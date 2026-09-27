@@ -11,6 +11,7 @@ import com.chua.starter.ai.support.mapper.SysAiMessageMapper;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,11 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
      * 消息 映射器
      */
     private final SysAiMessageMapper messageMapper;
+
+    /**
+     * JSON 序列化（确认请求读写）
+     */
+    private final ObjectMapper objectMapper;
 
     @Override
     /**
@@ -91,7 +97,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<SysAiSession>()
                 .eq(SysAiSession::getStatus, 1);
  // 管理员只读全量，普通用户只见本人会话；无身份时条件恒不匹配（失败即关闭）
-        if (!AiUserContext.isAdmin()) {
+        if (true) {
             wrapper.eq(SysAiSession::getSysUserId, AiUserContext.currentUserId());
         }
         return sessionMapper.selectList(wrapper.orderByDesc(SysAiSession::getCreateTime))
@@ -134,6 +140,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         entity.setPromptTokens(message.getPromptTokens());
         entity.setCompletionTokens(message.getCompletionTokens());
         entity.setTotalTokens(message.getTotalTokens());
+        entity.setConfirmation(message.getConfirmation());
         LocalDateTime now = LocalDateTime.now();
         entity.setCreateTime(now);
         entity.setUpdateTime(now);
@@ -146,6 +153,62 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         if (message.getTimestamp() == null) {
             message.setTimestamp(System.currentTimeMillis());
         }
+    }
+
+    @Override
+    public void resolveConfirmation(Long dialogId, String replyId, String decision) {
+        if (dialogId == null || replyId == null || replyId.isBlank()) {
+            return;
+        }
+        final String terminal = "rejected".equalsIgnoreCase(decision) ? "rejected" : "approved";
+        List<SysAiMessage> candidates = messageMapper.selectList(new LambdaQueryWrapper<SysAiMessage>()
+                .eq(SysAiMessage::getSysAiSessionId, dialogId)
+                .isNotNull(SysAiMessage::getConfirmation));
+        for (SysAiMessage entity : candidates) {
+            String json = entity.getConfirmation();
+            if (json == null || json.isBlank() || !json.contains(replyId)) {
+                continue;
+            }
+            try {
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> data = objectMapper.readValue(json, java.util.Map.class);
+                if (!replyId.equals(data.get("replyId")) || !"pending".equals(data.get("status"))) {
+                    continue;
+                }
+                data.put("status", terminal);
+                entity.setConfirmation(objectMapper.writeValueAsString(data));
+                messageMapper.updateById(entity);
+                log.info("[AIDialogDb] 会话 {} 确认 {} 标记为 {}", dialogId, replyId, terminal);
+            } catch (Exception e) {
+                log.warn("[AIDialogDb] 解析确认 JSON 失败 message={}: {}", entity.getId(), e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public String findParentMessageIdByReplyId(Long dialogId, String replyId) {
+        if (dialogId == null || replyId == null || replyId.isBlank()) {
+            return null;
+        }
+        List<SysAiMessage> candidates = messageMapper.selectList(new LambdaQueryWrapper<SysAiMessage>()
+                .eq(SysAiMessage::getSysAiSessionId, dialogId)
+                .isNotNull(SysAiMessage::getConfirmation));
+        for (SysAiMessage entity : candidates) {
+            String json = entity.getConfirmation();
+            if (json == null || json.isBlank() || !json.contains(replyId)) {
+                continue;
+            }
+            try {
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> data = objectMapper.readValue(json, java.util.Map.class);
+                if (replyId.equals(data.get("replyId"))) {
+                    return entity.getParentId() == null ? null : String.valueOf(entity.getParentId());
+                }
+            } catch (Exception e) {
+                log.warn("[AIDialogDb] 查找父消息失败 message={}: {}", entity.getId(), e.getMessage());
+            }
+        }
+        return null;
     }
 
     /**
@@ -231,6 +294,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         message.setPromptTokens(entity.getPromptTokens());
         message.setCompletionTokens(entity.getCompletionTokens());
         message.setTotalTokens(entity.getTotalTokens());
+        message.setConfirmation(entity.getConfirmation());
         message.setTimestamp(entity.getCreateTime() != null
                 ? entity.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
                 : System.currentTimeMillis());

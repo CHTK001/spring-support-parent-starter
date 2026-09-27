@@ -13,42 +13,40 @@ import com.chua.payment.support.entity.TransactionRecord;
 public interface TransactionRecordService {
 
     /**
-     * 创建record。
-     * @param record record
-     * @return 创建record的结果
+     * 创建交易流水记录。
+     * @param record 流水记录
+     * @return 创建出的流水记录
      */
     TransactionRecord createRecord(TransactionRecord record);
 
     /**
-     * 获取byid。
+     * 根据主键获取流水记录。
      * @param id 标识
-     * @return 获取byid的结果
+     * @return 获取到的流水记录
      */
     TransactionRecord getById(Long id);
 
     /**
-     * 列表by订单no。
-     * @param orderNo 订单no
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @return 列表by订单no的结果
+     * 按订单号分页查询流水。
+     * @param orderNo 订单号
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 按订单号查询的流水分页结果
      */
     Page<TransactionRecord> listByOrderNo(String orderNo, int pageNum, int pageSize);
 
     /**
-     * 列表bymerchantid。
-     * @param merchantId merchantid
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @return 列表bymerchantid的结果
+     * 按商户标识分页查询流水。
+     * @param merchantId 商户标识
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 按商户标识查询的流水分页结果
      */
     Page<TransactionRecord> listByMerchantId(Long merchantId, int pageNum, int pageSize);
 
     /**
-     * page。
-     * @param request 请求
-     * @return page的结果
+     * 分页查询流水记录。
+     * @param request 请求参数
      */
     Page<TransactionRecord> page(TransactionRecordQueryRequest request);
 }
-

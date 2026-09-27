@@ -67,6 +67,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
         "plugin.osgi.storage=target/osgi-cache-api-test",
+        // 本类 15 个用例反复安装「同符号名、不同版本」的 bundle（V1~V10），
+        // 若沿用默认的 onFirstInit，Felix 会在后续运行中从 storage 恢复并
+        // 自动启动全部历史版本，与本轮新装/启动形成竞争，导致
+        // lifecycleListenerEventsFire 偶发缺失 onBundleStarted。
+        // 测试环境不需要跨进程保留 bundle 状态，故每次从干净 storage 开始。
+        // 生产环境保留 onFirstInit（支持重启续用）才是正确语义，不应改框架默认值。
+        "plugin.osgi.storage-clean=onInit",
         "plugin.osgi.shell.enabled=false",
         "plugin.osgi.framework-properties[org.osgi.framework.system.packages.extra]=com.chua.starter.test.osgi"
 })
@@ -98,7 +105,8 @@ class OsgiFrameworkApiRealTest {
     void cleanup() {
         try {
             osgiLauncher.getBundles().stream()
-                    .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                    .filter(b -> b.getSymbolicName() != null
+                            && b.getSymbolicName().startsWith(BUNDLE_SYMBOLIC_NAME))
                     .forEach(OsgiBundle::uninstall);
         } catch (Exception ignored) {
         }
@@ -110,9 +118,10 @@ class OsgiFrameworkApiRealTest {
 
     /**
      * 真实测试：bundlelifecycle监听器 六回调随 bundle 生命周期真实触发
-    */
+     */
     @Test
     void lifecycleListenerEventsFire() throws Exception {
+        String bundleName = symbolicNameOf("ApiGreetV1");
         List<String> events = new CopyOnWriteArrayList<>();
         BundleLifecycleListener listener = new BundleLifecycleListener() {
             @Override public void onBundleInstalled(String n) { events.add("installed:" + n); }
@@ -125,31 +134,31 @@ class OsgiFrameworkApiRealTest {
         osgiLauncher.addListener(listener);
         try {
  // 安装 → auto启动 → installed + 启动
-            File jar = buildBundleJar("ApiGreetV1", "api", "1.0.0");
+            File jar = buildBundleJar("ApiGreetV1", "api", "1.0.0", bundleName);
             osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
             /**
              * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+             * @param bundleName) bundlesymbolic名称
              */
-            assertTrue(events.contains("installed:" + BUNDLE_SYMBOLIC_NAME), "安装应触发 onBundleInstalled，实际: " + events);
+            assertTrue(events.contains("installed:" + bundleName), "安装应触发 onBundleInstalled，实际: " + events);
             /**
              * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+             * @param bundleName) bundlesymbolic名称
              */
-            assertTrue(events.contains("started:" + BUNDLE_SYMBOLIC_NAME), "自动启动应触发 onBundleStarted，实际: " + events);
+            assertTrue(events.contains("started:" + bundleName), "自动启动应触发 onBundleStarted，实际: " + events);
 
  // 卸载 → 停止 + uninstall → stopped + uninstalled
-            osgiLauncher.uninstallBundle(BUNDLE_SYMBOLIC_NAME);
+            osgiLauncher.uninstallBundle(bundleName);
             /**
              * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+             * @param bundleName) bundlesymbolic名称
              */
-            assertTrue(events.contains("stopped:" + BUNDLE_SYMBOLIC_NAME), "卸载前停止应触发 onBundleStopped，实际: " + events);
+            assertTrue(events.contains("stopped:" + bundleName), "卸载前停止应触发 onBundleStopped，实际: " + events);
             /**
              * 断言true。
-             * @param BUNDLE_SYMBOLIC_NAME) bundlesymbolic名称
+             * @param bundleName) bundlesymbolic名称
              */
-            assertTrue(events.contains("uninstalled:" + BUNDLE_SYMBOLIC_NAME), "卸载应触发 onBundleUninstalled，实际: " + events);
+            assertTrue(events.contains("uninstalled:" + bundleName), "卸载应触发 onBundleUninstalled，实际: " + events);
         } finally {
             osgiLauncher.removeListener(listener);
         }
@@ -261,7 +270,7 @@ class OsgiFrameworkApiRealTest {
         assertNotNull(byName, "按名称 " + name + " 应能查到 BeanDefinition");
         /**
          * 断言equals。
-         * @param 类型应匹配" greet服务接口
+         * @param 类型应匹配 greet服务接口
          * @param byName.getType( by名称.获取类型(
          */
         assertEquals(GREET_SERVICE_INTERFACE, byName.getType(), "BeanDefinition 类型应匹配");
@@ -273,7 +282,7 @@ class OsgiFrameworkApiRealTest {
 
         // 3) 卸载后命名查询应为空
         osgiLauncher.getBundles().stream()
-                .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                .filter(b -> b.getSymbolicName() != null && b.getSymbolicName().startsWith(BUNDLE_SYMBOLIC_NAME))
                 .forEach(OsgiBundle::uninstall);
         /**
          * 断言空。
@@ -339,9 +348,10 @@ class OsgiFrameworkApiRealTest {
 
         File jar = buildBundleJar("ApiGreetV5", "api5", "5.0.0");
         osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
+        String bundleName = symbolicNameOf("ApiGreetV5");
 
  // 获取bundle(symbolic名称)
-        OsgiBundle byName = osgiLauncher.getBundle(BUNDLE_SYMBOLIC_NAME);
+        OsgiBundle byName = osgiLauncher.getBundle(bundleName);
         /**
          * 断言not空。
          * @param byName by名称
@@ -351,9 +361,9 @@ class OsgiFrameworkApiRealTest {
 
  // 获取bundlesby状态 / 获取活跃bundles
         List<OsgiBundle> active = osgiLauncher.getBundlesByState("ACTIVE");
-        assertTrue(active.stream().anyMatch(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName())),
+        assertTrue(active.stream().anyMatch(b -> bundleName.equals(b.getSymbolicName())),
                 "ACTIVE bundle 列表应包含目标 bundle");
-        assertTrue(osgiLauncher.getActiveBundles().stream().anyMatch(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName())),
+        assertTrue(osgiLauncher.getActiveBundles().stream().anyMatch(b -> bundleName.equals(b.getSymbolicName())),
                 "getActiveBundles 应包含目标 bundle");
 
  // 获取bundle数量
@@ -606,7 +616,7 @@ class OsgiFrameworkApiRealTest {
         assertEquals("api8:world", byName.greet("world"), "按名查询结果应与服务一致");
 
         osgiLauncher.getBundles().stream()
-                .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                .filter(b -> b.getSymbolicName() != null && b.getSymbolicName().startsWith(BUNDLE_SYMBOLIC_NAME))
                 .forEach(OsgiBundle::uninstall);
         /**
          * 断言空。
@@ -704,10 +714,11 @@ class OsgiFrameworkApiRealTest {
     */
     @Test
     void reinstallSameVersionBundle() throws Exception {
+        String bundleName = symbolicNameOf("ApiGreetV9");
         File jar = buildBundleJar("ApiGreetV9", "api9", "9.0.0");
         OsgiBundle first = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
         long afterFirst = osgiLauncher.getBundles().stream()
-                .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                .filter(b -> bundleName.equals(b.getSymbolicName()))
                 .count();
 
  // 重复安装相同 位置：osgi 规范本次幂等，返回同一 bundle，不新增副本
@@ -728,13 +739,13 @@ class OsgiFrameworkApiRealTest {
          * @param osgiLauncher.getBundles( osgilauncher.获取bundles(
          */
         assertEquals(afterFirst, osgiLauncher.getBundles().stream()
-                        .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                        .filter(b -> bundleName.equals(b.getSymbolicName()))
                         .count(),
                 "相同 location 重复安装不应新增 bundle");
 
         // 卸载清理
         osgiLauncher.getBundles().stream()
-                .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                .filter(b -> bundleName.equals(b.getSymbolicName()))
                 .forEach(OsgiBundle::uninstall);
         /**
          * 断言equals。
@@ -742,7 +753,7 @@ class OsgiFrameworkApiRealTest {
          * @param osgiLauncher.getBundles( osgilauncher.获取bundles(
          */
         assertEquals(0, osgiLauncher.getBundles().stream()
-                        .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                        .filter(b -> bundleName.equals(b.getSymbolicName()))
                         .count(),
                 "清理后应无同名 bundle");
     }
@@ -799,6 +810,37 @@ class OsgiFrameworkApiRealTest {
      * @return 构建bundlejar的结果
      */
     private static File buildBundleJar(String className, String prefix, String version) throws Exception {
+        return buildBundleJar(className, prefix, version, symbolicNameOf(className));
+    }
+
+    /**
+     * 由类名派生唯一的 bundle 符号名。
+     * <p>
+     * 早期所有测试 bundle 共用 {@code com.chua.test.api.bundle} 一个符号名，
+     * 而 Felix 按符号名索引 bundle、{@code uninstallBundle(String)} 也只按符号名定位，
+     * 于是不同用例的 bundle 相互串扰：{@code @AfterEach} 的卸载事件滞后到下一个用例，
+     * 与新装 bundle 的事件混在同一个监听记录里，表现为「事件时序随机错乱」。
+     * 符号名唯一化后，用例之间不再共享 bundle 身份，串扰从根上消失。
+     * </p>
+     *
+     * @param className 类名称
+     * @return 唯一符号名
+     */
+    private static String symbolicNameOf(String className) {
+        return BUNDLE_SYMBOLIC_NAME + "." + className.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /**
+     * 构建一个测试用 bundle jar。
+     *
+     * @param className     类名称
+     * @param prefix        前缀
+     * @param version       版本
+     * @param symbolicName  bundle 符号名
+     * @return 构建bundlejar的结果
+     */
+    private static File buildBundleJar(String className, String prefix, String version, String symbolicName)
+            throws Exception {
         Path srcFile = Paths.get("target", "osgi-api-src", className + ".java");
         Files.createDirectories(srcFile.getParent());
         Files.writeString(srcFile, bundleSource(className, prefix), StandardCharsets.UTF_8);
@@ -835,7 +877,7 @@ class OsgiFrameworkApiRealTest {
         Attributes attrs = manifest.getMainAttributes();
         attrs.put(Attributes.Name.MANIFEST_VERSION, "1.0");
         attrs.putValue("Bundle-ManifestVersion", "2");
-        attrs.putValue("Bundle-SymbolicName", BUNDLE_SYMBOLIC_NAME);
+        attrs.putValue("Bundle-SymbolicName", symbolicName);
         attrs.putValue("Bundle-Version", version);
         attrs.putValue("Bundle-Activator", BUNDLE_BASE_PACKAGE + "." + className);
         attrs.putValue("Import-Package", "org.osgi.framework, com.chua.starter.test.osgi");

@@ -23,31 +23,31 @@ import org.springframework.util.StringUtils;
 public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigService {
 
     /**
-     * 默认_Key
-    */
+     * 默认配置键
+     */
     private static final String DEFAULT_KEY = "DEFAULT";
 
     /**
-     * 薪酬全局配置映射器
-    */
+     * 支付全局配置映射器
+     */
     private final PaymentGlobalConfigMapper paymentGlobalConfigMapper;
     /**
-     * Paymentcallback属性
-    */
+     * 支付回调地址配置属性
+     */
     private final PaymentCallbackProperties paymentCallbackProperties;
 
     @Override
     /**
-     * 获取配置
-    */
+     * 获取支付全局配置
+     */
     public PaymentGlobalConfigVO getConfig() {
         return toVO(getConfigEntity());
     }
 
     @Override
     /**
-     * 获取配置实体
-    */
+     * 获取支付全局配置实体
+     */
     public PaymentGlobalConfig getConfigEntity() {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -66,8 +66,8 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
 
     @Override
     /**
-     * 保存或更新
-    */
+     * 保存或更新支付全局配置
+     */
     public PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto) {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -93,10 +93,10 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     /**
-     * 转为vo
+     * 转换为视图对象
      *
      * @param entity 实体
-     * @return 转为vo的结果
+     * @return 转换后的配置视图对象
      */
     private PaymentGlobalConfigVO toVO(PaymentGlobalConfig entity) {
         PaymentGlobalConfigVO vo = new PaymentGlobalConfigVO();
@@ -108,10 +108,9 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     /**
-     * Normalize
+     * 规范化地址：去掉末尾斜杠
      *
      * @param value 值
-     * @return normalize的结果
      */
     private String normalize(String value) {
         if (!StringUtils.hasText(value)) {
@@ -120,4 +119,3 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 }
-

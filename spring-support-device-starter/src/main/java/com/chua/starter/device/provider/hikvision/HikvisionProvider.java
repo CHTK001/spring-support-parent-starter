@@ -94,7 +94,7 @@ public class HikvisionProvider implements DeviceProvider {
      * 支持
     */
     public boolean support(DeviceConnectInfo info) {
-        return VENDOR.equalsIgnoreCase(info.getVendor());
+        return VENDOR.equalsIgnoreCase(info.vendor());
     }
 
     @Override
@@ -103,10 +103,10 @@ public class HikvisionProvider implements DeviceProvider {
     */
     public DeviceSession connect(DeviceConnectInfo info) {
         log.info("海康设备连接: authType={}, platformType={}, deviceSerial={}",
-                info.getAuthType(), info.getPlatformType(), info.getDeviceSerial());
+                info.authType(), info.platformType(), info.deviceSerial());
 
-        if (AUTH_PLATFORM.equalsIgnoreCase(info.getAuthType())) {
-            String platform = info.getPlatformType();
+        if (AUTH_PLATFORM.equalsIgnoreCase(info.authType())) {
+            String platform = info.platformType();
             try {
                 if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(platform)) {
                     /**
@@ -153,7 +153,7 @@ public class HikvisionProvider implements DeviceProvider {
             }
         }
 
-        if (AUTH_SDK.equalsIgnoreCase(info.getAuthType()) || info.getAuthType() == null) {
+        if (AUTH_SDK.equalsIgnoreCase(info.authType()) || info.authType() == null) {
             try {
                 /**
                  * hikvisionreal会话。
@@ -185,7 +185,7 @@ public class HikvisionProvider implements DeviceProvider {
          * @param info.getAuthType( 信息.获取认证类型(
          * @return IllegalArgumentException的结果
          */
-        throw new IllegalArgumentException("不支持的海康认证类型: " + info.getAuthType());
+        throw new IllegalArgumentException("不支持的海康认证类型: " + info.authType());
     }
 
     @Override

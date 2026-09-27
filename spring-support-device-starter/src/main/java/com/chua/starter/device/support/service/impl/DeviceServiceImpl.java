@@ -64,17 +64,17 @@ public class DeviceServiceImpl implements DeviceService {
 
         DeviceInfo device = new DeviceInfo();
         device.setDeviceInfoId(UUID.randomUUID().toString());
-        device.setDeviceInfoVendor(info.getVendor());
-        device.setDeviceInfoIp(info.getIp());
-        device.setDeviceInfoPort(info.getPort());
-        device.setDeviceInfoUsername(info.getUsername());
-        device.setDeviceInfoPassword(info.getPassword());
+        device.setDeviceInfoVendor(info.vendor());
+        device.setDeviceInfoIp(info.ip());
+        device.setDeviceInfoPort(info.port());
+        device.setDeviceInfoUsername(info.username());
+        device.setDeviceInfoPassword(info.password());
         device.setDeviceInfoOnline(Boolean.TRUE);
         device.setDeviceInfoCreatedAt(LocalDateTime.now());
         deviceInfoMapper.insert(device);
 
         sessionManager.register(device.getDeviceInfoId(), session);
-        log.info("设备添加成功: vendor={}, ip={}", info.getVendor(), info.getIp());
+        log.info("设备添加成功: vendor={}, ip={}", info.vendor(), info.ip());
         return device;
     }
 
@@ -206,12 +206,19 @@ public class DeviceServiceImpl implements DeviceService {
         // 关闭旧会话
         sessionManager.unregister(id);
         // 按设备现有信息重建连接
-        DeviceConnectInfo info = new DeviceConnectInfo();
-        info.setVendor(device.getDeviceInfoVendor());
-        info.setIp(device.getDeviceInfoIp());
-        info.setPort(device.getDeviceInfoPort());
-        info.setUsername(device.getDeviceInfoUsername());
-        info.setPassword(device.getDeviceInfoPassword());
+        DeviceConnectInfo info = new DeviceConnectInfo(
+                device.getDeviceInfoVendor(),
+                null,
+                device.getDeviceInfoIp(),
+                device.getDeviceInfoPort(),
+                device.getDeviceInfoUsername(),
+                device.getDeviceInfoPassword(),
+                null,
+                null,
+                null,
+                null,
+                null
+        );
         DeviceSession session = providers.stream()
                 .filter(p -> p.support(info))
                 .findFirst()
@@ -285,3 +292,4 @@ public class DeviceServiceImpl implements DeviceService {
         }
     }
 }
+

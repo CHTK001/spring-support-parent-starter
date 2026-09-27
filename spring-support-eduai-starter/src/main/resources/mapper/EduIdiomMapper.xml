@@ -2,13 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.eduai.mapper.EduIdiomMapper">
 
-    <!-- 根据学段获取成语列表：grade 非空时追加年级过滤，随机排序并限制条数 -->
+    <!-- 根据学段获取成语列表：grade 非空时同时命中「指定年级」与「该学段通用(grade IS NULL)」，随机排序并限制条数 -->
     <select id="selectByGradeLevel" resultType="com.chua.starter.eduai.model.EduIdiom">
         SELECT i.* FROM edu_idiom i
         INNER JOIN edu_idiom_grade g ON i.idiom_id = g.idiom_id
         WHERE g.grade_level = #{gradeLevel}
         <if test="grade != null and grade != ''">
-            AND g.grade = #{grade}
+            AND (g.grade IS NULL OR g.grade = #{grade})
         </if>
         <if test="userId != null and userId != ''">
             AND (i.idiom_owner_user_id IS NULL OR i.idiom_owner_user_id = #{userId})

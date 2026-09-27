@@ -7,6 +7,8 @@ import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.util.AiMemoryOwnership;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,6 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>维护 Webhook 端点（{@code webhook_id} 主键）与标签通知设置。签名密钥仅入参、永不出参
  * （以 {@code has_secret} 标记）。当前为进程内内存实现。</p>
+ *
+ * <p>隔离口径：Webhook 端点带创建人的 {@code user_id}，只有创建人可改可删可测，管理员只读；
+ * 标签通知设置按「用户 + 标签」为键存放，因此某人配置的转发目标不会出现在他人视图里，
+ * 也改不动他人的设置。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -56,7 +62,7 @@ public class ApiWebhookController {
     private final Map<String, Map<String, Object>> webhooks = new ConcurrentHashMap<>();
 
     /**
-     * 标签通知设置：标签 → 设置
+     * 标签通知设置：用户标识:标签 → 设置
      */
     private final Map<String, Map<String, Object>> tagSettings = new ConcurrentHashMap<>();
 
@@ -66,7 +72,7 @@ public class ApiWebhookController {
      * @return 列表的结果
      */
     public ApiResult<List<Map<String, Object>>> list() {
-        return ApiResult.ok(new ArrayList<>(webhooks.values()));
+        return ApiResult.ok(AiMemoryOwnership.visibleToCurrentUser(webhooks.values()));
     }
 
     @GetMapping("/webhooks/{webhookId}")
@@ -76,7 +82,7 @@ public class ApiWebhookController {
      * @return 获取的结果
      */
     public ApiResult<Map<String, Object>> get(@PathVariable String webhookId) {
-        return ApiResult.ok(requireWebhook(webhookId));
+        return ApiResult.ok(requireWebhook(webhookId, false));
     }
 
     @PostMapping("/webhooks")
@@ -98,6 +104,7 @@ public class ApiWebhookController {
         wh.put("enabled", body.getOrDefault("enabled", true));
         wh.put("created_at", now);
         wh.put("updated_at", now);
+        AiMemoryOwnership.stampOwner(wh);
         webhooks.put(webhookId, wh);
         pushService.push("webhook.updated", wh);
         return ApiResult.ok(wh);
@@ -106,7 +113,7 @@ public class ApiWebhookController {
     @PutMapping("/webhooks/{webhookId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String webhookId,
                                                  @RequestBody Map<String, Object> body) {
-        Map<String, Object> wh = requireWebhook(webhookId);
+        Map<String, Object> wh = requireWebhook(webhookId, true);
         if (body.containsKey("name")) {
             wh.put("name", body.get("name"));
         }
@@ -141,7 +148,7 @@ public class ApiWebhookController {
          * requirewebhook。
          * @param webhookId webhookid
          */
-        requireWebhook(webhookId);
+        requireWebhook(webhookId, true);
         webhooks.remove(webhookId);
         pushService.push("webhook.removed", Map.of("webhook_id", webhookId));
         return ApiResult.ok();
@@ -158,7 +165,7 @@ public class ApiWebhookController {
          * requirewebhook。
          * @param webhookId webhookid
          */
-        requireWebhook(webhookId);
+        requireWebhook(webhookId, true);
         return ApiResult.ok();
     }
 
@@ -169,9 +176,9 @@ public class ApiWebhookController {
      * @return 获取标签setting的结果
      */
     public ApiResult<Map<String, Object>> getTagSetting(@PathVariable String tag) {
-        return ApiResult.ok(tagSettings.computeIfAbsent(tag, k -> {
-            Map<String, Object> s = new LinkedHashMap<>();
-            s.put("tag", k);
+        return ApiResult.ok(tagSettings.computeIfAbsent(tagKey(tag), k -> {
+            Map<String, Object> s = AiMemoryOwnership.newOwnedRecord();
+            s.put("tag", tag);
             s.put("webhook_id", null);
             s.put("description", "");
             s.put("notify_events", new ArrayList<>());
@@ -182,11 +189,15 @@ public class ApiWebhookController {
     @PutMapping("/tags/{tag}/settings")
     public ApiResult<Map<String, Object>> setTagSetting(@PathVariable String tag,
                                                         @RequestBody Map<String, Object> body) {
-        Map<String, Object> s = tagSettings.computeIfAbsent(tag, k -> new LinkedHashMap<>());
-        s.put("tag", tag);
+        Map<String, Object> s = tagSettings.computeIfAbsent(tagKey(tag), k -> AiMemoryOwnership.newOwnedRecord());
+        Object webhookId = body.get("webhook_id");
         if (body.containsKey("webhook_id")) {
-            s.put("webhook_id", body.get("webhook_id"));
+            if (webhookId != null) {
+                requireWebhook(String.valueOf(webhookId), true);
+            }
+            s.put("webhook_id", webhookId);
         }
+        s.put("tag", tag);
         if (body.containsKey("description")) {
             s.put("description", body.get("description"));
         }
@@ -197,11 +208,22 @@ public class ApiWebhookController {
     }
 
     /**
+     * 标签设置的存储键：按登录用户分流，避免互相读到或覆盖。
+     *
+     * @param tag 标签
+     * @return 用户维度的存储键
+     */
+    private String tagKey(String tag) {
+        return AiUserContext.requireUserId() + ":" + tag;
+    }
+
+    /**
      * requirewebhook。
      * @param webhookId webhookid
+     * @param writable 是否要求写权限
      * @return requireWebhook的结果
      */
-    private Map<String, Object> requireWebhook(String webhookId) {
+    private Map<String, Object> requireWebhook(String webhookId, boolean writable) {
         Map<String, Object> wh = webhooks.get(webhookId);
         if (wh == null) {
             /**
@@ -212,6 +234,6 @@ public class ApiWebhookController {
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Webhook 不存在: " + webhookId);
         }
-        return wh;
+        return AiMemoryOwnership.requireOwned(wh, writable, "Webhook");
     }
 }

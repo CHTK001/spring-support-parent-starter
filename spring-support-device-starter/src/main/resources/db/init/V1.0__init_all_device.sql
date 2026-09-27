@@ -120,7 +120,3 @@ CREATE TABLE IF NOT EXISTS device_task_state (
 ) COMMENT '后台任务运行状态（Trigger 模式）';
 
 -- 初始化任务状态
-INSERT INTO device_task_state (device_task_state_id, device_task_state_name, device_task_state_running, device_task_state_interval, device_task_state_description)
-VALUES
-    (REPLACE(UUID(),'-',''), 'deviceOfflineCheck', 0, 30, '设备在离线检测任务'),
-    (REPLACE(UUID(),'-',''), 'deviceEventPoll', 0, 30, '设备事件轮询任务');

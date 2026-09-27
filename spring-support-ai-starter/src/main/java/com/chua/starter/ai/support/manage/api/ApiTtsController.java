@@ -1,12 +1,11 @@
 package com.chua.starter.ai.support.manage.api;
 
-import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
-
+import com.chua.common.support.ai.audio.TextToAudioClient;
+import com.chua.common.support.ai.audio.TextToAudioClientSetting;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
-import com.chua.starter.ai.support.manage.common.ApiResult;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,41 +19,97 @@ import java.util.Map;
 /**
  * 文本转语音（TTS）控制器，替代 nomicore 的 {@code /api/tts} 契约。
  *
- * <p>正常情况下该端点应返回二进制音频流（{@code audio/*}）。本内存后端未接入任何 TTS 引擎，
- * 故仅返回 JSON 错误信封（{@code NO_COMPLETER}，HTTP 409）以符合契约形状，避免返回非 JSON
- * 响应被前端判为契约违规。</p>
- *
  * @since 4.0.0.42
  * @author CH
  */
-@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/tts")
-@RequiredArgsConstructor
-@Slf4j
 public class ApiTtsController {
 
-    /**
-     * 生成语音（占位实现）。
-     *
-     * <p>未接入 TTS 引擎，返回 {@code NO_COMPLETER} 错误信封，HTTP 状态 409。</p>
-     *
-     * @param body    请求体（含 文本 / voice 等字段，本实现忽略）
-     * @param voice   可选音色参数
-     * @return JSON 错误信封
-     * @param false false
-     */
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResult<Void>> tts(@RequestBody(required = false) Map<String, Object> body,
-                                               @RequestParam(required = false) String voice) {
-        String text = body == null ? "" : String.valueOf(body.getOrDefault("text", ""));
-        log.warn("[tts] 未接入 TTS 引擎，返回 NO_COMPLETER；text={}, voice={}", text, voice);
-        ApiResult<Void> envelope = ApiResult.error(
-                ApiErrorCode.NO_COMPLETER.getCode(),
-                "当前后端未接入 TTS 引擎，无法生成语音"
-        );
-        return ResponseEntity.status(HttpStatus.valueOf(ApiErrorCode.NO_COMPLETER.getHttpStatus()))
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(envelope);
+    @Value("${ai.tts.provider:}")
+    private String provider;
+
+    @Value("${ai.tts.api-key:}")
+    private String apiKey;
+
+    @Value("${ai.tts.base-url:}")
+    private String baseUrl;
+
+    @Value("${ai.tts.model:}")
+    private String defaultModel;
+
+    @Value("${ai.tts.voice:}")
+    private String defaultVoice;
+
+    @Value("${ai.tts.format:mp3}")
+    private String defaultFormat;
+
+    @PostMapping
+    public ResponseEntity<byte[]> tts(@RequestBody Map<String, Object> body,
+                                       @RequestParam(required = false) String voice) {
+        String text = bodyText(body);
+        if (text.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "text 不能为空");
+        }
+        if (provider == null || provider.isBlank()) {
+            throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "未配置 ai.tts.provider，TTS 服务不可用");
+        }
+
+        String model = stringValue(body.get("model"), defaultModel);
+        String selectedVoice = stringValue(body.get("voice"), stringValue(voice, defaultVoice));
+        String format = stringValue(body.get("format"), defaultFormat);
+        TextToAudioClientSetting setting = TextToAudioClientSetting.builder()
+                .provider(provider)
+                .appKey(apiKey)
+                .baseUrl(baseUrl)
+                .model(model)
+                .voice(selectedVoice)
+                .language(stringValue(body.get("language"), ""))
+                .format(format)
+                .build();
+
+        try (TextToAudioClient client = TextToAudioClient.create(setting)) {
+            if (client == null) {
+                throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED,
+                        "未注册 TTS provider: " + provider);
+            }
+            byte[] audio = client.synthesize(text);
+            if (audio == null || audio.length == 0) {
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "TTS 服务返回空音频");
+            }
+            return ResponseEntity.ok()
+                    .contentType(audioMediaType(format))
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .body(audio);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "TTS 合成失败: " + e.getMessage(), e);
+        }
+    }
+
+    private static String bodyText(Map<String, Object> body) {
+        Object value = body == null ? null : body.get("text");
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private static String stringValue(Object value, String defaultValue) {
+        if (value == null || String.valueOf(value).isBlank()) {
+            return defaultValue;
+        }
+        return String.valueOf(value);
+    }
+
+    private static MediaType audioMediaType(String format) {
+        if (format == null) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        return switch (format.toLowerCase()) {
+            case "wav" -> MediaType.parseMediaType("audio/wav");
+            case "mp3" -> MediaType.parseMediaType("audio/mpeg");
+            case "ogg" -> MediaType.parseMediaType("audio/ogg");
+            case "flac" -> MediaType.parseMediaType("audio/flac");
+            default -> MediaType.APPLICATION_OCTET_STREAM;
+        };
     }
 }

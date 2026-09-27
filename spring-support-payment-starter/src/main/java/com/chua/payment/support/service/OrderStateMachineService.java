@@ -13,7 +13,7 @@ import com.chua.payment.support.enums.OrderTransitionResult;
 public interface OrderStateMachineService {
 
     /**
-     * 创建状态机
+     * 创建订单状态机
      *
      * @param orderId 订单标识
      */
@@ -25,7 +25,7 @@ public interface OrderStateMachineService {
      * @param orderId   订单标识
      * @param event     事件
      * @param operator  操作人
-     * @return 是否成功
+     * @return 是否流转成功
      */
     OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator);
 

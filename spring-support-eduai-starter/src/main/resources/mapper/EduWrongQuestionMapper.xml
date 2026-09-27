@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduWrongQuestionMapper">
+
+    <!-- 按学生/题目/归属取错题记录（重复记录时累加用） -->
+    <select id="selectOneByStudentQuestionOwner" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
+        SELECT w.* FROM edu_wrong_question w
+        WHERE w.wrong_question_student_id = #{studentId}
+          AND w.wrong_question_question_id = #{questionId}
+          AND w.wrong_question_owner_user_id = #{ownerUserId}
+        LIMIT 1
+    </select>
+
+    <!-- 分页查询错题：多条件筛选（学科走题目子查询）+ 归属隔离 + 最近错误时间倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
+        SELECT w.* FROM edu_wrong_question w
+        <where>
+            <if test="query.studentId != null and query.studentId != ''">
+                AND w.wrong_question_student_id = #{query.studentId}
+            </if>
+            <if test="query.subject != null and query.subject != ''">
+                AND w.wrong_question_question_id IN
+                (SELECT q.question_id FROM edu_question q WHERE q.question_subject = #{query.subject})
+            </if>
+            <if test="query.masteryLevel != null">
+                AND w.wrong_question_mastery_level = #{query.masteryLevel}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (w.wrong_question_owner_user_id IS NULL OR w.wrong_question_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY w.wrong_question_last_wrong_time DESC
+    </select>
+
+    <!-- 复习卷取题：按学生取未掌握错题，掌握度升序、最近错误时间倒序并限制条数 -->
+    <select id="selectReviewQuestions" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
+        SELECT w.* FROM edu_wrong_question w
+        <where>
+            w.wrong_question_student_id = #{studentId}
+            AND w.wrong_question_status = 1
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (w.wrong_question_owner_user_id IS NULL OR w.wrong_question_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY w.wrong_question_mastery_level ASC, w.wrong_question_last_wrong_time DESC
+        LIMIT #{count}
+    </select>
+
+</mapper>

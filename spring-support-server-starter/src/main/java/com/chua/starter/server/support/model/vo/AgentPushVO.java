@@ -14,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * @param cpuCores  CPU 核心数
  * @param memoryMb  内存容量（MB）
  * @param diskGb    磁盘容量（GB）
+ * @param os        操作系统平台（OSHI family，如 Windows / Linux / macOS）
  * @param osVersion 操作系统版本
  * @param osArch    操作系统架构
  * @param gpuCount  GPU 数量
@@ -32,6 +33,7 @@ public record AgentPushVO(
         Integer cpuCores,
         Long memoryMb,
         Long diskGb,
+        String os,
         String osVersion,
         String osArch,
         Integer gpuCount,

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -41,6 +42,10 @@ public class RedisCacheManagerConfiguration {
      * <p>
      * 当未显式定义 Redis缓存管理器 Bean 时，根据 缓存属性 创建。
      * </p>
+     *
+     * <p>写操作强制同步（{@code immediateWrites}）：Spring Data Redis 4.x 默认异步写缓存，
+     * 失效指令的 Future 从不 join、异常静默丢失，实测 {@code @CacheEvict} 到不了 Redis，
+     * 改了数据读接口永久返回旧值。</p>
      *
      * @param properties       缓存配置
      * @param connectionFactory Redis 连接工厂
@@ -81,7 +86,8 @@ public class RedisCacheManagerConfiguration {
             config = config.computePrefixWith(name -> name + redisProps.getSeparator());
         }
 
-        return RedisCacheManager.builder(connectionFactory)
+        return RedisCacheManager.builder(RedisCacheWriter.create(connectionFactory,
+                        writer -> writer.immediateWrites(true)))
                 .cacheDefaults(config)
                 .allowCreateOnMissingCache(true)
                 .build();

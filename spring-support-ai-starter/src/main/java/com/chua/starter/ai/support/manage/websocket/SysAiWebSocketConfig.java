@@ -13,6 +13,9 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * 子协议协商通过 {@link SysAiWebSocketHandler#getSubProtocols()} 声明，
  * 支持桌面模式 ({@code nomi-local-trust}) 和 Web 模式 ({@code chat})。</p>
  *
+ * <p>升级请求先过 {@link AiWebSocketHandshakeInterceptor}：登录令牌无效直接拒绝握手，
+ * 匿名连接收不到任何人的推送事件。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -29,6 +32,7 @@ public class SysAiWebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(handler, "/ws")
+                .addInterceptors(new AiWebSocketHandshakeInterceptor())
                 .setAllowedOriginPatterns("*");
     }
 }

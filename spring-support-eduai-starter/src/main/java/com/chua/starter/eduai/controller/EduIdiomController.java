@@ -1,8 +1,11 @@
 package com.chua.starter.eduai.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.mapper.EduIdiomGradeMapper;
 import com.chua.starter.eduai.model.EduIdiom;
+import com.chua.starter.eduai.model.EduIdiomGrade;
 import com.chua.starter.eduai.service.IEduIdiomService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +36,8 @@ import java.util.Map;
 public class EduIdiomController {
 
     private final IEduIdiomService idiomService;
+
+    private final EduIdiomGradeMapper idiomGradeMapper;
 
     @Operation(summary = "获取成语列表")
     @GetMapping("/list")
@@ -79,6 +84,7 @@ public class EduIdiomController {
         EduIdiom idiom = idiomService.getById(idiomId);
         if (idiom != null) {
             EduUserContext.checkReadable(idiom.getOwnerUserId());
+            fillIdiomGrades(idiom);
         }
         return ReturnResult.ok(idiom);
     }
@@ -102,7 +108,82 @@ public class EduIdiomController {
             EduUserContext.checkWritable(exists.getOwnerUserId());
             idiom.setOwnerUserId(exists.getOwnerUserId());
         }
-        return ReturnResult.ok(idiomService.saveOrUpdate(idiom));
+        Boolean saved = idiomService.saveOrUpdate(idiom);
+        syncIdiomGrades(idiom);
+        return ReturnResult.ok(saved);
+    }
+
+    /**
+     * 保存成语的学段/年级映射（edu_idiom_grade）：先清空再按提交的学段×年级重建。
+     * 未提交 gradeLevels 时视为不改动映射（兼容仅改内容的调用方）。
+     * <p>学段值统一存中文名（小学/初中/高中/大学），与前端下拉及消消乐取数保持一致。</p>
+     *
+     * @param idiom 已保存的成语（含 gradeLevels/grades）
+     */
+    private void syncIdiomGrades(EduIdiom idiom) {
+        List<String> levels = idiom.getGradeLevels();
+        if (levels == null || idiom.getIdiomId() == null) {
+            return;
+        }
+        idiomGradeMapper.delete(new QueryWrapper<EduIdiomGrade>().eq("idiom_id", idiom.getIdiomId()));
+        List<String> grades = idiom.getGrades();
+        for (String level : levels) {
+            if (level == null || level.trim().isEmpty()) {
+                continue;
+            }
+            String normalized = normalizeLevel(level.trim());
+            if (grades == null || grades.isEmpty()) {
+                insertIdiomGrade(idiom, normalized, null);
+            } else {
+                for (String grade : grades) {
+                    insertIdiomGrade(idiom, normalized, grade == null || grade.trim().isEmpty() ? null : grade.trim());
+                }
+            }
+        }
+    }
+
+    /**
+     * 学段值归一化：把 PRIMARY/JUNIOR/SENIOR/UNIVERSITY 等码值统一为中文名，避免同一学段出现两种写法。
+     *
+     * @param level 原始学段值
+     * @return 归一化后的学段名
+     */
+    private String normalizeLevel(String level) {
+        return switch (level.toUpperCase(java.util.Locale.ROOT)) {
+            case "PRIMARY", "小学" -> "小学";
+            case "JUNIOR", "MIDDLE", "初中" -> "初中";
+            case "SENIOR", "HIGH", "高中" -> "高中";
+            case "UNIVERSITY", "大学" -> "大学";
+            default -> level;
+        };
+    }
+
+    /**
+     * 插入单条成语学段映射。
+     *
+     * @param idiom      成语
+     * @param gradeLevel 学段
+     * @param grade      年级（可为空）
+     */
+    private void insertIdiomGrade(EduIdiom idiom, String gradeLevel, String grade) {
+        EduIdiomGrade row = new EduIdiomGrade();
+        row.setIdiomId(idiom.getIdiomId());
+        row.setGradeLevel(gradeLevel);
+        row.setGrade(grade);
+        row.setOwnerUserId(idiom.getOwnerUserId());
+        idiomGradeMapper.insert(row);
+    }
+
+    /**
+     * 回填成语的学段/年级映射，供编辑回显。
+     *
+     * @param idiom 成语
+     */
+    private void fillIdiomGrades(EduIdiom idiom) {
+        List<EduIdiomGrade> rows = idiomGradeMapper.selectList(
+                new QueryWrapper<EduIdiomGrade>().eq("idiom_id", idiom.getIdiomId()));
+        idiom.setGradeLevels(rows.stream().map(EduIdiomGrade::getGradeLevel).filter(java.util.Objects::nonNull).distinct().toList());
+        idiom.setGrades(rows.stream().map(EduIdiomGrade::getGrade).filter(java.util.Objects::nonNull).distinct().toList());
     }
 
     /**
@@ -119,6 +200,7 @@ public class EduIdiomController {
             return ReturnResult.ok(false);
         }
         EduUserContext.checkWritable(exists.getOwnerUserId());
+        idiomGradeMapper.delete(new QueryWrapper<EduIdiomGrade>().eq("idiom_id", idiomId));
         return ReturnResult.ok(idiomService.removeById(idiomId));
     }
 }

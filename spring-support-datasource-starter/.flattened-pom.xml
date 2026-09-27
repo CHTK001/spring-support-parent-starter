@@ -53,10 +53,6 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
       <artifactId>utils-support-flyway-starter</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -143,4 +139,25 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.chua</groupId>
+        <artifactId>utils-support-flyway-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>generate-module-init-sql</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>generate-init-sql</goal>
+            </goals>
+            <configuration>
+              <mode>initdata</mode>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

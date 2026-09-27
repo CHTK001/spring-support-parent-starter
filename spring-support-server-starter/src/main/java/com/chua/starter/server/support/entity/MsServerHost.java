@@ -82,6 +82,14 @@ public class MsServerHost extends SysBase {
     private String serverHostOsArch; // 服务端主机osArch Linux Linux Linux
 
     /**
+     * 是否开启 SSH（发布/命令执行等基于 OpenSSH 的能力依赖）
+     * <p>默认值：Linux/macOS 为 true，Windows 为 false（Windows 需自行启用 OpenSSH）。</p>
+     */
+    @TableField("ms_server_host_ssh_enabled")
+    @Schema(description = "是否开启SSH 1是 0否（Linux默认开，Windows默认关）", example = "1")
+    private Integer serverHostSshEnabled; // 服务端主机是否开启ssh
+
+    /**
      * 所属分组 标识
      */
     @TableField("ms_server_group_id")
@@ -173,6 +181,34 @@ public class MsServerHost extends SysBase {
     private String serverHostNetworks; // 服务端主机网卡
 
     /**
+     * 主网卡 MAC 地址（探测结果，画像刷新回写）
+     */
+    @TableField("ms_server_host_mac")
+    @Schema(description = "主网卡MAC(探测结果)", example = "00:25:41:03:10:00")
+    private String serverHostMac;
+
+    /**
+     * 操作系统上报的真实主机名（探测结果，区别于用户填写的资产名称）
+     */
+    @TableField("ms_server_host_os_hostname")
+    @Schema(description = "OS真实主机名(探测结果)", example = "DESKTOP-N2BE5N0")
+    private String serverHostOsHostname;
+
+    /**
+     * Java 运行时版本（探测结果）
+     */
+    @TableField("ms_server_host_java_version")
+    @Schema(description = "Java版本(探测结果)", example = "1.8.0_491")
+    private String serverHostJavaVersion;
+
+    /**
+     * 开机时长（秒，探测结果；配合最近采集时间可换算）
+     */
+    @TableField("ms_server_host_uptime_sec")
+    @Schema(description = "开机时长秒(探测结果)", example = "276000")
+    private Long serverHostUptimeSec;
+
+    /**
      * CPU 使用率（%，探测结果）
      */
     @TableField("ms_server_host_cpu_usage")
@@ -192,6 +228,27 @@ public class MsServerHost extends SysBase {
     @TableField("ms_server_host_disk_usage")
     @Schema(description = "磁盘使用率%(探测结果)", example = "68.00")
     private Double serverHostDiskUsage; // 服务端主机磁盘使用率
+
+    /**
+     * 磁盘读取速率（KB/s，探测结果）
+     */
+    @TableField("ms_server_host_disk_read_kbs")
+    @Schema(description = "磁盘读取速率KB/s(探测结果)", example = "128.50")
+    private Double serverHostDiskReadKbs; // 服务端主机磁盘读取速率
+
+    /**
+     * 磁盘写入速率（KB/s，执行结果）
+     */
+    @TableField("ms_server_host_disk_write_kbs")
+    @Schema(description = "磁盘写入速率KB/s(探测结果)", example = "64.00")
+    private Double serverHostDiskWriteKbs; // 服务端主机磁盘写入速率
+
+    /**
+     * 主机上运行的软件实例（JSON 数组，探测结果）
+     */
+    @TableField("ms_server_host_software")
+    @Schema(description = "运行软件实例JSON(探测结果)")
+    private String serverHostSoftware; // 服务端主机软件实例
 
     /**
      * 系统版本
@@ -331,6 +388,13 @@ public class MsServerHost extends SysBase {
     @TableField("ms_server_host_vnc_password")
     @Schema(description = "VNC口令(加密存储)", example = "vnc-secret")
     private String serverHostVncPassword; // 服务端主机vnc密码
+
+    /**
+     * 包管理器（硬件探测结果：apt/dnf/yum/brew/winget，供软件仓库 SPI 路由）
+     */
+    @TableField("ms_server_host_package_manager")
+    @Schema(description = "包管理器(探测结果): apt/dnf/yum/brew/winget", example = "apt")
+    private String serverHostPackageManager; // 服务端主机包管理器
 
     /**
      * 延迟检测开关（主机级）

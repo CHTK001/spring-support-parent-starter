@@ -33,20 +33,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class WalletWithdrawApprovalController {
 
     /**
-     * Walletwithdrawapproval服务
-    */
+     * 钱包提现审批服务
+     */
     private final WalletWithdrawApprovalService walletWithdrawApprovalService;
     /**
-     * Walletaccount服务
-    */
+     * 钱包账户服务
+     */
     private final WalletAccountService walletAccountService;
     /**
-     * Wallet排序服务
-    */
+     * 钱包排序服务
+     */
     private final WalletOrderService walletOrderService;
     /**
-     * Principal解析器
-    */
+     * 登录主体解析器
+     */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping("/page")
@@ -72,11 +72,10 @@ public class WalletWithdrawApprovalController {
 
     @PostMapping("/{id}/approve")
     /**
-     * Approve
+     * 审批通过
      *
      * @param id 标识
      * @param request 请求
-     * @return approve的结果
      */
     public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
@@ -114,9 +113,9 @@ public class WalletWithdrawApprovalController {
 
     @PostMapping("/{id}/reject")
     /**
-     * Reject
+     * 审批拒绝
      * @param id 标识
-     * @param reason ReasonMLML
+     * @param reason 拒绝原因
      * @param request 请求
      */
     public Result<String> reject(@PathVariable Long id,
@@ -130,7 +129,7 @@ public class WalletWithdrawApprovalController {
         String operator = resolveOperator(request);
         WalletWithdrawApproval approval = walletWithdrawApprovalService.getById(id);
 
- // 解冻余额（frozen → 可用）
+        // 解冻余额（frozen 可用）
         walletAccountService.cancelWithdraw(new WalletCancelWithdrawRequest(
                 approval.getMerchantId(), approval.getUserId(),
                 approval.getWithdrawNo(), approval.getAmount(), reason));
@@ -142,10 +141,10 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * 提现到账确认（厂商回调成功）
+     * 提现到账确认（商户回調成功）
      * @param orderNo 钱包订单号
-     * @param thirdPartyOrderNo 厂商订单号
-     * @param responsePayload 厂商响应报文
+     * @param thirdPartyOrderNo 第三方订单号
+     * @param responsePayload 第三方响应报文
      */
     @PostMapping("/{orderNo}/withdrawal/success")
     public Result<String> withdrawalSuccess(@PathVariable String orderNo,
@@ -170,9 +169,9 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * 提现失败回调（厂商处理失败，审核通过但提现未到账）
+     * 提现失败回调（商户处理失败，审核通过但提现未到账）
      * @param orderNo 钱包订单号
-     * @param responsePayload 厂商响应报文
+     * @param responsePayload 第三方响应报文
      * @param reason 失败原因
      */
     @PostMapping("/{orderNo}/withdrawal/fail")
@@ -189,21 +188,20 @@ public class WalletWithdrawApprovalController {
         if (order == null) {
             return Result.error("钱包订单不存在");
         }
-        final String failReason = StringUtils.hasText(reason) ? reason : "厂商处理失败";
+        final String failReason = StringUtils.hasText(reason) ? reason : "商户处理失败";
         walletOrderService.markFailed(orderNo, responsePayload, failReason);
         return Result.success("提现失败已记录");
     }
 
     /**
-     * denyifnecessary
+     * 权限校验
      *
      * @param request 请求
-     * @return denyIfNecessary的结果
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         if (!principalResolver.isAdmin(userResume)) {
             return Result.error(403, "仅超管和管理员可访问");
@@ -212,10 +210,10 @@ public class WalletWithdrawApprovalController {
     }
 
     /**
-     * 解析操作符
+     * 解析操作人
      *
      * @param request 请求
-     * @return resolve操作符的结果
+     * @return resolve操作者标识的结果
      */
     private String resolveOperator(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
@@ -225,4 +223,3 @@ public class WalletWithdrawApprovalController {
         return String.valueOf(userResume.getUserId());
     }
 }
-

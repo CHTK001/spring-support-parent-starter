@@ -422,3 +422,4 @@ CREATE TABLE IF NOT EXISTS `pay_partition_config` (
   `pay_partition_config_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   UNIQUE KEY `uk_pay_partition_config_business_type` (`pay_partition_config_business_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单与流水分表配置表';
+

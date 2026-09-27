@@ -188,7 +188,12 @@ public class AuthClientConfiguration
         OauthClientRuntimeContext.setAuthClientProperties(authClientProperties);
  // 使用注入的 认证客户端属性 Bean，确保与 whitelist文件watcher 同一实例
         FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean = new FilterRegistrationBean<>();
-        authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE);
+        // 认证必须跑在其它业务过滤器之前：AuthFilter 会把 username/userId 写进 request，
+        // 下游的策略限流过滤器(PolicyRateLimitFilter, order = LOWEST_PRECEDENCE - 1)依赖它取账号。
+        // 原来这里也是 LOWEST_PRECEDENCE，而过滤器是「order 小的先跑」，
+        // 于是认证排在策略过滤器之后，账号维度限流与账号黑名单拿不到账号、对真实流量全部失效。
+        // 往前挪 10 位给业务过滤器留出后置空间。
+        authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE - 10);
         authFilterFilterRegistrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
         authFilterFilterRegistrationBean.setName("authFilterFilterRegistrationBean");
         authFilterFilterRegistrationBean.setAsyncSupported(true);

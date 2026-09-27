@@ -119,4 +119,10 @@ public class WorkshopAsset {
      */
     @TableField("asset_updated_at")
     private Long updatedAt; // 更新at
+
+    /**
+     * 归属用户标识，由服务端按当前登录用户写入，客户端传值一律忽略
+     */
+    @TableField("asset_user_id")
+    private String userId; // 用户id
 }

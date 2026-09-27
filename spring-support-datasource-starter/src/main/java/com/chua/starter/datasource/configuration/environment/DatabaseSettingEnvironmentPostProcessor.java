@@ -64,13 +64,14 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     private static final String OPS_SOURCE_PREFIX = "ops-config-";
 
     /**
-     * 旧库缺失的配置列：本类早期版本的建表语句未声明这些列，而模块脚本的
-     * {@code CREATE TABLE IF NOT EXISTS} 对已存在的表不生效，需在此补齐到 {@code SysSetting} 实体的形状。
+     * 旧库缺失列对应的固定 DDL 注册表。
+     *
+     * <p>表名与列名均来自本类固定注册项，不接收外部标识符；值定义不属于 DDL 参数绑定范围。</p>
      */
     private static final Map<String, String> SETTING_MISSING_COLUMNS = Map.of(
-            "sys_setting_code", "VARCHAR(255)",
-            "sys_setting_is_sensitive", "INT DEFAULT 0",
-            "sys_setting_validate", "VARCHAR(512)");
+            "sys_setting_code", "ALTER TABLE sys_setting ADD COLUMN sys_setting_code VARCHAR(255)",
+            "sys_setting_is_sensitive", "ALTER TABLE sys_setting ADD COLUMN sys_setting_is_sensitive INT DEFAULT 0",
+            "sys_setting_validate", "ALTER TABLE sys_setting ADD COLUMN sys_setting_validate VARCHAR(512)");
 
     /**
      * 默认_群体
@@ -239,7 +240,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
      */
     private void ensureSettingTable(Connection connection) throws SQLException {
         if (tableExists(connection, SETTING_TABLE)) {
-            addMissingColumns(connection, SETTING_TABLE, SETTING_MISSING_COLUMNS);
+            addMissingSettingColumns(connection);
             return;
         }
         try (Statement statement = connection.createStatement()) {
@@ -249,23 +250,22 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     }
 
     /**
-     * 补齐表中缺失的列（逐列容错，单列失败不阻断启动）
+     * 补齐配置表中缺失的固定注册列，单列失败不阻断启动。
      *
-     * @param connection connection
-     * @param tableName table名称
-     * @param columns 列名 → 列定义片段
+     * @param connection 数据库连接
+     * @throws SQLException 读取表结构失败时抛出
      */
-    private void addMissingColumns(Connection connection, String tableName, Map<String, String> columns) throws SQLException {
-        List<String> existing = columnNames(connection, tableName);
-        for (Map.Entry<String, String> entry : columns.entrySet()) {
+    private void addMissingSettingColumns(Connection connection) throws SQLException {
+        List<String> existing = columnNames(connection, SETTING_TABLE);
+        for (Map.Entry<String, String> entry : SETTING_MISSING_COLUMNS.entrySet()) {
             if (existing.contains(entry.getKey())) {
                 continue;
             }
             try (Statement statement = connection.createStatement()) {
-                statement.execute("ALTER TABLE " + tableName + " ADD COLUMN " + entry.getKey() + " " + entry.getValue());
-                log.info("[数据库配置]已补齐表 {} 缺失列 {}", tableName, entry.getKey());
+                statement.execute(entry.getValue());
+                log.info("[数据库配置]已补齐表 {} 缺失列 {}", SETTING_TABLE, entry.getKey());
             } catch (SQLException e) {
-                log.warn("[数据库配置]补齐表 {} 缺失列 {} 失败: {}", tableName, entry.getKey(), e.getMessage());
+                log.warn("[数据库配置]补齐表 {} 缺失列 {} 失败: {}", SETTING_TABLE, entry.getKey(), e.getMessage());
             }
         }
     }

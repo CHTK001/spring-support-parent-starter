@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.toolmetrics;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.reflection.ReflectUtils;
+import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -19,9 +20,12 @@ import java.util.Map;
  * <p>在运行中的 Servlet 容器上动态添加/移除 Connector，
  * 使 /v2/** 端点同时监听主端口与独立 AI 端口。</p>
  *
+ * <p>端口增删影响整台主机的监听面，整个控制器仅管理员可用。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
+@Permission("admin")
 @Slf4j
 @RestController
 @RequestMapping("/v2/ai/gateway")

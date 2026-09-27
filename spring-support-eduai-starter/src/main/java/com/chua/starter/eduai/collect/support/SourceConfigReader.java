@@ -35,4 +35,28 @@ public final class SourceConfigReader {
             return null;
         }
     }
+
+    /**
+     * 读取配置中的对象/数组字段，返回其 JSON 文本（标量返回原文）。
+     * <p>注意：Jackson 的 {@code asText()} 对对象/数组返回空串，嵌套配置必须用本方法。</p>
+     *
+     * @param json 配置 JSON
+     * @param key  字段名
+     * @return JSON 文本（缺失时 null）
+     */
+    public static String json(String json, String key) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode root = MAPPER.readTree(json);
+            JsonNode value = root.get(key);
+            if (value == null || value.isNull()) {
+                return null;
+            }
+            return value.isObject() || value.isArray() ? value.toString() : value.asText();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

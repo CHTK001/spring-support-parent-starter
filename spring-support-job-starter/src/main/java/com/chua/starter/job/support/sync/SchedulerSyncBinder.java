@@ -10,8 +10,11 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
@@ -59,6 +62,16 @@ public class SchedulerSyncBinder {
     private final String nodeId;
 
     /**
+     * 执行器上报的处理器清单（用于校正"未注册"判定）
+     */
+    private final RemoteHandlerRegistry remoteHandlerRegistry;
+
+    /**
+     * 脚本正文同步服务（执行器上线后全量推送，覆盖执行器重启丢缓存场景）
+     */
+    private final ObjectProvider<GlueSyncService> glueSyncServiceProvider;
+
+    /**
      * CMD 转发器 (持有, 用于注销)
      */
     private BiConsumer<String, Object> cmdForwarder;
@@ -74,6 +87,16 @@ public class SchedulerSyncBinder {
     private final AtomicLong stickyCounter = new AtomicLong(0L);
 
     /**
+     * 无执行器丢单记录的节流表: 任务键 → 上次记录时刻（毫秒），避免执行器长时间离线刷爆日志表
+     */
+    private final Map<String, Long> missedDispatchLoggedAt = new ConcurrentHashMap<>();
+
+    /**
+     * 同一任务丢单记录的节流窗口（毫秒）
+     */
+    private static final long MISSED_LOG_THROTTLE_MS = 60_000L;
+
+    /**
      * 启动绑定。
      */
     @PostConstruct
@@ -84,10 +107,11 @@ public class SchedulerSyncBinder {
                 List<String> clients = syncServer.getConnectedClients();
                 log.info("[job] getConnectedClients()={} size={}", clients, clients == null ? 0 : clients.size());
                 if (clients == null || clients.isEmpty()) {
- // 0 在线 执行器: 退化为 broadcast (历史行为, 等待下次 tick)
+ // 0 在线执行器: 广播兜底（可能有未及时上报的客户端），并把丢单落到日志表，避免静默丢失
                     syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
-                    log.info("[job] cmd 已发 (broadcast fallback) topic={} payload={}",
+                    log.warn("[job] 无在线执行器, cmd 可能被丢弃 topic={} payload={}",
                             JobSyncTopics.TASK_COMMAND, payload);
+                    recordMissedDispatch(payload);
                     return;
                 }
                 if (clients.size() == 1) {
@@ -146,7 +170,26 @@ public class SchedulerSyncBinder {
                     logHandler.handle(topic, message);
                 } else if (JobSyncTopics.REGISTER.equals(topic)) {
                     log.info("[job] executor 上线 clientId={} payload={}", clientId, message);
+                    remoteHandlerRegistry.register(clientId,
+                            JobSyncTopics.parseRegister(message == null ? null : String.valueOf(message)));
+                    // 执行器刚上线/重连：异步全量推送脚本正文（读取台账 + 广播，放虚拟线程避免阻塞同步读线程）
+                    GlueSyncService glueSyncService = glueSyncServiceProvider.getIfAvailable();
+                    if (glueSyncService != null) {
+                        Thread.ofVirtual().name("job-glue-push-" + clientId)
+                                .start(glueSyncService::pushAll);
+                    }
+                } else if (JobSyncTopics.HANDLERS.equals(topic)) {
+                    java.util.List<String> names =
+                            JobSyncTopics.parseHandlers(message == null ? null : String.valueOf(message));
+                    log.info("[job] executor 处理器清单更新 clientId={} count={}", clientId, names.size());
+                    remoteHandlerRegistry.updateHandlers(clientId, names);
                 }
+            }
+
+            @Override
+            public void onClientDisconnected(String clientId) {
+                log.info("[job] executor 下线 clientId={}", clientId);
+                remoteHandlerRegistry.remove(clientId);
             }
         });
 
@@ -161,6 +204,29 @@ public class SchedulerSyncBinder {
             }
         }
         log.info("[job] SCHEDULER 同步绑定器已启动 nodeId={}", nodeId);
+    }
+
+    /**
+     * 无执行器时的丢单记录（按任务节流）。
+     *
+     * <p>执行器长时间离线时，每一拍都写日志会刷爆日志表，因此同一任务 60s 内只记一条
+     * SKIPPED，理由写明"无在线执行器"——作业没跑是事实，不该从日志里消失。</p>
+     *
+     * @param payload 派发负载
+     */
+    private void recordMissedDispatch(Object payload) {
+        String raw = payload == null ? "" : String.valueOf(payload);
+        String jobName = JobSyncTopics.commandJobName(raw);
+        long nowMs = System.currentTimeMillis();
+        Long last = missedDispatchLoggedAt.put(jobName, nowMs);
+        if (last != null && nowMs - last < MISSED_LOG_THROTTLE_MS) {
+            return;
+        }
+        try {
+            logSink.write(JobLogEvent.skipped(jobName, "无在线执行器，命令未派发", nodeId));
+        } catch (Throwable ex) {
+            log.warn("[job] 丢单记录写入失败 job={} cause={}", jobName, ex.getMessage());
+        }
     }
 
     /**

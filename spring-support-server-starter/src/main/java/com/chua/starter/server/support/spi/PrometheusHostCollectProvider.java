@@ -13,7 +13,6 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * Prometheus 拉取采集 提供者（Prometheus）
@@ -88,7 +87,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     @Override
     public Mono<CollectOutcome> collect(HostCollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
-                .subscribeOn(Schedulers.boundedElastic());
+                .subscribeOn(VirtualThreadSchedulers.virtual());
     }
 
     /**

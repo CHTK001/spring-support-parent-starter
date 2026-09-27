@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 知识点实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_knowledge_point")
-public class EduKnowledgePoint {
+public class EduKnowledgePoint extends SysBase {
 
     /**
      * 知识点标识
@@ -63,6 +65,36 @@ public class EduKnowledgePoint {
     private String knowledgePointDescription;
 
     /**
+     * 内容类型: TEXT/FILE
+     */
+    private String knowledgePointContentType;
+
+    /**
+     * 文本内容（TEXT 类型时使用）
+     */
+    private String knowledgePointContent;
+
+    /**
+     * 附件原始文件名
+     */
+    private String knowledgePointFileName;
+
+    /**
+     * 附件存储相对路径
+     */
+    private String knowledgePointFilePath;
+
+    /**
+     * 附件扩展名: png/jpg/pdf/docx 等
+     */
+    private String knowledgePointFileType;
+
+    /**
+     * 附件字节数
+     */
+    private Long knowledgePointFileSize;
+
+    /**
      * 向量嵌入JSON
      */
     private String knowledgePointEmbedding;
@@ -76,26 +108,6 @@ public class EduKnowledgePoint {
      * 状态
      */
     private Integer knowledgePointStatus;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime knowledgePointCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime knowledgePointUpdateTime;
-
-    /**
-     * 创建人
-     */
-    private String knowledgePointCreateBy;
-
-    /**
-     * 更新人
-     */
-    private String knowledgePointUpdateBy;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

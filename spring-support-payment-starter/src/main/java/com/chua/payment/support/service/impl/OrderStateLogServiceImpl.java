@@ -24,8 +24,8 @@ import java.util.List;
 public class OrderStateLogServiceImpl implements OrderStateLogService {
 
     /**
-     * 排序状态日志映射器
-    */
+     * 订单状态日志映射器
+     */
     private final OrderStateLogMapper orderStateLogMapper;
 
     /**
@@ -37,9 +37,7 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     public void log(OrderStateLogRequest request) {
         if (request == null) {
             /**
-             * IllegalArgumentException。
-             * @param "订单状态日志参数不能为空" "订单状态日志参数不能为空"
-             * @return IllegalArgumentException的结果
+             * 参数缺失时直接抛出 IllegalArgumentException
              */
             throw new IllegalArgumentException("订单状态日志参数不能为空");
         }
@@ -51,18 +49,17 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
         stateLog.setOperator(request.operator());
         stateLog.setRemark(request.remark());
         orderStateLogMapper.insert(stateLog);
-        log.info("订单状态流转日志记录成功: orderId={}, {} -> {}, event={}",
+        log.info("订单状态流转日志记录成功 orderId={}, {} -> {}, event={}",
                 request.orderId(), request.fromState(), request.toState(), request.event());
     }
 
     @Override
     /**
-     * 列表by订单标识
-    */
+     * 按订单标识查询状态流转日志
+     */
     public List<OrderStateLog> listByOrderId(Long orderId) {
         return orderStateLogMapper.selectList(new LambdaQueryWrapper<OrderStateLog>()
                 .eq(OrderStateLog::getOrderId, orderId)
                 .orderByAsc(OrderStateLog::getCreatedAt));
     }
 }
-

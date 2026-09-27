@@ -251,18 +251,18 @@ public class TableDeptRegister implements DeptRegister {
     }
 
     /**
-     * 是否拥有manageddept铅scope
+     * 是否拥有managedDeptLeadScope
      *
-     * @return 是否包含manageddept铅scope的结果
+     * @return 是否包含managedDeptLeadScope的结果
      */
     private boolean hasManagedDeptLeaderScope() {
         return currentUser.hasRole(DEPT_LEADER) && !resolveManagedDeptTreeIds().isEmpty();
     }
 
     /**
-     * 创建manageddept铅expression
+     * 创建managedDeptLeadExpression
      *
-     * @return 创建manageddept铅expression的结果
+     * @return 创建managedDeptLeadExpression的结果
      */
     private Expression createManagedDeptLeaderExpression() {
         EqualsTo selfCondition = new EqualsTo();
@@ -474,9 +474,9 @@ public class TableDeptRegister implements DeptRegister {
     }
 
     /**
-     * 解析manageddept树标识
+     * 解析managedDept树标识
      *
-     * @return resolvemanageddept树标识的结果
+     * @return resolveManagedDept树标识的结果
      */
     private List<String> resolveManagedDeptTreeIds() {
         Map<String, Object> ext = currentUser.getExt();
@@ -515,10 +515,10 @@ public class TableDeptRegister implements DeptRegister {
     }
 
     /**
-     * normalizemanageddept树标识
+     * normalizeManagedDept树标识
      *
      * @param value 值
-     * @return normalizemanageddept树id的结果
+     * @return normalizeManagedDept树id的结果
      */
     private String normalizeManagedDeptTreeId(Object value) {
         if (null == value) {

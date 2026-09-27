@@ -27,21 +27,21 @@ import java.util.List;
 public class PaymentOrderTimeoutTask implements PaymentManagedTask {
 
     /**
-     * 排序映射器
-    */
+     * 订单映射器
+     */
     private final PaymentOrderMapper orderMapper;
     /**
-     * 配置映射器
-    */
+     * 商户支付配置映射器
+     */
     private final MerchantPaymentConfigMapper configMapper;
     /**
-     * Payment排序服务
-    */
+     * 支付订单服务
+     */
     private final PaymentOrderService paymentOrderService;
 
     /**
-     * cancel超时订单
-    */
+     * 取消超时订单
+     */
     public void cancelTimeoutOrders() {
         log.info("开始执行订单超时处理任务");
 
@@ -59,7 +59,7 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
                     int cancelled = cancelMerchantTimeoutOrders(config);
                     totalCancelled += cancelled;
                 } catch (Exception e) {
-                    log.error("处理商户超时订单失败, merchantId={}", config.getMerchantId(), e);
+                    log.error("处理商户超时订单失败 merchantId={}", config.getMerchantId(), e);
                 }
             }
 
@@ -70,10 +70,10 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     }
 
     /**
-     * cancelmerchant超时订单
+     * 取消指定商户的超时订单
      *
-     * @param config 配置
-     * @return cancelmerchant超时订单的结果
+     * @param config 商户支付配置
+     * @return 取消的订单数量
      */
     private int cancelMerchantTimeoutOrders(MerchantPaymentConfig config) {
         LocalDateTime expireTime = LocalDateTime.now().minusMinutes(config.getOrderTimeoutMinutes());
@@ -101,8 +101,8 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
 
     @Override
     /**
-     * 任务Key
-    */
+     * 任务标识
+     */
     public String taskKey() {
         return "payment-order-timeout-scan";
     }
@@ -110,23 +110,23 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     @Override
     /**
      * 任务名称
-    */
+     */
     public String taskName() {
         return "订单超时扫描";
     }
 
     @Override
     /**
-     * 默认cron
-    */
+     * 默认 cron 表达式
+     */
     public String defaultCron() {
         return "0 */10 * * * ?";
     }
 
     @Override
     /**
-     * Description
-    */
+     * 任务说明
+     */
     public String description() {
         return "按商户支付配置扫描超时订单并执行自动取消。";
     }
@@ -138,13 +138,10 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
             desc = "按商户支付配置扫描超时订单并执行自动取消。"
     )
     /**
-     * 执行
-    */
+     * 执行超时订单取消任务
+     */
     public void execute() {
-        /**
-         * cancel超时订单。
-         */
         cancelTimeoutOrders();
     }
-}
 
+}

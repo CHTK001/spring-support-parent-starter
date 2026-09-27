@@ -12,22 +12,22 @@ import lombok.Data;
 public class WechatConfigDTO {
     /**
      * APPID
-    */
+     */
     private String appId;
     /**
      * MCHID
-    */
+     */
     private String mchId;
     /**
      * API密钥
-    */
+     */
     private String apiKey;
     /**
      * 证书路径
-    */
+     */
     private String certPath;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
 }

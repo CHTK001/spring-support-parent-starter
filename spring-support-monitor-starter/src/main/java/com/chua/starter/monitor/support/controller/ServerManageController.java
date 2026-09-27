@@ -1,9 +1,11 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
+import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
 import com.chua.starter.monitor.support.service.ServerManageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -182,7 +184,7 @@ public class ServerManageController {
      */
     @Operation(summary = "查询支持的协议类型", description = "http / http-proxy / tcp-proxy / sip 元数据")
     @GetMapping("/protocols")
-    public ReturnResult<List<Map<String, Object>>> protocols() {
+    public ReturnResult<List<ServerProtocolMetaVO>> protocols() {
         return serverManageService.protocols();
     }
 
@@ -193,7 +195,7 @@ public class ServerManageController {
      */
     @Operation(summary = "查询支持的 ServerFilter 插件类型", description = "file-storage 预设与 FQCN 通用插件说明")
     @GetMapping("/filters")
-    public ReturnResult<List<Map<String, Object>>> filterTypes() {
+    public ReturnResult<List<ServerFilterTypeMetaVO>> filterTypes() {
         return serverManageService.filterTypes();
     }
 

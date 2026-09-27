@@ -70,4 +70,24 @@ public class BotBindingCreateRequest {
      * 是否记录 AI 用量（令牌/费用），机器人 专属开关，默认开启
      */
     private Boolean recordUsage;
+
+    /**
+     * 是否仅回复 @ 了 Bot 的消息（群聊场景）
+     */
+    private Boolean mentionOnly;
+
+    /**
+     * 是否启用随机回复
+     */
+    private Boolean randomReplyEnabled;
+
+    /**
+     * 随机回复携带的上下文条数
+     */
+    private Integer randomContextCount;
+
+    /**
+     * 随机回复命中概率百分比 [0, 100]
+     */
+    private Double randomProbability;
 }

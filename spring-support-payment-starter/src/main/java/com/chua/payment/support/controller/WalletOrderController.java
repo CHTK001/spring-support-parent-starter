@@ -35,20 +35,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class WalletOrderController {
 
     /**
-     * Wallet排序服务
-    */
+     * 钱包订单服务
+     */
     private final WalletOrderService walletOrderService;
     /**
-     * paymentcallbackurl解析器
-    */
+     * 支付回调地址解析器
+     */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     @PostMapping("/recharge")
     /**
-     * 创建Recharge
+     * 创建充值
      *
      * @param dto dto
-     * @return 创建recharge的结果
+     * @return 创建充值的结果
      */
     public Result<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
         RechargeRequest request = new RechargeRequest();
@@ -58,10 +58,10 @@ public class WalletOrderController {
 
     @PostMapping("/transfer")
     /**
-     * 创建调动
+     * 创建转账
      *
      * @param dto dto
-     * @return 创建调动的结果
+     * @return 创建转账的结果
      */
     public Result<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
         TransferRequest request = new TransferRequest();
@@ -71,10 +71,10 @@ public class WalletOrderController {
 
     @PostMapping("/withdraw")
     /**
-     * 创建Withdraw
+     * 创建提现
      *
      * @param dto dto
-     * @return 创建withdraw的结果
+     * @return 创建提现的结果
      */
     public Result<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
         WithdrawRequest request = new WithdrawRequest();
@@ -84,10 +84,10 @@ public class WalletOrderController {
 
     @GetMapping("/{orderNo}")
     /**
-     * 获取by订单no
+     * 按订单号获取
      *
-     * @param orderNo 订单no
-     * @return 获取by订单no的结果
+     * @param orderNo 订单号
+     * @return 按订单号获取的结果
      */
     public Result<WalletOrderVO> getByOrderNo(@PathVariable String orderNo) {
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
@@ -96,10 +96,8 @@ public class WalletOrderController {
 
     @GetMapping("/page")
     /**
-     * Page
+     * 分页查询
      *
-     * @param "1" "1"
-     * @return page的结果
      */
     public Result<PageResult<WalletOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
@@ -126,4 +124,3 @@ public class WalletOrderController {
         return vo;
     }
 }
-

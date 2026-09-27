@@ -24,32 +24,31 @@ import java.util.List;
 public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
     /**
-     * Payment任务调度器管理器
-    */
+     * 支付任务调度器管理器
+     */
     private final PaymentTaskSchedulerManager paymentTaskSchedulerManager;
 
     @Override
     /**
-     * 列表任务
-    */
+     * 列出全部调度任务
+     */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentTaskSchedulerManager.listTasks();
     }
 
     @Override
     /**
-     * 更新任务
-    */
+     * 更新任务配置
+     */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         return paymentTaskSchedulerManager.updateTask(taskKey, dto);
     }
 
     @Override
     /**
-     * trigger任务
-    */
+     * 手动触发任务
+     */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         return paymentTaskSchedulerManager.triggerTask(taskKey);
     }
 }
-

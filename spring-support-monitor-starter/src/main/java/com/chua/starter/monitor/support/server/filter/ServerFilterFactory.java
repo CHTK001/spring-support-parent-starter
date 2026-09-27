@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.server.filter;
 
 import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.filter.ServerFilter;
+import com.chua.common.support.network.server.filter.discovery.ServiceDiscoveryServerFilter;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 服务管理 —— 服务端过滤器 插件工厂。
@@ -25,6 +27,9 @@ import java.util.Map;
  *       {@code FileStorageServerFilter}（classpath 存在该模块时可用），
  * 参数 映射到 {@code FileStorageSetting}，并自动发现 Spring 容器中的
  *       {@code FileStorage} Bean 注册为存储桶，使 HTTP 服务器变成文件服务器</li>
+ *   <li><b>service-discovery 预设</b>：以 {@code (String discoveryName)} 构造框架的
+ *       {@code ServiceDiscoveryServerFilter}（该类未注册为 ServerFilter SPI，通用路径不可用），
+ *       protocol/balance/scatterId/excludeServerId/routes 经 setter 落位</li>
  *   <li><b>通用插件</b>：type 视为 ServerFilter 全限定类名，反射实例化
  * （优先无参构造，其次 (服务端setting) 构造），参数 经
  *       {@code init(ServerFilterConfig)} 注入</li>
@@ -41,6 +46,23 @@ public class ServerFilterFactory {
      * 文件服务器预设别名
      */
     public static final String FILE_STORAGE_ALIAS = "file-storage";
+    /**
+     * 服务发现预设别名（框架 ServiceDiscoveryServerFilter 未注册为 ServerFilter SPI，按别名装配）
+     */
+    public static final String SERVICE_DISCOVERY_ALIAS = "service-discovery";
+    /**
+     * 服务发现服务端过滤器 全限定类名（utils-support-common-starter）
+     */
+    public static final String SERVICE_DISCOVERY_FILTER_CLASS =
+            "com.chua.common.support.network.server.filter.discovery.ServiceDiscoveryServerFilter";
+    /**
+     * 服务发现实现缺省使用的 ServiceDiscovery SPI 名
+     */
+    private static final String DEFAULT_DISCOVERY_NAME = "peerMesh";
+    /**
+     * 发现实现名的可接受键：平台约定 {@code discoveryName} 与框架 init 原生读取的 {@code discovery.name}
+     */
+    private static final Set<String> DISCOVERY_NAME_KEYS = Set.of("discoveryName", "discovery.name");
     /**
      * 文件storage服务端过滤器 全限定类名（spring-支持-filesystem-启动）
      */
@@ -130,6 +152,9 @@ public class ServerFilterFactory {
         if (FILE_STORAGE_ALIAS.equalsIgnoreCase(type) || FILE_STORAGE_FILTER_CLASS.equals(type)) {
             return createFileStorageFilter(descriptor);
         }
+        if (SERVICE_DISCOVERY_ALIAS.equalsIgnoreCase(type) || SERVICE_DISCOVERY_FILTER_CLASS.equals(type)) {
+            return createServiceDiscoveryFilter(descriptor);
+        }
         // 非全限定类名(不含点)时, 先尝试按 SPI 名称实例化, 失败回退 FQCN
         if (type.indexOf('.') == -1) {
             ServerFilter spiFilter = createSpiFilter(type, descriptor, setting);
@@ -146,7 +171,7 @@ public class ServerFilterFactory {
      * <p>优先尝试无参构造（插件自行在 {@code init} 阶段接收参数），
      * 失败再尝试 {@code (ServerSetting)} 构造。</p>
      *
-     * @param type       SPI 名称(如 url-mapping/shell-url-mapping/service-discovery/reverse-proxy)
+     * @param type       SPI 名称(如 url-mapping/shell-url-mapping), 不含内置预设别名
      * @param descriptor 插件描述
      * @param setting    所属服务器配置
      * @return 过滤器实例, SPI 未注册或实例化失败返回 空
@@ -216,6 +241,80 @@ public class ServerFilterFactory {
         } catch (Exception e) {
             throw new IllegalArgumentException("file-storage 插件实例化失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 创建服务发现过滤器。
+     *
+     * <p>框架的 {@code ServiceDiscoveryServerFilter} 只提供 {@code (String)} / {@code (ServiceDiscovery)}
+     * 构造且未注册为 ServerFilter SPI，通用实例化路径（无参或 (ServerSetting) 构造）拿不到它，
+     * 故与 file-storage 一样按预设别名显式装配。参数经 setter 落位：{@code init} 阶段只会按
+     * {@code discoveryName} 解析并拉起 ServiceDiscovery，不会读取 params。</p>
+     *
+     * @param descriptor 插件描述
+     * @return 过滤器实例
+     */
+    private ServerFilter createServiceDiscoveryFilter(ServerFilterDescriptor descriptor) {
+        Map<String, String> params = descriptor.getParams() == null ? Map.of() : descriptor.getParams();
+        String discoveryName = discoveryNameOf(params);
+        ServiceDiscoveryServerFilter filter = new ServiceDiscoveryServerFilter(discoveryName);
+        int routes = 0;
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue() == null ? "" : entry.getValue().trim();
+            if (value.isEmpty() || DISCOVERY_NAME_KEYS.contains(key)) {
+                continue;
+            }
+            switch (key) {
+                case "protocol" -> filter.setProtocol(value);
+                case "balance" -> filter.setBalance(value);
+                case "scatterId" -> filter.setScatterId(value);
+                case "excludeServerId" -> filter.setExcludeServerId(value);
+                case "routes" -> routes = applyDiscoveryRoutes(filter, value);
+                default -> log.warn("[ServerFilterFactory] service-discovery 忽略未知参数: {}={}", key, value);
+            }
+        }
+        log.info("[ServerFilterFactory] service-discovery 插件已创建: name={}, discoveryName={}, routes={}",
+                descriptor.getName(), discoveryName, routes);
+        return filter;
+    }
+
+    /**
+     * 取发现实现 SPI 名：{@code discoveryName} 为平台约定键，
+     * {@code discovery.name} 为框架 {@code init} 原生读取的键，两者等价。
+     *
+     * @param params 插件参数
+     * @return 发现实现 SPI 名
+     */
+    private String discoveryNameOf(Map<String, String> params) {
+        for (String key : DISCOVERY_NAME_KEYS) {
+            String value = params.get(key);
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return DEFAULT_DISCOVERY_NAME;
+    }
+
+    /**
+     * 解析发现路由参数（{@code /api/order=ORDER-SVC,/api/user=USER-SVC}）并逐条登记。
+     *
+     * @param filter  发现过滤器
+     * @param routes  路由串
+     * @return 登记成功的路由条数
+     */
+    private int applyDiscoveryRoutes(ServiceDiscoveryServerFilter filter, String routes) {
+        int registered = 0;
+        for (String pair : routes.split("[,;\\n]")) {
+            int split = pair.indexOf('=');
+            if (split <= 0 || split == pair.length() - 1) {
+                log.warn("[ServerFilterFactory] service-discovery 忽略非法路由: {}", pair);
+                continue;
+            }
+            filter.addRoute(pair.substring(0, split).trim(), pair.substring(split + 1).trim());
+            registered++;
+        }
+        return registered;
     }
 
     /**

@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
+import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -50,6 +52,19 @@ public class EduQuestionController {
     public ReturnResult<PageResult<EduQuestion>> page(QuestionQueryDTO query) {
         PageResult<EduQuestion> result = questionService.pageQuery(query);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 列出题库中真实存在的学段与年级组合，供前端级联筛选取候选项
+     *
+     * @param status 题目状态，为空时只统计未停用的题目
+     * @return 组合维度列表
+     */
+    @Operation(summary = "学段年级组合维度")
+    @GetMapping("/grade-dimensions")
+    public ReturnResult<List<QuestionGradeDimensionVO>> gradeDimensions(
+            @RequestParam(required = false) Integer status) {
+        return ReturnResult.ok(questionService.listGradeDimensions(status));
     }
 
     /**

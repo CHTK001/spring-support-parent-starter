@@ -18,44 +18,43 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class WalletWithdrawDTO {
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * withdrawno
-    */
+     * 提现单号
+     */
     private String withdrawNo;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
-     * Amount
-    */
+     * 金额
+     */
     private BigDecimal amount;
     /**
-     * Bankaccount
-    */
+     * 银行账号
+     */
     private String bankAccount;
     /**
-     * Bank名称
-    */
+     * 银行名称
+     */
     private String bankName;
     /**
-     * 账户名称
-    */
+     * 账户名
+     */
     private String accountName;
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }
-

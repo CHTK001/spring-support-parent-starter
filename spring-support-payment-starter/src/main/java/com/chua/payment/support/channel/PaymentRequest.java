@@ -14,59 +14,59 @@ import java.time.LocalDateTime;
 @Data
 public class PaymentRequest {
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * Amount
-    */
+     * 支付金额
+     */
     private BigDecimal amount;
     /**
-     * 主题
-    */
+     * 支付主题
+     */
     private String subject;
     /**
      * 请求体
-    */
+     */
     private String body;
     /**
-     * 通知url
-    */
+     * 通知回调 URL
+     */
     private String notifyUrl;
     /**
-     * 返回值URL
-    */
+     * 支付完成后返回 URL
+     */
     private String returnUrl;
     /**
-     * 货币
-    */
+     * 币种
+     */
     private String currency;
     /**
-     * Expire时间
-    */
+     * 过期时间
+     */
     private LocalDateTime expireTime;
     /**
-     * payeropenid
-    */
+     * 付款人 openId
+     */
     private String payerOpenId;
     /**
-     * 客户端IP
-    */
+     * 客户端 IP
+     */
     private String clientIp;
     /**
-     * deviceid
-    */
+     * 设备标识
+     */
     private String deviceId;
     /**
-     * 用户Agent
-    */
+     * 用户 Agent
+     */
     private String userAgent;
     /**
-     * Attach
-    */
+     * 附加数据
+     */
     private String attach;
 }

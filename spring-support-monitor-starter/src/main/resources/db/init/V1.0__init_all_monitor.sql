@@ -7,8 +7,8 @@
 -- 幂等: 建表 IF NOT EXISTS，补列 IF NOT EXISTS，重复执行安全
 -- ============================================================
 
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+-- (H2-incompatible) SET NAMES utf8mb4;
+-- (H2-incompatible) SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------------------------------------
 -- 1. 资产主表(主机视图)
@@ -374,78 +374,96 @@ CREATE TABLE IF NOT EXISTS ms_server_node (
 -- 便于按资产查询监控项
 
 -- MsMonitorAlarmEvent 追加触发时规则配置快照列
-SET FOREIGN_KEY_CHECKS = 1;
+-- (H2-incompatible) SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
--- 初始配置
+-- TShark 抓包建表脚本
+-- 模块: spring-support-monitor-starter
+-- 背景: MsTsharkSession / MsTsharkPacket 两个实体长期无对应 DDL，
+--       抓包结果落库必然报"表不存在"，故单列本脚本并在
+--       spring.sql.init.schema-locations 中追加加载。
+-- 数据库: MySQL 8.x / H2 (MySQL 模式)
+-- 幂等: 建表 IF NOT EXISTS，重复执行安全
 -- ============================================================
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.data.retention.days', '30', '历史数据保留天数'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.data.retention.days');
 
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.aggregate.interval', '1h', '聚合粒度'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.aggregate.interval');
+-- ----------------------------------------------------------
+-- 1. 抓包会话
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ms_tshark_session` (
+    `id`                            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_tshark_session_name`        VARCHAR(128) DEFAULT NULL            COMMENT '会话名称',
+    `ms_tshark_session_interface`   VARCHAR(128) DEFAULT NULL            COMMENT '抓包网卡',
+    `ms_tshark_session_filter`      VARCHAR(512) DEFAULT NULL            COMMENT 'BPF 过滤器',
+    `ms_tshark_session_status`      TINYINT      DEFAULT 0               COMMENT '状态: 0停止 1运行中',
+    `ms_tshark_session_packet_count` INT         DEFAULT 0               COMMENT '已入库数据包数',
+    `ms_tshark_session_file_path`   VARCHAR(512) DEFAULT NULL            COMMENT 'pcap 文件路径',
+    `ms_tshark_session_duration`    INT          DEFAULT NULL            COMMENT '抓包时长(秒)',
+    `ms_tshark_session_start_time`  DATETIME     DEFAULT NULL            COMMENT '开始时间',
+    `ms_tshark_session_end_time`    DATETIME     DEFAULT NULL            COMMENT '结束时间',
+    `create_name`                   VARCHAR(64)  NULL                    COMMENT '创建人姓名',
+    `create_by`                     INT          NULL                    COMMENT '创建人',
+    `create_time`                   DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_name`                   VARCHAR(64)  NULL                    COMMENT '更新人姓名',
+    `update_by`                     INT          NULL                    COMMENT '更新人',
+    `update_time`                   DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_tshark_session_status` (`ms_tshark_session_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TShark 抓包会话';
 
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.collect.interval.ms', '10000', '采集周期(毫秒)'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.collect.interval.ms');
-
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.local.skip.macos', 'true', '本地采集在 macOS 下跳过(oshi 动态库不支持)'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.local.skip.macos');
-
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.prometheus.enabled', 'false', 'Prometheus 采集总开关'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.prometheus.enabled');
-
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.prometheus.url', '', 'Prometheus 服务地址'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.prometheus.url');
-
-INSERT INTO `ms_monitor_config` (`ms_monitor_config_key`, `ms_monitor_config_value`, `ms_monitor_config_desc`)
-SELECT 'monitor.cleanup.cron', '0 0 3 * * ?', '数据清理任务 cron'
-WHERE NOT EXISTS (SELECT 1 FROM `ms_monitor_config` WHERE `ms_monitor_config_key` = 'monitor.cleanup.cron');
+-- ----------------------------------------------------------
+-- 2. 抓包数据包
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
+    `id`                         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_tshark_packet_session_id` BIGINT      NOT NULL                COMMENT '所属会话 ID',
+    `ms_tshark_packet_time`      DATETIME(3)  DEFAULT NULL            COMMENT '报文时间(毫秒精度)',
+    `ms_tshark_packet_source_ip` VARCHAR(64)  DEFAULT NULL            COMMENT '源 IP',
+    `ms_tshark_packet_dest_ip`   VARCHAR(64)  DEFAULT NULL            COMMENT '目的 IP',
+    `ms_tshark_packet_source_port` INT        DEFAULT NULL            COMMENT '源端口',
+    `ms_tshark_packet_dest_port` INT          DEFAULT NULL            COMMENT '目的端口',
+    `ms_tshark_packet_protocol`  VARCHAR(64)  DEFAULT NULL            COMMENT '协议分层',
+    `ms_tshark_packet_length`    INT          DEFAULT NULL            COMMENT '报文长度',
+    `ms_tshark_packet_info`      VARCHAR(1024) DEFAULT NULL           COMMENT '摘要信息',
+    `ms_tshark_packet_raw`       LONGTEXT     DEFAULT NULL            COMMENT '解码后的 JSON 原文',
+    `ms_tshark_packet_restored`  LONGTEXT     DEFAULT NULL            COMMENT '还原出的载荷文本',
+    `create_name`                VARCHAR(64)  NULL                    COMMENT '创建人姓名',
+    `create_by`                  INT          NULL                    COMMENT '创建人',
+    `create_time`                DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_name`                VARCHAR(64)  NULL                    COMMENT '更新人姓名',
+    `update_by`                  INT          NULL                    COMMENT '更新人',
+    `update_time`                DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_tshark_packet_session` (`ms_tshark_packet_session_id`, `id`),
+    KEY `idx_ms_tshark_packet_protocol` (`ms_tshark_packet_protocol`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TShark 抓包数据包';
 
 -- ============================================================
--- 项目守护/指标告警策略与规则种子（由 spring-support-project-starter 喂指标）
+-- Nginx 时序指标
+-- ------------------------------------------------------------
+-- 数据来源：SSH 读目标机 stub_status 的瞬时/累计值。
+-- 粒度：按采集周期（默认 30s）一行，保留窗口由
+--      monitor.data.retention.days 控制（默认 1，即滚动 24 小时）。
+-- 说明：stub_status 的 accepts/handled/requests 是「worker 启动以来」的累计计数，
+--      画趋势必须换算成速率（差值 / 间隔），直接画累计值只会得到单调上升的直线。
+--      本表存原始计数，速率在查询侧按相邻两点差值计算。
 -- ============================================================
-INSERT INTO ms_monitor_alarm_policy (`ms_monitor_alarm_policy_name`, `ms_monitor_alarm_policy_enabled`, `ms_monitor_alarm_policy_remark`)
-SELECT '项目守护与指标', 1, '项目守护失败自动拉起与指标采集相关告警'
-WHERE NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_policy WHERE `ms_monitor_alarm_policy_name` = '项目守护与指标');
+DROP TABLE IF EXISTS `ms_monitor_nginx_metric`;
+CREATE TABLE `ms_monitor_nginx_metric`
+(
+    `id`                             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_monitor_nginx_metric_datasource_id` BIGINT NOT NULL COMMENT 'ms_datasource.id',
+    `ms_monitor_nginx_metric_name`   VARCHAR(64)  NOT NULL COMMENT '指标名: active/accepts/handled/requests/reading/writing/waiting',
+    `ms_monitor_nginx_metric_value`  DOUBLE       NULL COMMENT '指标值（累计类为原始计数）',
+    `ms_monitor_nginx_metric_collect_time` DATETIME NOT NULL COMMENT '采集时刻',
+    PRIMARY KEY (`id`),
+    -- 幂等写入：同一数据源同一指标同一时刻只留一行
+    UNIQUE KEY `ms_monitor_nginx_metric_uk_point` (`ms_monitor_nginx_metric_datasource_id`,
+                                                 `ms_monitor_nginx_metric_name`,
+                                                 `ms_monitor_nginx_metric_collect_time`),
+    -- 趋势查询主路径：按数据源 + 时间范围扫
+    KEY `idx_ms_monitor_nginx_metric_ds_time` (`ms_monitor_nginx_metric_datasource_id`,
+                                              `ms_monitor_nginx_metric_collect_time`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT 'Nginx 时序指标';
 
-INSERT INTO ms_monitor_alarm_rule
-(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
- `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
- `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
-SELECT p.id, 'project.watchdog.fail', 'GT', 1, 1, 10, 'P2', 1
-FROM ms_monitor_alarm_policy p
-WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
-  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.fail');
-
-INSERT INTO ms_monitor_alarm_rule
-(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
- `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
- `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
-SELECT p.id, 'project.watchdog.restart.fail', 'GT', 1, 1, 10, 'P1', 1
-FROM ms_monitor_alarm_policy p
-WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
-  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.watchdog.restart.fail');
-
-INSERT INTO ms_monitor_alarm_rule
-(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
- `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
- `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
-SELECT p.id, 'project.port.alive', 'LE', 0, 2, 10, 'P1', 1
-FROM ms_monitor_alarm_policy p
-WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
-  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.port.alive');
-
-INSERT INTO ms_monitor_alarm_rule
-(`ms_monitor_alarm_rule_policy_id`, `ms_monitor_alarm_rule_metric_name`, `ms_monitor_alarm_rule_condition`,
- `ms_monitor_alarm_rule_threshold`, `ms_monitor_alarm_rule_consecutive_count`, `ms_monitor_alarm_rule_silence_minutes`,
- `ms_monitor_alarm_rule_level`, `ms_monitor_alarm_rule_enabled`)
-SELECT p.id, 'project.collect.fail', 'GT', 0, 3, 30, 'P3', 1
-FROM ms_monitor_alarm_policy p
-WHERE p.`ms_monitor_alarm_policy_name` = '项目守护与指标'
-  AND NOT EXISTS (SELECT 1 FROM ms_monitor_alarm_rule r WHERE r.`ms_monitor_alarm_rule_metric_name` = 'project.collect.fail');

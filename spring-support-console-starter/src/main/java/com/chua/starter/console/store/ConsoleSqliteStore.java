@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 管理控制台 sqlite 持久层（自包含 sqlite-JDBC，单连接同步访问）。
@@ -301,6 +302,53 @@ public class ConsoleSqliteStore implements AutoCloseable {
      * @return GrayOverrideRow的结果
      */
     public record GrayOverrideRow(Integer percentage, String[] roles, String[] users, String[] headers, String rule) {
+
+        /**
+         * 规范构造器：数组做防御性拷贝。
+         *
+         * <p>value class 前置条件——数组组件必须深不可变；
+         * 写入侧 {@code join} 允许传入 {@code null} 数组，但读取侧 {@code split}
+         * 恒返回非 {@code null} 数组（空串返回长度 0 数组），故此处按非空校验。</p>
+         *
+         * @param roles 角色数组
+         * @param users 用户数组
+         * @param headers 请求头数组
+         */
+        public GrayOverrideRow {
+            roles = Objects.requireNonNull(roles, "roles 不能为 null").clone();
+            users = Objects.requireNonNull(users, "users 不能为 null").clone();
+            headers = Objects.requireNonNull(headers, "headers 不能为 null").clone();
+        }
+
+        /**
+         * 访问器覆写：返回内部数组的副本。
+         *
+         * @return 角色数组副本
+         */
+        @Override
+        public String[] roles() {
+            return roles.clone();
+        }
+
+        /**
+         * 访问器覆写：返回内部数组的副本。
+         *
+         * @return 用户数组副本
+         */
+        @Override
+        public String[] users() {
+            return users.clone();
+        }
+
+        /**
+         * 访问器覆写：返回内部数组的副本。
+         *
+         * @return 请求头数组副本
+         */
+        @Override
+        public String[] headers() {
+            return headers.clone();
+        }
     }
 
     // ==================== 通用键值 ====================

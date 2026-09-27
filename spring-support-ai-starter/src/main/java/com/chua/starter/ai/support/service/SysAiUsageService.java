@@ -31,6 +31,13 @@ public interface SysAiUsageService {
                 AiUsage usage, String requestId, String userId);
 
     /**
+     * 记录一次调用用量（带来源标记）
+     * @param source 用量来源: service/third_party/self
+     */
+    void record(String groupName, String provider, String model, String callType,
+                AiUsage usage, String requestId, String userId, String source);
+
+    /**
      * 查询用量列表
      *
      * @param groupName 分组
@@ -38,12 +45,13 @@ public interface SysAiUsageService {
      * @param model 模型
      * @param startTime 开始时间
      * @param endTime 结束时间
+     * @param userId 归属用户（可为空，为空时列出全部用户明细）
      * @param page 页码
      * @param size 每页大小
      * @return 用量列表
      */
     Page<SysAiUsage> list(String groupName, String provider, String model,
-                          LocalDateTime startTime, LocalDateTime endTime, int page, int size);
+                          LocalDateTime startTime, LocalDateTime endTime, String userId, int page, int size);
 
     /**
      * 查询总用量统计
@@ -53,25 +61,38 @@ public interface SysAiUsageService {
      * @param model 模型
      * @param startTime 开始时间
      * @param endTime 结束时间
+     * @param userId 归属用户（可为空，为空时统计全部用户）
      * @return 统计结果
      */
     UsageStatistics getStatistics(String groupName, String provider, String model,
-                                  LocalDateTime startTime, LocalDateTime endTime);
+                                  LocalDateTime startTime, LocalDateTime endTime, String userId);
 
     /**
      * 查询按天趋势（令牌 使用趋势）。
      *
-     * <p>直接聚合日汇总表 {@code sys_ai_usage_daily}，按统计日期返回每天输入/输出/缓存 Token
-     * 合计，保证时间窗口内每天都有数据点（不受明细分页/条数限制）。</p>
+     * <p>统计全部用户时直接读日汇总表 {@code sys_ai_usage_daily}；日汇总表不带用户维度，
+     * 因此指定 {@code userId} 时改为对明细表按天聚合，保证普通用户只看得到自己的趋势。</p>
      *
      * @param provider 服务商（可为空）
      * @param model    模型（可为空）
      * @param startTime 开始时间（可为空）
      * @param endTime   结束时间（可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
      * @return 按天排序的趋势点列表（statDate 升序）
      */
     List<SysAiUsageDaily> getDailyTrend(String provider, String model,
-                                        LocalDateTime startTime, LocalDateTime endTime);
+                                        LocalDateTime startTime, LocalDateTime endTime, String userId);
+
+    /**
+     * 单日按小时聚合的趋势（趋势图今天/同一天时用）。
+     *
+     * @param startTime 开始时间
+     * @param endTime   结束时间
+     * @param userId    归属用户（可为空）
+     * @return 按小时升序的趋势点
+     */
+    List<com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO> getHourlyTrend(
+            LocalDateTime startTime, LocalDateTime endTime, String userId);
 
     /**
      * 用量统计摘要

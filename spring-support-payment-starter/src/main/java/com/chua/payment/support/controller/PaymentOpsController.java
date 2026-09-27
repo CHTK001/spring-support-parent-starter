@@ -35,8 +35,9 @@ import java.util.List;
 
 /**
  * 支付运营能力控制器。
- * 直接返回原始业务对象，由通用响应包装层统一输出 申报结果，
- * 避免这里再返回支付模块自己的 结果 造成双协议并存。
+ * 直接返回原始业务对象，由通用响应包装层统一输出报表结果。
+ * 避免这里再返回支付模块自己的 Result，造成双协议并存。
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -46,33 +47,33 @@ import java.util.List;
 public class PaymentOpsController {
 
     /**
-     * Payment调度器任务OPS服务
-    */
+     * 支付调度任务ops服务
+     */
     private final PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService;
     /**
-     * Paymentdashboard服务
-    */
+     * 支付概览服务
+     */
     private final PaymentDashboardService paymentDashboardService;
     /**
-     * Paymentnotify日志映射器
-    */
+     * 支付通知日志映射
+     */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
     /**
-     * Paymentnotify错误映射器
-    */
+     * 支付通知错误映射
+     */
     private final PaymentNotifyErrorMapper paymentNotifyErrorMapper;
     /**
-     * Paymentnotifyprocess服务
-    */
+     * 支付通知处理服务
+     */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
 
     /**
-     * 创建 薪酬ops控制器 实例
-     * @param paymentSchedulerTaskOpsService 薪酬调度器任务ops服务
-     * @param paymentDashboardService 薪酬dashboard服务
-     * @param paymentNotifyLogMapper 薪酬通知日志映射器
-     * @param paymentNotifyErrorMapper 薪酬通知错误映射器
-     * @param paymentNotifyProcessService 薪酬通知处理服务
+     * 构造支付ops控制器实例
+     * @param paymentSchedulerTaskOpsService 支付调度任务ops服务
+     * @param paymentDashboardService 支付概览服务
+     * @param paymentNotifyLogMapper 支付通知日志映射
+     * @param paymentNotifyErrorMapper 支付通知错误映射
+     * @param paymentNotifyProcessService 支付通知处理服务
      */
     public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
                                 PaymentDashboardService paymentDashboardService,
@@ -88,10 +89,10 @@ public class PaymentOpsController {
 
     @GetMapping("/dashboard/summary")
     /**
-     * dashboardsummary
+     * 查询支付概览汇总
      *
-     * @param false false
-     * @return dashboardSummary的结果
+     * @param startDate 开始日期
+     * @param endDate 结束日期
      */
     public PaymentDashboardSummaryVO dashboardSummary(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
                                                       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
@@ -100,9 +101,8 @@ public class PaymentOpsController {
 
     @GetMapping("/overview")
     /**
-     * Overview
+     * 支付运营总览
      *
-     * @return overview的结果
      */
     public PaymentOpsOverviewVO overview() {
         PaymentOpsOverviewVO overview = new PaymentOpsOverviewVO();
@@ -113,9 +113,9 @@ public class PaymentOpsController {
 
     @GetMapping("/scheduler/tasks")
     /**
-     * 列表任务
+     * 列出任务
      *
-     * @return 列表任务的结果
+     * @return 列出任务的结果
      */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentSchedulerTaskOpsService.listTasks();
@@ -134,10 +134,10 @@ public class PaymentOpsController {
 
     @PostMapping("/scheduler/tasks/{taskKey}/trigger")
     /**
-     * trigger任务
+     * 触发任务
      *
      * @param taskKey 任务Key
-     * @return trigger任务的结果
+     * @return 触发任务的结果
      */
     public PaymentSchedulerTaskVO triggerTask(@PathVariable String taskKey) {
         return paymentSchedulerTaskOpsService.triggerTask(taskKey);
@@ -145,10 +145,9 @@ public class PaymentOpsController {
 
     @GetMapping("/notify/log/page")
     /**
-     * Page通知日志
+     * 分页查询通知日志
      *
-     * @param "1" "1"
-     * @return page通知日志的结果
+     * @return 分页查询通知日志的结果
      */
     public PageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                        @RequestParam(defaultValue = "10") int pageSize,
@@ -178,10 +177,9 @@ public class PaymentOpsController {
 
     @GetMapping("/notify/error/page")
     /**
-     * Page通知错误
+     * 分页查询通知错误
      *
-     * @param "1" "1"
-     * @return page通知错误的结果
+     * @return 分页查询通知错误的结果
      */
     public PageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
                                                            @RequestParam(defaultValue = "10") int pageSize,
@@ -214,7 +212,7 @@ public class PaymentOpsController {
      * 重试通知记录错误
      *
      * @param id 标识
-     * @return 重试通知错误的结果
+     * @return 重试通知记录错误的结果
      */
     public Boolean retryNotifyError(@PathVariable Long id) {
         paymentNotifyProcessService.retryFailedNotify(id);
@@ -222,9 +220,9 @@ public class PaymentOpsController {
     }
 
     /**
-     * callback审计
+     * 回调审计
      *
-     * @return callback审计的结果
+     * @return 回调审计的结果
      */
     private List<PaymentCallbackAuditVO> callbackAudits() {
         return List.of(
@@ -235,7 +233,7 @@ public class PaymentOpsController {
                         "orderNo",
                         false,
                         "request.notifyUrl > channel.notifyUrl > merchant.defaultNotifyUrl > paymentGlobal scoped default",
-                        "默认会按 orderNo + merchantId 生成 scoped 回调，请求、渠道、商户级 notifyUrl 仍可覆盖；控制器保留旧 /{channelId}/{orderNo} 兼容路由。"),
+                        "默认会按 orderNo + merchantId 生成 scoped 回调，请求方、渠道、商户级 notifyUrl 仍可覆盖；控制器保留 /{channelId}/{orderNo} 兼容路由。"),
                 callbackAudit(
                         "ALIPAY_PAY",
                         "支付宝支付回调",
@@ -243,7 +241,7 @@ public class PaymentOpsController {
                         "orderNo",
                         false,
                         "request.notifyUrl > channel.notifyUrl > merchant.defaultNotifyUrl > paymentGlobal scoped default",
-                        "默认会按 orderNo + merchantId 生成 scoped 回调，渠道、商户、请求级 notifyUrl 会覆盖；控制器保留旧 /{channelId}/{orderNo} 兼容路由。"),
+                        "默认会按 orderNo + merchantId 生成 scoped 回调，渠道、商户、请求方级 notifyUrl 会覆盖；控制器保留旧 /{channelId}/{orderNo} 兼容路由。"),
                 callbackAudit(
                         "WECHAT_REFUND",
                         "微信退款回调",
@@ -251,7 +249,7 @@ public class PaymentOpsController {
                         "refundNo",
                         false,
                         "channel.extConfig.refundNotifyUrl > paymentGlobal scoped default > latest refund notifyUrl",
-                        "退款链路默认按 refundNo + merchantId 生成 scoped 路由；若渠道 extConfig 配置 refundNotifyUrl，则优先生效。"),
+                        "退款链路默认按 refundNo + merchantId 生成 scoped 路由，若填满 extConfig 配置的 refundNotifyUrl，则优先生效。"),
                 callbackAudit(
                         "WALLET",
                         "钱包业务回调",
@@ -259,7 +257,7 @@ public class PaymentOpsController {
                         "orderNo",
                         false,
                         "request.notifyUrl > scoped default",
-                        "钱包回调默认按订单类型和订单号拼路由，但调用侧显式传 notifyUrl 时会覆盖。"),
+                        "钱包回调默认按订单类型和订单号拼路由，但调用方显式传 notifyUrl 时会覆盖。"),
                 callbackAudit(
                         "WECHAT_PAYSCORE",
                         "微信支付分回调",
@@ -271,44 +269,44 @@ public class PaymentOpsController {
     }
 
     /**
-     * 订单数字strategies
+     * 订单号策略列表
      *
-     * @return 订单数字strategies的结果
+     * @return 订单号策略列表的结果
      */
     private List<PaymentOrderNumberStrategyVO> orderNumberStrategies() {
         return List.of(
                 orderNumberStrategy(
                         "标准支付订单",
                         "orderNo / businessOrderNo",
-                        "orderNo 默认生成: ORD + 当前毫秒时间 + 6位随机大写串",
+                        "orderNo 默认生成: ORD + 当前毫秒时间戳 + 6位随机大写",
                         "businessOrderNo 可由调用方传入；未传时默认等于 orderNo",
-                        "按 merchantId + businessOrderNo 做幂等复用",
-                        "createOrder 时先生成内部 orderNo，再以 businessOrderNo 做唯一性检查；重复请求会返回已有活动订单。"),
+                        "以 merchantId + businessOrderNo 做幂等兜底",
+                        "createOrder 时先生成内部 orderNo，再以 businessOrderNo 做唯一性检查；重复请求会返回已幂等订单。"),
                 orderNumberStrategy(
                         "钱包订单",
                         "orderNo",
-                        "充值/转账/提现分别生成: RCH/TRF/WDW + 当前毫秒时间 + 6位随机大写串",
-                        "调用方可分别传 rechargeNo / transferNo / withdrawNo 覆盖",
-                        "按 orderNo 查询现有钱包订单，存在则直接返回",
+                        "充值/转账/提现分别生成 RCH/TRF/WDW + 当前毫秒时间戳 + 6位随机大写",
+                        "调用方也可分别传入 rechargeNo / transferNo / withdrawNo 覆盖",
+                        "以 orderNo 查询现有钱包订单，存在则直接返回",
                         "钱包订单不区分 businessOrderNo，调用方如果需要幂等，应稳定传入自己的业务单号。"),
                 orderNumberStrategy(
                         "微信支付分",
                         "outOrderNo",
-                        "默认生成: PS + 当前毫秒时间 + 6位随机大写串",
-                        "调用方可传 outOrderNo 覆盖",
-                        "按 outOrderNo 唯一约束与查询幂等",
+                        "默认生成: PS + 当前毫秒时间戳 + 6位随机大写",
+                        "调用方也可传入 outOrderNo 覆盖",
+                        "以 outOrderNo 唯一约束与查重",
                         "支付分订单与普通支付订单分表存储，不与标准支付 orderNo 混用。"));
     }
 
     /**
-     * callback审计
-     * @param callbackType callback类型
-     * @param callbackName callback名称
-     * @param recommendedPattern recommended模式
-     * @param scopedIdentifier scopedidentifier
-     * @param strictScoped strictscoped
-     * @param effectivePriority effectivepriority
-     * @param notes 笔记
+     * 构建回调审计
+     * @param callbackType 回调类型
+     * @param callbackName 回调名称
+     * @param recommendedPattern 推荐路由模式
+     * @param scopedIdentifier 作用域标识字段
+     * @param strictScoped 是否强制作用域
+     * @param effectivePriority 生效优先级
+     * @param notes 备注
      */
     private PaymentCallbackAuditVO callbackAudit(String callbackType,
                                                 String callbackName,
@@ -329,13 +327,13 @@ public class PaymentOpsController {
     }
 
     /**
-     * 订单数字strategy
+     * 构建订单号策略
      * @param businessType 业务类型
      * @param fieldName 字段名称
-     * @param generationRule generationrule
-     * @param callerOverrideField calleroverride字段
-     * @param idempotentRule 幂等rule
-     * @param notes 笔记
+     * @param generationRule 生成规则
+     * @param callerOverrideField 调用方可覆盖字段
+     * @param idempotentRule 幂等规则
+     * @param notes 备注
      */
     private PaymentOrderNumberStrategyVO orderNumberStrategy(String businessType,
                                                              String fieldName,
@@ -353,4 +351,3 @@ public class PaymentOpsController {
         return vo;
     }
 }
-

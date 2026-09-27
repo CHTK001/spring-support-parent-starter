@@ -198,7 +198,7 @@ public class WorkshopAssetService {
         return assetMapper.selectPageByFilter(
                 req.kind(), req.collection(), req.ungrouped(),
                 req.query(), req.tag(), req.inLibrary(),
-                req.sort(), offset, safePageSize);
+                req.sort(), offset, safePageSize, scopeUserId());
     }
 
     /**
@@ -210,7 +210,7 @@ public class WorkshopAssetService {
     public long countAssets(AssetQueryRequest req) {
         return assetMapper.countByFilter(
                 req.kind(), req.collection(), req.ungrouped(),
-                req.query(), req.tag(), req.inLibrary());
+                req.query(), req.tag(), req.inLibrary(), scopeUserId());
     }
 
     /**
@@ -227,6 +227,7 @@ public class WorkshopAssetService {
         long now = Instant.now().toEpochMilli();
         WorkshopAsset asset = new WorkshopAsset();
         asset.setAssetId(id);
+        asset.setUserId(AiUserContext.requireUserId());
         asset.setKind("text");
         asset.setTitle(title);
         asset.setCollection(collection);
@@ -276,6 +277,7 @@ public class WorkshopAssetService {
         long now = Instant.now().toEpochMilli();
         WorkshopAsset asset = new WorkshopAsset();
         asset.setAssetId(fileId);
+        asset.setUserId(AiUserContext.requireUserId());
         asset.setKind(file.getContentType().startsWith("image/") ? "image" : "video");
         asset.setTitle(title != null && !title.isBlank() ? title : originalName);
         asset.setCollection(collection);
@@ -301,6 +303,7 @@ public class WorkshopAssetService {
         if (asset == null) {
             throw new RuntimeException("资产不存在: " + assetId);
         }
+        requireWritableAsset(asset);
         String tagsJson = tags != null ? (tags.isEmpty() ? "[]" : toTagsJson(tags)) : null;
         assetMapper.updateMeta(assetId, title, collection, tagsJson, inLibrary, Instant.now().toEpochMilli());
         return assetMapper.selectById(assetId);
@@ -313,7 +316,11 @@ public class WorkshopAssetService {
     @Transactional
     public void deleteAsset(String assetId) {
         WorkshopAsset asset = assetMapper.selectById(assetId);
-        if (asset != null && asset.getFilePath() != null && !asset.getFilePath().isBlank()) {
+        if (asset == null) {
+            return;
+        }
+        requireWritableAsset(asset);
+        if (asset.getFilePath() != null && !asset.getFilePath().isBlank()) {
             try {
                 Files.deleteIfExists(Path.of(resolveStorageDir(), asset.getFilePath()));
             } catch (IOException e) {
@@ -335,24 +342,54 @@ public class WorkshopAssetService {
         if (from == null || from.isBlank()) {
             return 0;
         }
-        return assetMapper.renameCollection(from, to);
+        return assetMapper.renameCollection(from, to, AiUserContext.requireUserId());
     }
 
     /**
-     * 获取资产记录。
+     * 获取资产记录（读归属校验：管理员可跨用户读取，其余仅本人）。
      * @param assetId assetid
      * @return 获取asset的结果
      */
     public WorkshopAsset getAsset(String assetId) {
-        return assetMapper.selectById(assetId);
+        WorkshopAsset asset = assetMapper.selectById(assetId);
+        if (asset == null) {
+            return null;
+        }
+        if (!AiUserContext.isAdmin() && !AiUserContext.requireUserId().equals(asset.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人资产");
+        }
+        return asset;
     }
     /**
-     * 获取所有非空集合名称列表。
+     * 获取所有非空集合名称列表（按当前用户归属过滤）。
      *
      * @return 去重升序的集合名列表
      */
     public List<String> listCollections() {
-        return assetMapper.selectDistinctCollections();
+        return assetMapper.selectDistinctCollections(scopeUserId());
+    }
+
+    /**
+     * 读查询的归属过滤值：管理员返回 null 表示看全量，其余返回本人用户标识。
+     *
+     * @return 归属过滤值
+     */
+    private String scopeUserId() {
+        return AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
+    }
+
+    /**
+     * 资产写归属校验：只读账号拒绝，仅归属者可改删（管理员对他人数据只读）。
+     *
+     * @param asset 资产实体
+     */
+    private void requireWritableAsset(WorkshopAsset asset) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(asset.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
     }
 
     /**

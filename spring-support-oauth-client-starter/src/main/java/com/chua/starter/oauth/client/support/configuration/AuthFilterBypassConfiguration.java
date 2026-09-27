@@ -9,48 +9,45 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 
 import java.io.IOException;
 
 /**
- * 鉴权过滤器的"全放行"降级 配置。
+ * 开发与测试环境认证过滤器降级配置。
  *
- * <p>当 {@code plugin.oauth.enable=false} 时，{@link AuthClientConfiguration} 整体不激活，
- * 但 Spring Web 仍会尝试注入 {@link AuthFilter}（部分模块通过 {@code @Autowired}
- * 引用）。该配置提供一个直接放行的占位 {@link AuthFilter}，避免启动失败。</p>
- *
- * <p>仅在 {@link AuthFilter} bean 缺失且 {@code plugin.oauth.enable=false} 时激活。</p>
+ * <p>仅当 Spring Profile 为 {@code dev} 或 {@code test}，且显式设置
+ * {@code plugin.oauth.enable=false} 时提供无远程认证的兼容过滤器。
+ * 其他环境不会创建该 Bean，应用按缺少认证依赖失败关闭。</p>
  *
  * @author opencode
  * @since 4.0.0.42
  */
 @Configuration
+@Profile({"dev", "test"})
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
         prefix = "plugin.oauth", name = "enable", havingValue = "false", matchIfMissing = false)
-/**
- * 认证过滤器bypass配置类。
- *
- * @author CH
- * @since 4.0.0
- */
 public class AuthFilterBypassConfiguration {
 
     /**
-     * 提供一个不进行任何校验的 {@link AuthFilter} 占位实现，
-     * 绕过真实的 o认证 远程调用，让所有请求直接通过。
-     * @return 认证过滤器bypass的结果
+     * 创建开发测试环境认证过滤器。
+     *
+     * @return 认证过滤器实例
      */
     @Bean
     @ConditionalOnMissingBean(AuthFilter.class)
     public AuthFilter authFilterBypass() {
-        /**
-         * 认证过滤器。
-         * @param null 空
-         * @param null 空
-         * @return 认证过滤器的结果
-         */
         return new AuthFilter(null, null) {
+            /**
+             * 执行请求过滤器链。
+             *
+             * @param request Servlet 请求
+             * @param response Servlet 响应
+             * @param chain 过滤器链
+             * @throws IOException 请求处理失败
+             * @throws ServletException 过滤器链处理失败
+             */
             @Override
             public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                     throws IOException, ServletException {
@@ -60,8 +57,9 @@ public class AuthFilterBypassConfiguration {
     }
 
     /**
-     * 同时注册 过滤器registrationBean 让 认证过滤器 拦截链生效（但内部 执行过滤器 直接放行）。
-     * @return 认证过滤器bypassregistration的结果
+     * 注册开发测试环境认证过滤器。
+     *
+     * @return 过滤器注册对象
      */
     @Bean
     @ConditionalOnMissingBean(name = "authFilterFilterRegistrationBean")

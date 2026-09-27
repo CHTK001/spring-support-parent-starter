@@ -21,19 +21,19 @@ import org.springframework.web.bind.annotation.RestController;
  * @author CH
  * @since 4.0.0
  */
-@Tag(name = "支付全局配置", description = "支付回调、返回地址、默认自动刷新配置")
+@Tag(name = "支付全局配置", description = "支付回调、返回地址、默认自动刷新等")
 @RestController
 @RequestMapping("/payment-global-config")
 @RequiredArgsConstructor
 public class PaymentGlobalConfigController {
 
     /**
-     * Payment全局配置服务
-    */
+     * 支付全局配置服务
+     */
     private final PaymentGlobalConfigService paymentGlobalConfigService;
     /**
-     * Principal解析器
-    */
+     * 登录主体解析器
+     */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @Operation(summary = "查询支付全局配置")
@@ -64,15 +64,14 @@ public class PaymentGlobalConfigController {
     }
 
     /**
-     * denyifnecessary
+     * 权限校验
      *
      * @param request 请求
-     * @return denyIfNecessary的结果
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         if (!principalResolver.isAdmin(userResume)) {
             return Result.error(403, "仅超管和管理员可访问");
@@ -80,4 +79,3 @@ public class PaymentGlobalConfigController {
         return null;
     }
 }
-

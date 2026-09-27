@@ -2,3 +2,4 @@ com.chua.starter.eduai.collect.provider.TextQuestionSourceProvider
 com.chua.starter.eduai.collect.provider.UrlQuestionSourceProvider
 com.chua.starter.eduai.collect.provider.ApiQuestionSourceProvider
 com.chua.starter.eduai.collect.provider.FileQuestionSourceProvider
+com.chua.starter.eduai.collect.provider.GroovyQuestionSourceProvider

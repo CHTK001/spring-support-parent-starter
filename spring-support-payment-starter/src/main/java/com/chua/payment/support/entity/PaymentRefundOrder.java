@@ -11,7 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 退款单实体
+ * 退款单实体类
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -22,109 +23,108 @@ public class PaymentRefundOrder {
     @TableId(value = "pay_refund_order_id", type = IdType.AUTO)
     /**
      * 标识
-    */
+     */
     private Long id;
 
     @TableField("pay_refund_order_refund_no")
     /**
-     * 退税no
-    */
+     * 退款单号
+     */
     private String refundNo;
 
     @TableField("pay_refund_order_order_id")
     /**
-     * 排序标识
-    */
+     * 订单标识
+     */
     private Long orderId;
 
     @TableField("pay_refund_order_order_no")
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
 
     @TableField("pay_refund_order_merchant_id")
     /**
-     * merchantid
-    */
+     * 商户标识
+     */
     private Long merchantId;
 
     @TableField("pay_refund_order_channel_id")
     /**
-     * 通道标识
-    */
+     * 渠道标识
+     */
     private Long channelId;
 
     @TableField("pay_refund_order_source_order_status")
     /**
-     * 来源排序状态
-    */
+     * 来源订单状态
+     */
     private String sourceOrderStatus;
 
     @TableField("pay_refund_order_third_party_refund_no")
     /**
-     * thirdpartyrefundno
-    */
+     * 第三方退款单号
+     */
     private String thirdPartyRefundNo;
 
     @TableField("pay_refund_order_refund_amount")
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
 
     @TableField("pay_refund_order_status")
     /**
-     * 状态
-    */
+     * 退款单状态
+     */
     private String status;
 
     @TableField("pay_refund_order_reason")
     /**
-     * ReasonMLmlml
-    */
+     * 退款原因
+     */
     private String reason;
 
     @TableField("pay_refund_order_notify_status")
     /**
      * 通知状态
-    */
+     */
     private Integer notifyStatus;
 
     @TableField("pay_refund_order_request_payload")
     /**
-     * 请求payload
-    */
+     * 请求报文
+     */
     private String requestPayload;
 
     @TableField("pay_refund_order_response_payload")
     /**
-     * 响应payload
-    */
+     * 响应报文
+     */
     private String responsePayload;
 
     @TableField("pay_refund_order_operator")
     /**
-     * 操作符
-    */
+     * 操作者
+     */
     private String operator;
 
     @TableField("pay_refund_order_remark")
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     @TableField(value = "pay_refund_order_created_at", fill = FieldFill.INSERT)
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 
     @TableField(value = "pay_refund_order_updated_at", fill = FieldFill.INSERT_UPDATE)
     /**
-     * 更新时间AT
-    */
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }
-

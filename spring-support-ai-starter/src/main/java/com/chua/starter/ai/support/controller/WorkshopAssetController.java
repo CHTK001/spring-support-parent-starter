@@ -1,6 +1,9 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.starter.ai.support.service.WorkshopAssetService;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -201,7 +204,12 @@ public class WorkshopAssetController {
      * @return 列表Canvas的结果
      */
     public Map<String, Object> listCanvases() {
-        List<Map<String, Object>> items = new ArrayList<>(canvases.values());
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Map<String, Object> canvas : canvases.values()) {
+            if (readableCanvas(canvas)) {
+                items.add(canvas);
+            }
+        }
         items.sort(Comparator.comparingLong(
                 (Map<String, Object> m) -> ((Number) m.getOrDefault("updated_at", 0L)).longValue()).reversed());
         Map<String, Object> result = new LinkedHashMap<>();
@@ -227,6 +235,7 @@ public class WorkshopAssetController {
         doc.put("edges", List.of());
         Map<String, Object> canvas = new LinkedHashMap<>();
         canvas.put("canvas_id", id);
+        canvas.put("user_id", AiUserContext.requireUserId());
         canvas.put("title", title);
         canvas.put("thumbnail_url", null);
         canvas.put("node_count", 0);
@@ -252,6 +261,9 @@ public class WorkshopAssetController {
             err.put("error", "画布不存在: " + canvasId);
             return err;
         }
+        if (!readableCanvas(canvas)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人画布");
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("meta", canvasMeta(canvas));
         result.put("doc", canvas.get("doc"));
@@ -274,6 +286,7 @@ public class WorkshopAssetController {
             err.put("error", "画布不存在: " + canvasId);
             return err;
         }
+        requireWritableCanvas(canvas);
         Object docObj = body.get("doc");
         if (docObj instanceof Map<?, ?> docMap) {
             canvas.put("doc", new LinkedHashMap<>((Map<?, ?>) docMap));
@@ -306,6 +319,7 @@ public class WorkshopAssetController {
             err.put("error", "画布不存在: " + canvasId);
             return err;
         }
+        requireWritableCanvas(canvas);
         if (body.get("title") instanceof String t && !t.isBlank()) {
             canvas.put("title", t);
         }
@@ -321,10 +335,38 @@ public class WorkshopAssetController {
      * @return 删除Canvas的结果
      */
     public Map<String, Object> deleteCanvas(@PathVariable String canvasId) {
-        canvases.remove(canvasId);
+        Map<String, Object> canvas = canvases.get(canvasId);
+        if (canvas != null) {
+            requireWritableCanvas(canvas);
+            canvases.remove(canvasId);
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("deleted", true);
         return result;
+    }
+
+    /**
+     * 画布读归属判定：管理员可跨用户读取，其余仅本人。
+     *
+     * @param canvas 画布条目
+     * @return 当前用户是否可读
+     */
+    private boolean readableCanvas(Map<String, Object> canvas) {
+        return AiUserContext.isAdmin() || AiUserContext.requireUserId().equals(canvas.get("user_id"));
+    }
+
+    /**
+     * 画布写归属校验：只读账号拒绝，仅归属者可改写删除（管理员对他人数据只读）。
+     *
+     * @param canvas 画布条目
+     */
+    private void requireWritableCanvas(Map<String, Object> canvas) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(canvas.get("user_id"))) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
     }
 
     /**

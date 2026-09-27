@@ -78,9 +78,11 @@ public class FileSystemSkillOfflineProvider implements SkillOfflineProvider {
                 return f;
             }
         }
+        // 只保留跨平台可用的相对目录；绝对路径一律由系统属性或 NOMIFUN_SKILLS_ROOT 提供，
+        // 不可写死某台机器的路径（曾在 Linux 上被当成相对路径，匹配到字面 Windows 目录）
         String[] candidates = {
-                "D:\\ch\\project\\spring-support-parent-starter\\spring-support-ai-starter\\skills",
-                "skills"
+                "skills",
+                "./skills"
         };
         for (String c : candidates) {
             File f = new File(c);

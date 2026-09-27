@@ -36,6 +36,69 @@ public class AiSessionController {
     private final SysAiSessionMapper sessionMapper;
     private final SysAiMessageMapper messageMapper;
     private final com.chua.starter.ai.support.mapper.SysAiSessionGroupMapper sessionGroupMapper;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    /**
+     * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
+     */
+    private String writeSettings(Object settingsObj) {
+        if (settingsObj == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(settingsObj);
+        } catch (Exception e) {
+            log.warn("[Session] 序列化 settings 失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 将持久化的 settings JSON 解析为 Map；为空或解析失败时返回空 Map。
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readSettings(String json) {
+        if (json == null || json.isBlank()) {
+            return new HashMap<>();
+        }
+        try {
+            Map<String, Object> parsed = objectMapper.readValue(json, Map.class);
+            return parsed != null ? parsed : new HashMap<>();
+        } catch (Exception e) {
+            log.warn("[Session] 解析 settings 失败: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * 解析助手消息上持久化的确认请求；仅返回 status=pending 的请求，结构 {replyId, items}。
+     *
+     * @param json 确认请求 JSON
+     * @return 待确认请求 Map；非 pending / 解析失败返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parsePendingConfirmation(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            if (!"pending".equals(data.get("status"))) {
+                return null;
+            }
+            Object replyId = data.get("replyId");
+            if (replyId == null || String.valueOf(replyId).isBlank()) {
+                return null;
+            }
+            Map<String, Object> req = new HashMap<>();
+            req.put("replyId", String.valueOf(replyId));
+            req.put("items", data.getOrDefault("items", new ArrayList<>()));
+            return req;
+        } catch (Exception e) {
+            log.warn("[Session] 解析确认请求失败: {}", e.getMessage());
+            return null;
+        }
+    }
 
     /**
      * 获取会话列表
@@ -250,6 +313,11 @@ public class AiSessionController {
                 usage.put("completionTokens", msg.getCompletionTokens());
                 usage.put("totalTokens", msg.getTotalTokens());
                 contentMetadata.put("usage", usage);
+                // 待人工确认（plan_exit）：刷新后仍渲染批准卡片
+                Map<String, Object> pendingConfirm = parsePendingConfirmation(msg.getConfirmation());
+                if (pendingConfirm != null) {
+                    contentMetadata.put("confirmationRequest", pendingConfirm);
+                }
             }
             content.put("metadata", contentMetadata);
             contents.add(content);
@@ -300,18 +368,22 @@ public class AiSessionController {
         if (session != null) {
             result.put("title", session.getTitle());
             result.put("modelId", session.getModelId());
+            result.put("characterId", session.getCharacterId());
+            result.put("mcpServerIds", parseIdList(session.getMcpServerIds()));
             result.put("groupId", session.getSysAiModuleCode());
             result.put("createdAt", session.getCreateTime() != null ? session.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : System.currentTimeMillis());
             result.put("updatedAt", session.getUpdateTime() != null ? session.getUpdateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : System.currentTimeMillis());
         } else {
             result.put("title", "会话 " + id);
             result.put("modelId", null);
+            result.put("characterId", null);
+            result.put("mcpServerIds", null);
             result.put("groupId", null);
             result.put("createdAt", System.currentTimeMillis());
             result.put("updatedAt", System.currentTimeMillis());
         }
         
-        result.put("settings", new HashMap<>());
+        result.put("settings", readSettings(session == null ? null : session.getSettings()));
         return ReturnResult.ok(result);
     }
 
@@ -360,16 +432,38 @@ public class AiSessionController {
                 session.setModelId(null);
             }
         }
-        
+
+        // 更新绑定角色
+        if (body.containsKey("characterId")) {
+            session.setCharacterId(parseLongOrNull(String.valueOf(body.get("characterId"))));
+        }
+
+        // 更新会话级 MCP 服务器列表（仅管理员可写，非管理员忽略）
+        if (body.containsKey("mcpServerIds")) {
+            String mcpCsvOnUpdate = normalizeIdList(body.get("mcpServerIds"));
+            if (!AiUserContext.isAdmin()) {
+                mcpCsvOnUpdate = null;
+            }
+            session.setMcpServerIds(mcpCsvOnUpdate);
+        }
+
+        // 更新会话级设置（runMode、温度、topP、知识库引用等），整体 JSON 持久化
+        if (body.containsKey("settings")) {
+            session.setSettings(writeSettings(body.get("settings")));
+        }
+
         session.setUpdateTime(LocalDateTime.now());
         sessionMapper.updateById(session);
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("id", String.valueOf(session.getId()));
         result.put("title", session.getTitle());
         result.put("groupId", session.getSysAiModuleCode());
         result.put("modelId", session.getModelId());
+        result.put("characterId", session.getCharacterId());
+        result.put("mcpServerIds", parseIdList(session.getMcpServerIds()));
+        result.put("settings", readSettings(session.getSettings()));
         return ReturnResult.ok(result);
     }
 
@@ -382,14 +476,24 @@ public class AiSessionController {
     @PostMapping
     public ReturnResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         String title = body.getOrDefault("title", "新会话").toString();
-        String roleId = body.getOrDefault("roleId", "").toString();
+        // 前端字段为 characterId，兼容旧字段 roleId
+        String characterIdRaw = body.getOrDefault("characterId", body.getOrDefault("roleId", "")).toString();
         String modelId = body.getOrDefault("modelId", "").toString();
+        Object mcpServerIdsRaw = body.get("mcpServerIds");
 
         // 真正保存到数据库
         SysAiSession session = new SysAiSession();
         session.setTitle(title);
         session.setSysAiModuleCode(null);
         session.setModelId(modelId);
+        session.setCharacterId(parseLongOrNull(characterIdRaw));
+        String mcpCsvOnCreate = normalizeIdList(mcpServerIdsRaw);
+        // MCP 仅管理员可配置：非管理员提交一律忽略
+        if (!AiUserContext.isAdmin()) {
+            mcpCsvOnCreate = null;
+        }
+        session.setMcpServerIds(mcpCsvOnCreate);
+        session.setSettings(writeSettings(body.get("settings")));
         session.setSysUserId(AiUserContext.requireUserId());
         session.setCreateTime(LocalDateTime.now());
         session.setUpdateTime(LocalDateTime.now());
@@ -402,12 +506,88 @@ public class AiSessionController {
         result.put("title", session.getTitle());
         result.put("groupId", session.getSysAiModuleCode());
         result.put("modelId", session.getModelId());
-        result.put("settings", new HashMap<>());
+        result.put("characterId", session.getCharacterId());
+        result.put("mcpServerIds", parseIdList(session.getMcpServerIds()));
+        result.put("settings", readSettings(session.getSettings()));
         result.put("createdAt", session.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
         result.put("updatedAt", session.getUpdateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
 
-        log.info("[Session] 创建会话: id={}, title={}", session.getId(), title);
+        log.info("[Session] 创建会话: id={}, title={}, characterId={}", session.getId(), title, session.getCharacterId());
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 解析角色 id 字符串为 Long，非数字 / 空值返回 null。
+     * @param raw 原始字符串
+     * @return Long 或 null
+     */
+    private static Long parseLongOrNull(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String v = raw.trim();
+        if (v.isEmpty() || "null".equalsIgnoreCase(v) || "undefined".equalsIgnoreCase(v)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(v);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 将逗号分隔的 MCP 服务器ID字符串解析为列表。
+     * @param raw 原始字符串
+     * @return ID 列表，永不为 null
+     */
+    private static List<String> parseIdList(String raw) {
+        List<String> result = new ArrayList<>();
+        if (raw == null) {
+            return result;
+        }
+        for (String part : raw.split(",")) {
+            String id = part.trim();
+            if (!id.isEmpty() && !result.contains(id)) {
+                result.add(id);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 将前端传入的 MCP 服务器ID（列表或逗号字符串）归一化为逗号分隔字符串；空集合归一化为 null。
+     * @param raw 原始值
+     * @return 逗号分隔字符串或 null
+     */
+    private static String normalizeIdList(Object raw) {
+        List<String> values = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                addId(values, o == null ? null : String.valueOf(o));
+            }
+        } else if (raw != null) {
+            for (String part : String.valueOf(raw).split(",")) {
+                addId(values, part);
+            }
+        }
+        return values.isEmpty() ? null : String.join(",", values);
+    }
+
+    /**
+     * 添加一个去空白、去重的 ID。
+     * @param values 目标列表
+     * @param part 原始片段
+     */
+    private static void addId(List<String> values, String part) {
+        if (part == null) {
+            return;
+        }
+        String id = part.trim();
+        if (!id.isEmpty() && !"null".equalsIgnoreCase(id) && !"undefined".equalsIgnoreCase(id)
+                && !values.contains(id)) {
+            values.add(id);
+        }
     }
 
     /**

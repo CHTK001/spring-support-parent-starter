@@ -34,6 +34,15 @@ public class EduStudent {
     private Long studentUserId;
 
     /**
+     * 绑定的登录账号
+     *
+     * <p>与 {@code studentUserId} 分开存：登录态里的 userId 是字符串
+     * （如 admin），而 studentUserId 是 BIGINT，两者类型对不上。
+     * 学生端「进入即绑定」占用的就是这个列，唯一索引保证一个账号只绑一个学生。</p>
+     */
+    private String studentAccount;
+
+    /**
      * 学号（业务唯一）
      */
     private String studentNo;

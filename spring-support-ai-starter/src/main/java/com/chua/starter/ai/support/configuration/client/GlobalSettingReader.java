@@ -27,6 +27,11 @@ public class GlobalSettingReader {
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
+     * 外部服务器目录模型绑定支持
+     */
+    private final ExternalModelSupport externalModelSupport;
+
+    /**
      * 读取字符串值。
      *
      * @param group 分组
@@ -34,7 +39,22 @@ public class GlobalSettingReader {
      * @return 值，未配置时返回 空
      */
     public String getStr(String group, String field) {
-        return sysAiGlobalSettingService.getValue(group, field).orElse(null);
+        String raw;
+        try {
+            raw = sysAiGlobalSettingService.getValue(group, field).orElse(null);
+        } catch (Exception e) {
+            // Redis 缓存不可达时不阻断调用方（如启动期定时任务），回落到直接读库
+            log.warn("[GlobalSettingReader] 缓存读取失败(group={},field={})，回落数据库: {}",
+                    group, field, e.getMessage());
+            try {
+                raw = sysAiGlobalSettingService.getValueDirect(group, field).orElse(null);
+            } catch (Exception ex) {
+                log.warn("[GlobalSettingReader] 数据库回落仍失败: {}", ex.getMessage());
+                raw = null;
+            }
+        }
+        // ONNX 外部目录：若是已存在的服务器目录，按字段模板动态注册为可运行模型
+        return externalModelSupport.prepare(group, field, raw);
     }
 
     /**
@@ -46,7 +66,13 @@ public class GlobalSettingReader {
      * @return 布尔值
      */
     public boolean getBool(String group, String field, boolean defaultValue) {
-        return sysAiGlobalSettingService.getBoolean(group, field, defaultValue);
+        // 统一走 getStr，使其在缓存故障时同样能回落到数据库
+        String v = getStr(group, field);
+        if (v == null || v.isBlank()) {
+            return defaultValue;
+        }
+        String lower = v.trim().toLowerCase();
+        return "true".equals(lower) || "1".equals(lower) || "yes".equals(lower);
     }
 
     /**

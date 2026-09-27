@@ -5,7 +5,7 @@ package com.chua.payment.support.dto;
  *
  * @param page      页码
  * @param size      每页大小
- * @param merchantId 商户标识（可选）
+ * @param merchantId 客户标识（可选）
  * @param orderNo   订单号（可选）
  * @param status    状态（可选）
  * @author CH

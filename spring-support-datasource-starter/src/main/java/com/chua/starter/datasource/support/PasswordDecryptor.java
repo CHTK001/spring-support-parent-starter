@@ -25,10 +25,6 @@ package com.chua.starter.datasource.support;
  *         // 自定义解密逻辑
  *     }
  * }
- * }</pre> {
- *         // 自定义解密逻辑
- *     }
- * }
  * }</pre>
  *
  * @since 2026/07/14

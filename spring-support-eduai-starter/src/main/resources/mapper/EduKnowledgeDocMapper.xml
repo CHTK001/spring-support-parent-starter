@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduKnowledgeDocMapper">
+
+    <!-- 分页查询知识库文档：多条件筛选 + 归属隔离 + 创建时间倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduKnowledgeDoc">
+        SELECT d.* FROM edu_knowledge_doc d
+        <where>
+            <if test="query.knowledgeDocName != null and query.knowledgeDocName != ''">
+                AND d.knowledge_doc_name LIKE CONCAT('%', #{query.knowledgeDocName}, '%')
+            </if>
+            <if test="query.knowledgeDocSubject != null and query.knowledgeDocSubject != ''">
+                AND d.knowledge_doc_subject = #{query.knowledgeDocSubject}
+            </if>
+            <if test="query.knowledgeDocStatus != null">
+                AND d.knowledge_doc_status = #{query.knowledgeDocStatus}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (d.knowledge_doc_owner_user_id IS NULL OR d.knowledge_doc_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY d.create_time DESC
+    </select>
+
+    <!-- 关键字检索已索引文档：名称模糊匹配 + 归属隔离 + 限制条数 -->
+    <select id="selectSearch" resultType="com.chua.starter.eduai.model.EduKnowledgeDoc">
+        SELECT d.* FROM edu_knowledge_doc d
+        <where>
+            d.knowledge_doc_status = 1
+            <if test="keyword != null and keyword != ''">
+                AND d.knowledge_doc_name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="subject != null and subject != ''">
+                AND d.knowledge_doc_subject = #{subject}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (d.knowledge_doc_owner_user_id IS NULL OR d.knowledge_doc_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY d.create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

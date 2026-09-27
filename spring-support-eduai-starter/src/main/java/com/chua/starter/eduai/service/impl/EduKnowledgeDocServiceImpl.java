@@ -1,6 +1,5 @@
 package com.chua.starter.eduai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -58,27 +57,9 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      * Page查询
     */
     public PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize) {
-        LambdaQueryWrapper<EduKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
-        if (query != null) {
-            // 按文档名称筛选（like 匹配）
-            if (StringUtils.hasText(query.getKnowledgeDocName())) {
-                wrapper.like(EduKnowledgeDoc::getKnowledgeDocName, query.getKnowledgeDocName());
-            }
-            // 按学科筛选
-            if (StringUtils.hasText(query.getKnowledgeDocSubject())) {
-                wrapper.eq(EduKnowledgeDoc::getKnowledgeDocSubject, query.getKnowledgeDocSubject());
-            }
-            // 按状态筛选
-            if (query.getKnowledgeDocStatus() != null) {
-                wrapper.eq(EduKnowledgeDoc::getKnowledgeDocStatus, query.getKnowledgeDocStatus());
-            }
-        }
-        EduUserContext.scopeOwned(wrapper, EduKnowledgeDoc::getOwnerUserId);
-        // 默认按创建时间倒序
-        wrapper.orderByDesc(EduKnowledgeDoc::getKnowledgeDocCreateTime);
-
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         Page<EduKnowledgeDoc> pageInfo = new Page<>(page, pageSize);
-        IPage<EduKnowledgeDoc> result = baseMapper.selectPage(pageInfo, wrapper);
+        IPage<EduKnowledgeDoc> result = baseMapper.pageSelect(pageInfo, query, scope);
         List<KnowledgeDocVO> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.<KnowledgeDocVO>builder()
                 .pageNo((int) result.getCurrent())
@@ -118,8 +99,8 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
         String vectorStoreId = vectorize(dto);
         entity.setKnowledgeDocVectorStoreId(vectorStoreId);
         entity.setKnowledgeDocStatus(vectorStoreId != null ? 1 : 0); // 1=已索引, 0=未索引
-        entity.setKnowledgeDocCreateTime(LocalDateTime.now());
-        entity.setKnowledgeDocUpdateTime(LocalDateTime.now());
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
         baseMapper.insert(entity);
         log.info("上传知识库文档成功，ID: {}, 名称: {}, 向量化: {}", entity.getKnowledgeDocId(), dto.name(), vectorStoreId != null);
         return entity.getKnowledgeDocId();
@@ -192,21 +173,8 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      * 搜索
     */
     public PageResult<KnowledgeDocVO> search(String keyword, String subject, int limit) {
-        LambdaQueryWrapper<EduKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
-        // 按关键字匹配文档名称
-        if (StringUtils.hasText(keyword)) {
-            wrapper.like(EduKnowledgeDoc::getKnowledgeDocName, keyword);
-        }
-        // 按学科筛选
-        if (StringUtils.hasText(subject)) {
-            wrapper.eq(EduKnowledgeDoc::getKnowledgeDocSubject, subject);
-        }
-        // 只查询已索引文档
-        wrapper.eq(EduKnowledgeDoc::getKnowledgeDocStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduKnowledgeDoc::getOwnerUserId);
-        wrapper.orderByDesc(EduKnowledgeDoc::getKnowledgeDocCreateTime)
-                .last("limit " + (limit > 0 ? limit : 10));
-        List<EduKnowledgeDoc> list = baseMapper.selectList(wrapper);
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        List<EduKnowledgeDoc> list = baseMapper.selectSearch(keyword, subject, limit > 0 ? limit : 10, scope);
         List<KnowledgeDocVO> voList = list.stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.<KnowledgeDocVO>builder()
                 .pageNo(1)
@@ -238,7 +206,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
         EduUserContext.checkWritable(exists.getOwnerUserId());
         // 逻辑删除：状态置为失败
         exists.setKnowledgeDocStatus(2);
-        exists.setKnowledgeDocUpdateTime(LocalDateTime.now());
+        exists.setUpdateTime(LocalDateTime.now());
         int rows = baseMapper.updateById(exists);
         log.info("删除知识库文档，ID: {}", id);
         return rows > 0;
@@ -251,17 +219,19 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      * @return VO
      */
     private KnowledgeDocVO toVO(EduKnowledgeDoc entity) {
-        KnowledgeDocVO vo = new KnowledgeDocVO();
-        vo.setKnowledgeDocId(entity.getKnowledgeDocId());
-        vo.setKnowledgeDocName(entity.getKnowledgeDocName());
-        vo.setKnowledgeDocType(entity.getKnowledgeDocType());
-        vo.setKnowledgeDocFilePath(entity.getKnowledgeDocFilePath());
-        vo.setKnowledgeDocFileSize(entity.getKnowledgeDocFileSize());
-        vo.setKnowledgeDocVectorStoreId(entity.getKnowledgeDocVectorStoreId());
-        vo.setKnowledgeDocSubject(entity.getKnowledgeDocSubject());
-        vo.setKnowledgeDocGradeLevel(entity.getKnowledgeDocGradeLevel());
-        vo.setKnowledgeDocStatus(entity.getKnowledgeDocStatus());
-        vo.setKnowledgeDocCreateTime(entity.getKnowledgeDocCreateTime());
+        KnowledgeDocVO vo = new KnowledgeDocVO(
+                entity.getKnowledgeDocId(),
+                entity.getKnowledgeDocName(),
+                entity.getKnowledgeDocType(),
+                entity.getKnowledgeDocFilePath(),
+                entity.getKnowledgeDocFileSize(),
+                entity.getKnowledgeDocVectorStoreId(),
+                entity.getKnowledgeDocSubject(),
+                entity.getKnowledgeDocGradeLevel(),
+                entity.getKnowledgeDocStatus(),
+                entity.getCreateTime()
+        );
         return vo;
     }
 }
+

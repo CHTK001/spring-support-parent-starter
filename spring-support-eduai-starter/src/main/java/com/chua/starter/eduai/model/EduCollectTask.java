@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import java.time.LocalDateTime;
 
 /**
@@ -15,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_collect_task")
-public class EduCollectTask {
+public class EduCollectTask extends SysBase {
 
     /**
      * 采集任务标识
@@ -60,17 +63,7 @@ public class EduCollectTask {
     private Integer collectTaskDifficulty;
 
     /**
-     * 定时Cron（留空使用默认调度周期）
-     */
-    private String collectTaskCron;
-
-    /**
-     * 下次执行时间
-     */
-    private LocalDateTime collectTaskNextRunTime;
-
-    /**
-     * 状态（0=禁用, 1=启用）
+     * 状态（0=禁用, 1=启用，同步到 sys_job 触发状态；cron 只存 sys_job）
      */
     private Integer collectTaskStatus;
 
@@ -98,26 +91,6 @@ public class EduCollectTask {
      * 最近执行采集题数
      */
     private Integer collectTaskLastRunCount;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime collectTaskCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime collectTaskUpdateTime;
-
-    /**
-     * 创建人
-     */
-    private String collectTaskCreateBy;
-
-    /**
-     * 更新人
-     */
-    private String collectTaskUpdateBy;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

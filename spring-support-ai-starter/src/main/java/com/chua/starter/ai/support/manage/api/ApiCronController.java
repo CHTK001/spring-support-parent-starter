@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversation;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +33,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>维护定时任务（{@code cron_job_id} 主键）、立即执行、运行记录与技能脚本。
  * 关键变更推送 {@code cron.job-created / cron.job-updated / cron.job-removed / cron.job-executed}
  * 事件。当前为进程内内存实现。</p>
+ *
+ * <p>隔离口径：任务表没有用户维度，按登录用户在 {@code metadata.user_id} 上打归属；
+ * 列表与详情仅本人可见（管理员可看全量但只读），改/删/立即执行只允许归属者，
+ * 管理员对他人任务不可写。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -68,10 +73,44 @@ public class ApiCronController {
     public ApiResult<List<Map<String, Object>>> list(@RequestParam(required = false) String conversation_id) {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> job : jobs.values()) {
+            if (!readableByJob(job)) {
+                continue;
+            }
             if (conversation_id == null
                     || conversation_id.equals(jobPath(job, "conversation_id"))) {
                 result.add(job);
             }
+        }
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 常用调度预设目录（供前端表达式选择器使用）。
+     *
+     * <p>字面路径 {@code /cron-presets} 的匹配优先级高于模板路径 {@code /{cronJobId}}，
+     * 不会被误当作任务标识。</p>
+     *
+     * @return 预设列表，每项含 label（中文描述）与 value（cron 表达式）
+     */
+    @GetMapping("/cron-presets")
+    public ApiResult<List<Map<String, Object>>> cronPresets() {
+        String[][] presets = {
+                {"每分钟", "0 * * * * *"},
+                {"每 5 分钟", "0 */5 * * * *"},
+                {"每 10 分钟", "0 */10 * * * *"},
+                {"每 30 分钟", "0 */30 * * * *"},
+                {"每小时", "0 0 * * * *"},
+                {"每天 0 点", "0 0 0 * * *"},
+                {"每天 9 点", "0 0 9 * * *"},
+                {"每周一 9 点", "0 0 9 * * MON"},
+                {"每月 1 日 0 点", "0 0 0 1 * *"},
+        };
+        List<Map<String, Object>> result = new ArrayList<>(presets.length);
+        for (String[] preset : presets) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("label", preset[0]);
+            item.put("value", preset[1]);
+            result.add(item);
         }
         return ApiResult.ok(result);
     }
@@ -94,7 +133,9 @@ public class ApiCronController {
         job.put("execution_mode", body.getOrDefault("execution_mode", "new_conversation"));
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("agent_type", body.getOrDefault("agent_type", "nomi"));
-        metadata.put("created_by", body.getOrDefault("created_by", "user"));
+        String owner = AiUserContext.requireUserId();
+        metadata.put("user_id", owner);
+        metadata.put("created_by", owner);
         long now = System.currentTimeMillis();
         metadata.put("created_at", now);
         metadata.put("updated_at", now);
@@ -135,7 +176,7 @@ public class ApiCronController {
     @PutMapping("/{cronJobId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String cronJobId,
                                                  @RequestBody Map<String, Object> body) {
-        Map<String, Object> job = requireJob(cronJobId);
+        Map<String, Object> job = requireWritableJob(cronJobId);
         if (body.containsKey("name")) {
             job.put("name", body.get("name"));
         }
@@ -172,7 +213,7 @@ public class ApiCronController {
      * @return 移除的结果
      */
     public ApiResult<Void> remove(@PathVariable String cronJobId) {
-        requireJob(cronJobId);
+        requireWritableJob(cronJobId);
         jobs.remove(cronJobId);
         pushService.push("cron.job-removed", Map.of("cron_job_id", cronJobId));
         return ApiResult.ok();
@@ -181,7 +222,7 @@ public class ApiCronController {
     @PostMapping("/{cronJobId}/run")
     public ApiResult<Map<String, Object>> run(@PathVariable String cronJobId,
                                               @RequestBody(required = false) Map<String, Object> body) {
-        Map<String, Object> job = requireJob(cronJobId);
+        Map<String, Object> job = requireWritableJob(cronJobId);
         Map<String, Object> state = (Map<String, Object>) job.get("state");
         state.put("last_run_at_ms", System.currentTimeMillis());
         state.put("last_status", "ok");
@@ -237,7 +278,7 @@ public class ApiCronController {
     @PostMapping("/{cronJobId}/skill")
     public ApiResult<Void> saveSkill(@PathVariable String cronJobId,
                                      @RequestBody Map<String, Object> body) {
-        requireJob(cronJobId);
+        requireWritableJob(cronJobId);
         return ApiResult.ok();
     }
 
@@ -261,7 +302,7 @@ public class ApiCronController {
      * @return 删除skill的结果
      */
     public ApiResult<Void> deleteSkill(@PathVariable String cronJobId) {
-        requireJob(cronJobId);
+        requireWritableJob(cronJobId);
         return ApiResult.ok();
     }
 
@@ -289,6 +330,36 @@ public class ApiCronController {
         Map<String, Object> job = jobs.get(cronJobId);
         if (job == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "定时任务不存在: " + cronJobId);
+        }
+        if (!readableByJob(job)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人定时任务");
+        }
+        return job;
+    }
+
+    /**
+     * 读归属判定：管理员可跨用户查看，其余仅本人。
+     *
+     * @param job 任务
+     * @return 当前用户是否可读
+     */
+    private boolean readableByJob(Map<String, Object> job) {
+        return AiUserContext.isAdmin() || AiUserContext.requireUserId().equals(jobPath(job, "user_id"));
+    }
+
+    /**
+     * 写归属校验：只读账号拒绝，仅归属者可改删与立即执行（管理员对他人任务只读）。
+     *
+     * @param cronJobId 任务标识
+     * @return 可写的任务
+     */
+    private Map<String, Object> requireWritableJob(String cronJobId) {
+        Map<String, Object> job = requireJob(cronJobId);
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(jobPath(job, "user_id"))) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
         }
         return job;
     }

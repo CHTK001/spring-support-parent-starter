@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -13,13 +13,13 @@
         网关、Redis Key 增删查改、AI 性能分析等能力；通过 SPI 接入多种采集与数据源。
     </description>
 
+    <properties>
+        <!-- 本模块既独立启动也被宿主当库依赖：默认跳过 fat-jar repackage，保证库坐标下是薄 jar；
+             需要可执行包时构建传 -Dspring-boot.repackage.skip=false，产物为 *-exec.jar，不替换主构件 -->
+        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
+    </properties>
+
     <dependencies>
-        <!-- 工具基础：声明在首位，确保 javac 优先解析本模块对 utils-support-common-starter 的
-             最新 API（部分下游 fat jar 会内嵌同名类的旧副本，靠类路径顺序兜底） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
         <!-- Spring 与基础 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -29,6 +29,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-server-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-datasource-hub-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -143,6 +149,20 @@
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- ZooKeeper 管理页：复用本仓 Curator 封装，不额外引入第三方注册中心客户端 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-zookeeper-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- Curator 5.9.0 传递依赖 3.9.3，本仓已备 3.9.4 补丁版，就近覆盖以免重复拉取 -->
+        <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.9.4</version>
+        </dependency>
+
         <!-- TShark 网络抓包 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -173,7 +193,13 @@
         </dependency>
 
         <!-- 测试 -->
-        
+        <!-- 仅测试作用域。规约要求测试必须真实，禁止引入 mockito/easymock/jmock（任何作用域） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -183,8 +209,9 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构，避免下游模块无法解析 BOOT-INF/classes 之外的类 -->
-                    <!-- 临时关闭 skip 允许打包可执行 jar（测试后恢复） -->
-                    <skip>false</skip>
+                    <skip>${spring-boot.repackage.skip}</skip>
+                    <!-- 可执行包另挂 exec 分类符，绝不替换主构件；历史上 repackage 覆盖主构件曾让库坐标变成 1.2GB fat jar -->
+                    <classifier>exec</classifier>
                 </configuration>
             </plugin>
             <plugin>

@@ -28,11 +28,11 @@ import javax.sql.DataSource;
 /**
  * 桌面伙伴（Companion）持久化存储服务。
  *
- * <p>基于 MyBatis-Plus 提供伙伴、记忆、技能、形象、共享配置的 CRUD 与 JSON 序列化，
- * 数据持久化到 MySQL（companions/内存/skills/figures/共享_配置 五张表）。</p>
+ * <p>基于 MyBatis-Plus 提供伙伴、记忆、技能、形象和共享配置的持久化访问、JSON 序列化及用户归属校验。</p>
+ * <p>职责：维护相关数据表，提供面向业务层的增删改查、补丁合并、记忆查重建议和共享配置操作。</p>
  *
- * @since 4.0.0.42
  * @author CH
+ * @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -853,7 +853,7 @@ public class SysAiCompanionStore {
      */
     private void checkWritableFigure(SysAiCompanionFigure figure) {
         if (figure.getUserId() == null) {
-            if (!AiUserContext.isAdmin()) {
+            if (true) {
                 throw new ApiException(ApiErrorCode.FORBIDDEN, "内置共享形象仅管理员可维护");
             }
             if (AiUserContext.isReadonly()) {

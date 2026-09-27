@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support DataSearch Starter - 数据检索服务化（顶栏天气 / 定位 / 台风）
+
+    把 utils 层 utils-support-datasearch-starter 的数据源 SPI（WeatherProvider / TyphoonProvider /
+    LocationProvider / GeocodeProvider）归一成前端唯一契约，并以 /v2/** 暴露：
+      - GET /v2/weather/overview    天气总览（实况 + 逐小时 + 逐日）
+      - GET /v2/location/resolve    按请求来源 IP 解析展示位置
+      - GET /v2/typhoon/active      当前活跃台风列表
+      - GET /v2/typhoon/detail      单个台风详情（历史路径 + 预报路径）
+
+    放在 spring 层的原因：这套能力是"平台可选增强"，ai / system / monitor 等各类宿主都可能要，
+    而 spring 层不得反向依赖 api 层，故在此下沉为共享库，api 业务层与 spring 业务层共用同一份实现
+    （原实现位于 spring-api-support-common-service-starter，已迁出，避免两份代码分叉）。
+
+    前端契约（@repo/core api/weather.ts、api/typhoon.ts）逐字段对齐：前端对后台数据原样透传、
+    不做补齐，因此数据源给出的字段必须全部映射，缺一项顶栏就少一行信息。
+
+    以自动配置注册（引入依赖即生效，无需宿主 @ComponentScan 覆盖本包）：
+      - 仅 Servlet Web 应用生效
+      - plugin.datasearch.enabled=false 可整体关闭（默认开启）
+      - 宿主已自建同名 Bean 时自动退让（@ConditionalOnMissingBean）
+
+    @author CH
+    @version 4.0.0.42
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <artifactId>spring-support-datasearch-starter</artifactId>
+    <description>数据检索服务化：天气 / 定位 / 台风的后台统一契约（前端顶栏数据源）</description>
+
+    <dependencies>
+        <!-- Web：@RestController / @GetMapping / 自动配置条件 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 数据源 SPI：WeatherProvider / TyphoonProvider / LocationProvider / GeocodeProvider -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasearch-starter</artifactId>
+        </dependency>
+
+        <!-- ReturnResult 统一响应、ServiceProvider SPI 装载 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- @TokenForIgnore：顶栏在登录前就要出数，四个接口必须匿名可访问 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
+        </dependency>
+
+        <!-- OpenAPI 注解（@Tag / @Operation / @Schema），仅文档用途 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+
+        <!-- HttpServletRequest：定位接口按来源 IP 解析 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

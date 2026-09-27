@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.dimension.mapper.EduGradeMapper">
+
+    <!-- 列表年级：学段等值筛选 + 归属隔离，按学段内顺序升序 -->
+    <select id="listGrades" resultType="com.chua.starter.eduai.dimension.entity.EduGrade">
+        SELECT g.* FROM edu_grade g
+        <where>
+            <if test="gradeLevel != null and gradeLevel != ''">
+                g.grade_level = #{gradeLevel}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (g.grade_owner_user_id IS NULL OR g.grade_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY g.grade_order ASC
+    </select>
+
+</mapper>

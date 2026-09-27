@@ -79,6 +79,81 @@ public class JobRuntimeVO {
     private boolean handlerRegistered;
 
     /**
+     * 分发模式: LOCAL-本节点执行 REMOTE-下发注册节点
+     */
+    private String dispatchMode;
+
+    /**
+     * 远程执行器地址
+     */
+    private String remoteExecutorAddress;
+
+    /**
+     * 负责人
+     */
+    private String author;
+
+    /**
+     * 失败重试次数
+     */
+    private Integer failRetry;
+
+    /**
+     * 重试间隔秒数, 0 为立即重试
+     */
+    private Integer retryInterval;
+
+    /**
+     * 执行超时秒数, 0 为不限
+     */
+    private Integer executeTimeout;
+
+    /**
+     * 错过触发策略
+     */
+    private String misfireStrategy;
+
+    /**
+     * 并发策略: SKIP=上一轮未结束则跳过本拍; ALLOW=允许并发重入
+     */
+    private String concurrentPolicy;
+
+    /**
+     * 执行类型: BEAN=本机处理器; 其它值为脚本引擎名 (如 groovy)
+     */
+    private String glueType;
+
+    /**
+     * 脚本正文, 执行类型为 BEAN 时为空
+     */
+    private String glueSource;
+
+    /**
+     * 脚本版本时刻 (毫秒), 0 表示无
+     */
+    private Long glueUpdatetimeMs;
+
+    /**
+     * 重试前回调处理器名
+     */
+    private String retryCallbackBean;
+
+    /**
+     * 异常回调处理器名
+     */
+    private String exceptionCallbackBean;
+
+    /**
+     * 失败告警目标：邮箱（逗号分隔）或 webhook 地址
+     */
+    private String alarmEmail;
+
+    /**
+     * 失败告警类型：EMAIL / WEBHOOK
+     */
+    private String alarmType;
+
+    /**
      * 由内部运行态快照构造出参。
      *
      * @param runtime 快照, 可为空
@@ -101,6 +176,21 @@ public class JobRuntimeVO {
         vo.setLastFireTime(runtime.getLastFireMs() > 0L ? runtime.getLastFireMs() : null);
         vo.setNextFireTime(runtime.getNextFireMs() > 0L ? runtime.getNextFireMs() : null);
         vo.setHandlerRegistered(runtime.isHandlerRegistered());
+        vo.setDispatchMode(runtime.getDispatchMode());
+        vo.setRemoteExecutorAddress(runtime.getRemoteExecutorAddress());
+        vo.setAuthor(runtime.getAuthor());
+        vo.setFailRetry(runtime.getFailRetry());
+        vo.setRetryInterval(runtime.getRetryInterval());
+        vo.setExecuteTimeout(runtime.getExecuteTimeout());
+        vo.setMisfireStrategy(runtime.getMisfireStrategy());
+        vo.setConcurrentPolicy(runtime.getConcurrentPolicy());
+        vo.setGlueType(runtime.getGlueType());
+        vo.setGlueSource(runtime.getGlueSource());
+        vo.setGlueUpdatetimeMs(runtime.getGlueUpdatetimeMs());
+        vo.setRetryCallbackBean(runtime.getRetryCallbackBean());
+        vo.setExceptionCallbackBean(runtime.getExceptionCallbackBean());
+        vo.setAlarmEmail(runtime.getAlarmEmail());
+        vo.setAlarmType(runtime.getAlarmType());
         return vo;
     }
 }

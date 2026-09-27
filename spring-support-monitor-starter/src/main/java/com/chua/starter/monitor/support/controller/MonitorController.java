@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.datasource.dialect.SqlName;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -19,19 +20,47 @@ import com.chua.starter.monitor.support.entity.MsMonitorRedisMetric;
 import com.chua.starter.monitor.support.entity.MsMonitorRedisMetricStatistics;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.enums.ServiceType;
+import com.chua.starter.monitor.support.model.ServerHostOptionVO;
+import com.chua.starter.monitor.support.model.AiAnalyzeVO;
+import com.chua.starter.monitor.support.model.AiHostAnalyzeVO;
+import com.chua.starter.monitor.support.model.AiStatusVO;
+import com.chua.starter.monitor.support.model.DashboardOverviewVO;
+import com.chua.starter.datasourcehub.support.service.DatasourceService;
+import com.chua.starter.monitor.support.model.DbColumnVO;
+import com.chua.starter.monitor.support.model.DbSqlResultVO;
+import com.chua.starter.monitor.support.model.DbTableDataVO;
+import com.chua.starter.monitor.support.model.dto.DbSqlExecuteDTO;
+import com.chua.starter.monitor.support.model.DbTableVO;
+import com.chua.starter.monitor.support.model.RedisCacheSummaryVO;
+import com.chua.starter.monitor.support.model.RedisKeyDetailVO;
+import com.chua.starter.monitor.support.model.RedisMemberScoreVO;
+import com.chua.starter.monitor.support.model.RedisOperationKeyDetailVO;
+import com.chua.starter.monitor.support.model.RedisScanVO;
+import com.chua.starter.monitor.support.model.RedisStreamEntryVO;
+import com.chua.starter.monitor.support.model.RedisValueVO;
+import com.chua.starter.monitor.support.model.dto.AiAnalyzeDTO;
+import com.chua.starter.monitor.support.model.dto.AiHostAnalyzeDTO;
+
+import com.chua.starter.ai.support.chat.ChatClientSettings;
+import com.chua.starter.ai.support.chat.ChatClientSettingsResolver;
+import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.monitor.support.registry.ProviderRegistry;
 import com.chua.starter.monitor.support.scheduler.MonitorScheduler;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
+
 import com.chua.starter.monitor.support.service.MonitorGatewayService;
 import com.chua.starter.monitor.support.service.MonitorMetricConfigService;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
+import com.chua.starter.monitor.support.service.SystemRedisKvService;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.OperationProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,12 +74,15 @@ import reactor.core.publisher.Mono;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
-import javax.sql.DataSource;
-import com.chua.starter.ai.support.chat.ChatClient;
+import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.model.AiChatResult;
+import com.chua.starter.ai.support.model.AiClientProbe;
 
 /**
  * 监控模块 REST 接口
@@ -62,6 +94,7 @@ import com.chua.starter.ai.support.chat.ChatClient;
 @RestController
 @RequestMapping("/ms/monitor")
 @RequiredArgsConstructor
+@Slf4j
 public class MonitorController {
 
     /**
@@ -115,14 +148,29 @@ public class MonitorController {
     private final ObjectProvider<StringRedisTemplate> redisTemplateProvider;
 
     /**
-     * 默认主数据源（用于数据库 web 管理器）
+     * 系统 Redis 集合类型元素操作服务（键详情的 STREAM 分支读取流消息）
      */
-    private final ObjectProvider<DataSource> dataSourceProvider;
+    private final SystemRedisKvService kvService;
 
     /**
-     * AI 对话客户端（未配置 AI 模型时为 null，接口返回未启用提示）
+     * 键详情一次性读取的流消息上限。
      */
-    private final ObjectProvider<ChatClient> chatClientProvider;
+    private static final int STREAM_DETAIL_LIMIT = 100;
+
+    /**
+     * 数据源服务（数据源配置落库与 JDBC 连接构建）
+     */
+    private final DatasourceService datasourceService;
+
+    /**
+     * AI 对话门面服务（宿主未装配 ai-starter 时为空，接口返回未启用提示）
+     */
+    private final ObjectProvider<AiChatFacadeService> aiChatFacadeProvider;
+
+    /**
+     * AI 全局设置服务（判定模型是否真的配置好，并取默认系统提示词）
+     */
+    private final ObjectProvider<SysAiGlobalSettingService> aiGlobalSettingProvider;
 
     // ==================== 资产 CRUD ====================
 
@@ -196,24 +244,20 @@ public class MonitorController {
      */
     @Operation(summary = "查询可用服务器主机列表")
     @GetMapping("/server-hosts")
-    public ReturnResult<List<Map<String, Object>>> listServerHosts() {
-        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+    public ReturnResult<List<ServerHostOptionVO>> listServerHosts() {
+        List<ServerHostOptionVO> result = new ArrayList<>();
         try {
-            ReturnResult<java.util.List<MsServerHost>> q = serverHostService.query(null, null, 1);
-            java.util.List<MsServerHost> hosts = q.getData();
+            ReturnResult<List<MsServerHost>> q = serverHostService.query(null, null, 1);
+            List<MsServerHost> hosts = q.getData();
             if (hosts != null) {
                 for (MsServerHost h : hosts) {
-                    Map<String, Object> item = new java.util.LinkedHashMap<>();
-                    item.put("id", h.getId());
-                    item.put("serverHostName", h.getServerHostName());
-                    item.put("serverHostAddress", h.getServerHostAddress());
-                    item.put("serverHostPort", h.getServerHostPort());
-                    item.put("serverHostOsType", h.getServerHostOsType());
-                    result.add(item);
+                    result.add(new ServerHostOptionVO(h.getId(), h.getServerHostName(),
+                            h.getServerHostAddress(), h.getServerHostPort(), h.getServerHostOsType()));
                 }
             }
         } catch (Exception e) {
             // 台账模块未启用时静默降级为空列表
+            log.debug("[monitor] 服务器主机列表不可用: {}", e.getMessage());
         }
         return ReturnResult.ok(result);
     }
@@ -379,6 +423,9 @@ public class MonitorController {
 
     /**
      * 获取全部全局配置。
+     * <p>
+     * 配置项由用户在配置页自定义键名，属通用动态键值结构而非业务载荷，故不改为 VO。
+     * </p>
      * @return 配置键值对 Map，无配置时为空 Map
      */
     @Operation(summary = "获取所有配置")
@@ -682,161 +729,232 @@ public class MonitorController {
         response.getWriter().flush();
     }
 
-    // ==================== 数据源管理（内存存储，支持 jdbc/redis/influxdb/neo4j/nacos/zookeeper） ====================
-
-    /**
-     * 数据源内存存储（简化实现，后续可改为数据库存储）
-     */
-    private static final java.util.concurrent.ConcurrentHashMap<Long, Map<String, Object>> DATA_SOURCE_STORE = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final java.util.concurrent.atomic.AtomicLong DS_ID_GENERATOR = new java.util.concurrent.atomic.AtomicLong(1000);
-
-    /**
-     * 支持的数据源类型
-     */
-    private static final java.util.List<String> DS_TYPES = java.util.List.of("jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper");
-
-    /**
-     * 获取所有数据源列表。
-     *
-     * @return 数据源列表
-     */
-    @Operation(summary = "获取所有数据源")
-    @GetMapping({"/datasource", "/datasource/list"})
-    public ReturnResult<java.util.List<Map<String, Object>>> listDataSources() {
-        return ReturnResult.ok(new java.util.ArrayList<>(DATA_SOURCE_STORE.values()));
-    }
-
-    /**
-     * 获取数据源详情。
-     *
-     * @param id 数据源 ID
-     * @return 数据源详情
-     */
-    @Operation(summary = "获取数据源详情")
-    @GetMapping("/datasource/{id}")
-    public ReturnResult<Map<String, Object>> getDataSource(@PathVariable Long id) {
-        Map<String, Object> ds = DATA_SOURCE_STORE.get(id);
-        if (ds == null) {
-            return ReturnResult.error("数据源不存在");
-        }
-        return ReturnResult.ok(ds);
-    }
-
-    /**
-     * 创建数据源。
-     *
-     * @param data 数据源配置
-     * @return 创建的数据源
-     */
-    @Operation(summary = "创建数据源")
-    @PostMapping("/datasource")
-    public ReturnResult<Map<String, Object>> createDataSource(@RequestBody Map<String, Object> data) {
-        Long id = DS_ID_GENERATOR.incrementAndGet();
-        data.put("id", id);
-        data.put("createTime", java.time.LocalDateTime.now().toString());
-        DATA_SOURCE_STORE.put(id, data);
-        return ReturnResult.ok(data);
-    }
-
-    /**
-     * 更新数据源。
-     *
-     * @param id   数据源 ID
-     * @param data 数据源配置
-     * @return 更新后的数据源
-     */
-    @Operation(summary = "更新数据源")
-    @PutMapping("/datasource/{id}")
-    public ReturnResult<Map<String, Object>> updateDataSource(@PathVariable Long id, @RequestBody Map<String, Object> data) {
-        if (!DATA_SOURCE_STORE.containsKey(id)) {
-            return ReturnResult.error("数据源不存在");
-        }
-        data.put("id", id);
-        data.put("updateTime", java.time.LocalDateTime.now().toString());
-        DATA_SOURCE_STORE.put(id, data);
-        return ReturnResult.ok(data);
-    }
-
-    /**
-     * 删除数据源。
-     *
-     * @param id 数据源 ID
-     * @return 是否成功
-     */
-    @Operation(summary = "删除数据源")
-    @DeleteMapping("/datasource/{id}")
-    public ReturnResult<Boolean> deleteDataSource(@PathVariable Long id) {
-        DATA_SOURCE_STORE.remove(id);
-        return ReturnResult.ok(true);
-    }
-
-    /**
-     * 测试数据源连接。
-     *
-     * @param id 数据源 ID
-     * @return 测试结果
-     */
-    @Operation(summary = "测试数据源连接")
-    @PostMapping("/datasource/{id}/test")
-    public ReturnResult<Map<String, Object>> testDataSource(@PathVariable Long id) {
-        Map<String, Object> ds = DATA_SOURCE_STORE.get(id);
-        if (ds == null) {
-            return ReturnResult.error("数据源不存在");
-        }
-        // 简化实现：返回测试成功（实际应根据类型测试连接）
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("success", true);
-        result.put("message", "连接测试成功（简化实现）");
-        result.put("type", ds.get("type"));
-        return ReturnResult.ok(result);
-    }
-
-    /**
-     * 获取支持的数据源类型。
-     *
-     * @return 数据源类型列表
-     */
-    @Operation(summary = "获取支持的数据源类型")
-    @GetMapping("/datasource/types")
-    public ReturnResult<java.util.List<String>> getDataSourceTypes() {
-        return ReturnResult.ok(DS_TYPES);
-    }
+    // ==================== 数据源管理 ====================
+    // 数据源台账 CRUD/测试/类型已抽为独立模块 spring-support-datasource-hub-starter，
+    // 接口迁移至 /ms/datasource/**（DatasourceController）；本模块仅注入其 DatasourceService
+    // 获取 JDBC 连接，供下方数据库管理器使用。
 
     // ==================== 数据库 web 管理器（支持按数据源 ID 连接，navicat 风格） ====================
 
     /**
-     * 根据数据源 ID 获取数据库连接。
-     * datasourceId 为 null 或 0 时使用默认主数据源。
-     * @param datasourceId datasourceID，不允许为 null
-     * @return 结果值
+     * 系统内置 schema，不作为可浏览的数据库展示。
      */
-    private java.sql.Connection getDbConnection(Long datasourceId) throws Exception {
-        if (datasourceId == null || datasourceId == 0) {
-            javax.sql.DataSource ds = dataSourceProvider.getIfAvailable();
-            if (ds == null) {
-                throw new RuntimeException("未配置默认数据源");
+    private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of("INFORMATION_SCHEMA", "PG_CATALOG", "SYS");
+
+    /**
+     * SQL 控制台单次查询返回的最大行数（超出置 truncated=true）
+     */
+    private static final int SQL_MAX_ROWS = 1000;
+
+    /**
+     * 把连接切到指定库，并在返回的作用域关闭时还原。
+     *
+     * <p>MySQL 用 catalog 表达库、PostgreSQL/H2 用 schema，两侧都尝试一次；
+     * 都没切过去时抛错，避免语句静默跑在默认库上。</p>
+     *
+     * <p>连接取自连接池，会话级 schema 不会随归还而复位，调用方必须把返回值放进
+     * try-with-resources，否则切库会污染后续取到同一物理连接的语句。</p>
+     *
+     * <p>安全豁免：schema 名经 {@link SqlName#checkSimple(String, String)} 严格校验，
+     * MySQL 的底层方言 {@code USE} 语句只拼接已校验标识符。</p>
+     *
+     * @param conn     数据库连接
+     * @param database 目标库名，为空表示不切换
+     * @return 用完需关闭的切库作用域
+     * @throws java.sql.SQLException 目标库无法选中时抛出
+     */
+    private SchemaScope useSchema(java.sql.Connection conn, String database) throws java.sql.SQLException {
+        // 目标库为空：不切换（默认主数据源/沿用连接默认库）
+        if (database == null || database.isBlank()) {
+            return new SchemaScope(conn, null);
+        }
+        if (!com.chua.starter.monitor.support.support.DbDialectSupport.isSafeIdentifier(database)) {
+            throw new java.sql.SQLException("数据库名不合法");
+        }
+        String original = currentDatabase(conn);
+        if (database.equalsIgnoreCase(original)) {
+            return new SchemaScope(conn, original);
+        }
+        // H2 等内核把「库名」暴露为 catalog（如 file 库 monitordb）而非 schema：
+        // 目标等于当前 catalog 时本就在该库上，无需也无法切换，直接返回。
+        try {
+            if (database.equalsIgnoreCase(conn.getCatalog())) {
+                return new SchemaScope(conn, original);
             }
-            return ds.getConnection();
+        } catch (java.sql.SQLException ignored) {
+            // 驱动不支持 catalog，继续尝试切换
         }
-        Map<String, Object> dsConfig = DATA_SOURCE_STORE.get(datasourceId);
-        if (dsConfig == null) {
-            throw new RuntimeException("数据源不存在: " + datasourceId);
+        if (!databaseExists(conn, database)) {
+            throw new java.sql.SQLException("数据库 " + database + " 不存在");
         }
-        String type = String.valueOf(dsConfig.get("type"));
-        if (!"jdbc".equals(type)) {
-            throw new RuntimeException("非 JDBC 数据源类型: " + type);
+        switchDatabase(conn, database);
+        if (!database.equalsIgnoreCase(currentDatabase(conn))) {
+            throw new java.sql.SQLException("无法切换到数据库 " + database);
         }
-        String host = String.valueOf(dsConfig.get("host"));
-        Object portObj = dsConfig.get("port");
-        int port = portObj != null ? Integer.parseInt(String.valueOf(portObj)) : 3306;
-        String database = String.valueOf(dsConfig.get("database"));
-        String username = String.valueOf(dsConfig.get("username"));
-        String password = String.valueOf(dsConfig.get("password"));
-        String url = String.format("jdbc:mysql://%s:%d/%s?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai", host, port, database);
-        java.util.Properties props = new java.util.Properties();
-        props.setProperty("user", username);
-        props.setProperty("password", password != null ? password : "");
-        return java.sql.DriverManager.getConnection(url, props);
+        return new SchemaScope(conn, original);
+    }
+
+    /**
+     * 读取连接当前所在库（权威值）。
+     *
+     * <p>MySQL 系用 {@code SELECT DATABASE()}：Connector/J 的 {@code getCatalog()} 只反映
+     * 驱动内部字段、{@code setCatalog()} 不会真正切换服务端会话库，必须以服务端查询为准；
+     * 其余内核用 {@code getSchema()}（H2/PostgreSQL）再退回 {@code getCatalog()}。</p>
+     *
+     * @param conn 数据库连接
+     * @return 当前库名，读取失败返回 空
+     */
+    private static String currentDatabase(java.sql.Connection conn) {
+        if (isMysqlFamily(conn)) {
+            try (java.sql.Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT DATABASE()")) {
+                if (rs.next()) {
+                    String value = rs.getString(1);
+                    if (value != null && !value.isBlank()) {
+                        return value;
+                    }
+                }
+            } catch (java.sql.SQLException ignored) {
+                // 退回元数据读取
+            }
+        }
+        try {
+            String schema = conn.getSchema();
+            if (schema != null && !schema.isBlank()) {
+                return schema;
+            }
+        } catch (java.sql.SQLException ignored) {
+            // 驱动不支持 schema，退回 catalog
+        }
+        try {
+            return conn.getCatalog();
+        } catch (java.sql.SQLException ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * 切换连接所在库（跨方言）。
+     *
+     * <p>MySQL 系执行 {@code USE `db`}（唯一可靠方式）；H2/PostgreSQL 用
+     * {@code setSchema}（失败退回 {@code setCatalog}）。</p>
+     *
+     * @param conn 数据库连接
+     * @param db   目标库名
+     * @throws java.sql.SQLException 切换失败
+     */
+    private static void switchDatabase(java.sql.Connection conn, String db) throws java.sql.SQLException {
+        if (isMysqlFamily(conn)) {
+            // setCatalog 只更新驱动内部字段（供 getTables/getColumns 等元数据定位库），
+            // 不真正切换服务端会话库；USE 才切会话。两者都要，缺一会导致「数据查对库、元数据查错库」。
+            try {
+                conn.setCatalog(db);
+            } catch (java.sql.SQLException ignored) {
+                // 驱动不支持 setCatalog，元数据退化为按会话默认库
+            }
+            try (java.sql.Statement st = conn.createStatement()) {
+                st.executeUpdate("USE " + SqlName.quoteMysql(db, "数据库名"));
+            }
+            return;
+        }
+        java.sql.SQLException first = null;
+        try {
+            conn.setSchema(db);
+            return;
+        } catch (java.sql.SQLException e) {
+            first = e;
+        }
+        try {
+            conn.setCatalog(db);
+        } catch (java.sql.SQLException e) {
+            throw first;
+        }
+    }
+
+    /**
+     * 是否 MySQL 系内核（元数据读取失败时按非 MySQL 处理）。
+     *
+     * @param conn 数据库连接
+     * @return true=MySQL/MariaDB 一类
+     */
+    private static boolean isMysqlFamily(java.sql.Connection conn) {
+        try {
+            String product = conn.getMetaData().getDatabaseProductName();
+            if (product == null) {
+                return false;
+            }
+            String lower = product.toLowerCase(java.util.Locale.ROOT);
+            return lower.contains("mysql") || lower.contains("mariadb") || lower.contains("oceanbase");
+        } catch (java.sql.SQLException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 判断库是否存在。
+     *
+     * <p>必须显式校验：部分驱动（如 H2）接受任意 catalog 值而不报错，
+     * 只比对切换结果会让写错的库名静默落在当前库上执行。</p>
+     *
+     * @param conn     数据库连接
+     * @param database 库名
+     * @return 存在返回 true
+     * @throws java.sql.SQLException 读取元数据失败时抛出
+     */
+    private static boolean databaseExists(java.sql.Connection conn, String database) throws java.sql.SQLException {
+        try (java.sql.ResultSet rs = conn.getMetaData().getSchemas()) {
+            while (rs.next()) {
+                if (database.equalsIgnoreCase(rs.getString(1))) {
+                    return true;
+                }
+            }
+        } catch (java.sql.SQLException ignored) {
+            // 驱动不支持 schema 视图，继续用 catalog 判断
+        }
+        try (java.sql.ResultSet rs = conn.getMetaData().getCatalogs()) {
+            while (rs.next()) {
+                if (database.equalsIgnoreCase(rs.getString(1))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 切库前的 catalog/schema 快照，关闭时还原，避免会话状态泄漏给连接池的下一个使用者。
+     *
+     * @param conn    被切换的连接
+     * @param catalog 切换前的 catalog
+     * @param schema  切换前的 schema
+     */
+    private record SchemaScope(java.sql.Connection conn, String database) implements AutoCloseable {
+
+        /**
+         * 规范构造器：被切换的连接非空校验。
+         *
+         * <p>value class 前置条件——语义必填的引用组件必须空值敌对。连接取自数据源服务，
+         * 不可能为 null；目标库名则显式允许为 null（为空表示不切换）。</p>
+         *
+         * @param conn     被切换的连接
+         * @param database 切换前的 catalog，可为空
+         */
+        SchemaScope {
+            conn = Objects.requireNonNull(conn, "conn 不能为 null");
+        }
+
+        @Override
+        public void close() {
+            if (database == null || database.isBlank()) {
+                return;
+            }
+            try {
+                // 按方言还原到进入前的库（MySQL 用 USE；H2/PG 用 setSchema）
+                switchDatabase(conn, database);
+            } catch (java.sql.SQLException ignored) {
+                // 还原失败只能随连接一起被池回收；连接缓存下下次访问会按目标库重切
+            }
+        }
     }
 
     /**
@@ -847,11 +965,26 @@ public class MonitorController {
     @Operation(summary = "获取数据库列表")
     @GetMapping("/db/databases")
     public ReturnResult<java.util.List<String>> getDbDatabases(@RequestParam(required = false) Long datasourceId) {
-        try (java.sql.Connection conn = getDbConnection(datasourceId);
-             java.sql.ResultSet rs = conn.getMetaData().getCatalogs()) {
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
             java.util.List<String> databases = new java.util.ArrayList<>();
-            while (rs.next()) {
-                databases.add(rs.getString(1));
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            try (java.sql.ResultSet rs = conn.getMetaData().getCatalogs()) {
+                while (rs.next()) {
+                    String catalog = rs.getString(1);
+                    if (catalog != null && seen.add(catalog.toUpperCase())) {
+                        databases.add(catalog);
+                    }
+                }
+            }
+            // MySQL 用 catalog 表达库，H2/PostgreSQL 用 schema，两侧都取一次
+            try (java.sql.ResultSet rs = conn.getMetaData().getSchemas()) {
+                while (rs.next()) {
+                    String schema = rs.getString(1);
+                    if (schema == null || SYSTEM_SCHEMAS.contains(schema.toUpperCase()) || !seen.add(schema.toUpperCase())) {
+                        continue;
+                    }
+                    databases.add(schema);
+                }
             }
             return ReturnResult.ok(databases);
         } catch (Exception e) {
@@ -864,18 +997,16 @@ public class MonitorController {
      */
     @Operation(summary = "获取数据库表列表")
     @GetMapping("/db/tables")
-    public ReturnResult<java.util.List<Map<String, Object>>> getDbTables(
+    public ReturnResult<java.util.List<DbTableVO>> getDbTables(
             @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database) {
-        try (java.sql.Connection conn = getDbConnection(datasourceId);
-             java.sql.ResultSet rs = conn.getMetaData().getTables(database != null ? database : conn.getCatalog(), null, "%", new String[]{"TABLE", "VIEW"})) {
-            java.util.List<Map<String, Object>> tables = new java.util.ArrayList<>();
-            while (rs.next()) {
-                Map<String, Object> table = new java.util.LinkedHashMap<>();
-                table.put("name", rs.getString("TABLE_NAME"));
-                table.put("type", rs.getString("TABLE_TYPE"));
-                table.put("remark", rs.getString("REMARKS"));
-                tables.add(table);
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             SchemaScope scope = useSchema(conn, database)) {
+            java.util.List<DbTableVO> tables = new java.util.ArrayList<>();
+            try (java.sql.ResultSet rs = conn.getMetaData().getTables(conn.getCatalog(), conn.getSchema(), "%", new String[]{"TABLE", "VIEW"})) {
+                while (rs.next()) {
+                    tables.add(new DbTableVO(rs.getString("TABLE_NAME"), rs.getString("TABLE_TYPE"), rs.getString("REMARKS")));
+                }
             }
             return ReturnResult.ok(tables);
         } catch (Exception e) {
@@ -888,33 +1019,34 @@ public class MonitorController {
      */
     @Operation(summary = "获取表结构")
     @GetMapping("/db/table/{tableName}/columns")
-    public ReturnResult<java.util.List<Map<String, Object>>> getTableColumns(
+    public ReturnResult<java.util.List<DbColumnVO>> getTableColumns(
             @PathVariable String tableName,
             @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database) {
-        try (java.sql.Connection conn = getDbConnection(datasourceId);
-             java.sql.ResultSet rs = conn.getMetaData().getColumns(database != null ? database : conn.getCatalog(), null, tableName, "%")) {
-            java.util.List<Map<String, Object>> columns = new java.util.ArrayList<>();
-            while (rs.next()) {
-                Map<String, Object> col = new java.util.LinkedHashMap<>();
-                col.put("name", rs.getString("COLUMN_NAME"));
-                col.put("type", rs.getString("TYPE_NAME"));
-                col.put("size", rs.getInt("COLUMN_SIZE"));
-                col.put("nullable", rs.getInt("NULLABLE") == 1);
-                col.put("remark", rs.getString("REMARKS"));
-                col.put("default", rs.getString("COLUMN_DEF"));
-                col.put("position", rs.getInt("ORDINAL_POSITION"));
-                col.put("isPrimaryKey", false); // 主键信息单独查询
-                columns.add(col);
-            }
-            // 查询主键
-            try (java.sql.ResultSet pkRs = conn.getMetaData().getPrimaryKeys(database != null ? database : conn.getCatalog(), null, tableName)) {
-                java.util.Set<String> pkCols = new java.util.HashSet<>();
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             SchemaScope scope = useSchema(conn, database)) {
+            String table = safeIdent(tableName, "表名");
+            requireTable(conn, table);
+            String catalog = conn.getCatalog();
+            String schema = conn.getSchema();
+            java.util.Set<String> pkCols = new java.util.HashSet<>();
+            try (java.sql.ResultSet pkRs = conn.getMetaData().getPrimaryKeys(catalog, schema, table)) {
                 while (pkRs.next()) {
                     pkCols.add(pkRs.getString("COLUMN_NAME"));
                 }
-                for (Map<String, Object> col : columns) {
-                    col.put("isPrimaryKey", pkCols.contains(col.get("name")));
+            }
+            java.util.List<DbColumnVO> columns = new java.util.ArrayList<>();
+            try (java.sql.ResultSet rs = conn.getMetaData().getColumns(catalog, schema, table, "%")) {
+                while (rs.next()) {
+                    String name = rs.getString("COLUMN_NAME");
+                    columns.add(new DbColumnVO(name,
+                            rs.getString("TYPE_NAME"),
+                            rs.getInt("COLUMN_SIZE"),
+                            rs.getInt("NULLABLE") == 1,
+                            rs.getString("REMARKS"),
+                            rs.getString("COLUMN_DEF"),
+                            rs.getInt("ORDINAL_POSITION"),
+                            pkCols.contains(name)));
                 }
             }
             return ReturnResult.ok(columns);
@@ -925,107 +1057,261 @@ public class MonitorController {
 
     /**
      * 获取表数据（分页）。
+     *
+     * <p>安全豁免：表名、排序列先经标识符白名单与 JDBC 元数据校验；分页值使用
+     * PreparedStatement 绑定。</p>
      */
     @Operation(summary = "获取表数据")
     @GetMapping("/db/table/{tableName}/data")
-    public ReturnResult<Map<String, Object>> getTableData(
+    public ReturnResult<DbTableDataVO> getTableData(
             @PathVariable String tableName,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "50") int pageSize,
             @RequestParam(required = false) String orderBy,
             @RequestParam(required = false) String orderDir,
             @RequestParam(required = false) Long datasourceId,
-            @RequestParam(required = false) String database) {
-        int offset = (page - 1) * pageSize;
-        String sql = String.format("SELECT * FROM `%s` %s LIMIT %d OFFSET %d",
-                tableName,
-                (orderBy != null && !orderBy.isEmpty()) ? String.format("ORDER BY `%s` %s", orderBy, "DESC".equalsIgnoreCase(orderDir) ? "DESC" : "ASC") : "",
-                pageSize, offset);
-        String countSql = String.format("SELECT COUNT(*) as total FROM `%s`", tableName);
-        try (java.sql.Connection conn = getDbConnection(datasourceId);
-             java.sql.Statement stmt = conn.createStatement();
-             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
-            java.sql.ResultSetMetaData meta = rs.getMetaData();
-            int colCount = meta.getColumnCount();
-            java.util.List<String> columns = new java.util.ArrayList<>();
-            for (int i = 1; i <= colCount; i++) {
-                columns.add(meta.getColumnLabel(i));
+            @RequestParam(required = false) String database,
+            @RequestParam(defaultValue = "true") boolean count,
+            @RequestParam(required = false) String where) {
+        int normalizedPage = Math.max(1, page);
+        int normalizedPageSize = Math.min(500, Math.max(1, pageSize));
+        long offset = (long) (normalizedPage - 1) * normalizedPageSize;
+        String table = safeIdent(tableName, "表名");
+        String column = orderBy == null || orderBy.isBlank() ? null : safeIdent(orderBy, "排序列");
+        String direction = "DESC".equalsIgnoreCase(orderDir) ? "DESC" : "ASC";
+        // WHERE 过滤：允许 Navicat 式自由条件，但拒绝语句分隔符/注释，避免堆叠多条语句
+        String whereClause = sanitizeWhere(where);
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             SchemaScope scope = useSchema(conn, database)) {
+            requireTable(conn, table);
+            if (column != null) {
+                requireColumn(conn, table, column);
             }
-            java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
-            while (rs.next()) {
-                Map<String, Object> row = new java.util.LinkedHashMap<>();
-                for (int i = 1; i <= colCount; i++) {
-                    row.put(columns.get(i - 1), rs.getObject(i));
+            String quotedTable = SqlName.quoteMysql(table, "表名");
+            String whereSql = whereClause == null ? "" : " WHERE " + whereClause;
+            String orderClause = column == null ? ""
+                    : " ORDER BY " + SqlName.quoteMysql(column, "排序列") + " " + direction;
+            String dataSql = "SELECT * FROM " + quotedTable + whereSql + orderClause + " LIMIT ? OFFSET ?";
+            String countSql = "SELECT COUNT(*) FROM " + quotedTable + whereSql;
+            java.util.List<String> columns;
+            java.util.List<Map<String, Object>> rows;
+            try (java.sql.PreparedStatement stmt = conn.prepareStatement(dataSql)) {
+                stmt.setInt(1, normalizedPageSize);
+                stmt.setLong(2, offset);
+                try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                    java.sql.ResultSetMetaData meta = rs.getMetaData();
+                    int colCount = meta.getColumnCount();
+                    columns = new java.util.ArrayList<>();
+                    for (int i = 1; i <= colCount; i++) {
+                        columns.add(meta.getColumnLabel(i));
+                    }
+                    rows = new java.util.ArrayList<>();
+                    while (rs.next()) {
+                        Map<String, Object> row = new java.util.LinkedHashMap<>();
+                        for (int i = 1; i <= colCount; i++) {
+                            row.put(columns.get(i - 1), rs.getObject(i));
+                        }
+                        rows.add(row);
+                    }
                 }
-                rows.add(row);
             }
-            // 查询总数
-            long total = 0;
-            try (java.sql.ResultSet countRs = stmt.executeQuery(countSql)) {
-                if (countRs.next()) {
-                    total = countRs.getLong(1);
+            long total = -1;
+            if (count) {
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(countSql);
+                     java.sql.ResultSet countRs = stmt.executeQuery()) {
+                    if (countRs.next()) {
+                        total = countRs.getLong(1);
+                    }
                 }
             }
-            Map<String, Object> result = new java.util.LinkedHashMap<>();
-            result.put("columns", columns);
-            result.put("rows", rows);
-            result.put("total", total);
-            result.put("page", page);
-            result.put("pageSize", pageSize);
-            return ReturnResult.ok(result);
-        } catch (Exception e) {
+            return ReturnResult.ok(new DbTableDataVO(columns, rows, total, normalizedPage, normalizedPageSize));
+} catch (Exception e) {
             return ReturnResult.error("获取表数据失败: " + e.getMessage());
         }
     }
 
     /**
-     * 执行 SQL（支持 SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/DROP）。
-     * @param request 请求，不允许为 null
-     * @return Return结果 对象
+     * 校验 WHERE 过滤条件（Navicat 式自由条件）。
+     *
+     * <p>仅作为管理端的数据筛选用途，允许列名/运算符/函数；为防堆叠多条语句，
+     * 拒绝语句分隔符与注释符。空白输入返回 null（不过滤）。</p>
+     *
+     * @param where 过滤条件
+     * @return 规整后的条件；为空返回 null
+     * @throws IllegalArgumentException 含禁止字符时抛出
+     */
+    private static String sanitizeWhere(String where) {
+        if (where == null || where.isBlank()) {
+            return null;
+        }
+        String value = where.trim();
+        for (String forbidden : new String[]{";", "--", "/*", "*/", "#"}) {
+            if (value.contains(forbidden)) {
+                throw new IllegalArgumentException("过滤条件含非法字符: " + forbidden);
+            }
+        }
+        return value;
+    }
+
+    /**
+     * 获取表的建表语句（DDL）。
+     *
+     * <p>优先 {@code SHOW CREATE TABLE}（MySQL/H2 兼容）；不支持时按列+主键拼装 CREATE TABLE，
+     * 保证在 PostgreSQL 等内核也能给出可用 DDL。</p>
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID
+     * @param database     库名
+     * @return 建表语句
+     */
+    @Operation(summary = "获取建表语句")
+    @GetMapping("/db/table/{tableName}/ddl")
+    public ReturnResult<String> getTableDdl(
+            @PathVariable String tableName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String table = safeIdent(tableName, "表名");
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             SchemaScope scope = useSchema(conn, database)) {
+            requireTable(conn, table);
+            String quoted = SqlName.quoteMysql(table, "表名");
+            try (java.sql.Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SHOW CREATE TABLE " + quoted)) {
+                if (rs.next()) {
+                    // MySQL 第 2 列为 DDL；部分内核列名不同，取首个含 CREATE 的文本列
+                    for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                        Object v = rs.getObject(i);
+                        if (v instanceof String s && s.toUpperCase().contains("CREATE")) {
+                            return ReturnResult.ok(s);
+                        }
+                    }
+                }
+            } catch (java.sql.SQLException ignored) {
+                // 非 SHOW CREATE 内核，走列结构拼装
+            }
+            String catalog = conn.getCatalog();
+            String schema = conn.getSchema();
+            java.util.Set<String> pkCols = new java.util.LinkedHashSet<>();
+            try (java.sql.ResultSet pkRs = conn.getMetaData().getPrimaryKeys(catalog, schema, table)) {
+                while (pkRs.next()) {
+                    pkCols.add(pkRs.getString("COLUMN_NAME"));
+                }
+            }
+            StringBuilder ddl = new StringBuilder("CREATE TABLE ").append(quoted).append(" (\n");
+            java.util.List<String> defs = new java.util.ArrayList<>();
+            try (java.sql.ResultSet rs = conn.getMetaData().getColumns(catalog, schema, table, "%")) {
+                while (rs.next()) {
+                    String name = rs.getString("COLUMN_NAME");
+                    String type = rs.getString("TYPE_NAME");
+                    int size = rs.getInt("COLUMN_SIZE");
+                    boolean nullable = rs.getInt("NULLABLE") == 1;
+                    String def = rs.getString("COLUMN_DEF");
+                    StringBuilder line = new StringBuilder("  ").append(SqlName.quoteMysql(name, "列名"))
+                            .append(' ').append(type);
+                    if (size > 0 && java.util.Set.of("VARCHAR", "CHAR", "DECIMAL", "NUMERIC").contains(type.toUpperCase())) {
+                        line.append('(').append(size).append(')');
+                    }
+                    line.append(nullable ? " NULL" : " NOT NULL");
+                    if (def != null && !def.isBlank()) {
+                        line.append(" DEFAULT ").append(def);
+                    }
+                    if (pkCols.contains(name)) {
+                        line.append(" PRIMARY KEY");
+                    }
+                    defs.add(line.toString());
+                }
+            }
+            ddl.append(String.join(",\n", defs)).append("\n);");
+            return ReturnResult.ok(ddl.toString());
+        } catch (Exception e) {
+            return ReturnResult.error("获取建表语句失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取表的外键列表。
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID
+     * @param database     库名
+     * @return 外键列表（约束名 / 本表列 / 引用表 / 引用列）
+     */
+    @Operation(summary = "获取外键列表")
+    @GetMapping("/db/table/{tableName}/foreign-keys")
+    public ReturnResult<java.util.List<Map<String, Object>>> getForeignKeys(
+            @PathVariable String tableName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String table = safeIdent(tableName, "表名");
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             SchemaScope scope = useSchema(conn, database)) {
+            requireTable(conn, table);
+            java.util.List<Map<String, Object>> list = new java.util.ArrayList<>();
+            try (java.sql.ResultSet rs = conn.getMetaData().getImportedKeys(conn.getCatalog(), conn.getSchema(), table)) {
+                while (rs.next()) {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("fkName", rs.getString("FK_NAME"));
+                    row.put("columnName", rs.getString("FKCOLUMN_NAME"));
+                    row.put("refTable", rs.getString("PKTABLE_NAME"));
+                    row.put("refColumn", rs.getString("PKCOLUMN_NAME"));
+                    row.put("updateRule", rs.getShort("UPDATE_RULE"));
+                    row.put("deleteRule", rs.getShort("DELETE_RULE"));
+                    list.add(row);
+                }
+            }
+            return ReturnResult.ok(list);
+        } catch (Exception e) {
+            return ReturnResult.error("获取外键失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 执行 SQL（支持 SELECT/SHOW/DESC/EXPLAIN 查询与 INSERT/UPDATE/DELETE/CREATE/ALTER/DROP 等更新）。
+     *
+     * <p>查询语句最多返回 {@value #SQL_MAX_ROWS} 行（超出置 truncated）；更新语句返回影响行数。
+     * 数据库管理器的建表/改名/复制表/查看建表语句/导入数据/查询控制台均经此端点。</p>
+     *
+     * @param request SQL 执行请求（sql / datasourceId / database）
+     * @return 执行结果
      */
     @Operation(summary = "执行 SQL")
     @PostMapping("/db/execute")
-    public ReturnResult<Map<String, Object>> executeDbSql(@RequestBody Map<String, Object> request) {
-        String sql = String.valueOf(request.get("sql"));
-        Long datasourceId = request.get("datasourceId") != null ? Long.valueOf(String.valueOf(request.get("datasourceId"))) : null;
+    public ReturnResult<DbSqlResultVO> executeDbSql(@RequestBody DbSqlExecuteDTO request) {
+        String sql = request.sql();
         if (sql == null || sql.trim().isEmpty()) {
             return ReturnResult.error("SQL 不能为空");
         }
+        Long datasourceId = request.datasourceId();
         String trimmed = sql.trim().toUpperCase();
-        boolean isQuery = trimmed.startsWith("SELECT") || trimmed.startsWith("SHOW") || trimmed.startsWith("DESC") || trimmed.startsWith("EXPLAIN");
-        try (java.sql.Connection conn = getDbConnection(datasourceId);
-             java.sql.Statement stmt = conn.createStatement()) {
-            Map<String, Object> result = new java.util.LinkedHashMap<>();
+        boolean isQuery = trimmed.startsWith("SELECT") || trimmed.startsWith("SHOW")
+                || trimmed.startsWith("DESC") || trimmed.startsWith("EXPLAIN");
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             java.sql.Statement stmt = conn.createStatement();
+             SchemaScope scope = useSchema(conn, request.database())) {
             if (isQuery) {
                 try (java.sql.ResultSet rs = stmt.executeQuery(sql)) {
                     java.sql.ResultSetMetaData meta = rs.getMetaData();
                     int colCount = meta.getColumnCount();
-                    java.util.List<String> columns = new java.util.ArrayList<>();
+                    java.util.List<String> columns = new java.util.ArrayList<>(colCount);
                     for (int i = 1; i <= colCount; i++) {
                         columns.add(meta.getColumnLabel(i));
                     }
                     java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
                     int rowCount = 0;
-                    int maxRows = 1000;
-                    while (rs.next() && rowCount < maxRows) {
-                        Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    while (rs.next() && rowCount < SQL_MAX_ROWS) {
+                        Map<String, Object> row = new java.util.LinkedHashMap<>(colCount);
                         for (int i = 1; i <= colCount; i++) {
                             row.put(columns.get(i - 1), rs.getObject(i));
                         }
                         rows.add(row);
                         rowCount++;
                     }
-                    result.put("columns", columns);
-                    result.put("rows", rows);
-                    result.put("rowCount", rowCount);
-                    result.put("truncated", rowCount >= maxRows);
+                    return ReturnResult.ok(new DbSqlResultVO(columns, rows, rowCount, rowCount >= SQL_MAX_ROWS, null, null));
                 }
-            } else {
-                int affectedRows = stmt.executeUpdate(sql);
-                result.put("affectedRows", affectedRows);
-                result.put("message", "执行成功，影响 " + affectedRows + " 行");
             }
-            return ReturnResult.ok(result);
+            int affectedRows = stmt.executeUpdate(sql);
+            return ReturnResult.ok(new DbSqlResultVO(null, null, null, null, affectedRows,
+                    "执行成功，影响 " + affectedRows + " 行"));
         } catch (Exception e) {
             return ReturnResult.error("SQL 执行失败: " + e.getMessage());
         }
@@ -1033,20 +1319,537 @@ public class MonitorController {
 
     /**
      * 删除表。
+     *
+     * <p>安全豁免：表名经标识符白名单与 JDBC 元数据校验后才进入 MySQL 底层方言 DDL。</p>
      */
     @Operation(summary = "删除表")
     @DeleteMapping("/db/table/{tableName}")
     public ReturnResult<Boolean> dropTable(
             @PathVariable String tableName,
-            @RequestParam(required = false) Long datasourceId) {
-        String sql = String.format("DROP TABLE IF EXISTS `%s`", tableName);
-        try (java.sql.Connection conn = getDbConnection(datasourceId);
-             java.sql.Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate(sql);
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String table = safeIdent(tableName, "表名");
+        return callDb("删除表", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                requireTable(conn, table);
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP TABLE " + SqlName.quoteMysql(table, "表名"))) {
+                    stmt.executeUpdate();
+                }
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 新建数据库。
+     *
+     * <p>库的 DDL 随内核不同（MySQL 用 DATABASE、H2/PostgreSQL 用 SCHEMA），
+     * 交由 {@link com.chua.starter.monitor.support.support.DbDialectSupport} 选型。</p>
+     *
+     * @param request 请求，不允许为 null
+     * @return Return结果 对象
+     */
+    @Operation(summary = "新建数据库")
+    @PostMapping("/db/database")
+    public ReturnResult<Boolean> createDatabase(@RequestBody com.chua.starter.monitor.support.model.dto.DbDatabaseDTO request) {
+        String name = request.name() == null ? "" : request.name().trim();
+        if (!com.chua.starter.monitor.support.support.DbDialectSupport.isSafeIdentifier(name)
+                || SYSTEM_SCHEMAS.contains(name.toUpperCase())) {
+            return ReturnResult.error("数据库名只能由字母、数字和下划线组成，且不能以数字开头");
+        }
+        try (java.sql.Connection conn = datasourceService.connection(request.datasourceId())) {
+            com.chua.starter.monitor.support.support.DbDialectSupport.createDatabase(
+                    conn, name, request.charset(), request.collation());
             return ReturnResult.ok(true);
         } catch (Exception e) {
-            return ReturnResult.error("删除表失败: " + e.getMessage());
+            return ReturnResult.error("创建数据库失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 删除数据库。
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @param name         数据库名
+     * @return Return结果 对象
+     */
+    @Operation(summary = "删除数据库")
+    @DeleteMapping("/db/database")
+    public ReturnResult<Boolean> dropDatabase(
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam String name) {
+        String database = name == null ? "" : name.trim();
+        if (!com.chua.starter.monitor.support.support.DbDialectSupport.isSafeIdentifier(database)
+                || SYSTEM_SCHEMAS.contains(database.toUpperCase())) {
+            return ReturnResult.error("数据库名只能由字母、数字和下划线组成，且不能以数字开头");
+        }
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+            com.chua.starter.monitor.support.support.DbDialectSupport.dropDatabase(conn, database);
+            return ReturnResult.ok(true);
+        } catch (Exception e) {
+            return ReturnResult.error("删除数据库失败: " + e.getMessage());
+        }
+    }
+
+
+    // ==================== 数据库表级编辑（单元格 / 索引 / 清空表 / 列） ====================
+
+    /** 允许通过 DDL 拼接的列类型白名单，杜绝把前端传入的类型字段拼进 SQL 造成注入 */
+    private static final java.util.Set<String> SAFE_COLUMN_TYPES =
+            java.util.Set.of("VARCHAR", "INT", "BIGINT", "TEXT", "DATETIME", "DECIMAL", "FLOAT", "DOUBLE", "BOOLEAN", "BLOB");
+
+    /** 可抛受检异常的 Supplier，配合 callDb 把 SQLException 转成可读错误 */
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws Exception;
+    }
+
+    /**
+     * 执行一次表级 DML/DDL 操作，把底层异常换成可读原因而不是 500 堆栈。
+     */
+    private <T> ReturnResult<T> callDb(String action, ThrowingSupplier<T> supplier) {
+        try {
+            return ReturnResult.ok(supplier.get());
+        } catch (Exception e) {
+            log.error("[db] {}失败", action, e);
+            return ReturnResult.error(action + "失败: " + e.getMessage());
+        }
+    }
+
+    /** 校验并规整 SQL 标识符，非法直接抛异常，由 callDb 转成可读错误 */
+    private static String safeIdent(String name, String label) {
+        try {
+            return SqlName.checkSimple(name == null ? null : name.trim(), label);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(label + "只能由字母、数字和下划线组成，且最长 64 字符: " + name, ex);
+        }
+    }
+
+    private static void requireTable(java.sql.Connection conn, String table) throws java.sql.SQLException {
+        java.sql.DatabaseMetaData metadata = conn.getMetaData();
+        // 依次尝试 (catalog,schema) / (catalog,null) / (null,schema) / (null,null)：
+        // MySQL 的 getSchema() 常为空串，配 useInformationSchema 时只传 catalog 才能命中
+        if (!hasTable(metadata, conn.getCatalog(), conn.getSchema(), table)
+                && !hasTable(metadata, conn.getCatalog(), null, table)
+                && !hasTable(metadata, null, conn.getSchema(), table)
+                && !hasTable(metadata, null, null, table)) {
+            throw new java.sql.SQLException("表不存在: " + table);
+        }
+    }
+
+    private static boolean hasTable(java.sql.DatabaseMetaData metadata, String catalog,
+                                   String schema, String table) throws java.sql.SQLException {
+        try (java.sql.ResultSet rs = metadata.getTables(catalog, schema, table, new String[]{"TABLE", "VIEW"})) {
+            while (rs.next()) {
+                if (table.equalsIgnoreCase(rs.getString("TABLE_NAME"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void requireColumn(java.sql.Connection conn, String table, String column) throws java.sql.SQLException {
+        requireTable(conn, table);
+        java.sql.DatabaseMetaData metadata = conn.getMetaData();
+        if (!hasColumn(metadata, conn.getCatalog(), conn.getSchema(), table, column)
+                && !hasColumn(metadata, conn.getCatalog(), null, table, column)
+                && !hasColumn(metadata, null, conn.getSchema(), table, column)
+                && !hasColumn(metadata, null, null, table, column)) {
+            throw new java.sql.SQLException("列不存在: " + table + "." + column);
+        }
+    }
+
+    private static boolean hasColumn(java.sql.DatabaseMetaData metadata, String catalog,
+                                     String schema, String table, String column) throws java.sql.SQLException {
+        try (java.sql.ResultSet rs = metadata.getColumns(catalog, schema, table, column)) {
+            while (rs.next()) {
+                if (column.equalsIgnoreCase(rs.getString("COLUMN_NAME"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void requireMissingColumn(java.sql.Connection conn, String table, String column)
+            throws java.sql.SQLException {
+        requireTable(conn, table);
+        java.sql.DatabaseMetaData metadata = conn.getMetaData();
+        if (hasColumn(metadata, conn.getCatalog(), conn.getSchema(), table, column)
+                || hasColumn(metadata, null, null, table, column)) {
+            throw new java.sql.SQLException("列已存在: " + table + "." + column);
+        }
+    }
+
+    private static void requireIndex(java.sql.Connection conn, String table, String index) throws java.sql.SQLException {
+        requireTable(conn, table);
+        try (java.sql.ResultSet rs = conn.getMetaData().getIndexInfo(conn.getCatalog(), conn.getSchema(), table, false, true)) {
+            while (rs.next()) {
+                if (index.equalsIgnoreCase(rs.getString("INDEX_NAME"))) {
+                    return;
+                }
+            }
+        }
+        throw new java.sql.SQLException("索引不存在: " + index);
+    }
+
+
+    /** 从请求体里取可选的 datasourceId，空串/0 统一归一为 null（走默认主数据源） */
+    private static Long bodyDatasourceId(Map<String, Object> body) {
+        Object v = body.get("datasourceId");
+        if (v == null || String.valueOf(v).isBlank()) {
+            return null;
+        }
+        long id = Long.parseLong(String.valueOf(v));
+        return id == 0 ? null : id;
+    }
+
+    /** 从请求体里取可选 database */
+    private static String bodyDatabase(Map<String, Object> body) {
+        Object v = body.get("database");
+        if (v == null || String.valueOf(v).isBlank()) {
+            return null;
+        }
+        return String.valueOf(v);
+    }
+
+    /**
+     * 更新单元格：按主键等值条件定位，PreparedStatement 绑定值防注入。
+     *
+     * <p>安全豁免：表名、目标列和主键列均经标识符白名单与 JDBC 元数据双重校验。</p>
+     */
+    @Operation(summary = "更新单元格")
+    @PutMapping("/db/table/{tableName}/cell")
+    public ReturnResult<Integer> updateCell(@PathVariable String tableName, @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        String column = safeIdent(String.valueOf(body.get("column")), "列名");
+        Object newValue = body.get("newValue");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> primaryKey = (Map<String, Object>) body.getOrDefault("primaryKey", java.util.Collections.emptyMap());
+        if (primaryKey == null || primaryKey.isEmpty()) {
+            return ReturnResult.error("缺少主键定位条件 primaryKey");
+        }
+        StringBuilder sql = new StringBuilder("UPDATE ").append(SqlName.quoteMysql(t, "表名"))
+                .append(" SET ").append(SqlName.quoteMysql(column, "列名")).append(" = ? WHERE ");
+        List<Object> params = new ArrayList<>();
+        params.add(newValue);
+        boolean first = true;
+        for (Map.Entry<String, Object> e : primaryKey.entrySet()) {
+            if (!first) {
+                sql.append(" AND ");
+            }
+            sql.append(SqlName.quoteMysql(safeIdent(e.getKey(), "主键列"), "主键列")).append(" = ?");
+            params.add(e.getValue());
+            first = false;
+        }
+        Long dsId = bodyDatasourceId(body);
+        String db = bodyDatabase(body);
+        return callDb("更新单元格", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, t);
+                requireColumn(conn, t, column);
+                for (Map.Entry<String, Object> entry : primaryKey.entrySet()) {
+                    requireColumn(conn, t, safeIdent(entry.getKey(), "主键列"));
+                }
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+                    for (int i = 0; i < params.size(); i++) {
+                        ps.setObject(i + 1, params.get(i));
+                    }
+                    return ps.executeUpdate();
+                }
+            }
+
+        });
+    }
+
+    /**
+     * 读取表索引列表（经 DatabaseMetaData.getIndexInfo）。
+     */
+    @Operation(summary = "获取表索引")
+    @GetMapping("/db/table/{tableName}/indexes")
+    public ReturnResult<java.util.List<Map<String, Object>>> getTableIndexes(
+            @PathVariable String tableName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String t = safeIdent(tableName, "表名");
+        return callDb("获取表索引", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                requireTable(conn, t);
+                String catalog = conn.getCatalog();
+
+                String schema = conn.getSchema();
+                java.util.List<Map<String, Object>> list = new ArrayList<>();
+                try (java.sql.ResultSet rs = conn.getMetaData().getIndexInfo(catalog, schema, t, false, false)) {
+                    while (rs.next()) {
+                        String idxName = rs.getString("INDEX_NAME");
+                        if (idxName == null || "PRIMARY".equalsIgnoreCase(idxName)) {
+                            continue;
+                        }
+                        Map<String, Object> row = new java.util.LinkedHashMap<>();
+                        row.put("indexName", idxName);
+                        row.put("columnName", rs.getString("COLUMN_NAME"));
+                        row.put("nonUnique", rs.getBoolean("NON_UNIQUE"));
+                        row.put("indexType", rs.getInt("TYPE"));
+                        row.put("seqInIndex", rs.getShort("ORDINAL_POSITION"));
+                        list.add(row);
+                    }
+                }
+                return list;
+            }
+        });
+    }
+
+    /**
+     * 新建索引（支持联合列与唯一索引）。
+     *
+     * <p>安全豁免：索引名、表名和索引列经标识符白名单及 JDBC 元数据校验后进入 MySQL 底层方言 DDL。</p>
+     */
+    @Operation(summary = "新建索引")
+    @PostMapping("/db/table/{tableName}/index")
+    public ReturnResult<Boolean> createIndex(@PathVariable String tableName, @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        String indexName = safeIdent(String.valueOf(body.get("indexName")), "索引名");
+        @SuppressWarnings("unchecked")
+        List<String> columns = (List<String>) body.get("columns");
+        boolean unique = Boolean.TRUE.equals(body.get("unique"));
+        if (columns == null || columns.isEmpty()) {
+            return ReturnResult.error("请至少选择一列");
+        }
+        StringBuilder sql = new StringBuilder(unique ? "CREATE UNIQUE INDEX " : "CREATE INDEX ");
+        sql.append(SqlName.quoteMysql(indexName, "索引名"))
+                .append(" ON ").append(SqlName.quoteMysql(t, "表名")).append(" (");
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append(SqlName.quoteMysql(safeIdent(columns.get(i), "索引列"), "索引列"));
+        }
+        sql.append(")");
+        Long dsId = bodyDatasourceId(body);
+        String db = bodyDatabase(body);
+        return callDb("新建索引", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, t);
+                for (String indexColumn : columns) {
+                    requireColumn(conn, t, safeIdent(indexColumn, "索引列"));
+                }
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+                    stmt.executeUpdate();
+                }
+                return Boolean.TRUE;
+            }
+        });
+
+    }
+
+    /**
+     * 删除索引。
+     *
+     * <p>安全豁免：索引名和表名经标识符白名单及 JDBC 元数据校验。</p>
+     */
+    @Operation(summary = "删除索引")
+    @DeleteMapping("/db/table/{tableName}/index/{indexName}")
+    public ReturnResult<Boolean> dropIndex(
+            @PathVariable String tableName,
+            @PathVariable String indexName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String t = safeIdent(tableName, "表名");
+        String idx = safeIdent(indexName, "索引名");
+        String sql = "DROP INDEX " + SqlName.quoteMysql(idx, "索引名")
+                + " ON " + SqlName.quoteMysql(t, "表名");
+        return callDb("删除索引", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                requireIndex(conn, t, idx);
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.executeUpdate();
+                }
+                return Boolean.TRUE;
+            }
+        });
+
+    }
+
+    /**
+     * 清空表：优先 TRUNCATE，不支持的内核退化为 DELETE FROM。
+     *
+     * <p>安全豁免：表名经标识符白名单和 JDBC 元数据校验后才进入数据库方言 DDL。</p>
+     */
+    @Operation(summary = "清空表")
+    @PostMapping("/db/table/{tableName}/truncate")
+    public ReturnResult<Boolean> truncateTable(
+            @PathVariable String tableName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String t = safeIdent(tableName, "表名");
+        return callDb("清空表", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                requireTable(conn, t);
+                try {
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("TRUNCATE TABLE " + SqlName.quoteMysql(t, "表名"))) {
+                        stmt.executeUpdate();
+                    }
+                } catch (java.sql.SQLException fallback) {
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + SqlName.quoteMysql(t, "表名"))) {
+                        stmt.executeUpdate();
+                    }
+                }
+                return Boolean.TRUE;
+            }
+        });
+
+    }
+
+    /**
+     * 拼接列定义片段（类型 + 可空 + 默认值 + 注释），类型走白名单。
+     */
+    private static String buildColumnDef(Map<String, Object> body) {
+        String rawType = body.get("type") == null ? "" : String.valueOf(body.get("type")).trim().toUpperCase();
+        if (!SAFE_COLUMN_TYPES.contains(rawType)) {
+            throw new IllegalArgumentException("不支持的列类型: " + body.get("type"));
+        }
+        StringBuilder ddl = new StringBuilder(rawType);
+        if (rawType.equals("VARCHAR") || rawType.equals("DECIMAL")) {
+            int size;
+            try {
+                size = body.get("size") == null || String.valueOf(body.get("size")).isBlank()
+                        ? (rawType.equals("VARCHAR") ? 255 : 10)
+                        : Integer.parseInt(String.valueOf(body.get("size")).trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("长度必须是整数: " + body.get("size"));
+            }
+            if (size <= 0 || size > 10000) {
+                throw new IllegalArgumentException("长度必须在 1 到 10000 之间");
+            }
+            ddl.append(rawType.equals("VARCHAR") ? "(" + size + ")" : "(" + size + ",2)");
+
+        }
+        boolean nullable = !Boolean.FALSE.equals(body.get("nullable"));
+        ddl.append(nullable ? " NULL" : " NOT NULL");
+        return ddl.toString();
+    }
+
+/**
+     * 仅取类型定义（如 VARCHAR(80)），供跨方言 ALTER COLUMN 使用。
+     *
+     * @param body 列定义请求体
+     * @return 类型定义
+     */
+    private static String columnTypeDef(Map<String, Object> body) {
+        String rawType = body.get("type") == null ? "" : String.valueOf(body.get("type")).trim().toUpperCase();
+        if (!SAFE_COLUMN_TYPES.contains(rawType)) {
+            throw new IllegalArgumentException("不支持的列类型: " + body.get("type"));
+        }
+        if (rawType.equals("VARCHAR") || rawType.equals("DECIMAL")) {
+            int size;
+            try {
+                size = body.get("size") == null || String.valueOf(body.get("size")).isBlank()
+                        ? (rawType.equals("VARCHAR") ? 255 : 10)
+                        : Integer.parseInt(String.valueOf(body.get("size")).trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("长度必须是整数: " + body.get("size"));
+            }
+            if (size <= 0 || size > 10000) {
+                throw new IllegalArgumentException("长度必须在 1 到 10000 之间");
+            }
+            return rawType.equals("VARCHAR") ? "VARCHAR(" + size + ")" : "DECIMAL(" + size + ",2)";
+        }
+        return rawType;
+    }
+
+    /**
+     * 新增列（ALTER TABLE ADD COLUMN）。
+     *
+     * <p>安全豁免：表名和列名经严格校验；默认值与注释由
+     * {@link com.chua.starter.monitor.support.support.DbDialectSupport} 参数绑定。</p>
+     */
+    @Operation(summary = "新增列")
+    @PostMapping("/db/table/{tableName}/column")
+    public ReturnResult<Boolean> addColumn(@PathVariable String tableName, @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        String col = safeIdent(String.valueOf(body.get("columnName")), "列名");
+        String typeDefinition = buildColumnDef(body);
+        boolean nullable = !Boolean.FALSE.equals(body.get("nullable"));
+        String defaultValue = body.get("defaultValue") == null ? null : String.valueOf(body.get("defaultValue"));
+        String comment = body.get("comment") == null ? null : String.valueOf(body.get("comment"));
+        Long dsId = bodyDatasourceId(body);
+        String db = bodyDatabase(body);
+        return callDb("新增列", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireMissingColumn(conn, t, col);
+                com.chua.starter.monitor.support.support.DbDialectSupport.addColumn(
+                        conn, t, col, typeDefinition, nullable, defaultValue, comment);
+                return Boolean.TRUE;
+            }
+        });
+
+    }
+
+    /**
+     * 修改列（ALTER TABLE MODIFY COLUMN）。
+     *
+     * <p>安全豁免：标识符和类型定义经白名单校验；默认值与注释全部参数绑定。</p>
+     */
+    @Operation(summary = "修改列")
+    @PutMapping("/db/table/{tableName}/column/{columnName}")
+    public ReturnResult<Boolean> modifyColumn(
+            @PathVariable String tableName,
+            @PathVariable String columnName,
+            @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        String col = safeIdent(columnName, "列名");
+        String typeDef = columnTypeDef(body);
+        boolean nullable = !Boolean.FALSE.equals(body.get("nullable"));
+        String defaultValue = body.get("defaultValue") == null ? null : String.valueOf(body.get("defaultValue"));
+        String comment = body.get("comment") == null ? null : String.valueOf(body.get("comment"));
+        Long dsId = bodyDatasourceId(body);
+        String db = bodyDatabase(body);
+        return callDb("修改列", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireColumn(conn, t, col);
+                com.chua.starter.monitor.support.support.DbDialectSupport.alterColumn(
+                        conn, t, col, typeDef, nullable, defaultValue, comment);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 删除列（ALTER TABLE DROP COLUMN）。
+     *
+     * <p>安全豁免：表名和列名经标识符白名单及 JDBC 元数据校验。</p>
+     */
+    @Operation(summary = "删除列")
+    @DeleteMapping("/db/table/{tableName}/column/{columnName}")
+    public ReturnResult<Boolean> dropColumn(
+            @PathVariable String tableName,
+            @PathVariable String columnName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String t = safeIdent(tableName, "表名");
+        String col = safeIdent(columnName, "列名");
+        String sql = "ALTER TABLE " + SqlName.quoteMysql(t, "表名")
+                + " DROP COLUMN " + SqlName.quoteMysql(col, "列名");
+        return callDb("删除列", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                requireColumn(conn, t, col);
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.executeUpdate();
+                }
+                return Boolean.TRUE;
+            }
+        });
+
     }
 
     // ==================== Redis 操作 ====================
@@ -1056,6 +1859,9 @@ public class MonitorController {
      * <p>
      * 直接读取应用自身连接的 Redis（spring.数据.Redis），与监控资产/Agent 无关；
      * 无 Redis 配置时前端不显示该菜单。
+     * </p>
+     * <p>
+     * INFO 输出的键集随 Redis 版本变化，属通用动态键值结构而非业务载荷，故不改为 VO。
      * </p>
      *
      * @return Redis 信息 关键指标
@@ -1106,7 +1912,7 @@ public class MonitorController {
      */
     @Operation(summary = "扫描当前系统 Redis Keys")
     @GetMapping("/system/redis/keys")
-    public ReturnResult<Map<String, Object>> scanSystemRedisKeys(
+    public ReturnResult<RedisScanVO> scanSystemRedisKeys(
             @RequestParam(defaultValue = "*") String pattern,
             @RequestParam(defaultValue = "0") String cursor,
             @RequestParam(defaultValue = "100") int count) {
@@ -1115,7 +1921,6 @@ public class MonitorController {
             return ReturnResult.error("当前系统未配置 Redis");
         }
         try {
-            Map<String, Object> result = new java.util.LinkedHashMap<>();
             var connection = redisTemplate.getConnectionFactory().getConnection();
             var scanOptions = org.springframework.data.redis.core.ScanOptions.scanOptions()
                     .match(pattern)
@@ -1128,10 +1933,7 @@ public class MonitorController {
             }
             cursorObj.close();
             connection.close();
-            result.put("keys", keys);
-            result.put("nextCursor", keys.size() >= count ? "1" : "0");
-            result.put("total", keys.size());
-            return ReturnResult.ok(result);
+            return ReturnResult.ok(new RedisScanVO(keys, keys.size() >= count ? "1" : "0", keys.size()));
         } catch (Exception e) {
             return ReturnResult.error("扫描 Redis Keys 失败: " + e.getMessage());
         }
@@ -1166,13 +1968,12 @@ public class MonitorController {
      */
     @Operation(summary = "获取当前系统 Redis Key 详细信息")
     @GetMapping("/system/redis/kv/{key}/detail")
-    public ReturnResult<Map<String, Object>> getSystemRedisKeyDetail(@PathVariable String key) {
+    public ReturnResult<RedisKeyDetailVO> getSystemRedisKeyDetail(@PathVariable String key) {
         StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
         if (redisTemplate == null) {
             return ReturnResult.error("当前系统未配置 Redis");
         }
         try {
-            Map<String, Object> detail = new java.util.LinkedHashMap<>();
             String type = redisTemplate.type(key) != null ? redisTemplate.type(key).name() : "none";
             Long ttl = redisTemplate.getExpire(key);
             Object value = null;
@@ -1192,23 +1993,20 @@ public class MonitorController {
             } else if ("ZSET".equals(type)) {
                 var zSetValues = redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
                 if (zSetValues != null) {
-                    java.util.List<Map<String, Object>> zSetList = new java.util.ArrayList<>();
+                    java.util.List<RedisMemberScoreVO> zSetList = new java.util.ArrayList<>();
                     for (var v : zSetValues) {
-                        Map<String, Object> item = new java.util.LinkedHashMap<>();
-                        item.put("member", v.getValue());
-                        item.put("score", v.getScore());
-                        zSetList.add(item);
+                        zSetList.add(new RedisMemberScoreVO(v.getValue(), v.getScore()));
                     }
                     value = zSetList;
                 }
                 size = redisTemplate.opsForZSet().size(key);
+            } else if ("STREAM".equals(type)) {
+                java.util.List<RedisStreamEntryVO> entries = kvService.readStream(key, STREAM_DETAIL_LIMIT);
+                value = entries;
+                size = (long) entries.size();
             }
-            detail.put("key", key);
-            detail.put("type", type);
-            detail.put("ttl", ttl != null && ttl >= 0 ? ttl : -1);
-            detail.put("value", value);
-            detail.put("size", size);
-            return ReturnResult.ok(detail);
+            return ReturnResult.ok(new RedisKeyDetailVO(key, type,
+                    ttl != null && ttl >= 0 ? ttl : -1, value, size));
         } catch (Exception e) {
             return ReturnResult.error("获取 Redis Key 详情失败: " + e.getMessage());
         }
@@ -1226,12 +2024,16 @@ public class MonitorController {
     @PutMapping("/system/redis/kv/{key}")
     public ReturnResult<Boolean> setSystemRedisKey(
             @PathVariable String key,
-            @RequestBody String value,
+            @RequestBody RedisValueVO body,
             @RequestParam(defaultValue = "-1") long ttl) {
         StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
         if (redisTemplate == null) {
             return ReturnResult.error("当前系统未配置 Redis");
         }
+        if (body == null || body.value() == null) {
+            return ReturnResult.error("值不能为空");
+        }
+        String value = body.value();
         try {
             if (ttl > 0) {
                 redisTemplate.opsForValue().set(key, value, java.time.Duration.ofSeconds(ttl));
@@ -1346,7 +2148,7 @@ public class MonitorController {
      */
     @Operation(summary = "读取 Redis Key")
     @GetMapping("/operation/redis/{taskId}/kv/{key}")
-    public Mono<Map<String, Object>> getValue(@PathVariable Long taskId, @PathVariable String key) {
+    public Mono<RedisOperationKeyDetailVO> getValue(@PathVariable Long taskId, @PathVariable String key) {
         return getKeyDetail(taskId, key);
     }
 
@@ -1396,7 +2198,7 @@ public class MonitorController {
      */
     @Operation(summary = "获取缓存前缀汇总")
     @GetMapping("/operation/redis/{taskId}/cache-summary")
-    public Mono<List<Map<String, Object>>> getCacheSummary(
+    public Mono<List<RedisCacheSummaryVO>> getCacheSummary(
             @PathVariable Long taskId,
             @RequestParam(defaultValue = "*") String prefix) {
         return resolveOperation(taskId).flatMap(op -> {
@@ -1427,14 +2229,11 @@ public class MonitorController {
                             }
                             iteration++;
                         }
-                        List<Map<String, Object>> resultList = new java.util.ArrayList<>();
+                        List<RedisCacheSummaryVO> resultList = new java.util.ArrayList<>();
                         for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
-                            Map<String, Object> item = new java.util.LinkedHashMap<>();
-                            item.put("prefix", entry.getKey());
-                            item.put("count", entry.getValue().size());
-                            resultList.add(item);
+                            resultList.add(new RedisCacheSummaryVO(entry.getKey(), entry.getValue().size()));
                         }
-                        resultList.sort((a, b) -> Integer.compare((int) b.get("count"), (int) a.get("count")));
+                        resultList.sort((a, b) -> Integer.compare(b.count(), a.count()));
                         return resultList;
                     });
         });
@@ -1449,22 +2248,15 @@ public class MonitorController {
      */
     @Operation(summary = "获取 Redis key 详细信息")
     @GetMapping("/operation/redis/{taskId}/kv/{key}/detail")
-    public Mono<Map<String, Object>> getKeyDetail(@PathVariable Long taskId, @PathVariable String key) {
+    public Mono<RedisOperationKeyDetailVO> getKeyDetail(@PathVariable Long taskId, @PathVariable String key) {
         return resolveOperation(taskId).flatMap(op -> {
             CollectContext ctx = buildContext(taskId);
             return Mono.zip(
                     op.getValue(ctx, key).defaultIfEmpty(""),
                     op.ttl(ctx, key).defaultIfEmpty(-1L),
                     op.type(ctx, key).defaultIfEmpty("STRING")
-            ).map(tuple -> {
-                Map<String, Object> detail = new java.util.LinkedHashMap<>();
-                detail.put("key", key);
-                detail.put("value", tuple.getT1());
-                detail.put("ttl", tuple.getT2());
-                detail.put("type", tuple.getT3());
-                detail.put("size", tuple.getT1() != null ? tuple.getT1().length() : 0);
-                return detail;
-            });
+            ).map(tuple -> new RedisOperationKeyDetailVO(key, tuple.getT1(), tuple.getT2(), tuple.getT3(),
+                    tuple.getT1() != null ? tuple.getT1().length() : 0));
         });
     }
 
@@ -1506,7 +2298,7 @@ public class MonitorController {
      */
     @Operation(summary = "全局概览统计")
     @GetMapping("/dashboard/overview")
-    public ReturnResult<Map<String, Object>> dashboardOverview() {
+    public ReturnResult<DashboardOverviewVO> dashboardOverview() {
         List<MsMonitor> monitors = monitorService.listAll().getData();
         int total = monitors == null ? 0 : monitors.size();
         int enabled = 0;
@@ -1528,111 +2320,290 @@ public class MonitorController {
                 }
             }
         }
-        Map<String, Object> overview = new java.util.LinkedHashMap<>();
-        overview.put("total", total);
-        overview.put("enabled", enabled);
-        overview.put("disabled", total - enabled);
-        overview.put("serverCount", serverCount);
-        overview.put("redisCount", redisCount);
-        overview.put("dbCount", dbCount);
-        return ReturnResult.ok(overview);
+        return ReturnResult.ok(new DashboardOverviewVO(total, enabled, total - enabled,
+                serverCount, redisCount, dbCount));
     }
 
     // ==================== AI 智能分析 ====================
 
-     /**
-      * 获取Ai状态。
-      *
-      * @return Return结果 对象
-      */
-     @Operation(summary = "查询 AI 分析是否启用")
-     @GetMapping("/ai/status")
-     public ReturnResult<Map<String, Object>> getAiStatus() {
-         com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
-         Map<String, Object> result = new java.util.LinkedHashMap<>();
-         result.put("enabled", chatClient != null);
-         if (chatClient != null) {
-             result.put("model", chatClient.getDefaultModel());
-             result.put("provider", chatClient.getProvider());
-         }
-         return ReturnResult.ok(result);
-     }
+    /**
+     * 主机指标分析的系统提示词。
+     */
+    private static final String HOST_ANALYZE_SYSTEM_PROMPT =
+            "你是一位资深的运维监控专家，擅长主机性能分析和容量规划。请用专业、简洁、可操作的语言输出分析结果。";
 
-     /**
-      * aiAnalyze。
-      *
-      * @param request 请求，不允许为 null
-      * @return Mono 对象
-      */
-     @Operation(summary = "通用 AI 分析")
-     @PostMapping("/ai/analyze")
-     public Mono<ReturnResult<Map<String, Object>>> aiAnalyze(@RequestBody Map<String, Object> request) {
-         com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
-         if (chatClient == null) {
-             return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
-         }
-         String prompt = request.get("prompt") != null ? String.valueOf(request.get("prompt")) : "";
-         String systemPrompt = request.get("systemPrompt") != null ? String.valueOf(request.get("systemPrompt")) : null;
-         String model = request.get("model") != null ? String.valueOf(request.get("model")) : null;
-         if (prompt.isBlank()) {
-             return Mono.just(ReturnResult.error("分析内容不能为空"));
-         }
-         return Mono.fromCallable(() -> {
-             com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
-             scope.setInput(prompt);
-             if (systemPrompt != null && !systemPrompt.isBlank()) {
-                 scope.setSystemPrompt(systemPrompt);
-             }
-             if (model != null && !model.isBlank()) {
-                 scope.setModel(model);
-             }
-             com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
-             Map<String, Object> result = new java.util.LinkedHashMap<>();
-             result.put("content", response != null ? response.getContent() : "");
-             result.put("model", response != null ? chatClient.getDefaultModel() : chatClient.getDefaultModel());
-             result.put("usage", response != null ? response.getUsage() : null);
-             return ReturnResult.ok(result);
-         }).onErrorResume(e -> Mono.just(ReturnResult.error("AI 分析失败: " + e.getMessage())));
-     }
+    /**
+     * 查询 AI 分析是否可用。
+     *
+     * <p>判据与真实对话同源：先用全局设置解析出默认模型（解析失败即视为不可用），再让对话门面按
+     * 「真实调用时完全相同的解析链路」探测客户端。自己按凭证字段猜会把未配置的实例报成可用，
+     * 页面就会出现「状态显示正常、点击按钮报错」。</p>
+     *
+     * @return AI 状态，不可用时携带原因
+     */
+    @Operation(summary = "查询 AI 分析是否启用")
+    @GetMapping("/ai/status")
+    public ReturnResult<AiStatusVO> getAiStatus() {
+        AiChatFacadeService facade = aiChatFacadeProvider.getIfAvailable();
+        if (facade == null) {
+            return ReturnResult.ok(new AiStatusVO(false, null, null, "未装配 AI 对话服务"));
+        }
+        ChatClientSettings settings = resolveAiSettings();
+        if (settings == null) {
+            return ReturnResult.ok(new AiStatusVO(false, null, null, "AI 全局设置不可用或已禁用"));
+        }
+        AiClientProbe probe = facade.probeChatClient(settings.getDefaultModel());
+        if (!probe.available()) {
+            return ReturnResult.ok(new AiStatusVO(false, probe.model(), null, probe.reason()));
+        }
+        return ReturnResult.ok(new AiStatusVO(true, probe.model(),
+                isBlank(probe.provider()) ? settings.getProvider() : probe.provider(), null));
+    }
 
-     /**
-      * aiAnalyze主机。
-      *
-      * @param id ID，不允许为 null
-      * @param request 请求，不允许为 null
-      * @return Mono 对象
-      */
-     @Operation(summary = "主机指标智能分析")
-     @PostMapping("/ai/host/{id}/analyze")
-     public Mono<ReturnResult<Map<String, Object>>> aiAnalyzeHost(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> request) {
-         com.chua.starter.ai.support.chat.ChatClient chatClient = chatClientProvider.getIfAvailable();
-         if (chatClient == null) {
-             return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
-         }
-         MsMonitor monitor = monitorService.findById(id).getData();
-         if (monitor == null) {
-             return Mono.just(ReturnResult.error("监控资产不存在"));
-         }
-         return Mono.fromCallable(() -> {
-             StringBuilder prompt = new StringBuilder();
-             prompt.append("请对以下主机监控指标进行智能分析，给出性能评估、瓶颈识别和优化建议：\n\n");
-             prompt.append("主机名称: ").append(monitor.getMonitorName()).append("\n");
-             prompt.append("主机地址: ").append(monitor.getMonitorHost()).append(":").append(monitor.getMonitorPort()).append("\n");
-             prompt.append("服务类型: ").append(monitor.getServiceType()).append("\n\n");
-             if (request != null && request.get("metrics") != null) {
-                 prompt.append("最近指标数据:\n").append(request.get("metrics").toString()).append("\n\n");
-             }
-             prompt.append("请按以下结构输出：\n1. 整体性能评分（0-100）\n2. 关键指标评估\n3. 潜在瓶颈识别\n4. 具体优化建议\n5. 风险预警");
-             com.chua.starter.ai.support.chat.ChatScope scope = new com.chua.starter.ai.support.chat.ChatScope();
-             scope.setInput(prompt.toString());
-             scope.setSystemPrompt("你是一位资深的运维监控专家，擅长主机性能分析和容量规划。请用专业、简洁、可操作的语言输出分析结果。");
-             com.chua.common.support.ai.chat.ChatResponse response = chatClient.chat(scope);
-             Map<String, Object> result = new java.util.LinkedHashMap<>();
-             result.put("hostId", id);
-             result.put("hostName", monitor.getMonitorName());
-             result.put("content", response != null ? response.getContent() : "");
-             result.put("model", response != null ? chatClient.getDefaultModel() : chatClient.getDefaultModel());
-             return ReturnResult.ok(result);
-         }).onErrorResume(e -> Mono.just(ReturnResult.error("主机 AI 分析失败: " + e.getMessage())));
-     }
+    /**
+     * 通用 AI 分析。
+     *
+     * @param request 请求，不允许为 null
+     * @return Mono 对象
+     */
+    @Operation(summary = "通用 AI 分析")
+    @PostMapping("/ai/analyze")
+    public Mono<ReturnResult<AiAnalyzeVO>> aiAnalyze(@RequestBody AiAnalyzeDTO request) {
+        String prompt = request.prompt() == null ? "" : request.prompt().trim();
+        if (prompt.isEmpty()) {
+            return Mono.just(ReturnResult.error("分析内容不能为空"));
+        }
+        AiChatFacadeService facade = aiChatFacadeProvider.getIfAvailable();
+        if (facade == null) {
+            return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
+        }
+        AiChatRequest chatRequest = buildChatRequest(prompt, request.systemPrompt(), request.model(), null);
+        return Mono.fromCallable(() -> {
+            AiChatResult result = facade.callForResult(chatRequest);
+            if (!result.success()) {
+                return ReturnResult.<AiAnalyzeVO>error("AI 分析失败: " + result.errorMessage());
+            }
+            return ReturnResult.ok(new AiAnalyzeVO(result.text(), result.model(), result.usage()));
+        }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                .onErrorResume(e -> Mono.just(ReturnResult.<AiAnalyzeVO>error("AI 分析失败: " + e.getMessage())));
+    }
+
+    /**
+     * 主机指标智能分析。
+     *
+     * <p>指标由服务端从主机资产实时取数，不接受前端回传的指标快照——否则页面伪造一份数据就能"分析"出结论。</p>
+     *
+     * @param id      主机资产 ID（与 /server-host/{id} 同一 ID 域），路径参数，不能为 null
+     * @param request 请求，可为空
+     * @return Mono 对象
+     */
+    @Operation(summary = "主机指标智能分析")
+    @PostMapping("/ai/host/{id}/analyze")
+    public Mono<ReturnResult<AiHostAnalyzeVO>> aiAnalyzeHost(@PathVariable Long id,
+                                                             @RequestBody(required = false) AiHostAnalyzeDTO request) {
+        AiChatFacadeService facade = aiChatFacadeProvider.getIfAvailable();
+        if (facade == null) {
+            return Mono.just(ReturnResult.error("AI 分析未启用，请配置 AI 模型"));
+        }
+        MsServerHost host = serverHostService.get(id).getData();
+        if (host == null) {
+            return Mono.just(ReturnResult.error("主机资产不存在"));
+        }
+        String dimension = request == null ? null : request.dimension();
+        String prompt = buildHostPrompt(host, dimension);
+        if (prompt == null) {
+            return Mono.just(ReturnResult.error("该主机暂无指标数据，无法分析"));
+        }
+        AiChatRequest chatRequest = buildChatRequest(prompt,
+                request == null ? null : request.systemPrompt(),
+                request == null ? null : request.model(),
+                HOST_ANALYZE_SYSTEM_PROMPT);
+        chatRequest.setCallType("host_analyze");
+        return Mono.fromCallable(() -> {
+            AiChatResult result = facade.callForResult(chatRequest);
+            if (!result.success()) {
+                return ReturnResult.<AiHostAnalyzeVO>error("主机 AI 分析失败: " + result.errorMessage());
+            }
+            return ReturnResult.ok(new AiHostAnalyzeVO(id, host.getServerHostName(),
+                    result.text(), result.model(), result.usage()));
+        }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                .onErrorResume(e -> Mono.just(ReturnResult.<AiHostAnalyzeVO>error("主机 AI 分析失败: " + e.getMessage())));
+    }
+
+    /**
+     * 解析 AI 全局设置。
+     *
+     * @return 设置，未装配 ai-starter 或被显式禁用时返回 null
+     */
+    private ChatClientSettings resolveAiSettings() {
+        SysAiGlobalSettingService settingService = aiGlobalSettingProvider.getIfAvailable();
+        if (settingService == null) {
+            return null;
+        }
+        try {
+            return ChatClientSettingsResolver.resolve(settingService);
+        } catch (Exception e) {
+            log.info("[MonitorAi] AI 全局设置不可用: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 组装对话请求：模型缺省时沿用全局默认模型，系统提示词缺省时沿用全局设置里的值。
+     *
+     * @param prompt         用户提示词
+     * @param systemPrompt   系统提示词，可为空
+     * @param model          指定模型，可为空
+     * @param defaultSystem  全局设置也没有值时的兜底角色，可为空
+     * @return 对话请求
+     */
+    private AiChatRequest buildChatRequest(String prompt, String systemPrompt, String model, String defaultSystem) {
+        AiChatRequest chatRequest = new AiChatRequest();
+        chatRequest.setPrompt(prompt);
+        ChatClientSettings settings = resolveAiSettings();
+        String resolvedSystem = systemPrompt;
+        if (isBlank(resolvedSystem) && settings != null) {
+            resolvedSystem = settings.getSystemPrompt();
+        }
+        if (isBlank(resolvedSystem)) {
+            resolvedSystem = defaultSystem;
+        }
+        if (!isBlank(resolvedSystem)) {
+            chatRequest.setSystemPrompt(resolvedSystem);
+        }
+        String resolvedModel = model;
+        if (isBlank(resolvedModel) && settings != null) {
+            resolvedModel = settings.getDefaultModel();
+        }
+        if (!isBlank(resolvedModel)) {
+            chatRequest.setModel(resolvedModel);
+        }
+        return chatRequest;
+    }
+
+    /**
+     * 拼装主机指标分析提示词。
+     *
+     * @param host      主机资产
+     * @param dimension 分析重点，可为空
+     * @return 提示词；没有任何指标数据时返回 null
+     */
+    private String buildHostPrompt(MsServerHost host, String dimension) {
+        if (host.getServerHostCpuUsage() == null && host.getServerHostMemUsage() == null
+                && host.getServerHostDiskUsage() == null) {
+            return null;
+        }
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("请对以下主机监控指标进行智能分析，给出性能评估、瓶颈识别和优化建议：\n\n");
+        prompt.append("主机名称: ").append(text(host.getServerHostName())).append("\n");
+        prompt.append("主机地址: ").append(text(host.getServerHostAddress())).append(":").append(text(host.getServerHostPort())).append("\n");
+        prompt.append("操作系统: ").append(text(host.getServerHostOsType())).append(" ")
+                .append(text(host.getServerHostOsArch())).append(" ").append(text(host.getServerHostOsVersion())).append("\n");
+        prompt.append("采集方式: ").append(text(host.getServerHostCollectMode()))
+                .append(", Agent 版本 ").append(text(host.getServerHostAgentVersion()))
+                .append(", 在线 ").append(Integer.valueOf(1).equals(host.getServerHostOnline()) ? "是" : "否").append("\n\n");
+        prompt.append("最近指标数据:\n");
+        prompt.append("- CPU: 使用率 ").append(text(host.getServerHostCpuUsage())).append("%");
+        if (host.getServerHostCpuCores() != null) {
+            prompt.append(", 核心数 ").append(host.getServerHostCpuCores());
+        }
+        prompt.append("\n");
+        prompt.append("- 内存: 使用率 ").append(text(host.getServerHostMemUsage())).append("%");
+        if (host.getServerHostMemoryMb() != null) {
+            prompt.append(", 总量 ").append(host.getServerHostMemoryMb()).append("MB");
+        }
+        prompt.append("\n");
+        prompt.append("- 磁盘: 使用率 ").append(text(host.getServerHostDiskUsage())).append("%");
+        if (host.getServerHostDiskGb() != null) {
+            prompt.append(", 总量 ").append(host.getServerHostDiskGb()).append("GB");
+        }
+        if (host.getServerHostDelayMs() != null) {
+            prompt.append("\n- 网络延迟: ").append(host.getServerHostDelayMs()).append("ms");
+        }
+        prompt.append("\n采集时间: ").append(text(host.getServerHostLastCollectTime())).append("\n");
+        appendCpuTrend(prompt, host.getId());
+        if (!isBlank(dimension)) {
+            prompt.append("\n分析重点: ").append(dimension).append("\n");
+        }
+        prompt.append("请按以下结构输出：\n1. 整体性能评分（0-100）\n2. 关键指标评估\n3. 潜在瓶颈识别\n4. 具体优化建议\n5. 风险预警");
+        return prompt.toString();
+    }
+
+    /**
+     * 追加最近 1 小时的 CPU 采样统计，让模型看到趋势而非单点。
+     * <p>
+     * 一台主机名下可能有多个监控项（存量数据按地址兜底匹配），逐个尝试直到命中有采样的那个。
+     * </p>
+     *
+     * @param prompt 提示词缓冲
+     * @param hostId 主机资产 ID
+     */
+    private void appendCpuTrend(StringBuilder prompt, Long hostId) {
+        if (hostId == null) {
+            return;
+        }
+        List<MsMonitor> linked = monitorService.listByServerHost(hostId).getData();
+        if (linked == null || linked.isEmpty()) {
+            return;
+        }
+        java.time.LocalDateTime start = java.time.LocalDateTime.now().minusHours(1);
+        for (MsMonitor monitor : linked) {
+            if (monitor == null || monitor.getId() == null) {
+                continue;
+            }
+            List<MsMonitorMetricCpu> history = metricService.getCpuHistory(monitor.getId(), start, null).getData();
+            if (history == null || history.isEmpty()) {
+                continue;
+            }
+            appendCpuStats(prompt, history);
+            return;
+        }
+    }
+
+    /**
+     * 把 CPU 历史采样汇总成一行趋势文本。
+     *
+     * @param prompt  提示词缓冲
+     * @param history 最近 1 小时的 CPU 采样，非空
+     */
+    private void appendCpuStats(StringBuilder prompt, List<MsMonitorMetricCpu> history) {
+        double sum = 0D;
+        double max = Double.NEGATIVE_INFINITY;
+        int counted = 0;
+        for (MsMonitorMetricCpu item : history) {
+            Double usage = item == null ? null : item.getCpuUsage();
+            if (usage == null) {
+                continue;
+            }
+            sum += usage;
+            max = Math.max(max, usage);
+            counted++;
+        }
+        if (counted == 0) {
+            return;
+        }
+        prompt.append("- 最近 1 小时 CPU 采样: 样本 ").append(counted)
+                .append(" 个, 平均 ").append(String.format(java.util.Locale.ROOT, "%.2f", sum / counted))
+                .append("%, 峰值 ").append(String.format(java.util.Locale.ROOT, "%.2f", max)).append("%\n");
+    }
+
+    /**
+     * 空值安全的文本形式。
+     *
+     * @param value 任意值，可为空
+     * @return 字符串，null 转为「未知」
+     */
+    private String text(Object value) {
+        return value == null ? "未知" : String.valueOf(value);
+    }
+
+    /**
+     * 判断字符串是否为空白。
+     *
+     * @param value 待判断值
+     * @return true 表示 null 或全空白
+     */
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
 }

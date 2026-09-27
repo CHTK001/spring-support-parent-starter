@@ -49,7 +49,7 @@ public class DahuaSession implements DeviceSession {
      */
     public DahuaSession(DeviceConnectInfo info) {
         this.info = info;
-        log.info("大华设备连接成功: {}", info.getIp());
+        log.info("大华设备连接成功: {}", info.ip());
     }
 
     @Override
@@ -57,7 +57,7 @@ public class DahuaSession implements DeviceSession {
      * 获取deviceid
     */
     public String getDeviceId() {
-        return info.getIp();
+        return info.ip();
     }
 
     @Override
@@ -74,7 +74,7 @@ public class DahuaSession implements DeviceSession {
     */
     public void close() {
         online = false;
-        log.info("大华设备断开: {}", info.getIp());
+        log.info("大华设备断开: {}", info.ip());
     }
 
     @Override

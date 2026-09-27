@@ -21,14 +21,14 @@ import org.springframework.util.StringUtils;
 public class TransactionRecordServiceImpl implements TransactionRecordService {
 
     /**
-     * Transactionrecordmapper
-    */
+     * 交易流水映射器
+     */
     private final TransactionRecordMapper transactionRecordMapper;
 
     @Override
     /**
-     * 创建Record
-    */
+     * 创建交易流水记录
+     */
     public TransactionRecord createRecord(TransactionRecord record) {
         transactionRecordMapper.insert(record);
         return record;
@@ -36,8 +36,8 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
 
     @Override
     /**
-     * 获取byid
-    */
+     * 根据主键获取交易流水
+     */
     public TransactionRecord getById(Long id) {
         return transactionRecordMapper.selectById(id);
     }
@@ -55,13 +55,9 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     @Override
     public Page<TransactionRecord> page(TransactionRecordQueryRequest request) {
         if (request == null) {
-            /**
-             * IllegalArgumentException。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return IllegalArgumentException的结果
-             */
             throw new IllegalArgumentException("查询参数不能为空");
         }
+
         Page<TransactionRecord> page = new Page<>(request.pageNum(), request.pageSize());
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();
         if (request.merchantId() != null) {
@@ -80,4 +76,3 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
         return transactionRecordMapper.selectPage(page, wrapper);
     }
 }
-

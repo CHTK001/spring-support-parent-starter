@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
+import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostProfileVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
@@ -54,6 +55,11 @@ public interface HostProfileService {
     String SECTION_ENV = "env";
 
     /**
+     * 画像分区：防火墙
+     */
+    String SECTION_FIREWALL = "firewall";
+
+    /**
      * 拉取概览 + 实时指标并回写主机台账。
      *
      * @param hostId  主机标识
@@ -63,32 +69,57 @@ public interface HostProfileService {
     ReturnResult<HostProfileVO> refresh(Long hostId, boolean persist);
 
     /**
-     * 监听端口分区。
+     * 只读台账快照：不触发任何通道采集，直接由 {@code ms_server_host} 表中已持久化的概要 / 指标
+     * 组装画像视图。进入画像页默认走这里；实时采集只由用户手动点「刷新主机」触发。
      *
      * @param hostId 主机标识
-     * @return 端口占用行
+     * @return 表中保存的画像视图（从未采集过的字段为空）
      */
-    ReturnResult<List<NetProcessRowVO>> ports(Long hostId);
+    ReturnResult<HostProfileVO> snapshot(Long hostId);
+
+    /**
+     * 监听端口分区（后端分页）。
+     *
+     * @param hostId  主机标识
+     * @param page    页码，可为 null
+     * @param size    每页条数，可为 null
+     * @param keyword 关键字，匹配端口/地址/状态/进程名，可为 null
+     * @return 当前页端口占用行
+     */
+    ReturnResult<List<NetProcessRowVO>> ports(Long hostId, Integer page, Integer size, String keyword);
+
+    /**
+     * 防火墙分区（后端分页）。
+     *
+     * @param hostId  主机标识
+     * @param page    页码，可为 null
+     * @param size    每页条数，可为 null
+     * @param keyword 关键字，匹配规则名/链/动作/协议/端口，可为 null
+     * @return 当前页防火墙规则行
+     */
+    ReturnResult<List<FirewallRuleRowVO>> firewall(Long hostId, Integer page, Integer size, String keyword);
 
     /**
      * 进程分区。
      *
-     * @param hostId 主机标识
-     * @param page   页码，可为 null
-     * @param size   每页条数，可为 null
+     * @param hostId  主机标识
+     * @param page    页码，可为 null
+     * @param size    每页条数，可为 null
+     * @param keyword 关键字，匹配 PID/进程名/用户/命令行，可为 null
      * @return 进程视图列表
      */
-    ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size);
+    ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size, String keyword);
 
     /**
      * 服务分区。
      *
-     * @param hostId 主机标识
-     * @param page   页码，可为 null
-     * @param size   每页条数，可为 null
+     * @param hostId  主机标识
+     * @param page    页码，可为 null
+     * @param size    每页条数，可为 null
+     * @param keyword 关键字，匹配服务名/显示名/状态/启动类型，可为 null
      * @return 服务视图列表
      */
-    ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size);
+    ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size, String keyword);
 
     /**
      * 磁盘分区。

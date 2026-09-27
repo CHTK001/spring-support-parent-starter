@@ -21,6 +21,7 @@ import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import com.chua.starter.datasource.properties.MaterializedRouteProperties;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.*;
+import com.chua.starter.mybatis.logger.SysLoggerPointcutAdvisor;
 import com.chua.starter.mybatis.method.SupportInjector;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
 import com.chua.starter.mybatis.properties.MybatisPlusProperties;
@@ -419,5 +420,16 @@ public class MybatisPlusConfiguration {
                     methodSecurityInterceptor.isEnable(),
                     "数据权限拦截", null);
         };
+    }
+
+    /**
+     * 系统操作日志切面：拦截标注 @SysLog 的方法，发布 SysLoggerInfo 事件（由日志服务监听落库）
+     *
+     * @return 操作日志 PointcutAdvisor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SysLoggerPointcutAdvisor sysLoggerPointcutAdvisor() {
+        return new SysLoggerPointcutAdvisor();
     }
 }

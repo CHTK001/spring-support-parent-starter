@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.api.configuration;
 import com.chua.common.support.lang.version.Version;
+import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeBodyAdvice;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeRegister;
@@ -212,13 +213,10 @@ public class ApiConfiguration implements EnvironmentAware  {
         return new WebMvcRegistrations() {
             @Override
             public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
-                /**
-                 * api版本请求mapping处理器mapping。
-                 * @param apiProperties api属性
-                 * @param environment 环境
-                 * @return api版本请求mapping处理器mapping的结果
-                 */
-                return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
+                ApiVersionRequestMappingHandlerMapping mapping =
+                        new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
+                SpringBeanUtils.setRequestMappingHandlerMapping(mapping);
+                return mapping;
             }
         };
     }

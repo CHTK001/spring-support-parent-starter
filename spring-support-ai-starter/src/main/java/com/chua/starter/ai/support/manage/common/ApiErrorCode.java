@@ -86,6 +86,8 @@ public enum ApiErrorCode {
      */
     NO_COMPLETER("NO_COMPLETER", 409),
 
+    NOT_IMPLEMENTED("NOT_IMPLEMENTED", 501),
+
     /**
      * 请求过于频繁（幂等键复用等）
      * @param "RATE_LIMITED" "RATE_限制"

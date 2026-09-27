@@ -28,33 +28,33 @@ import java.util.concurrent.TimeUnit;
 public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApprovalService {
 
     /**
-     * Approvalmapper
-    */
+     * 提现审批映射器
+     */
     private final WalletWithdrawApprovalMapper approvalMapper;
     /**
      * 幂等模板
-    */
+     */
     private final IdempotentTemplate idempotentTemplate;
 
     /**
-     * 锁_前缀
-    */
+     * 审批分布式锁键前缀
+     */
     private static final String LOCK_PREFIX = "payment:lock:withdraw-approval:";
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建Approval
-     * @param merchantId merchantid
+     * 创建提现审批单
+     * @param merchantId 商户标识
      * @param userId 用户标识
-     * @param amount amount
-     * @param bankAccount bank账户
-     * @param bankName bank名称
+     * @param amount 金额
+     * @param bankAccount 银行卡号
+     * @param bankName 银行名称
      * @param accountName 账户名称
-     * @param withdrawNo withdrawno
-     * @param remark 评论
+     * @param withdrawNo 提现单号
+     * @param remark 备注
      * @param dto dto
-     * @return 创建approval的结果
+     * @return 创建出的审批记录
      */
     public WalletWithdrawApproval createApproval(CreateApprovalDTO dto) {
         WalletWithdrawApproval approval = new WalletWithdrawApproval();
@@ -73,8 +73,8 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
 
     @Override
     /**
-     * pageapprovals
-    */
+     * 分页查询提现审批单
+     */
     public Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status) {
         LambdaQueryWrapper<WalletWithdrawApproval> wrapper = new LambdaQueryWrapper<WalletWithdrawApproval>()
                 .orderByDesc(WalletWithdrawApproval::getCreatedAt);
@@ -86,16 +86,11 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
 
     @Override
     /**
-     * 获取byid
-    */
+     * 根据主键获取审批单
+     */
     public WalletWithdrawApproval getById(Long id) {
         WalletWithdrawApproval approval = approvalMapper.selectById(id);
         if (approval == null) {
-            /**
-             * 薪酬异常。
-             * @param "提现审批记录不存在" "提现审批记录不存在"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("提现审批记录不存在");
         }
         return approval;
@@ -104,29 +99,19 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * Approve
+     * 审批通过
      *
      * @param id 标识
-     * @param operator 操作符
+     * @param operator 操作人
      */
     public void approve(Long id, String operator) {
         String lockKey = LOCK_PREFIX + id;
         if (!idempotentTemplate.tryAcquire(lockKey, 30, TimeUnit.SECONDS)) {
-            /**
-             * 薪酬异常。
-             * @param "操作过于频繁，请稍后重试" "操作过于频繁，请稍后重试"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("操作过于频繁，请稍后重试");
         }
         try {
             WalletWithdrawApproval approval = getById(id);
             if (!"PENDING".equals(approval.getStatus())) {
-                /**
-                 * 薪酬异常。
-                 * @param "仅待审批的记录可以审批通过" "仅待审批的记录可以审批通过"
-                 * @return 薪酬异常的结果
-                 */
                 throw new PaymentException("仅待审批的记录可以审批通过");
             }
             approval.setStatus("APPROVED");
@@ -141,30 +126,20 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * Reject
+     * 驳回审批
      *
      * @param id 标识
-     * @param operator 操作符
-     * @param reason ReasonMLmlml
+     * @param operator 操作人
+     * @param reason 驳回原因
      */
     public void reject(Long id, String operator, String reason) {
         String lockKey = LOCK_PREFIX + id;
         if (!idempotentTemplate.tryAcquire(lockKey, 30, TimeUnit.SECONDS)) {
-            /**
-             * 薪酬异常。
-             * @param "操作过于频繁，请稍后重试" "操作过于频繁，请稍后重试"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("操作过于频繁，请稍后重试");
         }
         try {
             WalletWithdrawApproval approval = getById(id);
             if (!"PENDING".equals(approval.getStatus())) {
-                /**
-                 * 薪酬异常。
-                 * @param "仅待审批的记录可以拒绝" "仅待审批的记录可以拒绝"
-                 * @return 薪酬异常的结果
-                 */
                 throw new PaymentException("仅待审批的记录可以拒绝");
             }
             approval.setStatus("REJECTED");
@@ -177,4 +152,3 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
         }
     }
 }
-

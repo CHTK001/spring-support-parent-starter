@@ -33,6 +33,14 @@ public class EduTeacher {
     private Long teacherUserId;
 
     /**
+     * 绑定的登录账号
+     *
+     * <p>同 EduStudent.studentAccount：登录态 userId 是字符串，
+     * 与 BIGINT 的 teacherUserId 类型不一致，绑定单独占用此列。</p>
+     */
+    private String teacherAccount;
+
+    /**
      * 工号
      */
     private String teacherNo;

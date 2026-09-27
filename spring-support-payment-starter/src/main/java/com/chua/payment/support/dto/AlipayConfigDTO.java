@@ -12,22 +12,22 @@ import lombok.Data;
 public class AlipayConfigDTO {
     /**
      * APPID
-    */
+     */
     private String appId;
     /**
-     * 私有密钥
-    */
+     * 私钥字符串
+     */
     private String privateKey;
     /**
-     * 公开密钥
-    */
+     * 公钥字符串
+     */
     private String publicKey;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
      * Sandbox
-    */
+     */
     private Boolean sandbox;
 }

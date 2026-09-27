@@ -5,6 +5,8 @@ import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.util.AiMemoryOwnership;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +30,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>维护会话/终端两类目标的 IDMM 状态与干预记录。状态变更推送
  * {@code idmm.statusChanged} 与 {@code idmm.intervention} 事件。当前为进程内内存实现。</p>
  *
+ * <p>存放键带登录用户标识（{@code 用户标识:种类:目标标识}），因此同一目标在两个用户名下的值守开关、
+ * 配置与干预记录互相看不到，也改不动对方的。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -49,12 +54,12 @@ public class ApiIdmmController {
     private final ApiWebSocketPushService pushService;
 
     /**
-     * IDMM 状态：种类:Target_标识 → 状态
+     * IDMM 状态：用户标识:种类:Target_标识 → 状态
      */
     private final Map<String, Map<String, Object>> states = new ConcurrentHashMap<>();
 
     /**
-     * IDMM 干预记录：种类:Target_标识 → 记录列表
+     * IDMM 干预记录：用户标识:种类:Target_标识 → 记录列表
      */
     private final Map<String, List<Map<String, Object>>> logs = new ConcurrentHashMap<>();
 
@@ -134,7 +139,7 @@ public class ApiIdmmController {
      * @return Key的的结果
      */
     private String keyOf(Object kind, Object targetId) {
-        return kind + ":" + targetId;
+        return AiUserContext.requireUserId() + ":" + kind + ":" + targetId;
     }
 
     /**
@@ -144,7 +149,7 @@ public class ApiIdmmController {
      * @return 默认状态的结果
      */
     private Map<String, Object> defaultState(Object kind, Object targetId) {
-        Map<String, Object> state = new LinkedHashMap<>();
+        Map<String, Object> state = AiMemoryOwnership.newOwnedRecord();
         state.put("kind", kind);
         state.put("target_id", targetId);
         state.put("enabled", false);

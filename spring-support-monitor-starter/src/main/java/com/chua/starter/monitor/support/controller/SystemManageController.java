@@ -1,14 +1,19 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.enums.ServiceAction;
 import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
+import com.chua.starter.monitor.support.model.EnvVarInputVO;
 import com.chua.starter.monitor.support.model.FileEntryVO;
+import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
+import com.chua.starter.monitor.support.model.HostActionVO;
 import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
+import com.chua.starter.monitor.support.model.NetworkConfigVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
@@ -17,10 +22,10 @@ import com.chua.starter.monitor.support.model.SystemListVO;
 import com.chua.starter.monitor.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
+import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -39,25 +44,22 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * 系统管理 —— 进程/服务/网络/磁盘/防火墙/驱动 管理端点。
  *
- * <p>本类不接触任何采集实现：主机（含 hostId 为空的管控机本机）统一由
+ * <p>本类不接触任何采集与命令实现：主机（含 hostId 为空的管控机本机）统一由
  * {@link SystemInfoProviderRouter} 选出 {@link SystemInfoProvider} 通道
- * （LOCAL / AGENT / SSH / WINRM），出入口一律是强类型视图。防火墙、驱动、分区、线程
- * 四个只读的机器级端点仍走本机 shell，因为台账里没有对应的主机配置可路由。</p>
+ * （LOCAL / AGENT / SSH / WINRM），采集与动作都调通道能力方法，出入口一律是强类型视图。
+ * 平台命令文本（taskkill、systemctl、nmcli、PowerShell 脚本）只存在于
+ * {@link com.chua.starter.monitor.support.spi.HostOperations} 的平台子类里。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -72,16 +74,10 @@ public class SystemManageController {
      * 是否 Windows 系统
      */
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
-
     /**
-     * 一 GiB 的字节数
+     * 关键词检索时的扫描窗口：必须远大于单页条数，否则过滤发生在截断之后，命中项只要排在窗口外就会返回空列表
      */
-    private static final double GIB_BYTES = 1024.0 * 1024.0 * 1024.0;
-
-    /**
-     * 本机命令输出的 JSON 解析器
-     */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final int KEYWORD_SCAN = 10000;
 
     /**
      * 主机 映射器
@@ -128,55 +124,34 @@ public class SystemManageController {
         MsServerHost host = new MsServerHost();
         host.setServerHostName("localhost");
         host.setServerHostAddress("127.0.0.1");
-        host.setServerHostOsType("LOCAL");
+        host.setServerHostCollectMode(HostCollectType.LOCAL.getCode());
+        host.setServerHostOsType(IS_WINDOWS ? Platforms.WINDOWS : Platforms.LINUX);
         return host;
     }
 
     /**
-     * 目标主机的真实平台：osType 可能只表达了接入方式（AGENT / LOCAL）。
+     * 动作结果 → 对外响应体。
      *
-     * @param ch 主机与通道
-     * @return WINDOWS / LINUX / MAC，通道无法判定时按管控端所在平台兜底
-     */
-    private static String platformOf(HostChannel ch) {
-        String platform = ch.provider().platform(ch.host());
-        if (platform != null && !platform.isEmpty()) {
-            return platform;
-        }
-        return IS_WINDOWS ? Platforms.WINDOWS : Platforms.LINUX;
-    }
-
-    /**
-     * 目标主机是否为 Windows。
+     * <p>成功与否由通道回查决定，本类不凭「命令有回显」推断；新进程号只拼进回显文本，
+     * 保持既有接口的字符串载荷契约不变。</p>
      *
-     * @param ch 主机与通道
-     * @return 是返回 true
+     * @param action 动作结果
+     * @return 响应体
      */
-    private static boolean isWindowsTarget(HostChannel ch) {
-        return Platforms.WINDOWS.equals(platformOf(ch));
-    }
-
-    /**
-     * 拼装带工作目录的命令行。
-     *
-     * @param cwd     工作目录，可为空
-     * @param cmd     命令
-     * @param windows 目标是否 Windows
-     * @return 可在目标 shell 执行的命令行
-     */
-    private static String withCwd(String cwd, String cmd, boolean windows) {
-        if (cwd == null || cwd.isEmpty()) {
-            return cmd;
-        }
-        if (windows) {
-            // cmd.exe 的 cd 不认正斜杠，必须先归一为反斜杠
-            return "cd /d \"" + cwd.replace("/", "\\").replace("\"", "") + "\" && " + cmd;
-        }
-        return "cd '" + cwd.replace("'", "") + "' && " + cmd;
+    private static ReturnResult<String> toResult(HostActionVO action) {
+        String message = action.message() + (action.newPid() == null ? "" : "，新 PID " + action.newPid());
+        return action.success() ? ReturnResult.ok(message) : ReturnResult.<String>error(message);
     }
 
     // ==================== 主机基础信息 ====================
 
+    /**
+     * 获取主机信息。
+     *
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param refresh 是否强制刷新缓存
+     * @return 主机信息
+     */
     @Operation(summary = "获取主机信息")
     @GetMapping("/host-info")
     public Mono<ReturnResult<HostInfoVO>> hostInfo(@RequestParam(required = false) Long hostId,
@@ -205,6 +180,12 @@ public class SystemManageController {
           });
     }
 
+    /**
+     * 获取环境变量。
+     *
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @return 环境变量列表
+     */
     @Operation(summary = "获取环境变量")
     @GetMapping("/env")
     public Mono<ReturnResult<List<EnvVarVO>>> envVars(@RequestParam(required = false) Long hostId) {
@@ -213,6 +194,42 @@ public class SystemManageController {
             return ReturnResult.ok(ch.provider().env(ch.host()));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<List<EnvVarVO>>error("获取环境变量失败: " + e.getMessage())));
+    }
+
+    /**
+     * 设置系统级环境变量。
+     *
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param body   变量名与值
+     * @return 操作结果
+     */
+    @Operation(summary = "设置环境变量")
+    @PostMapping("/env/set")
+    public Mono<ReturnResult<String>> setEnvVar(@RequestParam(required = false) Long hostId,
+                                                @RequestBody EnvVarInputVO body) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            return toResult(ch.provider().setEnvVar(ch.host(), body.name(), body.value()));
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("设置环境变量失败: " + e.getMessage())));
+    }
+
+    /**
+     * 删除系统级环境变量。
+     *
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param name   变量名
+     * @return 操作结果
+     */
+    @Operation(summary = "删除环境变量")
+    @PostMapping("/env/delete")
+    public Mono<ReturnResult<String>> deleteEnvVar(@RequestParam(required = false) Long hostId,
+                                                   @RequestParam String name) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            return toResult(ch.provider().deleteEnvVar(ch.host(), name));
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("删除环境变量失败: " + e.getMessage())));
     }
 
     // ==================== 进程管理 ====================
@@ -224,6 +241,8 @@ public class SystemManageController {
      * @param sortBy    排序字段：cpu/memory/pid/name，默认 cpu
      * @param sortOrder 排序方向：asc/desc，默认 desc
      * @param limit     返回条数，默认 50；传 page/pageSize 时以 pageSize 为准
+     * @param page      页码
+     * @param pageSize  每页条数
      * @param hostId    主机 ID，为空表示管控机本机
      * @return 进程分页视图
      */
@@ -240,8 +259,9 @@ public class SystemManageController {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
             int want = pageSize != null && pageSize > 0 ? pageSize : Math.max(limit, 500);
-            List<ProcessRowVO> processes = new ArrayList<>(ch.provider().processes(ch.host(), 1, want));
-            if (keyword != null && !keyword.isBlank()) {
+            boolean filtered = keyword != null && !keyword.isBlank();
+            List<ProcessRowVO> processes = new ArrayList<>(ch.provider().processes(ch.host(), 1, filtered ? KEYWORD_SCAN : want));
+            if (filtered) {
                 String kw = keyword.toLowerCase(Locale.ROOT);
                 processes = processes.stream()
                         .filter(p -> containsKw(p.getName(), kw) || containsKw(p.getCommand(), kw))
@@ -300,17 +320,6 @@ public class SystemManageController {
     }
 
     /**
-     * 按目标平台给出杀进程命令。
-     *
-     * @param ch  主机与通道
-     * @param pid 进程 ID
-     * @return 命令行
-     */
-    private static String killCommand(HostChannel ch, int pid) {
-        return isWindowsTarget(ch) ? "taskkill /F /PID " + pid : "kill -9 " + pid;
-    }
-
-    /**
      * 关闭进程。
      *
      * @param pid    进程 ID
@@ -320,79 +329,28 @@ public class SystemManageController {
     @Operation(summary = "关闭进程")
     @PostMapping("/process/{pid}/kill")
     public Mono<ReturnResult<String>> killProcess(@PathVariable int pid,
-                                                 @RequestParam(required = false) Long hostId) {
+                                                  @RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
-            if (!processAlive(ch, pid)) {
-                return ReturnResult.<String>error("进程 " + pid + " 不存在");
-            }
-            String out = ch.provider().exec(ch.host(), killCommand(ch, pid));
-            return killedResult(ch, pid, out, "");
+            return toResult(ch.provider().killProcess(ch.host(), pid, null));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<String>error("关闭进程失败: " + e.getMessage())));
     }
 
     /**
-     * 依据复查结果给出关闭进程的返回。
-     *
-     * @param ch     主机与通道
-     * @param pid    目标进程 ID
-     * @param out    kill 命令的输出
-     * @param suffix 回显后缀（端口等）
-     * @return 进程确认消失返回成功，否则返回失败并带上命令输出
-     */
-    private ReturnResult<String> killedResult(HostChannel ch, int pid, String out, String suffix) {
-        String detail = out == null ? "" : out.trim();
-        for (int i = 0; i < 3; i++) {
-            if (!processAlive(ch, pid)) {
-                return ReturnResult.ok("进程 " + pid + " 已关闭" + suffix + (detail.isEmpty() ? "" : ": " + detail));
-            }
-            sleepQuietly(800);
-        }
-        return ReturnResult.<String>error("进程 " + pid + " 未能关闭" + suffix
-                + (detail.isEmpty() ? "（进程可能不存在或权限不足）" : ": " + detail));
-    }
-
-    /**
-     * 复查进程是否仍存在。
-     *
-     * <p>用一条存在性探测命令而不是拉全量进程表：Agent 上一次全表要几秒，kill 前后要复查多次，
-     * 拉表会把请求拖到异步超时。</p>
-     *
-     * @param ch  主机与通道
-     * @param pid 进程 ID
-     * @return 存在返回 true
-     */
-    private boolean processAlive(HostChannel ch, int pid) {
-        String probe;
-        if (isWindowsTarget(ch)) {
-            probe = "tasklist /FI \"PID eq " + pid + "\" /NH";
-        } else {
-            probe = "kill -0 " + pid + " 2>/dev/null && echo ALIVE || echo DEAD";
-        }
-        String out = ch.provider().exec(ch.host(), probe);
-        if (out == null || out.isBlank()) {
-            return false;
-        }
-        if (isWindowsTarget(ch)) {
-            return out.contains(String.valueOf(pid));
-        }
-        String upper = out.toUpperCase(Locale.ROOT);
-        return upper.contains("ALIVE") && !upper.contains("DEAD");
-    }
-
-    /**
      * 获取进程的子进程。
      *
-     * @param pid 进程 ID
+     * @param pid    进程 ID
+     * @param hostId 主机 ID，为空表示管控机本机
      * @return 子进程列表
      */
     @Operation(summary = "获取进程的子进程")
     @GetMapping("/process/{pid}/children")
-    public Mono<ReturnResult<List<ProcessRowVO>>> listProcessChildren(@PathVariable int pid) {
+    public Mono<ReturnResult<List<ProcessRowVO>>> listProcessChildren(@PathVariable int pid,
+                                                                     @RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
-            HostChannel ch = channelOf(null);
-            List<ProcessRowVO> children = ch.provider().processes(ch.host(), 1, 10000).stream()
+            HostChannel ch = channelOf(hostId);
+            List<ProcessRowVO> children = ch.provider().processes(ch.host(), 1, KEYWORD_SCAN).stream()
                     .filter(p -> p.getPpid() == pid)
                     .collect(Collectors.toList());
             return ReturnResult.ok(children);
@@ -401,56 +359,39 @@ public class SystemManageController {
     }
 
     /**
-     * 获取进程的线程列表（本机端点，台账内无对应通道配置）。
+     * 获取进程的线程列表。
      *
-     * @param pid 进程 ID
+     * @param pid    进程 ID
+     * @param hostId 主机 ID，为空表示管控机本机
      * @return 线程列表
      */
     @Operation(summary = "获取进程的线程列表")
     @GetMapping("/process/{pid}/threads")
-    public Mono<ReturnResult<List<ProcessThreadRowVO>>> listProcessThreads(@PathVariable int pid) {
+    public Mono<ReturnResult<List<ProcessThreadRowVO>>> listProcessThreads(@PathVariable int pid,
+                                                                          @RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
-            if (IS_WINDOWS) {
-                String output = execCommand("powershell", "-Command",
-                        "Get-Process -Id " + pid + " -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Threads | "
-                        + "Select-Object Id, ThreadState, WaitReason, TotalProcessorTime | ConvertTo-Json -Depth 3");
-                return ReturnResult.ok(parseRows(output, SystemManageController::windowsThread));
-            }
-            String output = execCommand("ps", "-L", "-p", String.valueOf(pid), "-o", "tid,pcpu,pmem,stat,comm,time");
-            List<ProcessThreadRowVO> threads = new ArrayList<>();
-            String[] lines = output.split("\\r?\\n");
-            for (int i = 1; i < lines.length; i++) {
-                String[] parts = lines[i].trim().split("\\s+", 6);
-                if (parts.length < 5) {
-                    continue;
-                }
-                ProcessThreadRowVO vo = new ProcessThreadRowVO();
-                vo.setTid(parseLong(parts[0]));
-                vo.setCpu(parseDouble(parts[1]));
-                vo.setMemory(parseDouble(parts[2]));
-                vo.setState(parts[3]);
-                vo.setName(parts.length > 4 ? parts[4] : "");
-                vo.setCpuTime(parts.length > 5 ? parts[5] : "");
-                threads.add(vo);
-            }
-            return ReturnResult.ok(threads);
+            HostChannel ch = channelOf(hostId);
+            return ReturnResult.ok(ch.provider().processThreads(ch.host(), pid));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<List<ProcessThreadRowVO>>error("获取线程列表失败: " + e.getMessage())));
     }
 
     /**
-     * PowerShell ThreadObject → 线程视图。
+     * 重启进程：读取原命令行后杀掉，再以原命令、原工作目录拉起。
      *
-     * @param node 单条 JSON 节点
-     * @return 线程视图
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param pid    进程 ID
+     * @return 操作结果
      */
-    private static ProcessThreadRowVO windowsThread(JsonNode node) {
-        ProcessThreadRowVO vo = new ProcessThreadRowVO();
-        vo.setTid(number(node, "Id"));
-        vo.setState(text(node, "ThreadState"));
-        vo.setName(text(node, "WaitReason"));
-        vo.setCpuTime(text(node, "TotalProcessorTime"));
-        return vo;
+    @Operation(summary = "重启进程")
+    @PostMapping("/process/restart")
+    public Mono<ReturnResult<String>> restartProcess(@RequestParam(required = false) Long hostId,
+                                                     @RequestParam int pid) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            return toResult(ch.provider().restartProcess(ch.host(), pid));
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("重启进程失败: " + e.getMessage())));
     }
 
     // ==================== 服务管理 ====================
@@ -474,8 +415,9 @@ public class SystemManageController {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
             int want = pageSize != null && pageSize > 0 ? pageSize : 5000;
-            List<ServiceRowVO> services = new ArrayList<>(ch.provider().services(ch.host(), 1, want));
-            if (keyword != null && !keyword.isBlank()) {
+            boolean filtered = keyword != null && !keyword.isBlank();
+            List<ServiceRowVO> services = new ArrayList<>(ch.provider().services(ch.host(), 1, filtered ? KEYWORD_SCAN : want));
+            if (filtered) {
                 String kw = keyword.toLowerCase(Locale.ROOT);
                 services = services.stream()
                         .filter(s -> containsKw(s.getName(), kw) || containsKw(s.getDisplayName(), kw))
@@ -488,144 +430,19 @@ public class SystemManageController {
     }
 
     /**
-     * PowerShell 服务动作语句。
-     *
-     * @param name   服务名
-     * @param action start / stop / restart
-     * @return PowerShell 命令体
-     */
-    private static String psServiceBody(String name, String action) {
-        String verb = switch (action) {
-            case "start" -> "Start-Service";
-            case "stop" -> "Stop-Service";
-            default -> "Restart-Service";
-        };
-        return verb + " -Name " + sanitizeServiceName(name) + ("start".equals(action) ? " -PassThru" : " -Force");
-    }
-
-    /**
-     * 剔除服务名里的 shell 元字符。
-     *
-     * @param name 服务名
-     * @return 安全的服务名
-     */
-    private static String sanitizeServiceName(String name) {
-        return name.replaceAll("[\";&|`$\\\\]", "");
-    }
-
-    /**
-     * 服务动作命令：按目标主机的真实平台选择命令族。
-     *
-     * @param platform 真实平台（WINDOWS / LINUX / MAC）
-     * @param name     服务名
-     * @param action   start / stop / restart
-     * @return 可在目标主机 shell 执行的命令行
-     */
-    private static String serviceCommand(String platform, String name, String action) {
-        if (Platforms.WINDOWS.equalsIgnoreCase(platform)) {
-            return "powershell -Command \"" + psServiceBody(name, action) + "\"";
-        }
-        return "systemctl " + action + " " + sanitizeServiceName(name);
-    }
-
-    /**
      * 对主机上的服务执行动作。
      *
      * @param hostId 主机 ID，为空表示管控机本机
      * @param name   服务名称
-     * @param action start / stop / restart
+     * @param action 动作
      * @return 操作结果
      */
-    private Mono<ReturnResult<String>> controlService(Long hostId, String name, String action) {
+    private Mono<ReturnResult<String>> controlService(Long hostId, String name, ServiceAction action) {
         return Mono.fromCallable(() -> {
-            String label = switch (action) {
-                case "start" -> "启动";
-                case "stop" -> "停止";
-                default -> "重启";
-            };
             HostChannel ch = channelOf(hostId);
-            String output = ch.provider().exec(ch.host(), serviceCommand(platformOf(ch), name, action));
-            return serviceResult(ch, name, action, label, output);
+            return toResult(ch.provider().controlService(ch.host(), name, action));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<String>error("服务操作失败: " + e.getMessage())));
-    }
-
-    /**
-     * 服务动作后复查真实状态，避免把"指令已下发"当成操作成功。
-     *
-     * @param ch     主机与通道
-     * @param name   服务名
-     * @param action start / stop / restart
-     * @param label  中文动作名
-     * @param out    动作命令的输出
-     * @return 状态与期望一致返回成功，否则返回失败
-     */
-    private ReturnResult<String> serviceResult(HostChannel ch, String name, String action, String label, String out) {
-        String expect = "stop".equals(action) ? "STOPPED" : "RUNNING";
-        String detail = out == null ? "" : out.trim();
-        String last = "";
-        for (int i = 0; i < 4; i++) {
-            last = serviceState(ch, name);
-            if (expect.equals(last)) {
-                return ReturnResult.ok("服务 " + name + " 已" + label + "（当前 " + last + "）"
-                        + (detail.isEmpty() ? "" : ": " + detail));
-            }
-            if ("UNKNOWN".equals(last) || "MISSING".equals(last)) {
-                break;
-            }
-            sleepQuietly(1000);
-        }
-        return ReturnResult.<String>error("服务 " + name + " " + label + "未生效，当前状态 " + last
-                + (detail.isEmpty() ? "" : "：" + detail));
-    }
-
-    /**
-     * 睡眠指定毫秒，被打断时恢复中断标记。
-     *
-     * @param millis 毫秒
-     */
-    private static void sleepQuietly(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * 查询单个服务的当前状态。
-     *
-     * <p>按名字单查而不是拉全量服务表：动作后最多复查 4 次，全表拉取会拖到异步超时。</p>
-     *
-     * @param ch   主机与通道
-     * @param name 服务名（大小写不敏感）
-     * @return RUNNING / STOPPED 等，找不到服务返回 MISSING
-     */
-    private String serviceState(HostChannel ch, String name) {
-        String safe = sanitizeServiceName(name);
-        String out;
-        if (isWindowsTarget(ch)) {
-            out = ch.provider().exec(ch.host(), "powershell -NoProfile -Command \"$s = Get-Service -Name '"
-                    + safe + "' -ErrorAction SilentlyContinue; if ($s) { $s.Status } else { 'MISSING' }\"");
-        } else {
-            out = ch.provider().exec(ch.host(), "systemctl show -p LoadState,ActiveState --value " + safe + " 2>/dev/null");
-        }
-        if (out == null || out.isBlank()) {
-            return "UNKNOWN";
-        }
-        String text = out.trim();
-        if (text.contains("MISSING") || text.contains("not-found")) {
-            return "MISSING";
-        }
-        String[] lines = text.split("\\r?\\n");
-        String state = lines[lines.length - 1].trim();
-        if ("running".equalsIgnoreCase(state) || "active".equalsIgnoreCase(state)) {
-            return "RUNNING";
-        }
-        if ("stopped".equalsIgnoreCase(state) || "inactive".equalsIgnoreCase(state) || "failed".equalsIgnoreCase(state)) {
-            return "STOPPED";
-        }
-        return "UNKNOWN";
     }
 
     /**
@@ -639,7 +456,7 @@ public class SystemManageController {
     @PostMapping("/service/{name}/start")
     public Mono<ReturnResult<String>> startService(@PathVariable String name,
                                                    @RequestParam(required = false) Long hostId) {
-        return controlService(hostId, name, "start");
+        return controlService(hostId, name, ServiceAction.START);
     }
 
     /**
@@ -653,7 +470,7 @@ public class SystemManageController {
     @PostMapping("/service/{name}/stop")
     public Mono<ReturnResult<String>> stopService(@PathVariable String name,
                                                   @RequestParam(required = false) Long hostId) {
-        return controlService(hostId, name, "stop");
+        return controlService(hostId, name, ServiceAction.STOP);
     }
 
     /**
@@ -667,7 +484,7 @@ public class SystemManageController {
     @PostMapping("/service/{name}/restart")
     public Mono<ReturnResult<String>> restartService(@PathVariable String name,
                                                      @RequestParam(required = false) Long hostId) {
-        return controlService(hostId, name, "restart");
+        return controlService(hostId, name, ServiceAction.RESTART);
     }
 
     // ==================== 网络管理 ====================
@@ -749,13 +566,11 @@ public class SystemManageController {
                                                       @RequestParam int pid,
                                                       @RequestParam(required = false) Integer port) {
         return Mono.fromCallable(() -> {
-            String suffix = port == null ? "" : " (端口 " + port + ")";
-            HostChannel ch = channelOf(hostId);
-            if (!processAlive(ch, pid)) {
-                return ReturnResult.<String>error("进程 " + pid + " 不存在");
+            if (pid <= 0) {
+                return ReturnResult.<String>error("该连接无归属进程（PID " + pid + "），无法关闭");
             }
-            String out = ch.provider().exec(ch.host(), killCommand(ch, pid));
-            return killedResult(ch, pid, out, suffix);
+            HostChannel ch = channelOf(hostId);
+            return toResult(ch.provider().killProcess(ch.host(), pid, port));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<String>error("关闭失败: " + e.getMessage())));
     }
@@ -763,109 +578,19 @@ public class SystemManageController {
     /**
      * 应用网络配置（IP / 网关 / DNS）。
      *
-     * @param hostId  主机 ID，为空表示管控机本机
-     * @param request 配置项
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param config 配置项
      * @return 操作结果
      */
     @Operation(summary = "应用网络配置")
     @PostMapping("/network/config")
     public Mono<ReturnResult<String>> applyNetworkConfig(@RequestParam(required = false) Long hostId,
-                                                         @RequestBody NetworkConfigRequest request) {
+                                                         @RequestBody NetworkConfigVO config) {
         return Mono.fromCallable(() -> {
-            String ifname = trim(request.ifname());
-            if (ifname.isEmpty()) {
-                return ReturnResult.<String>error("缺少网卡名 ifname");
-            }
-            String command = nmcliCommand(request, ifname);
-            if (command == null) {
-                return ReturnResult.<String>error("静态地址缺少 ip");
-            }
             HostChannel ch = channelOf(hostId);
-            String out = ch.provider().exec(ch.host(), command);
-            if (out != null && (out.contains("Error") || out.contains("error") || out.contains("No such"))) {
-                return ReturnResult.<String>error("网络配置未生效: " + out.trim());
-            }
-            return ReturnResult.ok("网络配置已应用" + (out == null || out.isBlank() ? "" : ": " + out.trim()));
+            return toResult(ch.provider().applyNetworkConfig(ch.host(), config));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<String>error("应用网络配置失败: " + e.getMessage())));
-    }
-
-    /**
-     * 组装 NetworkManager 配置命令。
-     *
-     * @param request 配置项
-     * @param ifname  已归一的网卡名
-     * @return 命令行；静态模式缺 ip 时返回 null
-     */
-    private static String nmcliCommand(NetworkConfigRequest request, String ifname) {
-        String con = "'" + ifname.replace("'", "") + "'";
-        StringBuilder cmd = new StringBuilder();
-        if ("static".equalsIgnoreCase(trim(request.ipMode()))) {
-            String ip = trim(request.ip());
-            if (ip.isEmpty()) {
-                return null;
-            }
-            cmd.append("nmcli con mod ").append(con).append(" ipv4.addresses '").append(ip)
-                    .append('/').append(toPrefix(request.mask())).append("' ipv4.method manual");
-            String gateway = trim(request.gateway());
-            if (!gateway.isEmpty()) {
-                cmd.append(" ipv4.gateway '").append(gateway).append("'");
-            }
-            String dns = joinNonEmpty(" ", trim(request.dns1()), trim(request.dns2()));
-            if (!dns.isEmpty()) {
-                cmd.append(" ipv4.dns '").append(dns).append("' ipv4.ignore-auto-dns yes");
-            }
-        } else {
-            cmd.append("nmcli con mod ").append(con).append(" ipv4.method auto");
-        }
-        return cmd.append(" && nmcli con up ").append(con).toString();
-    }
-
-    /**
-     * 子网掩码转前缀长度。
-     *
-     * @param mask 点分掩码，空表示 24
-     * @return 前缀长度
-     */
-    private static int toPrefix(String mask) {
-        if (mask == null || mask.isBlank()) {
-            return 24;
-        }
-        if (mask.matches("^\\d{1,2}$")) {
-            return Integer.parseInt(mask);
-        }
-        int prefix = 0;
-        for (String part : mask.split("\\.")) {
-            prefix += Integer.bitCount(Integer.parseInt(part) & 0xFF);
-        }
-        return prefix == 0 ? 24 : prefix;
-    }
-
-    /**
-     * 取字符串值，null 归空串。
-     *
-     * @param value 原始值
-     * @return 字符串
-     */
-    private static String trim(String value) {
-        return value == null ? "" : value.trim();
-    }
-
-    /**
-     * 用分隔符拼接非空片段。
-     *
-     * @param sep   分隔符
-     * @param parts 片段
-     * @return 拼接结果
-     */
-    private static String joinNonEmpty(String sep, String... parts) {
-        List<String> kept = new ArrayList<>();
-        for (String p : parts) {
-            if (p != null && !p.isBlank()) {
-                kept.add(p);
-            }
-        }
-        return String.join(sep, kept);
     }
 
     // ==================== 磁盘管理 ====================
@@ -887,189 +612,97 @@ public class SystemManageController {
     }
 
     /**
-     * 获取磁盘分区列表（本机端点，台账内无对应通道配置）。
+     * 获取磁盘分区列表。
      *
+     * @param hostId 主机 ID，为空表示管控机本机
      * @return 磁盘分区列表
      */
     @Operation(summary = "获取磁盘分区列表")
     @GetMapping("/partitions")
-    public Mono<ReturnResult<List<DiskPartitionRowVO>>> listPartitions() {
+    public Mono<ReturnResult<List<DiskPartitionRowVO>>> listPartitions(@RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
-            if (IS_WINDOWS) {
-                String output = execCommand("powershell", "-Command",
-                        "Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, Size, SizeRemaining "
-                        + "| ConvertTo-Json -Depth 3");
-                return ReturnResult.ok(parseRows(output, SystemManageController::windowsPartition));
-            }
-            String output = execCommand("df", "-hT");
-            List<DiskPartitionRowVO> partitions = new ArrayList<>();
-            String[] lines = output.split("\\r?\\n");
-            for (int i = 1; i < lines.length; i++) {
-                String[] parts = lines[i].trim().split("\\s+", 7);
-                if (parts.length < 7) {
-                    continue;
-                }
-                DiskPartitionRowVO vo = new DiskPartitionRowVO();
-                vo.setFilesystem(parts[0]);
-                vo.setType(parts[1]);
-                vo.setSize(parts[2]);
-                vo.setUsed(parts[3]);
-                vo.setAvailable(parts[4]);
-                vo.setUsePercent(parts[5]);
-                vo.setMountPoint(parts[6]);
-                partitions.add(vo);
-            }
-            return ReturnResult.ok(partitions);
+            HostChannel ch = channelOf(hostId);
+            return ReturnResult.ok(ch.provider().diskPartitions(ch.host()));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<List<DiskPartitionRowVO>>error("获取磁盘分区失败: " + e.getMessage())));
-    }
-
-    /**
-     * PowerShell Get-Volume → 分区视图（容量统一为 GiB 文本）。
-     *
-     * @param node 单条 JSON 节点
-     * @return 分区视图
-     */
-    private static DiskPartitionRowVO windowsPartition(JsonNode node) {
-        long size = number(node, "Size");
-        long remaining = number(node, "SizeRemaining");
-        String letter = text(node, "DriveLetter");
-        String label = text(node, "FileSystemLabel");
-        DiskPartitionRowVO vo = new DiskPartitionRowVO();
-        vo.setFilesystem(letter.isEmpty() ? label : letter + ":\\");
-        vo.setType(text(node, "FileSystem"));
-        vo.setSize(gibText(size));
-        vo.setUsed(gibText(size - remaining));
-        vo.setAvailable(gibText(remaining));
-        vo.setUsePercent(size <= 0 ? "" : Math.round((size - remaining) * 100.0 / size) + "%");
-        vo.setMountPoint(label);
-        return vo;
-    }
-
-    /**
-     * 字节数转 GiB 展示文本。
-     *
-     * @param bytes 字节数
-     * @return 形如 {@code 12.3G}
-     */
-    private static String gibText(long bytes) {
-        return String.format(Locale.ROOT, "%.1fG", bytes / GIB_BYTES);
     }
 
     // ==================== 防火墙管理 ====================
 
     /**
-     * 获取防火墙规则列表（本机端点，台账内无对应通道配置）。
+     * 获取防火墙规则列表。
      *
+     * <p>命令与解析在平台实现里；采集失败与「确实没有规则」必须区分，不能把失败解析成空列表。</p>
+     *
+     * @param hostId 主机 ID，为空表示管控机本机
      * @return 防火墙规则列表
      */
     @Operation(summary = "获取防火墙规则列表")
     @GetMapping("/firewall/rules")
-    public Mono<ReturnResult<List<FirewallRuleRowVO>>> listFirewallRules() {
+    public Mono<ReturnResult<List<FirewallRuleRowVO>>> listFirewallRules(@RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
-            if (IS_WINDOWS) {
-                String output = execCommand("powershell", "-Command",
-                        "Get-NetFirewallRule | Select-Object DisplayName, Direction, Action, Enabled, Profile "
-                        + "| ConvertTo-Json -Depth 3");
-                return ReturnResult.ok(parseRows(output, SystemManageController::windowsFirewallRule));
-            }
-            String output = execCommand("iptables", "-L", "-n", "--line-numbers");
-            List<FirewallRuleRowVO> rules = new ArrayList<>();
-            String currentChain = "";
-            for (String line : output.split("\\r?\\n")) {
-                if (line.startsWith("Chain")) {
-                    currentChain = line.split("\\s+")[1];
-                    continue;
-                }
-                if (!line.matches("^\\d+.*")) {
-                    continue;
-                }
-                String[] parts = line.trim().split("\\s+", 7);
-                FirewallRuleRowVO vo = new FirewallRuleRowVO();
-                vo.setChain(currentChain);
-                vo.setNum((int) parseLong(parts[0]));
-                vo.setTarget(part(parts, 1));
-                vo.setProtocol(part(parts, 2));
-                vo.setSource(part(parts, 4));
-                vo.setDestination(part(parts, 5));
-                vo.setInfo(part(parts, 6));
-                rules.add(vo);
-            }
-            return ReturnResult.ok(rules);
+            HostChannel ch = channelOf(hostId);
+            return ReturnResult.ok(ch.provider().firewallRules(ch.host()));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<List<FirewallRuleRowVO>>error("获取防火墙规则失败: " + e.getMessage())));
     }
 
     /**
-     * PowerShell Get-NetFirewallRule → 规则视图。
+     * 新增防火墙规则。
      *
-     * @param node 单条 JSON 节点
-     * @return 规则视图
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param rule   规则入参
+     * @return 操作结果
      */
-    private static FirewallRuleRowVO windowsFirewallRule(JsonNode node) {
-        FirewallRuleRowVO vo = new FirewallRuleRowVO();
-        vo.setName(text(node, "DisplayName"));
-        vo.setChain(vo.getName());
-        vo.setDirection(text(node, "Direction"));
-        vo.setAction(text(node, "Action"));
-        vo.setEnabled(text(node, "Enabled"));
-        vo.setProfile(text(node, "Profile"));
-        return vo;
+    @Operation(summary = "新增防火墙规则")
+    @PostMapping("/firewall/add")
+    public Mono<ReturnResult<String>> addFirewallRule(@RequestParam(required = false) Long hostId,
+                                                      @RequestBody FirewallRuleInputVO rule) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            return toResult(ch.provider().addFirewallRule(ch.host(), rule));
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("新增防火墙规则失败: " + e.getMessage())));
+    }
+
+    /**
+     * 删除防火墙规则。
+     *
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @param name   规则名（Windows）
+     * @param chain  链名（Linux）
+     * @param num    规则序号（Linux）
+     * @return 操作结果
+     */
+    @Operation(summary = "删除防火墙规则")
+    @PostMapping("/firewall/delete")
+    public Mono<ReturnResult<String>> deleteFirewallRule(@RequestParam(required = false) Long hostId,
+                                                        @RequestParam(required = false) String name,
+                                                        @RequestParam(required = false) String chain,
+                                                        @RequestParam(required = false) Integer num) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            return toResult(ch.provider().deleteFirewallRule(ch.host(), name, chain, num));
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("删除防火墙规则失败: " + e.getMessage())));
     }
 
     // ==================== 驱动管理 ====================
 
     /**
-     * 获取驱动列表（本机端点，台账内无对应通道配置）。
+     * 获取驱动列表。
      *
+     * @param hostId 主机 ID，为空表示管控机本机
      * @return 驱动列表
      */
     @Operation(summary = "获取驱动列表")
     @GetMapping("/drivers")
-    public Mono<ReturnResult<List<DriverRowVO>>> listDrivers() {
+    public Mono<ReturnResult<List<DriverRowVO>>> listDrivers(@RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
-            if (IS_WINDOWS) {
-                String output = execCommand("powershell", "-Command",
-                        "Get-WindowsDriver -Online | Select-Object DriverFileName, OriginalFileName, ProviderName, "
-                        + "DriverVersion, DriverDate, ClassName, BootCritical | ConvertTo-Json -Depth 3");
-                return ReturnResult.ok(parseRows(output, SystemManageController::windowsDriver));
-            }
-            String output = execCommand("lsmod");
-            List<DriverRowVO> drivers = new ArrayList<>();
-            String[] lines = output.split("\\r?\\n");
-            for (int i = 1; i < lines.length; i++) {
-                String[] parts = lines[i].trim().split("\\s+", 4);
-                if (parts.length < 3) {
-                    continue;
-                }
-                DriverRowVO vo = new DriverRowVO();
-                vo.setName(parts[0]);
-                vo.setSize(parseLong(parts[1]));
-                vo.setUsedBy((int) parseLong(parts[2]));
-                vo.setDependsOn(part(parts, 3));
-                drivers.add(vo);
-            }
-            return ReturnResult.ok(drivers);
+            HostChannel ch = channelOf(hostId);
+            return ReturnResult.ok(ch.provider().drivers(ch.host()));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<List<DriverRowVO>>error("获取驱动列表失败: " + e.getMessage())));
-    }
-
-    /**
-     * PowerShell Get-WindowsDriver → 驱动视图。
-     *
-     * @param node 单条 JSON 节点
-     * @return 驱动视图
-     */
-    private static DriverRowVO windowsDriver(JsonNode node) {
-        DriverRowVO vo = new DriverRowVO();
-        vo.setName(text(node, "DriverFileName"));
-        vo.setFileName(text(node, "OriginalFileName"));
-        vo.setProvider(text(node, "ProviderName"));
-        vo.setVersion(text(node, "DriverVersion"));
-        vo.setDate(text(node, "DriverDate"));
-        vo.setClassName(text(node, "ClassName"));
-        vo.setBootCritical("true".equalsIgnoreCase(text(node, "BootCritical")));
-        return vo;
     }
 
     // ==================== 文件管理 ====================
@@ -1095,6 +728,9 @@ public class SystemManageController {
     /**
      * 在指定工作目录执行文件管理命令（新建/重命名/删除/解压等）。
      *
+     * <p>本端点的命令由调用方给出，因此按目标通道方言植入工作目录、退出码与完成三类探针，
+     * 不替调用方解释命令内容。</p>
+     *
      * @param request 命令请求体
      * @return 命令输出
      */
@@ -1107,8 +743,13 @@ public class SystemManageController {
                 return ReturnResult.<String>error("缺少命令 cmd");
             }
             HostChannel ch = channelOf(request.hostId());
-            String out = ch.provider().exec(ch.host(), withCwd(trim(request.cwd()), cmd, isWindowsTarget(ch)));
-            return ReturnResult.ok(out == null ? "" : out);
+            ShellSupport.Probe probe = ShellSupport.compose(trim(request.cwd()), cmd,
+                    ch.provider().shellDialect(ch.host()), true);
+            ShellSupport.ProbeResult result = ShellSupport.interpret(ch.provider().exec(ch.host(), probe.line()), probe);
+            if (result.failed()) {
+                return ReturnResult.<String>error("命令执行失败" + detail(result));
+            }
+            return ReturnResult.ok(result.output());
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<String>error("命令执行失败: " + e.getMessage())));
     }
@@ -1176,167 +817,28 @@ public class SystemManageController {
         return ch.provider().downloadFile(ch.host(), path);
     }
 
-    /**
-     * 重启进程：读取原命令行后杀掉，再以原命令、原工作目录后台拉起。
-     *
-     * @param hostId 主机 ID，为空表示管控机本机
-     * @param pid    进程 ID
-     * @return 操作结果
-     */
-    @Operation(summary = "重启进程")
-    @PostMapping("/process/restart")
-    public Mono<ReturnResult<String>> restartProcess(@RequestParam(required = false) Long hostId,
-                                                     @RequestParam int pid) {
-        return Mono.fromCallable(() -> {
-            HostChannel ch = channelOf(hostId);
-            if (isWindowsTarget(ch)) {
-                return ReturnResult.<String>error("Windows 主机暂不支持按 PID 重启进程，请在服务列表中重启对应服务");
-            }
-            String command = "A=$(tr '\\0' ' ' < /proc/" + pid + "/cmdline); "
-                    + "D=$(readlink /proc/" + pid + "/cwd); "
-                    + "kill -9 " + pid + " 2>/dev/null; sleep 1; "
-                    + "( cd \"$D\" && nohup $A >/dev/null 2>&1 & )";
-            String out = ch.provider().exec(ch.host(), command);
-            return ReturnResult.ok("进程 " + pid + " 重启指令已下发" + (out == null || out.isBlank() ? "" : ": " + out.trim()));
-        }).subscribeOn(Schedulers.boundedElastic())
-          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("重启进程失败: " + e.getMessage())));
-    }
-
     // ==================== 工具方法 ====================
 
     /**
-     * 执行本机命令并返回输出（仅只读的机器级端点使用）。
+     * 取字符串值，null 归空串。
      *
-     * @param cmd 命令及参数
-     * @return 命令输出，失败返回空串
+     * @param value 原始值
+     * @return 字符串
      */
-    private String execCommand(String... cmd) {
-        try {
-            // Windows: 确保 powershell 能被找到（Java CreateProcess 对 PATH 解析与 cmd 不同）
-            String[] actualCmd = cmd;
-            if (IS_WINDOWS && cmd.length > 0 && "powershell".equalsIgnoreCase(cmd[0])) {
-                String psPath = System.getenv("SystemRoot") + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
-                actualCmd = new String[cmd.length];
-                actualCmd[0] = psPath;
-                // 强制 PowerShell 输出 UTF-8，避免中文乱码
-                String psBody = cmd[1] != null ? cmd[1] : "";
-                actualCmd[1] = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;" + psBody;
-                System.arraycopy(cmd, 2, actualCmd, 2, cmd.length - 2);
-            }
-            ProcessBuilder pb = new ProcessBuilder(actualCmd);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-            process.waitFor();
-            return output.toString().trim();
-        } catch (Exception e) {
-            log.error("执行命令失败: {}", String.join(" ", cmd), e);
-            return "";
-        }
+    private static String trim(String value) {
+        return value == null ? "" : value.trim();
     }
 
     /**
-     * 把命令输出的 JSON 解析成结构化行；PowerShell 只有一行时不带方括号，单对象也按一行处理。
+     * 探针结果 → 失败说明后缀。
      *
-     * @param json   JSON 文本
-     * @param mapper 节点 → 行视图
-     * @param <R>    行类型
-     * @return 行列表，解析失败为空列表
+     * @param result 探针还原结果
+     * @return 形如 {@code : 原因}，无内容时返回空串
      */
-    private static <R> List<R> parseRows(String json, Function<JsonNode, R> mapper) {
-        List<R> rows = new ArrayList<>();
-        if (json == null || json.isBlank()) {
-            return rows;
-        }
-        try {
-            JsonNode root = MAPPER.readTree(json);
-            if (root.isArray()) {
-                for (JsonNode node : root) {
-                    rows.add(mapper.apply(node));
-                }
-            } else if (root.isObject()) {
-                rows.add(mapper.apply(root));
-            }
-        } catch (Exception e) {
-            log.warn("解析命令输出 JSON 失败: {}", e.getMessage());
-        }
-        return rows;
-    }
-
-    /**
-     * 取文本字段；PowerShell 把枚举序列化成对象时取其 DisplayValue。
-     *
-     * @param node  JSON 节点
-     * @param field 字段名
-     * @return 文本，取不到返回空串
-     */
-    private static String text(JsonNode node, String field) {
-        JsonNode value = node.get(field);
-        if (value == null || value.isNull()) {
-            return "";
-        }
-        if (value.isObject()) {
-            JsonNode display = value.get("DisplayValue");
-            return display == null ? value.toString() : display.asText();
-        }
-        return value.asText();
-    }
-
-    /**
-     * 取数值字段。
-     *
-     * @param node  JSON 节点
-     * @param field 字段名
-     * @return 数值，取不到返回 0
-     */
-    private static long number(JsonNode node, String field) {
-        JsonNode value = node.get(field);
-        return value == null || !value.isNumber() ? 0L : value.asLong();
-    }
-
-    /**
-     * 安全取数组片段。
-     *
-     * @param parts 片段数组
-     * @param index 下标
-     * @return 值，越界返回空串
-     */
-    private static String part(String[] parts, int index) {
-        return parts.length > index ? parts[index] : "";
-    }
-
-    /**
-     * 宽松 long 解析。
-     *
-     * @param text 数字字符串
-     * @return 解析结果，非法时返回 0
-     */
-    private static long parseLong(String text) {
-        try {
-            return text == null ? 0L : Long.parseLong(text.trim());
-        } catch (Exception e) {
-            return 0L;
-        }
-    }
-
-    /**
-     * 宽松 double 解析。
-     *
-     * @param text 数字字符串
-     * @return 解析结果，非法时返回 0
-     */
-    private static double parseDouble(String text) {
-        try {
-            return text == null ? 0.0 : Double.parseDouble(text.trim());
-        } catch (Exception e) {
-            return 0.0;
-        }
+    private static String detail(ShellSupport.ProbeResult result) {
+        String reason = result.reason();
+        String output = result.output() == null ? "" : result.output();
+        String text = reason == null ? output : (output.isEmpty() ? reason : reason + " | " + output);
+        return text.isBlank() ? "" : ": " + text.trim();
     }
 }

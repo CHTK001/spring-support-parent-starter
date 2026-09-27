@@ -269,9 +269,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
      * @return findInjectionMetadata的结果
      */
     protected AnnotatedInjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
- // 下降 back 转为 类 名称 as 缓存 Key, for backwards compatibility with 习俗 callers.
+        // Fall back to class name as cache key, for backwards compatibility with older callers.
         String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
- // Quick 检查 on the 并发 映射 第一个, with minimal 锁.
+        // Quick check on the concurrent map first, with minimal locking.
         AnnotatedInjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
         if (needsRefreshInjectionMetadata(metadata, clazz)) {
             synchronized (this.injectionMetadataCache) {
@@ -299,7 +299,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         return metadata;
     }
 
- // Use 习俗 检查 方法 转为 compatible with Spring 4.x
+    // Use legacy check method to be compatible with Spring 4.x
     /**
      * needsrefreshinjectionmetadata。
      * @param metadata metadata
@@ -381,7 +381,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * Subclass must implement this 方法 转为 获取 injected-对象. The 上下文 对象 could help this 方法 if
+     * Subclass must implement this method to get injected-object. The context object could help this method if
      * necessary :
      * <ul>
      * <li>{@link #getBeanFactory() BeanFactory}</li>
@@ -392,10 +392,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
      * @param attributes      {@link AnnotationAttributes the annotation attributes}
      * @param bean            当前 Bean that will be injected
      * @param beanName        当前 Bean 名称 that will be injected
-     * @param injectedType    the 类型 的 injected-对象
+     * @param injectedType    the type of injected-object
      * @param injectedElement {@link AnnotatedInjectElement}
-     * @return The injected 对象
-     * @throws Exception If resolving an injected 对象 是否 失败.
+     * @return The injected object
+     * @throws Exception If resolving an injected object fails.
      */
     protected abstract Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
                                                 AnnotatedInjectElement injectedElement) throws Exception;

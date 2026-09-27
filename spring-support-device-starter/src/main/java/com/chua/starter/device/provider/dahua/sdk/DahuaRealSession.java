@@ -146,7 +146,7 @@ public class DahuaRealSession implements DeviceSession {
             throw new IllegalStateException("大华 NetSDK 初始化失败");
         }
         LOGIN_INFO loginInfo = new LOGIN_INFO();
-        loginInfo.setLoginInfo(info.getIp(), info.getPort(), info.getUsername(), info.getPassword());
+        loginInfo.setLoginInfo(info.ip(), info.port(), info.username(), info.password());
         DEVICEINFO deviceInfo = new DEVICEINFO();
         loginHandle = sdk.CLIENT_LoginWithHighLevelSecurity(loginInfo, deviceInfo, Pointer.NULL);
         if (loginHandle == 0) {
@@ -156,13 +156,13 @@ public class DahuaRealSession implements DeviceSession {
              * @param info.getIp( 信息.获取ip(
              * @return illegal状态异常的结果
              */
-            throw new IllegalStateException("大华设备登录失败: " + info.getIp()
+            throw new IllegalStateException("大华设备登录失败: " + info.ip()
                     + "，错误码: " + sdk.CLIENT_GetLastError());
         }
         this.serial = new String(deviceInfo.szSerialNumber, StandardCharsets.US_ASCII).trim();
         this.channelCount = deviceInfo.byChanNum;
         log.info("大华设备登录成功: ip={}, serial={}, channels={}",
-                info.getIp(), serial, channelCount);
+                info.ip(), serial, channelCount);
     }
 
     @Override
@@ -170,7 +170,7 @@ public class DahuaRealSession implements DeviceSession {
      * 获取deviceid
     */
     public String getDeviceId() {
-        return info.getIp();
+        return info.ip();
     }
 
     @Override
@@ -192,7 +192,7 @@ public class DahuaRealSession implements DeviceSession {
         }
         sdk.CLIENT_Cleanup();
         online = false;
-        log.info("大华设备会话已关闭: {}", info.getIp());
+        log.info("大华设备会话已关闭: {}", info.ip());
     }
 
     @Override

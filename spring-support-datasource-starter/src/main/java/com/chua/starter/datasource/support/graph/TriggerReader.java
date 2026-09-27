@@ -79,10 +79,9 @@ public class TriggerReader {
 
     /**
      * 读取mysqllike
-    */
- // 豁免：查询 信息_模式.TRIGGERS 系统视图，无用户可控参数，仅读取数据库元数据
-    /**
-     * 读取mysqllike。
+     *
+     * <p>安全豁免：查询 information_schema.TRIGGERS 固定系统视图，不拼接用户输入或用户值。</p>
+     *
      * @param conn conn
      * @return 读取mysqllike的结果
      */
@@ -97,13 +96,14 @@ public class TriggerReader {
          */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                TriggerInfo t = new TriggerInfo();
-                t.setName(rs.getString("TRIGGER_NAME"));
-                t.setEvent(rs.getString("EVENT_MANIPULATION"));
-                t.setTableName(rs.getString("EVENT_OBJECT_TABLE"));
-                t.setTiming(rs.getString("ACTION_TIMING"));
-                t.setStatus(rs.getString("STATUS"));
-                t.setGranularity(rs.getString("ACTION_ORIENTATION"));
+                TriggerInfo t = new TriggerInfo(
+                        rs.getString("TRIGGER_NAME"),
+                        rs.getString("EVENT_OBJECT_TABLE"),
+                        rs.getString("ACTION_TIMING"),
+                        rs.getString("EVENT_MANIPULATION"),
+                        rs.getString("STATUS"),
+                        rs.getString("ACTION_ORIENTATION")
+                );
                 list.add(t);
             }
         }
@@ -112,6 +112,7 @@ public class TriggerReader {
 
     /**
      * 读取PostgreSQL
+     * <p>安全豁免：查询 information_schema.triggers 固定系统视图，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取postgresql的结果
@@ -127,12 +128,14 @@ public class TriggerReader {
          */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                TriggerInfo t = new TriggerInfo();
-                t.setName(rs.getString("trigger_name"));
-                t.setEvent(rs.getString("event_manipulation"));
-                t.setTableName(rs.getString("event_object_table"));
-                t.setTiming(rs.getString("action_timing"));
-                t.setGranularity(rs.getString("action_orientation"));
+                TriggerInfo t = new TriggerInfo(
+                        rs.getString("trigger_name"),
+                        rs.getString("event_object_table"),
+                        rs.getString("action_timing"),
+                        rs.getString("event_manipulation"),
+                        null,
+                        rs.getString("action_orientation")
+                );
                 list.add(t);
             }
         }
@@ -141,6 +144,7 @@ public class TriggerReader {
 
     /**
      * 读取Oracle
+     * <p>安全豁免：查询 Oracle ALL_TRIGGERS 固定系统视图，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取oracle的结果
@@ -155,12 +159,14 @@ public class TriggerReader {
          */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                TriggerInfo t = new TriggerInfo();
-                t.setName(rs.getString("TRIGGER_NAME"));
-                t.setTableName(rs.getString("TABLE_NAME"));
-                t.setStatus(rs.getString("STATUS"));
-                t.setTiming(rs.getString("TRIGGER_TYPE"));
-                t.setEvent(rs.getString("TRIGGERING_EVENT"));
+                TriggerInfo t = new TriggerInfo(
+                        rs.getString("TRIGGER_NAME"),
+                        rs.getString("TABLE_NAME"),
+                        rs.getString("TRIGGER_TYPE"),
+                        rs.getString("TRIGGERING_EVENT"),
+                        rs.getString("STATUS"),
+                        null
+                );
                 list.add(t);
             }
         }
@@ -169,6 +175,7 @@ public class TriggerReader {
 
     /**
      * 读取SQL服务端
+     * <p>安全豁免：查询 SQL Server sys.triggers 固定系统视图，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取sql服务端的结果
@@ -186,10 +193,14 @@ public class TriggerReader {
          */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                TriggerInfo t = new TriggerInfo();
-                t.setName(rs.getString("trigger_name"));
-                t.setTableName(rs.getString("table_name"));
-                t.setStatus(rs.getBoolean("is_disabled") ? "DISABLED" : "ENABLED");
+                TriggerInfo t = new TriggerInfo(
+                        rs.getString("trigger_name"),
+                        rs.getString("table_name"),
+                        null,
+                        null,
+                        rs.getBoolean("is_disabled") ? "DISABLED" : "ENABLED",
+                        null
+                );
                 list.add(t);
             }
         }
@@ -206,14 +217,17 @@ public class TriggerReader {
                 events.put(rs.getString("name"), rs.getString("events"));
             }
         }
-        for (TriggerInfo t : list) {
-            t.setEvent(events.get(t.getName()));
+        for (int i = 0; i < list.size(); i++) {
+            TriggerInfo t = list.get(i);
+            list.set(i, new TriggerInfo(t.name(), t.tableName(), t.timing(),
+                    events.get(t.name()), t.status(), t.granularity()));
         }
         return list;
     }
 
     /**
      * 读取Sqlite
+     * <p>安全豁免：查询 SQLite sqlite_master 固定系统表，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取sqlite的结果
@@ -227,9 +241,14 @@ public class TriggerReader {
          */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                TriggerInfo t = new TriggerInfo();
-                t.setName(rs.getString("name"));
-                t.setTableName(rs.getString("tbl_name"));
+                TriggerInfo t = new TriggerInfo(
+                        rs.getString("name"),
+                        rs.getString("tbl_name"),
+                        null,
+                        null,
+                        null,
+                        null
+                );
                 list.add(t);
             }
         }
@@ -238,6 +257,9 @@ public class TriggerReader {
 
     /**
      * 通用 信息_模式 兜底
+     *
+     * <p>安全豁免：查询 information_schema.TRIGGERS 固定系统视图，不含用户可控参数或值。</p>
+     *
      * @param conn conn
      * @return 读取generic信息模式的结果
      */
@@ -255,13 +277,14 @@ public class TriggerReader {
                 cols.put(meta.getColumnLabel(i).toUpperCase(Locale.ROOT), i);
             }
             while (rs.next()) {
-                TriggerInfo t = new TriggerInfo();
-                t.setName(getByName(rs, cols, "TRIGGER_NAME"));
-                t.setEvent(getByName(rs, cols, "EVENT_MANIPULATION"));
-                t.setTableName(getByName(rs, cols, "EVENT_OBJECT_TABLE"));
-                t.setTiming(getByName(rs, cols, "ACTION_TIMING"));
-                t.setStatus(getByName(rs, cols, "STATUS"));
-                t.setGranularity(getByName(rs, cols, "ACTION_ORIENTATION"));
+                TriggerInfo t = new TriggerInfo(
+                        getByName(rs, cols, "TRIGGER_NAME"),
+                        getByName(rs, cols, "EVENT_OBJECT_TABLE"),
+                        getByName(rs, cols, "ACTION_TIMING"),
+                        getByName(rs, cols, "EVENT_MANIPULATION"),
+                        getByName(rs, cols, "STATUS"),
+                        getByName(rs, cols, "ACTION_ORIENTATION")
+                );
                 list.add(t);
             }
         }
@@ -338,3 +361,4 @@ public class TriggerReader {
         }
     }
 }
+

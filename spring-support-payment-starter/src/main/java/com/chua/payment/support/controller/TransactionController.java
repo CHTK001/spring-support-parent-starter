@@ -24,16 +24,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransactionController {
 
     /**
-     * Transactionrecord服务
-    */
+     * 交易流水服务
+     */
     private final TransactionRecordService transactionRecordService;
 
     @GetMapping("/{id}")
     /**
-     * 获取byid
+     * 按id获取
      *
      * @param id 标识
-     * @return 获取byid的结果
+     * @return 按id获取的结果
      */
     public Result<TransactionRecord> getById(@PathVariable Long id) {
         TransactionRecord record = transactionRecordService.getById(id);
@@ -42,8 +42,8 @@ public class TransactionController {
 
     @GetMapping("/order/{orderNo}")
     /**
-     * 列表by订单no
-     * @param orderNo 订单no
+     * 按订单号查询列表
+     * @param orderNo 订单号
      * @param pageNum pagenum
      * @param pageSize page大小
      */
@@ -55,7 +55,7 @@ public class TransactionController {
 
     @GetMapping("/merchant/{merchantId}")
     /**
-     * 列表bymerchantid
+     * 按商户查询列表
      * @param merchantId merchantid
      * @param pageNum pagenum
      * @param pageSize page大小
@@ -68,10 +68,8 @@ public class TransactionController {
 
     @GetMapping("/page")
     /**
-     * Page
+     * 分页查询
      *
-     * @param "1" "1"
-     * @return page的结果
      */
     public Result<PageResult<TransactionRecord>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
@@ -83,4 +81,3 @@ public class TransactionController {
         return Result.success(PageResult.of(page));
     }
 }
-

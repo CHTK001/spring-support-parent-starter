@@ -247,6 +247,49 @@ public class AiBotBindingService {
         }
     }
 
+    /**
+     * 编辑绑定的展示名称与对话模型（绑定后「编辑」入口）。
+     *
+     * <p>仅更新 nickname / model 两列，不触碰凭证、状态，也不重启消息轮询；
+     * model 传 {@code null} 表示不修改，传空串表示跟随系统默认模型。</p>
+     *
+     * @param id       绑定记录标识
+     * @param nickname 展示名称（{@code null} 表示不修改）
+     * @param model    对话模型（{@code null} 表示不修改，空串为默认）
+     * @return 更新后的绑定记录，不存在时返回 {@code null}
+     */
+    public SysAiBotBinding updateSettings(Long id, String nickname, String model) {
+        SysAiBotBinding binding = getById(id);
+        if (binding == null) {
+            return null;
+        }
+        if (nickname != null) {
+            binding.setNickname(nickname);
+        }
+        if (model != null) {
+            binding.setModel(model);
+        }
+        binding.setUpdateTime(LocalDateTime.now());
+        botBindingMapper.updateById(binding);
+        return binding;
+    }
+
+    /**
+     * 通用编辑持久化：对已加载并就地修改过的绑定记录执行按 id 更新。
+     *
+     * <p>仅做 updateById，不按 botId upsert、不重启消息轮询，供连接器「编辑」
+     * 一次性保存名称 / 模型 / @过滤 / 随机回复等可编辑字段。</p>
+     *
+     * @param binding 已含 id 的绑定记录
+     */
+    public void updateBinding(SysAiBotBinding binding) {
+        if (binding == null || binding.getId() == null) {
+            return;
+        }
+        binding.setUpdateTime(LocalDateTime.now());
+        botBindingMapper.updateById(binding);
+    }
+
  // ==================== 微信 i链接 扫码登录 ====================
 
     /**
@@ -422,14 +465,18 @@ public class AiBotBindingService {
      * <p>会话状态由后台 {@link ILinkBotClient} 扫码流程的
      * {@link QrcodeListener} 回调实时更新，此处仅读取缓存，不做网络请求。</p>
      *
-     * @param key 会话 Key
-     * @return 状态 + 凭证（confirmed 时）
+     * <p>会话 Key 虽为随机串，但本出口在鉴权白名单内，故按归属收口：会话已归属时只有同一归属
+     * 可以查询，其余视同会话不存在。凭证不随状态下发，落库由 {@link #saveBindingFromScan} 完成。</p>
+     *
+     * @param key            会话 Key
+     * @param callerOwnerKey 当前调用方归属标识，可为空
+     * @return 状态 + 机器人标识（confirmed 时）
      */
-    public QrStatus checkQrCodeStatus(String key) {
+    public QrStatus checkQrCodeStatus(String key, String callerOwnerKey) {
         var session = qrSessions.get(key);
- // 会话不存在（已 confirmed 移除 / 已过期 / Key 无效）：返回 expired，避免前端轮询报错
-        if (session == null) {
-            return new QrStatus("expired", null, null, null, null);
+ // 会话不存在（已 confirmed 移除 / 已过期 / Key 无效 / 非本人会话）：返回 expired，避免前端轮询报错
+        if (session == null || !sameOwner(session.ownerKey, callerOwnerKey)) {
+            return new QrStatus("expired", null, null, null);
         }
  // 懒清理过期 会话
         if (System.currentTimeMillis() > session.expireAt && !"confirmed".equals(session.status)) {
@@ -437,18 +484,31 @@ public class AiBotBindingService {
             qrSessions.remove(key);
         }
         if ("confirmed".equals(session.status) && session.botId != null) {
-            return new QrStatus("confirmed", session.qrImageUrl, session.botId, session.botToken, session.expireAt);
+            return new QrStatus("confirmed", session.qrImageUrl, session.botId, session.expireAt);
         }
         /**
          * qr状态。
          * @param "pending" "pending"
          * @param session.qrImageUrl 会话.qr镜像url
          * @param null 空
-         * @param null 空
          * @param session.expireAt 会话.expireat
          * @return qr状态的结果
          */
-        return new QrStatus(session.status != null ? session.status : "pending", session.qrImageUrl, null, null, session.expireAt);
+        return new QrStatus(session.status != null ? session.status : "pending", session.qrImageUrl, null, session.expireAt);
+    }
+
+    /**
+     * 会话归属与调用方归属是否一致。
+     *
+     * @param sessionOwnerKey 会话归属标识，空表示未归属（桌面免登录场景）
+     * @param callerOwnerKey  调用方归属标识，可为空
+     * @return 一致或会话未归属时为 {@code true}
+     */
+    private static boolean sameOwner(String sessionOwnerKey, String callerOwnerKey) {
+        if (sessionOwnerKey == null || sessionOwnerKey.isBlank()) {
+            return true;
+        }
+        return sessionOwnerKey.equals(callerOwnerKey);
     }
 
     /**
@@ -544,7 +604,7 @@ public class AiBotBindingService {
             binding.setBotId(newBotId);
             binding.setBotToken(session.botToken);
             binding.setPlatform(platform);
-            binding.setNickname(userId != null ? userId : newBotId);
+            binding.setNickname("微信助理");
             binding.setStatus("online");
             binding.setBindSource("qrcode_scan");
             binding.setOwnerKey(session.ownerKey);
@@ -595,8 +655,10 @@ public class AiBotBindingService {
             if (!(auto instanceof FeishuBotClient feishu)) {
                 throw new IllegalStateException("feishu SPI 未返回 FeishuBotClient");
             }
-            feishu.configure(appId, appSecret, null).start();
-            log.info("[Bot] 飞书客户端初始化成功 appId={}", appId);
+            // 仅轻量校验凭据（获取 tenant_access_token），不建立长连接；
+            // 否则校验连接与 startBot 的托管连接并存，事件会被无监听器的校验连接接走
+            FeishuBotClient.fetchTenantAccessToken(appId, appSecret);
+            log.info("[Bot] 飞书凭据校验成功 appId={}", appId);
         } catch (Exception e) {
             log.error("[Bot] 飞书绑定失败 appId={}", appId, e);
             /**
@@ -619,6 +681,52 @@ public class AiBotBindingService {
         }
         binding.setCreateTime(LocalDateTime.now());
         binding.setUpdateTime(LocalDateTime.now());
+        return saveOrUpdate(binding);
+    }
+
+    // ==================== QQ（凭据配置型） ====================
+
+    /**
+     * 绑定 QQ 机器人（凭据配置型）。
+     *
+     * <p>校验 App ID / App Secret 非空后写入 sys_ai_bot_binding（platform=qq，
+     * bind_source=manual_import）。真实网关连接由 {@code AiBotChatService.startBot}
+     * 统一创建（WebSocket 长连接，内部负责换取 access_token、心跳与重连）。</p>
+     *
+     * @param appId     QQ 开放平台机器人 App ID
+     * @param appSecret QQ 开放平台机器人 App Secret
+     * @return 数据库标识
+     */
+    public Long bindQq(String appId, String appSecret) {
+        return bindQq(appId, appSecret, null);
+    }
+
+    /**
+     * 绑定 QQ 机器人（凭据配置型，带归属标识）。
+     *
+     * @param appId     QQ 机器人 App ID
+     * @param appSecret QQ 机器人 App Secret
+     * @param ownerKey  归属标识（可空，空=公共/未归属）
+     * @return 数据库标识
+     */
+    public Long bindQq(String appId, String appSecret, String ownerKey) {
+        if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
+            throw new IllegalArgumentException("QQ App ID 与 App Secret 必填");
+        }
+
+        var binding = new SysAiBotBinding();
+        binding.setBotId(appId);
+        binding.setBotToken(appSecret);
+        binding.setPlatform("qq");
+        binding.setNickname("QQ Bot");
+        binding.setStatus("online");
+        binding.setBindSource("manual_import");
+        if (ownerKey != null && !ownerKey.isBlank()) {
+            binding.setOwnerKey(ownerKey);
+        }
+        binding.setCreateTime(LocalDateTime.now());
+        binding.setUpdateTime(LocalDateTime.now());
+        // 凭据型不在此触发 startBot（saveOrUpdate 仅自动启动 wechat），由 /bind 统一托管
         return saveOrUpdate(binding);
     }
 
@@ -689,13 +797,11 @@ public class AiBotBindingService {
      * @param status    会话状态：pending / 就绪 / scanned / confirmed / expired / 错误
      * @param qrcodeUrl 就绪 时附带，前端 img src 直接使用；其他状态为 空
      * @param botId     绑定成功后回填
-     * @param botToken  绑定成功后回填
      * @param expireAt  二维码过期时间戳（毫秒），前端据此展示倒计时并到期自动刷新
      */
     public record QrStatus(String status,
                            String qrcodeUrl,
                            String botId,
-                           String botToken,
                            @JsonProperty("expireAt") Long expireAt) {
     }
 }

@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 需求（Requirement）控制器，替代 nomicore 的 {@code /api/requirements} 契约。
  *
  * <p>维护需求条目（{@code requirement_id} 主键）、标签统计、看板、自动作业（AutoWork）与
- * 标签绑定。关键变更推送 {@编码 requirement.创建 / requirement.更新 /
+ * 标签绑定。关键变更推送 {@code requirement.创建 / requirement.更新 /
  * requirement.状态改变 / requirement.删除} 与 {@code autowork.*} 事件。
  * 数据持久化到 {@code sys_ai_requirement} 表。</p>
  *

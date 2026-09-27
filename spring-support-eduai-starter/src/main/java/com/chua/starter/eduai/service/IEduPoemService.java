@@ -1,0 +1,36 @@
+package com.chua.starter.eduai.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.starter.eduai.model.EduPoem;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 古诗服务接口
+ *
+ * @since 4.0.0.42
+ * @author CH
+ */
+public interface IEduPoemService extends IService<EduPoem> {
+
+    /**
+     * 按学段/年级取古诗（学段为空时不限）
+     *
+     * @param gradeLevel 学段（小学/初中/高中）
+     * @param grade      年级（可为空）
+     * @param count      数量上限
+     * @return 古诗列表
+     */
+    List<EduPoem> listByGradeLevel(String gradeLevel, String grade, int count);
+
+    /**
+     * 生成古诗趣味游戏数据（补全下句：给上一句，选正确的下一句）
+     *
+     * @param gradeLevel 学段（可为空）
+     * @param grade      年级（可为空）
+     * @param count      题目数量
+     * @return 游戏数据
+     */
+    Map<String, Object> generatePoemGame(String gradeLevel, String grade, int count);
+}

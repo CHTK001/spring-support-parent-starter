@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.config;
 
 import com.chua.starter.monitor.support.service.HostProfileService;
+import com.chua.starter.monitor.support.service.HostMetricHistoryService;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.service.impl.MonitorPushService;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -54,6 +55,11 @@ public class HostRealtimePushConfiguration {
      * 主机画像服务（AGENT 方式采集时拉 agent 快照，可能未装配）
     */
     private final ObjectProvider<HostProfileService> profileServiceProvider;
+
+    /**
+     * 主机内置指标历史（采集后旁路写一行，不依赖监控项）
+    */
+    private final HostMetricHistoryService hostMetricHistoryService;
 
     /**
      * 主机延迟指标名（毫秒，告警规则 GT 阈值）
@@ -204,9 +210,19 @@ public class HostRealtimePushConfiguration {
         }
         try {
             monitorPushService.pushHostMetrics(host.getId(), host.getServerHostName(),
-                    host.getServerHostCpuUsage(), host.getServerHostMemUsage(), host.getServerHostDiskUsage());
+                    host.getServerHostCpuUsage(), host.getServerHostMemUsage(), host.getServerHostDiskUsage(),
+                    host.getServerHostDiskReadKbs(), host.getServerHostDiskWriteKbs(),
+                    host.getServerHostSoftware());
         } catch (Exception e) {
             log.debug("[monitor] 指标推送跳过 hostId={}: {}", host.getId(), e.getMessage());
+        }
+        // 旁路写主机指标历史（供监控详情近1h基础数据/图表历史），失败不影响主链路
+        try {
+            hostMetricHistoryService.record(host.getId(), host.getServerHostCpuUsage(),
+                    host.getServerHostMemUsage(), host.getServerHostDiskUsage(),
+                    host.getServerHostDiskReadKbs(), host.getServerHostDiskWriteKbs());
+        } catch (Exception e) {
+            log.debug("[monitor] 主机历史写入跳过 hostId={}: {}", host.getId(), e.getMessage());
         }
     }
 

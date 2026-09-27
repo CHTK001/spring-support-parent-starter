@@ -75,13 +75,22 @@ public class JobEntity extends SysBase implements Serializable {
     private String sysJobAuthor;
 
     /**
-     * 告警邮箱 (多个用逗号分隔)
+     * 告警目标 (邮箱多个用逗号分隔，或 webhook 地址)
      */
     @TableField("sys_job_alarm_email")
     /**
      * SYS作业alarmemail
     */
     private String sysJobAlarmEmail;
+
+    /**
+     * 告警类型 (EMAIL / WEBHOOK，空按 EMAIL)
+     */
+    @TableField("sys_job_alarm_type")
+    /**
+     * SYS作业alarmtype
+    */
+    private String sysJobAlarmType;
 
     /**
      * 命名空间 (隔离多项目)
@@ -163,6 +172,15 @@ public class JobEntity extends SysBase implements Serializable {
      * SYS作业dispatch模式
     */
     private String sysJobDispatchMode;
+
+    /**
+     * 并发策略 (SKIP / ALLOW)
+     */
+    @TableField("sys_job_concurrent_policy")
+    /**
+     * SYS作业并发策略
+     */
+    private String sysJobConcurrentPolicy;
 
     /**
      * 远程执行器地址覆盖

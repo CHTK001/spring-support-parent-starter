@@ -103,6 +103,30 @@ public class EduDimensionController {
         return ReturnResult.ok(dimensionService.listGrades(gradeLevel));
     }
 
+    @Operation(summary = "保存年级")
+    @PostMapping("/grades/save")
+    /**
+     * 保存grades
+     *
+     * @param entity 实体
+     * @return 保存grades的结果
+     */
+    public ReturnResult<Long> saveGrade(@RequestBody EduGrade entity) {
+        return ReturnResult.ok(dimensionService.saveGrade(entity));
+    }
+
+    @Operation(summary = "删除年级")
+    @DeleteMapping("/grades/{id}")
+    /**
+     * 删除grades
+     *
+     * @param id 标识
+     * @return 删除grades的结果
+     */
+    public ReturnResult<Boolean> deleteGrade(@PathVariable Long id) {
+        return ReturnResult.ok(dimensionService.deleteGrade(id));
+    }
+
     // ===== 班级 =====
 
     @Operation(summary = "班级列表")

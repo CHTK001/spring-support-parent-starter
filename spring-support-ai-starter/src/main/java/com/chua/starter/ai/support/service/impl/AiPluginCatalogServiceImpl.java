@@ -53,6 +53,7 @@ public class AiPluginCatalogServiceImpl implements AiPluginCatalogService {
 
     private final SysAiGlobalSettingService globalSettingService;
     private final List<PluginOfflineProvider> offlineProviders;
+    private final CustomLocalToolRegistrar customToolRegistrar;
 
     /**
      * 本地插件快照：Provider 键 → 插件条目列表，volatile 保证可见性
@@ -94,6 +95,10 @@ public class AiPluginCatalogServiceImpl implements AiPluginCatalogService {
             for (Map<String, Object> item : items) {
                 mergeById(byId, item);
             }
+        }
+        // 追加管理员注册的自定义本地工具（id 已带 custom: 前缀，不会与磁盘扫描结果冲突）
+        for (Map<String, Object> custom : customToolRegistrar.resolveTools()) {
+            byId.putIfAbsent(String.valueOf(custom.get("id")), withPluginSwitch(custom));
         }
         return new ArrayList<>(byId.values());
     }
@@ -172,6 +177,14 @@ public class AiPluginCatalogServiceImpl implements AiPluginCatalogService {
             for (Map<String, Object> item : items) {
                 if (pluginId.equals(item.get("id")) || pluginId.equals(item.get("pluginId"))) {
                     return withPluginSwitch(item);
+                }
+            }
+        }
+        // 自定义工具不在磁盘快照中，单独从注册项解析
+        if (customToolRegistrar.isCustom(pluginId)) {
+            for (Map<String, Object> custom : customToolRegistrar.resolveTools()) {
+                if (pluginId.equals(custom.get("id")) || pluginId.equals(custom.get("pluginId"))) {
+                    return withPluginSwitch(custom);
                 }
             }
         }

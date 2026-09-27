@@ -3,9 +3,10 @@ package com.chua.starter.monitor.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
-import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmPolicy;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmRule;
+import com.chua.starter.monitor.support.model.AlarmStatsSummaryVO;
+import com.chua.starter.monitor.support.model.AlarmTrendPointVO;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 告警管理接口：策略 / 规则 / 事件
@@ -250,22 +250,20 @@ public class AlarmController {
      */
     @Operation(summary = "告警概览统计")
     @GetMapping("/stats/summary")
-    public ReturnResult<Map<String, Object>> statsSummary() {
+    public ReturnResult<AlarmStatsSummaryVO> statsSummary() {
         return alarmEngineService.statsSummary();
     }
 
     /**
      * 告警趋势
      *
-     * @param hours    统计过去 N 小时
-     * @param interval 分桶粒度
-     * @return 时间序列，元素为 {time, count}
+     * @param hours 统计过去 N 小时
+     * @return 时间序列
      */
     @Operation(summary = "告警趋势")
     @GetMapping("/stats/trend")
-    public ReturnResult<List<Map<String, Object>>> statsTrend(
-            @RequestParam(defaultValue = "24") int hours,
-            @RequestParam(defaultValue = "1h") String interval) {
-        return alarmEngineService.statsTrend(hours, interval);
+    public ReturnResult<List<AlarmTrendPointVO>> statsTrend(
+            @RequestParam(defaultValue = "24") int hours) {
+        return alarmEngineService.statsTrend(hours);
     }
 }

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduKnowledgePointMapper">
+
+    <!-- 知识点树形列表：不取富文本/向量大字段，降低传输 -->
+    <select id="selectTree" resultType="com.chua.starter.eduai.model.EduKnowledgePoint">
+        SELECT k.knowledge_point_owner_user_id,
+               k.knowledge_point_id,
+               k.knowledge_point_name,
+               k.knowledge_point_code,
+               k.knowledge_point_parent_id,
+               k.knowledge_point_subject,
+               k.knowledge_point_grade_level,
+               k.knowledge_point_grade,
+               k.knowledge_point_description,
+               k.knowledge_point_sort_order,
+               k.knowledge_point_status,
+               k.knowledge_point_content_type,
+               k.create_time,
+               k.update_time
+        FROM edu_knowledge_point k
+        <where>
+            <if test="subject != null and subject != ''">
+                AND k.knowledge_point_subject = #{subject}
+            </if>
+            <if test="gradeLevel != null and gradeLevel != ''">
+                AND k.knowledge_point_grade_level = #{gradeLevel}
+            </if>
+            <if test="grade != null and grade != ''">
+                AND k.knowledge_point_grade = #{grade}
+            </if>
+            AND k.knowledge_point_status = 1
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (k.knowledge_point_owner_user_id IS NULL OR k.knowledge_point_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY k.knowledge_point_sort_order ASC, k.knowledge_point_id ASC
+    </select>
+
+    <!-- 取父节点下处于启用状态的子知识点（级联停用用） -->
+    <select id="selectEnabledChildren" resultType="com.chua.starter.eduai.model.EduKnowledgePoint">
+        SELECT k.* FROM edu_knowledge_point k
+        WHERE k.knowledge_point_parent_id = #{parentId}
+          AND k.knowledge_point_status = 1
+        ORDER BY k.knowledge_point_sort_order ASC, k.knowledge_point_id ASC
+    </select>
+
+    <!-- 关键字扁平检索：不取正文/向量，LIMIT 下拉用 -->
+    <select id="selectKeyword" resultType="com.chua.starter.eduai.model.EduKnowledgePoint">
+        SELECT k.knowledge_point_owner_user_id,
+               k.knowledge_point_id,
+               k.knowledge_point_name,
+               k.knowledge_point_code,
+               k.knowledge_point_parent_id,
+               k.knowledge_point_subject,
+               k.knowledge_point_grade_level,
+               k.knowledge_point_grade,
+               k.knowledge_point_description,
+               k.knowledge_point_sort_order,
+               k.knowledge_point_status,
+               k.knowledge_point_content_type,
+               k.create_time
+        FROM edu_knowledge_point k
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    k.knowledge_point_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR k.knowledge_point_code LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="subject != null and subject != ''">
+                AND k.knowledge_point_subject = #{subject}
+            </if>
+            AND k.knowledge_point_status = 1
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (k.knowledge_point_owner_user_id IS NULL OR k.knowledge_point_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY k.knowledge_point_sort_order ASC, k.knowledge_point_id ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 知识卡片列表：仅列表所需列（禁止 SELECT * 拉 content/embedding 大字段） -->
+    <select id="selectCards" resultType="com.chua.starter.eduai.model.vo.KnowledgeCardVO">
+        SELECT k.knowledge_point_id,
+               k.knowledge_point_name,
+               k.knowledge_point_code,
+               k.knowledge_point_parent_id,
+               k.knowledge_point_subject,
+               k.knowledge_point_grade_level,
+               k.knowledge_point_grade,
+               k.knowledge_point_description,
+               k.knowledge_point_sort_order,
+               k.knowledge_point_status,
+               k.create_time,
+               CASE WHEN k.knowledge_point_content IS NOT NULL AND k.knowledge_point_content &lt;&gt; ''
+                    THEN 1 ELSE 0 END AS has_content,
+               (SELECT COUNT(*) FROM edu_knowledge_file f
+                 WHERE f.knowledge_point_id = k.knowledge_point_id
+                   AND f.knowledge_file_status = 1) AS file_count
+        FROM edu_knowledge_point k
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    k.knowledge_point_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR k.knowledge_point_code LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="subject != null and subject != ''">
+                AND k.knowledge_point_subject = #{subject}
+            </if>
+            <if test="gradeLevel != null and gradeLevel != ''">
+                AND k.knowledge_point_grade_level = #{gradeLevel}
+            </if>
+            <if test="grade != null and grade != ''">
+                AND k.knowledge_point_grade = #{grade}
+            </if>
+            AND k.knowledge_point_status = 1
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (k.knowledge_point_owner_user_id IS NULL OR k.knowledge_point_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY k.knowledge_point_sort_order ASC, k.knowledge_point_id ASC
+    </select>
+
+</mapper>

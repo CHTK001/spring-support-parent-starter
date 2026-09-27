@@ -5,8 +5,10 @@ import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsTerminalSession;
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.TerminalSessionService;
+import com.chua.starter.server.support.terminal.WebSocketSessions;
 import com.chua.starter.server.support.util.SshClients;
 import com.chua.ssh.support.client.SshClient;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +21,12 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -58,6 +63,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     private static final int DEFAULT_ROWS = 30;
 
     /**
+     * 审计与在线列表使用的协议名
+    */
+    private static final String PROTOCOL = "SSH";
+
+    /**
      * 主机服务（地址/端口/凭据解析）
     */
     private final ServerHostService serverHostService;
@@ -80,16 +90,16 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession wsSession) throws Exception {
         wsSession.setTextMessageSizeLimit(MAX_TEXT_BUFFER);
-        Map<String, String> params = parseQuery(wsSession);
-        Long hostId = parseLong(params.get("hostId"));
+        Map<String, String> params = WebSocketSessions.parseQuery(wsSession);
+        Long hostId = WebSocketSessions.parseLong(params.get("hostId"));
         if (hostId == null) {
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
-        Long identityId = parseLong(params.get("identityId"));
-        int cols = parsePositiveInt(params.get("cols"), DEFAULT_COLS);
-        int rows = parsePositiveInt(params.get("rows"), DEFAULT_ROWS);
-        String userName = params.getOrDefault("user", "anonymous");
+        Long identityId = WebSocketSessions.parseLong(params.get("identityId"));
+        int cols = WebSocketSessions.parsePositiveInt(params.get("cols"), DEFAULT_COLS);
+        int rows = WebSocketSessions.parsePositiveInt(params.get("rows"), DEFAULT_ROWS);
+        String operator = params.get("user");
 
         ReturnResult<MsServerHost> hostResult = serverHostService.get(hostId);
         if (!hostResult.isOk() || hostResult.getData() == null) {
@@ -97,7 +107,13 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         MsServerHost host = hostResult.getData();
-        ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId);
+        // 本机不支持 SSH 远控（本机对自身 SSH 无意义），仅支持 VNC
+        if (host.getServerHostCollectMode() != null
+                && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim())) {
+            reject(wsSession, "本机不支持 SSH 远控，请使用 VNC");
+            return;
+        }
+        ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId, PROTOCOL);
         if (!resolved.isOk()) {
             reject(wsSession, resolved.getMsg());
             return;
@@ -111,14 +127,16 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             handle = SshClients.open(host.getServerHostAddress(), port, resolved.getData());
             handle.client().connect();
         } catch (Exception e) {
-            log.warn("[terminal-ssh] SSH 连接失败 hostId={} {}:{}: {}", hostId, host.getServerHostAddress(), port, e.getMessage());
-            reject(wsSession, "SSH 连接失败: " + e.getMessage());
+            String cause = WebSocketSessions.describeCause(e);
+            log.warn("[terminal-ssh] SSH 连接失败 hostId={} {}:{} {}", hostId, host.getServerHostAddress(), port, cause, e);
+            reject(wsSession, "SSH 连接失败 " + host.getServerHostAddress() + ":" + port + " - " + cause);
             return;
         }
 
-        Bridge bridge = new Bridge(handle, wsSession);
+        Bridge bridge = new Bridge(handle, wsSession, hostId);
+        String userName = WebSocketSessions.firstNonBlank(operator, resolved.getData().username());
         MsTerminalSession record = terminalSessionService.openRecord(
-                hostId, host.getServerHostName(), "SSH", userName, resolveClientIp(wsSession));
+                hostId, host.getServerHostName(), PROTOCOL, userName, WebSocketSessions.clientIp(wsSession));
         bridge.recordId = record == null ? null : record.getId();
         bridges.put(wsSession.getId(), bridge);
         try {
@@ -136,8 +154,9 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             bridges.remove(wsSession.getId());
             closeHandle(handle);
             terminalSessionService.closeRecord(bridge.recordId, "PTY 打开失败");
-            log.warn("[terminal-ssh] PTY 打开失败 hostId={}: {}", hostId, e.getMessage());
-            reject(wsSession, "PTY 打开失败: " + e.getMessage());
+            String cause = WebSocketSessions.describeCause(e);
+            log.warn("[terminal-ssh] PTY 打开失败 hostId={} {}", hostId, cause, e);
+            reject(wsSession, "PTY 打开失败 - " + cause);
         }
     }
 
@@ -153,6 +172,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         if (bridge == null) {
             return;
         }
+        bridge.touch();
         String payload = message.getPayload();
         if (payload == null || !payload.startsWith("{")) {
             return;
@@ -181,6 +201,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         if (bridge == null || bridge.operation == null) {
             return;
         }
+        bridge.touch();
         ByteBuffer buffer = message.getPayload();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
@@ -202,7 +223,8 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession wsSession, CloseStatus status) {
         Bridge bridge = bridges.get(wsSession.getId());
         if (bridge != null) {
-            closeBridge(bridge, "浏览器断开: " + status);
+            log.info("[terminal-ssh] 浏览器关闭 sessionId={} {}", wsSession.getId(), status);
+            closeBridge(bridge, "浏览器断开");
         }
     }
 
@@ -219,6 +241,58 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         if (bridge != null) {
             closeBridge(bridge, "传输异常");
         }
+    }
+
+    /**
+     * 本通道在线会话摘要（供管理端在线列表调用）
+     *
+     * @return 在线会话列表
+     */
+    public List<TerminalOnlineVO> onlineSessions() {
+        List<TerminalOnlineVO> result = new ArrayList<>(bridges.size());
+        for (Bridge bridge : bridges.values()) {
+            result.add(bridge.toOnlineView());
+        }
+        return result;
+    }
+
+    /**
+     * 按审计记录标识强制关闭会话
+     *
+     * @param recordId 审计记录 标识
+     * @param reason   关闭原因
+     * @return true 表示本通道持有该会话并已触发关闭
+     */
+    public boolean closeSession(Long recordId, String reason) {
+        if (recordId == null) {
+            return false;
+        }
+        for (Bridge bridge : bridges.values()) {
+            if (recordId.equals(bridge.recordId)) {
+                closeBridge(bridge, reason);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 关闭空闲超时的会话
+     *
+     * @param idleMinutes 最大空闲分钟数
+     * @return 本次关闭的会话数
+     */
+    public int sweepIdleSessions(int idleMinutes) {
+        List<Bridge> idle = new ArrayList<>();
+        for (Bridge bridge : bridges.values()) {
+            if (ChronoUnit.MINUTES.between(bridge.lastActiveTime, LocalDateTime.now()) >= idleMinutes) {
+                idle.add(bridge);
+            }
+        }
+        for (Bridge bridge : idle) {
+            closeBridge(bridge, "空闲超时");
+        }
+        return idle.size();
     }
 
     /**
@@ -272,7 +346,8 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     private void reject(WebSocketSession wsSession, String reason) {
         log.warn("[terminal-ssh] 拒绝直连 sessionId={} reason={}", wsSession.getId(), reason);
         try {
-            wsSession.sendMessage(new TextMessage("{\"c\":\"error\",\"msg\":\"" + escape(reason) + "\"}"));
+            wsSession.sendMessage(new TextMessage("{\"c\":\"error\",\"msg\":\""
+                    + WebSocketSessions.escapeJson(reason) + "\"}"));
         } catch (IOException ignored) {
             // 发送失败不影响关闭动作
         }
@@ -280,76 +355,6 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             wsSession.close(CloseStatus.POLICY_VIOLATION);
         } catch (IOException e) {
             log.debug("[terminal-ssh] 关闭被拒连接失败 sessionId={}", wsSession.getId());
-        }
-    }
-
-    /**
-     * 解析 WS 握手 URL 的查询参数
-     *
-     * @param wsSession WS 会话
-     * @return 参数表
-     */
-    private Map<String, String> parseQuery(WebSocketSession wsSession) {
-        URI uri = wsSession.getUri();
-        Map<String, String> params = new java.util.HashMap<>();
-        if (uri == null || uri.getRawQuery() == null) {
-            return params;
-        }
-        for (String pair : uri.getRawQuery().split("&")) {
-            int idx = pair.indexOf('=');
-            if (idx <= 0) {
-                continue;
-            }
-            params.put(java.net.URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8),
-                    java.net.URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8));
-        }
-        return params;
-    }
-
-    /**
-     * 提取客户端 IP
-     *
-     * @param wsSession WS 会话
-     * @return IP 字符串
-     */
-    private String resolveClientIp(WebSocketSession wsSession) {
-        var remoteAddress = wsSession.getRemoteAddress();
-        return remoteAddress == null ? "unknown" : remoteAddress.getAddress().getHostAddress();
-    }
-
-    /**
-     * 安全解析长整型参数
-     *
-     * @param value 原始字符串
-     * @return 长整型或 空
-     */
-    private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return Long.valueOf(value);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /**
-     * 安全解析正整型参数
-     *
-     * @param value      原始字符串
-     * @param defaultVal 兜底值
-     * @return 正整型
-     */
-    private int parsePositiveInt(String value, int defaultVal) {
-        if (value == null || value.isBlank()) {
-            return defaultVal;
-        }
-        try {
-            int parsed = Integer.parseInt(value);
-            return parsed > 0 ? parsed : defaultVal;
-        } catch (NumberFormatException e) {
-            return defaultVal;
         }
     }
 
@@ -389,19 +394,6 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     /**
-     * 转义错误信息中的 JSON 特殊字符
-     *
-     * @param value 原始文本
-     * @return 转义后文本
-     */
-    private String escape(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", " ");
-    }
-
-    /**
      * 单条直连会话的桥接上下文
      */
     private static final class Bridge {
@@ -410,6 +402,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
          * SSH 句柄
         */
         private final SshClients.Handle handle;
+
+        /**
+         * 主机 标识
+        */
+        private final Long hostId;
 
         /**
          * 浏览器 WS 会话
@@ -425,6 +422,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
          * 审计记录 标识，可空
         */
         private volatile Long recordId;
+
+        /**
+         * 最近活跃时间（管理端在线列表与空闲清理依据）
+        */
+        private volatile LocalDateTime lastActiveTime = LocalDateTime.now();
 
         /**
          * 当前列数
@@ -446,10 +448,29 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
          *
          * @param handle    SSH 句柄
          * @param wsSession 浏览器 WS 会话
+         * @param hostId    主机 标识
          */
-        private Bridge(SshClients.Handle handle, WebSocketSession wsSession) {
+        private Bridge(SshClients.Handle handle, WebSocketSession wsSession, Long hostId) {
             this.handle = handle;
             this.wsSession = wsSession;
+            this.hostId = hostId;
+        }
+
+        /**
+         * 刷新活跃时间（浏览器有输入即视为活跃）
+         */
+        private void touch() {
+            lastActiveTime = LocalDateTime.now();
+        }
+
+        /**
+         * 生成在线会话摘要
+         *
+         * @return 在线会话视图
+         */
+        private TerminalOnlineVO toOnlineView() {
+            return new TerminalOnlineVO(wsSession.getId(), hostId, recordId,
+                    PROTOCOL, lastActiveTime);
         }
 
         /**
@@ -461,6 +482,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             if (closed || !wsSession.isOpen()) {
                 return;
             }
+            touch();
             try {
                 synchronized (wsSession) {
                     wsSession.sendMessage(new BinaryMessage(data.getBytes(StandardCharsets.UTF_8)));

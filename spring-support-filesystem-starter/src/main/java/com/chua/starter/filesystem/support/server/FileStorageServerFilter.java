@@ -20,11 +20,13 @@ import com.chua.common.support.storage.result.GetObjectResult;
 import com.chua.common.support.storage.result.ListObjectResult;
 import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
+import com.chua.filestorage.support.preview.ClientPreviewSupport;
 import com.chua.filestorage.support.preview.FileStoragePreviewProvider;
 import com.chua.filestorage.support.preview.PreviewResult;
 import com.chua.filestorage.support.preview.provider.ArchivePreviewProvider;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
+import com.chua.filestorage.support.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
@@ -90,6 +92,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 文件存储设置
      */
     private final FileStorageSetting setting;
+
+    /**
+     * 配置热更新回调（用于把私有桶变更同步给 OAuth 鉴权过滤器）
+     */
+    private volatile java.util.function.Consumer<FileStorageSetting> configListener;
 
     /**
      * SPI 预览提供者缓存（懒加载，类路径 存在 utils-support-filestorage-starter 时可用）
@@ -219,6 +226,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     public FileStorageServerFilter(FileStorageSetting setting) {
         this.setting = setting == null ? FileStorageSetting.builder().build() : setting;
         this.token = generateToken();
+        log.info("文件服务器管理员令牌: {}（系统配置弹窗/配置页使用，每次启动随机生成）", token);
+    }
+
+    /**
+     * 注册配置热更新回调（setConfig 成功后触发，用于同步 OAuth 鉴权过滤器的私有桶）。
+     *
+     * @param configListener 回调（入参为最新配置）
+     */
+    public void setConfigListener(java.util.function.Consumer<FileStorageSetting> configListener) {
+        this.configListener = configListener;
     }
 
     /**
@@ -299,9 +316,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
  // 期权 预检请求直接放行
         if (request.getMethod() == HttpMethod.OPTIONS) {
+            // 回显浏览器请求的自定义头（如 x-req-fingerprint），否则预检拒绝导致跨域请求全部失败
+            String requestedHeaders = request.getHeader("Access-Control-Request-Headers");
             response.setStatus(204)
                     .setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
-                    .setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                    .setHeader("Access-Control-Allow-Headers",
+                            requestedHeaders == null || requestedHeaders.isBlank()
+                                    ? "Content-Type, Authorization" : requestedHeaders)
                     .setHeader("Access-Control-Max-Age", "3600")
                     .end();
             return CompletableFuture.completedFuture(null);
@@ -775,6 +796,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return;
         }
         response.setHeader("Access-Control-Allow-Origin", origin);
+        response.setHeader("Access-Control-Expose-Headers",
+                "Content-Disposition, X-FileStorage-Preview, X-FileStorage-Client-Renderer, Content-Range, Accept-Ranges");
         response.setHeader("Vary", "Origin");
     }
 
@@ -959,6 +982,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"showSize\":" + setting.isShowSize()
                 + ",\"showTime\":" + setting.isShowTime()
                 + ",\"imageFilter\":\"" + escapeJson(setting.getImageFilter() == null ? "NONE" : setting.getImageFilter()) + "\""
+                + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
+                + ",\"privateBuckets\":" + privateBucketsJson()
                 + ",\"oneTimeTtlMs\":" + ONE_TIME_TTL_MILLIS
                 + "}";
         response.setStatus(200)
@@ -966,6 +991,28 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .setBody(json)
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 私有桶集合的 JSON 数组文本。
+     *
+     * @return JSON 数组，如 ["local"]
+     */
+    private String privateBucketsJson() {
+        java.util.Set<String> buckets = setting.getPrivateBuckets();
+        if (buckets == null || buckets.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (String bucket : buckets) {
+            if (!first) {
+                sb.append(',');
+            }
+            sb.append('"').append(escapeJson(bucket)).append('"');
+            first = false;
+        }
+        return sb.append(']').toString();
     }
 
     /**
@@ -1208,6 +1255,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"openPreview\":" + setting.isOpenPreview()
                 + ",\"openDownload\":" + setting.isOpenDownload()
                 + ",\"openRange\":" + setting.isOpenRange()
+                + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
                 + "}";
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
@@ -1670,7 +1718,9 @@ function findParent(el) {
 }
 function pickRow(el) {
     var r=findParent(el);
-    if(r)showMenu(r);
+    if (r) {
+        showMenu(r);
+    }
 }
 function rowHref(r){return r.dataset?r.dataset.href:'';}
 function rowName(r){return r.dataset?r.dataset.name:'';}
@@ -2146,7 +2196,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
         response.setHeader("Content-Disposition", buildDisposition(download, fileName));
 
-        // 显式 ?preview=true 时才尝试 SPI 预览（xlsx/docx/ppt 等 Office 文档转 HTML）
+        // 显式 ?preview=true 时按渲染通道分流处理
         if (!download && wantPreview) {
             // 压缩包下钻：?preview&inner=包内路径 时提取条目并按条目类型预览
             String innerPath = request.getParams().get("inner");
@@ -2156,6 +2206,20 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                     return innerStage;
                 }
             }
+            // 客户端直渲染：docx / xlsx / xls / pdf / pptx 直接回吐原始字节，
+            // 由前端组件在浏览器内解析，避免服务端 LibreOffice / Aspose 转换开销。
+            // 必须早于 trySpiPreview，否则 Univer / 旧版 Office 提供者会抢先在服务端渲染
+            String clientRenderer = resolveClientRenderer(request, fileName, data);
+            if (clientRenderer != null) {
+                response.setStatus(200)
+                        .setHeader(ClientPreviewSupport.HEADER_PREVIEW, ClientPreviewSupport.CHANNEL_CLIENT)
+                        .setHeader(ClientPreviewSupport.HEADER_CLIENT_RENDERER, clientRenderer)
+                        .setContentType(MimeTypeUtils.getMimeTypeFromFilename(fileName))
+                        .setBody(data)
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
+            // 服务端渲染：SPI 提供者（Univer / 打开文档 / Visio 等）
             byte[] previewPage = trySpiPreview(data, fileName);
             if (previewPage != null) {
                 response.setStatus(200)
@@ -2523,13 +2587,64 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
             setting.setImageFilter(upper);
         }
+        // 访问权限热更新：private=true/false 针对 URL 中的当前桶；privateBuckets 直接替换全部私有桶
+        Boolean privateFlag = extractBoolean(body, "private");
+        if (privateFlag != null) {
+            String bucketName = resolveBucketName(request);
+            if (bucketName != null) {
+                if (privateFlag) {
+                    setting.getPrivateBuckets().add(bucketName);
+                } else {
+                    setting.getPrivateBuckets().remove(bucketName);
+                }
+            }
+        }
+        String privateCsv = extractString(body, "privateBuckets");
+        if (privateCsv != null) {
+            java.util.Set<String> buckets = java.util.concurrent.ConcurrentHashMap.newKeySet();
+            for (String item : privateCsv.split(",")) {
+                String trimmed = item.trim();
+                if (!trimmed.isEmpty()) {
+                    buckets.add(trimmed);
+                }
+            }
+            setting.setPrivateBuckets(buckets);
+        }
         log.info("管理员动态更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
                         + "openWatermark={}, openRemoteFile={}, layout={}, layoutType={}, "
-                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}",
+                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}, privateBuckets={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
                 setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isLayout(), setting.getLayoutType(),
-                setting.isShowFormat(), setting.isShowSize(), setting.isShowTime(), setting.getImageFilter());
+                setting.isShowFormat(), setting.isShowSize(), setting.isShowTime(), setting.getImageFilter(),
+                String.join(",", setting.getPrivateBuckets()));
+        notifyConfigChanged();
         return writeActionSuccess(response, "\"configUpdated\":true");
+    }
+
+    /**
+     * 通知配置热更新（同步私有桶给 OAuth 鉴权过滤器）。
+     */
+    private void notifyConfigChanged() {
+        java.util.function.Consumer<FileStorageSetting> listener = this.configListener;
+        if (listener == null) {
+            return;
+        }
+        try {
+            listener.accept(setting);
+        } catch (Exception e) {
+            log.warn("配置热更新回调失败（不影响 setConfig 结果）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 解析请求路径中的桶名（第一段）。
+     *
+     * @param request 当前请求
+     * @return 桶名，无法解析时返回 空
+     */
+    private String resolveBucketName(ServerRequest request) {
+        List<String> segments = splitPath(request.getPath());
+        return segments.isEmpty() ? null : segments.getFirst();
     }
 
     /**
@@ -3378,6 +3493,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     /**
      * 取文件名末段扩展名（小写、不含点）。
      *
+     * <p>刻意只取末段：返回值会作为 {@link #buildExtCandidates} 的兜底候选，
+     * 若在此处提前合并为复合扩展名（如 {@code tar.gz}），会挤掉 {@code gz}
+     * 这一单段兜底候选，导致压缩包条目识别回退。</p>
+     *
      * @param fileName 文件名
      * @return 扩展名；无扩展名时返回空串
      */
@@ -3772,6 +3891,30 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return "application/octet-stream";
         }
         return "application/octet-stream";
+    }
+
+    /**
+     * 判定本次预览请求应交由客户端直渲染，并解析出对应的渲染器标识。
+     *
+     * <p>命中条件：未显式指定 {@code render=server}，且扩展名在
+     * {@link ClientPreviewSupport} 的客户端可渲染清单内（docx / xlsx / xls / pdf / pptx）。
+     * 传统 {@code .doc} / {@code .ppt}（OLE2 复合文档）与 {@code .odt} 系列
+     * 不在清单内，将继续走服务端 SPI / 转换链路。</p>
+     *
+     * <p>对 {@code doc / xls / ppt} 这类传统扩展名，额外按<b>内容魔数</b>嗅探：
+     * 若文件实际是 OOXML（扩展名写着 doc、内容其实是 docx），则按真实类型
+     * 交给客户端组件渲染，避免误入 POI 二进制解析而失败。</p>
+     *
+     * @param request  请求对象，用于读取 {@code render} 参数
+     * @param fileName 文件名（用于推断扩展名）
+     * @param content  文件字节（用于魔数嗅探；可为 {@code null}）
+     * @return 客户端渲染器标识；应走服务端渲染时返回 {@code null}
+     */
+    private String resolveClientRenderer(ServerRequest request, String fileName, byte[] content) {
+        if (!ClientPreviewSupport.isClientPreferred(request.getParam(ClientPreviewSupport.PARAM_RENDER))) {
+            return null;
+        }
+        return ClientPreviewSupport.rendererOfSniffed(content, ClientPreviewSupport.resolveExtension(fileName));
     }
 
     /**

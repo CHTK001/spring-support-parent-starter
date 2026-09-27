@@ -40,14 +40,16 @@ public class HostProfileController {
      * 概览 + 实时指标。
      *
      * @param hostId  主机标识
-     * @param persist 是否回写主机台账，默认 true
+     * @param live    是否实时采集：默认 false，只读台账快照（进入画像不触发采集）；true 时经通道实时拉取
+     * @param persist 实时采集时是否回写主机台账，默认 true（仅 live=true 生效）
      * @return 画像数据
      */
-    @Operation(summary = "主机画像概览", description = "拉取基础信息与实时指标，并回写主机台账")
+    @Operation(summary = "主机画像概览", description = "默认只读台账快照；live=true 实时采集基础信息与指标并回写台账")
     @GetMapping("/{hostId}")
     public ReturnResult<HostProfileVO> overview(@PathVariable Long hostId,
+                                                @RequestParam(defaultValue = "false") boolean live,
                                                 @RequestParam(defaultValue = "true") boolean persist) {
-        return profileService.refresh(hostId, persist);
+        return live ? profileService.refresh(hostId, persist) : profileService.snapshot(hostId);
     }
 
     /**
@@ -57,22 +59,25 @@ public class HostProfileController {
      * @param section 分区：ports/processes/services/disks/network/env
      * @param page    页码（仅进程/服务生效）
      * @param size    每页条数（仅进程/服务生效）
+     * @param keyword 关键字（仅进程/服务生效，跨页命中）
      * @return 分区数据
      */
-    @Operation(summary = "主机画像分区", description = "监听端口/进程/服务/磁盘/网卡/环境变量")
+    @Operation(summary = "主机画像分区", description = "监听端口/进程/服务/磁盘/网卡/环境变量，进程与服务支持关键字检索")
     @GetMapping("/{hostId}/{section}")
     public ReturnResult<?> section(@PathVariable Long hostId,
                                   @PathVariable String section,
                                   @RequestParam(required = false) Integer page,
-                                  @RequestParam(required = false) Integer size) {
+                                  @RequestParam(required = false) Integer size,
+                                  @RequestParam(required = false) String keyword) {
         String name = section == null ? "" : section.trim().toLowerCase(Locale.ROOT);
         return switch (name) {
-            case HostProfileService.SECTION_PORTS -> profileService.ports(hostId);
-            case HostProfileService.SECTION_PROCESSES -> profileService.processes(hostId, page, size);
-            case HostProfileService.SECTION_SERVICES -> profileService.services(hostId, page, size);
+            case HostProfileService.SECTION_PORTS -> profileService.ports(hostId, page, size, keyword);
+            case HostProfileService.SECTION_PROCESSES -> profileService.processes(hostId, page, size, keyword);
+            case HostProfileService.SECTION_SERVICES -> profileService.services(hostId, page, size, keyword);
             case HostProfileService.SECTION_DISKS -> profileService.disks(hostId);
             case HostProfileService.SECTION_NETWORK -> profileService.network(hostId);
             case HostProfileService.SECTION_ENV -> profileService.env(hostId);
+            case HostProfileService.SECTION_FIREWALL -> profileService.firewall(hostId, page, size, keyword);
             default -> ReturnResult.error("不支持的画像分区: " + section);
         };
     }

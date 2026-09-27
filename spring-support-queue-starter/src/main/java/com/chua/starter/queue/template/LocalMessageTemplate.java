@@ -8,7 +8,6 @@ import com.chua.starter.queue.MessageHandler;
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.SendResult;
 import com.chua.starter.queue.properties.QueueProperties;
-import com.google.common.eventbus.AsyncEventBus;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +28,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 /**
  * 基于Guava 事件bus的本地消息队列模板
  * <p>
- * 使用 {@link EventBus} 和 {@link AsyncEventBus} 实现的本地消息队列，
- * 适用于单机环境或测试场景，支持同步和异步消息传递。
+ * 使用 {@link EventBus} 实现的本地消息队列，适用于单机环境或测试场景；
+ * 同步、异步、延迟发送共用同一张订阅者注册表，异步发送由虚拟线程执行器派发。
  * </p>
  *
  * @since 2025-01-02
@@ -48,11 +47,6 @@ public class LocalMessageTemplate implements MessageTemplate {
      * 事件bus容器，每个目标对应一个事件bus
      */
     private final ConcurrentHashMap<String, EventBus> eventBuses = new ConcurrentHashMap<>();
-
-    /**
-     * 异步事件bus容器，每个目标对应一个异步事件bus
-     */
-    private final ConcurrentHashMap<String, AsyncEventBus> asyncEventBuses = new ConcurrentHashMap<>();
 
     /**
      * 异步事件bus使用的线程池容器，用于关闭时清理资源
@@ -149,11 +143,10 @@ public class LocalMessageTemplate implements MessageTemplate {
             message.setTimestamp(System.currentTimeMillis());
             message.setType(TYPE);
 
- // 使用异步事件bus发送消息
-            AsyncEventBus asyncEventBus = getOrCreateAsyncEventBus(destination);
- // Async事件bus.post() 是异步的，不会抛出异常，所以这里直接完成期货
- // 如果消息处理失败，会在处理器中记录日志，但不会影响发送异步的返回值
-            asyncEventBus.post(message);
+ // 订阅者只注册在 eventBuses 上，异步投递必须复用同一个注册表：
+ // Guava 的每个 EventBus 实例有独立订阅者表，另起 AsyncEventBus 会让消息永远找不到消费者
+            EventBus eventBus = getOrCreateEventBus(destination);
+            virtualExecutor.execute(() -> eventBus.post(message));
 
             log.debug("Message sent asynchronously to destination: {}, messageId: {}", destination, messageId);
             future.complete(SendResult.success(messageId, destination));
@@ -390,19 +383,12 @@ public class LocalMessageTemplate implements MessageTemplate {
         // 移除订阅者列表
         this.subscribers.remove(destination);
         
- // 检查是否还有同步订阅者，如果没有则移除同步事件bus
+ // 如果没有同步订阅者，移除事件bus
         if (remainingHandlers == null || remainingHandlers.isEmpty()) {
             eventBuses.remove(destination);
             log.debug("EventBus removed for destination: {} (no more subscribers)", destination);
-            
- // 如果没有同步订阅者，也移除异步事件bus并关闭其线程池
- // 注意：异步事件bus主要用于异步发送，但如果没有订阅者，也可以清理
-            AsyncEventBus asyncEventBus = asyncEventBuses.remove(destination);
-            if (asyncEventBus != null) {
-                log.debug("AsyncEventBus removed for destination: {}", destination);
-            }
-            
-            // 关闭并移除对应的线程池（包括异步和并发执行器）
+
+            // 关闭并移除对应的线程池（并发执行器）
             ExecutorService executor = asyncExecutors.remove(destination);
             if (executor != null) {
                 /**
@@ -484,7 +470,6 @@ public class LocalMessageTemplate implements MessageTemplate {
 
  // 清空所有事件bus和线程池
         eventBuses.clear();
-        asyncEventBuses.clear();
         asyncExecutors.clear();
         subscribers.clear();
         eventBusSubscribers.clear();
@@ -520,27 +505,6 @@ public class LocalMessageTemplate implements MessageTemplate {
      */
     private EventBus getOrCreateEventBus(String destination) {
         return eventBuses.computeIfAbsent(destination, k -> new EventBus(destination));
-    }
-
-    /**
-     * 获取或创建异步事件bus（使用虚拟线程）
-     * @param destination 目标
-     * @return 获取or创建Async事件bus的结果
-     */
-    private AsyncEventBus getOrCreateAsyncEventBus(String destination) {
-        return asyncEventBuses.computeIfAbsent(destination, k -> {
- // 为每个目标创建独立的虚拟线程执行器
-            ExecutorService executor = Executors.newThreadPerTaskExecutor(
-                    Thread.ofVirtual().name("local-queue-async-" + destination + "-", 0).factory());
-            asyncExecutors.put(destination, executor);
-            /**
-             * 异步事件bus。
-             * @param destination 目标
-             * @param executor 执行器
-             * @return Async事件bus的结果
-             */
-            return new AsyncEventBus(destination, executor);
-        });
     }
 
     /**

@@ -159,7 +159,7 @@ public class HikvisionRealSession implements DeviceSession {
             throw new IllegalStateException("HCNetSDK 初始化失败，错误码: " + sdk.NET_DVR_GetLastError());
         }
         NET_DVR_USER_LOGIN_INFO loginInfo = new NET_DVR_USER_LOGIN_INFO();
-        loginInfo.setLoginInfo(info.getIp(), info.getPort(), info.getUsername(), info.getPassword());
+        loginInfo.setLoginInfo(info.ip(), info.port(), info.username(), info.password());
         NET_DVR_DEVICEINFO_V40 deviceInfo = new NET_DVR_DEVICEINFO_V40();
         userId = sdk.NET_DVR_Login_V40(loginInfo, deviceInfo);
         if (userId < 0) {
@@ -169,13 +169,13 @@ public class HikvisionRealSession implements DeviceSession {
              * @param info.getIp( 信息.获取ip(
              * @return illegal状态异常的结果
              */
-            throw new IllegalStateException("海康设备登录失败: " + info.getIp()
+            throw new IllegalStateException("海康设备登录失败: " + info.ip()
                     + "，错误码: " + sdk.NET_DVR_GetLastError());
         }
         this.serial = new String(deviceInfo.sSerialNumber, StandardCharsets.US_ASCII).trim();
         this.channelCount = deviceInfo.byChanNum;
         log.info("海康设备登录成功: ip={}, serial={}, channels={}",
-                info.getIp(), serial, channelCount);
+                info.ip(), serial, channelCount);
         /**
          * setup事件callback。
          */
@@ -188,7 +188,7 @@ public class HikvisionRealSession implements DeviceSession {
     private void setupEventCallback() {
         HCNetSDK.MessageCallback callback = this::onAlarmMessage;
         sdk.NET_DVR_SetDVRMessageCallBack(callback, Pointer.NULL);
-        log.info("海康事件订阅已注册: {}", info.getIp());
+        log.info("海康事件订阅已注册: {}", info.ip());
     }
 
     /**
@@ -203,7 +203,7 @@ public class HikvisionRealSession implements DeviceSession {
      */
     private boolean onAlarmMessage(int command, NET_DVR_ALARMER alarmer, Pointer alarmInfo, int bufLen, Pointer user) {
         DeviceEvent event = new DeviceEvent();
-        event.setDeviceId(info.getIp());
+        event.setDeviceId(info.ip());
         event.setType(EventType.OTHER);
         event.setDetail("海康报警事件，命令: " + command);
         event.setOccurredAt(java.time.LocalDateTime.now());
@@ -227,7 +227,7 @@ public class HikvisionRealSession implements DeviceSession {
      * 获取deviceid
     */
     public String getDeviceId() {
-        return info.getIp();
+        return info.ip();
     }
 
     @Override
@@ -250,7 +250,7 @@ public class HikvisionRealSession implements DeviceSession {
         }
         sdk.NET_DVR_Cleanup();
         online = false;
-        log.info("海康设备会话已关闭: {}", info.getIp());
+        log.info("海康设备会话已关闭: {}", info.ip());
     }
 
     @Override

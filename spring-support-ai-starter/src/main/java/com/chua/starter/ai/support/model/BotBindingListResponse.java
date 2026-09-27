@@ -89,6 +89,26 @@ public class BotBindingListResponse {
     private Boolean recordUsage;
 
     /**
+     * 是否仅回复 @ 了 Bot 的消息（群聊场景）
+     */
+    private Boolean mentionOnly;
+
+    /**
+     * 是否启用随机回复
+     */
+    private Boolean randomReplyEnabled;
+
+    /**
+     * 随机回复携带的上下文条数
+     */
+    private Integer randomContextCount;
+
+    /**
+     * 随机回复命中概率百分比 [0, 100]
+     */
+    private Double randomProbability;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

@@ -57,6 +57,21 @@ public class EduFunConfigController {
     }
 
     /**
+     * 指定学段的启用模块清单（学生端首页卡片用）
+     *
+     * <p>学生端按自己的学段取这份清单渲染功能卡；后台在「模块配置」里
+     * 按学段增删改排序，学生端不需要改代码。</p>
+     *
+     * @param gradeLevel 学段：PRIMARY / JUNIOR / SENIOR
+     * @return 该学段的模块列表
+     */
+    @Operation(summary = "指定学段的模块清单（学生端）")
+    @GetMapping("/modules")
+    public ReturnResult<List<EduFunConfig>> modules(@RequestParam String gradeLevel) {
+        return ReturnResult.ok(funConfigService.listByLevel(gradeLevel));
+    }
+
+    /**
      * detail。
      *
      * @param moduleCode module编码，不允许为 null

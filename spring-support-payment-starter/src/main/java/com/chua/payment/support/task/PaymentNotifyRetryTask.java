@@ -26,16 +26,16 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
 
     /**
      * 通知错误映射器
-    */
+     */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
     /**
-     * Notifyprocess服务
-    */
+     * 回调通知处理服务
+     */
     private final PaymentNotifyProcessService notifyProcessService;
 
     /**
-     * 重试失败通知
-    */
+     * 重试失败的通知
+     */
     public void retryFailedNotifies() {
         log.info("开始执行回调异常重试任务");
 
@@ -56,7 +56,7 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
                 }
             }
 
-            log.info("回调异常重试任务执行完成");
+            log.info("回调异常重试任务执行完毕");
         } catch (Exception e) {
             log.error("回调异常重试任务执行失败", e);
         }
@@ -64,8 +64,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
 
     @Override
     /**
-     * 任务Key
-    */
+     * 任务标识
+     */
     public String taskKey() {
         return "payment-notify-retry";
     }
@@ -73,41 +73,38 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     @Override
     /**
      * 任务名称
-    */
+     */
     public String taskName() {
         return "回调异常重试";
     }
 
     @Override
     /**
-     * 默认cron
-    */
+     * 默认 cron 表达式
+     */
     public String defaultCron() {
         return "0 */5 * * * ?";
     }
 
     @Override
     /**
-     * Description
-    */
+     * 任务说明
+     */
     public String description() {
-        return "扫描待重试的支付回调异常并自动回放。";
+        return "扫描待重试的支付回调异常并自动回放";
     }
 
     @Override
     @Job(
             value = "payment-notify-retry",
             cron = "0 */5 * * * ?",
-            desc = "扫描待重试的支付回调异常并自动回放。"
+            desc = "扫描待重试的支付回调异常并自动回放"
     )
     /**
-     * 执行
-    */
+     * 执行重试任务
+     */
     public void execute() {
-        /**
-         * 重试失败通知。
-         */
         retryFailedNotifies();
     }
-}
 
+}

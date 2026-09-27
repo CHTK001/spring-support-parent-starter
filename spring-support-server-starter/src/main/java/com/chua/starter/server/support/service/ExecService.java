@@ -72,26 +72,38 @@ public interface ExecService {
     ReturnResult<List<MsExecJob>> listJobs();
 
     /**
-     * 立即触发一次计划任务
+     * 查询单个任务
      *
      * @param id 主键
+     * @return 任务（不存在时为错误结果）
+     */
+    ReturnResult<MsExecJob> getJob(Long id);
+
+    /**
+     * 立即触发一次计划任务（支持指定目标主机）
+     *
+     * @param id             主键
+     * @param hostIds        本次目标主机 标识 集合，为空时用任务自身配置的主机
+     * @param timeoutSeconds 单机超时（秒），为空时用任务配置
      * @return 执行日志列表
      */
-    ReturnResult<List<MsExecLog>> runJobNow(Long id);
+    ReturnResult<List<MsExecLog>> runJobNow(Long id, List<Long> hostIds, Integer timeoutSeconds);
+
+    /**
+     * 调度触发计划任务（供 CronTrigger 调度器回调）
+     * <p>执行命令并回写 上次/下次 运行时间；任务不存在/已停用/非定时类型时跳过。</p>
+     *
+     * @param id 主键
+     */
+    void runScheduledJob(Long id);
 
     /**
      * 查询执行日志
      *
      * @param type   日志类型 命令 / 文件 / 作业，可为空
      * @param hostId 主机过滤，可为空
+     * @param jobId  计划任务过滤，可为空
      * @return 日志列表（最新在前，上限 200）
      */
-    ReturnResult<List<MsExecLog>> listLogs(String type, Long hostId);
-
-    /**
-     * 扫描并触发到期计划任务（供调度器调用）
-     *
-     * @return 本轮触发的任务数
-     */
-    int tickDueJobs();
+    ReturnResult<List<MsExecLog>> listLogs(String type, Long hostId, Long jobId);
 }

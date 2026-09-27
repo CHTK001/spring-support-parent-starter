@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper">
+
+    <!-- 按配置分组查询全部全局设置项。 -->
+    <select id="selectByGroup" parameterType="java.util.Map"
+            resultType="com.chua.starter.ai.support.entity.SysAiGlobalSetting">
+        SELECT *
+        FROM sys_ai_global_setting
+        WHERE sys_ai_global_setting_group = #{group}
+    </select>
+
+    <!-- 按配置分组和字段名查询单个全局设置项。 -->
+    <select id="selectByGroupAndField" parameterType="java.util.Map"
+            resultType="com.chua.starter.ai.support.entity.SysAiGlobalSetting">
+        SELECT *
+        FROM sys_ai_global_setting
+        WHERE sys_ai_global_setting_group = #{group}
+          AND sys_ai_global_setting_field = #{field}
+        LIMIT 1
+    </select>
+
+</mapper>

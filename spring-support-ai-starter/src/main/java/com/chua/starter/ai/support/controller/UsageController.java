@@ -7,11 +7,21 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageSyncLog;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
+import com.chua.starter.ai.support.model.AiUsageDTO;
+import com.chua.starter.ai.support.model.vo.AiUsagePageVO;
+import com.chua.starter.ai.support.model.vo.AiUsageParserVO;
+import com.chua.starter.ai.support.model.vo.AiUsageStatisticsVO;
+import com.chua.starter.ai.support.model.vo.AiUsageTaskStatusVO;
+import com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
 import com.chua.starter.ai.support.service.SysAiUsageService;
+import com.chua.starter.ai.support.service.settings.AiUsageService;
+import com.chua.starter.ai.support.service.UsagePricingReconService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +33,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -54,40 +66,36 @@ public class UsageController {
     private final SysAiUsageSyncLogMapper syncLogMapper;
 
     /**
-     * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
+     * 用量维度聚合服务（导出与用量分布表共用同一口径）
+     */
+    private final AiUsageService usageSummaryService;
+
+    /**
+     * 用量/定价对账服务
+     */
+    private final UsagePricingReconService reconService;
+
+    /**
+     * Spring 应用上下文，用于收集容器中的用量解析器实现。
      */
     @Autowired
-    private ApplicationContext applicationContext; // application上下文
+    private ApplicationContext applicationContext;
 
-    @Permission("admin")
-    @Operation(summary = "用量列表", description = "分页查询用量明细")
-    @GetMapping("/list")
     /**
-     * 列表
-     * @param groupName 群体名称
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param page page
-     * @param size 大小
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param page page
-     * @param size 大小
-     * @param groupName 群体名称
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
+     * 分页查询 AI 用量明细。
+     *
+     * @param groupName 用量分组名称，为空时不限定
+     * @param provider 服务商名称，为空时不限定
+     * @param model 模型名称，为空时不限定
+     * @param startTime 统计开始时间，为空时不限定
+     * @param endTime 统计结束时间，为空时不限定
+     * @param page 页码，从 1 开始
+     * @param size 每页条数
+     * @return AI 用量分页结果
      */
-    public ReturnResult<?> list(
+    @Operation(summary = "用量列表", description = "分页查询用量明细；普通用户仅列本人明细，管理员列全量")
+    @GetMapping("/list")
+    public ReturnResult<AiUsagePageVO<SysAiUsage>> list(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) String model,
@@ -95,84 +103,94 @@ public class UsageController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<?> p = usageService.list(groupName, provider, model, startTime, endTime, page, size);
-        Map<String, Object> result = new java.util.HashMap<>();
-        result.put("records", p.getRecords());
-        result.put("total", p.getTotal());
-        result.put("page", p.getCurrent());
-        result.put("pageSize", p.getSize());
-        return ReturnResult.ok(result);
+        Page<SysAiUsage> p = usageService.list(groupName, provider, model, startTime, endTime,
+                currentScopeUserId(), page, size);
+        return ReturnResult.ok(AiUsagePageVO.of(p));
     }
 
-    @Permission("admin")
-    @Operation(summary = "用量统计", description = "汇总统计")
-    @GetMapping("/statistics")
     /**
-     * Statistics
-     * @param groupName 群体名称
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
+     * 汇总查询 AI 用量统计。
+     *
+     * @param groupName 用量分组名称，为空时不限定
+     * @param provider 服务商名称，为空时不限定
+     * @param model 模型名称，为空时不限定
+     * @param startTime 统计开始时间，为空时不限定
+     * @param endTime 统计结束时间，为空时不限定
+     * @return AI 用量统计结果
      */
-    public ReturnResult<Map<String, Object>> statistics(
+    @Operation(summary = "用量统计", description = "汇总统计；普通用户仅统计本人明细，管理员统计全量")
+    @GetMapping("/statistics")
+    public ReturnResult<AiUsageStatisticsVO> statistics(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) String model,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        SysAiUsageService.UsageStatistics stats = usageService.getStatistics(groupName, provider, model, startTime, endTime);
-        return ReturnResult.ok(Map.of(
-                "totalCalls", stats.totalCalls,
-                "totalPromptTokens", stats.totalPromptTokens,
-                "totalCompletionTokens", stats.totalCompletionTokens,
-                "totalTokens", stats.totalTokens,
-                "totalCost", stats.totalCost,
-                "totalCachedTokens", stats.totalCachedTokens,
-                "avgLatency", stats.avgLatency,
-                "avgFirstTokenLatency", stats.avgFirstTokenLatency,
-                "standardCost", stats.standardCost
+        SysAiUsageService.UsageStatistics stats = usageService.getStatistics(
+                groupName, provider, model, startTime, endTime, currentScopeUserId());
+        return ReturnResult.ok(new AiUsageStatisticsVO(
+                stats.totalCalls,
+                stats.totalPromptTokens,
+                stats.totalCompletionTokens,
+                stats.totalTokens,
+                stats.totalCost,
+                stats.totalCachedTokens,
+                stats.avgLatency,
+                stats.avgFirstTokenLatency,
+                stats.standardCost
         ));
     }
 
-    @Permission("admin")
-    @Operation(summary = "用量趋势", description = "按天聚合返回 Token 使用趋势（基于日汇总表）")
+    /**
+     * 查询 AI 用量趋势。
+     *
+     * @param provider 服务商名称，为空时不限定
+     * @param model 模型名称，为空时不限定
+     * @param startTime 趋势开始时间，为空时不限定
+     * @param endTime 趋势结束时间，为空时不限定
+     * @return 按天或按小时聚合的用量趋势
+     */
+    @Operation(summary = "用量趋势", description = "按天聚合返回 Token 使用趋势；普通用户只看本人明细的按天聚合")
     @GetMapping("/trend")
-    public ReturnResult<List<Map<String, Object>>> trend(
+    public ReturnResult<List<AiUsageTrendPointVO>> trend(
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) String model,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        String userId = currentScopeUserId();
+        // 单日范围（今天 / 起止同一天）按小时分桶，其余按天
+        boolean singleDay = startTime != null && endTime != null
+                && startTime.toLocalDate().equals(endTime.toLocalDate());
+        if (singleDay) {
+            return ReturnResult.ok(usageService.getHourlyTrend(startTime, endTime, userId));
+        }
         List<com.chua.starter.ai.support.entity.SysAiUsageDaily> dailies =
-                usageService.getDailyTrend(provider, model, startTime, endTime);
-        List<Map<String, Object>> result = new ArrayList<>(dailies.size());
+                usageService.getDailyTrend(provider, model, startTime, endTime, userId);
+        List<AiUsageTrendPointVO> result = new ArrayList<>(dailies.size());
         for (var d : dailies) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("date", d.getStatDate() != null ? d.getStatDate().toString() : null);
-            item.put("totalCalls", d.getTotalCalls() != null ? d.getTotalCalls() : 0L);
-            item.put("promptTokens", d.getTotalPromptTokens() != null ? d.getTotalPromptTokens() : 0L);
-            item.put("completionTokens", d.getTotalCompletionTokens() != null ? d.getTotalCompletionTokens() : 0L);
-            item.put("cachedTokens", d.getTotalCachedTokens() != null ? d.getTotalCachedTokens() : 0L);
-            result.add(item);
+            result.add(new AiUsageTrendPointVO(
+                    d.getStatDate() != null ? d.getStatDate().toString() : null,
+                    d.getTotalCalls() != null ? d.getTotalCalls() : 0L,
+                    d.getTotalPromptTokens() != null ? d.getTotalPromptTokens() : 0L,
+                    d.getTotalCompletionTokens() != null ? d.getTotalCompletionTokens() : 0L,
+                    d.getTotalTokens() != null ? d.getTotalTokens() : 0L,
+                    d.getTotalCachedTokens() != null ? d.getTotalCachedTokens() : 0L
+            ));
         }
         return ReturnResult.ok(result);
     }
 
-    @Permission("admin")
-    @Operation(summary = "用量数据源列表", description = "返回已注册的 UsageParser SPI 实现列表")
-    @GetMapping("/parsers")
     /**
-     * parsers。
-     * @return parsers的结果
+     * 查询已注册的用量数据源解析器。
+     *
+     * @return 用量数据源解析器列表
      */
-    public ReturnResult<List<Map<String, Object>>> parsers() {
+    @Operation(summary = "用量数据源列表", description = "返回已注册的 UsageParser SPI 实现列表（静态目录，登录即可读）")
+    @GetMapping("/parsers")
+    public ReturnResult<List<AiUsageParserVO>> parsers() {
         Map<String, UsageParser> allParsers = new LinkedHashMap<>();
 
- // 1. 优先从 Spring 容器收集（如系统默认的 系统usageparser）
+        // 1. 优先从 Spring 容器收集系统默认的用量解析器
         try {
             Map<String, UsageParser> springBeans = applicationContext.getBeansOfType(UsageParser.class);
             for (UsageParser parser : springBeans.values()) {
@@ -194,18 +212,13 @@ public class UsageController {
             log.warn("[Usage] SPI 收集 UsageParser 失败: {}", e.getMessage());
         }
 
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<AiUsageParserVO> result = new ArrayList<>();
         for (Map.Entry<String, UsageParser> e : allParsers.entrySet()) {
- // SPI 扫描可能返回 值 为 空 的条目（声明存在但实现加载失败），跳过避免 NPE
+            // 跳过名称或实现为空的扫描条目，避免空指针异常
             if (e.getKey() == null || e.getValue() == null) {
                 continue;
             }
-            Map<String, Object> item = Map.of(
-                    "name", e.getKey(),
-                    "type", e.getValue().getClass().getSimpleName(),
-                    "enabled", true
-            );
-            result.add(item);
+            result.add(new AiUsageParserVO(e.getKey(), e.getValue().getClass().getSimpleName(), true));
         }
         return ReturnResult.ok(result);
     }
@@ -229,13 +242,14 @@ public class UsageController {
         return t;
     });
 
+    /**
+     * 异步触发用量同步与聚合。
+     *
+     * @return 触发结果
+     */
     @Permission("admin")
     @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与当天日汇总表聚合（异步执行）")
     @PostMapping("/trigger")
-    /**
-     * trigger。
-     * @return trigger的结果
-     */
     public ReturnResult<String> trigger() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
         new Thread(() -> {
@@ -248,13 +262,14 @@ public class UsageController {
         return ReturnResult.ok("已触发同步聚合（后台执行）");
     }
 
+    /**
+     * 异步执行当天用量聚合。
+     *
+     * @return 触发结果
+     */
     @Permission("admin")
     @Operation(summary = "仅执行当天聚合", description = "跳过外部同步，仅对当天已有明细数据执行日汇总（异步执行）")
     @PostMapping("/aggregate")
-    /**
-     * aggregate。
-     * @return aggregate的结果
-     */
     public ReturnResult<String> aggregate() {
         // 取消前一次任务
         if (aggregateFuture != null && !aggregateFuture.isDone()) {
@@ -272,13 +287,14 @@ public class UsageController {
         return ReturnResult.ok("已触发当天聚合（后台执行）");
     }
 
+    /**
+     * 异步执行历史用量全量聚合。
+     *
+     * @return 触发结果
+     */
     @Permission("admin")
     @Operation(summary = "手动全量同步", description = "对全部历史用量明细执行全量聚合回填日汇总表（异步执行，重复点击会取消前一次任务）")
     @PostMapping("/aggregate-all")
-    /**
-     * aggregate全部。
-     * @return aggregate全部的结果
-     */
     public ReturnResult<String> aggregateAll() {
         // 取消前一次任务
         if (aggregateAllFuture != null && !aggregateAllFuture.isDone()) {
@@ -299,13 +315,14 @@ public class UsageController {
         return ReturnResult.ok("已触发全量同步（后台执行，重复点击会取消前一次任务）");
     }
 
+    /**
+     * 取消正在执行的全量聚合任务。
+     *
+     * @return 取消结果
+     */
     @Permission("admin")
     @Operation(summary = "取消全量同步任务", description = "取消正在执行的全量同步任务")
     @PostMapping("/aggregate-all/cancel")
-    /**
-     * cancel aggregate all。
-     * @return cancel的结果
-     */
     public ReturnResult<String> cancelAggregateAll() {
         if (aggregateAllFuture != null && !aggregateAllFuture.isDone()) {
             aggregateAllFuture.cancel(true);
@@ -315,18 +332,28 @@ public class UsageController {
         return ReturnResult.ok("没有正在执行的全量同步任务");
     }
 
+    /**
+     * 查询当前聚合任务状态。
+     *
+     * @return 聚合任务状态
+     */
     @Permission("admin")
     @Operation(summary = "查询同步任务状态", description = "查询当前是否有正在执行的同步任务")
     @GetMapping("/task-status")
+    public ReturnResult<AiUsageTaskStatusVO> taskStatus() {
+        return ReturnResult.ok(currentTaskStatus());
+    }
+
     /**
-     * task status。
-     * @return task status的结果
+     * 当前聚合任务运行状态。
+     *
+     * @return 任务状态
      */
-    public ReturnResult<Map<String, Object>> taskStatus() {
-        Map<String, Object> status = new java.util.LinkedHashMap<>();
-        status.put("aggregateRunning", aggregateFuture != null && !aggregateFuture.isDone());
-        status.put("aggregateAllRunning", aggregateAllFuture != null && !aggregateAllFuture.isDone());
-        return ReturnResult.ok(status);
+    private AiUsageTaskStatusVO currentTaskStatus() {
+        return new AiUsageTaskStatusVO(
+                aggregateFuture != null && !aggregateFuture.isDone(),
+                aggregateAllFuture != null && !aggregateAllFuture.isDone()
+        );
     }
 
     /**
@@ -334,13 +361,14 @@ public class UsageController {
      */
     private final List<org.springframework.web.servlet.mvc.method.annotation.SseEmitter> sseEmitors = new java.util.concurrent.CopyOnWriteArrayList<>();
 
+    /**
+     * 创建任务状态事件流并推送当前状态。
+     *
+     * @return 服务器推送事件流
+     */
     @Permission("admin")
     @Operation(summary = "SSE订阅任务状态", description = "通过SSE实时推送任务状态变化")
     @GetMapping(value = "/task-status/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
-    /**
-     * task status stream。
-     * @return SseEmitter
-     */
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter taskStatusStream() {
         org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(0L);
         sseEmitors.add(emitter);
@@ -349,10 +377,7 @@ public class UsageController {
         emitter.onError(e -> sseEmitors.remove(emitter));
         // 立即推送一次当前状态
         try {
-            Map<String, Object> status = new java.util.LinkedHashMap<>();
-            status.put("aggregateRunning", aggregateFuture != null && !aggregateFuture.isDone());
-            status.put("aggregateAllRunning", aggregateAllFuture != null && !aggregateAllFuture.isDone());
-            emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("status").data(status));
+            emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("status").data(currentTaskStatus()));
         } catch (Exception e) {
             // 忽略
         }
@@ -363,10 +388,10 @@ public class UsageController {
      * 广播任务状态变化
      */
     private void broadcastTaskStatus() {
-        if (sseEmitors.isEmpty()) return;
-        Map<String, Object> status = new java.util.LinkedHashMap<>();
-        status.put("aggregateRunning", aggregateFuture != null && !aggregateFuture.isDone());
-        status.put("aggregateAllRunning", aggregateAllFuture != null && !aggregateAllFuture.isDone());
+        if (sseEmitors.isEmpty()) {
+            return;
+        }
+        AiUsageTaskStatusVO status = currentTaskStatus();
         for (org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter : sseEmitors) {
             try {
                 emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("status").data(status));
@@ -376,21 +401,30 @@ public class UsageController {
         }
     }
 
+    /**
+     * 查询最近一次同步聚合日志。
+     *
+     * @return 同步日志列表
+     */
     @Permission("admin")
     @Operation(summary = "获取同步日志", description = "查看最近一次定时同步聚合的日志")
     @GetMapping("/logs")
-    /**
-     * 日志。
-     * @return 日志的结果
-     */
     public ReturnResult<List<UsageAggregationTask.SyncLogEntry>> logs() {
         return ReturnResult.ok(UsageAggregationTask.getSyncLogs());
     }
 
+    /**
+     * 分页查询持久化的用量同步日志。
+     *
+     * @param page 页码，从 1 开始
+     * @param size 每页条数，最大为 200
+     * @param level 日志级别，为空时不限定
+     * @return 用量同步日志分页结果
+     */
     @Permission("admin")
     @Operation(summary = "用量同步日志（持久化分页）", description = "从 sys_ai_usage_sync_log 表分页查询历史同步日志")
     @GetMapping("/sync-logs")
-    public ReturnResult<Map<String, Object>> syncLogs(
+    public ReturnResult<AiUsagePageVO<SysAiUsageSyncLog>> syncLogs(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String level) {
@@ -400,11 +434,81 @@ public class UsageController {
         wrapper.eq(level != null && !level.isBlank(), SysAiUsageSyncLog::getLevel, level)
                 .orderByDesc(SysAiUsageSyncLog::getCreateTime);
         Page<SysAiUsageSyncLog> result = syncLogMapper.selectPage(p, wrapper);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("records", result.getRecords());
-        body.put("total", result.getTotal());
-        body.put("page", result.getCurrent());
-        body.put("pageSize", result.getSize());
-        return ReturnResult.ok(body);
+        return ReturnResult.ok(AiUsagePageVO.of(result));
+    }
+
+    @Permission("admin")
+    @Operation(summary = "用量/定价对账", description = "比对实际用量与各数据源模型指标，输出缺价模型、零费用来源、闲置定价与重复定价")
+    @GetMapping("/recon")
+    public ReturnResult<Object> recon(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        return ReturnResult.ok(reconService.reconcile(startTime, endTime));
+    }
+
+    /**
+     * 导出用量分布为 CSV 文件。
+     *
+     * @param model 模型名称，为空时不限定
+     * @param startTime 导出开始时间，为空时不限定
+     * @param endTime 导出结束时间，为空时不限定
+     * @param response HTTP 响应对象
+     * @throws IOException 写入响应失败时抛出
+     */
+    @Operation(summary = "导出用量分布",
+            description = "按 分组+服务商+模型 聚合导出 CSV，与用量分布表同口径；普通用户仅导出本人数据")
+    @GetMapping(value = "/export", produces = "text/csv;charset=UTF-8")
+    public void export(
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
+            HttpServletResponse response) throws IOException {
+        List<AiUsageDTO> rows = usageSummaryService.query(model, startTime, endTime, currentScopeUserId());
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"usage.csv\"");
+        Writer writer = response.getWriter();
+        StringBuilder line = new StringBuilder();
+        // Excel 会按本地编码猜 CSV，前置 BOM 才能稳定识别为 UTF-8
+        writer.write('\uFEFF');
+        writer.write("group,provider,model,calls,promptTokens,completionTokens,totalTokens,cost\n");
+        for (AiUsageDTO row : rows) {
+            line.setLength(0);
+            line.append(csvCell(row.getGroup())).append(',')
+                    .append(csvCell(row.getProvider())).append(',')
+                    .append(csvCell(row.getModel())).append(',')
+                    .append(row.getRequests()).append(',')
+                    .append(row.getPromptTokens()).append(',')
+                    .append(row.getCompletionTokens()).append(',')
+                    .append(row.getTotalTokens()).append(',')
+                    .append(row.getCost()).append('\n');
+            writer.write(line.toString());
+        }
+        writer.flush();
+    }
+
+    /**
+     * CSV 单元格转义：含分隔符、引号或换行时整体加引号，内部引号翻倍。
+     *
+     * @param value 原值（可为空）
+     * @return 转义后的单元格文本
+     */
+    private String csvCell(String value) {
+        if (value == null) {
+            return "";
+        }
+        if (value.indexOf(',') < 0 && value.indexOf('"') < 0
+                && value.indexOf('\n') < 0 && value.indexOf('\r') < 0) {
+            return value;
+        }
+        return '"' + value.replace("\"", "\"\"") + '"';
+    }
+
+    /**
+     * 当前请求的用量统计口径：管理员返回 {@code null} 表示全量，普通用户返回本人 ID。
+     *
+     * @return 归属用户标识，管理员为 null
+     */
+    private String currentScopeUserId() {
+        return AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
     }
 }

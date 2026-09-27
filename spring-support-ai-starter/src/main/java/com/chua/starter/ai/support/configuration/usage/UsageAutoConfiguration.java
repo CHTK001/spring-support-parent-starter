@@ -9,6 +9,7 @@ import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
+import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.ai.support.service.impl.SysAiPricingServiceImpl;
@@ -46,18 +47,20 @@ public class UsageAutoConfiguration {
      * @param pricingService pricing服务
      */
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
+                                               ModelAliasService modelAliasService,
                                                SysAiUsageDailyMapper dailyMapper,
                                                SysAiPricingService pricingService,
                                                IptablesService iptablesService) {
         /**
          * sysaiusage服务impl。
          * @param usageMapper usage映射器
+         * @param modelAliasService 模型别名服务
          * @param dailyMapper daily映射器
          * @param pricingService pricing服务
          * @param iptablesService iptables服务
          * @return sysAIusage服务impl的结果
          */
-        return new SysAiUsageServiceImpl(usageMapper, dailyMapper, pricingService, iptablesService);
+        return new SysAiUsageServiceImpl(usageMapper, modelAliasService, dailyMapper, pricingService, iptablesService);
     }
 
     @Bean

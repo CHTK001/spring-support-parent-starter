@@ -27,126 +27,121 @@ import java.util.List;
 public interface WalletAccountService {
 
     /**
-     * 获取账户。
-     * @param merchantId merchantid
+     * 获取钱包账户。
+     * @param merchantId 商户标识
      * @param userId 用户标识
-     * @return 获取账户的结果
+     * @return 获取到的钱包账户
      */
     WalletAccountVO getAccount(Long merchantId, Long userId);
 
     /**
-     * recharge。
+     * 充值。
      * @param dto dto
-     * @return recharge的结果
      */
     WalletAccountVO recharge(WalletRechargeDTO dto);
 
     /**
-     * 薪酬。
-     * @param request 请求
-     * @return 薪酬的结果
+     * 支付。
+     * @param request 请求参数
+     * @return 支付结果
      */
     WalletAccountVO pay(WalletPayRequest request);
 
     /**
-     * 退税。
-     * @param request 请求
-     * @return 退税的结果
+     * 退款。
+     * @param request 请求参数
+     * @return 退款结果
      */
     WalletAccountVO refund(WalletRefundRequest request);
 
     /**
-     * 调动。
+     * 转账。
      * @param dto dto
      */
     void transfer(WalletTransferOpDTO dto);
 
     /**
-     * withdraw。
-     * @param request 请求
+     * 提现。
+     * @param request 请求参数
      */
     void withdraw(WalletWithdrawRequest request);
 
     /**
-     * 冻结余额（提现专用）
-     * 可用_balance → frozen_balance，不立即扣减
+     * 冻结提现余额（提现专用），从可用余额划转到冻结余额，不立即扣减。
      * @param dto dto
-     * @return freezeForWithdraw的结果
      */
     WalletAccountVO freezeForWithdraw(WalletWithdrawDTO dto);
 
     /**
-     * 确认提现到账（扣除冻结余额）
-     * @param merchantId merchantid
+     * 确认提现到账（扣减冻结余额）。
+     * @param merchantId 商户标识
      * @param userId 用户标识
-     * @param bizNo bizno
-     * @param amount amount
+     * @param bizNo 业务单号
+     * @param amount 金额
      */
     void confirmWithdraw(Long merchantId, Long userId, String bizNo, BigDecimal amount);
 
     /**
-     * 取消提现（释放冻结余额回可用余额）
-     * @param request 请求
+     * 取消提现（释放冻结余额回可用余额）。
+     * @param request 请求参数
      */
     void cancelWithdraw(WalletCancelWithdrawRequest request);
 
     /**
-     * ensure账户。
-     * @param merchantId merchantid
+     * 确保账户存在，不存在则初始化。
+     * @param merchantId 商户标识
      * @param userId 用户标识
      */
     void ensureAccount(Long merchantId, Long userId);
 
     /**
-     * 调动。
+     * 转账。
      * @param dto dto
-     * @return 调动的结果
+     * @return 转账结果
      */
     WalletAccountVO transfer(WalletTransferDTO dto);
 
     /**
-     * withdraw。
+     * 提现。
      * @param dto dto
-     * @return withdraw的结果
      */
     WalletAccountVO withdraw(WalletWithdrawDTO dto);
 
     /**
-     * page账户。
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @return page账户的结果
+     * 分页查询钱包账户。
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @param merchantId 商户标识
+     * @return 钱包账户分页结果
      */
     Page<WalletAccount> pageAccounts(int pageNum, int pageSize, Long merchantId);
 
     /**
-     * freeze。
+     * 冻结账户。
      * @param id 标识
      */
     void freeze(Long id);
 
     /**
-     * unfreeze。
+     * 解冻账户。
      * @param id 标识
      */
     void unfreeze(Long id);
 
     /**
-     * 获取日志。
-     * @param bizType biz类型
-     * @param merchantId merchantid
+     * 获取账户流水日志。
+     * @param bizType 业务类型
+     * @param merchantId 商户标识
      * @param userId 用户标识
-     * @param bizNo bizno
-     * @return 获取日志的结果
+     * @param bizNo 业务单号
+     * @return 获取到的账户流水日志
      */
     WalletAccountLog getLog(String bizType, Long merchantId, Long userId, String bizNo);
 
     /**
-     * page日志。
-     * @param request 请求
-     * @return page日志的结果
+     * 分页查询账户流水日志。
+     * @param request 请求参数
+     * @return 账户流水日志分页结果
      */
     Page<WalletAccountLog> pageLogs(WalletLogQueryRequest request);
 }
-

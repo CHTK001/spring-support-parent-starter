@@ -33,6 +33,12 @@ public class SysAiRole {
     private Integer id;
 
     /**
+     * 归属用户标识（多用户隔离），与登录用户 userId 一致
+     */
+    @TableField("user_id")
+    private String userId;
+
+    /**
      * 角色名称（如 Java 开发助理）
      */
     @TableField("sys_ai_role_name")
@@ -63,10 +69,25 @@ public class SysAiRole {
     private String model; // 模型
 
     /**
+     * 头像访问路径（如 /v2/characters/{id}/avatar），为空时使用默认首字头像。
+     */
+    @TableField("sys_ai_role_avatar")
+    private String avatar; // 头像
+
+    /**
      * 采样温度（可空，为空时使用默认温度）
      */
     @TableField("sys_ai_role_temperature")
     private Double temperature; // temperature
+
+    /**
+     * 角色完整工具与能力配置（JSON 字符串）。
+     *
+     * <p>承载本地插件 / MCP / 技能 / 子代理 / 记忆压缩 / 默认能力（深度思考、在线检索）
+     * 等设置，结构与前端 CharacterSettingPanel 输出一致；为空表示沿用全局默认。</p>
+     */
+    @TableField("sys_ai_role_settings")
+    private String settings;
 
     /**
      * 排序值

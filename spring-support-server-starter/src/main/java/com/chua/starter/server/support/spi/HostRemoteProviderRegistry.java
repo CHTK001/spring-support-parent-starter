@@ -6,7 +6,6 @@ import com.chua.starter.server.support.entity.MsServerHost;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -195,7 +194,7 @@ public class HostRemoteProviderRegistry {
         if (index.isEmpty() && fallback == null) {
             log.warn("[remote] HostRemoteProvider 扩展点无任何实现，部署/启停/日志链路不可用");
         }
-        return new Registry(Collections.unmodifiableMap(index), fallback);
+        return new Registry(index, fallback);
     }
 
     /**
@@ -205,5 +204,18 @@ public class HostRemoteProviderRegistry {
      * @param fallback 兜底实现，可为 null
      */
     private record Registry(Map<String, HostRemoteProvider> index, HostRemoteProvider fallback) {
+
+        /**
+         * 规范构造器：系统类型索引做防御性拷贝。
+         *
+         * <p>value class 前置条件——Map 组件必须深不可变。键与值在 {@code build()} 中已保证非空
+         * （空系统类型跳过、空实现跳过），故可直接使用 {@code Map.copyOf}。</p>
+         *
+         * @param index    系统类型 -> 实现
+         * @param fallback 兜底实现，可为 null
+         */
+        Registry {
+            index = Map.copyOf(index);
+        }
     }
 }

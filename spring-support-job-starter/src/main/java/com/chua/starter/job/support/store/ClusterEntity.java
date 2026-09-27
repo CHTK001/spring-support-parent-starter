@@ -44,7 +44,7 @@ public class ClusterEntity extends SysBase implements Serializable {
     private String sysJobClusterId;
 
     /**
-     * 当前 铅 节点 标识
+     * 当前 Leader 节点 标识
      */
     @TableField("sys_job_cluster_leader_node")
     /**

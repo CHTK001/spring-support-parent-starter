@@ -110,6 +110,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
         </dependency>
         <!-- 真库分片探针：mysql-connector-j（远程 Docker mysql-shard 真库路由验证） -->
         <dependency>

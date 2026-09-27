@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 /**
  * 退款成功事件
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -13,67 +14,61 @@ import java.math.BigDecimal;
 public class RefundSuccessEvent extends PaymentEvent {
 
     /**
-     * 排序标识
-    */
+     * 订单标识
+     */
     private final Long orderId;
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private final String orderNo;
     /**
-     * 退税标识
-    */
+     * 退款标识
+     */
     private final Long refundId;
     /**
-     * 退税no
-    */
+     * 退款单号
+     */
     private final String refundNo;
     /**
      * 用户标识
-    */
+     */
     private final Long userId;
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private final BigDecimal refundAmount;
     /**
-     * thirdpartyrefundno
-    */
+     * 第三方退款单号
+     */
     private final String thirdPartyRefundNo;
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private final String channelType;
     /**
-     * 通道SUB类型
-    */
+     * 渠道子类型
+     */
     private final String channelSubType;
 
     /**
-     * 创建 退税成功事件 实例
-     * @param source 源
-     * @param tenantId tenantid
-     * @param merchantId merchantid
+     * 创建退款成功事件实例
+     *
+     * @param source 来源
+     * @param tenantId 租户标识
+     * @param merchantId 商户标识
      * @param orderId 订单标识
-     * @param orderNo 订单no
-     * @param refundId 退税标识
-     * @param refundNo 退税no
+     * @param orderNo 订单号
+     * @param refundId 退款标识
+     * @param refundNo 退款单号
      * @param userId 用户标识
-     * @param refundAmount 退税amount
-     * @param thirdPartyRefundNo thirdparty退税no
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
+     * @param refundAmount 退款金额
+     * @param thirdPartyRefundNo 第三方退款单号
+     * @param channelType 渠道类型
+     * @param channelSubType 渠道子类型
      */
     public RefundSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                               Long refundId, String refundNo, Long userId, BigDecimal refundAmount,
                               String thirdPartyRefundNo, String channelType, String channelSubType) {
-        /**
-         * 父。
-         * @param source 源
-         * @param "REFUND_SUCCESS" "退税_成功"
-         * @param tenantId tenantid
-         * @param merchantId merchantid
-         */
         super(source, "REFUND_SUCCESS", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;
@@ -86,4 +81,3 @@ public class RefundSuccessEvent extends PaymentEvent {
         this.channelSubType = channelSubType;
     }
 }
-

@@ -14,12 +14,6 @@
     <description>Socket 基础模块 - 提供统一的 Socket 抽象接口和 SPI 机制</description>
 
 <dependencies>
-        <!-- Utils Support Common Starter - 通用工具和 SPI 支持 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
         <!-- Spring Support Common Starter - 日志工具 -->
         <dependency>
             <groupId>com.chua</groupId>

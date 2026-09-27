@@ -195,28 +195,29 @@ FeatureResult feature = aiClient.extractFaceFeature(imageFile);
 float similarity = aiClient.compareFaces(image1, image2);
 ```
 
-### 7. 使用ChatClient（scope + MCP）
+### 7. 使用对话门面（同步 + 强类型出参）
 
 ```java
 @Autowired
-private ChatClient chatClient;
+private AiChatFacadeService aiChatFacadeService;
 
-ChatContext context = new ChatContext();
-context.setHistory(List.of(
-    ChatMessage.user("请记住我在看 Spring AI 模块"),
-    ChatMessage.assistant("好的，我会基于这个上下文继续回答")
-));
+AiChatRequest request = new AiChatRequest();
+request.setPrompt("帮我梳理 chatclient 和 agent 的边界");
+request.setSystemPrompt("你是资深 Java 架构师");
+request.setModel("gpt-4.1-mini");
+request.setStream(false);
 
-ChatResponse response = chatClient.chat(ChatScope.builder()
-    .input("帮我梳理 chatclient 和 agent 的边界")
-    .model("gpt-4.1-mini")
-    .context(context)
-    .inputOptimizationEnabled(true)
-    .contextCompressionEnabled(true)
-    .build());
-
-System.out.println(response.getText());
+AiChatResult result = aiChatFacadeService.callForResult(request);
+if (result.success()) {
+    System.out.println(result.text());
+    System.out.println(result.model() + " tokens=" + result.usage());
+} else {
+    System.err.println(result.errorMessage());
+}
 ```
+
+> 门面内部按 `model → provider → 默认聚合客户端` 解析厂商客户端（common 的 `ChatClient`，经 SPI 装配），
+> 并自动完成用量计量落库；同步取值请用 `AiChatResult#text()`，不要用流式事件的 `content`（那是分片）。
 
 ### 8. 使用Agent（session + snapshot）
 
@@ -289,16 +290,16 @@ float similarity = feature1.cosineSimilarity(feature2);
 | `extractFaceFeature(byte[]/File)` | 人脸特征提取 |
 | `compareFaces(byte[]/File, byte[]/File)` | 人脸比对，返回相似度（0-1） |
 
-### ChatClient接口（支持MCP）
+### ChatClient 接口（common 层，厂商经 SPI 注册）
 
 | 方法 | 说明 |
 |------|------|
-| `chat(ChatScope scope)` | 执行一次 scope 聊天 |
-| `chat(ChatScope scope, Consumer<String>, Runnable, Consumer<Throwable>)` | 执行一次流式 scope 聊天 |
-| `listModels()` | 返回当前 provider 支持的模型目录 |
-| `listTools(ChatScope scope)` | 返回当前 scope 可用工具 |
-| `callTool(ChatScope scope, AiToolCall)` | 直接调用 MCP 工具 |
-| `chatSync(String input)` | 使用最简单的默认 scope 调用 |
+| `chatSync(String prompt)` | 同步对话，返回完整文本 |
+| `chatSyncWithResponse(String prompt)` | 同步对话，返回 `ChatSyncResponse`（文本 + `AiUsage` 用量） |
+| `chat(String prompt, Consumer<ChatResponse>)` | 流式对话，按 START/STREAMING/STOP/ERROR 事件回调 |
+| `model(String)` / `system(String)` / `temperature(Double)` / `maxTokens(Integer)` | 链式配置，返回客户端自身 |
+| `tools(List<ChatTool>)` / `tool(ChatTool)` | 设置本轮可用的函数调用定义 |
+| `models()` / `listModels()` | 返回当前 provider 支持的模型目录 |
 
 ### AiChat链式API
 

@@ -32,6 +32,17 @@ public class BotGlobalSettingProvider implements GlobalSettingProvider {
     private static final String GROUP_NAME = "Bot";
 
     /**
+     * Bot 默认系统提示词：首次注册时作为默认值写入，定义 Bot 的语言、语气与基本行为。
+     */
+    private static final String DEFAULT_SYSTEM_PROMPT = """
+            你是一名友好、专业的 AI 助手，请遵守以下要求：\
+            1. 始终使用简体中文回复；\
+            2. 语气自然、亲切、有礼貌，像朋友一样交流；\
+            3. 回答简洁明了、准确可靠，避免冗长和重复；\
+            4. 对不确定的内容如实说明，不要编造信息；\
+            5. 必要时分点说明，保持条理清晰。""";
+
+    /**
      * 配置分组标识。
      *
      * @return bot
@@ -59,7 +70,8 @@ public class BotGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     public List<SettingItem> getItems() {
         return List.of(
-                new SettingItem("default_model", "", "STRING", "Bot 默认 AI 模型（未单独配置时的全局兜底，模型名须存在于模型管理）", 1)
+                new SettingItem("default_model", "", "STRING", "Bot 默认 AI 模型（未单独配置时的全局兜底，模型名须存在于模型管理）", 1),
+                new SettingItem("system_prompt", DEFAULT_SYSTEM_PROMPT, "STRING", "Bot 默认系统提示词（未单独配置时的全局兜底，定义 Bot 的角色/语气/行为边界）", 2)
         );
     }
 }

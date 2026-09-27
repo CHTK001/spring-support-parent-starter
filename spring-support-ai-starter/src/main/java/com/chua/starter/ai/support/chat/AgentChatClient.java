@@ -4,6 +4,7 @@ import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentResponse;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatResponse;
+import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,18 +26,23 @@ public class AgentChatClient implements ChatClient {
 
     /**
      * 默认模型名称
-    */
+     */
     private static final String DEFAULT_MODEL = "agent-router";
 
     /**
      * 内部 Agent 实例
-    */
+     */
     private final Agent agent;
 
     /**
      * 模型名称
-    */
+     */
     private String model = DEFAULT_MODEL;
+
+    /**
+     * 关闭钩子：释放 Agent 运行时私有的资源（如 MCP 连接），由构建方注入
+     */
+    private Runnable closeHook;
 
     /**
      * 创建 Agent对话客户端 实例
@@ -45,6 +51,17 @@ public class AgentChatClient implements ChatClient {
      */
     public AgentChatClient(Agent agent) {
         this.agent = agent;
+    }
+
+    /**
+     * 注入关闭钩子并返回自身（链式）。
+     *
+     * @param hook 关闭动作，用于释放 MCP 等私有资源，可空
+     * @return 当前客户端
+     */
+    public AgentChatClient withCloseHook(Runnable hook) {
+        this.closeHook = hook;
+        return this;
     }
 
     /**
@@ -73,33 +90,264 @@ public class AgentChatClient implements ChatClient {
     }
 
     @Override
+    public ChatSyncResponse chatSyncWithResponse(String prompt) {
+        try {
+            AgentResponse response = agent.run(prompt);
+            return ChatSyncResponse.builder()
+                    .text(response != null ? response.getOutput() : "")
+                    .usage(response != null ? response.getUsage() : null)
+                    .build();
+        } catch (Exception e) {
+            log.error("[AgentChatClient] 同步调用 Agent 失败: {}", e.getMessage(), e);
+            return ChatSyncResponse.builder()
+                    .text("Agent 调用失败: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    @Override
     public void chat(String prompt, Consumer<ChatResponse> consumer) {
         chat(prompt, consumer, () -> {}, e -> log.error("[AgentChatClient] chat error: {}", e.getMessage(), e));
     }
 
     @Override
     public void chat(String prompt, Consumer<ChatResponse> consumer, Runnable onComplete, Consumer<Throwable> onError) {
-        try {
-            consumer.accept(ChatResponse.builder().state(ChatResponse.State.START).build());
-            String output = chatSync(prompt);
-            if (output != null && !output.isEmpty()) {
-                consumer.accept(ChatResponse.builder()
-                        .state(ChatResponse.State.STREAMING)
-                        .content(output)
-                        .build());
-            }
-            consumer.accept(ChatResponse.builder()
-                    .state(ChatResponse.State.STOP)
-                    .usage(null)
-                    .build());
-            onComplete.run();
-        } catch (Exception e) {
-            consumer.accept(ChatResponse.builder()
-                    .state(ChatResponse.State.ERROR)
-                    .errorMessage(e.getMessage())
-                    .build());
-            onError.accept(e);
-        }
+        consumer.accept(ChatResponse.builder().state(ChatResponse.State.START).build());
+        final StringBuilder fullOutput = new StringBuilder();
+        final com.chua.common.support.ai.AiUsage[] usageHolder =
+                new com.chua.common.support.ai.AiUsage[1];
+        final java.util.concurrent.atomic.AtomicBoolean finished =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        // 直接订阅 Agent 的逐字事件流：正文/思考增量实时下发，COMPLETE 捕获聚合用量。
+        // 不能用 runAsync().get() 等整段结束后再一次性回调，否则表现为长静默后整段爆发（伪流式）。
+        reactor.core.Disposable disposable = agent.runStream(prompt).subscribe(
+                event -> {
+                    try {
+                        if (event == null || event.getType() == null) {
+                            return;
+                        }
+                        switch (event.getType()) {
+                            case REASONING_DELTA: {
+                                String delta = event.getDelta();
+                                if (delta != null && !delta.isEmpty()) {
+                                    fullOutput.append(delta);
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.STREAMING)
+                                            .content(delta)
+                                            .build());
+                                }
+                                break;
+                            }
+                            case THINKING_DELTA: {
+                                String delta = event.getDelta();
+                                if (delta != null && !delta.isEmpty()) {
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.STREAMING)
+                                            .reasoningContent(delta)
+                                            .build());
+                                }
+                                break;
+                            }
+                            case TRACE: {
+                                // 执行轨迹（thinking/输出/轮次/工具/用量/边缘）透传给上层，
+                                // 由 facade 作为独立 SSE 事件推到前端，不计入正文
+                                if (event.getTrace() != null) {
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.STREAMING)
+                                            .trace(event.getTrace())
+                                            .build());
+                                }
+                                break;
+                            }
+                            case CONFIRMATION_REQUEST: {
+                                // 人工确认请求：透传给上层渲染批准/拒绝卡片；本轮随后正常 STOP
+                                consumer.accept(ChatResponse.builder()
+                                        .state(ChatResponse.State.STREAMING)
+                                        .confirmationRequest(
+                                                com.chua.common.support.ai.agent.ConfirmationRequest.builder()
+                                                        .replyId(event.getReplyId())
+                                                        .items(event.getConfirmations())
+                                                        .build())
+                                        .build());
+                                break;
+                            }
+                            case TOOL_START:
+                            case TOOL_RESULT:
+                                // 工具步骤不注入正文，避免污染答案；后续可由独立工具面板展示
+                                break;
+                            case COMPLETE:
+                                if (event.getUsage() != null) {
+                                    usageHolder[0] = event.getUsage();
+                                }
+                                break;
+                            case ERROR:
+                                if (finished.compareAndSet(false, true)) {
+                                    String emsg = event.getToolOutput();
+                                    Exception err = new IllegalStateException(
+                                            emsg != null ? emsg : "Agent 执行错误");
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.ERROR)
+                                            .errorMessage(err.getMessage())
+                                            .build());
+                                    onError.accept(err);
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    } catch (Exception inner) {
+                        log.warn("[AgentChatClient] 流式事件转发异常: {}", inner.getMessage());
+                    }
+                },
+                err -> {
+                    if (finished.compareAndSet(false, true)) {
+                        consumer.accept(ChatResponse.builder()
+                                .state(ChatResponse.State.ERROR)
+                                .errorMessage(err.getMessage())
+                                .build());
+                        onError.accept(err);
+                    }
+                },
+                () -> {
+                    if (finished.compareAndSet(false, true)) {
+                        consumer.accept(ChatResponse.builder()
+                                .state(ChatResponse.State.STOP)
+                                .usage(usageHolder[0])
+                                .build());
+                        onComplete.run();
+                    }
+                }
+        );
+    }
+
+    /**
+     * 恢复执行：回传人工确认（human-in-the-loop）决策，订阅 Agent 恢复后的事件流。
+     *
+     * @param replyId    待确认请求回复 ID
+     * @param decisions  各待确认工具的决策
+     * @param consumer   流式响应回调
+     * @param onComplete 完成回调
+     * @param onError    异常回调
+     */
+    public void resume(String replyId,
+                       List<com.chua.common.support.ai.agent.ConfirmationDecision> decisions,
+                       Consumer<ChatResponse> consumer, Runnable onComplete,
+                       Consumer<Throwable> onError) {
+        resume(replyId, decisions, null, consumer, onComplete, onError);
+    }
+
+    /**
+     * 恢复执行（携带用户修改意见）。
+     *
+     * @param feedback 用户修改意见（规划模式「需要修改」），可空
+     */
+    public void resume(String replyId,
+                       List<com.chua.common.support.ai.agent.ConfirmationDecision> decisions,
+                       String feedback,
+                       Consumer<ChatResponse> consumer, Runnable onComplete,
+                       Consumer<Throwable> onError) {
+        consumer.accept(ChatResponse.builder().state(ChatResponse.State.START).build());
+        final StringBuilder fullOutput = new StringBuilder();
+        final com.chua.common.support.ai.AiUsage[] usageHolder =
+                new com.chua.common.support.ai.AiUsage[1];
+        final java.util.concurrent.atomic.AtomicBoolean finished =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        agent.resumeStream(replyId, decisions, feedback).subscribe(
+                event -> {
+                    try {
+                        if (event == null || event.getType() == null) {
+                            return;
+                        }
+                        switch (event.getType()) {
+                            case REASONING_DELTA: {
+                                String delta = event.getDelta();
+                                if (delta != null && !delta.isEmpty()) {
+                                    fullOutput.append(delta);
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.STREAMING)
+                                            .content(delta)
+                                            .build());
+                                }
+                                break;
+                            }
+                            case THINKING_DELTA: {
+                                String delta = event.getDelta();
+                                if (delta != null && !delta.isEmpty()) {
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.STREAMING)
+                                            .reasoningContent(delta)
+                                            .build());
+                                }
+                                break;
+                            }
+                            case TRACE: {
+                                if (event.getTrace() != null) {
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.STREAMING)
+                                            .trace(event.getTrace())
+                                            .build());
+                                }
+                                break;
+                            }
+                            case CONFIRMATION_REQUEST: {
+                                consumer.accept(ChatResponse.builder()
+                                        .state(ChatResponse.State.STREAMING)
+                                        .confirmationRequest(
+                                                com.chua.common.support.ai.agent.ConfirmationRequest.builder()
+                                                        .replyId(event.getReplyId())
+                                                        .items(event.getConfirmations())
+                                                        .build())
+                                        .build());
+                                break;
+                            }
+                            case TOOL_START:
+                            case TOOL_RESULT:
+                                // 工具步骤不注入正文
+                                break;
+                            case COMPLETE:
+                                if (event.getUsage() != null) {
+                                    usageHolder[0] = event.getUsage();
+                                }
+                                break;
+                            case ERROR:
+                                if (finished.compareAndSet(false, true)) {
+                                    String emsg = event.getToolOutput();
+                                    Exception err = new IllegalStateException(
+                                            emsg != null ? emsg : "Agent 执行错误");
+                                    consumer.accept(ChatResponse.builder()
+                                            .state(ChatResponse.State.ERROR)
+                                            .errorMessage(err.getMessage())
+                                            .build());
+                                    onError.accept(err);
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    } catch (Exception inner) {
+                        log.warn("[AgentChatClient] resume事件转发异常: {}", inner.getMessage());
+                    }
+                },
+                err -> {
+                    if (finished.compareAndSet(false, true)) {
+                        consumer.accept(ChatResponse.builder()
+                                .state(ChatResponse.State.ERROR)
+                                .errorMessage(err.getMessage())
+                                .build());
+                        onError.accept(err);
+                    }
+                },
+                () -> {
+                    if (finished.compareAndSet(false, true)) {
+                        consumer.accept(ChatResponse.builder()
+                                .state(ChatResponse.State.STOP)
+                                .usage(usageHolder[0])
+                                .build());
+                        onComplete.run();
+                    }
+                }
+        );
     }
 
     @Override
@@ -116,10 +364,15 @@ public class AgentChatClient implements ChatClient {
 
     @Override
     public void close() {
-        try {
-            agent.close();
-        } catch (Exception e) {
-            log.warn("[AgentChatClient] 关闭 Agent 失败: {}", e.getMessage());
+        // 仅释放 Agent 运行时私有的资源（MCP 连接等）；
+        // 不调用 agent.close()：其内部会关闭主 ChatClient，而主客户端是缓存/共享实例，
+        // 关闭会影响后续请求复用。模型注册为确定性 id，重复注册会被框架忽略，无需在此清理。
+        if (closeHook != null) {
+            try {
+                closeHook.run();
+            } catch (Exception e) {
+                log.warn("[AgentChatClient] 执行关闭钩子失败: {}", e.getMessage());
+            }
         }
     }
 }

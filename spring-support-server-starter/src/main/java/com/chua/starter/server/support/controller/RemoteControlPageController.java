@@ -127,6 +127,25 @@ public class RemoteControlPageController {
                     mouse.onmousedown = mouse.onmouseup = (e) => client.sendMouseState(e.state, true);
                     mouse.onmousemove = (e) => client.sendMouseState(e.state, false);
                     mouse.onmousewheel = (e) => client.sendMouseWheel(e.deltaY > 0 ? -1 : 1);
+                    // 远控工具条下发的特殊按键（Ctrl+Alt+Del / Alt+Tab / Win 等本机 OS 会截获的组合）：
+                    // 先按顺序全部按下，再逆序全部松开。
+                    window.addEventListener('message', (e) => {
+                      if (e.origin !== location.origin) {
+                        return;
+                      }
+                      const d = e.data;
+                      if (!d || d.source !== 'sc-remote' || d.type !== 'send-special-key') {
+                        return;
+                      }
+                      const keys = Array.isArray(d.keys) ? d.keys : [];
+                      if (!keys.length) {
+                        return;
+                      }
+                      keys.forEach((k) => client.sendKeyEvent(1, k.keysym));
+                      setTimeout(() => {
+                        for (let i = keys.length - 1; i >= 0; i--) client.sendKeyEvent(0, keys[i].keysym);
+                      }, 60);
+                    });
                     // 尺寸
                     const resize = () => client.sendSize(window.innerWidth, window.innerHeight);
                     window.addEventListener('resize', resize);

@@ -22,6 +22,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -37,6 +38,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.net.ConnectException;
@@ -372,6 +374,25 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
             return ReturnResult.error(FILE_SIZE_EXCEEDED.getCode(), "文件大小超过限制，最大允许" + maxSize);
         }
         return ReturnResult.error(FILE_SIZE_EXCEEDED.getCode(), "文件大小超过限制，请压缩后重试");
+    }
+
+    /**
+     * 处理响应状态异常。
+     *
+     * <p>{@code ResponseStatusException} 是组件显式声明「HTTP 状态 + 拒绝原因」的标准载体，
+     * 必须按声明透出。缺省处理器会把它交给运行时异常兜底分支，最终变成 500「系统忙，请稍后重试」，
+     * 调用方看不到真实原因。</p>
+     *
+     * @param e 响应状态异常
+     * @return 带声明状态码的响应
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public <T> ResponseEntity<ReturnResult<T>> handleResponseStatusException(ResponseStatusException e) {
+        logWarn("请求被显式拒绝，状态码: " + e.getStatusCode().value(), e);
+        String reason = StringUtils.isBlank(e.getReason())
+                ? "请求被拒绝，状态码：" + e.getStatusCode().value()
+                : e.getReason();
+        return ResponseEntity.status(e.getStatusCode()).body(ReturnResult.error(reason));
     }
 
     // ==================== 数据库异常 ====================

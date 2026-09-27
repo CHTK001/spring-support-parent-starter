@@ -3,7 +3,6 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
-import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,7 +22,8 @@ import java.util.List;
 /**
  * appKey 控制器，提供 appKey 的增删改查与启停切换。
  *
- * <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
+ * <p>统一返回 {@link ReturnResult}。鉴权按用户隔离：查询对全体登录用户开放，
+ * 非管理员仅返回本人名下记录；写接口由服务层的归属守卫校验，管理员对他人数据只读。</p>
  *
  * @since 2026-08-03
  * @author CH
@@ -40,11 +40,10 @@ public class AiAppKeyController {
     private final AiAppKeyService appKeyService;
 
     /**
-     * 查询所有 appKey。
+     * 查询 appKey，管理员全量、普通用户仅本人名下。
      *
      * @return 操作结果
      */
-    @Permission("admin")
     @Operation(summary = "查询所有 AppKey")
     @GetMapping
     public ReturnResult<List<AiAppKeyDTO>> list() {
@@ -57,7 +56,6 @@ public class AiAppKeyController {
      * @param appKey appKey DTO
      * @return 操作结果
      */
-    @Permission("admin")
     @Operation(summary = "新建 AppKey")
     @PostMapping
     public ReturnResult<AiAppKeyDTO> create(@RequestBody AiAppKeyDTO appKey) {
@@ -72,7 +70,6 @@ public class AiAppKeyController {
      * @return 操作结果
      * @param ID" 标识"
      */
-    @Permission("admin")
     @Operation(summary = "更新 AppKey")
     @PutMapping("/{appKeyId}")
     public ReturnResult<AiAppKeyDTO> update(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
@@ -89,7 +86,6 @@ public class AiAppKeyController {
      * @param ID" 标识"
      * @param ID" ID"
      */
-    @Permission("admin")
     @Operation(summary = "删除 AppKey")
     @DeleteMapping("/{appKeyId}")
     public ReturnResult<Void> delete(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId) {
@@ -104,7 +100,6 @@ public class AiAppKeyController {
      * @return 操作结果
      * @param ID" 标识"
      */
-    @Permission("admin")
     @Operation(summary = "切换 AppKey 启用状态")
     @PutMapping("/{appKeyId}/toggle")
     public ReturnResult<AiAppKeyDTO> toggle(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,

@@ -7,6 +7,9 @@ import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
+import com.chua.deeplearning.support.face.FacePipeline;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.deeplearning.support.model.PredictRectangle;
@@ -39,6 +42,23 @@ public class AiFaceServiceImpl implements AiFaceService {
     private final FaceClientManager faceClientManager;
 
     /**
+     * 取人脸管线，未启用时给出明确业务异常。
+     *
+     * <p>人脸检测模型（{@code detector_model}）留空即视为人脸能力未启用 —— ONNX 模型
+     * 未配置时模型文件并不存在，此时 {@code FaceClientManager.currentPipeline()} 返回 null。
+     * 这里统一拦截，避免各方法直接对 null 调用产生 NPE，同时把「为什么没生效」讲清楚。</p>
+     *
+     * @return 可用的人脸管线
+     */
+    private FacePipeline pipeline() {
+        FacePipeline current = faceClientManager.currentPipeline();
+        if (current == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "人脸能力未启用：请先在「系统配置 → 人脸识别」中配置人脸检测模型");
+        }
+        return current;
+    }
+
+    /**
      * 人脸检测（单独能力）。
      *
      * @param imageData 图片字节
@@ -46,7 +66,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public List<FaceDetectionHit> detect(byte[] imageData) {
-        return faceClientManager.currentPipeline().detect(imageData);
+        return pipeline().detect(imageData);
     }
 
     /**
@@ -57,7 +77,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public FaceDetectionHit detectLargest(byte[] imageData) {
-        return faceClientManager.currentPipeline().detectLargest(imageData);
+        return pipeline().detectLargest(imageData);
     }
 
     /**
@@ -68,7 +88,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public List<FaceDetectionHit> detectPipeline(byte[] imageData) {
-        return faceClientManager.currentPipeline().detectPipeline(imageData);
+        return pipeline().detectPipeline(imageData);
     }
 
     /**
@@ -79,7 +99,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public float[] extractFeature(byte[] imageData) {
-        FaceFeaturePipelineResult r = faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
+        FaceFeaturePipelineResult r = pipeline().extractFeatureWithMeta(imageData);
         return r == null || r.feature() == null ? new float[0] : r.feature();
     }
 
@@ -88,7 +108,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      * extract特征pipeline
     */
     public FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData) {
-        return faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
+        return pipeline().extractFeatureWithMeta(imageData);
     }
 
     @Override
@@ -96,7 +116,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      * Align
     */
     public FaceAlignResult align(byte[] imageData) {
-        return faceClientManager.currentPipeline().align(imageData);
+        return pipeline().align(imageData);
     }
 
     /**
@@ -109,8 +129,8 @@ public class AiFaceServiceImpl implements AiFaceService {
     @Override
     public double compare(byte[] imageA, byte[] imageB) {
  // 走完整管线（detect→crop→liveness→align→特征）提取两侧特征后余弦比对
-        FaceFeaturePipelineResult a = faceClientManager.currentPipeline().extractFeatureWithMeta(imageA);
-        FaceFeaturePipelineResult b = faceClientManager.currentPipeline().extractFeatureWithMeta(imageB);
+        FaceFeaturePipelineResult a = pipeline().extractFeatureWithMeta(imageA);
+        FaceFeaturePipelineResult b = pipeline().extractFeatureWithMeta(imageB);
         if (a == null || b == null || a.feature() == null || b.feature() == null) {
             return 0d;
         }
@@ -122,7 +142,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      * 比较withmeta
     */
     public FaceCompareResult compareWithMeta(byte[] imageA, byte[] imageB) {
-        return faceClientManager.currentPipeline().compareWithMeta(imageA, imageB);
+        return pipeline().compareWithMeta(imageA, imageB);
     }
 
     /**
@@ -148,7 +168,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     @Override
     public boolean enroll(String id, byte[] imageData, Map<String, Object> metadata) {
         float[] feature = extractFeature(imageData);
-        return faceClientManager.currentPipeline().enroll(id, feature, metadata, id);
+        return pipeline().enroll(id, feature, metadata, id);
     }
 
     /**
@@ -161,7 +181,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata) {
-        return faceClientManager.currentPipeline().enrollPipeline(id, imageData, metadata);
+        return pipeline().enrollPipeline(id, imageData, metadata);
     }
 
     @Override
@@ -169,7 +189,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      * enroll特征
     */
     public boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata) {
-        return faceClientManager.currentPipeline().enroll(id, feature, metadata, id);
+        return pipeline().enroll(id, feature, metadata, id);
     }
 
     /**
@@ -180,7 +200,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public FaceIdentifyHit identify(byte[] imageData) {
-        return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
+        return pipeline().identifyPipelineLargest(imageData);
     }
 
     /**
@@ -191,7 +211,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public FaceIdentifyHit identifyPipeline(byte[] imageData) {
-        return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
+        return pipeline().identifyPipelineLargest(imageData);
     }
 
     /**
@@ -227,7 +247,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public boolean verify(String id, byte[] imageData) {
-        FaceIdentifyHit hit = faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
+        FaceIdentifyHit hit = pipeline().identifyPipelineLargest(imageData);
         if (hit == null) {
             return false;
         }
@@ -371,7 +391,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public List<PredictRectangle> detectBoxes(byte[] imageData) {
-        return faceClientManager.currentPipeline().detectBoxes(imageData);
+        return pipeline().detectBoxes(imageData);
     }
 
     /**
@@ -381,7 +401,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public Map<String, List<String>> listModels() {
-        return faceClientManager.currentPipeline().listModels();
+        return pipeline().listModels();
     }
 
     /**

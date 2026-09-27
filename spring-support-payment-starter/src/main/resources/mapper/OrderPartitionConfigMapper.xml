@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.payment.support.mapper.OrderPartitionConfigMapper">
+
+    <insert id="migrateToPartition">
+        INSERT INTO ${targetTable}
+        SELECT * FROM ${sourceTable}
+        WHERE ${timeColumn} &lt; #{cutoff}
+          AND ${idColumn} NOT IN (SELECT ${idColumn} FROM ${targetTable})
+    </insert>
+
+    <delete id="deleteMigratedRows">
+        DELETE FROM ${sourceTable} WHERE ${timeColumn} &lt; #{cutoff}
+    </delete>
+
+    <select id="countPartitionRows" resultType="int">
+        SELECT COUNT(1) FROM ${targetTable} WHERE ${timeColumn} &lt; #{cutoff}
+    </select>
+
+    <update id="createPartitionLike">
+        CREATE TABLE IF NOT EXISTS ${targetTable} LIKE ${sourceTable}
+    </update>
+
+    <update id="createPartitionFromEmptyResult">
+        CREATE TABLE IF NOT EXISTS ${targetTable} AS
+        SELECT * FROM ${sourceTable} WHERE 1 = 0
+    </update>
+</mapper>

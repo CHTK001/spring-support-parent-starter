@@ -65,6 +65,10 @@ public class MarkingResultVO {
         */
         private Long questionId;
         /**
+         * 该题在试卷上的满分（取自 edu_paper_question 的每题分值），教师修正不得超过此值
+        */
+        private Integer maxScore;
+        /**
          * 分数
         */
         private Integer score;

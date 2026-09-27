@@ -3,17 +3,21 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.model.AiMemoryRecallDTO;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversation;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.store.SysAiConversationMessage;
+import com.chua.starter.ai.support.manage.store.SysAiMemoryStore;
 import com.chua.starter.ai.support.manage.store.SysAiSshHost;
 import com.chua.starter.ai.support.manage.store.SysAiSshHostStore;
 import com.chua.starter.ai.support.manage.ssh.SshConnectionManager;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.SysAiMemoryService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,8 +35,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 前端对话核心控制器（对接 nomicore 契约）。
@@ -77,9 +80,14 @@ public class ApiChatController {
     private final SysAiSshHostStore sshHostStore;
 
     /**
-     * 会话产物（artifacts）内存存储：conversationid → 产物列表（进程内占位实现）
+     * 记忆体服务：每轮对话前召回并注入长期记忆，回复后从轮次中抽取新记忆
      */
-    private final Map<String, List<Map<String, Object>>> artifacts = new ConcurrentHashMap<>();
+    private final SysAiMemoryService memoryService;
+
+    /**
+     * 记忆体存储（会话删除时连带清理该会话的会话级记忆）
+     */
+    private final SysAiMemoryStore memoryStore;
 
     @PostMapping
     /**
@@ -204,6 +212,12 @@ public class ApiChatController {
      */
     public ApiResult<Void> delete(@PathVariable String conversationId) {
         conversationStore.delete(conversationId);
+        try {
+ // 会话级记忆随会话消失，全局记忆不动
+            memoryStore.deleteByConversation(conversationId);
+        } catch (Exception e) {
+            log.warn("[Chat] 会话级记忆清理失败 conversation={}: {}", conversationId, e.getMessage());
+        }
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "deleted"));
         return ApiResult.ok();
     }
@@ -240,6 +254,7 @@ public class ApiChatController {
  // 3. 生成 turn 与 assistant 消息 标识
         String turnId = conversationStore.newId();
         String assistantMsgId = conversationStore.newId();
+        conversationStore.patchRuntime(conversationId, "active_turn_id", turnId);
 
  // 4. 推送 turn.启动
         pushService.push("turn.started", Map.of(
@@ -274,12 +289,19 @@ public class ApiChatController {
                 ));
             }
         }, (fullReply) -> {
+            if (fullReply == null || fullReply.isBlank()) {
+                pushTurnError(conversationId, turnId, assistantMsgId, modelName,
+                        new IllegalStateException("模型返回空回复"));
+                return;
+            }
             // 6. 保存 assistant 消息
             SysAiConversationMessage assistantMsg = newSysAiConversationMessage(conversationId, "text",
-                    fullReply != null ? fullReply : "", "assistant", "left");
+                    fullReply, "assistant", "left");
             assistantMsg.setMessageId(assistantMsgId);
             assistantMsg.setMsgId(assistantMsgId);
             conversationStore.addMessage(conversationId, assistantMsg);
+            rememberTurn(conversation, input, fullReply, modelName);
+            conversationStore.patchRuntime(conversationId, "active_turn_id", null);
 
  // 7. 推送 turn.完成（runtime 用可空 链接哈希映射，映射.的 不允许 空 值）
             java.util.Map<String, Object> runtimeMap = new LinkedHashMap<>();
@@ -288,64 +310,26 @@ public class ApiChatController {
             runtimeMap.put("has_runtime", false);
             runtimeMap.put("is_processing", false);
             runtimeMap.put("pending_confirmations", 0);
-            runtimeMap.put("active_turn_id", (Object) null);
-            pushService.push("turn.completed", Map.of(
-                    "conversation_id", conversationId,
-                    "turn_id", turnId,
-                    "status", "finished",
-                    "state", "ai_waiting_input",
-                    "can_send_message", true,
-                    "runtime", runtimeMap,
-                    "workspace", "",
-                    "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
-                            "use_model", modelName != null ? modelName : ""),
-                    "last_message", Map.of(
-                            "message_id", assistantMsgId,
-                            "type", "text",
-                            "content", fullReply != null ? fullReply : "",
-                            "status", "finish"
-                    )
+            Map<String, Object> completed = new LinkedHashMap<>();
+            completed.put("conversation_id", conversationId);
+            completed.put("turn_id", turnId);
+            completed.put("status", "finished");
+            completed.put("state", "ai_waiting_input");
+            completed.put("can_send_message", true);
+            completed.put("runtime", runtimeMap);
+            if (modelName != null && !modelName.isBlank()) {
+                completed.put("model", Map.of("name", modelName, "use_model", modelName));
+            }
+            completed.put("last_message", Map.of(
+                    "message_id", assistantMsgId,
+                    "type", "text",
+                    "content", fullReply,
+                    "status", "finish"
             ));
+            pushService.push("turn.completed", completed);
             pushService.push("conversation.listChanged",
                     Map.of("conversation_id", conversationId, "action", "updated"));
-        }, (error) -> {
-            // 9. 失败分支：保存错误 assistant 消息并推送带错误语义的 turn.completed，避免前端卡死
-            String errText = error != null && error.getMessage() != null
-                    ? "对话失败: " + error.getMessage() : "对话失败";
-            SysAiConversationMessage errMsg = newSysAiConversationMessage(conversationId, "text",
-                    errText, "assistant", "left");
-            errMsg.setMessageId(assistantMsgId);
-            errMsg.setMsgId(assistantMsgId);
-            conversationStore.addMessage(conversationId, errMsg);
-
-            java.util.Map<String, Object> errRuntime = new LinkedHashMap<>();
-            errRuntime.put("state", "error");
-            errRuntime.put("can_send_message", true);
-            errRuntime.put("has_runtime", false);
-            errRuntime.put("is_processing", false);
-            errRuntime.put("pending_confirmations", 0);
-            errRuntime.put("active_turn_id", (Object) null);
-            pushService.push("turn.completed", Map.of(
-                    "conversation_id", conversationId,
-                    "turn_id", turnId,
-                    "status", "error",
-                    "state", "error",
-                    "error", errText,
-                    "can_send_message", true,
-                    "runtime", errRuntime,
-                    "workspace", "",
-                    "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
-                            "use_model", modelName != null ? modelName : ""),
-                    "last_message", Map.of(
-                            "message_id", assistantMsgId,
-                            "type", "text",
-                            "content", errText,
-                            "status", "error"
-                    )
-            ));
-            pushService.push("conversation.listChanged",
-                    Map.of("conversation_id", conversationId, "action", "updated"));
-        });
+        }, error -> pushTurnError(conversationId, turnId, assistantMsgId, modelName, error));
 
         // 8. 返回发送结果（前端据此校正乐观气泡）
         Map<String, Object> result = new LinkedHashMap<>();
@@ -447,7 +431,7 @@ public class ApiChatController {
      */
     public ApiResult<Void> warmup(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
-        return ApiResult.ok();
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现模型预热");
     }
 
     @PostMapping("/{conversationId}/cancel")
@@ -458,23 +442,7 @@ public class ApiChatController {
      */
     public ApiResult<Void> cancel(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
-        String turnId = conversationStore.newId();
-        java.util.Map<String, Object> runtimeMap = new LinkedHashMap<>();
-        runtimeMap.put("state", "ai_waiting_input");
-        runtimeMap.put("can_send_message", true);
-        runtimeMap.put("has_runtime", false);
-        runtimeMap.put("is_processing", false);
-        runtimeMap.put("pending_confirmations", 0);
-        runtimeMap.put("active_turn_id", (Object) null);
-        pushService.push("turn.completed", Map.of(
-                "conversation_id", conversationId,
-                "turn_id", turnId,
-                "status", "finished",
-                "state", "ai_waiting_input",
-                "can_send_message", true,
-                "runtime", runtimeMap
-        ));
-        return ApiResult.ok();
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前流式对话服务未实现任务取消");
     }
 
     @PostMapping("/{conversationId}/clear-context")
@@ -484,16 +452,9 @@ public class ApiChatController {
      * @return clear上下文的结果
      */
     public ApiResult<Void> clearContext(@PathVariable String conversationId) {
-        SysAiConversation c = conversationStore.get(conversationId);
-        if (c.getExtra() != null) {
-            c.getExtra().remove("summon");
-        }
-        Map<String, Object> runtime = c.getRuntime();
-        if (runtime != null) {
-            runtime.remove("active_turn_id");
-        }
-        c.setRuntime(runtime);
-        c.setModifiedAt(System.currentTimeMillis());
+        conversationStore.get(conversationId);
+        conversationStore.patchExtra(conversationId, "summon", null);
+        conversationStore.patchRuntime(conversationId, "active_turn_id", null);
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
         return ApiResult.ok();
     }
@@ -518,19 +479,13 @@ public class ApiChatController {
     @PutMapping("/{conversationId}/summon")
     public ApiResult<Map<String, Object>> setSummon(@PathVariable String conversationId,
                                                     @RequestBody Map<String, Object> body) {
-        SysAiConversation c = conversationStore.get(conversationId);
-        Map<String, Object> extra = c.getExtra();
-        if (extra == null) {
-            extra = new LinkedHashMap<>();
-            c.setExtra(extra);
-        }
+        conversationStore.get(conversationId);
         Map<String, Object> summon = new LinkedHashMap<>();
         summon.put("companion_id", body.get("companion_id"));
         summon.put("memory_ids", body.getOrDefault("memory_ids", new ArrayList<>()));
         summon.put("skill_exclusions", body.getOrDefault("skill_exclusions", new ArrayList<>()));
         summon.put("summoned_at", System.currentTimeMillis());
-        extra.put("summon", summon);
-        c.setModifiedAt(System.currentTimeMillis());
+        conversationStore.patchExtra(conversationId, "summon", summon);
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
         return ApiResult.ok(summon);
     }
@@ -542,11 +497,8 @@ public class ApiChatController {
      * @return clearSummon的结果
      */
     public ApiResult<Void> clearSummon(@PathVariable String conversationId) {
-        SysAiConversation c = conversationStore.get(conversationId);
-        if (c.getExtra() != null) {
-            c.getExtra().remove("summon");
-        }
-        c.setModifiedAt(System.currentTimeMillis());
+        conversationStore.get(conversationId);
+        conversationStore.patchExtra(conversationId, "summon", null);
         return ApiResult.ok();
     }
 
@@ -577,7 +529,7 @@ public class ApiChatController {
      */
     public ApiResult<List<Object>> getAssociated(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
-        return ApiResult.ok(new ArrayList<>());
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现关联会话查询");
     }
 
     @GetMapping("/{conversationId}/slash-commands")
@@ -588,21 +540,14 @@ public class ApiChatController {
      */
     public ApiResult<List<Map<String, Object>>> getSlashCommands(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
-        List<Map<String, Object>> commands = new ArrayList<>();
-        Map<String, Object> help = new LinkedHashMap<>();
-        help.put("command", "/help");
-        help.put("description", "帮助");
-        commands.add(help);
-        return ApiResult.ok(commands);
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现斜杠命令目录");
     }
 
     @PostMapping("/{conversationId}/side-question")
     public ApiResult<Map<String, Object>> sideQuestion(@PathVariable String conversationId,
                                                        @RequestBody Map<String, Object> body) {
         conversationStore.get(conversationId);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("status", "noAnswer");
-        return ApiResult.ok(result);
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现侧问链路");
     }
 
     @GetMapping("/{conversationId}/artifacts")
@@ -613,22 +558,23 @@ public class ApiChatController {
      */
     public ApiResult<List<Map<String, Object>>> listArtifacts(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
-        List<Map<String, Object>> list = artifacts.computeIfAbsent(conversationId, k -> new CopyOnWriteArrayList<>());
-        return ApiResult.ok(new ArrayList<>(list));
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话产物存储");
     }
 
     @PatchMapping("/{conversationId}/artifacts/{conversationArtifactId}")
     public ApiResult<Map<String, Object>> patchArtifact(@PathVariable String conversationId,
                                                         @PathVariable String conversationArtifactId,
                                                         @RequestBody Map<String, Object> body) {
-        return ApiResult.ok(updateArtifactInternal(conversationId, conversationArtifactId, body));
+        conversationStore.get(conversationId);
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话产物存储");
     }
 
     @PutMapping("/{conversationId}/artifacts/{conversationArtifactId}")
     public ApiResult<Map<String, Object>> putArtifact(@PathVariable String conversationId,
                                                       @PathVariable String conversationArtifactId,
                                                       @RequestBody Map<String, Object> body) {
-        return ApiResult.ok(updateArtifactInternal(conversationId, conversationArtifactId, body));
+        conversationStore.get(conversationId);
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话产物存储");
     }
 
     @GetMapping("/{conversationId}/workspace")
@@ -636,12 +582,7 @@ public class ApiChatController {
                                                              @RequestParam(required = false) String path,
                                                              @RequestParam(required = false) String search) {
         conversationStore.get(conversationId);
-        List<Map<String, Object>> entries = new ArrayList<>();
-        Map<String, Object> placeholder = new LinkedHashMap<>();
-        placeholder.put("name", "workspace");
-        placeholder.put("type", "directory");
-        entries.add(placeholder);
-        return ApiResult.ok(entries);
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话工作区接口");
     }
 
     @GetMapping("/{conversationId}/mode")
@@ -653,24 +594,24 @@ public class ApiChatController {
     public ApiResult<Map<String, Object>> getMode(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
         Map<String, Object> extra = c.getExtra();
+        Object mode = extra == null ? null : extra.get("mode");
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("mode", extra != null ? extra.get("mode") : null);
+        result.put("mode", mode == null ? "chat" : mode);
         return ApiResult.ok(result);
     }
 
     @PutMapping("/{conversationId}/mode")
     public ApiResult<Map<String, Object>> setMode(@PathVariable String conversationId,
                                                   @RequestBody Map<String, Object> body) {
-        SysAiConversation c = conversationStore.get(conversationId);
-        Map<String, Object> extra = c.getExtra();
-        if (extra == null) {
-            extra = new LinkedHashMap<>();
-            c.setExtra(extra);
+        String mode = body.get("mode") == null ? "" : String.valueOf(body.get("mode")).trim();
+        if (mode.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "mode 不能为空");
         }
-        extra.put("mode", body.get("mode"));
-        c.setModifiedAt(System.currentTimeMillis());
+        SysAiConversation patch = new SysAiConversation();
+        patch.setExtra(Map.of("mode", mode));
+        conversationStore.patch(conversationId, patch);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("mode", body.get("mode"));
+        result.put("mode", mode);
         return ApiResult.ok(result);
     }
 
@@ -679,9 +620,7 @@ public class ApiChatController {
                                                         @RequestParam String action,
                                                         @RequestParam(required = false) String command_type) {
         conversationStore.get(conversationId);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("approved", true);
-        return ApiResult.ok(result);
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现审批策略");
     }
 
     @GetMapping("/{conversationId}/confirmations")
@@ -700,7 +639,7 @@ public class ApiChatController {
                                    @PathVariable String callId,
                                    @RequestBody Map<String, Object> body) {
         conversationStore.get(conversationId);
-        return ApiResult.ok();
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现确认请求处理");
     }
 
     @PostMapping("/{conversationId}/steer")
@@ -734,7 +673,47 @@ public class ApiChatController {
                                                    @RequestBody Map<String, Object> body) {
         conversationStore.get(conversationId);
         conversationStore.getMessage(conversationId, messageId);
-        return ApiResult.ok();
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现知识回写重试");
+    }
+
+    private void pushTurnError(String conversationId, String turnId, String assistantMsgId,
+                               String modelName, Throwable error) {
+        String errorMessage = error == null || error.getMessage() == null || error.getMessage().isBlank()
+                ? "未知错误" : error.getMessage();
+        String errText = "对话失败: " + errorMessage;
+        conversationStore.patchRuntime(conversationId, "active_turn_id", null);
+        SysAiConversationMessage errMsg = newSysAiConversationMessage(conversationId, "text",
+                errText, "assistant", "left");
+        errMsg.setMessageId(assistantMsgId);
+        errMsg.setMsgId(assistantMsgId);
+        conversationStore.addMessage(conversationId, errMsg);
+
+        Map<String, Object> errRuntime = new LinkedHashMap<>();
+        errRuntime.put("state", "error");
+        errRuntime.put("can_send_message", true);
+        errRuntime.put("has_runtime", false);
+        errRuntime.put("is_processing", false);
+        errRuntime.put("pending_confirmations", 0);
+        Map<String, Object> completed = new LinkedHashMap<>();
+        completed.put("conversation_id", conversationId);
+        completed.put("turn_id", turnId);
+        completed.put("status", "error");
+        completed.put("state", "error");
+        completed.put("error", errText);
+        completed.put("can_send_message", true);
+        completed.put("runtime", errRuntime);
+        if (modelName != null && !modelName.isBlank()) {
+            completed.put("model", Map.of("name", modelName, "use_model", modelName));
+        }
+        completed.put("last_message", Map.of(
+                "message_id", assistantMsgId,
+                "type", "text",
+                "content", errText,
+                "status", "error"
+        ));
+        pushService.push("turn.completed", completed);
+        pushService.push("conversation.listChanged",
+                Map.of("conversation_id", conversationId, "action", "updated"));
     }
 
     /**
@@ -761,6 +740,7 @@ public class ApiChatController {
  // 生成 turn 与 assistant 消息 标识
         String turnId = conversationStore.newId();
         String assistantMsgId = conversationStore.newId();
+        conversationStore.patchRuntime(conversationId, "active_turn_id", turnId);
 
  // 2. 推送 用户创建
         pushService.push("message.userCreated", Map.of(
@@ -806,12 +786,19 @@ public class ApiChatController {
                 ));
             }
         }, (fullReply) -> {
+            if (fullReply == null || fullReply.isBlank()) {
+                pushTurnError(conversationId, turnId, assistantMsgId, modelName,
+                        new IllegalStateException("模型返回空回复"));
+                return;
+            }
             // 5. 保存 assistant 消息
             SysAiConversationMessage assistantMsg = newSysAiConversationMessage(conversationId, "text",
-                    fullReply != null ? fullReply : "", "assistant", "left");
+                    fullReply, "assistant", "left");
             assistantMsg.setMessageId(assistantMsgId);
             assistantMsg.setMsgId(assistantMsgId);
             conversationStore.addMessage(conversationId, assistantMsg);
+            rememberTurn(conversation, input, fullReply, modelName);
+            conversationStore.patchRuntime(conversationId, "active_turn_id", null);
 
             // 6. 推送 turn.completed
             java.util.Map<String, Object> runtimeMap = new LinkedHashMap<>();
@@ -820,24 +807,23 @@ public class ApiChatController {
             runtimeMap.put("has_runtime", false);
             runtimeMap.put("is_processing", false);
             runtimeMap.put("pending_confirmations", 0);
-            runtimeMap.put("active_turn_id", (Object) null);
-            pushService.push("turn.completed", Map.of(
-                    "conversation_id", conversationId,
-                    "turn_id", turnId,
-                    "status", "finished",
-                    "state", "ai_waiting_input",
-                    "can_send_message", true,
-                    "runtime", runtimeMap,
-                    "workspace", "",
-                    "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
-                            "use_model", modelName != null ? modelName : ""),
-                    "last_message", Map.of(
-                            "message_id", assistantMsgId,
-                            "type", "text",
-                            "content", fullReply != null ? fullReply : "",
-                            "status", "finish"
-                    )
+            Map<String, Object> completed = new LinkedHashMap<>();
+            completed.put("conversation_id", conversationId);
+            completed.put("turn_id", turnId);
+            completed.put("status", "finished");
+            completed.put("state", "ai_waiting_input");
+            completed.put("can_send_message", true);
+            completed.put("runtime", runtimeMap);
+            if (modelName != null && !modelName.isBlank()) {
+                completed.put("model", Map.of("name", modelName, "use_model", modelName));
+            }
+            completed.put("last_message", Map.of(
+                    "message_id", assistantMsgId,
+                    "type", "text",
+                    "content", fullReply,
+                    "status", "finish"
             ));
+            pushService.push("turn.completed", completed);
             pushService.push("conversation.listChanged",
                     Map.of("conversation_id", conversationId, "action", "updated"));
         }, (error) -> {
@@ -856,7 +842,6 @@ public class ApiChatController {
             errRuntime.put("has_runtime", false);
             errRuntime.put("is_processing", false);
             errRuntime.put("pending_confirmations", 0);
-            errRuntime.put("active_turn_id", (Object) null);
             pushService.push("turn.completed", Map.of(
                     "conversation_id", conversationId,
                     "turn_id", turnId,
@@ -865,7 +850,6 @@ public class ApiChatController {
                     "error", errText,
                     "can_send_message", true,
                     "runtime", errRuntime,
-                    "workspace", "",
                     "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
                             "use_model", modelName != null ? modelName : ""),
                     "last_message", Map.of(
@@ -885,26 +869,6 @@ public class ApiChatController {
         result.put("replayed", false);
         result.put("completed", false);
         return ApiResult.ok(result);
-    }
-
-    /**
-     * 更新artifact内部。
-     * @param conversationId conversationid
-     * @param artifactId artifactid
-     * @param body 主体
-     * @return 更新artifact内部的结果
-     */
-    private Map<String, Object> updateArtifactInternal(String conversationId, String artifactId, Map<String, Object> body) {
-        conversationStore.get(conversationId);
-        List<Map<String, Object>> list = artifacts.computeIfAbsent(conversationId, k -> new CopyOnWriteArrayList<>());
-        Map<String, Object> target = list.stream()
-                .filter(a -> artifactId.equals(String.valueOf(a.get("conversation_artifact_id"))))
-                .findFirst()
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "产物不存在: " + artifactId));
-        if (body.containsKey("status")) {
-            target.put("status", body.get("status"));
-        }
-        return target;
     }
 
     /**
@@ -966,6 +930,7 @@ public class ApiChatController {
                 msgList.add(sys);
             }
         }
+        injectMemory(msgList, conversation, userInput);
         for (SysAiConversationMessage m : conversationStore.allMessages(conversation.getConversationId())) {
             if (!"text".equals(m.getType()) || m.getContent() == null) {
                 continue;
@@ -979,6 +944,74 @@ public class ApiChatController {
             request.setMessages(msgList);
         }
         return request;
+    }
+
+    /**
+     * 记忆召回并注入：把本轮命中的长期记忆作为一段 system 消息下发。
+     *
+     * <p>召回失败只降级为"本轮不带记忆"，不阻断对话。</p>
+     *
+     * @param msgList      待拼装的消息列表
+     * @param conversation 当前会话
+     * @param userInput    本轮用户输入（相关性打分依据）
+     */
+    private void injectMemory(List<Map<String, Object>> msgList, SysAiConversation conversation, String userInput) {
+        String owner = memoryOwner(conversation);
+        if (owner == null) {
+            return;
+        }
+        try {
+            AiMemoryRecallDTO recall = memoryService.recall(owner, conversation.getConversationId(), userInput, true);
+            if (recall == null || recall.getPromptBlock() == null || recall.getPromptBlock().isBlank()) {
+                return;
+            }
+            Map<String, Object> memory = new LinkedHashMap<>();
+            memory.put("role", "system");
+            memory.put("content", recall.getPromptBlock());
+            msgList.add(memory);
+            log.info("[Chat] 记忆注入 conversation={} user={} 条数={}",
+                    conversation.getConversationId(), owner, recall.getItems().size());
+        } catch (Exception e) {
+            log.warn("[Chat] 记忆召回失败（本轮不注入）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 记忆归属人：随会话归属，历史会话无归属时回落到当前请求身份。
+     *
+     * @param conversation 当前会话
+     * @return 归属用户，无法确定时返回 {@code null}
+     */
+    private String memoryOwner(SysAiConversation conversation) {
+        String owner = conversation.getUserId();
+        if (owner != null && !owner.isBlank()) {
+            return owner;
+        }
+        String current = AiUserContext.currentUserId();
+        return current == null || current.isBlank() ? null : current;
+    }
+
+    /**
+     * 轮次结束后的记忆抽取：异步执行，避免模型抽取拖慢 turn.completed 推送。
+     *
+     * @param conversation 当前会话
+     * @param input        本轮用户输入
+     * @param fullReply    本轮模型回复
+     * @param model        本轮模型名称
+     */
+    private void rememberTurn(SysAiConversation conversation, String input, String fullReply, String model) {
+        String owner = memoryOwner(conversation);
+        if (owner == null || fullReply == null || fullReply.isBlank()) {
+            return;
+        }
+        String conversationId = conversation.getConversationId();
+        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+            try {
+                memoryService.extractAndRecord(owner, conversationId, input, fullReply, model);
+            } catch (Exception e) {
+                log.warn("[Chat] 轮次记忆抽取失败 conversation={}: {}", conversationId, e.getMessage());
+            }
+        }));
     }
 
     /**
@@ -1043,26 +1076,44 @@ public class ApiChatController {
 @ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/messages")
+@RequiredArgsConstructor
 class ApiMessageSearchController {
 
+    private final SysAiConversationStore conversationStore;
+
     /**
-     * 全局消息检索（占位实现，返回空结果集）。
+     * 全局消息检索。
      *
      * @param keyword   关键字
      * @param page      页号
      * @param page_size 每页条数
      * @return 分页检索结果
-     * @param false false
      */
     @GetMapping("/search")
     public ApiResult<Map<String, Object>> search(@RequestParam(required = false) String keyword,
                                                  @RequestParam(required = false, defaultValue = "1") int page,
                                                  @RequestParam(required = false, defaultValue = "20") int page_size) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> paging =
+                conversationStore.searchMessages(keyword, page, page_size);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("items", new ArrayList<>());
-        result.put("total", 0);
-        result.put("has_more", false);
+        result.put("items", paging.getRecords().stream().map(this::toResponse).toList());
+        result.put("total", paging.getTotal());
+        result.put("has_more", paging.getCurrent() * paging.getSize() < paging.getTotal());
         return ApiResult.ok(result);
+    }
+
+    private Map<String, Object> toResponse(SysAiConversationMessage message) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message_id", message.getMessageId());
+        result.put("conversation_id", message.getConversationId());
+        result.put("msg_id", message.getMsgId());
+        result.put("type", message.getType());
+        result.put("content", message.getContent());
+        result.put("position", message.getPosition());
+        result.put("status", message.getStatus());
+        result.put("hidden", message.isHidden());
+        result.put("created_at", message.getCreatedAt());
+        return result;
     }
 }
 

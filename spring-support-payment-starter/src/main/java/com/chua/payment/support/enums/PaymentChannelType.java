@@ -2,55 +2,47 @@ package com.chua.payment.support.enums;
 
 /**
  * 支付渠道类型
+ *
  * @author CH
  * @since 4.0.0
  */
 public enum PaymentChannelType {
 
     /**
-     * WECHAT。
-     * @param "WECHAT" "WECHAT"
-     * @param "微信支付" "微信支付"
+     * WECHAT，微信支付渠道
      */
     WECHAT("WECHAT", "微信支付"),
     /**
-     * ALIPAY。
-     * @param "ALIPAY" "ALIPAY"
-     * @param "支付宝" "支付宝"
+     * ALIPAY，支付宝渠道
      */
     ALIPAY("ALIPAY", "支付宝"),
     /**
-     * EPAY。
-     * @param "EPAY" "EPAY"
-     * @param "易支付" "易支付"
+     * EPAY，易支付聚合渠道
      */
     EPAY("EPAY", "易支付"),
     /**
-     * COMPOSITE。
-     * @param "COMPOSITE" "COMPOSITE"
-     * @param "直营网关" "直营网关"
+     * COMPOSITE，运营网关统一收银渠道
      */
-    COMPOSITE("COMPOSITE", "直营网关"),
+    COMPOSITE("COMPOSITE", "运营网关"),
     /**
-     * WALLET。
-     * @param "WALLET" "WALLET"
-     * @param "钱包" "钱包"
+     * WALLET，钱包余额支付渠道
      */
     WALLET("WALLET", "钱包");
 
     /**
      * 代码
-    */
+     */
     private final String code;
     /**
      * 描述
-    */
+     */
     private final String description;
 
     /**
-     * 薪酬通道类型。
+     * 支付渠道类型
+     *
      * @param code 编码
-     * @param description description
+     * @param description 描述
      */
     PaymentChannelType(String code, String description) {
         this.code = code;
@@ -67,19 +59,19 @@ public enum PaymentChannelType {
     }
 
     /**
-     * 获取Description
+     * 获取描述
      *
-     * @return 获取description的结果
+     * @return 获取描述的结果
      */
     public String getDescription() {
         return description;
     }
 
     /**
-     * description的
+     * 根据编码获取描述
      *
      * @param code 编码
-     * @return description的的结果
+     * @return 描述
      */
     public static String descriptionOf(String code) {
         if (code == null) {
@@ -93,4 +85,3 @@ public enum PaymentChannelType {
         return "";
     }
 }
-

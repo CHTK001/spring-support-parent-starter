@@ -16,7 +16,9 @@ import java.io.IOException;
  *
  * <p>仅对 {@code /api/**} 与 {@code /ws} 路径生效（适配 nomicore 前端契约）：
  * <ul>
- *     <li>桌面模式携带 {@code x-nomi-local-trust} 头（Tauri 预加载注入的 per-boot 密钥）→ 标记为受信本地客户端放行；</li>
+ *     <li>桌面模式携带 {@code x-nomi-local-trust} 头（Tauri 预加载注入的 per-boot 密钥）
+ *         <b>且来源为回环地址</b>→ 标记为受信本地客户端放行；非回环来源一律不认，
+ *         否则任何人都能靠一个请求头冒充本机桌面端拿到管理员身份；</li>
  *     <li>否则（WebUI 浏览器模式 / 本地开发）→ 默认放行。</li>
  * </ul>
  * 其余路径交由现有 {@code @Permission} / Bearer 令牌 机制处理，本过滤器不做干预。</p>
@@ -46,12 +48,35 @@ public class LocalTrustAuthFilter extends OncePerRequestFilter {
         if (uri.startsWith("/api/") || uri.startsWith("/ws") || uri.startsWith("/v2")) {
             String trust = request.getHeader(LOCAL_TRUST_HEADER);
             if (trust != null && !trust.isBlank()) {
-                request.setAttribute(TRUSTED_ATTR, Boolean.TRUE);
-                log.debug("[local-trust] 受信本地客户端: uri={}", uri);
+                if (isLoopback(request.getRemoteAddr())) {
+                    request.setAttribute(TRUSTED_ATTR, Boolean.TRUE);
+                    log.debug("[local-trust] 受信本地客户端: uri={}", uri);
+                } else {
+                    log.warn("[local-trust] 拒绝非回环来源的本地信任声明: uri={}, remote={}", uri, request.getRemoteAddr());
+                }
             }
             chain.doFilter(request, response);
             return;
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * 来源地址是否回环。桌面端只会从 127.0.0.1/::1 访问本机后端，跨网段携带该头即为冒充。
+     *
+     * @param remoteAddr 对端地址
+     * @return 是否回环来源
+     */
+    private static boolean isLoopback(String remoteAddr) {
+        if (remoteAddr == null || remoteAddr.isBlank()) {
+            return false;
+        }
+        String addr = remoteAddr.trim();
+        int zone = addr.indexOf('%');
+        if (zone >= 0) {
+            addr = addr.substring(0, zone);
+        }
+        return addr.startsWith("127.") || "localhost".equalsIgnoreCase(addr)
+                || addr.equals("::1") || addr.equals("0:0:0:0:0:0:0:1");
     }
 }

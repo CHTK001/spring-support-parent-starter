@@ -1,14 +1,16 @@
 package com.chua.starter.ai.support.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
 import com.chua.common.support.ai.splitter.TextSplitterProvider;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.vector.VectorStorageDescriptor;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.deeplearning.support.engine.ModelRegistry;
-import com.chua.starter.ai.support.model.AiModelDTO;
-import com.chua.starter.ai.support.service.settings.AiModelService;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +25,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -49,9 +52,19 @@ import java.util.stream.Collectors;
 public class AiRagSettingController {
 
     /**
-     * AI 模型服务
+     * 能力项中表示任务类型的字段名
      */
-    private final AiModelService aiModelService;
+    private static final String CAPABILITY_TASK_KEY = "task";
+
+    /**
+     * 对话任务标识：{@code sys_ai_provider_model_capabilities} 中区分对话/思考/图像的判据
+     */
+    private static final String CAPABILITY_CHAT_TASK = "chat";
+
+    /**
+     * 供应商模型映射器：LLM 下拉数据源，与前端模型选择器同表同标识
+     */
+    private final SysAiProviderModelMapper providerModelMapper;
 
     /**
      * 获取 RAG 配置选项。
@@ -67,6 +80,7 @@ public class AiRagSettingController {
         result.put("ocrModels", listOcrModels());
         result.put("llmModels", listLlmModels());
         result.put("vectorStorages", listVectorStorages());
+        result.put("vectorStorageOptions", listVectorStorageOptions());
         result.put("splitters", listSplitters());
         return ReturnResult.ok(result);
     }
@@ -137,24 +151,55 @@ public class AiRagSettingController {
     }
 
     /**
-     * LLM 模型列表：AI_模型 表，能力含 对话。
+     * LLM 模型列表：{@code sys_ai_provider_model} 中已启用且能力含 {@code chat} 的模型。
      *
-     * @return 模型名列表
+     * <p>与前端模型选择器同源（同一张表、同一个 {@code model} 标识），因此下拉里选中的值
+     * 可以直接用于对话请求，不需要再做一次名称映射。</p>
+     *
+     * <p>此前读的是 {@code sys_ai_model}，但该表只承载 OCR/版面类模型，且能力列是
+     * {@code ["ocr","layout"]} 字符串数组，与本表 {@code [{"task":"chat"}]} 对象数组并不同构；
+     * 线上该表的对话模型行数为 0，导致本下拉恒为空、RAG 配置页无法选型。</p>
+     *
+     * @return 模型名列表，已停用或无 chat 能力的模型不出现
      */
     private List<String> listLlmModels() {
         try {
-            List<AiModelDTO> models = aiModelService.list();
-            return models.stream()
-                    .filter(m -> m.getCapabilities() != null
-                            && m.getCapabilities().stream().anyMatch(c -> "chat".equalsIgnoreCase(c)))
-                    .map(AiModelDTO::getCode)
-                    .filter(code -> code != null && !code.isBlank())
+            return providerModelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
+                            .eq(SysAiProviderModel::getEnabled, true))
+                    .stream()
+                    .filter(AiRagSettingController::isChatCapable)
+                    .map(SysAiProviderModel::getModel)
+                    .filter(model -> model != null && !model.isBlank())
                     .distinct()
+                    .sorted()
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("[RagSetting] 读取 LLM 模型列表失败: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * 判断供应商模型行是否具备对话能力。
+     *
+     * <p>能力以 JSON 对象数组存放，形如
+     * {@code [{"task":"chat","protocol":"openai"},{"task":"thinking","protocol":"openai"}]}，
+     * 所以必须按 {@code task} 字段匹配；用字符串包含去匹配会同时误命中 {@code thinking}。</p>
+     *
+     * @param row 供应商模型行
+     * @return 任一能力项的 {@code task} 为 chat 时返回 true
+     */
+    private static boolean isChatCapable(SysAiProviderModel row) {
+        List<Map<String, Object>> capabilities = row.getCapabilities();
+        if (capabilities == null || capabilities.isEmpty()) {
+            return false;
+        }
+        return capabilities.stream()
+                .filter(Objects::nonNull)
+                .map(capability -> capability.get(CAPABILITY_TASK_KEY))
+                .filter(Objects::nonNull)
+                .map(String::valueOf)
+                .anyMatch(CAPABILITY_CHAT_TASK::equalsIgnoreCase);
     }
 
     /**
@@ -174,9 +219,26 @@ public class AiRagSettingController {
     }
 
     /**
-     * 文本切片策略列表：文本splitter提供者 SPI。
+     * 向量库实现描述器：字段、默认值、是否敏感，供前端动态渲染与保存配置。
      *
-     * @return 提供者名称列表
+     * <p>前端按描述器渲染表单，因此新增向量库无需再改前端。
+     * {@code sensitive} 为 true 的字段提交后不参与回显。</p>
+     *
+     * @return 向量库描述器列表
+     */
+    private List<VectorStorageDescriptor> listVectorStorageOptions() {
+        try {
+            return VectorStorageProvider.descriptors();
+        } catch (Exception e) {
+            log.warn("[RagSetting] 枚举向量存储描述器失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 文本切片器列表：由 text splitters 提供的 SPI。
+     *
+     * @return 提供商名称列表
      */
     private List<String> listSplitters() {
         try {

@@ -6,17 +6,17 @@ package org.springdoc.core.service;
  *  *  *  *
    * *  *  *  * Copyright 2019-2023 the 原始 作者 或 作者.
  *  *  *  *  *
-   * *  *  *  * 执照 under the Apache 执照, 版本 2.0 (the "执照");
-   * *  *  *  * you may not use this 文件 except 入 compliance with the 执照.
-   * *  *  *  * You may obtain a 副本 的 the 执照 at
+   * *  *  *  * Licensed under the Apache License, Version 2.0 (the "License");
+   * *  *  *  * you may not use this file except in compliance with the License.
+   * *  *  *  * You may obtain a copy of the License at
  *  *  *  *  *
  *  *  *  *  *      https://www.apache.org/licenses/LICENSE-2.0
  *  *  *  *  *
-   * *  *  *  * Unless required by applicable 定律 或 agreed 转为 入 写入, software
-   * *  *  *  * distributed under the 执照 是否 distributed on an "AS 是否" BASIS,
-   * *  *  *  * WITHOUT WARRANTIES 或 条件 的 任意 种类, either express 或 implied.
-   * *  *  *  * 参见 the 执照 for the 特定 language governing 权限 和
-   * *  *  *  * limitations under the 执照.
+   * *  *  *  * Unless required by applicable law or agreed to in writing, software
+   * *  *  *  * distributed under the License is distributed on an "AS IS" BASIS,
+   * *  *  *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * *  *  *  * See the License for the specific language governing permissions and
+   * *  *  *  * limitations under the License.
  *  *  *  *
  *  *  *
  *  *
@@ -256,11 +256,11 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     /**
-     * 过滤器 the generic API 响应 by the declared 异常.
-     * If Javadoc 评论 found for the declaration than it overrides the 默认 description.
+     * Filters the generic API response by the declared exceptions.
+     * If Javadoc comments are found for the declaration then they override the default description.
      *
-     * @param handlerMethod      the 方法 which 能否 have 异常 declarations
-     * @param genericMapResponse the 默认 generic API 响应
+     * @param handlerMethod      the method which can have exception declarations
+     * @param genericMapResponse the default generic API response
      * @return the 过滤器 和 enriched 响应
      */
     private Map<String, ApiResponse> filterAndEnrichGenericMapResponseByDeclarations(HandlerMethod handlerMethod, Map<String, ApiResponse> genericMapResponse) {

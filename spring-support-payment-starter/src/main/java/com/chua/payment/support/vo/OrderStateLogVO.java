@@ -12,45 +12,45 @@ import java.time.LocalDateTime;
  */
 @Data
 public class OrderStateLogVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
      * 标识
-    */
+     */
     private Long id;
 
     /**
-     * 排序标识
-    */
+     * 订单标识
+     */
     private Long orderId;
 
     /**
-     * 从状态
-    */
+     * 原状态
+     */
     private String fromState;
 
     /**
-     * 转为状态
-    */
+     * 目标状态
+     */
     private String toState;
 
     /**
-     * 事件
-    */
+     * 事件描述
+     */
     private String event;
 
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 }

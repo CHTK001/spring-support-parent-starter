@@ -29,7 +29,8 @@ import java.util.UUID;
 
 /**
  * 小程序钱包 API
- * <p>小程序使用 OAuth2 登录流程获取 Bearer Token，认证机制与 Web 一致</p>
+ * <p>小程序使用 OAuth2 登录流程获取 Bearer Token，认证场景为 Web 端。
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -39,21 +40,21 @@ import java.util.UUID;
 public class MpWalletController {
 
     /**
-     * Walletaccount服务
-    */
+     * 钱包账户服务
+     */
     private final WalletAccountService walletAccountService;
     /**
-     * Wallet排序服务
-    */
+     * 钱包订单服务
+     */
     private final WalletOrderService walletOrderService;
     /**
-     * Principal解析器
-    */
+     * 登录主体解析器
+     */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping
     /**
-     * 获取Wallet
+     * 获取钱包
      * @param request 请求
      * @param merchantId merchantid
      */
@@ -61,20 +62,20 @@ public class MpWalletController {
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         return Result.success(walletAccountService.getAccount(merchantId, userId));
     }
 
     @GetMapping("/log/page")
     /**
-     * 列表日志
+     * 流水列表
      * @param request 请求
      * @param pageNum pagenum
      * @param pageSize page大小
      * @param merchantId merchantid
-     * @param bizType biz类型
-     * @param bizNo bizno
+     * @param bizType 业务类型
+     * @param bizNo 业务单号
      */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
@@ -84,7 +85,7 @@ public class MpWalletController {
                                                          @RequestParam(required = false) String bizNo) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null));
         return Result.success(PageResult.of(page));
@@ -92,7 +93,7 @@ public class MpWalletController {
 
     @GetMapping("/order/page")
     /**
-     * 列表订单
+     * 订单列表
      * @param request 请求
      * @param pageNum pagenum
      * @param pageSize page大小
@@ -108,7 +109,7 @@ public class MpWalletController {
                                                       @RequestParam(required = false) String status) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         Page<WalletOrder> page = walletOrderService.page(new WalletOrderQueryRequest(pageNum, pageSize, merchantId, userId, orderType, status));
         return Result.success(PageResult.of(page));
@@ -116,7 +117,7 @@ public class MpWalletController {
 
     @PostMapping("/withdraw")
     /**
-     * Withdraw
+     * 提现
      * @param request 请求
      * @param dto dto
      */
@@ -124,7 +125,7 @@ public class MpWalletController {
                                         @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         if (dto.getMerchantId() == null) {
             return Result.error("商户ID不能为空");
@@ -136,7 +137,7 @@ public class MpWalletController {
             return Result.error("银行账号不能为空");
         }
 
-        // 强检验
+        // 强校验：用户标识与操作者强制等于当前用户
         dto.setUserId(userId);
         dto.setOperator(String.valueOf(userId));
 
@@ -161,7 +162,7 @@ public class MpWalletController {
 
     @PostMapping("/transfer")
     /**
-     * 调动
+     * 转账
      * @param request 请求
      * @param dto dto
      */
@@ -169,7 +170,7 @@ public class MpWalletController {
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账号");
+            return Result.error(401, "未获取到当前账户");
         }
         if (dto.getMerchantId() == null) {
             return Result.error("商户ID不能为空");
@@ -192,4 +193,3 @@ public class MpWalletController {
         return Result.success();
     }
 }
-

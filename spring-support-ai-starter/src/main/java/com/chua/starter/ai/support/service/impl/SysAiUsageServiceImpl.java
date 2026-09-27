@@ -10,6 +10,7 @@ import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
+import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.common.support.service.IptablesService;
 import com.chua.starter.common.support.utils.IpUtils;
 import com.chua.common.support.lang.code.ReturnResult;
@@ -23,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,6 +42,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
      * 用量 映射器
      */
     private final SysAiUsageMapper usageMapper;
+    private final ModelAliasService modelAliasService;
 
     /**
      * 日汇总 映射器
@@ -89,7 +92,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         entity.setSysAiUsageCachedTokens(usage.getCacheTokens());
         entity.setSysAiUsageInferenceStrength("默认");
         entity.setSysAiUsageEndpoint("/v1/chat/completions");
-        entity.setSysAiUsageType("chat");
+        entity.setSysAiUsageType(callType != null ? callType : "chat");
         entity.setSysAiUsageBillingMode("pay_as_you_go");
 
  // 本机请求兜底：默认本机 ipv4；非本机部署可由拦截器回填真实客户端 IP
@@ -142,27 +145,52 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
             entity.setSysAiUsageTotalCost(0.0);
         }
 
+        entity.setSysAiUsageSource("chat");
         usageMapper.insert(entity);
         log.debug("[Usage] 记录成功: group={}, model={}, tokens={}, cost={}",
                 groupName, model, usage.getTotalTokens(), entity.getSysAiUsageTotalCost());
     }
 
     @Override
+    @Transactional
+    public void record(String groupName, String provider, String model, String callType,
+                       AiUsage usage, String requestId, String userId, String source) {
+        if (usage == null) {
+            return;
+        }
+        // 复用主 record 逻辑：先调用主方法，再更新 source
+        record(groupName, provider, model, callType, usage, requestId, userId);
+        // 主方法已 insert，这里通过 mapper 按 requestId 更新 source（简化：直接查最新一条）
+        try {
+            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiUsage> w =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+            w.eq(SysAiUsage::getSysAiUsageRequestId, requestId).orderByDesc(SysAiUsage::getSysAiUsageCallTime).last("LIMIT 1");
+            SysAiUsage latest = usageMapper.selectOne(w);
+            if (latest != null) {
+                latest.setSysAiUsageSource(source);
+                usageMapper.updateById(latest);
+            }
+        } catch (Exception e) {
+            log.warn("[Usage] 更新 source 失败: {}", e.getMessage());
+        }
+    }
     /**
-     * 列表
-     * @param groupName 群体名称
      * @param provider 提供者
      * @param model 模型
      * @param startTime 启动时间
      * @param endTime 结束时间
+     * @param userId 归属用户，为空时列出全部用户明细
      * @param page page
      * @param size 大小
      */
     public Page<SysAiUsage> list(String groupName, String provider, String model,
-                                 LocalDateTime startTime, LocalDateTime endTime, int page, int size) {
+                                 LocalDateTime startTime, LocalDateTime endTime, String userId, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
         if (groupName != null) {
             wrapper.eq(SysAiUsage::getSysAiUsageGroupName, groupName);
+        }
+        if (userId != null && !userId.isBlank()) {
+            wrapper.eq(SysAiUsage::getSysAiUsageUserId, userId);
         }
         if (provider != null) {
             wrapper.eq(SysAiUsage::getSysAiUsageProvider, provider);
@@ -185,17 +213,22 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     @Override
     /**
      * 获取用量统计。
-     * <p>查询日汇总表 sys_ai_usage_daily，避免全量扫描原始明细表。</p>
+     * <p>全量统计读日汇总表 sys_ai_usage_daily；指定 userId 时读汇总表会连带别人的量，
+     * 因此改走明细表的数据库端聚合。</p>
      *
      * @param groupName 分组名称（可为空）
      * @param provider  服务商（可为空）
      * @param model     模型（可为空）
      * @param startTime 开始时间（可为空）
      * @param endTime   结束时间（可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
      * @return 聚合统计结果
      */
     public UsageStatistics getStatistics(String groupName, String provider, String model,
-                                          LocalDateTime startTime, LocalDateTime endTime) {
+                                          LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        if (userId != null && !userId.isBlank()) {
+            return statisticsFromDetail(groupName, provider, model, startTime, endTime, userId);
+        }
         LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();
         if (groupName != null) {
             wrapper.eq(SysAiUsageDaily::getGroupName, groupName);
@@ -230,7 +263,29 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     @Override
     public List<SysAiUsageDaily> getDailyTrend(String provider, String model,
-                                               LocalDateTime startTime, LocalDateTime endTime) {
+                                               LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        if (userId != null && !userId.isBlank()) {
+            List<SysAiUsageMapper.DailyAggregateRow> rows =
+                    usageMapper.selectDailyAggregate(startTime, endTime, userId);
+            List<SysAiUsageDaily> trend = new ArrayList<>(rows.size());
+            for (SysAiUsageMapper.DailyAggregateRow row : rows) {
+                SysAiUsageDaily daily = new SysAiUsageDaily();
+                daily.setStatDate(row.statDate());
+                daily.setGroupName(row.groupName());
+                daily.setProvider(row.provider());
+                daily.setModel(row.model());
+                daily.setTotalCalls(row.totalCalls());
+                daily.setTotalPromptTokens(row.totalPromptTokens());
+                daily.setTotalCompletionTokens(row.totalCompletionTokens());
+                daily.setTotalTokens(row.totalTokens());
+                daily.setTotalCost(row.totalCost());
+                daily.setTotalCachedTokens(row.totalCachedTokens());
+                daily.setTotalLatency(row.totalLatency());
+                daily.setTotalFirstTokenLatency(row.totalFirstTokenLatency());
+                trend.add(daily);
+            }
+            return trend;
+        }
         LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();
         if (provider != null && !provider.isBlank()) {
             wrapper.eq(SysAiUsageDaily::getProvider, provider);
@@ -246,5 +301,57 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         }
         wrapper.orderByAsc(SysAiUsageDaily::getStatDate);
         return dailyMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO> getHourlyTrend(
+            LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        List<SysAiUsageMapper.HourlyAggregateRow> rows =
+                usageMapper.selectHourlyAggregate(startTime, endTime, userId);
+        List<com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO> result = new ArrayList<>(rows.size());
+        for (SysAiUsageMapper.HourlyAggregateRow r : rows) {
+            result.add(new com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO(
+                    r.statHour(),
+                    r.totalCalls() == null ? 0L : r.totalCalls(),
+                    r.totalPromptTokens() == null ? 0L : r.totalPromptTokens(),
+                    r.totalCompletionTokens() == null ? 0L : r.totalCompletionTokens(),
+                    r.totalTokens() == null ? 0L : r.totalTokens(),
+                    r.totalCachedTokens() == null ? 0L : r.totalCachedTokens()
+            ));
+        }
+        return result;
+    }
+
+    /**
+     * 由明细表聚合出统计摘要（普通用户口径：日汇总表没有用户维度，不能给它读汇总表）。
+     *
+     * @param groupName 分组名称（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @param userId    归属用户，不能为空
+     * @return 聚合统计结果
+     */
+    private UsageStatistics statisticsFromDetail(String groupName, String provider, String model,
+                                                 LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        SysAiUsageMapper.UsageStatsRow row =
+                usageMapper.selectStatistics(groupName, provider, model, startTime, endTime, userId);
+        UsageStatistics stats = new UsageStatistics();
+        if (row == null) {
+            return stats;
+        }
+        stats.totalCalls = row.totalCalls() == null ? 0L : row.totalCalls().longValue();
+        stats.totalPromptTokens = row.totalPromptTokens() == null ? 0L : row.totalPromptTokens().longValue();
+        stats.totalCompletionTokens = row.totalCompletionTokens() == null ? 0L : row.totalCompletionTokens().longValue();
+        stats.totalTokens = row.totalTokens() == null ? 0L : row.totalTokens().longValue();
+        stats.totalCachedTokens = row.totalCachedTokens() == null ? 0L : row.totalCachedTokens().longValue();
+        stats.totalCost = row.totalCost() == null ? 0D : row.totalCost();
+        stats.standardCost = row.standardCost() == null ? 0D : row.standardCost();
+        stats.avgLatency = stats.totalCalls > 0 && row.totalLatency() != null
+                ? (double) row.totalLatency() / stats.totalCalls : 0.0;
+        stats.avgFirstTokenLatency = stats.totalCalls > 0 && row.totalFirstTokenLatency() != null
+                ? (double) row.totalFirstTokenLatency() / stats.totalCalls : 0.0;
+        return stats;
     }
 }

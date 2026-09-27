@@ -51,6 +51,12 @@ public class SysAiMcpServer implements Serializable {
     private String description; // description
 
     /**
+     * 图标地址（图片 URL 或图标名，可为空）
+     */
+    @TableField("sys_ai_mcp_server_icon")
+    private String icon; // icon
+
+    /**
      * 传输配置 JSON（类型/url/命令/参数/env/头部）
      */
     @TableField("sys_ai_mcp_server_transport")

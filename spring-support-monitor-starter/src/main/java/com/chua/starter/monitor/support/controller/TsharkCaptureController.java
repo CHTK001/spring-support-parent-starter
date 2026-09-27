@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
+import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 网络抓包接口
@@ -71,13 +73,9 @@ public class TsharkCaptureController {
      */
     @Operation(summary = "启动抓包会话")
     @PostMapping("/capture")
-    public ReturnResult<MsTsharkSession> start(@RequestBody Map<String, Object> body) {
-        String name = str(body.get("name"));
-        String iface = str(body.get("captureInterface"));
-        String filter = str(body.get("captureFilter"));
-        Integer count = intOf(body.get("count"));
-        Integer timeout = intOf(body.get("timeout"));
-        return this.tsharkCaptureService.startCapture(name, iface, filter, count, timeout);
+    public ReturnResult<MsTsharkSession> start(@RequestBody TsharkCaptureStartDTO body) {
+        return this.tsharkCaptureService.startCapture(body.name(), body.captureInterface(),
+                body.captureFilter(), body.count(), body.timeout());
     }
 
     /**
@@ -154,7 +152,7 @@ public class TsharkCaptureController {
      */
     @Operation(summary = "协议分布统计")
     @GetMapping("/sessions/{id}/stats/protocol")
-    public ReturnResult<List<Map<String, Object>>> protocolStats(@PathVariable Long id) {
+    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(@PathVariable Long id) {
         return this.tsharkCaptureService.protocolStats(id);
     }
 
@@ -167,35 +165,8 @@ public class TsharkCaptureController {
      */
     @Operation(summary = "会话 Top 流统计")
     @GetMapping("/sessions/{id}/stats/top")
-    public ReturnResult<List<Map<String, Object>>> topFlows(@PathVariable Long id,
-                                                            @RequestParam(defaultValue = "10") int limit) {
+    public ReturnResult<List<TsharkFlowVO>> topFlows(@PathVariable Long id,
+                                                     @RequestParam(defaultValue = "10") int limit) {
         return this.tsharkCaptureService.topFlows(id, limit);
-    }
-
-    /**
-     * 取字符串值（null 安全）
-     *
-     * @param o 原始值
-     * @return 字符串形式
-     */
-    private String str(Object o) {
-        return o == null ? null : String.valueOf(o);
-    }
-
-    /**
-     * 取整数值（null 安全，非法格式返回 null）
-     *
-     * @param o 原始值
-     * @return 整数形式
-     */
-    private Integer intOf(Object o) {
-        if (o == null) {
-            return null;
-        }
-        try {
-            return o instanceof Number ? ((Number) o).intValue() : Integer.parseInt(String.valueOf(o));
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 }

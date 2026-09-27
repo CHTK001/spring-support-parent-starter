@@ -5,6 +5,7 @@ import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsExecJob;
 import com.chua.starter.server.support.entity.MsExecLog;
 import com.chua.starter.server.support.model.vo.ExecCommandVO;
+import com.chua.starter.server.support.model.vo.ExecJobRunVO;
 import com.chua.starter.server.support.service.ExecService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -122,10 +123,13 @@ public class ExecController {
      * @param id 主键
      * @return 执行日志
      */
-    @Operation(summary = "立即触发任务")
+    @Operation(summary = "立即触发任务（可指定目标主机）")
     @PostMapping("/job/{id}/run")
-    public ReturnResult<List<MsExecLog>> runJobNow(@PathVariable Long id) {
-        return execService.runJobNow(id);
+    public ReturnResult<List<MsExecLog>> runJobNow(@PathVariable Long id,
+                                                   @RequestBody(required = false) ExecJobRunVO body) {
+        List<Long> hostIds = body == null ? null : body.hostIds();
+        Integer timeoutSeconds = body == null ? null : body.timeoutSeconds();
+        return execService.runJobNow(id, hostIds, timeoutSeconds);
     }
 
     /**
@@ -138,8 +142,9 @@ public class ExecController {
     @Operation(summary = "执行日志查询")
     @GetMapping("/log")
     public ReturnResult<List<MsExecLog>> listLogs(@RequestParam(required = false) String type,
-                                                  @RequestParam(required = false) Long hostId) {
-        return execService.listLogs(type, hostId);
+                                                  @RequestParam(required = false) Long hostId,
+                                                  @RequestParam(required = false) Long jobId) {
+        return execService.listLogs(type, hostId, jobId);
     }
 
     /**

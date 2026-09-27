@@ -31,7 +31,6 @@ import java.util.Map;
 
 import static com.chua.common.support.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
-import static com.chua.starter.common.support.constant.Constant.OPS;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
 
 /**
@@ -212,7 +211,8 @@ public class StaticProtocol extends AbstractProtocol {
         } else if (ADMIN.equalsIgnoreCase(userResume.getUsername())) {
             userResume.setRoles(Sets.newHashSet(SUPER_ADMIN, ADMIN));
         } else {
-            userResume.setRoles(Sets.newHashSet(OPS));
+            // 角色为空必须保持为空：兜底给 OPS 会让"未绑定任何角色"变成升权路径
+            userResume.setRoles(Collections.emptySet());
         }
         userResume.setUserId(StringUtils.defaultString(userResult.getUserId(), "1"));
         userResume.setUid(StringUtils.defaultString(userResult.getUid(), DigestUtils.sha1(userResume.getUserId())));
@@ -280,7 +280,8 @@ public class StaticProtocol extends AbstractProtocol {
         userResult.setExt(userResume.getExt());
         userResult.setDataPermission(userResume.getDataPermission());
         userResult.setDataPermissionRule(userResume.getDataPermissionRule());
-        userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
+        userResult.setExpireTime(System.currentTimeMillis() / 1000
+                + authClientProperties.getClampedStaticTokenExpireSeconds());
 
         String refreshedToken = TokenCipher.encrypt(userResult);
         if (StringUtils.isBlank(refreshedToken)) {
@@ -321,7 +322,8 @@ public class StaticProtocol extends AbstractProtocol {
             return null;
         }
         LoginAuthResult result = StaticTempLogin.login(tempUser, username, password,
-                authType != null ? authType.getCode() : "web");
+                authType != null ? authType.getCode() : "web",
+                authClientProperties.getClampedStaticTokenExpireSeconds());
         if (result == null) {
             log.warn("[StaticProtocol] 临时账号不匹配 - 输入: {}", username);
         }

@@ -49,7 +49,7 @@ public class HikvisionSession implements DeviceSession {
      */
     public HikvisionSession(DeviceConnectInfo info) {
         this.info = info;
-        log.info("海康设备连接成功: {}", info.getIp());
+        log.info("海康设备连接成功: {}", info.ip());
     }
 
     @Override
@@ -57,7 +57,7 @@ public class HikvisionSession implements DeviceSession {
      * 获取deviceid
     */
     public String getDeviceId() {
-        return info.getIp();
+        return info.ip();
     }
 
     @Override
@@ -74,7 +74,7 @@ public class HikvisionSession implements DeviceSession {
     */
     public void close() {
         online = false;
-        log.info("海康设备断开: {}", info.getIp());
+        log.info("海康设备断开: {}", info.ip());
     }
 
     @Override

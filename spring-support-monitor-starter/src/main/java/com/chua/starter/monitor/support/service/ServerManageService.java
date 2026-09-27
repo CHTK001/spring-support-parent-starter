@@ -1,9 +1,11 @@
 package com.chua.starter.monitor.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
+import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
 
 import java.util.List;
 import java.util.Map;
@@ -116,14 +118,14 @@ public interface ServerManageService {
      *
      * @return 协议描述列表
      */
-    ReturnResult<List<Map<String, Object>>> protocols();
+    ReturnResult<List<ServerProtocolMetaVO>> protocols();
 
     /**
      * 支持的 服务端过滤器 插件类型元数据。
      *
      * @return 插件描述列表
      */
-    ReturnResult<List<Map<String, Object>>> filterTypes();
+    ReturnResult<List<ServerFilterTypeMetaVO>> filterTypes();
 
     /**
      * 反向代理类节点视图（HTTP_PROXY / TCP_PROXY / socks 等）。

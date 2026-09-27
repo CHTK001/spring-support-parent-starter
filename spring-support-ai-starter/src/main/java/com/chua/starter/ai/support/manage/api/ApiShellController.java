@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
@@ -20,9 +21,13 @@ import java.util.Map;
  *
  * <p>提供桌面壳模式下的系统级操作：打开文件、文件夹、外部链接、检查工具安装等。</p>
  *
+ * <p>这些动作在服务器所在主机上拉起外部应用或探测本机可执行文件，
+ * 影响面是整台主机而非某个用户的资源，因此整个控制器仅管理员可用。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
+@Permission("admin")
 @Slf4j
 @ApiReturnFormatIgnore
 @RestController

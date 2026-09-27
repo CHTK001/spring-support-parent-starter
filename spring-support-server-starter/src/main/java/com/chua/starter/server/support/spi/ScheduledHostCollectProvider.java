@@ -6,13 +6,12 @@ import com.chua.starter.server.support.service.ServerHostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * 定时 SSH 采集 提供者（调度）
  * <p>
  * 通过 SSH 连接目标主机采集硬件信息（CPU/内存/磁盘/系统版本/IP）。
- * SSH 为阻塞 IO，在 boundedElastic 调度器上执行，避免阻塞 Web 线程。
+ * SSH 为阻塞 IO，统一 offload 到虚拟线程调度器并发执行，避免阻塞时间轮/Web 线程。
  * </p>
  *
  * @author CH
@@ -36,7 +35,7 @@ public class ScheduledHostCollectProvider implements HostCollectProvider {
     @Override
     public Mono<CollectOutcome> collect(HostCollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
-                .subscribeOn(Schedulers.boundedElastic());
+                .subscribeOn(VirtualThreadSchedulers.virtual());
     }
 
     /**

@@ -1,20 +1,31 @@
 package com.chua.starter.ai.support.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.ai.bot.BotClient;
 import com.chua.common.support.ai.bot.BotInboundMessage;
 import com.chua.common.support.ai.bot.BotMessageListener;
+import com.chua.common.support.ai.agent.Agent;
+import com.chua.common.support.ai.agent.AgentDefinition;
+import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.ChatMessage;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.bot.BotSendResult;
+import com.chua.common.support.probability.ProbabilityCollision;
+import com.chua.common.support.probability.SimpleProbabilityCollision;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.ilink.support.bot.ILinkBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.entity.SysAiBotMessage;
+import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
+import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
 import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
 import com.chua.starter.ai.support.model.BotConversation;
@@ -26,13 +37,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -92,9 +107,14 @@ public class AiBotChatService {
     private final UsageRecorderInterceptor usageRecorderInterceptor;
 
     /**
-     * 运行中的 机器人：机器人标识 -> i链接 客户端
+     * MCP 运行时服务（Bot 勾选 MCP 时实时连接）。
+     */
+    private final AgentMcpRuntimeService agentMcpRuntimeService;
+
+    /**
+     * 运行中的 机器人：机器人标识 -> 平台客户端（wechat=ILink，feishu/qq 等为对应 SPI 实现）。
     */
-    private final Map<String, ILinkBotClient> runningBots = new ConcurrentHashMap<>();
+    private final Map<String, BotClient> runningBots = new ConcurrentHashMap<>();
 
     /**
      * 应用上下文刷新后加载所有已绑定的微信 机器人 并启动消息轮询。
@@ -104,10 +124,9 @@ public class AiBotChatService {
      */
     @EventListener(ContextRefreshedEvent.class)
     public void init() {
-        log.info("[BotChat] 启动微信 Bot 聊天引擎，加载已绑定 Bot...");
+        log.info("[BotChat] 启动 Bot 聊天引擎，加载所有平台已绑定 Bot...");
         List<SysAiBotBinding> bots = botBindingMapper.selectList(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
-                        .eq(SysAiBotBinding::getPlatform, "wechat")
                         .eq(SysAiBotBinding::getStatus, "online")
                         .isNotNull(SysAiBotBinding::getBotToken));
         for (SysAiBotBinding bot : bots) {
@@ -117,9 +136,15 @@ public class AiBotChatService {
     }
 
     /**
-     * 启动单个 机器人 的消息轮询与 AI 回复。
+     * 启动单个 机器人 的消息监听与 AI 回复（多平台）。
      *
-     * <p>若该 Bot 已在运行则先停止，避免重复轮询。</p>
+     * <p>若该 Bot 已在运行则先停止，避免重复连接：</p>
+     * <ul>
+     *   <li>{@code wechat}：构建 {@link ILinkBotClient}，有 botToken 时直接 {@code startPolling}
+     *       长轮询（避免 start() 强制重新扫码），轮询在独立线程阻塞；</li>
+     *   <li>{@code feishu / qq} 等凭据型：经 {@link BotClient#auto(String)} 构建，
+     *       用 appId/appSecret 配置后 {@code start()}（客户端内部自行管理网关线程、心跳与重连）。</li>
+     * </ul>
      *
      * @param bot 机器人 绑定记录
      */
@@ -129,46 +154,65 @@ public class AiBotChatService {
         }
         stopBot(bot.getBotId());
 
-        ILinkBotClient client = new ILinkBotClient();
-        // token = iLink bot_token，登录后凭证；有 token 时 start() 直接轮询不扫码
-        client.configure(bot.getBotToken(), null, null);
+        String platform = bot.getPlatform();
+        BotClient client;
+        if ("wechat".equals(platform)) {
+            // token = iLink bot_token，登录后凭证
+            ILinkBotClient ilink = new ILinkBotClient();
+            ilink.configure(bot.getBotToken(), null, null);
+            // 补全机器人自身标识；重启后内存令牌丢失时回查持久化 context_token
+            ilink.accountId(bot.getBotId());
+            ilink.contextTokenLoader((bid, user) -> loadLatestContextToken(bid, user));
+            client = ilink;
+        } else {
+            // 凭据型：botId=appId，botToken=appSecret
+            client = BotClient.auto(platform);
+            client.configure(bot.getBotId(), bot.getBotToken(), null);
+        }
+
+        final BotClient managed = client;
         client.addMessageListener(new BotMessageListener() {
             @Override
             public void onMessage(BotInboundMessage message) {
-                handleMessage(bot, client, message);
+                handleMessage(bot, managed, message);
             }
         });
-        client.addErrorListener(e -> log.warn("[BotChat] Bot {} 消息轮询出错: {}", bot.getBotId(), e.getMessage()));
+        client.addErrorListener(e -> log.warn("[BotChat] Bot {} 消息监听出错: {}", bot.getBotId(), e.getMessage()));
 
         runningBots.put(bot.getBotId(), client);
-        // 已有 botToken 时直接轮询（getupdates 长轮询阻塞），避免 start() 强制重新扫码登录
-        new Thread(() -> {
-            try {
-                client.startPolling();
-            } catch (Exception e) {
-                log.error("[BotChat] Bot {} 启动失败", bot.getBotId(), e);
-            }
-        }, "bot-chat-" + bot.getBotId()).start();
-        log.info("[BotChat] Bot {} 已启动，模型={}", bot.getBotId(), bot.getModel());
+        if (client instanceof ILinkBotClient ilink) {
+            // iLink 长轮询阻塞，放独立线程
+            new Thread(() -> {
+                try {
+                    ilink.startPolling();
+                } catch (Exception e) {
+                    log.error("[BotChat] Bot {} 启动失败", bot.getBotId(), e);
+                }
+            }, "bot-chat-" + bot.getBotId()).start();
+        } else {
+            // 凭据型客户端 start() 自带网关线程，非阻塞
+            client.start();
+        }
+        log.info("[BotChat] Bot {}({}) 已启动，模型={}", bot.getBotId(), platform, bot.getModel());
     }
 
     /**
-     * 查询 机器人 运行状态（i链接 会话是否存活）。
+     * 查询 机器人 运行状态（客户端是否存活）。
      *
-     * <p>ILink 会话超时（errcode=-14）后客户端停止轮询并从 runningBots 移除，
-     * 前端据此提示「会话已过期，请重新扫码绑定」。</p>
+     * <p>wechat 会话超时（errcode=-14）后客户端停止轮询并从 runningBots 移除，
+     * 前端据此提示「会话已过期，请重新绑定」。</p>
      *
      * @param botId 机器人 唯一标识
-     * @return running=会话存活；stopped=未在运行（超时/停止），需重新扫码
+     * @return running=存活；stopped=未在运行（超时/停止），需重新绑定
      */
     public String runtimeStatus(String botId) {
-        ILinkBotClient client = runningBots.get(botId);
- // 只用对象存在判断不够：会话超时（-14）后 客户端 仍留在 映射 中，
-        // 但内部轮询已停止（isRunning=false）。必须看真实轮询状态。
+        BotClient client = runningBots.get(botId);
+ // 只用对象存在判断不够：会话超时后 客户端 仍留在 映射 中，
+        // 但内部监听已停止（isRunning=false）。必须看真实运行状态。
         if (client != null && client.isRunning()) {
             return "running";
         }
- // 会话已停止：从 映射 移除，避免悬挂引用，并提示需要重新扫码
+ // 会话已停止：从 映射 移除，避免悬挂引用，并提示需要重新绑定
         if (client != null) {
             runningBots.remove(botId);
         }
@@ -176,12 +220,12 @@ public class AiBotChatService {
     }
 
     /**
-     * 停止指定 机器人 的消息轮询。
+     * 停止指定 机器人 的消息监听。
      *
      * @param botId 机器人 唯一标识
      */
     public void stopBot(String botId) {
-        ILinkBotClient client = runningBots.remove(botId);
+        BotClient client = runningBots.remove(botId);
         if (client != null) {
             client.stop();
             log.info("[BotChat] Bot {} 已停止", botId);
@@ -189,42 +233,324 @@ public class AiBotChatService {
     }
 
     /**
-     * 处理微信入站消息：调用 AI 生成回复并回发。
+     * 按平台与会话类型选择正确的回复目标并发送。
+     *
+     * <p>wechat（iLink）沿用 {@code sendText(发送者, ...)}；其余平台（qq/feishu）：
+     * 群聊以会话目标 {@code chatId}（group/channel openid）走 {@code sendToGroup}，
+     * 私聊以用户 openid 走 {@code sendText}。群回复所需的被动 msg_id 由客户端按
+     * chatId 记忆的被动上下文自动附带。</p>
+     *
+     * @param bot     机器人绑定
+     * @param client  平台客户端
+     * @param message 触发回复的入站消息
+     * @param reply   回复内容
+     * @return 发送结果
+     */
+    private BotSendResult sendReply(SysAiBotBinding bot, BotClient client,
+                                    BotInboundMessage message, String reply) {
+        String fromUser = message.getFromUser();
+        if (!"wechat".equals(bot.getPlatform()) && message.isFromGroup()) {
+            String groupTarget = message.getChatId() != null ? message.getChatId() : fromUser;
+            return client.sendToGroup(groupTarget, reply);
+        }
+        return client.sendText(fromUser, reply);
+    }
+
+    /**
+     * 处理入站消息：调用 AI 生成回复并回发（多平台）。
      * @param bot 机器人
      * @param client 客户端
      * @param message 消息
      */
-    private void handleMessage(SysAiBotBinding bot, ILinkBotClient client, BotInboundMessage message) {
+    private String handleMessage(SysAiBotBinding bot, BotClient client, BotInboundMessage message) {
         String content = message.getContent();
         String fromUser = message.getFromUser();
         if (content == null || content.isBlank() || fromUser == null) {
-            return;
+            return "SKIP_EMPTY";
         }
-        log.info("[BotChat] Bot {} 收到消息 from={}: {}", bot.getBotId(), fromUser, content);
-        recordMessage(bot.getBotId(), "IN", fromUser, content, bot.getOwnerKey());
-        try {
-            String reply = aiReply(bot, content);
-            if (reply != null && !reply.isBlank()) {
-                BotSendResult result = client.sendText(fromUser, reply);
-                if (result.isSuccess()) {
-                    log.info("[BotChat] Bot {} 已回复 from={} text={}", bot.getBotId(), fromUser, reply);
-                    recordMessage(bot.getBotId(), "OUT", fromUser, reply, bot.getOwnerKey());
-                } else {
-                    log.warn("[BotChat] Bot {} 回复发送失败 from={} code={} msg={} text={}",
-                            bot.getBotId(), fromUser, result.getErrorCode(), result.getErrorMessage(), reply);
-                }
-                // 更新最后活跃时间
-                bot.setLastActiveTime(LocalDateTime.now());
-                botBindingMapper.updateById(bot);
-            }
-        } catch (Exception e) {
-            log.error("[BotChat] Bot {} 回复失败 from={}", bot.getBotId(), fromUser, e);
+        // 会话键：群聊用群 chatId，私聊用用户 openid，保证上下文按会话隔离
+        boolean fromGroup = message.isFromGroup();
+        String chatId = fromGroup
+                ? (message.getChatId() != null ? message.getChatId() : fromUser)
+                : fromUser;
+        log.info("[BotChat] Bot {} 收到消息 chat={} from={} group={}: {}",
+                bot.getBotId(), chatId, fromUser, fromGroup, content);
+        // 幂等声明：跨实例同时收到同一条消息时，仅第一个落库成功的实例会处理并回复
+        String dedupKey = inboundDedupKey(bot, message, chatId);
+        boolean claimed = recordMessage(bot.getBotId(), "IN", fromUser, chatId, fromGroup, content,
+                bot.getOwnerKey(), dedupKey, message.getContextToken());
+        if (!claimed) {
+            log.info("[BotChat] 入站消息已被其他实例处理，跳过回复 bot={} chat={} key={}",
+                    bot.getBotId(), chatId, dedupKey);
+            return "SKIP_DUPLICATE";
+        }
+
+        // ===== 路径 A（优先级最高）：被直接点名 → 常规直接回复 =====
+        // 私聊总是回复；群聊：mentionOnly 关闭时回复，开启时仅被 @ 才回复。
+        boolean addressed = !fromGroup
+                || !Boolean.TRUE.equals(bot.getMentionOnly())
+                || isMentioned(bot, message);
+        boolean directReplied = false;
+        if (!addressed) {
+            log.info("[BotChat] 群消息未 @ Bot，不做直接回复 bot={} from={}", bot.getBotId(), fromUser);
+        } else {
             try {
-                client.sendText(fromUser, "抱歉，我暂时无法回复，请稍后再试。");
-            } catch (Exception ignored) {
-                // 忽略
+                // 直接回复也带多轮记忆：按绑定的「上下文条数」（random_context_count，默认 10）
+                // 取本会话最近 N 条历史（排除当前这条刚落库的 IN），组装成 user/assistant 多轮。
+                int memoryCount = bot.getRandomContextCount() == null ? 10 : bot.getRandomContextCount();
+                List<ChatMessage> priorTurns = loadRecentTurns(bot.getBotId(), chatId, dedupKey, memoryCount);
+                String reply = aiReply(bot, content, priorTurns);
+                if (reply != null && !reply.isBlank()) {
+                    BotSendResult result = sendReply(bot, client, message, reply);
+                    if (result.isSuccess()) {
+                        log.info("[BotChat] Bot {} 直接回复 chat={} text={}", bot.getBotId(), chatId, reply);
+                        recordMessage(bot.getBotId(), "OUT", fromUser, chatId, fromGroup, reply,
+                                bot.getOwnerKey(), null, null);
+                        directReplied = true;
+                    } else {
+                        log.warn("[BotChat] Bot {} 直接回复发送失败 chat={} code={} msg={} text={}",
+                                bot.getBotId(), chatId, result.getErrorCode(), result.getErrorMessage(), reply);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("[BotChat] Bot {} 直接回复失败 chat={}", bot.getBotId(), chatId, e);
+                try {
+                    sendReply(bot, client, message, "抱歉，我暂时无法回复，请稍后再试。");
+                } catch (Exception ignored) {
+                    // 忽略
+                }
             }
         }
+
+        // ===== 路径 B：随机冒泡（群聊/私聊每条都参与，独立于 @，在直接回复之后处理）=====
+        boolean randomFired = false;
+        if (Boolean.TRUE.equals(bot.getRandomReplyEnabled())) {
+            double probability = bot.getRandomProbability() == null ? 0.0 : bot.getRandomProbability();
+            if (!probabilityCollision().hitPercent(probability)) {
+                log.info("[BotChat] 随机冒泡未命中（{}%）bot={} from={}", probability, bot.getBotId(), fromUser);
+            } else {
+                log.info("[BotChat] 随机冒泡命中（{}%），组装上下文 bot={} chat={}",
+                        probability, bot.getBotId(), chatId);
+                try {
+                    int contextCount = bot.getRandomContextCount() == null ? 10 : bot.getRandomContextCount();
+                    String proactive = aiReply(bot, buildContextPrompt(bot.getBotId(), chatId, contextCount));
+                    if (proactive != null && !proactive.isBlank()) {
+                        BotSendResult randomResult = sendReply(bot, client, message, proactive);
+                        if (randomResult.isSuccess()) {
+                            log.info("[BotChat] Bot {} 随机冒泡已发送 chat={} text={}",
+                                    bot.getBotId(), chatId, proactive);
+                            recordMessage(bot.getBotId(), "OUT", fromUser, chatId, fromGroup, proactive,
+                                    bot.getOwnerKey(), null, null);
+                            randomFired = true;
+                        } else {
+                            log.warn("[BotChat] Bot {} 随机冒泡发送失败 chat={} code={} msg={}",
+                                    bot.getBotId(), chatId, randomResult.getErrorCode(),
+                                    randomResult.getErrorMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("[BotChat] Bot {} 随机冒泡失败 chat={}", bot.getBotId(), chatId, e);
+                }
+            }
+        }
+
+        // 更新最后活跃时间
+        if (directReplied || randomFired) {
+            bot.setLastActiveTime(LocalDateTime.now());
+            botBindingMapper.updateById(bot);
+        }
+        if (directReplied) {
+            return "REPLIED";
+        }
+        if (randomFired) {
+            return "RANDOM_FIRED";
+        }
+        return addressed ? "SEND_FAILED" : "SKIP_NOT_MENTIONED";
+    }
+
+    /**
+     * 【仅用于业务验收】以捕获型客户端驱动真实消息处理链路，不真正对外发送。
+     *
+     * @param bindingId 绑定 id
+     * @param message   模拟入站消息
+     * @return 决策结果：outcome（决策码）、sentText（捕获到的回复，可空）
+     */
+    public Map<String, Object> simulateInbound(Long bindingId, BotInboundMessage message) {
+        SysAiBotBinding bot = botBindingMapper.selectById(bindingId);
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        if (bot == null) {
+            result.put("outcome", "BINDING_NOT_FOUND");
+            return result;
+        }
+        CapturingBotClient stub = new CapturingBotClient();
+        String outcome = handleMessage(bot, stub, message);
+        result.put("outcome", outcome);
+        result.put("sentText", stub.captured);
+        return result;
+    }
+
+    /**
+     * 捕获型客户端：拦截 sendText / sendToGroup，不发起真实网络请求，仅记录待发送文本。
+     */
+    static final class CapturingBotClient extends ILinkBotClient {
+        private String captured;
+
+        @Override
+        public BotSendResult sendText(String toUser, String content) {
+            this.captured = content;
+            return BotSendResult.ok("simulated");
+        }
+
+        @Override
+        public BotSendResult sendToGroup(String groupId, String content) {
+            this.captured = content;
+            return BotSendResult.ok("simulated");
+        }
+    }
+
+    /**
+     * 判断入站消息是否 @ 了 Bot 自身。
+     *
+     * <p>判定优先级：平台显式标记 {@code mentionedBot} → @ 列表包含 Bot 标识/昵称
+     * → 文本中出现「@昵称」。都不满足视为未 @。</p>
+     *
+     * @param bot     机器人绑定
+     * @param message 入站消息
+     * @return 是否 @ 了 Bot
+     */
+    private boolean isMentioned(SysAiBotBinding bot, BotInboundMessage message) {
+        if (Boolean.TRUE.equals(message.getMentionedBot())) {
+            return true;
+        }
+        List<String> mentioned = message.getMentionedList();
+        if (mentioned != null) {
+            for (String id : mentioned) {
+                if (id == null) {
+                    continue;
+                }
+                if (id.equals(bot.getBotId())
+                        || (bot.getNickname() != null && id.contains(bot.getNickname()))) {
+                    return true;
+                }
+            }
+        }
+        String text = message.getContent();
+        return text != null
+                && bot.getNickname() != null
+                && text.contains("@" + bot.getNickname());
+    }
+
+    /**
+     * 组装某会话最近 N 条上下文，构造交给 AI 的提示词（随机冒泡 / AI 发送复用）。
+     *
+     * <p>取该会话（bot + chatId）最近 {@code count} 条消息，按时间升序拼成聊天记录，
+     * 并要求 AI 以参与者口吻自然接一句话。</p>
+     *
+     * @param botId  机器人标识
+     * @param chatId 会话标识
+     * @param count  上下文条数
+     * @return 含上下文的提示词
+     */
+    private String buildContextPrompt(String botId, String chatId, int count) {
+        int safeCount = Math.max(1, count);
+        List<SysAiBotMessage> recent = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .orderByDesc(SysAiBotMessage::getCreateTime)
+                        .last("LIMIT " + safeCount));
+        Collections.reverse(recent);
+
+        StringBuilder transcript = new StringBuilder(512);
+        for (SysAiBotMessage m : recent) {
+            String speaker = "IN".equals(m.getDirection())
+                    ? "对方"
+                    : "你（Bot）";
+            transcript.append(speaker).append("：").append(m.getContent()).append('\n');
+        }
+        return "以下是最近的聊天上下文：\n" + transcript
+                + "\n请像其中的参与者一样，结合上下文自然地接一句话参与对话，"
+                + "直接输出你要说的内容，不要解释、不要复述记录、不要加引号或任何前缀。";
+    }
+
+    /**
+     * 取本会话最近 N 条历史，组装成多轮 role 消息（user/assistant），用于直接回复的上下文记忆。
+     *
+     * <p>排除当前这条刚落库的入站消息（按 dedupKey），避免与作为当前输入再次发送而重复；
+     * OUT 行 dedupKey 为 NULL、历史 IN 行为各自不同的 dedupKey，故条件为
+     * {@code dedup IS NULL OR dedup <> 当前key}。按 id 倒序取最近 N 条后再反转为时间正序。</p>
+     *
+     * @param botId           机器人标识
+     * @param chatId          会话标识
+     * @param currentDedupKey 当前入站消息的去重键
+     * @param count           上下文条数
+     * @return 时间正序的多轮消息（无历史时返回空列表）
+     */
+    private List<ChatMessage> loadRecentTurns(String botId, String chatId, String currentDedupKey, int count) {
+        int safeCount = Math.max(0, count);
+        if (safeCount == 0) {
+            return List.of();
+        }
+        List<SysAiBotMessage> recent = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .and(w -> w.isNull(SysAiBotMessage::getDedupKey)
+                                .or().ne(SysAiBotMessage::getDedupKey, currentDedupKey))
+                        .orderByDesc(SysAiBotMessage::getId)
+                        .last("LIMIT " + safeCount));
+        if (recent.isEmpty()) {
+            return List.of();
+        }
+        Collections.reverse(recent);
+        return toTurns(recent);
+    }
+
+    /**
+     * 取本会话最近 N 条历史组装成多轮 role 消息（user/assistant），不做 dedup 排除。
+     *
+     * <p>用于「AI 发送」：操作者输入的 prompt 并未落库为 IN 消息，因此无需排除
+     * 当前入站行，直接取最近上下文作为记忆即可。count=0 返回空列表。</p>
+     *
+     * @param botId  机器人标识
+     * @param chatId 会话标识
+     * @param count  上下文条数
+     * @return 时间正序的多轮消息
+     */
+    private List<ChatMessage> loadHistoryTurns(String botId, String chatId, int count) {
+        int safeCount = Math.max(0, count);
+        if (safeCount == 0) {
+            return List.of();
+        }
+        List<SysAiBotMessage> recent = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .orderByDesc(SysAiBotMessage::getId)
+                        .last("LIMIT " + safeCount));
+        if (recent.isEmpty()) {
+            return List.of();
+        }
+        Collections.reverse(recent);
+        return toTurns(recent);
+    }
+
+    /**
+     * 把按时间正序排列的消息行映射为多轮 role 消息（IN→user，OUT→assistant）。
+     *
+     * @param rows 时间正序的消息行
+     * @return 多轮消息
+     */
+    private static List<ChatMessage> toTurns(List<SysAiBotMessage> rows) {
+        List<ChatMessage> turns = new ArrayList<>(rows.size());
+        for (SysAiBotMessage m : rows) {
+            if (m.getContent() == null || m.getContent().isBlank()) {
+                continue;
+            }
+            String role = "IN".equals(m.getDirection()) ? "user" : "assistant";
+            turns.add(ChatMessage.builder().role(role).content(m.getContent()).build());
+        }
+        return turns;
     }
 
     /**
@@ -240,21 +566,244 @@ public class AiBotChatService {
         SysAiBotBinding binding = findBinding(botId);
         // 以他人机器人对外发消息会消耗归属者的凭证与信任，先按绑定归属拦越权
         caller.requireReadable(binding == null ? null : binding.getOwnerKey());
-        ILinkBotClient client = runningBots.get(botId);
+        BotClient client = runningBots.get(botId);
         if (client == null) {
-            return BotSendResult.fail(-1, "Bot 未在运行，请先在 Bot 管理页启用");
+            return BotSendResult.fail(-1, "Bot 未在运行，请先在连接器管理页启用");
         }
         if (content == null || content.isBlank()) {
             return BotSendResult.fail(-1, "消息内容不能为空");
         }
         BotSendResult result = client.sendText(fromUser, content);
         if (result.isSuccess()) {
-            recordMessage(botId, "OUT", fromUser, content, binding == null ? null : binding.getOwnerKey());
+            recordMessage(botId, "OUT", fromUser, fromUser, false, content,
+                    binding == null ? null : binding.getOwnerKey(), null, null);
         } else {
             log.warn("[BotChat] 主动发送失败 bot={} to={} code={} msg={}",
                     botId, fromUser, result.getErrorCode(), result.getErrorMessage());
         }
         return result;
+    }
+
+    // ==================== 连接器会话监控（按 chatId 隔离上下文） ====================
+
+    /**
+     * 列出某连接器下的会话（按 chatId 聚合，取每个会话最后一条消息）。
+     *
+     * @param bindingId 绑定 id
+     * @param caller    调用方归属
+     * @return 会话列表（按最后消息时间降序）
+     */
+    public List<Map<String, Object>> listBindingConversations(Long bindingId, AiBotCaller caller) {
+        SysAiBotBinding binding = loadBinding(bindingId, caller);
+        List<SysAiBotMessage> all = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, binding.getBotId())
+                        .orderByAsc(SysAiBotMessage::getCreateTime));
+        Map<String, Map<String, Object>> byChat = new LinkedHashMap<>();
+        for (SysAiBotMessage m : all) {
+            String key = m.getChatId() != null ? m.getChatId() : m.getFromUser();
+            Map<String, Object> c = byChat.computeIfAbsent(key, k -> {
+                Map<String, Object> x = new LinkedHashMap<>(8);
+                x.put("chatId", key);
+                x.put("fromGroup", Boolean.TRUE.equals(m.getFromGroup()));
+                x.put("messageCount", 0);
+                return x;
+            });
+            c.put("lastContent", m.getContent());
+            c.put("lastTime", m.getCreateTime());
+            c.put("messageCount", (Integer) c.get("messageCount") + 1);
+            if (Boolean.TRUE.equals(m.getFromGroup())) {
+                c.put("fromGroup", true);
+            }
+        }
+        List<Map<String, Object>> result = new ArrayList<>(byChat.values());
+        result.sort((a, b) -> {
+            LocalDateTime ta = (LocalDateTime) a.get("lastTime");
+            LocalDateTime tb = (LocalDateTime) b.get("lastTime");
+            if (ta == null) {
+                return 1;
+            }
+            if (tb == null) {
+                return -1;
+            }
+            return tb.compareTo(ta);
+        });
+        return result;
+    }
+
+    /**
+     * 查询某会话的消息（按时间升序），构成该会话独立上下文。
+     *
+     * @param bindingId 绑定 id
+     * @param chatId    会话标识
+     * @param caller    调用方归属
+     * @return 消息列表
+     */
+    public List<SysAiBotMessage> listConversationMessages(Long bindingId, String chatId, AiBotCaller caller) {
+        SysAiBotBinding binding = loadBinding(bindingId, caller);
+        return botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, binding.getBotId())
+                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .orderByAsc(SysAiBotMessage::getCreateTime));
+    }
+
+    /**
+     * 清除某会话的全部消息（重置该会话独立上下文）。
+     *
+     * <p>删除该绑定（botId）下指定 chatId 的全部消息；清除后该会话将从会话列表消失，
+     * 直到外部平台再次发来消息。属写操作，仅归属本人可清除。</p>
+     *
+     * @param bindingId 绑定 id
+     * @param chatId    会话标识
+     * @param caller    调用方归属
+     * @return 删除的消息条数
+     */
+    public int clearConversation(Long bindingId, String chatId, AiBotCaller caller) {
+        SysAiBotBinding binding = loadBinding(bindingId, caller);
+        caller.requireWritable(binding.getOwnerKey());
+        int deleted = botMessageMapper.delete(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, binding.getBotId())
+                        .eq(SysAiBotMessage::getChatId, chatId));
+        log.info("[Connector] 清除会话 id={} chat={} deleted={}", bindingId, chatId, deleted);
+        return deleted;
+    }
+
+    /**
+     * 以 Bot 身份向某会话手动发送一条消息。
+     *
+     * @param bindingId 绑定 id
+     * @param chatId    会话标识
+     * @param content   消息内容
+     * @param caller    调用方归属
+     * @return 发送结果
+     */
+    public BotSendResult sendToConversation(Long bindingId, String chatId, String content, AiBotCaller caller) {
+        SysAiBotBinding binding = loadBinding(bindingId, caller);
+        if (content == null || content.isBlank()) {
+            return BotSendResult.fail(-1, "消息内容不能为空");
+        }
+        BotClient client = runningBots.get(binding.getBotId());
+        if (client == null) {
+            return BotSendResult.fail(-1, "连接器未在运行，请先在连接器管理页启用");
+        }
+        boolean fromGroup = isGroupConversation(binding.getBotId(), chatId);
+        BotSendResult result = dispatch(client, binding, chatId, fromGroup, content);
+        if (result.isSuccess()) {
+            String author = "wechat".equals(binding.getPlatform()) && fromGroup
+                    ? lastInboundAuthor(binding.getBotId(), chatId) : chatId;
+            recordMessage(binding.getBotId(), "OUT", author != null ? author : chatId,
+                    chatId, fromGroup, content, binding.getOwnerKey(), null, null);
+        }
+        return result;
+    }
+
+    /**
+     * AI 发送：以操作者输入的 prompt 为当前问题，附带该会话最近 N 条上下文作为多轮记忆，
+     * 交给 AI 生成回复并发送。
+     *
+     * @param bindingId    绑定 id
+     * @param chatId       会话标识
+     * @param prompt       操作者输入的问题/指令（必填，不落库为 IN）
+     * @param contextCount 上下文条数（可空，空=绑定配置的条数）
+     * @param caller       调用方归属
+     * @return reply（AI 回复）、sent（是否已发送）、错误信息
+     */
+    public Map<String, Object> aiSendToConversation(Long bindingId, String chatId, String prompt,
+                                                    Integer contextCount, AiBotCaller caller) {
+        SysAiBotBinding binding = loadBinding(bindingId, caller);
+        int count = contextCount != null && contextCount > 0
+                ? contextCount
+                : (binding.getRandomContextCount() != null ? binding.getRandomContextCount() : 10);
+        // 当前问题用操作者输入的 prompt；最近上下文以多轮 role 消息注入（count=0 表示不带历史）
+        List<ChatMessage> history = loadHistoryTurns(binding.getBotId(), chatId, count);
+        String reply = aiReply(binding, prompt, history);
+        Map<String, Object> data = new LinkedHashMap<>(8);
+        data.put("reply", reply);
+
+        boolean usable = reply != null && !reply.isBlank()
+                && !reply.startsWith("AI 回复失败") && !reply.contains("未配置") && !reply.contains("未在模型管理");
+        BotClient client = runningBots.get(binding.getBotId());
+        if (!usable) {
+            data.put("sent", false);
+            return data;
+        }
+        if (client == null) {
+            data.put("sent", false);
+            data.put("errorMessage", "连接器未在运行，请先在连接器管理页启用");
+            return data;
+        }
+        boolean fromGroup = isGroupConversation(binding.getBotId(), chatId);
+        BotSendResult result = dispatch(client, binding, chatId, fromGroup, reply);
+        data.put("sent", result.isSuccess());
+        data.put("errorCode", result.getErrorCode());
+        data.put("errorMessage", result.getErrorMessage());
+        if (result.isSuccess()) {
+            String author = "wechat".equals(binding.getPlatform()) && fromGroup
+                    ? lastInboundAuthor(binding.getBotId(), chatId) : chatId;
+            recordMessage(binding.getBotId(), "OUT", author != null ? author : chatId,
+                    chatId, fromGroup, reply, binding.getOwnerKey(), null, null);
+        }
+        return data;
+    }
+
+    // ---- 连接器监控辅助 ----
+
+    /**
+     * 加载绑定并校验可读。
+     */
+    private SysAiBotBinding loadBinding(Long bindingId, AiBotCaller caller) {
+        SysAiBotBinding binding = botBindingMapper.selectById(bindingId);
+        if (binding == null) {
+            throw new IllegalArgumentException("连接器不存在");
+        }
+        caller.requireReadable(binding.getOwnerKey());
+        return binding;
+    }
+
+    /**
+     * 该会话是否为群聊（看是否存在 fromGroup=1 的消息）。
+     */
+    private boolean isGroupConversation(String botId, String chatId) {
+        Long cnt = botMessageMapper.selectCount(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .eq(SysAiBotMessage::getFromGroup, true));
+        return cnt != null && cnt > 0;
+    }
+
+    /**
+     * 取该会话最近一条入站消息的作者（wechat 群被动回复需发给作者）。
+     */
+    private String lastInboundAuthor(String botId, String chatId) {
+        List<SysAiBotMessage> ins = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .eq(SysAiBotMessage::getDirection, "IN")
+                        .orderByDesc(SysAiBotMessage::getCreateTime)
+                        .last("LIMIT 1"));
+        return ins.isEmpty() ? null : ins.getFirst().getFromUser();
+    }
+
+    /**
+     * 按平台/会话类型选择正确目标发送。
+     *
+     * <p>wechat：私聊 sendText(用户)，群 sendText(最近作者)（沿用被动回复语义）；
+     * qq/feishu：群 sendToGroup(chatId)，私聊 sendText(chatId)。</p>
+     */
+    private BotSendResult dispatch(BotClient client, SysAiBotBinding binding,
+                                   String chatId, boolean fromGroup, String text) {
+        if ("wechat".equals(binding.getPlatform())) {
+            String target = fromGroup ? lastInboundAuthor(binding.getBotId(), chatId) : chatId;
+            return client.sendText(target != null ? target : chatId, text);
+        }
+        if (fromGroup) {
+            return client.sendToGroup(chatId, text);
+        }
+        return client.sendText(chatId, text);
     }
 
     /**
@@ -423,10 +972,56 @@ public class AiBotChatService {
      * @return 模型名，无法解析时返回 空
      */
     private String resolveModelName(SysAiBotBinding bot) {
+        String modelName;
         if (bot != null && bot.getModel() != null && !bot.getModel().isBlank()) {
-            return bot.getModel();
+            modelName = bot.getModel();
+        } else {
+            modelName = globalSettingReader.getStr("bot", "default_model");
         }
-        return globalSettingReader.getStr("bot", "default_model");
+        return normalizeModelName(modelName);
+    }
+
+    /**
+     * 解析 机器人 使用的系统提示词：优先 机器人 单独配置的自定义提示词，
+     * 未配置则回退全局默认提示词（bot.system_prompt），都没有则返回 空。
+     *
+     * @param bot 机器人 绑定记录（可为 空）
+     * @return 生效的系统提示词，无则返回 {@code null}
+     */
+    private String resolveSystemPrompt(SysAiBotBinding bot) {
+        if (bot != null && bot.getSystemPrompt() != null && !bot.getSystemPrompt().isBlank()) {
+            return bot.getSystemPrompt().trim();
+        }
+        String global = globalSettingReader.getStr("bot", "system_prompt");
+        return (global == null || global.isBlank()) ? null : global.trim();
+    }
+
+    /**
+     * 归一化模型名：剥离「提供者id:」前缀。
+     *
+     * <p>系统默认模型以 {@code <providerId>:<model>} 形式存储（如
+     * {@code 1789547286889:agnes-3.0-flash}），而模型表 {@code model} 列只存
+     * {@code agnes-3.0-flash}。直接用带前缀的整串查表会查不到，因此当冒号前是
+     * 纯数字（提供者id）时，取冒号之后的真实模型名；其余形态原样返回。</p>
+     *
+     * @param raw 原始模型名（可空）
+     * @return 归一化后的模型名，入参为空时返回 {@code null}
+     */
+    private static String normalizeModelName(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.trim();
+        int colon = value.indexOf(':');
+        if (colon > 0) {
+            String prefix = value.substring(0, colon);
+            boolean numeric = !prefix.isEmpty()
+                    && prefix.chars().allMatch(Character::isDigit);
+            if (numeric) {
+                return value.substring(colon + 1).trim();
+            }
+        }
+        return value;
     }
 
     /**
@@ -456,13 +1051,7 @@ public class AiBotChatService {
             }
             String apiKey = extractApiKey(provider.getCredentials());
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
-            return ChatClient.create(ChatClientSetting.builder()
-                    .provider(provider.getPlatform())
-                    .appKey(apiKey)
-                    .baseUrl(provider.getBaseUrl())
-                    .extraHeaders(extraHeaders)
-                    .proxy(provider.getProxy())
-                    .build())
+            return ChatClient.create(buildSetting(provider, apiKey, extraHeaders))
                     .model(modelName);
         } catch (Exception e) {
             log.warn("[BotChat] 构建模型 ChatClient 失败 model={}: {}", modelName, e.getMessage());
@@ -638,42 +1227,148 @@ public class AiBotChatService {
         push.put("type", "bot.conversation-deleted");
         push.put("botId", botId);
         push.put("fromUser", fromUser);
-        webSocketHandler.broadcast("bot.conversation-deleted", push);
+        webSocketHandler.sendToUser(AiUserContext.currentUserId(), "bot.conversation-deleted", push);
         return deleted;
+    }
+
+    /**
+     * 查询某 Bot 与目标用户/会话最近一条持久化的 context_token（重启后回填）。
+     *
+     * <p>按 chat_id（私聊即用户 openid）或 from_user 匹配目标，取 id 最大的非空令牌；
+     * 无历史令牌（用户从未在重启后发过消息）时返回 {@code null}。</p>
+     *
+     * @param botId 机器人标识
+     * @param user  目标用户/会话标识
+     * @return 最近上下文令牌，无则 {@code null}
+     */
+    private String loadLatestContextToken(String botId, String user) {
+        if (botId == null || user == null) {
+            return null;
+        }
+        try {
+            List<SysAiBotMessage> rows = botMessageMapper.selectList(
+                    Wrappers.<SysAiBotMessage>lambdaQuery()
+                            .eq(SysAiBotMessage::getBotId, botId)
+                            .isNotNull(SysAiBotMessage::getContextToken)
+                            .and(w -> w.eq(SysAiBotMessage::getChatId, user)
+                                    .or().eq(SysAiBotMessage::getFromUser, user))
+                            .orderByDesc(SysAiBotMessage::getId)
+                            .last("LIMIT 1"));
+            return rows.isEmpty() ? null : rows.getFirst().getContextToken();
+        } catch (Throwable e) {
+            log.error("[BotChat] loadLatestContextToken 查询异常 bot={} user={}", botId, user, e);
+            return null;
+        }
     }
 
     /**
      * 落库一条 机器人 聊天消息（失败不阻断主流程），并广播到 IM 页。
      *
-     * @param botId    机器人 唯一标识
+     * @param botId     机器人 唯一标识
      * @param direction 入（用户→机器人）/ 出（机器人→用户）
-     * @param fromUser  微信用户 标识
+     * @param fromUser  消息作者标识
+     * @param chatId    会话标识（群=群 openid，私聊=用户 openid）
+     * @param fromGroup 是否群聊
      * @param content   消息内容
      * @param ownerKey  所属 机器人 绑定的归属标识（{@code u:<userId>} / {@code fp:<指纹>}，可为空）
+     * @param dedupKey  幂等去重键（仅入站 IN 消息传入，OUT 传 {@code null}）
+     * @return {@code true}=落库成功（或非重复类异常，按尽力而为不阻断）；
+     *         {@code false}=命中唯一键冲突，说明同一条消息已被本实例或其他实例处理，调用方应跳过
      */
-    private void recordMessage(String botId, String direction, String fromUser, String content, String ownerKey) {
+    private boolean recordMessage(String botId, String direction, String fromUser, String chatId,
+                               boolean fromGroup, String content, String ownerKey, String dedupKey,
+                               String contextToken) {
         try {
             SysAiBotMessage msg = new SysAiBotMessage();
             msg.setBotId(botId);
             msg.setDirection(direction);
             msg.setFromUser(fromUser);
+            msg.setChatId(chatId != null ? chatId : fromUser);
+            msg.setFromGroup(fromGroup);
             msg.setContent(content);
             msg.setCreateTime(LocalDateTime.now());
+            msg.setDedupKey(dedupKey);
+            // 仅入站 IN 消息携带 context_token，随消息持久化，供重启后回填
+            msg.setContextToken(contextToken);
             // 归属随 机器人 绑定：轮询线程取不到请求身份，且设备指纹流量不算到任何用户头上
             msg.setUserId(AiBotCaller.userOf(ownerKey));
             botMessageMapper.insert(msg);
             // 广播到 IM 页（新消息 / 新会话实时刷新）
-        Map<String, Object> push = new HashMap<>(4);
+        Map<String, Object> push = new HashMap<>(8);
             push.put("type", "bot.message");
             push.put("botId", botId);
             push.put("direction", direction);
             push.put("fromUser", fromUser);
+            push.put("chatId", msg.getChatId());
+            push.put("fromGroup", fromGroup);
             push.put("content", content);
+            push.put("dedupKey", dedupKey);
             push.put("createTime", msg.getCreateTime() != null ? msg.getCreateTime().toString() : null);
-            webSocketHandler.broadcast("bot.message", push);
+            webSocketHandler.sendToUser(msg.getUserId(), "bot.message", push);
+            return true;
+        } catch (DuplicateKeyException e) {
+            // 多实例并发处理同一条消息：唯一键冲突，仅一个实例能成功，其余在此被拦下
+            log.info("[BotChat] 重复消息已拦截（幂等）bot={} dir={} chat={} key={}",
+                    botId, direction, chatId, dedupKey);
+            return false;
         } catch (Exception e) {
             log.warn("[BotChat] 消息落库失败 bot={} dir={}: {}", botId, direction, e.getMessage());
+            // 非重复类异常按尽力而为处理，不阻断 IN 主链路（与改造前行为一致）
+            return true;
         }
+    }
+
+    /**
+     * 构造入站消息的幂等去重键。
+     *
+     * <p>平台提供稳定消息 ID（如 QQ 的消息 {@code id}）时，直接用
+     * {@code ID:botId|chatId|msgId}，可精确去重、零误判；</p>
+     *
+     * <p>平台不提供稳定 ID（如 iLink 早期用随机值）时，退化为
+     * {@code FP:botId|chatId|60s时间窗|发送者+内容指纹}：多实例对同一条消息的重复投递
+     * 几乎同时发生、落在同一时间窗内从而被去重；窗口仅 60 秒，正常间隔的重复发言不受影响。</p>
+     *
+     * @param bot     机器人绑定
+     * @param message 入站消息
+     * @param chatId  会话标识
+     * @return 幂等去重键
+     */
+    private String inboundDedupKey(SysAiBotBinding bot, BotInboundMessage message, String chatId) {
+        String botId = bot.getBotId();
+        String msgId = message.getMsgId();
+        if (msgId != null && !msgId.isBlank()) {
+            return "ID:" + botId + "|" + chatId + "|" + msgId;
+        }
+        long ts = message.getCreateTime() > 0L ? message.getCreateTime() : System.currentTimeMillis();
+        long bucket = ts / 60000L;
+        String fingerprint = DigestUtils.md5DigestAsHex(
+                (message.getFromUser() + "\n" + message.getContent())
+                        .getBytes(StandardCharsets.UTF_8));
+        return "FP:" + botId + "|" + chatId + "|" + bucket + "|" + fingerprint;
+    }
+
+    /**
+     * 获取概率碰撞实现（common-starter SPI）。
+     *
+     * <p>通过 {@link ServiceProvider} 加载默认的 {@link ProbabilityCollision}；
+     * 类路径无注册实现时回退到 {@link SimpleProbabilityCollision}，保证不返回空。</p>
+     *
+     * @return 概率碰撞实现
+     */
+    private static ProbabilityCollision probabilityCollision() {
+        // SPI 加载可能因实现类缺少 @Spi 注解等直接抛 IllegalStateException，
+        // 必须失败安全：任何加载异常都回退到内置简单实现，绝不让概率组件拖垮整条消息链路。
+        try {
+            ProbabilityCollision collision = ServiceProvider
+                    .of(ProbabilityCollision.class)
+                    .getSpiService();
+            if (collision != null) {
+                return collision;
+            }
+        } catch (Throwable e) {
+            log.warn("[BotChat] ProbabilityCollision SPI 加载失败，回退内置实现: {}", e.getMessage());
+        }
+        return new SimpleProbabilityCollision();
     }
 
     /**
@@ -687,81 +1382,198 @@ public class AiBotChatService {
      * @return AIreply的结果
      */
     private String aiReply(SysAiBotBinding bot, String userMsg) {
- // 优先用 机器人 单独配置的模型，未配置则回退全局默认模型（机器人.默认_模型）
-        String modelName = bot.getModel();
-        if (modelName == null || modelName.isBlank()) {
-            modelName = globalSettingReader.getStr("bot", "default_model");
+        return aiReply(bot, userMsg, List.of());
+    }
+
+    /**
+     * 用 机器人 配置的模型生成 AI 回复（可携带多轮历史）。
+     *
+     * @param bot     机器人绑定
+     * @param userMsg 当前用户消息
+     * @param history 多轮历史（user/assistant，时间正序，可空）
+     * @return AI 回复
+     */
+    private String aiReply(SysAiBotBinding bot, String userMsg, List<ChatMessage> history) {
+        // 候选模型（按优先级、去重）：Bot 单独模型 → Bot 默认模型 → 运行时默认模型
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        addCandidate(candidates, bot.getModel());
+        addCandidate(candidates, globalSettingReader.getStr("bot", "default_model"));
+        addCandidate(candidates, globalSettingReader.getStr("runtime", "default_model"));
+        if (candidates.isEmpty()) {
+            return "请先为该 Bot 设置 AI 模型，或在设置中配置默认模型。";
         }
-        if (modelName == null || modelName.isBlank()) {
-            return "请先为该 Bot 设置 AI 模型，或在设置中配置 Bot 默认模型。";
+        long timeoutMs = resolveBotTimeout();
+        Exception lastError = null;
+        for (String candidate : candidates) {
+            try {
+                String reply = attemptReply(bot, candidate, userMsg, timeoutMs, history);
+                if (reply != null && !reply.isBlank()) {
+                    return reply;
+                }
+                log.warn("[BotChat] 候选模型 {} 无有效回复，尝试下一个", candidate);
+            } catch (Exception e) {
+                lastError = e;
+                log.warn("[BotChat] 候选模型 {} 调用失败（{}），尝试下一个", candidate, e.getMessage());
+            }
         }
+        String reason = describeAiError(lastError, "所有候选模型均无响应");
+        return "AI 回复失败：" + reason;
+    }
+
+    /**
+     * 规整 AI 调用失败原因：异常 message 为空、仅分隔符或为裸全限定类名时，
+     * 回退为可读提示，避免出现「AI 回复失败： : com.xxx.Client」这类残缺文案。
+     */
+    private String describeAiError(Throwable e, String fallback) {
+        if (e == null) {
+            return fallback;
+        }
+        String raw = e.getMessage() == null ? "" : e.getMessage();
+        String trimmed = raw.trim().replaceAll("^[:：\\s]+", "").trim();
+        boolean looksLikeClassName = !trimmed.isEmpty()
+                && trimmed.matches("[A-Za-z_$][\\w$.]*")
+                && trimmed.contains(".")
+                && Character.isLowerCase(trimmed.charAt(0));
+        if (trimmed.isEmpty() || looksLikeClassName) {
+            return e.getClass().getSimpleName() + "：模型未返回有效内容，请检查模型配置、密钥或网络后重试";
+        }
+        return trimmed;
+    }
+
+    /**
+     * 使用指定模型发起一次 AI 回复（含超时与用量记录）。
+     *
+     * <p>模型未配置、供应商缺失或调用超时时抛出异常，由 {@link #aiReply} 决定是否降级。</p>
+     *
+     * @param bot       机器人绑定
+     * @param modelName 已归一化的模型名称
+     * @param userMsg   用户消息
+     * @param timeoutMs 请求超时（毫秒）
+     * @param history   多轮历史（可空）
+     * @return AI 回复文本
+     */
+    private String attemptReply(SysAiBotBinding bot, String modelName, String userMsg,
+                                long timeoutMs, List<ChatMessage> history) {
+        // 1. 按模型名查 提供者_模型，确定所属 提供者
+        SysAiProviderModel pm = providerModelMapper.selectOne(
+                Wrappers.<SysAiProviderModel>lambdaQuery()
+                        .eq(SysAiProviderModel::getModel, modelName)
+                        .eq(SysAiProviderModel::getEnabled, true));
+        if (pm == null) {
+            throw new IllegalStateException("模型 " + modelName + " 未在模型管理中配置");
+        }
+        // 2. 查 提供者，取 platform / baseurl / 凭证
+        SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+        if (provider == null || provider.getBaseUrl() == null) {
+            throw new IllegalStateException("模型 " + modelName + " 的供应商不存在");
+        }
+        String apiKey = extractApiKey(provider.getCredentials());
+        Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+        // 3. 构建 对话客户端（带请求超时）并回复
+        ChatClient chatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs))
+                .model(modelName);
+        // 系统提示词：优先 Bot 自定义，未配置则回退全局默认（bot.system_prompt）
+        String effectiveSystemPrompt = resolveSystemPrompt(bot);
+        if (effectiveSystemPrompt != null && !effectiveSystemPrompt.isBlank()) {
+            chatClient.system(effectiveSystemPrompt);
+        }
+        // 多轮历史：以 user/assistant role 消息注入（位于系统提示词之后、当前输入之前）
+        if (history != null && !history.isEmpty()) {
+            chatClient.history(history);
+        }
+        if (Boolean.TRUE.equals(bot.getThinking())) {
+            chatClient.thinking(true);
+            if (bot.getThinkingEffort() != null && !bot.getThinkingEffort().isBlank()) {
+                chatClient.thinkingEffort(bot.getThinkingEffort());
+            }
+        }
+        // 3.1 勾选了 MCP 服务器时，包装为 Agent 运行时真实连接并调用工具
+        List<String> bindingMcpIds = new ArrayList<>();
+        if (bot.getMcpServerIds() != null) {
+            for (String piece : bot.getMcpServerIds().split(",")) {
+                String trimmed = piece.trim();
+                if (!trimmed.isEmpty()) {
+                    bindingMcpIds.add(trimmed);
+                }
+            }
+        }
+        AgentMcpRuntimeService.McpRuntime mcpRuntime = null;
+        if (!bindingMcpIds.isEmpty()) {
+            mcpRuntime = agentMcpRuntimeService.build(bindingMcpIds);
+            String agentId = "bot-" + Integer.toHexString(System.identityHashCode(chatClient));
+            String instruction = effectiveSystemPrompt != null && !effectiveSystemPrompt.isBlank()
+                    ? effectiveSystemPrompt : "You are a helpful assistant.";
+            AgentDefinition definition = AgentDefinition.builder()
+                    .id(agentId).name("Assistant").instruction(instruction).build();
+            Agent agent = Agent.create("agentscope")
+                    .chatClient(chatClient)
+                    .definition(definition)
+                    .mode(AgentMode.SINGLE)
+                    .mcp(true);
+            agent.mcpManager(mcpRuntime.getManager());
+            chatClient = new AgentChatClient(agent).withCloseHook(mcpRuntime::close);
+        }
+        // 4. 调用模型并记录用量（令牌/费用入库，供 usage 页统计）。
+        // 受 机器人 绑定上的「记录用量」专属开关控制：关闭时不记录。
+        long start = System.currentTimeMillis();
+        ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
+        long end = System.currentTimeMillis();
+        boolean recordUsage = !Boolean.FALSE.equals(bot.getRecordUsage());
+        if (recordUsage && response != null && response.getUsage() != null) {
+            long duration = Math.max(0L, end - start);
+            response.getUsage().setDurationMillis(duration);
+            if (response.getUsage().getFirstTokenLatencyMillis() == null) {
+                response.getUsage().setFirstTokenLatencyMillis(duration);
+            }
+            try {
+                // 归属随 机器人 绑定：轮询线程取不到请求身份，设备指纹流量不计入任何用户
+                usageRecorderInterceptor.record(
+                        "bot",
+                        provider.getPlatform(),
+                        modelName,
+                        "bot",
+                        response.getUsage(),
+                        UUID.randomUUID().toString(),
+                        AiBotCaller.userOf(bot.getOwnerKey())
+                );
+            } catch (Exception e) {
+                log.warn("[BotChat] 用量记录失败 bot={} err={}", bot.getBotId(), e.getMessage());
+            }
+        }
+        return response != null && response.getText() != null ? response.getText() : "";
+    }
+
+    /**
+     * 解析 Bot 请求超时（毫秒），取自系统配置 {@code runtime.timeout_millis}，
+     * 默认 30000，并收敛到 [5000, 120000]。
+     *
+     * @return 超时时间（毫秒）
+     */
+    private long resolveBotTimeout() {
         try {
- // 1. 按模型名查 提供者_模型，确定所属 提供者
-            SysAiProviderModel pm = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, modelName)
-                            .eq(SysAiProviderModel::getEnabled, true));
-            if (pm == null) {
-                log.warn("[BotChat] 模型 {} 未在模型管理中配置", modelName);
-                return "模型 " + modelName + " 未配置，请在模型管理中检查。";
-            }
- // 2. 查 提供者，取 platform / baseurl / 凭证
-            SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
-            if (provider == null || provider.getBaseUrl() == null) {
-                return "模型 " + modelName + " 的供应商不存在。";
-            }
-            String apiKey = extractApiKey(provider.getCredentials());
-            Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
- // 3. 构建 对话客户端 并回复（默认非流式；机器人 开启深度思考时透传）
-            ChatClient chatClient = ChatClient.create(ChatClientSetting.builder()
-                    .provider(provider.getPlatform())
-                    .appKey(apiKey)
-                    .baseUrl(provider.getBaseUrl())
-                    .extraHeaders(extraHeaders)
-                    .proxy(provider.getProxy())
-                    .build())
-                    .model(modelName);
- // 机器人 配置了 系统 提示符 时注入
-            if (bot.getSystemPrompt() != null && !bot.getSystemPrompt().isBlank()) {
-                chatClient.system(bot.getSystemPrompt());
-            }
-            if (Boolean.TRUE.equals(bot.getThinking())) {
-                chatClient.thinking(true);
-                if (bot.getThinkingEffort() != null && !bot.getThinkingEffort().isBlank()) {
-                    chatClient.thinkingEffort(bot.getThinkingEffort());
+            String value = globalSettingReader.getStr("runtime", "timeout_millis");
+            if (value != null && !value.isBlank()) {
+                long parsed = Long.parseLong(value.trim());
+                if (parsed > 0L) {
+                    return Math.max(5000L, Math.min(120000L, parsed));
                 }
             }
- // 4. 调用模型并记录用量（令牌/费用入库，供 usage 页统计）。
- // 受 机器人 绑定上的「记录用量」专属开关控制：关闭时不记录。
-            long start = System.currentTimeMillis();
-            ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
-            long end = System.currentTimeMillis();
-            boolean recordUsage = !Boolean.FALSE.equals(bot.getRecordUsage());
-            if (recordUsage && response != null && response.getUsage() != null) {
-                long duration = Math.max(0L, end - start);
-                response.getUsage().setDurationMillis(duration);
-                if (response.getUsage().getFirstTokenLatencyMillis() == null) {
-                    response.getUsage().setFirstTokenLatencyMillis(duration);
-                }
-                try {
-                    // 归属随 机器人 绑定：轮询线程取不到请求身份，设备指纹流量不计入任何用户
-                    usageRecorderInterceptor.record(
-                            "bot",
-                            provider.getPlatform(),
-                            modelName,
-                            "bot",
-                            response.getUsage(),
-                            UUID.randomUUID().toString(),
-                            AiBotCaller.userOf(bot.getOwnerKey())
-                    );
-                } catch (Exception e) {
-                    log.warn("[BotChat] 用量记录失败 bot={} err={}", bot.getBotId(), e.getMessage());
-                }
-            }
-            return response != null && response.getText() != null ? response.getText() : "";
-        } catch (Exception e) {
-            log.error("[BotChat] AI 回复失败 bot={} model={}", bot.getBotId(), modelName, e);
-            return "AI 回复失败：" + e.getMessage();
+        } catch (Exception ignored) {
+            // 配置缺失或非法时使用默认值
+        }
+        return 30000L;
+    }
+
+    /**
+     * 将原始模型标识归一化后加入候选集合（自动去重、忽略空值）。
+     *
+     * @param set 候选集合
+     * @param raw 原始模型标识（可能带 providerId: 前缀）
+     */
+    private static void addCandidate(LinkedHashSet<String> set, String raw) {
+        String name = normalizeModelName(raw);
+        if (name != null && !name.isBlank()) {
+            set.add(name);
         }
     }
 
@@ -797,5 +1609,61 @@ public class AiBotChatService {
             return result.isEmpty() ? null : result;
         }
         return null;
+    }
+
+    /**
+     * 组装 提供者 的对话客户端配置，含认证方案。
+     *
+     * <p>{@code auth_scheme} 决定是否发送认证头，{@code extra.auth_header} /
+     * {@code extra.auth_prefix} 决定头名与前缀。例如 Dots Studio 只认
+     * {@code api-key: <key>}，若仍发标准的 {@code Authorization: Bearer} 会被 401。</p>
+     *
+     * @param provider     DB 提供者
+     * @param apiKey       API Key，可为 null
+     * @param extraHeaders 自定义请求头
+     * @return 客户端配置
+     */
+    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey, Map<String, String> extraHeaders) {
+        return buildSetting(provider, apiKey, extraHeaders, null);
+    }
+
+    /**
+     * 组装 提供者 的对话客户端配置（带超时），含认证方案。
+     *
+     * @param provider      DB 提供者
+     * @param apiKey        API Key，可为 null
+     * @param extraHeaders  自定义请求头
+     * @param timeoutMillis 请求超时（毫秒），可为 null
+     * @return 客户端配置
+     */
+    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+                                                  Map<String, String> extraHeaders, Long timeoutMillis) {
+        Map<String, Object> extra = provider.getExtra();
+        return ChatClientSetting.builder()
+                .provider(provider.getPlatform())
+                .appKey(apiKey)
+                .baseUrl(provider.getBaseUrl())
+                .extraHeaders(extraHeaders)
+                .authScheme(provider.getAuthScheme())
+                .authHeader(extraString(extra, "auth_header"))
+                .authPrefix(extraString(extra, "auth_prefix"))
+                .proxy(provider.getProxy())
+                .timeoutMillis(timeoutMillis)
+                .build();
+    }
+
+    /**
+     * 读取 extra 中的字符串值。
+     *
+     * @param extra 扩展配置
+     * @param key   键名
+     * @return 字符串值；缺失返回 null
+     */
+    private static String extraString(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return null;
+        }
+        Object value = extra.get(key);
+        return value == null ? null : value.toString();
     }
 }

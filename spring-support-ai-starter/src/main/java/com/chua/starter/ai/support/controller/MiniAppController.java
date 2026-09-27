@@ -1,12 +1,13 @@
 package com.chua.starter.ai.support.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -30,6 +32,9 @@ import java.util.stream.Stream;
  *
  * <p>提供 /api/miniapps 全量 CRUD、画布文档读写、发布、导入验证等接口。
  * 内部以内存 映射 为元数据层，文件系统（用户.dir/miniapps/{标识}/）为 HTML 存储层。</p>
+ *
+ * <p>小程序按登录用户归属：列表与详情只返回自己的数据，改删与发布要求归属一致，
+ * 管理员可读取他人小程序用于排查，但不能修改或删除。</p>
  * @author CH
  * @since 4.0.0
  */
@@ -41,8 +46,50 @@ import java.util.stream.Stream;
 public class MiniAppController {
 
     private static final Path ROOT = Path.of(System.getProperty("user.dir"), "miniapps"); // 根
+
+    /**
+     * 小程序标识白名单：服务端生成的 uuidv7，禁止出现路径分隔符与 {@code ..}
+     */
+    private static final Pattern SAFE_ID = Pattern.compile("^[0-9a-zA-Z_-]{1,64}$");
+
     private final Map<String, Map<String, Object>> apps = new ConcurrentHashMap<>(); // apps
     private final ObjectMapper om = new ObjectMapper(); // om
+
+    /**
+     * 解析小程序存储目录。
+     *
+     * @param id 小程序标识
+     * @return 位于存储根目录内的小程序目录
+     */
+    private static Path appDir(String id) {
+        if (id == null || !SAFE_ID.matcher(id).matches()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "小程序标识非法");
+        }
+        return ROOT.resolve(id);
+    }
+
+    /**
+     * 归属校验。
+     *
+     * @param id       小程序标识
+     * @param writable 是否为写操作
+     * @return 小程序元数据
+     */
+    private Map<String, Object> requireOwned(String id, boolean writable) {
+        Map<String, Object> app = apps.get(id);
+        if (app == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "小程序不存在");
+        }
+        String userId = AiUserContext.requireUserId();
+        String owner = app.get("user_id") == null ? null : String.valueOf(app.get("user_id"));
+        if (userId.equals(owner)) {
+            return app;
+        }
+        if (!writable && AiUserContext.isAdmin()) {
+            return app;
+        }
+        throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人的小程序");
+    }
 
     // ─── 集合接口 ───────────────────────────────────────────────────────────────
 
@@ -53,7 +100,15 @@ public class MiniAppController {
      * @return 列表的结果
      */
     public Map<String, Object> list() {
-        List<Map<String, Object>> items = new ArrayList<>(apps.values());
+        String userId = AiUserContext.requireUserId();
+        boolean admin = AiUserContext.isAdmin();
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Map<String, Object> item : apps.values()) {
+            String owner = item.get("user_id") == null ? null : String.valueOf(item.get("user_id"));
+            if (admin || userId.equals(owner)) {
+                items.add(item);
+            }
+        }
         items.sort(Comparator.comparingLong(
                 (Map<String, Object> m) -> ((Number) m.get("updated_at")).longValue()).reversed());
         Map<String, Object> result = new LinkedHashMap<>();
@@ -91,6 +146,7 @@ public class MiniAppController {
         }
 
         Map<String, Object> meta = buildMeta(id, name, description, icon, sourceConversationId, html, now, now);
+        meta.put("user_id", AiUserContext.requireUserId());
         apps.put(id, meta);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("data", meta);
@@ -108,9 +164,9 @@ public class MiniAppController {
      * @return 获取的结果
      */
     public Map<String, Object> get(@PathVariable String id) {
-        Map<String, Object> app = apps.get(id);
+        Map<String, Object> app = requireOwned(id, false);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("data", app != null ? app : null);
+        result.put("data", app);
         result.put("success", true);
         return result;
     }
@@ -124,13 +180,7 @@ public class MiniAppController {
      * @return 更新的结果
      */
     public Map<String, Object> update(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        Map<String, Object> app = apps.get(id);
-        if (app == null) {
-            Map<String, Object> err = new LinkedHashMap<>();
-            err.put("success", false);
-            err.put("error", "小程序不存在: " + id);
-            return err;
-        }
+        Map<String, Object> app = requireOwned(id, true);
         long now = System.currentTimeMillis();
         if (body.get("name") instanceof String n && !n.isBlank()) {
             app.put("name", n);
@@ -142,7 +192,7 @@ public class MiniAppController {
             app.put("icon", ic);
         }
         if (body.get("html") instanceof String h) {
-            Path dir = ROOT.resolve(id);
+            Path dir = appDir(id);
             try {
                 Files.createDirectories(dir);
                 Files.writeString(dir.resolve("miniapp.html"), h);
@@ -167,8 +217,9 @@ public class MiniAppController {
      * @return 删除的结果
      */
     public Map<String, Object> delete(@PathVariable String id) {
+        requireOwned(id, true);
         apps.remove(id);
-        Path dir = ROOT.resolve(id);
+        Path dir = appDir(id);
         deleteRecursively(dir);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("data", true);
@@ -186,7 +237,8 @@ public class MiniAppController {
      * @return provisionWorkspace的结果
      */
     public Map<String, Object> provisionWorkspace(@PathVariable String id) {
-        Path dir = ROOT.resolve(id);
+        requireOwned(id, true);
+        Path dir = appDir(id);
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
@@ -211,14 +263,8 @@ public class MiniAppController {
      * @return 发布的结果
      */
     public Map<String, Object> publish(@PathVariable String id) {
-        Map<String, Object> app = apps.get(id);
-        if (app == null) {
-            Map<String, Object> err = new LinkedHashMap<>();
-            err.put("success", false);
-            err.put("error", "小程序不存在: " + id);
-            return err;
-        }
-        Path dir = ROOT.resolve(id);
+        Map<String, Object> app = requireOwned(id, true);
+        Path dir = appDir(id);
         Path src = dir.resolve("miniapp.html");
         if (!Files.exists(src)) {
             Map<String, Object> err = new LinkedHashMap<>();
@@ -251,7 +297,7 @@ public class MiniAppController {
      * @param response 响应
      */
     public void serve(@PathVariable String id, HttpServletResponse response) throws IOException {
-        Path src = ROOT.resolve(id).resolve("miniapp.html");
+        Path src = appDir(id).resolve("miniapp.html");
         if (!Files.exists(src)) {
             response.setStatus(200);
             response.setContentType(MediaType.TEXT_HTML_VALUE);
@@ -261,7 +307,6 @@ public class MiniAppController {
         byte[] bytes = Files.readAllBytes(src);
         response.setStatus(200);
         response.setContentType(MediaType.TEXT_HTML_VALUE);
-        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         response.setContentLength(bytes.length);
         response.getOutputStream().write(bytes);
         response.getOutputStream().flush();
@@ -309,7 +354,11 @@ public class MiniAppController {
         String source;
         try {
             if (path != null && !path.isBlank()) {
-                Path p = Path.of(path);
+                Path base = ROOT.toAbsolutePath().normalize();
+                Path p = base.resolve(path).normalize();
+                if (!p.startsWith(base)) {
+                    throw new IllegalArgumentException("路径必须位于小程序目录内");
+                }
                 if (Files.isDirectory(p)) {
                     p = p.resolve("index.html");
                 }
@@ -372,6 +421,7 @@ public class MiniAppController {
         Map<String, Object> app = buildMeta(id, name,
                 optStr(body, "description", ""), optStr(body, "icon", null), null,
                 source, now, now);
+        app.put("user_id", AiUserContext.requireUserId());
         apps.put(id, app);
 
         Map<String, Object> r = new LinkedHashMap<>();

@@ -3,6 +3,7 @@ package com.chua.starter.server.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.datasearch.email.spi.EmailProvider;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.server.support.model.vo.TempMailboxVO;
 import com.chua.starter.server.support.service.MailboxSseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,8 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * 邮箱账号(MAILBOX) SSE 连接与临时邮箱管理
@@ -71,7 +70,7 @@ public class MailboxConnectionController {
      */
     @Operation(summary = "创建临时邮箱地址")
     @PostMapping("/mailbox/temp-create")
-    public ReturnResult<Map<String, String>> createTempEmail(@RequestParam String provider) {
+    public ReturnResult<TempMailboxVO> createTempEmail(@RequestParam String provider) {
         if (provider == null || provider.isBlank()) {
             return ReturnResult.error("临时邮箱服务商不能为空");
         }
@@ -84,7 +83,7 @@ public class MailboxConnectionController {
             if (email == null || email.isBlank()) {
                 return ReturnResult.error("创建临时邮箱失败(请检查服务商配置/网络)");
             }
-            return ReturnResult.ok(Map.of("email", email, "provider", provider));
+            return ReturnResult.ok(new TempMailboxVO(email, provider));
         } catch (Exception e) {
             log.warn("[mailbox] 创建临时邮箱失败 provider={} - {}", provider, e.getMessage());
             return ReturnResult.error("创建临时邮箱失败: " + e.getMessage());

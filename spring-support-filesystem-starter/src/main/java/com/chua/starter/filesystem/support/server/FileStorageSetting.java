@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * 文件存储设置
  *
@@ -70,9 +73,17 @@ public class FileStorageSetting {
     private boolean showTime = true;
     /**
      * 图片滤镜名称（对应 {@code com.chua.common.support.image.filter.ImageFilter} SPI 扩展名，NONE 表示原图）
-    */
+     */
     @Builder.Default
     private String imageFilter = "NONE";
+
+    /**
+     * 私有桶集合（支持热更新；空表示全部公共桶）。
+     * <p>命中私有桶的请求由 OAuthServerFilter（oauth 模块，反射挂载）校验访问令牌；
+     * 本集合为该过滤器的私有桶来源，管理员 setConfig 变更后实时同步。</p>
+     */
+    @Builder.Default
+    private Set<String> privateBuckets = ConcurrentHashMap.newKeySet();
 
     /**
      * 文件列表布局类型。

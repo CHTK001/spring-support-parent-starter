@@ -151,6 +151,10 @@ public class ChatClientSettings {
                 .appKey(baseSetting.getAppKey())
                 .appSecret(baseSetting.getAppSecret())
                 .extraHeaders(baseSetting.getExtraHeaders())
+                // 认证方案随连接信息一并透传，否则 MCP 链路会丢掉 api-key 这类非标准认证头
+                .authScheme(baseSetting.getAuthScheme())
+                .authHeader(baseSetting.getAuthHeader())
+                .authPrefix(baseSetting.getAuthPrefix())
                 .build();
     }
 

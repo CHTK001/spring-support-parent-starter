@@ -94,6 +94,12 @@ public class SysAiMessage {
     private String attachment; // attachment
 
     /**
+     * 人工确认请求 JSON（plan_exit：replyId/status/items）
+     */
+    @TableField("sys_ai_message_confirmation")
+    private String confirmation;
+
+    /**
      * 归属用户标识（随所属会话写入，非客户端传入）
      */
     @TableField("sys_ai_message_user_id")

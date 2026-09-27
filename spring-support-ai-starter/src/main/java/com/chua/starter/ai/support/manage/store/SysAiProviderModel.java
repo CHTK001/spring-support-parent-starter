@@ -41,6 +41,12 @@ public class SysAiProviderModel implements Serializable {
     private String model; // 模型
 
     /**
+     * 模型别名（可空，空则显示真实 model id）
+    */
+    @TableField("sys_ai_provider_model_alias")
+    private String alias; // 别名
+
+    /**
      * 是否启用
      */
     @TableField("sys_ai_provider_model_enabled")

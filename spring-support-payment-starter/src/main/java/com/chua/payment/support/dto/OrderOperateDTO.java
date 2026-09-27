@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 订单操作通用 DTO
+ * 订单操作通用DTO
  * @author CH
  * @since 4.0.0
  */
@@ -13,28 +13,27 @@ import java.math.BigDecimal;
 public class OrderOperateDTO {
 
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     /**
-     * Paidamount
-    */
+     * 已付金额
+     */
     private BigDecimal paidAmount;
 
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
 
     /**
-     * Thirdparty排序NO
-    */
+     * 第三方订单号
+     */
     private String thirdPartyOrderNo;
 }
-

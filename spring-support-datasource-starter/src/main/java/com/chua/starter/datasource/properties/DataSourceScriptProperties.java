@@ -60,7 +60,6 @@ public class DataSourceScriptProperties {
      *   <li>V1.0__initdata_xxx.sql</li>
      * </ul>
      * migration / 同步 路径仍然保留兼容能力，但更推荐在业务模块内收敛到单一 初始化 目录。
-     * </p>
      */
     public static final String DEFAULT_SCRIPT_PATH =
             "classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql";

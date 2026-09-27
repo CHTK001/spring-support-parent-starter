@@ -39,7 +39,8 @@ public class AgentHostCollectProvider implements HostCollectProvider {
 
     @Override
     public Mono<CollectOutcome> collect(HostCollectContext context) {
-        return Mono.fromCallable(() -> doCollect(context));
+        return Mono.fromCallable(() -> doCollect(context))
+                .subscribeOn(VirtualThreadSchedulers.virtual());
     }
 
     /**

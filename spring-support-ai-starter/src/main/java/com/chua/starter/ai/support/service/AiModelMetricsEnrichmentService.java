@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -333,15 +334,23 @@ public class AiModelMetricsEnrichmentService {
          * ensure加载。
          */
         ensureLoaded();
-        if (index.isEmpty()) { return null; }
+        if (index.isEmpty()) {
+            return null;
+        }
         String key = normalize(modelId);
-        if (key.isEmpty()) { return null; }
+        if (key.isEmpty()) {
+            return null;
+        }
         MetricsRecord exact = index.get(key);
-        if (exact != null) { return exact; }
+        if (exact != null) {
+            return exact;
+        }
         // 次优：包含关系（AA 的 slug 通常更长，如 deepseek-v4-flash-vision-exp）
         for (MetricsRecord rec : index.values()) {
             String nk = rec.normalizedKey;
-            if (nk.length() >= 6 && (nk.contains(key) || key.contains(nk))) { return rec; }
+            if (nk.length() >= 6 && (nk.contains(key) || key.contains(nk))) {
+                return rec;
+            }
         }
         return null;
     }
@@ -352,16 +361,22 @@ public class AiModelMetricsEnrichmentService {
     private void ensureLoaded() {
         long now = System.currentTimeMillis();
         long last = lastLoadAt.get();
-        if (now - last < CACHE_TTL_MILLIS && !index.isEmpty()) { return; }
+        if (now - last < CACHE_TTL_MILLIS && !index.isEmpty()) {
+            return;
+        }
         synchronized (this) {
             now = System.currentTimeMillis();
             last = lastLoadAt.get();
-            if (now - last < CACHE_TTL_MILLIS && !index.isEmpty()) { return; }
+            if (now - last < CACHE_TTL_MILLIS && !index.isEmpty()) {
+            return;
+        }
 
             List<MetricsRecord> fresh = null;
             try {
                 Map<String, MetricsRecord> loaded = loadIndex();
-                if (!loaded.isEmpty()) { fresh = new ArrayList<>(loaded.values()); }
+                if (!loaded.isEmpty()) {
+                    fresh = new ArrayList<>(loaded.values());
+                }
             } catch (Throwable t) {
                 log.warn("[AiModelMetrics] 在线指标加载失败: {}", t.getMessage());
             }
@@ -399,7 +414,9 @@ public class AiModelMetricsEnrichmentService {
     private Map<String, MetricsRecord> loadIndex() {
         ModelMetricsProvider provider = ServiceProvider.of(ModelMetricsProvider.class)
                 .getExtension(SOURCE_NAME);
-        if (provider == null) { return Map.of(); }
+        if (provider == null) {
+            return Map.of();
+        }
         List<ModelDefinition> list;
         if (provider instanceof AbstractModelMetricsProvider abstractProvider) {
  // SPI 实例未注入 配置保存or加载，获取指标()/同步从online() 无法持久化读取，
@@ -412,11 +429,15 @@ public class AiModelMetricsEnrichmentService {
                 list = safeMetrics(provider);
             }
         }
-        if (list == null || list.isEmpty()) { return Map.of(); }
+        if (list == null || list.isEmpty()) {
+            return Map.of();
+        }
         Map<String, MetricsRecord> idx = new HashMap<>(256); // AA 模型数量较多，预留容量
         for (ModelDefinition md : list) {
             String key = normalize(md.getId());
-            if (key.isEmpty()) { continue; }
+            if (key.isEmpty()) {
+                continue;
+            }
             idx.putIfAbsent(key, new MetricsRecord(
                     key,
                     md.getProvider(),
@@ -587,12 +608,16 @@ public class AiModelMetricsEnrichmentService {
     private List<MetricsRecord> loadFromDisk() {
         try {
             java.nio.file.Path file = java.nio.file.Path.of(CACHE_DIR, SNAPSHOT_FILE);
-            if (!java.nio.file.Files.exists(file)) { return null; }
+            if (!java.nio.file.Files.exists(file)) {
+                return null;
+            }
             String json = java.nio.file.Files.readString(file);
             List<Map<String, Object>> arr = com.chua.common.support.lang.json.Json.fromJson(
                     json,
                     new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() { });
-            if (arr == null || arr.isEmpty()) { return null; }
+            if (arr == null || arr.isEmpty()) {
+                return null;
+            }
             List<MetricsRecord> out = new ArrayList<>(arr.size());
             for (Map<String, Object> o : arr) {
                 out.add(new MetricsRecord(
@@ -925,6 +950,18 @@ public class AiModelMetricsEnrichmentService {
              * 智能指数是否为估算值
              */
             Boolean intelligenceIndexEstimated) {
+
+        /**
+         * 规范构造器：归一化键做空值校验。
+         *
+         * <p>value class 前置条件——值类要求空值敌对；其余组件取自外部指标源，
+         * 允许为空（见 {@code putIfNotNull} 与快照读写），故不做校验。</p>
+         *
+         * @param normalizedKey 归一化键
+         */
+        public MetricsRecord {
+            normalizedKey = Objects.requireNonNull(normalizedKey, "normalizedKey 不能为 null");
+        }
     }
 
     /**

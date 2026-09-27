@@ -10,25 +10,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 支付渠道注册表
+ * 支付通道注册表
  * @author CH
  * @since 4.0.0
  */
 @Component
 public class PaymentChannelRegistry {
 
-    private volatile List<PaymentChannel> channels; // 通道
+    private volatile List<PaymentChannel> channels; // 已注册的通道
 
     @Autowired
     /**
-     * Application上下文
-    */
+     * Application 上下文
+     */
     private ApplicationContext applicationContext;
 
     /**
-     * 通道
+     * 通道列表
      *
-     * @return 通道的结果
+     * @return 通道列表
      */
     private List<PaymentChannel> channels() {
         if (channels == null) {
@@ -42,8 +42,8 @@ public class PaymentChannelRegistry {
     }
 
     /**
-     * 测试支持：注入测试渠道列表
-     * @param channels 通道
+     * 测试支持：注入测试通道列表
+     * @param channels 通道列表
      */
     void setTestChannels(List<PaymentChannel> channels) {
         this.channels = channels;
@@ -53,8 +53,8 @@ public class PaymentChannelRegistry {
      * 获取通道
      *
      * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
-     * @return 获取通道的结果
+     * @param channelSubType 通道子类型
+     * @return 获取到的通道
      */
     public PaymentChannel getChannel(String channelType, String channelSubType) {
         return channels().stream()
@@ -63,18 +63,17 @@ public class PaymentChannelRegistry {
                 .orElseThrow(() -> new PaymentException("暂不支持的支付方式: "
                         + channelType
                         + (StringUtils.hasText(channelSubType) ? "/" + channelSubType : "")
-                        + ", 已注册渠道数: " + channels().size()));
+                        + ", 已注册通道数: " + channels().size()));
     }
 
     /**
-     * 支持
+     * 是否存在支持该类型的通道
      *
      * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
-     * @return 支持的结果
+     * @param channelSubType 通道子类型
+     * @return 支持则返回 true
      */
     public boolean supports(String channelType, String channelSubType) {
         return channels().stream().anyMatch(channel -> channel.supports(channelType, channelSubType));
     }
 }
-

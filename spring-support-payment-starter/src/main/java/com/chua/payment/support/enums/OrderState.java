@@ -9,95 +9,78 @@ package com.chua.payment.support.enums;
 public enum OrderState {
 
     /**
-     * 待支付
-     * @param "待支付" "待支付"
-     * @return PENDING的结果
+     * 待支付，订单已创建但未发起收款
      */
     PENDING("待支付"),
 
     /**
-     * 支付中
-     * @param "支付中" "支付中"
-     * @return 薪酬的结果
+     * 支付中，已向渠道发起收款，等待渠道回调
      */
     PAYING("支付中"),
 
     /**
-     * 支付成功
-     * @param "支付成功" "支付成功"
-     * @return PAID的结果
+     * 支付成功，渠道已确认收款
      */
     PAID("支付成功"),
 
     /**
-     * 已完成
-     * @param "已完成" "已完成"
-     * @return 完成的结果
+     * 已完成，订单履约结束
      */
     COMPLETED("已完成"),
 
     /**
-     * 已取消
-     * @param "已取消" "已取消"
-     * @return CANCELLED的结果
+     * 已取消，订单被主动关闭
      */
     CANCELLED("已取消"),
 
     /**
-     * 支付超时
-     * @param "支付超时" "支付超时"
-     * @return 超时的结果
+     * 支付超时，超过有效期未完成支付
      */
     TIMEOUT("支付超时"),
 
     /**
-     * 支付失败
-     * @param "支付失败" "支付失败"
-     * @return 失败的结果
+     * 支付失败，收款未成功
      */
     FAILED("支付失败"),
 
     /**
-     * 退款中
-     * @param "退款中" "退款中"
-     * @return 退税的结果
+     * 退款中，已发起退款等待渠道处理
      */
     REFUNDING("退款中"),
 
     /**
-     * 已退款
-     * @param "已退款" "已退款"
-     * @return 退税的结果
+     * 已退款，退款已成功到账
      */
     REFUNDED("已退款");
 
     /**
      * 描述
-    */
+     */
     private final String description;
 
     /**
-     * 订单状态。
-     * @param description description
+     * 订单状态
+     *
+     * @param description 描述
      */
     OrderState(String description) {
         this.description = description;
     }
 
     /**
-     * 获取Description
+     * 获取描述
      *
-     * @return 获取description的结果
+     * @return 获取描述的结果
      */
     public String getDescription() {
         return description;
     }
 
     /**
-     * description的
+     * 根据状态编码获取描述
      *
      * @param code 编码
-     * @return description的的结果
+     * @return 描述
      */
     public static String descriptionOf(String code) {
         if (code == null) {

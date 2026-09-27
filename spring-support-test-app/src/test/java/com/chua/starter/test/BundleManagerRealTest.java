@@ -51,6 +51,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
         "plugin.osgi.storage=target/osgi-cache-bundle-mgr",
+        // 测试环境每次从干净 storage 开始：默认 onFirstInit 会让 Felix 恢复并
+        // 自动启动历史版本 bundle，与本轮装卸形成竞争
+        "plugin.osgi.storage-clean=onInit",
         "plugin.osgi.shell.enabled=false",
         "plugin.osgi.framework-properties[org.osgi.framework.system.packages.extra]=com.chua.starter.test.osgi",
         "plugin.bundle.enabled=true",
@@ -152,6 +155,11 @@ class BundleManagerRealTest {
          */
         assertEquals("mgr-v1:world", v1.greet("world"), "v1 服务应返回 mgr-v1 结果");
 
+        // 容器视角：安装 v1 后 ObjectContext 必须能查到 v1 实现
+        GreetService contextV1 = objectContext.getBeanOfTypeSafely(GreetService.class);
+        assertNotNull(contextV1, "安装 v1 后 ObjectContext 应能查到 GreetService");
+        assertEquals("mgr-v1:world", contextV1.greet("world"), "安装 v1 后容器应取到 v1 实现");
+
         // 2) install v2 同 artifact（高版本自动升级 → 卸载旧版安装新版）
         BundleManagerService.InstallResult r2 = bundleManager.install(GROUP_ID + ":" + ARTIFACT_ID + ":2.0.0");
         /**
@@ -172,6 +180,13 @@ class BundleManagerRealTest {
          * @param afterUpgrade.greet("world" 之后upgrade.greet("world"
          */
         assertEquals("mgr-v2:world", afterUpgrade.greet("world"), "升级后应返回 v2 结果");
+
+        // 热更新核心语义：原地升级后 ObjectContext 必须自动切换到 v2 实现，
+        // 全程不重启 Spring 上下文
+        GreetService contextV2 = objectContext.getBeanOfTypeSafely(GreetService.class);
+        assertNotNull(contextV2, "热升级后 ObjectContext 应能查到 GreetService");
+        assertEquals("mgr-v2:world", contextV2.greet("world"),
+                "热升级后 ObjectContext 应自动切换到 v2 实现（无需重启 Spring 上下文）");
 
  // 3) 获取状态 含已安装 bundle，uninstall 移除
         /**

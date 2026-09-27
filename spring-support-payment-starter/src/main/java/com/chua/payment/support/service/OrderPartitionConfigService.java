@@ -16,43 +16,41 @@ import java.util.List;
 public interface OrderPartitionConfigService {
 
     /**
-     * 列表配置。
-     * @return 列表配置的结果
+     * 列表分表配置。
+     * @return 分表配置列表
      */
     List<OrderPartitionConfigVO> listConfigs();
 
     /**
-     * 更新配置。
+     * 更新分表配置。
      * @param businessType 业务类型
      * @param dto dto
-     * @return 更新配置的结果
+     * @return 更新后的分表配置
      */
     OrderPartitionConfigVO updateConfig(String businessType, OrderPartitionConfigDTO dto);
 
     /**
-     * preview。
+     * 预览分表执行结果。
      * @param businessType 业务类型
-     * @return preview的结果
      */
     OrderPartitionPreviewVO preview(String businessType);
 
     /**
-     * 执行auto创建。
+     * 执行自动建表。
      * @param businessType 业务类型
      */
     void executeAutoCreate(String businessType);
 
     /**
-     * 执行automigrate。
+     * 执行自动迁移。
      * @param businessType 业务类型
      */
     void executeAutoMigrate(String businessType);
 
     /**
-     * 获取配置实体。
+     * 获取分表配置实体。
      * @param businessType 业务类型
-     * @return 获取配置实体的结果
+     * @return 分表配置实体
      */
     OrderPartitionConfig getConfigEntity(String businessType);
 }
-

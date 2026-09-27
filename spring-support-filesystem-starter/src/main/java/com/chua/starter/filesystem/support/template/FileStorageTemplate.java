@@ -14,6 +14,7 @@ import lombok.Getter;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -101,8 +102,24 @@ public class FileStorageTemplate implements AutoCloseable {
                 .accessKeyId(config.getAccessKey())
                 .accessKeySecret(config.getSecretKey())
                 .region(config.getRegion())
+                .extraProperties(extraProperties(config))
                 .build();
         return FileStorage.createStorage(inferType(config), setting);
+    }
+
+    /**
+     * 透传本地落盘根目录给 SPI 实现。
+     *
+     * @param config 提供者配置
+     * @return 附加属性，未配置 base-path 时返回 null
+     */
+    private Map<String, String> extraProperties(ProviderConfig config) {
+        if (config.getBasePath() == null || config.getBasePath().isEmpty()) {
+            return null;
+        }
+        Map<String, String> extra = new HashMap<>(2);
+        extra.put("basePath", config.getBasePath());
+        return extra;
     }
 
     /**

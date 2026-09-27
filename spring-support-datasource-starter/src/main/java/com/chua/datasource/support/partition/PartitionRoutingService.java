@@ -1,5 +1,6 @@
 package com.chua.datasource.support.partition;
 
+import com.chua.common.support.lang.datasource.dialect.SqlName;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -8,7 +9,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * 分区路由服务 — 解析冷热表名、按日期裁剪分区。
@@ -19,10 +19,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class PartitionRoutingService {
 
-    /**
-     * Safe_table
-    */
-    private static final Pattern SAFE_TABLE = Pattern.compile("^[a-zA-Z0-9_]+$");
+
     /**
      * Month_格式化
     */
@@ -82,9 +79,14 @@ public class PartitionRoutingService {
     public static List<String> resolveAllTables(String sourceTable, String partitionPrefix,
                                                  String granularity,
                                                  List<String> existingPartitions) {
+        validateTableName(sourceTable, "源表");
+        validateTableName(partitionPrefix, "分区前缀");
         List<String> result = new ArrayList<>();
         result.add(sourceTable);
-        result.addAll(existingPartitions);
+        if (existingPartitions != null) {
+            existingPartitions.forEach(table -> validateTableName(table, "分区表"));
+            result.addAll(existingPartitions);
+        }
         return result;
     }
 
@@ -105,7 +107,7 @@ public class PartitionRoutingService {
         String suffix = "DAY".equalsIgnoreCase(granularity)
                 ? DAY_FORMAT.format(date)
                 : MONTH_FORMAT.format(date.withDayOfMonth(1));
-        return partitionPrefix + "_" + suffix;
+        return validateTableName(partitionPrefix + "_" + suffix, "生成分区表名");
     }
 
     /**
@@ -136,20 +138,13 @@ public class PartitionRoutingService {
     }
 
     /**
-     * SQL 注入防护：校验表名合法性。
+     * SQL 注入防护：使用公共 SQL 标识符工具校验表名合法性并限制长度。
+     *
      * @param value 值
      * @param label 标签
-     * @return 校验table名称的结果
+     * @return 校验后的 table 名称
      */
     public static String validateTableName(String value, String label) {
-        if (value == null || value.isEmpty() || !SAFE_TABLE.matcher(value).matches()) {
-            /**
-             * IllegalArgumentException。
-             * @param value 值
-             * @return IllegalArgumentException的结果
-             */
-            throw new IllegalArgumentException(label + " 不合法: " + value);
-        }
-        return value;
+        return SqlName.checkSimple(value, label);
     }
 }

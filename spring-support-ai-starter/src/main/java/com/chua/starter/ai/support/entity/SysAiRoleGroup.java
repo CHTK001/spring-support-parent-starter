@@ -46,7 +46,7 @@ public class SysAiRoleGroup {
     /**
      * 删除
     */
-    private Integer delete;
+    private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT)
     /**

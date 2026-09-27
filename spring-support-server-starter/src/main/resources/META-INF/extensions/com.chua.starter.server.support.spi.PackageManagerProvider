@@ -1,0 +1,5 @@
+com.chua.starter.server.support.spi.AptPackageManagerProvider
+com.chua.starter.server.support.spi.YumPackageManagerProvider
+com.chua.starter.server.support.spi.DnfPackageManagerProvider
+com.chua.starter.server.support.spi.WingetPackageManagerProvider
+com.chua.starter.server.support.spi.ChocolateyPackageManagerProvider

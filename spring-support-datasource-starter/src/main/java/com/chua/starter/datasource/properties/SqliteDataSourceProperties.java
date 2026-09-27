@@ -11,8 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * plugin.sqlite.enable=true
  * plugin.sqlite.path=./data/app.sqlite
  * plugin.sqlite.init-sql=classpath:db/init.sql
- * }</pre> }</pre>
- * </p>
+ * }</pre>
  *
  * @author CH
  * @since 4.0.0.42

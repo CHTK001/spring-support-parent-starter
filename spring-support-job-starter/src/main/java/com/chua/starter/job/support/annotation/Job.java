@@ -72,8 +72,20 @@ public @interface Job {
     String init() default "";
 
     /**
-     * 销毁方法名,与 执行 方法同处一个类, 无参
+     * 任务销毁方法名,与 执行 方法同处一个类, 无参
      * @return 销毁的结果
      */
     String destroy() default "";
+
+    /**
+     * 调度分组 (对应 {@code sys_job_group})。
+     *
+     * <p>留空时按 {@code default} 落库,与本属性引入前的行为完全一致。
+     * 需要显式指定时,本机的 {@code plugin.job.cluster.group} 必须与之一致:
+     * Leader 单秒扫描只捞本分组 ({@code sys_job_group = plugin.job.cluster.group}),
+     * 两者不一致会导致任务登记了却永远不被派发。</p>
+     *
+     * @return 分组名, 留空表示使用 default
+     */
+    String group() default "";
 }

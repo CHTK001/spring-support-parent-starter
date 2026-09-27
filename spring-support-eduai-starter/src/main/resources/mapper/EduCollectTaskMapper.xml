@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduCollectTaskMapper">
+
+    <!-- 分页查询采集任务：多条件筛选 + 归属隔离 + 任务ID倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduCollectTask">
+        SELECT t.* FROM edu_collect_task t
+        <where>
+            <if test="query.taskName != null and query.taskName != ''">
+                AND t.collect_task_name LIKE CONCAT('%', #{query.taskName}, '%')
+            </if>
+            <if test="query.sourceType != null and query.sourceType != ''">
+                AND t.collect_task_source_type = #{query.sourceType}
+            </if>
+            <if test="query.subject != null and query.subject != ''">
+                AND t.collect_task_subject = #{query.subject}
+            </if>
+            <if test="query.status != null">
+                AND t.collect_task_status = #{query.status}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (t.collect_task_owner_user_id IS NULL OR t.collect_task_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY t.collect_task_id DESC
+    </select>
+
+    <!-- 采集任务执行完成后回写计量列：末次运行时刻/状态/入库题数 + 累计题数自增 -->
+    <update id="writeBackRunMetrics">
+        UPDATE edu_collect_task
+        SET collect_task_last_run_time = #{startTime},
+            collect_task_last_run_status = #{lastRunStatus},
+            collect_task_last_run_count = #{lastRunCount},
+            collect_task_total_count = IFNULL(collect_task_total_count, 0) + #{savedCount}
+        WHERE collect_task_id = #{taskId}
+    </update>
+
+</mapper>

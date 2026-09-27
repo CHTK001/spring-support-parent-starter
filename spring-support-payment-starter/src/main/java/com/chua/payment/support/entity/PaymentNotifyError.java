@@ -9,7 +9,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 回调异常记录
+ * 支付回调异常记录
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -19,121 +20,120 @@ public class PaymentNotifyError {
     @TableId(value = "pay_notify_error_id", type = IdType.AUTO)
     /**
      * 标识
-    */
+     */
     private Long id;
 
     @TableField("pay_notify_error_notify_log_id")
     /**
      * 通知日志标识
-    */
+     */
     private Long notifyLogId;
 
     @TableField("pay_notify_error_notify_type")
     /**
      * 通知类型
-    */
+     */
     private String notifyType;
 
     @TableField("pay_notify_error_tenant_id")
     /**
-     * tenantid
-    */
+     * 租户标识
+     */
     private Long tenantId;
 
     @TableField("pay_notify_error_merchant_id")
     /**
-     * merchantid
-    */
+     * 商户标识
+     */
     private Long merchantId;
 
     @TableField("pay_notify_error_order_no")
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
 
     @TableField("pay_notify_error_refund_no")
     /**
-     * 退税no
-    */
+     * 退款单号
+     */
     private String refundNo;
 
     @TableField("pay_notify_error_error_type")
     /**
      * 错误类型
-    */
+     */
     private String errorType;
 
     @TableField("pay_notify_error_error_message")
     /**
      * 错误消息
-    */
+     */
     private String errorMessage;
 
     @TableField("pay_notify_error_error_stack")
     /**
-     * 错误栈
-    */
+     * 错误堆栈
+     */
     private String errorStack;
 
     @TableField("pay_notify_error_request_data")
     /**
      * 请求数据
-    */
+     */
     private String requestData;
 
     @TableField("pay_notify_error_retry_count")
     /**
-     * 重试数量
-    */
+     * 重试次数
+     */
     private Integer retryCount;
 
     @TableField("pay_notify_error_max_retry_count")
     /**
-     * 最大值重试数量
-    */
+     * 最大重试次数
+     */
     private Integer maxRetryCount;
 
     @TableField("pay_notify_error_next_retry_time")
     /**
-     * 下一个重试时间
-    */
+     * 下次重试时间
+     */
     private LocalDateTime nextRetryTime;
 
     @TableField("pay_notify_error_status")
     /**
-     * 状态
-    */
+     * 处理状态
+     */
     private String status;
 
     @TableField("pay_notify_error_resolved_at")
     /**
-     * resolvedat
-    */
+     * 处理完成时间
+     */
     private LocalDateTime resolvedAt;
 
     @TableField("pay_notify_error_resolved_by")
     /**
-     * resolvedby
-    */
+     * 处理人
+     */
     private String resolvedBy;
 
     @TableField("pay_notify_error_remark")
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     @TableField("pay_notify_error_create_time")
     /**
      * 创建时间
-    */
+     */
     private LocalDateTime createTime;
 
     @TableField("pay_notify_error_update_time")
     /**
      * 更新时间
-    */
+     */
     private LocalDateTime updateTime;
 }
-

@@ -7,6 +7,7 @@ import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.network.sip.SipConfig;
 import com.chua.common.support.network.sip.SipServer;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
@@ -57,6 +58,29 @@ public class ServerNodeRegistry {
      * HTTP 引擎白名单
      */
     private static final Set<String> HTTP_ENGINES = Set.of("jdk", "nio", "aio");
+
+    /**
+     * 文件存储网关过滤器类型别名（与 {@code ServerFilterFactory} 预设一致）
+     */
+    private static final String FILE_STORAGE_ALIAS = "file-storage";
+
+    /**
+     * 文件存储网关过滤器全限定类名（file-storage 预设实例化的目标类）
+     */
+    private static final String FILE_STORAGE_FILTER_CLASS =
+            "com.chua.starter.filesystem.support.server.FileStorageServerFilter";
+
+    /**
+     * OAuth 鉴权过滤器全限定类名。
+     * <p>oauth-client-starter 为可选依赖，保持反射装载的插件语义：类缺失时文件服务器按公共桶运行。</p>
+     */
+    private static final String OAUTH_FILTER_CLASS =
+            "com.chua.starter.oauth.client.support.filter.OAuthServerFilter";
+
+    /**
+     * OAuth 鉴权过滤器类型别名（节点 filters 显式声明时不再自动挂载）
+     */
+    private static final String OAUTH_FILTER_ALIAS = "oauth";
 
     /**
      * 运行中/曾拉起的节点: 节点标识 -> 运行时
@@ -188,7 +212,7 @@ public class ServerNodeRegistry {
             return runtime;
         }
         List<ServerFilterDescriptor> descriptors = parseFilters(node);
-        List<ServerFilter> created = filterFactory.createFilters(descriptors, server.getSetting());
+        List<ServerFilter> created = createManagedFilters(node, descriptors, server.getSetting());
         // 先建后删：新插件构建失败时保持原链路可用，避免把服务打成无过滤器状态
         for (ServerFilter old : runtime.getManagedFilters()) {
             try {
@@ -400,7 +424,15 @@ public class ServerNodeRegistry {
                 .host(setting.getHost())
                 .port(setting.getPort())
                 .build();
-        attachFilters(server, descriptors, setting, managed);
+        // 文件存储节点：预览统一走 iframe，关闭 X-Frame-Options 并用 CSP frame-ancestors 允许被嵌入
+        if (containsFileStorage(descriptors)) {
+            ServerSetting.SecurityHeadersConfig security = server.getSetting().getSecurityHeaders();
+            if (security != null) {
+                security.setFrameOptions("");
+                security.setFrameAncestors("*");
+            }
+        }
+        attachFilters(server, node, descriptors, setting, managed);
         return server;
     }
 
@@ -416,7 +448,7 @@ public class ServerNodeRegistry {
      */
     private <T extends com.chua.common.support.network.server.Server> Server buildProxyServer(
             T server, MsServerNode node, List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
-        attachFilters(server, descriptors, server.getSetting(), managed);
+        attachFilters(server, node, descriptors, server.getSetting(), managed);
         return server;
     }
 
@@ -443,7 +475,7 @@ public class ServerNodeRegistry {
             builder.dataPlaneMode(String.valueOf(dataPlaneMode));
         }
         SipServer server = new SipServer(builder.build());
-        attachFilters(server, descriptors, server.getSetting(), managed);
+        attachFilters(server, node, descriptors, server.getSetting(), managed);
         return server;
     }
 
@@ -462,7 +494,7 @@ public class ServerNodeRegistry {
         if (server == null) {
             throw new IllegalStateException("Server SPI 未注册: " + node.getProtocol());
         }
-        attachFilters(server, descriptors, setting, managed);
+        attachFilters(server, node, descriptors, setting, managed);
         return server;
     }
 
@@ -474,11 +506,178 @@ public class ServerNodeRegistry {
      * @param setting     服务器配置
      * @param managed     托管过滤器收集器
      */
-    private void attachFilters(Server server, List<ServerFilterDescriptor> descriptors,
+    private void attachFilters(Server server, MsServerNode node, List<ServerFilterDescriptor> descriptors,
                                ServerSetting setting, List<ServerFilter> managed) {
-        for (ServerFilter filter : filterFactory.createFilters(descriptors, setting)) {
+        for (ServerFilter filter : createManagedFilters(node, descriptors, setting)) {
             server.addFilter(filter);
             managed.add(filter);
+        }
+    }
+
+    /**
+     * 构建节点托管过滤器链（含按需自动挂载的附加过滤器）。
+     *
+     * <p>启动（{@link #attachFilters}）与热更新（{@link #hotUpdateFilters}）必须走同一入口，
+     * 保证自动挂载的过滤器在两条路径上行为一致。</p>
+     *
+     * @param node        节点定义
+     * @param descriptors 插件描述
+     * @param setting     服务器配置
+     * @return 过滤器列表（顺序由各自 {@code getOrder()} 在链上合并时决定）
+     */
+    private List<ServerFilter> createManagedFilters(MsServerNode node, List<ServerFilterDescriptor> descriptors,
+                                                    ServerSetting setting) {
+        List<ServerFilter> created = filterFactory.createFilters(descriptors, setting);
+        attachOAuthFilter(node, descriptors, created);
+        return created;
+    }
+
+    /**
+     * 文件服务器节点自动挂载 OAuth 鉴权过滤器。
+     *
+     * <p>命中条件：节点过滤器链含 {@code file-storage} 且未显式声明 {@code oauth}；
+     * 过滤器经 {@link ReflectUtils} 反射装载（oauth-client-starter 可选存在），
+     * 私有桶取自节点 config JSON 的 {@code privateBuckets}（缺省回退环境配置，
+     * 见 {@code plugin.oauth.file-storage.private-buckets}）。过滤器自身在
+     * {@code plugin.oauth.enable=false} 或未配置私有桶时整体放行，不影响公共桶。</p>
+     *
+     * @param node        节点定义
+     * @param descriptors 插件描述
+     * @param filters     已构建的过滤器列表（原地追加）
+     */
+    private void attachOAuthFilter(MsServerNode node, List<ServerFilterDescriptor> descriptors,
+                                   List<ServerFilter> filters) {
+        if (!containsFileStorage(descriptors) || containsOAuthFilter(descriptors)) {
+            return;
+        }
+        ServerFilter oauth = createOAuthFilter();
+        if (oauth == null) {
+            log.debug("[ServerNodeRegistry] OAuth 鉴权过滤器不可用（oauth-client-starter 未装配），文件服务器按公共桶运行");
+            return;
+        }
+        Object privateBuckets = parseConfig(node).get("privateBuckets");
+        if (privateBuckets != null && !String.valueOf(privateBuckets).isBlank()) {
+            oauth.updateConfig(Map.of("privateBuckets", String.valueOf(privateBuckets).trim()));
+        }
+        filters.add(oauth);
+        // 私有桶热更新联动：文件存储网关 setConfig 后，把最新私有桶同步给 OAuth 鉴权过滤器
+        bindFileStorageConfigListener(filters, oauth);
+        log.info("[ServerNodeRegistry] 自动挂载 OAuth 鉴权过滤器: node={} order={} filters={} privateBuckets={}",
+                node.getName(), oauth.getOrder(), filters.size(),
+                privateBuckets == null ? "" : String.valueOf(privateBuckets).trim());
+    }
+
+    /**
+     * 将文件存储网关的配置热更新回调绑定到 OAuth 鉴权过滤器。
+     *
+     * <p>文件存储网关（{@code FileStorageServerFilter}）提供 {@code setConfigListener(Consumer)}，
+     * 管理员 {@code setConfig} 变更私有桶后回调；此处经动态代理桥接到
+     * {@link ServerFilter#updateConfig(Map)}，使运行期"公共/私有"切换即时生效。</p>
+     *
+     * @param filters 已构建的过滤器列表
+     * @param oauth   OAuth 鉴权过滤器
+     */
+    private void bindFileStorageConfigListener(List<ServerFilter> filters, ServerFilter oauth) {
+        ServerFilter fileStorage = null;
+        for (ServerFilter filter : filters) {
+            if (FILE_STORAGE_FILTER_CLASS.equals(filter.getClass().getName())) {
+                fileStorage = filter;
+                break;
+            }
+        }
+        if (fileStorage == null) {
+            return;
+        }
+        try {
+            // [P3C 1.10 豁免] 跨模块反射桥接 Consumer<FileStorageSetting> → updateConfig，第三方签名保持原生反射
+            java.util.function.Consumer<Object> consumer = setting -> {
+                try {
+                    Object buckets = ReflectUtils.invoke(setting, "getPrivateBuckets", java.util.Set.class);
+                    String csv = buckets == null ? "" : joinCsv((java.util.Set<?>) buckets);
+                    oauth.updateConfig(Map.of("privateBuckets", csv));
+                } catch (Exception ignored) {
+                    // 同步失败不影响 setConfig 结果
+                }
+            };
+            fileStorage.getClass()
+                    .getMethod("setConfigListener", java.util.function.Consumer.class)
+                    .invoke(fileStorage, consumer);
+        } catch (Exception e) {
+            log.debug("[ServerNodeRegistry] 绑定文件存储配置热更新回调失败(可忽略): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 集合转逗号分隔文本。
+     *
+     * @param values 集合
+     * @return CSV
+     */
+    private String joinCsv(java.util.Set<?> values) {
+        StringBuilder sb = new StringBuilder();
+        for (Object value : values) {
+            if (value == null) {
+                continue;
+            }
+            String text = String.valueOf(value).trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(',');
+            }
+            sb.append(text);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 判断过滤器描述中是否含文件存储网关。
+     *
+     * @param descriptors 插件描述
+     * @return true 表示含 file-storage
+     */
+    private boolean containsFileStorage(List<ServerFilterDescriptor> descriptors) {
+        for (ServerFilterDescriptor descriptor : descriptors) {
+            String type = descriptor.resolveType();
+            if (FILE_STORAGE_ALIAS.equalsIgnoreCase(type) || FILE_STORAGE_FILTER_CLASS.equals(type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断过滤器描述中是否已显式声明 OAuth 鉴权过滤器（避免重复挂载）。
+     *
+     * @param descriptors 插件描述
+     * @return true 表示已声明
+     */
+    private boolean containsOAuthFilter(List<ServerFilterDescriptor> descriptors) {
+        for (ServerFilterDescriptor descriptor : descriptors) {
+            String type = descriptor.resolveType();
+            if (OAUTH_FILTER_ALIAS.equalsIgnoreCase(type) || OAUTH_FILTER_CLASS.equals(type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 反射创建 OAuth 鉴权过滤器（类缺失时返回 空）。
+     *
+     * @return 过滤器实例，不可用时返回 空
+     */
+    private ServerFilter createOAuthFilter() {
+        try {
+            Class<?> filterClass = ReflectUtils.forName(OAUTH_FILTER_CLASS);
+            if (filterClass == null) {
+                return null;
+            }
+            return (ServerFilter) ReflectUtils.instantiate(filterClass);
+        } catch (Exception e) {
+            log.warn("[ServerNodeRegistry] OAuth 鉴权过滤器实例化失败: {}", e.getMessage());
+            return null;
         }
     }
 

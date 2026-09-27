@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.starter.ai.support.chat.ChatMemorySupport;
 import com.chua.starter.ai.support.chat.ChatMessage;
 import com.chua.starter.ai.support.entity.AIDialog;
 import com.chua.starter.ai.support.model.AiChatRequest;
@@ -38,6 +39,7 @@ public class ChatSendController {
 
     private final AiChatFacadeService aiChatFacadeService;
     private final AIDialogRecordService aiDialogRecordService;
+    private final ChatMemorySupport chatMemorySupport;
 
     /**
      * 前端 sessionId(UUID) -> 后端 dialogId 映射
@@ -78,6 +80,8 @@ public class ChatSendController {
         final String userContent = content;
         final Long did = dialogId;
         final String sid = sessionId;
+        // 身份必须在请求线程内解析：异步回调线程取不到，记忆会落成无主数据
+        final String memoryUser = AiUserContext.currentUserId();
         CompletableFuture.runAsync(AiUserContext.capturing(() -> {
             try {
                 List<Map<String, Object>> msgList = new ArrayList<>();
@@ -90,9 +94,11 @@ public class ChatSendController {
                         msgList.add(mm);
                     }
                 }
+                chatMemorySupport.inject(memoryUser, sid, userContent, msgList);
                 AiChatRequest req = new AiChatRequest();
                 req.setModel(DEFAULT_MODEL);
                 req.setStream(true);
+                req.setUseSkill(true);
                 req.setMessages(msgList);
                 // 返回的 emitter 不挂到 HTTP 响应，仅利用回调拿完整回复
                 aiChatFacadeService.stream(req, null, reply -> {
@@ -102,6 +108,7 @@ public class ChatSendController {
                     } catch (Exception e) {
                         log.warn("[ChatSend] 保存助手消息失败: {}", e.getMessage());
                     }
+                    chatMemorySupport.remember(memoryUser, sid, userContent, finalText, DEFAULT_MODEL);
                     log.info("[ChatSend] 异步对话完成 sessionId={}, 回复长度={}", sid, finalText.length());
                 }, error -> log.error("[ChatSend] 异步对话失败 sessionId={}", sid, error));
             } catch (Exception e) {

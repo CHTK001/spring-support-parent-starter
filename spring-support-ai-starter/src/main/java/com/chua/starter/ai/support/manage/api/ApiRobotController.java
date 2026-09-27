@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.util.AiMemoryOwnership;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,6 +30,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>维护设备档案（{@code robot_id} 主键）与在线状态，关键状态变更推送
  * {@code robot.status} 事件。当前为进程内内存实现。</p>
+ *
+ * <p>设备归属认领人：档案与状态快照都带 {@code user_id}，他人既查不到也改不了；
+ * 管理员可在列表里看到全部设备，但改绑与下架只能由归属人执行。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -67,7 +71,7 @@ public class ApiRobotController {
      */
     public ApiResult<Map<String, Object>> list() {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("robots", new ArrayList<>(robots.values()));
+        payload.put("robots", AiMemoryOwnership.visibleToCurrentUser(robots.values()));
         return ApiResult.ok(payload);
     }
 
@@ -98,6 +102,7 @@ public class ApiRobotController {
         robot.put("firmware_version", (String) body.getOrDefault("firmware_version", "1.0.0"));
         robot.put("last_seen", null);
         robot.put("created_at", System.currentTimeMillis());
+        AiMemoryOwnership.stampOwner(robot);
         robots.put(robotId, robot);
         /**
          * 更新状态。
@@ -153,7 +158,7 @@ public class ApiRobotController {
      */
     public ApiResult<Map<String, Object>> statuses() {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("statuses", new ArrayList<>(robotStatus.values()));
+        payload.put("statuses", AiMemoryOwnership.visibleToCurrentUser(robotStatus.values()));
         return ApiResult.ok(payload);
     }
 
@@ -176,7 +181,7 @@ public class ApiRobotController {
      * @param phase phase
      */
     private void updateStatus(String robotId, String companionId, String phase) {
-        Map<String, Object> status = robotStatus.computeIfAbsent(robotId, k -> new LinkedHashMap<>());
+        Map<String, Object> status = robotStatus.computeIfAbsent(robotId, k -> AiMemoryOwnership.newOwnedRecord());
         status.put("robot_id", robotId);
         status.put("companion_id", companionId);
         status.put("phase", phase);
@@ -200,6 +205,6 @@ public class ApiRobotController {
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "设备不存在: " + robotId);
         }
-        return robot;
+        return AiMemoryOwnership.requireOwned(robot, true, "设备");
     }
 }

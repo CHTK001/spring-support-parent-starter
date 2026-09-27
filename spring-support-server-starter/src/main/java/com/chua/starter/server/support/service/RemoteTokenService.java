@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * 远控短令牌服务（guacamole客户端 单例封装）
+ * 远控短令牌服务（远控客户端单例封装）。
  *
  * <p>基于 utils-support-guacamole-starter 的 {@link GuacamoleClient} 短链能力：
  * 连接参数（目标机地址/端口/凭据）由后端登记进 令牌 登记表，
@@ -47,10 +47,10 @@ public class RemoteTokenService {
     private static final int DEFAULT_TOKEN_TTL_MINUTES = 60;
 
     /**
-     * guacamole客户端 单例（令牌 登记表必须全局唯一，签发与解析才对得上）
+     * 远控客户端单例，令牌登记表必须全局唯一，保证签发与解析结果一致。
      */
     @Getter
-    private GuacamoleClient client; // 客户端
+    private GuacamoleClient client;
 
     /**
      * 服务属性（guacd 地址回落值）
@@ -146,7 +146,7 @@ public class RemoteTokenService {
 
     /**
      * 当前生效的 guacd 地址（配置表优先，回落 application.yml）
-     * @return 当前guacd主机的结果
+     * @return 当前生效的远控服务地址
      */
     public String currentGuacdHost() {
         return configService.getString("guacd.host", properties.getGuacd().getHost());
@@ -154,7 +154,7 @@ public class RemoteTokenService {
 
     /**
      * 当前生效的 guacd 端口
-     * @return 当前guacd端口的结果
+     * @return 当前生效的远控服务端口
      */
     public int currentGuacdPort() {
         return configService.getInt("guacd.port", properties.getGuacd().getPort());
@@ -162,7 +162,7 @@ public class RemoteTokenService {
 
     /**
      * 当前短令牌有效期（分钟，配置表优先）
-     * @return 令牌ttlminutes的结果
+     * @return 短令牌有效期，单位为分钟
      */
     public int tokenTtlMinutes() {
         return configService.getInt(KEY_TOKEN_TTL_MINUTES, DEFAULT_TOKEN_TTL_MINUTES);

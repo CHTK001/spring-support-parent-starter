@@ -3,12 +3,12 @@ package com.chua.starter.monitor.support.service.alarm;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
-import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmPolicy;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmRule;
+import com.chua.starter.monitor.support.model.AlarmStatsSummaryVO;
+import com.chua.starter.monitor.support.model.AlarmTrendPointVO;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 告警引擎服务
@@ -181,14 +181,13 @@ public interface AlarmEngineService {
      *
      * @return todayTotal/unprocessed/processed/falseAlarm/levelDistribution
      */
-    ReturnResult<Map<String, Object>> statsSummary();
+    ReturnResult<AlarmStatsSummaryVO> statsSummary();
 
     /**
      * 告警趋势（按小时分桶，空桶补 0）
      *
-     * @param hours    统计过去 N 小时
-     * @param interval 分桶粒度，当前仅支持按小时
-     * @return 时间序列，元素为 {time, count}
+     * @param hours 统计过去 N 小时
+     * @return 时间序列
      */
-    ReturnResult<List<Map<String, Object>>> statsTrend(int hours, String interval);
+    ReturnResult<List<AlarmTrendPointVO>> statsTrend(int hours);
 }

@@ -28,7 +28,7 @@ import java.util.Base64;
  *
  * # 使用加密密码
  * spring.datasource.password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
- * }</pre> * }</pre>
+ * }</pre>
  *
  * @since 2026/07/14
  * @author CH

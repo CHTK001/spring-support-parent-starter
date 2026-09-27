@@ -104,8 +104,9 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
 
         String userAgent = inputMessage.getHeaders().getFirst("user-agent");
         if (UserAgent.isCrawler(userAgent)) {
+            // 不能换成空请求体：那只会让 Jackson 报「请求数据格式不正确」，把调用方引向解析错误而不是 UA 拒绝
             log.warn("[RequestSign] 检测到爬虫请求，拒绝处理： {}", userAgent);
-            return EmptyHttpInputMessage.getInstance();
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "请求被识别为爬虫客户端，已拒绝访问: " + userAgent);
         }
 
         if (!NonceUtils.hasSignHeaders(request)) {
@@ -334,51 +335,6 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         */
         public HttpHeaders getHeaders() {
             return headers;
-        }
-    }
-
-    /**
-     * 空http输入消息类。
-     *
-     * @author CH
-     * @since 4.0.0
-     */
-    static class EmptyHttpInputMessage implements HttpInputMessage {
-        /**
-         * 空_消息
-        */
-        private static final EmptyHttpInputMessage EMPTY_MESSAGE = new EmptyHttpInputMessage();
-        /**
-         * 是否为空
-        */
-        private static final InputStream EMPTY = new ByteArrayInputStream(new byte[0]);
-        /**
-         * 空_头部
-        */
-        private static final org.springframework.http.HttpHeaders EMPTY_HEADER = new org.springframework.http.HttpHeaders();
-
-        @Override
-        /**
-         * 获取主体
-        */
-        public InputStream getBody() throws IOException {
-            return EMPTY;
-        }
-
-        @Override
-        /**
-         * 获取头部
-        */
-        public org.springframework.http.HttpHeaders getHeaders() {
-            return EMPTY_HEADER;
-        }
-
-        /**
-         * 获取instance。
-         * @return 获取instance的结果
-         */
-        public static EmptyHttpInputMessage getInstance() {
-            return EMPTY_MESSAGE;
         }
     }
 }

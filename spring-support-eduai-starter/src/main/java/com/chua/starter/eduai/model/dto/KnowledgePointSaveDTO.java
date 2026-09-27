@@ -13,6 +13,12 @@ package com.chua.starter.eduai.model.dto;
  * @param knowledgePointDescription 知识点描述
  * @param knowledgePointSortOrder 排序号
  * @param knowledgePointStatus 状态（0-停用 1-启用）
+ * @param knowledgePointContentType 内容类型: TEXT/FILE
+ * @param knowledgePointContent 文本内容
+ * @param knowledgePointFileName 附件原始文件名
+ * @param knowledgePointFilePath 附件存储相对路径
+ * @param knowledgePointFileType 附件扩展名
+ * @param knowledgePointFileSize 附件字节数
  *
  * @since 4.0.0.42
  * @author CH
@@ -27,6 +33,12 @@ public record KnowledgePointSaveDTO(
         String knowledgePointGrade,
         String knowledgePointDescription,
         Integer knowledgePointSortOrder,
-        Integer knowledgePointStatus
+        Integer knowledgePointStatus,
+        String knowledgePointContentType,
+        String knowledgePointContent,
+        String knowledgePointFileName,
+        String knowledgePointFilePath,
+        String knowledgePointFileType,
+        Long knowledgePointFileSize
 ) {
 }

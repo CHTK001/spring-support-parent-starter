@@ -1,8 +1,12 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.common.support.ai.AiUsage;
+import com.chua.common.support.ai.agent.AgentTrace;
+import com.chua.common.support.ai.chat.ChatToolCallData;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.model.AiChatResult;
+import com.chua.starter.ai.support.model.AiClientProbe;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Collections;
@@ -26,6 +30,28 @@ public interface AiChatFacadeService {
      * @return 对话结果
      */
     Map<String, Object> call(AiChatRequest request);
+
+    /**
+     * 同步对话调用（强类型出参）。
+     *
+     * <p>与 {@link #call(AiChatRequest)} 走同一条链路（含用量落库），差别在于返回
+     * {@link AiChatResult} 记录而非按字符串键取值的 Map，供服务端代码直接按字段消费。</p>
+     *
+     * @param request 对话请求
+     * @return 对话结果，失败时 {@code success()} 为 false 并携带错误原因
+     */
+    AiChatResult callForResult(AiChatRequest request);
+
+    /**
+     * 探测指定模型是否存在可用的对话客户端（不发起网络请求）。
+     *
+     * <p>与 {@link #callForResult(AiChatRequest)} 共用同一条解析链路，因此「状态显示可用」与
+     * 「点击后真能对话」是同一个判据；{@code model} 为空时按注册中心默认客户端探测。</p>
+     *
+     * @param model 模型名称，可为空
+     * @return 探测结果，不可用时携带原因
+     */
+    AiClientProbe probeChatClient(String model);
 
     /**
      * 流式对话调用。
@@ -117,9 +143,105 @@ public interface AiChatFacadeService {
                                        BiConsumer<String, AiUsage> onCompleteWithUsage,
                                        Consumer<Throwable> onError,
                                        Consumer<String> onThinkingChunk) {
+        return streamWithUsage(request, onChunk, onCompleteWithUsage, onError, onThinkingChunk, null);
+    }
+
+    /**
+     * 流式对话调用（额外支持执行轨迹回调）。
+     *
+     * <p>{@code onTrace} 逐条接收 Agent 运行时的执行轨迹（轮次 / 深度思考 / 模型输出 / 工具调用与结果 /
+     * token 用量 / 等待确认等边缘事件），供调用方把「为什么卡住」的完整过程转发到前端；不传时轨迹仅写入
+     * 服务端日志，不影响正文与思考回调。</p>
+     *
+     * @param onTrace 每条执行轨迹回调，可为 空
+     * @return SSE 发射器
+     */
+    default SseEmitter streamWithUsage(AiChatRequest request,
+                                       Consumer<String> onChunk,
+                                       BiConsumer<String, AiUsage> onCompleteWithUsage,
+                                       Consumer<Throwable> onError,
+                                       Consumer<String> onThinkingChunk,
+                                       Consumer<AgentTrace> onTrace) {
         return stream(request, onChunk,
                 onCompleteWithUsage == null ? null : reply -> onCompleteWithUsage.accept(reply, null),
                 onError, onThinkingChunk);
+    }
+
+    /**
+     * 流式对话调用（额外支持工具调用增量回调）。
+     *
+     * <p>{@code onToolCall} 逐帧接收模型发起的函数调用（序号/id/名称/入参 JSON 增量），
+     * 供对外协议适配层把 OpenAI 的 tool_calls 翻译为 Anthropic 的 tool_use 块；不传时工具调用
+     * 仅在底层处理、不下发给调用方。</p>
+     *
+     * @param onToolCall 工具调用增量回调（每帧一批），可为 空
+     * @return Sse 发射器
+     */
+    default SseEmitter streamWithUsage(AiChatRequest request,
+                                       Consumer<String> onChunk,
+                                       BiConsumer<String, AiUsage> onCompleteWithUsage,
+                                       Consumer<Throwable> onError,
+                                       Consumer<String> onThinkingChunk,
+                                       Consumer<AgentTrace> onTrace,
+                                       Consumer<List<ChatToolCallData>> onToolCall) {
+        return streamWithUsage(request, onChunk, onCompleteWithUsage, onError,
+                onThinkingChunk, onTrace, onToolCall, null);
+    }
+
+    /**
+     * 流式对话调用（额外支持人工确认请求回调）。
+     *
+     * <p>{@code onConfirmation} 在 Agent 请求人工确认（如规划模式 plan_exit）时触发，
+     * 携带 replyId 与待确认项，供编排层下发确认卡片；不传时确认请求不下发给调用方。</p>
+     *
+     * @param onConfirmation 人工确认请求回调，可为 空
+     * @return SSE 发射器
+     */
+    default SseEmitter streamWithUsage(AiChatRequest request,
+                                       Consumer<String> onChunk,
+                                       BiConsumer<String, AiUsage> onCompleteWithUsage,
+                                       Consumer<Throwable> onError,
+                                       Consumer<String> onThinkingChunk,
+                                       Consumer<AgentTrace> onTrace,
+                                       Consumer<List<ChatToolCallData>> onToolCall,
+                                       Consumer<com.chua.common.support.ai.agent.ConfirmationRequest> onConfirmation) {
+        return streamWithUsage(request, onChunk, onCompleteWithUsage, onError,
+                onThinkingChunk, onTrace, onToolCall);
+    }
+
+    /**
+     * 恢复执行：回传人工确认（human-in-the-loop）决策，订阅 Agent 恢复后的事件流。
+     *
+     * <p>当流式对话下发 confirmation 事件（如规划模式 plan_exit）后，前端在用户点击
+     * 「批准 / 拒绝」时调用本方法，携带原请求（同会话/模型/设置）、replyId 与各工具决策；
+     * 批准则 Agent 继续执行（进入 BUILD），拒绝则回到上一阶段（继续 PLAN）。
+     *
+     * @param request   原对话请求（携带会话/模型/角色设置）
+     * @param replyId   待确认请求回复 ID
+     * @param decisions 各待确认工具的决策
+     * @return SSE 发射器（恢复后的事件流）
+     */
+    default SseEmitter resume(AiChatRequest request, String replyId,
+                              List<com.chua.common.support.ai.agent.ConfirmationDecision> decisions) {
+        SseEmitter emitter = new SseEmitter(60_000L);
+        try {
+            emitter.completeWithError(new IllegalStateException("当前实现不支持人工确认恢复"));
+        } catch (Exception ignored) {
+        }
+        return emitter;
+    }
+
+    /**
+     * 仅组装已配置的客户端（解析 + 参数配置 + 按需 Agent 包装），不发起对话。
+     *
+     * <p>供人工确认恢复等需要直接持有 {@code AgentChatClient} 再调用其 resume 的场景；
+     * 调用方负责在用完后关闭返回的客户端。</p>
+     *
+     * @param request 对话请求
+     * @return 已配置客户端；无法解析时返回 空
+     */
+    default com.chua.common.support.ai.chat.ChatClient prepareConfigured(AiChatRequest request) {
+        return null;
     }
 
     /**

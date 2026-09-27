@@ -31,7 +31,7 @@
   <!-- 项目属性配置 -->
   <properties>
     <!-- 作为内部 starter 被依赖模块使用时默认跳过 fat-jar repackage，保留原始 jar 结构；
-             需要可执行包时构建传 -Dspring-boot.repackage.skip=false -->
+             需要可执行包时构建传 -Dspring-boot.repackage.skip=false，产物为 *-exec.jar，主构件不受影响 -->
     <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
   </properties>
   <!-- 依赖配置 -->
@@ -41,11 +41,6 @@
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <!-- AI 核心（ChatClient, Agent 等） -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
     </dependency>
     <!-- OpenAI 兼容协议 ChatClient（OpenAI/SiliconFlow/SenseTime/GitHub/Gitee） -->
     <dependency>
@@ -88,20 +83,18 @@
       <artifactId>utils-support-feishu-starter</artifactId>
       <version>4.0.0.42</version>
     </dependency>
-    <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
+    <!-- QQ Bot（凭据配置型：appId/appSecret，WebSocket 长连接） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-qq-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现）。
+         注意：这里只引「实现」，不引「权重」——具体模型构件（utils-support-models-onnx-*）
+         由各应用按需声明，否则每个下游可执行 jar 都会被捆绑上百兆权重 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-models-onnx-paddleocrv6-tiny</artifactId>
-      <version>4.0.0.42</version>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-models-onnx-paddleocrv6-medium</artifactId>
-      <version>4.0.0.42</version>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
@@ -167,6 +160,13 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-oauth-client-starter</artifactId>
+    </dependency>
+    <!-- 顶栏天气 / 定位 / 台风（/v2/weather/overview、/v2/location/resolve、/v2/typhoon/**）：
+         平台可选增强能力，与 api 侧宿主共用同一份实现；自动配置注册，@ComponentScan 无需覆盖。
+         前端探测命中即走本模块，未命中回落三方（见 vue-support-parent-starter other.capabilities） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasearch-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -285,6 +285,8 @@
         <configuration>
           <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
           <skip>${spring-boot.repackage.skip}</skip>
+          <!-- 可执行包另挂 exec 分类符，绝不替换主构件：库坐标下必须始终是薄 jar，否则按类路径引本模块的进程解析不到 com/chua/... 根路径类 -->
+          <classifier>exec</classifier>
         </configuration>
         <executions>
           <execution>

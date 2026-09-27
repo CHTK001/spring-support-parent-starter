@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduMarkingResultMapper">
+
+    <!-- 按任务取阅卷结果（队列/同步共用的无隔离查询） -->
+    <select id="selectByTaskId" resultType="com.chua.starter.eduai.model.EduMarkingResult">
+        SELECT r.* FROM edu_marking_result r
+        WHERE r.marking_result_task_id = #{taskId}
+    </select>
+
+    <!-- 按任务取阅卷结果（面向用户的隔离查询） -->
+    <select id="selectTaskResults" resultType="com.chua.starter.eduai.model.EduMarkingResult">
+        SELECT r.* FROM edu_marking_result r
+        <where>
+            r.marking_result_task_id = #{taskId}
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (r.marking_result_owner_user_id IS NULL OR r.marking_result_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+    </select>
+
+    <!-- 把单题 AI 批改结果写入库：AI/统一得分评语 + 状态置为 AI 已批改 + 更新时间 -->
+    <update id="updateAiOutcome">
+        UPDATE edu_marking_result
+        SET marking_result_ai_score = #{aiScore},
+            marking_result_ai_comment = #{aiComment},
+            marking_result_score = #{aiScore},
+            marking_result_comment = #{aiComment},
+            marking_result_status = 1,
+            update_time = #{now}
+        WHERE marking_result_task_id = #{taskId}
+          AND marking_result_question_id = #{questionId}
+    </update>
+
+</mapper>

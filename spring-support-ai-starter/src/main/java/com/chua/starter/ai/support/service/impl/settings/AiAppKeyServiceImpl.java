@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 import org.springframework.cache.annotation.CacheEvict;
 import com.chua.starter.ai.support.entity.settings.SysAiGroup;
@@ -13,6 +15,7 @@ import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,14 +61,16 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     private final AiGroupMapper groupMapper;
 
     /**
-     * 查询所有 appKey。
+     * 查询 appKey：管理员全量，普通用户仅本人名下。
      *
      * @return 操作结果
      */
     @Override
     public ReturnResult<List<AiAppKeyDTO>> list() {
+        String scopeUserId = AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
         List<SysAiAppKey> keys = appKeyMapper.selectList(
                         new LambdaQueryWrapper<SysAiAppKey>()
+                                .eq(scopeUserId != null, SysAiAppKey::getUserId, scopeUserId)
                                 .orderByDesc(SysAiAppKey::getId))
                 .stream().toList();
 
@@ -102,13 +107,17 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (dto == null || dto.getName() == null || dto.getName().isBlank()) {
             return ReturnResult.illegal("AppKey 名称不能为空");
         }
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
         SysAiAppKey entity = toEntity(dto);
+        entity.setUserId(AiUserContext.requireUserId());
         LocalDateTime now = LocalDateTime.now();
         if (entity.getStatus() == null) {
             entity.setStatus(1);
         }
-        if (entity.getDelete() == null) {
-            entity.setDelete(0);
+        if (entity.getDeleted() == null) {
+            entity.setDeleted(0);
         }
         if (entity.getUseCount() == null) {
             entity.setUseCount(0L);
@@ -132,13 +141,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (appKeyId == null) {
             return ReturnResult.illegal("AppKey ID 不能为空");
         }
-        SysAiAppKey existing = appKeyMapper.selectById(appKeyId.intValue());
-        if (existing == null) {
-            return ReturnResult.error("AppKey 不存在");
-        }
+        requireWritableAppKey(appKeyId);
         SysAiAppKey entity = toEntity(dto);
         entity.setId(appKeyId.intValue());
-        entity.setDelete(0);
+        entity.setDeleted(0);
         appKeyMapper.updateById(entity);
         SysAiAppKey updated = appKeyMapper.selectById(appKeyId.intValue());
         return ReturnResult.ok(toDto(updated, resolveProvider(updated.getProviderId()),
@@ -157,6 +163,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (appKeyId == null) {
             return ReturnResult.illegal("AppKey ID 不能为空");
         }
+        requireWritableAppKey(appKeyId);
         appKeyMapper.deleteById(appKeyId.intValue());
         log.debug("[SysAiAppKey] 删除成功: id={}", appKeyId);
         return ReturnResult.ok();
@@ -175,6 +182,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (appKeyId == null) {
             return ReturnResult.illegal("AppKey ID 不能为空");
         }
+        requireWritableAppKey(appKeyId);
         LambdaUpdateWrapper<SysAiAppKey> wrapper = new LambdaUpdateWrapper<SysAiAppKey>()
                 .eq(SysAiAppKey::getId, appKeyId.intValue())
                 .set(SysAiAppKey::getStatus, Boolean.TRUE.equals(enabled) ? 1 : 0)
@@ -183,6 +191,35 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
         return ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
                 resolveGroup(entity.getGroupId())));
+    }
+
+    /**
+     * 写出口归属校验：只认归属人本身，管理员对他人数据只读。
+     *
+     * @param appKeyId appKey 主键
+     * @return 校验通过的 appKey
+     */
+    private SysAiAppKey requireWritableAppKey(Long appKeyId) {
+        SysAiAppKey existing = appKeyMapper.selectById(appKeyId.intValue());
+        if (existing == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "AppKey 不存在");
+        }
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        String userId = AiUserContext.requireUserId();
+        String owner = existing.getUserId();
+        if (owner == null || owner.isBlank()) {
+            if (!AiUserContext.isAdmin()) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人 AppKey");
+            }
+            return existing;
+        }
+        if (!userId.equals(owner)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, AiUserContext.isAdmin()
+                    ? "管理员对他人数据只读，不可修改或删除" : "无权访问他人 AppKey");
+        }
+        return existing;
     }
 
     /**
@@ -244,6 +281,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
                 ? entity.getEnabled()
                 : entity.getStatus() != null && entity.getStatus() == 1);
         dto.setCreatedAt(entity.getCreateTime() != null ? entity.getCreateTime().format(FORMATTER) : null);
+        dto.setOwner(entity.getUserId());
         return dto;
     }
 

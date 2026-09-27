@@ -6,7 +6,7 @@ import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.vo.MerchantVO;
 
 /**
- * 商户服务接口
+ * 客户（商户）服务接口
  *
  * @since 2026-03-18
  * @author CH

@@ -12,32 +12,31 @@ import java.math.BigDecimal;
 @Data
 public class RechargeRequest {
     /**
-     * rechargeno
-    */
+     * 充值单号
+     */
     private String rechargeNo;
     /**
-     * 通知url
-    */
+     * 通知回调 URL
+     */
     private String notifyUrl;
     /**
-     * merchantid
-    */
+     * 商户 ID
+     */
     private Long merchantId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * Amount
-    */
+     * 充值金额
+     */
     private BigDecimal amount;
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }
-

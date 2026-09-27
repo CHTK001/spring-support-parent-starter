@@ -220,12 +220,34 @@ public class MonitorPushService {
      * @param disk     磁盘使用率 %
      */
     public void pushHostMetrics(Long hostId, String hostName, Number cpu, Number mem, Number disk) {
-        Map<String, Object> payload = new LinkedHashMap<>(6);
+        pushHostMetrics(hostId, hostName, cpu, mem, disk, null, null, null);
+    }
+
+    /**
+     * 广播主机实时指标（含磁盘 IO 与软件，前端 订阅("监控", "host-metrics") 接收）
+     *
+     * @param hostId    主机 标识
+     * @param hostName  主机名
+     * @param cpu       CPU 使用率 %
+     * @param mem       内存使用率 %
+     * @param disk      磁盘使用率 %
+     * @param diskRead  磁盘读取速率 KB/s，可为空
+     * @param diskWrite 磁盘写入速率 KB/s，可为空
+     * @param software  软件实例 JSON，可为空
+     */
+    public void pushHostMetrics(Long hostId, String hostName, Number cpu, Number mem, Number disk,
+                                Number diskRead, Number diskWrite, String software) {
+        Map<String, Object> payload = new LinkedHashMap<>(10);
         payload.put("hostId", hostId);
         payload.put("hostName", hostName == null ? "" : hostName);
         payload.put("cpu", cpu == null ? 0 : cpu);
         payload.put("mem", mem == null ? 0 : mem);
         payload.put("disk", disk == null ? 0 : disk);
+        payload.put("diskRead", diskRead == null ? 0 : diskRead);
+        payload.put("diskWrite", diskWrite == null ? 0 : diskWrite);
+        if (software != null && !software.isBlank()) {
+            payload.put("software", software);
+        }
         broadcast(EVENT_HOST_METRICS, payload, hostId == null ? null : String.valueOf(hostId));
     }
 

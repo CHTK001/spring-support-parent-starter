@@ -186,6 +186,9 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     /**
      * 构建union全部SQL
      *
+     * <p>安全豁免：动态表名均来自 JDBC 元数据或配置，并在构造及刷新时经
+     * {@link PartitionRoutingService#validateTableName(String, String)} 严格白名单与长度校验。</p>
+     *
      * @return 构建union全部sql的结果
      */
     private String buildUnionAllSql() {
