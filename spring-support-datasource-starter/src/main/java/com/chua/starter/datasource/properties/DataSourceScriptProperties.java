@@ -556,53 +556,35 @@ public class DataSourceScriptProperties {
         /**
          * 快照版本
          * 示例: V1.0.0-SNAPSHOT__初始化_用户.SQL
-         * @param "snapshot" "snapshot"
-         * @param 0 0
-         * @return SNAPSHOT的结果
          */
         SNAPSHOT("snapshot", 0),
         
         /**
          * Alpha 内部测试版本
          * 示例: V1.0.0-alpha__初始化_用户.SQL
-         * @param "alpha" "alpha"
-         * @param 1 1
-         * @return ALPHA的结果
          */
         ALPHA("alpha", 1),
         
         /**
          * Beta 公开测试版本
          * 示例: V1.0.0-beta__初始化_用户.SQL
-         * @param "beta" "beta"
-         * @param 2 2
-         * @return BETA的结果
          */
         BETA("beta", 2),
         
         /**
          * RC（Release Candidate）候选发布版本
          * 示例: V1.0.0-rc1__初始化_用户.SQL
-         * @param "rc" "rc"
-         * @param 3 3
-         * @return RC的结果
          */
         RC("rc", 3),
         
         /**
          * 正式稳定版本
          * 示例: V1.0.0__初始化_用户.SQL
-         * @param "stable" "stable"
-         * @param 4 4
-         * @return st的结果
          */
         STABLE("stable", 4),
         
         /**
          * 允许所有版本类型
-         * @param "all" "全部"
-         * @param 99 99
-         * @return 全部的结果
          */
         ALL("all", 99);
 
