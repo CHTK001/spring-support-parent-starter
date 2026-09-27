@@ -12,35 +12,35 @@ import java.math.BigDecimal;
 @Data
 public class RefundRequest {
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * 贸易no
-    */
+     * 交易单号
+     */
     private String tradeNo;
     /**
-     * 退税no
-    */
+     * 退款单号
+     */
     private String refundNo;
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
     /**
-     * 总数amount
-    */
+     * 订单总金额
+     */
     private BigDecimal totalAmount;
     /**
-     * ReasonMLmlml
-    */
+     * 退款原因
+     */
     private String reason;
     /**
-     * 通知url
-    */
+     * 通知回调 URL
+     */
     private String notifyUrl;
 }

@@ -640,10 +640,23 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
                 return HttpFetchSupport.get(candidate);
             } catch (IOException e) {
                 last = e;
-                log.warn("[collect] 数据源不可用，尝试下一个: {} 原因: {}", candidate, e.getMessage());
+                log.warn("[collect] 数据源不可用，尝试下一个: {} 原因: {}", candidate, describe(e));
             }
         }
-        throw new IllegalStateException("数据源拉取失败: " + (last == null ? rawUrl : last.getMessage()), last);
+        throw new IllegalStateException("数据源拉取失败: " + (last == null ? rawUrl : describe(last)), last);
+    }
+
+    /**
+     * 描述一次拉取失败的原因。{@link java.net.ConnectException} 等异常自带的
+     * {@code getMessage()} 常为 null，直接拼进提示会显示成「原因: null」，
+     * 这里在消息缺失时退回异常类名，保证日志与接口提示可读。
+     *
+     * @param e 拉取异常
+     * @return 可读的原因描述
+     */
+    private String describe(IOException e) {
+        String message = e.getMessage();
+        return StringUtils.hasText(message) ? message : e.getClass().getSimpleName();
     }
 
     private boolean existsSameQuestion(String stem, String subject, String owner) {

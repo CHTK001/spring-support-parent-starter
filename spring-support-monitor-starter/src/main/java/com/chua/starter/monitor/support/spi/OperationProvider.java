@@ -4,6 +4,8 @@ import com.chua.starter.monitor.support.enums.ServiceType;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -115,5 +117,19 @@ public interface OperationProvider {
      * @return 扫描结果的结果
      */
     public record ScanResult(List<String> keys, String nextCursor) {
+
+        /**
+         * 规范构造器：非空时对 键 列表做防御性拷贝。
+         *
+         * <p>value class 前置条件——集合组件必须深不可变。本 record 是对外 SPI：
+         * 调用方 {@code MonitorController} 两处显式判空 {@code keys() != null}，
+         * 说明 null 是被允许的状态；外部实现也可能给出含 null 元素的列表，
+         * 故保留 null 语义并采用可含 null 元素的不可变包装。</p>
+         *
+         * @param keys 本次返回的 键，可为 null
+         */
+        public ScanResult {
+            keys = keys == null ? null : Collections.unmodifiableList(new ArrayList<>(keys));
+        }
     }
 }

@@ -8,10 +8,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * 支付事件监听器
- * 监听支付相关事件并记录日志
+ * 监听支付相关事件并记录日志。
  *
- * 注意：事件已通过@事件转为队列自动发送到队列
- * 如需从队列接收事件，请使用@队列事件监听器注解
+ * 注意：事件已通过 Spring 事件转为队列自动发送到队列端，
+ * 若需要从队列接收事件，请使用队列事件监听器注解。
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -72,4 +73,3 @@ public class PaymentEventListener {
             event.getErrorType(), event.getErrorMessage());
     }
 }
-

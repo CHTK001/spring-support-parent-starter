@@ -12,32 +12,31 @@ import java.math.BigDecimal;
 @Data
 public class WithdrawResult {
     /**
-     * 成功
-    */
+     * 是否成功
+     */
     private boolean success;
     /**
-     * withdrawno
-    */
+     * 提现单号
+     */
     private String withdrawNo;
     /**
-     * 贸易no
-    */
+     * 交易单号
+     */
     private String tradeNo;
     /**
-     * Amount
-    */
+     * 提现金额
+     */
     private BigDecimal amount;
     /**
-     * 状态
-    */
+     * 提现状态
+     */
     private String status;
     /**
-     * 消息
-    */
+     * 提示消息
+     */
     private String message;
     /**
-     * RAW响应
-    */
+     * 渠道 RAW 响应
+     */
     private String rawResponse;
 }
-

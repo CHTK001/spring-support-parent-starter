@@ -5,6 +5,7 @@ import com.chua.common.support.objects.definition.BeanDefinition;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.test.osgi.GreetService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,6 +58,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
         "plugin.osgi.storage=target/osgi-cache-bean-switch",
+        // 测试环境每次从干净 storage 开始：本类验证「同符号名两版本共存」，
+        // 残留的历史版本会让共存断言与卸载断言互相干扰
+        "plugin.osgi.storage-clean=onInit",
         "plugin.osgi.shell.enabled=false",
         "plugin.osgi.framework-properties[org.osgi.framework.system.packages.extra]=com.chua.starter.test.osgi"
 })
@@ -82,8 +86,34 @@ class OsgiBeanSwitchRealTest {
     private ObjectContext objectContext; // 对象上下文
 
     /**
+     * 每个用例后卸载本类安装的 bundle。
+     * <p>
+     * 本类两个用例都涉及「同符号名、不同版本」的 bundle，且
+     * {@code ObjectContext} 在同一 JVM 内被多个 Spring 上下文共享——
+     * 一旦某个 bundle 残留，后续用例的「初始不应存在服务」「卸载后仅剩 N 个」
+     * 这类断言就会被污染。用例自身不做清理时，失败点会随机漂移到不同断言上。
+     * </p>
+     */
+    @AfterEach
+    void cleanup() {
+        try {
+            osgiLauncher.getBundles().stream()
+                    .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                    .forEach(b -> {
+                        try {
+                            b.uninstall();
+                        } catch (Exception e) {
+                            // 清理失败不应掩盖用例自身结论
+                        }
+                    });
+        } catch (Exception e) {
+            // 同上
+        }
+    }
+
+    /**
      * 真实测试：安装 → Bean 出现；卸载 → Bean 消失；换版本 → Bean 切换
-    */
+     */
     @Test
     void greetBeanSwitchesWithBundleLifecycle() throws Exception {
  // 1) 初始：无 greet服务 服务与 Bean

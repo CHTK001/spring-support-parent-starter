@@ -16,9 +16,5 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-nacos-starter</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
   </dependencies>
 </project>

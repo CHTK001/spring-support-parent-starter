@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory;
 
 import com.chua.common.support.lang.format.DmlFormatter;
 import com.chua.common.support.lang.format.Formatter;
+import com.chua.common.support.utils.DateUtils;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cache.CacheKey;
@@ -27,7 +28,6 @@ import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.sql.Connection;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -67,11 +67,6 @@ public class SqlInterceptor implements Interceptor {
     private static final Logger log = LoggerFactory.getLogger(SqlInterceptor.class);
 
     private static final Map<String, Object> MAP = new ConcurrentHashMap<>(2); // 映射
-
-    /**
-     * Formatter
-    */
-    private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * SQL 格式化器
@@ -149,7 +144,7 @@ public class SqlInterceptor implements Interceptor {
          */
         showSql(configuration, boundSql);
         String traceId = MDC.get(TRACE_ID);
-        String message = "[SqlInterceptor] 执行 [" + name + "] 时间 [" + formatter.format(System.currentTimeMillis()) + "] sql耗时 [" + (double) time / 1000 + "] s";
+        String message = "[SqlInterceptor] 执行 [" + name + "] 时间 [" + DateUtils.format(System.currentTimeMillis()) + "] sql耗时 [" + (double) time / 1000 + "] s";
         StringBuilder str = new StringBuilder();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
         str.append("\n").append("----------------------------begin[SQL Execute Message]--------------------------------\n");
@@ -194,7 +189,7 @@ public class SqlInterceptor implements Interceptor {
         if (obj instanceof String) {
             value = "'" + obj + "'";
         } else if (obj instanceof Date) {
-            value = "'" + formatter.format(obj) + "'";
+            value = "'" + DateUtils.format((Date) obj) + "'";
         } else {
             if (obj != null) {
                 value = obj.toString();

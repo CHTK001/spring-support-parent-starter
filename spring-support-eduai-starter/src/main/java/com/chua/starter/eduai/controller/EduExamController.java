@@ -33,8 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class EduExamController {
 
     /**
-     * Exam服务
-    */
+     * 考试服务。
+     */
     private final IEduExamService examService;
 
     /**

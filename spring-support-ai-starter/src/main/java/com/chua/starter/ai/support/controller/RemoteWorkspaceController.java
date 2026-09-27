@@ -266,9 +266,53 @@ public class RemoteWorkspaceController {
     @Operation(summary = "更新连接", description = "更新远程工作区连接")
     @PutMapping("/connections/{id}")
     public ReturnResult<Map<String, Object>> updateConnection(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        Map<String, Object> config = (Map<String, Object>) body.get("config");
+        if (config == null) {
+            config = body;
+        }
+        SysAiSshHost updates = new SysAiSshHost();
+        Object name = body.get("name") != null ? body.get("name") : config.get("name");
+        if (name != null) {
+            updates.setName(String.valueOf(name));
+        }
+        if (config.get("host") != null) {
+            updates.setHost(String.valueOf(config.get("host")));
+        }
+        if (config.get("port") instanceof Number number) {
+            updates.setPort(number.intValue());
+        }
+        if (config.get("username") != null) {
+            updates.setUsername(String.valueOf(config.get("username")));
+        }
+        String authMethod = String.valueOf(config.getOrDefault("authMethod", "password"));
+        if (config.get("authMethod") != null) {
+            updates.setAuthType("privateKey".equals(authMethod) ? "key" : authMethod);
+        }
+        updates.setPassword(firstText(config.get("password")));
+        updates.setPrivateKey(firstText(config.get("privateKey")));
+        updates.setPassphrase(firstText(config.get("passphrase")));
+
+        SysAiSshHost host = sshHostStore.update(id, updates);
         Map<String, Object> result = new HashMap<>();
-        result.put("id", id);
+        result.put("id", host.getSshHostId());
+        result.put("name", host.getName());
+        Map<String, Object> echo = new HashMap<>();
+        echo.put("host", host.getHost());
+        echo.put("port", host.getPort());
+        echo.put("username", host.getUsername());
+        echo.put("authMethod", "key".equals(host.getAuthType()) ? "privateKey" : host.getAuthType());
+        result.put("config", echo);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 取请求里的密钥字段，未提供时返回 {@code null} 表示不修改。
+     *
+     * @param value 请求值
+     * @return 文本值，缺失时为 {@code null}
+     */
+    private static String firstText(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     /**

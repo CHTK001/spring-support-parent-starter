@@ -682,11 +682,16 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         String apiKey = extractApiKey(provider.getCredentials());
         Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+        Map<String, Object> extra = provider.getExtra();
         ChatClientSetting setting = ChatClientSetting.builder()
                 .provider(provider.getPlatform())
                 .appKey(apiKey)
                 .baseUrl(provider.getBaseUrl())
                 .extraHeaders(extraHeaders)
+                // 认证方案：Dots Studio 这类只认 api-key 头的服务商靠这三项才能通过鉴权
+                .authScheme(provider.getAuthScheme())
+                .authHeader(extra == null || extra.get("auth_header") == null ? null : extra.get("auth_header").toString())
+                .authPrefix(extra == null || extra.get("auth_prefix") == null ? null : extra.get("auth_prefix").toString())
                 .proxy(provider.getProxy())
                 .build();
         return ChatClient.create(setting).model(agent.getModel());

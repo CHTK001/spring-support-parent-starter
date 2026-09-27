@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS concurrent_rate_limiter (
     created_at         DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at         DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (name)
-) COMMENT ='限流器配置';
+);
 
 CREATE TABLE IF NOT EXISTS concurrent_circuit_breaker (
     name              VARCHAR(128) NOT NULL COMMENT '熔断器名称',
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS concurrent_circuit_breaker (
     created_at        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (name)
-) COMMENT ='熔断器配置';
+);
 
 CREATE TABLE IF NOT EXISTS concurrent_distributed_lock (
     name          VARCHAR(128) NOT NULL COMMENT '锁名称',
@@ -44,6 +44,6 @@ CREATE TABLE IF NOT EXISTS concurrent_distributed_lock (
     created_at    DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at    DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (name)
-) COMMENT ='分布式锁配置';
+);
 
 

@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * 模型价格/指标快照服务。
  *
  * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
- * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
+ * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/HLE/全知指数/输出速度/首块延迟/
  * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>指标</code> 实时字段
  * 与能力健康探测延迟，构建一份快照写入 Redis（Key {@code nomifun:model-metrics:latest}，
  * TTL 12h），供查询接口按需读取。不再经 webSocket 定时推送，前端通过
@@ -157,6 +157,8 @@ public class ModelMetricsSnapshotService {
             "price_cache_hit_per_musd",
             "price_cache_write_per_musd",
             "intelligence_index",
+            "hle_score",
+            "omniscience_index",
             "output_speed_tps",
             "latency_first_token_seconds",
             "context_window_tokens",
@@ -202,12 +204,32 @@ public class ModelMetricsSnapshotService {
      */
     public Map<String, Object> buildAndPushSnapshot() {
         Map<String, Object> snapshot = buildSnapshotInternal();
-        /**
-         * persist转为Redis。
-         * @param snapshot snapshot
-         */
+        if (!isUsableSnapshot(snapshot)) {
+            // 本应用没有可枚举的供应商模型时不写 Redis：Redis 上的快照 Key 是按应用共享的，
+            // 另一个内嵌本模块的应用（例如 eduai，自带 H2 库、供应商表为空）会把它的空快照
+            // 写到同一个 Key 上。若本应用也照写，等于把有效快照覆盖成空，模型指标会整段消失。
+            log.debug("[ModelMetrics] 快照为空（无供应商模型），跳过写 Redis");
+            return snapshot;
+        }
         persistToRedis(snapshot);
         return snapshot;
+    }
+
+    /**
+     * 判断快照是否可用（含非空 models 列表）。
+     *
+     * <p>用于抵御「共享 Redis Key 被空快照污染」：同一 Redis 上可能并存多个内嵌本模块的
+     * 应用，供应商表为空的那个会把 <code>{count:0, models:[]}</code> 写进来。</p>
+     *
+     * @param snapshot 待判定的快照
+     * @return 含至少一行模型时返回 true
+     */
+    private boolean isUsableSnapshot(Map<String, Object> snapshot) {
+        if (snapshot == null) {
+            return false;
+        }
+        Object models = snapshot.get("models");
+        return models instanceof List<?> list && !list.isEmpty();
     }
 
     /**
@@ -283,9 +305,13 @@ public class ModelMetricsSnapshotService {
             if (cached != null && !cached.isBlank()) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> parsed = objectMapper.readValue(cached, Map.class);
-                if (parsed != null) {
+                // 空快照视为不可用：Redis 上的 Key 是按应用共享的，别的内嵌本模块的应用
+                // （供应商表为空）会把自己的空快照写进来。若直接采信，本应用的模型指标索引
+                // 会整段为空 —— 卡片上的官方估价/速度/智能全部消失。此时改为现场构建。
+                if (isUsableSnapshot(parsed)) {
                     return parsed;
                 }
+                log.debug("[ModelMetrics] Redis 快照为空（{}），改为现场构建", cached);
             }
         } catch (Exception e) {
             log.warn("[ModelMetrics] 读取 Redis 快照失败，转为现场构建: {}", e.getMessage());

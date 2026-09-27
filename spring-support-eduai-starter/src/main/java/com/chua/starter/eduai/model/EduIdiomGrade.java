@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 成语学段映射实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_idiom_grade")
-public class EduIdiomGrade {
+public class EduIdiomGrade extends SysBase {
 
     /**
      * 映射标识
@@ -48,11 +50,6 @@ public class EduIdiomGrade {
      * 教材版本（人教版/苏教版等）
      */
     private String textbookVersion;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

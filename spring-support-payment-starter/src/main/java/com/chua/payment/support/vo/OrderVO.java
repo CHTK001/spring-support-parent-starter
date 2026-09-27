@@ -14,154 +14,154 @@ import java.time.LocalDateTime;
  */
 @Data
 public class OrderVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
     /**
      * 标识
-    */
+     */
     private Long id;
 
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
 
     /**
-     * 业务排序NO
-    */
+     * 业务订单号
+     */
     private String businessOrderNo;
 
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
 
     /**
-     * Merchant名称
-    */
+     * 商户名称
+     */
     private String merchantName;
 
     /**
-     * 通道标识
-    */
+     * 渠道标识
+     */
     private Long channelId;
 
     /**
-     * 通道名称
-    */
+     * 渠道名称
+     */
     private String channelName;
 
     /**
      * 用户标识
-    */
+     */
     private Long userId;
 
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private String channelType;
 
     /**
-     * 通道SUB类型
-    */
+     * 渠道SUB类型
+     */
     private String channelSubType;
 
     /**
-     * 排序amount
-    */
+     * 订单金额
+     */
     private BigDecimal orderAmount;
 
     /**
-     * Paidamount
-    */
+     * 已付金额
+     */
     private BigDecimal paidAmount;
 
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
 
     /**
-     * Discountamount
-    */
+     * 优惠金额
+     */
     private BigDecimal discountAmount;
 
     /**
-     * 货币
-    */
+     * 币种
+     */
     private String currency;
 
     /**
      * 状态
-    */
+     */
     private String status;
 
     /**
-     * 状态desc
-    */
+     * 状态描述
+     */
     private String statusDesc;
 
     /**
      * 主题
-    */
+     */
     private String subject;
 
     /**
      * 请求体
-    */
+     */
     private String body;
 
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
 
     /**
      * 返回值URL
-    */
+     */
     private String returnUrl;
 
     /**
-     * Expire时间
-    */
+     * 过期时间
+     */
     private LocalDateTime expireTime;
 
     /**
-     * 薪酬时间
-    */
+     * 支付时间
+     */
     private LocalDateTime payTime;
 
     /**
      * 完成时间
-    */
+     */
     private LocalDateTime completeTime;
 
     /**
-     * 退税时间
-    */
+     * 退款时间
+     */
     private LocalDateTime refundTime;
 
     /**
-     * Thirdparty排序NO
-    */
+     * 第三方订单号
+     */
     private String thirdPartyOrderNo;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     /**
      * 删除标记
-    */
+     */
     private Integer deleted;
 
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 
     /**
-     * 更新时间AT
-    */
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }

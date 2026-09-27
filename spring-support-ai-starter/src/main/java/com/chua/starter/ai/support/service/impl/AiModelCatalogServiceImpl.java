@@ -11,12 +11,16 @@ import com.chua.deeplearning.support.capability.ModelCapabilities;
 import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.model.AiModelDTO;
+import com.chua.starter.ai.support.manage.service.OnnxExternalDirectoryService;
 import com.chua.starter.ai.support.service.AiModelCatalogService;
 import com.chua.starter.ai.support.service.settings.AiModelService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -43,6 +47,11 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     private final AiModelService aiModelService;
 
     /**
+     * ONNX 外部目录服务：提供持久化的模型根，用于在 discoverAll 之后把根推回注册表
+     */
+    private final OnnxExternalDirectoryService onnxExternalDirectoryService;
+
+    /**
      * 能力 → 云端门面 列表模型 提供者 映射。
      */
     private final Map<String, List<String>> cloudCapabilityModels = new LinkedHashMap<>();
@@ -65,6 +74,9 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
                 log.debug("[AiModelCatalog] 模型注册表发现失败: {}", e.getMessage());
             }
             Map<String, LinkedHashSet<String>> grouped = new LinkedHashMap<>();
+        // discoverAll 会把模型根重置为库默认值，必须重新推回持久化的根，
+        // 否则本地模型按相对路径探测时全部落空（/v2/models 恒为空）
+        onnxExternalDirectoryService.applyModelRoot();
         // 1. 本地模型：按能力接口归类
         for (ModelRegistry.Entry entry : ModelRegistry.getAll()) {
             String label = ModelCapabilities.labelOf(entry.capabilityInterface());
@@ -158,6 +170,115 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     */
     public List<String> listCapabilities() {
         return new ArrayList<>(listModelsByCapability().keySet());
+    }
+
+    /**
+     * 本地模型详情缓存（只读探测，不触发下载）；TTL 内复用，避免每次打开选择器都做大量路径探测。
+     */
+    private volatile List<Map<String, Object>> localDetailsCache;
+    private volatile long localDetailsCacheAt;
+    private static final long LOCAL_DETAILS_TTL_MS = 10_000L;
+
+    @Override
+    public List<Map<String, Object>> listLocalModelDetails() {
+        List<Map<String, Object>> cache = localDetailsCache;
+        if (cache != null && System.currentTimeMillis() - localDetailsCacheAt < LOCAL_DETAILS_TTL_MS) {
+            return cache;
+        }
+        synchronized (this) {
+            if (localDetailsCache != null && System.currentTimeMillis() - localDetailsCacheAt < LOCAL_DETAILS_TTL_MS) {
+                return localDetailsCache;
+            }
+            List<Map<String, Object>> computed = computeLocalModelDetails();
+            localDetailsCache = computed;
+            localDetailsCacheAt = System.currentTimeMillis();
+            return computed;
+        }
+    }
+
+    /**
+     * 外部模型目录变更后清空本地模型目录清单缓存。
+     *
+     * <p>该清单带 TTL 缓存，而外部目录是在 {@code ApplicationReadyEvent} 阶段才注册进
+     * {@code ModelRegistry} 的。若缓存在注册之前被填充，ONNX 提供商的「刷新模型」在 TTL 内
+     * 看不到这些目录，列表会是空的。收到变更事件后立即失效，避免等 TTL 自然过期。</p>
+     *
+     * @param event 目录变更事件
+     */
+    @org.springframework.context.event.EventListener
+    public void onModelDirsChanged(
+            com.chua.starter.ai.support.manage.service.OnnxModelDirsChangedEvent event) {
+        localDetailsCache = null;
+        localDetailsCacheAt = 0L;
+        log.debug("[AiModelCatalog] 外部目录变更，已清空本地模型目录缓存 root={}", event.modelRoot());
+    }
+
+    /**
+     * 计算本地模型详情：只读探测本地可用性，不调用 resolveModelPath（避免触发联网下载）。
+     */    private List<Map<String, Object>> computeLocalModelDetails() {
+        // 顺序敏感：必须先把持久化的模型根推回注册表，再触发发现。
+        // 反过来 discoverAll 会在库默认根（通常不存在）下扫描，外部目录一个都发现不了，
+        // 本地模型清单就会缺失这些目录，ONNX 提供商「刷新模型」返回空
+        onnxExternalDirectoryService.applyModelRoot();
+        try {
+            ModelRegistry.discoverAll();
+        } catch (Exception e) {
+            log.debug("[AiModelCatalog] 模型注册表发现失败: {}", e.getMessage());
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        onnxExternalDirectoryService.applyModelRoot();
+        for (ModelRegistry.Entry entry : ModelRegistry.getAll()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("modelId", entry.modelId());
+            item.put("capability", ModelCapabilities.labelOf(entry.capabilityInterface()));
+            item.put("recommended", entry.isRecommended());
+            item.put("relativePath", entry.relativePath());
+            item.put("downloadUrl", entry.downloadUrl());
+
+            Path resolved = probeAvailablePath(entry.relativePath());
+            boolean available = resolved != null && Files.exists(resolved);
+            item.put("available", available);
+            item.put("localPath", resolved == null ? null : resolved.toAbsolutePath().normalize().toString());
+            result.add(item);
+        }
+        return result;
+    }
+
+    /**
+     * 轻量本地可用性探测：仅检查绝对路径 / 模型根目录 / 工作目录，以及显式 classpath: 引用；
+     * 不对下载型条目做昂贵的 classpath 全量扫描（下载由 resolveModelPath 在推理时处理）。
+     *
+     * @param relativePath 注册条目声明的相对路径
+     * @return 本地已存在的路径；不存在返回 空
+     */
+    private Path probeAvailablePath(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return null;
+        }
+        String cfg = relativePath.trim();
+        if (cfg.startsWith("classpath:")) {
+            try {
+                return ModelRegistry.resolveConfiguredPath(cfg);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        try {
+            Path p = Paths.get(cfg);
+            if (p.isAbsolute() && Files.exists(p)) {
+                return p;
+            }
+            Path underRoot = Paths.get(ModelRegistry.getModelRootDir()).resolve(cfg);
+            if (Files.exists(underRoot)) {
+                return underRoot;
+            }
+            if (!p.isAbsolute() && Files.exists(p)) {
+                return p.toAbsolutePath().normalize();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return null;
     }
 
     /**

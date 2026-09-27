@@ -123,10 +123,31 @@ public class MonitorScheduler {
                 .flatMap(task -> execute(task), CONCURRENCY)
                 .onBackpressureBuffer(10_000)
                 .subscribe(
-                        result -> log.debug("[MonitorScheduler] 采集完成 task={} points={}",
-                                result.getTask().getId(), result.getPoints().size()),
+                        result -> logCollectResult("定时", result),
                         error -> log.error("[MonitorScheduler] 采集异常", error)
                 );
+    }
+
+    /**
+     * 打印单次采集结果
+     * <p>
+     * 提供者可以返回 {@code fail(...)} 而不抛异常（如指标服务未启用、平台不支持），
+     * 此时必须把原因打出来，否则对外表现与"采集完成"无异。
+     * </p>
+     *
+     * @param source 触发来源（定时/手动）
+     * @param result 采集结果
+     */
+    private void logCollectResult(String source, CollectResult result) {
+        Long taskId = result.getTask() == null ? null : result.getTask().getId();
+        int points = result.getPoints() == null ? 0 : result.getPoints().size();
+        if (!result.isSuccess() || points == 0) {
+            log.warn("[MonitorScheduler] {}采集未取到指标 task={} points={} reason={}",
+                    source, taskId, points,
+                    result.getErrorMessage() == null ? "提供者未返回指标点" : result.getErrorMessage());
+            return;
+        }
+        log.debug("[MonitorScheduler] {}采集完成 task={} points={}", source, taskId, points);
     }
 
     /**
@@ -138,9 +159,14 @@ public class MonitorScheduler {
     }
 
     /**
-     * 数据保留清理, 每天凌晨 3 点执行
+     * 数据保留清理。
+     *
+     * <p>默认每小时跑一次而不是每天一次：保留期是「从执行时刻往前推 N 天」的滚动窗口，
+     * 如果清理频率是每天一次，那么实际留存上界是 {@code 保留期 + 最多 24 小时}——
+     * 保留期配 1 天时最坏会存到 48 小时，与「只保留 24 小时」的预期不符。
+     * 需要按天清理的场景把 {@code monitor.cleanup.cron} 配成 {@code 0 0 3 * * ?} 即可。</p>
      */
-    @Scheduled(cron = "0 0 3 * * ?")
+    @Scheduled(cron = "${monitor.cleanup.cron:0 0 * * * ?}")
     public void cleanupOldData() {
         int retentionDays = configService.getInt("monitor.data.retention.days", 30);
         metricService.cleanupOldData(retentionDays);
@@ -153,8 +179,7 @@ public class MonitorScheduler {
      */
     public void triggerNow(MsMonitorTask task) {
         execute(task).subscribe(
-                result -> log.info("[MonitorScheduler] 手动采集完成 task={} points={}",
-                        task.getId(), result.getPoints().size()),
+                result -> logCollectResult("手动", result),
                 error -> log.error("[MonitorScheduler] 手动采集异常 task={}", task.getId(), error)
         );
     }

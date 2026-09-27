@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 退款申请 DTO
+ * 退款申请执行DTO
  * @author CH
  * @since 4.0.0
  */
@@ -13,18 +13,17 @@ import java.math.BigDecimal;
 public class RefundApplyDTO {
 
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
 
     /**
-     * Refundreason
-    */
+     * 退款原因
+     */
     private String refundReason;
 
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
 }
-

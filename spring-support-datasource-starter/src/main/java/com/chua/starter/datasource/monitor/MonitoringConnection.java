@@ -4,7 +4,6 @@ import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.Statement;
@@ -53,13 +52,6 @@ public class MonitoringConnection implements InvocationHandler {
      * @param monitor        监控门面
      */
     public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor) {
-        /**
-         * this。
-         * @param delegate delegate
-         * @param dataSourceName 数据源名称
-         * @param monitor 监控
-         * @param null 空
-         */
         this(delegate, dataSourceName, monitor, null);
     }
 
@@ -90,17 +82,23 @@ public class MonitoringConnection implements InvocationHandler {
                 this);
     }
 
-    @Override
     /**
-     * 调用
-    */
+     * 处理代理连接调用并包装新建 Statement。
+     *
+     * @param proxy JDK 动态代理对象
+     * @param method JDK 代理契约传入的方法元数据；实际调用统一委托 {@link ReflectUtils#invokeProxy(Object, Method, Object[])}
+     * @param args 方法参数
+     * @return 方法返回值
+     * @throws Throwable 目标方法异常
+     */
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        String name = method.getName();
+        String name = ReflectUtils.methodName(method);
 
  // 关闭连接：透传并触发关闭回调（幂等，多次 关闭 仅回调一次）
         if ("close".equals(name)) {
             try {
-                return invokeTarget(method, args);
+                return ReflectUtils.invokeProxy(delegate, method, args);
             } finally {
                 if (onClose != null) {
                     onClose.run();
@@ -111,7 +109,7 @@ public class MonitoringConnection implements InvocationHandler {
  // 创建 对账单 的入口：统一反射分派，避免手工解析重载参数导致
  // (字符串, 字符串[]) / (字符串, int[]) 等重载被误强转为 int 抛 类cast异常
         if ("createStatement".equals(name) || "prepareStatement".equals(name) || "prepareCall".equals(name)) {
-            Object result = invokeTarget(method, args);
+            Object result = ReflectUtils.invokeProxy(delegate, method, args);
             if (result instanceof Statement statement) {
  // 提取 SQL 文本：仅当第一个参数为 字符串（执行(sql) 形式）时携带
                 String sql = args != null && args.length > 0 && args[0] instanceof String sqlText ? sqlText : null;
@@ -135,29 +133,16 @@ public class MonitoringConnection implements InvocationHandler {
             if (iface.isInstance(proxy)) {
                 return iface.cast(proxy);
             }
-            return invokeTarget(method, args);
+            return ReflectUtils.invokeProxy(delegate, method, args);
         }
         if ("isWrapperFor".equals(name)) {
             Class<?> iface = (Class<?>) args[0];
-            return iface.isInstance(proxy) || (Boolean) invokeTarget(method, args);
+            if (iface.isInstance(proxy)) {
+                return true;
+            }
+            return ReflectUtils.invokeProxy(delegate, method, args);
         }
 
-        return invokeTarget(method, args);
-    }
-
-    /**
-     * 调用目标连接对应方法（透传）
-     *
-     * @param method 方法
-     * @param args   参数
-     * @return 方法返回值
-     * @throws Throwable 目标连接抛出的异常
-     */
-    private Object invokeTarget(Method method, Object[] args) throws Throwable {
-        try {
-            return method.invoke(delegate, args);
-        } catch (InvocationTargetException e) {
-            throw e.getCause();
-        }
+        return ReflectUtils.invokeProxy(delegate, method, args);
     }
 }

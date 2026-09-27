@@ -12,12 +12,11 @@ import java.util.List;
 @Data
 public class PaymentOpsOverviewVO {
     /**
-     * Callbackaudits
-    */
+     * 回调策略审计列表
+     */
     private List<PaymentCallbackAuditVO> callbackAudits;
     /**
-     * 排序数字strategies
-    */
+     * 订单号生成策略列表
+     */
     private List<PaymentOrderNumberStrategyVO> orderNumberStrategies;
 }
-

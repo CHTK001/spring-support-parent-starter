@@ -20,86 +20,85 @@ import java.util.List;
 public interface PaymentRefundOrderService {
 
     /**
-     * 创建退税订单。
+     * 创建退款订单。
      * @param dto dto
-     * @return 创建退税订单的结果
+     * @return 创建出的退款订单
      */
     PaymentRefundOrder createRefundOrder(CreateRefundOrderDTO dto);
 
     /**
-     * 获取byid。
+     * 根据主键获取退款单。
      * @param id 标识
-     * @return 获取byid的结果
+     * @return 获取到的退款单
      */
     PaymentRefundOrder getById(Long id);
 
     /**
-     * 获取by退税no。
-     * @param refundNo 退税no
-     * @return 获取by退税no的结果
+     * 根据退款单号获取退款单。
+     * @param refundNo 退款单号
+     * @return 获取到的退款单
      */
     PaymentRefundOrder getByRefundNo(String refundNo);
 
     /**
-     * 获取bythirdparty退税no。
-     * @param thirdPartyRefundNo thirdparty退税no
-     * @return 获取bythirdparty退税no的结果
+     * 根据第三方退款单号获取退款单。
+     * @param thirdPartyRefundNo 第三方退款单号
+     * @return 获取到的退款单
      */
     PaymentRefundOrder getByThirdPartyRefundNo(String thirdPartyRefundNo);
 
     /**
-     * 获取detail。
+     * 获取退款单详情。
      * @param id 标识
-     * @return 获取detail的结果
+     * @return 退款单详情
      */
     RefundOrderVO getDetail(Long id);
 
     /**
-     * page。
-     * @param request 请求
-     * @return page的结果
+     * 分页查询退款单。
+     * @param request 请求参数
      */
     Page<RefundOrderVO> page(RefundOrderQueryRequest request);
 
     /**
-     * 获取latestby订单标识。
+     * 获取订单最新的一笔退款单。
      * @param orderId 订单标识
-     * @return 获取latestby订单id的结果
+     * @return 订单最新的一笔退款单
      */
     PaymentRefundOrder getLatestByOrderId(Long orderId);
 
     /**
-     * 获取处理by订单标识。
+     * 获取订单处理中的退款单。
      * @param orderId 订单标识
-     * @return 获取处理by订单id的结果
+     * @return 订单处理中的退款单
      */
     PaymentRefundOrder getProcessingByOrderId(Long orderId);
 
     /**
-     * 列表by订单标识。
+     * 按订单标识查询退款单列表。
      * @param orderId 订单标识
-     * @return 列表by订单id的结果
+     * @return 按订单标识查询到的退款单列表
      */
     List<PaymentRefundOrder> listByOrderId(Long orderId);
 
     /**
-     * 列表voby订单标识。
+     * 按订单标识查询退款单视图列表。
      * @param orderId 订单标识
-     * @return 列表voby订单id的结果
+     * @return 按订单标识查询到的退款单视图列表
      */
     List<RefundOrderVO> listVoByOrderId(Long orderId);
 
     /**
-     * 是否包含处理退税。
+     * 是否存在处理中的退款单。
      * @param orderId 订单标识
-     * @return 是否包含处理退税的结果
+     * @return 是否存在处理中的退款单
      */
     boolean hasProcessingRefund(Long orderId);
 
     /**
-     * sum退税amount。
+     * 汇总订单已退款金额。
      * @param orderId 订单标识
-     * @return sum退税amount的结果
+     * @return 汇总后的已退款金额
      */
     BigDecimal sumRefundedAmount(Long orderId);
 
@@ -109,9 +108,9 @@ public interface PaymentRefundOrderService {
                                       String remark);
 
     /**
-     * mark退税。
+     * 标记退款单为已退款。
      * @param dto dto
-     * @return mark退税的结果
+     * @return 标记后的退款单
      */
     PaymentRefundOrder markRefunded(MarkRefundedDTO dto);
 
@@ -120,4 +119,3 @@ public interface PaymentRefundOrderService {
                                   String operator,
                                   String remark);
 }
-

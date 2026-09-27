@@ -1,5 +1,6 @@
 package com.chua.starter.mybatis.interceptor;
 
+import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
@@ -44,6 +45,11 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
      * 认证服务供应商
     */
     private final Supplier<AuthService> authServiceSupplier;
+
+    /**
+     * 当前线程正在解析登录用户，避免解析过程触发的嵌套查询重入数据权限处理
+     */
+    private static final ThreadLocal<Boolean> RESOLVING_USER = new ThreadLocal<>();
 
     /**
      * 创建 mybatisplus数据权限拦截器 实例
@@ -115,6 +121,9 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
                             RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+        if (InterceptorIgnoreHelper.willIgnoreDataPermission(ms.getId())) {
+            return;
+        }
         PluginUtils.MPBoundSql mp = PluginUtils.mpBoundSql(boundSql);
         try {
             mp.sql(parserSingle(mp.sql(), ms.getId()));
@@ -126,6 +135,9 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     /**
      * 判断是否应该应用数据权限
      *
+     * <p>解析当前用户可能触发业务 Mapper 查询，该查询会再次进入本拦截器，
+     * 因此解析期间标记重入，嵌套查询不做数据权限过滤。</p>
+     *
      * @return true-应用, false-不应用
      */
     private boolean shouldApplyDataPermission() {
@@ -134,8 +146,19 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
             return false;
         }
 
+        // 正在解析当前用户，嵌套查询不再解析，避免无限递归
+        if (Boolean.TRUE.equals(RESOLVING_USER.get())) {
+            return false;
+        }
+
         // 获取当前用户
-        CurrentUser currentUser = getCurrentUser();
+        RESOLVING_USER.set(Boolean.TRUE);
+        CurrentUser currentUser;
+        try {
+            currentUser = getCurrentUser();
+        } finally {
+            RESOLVING_USER.remove();
+        }
         if (ObjectUtils.isEmpty(currentUser)) {
             return false;
         }
@@ -143,10 +166,10 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     /**
-     * 是否拥有manageddept铅scope
+     * 是否拥有managedDeptLeadScope
      *
      * @param currentUser 当前用户
-     * @return 是否包含manageddept铅scope的结果
+     * @return 是否包含managedDeptLeadScope的结果
      */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         return currentUser.hasRole(DEPT_LEADER)

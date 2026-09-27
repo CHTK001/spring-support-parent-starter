@@ -36,49 +36,49 @@ public class SysAiModelMetrics implements Serializable {
     /**
      * 归一化模型键（唯一，关联键）
      */
-    @TableField("model_key")
+    @TableField("sys_ai_model_metrics_model_key")
     private String modelKey; // 模型键
 
     /**
      * 模型名称（展示用）
      */
-    @TableField("model_name")
+    @TableField("sys_ai_model_metrics_model")
     private String modelName; // 模型名称
 
     /**
      * 厂商（可空）
      */
-    @TableField("provider")
+    @TableField("sys_ai_model_metrics_provider")
     private String provider; // 厂商
 
     /**
      * 输入单价（USD/百万 token）
      */
-    @TableField("price_input_per_musd")
+    @TableField("sys_ai_model_metrics_price_input")
     private BigDecimal priceInputPerMusd; // 输入价
 
     /**
      * 输出单价（USD/百万 token）
      */
-    @TableField("price_output_per_musd")
+    @TableField("sys_ai_model_metrics_price_output")
     private BigDecimal priceOutputPerMusd; // 输出价
 
     /**
      * 缓存命中输入价（USD/百万 token）
      */
-    @TableField("price_cache_hit_per_musd")
+    @TableField("sys_ai_model_metrics_price_cache_hit")
     private BigDecimal priceCacheHitPerMusd; // 缓存命中价
 
     /**
      * 缓存写入价（USD/百万 token）
      */
-    @TableField("price_cache_write_per_musd")
+    @TableField("sys_ai_model_metrics_price_cache_write")
     private BigDecimal priceCacheWritePerMusd; // 缓存写入价
 
     /**
      * 智能指数
      */
-    @TableField("intelligence_index")
+    @TableField("sys_ai_model_metrics_intelligence_index")
     private BigDecimal intelligenceIndex; // 智能指数
     /**
      * HLE（Humanity's Last Exam，人类最后考试）得分（0~1）
@@ -251,73 +251,73 @@ public class SysAiModelMetrics implements Serializable {
     /**
      * 输出速度（token/秒）
      */
-    @TableField("output_speed_tps")
+    @TableField("sys_ai_model_metrics_output_speed_tps")
     private BigDecimal outputSpeedTps; // 输出速度
 
     /**
      * 首 token 延迟（秒）
      */
-    @TableField("latency_first_token_seconds")
+    @TableField("sys_ai_model_metrics_latency_first_token")
     private BigDecimal latencyFirstTokenSeconds; // 首token延迟
 
     /**
      * 上下文窗口（token 数）
      */
-    @TableField("context_window_tokens")
+    @TableField("sys_ai_model_metrics_context_window")
     private Long contextWindowTokens; // 上下文窗口
 
     /**
      * 图标地址
      */
-    @TableField("icon_url")
+    @TableField("sys_ai_model_metrics_icon_url")
     private String iconUrl; // 图标
 
     /**
      * 是否支持深度思考（推理）
      */
-    @TableField("reasoning")
+    @TableField("sys_ai_model_metrics_support_reasoning")
     private Boolean reasoning; // 深度思考
 
     /**
      * 是否支持联网检索
      */
-    @TableField("web_search")
+    @TableField("sys_ai_model_metrics_support_web_search")
     private Boolean webSearch; // 联网检索
 
     /**
      * 是否支持图片输入（视觉）
      */
-    @TableField("image_input")
+    @TableField("sys_ai_model_metrics_support_image_input")
     private Boolean imageInput; // 图片输入
 
     /**
      * 是否支持函数调用
      */
-    @TableField("function_calling")
+    @TableField("sys_ai_model_metrics_support_function_call")
     private Boolean functionCalling; // 函数调用
 
     /**
      * 手动锁定字段名集合（同步时这些字段不覆盖）
      */
-    @TableField(value = "manual_locked", typeHandler = JacksonTypeHandler.class)
+    @TableField(value = "sys_ai_model_metrics_manual_locked", typeHandler = JacksonTypeHandler.class)
     private List<String> manualLocked; // 锁定字段
 
     /**
      * 手动修改时间（毫秒）
      */
-    @TableField("manual_updated_at")
+    @TableField("sys_ai_model_metrics_manual_updated_at")
     private Long manualUpdatedAt; // 手动修改时间
 
     /**
      * 手动修改人
      */
-    @TableField("manual_updated_by")
+    @TableField("sys_ai_model_metrics_manual_updated_by")
     private String manualUpdatedBy; // 手动修改人
 
     /**
      * 数据源标识
      */
-    @TableField("source")
+    @TableField("sys_ai_model_metrics_source")
     private String source; // 数据源
 
     /**

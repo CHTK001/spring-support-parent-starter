@@ -5,36 +5,36 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 商户支付规则 VO
+ * 客户支付配置VO
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class MerchantPaymentConfigVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
 
     /**
-     * 排序reusable
-    */
+     * 订单可复用
+     */
     private Boolean orderReusable;
 
     /**
-     * 排序超时minutes
-    */
+     * 订单超时分钟数
+     */
     private Integer orderTimeoutMinutes;
 
     /**
-     * Pending排序限制
-    */
+     * 待支付订单限制
+     */
     private Integer pendingOrderLimit;
 
     /**
-     * Autocancel超时排序
-    */
+     * 自动取消超时订单
+     */
     private Boolean autoCancelTimeoutOrder;
 }

@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.schedule;
 
+import com.chua.common.support.datasearch.pricing.PricingSyncer;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
@@ -58,6 +59,23 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     private static final long MIN_INTERVAL_SEC = 30;
 
     /**
+     * datasearch 数据源在线刷新间隔设置键（分钟，0 = 不刷新）
+     */
+    private static final String SETTING_SOURCE_REFRESH_INTERVAL_MIN =
+            "model_metrics_source_refresh_interval_min";
+
+    /**
+     * 数据源在线刷新间隔默认值（分钟）
+     */
+    private static final int DEFAULT_SOURCE_REFRESH_INTERVAL_MIN = 360;
+
+    /**
+     * 上次数据源在线刷新时间戳（毫秒，0 表示还没刷过）
+     */
+    private final java.util.concurrent.atomic.AtomicLong lastSourceRefreshAt =
+            new java.util.concurrent.atomic.AtomicLong(0L);
+
+    /**
      * 全局设置读取器
      */
     private final GlobalSettingReader settingReader;
@@ -97,6 +115,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             log.debug("[ModelMetrics] 模型指标推送未启用，跳过本次执行");
             return;
         }
+        refreshOnlineSourcesIfDue();
         try {
             // 1. 全量指标同步到指标库（锁定字段跳过）
             int synced = metricsService.syncAll();
@@ -117,6 +136,40 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             log.info("[ModelMetrics] 官方定价同步完成（datasearch-starter）");
         } catch (Exception e) {
             log.warn("[ModelMetrics] 官方定价同步失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 按独立节奏刷新 datasearch 各数据源（Artificial Analysis / OpenRouter / Vercel 等）的在线数据到本地缓存。
+     *
+     * <p>各 {@code ModelMetricsProvider} 的 {@code getMetrics()} 只读本地文件缓存、不会自行联网，
+     * 必须显式调用 {@code PricingSyncer.syncAllFromOnline()}（内部逐源触发 {@code syncFromOnline()}）
+     * 才会更新。若从不刷新，新接入的数据源（如只补模型能力的 Vercel）会永远停留在首次种子的快照上。
+     * 这里用一个较长的独立间隔（默认 6 小时，可用 {@code model_metrics_source_refresh_interval_min}
+     * 调整，0 表示关闭）避免每次推送都压外网；刷新失败时保留旧缓存并回退时间戳，下个周期重试。</p>
+     */
+    private void refreshOnlineSourcesIfDue() {
+        int intervalMin = settingReader.getInt(GROUP, SETTING_SOURCE_REFRESH_INTERVAL_MIN,
+                DEFAULT_SOURCE_REFRESH_INTERVAL_MIN);
+        if (intervalMin <= 0) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long last = lastSourceRefreshAt.get();
+        if (last > 0 && now - last < TimeUnit.MINUTES.toMillis(intervalMin)) {
+            return;
+        }
+        // 先占位再执行，避免上一次刷新尚未结束时被并发进入
+        if (!lastSourceRefreshAt.compareAndSet(last, now)) {
+            return;
+        }
+        try {
+            int count = PricingSyncer.syncAllFromOnline(null);
+            log.info("[ModelMetrics] datasearch 数据源在线刷新完成，共 {} 个", count);
+        } catch (Exception e) {
+            // 失败时回退时间戳让下个周期重试，不阻断本轮指标与定价同步
+            lastSourceRefreshAt.compareAndSet(now, last);
+            log.warn("[ModelMetrics] datasearch 数据源在线刷新失败: {}", e.getMessage());
         }
     }
 

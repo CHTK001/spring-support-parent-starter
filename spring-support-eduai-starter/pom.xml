@@ -78,6 +78,16 @@
             <artifactId>spring-support-job-starter</artifactId>
         </dependency>
 
+        <!-- Groovy 脚本采集源（GROOVY 类型的 QuestionSourceProvider） -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-json</artifactId>
+        </dependency>
+
         <!-- 深度学习/AI推理 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -112,7 +122,7 @@
         
     </dependencies>
 
-    <build>
+<build>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -126,13 +136,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <release>25</release>
-                    <compilerArgs>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
-                    </compilerArgs>
+                    <!-- 编译参数（fork / UTF-8 / -parameters / -proc:full / 整套 add-opens）继承父 pom，
+                         此处只补充父 pom 未声明的注解处理器；不要在此覆盖 compilerArgs，
+                         Maven 的 plugin configuration 是整体替换而非合并，覆盖会丢掉父 pom
+                         传给 JVM 的 add-opens 参数，lombok 在 JDK 25 下将无法访问 javac 内部包 -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -140,16 +147,30 @@
                             <version>${lombok.version}</version>
                         </path>
 
-                            <path>
-                                <groupId>com.uber.nullaway</groupId>
-                                <artifactId>nullaway</artifactId>
-                                <version>${nullaway.version}</version>
-                            </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
+                        </path>
 
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.chua.starter.eduai.EduAiApplication</mainClass>
+                    <includeSystemScope>true</includeSystemScope>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
 </project>

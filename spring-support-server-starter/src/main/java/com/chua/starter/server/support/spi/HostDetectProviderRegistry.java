@@ -2,6 +2,7 @@ package com.chua.starter.server.support.spi;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
+import com.chua.starter.server.support.entity.MsServerHost;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +42,21 @@ public class HostDetectProviderRegistry {
      * 系统类型 -> 探测实现索引，首次使用时构建
      */
     private volatile Map<String, HostDetectProvider> index;
+
+    /**
+     * 按主机解析探测提供者：先按采集方式（Agent 等自报通道按 {@code HostCollectType} 编码注册），
+     * 未命中再按平台。
+     *
+     * @param host 目标主机
+     * @return Optional，可能为空
+     */
+    public Optional<HostDetectProvider> resolve(MsServerHost host) {
+        if (host == null) {
+            return Optional.empty();
+        }
+        Optional<HostDetectProvider> channel = resolve(host.getServerHostCollectMode());
+        return channel.isPresent() ? channel : resolve(host.getServerHostOsType());
+    }
 
     /**
      * 按系统类型解析探测提供者

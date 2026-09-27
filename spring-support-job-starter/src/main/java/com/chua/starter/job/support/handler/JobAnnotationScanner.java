@@ -75,7 +75,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     */
     public void afterSingletonsInstantiated() {
         log.info("[job] @Job 扫描完成, 共注册 {} 个处理器", JobHandlerFactory.getInstance().size());
- // 同步到 作业仓库, 让 作业铅循环 调度时能查到任务
+ // 同步到 作业仓库, 让 作业Leader循环 调度时能查到任务
         if (collectedDefinitions.isEmpty() || applicationContext == null) {
             return;
         }
@@ -157,6 +157,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
         definition.setFixedRateMs(job.fixedRate());
         definition.setEnabled(true);
         definition.setDesc(job.desc());
+        definition.setGroup(job.group());
         synchronized (collectedDefinitions) {
             collectedDefinitions.add(definition);
         }

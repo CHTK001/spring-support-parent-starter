@@ -52,6 +52,16 @@ public class EduSubject {
      */
     private Integer subjectStatus;
 
+    /**
+     * 图标 key（如 book/calculator/atom）
+     */
+    private String subjectIcon;
+
+    /**
+     * 主题色（hex，如 #3b82f6）
+     */
+    private String subjectColor;
+
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
     /**
      * 创建时间

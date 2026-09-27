@@ -24,12 +24,12 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
 
     /**
      * 通知错误映射器
-    */
+     */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
 
     /**
-     * cleanresolved错误
-    */
+     * 清理已解决的回调异常记录
+     */
     public void cleanResolvedErrors() {
         log.info("开始清理已解决的回调异常记录");
 
@@ -47,8 +47,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
 
     @Override
     /**
-     * 任务Key
-    */
+     * 任务标识
+     */
     public String taskKey() {
         return "payment-notify-cleanup";
     }
@@ -56,41 +56,38 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     @Override
     /**
      * 任务名称
-    */
+     */
     public String taskName() {
         return "回调异常清理";
     }
 
     @Override
     /**
-     * 默认cron
-    */
+     * 默认 cron 表达式
+     */
     public String defaultCron() {
         return "0 0 2 * * ?";
     }
 
     @Override
     /**
-     * Description
-    */
+     * 任务说明
+     */
     public String description() {
-        return "清理已解决且超过保留期的回调异常记录。";
+        return "清理已解决且超过保留期的回调异常记录";
     }
 
     @Override
     @Job(
             value = "payment-notify-cleanup",
             cron = "0 0 2 * * ?",
-            desc = "清理已解决且超过保留期的回调异常记录。"
+            desc = "清理已解决且超过保留期的回调异常记录"
     )
     /**
-     * 执行
-    */
+     * 执行清理任务
+     */
     public void execute() {
-        /**
-         * cleanresolved错误。
-         */
         cleanResolvedErrors();
     }
-}
 
+}

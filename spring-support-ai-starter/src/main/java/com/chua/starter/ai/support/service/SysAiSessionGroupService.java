@@ -39,6 +39,12 @@ public interface SysAiSessionGroupService {
     void delete(Long id);
 
     /**
+     * 批量删除分组
+     * @param ids 分组 ID 列表，不允许为 null
+     */
+    void deleteBatch(List<Long> ids);
+
+    /**
      * 排序
      * @param ids 方法入参 ids
      */

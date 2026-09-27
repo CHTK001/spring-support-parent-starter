@@ -6,7 +6,6 @@ import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
-import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +37,31 @@ public class McpConnectionService {
      * 连接超时：初始化 MCP 会话的最长等待时间
     */
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
+
+    /**
+     * 显式共享的 Jackson3 JSON 映射器。
+     *
+     * <p>不依赖 MCP SDK 基于 ServiceLoader 的自动发现：异步线程（ForkJoinPool）的上下文类加载器
+     * 在 fat jar 下可能无法枚举嵌套 jar 中的 {@code McpJsonMapperSupplier}，导致
+     * “No McpJsonMapperSupplier available”。这里直接用应用类加载器构造，确定性可用。</p>
+    */
+    private static volatile io.modelcontextprotocol.json.McpJsonMapper sharedMapper;
+
+    /**
+     * 获取显式构造的 Jackson3 MCP JSON 映射器（单例，双重检查）。
+     * @return MCP JSON 映射器
+     */
+    static io.modelcontextprotocol.json.McpJsonMapper explicitMapper() {
+        if (sharedMapper == null) {
+            synchronized (McpConnectionService.class) {
+                if (sharedMapper == null) {
+                    sharedMapper = new io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper(
+                            tools.jackson.databind.json.JsonMapper.shared());
+                }
+            }
+        }
+        return sharedMapper;
+    }
 
     /**
      * 连接 MCP 服务器并列举其工具。
@@ -119,7 +143,7 @@ public class McpConnectionService {
      * @param transport transport 配置（类型 + url/命令/参数/env + 头部）
      * @return 对应 transport，不支持的 类型 返回 空
      */
-    private io.modelcontextprotocol.spec.McpClientTransport buildTransport(Map<String, Object> transport) {
+    public io.modelcontextprotocol.spec.McpClientTransport buildTransport(Map<String, Object> transport) {
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
         String url = transport == null ? "" : String.valueOf(transport.getOrDefault("url", ""));
         @SuppressWarnings("unchecked")
@@ -147,6 +171,7 @@ public class McpConnectionService {
             String url, Map<String, Object> headers) {
         HttpClientStreamableHttpTransport.Builder builder =
                 HttpClientStreamableHttpTransport.builder(url);
+        builder.jsonMapper(explicitMapper());
         /**
          * apply头部。
          * @param builder 构建器
@@ -159,6 +184,7 @@ public class McpConnectionService {
     private io.modelcontextprotocol.spec.McpClientTransport buildSseTransport(
             String url, Map<String, Object> headers) {
         HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(url);
+        builder.jsonMapper(explicitMapper());
         /**
          * apply头部。
          * @param builder 构建器
@@ -207,7 +233,7 @@ public class McpConnectionService {
          * @param builder.build( 构建器.构建(
          * @return stdio客户端transport的结果
          */
-        return new StdioClientTransport(builder.build(), McpJsonDefaults.getMapper());
+        return new StdioClientTransport(builder.build(), explicitMapper());
     }
 
     /**

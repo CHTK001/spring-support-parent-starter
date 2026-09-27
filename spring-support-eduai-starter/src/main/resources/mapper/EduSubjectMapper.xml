@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.dimension.mapper.EduSubjectMapper">
+
+    <!-- 列表学科：启用状态 + 学段模糊匹配 + 归属隔离，按排序号升序 -->
+    <select id="listSubjects" resultType="com.chua.starter.eduai.dimension.entity.EduSubject">
+        SELECT s.* FROM edu_subject s
+        <where>
+            s.subject_status = 1
+            <if test="gradeLevel != null and gradeLevel != ''">
+                AND s.subject_grade_levels LIKE CONCAT('%', #{gradeLevel}, '%')
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (s.subject_owner_user_id IS NULL OR s.subject_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY s.subject_sort_order ASC
+    </select>
+
+</mapper>

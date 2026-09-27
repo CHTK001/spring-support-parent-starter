@@ -3,6 +3,7 @@ package com.chua.starter.common.support.api.feature;
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.interceptor.ApiControlInterceptor;
 import com.chua.starter.common.support.api.properties.ApiProperties;
+import com.chua.starter.common.support.oauth.AuthService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -125,6 +126,9 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     @Autowired
     private ObjectProvider<ApiSwitchOverrideProvider> overrideProvider; // override提供者
 
+    @Autowired
+    private ObjectProvider<AuthService> authServiceProvider; // 当前身份提供者
+
     /**
      * 创建 {@link ApiControlInterceptor} Bean，用于拦截未启用的功能开关。
      *
@@ -139,9 +143,11 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
          * @param environment 环境
          * @param featureManager 特征管理器
          * @param overrideProvider override提供者
+         * @param authServiceProvider 当前身份提供者
          * @return apicontrol拦截器的结果
          */
-        return new ApiControlInterceptor(apiProperties, environment, featureManager, overrideProvider);
+        return new ApiControlInterceptor(apiProperties, environment, featureManager, overrideProvider,
+                authServiceProvider);
     }
 
     /**

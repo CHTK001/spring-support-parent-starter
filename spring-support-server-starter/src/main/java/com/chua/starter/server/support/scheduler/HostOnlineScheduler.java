@@ -91,8 +91,9 @@ public class HostOnlineScheduler {
 
     /**
      * 默认采集间隔(秒)
+     * <p>主机卡片三率靠 socket 近实时刷新，默认 15s；用户可在编辑页调整（10s~86400s）。</p>
     */
-    private static final int DEFAULT_COLLECT_INTERVAL = 3600;
+    private static final int DEFAULT_COLLECT_INTERVAL = 15;
 
     /**
      * 默认延迟检测间隔(秒)
@@ -115,6 +116,27 @@ public class HostOnlineScheduler {
     private static final ExecutorService VIRTUAL_EXECUTOR =
             java.util.concurrent.Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-online-").factory());
+
+    /**
+     * 在途采集主机集合
+     * <p>慢链路（如高延迟隧道）上一轮全量探测可能尚未结束，用原子集合保证同一主机
+     * 不会被并发重复采集；采集在 {@code markCollected} 结束时移除。</p>
+    */
+    private static final java.util.Set<Long> IN_FLIGHT =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * 每台主机本轮采集的起始时刻（epoch 毫秒）：占位成功时记录，markCollected 时移除并算出本轮耗时。
+     */
+    private static final java.util.Map<Long, Long> COLLECT_START_MS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 每台主机上一轮采集的实测耗时（毫秒）：用于让下一轮按耗时提前触发，
+     * 抵消采集自身耗时，使「数据点间隔」贴近配置的采集间隔。
+     */
+    private static final java.util.Map<Long, Long> COLLECT_DURATION_MS =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * 存在仅用于占位的统一入口（兼容旧调用）：
@@ -146,7 +168,8 @@ public class HostOnlineScheduler {
             List<CompletableFuture<Void>> tasks = new ArrayList<>(dueHosts.size());
             for (MsServerHost host : dueHosts) {
                 tasks.add(CompletableFuture.runAsync(() -> {
-                    boolean reachable = isReachable(host);
+                    // 本机（LOCAL）不做 TCP 探测，恒在线；其余主机虚拟线程并发探测
+                    boolean reachable = isLocal(host) || isReachable(host);
                     if (reachable) {
                         online.incrementAndGet();
                     }
@@ -183,7 +206,20 @@ public class HostOnlineScheduler {
                     .filter(h -> {
                         int interval = normalizeInterval(h.getServerHostCollectInterval() == null
                                 ? DEFAULT_COLLECT_INTERVAL : h.getServerHostCollectInterval());
-                        return isDue(h.getServerHostLastCollectTime(), interval, now);
+                        // 按上一轮实测耗时提前触发，抵消采集自身耗时，使数据点间隔贴近 interval；
+                        // 最早不早于 1s，且 IN_FLIGHT 仍会拦住尚未结束的上一轮，不会重叠
+                        long durMs = COLLECT_DURATION_MS.getOrDefault(h.getId(), 0L);
+                        int leadSec = (int) Math.round(durMs / 1000.0);
+                        int effective = Math.max(1, interval - leadSec);
+                        return isDue(h.getServerHostLastCollectTime(), effective, now);
+                    })
+                    // 原子占位：上一轮采集未结束的主机本轮直接跳过，避免慢链路堆叠；占位成功记录起始时刻
+                    .filter(h -> {
+                        if (IN_FLIGHT.add(h.getId())) {
+                            COLLECT_START_MS.put(h.getId(), System.currentTimeMillis());
+                            return true;
+                        }
+                        return false;
                     })
                     .toList();
             if (dueHosts.isEmpty()) {
@@ -192,11 +228,9 @@ public class HostOnlineScheduler {
             long[] ok = {0};
             Flux.fromIterable(dueHosts)
                     .map(host -> {
-                        // 本机（osType=LOCAL）强制走本机自采集 OSHI，忽略前端选择的 AGENT/PROMETHEUS
-                        String osType = host.getServerHostOsType();
-                        String modeCode = ("LOCAL".equalsIgnoreCase(osType == null ? "" : osType))
-                                ? "LOCAL"
-                                : (host.getServerHostCollectMode() == null ? "SCHEDULED" : host.getServerHostCollectMode());
+                        // 采集方式只由 collect_mode 表达（LOCAL 即本机 OSHI 自采集），os_type 只用于命令族判定
+                        String modeCode = host.getServerHostCollectMode() == null
+                                ? "SCHEDULED" : host.getServerHostCollectMode();
                         HostCollectType mode = HostCollectType.of(modeCode);
                         /**
                          * 主机collect上下文。
@@ -309,6 +343,10 @@ public class HostOnlineScheduler {
      * @return 延迟毫秒或 -1
      */
     private long measureDelayMs(MsServerHost host) {
+        // 本机（LOCAL）不做 RTT 探测，恒为 0ms
+        if (isLocal(host)) {
+            return 0;
+        }
         String address = host.getServerHostAddress();
         if (address == null || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
             return 0;
@@ -334,12 +372,21 @@ public class HostOnlineScheduler {
      * @param host 主机
      */
     private void markCollected(MsServerHost host) {
+        // 无论后续成败，先释放占位，允许下一轮重新采集
+        IN_FLIGHT.remove(host.getId());
+        // 算出本轮采集实测耗时（触发→完成），供下一轮提前触发补偿
+        Long startMs = COLLECT_START_MS.remove(host.getId());
+        if (startMs != null) {
+            COLLECT_DURATION_MS.put(host.getId(), System.currentTimeMillis() - startMs);
+        }
         try {
+            long m0 = System.nanoTime();
             host.setServerHostLastCollectTime(LocalDateTime.now());
             // 只写自己负责的列：updateById 会用这份旧快照覆盖并发路径刚改过的列
             hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
                     .eq(MsServerHost::getId, host.getId())
                     .set(MsServerHost::getServerHostLastCollectTime, host.getServerHostLastCollectTime()));
+            long m1 = System.nanoTime();
             // 采集完成回调（监控 侧注册：评估 CPU/内存/磁盘使用率告警规则）
             if (collectHook != null) {
                 try {
@@ -348,6 +395,9 @@ public class HostOnlineScheduler {
                     log.debug("[collect] 采集钩子异常 hostId={}: {}", host.getId(), hookEx.getMessage());
                 }
             }
+            long m2 = System.nanoTime();
+            log.info("[collect-timing-tail] hostId={} lastTimeUpdate={}ms hook={}ms",
+                    host.getId(), (m1 - m0) / 1_000_000, (m2 - m1) / 1_000_000);
         } catch (Exception e) {
             log.warn("[collect] 回写采集时间失败 hostId={}", host.getId(), e);
         }
@@ -412,6 +462,18 @@ public class HostOnlineScheduler {
         }
         return host.getServerHostPort() != null && host.getServerHostPort() > 0
                 ? host.getServerHostPort() : 22;
+    }
+
+    /**
+     * 是否为本机自采集（collect_mode=LOCAL）：本机不做在离线/延迟探测，恒在线、0ms
+     *
+     * @param host 主机
+     * @return 是否本机
+     */
+    private boolean isLocal(MsServerHost host) {
+        return host != null
+                && HostCollectType.LOCAL.getCode().equalsIgnoreCase(
+                        host.getServerHostCollectMode() == null ? "" : host.getServerHostCollectMode().trim());
     }
 
     /**

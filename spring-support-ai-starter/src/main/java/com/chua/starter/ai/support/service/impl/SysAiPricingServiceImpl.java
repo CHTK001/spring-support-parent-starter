@@ -114,16 +114,22 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
 
     /**
      * 同步官方定价数据到数据库。
-     * <p>从 datasearch-starter 的 JSON 定价文件加载全量数据，每次同步前清空旧数据，
+     * <p>从 datasearch-starter 的各数据源加载全量数据，每次同步前清空旧数据，
      * 全量插入到 sys_ai_pricing 表。同步完成后清除定价缓存。</p>
+     *
+     * <p>多源会对同一 (厂商, 模型) 给出多条报价（如 Artificial Analysis 与 OpenRouter 都收录
+     * gpt-4o）。这里按数据源优先级（models.dev 官方价 &gt; Artificial Analysis &gt; OpenRouter）
+     * 只保留优先级最高的一条，并统一把厂商名归一化为小写，避免因大小写差异被当成不同厂商
+     * 而重复入库。厂商与模型均归一化后仍重复的，按先到先得。</p>
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public void syncOfficialPricing() {
         try {
+            // 逐源加载并按优先级排序，来源优先级高的先写入，同键后者不覆盖前者
             List<com.chua.common.support.ai.chat.ModelDefinition> models =
-                    com.chua.common.support.datasearch.pricing.PricingSyncer.loadAll(null);
+                    loadBySourcePriority();
             if (models == null || models.isEmpty()) {
                 log.info("[Pricing] 无定价数据可同步，清空旧数据");
                 pricingMapper.delete(null);
@@ -135,6 +141,8 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             log.info("[Pricing] 清空旧定价数据 {} 条", deleted);
 
             int inserted = 0;
+            int skippedDuplicate = 0;
+            java.util.Set<String> seen = new java.util.HashSet<>();
             LocalDateTime now = LocalDateTime.now();
             for (com.chua.common.support.ai.chat.ModelDefinition md : models) {
                 if (md.getId() == null || md.getProvider() == null) {
@@ -143,14 +151,26 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
                 if (md.getInputUnitPrice() == null && md.getOutputUnitPrice() == null) {
                     continue;
                 }
+                // 厂商归一化为小写，模型保持原样；(厂商, 模型) 唯一
+                String provider = md.getProvider().trim().toLowerCase(java.util.Locale.ROOT);
+                String model = md.getId().trim();
+                String key = provider + " "
+                        + model.toLowerCase(java.util.Locale.ROOT);
+                if (!seen.add(key)) {
+                    skippedDuplicate++;
+                    continue;
+                }
                 SysAiPricing pricing = new SysAiPricing();
-                pricing.setProvider(md.getProvider());
-                pricing.setModel(md.getId());
+                pricing.setProvider(provider);
+                pricing.setModel(model);
+                // 定价表字段单位为 币种/千令牌，而 ModelDefinition 单价为 币种/百万令牌
                 if (md.getInputUnitPrice() != null) {
-                    pricing.setInputPricePer1k(md.getInputUnitPrice().doubleValue());
+                    pricing.setInputPricePer1k(md.getInputUnitPrice()
+                            .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP).doubleValue());
                 }
                 if (md.getOutputUnitPrice() != null) {
-                    pricing.setOutputPricePer1k(md.getOutputUnitPrice().doubleValue());
+                    pricing.setOutputPricePer1k(md.getOutputUnitPrice()
+                            .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP).doubleValue());
                 }
                 pricing.setCurrency(md.getCurrency() != null ? md.getCurrency() : "USD");
                 pricing.setEffectiveDate(now);
@@ -158,9 +178,64 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
                 pricingMapper.insert(pricing);
                 inserted++;
             }
-            log.info("[Pricing] 官方定价同步完成，共插入 {} 条", inserted);
+            log.info("[Pricing] 官方定价同步完成，共插入 {} 条，按来源优先级去重 {} 条", inserted, skippedDuplicate);
         } catch (Exception e) {
             log.warn("[Pricing] 同步官方定价失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 按数据源优先级加载全量模型定价（优先级高者在前）。
+     *
+     * <p>优先级：models.dev（厂商官方目录价）&gt; Artificial Analysis &gt; OpenRouter。
+     * 未能识别的数据源排在最后，保证已知权威源的价格优先入库。</p>
+     *
+     * @return 按优先级排序的模型定价列表
+     */
+    private List<com.chua.common.support.ai.chat.ModelDefinition> loadBySourcePriority() {
+        java.util.Map<String, com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider> providers;
+        try {
+            providers = com.chua.common.support.spi.ServiceProvider
+                    .of(com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider.class).list();
+        } catch (Exception e) {
+            return com.chua.common.support.datasearch.pricing.PricingSyncer.loadAll(null);
+        }
+        if (providers == null || providers.isEmpty()) {
+            return com.chua.common.support.datasearch.pricing.PricingSyncer.loadAll(null);
+        }
+        List<com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider> ordered =
+                new java.util.ArrayList<>(providers.values());
+        ordered.removeIf(java.util.Objects::isNull);
+        ordered.sort(java.util.Comparator.comparingInt(p -> sourcePriority(p.name())));
+        List<com.chua.common.support.ai.chat.ModelDefinition> all = new java.util.ArrayList<>();
+        for (var p : ordered) {
+            try {
+                var metrics = p.getMetrics();
+                if (metrics != null) {
+                    all.addAll(metrics);
+                }
+            } catch (Exception e) {
+                log.warn("[Pricing] 读取数据源[{}]失败: {}", p.name(), e.getMessage());
+            }
+        }
+        return all;
+    }
+
+    /**
+     * 数据源优先级：数字越小越优先（先入库）。
+     *
+     * @param name 数据源名
+     * @return 优先级
+     */
+    private static int sourcePriority(String name) {
+        if (name == null) {
+            return 99;
+        }
+        return switch (name.toLowerCase(java.util.Locale.ROOT)) {
+            case "modelsdev" -> 0;
+            case "artificialanalysis" -> 1;
+            case "openrouter" -> 2;
+            default -> 50;
+        };
     }
 }

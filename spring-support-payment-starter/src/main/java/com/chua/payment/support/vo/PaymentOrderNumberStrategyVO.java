@@ -11,27 +11,26 @@ import lombok.Data;
 public class PaymentOrderNumberStrategyVO {
     /**
      * 业务类型
-    */
+     */
     private String businessType;
     /**
      * 字段名称
-    */
+     */
     private String fieldName;
     /**
-     * Generationrule
-    */
+     * 生成规则
+     */
     private String generationRule;
     /**
-     * Calleroverridefield
-    */
+     * 调用方覆盖字段
+     */
     private String callerOverrideField;
     /**
-     * Idempotentrule
-    */
+     * 幂等规则
+     */
     private String idempotentRule;
     /**
-     * 笔记
-    */
+     * 备注
+     */
     private String notes;
 }
-

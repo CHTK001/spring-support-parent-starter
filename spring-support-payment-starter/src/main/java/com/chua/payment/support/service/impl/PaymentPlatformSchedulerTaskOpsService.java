@@ -38,10 +38,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 基于 调度器 平台的支付调度任务运维服务。
+ * 基于“调度器平台”的支付调度任务运维服务。
  * <p>
- * 薪酬 在 {@code engine=job} 模式下不再直接管理本地调度器，而是将运营端的
- * 查询、修改和手工触发请求转发到 调度器 平台对应 namespace 的任务接口。
+ * 当 {@code engine=job} 模式下不再直接管理本地调度器，而是将运行端的
+ * 查询、修改和手工触发请求转发至调度器平台对应 namespace 的任务接口。
  * </p>
  *
  * @author CH
@@ -52,55 +52,55 @@ import java.util.stream.Collectors;
 public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
     /**
-     * 默认_连接_超时
-    */
+     * 默认连接超时
+     */
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
     /**
-     * 默认_读取_超时
-    */
+     * 默认读取超时
+     */
     private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(10);
     /**
-     * 默认_控制台_用户名
-    */
+     * 默认控制台用户名
+     */
     private static final String DEFAULT_CONSOLE_USERNAME = "admin";
     /**
-     * 默认_控制台_密码
-    */
+     * 默认控制台密码
+     */
     private static final String DEFAULT_CONSOLE_PASSWORD = "${payment.console.password:}";
     /**
-     * 标准_日期_时间
-    */
+     * 标准日期时间格式
+     */
     private static final DateTimeFormatter STANDARD_DATE_TIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * 环境
-    */
+     * 运行环境
+     */
     private final Environment environment;
     /**
-     * Objectmapper
-    */
+     * JSON 序列化器
+     */
     private final ObjectMapper objectMapper;
     /**
-     * Rest模板
-    */
+     * HTTP 客户端
+     */
     private final RestTemplate restTemplate;
-    private final Object consoleSessionMonitor = new Object(); // 控制台会话监控
+    private final Object consoleSessionMonitor = new Object(); // 控制台会话监视器
 
     /**
-     * 轻量控制台模式下缓存 调度器 返回的 Cookie。
+     * 轻量控制台模式（“调度器返回的 Cookie”）下缓存的登录态。
      * <p>
-     * 这是给 Spring 内置简单页使用的固定账号密码会话，不承载多用户语义；
-     * 真正的开放接口仍然优先走 o认证 头部 转发。
+     * 这是给 Spring 内置简单页面使用的固定账号密码会话，不承载多用户语义；
+     * 真正的开放接口仍然优先由 OAuth 授权转发触发。
      * </p>
      */
     private volatile String schedulerConsoleCookie;
 
     /**
-     * 创建 薪酬platform调度器任务ops服务 实例
-     * @param environment 环境
+     * 构造支付平台调度任务运维服务。
+     * @param environment 运行环境
      * @param objectMapper 对象映射器
-     * @param restTemplate RestTemplate
+     * @param restTemplate HTTP 客户端
      */
     public PaymentPlatformSchedulerTaskOpsService(Environment environment,
                                                   ObjectMapper objectMapper,
@@ -112,8 +112,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     @Override
     /**
-     * 列表任务
-    */
+     * 列出调度任务
+     */
     public List<PaymentSchedulerTaskVO> listTasks() {
         AccessMode accessMode = resolveAccessMode();
         JsonNode data = request(HttpMethod.GET, taskListUrl(accessMode), null, accessMode);
@@ -126,8 +126,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     @Override
     /**
-     * 更新任务
-    */
+     * 更新任务配置
+     */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.PUT, taskUrl(accessMode, taskKey), dto, accessMode));
@@ -135,67 +135,40 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     @Override
     /**
-     * trigger任务
-    */
+     * 手动触发任务
+     */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.POST, taskTriggerUrl(accessMode, taskKey), null, accessMode));
     }
 
-    /**
-     * 使用统一的 JSON 协议访问 调度器 平台。
-     * <p>
-     * 这里对空响应、业务码失败和反序列化异常都显式抛出 薪酬异常，
-     * 避免运营台收到模糊的 NPE 或日期解析异常。
-     * </p>
-     * @param method 方法
-     * @param uri uri
-     * @param body 主体
-     * @param accessMode accessmode
-     * @return 请求的结果
-     */
     private JsonNode request(HttpMethod method, URI uri, Object body, AccessMode accessMode) {
         try {
             ResponseEntity<String> response = exchange(method, uri, body, accessMode, true);
             String responseBody = response.getBody();
             if (!StringUtils.hasText(responseBody)) {
-                /**
-                 * 薪酬异常。
-                 * @param uri uri
-                 * @return 薪酬异常的结果
-                 */
                 throw new PaymentException("调度平台返回空响应: " + uri);
             }
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode code = root.get("code");
             if (code != null && !"00000".equals(code.asText()) && !"200".equals(code.asText())) {
-                /**
-                 * 薪酬异常。
-                 * @param root.path("msg" 根.路径("msg"
-                 * @return 薪酬异常的结果
-                 */
                 throw new PaymentException("调度平台调用失败: " + root.path("msg").asText(root.path("message").asText()));
             }
             return root.path("data");
         } catch (PaymentException e) {
             throw e;
         } catch (Exception e) {
-            /**
-             * 薪酬异常。
-             * @param e.getMessage( e.获取消息(
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("调用调度平台失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Exchange
-     * @param method 方法
-     * @param uri uri
-     * @param body 主体
-     * @param accessMode accessmode
-     * @param allowConsoleRelogin allow控制台relogin
+     * 发起 HTTP 调用
+     * @param method 请求方法
+     * @param uri 请求地址
+     * @param body 请求主体
+     * @param accessMode 访问模式
+     * @param allowConsoleRelogin 是否允许控制台重新登录
      */
     private ResponseEntity<String> exchange(HttpMethod method,
                                             URI uri,
@@ -207,19 +180,19 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
             headers.setContentType(MediaType.APPLICATION_JSON);
             if (accessMode == AccessMode.PLATFORM) {
                 /**
-                 * 副本认证头部。
-                 * @param headers 头部
+                 * 透传当前请求认证头
+                 * @param headers 请求头
                  */
                 copyAuthHeaders(headers);
             } else {
                 /**
-                 * ensure控制台会话。
-                 * @param false false
+                 * 确保控制台会话有效
+                 * @param false 不强制刷新
                  */
                 ensureConsoleSession(false);
                 /**
-                 * apply控制台Cookie。
-                 * @param headers 头部
+                 * 附加控制台 Cookie
+                 * @param headers 请求头
                  */
                 applyConsoleCookie(headers);
             }
@@ -230,12 +203,12 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
                     && allowConsoleRelogin
                     && (e.getStatusCode() == HttpStatus.UNAUTHORIZED || e.getStatusCode() == HttpStatus.FORBIDDEN)) {
                 /**
-                 * clear控制台会话。
+                 * 清除控制台会话
                  */
                 clearConsoleSession();
                 /**
-                 * ensure控制台会话。
-                 * @param true true
+                 * 重新登录控制台
+                 * @param true 强制刷新
                  */
                 ensureConsoleSession(true);
                 return exchange(method, uri, body, accessMode, false);
@@ -245,9 +218,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * ensure控制台会话
+     * 确保控制台会话有效
      *
-     * @param forceRefresh forcerefresh
+     * @param forceRefresh 是否强制重新登录
      */
     private void ensureConsoleSession(boolean forceRefresh) {
         synchronized (consoleSessionMonitor) {
@@ -261,7 +234,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
             headers.setContentType(MediaType.APPLICATION_JSON);
             ResponseEntity<String> response = restTemplate.exchange(
                     /**
-                     * 控制台loginurl。
+                     * 控制台登录地址
                      */
                     consoleLoginUrl(),
                     HttpMethod.POST,
@@ -269,11 +242,6 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
                     String.class);
             String responseBody = response.getBody();
             if (!StringUtils.hasText(responseBody)) {
-                /**
-                 * 薪酬异常。
-                 * @param "调度平台控制台登录返回空响应" "调度平台控制台登录返回空响应"
-                 * @return 薪酬异常的结果
-                 */
                 throw new PaymentException("调度平台控制台登录返回空响应");
             }
             try {
@@ -286,11 +254,6 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
             } catch (PaymentException e) {
                 throw e;
             } catch (Exception e) {
-                /**
-                 * 薪酬异常。
-                 * @param e.getMessage( e.获取消息(
-                 * @return 薪酬异常的结果
-                 */
                 throw new PaymentException("解析调度平台控制台登录响应失败: " + e.getMessage(), e);
             }
             schedulerConsoleCookie = extractCookieHeader(response.getHeaders());
@@ -298,8 +261,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * clear控制台会话
-    */
+     * 清除控制台会话
+     */
     private void clearConsoleSession() {
         synchronized (consoleSessionMonitor) {
             schedulerConsoleCookie = null;
@@ -307,9 +270,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 应用控制台Cookie
+     * 应用控制台 Cookie
      *
-     * @param headers 头部
+     * @param headers 请求头
      */
     private void applyConsoleCookie(HttpHeaders headers) {
         if (StringUtils.hasText(schedulerConsoleCookie)) {
@@ -318,10 +281,10 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * extractCookie头部
+     * 从响应头中提取 Cookie
      *
-     * @param headers 头部
-     * @return extractCookie头部的结果
+     * @param headers 响应头
+     * @return 提取出的 Cookie 请求头值
      */
     private String extractCookieHeader(HttpHeaders headers) {
         List<String> setCookieValues = headers.get(HttpHeaders.SET_COOKIE);
@@ -336,10 +299,10 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 转为请求Cookie
+     * 将 Set-Cookie 值转换为请求 Cookie
      *
-     * @param rawCookie rawCookie
-     * @return 转为请求Cookie的结果
+     * @param rawCookie 原始 Set-Cookie 值
+     * @return 可用于请求的 Cookie 值
      */
     private String toRequestCookie(String rawCookie) {
         if (!StringUtils.hasText(rawCookie)) {
@@ -350,9 +313,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 运营中心通过 薪酬 服务代理访问 调度器 平台时，需要把当前登录态继续向下游透传。
-     * 调度器 同时兼容 `x-oauth-token` 与 `Authorization: Bearer ...` 两种写法，这里保持原样复制。
-     * @param headers 头部
+     * 运营中心通过支付服务代理访问调度器平台时，需要把当前登录态继续向下游透传。
+     * 调度器同时兼容 `x-oauth-token` 与 `Authorization: Bearer ...` 两种写法，这里保持原样转发。
+     * @param headers 请求头
      */
     private void copyAuthHeaders(HttpHeaders headers) {
         ServletRequestAttributes attributes =
@@ -362,27 +325,26 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
         HttpServletRequest request = attributes.getRequest();
         /**
-         * 副本头部ifpresent。
-         * @param request 请求
-         * @param headers 头部
-         * @param "x-oauth-token" "x-OAuth-令牌"
+         * 请求头存在时复制
+         * @param request 当前请求
+         * @param headers 目标请求头
          */
         copyHeaderIfPresent(request, headers, "x-oauth-token");
         /**
-         * 副本头部ifpresent。
-         * @param request 请求
-         * @param headers 头部
-         * @param HttpHeaders.AUTHORIZATION http头部.授权
+         * 请求头存在时复制
+         * @param request 当前请求
+         * @param headers 目标请求头
+         * @param HttpHeaders.AUTHORIZATION 授权请求头
          */
         copyHeaderIfPresent(request, headers, HttpHeaders.AUTHORIZATION);
     }
 
     /**
-     * 复制头部ifpresent
+     * 请求头存在时复制到目标请求头
      *
-     * @param request 请求
-     * @param headers 头部
-     * @param headerName 头部名称
+     * @param request 当前请求
+     * @param headers 目标请求头
+     * @param headerName 请求头名称
      */
     private void copyHeaderIfPresent(HttpServletRequest request, HttpHeaders headers, String headerName) {
         String headerValue = request.getHeader(headerName);
@@ -392,9 +354,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 解析accessmode
+     * 解析访问模式：显式配置优先，其次按是否存在透传认证头判断
      *
-     * @return resolveAccessMode的结果
      */
     private AccessMode resolveAccessMode() {
         String configuredMode = environment.getProperty("plugin.payment.scheduler.platform-access-mode", "auto");
@@ -408,9 +369,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 是否拥有远期认证头部
+     * 是否携带透传认证头
      *
-     * @return 是否包含远期认证头部的结果
+     * @return 是否包含透传认证头
      */
     private boolean hasForwardedAuthHeaders() {
         ServletRequestAttributes attributes =
@@ -423,29 +384,24 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 是否拥有头部
+     * 是否携带指定请求头
      *
-     * @param request 请求
-     * @param headerName 头部名称
-     * @return 是否包含头部的结果
+     * @param request 当前请求
+     * @param headerName 请求头名称
+     * @return 是否包含该请求头
      */
     private boolean hasHeader(HttpServletRequest request, String headerName) {
         return request != null && StringUtils.hasText(request.getHeader(headerName));
     }
 
     /**
-     * 转为任务vo
+     * 转换为任务视图对象
      *
-     * @param node 节点
-     * @return 转为任务vo的结果
+     * @param node 任务节点
+     * @return 任务视图对象
      */
     private PaymentSchedulerTaskVO toTaskVO(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
-            /**
-             * 薪酬异常。
-             * @param "调度平台返回空任务数据" "调度平台返回空任务数据"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("调度平台返回空任务数据");
         }
         PaymentSchedulerTaskVO vo = new PaymentSchedulerTaskVO();
@@ -464,10 +420,10 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 解析时间
+     * 解析时间字符串，兼容多种格式
      *
-     * @param value 值
-     * @return 解析时间的结果
+     * @param value 时间字符串
+     * @return 解析出的时间，无法解析时抛出异常
      */
     private LocalDateTime parseTime(String value) {
         if (!StringUtils.hasText(value) || "null".equalsIgnoreCase(value)) {
@@ -497,62 +453,57 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
                     : Instant.ofEpochMilli(epochValue);
             return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
         }
-        /**
-         * 薪酬异常。
-         * @param value 值
-         * @return 薪酬异常的结果
-         */
         throw new PaymentException("无法解析调度平台返回的时间字段: " + value);
     }
 
     /**
-     * 任务列表url
+     * 构建任务列表地址
      *
-     * @param accessMode accessmode
-     * @return 任务列表url的结果
+     * @param accessMode 访问模式
+     * @return 任务列表地址
      */
     private URI taskListUrl(AccessMode accessMode) {
         return buildUri(accessMode, namespace(), "task", "list");
     }
 
     /**
-     * 任务url
+     * 构建任务详情地址
      *
-     * @param accessMode accessmode
-     * @param taskKey 任务Key
-     * @return 任务url的结果
+     * @param accessMode 访问模式
+     * @param taskKey 任务标识
+     * @return 任务地址
      */
     private URI taskUrl(AccessMode accessMode, String taskKey) {
         return buildUri(accessMode, namespace(), "task", requireText(taskKey, "任务标识不能为空"));
     }
 
     /**
-     * 任务triggerurl
+     * 构建任务触发地址
      *
-     * @param accessMode accessmode
-     * @param taskKey 任务Key
-     * @return 任务triggerurl的结果
+     * @param accessMode 访问模式
+     * @param taskKey 任务标识
+     * @return 任务触发地址
      */
     private URI taskTriggerUrl(AccessMode accessMode, String taskKey) {
         return buildUri(accessMode, namespace(), "task", requireText(taskKey, "任务标识不能为空"), "trigger");
     }
 
     /**
-     * 控制台loginurl
+     * 构建控制台登录地址
      *
-     * @return 控制台loginurl的结果
+     * @return 控制台登录地址
      */
     private URI consoleLoginUrl() {
         return buildRawUri("job-console", "auth", "login");
     }
 
     /**
-     * 构建Uri
+     * 按访问模式拼接接口地址
      *
-     * @param accessMode accessmode
-     * @param namespace namespace
-     * @param pathSegments 路径segments
-     * @return 构建uri的结果
+     * @param accessMode 访问模式
+     * @param namespace 命名空间
+     * @param pathSegments 路径片段
+     * @return 拼接后的地址
      */
     private URI buildUri(AccessMode accessMode, String namespace, String... pathSegments) {
         if (accessMode == AccessMode.CONSOLE) {
@@ -572,10 +523,10 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 构建rawuri
+     * 拼接原始地址
      *
-     * @param pathSegments 路径segments
-     * @return 构建rawuri的结果
+     * @param pathSegments 路径片段
+     * @return 拼接后的地址
      */
     private URI buildRawUri(String... pathSegments) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl());
@@ -586,9 +537,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * baseurl
+     * 调度平台基础地址
      *
-     * @return baseUrl的结果
      */
     private String baseUrl() {
         String value = environment.getProperty("plugin.payment.scheduler.platform-base-url",
@@ -598,9 +548,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * Namespace
+     * 调度平台命名空间
      *
-     * @return namespace的结果
      */
     private String namespace() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-namespace", "payment"),
@@ -608,9 +557,9 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * 控制台用户名
+     * 控制台账号
      *
-     * @return 控制台用户名的结果
+     * @return 控制台账号
      */
     private String consoleUsername() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-console-username",
@@ -620,7 +569,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     /**
      * 控制台密码
      *
-     * @return 控制台密码的结果
+     * @return 控制台密码
      */
     private String consolePassword() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-console-password",
@@ -628,26 +577,21 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     /**
-     * require文本
+     * 校验必填文本
      *
      * @param value 值
-     * @param message 消息
-     * @return require文本的结果
+     * @param message 错误消息
+     * @return 去除首尾空白后的文本
      */
     private String requireText(String value, String message) {
         if (!StringUtils.hasText(value)) {
-            /**
-             * 薪酬异常。
-             * @param message 消息
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException(message);
         }
         return value.trim();
     }
 
     /**
-     * accessmode枚举。
+     * 访问模式枚举
      *
      * @author CH
      * @since 4.0.0
@@ -657,4 +601,3 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         CONSOLE
     }
 }
-

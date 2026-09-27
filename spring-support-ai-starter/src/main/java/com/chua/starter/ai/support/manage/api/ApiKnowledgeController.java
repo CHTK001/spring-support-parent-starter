@@ -1,12 +1,15 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.common.support.ai.rag.RagClient;
+import com.chua.common.support.ai.rag.RagDocument;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.vector.VectorStorage;
 import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.ai.support.configuration.rag.RagProperties;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
@@ -15,6 +18,8 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.util.AiMemoryOwnership;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,6 +60,11 @@ import java.util.stream.Stream;
  * 严禁遗留 {@code id} 字段。知识变更通过 {@link ApiWebSocketPushService} 推送
  * {@code knowledge.base-created / base-updated / base-deleted / binding-changed / tag-changed} 事件。</p>
  *
+ * <p>隔离口径：知识库与标签带创建人的 {@code user_id}，本人可读写，管理员可读他人记录但不可改写或删除，
+ * 他人一律 403；文件、目录、导入导出等落盘出口同样走归属校验，避免借他人知识库读到其磁盘目录。
+ * 绑定以「登录用户标识 + 种类 + 目标标识」为键存放，各用户互不可见。检索配置是全体用户共用的全局默认，
+ * 因此读取开放、写入只允许管理员。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -91,17 +101,17 @@ public class ApiKnowledgeController {
     private final ChatClientRegistry chatClientRegistry;
 
     /**
-     * 知识库元数据表：知识_基础_标识 → 元数据
+     * 知识库元数据表：知识_基础_标识 → 元数据（记录内带创建人 用户标识）
      */
     private final Map<String, Map<String, Object>> bases = new ConcurrentHashMap<>();
 
     /**
-     * 标签表：Key → 标签
+     * 标签表：Key → 标签（记录内带创建人 用户标识）
      */
     private final Map<String, Map<String, Object>> tags = new ConcurrentHashMap<>();
 
     /**
-     * 绑定表："{种类}:{Target_标识}" → 绑定
+     * 绑定表："{用户标识}:{种类}:{Target_标识}" → 绑定
      */
     private final Map<String, Map<String, Object>> bindings = new ConcurrentHashMap<>();
 
@@ -120,7 +130,7 @@ public class ApiKnowledgeController {
      * @return 列表基础的结果
      */
     public ApiResult<List<Map<String, Object>>> listBases() {
-        List<Map<String, Object>> items = bases.values().stream()
+        List<Map<String, Object>> items = AiMemoryOwnership.visibleToCurrentUser(bases.values(), true).stream()
                 .map(this::toBaseResponse)
                 .sorted(Comparator.comparing(
                         m -> ((Number) m.getOrDefault("created_at", 0L)).longValue(),
@@ -152,6 +162,7 @@ public class ApiKnowledgeController {
         @SuppressWarnings("unchecked")
         List<String> reqTags = body.get("tags") instanceof List ? (List<String>) body.get("tags") : new ArrayList<>();
         Map<String, Object> source = body.get("source") instanceof Map ? uncheckedCast(body.get("source")) : null;
+        boolean isPublic = Boolean.parseBoolean(String.valueOf(body.getOrDefault("is_public", false)));
 
         boolean managed;
         String kind;
@@ -164,6 +175,7 @@ public class ApiKnowledgeController {
             // 外部本地目录（非托管）
             kind = "local";
             managed = false;
+            assertExternalRoot(rootPath);
         } else {
             // 空白托管知识库
             kind = "blank";
@@ -200,6 +212,7 @@ public class ApiKnowledgeController {
         base.put("root_exists", Files.exists(root));
         base.put("tags", new ArrayList<>(reqTags));
         base.put("kind", kind);
+        base.put("is_public", isPublic);
         if (source != null) {
             // 规整来源配置，补齐 entries 默认空列表
             Map<String, Object> src = new LinkedHashMap<>(source);
@@ -209,6 +222,7 @@ public class ApiKnowledgeController {
             base.put("source", src);
         }
 
+        AiMemoryOwnership.stampOwner(base);
         /**
          * refreshstats。
          * @param base 基础
@@ -234,7 +248,7 @@ public class ApiKnowledgeController {
      * @return 获取base的结果
      */
     public ApiResult<Map<String, Object>> getBase(@PathVariable String knowledge_base_id) {
-        Map<String, Object> base = requireBase(knowledge_base_id);
+        Map<String, Object> base = requireBase(knowledge_base_id, false);
         return ApiResult.ok(toBaseResponse(base));
     }
 
@@ -252,6 +266,9 @@ public class ApiKnowledgeController {
             @SuppressWarnings("unchecked")
             List<String> newTags = (List<String>) body.get("tags");
             base.put("tags", new ArrayList<>(newTags));
+        }
+        if (body.containsKey("is_public")) {
+            base.put("is_public", Boolean.parseBoolean(String.valueOf(body.get("is_public"))));
         }
         base.put("updated_at", System.currentTimeMillis());
         pushService.push("knowledge.base-updated", toBaseResponse(base));
@@ -272,6 +289,8 @@ public class ApiKnowledgeController {
             deleteRecursively(root);
         }
         bases.remove(knowledge_base_id);
+        // 按知识库ID前缀回收其全部向量，避免知识库已删但向量残留继续参与召回
+        purgeVectorsByPrefix(knowledge_base_id);
         // 清理引用该库的绑定
         bindings.values().removeIf(b -> {
             @SuppressWarnings("unchecked")
@@ -296,8 +315,9 @@ public class ApiKnowledgeController {
     }
 
     @PutMapping("/retrieval")
+    @Permission("admin")
     /**
-     * 设置retrieval配置。
+     * 设置retrieval配置（全局默认，仅管理员可改）。
      * @param body 主体
      * @return 设置retrieval配置的结果
      */
@@ -402,6 +422,7 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "root_path 不能为空");
         }
         Path root = Paths.get(rootPath);
+        assertExternalRoot(rootPath);
         if (!Files.isDirectory(root)) {
             /**
              * api异常。
@@ -536,7 +557,7 @@ public class ApiKnowledgeController {
     @GetMapping("/bases/{knowledge_base_id}/files")
     public ApiResult<List<Map<String, Object>>> listFiles(@PathVariable String knowledge_base_id,
                                                           @RequestParam(required = false) String path) {
-        Path root = resolveRoot(requireBase(knowledge_base_id));
+        Path root = resolveRoot(requireBase(knowledge_base_id, false));
         Path dir = safeResolve(root, path);
         if (!Files.isDirectory(dir)) {
             /**
@@ -572,7 +593,7 @@ public class ApiKnowledgeController {
     @GetMapping("/bases/{knowledge_base_id}/tree")
     public ApiResult<List<Map<String, Object>>> listTree(@PathVariable String knowledge_base_id,
                                                          @RequestParam(required = false) String path) {
-        Path root = resolveRoot(requireBase(knowledge_base_id));
+        Path root = resolveRoot(requireBase(knowledge_base_id, false));
         Path dir = safeResolve(root, path);
         if (!Files.isDirectory(dir)) {
             /**
@@ -645,6 +666,8 @@ public class ApiKnowledgeController {
          */
         deleteRecursively(folder);
         Map<String, Object> base = requireBase(knowledge_base_id);
+        // 按「知识库ID/目录」前缀回收该目录下所有文件的向量
+        purgeVectorsByPrefix(knowledge_base_id + "/" + path);
         /**
          * refreshstats。
          * @param base 基础
@@ -702,6 +725,10 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "重命名失败: " + e.getMessage());
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
+        // 改名会改变向量标识（旧路径向量残留、新路径无向量），此处回收并重建索引
+        int lastSlash = rel.lastIndexOf('/');
+        String newRel = lastSlash >= 0 ? rel.substring(0, lastSlash + 1) + newName : newName;
+        reindexVectorsAfterRename(knowledge_base_id, rel, newRel);
         /**
          * refreshstats。
          * @param base 基础
@@ -714,7 +741,7 @@ public class ApiKnowledgeController {
     @GetMapping("/bases/{knowledge_base_id}/file")
     public ApiResult<Map<String, Object>> readFile(@PathVariable String knowledge_base_id,
                                                    @RequestParam String path) {
-        Path root = resolveRoot(requireBase(knowledge_base_id));
+        Path root = resolveRoot(requireBase(knowledge_base_id, false));
         Path file = safeResolve(root, path);
         if (!Files.isRegularFile(file)) {
             /**
@@ -826,6 +853,8 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除文件失败: " + e.getMessage());
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
+        // 按「知识库ID/相对路径」前缀精确回收该文件产生的向量
+        purgeVectorsByPrefix(knowledge_base_id + "/" + path);
         /**
          * refreshstats。
          * @param base 基础
@@ -872,8 +901,13 @@ public class ApiKnowledgeController {
         binding.put("writeback_eagerness",
                 body.get("writeback_eagerness") == null ? "manual" : String.valueOf(body.get("writeback_eagerness")));
         binding.put("channel_write_enabled", Boolean.TRUE.equals(body.get("channel_write_enabled")));
-        binding.put("kb_ids", body.get("kb_ids") instanceof List
-                ? new ArrayList<>((List<?>) body.get("kb_ids")) : new ArrayList<>());
+        List<Object> kbIds = body.get("kb_ids") instanceof List
+                ? new ArrayList<>((List<?>) body.get("kb_ids")) : new ArrayList<>();
+        for (Object kbId : kbIds) {
+            requireBase(String.valueOf(kbId), false);
+        }
+        binding.put("kb_ids", kbIds);
+        AiMemoryOwnership.stampOwner(binding);
         bindings.put(bindingKey(kind, target_id), binding);
         pushService.push("knowledge.binding-changed", new LinkedHashMap<>(binding));
         return ApiResult.ok(binding);
@@ -886,8 +920,9 @@ public class ApiKnowledgeController {
      * @return 列表consumers的结果
      */
     public ApiResult<List<Map<String, Object>>> listConsumers(@PathVariable String knowledge_base_id) {
+        requireBase(knowledge_base_id, false);
         List<Map<String, Object>> consumers = new ArrayList<>();
-        for (Map<String, Object> b : bindings.values()) {
+        for (Map<String, Object> b : AiMemoryOwnership.visibleToCurrentUser(bindings.values())) {
             @SuppressWarnings("unchecked")
             List<String> kbIds = (List<String>) b.get("kb_ids");
             if (kbIds != null && kbIds.contains(knowledge_base_id)) {
@@ -920,6 +955,7 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "dest_path 不能为空");
         }
         Path root = resolveRoot(base);
+        assertExternalRoot(destPath);
         Path dest = Paths.get(destPath);
         try {
             Files.createDirectories(dest.getParent());
@@ -1000,6 +1036,7 @@ public class ApiKnowledgeController {
         base.put("updated_at", now);
         base.put("tags", new ArrayList<>());
         base.put("kind", "local");
+        AiMemoryOwnership.stampOwner(base);
         /**
          * refreshstats。
          * @param base 基础
@@ -1020,7 +1057,7 @@ public class ApiKnowledgeController {
      * @return 列表标签的结果
      */
     public ApiResult<List<Map<String, Object>>> listTags() {
-        List<Map<String, Object>> items = tags.values().stream()
+        List<Map<String, Object>> items = AiMemoryOwnership.visibleToCurrentUser(tags.values()).stream()
                 .sorted(Comparator.comparing(
                         m -> ((Number) m.getOrDefault("sortOrder", 0)).intValue()))
                 .toList();
@@ -1045,13 +1082,14 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "标签名称不能为空");
         }
         String key = "tag-" + conversationStore.newId();
-        int maxOrder = tags.values().stream()
+        int maxOrder = AiMemoryOwnership.visibleToCurrentUser(tags.values()).stream()
                 .mapToInt(t -> ((Number) t.getOrDefault("sortOrder", 0)).intValue()).max().orElse(0);
         Map<String, Object> tag = new LinkedHashMap<>();
         tag.put("key", key);
         tag.put("label", label);
         tag.put("color", body.get("color"));
         tag.put("sortOrder", maxOrder + 1);
+        AiMemoryOwnership.stampOwner(tag);
         tags.put(key, tag);
         pushService.push("knowledge.tag-changed", Map.of());
         return ApiResult.ok(tag);
@@ -1060,16 +1098,7 @@ public class ApiKnowledgeController {
     @PutMapping("/tags/{key}")
     public ApiResult<Void> updateTag(@PathVariable String key,
                                      @RequestBody Map<String, Object> body) {
-        Map<String, Object> tag = tags.get(key);
-        if (tag == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param key Key
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
-        }
+        Map<String, Object> tag = requireTag(key, true);
         if (body.containsKey("label")) {
             tag.put("label", String.valueOf(body.get("label")));
         }
@@ -1090,17 +1119,14 @@ public class ApiKnowledgeController {
      * @return 删除标签的结果
      */
     public ApiResult<Void> deleteTag(@PathVariable String key) {
-        if (tags.remove(key) == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param key Key
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
-        }
-        // 从所有知识库标签列表中移除
+        requireTag(key, true);
+        tags.remove(key);
+        // 仅从本人的知识库标签列表中移除（他人列表不动）
+        String ownerId = AiUserContext.requireUserId();
         for (Map<String, Object> base : bases.values()) {
+            if (!ownerId.equals(String.valueOf(base.get(AiMemoryOwnership.USER_ID_FIELD)))) {
+                continue;
+            }
             @SuppressWarnings("unchecked")
             List<String> baseTags = (List<String>) base.get("tags");
             if (baseTags != null) {
@@ -1109,6 +1135,26 @@ public class ApiKnowledgeController {
         }
         pushService.push("knowledge.tag-changed", Map.of());
         return ApiResult.ok();
+    }
+
+    /**
+     * 获取标签并校验归属（不存在抛 NOT_FOUND）。
+     * @param key Key
+     * @param writable 是否要求写权限
+     * @return requireTag的结果
+     */
+    private Map<String, Object> requireTag(String key, boolean writable) {
+        Map<String, Object> tag = tags.get(key);
+        if (tag == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param key Key
+             * @return api异常的结果
+             */
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
+        }
+        return AiMemoryOwnership.requireOwned(tag, writable, "标签");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1138,13 +1184,10 @@ public class ApiKnowledgeController {
 
         List<Map<String, Object>> scope = new ArrayList<>();
         if (kbIds.isEmpty()) {
-            scope.addAll(bases.values());
+            scope.addAll(AiMemoryOwnership.visibleToCurrentUser(bases.values()));
         } else {
             for (String id : kbIds) {
-                Map<String, Object> b = bases.get(id);
-                if (b != null) {
-                    scope.add(b);
-                }
+                scope.add(requireBase(id, false));
             }
         }
 
@@ -1164,11 +1207,21 @@ public class ApiKnowledgeController {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * 获取知识库元数据（不存在抛 NOT_FOUND）。
+     * 获取知识库元数据并校验归属（缺省按写权限收口）。
      * @param knowledgeBaseId 知识baseid
      * @return requireBase的结果
      */
     private Map<String, Object> requireBase(String knowledgeBaseId) {
+        return requireBase(knowledgeBaseId, true);
+    }
+
+    /**
+     * 获取知识库元数据并校验归属。
+     * @param knowledgeBaseId 知识baseid
+     * @param writable 是否要求写权限（只读出口传 假，管理员可读他人知识库）
+     * @return requireBase的结果
+     */
+    private Map<String, Object> requireBase(String knowledgeBaseId, boolean writable) {
         Map<String, Object> base = bases.get(knowledgeBaseId);
         if (base == null) {
             /**
@@ -1179,7 +1232,28 @@ public class ApiKnowledgeController {
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "知识库不存在: " + knowledgeBaseId);
         }
-        return base;
+        if (writable) {
+            return AiMemoryOwnership.requireOwned(base, true, "知识库");
+        }
+        return AiMemoryOwnership.requireReadable(base, "知识库");
+    }
+
+    /**
+     * 校验客户端自报的外部目录：托管上传目录归各自创建人，不允许挂载为他人知识库目录。
+     * @param rootPath 根路径
+     */
+    private void assertExternalRoot(String rootPath) {
+        Path upload = Paths.get(ragProperties.getUploadDir()).toAbsolutePath().normalize();
+        Path target = Paths.get(rootPath).toAbsolutePath().normalize();
+        if (target.startsWith(upload)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param rootPath 根路径
+             * @return api异常的结果
+             */
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "root_path 不能指向托管上传目录: " + rootPath);
+        }
     }
 
     /**
@@ -1556,6 +1630,157 @@ public class ApiKnowledgeController {
     }
 
     /**
+     * 按前缀清理全局 RAG 客户端中属于该前缀的向量与文档（最佳努力，失败静默忽略）。
+     *
+     * <p>前缀语义为「知识库ID」或「知识库ID/相对路径」，由 {@link #indexKnowledgeFile}
+     * 传给 pipeline 的文档名决定：删除知识库时用 {@code knowledge_base_id}，
+     * 删除单文件 / 目录时用 {@code knowledge_base_id + "/" + 相对路径}。</p>
+     *
+     * <p><strong>注意</strong>：向量标识本身是 {@code <随机UUID>_<切片序号>}，
+     * 并不携带知识库信息，所以真正生效的是「按文档名反查删除」这一步；
+     * 前缀直删只对「标识即逻辑路径」的实现有效，保留作为兜底。</p>
+     *
+     * <p>不清理会导致向量随知识库删除而残留：向量库存量只增不减，
+     * 重建同名知识库后旧向量仍参与召回。</p>
+     *
+     * @param idPrefix 文档名 / 向量标识前缀
+     */
+    private void purgeVectorsByPrefix(String idPrefix) {
+        try {
+            RagClient client = ragClientManager.current();
+            if (client == null) {
+                return;
+            }
+            // 1) 先按标识前缀直删：对「向量标识即逻辑路径」的实现有效
+            VectorStorage storage = client.getSetting() == null
+                    ? null : client.getSetting().getVectorStorage();
+            if (storage != null) {
+                int removed = storage.removeByIdPrefix(idPrefix);
+                if (removed > 0) {
+                    log.info("[ApiKnowledgeController] 按标识前缀清理向量 {} 条, 前缀={}", removed, idPrefix);
+                }
+            } else {
+                log.debug("[ApiKnowledgeController] 无可用向量库，跳过前缀清理, 前缀={}", idPrefix);
+            }
+        } catch (UnsupportedOperationException e) {
+            log.debug("[ApiKnowledgeController] 当前向量库不支持按前缀删除, 前缀={}: {}", idPrefix, e.getMessage());
+        } catch (Exception e) {
+            log.debug("[ApiKnowledgeController] 前缀清理失败(忽略), 前缀={}: {}", idPrefix, e.getMessage());
+        }
+        // 2) 再按文档名反查删除：向量标识为 <随机UUID>_<切片序号>，不含逻辑路径，
+        //    故前缀直删对现网无效；文档记录里的 fileName 才是「知识库ID/相对路径」，
+        //    借 deleteDocument 由 pipeline 连带回收其向量。
+        purgeDocumentsByNamePrefix(idPrefix);
+    }
+
+    /**
+     * 按文档名（{@code knowledge_base_id} 或 {@code knowledge_base_id/相对路径} 前缀）
+     * 反查并删除 RAG 文档，由 pipeline 连带回收对应向量。
+     *
+     * <p>向量标识形如 {@code <随机UUID>_<切片序号>}，<strong>不携带</strong>知识库信息，
+     * 因此无法用向量库的前缀删除定位；知识库与向量的唯一关联是文档记录里的
+     * {@code fileName}。删除知识库 / 单文件 / 目录 / 改名时都必须走这条路径。</p>
+     *
+     * @param namePrefix 文档名前缀
+     */
+    private void purgeDocumentsByNamePrefix(String namePrefix) {
+        try {
+            RagClient client = ragClientManager.current();
+            if (client == null || StringUtils.isBlank(namePrefix)) {
+                return;
+            }
+            int deleted = 0;
+            // 分页遍历，避免单页截断导致漏删
+            final int pageSize = 100;
+            for (int page = 1; page <= 50; page++) {
+                List<RagDocument> batch = client.listDocuments(page, pageSize);
+                if (batch == null || batch.isEmpty()) {
+                    break;
+                }
+                List<RagDocument> matched = batch.stream()
+                        .filter(doc -> doc != null && doc.fileName() != null
+                                && doc.fileName().startsWith(namePrefix))
+                        .toList();
+                for (RagDocument doc : matched) {
+                    if (client.deleteDocument(doc.id())) {
+                        deleted++;
+                    } else {
+                        log.warn("[ApiKnowledgeController] 删除文档失败(忽略), id={}", doc.id());
+                    }
+                }
+                if (batch.size() < pageSize) {
+                    break;
+                }
+            }
+            if (deleted > 0) {
+                log.info("[ApiKnowledgeController] 按文档名清理知识库文档 {} 个, 前缀={}", deleted, namePrefix);
+            }
+        } catch (Exception e) {
+            log.debug("[ApiKnowledgeController] 文档名清理失败(忽略), 前缀={}: {}", namePrefix, e.getMessage());
+        }
+    }
+
+    /**
+     * 重命名后重建向量索引：先回收旧路径下的全部向量，再按新路径重新入库。
+     *
+     * <p>向量标识为 {@code <随机UUID>_<切片序号>}，改名后旧文档对应的向量不会自动跟随，
+     * 若不处理会出现「旧路径向量残留 + 新路径无向量」：检索既召回过期内容，
+     * 又永远召不到新名字的文件。目录改名时以旧文档名（{@code 旧路径/}）为前缀
+     * 清理整棵子树，再递归重建子树内全部文本文件。</p>
+     *
+     * @param knowledge_base_id 知识库ID
+     * @param oldRel           改名前的相对路径
+     * @param newRel           改名后的相对路径
+     */
+    private void reindexVectorsAfterRename(String knowledge_base_id, String oldRel, String newRel) {
+        // 目录改名时以「旧路径/」为前缀才能覆盖子树内所有文件
+        purgeVectorsByPrefix(knowledge_base_id + "/" + oldRel);
+        try {
+            Map<String, Object> base = requireBase(knowledge_base_id);
+            Path root = resolveRoot(base);
+            Path target = safeResolve(root, newRel);
+            if (Files.isRegularFile(target)) {
+                indexKnowledgeFile(base, newRel, readTextQuietly(target));
+                return;
+            }
+            if (!Files.isDirectory(target)) {
+                return;
+            }
+            try (Stream<Path> walk = Files.walk(target)) {
+                for (Path p : walk.filter(Files::isRegularFile).sorted().toList()) {
+                    if (!isTextFile(p)) {
+                        continue;
+                    }
+                    String relNew = root.relativize(p).toString().replace('\\', '/');
+                    String text = readTextQuietly(p);
+                    if (text != null) {
+                        indexKnowledgeFile(base, relNew, text);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[ApiKnowledgeController] 重命名后重建向量索引失败(忽略): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 静默读取文本文件内容，失败时返回 空（供最佳努力的后台索引使用）。
+     *
+     * @param file 文件
+     * @return 文件文本；非文本文件或读取失败时返回 空
+     */
+    private String readTextQuietly(Path file) {
+        try {
+            if (!isTextFile(file)) {
+                return null;
+            }
+            return new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
      * 递归删除目录。
      * @param path 路径
      */
@@ -1648,13 +1873,13 @@ public class ApiKnowledgeController {
     }
 
     /**
-     * 绑定存储键。
+     * 绑定存储键（按登录用户隔离，防止他人读写同一目标的绑定）。
      * @param kind 种类
      * @param targetId Targetid
      * @return bindingKey的结果
      */
     private String bindingKey(String kind, String targetId) {
-        return kind + ":" + targetId;
+        return AiUserContext.requireUserId() + ":" + kind + ":" + targetId;
     }
 
     /**

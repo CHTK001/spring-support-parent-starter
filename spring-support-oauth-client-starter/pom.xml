@@ -77,12 +77,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- 通用工具类库核心模块 - 提供 CommonConstant, Action, Version 等类 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
         <!-- HTTP客户端工具 - 提供 HTTP 相关功能 -->
         <dependency>
             <groupId>com.chua</groupId>

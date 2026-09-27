@@ -52,16 +52,16 @@ public class LayoutGlobalSettingProvider implements GlobalSettingProvider {
     */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
-                new GlobalSettingProvider.SettingItem("layout_model", "pp-structurev2-layout", "STRING", "版面分析模型（pp-structurev2-layout / pp-layout-parser / yolov8-doclayout）", 1),
+                // 默认留空：ONNX 未配置时该模型并不存在，写死具体模型名会在首次调用时直接报错；
+                // 空值由 LayoutClientManager.build() 判定为「版面分析未启用」，语义更准确
+                new GlobalSettingProvider.SettingItem("layout_model", "", "STRING", "版面分析模型", 1),
                 new GlobalSettingProvider.SettingItem("layout_threshold", "0.5", "NUMBER", "版面分析置信度阈值（0~1）", 2),
-                new GlobalSettingProvider.SettingItem("table_enabled", "true", "BOOLEAN", "是否启用表格结构识别", 3),
-                new GlobalSettingProvider.SettingItem("reading_order_enabled", "true", "BOOLEAN", "是否启用阅读顺序排序", 4),
-                new GlobalSettingProvider.SettingItem("pose_model", "", "STRING", "姿态估计模型（如 yolov8-pose / hrnet，留空关闭）", 5),
-                new GlobalSettingProvider.SettingItem("pose_threshold", "0.5", "NUMBER", "姿态估计置信度阈值（0~1）", 6),
-                new GlobalSettingProvider.SettingItem("ocr_link_enabled", "true", "BOOLEAN", "是否联动 OCR 识别版块文字", 7),
-                new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "版块图像超分模型（如 real-esrgan / gfpgan，留空关闭）", 8),
-                new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 9),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 10)
+                new GlobalSettingProvider.SettingItem("reading_order_enabled", "true", "BOOLEAN", "是否启用阅读顺序排序（按 y 升序、x 升序排列版块）", 3),
+                new GlobalSettingProvider.SettingItem("ocr_link_enabled", "true", "BOOLEAN", "是否联动 OCR 识别版块文字（关闭时 parse 仅输出版面标签）", 4),
+                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 5)
+                // 已移除（原为无消费方的死配置，待功能接线后再行恢复）：
+                // table_enabled / pose_model / pose_threshold / super_resolution_model / super_resolution_enabled
+                // 其中 table_enabled 对应的 table-struct 模型已随 OnnxModelRegistrar 一并停用（Translator 类缺失）。
         );
     }
 }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.dimension.mapper.EduTeacherMapper">
+
+    <!-- 列表教师：在职状态 + 学科筛选 + 归属隔离，按教师ID升序 -->
+    <select id="listTeachers" resultType="com.chua.starter.eduai.dimension.entity.EduTeacher">
+        SELECT t.* FROM edu_teacher t
+        <where>
+            t.teacher_status = 1
+            <if test="subjectCode != null and subjectCode != ''">
+                AND t.teacher_subject_code = #{subjectCode}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (t.teacher_owner_user_id IS NULL OR t.teacher_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY t.teacher_id ASC
+    </select>
+
+</mapper>

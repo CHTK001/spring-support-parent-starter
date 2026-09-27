@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -100,6 +101,9 @@ public class CacheConfiguration {
     /**
      * 创建Redis缓存管理器
      *
+     * <p>写操作强制同步（{@code immediateWrites}）：Spring Data Redis 4.x 默认异步写缓存，
+     * 失效指令的 Future 从不 join、异常静默丢失，{@code @CacheEvict} 到不了 Redis。</p>
+     *
      * @param om
      * @param factory 工厂
      * @param seconds 秒
@@ -119,7 +123,7 @@ public class CacheConfiguration {
                 .computePrefixWith(name -> name + ":")
                 .disableCachingNullValues();
 
-        return RedisCacheManager.builder(factory)
+        return RedisCacheManager.builder(RedisCacheWriter.create(factory, writer -> writer.immediateWrites(true)))
                 .cacheDefaults(config)
                 .allowCreateOnMissingCache(true)
                 .build();

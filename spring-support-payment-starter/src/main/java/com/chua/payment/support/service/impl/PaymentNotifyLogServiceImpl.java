@@ -24,20 +24,20 @@ import java.time.LocalDateTime;
 public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
 
     /**
-     * Paymentnotify日志映射器
-    */
+     * 支付通知日志映射器
+     */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
     /**
-     * Merchant通道映射器
-    */
+     * 商户渠道映射器
+     */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     /**
-     * 开始
+     * 记录通知开始日志
      * @param notifyType 通知类型
-     * @param channelId 通道标识
+     * @param channelId 渠道标识
      * @param requestHeaders 请求头部
      * @param requestBody 请求主体
      */
@@ -66,15 +66,15 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     /**
-     * 饰面
+     * 更新通知处理完成信息
      * @param logId 日志标识
-     * @param signVerified 标志verified
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
+     * @param signVerified 签名是否校验通过
+     * @param channelType 渠道类型
+     * @param channelSubType 渠道子类型
      * @param processStatus 处理状态
      * @param processResult 处理结果
-     * @param relatedOrderId related订单标识
-     * @param relatedRefundId related退税标识
+     * @param relatedOrderId 关联订单标识
+     * @param relatedRefundId 关联退款标识
      * @param dto dto
      */
     public void finish(FinishNotifyLogDTO dto) {
@@ -100,4 +100,3 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
         paymentNotifyLogMapper.updateById(entity);
     }
 }
-

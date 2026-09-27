@@ -12,32 +12,31 @@ import java.math.BigDecimal;
 @Data
 public class TransferResult {
     /**
-     * 成功
-    */
+     * 是否成功
+     */
     private boolean success;
     /**
-     * 调动no
-    */
+     * 转账单号
+     */
     private String transferNo;
     /**
-     * 贸易no
-    */
+     * 交易单号
+     */
     private String tradeNo;
     /**
-     * Amount
-    */
+     * 转账金额
+     */
     private BigDecimal amount;
     /**
-     * 状态
-    */
+     * 转账状态
+     */
     private String status;
     /**
-     * 消息
-    */
+     * 提示消息
+     */
     private String message;
     /**
-     * RAW响应
-    */
+     * 渠道 RAW 响应
+     */
     private String rawResponse;
 }
-

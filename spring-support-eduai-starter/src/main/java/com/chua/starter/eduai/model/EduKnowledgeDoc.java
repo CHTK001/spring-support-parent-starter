@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 知识库文档实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_knowledge_doc")
-public class EduKnowledgeDoc {
+public class EduKnowledgeDoc extends SysBase {
 
     /**
      * 文档标识
@@ -66,26 +68,6 @@ public class EduKnowledgeDoc {
      * 状态
      */
     private Integer knowledgeDocStatus;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime knowledgeDocCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime knowledgeDocUpdateTime;
-
-    /**
-     * 创建人
-     */
-    private String knowledgeDocCreateBy;
-
-    /**
-     * 更新人
-     */
-    private String knowledgeDocUpdateBy;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

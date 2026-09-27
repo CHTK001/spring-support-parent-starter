@@ -1,31 +1,20 @@
 package com.chua.starter.filesystem.support.config;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.chua.common.support.storage.FileStorage;
-import com.chua.common.support.storage.setting.BucketSetting;
-import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
-import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
-import com.chua.starter.filesystem.support.controller.FileChunkUploadController;
 import com.chua.starter.filesystem.support.controller.FileDirController;
-import com.chua.starter.filesystem.support.server.FileServerManager;
-import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
-import com.chua.starter.filesystem.support.mapper.SysFileSystemUploadMapper;
+import com.chua.starter.filesystem.support.controller.FileObjectController;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
+import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import com.chua.starter.filesystem.support.properties.FileStorageUploadProperties;
-import com.chua.starter.filesystem.support.service.SysFileSystemUploadChunkService;
-import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
+import com.chua.starter.filesystem.support.server.FileServerManager;
+import com.chua.starter.filesystem.support.server.FileStorageServerLauncher;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
-import com.chua.starter.filesystem.support.utils.FileStorageSupport;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
 
 /**
  * 文件系统自动配置类。
@@ -34,114 +23,96 @@ import java.util.List;
  * @author CH
  */
 @Configuration
-@EnableConfigurationProperties({FileStorageProperties.class, FileStorageUploadProperties.class})
-@MapperScan(basePackages = "com.chua.starter.filesystem.support.mapper")
+@EnableConfigurationProperties({FileStorageProperties.class, FileStorageUploadProperties.class,
+        FileStorageServerProperties.class})
 @ConditionalOnProperty(prefix = FileStorageProperties.PREFIX, name = "enable", havingValue = "true")
 public class FileSystemAutoConfiguration {
 
-    @Bean
     /**
-     * 文件storagetemplate
+     * 创建文件存储模板。
      *
-     * @param properties 属性
-     * @return 文件storagetemplate的结果
+     * @param properties 文件存储配置
+     * @return 文件存储模板
      */
+    @Bean
     public FileStorageTemplate fileStorageTemplate(FileStorageProperties properties) {
         FileStorageTemplate template = new FileStorageTemplate(properties);
         template.initialize();
         return template;
     }
 
-    @Bean
-    @ConditionalOnMissingBean
     /**
-     * sys文件系统upload服务
+     * 创建文件对象控制器。
      *
-     * @param uploadMapper upload映射器
-     * @return sys文件系统upload服务的结果
+     * @param fileStorageTemplate 文件存储模板
+     * @param uploadProperties 上传配置
+     * @return 文件对象控制器
      */
-    public SysFileSystemUploadService sysFileSystemUploadService(SysFileSystemUploadMapper uploadMapper) {
-        return new com.chua.starter.filesystem.support.service.impl.SysFileSystemUploadServiceImpl();
-    }
-
     @Bean
     @ConditionalOnMissingBean
-    /**
-     * 文件chunkupload控制器
-     * @param uploadService upload服务
-     * @param chunkService chunk服务
-     * @param fileStorageTemplate 文件storagetemplate
-     * @param fileStorageProperties 文件storage属性
-     * @param uploadProperties upload属性
-     * @param fileServerManager 文件服务端管理器
-     * @param chunkService chunk服务
-     * @param fileStorageTemplate 文件storagetemplate
-     * @param fileStorageProperties 文件storage属性
-     * @param uploadProperties upload属性
-     * @param fileServerManager 文件服务端管理器
-     * @param properties 属性
-     * @param true true
-     * @param properties 属性
-     * @param template template
-     * @param applicationContext application上下文
-     * @param template template
-     * @param applicationContext application上下文
-     */
-    public FileChunkUploadController fileChunkUploadController(
-            SysFileSystemUploadService uploadService,
-            SysFileSystemUploadChunkService chunkService,
+    public FileObjectController fileObjectController(
             FileStorageTemplate fileStorageTemplate,
-            FileStorageProperties fileStorageProperties,
-            FileStorageUploadProperties uploadProperties,
-            FileServerManager fileServerManager) {
-        return new FileChunkUploadController(uploadService, chunkService, fileStorageTemplate,
-                fileStorageProperties, uploadProperties, fileServerManager);
+            FileStorageUploadProperties uploadProperties) {
+        return new FileObjectController(fileStorageTemplate, uploadProperties);
     }
 
+    /**
+     * 创建文件目录控制器。
+     *
+     * @param properties 文件存储配置
+     * @return 文件目录控制器
+     */
     @Bean
     @ConditionalOnMissingBean
-    /**
-     * 文件dir控制器
-     *
-     * @param properties 属性
-     * @return 文件dir控制器的结果
-     */
     public FileDirController fileDirController(FileStorageProperties properties) {
-        /**
-         * 文件dir控制器。
-         * @param properties 属性
-         * @return 文件dir控制器的结果
-         */
         return new FileDirController(properties);
     }
 
-    @Bean
     /**
-     * 文件系统服务信息contributor
+     * 创建文件系统服务信息贡献者。
      *
-     * @return 文件系统服务信息contributor的结果
+     * @return 文件系统服务信息贡献者
      */
+    @Bean
     public ServiceInfoContributor fileSystemServiceInfoContributor() {
         return registry -> {
-            registry.registerEndpoint("文件系统", "分片上传", "/chunk/create,upload,complete", "分片上传");
-            registry.registerEndpoint("文件系统", "文件预览", "preview", "文件预览");
-            registry.registerEndpoint("文件系统", "文件下载", "download", "文件下载");
+            registry.registerEndpoint("文件系统", "单次上传", "/v2/file/upload", "小文件单次上传");
+            registry.registerEndpoint("文件系统", "文件回显", "/v2/file/view/**", "匿名直链读取对象");
+            registry.registerEndpoint("文件系统", "文件服务器", "http://127.0.0.1:18080",
+                    "独立文件存储网关（随应用自动启动，见 plugin.filesystem.storage-server）");
             registry.registerFlag("filesystem", "文件系统", true, "文件存储模块");
         };
     }
 
-    @Bean
     /**
-     * 文件服务端管理器
+     * 创建文件服务端管理器。
      *
-     * @param properties 属性
-     * @param template template
-     * @param applicationContext application上下文
-     * @return 文件服务端管理器的结果
+     * @param properties 文件存储配置
+     * @param template 文件存储模板
+     * @param applicationContext 应用上下文
+     * @return 文件服务端管理器
      */
+    @Bean
     public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
         FileServerManager manager = new FileServerManager(properties, template, applicationContext);
         manager.startAll();
         return manager;
+    }
+
+    /**
+     * 创建文件存储服务器启动器。
+     *
+     * @param properties 文件服务器配置
+     * @param template 文件存储模板
+     * @return 文件存储服务器启动器
+     */
+    @Bean(destroyMethod = "close")
+    @ConditionalOnProperty(prefix = FileStorageServerProperties.PRE, name = "enable",
+            havingValue = "true", matchIfMissing = true)
+    public FileStorageServerLauncher fileStorageServerLauncher(FileStorageServerProperties properties,
+                                                               FileStorageTemplate template) {
+        FileStorageServerLauncher launcher = new FileStorageServerLauncher(properties, template);
+        launcher.start();
+        return launcher;
     }
 }

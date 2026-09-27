@@ -12,36 +12,35 @@ import java.math.BigDecimal;
 @Data
 public class TransferRequest {
     /**
-     * 调动no
-    */
+     * 转账单号
+     */
     private String transferNo;
     /**
-     * 通知url
-    */
+     * 通知回调 URL
+     */
     private String notifyUrl;
     /**
-     * merchantid
-    */
+     * 商户 ID
+     */
     private Long merchantId;
     /**
-     * 从用户标识
-    */
+     * 转出用户标识
+     */
     private Long fromUserId;
     /**
-     * 转为用户标识
-    */
+     * 转入用户标识
+     */
     private Long toUserId;
     /**
-     * Amount
-    */
+     * 转账金额
+     */
     private BigDecimal amount;
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }
-

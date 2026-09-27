@@ -7,13 +7,13 @@ server:
 spring:
   application:
     name: hotsport
-  # 嵌入式 H2 兜底 DataSource（common-starter 的 ApiConfiguration 异常处理器
-  # 依赖 spring-jdbc，但 hotsport 业务本身不写库；纯内存、无文件、无网络）
+  # DataSource（common-starter 的 ApiConfiguration 异常处理器依赖 spring-jdbc，
+  # 但 hotsport 业务本身不写库）；已移除 H2，改用 MySQL，启动需可连的 MySQL
   datasource:
-    url: jdbc:h2:mem:hotsportdb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:mysql://172.16.0.40:3306/hotsport?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root@
   # 关闭 SQL 初始化（无建表脚本）
   sql:
     init:

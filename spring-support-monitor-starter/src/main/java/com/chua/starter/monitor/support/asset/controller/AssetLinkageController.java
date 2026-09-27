@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.asset.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.asset.model.AssetDetailView;
+import com.chua.starter.monitor.support.asset.model.AssetSearchItemVO;
 import com.chua.starter.monitor.support.asset.service.AssetLinkageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 资产联动控制器 —— 主机台账与服务节点的聚合查询。
@@ -52,11 +52,10 @@ public class AssetLinkageController {
      *
      * @param keyword 关键字（可空，空则返回全部）
      * @return 资产简表列表
-     * @param false false
      */
     @Operation(summary = "资产检索")
     @GetMapping("/search")
-    public ReturnResult<List<Map<String, Object>>> search(@RequestParam(required = false) String keyword) {
+    public ReturnResult<List<AssetSearchItemVO>> search(@RequestParam(required = false) String keyword) {
         return assetLinkageService.searchAssets(keyword);
     }
 }

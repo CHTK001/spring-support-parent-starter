@@ -14,111 +14,110 @@ import java.time.LocalDateTime;
 public class WechatPayScoreOrderVO {
     /**
      * 标识
-    */
+     */
     private Long id;
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
-     * 通道标识
-    */
+     * 渠道标识
+     */
     private Long channelId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * 出排序NO
-    */
+     * 分订单号
+     */
     private String outOrderNo;
     /**
-     * 服务排序NO
-    */
+     * 服务订单号
+     */
     private String serviceOrderNo;
     /**
      * APPID
-    */
+     */
     private String appId;
     /**
      * 服务标识
-    */
+     */
     private String serviceId;
     /**
-     * 打开标识
-    */
+     * 用户OpenId标识
+     */
     private String openId;
     /**
      * 状态
-    */
+     */
     private String state;
     /**
-     * 总数amount
-    */
+     * 总金额
+     */
     private BigDecimal totalAmount;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
-     * 服务introduction
-    */
+     * 服务介绍
+     */
     private String serviceIntroduction;
     /**
      * 开始时间
-    */
+     */
     private String startTime;
     /**
      * 结束时间
-    */
+     */
     private String endTime;
     /**
-     * 饰面类型
-    */
+     * 完成类型
+     */
     private String finishType;
     /**
-     * ReasonMLmlml
-    */
+     * 创建原因
+     */
     private String reason;
     /**
-     * Finishreason
-    */
+     * 完结原因
+     */
     private String finishReason;
     /**
      * 包信息
-    */
+     */
     private String packageInfo;
     /**
-     * Attach
-    */
+     * 附加数据
+     */
     private String attach;
     /**
-     * 请求payload
-    */
+     * 请求报文
+     */
     private String requestPayload;
     /**
-     * 响应payload
-    */
+     * 响应报文
+     */
     private String responsePayload;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
     /**
-     * 完成at
-    */
+     * 完成时间
+     */
     private LocalDateTime completedAt;
     /**
-     * cancelledat
-    */
+     * 取消时间
+     */
     private LocalDateTime cancelledAt;
     /**
      * 创建时间
-    */
+     */
     private LocalDateTime createTime;
     /**
      * 更新时间
-    */
+     */
     private LocalDateTime updateTime;
 }
-

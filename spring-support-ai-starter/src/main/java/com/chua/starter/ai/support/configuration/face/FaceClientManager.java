@@ -151,6 +151,9 @@ public class FaceClientManager {
      * @return 特征提取器
      */
     public FeatureExtractor currentFeatureExtractor() {
+        if (!isModelConfigured("feature_model")) {
+            return null;
+        }
         FeatureExtractor current = featureExtractor;
         if (current == null) {
             synchronized (this) {
@@ -219,6 +222,9 @@ public class FaceClientManager {
      * @return 人脸检测器
      */
     public FaceDetector currentDetector() {
+        if (!isModelConfigured("detector_model")) {
+            return null;
+        }
         FaceDetector current = detector;
         if (current == null) {
             synchronized (this) {
@@ -248,6 +254,12 @@ public class FaceClientManager {
         }
         int minSize = settingReader.getInt(GROUP, "min_face_size", 20);
         d.minFaceSize(minSize);
+        // 桥接为模型级参数：使 device / 阈值在引擎侧生效（人脸链路原先只调用门面 setter，
+        // device 从未参与推理设备决策）
+        com.chua.starter.ai.support.configuration.client.ModelParamBridge.bridge(
+                modelId,
+                settingReader.getStr(GROUP, "device"),
+                detTh == null ? null : detTh.floatValue());
         return d;
     }
 
@@ -257,6 +269,9 @@ public class FaceClientManager {
      * @return 动漫人脸检测器
      */
     public FaceDetector currentAnimeDetector() {
+        if (!isModelConfigured("anime_detector_model")) {
+            return null;
+        }
         FaceDetector current = animeDetector;
         if (current == null) {
             synchronized (this) {
@@ -298,6 +313,9 @@ public class FaceClientManager {
      * @return 人脸修复器
      */
     public ImageEnhancer currentRestorer() {
+        if (!isModelConfigured("restore_model")) {
+            return null;
+        }
         ImageEnhancer current = restorer;
         if (current == null) {
             synchronized (this) {
@@ -316,6 +334,9 @@ public class FaceClientManager {
      * @return 属性分类器
      */
     public ImageClassifier currentAttributeClassifier() {
+        if (!isModelConfigured("attribute_model")) {
+            return null;
+        }
         ImageClassifier current = attributeClassifier;
         if (current == null) {
             synchronized (this) {
@@ -334,6 +355,9 @@ public class FaceClientManager {
      * @return 表情分类器
      */
     public ImageClassifier currentEmotionClassifier() {
+        if (!isModelConfigured("emotion_model")) {
+            return null;
+        }
         ImageClassifier current = emotionClassifier;
         if (current == null) {
             synchronized (this) {
@@ -352,6 +376,9 @@ public class FaceClientManager {
      * @return 换脸检测分类器
      */
     public ImageClassifier currentDeepfakeClassifier() {
+        if (!isModelConfigured("deepfake_model")) {
+            return null;
+        }
         ImageClassifier current = deepfakeClassifier;
         if (current == null) {
             synchronized (this) {
@@ -370,6 +397,9 @@ public class FaceClientManager {
      * @return 关键点提取器
      */
     public FeatureExtractor currentLandmarkExtractor() {
+        if (!isModelConfigured("landmark_model")) {
+            return null;
+        }
         FeatureExtractor current = landmarkExtractor;
         if (current == null) {
             synchronized (this) {
@@ -446,8 +476,14 @@ public class FaceClientManager {
      * @return 检测管线
      */
     private FacePipeline buildPipeline() {
+        // detector 为空 = 人脸检测未启用：ONNX 模型未配置时该模型并不存在，
+        // 此时不构建管线（与 buildLiveness() 的空值语义一致），调用方按「未开启」处理
+        String detectorModel = settingReader.getStr(GROUP, "detector_model");
+        if (StringUtils.isBlank(detectorModel)) {
+            return null;
+        }
         FacePipeline.Builder builder = FacePipeline.builder()
-                .detector(settingReader.getStr(GROUP, "detector_model"));
+                .detector(detectorModel);
         LivenessDetector liveness = buildLiveness();
         if (liveness != null) {
             builder.liveness(liveness);
@@ -479,6 +515,27 @@ public class FaceClientManager {
      * @param enabledField 启用开关字段
      * @param field        模型字段
      * @param inject       注入动作
+     */
+    /**
+     * 读取模型配置项，非空表示该能力已配置。
+     *
+     * <p>ONNX 模型未配置时该模型并不存在，因此「留空」一律视为该能力未启用，
+     * 与 {@link #buildLiveness()} / {@link #buildQualityAssessor()} 的空值语义一致。</p>
+     *
+     * @param field 模型配置字段
+     * @return true=已配置
+     */
+    private boolean isModelConfigured(String field) {
+        return StringUtils.isNotBlank(settingReader.getStr(GROUP, field));
+    }
+
+    /**
+     * 选填模型注入：仅当开关为 true 且模型非空才注册动作。
+     *
+     * @param builder      管线构建器
+     * @param enabledField 开关字段
+     * @param field        模型字段
+     * @param inject       注册动作
      */
     private void injectOptional(FacePipeline.Builder builder, String enabledField, String field,
                                 java.util.function.Consumer<String> inject) {
@@ -521,7 +578,11 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建质量评估器（未配置时返回 空）。
+     * 构建质量评估器（未配置或模型不支持质量评估时返回 空）。
+     * <p>质量评估必须使用独立的质量模型（配置项 quality_model），不能复用 detector_model：
+     * 检测类 Translator 输出 {@code List<PredictRectangle>}，而本接口要求
+     * {@link FaceQualityAssessor} 返回 {@code FaceQualityInfo}，混用会在首次调用时抛
+     * ClassCastException。此处同时校验模型是否在质量能力清单内，避免误配。</p>
      *
      * @return 质量评估器或 空
      */
@@ -530,7 +591,14 @@ public class FaceClientManager {
         if (!enabled) {
             return null;
         }
-        return FaceQualityAssessor.create(settingReader.getStr(GROUP, "detector_model"));
+        String qualityModel = settingReader.getStr(GROUP, "quality_model");
+        if (StringUtils.isBlank(qualityModel)) {
+            return null;
+        }
+        if (!FaceQualityAssessor.listModels().contains(qualityModel)) {
+            return null;
+        }
+        return FaceQualityAssessor.create(qualityModel);
     }
 
     /**

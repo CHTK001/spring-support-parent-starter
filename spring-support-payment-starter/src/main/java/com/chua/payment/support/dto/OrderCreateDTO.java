@@ -13,79 +13,79 @@ import java.math.BigDecimal;
  */
 @Data
 public class OrderCreateDTO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
 
     /**
-     * 通道标识
-    */
+     * 渠道标识
+     */
     private Long channelId;
 
     /**
      * 用户标识
-    */
+     */
     private Long userId;
 
     /**
-     * 业务排序NO
-    */
+     * 业务订单NO
+     */
     private String businessOrderNo;
 
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private String channelType;
 
     /**
-     * 通道SUB类型
-    */
+     * 渠道SUB类型
+     */
     private String channelSubType;
 
     /**
-     * 排序amount
-    */
+     * 订单金额
+     */
     private BigDecimal orderAmount;
 
     /**
-     * Discountamount
-    */
+     * 优惠金额
+     */
     private BigDecimal discountAmount;
 
     /**
-     * 货币
-    */
+     * 币种
+     */
     private String currency;
 
     /**
      * 主题
-    */
+     */
     private String subject;
 
     /**
      * 请求体
-    */
+     */
     private String body;
 
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
 
     /**
      * 返回值URL
-    */
+     */
     private String returnUrl;
 
     /**
-     * Expireminutes
-    */
+     * 过期分钟数
+     */
     private Integer expireMinutes;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }

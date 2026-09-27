@@ -46,6 +46,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
      * @param sort       排序（created_desc 等）
      * @param offset     偏移量
      * @param pageSize   每页数量
+     * @param userId     归属过滤：传登录用户标识仅查本人资产，传 null 表示管理员查全量
      * @return 资产列表
      */
     List<WorkshopAsset> selectPageByFilter(@Param("kind") String kind,
@@ -56,7 +57,8 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
                                            @Param("inLibrary") Boolean inLibrary,
                                            @Param("sort") String sort,
                                            @Param("offset") int offset,
-                                           @Param("pageSize") int pageSize);
+                                           @Param("pageSize") int pageSize,
+                                           @Param("userId") String userId);
 
     /**
      * 按过滤条件统计资产总数（SQL 在 workshopasset映射器.xml）。
@@ -67,6 +69,7 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
      * @param query      标题/标签模糊搜索
      * @param tag        精确标签
      * @param inLibrary  是否仅在库（1/0），空 = 全部
+     * @param userId     归属过滤：传登录用户标识仅统计本人资产，传 null 表示管理员统计全量
      * @return 资产总数
      * @param @Param("kind" @参数("种类"
      */
@@ -75,14 +78,16 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
                        @Param("ungrouped") boolean ungrouped,
                        @Param("query") String query,
                        @Param("tag") String tag,
-                       @Param("inLibrary") Boolean inLibrary);
+                       @Param("inLibrary") Boolean inLibrary,
+                       @Param("userId") String userId);
 
     /**
      * 查询所有非空集合名称（去重、非空）。
      *
+     * @param userId 归属过滤：传登录用户标识仅看本人集合，传 null 表示管理员看全量
      * @return 集合名称列表
      */
-    List<String> selectDistinctCollections();
+    List<String> selectDistinctCollections(@Param("userId") String userId);
 
     /**
      * 按主键更新资产元数据（标题/集合/标签/入_图书馆/更新时间）。
@@ -108,8 +113,9 @@ public interface WorkshopAssetMapper extends BaseMapper<WorkshopAsset> {
      *
      * @param from 原集合名
      * @param to   新集合名（空/空 = 移出分组）
+     * @param userId 归属过滤：传登录用户标识仅改本人资产，传 null 表示管理员改全量
      * @return 更新行数
      * @param @Param("from" @参数("从"
      */
-    int renameCollection(@Param("from") String from, @Param("to") String to);
+    int renameCollection(@Param("from") String from, @Param("to") String to, @Param("userId") String userId);
 }

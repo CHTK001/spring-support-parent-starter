@@ -35,4 +35,9 @@ public class JobQuery {
      * 调度状态: 0-停止 1-运行, 可空
      */
     private Integer status;
+
+    /**
+     * 分发模式精确匹配 (LOCAL/REMOTE), 可空
+     */
+    private String dispatchMode;
 }

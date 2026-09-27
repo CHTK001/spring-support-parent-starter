@@ -34,12 +34,27 @@ public class RagStatusController {
     public ReturnResult<Map<String, Object>> getRagStatus() {
         Map<String, Object> status = new HashMap<>();
 
-        // 检查 RAG 客户端是否可用
-        boolean ragAvailable = ragClientManager.current() != null;
+        // 探测 RAG 客户端是否可用。
+        // RAG 未配置时 current() 会走到未初始化的嵌入实现并抛 NoClassDefFoundError（Error 而非 Exception，
+        // 常规 catch (Exception) 兜不住），这里显式声明，这里要的是「状态」而不是「异常」。
+        boolean ragAvailable = false;
+        try {
+            ragAvailable = ragClientManager.current() != null;
+        } catch (Throwable e) {
+            log.debug("[RagStatus] RAG 客户端不可用（未配置 RAG 参数）: {}", e.toString());
+        }
         status.put("available", ragAvailable);
 
         // 获取当前配置描述
-        Map<String, String> config = ragClientManager.describe();
+        Map<String, String> config = new HashMap<>();
+        try {
+            Map<String, String> described = ragClientManager.describe();
+            if (described != null) {
+                config.putAll(described);
+            }
+        } catch (Throwable e) {
+            log.debug("[RagStatus] 读取 RAG 配置失败: {}", e.toString());
+        }
         status.put("config", config);
 
         // 检查是否需要配置

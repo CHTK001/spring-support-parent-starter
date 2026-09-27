@@ -62,17 +62,18 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     public AliyunAlipayPayResponse pagePay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradePagePayRequest payRequest = new AlipayTradePagePayRequest();
-            payRequest.setNotifyUrl(request.getNotifyUrl());
-            payRequest.setReturnUrl(request.getReturnUrl());
+            payRequest.setNotifyUrl(request.notifyUrl());
+            payRequest.setReturnUrl(request.returnUrl());
             payRequest.setBizContent(toJson(buildPayBizContent(request)));
             AlipayTradePagePayResponse response = client(properties).pageExecute(payRequest);
 
-            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse();
-            result.setSuccess(StringUtils.hasText(response.getBody()));
-            result.setBody(response.getBody());
-            result.setTradeNo(response.getTradeNo());
-            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg()));
-            result.setRawResponse(response.getBody());
+            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse(
+                    StringUtils.hasText(response.getBody()),
+                    response.getBody(),
+                    response.getTradeNo(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody()
+            );
             return result;
         } catch (AlipayApiException e) {
             /**
@@ -92,17 +93,18 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     public AliyunAlipayPayResponse wapPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradeWapPayRequest payRequest = new AlipayTradeWapPayRequest();
-            payRequest.setNotifyUrl(request.getNotifyUrl());
-            payRequest.setReturnUrl(request.getReturnUrl());
+            payRequest.setNotifyUrl(request.notifyUrl());
+            payRequest.setReturnUrl(request.returnUrl());
             payRequest.setBizContent(toJson(buildPayBizContent(request)));
             AlipayTradeWapPayResponse response = client(properties).pageExecute(payRequest);
 
-            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse();
-            result.setSuccess(StringUtils.hasText(response.getBody()));
-            result.setBody(response.getBody());
-            result.setTradeNo(response.getTradeNo());
-            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg()));
-            result.setRawResponse(response.getBody());
+            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse(
+                    StringUtils.hasText(response.getBody()),
+                    response.getBody(),
+                    response.getTradeNo(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody()
+            );
             return result;
         } catch (AlipayApiException e) {
             /**
@@ -122,16 +124,17 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     public AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradeAppPayRequest payRequest = new AlipayTradeAppPayRequest();
-            payRequest.setNotifyUrl(request.getNotifyUrl());
+            payRequest.setNotifyUrl(request.notifyUrl());
             payRequest.setBizContent(toJson(buildPayBizContent(request)));
             com.alipay.api.response.AlipayTradeAppPayResponse response = client(properties).sdkExecute(payRequest);
 
-            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse();
-            result.setSuccess(StringUtils.hasText(response.getBody()));
-            result.setBody(response.getBody());
-            result.setTradeNo(response.getTradeNo());
-            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg()));
-            result.setRawResponse(response.getBody());
+            AliyunAlipayPayResponse result = new AliyunAlipayPayResponse(
+                    StringUtils.hasText(response.getBody()),
+                    response.getBody(),
+                    response.getTradeNo(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody()
+            );
             return result;
         } catch (AlipayApiException e) {
             /**
@@ -154,13 +157,14 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             queryRequest.setBizContent(toJson(Map.of("out_trade_no", orderNo)));
             AlipayTradeQueryResponse response = client(properties).execute(queryRequest);
 
-            AliyunAlipayTradeQueryResponse result = new AliyunAlipayTradeQueryResponse();
-            result.setSuccess(response.isSuccess());
-            result.setTradeNo(response.getTradeNo());
-            result.setTotalAmount(StringUtils.hasText(response.getTotalAmount()) ? new BigDecimal(response.getTotalAmount()) : null);
-            result.setTradeStatus(response.getTradeStatus());
-            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg(), response.getTradeStatus()));
-            result.setRawResponse(response.getBody());
+            AliyunAlipayTradeQueryResponse result = new AliyunAlipayTradeQueryResponse(
+                    response.isSuccess(),
+                    response.getTradeNo(),
+                    StringUtils.hasText(response.getTotalAmount()) ? new BigDecimal(response.getTotalAmount()) : null,
+                    response.getTradeStatus(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg(), response.getTradeStatus()),
+                    response.getBody()
+            );
             return result;
         } catch (AlipayApiException e) {
             /**
@@ -201,21 +205,22 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         try {
             AlipayTradeRefundRequest refundRequest = new AlipayTradeRefundRequest();
             Map<String, Object> bizContent = new LinkedHashMap<>();
-            bizContent.put("out_trade_no", request.getOrderNo());
-            bizContent.put("refund_amount", request.getRefundAmount().setScale(2, RoundingMode.HALF_UP).toPlainString());
-            bizContent.put("refund_reason", request.getReason());
-            bizContent.put("out_request_no", request.getRefundNo());
+            bizContent.put("out_trade_no", request.orderNo());
+            bizContent.put("refund_amount", request.refundAmount().setScale(2, RoundingMode.HALF_UP).toPlainString());
+            bizContent.put("refund_reason", request.reason());
+            bizContent.put("out_request_no", request.refundNo());
             refundRequest.setBizContent(toJson(bizContent));
             AlipayTradeRefundResponse response = client(properties).execute(refundRequest);
 
-            AliyunAlipayRefundResponse result = new AliyunAlipayRefundResponse();
-            result.setSuccess(response.isSuccess());
-            result.setRefundNo(request.getRefundNo());
-            result.setTradeNo(response.getTradeNo());
-            result.setRefundAmount(StringUtils.hasText(response.getRefundFee()) ? new BigDecimal(response.getRefundFee()) : request.getRefundAmount());
-            result.setRefundStatus(response.isSuccess() ? "SUCCESS" : "FAILED");
-            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg()));
-            result.setRawResponse(response.getBody());
+            AliyunAlipayRefundResponse result = new AliyunAlipayRefundResponse(
+                    response.isSuccess(),
+                    request.refundNo(),
+                    response.getTradeNo(),
+                    StringUtils.hasText(response.getRefundFee()) ? new BigDecimal(response.getRefundFee()) : request.refundAmount(),
+                    response.isSuccess() ? "SUCCESS" : "FAILED",
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody()
+            );
             return result;
         } catch (AlipayApiException e) {
             /**
@@ -236,19 +241,20 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         try {
             AlipayTradeFastpayRefundQueryRequest queryRequest = new AlipayTradeFastpayRefundQueryRequest();
             Map<String, Object> bizContent = new LinkedHashMap<>();
-            bizContent.put("out_trade_no", request.getOrderNo());
-            bizContent.put("out_request_no", request.getRefundNo());
+            bizContent.put("out_trade_no", request.orderNo());
+            bizContent.put("out_request_no", request.refundNo());
             queryRequest.setBizContent(toJson(bizContent));
             AlipayTradeFastpayRefundQueryResponse response = client(properties).execute(queryRequest);
 
-            AliyunAlipayRefundResponse result = new AliyunAlipayRefundResponse();
-            result.setSuccess(response.isSuccess());
-            result.setRefundNo(response.getOutRequestNo());
-            result.setTradeNo(response.getTradeNo());
-            result.setRefundAmount(StringUtils.hasText(response.getRefundAmount()) ? new BigDecimal(response.getRefundAmount()) : request.getRefundAmount());
-            result.setRefundStatus(response.getRefundStatus());
-            result.setMessage(firstNonBlank(response.getErrorCode(), response.getSubMsg(), response.getMsg(), response.getRefundStatus()));
-            result.setRawResponse(response.getBody());
+            AliyunAlipayRefundResponse result = new AliyunAlipayRefundResponse(
+                    response.isSuccess(),
+                    response.getOutRequestNo(),
+                    response.getTradeNo(),
+                    StringUtils.hasText(response.getRefundAmount()) ? new BigDecimal(response.getRefundAmount()) : request.refundAmount(),
+                    response.getRefundStatus(),
+                    firstNonBlank(response.getErrorCode(), response.getSubMsg(), response.getMsg(), response.getRefundStatus()),
+                    response.getBody()
+            );
             return result;
         } catch (AlipayApiException e) {
             /**
@@ -269,7 +275,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
      */
     public AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
                                                                 AliyunAlipayNotifyRequest request) {
-        Map<String, String> params = request.getParams();
+        Map<String, String> params = request.params();
         if (params == null || params.isEmpty()) {
             /**
              * illegal状态异常。
@@ -379,13 +385,13 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
      */
     private Map<String, Object> buildPayBizContent(AliyunAlipayPayRequest request) {
         Map<String, Object> bizContent = new LinkedHashMap<>();
-        bizContent.put("out_trade_no", request.getOrderNo());
-        bizContent.put("total_amount", request.getTotalAmount().setScale(2, RoundingMode.HALF_UP).toPlainString());
-        bizContent.put("subject", firstNonBlank(request.getSubject(), request.getOrderNo()));
-        bizContent.put("body", request.getBody());
-        bizContent.put("product_code", request.getProductCode());
-        if (StringUtils.hasText(request.getPayerOpenId())) {
-            bizContent.put("buyer_id", request.getPayerOpenId());
+        bizContent.put("out_trade_no", request.orderNo());
+        bizContent.put("total_amount", request.totalAmount().setScale(2, RoundingMode.HALF_UP).toPlainString());
+        bizContent.put("subject", firstNonBlank(request.subject(), request.orderNo()));
+        bizContent.put("body", request.body());
+        bizContent.put("product_code", request.productCode());
+        if (StringUtils.hasText(request.payerOpenId())) {
+            bizContent.put("buyer_id", request.payerOpenId());
         }
         return bizContent;
     }
@@ -425,4 +431,5 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         }
     }
 }
+
 

@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.monitor.support.model.DiskRowVO;
+import com.chua.starter.monitor.support.model.DiskUsageNodeVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
 import com.chua.starter.monitor.support.model.FileEntryVO;
 import com.chua.starter.monitor.support.model.HostInfoVO;
@@ -12,6 +13,7 @@ import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.RowNormalizer;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
+import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +29,7 @@ import java.util.Map;
 /**
  * Agent HTTP 系统信息 Provider。
  *
- * <p>面向安装了 monitor-agent 的主机（osType=AGENT），通过 Agent 的 19876 HTTP 端口获取信息。
+ * <p>面向安装了 monitor-agent 的主机（采集方式 collect_mode=AGENT），通过 Agent 的 19876 HTTP 端口获取信息。
  * Agent 的 JSON 报文只在本类内部流转，出参一律是 SPI 的强类型视图。</p>
  *
  * @author CH
@@ -53,6 +55,16 @@ public class AgentProvider implements SystemInfoProvider {
     private static final Map<Long, String> PLATFORM_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
+     * Agent 侧命令执行超时（秒），由 Agent 到点自行终止命令并回原因
+     */
+    private static final int AGENT_EXEC_TIMEOUT_SECONDS = 25;
+
+    /**
+     * /exec 的 HTTP 读超时（秒）：须大于 Agent 侧超时，否则拿到的是本地读超时而非 Agent 的原因
+     */
+    private static final Duration AGENT_EXEC_READ_TIMEOUT = Duration.ofSeconds(30);
+
+    /**
      * 拼接 Agent 基础地址。
      *
      * @param host 目标主机
@@ -64,21 +76,24 @@ public class AgentProvider implements SystemInfoProvider {
     }
 
     /**
-     * 主机类型是否为 AGENT。
+     * 采集方式是否为 AGENT。
      *
      * @param host 目标主机
-     * @return 类型为 AGENT 时返回 true
+     * @return 采集方式为 AGENT 时返回 true
      */
     @Override
     public boolean supports(MsServerHost host) {
-        return "AGENT".equalsIgnoreCase(host.getServerHostOsType());
+        return host != null
+                && "AGENT".equalsIgnoreCase(host.getServerHostCollectMode())
+                && host.getServerHostAgentInstalled() != null
+                && host.getServerHostAgentInstalled() == 1;
     }
 
     /**
-     * Agent 主机的真实平台：osType 只表达接入方式，命令族必须看 Agent 自报的 os。
+     * Agent 主机的真实平台：优先取 Agent 自报的 os，探测不到再回退台账记录。
      *
      * @param host 目标主机
-     * @return WINDOWS / LINUX / MAC，探测不到时返回空串
+     * @return WINDOWS / LINUX / MACOS，无法判定时返回空串
      */
     @Override
     public String platform(MsServerHost host) {
@@ -95,33 +110,27 @@ public class AgentProvider implements SystemInfoProvider {
             HostInfoVO info = hostInfo(host);
             platform = Platforms.normalize(info == null ? null : info.getOs());
         } catch (Exception e) {
-            log.warn("[agent] 平台探测失败 host={}: {}", id, e.getMessage());
-            return "";
+            log.warn("[agent] 平台探测失败 host={}, 回退台账 osType: {}", id, e.getMessage());
         }
         if (!platform.isEmpty()) {
             PLATFORM_CACHE.put(id, platform);
+            return platform;
         }
-        return platform;
+        return SystemInfoProvider.super.platform(host);
     }
 
     /**
-     * 发起 GET 请求并把响应反序列化为指定类型。
+     * 发起 GET 请求并把 JSON 对象响应反序列化为 Map。
      *
-     * @param url  请求地址
-     * @param type 目标类型
-     * @param <T>  返回类型
+     * @param url 请求地址
      * @return 反序列化结果
      */
     @SuppressWarnings("unchecked")
-    private <T> T get(String url, Class<T> type) {
-        String body = body(url);
-        if (type == String.class) {
-            return (T) body;
-        }
+    private Map<String, Object> getMap(String url) {
         try {
-            return (T) MAPPER.readValue(body, type);
+            return MAPPER.readValue(body(url), Map.class);
         } catch (Exception e) {
-            throw new IllegalStateException("Agent 响应无法解析为 " + type.getSimpleName() + ": " + e.getMessage(), e);
+            throw new IllegalStateException("Agent 响应无法解析为对象: " + e.getMessage(), e);
         }
     }
 
@@ -134,18 +143,47 @@ public class AgentProvider implements SystemInfoProvider {
      * @return 响应正文
      */
     private String body(String url) {
+        return body(url, Duration.ofSeconds(15));
+    }
+
+    /**
+     * 发起 GET 并按给定读超时取回响应正文。
+     *
+     * @param url     请求地址
+     * @param timeout 读超时
+     * @return 响应正文
+     */
+    private String body(String url, Duration timeout) {
         try {
-            HttpResponse<String> r = http.send(HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(15)).GET().build(),
+            HttpResponse<String> r = http.send(HttpRequest.newBuilder().uri(URI.create(url)).timeout(timeout).GET().build(),
                     HttpResponse.BodyHandlers.ofString());
             if (r.statusCode() == 200) {
                 return r.body();
             }
-            throw new IllegalStateException("Agent 返回 HTTP " + r.statusCode());
+            throw new IllegalStateException("Agent 返回 HTTP " + r.statusCode() + brief(r.body()));
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Agent 无响应 " + url + ": " + e.getMessage(), e);
+            throw new IllegalStateException("Agent 无响应 " + url + ": "
+                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()), e);
         }
+    }
+
+    /**
+     * 把 Agent 的错误正文缀到异常文案里，长文本截断。
+     *
+     * @param body 响应正文，可为 null
+     * @return 形如「：原因」的后缀，正文为空时返回空串
+     */
+    private static String brief(String body) {
+        if (body == null) {
+            return "";
+        }
+        String one = body.replaceAll("\\s+", " ").trim();
+        if (one.isEmpty()) {
+            return "";
+        }
+        return "：" + (one.length() > 200 ? one.substring(0, 200) + "..." : one);
     }
 
     /**
@@ -180,7 +218,15 @@ public class AgentProvider implements SystemInfoProvider {
 
     @Override
     public HostInfoVO hostInfo(MsServerHost host) {
-        return RowNormalizer.hostInfo(get(agentUrl(host) + "/info", Map.class));
+        Map<String, Object> info = getMap(agentUrl(host) + "/info");
+        // /info 只含静态台账字段（无 CPU% / 已用内存），合并 /metrics 的实时用量，
+        // 否则画像顶部 CPU、内存会显示 0（磁盘/进程数因另走 /disks、/processes 看似正常，更具迷惑性）
+        try {
+            info.putAll(getMap(agentUrl(host) + "/metrics"));
+        } catch (Exception e) {
+            log.warn("[agent] 合并 /metrics 失败 hostId={}: {}", host.getId(), e.getMessage());
+        }
+        return RowNormalizer.hostInfo(info);
     }
 
     @Override
@@ -196,6 +242,25 @@ public class AgentProvider implements SystemInfoProvider {
     @Override
     public List<DiskRowVO> disks(MsServerHost h) {
         return RowNormalizer.disks(getList(agentUrl(h) + "/disks"));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Agent 在被监控主机本地递归，一次 HTTP 返回整棵占用树，避免平台侧逐目录经 HTTP 递归
+     * 放大成数千次串行往返；根节点的卷总容量 / 可用容量由 Agent 直接回填。</p>
+     */
+    @Override
+    public DiskUsageNodeVO diskUsage(MsServerHost h, String path, int depth) {
+        int d = depth <= 0 ? 4 : Math.min(depth, 8);
+        String url = agentUrl(h) + "/files/usage?path=" + urlEncode(path) + "&depth=" + d;
+        try {
+            return MAPPER.readValue(body(url, Duration.ofSeconds(120)), DiskUsageNodeVO.class);
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Agent 磁盘占用解析失败: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -221,10 +286,16 @@ public class AgentProvider implements SystemInfoProvider {
                     .PUT(HttpRequest.BodyPublishers.ofInputStream(() -> d))
                     .build();
             HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
-            return r.statusCode() == 200;
+            if (r.statusCode() != 200) {
+                // Agent 已把失败原因写在响应体里，折成 false 就只剩「上传失败: 路径」
+                throw new IllegalStateException("Agent 上传失败(HTTP " + r.statusCode() + ")" + brief(r.body()));
+            }
+            return true;
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
-            // 上传失败统一返回 false，由调用方决定是否重试
-            return false;
+            throw new IllegalStateException("Agent 上传无响应: "
+                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()), e);
         }
     }
 
@@ -244,7 +315,45 @@ public class AgentProvider implements SystemInfoProvider {
 
     @Override
     public String exec(MsServerHost h, String cmd) {
-        return get(agentUrl(h) + "/exec?cmd=" + urlEncode(cmd), String.class);
+        String url = agentUrl(h) + "/exec?cmd=" + urlEncode(cmd) + "&timeout=" + AGENT_EXEC_TIMEOUT_SECONDS;
+        return unwrapExec(body(url, AGENT_EXEC_READ_TIMEOUT));
+    }
+
+    /**
+     * Agent 的 /exec 把命令输出包在 {@code {"exitCode":0,"output":"..."}} 信封里，
+     * 这里取出 output，使 exec 的返回与本机 / SSH 通道一致（均为命令 stdout）。
+     *
+     * <p>退出码非 0 时必须补出失败探针行：命令自己把 shell 退出掉（{@code exit 3}）时，
+     * {@link ShellSupport} 拼在行尾的探针来不及执行，只回 stdout 就成了「什么都没做但成功」。</p>
+     *
+     * @param body Agent 响应正文
+     * @return 命令 stdout；非信封结构时原样返回
+     */
+    @SuppressWarnings("unchecked")
+    private static String unwrapExec(String body) {
+        if (body == null) {
+            return "";
+        }
+        String trimmed = body.trim();
+        if (trimmed.startsWith("{")) {
+            try {
+                Object parsed = MAPPER.readValue(trimmed, Object.class);
+                if (parsed instanceof Map) {
+                    Map<String, Object> envelope = (Map<String, Object>) parsed;
+                    Object output = envelope.get("output");
+                    String out = output == null ? "" : output.toString();
+                    Object code = envelope.get("exitCode");
+                    if (code instanceof Number && ((Number) code).intValue() != 0) {
+                        String mark = ShellSupport.FAIL_MARK + ":Agent 退出码 " + ((Number) code).intValue();
+                        return out.isBlank() ? mark : out + "\r\n" + mark;
+                    }
+                    return out;
+                }
+            } catch (Exception ignored) {
+                // 不是信封则按原始 stdout 处理
+            }
+        }
+        return body;
     }
 
     /**
@@ -269,5 +378,37 @@ public class AgentProvider implements SystemInfoProvider {
     @Override
     public List<EnvVarVO> env(MsServerHost h) {
         return RowNormalizer.envVars(getList(agentUrl(h) + "/env"));
+    }
+
+    @Override
+    public boolean mkdir(MsServerHost h, String path) {
+        // 走 Agent 专用文件端点，跨平台由 Agent 用 File 实现
+        return fileOk(h, "/files/mkdir?path=" + urlEncode(path));
+    }
+
+    @Override
+    public boolean delete(MsServerHost h, String path) {
+        return fileOk(h, "/files/delete?path=" + urlEncode(path));
+    }
+
+    @Override
+    public boolean rename(MsServerHost h, String from, String to) {
+        return fileOk(h, "/files/rename?from=" + urlEncode(from) + "&to=" + urlEncode(to));
+    }
+
+    /**
+     * 调用 Agent 文件操作端点并判定是否成功（端点回传 {@code {"ok":true}}）。
+     *
+     * @param h        目标主机
+     * @param endpoint 端点路径（含查询串）
+     * @return 成功返回 true，Agent 无响应或返回失败均为 false
+     */
+    private boolean fileOk(MsServerHost h, String endpoint) {
+        try {
+            String b = body(agentUrl(h) + endpoint);
+            return b != null && b.contains("\"ok\":true");
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

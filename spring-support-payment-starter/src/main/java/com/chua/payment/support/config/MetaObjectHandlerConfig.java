@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * MyBatis Plus 字段自动填充配置，自动维护 创建at/更新at 时间戳。
+ * MyBatis Plus 字段自动填充配置，自动维护创建与更新时间戳。
  *
  * @author CH
  * @since 4.0.0.50
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 public class MetaObjectHandlerConfig implements MetaObjectHandler {
 
     /**
-     * 插入时自动填充
+     * 插入时自动填充。
      */
     @Override
     public void insertFill(MetaObject metaObject) {
@@ -27,7 +27,7 @@ public class MetaObjectHandlerConfig implements MetaObjectHandler {
     }
 
     /**
-     * 更新时自动填充
+     * 更新时自动填充。
      */
     @Override
     public void updateFill(MetaObject metaObject) {

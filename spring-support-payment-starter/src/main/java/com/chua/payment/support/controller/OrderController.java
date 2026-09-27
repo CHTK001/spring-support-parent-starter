@@ -39,8 +39,8 @@ import java.util.List;
 public class OrderController {
 
     /**
-     * 排序服务
-    */
+     * 订单服务
+     */
     private final PaymentOrderService orderService;
 
     @Operation(summary = "创建订单")
@@ -72,7 +72,6 @@ public class OrderController {
     /**
      * 列表订单
      *
-     * @param "1" "1"
      * @return 列表订单的结果
      */
     public Result<PageResult<OrderVO>> listOrders(@RequestParam(defaultValue = "1") int page,
@@ -87,7 +86,7 @@ public class OrderController {
     @Operation(summary = "查询商户订单")
     @GetMapping("/merchant/{merchantId}")
     /**
-     * 列表merchant订单
+     * 商户订单列表
      * @param merchantId merchantid
      * @param page page
      * @param size 大小
@@ -115,7 +114,7 @@ public class OrderController {
     @Operation(summary = "真实发起支付")
     @PostMapping("/{id}/pay")
     /**
-     * 薪酬订单
+     * 支付订单
      * @param id 标识
      * @param dto dto
      */
@@ -128,7 +127,6 @@ public class OrderController {
     @PostMapping("/{id}/sync")
     /**
      * 同步订单
-     *
      * @param id 标识
      * @return 同步订单的结果
      */
@@ -139,7 +137,7 @@ public class OrderController {
     @Operation(summary = "发起支付")
     @PutMapping("/{id}/pay-start")
     /**
-     * 开始薪酬
+     * 开始支付
      * @param id 标识
      * @param dto dto
      */
@@ -151,7 +149,7 @@ public class OrderController {
     @Operation(summary = "标记支付成功")
     @PutMapping("/{id}/pay-success")
     /**
-     * 薪酬成功
+     * 支付成功
      * @param id 标识
      * @param dto dto
      */
@@ -167,7 +165,7 @@ public class OrderController {
     @Operation(summary = "标记支付失败")
     @PutMapping("/{id}/pay-fail")
     /**
-     * 薪酬失败
+     * 支付失败
      * @param id 标识
      * @param dto dto
      */
@@ -176,12 +174,12 @@ public class OrderController {
         return Result.success(orderService.payFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
     }
 
-    @Operation(summary = "取消订单", description = "refund=true: 已支付订单退款+取消; refund=false: 不退款仅取消(PENDING/PAYING)")
+    @Operation(summary = "取消订单", description = "refund=true: 已支付订单发起退款并取消；refund=false: 不退款仅取消(PENDING/PAYING)")
     @PutMapping("/{id}/cancel")
     /**
-     * cancel订单
+     * 取消订单
      * @param id 标识
-     * @param refund 退税
+     * @param refund 是否退款
      * @param dto dto
      */
     public Result<Boolean> cancelOrder(@PathVariable Long id,
@@ -208,7 +206,7 @@ public class OrderController {
     @Operation(summary = "申请退款")
     @PostMapping("/{id}/refund")
     /**
-     * 退税订单
+     * 退款订单
      * @param id 标识
      * @param dto dto
      */
@@ -220,7 +218,7 @@ public class OrderController {
     @Operation(summary = "标记退款成功")
     @PutMapping("/{id}/refund-success")
     /**
-     * 退税成功
+     * 退款成功
      * @param id 标识
      * @param dto dto
      */
@@ -232,7 +230,7 @@ public class OrderController {
     @Operation(summary = "标记退款失败")
     @PutMapping("/{id}/refund-fail")
     /**
-     * 退税失败
+     * 退款失败
      * @param id 标识
      * @param dto dto
      */
@@ -253,4 +251,3 @@ public class OrderController {
         return Result.success(orderService.deleteOrder(id));
     }
 }
-

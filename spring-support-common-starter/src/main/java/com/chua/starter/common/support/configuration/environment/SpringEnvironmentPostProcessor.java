@@ -31,8 +31,8 @@ public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor 
         properties.setProperty("logging.level.org.zbus.net.tcp.TcpClient", "OFF");
         properties.setProperty("spring.web.resources.add-mappings", "false");
         properties.setProperty("spring.servlet.multipart.enabled", "true");
-        properties.setProperty("spring.servlet.multipart.max-file-size", "600MB");
-        properties.setProperty("spring.servlet.multipart.max-request-size", "2000MB");
+        properties.setProperty("spring.servlet.multipart.max-file-size", "2GB");
+        properties.setProperty("spring.servlet.multipart.max-request-size", "2GB");
         properties.setProperty("localhost.address", IpUtils.getLocalIpv4());
 
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("spring", properties);

@@ -13,115 +13,115 @@ import java.time.LocalDateTime;
  */
 @Data
 public class RefundOrderVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
      * 标识
-    */
+     */
     private Long id;
 
     /**
-     * 退税no
-    */
+     * 退款单号
+     */
     private String refundNo;
 
     /**
-     * 排序标识
-    */
+     * 订单标识
+     */
     private Long orderId;
 
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
 
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
 
     /**
-     * Merchant名称
-    */
+     * 商户名称
+     */
     private String merchantName;
 
     /**
-     * 通道标识
-    */
+     * 渠道标识
+     */
     private Long channelId;
 
     /**
-     * 通道名称
-    */
+     * 渠道名称
+     */
     private String channelName;
 
     /**
-     * 来源排序状态
-    */
+     * 来源订单状态
+     */
     private String sourceOrderStatus;
 
     /**
-     * 来源排序状态desc
-    */
+     * 来源订单状态描述
+     */
     private String sourceOrderStatusDesc;
 
     /**
-     * thirdpartyrefundno
-    */
+     * 第三方退款单号
+     */
     private String thirdPartyRefundNo;
 
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
 
     /**
      * 状态
-    */
+     */
     private String status;
 
     /**
-     * 状态desc
-    */
+     * 状态描述
+     */
     private String statusDesc;
 
     /**
-     * ReasonMLmlml
-    */
+     * 退款原因
+     */
     private String reason;
 
     /**
      * 通知状态
-    */
+     */
     private Integer notifyStatus;
 
     /**
-     * 请求payload
-    */
+     * 请求报文
+     */
     private String requestPayload;
 
     /**
-     * 响应payload
-    */
+     * 响应报文
+     */
     private String responsePayload;
 
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 
     /**
-     * 更新时间AT
-    */
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }

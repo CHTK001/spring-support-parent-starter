@@ -69,4 +69,16 @@ public class AiModelCatalogController {
     public List<String> listCapabilities() {
         return aiModelCatalogService.listCapabilities();
     }
+
+    /**
+     * 获取全部本地（ONNX/本地推理）模型详情。
+     *
+     * @return 本地模型详情列表（含能力、推荐、本地路径与就绪状态，不触发下载）
+     */
+    @Permission("admin")
+    @Operation(summary = "本地模型详情", description = "枚举 ModelRegistry 全部本地模型，含就绪状态，供 ONNX 选择器使用")
+    @GetMapping("/local")
+    public List<java.util.Map<String, Object>> listLocalModels() {
+        return aiModelCatalogService.listLocalModelDetails();
+    }
 }

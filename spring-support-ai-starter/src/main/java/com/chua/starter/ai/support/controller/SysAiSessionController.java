@@ -3,7 +3,10 @@ package com.chua.starter.ai.support.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiSession;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,6 +39,10 @@ public class SysAiSessionController {
             @RequestParam(required = false) Integer limit) {
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiSession::getIsArchived, true);  // 只查询已归档的会话
+        // 管理员只读全量，其余用户只能看到自己的归档
+        if (!AiUserContext.isAdmin()) {
+            wrapper.eq(SysAiSession::getSysUserId, AiUserContext.requireUserId());
+        }
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(SysAiSession::getTitle, keyword);
         }
@@ -74,16 +81,14 @@ public class SysAiSessionController {
         
         // 解析 sessionId：数字直接用，UUID 通过标题匹配查找
         Long sessionIdLong = resolveSessionId(sessionId);
-        
-        SysAiSession session = null;
-        if (sessionIdLong != null) {
-            session = sessionMapper.selectById(sessionIdLong);
-            if (session != null) {
-                session.setIsArchived(archived);
-                session.setUpdateTime(LocalDateTime.now());
-                sessionMapper.updateById(session);
-            }
+        if (sessionIdLong == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
+
+        SysAiSession session = requireWritableSession(sessionIdLong);
+        session.setIsArchived(archived);
+        session.setUpdateTime(LocalDateTime.now());
+        sessionMapper.updateById(session);
         return Map.of("success", true, "session", session);
     }
     
@@ -121,14 +126,37 @@ public class SysAiSessionController {
         @SuppressWarnings("unchecked")
         List<Long> sessionIds = (List<Long>) body.get("sessionIds");
         Boolean archived = (Boolean) body.get("archived");
+        List<Long> skipped = new ArrayList<>();
         for (Long id : sessionIds) {
-            SysAiSession session = sessionMapper.selectById(id);
-            if (session != null) {
+            try {
+                SysAiSession session = requireWritableSession(id);
                 session.setIsArchived(archived);
                 session.setUpdateTime(LocalDateTime.now());
                 sessionMapper.updateById(session);
+            } catch (ApiException e) {
+                skipped.add(id);
             }
         }
-        return Map.of("success", true, "skipped", List.of());
+        return Map.of("success", true, "skipped", skipped);
+    }
+
+    /**
+     * 写出口归属校验：只认归属人本身，管理员对他人数据只读。
+     *
+     * @param sessionId 会话标识
+     * @return 校验通过的会话
+     */
+    private SysAiSession requireWritableSession(Long sessionId) {
+        SysAiSession session = sessionMapper.selectById(sessionId);
+        if (session == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (!AiUserContext.requireUserId().equals(session.getSysUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+        }
+        return session;
     }
 }

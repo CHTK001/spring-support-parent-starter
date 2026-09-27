@@ -27,8 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class WalletAccountController {
 
     /**
-     * Walletaccount服务
-    */
+     * 钱包账户服务
+     */
     private final WalletAccountService walletAccountService;
 
     @GetMapping("/account")
@@ -44,10 +44,9 @@ public class WalletAccountController {
 
     @PostMapping("/account/recharge")
     /**
-     * Recharge
+     * 充值
      *
      * @param dto dto
-     * @return recharge的结果
      */
     public Result<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
         return Result.success(walletAccountService.recharge(dto));
@@ -55,9 +54,8 @@ public class WalletAccountController {
 
     @GetMapping("/account/log/page")
     /**
-     * page日志。
-     * @param "1" "1"
-     * @return page日志的结果
+     * 分页查询账户流水
+     * @return 分页查询账户流水的结果
      */
     public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
@@ -70,4 +68,3 @@ public class WalletAccountController {
         return Result.success(PageResult.of(page));
     }
 }
-

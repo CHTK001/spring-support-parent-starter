@@ -31,8 +31,14 @@ public record JobLogEvent(
         long executedAtMs,
         String nodeId,
         Instant timestamp,
-        String logContent
+        String logContent,
+        String triggerType
 ) {
+
+    /**
+     * 触发方式: 有人在调度中心点的立即运行/立即触发
+     */
+    public static final String TRIGGER_MANUAL = "MANUAL";
 
     /**
      * 状态枚举。
@@ -72,6 +78,18 @@ public record JobLogEvent(
     }
 
     /**
+     * 构造成功事件 (含日志内容与本轮触发方式)。
+     *
+     * @param triggerType 本轮触发方式, 为空时由落库侧回退台账的调度类型
+     * @return 成功的结果
+     */
+    public static JobLogEvent success(String jobName, long costMs, long executedAtMs, String nodeId,
+                                      String logContent, String triggerType) {
+        return withTrigger(new JobLogEvent(jobName, Status.SUCCESS, costMs, null,
+                executedAtMs, nodeId, Instant.now(), logContent), triggerType);
+    }
+
+    /**
      * 构造失败事件 (无日志内容)。
      */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
@@ -89,6 +107,40 @@ public record JobLogEvent(
         String message = extractMessage(throwable);
         return new JobLogEvent(jobName, Status.FAILURE, costMs, message,
                 executedAtMs, nodeId, Instant.now(), logContent);
+    }
+
+    /**
+     * 构造失败事件 (含日志内容与本轮触发方式)。
+     *
+     * @param triggerType 本轮触发方式, 为空时由落库侧回退台账的调度类型
+     * @return 失败的结果
+     */
+    public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
+                                      long executedAtMs, String nodeId, String logContent, String triggerType) {
+        String message = extractMessage(throwable);
+        return withTrigger(new JobLogEvent(jobName, Status.FAILURE, costMs, message,
+                executedAtMs, nodeId, Instant.now(), logContent), triggerType);
+    }
+
+    /**
+     * 兼容不关心触发方式的构造 (8 参)。
+     */
+    public JobLogEvent(String jobName, Status status, long costMs, String exception, long executedAtMs,
+                       String nodeId, Instant timestamp, String logContent) {
+        this(jobName, status, costMs, exception, executedAtMs, nodeId, timestamp, logContent, null);
+    }
+
+    /**
+     * 给事件补上本轮触发方式。
+     *
+     * @param event       原事件
+     * @param triggerType 触发方式, 为空保持原样
+     * @return 带触发方式的事件
+     */
+    private static JobLogEvent withTrigger(JobLogEvent event, String triggerType) {
+        return triggerType == null ? event
+                : new JobLogEvent(event.jobName(), event.status(), event.costMs(), event.exception(),
+                event.executedAtMs(), event.nodeId(), event.timestamp(), event.logContent(), triggerType);
     }
 
     /**
@@ -134,11 +186,12 @@ public record JobLogEvent(
                 + "jobName=" + nvl(jobName)
                 + ", status=" + status
                 + ", costMs=" + costMs
-                + ", exception=" + nvl(exception)
+                + ", exception=" + encodeField(exception)
                 + ", executedAtMs=" + executedAtMs
                 + ", nodeId=" + nvl(nodeId)
                 + ", timestamp=" + (timestamp == null ? 0 : timestamp.toEpochMilli())
                 + ", logContent=" + encodeLogContent(logContent)
+                + ", triggerType=" + nvl(triggerType)
                 + "]";
     }
 
@@ -156,10 +209,7 @@ public record JobLogEvent(
             String statusStr = readField(text, "status");
             Status status = statusStr == null ? null : Status.valueOf(statusStr);
             long costMs = readLongField(text, "costMs");
-            String exception = readField(text, "exception");
-            if ("null".equals(exception)) {
-                exception = null;
-            }
+            String exception = decodeField(readField(text, "exception"));
             long executedAtMs = readLongField(text, "executedAtMs");
             String nodeId = readField(text, "nodeId");
             long ts = readLongField(text, "timestamp");
@@ -169,7 +219,12 @@ public record JobLogEvent(
             } else {
                 logContent = decodeLogContent(logContent);
             }
-            return new JobLogEvent(jobName, status, costMs, exception, executedAtMs, nodeId, Instant.ofEpochMilli(ts), logContent);
+            String triggerType = readField(text, "triggerType");
+            if ("null".equals(triggerType)) {
+                triggerType = null;
+            }
+            return new JobLogEvent(jobName, status, costMs, exception, executedAtMs, nodeId,
+                    Instant.ofEpochMilli(ts), logContent, triggerType);
         } catch (Exception ex) {
             return null;
         }
@@ -234,6 +289,41 @@ public record JobLogEvent(
             return "null";
         }
         return Base64.getEncoder().encodeToString(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 编码可能含换行/逗号的字段（异常消息）。
+     *
+     * <p>wire 是行协议（{@code topic:payload} 按换行切分），异常的多行栈信息若原样写入，
+     * 会把一行拆成多行，接收端只能解析到残行——表现就是日志 executedAtMs=0、nodeId 丢失、
+     * message 截断。这里与 logContent 一样做 Base64，保证单行安全。</p>
+     *
+     * @param content 字段内容，可为 null
+     * @return "null" 或 Base64 文本
+     */
+    private static String encodeField(String content) {
+        if (content == null) {
+            return "null";
+        }
+        return Base64.getEncoder().encodeToString(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 解码字段：Base64 失败时回退原文（兼容旧版未编码的 wire 报文）。
+     *
+     * @param encoded 编码文本或旧版原文
+     * @return 原文，null 表示无
+     */
+    private static String decodeField(String encoded) {
+        if (encoded == null || encoded.isEmpty() || "null".equals(encoded)) {
+            return null;
+        }
+        try {
+            byte[] decoded = Base64.getDecoder().decode(encoded);
+            return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception ex) {
+            return encoded;
+        }
     }
 
     /**

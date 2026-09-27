@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 趣味模块配置实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_fun_config")
-public class EduFunConfig {
+public class EduFunConfig extends SysBase {
 
     /**
      * 配置标识
@@ -25,9 +27,37 @@ public class EduFunConfig {
     private Long configId;
 
     /**
-     * 模块编码（如 INSECT, IDIOM, IDIOM_GAME）
+     * 模块编码
      */
     private String moduleCode;
+
+    /**
+     * 适用学段：PRIMARY / JUNIOR / SENIOR；null 表示各学段通用
+     *
+     * <p>与学生端配合使用：学生端首页按自己的学段取这里配置的模块清单，
+     * 因此同一个 moduleCode 可以在三个学段各有一行（唯一键是 code + 学段）。</p>
+     */
+    private String funConfigGradeLevel;
+
+    /**
+     * 学生端卡片副标题
+     */
+    private String funConfigSubtitle;
+
+    /**
+     * 学生端卡片图标渐变起始色
+     */
+    private String funConfigColor;
+
+    /**
+     * 学生端卡片图标渐变结束色
+     */
+    private String funConfigColorTo;
+
+    /**
+     * 是否显示未完成角标：0-否 1-是（小学端用）
+     */
+    private Integer funConfigShowBadge;
 
     /**
      * 模块名称
@@ -63,16 +93,6 @@ public class EduFunConfig {
      * 配置JSON（扩展配置）
      */
     private String configJson;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

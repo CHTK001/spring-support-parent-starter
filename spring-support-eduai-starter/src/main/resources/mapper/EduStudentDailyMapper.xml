@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduStudentDailyMapper">
+
+    <!-- 区间汇总。COALESCE 是必需的：区间内没有记录时 SUM 返回 NULL，
+         前端拿到 null 会算不出 0% 正确率 -->
+    <select id="sumRange" resultType="java.util.LinkedHashMap">
+        SELECT
+            COALESCE(SUM(study_count), 0)    AS studyCount,
+            COALESCE(SUM(study_minutes), 0)  AS studyMinutes,
+            COALESCE(SUM(question_count), 0) AS questionCount,
+            COALESCE(SUM(correct_count), 0)  AS correctCount,
+            COALESCE(SUM(stars), 0)          AS stars,
+            COALESCE(SUM(points), 0)         AS points
+        FROM edu_student_daily
+        WHERE student_id = #{studentId}
+          AND stat_date BETWEEN #{from} AND #{to}
+    </select>
+
+    <!-- 最近有学习记录的日期（倒序）。连续打卡天数在 Java 里按相邻日差 1 计算，
+         比写窗口函数更可移植（MariaDB / MySQL 都跑得动） -->
+    <select id="selectActiveDates" resultType="java.time.LocalDate">
+        SELECT stat_date FROM edu_student_daily
+        WHERE student_id = #{studentId}
+          AND stat_date &lt;= #{until}
+        ORDER BY stat_date DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 班级排名用：按学生汇总积分 -->
+    <select id="sumPointsByStudents" resultType="java.util.LinkedHashMap">
+        SELECT student_id AS studentId, COALESCE(SUM(points), 0) AS points
+        FROM edu_student_daily
+        WHERE stat_date BETWEEN #{from} AND #{to}
+          AND student_id IN
+        <foreach collection="studentIds" item="sid" open="(" separator="," close=")">
+            #{sid}
+        </foreach>
+        GROUP BY student_id
+    </select>
+
+</mapper>

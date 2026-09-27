@@ -74,8 +74,8 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      */
     private void login() {
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("appKey", info.getAppKey());
-        params.put("appSecret", info.getAppSecret());
+        params.put("appKey", info.appKey());
+        params.put("appSecret", info.appSecret());
         try {
             JsonNode resp = execute("POST", PATH_TOKEN, params, null);
             JsonNode data = assertOk(resp);
@@ -95,7 +95,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
              * @param expires expires
              */
             cacheToken(token, expires);
-            log.info("海康云耀登录成功: deviceSerial={}", info.getDeviceSerial());
+            log.info("海康云耀登录成功: deviceSerial={}", info.deviceSerial());
         } catch (Exception e) {
             /**
              * illegal状态异常。
@@ -120,7 +120,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
                 .collect(Collectors.joining("&"));
         try {
             javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
-            mac.init(new javax.crypto.spec.SecretKeySpec(utf8(info.getAppSecret()), "HmacSHA256"));
+            mac.init(new javax.crypto.spec.SecretKeySpec(utf8(info.appSecret()), "HmacSHA256"));
             byte[] digest = mac.doFinal(utf8(sorted));
             StringBuilder sb = new StringBuilder(digest.length * 2);
             for (byte b : digest) {
@@ -175,7 +175,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      */
     public JsonNode getLiveAddress(int channel, String protocol) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
         params.put("protocol", protocol);
         return assertOk(post(PATH_LIVE_ADDRESS, params));
@@ -202,7 +202,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     @Override
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
         params.put("startTime", range.getStart().toString());
         params.put("endTime", range.getEnd().toString());
@@ -220,7 +220,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
             return;
         }
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("channel", 1);
         params.put("direction", mapDirection(cmd));
         params.put("speed", Math.max(1, Math.min(255, Math.round(speed * 255))));
@@ -259,7 +259,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("doorId", doorId);
         params.put("command", 1);
         /**

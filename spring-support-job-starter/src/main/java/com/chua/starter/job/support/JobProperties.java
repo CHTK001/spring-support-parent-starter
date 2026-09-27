@@ -179,9 +179,44 @@ public class JobProperties {
         public static final long DEFAULT_SCAN_INTERVAL_MS = 1000L;
 
         /**
-         * 命名空间, 同一 群体 内 铅 唯一
+         * 命名空间, 同一 群体 内 Leader 唯一
+         *
+         * <p>本值是<b>作业归属</b>口径: Leader 只扫描 {@code sys_job_group = group} 的任务行,
+         * 与 {@code sys_job.sys_job_group} 对齐。不要拿它当选主租约的键, 见 {@link #electionNamespace}。</p>
          */
         private String group = "default";
+
+        /**
+         * 选主租约命名空间, 留空时按 {@link #resolveElectionNamespace(String)} 推导。
+         *
+         * <p><b>与 {@link #group} 分工的原因</b>: 选主租约在 {@code sys_job_cluster} 里以本值为主键,
+         * 同一行只能有一个 Leader。把「作业分组」直接当租约键时, 两个彼此独立、恰好都叫
+         * {@code default} 的部署会抢同一条租约行, 互相把对方踢下 Leader, 表现为两边任务都只跑一半拍。
+         * 作业分组允许跨部署重名, 选主命名空间不允许, 因此必须是独立配置项。</p>
+         *
+         * <p>同一集群内所有节点的取值必须一致 (通常都用默认推导), 否则会分裂成两个各自当 Leader 的集群。</p>
+         */
+        private String electionNamespace;
+
+        /**
+         * 推导选主租约命名空间: 显式配置优先, 其次应用名, 最后才回落到作业分组。
+         *
+         * <p>用应用名做默认是刻意的: 调度集群本就以「应用」为单位,
+         * 两个独立部署的应用名通常不同, 天然不会抢同一条租约行; 而同一个应用的多节点
+         * 应用名相同, 仍会正确地选出唯一 Leader。</p>
+         *
+         * @param applicationName Spring 应用名, 可为空
+         * @return 选主租约命名空间 (非空)
+         */
+        public String resolveElectionNamespace(String applicationName) {
+            if (electionNamespace != null && !electionNamespace.isBlank()) {
+                return electionNamespace.trim();
+            }
+            if (applicationName != null && !applicationName.isBlank()) {
+                return applicationName.trim();
+            }
+            return group == null || group.isBlank() ? "default" : group.trim();
+        }
 
         /**
          * 单秒扫描间隔, 默认 1000ms
@@ -209,8 +244,7 @@ public class JobProperties {
     public static class SyncConfig {
 
         /**
-         * 是否强制使用内存 SPI 实现 (跳过真实 rSocket/HTTP 选取)。
-         * <p>主要用于单元测试和精简部署,默认 false。</p>
+         * 兼容旧配置项；设置为 true 时明确拒绝启动，不提供内存同步伪实现。
          */
         private boolean inMemory = false;
 
@@ -240,6 +274,14 @@ public class JobProperties {
         public static final int DEFAULT_LISTEN_PORT = 8081;
 
         /**
+         * 默认长链协议
+         *
+         * <p>必须与执行器 {@code sync.executor.server-url} 的 scheme 一致，否则两端协议错配：
+         * 执行器连得上却永远发不出可解析的注册报文，调度中心的执行器注册表恒为空。</p>
+         */
+        public static final String DEFAULT_PROTOCOL = "tcp";
+
+        /**
          * 监听主机
          */
         private String listenHost = "0.0.0.0";
@@ -248,6 +290,13 @@ public class JobProperties {
          * 监听端口
          */
         private int listenPort = DEFAULT_LISTEN_PORT;
+
+        /**
+         * 长链协议 (tcp / websocket / udp / http / rsocket)
+         *
+         * <p>按本值优先挑 SyncServer SPI 实现，挑不到再按内置兜底顺序回退。</p>
+         */
+        private String protocol = DEFAULT_PROTOCOL;
     }
 
     /**

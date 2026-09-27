@@ -56,7 +56,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     public List<SysAiToken> list() {
         return sysAiTokenMapper.selectList(
                 Wrappers.lambdaQuery(SysAiToken.class)
-                        .eq(SysAiToken::getDelete, 0)
+                        .eq(SysAiToken::getDeleted, 0)
                         .orderByDesc(SysAiToken::getId)
         );
     }
@@ -72,7 +72,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         return sysAiTokenMapper.selectList(
                 Wrappers.lambdaQuery(SysAiToken.class)
                         .eq(SysAiToken::getGroupId, groupId)
-                        .eq(SysAiToken::getDelete, 0)
+                        .eq(SysAiToken::getDeleted, 0)
                         .orderByDesc(SysAiToken::getId)
         );
     }
@@ -91,8 +91,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         if (token.getStatus() == null) {
             token.setStatus(1);
         }
-        if (token.getDelete() == null) {
-            token.setDelete(0);
+        if (token.getDeleted() == null) {
+            token.setDeleted(0);
         }
         if (token.getUseCount() == null) {
             token.setUseCount(0L);
@@ -130,7 +130,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         }
         SysAiToken entity = new SysAiToken();
         entity.setId(tokenId);
-        entity.setDelete(1);
+        entity.setDeleted(1);
         return sysAiTokenMapper.updateById(entity) > 0;
     }
 
@@ -146,7 +146,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         return sysAiTokenMapper.selectOne(
                 Wrappers.lambdaQuery(SysAiToken.class)
                         .eq(SysAiToken::getKeyHash, hash)
-                        .eq(SysAiToken::getDelete, 0)
+                        .eq(SysAiToken::getDeleted, 0)
                         .last("LIMIT 1")
         );
     }

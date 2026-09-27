@@ -32,17 +32,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class MerchantController {
 
     /**
-     * Merchant服务
-    */
+     * 商户服务
+     */
     private final MerchantService merchantService;
 
     @Operation(summary = "创建商户")
     @PostMapping
     /**
-     * 创建Merchant
+     * 创建商户
      *
      * @param dto dto
-     * @return 创建merchant的结果
+     * @return 创建商户的结果
      */
     public Result<MerchantVO> createMerchant(@RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.createMerchant(dto);
@@ -52,11 +52,11 @@ public class MerchantController {
     @Operation(summary = "更新商户")
     @PutMapping("/{id}")
     /**
-     * 更新Merchant
+     * 更新商户
      *
      * @param id 标识
      * @param dto dto
-     * @return 更新merchant的结果
+     * @return 更新商户的结果
      */
     public Result<MerchantVO> updateMerchant(@PathVariable Long id, @RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.updateMerchant(id, dto);
@@ -66,10 +66,10 @@ public class MerchantController {
     @Operation(summary = "删除商户")
     @DeleteMapping("/{id}")
     /**
-     * 删除Merchant
+     * 删除商户
      *
      * @param id 标识
-     * @return 删除merchant的结果
+     * @return 删除商户的结果
      */
     public Result<Boolean> deleteMerchant(@PathVariable Long id) {
         boolean success = merchantService.deleteMerchant(id);
@@ -79,10 +79,10 @@ public class MerchantController {
     @Operation(summary = "查询商户")
     @GetMapping("/{id}")
     /**
-     * 获取Merchant
+     * 获取商户
      *
      * @param id 标识
-     * @return 获取merchant的结果
+     * @return 获取商户的结果
      */
     public Result<MerchantVO> getMerchant(@PathVariable Long id) {
         MerchantVO vo = merchantService.getMerchant(id);
@@ -92,16 +92,11 @@ public class MerchantController {
     @Operation(summary = "分页查询商户列表")
     @GetMapping("/list")
     /**
-     * 列表merchants
+     * 商户列表
      * @param page page
      * @param size 大小
-     * @param merchantName merchant名称
+     * @param merchantName 商户名称
      * @param status 状态
-     * @param size 大小
-     * @param merchantName merchant名称
-     * @param status 状态
-     * @param id 标识
-     * @param id 标识
      */
     public Result<PageResult<MerchantVO>> listMerchants(
             @RequestParam(defaultValue = "1") int page,
@@ -121,10 +116,9 @@ public class MerchantController {
     @Operation(summary = "激活商户")
     @PutMapping("/{id}/activate")
     /**
-     * activatemerchant
+     * 激活商户
      *
      * @param id 标识
-     * @return activateMerchant的结果
      */
     public Result<Boolean> activateMerchant(@PathVariable Long id) {
         boolean success = merchantService.activateMerchant(id);
@@ -134,10 +128,9 @@ public class MerchantController {
     @Operation(summary = "停用商户")
     @PutMapping("/{id}/deactivate")
     /**
-     * deactivatemerchant
+     * 停用商户
      *
      * @param id 标识
-     * @return deactivateMerchant的结果
      */
     public Result<Boolean> deactivateMerchant(@PathVariable Long id) {
         boolean success = merchantService.deactivateMerchant(id);

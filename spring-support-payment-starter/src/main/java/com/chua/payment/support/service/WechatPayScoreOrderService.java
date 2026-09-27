@@ -9,7 +9,7 @@ import com.chua.payment.support.entity.WechatPayScoreOrder;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
 
 /**
- * 微信支付分订单服务接口，定义微信免密支付订单的创建、同步、完成与取消契约。
+ * 微信支付分订单服务接口，定义微信先享后付支付订单的创建、同步、完成与取消契约。
  *
  * @author CH
  * @since 4.0.0.50
@@ -17,56 +17,54 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyP
 public interface WechatPayScoreOrderService {
 
     /**
-     * 创建订单。
-     * @param request 请求
-     * @return 创建订单的结果
+     * 创建支付分订单。
+     * @param request 请求参数
+     * @return 创建出的支付分订单
      */
     WechatPayScoreOrder createOrder(WechatPayScoreCreateDTO request);
 
     /**
-     * 获取by出订单no。
-     * @param outOrderNo 出订单no
-     * @return 获取by出订单no的结果
+     * 根据出订单号获取支付分订单。
+     * @param outOrderNo 出订单号
+     * @return 获取到的支付分订单
      */
     WechatPayScoreOrder getByOutOrderNo(String outOrderNo);
 
     /**
-     * page。
-     * @param request 请求
-     * @return page的结果
+     * 分页查询支付分订单。
+     * @param request 请求参数
      */
     Page<WechatPayScoreOrder> page(WechatPayScoreOrderQueryRequest request);
 
     /**
-     * 同步订单。
-     * @param outOrderNo 出订单no
-     * @return 同步订单的结果
+     * 同步订单状态。
+     * @param outOrderNo 出订单号
+     * @return 同步后的支付分订单
      */
     WechatPayScoreOrder syncOrder(String outOrderNo);
 
     /**
-     * 完成订单。
-     * @param outOrderNo 出订单no
-     * @param request 请求
-     * @return 完成订单的结果
+     * 完成支付分订单。
+     * @param outOrderNo 出订单号
+     * @param request 请求参数
+     * @return 完成后的支付分订单
      */
     WechatPayScoreOrder completeOrder(String outOrderNo, WechatPayScoreCompleteDTO request);
 
     /**
-     * cancel订单。
-     * @param outOrderNo 出订单no
-     * @param request 请求
-     * @return cancel订单的结果
+     * 取消支付分订单。
+     * @param outOrderNo 出订单号
+     * @param request 请求参数
+     * @return 取消后的支付分订单
      */
     WechatPayScoreOrder cancelOrder(String outOrderNo, WechatPayScoreCancelDTO request);
 
     /**
-     * 把手通知。
-     * @param channelId 通道标识
-     * @param outOrderNo 出订单no
-     * @param payload payload
-     * @param responsePayload 响应payload
+     * 处理微信支付分通知。
+     * @param channelId 渠道标识
+     * @param outOrderNo 出订单号
+     * @param payload 通知报文
+     * @param responsePayload 响应报文
      */
     void handleNotify(Long channelId, String outOrderNo, TencentWechatPayScoreNotifyPayload payload, String responsePayload);
 }
-

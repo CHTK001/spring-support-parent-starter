@@ -113,16 +113,10 @@ public class OpenApiConverter {
 
         if (op.getParameters() != null) {
             for (Parameter p : op.getParameters()) {
-                OpenApiParam op2 = new OpenApiParam();
-                op2.setName(p.getName());
-                op2.setIn(p.getIn());
-                op2.setType(schemaType(p.getSchema()));
-                op2.setRequired(Boolean.TRUE.equals(p.getRequired()));
-                op2.setDescription(p.getDescription());
-                if (p.getSchema() != null && p.getSchema().getExample() != null) {
-                    op2.setExample(String.valueOf(p.getSchema().getExample()));
-                }
-                ep.getParameters().add(op2);
+                ep.getParameters().add(new OpenApiParam(p.getName(), p.getIn(), schemaType(p.getSchema()),
+                        Boolean.TRUE.equals(p.getRequired()), p.getDescription(),
+                        p.getSchema() != null && p.getSchema().getExample() != null
+                                ? String.valueOf(p.getSchema().getExample()) : null));
             }
         }
 
@@ -154,9 +148,14 @@ public class OpenApiConverter {
                     MediaType mt = r.getValue().getContent().get("application/json");
                     Map<String, Object> flat = flattenSchema(prefix(""), mt.getSchema(), new TreeMap<>());
                     for (Map.Entry<String, Object> f : flat.entrySet()) {
-                        OpenApiParam op2 = new OpenApiParam();
-                        op2.setName(f.getKey());
-                        op2.setType(String.valueOf(f.getValue()));
+                        OpenApiParam op2 = new OpenApiParam(
+                                f.getKey(),
+                                null,
+                                String.valueOf(f.getValue()),
+                                false,
+                                null,
+                                null
+                        );
                         or.getFields().add(op2);
                     }
                     Map<String, Object> sample = exampleForSchema(mt.getSchema(), new LinkedHashMap<>());
@@ -285,3 +284,4 @@ public class OpenApiConverter {
         return out;
     }
 }
+

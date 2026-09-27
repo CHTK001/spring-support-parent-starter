@@ -57,9 +57,10 @@ public class SysAiAppKey {
     private String name; // 名称
 
     /**
-     * 所属用户 标识
+     * 归属用户标识（登录用户名，由服务端按当前身份写入）
      */
-    private Integer sysUserId;
+    @TableField("sys_ai_app_key_user_id")
+    private String userId; // 归属用户
 
     /**
      * 状态：1 启用，0 禁用
@@ -72,7 +73,7 @@ public class SysAiAppKey {
      */
     @TableField("sys_ai_app_key_delete")
     @TableLogic
-    private Integer delete; // 删除
+    private Integer deleted; // 删除
 
     /**
      * 分组 标识——令牌/appKey 绑定的分组

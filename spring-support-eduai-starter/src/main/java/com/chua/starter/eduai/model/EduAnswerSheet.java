@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import java.time.LocalDateTime;
 
 /**
@@ -15,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_answer_sheet")
-public class EduAnswerSheet {
+public class EduAnswerSheet extends SysBase {
 
     /**
      * 答题卡标识
@@ -51,16 +54,6 @@ public class EduAnswerSheet {
      * 状态
      */
     private Integer answerSheetStatus;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime answerSheetCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime answerSheetUpdateTime;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

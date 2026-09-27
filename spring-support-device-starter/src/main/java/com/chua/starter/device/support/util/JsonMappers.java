@@ -46,9 +46,10 @@ public final class JsonMappers {
         }
         List<PresetInfo> list = new ArrayList<>();
         for (JsonNode n : arr) {
-            PresetInfo p = new PresetInfo();
-            p.setPresetId(n.path("presetId").asInt(n.path("id").asInt()));
-            p.setName(n.path("name").asText(n.path("presetName").asText("")));
+            PresetInfo p = new PresetInfo(
+                    n.path("presetId").asInt(n.path("id").asInt()),
+                    n.path("name").asText(n.path("presetName").asText(""))
+            );
             list.add(p);
         }
         return list;
@@ -129,3 +130,4 @@ public final class JsonMappers {
         }
     }
 }
+

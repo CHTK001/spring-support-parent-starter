@@ -115,13 +115,13 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
 
 
     /**
-     * Whether the given view 名称 是否 a redirect view 引用.
-     * The 默认 implementation 检查 the configured redirect 模式 和
-     * also if the view 名称 启动 with the "redirect:" 前缀.
+     * Whether the given view name is a redirect view reference.
+     * The default implementation checks the configured redirect patterns and
+     * also if the view name starts with the "redirect:" prefix.
      *
-     * @param viewName the view 名称 转为 检查, 从不 {@code null}
-     * @return "true" if the given view 名称 是否 recognized as a redirect view
-     * 引用; "false" otherwise.
+     * @param viewName the view name to check, never {@code null}
+     * @return "true" if the given view name is recognized as a redirect view
+     * reference; "false" otherwise.
      */
     protected boolean isRedirectViewName(String viewName) {
         return (PatternMatchUtils.simpleMatch(this.redirectPatterns, viewName) || viewName.startsWith("redirect:"));

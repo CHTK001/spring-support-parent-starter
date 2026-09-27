@@ -33,35 +33,35 @@ import org.springframework.web.bind.annotation.RestController;
 public class MerchantSettingController {
 
     /**
-     * Merchant服务
-    */
+     * 商户服务
+     */
     private final MerchantService merchantService;
     /**
-     * Merchantpayment配置服务
-    */
+     * 商户支付配置服务
+     */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
     /**
-     * Wallet限制服务
-    */
+     * 钱包限额服务
+     */
     private final WalletLimitService walletLimitService;
 
-    @Operation(summary = "查询商户支付规则")
+    @Operation(summary = "查询商户支付配置")
     @GetMapping("/{merchantId}/payment-config")
     /**
-     * 获取薪酬配置
+     * 获取商户支付配置
      *
      * @param merchantId merchantid
-     * @return 获取薪酬配置的结果
+     * @return 获取商户支付配置的结果
      */
     public Result<MerchantPaymentConfigVO> getPaymentConfig(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
         return Result.success(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
     }
 
-    @Operation(summary = "保存商户支付规则")
+    @Operation(summary = "保存商户支付配置")
     @PutMapping("/{merchantId}/payment-config")
     /**
-     * 保存薪酬配置
+     * 保存商户支付配置
      * @param merchantId merchantid
      * @param dto dto
      */
@@ -78,10 +78,10 @@ public class MerchantSettingController {
     @Operation(summary = "查询商户钱包限额")
     @GetMapping("/{merchantId}/wallet-limit")
     /**
-     * 获取wallet限制
+     * 获取钱包限额
      *
      * @param merchantId merchantid
-     * @return 获取wallet限制的结果
+     * @return 获取钱包限额的结果
      */
     public Result<MerchantWalletLimitVO> getWalletLimit(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
@@ -91,7 +91,7 @@ public class MerchantSettingController {
     @Operation(summary = "保存商户钱包限额")
     @PutMapping("/{merchantId}/wallet-limit")
     /**
-     * 保存wallet限制
+     * 保存钱包限额
      * @param merchantId merchantid
      * @param dto dto
      */
@@ -106,11 +106,11 @@ public class MerchantSettingController {
     }
 
     /**
-     * 转为薪酬配置vo
+     * 转换为商户配置vo
      *
      * @param merchantId merchantid
      * @param config 配置
-     * @return 转为薪酬配置vo的结果
+     * @return 转换为商户配置vo的结果
      */
     private MerchantPaymentConfigVO toPaymentConfigVO(Long merchantId, MerchantPaymentConfig config) {
         MerchantPaymentConfigVO vo = new MerchantPaymentConfigVO();
@@ -122,11 +122,11 @@ public class MerchantSettingController {
     }
 
     /**
-     * 转为wallet限制vo
+     * 转换为钱包限额vo
      *
      * @param merchantId merchantid
-     * @param limit 限制
-     * @return 转为wallet限制vo的结果
+     * @param limit 限额
+     * @return 转换为钱包限额vo的结果
      */
     private MerchantWalletLimitVO toWalletLimitVO(Long merchantId, MerchantWalletLimit limit) {
         MerchantWalletLimitVO vo = new MerchantWalletLimitVO();
@@ -137,4 +137,3 @@ public class MerchantSettingController {
         return vo;
     }
 }
-

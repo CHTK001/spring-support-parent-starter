@@ -110,7 +110,7 @@ public class GuacdConnectionFactory {
              * @param e.getMessage( e.获取消息(
              * @return runtime异常的结果
              */
-            throw new RuntimeException("guacd 握手失败: " + e.getMessage(), e);
+            throw new RuntimeException(e.getMessage(), e);
         }
         return tunnel;
     }

@@ -12,55 +12,55 @@ import java.time.LocalDateTime;
  */
 @Data
 public class PaymentGlobalConfigVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
-     * 配置密钥
-    */
+     * 配置键
+     */
     private String configKey;
 
     /**
-     * paymentnotifybaseurl
-    */
+     * 支付通知基础URL
+     */
     private String paymentNotifyBaseUrl;
 
     /**
-     * Payment返回值URL
-    */
+     * 支付返回值URL
+     */
     private String paymentReturnUrl;
 
     /**
-     * Paymentcallback路径模板
-    */
+     * 支付回调路径模板
+     */
     private String paymentCallbackPathTemplate;
 
     /**
-     * Paymentautorefresh秒
-    */
+     * 支付自动刷新秒数
+     */
     private Integer paymentAutoRefreshSeconds;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     /**
-     * 薪酬示例paynotifyurl
-    */
+     * 支付示例支付通知URL
+     */
     private String paymentSamplePayNotifyUrl;
 
     /**
-     * 薪酬示例refundnotifyurl
-    */
+     * 支付示例退款通知URL
+     */
     private String paymentSampleRefundNotifyUrl;
 
     /**
-     * Coupondeductwithdrawable
-    */
+     * 优惠券抵扣是否可提现
+     */
     private Boolean couponDeductWithdrawable;
 
     /**
-     * 更新时间AT
-    */
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }

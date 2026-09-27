@@ -23,47 +23,37 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
     /**
-     * Walletaccount服务
-    */
+     * wallet 账户服务
+     */
     private final WalletAccountService walletAccountService;
 
     /**
-     * 创建 walletbalance薪酬通道 实例
-     * @param merchantChannelService merchant通道服务
+     * 创建钱包余额支付通道实例
+     * @param merchantChannelService merchant 通道服务
      * @param objectMapper 对象映射器
-     * @param walletAccountService wallet账户服务
+     * @param walletAccountService wallet 账户服务
      */
     public WalletBalancePaymentChannel(MerchantChannelService merchantChannelService,
                                        ObjectMapper objectMapper,
                                        WalletAccountService walletAccountService) {
-        /**
-         * 父。
-         * @param merchantChannelService merchant通道服务
-         * @param objectMapper 对象映射器
-         */
         super(merchantChannelService, objectMapper);
         this.walletAccountService = walletAccountService;
     }
 
     @Override
     /**
-     * 支持
-    */
+     * 是否支持该通道
+     */
     public boolean supports(String channelType, String channelSubType) {
         return "WALLET".equalsIgnoreCase(channelType) && "BALANCE".equalsIgnoreCase(channelSubType);
     }
 
     @Override
     /**
-     * 薪酬
-    */
+     * 发起支付
+     */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (request.getUserId() == null) {
-            /**
-             * 薪酬异常。
-             * @param userId" 用户标识"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("钱包支付必须提供 userId");
         }
         walletAccountService.pay(new WalletPayRequest(
@@ -86,8 +76,8 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
 
     @Override
     /**
-     * 查询
-    */
+     * 查询支付结果
+     */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         WalletAccountLog log = walletAccountService.getLog("PAY", channel.getMerchantId(), null, orderNo);
         PaymentResult result = new PaymentResult();
@@ -102,15 +92,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
 
     @Override
     /**
-     * 退税
-    */
+     * 申请退款
+     */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         if (request.getUserId() == null) {
-            /**
-             * 薪酬异常。
-             * @param "钱包退款缺少用户上下文" "钱包退款缺少用户上下文"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("钱包退款缺少用户上下文");
         }
         walletAccountService.refund(new WalletRefundRequest(
@@ -134,8 +119,8 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
 
     @Override
     /**
-     * 查询退税
-    */
+     * 查询退款结果
+     */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         WalletAccountLog log = walletAccountService.getLog("REFUND", channel.getMerchantId(), null, request.getRefundNo());
         RefundResult result = new RefundResult();
@@ -150,4 +135,3 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
 }
-

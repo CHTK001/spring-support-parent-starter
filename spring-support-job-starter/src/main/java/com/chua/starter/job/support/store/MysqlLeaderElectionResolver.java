@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * MyBatis-Plus 行级抢占版 铅 选举实现, 基于 {@code sys_job_cluster} 表。
+ * MyBatis-Plus 行级抢占版 Leader 选举实现, 基于 {@code sys_job_cluster} 表。
  *
  * <h3>抢占策略</h3>
  * <pre>

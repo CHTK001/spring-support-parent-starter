@@ -45,9 +45,5 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-webmvc</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
   </dependencies>
 </project>

@@ -1,0 +1,2 @@
+{"type":"message","id":"c05b41cf-f5f4-4e76-a272-a459930f4e68","timestamp":1790058564.109088200,"role":"USER","content":"请用三句话介绍你自己，并说明你当前可以调用哪些工具。"}
+{"type":"message","id":"a229858d-905f-48d8-ae7e-3f95902d362a","parentId":"c05b41cf-f5f4-4e76-a272-a459930f4e68","timestamp":1790058564.109088200,"role":"ASSISTANT","content":"我是 Agnes-3.0-flash，由 Sapiens AI 开发。\n我是一名资深代码审查专家，专注于评估代码的正确性、安全性、性能和可维护性，并可提供改进建议与最佳实践。\n我可以调用文件读取与搜索工具（如 read_file、list_files、glob_files、grep_files）、代码执行工具（execute）以及记忆管理工具（memory_search、memory_save）等，来协助完成代码审查与分析任务。"}

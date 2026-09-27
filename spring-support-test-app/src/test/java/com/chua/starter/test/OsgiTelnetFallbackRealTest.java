@@ -26,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
         "plugin.osgi.storage=target/osgi-cache-telnet-test",
+        // 测试环境每次从干净 storage 开始，避免历史 bundle 被恢复后与本轮装卸竞争
+        "plugin.osgi.storage-clean=onInit",
         "plugin.osgi.shell.enabled=true",
         "plugin.osgi.shell.protocol=telnet",
         "plugin.osgi.shell.port=6666",

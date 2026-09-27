@@ -2,7 +2,10 @@ package com.chua.starter.ai.support.manage.ssh;
 
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.store.SysAiSshHost;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.ssh.support.client.SshClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +14,10 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,6 +28,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * 活跃的远程主机交互终端：创建时连接远端 Shell，把输出通过
  * {@code terminal.output} WebSocket 事件推给前端 XtermView，输入/尺寸经
  * REST 端点转发到远端 伪终端。scrollback 按 基础64 缓冲，供断线重放。</p>
+ *
+ * <p>会话是登录用户的实时 Shell，归属在 {@link #open} 时按当前登录用户盖章：
+ * 本人可读写；管理员可读他人会话（看 scrollback/状态）但不可输入、调尺寸或关闭；
+ * 他人一律 403。口径与 {@code sys_ai_ssh_host} 等落库表保持一致。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -62,6 +72,7 @@ public class SshTerminalSessionManager {
         session.terminalId = terminalId;
         session.sshHostId = host.getSshHostId();
         session.name = host.getName();
+        session.userId = AiUserContext.requireUserId();
         session.client = client;
         session.scrollback = scrollback;
 
@@ -78,14 +89,14 @@ public class SshTerminalSessionManager {
                             scrollback.delete(0, excess);
                         }
                     }
-                    pushService.push("terminal.output", Map.of(
+                    pushService.pushToUser(session.userId, "terminal.output", Map.of(
                             "terminal_id", terminalId,
                             "data_b64", Base64.getEncoder().encodeToString(data.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                     ));
                 })
                 .onClose(() -> {
                     session.lastStatus = "exited";
-                    pushService.push("terminal.exit", Map.of(
+                    pushService.pushToUser(session.userId, "terminal.exit", Map.of(
                             "terminal_id", terminalId,
                             "exit_code", 0
                     ));
@@ -98,6 +109,28 @@ public class SshTerminalSessionManager {
         session.updatedAt = System.currentTimeMillis();
         sessions.put(terminalId, session);
         log.info("[SshTerminal] 已开启交互终端: {} @ {}:{} ({}x{})", host.getName(), host.getHost(), host.getPort(), cols, rows);
+        return session;
+    }
+
+    /**
+     * 登记一个 WebUI 本地占位终端（真实 伪终端 由宿主进程管理）。
+     *
+     * <p>登记的意义是让占位终端与真实 SSH 会话走同一套归属校验，
+     * 避免他人凭 标识 猜中占位终端后关闭或复用同 标识。</p>
+     *
+     * @param terminalId 终端 标识
+     * @param name       显示名称
+     * @return 登记后的会话载体
+     */
+    public SshTerminalSession registerLocalPlaceholder(String terminalId, String name) {
+        SshTerminalSession session = new SshTerminalSession();
+        session.terminalId = terminalId;
+        session.name = name;
+        session.userId = AiUserContext.requireUserId();
+        session.scrollback = new StringBuilder();
+        session.lastStatus = "running";
+        session.updatedAt = System.currentTimeMillis();
+        sessions.put(terminalId, session);
         return session;
     }
 
@@ -171,7 +204,7 @@ public class SshTerminalSessionManager {
             log.debug("[SshTerminal] 关闭异常: {}", e.getMessage());
         }
         session.lastStatus = "exited";
-        pushService.push("terminal.exit", Map.of(
+        pushService.pushToUser(session.userId, "terminal.exit", Map.of(
                 "terminal_id", terminalId,
                 "exit_code", 0
         ));
@@ -185,6 +218,47 @@ public class SshTerminalSessionManager {
      */
     public SshTerminalSession get(String terminalId) {
         return sessions.get(terminalId);
+    }
+
+    /**
+     * 当前登录用户可见的会话列表（管理员可见全部，其余仅本人）。
+     *
+     * @return 会话列表（按标识稳定排序）
+     */
+    public List<SshTerminalSession> listVisible() {
+        String userId = AiUserContext.requireUserId();
+        boolean admin = AiUserContext.isAdmin();
+        List<SshTerminalSession> result = new ArrayList<>();
+        for (SshTerminalSession session : sessions.values()) {
+            if (admin || userId.equals(session.userId)) {
+                result.add(session);
+            }
+        }
+        result.sort(Comparator.comparing(s -> s.terminalId));
+        return result;
+    }
+
+    /**
+     * 取回会话并校验归属。
+     *
+     * @param terminalId 终端 标识
+     * @param writable   是否要求写权限（{@code false} 表示只读，管理员可读他人会话）
+     * @return 通过校验的会话
+     */
+    public SshTerminalSession requireOwned(String terminalId, boolean writable) {
+        SshTerminalSession session = sessions.get(terminalId);
+        if (session == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "终端会话不存在: " + terminalId);
+        }
+        String userId = AiUserContext.requireUserId();
+        if (userId.equals(session.userId)) {
+            return session;
+        }
+        if (!writable && AiUserContext.isAdmin()) {
+            return session;
+        }
+        throw new ApiException(ApiErrorCode.FORBIDDEN,
+                "无权" + (writable ? "操作他人的" : "访问他人的") + "终端会话");
     }
 
     /**
@@ -213,6 +287,10 @@ public class SshTerminalSessionManager {
          * 关联主机 标识
          */
         public String sshHostId;
+        /**
+         * 归属登录用户（创建时盖章）
+         */
+        public String userId;
         /**
          * 显示名称
          */

@@ -6,6 +6,7 @@ import com.chua.starter.server.support.entity.MsServerHostIdentity;
 import com.chua.starter.server.support.entity.MsServerIdentity;
 import com.chua.starter.server.support.mapper.MsServerHostIdentityMapper;
 import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
+import com.chua.starter.monitor.support.config.MonitorSshProperties;
 import com.chua.starter.server.support.util.CredentialCipher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +15,17 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SSH / SFTP 连接缓存。
  *
  * <p>按主机 ID 复用 {@code SshClient} / {@code SftpClient} 会话，TTL 5 分钟，
  * 由守护线程每分钟清理一次过期会话，避免频繁建连带来的开销。</p>
+ *
+ * <p>命令执行按主机限流：同一会话上并发通道超过服务端上限会连整条连接被拆掉，
+ * 因此超出 {@link #MAX_INFLIGHT_PER_HOST} 的调用排队等槽。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -54,6 +60,27 @@ public class SshConnectionCache {
      * 会话空闲有效期：5 分钟
     */
     private static final long TTL_MS = 5 * 60 * 1000L;
+    /**
+     * 单主机的执行槽位闸门：主机 ID -> 信号量
+    */
+    private static final Map<Object, Semaphore> GATES = new ConcurrentHashMap<>();
+    /**
+     * 单主机在途通道上限：服务端 MaxSessions（Windows OpenSSH 默认 10）被打满会直接拆掉整条连接，
+     * 故留出余量
+    */
+    private static final int MAX_INFLIGHT_PER_HOST = 4;
+    /**
+     * 拆会话前独占槽位的等待上限：同主机其它命令多为秒级，等得起；超时也只退化为「不独占地丢弃会话」
+    */
+    private static final long DRAIN_WAIT_MS = 10_000L;
+    /**
+     * 等槽上限：宁可排队等前序命令让位，也不把并发压力直接变成用户可见失败；超时才快速失败
+    */
+    private static final long GATE_WAIT_MS = 120_000L;
+    /**
+     * 未取到退出码：通道在 EXEC 结束前被关掉，输出同样不可信
+    */
+    private static final int NO_EXIT_STATUS = -1;
 
     @Autowired(required = false)
     /**
@@ -72,17 +99,52 @@ public class SshConnectionCache {
     private CredentialCipher credentialCipher;
     @Autowired(required = false)
     /**
+     * ssh 超时配置
+    */
+    private MonitorSshProperties sshProperties;
+
+    /**
+     * 连接超时（秒），缺省给 15
+    */
+    private int connectTimeoutSeconds() {
+        return sshProperties == null ? 15 : Math.max(1, sshProperties.getConnectTimeoutSeconds());
+    }
+    /**
+     * 会话超时（秒），缺省给 15
+    */
+    private int sessionTimeoutSeconds() {
+        return sshProperties == null ? 15 : Math.max(1, sshProperties.getSessionTimeoutSeconds());
+    }
+    /**
+     * 命令执行超时（秒），缺省给 60
+    */
+    private long execTimeoutSeconds() {
+        return sshProperties == null ? 60L : Math.max(1L, sshProperties.getExecTimeoutSeconds());
+    }
+    @Autowired(required = false)
+    /**
      * 键Mapper
     */
     private com.chua.starter.server.support.mapper.MsServerKeyMapper keyMapper;
 
     /**
-     * 解析主机绑定的所有身份，按优先级排序（非 root 优先）
-     * @param host 主机，不允许为 null
-     * @return 结果列表，无数据时为空列表
+     * 主机绑定的登录凭据（SSH 口令/私钥与 WinRM 口令同源，均来自主机绑定的身份）。
+     *
+     * @param username   登录名
+     * @param password   口令或私钥口令，可为空
+     * @param privateKey 私钥内容，可为空
      */
-    private List<SshCred> resolveCredentials(MsServerHost host) {
-        List<SshCred> result = new java.util.ArrayList<>();
+    public record LoginCredential(String username, String password, String privateKey) {
+    }
+
+    /**
+     * 解析主机绑定的全部可用登录凭据，按优先级排序（非 root 优先）。
+     *
+     * @param host 主机，不允许为 null
+     * @return 结果列表，无可用凭据时为空列表
+     */
+    public List<LoginCredential> credentials(MsServerHost host) {
+        List<LoginCredential> result = new java.util.ArrayList<>();
         if (hostIdentityMapper == null || identityMapper == null) {
             return result;
         }
@@ -91,7 +153,7 @@ public class SshConnectionCache {
                     new LambdaQueryWrapper<MsServerHostIdentity>()
                             .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, host.getId())
                             .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
-            List<SshCred> roots = new java.util.ArrayList<>();
+            List<LoginCredential> roots = new java.util.ArrayList<>();
             for (MsServerHostIdentity rel : rels) {
                 MsServerIdentity id = identityMapper.selectById(rel.getMsServerHostIdentityIdentityId());
                 if (id == null) {
@@ -101,21 +163,21 @@ public class SshConnectionCache {
                 if (uname == null) {
                     continue;
                 }
-                SshCred cred = null;
+                LoginCredential cred = null;
                 if ("PUBLIC_KEY".equalsIgnoreCase(id.getMsServerIdentityAuthType())) {
                     if (keyMapper != null && id.getMsServerIdentityKeyId() != null) {
                         var key = keyMapper.selectById(id.getMsServerIdentityKeyId());
                         if (key != null && key.getMsServerKeyPrivateKey() != null) {
                             String privKey = credentialCipher != null ? credentialCipher.decrypt(key.getMsServerKeyPrivateKey()) : key.getMsServerKeyPrivateKey();
                             String passPhrase = key.getMsServerKeyPassword() != null ? (credentialCipher != null ? credentialCipher.decrypt(key.getMsServerKeyPassword()) : key.getMsServerKeyPassword()) : null;
-                            cred = new SshCred(uname, passPhrase, privKey);
+                            cred = new LoginCredential(uname, passPhrase, privKey);
                         }
                     }
                 } else {
                     String encPass = id.getMsServerIdentityPassword();
                     if (encPass != null && !encPass.isBlank()) {
                         String pass = credentialCipher != null ? credentialCipher.decrypt(encPass) : encPass;
-                        cred = new SshCred(uname, pass, null);
+                        cred = new LoginCredential(uname, pass, null);
                     }
                 }
                 if (cred != null) {
@@ -128,25 +190,11 @@ public class SshConnectionCache {
                 }
             }
             result.addAll(roots);
-            // fallback: try local SSH keys
-            String home = System.getProperty("user.home");
-            String[] keyPaths = { home + "/.ssh/id_rsa_pk8.pem", home + "/.ssh/id_rsa", home + "/.ssh/id_ed25519" };
-            for (String kp : keyPaths) {
-                try {
-                    java.nio.file.Path kf = java.nio.file.Paths.get(kp);
-                    if (java.nio.file.Files.exists(kf)) {
-                        String key = java.nio.file.Files.readString(kf);
-                        result.add(new SshCred("ubuntu", null, key));
-                    }
-                } catch (Exception ignored) {}
-            }
         } catch (Exception e) {
-            log.warn("resolveCredentials failed host={}: {}", host.getId(), e.getMessage());
+            log.warn("credentials failed host={}: {}", host.getId(), e.getMessage());
         }
         return result;
     }
-
-    private record SshCred(String username, String password, String privateKey) {}
 
     static {
         // 守护线程周期清理过期会话，避免连接泄漏
@@ -185,14 +233,20 @@ public class SshConnectionCache {
             c.expireAt = System.currentTimeMillis() + TTL_MS;
             return c.ssh;
         }
-        List<SshCred> creds = resolveCredentials(host);
+        List<LoginCredential> creds = credentials(host);
+        if (creds.isEmpty()) {
+            throw new IllegalStateException("主机 " + host.getId() + " 未绑定 SSH 凭据，请先在主机资产配置身份");
+        }
         Exception lastErr = null;
-        for (SshCred cred : creds) {
+        for (LoginCredential cred : creds) {
             try {
                 var builder = com.chua.ssh.support.client.SshClient.builder()
                         .host(host.getServerHostAddress())
                         .port(host.getServerHostPort() != null ? host.getServerHostPort() : 22)
-                        .username(cred.username());
+                        .username(cred.username())
+                        .connectTimeout(connectTimeoutSeconds())
+                        .sessionTimeout(sessionTimeoutSeconds())
+                        .execTimeout(execTimeoutSeconds());
                 if (cred.privateKey() != null) {
                     java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ms-ssh-", ".pem");
                     java.nio.file.Files.writeString(tmp, cred.privateKey());
@@ -200,11 +254,18 @@ public class SshConnectionCache {
                     if (cred.password() != null && !cred.password().isBlank()) {
                         builder.password(cred.password());
                     }
-                } else {
-                    builder.password(cred.password() != null ? cred.password() : "lvzhou2011");
+                } else if (cred.password() != null && !cred.password().isBlank()) {
+                    builder.password(cred.password());
                 }
                 com.chua.ssh.support.client.SshClient ssh = builder.build();
                 ssh.connect();
+                if (c != null && c.ssh != null) {
+                    try {
+                        c.ssh.disconnect();
+                    } catch (Exception ignored) {
+                        // 旧会话已失效，断开失败不影响替换
+                    }
+                }
                 if (c == null) {
                     c = new CachedSession();
                     cache.put(key, c);
@@ -218,21 +279,36 @@ public class SshConnectionCache {
                 log.warn("SSH connect failed host={} user={}: {}", host.getId(), cred.username(), e.getMessage());
             }
         }
-        // fallback
-        var builder = com.chua.ssh.support.client.SshClient.builder()
-                .host(host.getServerHostAddress())
-                .port(host.getServerHostPort() != null ? host.getServerHostPort() : 22)
-                .username("ubuntu")
-                .password("lvzhou2011");
-        com.chua.ssh.support.client.SshClient ssh = builder.build();
-        ssh.connect();
-        if (c == null) {
-            c = new CachedSession();
-            cache.put(key, c);
+        throw new IllegalStateException("SSH 连接失败 host=" + host.getId() + " "
+                + host.getServerHostAddress() + ":" + (host.getServerHostPort() != null ? host.getServerHostPort() : 22)
+                + " 已尝试 " + creds.size() + " 组凭据"
+                + (lastErr == null ? "" : "，最后原因: " + describe(lastErr)), lastErr);
+    }
+
+    /**
+     * 取异常链上最里层的可读描述。
+     *
+     * <p>必须走到最里层：SSH 客户端把整条命令行塞进了最外层的 message（EncodedCommand 是上千字符
+     * 的 base64），真正的原因只在更内层的 cause 上。</p>
+     *
+     * @param e 原始异常
+     * @return 非空的原因文本，异常未带 message 时退回类名
+     */
+    private static String describe(Throwable e) {
+        String deepest = null;
+        Throwable last = e;
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            last = t;
+            String msg = t.getMessage();
+            if (msg != null && !msg.isBlank()) {
+                deepest = msg;
+            }
         }
-        c.ssh = ssh;
-        c.expireAt = System.currentTimeMillis() + TTL_MS;
-        return ssh;
+        if (deepest == null) {
+            return last.getClass().getSimpleName();
+        }
+        String oneLine = deepest.replaceAll("-EncodedCommand\\s+\\S+", "-EncodedCommand <base64>").replaceAll("\\r?\\n", " ");
+        return oneLine.length() <= 300 ? oneLine : oneLine.substring(0, 300) + "...";
     }
 
     /**
@@ -244,17 +320,22 @@ public class SshConnectionCache {
     public synchronized com.chua.ssh.support.client.SftpClient getSftp(MsServerHost host) {
         Object key = host.getId();
         CachedSession c = cache.computeIfAbsent(key, k -> new CachedSession());
-        if (c.sftp != null && c.sftp.getSession() != null && c.sftp.getSession().isOpen()) {
+        if (c.sftp != null && c.sftp.isOpen()) {
             c.expireAt = System.currentTimeMillis() + TTL_MS;
             return c.sftp;
         }
-        List<SshCred> creds = resolveCredentials(host);
-        for (SshCred cred : creds) {
+        List<LoginCredential> creds = credentials(host);
+        if (creds.isEmpty()) {
+            throw new IllegalStateException("主机 " + host.getId() + " 未绑定 SSH 凭据，请先在主机资产配置身份");
+        }
+        Exception lastErr = null;
+        for (LoginCredential cred : creds) {
             try {
                 var sftpBuilder = com.chua.ssh.support.client.SftpClient.builder()
                         .host(host.getServerHostAddress())
                         .port(host.getServerHostPort() != null ? host.getServerHostPort() : 22)
-                        .username(cred.username());
+                        .username(cred.username())
+                        .connectTimeout(connectTimeoutSeconds());
                 if (cred.privateKey() != null) {
                     java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ms-sftp-", ".pem");
                     java.nio.file.Files.writeString(tmp, cred.privateKey());
@@ -262,8 +343,8 @@ public class SshConnectionCache {
                     if (cred.password() != null && !cred.password().isBlank()) {
                         sftpBuilder.password(cred.password());
                     }
-                } else {
-                    sftpBuilder.password(cred.password() != null ? cred.password() : "lvzhou2011");
+                } else if (cred.password() != null && !cred.password().isBlank()) {
+                    sftpBuilder.password(cred.password());
                 }
                 com.chua.ssh.support.client.SftpClient sftp = sftpBuilder.build();
                 sftp.connect();
@@ -271,10 +352,133 @@ public class SshConnectionCache {
                 c.expireAt = System.currentTimeMillis() + TTL_MS;
                 return sftp;
             } catch (Exception e) {
+                lastErr = e;
                 log.warn("SFTP connect failed host={} user={}: {}", host.getId(), cred.username(), e.getMessage());
             }
         }
-        throw new RuntimeException("SFTP connect failed for host " + host.getId());
+        throw new IllegalStateException("SFTP 连接失败 host=" + host.getId() + " "
+                + host.getServerHostAddress() + ":" + (host.getServerHostPort() != null ? host.getServerHostPort() : 22)
+                + " 已尝试 " + creds.size() + " 组凭据"
+                + (lastErr == null ? "" : "，最后原因: " + describe(lastErr)), lastErr);
+    }
+
+    /**
+     * 在目标主机执行命令并返回结构化结果（退出码 + 标准输出 + 标准错误），会话失效时重连重试一次。
+     *
+     * <p>缓存的长连接可能变成僵尸态：MINA 的 {@code isConnected()} 仍为真，但打不开新通道，
+     * 每条命令都在十几毫秒内失败。这类失败必须换连接，否则会一直坏到进程重启。</p>
+     *
+     * <p>并发受 {@link #MAX_INFLIGHT_PER_HOST} 约束：同一条会话上并发通道一多，服务端会直接拆掉整条
+     * 连接（实测 192.168.200.18 八路并发即触发），此时正在写入的其它通道会一起收到
+     * {@code Write attempt on a closed session}；因此重连只允许拆自己用过的那条会话，见
+     * {@link #retireUsed}。</p>
+     *
+     * @param host 目标主机
+     * @param cmd  命令
+     * @return 执行结果
+     * @throws IllegalStateException 无法建连、排队超时或执行中断，避免以空输出冒充执行成功
+     */
+    public com.chua.ssh.support.client.SshClient.ExecResult execResult(MsServerHost host, String cmd) {
+        Semaphore gate = gate(host.getId());
+        boolean acquired;
+        try {
+            acquired = gate.tryAcquire(GATE_WAIT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("主机 " + host.getId() + " 等待执行槽位被中断", e);
+        }
+        if (!acquired) {
+            throw new IllegalStateException("主机 " + host.getId() + " 并发执行排队超过 " + GATE_WAIT_MS + "ms");
+        }
+        try {
+            return execWithReconnect(host, cmd, gate);
+        } finally {
+            gate.release();
+        }
+    }
+
+    /**
+     * 执行命令，最多两轮：首轮失败则丢弃本次用到的会话再重连一次。
+     *
+     * <p>「服务端只是拒开通道、会话还能用」的猜测已被实测推翻：拒开之后原地重试继续拒开，28 路并发
+     * 全部失败且永不自愈；换一条新连接则立刻恢复。拿不到退出码同理，说明通道中途被关掉，输出不可信。</p>
+     *
+     * @param host 目标主机
+     * @param cmd  命令
+     * @param gate 本主机已占用的执行槽位闸门
+     * @return 执行结果
+     */
+    private com.chua.ssh.support.client.SshClient.ExecResult execWithReconnect(MsServerHost host, String cmd,
+                                                                               Semaphore gate) {
+        Exception last = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            com.chua.ssh.support.client.SshClient ssh = getSsh(host);
+            try {
+                com.chua.ssh.support.client.SshClient.ExecResult r = ssh.exec().command(cmd).execute();
+                if (r.exitCode() != NO_EXIT_STATUS || attempt == 2) {
+                    return r;
+                }
+                last = new IllegalStateException("未取到退出码，通道在执行中被关闭");
+            } catch (Exception e) {
+                last = e;
+            }
+            log.warn("SSH exec 第 {} 次失败 host={}，丢弃会话重连: {}", attempt, host.getId(), describe(last));
+            retireUsed(host, gate, ssh);
+        }
+        throw new IllegalStateException("主机 " + host.getId() + " 命令执行失败: " + describe(last), last);
+    }
+
+    /**
+     * 丢弃本次失败所用的会话，且尽量不误伤同主机其它在途命令。
+     *
+     * <p>两级保护：一是身份比对，缓存里已被别的线程换成新会话时直接返回，否则重试风暴会把刚建好的连接
+     * 再拆一遍；二是先申请走该主机剩余的全部槽位，拿到即独占，此时关连接没人正在用。等槽超时才退化为
+     * 直接丢弃——本条连接大概率已经坏了，留给它继续被使用只会让更多命令失败。</p>
+     *
+     * @param host 目标主机
+     * @param gate 本主机已占用的执行槽位闸门（本线程持 1 个）
+     * @param used 本次执行实际使用的会话
+     */
+    private void retireUsed(MsServerHost host, Semaphore gate, com.chua.ssh.support.client.SshClient used) {
+        int spare = MAX_INFLIGHT_PER_HOST - 1;
+        boolean drained = false;
+        try {
+            drained = gate.tryAcquire(spare, DRAIN_WAIT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        try {
+            closeIfSame(host, used);
+        } finally {
+            if (drained) {
+                gate.release(spare);
+            }
+        }
+    }
+
+    /**
+     * 仅当缓存里的会话就是 {@code used} 时才移除并关闭。
+     *
+     * @param host 目标主机
+     * @param used 待丢弃的会话
+     */
+    private synchronized void closeIfSame(MsServerHost host, com.chua.ssh.support.client.SshClient used) {
+        CachedSession c = cache.get(host.getId());
+        if (c == null || c.ssh != used) {
+            return;
+        }
+        cache.remove(host.getId(), c);
+        closeQuietly(c);
+    }
+
+    /**
+     * 取（或新建）主机的执行槽位闸门。
+     *
+     * @param key 主机 ID
+     * @return 该主机的信号量
+     */
+    private static Semaphore gate(Object key) {
+        return GATES.computeIfAbsent(key, k -> new Semaphore(MAX_INFLIGHT_PER_HOST));
     }
 
     /**
@@ -282,17 +486,24 @@ public class SshConnectionCache {
      *
      * @param host      目标主机
      * @param cmd       命令
-     * @param timeoutMs 超时时间（毫秒）
-     * @return 标准输出（已 trim）；执行失败返回空字符串
+     * @param timeoutMs 预留的超时参数，当前由会话级超时兜底
+     * @return 标准输出（已 trim）；命令无输出时为空字符串
+     * @throws IllegalStateException 无法建连或执行中断，避免以空输出冒充执行成功
      */
     public String exec(MsServerHost host, String cmd, long timeoutMs) {
-        try {
-            com.chua.ssh.support.client.SshClient ssh = getSsh(host);
-            com.chua.ssh.support.client.SshClient.ExecResult r = ssh.exec().command(cmd).execute();
-            return r.stdout() != null ? r.stdout().trim() : "";
-        } catch (Exception e) {
-            log.error("SSH exec failed host={} cmd={}", host.getId(), cmd, e);
-            return "";
+        String out = execResult(host, cmd).stdout();
+        return out != null ? out.trim() : "";
+    }
+
+    /**
+     * 丢弃并静默关闭主机的缓存会话（SSH + SFTP），强制下次重建连接。
+     *
+     * @param host 目标主机
+     */
+    public synchronized void invalidate(MsServerHost host) {
+        CachedSession c = cache.remove(host.getId());
+        if (c != null) {
+            closeQuietly(c);
         }
     }
 

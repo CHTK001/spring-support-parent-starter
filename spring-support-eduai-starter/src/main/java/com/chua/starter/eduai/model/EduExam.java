@@ -3,9 +3,12 @@ package com.chua.starter.eduai.model;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import java.time.LocalDateTime;
 
 /**
@@ -15,8 +18,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_exam")
-public class EduExam {
+public class EduExam extends SysBase {
 
     /**
      * 考试标识
@@ -63,24 +67,11 @@ public class EduExam {
     private Integer examStatus;
 
     /**
-     * 创建时间
+     * 删除标记（0 正常 / 1 已删除），与生命周期列 exam_status 分开
      */
-    private LocalDateTime examCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime examUpdateTime;
-
-    /**
-     * 创建人
-     */
-    private String examCreateBy;
-
-    /**
-     * 更新人
-     */
-    private String examUpdateBy;
+    @TableField("exam_del_flag")
+    @TableLogic
+    private Integer examDelFlag;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

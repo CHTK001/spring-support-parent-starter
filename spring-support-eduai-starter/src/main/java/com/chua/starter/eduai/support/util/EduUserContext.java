@@ -1,7 +1,5 @@
 package com.chua.starter.eduai.support.util;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
@@ -35,6 +33,38 @@ public final class EduUserContext {
      * 无身份时使用的永假归属值（保证查询 fail-closed，不泄漏数据）
      */
     private static final String DENY_ALL_OWNER = "__anonymous__";
+
+    /**
+     * 归属隔离参数三元组：管理员返回 null 谓词（不过滤），非管理员返回 用户ID，无身份返回永假值。
+     *
+     * @param userId         用户ID（归属查询绑定值），管理员为 null，无身份为永假值
+     * @param ownerPredicate 归属谓词：null 表示管理员放行（不过滤），否则绑定该值过滤（本人或系统数据）
+     */
+    public record OwnerScope(String userId, String ownerPredicate) {
+    }
+
+    /**
+     * 当前身份的归属隔离参数三元组。
+     *
+     * <p>管理员返回 {@code (null, null)}：ownerPredicate 为空，XML 侧不做归属过滤，可见全部数据；
+     * 普通用户返回 {@code (userId, userId)}：ownerPredicate 绑定本人用户ID，
+     * XML 侧追加 {@code (owner IS NULL OR owner = #{ownerPredicate})} 谓词，
+     * 即本人与系统预置（归属为空）数据可见；
+     * 无身份返回 {@code (DENY_ALL_OWNER, DENY_ALL_OWNER)}：ownerPredicate 绑定永假值，
+     * 查询 fail-closed，不泄漏任何数据。</p>
+     *
+     * @return 归属隔离参数三元组：{@code (userId 绑定值, ownerPredicate XML 谓词值)}
+     */
+    public static OwnerScope ownerScope() {
+        if (isAdmin()) {
+            return new OwnerScope(null, null);
+        }
+        String userId = currentUserId();
+        if (userId == null) {
+            return new OwnerScope(DENY_ALL_OWNER, DENY_ALL_OWNER);
+        }
+        return new OwnerScope(userId, userId);
+    }
 
     private EduUserContext() {
     }
@@ -111,25 +141,6 @@ public final class EduUserContext {
         }
         Set<String> roles = resume.getRoles();
         return AuthConstant.isSuperAdmin(roles) || AuthConstant.isAdmin(roles);
-    }
-
-    /**
-     * 为查询条件追加归属隔离谓词：非管理员只见自己的数据（归属为空的行为系统预置数据，所有人可见）。
-     *
-     * @param wrapper     查询条件
-     * @param ownerColumn 实体的归属字段 getter 引用
-     * @param <T>         实体类型
-     */
-    public static <T> void scopeOwned(LambdaQueryWrapper<T> wrapper, SFunction<T, String> ownerColumn) {
-        if (isAdmin()) {
-            return;
-        }
-        String userId = currentUserId();
-        if (userId == null) {
-            wrapper.eq(ownerColumn, DENY_ALL_OWNER);
-            return;
-        }
-        wrapper.and(w -> w.eq(ownerColumn, userId).or().isNull(ownerColumn));
     }
 
     /**

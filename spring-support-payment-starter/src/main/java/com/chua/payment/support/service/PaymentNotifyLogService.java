@@ -17,9 +17,8 @@ public interface PaymentNotifyLogService {
                            String requestBody);
 
     /**
-     * 饰面。
+     * 标记通知日志处理完成。
      * @param dto dto
      */
     void finish(FinishNotifyLogDTO dto);
 }
-

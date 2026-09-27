@@ -19,7 +19,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * 钱包限额服务实现，校验充值/转账/提现等操作是否超出商户额度限制。
+ * 钱包限额服务实现，校验充值、转账、提现操作是否超出商户设置限额。
  *
  * @author CH
  * @since 4.0.0.50
@@ -29,22 +29,22 @@ import java.util.List;
 public class WalletLimitServiceImpl implements WalletLimitService {
 
     /**
-     * 限制映射器
-    */
+     * 限额配置映射器
+     */
     private final MerchantWalletLimitMapper limitMapper;
     /**
-     * Accountmapper
-    */
+     * 钱包账户映射器
+     */
     private final WalletAccountMapper accountMapper;
     /**
-     * 日志映射器
-    */
+     * 钱包账户日志映射器
+     */
     private final WalletAccountLogMapper logMapper;
 
     @Override
     /**
-     * 获取限制
-    */
+     * 获取商户钱包限额配置
+     */
     public MerchantWalletLimit getLimit(Long merchantId) {
         if (merchantId == null) {
             return null;
@@ -56,15 +56,10 @@ public class WalletLimitServiceImpl implements WalletLimitService {
 
     @Override
     /**
-     * 保存或更新
-    */
+     * 保存或更新限额配置
+     */
     public void saveOrUpdate(MerchantWalletLimit limit) {
         if (limit == null || limit.getMerchantId() == null) {
-            /**
-             * 薪酬异常。
-             * @param "限额配置不能为空" "限额配置不能为空"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("限额配置不能为空");
         }
         MerchantWalletLimit existing = getLimit(limit.getMerchantId());
@@ -84,8 +79,8 @@ public class WalletLimitServiceImpl implements WalletLimitService {
 
     @Override
     /**
-     * 校验recharge限制
-    */
+     * 校验充值限额
+     */
     public void validateRechargeLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -93,31 +88,21 @@ public class WalletLimitServiceImpl implements WalletLimitService {
         }
 
         if (limit.getSingleRechargeLimit() != null && amount.compareTo(limit.getSingleRechargeLimit()) > 0) {
-            /**
-             * 薪酬异常。
-             * @param limit.getSingleRechargeLimit( 限制.获取单个rechargelimit(
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("充值金额超过单笔限额: " + limit.getSingleRechargeLimit());
         }
 
         if (limit.getDailyRechargeLimit() != null) {
             BigDecimal todayTotal = getTodayAmount(merchantId, userId, "RECHARGE");
             if (todayTotal.add(amount).compareTo(limit.getDailyRechargeLimit()) > 0) {
-                /**
-                 * 薪酬异常。
-                 * @param limit.getDailyRechargeLimit( 限制.获取dailyrecharge限制(
-                 * @return 薪酬异常的结果
-                 */
-                throw new PaymentException("充值金额超过日累计限额: " + limit.getDailyRechargeLimit());
+                throw new PaymentException("充值金额超过每日累计限额: " + limit.getDailyRechargeLimit());
             }
         }
     }
 
     @Override
     /**
-     * 校验withdraw限制
-    */
+     * 校验提现限额
+     */
     public void validateWithdrawLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -125,31 +110,21 @@ public class WalletLimitServiceImpl implements WalletLimitService {
         }
 
         if (limit.getSingleWithdrawLimit() != null && amount.compareTo(limit.getSingleWithdrawLimit()) > 0) {
-            /**
-             * 薪酬异常。
-             * @param limit.getSingleWithdrawLimit( 限制.获取单个withdrawlimit(
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("提现金额超过单笔限额: " + limit.getSingleWithdrawLimit());
         }
 
         if (limit.getDailyWithdrawLimit() != null) {
             BigDecimal todayTotal = getTodayAmount(merchantId, userId, "WITHDRAW");
             if (todayTotal.add(amount).compareTo(limit.getDailyWithdrawLimit()) > 0) {
-                /**
-                 * 薪酬异常。
-                 * @param limit.getDailyWithdrawLimit( 限制.获取dailywithdraw限制(
-                 * @return 薪酬异常的结果
-                 */
-                throw new PaymentException("提现金额超过日累计限额: " + limit.getDailyWithdrawLimit());
+                throw new PaymentException("提现金额超过每日累计限额: " + limit.getDailyWithdrawLimit());
             }
         }
     }
 
     @Override
     /**
-     * 校验调动限制
-    */
+     * 校验转账限额
+     */
     public void validateTransferLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -157,31 +132,21 @@ public class WalletLimitServiceImpl implements WalletLimitService {
         }
 
         if (limit.getSingleTransferLimit() != null && amount.compareTo(limit.getSingleTransferLimit()) > 0) {
-            /**
-             * 薪酬异常。
-             * @param limit.getSingleTransferLimit( 限制.获取单个调动限制(
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("转账金额超过单笔限额: " + limit.getSingleTransferLimit());
         }
 
         if (limit.getDailyTransferLimit() != null) {
             BigDecimal todayTotal = getTodayAmount(merchantId, userId, "TRANSFER_OUT");
             if (todayTotal.add(amount).compareTo(limit.getDailyTransferLimit()) > 0) {
-                /**
-                 * 薪酬异常。
-                 * @param limit.getDailyTransferLimit( 限制.getdaily调动限制(
-                 * @return 薪酬异常的结果
-                 */
-                throw new PaymentException("转账金额超过日累计限额: " + limit.getDailyTransferLimit());
+                throw new PaymentException("转账金额超过每日累计限额: " + limit.getDailyTransferLimit());
             }
         }
     }
 
     @Override
     /**
-     * 校验balance限制
-    */
+     * 校验余额上限
+     */
     public void validateBalanceLimit(Long merchantId, Long userId, BigDecimal currentBalance, BigDecimal addAmount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null || limit.getBalanceLimit() == null) {
@@ -190,22 +155,17 @@ public class WalletLimitServiceImpl implements WalletLimitService {
 
         BigDecimal afterBalance = currentBalance.add(addAmount);
         if (afterBalance.compareTo(limit.getBalanceLimit()) > 0) {
-            /**
-             * 薪酬异常。
-             * @param limit.getBalanceLimit( 限制.获取balance限制(
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("余额将超过上限: " + limit.getBalanceLimit());
         }
     }
 
     /**
-     * 获取todayamount
+     * 统计用户当日指定业务类型的累计变动金额
      *
-     * @param merchantId merchantid
+     * @param merchantId 商户标识
      * @param userId 用户标识
-     * @param bizType biz类型
-     * @return 获取todayamount的结果
+     * @param bizType 业务类型
+     * @return 当日累计金额
      */
     private BigDecimal getTodayAmount(Long merchantId, Long userId, String bizType) {
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
@@ -222,4 +182,3 @@ public class WalletLimitServiceImpl implements WalletLimitService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
-

@@ -13,7 +13,7 @@
     - 支持 SPI 扩展机制 (@Spi 注解 + META-INF/extensions/<接口名> 注册)
     - 支持多存储后端 + 多 Bucket 路由
     - 支持文件上传、下载、删除、列表等操作
-    - 支持分片上传 (FileChunkUploadController)
+    - 内置 HTTP 文件服务器（storage-server，随应用启动，支持预览/下载与私有桶 OAuth 鉴权）
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -38,11 +38,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- 基础工具包，包含 FileStorage 接口 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-filestorage-starter</artifactId>

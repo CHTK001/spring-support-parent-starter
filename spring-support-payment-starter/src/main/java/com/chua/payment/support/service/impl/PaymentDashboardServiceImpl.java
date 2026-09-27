@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 支付首页业务统计服务实现，提供订单、退款、商户等维度的数据汇总。
+ * 支付首页业务统计服务实现，提供订单、交易、商户等维度的数据汇总。
  *
  * @author CH
  * @since 4.0.0.50
@@ -35,55 +35,55 @@ import java.util.Objects;
 public class PaymentDashboardServiceImpl implements PaymentDashboardService {
 
     /**
-     * Paid_订单_状态
-    */
+     * 已支付订单状态集合（计入消费金额）
+     */
     private static final List<String> PAID_ORDER_STATUSES = List.of("PAID", "COMPLETED", "REFUNDING", "REFUNDED");
     /**
-     * 活跃_merchant_状态
-    */
+     * 活跃商户状态
+     */
     private static final int ACTIVE_MERCHANT_STATUS = 1;
     /**
-     * 退税_状态
-    */
+     * 退款完成状态
+     */
     private static final String REFUNDED_STATUS = "REFUNDED";
     /**
-     * 成功_状态
-    */
+     * 回调处理成功状态
+     */
     private static final String SUCCESS_STATUS = "SUCCESS";
 
     /**
-     * Merchantmapper
-    */
+     * 商户映射器
+     */
     private final MerchantMapper merchantMapper;
     /**
-     * Merchant通道映射器
-    */
+     * 商户渠道映射器
+     */
     private final MerchantChannelMapper merchantChannelMapper;
     /**
-     * 薪酬排序映射器
-    */
+     * 支付订单映射器
+     */
     private final PaymentOrderMapper paymentOrderMapper;
     /**
-     * Paymentrefund排序映射器
-    */
+     * 支付退款单映射器
+     */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
     /**
-     * Paymentnotify日志映射器
-    */
+     * 支付通知日志映射器
+     */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
     /**
-     * Transactionrecordmapper
-    */
+     * 交易流水映射器
+     */
     private final TransactionRecordMapper transactionRecordMapper;
 
     /**
-     * 创建 薪酬dashboard服务impl 实例
-     * @param merchantMapper merchant映射器
-     * @param merchantChannelMapper merchant通道映射器
-     * @param paymentOrderMapper 薪酬订单映射器
-     * @param paymentRefundOrderMapper 薪酬退税订单映射器
-     * @param paymentNotifyLogMapper 薪酬通知日志映射器
-     * @param transactionRecordMapper transactionrecord映射器
+     * 构造支付首页业务统计服务。
+     * @param merchantMapper 商户映射器
+     * @param merchantChannelMapper 商户渠道映射器
+     * @param paymentOrderMapper 支付订单映射器
+     * @param paymentRefundOrderMapper 支付退款单映射器
+     * @param paymentNotifyLogMapper 支付通知日志映射器
+     * @param transactionRecordMapper 交易流水映射器
      */
     public PaymentDashboardServiceImpl(MerchantMapper merchantMapper,
                                        MerchantChannelMapper merchantChannelMapper,
@@ -101,8 +101,8 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
 
     @Override
     /**
-     * Summary
-    */
+     * 查询支付首页汇总数据
+     */
     public PaymentDashboardSummaryVO summary(LocalDate startDate, LocalDate endDate) {
         LocalDate normalizedEndDate = endDate != null ? endDate : LocalDate.now();
         LocalDate normalizedStartDate = startDate != null ? startDate : normalizedEndDate;
@@ -120,35 +120,35 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setEndTime(endTime);
 
         /**
-         * fillmerchant指标。
-         * @param summary summary
+         * 填充商户维度指标
+         * @param summary 汇总对象
          */
         fillMerchantMetrics(summary);
         /**
-         * fill订单指标。
-         * @param summary summary
-         * @param startTime 启动时间
+         * 填充订单维度指标
+         * @param summary 汇总对象
+         * @param startTime 起始时间
          * @param endTime 结束时间
          */
         fillOrderMetrics(summary, startTime, endTime);
         /**
-         * fill退税指标。
-         * @param summary summary
-         * @param startTime 启动时间
+         * 填充退款维度指标
+         * @param summary 汇总对象
+         * @param startTime 起始时间
          * @param endTime 结束时间
          */
         fillRefundMetrics(summary, startTime, endTime);
         /**
-         * filltransaction指标。
-         * @param summary summary
-         * @param startTime 启动时间
+         * 填充流水维度指标
+         * @param summary 汇总对象
+         * @param startTime 起始时间
          * @param endTime 结束时间
          */
         fillTransactionMetrics(summary, startTime, endTime);
         /**
-         * fill通知指标。
-         * @param summary summary
-         * @param startTime 启动时间
+         * 填充回调通知维度指标
+         * @param summary 汇总对象
+         * @param startTime 起始时间
          * @param endTime 结束时间
          */
         fillNotifyMetrics(summary, startTime, endTime);
@@ -156,9 +156,9 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * fillmerchant指标
+     * 填充商户维度指标
      *
-     * @param summary summary
+     * @param summary 汇总对象
      */
     private void fillMerchantMetrics(PaymentDashboardSummaryVO summary) {
         summary.setMerchantTotal(merchantMapper.selectCount(new LambdaQueryWrapper<>()));
@@ -172,10 +172,10 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * fill订单指标
+     * 填充订单维度指标
      *
-     * @param summary summary
-     * @param startTime 启动时间
+     * @param summary 汇总对象
+     * @param startTime 起始时间
      * @param endTime 结束时间
      */
     private void fillOrderMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
@@ -192,10 +192,10 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * fill退税指标
+     * 填充退款维度指标
      *
-     * @param summary summary
-     * @param startTime 启动时间
+     * @param summary 汇总对象
+     * @param startTime 起始时间
      * @param endTime 结束时间
      */
     private void fillRefundMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
@@ -212,10 +212,10 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * filltransaction指标
+     * 填充流水维度指标
      *
-     * @param summary summary
-     * @param startTime 启动时间
+     * @param summary 汇总对象
+     * @param startTime 起始时间
      * @param endTime 结束时间
      */
     private void fillTransactionMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
@@ -226,10 +226,10 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * Fill通知指标
+     * 填充回调通知维度指标
      *
-     * @param summary summary
-     * @param startTime 启动时间
+     * @param summary 汇总对象
+     * @param startTime 起始时间
      * @param endTime 结束时间
      */
     private void fillNotifyMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
@@ -255,10 +255,10 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * 处理持续时间ms
+     * 计算回调处理耗时（毫秒）
      *
-     * @param item item
-     * @return 处理持续时间ms的结果
+     * @param item 回调通知日志
+     * @return 处理耗时毫秒数，时间不完整时返回 null
      */
     private Long processDurationMs(PaymentNotifyLog item) {
         if (item.getReceivedTime() == null || item.getProcessedTime() == null) {
@@ -268,11 +268,11 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     /**
-     * 第一个non空
+     * 返回第一个非空金额
      *
-     * @param first 第一个
-     * @param second second
-     * @return 第一个non空的结果
+     * @param first 第一个值
+     * @param second 第二个值
+     * @return 第一个非空值，均为空时返回零
      */
     private BigDecimal firstNonNull(BigDecimal first, BigDecimal second) {
         if (first != null) {
@@ -281,4 +281,3 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         return second != null ? second : BigDecimal.ZERO;
     }
 }
-

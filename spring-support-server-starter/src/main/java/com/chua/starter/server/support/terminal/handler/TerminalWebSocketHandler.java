@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.terminal.handler;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.net.NetUtils;
 import com.chua.starter.server.support.config.ServerProperties;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsTerminalSession;
@@ -9,6 +10,7 @@ import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.terminal.GuacdSession;
 import com.chua.starter.server.support.terminal.GuacdSessionRegistry;
 import com.chua.starter.server.support.terminal.GuacdTunnel;
+import com.chua.starter.server.support.terminal.WebSocketSessions;
 import com.chua.starter.server.support.terminal.GuacdConnectionFactory;
 import com.chua.starter.server.support.service.RemoteTokenService;
 import com.chua.starter.server.support.service.ServerHostService;
@@ -97,7 +99,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         String protocolName = params.getOrDefault("protocol", "ssh");
         Long identityId = parseLong(params.get("identityId"));
         Integer targetPort = parseInteger(params.get("targetPort"));
-        String userName = params.getOrDefault("user", "anonymous");
+        String operator = params.get("user");
 
  // ---- 令牌 模式：连接参数由短令牌反解（服务器信息不出后端，免查库） ----
         if (token != null && !token.isBlank()) {
@@ -131,11 +133,15 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             }
             // token 模式无 hostId 上下文，审计记录以 host 地址标记（hostId=空）
             MsTerminalSession tokenRecord = terminalSessionService.openRecord(
-                    null, spec.host(), tokenProtocol.name(), userName, resolveClientIp(wsSession));
+                    null, spec.host(), tokenProtocol.name(),
+                    WebSocketSessions.firstNonBlank(operator, spec.username()), resolveClientIp(wsSession));
             var tokenSession = new GuacdSession(tunnelId, wsSession, tokenTunnel, null,
                     tokenRecord == null ? null : tokenRecord.getId(), tokenProtocolName, null);
             Thread tokenReader = new Thread(() -> pumpGuacdToBrowser(tokenSession), "guac-reader-" + tunnelId);
             tokenReader.setDaemon(true);
+            tokenSession.setReaderThread(tokenReader);
+            tokenSession.setLastActiveTime(LocalDateTime.now());
+            sessionRegistry.register(tokenSession);
             tokenReader.start();
             log.info("[terminal] 会话建立(token) tunnelId={} host={} protocol={}", tunnelId, spec.host(), tokenProtocolName);
             return;
@@ -172,8 +178,9 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // 解析凭据（含解密）
-        ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId);
+        // 解析凭据（含解密）：按本次实际协议取凭据，避免主机配成 VNC 后 SSH/RDP 误拿 VNC 口令
+        ReturnResult<SshCredential> resolved =
+                serverHostService.resolveCredential(hostId, identityId, protocolType.name());
         if (!resolved.isOk()) {
             /**
              * reject。
@@ -194,13 +201,25 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        MsServerHost connectHost = hostResult.getData();
+        boolean isLocal = connectHost.getServerHostCollectMode() != null
+                && "LOCAL".equalsIgnoreCase(connectHost.getServerHostCollectMode().trim());
+        // 本机远控仅支持 VNC（本机对自身 SSH/RDP 无意义）
+        if (isLocal && protocolType != ProtocolType.VNC) {
+            reject(wsSession, "本机远控仅支持 VNC 协议");
+            return;
+        }
+        // 本机地址去回环：远程 guacd 收到 127.0.0.1 会回连 guacd 自身，强制物理网卡 IP
+        String connectAddress = isLocal
+                ? NetUtils.getPreferredLocalIp() : connectHost.getServerHostAddress();
+
         // 与 guacd 握手（阻塞操作，失败即拒绝连接）
         String tunnelId = java.util.UUID.randomUUID().toString();
         GuacdTunnel tunnel;
         try {
             tunnel = connectionFactory.create(protocolType,
-                    hostResult.getData().getServerHostAddress(),
-                    resolveTargetPort(hostResult.getData(), protocolType, targetPort),
+                    connectAddress,
+                    resolveTargetPort(connectHost, protocolType, targetPort),
                     resolved.getData(), tunnelId);
         } catch (RuntimeException e) {
             log.warn("[terminal] guacd 握手失败 hostId={} protocol={}: {}", hostId, protocolName, e.getMessage());
@@ -214,6 +233,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         }
 
         // 写入审计记录
+        String userName = WebSocketSessions.firstNonBlank(operator, resolved.getData().username());
         MsTerminalSession record = terminalSessionService.openRecord(
                 hostId, hostResult.getData().getServerHostName(),
                 protocolType.name(), userName, resolveClientIp(wsSession));
@@ -257,8 +277,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             session.setLastActiveTime(LocalDateTime.now());
         } catch (GuacamoleException e) {
             log.warn("[terminal] 指令写入 guacd 失败 tunnelId={}: {}", session.getTunnelId(), e.getMessage());
-            sessionRegistry.close(session, "指令写入失败");
-            if (session.getSessionId() != null) {
+            if (sessionRegistry.close(session, "指令写入失败") && session.getSessionId() != null) {
                 terminalSessionService.closeRecord(session.getSessionId(), "指令写入失败");
             }
         }
@@ -274,8 +293,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession wsSession, CloseStatus status) {
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
         if (session != null) {
-            sessionRegistry.close(session, "浏览器断开: " + status);
-            if (session.getSessionId() != null) {
+            if (sessionRegistry.close(session, "浏览器断开: " + status) && session.getSessionId() != null) {
                 terminalSessionService.closeRecord(session.getSessionId(), "浏览器断开");
             }
         }
@@ -293,8 +311,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 wsSession.getId(), exception.toString(), exception);
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
         if (session != null) {
-            sessionRegistry.close(session, "传输异常");
-            if (session.getSessionId() != null) {
+            if (sessionRegistry.close(session, "传输异常") && session.getSessionId() != null) {
                 terminalSessionService.closeRecord(session.getSessionId(), "传输异常");
             }
         }
@@ -328,8 +345,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             log.info("[terminal] guacd 读通道结束 tunnelId={}: {}", session.getTunnelId(), e.getMessage());
         }
  // 关闭() 内部幂等：先标记 关闭，再关 Socket / WS / 移除注册表
-        sessionRegistry.close(session, "guacd 关闭或读取结束");
-        if (session.getSessionId() != null) {
+        if (sessionRegistry.close(session, "guacd 关闭或读取结束") && session.getSessionId() != null) {
             terminalSessionService.closeRecord(session.getSessionId(), "远端关闭");
         }
     }
@@ -343,8 +359,8 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     private void reject(WebSocketSession wsSession, String reason) {
         log.warn("[terminal] 拒绝终端连接 sessionId={} reason={}", wsSession.getId(), reason);
         try {
-            wsSession.sendMessage(new TextMessage("5.error;" + reason.length() + "."
-                    + reason + ";"));
+            // guacamole 语义：error 指令带「消息 + 状态码」两个参数，客户端据此回报失败原因
+            wsSession.sendMessage(new TextMessage("5.error," + reason.length() + "." + reason + ",3.512;"));
         } catch (IOException ignored) {
             // 发送失败不影响关闭动作
         }

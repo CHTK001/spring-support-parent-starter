@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 订单状态机服务实现，基于Spring Statemachine管理订单生命周期状态流转。
+ * 订单状态机服务实现，基于 Spring Statemachine 管理订单生命周期状态流转。
  *
  * @author CH
  * @since 4.0.0.50
@@ -28,33 +28,33 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
-    private final StateMachineFactory<OrderState, OrderEvent> stateMachineFactory; // 状态machine工厂
+    private final StateMachineFactory<OrderState, OrderEvent> stateMachineFactory; // 状态机工厂
     /**
-     * 薪酬排序映射器
-    */
+     * 支付订单映射器
+     */
     private final PaymentOrderMapper paymentOrderMapper;
     /**
-     * 排序状态日志服务
-    */
+     * 订单状态日志服务
+     */
     private final OrderStateLogService orderStateLogService;
 
     @Override
     /**
-     * 创建状态machine
-    */
+     * 创建订单状态机
+     */
     public void createStateMachine(Long orderId) {
-        log.debug("订单状态机初始化完成: orderId={}", orderId);
+        log.debug("订单状态机初始化完成 orderId={}", orderId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 发送事件
+     * 发送状态机事件
      *
      * @param orderId 订单标识
      * @param event 事件
-     * @param operator 操作符
-     * @return 发送事件的结果
+     * @param operator 操作人
+     * @return 事件发送与状态落库的流转结果
      */
     public OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
@@ -80,7 +80,7 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
             stateMachine.stop();
             PaymentOrder latest = paymentOrderMapper.selectById(orderId);
             if (isDuplicateTargetState(event, latest)) {
-                log.info("订单状态已由其他节点满足事件结果: orderId={}, event={}, state={}", orderId, event, latest.getStatus());
+                log.info("订单状态已由其他节点满足事件结果 orderId={}, event={}, state={}", orderId, event, latest.getStatus());
                 return OrderTransitionResult.DUPLICATED;
             }
             log.warn("订单状态机拒绝事件: orderId={}, state={}, event={}", orderId, fromState, event);
@@ -97,10 +97,10 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
             if (updated == 0) {
                 PaymentOrder latest = paymentOrderMapper.selectById(orderId);
                 if (latest != null && toState.name().equals(latest.getStatus())) {
-                    log.info("订单状态已由其他节点完成转换: orderId={}, event={}, target={}", orderId, event, toState);
+                    log.info("订单状态已由其他节点完成流转 orderId={}, event={}, target={}", orderId, event, toState);
                     return OrderTransitionResult.DUPLICATED;
                 }
-                log.warn("订单状态并发更新失败: orderId={}, fromState={}, event={}", orderId, fromState, event);
+                log.warn("订单状态并发更新失败 orderId={}, fromState={}, event={}", orderId, fromState, event);
                 return OrderTransitionResult.REJECTED;
             }
 
@@ -115,19 +115,19 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
     @Override
     /**
-     * 获取当前状态
-    */
+     * 获取订单当前状态
+     */
     public OrderState getCurrentState(Long orderId) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         return order != null ? OrderState.valueOf(order.getStatus()) : null;
     }
 
     /**
-     * 是否重复Target状态
+     * 是否已达到事件对应的目标状态
      *
      * @param event 事件
      * @param order 订单
-     * @return 是否重复Target状态的结果
+     * @return 是否已达到目标状态
      */
     private boolean isDuplicateTargetState(OrderEvent event, PaymentOrder order) {
         if (order == null) {
@@ -154,4 +154,3 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
         };
     }
 }
-

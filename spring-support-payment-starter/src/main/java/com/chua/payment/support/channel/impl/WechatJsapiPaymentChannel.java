@@ -32,32 +32,27 @@ import java.time.format.DateTimeFormatter;
 public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
     /**
-     * 提供者gateway注册表
-    */
+     * 提供方 gateway 注册表
+     */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     /**
-     * 创建 wechatjsapi薪酬通道 实例
-     * @param merchantChannelService merchant通道服务
+     * 创建微信 JSAPI 支付通道实例
+     * @param merchantChannelService merchant 通道服务
      * @param objectMapper 对象映射器
-     * @param providerGatewayRegistry 提供者gatewayregistry
+     * @param providerGatewayRegistry 提供方 gateway 注册表
      */
     public WechatJsapiPaymentChannel(MerchantChannelService merchantChannelService,
                                      ObjectMapper objectMapper,
                                      PaymentProviderGatewayRegistry providerGatewayRegistry) {
-        /**
-         * 父。
-         * @param merchantChannelService merchant通道服务
-         * @param objectMapper 对象映射器
-         */
         super(merchantChannelService, objectMapper);
         this.providerGatewayRegistry = providerGatewayRegistry;
     }
 
     @Override
     /**
-     * 支持
-    */
+     * 是否支持该通道
+     */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && "JSAPI".equalsIgnoreCase(channelSubType);
@@ -65,159 +60,156 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
 
     @Override
     /**
-     * 薪酬
-    */
+     * 发起支付
+     */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (!StringUtils.hasText(request.getPayerOpenId())) {
-            /**
-             * 薪酬异常。
-             * @param payerOpenId" 薪酬打开标识"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("微信 JSAPI 支付必须提供 payerOpenId");
         }
 
         TencentWechatPayResponse response = gateway(providerSpi(channel, null)).jsapiPay(buildProperties(channel), buildPayRequest(channel, request));
 
         PaymentResult result = new PaymentResult();
-        result.setSuccess(response.isSuccess());
+        result.setSuccess(response.success());
         result.setLaunchType("JSAPI");
-        result.setSdkParams(response.getSdkParams());
+        result.setSdkParams(response.sdkParams());
         result.setStatus("PAYING");
-        result.setMessage(response.getMessage());
-        result.setRawResponse(response.getRawResponse());
+        result.setMessage(response.message());
+        result.setRawResponse(response.rawResponse());
         return result;
     }
 
     @Override
     /**
-     * 查询
-    */
+     * 查询支付结果
+     */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryJsapiOrder(buildProperties(channel), orderNo);
 
         PaymentResult result = new PaymentResult();
-        result.setSuccess(response.isSuccess());
-        result.setTradeNo(response.getTransactionId());
-        result.setPaidAmount(resolvePaidAmount(response.getPayerTotalAmountFen(), response.getTotalAmountFen()));
-        result.setStatus(normalizeTradeState(response.getTradeState()));
-        result.setMessage(response.getTradeStateDesc());
-        result.setRawResponse(response.getRawResponse());
+        result.setSuccess(response.success());
+        result.setTradeNo(response.transactionId());
+        result.setPaidAmount(resolvePaidAmount(response.payerTotalAmountFen(), response.totalAmountFen()));
+        result.setStatus(normalizeTradeState(response.tradeState()));
+        result.setMessage(response.tradeStateDesc());
+        result.setRawResponse(response.rawResponse());
         return result;
     }
 
     @Override
     /**
-     * 关闭
-    */
+     * 关闭订单
+     */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeJsapiOrder(buildProperties(channel), orderNo);
     }
 
     @Override
     /**
-     * 退税
-    */
+     * 申请退款
+     */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         TencentWechatRefundResponse response = gateway(providerSpi(channel, null)).refund(buildProperties(channel), buildRefundRequest(channel, request));
 
         RefundResult result = new RefundResult();
-        result.setSuccess(response.isSuccess());
-        result.setRefundNo(response.getRefundNo());
-        result.setTradeNo(response.getRefundId());
-        result.setRefundAmount(fenToYuan(response.getRefundAmountFen()));
-        result.setStatus(normalizeRefundStatus(response.getRefundStatus()));
-        result.setMessage(response.getMessage());
-        result.setRawResponse(response.getRawResponse());
+        result.setSuccess(response.success());
+        result.setRefundNo(response.refundNo());
+        result.setTradeNo(response.refundId());
+        result.setRefundAmount(fenToYuan(response.refundAmountFen()));
+        result.setStatus(normalizeRefundStatus(response.refundStatus()));
+        result.setMessage(response.message());
+        result.setRawResponse(response.rawResponse());
         return result;
     }
 
     @Override
     /**
-     * 查询退税
-    */
+     * 查询退款结果
+     */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         TencentWechatRefundResponse response = gateway(providerSpi(channel, null)).queryRefund(buildProperties(channel), buildRefundRequest(channel, request));
 
         RefundResult result = new RefundResult();
-        result.setSuccess(response.isSuccess());
-        result.setRefundNo(response.getRefundNo());
-        result.setTradeNo(response.getRefundId());
-        result.setRefundAmount(fenToYuan(response.getRefundAmountFen()));
-        result.setStatus(normalizeRefundStatus(response.getRefundStatus()));
-        result.setMessage(response.getMessage());
-        result.setRawResponse(response.getRawResponse());
+        result.setSuccess(response.success());
+        result.setRefundNo(response.refundNo());
+        result.setTradeNo(response.refundId());
+        result.setRefundAmount(fenToYuan(response.refundAmountFen()));
+        result.setStatus(normalizeRefundStatus(response.refundStatus()));
+        result.setMessage(response.message());
+        result.setRawResponse(response.rawResponse());
         return result;
     }
 
     /**
-     * Gateway
+     * 获取微信网关
      *
-     * @return gateway的结果
+     * @return 微信网关
      */
     protected TencentWechatPayGateway gateway() {
         return providerGatewayRegistry.tencentWechatPayGateway();
     }
 
     /**
-     * Gateway
+     * 获取微信网关
      *
-     * @param extension 延伸
-     * @return gateway的结果
+     * @param extension 扩展名
+     * @return 微信网关
      */
     protected TencentWechatPayGateway gateway(String extension) {
         return providerGatewayRegistry.tencentWechatPayGateway(extension);
     }
 
     /**
-     * 构建薪酬请求
+     * 构建支付请求
      *
-     * @param channel 通道
-     * @param request 请求
-     * @return 构建薪酬请求的结果
+     * @param channel 通道配置
+     * @param request 请求参数
+     * @return 构建好的支付请求
      */
     protected TencentWechatPayRequest buildPayRequest(MerchantChannel channel, PaymentRequest request) {
-        TencentWechatPayRequest payRequest = new TencentWechatPayRequest();
-        payRequest.setOrderNo(request.getOrderNo());
-        payRequest.setAmountFen(yuanToFen(request.getAmount()));
-        payRequest.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
-        payRequest.setDescription(firstNonBlank(request.getSubject(), request.getOrderNo()));
-        payRequest.setNotifyUrl(request.getNotifyUrl());
-        payRequest.setExpireTime(formatExpireTime(request));
-        payRequest.setPayerOpenId(request.getPayerOpenId());
-        payRequest.setClientIp(firstNonBlank(request.getClientIp(), "127.0.0.1"));
-        payRequest.setDeviceId(request.getDeviceId());
-        payRequest.setAttach(request.getAttach());
-        payRequest.setH5Type(firstNonBlank(extText(channel, "h5Type"), "Wap"));
-        payRequest.setAppName(firstNonBlank(extText(channel, "appName"), "payment-console"));
-        payRequest.setAppUrl(firstNonBlank(request.getReturnUrl(), extText(channel, "appUrl")));
+        TencentWechatPayRequest payRequest = new TencentWechatPayRequest(
+                request.getOrderNo(),
+                yuanToFen(request.getAmount()),
+                firstNonBlank(request.getCurrency(), "CNY"),
+                firstNonBlank(request.getSubject(), request.getOrderNo()),
+                request.getNotifyUrl(),
+                formatExpireTime(request),
+                request.getPayerOpenId(),
+                firstNonBlank(request.getClientIp(), "127.0.0.1"),
+                request.getDeviceId(),
+                request.getAttach(),
+                firstNonBlank(extText(channel, "h5Type"), "Wap"),
+                firstNonBlank(extText(channel, "appName"), "payment-console"),
+                firstNonBlank(request.getReturnUrl(), extText(channel, "appUrl"))
+        );
         return payRequest;
     }
 
     /**
-     * 构建退税请求
+     * 构建退款请求
      *
-     * @param channel 通道
-     * @param request 请求
-     * @return 构建退税请求的结果
+     * @param channel 通道配置
+     * @param request 请求参数
+     * @return 构建好的退款请求
      */
     protected TencentWechatRefundRequest buildRefundRequest(MerchantChannel channel, RefundRequest request) {
-        TencentWechatRefundRequest refundRequest = new TencentWechatRefundRequest();
-        refundRequest.setOrderNo(request.getOrderNo());
-        refundRequest.setTradeNo(request.getTradeNo());
-        refundRequest.setRefundNo(request.getRefundNo());
-        refundRequest.setRefundAmountFen(yuanToFen(request.getRefundAmount()));
-        refundRequest.setTotalAmountFen(yuanToFen(request.getTotalAmount()));
-        refundRequest.setReason(request.getReason());
-        refundRequest.setNotifyUrl(firstNonBlank(extText(channel, "refundNotifyUrl"), request.getNotifyUrl(), channel.getNotifyUrl()));
+        TencentWechatRefundRequest refundRequest = new TencentWechatRefundRequest(
+                request.getOrderNo(),
+                request.getTradeNo(),
+                request.getRefundNo(),
+                yuanToFen(request.getRefundAmount()),
+                yuanToFen(request.getTotalAmount()),
+                request.getReason(),
+                firstNonBlank(extText(channel, "refundNotifyUrl"), request.getNotifyUrl(), channel.getNotifyUrl())
+        );
         return refundRequest;
     }
 
     /**
-     * 构建属性
+     * 构建微信支付属性
      *
-     * @param channel 通道
-     * @return 构建属性的结果
+     * @param channel 通道配置
+     * @return 构建好的微信支付属性
      */
     protected TencentWechatPayProperties buildProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
@@ -227,9 +219,8 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
         properties.setApiV3Key(requiredText(decryptValue(channel.getApiKey()), "微信 APIv3 Key 不能为空"));
         properties.setMerchantSerialNumber(requiredText(
                 /**
-                 * ext文本。
-                 * @param channel 通道
-                 * @param "merchantSerialNumber" "merchant串行数字"
+                 * ext 文本。
+                 * @param channel 通道配置
                  */
                 extText(channel, "merchantSerialNumber"),
                 "微信商户证书序列号不能为空，请在 extConfig 中提供 merchantSerialNumber"));
@@ -238,10 +229,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * normalize贸易状态
+     * 归一化交易状态
      *
-     * @param tradeState 贸易状态
-     * @return normalize贸易状态的结果
+     * @param tradeState 渠道交易状态
+     * @return 归一化后的交易状态
      */
     protected String normalizeTradeState(String tradeState) {
         if (!StringUtils.hasText(tradeState)) {
@@ -257,10 +248,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * normalize退税状态
+     * 归一化退款状态
      *
-     * @param refundStatus 退税状态
-     * @return normalize退税状态的结果
+     * @param refundStatus 渠道退款状态
+     * @return 归一化后的退款状态
      */
     protected String normalizeRefundStatus(String refundStatus) {
         if (!StringUtils.hasText(refundStatus)) {
@@ -275,10 +266,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * 格式化expire时间
+     * 格式化过期时间
      *
-     * @param request 请求
-     * @return 格式化expire时间的结果
+     * @param request 请求参数
+     * @return 格式化后的过期时间
      */
     protected String formatExpireTime(PaymentRequest request) {
         if (request.getExpireTime() == null) {
@@ -290,15 +281,14 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * 解析paidamount
+     * 解析实付金额
      *
-     * @param payerTotalAmountFen 薪酬totalamountfen
-     * @param totalAmountFen totalamountfen
-     * @return resolvePaidAmount的结果
+     * @param payerTotalAmountFen 渠道付款方实付金额(分)
+     * @param totalAmountFen 渠道订单总金额(分)
+     * @return 解析出的实付金额
      */
     protected BigDecimal resolvePaidAmount(Long payerTotalAmountFen, Long totalAmountFen) {
         Long amountFen = payerTotalAmountFen != null ? payerTotalAmountFen : totalAmountFen;
         return amountFen == null ? null : fenToYuan(amountFen);
     }
 }
-

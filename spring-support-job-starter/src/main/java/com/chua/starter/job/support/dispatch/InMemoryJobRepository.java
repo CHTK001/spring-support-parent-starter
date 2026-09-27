@@ -115,6 +115,24 @@ public class InMemoryJobRepository implements JobRepository {
             return false;
         }
         String jobKey = spec.getJobKey().trim();
+        // 任务键重命名（编辑时改键）：目标键未被占用才迁移
+        String originKey = spec.getOriginJobKey() == null ? null : spec.getOriginJobKey().trim();
+        if (originKey != null && !originKey.isEmpty() && !originKey.equals(jobKey)
+                && !table.containsKey(jobKey)) {
+            JobDefinition origin = table.remove(originKey);
+            JobSpec originSpec = specs.remove(originKey);
+            if (origin != null) {
+                origin.setName(jobKey);
+                if (origin.getJobName() == null || origin.getJobName().isBlank()) {
+                    origin.setJobName(jobKey);
+                }
+                table.put(jobKey, origin);
+            }
+            if (originSpec != null) {
+                originSpec.setJobKey(jobKey);
+                specs.put(jobKey, originSpec);
+            }
+        }
         JobDefinition definition = table.computeIfAbsent(jobKey, key -> {
             JobDefinition created = new JobDefinition();
             created.setName(key);
@@ -122,6 +140,18 @@ public class InMemoryJobRepository implements JobRepository {
         });
         definition.setDesc(spec.getDesc());
         definition.setJobName(blankToDefault(spec.getJobName(), jobKey));
+        definition.setFailRetry(spec.getFailRetry());
+        definition.setRetryIntervalSec(spec.getRetryInterval());
+        definition.setExecuteTimeoutSec(spec.getExecuteTimeout());
+        String glueType = spec.getGlueType() == null || spec.getGlueType().isBlank()
+                ? JobSpec.GLUE_BEAN : spec.getGlueType().trim();
+        definition.setGlueType(glueType);
+        definition.setGlueSource(JobSpec.GLUE_BEAN.equals(glueType) ? null : spec.getGlueSource());
+        definition.setGlueUpdatetimeMs(JobSpec.GLUE_BEAN.equals(glueType) ? 0L : System.currentTimeMillis());
+        definition.setRetryCallbackBean(spec.getRetryCallbackBean());
+        definition.setExceptionCallbackBean(spec.getExceptionCallbackBean());
+        definition.setAlarmEmail(spec.getAlarmEmail());
+        definition.setExecuteParam(spec.getExecuteParam());
         applySchedule(definition, spec.getScheduleType(), spec.getScheduleTime());
         if (spec.getEnabled() != null) {
             definition.setEnabled(spec.getEnabled());
@@ -162,8 +192,14 @@ public class InMemoryJobRepository implements JobRepository {
             if (condition.getStatus() != null && condition.getStatus() != (row.isEnabled() ? 1 : 0)) {
                 continue;
             }
+            if (condition.getDispatchMode() != null && !condition.getDispatchMode().isBlank()
+                    && !condition.getDispatchMode().trim().equalsIgnoreCase(row.getDispatchMode())) {
+                continue;
+            }
             if (!keyword.isEmpty() && !containsIgnoreCase(row.getJobKey(), keyword)
                     && !containsIgnoreCase(row.getJobName(), keyword)
+                    && !containsIgnoreCase(row.getJobNo(), keyword)
+                    && !containsIgnoreCase(row.getAuthor(), keyword)
                     && !containsIgnoreCase(row.getDesc(), keyword)) {
                 continue;
             }
@@ -299,6 +335,20 @@ public class InMemoryJobRepository implements JobRepository {
         runtime.setScheduleTime(scheduleTimeOf(definition));
         runtime.setEnabled(definition.isEnabled());
         runtime.setExecuteParam(spec == null ? null : spec.getExecuteParam());
+        runtime.setDispatchMode(spec == null || spec.getDispatchMode() == null || spec.getDispatchMode().isBlank()
+                ? JobSpec.DISPATCH_LOCAL : spec.getDispatchMode().trim());
+        runtime.setRemoteExecutorAddress(spec == null ? null : spec.getRemoteExecutorAddress());
+        runtime.setAuthor(spec == null ? null : spec.getAuthor());
+        runtime.setFailRetry(spec == null ? null : spec.getFailRetry());
+        runtime.setRetryInterval(spec == null ? null : spec.getRetryInterval());
+        runtime.setExecuteTimeout(spec == null ? null : spec.getExecuteTimeout());
+        runtime.setMisfireStrategy(spec == null ? null : spec.getMisfireStrategy());
+        runtime.setGlueType(definition.getGlueType() == null ? JobSpec.GLUE_BEAN : definition.getGlueType());
+        runtime.setGlueSource(definition.getGlueSource());
+        runtime.setGlueUpdatetimeMs(definition.getGlueUpdatetimeMs());
+        runtime.setRetryCallbackBean(definition.getRetryCallbackBean());
+        runtime.setExceptionCallbackBean(definition.getExceptionCallbackBean());
+        runtime.setAlarmEmail(definition.getAlarmEmail());
         Long last = lastFireMs.get(key);
         runtime.setLastFireMs(last == null ? 0L : last);
         runtime.setNextFireMs(definition.isEnabled() ? computeNextFireMs(definition) : 0L);

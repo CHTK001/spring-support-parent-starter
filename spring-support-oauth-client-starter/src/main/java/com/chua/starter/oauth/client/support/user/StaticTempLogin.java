@@ -26,11 +26,6 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
  */
 public final class StaticTempLogin {
 
-    /**
-     * 令牌有效期（秒）
-     */
-    private static final long TOKEN_TTL_SECONDS = 7L * 24 * 60 * 60;
-
     private StaticTempLogin() {
     }
 
@@ -41,9 +36,10 @@ public final class StaticTempLogin {
      * @param username   登录名
      * @param password   口令（明文或配置明文的 md5）
      * @param loginType  登录类型，写入令牌便于用量归因
+     * @param ttlSeconds 令牌有效期（秒）
      * @return 登录结果，账号未配置或不匹配返回 {@code null}
      */
-    public static LoginAuthResult login(String rawUsers, String username, String password, String loginType) {
+    public static LoginAuthResult login(String rawUsers, String username, String password, String loginType, long ttlSeconds) {
         if (StringUtils.isBlank(rawUsers) || StringUtils.isBlank(username)) {
             return null;
         }
@@ -52,21 +48,48 @@ public final class StaticTempLogin {
             if (!isMatch(parts, username, password)) {
                 continue;
             }
-            return issue(parts.get(0), loginType);
+            return issue(parts.get(0), loginType, ttlSeconds);
         }
         return null;
     }
 
     /**
-     * 签发令牌。
+     * 按「验证码已校验」的账号换发访问令牌（短信 / 邮箱登录）。
+     *
+     * <p>验证码归属已在业务层（SmsCodeService / EmailCodeService）校验通过，
+     * 此处不再校验口令，仅按用户名匹配静态账号后签发；未配置该用户返回 {@code null}。</p>
+     *
+     * @param rawUsers   {@code plugin.oauth.temp.user} 原始配置
+     * @param username   登录用户名（与静态账号配置一致）
+     * @param loginType  登录类型（SMS / EMAIL），写入令牌便于用量归因
+     * @param ttlSeconds 令牌有效期（秒）
+     * @return 登录结果，账号未配置返回 {@code null}
+     */
+    public static LoginAuthResult loginByVerifiedCode(String rawUsers, String username, String loginType, long ttlSeconds) {
+        if (StringUtils.isBlank(rawUsers) || StringUtils.isBlank(username)) {
+            return null;
+        }
+        for (String entry : Splitter.on(";").omitEmptyStrings().trimResults().splitToList(rawUsers)) {
+            List<String> parts = Splitter.on(":").omitEmptyStrings().limit(2).trimResults().splitToList(entry);
+            if (parts.isEmpty() || !parts.get(0).equals(username)) {
+                continue;
+            }
+            return issue(parts.get(0), loginType, ttlSeconds);
+        }
+        return null;
+    }
+
+    /**
+     * 签发静态登录令牌。
      *
      * <p>静态账号没有独立主键，用户标识直接取用户名：跨登录稳定，且不同账号的数据归属可区分。</p>
      *
-     * @param username  用户名
-     * @param loginType 登录类型
+     * @param username   用户名
+     * @param loginType  登录类型
+     * @param ttlSeconds 令牌有效期（秒）
      * @return 登录结果，令牌签发失败返回 {@code null}
      */
-    private static LoginAuthResult issue(String username, String loginType) {
+    private static LoginAuthResult issue(String username, String loginType, long ttlSeconds) {
         String userId = username;
         String uid = DigestUtils.md5(userId);
 
@@ -78,11 +101,16 @@ public final class StaticTempLogin {
         userResult.setLoginType(loginType);
         userResult.setOpenId(uid);
         userResult.setUnionId(uid);
-        userResult.setPermission(Collections.emptySet());
-        userResult.setRoles(ADMIN.equalsIgnoreCase(username)
+        // 权限集合与角色集合是两套独立的判定依据：
+        // PermissionInterceptor#isPermissionMatch 比的是 permission 集合，isRoleMatch 比的是 roles。
+        // 内置 admin 账号必须同时带上 ADMIN 权限，否则 @Permission("admin") 这类按权限名声明的注解
+        // 即使角色已是 SUPER_ADMIN 也会被拒（角色匹配通过、权限匹配失败 → 整体不通过）。
+        boolean builtinAdmin = ADMIN.equalsIgnoreCase(username);
+        userResult.setPermission(builtinAdmin ? Sets.newHashSet(ADMIN) : Collections.emptySet());
+        userResult.setRoles(builtinAdmin
                 ? Sets.newHashSet(SUPER_ADMIN, ADMIN)
                 : Sets.newHashSet("OPS"));
-        userResult.setExpireTime(System.currentTimeMillis() / 1000 + TOKEN_TTL_SECONDS);
+        userResult.setExpireTime(System.currentTimeMillis() / 1000 + Math.max(1, ttlSeconds));
 
         Map<String, Object> ext = new LinkedHashMap<>();
         ext.put("userId", userId);

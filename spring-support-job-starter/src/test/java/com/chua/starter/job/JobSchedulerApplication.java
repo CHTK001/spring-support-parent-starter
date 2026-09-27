@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
  * </pre>
  *
  * <p>效果: 装配 {@link JobAutoConfiguration} 并以 SCHEDULER 角色启动,
- * 铅 抢占 + 单秒扫描仓库 + 通过 同步服务端 长链广播/单播 CMD,
+ * Leader 抢占 + 单秒扫描仓库 + 通过 同步服务端 长链广播/单播 CMD,
  * 再配合 {@code JobExecutorApplication} 组成完整的调度→执行→回传链路。</p>
  *
  * @since 4.0.0.42

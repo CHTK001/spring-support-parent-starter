@@ -78,7 +78,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     public List<SysAiAppKey> list() {
         return sysAiAppKeyMapper.selectList(
                 Wrappers.lambdaQuery(SysAiAppKey.class)
-                        .eq(SysAiAppKey::getDelete, 0)
+                        .eq(SysAiAppKey::getDeleted, 0)
                         .orderByDesc(SysAiAppKey::getId)
         );
     }
@@ -100,7 +100,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             entity.setSecret(entity.getAppKey());
         }
         entity.setStatus(entity.getStatus() == null ? 1 : entity.getStatus());
-        entity.setDelete(entity.getDelete() == null ? 0 : entity.getDelete());
+        entity.setDeleted(entity.getDeleted() == null ? 0 : entity.getDeleted());
         entity.setUseCount(entity.getUseCount() == null ? 0 : entity.getUseCount());
         sysAiAppKeyMapper.insert(entity);
         return entity;
@@ -285,7 +285,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         var wrapper = Wrappers.lambdaQuery(SysAiAppKey.class)
                 .select(SysAiAppKey::getGroupId)
                 .eq(SysAiAppKey::getAppKey, appKey)
-                .eq(SysAiAppKey::getDelete, 0)
+                .eq(SysAiAppKey::getDeleted, 0)
                 .last("LIMIT 1");
         SysAiAppKey result = sysAiAppKeyMapper.selectOne(wrapper);
         return result != null ? result.getGroupId() : null;

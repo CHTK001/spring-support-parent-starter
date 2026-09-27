@@ -244,7 +244,6 @@ public class TableGraphReader {
         /**
          * 创建 图计算读取结果 实例
          * @param tables tables
-         * @param tables 列表
          * @param edges edges
          */
         public GraphReadResult(List<TableNodeInfo> tables, List<GraphEdge> edges) {

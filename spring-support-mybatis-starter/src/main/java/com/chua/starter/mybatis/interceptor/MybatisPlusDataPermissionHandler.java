@@ -319,10 +319,10 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     }
 
     /**
-     * 是否拥有manageddept铅scope
+     * 是否拥有managedDeptLeadScope
      *
      * @param currentUser 当前用户
-     * @return 是否包含manageddept铅scope的结果
+     * @return 是否包含managedDeptLeadScope的结果
      */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         if (!currentUser.hasRole(DEPT_LEADER) || null == currentUser.getExt()) {

@@ -30,4 +30,35 @@ public interface QuestionSourceProvider {
      * @return 采集到的题目列表
      */
     List<CollectedQuestion> fetch(QuestionSourceContext context);
+
+    /**
+     * 是否由 Provider 自行落库（成语等非题目类数据源使用）。
+     * <p>返回 true 时，采集流程不再按题目落库，改调 {@link #persist(QuestionSourceContext)} 计数。</p>
+     *
+     * @return true = 自行落库
+     */
+    default boolean selfPersisted() {
+        return false;
+    }
+
+    /**
+     * 自行落库并返回写入条数（{@link #selfPersisted()} 为 true 时由采集流程调用）。
+     *
+     * @param context 采集上下文（任务配置快照）
+     * @return 写入条数
+     */
+    default int persist(QuestionSourceContext context) {
+        return 0;
+    }
+
+    /**
+     * 取原始数据（JSON 文本 / 已解析对象），供「前置处理器 → 入库处理器」统一入库管线使用。
+     * <p>返回 null 时采集流程会退化为按任务配置的 url/apiUrl 直接拉取。</p>
+     *
+     * @param context 采集上下文（任务配置快照）
+     * @return 原始数据，未实现返回 null
+     */
+    default Object fetchRaw(QuestionSourceContext context) {
+        return null;
+    }
 }

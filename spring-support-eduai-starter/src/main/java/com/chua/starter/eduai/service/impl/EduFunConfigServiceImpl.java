@@ -1,6 +1,5 @@
 package com.chua.starter.eduai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.eduai.mapper.EduFunConfigMapper;
 import com.chua.starter.eduai.model.EduFunConfig;
@@ -22,27 +21,17 @@ public class EduFunConfigServiceImpl extends ServiceImpl<EduFunConfigMapper, Edu
 
     @Override
     public List<EduFunConfig> listEnabled() {
-        LambdaQueryWrapper<EduFunConfig> wrapper = new LambdaQueryWrapper<EduFunConfig>()
-                .eq(EduFunConfig::getEnabled, 1)
-                .orderByAsc(EduFunConfig::getSortOrder);
-        EduUserContext.scopeOwned(wrapper, EduFunConfig::getOwnerUserId);
-        return list(wrapper);
+        return getBaseMapper().selectEnabledList(EduUserContext.ownerScope());
     }
 
     @Override
     public List<EduFunConfig> listAllScoped() {
-        LambdaQueryWrapper<EduFunConfig> wrapper = new LambdaQueryWrapper<EduFunConfig>()
-                .orderByAsc(EduFunConfig::getSortOrder);
-        EduUserContext.scopeOwned(wrapper, EduFunConfig::getOwnerUserId);
-        return list(wrapper);
+        return getBaseMapper().selectScopedList(EduUserContext.ownerScope());
     }
 
     @Override
     public EduFunConfig getByModuleCode(String moduleCode) {
-        LambdaQueryWrapper<EduFunConfig> wrapper = new LambdaQueryWrapper<EduFunConfig>()
-                .eq(EduFunConfig::getModuleCode, moduleCode);
-        EduUserContext.scopeOwned(wrapper, EduFunConfig::getOwnerUserId);
-        return getOne(wrapper, false);
+        return getBaseMapper().selectByModuleCode(moduleCode, EduUserContext.ownerScope());
     }
 
     @Override
@@ -54,5 +43,14 @@ public class EduFunConfigServiceImpl extends ServiceImpl<EduFunConfigMapper, Edu
         EduUserContext.checkWritable(config.getOwnerUserId());
         config.setEnabled(enabled);
         return updateById(config);
+    }
+
+    @Override
+    public List<EduFunConfig> listByLevel(String gradeLevel) {
+        if (gradeLevel == null || gradeLevel.isBlank()) {
+            return List.of();
+        }
+        return getBaseMapper().selectByLevel(gradeLevel.trim().toUpperCase(java.util.Locale.ROOT),
+                EduUserContext.ownerScope());
     }
 }

@@ -2,7 +2,6 @@ package com.chua.starter.datasource.configuration;
 
 import com.chua.common.support.lang.datasource.flyway.Flyway;
 import com.chua.h2.support.cleanup.H2CleanupPlugin;
-import com.chua.h2.support.dialect.H2Dialect;
 import com.chua.h2.support.engine.H2Engine;
 import com.chua.starter.datasource.properties.H2DataSourceProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +28,6 @@ import java.sql.DriverManager;
  *   <li>{@link Flyway} — SQL 迁移执行器（含 H2 DDL Normalizer）</li>
  *   <li>{@link H2CleanupPlugin} — 测试清理插件（可选）</li>
  * </ul>
- * </p>
  * <p>
  * 使用示例：
  * <pre>{@code
@@ -38,9 +36,7 @@ import java.sql.DriverManager;
  * plugin.h2.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
  * plugin.h2.script-path=classpath:db/migration/h2
  * plugin.h2.cleanup-after-test=true
- * }</pre>est=true
  * }</pre>
- * </p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -52,11 +48,15 @@ import java.sql.DriverManager;
 @EnableConfigurationProperties(H2DataSourceProperties.class)
 public class H2EngineAutoConfiguration {
 
-    private final H2DataSourceProperties properties; // 属性
+    /**
+     * H2 数据源配置属性。
+     */
+    private final H2DataSourceProperties properties;
 
     /**
-     * h2engineauto配置。
-     * @param properties 属性
+     * 构造 H2 数据库自动配置。
+     *
+     * @param properties H2 数据源配置属性，不能为 null
      */
     public H2EngineAutoConfiguration(H2DataSourceProperties properties) {
         this.properties = properties;
@@ -118,8 +118,9 @@ public class H2EngineAutoConfiguration {
         Flyway flyway = h2Engine.flyway();
         if (properties.getScriptPath() != null && !properties.getScriptPath().isBlank()) {
             flyway.location(properties.getScriptPath());
-            int count = flyway.migrate();
-            log.info("[h2] 迁移完成，执行了 {} 个脚本", count);
+            int initCount = flyway.migrateInit();
+            int initDataCount = flyway.migrateInitData();
+            log.info("[h2] 迁移完成，执行结构 {} 个脚本、数据 {} 个脚本", initCount, initDataCount);
         }
         return flyway;
     }

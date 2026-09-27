@@ -3,6 +3,8 @@ package com.chua.starter.server.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.model.vo.HostSyncSummaryVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -90,6 +92,17 @@ public class ServerHostController {
     }
 
     /**
+     * 获取本机首选局域网 IPv4（本机主机地址锁定、本机远控回连使用）
+     *
+     * @return 本机物理网卡 IPv4
+     */
+    @Operation(summary = "获取本机首选IP")
+    @GetMapping("/local-address")
+    public ReturnResult<String> localAddress() {
+        return ReturnResult.ok(com.chua.common.support.network.net.NetUtils.getPreferredLocalIp());
+    }
+
+    /**
      * 条件查询主机列表
      *
      * @param keyword 关键词，可为空
@@ -149,6 +162,24 @@ public class ServerHostController {
     @PostMapping("/{id}/test-connect")
     public ReturnResult<String> testConnect(@PathVariable Long id) {
         return serverHostService.testConnect(id);
+    }
+
+    /**
+     * 获取 VNC 直连凭据（noVNC 在浏览器端完成 RFB 口令认证）
+     * <p>
+     * websockify 透明桥不解析协议，VNC 口令需交给浏览器侧 noVNC；
+     * 此处按主机配置/绑定身份解析 VNC 用户名与口令返回。
+     * </p>
+     *
+     * @param id         主机主键
+     * @param identityId 绑定身份标识，可为空
+     * @return VNC 凭据（用户名/口令）
+     */
+    @Operation(summary = "获取VNC直连凭据")
+    @GetMapping("/{id}/vnc-credential")
+    public ReturnResult<SshCredential> vncCredential(@PathVariable Long id,
+                                                     @RequestParam(required = false) Long identityId) {
+        return serverHostService.resolveCredential(id, identityId, "VNC");
     }
 
     /**
@@ -220,6 +251,18 @@ public class ServerHostController {
     }
 
     /**
+     * 确保 Windows 已安装并启用 OpenSSH Server（未装则一次性引导安装，端口回写 22）
+     *
+     * @param id 主机标识
+     * @return 收敛结果
+     */
+    @Operation(summary = "确保 OpenSSH 已启用")
+    @PostMapping("/{id}/ensure-ssh")
+    public ReturnResult<String> ensureSsh(@PathVariable Long id) {
+        return serverHostService.ensureOpenSsh(id);
+    }
+
+    /**
      * 刷新公网 IP：探测目标主机出口公网 IP 并回写
      *
      * @param id 主机 标识
@@ -243,7 +286,7 @@ public class ServerHostController {
      */
     @Operation(summary = "批量同步主机资产")
     @PostMapping("/sync")
-    public ReturnResult<java.util.Map<String, Object>> syncHosts(@RequestBody(required = false) java.util.List<Long> hostIds) {
+    public ReturnResult<HostSyncSummaryVO> syncHosts(@RequestBody(required = false) List<Long> hostIds) {
         return serverHostService.syncHosts(hostIds);
     }
 

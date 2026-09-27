@@ -12,6 +12,8 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -364,6 +366,19 @@ public class ApiGrayEvaluator {
      */
     public record GrayContext(HttpServletRequest request, Object userId, String username, String ip,
                               java.util.Collection<String> roles) {
+
+        /**
+         * 规范构造器：对角色集合做防御性拷贝。
+         *
+         * <p>value class 前置条件——集合组件必须深不可变；兼容重载允许角色集合为空
+         * （见本类无角色参数的 evaluate 重载），故此处保留空值语义，只做不可变包装。</p>
+         *
+         * @param roles 当前用户角色集合，可为 {@code null}
+         */
+        public GrayContext {
+            roles = roles == null ? null
+                    : Collections.unmodifiableCollection(new ArrayList<>(roles));
+        }
 
         /**
          * 头部

@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.config.ServerProperties;
 import com.chua.starter.server.support.connection.ConnectionManager;
+import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsExecJob;
 import com.chua.starter.server.support.entity.MsExecLog;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.event.ExecJobChangedEvent;
 import com.chua.starter.server.support.mapper.MsExecJobMapper;
 import com.chua.starter.server.support.mapper.MsExecLogMapper;
 import com.chua.starter.server.support.model.SshCredential;
@@ -18,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.scheduling.support.SimpleTriggerContext;
 import org.springframework.stereotype.Service;
@@ -99,9 +102,19 @@ public class ExecServiceImpl implements ExecService {
     private final ConnectionManager connectionManager;
 
     /**
+     * Windows WinRM 执行通道
+     */
+    private final WindowsSshShell windowsSshShell;
+
+    /**
      * 服务属性
-    */
+     */
     private final ServerProperties properties;
+
+    /**
+     * 事件发布器（通知 CronTrigger 调度器同步任务）
+     */
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds, Long jobId) {
@@ -172,9 +185,12 @@ public class ExecServiceImpl implements ExecService {
         if (job.getMsExecJobEnabled() == null) {
             job.setMsExecJobEnabled(1);
         }
-        // 预计算首次运行时间，便于调度器快速判定
-        job.setMsExecJobNextRunTime(nextFireTime(job.getMsExecJobCron(), LocalDateTime.now()));
+        normalizeJobType(job);
+        // 仅定时任务预计算首次运行时间（脚本任务不调度）
+        job.setMsExecJobNextRunTime(isCron(job)
+                ? nextFireTime(job.getMsExecJobCron(), LocalDateTime.now()) : null);
         jobMapper.insert(job);
+        eventPublisher.publishEvent(new ExecJobChangedEvent(job.getId(), false));
         return ReturnResult.ok(jobMapper.selectById(job.getId()));
     }
 
@@ -183,12 +199,6 @@ public class ExecServiceImpl implements ExecService {
         MsExecJob exists = jobMapper.selectById(id);
         if (exists == null) {
             return ReturnResult.error("任务不存在: " + id);
-        }
-        if (!isBlank(job.getMsExecJobCron())) {
-            exists.setMsExecJobCron(job.getMsExecJobCron());
-            exists.setMsExecJobNextRunTime(nextFireTime(job.getMsExecJobCron(), LocalDateTime.now()));
-        } else if (exists.getMsExecJobNextRunTime() != null && exists.getMsExecJobLastRunTime() != null) {
-            exists.setMsExecJobNextRunTime(nextFireTime(exists.getMsExecJobCron(), exists.getMsExecJobLastRunTime()));
         }
         if (!isBlank(job.getMsExecJobName())) {
             exists.setMsExecJobName(job.getMsExecJobName());
@@ -208,13 +218,31 @@ public class ExecServiceImpl implements ExecService {
         if (job.getMsExecJobRemark() != null) {
             exists.setMsExecJobRemark(job.getMsExecJobRemark());
         }
+        if (!isBlank(job.getMsExecJobType())) {
+            exists.setMsExecJobType(job.getMsExecJobType());
+        }
+        if (!isBlank(job.getMsExecJobCron())) {
+            exists.setMsExecJobCron(job.getMsExecJobCron());
+        }
+        normalizeJobType(exists);
+        if (isCron(exists)) {
+            try {
+                exists.setMsExecJobNextRunTime(nextFireTime(exists.getMsExecJobCron(), LocalDateTime.now()));
+            } catch (IllegalArgumentException e) {
+                return ReturnResult.error("cron 表达式非法: " + exists.getMsExecJobCron());
+            }
+        } else {
+            exists.setMsExecJobNextRunTime(null);
+        }
         jobMapper.updateById(exists);
+        eventPublisher.publishEvent(new ExecJobChangedEvent(id, false));
         return ReturnResult.ok(jobMapper.selectById(id));
     }
 
     @Override
     public ReturnResult<Void> deleteJob(Long id) {
         jobMapper.deleteById(id);
+        eventPublisher.publishEvent(new ExecJobChangedEvent(id, true));
         return ReturnResult.success();
     }
 
@@ -225,71 +253,37 @@ public class ExecServiceImpl implements ExecService {
     }
 
     @Override
-    public ReturnResult<List<MsExecLog>> runJobNow(Long id) {
+    public ReturnResult<MsExecJob> getJob(Long id) {
         MsExecJob job = jobMapper.selectById(id);
         if (job == null) {
             return ReturnResult.error("任务不存在: " + id);
         }
-        return runCommand(parseHostIds(job.getMsExecJobHostIds()),
-                job.getMsExecJobCommand(), job.getMsExecJobTimeout(), job.getId());
+        return ReturnResult.ok(job);
     }
 
     @Override
-    public ReturnResult<List<MsExecLog>> listLogs(String type, Long hostId) {
-        var wrapper = new LambdaQueryWrapper<MsExecLog>();
-        if (!isBlank(type)) {
-            wrapper.eq(MsExecLog::getMsExecLogType, type);
+    public ReturnResult<List<MsExecLog>> runJobNow(Long id, List<Long> hostIds, Integer timeoutSeconds) {
+        MsExecJob job = jobMapper.selectById(id);
+        if (job == null) {
+            return ReturnResult.error("任务不存在: " + id);
         }
-        if (hostId != null) {
-            wrapper.eq(MsExecLog::getMsExecLogHostId, hostId);
-        }
-        wrapper.orderByDesc(MsExecLog::getId).last("LIMIT " + LOG_LIMIT);
-        return ReturnResult.list(logMapper.selectList(wrapper));
+        List<Long> targets = (hostIds == null || hostIds.isEmpty())
+                ? parseHostIds(job.getMsExecJobHostIds()) : hostIds;
+        int timeout = (timeoutSeconds == null || timeoutSeconds <= 0)
+                ? (job.getMsExecJobTimeout() == null ? DEFAULT_TIMEOUT_SECONDS : job.getMsExecJobTimeout())
+                : timeoutSeconds;
+        return runCommand(targets, job.getMsExecJobCommand(), timeout, job.getId());
     }
 
-    // ==================== 调度支撑 ====================
-
-    /**
-     * 扫描到期任务并触发执行（由 执行作业调度器 定时调用）
-     *
-     * @return 本次触发的任务数
-     */
     @Override
-    public int tickDueJobs() {
-        List<MsExecJob> jobs = jobMapper.selectList(new LambdaQueryWrapper<MsExecJob>()
-                .eq(MsExecJob::getMsExecJobEnabled, 1));
-        int fired = 0;
-        for (MsExecJob job : jobs) {
-            LocalDateTime next = job.getMsExecJobNextRunTime();
-            boolean due = next == null || !next.isAfter(LocalDateTime.now());
-            if (!due) {
-                continue;
-            }
-            fired++;
-            /**
-             * trigger作业。
-             * @param job 作业
-             */
-            triggerJob(job);
+    public void runScheduledJob(Long id) {
+        MsExecJob job = jobMapper.selectById(id);
+        if (job == null || job.getMsExecJobEnabled() == null || job.getMsExecJobEnabled() != 1 || !isCron(job)) {
+            return;
         }
-        return fired;
-    }
-
-    /**
-     * 触发单个计划任务：执行命令并回写运行时间
-     *
-     * @param job 任务
-     */
-    private void triggerJob(MsExecJob job) {
         try {
-            List<Long> hostIds = parseHostIds(job.getMsExecJobHostIds());
- // 透传 作业标识，日志在 执行单个 中统一落库（不再重复 插入）
-            /**
-             * 运行命令。
-             * @param hostIds 主机标识
-             * @param job.getMsExecJobCommand( 作业.getms执行作业命令(
-             */
-            runCommand(hostIds, job.getMsExecJobCommand(), job.getMsExecJobTimeout(), job.getId());
+            runCommand(parseHostIds(job.getMsExecJobHostIds()), job.getMsExecJobCommand(),
+                    job.getMsExecJobTimeout(), job.getId());
         } catch (Exception e) {
             log.warn("[exec] 计划任务执行异常 jobId={}: {}", job.getId(), e.getMessage());
         } finally {
@@ -298,6 +292,22 @@ public class ExecServiceImpl implements ExecService {
             job.setMsExecJobNextRunTime(nextFireTime(job.getMsExecJobCron(), now));
             jobMapper.updateById(job);
         }
+    }
+
+    @Override
+    public ReturnResult<List<MsExecLog>> listLogs(String type, Long hostId, Long jobId) {
+        var wrapper = new LambdaQueryWrapper<MsExecLog>();
+        if (!isBlank(type)) {
+            wrapper.eq(MsExecLog::getMsExecLogType, type);
+        }
+        if (hostId != null) {
+            wrapper.eq(MsExecLog::getMsExecLogHostId, hostId);
+        }
+        if (jobId != null) {
+            wrapper.eq(MsExecLog::getMsExecLogJobId, jobId);
+        }
+        wrapper.orderByDesc(MsExecLog::getId).last("LIMIT " + LOG_LIMIT);
+        return ReturnResult.list(logMapper.selectList(wrapper));
     }
 
     // ==================== 并发执行内核 ====================
@@ -364,7 +374,16 @@ public class ExecServiceImpl implements ExecService {
             return fail(item, resolved.getMsg(), startMs);
         }
         try {
-            if (localFile != null) {
+            if (WindowsSshShell.isWindows(host) && localFile == null) {
+                // Windows 经 OpenSSH 执行（PowerShell EncodedCommand over SSH）
+                WindowsSshShell.Result r = windowsSshShell.exec(host, resolved.getData(), commandOrPath, timeoutSeconds);
+                item.setMsExecLogOutput(truncate(r.stdout()));
+                item.setMsExecLogExitCode(r.exitCode());
+                if (r.exitCode() != 0) {
+                    throw new IllegalStateException((r.stderr() == null || r.stderr().isBlank())
+                            ? "退出码非 0: " + r.exitCode() : r.stderr().trim());
+                }
+            } else if (localFile != null) {
                 /**
                  * uploadviasftp。
                  * @param host 主机
@@ -542,24 +561,52 @@ public class ExecServiceImpl implements ExecService {
      * @return 校验失败的错误结果，合法返回 空
      */
     private ReturnResult<MsExecJob> validateJob(MsExecJob job) {
-        if (job == null || isBlank(job.getMsExecJobName()) || isBlank(job.getMsExecJobCron())
-                || isBlank(job.getMsExecJobCommand())) {
-            return ReturnResult.error("任务名称、cron 表达式与命令均不能为空");
+        if (job == null || isBlank(job.getMsExecJobName()) || isBlank(job.getMsExecJobCommand())) {
+            return ReturnResult.error("任务名称与命令均不能为空");
         }
         if (parseHostIds(job.getMsExecJobHostIds()).isEmpty()) {
             return ReturnResult.error("至少选择一台目标主机");
         }
- // 借助 crontrigger 构造校验表达式合法性（非法表达式抛出异常）
-        try {
-            /**
-             * 下一个fire时间。
-             * @param job.getMsExecJobCron( 作业.getms执行作业cron(
-             */
-            nextFireTime(job.getMsExecJobCron(), LocalDateTime.now());
-        } catch (IllegalArgumentException e) {
-            return ReturnResult.error("cron 表达式非法: " + job.getMsExecJobCron());
+        normalizeJobType(job);
+        if (isCron(job)) {
+            if (isBlank(job.getMsExecJobCron())) {
+                return ReturnResult.error("定时任务必须填写 cron 表达式");
+            }
+            // 借助 crontrigger 构造校验表达式合法性（非法表达式抛出异常）
+            try {
+                nextFireTime(job.getMsExecJobCron(), LocalDateTime.now());
+            } catch (IllegalArgumentException e) {
+                return ReturnResult.error("cron 表达式非法: " + job.getMsExecJobCron());
+            }
         }
         return null;
+    }
+
+    /**
+     * 规范化任务类型：空/未知回填 CRON；非定时任务清空 cron（列非空，空串占位）且不调度
+     *
+     * @param job 任务
+     */
+    private void normalizeJobType(MsExecJob job) {
+        String type = job.getMsExecJobType();
+        job.setMsExecJobType(isBlank(type) ? ServerConstants.EXEC_JOB_TYPE_CRON : type.trim().toUpperCase());
+        if (!isCron(job)) {
+            job.setMsExecJobCron("");
+        }
+    }
+
+    /**
+     * 是否定时任务（类型为空按定时处理）
+     *
+     * @param job 任务
+     * @return true=定时
+     */
+    private boolean isCron(MsExecJob job) {
+        if (job == null) {
+            return false;
+        }
+        String type = job.getMsExecJobType();
+        return isBlank(type) || ServerConstants.EXEC_JOB_TYPE_CRON.equalsIgnoreCase(type.trim());
     }
 
     /**

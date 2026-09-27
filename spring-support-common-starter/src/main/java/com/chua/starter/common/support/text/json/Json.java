@@ -1,8 +1,5 @@
 package com.chua.starter.common.support.text.json;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.Map;
 
 /**
@@ -16,10 +13,6 @@ import java.util.Map;
  */
 public final class Json {
 
-    /**
-     * Jackson 对象映射器 单例
-    */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
      * Json。
@@ -35,17 +28,7 @@ public final class Json {
      * @throws RuntimeException 当序列化失败时
      */
     public static String toJson(Object value) {
-        try {
-            return MAPPER.writeValueAsString(value);
-        } catch (Exception e) {
-            /**
-             * runtime异常。
-             * @param failure" 失败"
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException("JSON serialize failure", e);
-        }
+        return com.chua.common.support.lang.json.Json.toJson(value);
     }
 
     /**
@@ -69,17 +52,7 @@ public final class Json {
      * @throws RuntimeException 当反序列化失败时
      */
     public static <T> T fromJson(String json, Class<T> clazz) {
-        try {
-            return MAPPER.readValue(json, clazz);
-        } catch (Exception e) {
-            /**
-             * runtime异常。
-             * @param failure" 失败"
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException("JSON parse failure", e);
-        }
+        return com.chua.common.support.lang.json.Json.fromJson(json, clazz);
     }
 
     /**
@@ -90,16 +63,6 @@ public final class Json {
      * @throws RuntimeException 当反序列化失败时
      */
     public static Map<String, Object> getJsonObject(String content) {
-        try {
-            return MAPPER.readValue(content, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception e) {
-            /**
-             * runtime异常。
-             * @param failure" 失败"
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException("JSON parse failure", e);
-        }
+        return com.chua.common.support.lang.json.Json.fromJson(content);
     }
 }

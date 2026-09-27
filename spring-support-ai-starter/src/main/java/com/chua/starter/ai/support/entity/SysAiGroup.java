@@ -38,7 +38,7 @@ public class SysAiGroup {
      * 分组描述
      */
     @TableField("sys_ai_group_desc")
-    private String desc; // desc
+    private String description; // desc
 
     /**
      * 排序值
@@ -56,7 +56,7 @@ public class SysAiGroup {
      * 删除标记：0 未删除，1 已删除
      */
     @TableField("sys_ai_group_delete")
-    private Integer delete; // 删除
+    private Integer deleted; // 删除
 
     /**
      * 创建时间

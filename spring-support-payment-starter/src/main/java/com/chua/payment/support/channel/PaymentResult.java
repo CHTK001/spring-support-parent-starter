@@ -14,44 +14,44 @@ import java.util.Map;
 @Data
 public class PaymentResult {
     /**
-     * 成功
-    */
+     * 是否成功
+     */
     private boolean success;
     /**
-     * 贸易no
-    */
+     * 交易单号
+     */
     private String tradeNo;
     /**
-     * 消息
-    */
+     * 提示消息
+     */
     private String message;
     /**
-     * PAYURL
-    */
+     * 支付跳转地址
+     */
     private String payUrl;
     /**
-     * Launch类型
-    */
+     * 拉起方式
+     */
     private String launchType;
     /**
-     * formhtml
-    */
+     * 表单 HTML
+     */
     private String formHtml;
     /**
      * 请求体
-    */
+     */
     private String body;
-    private Map<String, Object> sdkParams; // sdk参数
+    private Map<String, Object> sdkParams; // SDK 调起参数
     /**
-     * Paidamount
-    */
+     * 实付金额
+     */
     private BigDecimal paidAmount;
     /**
-     * 状态
-    */
+     * 支付状态
+     */
     private String status;
     /**
-     * RAW响应
-    */
+     * 渠道 RAW 响应
+     */
     private String rawResponse;
 }

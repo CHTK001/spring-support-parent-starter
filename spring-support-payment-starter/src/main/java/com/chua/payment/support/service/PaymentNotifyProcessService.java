@@ -12,44 +12,43 @@ import com.chua.payment.support.entity.PaymentNotifyLog;
 public interface PaymentNotifyProcessService {
 
     /**
-     * 记录回调日志
+     * 记录回调日志。
      * @param dto dto
-     * @return 日志通知的结果
+     * @return 记录到的通知日志
      */
     PaymentNotifyLog logNotify(LogNotifyDTO dto);
 
     /**
-     * 处理支付回调
+     * 处理支付回调。
      * @param log 日志
      */
     void processPaymentNotify(PaymentNotifyLog log);
 
     /**
-     * 处理退款回调
+     * 处理退款回调。
      * @param log 日志
      */
     void processRefundNotify(PaymentNotifyLog log);
 
     /**
-     * 标记处理成功
+     * 标记处理成功。
      * @param logId 日志标识
-     * @param result 结果
+     * @param result 处理结果
      */
     void markSuccess(Long logId, String result);
 
     /**
-     * 标记处理失败并记录异常
+     * 标记处理失败并记录异常。
      * @param logId 日志标识
      * @param errorType 错误类型
      * @param errorMessage 错误消息
-     * @param errorStack 错误stack
+     * @param errorStack 错误堆栈
      */
     void markFailedAndRecordError(Long logId, String errorType, String errorMessage, String errorStack);
 
     /**
-     * 重试处理失败的回调
+     * 重试处理失败的回调。
      * @param errorId 错误标识
      */
     void retryFailedNotify(Long errorId);
 }
-

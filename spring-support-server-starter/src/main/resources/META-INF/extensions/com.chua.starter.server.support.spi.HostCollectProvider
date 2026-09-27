@@ -1,4 +1,5 @@
 com.chua.starter.server.support.spi.ScheduledHostCollectProvider
+com.chua.starter.server.support.spi.OpenSshHostCollectProvider
 com.chua.starter.server.support.spi.AgentHostCollectProvider
 com.chua.starter.server.support.spi.HttpHostCollectProvider
 com.chua.starter.server.support.spi.PrometheusHostCollectProvider

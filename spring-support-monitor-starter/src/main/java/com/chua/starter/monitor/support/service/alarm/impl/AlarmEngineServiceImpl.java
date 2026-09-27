@@ -15,6 +15,8 @@ import com.chua.starter.monitor.support.mapper.MsMonitorAlarmMaintenanceWindowMa
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmPolicyMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmRuleMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
+import com.chua.starter.monitor.support.model.AlarmStatsSummaryVO;
+import com.chua.starter.monitor.support.model.AlarmTrendPointVO;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.service.alarm.NotifySender;
 import com.chua.starter.monitor.support.service.impl.MonitorPushService;
@@ -459,6 +461,10 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      * @return true=首次触发(放行); false=静默期内(跳过)或获取失败(保守跳过)
      */
     private Boolean acquireSilence(String silenceKey, int silenceMinutes) {
+        // 0/负数表示不静默：Redis 对非正 TTL 会抛异常，直接放行避免退化成"永不告警"
+        if (silenceMinutes <= 0) {
+            return true;
+        }
         // 1) 优先 Redis：可用时返回其 SETNX 结果
         try {
             return redisTemplate.opsForValue()
@@ -483,6 +489,137 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
     /**
+     * 判断规则当前是否落在生效的维护窗口内。
+     * <p>
+     * 窗口级别为空 = 全局静默（命中任意级别的规则，与实体注释一致）；级别非空 = 仅静默同级别规则。
+     * 单个窗口的星期/起止时间配置残缺只跳过该窗口，不影响的其余窗口判定。
+     *
+     * @param rule 待判定规则
+     * @return true=处于维护窗口内，应跳过告警
+     */
+    private boolean inMaintenanceWindow(MsMonitorAlarmRule rule) {
+        List<MsMonitorAlarmMaintenanceWindow> windows;
+        try {
+            String ruleLevel = isBlank(rule.getMsMonitorAlarmRuleLevel()) ? null : rule.getMsMonitorAlarmRuleLevel().trim();
+            windows = maintenanceWindowMapper.selectList(
+                    new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
+                            .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowEnabled, 1)
+                            .and(wrapper -> {
+                                wrapper.isNull(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel)
+                                        .or()
+                                        .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel, "");
+                                if (ruleLevel != null) {
+                                    wrapper.or()
+                                            .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel, ruleLevel);
+                                }
+                            }));
+        } catch (Exception e) {
+            log.warn("[alarm] 维护窗口查询异常, 本次不静默: {}", e.getMessage());
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        int nowMinutes = now.getHour() * 60 + now.getMinute();
+        String nowWeekday = String.valueOf(now.getDayOfWeek().getValue() % 7);
+        for (MsMonitorAlarmMaintenanceWindow window : windows) {
+            try {
+                if (!matchesWeekday(window.getWeekdays(), nowWeekday)) {
+                    continue;
+                }
+                Integer start = toDayMinutes(window.getStartTime());
+                Integer end = toDayMinutes(window.getEndTime());
+                if (start == null || end == null) {
+                    log.warn("[alarm] 维护窗口[{}]起止时间缺失或非法({}~{}), 已跳过该窗口",
+                            window.getId(), window.getStartTime(), window.getEndTime());
+                    continue;
+                }
+                // 支持跨午夜（如 22:00~06:00）；起止相同视为全天静默
+                boolean inRange = start < end
+                        ? nowMinutes >= start && nowMinutes < end
+                        : nowMinutes >= start || nowMinutes < end;
+                if (inRange) {
+                    return true;
+                }
+            } catch (Exception e) {
+                log.warn("[alarm] 维护窗口[{}]判定异常, 跳过该窗口: {}", window.getId(), e.getMessage());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 星期命中判定
+     *
+     * @param weekdays   窗口配置，逗号分隔的 0~6（周日=0），为空表示每天
+     * @param nowWeekday 当前星期数字
+     * @return 是否命中
+     */
+    private boolean matchesWeekday(String weekdays, String nowWeekday) {
+        if (isBlank(weekdays)) {
+            return true;
+        }
+        for (String token : weekdays.split(",")) {
+            if (token.trim().equals(nowWeekday)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * "HH:mm" 解析为当日分钟数
+     *
+     * @param hhmm 待解析时间串
+     * @return 分钟数，格式非法返回 空
+     */
+    private Integer toDayMinutes(String hhmm) {
+        if (isBlank(hhmm)) {
+            return null;
+        }
+        String[] parts = hhmm.trim().split(":");
+        if (parts.length != 2) {
+            return null;
+        }
+        try {
+            int hour = Integer.parseInt(parts[0].trim());
+            int minute = Integer.parseInt(parts[1].trim());
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                return null;
+            }
+            return hour * 60 + minute;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 级别归一：空白统一为 空串，使「全局静默」在数据层只有一种表示。
+     * 不能归一为 null——updateById 默认跳过 null 字段，"改回全局静默" 会静默失效。
+     *
+     * @param level 原始级别
+     * @return 归一后的级别
+     */
+    private String normalizeLevel(String level) {
+        return isBlank(level) ? "" : level.trim();
+    }
+
+    /**
+     * 维护窗口起止时间校验
+     *
+     * @param startTime 起始时间 HH:mm
+     * @param endTime   结束时间 HH:mm
+     * @return 错误文案，校验通过返回 空
+     */
+    private String validateWindowTime(String startTime, String endTime) {
+        if (toDayMinutes(startTime) == null) {
+            return "起始时间格式非法，需为 HH:mm（如 22:00）";
+        }
+        if (toDayMinutes(endTime) == null) {
+            return "结束时间格式非法，需为 HH:mm（如 06:00）";
+        }
+        return null;
+    }
+
+    /**
      * 通过静默期判定后真实触发告警
      *
      * @param rule        规则
@@ -492,59 +629,11 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      * @param value       实际值
      */
 private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String monitorName,
-                             String metricName, BigDecimal value) {            // ---- 新增：维护窗口检查 ----
-            // 如果当前时间在活跃的维护窗口内，则跳过告警（不受静默期影响）
-            try {
-                LocalDateTime now = LocalDateTime.now();
-                int nowWeekday = now.getDayOfWeek().getValue() % 7; // Monday=1 -> 1, Sunday=7 -> 0
-                String weekdays = String.valueOf(nowWeekday);
-                // 查询启用中的维护窗口
-                LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow> mwWrapper = new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
-                        .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowEnabled, 1);
-                if (rule.getMsMonitorAlarmRuleLevel() != null) {
-                    mwWrapper.eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel, rule.getMsMonitorAlarmRuleLevel());
-                } else {
- // 全局级别的窗口（水平仪 为空）
-                    mwWrapper.isNull(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel);
-                }
-                List<MsMonitorAlarmMaintenanceWindow> windows = maintenanceWindowMapper.selectList(mwWrapper);
-                boolean inMaintenance = false;
-                for (MsMonitorAlarmMaintenanceWindow window : windows) {
-                    // 检查周日目标：weekdays 为空则每天生效，否则匹配
-                    if (window.getWeekdays() == null || window.getWeekdays().isEmpty() || window.getWeekdays().contains(weekdays)) {
- // 检查时间范围：每天的 启动时间 ~ 结束时间
-                        String[] startParts = window.getStartTime().split(":");
-                        String[] endParts = window.getEndTime().split(":");
-                        int startHour = Integer.parseInt(startParts[0]);
-                        int startMin = Integer.parseInt(startParts[1]);
-                        int endHour = Integer.parseInt(endParts[0]);
-                        int endMin = Integer.parseInt(endParts[1]);
-                        // 将当前时间转换为分钟数便于比较
-                        int nowMinutes = now.getHour() * 60 + now.getMinute();
-                        int startMinutes = startHour * 60 + startMin;
-                        int endMinutes = endHour * 60 + endMin;
-                        // 处理跨午夜的情况（例如 22:00 ~ 06:00）
-                        boolean inRange;
-                        if (startMinutes < endMinutes) {
-                            inRange = nowMinutes >= startMinutes && nowMinutes < endMinutes;
-                        } else {
-                            inRange = nowMinutes >= startMinutes || nowMinutes < endMinutes;
-                        }
-                        if (inRange) {
-                            inMaintenance = true;
-                            break;
-                        }
-                    }
-                }
-                if (inMaintenance) {
-                    log.debug("[alarm] 维护窗口内跳过告警 rule={} monitor={}", rule.getId(), monitorId);
-                    return;
-                }
-            } catch (Exception e) {
-                log.warn("[alarm] 维护窗口检查异常: {}", e.getMessage());
-                // 异常时不阻断主链路，继续走常规静默期逻辑
+                             String metricName, BigDecimal value) {
+            if (inMaintenanceWindow(rule)) {
+                log.debug("[alarm] 维护窗口内跳过告警 rule={} monitor={}", rule.getId(), monitorId);
+                return;
             }
-            // --------------------------------------------
 
             String silenceKey = SILENCE_KEY_PREFIX + rule.getId() + ":" + monitorId;
             int silenceMinutes = rule.getMsMonitorAlarmRuleSilenceMinutes() == null ? 10 : rule.getMsMonitorAlarmRuleSilenceMinutes();
@@ -738,6 +827,11 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
         if (window == null || isBlank(window.getWindowName())) {
             return ReturnResult.error("窗口名称不能为空");
         }
+        String error = validateWindowTime(window.getStartTime(), window.getEndTime());
+        if (error != null) {
+            return ReturnResult.error(error);
+        }
+        window.setMsMonitorAlarmMaintenanceWindowLevel(normalizeLevel(window.getMsMonitorAlarmMaintenanceWindowLevel()));
         window.setMsMonitorAlarmMaintenanceWindowEnabled(window.getMsMonitorAlarmMaintenanceWindowEnabled() == null ? 1 : window.getMsMonitorAlarmMaintenanceWindowEnabled());
         maintenanceWindowMapper.insert(window);
         return ReturnResult.ok(window);
@@ -757,13 +851,17 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             exists.setWindowName(window.getWindowName());
         }
         if (window.getMsMonitorAlarmMaintenanceWindowLevel() != null) {
-            exists.setMsMonitorAlarmMaintenanceWindowLevel(window.getMsMonitorAlarmMaintenanceWindowLevel());
+            exists.setMsMonitorAlarmMaintenanceWindowLevel(normalizeLevel(window.getMsMonitorAlarmMaintenanceWindowLevel()));
         }
         if (window.getStartTime() != null) {
             exists.setStartTime(window.getStartTime());
         }
         if (window.getEndTime() != null) {
             exists.setEndTime(window.getEndTime());
+        }
+        String error = validateWindowTime(exists.getStartTime(), exists.getEndTime());
+        if (error != null) {
+            return ReturnResult.error(error);
         }
         if (window.getWeekdays() != null) {
             exists.setWeekdays(window.getWeekdays());
@@ -795,7 +893,6 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             Long policyId) {
         LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow> wrapper = new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
                 .eq(policyId != null, MsMonitorAlarmMaintenanceWindow::getPolicyId, policyId)
-                .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowEnabled, 1)
                 .orderByDesc(MsMonitorAlarmMaintenanceWindow::getId);
         return ReturnResult.list(maintenanceWindowMapper.selectList(wrapper));
     }
@@ -857,15 +954,10 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
     @Override
-    public ReturnResult<Map<String, Object>> statsSummary() {
-        Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("todayTotal", eventMapper.selectCount(new LambdaQueryWrapper<MsMonitorAlarmEvent>()
-                .ge(MsMonitorAlarmEvent::getMsMonitorAlarmEventTriggerTime, LocalDate.now().atStartOfDay())));
-        summary.put("unprocessed", countByStatus("NEW"));
-        summary.put("processed", countByStatus("PROCESSED"));
-        summary.put("falseAlarm", countByStatus("FALSE_ALARM"));
-
-        Map<String, Object> levelDistribution = new LinkedHashMap<>();
+    public ReturnResult<AlarmStatsSummaryVO> statsSummary() {
+        long todayTotal = eventMapper.selectCount(new LambdaQueryWrapper<MsMonitorAlarmEvent>()
+                .ge(MsMonitorAlarmEvent::getMsMonitorAlarmEventTriggerTime, LocalDate.now().atStartOfDay()));
+        Map<String, Long> levelDistribution = new LinkedHashMap<>();
         for (Map<String, Object> row : eventMapper.selectMaps(new QueryWrapper<MsMonitorAlarmEvent>()
                 .select("ms_monitor_alarm_event_level AS lvl", "COUNT(1) AS cnt")
                 .groupBy("ms_monitor_alarm_event_level"))) {
@@ -873,16 +965,17 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             Map<String, Object> ci = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             ci.putAll(row);
             Object level = ci.get("lvl");
-            if (level != null) {
-                levelDistribution.put(String.valueOf(level), ci.get("cnt"));
+            Object cnt = ci.get("cnt");
+            if (level != null && cnt instanceof Number n) {
+                levelDistribution.put(String.valueOf(level), n.longValue());
             }
         }
-        summary.put("levelDistribution", levelDistribution);
-        return ReturnResult.ok(summary);
+        return ReturnResult.ok(new AlarmStatsSummaryVO(todayTotal, countByStatus("NEW"),
+                countByStatus("PROCESSED"), countByStatus("FALSE_ALARM"), levelDistribution));
     }
 
     @Override
-    public ReturnResult<List<Map<String, Object>>> statsTrend(int hours, String interval) {
+    public ReturnResult<List<AlarmTrendPointVO>> statsTrend(int hours) {
         int span = hours <= 0 ? 24 : Math.min(hours, MAX_TREND_HOURS);
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime first = now.minusHours(span).truncatedTo(ChronoUnit.HOURS).plusHours(1);
@@ -904,12 +997,9 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
         DateTimeFormatter label = span <= DAY_SPAN_HOURS
                 ? DateTimeFormatter.ofPattern("HH:00")
                 : DateTimeFormatter.ofPattern("MM-dd HH:00");
-        List<Map<String, Object>> series = new ArrayList<>(buckets.size());
+        List<AlarmTrendPointVO> series = new ArrayList<>(buckets.size());
         for (Map.Entry<LocalDateTime, Long> bucket : buckets.entrySet()) {
-            Map<String, Object> point = new LinkedHashMap<>();
-            point.put("time", label.format(bucket.getKey()));
-            point.put("count", bucket.getValue());
-            series.add(point);
+            series.add(new AlarmTrendPointVO(label.format(bucket.getKey()), bucket.getValue()));
         }
         return ReturnResult.list(series);
     }

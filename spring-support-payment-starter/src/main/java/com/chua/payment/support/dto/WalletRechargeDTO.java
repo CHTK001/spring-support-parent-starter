@@ -5,39 +5,38 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 钱包充值 DTO
+ * 钱包充值DTO
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class WalletRechargeDTO {
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * rechargeno
-    */
+     * 充值单号
+     */
     private String rechargeNo;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
-     * Amount
-    */
+     * 金额
+     */
     private BigDecimal amount;
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }
-

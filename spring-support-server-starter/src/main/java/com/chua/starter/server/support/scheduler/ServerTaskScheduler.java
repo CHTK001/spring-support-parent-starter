@@ -57,23 +57,25 @@ public class ServerTaskScheduler {
     private static final int HOST_SCAN_INTERVAL_SECONDS = 5;
 
     /**
+     * 采集扫描粒度（秒）：采集间隔可小至 {@code MIN_INTERVAL=5s}，若与在离线检测共用 5s 扫描，
+     * 因扫描相位与采集完成相位错开，配置 5s/10s 会被量化成约 10s/15s。采集单独用 1s 细粒度扫描，
+     * 把触发延迟压到 ≤1s（5s 配置实际约 5-6s，10s 配置约 10-11s；剩余约 0.5-1s 为采集本身耗时）。
+     */
+    private static final int COLLECT_SCAN_INTERVAL_SECONDS = 1;
+
+    /**
      * 系统配置服务
     */
     private final ServerConfigService configService;
 
     /**
      * 在离线检测器
-    */
+     */
     private final HostOnlineScheduler onlineScheduler;
 
     /**
-     * 计划任务调度器
-    */
-    private final ExecJobScheduler execJobScheduler;
-
-    /**
      * 会话空闲清理器
-    */
+     */
     private final SessionIdleSweeper sessionIdleSweeper;
 
     /**
@@ -93,17 +95,12 @@ public class ServerTaskScheduler {
 
     /**
      * 采集定时任务
-    */
+     */
     private volatile TimerTask collectTask;
 
     /**
-     * 计划任务扫描定时任务
-    */
-    private volatile TimerTask execTask;
-
-    /**
      * 会话清理定时任务
-    */
+     */
     private volatile TimerTask sessionTask;
 
     /**
@@ -134,19 +131,9 @@ public class ServerTaskScheduler {
          * reschedule延迟。
          */
         rescheduleDelay();
-        /**
-         * reschedule执行。
-         */
-        rescheduleExec();
-        /**
-         * reschedule会话。
-         */
         rescheduleSession();
-        /**
-         * rescheduleconnection。
-         */
         rescheduleConnection();
-        log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/延迟检测/计划任务/会话清理/连接健康检查");
+        log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/延迟检测/会话清理/连接健康检查(计划任务由 exec-cron 逐任务 CronTrigger 调度)");
     }
 
     /**
@@ -213,7 +200,7 @@ public class ServerTaskScheduler {
          */
         cancelTask(collectTask);
         collectTask = timer.scheduleAtFixedRate(onlineScheduler::collectTick,
-                HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
+                COLLECT_SCAN_INTERVAL_SECONDS, COLLECT_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
@@ -227,19 +214,6 @@ public class ServerTaskScheduler {
         cancelTask(delayTask);
         delayTask = timer.scheduleAtFixedRate(onlineScheduler::delayTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
-    }
-
-    /**
-     * 重排计划任务扫描
-     */
-    private void rescheduleExec() {
-        /**
-         * cancel任务。
-         * @param execTask 执行任务
-         */
-        cancelTask(execTask);
-        execTask = timer.scheduleAtFixedRate(execJobScheduler::tick,
-                60, 30, TimeUnit.SECONDS);
     }
 
     /**

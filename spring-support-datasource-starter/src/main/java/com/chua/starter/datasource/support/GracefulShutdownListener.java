@@ -18,7 +18,6 @@ import java.util.Map;
  *   <li>{@link MultiDataSource} 的 Calcite 连接池将被归还并关闭</li>
  *   <li>非连接池类型的数据源不会被执行额外操作</li>
  * </ul>
- * </p>
  *
  * @since 2026/07/14
  * @author CH

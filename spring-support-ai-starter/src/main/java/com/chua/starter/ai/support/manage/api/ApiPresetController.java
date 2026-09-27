@@ -2,10 +2,9 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
-import com.chua.starter.ai.support.manage.common.ApiErrorCode;
-import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
+import com.chua.starter.ai.support.util.AiMemoryOwnership;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * 预设配置控制器。
  *
  * <p>提供预设（Preset）的 CRUD、状态切换、解析和批量导入功能。</p>
+ *
+ * <p>预设存放在进程内内存，按登录用户归属：列表只返回本人记录（管理员可见全部），
+ * 读取放行本人和管理员，改删仅本人——管理员对他人数据只读。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -44,7 +46,7 @@ public class ApiPresetController {
      * @return 列表的结果
      */
     public ApiResult<List<Map<String, Object>>> list() {
-        return ApiResult.ok(new ArrayList<>(presets.values()));
+        return ApiResult.ok(AiMemoryOwnership.visibleToCurrentUser(presets.values()));
     }
 
     @GetMapping("/{presetId}")
@@ -54,17 +56,7 @@ public class ApiPresetController {
      * @return 获取的结果
      */
     public ApiResult<Map<String, Object>> get(@PathVariable String presetId) {
-        Map<String, Object> preset = presets.get(presetId);
-        if (preset == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param presetId presetid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
-        }
-        return ApiResult.ok(preset);
+        return ApiResult.ok(AiMemoryOwnership.requireOwned(presets, presetId, false, "预设"));
     }
 
     @PostMapping
@@ -83,6 +75,7 @@ public class ApiPresetController {
         body.putIfAbsent("updated_at", System.currentTimeMillis());
         body.putIfAbsent("audience_tag_ids", new ArrayList<>());
         body.putIfAbsent("scenario_tag_ids", new ArrayList<>());
+        AiMemoryOwnership.stampOwner(body);
         presets.put(presetId, body);
         return ApiResult.ok(body);
     }
@@ -90,18 +83,9 @@ public class ApiPresetController {
     @PutMapping("/{presetId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String presetId,
                                                   @RequestBody Map<String, Object> body) {
-        Map<String, Object> preset = presets.get(presetId);
-        if (preset == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param presetId presetid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
-        }
+        Map<String, Object> preset = AiMemoryOwnership.requireOwned(presets, presetId, true, "预设");
         body.forEach((k, v) -> {
-            if (!"preset_id".equals(k)) {
+            if (!"preset_id".equals(k) && !AiMemoryOwnership.USER_ID_FIELD.equals(k)) {
                 preset.put(k, v);
             }
         });
@@ -116,32 +100,15 @@ public class ApiPresetController {
      * @return 删除的结果
      */
     public ApiResult<Void> delete(@PathVariable String presetId) {
-        Map<String, Object> preset = presets.remove(presetId);
-        if (preset == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param presetId presetid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
-        }
+        AiMemoryOwnership.requireOwned(presets, presetId, true, "预设");
+        presets.remove(presetId);
         return ApiResult.ok();
     }
 
     @PatchMapping("/{presetId}/state")
     public ApiResult<Map<String, Object>> setState(@PathVariable String presetId,
                                                     @RequestBody Map<String, Object> body) {
-        Map<String, Object> preset = presets.get(presetId);
-        if (preset == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param presetId presetid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
-        }
+        Map<String, Object> preset = AiMemoryOwnership.requireOwned(presets, presetId, true, "预设");
         if (body.containsKey("enabled")) {
             preset.put("enabled", body.get("enabled"));
         }
@@ -152,16 +119,7 @@ public class ApiPresetController {
     @PostMapping("/{presetId}/resolve")
     public ApiResult<Map<String, Object>> resolve(@PathVariable String presetId,
                                                    @RequestBody(required = false) Map<String, Object> body) {
-        Map<String, Object> preset = presets.get(presetId);
-        if (preset == null) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param presetId presetid
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "预设不存在: " + presetId);
-        }
+        Map<String, Object> preset = AiMemoryOwnership.requireOwned(presets, presetId, false, "预设");
         Map<String, Object> snapshot = new LinkedHashMap<>(preset);
         snapshot.put("resolved_at", System.currentTimeMillis());
         return ApiResult.ok(snapshot);
@@ -185,6 +143,7 @@ public class ApiPresetController {
                     p.put("preset_id", id);
                     p.putIfAbsent("source", "user");
                     p.putIfAbsent("created_at", System.currentTimeMillis());
+                    AiMemoryOwnership.stampOwner(p);
                     presets.put(id, p);
                     imported++;
                 }

@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 /**
  * 支付成功事件
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -13,57 +14,51 @@ import java.math.BigDecimal;
 public class PaymentSuccessEvent extends PaymentEvent {
 
     /**
-     * 排序标识
-    */
+     * 订单标识
+     */
     private final Long orderId;
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private final String orderNo;
     /**
      * 用户标识
-    */
+     */
     private final Long userId;
     /**
-     * Paidamount
-    */
+     * 实付金额
+     */
     private final BigDecimal paidAmount;
     /**
-     * Thirdparty排序NO
-    */
+     * 第三方订单号
+     */
     private final String thirdPartyOrderNo;
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private final String channelType;
     /**
-     * 通道SUB类型
-    */
+     * 渠道子类型
+     */
     private final String channelSubType;
 
     /**
-     * 创建 薪酬成功事件 实例
-     * @param source 源
-     * @param tenantId tenantid
-     * @param merchantId merchantid
+     * 创建支付成功事件实例
+     *
+     * @param source 来源
+     * @param tenantId 租户标识
+     * @param merchantId 商户标识
      * @param orderId 订单标识
-     * @param orderNo 订单no
+     * @param orderNo 订单号
      * @param userId 用户标识
-     * @param paidAmount paidamount
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
+     * @param paidAmount 实付金额
+     * @param thirdPartyOrderNo 第三方订单号
+     * @param channelType 渠道类型
+     * @param channelSubType 渠道子类型
      */
     public PaymentSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                                Long userId, BigDecimal paidAmount, String thirdPartyOrderNo,
                                String channelType, String channelSubType) {
-        /**
-         * 父。
-         * @param source 源
-         * @param "PAYMENT_SUCCESS" "薪酬_成功"
-         * @param tenantId tenantid
-         * @param merchantId merchantid
-         */
         super(source, "PAYMENT_SUCCESS", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;
@@ -74,4 +69,3 @@ public class PaymentSuccessEvent extends PaymentEvent {
         this.channelSubType = channelSubType;
     }
 }
-

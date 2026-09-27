@@ -73,25 +73,25 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         var prepayRequest = new com.wechat.pay.java.service.payments.jsapi.model.PrepayRequest();
         prepayRequest.setAppid(properties.getAppId());
         prepayRequest.setMchid(properties.getMerchantId());
-        prepayRequest.setDescription(request.getDescription());
-        prepayRequest.setOutTradeNo(request.getOrderNo());
-        prepayRequest.setNotifyUrl(request.getNotifyUrl());
-        prepayRequest.setTimeExpire(request.getExpireTime());
+        prepayRequest.setDescription(request.description());
+        prepayRequest.setOutTradeNo(request.orderNo());
+        prepayRequest.setNotifyUrl(request.notifyUrl());
+        prepayRequest.setTimeExpire(request.expireTime());
 
         var amount = new com.wechat.pay.java.service.payments.jsapi.model.Amount();
-        amount.setTotal(request.getAmountFen().intValue());
-        amount.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
+        amount.setTotal(request.amountFen().intValue());
+        amount.setCurrency(firstNonBlank(request.currency(), "CNY"));
         prepayRequest.setAmount(amount);
 
         var payer = new com.wechat.pay.java.service.payments.jsapi.model.Payer();
-        payer.setOpenid(request.getPayerOpenId());
+        payer.setOpenid(request.payerOpenId());
         prepayRequest.setPayer(payer);
 
         var sceneInfo = new com.wechat.pay.java.service.payments.jsapi.model.SceneInfo();
-        sceneInfo.setPayerClientIp(firstNonBlank(request.getClientIp(), "127.0.0.1"));
-        sceneInfo.setDeviceId(request.getDeviceId());
+        sceneInfo.setPayerClientIp(firstNonBlank(request.clientIp(), "127.0.0.1"));
+        sceneInfo.setDeviceId(request.deviceId());
         prepayRequest.setSceneInfo(sceneInfo);
-        prepayRequest.setAttach(request.getAttach());
+        prepayRequest.setAttach(request.attach());
 
         var response = service.prepayWithRequestPayment(prepayRequest);
         Map<String, Object> sdkParams = new LinkedHashMap<>();
@@ -102,11 +102,13 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         sdkParams.put("signType", response.getSignType());
         sdkParams.put("paySign", response.getPaySign());
 
-        TencentWechatPayResponse result = new TencentWechatPayResponse();
-        result.setSuccess(true);
-        result.setSdkParams(sdkParams);
-        result.setMessage("微信 JSAPI 下单成功");
-        result.setRawResponse(String.valueOf(response));
+        TencentWechatPayResponse result = new TencentWechatPayResponse(
+                true,
+                null,
+                sdkParams,
+                "微信 JSAPI 下单成功",
+                String.valueOf(response)
+        );
         return result;
     }
 
@@ -120,33 +122,35 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         var prepayRequest = new com.wechat.pay.java.service.payments.h5.model.PrepayRequest();
         prepayRequest.setAppid(properties.getAppId());
         prepayRequest.setMchid(properties.getMerchantId());
-        prepayRequest.setDescription(request.getDescription());
-        prepayRequest.setOutTradeNo(request.getOrderNo());
-        prepayRequest.setNotifyUrl(request.getNotifyUrl());
-        prepayRequest.setTimeExpire(request.getExpireTime());
+        prepayRequest.setDescription(request.description());
+        prepayRequest.setOutTradeNo(request.orderNo());
+        prepayRequest.setNotifyUrl(request.notifyUrl());
+        prepayRequest.setTimeExpire(request.expireTime());
 
         var amount = new com.wechat.pay.java.service.payments.h5.model.Amount();
-        amount.setTotal(request.getAmountFen().intValue());
-        amount.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
+        amount.setTotal(request.amountFen().intValue());
+        amount.setCurrency(firstNonBlank(request.currency(), "CNY"));
         prepayRequest.setAmount(amount);
 
         var sceneInfo = new com.wechat.pay.java.service.payments.h5.model.SceneInfo();
-        sceneInfo.setPayerClientIp(firstNonBlank(request.getClientIp(), "127.0.0.1"));
-        sceneInfo.setDeviceId(request.getDeviceId());
+        sceneInfo.setPayerClientIp(firstNonBlank(request.clientIp(), "127.0.0.1"));
+        sceneInfo.setDeviceId(request.deviceId());
         H5Info h5Info = new H5Info();
-        h5Info.setType(firstNonBlank(request.getH5Type(), "Wap"));
-        h5Info.setAppName(firstNonBlank(request.getAppName(), "payment-console"));
-        h5Info.setAppUrl(request.getAppUrl());
+        h5Info.setType(firstNonBlank(request.h5Type(), "Wap"));
+        h5Info.setAppName(firstNonBlank(request.appName(), "payment-console"));
+        h5Info.setAppUrl(request.appUrl());
         sceneInfo.setH5Info(h5Info);
         prepayRequest.setSceneInfo(sceneInfo);
-        prepayRequest.setAttach(request.getAttach());
+        prepayRequest.setAttach(request.attach());
 
         var response = service.prepay(prepayRequest);
-        TencentWechatPayResponse result = new TencentWechatPayResponse();
-        result.setSuccess(true);
-        result.setPayUrl(response.getH5Url());
-        result.setMessage("微信 H5 下单成功");
-        result.setRawResponse(String.valueOf(response));
+        TencentWechatPayResponse result = new TencentWechatPayResponse(
+                true,
+                response.getH5Url(),
+                null,
+                "微信 H5 下单成功",
+                String.valueOf(response)
+        );
         return result;
     }
 
@@ -216,21 +220,23 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         var prepayRequest = new com.wechat.pay.java.service.payments.nativepay.model.PrepayRequest();
         prepayRequest.setAppid(properties.getAppId());
         prepayRequest.setMchid(properties.getMerchantId());
-        prepayRequest.setDescription(request.getDescription());
-        prepayRequest.setOutTradeNo(request.getOrderNo());
-        prepayRequest.setNotifyUrl(request.getNotifyUrl());
-        prepayRequest.setTimeExpire(request.getExpireTime());
-        prepayRequest.setAttach(request.getAttach());
+        prepayRequest.setDescription(request.description());
+        prepayRequest.setOutTradeNo(request.orderNo());
+        prepayRequest.setNotifyUrl(request.notifyUrl());
+        prepayRequest.setTimeExpire(request.expireTime());
+        prepayRequest.setAttach(request.attach());
         var amount = new com.wechat.pay.java.service.payments.nativepay.model.Amount();
-        amount.setTotal(request.getAmountFen().intValue());
-        amount.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
+        amount.setTotal(request.amountFen().intValue());
+        amount.setCurrency(firstNonBlank(request.currency(), "CNY"));
         prepayRequest.setAmount(amount);
         var response = service.prepay(prepayRequest);
-        TencentWechatPayResponse result = new TencentWechatPayResponse();
-        result.setSuccess(true);
-        result.setPayUrl(response.getCodeUrl());
-        result.setMessage("微信 Native 支付下单成功");
-        result.setRawResponse(String.valueOf(response));
+        TencentWechatPayResponse result = new TencentWechatPayResponse(
+                true,
+                response.getCodeUrl(),
+                null,
+                "微信 Native 支付下单成功",
+                String.valueOf(response)
+        );
         return result;
     }
 
@@ -272,18 +278,16 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         var prepayRequest = new com.wechat.pay.java.service.payments.app.model.PrepayRequest();
         prepayRequest.setAppid(properties.getAppId());
         prepayRequest.setMchid(properties.getMerchantId());
-        prepayRequest.setDescription(request.getDescription());
-        prepayRequest.setOutTradeNo(request.getOrderNo());
-        prepayRequest.setNotifyUrl(request.getNotifyUrl());
-        prepayRequest.setTimeExpire(request.getExpireTime());
-        prepayRequest.setAttach(request.getAttach());
+        prepayRequest.setDescription(request.description());
+        prepayRequest.setOutTradeNo(request.orderNo());
+        prepayRequest.setNotifyUrl(request.notifyUrl());
+        prepayRequest.setTimeExpire(request.expireTime());
+        prepayRequest.setAttach(request.attach());
         var amount = new com.wechat.pay.java.service.payments.app.model.Amount();
-        amount.setTotal(request.getAmountFen().intValue());
-        amount.setCurrency(firstNonBlank(request.getCurrency(), "CNY"));
+        amount.setTotal(request.amountFen().intValue());
+        amount.setCurrency(firstNonBlank(request.currency(), "CNY"));
         prepayRequest.setAmount(amount);
         var response = service.prepayWithRequestPayment(prepayRequest);
-        TencentWechatPayResponse result = new TencentWechatPayResponse();
-        result.setSuccess(true);
         Map<String, Object> sdkParams = new LinkedHashMap<>();
         sdkParams.put("appid", response.getAppid());
         sdkParams.put("partnerid", response.getPartnerId());
@@ -292,10 +296,8 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         sdkParams.put("noncestr", response.getNonceStr());
         sdkParams.put("timestamp", response.getTimestamp());
         sdkParams.put("sign", response.getSign());
-        result.setSdkParams(sdkParams);
-        result.setMessage("微信 App 支付下单成功");
-        result.setRawResponse(String.valueOf(response));
-        return result;
+        return new TencentWechatPayResponse(true, null, sdkParams,
+                "微信 App 支付下单成功", String.valueOf(response));
     }
 
     @Override
@@ -363,72 +365,72 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
          * @param "appid" "appid"
          * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
          */
-        putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
+        putIfHasText(body, "appid", firstNonBlank(request.appId(), properties.getAppId()));
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "service_id" "服务_标识"
          * @param request.getServiceId( 请求.获取服务标识(
          */
-        putIfHasText(body, "service_id", request.getServiceId());
+        putIfHasText(body, "service_id", request.serviceId());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "out_order_no" "出订单no"
          * @param request.getOutOrderNo( 请求.获取出订单no(
          */
-        putIfHasText(body, "out_order_no", request.getOutOrderNo());
+        putIfHasText(body, "out_order_no", request.outOrderNo());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "openid" "openid"
          * @param request.getOpenId( 请求.获取打开标识(
          */
-        putIfHasText(body, "openid", request.getOpenId());
+        putIfHasText(body, "openid", request.openId());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "notify_url" "通知_url"
          * @param firstNonBlank(request.getNotifyUrl( 第一个nonblank(请求.获取通知url(
          */
-        putIfHasText(body, "notify_url", firstNonBlank(request.getNotifyUrl(), properties.getNotifyUrl()));
+        putIfHasText(body, "notify_url", firstNonBlank(request.notifyUrl(), properties.getNotifyUrl()));
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "service_introduction" "服务_introduction"
          * @param request.getServiceIntroduction( 请求.获取服务introduction(
          */
-        putIfHasText(body, "service_introduction", request.getServiceIntroduction());
+        putIfHasText(body, "service_introduction", request.serviceIntroduction());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "attach" "attach"
          * @param request.getAttach( 请求.获取attach(
          */
-        putIfHasText(body, "attach", request.getAttach());
-        if (request.getNeedUserConfirm() != null) {
-            body.put("need_user_confirm", request.getNeedUserConfirm());
+        putIfHasText(body, "attach", request.attach());
+        if (request.needUserConfirm() != null) {
+            body.put("need_user_confirm", request.needUserConfirm());
         }
         Map<String, Object> timeRange = buildTimeRange(request);
         if (!timeRange.isEmpty()) {
             body.put("time_range", timeRange);
         }
-        if (request.getPostPayments() != null && !request.getPostPayments().isEmpty()) {
-            body.put("post_payments", request.getPostPayments());
+        if (request.postPayments() != null && !request.postPayments().isEmpty()) {
+            body.put("post_payments", request.postPayments());
         }
-        if (request.getPostDiscounts() != null && !request.getPostDiscounts().isEmpty()) {
-            body.put("post_discounts", request.getPostDiscounts());
+        if (request.postDiscounts() != null && !request.postDiscounts().isEmpty()) {
+            body.put("post_discounts", request.postDiscounts());
         }
-        if (request.getTotalAmountFen() != null) {
-            body.put("total_amount", request.getTotalAmountFen());
+        if (request.totalAmountFen() != null) {
+            body.put("total_amount", request.totalAmountFen());
         }
         /**
          * 合并extra参数。
          * @param body 主体
          * @param request.getExtraParams( 请求.获取extra参数(
          */
-        mergeExtraParams(body, request.getExtraParams());
-        return callPayScoreApi(properties, "/v3/payscore/serviceorder", body, request.getOutOrderNo(), "微信支付分创建成功");
+        mergeExtraParams(body, request.extraParams());
+        return callPayScoreApi(properties, "/v3/payscore/serviceorder", body, request.outOrderNo(), "微信支付分创建成功");
     }
 
     @Override
@@ -439,11 +441,11 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         Config config = clientFactory.createAutoCertificateConfig(properties);
         HttpClient client = clientFactory.createHttpClient(config);
         String url = WECHAT_PAY_BASE_URL
-                + "/v3/payscore/serviceorder?out_order_no=" + urlEncode(request.getOutOrderNo())
-                + "&service_id=" + urlEncode(request.getServiceId())
-                + "&appid=" + urlEncode(firstNonBlank(request.getAppId(), properties.getAppId()));
+                + "/v3/payscore/serviceorder?out_order_no=" + urlEncode(request.outOrderNo())
+                + "&service_id=" + urlEncode(request.serviceId())
+                + "&appid=" + urlEncode(firstNonBlank(request.appId(), properties.getAppId()));
         Map<String, Object> body = client.get(new HttpHeaders(), url, Map.class).getServiceResponse();
-        return toPayScoreResponse(body, request.getOutOrderNo(), "微信支付分查询成功");
+        return toPayScoreResponse(body, request.outOrderNo(), "微信支付分查询成功");
     }
 
     @Override
@@ -458,51 +460,51 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
          * @param "appid" "appid"
          * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
          */
-        putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
+        putIfHasText(body, "appid", firstNonBlank(request.appId(), properties.getAppId()));
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "service_id" "服务_标识"
          * @param request.getServiceId( 请求.获取服务标识(
          */
-        putIfHasText(body, "service_id", request.getServiceId());
+        putIfHasText(body, "service_id", request.serviceId());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "finish_type" "饰面_类型"
          * @param request.getFinishType( 请求.获取饰面类型(
          */
-        putIfHasText(body, "finish_type", request.getFinishType());
+        putIfHasText(body, "finish_type", request.finishType());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "reason" "ReasonMLML"
          * @param request.getReason( 请求.获取ReasonMLML(
          */
-        putIfHasText(body, "reason", request.getReason());
+        putIfHasText(body, "reason", request.reason());
         Map<String, Object> timeRange = buildTimeRange(request);
         if (!timeRange.isEmpty()) {
             body.put("time_range", timeRange);
         }
-        if (request.getPostPayments() != null && !request.getPostPayments().isEmpty()) {
-            body.put("post_payments", request.getPostPayments());
+        if (request.postPayments() != null && !request.postPayments().isEmpty()) {
+            body.put("post_payments", request.postPayments());
         }
-        if (request.getPostDiscounts() != null && !request.getPostDiscounts().isEmpty()) {
-            body.put("post_discounts", request.getPostDiscounts());
+        if (request.postDiscounts() != null && !request.postDiscounts().isEmpty()) {
+            body.put("post_discounts", request.postDiscounts());
         }
-        if (request.getTotalAmountFen() != null) {
-            body.put("total_amount", request.getTotalAmountFen());
+        if (request.totalAmountFen() != null) {
+            body.put("total_amount", request.totalAmountFen());
         }
         /**
          * 合并extra参数。
          * @param body 主体
          * @param request.getExtraParams( 请求.获取extra参数(
          */
-        mergeExtraParams(body, request.getExtraParams());
+        mergeExtraParams(body, request.extraParams());
         return callPayScoreApi(properties,
-                "/v3/payscore/serviceorder/" + urlEncode(request.getOutOrderNo()) + "/complete",
+                "/v3/payscore/serviceorder/" + urlEncode(request.outOrderNo()) + "/complete",
                 body,
-                request.getOutOrderNo(),
+                request.outOrderNo(),
                 "微信支付分完结成功");
     }
 
@@ -518,31 +520,31 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
          * @param "appid" "appid"
          * @param firstNonBlank(request.getAppId( 第一个nonblank(请求.getappid(
          */
-        putIfHasText(body, "appid", firstNonBlank(request.getAppId(), properties.getAppId()));
+        putIfHasText(body, "appid", firstNonBlank(request.appId(), properties.getAppId()));
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "service_id" "服务_标识"
          * @param request.getServiceId( 请求.获取服务标识(
          */
-        putIfHasText(body, "service_id", request.getServiceId());
+        putIfHasText(body, "service_id", request.serviceId());
         /**
          * 放入if是否包含文本。
          * @param body 主体
          * @param "reason" "ReasonMLML"
          * @param request.getReason( 请求.获取ReasonMLML(
          */
-        putIfHasText(body, "reason", request.getReason());
+        putIfHasText(body, "reason", request.reason());
         /**
          * 合并extra参数。
          * @param body 主体
          * @param request.getExtraParams( 请求.获取extra参数(
          */
-        mergeExtraParams(body, request.getExtraParams());
+        mergeExtraParams(body, request.extraParams());
         return callPayScoreApi(properties,
-                "/v3/payscore/serviceorder/" + urlEncode(request.getOutOrderNo()) + "/cancel",
+                "/v3/payscore/serviceorder/" + urlEncode(request.outOrderNo()) + "/cancel",
                 body,
-                request.getOutOrderNo(),
+                request.outOrderNo(),
                 "微信支付分取消成功");
     }
 
@@ -571,20 +573,20 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatRefundResponse refund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         RefundService service = clientFactory.createRefundService(clientFactory.createAutoCertificateConfig(properties));
         var createRequest = new com.wechat.pay.java.service.refund.model.CreateRequest();
-        createRequest.setOutTradeNo(request.getOrderNo());
-        createRequest.setTransactionId(request.getTradeNo());
-        createRequest.setOutRefundNo(request.getRefundNo());
-        createRequest.setReason(request.getReason());
-        createRequest.setNotifyUrl(firstNonBlank(request.getNotifyUrl(), properties.getNotifyUrl()));
+        createRequest.setOutTradeNo(request.orderNo());
+        createRequest.setTransactionId(request.tradeNo());
+        createRequest.setOutRefundNo(request.refundNo());
+        createRequest.setReason(request.reason());
+        createRequest.setNotifyUrl(firstNonBlank(request.notifyUrl(), properties.getNotifyUrl()));
 
         var amount = new com.wechat.pay.java.service.refund.model.AmountReq();
-        amount.setTotal(request.getTotalAmountFen());
-        amount.setRefund(request.getRefundAmountFen());
+        amount.setTotal(request.totalAmountFen());
+        amount.setRefund(request.refundAmountFen());
         amount.setCurrency("CNY");
         createRequest.setAmount(amount);
 
         Refund response = service.create(createRequest);
-        return toRefundResponse(response, request.getRefundNo(), request.getRefundAmountFen());
+        return toRefundResponse(response, request.refundNo(), request.refundAmountFen());
     }
 
     @Override
@@ -594,9 +596,9 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     public TencentWechatRefundResponse queryRefund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         RefundService service = clientFactory.createRefundService(clientFactory.createAutoCertificateConfig(properties));
         var queryRequest = new com.wechat.pay.java.service.refund.model.QueryByOutRefundNoRequest();
-        queryRequest.setOutRefundNo(request.getRefundNo());
+        queryRequest.setOutRefundNo(request.refundNo());
         Refund response = service.queryByOutRefundNo(queryRequest);
-        return toRefundResponse(response, request.getRefundNo(), request.getRefundAmountFen());
+        return toRefundResponse(response, request.refundNo(), request.refundAmountFen());
     }
 
     @Override
@@ -655,12 +657,12 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
      */
     private RequestParam toRequestParam(TencentWechatNotifyRequest request) {
         return new RequestParam.Builder()
-                .serialNumber(requiredText(request.getSerialNumber(), "微信支付通知缺少证书序列号"))
-                .timestamp(requiredText(request.getTimestamp(), "微信支付通知缺少时间戳"))
-                .nonce(requiredText(request.getNonce(), "微信支付通知缺少随机串"))
-                .signature(requiredText(request.getSignature(), "微信支付通知缺少签名"))
-                .signType(firstNonBlank(request.getSignType(), DEFAULT_SIGN_TYPE))
-                .body(requiredText(request.getBody(), "微信支付通知缺少请求体"))
+                .serialNumber(requiredText(request.serialNumber(), "微信支付通知缺少证书序列号"))
+                .timestamp(requiredText(request.timestamp(), "微信支付通知缺少时间戳"))
+                .nonce(requiredText(request.nonce(), "微信支付通知缺少随机串"))
+                .signature(requiredText(request.signature(), "微信支付通知缺少签名"))
+                .signType(firstNonBlank(request.signType(), DEFAULT_SIGN_TYPE))
+                .body(requiredText(request.body(), "微信支付通知缺少请求体"))
                 .build();
     }
 
@@ -671,17 +673,12 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
      * @return 转为订单响应的结果
      */
     private TencentWechatOrderResponse toOrderResponse(Transaction response) {
-        TencentWechatOrderResponse result = new TencentWechatOrderResponse();
-        result.setSuccess(true);
-        result.setTransactionId(response.getTransactionId());
-        result.setTradeState(response.getTradeState() != null ? response.getTradeState().name() : null);
-        result.setTradeStateDesc(response.getTradeStateDesc());
-        if (response.getAmount() != null) {
-            result.setTotalAmountFen(longValue(response.getAmount().getTotal()));
-            result.setPayerTotalAmountFen(longValue(response.getAmount().getPayerTotal()));
-        }
-        result.setRawResponse(String.valueOf(response));
-        return result;
+        var amount = response.getAmount();
+        return new TencentWechatOrderResponse(true, response.getTransactionId(),
+                amount != null ? longValue(amount.getTotal()) : null,
+                amount != null ? longValue(amount.getPayerTotal()) : null,
+                response.getTradeState() != null ? response.getTradeState().name() : null,
+                response.getTradeStateDesc(), String.valueOf(response));
     }
 
     /**
@@ -693,22 +690,13 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
      * @return 转为退税响应的结果
      */
     private TencentWechatRefundResponse toRefundResponse(Refund response, String refundNo, Long fallbackRefundAmountFen) {
-        TencentWechatRefundResponse result = new TencentWechatRefundResponse();
-        result.setSuccess(true);
-        result.setRefundNo(firstNonBlank(response.getOutRefundNo(), refundNo));
-        result.setRefundId(response.getRefundId());
-        result.setRefundStatus(response.getStatus() != null ? response.getStatus().name() : null);
-        result.setMessage(response.getStatus() != null ? response.getStatus().name() : null);
-        result.setRefundAmountFen(response.getAmount() != null && response.getAmount().getRefund() != null
-                /**
-                 * long值。
-                 * @param response.getAmount( 响应.获取amount(
-                 * @return long值的结果
-                 */
-                ? longValue(response.getAmount().getRefund())
-                : fallbackRefundAmountFen);
-        result.setRawResponse(String.valueOf(response));
-        return result;
+        var amount = response.getAmount();
+        Long refundAmountFen = amount != null && amount.getRefund() != null
+                ? longValue(amount.getRefund())
+                : fallbackRefundAmountFen;
+        String status = response.getStatus() != null ? response.getStatus().name() : null;
+        return new TencentWechatRefundResponse(true, firstNonBlank(response.getOutRefundNo(), refundNo),
+                response.getRefundId(), refundAmountFen, status, status, String.valueOf(response));
     }
 
     /**
@@ -755,15 +743,16 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     private TencentWechatPayScoreResponse toPayScoreResponse(Map<String, Object> body,
                                                              String fallbackOutOrderNo,
                                                              String successMessage) {
-        TencentWechatPayScoreResponse response = new TencentWechatPayScoreResponse();
-        response.setSuccess(true);
-        response.setOutOrderNo(firstText(body, "out_order_no", "outOrderNo", fallbackOutOrderNo));
-        response.setServiceOrderNo(firstText(body, "service_order_no", "serviceOrderNo"));
-        response.setState(firstText(body, "state", "service_state", "serviceState", "order_status", "orderStatus"));
-        response.setPackageInfo(firstText(body, "package_info", "packageInfo", "package"));
-        response.setMessage(successMessage);
-        response.setRawData(body);
-        response.setRawResponse(toJson(body));
+        TencentWechatPayScoreResponse response = new TencentWechatPayScoreResponse(
+                true,
+                firstText(body, "out_order_no", "outOrderNo", fallbackOutOrderNo),
+                firstText(body, "service_order_no", "serviceOrderNo"),
+                firstText(body, "state", "service_state", "serviceState", "order_status", "orderStatus"),
+                firstText(body, "package_info", "packageInfo", "package"),
+                successMessage,
+                toJson(body),
+                body
+        );
         return response;
     }
 
@@ -781,14 +770,14 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
          * @param "start_time" "启动_时间"
          * @param request.getStartTime( 请求.获取启动时间(
          */
-        putIfHasText(timeRange, "start_time", request.getStartTime());
+        putIfHasText(timeRange, "start_time", request.startTime());
         /**
          * 放入if是否包含文本。
          * @param timeRange 时间范围
          * @param "end_time" "结束_时间"
          * @param request.getEndTime( 请求.获取结束时间(
          */
-        putIfHasText(timeRange, "end_time", request.getEndTime());
+        putIfHasText(timeRange, "end_time", request.endTime());
         return timeRange;
     }
 
@@ -901,4 +890,5 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         return value;
     }
 }
+
 

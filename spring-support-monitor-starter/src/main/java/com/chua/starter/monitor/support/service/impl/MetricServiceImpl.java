@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -98,18 +99,42 @@ public class MetricServiceImpl implements MetricService {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
+     * 历史曲线单次返回的最大采样点数
+     */
+    private static final int HISTORY_MAX_POINTS = 200;
+
+    /**
+     * 窗口不少于该小时数才允许退化到小时聚合，更短的窗口保留原始采集点细节
+     */
+    private static final long HISTORY_HOURLY_MIN_HOURS = 6;
+
+    /**
+     * 把按时间倒序取出的最近 N 条记录翻成正序，供曲线按时间轴绘制
+     *
+     * @param rows 倒序记录
+     * @param <T>  记录类型
+     * @return 正序记录
+     */
+    private static <T> List<T> chronological(List<T> rows) {
+        List<T> out = new ArrayList<>(rows);
+        Collections.reverse(out);
+        return out;
+    }
+
+    /**
      * 默认批量插入大小
      */
     private static final int BATCH_SIZE = 200;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    // 返回值是 ReturnResult<Void>，主机 id 只能从入参 CollectResult 取（用 #result 会抛 EL1008E）
     @org.springframework.cache.annotation.Caching(evict = {
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'cpu:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'memory:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'disk:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'network:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'jvm:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null")
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'cpu:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'memory:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'disk:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'network:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'jvm:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null")
     })
     /**
      * 写入collect结果
@@ -373,7 +398,9 @@ public class MetricServiceImpl implements MetricService {
             jdbcTemplate.update("DELETE FROM ms_monitor_redis_metric WHERE ms_monitor_redis_metric_collect_time < ?", cutoff);
             int deletedStats = jdbcTemplate.update("DELETE FROM ms_monitor_metric_statistics WHERE ms_monitor_metric_statistics_hour_bucket < ?", cutoff);
             int deletedRedisStats = jdbcTemplate.update("DELETE FROM ms_monitor_redis_metric_statistics WHERE ms_monitor_redis_metric_statistics_hour_bucket < ?", cutoff);
-            log.info("数据清理完成, 删除 {} 条指标, {} 条统计", deleted, deletedStats + deletedRedisStats);
+            int deletedNginx = jdbcTemplate.update("DELETE FROM ms_monitor_nginx_metric WHERE ms_monitor_nginx_metric_collect_time < ?", cutoff);
+            log.info("数据清理完成, 删除 {} 条指标, {} 条统计, {} 条 nginx 指标",
+                    deleted, deletedStats + deletedRedisStats, deletedNginx);
             return ReturnResult.ok();
         } catch (Exception e) {
             log.error("数据清理失败", e);
@@ -466,13 +493,13 @@ public class MetricServiceImpl implements MetricService {
      * 获取cpu历史
     */
     public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
-        return ReturnResult.ok(cpuMapper.selectList(
+        return ReturnResult.ok(chronological(cpuMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricCpu>()
                         .eq(MsMonitorMetricCpu::getMonitorId, monitorId)
                         .ge(startTime != null, MsMonitorMetricCpu::getCollectTime, startTime)
                         .le(endTime != null, MsMonitorMetricCpu::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorMetricCpu::getCollectTime)
-                        .last("LIMIT 200")));
+                        .orderByDesc(MsMonitorMetricCpu::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS))));
     }
 
     @Override
@@ -480,13 +507,13 @@ public class MetricServiceImpl implements MetricService {
      * 获取内存历史
     */
     public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
-        return ReturnResult.ok(memoryMapper.selectList(
+        return ReturnResult.ok(chronological(memoryMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricMemory>()
                         .eq(MsMonitorMetricMemory::getMonitorId, monitorId)
                         .ge(startTime != null, MsMonitorMetricMemory::getCollectTime, startTime)
                         .le(endTime != null, MsMonitorMetricMemory::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorMetricMemory::getCollectTime)
-                        .last("LIMIT 200")));
+                        .orderByDesc(MsMonitorMetricMemory::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS))));
     }
 
     @Override
@@ -494,13 +521,13 @@ public class MetricServiceImpl implements MetricService {
      * 获取jvm历史
     */
     public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
-        return ReturnResult.ok(jvmMapper.selectList(
+        return ReturnResult.ok(chronological(jvmMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricJvm>()
                         .eq(MsMonitorMetricJvm::getMonitorId, monitorId)
                         .ge(startTime != null, MsMonitorMetricJvm::getCollectTime, startTime)
                         .le(endTime != null, MsMonitorMetricJvm::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorMetricJvm::getCollectTime)
-                        .last("LIMIT 200")));
+                        .orderByDesc(MsMonitorMetricJvm::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS))));
     }
 
     @Override
@@ -508,13 +535,13 @@ public class MetricServiceImpl implements MetricService {
      * 获取network历史
     */
     public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
-        return ReturnResult.ok(networkMapper.selectList(
+        return ReturnResult.ok(chronological(networkMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricNetwork>()
                         .eq(MsMonitorMetricNetwork::getMonitorId, monitorId)
                         .ge(startTime != null, MsMonitorMetricNetwork::getCollectTime, startTime)
                         .le(endTime != null, MsMonitorMetricNetwork::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorMetricNetwork::getCollectTime)
-                        .last("LIMIT 200")));
+                        .orderByDesc(MsMonitorMetricNetwork::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS))));
     }
 
     @Override
@@ -522,13 +549,13 @@ public class MetricServiceImpl implements MetricService {
      * 获取disk历史
     */
     public ReturnResult<List<MsMonitorMetricDisk>> getDiskHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
-        return ReturnResult.ok(diskMapper.selectList(
+        return ReturnResult.ok(chronological(diskMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricDisk>()
                         .eq(MsMonitorMetricDisk::getMonitorId, monitorId)
                         .ge(startTime != null, MsMonitorMetricDisk::getCollectTime, startTime)
                         .le(endTime != null, MsMonitorMetricDisk::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorMetricDisk::getCollectTime)
-                        .last("LIMIT 200")));
+                        .orderByDesc(MsMonitorMetricDisk::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS))));
     }
 
     @Override
@@ -548,13 +575,109 @@ public class MetricServiceImpl implements MetricService {
      * 获取Redis指标历史
     */
     public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
-        return ReturnResult.ok(redisMetricMapper.selectList(
+        List<MsMonitorRedisMetric> stamps = selectRedisCollectTimes(monitorId, startTime, endTime);
+        if (stamps.isEmpty()) {
+            return ReturnResult.ok(List.of());
+        }
+        if (useHourlyStats(startTime, endTime, stamps)) {
+            return ReturnResult.ok(hourlyRedisMetricSeries(monitorId, startTime, endTime));
+        }
+        return ReturnResult.ok(readRedisMetricRows(monitorId,
+                stamps.get(stamps.size() - 1).getCollectTime(),
+                stamps.get(0).getCollectTime()));
+    }
+
+    /**
+     * 取窗口内最近的 Redis 采集时刻（倒序）
+     *
+     * @param monitorId 监控资产
+     * @param startTime 窗口起点
+     * @param endTime   窗口终点
+     * @return 采集时刻列表
+     */
+    private List<MsMonitorRedisMetric> selectRedisCollectTimes(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
+        return redisMetricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                        .select(MsMonitorRedisMetric::getCollectTime)
                         .eq(MsMonitorRedisMetric::getMonitorId, monitorId)
                         .ge(startTime != null, MsMonitorRedisMetric::getCollectTime, startTime)
                         .le(endTime != null, MsMonitorRedisMetric::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorRedisMetric::getCollectTime)
-                        .last("LIMIT 200")));
+                        .groupBy(MsMonitorRedisMetric::getCollectTime)
+                        .orderByDesc(MsMonitorRedisMetric::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS));
+    }
+
+    /**
+     * 回读指定时间段内的 Redis 指标行（正序）
+     *
+     * @param monitorId 监控资产
+     * @param oldest    最早采集时刻
+     * @param newest    最新采集时刻
+     * @return 指标行列表
+     */
+    private List<MsMonitorRedisMetric> readRedisMetricRows(Long monitorId, LocalDateTime oldest, LocalDateTime newest) {
+        return redisMetricMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                        .eq(MsMonitorRedisMetric::getMonitorId, monitorId)
+                        .between(MsMonitorRedisMetric::getCollectTime, oldest, newest)
+                        .orderByAsc(MsMonitorRedisMetric::getCollectTime));
+    }
+
+    /**
+     * 判断原始采集点预算是否覆盖不满窗口，需要退到小时聚合
+     *
+     * @param startTime 窗口起点
+     * @param endTime   窗口终点
+     * @param stamps    窗口内最近的采集时刻（倒序）
+     * @return true 表示改用小时聚合序列
+     */
+    private static boolean useHourlyStats(LocalDateTime startTime, LocalDateTime endTime, List<MsMonitorRedisMetric> stamps) {
+        if (startTime == null || stamps.size() < HISTORY_MAX_POINTS) {
+            return false;
+        }
+        LocalDateTime until = endTime != null ? endTime : LocalDateTime.now();
+        return stamps.get(stamps.size() - 1).getCollectTime().isAfter(startTime)
+                && ChronoUnit.HOURS.between(startTime, until) >= HISTORY_HOURLY_MIN_HOURS;
+    }
+
+    /**
+     * 用小时聚合表绘制长窗口 Redis 曲线，聚合均值按采集指标行返回
+     *
+     * @param monitorId 监控资产
+     * @param startTime 窗口起点
+     * @param endTime   窗口终点
+     * @return 指标行列表（正序）
+     */
+    private List<MsMonitorRedisMetric> hourlyRedisMetricSeries(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
+        List<MsMonitorRedisMetricStatistics> buckets = redisMetricStatsMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
+                        .select(MsMonitorRedisMetricStatistics::getHourBucket)
+                        .eq(MsMonitorRedisMetricStatistics::getMonitorId, monitorId)
+                        .ge(startTime != null, MsMonitorRedisMetricStatistics::getHourBucket, startTime)
+                        .le(endTime != null, MsMonitorRedisMetricStatistics::getHourBucket, endTime)
+                        .groupBy(MsMonitorRedisMetricStatistics::getHourBucket)
+                        .orderByDesc(MsMonitorRedisMetricStatistics::getHourBucket)
+                        .last("LIMIT " + HISTORY_MAX_POINTS));
+        if (buckets.isEmpty()) {
+            return List.of();
+        }
+        LocalDateTime newest = buckets.get(0).getHourBucket();
+        LocalDateTime oldest = buckets.get(buckets.size() - 1).getHourBucket();
+        List<MsMonitorRedisMetricStatistics> stats = redisMetricStatsMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
+                        .eq(MsMonitorRedisMetricStatistics::getMonitorId, monitorId)
+                        .between(MsMonitorRedisMetricStatistics::getHourBucket, oldest, newest)
+                        .orderByAsc(MsMonitorRedisMetricStatistics::getHourBucket));
+        List<MsMonitorRedisMetric> rows = new ArrayList<>(stats.size());
+        for (MsMonitorRedisMetricStatistics stat : stats) {
+            MsMonitorRedisMetric row = new MsMonitorRedisMetric();
+            row.setMonitorId(stat.getMonitorId());
+            row.setMetricName(stat.getMetricName());
+            row.setMetricValue(stat.getAvgValue());
+            row.setCollectTime(stat.getHourBucket());
+            rows.add(row);
+        }
+        return rows;
     }
 
     @Override
@@ -562,14 +685,28 @@ public class MetricServiceImpl implements MetricService {
      * 获取generic指标历史
     */
     public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
+        boolean filtered = metricName != null && !metricName.isEmpty();
+        List<MsMonitorMetric> stamps = metricMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorMetric>()
+                        .select(MsMonitorMetric::getCollectTime)
+                        .eq(MsMonitorMetric::getMonitorId, monitorId)
+                        .eq(filtered, MsMonitorMetric::getMetricName, metricName)
+                        .ge(startTime != null, MsMonitorMetric::getCollectTime, startTime)
+                        .le(endTime != null, MsMonitorMetric::getCollectTime, endTime)
+                        .groupBy(MsMonitorMetric::getCollectTime)
+                        .orderByDesc(MsMonitorMetric::getCollectTime)
+                        .last("LIMIT " + HISTORY_MAX_POINTS));
+        if (stamps.isEmpty()) {
+            return ReturnResult.ok(List.of());
+        }
+        LocalDateTime newest = stamps.get(0).getCollectTime();
+        LocalDateTime oldest = stamps.get(stamps.size() - 1).getCollectTime();
         return ReturnResult.ok(metricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetric>()
                         .eq(MsMonitorMetric::getMonitorId, monitorId)
-                        .eq(metricName != null && !metricName.isEmpty(), MsMonitorMetric::getMetricName, metricName)
-                        .ge(startTime != null, MsMonitorMetric::getCollectTime, startTime)
-                        .le(endTime != null, MsMonitorMetric::getCollectTime, endTime)
-                        .orderByAsc(MsMonitorMetric::getCollectTime)
-                        .last("LIMIT 200")));
+                        .eq(filtered, MsMonitorMetric::getMetricName, metricName)
+                        .between(MsMonitorMetric::getCollectTime, oldest, newest)
+                        .orderByAsc(MsMonitorMetric::getCollectTime)));
     }
 
     @Override

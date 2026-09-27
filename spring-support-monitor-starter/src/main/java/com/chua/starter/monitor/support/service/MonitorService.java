@@ -62,6 +62,17 @@ public interface MonitorService {
     ReturnResult<List<MsMonitor>> listByServiceType(String serviceType);
 
     /**
+     * 解析主机名下的监控项（主机↔监控归属的唯一读取出口）
+     * <p>
+     * 优先取显式绑定列 {@code ms_server_host_id}；未绑定（历史数据）时按监控地址与主机地址相等回退匹配。
+     * </p>
+     *
+     * @param hostId 服务器主机 标识
+     * @return 该主机的监控项列表，无归属时为空列表
+     */
+    ReturnResult<List<MsMonitor>> listByServerHost(Long hostId);
+
+    /**
      * 分页查询
      *
      * @param pageNum  页码

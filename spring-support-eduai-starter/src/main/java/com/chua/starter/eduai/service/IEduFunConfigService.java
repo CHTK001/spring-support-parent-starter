@@ -43,4 +43,12 @@ public interface IEduFunConfigService extends IService<EduFunConfig> {
      * @return 是否成功
      */
     boolean updateEnabled(String moduleCode, Integer enabled);
+
+    /**
+     * 查询指定学段启用中的模块清单（学生端首页用）
+     *
+     * @param gradeLevel 学段：PRIMARY / JUNIOR / SENIOR
+     * @return 该学段的模块列表，按 sort_order 升序
+     */
+    List<EduFunConfig> listByLevel(String gradeLevel);
 }

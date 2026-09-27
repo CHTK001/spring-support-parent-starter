@@ -126,6 +126,45 @@ public class SysAiBotBinding extends SysBase {
     private Boolean recordUsage; // recordusage
 
     /**
+     * 是否仅回复 @ 了 Bot 自身的消息（群聊场景）。
+     *
+     * <p>开启后，群聊中未 @ Bot 的消息不触发回复；私聊（1:1）不受影响，照常回复。
+     * <b>默认开启</b>。</p>
+     */
+    @TableField("sys_ai_bot_binding_mention_only")
+    private Boolean mentionOnly = Boolean.TRUE;
+
+    /**
+     * 是否启用随机回复。
+     *
+     * <p>开启后不再逐条回复，而是每条消息按 {@link #randomProbability} 概率命中后，
+     * 取 {@link #randomContextCount} 条上下文交给 AI 生成一条消息主动发出。默认关闭。</p>
+     */
+    @TableField("sys_ai_bot_binding_random_reply_enabled")
+    private Boolean randomReplyEnabled;
+
+    /**
+     * 随机回复命中时携带的上下文消息条数。
+     */
+    @TableField("sys_ai_bot_binding_random_context_count")
+    private Integer randomContextCount;
+
+    /**
+     * 随机回复命中概率百分比，取值 [0, 100]，0 表示从不随机回复。
+     */
+    @TableField("sys_ai_bot_binding_random_probability")
+    private Double randomProbability;
+
+    /**
+     * 勾选的 MCP 服务器 ID（逗号分隔）。
+     *
+     * <p>仅管理员可配置；非空时 Bot 回复（含 AI 发送 / 入站触发 / 随机回复）
+     * 会真实连接并调用所选 MCP 工具。为空表示不使用 MCP。</p>
+     */
+    @TableField("sys_ai_bot_binding_mcp_server_ids")
+    private String mcpServerIds;
+
+    /**
      * 最后活跃时间
      */
     @TableField("sys_ai_bot_binding_last_active_time")

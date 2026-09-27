@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 /**
  * 订单创建事件
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -13,56 +14,50 @@ import java.math.BigDecimal;
 public class OrderCreatedEvent extends PaymentEvent {
 
     /**
-     * 排序标识
-    */
+     * 订单标识
+     */
     private final Long orderId;
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private final String orderNo;
     /**
      * 用户标识
-    */
+     */
     private final Long userId;
     /**
-     * 排序amount
-    */
+     * 订单金额
+     */
     private final BigDecimal orderAmount;
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private final String channelType;
     /**
-     * 通道SUB类型
-    */
+     * 渠道子类型
+     */
     private final String channelSubType;
     /**
      * 主题
-    */
+     */
     private final String subject;
 
     /**
-     * 创建 订单创建事件 实例
-     * @param source 源
-     * @param tenantId tenantid
-     * @param merchantId merchantid
+     * 创建订单创建事件实例
+     *
+     * @param source 来源
+     * @param tenantId 租户标识
+     * @param merchantId 商户标识
      * @param orderId 订单标识
-     * @param orderNo 订单no
+     * @param orderNo 订单号
      * @param userId 用户标识
-     * @param orderAmount 订单amount
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
+     * @param orderAmount 订单金额
+     * @param channelType 渠道类型
+     * @param channelSubType 渠道子类型
      * @param subject 主题
      */
     public OrderCreatedEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                              Long userId, BigDecimal orderAmount, String channelType, String channelSubType, String subject) {
-        /**
-         * 父。
-         * @param source 源
-         * @param "ORDER_CREATED" "订单_创建"
-         * @param tenantId tenantid
-         * @param merchantId merchantid
-         */
         super(source, "ORDER_CREATED", tenantId, merchantId);
         this.orderId = orderId;
         this.orderNo = orderNo;
@@ -73,4 +68,3 @@ public class OrderCreatedEvent extends PaymentEvent {
         this.subject = subject;
     }
 }
-

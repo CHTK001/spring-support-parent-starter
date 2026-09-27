@@ -21,6 +21,14 @@ public enum HostCollectType {
      */
     SCHEDULED("SCHEDULED", "定时SSH采集"),
     /**
+     * OpenSSH 采集：显式选择 OpenSSH(22) 通道，服务端周期经 SSH 连接执行探测命令
+     */
+    OPENSSH("OPENSSH", "OpenSSH采集"),
+    /**
+     * WinRM 采集：Windows 远程管理(5985)，保留实现，Windows 默认走 OpenSSH
+     */
+    WINRM("WINRM", "WinRM采集"),
+    /**
      * Agent 主动上报：目标主机 Agent 按 Agent键 推送数据
      */
     AGENT("AGENT", "Agent主动上报"),

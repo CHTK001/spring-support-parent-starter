@@ -3,6 +3,7 @@ package com.chua.starter.server.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerGroup;
+import com.chua.starter.server.support.model.vo.ServerGroupNodeVO;
 import com.chua.starter.server.support.service.ServerGroupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,12 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 服务器分组接口
@@ -95,50 +91,7 @@ public class ServerGroupController {
      */
     @Operation(summary = "分组树")
     @GetMapping("/tree")
-    public ReturnResult<List<Map<String, Object>>> tree() {
-        ReturnResult<List<MsServerGroup>> result = serverGroupService.list();
-        List<MsServerGroup> all = result.getData();
-        if (all == null) {
-            all = new ArrayList<>();
-        }
-
-        // 按 parentId 分组；根节点 parentId 为 null 或 0
-        Map<Long, List<MsServerGroup>> childrenMap = all.stream()
-                .filter(g -> g.getMsServerGroupParentId() != null && g.getMsServerGroupParentId() != 0L)
-                .collect(Collectors.groupingBy(MsServerGroup::getMsServerGroupParentId));
-
-        List<Map<String, Object>> tree = new ArrayList<>();
-        for (MsServerGroup g : all) {
-            Long pid = g.getMsServerGroupParentId();
-            if (pid == null || pid == 0L) {
-                tree.add(toNode(g, childrenMap));
-            }
-        }
-        return ReturnResult.ok(tree);
-    }
-
-    /**
-     * 将实体转换为树节点并递归组装 children
-     * @param g 方法入参 g
-     * @param childrenMap children映射，不允许为 null
-     * @return 结果映射，无数据时为空映射
-     */
-    private Map<String, Object> toNode(MsServerGroup g, Map<Long, List<MsServerGroup>> childrenMap) {
-        Map<String, Object> node = new LinkedHashMap<>();
-        node.put("id", g.getId());
-        node.put("name", g.getMsServerGroupName());
-        node.put("parentId", g.getMsServerGroupParentId());
-        node.put("sort", g.getMsServerGroupSort());
-        node.put("remark", g.getMsServerGroupRemark());
-        node.put("color", g.getMsServerGroupColor());
-        List<Map<String, Object>> children = new ArrayList<>();
-        List<MsServerGroup> subs = childrenMap.get(g.getId());
-        if (subs != null) {
-            for (MsServerGroup sub : subs) {
-                children.add(toNode(sub, childrenMap));
-            }
-        }
-        node.put("children", children);
-        return node;
+    public ReturnResult<List<ServerGroupNodeVO>> tree() {
+        return serverGroupService.tree();
     }
 }

@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.model.vo.RemoteTokenVO;
 import com.chua.starter.server.support.service.RemoteTokenService;
 import com.chua.starter.server.support.service.ServerHostService;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * 远控短令牌签发接口
@@ -51,10 +49,10 @@ public class RemoteTokenController {
      * @return token + 会话 URL（未配置 web 前端时 url 为 空，前端走 WS 直连）
      */
     @GetMapping("/token")
-    public ReturnResult<Map<String, Object>> issueToken(@RequestParam Long hostId,
-                                                        @RequestParam(defaultValue = "ssh") String protocol,
-                                                        @RequestParam(required = false) Long identityId,
-                                                        @RequestParam(required = false) Integer targetPort) {
+    public ReturnResult<RemoteTokenVO> issueToken(@RequestParam Long hostId,
+                                                  @RequestParam(defaultValue = "ssh") String protocol,
+                                                  @RequestParam(required = false) Long identityId,
+                                                  @RequestParam(required = false) Integer targetPort) {
         // 主机信息
         ReturnResult<MsServerHost> hostResult = serverHostService.get(hostId);
         if (!hostResult.isOk()) {
@@ -69,9 +67,12 @@ public class RemoteTokenController {
         }
         SshCredential cred = credential.getData();
 
- // 端口：显式 Target端口 优先，其次主机配置端口，最后协议默认
+ // 端口：显式 Target端口 > 远控端口 > 主机端口 > 协议默认（与 WS 隧道模式同一口径）
         Integer port = targetPort;
-        if (port == null) {
+        if (port == null || port <= 0) {
+            port = host.getServerHostRemotePort();
+        }
+        if (port == null || port <= 0) {
             port = host.getServerHostPort();
         }
 
@@ -80,11 +81,8 @@ public class RemoteTokenController {
                 host.getServerHostAddress(), port,
                 cred.username(), cred.password());
 
-        Map<String, Object> data = new LinkedHashMap<>(4);
-        data.put("token", token);
-        data.put("url", remoteTokenService.buildSessionUrl(token));
-        data.put("hostName", host.getServerHostName());
-        data.put("protocol", protocol);
-        return ReturnResult.ok(data);
+        return ReturnResult.ok(new RemoteTokenVO(token,
+                remoteTokenService.buildSessionUrl(token),
+                host.getServerHostName(), protocol));
     }
 }

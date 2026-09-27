@@ -4,7 +4,7 @@ package com.chua.payment.support.dto;
  * 微信支付分回调通知参数对象。
  *
  * @param channelId      渠道标识
- * @param outOrderNo     商户订单号
+ * @param outOrderNo     客户订单号
  * @param serialNumber   证书序列号
  * @param timestamp      时间戳
  * @param nonce          随机字符串

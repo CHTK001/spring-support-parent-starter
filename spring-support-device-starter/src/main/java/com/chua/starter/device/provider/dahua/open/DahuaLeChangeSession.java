@@ -81,7 +81,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         });
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            String src = info.getAppSecret() + system + paramStr + time + nonce;
+            String src = info.appSecret() + system + paramStr + time + nonce;
             byte[] digest = md.digest(utf8(src));
             StringBuilder sb = new StringBuilder(digest.length * 2);
             for (byte b : digest) {
@@ -105,8 +105,8 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     private void login() {
         try {
             Map<String, Object> params = new LinkedHashMap<>();
-            params.put("appKey", info.getAppKey());
-            params.put("appSecret", info.getAppSecret());
+            params.put("appKey", info.appKey());
+            params.put("appSecret", info.appSecret());
             params.put("system", "openAPI");
             JsonNode resp = execute("POST", PATH_TOKEN, params, null);
             JsonNode data = assertOk(resp);
@@ -127,7 +127,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
              * @param expires expires
              */
             cacheToken(token, expires);
-            log.info("乐橙登录成功: deviceSerial={}", info.getDeviceSerial());
+            log.info("乐橙登录成功: deviceSerial={}", info.deviceSerial());
         } catch (Exception e) {
             /**
              * illegal状态异常。
@@ -178,7 +178,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
      */
     public JsonNode getLiveUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceId", info.getDeviceSerial());
+        params.put("deviceId", info.deviceSerial());
         params.put("channelId", channel);
         params.put("streamId", 0);
         return assertOk(post(PATH_LIVE_URL, params));
@@ -201,7 +201,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceId", info.getDeviceSerial());
+        params.put("deviceId", info.deviceSerial());
         params.put("channelId", channel);
         params.put("beginTime", range.getStart().toString());
         params.put("endTime", range.getEnd().toString());
@@ -220,7 +220,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
             return;
         }
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceId", info.getDeviceSerial());
+        params.put("deviceId", info.deviceSerial());
         params.put("channelId", 1);
         params.put("operation", mapOperation(cmd));
         params.put("duration", (int) Math.max(100, Math.min(2000, Math.round(2000 * speed))));

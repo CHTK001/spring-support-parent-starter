@@ -2,23 +2,29 @@ package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.net.NetUtils;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.nmap.support.NmapScanner;
 import com.chua.nmap.support.RustNmapScanner;
 import com.chua.nmap.support.bridge.RustNmapBridge;
 import com.chua.starter.server.support.connection.ConnectionManager;
+import com.chua.starter.server.support.connection.WinrmShell;
+import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsServerHostIdentity;
 import com.chua.starter.server.support.entity.MsServerIdentity;
 import com.chua.starter.server.support.entity.MsServerKey;
 import com.chua.starter.server.support.enums.AuthType;
 import com.chua.starter.server.support.enums.ProtocolType;
+import com.chua.starter.server.support.event.HostPortScanEvent;
 import com.chua.starter.server.support.mapper.MsServerHostIdentityMapper;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
 import com.chua.starter.server.support.mapper.MsServerKeyMapper;
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.model.vo.HostSyncChangeVO;
+import com.chua.starter.server.support.model.vo.HostSyncSummaryVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.spi.HostDetectProvider;
 import com.chua.starter.server.support.spi.HostDetectProviderRegistry;
@@ -27,17 +33,21 @@ import com.chua.starter.server.support.spi.HostRemoteProviderRegistry;
 import com.chua.starter.server.support.spi.HostShellDialect;
 import com.chua.starter.server.support.spi.RemoteExecResult;
 import com.chua.starter.server.support.util.CredentialCipher;
+import com.chua.starter.server.support.util.HostPlatforms;
 import com.chua.starter.server.support.util.SshClients;
-import com.chua.winrm.support.client.WinRmExecClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -47,6 +57,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 服务器主机服务实现
@@ -93,6 +106,11 @@ public class ServerHostServiceImpl implements ServerHostService {
      * 远控通道取值：GUACD 中转 / DIRECT 平台原生客户端直连 / NONE 不经平台通道
     */
     private static final Set<String> REMOTE_MODES = Set.of("GUACD", "DIRECT", "NONE");
+
+    /**
+     * 平台自研直连通道覆盖的协议：SSH 为 MINA SSHD PTY 桥接，VNC 为 RFB 帧桥接
+    */
+    private static final Set<String> DIRECT_PROTOCOLS = Set.of("SSH", "VNC");
 
     /**
      * JSON 序列化器
@@ -160,6 +178,32 @@ public class ServerHostServiceImpl implements ServerHostService {
     private final HostRemoteProviderRegistry remoteProviderRegistry;
 
     /**
+     * Windows 经 OpenSSH 的执行通道
+     */
+    private final WindowsSshShell windowsSshShell;
+
+    /**
+     * Windows 一次性引导安装 OpenSSH 时的 WinRM 兜底通道
+     */
+    private final WinrmShell winrmShell;
+
+    /**
+     * Spring 事件发布器（后台扫描完成后发布事件，由监控模块转发 Socket）
+     */
+    private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * 端口扫描中的主机集合，防止同一主机并发扫描
+     */
+    private final Set<Long> portScanning = ConcurrentHashMap.newKeySet();
+
+    /**
+     * 端口扫描后台执行器：扫描为阻塞式 native 调用，用虚拟线程承载不占用平台线程
+     */
+    private final ExecutorService portScanExecutor =
+            Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("port-scan-").factory());
+
+    /**
      * 探针标识随机源
     */
     private final SecureRandom secureRandom = new SecureRandom();
@@ -179,9 +223,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostPort() == null || host.getServerHostPort() <= 0) {
             host.setServerHostPort(DEFAULT_SSH_PORT);
         }
-        if (isBlank(host.getServerHostOsType())) {
-            host.setServerHostOsType("LINUX");
-        }
+        applyOsType(host);
+        applySshEnabledDefault(host);
         if (host.getServerHostStatus() == null) {
             host.setServerHostStatus(STATUS_ENABLED);
         }
@@ -201,6 +244,12 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostCollectMode() == null || isBlank(host.getServerHostCollectMode())) {
             host.setServerHostCollectMode("SCHEDULED");
         }
+        // 本机：先校验地址确属本机（填了非本机地址直接拒绝），再把回环/空地址归一为物理网卡 IP、远控强制 VNC
+        String localError = validateLocalAddress(host);
+        if (localError != null) {
+            return ReturnResult.error(localError);
+        }
+        applyLocalDefaults(host);
         if (host.getServerHostCollectInterval() == null) {
             host.setServerHostCollectInterval(3600);
         }
@@ -217,10 +266,6 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (channelError != null) {
             return ReturnResult.error(channelError);
         }
-        String localError = validateLocalAddress(host);
-        if (localError != null) {
-            return ReturnResult.error(localError);
-        }
         // VNC 口令密文落库（前端提交明文，禁止原样入库）
         if (!isBlank(host.getServerHostVncPassword())) {
             host.setServerHostVncPassword(cipher.encrypt(host.getServerHostVncPassword().trim()));
@@ -234,6 +279,10 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
         // 探针标识服务端生成，保证全局唯一
         host.setServerHostAgentKey(generateAgentKey());
+        // 主机资产编码服务端生成（用户未自定义时），保证可读且全局唯一
+        if (isBlank(host.getServerHostCode())) {
+            host.setServerHostCode(generateHostCode());
+        }
         hostMapper.insert(host);
         // 携带账号密码/PEM 时自动建身份并绑定，保证新增即可测连/远控
         /**
@@ -298,6 +347,19 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!isBlank(host.getServerHostCollectMode())) {
             exists.setServerHostCollectMode(host.getServerHostCollectMode());
         }
+        applyOsType(exists);
+        // 是否开启 SSH：显式提交则覆盖，否则保留/补默认（Linux 默认开、Windows 默认关）
+        if (host.getServerHostSshEnabled() != null) {
+            exists.setServerHostSshEnabled(host.getServerHostSshEnabled());
+        } else {
+            applySshEnabledDefault(exists);
+        }
+        // 本机：先校验地址确属本机（改成非本机地址直接拒绝），再把回环/空地址归一为物理网卡 IP、远控强制 VNC
+        String localError = validateLocalAddress(exists);
+        if (localError != null) {
+            return ReturnResult.error(localError);
+        }
+        applyLocalDefaults(exists);
         if (host.getServerHostCollectInterval() != null && host.getServerHostCollectInterval() > 0) {
             exists.setServerHostCollectInterval(host.getServerHostCollectInterval());
         }
@@ -338,10 +400,6 @@ public class ServerHostServiceImpl implements ServerHostService {
         String channelError = validateRemoteChannel(exists);
         if (channelError != null) {
             return ReturnResult.error(channelError);
-        }
-        String localError = validateLocalAddress(exists);
-        if (localError != null) {
-            return ReturnResult.error(localError);
         }
         hostMapper.updateById(exists);
         // 携带账号密码/PEM 时自动创建/更新登录身份并绑定（编辑时亦可调整凭据）
@@ -424,25 +482,55 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host == null) {
             return ReturnResult.error("主机不存在: " + id);
         }
-        // Agent / Local 通道没有 SSH，连通性由各自的探测提供者按自身通道判断
-        HostDetectProvider detector = detectProviderRegistry.resolve(host.getServerHostOsType()).orElse(null);
+        // 采集通道专属实现（如 Agent）优先，其余按平台路由；通道实现无需 SSH 身份
+        HostDetectProvider detector = detectProviderRegistry.resolve(host).orElse(null);
         if (detector != null && !detector.requiresCredential()) {
             ReturnResult<String> tested = detector.test(host);
             markOnline(id, tested.isOk());
             return tested;
         }
-        ReturnResult<SshCredential> resolved = resolveCredential(id, null);
-        if (!resolved.isOk()) {
-            return ReturnResult.error(resolved.getMsg());
+        List<Long> bound = listBoundIdentityIds(id).getData();
+        if (bound == null || bound.isEmpty()) {
+            // 无绑定身份时仍走一次解析：纯 VNC 主机的回落凭据在这里给出
+            return ReturnResult.error(resolveCredential(id, null).getMsg());
         }
+        // 采集侧（SshConnectionCache）按全部凭据逐组重试，这里同口径：一组口令错不该挡住后面的可用身份
+        String lastError = null;
+        for (Long identityId : bound) {
+            ReturnResult<SshCredential> resolved = resolveCredential(id, identityId);
+            if (!resolved.isOk()) {
+                lastError = resolved.getMsg();
+                continue;
+            }
+            ReturnResult<String> attempt = probeCredential(host, resolved.getData());
+            if (attempt.isOk()) {
+                return attempt;
+            }
+            lastError = attempt.getMsg();
+            log.info("[server] 身份 {} 未能登录主机 {}: {}", identityId, id, lastError);
+        }
+        markOnline(id, false);
+        return ReturnResult.error((lastError == null ? "连接失败" : lastError)
+                + "（已尝试 " + bound.size() + " 组绑定身份）");
+    }
+
+    /**
+     * 用一组凭据探测主机连通性。
+     *
+     * @param host       主机
+     * @param credential 凭据
+     * @return 连通结果，失败时 msg 为原因
+     */
+    private ReturnResult<String> probeCredential(MsServerHost host, SshCredential credential) {
+        Long id = host.getId();
         // Windows 主机没有 SSH 服务，必须按 SPI 走 WinRM，否则会误报「SSH 连接失败」并错标离线
         HostRemoteProvider provider = remoteProviderRegistry.resolve(host).orElse(null);
         if (provider != null && provider.shellDialect() == HostShellDialect.POWERSHELL) {
-            return testRemoteExec(host, provider, resolved.getData());
+            return testRemoteExec(host, provider, credential);
         }
         SshClients.Handle handle = null;
         try {
-            handle = connectionManager.borrow(host, resolved.getData());
+            handle = connectionManager.borrow(host, credential);
             // 登录+认证成功即为连通；exec 通道不可用时不影响结论，banner 仅尽力获取
             String banner = "connected";
             if ("LINUX".equalsIgnoreCase(host.getServerHostOsType())) {
@@ -460,7 +548,7 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.ok(banner, "测试成功");
         } catch (Exception e) {
             markOnline(host.getId(), false);
-            log.warn("[server] 连通性测试失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage());
+            log.warn("[server] 连通性测试失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage(), e);
             return ReturnResult.error("连接失败: " + e.getMessage());
         } finally {
             if (handle != null) {
@@ -490,7 +578,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         } catch (Exception e) {
             markOnline(host.getId(), false);
             log.warn("[server] 连通性测试失败 hostId={} address={}: {}",
-                    host.getId(), host.getServerHostAddress(), e.getMessage());
+                    host.getId(), host.getServerHostAddress(), e.getMessage(), e);
             return ReturnResult.error("连接失败: " + e.getMessage());
         }
     }
@@ -560,21 +648,26 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     @Override
-    public ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId) {
+    public ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId, String protocol) {
         MsServerHost host = hostMapper.selectById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
+        // 生效协议：调用方实际请求优先（SSH 直连传 SSH、VNC 直连传 VNC），否则回退主机当前远控协议
+        String effectiveProtocol = !isBlank(protocol) ? protocol.trim()
+                : (isBlank(host.getServerHostRemoteProtocol()) ? "" : host.getServerHostRemoteProtocol().trim());
+        boolean isVnc = ProtocolType.VNC.name().equalsIgnoreCase(effectiveProtocol);
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
                         .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
                         .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
         if (relations.isEmpty()) {
             // 纯 VNC 主机（如 Windows 桌面共享）可只配 VNC 口令而不绑定登录身份，
-            // 此时回落主机级 VNC 凭据；其余场景仍按未绑定身份报错
-            boolean vncProtocol = isBlank(host.getServerHostRemoteProtocol())
-                    || ProtocolType.VNC.name().equalsIgnoreCase(host.getServerHostRemoteProtocol().trim());
-            if (vncProtocol && !isBlank(host.getServerHostVncPassword())) {
+            // 此时回落主机级 VNC 凭据；仅当请求方不是明确的 SSH/RDP 时才允许（blank 与 VNC 都放行）
+            boolean vncFallback = !ProtocolType.SSH.name().equals(effectiveProtocol)
+                    && !ProtocolType.RDP.name().equals(effectiveProtocol)
+                    && !isBlank(host.getServerHostVncPassword());
+            if (vncFallback) {
                 return ReturnResult.ok(new SshCredential("",
                         decryptQuietly(host.getServerHostVncPassword(), host.getId()), null));
             }
@@ -599,10 +692,9 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("绑定的身份已被删除");
         }
         String username = identity.getMsServerIdentityUsername();
-        // VNC 桌面认证与 SSH/RDP 登录口令不同源：主机配了 VNC 口令时优先取它
-        boolean vncOnly = !isBlank(host.getServerHostRemoteProtocol())
-                && ProtocolType.VNC.name().equalsIgnoreCase(host.getServerHostRemoteProtocol().trim())
-                && !isBlank(host.getServerHostVncPassword());
+        // VNC 桌面认证与 SSH/RDP 登录口令不同源：仅当本次请求就是 VNC 且主机配了 VNC 口令时才取它；
+        // 请求 SSH/RDP 时这里 isVnc=false，一律走下面的绑定身份口令/私钥
+        boolean vncOnly = isVnc && !isBlank(host.getServerHostVncPassword());
         if (vncOnly) {
             return ReturnResult.ok(new SshCredential(username,
                     decryptQuietly(host.getServerHostVncPassword(), hostId), null));
@@ -636,9 +728,33 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!RustNmapBridge.isLoaded()) {
             return ReturnResult.error("Rust Nmap 原生库未加载，请检查 jar 内置 native 库是否随平台分发");
         }
+        // 同一主机同时只允许一个扫描任务，重复点击直接拒绝
+        if (!portScanning.add(hostId)) {
+            return ReturnResult.error("该主机端口扫描正在进行中，请等待本次扫描完成");
+        }
+        final String addr = address.trim();
         try {
-            RustNmapScanner scanner = new RustNmapScanner();
-            NmapScanner.ScanResult result = scanner.scanAllPorts(address.trim());
+            portScanExecutor.submit(() -> runPortScan(hostId, addr));
+        } catch (Exception e) {
+            portScanning.remove(hostId);
+            return ReturnResult.error("端口扫描任务提交失败: " + e.getMessage());
+        }
+        // 立即返回，扫描结果落库后由 Socket 事件推送，前端不阻塞等待
+        return ReturnResult.ok(hostMapper.selectById(hostId),
+                "端口扫描已开始，正在后台扫描 " + addr + " 常用端口，完成后自动更新");
+    }
+
+    /**
+     * 后台执行端口扫描：扫描结果落库并发布事件；异常折算为失败事件，绝不抛出线程外。
+     *
+     * @param hostId 主机标识
+     * @param addr   主机地址
+     */
+    private void runPortScan(Long hostId, String addr) {
+        long start = System.currentTimeMillis();
+        try {
+            // 只扫常用端口：1~65535 全量扫描实测超过 240 秒不返回，且期间把同进程采集接口拖慢数倍
+            NmapScanner.ScanResult result = new RustNmapScanner().scanCommonPorts(addr);
             List<NmapScanner.PortInfo> openPorts = new ArrayList<>();
             if (result.getPorts() != null) {
                 for (NmapScanner.PortInfo p : result.getPorts()) {
@@ -647,14 +763,24 @@ public class ServerHostServiceImpl implements ServerHostService {
                     }
                 }
             }
-            host.setServerHostPorts(toPortsJson(openPorts));
-            host.setServerHostLastPortScanTime(LocalDateTime.now());
-            hostMapper.updateById(host);
-            return ReturnResult.ok(hostMapper.selectById(hostId),
-                    String.format("端口扫描完成，发现 %d 个开放端口", openPorts.size()));
+            String portsJson = toPortsJson(openPorts);
+            LocalDateTime scanTime = LocalDateTime.now();
+            MsServerHost update = hostMapper.selectById(hostId);
+            if (update != null) {
+                update.setServerHostPorts(portsJson);
+                update.setServerHostLastPortScanTime(scanTime);
+                hostMapper.updateById(update);
+            }
+            long elapsed = (System.currentTimeMillis() - start) / 1000;
+            eventPublisher.publishEvent(new HostPortScanEvent(hostId, addr, true, openPorts.size(),
+                    result.getTotalPorts(), elapsed, portsJson, scanTime, null));
         } catch (Exception e) {
-            log.warn("[server] 端口扫描异常 hostId={} address={}: {}", hostId, address, e.getMessage());
-            return ReturnResult.error("端口扫描异常: " + e.getMessage());
+            log.warn("[server] 端口扫描异常 hostId={} address={}: {}", hostId, addr, e.getMessage());
+            long elapsed = (System.currentTimeMillis() - start) / 1000;
+            eventPublisher.publishEvent(new HostPortScanEvent(hostId, addr, false, 0, 0,
+                    elapsed, null, LocalDateTime.now(), e.getMessage()));
+        } finally {
+            portScanning.remove(hostId);
         }
     }
 
@@ -691,10 +817,11 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
-        // 按系统类型 SPI 路由（Linux/macOS 走 SSH、Windows 走 WinRM、AGENT/LOCAL 由主机侧自报）
-        HostDetectProvider provider = detectProviderRegistry.resolve(host.getServerHostOsType()).orElse(null);
+        // 按主机路由 SPI：采集通道专属实现（Agent 自报）优先，其余按平台（Linux/macOS 走 SSH、Windows 走 WinRM）
+        HostDetectProvider provider = detectProviderRegistry.resolve(host).orElse(null);
         if (provider == null) {
-            log.warn("[detect] 未找到系统类型 {} 的探测实现 hostId={}", host.getServerHostOsType(), hostId);
+            log.warn("[detect] 未找到采集方式 {} / 系统类型 {} 的探测实现 hostId={}",
+                    host.getServerHostCollectMode(), host.getServerHostOsType(), hostId);
             return ReturnResult.error("不支持的探测系统类型: " + host.getServerHostOsType());
         }
         SshCredential credential = null;
@@ -709,18 +836,166 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!detected.isOk()) {
             return detected;
         }
-        MsServerHost latest = hostMapper.selectById(hostId);
-        if (latest == null) {
+        // detect 已在库数据 host 上回写硬件/包管理器等探测字段，直接以探测结果为准持久化，
+        // 避免重新 selectById 得到未含探测修改的对象而丢失 PM/硬件
+        MsServerHost probed = detected.getData();
+        if (probed == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
         // 统一补采公网 IP（SSH 探测目标出口 IP，失败静默保持原值）
-        String publicIp = fetchPublicIp(latest);
+        String publicIp = fetchPublicIp(probed);
         if (StringUtils.isNotBlank(publicIp)) {
-            latest.setServerHostPublicIp(publicIp);
+            probed.setServerHostPublicIp(publicIp);
         }
-        hostMapper.updateById(latest);
+        // 存量主机历史编码可能为空，探测时补齐，保证资产编码不再有空数据
+        if (isBlank(probed.getServerHostCode())) {
+            probed.setServerHostCode(generateHostCode());
+        }
+        hostMapper.updateById(probed);
         markOnline(hostId, true);
         return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");
+    }
+    @Override
+    public ReturnResult<String> ensureOpenSsh(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (!"WINDOWS".equalsIgnoreCase(host.getServerHostOsType())) {
+            return ReturnResult.error("仅 Windows 主机支持 OpenSSH 引导");
+        }
+        ReturnResult<SshCredential> rr = resolveCredential(hostId, null);
+        if (!rr.isOk()) {
+            return ReturnResult.error(rr.getMsg());
+        }
+        SshCredential cred = rr.getData();
+        int targetPort = DEFAULT_SSH_PORT;
+        String address = host.getServerHostAddress();
+        StringBuilder detail = new StringBuilder();
+        try {
+            if (isTcpReachable(address, targetPort, 3000)) {
+                // 22 已可达：经 OpenSSH 做幂等收敛（开机自启、运行中、防火墙放行）
+                String ensure = """
+                        $ErrorActionPreference='Stop'
+                        $svc = Get-Service -Name sshd -ErrorAction SilentlyContinue
+                        if (-not $svc) { Write-Output 'SSHD_MISSING'; exit 2 }
+                        Set-Service -Name sshd -StartupType Automatic
+                        if ($svc.Status -ne 'Running') { Start-Service sshd }
+                        if (-not (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue)) {
+                          New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
+                        }
+                        Write-Output 'SSHD_READY'
+                        """;
+                WindowsSshShell.Result r = windowsSshShell.exec(copyForPort(host, targetPort), cred, ensure, 60);
+                if (r.exitCode() != 0) {
+                    return ReturnResult.error("OpenSSH 收敛失败: " + r.stderr());
+                }
+                detail.append("OpenSSH 已就绪");
+                if (StringUtils.isNotBlank(r.stdout())) {
+                    detail.append('\n').append(r.stdout().trim());
+                }
+            } else {
+                // 22 不可达：经 WinRM(5985) 一次性引导安装，之后全部走 OpenSSH
+                String bootstrap = """
+                        $ErrorActionPreference='Stop'
+                        [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
+                        $svc = Get-Service -Name sshd -ErrorAction SilentlyContinue
+                        if (-not $svc) {
+                          if (Get-Command Add-WindowsCapability -ErrorAction SilentlyContinue) {
+                            Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Server*' } | Add-WindowsCapability -Online | Out-Null
+                          } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+                            choco install openssh -y --no-progress
+                          } else {
+                            $base='C:\\Program Files'
+                            $zip=Join-Path $env:TEMP 'openssh-win64.zip'
+                            Invoke-WebRequest -Uri 'https://github.com/PowerShell/Win32-OpenSSH/releases/latest/download/OpenSSH-Win64.zip' -UseBasicParsing -OutFile $zip
+                            Expand-Archive -Path $zip -DestinationPath $base -Force
+                            if (Test-Path (Join-Path $base 'OpenSSH')) { Remove-Item (Join-Path $base 'OpenSSH') -Recurse -Force }
+                            Rename-Item (Join-Path $base 'OpenSSH-Win64') 'OpenSSH'
+                            & (Join-Path $base 'OpenSSH\\install-sshd.ps1')
+                          }
+                        }
+                        Set-Service -Name sshd -StartupType Automatic
+                        Start-Service sshd
+                        if (-not (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue)) {
+                          New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
+                        }
+                        Write-Output 'SSHD_INSTALLED'
+                        """;
+                WinrmShell.Result r = winrmShell.exec(copyForPort(host, 5985), cred, bootstrap, 600);
+                if (r.exitCode() != 0) {
+                    return ReturnResult.error("OpenSSH 引导安装失败: " + r.stderr());
+                }
+                if (!awaitTcpReachable(address, targetPort, 40_000L)) {
+                    return ReturnResult.error("安装已完成但 22 端口仍不可达");
+                }
+                detail.append("OpenSSH 安装并启用");
+                if (StringUtils.isNotBlank(r.stdout())) {
+                    detail.append('\n').append(r.stdout().trim());
+                }
+            }
+            // 登录端口回写为 22，后续操作全部走 OpenSSH
+            if (host.getServerHostPort() == null || host.getServerHostPort() != targetPort) {
+                host.setServerHostPort(targetPort);
+                hostMapper.updateById(host);
+            }
+            markOnline(hostId, true);
+            return ReturnResult.ok(detail.toString(), "OpenSSH 已就绪");
+        } catch (Exception e) {
+            log.warn("[ssh] ensure OpenSSH failed hostId={}: {}", hostId, e.getMessage());
+            return ReturnResult.error("OpenSSH 引导异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 探测 TCP 端口是否可连
+     *
+     * @param address   主机地址
+     * @param port      端口
+     * @param timeoutMs 连接超时（毫秒）
+     * @return 可连返回 true
+     */
+    private boolean isTcpReachable(String address, int port, int timeoutMs) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(address, port), timeoutMs);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 轮询等待 TCP 端口可连
+     *
+     * @param address 主机地址
+     * @param port    端口
+     * @param waitMs  最长等待（毫秒）
+     * @return 等待期内可连返回 true
+     * @throws InterruptedException 等待被中断时抛出
+     */
+    private boolean awaitTcpReachable(String address, int port, long waitMs) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + waitMs;
+        while (System.currentTimeMillis() < deadline) {
+            if (isTcpReachable(address, port, 2000)) {
+                return true;
+            }
+            Thread.sleep(2000L);
+        }
+        return false;
+    }
+
+    /**
+     * 复制主机并覆盖登录端口（引导时强制走指定通道，不污染库中对象）
+     *
+     * @param src  原主机
+     * @param port 覆盖端口
+     * @return 端口覆盖后的浅拷贝
+     */
+    private MsServerHost copyForPort(MsServerHost src, int port) {
+        MsServerHost copy = new MsServerHost();
+        BeanUtils.copyProperties(src, copy);
+        copy.setServerHostPort(port);
+        return copy;
     }
 
     @Override
@@ -746,7 +1021,7 @@ public class ServerHostServiceImpl implements ServerHostService {
                     Thread.ofVirtual().name("host-sync-").factory());
 
     @Override
-    public ReturnResult<java.util.Map<String, Object>> syncHosts(java.util.List<Long> hostIds) {
+    public ReturnResult<HostSyncSummaryVO> syncHosts(java.util.List<Long> hostIds) {
         try {
             List<MsServerHost> targets;
             if (hostIds == null || hostIds.isEmpty()) {
@@ -761,7 +1036,7 @@ public class ServerHostServiceImpl implements ServerHostService {
             java.util.concurrent.atomic.AtomicInteger ok = new java.util.concurrent.atomic.AtomicInteger(0);
             java.util.concurrent.atomic.AtomicInteger skipped = new java.util.concurrent.atomic.AtomicInteger(0);
             java.util.concurrent.atomic.AtomicInteger failed = new java.util.concurrent.atomic.AtomicInteger(0);
-            java.util.List<java.util.Map<String, Object>> changes =
+            java.util.List<HostSyncChangeVO> changes =
                     java.util.Collections.synchronizedList(new java.util.ArrayList<>());
             java.util.List<java.util.concurrent.CompletableFuture<Void>> tasks =
                     new java.util.ArrayList<>(targets.size());
@@ -780,12 +1055,8 @@ public class ServerHostServiceImpl implements ServerHostService {
                 }, SYNC_EXECUTOR));
             }
             java.util.concurrent.CompletableFuture.allOf(tasks.toArray(new java.util.concurrent.CompletableFuture[0])).join();
-            java.util.Map<String, Object> summary = new java.util.LinkedHashMap<>(8);
-            summary.put("total", targets.size());
-            summary.put("updated", ok.get());
-            summary.put("unchanged", skipped.get());
-            summary.put("failed", failed.get());
-            summary.put("changes", changes);
+            HostSyncSummaryVO summary = new HostSyncSummaryVO(targets.size(), ok.get(),
+                    skipped.get(), failed.get(), List.copyOf(changes));
             log.info("[server] 批量同步完成: 共 {} 台, 更新 {} 台, 未变更 {} 台, 失败 {} 台",
                     targets.size(), ok.get(), skipped.get(), failed.get());
             return ReturnResult.ok(summary, "同步完成");
@@ -806,12 +1077,15 @@ public class ServerHostServiceImpl implements ServerHostService {
      * @param changes 变更明细收集器
      * @return true=有字段更新，false=无变化跳过
      */
-    private boolean syncSingleHost(MsServerHost target, java.util.List<java.util.Map<String, Object>> changes) {
+    private boolean syncSingleHost(MsServerHost target, java.util.List<HostSyncChangeVO> changes) {
         // 保存探测前 IP 快照（用于判断是否发生变更）
         String oldPublicIp = target.getServerHostPublicIp();
         String oldPrivateIp = target.getServerHostPrivateIp();
         ReturnResult<MsServerHost> detected = detectHardware(target.getId());
-        if (!detected.isOk() || detected.getData() == null) {
+        if (!detected.isOk()) {
+            throw new IllegalStateException(detected.getMsg() == null ? "硬件探测失败" : detected.getMsg());
+        }
+        if (detected.getData() == null) {
             return false;
         }
         MsServerHost latest = hostMapper.selectById(target.getId());
@@ -825,12 +1099,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!ipChanged) {
             return false;
         }
-        java.util.Map<String, Object> change = new java.util.LinkedHashMap<>(4);
-        change.put("hostId", latest.getId());
-        change.put("hostName", latest.getServerHostName());
-        change.put("publicIp", latest.getServerHostPublicIp());
-        change.put("privateIp", latest.getServerHostPrivateIp());
-        changes.add(change);
+        changes.add(new HostSyncChangeVO(latest.getId(), latest.getServerHostName(),
+                latest.getServerHostPublicIp(), latest.getServerHostPrivateIp()));
         return true;
     }
 
@@ -852,7 +1122,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         // 优先通过 SSH 在目标主机上探测出口 IP
         try {
             ReturnResult<SshCredential> resolved = resolveCredential(host.getId(), null);
-            if (resolved.isOk()) {
+            // Windows 主机无 SSH（其端口是 WinRM），跳过 SSH 探测直接走本机回退
+            if (resolved.isOk() && !"WINDOWS".equalsIgnoreCase(host.getServerHostOsType())) {
                 SshClients.Handle handle = null;
                 try {
                     handle = connectionManager.borrow(host, resolved.getData());
@@ -874,13 +1145,15 @@ public class ServerHostServiceImpl implements ServerHostService {
         } catch (Exception e) {
             log.debug("[server] SSH 探测公网IP失败, 回退本机探测 hostId={}", host.getId(), e);
         }
-        // 回退：探测本机出口 IP（供公网资产参考）
+        // 回退：探测本机出口 IP（供公网资产参考）。响应可能被劫持为 HTML 错误页，
+        // 必须严格校验为合法 IPv4 才采用，避免超长非 IP 内容写入公网IP列
         try {
             String ip = fetchViaHttp("https://ifconfig.me");
-            if (isBlank(ip)) {
+            if (!isIp(ip == null ? "" : ip.trim())) {
                 ip = fetchViaHttp("https://api.ipify.org");
             }
-            return isBlank(ip) ? "" : ip.trim();
+            ip = ip == null ? "" : ip.trim();
+            return isIp(ip) ? ip : "";
         } catch (Exception e) {
             log.debug("[server] 本机公网IP探测失败 hostId={}", host.getId(), e);
             return "";
@@ -1097,6 +1370,17 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
+     * 生成可读且全局唯一的主机资产编码：HOST-XXXXXXXX（8 位大写十六进制）
+     *
+     * @return hostCode
+     */
+    private String generateHostCode() {
+        byte[] bytes = new byte[4];
+        secureRandom.nextBytes(bytes);
+        return "HOST-" + HexFormat.of().withUpperCase().formatHex(bytes);
+    }
+
+    /**
      * 静默解密凭据（失败仅告警，避免详情接口/凭据解析被裸异常打断）
      *
      * @param cipherText 密文
@@ -1187,8 +1471,13 @@ public class ServerHostServiceImpl implements ServerHostService {
     /**
      * 校验远控通道与协议的搭配
      * <p>
-     * RDP 只能由 guacd 中转渲染，平台没有原生 RDP 客户端；DIRECT 是平台自研 SSH 通道，
-     * 仅 SSH 可用；NONE 表示不经平台通道（SSH 用平台终端、VNC 用本机客户端）。
+     * RDP 只能由 guacd 中转渲染，平台没有原生 RDP 客户端；DIRECT 是平台自研通道，
+     * 覆盖 SSH（MINA SSHD PTY 桥接）与 VNC（RFB 帧桥接）；NONE 表示不经平台通道
+     * （SSH 用平台终端、VNC 用本机客户端）。
+     * </p>
+     * <p>
+     * VNC 直连只实现 RFB 标准认证（None/VNC 口令），macOS 远程管理的 ARD、TLS、AES 等
+     * 扩展安全类型仍需 guacd 中转，属运行时能力边界而非配置约束，这里不拦。
      * </p>
      *
      * @param host 主机（取远控协议、通道与系统类型）
@@ -1206,7 +1495,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         if ("RDP".equals(protocol) && !"GUACD".equals(mode)) {
             return "RDP 必须经 guacd 中转通道，远控通道不能设为 " + mode;
         }
-        if ("DIRECT".equals(mode) && !"SSH".equals(protocol)) {
+        if ("DIRECT".equals(mode) && !DIRECT_PROTOCOLS.contains(protocol)) {
             return protocol + " 不支持平台直连通道，请改为 guacd 中转或无需通道";
         }
         return null;
@@ -1223,15 +1512,104 @@ public class ServerHostServiceImpl implements ServerHostService {
      * @return 错误文案，非本机类型或校验通过返回 null
      */
     private String validateLocalAddress(MsServerHost host) {
-        if (!"LOCAL".equals(upper(host.getServerHostOsType()))) {
+        if (!"LOCAL".equals(upper(host.getServerHostCollectMode()))) {
             return null;
         }
         String address = host.getServerHostAddress() == null ? "" : host.getServerHostAddress().trim();
+        if (address.isEmpty()) {
+            // 空地址由入口必填校验统一处理，这里不发误导性的「不是本机地址」
+            return null;
+        }
         if (isLocalAddress(address)) {
             return null;
         }
-        return "平台类型为「本机」但地址 " + address + " 不是本机地址；本机请使用 127.0.0.1 或本机网卡地址（"
+        return "采集方式为「本机」但地址 " + address + " 不是本机地址；本机请使用 127.0.0.1 或本机网卡地址（"
                 + localAddressesHint() + "）";
+    }
+
+    /**
+     * 平台列归一：os_type 只承载真实平台，接入方式归 collect_mode。
+     *
+     * <p>历史口径把 {@code LOCAL} / {@code AGENT} 填进平台列（前端表单同样如此），这里收编为采集方式；
+     * 本机自采集的主机即运行本服务的这台机器，平台不由表单决定，一律按本机操作系统覆盖；
+     * 其余无法识别的值沿用原默认 LINUX。</p>
+     *
+     * @param host 主机
+     */
+    /**
+     * 应用「是否开启 SSH」默认值：Linux/macOS 默认开启，Windows 默认关闭（需自行启用 OpenSSH）。
+     * 仅在未显式设置时补默认，不覆盖用户已有的显式选择。
+     *
+     * @param host 主机
+     */
+    private void applySshEnabledDefault(MsServerHost host) {
+        if (host.getServerHostSshEnabled() == null) {
+            host.setServerHostSshEnabled(defaultSshEnabled(host.getServerHostOsType()));
+        }
+    }
+
+    /**
+     * 按操作系统类型返回 SSH 默认开关（Linux/macOS=1，Windows=0）
+     *
+     * @param osType 操作系统类型
+     * @return 1=开启 0=关闭
+     */
+    private int defaultSshEnabled(String osType) {
+        return osType != null && "WINDOWS".equalsIgnoreCase(osType.trim()) ? 0 : 1;
+    }
+
+    private void applyOsType(MsServerHost host) {
+        String raw = host.getServerHostOsType();
+        String platform = HostPlatforms.normalize(raw);
+        if (platform.isEmpty() && raw != null) {
+            String token = upper(raw);
+            if (("LOCAL".equals(token) || "AGENT".equals(token)) && isBlank(host.getServerHostCollectMode())) {
+                host.setServerHostCollectMode(token);
+            }
+        }
+        if ("LOCAL".equals(upper(host.getServerHostCollectMode()))) {
+            String local = HostPlatforms.normalize(System.getProperty("os.name"));
+            if (!local.isEmpty()) {
+                platform = local;
+            }
+        }
+        host.setServerHostOsType(platform.isEmpty() ? HostPlatforms.LINUX : platform);
+    }
+
+    /**
+     * 「本机」主机的地址与远控协议归一。
+     *
+     * <p>本机即运行本服务的机器，远控由平台自身发起：①地址强制为物理网卡的局域网 IP，
+     * 不使用回环地址（远程 guacd 收到 127.0.0.1 会回连到 guacd 自身，无法连到本机）；
+     * ②本机远控仅支持 VNC，强制协议为 VNC。</p>
+     *
+     * @param host 主机
+     */
+    private void applyLocalDefaults(MsServerHost host) {
+        if (!"LOCAL".equals(upper(host.getServerHostCollectMode()))) {
+            return;
+        }
+        // 地址为空或回环（guacd 收到 127.0.0.1 会回连自身）时归一为物理网卡 IP；
+        // 用户显式填写的本机网卡地址保留，不强行覆盖
+        String address = host.getServerHostAddress() == null ? "" : host.getServerHostAddress().trim();
+        if (address.isEmpty() || isLoopbackAddress(address)) {
+            host.setServerHostAddress(NetUtils.getPreferredLocalIp());
+        }
+        host.setServerHostRemoteProtocol(ProtocolType.VNC.name());
+    }
+
+    /**
+     * 判断地址是否为回环地址（127.0.0.1 / localhost / ::1）。
+     *
+     * @param address 主机地址
+     * @return 回环返回 true
+     */
+    private boolean isLoopbackAddress(String address) {
+        try {
+            return InetAddress.getByName(address).isLoopbackAddress();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

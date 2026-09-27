@@ -219,6 +219,34 @@ public class RequestUtils {
     }
 
     /**
+     * 获取去掉 context-path 的请求路径（策略匹配用）。
+     *
+     * <p>限流与接口路由策略都按「应用内路径」匹配，不含 context-path 与查询串：
+     * {@code /system/api/v2/user/me?x=1} → {@code /v2/user/me}。这样配置里写
+     * {@code /v2/user/me} 就能命中，不需要知道部署时的 context-path。</p>
+     *
+     * @param request request
+     * @return 去掉 context-path 与查询串后的路径，为空返回空串
+     */
+    public static String getPathWithinApplication(HttpServletRequest request) {
+        if (null == request) {
+            return "";
+        }
+        String uri = request.getRequestURI();
+        if (null == uri || uri.isEmpty()) {
+            return "";
+        }
+        String contextPath = request.getContextPath();
+        if (null != contextPath && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
+            uri = uri.substring(contextPath.length());
+        }
+        if (uri.isEmpty()) {
+            return "/";
+        }
+        return uri.startsWith("/") ? uri : "/" + uri;
+    }
+
+    /**
      * 获取请求头值
      *
      * @param request httpservlet请求

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.Map;
 
 /**
  * 全局设置 DTO，字段命名与前端面板对齐。
@@ -156,6 +157,22 @@ public class AiGlobalSettingDTO implements Serializable {
     private String ragVectorStorage;
 
     /**
+     * RAG 向量库配置：SPI 名称到该库键值配置的映射。
+     *
+     * <p>例如 {@code {"milvus":{"host":"...","port":"19530","collection":"rag","token":"..."}}}。
+     * 按向量库分桶保存，来回切换向量库时各自的 host / token / 表名都保留。</p>
+     *
+     * <p>字段结构由 {@code /v2/rag/options} 返回的 vectorStorageOptions 描述，
+     * 前端按描述渲染表单即可，新增向量库无需改前端。
+     * 标记为敏感（sensitive）的字段保存后不再回显。</p>
+     */
+    @Schema(description = "RAG 向量库配置：SPI 名称 -> 键值配置")
+    /**
+     * rag向量存储配置
+     */
+    private Map<String, Map<String, Object>> ragVectorStorageConfig;
+
+    /**
      * RAG 问答系统提示词
      */
     @Schema(description = "RAG 问答系统提示词")
@@ -183,56 +200,56 @@ public class AiGlobalSettingDTO implements Serializable {
     private Integer ragChunkOverlap;
 
     /**
-     * RAG �ı���Ƭ���ԣ�文本splitter SPI ���ƣ�Ĭ�� sentence��
+     * RAG 文本切片策略，对应文本 splitter SPI 名称，默认使用 sentence。
      */
-    @Schema(description = "RAG �ı���Ƭ����")
+    @Schema(description = "RAG 文本切片策略")
     /**
-     * ragsplitter
-    */
+     * RAG 文本切片策略。
+     */
     private String ragSplitter;
 
     /**
-     * ���⹤���ʲ��洢Ŀ¼��ӳ�䵽 workshop.storage_dir��
+     * 问题库原始素材存储目录，对应映射到 workshop.storage_dir。
      */
-    @Schema(description = "���⹤���ʲ��洢Ŀ¼")
+    @Schema(description = "问题库原始素材存储目录")
     /**
-     * Workshop存储目录
-    */
+     * 问题库素材存储目录。
+     */
     private String workshopStorageDir;
 
     /**
-     * ���⹤�������ϴ���С���ޣ�MB����ӳ�䵽 workshop.最大_upload_大小_mb��
+     * 问题库素材上传大小限制，单位 MB，对应映射到 workshop.max_upload_size_mb。
      */
-    @Schema(description = "���⹤�������ϴ���С����(MB)")
+    @Schema(description = "问题库素材上传大小限制(MB)")
     /**
-     * �����ϴ���С����
-    */
+     * 素材上传大小限制，单位 MB。
+     */
     private Integer workshopMaxUploadSizeMb;
 
     /**
-     * ���⹤�������ϴ��ļ���չ����Ȩ�б���Ӣ�Ķ��ŷָ����� jpg,png,webp,mp4 ������ӳ�䵽 workshop.allowed_延伸��
+     * 问题库素材上传文件扩展名白名单，默认支持 jpg、png、webp、mp4，对应映射到 workshop.allowed_extensions。
      */
-    @Schema(description = "���⹤�������ϴ��ļ���չ��(��ŷָ�, �� jpg,png,webp,mp4)")
+    @Schema(description = "问题库素材上传文件扩展名白名单(扩展名，如 jpg,png,webp,mp4)")
     /**
-     * �ϴ��ļ���չ��
-    */
+     * 上传文件扩展名白名单。
+     */
     private String workshopAllowedExtensions;
 
     /**
-     * �Ƿ���������Э������ 打开AI客户端/Claude/Gemini ��Ӧ�˵㣩��ӳ�䵽 runtime.协议_服务端_已启用��
+     * 是否启用协议服务端，对应映射到 runtime.protocol_server_enabled。
      */
-    @Schema(description = "�Ƿ���������Э������")
+    @Schema(description = "是否启用协议服务端")
     /**
-     * Э��������Ƿ�����
-    */
+     * 协议服务端是否启用。
+     */
     private Boolean protocolServerEnabled;
 
     /**
-     * ����Э������˿ڣ�ӳ�䵽 runtime.协议_服务端_端口��
+     * 协议服务端监听端口，对应映射到 runtime.protocol_server_port。
      */
-    @Schema(description = "����Э������˿�")
+    @Schema(description = "协议服务端监听端口")
     /**
-     * Э��������˿�
-    */
+     * 协议服务端端口。
+     */
     private Integer protocolServerPort;
 }

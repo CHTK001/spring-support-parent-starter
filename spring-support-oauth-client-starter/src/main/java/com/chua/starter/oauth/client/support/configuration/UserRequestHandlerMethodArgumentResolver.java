@@ -10,9 +10,11 @@ import com.chua.starter.oauth.client.support.annotation.TokenValue;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.entity.RoleJudge;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.principal.OAuthPrincipal;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.beans.factory.config.BeanExpressionResolver;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -22,11 +24,13 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.RequestScope;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Parameter;
+import java.security.Principal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -134,7 +138,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         WebRequest webRequest1 = new WebRequest(
                 this.webRequest.getAuthProperties(),
                 webRequest.getNativeRequest(HttpServletRequest.class), null);
-        UserResume userResume = analysis(webRequest1);
+        UserResume userResume = resolveUserResume(webRequest, webRequest1);
         Parameter parameter = methodParameter.getParameter();
         Class<?> parameterType = parameter.getType();
 
@@ -144,20 +148,22 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
              * @param userResume.getRoles( 用户resume.getroles(
              * @return 角色judge的结果
              */
-            return new RoleJudge(userResume.getRoles());
+            return new RoleJudge(null == userResume ? java.util.Collections.emptySet() : userResume.getRoles());
         }
 
         if (UserResume.class.isAssignableFrom(parameterType)) {
             return userResume;
         }
 
+        // 未认证（无 UserResume）时，所有标量参数安全降级为 null / 默认值，禁止再解引用
+        if (null == userResume) {
+            String dv = defaultFunction.apply(methodParameter);
+            return (dv == null || dv.isEmpty()) ? null : dv;
+        }
+
         String paramName = nameFunction.apply(methodParameter);
         if ("userId".equalsIgnoreCase(paramName)) {
             return conversionService.convert(userResume.getUserId(), parameterType);
-        }
-
-        if (null == userResume) {
-            return null;
         }
 
         Map<String, Object> cacheValue = asMap(webRequest, userResume);
@@ -253,6 +259,41 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
             return value;
         }
         return exprResolver.evaluate(placeholdersResolved, this.expressionContext);
+    }
+
+    /**
+     * 解析当前已认证用户，优先复用 AuthFilter 已建立的认证结果。
+     *
+     * @param nativeWebRequest 原生请求
+     * @param fallback         回退用 WebRequest
+     * @return UserResume，未认证时为 null
+     */
+    protected UserResume resolveUserResume(NativeWebRequest nativeWebRequest, WebRequest fallback) {
+        // 必须取最外层请求（AuthFilter 的 wrapper，携带 OAuthPrincipal）；
+        // getNativeRequest(HttpServletRequest.class) 会沿 wrapper 链向内返回最内层的原始 RequestFacade（无 Principal）
+        HttpServletRequest servletRequest = null;
+        if (nativeWebRequest instanceof ServletWebRequest servletWebRequest) {
+            servletRequest = servletWebRequest.getRequest();
+        }
+        if (null == servletRequest) {
+            servletRequest = nativeWebRequest.getNativeRequest(HttpServletRequest.class);
+        }
+        if (null != servletRequest) {
+            Principal principal = servletRequest.getUserPrincipal();
+            if (principal instanceof OAuthPrincipal oAuthPrincipal
+                    && oAuthPrincipal.isAuthenticated()
+                    && null != oAuthPrincipal.getUserResume()) {
+                return oAuthPrincipal.getUserResume();
+            }
+
+            HttpSession session = servletRequest.getSession(false);
+            if (null != session && session.getAttribute("userResume") instanceof UserResume sessionUser) {
+                return sessionUser;
+            }
+        }
+
+        AuthenticationInformation authentication = fallback.authentication();
+        return null == authentication ? null : authentication.getReturnResult();
     }
 
     /**

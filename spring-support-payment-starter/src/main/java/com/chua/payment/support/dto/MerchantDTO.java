@@ -5,86 +5,86 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 商户数据传输对象
+ * 客户数据传输对象
  *
  * @since 2026-03-18
  * @author CH
  */
 @Data
 public class MerchantDTO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
     /**
-     * Merchant名称
-    */
+     * 商户名称
+     */
     private String merchantName;
 
     /**
-     * Contact名称
-    */
+     * 联系人名称
+     */
     private String contactName;
 
     /**
-     * Contactphone
-    */
+     * 联系电话
+     */
     private String contactPhone;
 
     /**
-     * Contactemail
-    */
+     * 联系邮箱
+     */
     private String contactEmail;
 
     /**
-     * Businesslicense
-    */
+     * 营业执照
+     */
     private String businessLicense;
 
     /**
-     * Legalperson
-    */
+     * 法人
+     */
     private String legalPerson;
 
     /**
-     * 默认通知url
-    */
+     * 默认通知URL
+     */
     private String defaultNotifyUrl;
 
     /**
      * 默认返回值URL
-    */
+     */
     private String defaultReturnUrl;
 
     /**
-     * Paymentwallet是否启用
-    */
+     * 支付钱包是否启用
+     */
     private Boolean paymentWalletEnabled;
 
     /**
-     * Paymentautoclose是否启用
-    */
+     * 支付自动关闭是否启用
+     */
     private Boolean paymentAutoCloseEnabled;
 
     /**
-     * Paymentautocloseminutes
-    */
+     * 支付自动关闭分钟数
+     */
     private Integer paymentAutoCloseMinutes;
 
     /**
-     * Paymentsplit表是否启用
-    */
+     * 支付分表是否启用
+     */
     private Boolean paymentSplitTableEnabled;
 
     /**
-     * Paymentprofitsharing是否启用
-    */
+     * 支付分账是否启用
+     */
     private Boolean paymentProfitSharingEnabled;
 
     /**
-     * Paymentcoupon是否启用
-    */
+     * 支付优惠券是否启用
+     */
     private Boolean paymentCouponEnabled;
 
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }

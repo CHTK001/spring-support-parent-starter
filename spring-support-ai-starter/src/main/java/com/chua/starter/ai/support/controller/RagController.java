@@ -11,6 +11,7 @@ import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.rag.RagClientManager;
+import com.chua.common.support.vector.VectorStorage;
 import com.chua.starter.ai.support.configuration.rag.RagProperties;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
@@ -263,7 +264,7 @@ public class RagController {
  // 安全解析 topk，非法值回退默认配置，避免 数字格式化异常
         int topK = parsePositiveInt(body.get("topK"), ragProperties.getDefaultTopK());
  // 安全解析 阈值，限制在 0~1 区间
-        double threshold = parseThreshold(body.get("threshold"), ragProperties.getDefaultSimilarityThreshold());
+        double threshold = parseThreshold(body.get("threshold"), resolveDefaultThreshold());
 
         try {
             RagResponse response = ragClient().query(query, topK, threshold);
@@ -291,20 +292,32 @@ public class RagController {
     // ── 状态与管理 ───────────────────────────────────────
 
     /**
-     * 获取 RAG 服务运行状态。
+     * 获取 RAG 服务运行时诊断信息。
      *
-     * @return 含引擎、上传目录、默认 topK / 阈值、客户端类型与文档数的状态信息
+     * <p>与 {@code GET /v2/rag/status}（面向控制台的可用性探测）分开：这里输出引擎、上传目录、
+     * 生效参数与文档数，用于排障；两者共用同一路径会触发 Spring 的 Ambiguous handler methods。</p>
+     *
+     * @return 含引擎、上传目录、默认 topK / 阈值、客户端类型、文档数与向量库实际实例的状态信息
      */
-    @Operation(summary = "服务状态", description = "获取 RAG 服务运行状态")
-    @GetMapping("/status")
+    @Operation(summary = "运行时诊断", description = "获取 RAG 客户端的生效参数与文档数（排障用）")
+    @GetMapping("/runtime-status")
     public ReturnResult<Map<String, Object>> status() {
         Map<String, Object> status = new LinkedHashMap<>();
         RagClient client = ragClient();
         RagClientSetting runtime = client != null ? client.getSetting() : null;
         int topK = runtime != null ? runtime.getTopK() : ragProperties.getDefaultTopK();
-        double threshold = runtime != null ? runtime.getSimilarityThreshold() : ragProperties.getDefaultSimilarityThreshold();
+        double threshold = resolveDefaultThreshold();
         String uploadDir = runtime != null ? runtime.getUploadDir() : ragProperties.getUploadDir();
-        status.put("engine", ragProperties.getEmbeddingEngine());
+        // 向量库同时回报「配置名」与「实际实例」：配置名可能被拼写错误或降级，
+        // 实际实例类名 + 维度 + 存量条数才是判断 SPI 是否真的生效的依据
+        VectorStorage storage = runtime != null ? runtime.getVectorStorage() : null;
+        // 实际生效的引擎取自 ragClientManager 的运行期描述（读 DB 配置），而不是 RagProperties 的
+        // 代码默认值：后者在已配置真实引擎时仍报 memory，导致排障时误判。
+        Map<String, String> runtimeDesc = ragClientManager.describe();
+        String configuredEngine = runtimeDesc.get("embedding_model");
+        String engineName = StringUtils.isBlank(configuredEngine)
+                ? ragProperties.getEmbeddingEngine() : configuredEngine;
+        status.put("engine", engineName);
         status.put("llmProvider", "global (使用全局 LLM 配置)");
         status.put("uploadDir", uploadDir);
         status.put("defaultTopK", topK);
@@ -312,6 +325,21 @@ public class RagController {
         status.put("clientType", client instanceof com.chua.common.support.ai.rag.RagPipeline ? "pipeline" : "memory");
         status.put("ragClientReady", ragClient() != null);
         status.put("documentCount", ragClient() != null ? ragClient().documentCount() : 0);
+        status.put("vectorStorage", runtimeDesc.get("vector_storage"));
+        status.put("vectorStorageImpl", storage != null ? storage.getClass().getSimpleName() : null);
+        status.put("vectorStorageDimension", storage != null ? storage.dimension() : null);
+        status.put("vectorStorageSize", storage != null ? storage.size() : null);
+        // 占位 embedding 不具备语义：其伪向量对任意两条不同文本的余弦恒在 0.63~0.69，
+        // 与默认阈值 0.7 重叠，导致语义检索恒定 0 命中。这不是配置错误，但必须显式告知，
+        // 否则排障时只能看到「0 命中」而无任何线索。
+        boolean placeholder = "memory".equalsIgnoreCase(engineName);
+        status.put("semanticRetrievalAvailable", !placeholder);
+        if (placeholder) {
+            status.put("engineWarning",
+                    "当前 embedding 引擎为占位实现 memory，不具备语义能力：任意两条不同文本的余弦恒在 0.63~0.69，"
+                            + "与当前阈值 " + threshold + " 重叠，语义检索将恒定 0 命中。"
+                            + "如需真实语义召回，请配置 rag_embedding_model / base_url / api_key / model_name 指向真实 embedding 服务。");
+        }
         return ReturnResult.ok(status);
     }
 
@@ -378,10 +406,18 @@ public class RagController {
             }
 
             Map<String, Object> result = new LinkedHashMap<>();
+            // VectorStorage SPI 只提供 size()/search()，没有枚举全部向量的能力，
+            // 因此 records 无法真实填充；total 取自向量库实际存量，不再硬编码 0。
+            RagClient client = ragClient();
+            RagClientSetting runtime = client != null ? client.getSetting() : null;
+            VectorStorage storage = runtime != null ? runtime.getVectorStorage() : null;
+            int total = storage != null ? storage.size() : 0;
             result.put("records", Collections.emptyList());
-            result.put("total", 0);
+            result.put("total", total);
             result.put("page", page);
             result.put("pageSize", pageSize);
+            result.put("enumerable", false);
+            result.put("note", "VectorStorage SPI 未提供枚举接口，records 恒为空；请改用 /v2/rag/vector/search 查看命中向量");
             return ReturnResult.ok(result);
         } catch (Exception e) {
             return ReturnResult.error("查询失败: " + e.getMessage());
@@ -391,22 +427,45 @@ public class RagController {
     /**
      * 按文本检索相似向量（仅做向量检索，不调用 LLM）。
      *
-     * @param query 检索文本，不能为空
-     * @param topK  返回条数
+     * <p>阈值支持两种传参方式，优先级为 请求参数 threshold 高于 JSON 请求体 threshold，
+     * 均未提供时才回退全局默认相似度阈值 {@code rag.defaultSimilarityThreshold}。
+     * 阈值限制在 0~1 区间，非法或越界时回退默认值，保证调用方可用阈值排查召回问题。</p>
+     *
+     * @param request   可选的 JSON 请求体，含 threshold 字段
+     * @param query     检索文本，不能为空
+     * @param topK      返回条数
+     * @param threshold 可选的相似度阈值，不传则使用全局默认值
      * @return 命中的向量条目（documentId / score / content）
      */
     @Operation(summary = "向量搜索", description = "按文本检索相似向量（仅搜索，不走 LLM）")
     @GetMapping("/vector/search")
     public ReturnResult<List<Map<String, Object>>> searchVectors(
+            @RequestBody(required = false) Map<String, Object> request,
             @RequestParam String query,
-            @RequestParam(defaultValue = "10") int topK) {
+            @RequestParam(defaultValue = "10") int topK,
+            @RequestParam(required = false) Double threshold) {
         if (query.isBlank()) {
             return ReturnResult.error("查询内容不能为空");
         }
+        // 夹取 topK，避免非法值透传到向量库
+        if (topK < 1) {
+            topK = 1;
+        }
+        if (topK > 100) {
+            topK = 100;
+        }
         try {
-            // 向量搜索阈值默认取配置值，避免硬编码
-            double threshold = ragProperties.getDefaultSimilarityThreshold();
-            RagResponse response = ragClient().query(query, topK, threshold);
+            // 向量搜索阈值默认取运行期生效值（与 /v2/rag/query 同源），
+            // 避免与 /v2/rag/runtime-status 报告的阈值口径不一致
+            double defThreshold = resolveDefaultThreshold();
+            // 阈值优先级：显式请求参数 > JSON 请求体 > 全局默认值
+            Object rawThreshold = threshold;
+            if (rawThreshold == null && request != null) {
+                rawThreshold = request.get("threshold");
+            }
+            double finalThreshold = parseThreshold(rawThreshold, defThreshold);
+            // 纯检索：不调用 LLM，故上游不可用/限流时仍能校验召回效果
+            RagResponse response = ragClient().search(query, topK, finalThreshold);
             List<Map<String, Object>> items = response.sources().stream().map(s -> {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("documentId", s.documentId());
@@ -596,6 +655,26 @@ public class RagController {
             log.warn("[RagController] threshold 参数非法: {}", value);
             return defVal;
         }
+    }
+
+    /**
+     * 解析当前生效的默认相似度阈值。
+     *
+     * <p>优先取运行期 {@link RagClient} 上真实生效的值（来自 {@code sys_ai_global_setting}
+     * 的 {@code rag_similarity_threshold}），客户端尚未就绪时才回退代码默认配置。
+     * 早前 {@code /v2/rag/query} 与 {@code /v2/rag/vector/search} 都直接用
+     * {@code ragProperties} 的代码默认值，导致运维在管理端调整阈值后不传参的调用
+     * 仍按旧阈值执行，且与 {@code /v2/rag/runtime-status} 报告的值不一致。</p>
+     *
+     * @return 生效中的默认相似度阈值
+     */
+    private double resolveDefaultThreshold() {
+        RagClient client = ragClient();
+        RagClientSetting runtime = client != null ? client.getSetting() : null;
+        if (runtime != null) {
+            return runtime.getSimilarityThreshold();
+        }
+        return ragProperties.getDefaultSimilarityThreshold();
     }
 }
 

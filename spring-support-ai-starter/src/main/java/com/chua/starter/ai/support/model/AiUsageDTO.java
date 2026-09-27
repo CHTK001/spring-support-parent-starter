@@ -17,6 +17,18 @@ public class AiUsageDTO implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
+     * 分组名称
+     */
+    @Schema(description = "分组名称")
+    private String group;
+
+    /**
+     * 服务商
+     */
+    @Schema(description = "服务商")
+    private String provider;
+
+    /**
      * 模型名称
      */
     @Schema(description = "模型名称")
@@ -24,6 +36,12 @@ public class AiUsageDTO implements Serializable {
      * 模型
     */
     private String model;
+
+    /**
+     * 总费用（元）
+     */
+    @Schema(description = "总费用")
+    private Double cost;
 
     /**
      * 请求次数

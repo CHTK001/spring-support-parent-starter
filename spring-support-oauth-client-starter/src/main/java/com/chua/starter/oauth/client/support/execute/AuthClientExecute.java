@@ -424,6 +424,21 @@ public class AuthClientExecute {
         return getAccessToken(account, null, AuthType.SMS, ext);
     }
 
+    /**
+     * 邮箱登录：以邮箱（或用户标识）换发访问令牌。
+     * <p>
+     * 适用于邮箱验证码登录等已验证邮箱归属的场景，验证码校验在业务层完成，
+     * 此处仅负责按账号签发令牌。内部复用 {@link #getAccessToken}，自动携带账号锁定限流埋点。
+     * </p>
+     *
+     * @param account 登录账号（用户名，与静态账号配置一致）
+     * @param ext     额外参数，例如 {@code Map.of("loginType", "email", "email", "a@b.com")}
+     * @return 登录认证结果
+     */
+    public LoginAuthResult emailLogin(String account, Map<String, Object> ext) {
+        return getAccessToken(account, null, AuthType.EMAIL, ext);
+    }
+
 
     /**
      * 创建用户唯一标识

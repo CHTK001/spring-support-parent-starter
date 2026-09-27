@@ -111,7 +111,8 @@ public class FreebsdHostDetectProvider implements HostDetectProvider {
      * @return 是否可解析
      */
     private boolean isRatio(String value) {
-        return StringUtils.isNotBlank(value) && NumberUtils.isNumber(value);
+        // 使用率命令输出为小数，isNumber 遇小数点即 false，改用支持小数的 isDecimal
+        return StringUtils.isNotBlank(value) && NumberUtils.isDecimals(value);
     }
 
     /**

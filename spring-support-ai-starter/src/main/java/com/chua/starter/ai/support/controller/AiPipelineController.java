@@ -1,10 +1,18 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.model.AiModelDTO;
+import com.chua.starter.ai.support.model.PipelineDetailDTO;
+import com.chua.starter.ai.support.model.PipelineModelDTO;
+import com.chua.starter.ai.support.service.settings.AiModelService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,13 +29,19 @@ import java.util.Map;
  * 每个管线声明其必填能力（required）与非必填能力（optional）——按后台管线定义，
  * 必填与非必填的模型均属于该管线的模型集合，前端据此在模型管理中打标并分组展示。</p>
  *
+ * <p>同一份目录挂三个前缀：{@code /v2/ai/pipelines}（内部规范路径）、
+ * {@code /v2/models/pipelines}（模型管理页取目录）与 {@code /v2/pipelines}（能力页取详情与成员模型）。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
 @RestController
-@RequestMapping("/v2/ai/pipelines")
+@RequestMapping({"/v2/ai/pipelines", "/v2/models/pipelines", "/v2/pipelines"})
+@RequiredArgsConstructor
 @Tag(name = "AI 管线目录")
 public class AiPipelineController {
+
+    private final AiModelService modelService;
 
     /**
      * 管线目录。
@@ -38,6 +52,147 @@ public class AiPipelineController {
     @Operation(summary = "AI 管线目录", description = "管线必填/非必填能力定义，驱动左侧菜单、能力页与模型管理")
     @GetMapping
     public ReturnResult<List<Map<String, Object>>> pipelines() {
+        return ReturnResult.ok(catalog());
+    }
+
+    /**
+     * 单条管线详情（能力页据此渲染必填/非必填能力）。
+     *
+     * @param code 管线编码
+     * @return 管线详情
+     */
+    @Permission("admin")
+    @Operation(summary = "AI 管线详情", description = "按编码返回单条管线的必填/非必填能力定义")
+    @GetMapping("/{code}")
+    public ReturnResult<PipelineDetailDTO> pipelineDetail(@PathVariable String code) {
+        return ReturnResult.ok(toDetail(catalog().stream()
+                .filter(item -> code.equals(item.get("code")))
+                .findFirst()
+                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "管线不存在: " + code))));
+    }
+
+    /**
+     * 管线成员模型：能力的必填/非必填归属由模型自身的 requiredPipelines / optionalPipelines 决定。
+     *
+     * @param code 管线编码
+     * @return 成员模型列表
+     */
+    @Permission("admin")
+    @Operation(summary = "AI 管线成员模型", description = "声明了该管线的模型，required 标记必填与否")
+    @GetMapping("/{code}/models")
+    public ReturnResult<List<PipelineModelDTO>> pipelineModels(@PathVariable String code) {
+        Map<String, Object> definition = catalog().stream()
+                .filter(item -> code.equals(item.get("code")))
+                .findFirst()
+                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "管线不存在: " + code));
+        List<PipelineModelDTO> result = new ArrayList<>();
+        for (AiModelDTO model : modelService.list()) {
+            boolean required = contains(model.getRequiredPipelines(), code);
+            boolean optional = !required && contains(model.getOptionalPipelines(), code);
+            List<String> declaredRequired = declaredCapabilities(definition, "required");
+            List<String> declaredOptional = declaredCapabilities(definition, "optional");
+            required = required || intersects(model.getCapabilities(), declaredRequired);
+            optional = optional || (!required && intersects(model.getCapabilities(), declaredOptional));
+            if (!required && !optional) {
+                continue;
+            }
+            PipelineModelDTO item = new PipelineModelDTO();
+            item.setModelId(model.getId());
+            item.setName(model.getName());
+            item.setProvider(model.getProviderName());
+            item.setCapability(matchCapability(model.getCapabilities(), definition));
+            item.setEnabled(model.getEnabled());
+            item.setRequired(required);
+            result.add(item);
+        }
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 取管线定义中某一侧（required / optional）声明的能力列表。
+     *
+     * @param definition 管线定义
+     * @param key        字段名
+     * @return 能力列表，缺失时为空列表
+     */
+    @SuppressWarnings("unchecked")
+    private static List<String> declaredCapabilities(Map<String, Object> definition, String key) {
+        Object value = definition.get(key);
+        return value instanceof List ? (List<String>) value : List.of();
+    }
+
+    /**
+     * 两个能力列表是否有交集。
+     *
+     * @param values     模型能力，可为 {@code null}
+     * @param declared   管线声明的能力
+     * @return 是否命中
+     */
+    private static boolean intersects(List<String> values, List<String> declared) {
+        return values != null && values.stream().anyMatch(declared::contains);
+    }
+
+    /**
+     * 取模型能力中属于该管线声明的那一个，用于表格「能力」列展示。
+     *
+     * @param capabilities 模型能力列表
+     * @param definition   管线定义
+     * @return 命中的能力，无命中时为 {@code null}
+     */
+    private static String matchCapability(List<String> capabilities, Map<String, Object> definition) {
+        if (capabilities == null || capabilities.isEmpty()) {
+            return null;
+        }
+        return capabilities.stream()
+                .filter(declaredCapabilities(definition, "required")::contains)
+                .findFirst()
+                .orElseGet(() -> capabilities.stream()
+                        .filter(declaredCapabilities(definition, "optional")::contains)
+                        .findFirst()
+                        .orElse(capabilities.get(0)));
+    }
+
+    /**
+     * 列表判空包含。
+     *
+     * @param values 列表，可为 {@code null}
+     * @param value  待查值
+     * @return 是否包含
+     */
+    private static boolean contains(List<String> values, String value) {
+        return values != null && values.contains(value);
+    }
+
+    /**
+     * 目录条目转详情 DTO（同时给出前端字段名的能力别名）。
+     *
+     * @param definition 目录条目
+     * @return 管线详情
+     */
+    @SuppressWarnings("unchecked")
+    private static PipelineDetailDTO toDetail(Map<String, Object> definition) {
+        PipelineDetailDTO detail = new PipelineDetailDTO();
+        detail.setCode((String) definition.get("code"));
+        detail.setName((String) definition.get("name"));
+        detail.setGroup((String) definition.get("group"));
+        detail.setTag((String) definition.get("tag"));
+        detail.setRequired((List<String>) definition.get("required"));
+        detail.setOptional((List<String>) definition.get("optional"));
+        detail.setRequiredCapabilities(detail.getRequired());
+        detail.setOptionalCapabilities(detail.getOptional());
+        detail.setDescription((String) definition.get("description"));
+        detail.setRoute((String) definition.get("route"));
+        detail.setConfigGroup((String) definition.get("configGroup"));
+        detail.setKind((String) definition.get("kind"));
+        return detail;
+    }
+
+    /**
+     * 构造管线目录（唯一数据源）。
+     *
+     * @return 管线与全局 Bean 定义列表
+     */
+    private static List<Map<String, Object>> catalog() {
         List<Map<String, Object>> result = new ArrayList<>();
 
         result.add(pipeline("text-to-image", "文生图", "generate", "text-to-image",
@@ -73,7 +228,7 @@ public class AiPipelineController {
         result.add(globalBean("bot", "Bot 全局设置", "bot",
                 "Bot 绑定默认行为与回复策略", "/settings/global-beans", "bot"));
 
-        return ReturnResult.ok(result);
+        return result;
     }
 
     /**

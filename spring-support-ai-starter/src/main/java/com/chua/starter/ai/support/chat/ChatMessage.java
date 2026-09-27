@@ -59,6 +59,11 @@ public class ChatMessage {
     private Integer totalTokens;
 
     /**
+     * 人工确认请求 JSON（plan_exit：replyId/status/items）
+     */
+    private String confirmation;
+
+    /**
      * 空参构造。
      */
     public ChatMessage() {
@@ -270,6 +275,24 @@ public class ChatMessage {
      */
     public void setTotalTokens(Integer totalTokens) {
         this.totalTokens = totalTokens;
+    }
+
+    /**
+     * 获取人工确认请求 JSON。
+     *
+     * @return 确认请求 JSON
+     */
+    public String getConfirmation() {
+        return confirmation;
+    }
+
+    /**
+     * 设置人工确认请求 JSON。
+     *
+     * @param confirmation 确认请求 JSON
+     */
+    public void setConfirmation(String confirmation) {
+        this.confirmation = confirmation;
     }
 
     /**

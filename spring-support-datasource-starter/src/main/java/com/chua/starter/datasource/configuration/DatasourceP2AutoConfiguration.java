@@ -20,7 +20,6 @@ import org.springframework.core.Ordered;
  *   <li><b>Actuator 健康检查</b> — 多数据源健康指示器</li>
  *   <li><b>优雅关闭</b> — 应用关闭时清理数据源连接池</li>
  * </ul>
- * </p>
  *
  * @since 2026/07/14
  * @author CH

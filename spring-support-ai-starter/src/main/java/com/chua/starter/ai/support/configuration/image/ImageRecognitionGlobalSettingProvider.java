@@ -53,16 +53,16 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
     */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
-                new GlobalSettingProvider.SettingItem("classify_model", "", "STRING", "图像分类模型（如 google-vit / mobilenet-classify，留空关闭）", 1),
+                new GlobalSettingProvider.SettingItem("classify_model", "", "STRING", "图像分类模型（留空关闭）", 1),
                 new GlobalSettingProvider.SettingItem("classify_threshold", "0.5", "NUMBER", "图像分类置信度阈值（0~1）", 2),
-                new GlobalSettingProvider.SettingItem("detect_model", "", "STRING", "目标检测模型（如 yolo-v8-detect / rtdetr，留空关闭）", 3),
+                new GlobalSettingProvider.SettingItem("detect_model", "", "STRING", "目标检测模型（留空关闭）", 3),
                 new GlobalSettingProvider.SettingItem("detect_threshold", "0.5", "NUMBER", "目标检测置信度阈值（0~1）", 4),
-                new GlobalSettingProvider.SettingItem("segment_model", "", "STRING", "图像分割模型（如 sam-vit-base / yolo-seg，留空关闭）", 5),
-                new GlobalSettingProvider.SettingItem("captioning_model", "", "STRING", "图像描述模型（如 blip2 / git-base，留空关闭）", 6),
+                new GlobalSettingProvider.SettingItem("segment_model", "", "STRING", "图像分割模型（留空关闭）", 5),
+                new GlobalSettingProvider.SettingItem("captioning_model", "", "STRING", "图像描述模型（留空关闭）", 6),
                 new GlobalSettingProvider.SettingItem("depth_enabled", "false", "BOOLEAN", "是否启用深度估计", 7),
                 new GlobalSettingProvider.SettingItem("pedestrian_enabled", "false", "BOOLEAN", "是否启用行人与异常检测", 8),
                 new GlobalSettingProvider.SettingItem("quality_enabled", "false", "BOOLEAN", "是否启用图像质量评估", 9),
-                new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "图像超分模型（如 real-esrgan / gfpgan / waifu2x，留空关闭）", 10),
+                new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "图像超分模型（留空关闭）", 10),
                 new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 11),
                 new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 12)
         );

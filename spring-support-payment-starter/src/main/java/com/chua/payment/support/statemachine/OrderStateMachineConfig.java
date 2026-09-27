@@ -24,7 +24,7 @@ import java.util.EnumSet;
 public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<OrderState, OrderEvent> {
 
     /**
-     * 配置状态
+     * 配置订单状态集合
      */
     @Override
     public void configure(StateMachineStateConfigurer<OrderState, OrderEvent> states) throws Exception {
@@ -37,62 +37,62 @@ public class OrderStateMachineConfig extends EnumStateMachineConfigurerAdapter<O
     }
 
     /**
-     * 配置状态转换
+     * 配置订单状态流转
      */
     @Override
     public void configure(StateMachineTransitionConfigurer<OrderState, OrderEvent> transitions) throws Exception {
         transitions
-                // 待支付 → 支付中
+                // 待支付 -> 支付中
                 .withExternal()
                 .source(OrderState.PENDING).target(OrderState.PAYING)
                 .event(OrderEvent.PAY)
                 .and()
-                // 支付中 → 支付成功
+                // 支付中 -> 支付成功
                 .withExternal()
                 .source(OrderState.PAYING).target(OrderState.PAID)
                 .event(OrderEvent.PAY_SUCCESS)
                 .and()
-                // 支付中 → 支付失败
+                // 支付中 -> 支付失败
                 .withExternal()
                 .source(OrderState.PAYING).target(OrderState.FAILED)
                 .event(OrderEvent.PAY_FAIL)
                 .and()
-                // 支付成功 → 已完成
+                // 支付成功 -> 已完成
                 .withExternal()
                 .source(OrderState.PAID).target(OrderState.COMPLETED)
                 .event(OrderEvent.COMPLETE)
                 .and()
-                // 支付成功 → 退款中
+                // 支付成功 -> 退款中
                 .withExternal()
                 .source(OrderState.PAID).target(OrderState.REFUNDING)
                 .event(OrderEvent.REFUND)
                 .and()
-                // 已完成 → 退款中
+                // 已完成 -> 退款中
                 .withExternal()
                 .source(OrderState.COMPLETED).target(OrderState.REFUNDING)
                 .event(OrderEvent.REFUND)
                 .and()
-                // 退款中 → 已退款
+                // 退款中 -> 已退款
                 .withExternal()
                 .source(OrderState.REFUNDING).target(OrderState.REFUNDED)
                 .event(OrderEvent.REFUND_SUCCESS)
                 .and()
-                // 退款中 → 支付成功（退款失败回退）
+                // 退款中 -> 支付成功（退款失败回退）
                 .withExternal()
                 .source(OrderState.REFUNDING).target(OrderState.PAID)
                 .event(OrderEvent.REFUND_FAIL)
                 .and()
-                // 待支付 → 支付超时
+                // 待支付 -> 支付超时
                 .withExternal()
                 .source(OrderState.PENDING).target(OrderState.TIMEOUT)
                 .event(OrderEvent.TIMEOUT)
                 .and()
-                // 待支付 → 已取消
+                // 待支付 -> 已取消
                 .withExternal()
                 .source(OrderState.PENDING).target(OrderState.CANCELLED)
                 .event(OrderEvent.CANCEL)
                 .and()
-                // 支付中 → 已取消
+                // 支付中 -> 已取消
                 .withExternal()
                 .source(OrderState.PAYING).target(OrderState.CANCELLED)
                 .event(OrderEvent.CANCEL);

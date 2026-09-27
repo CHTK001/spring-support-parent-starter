@@ -19,6 +19,11 @@ public final class ServerConstants {
     public static final String WEBSOCKET_SSH_DIRECT_PATH = "/ws/ms/server/terminal/ssh";
 
     /**
+     * VNC 直连桌面 webSocket 端点路径（不经 guacd）
+    */
+    public static final String WEBSOCKET_VNC_DIRECT_PATH = "/ws/ms/server/terminal/vnc";
+
+    /**
      * 接口根路径
     */
     public static final String API_PREFIX = "/ms/server";
@@ -27,6 +32,11 @@ public final class ServerConstants {
      * 默认 SSH 端口
     */
     public static final int DEFAULT_SSH_PORT = 22;
+
+    /**
+     * 默认 VNC 端口
+    */
+    public static final int DEFAULT_VNC_PORT = 5900;
 
     /**
      * 会话状态：打开
@@ -49,8 +59,18 @@ public final class ServerConstants {
     public static final String EXEC_TYPE_FILE = "FILE";
 
     /**
+     * 计划任务类型：定时（后台按 cron 调度）
+     */
+    public static final String EXEC_JOB_TYPE_CRON = "CRON";
+
+    /**
+     * 计划任务类型：脚本（仅手动执行，不调度）
+     */
+    public static final String EXEC_JOB_TYPE_NONE = "NONE";
+
+    /**
      * 执行日志状态：成功
-    */
+     */
     public static final String EXEC_STATUS_SUCCESS = "SUCCESS";
 
     /**

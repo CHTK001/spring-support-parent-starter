@@ -5,9 +5,10 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 题目实体
@@ -16,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_question")
-public class EduQuestion {
+public class EduQuestion extends SysBase {
 
     /**
      * 题目标识
@@ -57,6 +59,11 @@ public class EduQuestion {
      * 难度（1-5）
      */
     private Integer questionDifficulty;
+
+    /**
+     * 总分（单题分值）
+     */
+    private Integer questionScore;
 
     /**
      * 知识点标识列表
@@ -117,26 +124,6 @@ public class EduQuestion {
      * 状态
      */
     private Integer questionStatus;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime questionCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime questionUpdateTime;
-
-    /**
-     * 创建人
-     */
-    private String questionCreateBy;
-
-    /**
-     * 更新人
-     */
-    private String questionUpdateBy;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

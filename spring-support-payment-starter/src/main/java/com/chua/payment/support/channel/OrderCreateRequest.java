@@ -12,32 +12,31 @@ import java.math.BigDecimal;
 @Data
 public class OrderCreateRequest {
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * Amount
-    */
+     * 订单金额
+     */
     private BigDecimal amount;
     /**
-     * 主题
-    */
+     * 订单主题
+     */
     private String subject;
     /**
      * 请求体
-    */
+     */
     private String body;
     /**
-     * 货币
-    */
+     * 币种
+     */
     private String currency;
     /**
-     * Attach
-    */
+     * 附加数据
+     */
     private String attach;
 }
-

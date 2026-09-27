@@ -47,6 +47,11 @@ public class QuestionSaveDTO {
     private Integer questionDifficulty;
 
     /**
+     * 总分（单题分值）
+     */
+    private Integer questionScore;
+
+    /**
      * 知识点标识列表（逗号分隔）
      */
     private String questionKnowledgePointIds;

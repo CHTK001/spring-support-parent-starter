@@ -27,11 +27,6 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
             <optional>true</optional>
         </dependency>
@@ -78,6 +73,16 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 分组作用域探针：真实 MySQL/MariaDB 驱动（版本与生产 lib 的 mysql-connector-j 9.7.0 保持一致）。
+             本模块《全功能单元测试文档.md》成文规定不使用 JUnit 断言，验证走真实链路；
+             且分组收敛的缺陷在 SQL 作用域上，必须在真方言真数据上验，故不使用 H2。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.7.0</version>
             <scope>test</scope>
         </dependency>
 

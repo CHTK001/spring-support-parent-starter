@@ -25,6 +25,15 @@ public interface SysAiGlobalSettingService {
     Optional<String> getValue(String group, String field);
 
     /**
+     * 不经缓存、直接查询数据库（Redis 不可达时的回落路径）。
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @return 配置值，未配置时返回 {@link Optional#empty()}
+     */
+    Optional<String> getValueDirect(String group, String field);
+
+    /**
      * 读取布尔类型配置。
      *
      * @param group        分组
@@ -70,4 +79,17 @@ public interface SysAiGlobalSettingService {
      * @param sort        排序序号
      */
     void upsertField(String group, String field, String value, String valueType, String description, int sort);
+
+    /**
+     * 同步分组内的配置项描述（只改描述，不动用户已保存的值）。
+     *
+     * <p>用于 provider 迭代时修正文案：{@code GlobalSettingInitializer} 仅在分组为空时写入默认值，
+     * 已存在的分组不会刷新，导致代码里的新描述无法生效。本方法只更新「描述与代码不一致」的行，
+     * 避免覆盖用户改过的取值。</p>
+     *
+     * @param group                 配置分组
+     * @param fieldToDescription    字段 → 代码中的最新描述
+     * @return 实际更新的行数
+     */
+    int syncDescriptions(String group, java.util.Map<String, String> fieldToDescription);
 }

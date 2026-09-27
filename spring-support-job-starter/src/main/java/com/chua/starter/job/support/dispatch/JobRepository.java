@@ -8,7 +8,7 @@ import java.util.List;
  * 任务仓库接口。
  *
  * <p>Leader 单秒循环通过 {@link #findDue(long, int)} 查询当前到期任务,
- * 非 铅 节点不会调用。生产建议基于 MyBatis-Plus / JDBC 替换默认实现。</p>
+ * 非 Leader 节点不会调用。生产建议基于 MyBatis-Plus / JDBC 替换默认实现。</p>
  *
  * <p>除调度读取外, 本接口还承担任务治理 (写入任意 {@link JobSpec}、改调度时间、启停、
  * 删除、查运行态)。这些能力一律给默认实现, 只读型仓库 (例如远端仓库) 不覆盖即视为不支持,
@@ -28,6 +28,21 @@ public interface JobRepository {
      * @return 任务列表
      */
     List<JobDefinition> findDue(long now, long preReadMs, int preReadCount);
+
+    /**
+     * 查询指定集群分组当前应当被触发执行的任务列表。
+     *
+     * <p>默认回退到无分组过滤的实现，兼容第三方仓库；内置持久化仓库会按分组隔离扫描范围。</p>
+     *
+     * @param now         当前时间戳 (毫秒)
+     * @param preReadMs   预读时间窗 (毫秒)
+     * @param preReadCount 最大返回数
+     * @param group       集群分组
+     * @return 任务列表
+     */
+    default List<JobDefinition> findDue(long now, long preReadMs, int preReadCount, String group) {
+        return findDue(now, preReadMs, preReadCount);
+    }
 
     /**
      * 将任务定义插入或更新到仓库。供 {@link com.chua.starter.job.support.handler.JobAnnotationScanner}

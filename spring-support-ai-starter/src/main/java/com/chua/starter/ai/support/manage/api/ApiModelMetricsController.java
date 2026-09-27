@@ -7,6 +7,8 @@ import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
+import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -128,8 +130,11 @@ public class ApiModelMetricsController {
     /**
      * 手动触发指标源全量同步落库，并重建兼容快照。
      *
+     * <p>全量重写共享指标表，仅限管理员。</p>
+     *
      * @return 同步条数与快照
      */
+    @Permission("admin")
     @PostMapping("/model-metrics/refresh")
     public ApiResult<Map<String, Object>> refreshSnapshot() {
         log.info("[ModelMetrics] 手动触发全量同步");
@@ -162,9 +167,12 @@ public class ApiModelMetricsController {
     /**
      * 保存指标推送配置。
      *
+     * <p>写入 {@code sys_ai_global_setting}，对全部用户生效，仅限管理员。</p>
+     *
      * @param body 配置 {@code {enabled, intervalSec}}
      * @return 是否保存成功
      */
+    @Permission("admin")
     @PutMapping("/model-metrics/config")
     public ApiResult<Boolean> saveConfig(@RequestBody Map<String, Object> body) {
         if (body != null) {
@@ -187,8 +195,11 @@ public class ApiModelMetricsController {
     /**
      * 手动触发官方定价同步。
      *
+     * <p>重写共享定价表，仅限管理员。</p>
+     *
      * @return {synced, syncedAt}
      */
+    @Permission("admin")
     @PostMapping("/model-metrics/sync-pricing")
     public ApiResult<Map<String, Object>> syncPricing() {
         log.info("[ModelMetrics] 手动触发官方定价同步");
@@ -202,12 +213,14 @@ public class ApiModelMetricsController {
     /**
      * 手动修改指标库字段并锁定。
      *
-     * <p>请求体：{@code {key, values:{字段:值}, locked:[字段...], operator?}}。
-     * 落点为全量指标表 {@code sys_ai_model_metrics}；被锁定的字段在后续全量同步时不覆盖。</p>
+     * <p>请求体：{@code {key, values:{字段:值}, locked:[字段...]}}。
+     * 落点为全量指标表 {@code sys_ai_model_metrics}；被锁定的字段在后续全量同步时不覆盖。
+     * 审计操作人取当前登录身份，不接受请求体传入。仅限管理员。</p>
      *
      * @param body 请求体
      * @return 锁定字段、修改时间与更新行
      */
+    @Permission("admin")
     @PutMapping("/model-metrics/manual")
     public ApiResult<Map<String, Object>> saveManual(@RequestBody Map<String, Object> body) {
         if (body == null) {
@@ -240,8 +253,10 @@ public class ApiModelMetricsController {
             }
         }
 
-        String operator = body.get("operator") == null
-                ? "admin" : body.get("operator").toString().trim();
+        String operator = AiUserContext.currentUsername();
+        if (operator == null) {
+            operator = AiUserContext.currentUserId();
+        }
 
         try {
             SysAiModelMetrics updated = metricsService.applyManual(key, values, locked, operator);

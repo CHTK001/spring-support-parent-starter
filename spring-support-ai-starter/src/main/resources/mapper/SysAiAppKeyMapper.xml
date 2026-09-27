@@ -14,7 +14,8 @@
         <result property="secret" column="sys_ai_app_key_secret"/>
         <result property="name" column="sys_ai_app_key_name"/>
         <result property="status" column="sys_ai_app_key_status"/>
-        <result property="delete" column="sys_ai_app_key_delete"/>
+        <result property="deleted" column="sys_ai_app_key_delete"/>
+        <result property="userId" column="sys_ai_app_key_user_id"/>
         <result property="groupId" column="sys_ai_app_key_group_id"/>
         <result property="providerId" column="sys_ai_app_key_provider_id"/>
         <result property="model" column="sys_ai_app_key_model"/>

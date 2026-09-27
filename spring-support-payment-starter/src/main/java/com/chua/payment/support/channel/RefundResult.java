@@ -13,31 +13,31 @@ import java.math.BigDecimal;
 @Data
 public class RefundResult {
     /**
-     * 成功
-    */
+     * 是否成功
+     */
     private boolean success;
     /**
-     * 退税no
-    */
+     * 退款单号
+     */
     private String refundNo;
     /**
-     * 贸易no
-    */
+     * 交易单号
+     */
     private String tradeNo;
     /**
-     * 消息
-    */
+     * 提示消息
+     */
     private String message;
     /**
-     * Refundamount
-    */
+     * 退款金额
+     */
     private BigDecimal refundAmount;
     /**
-     * 状态
-    */
+     * 退款状态
+     */
     private String status;
     /**
-     * RAW响应
-    */
+     * 渠道 RAW 响应
+     */
     private String rawResponse;
 }

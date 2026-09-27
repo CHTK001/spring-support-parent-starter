@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -47,6 +48,11 @@ import java.util.stream.Collectors;
  *   <li><b>Host</b> - 浏览器宿主进程，负责管理多个 Lane</li>
  *   <li><b>Setting</b> - 全局设置（显示模式、资源策略等）</li>
  * </ul>
+ *
+ * <p>隔离口径：Lane/Tab/Host 带归属用户，按本人可读写、管理员只读、他人 403 分流
+ * （见 {@code scopeToOwner} 与 {@code requireReadableLane}/{@code requireWritableLane}）；
+ * 显示模式、资源策略与登录窗口三项是常量键的单行全局态，改写会影响整台主机的浏览器调度，
+ * 因此读取对所有登录用户开放、写入仅管理员。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -484,6 +490,7 @@ public class AgentBrowserController {
      * @return 设置结果
      */
     @PutMapping("/display-mode")
+    @Permission("admin")
     @Operation(summary = "设置显示策略", description = "设置全局浏览器显示策略")
     public ApiResult<Map<String, Object>> setDisplayMode(@RequestBody Map<String, Object> body) {
         String displayMode = str(body, "display_mode", "auto");
@@ -547,6 +554,7 @@ public class AgentBrowserController {
      * @return 更新结果
      */
     @PutMapping("/resource-policy")
+    @Permission("admin")
     @Operation(summary = "更新资源策略", description = "更新浏览器资源策略配置")
     public ApiResult<Map<String, Object>> updateResourcePolicy(@RequestBody Map<String, Object> body) {
         String preset = str(body, "preset", "automatic");
@@ -580,6 +588,7 @@ public class AgentBrowserController {
      * @return 操作结果
      */
     @PostMapping("/login/open")
+    @Permission("admin")
     @Operation(summary = "打开登录窗口", description = "打开浏览器登录窗口（Primary 身份 Lane）")
     public ApiResult<Map<String, Object>> openLogin() {
         long now = System.currentTimeMillis();
@@ -608,6 +617,7 @@ public class AgentBrowserController {
      * @return 操作结果
      */
     @PostMapping("/login/close")
+    @Permission("admin")
     @Operation(summary = "关闭登录窗口", description = "关闭浏览器登录窗口")
     public ApiResult<Map<String, Object>> closeLogin() {
         long now = System.currentTimeMillis();

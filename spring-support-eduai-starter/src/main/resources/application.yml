@@ -1,0 +1,115 @@
+# 教育 AI 工作台 后端配置（本地开发）
+server:
+  port: 19095
+
+spring:
+  application:
+    name: spring-support-eduai-starter
+  main:
+    allow-bean-definition-overriding: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+  # MySQL / MariaDB：已彻底移除 H2（无 H2 驱动、无 jdbc:h2、H2 自动配置不生效）
+  # 下方为本地开发默认值；部署环境由 systemd ExecStart 的 --spring.datasource.* 覆盖
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/eduai?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ""
+  sql:
+    init:
+      mode: never
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+  autoconfigure:
+    exclude:
+      # Redisson 3.36 的 V2 自动配置 @EnableConfigurationProperties 引用了
+      # Boot 4 已删除的 org.springframework.boot.autoconfigure.data.redis.RedisProperties；
+      # 仅 V2 注册在 AutoConfiguration.imports 中（父类不是自动配置类，不可 exclude）。
+      # 本项目由 spring-support-redis-starter.RedisConfiguration 自建 RedissonClient。
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+
+# 采集任务配置
+eduai:
+  collect:
+    default-cron: "0 0/30 * * * ?"
+
+# MyBatis Plus
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.chua.starter.eduai.model
+
+# 数据源脚本（db/init 下 V*__*.sql 建表 + initdata）
+plugin:
+  async:
+    enable: false
+  # 本地 static 鉴权：自校验令牌，不外呼 OAuth 服务端（否则登录报「鉴权服务器异常」）
+  oauth:
+    enable: true
+    protocol: static
+    # isFailure() 要求 loginAddress/auth-address 非空，留空会直接判鉴权失败
+    address: http://127.0.0.1:19095/login
+    auth-address: http://127.0.0.1:19095/login
+    login-address: /#/login
+    token-name: x-oauth-token
+    static-token-expire-seconds: 7200
+    temp:
+      # 格式 用户名:密码;用户名:密码；登录 /v2/user/login 走 static 自签
+      user: "admin:admin123;alice:alice123;bob:bob123"
+    # 不继承框架默认白名单（混有其它应用历史路径），按本应用显式放行
+    use-default-whitelist: false
+    whitelist:
+      - /v2/user/login
+      - /v2/user/logout
+      - /v2/user/refresh-token
+      - /v2/user/me
+      - /**/captcha
+      - /v3/api-docs/**
+      - /doc.html
+      - /webjars/**
+      - /actuator/**
+      - /actuator
+      - /login
+      - /logout
+      # 附件直链预览：iframe/img 无法带请求头，路径含随机 UUID + 扩展名白名单
+      - /v2/edu/knowledge-point/file
+  datasource:
+    script:
+      enable: true
+      # 表结构脚本必须用 ALWAYS，原因有二（缺一不可）：
+      # 1) filterSchemaScripts 在「ONCE + 库非空」时会把结构脚本全部跳过，
+      #    存量库升级时新版本脚本根本不会被执行；
+      # 2) 脚本文件名带版本号（V1.0__init_all_eduai.sql），升版后文件名变化、
+      #    执行记录里查不到，才会真正执行；同一版本成功后 needsExecution() 会拦住，
+      #    因此不是「每次启动都重跑 154 条语句」，而是「每个版本只跑一次」。
+      # 之前用 ONCE + 固定 V1.0，导致新增的唯一索引在存量库上永不生效，
+      # initdata 的 INSERT IGNORE 失去约束、每次重灌数据翻倍
+      # （实测 edu_poem_grade 由 967 涨到 2901）。
+      # 前提：init_all 脚本必须全幂等（已审计：154 条语句全部带 IF NOT EXISTS / OR IGNORE）。
+      scan-mode: ALWAYS
+      # 初始化数据仍保持 ONCE：种子脚本体积已达 1.1MB，且业务表非空即无需重灌。
+      data-scan-mode: ONCE
+      continue-on-error: true
+      verbose: true
+  queue:
+    enable: true
+    type: local
+  job:
+    enable: true
+    role: SINGLE
+    manage:
+      enable: true
+  eduai:
+    marking:
+      async: true
+
+logging:
+  level:
+    com.chua.starter.eduai: INFO
+  file:
+    name: ./logs/eduai.log

@@ -94,9 +94,54 @@ public class HostInfoVO {
     private Double diskTotalGb;
 
     /**
+     * 磁盘已用容量，单位 GB（合并采集通道随概览一次返回）
+     */
+    private Double diskUsedGb;
+
+    /**
+     * 磁盘读取速率 KB/s（合并采集通道随概览一次返回）
+     */
+    private Double diskReadKbs;
+
+    /**
+     * 磁盘写入速率 KB/s（合并采集通道随概览一次返回）
+     */
+    private Double diskWriteKbs;
+
+    /**
+     * 进程总数（合并采集通道随概览一次返回）
+     */
+    private Integer processCount;
+
+    /**
+     * 线程总数（合并采集通道随概览一次返回）
+     */
+    private Integer threadCount;
+
+    /**
+     * 网络接收速率 KB/s
+     */
+    private Double networkRxKb;
+
+    /**
+     * 网络发送速率 KB/s
+     */
+    private Double networkTxKb;
+
+    /**
+     * 网络带宽使用率（0-100）
+     */
+    private Double networkPercent;
+
+    /**
      * 公网地址
      */
     private String publicIp;
+
+    /**
+     * 主机编码（机器唯一标识：Windows MachineGuid / Linux machine-id / 硬件 UUID）
+     */
+    private String hostCode;
 
     /**
      * 内网地址

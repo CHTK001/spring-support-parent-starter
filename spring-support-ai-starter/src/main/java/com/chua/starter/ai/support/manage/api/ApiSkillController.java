@@ -1,10 +1,21 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.common.support.ai.skill.SkillDefinition;
+import com.chua.common.support.datasearch.skill.impl.ClawHubSkillOnlineProvider;
+import com.chua.common.support.datasearch.skill.impl.GithubSkillOnlineProvider;
+import com.chua.common.support.datasearch.skill.impl.LoopHubSkillOnlineProvider;
+import com.chua.common.support.datasearch.skill.impl.McpWorldSkillOnlineProvider;
+import com.chua.common.support.datasearch.skill.impl.SkillHubSkillOnlineProvider;
+import com.chua.common.support.datasearch.skill.impl.SkillShSkillProvider;
+import com.chua.common.support.datasearch.skill.impl.SkillsmpSkillProvider;
+import com.chua.common.support.datasearch.skill.model.SkillMarketListing;
 import com.chua.common.support.datasearch.skill.spi.SkillOfflineProvider;
+import com.chua.common.support.datasearch.skill.spi.SkillOnlineProvider;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.manage.api.market.ClawHubPluginsSkillMarketSourceProvider;
 import com.chua.starter.ai.support.manage.api.market.ClawHubSkillMarketSourceProvider;
 import com.chua.starter.ai.support.manage.api.market.LoopHubSkillMarketSourceProvider;
@@ -16,9 +27,15 @@ import com.chua.starter.ai.support.manage.api.market.SkillMarketSourceProvider;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.model.AiInstalledSkillDTO;
+import com.chua.starter.ai.support.model.AiSkillMarketItemDTO;
+import com.chua.starter.ai.support.model.AiSkillMarketSearchDTO;
+import com.chua.starter.ai.support.model.AiSkillMarketSourceDTO;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,20 +47,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +75,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -63,6 +88,9 @@ import java.util.zip.ZipInputStream;
  *
  * <p>技能识别规则：目录下存在 {@code SKILL.md}（或 {@code skill.md}）即视为一个技能，其首行非空文本
  * 作为技能描述。市场相关接口支持从 GitHub 仓库真实下载并安装技能包。</p>
+ *
+ * <p>在线市场搜索按 {@code SkillOnlineProvider} SPI 扇出到各市场源，控制器不直连任何单一市场站；
+ * 源侧无公开查询接口时该源返回空条目，不伪造数据。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -99,6 +127,11 @@ public class ApiSkillController {
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
+     * 已安装技能扫描与启停（对话注入侧共用）
+     */
+    private final ChatSkillSupport chatSkillSupport;
+
+    /**
      * 市场启用状态分组
      */
     private static final String MARKET_SETTING_GROUP = "skills";
@@ -119,6 +152,33 @@ public class ApiSkillController {
      * 专家包“添加”时单次安装的上限技能数（避免一次下载整仓全部技能）。
      */
     private static final int MAX_AUTHOR_PACKAGE_SKILLS = 12;
+
+    /**
+     * 在线市场搜索的单源条数上限（前端可传更大值，此处截断）。
+     */
+    private static final int MAX_MARKET_PAGE_SIZE = 50;
+
+    /**
+     * GitHub 段名合法字符集（owner / repo / branch）。
+     * <p>解析结果直接拼进 {@code codeload.github.com} 与 {@code api.github.com} 地址，
+     * 收紧字符可确保请求主机与路径段不被进一步改写。</p>
+     */
+    private static final Pattern GITHUB_SEGMENT = Pattern.compile("[A-Za-z0-9._-]{1,100}");
+
+    /**
+     * 单个技能从归档解包的文件数上限。
+     */
+    private static final int MAX_SKILL_FILES = 500;
+
+    /**
+     * 单个技能从归档解包的总字节上限（32 MB）。
+     */
+    private static final long MAX_SKILL_BYTES = 32L * 1024 * 1024;
+
+    /**
+     * 仓库归档可读字节上限（64 MB），超过则不整读进内存。
+     */
+    private static final long MAX_ARCHIVE_BYTES = 64L * 1024 * 1024;
 
     /**
      * 列出全部可用技能。
@@ -293,10 +353,13 @@ public class ApiSkillController {
         Object skillsObj = body.get("skills");
         List<Map<String, String>> skills = new ArrayList<>();
         if (skillsObj instanceof List) {
-            Path builtinDir = Paths.get(skillsRoot).resolve("builtin");
+            Path builtinDir = normalizeRoot(skillsRoot).resolve("builtin");
             for (Object s : (List<?>) skillsObj) {
                 String name = String.valueOf(s);
-                Path src = builtinDir.resolve(name);
+                Path src = builtinDir.resolve(name).normalize();
+                if (!src.getParent().equals(builtinDir)) {
+                    continue;
+                }
                 Map<String, String> item = new LinkedHashMap<>();
                 item.put("name", name);
                 item.put("source_path", Files.exists(src) ? src.toAbsolutePath().toString() : "");
@@ -338,7 +401,8 @@ public class ApiSkillController {
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
      */
-     @PostMapping("/import")
+    @Permission("admin")
+    @PostMapping("/import")
      public ApiResult<Map<String, Object>> importSkill(@RequestBody Map<String, Object> body) {
          String rawPath = asText(body.get("skill_path"));
          if (rawPath != null && rawPath.startsWith("agent://")) {
@@ -452,6 +516,7 @@ public class ApiSkillController {
      * @param body 请求体 {@code { folder_path: string }}
      * @return 技能列表
      */
+    @Permission("admin")
     @PostMapping("/scan")
     public ApiResult<List<Map<String, Object>>> scan(@RequestBody Map<String, Object> body) {
         String folderPath = asText(body.get("folder_path"));
@@ -459,12 +524,8 @@ public class ApiSkillController {
         if (folderPath == null || folderPath.isBlank()) {
             return ApiResult.ok(result);
         }
-        Path dir = Paths.get(folderPath);
+        Path dir = resolveContainedPath(folderPath);
         if (Files.exists(dir) && Files.isDirectory(dir)) {
-            /**
-             * 尝试。
-             * @param Files.list(dir 文件.列表(dir
-             */
             try (Stream<Path> stream = Files.list(dir)) {
                 for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
                     if (hasSkillMark(p)) {
@@ -555,7 +616,8 @@ public class ApiSkillController {
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
      */
-     @PostMapping("/import-symlink")
+    @Permission("admin")
+    @PostMapping("/import-symlink")
      public ApiResult<Map<String, Object>> importSymlink(@RequestBody Map<String, Object> body) {
          String rawPath = asText(body.get("skill_path"));
          if (rawPath != null && rawPath.startsWith("agent://")) {
@@ -675,16 +737,21 @@ public class ApiSkillController {
      * @param @PathVariable("skill_name" @路径变量("skill_名称"
      * @param @PathVariable("skill_name" @PathVariable("skill_name"
      */
+    @Permission("admin")
     @DeleteMapping("/{skill_name}")
     public ApiResult<Void> delete(@PathVariable("skill_name") String skillName) {
-        Path userDir = Paths.get(skillsRoot).resolve("user").resolve(skillName);
-        if (Files.exists(userDir)) {
+        Path userDir = normalizeRoot(skillsRoot).resolve("user");
+        Path target = userDir.resolve(sanitizeSkillName(skillName)).normalize();
+        if (!target.getParent().equals(userDir.normalize())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "技能名非法: " + skillName);
+        }
+        if (Files.exists(target)) {
             try {
                 /**
                  * 删除recursively。
                  * @param userDir 用户dir
                  */
-                deleteRecursively(userDir);
+                deleteRecursively(target);
             } catch (IOException e) {
                 /**
                  * api异常。
@@ -699,6 +766,65 @@ public class ApiSkillController {
     }
 
     /**
+     * 列出已安装技能（含启用状态）。
+     *
+     * <p>扫描的是技能根目录下的真实 {@code SKILL.md}，供搜索弹层的「已安装」区与管理列表渲染。</p>
+     *
+     * @return 已安装技能列表
+     */
+    @GetMapping("/installed")
+    public ApiResult<List<AiInstalledSkillDTO>> installed() {
+        List<AiInstalledSkillDTO> result = new ArrayList<>();
+        for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
+            AiInstalledSkillDTO dto = new AiInstalledSkillDTO();
+            dto.setId(skill.id());
+            dto.setName(skill.name());
+            dto.setDescription(skill.description());
+            dto.setIcon(skill.icon());
+            dto.setLocation(skill.location());
+            dto.setSource(skill.custom() ? "custom" : "builtin");
+            dto.setEnabled(skill.enabled());
+            dto.setContentLength(skill.content().length());
+            result.add(dto);
+        }
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 启用/停用技能。
+     * <p>停用只让该技能不再注入对话，不删除文件；名单持久化在 {@code skills.disabled_skills}，
+     * 按 {@code source:name} 限定标识记录。技能是宿主级共享资源，故与安装/删除同为管理员出口。</p>
+     *
+     * @param skillName 技能名
+     * @param body      请求体 {@code { enabled: boolean, source?: "builtin"|"custom" }}
+     * @return 成功信封
+     */
+    @Permission("admin")
+    @PostMapping("/{skill_name}/toggle")
+    public ApiResult<Void> toggleSkill(@PathVariable("skill_name") String skillName,
+                                       @RequestBody Map<String, Object> body) {
+        String name = sanitizeSkillName(skillName);
+        String source = body.get("source") == null ? "" : String.valueOf(body.get("source")).trim();
+        List<ChatSkillSupport.InstalledSkill> matched = chatSkillSupport.skills().stream()
+                .filter(skill -> skill.name().equals(name))
+                .filter(skill -> source.isEmpty() || source.equals(skill.custom() ? "custom" : "builtin"))
+                .toList();
+        if (matched.isEmpty()) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillName);
+        }
+        if (matched.size() > 1) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "内置与用户技能同名，请指明 source: " + name);
+        }
+        boolean enabled = body.get("enabled") == null
+                || Boolean.parseBoolean(String.valueOf(body.get("enabled")));
+        String id = matched.get(0).id();
+        chatSkillSupport.toggle(id, enabled);
+        log.info("[skills] 技能 {} -> {}", id, enabled ? "启用" : "停用");
+        return ApiResult.ok();
+    }
+
+    /**
      * 为技能设置标签。
      *
      * @param skillName 技能名
@@ -706,6 +832,7 @@ public class ApiSkillController {
      * @return 成功信封
      * @param @PathVariable("skill_name" @路径变量("skill_名称"
      */
+    @Permission("admin")
     @PutMapping("/{skill_name}/tags")
     public ApiResult<Void> setTags(@PathVariable("skill_name") String skillName,
                                    @RequestBody Map<String, Object> body) {
@@ -742,6 +869,7 @@ public class ApiSkillController {
      * @param body 请求体 {@code { name: string, path: string }}
      * @return 成功信封
      */
+    @Permission("admin")
     @PostMapping("/external-paths")
     public ApiResult<Void> addExternalPath(@RequestBody Map<String, Object> body) {
         String name = asText(body.get("name"));
@@ -769,6 +897,7 @@ public class ApiSkillController {
      * @param @RequestParam("path" @请求参数("路径"
      * @param @RequestParam("path" @RequestParam("path"
      */
+    @Permission("admin")
     @DeleteMapping("/external-paths")
     public ApiResult<Void> removeExternalPath(@RequestParam("path") String path) {
         externalPaths.removeIf(e -> path.equals(e.get("path")));
@@ -781,6 +910,7 @@ public class ApiSkillController {
      *
      * @return 成功信封
      */
+    @Permission("admin")
     @PostMapping("/market/enable")
     public ApiResult<Void> marketEnable() {
         sysAiGlobalSettingService.upsertValue(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, "true", "技能市场是否启用");
@@ -794,6 +924,7 @@ public class ApiSkillController {
      *
      * @return 成功信封
      */
+    @Permission("admin")
     @PostMapping("/market/disable")
     public ApiResult<Void> marketDisable() {
         sysAiGlobalSettingService.upsertValue(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, "false", "技能市场是否启用");
@@ -823,6 +954,7 @@ public class ApiSkillController {
      * @return 成功信封
      * @param body 主体
      */
+    @Permission("admin")
     @PostMapping("/market/source/toggle")
     public ApiResult<Void> marketSourceToggle(@RequestBody Map<String, Object> body) {
         String source = asText(body.get("source"));
@@ -1058,8 +1190,9 @@ public class ApiSkillController {
         if (fileName == null || fileName.isBlank()) {
             return "";
         }
-        Path file = Paths.get(skillsRoot).resolve(subDir).resolve(fileName);
-        if (!Files.exists(file)) {
+        Path root = normalizeRoot(skillsRoot);
+        Path file = root.resolve(subDir).resolve(fileName).normalize();
+        if (!isWithin(root, file) || !Files.exists(file)) {
             return "";
         }
         try {
@@ -1086,8 +1219,74 @@ public class ApiSkillController {
               */
              throw new ApiException(ApiErrorCode.INVALID_PARAM, "skill_path 不能为空");
          }
-         return Paths.get(skillPath).toAbsolutePath().normalize();
+         return resolveContainedPath(skillPath);
      }
+
+    /**
+     * 解析客户端路径，并限定在技能根目录或已登记的外部路径内。
+     *
+     * <p>技能目录、扫描目录由前端传入，不加约束时可指向任意服务器绝对路径：
+     * 导入会把该目录内容复制进共享技能目录，扫描会把目录条目回显给调用方。</p>
+     *
+     * @param rawPath 客户端路径
+     * @return 规范化后的绝对路径
+     */
+    private Path resolveContainedPath(String rawPath) {
+        Path path;
+        try {
+            path = Paths.get(rawPath).toAbsolutePath().normalize();
+        } catch (InvalidPathException e) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "路径格式非法: " + rawPath);
+        }
+        if (!isWithinAllowedRoots(path)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "路径不在技能目录或已登记的外部路径内");
+        }
+        return path;
+    }
+
+    /**
+     * 路径是否落在允许访问的根目录集合内。
+     *
+     * @param path 规范化后的绝对路径
+     * @return 是否允许访问
+     */
+    private boolean isWithinAllowedRoots(Path path) {
+        if (isWithin(normalizeRoot(skillsRoot), path)) {
+            return true;
+        }
+        for (Map<String, String> entry : externalPaths) {
+            String registered = entry.get("path");
+            if (registered != null && isWithin(normalizeRoot(registered), path)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 规范化根目录，非法路径按不匹配处理。
+     *
+     * @param root 根目录原始值
+     * @return 规范化绝对目录，无法解析时返回 {@code null}
+     */
+    private static Path normalizeRoot(String root) {
+        try {
+            return Paths.get(root).toAbsolutePath().normalize();
+        } catch (InvalidPathException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 判定路径是否位于父目录内（含父目录自身）。
+     *
+     * @param base 父目录
+     * @param path 待判定路径
+     * @return 是否位于父目录内
+     */
+    private static boolean isWithin(Path base, Path path) {
+        return base != null && path.startsWith(base);
+    }
 
     /**
      * 导入 {@code agent://PROVIDER/SKILL} 虚拟地址指向的 Agent 本地技能。
@@ -1317,68 +1516,157 @@ public class ApiSkillController {
     // ==================== 技能市场 ====================
 
     /**
-     * 搜索 skillsmp 技能市场。
+     * 在线市场搜索：扇出到全部 {@link SkillOnlineProvider} 市场源并聚合结果。
      *
-     * @param search 搜索关键词
-     * @param page   页码（默认 1）
-     * @param limit  每页数量（默认 20）
-     * @param sortBy 排序方式（stars/forks/updated，默认 stars）
+     * <p>关键词为空时等价于浏览各源榜单，供前端渲染「推荐」区。总开关
+     * {@code skills.market_enabled} 关闭时不访问任何源；单源异常只记在该源的状态上，
+     * 不影响其余源，也不返回伪造条目。</p>
+     *
+     * @param search  搜索关键词
+     * @param keyword 搜索关键词（前端历史参数名，与 {@code search} 等价）
+     * @param page    页码（默认 1）
+     * @param limit   每页数量（默认 20）
+     * @param sortBy  排序方式（stars/forks/updated，默认 stars），源侧不支持时由实现忽略
+     * @param source  可选：只查某个市场源
      * @return 搜索结果
      */
     @GetMapping("/market/search")
-    public ApiResult<Map<String, Object>> marketSearch(
+    public ApiResult<AiSkillMarketSearchDTO> marketSearch(
             @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "stars") String sortBy) {
-        try {
-            StringBuilder urlBuilder = new StringBuilder(skillsMarketUrl)
-                    .append("?page=").append(page).append("&limit=").append(limit)
-                    .append("&sortBy=").append(sortBy);
-            if (search != null && !search.isBlank()) {
-                urlBuilder.append("&search=").append(java.net.URLEncoder.encode(search, StandardCharsets.UTF_8));
-            }
-            String url = urlBuilder.toString();
-            String body = httpGet(url);
-            Map<String, Object> raw = parseJson(body);
-            List<?> rawSkills = (List<?>) raw.get("skills");
-            Map<String, Object> pagination = (Map<String, Object>) raw.get("pagination");
+            @RequestParam(defaultValue = "stars") String sortBy,
+            @RequestParam(required = false) String source) {
+        AiSkillMarketSearchDTO result = new AiSkillMarketSearchDTO();
+        result.setFetchedAt(System.currentTimeMillis());
+        String term = search == null || search.isBlank() ? (keyword == null ? "" : keyword.trim()) : search.trim();
+        result.setKeyword(term);
 
-            List<Map<String, Object>> items = new ArrayList<>();
-            if (rawSkills != null) {
-                int rank = (page - 1) * limit + 1;
-                for (Object obj : rawSkills) {
-                    Map<String, Object> skill = (Map<String, Object>) obj;
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("id", "skillsmp:" + skill.getOrDefault("id", ""));
-                    item.put("source", "skillsmp");
-                    item.put("rank", rank++);
-                    item.put("name", skill.getOrDefault("name", ""));
-                    item.put("description", skill.getOrDefault("description", ""));
-                    item.put("url", skill.getOrDefault("githubUrl", ""));
-                    item.put("install_command", "");
-                    item.put("tags", List.of());
-                    item.put("stats", "★ " + skill.getOrDefault("stars", 0) + " · Fork " + skill.getOrDefault("forks", 0));
-                    items.add(item);
+        boolean enabled = sysAiGlobalSettingService.getBoolean(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, true);
+        result.setEnabled(enabled);
+        if (!enabled) {
+            log.info("[skills] 市场总开关关闭，跳过在线搜索");
+            return ApiResult.ok(result);
+        }
+
+        int size = Math.max(1, Math.min(limit, MAX_MARKET_PAGE_SIZE));
+        int current = Math.max(1, page);
+        Set<String> installed = installedSkillNames();
+        for (SkillOnlineProvider provider : skillOnlineProviders()) {
+            String src = provider.name();
+            AiSkillMarketSourceDTO status = new AiSkillMarketSourceDTO();
+            status.setSource(src);
+            status.setCount(0);
+            boolean wanted = source == null || source.isBlank() || source.equalsIgnoreCase(src);
+            boolean sourceEnabled = sysAiGlobalSettingService.getBoolean(
+                    MARKET_SETTING_GROUP,
+                    MARKET_SOURCE_FIELD_PREFIX + src + MARKET_SOURCE_FIELD_SUFFIX,
+                    true);
+            if (!wanted || !sourceEnabled) {
+                status.setQueried(false);
+                result.getSources().add(status);
+                continue;
+            }
+            status.setQueried(true);
+            try {
+                List<SkillMarketListing> listings = provider.searchMarket(term, current, size, sortBy);
+                for (SkillMarketListing listing : listings) {
+                    result.getItems().add(toMarketItem(listing, installed));
+                }
+                status.setCount(listings.size());
+            } catch (Exception e) {
+                log.warn("[skills] 市场源搜索失败: source={}, keyword={}", src, term, e);
+                status.setError("搜索失败: " + e.getMessage());
+            }
+            result.getSources().add(status);
+        }
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 收集在线市场源：SPI 发现优先，fat jar 下服务发现失效时回退显式枚举。
+     *
+     * <p>同一实现可能以「服务登记名 + 注解值」两个别名被收集两次，这里按实现类去重，
+     * 避免同一源被重复请求。</p>
+     *
+     * @return 市场源提供器列表
+     */
+    private List<SkillOnlineProvider> skillOnlineProviders() {
+        Map<String, SkillOnlineProvider> discovered = ServiceProvider.of(SkillOnlineProvider.class).list();
+        List<SkillOnlineProvider> providers = new ArrayList<>();
+        if (discovered != null) {
+            for (SkillOnlineProvider provider : discovered.values()) {
+                if (provider != null) {
+                    providers.add(provider);
                 }
             }
-
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("items", items);
-            result.put("fetched_at", System.currentTimeMillis());
-            result.put("errors", List.of());
-            if (pagination != null) {
-                result.put("pagination", pagination);
-            }
-            return ApiResult.ok(result);
-        } catch (Exception e) {
-            log.error("SkillsMP 市场搜索失败: search={}", search, e);
-            Map<String, Object> empty = new LinkedHashMap<>();
-            empty.put("items", List.of());
-            empty.put("fetched_at", System.currentTimeMillis());
-            empty.put("errors", List.of("市场搜索失败: " + e.getMessage()));
-            return ApiResult.ok(empty);
         }
+        if (providers.isEmpty()) {
+            providers.addAll(List.of(
+                    new SkillsmpSkillProvider(),
+                    new SkillShSkillProvider(),
+                    new GithubSkillOnlineProvider(),
+                    new ClawHubSkillOnlineProvider(),
+                    new LoopHubSkillOnlineProvider(),
+                    new SkillHubSkillOnlineProvider(),
+                    new McpWorldSkillOnlineProvider()));
+        }
+        List<SkillOnlineProvider> unique = new ArrayList<>();
+        Set<Class<?>> seen = new LinkedHashSet<>();
+        for (SkillOnlineProvider provider : providers) {
+            if (seen.add(provider.getClass())) {
+                unique.add(provider);
+            }
+        }
+        return unique;
+    }
+
+    /**
+     * 已落盘技能名集合，用于给市场条目标注「已安装」。
+     *
+     * @return 用户目录与内置目录下的技能名
+     */
+    private Set<String> installedSkillNames() {
+        Set<String> names = new LinkedHashSet<>();
+        for (String subdir : List.of("user", "builtin")) {
+            Path dir = Paths.get(skillsRoot).resolve(subdir);
+            if (!Files.isDirectory(dir)) {
+                continue;
+            }
+            try (Stream<Path> stream = Files.list(dir)) {
+                stream.filter(Files::isDirectory)
+                        .forEach(p -> names.add(p.getFileName().toString()));
+            } catch (IOException e) {
+                log.debug("[skills] 扫描已安装技能目录失败: {}", dir, e);
+            }
+        }
+        return names;
+    }
+
+    /**
+     * 市场条目转 DTO。
+     *
+     * @param listing   市场源归一化条目
+     * @param installed 已安装技能名集合
+     * @return 市场条目 DTO
+     */
+    private AiSkillMarketItemDTO toMarketItem(SkillMarketListing listing, Set<String> installed) {
+        AiSkillMarketItemDTO item = new AiSkillMarketItemDTO();
+        item.setId(listing.getId());
+        item.setSource(listing.getSource());
+        item.setRank(listing.getRank());
+        item.setName(listing.getName());
+        item.setDescription(listing.getDescription());
+        item.setAuthor(listing.getAuthor());
+        item.setUrl(listing.getUrl());
+        item.setPath(listing.getPath());
+        item.setStars(listing.getStars());
+        item.setForks(listing.getForks());
+        item.setInstalls(listing.getInstalls());
+        item.setContentLanguage(listing.getContentLanguage());
+        item.setInstalled(listing.getName() != null && installed.contains(listing.getName()));
+        return item;
     }
 
     /**
@@ -1394,6 +1682,7 @@ public class ApiSkillController {
      * @return 同步结果
      */
     @SuppressWarnings("unchecked")
+    @Permission("admin")
     @PostMapping("/market/rankings/sync")
     public ApiResult<Map<String, Object>> syncMarketRankings(@RequestBody Map<String, Object> body) {
         List<String> sources = new ArrayList<>();
@@ -1571,6 +1860,7 @@ public class ApiSkillController {
      * @param body 请求体 {@code { source, id, url }}
      * @return MCP 配置
      */
+    @Permission("admin")
     @PostMapping("/market/mcp/config")
     public ApiResult<Map<String, Object>> resolveMcpConfig(@RequestBody Map<String, Object> body) {
         String source = asText(body.get("source"));
@@ -1590,10 +1880,8 @@ public class ApiSkillController {
         String mcpName = id != null ? id : "default";
         for (String mcpFile : List.of("mcp.json", "mcp_config.json", ".mcp.json")) {
             String filePath = (ref.path() != null ? ref.path() + "/" : "") + mcpFile;
-            String rawUrl = "https://raw.githubusercontent.com/" + ref.owner() + "/" + ref.repo()
-                    + "/" + encodePath(ref.branch()) + "/" + encodePath(filePath);
             try {
-                String content = httpGet(rawUrl);
+                String content = new String(httpGetGithubFile(ref, filePath), StandardCharsets.UTF_8);
                 if (!content.isBlank()) {
                     Map<String, Object> config = parseJson(content);
                     if (!config.isEmpty()) {
@@ -1601,7 +1889,7 @@ public class ApiSkillController {
                     }
                 }
             } catch (Exception e) {
-                log.debug("[skills] 获取 MCP 配置失败 ({}): {}", mcpFile, e.getMessage());
+                log.debug("[skills] 获取 MCP 配置失败 ({}) : {}", filePath, e.getMessage());
             }
         }
 
@@ -1637,13 +1925,14 @@ public class ApiSkillController {
         if (ref == null) {
             return ApiResult.ok(unavailable);
         }
-        String base = ref.path() != null && !ref.path().isBlank() ? ref.path() : "";
+        String subdir = asText(body.get("path"));
+        String wanted = (subdir != null && !subdir.isBlank()) ? subdir.trim() : ref.path();
+        // 复用安装流程的目录反查：市场 path 多为技能叶子名，真实父目录可能带 "skills/" 等前缀
+        String base = resolveSkillDir(ref, wanted);
         for (String file : List.of("SKILL.md", "skill.md")) {
             String filePath = base.isBlank() ? file : base + "/" + file;
-            String rawUrl = "https://raw.githubusercontent.com/" + ref.owner() + "/" + ref.repo()
-                    + "/" + encodePath(ref.branch()) + "/" + encodePath(filePath);
             try {
-                String content = httpGet(rawUrl);
+                String content = new String(httpGetGithubFile(ref, filePath), StandardCharsets.UTF_8);
                 if (content != null && !content.isBlank()) {
                     Map<String, Object> result = new LinkedHashMap<>();
                     result.put("content", content);
@@ -1652,7 +1941,7 @@ public class ApiSkillController {
                     return ApiResult.ok(result);
                 }
             } catch (Exception e) {
-                log.debug("[skills] 拉取市场技能内容失败 (rawUrl={}): {}", rawUrl, e.getMessage());
+                log.debug("[skills] 拉取市场技能内容失败 (path={}): {}", filePath, e.getMessage());
             }
         }
         return ApiResult.ok(unavailable);
@@ -1724,18 +2013,20 @@ public class ApiSkillController {
     /**
      * 安装市场技能包。
      * <p>从市场技能项（GitHub 仓库子目录）真实下载并安装到 {@code skillsRoot/user/<name>}：
-     * 解析 GitHub 树/blob URL → 通过 GitHub 内容 API 递归拉取目录文件 → 校验 SKILL.md →
-     * 写入用户技能目录。失败时返回具体错误，不再返回假成功。</p>
+     * 解析 GitHub 树/blob URL → 归一化仓库内技能目录 → 通过 GitHub 内容 API 递归拉取目录文件 →
+     * 校验 SKILL.md → 写入用户技能目录。失败时返回具体错误，不再返回假成功。</p>
      *
-     * @param body 请求体 {@code { source, id, url }}
+     * @param body 请求体 {@code { source, id, url, path }}
      * @return 安装结果（真实 installed_skill_名称 或 错误）
      */
+    @Permission("admin")
     @PostMapping("/market/package/install")
     public ApiResult<Map<String, Object>> installMarketPackage(@RequestBody Map<String, Object> body) {
         String source = asText(body.get("source"));
         String id = asText(body.get("id"));
         String url = asText(body.get("url"));
-        log.info("安装市场包: source={}, id={}, url={}", source, id, url);
+        String path = asText(body.get("path"));
+        log.info("安装市场包: source={}, id={}, url={}, path={}", source, id, url, path);
 
         List<String> installed = new ArrayList<>();
         List<Map<String, String>> errors = new ArrayList<>();
@@ -1762,10 +2053,11 @@ public class ApiSkillController {
             errors.add(errorEntry(id, "仅支持 GitHub 仓库地址: " + url));
             return installResult(null, installed, errors);
         }
+        String dirPath = resolveSkillDir(ref, path);
 
-        String skillName = ref.path() == null || ref.path().isBlank()
+        String skillName = dirPath == null || dirPath.isBlank()
                 ? ref.repo()
-                : ref.path().substring(ref.path().lastIndexOf('/') + 1);
+                : dirPath.substring(dirPath.lastIndexOf('/') + 1);
         if (skillName.isBlank()) {
             skillName = ref.repo();
         }
@@ -1785,9 +2077,9 @@ public class ApiSkillController {
             /**
              * downloadgithubdir。
              * @param ref ref
-             * @param ref.path( ref.路径(
+             * @param dirPath 目录路径
              */
-            downloadGithubDir(ref, ref.path(), tmpDir, errors);
+            downloadGithubDir(ref, dirPath, tmpDir, errors);
             if (!errors.isEmpty()) {
                 return installResult(skillName, installed, errors);
             }
@@ -1993,6 +2285,9 @@ public class ApiSkillController {
         if (branch == null || branch.isBlank()) {
             branch = "main";
         }
+        if (!isGithubSegment(owner) || !isGithubSegment(repo) || !isGithubSegment(branch)) {
+            return null;
+        }
         /**
          * githubref。
          * @param owner owner
@@ -2005,11 +2300,94 @@ public class ApiSkillController {
     }
 
     /**
-     * 下载 GitHub 目录（递归），文件写入目标目录。
-     * <p>通过 GitHub Contents API 列出目录项，文件用 raw 地址逐一下载。</p>
+     * 是否为合法的 GitHub 段名。
+     *
+     * @param segment 段名
+     * @return 是否合法
+     */
+    private static boolean isGithubSegment(String segment) {
+        return segment != null && GITHUB_SEGMENT.matcher(segment).matches();
+    }
+
+    /**
+     * 归一化仓库内技能目录。
+     * <p>市场条目回传的目录形态不一：技能市场与 GitHub 源给完整相对路径，skills.sh 只给末级
+     * 技能名。后者直接当目录下载必然取不到内容，故用 GitHub 树接口在仓库内反查
+     * {@code <名称>/SKILL.md} 的真实父目录；反查不到时按原值继续，由 SKILL.md 校验如实报错。</p>
+     *
+     * @param ref  GitHub 引用
+     * @param path 市场条目给出的目录或末级技能名，可为空
+     * @return 仓库内技能目录，空串表示仓库根
+     */
+    private String resolveSkillDir(GithubRef ref, String path) {
+        String urlPath = ref.path() == null ? "" : ref.path().trim();
+        String wanted = path == null ? "" : path.trim().replaceAll("^/+", "");
+        if (wanted.isEmpty()) {
+            return urlPath;
+        }
+        if (wanted.contains("/") || wanted.equalsIgnoreCase(leafOf(urlPath))) {
+            return wanted;
+        }
+        try {
+            String treeUrl = "https://api.github.com/repos/" + ref.owner() + "/" + ref.repo()
+                    + "/git/trees/" + encodePath(ref.branch()) + "?recursive=1";
+            Object treeValue;
+            try {
+                treeValue = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(httpGet(treeUrl), Object.class);
+            } catch (Exception parseEx) {
+                treeValue = null;
+            }
+            List<?> nodes = null;
+            if (treeValue instanceof List<?> list) {
+                nodes = list;
+            } else if (treeValue instanceof Map<?, ?> map && map.get("tree") instanceof List<?> list) {
+                nodes = list;
+            }
+            if (nodes == null) {
+                return wanted;
+            }
+            String suffix = "/" + wanted.toLowerCase() + "/skill.md";
+            for (Object nodeObj : nodes) {
+                if (!(nodeObj instanceof Map<?, ?> node)) {
+                    continue;
+                }
+                if (!"blob".equals(String.valueOf(node.get("type")))) {
+                    continue;
+                }
+                String nodePath = String.valueOf(node.get("path")).toLowerCase();
+                if (nodePath.endsWith(suffix)) {
+                    return String.valueOf(node.get("path")).replaceAll("(?i)/[^/]+$", "");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[skills] 反查技能目录失败: repo={}, name={}", ref.owner() + "/" + ref.repo(), wanted, e);
+        }
+        return wanted;
+    }
+
+    /**
+     * 取路径的末级段。
+     *
+     * @param path 路径，可为空串
+     * @return 末级段，入参为空时返回空串
+     */
+    private static String leafOf(String path) {
+        if (path == null || path.isBlank()) {
+            return "";
+        }
+        return path.substring(path.lastIndexOf('/') + 1);
+    }
+
+    /**
+     * 下载 GitHub 目录，文件写入目标目录。
+     *
+     * <p>优先用 Contents API 逐项拉取：一次列目录加每文件一次请求，实测比整仓归档快一个数量级
+     * （归档需下载整个仓库）。仅当目录列不出来（仓库内路径不存在、被限流或 IO 异常）时，
+     * 才回退单次拉取仓库归档（{@code codeload.github.com}）并在本地解出技能子目录。</p>
      *
      * @param ref      GitHub 引用
-     * @param dirPath  要下载的目录路径（仓库内相对路径）
+     * @param dirPath  要下载的目录路径（仓库内相对路径，空串表示仓库根）
      * @param target   落盘目录
      * @param errors   错误收集器
      * @throws IOException          网络/IO 异常
@@ -2017,43 +2395,245 @@ public class ApiSkillController {
      */
     private void downloadGithubDir(GithubRef ref, String dirPath, Path target, List<Map<String, String>> errors)
             throws IOException, InterruptedException {
+        String normalized = dirPath == null ? "" : dirPath.trim().replaceAll("^/+|/+$", "");
+        List<Map<String, String>> staged = new ArrayList<>();
+        boolean listed = false;
+        try {
+            listed = downloadGithubContentsDir(ref, normalized, target, staged);
+        } catch (InterruptedException e) {
+            throw e;
+        } catch (IOException e) {
+            log.warn("[skills] 逐项下载异常，回退仓库归档: repo={}, dir={}, err={}",
+                    ref.owner() + "/" + ref.repo(), normalized, e.getMessage());
+            staged.clear();
+        }
+        if (listed) {
+            errors.addAll(staged);
+            return;
+        }
+        if (extractSkillFromArchive(ref, normalized, target, staged)) {
+            errors.addAll(staged);
+            return;
+        }
+        errors.add(errorEntry(normalized, "技能目录不存在或无法读取: " + (normalized.isEmpty() ? "/" : normalized)));
+    }
+
+    /**
+     * 从仓库 tar.gz 归档中解出技能目录。
+     *
+     * @param ref     GitHub 引用
+     * @param dirPath 仓库内技能目录，空串表示整个仓库
+     * @param target  落盘目录
+     * @param errors  错误收集器
+     * @return {@code true} 表示已由归档处理（含超限报错），{@code false} 表示需回退逐项下载
+     * @throws IOException IO 异常
+     */
+    private boolean extractSkillFromArchive(GithubRef ref, String dirPath, Path target,
+                                            List<Map<String, String>> errors) throws IOException {
+        String archiveUrl = "https://codeload.github.com/" + ref.owner() + "/" + ref.repo()
+                + "/tar.gz/refs/heads/" + encodePath(ref.branch());
+        byte[] archive;
+        try {
+            archive = httpGetBytes(archiveUrl, null, ARCHIVE_TIMEOUT);
+        } catch (Exception e) {
+            log.warn("[skills] 仓库归档下载失败，回退逐项下载: repo={}, err={}",
+                    ref.owner() + "/" + ref.repo(), e.getMessage());
+            return false;
+        }
+        if (archive.length > MAX_ARCHIVE_BYTES) {
+            log.warn("[skills] 仓库归档 {} MB 超过 {} MB 上限，回退逐项下载",
+                    archive.length / (1024 * 1024), MAX_ARCHIVE_BYTES / (1024 * 1024));
+            return false;
+        }
+        long written = 0L;
+        int files = 0;
+        boolean matched = false;
+        try (TarArchiveInputStream stream = new TarArchiveInputStream(
+                new GZIPInputStream(new ByteArrayInputStream(archive), 8192), StandardCharsets.UTF_8.name())) {
+            TarArchiveEntry entry;
+            while ((entry = stream.getNextEntry()) != null) {
+                String relative = stripArchiveRoot(entry.getName());
+                if (relative == null || relative.isEmpty()) {
+                    continue;
+                }
+                if (!dirPath.isEmpty()) {
+                    if (!relative.startsWith(dirPath + "/")) {
+                        continue;
+                    }
+                    relative = relative.substring(dirPath.length() + 1);
+                    if (relative.isEmpty()) {
+                        continue;
+                    }
+                }
+                matched = true;
+                Path out = resolveInTarget(target, relative);
+                if (out == null) {
+                    errors.add(errorEntry(relative, "归档中存在越界路径，已中止安装"));
+                    return true;
+                }
+                if (entry.isDirectory()) {
+                    Files.createDirectories(out);
+                    continue;
+                }
+                if (!entry.isFile()) {
+                    continue;
+                }
+                if (files >= MAX_SKILL_FILES || written + entry.getSize() > MAX_SKILL_BYTES) {
+                    errors.add(errorEntry(dirPath, "技能内容超出安装上限：最多 " + MAX_SKILL_FILES
+                            + " 个文件 / " + (MAX_SKILL_BYTES / (1024 * 1024)) + " MB"));
+                    return true;
+                }
+                Files.createDirectories(out.getParent());
+                try (OutputStream os = Files.newOutputStream(out)) {
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = stream.read(buffer)) > 0) {
+                        os.write(buffer, 0, read);
+                        written += read;
+                    }
+                }
+                files++;
+            }
+        } catch (IOException e) {
+            log.warn("[skills] 归档解包失败，回退逐项下载: repo={}, err={}",
+                    ref.owner() + "/" + ref.repo(), e.getMessage());
+            return false;
+        }
+        if (!matched) {
+            log.warn("[skills] 仓库归档中不存在目录 {}，回退逐项下载", dirPath);
+            return false;
+        }
+        log.info("[skills] 归档解包完成: repo={}, dir={}, 文件={} 个, 字节={}",
+                ref.owner() + "/" + ref.repo(), dirPath, files, written);
+        return true;
+    }
+
+    /**
+     * 去掉归档条目的仓库根前缀（GitHub 归档统一为 {@code <repo>-<ref>/...}）。
+     *
+     * @param entryName 归档条目名
+     * @return 仓库内相对路径，根条目返回 {@code null}
+     */
+    private static String stripArchiveRoot(String entryName) {
+        if (entryName == null || entryName.isEmpty()) {
+            return null;
+        }
+        int slash = entryName.indexOf('/');
+        return slash < 0 ? null : entryName.substring(slash + 1);
+    }
+
+    /**
+     * 将归档内相对路径解析到落盘目录内，拒绝绝对路径与逃逸。
+     *
+     * @param target   落盘目录
+     * @param relative 归档内相对路径
+     * @return 落盘路径，越界时返回 {@code null}
+     */
+    private Path resolveInTarget(Path target, String relative) {
+        if (relative.startsWith("/") || relative.contains(":")) {
+            return null;
+        }
+        Path base = target.toAbsolutePath().normalize();
+        try {
+            Path out = base.resolve(relative).normalize();
+            return out.startsWith(base) && !out.equals(base) ? out : null;
+        } catch (InvalidPathException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 经 Contents API 递归下载目录（入口，落盘路径以该目录为根）。
+     *
+     * @param ref     GitHub 引用
+     * @param dirPath 仓库内目录，空串表示仓库根
+     * @param target  落盘目录
+     * @param errors  错误收集器
+     * @return 根目录是否成功列出
+     * @throws IOException          网络/IO 异常
+     * @throws InterruptedException 中断异常
+     */
+    private boolean downloadGithubContentsDir(GithubRef ref, String dirPath, Path target,
+                                              List<Map<String, String>> errors)
+            throws IOException, InterruptedException {
+        return downloadGithubContentsDir(ref, dirPath, dirPath, target, errors);
+    }
+
+    /**
+     * 经 Contents API 递归下载目录，文件按技能目录内的相对路径镜像落盘。
+     *
+     * @param ref      GitHub 引用
+     * @param dirPath  当前遍历的仓库内目录
+     * @param rootDir  技能目录（落盘根的对应仓库内路径）
+     * @param target   落盘目录
+     * @param errors   错误收集器
+     * @return 当前目录是否成功列出
+     * @throws IOException          网络/IO 异常
+     * @throws InterruptedException 中断异常
+     */
+    private boolean downloadGithubContentsDir(GithubRef ref, String dirPath, String rootDir, Path target,
+                                              List<Map<String, String>> errors)
+            throws IOException, InterruptedException {
         String apiUrl = "https://api.github.com/repos/" + ref.owner() + "/" + ref.repo()
                 + "/contents/" + encodePath(dirPath) + "?ref=" + encodePath(ref.branch());
-        String response = httpGet(apiUrl);
-        List<?> entries = parseJsonArray(response);
-        if (entries == null || entries.isEmpty()) {
-            errors.add(errorEntry(ref.path(), "目录为空或无法读取: " + dirPath));
-            return;
+        List<?> entries = parseJsonArray(httpGet(apiUrl));
+        if (entries.isEmpty()) {
+            return false;
         }
         for (Object entryObj : entries) {
             Map<?, ?> entry = (Map<?, ?>) entryObj;
             String type = String.valueOf(entry.get("type"));
             String name = String.valueOf(entry.get("name"));
             if ("dir".equals(type)) {
-                String childPath = dirPath == null || dirPath.isBlank()
-                        ? name
-                        : dirPath + "/" + name;
-                /**
-                 * downloadgithubdir。
-                 * @param ref ref
-                 * @param childPath 子路径
-                 * @param target Target
-                 * @param errors 错误
-                 */
-                downloadGithubDir(ref, childPath, target, errors);
+                String childPath = dirPath.isEmpty() ? name : dirPath + "/" + name;
+                try {
+                    if (!downloadGithubContentsDir(ref, childPath, rootDir, target, errors)) {
+                        errors.add(errorEntry(childPath, "子目录为空或无法读取: " + childPath));
+                    }
+                } catch (InterruptedException e) {
+                    throw e;
+                } catch (IOException e) {
+                    errors.add(errorEntry(childPath, "子目录下载失败: " + e.getMessage()));
+                }
             } else if ("file".equals(type)) {
-                Object downloadUrlObj = entry.get("download_url");
-                String downloadUrl = downloadUrlObj != null ? String.valueOf(downloadUrlObj) : "";
-                if (downloadUrl.isBlank() || "null".equals(downloadUrl)) {
-                    errors.add(errorEntry(name, "文件无下载地址: " + name));
+                String relativeDir = dirPath.length() > rootDir.length()
+                        ? dirPath.substring(rootDir.length() + 1) : "";
+                String relative = relativeDir.isEmpty() ? name : relativeDir + "/" + name;
+                String filePath = dirPath.isEmpty() ? name : dirPath + "/" + name;
+                Path out = resolveInTarget(target, relative);
+                if (out == null) {
+                    errors.add(errorEntry(relative, "文件名非法: " + relative));
                     continue;
                 }
-                Path filePath = target.resolve(name);
-                byte[] content = httpGetBytes(downloadUrl);
-                Files.createDirectories(filePath.getParent());
-                Files.write(filePath, content);
+                try {
+                    Files.createDirectories(out.getParent());
+                    Files.write(out, httpGetGithubFile(ref, filePath));
+                } catch (InterruptedException e) {
+                    throw e;
+                } catch (IOException e) {
+                    errors.add(errorEntry(relative, "文件下载失败: " + e.getMessage()));
+                }
             }
         }
+        return true;
+    }
+
+    /**
+     * 经 Contents API 读取仓库内单个文件内容。
+     *
+     * <p>走 {@code api.github.com} 并声明 raw 媒体类型，避免依赖 {@code raw.githubusercontent.com}
+     * （该域名在部分网络下不可达）。</p>
+     *
+     * @param ref      GitHub 引用
+     * @param filePath 仓库内文件路径
+     * @return 文件字节
+     * @throws IOException          网络/IO 异常
+     * @throws InterruptedException 中断异常
+     */
+    private byte[] httpGetGithubFile(GithubRef ref, String filePath) throws IOException, InterruptedException {
+        String apiUrl = "https://api.github.com/repos/" + ref.owner() + "/" + ref.repo()
+                + "/contents/" + encodePath(filePath) + "?ref=" + encodePath(ref.branch());
+        return httpGetBytes(apiUrl, GITHUB_RAW_ACCEPT, DEFAULT_TIMEOUT);
     }
 
     /**
@@ -2142,37 +2722,91 @@ public class ApiSkillController {
      * @throws IOException          网络/IO 异常、非法 URL、非 2xx 状态
      * @throws InterruptedException 中断异常
      */
+    /**
+     * 信任操作系统（Windows）根证书库的 SSL 上下文。
+     *
+     * <p>本机可能经 SteamTools 等加速工具以本地根 CA 代理 GitHub，其根证书已装入
+     * Windows 证书库（浏览器信任）但不在 JDK 默认 cacerts 中。此处显式信任
+     * Windows-ROOT，仍执行完整证书链校验；非 Windows 或加载失败时回退 JDK 默认信任库。</p>
+     */
+    private static final SSLContext OS_TRUST_SSL_CONTEXT = buildOsTrustSslContext();
+
+    private static SSLContext buildOsTrustSslContext() {
+        try {
+            TrustManagerFactory tmf = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            KeyStore osRoots = null;
+            try {
+                osRoots = KeyStore.getInstance("Windows-ROOT");
+                osRoots.load(null, null);
+            } catch (Exception ignore) {
+                osRoots = null;
+            }
+            tmf.init(osRoots);
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, tmf.getTrustManagers(), null);
+            return context;
+        } catch (Exception e) {
+            throw new IllegalStateException("初始化操作系统信任 SSL 上下文失败", e);
+        }
+    }
+
+    /**
+     * 进程级共享 HTTP 客户端（连接超时收紧，避免不可达域名长时间占住请求线程）。
+     */
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .sslContext(OS_TRUST_SSL_CONTEXT)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
+
+    /**
+     * 普通请求的整体超时。
+     */
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
+
+    /**
+     * 仓库归档下载的整体超时（单次请求，需容忍较大仓库）。
+     */
+    private static final Duration ARCHIVE_TIMEOUT = Duration.ofSeconds(120);
+
+    /**
+     * GitHub Contents API 的 raw 媒体类型。
+     */
+    private static final String GITHUB_RAW_ACCEPT = "application/vnd.github.raw";
+
     private byte[] httpGetBytes(String urlStr) throws IOException, InterruptedException {
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(15))
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
+        return httpGetBytes(urlStr, null, DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * 下载字节内容。
+     *
+     * @param urlStr  URL
+     * @param accept  {@code Accept} 头，可为 {@code null}
+     * @param timeout 整体超时
+     * @return 响应字节
+     * @throws IOException          网络/IO 异常、非法 URL、非 2xx 状态
+     * @throws InterruptedException 中断异常
+     */
+    private byte[] httpGetBytes(String urlStr, String accept, Duration timeout)
+            throws IOException, InterruptedException {
         URI uri;
         try {
             uri = URI.create(urlStr);
         } catch (IllegalArgumentException e) {
-            /**
-             * io异常。
-             * @param urlStr urlstr
-             * @param e e
-             * @return io异常的结果
-             */
             throw new IOException("非法 URL: " + urlStr, e);
         }
-        HttpRequest request = HttpRequest.newBuilder()
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(uri)
-                .timeout(Duration.ofSeconds(30))
-                .header("User-Agent", "AiControl/1.0 SkillMarket")
-                .GET()
-                .build();
-        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+                .timeout(timeout)
+                .header("User-Agent", "AiControl/1.0 SkillMarket");
+        if (accept != null && !accept.isBlank()) {
+            builder.header("Accept", accept);
+        }
+        HttpResponse<byte[]> response = HTTP_CLIENT.send(builder.GET().build(), HttpResponse.BodyHandlers.ofByteArray());
         int status = response.statusCode();
         if (status < 200 || status >= 300) {
-            /**
-             * io异常。
-             * @param urlStr urlstr
-             * @return io异常的结果
-             */
             throw new IOException("HTTP " + status + " for " + urlStr);
         }
         return response.body();

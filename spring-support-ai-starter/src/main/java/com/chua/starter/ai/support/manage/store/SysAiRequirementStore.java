@@ -374,7 +374,7 @@ public class SysAiRequirementStore {
         state.put("completed_count", 0);
         // Persist binding for tag-bindings aggregation
         if (kind != null && targetId != null) {
-            String key = kind + ":" + targetId;
+            String key = autoworkKeyPrefix() + kind + ":" + targetId;
             Map<String, Object> binding = new LinkedHashMap<>();
             binding.put("kind", kind);
             binding.put("target_id", targetId);
@@ -690,6 +690,15 @@ public class SysAiRequirementStore {
     }
 
     /**
+     * AutoWork 绑定的内存键前缀：进程内共享表按登录用户分键，未登录直接拒绝。
+     *
+     * @return 形如 {@code <userId>:} 的键前缀
+     */
+    private String autoworkKeyPrefix() {
+        return AiUserContext.requireUserId() + ":";
+    }
+
+    /**
      * 需求写归属校验：只读账号拒绝，仅归属者可改删（管理员对他人数据只读）。
      *
      * @param requirement 需求实体
@@ -825,7 +834,12 @@ public class SysAiRequirementStore {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getTagBindings() {
         Map<String, List<Map<String, Object>>> byTag = new LinkedHashMap<>();
-        for (Map<String, Object> binding : autoworkBindings.values()) {
+        String prefix = autoworkKeyPrefix();
+        for (Map.Entry<String, Map<String, Object>> entry : autoworkBindings.entrySet()) {
+            if (!entry.getKey().startsWith(prefix)) {
+                continue;
+            }
+            Map<String, Object> binding = entry.getValue();
             String tag = (String) binding.get("tag");
             if (tag == null || tag.isBlank()) {
                 continue;

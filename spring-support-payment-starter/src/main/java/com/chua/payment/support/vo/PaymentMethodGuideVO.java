@@ -6,66 +6,66 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 支付方式开通指引
+ * 支付方式开通指南
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class PaymentMethodGuideVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private String channelType;
 
     /**
-     * 通道SUB类型
-    */
+     * 渠道SUB类型
+     */
     private String channelSubType;
 
     /**
      * 标题
-    */
+     */
     private String title;
 
     /**
-     * Official名称
-    */
+     * 官方名称
+     */
     private String officialName;
 
     /**
-     * officialurl
-    */
+     * 官方链接
+     */
     private String officialUrl;
 
     /**
-     * applyurl
-    */
+     * 申请链接
+     */
     private String applyUrl;
 
     /**
-     * sandboxurl
-    */
+     * 沙箱链接
+     */
     private String sandboxUrl;
 
     /**
-     * Summary
-    */
+     * 简介
+     */
     private String summary;
 
     /**
-     * 是否必填materials
-    */
+     * 必填材料
+     */
     private List<String> requiredMaterials;
 
     /**
-     * Steps
-    */
+     * 开通步骤
+     */
     private List<String> steps;
 
     /**
-     * 小费
-    */
+     * 小贴士
+     */
     private List<String> tips;
 }
