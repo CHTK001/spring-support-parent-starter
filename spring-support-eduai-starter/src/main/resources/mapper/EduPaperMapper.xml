@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduPaperMapper">
+
+    <!-- 分页查询试卷：多条件筛选 + 归属隔离 + 创建时间倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduPaper">
+        SELECT p.* FROM edu_paper p
+        <where>
+            <if test="query.subject != null and query.subject != ''">
+                AND p.paper_subject = #{query.subject}
+            </if>
+            <if test="query.gradeLevel != null and query.gradeLevel != ''">
+                AND p.paper_grade_level = #{query.gradeLevel}
+            </if>
+            <if test="query.status != null">
+                AND p.paper_status = #{query.status}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (p.paper_owner_user_id IS NULL OR p.paper_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <!-- 按试卷唯一编号取试卷（编号查重用） -->
+    <select id="selectByPaperNo" resultType="com.chua.starter.eduai.model.EduPaper">
+        SELECT p.* FROM edu_paper p
+        WHERE p.paper_no = #{paperNo}
+        LIMIT 1
+    </select>
+
+</mapper>

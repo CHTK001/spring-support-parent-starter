@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduPaperQuestionMapper">
+
+    <!-- 取试卷下的题目关联（按题目顺序升序） -->
+    <select id="selectByPaperId" resultType="com.chua.starter.eduai.model.EduPaperQuestion">
+        SELECT pq.* FROM edu_paper_question pq
+        WHERE pq.paper_question_paper_id = #{paperId}
+        ORDER BY pq.paper_question_order ASC
+    </select>
+
+    <!-- 取试卷下各题的分值映射（满分解析用） -->
+    <select id="selectByPaperIdForScores" resultType="com.chua.starter.eduai.model.EduPaperQuestion">
+        SELECT pq.* FROM edu_paper_question pq
+        WHERE pq.paper_question_paper_id = #{paperId}
+    </select>
+
+    <!-- 删除试卷下指定题目关联（替换题目用） -->
+    <delete id="deleteByPaperAndQuestion">
+        DELETE FROM edu_paper_question
+        WHERE paper_question_paper_id = #{paperId}
+          AND paper_question_question_id = #{questionId}
+    </delete>
+
+    <!-- 取试卷下指定题目的关联（移题前校验存在） -->
+    <select id="selectByPaperAndQuestion" resultType="com.chua.starter.eduai.model.EduPaperQuestion">
+        SELECT pq.* FROM edu_paper_question pq
+        WHERE pq.paper_question_paper_id = #{paperId}
+          AND pq.paper_question_question_id = #{questionId}
+        LIMIT 1
+    </select>
+
+    <!-- 按题项唯一编号取关联（二维码内容 = paper_question_no） -->
+    <select id="selectByQuestionNo" resultType="com.chua.starter.eduai.model.EduPaperQuestion">
+        SELECT pq.* FROM edu_paper_question pq
+        WHERE pq.paper_question_no = #{questionNo}
+        LIMIT 1
+    </select>
+
+    <!-- 试卷每次改动后把全部题项版本同步为最新版本（历史留痕一致性） -->
+    <update id="updateVersionByPaperId">
+        UPDATE edu_paper_question
+        SET paper_question_version = #{version}
+        WHERE paper_question_paper_id = #{paperId}
+    </update>
+
+</mapper>

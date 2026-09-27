@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduPaperHistoryMapper">
+
+    <!-- 取试卷历史列表：按版本倒序，不取 snapshot 大字段（详情接口才取） -->
+    <select id="selectByPaperId" resultType="com.chua.starter.eduai.model.EduPaperHistory">
+        SELECT h.paper_history_id,
+               h.paper_history_owner_user_id,
+               h.paper_history_paper_id,
+               h.paper_history_paper_no,
+               h.paper_history_version,
+               h.paper_history_action,
+               h.paper_history_hash,
+               h.paper_history_create_time,
+               h.paper_history_create_by
+        FROM edu_paper_history h
+        WHERE h.paper_history_paper_id = #{paperId}
+        ORDER BY h.paper_history_version DESC, h.paper_history_id DESC
+    </select>
+
+</mapper>
