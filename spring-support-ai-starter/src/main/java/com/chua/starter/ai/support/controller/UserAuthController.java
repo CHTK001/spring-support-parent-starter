@@ -4,15 +4,16 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.enums.AuthType;
-import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -49,6 +50,11 @@ public class UserAuthController {
      * Bearer 令牌 前缀长度
     */
     private static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
+
+    /**
+     * 静态协议登录 Cookie 名（登录时由服务端下发，登出时需一并吊销其中的令牌）
+     */
+    private static final String AUTH_COOKIE_NAME = "x-oauth-cookie";
 
     /**
      * 用户登录（对接 o认证 静态 协议）。
@@ -108,22 +114,87 @@ public class UserAuthController {
     }
 
     /**
-     * 用户登出。
+     * 用户登出（POST，保留给桌面端等既有调用方）。
      *
-     * <p>调用 oauth 客户端登出当前用户，清除本地会话。</p>
+     * <p>与 {@link #logoutByDelete(HttpServletRequest)} 完全等价，共用同一套吊销逻辑。</p>
      *
+     * @param request HTTP 请求，用于取回本次请求携带的令牌
      * @return 登出结果
      */
     @TokenForIgnore
     @PostMapping("/logout")
-    public ReturnResult<Void> logout() {
+    public ReturnResult<Void> logout(HttpServletRequest request) {
+        return doLogout(request);
+    }
+
+    /**
+     * 用户登出（DELETE，前端 auth-core 契约使用的方法）。
+     *
+     * <p>前端 {@code /v2/user/logout} 走 {@code DELETE}，而本控制器原先只声明了
+     * {@code POST}，导致请求方法不被支持、返回 405。</p>
+     *
+     * @param request HTTP 请求，用于取回本次请求携带的令牌
+     * @return 登出结果
+     */
+    @TokenForIgnore
+    @DeleteMapping("/logout")
+    public ReturnResult<Void> logoutByDelete(HttpServletRequest request) {
+        return doLogout(request);
+    }
+
+    /**
+     * 执行登出：真正吊销本次请求携带的令牌。
+     *
+     * <p>登出接口在鉴权白名单内，鉴权链路不会解析令牌、会话里也没有用户信息，
+     * 因此必须由业务侧自行取出令牌再吊销。若像原先那样传空令牌，
+     * 服务端令牌不会被登记进吊销名单，登出后旧令牌仍能继续调用业务接口。</p>
+     *
+     * @param request HTTP 请求，用于取回本次请求携带的令牌
+     * @return 登出结果
+     */
+    private ReturnResult<Void> doLogout(HttpServletRequest request) {
+        String token = resolveLogoutToken(request);
+        if (StringUtils.isBlank(token)) {
+            // 本次请求没有携带任何凭据，无令牌可吊销，按幂等成功返回
+            return ReturnResult.ok(null);
+        }
         try {
-            AuthClientExecute.getInstance().logout(null, null, LogoutType.LOGOUT);
+            LoginAuthResult result = AuthClientExecute.getInstance().logoutByToken(token);
+            if (null == result || null == result.getCode() || result.getCode() != 200) {
+                // 吊销失败必须留痕，否则「登出成功」的表象会掩盖令牌仍然可用
+                log.warn("用户登出未成功吊销令牌: {}", null == result ? "无返回" : result.getMessage());
+            }
         } catch (Exception e) {
             // 登出异常不阻断响应，仅记录日志
             log.warn("用户登出调用 oauth 异常: {}", e.getMessage());
         }
         return ReturnResult.ok(null);
+    }
+
+    /**
+     * 解析本次登出需要吊销的令牌。
+     *
+     * <p>覆盖三类凭据来源：{@code Authorization: Bearer} 头、{@code token} 查询参数，
+     * 以及静态协议登录时由服务端下发的 {@code x-oauth-cookie} Cookie。</p>
+     *
+     * @param request HTTP 请求
+     * @return 待吊销的令牌；请求未携带任何凭据时返回 {@code null}
+     */
+    private String resolveLogoutToken(HttpServletRequest request) {
+        String token = resolveToken(request);
+        if (StringUtils.isNotBlank(token)) {
+            return token;
+        }
+        Cookie[] cookies = request.getCookies();
+        if (null == cookies) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (AUTH_COOKIE_NAME.equals(cookie.getName()) && StringUtils.isNotBlank(cookie.getValue())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     /**
