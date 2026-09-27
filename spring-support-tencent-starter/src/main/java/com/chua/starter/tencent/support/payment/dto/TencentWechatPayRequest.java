@@ -1,65 +1,39 @@
 package com.chua.starter.tencent.support.payment.dto;
 
-import lombok.Data;
-
 /**
  * 微信下单请求
+ *
+ * @param orderNo 排序NO
+ * @param amountFen amountfen
+ * @param currency 货币
+ * @param description 描述
+ * @param notifyUrl 通知url
+ * @param expireTime Expire时间
+ * @param payerOpenId payeropenid
+ * @param clientIp 客户端IP
+ * @param deviceId deviceid
+ * @param attach Attach
+ * @param h5Type H5类型
+ * @param appName APP名称
+ * @param appUrl APPURL
+ *
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class TencentWechatPayRequest {
-    /**
-     * 排序NO
-    */
-    private String orderNo;
-    /**
-     * amountfen
-    */
-    private Long amountFen;
-    /**
-     * 货币
-    */
-    private String currency;
-    /**
-     * 描述
-    */
-    private String description;
-    /**
-     * 通知url
-    */
-    private String notifyUrl;
-    /**
-     * Expire时间
-    */
-    private String expireTime;
-    /**
-     * payeropenid
-    */
-    private String payerOpenId;
-    /**
-     * 客户端IP
-    */
-    private String clientIp;
-    /**
-     * deviceid
-    */
-    private String deviceId;
-    /**
-     * Attach
-    */
-    private String attach;
-    /**
-     * H5类型
-    */
-    private String h5Type;
-    /**
-     * APP名称
-    */
-    private String appName;
-    /**
-     * APPURL
-    */
-    private String appUrl;
+public record TencentWechatPayRequest(
+        String orderNo,
+        Long amountFen,
+        String currency,
+        String description,
+        String notifyUrl,
+        String expireTime,
+        String payerOpenId,
+        String clientIp,
+        String deviceId,
+        String attach,
+        String h5Type,
+        String appName,
+        String appUrl
+) {
 }
 

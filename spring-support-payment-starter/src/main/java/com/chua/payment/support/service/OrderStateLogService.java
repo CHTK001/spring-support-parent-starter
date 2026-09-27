@@ -14,16 +14,15 @@ import java.util.List;
 public interface OrderStateLogService {
 
     /**
-     * 日志。
-     * @param request 请求
+     * 记录状态流转日志。
+     * @param request 请求参数
      */
     void log(OrderStateLogRequest request);
 
     /**
-     * 列表by订单标识。
+     * 按订单标识查询日志列表。
      * @param orderId 订单标识
-     * @return 列表by订单id的结果
+     * @return 按订单标识查询到的日志列表
      */
     List<OrderStateLog> listByOrderId(Long orderId);
 }
-

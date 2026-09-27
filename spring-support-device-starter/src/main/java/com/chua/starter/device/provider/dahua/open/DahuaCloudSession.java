@@ -78,7 +78,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     private String sign(String time, String nonce) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            String src = info.getAppSecret() + time + nonce + info.getAppKey();
+            String src = info.appSecret() + time + nonce + info.appKey();
             byte[] digest = md.digest(utf8(src));
             StringBuilder sb = new StringBuilder(digest.length * 2);
             for (byte b : digest) {
@@ -102,8 +102,8 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     private void login() {
         try {
             Map<String, Object> params = new LinkedHashMap<>();
-            params.put("appKey", info.getAppKey());
-            params.put("appSecret", info.getAppSecret());
+            params.put("appKey", info.appKey());
+            params.put("appSecret", info.appSecret());
             JsonNode resp = execute("POST", PATH_LOGIN, params, null);
             JsonNode data = assertOk(resp);
             String token = data.path("accessToken").asText(null);
@@ -122,7 +122,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
              * @param expires expires
              */
             cacheToken(token, expires);
-            log.info("大华云睿登录成功: deviceSerial={}", info.getDeviceSerial());
+            log.info("大华云睿登录成功: deviceSerial={}", info.deviceSerial());
         } catch (Exception e) {
             /**
              * illegal状态异常。
@@ -153,7 +153,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         if (accessToken != null && !PATH_LOGIN.equals(path)) {
             realParams.put("accessToken", accessToken);
         }
-        realParams.put("appKey", info.getAppKey());
+        realParams.put("appKey", info.appKey());
         realParams.put("time", time);
         realParams.put("nonce", nonce);
         String sig = sign(time, nonce);
@@ -173,7 +173,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
      */
     public JsonNode getLiveUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
         params.put("stream", 0);
         return assertOk(post(PATH_LIVE_URL, params));
@@ -194,7 +194,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
         params.put("startTime", range.getStart().toString());
         params.put("endTime", range.getEnd().toString());
@@ -219,7 +219,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     public java.util.List<com.chua.starter.device.spi.model.AccessRecord> queryAccessRecords(
             com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("startTime", range.getStart().toString());
         params.put("endTime", range.getEnd().toString());
         JsonNode data = assertOk(post("/openapi/access/records", params));
@@ -235,7 +235,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
             return;
         }
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("channel", 1);
         params.put("action", mapAction(cmd));
         params.put("speed", (int) Math.max(1, Math.min(255, Math.round(speed * 255))));
@@ -275,7 +275,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
-        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("deviceSerial", info.deviceSerial());
         params.put("doorId", doorId);
         params.put("action", "open");
         /**

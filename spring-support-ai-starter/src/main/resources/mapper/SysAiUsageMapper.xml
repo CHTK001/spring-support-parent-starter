@@ -34,6 +34,9 @@
             <if test="endTime != null">
                 AND sys_ai_usage_call_time &lt;= #{endTime}
             </if>
+            <if test="userId != null and userId != ''">
+                AND sys_ai_usage_user_id = #{userId}
+            </if>
         </where>
     </select>
 
@@ -56,10 +59,77 @@
             COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency,
             COALESCE(SUM(sys_ai_usage_first_token_latency), 0) AS totalFirstTokenLatency
         FROM sys_ai_usage
-        WHERE sys_ai_usage_call_time &gt;= #{startTime}
-          AND sys_ai_usage_call_time &lt; #{endTime}
+        <where>
+            <if test="startTime != null">
+                AND sys_ai_usage_call_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND sys_ai_usage_call_time &lt; #{endTime}
+            </if>
+            <if test="userId != null and userId != ''">
+                AND sys_ai_usage_user_id = #{userId}
+            </if>
+        </where>
         GROUP BY DATE(sys_ai_usage_call_time), sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model
         ORDER BY statDate
+    </select>
+
+    <!-- 单日按小时聚合：趋势图今天/同一天时按小时分桶 -->
+    <select id="selectHourlyAggregate" resultType="com.chua.starter.ai.support.mapper.SysAiUsageMapper$HourlyAggregateRow">
+        SELECT
+            DATE_FORMAT(sys_ai_usage_call_time, '%Y-%m-%d %H:00') AS statHour,
+            COUNT(*) AS totalCalls,
+            COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS totalPromptTokens,
+            COALESCE(SUM(sys_ai_usage_completion_tokens), 0) AS totalCompletionTokens,
+            COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS totalTokens,
+            COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost,
+            COALESCE(SUM(sys_ai_usage_cached_tokens), 0) AS totalCachedTokens
+        FROM sys_ai_usage
+        <where>
+            <if test="startTime != null">
+                AND sys_ai_usage_call_time >= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND sys_ai_usage_call_time &lt; #{endTime}
+            </if>
+            <if test="userId != null and userId != ''">
+                AND sys_ai_usage_user_id = #{userId}
+            </if>
+        </where>
+        GROUP BY statHour
+        ORDER BY statHour
+    </select>
+
+    <!--
+        按 分组+服务商+模型 聚合用量：用量分布出口用它，避免把明细整表拉进 JVM 再前端累加。
+    -->
+    <select id="selectUsageSummary" resultType="com.chua.starter.ai.support.mapper.SysAiUsageMapper$UsageSummaryRow">
+        SELECT
+            sys_ai_usage_group_name AS groupName,
+            sys_ai_usage_provider AS provider,
+            sys_ai_usage_model AS model,
+            COUNT(*) AS totalCalls,
+            COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS totalPromptTokens,
+            COALESCE(SUM(sys_ai_usage_completion_tokens), 0) AS totalCompletionTokens,
+            COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS totalTokens,
+            COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost
+        FROM sys_ai_usage
+        <where>
+            <if test="model != null and model != ''">
+                AND sys_ai_usage_model = #{model}
+            </if>
+            <if test="startTime != null">
+                AND sys_ai_usage_call_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND sys_ai_usage_call_time &lt;= #{endTime}
+            </if>
+            <if test="userId != null and userId != ''">
+                AND sys_ai_usage_user_id = #{userId}
+            </if>
+        </where>
+        GROUP BY sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model
+        ORDER BY totalTokens DESC
     </select>
 
 </mapper>

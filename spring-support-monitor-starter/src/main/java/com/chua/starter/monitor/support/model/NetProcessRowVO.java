@@ -2,6 +2,8 @@ package com.chua.starter.monitor.support.model;
 
 import lombok.Data;
 
+import java.util.Locale;
+
 /**
  * 网络端口占用视图。
  *
@@ -89,9 +91,10 @@ public class NetProcessRowVO {
      */
     public static NetProcessRowVO of(String protocol, String localAddr, int localPort, String remoteAddr,
                                     int remotePort, String state, int pid, String process) {
+        String proto = protocol == null ? "" : protocol.trim().toLowerCase(Locale.ROOT);
         NetProcessRowVO row = new NetProcessRowVO();
-        row.setProtocol(protocol);
-        row.setType(protocol);
+        row.setProtocol(proto);
+        row.setType(proto);
         row.setLocal(localAddr + ":" + localPort);
         row.setLocalAddr(localAddr);
         row.setLocalPort(localPort);
@@ -99,9 +102,35 @@ public class NetProcessRowVO {
         row.setRemoteAddr(remoteAddr);
         row.setRemotePort(remotePort);
         row.setPort(localPort);
-        row.setState(state);
+        row.setState(normalizeState(proto, state));
         row.setPid(pid);
-        row.setProcess(process == null ? "" : process);
+        row.setProcess(pid <= 0 ? "" : (process == null ? "" : process));
         return row;
+    }
+
+    /**
+     * 把各通道的状态写法折叠到同一词表。
+     *
+     * <p>ss 用 {@code ESTAB}/{@code TIME-WAIT}，WinRM 用 {@code TimeWait}，netstat 用 {@code LISTENING}，
+     * OSHI 用 {@code TIME_WAIT}，同一含义多种写法会让前端的筛选与配色按通道分裂，故在行工厂统一为 OSHI 的大写下划线口径。</p>
+     *
+     * @param protocol 已归一为小写的协议
+     * @param state    通道原始状态，可为 null
+     * @return 统一后的状态；无状态时 UDP 给 UNCONN、其余给 UNKNOWN
+     */
+    private static String normalizeState(String protocol, String state) {
+        String raw = state == null ? "" : state.trim();
+        if (raw.isEmpty() || "NONE".equalsIgnoreCase(raw)) {
+            return protocol.startsWith("udp") ? "UNCONN" : "UNKNOWN";
+        }
+        String normalized = raw.replaceAll("(?<=[a-z0-9])(?=[A-Z])", "_")
+                .replace('-', '_')
+                .replace(' ', '_')
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("_(?=\\d)", "");
+        if ("LISTENING".equals(normalized)) {
+            return "LISTEN";
+        }
+        return "ESTAB".equals(normalized) ? "ESTABLISHED" : normalized;
     }
 }

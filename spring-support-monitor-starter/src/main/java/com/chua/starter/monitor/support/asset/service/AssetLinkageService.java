@@ -5,13 +5,14 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.asset.model.AssetDetailView;
 import com.chua.starter.monitor.support.asset.model.AssetDetailView.NodeChannel;
 import com.chua.starter.monitor.support.asset.model.AssetDetailView.MonitorItem;
+import com.chua.starter.monitor.support.asset.model.AssetSearchItemVO;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsServerNode;
-import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmEventMapper;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
+import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.service.ServerHostService;
 import lombok.RequiredArgsConstructor;
@@ -53,9 +54,9 @@ public class AssetLinkageService {
     */
     private final ServerNodeRegistry nodeRegistry;
     /**
-     * 监控项 映射器
+     * 监控项 服务，主机↔监控归属解析出口
     */
-    private final MsMonitorMapper monitorMapper;
+    private final MonitorService monitorService;
     /**
      * 告警事件 映射器
     */
@@ -87,24 +88,17 @@ public class AssetLinkageService {
      * @param keyword 关键字（名称/IP 模糊，可空）
      * @return 资产简表列表
      */
-    public ReturnResult<List<Map<String, Object>>> searchAssets(String keyword) {
+    public ReturnResult<List<AssetSearchItemVO>> searchAssets(String keyword) {
         try {
             ReturnResult<List<MsServerHost>> q = serverHostService.query(keyword, null, null);
             List<MsServerHost> hosts = q != null ? q.getData() : null;
-            List<Map<String, Object>> result = new ArrayList<>();
+            List<AssetSearchItemVO> result = new ArrayList<>();
             if (hosts != null) {
                 for (MsServerHost h : hosts) {
-                    Map<String, Object> item = new java.util.LinkedHashMap<>();
-                    item.put("hostId", h.getId());
-                    item.put("name", h.getServerHostName());
-                    item.put("address", h.getServerHostAddress());
-                    item.put("port", h.getServerHostPort());
-                    item.put("osType", h.getServerHostOsType());
-                    item.put("online", h.getServerHostOnline());
-                    item.put("collectEnabled", h.getServerHostCollectEnabled());
-                    item.put("agentEnabled", h.getServerHostAgentEnabled());
-                    item.put("remoteEnabled", h.getServerHostRemoteEnabled());
-                    result.add(item);
+                    result.add(new AssetSearchItemVO(h.getId(), h.getServerHostName(),
+                            h.getServerHostAddress(), h.getServerHostPort(), h.getServerHostOsType(),
+                            h.getServerHostOnline(), toBoolean(h.getServerHostCollectEnabled()),
+                            toBoolean(h.getServerHostAgentEnabled()), toBoolean(h.getServerHostRemoteEnabled())));
                 }
             }
             return ReturnResult.ok(result);
@@ -203,26 +197,17 @@ public class AssetLinkageService {
     }
 
     /**
-     * 从库里取关联该主机的监控项（通过 ms_服务端_主机_标识 或主机 IP 兜底匹配）。
+     * 取关联该主机的监控项，归属口径统一由 {@link MonitorService#listByServerHost} 决定。
      *
      * @param host 主机
      * @return 监控项列表
      */
     private List<MsMonitor> loadMonitorsForHost(MsServerHost host) {
- // 首选 ms_服务端_主机_标识 精确关联
-        if (host.getId() != null) {
-            List<MsMonitor> byId = monitorMapper.selectList(new LambdaQueryWrapper<MsMonitor>()
-                    .eq(MsMonitor::getMsServerHostId, host.getId()));
-            if (!byId.isEmpty()) {
-                return byId;
-            }
+        if (host.getId() == null) {
+            return new ArrayList<>();
         }
-        // 兜底: 监控项主机地址与资产 IP 匹配
-        if (host.getServerHostAddress() != null && !host.getServerHostAddress().isBlank()) {
-            return monitorMapper.selectList(new LambdaQueryWrapper<MsMonitor>()
-                    .eq(MsMonitor::getMonitorHost, host.getServerHostAddress().trim()));
-        }
-        return new ArrayList<>();
+        List<MsMonitor> monitors = monitorService.listByServerHost(host.getId()).getData();
+        return monitors == null ? new ArrayList<>() : monitors;
     }
 
     /**

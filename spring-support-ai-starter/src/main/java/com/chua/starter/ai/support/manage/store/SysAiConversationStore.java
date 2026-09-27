@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.manage.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.datasource.dialect.SqlName;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiConversationMapper;
@@ -74,10 +75,14 @@ public class SysAiConversationStore {
     /**
      * 启动时检查 sys_AI_conversation 表是否缺少 extra 等列，自动 ALTER TABLE 补上。
      * 这样即使 MySQL 建表时遗漏了新列，重启后也能自动修复。
+     *
+     * <p>安全豁免：表名、列名和列类型均为本类常量，并经
+     * {@link SqlName#checkSimple(String, String)} 校验；该 DDL 不接受任何用户值。</p>
+     *
      * @param dataSource 数据源
      */
     private void ensureColumns(DataSource dataSource) {
-        String table = "sys_ai_conversation";
+        String table = SqlName.checkSimple("sys_ai_conversation", "AI 会话表名");
         String[][] neededColumns = {
             {"sys_ai_conversation_extra", "TEXT NULL COMMENT '扩展字段JSON（Map）'"},
             {"sys_ai_conversation_execution_template_id", "VARCHAR(64) NULL COMMENT '执行模板ID'"}
@@ -95,7 +100,8 @@ public class SysAiConversationStore {
                     }
                 }
                 if (!found) {
-                    String sql = "ALTER TABLE `" + table + "` ADD COLUMN `" + col[0] + "` " + col[1];
+                    String safeColumn = SqlName.checkSimple(col[0], "AI 会话列名");
+                    String sql = "ALTER TABLE `" + table + "` ADD COLUMN `" + safeColumn + "` " + col[1];
                     try (Statement stmt = conn.createStatement()) {
                         stmt.execute(sql);
                         log.info("[Store] 已自动补列: {}", col[0]);
@@ -169,8 +175,8 @@ public class SysAiConversationStore {
      */
     public SysAiConversation create(SysAiConversation conversation) {
         if (conversation.getUserId() == null) {
-            // 身份由服务端按当前登录用户写入，不接受客户端传值
-            conversation.setUserId(AiUserContext.currentUserId());
+            // 身份由服务端按当前登录用户写入，不接受客户端传值；无身份不落无主数据
+            conversation.setUserId(AiUserContext.requireUserId());
         }
         conversationMapper.insert(conversation);
         return conversation;
@@ -189,17 +195,73 @@ public class SysAiConversationStore {
         if (conversation == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在: " + conversationId);
         }
-        if (!AiUserContext.isAdmin()) {
-            String userId = AiUserContext.currentUserId();
-            if (userId == null) {
- // 线程池与回复回调取不到请求身份，属机器流量而非越权
-                return conversation;
-            }
-            if (!userId.equals(conversation.getUserId())) {
-                throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人会话");
-            }
-        }
+        assertReadable(conversation);
         return conversation;
+    }
+
+    /**
+     * 读出口的存在性校验：会话存在时按归属判定，不存在时放过。
+     *
+     * <p>记忆出口的 {@code conversation_id} 只是一个筛选维度，而前端会话主键与
+     * {@code sys_ai_conversation} 不同源（如数字会话 id），未知 id 只应筛出空集而不是 404；
+     * 他人会话仍然 403。</p>
+     *
+     * @param conversationId 会话 标识
+     */
+    public void assertReadableIfPresent(String conversationId) {
+        SysAiConversation conversation = findIfPresent(conversationId);
+        if (conversation != null) {
+            assertReadable(conversation);
+        }
+    }
+
+    /**
+     * 按主键查会话，不存在返回 {@code null}（不抛 NOT_FOUND）。
+     *
+     * @param conversationId 会话 标识
+     * @return 会话，不存在时为 {@code null}
+     */
+    public SysAiConversation findIfPresent(String conversationId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            return null;
+        }
+        return conversationMapper.selectById(conversationId);
+    }
+
+    /**
+     * 写出口的存在性校验：会话存在时按归属与只读判定，不存在时放过。
+     *
+     * <p>用于按 {@code conversation_id} 批量清理的出口——清理本身已按当前用户收窄，
+     * 未知 id 清不出任何行，不该因此拒绝请求。</p>
+     *
+     * @param conversationId 会话 标识
+     */
+    public void assertWritableIfPresent(String conversationId) {
+        SysAiConversation conversation = findIfPresent(conversationId);
+        if (conversation == null) {
+            return;
+        }
+        assertReadable(conversation);
+        requireWritable(conversation);
+    }
+
+    /**
+     * 归属判定：管理员可读全量，普通用户只能读本人会话。
+     *
+     * @param conversation 会话
+     */
+    private void assertReadable(SysAiConversation conversation) {
+        if (AiUserContext.isAdmin()) {
+            return;
+        }
+        String userId = AiUserContext.currentUserId();
+        if (userId == null) {
+            // 线程池与回复回调取不到请求身份，属机器流量而非越权
+            return;
+        }
+        if (!userId.equals(conversation.getUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人会话");
+        }
     }
 
     /**
@@ -209,7 +271,16 @@ public class SysAiConversationStore {
      * @return 校验通过的会话
      */
     public SysAiConversation requireWritable(String conversationId) {
-        SysAiConversation conversation = get(conversationId);
+        return requireWritable(get(conversationId));
+    }
+
+    /**
+     * 写出口校验（已知会话）。
+     *
+     * @param conversation 会话
+     * @return 校验通过的会话
+     */
+    private SysAiConversation requireWritable(SysAiConversation conversation) {
         if (AiUserContext.isReadonly()) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
         }
@@ -304,7 +375,7 @@ public class SysAiConversationStore {
         LambdaQueryWrapper<SysAiConversation> wrapper = new LambdaQueryWrapper<SysAiConversation>()
                 .orderByDesc(SysAiConversation::getCreatedAt);
  // 管理员读全量，其余仅本人会话；无身份时条件恒不匹配（失败即关闭）
-        if (!AiUserContext.isAdmin()) {
+        if (true) {
             wrapper.eq(SysAiConversation::getUserId, AiUserContext.currentUserId());
         }
         return conversationMapper.selectPage(paging, wrapper);
@@ -378,6 +449,74 @@ public class SysAiConversationStore {
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
                 .orderByAsc(SysAiConversationMessage::getCreatedAt);
         return messageMapper.selectList(wrapper);
+    }
+
+    /**
+     * 更新会话扩展字段，null 表示删除。
+     *
+     * @param conversationId 会话标识
+     * @param key           扩展键
+     * @param value         扩展值
+     */
+    public void patchExtra(String conversationId, String key, Object value) {
+        SysAiConversation current = requireWritable(conversationId);
+        Map<String, Object> extra = current.getExtra();
+        if (extra == null) {
+            extra = new java.util.LinkedHashMap<>();
+            current.setExtra(extra);
+        }
+        if (value == null) {
+            extra.remove(key);
+        } else {
+            extra.put(key, value);
+        }
+        current.setModifiedAt(System.currentTimeMillis());
+        conversationMapper.updateById(current);
+    }
+
+    /**
+     * 更新会话运行时字段，null 表示删除。
+     *
+     * @param conversationId 会话标识
+     * @param key           运行时字段
+     * @param value         字段值
+     */
+    public void patchRuntime(String conversationId, String key, Object value) {
+        SysAiConversation current = requireWritable(conversationId);
+        Map<String, Object> runtime = current.getRuntime();
+        if (runtime == null) {
+            runtime = new java.util.LinkedHashMap<>();
+            current.setRuntime(runtime);
+        }
+        if (value == null) {
+            runtime.remove(key);
+        } else {
+            runtime.put(key, value);
+        }
+        current.setModifiedAt(System.currentTimeMillis());
+        conversationMapper.updateById(current);
+    }
+
+    /**
+     * 按内容关键字分页检索消息。
+     *
+     * @param keyword  关键字，为空时检索当前用户全部消息
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 消息分页
+     */
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> searchMessages(
+            String keyword, int page, int pageSize) {
+        String userId = AiUserContext.requireUserId();
+        long current = page <= 0 ? 1 : page;
+        long size = pageSize <= 0 ? 20 : Math.min(pageSize, MAX_PAGE_SIZE);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> paging =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(current, size);
+        LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
+                .eq(!AiUserContext.isAdmin(), SysAiConversationMessage::getUserId, userId)
+                .like(keyword != null && !keyword.isBlank(), SysAiConversationMessage::getContent, keyword)
+                .orderByDesc(SysAiConversationMessage::getCreatedAt);
+        return messageMapper.selectPage(paging, wrapper);
     }
 
     /**

@@ -5,26 +5,34 @@ import org.slf4j.LoggerFactory;
 
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.oauth.client.support.annotation.VerifyFingerprint;
+import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.execute.AuthSessionUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.principal.OAuthPrincipal;
+import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import com.chua.starter.oauth.client.support.wrapper.OAuthHttpServletRequestWrapper;
+import com.google.common.collect.Sets;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ConcurrentReferenceHashMap;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * *
@@ -38,12 +46,18 @@ public class AuthFilter implements Filter {
 
     /**
      * Web请求
-    */
+     */
     private final WebRequest webRequest;
     /**
      * 请求mapping处理器mapping
-    */
+     */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
+
+    /**
+     * 本地管理员兜底只告警一次，避免每请求刷屏
+     */
+    private final AtomicBoolean localAdminFallbackWarned = new AtomicBoolean(false);
+
     
     /**
      * 缓存处理器方法是否需要指纹验证的结果
@@ -132,7 +146,19 @@ public class AuthFilter implements Filter {
 
         log.debug("[AuthFilter拦截]拦截到需要认证的请求 - URI: {}, 方法: {}, IP: {}", requestURI, method, remoteAddr);
 
- // 令牌检查
+        // 本地管理员兜底：显式开启 plugin.oauth.local-admin-fallback 且本次请求没有有效令牌时，
+        // 注入内置 admin 身份后继续。必须放在这里（令牌检查之前）：
+        // 本过滤器是 Servlet Filter，早于所有 HandlerInterceptor，
+        // 而 @Permission 的判定（ApiControlInterceptor / PermissionControlInterceptor）
+        // 是在拦截器阶段读会话身份，兜底若晚于它们执行就永远不会被看到。
+        if (isLocalAdminFallback() && webRequest.isFailure()) {
+            applyLocalAdminFallback(httpRequest);
+            chain.doFilter(request, response);
+            log.debug("[AuthFilter]请求处理完成(本地管理员兜底) - URI: {}, 耗时: {}ms", requestURI, System.currentTimeMillis() - startTime);
+            return;
+        }
+
+  // 令牌检查
         if (webRequest.isFailure()) {
             log.warn("[AuthFilter认证失败]未找到有效Token - URI: {}, 方法: {}", requestURI, method);
             log.debug("[AuthFilter认证失败]Token检查失败，执行失败链");
@@ -150,6 +176,16 @@ public class AuthFilter implements Filter {
                     requestURI, 
                     authentication.getInformation().getCode(),
                     authentication.getInformation().getMessage());
+            // 本地管理员兜底：鉴权失败同样放行。
+            // 不能只判 isFailure()——WebRequest#getCookie 返回全部 Cookie（含 JSESSIONID），
+            // 只要浏览器带着会话 Cookie，isFailure() 就误判为「已有 Token」而走到这里；
+            // 典型的就是登录接口自身：先取验证码拿到 JSESSIONID，再调 /v1/users/login 换令牌。
+            if (isLocalAdminFallback()) {
+                applyLocalAdminFallback(httpRequest);
+                chain.doFilter(request, response);
+                log.debug("[AuthFilter]请求处理完成(本地管理员兜底-鉴权失败) - URI: {}, 耗时: {}ms", requestURI, System.currentTimeMillis() - startTime);
+                return;
+            }
             webRequest.doFailureChain(chain, (HttpServletResponse) response, authentication.getInformation());
             log.debug("[AuthFilter]请求处理完成(鉴权失败) - URI: {}, 耗时: {}ms", requestURI, System.currentTimeMillis() - startTime);
             return;
@@ -184,15 +220,25 @@ public class AuthFilter implements Filter {
             httpRequest, userResume, authType);
 
  // 设置 用户标识 到 请求 属性，供拦截器和业务代码使用
-        if (userResume != null && userResume.getUserId() != null) {
-            wrappedRequest.setAttribute("userId", userResume.getUserId());
-            log.debug("[AuthFilter属性]设置userId到request属性 - userId: {}", userResume.getUserId());
+        if (userResume != null) {
+            if (userResume.getUserId() != null) {
+                wrappedRequest.setAttribute("userId", userResume.getUserId());
+                log.debug("[AuthFilter属性]设置userId到request属性 - userId: {}", userResume.getUserId());
+            }
+            if (userResume.getUsername() != null) {
+                wrappedRequest.setAttribute("username", userResume.getUsername());
+                log.debug("[AuthFilter属性]设置username到request属性 - username: {}", userResume.getUsername());
+            }
         }
 
         log.debug("[AuthFilter完成]认证完成，继续处理请求 - 用户: {}, 用户ID: {}, URI: {}",
                  userResume != null ? userResume.getUsername() : "anonymous",
                  userResume != null ? userResume.getUserId() : null,
                  requestURI);
+
+        // 将包装请求更新进 RequestContextHolder，使 RequestUtils / 业务层能取到认证 Principal 与用户属性
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(wrappedRequest, (HttpServletResponse) response));
 
         // 使用包装后的请求继续过滤链
         chain.doFilter(wrappedRequest, response);
@@ -223,6 +269,44 @@ public class AuthFilter implements Filter {
             };
         }
         return "OAUTH";
+    }
+
+    /**
+     * 是否开启本地管理员兜底（{@code plugin.oauth.local-admin-fallback}，默认关闭）。
+     *
+     * @return 开启返回 {@code true}
+     */
+    private boolean isLocalAdminFallback() {
+        AuthClientProperties properties = OauthClientRuntimeContext.getAuthClientProperties();
+        return properties != null && properties.isLocalAdminFallback();
+    }
+
+    /**
+     * 注入内置 admin 兜底身份到当前会话。
+     *
+     * <p>角色与权限必须同时授予：{@code @Permission} 的 {@code role()} 与
+     * {@code value()/permission()} 是两套独立判定依据，
+     * {@code PermissionRules} 用「角色 ∪ 权限」，{@code PermissionInterceptor} 分开校验，
+     * 只给角色会被权限判定拦下。</p>
+     *
+     * <p>注意：该开关只要开启，<b>任何</b>无法完成鉴权的请求（含携带无效令牌的请求）
+     * 都会被提升为内置 admin。这是「本地开发 / 联调兜底」的既定语义，
+     * 因此默认关闭，且严禁在对外环境开启。</p>
+     *
+     * @param request 当前请求，用于取得会话
+     */
+    private void applyLocalAdminFallback(HttpServletRequest request) {
+        if (localAdminFallbackWarned.compareAndSet(false, true)) {
+            log.warn("[AuthFilter本地管理员兜底]已开启 plugin.oauth.local-admin-fallback，"
+                    + "无令牌请求将被放行为内置 admin，仅限本地开发与联调环境使用");
+        }
+        UserResume fallback = new UserResume();
+        fallback.setUserId("1");
+        fallback.setUid("1");
+        fallback.setUsername(AuthConstant.BUILTIN_ADMIN_USERNAME);
+        fallback.setRoles(Sets.newHashSet(AuthConstant.SUPER_ADMIN, Constant.ADMIN));
+        fallback.setPermission(Sets.newHashSet(Constant.ADMIN));
+        AuthSessionUtils.setUserInfo(fallback);
     }
 
     /**

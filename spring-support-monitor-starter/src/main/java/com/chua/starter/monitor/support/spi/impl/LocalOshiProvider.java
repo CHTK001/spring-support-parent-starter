@@ -9,11 +9,15 @@ import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.ProcessSummaryVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.LocalSystemInfoService;
 import com.chua.starter.monitor.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
+import com.chua.starter.monitor.support.support.ConsoleOutput;
+import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.enums.HostCollectType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -22,7 +26,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -31,7 +34,7 @@ import java.util.List;
 /**
  * 本机 OSHI 系统信息 Provider（SPI 优先级最高）。
  *
- * <p>当目标主机地址为回环地址或本机网卡地址时命中，数据由 {@link LocalSystemInfoService} 采集；
+ * <p>仅当主机显式选择 LOCAL 采集方式且地址确属本机时命中，数据由 {@link LocalSystemInfoService} 采集；
  * 文件、环境变量与命令执行走 JDK 本地能力。</p>
  *
  * @author CH
@@ -40,6 +43,12 @@ import java.util.List;
 @Slf4j
 @Spi(value = "local", order = 400)
 public class LocalOshiProvider implements SystemInfoProvider {
+
+    /**
+     * 本机进程深翻页的取数上限：命令行与路径按进程补全（Windows 实测约 39ms/进程），
+     * 不设上限会让深页请求退化成全量补全
+     */
+    private static final int MAX_PROCESS_ROWS = 2000;
 
     /**
      * 本机采集服务，首次使用时从 Spring 容器解析
@@ -61,14 +70,19 @@ public class LocalOshiProvider implements SystemInfoProvider {
     }
 
     /**
-     * 目标主机是否为本机。
+     * 目标主机是否显式选择本机自采集通道。
      *
      * @param host 目标主机
-     * @return 127.0.0.1 / localhost 或命中本机网卡地址时返回 true
+     * @return 采集方式为 LOCAL 且地址确属本机时返回 true
      */
     @Override
     public boolean supports(MsServerHost host) {
         if (host == null || host.getServerHostAddress() == null) {
+            return false;
+        }
+        // 本实现优先级最高，若不校验采集方式就会把同机注册的 AGENT/SSH/WINRM 主机全部顶掉，
+        // 采回来的其实是管控机自己的数据
+        if (!HostCollectType.LOCAL.getCode().equalsIgnoreCase(host.getServerHostCollectMode())) {
             return false;
         }
         try {
@@ -102,12 +116,24 @@ public class LocalOshiProvider implements SystemInfoProvider {
 
     @Override
     public HostInfoVO hostInfo(MsServerHost host) {
-        return localService().getHostInfo();
+        // 按需画像刷新（点击刷新）：探测公网 IP；时间轮周期采集不探测
+        return localService().getHostInfo(true);
     }
 
     @Override
     public List<ProcessRowVO> processes(MsServerHost host, int page, int pageSize) {
-        return localService().getProcesses("", Math.max(pageSize, 500));
+        int size = Math.max(pageSize, 1);
+        int no = Math.max(page, 1);
+        int need = Math.min(no * size, MAX_PROCESS_ROWS);
+        List<ProcessRowVO> head = localService().getProcesses("", need);
+        int from = (no - 1) * size;
+        return from >= head.size() ? Collections.emptyList()
+                : new ArrayList<>(head.subList(from, Math.min(from + size, head.size())));
+    }
+
+    @Override
+    public ProcessSummaryVO processSummary(MsServerHost host) {
+        return localService().getProcessSummary();
     }
 
     @Override
@@ -139,7 +165,8 @@ public class LocalOshiProvider implements SystemInfoProvider {
         File dir = new File(path);
         File[] children = dir.listFiles();
         if (children == null) {
-            return list;
+            // 空目录与读不到是两回事：回空列表会让不存在的路径在页面上显示成「空目录」
+            throw new IllegalStateException((dir.isDirectory() ? "目录不可读: " : "目录不存在: ") + path);
         }
         for (File f : children) {
             FileEntryVO vo = new FileEntryVO();
@@ -169,7 +196,8 @@ public class LocalOshiProvider implements SystemInfoProvider {
             }
             return true;
         } catch (Exception e) {
-            return false;
+            // 只回 false 会让用户看到「写入失败: 路径」，分不清是目录不存在还是磁盘不可写
+            throw new IllegalStateException(e.getMessage(), e);
         }
     }
 
@@ -194,18 +222,76 @@ public class LocalOshiProvider implements SystemInfoProvider {
         try {
             ProcessBuilder builder = new ProcessBuilder(shell);
             builder.redirectErrorStream(true);
+            // 有界读取：分离出去的子进程继承同一个管道写端，readAllBytes 会读到它退出为止
             Process process = builder.start();
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            process.waitFor();
-            return output;
+            String out = ConsoleOutput.read(process);
+            int code = process.exitValue();
+            if (code != 0) {
+                String mark = ShellSupport.FAIL_MARK + ":本机退出码 " + code;
+                return out == null || out.isBlank() ? mark : out + "\r\n" + mark;
+            }
+            return out;
         } catch (Exception e) {
             log.warn("[local] 命令执行失败 cmd={}: {}", cmd, e.getMessage());
-            return "";
+            throw new IllegalStateException("本机命令执行失败: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()), e);
         }
     }
 
     @Override
     public List<EnvVarVO> env(MsServerHost host) {
         return localService().getEnvVars();
+    }
+
+    @Override
+    public boolean mkdir(MsServerHost host, String path) {
+        try {
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(path));
+            return true;
+        } catch (Exception e) {
+            log.warn("[local] mkdir 失败 path={}: {}", path, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean delete(MsServerHost host, String path) {
+        try {
+            java.nio.file.Path p = java.nio.file.Paths.get(path);
+            if (java.nio.file.Files.isDirectory(p)) {
+                // 递归删除：深度优先删子项后再删目录本身
+                try (java.util.stream.Stream<java.nio.file.Path> walk = java.nio.file.Files.walk(p)) {
+                    walk.sorted(java.util.Comparator.reverseOrder()).forEach(c -> {
+                        try {
+                            java.nio.file.Files.deleteIfExists(c);
+                        } catch (Exception ignored) {
+                            // 单个条目删除失败不阻断整体流程
+                        }
+                    });
+                }
+                return !java.nio.file.Files.exists(p);
+            }
+            java.nio.file.Files.deleteIfExists(p);
+            return true;
+        } catch (Exception e) {
+            log.warn("[local] delete 失败 path={}: {}", path, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean rename(MsServerHost host, String from, String to) {
+        try {
+            java.nio.file.Path src = java.nio.file.Paths.get(from);
+            java.nio.file.Path target = java.nio.file.Paths.get(to);
+            java.nio.file.Path parent = target.getParent();
+            if (parent != null) {
+                java.nio.file.Files.createDirectories(parent);
+            }
+            java.nio.file.Files.move(src, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (Exception e) {
+            log.warn("[local] rename 失败 {} -> {}: {}", from, to, e.getMessage());
+            return false;
+        }
     }
 }

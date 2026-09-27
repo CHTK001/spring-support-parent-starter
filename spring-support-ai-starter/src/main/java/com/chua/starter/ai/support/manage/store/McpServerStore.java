@@ -95,6 +95,7 @@ public class McpServerStore {
         e.setMcpServerId(str(c.get("mcp_server_id")));
         e.setName(str(c.get("name")));
         e.setDescription(str(c.get("description")));
+        e.setIcon(str(c.get("icon")));
         e.setTransportJson(writeJson(c.get("transport")));
         e.setOriginalJson(c.get("original_json") == null ? null : str(c.get("original_json")));
         e.setBuiltin(bool(c.get("builtin")));
@@ -118,6 +119,9 @@ public class McpServerStore {
         m.put("name", e.getName());
         if (e.getDescription() != null) {
             m.put("description", e.getDescription());
+        }
+        if (e.getIcon() != null) {
+            m.put("icon", e.getIcon());
         }
         m.put("transport", parseJson(e.getTransportJson()));
         m.put("original_json", e.getOriginalJson() == null ? "{}" : e.getOriginalJson());

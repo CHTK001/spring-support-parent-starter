@@ -42,12 +42,13 @@ CREATE TABLE IF NOT EXISTS `soft_software` (
   `software_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `software_create_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
   `software_update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
-  PRIMARY KEY (`software_id`),
-  UNIQUE KEY `soft_software_uk_code` (`software_code`),
-  KEY `soft_software_source` (`software_source_id`),
-  KEY `soft_software_category` (`software_category`),
-  KEY `soft_software_status` (`software_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='soft_software 软件信息表';
+  PRIMARY KEY (`software_id`)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS `soft_software_uk_code` ON `soft_software` (`software_code`);
+CREATE INDEX IF NOT EXISTS `soft_software_source` ON `soft_software` (`software_source_id`);
+CREATE INDEX IF NOT EXISTS `soft_software_category` ON `soft_software` (`software_category`);
+CREATE INDEX IF NOT EXISTS `soft_software_status` ON `soft_software` (`software_status`);
 
 -- ----------------------------------------
 -- 2. soft_install_record 安装记录表
@@ -75,12 +76,13 @@ CREATE TABLE IF NOT EXISTS `soft_install_record` (
   `install_record_extra` JSON DEFAULT NULL COMMENT '扩展信息JSON',
   `install_record_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `install_record_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`install_record_id`),
-  KEY `soft_install_record_software` (`install_record_software_id`),
-  KEY `soft_install_record_user` (`install_record_user_id`),
-  KEY `soft_install_record_status` (`install_record_status`),
-  KEY `soft_install_record_device` (`install_record_device_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='soft_install_record 安装记录表';
+  PRIMARY KEY (`install_record_id`)
+);
+
+CREATE INDEX IF NOT EXISTS `soft_install_record_software` ON `soft_install_record` (`install_record_software_id`);
+CREATE INDEX IF NOT EXISTS `soft_install_record_user` ON `soft_install_record` (`install_record_user_id`);
+CREATE INDEX IF NOT EXISTS `soft_install_record_status` ON `soft_install_record` (`install_record_status`);
+CREATE INDEX IF NOT EXISTS `soft_install_record_device` ON `soft_install_record` (`install_record_device_id`);
 
 -- ----------------------------------------
 -- 3. soft_config 软件配置表
@@ -106,12 +108,13 @@ CREATE TABLE IF NOT EXISTS `soft_config` (
   `config_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `config_create_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
   `config_update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
-  PRIMARY KEY (`config_id`),
-  UNIQUE KEY `soft_config_uk_software_key` (`config_software_id`, `config_key`, `config_user_id`, `config_device_id`),
-  KEY `soft_config_software` (`config_software_id`),
-  KEY `soft_config_user` (`config_user_id`),
-  KEY `soft_config_group` (`config_group`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='soft_config 软件配置表';
+  PRIMARY KEY (`config_id`)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS `soft_config_uk_software_key` ON `soft_config` (`config_software_id`, `config_key`, `config_user_id`, `config_device_id`);
+CREATE INDEX IF NOT EXISTS `soft_config_software` ON `soft_config` (`config_software_id`);
+CREATE INDEX IF NOT EXISTS `soft_config_user` ON `soft_config` (`config_user_id`);
+CREATE INDEX IF NOT EXISTS `soft_config_group` ON `soft_config` (`config_group`);
 
 -- ----------------------------------------
 -- 4. soft_source 软件源表
@@ -142,9 +145,11 @@ CREATE TABLE IF NOT EXISTS `soft_source` (
   `source_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `source_create_by` VARCHAR(64) DEFAULT NULL COMMENT '创建人',
   `source_update_by` VARCHAR(64) DEFAULT NULL COMMENT '更新人',
-  PRIMARY KEY (`source_id`),
-  UNIQUE KEY `soft_source_uk_code` (`source_code`),
-  KEY `soft_source_type` (`source_type`),
-  KEY `soft_source_status` (`source_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='soft_source 软件源表';
+  PRIMARY KEY (`source_id`)
+);
 
+CREATE UNIQUE INDEX IF NOT EXISTS `soft_source_uk_code` ON `soft_source` (`source_code`);
+CREATE INDEX IF NOT EXISTS `soft_source_url` ON `soft_source` (`source_url`);
+CREATE INDEX IF NOT EXISTS `soft_source_priority` ON `soft_source` (`source_priority`);
+CREATE INDEX IF NOT EXISTS `soft_source_type` ON `soft_source` (`source_type`);
+CREATE INDEX IF NOT EXISTS `soft_source_status` ON `soft_source` (`source_status`);

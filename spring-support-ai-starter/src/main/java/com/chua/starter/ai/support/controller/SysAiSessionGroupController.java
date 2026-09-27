@@ -69,6 +69,15 @@ public class SysAiSessionGroupController {
     }
 
     /**
+     * 批量删除分组
+     * @param body 请求体，ids 为待删除分组 ID 列表
+     */
+    @PostMapping("/batch-delete")
+    public void deleteBatch(@RequestBody Map<String, List<Long>> body) {
+        sessionGroupService.deleteBatch(body == null ? null : body.get("ids"));
+    }
+
+    /**
      * 排序
      * @param body 请求体，不允许为 null
      */

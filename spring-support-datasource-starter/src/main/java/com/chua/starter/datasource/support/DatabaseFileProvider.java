@@ -77,7 +77,6 @@ public interface DatabaseFileProvider {
      *   <li>100-500: 通用业务模块</li>
      *   <li>500-1000: 扩展模块</li>
      * </ul>
-     * </p>
      *
      * @return 优先级值，默认100
      */

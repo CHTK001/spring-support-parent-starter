@@ -6,51 +6,51 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * 商户钱包限额 VO
+ * 客户钱包限额VO
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class MerchantWalletLimitVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
 
     /**
-     * Singlerecharge限制
-    */
+     * 单次充值限额
+     */
     private BigDecimal singleRechargeLimit;
 
     /**
-     * Dailyrecharge限制
-    */
+     * 每日充值限额
+     */
     private BigDecimal dailyRechargeLimit;
 
     /**
-     * Singlewithdraw限制
-    */
+     * 单次提现限额
+     */
     private BigDecimal singleWithdrawLimit;
 
     /**
-     * Dailywithdraw限制
-    */
+     * 每日提现限额
+     */
     private BigDecimal dailyWithdrawLimit;
 
     /**
-     * Singletransfer限制
-    */
+     * 单次转账限额
+     */
     private BigDecimal singleTransferLimit;
 
     /**
-     * Dailytransfer限制
-    */
+     * 每日转账限额
+     */
     private BigDecimal dailyTransferLimit;
 
     /**
-     * Balance限制
-    */
+     * 余额限额
+     */
     private BigDecimal balanceLimit;
 }

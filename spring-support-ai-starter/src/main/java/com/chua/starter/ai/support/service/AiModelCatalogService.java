@@ -39,4 +39,15 @@ public interface AiModelCatalogService {
      * @return 能力标签列表
      */
     List<String> listCapabilities();
+
+    /**
+     * 获取全部本地（ONNX/本地推理）模型的详细清单。
+     *
+     * <p>每条包含模型标识、能力标签、推荐标记、声明的相对路径 / 下载地址、
+     * 解析到的本地绝对路径，以及当前是否已就绪（文件已存在）。仅做只读探测，
+     * 不触发联网下载，供 ONNX 模型选择器「从提供商获取」使用。</p>
+     *
+     * @return 本地模型详情列表
+     */
+    List<Map<String, Object>> listLocalModelDetails();
 }

@@ -20,11 +20,15 @@
         <result property="thumbPath" column="asset_thumb_path"/>
         <result property="createdAt" column="asset_created_at"/>
         <result property="updatedAt" column="asset_updated_at"/>
+        <result property="userId" column="asset_user_id"/>
     </resultMap>
 
-    <!-- 复用：查询过滤条件片段 -->
+    <!-- 复用：查询过滤条件片段（userId 非空即按归属过滤；传 null 表示管理员查全量） -->
     <sql id="filterWhere">
         <where>
+            <if test="userId != null and userId != ''">
+                AND asset_user_id = #{userId}
+            </if>
             <if test="inLibrary != null">
                 AND asset_in_library = #{inLibrary}
             </if>
@@ -84,6 +88,9 @@
         SELECT DISTINCT asset_collection
         FROM workshop_asset
         WHERE asset_collection IS NOT NULL AND asset_collection != ''
+        <if test="userId != null and userId != ''">
+            AND asset_user_id = #{userId}
+        </if>
         ORDER BY asset_collection
     </select>
 
@@ -111,6 +118,9 @@
         UPDATE workshop_asset
         SET asset_collection = CASE WHEN #{to} IS NULL OR #{to} = '' THEN NULL ELSE #{to} END
         WHERE asset_collection = #{from}
+        <if test="userId != null and userId != ''">
+            AND asset_user_id = #{userId}
+        </if>
     </update>
 
 </mapper>

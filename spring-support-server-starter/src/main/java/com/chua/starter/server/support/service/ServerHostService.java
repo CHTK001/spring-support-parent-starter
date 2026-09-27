@@ -3,6 +3,7 @@ package com.chua.starter.server.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.model.vo.HostSyncSummaryVO;
 
 import java.util.List;
 
@@ -116,7 +117,24 @@ public interface ServerHostService {
      * @param identityId 指定身份 标识，可为空
      * @return 凭据结果，data 为解密后的凭据
      */
-    ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId);
+    default ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId) {
+        return resolveCredential(hostId, identityId, null);
+    }
+
+    /**
+     * 解析主机登录凭据（按调用方实际请求的协议取凭据）
+     * <p>
+     * VNC 桌面口令与 SSH/RDP 登录口令不同源：仅当请求协议为 VNC 且主机配了 VNC 口令时
+     * 才回退 VNC 口令；请求 SSH/RDP 时一律使用绑定登录身份的口令/私钥，避免主机当前协议
+     * 配成 VNC 后，SSH 直连误拿 VNC 口令导致认证失败。protocol 为空时回退按主机当前远控协议判断。
+     * </p>
+     *
+     * @param hostId     主机 标识
+     * @param identityId 指定身份 标识，可为空
+     * @param protocol   调用方实际协议（SSH/RDP/VNC），可为空
+     * @return 凭据结果，data 为解密后的凭据
+     */
+    ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId, String protocol);
 
     /**
      * 硬件探测：SSH 连上目标主机，自动采集 CPU/内存/磁盘/系统版本/IP 并回写
@@ -125,6 +143,19 @@ public interface ServerHostService {
      * @return 更新后的主机（含硬件信息）
      */
     ReturnResult<MsServerHost> detectHardware(Long hostId);
+
+    /**
+     * 确保 Windows 主机已安装并启用 OpenSSH Server（sshd）。
+     * <p>
+     * 已可经 22 连通时做幂等收敛（开机自启、运行中、防火墙放行）；未连通时经 WinRM
+     * 一次性引导安装（新版 Add-WindowsCapability / choco / Win32-OpenSSH 兜底），完成后
+     * 把主机登录端口回写为 22。除 RDP 外的 Windows 管理操作之后全部走 OpenSSH。
+     * </p>
+     *
+     * @param hostId 主机标识
+     * @return 收敛结果，data 为说明信息
+     */
+    ReturnResult<String> ensureOpenSsh(Long hostId);
 
     /**
      * 刷新公网 IP：通过 ifconfig.me/ipinfo.io 探测目标主机出口公网 IP 并回写
@@ -137,6 +168,8 @@ public interface ServerHostService {
     /**
      * 端口扫描：依赖本机 nmap 对目标主机做 TCP 连接扫描，解析开放端口并回写
      * 主机资产表的 {@code serverHostPorts}（JSON 数组）与扫描时间。
+     *
+     * <p>只扫常用端口集，同步接口不接受 1~65535 全端口范围。</p>
      *
      * @param hostId 主机 标识
      * @return 更新后的主机（含端口扫描结果）
@@ -164,7 +197,7 @@ public interface ServerHostService {
      * @param hostIds 目标主机 ID 列表；为空则同步全部启用主机
      * @return 同步结果概要（成功数 / 跳过数 / 失败数 / 变更明细）
      */
-    ReturnResult<java.util.Map<String, Object>> syncHosts(java.util.List<Long> hostIds);
+    ReturnResult<HostSyncSummaryVO> syncHosts(List<Long> hostIds);
 
     /**
      * Prometheus 凭据校验：GET 目标主机 {@code http://{address}:{port}/metrics}，

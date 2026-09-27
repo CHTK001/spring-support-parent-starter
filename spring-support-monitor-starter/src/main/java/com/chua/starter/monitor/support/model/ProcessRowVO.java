@@ -40,7 +40,7 @@ public class ProcessRowVO {
     private double cpu;
 
     /**
-     * 内存占用，单位与来源通道保持一致
+     * 内存占用，单位 MB（四类通道统一折算后下发）
      */
     private long memory;
 

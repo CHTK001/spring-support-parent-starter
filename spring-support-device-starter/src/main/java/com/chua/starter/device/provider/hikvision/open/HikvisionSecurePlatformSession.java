@@ -54,7 +54,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
  // 安防平台通常无独立登录，app键/appsecret 通过签名头传递
-        this.accessToken = "artemis:" + info.getAppKey();
+        this.accessToken = "artemis:" + info.appKey();
         this.tokenExpiry = Instant.MAX;
     }
 
@@ -73,7 +73,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
                 + headers.getOrDefault("x-ca-nonce", "");
         try {
             javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
-            mac.init(new javax.crypto.spec.SecretKeySpec(utf8(info.getAppSecret()), "HmacSHA256"));
+            mac.init(new javax.crypto.spec.SecretKeySpec(utf8(info.appSecret()), "HmacSHA256"));
             byte[] digest = mac.doFinal(utf8(stringToSign));
             return Base64.getEncoder().encodeToString(digest);
         } catch (Exception e) {
@@ -89,7 +89,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         String timestamp = String.valueOf(System.currentTimeMillis());
         String nonce = java.util.UUID.randomUUID().toString();
         Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("x-ca-key", info.getAppKey());
+        headers.put("x-ca-key", info.appKey());
         headers.put("x-ca-timestamp", timestamp);
         headers.put("x-ca-nonce", nonce);
 
@@ -126,7 +126,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
      */
     public JsonNode getPreviewUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
-        params.put("cameraIndexCode", info.getDeviceSerial());
+        params.put("cameraIndexCode", info.deviceSerial());
         params.put("streamType", 0);
         params.put("protocol", "rtsp");
         params.put("transmode", 1);
@@ -148,7 +148,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
-        params.put("cameraIndexCode", info.getDeviceSerial());
+        params.put("cameraIndexCode", info.deviceSerial());
         params.put("beginTime", range.getStart().toString());
         params.put("endTime", range.getEnd().toString());
         params.put("protocol", "hls");
@@ -165,7 +165,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
             return;
         }
         Map<String, Object> params = new HashMap<>();
-        params.put("cameraIndexCode", info.getDeviceSerial());
+        params.put("cameraIndexCode", info.deviceSerial());
         params.put("action", mapArtemisDirection(cmd));
         params.put("speed", (int) Math.max(1, Math.min(255, Math.round(speed * 255))));
         post(PATH_PTZ_CONTROL, params);
@@ -199,7 +199,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
-        params.put("doorIndexCode", info.getDeviceSerial() + ":" + doorId);
+        params.put("doorIndexCode", info.deviceSerial() + ":" + doorId);
         params.put("controlType", 1);
         post(PATH_DOOR_CONTROL, params);
     }

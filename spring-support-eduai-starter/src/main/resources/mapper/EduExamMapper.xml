@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduExamMapper">
+
+    <!-- 分页查询考试：多条件筛选 + 归属隔离 + 创建时间倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduExam">
+        SELECT e.* FROM edu_exam e
+        <where>
+            <if test="query.examPaperId != null">
+                AND e.exam_paper_id = #{query.examPaperId}
+            </if>
+            <if test="query.examName != null and query.examName != ''">
+                AND e.exam_name LIKE CONCAT('%', #{query.examName}, '%')
+            </if>
+            <if test="query.examClassId != null and query.examClassId != ''">
+                AND e.exam_class_id = #{query.examClassId}
+            </if>
+            <if test="query.examStatus != null">
+                AND e.exam_status = #{query.examStatus}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (e.exam_owner_user_id IS NULL OR e.exam_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY e.create_time DESC
+    </select>
+
+</mapper>

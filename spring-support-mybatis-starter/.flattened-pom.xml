@@ -85,9 +85,5 @@
       <artifactId>spring-support-swagger-starter</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
   </dependencies>
 </project>

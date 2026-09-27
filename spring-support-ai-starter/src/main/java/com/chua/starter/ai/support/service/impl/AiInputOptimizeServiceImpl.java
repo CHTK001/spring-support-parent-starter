@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.model.InputOptimizeRequest;
 import com.chua.starter.ai.support.model.InputOptimizeResponse;
@@ -48,6 +49,14 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     private static final double DEFAULT_OPTIMIZE_TEMPERATURE = 0.3;
 
     /**
+     * 固定 system 指令（组合模板场景使用）
+     */
+    private static final String DEFAULT_SYSTEM_INSTRUCTION = """
+            你是一个输入优化助手。请在不改变用户真实意图的前提下，将用户输入改写为更清晰、更准确、更适合模型理解的版本。
+            不要解释，不要添加无关内容，只输出优化后的文本。
+            """;
+
+    /**
      * 内置默认优化提示词
      */
     private static final String DEFAULT_OPTIMIZE_PROMPT = """
@@ -68,6 +77,8 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
      * 全局 对话客户端 注册中心
      */
     private final ChatClientRegistry chatClientRegistry;
+    private final ModelClientResolver modelClientResolver;
+    private final com.chua.starter.ai.support.service.SysAiUsageService usageService;
 
     /**
      * 执行输入优化。
@@ -90,27 +101,45 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
 
         long start = System.currentTimeMillis();
         try {
-            // 解析优化模型：请求 > 全局配置 > runtime 默认模型
-            String model = request.getModel();
-            if (StringUtils.isBlank(model)) {
-                model = globalSettingReader.getStr(GROUP, "optimizer_model");
+            // 解析优化模型（可能为 <providerId>:<model>）：请求 > input.optimizer_model > runtime.default_model
+            String qualifiedModel = request.getModel();
+            if (StringUtils.isBlank(qualifiedModel)) {
+                qualifiedModel = globalSettingReader.getStr(GROUP, "optimizer_model");
             }
-            ChatClient client = resolveChatClient(model);
+            if (StringUtils.isBlank(qualifiedModel)) {
+                qualifiedModel = globalSettingReader.getStr(RUNTIME_GROUP, "default_model");
+            }
+
+            // 统一走「模型→客户端」解析器（按 DB 供应商动态构建，支持多密钥 failover），失败再回退注册中心默认
+            ChatClient client = modelClientResolver.resolve(qualifiedModel);
+            if (client == null) {
+                client = chatClientRegistry.getDefault();
+            }
+            String model = ModelClientResolver.normalize(qualifiedModel);
             if (client == null) {
                 return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start);
             }
 
             // 解析提示词：请求 > 全局配置 > 内置默认
-            String systemPrompt = request.getSystemPrompt();
-            if (StringUtils.isBlank(systemPrompt)) {
-                systemPrompt = globalSettingReader.getStr(GROUP, "optimizer_prompt");
+            String template = request.getSystemPrompt();
+            if (StringUtils.isBlank(template)) {
+                template = globalSettingReader.getStr(GROUP, "optimizer_prompt");
             }
-            if (StringUtils.isBlank(systemPrompt)) {
-                systemPrompt = DEFAULT_OPTIMIZE_PROMPT;
+            if (StringUtils.isBlank(template)) {
+                template = DEFAULT_OPTIMIZE_PROMPT;
             }
-            String prompt = systemPrompt.contains("%s")
-                    ? String.format(systemPrompt, input)
-                    : systemPrompt;
+
+            // 含 %s 的模板视为「组合模板」：格式化后作为用户消息，另配固定 system 指令；
+            // 不含 %s 的模板直接作为 system 指令，用户消息为原始输入。
+            String systemInstruction;
+            String userPrompt;
+            if (template.contains("%s")) {
+                userPrompt = String.format(template, input);
+                systemInstruction = DEFAULT_SYSTEM_INSTRUCTION;
+            } else {
+                systemInstruction = template;
+                userPrompt = input;
+            }
 
             // 解析温度
             double temperature = globalSettingReader.getDouble(GROUP, "optimizer_temperature",
@@ -118,9 +147,9 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
 
             String optimized = client
                     .model(model)
-                    .system(systemPrompt)
+                    .system(systemInstruction)
                     .temperature(temperature)
-                    .chatSync(prompt);
+                    .chatSync(userPrompt);
 
             if (StringUtils.isBlank(optimized)) {
                 return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start);
@@ -130,28 +159,5 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
             log.warn("[InputOptimize] 输入优化失败，返回原始输入: {}", e.getMessage());
             return InputOptimizeResponse.of(input, input, "", System.currentTimeMillis() - start);
         }
-    }
-
-    /**
-     * 解析优化用 对话客户端。
-     *
-     * <p>指定模型时优先按模型查找注册实例；否则使用全局聚合 ChatClient。
-     * 全局配置未配置模型时，从 {@code runtime} 分组读取默认模型名。</p>
-     *
-     * @param model 配置的模型名（可能为空）
-     * @return ChatClient 实例；不可用时返回 空
-     */
-    private ChatClient resolveChatClient(String model) {
-        String effectiveModel = model;
-        if (StringUtils.isBlank(effectiveModel)) {
-            effectiveModel = globalSettingReader.getStr(RUNTIME_GROUP, "default_model");
-        }
-        if (StringUtils.isNotBlank(effectiveModel)) {
-            ChatClient byModel = chatClientRegistry.getByModel(effectiveModel);
-            if (byModel != null) {
-                return byModel;
-            }
-        }
-        return chatClientRegistry.getDefault();
     }
 }

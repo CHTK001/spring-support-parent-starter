@@ -60,9 +60,15 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
         return List.of(
                 new SettingItem("enable_usage_analysis", "true", "BOOLEAN", "用量分析开关：关闭后跳过定时同步与聚合", 1),
                 new SettingItem("enable_usage_recorder", "true", "BOOLEAN", "会话用量写入开关：关闭后不记录每次调用到明细表", 2),
-                new SettingItem("usage_report_interval", "3600", "NUMBER", "定时聚合时间（秒），最小 60 秒，未配置默认 3600（1小时）", 3),
-                new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 4),
-                new SettingItem("usage_timewheel_enabled", "false", "BOOLEAN", "后台时间轮：开启后用量同步改用时间轮调度", 5)
+                new SettingItem("enable_connector_usage", "false", "BOOLEAN", "连接器聊天用量开关：开启后连接器 AI 回复计入用量统计", 3),
+                new SettingItem("usage_report_interval", "3600", "NUMBER", "定时聚合时间（秒），最小 60 秒，未配置默认 3600（1小时）", 4),
+                new SettingItem("usage_timewheel_enabled", "false", "BOOLEAN", "后台时间轮：开启后用量同步改用时间轮调度", 5),
+                new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 6),
+                new SettingItem("usage_currency", "CNY", "STRING", "货币单位：CNY（人民币 ¥）/ USD（美元 $）/ EUR（欧元 €）", 7),
+                new SettingItem("usage_token_scale", "auto", "STRING", "Token 显示量级：auto（自动 K/M/B 缩写）/ raw（完整数值）", 8),
+                new SettingItem("usage_currency_auto_convert", "true", "BOOLEAN", "货币自动换算：开启后切换货币按下方汇率换算金额，关闭则仅切换符号", 9),
+                new SettingItem("usage_rate_usd", "7.1", "NUMBER", "美元汇率：1 美元可兑换的人民币数量（CNY→USD 时金额除以该值）", 10),
+                new SettingItem("usage_rate_eur", "7.8", "NUMBER", "欧元汇率：1 欧元可兑换的人民币数量（CNY→EUR 时金额除以该值）", 11)
         );
     }
 }

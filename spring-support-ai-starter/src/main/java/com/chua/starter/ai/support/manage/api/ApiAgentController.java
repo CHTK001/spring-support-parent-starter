@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -12,6 +13,7 @@ import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.util.AiMemoryOwnership;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -47,6 +49,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  * 全部为进程内内存实现，主键使用 {@link SysAiConversationStore#newId()} 生成的 UUID；
  * 关键状态变更通过 {@link ApiWebSocketPushService} 推送 {@code agentExecution.changed} 等事件。</p>
+ *
+ * <p>隔离口径：内置 Agent 目录是共享元数据，人人可读；执行（含步骤）与执行模板带创建人的
+ * {@code user_id}，归属人可读写，管理员跨用户只读，他人一律 403。故障转移队列、健康探测等
+ * 影响整机行为的出口按主机级处理，只有管理员可写。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -135,6 +141,7 @@ public class ApiAgentController {
         return ApiResult.ok(all);
     }
 
+    @Permission("admin")
     @PostMapping("/agents/refresh")
     /**
      * refresh习俗Agent。
@@ -167,6 +174,7 @@ public class ApiAgentController {
         return ApiResult.ok(new LinkedHashMap<>(modelFailoverConfig));
     }
 
+    @Permission("admin")
     @PutMapping("/agent/model-failover")
     /**
      * 更新模型failover。
@@ -212,6 +220,7 @@ public class ApiAgentController {
         return ApiResult.ok(new LinkedHashMap<>(modelFailoverConfig));
     }
 
+    @Permission("admin")
     @PostMapping("/agents/provider-health-check")
     /**
      * 提供者健康检查。
@@ -534,7 +543,7 @@ public class ApiAgentController {
      * @return 列表executions的结果
      */
     public ApiResult<List<Map<String, Object>>> listExecutions() {
-        return ApiResult.ok(new ArrayList<>(executions.values()));
+        return ApiResult.ok(AiMemoryOwnership.visibleToCurrentUser(executions.values()));
     }
 
     @PostMapping("/agent-executions")
@@ -554,6 +563,7 @@ public class ApiAgentController {
         exec.put("created_at", System.currentTimeMillis());
         exec.put("updated_at", System.currentTimeMillis());
         exec.put("participants", new ArrayList<Map<String, Object>>());
+        AiMemoryOwnership.stampOwner(exec);
         executions.put(executionId, exec);
         executionSteps.put(executionId, new ArrayList<>());
         /**
@@ -571,7 +581,7 @@ public class ApiAgentController {
      * @return 获取执行的结果
      */
     public ApiResult<Map<String, Object>> getExecution(@PathVariable String executionId) {
-        Map<String, Object> exec = requireExecution(executionId);
+        Map<String, Object> exec = requireExecution(executionId, false);
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
@@ -820,7 +830,7 @@ public class ApiAgentController {
     public ApiResult<Map<String, Object>> listEvents(@PathVariable String executionId,
                                                      @RequestParam(required = false) Long after_sequence,
                                                      @RequestParam(required = false, defaultValue = "50") int limit) {
-        requireExecution(executionId);
+        requireExecution(executionId, false);
         Map<String, Object> page = new LinkedHashMap<>();
         page.put("items", new ArrayList<Map<String, Object>>());
         page.put("total", 0);
@@ -832,7 +842,7 @@ public class ApiAgentController {
     public ApiResult<List<Map<String, Object>>> executionWorkspace(@PathVariable String executionId,
                                                                   @RequestParam(required = false) String path,
                                                                   @RequestParam(required = false) String search) {
-        requireExecution(executionId);
+        requireExecution(executionId, false);
         return ApiResult.ok(new ArrayList<>());
     }
 
@@ -846,7 +856,7 @@ public class ApiAgentController {
      * @return 列表templates的结果
      */
     public ApiResult<List<Map<String, Object>>> listTemplates() {
-        return ApiResult.ok(new ArrayList<>(templates.values()));
+        return ApiResult.ok(AiMemoryOwnership.visibleToCurrentUser(templates.values()));
     }
 
     @GetMapping("/agent-execution-templates/{templateId}")
@@ -856,7 +866,7 @@ public class ApiAgentController {
      * @return 获取template的结果
      */
     public ApiResult<Map<String, Object>> getTemplate(@PathVariable String templateId) {
-        return ApiResult.ok(toTemplateDetail(requireTemplate(templateId)));
+        return ApiResult.ok(toTemplateDetail(requireTemplate(templateId, false)));
     }
 
     @PostMapping("/agent-execution-templates")
@@ -873,6 +883,7 @@ public class ApiAgentController {
         tpl.put("description", body.get("description"));
         tpl.put("created_at", System.currentTimeMillis());
         tpl.put("updated_at", System.currentTimeMillis());
+        AiMemoryOwnership.stampOwner(tpl);
         templates.put(templateId, tpl);
         templateParticipants.put(templateId, new ArrayList<>());
         return ApiResult.ok(toTemplateDetail(tpl));
@@ -904,7 +915,7 @@ public class ApiAgentController {
     @PostMapping("/agent-execution-templates/{templateId}/create-execution")
     public ApiResult<Map<String, Object>> createExecutionFromTemplate(@PathVariable String templateId,
                                                                       @RequestBody(required = false) Map<String, Object> body) {
-        requireTemplate(templateId);
+        requireTemplate(templateId, false);
         String executionId = conversationStore.newId();
         Map<String, Object> exec = new LinkedHashMap<>();
         exec.put("execution_id", executionId);
@@ -915,6 +926,7 @@ public class ApiAgentController {
         exec.put("created_at", System.currentTimeMillis());
         exec.put("updated_at", System.currentTimeMillis());
         exec.put("participants", new ArrayList<Map<String, Object>>());
+        AiMemoryOwnership.stampOwner(exec);
         executions.put(executionId, exec);
         executionSteps.put(executionId, new ArrayList<>());
         /**
@@ -975,16 +987,26 @@ public class ApiAgentController {
     }
 
     /**
-     * require执行。
+     * require执行（写口径：只有归属人可以改删）。
      * @param executionId 执行标识
      * @return require执行的结果
      */
     private Map<String, Object> requireExecution(String executionId) {
+        return requireExecution(executionId, true);
+    }
+
+    /**
+     * require执行。
+     * @param executionId 执行标识
+     * @param writable 是否要求写权限
+     * @return require执行的结果
+     */
+    private Map<String, Object> requireExecution(String executionId, boolean writable) {
         Map<String, Object> exec = executions.get(executionId);
         if (exec == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "执行不存在: " + executionId);
         }
-        return exec;
+        return AiMemoryOwnership.requireOwned(exec, writable, "执行");
     }
 
     /**
@@ -994,6 +1016,7 @@ public class ApiAgentController {
      * @return requireStep的结果
      */
     private Map<String, Object> requireStep(String executionId, String stepId) {
+        requireExecution(executionId);
         List<Map<String, Object>> steps = executionSteps.get(executionId);
         if (steps == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "执行不存在: " + executionId);
@@ -1005,16 +1028,26 @@ public class ApiAgentController {
     }
 
     /**
-     * requiretemplate。
+     * requiretemplate（写口径：只有归属人可以改删）。
      * @param templateId templateid
      * @return requireTemplate的结果
      */
     private Map<String, Object> requireTemplate(String templateId) {
+        return requireTemplate(templateId, true);
+    }
+
+    /**
+     * requiretemplate。
+     * @param templateId templateid
+     * @param writable 是否要求写权限
+     * @return requireTemplate的结果
+     */
+    private Map<String, Object> requireTemplate(String templateId, boolean writable) {
         Map<String, Object> tpl = templates.get(templateId);
         if (tpl == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "执行模板不存在: " + templateId);
         }
-        return tpl;
+        return AiMemoryOwnership.requireOwned(tpl, writable, "执行模板");
     }
 
     /**

@@ -1,0 +1,266 @@
+# 本 jar 会被宿主以库依赖引入：文件名不能是 application.yml，否则类路径首匹配会整份替换宿主的配置。
+# 仅由 AiStarterApplication 通过 spring.config.import 导入。
+server:
+  # 8787 固定为 ai 前端运行模式时的固定端口，pages/ai index.html 注入 __backendPort
+  port: 8787
+  servlet:
+    context-path: /
+
+ai:
+  skills-market-url: https://skillsmp.com/api/skills
+
+  # ==========================================================================
+  # 默认模型配置（yaml 侧）
+  #
+  # 对应页面「系统配置 → 默认模型」。优先级：页面配置 > yaml。
+  #   * 页面已保存的字段 → 生效值为页面值，本节被忽略
+  #   * 页面为空的字段   → 生效值为本节对应值
+  #
+  # 用途：其它模块依赖 ai-starter 但自身没有配置页面时，可在此直接给出默认模型，
+  #      并注入 DefaultModelResolver（全局 Bean）读取最终生效值，无需访问数据库。
+  #
+  # 取值格式二选一：
+  #   model                 纯模型名
+  #   providerId:model      带提供商前缀（同名模型消歧用），解析后同样取 model
+  #
+  # 全部留空 = 交由各能力的既有兜底逻辑处理（不启用对应能力）。
+  # ==========================================================================
+  default-model:
+    # ── 对话类 ──
+    chat: # 默认对话模型
+    title-summary: # 默认标题总结模型
+    visual-assistant: # 默认视觉辅助模型
+    history-compression: # 默认历史压缩模型
+    history-compression-prompt: # 默认历史压缩提示词
+    translation: # 默认翻译模型
+    translation-prompt: # 默认翻译提示词
+
+    # ── 通用能力 ──
+    feature: # 默认特征提取模型
+    rag-embedding: # 默认 RAG 嵌入模型
+    rerank: # 默认重排序模型
+
+    # ── 图像 / 视频 ──
+    text-to-image: # 默认文生图模型
+    text-to-video: # 默认文生视频模型
+    image-enhance: # 默认图像增强模型
+    image-quality: # 默认图像质量评估模型
+    image-classify: # 默认图像分类模型
+    image-detect: # 默认目标检测模型
+    image-segment: # 默认图像分割模型
+    image-captioning: # 默认图像描述模型
+    depth: # 默认深度估计模型
+
+    # ── OCR ──
+    ocr-detect: # 默认 OCR 文字检测模型
+    ocr-recognize: # 默认 OCR 文字识别模型
+    ocr-direction: # 默认 OCR 方向矫正模型
+    ocr-super-resolution: # 默认 OCR 超分模型
+
+    # ── 版面 ──
+    layout: # 默认版面分析模型
+
+    # ── 人脸 ──
+    face-detect: # 默认人脸检测模型
+    face-recognize: # 默认人脸识别（特征）模型
+    liveness: # 默认活体检测模型
+    face-quality: # 默认人脸质量评估模型
+
+    # ── 其它视觉 ──
+    eye-detect: # 默认眼睛检测模型
+    smile-detect: # 默认微笑检测模型
+    pedestrian: # 默认行人检测模型
+
+    # ── 车牌 ──
+    plate-detect: # 默认车牌检测模型
+    plate-recognize: # 默认车牌识别模型
+
+spring:
+  application:
+    name: ai-starter
+  autoconfigure:
+    exclude:
+      - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
+      - com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
+      - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://172.16.0.40:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: root@
+    hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 10000
+  sql:
+    init:
+      mode: never
+  data:
+    redis:
+      host: 172.16.0.40
+      port: 6379
+      # 无密码环境留空；有密码取消注释
+      # password:
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  profiles:
+    active: dev
+  ai:
+    usage:
+      enabled: true
+
+# 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
+# OAuth 客户端鉴权（管理端 @Permission("admin") 接口鉴权，对接外部 oauth 服务端）
+---
+spring:
+  config:
+    activate:
+      on-profile: "local"
+plugin:
+  oauth:
+    enable: true
+    protocol: static
+    # 静态协议自校验令牌不外呼；loginAddress 只作为「未登录跳转地址」参与前置判断，
+    # 留空会让 isFailure() 直接判为鉴权失败，故必须给出非空值
+    auth-address: http://127.0.0.1:8787/login
+    temp:
+      # 格式 用户名:密码;用户名:密码；用户标识取用户名，跨登录稳定，数据按此归属
+      user: "admin:admin123;alice:alice123;bob:bob123"
+    # 框架内置默认白名单混有历史应用专用路径（/api/extensions/**、/v2/usage/** 等），
+    # 本应用按自身路由显式放行，不继承
+    use-default-whitelist: false
+    whitelist:
+      # OpenAI/Claude/Gemini 兼容协议：Bearer 是业务 AppKey，不是登录令牌
+      - /v2/v1/**
+      - /v2/v1beta/**
+      # 桌面端 Bot 绑定与探活、WebSocket 握手、健康检查
+      - /v2/ai/bot-binding/**
+      - /ws
+      - /actuator/**
+      # 角色头像通过 <img> 加载（不携带 Authorization 头），头像非敏感放行读取
+      - /v2/characters/*/avatar
+  filesystem:
+    enable: false
+    # ONNX 模型选择器需浏览服务器模型目录；该接口仅管理员可访问
+    dir-list: true
+  datasource:
+    script:
+      validate-checksum: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!local"
+plugin:
+  filesystem:
+    enable: true
+    dir-list: false
+  oauth:
+    enable: true
+    protocol: http
+    address: http://172.16.0.40:19180/oauth
+    auth-address: http://172.16.0.40:19180/oauth
+    oauth-url: /verify
+    # 框架内置默认白名单含历史应用专用路径，本应用不继承
+    use-default-whitelist: false
+    whitelist:
+      # AI 协议端点（Bearer 为业务 AppKey，非 oauth token）
+      - /v2/v1/**
+      - /v2/v1beta/**
+      # 桌面端 Bot 绑定与探活、WebSocket 握手
+      - /v2/ai/bot-binding/**
+      - /ws
+      # 角色头像通过 <img> 加载，头像非敏感放行读取
+      - /v2/characters/*/avatar
+  account:
+    register:
+      enable: false
+      yescaptcha-key: ""
+      email-provider: fce
+      replenish-interval-seconds: 3600
+
+logging:
+  level:
+    com.chua.starter.oauth.client: debug
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+  mapper-locations: classpath*:mapper/**/*.xml
+---
+# 本地自测档：只连本机 MySQL/Redis，不外指 172.16.0.40
+# 启动方式：mvn -pl spring-support-ai-starter spring-boot:run -Dspring-boot.run.profiles=local
+# 或打包后：java -jar spring-support-ai-starter-<version>.jar --spring.profiles.active=local
+spring:
+  config:
+    activate:
+      on-profile: "local"
+  application:
+    name: ai-starter
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  autoconfigure:
+    exclude:
+      - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
+      - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
+      - org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.endpoint.web.servlet.WebMvcEndpointManagementContextConfiguration
+      - com.chua.starter.datasource.configuration.DocumentAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 15000
+  sql:
+    init:
+      mode: never
+  ai:
+    usage:
+      enabled: true
+    generate:
+      enabled: false
+    rag:
+      enabled: true
+      vector-storage: jvector
+      embedding-engine: memory
+server:
+  port: 8787
+  servlet:
+    context-path:
+
+# 技能根目录：默认相对进程工作目录（不存在时由内置技能初始化器自建）。
+# 内置技能每次启动都从 classpath 的 skills-builtin/ 与 characters-builtin/ 覆盖同步，
+# 因此不依赖 CWD 布局，模块目录、部署目录、服务器上都能正常初始化。
+# 部署环境如需固定位置，用环境变量 NOMIFUN_SKILLS_ROOT 覆盖，不要写死某台机器的绝对路径。
+nomifun:
+  skills-root: ${NOMIFUN_SKILLS_ROOT:./skills}

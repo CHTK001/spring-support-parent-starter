@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.email.support.client.EmailClient;
 import com.chua.starter.server.support.entity.MsServerIdentity;
 import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
+import com.chua.starter.server.support.model.vo.MailMessageVO;
 import com.chua.starter.server.support.service.MailboxService;
 import com.chua.starter.server.support.util.CredentialCipher;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class MailboxServiceImpl implements MailboxService {
     private static final int CONTENT_TRUNCATE = 400;
 
     @Override
-    public ReturnResult<List<Map<String, Object>>> list(Long identityId, String folder, int limit) {
+    public ReturnResult<List<MailMessageVO>> list(Long identityId, String folder, int limit) {
         ResolvedMail cred = resolve(identityId);
         if (cred == null) {
             return ReturnResult.error("邮箱身份不存在或非 MAILBOX 类型: " + identityId);
@@ -70,16 +71,12 @@ public class MailboxServiceImpl implements MailboxService {
                     .folder(folder == null || folder.isBlank() ? DEFAULT_FOLDER : folder)
                     .limit(Math.max(1, Math.min(limit <= 0 ? 20 : limit, 100)))
                     .exec();
-            List<Map<String, Object>> result = new ArrayList<>();
+            List<MailMessageVO> result = new ArrayList<>(emails.size());
             for (Map<String, Object> email : emails) {
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("subject", email.get("subject"));
-                item.put("from", email.get("from"));
-                item.put("date", email.get("date"));
-                item.put("size", email.get("size"));
                 String content = email.get("content") == null ? "" : email.get("content").toString();
-                item.put("content", content.length() > CONTENT_TRUNCATE ? content.substring(0, CONTENT_TRUNCATE) : content);
-                result.add(item);
+                result.add(new MailMessageVO(str(email.get("subject")), str(email.get("from")),
+                        date(email.get("date")), size(email.get("size")),
+                        content.length() > CONTENT_TRUNCATE ? content.substring(0, CONTENT_TRUNCATE) : content));
             }
             return ReturnResult.ok(result);
         } catch (Exception e) {
@@ -88,7 +85,7 @@ public class MailboxServiceImpl implements MailboxService {
         }
     }
     @Override
-    public ReturnResult<Map<String, Object>> detail(Long identityId, String folder, String subject) {
+    public ReturnResult<MailMessageVO> detail(Long identityId, String folder, String subject) {
         ResolvedMail cred = resolve(identityId);
         if (cred == null) {
             return ReturnResult.error("邮箱身份不存在或非 MAILBOX 类型: " + identityId);
@@ -121,13 +118,9 @@ public class MailboxServiceImpl implements MailboxService {
             if (hit == null) {
                 return ReturnResult.error("邮箱为空或未找到邮件");
             }
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("subject", hit.get("subject"));
-            item.put("from", hit.get("from"));
-            item.put("date", hit.get("date"));
-            item.put("size", hit.get("size"));
-            item.put("content", hit.get("content"));
-            return ReturnResult.ok(item);
+            return ReturnResult.ok(new MailMessageVO(str(hit.get("subject")), str(hit.get("from")),
+                    date(hit.get("date")), size(hit.get("size")),
+                    hit.get("content") == null ? "" : hit.get("content").toString()));
         } catch (Exception e) {
             log.warn("[mailbox] 读取邮件详情失败 identityId={} - {}", identityId, e.getMessage());
             return ReturnResult.error("读取邮件详情失败: " + safeMsg(e));
@@ -158,15 +151,37 @@ public class MailboxServiceImpl implements MailboxService {
         }
         int port = identity.getMsServerIdentityImapPort() == null
                 ? DEFAULT_IMAP_PORT : identity.getMsServerIdentityImapPort();
-        /**
-         * resolvedmail。
-         * @param email email
-         * @param authCode 认证编码
-         * @param imapHost imap主机
-         * @param port 端口
-         * @return ResolvedMail的结果
-         */
         return new ResolvedMail(email, authCode, imapHost, port);
+    }
+
+    /**
+     * IMAP 载荷取字符串（缺失时为空串，保持历史出参一致）
+     *
+     * @param raw 原始值
+     * @return 字符串值
+     */
+    private static String str(Object raw) {
+        return raw == null ? "" : raw.toString();
+    }
+
+    /**
+     * IMAP 载荷取发送时间
+     *
+     * @param raw 原始值
+     * @return 时间，非 Date 或缺失时为 {@code null}
+     */
+    private static Date date(Object raw) {
+        return raw instanceof Date d ? d : null;
+    }
+
+    /**
+     * IMAP 载荷取邮件字节数
+     *
+     * @param raw 原始值
+     * @return 字节数，缺失时为 {@code null}
+     */
+    private static Integer size(Object raw) {
+        return raw instanceof Number n ? n.intValue() : null;
     }
 
     /**

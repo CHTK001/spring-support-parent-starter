@@ -132,4 +132,10 @@ public class AiAppKeyDTO implements Serializable {
      * 创建时间AT
     */
     private String createdAt;
+
+    /**
+     * 归属用户标识（登录用户名），管理员全量查询时用于区分数据归属
+     */
+    @Schema(description = "归属用户")
+    private String owner;
 }

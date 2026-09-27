@@ -37,35 +37,35 @@ import java.util.List;
 public class RefundOrderController {
 
     /**
-     * Paymentrefund排序服务
-    */
+     * 退款单服务
+     */
     private final PaymentRefundOrderService paymentRefundOrderService;
     /**
-     * Payment排序服务
-    */
+     * 支付订单服务
+     */
     private final PaymentOrderService paymentOrderService;
 
     @Operation(summary = "查询退款单")
     @GetMapping("/{id}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
     /**
-     * 获取byid
+     * 按id获取
      *
      * @param id 标识
-     * @return 获取byid的结果
+     * @return 按id获取的结果
      */
     public Result<RefundOrderVO> getById(@PathVariable Long id) {
         return Result.success(paymentRefundOrderService.getDetail(id));
     }
 
-    @Operation(summary = "查询订单退款单列表")
+    @Operation(summary = "查询订单的退款单列表")
     @GetMapping("/order/{orderId}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
     /**
-     * 列表by订单标识
+     * 按订单标识查询列表
      *
      * @param orderId 订单标识
-     * @return 列表by订单id的结果
+     * @return 按订单id查询列表的结果
      */
     public Result<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
         return Result.success(paymentRefundOrderService.listVoByOrderId(orderId));
@@ -75,10 +75,8 @@ public class RefundOrderController {
     @GetMapping("/page")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
     /**
-     * Page
+     * 分页查询
      *
-     * @param "1" "1"
-     * @return page的结果
      */
     public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
@@ -94,7 +92,7 @@ public class RefundOrderController {
     @PutMapping("/{id}/success")
     @Permission(value = "payment:refund:success", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * mark退税成功
+     * 标记退款成功
      * @param id 标识
      * @param dto dto
      */
@@ -114,7 +112,7 @@ public class RefundOrderController {
     @PutMapping("/{id}/fail")
     @Permission(value = "payment:refund:fail", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * mark退税失败
+     * 标记退款失败
      * @param id 标识
      * @param dto dto
      */
@@ -128,4 +126,3 @@ public class RefundOrderController {
                 dto != null ? dto.getRemark() : null));
     }
 }
-

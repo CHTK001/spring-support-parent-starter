@@ -2,6 +2,7 @@ package com.chua.starter.server.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.entity.MsServerGroup;
+import com.chua.starter.server.support.model.vo.ServerGroupNodeVO;
 
 import java.util.List;
 
@@ -44,4 +45,11 @@ public interface ServerGroupService {
      * @return 分组列表
      */
     ReturnResult<List<MsServerGroup>> list();
+
+    /**
+     * 查询分组树（按父键组装，根节点父键为 null 或 0）
+     *
+     * @return 根节点列表
+     */
+    ReturnResult<List<ServerGroupNodeVO>> tree();
 }

@@ -117,6 +117,10 @@ public final class ChatClientSettingsResolver {
                 ))
                 .proxy(getValue(sysAiGlobalSettingService, "provider_proxy"))
                 .extraHeaders(extraHeaders)
+                // 认证方案：用于 Dots Studio 这类只认 api-key 头、不认 Authorization 的服务商
+                .authScheme(getValue(sysAiGlobalSettingService, "provider_auth_scheme"))
+                .authHeader(getValue(sysAiGlobalSettingService, "provider_auth_header"))
+                .authPrefix(getValue(sysAiGlobalSettingService, "provider_auth_prefix"))
                 .build();
 
         return ChatClientSettings.builder()

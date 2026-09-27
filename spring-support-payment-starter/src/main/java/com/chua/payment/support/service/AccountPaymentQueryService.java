@@ -10,7 +10,7 @@ import com.chua.payment.support.vo.OrderVO;
 import java.util.List;
 
 /**
- * 账户支付查询服务接口，定义用户维度订单、交易流水与状态日志查询契约。
+ * 账户支付查询服务接口，定义以用户为维度的订单、交易流水与状态日志查询封装契约。
  *
  * @author CH
  * @since 4.0.0.50
@@ -18,33 +18,32 @@ import java.util.List;
 public interface AccountPaymentQueryService {
 
     /**
-     * 列表订单by用户。
-     * @param request 请求
-     * @return 列表订单by用户的结果
+     * 按用户分页查询订单列表。
+     * @param request 请求参数
+     * @return 按用户分页查询的订单分页结果
      */
     Page<OrderVO> listOrdersByUser(UserOrderQueryRequest request);
 
     /**
-     * 获取订单by用户。
+     * 按用户查询单个订单详情。
      * @param userId 用户标识
      * @param id 标识
-     * @return 获取订单by用户的结果
+     * @return 按用户查询到的订单详情
      */
     OrderVO getOrderByUser(Long userId, Long id);
 
     /**
-     * 列表订单日志by用户。
+     * 按用户查询订单状态日志列表。
      * @param userId 用户标识
      * @param id 标识
-     * @return 列表订单日志by用户的结果
+     * @return 按用户查询的订单状态日志列表
      */
     List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id);
 
     /**
-     * 列表transactionsby用户。
-     * @param request 请求
-     * @return 列表transactionsby用户的结果
+     * 按用户分页查询交易流水列表。
+     * @param request 请求参数
+     * @return 按用户分页查询的交易流水分页结果
      */
     Page<TransactionRecord> listTransactionsByUser(UserTransactionQueryRequest request);
 }
-

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduInsectMapper">
+
+    <!-- 按目 / 变态类型 / 难度上限过滤后随机取 count 条：消消乐配对玩法每次开局都要重新洗牌 -->
+    <select id="selectByFilter" resultType="com.chua.starter.eduai.model.EduInsect">
+        SELECT * FROM edu_insect
+        <where>
+            <if test="order != null and order != ''">
+                AND insect_order = #{order}
+            </if>
+            <if test="metamorphosis != null and metamorphosis != ''">
+                AND insect_metamorphosis = #{metamorphosis}
+            </if>
+            <if test="maxDifficulty != null">
+                AND insect_difficulty &lt;= #{maxDifficulty}
+            </if>
+            <if test="userId != null and userId != ''">
+                AND (insect_owner_user_id IS NULL OR insect_owner_user_id = #{userId})
+            </if>
+        </where>
+        ORDER BY RAND() LIMIT #{count}
+    </select>
+
+    <!-- 各目物种数：前端「目」筛选按数量降序展示，孤儿目排在最后 -->
+    <select id="countByOrder" resultType="java.util.LinkedHashMap">
+        SELECT insect_order AS `order`, COUNT(*) AS speciesCount
+        FROM edu_insect
+        <where>
+            <if test="userId != null and userId != ''">
+                AND (insect_owner_user_id IS NULL OR insect_owner_user_id = #{userId})
+            </if>
+        </where>
+        GROUP BY insect_order
+        ORDER BY speciesCount DESC, insect_order ASC
+    </select>
+
+    <!-- 全量物种（名录用）。用 SELECT * 而非 BaseMapper.selectList：本库表未落
+         SysBase 的 create_name/create_by 等列，selectList 会拼出这些不存在的列而报错 -->
+    <select id="selectAll" resultType="com.chua.starter.eduai.model.EduInsect">
+        SELECT * FROM edu_insect
+        <where>
+            <if test="userId != null and userId != ''">
+                (insect_owner_user_id IS NULL OR insect_owner_user_id = #{userId})
+            </if>
+        </where>
+        ORDER BY insect_order ASC, insect_id ASC
+    </select>
+
+    <!-- 按 slug 取单条；LIMIT 1 兜底重复数据 -->
+    <select id="selectByCode" resultType="com.chua.starter.eduai.model.EduInsect">
+        SELECT * FROM edu_insect WHERE insect_code = #{insectCode} LIMIT 1
+    </select>
+
+</mapper>

@@ -48,6 +48,13 @@ public class MsExecJob extends SysBase {
     private String msExecJobName; // ms执行作业名称
 
     /**
+     * 任务类型：CRON=定时（后台按 cron 调度）/ NONE=脚本（仅手动执行，不调度）
+     */
+    @TableField("ms_exec_job_type")
+    @Schema(description = "任务类型 CRON定时/NONE脚本", example = "CRON")
+    private String msExecJobType; // ms执行作业类型
+
+    /**
      * cron 表达式
      */
     @TableField("ms_exec_job_cron")

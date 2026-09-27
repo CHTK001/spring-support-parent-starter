@@ -52,4 +52,9 @@ public class QuestionSourceContext {
      * 难度（1-5）
      */
     private Integer difficulty;
+
+    /**
+     * 任务归属用户 ID（自落库型来源写入数据归属用）
+     */
+    private String ownerUserId;
 }

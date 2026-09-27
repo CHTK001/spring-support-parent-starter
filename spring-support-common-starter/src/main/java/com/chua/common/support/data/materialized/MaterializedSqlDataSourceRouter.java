@@ -16,14 +16,18 @@ public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
      * @param route 路由信息
      * @return 数据源
      */
-    DataSource selectDataSource(MaterializedSqlRoute route);
+    default DataSource selectDataSource(MaterializedSqlRoute route) {
+        return resolveDataSource(route);
+    }
 
     /**
      * 获取所有可用数据源
      *
      * @return 数据源映射
      */
-    java.util.Map<String, DataSource> getDataSources();
+    default java.util.Map<String, DataSource> getDataSources() {
+        return java.util.Map.of();
+    }
 
     /**
      * 根据请求确定路由

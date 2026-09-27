@@ -179,6 +179,8 @@ public class ImageRecognitionClientManager {
                     if (StringUtils.isNotBlank(device)) {
                         c.device(device);
                     }
+                    com.chua.starter.ai.support.configuration.client.ModelParamBridge.bridge(
+                            model, device, threshold == null ? null : threshold.floatValue());
                     this.classifier = c;
                 }
                 this.classifierFp = fp;
@@ -210,6 +212,12 @@ public class ImageRecognitionClientManager {
                     if (threshold != null) {
                         d.threshold(threshold.floatValue());
                     }
+                    String device = settingReader.getStr(GROUP, "device");
+                    if (StringUtils.isNotBlank(device)) {
+                        d.device(device);
+                    }
+                    com.chua.starter.ai.support.configuration.client.ModelParamBridge.bridge(
+                            model, device, threshold == null ? null : threshold.floatValue());
                     this.detector = d;
                 }
                 this.detectorFp = fp;
@@ -231,6 +239,10 @@ public class ImageRecognitionClientManager {
         synchronized (this) {
             if (!fp.equals(captioningFp)) {
                 this.captioning = fp.isBlank() ? null : ImageCaptioning.create(fp);
+                if (!fp.isBlank()) {
+                    com.chua.starter.ai.support.configuration.client.ModelParamBridge
+                            .bridgeDevice(fp, settingReader.getStr(GROUP, "device"));
+                }
                 this.captioningFp = fp;
             }
         }

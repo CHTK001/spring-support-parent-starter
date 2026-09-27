@@ -46,9 +46,9 @@ public class FirewallRuleRowVO {
     private String profile;
 
     /**
-     * 规则序号（iptables 行号）
+     * 规则序号（仅 iptables 有行号，Windows 规则为 null）
      */
-    private int num;
+    private Integer num;
 
     /**
      * 协议

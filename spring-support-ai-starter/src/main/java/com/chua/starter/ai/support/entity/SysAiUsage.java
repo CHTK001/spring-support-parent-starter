@@ -160,6 +160,16 @@ public class SysAiUsage extends SysBase {
     private Long sysAiUsageTotalLatency;
 
     /**
+     * 用量来源: service(对外服务)/third_party(三方)/self(自身)
+    */
+    private String sysAiUsageSource;
+
+    /**
+     * token 是否为估算值: 1=估算, 0/null=真实
+     */
+    private Integer sysAiUsageEstimatedTokens;
+
+    /**
      * 获取分组名称，为空时返回默认值"默认"，保证前端展示有兜底。
      *
      * @return 分组名称，null 时返回"默认"

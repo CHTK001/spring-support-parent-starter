@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.dimension.mapper.EduStudentMapper">
+
+    <!-- 列表学生：在读状态 + 班级/学段/年级筛选 + 归属隔离，按学生ID升序 -->
+    <select id="listStudents" resultType="com.chua.starter.eduai.dimension.entity.EduStudent">
+        SELECT st.* FROM edu_student st
+        <where>
+            st.student_status = 1
+            <if test="classId != null">
+                AND st.student_class_id = #{classId}
+            </if>
+            <if test="gradeLevel != null and gradeLevel != ''">
+                AND st.student_grade_level = #{gradeLevel}
+            </if>
+            <if test="grade != null and grade != ''">
+                AND st.student_grade = #{grade}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (st.student_owner_user_id IS NULL OR st.student_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY st.student_id ASC
+    </select>
+
+</mapper>

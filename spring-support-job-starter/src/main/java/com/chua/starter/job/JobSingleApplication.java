@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
  * </pre>
  *
  * <p>效果: 装配 {@link JobAutoConfiguration} 并以 SINGLE 角色启动,
- * 铅 自选 + 单秒扫描 + 本地执行, 观察 处理器 的成功/失败/原生定时日志。</p>
+ * Leader 自选 + 单秒扫描 + 本地执行, 观察 处理器 的成功/失败/原生定时日志。</p>
  *
  * @since 4.0.0.42
  * @author CH

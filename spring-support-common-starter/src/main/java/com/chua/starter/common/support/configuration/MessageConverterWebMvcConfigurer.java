@@ -24,6 +24,7 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.cbor.MappingJackson2CborHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -104,17 +105,23 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         } else {
             log.debug("[消息转换器]ApiResponseEncodeRegister 未配置, 跳过二进制转换器注册");
         }
- // 向列表添加转换器会让 Spring 跳过全部默认转换器，必须自行补回文本/字节/表单三类请求体转换器，
+ // 向列表添加转换器会让 Spring 跳过全部默认转换器，必须自行补回文本/字节/资源/表单四类请求体转换器，
  // 否则 @RequestBody String 等端点对 text/plain 一律抛 HttpMediaTypeNotSupportedException。
- // 只放开各自的专属媒体类型，JSON 仍由后注册的 Jackson 转换器处理，行为与默认列表一致。
+ // String 只放开 text/plain（JSON 字符串响应仍由后注册的 Jackson 转换器处理）；ByteArray/Resource 保持默认媒体类型。
         StringHttpMessageConverter textConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
         textConverter.setSupportedMediaTypes(List.of(MediaType.TEXT_PLAIN));
         converters.add(textConverter);
         ByteArrayHttpMessageConverter byteConverter = new ByteArrayHttpMessageConverter();
-        byteConverter.setSupportedMediaTypes(List.of(MediaType.APPLICATION_OCTET_STREAM));
+ // ByteArray 默认媒体类型为 application/octet-stream + */*，两者都必须保留：
+ // 裁剪掉 */* 后，返回 ResponseEntity<byte[]> 且显式 produces=text/csv（导出）或 image/gif
+ // （埋点图）的端点匹配不到任何转换器，直接抛 HttpMessageNotWritableException(500)。
+ // 该转换器 supports() 仅认 byte[].class，放开 */* 不会抢走 String/POJO 响应。
+        byteConverter.setSupportedMediaTypes(List.of(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
         converters.add(byteConverter);
+ // 默认列表里的 ResourceHttpMessageConverter 也要补回，否则返回 Resource/InputStreamResource 的下载端点同样无转换器
+        converters.add(new ResourceHttpMessageConverter());
         converters.add(new AllEncompassingFormHttpMessageConverter());
-        log.info("[消息转换器]补注默认请求体转换器: String/ByteArray/Form");
+        log.info("[消息转换器]补注默认请求体转换器: String/ByteArray/Resource/Form");
     }
     @Override
     /**

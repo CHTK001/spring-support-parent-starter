@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -621,6 +622,25 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
                                     Field field,
                                     Method method,
                                     Class<?> targetType) {
+
+        /**
+         * 规范构造器：必填组件做空值校验。
+         *
+         * <p>value class 前置条件——值类要求空值敌对；{@code defaultValue} 可为空，
+         * {@code field} 与 {@code method} 互斥（其一时另一为 {@code null}），
+         * 故均不做校验。</p>
+         *
+         * @param configKey 配置键
+         * @param bean 目标 Bean 实例
+         * @param beanName Bean 名称
+         * @param targetType 目标类型
+         */
+        public ValueBindingInfo {
+            configKey = Objects.requireNonNull(configKey, "configKey 不能为 null");
+            bean = Objects.requireNonNull(bean, "bean 不能为 null");
+            beanName = Objects.requireNonNull(beanName, "beanName 不能为 null");
+            targetType = Objects.requireNonNull(targetType, "targetType 不能为 null");
+        }
     }
 
     /**

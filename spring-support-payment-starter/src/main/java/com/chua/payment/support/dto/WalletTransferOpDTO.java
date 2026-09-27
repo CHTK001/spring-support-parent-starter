@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 /**
  * 钱包转账操作请求参数对象。
  *
- * @param merchantId  商户标识
+ * @param merchantId  客户标识
  * @param fromUserId  转出用户标识
  * @param toUserId    转入用户标识
  * @param amount      转账金额

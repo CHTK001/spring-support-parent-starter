@@ -33,7 +33,6 @@ import java.util.Map;
  *     <version>2.6.0</version>
  * </dependency>
  * }</pre>
- * </p>
  *
  * <p>
  * <b>配置：</b>
@@ -44,9 +43,7 @@ import java.util.Map;
  *   tx-service-group: my_tx_group
  *   enable-auto-data-source-proxy: false  # 我们自行代理，避免冲突
  *   data-source-proxy-mode: AT       # AT 或 XA
- * }</pre>de: AT       # AT 或 XA
  * }</pre>
- * </p>
  *
  * @since 2026/07/14
  */

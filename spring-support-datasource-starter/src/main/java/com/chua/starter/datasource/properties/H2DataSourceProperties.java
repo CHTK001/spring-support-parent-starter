@@ -12,9 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * plugin.h2.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
  * plugin.h2.script-path=classpath:db/migration/h2
  * plugin.h2.cleanup-after-test=true
- * }</pre>ue
  * }</pre>
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

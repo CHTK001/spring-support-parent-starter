@@ -82,13 +82,7 @@ public class GuacdSessionRegistry {
             sessionRecordIndex.remove(recordId);
             return false;
         }
-        /**
-         * 关闭。
-         * @param session 会话
-         * @param reason ReasonMLmlml
-         */
-        close(session, reason);
-        return true;
+        return close(session, reason);
     }
 
     /**
@@ -99,10 +93,11 @@ public class GuacdSessionRegistry {
      *
      * @param session 会话
      * @param reason  关闭原因（写入审计）
+     * @return true 表示本次调用真正执行了关闭，false 表示会话已由其它路径关闭过
      */
-    public void close(GuacdSession session, String reason) {
+    public boolean close(GuacdSession session, String reason) {
         if (!session.markClosed()) {
-            return;
+            return false;
         }
         // 中断读线程，令其尽快退出阻塞读取
         if (session.getReaderThread() != null && session.getReaderThread().isAlive()) {
@@ -125,6 +120,7 @@ public class GuacdSessionRegistry {
         }
         log.info("[terminal] 会话关闭 tunnelId={} hostId={} reason={}",
                 session.getTunnelId(), session.getHostId(), reason);
+        return true;
     }
 
     /**
@@ -141,10 +137,13 @@ public class GuacdSessionRegistry {
                 idleSessions.add(session);
             }
         }
+        int closed = 0;
         for (GuacdSession session : idleSessions) {
-            close(session, "空闲超时");
+            if (close(session, "空闲超时")) {
+                closed++;
+            }
         }
-        return idleSessions.size();
+        return closed;
     }
 
     /**

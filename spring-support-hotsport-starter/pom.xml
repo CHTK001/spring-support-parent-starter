@@ -46,13 +46,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- 嵌入式 H2（内存兜底 DataSource，common-starter 的异常处理器依赖 spring-jdbc） -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
         <!-- 运行时 APM：StorageManager / Query / ApmStorage SPI -->
         <dependency>
             <groupId>com.chua</groupId>

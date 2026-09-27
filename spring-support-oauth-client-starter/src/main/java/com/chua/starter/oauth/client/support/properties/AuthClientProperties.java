@@ -31,6 +31,31 @@ public class AuthClientProperties {
     private boolean localAdminFallback = false;
 
     /**
+     * 静态账号（用户名 / 密码）登录令牌的有效期（秒）。
+     * <p>历史上硬编码为 7 天，令牌签发后长期有效、后端重启也仍被前端长期缓存；
+     * 现缩短为默认 24 小时，可通过 {@code plugin.oauth.static-token-expire-seconds} 调整，
+     * 实际取值会被夹到 [60, 7天] 区间。</p>
+     */
+    private long staticTokenExpireSeconds = 24L * 60 * 60;
+
+    /**
+     * 获取静态令牌有效期（秒），夹到 [60, 7天]，避免误配成超长或立即失效。
+     *
+     * @return 有效期秒数
+     */
+    public long getClampedStaticTokenExpireSeconds() {
+        long max = 7L * 24 * 60 * 60;
+        long v = staticTokenExpireSeconds;
+        if (v < 60) {
+            v = 60;
+        }
+        if (v > max) {
+            v = max;
+        }
+        return v;
+    }
+
+    /**
      * PRE
     */
     public static final String PRE = "plugin.oauth";

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 
 /**
  * 钱包账户流水
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -22,73 +23,72 @@ public class WalletAccountLog {
     @TableId(value = "pay_wallet_account_log_id", type = IdType.AUTO)
     /**
      * 标识
-    */
+     */
     private Long id;
 
     @TableField("pay_wallet_account_log_merchant_id")
     /**
-     * merchantid
-    */
+     * 商户标识
+     */
     private Long merchantId;
 
     @TableField("pay_wallet_account_log_user_id")
     /**
      * 用户标识
-    */
+     */
     private Long userId;
 
     @TableField("pay_wallet_account_log_biz_type")
     /**
-     * BIZ类型
-    */
+     * 业务类型
+     */
     private String bizType;
 
     @TableField("pay_wallet_account_log_biz_no")
     /**
-     * BIZNO
-    */
+     * 业务单号
+     */
     private String bizNo;
 
     @TableField("pay_wallet_account_log_change_type")
     /**
-     * 改变类型
-    */
+     * 变更类型
+     */
     private String changeType;
 
     @TableField("pay_wallet_account_log_change_amount")
     /**
-     * Changeamount
-    */
+     * 变更金额
+     */
     private BigDecimal changeAmount;
 
     @TableField("pay_wallet_account_log_balance_before")
     /**
-     * Balancebefore
-    */
+     * 变更前余额
+     */
     private BigDecimal balanceBefore;
 
     @TableField("pay_wallet_account_log_balance_after")
     /**
-     * Balanceafter
-    */
+     * 变更后余额
+     */
     private BigDecimal balanceAfter;
 
     @TableField("pay_wallet_account_log_operator")
     /**
-     * 操作符
-    */
+     * 操作者
+     */
     private String operator;
 
     @TableField("pay_wallet_account_log_remark")
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 
     @TableField(value = "pay_wallet_account_log_created_at", fill = FieldFill.INSERT)
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 }
-

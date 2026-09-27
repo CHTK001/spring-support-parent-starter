@@ -1,48 +1,54 @@
 package com.chua.starter.job.support;
 
 import com.chua.common.support.network.sync.SyncClient;
-import com.chua.common.support.network.sync.impl.TcpSyncClient;
 import com.chua.common.support.network.server.SyncServer;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.job.support.cluster.LeaderElector;
 import com.chua.starter.job.support.dispatch.InMemoryJobRepository;
 import com.chua.starter.job.support.dispatch.JobDefinition;
 import com.chua.starter.job.support.dispatch.JobRepository;
+import com.chua.starter.job.support.dispatch.JobSpec;
 import com.chua.starter.job.support.execute.JobExecutor;
 import com.chua.starter.job.support.handler.JobAnnotationScanner;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.log.AsyncLogWriter;
 import com.chua.starter.job.support.log.FileJobLogSink;
+import com.chua.starter.job.support.log.JobLogRepository;
 import com.chua.starter.job.support.log.JobLogSink;
 import com.chua.starter.job.support.log.LocalJobLogBinder;
 import com.chua.starter.job.support.log.StdoutJobLogSink;
 import com.chua.starter.job.support.loop.JobLeaderLoop;
+import com.chua.starter.job.support.manage.JobGovernanceService;
 import com.chua.starter.job.support.manage.JobManageController;
 import com.chua.starter.job.support.operate.DefaultJobOperator;
 import com.chua.starter.job.support.operate.JobOperator;
 import com.chua.starter.job.support.schedule.ScheduledAnnotationScanner;
 import com.chua.starter.job.support.sync.ExecutorSyncBinder;
-import com.chua.starter.job.support.sync.InMemorySyncClient;
-import com.chua.starter.job.support.sync.InMemorySyncServer;
+import com.chua.starter.job.support.sync.GlueSyncService;
 import com.chua.starter.job.support.sync.JobSyncBus;
+import com.chua.starter.job.support.sync.RemoteHandlerRegistry;
 import com.chua.starter.job.support.sync.SchedulerSyncBinder;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -81,6 +87,11 @@ public class JobAutoConfiguration {
      * 配置属性
      */
     private final JobProperties properties;
+
+    /**
+     * 同步服务端 (仅调度中心角色装配, 治理接口用它读在线执行器)
+     */
+    private final ObjectProvider<SyncServer> syncServerProvider;
 
     /**
      * 当前节点 标识 Bean, 缺省时按 主机名称-pid 推导。
@@ -170,13 +181,39 @@ public class JobAutoConfiguration {
     }
 
     /**
+     * 任务治理的公共实现 (与传输层无关)。
+     *
+     * <p>装配门槛与治理控制器一致：Servlet 应用 + classpath 有 spring-webmvc + 显式开启
+     * {@code plugin.job.manage.enable=true}。宿主若要换一个认证口径 (如自带控制台会话),
+     * 复用本 bean 再挂自己的出口即可。</p>
+     *
+     * @param jobOperator       任务治理接口
+     * @param jobLogRepository  执行日志读取侧
+     * @param jobLeaderElector  本地选主状态
+     * @return 治理实现
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnClass(name = "org.springframework.web.servlet.DispatcherServlet")
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "manage.enable", havingValue = "true")
+    public JobGovernanceService jobGovernanceService(JobOperator jobOperator,
+                                                      JobLogRepository jobLogRepository,
+                                                      LeaderElector jobLeaderElector,
+                                                      RemoteHandlerRegistry remoteHandlerRegistry,
+                                                      ObjectProvider<GlueSyncService> glueSyncServiceProvider) {
+        return new JobGovernanceService(jobOperator, jobLogRepository, properties,
+                jobLeaderElector, syncServerProvider, remoteHandlerRegistry, glueSyncServiceProvider);
+    }
+
+    /**
      * 任务治理外部接口 (HTTP)。
      *
      * <p>装配门槛：Servlet 应用 + classpath 有 spring-webmvc + 显式开启
      * {@code plugin.job.manage.enable=true}。{@code sys_job} 是全局资源 (无归属列)，
      * 出口整体要求管理员权限，故默认关闭、按需开启。</p>
      *
-     * @param jobOperator 任务治理接口
+     * @param governance 任务治理实现
      * @return 任务治理控制器
      */
     @Bean
@@ -184,8 +221,39 @@ public class JobAutoConfiguration {
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     @ConditionalOnClass(name = "org.springframework.web.servlet.DispatcherServlet")
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "manage.enable", havingValue = "true")
-    public JobManageController jobManageController(JobOperator jobOperator) {
-        return new JobManageController(jobOperator);
+    public JobManageController jobManageController(JobGovernanceService governance) {
+        return new JobManageController(governance);
+    }
+
+    /**
+     * 执行日志读取侧默认实现 (不落库时返回空页), MyBatis-Plus 存在时被 MyBatis 版覆盖。
+     *
+     * @return 空实现的日志仓库
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
+    public JobLogRepository emptyJobLogRepository() {
+        return new JobLogRepository() {
+        };
+    }
+
+    /**
+     * MyBatis-Plus 版执行日志读取侧 (依赖 MyBatis-Plus 时启用, 业务侧无需自行声明)。
+     *
+     * @param jobLogMapper 日志映射器
+     * @param jobMapperProvider 任务映射器提供者, 缺失时按台账任务名搜日志会落空
+     * @return MyBatis 版日志仓库
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
+    @org.springframework.context.annotation.Primary
+    public JobLogRepository mybatisJobLogRepository(
+            com.chua.starter.job.support.store.JobLogMapper jobLogMapper,
+            org.springframework.beans.factory.ObjectProvider<com.chua.starter.job.support.store.JobMapper> jobMapperProvider) {
+        return new com.chua.starter.job.support.store.MybatisJobLogRepository(jobLogMapper,
+                jobMapperProvider.getIfAvailable());
     }
 
     /**
@@ -200,9 +268,9 @@ public class JobAutoConfiguration {
     }
 
     /**
-     * 铅 选举器 (CAS 占位)。
+     * Leader 选举器 (CAS 占位)。
      * @param jobNodeId 作业节点标识
-     * @return 作业铅elector的结果
+     * @return 作业 Leader 选举器的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -234,7 +302,9 @@ public class JobAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
     @org.springframework.context.annotation.Primary
     public JobRepository mybatisJobRepository(com.chua.starter.job.support.store.JobMapper jobMapper) {
-        return new com.chua.starter.job.support.store.MybatisJobRepository(jobMapper);
+        // 留空分组落到本节点的 cluster.group：Leader 只扫同组任务，落 default 会"登记成功但永不派发"
+        return new com.chua.starter.job.support.store.MybatisJobRepository(jobMapper,
+                properties.getCluster().getGroup());
     }
 
     /**
@@ -275,8 +345,8 @@ public class JobAutoConfiguration {
     }
 
     /**
-     * 铅 选举解析器默认实现: 本地 CAS 占位, 适用于单机或无 MyBatis 场景。
-     * @return 入内存铅election解析器的结果
+     * Leader 选举解析器默认实现: 本地 CAS 占位, 适用于单机或无 MyBatis 场景。
+     * @return 入内存 Leader 选举解析器的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -286,7 +356,7 @@ public class JobAutoConfiguration {
     }
 
     /**
-     * MyBatis-Plus 行锁版 铅 选举 (依赖 MyBatis-Plus 时覆盖默认)。
+     * MyBatis-Plus 行锁版 Leader 选举 (依赖 MyBatis-Plus 时覆盖默认)。
      */
     @Bean
     @ConditionalOnMissingBean
@@ -298,77 +368,64 @@ public class JobAutoConfiguration {
     }
 
     // ====================================================================
- // 调度器 角色: 装配 铅循环 + 调度器同步binder
+ // 调度器 角色: 装配 Leader循环 + 调度器同步binder
     // ====================================================================
 
     /**
-     * 调度器 端: 注册到仓库公共 同步服务端。
-     * <p>SPI 未发现实现时 (精简部署或单元测试),自动 fallback 到 {@link InMemorySyncServer}。</p>
-     * @return 作业同步服务端的结果
+     * 调度器端注册到真实同步服务端。
+     *
+     * @return 作业同步服务端
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
     public SyncServer jobSyncServer() {
         if (properties.getSync().isInMemory()) {
-            log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncServer (跳过 SPI)");
-            /**
-             * 入内存同步服务端。
-             * @return 入内存同步服务端的结果
-             */
-            return new InMemorySyncServer();
+            throw new UnsupportedOperationException("同步服务不支持 in-memory 模式，请配置真实 SyncServer SPI");
         }
         ServiceProvider<SyncServer> sp = ServiceProvider.of(SyncServer.class);
-        log.info("[job][diag] SyncServer SPI keys={} loader={} ctxLoader={}", sp.names(),
-                SyncServer.class.getClassLoader(),
-                Thread.currentThread().getContextClassLoader());
-        try {
-            java.util.Enumeration<java.net.URL> rs = Thread.currentThread().getContextClassLoader()
-                    .getResources("META-INF/extensions/com.chua.common.support.network.server.SyncServer");
-            java.util.List<String> urls = new java.util.ArrayList<>();
-            while (rs.hasMoreElements()) { urls.add(rs.nextElement().toString()); }
-            log.info("[job][diag] SyncServer SPI resource URLs={}", urls);
-        } catch (Throwable ex) {
-            log.warn("[job][diag] SyncServer SPI resource enumeration failed cause={}", ex.getMessage());
-        }
-        String[] keys = {"rsocket", "tcp", "udp", "websocket", "http"};
-        SyncServer server = null;
-        for (String k : keys) {
+        com.chua.common.support.network.server.ServerSetting setting =
+                com.chua.common.support.network.server.ServerSetting.defaults();
+        setting.setHost(properties.getSync().getScheduler().getListenHost());
+        setting.setPort(properties.getSync().getScheduler().getListenPort());
+        for (String key : syncServerCandidates(properties.getSync().getScheduler().getProtocol())) {
             try {
-                SyncServer s = sp.getExtension(k);
-                log.info("[job][diag] try key={} -> class={} extClassLoader={}",
-                        k, s == null ? "NULL" : s.getClass().getName(), s == null ? "-" : s.getClass().getClassLoader());
-                if (s != null) {
-                    server = s;
-                    break;
+                // 同步服务端实现普遍以 ServerSetting 构造，先按带参 SPI 实例化，避免落到无参构造失败。
+                SyncServer server = sp.getNewExtension(key, setting);
+                if (server != null) {
+                    log.info("[job] SyncServer 协议已选定 protocol={} listen={}:{}",
+                            key, setting.getHost(), setting.getPort());
+                    return server;
                 }
-            } catch (Throwable t) {
-                log.warn("[job][diag] key={} threw cause={}", k, t.getClass().getName() + ":" + t.getMessage(), t);
+            } catch (RuntimeException ex) {
+                log.warn("[job] SyncServer SPI 带参实例化失败 protocol={} cause={}", key, ex.getMessage());
             }
         }
-        log.info("[job][diag] SyncServer final result class={}",
-                server == null ? "NULL" : server.getClass().getName());
-        if (server == null) {
-            log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
-            /**
-             * 入内存同步服务端。
-             * @return 入内存同步服务端的结果
-             */
-            return new InMemorySyncServer();
+        throw new IllegalStateException("未找到真实 SyncServer SPI 实现，请配置服务端同步协议");
+    }
+
+    /**
+     * 调度中心 SyncServer 的协议候选顺序：配置的协议优先，其余按兜底顺序补齐。
+     *
+     * <p>兜底顺序里 rsocket 排最后：{@code RSocketSyncServer} 目前只做出站，
+     * 入站报文不会回调 {@code SyncServerListener#onMessage}，
+     * 选中它会让执行器注册永远进不了注册表（在线节点恒空）。</p>
+     *
+     * @param protocol 配置的协议（可为空）
+     * @return 候选协议列表
+     */
+    private static List<String> syncServerCandidates(String protocol) {
+        List<String> keys = new ArrayList<>();
+        String configured = protocol == null ? "" : protocol.trim().toLowerCase(Locale.ROOT);
+        if (!configured.isEmpty()) {
+            keys.add(configured);
         }
- // 注入配置的监听 主机/端口, 使 tcp同步服务端 等真实实现绑定到目标端口
-        try {
-            com.chua.common.support.network.server.ServerSetting setting = server.getSetting();
-            if (setting != null) {
-                setting.setHost(properties.getSync().getScheduler().getListenHost());
-                setting.setPort(properties.getSync().getScheduler().getListenPort());
-                log.info("[job] SyncServer 监听地址注入 host={} port={}",
-                        setting.getHost(), setting.getPort());
+        for (String fallback : new String[]{"tcp", "websocket", "udp", "http", "rsocket"}) {
+            if (!keys.contains(fallback)) {
+                keys.add(fallback);
             }
-        } catch (Throwable ex) {
-            log.warn("[job] SyncServer 监听地址注入失败 cause={}", ex.getMessage());
         }
-        return server;
+        return keys;
     }
 
     /**
@@ -380,12 +437,43 @@ public class JobAutoConfiguration {
     public SchedulerSyncBinder jobSchedulerSyncBinder(SyncServer jobSyncServer,
                                                      JobSyncBus jobSyncBus,
                                                      JobLogSink jobLogSink,
-                                                     String jobNodeId) {
-        return new SchedulerSyncBinder(jobSyncServer, jobSyncBus, jobLogSink, jobNodeId);
+                                                     String jobNodeId,
+                                                     RemoteHandlerRegistry remoteHandlerRegistry,
+                                                     ObjectProvider<GlueSyncService> glueSyncServiceProvider) {
+        return new SchedulerSyncBinder(jobSyncServer, jobSyncBus, jobLogSink, jobNodeId,
+                remoteHandlerRegistry, glueSyncServiceProvider);
     }
 
     /**
-     * 调度器 角色: 通过 SPI 抢占 铅 + 启动续约心跳 + 单秒循环。
+     * 脚本正文同步服务（调度中心侧）：保存/执行器上线时推送正文，派发命令只带版本号。
+     *
+     * @param jobSyncServer  同步服务端
+     * @param jobRepository  任务仓库
+     * @return 同步服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
+    public GlueSyncService jobGlueSyncService(SyncServer jobSyncServer, JobRepository jobRepository) {
+        return new GlueSyncService(jobSyncServer, jobRepository);
+    }
+
+    /**
+     * 执行器处理器清单注册表（调度中心侧）。
+     *
+     * <p>执行器上报 handler 清单后，调度中心据此校正"未注册"判定与执行器列表；
+     * 单机/执行器角色下注册表恒为空，不影响原有语义。</p>
+     *
+     * @return 处理器清单注册表
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RemoteHandlerRegistry remoteHandlerRegistry() {
+        return new RemoteHandlerRegistry();
+    }
+
+    /**
+     * 调度器 角色: 通过 SPI 抢占 Leader + 启动续约心跳 + 单秒循环。
      *
      * <p>三次装配顺序:</p>
      * <ol>
@@ -401,39 +489,44 @@ public class JobAutoConfiguration {
                                        com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver,
                                        JobRepository jobRepository,
                                        JobSyncBus jobSyncBus,
-                                       String jobNodeId) {
-        String group = properties.getCluster().getGroup();
+                                       String jobNodeId,
+                                       Environment environment) {
+        // 选主租约键与作业分组解耦: 租约走 electionNamespace, 扫描仍按 cluster.group 过滤作业归属
+        String electionNamespace = properties.getCluster()
+                .resolveElectionNamespace(environment.getProperty("spring.application.name"));
         int leaseSeconds = properties.getCluster().getLeaseSeconds();
-        boolean acquired = jobLeaderElectionResolver.tryAcquire(group, jobNodeId, leaseSeconds);
+        boolean acquired = jobLeaderElectionResolver.tryAcquire(electionNamespace, jobNodeId, leaseSeconds);
         if (acquired) {
-            jobLeaderElector.markLeader(group);
+            jobLeaderElector.markLeader(electionNamespace);
         }
         /**
-         * 作业铅循环。
+         * 作业Leader循环。
          * @param properties 属性
-         * @param jobLeaderElector 作业铅elector
+         * @param jobLeaderElector 作业 Leader 选举器
          * @param jobNodeId 作业节点标识
          * @param jobRepository 作业仓库
          * @param jobSyncBus 作业同步bus
-         * @return 作业铅循环的结果
+         * @return 作业Leader循环的结果
          */
         return new JobLeaderLoop(properties, jobLeaderElector, jobNodeId, jobRepository, jobSyncBus);
     }
 
     /**
-     * 调度器 角色: 铅 续约心跳守护线程。
+     * 调度器 角色: Leader 续约心跳守护线程。
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
     public com.chua.starter.job.support.cluster.ClusterElectionHeartbeat jobClusterElectionHeartbeat(
             LeaderElector jobLeaderElector,
-            com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver) {
+            com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver,
+            Environment environment) {
         com.chua.starter.job.support.cluster.ClusterElectionHeartbeat heartbeat =
                 new com.chua.starter.job.support.cluster.ClusterElectionHeartbeat(
                         jobLeaderElector,
                         jobLeaderElectionResolver,
-                        properties.getCluster().getGroup(),
+                        properties.getCluster()
+                                .resolveElectionNamespace(environment.getProperty("spring.application.name")),
                         properties.getCluster().getLeaseSeconds());
         heartbeat.start();
         return heartbeat;
@@ -444,41 +537,75 @@ public class JobAutoConfiguration {
     // ====================================================================
 
     /**
-     * 执行器 端: 注册到仓库公共 同步客户端。
-     * <p>
-     * 优先走仓库 SPI 获取网络协议客户端 (tcp/udp/WebSocket/http/Socket.IO)；
-     * 由于 {@link TcpSyncClient} 无无参构造、其一键 SPI 实例化在部分 SPI 环境下返回 空,
-     * 当 SPI 未命中或指向 入内存 时, 直接以配置的 服务端-url 构造真实 {@link TcpSyncClient}。
-     * </p>
-     * @return 作业同步客户端的结果
+     * 执行器端装配真实同步客户端。
+     *
+     * @return 作业同步客户端
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
     public SyncClient jobSyncClient() {
         if (properties.getSync().isInMemory()) {
-            log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncClient (跳过 SPI)");
-            /**
-             * 入内存同步客户端。
-             * @return 入内存同步客户端的结果
-             */
-            return new InMemorySyncClient();
-        }
-        SyncClient spiClient = ServiceProvider.of(SyncClient.class)
-                .getExtension("rsocket", "tcp", "udp", "websocket", "http", "socketio");
-        if (spiClient != null && !(spiClient instanceof InMemorySyncClient)) {
-            log.info("[job] SyncClient SPI 命中 impl={}", spiClient.getClass().getName());
-            return spiClient;
+            throw new UnsupportedOperationException("同步客户端不支持 in-memory 模式，请配置真实 SyncClient SPI");
         }
         String serverUrl = properties.getSync().getExecutor().getServerUrl();
-        log.warn("[job] SyncClient SPI 未命中有效实现 (got={}), 直接构造 TcpSyncClient serverUrl={}",
-                spiClient == null ? "null" : spiClient.getClass().getName(), serverUrl);
-        /**
-         * tcp同步客户端。
-         * @param serverUrl 服务端url
-         * @return tcp同步客户端的结果
-         */
-        return new TcpSyncClient(serverUrl);
+        ServiceProvider<SyncClient> sp = ServiceProvider.of(SyncClient.class);
+        List<String> keys = new ArrayList<>();
+        String scheme = schemeOf(serverUrl);
+        if (scheme != null) {
+            keys.add(scheme);
+        }
+        for (String candidate : new String[]{"rsocket", "tcp", "udp", "websocket", "http", "socketio"}) {
+            if (!keys.contains(candidate)) {
+                keys.add(candidate);
+            }
+        }
+        for (String key : keys) {
+            SyncClient client = trySyncClient(sp, key, serverUrl, false);
+            if (client == null) {
+                client = trySyncClient(sp, key, serverUrl, true);
+            }
+            if (client != null) {
+                return client;
+            }
+        }
+        throw new IllegalStateException("未找到真实 SyncClient SPI 实现，请配置执行器同步协议和 serverUrl");
+    }
+
+    /**
+     * 尝试按 key 获取 SyncClient；带参模式用 serverUrl 走构造注入。
+     *
+     * @param sp        服务提供者
+     * @param key       SPI key
+     * @param serverUrl 调度中心长链 URL
+     * @param withArgs  是否使用带参构造
+     * @return 可用实例；不可用返回 null（不抛出，交由调用方尝试下一个 key）
+     */
+    private SyncClient trySyncClient(ServiceProvider<SyncClient> sp, String key,
+                                     String serverUrl, boolean withArgs) {
+        try {
+            SyncClient client = withArgs ? sp.getNewExtension(key, serverUrl) : sp.getExtension(key);
+            if (client != null) {
+                return client;
+            }
+        } catch (Throwable ex) {
+            log.debug("[job] SyncClient key={} withArgs={} 不可用 cause={}", key, withArgs, ex.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 提取 URL scheme。
+     *
+     * @param url URL，如 tcp://127.0.0.1:8081
+     * @return scheme（小写），无则返回 null
+     */
+    private static String schemeOf(String url) {
+        if (url == null) {
+            return null;
+        }
+        int idx = url.indexOf("://");
+        return idx <= 0 ? null : url.substring(0, idx).toLowerCase();
     }
 
     /**
@@ -489,8 +616,9 @@ public class JobAutoConfiguration {
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
     public ExecutorSyncBinder jobExecutorSyncBinder(SyncClient jobSyncClient,
                                                     JobSyncBus jobSyncBus,
-                                                    String jobNodeId) {
-        return new ExecutorSyncBinder(jobSyncClient, jobSyncBus, properties, jobNodeId);
+                                                    String jobNodeId,
+                                                    ApplicationContext applicationContext) {
+        return new ExecutorSyncBinder(jobSyncClient, jobSyncBus, properties, jobNodeId, applicationContext);
     }
 
     /**
@@ -501,16 +629,38 @@ public class JobAutoConfiguration {
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
     public JobExecutor jobExecutor(JobHandlerFactory jobHandlerFactory,
                                    JobSyncBus jobSyncBus,
-                                   String jobNodeId) {
-        return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
+                                   String jobNodeId,
+                                   ObjectProvider<com.chua.starter.job.support.notify.JobAlarmNotifier> alarmNotifierProvider,
+                                   ApplicationContext applicationContext) {
+        return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor(),
+                aggregateAlarmNotifiers(alarmNotifierProvider), JobSpec.CONCURRENT_ALLOW, applicationContext);
+    }
+
+    /**
+     * 收集宿主注册的告警通道并按类型聚合成一个路由器。
+     *
+     * <p>一条都没注册时返回 {@code null}，让执行器走"未接入告警通道"的既有分支；
+     * 注册了多条（邮件 + Webhook 等）时由聚合器按台账的告警类型选择一条投递。</p>
+     *
+     * @param provider 宿主注册的通道实现
+     * @return 聚合后的通道，未注册任何实现时为 null
+     */
+    private static com.chua.starter.job.support.notify.JobAlarmNotifier aggregateAlarmNotifiers(
+            ObjectProvider<com.chua.starter.job.support.notify.JobAlarmNotifier> provider) {
+        java.util.List<com.chua.starter.job.support.notify.JobAlarmNotifier> notifiers =
+                provider.orderedStream().toList();
+        if (notifiers.isEmpty()) {
+            return null;
+        }
+        return new com.chua.starter.job.support.notify.CompositeJobAlarmNotifier(notifiers);
     }
 
     // ====================================================================
- // 单个 角色: 装配 铅循环 + 作业执行器 + 默认日志 sink
+ // 单个 角色: 装配 Leader循环 + 作业执行器 + 默认日志 sink
     // ====================================================================
 
     /**
-     * 单个 角色: 本机自认 铅, 通过本地 CAS 解析器 (MyBatis 未启用时)。
+     * 单个 角色: 本机自认 Leader, 通过本地 CAS 解析器 (MyBatis 未启用时)。
      */
     @Bean
     @ConditionalOnMissingBean
@@ -519,21 +669,24 @@ public class JobAutoConfiguration {
                                             com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver,
                                             JobRepository jobRepository,
                                             JobSyncBus jobSyncBus,
-                                            String jobNodeId) {
-        String group = properties.getCluster().getGroup();
+                                            String jobNodeId,
+                                            Environment environment) {
+        // 与调度器角色同口径: 选主租约键与作业分组解耦
+        String electionNamespace = properties.getCluster()
+                .resolveElectionNamespace(environment.getProperty("spring.application.name"));
         int leaseSeconds = properties.getCluster().getLeaseSeconds();
-        boolean acquired = jobLeaderElectionResolver.tryAcquire(group, jobNodeId, leaseSeconds);
+        boolean acquired = jobLeaderElectionResolver.tryAcquire(electionNamespace, jobNodeId, leaseSeconds);
         if (acquired) {
-            jobLeaderElector.markLeader(group);
+            jobLeaderElector.markLeader(electionNamespace);
         }
         /**
-         * 作业铅循环。
+         * 作业Leader循环。
          * @param properties 属性
-         * @param jobLeaderElector 作业铅elector
+         * @param jobLeaderElector 作业 Leader 选举器
          * @param jobNodeId 作业节点标识
          * @param jobRepository 作业仓库
          * @param jobSyncBus 作业同步bus
-         * @return 作业铅循环的结果
+         * @return 作业Leader循环的结果
          */
         return new JobLeaderLoop(properties, jobLeaderElector, jobNodeId, jobRepository, jobSyncBus);
     }
@@ -546,12 +699,14 @@ public class JobAutoConfiguration {
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
     public com.chua.starter.job.support.cluster.ClusterElectionHeartbeat jobSingleClusterHeartbeat(
             LeaderElector jobLeaderElector,
-            com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver) {
+            com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver,
+            Environment environment) {
         com.chua.starter.job.support.cluster.ClusterElectionHeartbeat heartbeat =
                 new com.chua.starter.job.support.cluster.ClusterElectionHeartbeat(
                         jobLeaderElector,
                         jobLeaderElectionResolver,
-                        properties.getCluster().getGroup(),
+                        properties.getCluster()
+                                .resolveElectionNamespace(environment.getProperty("spring.application.name")),
                         properties.getCluster().getLeaseSeconds());
         heartbeat.start();
         return heartbeat;
@@ -565,8 +720,11 @@ public class JobAutoConfiguration {
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
     public JobExecutor jobSingleExecutor(JobHandlerFactory jobHandlerFactory,
                                           JobSyncBus jobSyncBus,
-                                          String jobNodeId) {
-        return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor());
+                                          String jobNodeId,
+                                          ObjectProvider<com.chua.starter.job.support.notify.JobAlarmNotifier> alarmNotifierProvider,
+                                          ApplicationContext applicationContext) {
+        return new JobExecutor(jobHandlerFactory, jobSyncBus, jobNodeId, buildExecutor(),
+                aggregateAlarmNotifiers(alarmNotifierProvider), JobSpec.CONCURRENT_ALLOW, applicationContext);
     }
 
     /**

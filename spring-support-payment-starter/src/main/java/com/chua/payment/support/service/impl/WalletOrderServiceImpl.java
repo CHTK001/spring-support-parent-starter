@@ -31,25 +31,25 @@ import java.util.UUID;
 public class WalletOrderServiceImpl implements WalletOrderService {
 
     /**
-     * Wallet排序映射器
-    */
+     * 钱包订单映射器
+     */
     private final WalletOrderMapper walletOrderMapper;
     /**
-     * paymentcallbackurl解析器
-    */
+     * 支付回调地址解析器
+     */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
     /**
-     * Objectmapper
-    */
+     * JSON 序列化器
+     */
     private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建recharge订单
+     * 创建充值订单
      *
-     * @param request 请求
-     * @return 创建recharge订单的结果
+     * @param request 请求参数
+     * @return 创建出的充值订单
      */
     public WalletOrder createRechargeOrder(RechargeRequest request) {
         String orderNo = StringUtils.hasText(request.getRechargeNo()) ? request.getRechargeNo() : generateOrderNo("RCH");
@@ -80,10 +80,10 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建调动订单
+     * 创建转账订单
      *
-     * @param request 请求
-     * @return 创建调动订单的结果
+     * @param request 请求参数
+     * @return 创建出的转账订单
      */
     public WalletOrder createTransferOrder(TransferRequest request) {
         String orderNo = StringUtils.hasText(request.getTransferNo()) ? request.getTransferNo() : generateOrderNo("TRF");
@@ -115,10 +115,10 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建withdraw订单
+     * 创建提现订单
      *
-     * @param request 请求
-     * @return 创建withdraw订单的结果
+     * @param request 请求参数
+     * @return 创建出的提现订单
      */
     public WalletOrder createWithdrawOrder(WithdrawRequest request) {
         String orderNo = StringUtils.hasText(request.getWithdrawNo()) ? request.getWithdrawNo() : generateOrderNo("WDW");
@@ -152,11 +152,11 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 标记处理
+     * 标记订单处理中
      *
-     * @param orderNo 订单no
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param responsePayload 响应payload
+     * @param orderNo 订单号
+     * @param thirdPartyOrderNo 第三方订单号
+     * @param responsePayload 响应报文
      */
     public void markProcessing(String orderNo, String thirdPartyOrderNo, String responsePayload) {
         WalletOrder order = requireOrder(orderNo);
@@ -169,11 +169,11 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 标记成功
+     * 标记订单成功
      *
-     * @param orderNo 订单no
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param responsePayload 响应payload
+     * @param orderNo 订单号
+     * @param thirdPartyOrderNo 第三方订单号
+     * @param responsePayload 响应报文
      */
     public void markSuccess(String orderNo, String thirdPartyOrderNo, String responsePayload) {
         WalletOrder order = requireOrder(orderNo);
@@ -189,11 +189,11 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 标记失败
+     * 标记订单失败
      *
-     * @param orderNo 订单no
-     * @param responsePayload 响应payload
-     * @param reason ReasonMLmlml
+     * @param orderNo 订单号
+     * @param responsePayload 响应报文
+     * @param reason 失败原因
      */
     public void markFailed(String orderNo, String responsePayload, String reason) {
         WalletOrder order = requireOrder(orderNo);
@@ -206,10 +206,10 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 标记Cancelled
+     * 标记订单已取消
      *
-     * @param orderNo 订单no
-     * @param remark 评论
+     * @param orderNo 订单号
+     * @param remark 备注
      */
     public void markCancelled(String orderNo, String remark) {
         WalletOrder order = requireOrder(orderNo);
@@ -220,8 +220,8 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     /**
-     * 获取by订单no
-    */
+     * 根据订单号查询钱包订单
+     */
     public WalletOrder getByOrderNo(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return null;
@@ -234,11 +234,6 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     public Page<WalletOrder> page(WalletOrderQueryRequest request) {
         if (request == null) {
-            /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WalletOrder> wrapper = new LambdaQueryWrapper<WalletOrder>()
@@ -259,39 +254,33 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     }
 
     /**
-     * require订单
+     * 获取钱包订单，不存在时抛出异常
      *
-     * @param orderNo 订单no
-     * @return require订单的结果
+     * @param orderNo 订单号
+     * @return 获取到的钱包订单
      */
     private WalletOrder requireOrder(String orderNo) {
         WalletOrder order = getByOrderNo(orderNo);
         if (order == null) {
-            /**
-             * 薪酬异常。
-             * @param orderNo 订单no
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("钱包订单不存在: " + orderNo);
         }
         return order;
     }
 
     /**
-     * generate订单no
+     * 生成钱包订单号
      *
      * @param prefix 前缀
-     * @return generate订单no的结果
+     * @return 生成的钱包订单号
      */
     private String generateOrderNo(String prefix) {
         return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
     /**
-     * safejson
+     * 安全序列化
      *
      * @param value 值
-     * @return safeJson的结果
      */
     private String safeJson(Object value) {
         try {
@@ -301,4 +290,3 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         }
     }
 }
-

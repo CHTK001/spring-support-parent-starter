@@ -20,11 +20,14 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     /**
      * 记录错题
      *
-     * @param studentId  学生标识
-     * @param questionId 题目标识
-     * @param examId     考试标识
+     * <p>阅卷消费线程取不到登录身份，归属必须由调用方从父行（答题卡）继承后传入。</p>
+     *
+     * @param studentId   学生标识
+     * @param questionId  题目标识
+     * @param examId      考试标识
+     * @param ownerUserId 归属用户标识
      */
-    void recordWrongQuestion(String studentId, Long questionId, Long examId);
+    void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId);
 
     /**
      * 分页查询错题

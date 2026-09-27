@@ -40,16 +40,52 @@ public class SysAiBotMessage {
     private String direction; // direction
 
     /**
-     * 微信用户 标识（来源）
+     * 微信用户 标识（消息作者）
      */
     @TableField("sys_ai_bot_message_from_user")
     private String fromUser; // 从用户
+
+    /**
+     * 会话标识（上下文隔离键）。
+     *
+     * <p>群聊为群 openid（chatId），私聊为用户 openid（与 fromUser 相同）。
+     * 同一 chatId 的消息构成一个独立上下文。</p>
+     */
+    @TableField("sys_ai_bot_message_chat_id")
+    private String chatId;
+
+    /**
+     * 是否来自群聊：1=群消息，0=私聊。
+     */
+    @TableField("sys_ai_bot_message_from_group")
+    private Boolean fromGroup;
 
     /**
      * 消息内容
      */
     @TableField("sys_ai_bot_message_content")
     private String content; // 内容
+
+    /**
+     * 会话上下文令牌（仅入站 IN 消息携带并持久化）。
+     *
+     * <p>微信 iLink 入站消息携带 context_token，回复 / 主动发送时必须原样回传。
+     * 该令牌仅在内存中会随后端重启丢失，故随 IN 消息落库；重启后发送时回查
+     * 最近一条 context_token 回填，避免服务器返回 ret=-2「prepare failed」。</p>
+     */
+    @TableField("sys_ai_bot_message_context_token")
+    private String contextToken;
+
+    /**
+     * 幂等去重键（仅入站 IN 消息写入）。
+     *
+     * <p>有稳定平台消息 ID 时为 {@code ID:botId|chatId|msgId}；
+     * 平台不提供稳定 ID 时为 {@code FP:botId|chatId|时间窗|内容指纹}。
+     * 该列加唯一索引，多实例同时收到同一条消息时，仅第一个插入成功的实例会处理并回复，
+     * 其余实例触发唯一键冲突并跳过，保证 Bot 不重复回复。</p>
+     */
+    @TableField("sys_ai_bot_message_dedup_key")
+    private String dedupKey;
 
     /**
      * 创建时间

@@ -13,7 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 将支付异步通知接口加入 o认证 客户端白名单的配置类。
+ * 将支付异步通知接口加入 OAuth 免鉴权客户端白名单的配置类。
+ *
+ * <p>仅在 {@code AuthClientProperties} 存在时生效，通过反射读取并合并白名单，避免支付模块直接依赖 OAuth 客户端模块。</p>
  *
  * @author CH
  * @since 4.0.0.50
@@ -24,18 +26,18 @@ import java.util.List;
 public class PaymentOauthWhitelistConfiguration {
 
     /**
-     * 薪酬_通知_whitelist_模式
-    */
+     * 支付通知接口的免鉴权路径模式，通知回调不携带用户令牌。
+     */
     private static final List<String> PAYMENT_NOTIFY_WHITELIST_PATTERNS = List.of(
             "/api/notify/**"
     );
 
     @Bean
     /**
-     * 薪酬oauthwhitelistinitializer
+     * 构建支付通知白名单初始化器。
      *
-     * @param applicationContext application上下文
-     * @return 薪酬oauthwhitelistinitializer的结果
+     * @param applicationContext 应用上下文
+     * @return OAuth 白名单初始化器
      */
     public SmartInitializingSingleton paymentOauthWhitelistInitializer(ApplicationContext applicationContext) {
         return () -> {
@@ -63,4 +65,3 @@ public class PaymentOauthWhitelistConfiguration {
         };
     }
 }
-

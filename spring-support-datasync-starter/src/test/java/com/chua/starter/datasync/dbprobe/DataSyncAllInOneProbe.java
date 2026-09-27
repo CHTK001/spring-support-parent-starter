@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -352,7 +353,28 @@ public final class DataSyncAllInOneProbe {
         return map(id, cron, id + "-src", id + "-sink");
     }
 
-    record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
+    /**
+     * 简单字段映射。
+     *
+     * @param sourceField 源字段名
+     * @param targetField 目标字段名
+     * @param converter 转换器名
+     */
+    record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {
+
+        /**
+         * 规范构造器：必填组件做空值校验。
+         *
+         * <p>value class 前置条件——值类要求空值敌对；转换器名允许为空，故不做校验。</p>
+         *
+         * @param sourceField 源字段名
+         * @param targetField 目标字段名
+         */
+        public SimpleFieldMapping {
+            sourceField = Objects.requireNonNull(sourceField, "sourceField 不能为 null");
+            targetField = Objects.requireNonNull(targetField, "targetField 不能为 null");
+        }
+    }
 
     static final class CollectSink implements DataSyncAgentSink {
         /**

@@ -1,0 +1,3 @@
+com.chua.starter.server.support.terminal.channel.GuacdTerminalSessionChannel
+com.chua.starter.server.support.terminal.channel.SshDirectTerminalSessionChannel
+com.chua.starter.server.support.terminal.channel.VncDirectTerminalSessionChannel

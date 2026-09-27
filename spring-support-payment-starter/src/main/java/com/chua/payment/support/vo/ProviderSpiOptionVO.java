@@ -5,31 +5,31 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 提供者 SPI 选项
+ * 提供者SPI选项
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class ProviderSpiOptionVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private String channelType;
 
     /**
-     * 延伸名称
-    */
+     * 扩展名称
+     */
     private String extensionName;
 
     /**
-     * 默认期权
-    */
+     * 默认授权
+     */
     private Boolean defaultOption;
 
     /**
      * 描述
-    */
+     */
     private String description;
 }

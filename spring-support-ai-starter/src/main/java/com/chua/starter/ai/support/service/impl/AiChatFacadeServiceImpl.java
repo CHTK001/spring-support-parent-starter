@@ -1,15 +1,22 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.ai.AiUsage;
+import com.chua.common.support.ai.agent.Agent;
+import com.chua.common.support.ai.agent.AgentDefinition;
+import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ChatMessage;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
+import com.chua.common.support.ai.chat.ChatToolCallData;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
+import com.chua.starter.ai.support.chat.ChatSkillSupport;
+import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiGroupModel;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
@@ -19,13 +26,17 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.model.AiChatResult;
+import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.util.ProviderCredentials;
@@ -82,6 +93,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiProviderConnectionMapper sysAiProviderConnectionMapper; // sysAI提供者connection映射器
     private final UsageRecorderInterceptor usageRecorderInterceptor; // usagerecorder拦截器
     private final AiModelMapper aiModelMapper; // 模型定义映射器（加载别名→主模型映射）
+    private final ChatSkillSupport chatSkillSupport; // 已安装技能注入
+    private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
+    private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -109,11 +123,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     @Override
     public Map<String, Object> call(AiChatRequest request) {
+        return toLegacyMap(callForResult(request));
+    }
+
+    @Override
+    public AiChatResult callForResult(AiChatRequest request) {
         ChatClient client = resolveChatClient(request);
         if (client == null) {
-            throw new IllegalStateException("No available ChatClient for model: " + request.getModel());
+            return AiChatResult.failed(request.getModel(),
+                    "No available ChatClient for model: " + request.getModel());
         }
-        ChatClient configured = configureClient(client, request);
+        ChatClient configured = maybeWrapAgent(configureClient(client, request), request);
         try {
             long start = System.currentTimeMillis();
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
@@ -122,19 +142,105 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
              * enrich延迟。
              * @param response.getUsage( 响应.获取usage(
              */
-            enrichLatency(response != null ? response.getUsage() : null, start, end, 0L);
+            AiUsage usage = response != null ? response.getUsage() : null;
+            enrichLatency(usage, start, end, 0L);
             /**
              * recordusage。
              * @param configured configured
              * @param "chat" "对话"
              * @param response 响应
              */
-            recordUsage(configured, "chat", response, AiUserContext.currentUserId());
-            return buildResult(response);
+            recordUsage(configured, callTypeOf(request), response, AiUserContext.currentUserId());
+            String text = response != null && response.getText() != null ? response.getText() : "";
+            return AiChatResult.ok(text, resolveUsedModel(configured, request, usage), usage);
         } catch (Exception e) {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
-            return buildErrorResult(e);
+            return AiChatResult.failed(request.getModel(), e.getMessage());
+        } finally {
+            // 释放 Agent 运行时私有的 MCP 连接；直连客户端不在此关闭（可能为缓存共享实例）
+            if (configured instanceof AgentChatClient agentClient) {
+                agentClient.close();
+            }
         }
+    }
+
+    /**
+     * 取本次调用的用量记账来源。
+     *
+     * @param request 对话请求
+     * @return 调用方声明的 callType，未声明时返回 chat
+     */
+    private String callTypeOf(AiChatRequest request) {
+        String callType = request.getCallType();
+        return callType == null || callType.isBlank() ? "chat" : callType.trim();
+    }
+
+    /**
+     * 解析本次对话实际使用的模型名称。
+     *
+     * @param configured 已配置的客户端
+     * @param request    对话请求
+     * @param usage      模型回传用量，可为空
+     * @return 模型名称，无法确定时为空
+     */
+    private String resolveUsedModel(ChatClient configured, AiChatRequest request, AiUsage usage) {
+        String model = configured.getModel();
+        if (model == null || model.isBlank()) {
+            model = usage != null ? usage.getModel() : null;
+        }
+        return model == null || model.isBlank() ? request.getModel() : model;
+    }
+
+    /**
+     * 探测模型是否可对话：与真实对话共用解析链路，只建客户端不发请求。
+     *
+     * @param model 模型名称，可为空
+     * @return 探测结果
+     */
+    @Override
+    public AiClientProbe probeChatClient(String model) {
+        AiChatRequest request = new AiChatRequest();
+        request.setModel(model);
+        ChatClient client;
+        try {
+            client = resolveChatClient(request);
+        } catch (Exception e) {
+            log.warn("[AiChat] 探测对话客户端失败 model={}: {}", model, e.getMessage());
+            return AiClientProbe.unavailable(model, "解析对话客户端失败: " + e.getMessage());
+        }
+        if (client == null) {
+            return AiClientProbe.unavailable(request.getModel(),
+                    "未找到模型 " + (model == null || model.isBlank() ? "默认客户端" : model) + " 对应的对话客户端");
+        }
+        if (client instanceof AggregateChatClient aggregate && aggregate.clientCount() == 0) {
+            return AiClientProbe.unavailable(request.getModel(),
+                    "聚合客户端未挂载任何子客户端，请在模型管理中配置提供商与密钥");
+        }
+        ChatClient configured = configureClient(client, request);
+        ChatClientSetting setting = configured.getSetting();
+        return AiClientProbe.available(configured.getModel(),
+                setting != null ? setting.getProvider() : null,
+                setting != null ? setting.getBaseUrl() : null,
+                configured.getClass().getSimpleName());
+    }
+
+    /**
+     * 把强类型结果投影为历史 Map 结构，键与顺序保持与旧实现一致。
+     *
+     * @param result 强类型对话结果
+     * @return 兼容旧调用方的 Map
+     */
+    private Map<String, Object> toLegacyMap(AiChatResult result) {
+        Map<String, Object> map = new LinkedHashMap<>(5);
+        AiUsage usage = result.usage();
+        map.put("text", result.text());
+        if (!result.success()) {
+            map.put("error", Map.of("message", result.errorMessage()));
+        }
+        map.put("promptTokens", usage != null && usage.getInputTokens() != null ? usage.getInputTokens() : 0);
+        map.put("completionTokens", usage != null && usage.getOutputTokens() != null ? usage.getOutputTokens() : 0);
+        map.put("totalTokens", usage != null && usage.getTotalTokens() != null ? usage.getTotalTokens() : 0);
+        return map;
     }
 
     // ==================== 流式对话 ====================
@@ -156,39 +262,133 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     public SseEmitter streamWithUsage(AiChatRequest request, Consumer<String> onChunk,
                                       BiConsumer<String, com.chua.common.support.ai.AiUsage> onCompleteWithUsage,
                                       Consumer<Throwable> onError, Consumer<String> onThinkingChunk) {
+        return streamWithUsage(request, onChunk, onCompleteWithUsage, onError, onThinkingChunk, null);
+    }
+
+    @Override
+    public SseEmitter streamWithUsage(AiChatRequest request, Consumer<String> onChunk,
+                                      BiConsumer<String, com.chua.common.support.ai.AiUsage> onCompleteWithUsage,
+                                      Consumer<Throwable> onError, Consumer<String> onThinkingChunk,
+                                      Consumer<com.chua.common.support.ai.agent.AgentTrace> onTrace) {
+        return streamWithUsage(request, onChunk, onCompleteWithUsage, onError, onThinkingChunk, onTrace, null);
+    }
+
+    @Override
+    public SseEmitter streamWithUsage(AiChatRequest request, Consumer<String> onChunk,
+                                      BiConsumer<String, com.chua.common.support.ai.AiUsage> onCompleteWithUsage,
+                                      Consumer<Throwable> onError, Consumer<String> onThinkingChunk,
+                                      Consumer<com.chua.common.support.ai.agent.AgentTrace> onTrace,
+                                      Consumer<List<ChatToolCallData>> onToolCall) {
+        return streamWithUsage(request, onChunk, onCompleteWithUsage, onError,
+                onThinkingChunk, onTrace, onToolCall, null);
+    }
+
+    @Override
+    public SseEmitter streamWithUsage(AiChatRequest request, Consumer<String> onChunk,
+                                      BiConsumer<String, com.chua.common.support.ai.AiUsage> onCompleteWithUsage,
+                                      Consumer<Throwable> onError, Consumer<String> onThinkingChunk,
+                                      Consumer<com.chua.common.support.ai.agent.AgentTrace> onTrace,
+                                      Consumer<List<ChatToolCallData>> onToolCall,
+                                      Consumer<com.chua.common.support.ai.agent.ConfirmationRequest> onConfirmation) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
-        ChatClient client = resolveChatClient(request);
-        if (client == null) {
-            emitter.completeWithError(new IllegalStateException("No available ChatClient for model: " + request.getModel()));
+        ChatClient configured;
+        try {
+            ChatClient client = resolveChatClient(request);
+            if (client == null) {
+                emitter.completeWithError(new IllegalStateException("No available ChatClient for model: " + request.getModel()));
+                return emitter;
+            }
+            configured = maybeWrapAgent(configureClient(client, request), request);
+        } catch (Throwable e) {
+            // 组装阶段（含 Agent 包装 / SPI 实例化）异常必须显式记录并经错误回调下发，
+            // 否则外层 CompletableFuture 会静默吞掉，前端永远停在“工作中”
+            log.error("[AiChat] 组装 Agent/客户端失败 model={}", request.getModel(), e);
+            if (onError != null) {
+                try {
+                    onError.accept(e);
+                } catch (Exception ignored) {
+                }
+            }
+            try {
+                emitter.completeWithError(e);
+            } catch (Exception ignored) {
+            }
             return emitter;
         }
-
-        ChatClient configured = configureClient(client, request);
         StringBuilder fullResponse = new StringBuilder(256); // 回复长度不可预估
         final com.chua.common.support.ai.AiUsage[] lastUsage = new com.chua.common.support.ai.AiUsage[1];
         final long start = System.currentTimeMillis();
         final long[] firstTokenAt = new long[] { 0L };
- // 请求线程内捕获身份：流式回调整时在别的线程执行，届时取不到上下文
+        // 请求线程内捕获身份：流式回调整时在别的线程执行，届时取不到上下文
         final String usageUserId = AiUserContext.currentUserId();
+        // 思考开关在请求线程快照：推理模型可能默认产出 reasoning，
+        // 未开启深度思考时必须在回调里丢弃，避免前端仍渲染思考块
+        final boolean forwardThinking = Boolean.TRUE.equals(request.getThink());
 
         CompletableFuture.runAsync(AiUserContext.capturing(() -> {
             try {
-                log.info("[AiChat] DBG chat call begin, promptLen={}, class={}", promptOf(request)==null?-1:promptOf(request).length(), configured.getClass().getName());
                 configured.chat(promptOf(request),
                         response -> {
+                            if (response.getTrace() != null) {
+                                com.chua.common.support.ai.agent.AgentTrace trace = response.getTrace();
+                                // 经回调转发给调用方（控制器），由其下发到前端
+                                if (onTrace != null) {
+                                    try {
+                                        onTrace.accept(trace);
+                                    } catch (Exception e) {
+                                        log.warn("[AiChat] trace 回调失败: {}", e.getMessage());
+                                    }
+                                }
+                                try {
+                                    emitter.send(SseEmitter.event().name("trace").data(trace));
+                                } catch (Exception e) {
+                                    log.warn("[AiChat] SSE trace send failed: {}", e.getMessage());
+                                }
+                                return;
+                            }
+                            if (response.getConfirmationRequest() != null) {
+                                // 人工确认请求：作为独立 SSE 事件下发，前端渲染批准/拒绝卡片
+                                com.chua.common.support.ai.agent.ConfirmationRequest creq =
+                                        response.getConfirmationRequest();
+                                if (onConfirmation != null) {
+                                    try {
+                                        onConfirmation.accept(creq);
+                                    } catch (Exception e) {
+                                        log.warn("[AiChat] confirmation 回调失败: {}", e.getMessage());
+                                    }
+                                }
+                                try {
+                                    emitter.send(SseEmitter.event()
+                                            .name("confirmation")
+                                            .data(creq));
+                                } catch (Exception e) {
+                                    log.warn("[AiChat] SSE confirmation send failed: {}", e.getMessage());
+                                }
+                                return;
+                            }
                             if (response.getState() == com.chua.common.support.ai.chat.ChatResponse.State.STOP
                                     && lastUsage[0] == null && response.getUsage() != null) {
                                 // 聚合客户端会在底层客户端的带量 STOP 之后补发一个空 STOP，
                                 // 无条件覆盖会把真实用量清空，导致 sys_ai_usage 恒为 0 行
                                 lastUsage[0] = response.getUsage();
                             }
-                            // 思考内容分流（深度思考），不受正文为空影响
+                            // 思考内容分流（深度思考），不受正文为空影响；未开启时丢弃
                             String reasoning = response.getReasoningContent();
-                            if (reasoning != null && !reasoning.isEmpty() && onThinkingChunk != null) {
+                            if (forwardThinking && reasoning != null && !reasoning.isEmpty()
+                                    && onThinkingChunk != null) {
                                 try {
                                     onThinkingChunk.accept(reasoning);
                                 } catch (Exception ignored) {
+                                }
+                            }
+                            // 工具调用增量分流（函数调用），与正文相互独立
+                            List<ChatToolCallData> toolCalls = response.getToolCalls();
+                            if (toolCalls != null && !toolCalls.isEmpty() && onToolCall != null) {
+                                try {
+                                    onToolCall.accept(toolCalls);
+                                } catch (Exception e) {
+                                    log.warn("[AiChat] toolCall 回调失败: {}", e.getMessage());
                                 }
                             }
                             String chunk = response.getContent() != null ? response.getContent() : "";
@@ -212,20 +412,34 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             }
                         },
                         () -> {
-                            if (lastUsage[0] != null) {
-                                enrichLatency(lastUsage[0], start, System.currentTimeMillis(), firstTokenAt[0]);
-                                /**
-                                 * recordusage。
-                                 * @param lastUsage[0] 最后一个usage[0]
-                                 */
-                                recordStreamUsage(lastUsage[0], usageUserId);
-                            }
                             String reply = fullResponse.toString();
+                            if (lastUsage[0] != null) {
+                                try {
+                                    enrichLatency(lastUsage[0], start, System.currentTimeMillis(), firstTokenAt[0]);
+                                    if (lastUsage[0].getModel() == null) {
+                                        lastUsage[0].setModel(request.getModel());
+                                    }
+                                    if (lastUsage[0].getProvider() == null) {
+                                        lastUsage[0].setProvider(request.getProvider());
+                                    }
+                                    recordStreamUsage(lastUsage[0], usageUserId, request.getUsageSource());
+                                } catch (Throwable e) {
+                                    // 计量落库失败不得连带丢弃回复：本轮答案已经生成
+                                    log.error("[AiChat] 流式计量落库失败: model={}, userId={}",
+                                            request.getModel(), usageUserId, e);
+                                }
+                            }
                             if (onCompleteWithUsage != null) {
                                 try {
                                     onCompleteWithUsage.accept(reply, lastUsage[0]);
-                                } catch (Exception ignored) {
+                                } catch (Exception e) {
+                                    log.error("[AiChat] 完成回调异常（回复已生成但未落库/未推送）: model={}",
+                                            request.getModel(), e);
                                 }
+                            }
+                            // Agent 运行时私有 MCP 连接在流结束后释放
+                            if (configured instanceof AgentChatClient agentClient) {
+                                agentClient.close();
                             }
                             emitter.complete();
                         },
@@ -237,10 +451,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                 } catch (Exception ignored) {
                                 }
                             }
+                            // 出错同样释放 Agent 私有连接，避免 stdio 进程泄漏
+                            if (configured instanceof AgentChatClient agentClient) {
+                                agentClient.close();
+                            }
                             emitter.completeWithError(error);
                         }
                 );
-                log.info("[AiChat] DBG configured.chat() returned normally");
             } catch (Throwable e) {
                 log.error("[AiChat] stream failed: model={}", request.getModel(), e);
                 if (onError != null) {
@@ -249,6 +466,134 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     } catch (Exception ignored) {
                     }
                 }
+                // 兜底：启动/订阅阶段异常也要释放 Agent 私有连接
+                if (configured instanceof AgentChatClient agentClient) {
+                    agentClient.close();
+                }
+                emitter.completeWithError(e);
+            }
+        }));
+
+        return emitter;
+    }
+
+    @Override
+    public ChatClient prepareConfigured(AiChatRequest request) {
+        ChatClient base = resolveChatClient(request);
+        if (base == null) {
+            return null;
+        }
+        return maybeWrapAgent(configureClient(base, request), request);
+    }
+
+    @Override
+    public SseEmitter resume(AiChatRequest request, String replyId,
+                             List<com.chua.common.support.ai.agent.ConfirmationDecision> decisions) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
+
+        ChatClient configured;
+        try {
+            ChatClient client = resolveChatClient(request);
+            if (client == null) {
+                emitter.completeWithError(new IllegalStateException(
+                        "No available ChatClient for model: " + request.getModel()));
+                return emitter;
+            }
+            configured = maybeWrapAgent(configureClient(client, request), request);
+        } catch (Throwable e) {
+            log.error("[AiChat] resume组装失败 model={}", request.getModel(), e);
+            emitter.completeWithError(e);
+            return emitter;
+        }
+
+        if (!(configured instanceof AgentChatClient wrapper)) {
+            emitter.completeWithError(new IllegalStateException(
+                    "当前会话不是 Agent 运行时，无法处理人工确认恢复"));
+            return emitter;
+        }
+
+        final StringBuilder fullResponse = new StringBuilder(256);
+        final AiUsage[] lastUsage = new AiUsage[1];
+        final long start = System.currentTimeMillis();
+        final long[] firstTokenAt = {0L};
+        final String usageUserId = AiUserContext.currentUserId();
+        final boolean forwardThinking = Boolean.TRUE.equals(request.getThink());
+
+        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+            try {
+                wrapper.resume(replyId, decisions,
+                        response -> {
+                            if (response.getTrace() != null) {
+                                try {
+                                    emitter.send(SseEmitter.event()
+                                            .name("trace").data(response.getTrace()));
+                                } catch (Exception e) {
+                                    log.warn("[AiChat] resume trace send failed: {}", e.getMessage());
+                                }
+                                return;
+                            }
+                            if (response.getConfirmationRequest() != null) {
+                                try {
+                                    emitter.send(SseEmitter.event()
+                                            .name("confirmation")
+                                            .data(response.getConfirmationRequest()));
+                                } catch (Exception e) {
+                                    log.warn("[AiChat] resume confirmation send failed: {}", e.getMessage());
+                                }
+                                return;
+                            }
+                            if (response.getState() == ChatResponse.State.STOP
+                                    && lastUsage[0] == null && response.getUsage() != null) {
+                                lastUsage[0] = response.getUsage();
+                            }
+                            String reasoning = response.getReasoningContent();
+                            if (forwardThinking && reasoning != null && !reasoning.isEmpty()) {
+                                try {
+                                    emitter.send(SseEmitter.event().name("thinking").data(reasoning));
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            String chunk = response.getContent() != null ? response.getContent() : "";
+                            if (chunk.isEmpty()) {
+                                return;
+                            }
+                            if (firstTokenAt[0] == 0L) {
+                                firstTokenAt[0] = System.currentTimeMillis();
+                            }
+                            fullResponse.append(chunk);
+                            try {
+                                emitter.send(SseEmitter.event().name("message").data(chunk));
+                            } catch (Exception e) {
+                                log.warn("[AiChat] resume message send failed: {}", e.getMessage());
+                            }
+                        },
+                        () -> {
+                            if (lastUsage[0] != null) {
+                                try {
+                                    enrichLatency(lastUsage[0], start,
+                                            System.currentTimeMillis(), firstTokenAt[0]);
+                                    if (lastUsage[0].getModel() == null) {
+                                        lastUsage[0].setModel(request.getModel());
+                                    }
+                                    if (lastUsage[0].getProvider() == null) {
+                                        lastUsage[0].setProvider(request.getProvider());
+                                    }
+                                    recordStreamUsage(lastUsage[0], usageUserId, request.getUsageSource());
+                                } catch (Throwable e) {
+                                    log.error("[AiChat] resume计量落库失败: model={}", request.getModel(), e);
+                                }
+                            }
+                            wrapper.close();
+                            emitter.complete();
+                        },
+                        error -> {
+                            log.error("[AiChat] resume error: model={}", request.getModel(), error);
+                            wrapper.close();
+                            emitter.completeWithError(error);
+                        });
+            } catch (Throwable e) {
+                log.error("[AiChat] resume failed: model={}", request.getModel(), e);
+                wrapper.close();
                 emitter.completeWithError(e);
             }
         }));
@@ -480,23 +825,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
             if (keys.isEmpty()) {
  // 无任何可用密钥：保留原行为（appKey 为 空），由下游/兜底处理
-                ChatClientSetting setting = ChatClientSetting.builder()
-                        .provider(provider.getPlatform())
-                        .baseUrl(provider.getBaseUrl())
-                        .extraHeaders(extraHeaders)
-                        .proxy(provider.getProxy())
-                        .build();
+                ChatClientSetting setting = buildSetting(provider, null, extraHeaders);
                 ChatClient raw = ChatClient.create(setting);
                 return raw == null ? null : raw.model(model);
             }
             if (keys.size() == 1) {
-                ChatClientSetting setting = ChatClientSetting.builder()
-                        .provider(provider.getPlatform())
-                        .appKey(keys.getFirst())
-                        .baseUrl(provider.getBaseUrl())
-                        .extraHeaders(extraHeaders)
-                        .proxy(provider.getProxy())
-                        .build();
+                ChatClientSetting setting = buildSetting(provider, keys.getFirst(), extraHeaders);
                 ChatClient raw = ChatClient.create(setting);
                 if (raw == null) {
                     return null;
@@ -514,13 +848,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 逐个创建底层客户端，设置 stream(true)
         for (int i = 0; i < keys.size(); i++) {
             String key = keys.get(i);
-            ChatClientSetting setting = ChatClientSetting.builder()
-                    .provider(provider.getPlatform())
-                    .appKey(key)
-                    .baseUrl(provider.getBaseUrl())
-                    .extraHeaders(extraHeaders)
-                    .proxy(provider.getProxy())
-                    .build();
+            ChatClientSetting setting = buildSetting(provider, key, extraHeaders);
             ChatClient raw = ChatClient.create(setting);
             if (raw != null) {
                 raw = raw.model(model);
@@ -613,8 +941,23 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (request.getModel() != null && !request.getModel().isBlank()) {
             c = c.model(request.getModel());
         }
-        if (request.getSystemPrompt() != null && !request.getSystemPrompt().isBlank()) {
-            c = c.system(request.getSystemPrompt());
+        String system = request.getSystemPrompt();
+        if (system != null && !system.isBlank()) {
+            c = c.system(system);
+        }
+        // 技能不再在 facade 手动拼 system：解析出正文块后交由客户端内部并入 system
+        String skills = "";
+        if (Boolean.TRUE.equals(request.getUseSkill())) {
+            List<String> pickedNames = request.getSkillNames();
+            skills = (pickedNames != null && !pickedNames.isEmpty())
+                    ? chatSkillSupport.promptBlock(pickedNames)
+                    : chatSkillSupport.promptBlock();
+        }
+        // 客户端按 提供者::模型 缓存复用，技能块是实例字段：每轮必须显式写入，空串即清除上一轮残留
+        c = c.skillPrompt(skills);
+        if (!skills.isBlank()) {
+            log.info("[ChatSkill] 技能交由客户端内部注入，长度={} 字符，显式选中={}",
+                    skills.length(), request.getSkillNames() != null && !request.getSkillNames().isEmpty());
         }
         if (request.getTemperature() != null) {
             c = c.temperature(request.getTemperature());
@@ -628,14 +971,22 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
          if (request.getFrequencyPenalty() != null) {
              c = c.extraBody(java.util.Map.of("frequency_penalty", request.getFrequencyPenalty()));
          }
-        if (Boolean.TRUE.equals(request.getThink())) {
-            c = c.thinking(true);
-            if (request.getParameters() != null && request.getParameters().get("thinking_effort") != null) {
-                c = c.thinkingEffort(String.valueOf(request.getParameters().get("thinking_effort")));
-            }
+        // 思考开关必须显式下发：客户端按 提供者::模型 缓存复用，
+        // 只在开启时写 true 会让上一轮的思考状态残留到未开启的请求
+        boolean thinkOn = Boolean.TRUE.equals(request.getThink());
+        c = c.thinking(thinkOn);
+        if (thinkOn && request.getParameters() != null && request.getParameters().get("thinking_effort") != null) {
+            c = c.thinkingEffort(String.valueOf(request.getParameters().get("thinking_effort")));
         }
         if (Boolean.TRUE.equals(request.getSearch())) {
             c = c.smartSearch(true);
+        }
+        // 工具（函数调用）定义与选择策略透传
+        if (request.getTools() != null && !request.getTools().isEmpty()) {
+            c = c.tools(request.getTools());
+        }
+        if (request.getToolChoice() != null && !request.getToolChoice().isBlank()) {
+            c = c.toolChoice(request.getToolChoice());
         }
         // 启用流式
         c = c.stream(Boolean.TRUE.equals(request.getStream()));
@@ -651,11 +1002,226 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             for (Map<String, Object> msg : request.getMessages()) {
                 String role = msg.get("role") != null ? msg.get("role").toString() : "user";
                 String content = msg.get("content") != null ? msg.get("content").toString() : "";
-                history.add(new ChatMessage(role, content));
+                ChatMessage.ChatMessageBuilder messageBuilder =
+                        ChatMessage.builder().role(role).content(content);
+                // tool 角色关联 tool_call_id
+                if (msg.get("tool_call_id") != null) {
+                    messageBuilder.toolCallId(msg.get("tool_call_id").toString());
+                }
+                // assistant 携带的 tool_calls（OpenAI 形态：{id,function:{name,arguments}}）
+                Object rawToolCalls = msg.get("tool_calls");
+                if (rawToolCalls instanceof List<?> toolCallList && !toolCallList.isEmpty()) {
+                    List<com.chua.common.support.ai.chat.ChatToolCallData> toolCalls = new ArrayList<>();
+                    for (Object item : toolCallList) {
+                        if (item instanceof Map<?, ?> toolCallMap) {
+                            com.chua.common.support.ai.chat.ChatToolCallData.ChatToolCallDataBuilder tb =
+                                    com.chua.common.support.ai.chat.ChatToolCallData.builder();
+                            if (toolCallMap.get("id") != null) {
+                                tb.id(toolCallMap.get("id").toString());
+                            }
+                            Object fn = toolCallMap.get("function");
+                            if (fn instanceof Map<?, ?> functionMap) {
+                                if (functionMap.get("name") != null) {
+                                    tb.name(functionMap.get("name").toString());
+                                }
+                                if (functionMap.get("arguments") != null) {
+                                    tb.arguments(functionMap.get("arguments").toString());
+                                }
+                            }
+                            toolCalls.add(tb.build());
+                        }
+                    }
+                    if (!toolCalls.isEmpty()) {
+                        messageBuilder.toolCalls(toolCalls);
+                    }
+                }
+                history.add(messageBuilder.build());
             }
             c = c.history(history);
         }
         return c;
+    }
+
+    /**
+     * 管理员会话统一把已配置的直连客户端包装为 Agent 运行时客户端。
+     *
+     * <p>判定：当前用户为管理员即包装（无工具/非 Plan 时为 SINGLE 模式，等价于直答）；
+     * 角色 settings.plugins 中 MCP / 子代理 / 任意本地工具启用时，Agent 具备相应执行能力；
+     * 请求 mode=plan 时首轮即进入只读规划。普通用户原样返回直连客户端。</p>
+     *
+     * @param configured 已完成参数配置的直连客户端
+     * @param request    对话请求（携带 roleSettings、mode）
+     * @return Agent 包装客户端或原直连客户端
+     */
+    private ChatClient maybeWrapAgent(ChatClient configured, AiChatRequest request) {
+        // 仅管理员经 Agent 运行时；普通用户保持直连
+        if (!AiUserContext.isAdmin()) {
+            return configured;
+        }
+
+        Map<String, Object> roleSettings = request.getRoleSettings();
+        Map<?, ?> plugins = roleSettings != null && roleSettings.get("plugins") instanceof Map<?, ?> p
+                ? p : null;
+
+        boolean mcpOn = false;
+        boolean subAgentOn = false;
+        boolean localOn = false;
+        if (plugins != null) {
+            mcpOn = isEnabledNode(plugins.get("mcp"));
+            subAgentOn = isEnabledNode(plugins.get("sub_agent"));
+            for (Map.Entry<?, ?> e : plugins.entrySet()) {
+                String key = String.valueOf(e.getKey());
+                // 保留键：策略标记 + 三个已知能力节点；其余启用节点视为本地工具
+                if (key.startsWith("__") || "mcp".equals(key) || "skill".equals(key) || "sub_agent".equals(key)) {
+                    continue;
+                }
+                if (isEnabledNode(e.getValue())) {
+                    localOn = true;
+                }
+            }
+        }
+
+        // Plan 只读模式（Build 为默认）；仅管理员经 Agent 生效
+        boolean planOn = "plan".equalsIgnoreCase(request.getMode());
+
+        // MCP / 本地工具 / 子代理 / Plan 均未开启：无需 Agent 运行时，
+        // 直接使用标准非 Agent 客户端（等价普通直答），避免无谓的 Agent 开销与状态
+        if (!mcpOn && !localOn && !subAgentOn && !planOn) {
+            log.debug("[AiChat] 管理员会话未启用任何 Agent 能力，保持标准非 Agent 客户端 model={}",
+                    request.getModel());
+            return configured;
+        }
+
+        // MCP/本地工具启用时实时连接，构建私有运行时：
+        //  - MCP 开：catalogIds 为会话所选（null=全部启用目录服务器）；
+        //  - MCP 关、仅本地工具：连接零目录服务器，仅追加已启用的 .mcp.json 本地工具
+        java.util.Collection<String> mcpIds = plugins != null ? extractMcpIds(plugins.get("mcp")) : null;
+        boolean needRuntime = mcpOn || localOn;
+        java.util.Collection<String> catalogIds = mcpOn ? mcpIds : java.util.List.of();
+        AgentMcpRuntimeService.McpRuntime runtime = needRuntime
+                ? agentMcpRuntimeService.build(catalogIds) : null;
+
+        // Agent 标识按会话稳定：初始轮与人工确认恢复轮（可能跨重启）必须落到同一
+        // agent 目录 / 状态键，否则恢复时读不到待确认请求。String.hashCode 跨 JVM 稳定。
+        String agentId;
+        if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
+            agentId = "role-" + Integer.toHexString(request.getSessionId().hashCode());
+        } else {
+            agentId = "role-" + Integer.toHexString(System.identityHashCode(configured));
+        }
+        String instruction = request.getSystemPrompt() != null && !request.getSystemPrompt().isBlank()
+                ? request.getSystemPrompt()
+                : "You are a helpful assistant.";
+        AgentDefinition definition = AgentDefinition.builder()
+                .id(agentId)
+                .name("Assistant")
+                .instruction(instruction)
+                .leader(subAgentOn)
+                .build();
+        Agent agent = Agent.create("agentscope")
+                .chatClient(configured)
+                .definition(definition)
+                // 子代理编排存在时 AUTO 路由，否则 SINGLE（主 Agent 直接调用工具）
+                .mode(subAgentOn ? AgentMode.AUTO : AgentMode.SINGLE)
+                .mcp(mcpOn || localOn);
+        // 业务会话标识作为 defaultSessionId：进入 Plan / 读取 AgentState 必需，缺失会抛 NPE
+        if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
+            agent.sessionId(request.getSessionId());
+        }
+        // 工作目录：以系统设置「通用设置 - 工作目录基路径」为根，每会话独立子目录，避免跨会话文件冲突
+        String workspace = resolveSessionWorkspace(request.getSessionId());
+        if (workspace != null) {
+            agent.workspace(workspace);
+        }
+        if (runtime != null) {
+            agent.mcpManager(runtime.getManager());
+        }
+        if (planOn) {
+            // 注册 Plan 能力并在首轮即进入只读，不产生文件写入/命令执行等副作用
+            agent.plan(true).startInPlanMode(true);
+            // 规划模式需要「只读调研若干轮 + plan_write 记录计划 + plan_exit 请求批准」，
+            // 默认 5 轮会在 plan_write 当轮触发 ExceedMaxIters、把 plan_exit 挤掉。
+            // 这里给规划模式独立的迭代预算（10），确保能走到 plan_exit 等待用户批准。
+            agent.maxToolIterations(10);
+        }
+        AgentChatClient wrapper = new AgentChatClient(agent)
+                .withCloseHook(runtime != null ? runtime::close : null);
+        log.info("[AiChat] 管理员会话切换到 Agent 运行时 agentId={}, mode={}, mcp={}, subAgent={}, local={}, plan={}",
+                agentId, subAgentOn ? "AUTO" : "SINGLE", mcpOn, subAgentOn, localOn, planOn);
+        return wrapper;
+    }
+
+    /**
+     * 解析工作目录基路径：读取系统设置「通用设置 - 工作目录基路径」，确保其存在后返回。
+     *
+     * <p>注意：HarnessAgent 会在该基路径下再按会话标识（defaultSessionId）自动建立每会话
+     * 独立的工作子目录（{@code <基路径>/<sessionId>/}），故此处<b>只返回基路径</b>，
+     * 不再额外拼接 sessionId，避免出现 {@code base/<id>/<id>} 双重嵌套。</p>
+     *
+     * @param sessionId 业务会话标识（保留参数以便日志/扩展，当前不参与路径拼接）
+     * @return 工作目录基路径绝对路径；未配置或创建失败时返回 null（回退底层默认目录）
+     */
+    private String resolveSessionWorkspace(String sessionId) {
+        String base;
+        try {
+            base = globalSettingService.getValue("system", "workspaceBaseDir").orElse(null);
+        } catch (Exception e) {
+            log.warn("[AiChat] 读取工作目录基路径失败: {}", e.getMessage());
+            return null;
+        }
+        if (base == null || base.isBlank()) {
+            return null;
+        }
+        try {
+            java.nio.file.Path basePath = java.nio.file.Paths.get(base.trim()).toAbsolutePath().normalize();
+            java.nio.file.Files.createDirectories(basePath);
+            return basePath.toString();
+        } catch (Exception e) {
+            log.warn("[AiChat] 解析/创建工作目录基路径失败 base={}: {}", base, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 判断插件节点是否启用：布尔节点直接取值；对象节点读取 enabled（缺省 false）。
+     *
+     * @param node 插件节点（Boolean 或 Map）
+     * @return 是否启用
+     */
+    private static boolean isEnabledNode(Object node) {
+        if (node instanceof Boolean b) {
+            return b;
+        }
+        if (node instanceof Map<?, ?> m) {
+            Object enabled = m.get("enabled");
+            return enabled != null && Boolean.parseBoolean(String.valueOf(enabled));
+        }
+        return false;
+    }
+
+    /**
+     * 从 MCP 节点提取会话显式选择的服务器ID集合。
+     * @param node MCP 插件节点
+     * @return null 表示未显式选择（连接全部启用）；空集合表示显式不连；非空表示只连所选
+     */
+    private static java.util.Collection<String> extractMcpIds(Object node) {
+        if (!(node instanceof Map<?, ?> m)) {
+            return null;
+        }
+        Object serverIds = m.get("serverIds");
+        if (!(serverIds instanceof List<?> list)) {
+            return null;
+        }
+        java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
+        for (Object o : list) {
+            if (o != null) {
+                String v = String.valueOf(o).trim();
+                if (!v.isEmpty()) {
+                    ids.add(v);
+                }
+            }
+        }
+        return ids;
     }
 
     /**
@@ -710,8 +1276,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param usage  用量
      * @param userId 请求线程捕获的归属用户标识
      */
-    private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId) {
-        recordUsage(usage, "chat_stream", userId);
+    private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId, String source) {
+        recordUsage(usage, "chat_stream", userId, source);
     }
 
     /**
@@ -721,6 +1287,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param userId 归属用户标识
      */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId) {
+        recordUsage(usage, callType, userId, null);
+    }
+
+    /**
+     * recordusage，并显式标注用量来源。
+     * @param source 用量来源 service/third_party/self，为空按默认口径
+     */
+    private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId, String source) {
         if (usage == null) {
             return;
         }
@@ -732,7 +1306,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     callType,
                     usage,
                     UUID.randomUUID().toString(),
-                    userId
+                    userId,
+                    source
             );
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
@@ -807,37 +1382,43 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 构建结果。
-     * @param response 响应
-     * @return 构建结果的结果
+     * 组装 提供者 的对话客户端配置，含认证方案。
+     *
+     * <p>{@code auth_scheme} 决定是否发送认证头，{@code extra.auth_header} /
+     * {@code extra.auth_prefix} 决定头名与前缀。例如 Dots Studio 只认
+     * {@code api-key: <key>}，若仍发标准的 {@code Authorization: Bearer} 会被 401。</p>
+     *
+     * @param provider     DB 提供者
+     * @param apiKey       API Key，可为 null
+     * @param extraHeaders 自定义请求头
+     * @return 客户端配置
      */
-    private Map<String, Object> buildResult(ChatSyncResponse response) {
-        Map<String, Object> result = new LinkedHashMap<>(4);
-        result.put("text", response != null && response.getText() != null ? response.getText() : "");
-        if (response != null && response.getUsage() != null) {
-            result.put("promptTokens", response.getUsage().getInputTokens());
-            result.put("completionTokens", response.getUsage().getOutputTokens());
-            result.put("totalTokens", response.getUsage().getTotalTokens());
-        } else {
-            result.put("promptTokens", 0);
-            result.put("completionTokens", 0);
-            result.put("totalTokens", 0);
-        }
-        return result;
+    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey, Map<String, String> extraHeaders) {
+        Map<String, Object> extra = provider.getExtra();
+        return ChatClientSetting.builder()
+                .provider(provider.getPlatform())
+                .appKey(apiKey)
+                .baseUrl(provider.getBaseUrl())
+                .extraHeaders(extraHeaders)
+                .authScheme(provider.getAuthScheme())
+                .authHeader(extraString(extra, "auth_header"))
+                .authPrefix(extraString(extra, "auth_prefix"))
+                .proxy(provider.getProxy())
+                .build();
     }
 
     /**
-     * 构建错误结果。
-     * @param e e
-     * @return 构建错误结果的结果
+     * 读取 extra 中的字符串值。
+     *
+     * @param extra 扩展配置
+     * @param key   键名
+     * @return 字符串值；缺失返回 null
      */
-    private Map<String, Object> buildErrorResult(Exception e) {
-        Map<String, Object> result = new LinkedHashMap<>(4);
-        result.put("text", "");
-        result.put("error", Map.of("message", e.getMessage() != null ? e.getMessage() : "Chat failed"));
-        result.put("promptTokens", 0);
-        result.put("completionTokens", 0);
-        result.put("totalTokens", 0);
-        return result;
+    private static String extraString(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return null;
+        }
+        Object value = extra.get(key);
+        return value == null ? null : value.toString();
     }
 }

@@ -159,12 +159,20 @@ public class DeviceScheduler {
      * @return 连接信息
      */
     private DeviceConnectInfo buildConnectInfo(DeviceInfo device) {
-        DeviceConnectInfo info = new DeviceConnectInfo();
-        info.setVendor(device.getDeviceInfoVendor());
-        info.setIp(device.getDeviceInfoIp());
-        info.setPort(device.getDeviceInfoPort());
-        info.setUsername(device.getDeviceInfoUsername());
-        info.setPassword(device.getDeviceInfoPassword());
+        DeviceConnectInfo info = new DeviceConnectInfo(
+                device.getDeviceInfoVendor(),
+                null,
+                device.getDeviceInfoIp(),
+                device.getDeviceInfoPort(),
+                device.getDeviceInfoUsername(),
+                device.getDeviceInfoPassword(),
+                null,
+                null,
+                null,
+                null,
+                null
+        );
         return info;
     }
 }
+

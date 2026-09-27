@@ -8,7 +8,6 @@ import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * HTTP 接口拉取采集 提供者（HTTP）
@@ -49,7 +48,7 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     @Override
     public Mono<CollectOutcome> collect(HostCollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
-                .subscribeOn(Schedulers.boundedElastic());
+                .subscribeOn(VirtualThreadSchedulers.virtual());
     }
 
     /**

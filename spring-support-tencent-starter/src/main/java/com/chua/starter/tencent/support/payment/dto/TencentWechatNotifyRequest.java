@@ -1,37 +1,25 @@
 package com.chua.starter.tencent.support.payment.dto;
 
-import lombok.Data;
-
 /**
  * 微信支付回调请求
+ *
+ * @param serialNumber 串行数字
+ * @param timestamp 时间戳
+ * @param nonce Nonce
+ * @param signature 签名
+ * @param signType 标志类型
+ * @param body 请求体
+ *
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class TencentWechatNotifyRequest {
-    /**
-     * 串行数字
-    */
-    private String serialNumber;
-    /**
-     * 时间戳
-    */
-    private String timestamp;
-    /**
-     * Nonce
-    */
-    private String nonce;
-    /**
-     * 签名
-    */
-    private String signature;
-    /**
-     * 标志类型
-    */
-    private String signType;
-    /**
-     * 请求体
-    */
-    private String body;
+public record TencentWechatNotifyRequest(
+        String serialNumber,
+        String timestamp,
+        String nonce,
+        String signature,
+        String signType,
+        String body
+) {
 }
 

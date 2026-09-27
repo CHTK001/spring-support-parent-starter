@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     ms_server_host_port         INT          NOT NULL DEFAULT 22     COMMENT 'SSH端口',
     ms_server_host_os_type      VARCHAR(16)  NOT NULL DEFAULT 'LINUX' COMMENT '系统类型: LINUX/WINDOWS/MACOS',
     ms_server_host_os_arch      VARCHAR(32)  NULL                    COMMENT '系统架构',
+    ms_server_host_ssh_enabled  TINYINT(1)   NOT NULL DEFAULT 1      COMMENT '是否开启SSH 1是 0否(Linux默认1,Windows默认0)',
     ms_server_group_id          BIGINT       NULL                    COMMENT '所属分组ID',
     ms_server_host_tags         VARCHAR(512) NULL                    COMMENT '标签(JSON数组)',
     ms_server_host_status       TINYINT      NOT NULL DEFAULT 1      COMMENT '启用状态 1启用 0停用',
@@ -129,10 +130,19 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     `ms_server_host_cpu_usage` DECIMAL(5,2) NULL COMMENT 'CPU使用率%(探测结果)',
     `ms_server_host_mem_usage` DECIMAL(5,2) NULL COMMENT '内存使用率%(探测结果)',
     `ms_server_host_disk_usage` DECIMAL(5,2) NULL COMMENT '磁盘使用率%(探测结果)',
+    `ms_server_host_disk_read_kbs` DECIMAL(10,2) NULL COMMENT '磁盘读取速率 KB/s(探测结果)',
+    `ms_server_host_disk_write_kbs` DECIMAL(10,2) NULL COMMENT '磁盘写入速率 KB/s(探测结果)',
+    `ms_server_host_software` TEXT NULL COMMENT '软件实例(JSON数组,进程识别结果)',
     ms_server_host_remote_protocol VARCHAR(16) NULL DEFAULT NULL COMMENT '远控协议: SSH/RDP/VNC, 空则按操作系统类型推断',
     ms_server_host_remote_port     INT          NULL DEFAULT NULL COMMENT '远控端口, 空则取协议默认端口(SSH 22/RDP 3389/VNC 5900)',
     ms_server_host_remote_mode     VARCHAR(16)  NULL DEFAULT 'GUACD' COMMENT '远控模式: GUACD 经 guacd 中继 / DIRECT 平台原生客户端直连',
     ms_server_host_vnc_password    VARCHAR(512) NULL DEFAULT NULL COMMENT 'VNC 口令(AES 密文)',
+    ms_server_host_package_manager VARCHAR(32)  NULL DEFAULT NULL COMMENT '包管理器(探测结果): apt/dnf/yum/brew/winget',
+  `ms_server_host_mac` VARCHAR(32) NULL COMMENT 'MAC地址',
+  `ms_server_host_os_hostname` VARCHAR(128) NULL COMMENT '系统主机名',
+  `ms_server_host_java_version` VARCHAR(64) NULL COMMENT 'Java版本',
+  `ms_server_host_uptime_sec` BIGINT NULL COMMENT '运行时间秒',
+
     PRIMARY KEY (id),
     UNIQUE KEY uk_server_host_agent (ms_server_host_agent_key),
     KEY idx_server_host_group (ms_server_group_id),
@@ -207,6 +217,7 @@ CREATE TABLE IF NOT EXISTS ms_terminal_bookmark (
 CREATE TABLE IF NOT EXISTS ms_exec_job (
     id                       BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     ms_exec_job_name         VARCHAR(64)  NOT NULL                COMMENT '任务名称',
+    ms_exec_job_type         VARCHAR(16)  NOT NULL DEFAULT 'CRON' COMMENT '任务类型 CRON定时/NONE脚本',
     ms_exec_job_cron         VARCHAR(32)  NOT NULL                COMMENT 'cron表达式(6域)',
     ms_exec_job_command      TEXT         NOT NULL                COMMENT '执行命令',
     ms_exec_job_host_ids     VARCHAR(512) NOT NULL                COMMENT '目标主机ID集合(JSON数组)',
@@ -273,7 +284,7 @@ CREATE TABLE IF NOT EXISTS ms_proxy (
     protocol         VARCHAR(16)  NULL COMMENT '协议（Http/Https/Socks4/Socks5）',
     source           VARCHAR(64)  NULL COMMENT '来源',
     delay            BIGINT       NULL COMMENT '延迟（毫秒），探测结果',
-    reachable        INT          NULL DEFAULT 0 COMMENT '是否可达（0否 1是）',
+    reachable        INT          NULL COMMENT '是否可达（NULL 未检测 0 不可达 1 可达）',
     check_time       BIGINT       NULL COMMENT '最近一次探测时间（毫秒时间戳）',
     create_by        INT          NULL COMMENT '创建人',
     create_name      VARCHAR(64)  NULL COMMENT '创建人名称',
@@ -293,13 +304,30 @@ CREATE TABLE IF NOT EXISTS ms_server_project (
     release_id     BIGINT       NULL                    COMMENT '发布ID',
     project_name   VARCHAR(128) NOT NULL                COMMENT '项目名称',
     project_type   VARCHAR(32)  NULL                    COMMENT '项目类型: springboot/fatjar/static/nginx等',
+    main_entry     VARCHAR(255) NULL                    COMMENT '主入口名称: 如 jar 文件名/二进制名/静态目录',
     start_script   TEXT         NULL                    COMMENT '启动脚本',
     stop_script    TEXT         NULL                    COMMENT '停止脚本',
     restart_script TEXT         NULL                    COMMENT '重启脚本',
     status         VARCHAR(16)  NULL DEFAULT 'unknown'   COMMENT '项目状态: running/stopped/unknown',
     project_path   VARCHAR(512) NULL                    COMMENT '项目地址',
     log_path       VARCHAR(512) NULL                    COMMENT '日志地址',
+    log_mode       VARCHAR(16)  NULL DEFAULT 'append'   COMMENT '重启日志: append追加/truncate清空',
     description    VARCHAR(255) NULL                    COMMENT '描述',
+    icon           VARCHAR(64)  NULL                    COMMENT '项目图标: 如 ep:cpu/ri:java-line',
+    env_vars       TEXT         NULL                    COMMENT '环境变量JSON: [{"key":"K","value":"V"}]',
+    cmd_args       TEXT         NULL                    COMMENT '命令参数JSON: ["--profile=prod"]',
+    jvm_args       TEXT         NULL                    COMMENT 'JVM参数JSON: ["-Xmx512m"]',
+    status_script  TEXT         NULL                    COMMENT '状态检测脚本',
+    service_name   VARCHAR(128) NULL                    COMMENT '系统服务名(非空=已挂载)',
+    autostart      TINYINT      NULL DEFAULT 0          COMMENT '开机自启',
+    guardian       TINYINT      NULL DEFAULT 0          COMMENT '守护进程',
+    enabled        TINYINT      NULL DEFAULT 1          COMMENT '是否启用(0=禁用)',
+    pid            VARCHAR(32)  NULL                    COMMENT '运行时PID',
+    app_config     TEXT         NULL                    COMMENT 'SpringBoot专属配置JSON',
+    config_dir     VARCHAR(512) NULL                    COMMENT '分离式配置目录',
+    lib_dir        VARCHAR(512) NULL                    COMMENT '分离式依赖(lib)目录',
+    nginx_dir      VARCHAR(512) NULL                    COMMENT 'Nginx安装/配置目录',
+    running_since  DATETIME     NULL                    COMMENT '本次启动时间(运行时长基准)',
     create_time    DATETIME     NULL                    COMMENT '创建时间',
     update_time    DATETIME     NULL                    COMMENT '更新时间',
     PRIMARY KEY (id),
@@ -322,30 +350,12 @@ CREATE TABLE IF NOT EXISTS ms_server_release (
     KEY idx_server_release_host (host_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '发布管理';
 
--- 老库补列：背景图（H2 支持 IF NOT EXISTS；MySQL 新库建表已含，报错由 continue-on-error 忽略）
-ALTER TABLE ms_server_release ADD COLUMN IF NOT EXISTS background_image VARCHAR(1000);
+-- ---------------------------------------------------------------------
+-- 历史增量列（V1.1 延迟检测 / V1.10 / V1.11、主机扩展采集字段）已全部并入上面的
+-- CREATE TABLE 全量定义，此处不再输出兼容 ALTER：
+--   1) 新库由全量建表覆盖，不需要补列；
+--   2) MySQL 的 ADD COLUMN 不支持 IF NOT EXISTS，保留这些语句只会在每次启动产生语法错误，
+--      再被 continue-on-error 静默吞掉，并向版本表写入 FAILED 记录；
+--   3) 存量库确需补列时，走独立的一次性 ALTER 变更单，不混进初始化脚本。
+-- ---------------------------------------------------------------------
 
--- ---------------------------------------------------------------------
--- 主机延迟检测字段（原 V1.1__add_host_delay_detect，老库补列；新库已由
--- ms_server_host 全量建表包含，此处幂等 IF NOT EXISTS）
--- ---------------------------------------------------------------------
--- ---------------------------------------------------------------------
--- 主机扩展采集字段（GPU/网卡/CPU使用率/内存使用率/磁盘使用率，幂等 IF NOT EXISTS）
--- ---------------------------------------------------------------------
--- ---------------------------------------------------------------------
--- 系统配置初始化数据（原 V1.0__initdata_server.sql，INSERT IGNORE 幂等）
--- ---------------------------------------------------------------------
-INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('guacd.host', '"124.221.230.112"', 'guacd 网关地址（远控隧道）');
-
-INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('guacd.port', '"4822"', 'guacd 网关端口（远控隧道）');
-
-INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('guacd.client.host', '""', 'guacd-client 网关地址（浏览器侧 WS 隧道 host:port，空串=同域）');
-
-INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('connection.sweep.interval', '"60"', '连接缓存健康检查间隔(秒)');
-
-INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('connection.idle.timeout', '"300"', '连接空闲超时(秒)');

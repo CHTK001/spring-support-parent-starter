@@ -1,15 +1,22 @@
 package com.chua.starter.eduai.dimension.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.common.support.constant.CacheConstant;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.mapper.*;
+import com.chua.starter.eduai.mapper.EduStudentDailyMapper;
+import com.chua.starter.eduai.mapper.EduStudentProgressMapper;
+import com.chua.starter.eduai.model.EduStudentDaily;
+import com.chua.starter.eduai.model.EduStudentProgress;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.common.support.utils.StringUtils;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -25,6 +32,9 @@ import java.util.List;
  *   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
  * </ul>
  *
+ * <p>只读接口走 {@code @Cacheable}（按 ownerScope + 过滤条件分键），写路径
+ * {@code @CacheEvict} 全量清理，避免多用户串缓存。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -34,25 +44,48 @@ import java.util.List;
 public class EduDimensionService {
 
     /**
+     * 学科列表缓存名
+     */
+    private static final String CACHE_SUBJECTS = "edu:dimension:subjects";
+    /**
+     * 年级列表缓存名
+     */
+    private static final String CACHE_GRADES = "edu:dimension:grades";
+    /**
+     * 字典下拉缓存名
+     */
+    private static final String CACHE_DROPDOWN = "edu:dimension:dropdown";
+
+    /**
      * Subjectmapper
-    */
+     */
     private final EduSubjectMapper subjectMapper;
     /**
      * Grademapper
-    */
+     */
     private final EduGradeMapper gradeMapper;
     /**
      * Classmapper
-    */
+     */
     private final EduClassMapper classMapper;
     /**
      * Studentmapper
-    */
+     */
     private final EduStudentMapper studentMapper;
     /**
      * Teachermapper
-    */
+     */
     private final EduTeacherMapper teacherMapper;
+
+    /**
+     * 学生学习进度：删除学生时连带清理，避免留下孤儿行
+     */
+    private final EduStudentProgressMapper progressMapper;
+
+    /**
+     * 学生每日汇总：删除学生时连带清理
+     */
+    private final EduStudentDailyMapper dailyMapper;
 
     // ==================== 学科 ====================
 
@@ -62,24 +95,23 @@ public class EduDimensionService {
      * @param gradeLevel grade级别
      * @return 列表主题的结果
      */
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = CACHE_SUBJECTS,
+            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '')",
+            unless = "#result == null")
     public List<EduSubject> listSubjects(String gradeLevel) {
-        LambdaQueryWrapper<EduSubject> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(gradeLevel)) {
-            wrapper.like(EduSubject::getSubjectGradeLevels, gradeLevel);
-        }
-        wrapper.eq(EduSubject::getSubjectStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduSubject::getOwnerUserId);
-        wrapper.orderByAsc(EduSubject::getSubjectSortOrder);
-        return subjectMapper.selectList(wrapper);
+        return subjectMapper.listSubjects(gradeLevel, EduUserContext.ownerScope());
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 保存主题
+     * 保存学科。
      *
-     * @param entity 实体
-     * @return 保存主题的结果
+     * @param entity 学科实体
+     * @return 学科标识
      */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = {CACHE_SUBJECTS, CACHE_DROPDOWN}, allEntries = true)
     public Long saveSubject(EduSubject entity) {
         if (!StringUtils.hasText(entity.getSubjectCode()) || !StringUtils.hasText(entity.getSubjectName())) {
             throw new BusinessException("学科编码与名称必填");
@@ -106,13 +138,15 @@ public class EduDimensionService {
         return entity.getSubjectId();
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除主题
+     * 删除学科。
      *
-     * @param id 标识
-     * @return 删除主题的结果
+     * @param id 学科标识
+     * @return 是否删除成功
      */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = {CACHE_SUBJECTS, CACHE_DROPDOWN}, allEntries = true)
     public boolean deleteSubject(Long id) {
         if (id == null) {
             return false;
@@ -135,14 +169,67 @@ public class EduDimensionService {
      * @param gradeLevel grade级别
      * @return 列表grades的结果
      */
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = CACHE_GRADES,
+            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '')",
+            unless = "#result == null")
     public List<EduGrade> listGrades(String gradeLevel) {
-        LambdaQueryWrapper<EduGrade> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(gradeLevel)) {
-            wrapper.eq(EduGrade::getGradeLevel, gradeLevel);
+        return gradeMapper.listGrades(gradeLevel, EduUserContext.ownerScope());
+    }
+
+    /**
+     * 保存年级。
+     *
+     * @param entity 年级实体
+     * @return 年级标识
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = {CACHE_GRADES, CACHE_DROPDOWN}, allEntries = true)
+    public Long saveGrade(EduGrade entity) {
+        if (!StringUtils.hasText(entity.getGradeLevel()) || !StringUtils.hasText(entity.getGradeName())) {
+            throw new BusinessException("学段与年级名称必填");
         }
-        EduUserContext.scopeOwned(wrapper, EduGrade::getOwnerUserId);
-        wrapper.orderByAsc(EduGrade::getGradeOrder);
-        return gradeMapper.selectList(wrapper);
+        if (entity.getGradeId() != null && entity.getGradeId() > 0) {
+            EduGrade exists = gradeMapper.selectById(entity.getGradeId());
+            if (exists == null) {
+                throw new BusinessException("年级不存在");
+            }
+            EduUserContext.checkWritable(exists.getOwnerUserId());
+            entity.setOwnerUserId(exists.getOwnerUserId());
+            gradeMapper.updateById(entity);
+            return entity.getGradeId();
+        }
+        if (entity.getGradeOrder() == null) {
+            entity.setGradeOrder(0);
+        }
+        entity.setOwnerUserId(EduUserContext.requireUserId());
+        gradeMapper.insert(entity);
+        log.info("[EduAi] 新增年级: {} ({})", entity.getGradeName(), entity.getGradeLevel());
+        return entity.getGradeId();
+    }
+
+    /**
+     * 删除年级。
+     *
+     * @param id 年级标识
+     * @return 是否删除成功
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = {CACHE_GRADES, CACHE_DROPDOWN}, allEntries = true)
+    public boolean deleteGrade(Long id) {
+        if (id == null) {
+            return false;
+        }
+        EduGrade exists = gradeMapper.selectById(id);
+        if (exists == null) {
+            return false;
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
+        int rows = gradeMapper.deleteById(id);
+        log.info("[EduAi] 删除年级: id={}, rows={}", id, rows);
+        return rows > 0;
     }
 
     // ==================== 班级 ====================
@@ -155,29 +242,25 @@ public class EduDimensionService {
      * @return 列表类的结果
      */
     public List<EduClass> listClasses(String gradeLevel, Long teacherId) {
-        LambdaQueryWrapper<EduClass> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(gradeLevel)) {
-            wrapper.eq(EduClass::getClassGradeLevel, gradeLevel);
-        }
-        if (teacherId != null) {
-            wrapper.eq(EduClass::getClassTeacherId, teacherId);
-        }
-        wrapper.eq(EduClass::getClassStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduClass::getOwnerUserId);
-        wrapper.orderByAsc(EduClass::getClassId);
-        return classMapper.selectList(wrapper);
+        return classMapper.listClasses(gradeLevel, teacherId, EduUserContext.ownerScope());
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 保存类
+     * 保存班级。
      *
-     * @param entity 实体
-     * @return 保存类的结果
+     * @param entity 班级实体
+     * @return 班级标识
      */
+    @Transactional(rollbackFor = Exception.class)
     public Long saveClass(EduClass entity) {
-        if (!StringUtils.hasText(entity.getClassCode()) || !StringUtils.hasText(entity.getClassName())) {
-            throw new BusinessException("班级编码与名称必填");
+        if (!StringUtils.hasText(entity.getClassName())) {
+            throw new BusinessException("班级名称必填");
+        }
+        // 班级编码允许留空：管理端「新增班级」表单一直写着「留空自动生成」，
+        // 但这里原先硬要求非空，导致从界面上建班必然失败（学生端绑定那条路径
+        // 自己在别处生成了编码，所以只有手工建班才会踩到）。
+        if (!StringUtils.hasText(entity.getClassCode())) {
+            entity.setClassCode("CLS-" + System.currentTimeMillis());
         }
         if (entity.getClassId() != null && entity.getClassId() > 0) {
             EduClass exists = classMapper.selectById(entity.getClassId());
@@ -198,13 +281,13 @@ public class EduDimensionService {
         return entity.getClassId();
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除类
+     * 删除班级。
      *
-     * @param id 标识
-     * @return 删除类的结果
+     * @param id 班级标识
+     * @return 是否删除成功
      */
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteClass(Long id) {
         if (id == null) {
             return false;
@@ -230,29 +313,16 @@ public class EduDimensionService {
      * @return 列表students的结果
      */
     public List<EduStudent> listStudents(Long classId, String gradeLevel, String grade) {
-        LambdaQueryWrapper<EduStudent> wrapper = new LambdaQueryWrapper<>();
-        if (classId != null) {
-            wrapper.eq(EduStudent::getStudentClassId, classId);
-        }
-        if (StringUtils.hasText(gradeLevel)) {
-            wrapper.eq(EduStudent::getStudentGradeLevel, gradeLevel);
-        }
-        if (StringUtils.hasText(grade)) {
-            wrapper.eq(EduStudent::getStudentGrade, grade);
-        }
-        wrapper.eq(EduStudent::getStudentStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduStudent::getOwnerUserId);
-        wrapper.orderByAsc(EduStudent::getStudentId);
-        return studentMapper.selectList(wrapper);
+        return studentMapper.listStudents(classId, gradeLevel, grade, EduUserContext.ownerScope());
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 保存Student
+     * 保存学生。
      *
-     * @param entity 实体
-     * @return 保存student的结果
+     * @param entity 学生实体
+     * @return 学生标识
      */
+    @Transactional(rollbackFor = Exception.class)
     public Long saveStudent(EduStudent entity) {
         if (!StringUtils.hasText(entity.getStudentNo())) {
             throw new BusinessException("学号必填");
@@ -276,13 +346,13 @@ public class EduDimensionService {
         return entity.getStudentId();
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除Student
+     * 删除学生。
      *
-     * @param id 标识
-     * @return 删除student的结果
+     * @param id 学生标识
+     * @return 是否删除成功
      */
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteStudent(Long id) {
         if (id == null) {
             return false;
@@ -292,6 +362,10 @@ public class EduDimensionService {
             return false;
         }
         EduUserContext.checkWritable(exists.getOwnerUserId());
+        // 连带清掉该学生的学习数据：进度与每日汇总都按 student_id 关联，
+        // 不一起删会留下查不到主人的孤儿行（验收时确实留下过 3 条进度 + 1 条日汇总）。
+        progressMapper.delete(new QueryWrapper<EduStudentProgress>().eq("student_id", id));
+        dailyMapper.delete(new QueryWrapper<EduStudentDaily>().eq("student_id", id));
         return studentMapper.deleteById(id) > 0;
     }
 
@@ -304,23 +378,16 @@ public class EduDimensionService {
      * @return 列表teachers的结果
      */
     public List<EduTeacher> listTeachers(String subjectCode) {
-        LambdaQueryWrapper<EduTeacher> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(subjectCode)) {
-            wrapper.eq(EduTeacher::getTeacherSubjectCode, subjectCode);
-        }
-        wrapper.eq(EduTeacher::getTeacherStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduTeacher::getOwnerUserId);
-        wrapper.orderByAsc(EduTeacher::getTeacherId);
-        return teacherMapper.selectList(wrapper);
+        return teacherMapper.listTeachers(subjectCode, EduUserContext.ownerScope());
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 保存Teacher
+     * 保存教师。
      *
-     * @param entity 实体
-     * @return 保存teacher的结果
+     * @param entity 教师实体
+     * @return 教师标识
      */
+    @Transactional(rollbackFor = Exception.class)
     public Long saveTeacher(EduTeacher entity) {
         if (!StringUtils.hasText(entity.getTeacherNo())) {
             throw new BusinessException("工号必填");
@@ -344,13 +411,13 @@ public class EduDimensionService {
         return entity.getTeacherId();
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
-     * 删除Teacher
+     * 删除教师。
      *
-     * @param id 标识
-     * @return 删除teacher的结果
+     * @param id 教师标识
+     * @return 是否删除成功
      */
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteTeacher(Long id) {
         if (id == null) {
             return false;
@@ -370,7 +437,17 @@ public class EduDimensionService {
      * @since 4.0.0
      * @return 获取dropdown的结果
      */
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = CACHE_DROPDOWN,
+            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate()",
+            unless = "#result == null")
     public DimensionDropdown getDropdown() {
+        // 学科 / 年级并行查询，缩短下拉首屏
+        java.util.concurrent.CompletableFuture<List<EduSubject>> subjectsF =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> listSubjects(null));
+        java.util.concurrent.CompletableFuture<List<EduGrade>> gradesF =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> listGrades(null));
+
         DimensionDropdown dropdown = new DimensionDropdown();
         dropdown.setGradeLevels(List.of(
                 new EnumOption("PRIMARY", "小学"),
@@ -378,23 +455,38 @@ public class EduDimensionService {
                 new EnumOption("SENIOR", "高中"),
                 new EnumOption("UNIVERSITY", "大学")
         ));
-        dropdown.setSubjects(listSubjects(null));
-        dropdown.setGrades(listGrades(null));
+        try {
+            dropdown.setSubjects(subjectsF.get(3, java.util.concurrent.TimeUnit.SECONDS));
+            dropdown.setGrades(gradesF.get(3, java.util.concurrent.TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            dropdown.setSubjects(listSubjects(null));
+            dropdown.setGrades(listGrades(null));
+        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+            log.warn("[EduAi] dropdown 并行查询回退串行: {}", e.getMessage());
+            dropdown.setSubjects(subjectsF.isDone() && !subjectsF.isCompletedExceptionally()
+                    ? subjectsF.getNow(null) : listSubjects(null));
+            dropdown.setGrades(gradesF.isDone() && !gradesF.isCompletedExceptionally()
+                    ? gradesF.getNow(null) : listGrades(null));
+        }
         return dropdown;
     }
 
+    /**
+     * 字典下拉数据，封装学段、学科和年级选项。
+     */
     public static class DimensionDropdown {
         /**
          * Gradelevels
-        */
+         */
         private List<EnumOption> gradeLevels;
         /**
          * 主题
-        */
+         */
         private List<EduSubject> subjects;
         /**
          * Grades
-        */
+         */
         private List<EduGrade> grades;
         /**
          * 获取grade级别
@@ -423,11 +515,11 @@ public class EduDimensionService {
         /**
          * 获取Grades
          *
-         * @return 获取grades的结果
+         * @return 获取Grades的结果
          */
         public List<EduGrade> getGrades() { return grades; }
         /**
-         * 设置Grades
+         * 设置grades
          *
          * @param grades grades
          * @author CH
@@ -436,24 +528,28 @@ public class EduDimensionService {
         public void setGrades(List<EduGrade> grades) { this.grades = grades; }
     }
 
+    /**
+     * 字典下拉选项，封装枚举值和显示文本。
+     */
     public static class EnumOption {
         /**
          * 值
-        */
+         */
         private String value;
         /**
          * 标签
-        */
+         */
         private String label;
         /**
-         * 创建 enum期权 实例
-        */
-        public EnumOption() {}
+         * 创建空的字典下拉选项。
+         */
+        public EnumOption() {
+        }
         /**
-         * 创建 enum期权 实例
-         * @param value 值
-         * @param value 字符串
-         * @param label 标签
+         * 创建字典下拉选项。
+         *
+         * @param value 选项值
+         * @param label 显示文本
          */
         public EnumOption(String value, String label) {
             this.value = value;

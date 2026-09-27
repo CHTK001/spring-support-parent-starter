@@ -14,35 +14,34 @@ import java.time.LocalDateTime;
 public class WalletAccountVO {
     /**
      * 标识
-    */
+     */
     private Long id;
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * 可用balance
-    */
+     * 可用余额
+     */
     private BigDecimal availableBalance;
     /**
-     * Frozenbalance
-    */
+     * 冻结余额
+     */
     private BigDecimal frozenBalance;
     /**
      * 状态
-    */
+     */
     private Integer status;
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
     /**
-     * 更新时间AT
-    */
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }
-

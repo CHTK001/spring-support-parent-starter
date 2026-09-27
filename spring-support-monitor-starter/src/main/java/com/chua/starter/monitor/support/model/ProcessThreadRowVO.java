@@ -8,6 +8,9 @@ import lombok.Data;
  * <p>Windows（PowerShell {@code Get-Process | Threads}）与 Linux（{@code ps -L}）两种来源
  * 的键名差异在采集侧归一，字段名即前端消费的 JSON 键名。</p>
  *
+ * <p>Windows 侧没有线程名，{@code name} 留空；{@code priority} 与 {@code waitReason}
+ * 只有 Windows 能给，Linux 侧为空串。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
@@ -32,15 +35,25 @@ public class ProcessThreadRowVO {
     /**
      * 线程状态
      */
-    private String state;
+    private String state = "";
 
     /**
      * 线程名
      */
-    private String name;
+    private String name = "";
+
+    /**
+     * 优先级，仅 Windows 有值
+     */
+    private String priority = "";
+
+    /**
+     * 等待原因，仅 Windows 有值
+     */
+    private String waitReason = "";
 
     /**
      * 累计 CPU 时间展示文本
      */
-    private String cpuTime;
+    private String cpuTime = "";
 }

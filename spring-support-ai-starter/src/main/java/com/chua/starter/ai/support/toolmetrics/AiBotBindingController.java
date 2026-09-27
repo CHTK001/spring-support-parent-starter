@@ -346,11 +346,16 @@ public class AiBotBindingController {
     /**
      * 设置 机器人 默认 AI 模型（全局兜底，避免每个用户单独配置模型）。
      *
-     * @param body 请求体：模型
+     * <p>写入全局设置表，影响所有用户的 机器人 行为，因此仅管理员（或本地信任的桌面端）可改。</p>
+     *
+     * @param body        请求体：模型
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 更新后的默认模型名
      */
     @PutMapping("/default-model")
-    public ReturnResult<Map<String, Object>> setDefaultModel(@RequestBody Map<String, String> body) {
+    public ReturnResult<Map<String, Object>> setDefaultModel(@RequestBody Map<String, String> body,
+                                                             HttpServletRequest httpRequest) {
+        requireGlobalAdmin(httpRequest);
         String model = body.get("model");
         if (StringUtils.isBlank(model)) {
             return ReturnResult.illegal("model 不能为空");
@@ -383,11 +388,17 @@ public class AiBotBindingController {
     /**
      * 更新 机器人 全局行为配置（部分更新，仅写入请求体中出现的字段）。
      *
-     * @param body 配置键值对（支持 上下文thinking / 上下文大小 / 历史大小 / 命令已启用 / compression阈值）
+     * <p>配置落在全局设置表，对所有用户的 机器人 生效，因此仅管理员（或本地信任的桌面端）可改；
+     * 读取保持开放以便前端展示默认值。</p>
+     *
+     * @param body        配置键值对（支持 上下文thinking / 上下文大小 / 历史大小 / 命令已启用 / compression阈值）
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 更新后的完整配置
      */
     @PutMapping("/global-config")
-    public ReturnResult<Map<String, Object>> updateGlobalConfig(@RequestBody Map<String, Object> body) {
+    public ReturnResult<Map<String, Object>> updateGlobalConfig(@RequestBody Map<String, Object> body,
+                                                                HttpServletRequest httpRequest) {
+        requireGlobalAdmin(httpRequest);
         if (body == null || body.isEmpty()) {
             return ReturnResult.illegal("请求体不能为空");
         }
@@ -607,7 +618,7 @@ public class AiBotBindingController {
     public ReturnResult<Void> delete(@PathVariable Long id, HttpServletRequest httpRequest) {
         SysAiBotBinding entity = botBindingService.getById(id);
         if (entity != null) {
-            caller(httpRequest).requireWritable(entity.getOwnerKey());
+            caller(httpRequest).requireWritableOrAdminOrphan(entity.getOwnerKey());
         }
         botBindingService.delete(id);
         return ReturnResult.ok(null);
@@ -636,6 +647,10 @@ public class AiBotBindingController {
         resp.setThinkingEffort(entity.getThinkingEffort());
         resp.setSystemPrompt(entity.getSystemPrompt());
         resp.setRecordUsage(entity.getRecordUsage());
+        resp.setMentionOnly(entity.getMentionOnly());
+        resp.setRandomReplyEnabled(entity.getRandomReplyEnabled());
+        resp.setRandomContextCount(entity.getRandomContextCount());
+        resp.setRandomProbability(entity.getRandomProbability());
         resp.setCreateTime(entity.getCreateTime());
         resp.setLastActiveTime(entity.getLastActiveTime());
         return resp;
@@ -672,11 +687,13 @@ public class AiBotBindingController {
      * <p>前端每 3 秒调用一次；status 变为 confirmed 时表示绑定已完成，可刷新列表。</p>
      *
      * @param key 会话 Key
+     * @param httpRequest HTTP 请求（用于解析当前身份，只允许查询本人会话）
      * @return status + 机器人标识（confirmed 时回填）
      */
     @GetMapping("/qrcode/status")
-    public ReturnResult<AiBotBindingService.QrStatus> checkQrStatus(@RequestParam String key) {
-        return ReturnResult.ok(botBindingService.checkQrCodeStatus(key));
+    public ReturnResult<AiBotBindingService.QrStatus> checkQrStatus(@RequestParam String key,
+                                                                   HttpServletRequest httpRequest) {
+        return ReturnResult.ok(botBindingService.checkQrCodeStatus(key, caller(httpRequest).ownerKey()));
     }
 
     // ==================== 飞书（凭据配置型） ====================
@@ -694,8 +711,10 @@ public class AiBotBindingController {
     public ReturnResult<Long> bindFeishu(@RequestParam String appId,
                                          @RequestParam String appSecret,
                                          HttpServletRequest httpRequest) {
-        return ReturnResult.ok(botBindingService.bindFeishu(appId, appSecret,
-                resolveIdentity(httpRequest).ownerKey()));
+        AiBotCaller caller = caller(httpRequest);
+        // 与 /create 同一道闸门：appId 即 botId，命中他人绑定等同于改写他人凭据
+        requireSaveAllowed(caller, findExisting(appId));
+        return ReturnResult.ok(botBindingService.bindFeishu(appId, appSecret, caller.ownerKey()));
     }
 
     // ==================== 身份解析 ====================
@@ -784,6 +803,22 @@ public class AiBotBindingController {
     private AiBotCaller caller(HttpServletRequest request) {
         Identity identity = resolveIdentity(request);
         return new AiBotCaller(identity.ownerKey(), identity.admin());
+    }
+
+    /**
+     * 校验当前调用方可否写入影响全部用户的 机器人 全局设置。
+     *
+     * <p>本控制器在鉴权白名单内，必须自行解析身份；无身份与设备指纹归属者都不是管理员，
+     * 因此匿名请求会被拒绝。异常用 {@link ApiErrorCode#FORBIDDEN} 而非会话失效码，
+     * 避免前端拦截器把越权误判为未登录而清空令牌。</p>
+     *
+     * @param request HTTP 请求
+     * @throws ApiException 非管理员且非本地信任时抛出
+     */
+    private void requireGlobalAdmin(HttpServletRequest request) {
+        if (!caller(request).admin()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "机器人全局配置仅管理员可修改");
+        }
     }
 
     /**

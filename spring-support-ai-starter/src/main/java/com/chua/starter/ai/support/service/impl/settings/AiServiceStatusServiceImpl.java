@@ -130,11 +130,13 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
      * @return 服务状态 DTO
      */
     private AiServiceStatusDTO toDto(SysAiServiceStatus entity) {
-        AiServiceStatusDTO dto = new AiServiceStatusDTO();
-        dto.setName(entity.getStatusServiceName());
-        dto.setRunning(entity.getStatusRunning());
-        dto.setPid(entity.getStatusPid());
-        dto.setUptime(entity.getStatusUptimeSec());
+        AiServiceStatusDTO dto = new AiServiceStatusDTO(
+                entity.getStatusServiceName(),
+                entity.getStatusRunning(),
+                entity.getStatusPid(),
+                entity.getStatusUptimeSec()
+        );
         return dto;
     }
 }
+

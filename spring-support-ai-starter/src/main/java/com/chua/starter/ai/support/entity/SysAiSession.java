@@ -58,6 +58,26 @@ public class SysAiSession {
     private String modelId;
 
     /**
+     * 绑定角色（助手）ID，对应 sys_ai_role 主键；为空表示不使用特定角色
+     */
+    @TableField("character_id")
+    private Long characterId;
+
+    /**
+     * 会话级 MCP 服务器ID列表（逗号分隔，仅 v-admin 管理员可配置）；
+     * 非空时本次会话仅连接所选 MCP 服务器。
+     */
+    @TableField("mcp_server_ids")
+    private String mcpServerIds;
+
+    /**
+     * 会话级设置 JSON（运行模式 build/plan、温度、topP、知识库引用等），
+     * 由前端 settings 对象整体序列化持久化；为空表示使用默认设置。
+     */
+    @TableField("settings")
+    private String settings;
+
+    /**
      * 关联用户 标识
      */
     @TableField("sys_user_id")

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 铅 单秒扫描循环 (调度器 / 单个 角色专用)。
+ * Leader 单秒扫描循环 (调度器 / 单个 角色专用)。
  *
  * <p>每秒调用 {@link JobRepository#findDue(long, long, int)} 拉取到期任务,
  * 通过 {@link JobSyncBus#publish(String, String, Object)} 发出 CMD 事件:</p>
@@ -140,13 +140,26 @@ public class JobLeaderLoop {
             return;
         }
         long now = System.currentTimeMillis();
-        List<JobDefinition> due = repository.findDue(now, preReadMs, DEFAULT_PRE_READ);
+        List<JobDefinition> due = repository.findDue(now, preReadMs, DEFAULT_PRE_READ,
+                properties.getCluster().getGroup());
         if (due.isEmpty()) {
             return;
         }
         log.debug("[job] Leader 单秒扫描发现 {} 个到期任务", due.size());
         for (JobDefinition definition : due) {
-            bus.publish(JobSyncTopics.TASK_COMMAND, nodeId, definition.getName());
+            // 分布式定时：正文由 GlueSyncService 在保存/执行器上线时推送，命令只带版本号；
+            // 单机没有推送通道，定时命令回带正文，否则执行器缓存里永远没有脚本可跑。
+            String glueSource = properties.isSingle() ? definition.getGlueSource() : null;
+            bus.publish(JobSyncTopics.TASK_COMMAND, nodeId,
+                    JobSyncTopics.command(definition.getName(), false,
+                            definition.getFailRetry(), definition.getRetryIntervalSec(),
+                            definition.getExecuteTimeoutSec(),
+                            definition.getGlueType(), glueSource,
+                            definition.getGlueUpdatetimeMs(),
+                            definition.getRetryCallbackBean(), definition.getExceptionCallbackBean(),
+                            definition.getAlarmEmail(), definition.getAlarmType(), definition.getExecuteParam(),
+                            // 并发策略随命令下发, 由执行器据此决定"上一轮未结束"时跳过还是放行
+                            definition.getConcurrentPolicy()));
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.chua.starter.eduai.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -16,10 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,7 +28,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMapper, EduWrongQuestion> implements IEduWrongQuestionService {
 
     @Override
@@ -42,22 +38,20 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      * @param studentId studentid
      * @param questionId questionid
      * @param examId examid
+     * @param ownerUserId 归属用户标识
      */
-    public void recordWrongQuestion(String studentId, Long questionId, Long examId) {
-        LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, studentId)
-                .eq(EduWrongQuestion::getWrongQuestionQuestionId, questionId);
-        EduWrongQuestion existing = baseMapper.selectOne(wrapper);
+    public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId) {
+        EduWrongQuestion existing = baseMapper.selectOneByStudentQuestionOwner(studentId, questionId, ownerUserId);
 
         if (existing != null) {
             existing.setWrongQuestionWrongCount(existing.getWrongQuestionWrongCount() + 1);
             existing.setWrongQuestionLastWrongTime(LocalDateTime.now());
             existing.setWrongQuestionMasteryLevel(0); // 重置为未掌握
-            existing.setWrongQuestionUpdateTime(LocalDateTime.now());
+            existing.setUpdateTime(LocalDateTime.now());
             baseMapper.updateById(existing);
         } else {
             EduWrongQuestion entity = new EduWrongQuestion();
-            entity.setOwnerUserId(EduUserContext.requireUserId());
+            entity.setOwnerUserId(ownerUserId);
             entity.setWrongQuestionStudentId(studentId);
             entity.setWrongQuestionQuestionId(questionId);
             entity.setWrongQuestionExamId(examId);
@@ -65,8 +59,8 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             entity.setWrongQuestionMasteryLevel(0);
             entity.setWrongQuestionLastWrongTime(LocalDateTime.now());
             entity.setWrongQuestionStatus(1);
-            entity.setWrongQuestionCreateTime(LocalDateTime.now());
-            entity.setWrongQuestionUpdateTime(LocalDateTime.now());
+            entity.setCreateTime(LocalDateTime.now());
+            entity.setUpdateTime(LocalDateTime.now());
             baseMapper.insert(entity);
         }
         log.info("记录错题: student={}, question={}", studentId, questionId);
@@ -77,19 +71,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      * Page查询
     */
     public PageResult<WrongQuestionVO> pageQuery(WrongQueryDTO query) {
-        LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, query.getStudentId());
-        if (StringUtils.hasText(query.getSubject())) {
-            // 需要关联查询，简化处理
-        }
-        if (query.getMasteryLevel() != null) {
-            wrapper.eq(EduWrongQuestion::getWrongQuestionMasteryLevel, query.getMasteryLevel());
-        }
-        EduUserContext.scopeOwned(wrapper, EduWrongQuestion::getOwnerUserId);
-        wrapper.orderByDesc(EduWrongQuestion::getWrongQuestionLastWrongTime);
-
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         Page<EduWrongQuestion> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<EduWrongQuestion> result = baseMapper.selectPage(page, wrapper);
+        IPage<EduWrongQuestion> result = baseMapper.pageSelect(page, query, scope);
 
         List<WrongQuestionVO> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.<WrongQuestionVO>builder()
@@ -106,14 +90,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      * generate评审paper
     */
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
-        LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, dto.getStudentId())
-                .eq(EduWrongQuestion::getWrongQuestionStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduWrongQuestion::getOwnerUserId);
-        wrapper.orderByAsc(EduWrongQuestion::getWrongQuestionMasteryLevel)
-                .orderByDesc(EduWrongQuestion::getWrongQuestionLastWrongTime)
-                .last("limit " + (dto.getCount() != null ? dto.getCount() : 10));
-        List<EduWrongQuestion> list = baseMapper.selectList(wrapper);
+        int count = dto.getCount() != null ? dto.getCount() : 10;
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        List<EduWrongQuestion> list = baseMapper.selectReviewQuestions(dto.getStudentId(), count, scope);
         return list.stream()
                 .map(EduWrongQuestion::getWrongQuestionQuestionId)
                 .collect(Collectors.toList());
@@ -137,7 +116,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
         entity.setWrongQuestionMasteryLevel(masteryLevel);
         entity.setWrongQuestionLastReviewTime(LocalDateTime.now());
         entity.setWrongQuestionReviewCount(entity.getWrongQuestionReviewCount() + 1);
-        entity.setWrongQuestionUpdateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
         baseMapper.updateById(entity);
         log.info("更新掌握度: wrongId={}, mastery={}", wrongId, masteryLevel);
         return true;

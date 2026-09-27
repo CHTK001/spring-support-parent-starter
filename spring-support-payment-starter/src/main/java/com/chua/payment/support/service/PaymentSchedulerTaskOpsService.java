@@ -15,23 +15,22 @@ public interface PaymentSchedulerTaskOpsService {
 
     /**
      * 列表任务。
-     * @return 列表任务的结果
+     * @return 任务列表
      */
     List<PaymentSchedulerTaskVO> listTasks();
 
     /**
      * 更新任务。
-     * @param taskKey 任务Key
+     * @param taskKey 任务标识
      * @param dto dto
-     * @return 更新任务的结果
+     * @return 更新后的任务
      */
     PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto);
 
     /**
-     * trigger任务。
-     * @param taskKey 任务Key
-     * @return trigger任务的结果
+     * 手动触发任务。
+     * @param taskKey 任务标识
+     * @return 触发后的任务
      */
     PaymentSchedulerTaskVO triggerTask(String taskKey);
 }
-

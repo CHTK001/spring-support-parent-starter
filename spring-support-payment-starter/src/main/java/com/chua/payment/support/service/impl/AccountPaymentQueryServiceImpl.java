@@ -26,7 +26,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 /**
- * 账户支付查询服务实现，提供用户维度的订单、交易流水、状态日志查询。
+ * 账户支付查询服务实现，提供以用户为维度的订单、交易流水、状态日志查询。
  *
  * @author CH
  * @since 4.0.0.50
@@ -37,34 +37,29 @@ import java.util.List;
 public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryService {
 
     /**
-     * 薪酬排序映射器
-    */
+     * 支付订单映射器
+     */
     private final PaymentOrderMapper paymentOrderMapper;
     /**
-     * Transactionrecordmapper
-    */
+     * 交易流水映射器
+     */
     private final TransactionRecordMapper transactionRecordMapper;
     /**
-     * 排序状态日志服务
-    */
+     * 订单状态日志服务
+     */
     private final OrderStateLogService orderStateLogService;
     /**
-     * Merchantmapper
-    */
+     * 商户映射器
+     */
     private final MerchantMapper merchantMapper;
     /**
-     * Merchant通道映射器
-    */
+     * 商户渠道映射器
+     */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
     public Page<OrderVO> listOrdersByUser(UserOrderQueryRequest request) {
         if (request == null) {
-            /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("查询参数不能为空");
         }
         Page<PaymentOrder> source = paymentOrderMapper.selectPage(new Page<>(request.page(), request.size()), baseOrderWrapper(request.userId(), request.orderNo(), request.status()));
@@ -75,19 +70,19 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
 
     @Override
     /**
-     * 获取订单by用户
-    */
+     * 按用户查询订单详情
+     */
     public OrderVO getOrderByUser(Long userId, Long id) {
         return toOrderVO(requireUserOrder(userId, id));
     }
 
     @Override
     /**
-     * 列表订单日志by用户
-    */
+     * 按用户查询订单状态日志列表
+     */
     public List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id) {
         /**
-         * require用户订单。
+         * 先校验订单归属，避免越权查询
          * @param userId 用户标识
          * @param id 标识
          */
@@ -98,11 +93,6 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     @Override
     public Page<TransactionRecord> listTransactionsByUser(UserTransactionQueryRequest request) {
         if (request == null) {
-            /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();
@@ -121,12 +111,12 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-     * 基础订单包装器
+     * 基础订单查询条件封装
      *
      * @param userId 用户标识
-     * @param orderNo 订单no
+     * @param orderNo 订单号
      * @param status 状态
-     * @return base订单包装器的结果
+     * @return 封装后的基础订单查询条件
      */
     private LambdaQueryWrapper<PaymentOrder> baseOrderWrapper(Long userId, String orderNo, String status) {
         LambdaQueryWrapper<PaymentOrder> wrapper = new LambdaQueryWrapper<PaymentOrder>()
@@ -143,11 +133,11 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-     * require用户订单
+     * 获取用户订单，不存在时抛出异常
      *
      * @param userId 用户标识
      * @param id 标识
-     * @return require用户订单的结果
+     * @return 获取到的用户订单
      */
     private PaymentOrder requireUserOrder(Long userId, Long id) {
         PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
@@ -156,21 +146,16 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
                 .and(item -> item.isNull(PaymentOrder::getDeleted).or().eq(PaymentOrder::getDeleted, 0))
                 .last("limit 1"));
         if (order == null) {
-            /**
-             * 薪酬异常。
-             * @param "订单不存在或无权访问" "订单不存在或无权访问"
-             * @return 薪酬异常的结果
-             */
             throw new PaymentException("订单不存在或无权访问");
         }
         return order;
     }
 
     /**
-     * 转为订单vo
+     * 转换为订单视图对象
      *
      * @param order 订单
-     * @return 转为订单vo的结果
+     * @return 转换后的订单视图对象
      */
     private OrderVO toOrderVO(PaymentOrder order) {
         OrderVO vo = new OrderVO();
@@ -184,10 +169,10 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     /**
-     * 转为记录日志VO
+     * 转换为状态日志视图对象
      *
      * @param log 日志
-     * @return 转为日志vo的结果
+     * @return 转换后的状态日志视图对象
      */
     private OrderStateLogVO toLogVO(OrderStateLog log) {
         OrderStateLogVO vo = new OrderStateLogVO();
@@ -195,4 +180,3 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
         return vo;
     }
 }
-

@@ -1,25 +1,30 @@
 package com.chua.starter.server.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.lang.datasource.series.SeriesEngine;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.model.vo.AgentPushVO;
+import com.chua.starter.server.support.spi.HostAgentHistoryWriter;
 import com.chua.starter.server.support.spi.HostCollectContext;
 import com.chua.starter.server.support.spi.HostCollectProvider;
 import com.chua.starter.server.support.spi.HostCollectProviderRegistry;
+import com.chua.starter.server.support.util.HostPlatforms;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
+
+import java.util.HashSet;
+import java.util.Set;
 
 
 /**
@@ -34,10 +39,17 @@ import reactor.core.publisher.Mono;
  * @since 4.0.0.42
  */
 @Tag(name = "服务器资产-Agent上报", description = "Agent 主动推送采集数据")
+@Slf4j
 @RestController
 @RequestMapping(ServerConstants.API_PREFIX + "/host/agent")
 @RequiredArgsConstructor
 public class HostAgentController {
+
+    /**
+     * 历史指标写入扩展点（监控模块注册实现；未接入监控模块时为空）
+    */
+    private static final ServiceProvider<HostAgentHistoryWriter> HISTORY_WRITERS =
+            ServiceProvider.of(HostAgentHistoryWriter.class);
 
     /**
      * 采集提供者注册中心
@@ -48,12 +60,6 @@ public class HostAgentController {
      * 主机 映射器
     */
     private final MsServerHostMapper hostMapper;
-
-    /**
-     * 时序引擎（可选，未配置时为 null）
-    */
-    @Autowired(required = false)
-    private SeriesEngine seriesEngine;
 
     /**
      * Agent 推送数据（按 Agent键 定位主机）
@@ -115,6 +121,10 @@ public class HostAgentController {
         if (payload.diskGb() != null) {
             host.setServerHostDiskGb(payload.diskGb());
         }
+        String reportedOs = HostPlatforms.normalize(payload.os());
+        if (!reportedOs.isEmpty()) {
+            host.setServerHostOsType(reportedOs);
+        }
         if (payload.osVersion() != null) {
             host.setServerHostOsVersion(payload.osVersion());
         }
@@ -149,33 +159,23 @@ public class HostAgentController {
     }
 
     /**
-     * 写历史时序指标（CPU/内存/磁盘）到 SeriesEngine。
+     * 广播给监控域的历史写入实现。
      *
-     * @param host    主机
+     * @param host    已回写台账的主机
      * @param payload 上报负载
      */
     private void writeHistoryMetrics(MsServerHost host, AgentPushVO payload) {
-        if (seriesEngine == null || !seriesEngine.isAvailable()) {
-            return;
-        }
-        Long monitorId = host.getId();
-        long now = System.currentTimeMillis();
         try {
-            // CPU
-            if (payload.cpuUsage() != null) {
-                seriesEngine.writePoint("ms_monitor_metric_cpu", monitorId, "cpu_usage", payload.cpuUsage(), now);
-            }
-            // 内存
-            if (payload.memUsage() != null) {
-                seriesEngine.writePoint("ms_monitor_metric_memory", monitorId, "usage_percent", payload.memUsage(), now);
-            }
-            // 磁盘
-            if (payload.diskUsage() != null) {
-                seriesEngine.writePoint("ms_monitor_metric_disk", monitorId, "usage_percent", payload.diskUsage(), now);
+            Set<Class<?>> seen = new HashSet<>();
+            for (HostAgentHistoryWriter writer : HISTORY_WRITERS.collect()) {
+                // 同一实现类的多个别名（扩展点登记名 + @Spi value）会各自建实例，只执行一次
+                if (writer == null || !seen.add(writer.getClass())) {
+                    continue;
+                }
+                writer.write(host, payload);
             }
         } catch (Exception e) {
-            org.slf4j.LoggerFactory.getLogger(HostAgentController.class)
-                    .warn("[HostAgent] 时序历史写入失败 hostId={}: {}", monitorId, e.getMessage());
+            log.warn("[HostAgent] 历史指标写入扩展点执行失败 hostId={}: {}", host.getId(), e.getMessage());
         }
     }
 }

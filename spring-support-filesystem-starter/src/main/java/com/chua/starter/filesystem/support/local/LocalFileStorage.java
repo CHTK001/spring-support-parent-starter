@@ -32,15 +32,26 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 本地文件系统存储 SPI 实现（仅用于集成测试）。
+ * 本地文件系统存储 SPI 实现。
  *
- * <p>将对象写入本地磁盘目录，提供最小化的 {@link com.chua.common.support.storage.FileStorage} 接口，
- * 用于在没有真实云存储的情况下验证分片上传链路。</p>
+ * <p>将对象写入本地磁盘目录，提供 {@link com.chua.common.support.storage.FileStorage} 接口的
+ * 无外部依赖落盘实现。配置了 {@code base-path} 时落盘到 {@code base-path/bucket}，
+ * 未配置时退回系统临时目录（集成测试路径）。</p>
  *
  * @since 4.0.0.42
  * @author CH
  */
 public class LocalFileStorage extends AbstractFileStorage {
+
+    /**
+     * 临时目录系统属性键
+     */
+    private static final String TEMP_PATH_KEY = "filesystem.temp.path";
+
+    /**
+     * 附加配置键：本地存储根目录
+     */
+    private static final String BASE_PATH_KEY = "basePath";
 
     /**
      * 本地存储根目录
@@ -58,16 +69,44 @@ public class LocalFileStorage extends AbstractFileStorage {
      */
     public LocalFileStorage(BucketSetting setting) {
         super(setting);
-        String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
-                .orElse(System.getProperty("java.io.tmpdir"))
-                + "/filesystem-local-test/"
-                + (bucket != null ? bucket : "default");
-        this.rootPath = Paths.get(baseDir);
+        this.rootPath = Paths.get(resolveRoot(setting)).toAbsolutePath().normalize();
         try {
             Files.createDirectories(rootPath);
         } catch (IOException e) {
-            throw new RuntimeException("创建本地存储根目录失败: " + baseDir, e);
+            throw new RuntimeException("创建本地存储根目录失败: " + rootPath, e);
         }
+    }
+
+    /**
+     * 解析存储根目录：显式 base-path 优先，缺省回退系统临时目录。
+     *
+     * @param setting 存储配置
+     * @return 根目录绝对路径字符串
+     */
+    private String resolveRoot(BucketSetting setting) {
+        Map<String, String> extra = setting.getExtraProperties();
+        String base = extra == null ? null : extra.get(BASE_PATH_KEY);
+        if (base != null && !base.isEmpty()) {
+            return base + "/" + (bucket != null ? bucket : "default");
+        }
+        return Optional.ofNullable(System.getProperty(TEMP_PATH_KEY))
+                .orElse(System.getProperty("java.io.tmpdir"))
+                + "/filesystem-local-test/"
+                + (bucket != null ? bucket : "default");
+    }
+
+    /**
+     * 解析对象键并挡住目录穿越。
+     *
+     * @param key 对象键
+     * @return 归一化后的绝对路径，越界返回 null
+     */
+    private Path resolveSafely(String key) {
+        if (key == null || key.isEmpty()) {
+            return null;
+        }
+        Path target = rootPath.resolve(key).normalize();
+        return target.startsWith(rootPath) ? target : null;
     }
 
     @Override
@@ -85,7 +124,13 @@ public class LocalFileStorage extends AbstractFileStorage {
     public PutObjectResult putObject(PutObjectRequest request) {
         try {
             String key = resolveKey(request.getFilePath(), request.getFileName());
-            Path target = rootPath.resolve(key);
+            Path target = resolveSafely(key);
+            if (target == null) {
+                return PutObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.FAILURE)
+                        .message("非法对象键: " + key)
+                        .build();
+            }
             Files.createDirectories(target.getParent());
             // 键以路径分隔符结尾时语义为"创建目录"（与 S3 零字节目录占位对象的约定对齐），
             // 本地落盘为真实目录，不产生占位文件
@@ -93,6 +138,7 @@ public class LocalFileStorage extends AbstractFileStorage {
                 Files.createDirectories(target);
                 return PutObjectResult.builder()
                         .resultCode(ObjectResult.ResultCode.SUCCESS)
+                        .key(key)
                         .url(target.toUri().toString())
                         .message("OK")
                         .build();
@@ -109,6 +155,7 @@ public class LocalFileStorage extends AbstractFileStorage {
             }
             return PutObjectResult.builder()
                     .resultCode(ObjectResult.ResultCode.SUCCESS)
+                    .key(key)
                     .url(target.toUri().toString())
                     .message("OK")
                     .build();
@@ -125,8 +172,8 @@ public class LocalFileStorage extends AbstractFileStorage {
      * 获取对象
     */
     public GetObjectResult getObject(String key) {
-        Path target = rootPath.resolve(key);
-        if (!Files.exists(target)) {
+        Path target = resolveSafely(key);
+        if (target == null || !Files.exists(target)) {
             return GetObjectResult.builder()
                     .resultCode(ObjectResult.ResultCode.FAILURE)
                     .message("对象不存在: " + key)
@@ -159,7 +206,14 @@ public class LocalFileStorage extends AbstractFileStorage {
     */
     public DeleteObjectResult deleteObject(String key) {
         try {
-            Files.deleteIfExists(rootPath.resolve(key));
+            Path target = resolveSafely(key);
+            if (target == null) {
+                return DeleteObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.FAILURE)
+                        .message("非法对象键: " + key)
+                        .build();
+            }
+            Files.deleteIfExists(target);
             return DeleteObjectResult.builder()
                     .resultCode(ObjectResult.ResultCode.SUCCESS)
                     .build();
@@ -177,7 +231,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     */
     public ExistObjectResult existObject(ExistObjectRequest request) {
         String key = request.getKey();
-        boolean exists = key != null && Files.exists(rootPath.resolve(key));
+        Path target = resolveSafely(key);
+        boolean exists = target != null && Files.exists(target);
         return ExistObjectResult.builder()
                 .resultCode(ObjectResult.ResultCode.SUCCESS)
                 .exists(exists)
@@ -192,8 +247,8 @@ public class LocalFileStorage extends AbstractFileStorage {
         try {
             List<Metadata> metadataList = new java.util.ArrayList<>();
             String dir = request.getFilePath();
-            Path targetDir = dir == null || dir.isEmpty() ? rootPath : rootPath.resolve(dir);
-            if (!Files.exists(targetDir) || !Files.isDirectory(targetDir)) {
+            Path targetDir = dir == null || dir.isEmpty() ? rootPath : resolveSafely(dir);
+            if (targetDir == null || !Files.exists(targetDir) || !Files.isDirectory(targetDir)) {
                 return ListObjectResult.builder()
                         .resultCode(ObjectResult.ResultCode.SUCCESS)
                         .metadata(metadataList)

@@ -99,6 +99,10 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                         userInfo.setRoles(com.google.common.collect.Sets.newHashSet(
                                 com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN,
                                 com.chua.starter.common.support.constant.Constant.ADMIN));
+                        // 权限集合必须一并授予：@Permission 的 value（权限名）与 role（角色名）是两套独立判定，
+                        // 只授角色时 isRoleMatch 通过但 isPermissionMatch 必然失败，@Permission("admin") 仍会被拒。
+                        userInfo.setPermission(com.google.common.collect.Sets.newHashSet(
+                                com.chua.starter.common.support.constant.Constant.ADMIN));
                         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userInfo);
                     } else if (currentRequest() != null) {
  // HTTP 请求无用户上下文即未登录，不得伪造身份放行
@@ -135,26 +139,10 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                     }
                 }
 
-                // 超级管理员检查
-                if (AuthConstant.isSuperAdmin(roles)) {
-                    log.info("[权限拦截器]超级管理员放行 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
-                    return invocation.proceed();
-                }
-
-                // 普通管理员检查
-                if (AuthConstant.isAdmin(roles)) {
-                    if (hasSuperAdminAndMatch(permission)) {
-                        log.warn("[权限拦截器]管理员权限不足(需要超级管理员) - 用户: {}, 方法: {}", 
-                                userInfo.getUsername(), methodName);
-                        /**
-                         * OAuth异常。
-                         * @param "您的账号没有权限 "您的账号没有权限
-                         * @param 请联系管理员分配!" 请联系管理员分配!"
-                         * @return oauth异常的结果
-                         */
-                        throw new OauthException("您的账号没有权限, 请联系管理员分配!");
-                    }
-                    log.info("[权限拦截器]管理员放行 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
+                // 特权放行：内置 admin 账号（全部权限+菜单，与角色授权无关）或持有超管角色；
+                // 仅被授予 ADMIN 角色的账号不再全量放行，落到下面的角色/权限匹配，受该角色授权控制
+                if (AuthConstant.isPrivileged(userInfo.getUsername(), roles)) {
+                    log.info("[权限拦截器]特权账号放行 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
                     return invocation.proceed();
                 }
 
@@ -209,20 +197,6 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     /**
-     * 是否Admin
-     *
-     * @return 是否admin的结果
-     */
-    private boolean isAdmin() {
-        UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
-        if(null == userInfo) {
-            return false;
-        }
-        Set<String> roles = userInfo.getRoles();
-        return CollectionUtils.containsIgnoreCase(roles, "ADMIN");
-    }
-
-    /**
      * 是否权限匹配
      *
      * @param permission 权限
@@ -250,20 +224,6 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
     }
 
-    /**
-     * 是否拥有父adminand匹配
-     *
-     * @param permission 权限
-     * @return 是否包含父adminand匹配的结果
-     */
-    private boolean hasSuperAdminAndMatch(Permission permission) {
-        String[] role = permission.role();
-        if (ArrayUtils.isEmpty(role)) {
-            return false;
-        }
-
-        return role.length == 1 && SUPER_ADMIN.equalsIgnoreCase(role[0]);
-    }
     /**
      * 是否角色匹配
      *

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduCollectLogMapper">
+
+    <!-- 分页查询采集执行日志：按任务筛选 + 归属隔离 + 日志ID倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduCollectLog">
+        SELECT l.* FROM edu_collect_log l
+        <where>
+            <if test="taskId != null">
+                AND l.collect_log_task_id = #{taskId}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (l.collect_log_owner_user_id IS NULL OR l.collect_log_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY l.collect_log_id DESC
+    </select>
+
+</mapper>

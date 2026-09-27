@@ -48,6 +48,13 @@ import javax.sql.DataSource;
 public class DocumentAutoConfiguration {
 
     /**
+     * Spring MVC 的 RequestMappingHandlerMapping bean 名。
+     *
+     * <p>按类型查找会与 Actuator 的 controllerEndpointHandlerMapping 冲突，故按名取。</p>
+     */
+    private static final String HANDLER_MAPPING_BEAN = "requestMappingHandlerMapping";
+
+    /**
      * 文档服务（解析 + 缓存）。
      * <p>若 classpath 缺 DocumentParser SPI 或 DataSource 不可用，返回 null</p>
      */
@@ -145,7 +152,16 @@ public SmartInitializingSingleton documentPathRegistrar(ApplicationContext conte
             return;
         }
         try {
-            RequestMappingHandlerMapping mapping = context.getBean(RequestMappingHandlerMapping.class);
+            // 必须按 bean 名取：上下文里同时存在 requestMappingHandlerMapping 与
+            // Actuator 的 controllerEndpointHandlerMapping 两个同类型 Bean，
+            // getBean(RequestMappingHandlerMapping.class) 会抛 NoUniqueBeanDefinitionException，
+            // 导致数据库文档路径注册静默失败。
+            if (!context.containsBean(HANDLER_MAPPING_BEAN)) {
+                log.warn("未找到 {} Bean，跳过数据库文档路径注册", HANDLER_MAPPING_BEAN);
+                return;
+            }
+            RequestMappingHandlerMapping mapping =
+                    context.getBean(HANDLER_MAPPING_BEAN, RequestMappingHandlerMapping.class);
             handler.register(mapping);
         } catch (Exception e) {
             log.warn("注册数据库文档路径失败：{}", e.getMessage());

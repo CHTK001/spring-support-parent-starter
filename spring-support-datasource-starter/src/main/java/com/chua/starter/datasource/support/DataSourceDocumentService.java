@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 数据源文档服务
- * <p>
  * 提供两种取数据方式：
  * <ul>
  *     <li>{@link #apply()} —— 强制重新读取数据库元数据并刷新缓存</li>
@@ -24,7 +23,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * </ul>
  * 通过复用 {@link DocumentParser} SPI（{@code DatabaseDocumentParser}），
  * 无三方模板引擎依赖。
- * </p>
  *
  * @since 2026/8/5
  * @author CH
@@ -61,7 +59,6 @@ public class DataSourceDocumentService {
      * 创建 数据源文档服务 实例
      * @param dataSource 数据源
      * @param properties 文档属性
-     * @param properties 属性
      */
     public DataSourceDocumentService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;

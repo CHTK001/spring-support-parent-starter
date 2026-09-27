@@ -96,7 +96,7 @@ public class BeanJobHandler implements JobHandler {
     public void execute() throws Exception {
         log.debug("[job] execute handler={} target={}#{}",
                 name, target.getClass().getSimpleName(), method.getName());
-        ReflectUtils.invoke(target, method.getName(), method.getReturnType(), method.getParameterTypes());
+        invoke(method);
     }
 
     @Override
@@ -108,7 +108,7 @@ public class BeanJobHandler implements JobHandler {
             return;
         }
         log.debug("[job] init handler={}", name);
-        ReflectUtils.invoke(target, initMethod.getName(), initMethod.getReturnType(), initMethod.getParameterTypes());
+        invoke(initMethod);
     }
 
     @Override
@@ -120,6 +120,32 @@ public class BeanJobHandler implements JobHandler {
             return;
         }
         log.debug("[job] destroy handler={}", name);
-        ReflectUtils.invoke(target, destroyMethod.getName(), destroyMethod.getReturnType(), destroyMethod.getParameterTypes());
+        invoke(destroyMethod);
+    }
+
+    /**
+     * 调用钩子方法，并把目标方法抛出的异常原样上抛。
+     *
+     * <p>刻意不用 {@code ReflectUtils.invoke(Object, String, Class, Class[], Object...)}：
+     * 一是它与同名的 {@code invoke(Object, String, Class, Object...)} 在本调用形态下构成
+     * varargs 歧义、无法编译（补 {@code new Object[0]} 也消不掉，两者在可变参数阶段同时可用）；
+     * 二是它失败时只记日志并返回 {@code null}，会让 {@code @Job} 方法抛出的异常被静默吞掉、
+     * 任务被误记成成功。</p>
+     *
+     * @param hookMethod 钩子方法（无参）
+     * @throws Exception 目标方法抛出的异常
+     */
+    private void invoke(Method hookMethod) throws Exception {
+        try {
+            ReflectUtils.invokeProxy(target, hookMethod, null);
+        } catch (Throwable ex) {
+            if (ex instanceof Exception exception) {
+                throw exception;
+            }
+            if (ex instanceof Error error) {
+                throw error;
+            }
+            throw new IllegalStateException("任务钩子调用失败: " + name + "#" + hookMethod.getName(), ex);
+        }
     }
 }

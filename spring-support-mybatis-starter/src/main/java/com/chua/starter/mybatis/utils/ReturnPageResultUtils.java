@@ -3,7 +3,6 @@ package com.chua.starter.mybatis.utils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.PageResult;
-import com.chua.common.support.utils.PageUtils;
 import com.chua.starter.common.support.lang.ReturnPageResult;
 
 import java.util.List;
@@ -59,7 +58,7 @@ public class ReturnPageResultUtils {
      * @return 包装后的分页结果
      */
     public static <T> ReturnPageResult<T> staticPage(List<T> data, int page, int size) {
-        IPage<T> ipage = com.chua.common.support.utils.PageUtils.page(data, page, size);
+        IPage<T> ipage = MybatisPageUtils.page(data, page, size);
         PageResult<T> pageResult = PageResult.<T>builder()
                 .pageNo((int) ipage.getCurrent())
                 .pageSize((int) ipage.getSize())
@@ -80,6 +79,6 @@ public class ReturnPageResultUtils {
      * @return 填充数据的 ipage
      */
     public static <T> IPage<T> page(List<T> list, int page, int size) {
-        return com.chua.common.support.utils.PageUtils.page(list, page, size);
+        return MybatisPageUtils.page(list, page, size);
     }
 }

@@ -13,41 +13,39 @@ import com.chua.payment.support.entity.WalletWithdrawApproval;
 public interface WalletWithdrawApprovalService {
 
     /**
-     * 创建approval。
+     * 创建提现审批单。
      * @param dto dto
-     * @return 创建approval的结果
+     * @return 创建出的审批单
      */
     WalletWithdrawApproval createApproval(CreateApprovalDTO dto);
 
     /**
-     * pageapprovals。
-     * @param pageNum pagenum
-     * @param pageSize page大小
+     * 分页查询审批单。
+     * @param pageNum 页码
+     * @param pageSize 每页大小
      * @param status 状态
-     * @return pageApprovals的结果
      */
     Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status);
 
     /**
-     * 获取byid。
+     * 根据主键获取审批单。
      * @param id 标识
-     * @return 获取byid的结果
+     * @return 获取到的审批单
      */
     WalletWithdrawApproval getById(Long id);
 
     /**
-     * approve。
+     * 审批通过。
      * @param id 标识
-     * @param operator 操作符
+     * @param operator 操作人
      */
     void approve(Long id, String operator);
 
     /**
-     * reject。
+     * 驳回。
      * @param id 标识
-     * @param operator 操作符
-     * @param reason ReasonMLmlml
+     * @param operator 操作人
+     * @param reason 驳回原因
      */
     void reject(Long id, String operator, String reason);
 }
-

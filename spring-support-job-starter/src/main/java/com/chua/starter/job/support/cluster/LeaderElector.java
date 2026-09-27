@@ -21,10 +21,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *     elector.markLeader("payment");
  *     // 启动单秒循环
  * }
- * }</pre>kLeader("payment");
- *     // 启动单秒循环
- * }
  * }</pre>
+ *
+ * <p>注意 {@code tryAcquire} 的第一个参数是<b>选主租约命名空间</b>
+ * （{@code plugin.job.cluster.election-namespace}，留空时按应用名推导），
+ * <b>不是</b>作业归属分组 {@code plugin.job.cluster.group}：作业分组允许跨部署重名，
+ * 而租约命名空间不允许，两者混用会让两个独立部署抢同一条租约行。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -39,7 +41,7 @@ public class LeaderElector {
     private final String nodeId;
 
     /**
-     * 铅 状态标记 (CAS)
+     * Leader 状态标记 (CAS)
      */
     private final AtomicBoolean leader = new AtomicBoolean(false);
 

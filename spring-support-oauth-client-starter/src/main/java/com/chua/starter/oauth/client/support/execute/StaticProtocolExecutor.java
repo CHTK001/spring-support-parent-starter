@@ -62,15 +62,32 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         AuthClientProperties.TempUser temp = getAuthClientProperties().getTemp();
-        String rawUsers = temp != null ? temp.getUser() : null;
+        String rawConfig = temp != null ? temp.getUser() : null;
+        // 读可变凭据存储：改密后登录鉴权使用新口令（首次按配置初始化）
+        String rawUsers = StringUtils.isBlank(rawConfig) ? rawConfig
+                : com.chua.starter.oauth.client.support.user.StaticUserStore.get().effective(rawConfig);
         if (StringUtils.isBlank(rawUsers)) {
             LoginAuthResult empty = new LoginAuthResult();
             empty.setCode(403);
             empty.setMessage("静态临时账号未配置");
             return empty;
         }
+        // 短信 / 邮箱登录：验证码归属已在业务层校验，令牌签发免口令，仅按用户名匹配
+        if (authType == AuthType.SMS || authType == AuthType.EMAIL) {
+            LoginAuthResult codeResult = StaticTempLogin.loginByVerifiedCode(
+                    rawUsers, username, authType.getCode(),
+                    getAuthClientProperties().getClampedStaticTokenExpireSeconds());
+            if (codeResult == null) {
+                LoginAuthResult denied = new LoginAuthResult();
+                denied.setCode(403);
+                denied.setMessage("账号未配置，无法登录");
+                return denied;
+            }
+            return codeResult;
+        }
         LoginAuthResult result = StaticTempLogin.login(rawUsers, username, password,
-                authType != null ? authType.getCode() : "STATIC");
+                authType != null ? authType.getCode() : "STATIC",
+                getAuthClientProperties().getClampedStaticTokenExpireSeconds());
         if (result == null) {
             LoginAuthResult denied = new LoginAuthResult();
             denied.setCode(403);

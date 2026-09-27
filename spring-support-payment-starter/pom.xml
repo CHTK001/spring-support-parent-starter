@@ -91,9 +91,5 @@
     <!-- 测试依赖 -->
     
 
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
   </dependencies>
 </project>

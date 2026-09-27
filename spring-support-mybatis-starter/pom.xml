@@ -92,9 +92,5 @@
       <scope>provided</scope>
       <!-- 可选依赖，不强制引入 -->
     </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
   </dependencies>
 </project>

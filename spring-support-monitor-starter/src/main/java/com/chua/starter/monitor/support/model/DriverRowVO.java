@@ -25,14 +25,14 @@ public class DriverRowVO {
     private String fileName;
 
     /**
-     * 占用字节数（Linux lsmod size）
+     * 占用字节数（仅 Linux lsmod 提供，Windows 为 null）
      */
-    private long size;
+    private Long size;
 
     /**
-     * 被引用次数（Linux lsmod used）
+     * 被引用次数（仅 Linux lsmod 提供，Windows 为 null）
      */
-    private int usedBy;
+    private Integer usedBy;
 
     /**
      * 依赖的其他模块
@@ -60,7 +60,7 @@ public class DriverRowVO {
     private String className;
 
     /**
-     * 是否启动关键
+     * 是否启动关键（仅 Windows Get-WindowsDriver 提供，Linux 为 null）
      */
-    private boolean bootCritical;
+    private Boolean bootCritical;
 }

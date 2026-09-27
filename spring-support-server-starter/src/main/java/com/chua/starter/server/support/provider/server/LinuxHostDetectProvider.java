@@ -8,9 +8,14 @@ import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostDetectProvider;
+import com.chua.starter.server.support.software.SoftwareCatalog;
+import com.chua.starter.server.support.software.SoftwareInstanceVO;
 import com.chua.starter.server.support.util.SshClients;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Linux 主机硬件探测提供者（SSH 采集）
@@ -47,8 +52,9 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
             if (NumberUtils.isNumber(cpu)) {
                 host.setServerHostCpuCores(NumberUtils.toInt(cpu));
             }
-            // 内存(MB)，取自 free -m 第二行 Mem 列
-            String mem = execQuiet(handle, "free -m | awk '/^Mem:/{print $2}'");
+            // 内存(MB)：直接读 /proc/meminfo 的 MemTotal 换算（精简容器可能没有 free 命令）
+            String mem = execQuiet(handle,
+                    "awk '/MemTotal/{printf \"%.0f\", $2/1024}' /proc/meminfo");
             if (NumberUtils.isNumber(mem)) {
                 host.setServerHostMemoryMb(NumberUtils.toLong(mem));
             }
@@ -81,13 +87,19 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
             if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
                 host.setServerHostNetworks(networks);
             }
-            // CPU 使用率（%）（top 空闲列换算）
-            String cpuUsage = execQuiet(handle, "top -bn1 2>/dev/null | grep 'Cpu(s)' | awk '{print 100-$8}'");
+            // CPU 使用率（%）：直接读 /proc/stat 两次采样（间隔 1s），避免 top 在容器/不同 procps 版本下字段错位
+            String cpuUsage = execQuiet(handle,
+                    "set -- $(grep '^cpu ' /proc/stat); I1=$(($5+$6)); T1=$(($2+$3+$4+$5+$6+$7+$8+$9)); "
+                            + "sleep 1; set -- $(grep '^cpu ' /proc/stat); I2=$(($5+$6)); T2=$(($2+$3+$4+$5+$6+$7+$8+$9)); "
+                            + "awk -v i1=$I1 -v t1=$T1 -v i2=$I2 -v t2=$T2 "
+                            + "'BEGIN{dt=t2-t1; di=i2-i1; if(dt<=0){print 0}else{printf \"%.2f\",(dt-di)*100/dt}}'");
             if (StringUtils.isNotBlank(cpuUsage) && isRatio(cpuUsage)) {
                 host.setServerHostCpuUsage(toRatio(cpuUsage));
             }
-            // 内存使用率（%）（free 第三行 used/total）
-            String memUsage = execQuiet(handle, "free | awk '/^Mem:/{printf \"%.2f\", $3/$2*100}'");
+            // 内存使用率（%）：/proc/meminfo 用 MemTotal 与 MemAvailable（含可回收缓存），直观且稳定
+            String memUsage = execQuiet(handle,
+                    "awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}/MemFree/{f=$2}"
+                            + " END{u=(a>0?a:(f>0?f:0)); if(t>0){printf \"%.2f\",(t-u)*100/t}}' /proc/meminfo");
             if (StringUtils.isNotBlank(memUsage) && isRatio(memUsage)) {
                 host.setServerHostMemUsage(toRatio(memUsage));
             }
@@ -110,11 +122,23 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
             if (StringUtils.isNotBlank(arch)) {
                 host.setServerHostOsArch(arch.trim());
             }
+            // 包管理器（apt/dnf/yum/brew，供软件仓库 SPI 路由；探测失败回退 unknown）
+            String packageManager = execQuiet(handle,
+                    "which apt >/dev/null 2>&1 && echo apt || (which dnf >/dev/null 2>&1 && echo dnf"
+                            + " || (which yum >/dev/null 2>&1 && echo yum || (which brew >/dev/null 2>&1"
+                            + " && echo brew || echo unknown)))");
+            if (StringUtils.isNotBlank(packageManager)) {
+                host.setServerHostPackageManager(packageManager.trim());
+            }
             // 内网 IP（hostname -I 取第一个）
             String ip = execQuiet(handle, "hostname -I 2>/dev/null | awk '{print $1}'");
             if (StringUtils.isNotBlank(ip)) {
                 host.setServerHostPrivateIp(ip.trim());
             }
+            // 磁盘 IO（KB/s）：/proc/diskstats 两次采样（间隔 1s），整盘扇区增量 *512B
+            collectDiskIo(handle, host);
+            // 运行软件：ps 全量进程按已知软件特征识别（支持多实例）
+            collectSoftware(handle, host);
             return ReturnResult.ok(host, "Linux 硬件探测成功");
         } catch (Exception e) {
             log.warn("[detect] Linux 探测失败 hostId={} address={}: {}",
@@ -128,17 +152,108 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
     }
 
     /**
+     * 采集磁盘读写速率（KB/s）：/proc/diskstats 两次采样整盘扇区增量。
+     *
+     * @param handle SSH 句柄
+     * @param host   主机
+     */
+    private void collectDiskIo(SshClients.Handle handle, MsServerHost host) {
+        // whole() 过滤分区：nvme/mmcblk 整盘不含 'p'；sd/vd 整盘不以数字结尾
+        String sample = "f(){ awk 'function whole(n){ if(n ~ /^(nvme|mmcblk)/) return index(n,\"p\")==0;"
+                + " return n !~ /[0-9]$/ } { if($3 ~ /^(sd|vd|xvd|hd|nvme|mmcblk)/ && whole($3))"
+                + "{r+=$6;w+=$10} } END{printf \"%d %d\", r, w}' /proc/diskstats; }; "
+                + "echo $(f); sleep 1; echo $(f)";
+        String out = execQuiet(handle, sample);
+        if (StringUtils.isBlank(out)) {
+            return;
+        }
+        String[] lines = out.trim().split("\\r?\\n");
+        if (lines.length < 2) {
+            return;
+        }
+        String[] a = lines[0].trim().split("\\s+");
+        String[] b = lines[1].trim().split("\\s+");
+        if (a.length < 2 || b.length < 2
+                || !NumberUtils.isNumber(a[0]) || !NumberUtils.isNumber(b[0])) {
+            return;
+        }
+        long r1 = NumberUtils.toLong(a[0]), w1 = NumberUtils.toLong(a[1]);
+        long r2 = NumberUtils.toLong(b[0]), w2 = NumberUtils.toLong(b[1]);
+        // 扇区 512B，间隔 1s，*512/1024 = KB/s；计数器回绕时为负则归零
+        double readKbs = Math.max(0, (r2 - r1) * 512.0 / 1024.0);
+        double writeKbs = Math.max(0, (w2 - w1) * 512.0 / 1024.0);
+        host.setServerHostDiskReadKbs(round2(readKbs));
+        host.setServerHostDiskWriteKbs(round2(writeKbs));
+    }
+
+    /**
+     * 采集运行软件实例：ps 全量进程按软件特征识别并落 JSON。
+     *
+     * @param handle SSH 句柄
+     * @param host   主机
+     */
+    private void collectSoftware(SshClients.Handle handle, MsServerHost host) {
+        // 字段：pid %cpu rss(KB) etimes(s) comm args；--no-headers 去掉表头
+        String out = execQuiet(handle, "ps -eo pid,pcpu,rss,etimes,comm,args --no-headers");
+        if (StringUtils.isBlank(out)) {
+            return;
+        }
+        List<SoftwareInstanceVO> list = new ArrayList<>();
+        int seen = 0;
+        for (String line : out.split("\\r?\\n")) {
+            if (++seen > 500) {
+                break;
+            }
+            // 前 5 列无空格，第 6 段为完整命令行（可含空格）
+            String[] parts = line.trim().split("\\s+", 6);
+            if (parts.length < 5 || !NumberUtils.isNumber(parts[0])) {
+                continue;
+            }
+            int pid = NumberUtils.toInt(parts[0]);
+            double cpu = NumberUtils.isDecimals(parts[1]) ? NumberUtils.toDouble(parts[1]) : 0;
+            double rssKb = NumberUtils.isNumber(parts[2]) ? NumberUtils.toLong(parts[2]) : 0;
+            long etimes = NumberUtils.isNumber(parts[3]) ? NumberUtils.toLong(parts[3]) : 0;
+            String comm = parts[4];
+            String args = parts.length > 5 ? parts[5] : "";
+            String type = SoftwareCatalog.match(comm, args);
+            if (type != null) {
+                list.add(SoftwareCatalog.instance(type, pid, cpu, rssKb / 1024.0, etimes,
+                        args.isBlank() ? comm : args));
+            }
+        }
+        if (!list.isEmpty()) {
+            try {
+                host.setServerHostSoftware(new com.fasterxml.jackson.databind.ObjectMapper()
+                        .writeValueAsString(list));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException ignore) {
+                // 序列化失败不阻断探测
+            }
+        }
+    }
+
+    /**
+     * 保留两位小数。
+     * @param v 原值
+     * @return 结果
+     */
+    private double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
+    }
+
+    /**
      * 判断字符串是否为可解析的百分比数字（非空且为数字或小数）
      *
      * @param value 待判断字符串
      * @return 是否可解析
      */
     private boolean isRatio(String value) {
-        return StringUtils.isNotBlank(value) && NumberUtils.isNumber(value);
+        // 使用率命令输出为小数（如 17.17），NumberUtils.isNumber 遇小数点即 false，
+        // 必须用支持小数的 isDecimal 判定，否则三率永远不回写
+        return StringUtils.isNotBlank(value) && NumberUtils.isDecimals(value);
     }
 
     /**
-     * 将百分比字符串转为 Double（四舍五入保留两位小数），解析失败返回 null
+     * 将百分比字符串转为 Double（四舍五入保留 1 位小数），解析失败返回 null
      *
      * @param value 百分比字符串
      * @return Double 或 null
@@ -148,7 +263,7 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
             return null;
         }
         try {
-            return Double.parseDouble(value.trim());
+            return Math.round(Double.parseDouble(value.trim()) * 10.0) / 10.0;
         } catch (NumberFormatException e) {
             return null;
         }

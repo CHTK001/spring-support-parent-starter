@@ -65,15 +65,8 @@ public class DataSourceDocumentController {
      * 创建 数据源文档控制器 实例
      * @param service 服务
      * @param properties 文档属性
-     * @param properties 属性
      */
     public DataSourceDocumentController(DataSourceDocumentService service, DocumentProperties properties) {
-        /**
-         * this。
-         * @param service 服务
-         * @param properties 属性
-         * @param null 空
-         */
         this(service, properties, null);
     }
 
@@ -100,7 +93,6 @@ public class DataSourceDocumentController {
         /**
          * 写入HTML。
          * @param response 响应
-         * @param null 空
          */
         writeHtml(response, renderHtml(data, null));
     }
@@ -114,7 +106,6 @@ public class DataSourceDocumentController {
         /**
          * 写入HTML。
          * @param response 响应
-         * @param null 空
          */
         writeHtml(response, renderHtml(data, null));
     }

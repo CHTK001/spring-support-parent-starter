@@ -4,6 +4,7 @@ import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.util.SshClients;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -36,6 +37,24 @@ public class ConnectionManager {
      * 健康检查：ECHO 命令
     */
     private static final String HEALTH_PROBE_CMD = "echo ok";
+
+    /**
+     * SSH TCP 连接/握手超时（秒），yaml: monitor.ssh.connect-timeout
+    */
+    @Value("${monitor.ssh.connect-timeout:15}")
+    private int connectTimeout;
+
+    /**
+     * SSH 认证/会话建立超时（秒），yaml: monitor.ssh.session-timeout
+    */
+    @Value("${monitor.ssh.session-timeout:15}")
+    private int sessionTimeout;
+
+    /**
+     * 单条命令执行/读取超时（秒），yaml: monitor.ssh.exec-timeout
+    */
+    @Value("${monitor.ssh.exec-timeout:60}")
+    private long execTimeout;
 
     /**
      * 缓存项：已连接句柄 + 最后活动时间 + 引用计数
@@ -189,15 +208,37 @@ public class ConnectionManager {
         }
         try {
             var handle = SshClients.open(host.getServerHostAddress(),
-                    host.getServerHostPort(), credential);
+                    host.getServerHostPort(), credential,
+                    connectTimeout, sessionTimeout, execTimeout);
             handle.client().connect();
             Entry entry = new Entry(handle, fp, now);
             cache.put(hostId, entry);
             return entry;
         } catch (IOException e) {
+            int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0
+                    ? 22 : host.getServerHostPort();
             throw new ConnectionException(
-                    "SSH 连接失败: " + host.getServerHostAddress(), e);
+                    "SSH 连接失败: " + host.getServerHostAddress() + ":" + port + "，" + rootReason(e), e);
         }
+    }
+
+    /**
+     * 取异常链上最里层的可读原因。
+     *
+     * @param e 原始异常
+     * @return 非空原因文本，无 message 时退回类名
+     */
+    private static String rootReason(Throwable e) {
+        Throwable t = e;
+        String last = "";
+        while (t != null) {
+            String msg = t.getMessage();
+            if (msg != null && !msg.isBlank()) {
+                last = msg;
+            }
+            t = t.getCause();
+        }
+        return last.isEmpty() ? e.getClass().getSimpleName() : last;
     }
 
     /**

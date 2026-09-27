@@ -5,6 +5,7 @@ import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,9 +50,14 @@ import java.util.zip.ZipOutputStream;
  * <p>基准目录由 {@code nomifun.fs-root} 配置（默认 {@code ./fs-root}），{@code list} 等接口的
  * {@code root}/{@code workspace} 参数可作为当次请求的覆盖基准目录。</p>
  *
+ * <p>隔离口径：这里的每个出口都以调用方给出的绝对路径为准直接读写本机磁盘（{@code root}/{@code path}
+ * 不受任何用户目录约束），影响面是整台主机而不是某个登录用户的资源，因此整个控制器仅管理员可用；
+ * 会话级文件读写请走 {@code /sessions/{id}/workspace/**} 那套带归属校验的出口。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
+@Permission("admin")
 @ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/fs")

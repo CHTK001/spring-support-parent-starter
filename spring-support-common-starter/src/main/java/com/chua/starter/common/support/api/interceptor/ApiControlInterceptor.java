@@ -15,7 +15,10 @@ import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.starter.common.support.api.feature.ApiSwitchOverrideProvider;
 import com.chua.starter.common.support.api.gray.ApiGrayEvaluator;
+import com.chua.starter.common.support.api.permission.PermissionRules;
 import com.chua.starter.common.support.api.properties.ApiProperties;
+import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.common.support.utils.IpUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +34,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -56,13 +63,16 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * @param environment 环境
      * @param featureManager api特征管理器
      * @param overrideProvider 运行时覆盖提供者（可空：未注册实现时走默认判定）
+     * @param authServiceProvider 当前身份提供者（可空：未接入认证体系时视为匿名）
      */
     public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager,
-                                 ObjectProvider<ApiSwitchOverrideProvider> overrideProvider) {
+                                 ObjectProvider<ApiSwitchOverrideProvider> overrideProvider,
+                                 ObjectProvider<AuthService> authServiceProvider) {
         this.apiProperties = apiProperties;
         this.environment = environment;
         this.featureManager = featureManager;
         this.overrideProvider = overrideProvider.getIfAvailable();
+        this.authService = authServiceProvider.getIfAvailable();
     }
 
         /**
@@ -81,6 +91,10 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * 运行时覆盖提供者（可空）
     */
     private final ApiSwitchOverrideProvider overrideProvider;
+    /**
+     * 当前身份服务（可空），角色与权限的唯一可信来源
+    */
+    private final AuthService authService;
     /**
      * Grayevaluator
     */
@@ -166,7 +180,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             return false;
         }
 
- // 处理 @权限（角色 + dev 配置文件 校验）
+ // 处理 @权限（角色 / 权限标识 校验）
         if (!handlePermission(handlerMethod, request, response)) {
             return false;
         }
@@ -518,26 +532,31 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     }
 
     /**
-     * 从 请求/会话 中解析当前用户角色
+     * 解析当前用户角色
      * <p>
-     * 支持 集合&lt;字符串&gt; 或逗号分隔字符串两种存储形式，
-     * 属性名为 "角色"，优先从 请求 attribute 取，其次从 会话 取。
+     * 已注册 {@link AuthService} 时只认它（身份由认证体系签发，客户端不可伪造）；
+     * 未接入认证体系的应用才回退到 请求 attribute / 会话 的 "roles"（集合 或逗号分隔字符串）。
      * </p>
      */
     @SuppressWarnings("unchecked")
-    private java.util.Collection<String> resolveRoles(HttpServletRequest request,
-                                                       jakarta.servlet.http.HttpSession session) {
+    private Collection<String> resolveRoles(HttpServletRequest request,
+                                            jakarta.servlet.http.HttpSession session) {
+        if (authService != null) {
+            CurrentUser currentUser = authService.getCurrentUser();
+            Set<String> roles = currentUser == null ? null : currentUser.getRoles();
+            return roles == null ? Collections.emptyList() : roles;
+        }
         Object raw = request.getAttribute("roles");
         if (raw == null && session != null) {
             raw = session.getAttribute("roles");
         }
-        if (raw instanceof java.util.Collection) {
-            return (java.util.Collection<String>) raw;
+        if (raw instanceof Collection) {
+            return (Collection<String>) raw;
         }
         if (raw instanceof String str && !str.isBlank()) {
             return java.util.Arrays.asList(str.split(","));
         }
-        return java.util.Collections.emptyList();
+        return Collections.emptyList();
     }
 
     /**
@@ -611,8 +630,11 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
      * 处理 @权限 注解
-     * <p>校验用户角色是否在允许列表中，且当前运行 profile 为 dev。</p>
-     * <p>角色来源优先级：x-user-role 请求头 → session attributes → request attributes。</p>
+     * <p>
+     * {@code role()} 与用户角色比对，{@code value()/permission()} 与用户角色 ∪ 权限比对
+     * （注解值即可写角色名也可写权限标识）；超级管理员放行全部受限出口。
+     * 解析不出身份即拒绝——不信任任何客户端可写的请求头。
+     * </p>
      */
     private boolean handlePermission(HandlerMethod handlerMethod, HttpServletRequest request,
                                      HttpServletResponse response) throws IOException {
@@ -624,78 +646,23 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             return true;
         }
 
-        String[] requiredRoles = permission.role();
-        if (requiredRoles == null || requiredRoles.length == 0) {
-            return true;
-        }
-
-        // 解析当前用户角色
-        String userRole = resolveUserRole(request);
-
-        boolean roleAllowed = false;
-        for (String role : requiredRoles) {
-            if (role.equalsIgnoreCase(userRole)) {
-                roleAllowed = true;
-                break;
-            }
-        }
-        if (!roleAllowed) {
-            log.warn("权限拒绝：uri={}, userRole={}, requiredRoles={}", request.getRequestURI(), userRole, requiredRoles);
+        Collection<String> owned = resolveRoles(request, request.getSession(false));
+        CurrentUser currentUser = authService == null ? null : authService.getCurrentUser();
+        Collection<String> permissions = currentUser == null || currentUser.getPermission() == null
+                ? Collections.<String>emptyList() : currentUser.getPermission();
+        String denied = PermissionRules.evaluate(permission, owned, permissions);
+        if (denied != null) {
+            log.warn("权限拒绝：uri={}, owned={}, 原因={}", request.getRequestURI(), owned, denied);
             /**
              * 写入响应。
              * @param response 响应
              * @param HttpServletResponse.SC_FORBIDDEN httpservlet响应.SC_FORBIDDEN
-             * @param ReturnResult.error("仅管理员可操作" 申报结果.错误("仅管理员可操作"
              */
-            writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error("仅管理员可操作"));
-            return false;
-        }
-
- // 校验 dev 配置文件
-        String[] activeProfiles = environment.getActiveProfiles();
-        boolean isDev = activeProfiles.length == 0 || "dev".equals(activeProfiles[0]);
-        if (!isDev) {
-            log.warn("禁止在非 dev 模式修改敏感配置：uri={}, profiles={}", request.getRequestURI(), activeProfiles);
-            /**
-             * 写入响应。
-             * @param response 响应
-             * @param HttpServletResponse.SC_FORBIDDEN httpservlet响应.SC_FORBIDDEN
-             * @param 模式下修改" 模式下修改"
-             */
-            writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error("系统目录仅允许在 dev 模式下修改"));
+            writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error(denied));
             return false;
         }
 
         return true;
-    }
-
-    /**
-     * 解析当前用户角色
-     * <p>优先从 x-user-role 请求头获取，其次 session，最后 request attribute。</p>
-     * @param request 请求
-     * @return resolve用户角色的结果
-     */
-    private String resolveUserRole(HttpServletRequest request) {
- // 1. 请求头（webui 前端在 authenticated 时通过 httpbridge 注入）
-        String headerRole = request.getHeader("x-user-role");
-        if (StringUtils.isNotBlank(headerRole)) {
-            return headerRole.trim().toLowerCase();
-        }
- // 2. 会话
-        var session = request.getSession(false);
-        if (session != null) {
-            Object role = session.getAttribute("role");
-            if (role instanceof String str && StringUtils.isNotBlank(str)) {
-                return str.trim().toLowerCase();
-            }
-        }
- // 3. 请求 attribute（由上游过滤器注入）
-        Object attrRole = request.getAttribute("role");
-        if (attrRole instanceof String str && StringUtils.isNotBlank(str)) {
-            return str.trim().toLowerCase();
-        }
-        // 默认 admin（本地信任场景）
-        return "admin";
     }
 
     /**

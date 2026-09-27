@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiCompanion;
@@ -11,6 +12,7 @@ import com.chua.starter.ai.support.manage.store.SysAiCompanionSkill;
 import com.chua.starter.ai.support.manage.store.SysAiCompanionStore;
 import com.chua.starter.ai.support.manage.store.SysAiConversation;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,6 +38,10 @@ import java.util.Map;
  * <p>提供伙伴 CRUD、记忆管理、技能管理、形象库、共享配置与数据导出的真实实现，
  * 持久化到 {@code sys_ai_companion*} 表。关键状态变更推送 companion.* WS 事件。</p>
  *
+ * <p>共享配置在库中只有 {@code shared} 一条全局行，一经写入即影响所有用户，
+ * 因此整体配置与「一键关闭」入口仅管理员可执行；采集授权属个人同意行为，
+ * 按登录用户以 {@code consent:<userId>} 键单独读写，不污染全局行。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -45,6 +51,11 @@ import java.util.Map;
 @RequestMapping("/api/companion")
 @RequiredArgsConstructor
 public class ApiCompanionController {
+
+    /**
+     * 授权配置键前缀：采集授权是个人同意行为，按登录用户单独成键，不写入全局 shared 行
+     */
+    private static final String CONSENT_KEY_PREFIX = "consent:";
 
     /**
      * 桌面伙伴持久化存储
@@ -196,7 +207,7 @@ public class ApiCompanionController {
      */
     @PostMapping("/companions/{companionId}/companion/threads")
     public ApiResult<Map<String, Object>> ensureCompanionSession(@PathVariable String companionId) {
-        SysAiCompanion companion = companionStore.getCompanion(companionId);
+        SysAiCompanion companion = companionStore.requireWritableCompanion(companionId);
         if (companion.getConversationId() == null) {
             SysAiConversation conversation = new SysAiConversation();
             String conversationId = conversationStore.newId();
@@ -525,10 +536,11 @@ public class ApiCompanionController {
      * @return applyConsent的结果
      */
     public ApiResult<Map<String, Object>> applyConsent(@RequestBody Map<String, Object> body) {
-        Map<String, Object> config = sharedConfig();
-        config.putIfAbsent("consent_applied", true);
-        companionStore.setConfigValue("shared", companionStore.toJson(config));
-        return ApiResult.ok(config);
+        Map<String, Object> consent = currentUserConsent();
+        consent.put("consent_applied", true);
+        companionStore.setConfigValue(CONSENT_KEY_PREFIX + AiUserContext.requireUserId(),
+                companionStore.toJson(consent));
+        return ApiResult.ok(viewConfig(sharedConfig()));
     }
 
     @PostMapping("/disable-all")
@@ -537,6 +549,7 @@ public class ApiCompanionController {
      * @param body 主体
      * @return disable全部的结果
      */
+    @Permission("admin")
     public ApiResult<Map<String, Object>> disableAll(@RequestBody Map<String, Object> body) {
         Map<String, Object> config = sharedConfig();
         config.put("disable_all", true);
@@ -552,7 +565,7 @@ public class ApiCompanionController {
      * @return 获取配置的结果
      */
     public ApiResult<Map<String, Object>> getConfig() {
-        Map<String, Object> config = sharedConfig();
+        Map<String, Object> config = viewConfig(sharedConfig());
         pushService.push("companion.config-updated", Map.of("scope", "shared", "config", config));
         return ApiResult.ok(config);
     }
@@ -563,12 +576,15 @@ public class ApiCompanionController {
      * @param body 主体
      * @return patch配置的结果
      */
+    @Permission("admin")
     public ApiResult<Map<String, Object>> patchConfig(@RequestBody Map<String, Object> body) {
         Map<String, Object> config = sharedConfig();
         config.putAll(toMapOrEmpty(body));
+        config.remove("consent_applied");
         companionStore.setConfigValue("shared", companionStore.toJson(config));
-        pushService.push("companion.config-updated", Map.of("scope", "shared", "config", config));
-        return ApiResult.ok(config);
+        Map<String, Object> view = viewConfig(config);
+        pushService.push("companion.config-updated", Map.of("scope", "shared", "config", view));
+        return ApiResult.ok(view);
     }
 
     // ==================== 导出 / 导入 ====================
@@ -774,6 +790,40 @@ public class ApiCompanionController {
         config.putIfAbsent("default_companion_id", null);
         config.putIfAbsent("bridge_to_memory_dir", null);
         return config;
+    }
+
+    /**
+     * 当前登录用户的数据采集授权。
+     *
+     * @return 授权配置，未登录或从未授权时为空集合
+     */
+    private Map<String, Object> currentUserConsent() {
+        String userId = AiUserContext.currentUserId();
+        if (userId == null) {
+            return new LinkedHashMap<>(2);
+        }
+        String json = companionStore.getConfigValue(CONSENT_KEY_PREFIX + userId);
+        Map<String, Object> consent = new LinkedHashMap<>(4);
+        if (json != null) {
+            consent.putAll(companionStore.fromJson(json));
+        }
+        return consent;
+    }
+
+    /**
+     * 配置视图：全局共享配置叠加当前用户授权，前端仍从 {@code consent_applied} 读取本人状态。
+     *
+     * @param config 全局共享配置
+     * @return 叠加本人授权后的配置
+     */
+    private Map<String, Object> viewConfig(Map<String, Object> config) {
+        Map<String, Object> consent = currentUserConsent();
+        if (consent.isEmpty()) {
+            return config;
+        }
+        Map<String, Object> merged = new LinkedHashMap<>(config);
+        merged.putAll(consent);
+        return merged;
     }
 
     /**

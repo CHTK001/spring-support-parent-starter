@@ -113,6 +113,55 @@ public record AiBotCaller(String ownerKey, boolean admin) {
     }
 
     /**
+     * 校验写权限，并额外允许管理员清理无主历史遗留记录。
+     *
+     * <p>与 {@link #requireWritable(String)} 的区别：当资源归属为空（{@code owner_key}
+     * 为 null/空白，即无主的历史遗留数据）时，管理员可以删除——无主记录不属于任何用户，
+     * 管理员清理不侵犯他人归属；明确归属他人的数据仍一律只读。</p>
+     *
+     * @param resourceOwnerKey 资源归属标识，可为空
+     * @throws ApiException 越权时抛出，由全局异常处理转 403
+     */
+    public void requireWritableOrAdminOrphan(String resourceOwnerKey) {
+        requireWritableOrAdminPurge(resourceOwnerKey, null, null);
+    }
+
+    /**
+     * 校验写权限，并额外允许管理员清理无主记录或未完成的无效绑定。
+     *
+     * <p>管理员在两种情况下可以删除，且都不侵犯他人的有效数据：</p>
+     * <ul>
+     *   <li><b>无主记录</b>：{@code owner_key} 为空，不属于任何用户；</li>
+     *   <li><b>无效绑定</b>：{@code platform} 或 {@code botId} 为空，这类行从未构成可用连接器，
+     *       只是失败流程残留的空壳（页面上表现为无名、默认插头图标、"默认模型"），
+     *       清理它们不影响任何人的有效连接器。</li>
+     * </ul>
+     * <p>归属他人且字段完整的有效连接器，管理员仍只读；只读账号一律拒绝。</p>
+     *
+     * @param resourceOwnerKey 资源归属标识，可为空
+     * @param platform         绑定平台，可为空（空表示未完成的无效绑定）
+     * @param botId            机器人唯一标识，可为空（空表示未完成的无效绑定）
+     * @throws ApiException 越权时抛出，由全局异常处理转 403
+     */
+    public void requireWritableOrAdminPurge(String resourceOwnerKey, String platform, String botId) {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        if (ownerEquals(resourceOwnerKey)) {
+            return;
+        }
+        if (admin) {
+            boolean orphan = normalize(resourceOwnerKey) == null;
+            boolean incomplete = (platform == null || platform.isBlank())
+                    || (botId == null || botId.isBlank());
+            if (orphan || incomplete) {
+                return;
+            }
+        }
+        throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+    }
+
+    /**
      * 校验当前调用方可否新建一条记录（归属由服务端按当前身份写入）。
      *
      * <p>新建没有可被改写的他人资源，归属一致性无从比对，因此只拦只读账号；

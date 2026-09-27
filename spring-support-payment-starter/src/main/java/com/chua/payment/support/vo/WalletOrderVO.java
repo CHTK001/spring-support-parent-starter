@@ -14,83 +14,82 @@ import java.time.LocalDateTime;
 public class WalletOrderVO {
     /**
      * 标识
-    */
+     */
     private Long id;
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
     /**
-     * 排序类型
-    */
+     * 订单类型
+     */
     private String orderType;
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * Related用户标识
-    */
+     * 关联用户标识
+     */
     private Long relatedUserId;
     /**
-     * Amount
-    */
+     * 金额
+     */
     private BigDecimal amount;
     /**
      * 状态
-    */
+     */
     private String status;
     /**
-     * Thirdparty排序NO
-    */
+     * 第三方订单号
+     */
     private String thirdPartyOrderNo;
     /**
-     * Bankaccount
-    */
+     * 银行账号
+     */
     private String bankAccount;
     /**
-     * Bank名称
-    */
+     * 银行名称
+     */
     private String bankName;
     /**
-     * 账户名称
-    */
+     * 账户名
+     */
     private String accountName;
     /**
-     * 请求payload
-    */
+     * 请求报文
+     */
     private String requestPayload;
     /**
-     * 响应payload
-    */
+     * 响应报文
+     */
     private String responsePayload;
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
-     * 完成at
-    */
+     * 完成时间
+     */
     private LocalDateTime completedAt;
     /**
      * 创建时间
-    */
+     */
     private LocalDateTime createTime;
     /**
      * 更新时间
-    */
+     */
     private LocalDateTime updateTime;
 }
-

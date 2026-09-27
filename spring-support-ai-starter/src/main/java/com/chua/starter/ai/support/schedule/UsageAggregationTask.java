@@ -31,6 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -164,7 +165,14 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      */
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
-        if (isTimeWheelEnabled()) {
+        boolean timeWheelEnabled = false;
+        try {
+            timeWheelEnabled = isTimeWheelEnabled();
+        } catch (Throwable e) {
+            log.warn("[UsageAggregation] 读取时间轮开关失败，回退 Trigger 调度: {}", e.getMessage());
+        }
+        log.info("[UsageAggregation] configureTasks 注册调度：timewheelEnabled={}", timeWheelEnabled);
+        if (timeWheelEnabled) {
             log.info("[UsageAggregation] 用量同步使用后台时间轮调度");
             /**
              * 启动时间wheel。
@@ -172,6 +180,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             startTimeWheel();
             return;
         }
+        int interval = settingReader.getInt(GROUP, SETTING_REPORT_INTERVAL, DEFAULT_REPORT_INTERVAL_SEC);
+        log.info("[UsageAggregation] 用量同步使用 Trigger 调度，间隔 {} 秒", interval);
         Trigger trigger = this::nextTriggerTime;
         taskRegistrar.addTriggerTask(this::run, trigger);
     }
@@ -453,22 +463,44 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 if (batch.isEmpty()) {
                     continue;
                 }
- // 增量同步：仅插入 call_时间 晚于库内该 群体 最大时间的记录，
-                // 避免全量重复插入拖慢同步，也保证新数据能进来（旧实现按 ASC 排，新数据永远被超时截断）
+                // 按 requestId 去重：已入库的跳过，新记录（含历史缺口/在途完成）照插；
+                // 无 requestId 的解析器退回时间水位兜底，避免全量重复
+                Set<String> existingIds = existingRequestIds(entry.getKey(), batch);
+                Set<String> seenIds = new HashSet<>();
                 LocalDateTime since = maxCallTimeOfGroup(entry.getKey());
                 int inserted = 0;
+                int skipped = 0;
                 for (AiUsage usage : batch) {
-                    LocalDateTime callTime = usage.getStartTime() != null
-                            ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
-                            : null;
-                    if (since != null && (callTime == null || !callTime.isAfter(since))) {
-                        continue;
+                    String requestId = usage.getRequestId();
+                    if (requestId != null && !requestId.isBlank()) {
+                        // 有稳定请求号：按 requestId 去重，历史缺口（在途/漏采）可在任一次同步补齐
+                        if (existingIds.contains(requestId) || !seenIds.add(requestId)) {
+                            skipped++;
+                            continue;
+                        }
+                    } else {
+                        // 无请求号：退回时间水位，避免全量重复插入
+                        LocalDateTime callTime = usage.getStartTime() != null
+                                ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
+                                : null;
+                        if (since != null && (callTime == null || !callTime.isAfter(since))) {
+                            skipped++;
+                            continue;
+                        }
                     }
-                    SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
-                    if (record != null) {
-                        usageMapper.insert(record);
-                        inserted++;
-                        total++;
+                    try {
+                        SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
+                        if (record != null) {
+                            usageMapper.insert(record);
+                            inserted++;
+                            total++;
+                            if (requestId != null && !requestId.isBlank()) {
+                                existingIds.add(requestId);
+                            }
+                        }
+                    } catch (Throwable ex) {
+                        // 单条失败（缺价/字段异常等）不应拖垮整批
+                        log.warn("[UsageAggregation] [{}] 单条用量入库失败: {}", entry.getKey(), ex.getMessage());
                     }
                 }
                 /**
@@ -505,6 +537,47 @@ public class UsageAggregationTask implements SchedulingConfigurer {
              */
             recordLog(LOG_LEVEL_INFO, "本次外部同步无新增数据（本地工具无可用记录）");
         }
+    }
+
+    /**
+     * 批量查询指定分组下已存在的 request_id，用于按请求号去重（替代「仅大于时间水位」的增量过滤）。
+     * <p>分批 IN 查询，避免一次装载过多绑定参数；查询失败时退化为空集合（后续按 id 去重会重复插入，
+     * 但由时间水位兜底的方式仍可控制），不阻断主流程。</p>
+     *
+     * @param groupName 分组名称
+     * @param batch     本批解析出的用量记录
+     * @return 已入库的 request_id 集合
+     */
+    private Set<String> existingRequestIds(String groupName, List<AiUsage> batch) {
+        Set<String> ids = new HashSet<>();
+        List<String> batchIds = new ArrayList<>();
+        for (AiUsage usage : batch) {
+            String requestId = usage.getRequestId();
+            if (requestId != null && !requestId.isBlank()) {
+                batchIds.add(requestId);
+            }
+        }
+        if (batchIds.isEmpty()) {
+            return ids;
+        }
+        int chunk = 500;
+        for (int i = 0; i < batchIds.size(); i += chunk) {
+            List<String> part = batchIds.subList(i, Math.min(i + chunk, batchIds.size()));
+            try {
+                List<SysAiUsage> rows = usageMapper.selectList(new LambdaQueryWrapper<SysAiUsage>()
+                        .select(SysAiUsage::getSysAiUsageRequestId)
+                        .eq(SysAiUsage::getSysAiUsageGroupName, groupName)
+                        .in(SysAiUsage::getSysAiUsageRequestId, part));
+                for (SysAiUsage row : rows) {
+                    if (row.getSysAiUsageRequestId() != null) {
+                        ids.add(row.getSysAiUsageRequestId());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[UsageAggregation] 查询已存在 requestId 失败(group={}): {}", groupName, e.getMessage());
+            }
+        }
+        return ids;
     }
 
     /**
@@ -590,6 +663,13 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         record.setSysAiUsageType("external");
         record.setSysAiUsageBillingMode("默认");
         record.setSysAiUsageRequestId(usage.getRequestId());
+        // 三方导入记录归属执行同步的当前登录账号（服务端写）
+        record.setSysAiUsageUserId(com.chua.starter.ai.support.util.AiUserContext.currentUserId());
+        // 标记是否为估算 token
+        if (usage.isEstimated()) {
+            record.setSysAiUsageEstimatedTokens(1);
+        }
+        record.setSysAiUsageSource("third_party");
         record.setSysAiUsageCallTime(usage.getStartTime() != null
                 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
                 : LocalDateTime.now());
@@ -597,8 +677,14 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         // 如果外部工具未提供费用，使用官方价格兜底计算
         Double totalCost = usage.getTotalCost() != null ? usage.getTotalCost().doubleValue() : null;
         if (totalCost == null || totalCost == 0) {
-            SysAiPricing pricing = pricingService.getLatestPricing(
-                    record.getSysAiUsageProvider(), record.getSysAiUsageModel());
+            SysAiPricing pricing = null;
+            try {
+                pricing = pricingService.getLatestPricing(
+                        record.getSysAiUsageProvider(), record.getSysAiUsageModel());
+            } catch (Exception e) {
+                log.warn("[UsageAggregation] 定价查询失败，按 0 计: provider={}, model={}, err={}",
+                        record.getSysAiUsageProvider(), record.getSysAiUsageModel(), e.getMessage());
+            }
             if (pricing != null && pricing.getInputPricePer1k() != null
                     && pricing.getOutputPricePer1k() != null) {
                 int inputTokens = usage.getInputTokens() != null ? usage.getInputTokens() : 0;
@@ -718,7 +804,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 ? end : end.toLocalDate().plusDays(1).atStartOfDay();
 
  // 数据库端 群体 BY 聚合，一次返回全部日汇总数据，避免全量装载到 JVM
-        List<SysAiUsageMapper.DailyAggregateRow> rows = usageMapper.selectDailyAggregate(dayStart, dayEnd);
+        List<SysAiUsageMapper.DailyAggregateRow> rows = usageMapper.selectDailyAggregate(dayStart, dayEnd, null);
         if (rows.isEmpty()) {
             log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", dayStart, dayEnd);
             return 0;

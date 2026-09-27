@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduInsectGuideMapper">
+
+    <!-- 按 slug 取讲解。用 SELECT * 而非 BaseMapper.selectOne：本库表未落
+         SysBase 的 create_name/create_by 等列，selectOne 会拼出这些不存在的列而报错 -->
+    <select id="selectByCode" resultType="com.chua.starter.eduai.model.EduInsectGuide">
+        SELECT * FROM edu_insect_guide WHERE insect_code = #{insectCode} LIMIT 1
+    </select>
+
+    <!-- 已有讲解的物种 slug：维护页据此标出漏配讲解的物种 -->
+    <select id="selectAllCodes" resultType="java.lang.String">
+        SELECT insect_code FROM edu_insect_guide
+        <where>
+            <if test="userId != null and userId != ''">
+                (guide_owner_user_id IS NULL OR guide_owner_user_id = #{userId})
+            </if>
+        </where>
+    </select>
+
+    <!-- 按 slug 更新讲解。显式列出本表真实列，避免 updateById 带上不存在的 SysBase 列 -->
+    <update id="updateByCode">
+        UPDATE edu_insect_guide
+        SET guide_lesson = #{guideLesson},
+            guide_motion_title = #{guideMotionTitle},
+            guide_motion_body = #{guideMotionBody},
+            guide_quiz = #{guideQuiz},
+            guide_habitat_title = #{guideHabitatTitle},
+            guide_habitat_body = #{guideHabitatBody},
+            update_time = CURRENT_TIMESTAMP
+        WHERE insect_code = #{insectCode}
+    </update>
+
+</mapper>

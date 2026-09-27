@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduQuestionMapper">
+
+    <!-- 分页查询题目：动态筛选 + 归属隔离 + 创建时间倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduQuestion">
+        SELECT q.* FROM edu_question q
+        <where>
+            <if test="query.subject != null and query.subject != ''">
+                AND q.question_subject = #{query.subject}
+            </if>
+            <if test="query.gradeLevel != null and query.gradeLevel != ''">
+                AND q.question_grade_level = #{query.gradeLevel}
+            </if>
+            <if test="query.grade != null and query.grade != ''">
+                AND q.question_grade = #{query.grade}
+            </if>
+            <if test="query.type != null and query.type != ''">
+                AND q.question_type = #{query.type}
+            </if>
+            <if test="query.difficulty != null">
+                AND q.question_difficulty = #{query.difficulty}
+            </if>
+            <if test="query.knowledgePointIds != null and query.knowledgePointIds != ''">
+                AND q.question_knowledge_point_ids LIKE CONCAT('%', #{query.knowledgePointIds}, '%')
+            </if>
+            <if test="query.auditStatus != null">
+                AND q.question_audit_status = #{query.auditStatus}
+            </if>
+            <choose>
+                <when test="query.status != null">
+                    AND q.question_status = #{query.status}
+                </when>
+                <otherwise>
+                    AND q.question_status != 0
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (q.question_owner_user_id IS NULL OR q.question_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY q.create_time DESC
+    </select>
+
+    <!-- 学段年级组合维度：按题目行聚合，学段与年级皆空的行不作为候选 -->
+    <select id="selectGradeDimensions" resultType="com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO">
+        SELECT q.question_grade_level AS gradeLevel,
+               q.question_grade AS grade,
+               COUNT(*) AS questionCount
+        FROM edu_question q
+        <where>
+            AND NOT (q.question_grade_level IS NULL AND q.question_grade IS NULL)
+            <choose>
+                <when test="status != null">
+                    AND q.question_status = #{status}
+                </when>
+                <otherwise>
+                    AND q.question_status != 0
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (q.question_owner_user_id IS NULL OR q.question_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        GROUP BY q.question_grade_level, q.question_grade
+        ORDER BY gradeLevel ASC, grade ASC
+    </select>
+
+    <!-- 统计同题干同学科的有效题目（去重入库用） -->
+    <select id="countSameQuestion" resultType="long">
+        SELECT COUNT(*) FROM edu_question
+        WHERE question_stem = #{stem}
+          AND question_subject = #{subject}
+          AND question_status = 1
+        <if test="ownerUserId != null">
+            AND (question_owner_user_id = #{ownerUserId} OR question_owner_user_id IS NULL)
+        </if>
+    </select>
+
+    <!-- 组卷候选题目：按题目ID倒序取样并限制条数 -->
+    <select id="selectCandidates" resultType="com.chua.starter.eduai.model.EduQuestion">
+        SELECT q.* FROM edu_question q
+        <where>
+            q.question_subject = #{subject}
+            AND q.question_status = 1
+            <if test="gradeLevel != null and gradeLevel != ''">
+                AND q.question_grade_level = #{gradeLevel}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (q.question_owner_user_id IS NULL OR q.question_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY q.question_id DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

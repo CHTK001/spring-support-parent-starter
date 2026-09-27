@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.store.datasource;
 
+import com.chua.common.support.lang.datasource.dialect.SqlName;
 import com.chua.common.support.spi.annotations.Spi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -49,14 +50,8 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
     private static final int MAX_POOL_SIZE = 2; // 最大游泳池大小
 
     /**
-     * 表名白名单正则，仅允许字母、数字、下划线，防 SQL 注入
-    */
-    private static final java.util.regex.Pattern SAFE_TABLE_NAME =
-            java.util.regex.Pattern.compile("^[A-Za-z0-9_]+$");
-
-    /**
-     * 数量 查询：仅计数远程表中的需求条目
-    */
+     * 数量查询语句，表名由 {@link SqlName} 校验后填充。
+     */
     private static final String COUNT_SQL =
             """
             /**
@@ -259,7 +254,7 @@ public class LocalDbRequirementDataSource implements IRequirementDataSource {
         if (raw == null || raw.isBlank()) {
             return null;
         }
-        if (!SAFE_TABLE_NAME.matcher(raw).matches()) {
+        if (!SqlName.isSimple(raw)) {
             return null;
         }
         return raw;

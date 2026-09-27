@@ -52,4 +52,31 @@ public interface AIDialogRecordService {
      * @param message  消息
      */
     void addMessage(Long dialogId, ChatMessage message);
+
+    /**
+     * 将指定会话中、携带给定 replyId 的待确认请求标记为已解决（approved/rejected）。
+     *
+     * <p>用于人工确认恢复：用户在卡片上批准/拒绝后，把旧助手消息上的 pending 确认置为终态。
+     * 默认空实现，仅持久化（DB）实现需要覆盖。</p>
+     *
+     * @param dialogId 会话 标识
+     * @param replyId  待确认请求的 replyId
+     * @param decision 决定结果（approved/rejected）
+     */
+    default void resolveConfirmation(Long dialogId, String replyId, String decision) {
+    }
+
+    /**
+     * 查找携带给定 replyId 确认请求的助手消息所属的用户消息标识（parent_id）。
+     *
+     * <p>用于人工确认恢复：恢复轮新建的助手消息需要挂到同一用户消息下，
+     * 否则前端按 parentId 分组时该消息不会渲染。默认空实现返回 {@code null}。</p>
+     *
+     * @param dialogId 会话 标识
+     * @param replyId  待确认请求的 replyId
+     * @return 用户消息标识；未找到时返回 {@code null}
+     */
+    default String findParentMessageIdByReplyId(Long dialogId, String replyId) {
+        return null;
+    }
 }

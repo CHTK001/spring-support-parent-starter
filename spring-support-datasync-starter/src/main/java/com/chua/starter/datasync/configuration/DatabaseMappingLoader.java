@@ -1,5 +1,7 @@
 package com.chua.starter.datasync.configuration;
 
+import com.chua.common.support.lang.datasource.dialect.SqlName;
+
 import com.chua.starter.datasync.config.DataSyncConfigDefinition;
 import com.chua.starter.datasync.mapping.DataSyncFieldMapping;
 import com.chua.starter.datasync.mapping.DataSyncMappingManager;
@@ -77,17 +79,26 @@ public class DatabaseMappingLoader implements InitializingBean {
     /**
      * 加载Mappings
      *
+     * <p>安全豁免：表名由部署配置前缀与固定后缀组成，前缀经
+     * {@link SqlName#checkSimple(String, String)} 校验；查询值全部使用参数绑定。</p>
+     *
      * @param jdbcTemplate jdbctemplate
      * @param prefix 前缀
      */
     private void loadMappings(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, String prefix) {
-        String mappingTable = prefix + "mapping";
-        String sql = String.format("SELECT * FROM %s WHERE datasync_mapping_enabled = TRUE", mappingTable);
+        String safePrefix = SqlName.checkSimple(prefix, "映射表前缀");
+        String mappingTable = SqlName.checkSimple(safePrefix + "mapping", "映射表名");
+        String sql = """
+                SELECT datasync_mapping_id, datasync_mapping_input_id, datasync_mapping_source_id,
+                       datasync_mapping_output_id, datasync_mapping_sink_id, datasync_mapping_batch,
+                       datasync_mapping_cron_type, datasync_mapping_cron, datasync_mapping_params
+                FROM %s WHERE datasync_mapping_enabled = TRUE
+                """.formatted(mappingTable);
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
             for (Map<String, Object> row : rows) {
                 String mappingId = (String) row.get("datasync_mapping_id");
-                List<DataSyncFieldMapping> fields = loadFieldMappings(jdbcTemplate, prefix, mappingId);
+                List<DataSyncFieldMapping> fields = loadFieldMappings(jdbcTemplate, safePrefix, mappingId);
                 com.chua.common.support.task.scheduler.Trigger trigger = null;
                 DataSyncMapping mapping = new DefaultDataSyncMapping(
                         mappingId,
@@ -136,8 +147,14 @@ public class DatabaseMappingLoader implements InitializingBean {
     private List<DataSyncFieldMapping> loadFieldMappings(
             org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
             String prefix, String mappingId) {
-        String fieldTable = prefix + "field_mapping";
-        String sql = String.format("SELECT * FROM %s WHERE datasync_field_mapping_mapping_id = ? ORDER BY datasync_field_mapping_sort ASC", fieldTable);
+        String fieldTable = SqlName.checkSimple(prefix + "field_mapping", "字段映射表名");
+        String sql = """
+                SELECT datasync_field_mapping_source_field, datasync_field_mapping_target_field,
+                       datasync_field_mapping_converter
+                FROM %s
+                WHERE datasync_field_mapping_mapping_id = ?
+                ORDER BY datasync_field_mapping_sort ASC
+                """.formatted(fieldTable);
         List<DataSyncFieldMapping> fields = new ArrayList<>();
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, mappingId);

@@ -22,173 +22,172 @@ import java.util.List;
 public interface PaymentOrderService {
 
     /**
-     * 创建订单。
+     * 创建支付订单。
      * @param dto dto
-     * @return 创建订单的结果
+     * @return 创建支付订单的结果
      */
     OrderVO createOrder(OrderCreateDTO dto);
 
     /**
      * 获取订单。
      * @param id 标识
-     * @return 获取订单的结果
+     * @return 获取到的订单
      */
     OrderVO getOrder(Long id);
 
     /**
-     * 列表订单。
-     * @param request 请求
-     * @return 列表订单的结果
+     * 分页查询订单。
+     * @param request 请求参数
+     * @return 订单分页结果
      */
     Page<OrderVO> listOrders(PaymentOrderPageRequest request);
 
     /**
-     * 列表merchant订单。
-     * @param merchantId merchantid
+     * 分页查询商户订单。
+     * @param merchantId 商户标识
      * @param page page
      * @param size 大小
      * @param status 状态
-     * @return 列表merchant订单的结果
+     * @return 商户订单分页结果
      */
     Page<OrderVO> listMerchantOrders(Long merchantId, int page, int size, String status);
 
     /**
-     * 列表订单日志。
+     * 查询订单状态日志。
      * @param id 标识
-     * @return 列表订单日志的结果
+     * @return 订单状态日志列表
      */
     List<OrderStateLogVO> listOrderLogs(Long id);
 
     /**
-     * 薪酬订单。
+     * 发起支付。
      * @param id 标识
      * @param dto dto
-     * @return 薪酬订单的结果
+     * @return 发起支付的结果
      */
     PaymentResult payOrder(Long id, OrderPayDTO dto);
 
     /**
-     * 同步订单。
+     * 同步订单状态。
      * @param id 标识
-     * @return 同步订单的结果
+     * @return 同步后的订单
      */
     OrderVO syncOrder(Long id);
 
     /**
-     * 启动薪酬。
+     * 启动支付。
      * @param id 标识
-     * @param operator 操作符
-     * @return 启动薪酬的结果
+     * @param operator 操作人
+     * @return 是否启动成功
      */
     boolean startPay(Long id, String operator);
 
     /**
-     * 薪酬成功。
+     * 支付成功。
      * @param id 标识
-     * @param paidAmount paidamount
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param operator 操作符
-     * @return 薪酬成功的结果
+     * @param paidAmount 实付金额
+     * @param thirdPartyOrderNo 第三方订单号
+     * @param operator 操作人
+     * @return 是否处理成功
      */
     boolean paySuccess(Long id, BigDecimal paidAmount, String thirdPartyOrderNo, String operator);
 
     /**
-     * 薪酬失败。
+     * 支付失败。
      * @param id 标识
-     * @param reason ReasonMLmlml
-     * @param operator 操作符
-     * @return 薪酬失败的结果
+     * @param reason 失败原因
+     * @param operator 操作人
+     * @return 是否处理成功
      */
     boolean payFail(Long id, String reason, String operator);
 
     /**
      * 取消订单
      *
-     * @param refund true=退款取消（已支付订单退款+标取消），false=不退款取消（仅 PENDING/薪酬 可取消）
+     * @param refund true=退款取消（已支付订单，标记为已取消）；false=不退款取消（未支付/支付中，可直接取消）
      * @param id 标识
-     * @param operator 操作符
-     * @param reason ReasonMLmlml
-     * @return cancel订单的结果
+     * @param operator 操作人
+     * @param reason 取消原因
+     * @return 取消订单的结果
      */
     boolean cancelOrder(Long id, String operator, String reason, boolean refund);
 
     /**
-     * cancel订单。
+     * 取消订单。
      * @param id 标识
-     * @param operator 操作符
-     * @param reason ReasonMLmlml
-     * @return cancel订单的结果
+     * @param operator 操作人
+     * @param reason 取消原因
+     * @return 取消订单的结果
      */
     boolean cancelOrder(Long id, String operator, String reason);
 
     /**
      * 完成订单。
      * @param id 标识
-     * @param operator 操作符
-     * @return 完成订单的结果
+     * @param operator 操作人
+     * @return 是否完成成功
      */
     boolean completeOrder(Long id, String operator);
 
     /**
-     * 退税订单。
+     * 发起退款。
      * @param id 标识
      * @param dto dto
-     * @return 退税订单的结果
+     * @return 发起退款的结果
      */
     boolean refundOrder(Long id, RefundApplyDTO dto);
 
     /**
-     * 退税成功。
+     * 退款成功。
      * @param id 标识
-     * @param refundAmount 退税amount
-     * @param operator 操作符
-     * @return 退税成功的结果
+     * @param refundAmount 退款金额
+     * @param operator 操作人
+     * @return 是否处理成功
      */
     boolean refundSuccess(Long id, BigDecimal refundAmount, String operator);
 
     /**
-     * 退税成功。
+     * 退款成功。
      * @param dto dto
-     * @return 退税成功的结果
+     * @return 是否处理成功
      */
     boolean refundSuccess(RefundSuccessDTO dto);
 
     /**
-     * 退税失败。
+     * 退款失败。
      * @param id 标识
-     * @param reason ReasonMLmlml
-     * @param operator 操作符
-     * @return 退税失败的结果
+     * @param reason 失败原因
+     * @param operator 操作人
+     * @return 是否处理成功
      */
     boolean refundFail(Long id, String reason, String operator);
 
     /**
-     * 退税失败。
-     * @param refundNo 退税no
-     * @param responsePayload 响应payload
-     * @param operator 操作符
-     * @param reason ReasonMLmlml
-     * @return 退税失败的结果
+     * 退款失败。
+     * @param refundNo 退款单号
+     * @param responsePayload 响应报文
+     * @param operator 操作人
+     * @param reason 失败原因
+     * @return 是否处理成功
      */
     boolean refundFail(String refundNo, String responsePayload, String operator, String reason);
 
     /**
      * 删除订单。
      * @param id 标识
-     * @return 删除订单的结果
+     * @return 是否删除成功
      */
     boolean deleteOrder(Long id);
 
     /**
-     * generate订单no。
-     * @return generate订单no的结果
+     * 生成订单号。
+     * @return 生成的订单号
      */
     String generateOrderNo();
 
     /**
-     * 超时关单（发送 超时 事件 via 状态机）
+     * 超时关单（发送超时关闭事件，由状态机处理）。
      * @param id 标识
      */
     void timeoutOrder(Long id);
 }
-

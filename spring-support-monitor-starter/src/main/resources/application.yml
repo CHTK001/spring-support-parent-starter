@@ -6,7 +6,6 @@ spring:
     name: monitor-test
   autoconfigure:
     exclude:
-      - com.chua.metrics.support.MetricsAutoConfiguration
       # filesystem-starter 自带的 web 分片上传链(auto-config 引用 monitor 未装配的 Service/Controller Bean), 排除之;
       # 我们只需其 FileStorageServerFilter/Setting/LocalFileStorage 类(file-storage 插件反射加载)
       - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
@@ -20,7 +19,7 @@ spring:
     generate:
       enabled: false
 
-  # 建表脚本（独立联调）：本模块的 FlywayLike 已禁用（H2 下脚本语法错会阻断启动），
+  # 建表脚本（独立联调）：本模块的 FlywayLike 已禁用（脚本语法错会阻断启动），
   #  由 spring.sql.init 逐个加载各模块本体的全量建表脚本（脚本归口各自 starter jar 的 db/init/）：
   #  - monitor 自身：V1.0__init_all_monitor.sql、V1.5__init_tshark.sql
   #  - 依赖 jar 内：V1.0__init_all_server.sql（资产台账）、V1.0__init_all_project.sql、V1.0__init_all_ai.sql
@@ -34,19 +33,16 @@ spring:
         - classpath:db/init/V1.0__init_all_monitor.sql
         - classpath:db/init/V1.0__init_all_server.sql
         - classpath:db/init/V1.0__init_all_ai.sql
-        # TShark 抓包两张表（本模块自有，全量脚本未包含）
-        - classpath:db/init/V1.5__init_tshark.sql
+        # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
+        - classpath:db/init/V1.0__init_all_datasource_hub.sql
+        # 注：bot_binding 补列 / tshark / exec_job type / host ssh_enabled 等脚本
+        # 在本次重构中被合并/删除（本地脚本易被还原），故不再单列，避免启动缺文件拦截
 
   datasource:
-    url: jdbc:h2:file:./data/monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root@
 
   # Redis（告警静默期 + 可选时序引擎 monitor.timeseries.engine=redis）
   data:
@@ -69,7 +65,9 @@ mybatis-plus:
   type-aliases-package: com.chua.starter.monitor.support.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 生产环境关闭 SQL/结果全量打印（StdOutImpl 会把含巨大 software JSON 的整行打到 stdout，
+    # 既拖慢调度又使日志暴涨）；需要排查 SQL 时临时改为 org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 plugin:
   api:
@@ -80,6 +78,10 @@ plugin:
     enable: false
     whitelist:
       - /ms/**
+    # 文件服务器私有桶（逗号分隔，* 表示全部）：由服务管理节点自动挂载的 OAuthServerFilter 执行鉴权；
+    # enable=false 或留空时文件服务器按公共桶运行；/ot 一次性链接本身即凭证，始终放行
+    file-storage:
+      private-buckets: localFileStorage
   # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
   # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
   # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。
@@ -115,10 +117,20 @@ plugin:
 # none：跳过时序，仅 MySQL 明细
 monitor:
   timeseries:
-    engine: none
+    # 主机历史与监控项双写统一走 SeriesEngine；datasource=JDBC 实现，可切 redis/influxdb
+    engine: datasource
     url: http://172.16.0.40:8086
     database: monitor
+  history:
+    # 主机指标历史保留天数
+    retention-days: 7
+  ssh:
+    # OpenSSH 采集通道超时；慢链路/高 RTT 可调大
+    connect-timeout-seconds: 15
+    session-timeout-seconds: 15
+    exec-timeout-seconds: 60
 
 logging:
   level:
-    com.chua.starter.monitor.support: debug
+    # 生产默认 info；需要排查采集/推送细节时临时改 debug
+    com.chua.starter.monitor.support: info

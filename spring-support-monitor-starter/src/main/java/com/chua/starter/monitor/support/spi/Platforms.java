@@ -1,13 +1,14 @@
 package com.chua.starter.monitor.support.spi;
 
-import java.util.Locale;
+import com.chua.starter.server.support.util.HostPlatforms;
 
 /**
  * 操作系统平台判定。
  *
- * <p>主机的 {@code serverHostOsType} 同时承载了接入方式（AGENT / LOCAL）与平台
- * （WINDOWS / LINUX / MAC），凡是拼装平台专属命令（systemctl、taskkill、cd /d）的地方
- * 都必须先解析出真实平台，否则会出现给 Agent 接入的 Windows 主机下发 systemctl。</p>
+ * <p>取值域与主机台账列 {@code ms_server_host.ms_server_host_os_type} 一致，统一由
+ * {@link HostPlatforms} 维护，本类只作为 monitor 侧的调用入口。接入方式（AGENT / LOCAL /
+ * SCHEDULED）由 {@code ms_server_host_collect_mode} 表达，不是平台，凡拼装平台专属命令
+ * （systemctl、taskkill、cd /d）的地方都必须先解析出真实平台。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -17,17 +18,17 @@ public final class Platforms {
     /**
      * Windows 平台标识。
      */
-    public static final String WINDOWS = "WINDOWS";
+    public static final String WINDOWS = HostPlatforms.WINDOWS;
 
     /**
      * Linux 平台标识。
      */
-    public static final String LINUX = "LINUX";
+    public static final String LINUX = HostPlatforms.LINUX;
 
     /**
      * macOS 平台标识。
      */
-    public static final String MAC = "MAC";
+    public static final String MACOS = HostPlatforms.MACOS;
 
     /**
      * 工具类，禁止实例化。
@@ -36,27 +37,13 @@ public final class Platforms {
     }
 
     /**
-     * 把任意平台描述串归一为 WINDOWS / LINUX / MAC。
+     * 把任意平台描述串归一为 WINDOWS / LINUX / MACOS。
      *
      * @param raw 平台描述，如 {@code WINDOWS}、{@code Windows 11}、{@code darwin}、{@code macOS}
-     * @return 归一后的平台标识；无法识别返回空串
+     * @return 归一后的平台标识；无法识别（含接入方式关键字）返回空串
      */
     public static String normalize(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "";
-        }
-        String key = raw.trim().toLowerCase(Locale.ROOT);
-        if (key.startsWith("win")) {
-            return WINDOWS;
-        }
-        if (key.startsWith("mac") || key.contains("darwin") || key.equals("osx") || key.equals("os x")) {
-            return MAC;
-        }
-        if (key.startsWith("linux") || key.contains("unix") || key.contains("sunos")
-                || key.contains("bsd") || key.equals("alpine") || key.equals("centos") || key.equals("ubuntu")) {
-            return LINUX;
-        }
-        return "";
+        return HostPlatforms.normalize(raw);
     }
 
     /**

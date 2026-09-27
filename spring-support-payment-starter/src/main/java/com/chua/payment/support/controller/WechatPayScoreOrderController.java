@@ -34,8 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class WechatPayScoreOrderController {
 
     /**
-     * wechat薪酬分数排序服务
-    */
+     * 微信支付分服务
+     */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     @Operation(summary = "创建微信支付分订单")
@@ -55,7 +55,7 @@ public class WechatPayScoreOrderController {
     /**
      * 获取
      *
-     * @param outOrderNo 出订单no
+     * @param outOrderNo 商户订单号
      * @return 获取的结果
      */
     public Result<WechatPayScoreOrderVO> get(@PathVariable String outOrderNo) {
@@ -66,10 +66,8 @@ public class WechatPayScoreOrderController {
     @Operation(summary = "分页查询微信支付分订单")
     @GetMapping("/page")
     /**
-     * Page
+     * 分页查询
      *
-     * @param "1" "1"
-     * @return page的结果
      */
     public Result<PageResult<WechatPayScoreOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
@@ -88,7 +86,7 @@ public class WechatPayScoreOrderController {
     /**
      * 同步
      *
-     * @param outOrderNo 出订单no
+     * @param outOrderNo 商户订单号
      * @return 同步的结果
      */
     public Result<WechatPayScoreOrderVO> sync(@PathVariable String outOrderNo) {
@@ -98,8 +96,8 @@ public class WechatPayScoreOrderController {
     @Operation(summary = "完结微信支付分订单")
     @PostMapping("/{outOrderNo}/complete")
     /**
-     * 完成
-     * @param outOrderNo 出订单no
+     * 完结
+     * @param outOrderNo 商户订单号
      * @param dto dto
      */
     public Result<WechatPayScoreOrderVO> complete(@PathVariable String outOrderNo,
@@ -110,8 +108,8 @@ public class WechatPayScoreOrderController {
     @Operation(summary = "取消微信支付分订单")
     @PostMapping("/{outOrderNo}/cancel")
     /**
-     * Cancel
-     * @param outOrderNo 出订单no
+     * 取消
+     * @param outOrderNo 商户订单号
      * @param dto dto
      */
     public Result<WechatPayScoreOrderVO> cancel(@PathVariable String outOrderNo,
@@ -131,4 +129,3 @@ public class WechatPayScoreOrderController {
         return vo;
     }
 }
-

@@ -7,8 +7,12 @@ import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.network.server.filter.discovery.ServiceDiscoveryServerFilter;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.discovery.support.service.DiscoveryService;
+import com.chua.starter.monitor.support.model.DiscoveryInstanceVO;
+import com.chua.starter.monitor.support.model.DiscoveryQueryVO;
+import com.chua.starter.monitor.support.model.DiscoveryStatusVO;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry.RuntimeServer;
+import com.chua.starter.monitor.support.server.filter.DelegatingServerFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -109,19 +111,11 @@ public class ServerDiscoveryController {
      */
     @Operation(summary = "查询服务实例", description = "按发现协议与/或服务标识查询实时实例；复用运行中节点的发现连接")
     @GetMapping("/services")
-    public ReturnResult<Map<String, Object>> services(@RequestParam(required = false) String protocol,
-                                                      @RequestParam(required = false) String uriSpec) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        List<Map<String, Object>> instances = new ArrayList<>();
-        String message;
-
+    public ReturnResult<DiscoveryQueryVO> services(@RequestParam(required = false) String protocol,
+                                                   @RequestParam(required = false) String uriSpec) {
         if (uriSpec == null || uriSpec.isBlank()) {
-            message = "请提供服务标识(uriSpec)后再查询";
-            result.put("instances", instances);
-            result.put("message", message);
-            return ReturnResult.ok(result);
+            return ReturnResult.ok(new DiscoveryQueryVO(List.of(), "请提供服务标识(uriSpec)后再查询"));
         }
-
         Set<Discovery> found = new LinkedHashSet<>();
         List<ServiceDiscoveryServerFilter> filters = liveDiscoveryFilters(protocol);
         for (ServiceDiscoveryServerFilter filter : filters) {
@@ -160,10 +154,12 @@ public class ServerDiscoveryController {
             }
         }
 
+        List<DiscoveryInstanceVO> instances = new ArrayList<>(found.size());
         for (Discovery d : found) {
             instances.add(toInstance(d));
         }
 
+        String message;
         if (instances.isEmpty()) {
             message = filters.isEmpty()
                     ? "未发现运行中的服务发现插件，请先在服务管理中为某个服务器挂载 service-discovery 插件"
@@ -171,9 +167,7 @@ public class ServerDiscoveryController {
         } else {
             message = "ok";
         }
-        result.put("instances", instances);
-        result.put("message", message);
-        return ReturnResult.ok(result);
+        return ReturnResult.ok(new DiscoveryQueryVO(instances, message));
     }
 
     /**
@@ -183,8 +177,7 @@ public class ServerDiscoveryController {
      */
     @Operation(summary = "发现服务状态", description = "运行中的发现插件数量、可用协议数、容器内是否装配 DiscoveryService")
     @GetMapping("/status")
-    public ReturnResult<Map<String, Object>> status() {
-        Map<String, Object> result = new LinkedHashMap<>();
+    public ReturnResult<DiscoveryStatusVO> status() {
         List<ServiceDiscoveryServerFilter> filters = liveDiscoveryFilters(null);
         Set<String> protocols = new LinkedHashSet<>();
         try {
@@ -196,11 +189,9 @@ public class ServerDiscoveryController {
         } catch (Exception ignored) {
             // 枚举失败不影响状态摘要
         }
-        result.put("runningDiscoveryFilters", filters.size());
-        result.put("availableProtocols", new ArrayList<>(protocols));
-        result.put("discoveryServicePresent", discoveryServiceProvider.getIfAvailable() != null);
-        result.put("enabled", !filters.isEmpty() || discoveryServiceProvider.getIfAvailable() != null);
-        return ReturnResult.ok(result);
+        boolean present = discoveryServiceProvider.getIfAvailable() != null;
+        return ReturnResult.ok(new DiscoveryStatusVO(filters.size(), new ArrayList<>(protocols), present,
+                !filters.isEmpty() || present));
     }
 
     /**
@@ -229,7 +220,10 @@ public class ServerDiscoveryController {
                 continue;
             }
             for (ServerFilter filter : filters) {
-                if (!(filter instanceof ServiceDiscoveryServerFilter discoveryFilter)) {
+                // 挂载链路上的过滤器一律被 ServerFilterFactory 包一层委托，不解包永远匹配不到
+                ServerFilter effective = filter instanceof DelegatingServerFilter delegating
+                        ? delegating.getDelegate() : filter;
+                if (!(effective instanceof ServiceDiscoveryServerFilter discoveryFilter)) {
                     continue;
                 }
                 if (protocol != null && !protocol.isBlank()) {
@@ -256,16 +250,8 @@ public class ServerDiscoveryController {
      * @param d 发现信息
      * @return 实例视图
      */
-    private Map<String, Object> toInstance(Discovery d) {
-        Map<String, Object> item = new LinkedHashMap<>();
-        item.put("id", d.getId());
-        item.put("host", d.getHost());
-        item.put("port", d.getPort());
-        item.put("protocol", d.getProtocol());
-        item.put("weight", d.getWeight());
-        item.put("env", d.getEnv());
-        item.put("uriSpec", d.getUriSpec());
-        item.put("metadata", d.getMetadata());
-        return item;
+    private DiscoveryInstanceVO toInstance(Discovery d) {
+        return new DiscoveryInstanceVO(d.getId(), d.getHost(), d.getPort(), d.getProtocol(),
+                d.getWeight(), d.getEnv(), d.getUriSpec(), d.getMetadata());
     }
 }

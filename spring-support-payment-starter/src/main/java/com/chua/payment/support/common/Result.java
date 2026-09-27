@@ -5,49 +5,49 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 统一返回结果类
+ * 统一返回结果类。
  *
  * @since 2026-03-18
  * @author CH
  */
 @Data
 public class Result<T> implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+
+    private static final long serialVersionUID = 1L; // 序列化版本 uid
 
     /**
-     * 状态码
+     * 状态码。
      */
     private Integer code;
 
     /**
-     * 消息
+     * 消息。
      */
     private String message;
 
     /**
-     * 数据
+     * 数据。
      */
     private T data;
 
     /**
-     * 时间戳
+     * 时间戳。
      */
     private Long timestamp;
 
     /**
-     * 创建 结果 实例
-    */
+     * 使用当前时间戳构造结果对象。
+     */
     public Result() {
         this.timestamp = System.currentTimeMillis();
     }
 
     /**
-     * 创建 结果 实例
-     * @param code 编码
-     * @param message 字符串
-     * @param data T
+     * 构造指定状态码、消息与数据的结果对象。
+     *
+     * @param code    状态码
      * @param message 消息
-     * @param data 数据
+     * @param data    数据
      */
     public Result(Integer code, String message, T data) {
         this.code = code;
@@ -57,7 +57,8 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 成功返回
+     * 成功返回。
+     *
      * @return 成功的结果
      */
     public static <T> Result<T> success() {
@@ -65,7 +66,8 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 成功返回（带数据）
+     * 成功返回（携带数据）。
+     *
      * @param data 数据
      * @return 成功的结果
      */
@@ -74,9 +76,10 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 成功返回（带消息和数据）
+     * 成功返回（携带消息和数据）。
+     *
      * @param message 消息
-     * @param data 数据
+     * @param data    数据
      * @return 成功的结果
      */
     public static <T> Result<T> success(String message, T data) {
@@ -84,7 +87,8 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 失败返回
+     * 失败返回。
+     *
      * @param message 消息
      * @return 错误的结果
      */
@@ -93,8 +97,9 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 失败返回（带状态码）
-     * @param code 编码
+     * 失败返回（携带状态码）。
+     *
+     * @param code    状态码
      * @param message 消息
      * @return 错误的结果
      */
@@ -103,10 +108,11 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 自定义返回
-     * @param code 编码
+     * 自定义返回。
+     *
+     * @param code    状态码
      * @param message 消息
-     * @param data 数据
+     * @param data    数据
      * @return 构建的结果
      */
     public static <T> Result<T> build(Integer code, String message, T data) {

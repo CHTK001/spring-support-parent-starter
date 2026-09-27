@@ -2,6 +2,7 @@ package com.chua.starter.mybatis.interceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.chua.common.support.utils.DateUtils;
 import com.chua.starter.mybatis.event.MybatisSlowSqlEvent;
 import com.chua.starter.mybatis.properties.MybatisSlowSqlProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,6 @@ import org.slf4j.MDC;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.CollectionUtils;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -59,11 +59,6 @@ public class SlowSqlDetectInterceptor implements Interceptor {
      * 日志
     */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
-
-    /**
-     * 日期格式化器（仅用于参数格式化）。
-     */
-    private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 事件publisher
@@ -277,7 +272,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
             return "'" + obj + "'";
         }
         if (obj instanceof Date) {
-            return "'" + FORMATTER.format(obj) + "'";
+            return "'" + DateUtils.format((Date) obj) + "'";
         }
         return String.valueOf(obj);
     }

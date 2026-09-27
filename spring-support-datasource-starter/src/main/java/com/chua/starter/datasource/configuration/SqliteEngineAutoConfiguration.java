@@ -25,7 +25,6 @@ import java.io.File;
  *   <li>{@link SqliteEngine} — 优先于注解初始化，在 Bean 容器中注入</li>
  *   <li>{@link DataSource} — HikariCP 包装的 SQLite 连接池</li>
  * </ul>
- * </p>
  * <p>
  * 使用示例：
  * <pre>{@code
@@ -34,9 +33,7 @@ import java.io.File;
  * plugin.sqlite.path=./data/app.sqlite
  * plugin.sqlite.init-sql=classpath:db/init/sqlite
  * plugin.sqlite.max-pool-size=5
- * }</pre>ize=5
  * }</pre>
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

@@ -16,20 +16,26 @@ import com.chua.common.support.ai.splitter.SentenceTextSplitter;
 import com.chua.common.support.ai.splitter.TextSplitter;
 import com.chua.common.support.ai.splitter.TextSplitterProvider;
 import com.chua.common.support.file.txtractor.TextExtractor;
+import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.vector.VectorCompareAlgorithm;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.common.support.vector.VectorStorageProvider;
-import com.chua.jvector.support.configuration.JVectorStorageProperties;
+import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import javax.sql.DataSource;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,14 +61,34 @@ public class RagClientManager {
     private static final int DEFAULT_EMBEDDING_DIMENSIONS = 1536;
 
     /**
-     * 全局设置键值分组
+     * 全局配置组名
      */
     private static final String GROUP = "rag";
+
+    /**
+     * 向量库配置项：JSON，结构为「SPI 名称 → 键值配置」。
+     *
+     * <p>按名称分桶保存，切换向量库时各自身份的 host / token / 表名等配置都保留，
+     * 不会被另一种向量库覆盖。</p>
+     */
+    public static final String KEY_VECTOR_STORAGE_CONFIG = "rag_vector_storage_config";
+
 
     /**
      * 全局 RAG 客户端在 Spring 容器中的 Bean 名称
      */
     private static final String RAG_CLIENT_BEAN_NAME = "globalRagClient";
+
+    /**
+     * 本地推理类 embedding 引擎：不需要 apiKey / baseUrl 即可构建。
+     *
+     * <p>这些引擎由 {@code META-INF/extensions/com.chua.common.support.ai.embedding.EmbeddingClient}
+     * 索引暴露，实际模型走 deeplearning 的 ModelRegistry 解析（可指向本地 ONNX 目录），
+     * 不经过任何 HTTP 服务。若对它们也套用「必须有 apiKey + baseUrl」的门槛，
+     * 会把「已注册、模型已就位」误判为不可用并静默降级成占位向量。</p>
+     */
+    private static final Set<String> LOCAL_EMBEDDING_ENGINES =
+            Set.of("memory", "onnx", "bge", "minilm", "wemm");
 
     /**
      * 全局设置读取工具
@@ -80,9 +106,28 @@ public class RagClientManager {
     private final RagProperties properties;
 
     /**
-     * Spring Bean工厂（动态注册/替换 全局rag客户端 Bean）
+     * Spring Bean工厂：用于动态注册/替换 全局rag客户端 Bean。
      */
     private final DefaultListableBeanFactory beanFactory;
+
+    /**
+     * 宿主数据源，供「向量直接存业务库」的向量库实现注入。
+     *
+     * <p>用 {@code ObjectProvider} 延迟取，避免 jvector / milvus 等不需要数据源时
+     * 因为容器里没有 DataSource 而启动失败。</p>
+     */
+    private final ObjectProvider<DataSource> dataSourceProvider;
+
+    /**
+     * LLM 供应商表 Mapper：按供应商ID解析 base_url 与 API Key。
+     *
+     * <p>模型引用形如 {@code 供应商ID:模型名}（如 {@code 1789547286889:agnes-3.0-flash}），
+     * 其凭据权威来源是 {@code sys_ai_provider}，而非 {@code runtime} 分组的
+     * provider/provider_api_key —— 后者由 {@code RuntimeGlobalSettingProvider} 以
+     * {@code openai}/{@code gpt-4o} 作为首次种子默认值，供应商接入信息并不落在那里。</p>
+     */
+    private final SysAiProviderMapper providerMapper;
+
 
     /**
      * 当前生效的全局 RAG 客户端（懒构建，热更新时替换）。
@@ -190,6 +235,11 @@ public class RagClientManager {
 
         EmbeddingClient embeddingClient = createEmbeddingClient(ragEmbeddingModel, embeddingDimensions);
         VectorStorage vectorStorage = createVectorStorage(ragVectorStorage, uploadDir, embeddingDimensions);
+        if (vectorStorage == null) {
+            log.error("[RagClientManager] 向量存储不可用，RAG 客户端不构建。"
+                    + "请到 RAG 设置里选择一个已注册的向量库并检查其配置");
+            return null;
+        }
         TextSplitter splitter = createTextSplitter(ragSplitter, chunkSize, chunkOverlap);
         RagClientSetting setting = RagClientSetting.builder()
                 .topK(topK)
@@ -218,8 +268,9 @@ public class RagClientManager {
     /**
      * 解析 RAG 使用的 LLM：
      * 1. 按 rag_llm_model 从 ChatClientRegistry 查找已注册客户端
-     * 2. 查不到则用 registry 默认客户端
-     * 3. 都没有时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
+     * 2. 模型引用形如 供应商ID:模型名 时，直接用 sys_ai_provider 的 base_url + API Key 构建
+     * 3. 查不到则用 registry 默认客户端
+     * 4. 都没有时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
      * @param ragLlmModel ragLlm模型，不允许为 null
      * @return Chat客户端 对象
      */
@@ -237,8 +288,107 @@ public class RagClientManager {
                 return defaultClient;
             }
         }
-        // registry 无客户端 → 从 runtime 全局设置直接构建
+        // registry 无客户端 → 先按「供应商ID:模型名」从供应商表解析真实凭据
+        ChatClient byProvider = buildProviderChatClient(ragLlmModel);
+        if (byProvider != null) {
+            return byProvider;
+        }
+        // 供应商表也解析不出 → 从 runtime 全局设置直接构建
         return buildRuntimeChatClient();
+    }
+
+    /**
+     * 按「供应商ID:模型名」引用从 {@code sys_ai_provider} 构建 ChatClient。
+     *
+     * <p>模型引用支持两种形态：{@code 供应商ID:模型名} 与裸模型名。凭据取自供应商表的
+     * {@code credentials} JSON，同时兼容两种键形态：{@code api_keys}（列表，取第一个非空）
+     * 与 {@code api_key}（单值）。因此不会退化到 {@code runtime} 分组的
+     * {@code openai}/{@code gpt-4o} 首次种子默认值。</p>
+     *
+     * @param modelRef 模型引用，允许为 空
+     * @return Chat客户端 对象；引用为空、供应商缺失或凭据不完整时返回 空
+     */
+    private ChatClient buildProviderChatClient(String modelRef) {
+        if (StringUtils.isBlank(modelRef)) {
+            return null;
+        }
+        String providerId = null;
+        String modelName = modelRef.trim();
+        int idx = modelName.indexOf(':');
+        if (idx > 0) {
+            providerId = modelName.substring(0, idx).trim();
+            modelName = modelName.substring(idx + 1).trim();
+        }
+        if (StringUtils.isBlank(modelName)) {
+            return null;
+        }
+        try {
+            SysAiProvider provider = providerId != null
+                    ? providerMapper.selectById(providerId)
+                    : null;
+            if (provider == null) {
+                log.warn("[RagClientManager] 模型引用 {} 未定位到供应商", modelRef);
+                return null;
+            }
+            if (!Boolean.TRUE.equals(provider.getEnabled())) {
+                log.warn("[RagClientManager] 供应商 {} 已禁用，无法构建 ChatClient", provider.getName());
+                return null;
+            }
+            String apiKey = extractApiKey(provider.getCredentials());
+            if (StringUtils.isBlank(apiKey)) {
+                log.warn("[RagClientManager] 供应商 {} 未配置 API Key，无法构建 ChatClient",
+                        provider.getName());
+                return null;
+            }
+            ChatClientSetting setting = ChatClientSetting.builder()
+                    .provider(StringUtils.isBlank(provider.getPlatform())
+                            ? "openai" : provider.getPlatform().trim())
+                    .appKey(apiKey)
+                    .baseUrl(StringUtils.hasText(provider.getBaseUrl())
+                            ? provider.getBaseUrl().trim() : null)
+                    .model(modelName)
+                    .authScheme(StringUtils.hasText(provider.getAuthScheme())
+                            ? provider.getAuthScheme().trim() : null)
+                    .build();
+            ChatClient client = ChatClient.create(setting);
+            if (client != null) {
+                log.info("[RagClientManager] 按供应商表创建真实 ChatClient: provider={}, model={}",
+                        provider.getName(), modelName);
+            }
+            return client;
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 供应商表 ChatClient 创建失败({}): {}", modelRef, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从供应商 credentials 中提取可用 API Key。
+     *
+     * <p>兼容两种存储形态：{@code api_keys} 为字符串列表（多 Key 轮换），
+     * {@code api_key} 为单值。取第一个非空项。</p>
+     *
+     * @param credentials 凭证 JSON，允许为 空
+     * @return API Key；不存在时返回 空
+     */
+    private String extractApiKey(Map<String, Object> credentials) {
+        if (credentials == null || credentials.isEmpty()) {
+            return null;
+        }
+        Object multi = credentials.get("api_keys");
+        if (multi instanceof List<?> list) {
+            for (Object item : list) {
+                String key = item == null ? null : String.valueOf(item).trim();
+                if (StringUtils.hasText(key)) {
+                    return key;
+                }
+            }
+        }
+        Object single = credentials.get("api_key");
+        if (single != null && StringUtils.hasText(String.valueOf(single).trim())) {
+            return String.valueOf(single).trim();
+        }
+        return null;
     }
 
     /**
@@ -261,6 +411,11 @@ public class RagClientManager {
                     .appKey(apiKey.trim())
                     .baseUrl(StringUtils.hasText(baseUrl) ? baseUrl.trim() : null)
                     .model(StringUtils.hasText(model) ? model.trim() : null)
+                    // 认证方案：runtime.provider_auth_scheme / provider_auth_header / provider_auth_prefix
+                    // 用于 Dots Studio 这类只认 api-key 头、不认 Authorization 的服务商
+                    .authScheme(settingReader.getStr("runtime", "provider_auth_scheme"))
+                    .authHeader(settingReader.getStr("runtime", "provider_auth_header"))
+                    .authPrefix(settingReader.getStr("runtime", "provider_auth_prefix"))
                     .build();
             ChatClient client = ChatClient.create(setting);
             if (client != null) {
@@ -346,84 +501,209 @@ public class RagClientManager {
             engine = properties.getEmbeddingEngine();
         }
         if ("memory".equalsIgnoreCase(engine)) {
+            logPlaceholderEmbedding(engine, embeddingDimensions);
             return new MemoryEmbeddingClient().dimensions(embeddingDimensions);
         }
         try {
             Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
-            if (!providers.contains(engine.toLowerCase())) {
-                log.debug("[RagClientManager] EmbeddingClient SPI 中没有 provider '{}', 回退离线实现", engine);
+            // SPI 别名在 ServiceDefinition 中统一大写归一化（实测 getExtensions() 返回
+            // ONNX / MEMORY / JVECTOR 等全大写名），这里必须按同一规则比较，
+            // 否则 contains(lowerCase) 恒为 false，所有真实 embedding 引擎都会被误判为
+            // 「未注册」并静默降级成占位向量。
+            boolean registered = false;
+            for (String provider : providers) {
+                if (provider != null && provider.equalsIgnoreCase(engine)) {
+                    registered = true;
+                    break;
+                }
+            }
+            if (!registered) {
+                // 降级到占位实现会让语义检索恒定 0 命中，必须让运维看见
+                log.warn("[RagClientManager] EmbeddingClient SPI 中没有 provider '{}'（已注册: {}），"
+                        + "回退占位实现，语义检索不可用", engine, providers);
                 return new MemoryEmbeddingClient().dimensions(embeddingDimensions);
             }
             // 优先 rag 分组独立 embedding 配置，其次 runtime 配置
             String embKey = settingReader.getStr(GROUP, "rag_embedding_api_key");
             String embBase = settingReader.getStr(GROUP, "rag_embedding_base_url");
             String embModel = settingReader.getStr(GROUP, "rag_embedding_model_name");
-            if (!StringUtils.hasText(embKey)) {
-                embKey = settingReader.getStr("runtime", "provider_api_key");
+            boolean local = LOCAL_EMBEDDING_ENGINES.contains(engine.toLowerCase());
+            if (!local) {
+                if (!StringUtils.hasText(embKey)) {
+                    embKey = settingReader.getStr("runtime", "provider_api_key");
+                }
+                if (!StringUtils.hasText(embBase)) {
+                    embBase = settingReader.getStr("runtime", "provider_base_url");
+                }
             }
-            if (!StringUtils.hasText(embBase)) {
-                embBase = settingReader.getStr("runtime", "provider_base_url");
-            }
-            if (!StringUtils.hasText(embModel)) {
-                embModel = settingReader.getStr("runtime", "default_model");
-            }
-            if (StringUtils.hasText(embKey) && StringUtils.isNotBlank(embBase)) {
+            // 在线引擎必须有 apiKey + baseUrl；本地 ONNX 推理不需要任何凭据，
+            // 若沿用同一门槛会导致「已注册且模型就位」也被判为不可用而静默降级。
+            boolean credentialReady = local
+                    || (StringUtils.hasText(embKey) && StringUtils.isNotBlank(embBase));
+            if (credentialReady) {
                 EmbeddingClientSetting setting = EmbeddingClientSetting.builder()
                         .provider(engine.toLowerCase())
-                        .appKey(embKey.trim())
-                        .baseUrl(embBase.trim())
+                        .appKey(StringUtils.hasText(embKey) ? embKey.trim() : null)
+                        .baseUrl(StringUtils.hasText(embBase) ? embBase.trim() : null)
                         .model(StringUtils.hasText(embModel) ? embModel.trim() : null)
                         .dimensions(embeddingDimensions)
                         .build();
                 EmbeddingClient client = EmbeddingClient.create(setting);
                 if (client != null) {
-                    log.info("[RagClientManager] 创建真实 EmbeddingClient: provider={}, model={}, dim={}",
-                            engine, embModel, embeddingDimensions);
+                    log.info("[RagClientManager] 创建真实 EmbeddingClient: provider={}, model={}, dim={}, 本地推理={}",
+                            engine, embModel, embeddingDimensions, local);
                     return client;
                 }
             }
             // 无 runtime key 时回退离线
-            log.debug("[RagClientManager] 无 runtime apiKey，EmbeddingClient 回退离线实现（engine={}）", engine);
+            log.warn("[RagClientManager] 无可用 embedding apiKey/baseUrl，EmbeddingClient 回退占位实现，语义检索不可用（engine={}）", engine);
         } catch (Exception e) {
-            log.warn("[RagClientManager] EmbeddingClient SPI 创建失败，回退离线实现: {}", e.getMessage());
+            log.warn("[RagClientManager] EmbeddingClient SPI 创建失败，回退占位实现，语义检索不可用: {}", e.getMessage());
         }
-        log.info("[RagClientManager] 使用离线向量化 MemoryEmbeddingClient（engine={}, dim={}）", engine, embeddingDimensions);
+        logPlaceholderEmbedding(engine, embeddingDimensions);
         return new MemoryEmbeddingClient().dimensions(embeddingDimensions);
     }
 
     /**
-     * 创建向量存储：jvector 使用 ON_DISK 落盘，其余使用内存实现。
-     * jvector 初始化失败（如 native VectorizationProvider 不可用）时降级到内存实现，
-     * 保证 RAG 服务始终可用。
+     * 记录占位向量化实现的固有限制。
      *
-     * <p>生产默认 ON_DISK 模式 + 持久化索引路径（uploadDir 下的 jvector-index），
-     * 重启后向量数据不丢失；开发测试可配 memory 模式快速验证。</p>
+     * <p>{@link MemoryEmbeddingClient} 生成的是无语义伪向量，任意两条不同文本的余弦
+     * 实测恒在 0.63~0.69，而 {@code rag_similarity_threshold} 默认 0.7 恰好压在其上，
+     * 因此语义检索会稳定返回 0 命中、{@code sources} 恒空。这既不是检索链路的缺陷，
+     * 也不能靠调阈值解决（调低会让任意文本互相召回，等于注入无关上下文），
+     * 唯一出路是配置真实 embedding 服务。此处按 WARN 记录，避免运维只看到「0 命中」而无线索。</p>
      *
-     * @param storageName 存储名称（jvector / memory / milvus 等，留空取属性默认）
-     * @param uploadDir   上传根目录，jvector 索引文件存放于其下
-     * @return VectorStorage 实例（jvector 失败时降级 memory）
-     * @param embeddingDimensions 方法入参 embeddingDimensions
+     * @param engine                 引擎名（配置值）
+     * @param embeddingDimensions    向量维度
+     */
+    private void logPlaceholderEmbedding(String engine, int embeddingDimensions) {
+        log.warn("[RagClientManager] 使用占位向量化 MemoryEmbeddingClient（engine={}, dim={}）："
+                        + "该实现无语义能力，任意两条不同文本余弦恒在 0.63~0.69，与默认相似度阈值 0.7 重叠，"
+                        + "语义检索将恒定 0 命中；需要真实召回请配置 rag_embedding_model/base_url/api_key/model_name",
+                engine, embeddingDimensions);
+    }
+
+    /**
+     * 按名称动态创建向量存储：配置来自业务侧持久化，实现由 SPI 自己决定。
+     *
+     * <p>全程没有按名称的硬编码分支，也没有静默降级：
+     * 未注册的实现、需要数据源却没容器、或 SPI 自身抛错，都会明确失败并返回 {@code null}，
+     * 由调用方让 RAG 不可用——而不是悄悄把知识库索引写进内存里假装成功。</p>
+     *
+     * <p>业务默认值只在用户尚未保存配置时生效（当前仅 jvector 的索引落盘位置），
+     * 一旦用户在页面保存过，就完全以保存值为准。</p>
+     *
+     * @param storageName        存储名，取自已注册的 VectorStorageProvider SPI
+     * @param uploadDir          RAG 上传目录，jvector 默认索引目录的父目录
+     * @param embeddingDimensions 向量维度
+     * @return VectorStorage 实例；创建失败返回 null
      */
     private VectorStorage createVectorStorage(String storageName, String uploadDir, int embeddingDimensions) {
         String name = StringUtils.hasText(storageName)
                 ? storageName.trim().toLowerCase()
                 : properties.getVectorStorage();
+        // 兜底必须是 jvector：默认落到 memory 会让向量随进程重启全部丢失，
+        // 且没有任何提示，属静默降级。jvector 未注册时下方 createDynamic 会明确抛错。
+        name = StringUtils.hasText(name) ? name.trim().toLowerCase() : "jvector";
         VectorCompareAlgorithm algorithm = VectorCompareAlgorithm.cosine();
         int dim = embeddingDimensions > 0 ? embeddingDimensions : properties.getEmbeddingDimensions();
-        if ("jvector".equals(name)) {
-            try {
-                JVectorStorageProperties props = new JVectorStorageProperties();
-                // 生产持久化：ON_DISK 模式，索引文件落在 uploadDir 下，重启不丢失
-                props.setMode(JVectorStorageProperties.Mode.ON_DISK);
-                props.setIndexPath(uploadDir + "/jvector-index");
-                log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK), indexPath={}", props.getIndexPath());
-                return VectorStorageProvider.create("jvector", dim, algorithm, props);
-            } catch (Throwable e) {
-                log.warn("[RagClientManager] jvector 初始化失败，降级到内存存储: {}", e.getMessage());
+        try {
+            Map<String, Object> config = resolveVectorStorageConfig(name, uploadDir);
+            VectorStorage storage = VectorStorageProvider.createDynamic(
+                    name, dim, algorithm, config, resolveDataSource());
+            if (storage != null) {
+                log.info("[RagClientManager] 向量存储已就绪: name={}, dim={}, 字段={}",
+                        name, dim, config.keySet());
+            }
+            return storage;
+        } catch (Throwable e) {
+            log.error("[RagClientManager] 向量存储 [{}] 初始化失败，RAG 不可用（已注册: {}）: {}",
+                    name, VectorStorageProvider.providers(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 取出指定向量库的保存配置。
+     *
+     * <p>持久化结构是「SPI 名称 → 键值配置」的一层映射，
+     * 这样在不同向量库之间来回切换时各自的配置都还在，不会互相覆盖。</p>
+     *
+     * @param name      SPI 名称
+     * @param uploadDir RAG 上传目录，用于补齐业务默认索引路径
+     * @return 键值配置，不可为 null
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> resolveVectorStorageConfig(String name, String uploadDir) {
+        Map<String, Object> all = readVectorStorageConfigs();
+        Object raw = all.get(name);
+        Map<String, Object> config = new LinkedHashMap<>();
+        if (raw instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    config.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
             }
         }
-        log.info("[RagClientManager] 向量存储使用 memory（无落盘）");
-        return VectorStorageProvider.create("memory", dim, algorithm);
+        applyBusinessDefaults(name, config, uploadDir);
+        return config;
+    }
+
+    /**
+     * 业务默认配置：仅在用户尚未保存该项时补充，不覆盖已保存的值。
+     *
+     * <p>这里放的是「RAG 索引放在哪」这类业务约定，属于业务侧知识；
+     * 具体如何落盘、怎么建索引仍然由 SPI 自己决定。</p>
+     *
+     * @param name      SPI 名称
+     * @param config    待补充的配置（原地修改）
+     * @param uploadDir RAG 上传目录
+     */
+    private void applyBusinessDefaults(String name, Map<String, Object> config, String uploadDir) {
+        if ("jvector".equals(name)
+                && !config.containsKey(JVectorVectorStorageProvider.KEY_INDEX_PATH)
+                && StringUtils.hasText(uploadDir)) {
+            config.put(JVectorVectorStorageProvider.KEY_INDEX_PATH,
+                    uploadDir + "/jvector-index");
+        }
+    }
+
+    /**
+     * 读取所有向量库的持久化配置。
+     *
+     * @return SPI 名称到键值配置的映射，解析失败返回空映射
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readVectorStorageConfigs() {
+        String json = settingReader.getStr(GROUP, KEY_VECTOR_STORAGE_CONFIG);
+        if (!StringUtils.hasText(json)) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            Map<String, Object> parsed = Json.fromJson(json);
+            return parsed == null ? new LinkedHashMap<>() : parsed;
+        } catch (Exception e) {
+            log.error("[RagClientManager] 解析 {} 配置失败，按空配置处理: {}",
+                    KEY_VECTOR_STORAGE_CONFIG, e.getMessage());
+            return new LinkedHashMap<>();
+        }
+    }
+
+    /**
+     * 取出宿主数据源，供 MySQL / PostgreSQL 这类「向量直接存业务库」的实现注入。
+     *
+     * <p>用 {@code ObjectProvider} 延迟取：jvector / milvus 等实现根本不需要数据源，
+     * 此时容器里没有 DataSource 也不该导致启动失败。</p>
+     *
+     * @return 宿主数据源；容器中没有时返回 null
+     */
+    private DataSource resolveDataSource() {
+        try {
+            return dataSourceProvider == null ? null : dataSourceProvider.getIfAvailable();
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 获取宿主数据源失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

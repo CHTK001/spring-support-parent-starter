@@ -9,8 +9,7 @@ import com.chua.starter.server.support.mapper.MsTerminalBookmarkMapper;
 import com.chua.starter.server.support.mapper.MsTerminalSnippetMapper;
 import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.TerminalSessionService;
-import com.chua.starter.server.support.terminal.GuacdSession;
-import com.chua.starter.server.support.terminal.GuacdSessionRegistry;
+import com.chua.starter.server.support.spi.TerminalSessionChannelRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +43,9 @@ public class TerminalController {
     private final TerminalSessionService terminalSessionService;
 
     /**
-     * guacd 会话注册表
+     * 远控会话通道注册中心（guacd 中转 + 各直连通道）
     */
-    private final GuacdSessionRegistry sessionRegistry;
+    private final TerminalSessionChannelRegistry sessionChannels;
 
     /**
      * 命令片段 映射器（简单 CRUD 直连）
@@ -66,13 +65,7 @@ public class TerminalController {
     @Operation(summary = "在线会话列表")
     @GetMapping("/online")
     public ReturnResult<List<TerminalOnlineVO>> online() {
-        List<GuacdSession> sessions = sessionRegistry.snapshot();
-        List<TerminalOnlineVO> result = new java.util.ArrayList<>(sessions.size());
-        for (GuacdSession session : sessions) {
-            result.add(new TerminalOnlineVO(session.getTunnelId(), session.getHostId(),
-                    session.getSessionId(), session.getProtocol(), session.getLastActiveTime()));
-        }
-        return ReturnResult.list(result);
+        return ReturnResult.list(sessionChannels.online());
     }
 
     /**
@@ -84,7 +77,7 @@ public class TerminalController {
     @Operation(summary = "强制关闭会话")
     @PostMapping("/session/{recordId}/close")
     public ReturnResult<Void> closeSession(@PathVariable Long recordId) {
-        if (!sessionRegistry.closeByRecordId(recordId, "管理端强制关闭")) {
+        if (!sessionChannels.closeByRecordId(recordId, "管理端强制关闭")) {
             return ReturnResult.error("会话不存在或已关闭: " + recordId);
         }
         terminalSessionService.closeRecord(recordId, "管理端强制关闭");

@@ -7,81 +7,81 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 支付首页业务统计汇总。
+ * 支付首页业务统计汇总
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class PaymentDashboardSummaryVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
      * 开始时间
-    */
+     */
     private LocalDateTime startTime;
 
     /**
      * 结束时间
-    */
+     */
     private LocalDateTime endTime;
 
     /**
-     * Merchant总数
-    */
+     * 商户总数
+     */
     private Long merchantTotal;
 
     /**
-     * 是否激活merchant数量
-    */
+     * 活跃商户数量
+     */
     private Long activeMerchantCount;
 
     /**
-     * Configuredmerchant数量
-    */
+     * 已配置商户数量
+     */
     private Long configuredMerchantCount;
 
     /**
-     * Payment排序数量
-    */
+     * 支付订单数量
+     */
     private Long paymentOrderCount;
 
     /**
-     * 退税数量
-    */
+     * 退款数量
+     */
     private Long refundCount;
 
     /**
-     * Transaction数量
-    */
+     * 交易数量
+     */
     private Long transactionCount;
 
     /**
-     * Callback请求数量
-    */
+     * 回调请求数量
+     */
     private Long callbackRequestCount;
 
     /**
-     * Successnotify数量
-    */
+     * 成功通知数量
+     */
     private Long successNotifyCount;
 
     /**
-     * Failednotify数量
-    */
+     * 失败通知数量
+     */
     private Long failedNotifyCount;
 
     /**
-     * Averageprocess持续时间MS
-    */
+     * 平均处理耗时（毫秒）
+     */
     private Long averageProcessDurationMs;
 
     /**
-     * 总数consumeamount
-    */
+     * 消费总金额
+     */
     private BigDecimal totalConsumeAmount;
 
     /**
-     * 总数refundamount
-    */
+     * 退款总金额
+     */
     private BigDecimal totalRefundAmount;
 }

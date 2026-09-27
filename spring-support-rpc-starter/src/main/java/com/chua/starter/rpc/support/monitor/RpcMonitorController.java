@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * RPC 监控端点，暴露当前 RPC 服务端的连接信息与运行时指标。
@@ -183,6 +184,18 @@ public class RpcMonitorController {
      * @return 监控信息的结果
      */
     public record MonitorInfo(boolean enabled, String protocol, int serviceCount, List<String> services) {
+
+        /**
+         * 规范构造器：服务接口列表做防御性拷贝。
+         *
+         * <p>value class 前置条件——集合组件必须深不可变。协议名称保留可空语义：
+         * RPC 未启用时为 {@code null}。</p>
+         *
+         * @param services 服务接口全限定名列表
+         */
+        public MonitorInfo {
+            services = List.copyOf(Objects.requireNonNull(services, "services 不能为 null"));
+        }
     }
 
     /**
@@ -195,6 +208,18 @@ public class RpcMonitorController {
      */
     public record ConnectionsInfo(boolean enabled, String protocol, int count,
                                   List<RpcConnectionInfo> connections) {
+
+        /**
+         * 规范构造器：连接详情列表做防御性拷贝。
+         *
+         * <p>value class 前置条件——集合组件必须深不可变。协议名称保留可空语义：
+         * RPC 未启用时为 {@code null}。</p>
+         *
+         * @param connections 连接详情列表
+         */
+        public ConnectionsInfo {
+            connections = List.copyOf(Objects.requireNonNull(connections, "connections 不能为 null"));
+        }
     }
 
     /**

@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS sys_job (
     sys_job_author                   VARCHAR(64),
     -- 告警邮箱: 多个用逗号分隔
     sys_job_alarm_email              VARCHAR(255),
+    -- 告警类型: EMAIL/WEBHOOK，空值按 EMAIL 处理
+    sys_job_alarm_type               VARCHAR(32) DEFAULT NULL,
     -- 命名空间: 隔离多项目
     sys_job_group                    VARCHAR(64)    DEFAULT 'default',
     -- 调度类型: CRON / FIXED / FIXED_MS / DELAY / AT / NONE
@@ -59,6 +61,11 @@ CREATE TABLE IF NOT EXISTS sys_job (
     sys_job_glue_type                VARCHAR(50)    DEFAULT 'BEAN',
     -- 分发模式: LOCAL / REMOTE
     sys_job_dispatch_mode            VARCHAR(20)    DEFAULT 'LOCAL',
+    -- 并发策略: 同一任务上一轮未结束时如何处理新一拍
+    --   SKIP  (默认) 跳过本次, 记 SKIPPED 日志, 不堆积
+    --   ALLOW           允许并发重入 (保持历史行为, 长任务可能无限堆积)
+    -- 缺列或为空的存量行按 ALLOW 处理, 见 MybatisJobLogSink 同类兼容说明
+    sys_job_concurrent_policy        VARCHAR(20)    DEFAULT 'SKIP',
     -- 远程执行器地址覆盖
     sys_job_remote_executor_address  VARCHAR(500),
     -- 日志存储模式: DATABASE / FILE
@@ -99,7 +106,10 @@ CREATE TABLE IF NOT EXISTS sys_job (
     PRIMARY KEY (sys_job_id),
     CONSTRAINT uk_sys_job_no UNIQUE (sys_job_no),
     KEY `idx_sys_job_trigger_status` (`sys_job_trigger_status`),
-    KEY `idx_sys_job_trigger_next_time` (`sys_job_trigger_next_time`)
+    KEY `idx_sys_job_trigger_next_time` (`sys_job_trigger_next_time`),
+    -- Leader 每秒按 (分组 + 未删) 扫描到期任务: 分组收敛后该组合条件是热路径,
+    -- 缺此索引会退化成全表扫描 (概览/日志的分组口径同样经此列回查任务主键)
+    KEY `idx_sys_job_group_deleted` (`sys_job_group`, `sys_job_is_deleted`)
 );
 
 -- 任务状态索引: 用于按调度状态扫描任务
@@ -162,7 +172,10 @@ CREATE TABLE IF NOT EXISTS sys_job_log (
     CONSTRAINT uk_sys_job_log_no UNIQUE (sys_job_log_no),
     KEY `idx_sys_job_log_job_id` (`sys_job_id`),
     KEY `idx_sys_job_log_node_id` (`sys_job_log_node_id`),
-    KEY `idx_sys_job_log_trigger_date` (`sys_job_log_trigger_date`)
+    KEY `idx_sys_job_log_trigger_date` (`sys_job_log_trigger_date`),
+    -- 概览「最近失败」按 (未删 + 结果码 + 触发时刻) 回溯 24h, 且要叠加分组的主键集合过滤;
+    -- 该组合顺序让 MySQL 先用等值列收敛再走范围列, 避免按时间范围扫全表
+    KEY `idx_sys_job_log_scope` (`sys_job_log_is_deleted`, `sys_job_log_execute_code`, `sys_job_log_trigger_time`)
 );
 
 -- 任务 ID 索引: 用于按任务查询日志

@@ -1,31 +1,23 @@
 package com.chua.starter.aliyun.support.payment.dto;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 
 /**
  * 支付宝退款请求
+ *
+ * @param orderNo 排序NO
+ * @param refundNo 退税no
+ * @param refundAmount Refundamount
+ * @param reason ReasonMLmlml
+ *
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class AliyunAlipayRefundRequest {
-    /**
-     * 排序NO
-    */
-    private String orderNo;
-    /**
-     * 退税no
-    */
-    private String refundNo;
-    /**
-     * Refundamount
-    */
-    private BigDecimal refundAmount;
-    /**
-     * ReasonMLmlml
-    */
-    private String reason;
+public record AliyunAlipayRefundRequest(
+        String orderNo,
+        String refundNo,
+        BigDecimal refundAmount,
+        String reason
+) {
 }
 

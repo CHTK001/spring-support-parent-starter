@@ -3,6 +3,7 @@ package com.chua.starter.server.support.model;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * 临时文件句柄
@@ -19,6 +20,18 @@ import java.nio.file.Path;
  * @return temp文件的结果
  */
 public record TempFile(Path path, String fileName) implements AutoCloseable {
+
+    /**
+     * 规范构造器：临时文件路径做空值敌对化。
+     *
+     * <p>value class 前置条件——文件路径是本值类的身份，必须非空（关闭时按它删除磁盘文件）。
+     * 展示文件名只用于呈现，允许为空。</p>
+     *
+     * @param path 临时文件路径
+     */
+    public TempFile {
+        path = Objects.requireNonNull(path, "path 不能为 null");
+    }
 
     /**
      * 关闭并删除临时文件（幂等）

@@ -33,8 +33,9 @@ public class ServerConfigController {
     private final ServerConfigService configService;
 
     /**
-     * 查询全部配置
-     * @return 列表的结果
+     * 查询全部服务器系统配置。
+     *
+     * @return 全部配置项列表
      */
     @Operation(summary = "查询全部配置")
     @GetMapping
@@ -43,19 +44,21 @@ public class ServerConfigController {
     }
 
     /**
-     * 读取配置为扁平 映射（含默认值）
-     * @return 映射的结果
+     * 读取配置为扁平映射并补充默认值。
+     *
+     * @return 全部配置的键值映射
      */
-    @Operation(summary = "读取配置Map")
+    @Operation(summary = "读取配置映射")
     @GetMapping("/map")
     public ReturnResult<Map<String, Object>> map() {
         return configService.getConfigMap();
     }
 
     /**
-     * 保存配置
-     * @param body 主体
-     * @return 保存的结果
+     * 保存服务器系统配置。
+     *
+     * @param body 配置键值映射
+     * @return 保存结果
      */
     @Operation(summary = "保存配置")
     @PostMapping

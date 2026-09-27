@@ -61,7 +61,6 @@ public class DatabaseGraphService {
      * 创建 database图计算服务 实例
      * @param dataSource 数据源
      * @param properties 文档属性
-     * @param properties 属性
      */
     public DatabaseGraphService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
@@ -161,7 +160,7 @@ public class DatabaseGraphService {
         }
 
         for (TriggerInfo t : triggers) {
-            TableNodeInfo node = tableMap.get(t.getTableName());
+            TableNodeInfo node = tableMap.get(t.tableName());
             if (node != null) {
                 node.getTriggers().add(t);
             }
@@ -171,7 +170,7 @@ public class DatabaseGraphService {
  // 2) 启发式：扫描 procedure 定义里出现的 创建/插入/更新/删除/从/连接 + 表名（此处不解析 SQL）
             String matched = matchTable(p, tableMap.keySet());
             if (matched != null) {
-                p.setTableName(matched);
+                p = new ProcedureInfo(p.name(), p.type(), p.schema(), p.remark(), matched);
                 TableNodeInfo node = tableMap.get(matched);
                 if (node != null) {
                     node.getProcedures().add(p);
@@ -229,7 +228,7 @@ public class DatabaseGraphService {
         // 未归属的存储过程/函数挂到虚拟节点
         List<ProcedureInfo> unboundProcedures = new ArrayList<>();
         for (ProcedureInfo p : procedures) {
-            if (p.getTableName() == null) {
+            if (p.tableName() == null) {
                 unboundProcedures.add(p);
             }
         }
@@ -277,12 +276,12 @@ public class DatabaseGraphService {
      * @return 匹配table的结果
      */
     private static String matchTable(ProcedureInfo p, java.util.Set<String> tables) {
-        if (p.getName() == null) {
+        if (p.name() == null) {
             return null;
         }
-        String name = p.getName().toLowerCase();
-        if (tables.contains(p.getName())) {
-            return p.getName();
+        String name = p.name().toLowerCase();
+        if (tables.contains(p.name())) {
+            return p.name();
         }
         for (String t : tables) {
             String tLower = t.toLowerCase();

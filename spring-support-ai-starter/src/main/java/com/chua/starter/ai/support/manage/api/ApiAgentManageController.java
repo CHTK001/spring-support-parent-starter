@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
@@ -33,6 +34,9 @@ import java.util.Set;
  *
  * <p>数据持久化到 {@code sys_ai_agent} 表，运行时经 {@link SysAiAgentService}
  * 动态构建并注册到 {@code AgentRegistry}。</p>
+ *
+ * <p>{@code sys_ai_agent} 没有用户维度列，Agent 与其编排图对全部用户共享生效，
+ * 因此本控制器的读取对所有登录用户开放，新增/修改/删除/注册为模型/重建等写出口仅管理员可执行。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -79,6 +83,7 @@ public class ApiAgentManageController {
      * @param body 创建请求
      * @return 创建后的 Agent
      */
+    @Permission("admin")
     @PostMapping
     public ApiResult<Map<String, Object>> createAgent(@RequestBody Map<String, Object> body) {
         return ApiResult.ok(agentService.createAgent(body));
@@ -92,6 +97,7 @@ public class ApiAgentManageController {
      * @return 更新后的 Agent
      * @param @PathVariable("agentId" @路径变量("Agent标识"
      */
+    @Permission("admin")
     @PutMapping("/{agentId}")
     public ApiResult<Map<String, Object>> updateAgent(@PathVariable("agentId") String agentId,
                                                        @RequestBody Map<String, Object> body) {
@@ -107,6 +113,7 @@ public class ApiAgentManageController {
      * @param @PathVariable("agentId" @路径变量("Agentid"
      * @param @PathVariable("agentId" @PathVariable("agentId"
      */
+    @Permission("admin")
     @DeleteMapping("/{agentId}")
     public ApiResult<Void> deleteAgent(@PathVariable("agentId") String agentId) {
         agentService.deleteAgent(agentId);
@@ -121,6 +128,7 @@ public class ApiAgentManageController {
      * @return 创建后的子 Agent
      * @param @PathVariable("agentId" @路径变量("Agent标识"
      */
+    @Permission("admin")
     @PostMapping("/{agentId}/sub-agents")
     public ApiResult<Map<String, Object>> createSubAgent(@PathVariable("agentId") String agentId,
                                                           @RequestBody Map<String, Object> body) {
@@ -136,6 +144,7 @@ public class ApiAgentManageController {
      * @return 更新后的子 Agent
      * @param @PathVariable("agentId" @路径变量("Agent标识"
      */
+    @Permission("admin")
     @PutMapping("/{agentId}/sub-agents/{subId}")
     public ApiResult<Map<String, Object>> updateSubAgent(@PathVariable("agentId") String agentId,
                                                           @PathVariable("subId") String subId,
@@ -151,6 +160,7 @@ public class ApiAgentManageController {
      * @return 成功
      * @param @PathVariable("agentId" @路径变量("Agent标识"
      */
+    @Permission("admin")
     @DeleteMapping("/{agentId}/sub-agents/{subId}")
     public ApiResult<Void> deleteSubAgent(@PathVariable("agentId") String agentId,
                                            @PathVariable("subId") String subId) {
@@ -166,6 +176,7 @@ public class ApiAgentManageController {
      * @return 保存结果
      * @param @PathVariable("agentId" @路径变量("Agent标识"
      */
+    @Permission("admin")
     @PostMapping("/{agentId}/orchestration")
     public ApiResult<Map<String, Object>> saveOrchestration(@PathVariable("agentId") String agentId,
                                                              @RequestBody Map<String, Object> body) {
@@ -208,6 +219,7 @@ public class ApiAgentManageController {
      * @return 注册结果
      * @param @PathVariable("agentId" @路径变量("Agent标识"
      */
+    @Permission("admin")
     @PostMapping("/{agentId}/register")
     public ApiResult<Map<String, Object>> registerAsModel(@PathVariable("agentId") String agentId,
                                                             @RequestParam(required = false) String model_name) {
@@ -223,6 +235,7 @@ public class ApiAgentManageController {
      * @param @PathVariable("agentId" @路径变量("Agentid"
      * @param @PathVariable("agentId" @PathVariable("agentId"
      */
+    @Permission("admin")
     @DeleteMapping("/{agentId}/register")
     public ApiResult<Void> unregisterModel(@PathVariable("agentId") String agentId) {
         agentService.unregisterModel(agentId);
@@ -271,6 +284,7 @@ public class ApiAgentManageController {
      * @param @PathVariable("agentId" @路径变量("Agentid"
      * @param @PathVariable("agentId" @PathVariable("agentId"
      */
+    @Permission("admin")
     @PostMapping("/{agentId}/rebuild")
     public ApiResult<Void> rebuild(@PathVariable("agentId") String agentId) {
         agentService.rebuildAgentById(agentId);

@@ -90,8 +90,14 @@ public class GlobalSettingInitializer implements ApplicationRunner {
                             item.valueType(), item.description(), item.sort());
                     added++;
                 }
-                log.info("[GlobalSettingInitializer] 分组 '{}' ({}): 已有 {} 项，新增 {} 项配置",
-                        group, gsp.groupName(), existing.size(), added);
+                // 描述同步：文案随 provider 迭代修正，但绝不覆盖用户已保存的值
+                int synced = globalSettingService.syncDescriptions(group, items.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                GlobalSettingProvider.SettingItem::field,
+                                GlobalSettingProvider.SettingItem::description,
+                                (a, b) -> a)));
+                log.info("[GlobalSettingInitializer] 分组 '{}' ({}): 已有 {} 项，新增 {} 项，同步描述 {} 项",
+                        group, gsp.groupName(), existing.size(), added, synced);
             } catch (Exception e) {
                 log.warn("[GlobalSettingInitializer] 注册分组 '{}' 失败: {}", gsp.group(), e.getMessage());
             }

@@ -8,6 +8,7 @@ import com.chua.starter.monitor.support.model.AgentHealthVO;
 import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.service.ServerHostService;
@@ -312,6 +313,8 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         push(hostId, 56, "清理远端文件", "info");
         String dir = session.dir;
         if (session.windows) {
+            // 删除计划任务定义（stopService 已停运行实例，这里彻底注销）
+            unregisterWindowsTask(session);
             session.exec("Remove-Item -Recurse -Force '" + dir + "' -ErrorAction SilentlyContinue", PROBE_TIMEOUT_SECONDS);
         } else {
             session.exec(sudo(session) + "rm -rf " + dir, PROBE_TIMEOUT_SECONDS);
@@ -380,6 +383,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         host.setServerHostAgentPort(agentClient.portOf(host));
         host.setServerHostAgentVersion(nullToEmpty(health.version()));
         host.setServerHostAgentTime(LocalDateTime.now());
+        host.setServerHostCollectMode(HostCollectType.AGENT.getCode());
         hostMapper.updateById(host);
         // 成功后清掉历史失败原因（updateById 跳过 null，必须显式置空）
         hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
@@ -608,51 +612,62 @@ public class AgentDeployServiceImpl implements AgentDeployService {
     }
 
     /**
-     * Windows：优先 nssm 注册服务，否则 Start-Process 后台常驻。
+     * Windows：用「计划任务」注册为开机启动、SYSTEM 身份、崩溃自动重启的常驻服务。
+     * <p>
+     * 不再依赖 nssm（目标机默认没有，现场下载/放行不可控）。计划任务是 Windows 原生能力，
+     * Server 2012 R2（PowerShell 4.0）即可用：-AtStartup 开机拉起、RestartCount/Interval
+     * 实现进程退出后自动重启，效果与 nssm 服务等价且无需任何第三方可执行文件。
      *
      * @param session 会话
      * @param javaBin java 路径
      */
     private void startWindowsService(Session session, String javaBin) {
         Long hostId = session.host.getId();
-        String service = properties.getWindowsServiceName();
-        try {
-            session.exec("nssm status " + service, PROBE_TIMEOUT_SECONDS);
-            session.exec("nssm stop " + service, PROBE_TIMEOUT_SECONDS);
-            session.exec("nssm remove " + service + " confirm", PROBE_TIMEOUT_SECONDS);
-        } catch (Exception ignore) {
-            // 服务不存在时 remove 会失败，忽略即可
-        }
-        RemoteExecResult install = session.exec("nssm install " + service + " \"" + javaBin
-                + "\" \"-cp '" + jarPath(session) + "' com.chua.agent.AgentMain\"", PROBE_TIMEOUT_SECONDS);
-        if (install.success()) {
-            session.exec("nssm set " + service + " AppDirectory " + session.dir, PROBE_TIMEOUT_SECONDS);
-            session.exec("nssm start " + service, PROBE_TIMEOUT_SECONDS);
-            push(hostId, 78, "Windows 服务已注册并启动", "info");
-            return;
-        }
-        push(hostId, 74, "nssm 不可用，改以独立进程常驻（无开机自启/崩溃拉起）", "warn");
-        startWindowsDetached(session, javaBin);
+        String task = properties.getWindowsServiceName();
+        String jar = jarPath(session);
+        String dir = session.dir;
+        // java 路径作为 Execute、其余作为 Argument，规避「路径含空格 + 命令行引号」被任务计划错误拆分
+        String arguments = "-cp \"" + jar + "\" com.chua.agent.AgentMain";
+        String script = "$ErrorActionPreference='Stop';"
+                + "$task='" + psEscape(task) + "';"
+                + "$action=New-ScheduledTaskAction -Execute '" + psEscape(javaBin) + "' -Argument '"
+                + psEscape(arguments) + "' -WorkingDirectory '" + psEscape(dir) + "';"
+                + "$trigger=New-ScheduledTaskTrigger -AtStartup;"
+                + "$principal=New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest;"
+                + "$settings=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries"
+                + " -StartWhenAvailable -DontStopOnIdleEnd"
+                + " -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)"
+                + " -ExecutionTimeLimit ([TimeSpan]::Zero);"
+                + "Register-ScheduledTask -TaskName $task -Action $action -Trigger $trigger"
+                + " -Principal $principal -Settings $settings -Force | Out-Null;"
+                + "Start-ScheduledTask -TaskName $task;";
+        session.exec(script, PROBE_TIMEOUT_SECONDS);
+        push(hostId, 78, "Windows 计划任务已注册并启动（开机自启 + 崩溃重启）", "info");
     }
 
     /**
-     * 以 WMI 创建脱离远程会话的常驻进程
-     * <p>
-     * WinRM 远程会话结束时，会话内派生的子进程（含 Start-Process）会被一并回收，
-     * 用 Start-Process 装的 agent 在通道断开后就消失了。交给 WMI 的 Win32_Process Create
-     * 创建，进程归属 WMI 服务而非远程会话，才能常驻。
-     * </p>
+     * 停止 Windows 计划任务的运行实例（保留任务定义，升级/重装后由 startWindowsService 重新注册并启动）。
      *
      * @param session 会话
-     * @param javaBin java 路径
      */
-    private void startWindowsDetached(Session session, String javaBin) {
-        String commandLine = "\"" + javaBin + "\" -cp \"" + jarPath(session) + "\" com.chua.agent.AgentMain";
-        String script = "$cmd='" + commandLine.replace("'", "''") + "';"
-                + "$r=Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments "
-                + "@{CommandLine=$cmd;CurrentDirectory='" + session.dir.replace("'", "''") + "'};"
-                + "if ($r.ReturnValue -ne 0) { throw ('Win32_Process Create 失败, ReturnValue=' + $r.ReturnValue) }";
-        session.exec(script, PROBE_TIMEOUT_SECONDS);
+    private void stopWindowsTask(Session session) {
+        String task = properties.getWindowsServiceName();
+        String script = "$ErrorActionPreference='SilentlyContinue';"
+                + "Stop-ScheduledTask -TaskName '" + psEscape(task) + "';";
+        session.tryExec(script, PROBE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * 注销并删除 Windows 计划任务（卸载时调用）。
+     *
+     * @param session 会话
+     */
+    private void unregisterWindowsTask(Session session) {
+        String task = properties.getWindowsServiceName();
+        String script = "$ErrorActionPreference='SilentlyContinue';"
+                + "Stop-ScheduledTask -TaskName '" + psEscape(task) + "';"
+                + "Unregister-ScheduledTask -TaskName '" + psEscape(task) + "' -Confirm:$false;";
+        session.tryExec(script, PROBE_TIMEOUT_SECONDS);
     }
 
     /**
@@ -675,8 +690,8 @@ public class AgentDeployServiceImpl implements AgentDeployService {
     private void stopService(Session session) {
         String service = session.windows ? properties.getWindowsServiceName() : properties.getLinuxServiceName();
         if (session.windows) {
-            session.tryExec("Stop-Service -Name '" + service + "' -ErrorAction SilentlyContinue", PROBE_TIMEOUT_SECONDS);
-            session.tryExec("nssm remove " + service + " confirm", PROBE_TIMEOUT_SECONDS);
+            // 先停计划任务运行实例（任务定义保留，升级/重装后重新注册）
+            stopWindowsTask(session);
             // 按 agent.pid 精确停，绝不按进程名批量杀：同机其它 java 服务会被连带打断
             String pidFile = session.join(session.dir, "agent.pid").replace("'", "''");
             String agentJar = jarPath(session).replace("'", "''");
@@ -922,6 +937,16 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      */
     private String nullToEmpty(Object value) {
         return value == null ? "" : String.valueOf(value);
+    }
+
+    /**
+     * 转义 PowerShell 单引号字符串字面量：单引号翻倍（' → ''）。
+     *
+     * @param value 原值
+     * @return 可安全嵌入 PS 单引号字面量的文本
+     */
+    private String psEscape(String value) {
+        return value == null ? "" : value.replace("'", "''");
     }
 
     /**

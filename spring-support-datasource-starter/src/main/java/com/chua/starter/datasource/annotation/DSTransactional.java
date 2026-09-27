@@ -37,9 +37,6 @@ import java.lang.annotation.*;
  *         userDao.updateLog(user.getId(), log.getId());
  *     }
  * }
- * }</pre>er.getId(), log.getId());
- *     }
- * }
  * }</pre>
  *
  * @since 2026/07/14

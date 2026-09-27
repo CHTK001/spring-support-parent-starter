@@ -95,15 +95,20 @@ public class MaterializedSqlRequest {
     }
 
     /**
+     * 获取路由定义。
+     *
+     * @return 路由定义
+     */
+    public MaterializedRouteDefinition getDefinition() {
+        return definition;
+    }
+
+    /**
      * 创建构建器
      *
      * @return 构建器实例
      */
     public static MaterializedSqlRequestBuilder builder() {
-        /**
-         * 物化SQL请求构建器。
-         * @return 物化sql请求构建器的结果
-         */
         return new MaterializedSqlRequestBuilder();
     }
 

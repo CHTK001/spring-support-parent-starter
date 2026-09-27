@@ -1,19 +1,19 @@
 package com.chua.starter.swagger.support.customize;
 
 /*
-   * Copyright © 2017-2023 刀4j(xiaoymin@foxmail.com)
+   * Copyright © 2017-2023 Knife4j (xiaoymin@foxmail.com)
  *
-   * 执照 under the Apache 执照, 版本 2.0 (the "执照");
-   * you may not use this 文件 except 入 compliance with the 执照.
-   * You may obtain a 副本 的 the 执照 at
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
-   * Unless required by applicable 定律 或 agreed 转为 入 写入, software
-   * distributed under the 执照 是否 distributed on an "AS 是否" BASIS,
-   * WITHOUT WARRANTIES 或 条件 的 任意 种类, either express 或 implied.
-   * 参见 the 执照 for the 特定 language governing 权限 和
-   * limitations under the 执照.
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
  */
 
 import com.chua.common.support.reflection.ReflectUtils;

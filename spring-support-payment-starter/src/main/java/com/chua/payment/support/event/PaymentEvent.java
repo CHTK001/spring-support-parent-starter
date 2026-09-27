@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 /**
  * 支付事件基类
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -15,36 +16,30 @@ public abstract class PaymentEvent extends ApplicationEvent {
 
     /**
      * 事件类型
-    */
+     */
     private final String eventType;
     /**
-     * tenantid
-    */
+     * 租户标识
+     */
     private final Long tenantId;
     /**
-     * merchantid
-    */
+     * 商户标识
+     */
     private final Long merchantId;
     /**
-     * occurredat
-    */
+     * 事件发生时间
+     */
     private final LocalDateTime occurredAt;
 
     /**
-     * 创建 薪酬事件 实例
-     * @param source 源
-     * @param eventType 字符串
-     * @param tenantId Long
-     * @param tenantId Long
+     * 创建支付事件实例
+     *
+     * @param source 来源
      * @param eventType 事件类型
-     * @param tenantId tenantid
-     * @param merchantId merchantid
+     * @param tenantId 租户标识
+     * @param merchantId 商户标识
      */
     public PaymentEvent(Object source, String eventType, Long tenantId, Long merchantId) {
-        /**
-         * 父。
-         * @param source 源
-         */
         super(source);
         this.eventType = eventType;
         this.tenantId = tenantId;
@@ -52,4 +47,3 @@ public abstract class PaymentEvent extends ApplicationEvent {
         this.occurredAt = LocalDateTime.now();
     }
 }
-

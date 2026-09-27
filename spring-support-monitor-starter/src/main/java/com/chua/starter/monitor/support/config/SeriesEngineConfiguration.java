@@ -1,23 +1,31 @@
 package com.chua.starter.monitor.support.config;
 
+import com.chua.common.support.lang.datasource.dialect.Dialect;
 import com.chua.common.support.lang.datasource.engine.Engine;
+import com.chua.common.support.lang.datasource.engine.EngineDataSource;
 import com.chua.common.support.lang.datasource.series.SeriesEngine;
 import com.chua.common.support.lang.datasource.series.impl.DataSourceSeriesEngine;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.datasource.support.engine.JdbcEngine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
+import javax.sql.DataSource;
 import java.util.Properties;
 
 /**
  * 时序引擎装配。
  *
- * <p>全系统只有一个时序契约 {@link SeriesEngine}，按 {@code monitor.timeseries.engine} 装配唯一实现：</p>
+ * <p>全系统只有一个时序契约 {@link SeriesEngine}，按 {@code monitor.timeseries.engine}
+ * 装配唯一实现。{@link SeriesEngine} 是独立的顶级抽象，<b>不</b>从 Spring 容器注入
+ * {@link Engine}（容器可能同时存在 Prometheus 等多个 Engine Bean）；JDBC 实现所需的
+ * {@link Engine} 由本配置用 Spring {@link DataSource} 独立构造，作为
+ * {@link DataSourceSeriesEngine} 的内部属性，不注册为 Bean。</p>
  * <ul>
- *   <li>{@code datasource}：JDBC 明细表，需要容器里的 {@link Engine} 数据源引擎，故由 Spring 构造</li>
+ *   <li>{@code datasource}：用 Spring DataSource 独立构造 JDBC Engine，再包一层 DataSourceSeriesEngine</li>
  *   <li>{@code influxdb} / {@code redis}：走自研 SPI 发现（各 starter 的
  *       {@code META-INF/extensions/…SeriesEngine}），以 {@link Properties} 传连接参数</li>
  *   <li>{@code none} / 空 / 扩展缺失：空实现，保证消费方注入不为 null</li>
@@ -32,38 +40,42 @@ public class SeriesEngineConfiguration {
 
     /**
      * JDBC 明细表引擎名
-     */
+    */
     private static final String ENGINE_DATASOURCE = "datasource";
 
     /**
      * Redis 引擎名
-     */
+    */
     private static final String ENGINE_REDIS = "redis";
 
     /**
      * 装配唯一时序引擎。
      *
      * @param properties  时序配置
-     * @param engine      数据源引擎（可选，仅 datasource 使用）
+     * @param dataSource  Spring 共享数据源（可选，仅 datasource 使用）
      * @param environment 容器环境（redis 复用 spring.data.redis 连接参数）
      * @return SeriesEngine Bean，永不为 null
      */
     @Bean
     public SeriesEngine seriesEngine(MonitorTimeseriesProperties properties,
-                                     @Autowired(required = false) Engine engine,
+                                     @Autowired(required = false) DataSource dataSource,
                                      Environment environment) {
         String selected = normalize(properties.getEngine());
         if (selected.isEmpty() || "none".equals(selected)) {
-            log.info("[SeriesEngine] 未启用时序双写（engine={}）", properties.getEngine());
+            log.info("[SeriesEngine] 未启用时序（engine={}）", properties.getEngine());
             return new NoopSeriesEngine("none");
         }
         if (ENGINE_DATASOURCE.equals(selected)) {
-            if (engine == null) {
-                log.warn("[SeriesEngine] engine=datasource 但未找到 Engine Bean，时序存储不可用");
+            if (dataSource == null) {
+                log.warn("[SeriesEngine] engine=datasource 但容器无 DataSource，时序存储不可用");
                 return new NoopSeriesEngine(selected);
             }
-            log.info("[SeriesEngine] 装配 DataSourceSeriesEngine（JDBC 明细表）");
-            return new DataSourceSeriesEngine(engine);
+            // 独立构造 JDBC Engine 作为内部属性，不注册为 Bean，避免与其它 Engine 实现冲突
+            Engine jdbcEngine = new JdbcEngine() {
+            };
+            jdbcEngine.addDataSource("default", new SharedDataSource(dataSource));
+            log.info("[SeriesEngine] 装配 DataSourceSeriesEngine（JDBC，复用 Spring DataSource）");
+            return new DataSourceSeriesEngine(jdbcEngine);
         }
 
         SeriesEngine seriesEngine = ServiceProvider.of(SeriesEngine.class)
@@ -122,7 +134,73 @@ public class SeriesEngineConfiguration {
     }
 
     /**
-     * 时序存储空实现：配置为 none 或实现缺失时装配，保证消费方注入不为 null。
+     * 共享数据源适配器：不拥有底层连接池，{@link #close()} 为空，避免内部引擎关闭时
+     * 误关 Spring 管理的连接池。
+     */
+    private static final class SharedDataSource implements EngineDataSource<DataSource> {
+
+        /**
+         * Spring 共享数据源
+         */
+        private final DataSource dataSource;
+
+        /**
+         * 构造共享数据源适配器。
+         *
+         * @param dataSource Spring 共享数据源
+         */
+        private SharedDataSource(DataSource dataSource) {
+            this.dataSource = dataSource;
+        }
+
+        @Override
+        public String name() {
+            return "default";
+        }
+
+        @Override
+        public DataSource getSource() {
+            return dataSource;
+        }
+
+        @Override
+        public EngineDataSource<DataSource> setSource(Object source) {
+            return this;
+        }
+
+        @Override
+        public Dialect getDialect() {
+            return null;
+        }
+
+        @Override
+        public EngineDataSource<DataSource> setDialect(Dialect dialect) {
+            return this;
+        }
+
+        @Override
+        public String url() {
+            return null;
+        }
+
+        @Override
+        public String username() {
+            return null;
+        }
+
+        @Override
+        public String password() {
+            return null;
+        }
+
+        @Override
+        public void close() {
+            // 不关闭共享连接池
+        }
+    }
+
+    /**
+     * 时序存储空实现：配置为 none 或实现缺失时装配，保证注入不为 null。
      */
     private static final class NoopSeriesEngine implements SeriesEngine {
 

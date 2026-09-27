@@ -69,12 +69,14 @@ public class PartitionAwareTableFactory {
      * @return 路由表实例
      */
     public PartitionRoutingTable buildRoutingTable(String sourceTable, String partitionPrefix) {
-        String cacheKey = sourceTable + "|" + partitionPrefix;
+        String safeSourceTable = PartitionRoutingService.validateTableName(sourceTable, "源表");
+        String safePartitionPrefix = PartitionRoutingService.validateTableName(partitionPrefix, "分区前缀");
+        String cacheKey = safeSourceTable + "|" + safePartitionPrefix;
         return cache.computeIfAbsent(cacheKey, key -> {
             List<String> discovered = PartitionRoutingService.discoverPartitionTables(
-                    jdbcTemplate, partitionPrefix, sourceTable);
+                    jdbcTemplate, safePartitionPrefix, safeSourceTable);
             List<String> allTables = PartitionRoutingService.resolveAllTables(
-                    sourceTable, partitionPrefix, "MONTH", discovered);
+                    safeSourceTable, safePartitionPrefix, "MONTH", discovered);
             /**
              * 分区routingtable。
              * @param sourceTable 源table
@@ -82,7 +84,7 @@ public class PartitionAwareTableFactory {
              * @param jdbcTemplate jdbctemplate
              * @return 分区routingtable的结果
              */
-            return new PartitionRoutingTable(sourceTable, allTables, jdbcTemplate);
+            return new PartitionRoutingTable(safeSourceTable, allTables, jdbcTemplate);
         });
     }
 

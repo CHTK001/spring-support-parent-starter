@@ -63,12 +63,6 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
-        <!-- 通用工具类库核心模块 - 提供 ProgressBar, Version 等类 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
         <!-- Flyway SPI 高优先级实现 - 脚本迁移自动执行（DataSource 版） -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -219,6 +213,9 @@
                         <goals>
                             <goal>generate-init-sql</goal>
                         </goals>
+                        <configuration>
+                            <mode>initdata</mode>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

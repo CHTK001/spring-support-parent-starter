@@ -1,14 +1,10 @@
 package com.chua.starter.common.support.api.response;
 import com.chua.common.support.annotation.IgnoreReturnType;
-import com.chua.starter.common.support.http.ContentDisposition;
-import com.chua.starter.common.support.http.ContentType;
-import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.ReturnPreconditioning;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.api.properties.ApiProperties;
-import jakarta.annotation.Resource;
 import lombok.SneakyThrows;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
@@ -30,13 +26,8 @@ import reactor.core.publisher.Flux;
 // 注：Method 为 Spring ResponseBodyAdvice 接口签名要求，豁免
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 统一返回值处理
@@ -47,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author CH
  * @since 2024/01/01
  */
-@Slf4j
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
@@ -72,9 +62,6 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
      */
     private static final String PAGE_RESULT_SUFFIX = "result.PageResult";
 
-    @Resource(name = "uniform")
-    private ExecutorService executorService; // 执行器服务
-
     private ApiProperties apiProperties; // api属性
     private String[] ignoreFormatPackages; // ignore格式化包
     private boolean noPackages; // no包
@@ -88,7 +75,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     @Override
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof ReturnPreconditioning<?> preconditioning) {
-            return bodyWithPreconditioning(preconditioning, serverHttpResponse);
+            return preconditioning.asResult();
         }
 
         if (o instanceof org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
@@ -162,67 +149,6 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
         return false;
     }
 
-    /**
-     * 预处理
-     *
-     * @param preconditioning    预处理对象
-     * @param serverHttpResponse 响应对象
-     * @return 处理结果
-     */
-    private Object bodyWithPreconditioning(ReturnPreconditioning<?> preconditioning, ServerHttpResponse serverHttpResponse) {
-        ContentType contentType = preconditioning.getContentType();
-        if (null != contentType) {
-            serverHttpResponse.getHeaders().setContentType(MediaType.valueOf(contentType.getMimeType()));
-        }
-
-        ContentDisposition contentDisposition = preconditioning.getContentDisposition();
-        if (null != contentDisposition) {
-            serverHttpResponse.getHeaders().setContentDisposition(org.springframework.http.ContentDisposition.attachment()
-                    .filename(contentDisposition.getFilename(),
-                            contentDisposition.getCharset() != null
-                                    ? java.nio.charset.Charset.forName(contentDisposition.getCharset())
-                                    : java.nio.charset.StandardCharsets.UTF_8)
-                    .name(contentDisposition.getName())
-                    .build());
-        }
-
-        return createNewResult(preconditioning);
-    }
-
-    /**
-     * 创建新结果。
-     * @param preconditioning preconditioning
-     * @return 创建新结果的结果
-     */
-    private Object createNewResult(ReturnPreconditioning<?> preconditioning) {
-        ReturnResult<?> result = preconditioning.toResult();
-        if (!preconditioning.isSuccessful()) {
-            return result;
-        }
-        Object data = !preconditioning.hasUnpack() ? result : result.getData();
-        if (preconditioning.isAsync() && Supplier.class.isAssignableFrom(data.getClass())) {
-            DeferredResult deferredResult = new DeferredResult<>((long) preconditioning.getTimeoutMillis());
-            executorService.execute(Thread.ofVirtual()
-                    .unstarted(new Runnable() {
-                        @Override
-                        public void run() {
-                            deferredResult.setResult(((Supplier<?>) data).get());
-                        }
-                    })
-            );
-            deferredResult.onTimeout(() -> {
-                        deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_TIMEOUT.getCode(), ReturnCode.SYSTEM_EXECUTION_TIMEOUT.getMsg()));
-            });
-
-                    deferredResult.onError(throwable -> {
-                        log.error("[统一响应]异步任务执行失败", throwable);
-                        deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_ERROR.getCode(), ReturnCode.SYSTEM_EXECUTION_ERROR.getMsg()));
-                    });
-
-            return deferredResult;
-        }
-        return data;
-    }
 
     @SneakyThrows
     /**

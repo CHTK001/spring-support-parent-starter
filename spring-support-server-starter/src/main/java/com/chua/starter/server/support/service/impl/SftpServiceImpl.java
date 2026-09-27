@@ -427,7 +427,9 @@ public class SftpServiceImpl implements SftpService {
      * @return 解析结果
      */
     private ReturnResult<SshCredential> resolve(Long hostId, Long identityId) {
-        return serverHostService.resolveCredential(hostId, identityId);
+        // SFTP 始终承载于 SSH：必须显式按 SSH 解析登录身份/口令；
+        // 否则在仅配置 VNC 的主机会回落取到 VNC 桌面口令，导致 SFTP 认证失败
+        return serverHostService.resolveCredential(hostId, identityId, "SSH");
     }
 
     /**

@@ -3,8 +3,11 @@ package com.chua.starter.ai.support.controller;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.service.AiPluginCatalogService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.impl.CustomLocalToolRegistrar;
+import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,6 +46,11 @@ public class PluginsController {
     private final AiPluginCatalogService pluginCatalogService;
 
     /**
+     * 自定义本地工具注册器
+     */
+    private final CustomLocalToolRegistrar customToolRegistrar;
+
+    /**
      * 插件状态存储分组
      */
     private static final String PLUGIN_GROUP = "plugins";
@@ -53,6 +61,7 @@ public class PluginsController {
      * @param body 包含 pluginId 和 enabled 的请求体
      * @return 是否写入成功
      */
+    @Permission("admin")
     @PutMapping("/global")
     public ApiResult<Boolean> updateGlobalPluginStatus(@RequestBody Map<String, Object> body) {
         String pluginId = body == null ? null : (String) body.get("pluginId");
@@ -78,6 +87,7 @@ public class PluginsController {
      * @param pluginId 插件ID
      * @return 重载结果
      */
+    @Permission("admin")
     @PostMapping("/reload/{pluginId}")
     public ApiResult<Map<String, Object>> reloadPlugin(@PathVariable String pluginId) {
         log.info("重新加载插件: pluginId={}", pluginId);
@@ -140,6 +150,61 @@ public class PluginsController {
         result.put("marketCount", remote.size());
 
         return result;
+    }
+
+    /**
+     * 注册自定义本地工具目录（管理员）。
+     *
+     * <p>请求体 <code>{name, path}</code>：path 为本机含 {@code plugin.json} 或
+     * {@code package.json} 的目录；目录自身含清单则注册为单个工具，否则遍历其一级子目录。</p>
+     *
+     * @param body 注册参数
+     * @return 注册结果与识别出的工具
+     */
+    @Permission("admin")
+    @PostMapping("/custom")
+    public ApiResult<Map<String, Object>> addCustomTool(@RequestBody Map<String, Object> body) {
+        String name = body == null ? null : Objects.toString(body.get("name"), null);
+        String path = body == null ? null : Objects.toString(body.get("path"), null);
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> tools = customToolRegistrar.register(name, path);
+            // 注册项变更后作废快照缓存，保证列表立即反映
+            pluginCatalogService.refresh();
+            result.put("success", true);
+            result.put("tools", tools);
+            result.put("count", tools.size());
+            return ApiResult.ok(result);
+        } catch (Exception e) {
+            log.warn("注册自定义工具失败: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ApiResult.ok(result);
+        }
+    }
+
+    /**
+     * 移除自定义本地工具（管理员）。请求体 <code>{pluginId}</code>，
+     * 仅对 {@code custom:} 前缀的自定义工具生效（id 含斜杠，故走请求体而非路径变量）。
+     *
+     * @param body {pluginId}
+     * @return 移除结果
+     */
+    @Permission("admin")
+    @DeleteMapping("/custom")
+    public ApiResult<Map<String, Object>> removeCustomTool(@RequestBody Map<String, Object> body) {
+        String pluginId = body == null ? null : Objects.toString(body.get("pluginId"), null);
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (!customToolRegistrar.isCustom(pluginId)) {
+            result.put("success", false);
+            result.put("message", "仅支持移除自定义工具");
+            return ApiResult.ok(result);
+        }
+        boolean removed = customToolRegistrar.unregister(pluginId);
+        pluginCatalogService.refresh();
+        result.put("success", removed);
+        result.put("pluginId", pluginId);
+        return ApiResult.ok(result);
     }
 
     /**

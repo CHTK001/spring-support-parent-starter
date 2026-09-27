@@ -18,6 +18,27 @@ public class MaterializedSqlRoute {
     private String tableName;
 
     /**
+     * 创建未路由结果。
+     *
+     * @return 未路由结果
+     */
+    public static MaterializedSqlRoute notRouted() {
+        return new MaterializedSqlRoute();
+    }
+
+    /**
+     * 创建指定数据源的路由结果。
+     *
+     * @param dataSource 数据源名称
+     * @return 路由结果
+     */
+    public static MaterializedSqlRoute routed(String dataSource) {
+        MaterializedSqlRoute route = new MaterializedSqlRoute();
+        route.setDataSource(dataSource);
+        return route;
+    }
+
+    /**
      * 获取数据源名称
      *
      * @return 数据源名称

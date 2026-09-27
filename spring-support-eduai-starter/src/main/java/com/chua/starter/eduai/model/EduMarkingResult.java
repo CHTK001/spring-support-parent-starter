@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 阅卷结果实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_marking_result")
-public class EduMarkingResult {
+public class EduMarkingResult extends SysBase {
 
     /**
      * 阅卷结果标识
@@ -81,16 +83,6 @@ public class EduMarkingResult {
      * 异步任务标识
      */
     private String markingResultTaskId;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime markingResultCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime markingResultUpdateTime;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

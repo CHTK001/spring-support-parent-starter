@@ -104,7 +104,7 @@ public final class RowNormalizer {
             vo.setName(text(row, "name", "Name", "imageName", "processName"));
             vo.setUser(text(row, "user", "User", "username", "UserName"));
             vo.setCpu(decimal(row, "cpu", "CPU", "cpuUsage"));
-            vo.setMemory(number(row, "memory", "Memory", "rss", "RSS", "workingSet", "residentSetSize"));
+            vo.setMemory(memoryMb(row));
             vo.setThreads(number(row, "threads", "Threads", "threadCount"));
             vo.setStartTime(first(text(row, "startTime", "StartTime", "started"), ""));
             vo.setCommand(first(text(row, "command", "Command", "args", "cmdline", "CommandLine"),
@@ -180,42 +180,13 @@ public final class RowNormalizer {
             NetworkInterfaceRowVO vo = new NetworkInterfaceRowVO();
             vo.setName(name);
             vo.setDisplayName(first(text(row, "displayName", "InterfaceDescription", "Description"), name));
-            vo.setStatus(first(text(row, "status", "Status", "operstate", "NetEnabled", "state"), "UP"));
+            vo.setStatus(first(text(row, "status", "Status", "operstate", "ifOperStatus", "state"), "UNKNOWN"));
             vo.setMac(text(row, "mac", "MacAddress", "macaddr", "address"));
             vo.setIpv4(text(row, "ipv4", "IPAddress", "IPv4", "addr"));
             vo.setIpv6(text(row, "ipv6", "IPv6"));
             vo.setMtu(number(row, "mtu", "MTU", "MaxMtu"));
             vo.setSpeed(speedText(row));
             out.add(vo);
-        }
-        return out;
-    }
-
-    /**
-     * 批量归一网络端口占用行。
-     *
-     * <p>协议统一小写、状态统一大写，四类通道输出才能同表渲染。</p>
-     *
-     * @param rows 任意来源的监听行，可为 null
-     * @return 归一后的行列表，永不为 null
-     */
-    public static List<NetProcessRowVO> netProcesses(List<NetProcessRowVO> rows) {
-        List<NetProcessRowVO> out = new ArrayList<>();
-        if (rows == null) {
-            return out;
-        }
-        for (NetProcessRowVO row : rows) {
-            if (row == null) {
-                continue;
-            }
-            if (row.getProtocol() != null) {
-                row.setType(row.getProtocol().toLowerCase(Locale.ROOT));
-                row.setProtocol(row.getProtocol().toLowerCase(Locale.ROOT));
-            }
-            if (row.getState() != null) {
-                row.setState(row.getState().toUpperCase(Locale.ROOT));
-            }
-            out.add(row);
         }
         return out;
     }
@@ -268,6 +239,7 @@ public final class RowNormalizer {
         vo.setPackageManager(text(row, "packageManager"));
         vo.setGpu(text(row, "gpu"));
         vo.setPublicIp(text(row, "publicIp"));
+        vo.setHostCode(text(row, "hostCode", "code", "machineId"));
         vo.setPrivateIp(text(row, "privateIp"));
         vo.setMac(text(row, "mac", "macAddress"));
         vo.setIpv4DefaultGateway(text(row, "ipv4DefaultGateway"));
@@ -286,6 +258,16 @@ public final class RowNormalizer {
         vo.setCpuPercent(nullableDecimal(row, "cpuPercent"));
         vo.setMemoryUsage(nullableDecimal(row, "memoryUsage", "memoryPercent"));
         vo.setDiskTotalGb(nullableDecimal(row, "diskTotalGb"));
+        vo.setDiskUsedGb(nullableDecimal(row, "diskUsedGb"));
+        vo.setDiskReadKbs(nullableDecimal(row, "diskReadKbs"));
+        vo.setDiskWriteKbs(nullableDecimal(row, "diskWriteKbs"));
+        vo.setNetworkRxKb(nullableDecimal(row, "networkRxKb", "networkRxKbs"));
+        vo.setNetworkTxKb(nullableDecimal(row, "networkTxKb", "networkTxKbs"));
+        vo.setNetworkPercent(nullableDecimal(row, "networkPercent"));
+        int procCount = (int) number(row, "processCount");
+        vo.setProcessCount(procCount > 0 ? procCount : null);
+        int threadCount = (int) number(row, "threadCount");
+        vo.setThreadCount(threadCount > 0 ? threadCount : null);
         return vo;
     }
 
@@ -320,7 +302,7 @@ public final class RowNormalizer {
                     first(text(row, "process", "pidName", "ProcessName"), ""));
             out.add(vo);
         }
-        return netProcesses(out);
+        return out;
     }
 
     /**
@@ -507,6 +489,27 @@ public final class RowNormalizer {
     }
 
     /**
+     * 进程内存量纲归一。
+     *
+     * <p>Agent 的 {@code rss} 是 KB，WinRM 的 {@code workingSet} 是字节，本机 OSHI 直接给 MB；
+     * 前端表头写死「内存(MB)」，故统一折算成 MB，取不到时返回 0。</p>
+     *
+     * @param row 原始行
+     * @return MB 值
+     */
+    private static long memoryMb(Map<String, Object> row) {
+        long bytes = number(row, "workingSet", "WorkingSetSize", "residentSetSizeBytes");
+        if (bytes > 0) {
+            return bytes / (1024L * 1024L);
+        }
+        long kb = number(row, "rss", "RSS", "residentSetSize");
+        if (kb > 0) {
+            return kb / 1024L;
+        }
+        return number(row, "memory", "Memory");
+    }
+
+    /**
      * 归一网卡速率展示值。
      *
      * @param row 原始行
@@ -518,17 +521,26 @@ public final class RowNormalizer {
             return "";
         }
         if (raw instanceof Number) {
-            double bits = ((Number) raw).doubleValue();
-            if (bits <= 0) {
-                return "";
-            }
-            if (bits >= 1_000_000_000) {
-                return round1(bits / 1_000_000_000) + " Gbps";
-            }
-            return round1(bits / 1_000_000) + " Mbps";
+            return speedText(((Number) raw).longValue());
         }
         String text = String.valueOf(raw).trim();
         return "0".equals(text) ? "" : text;
+    }
+
+    /**
+     * 把链路速率（bps）格式化为展示文本。
+     *
+     * @param bits 每秒比特数
+     * @return 展示文本，如 {@code "1.0 Gbps"}；非正值返回空串
+     */
+    public static String speedText(long bits) {
+        if (bits <= 0) {
+            return "";
+        }
+        if (bits >= 1_000_000_000L) {
+            return round1(bits / 1_000_000_000.0) + " Gbps";
+        }
+        return round1(bits / 1_000_000.0) + " Mbps";
     }
 
     /**

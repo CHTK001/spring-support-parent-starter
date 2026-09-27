@@ -64,7 +64,9 @@ public class LocalToolUsageSyncService {
                         .blockLast(java.time.Duration.ofSeconds(120));
                 scanned += batch.size();
                 for (AiUsage u : batch) {
-                    if (insertOne(source, u)) { inserted++; }
+                    if (insertOne(source, u)) {
+                        inserted++;
+                    }
                 }
             } catch (Exception e) {
                 log.warn("[LocalUsageSync] 解析器[{}]同步失败: {}", source, e.getMessage());

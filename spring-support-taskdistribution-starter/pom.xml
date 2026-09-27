@@ -24,12 +24,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 通用工具模块，包含任务分发核心模型 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
         <!-- Spring Support Common Starter -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -67,10 +61,10 @@
                     <maxmem>2048m</maxmem>
                     <useIncrementalCompilation>true</useIncrementalCompilation>
                     <compilerArgs>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
-                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                         <arg>-parameters</arg>
                         <arg>-proc:full</arg>
                         <arg>-J--enable-native-access=ALL-UNNAMED</arg>

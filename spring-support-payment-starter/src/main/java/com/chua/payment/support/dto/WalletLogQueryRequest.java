@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
  *
  * @param pageNum   页码
  * @param pageSize  每页大小
- * @param merchantId 商户标识
+ * @param merchantId 客户标识
  * @param userId    用户标识
  * @param bizType   业务类型
  * @param bizNo     业务单号

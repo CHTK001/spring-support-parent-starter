@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import com.chua.starter.mybatis.pojo.SysBase;
 
 /**
  * 成语实体
@@ -15,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_idiom")
-public class EduIdiom {
+public class EduIdiom extends SysBase {
 
     /**
      * 成语标识
@@ -70,18 +72,20 @@ public class EduIdiom {
     private String idiomTags;
 
     /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
-
-    /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）
      */
     @TableField("idiom_owner_user_id")
     private String ownerUserId;
+
+    /**
+     * 适用学段列表（非落库字段，保存时同步 edu_idiom_grade）
+     */
+    @TableField(exist = false)
+    private java.util.List<String> gradeLevels;
+
+    /**
+     * 适用年级列表（非落库字段，保存时同步 edu_idiom_grade；为空表示不限定年级）
+     */
+    @TableField(exist = false)
+    private java.util.List<String> grades;
 }

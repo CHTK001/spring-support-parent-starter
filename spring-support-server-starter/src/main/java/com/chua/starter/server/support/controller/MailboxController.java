@@ -2,6 +2,7 @@ package com.chua.starter.server.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
+import com.chua.starter.server.support.model.vo.MailMessageVO;
 import com.chua.starter.server.support.service.MailboxService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 邮箱账号(MAILBOX 身份)邮件箱接口
@@ -43,9 +43,9 @@ public class MailboxController {
      */
     @Operation(summary = "邮箱收件箱列表")
     @GetMapping("/{identityId}/mailbox/list")
-    public ReturnResult<List<Map<String, Object>>> list(@PathVariable Long identityId,
-                                                        @RequestParam(required = false) String folder,
-                                                        @RequestParam(required = false, defaultValue = "20") int limit) {
+    public ReturnResult<List<MailMessageVO>> list(@PathVariable Long identityId,
+                                                  @RequestParam(required = false) String folder,
+                                                  @RequestParam(required = false, defaultValue = "20") int limit) {
         return mailboxService.list(identityId, folder, limit);
     }
 
@@ -59,9 +59,9 @@ public class MailboxController {
      */
     @Operation(summary = "邮件正文详情")
     @GetMapping("/{identityId}/mailbox/message")
-    public ReturnResult<Map<String, Object>> detail(@PathVariable Long identityId,
-                                                    @RequestParam(required = false) String folder,
-                                                    @RequestParam(required = false) String subject) {
+    public ReturnResult<MailMessageVO> detail(@PathVariable Long identityId,
+                                              @RequestParam(required = false) String folder,
+                                              @RequestParam(required = false) String subject) {
         return mailboxService.detail(identityId, folder, subject);
     }
 }

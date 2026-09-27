@@ -3,12 +3,18 @@ package com.chua.starter.eduai.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.mapper.EduKnowledgeFileMapper;
 import com.chua.starter.eduai.mapper.EduKnowledgePointMapper;
+import com.chua.starter.eduai.model.EduKnowledgeFile;
 import com.chua.starter.eduai.model.EduKnowledgePoint;
+import com.chua.starter.eduai.model.dto.KnowledgeFileBindDTO;
 import com.chua.starter.eduai.model.dto.KnowledgePointSaveDTO;
+import com.chua.starter.eduai.model.vo.KnowledgeCardVO;
+import com.chua.starter.eduai.model.vo.KnowledgeFileVO;
 import com.chua.starter.eduai.model.vo.KnowledgePointVO;
 import com.chua.starter.eduai.service.IEduKnowledgePointService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,38 +34,27 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointMapper, EduKnowledgePoint> implements IEduKnowledgePointService {
+
+    /**
+     * 附件条目 Mapper
+     */
+    private final EduKnowledgeFileMapper knowledgeFileMapper;
 
     @Override
     /**
      * 列表树
     */
     public List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade) {
-        LambdaQueryWrapper<EduKnowledgePoint> wrapper = new LambdaQueryWrapper<>();
-        // 按学科筛选
-        if (StringUtils.hasText(subject)) {
-            wrapper.eq(EduKnowledgePoint::getKnowledgePointSubject, subject);
-        }
-        // 按学段筛选
-        if (StringUtils.hasText(gradeLevel)) {
-            wrapper.eq(EduKnowledgePoint::getKnowledgePointGradeLevel, gradeLevel);
-        }
-        // 按年级筛选
-        if (StringUtils.hasText(grade)) {
-            wrapper.eq(EduKnowledgePoint::getKnowledgePointGrade, grade);
-        }
-        // 只查询启用状态
-        wrapper.eq(EduKnowledgePoint::getKnowledgePointStatus, 1);
-        EduUserContext.scopeOwned(wrapper, EduKnowledgePoint::getOwnerUserId);
-        wrapper.orderByAsc(EduKnowledgePoint::getKnowledgePointSortOrder)
-                .orderByAsc(EduKnowledgePoint::getKnowledgePointId);
-        List<EduKnowledgePoint> list = baseMapper.selectList(wrapper);
+        List<EduKnowledgePoint> list = baseMapper.selectTree(subject, gradeLevel, grade,
+                EduUserContext.ownerScope());
 
         // 转换为 VO 列表
         List<KnowledgePointVO> voList = list.stream().map(this::toVO).collect(Collectors.toList());
         // 按父节点分组
         Map<Long, List<KnowledgePointVO>> groupMap = voList.stream()
-                .collect(Collectors.groupingBy(vo -> vo.getKnowledgePointParentId() == null ? 0L : vo.getKnowledgePointParentId()));
+                .collect(Collectors.groupingBy(vo -> vo.knowledgePointParentId() == null ? 0L : vo.knowledgePointParentId()));
 
         List<KnowledgePointVO> tree = new ArrayList<>();
  // 构建树形结构，根节点 父标识 为 0
@@ -91,9 +86,8 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
              * 构建children。
              * @param vo.getId( vo.获取标识(
              */
-            buildChildren(vo.getKnowledgePointId(), groupMap, subChildren);
-            vo.setChildren(subChildren);
-            target.add(vo);
+            buildChildren(vo.knowledgePointId(), groupMap, subChildren);
+            target.add(vo.withChildren(subChildren));
         }
     }
 
@@ -115,6 +109,13 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         entity.setKnowledgePointGrade(dto.knowledgePointGrade());
         entity.setKnowledgePointDescription(dto.knowledgePointDescription());
         entity.setKnowledgePointSortOrder(dto.knowledgePointSortOrder() != null ? dto.knowledgePointSortOrder() : 0);
+        entity.setKnowledgePointContentType(dto.knowledgePointContentType() != null && !dto.knowledgePointContentType().isBlank()
+                ? dto.knowledgePointContentType() : "TEXT");
+        entity.setKnowledgePointContent(dto.knowledgePointContent());
+        entity.setKnowledgePointFileName(dto.knowledgePointFileName());
+        entity.setKnowledgePointFilePath(dto.knowledgePointFilePath());
+        entity.setKnowledgePointFileType(dto.knowledgePointFileType());
+        entity.setKnowledgePointFileSize(dto.knowledgePointFileSize());
 
         if (dto.knowledgePointId() != null && dto.knowledgePointId() > 0) {
             // 更新：校验归属并锁定原归属
@@ -126,7 +127,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
             entity.setOwnerUserId(exists.getOwnerUserId());
             entity.setKnowledgePointId(dto.knowledgePointId());
             entity.setKnowledgePointStatus(dto.knowledgePointStatus() != null ? dto.knowledgePointStatus() : 1);
-            entity.setKnowledgePointUpdateTime(LocalDateTime.now());
+            entity.setUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
             log.info("更新知识点成功，ID: {}", dto.knowledgePointId());
             return dto.knowledgePointId();
@@ -134,8 +135,8 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
             // 新增
             entity.setOwnerUserId(EduUserContext.requireUserId());
             entity.setKnowledgePointStatus(dto.knowledgePointStatus() != null ? dto.knowledgePointStatus() : 1);
-            entity.setKnowledgePointCreateTime(LocalDateTime.now());
-            entity.setKnowledgePointUpdateTime(LocalDateTime.now());
+            entity.setCreateTime(LocalDateTime.now());
+            entity.setUpdateTime(LocalDateTime.now());
             baseMapper.insert(entity);
             log.info("新增知识点成功，ID: {}", entity.getKnowledgePointId());
             return entity.getKnowledgePointId();
@@ -163,14 +164,11 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         EduUserContext.checkWritable(exists.getOwnerUserId());
         // 逻辑删除：状态置为停用
         exists.setKnowledgePointStatus(0);
-        exists.setKnowledgePointUpdateTime(LocalDateTime.now());
+        exists.setUpdateTime(LocalDateTime.now());
         int rows = baseMapper.updateById(exists);
 
         // 级联停用子节点
-        LambdaQueryWrapper<EduKnowledgePoint> childWrapper = new LambdaQueryWrapper<>();
-        childWrapper.eq(EduKnowledgePoint::getKnowledgePointParentId, id)
-                .eq(EduKnowledgePoint::getKnowledgePointStatus, 1);
-        List<EduKnowledgePoint> children = baseMapper.selectList(childWrapper);
+        List<EduKnowledgePoint> children = baseMapper.selectEnabledChildren(id);
         for (EduKnowledgePoint child : children) {
             /**
              * 删除知识point。
@@ -182,6 +180,108 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         return rows > 0;
     }
 
+    @Override
+    public List<KnowledgePointVO> listByKeyword(String keyword, String subject, Integer limit) {
+        int max = limit == null || limit <= 0 ? 50 : Math.min(limit, 200);
+        List<EduKnowledgePoint> list = baseMapper.selectKeyword(keyword, subject, max, EduUserContext.ownerScope());
+        return list.stream().map(this::toVO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<KnowledgeCardVO> listCards(String keyword, String subject, String gradeLevel, String grade) {
+        return baseMapper.selectCards(keyword, subject, gradeLevel, grade, EduUserContext.ownerScope());
+    }
+
+    @Override
+    public KnowledgePointVO getDetail(Long id) {
+        EduKnowledgePoint card = requireCardReadable(id);
+        return toVO(card);
+    }
+
+    @Override
+    public List<KnowledgeFileVO> listFiles(Long knowledgePointId) {
+        requireCardReadable(knowledgePointId);
+        List<EduKnowledgeFile> list = knowledgeFileMapper.selectList(
+                new LambdaQueryWrapper<EduKnowledgeFile>()
+                        .eq(EduKnowledgeFile::getKnowledgePointId, knowledgePointId)
+                        .eq(EduKnowledgeFile::getKnowledgeFileStatus, 1)
+                        .orderByAsc(EduKnowledgeFile::getKnowledgeFileSortOrder)
+                        .orderByAsc(EduKnowledgeFile::getKnowledgeFileId));
+        return list.stream().map(this::toFileVO).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long bindFile(KnowledgeFileBindDTO dto) {
+        if (dto.knowledgePointId() == null || dto.knowledgePointId() <= 0) {
+            throw new BusinessException("缺少所属卡片标识");
+        }
+        if (!StringUtils.hasText(dto.knowledgeFilePath())) {
+            throw new BusinessException("附件路径不能为空");
+        }
+        EduKnowledgePoint card = requireCardWritable(dto.knowledgePointId());
+
+        EduKnowledgeFile entity = new EduKnowledgeFile();
+        entity.setKnowledgePointId(dto.knowledgePointId());
+        entity.setKnowledgeFileName(dto.knowledgeFileName());
+        entity.setKnowledgeFilePath(dto.knowledgeFilePath());
+        entity.setKnowledgeFileType(dto.knowledgeFileType());
+        entity.setKnowledgeFileSize(dto.knowledgeFileSize());
+        entity.setKnowledgeFileSortOrder(dto.knowledgeFileSortOrder() != null ? dto.knowledgeFileSortOrder() : 0);
+        entity.setKnowledgeFileStatus(1);
+        entity.setOwnerUserId(card.getOwnerUserId() != null ? card.getOwnerUserId() : EduUserContext.requireUserId());
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
+        knowledgeFileMapper.insert(entity);
+        log.info("绑定知识卡片附件，卡ID: {}, 附件ID: {}", dto.knowledgePointId(), entity.getKnowledgeFileId());
+        return entity.getKnowledgeFileId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteFile(Long id) {
+        EduKnowledgeFile exists = knowledgeFileMapper.selectById(id);
+        if (exists == null) {
+            throw new BusinessException("附件条目不存在");
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
+        exists.setKnowledgeFileStatus(0);
+        exists.setUpdateTime(LocalDateTime.now());
+        int rows = knowledgeFileMapper.updateById(exists);
+        log.info("删除知识卡片附件条目，ID: {}", id);
+        return rows > 0;
+    }
+
+    /**
+     * 校验卡片可读并返回实体
+     *
+     * @param knowledgePointId 卡片标识
+     * @return 卡片实体
+     */
+    private EduKnowledgePoint requireCardReadable(Long knowledgePointId) {
+        EduKnowledgePoint card = baseMapper.selectById(knowledgePointId);
+        if (card == null || card.getKnowledgePointStatus() == null || card.getKnowledgePointStatus() != 1) {
+            throw new BusinessException("知识点卡片不存在或已停用");
+        }
+        EduUserContext.checkReadable(card.getOwnerUserId());
+        return card;
+    }
+
+    /**
+     * 校验卡片可写并返回实体
+     *
+     * @param knowledgePointId 卡片标识
+     * @return 卡片实体
+     */
+    private EduKnowledgePoint requireCardWritable(Long knowledgePointId) {
+        EduKnowledgePoint card = baseMapper.selectById(knowledgePointId);
+        if (card == null) {
+            throw new BusinessException("知识点卡片不存在");
+        }
+        EduUserContext.checkWritable(card.getOwnerUserId());
+        return card;
+    }
+
     /**
      * 实体转 VO
      *
@@ -189,18 +289,47 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
      * @return VO
      */
     private KnowledgePointVO toVO(EduKnowledgePoint entity) {
-        KnowledgePointVO vo = new KnowledgePointVO();
+        KnowledgePointVO vo = new KnowledgePointVO(
+                entity.getKnowledgePointId(),
+                entity.getKnowledgePointName(),
+                entity.getKnowledgePointCode(),
+                entity.getKnowledgePointParentId(),
+                entity.getKnowledgePointSubject(),
+                entity.getKnowledgePointGradeLevel(),
+                entity.getKnowledgePointGrade(),
+                entity.getKnowledgePointDescription(),
+                entity.getKnowledgePointSortOrder(),
+                entity.getKnowledgePointStatus(),
+                entity.getKnowledgePointContentType(),
+                entity.getKnowledgePointContent(),
+                entity.getKnowledgePointFileName(),
+                entity.getKnowledgePointFilePath(),
+                entity.getKnowledgePointFileType(),
+                entity.getKnowledgePointFileSize(),
+                entity.getCreateTime(),
+                null
+        );
+        return vo;
+    }
+
+    /**
+     * 附件实体转 VO
+     *
+     * @param entity 实体
+     * @return VO
+     */
+    private KnowledgeFileVO toFileVO(EduKnowledgeFile entity) {
+        KnowledgeFileVO vo = new KnowledgeFileVO();
+        vo.setKnowledgeFileId(entity.getKnowledgeFileId());
         vo.setKnowledgePointId(entity.getKnowledgePointId());
-        vo.setKnowledgePointName(entity.getKnowledgePointName());
-        vo.setKnowledgePointCode(entity.getKnowledgePointCode());
-        vo.setKnowledgePointParentId(entity.getKnowledgePointParentId());
-        vo.setKnowledgePointSubject(entity.getKnowledgePointSubject());
-        vo.setKnowledgePointGradeLevel(entity.getKnowledgePointGradeLevel());
-        vo.setKnowledgePointGrade(entity.getKnowledgePointGrade());
-        vo.setKnowledgePointDescription(entity.getKnowledgePointDescription());
-        vo.setKnowledgePointSortOrder(entity.getKnowledgePointSortOrder());
-        vo.setKnowledgePointStatus(entity.getKnowledgePointStatus());
-        vo.setKnowledgePointCreateTime(entity.getKnowledgePointCreateTime());
+        vo.setKnowledgeFileName(entity.getKnowledgeFileName());
+        vo.setKnowledgeFilePath(entity.getKnowledgeFilePath());
+        vo.setKnowledgeFileType(entity.getKnowledgeFileType());
+        vo.setKnowledgeFileSize(entity.getKnowledgeFileSize());
+        vo.setKnowledgeFileSortOrder(entity.getKnowledgeFileSortOrder());
+        vo.setKnowledgeFileStatus(entity.getKnowledgeFileStatus());
+        vo.setCreateTime(entity.getCreateTime());
         return vo;
     }
 }
+

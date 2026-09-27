@@ -4,19 +4,23 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
+import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.HostMetricsVO;
 import com.chua.starter.monitor.support.model.HostProfileVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.ProcessSummaryVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.HostProfileService;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
+import com.chua.starter.monitor.support.spi.impl.AgentProvider;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.util.HostPlatforms;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +52,16 @@ public class HostProfileServiceImpl implements HostProfileService {
     private static final int DEFAULT_SECTION_SIZE = 50;
 
     /**
+     * 进程/服务分区单次允许的最大条数
+     */
+    private static final int MAX_SECTION_SIZE = 500;
+
+    /**
+     * 关键字检索时向通道取的宽页条数：候选集截断只会少命中，不影响无关键字时的通道分页
+     */
+    private static final int KEYWORD_SCAN_LIMIT = 2000;
+
+    /**
      * 主机 映射器
      */
     private final MsServerHostMapper hostMapper;
@@ -61,6 +75,11 @@ public class HostProfileServiceImpl implements HostProfileService {
      * 采集通道路由器
      */
     private final SystemInfoProviderRouter providerRouter;
+
+    /**
+     * JSON 序列化（网卡列表落库）
+     */
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Override
     public ReturnResult<HostProfileVO> refresh(Long hostId, boolean persist) {
@@ -101,13 +120,13 @@ public class HostProfileServiceImpl implements HostProfileService {
         vo.setInfo(info);
         vo.setMetrics(metrics);
         vo.setHost(host);
-        if (isAgentChannel(host)) {
+        if (isAgentProvider(provider)) {
             vo.setPort(agentClient.portOf(host));
         }
         vo.setOsMismatch(osMismatch(host, info));
         vo.setCollectedAt(LocalDateTime.now().toString());
         if (persist) {
-            persistSnapshot(host, info, metrics);
+            persistSnapshot(host, info, metrics, provider);
         } else {
             clearError(hostId);
         }
@@ -115,22 +134,160 @@ public class HostProfileServiceImpl implements HostProfileService {
     }
 
     @Override
-    public ReturnResult<List<NetProcessRowVO>> ports(Long hostId) {
-        return collect(hostId, (provider, host) -> provider.netProcesses(host));
+    public ReturnResult<HostProfileVO> snapshot(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        return ReturnResult.ok(fromStored(host));
+    }
+
+    /**
+     * 由台账行还原画像视图（不触发任何通道采集）。
+     *
+     * @param h 台账主机行
+     * @return 表中保存的画像视图，从未采集过的字段为空 / 0
+     */
+    private HostProfileVO fromStored(MsServerHost h) {
+        double memTotal = h.getServerHostMemoryMb() == null ? 0.0 : h.getServerHostMemoryMb();
+        double memPct = h.getServerHostMemUsage() == null ? 0.0 : h.getServerHostMemUsage();
+        double diskTotal = h.getServerHostDiskGb() == null ? 0.0 : h.getServerHostDiskGb();
+        double diskPct = h.getServerHostDiskUsage() == null ? 0.0 : h.getServerHostDiskUsage();
+        long memUsed = Math.round(memTotal * memPct / 100.0);
+        double diskUsed = round(diskTotal * diskPct / 100.0);
+
+        HostInfoVO info = new HostInfoVO();
+        info.setHostname(h.getServerHostOsHostname());
+        info.setOs(h.getServerHostOsType());
+        info.setOsName(h.getServerHostOsType());
+        info.setOsVersion(h.getServerHostOsVersion());
+        info.setArch(h.getServerHostOsArch());
+        info.setCpuCores(h.getServerHostCpuCores());
+        info.setMemoryMb((long) memTotal);
+        info.setMemoryTotalMb((long) memTotal);
+        info.setMemoryUsedMb(memUsed);
+        info.setMemoryUsage(round(memPct));
+        info.setCpuPercent(h.getServerHostCpuUsage() == null ? 0.0 : round(h.getServerHostCpuUsage()));
+        info.setDiskTotalGb(diskTotal);
+        info.setDiskUsedGb(diskUsed);
+        info.setDiskReadKbs(h.getServerHostDiskReadKbs());
+        info.setDiskWriteKbs(h.getServerHostDiskWriteKbs());
+        info.setPublicIp(h.getServerHostPublicIp());
+        info.setPrivateIp(h.getServerHostPrivateIp());
+        info.setMac(h.getServerHostMac());
+        info.setHostCode(h.getServerHostCode());
+        info.setJavaVersion(h.getServerHostJavaVersion());
+        info.setUptimeSec(h.getServerHostUptimeSec());
+        info.setAgentVersion(h.getServerHostAgentVersion());
+        info.setNetworkInterfaces(parseStoredNetworks(h.getServerHostNetworks()));
+
+        HostMetricsVO metrics = new HostMetricsVO();
+        metrics.setCpuPercent(info.getCpuPercent());
+        metrics.setMemoryTotalMb((long) memTotal);
+        metrics.setMemoryUsedMb(memUsed);
+        metrics.setMemoryPercent(round(memPct));
+        metrics.setDiskTotalGb(diskTotal);
+        metrics.setDiskUsedGb(diskUsed);
+        metrics.setDiskPercent(round(diskPct));
+        metrics.setDiskReadKbs(h.getServerHostDiskReadKbs() == null ? 0.0 : round(h.getServerHostDiskReadKbs()));
+        metrics.setDiskWriteKbs(h.getServerHostDiskWriteKbs() == null ? 0.0 : round(h.getServerHostDiskWriteKbs()));
+        metrics.setUptimeSec(h.getServerHostUptimeSec() == null ? 0L : h.getServerHostUptimeSec());
+        metrics.setCollectTime(h.getServerHostLastCollectTime() == null ? null
+                : h.getServerHostLastCollectTime().toString());
+
+        HostProfileVO vo = new HostProfileVO();
+        vo.setInfo(info);
+        vo.setMetrics(metrics);
+        vo.setHost(h);
+        vo.setPort(h.getServerHostAgentPort());
+        vo.setCollectedAt(h.getServerHostLastCollectTime() == null ? null
+                : h.getServerHostLastCollectTime().toString());
+        return vo;
+    }
+
+    /**
+     * 解析台账里保存的网卡 JSON，失败 / 为空返回空列表。
+     *
+     * @param json 网卡列表 JSON
+     * @return 网卡行列表
+     */
+    private List<NetworkInterfaceRowVO> parseStoredNetworks(String json) {
+        if (json == null || json.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        try {
+            List<NetworkInterfaceRowVO> list = objectMapper.readValue(json, objectMapper.getTypeFactory()
+                    .constructCollectionType(List.class, NetworkInterfaceRowVO.class));
+            return list == null ? java.util.Collections.emptyList() : list;
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
+        }
     }
 
     @Override
-    public ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size) {
-        int no = page == null || page < 1 ? 1 : page;
-        int limit = size == null || size < 1 ? DEFAULT_SECTION_SIZE : Math.min(size, 500);
-        return collect(hostId, (provider, host) -> provider.processes(host, no, limit));
+    public ReturnResult<List<NetProcessRowVO>> ports(Long hostId, Integer page, Integer size, String keyword) {
+        // 「监听端口」只展示处于监听态的 TCP(LISTEN) 与 UDP(UNCONN) 端点，
+        // 不混入 ESTABLISHED / TIME_WAIT 等活动连接；后端按页切片，前端只渲染当前页。
+        int no = pageOf(page);
+        int limit = sizeOf(size);
+        String needle = lower(keyword);
+        return collect(hostId, (provider, host) -> {
+            List<NetProcessRowVO> filtered = provider.netProcesses(host).stream()
+                    .filter(row -> {
+                        String state = String.valueOf(row.getState()).toUpperCase(Locale.ROOT);
+                        return "LISTEN".equals(state) || "UNCONN".equals(state);
+                    })
+                    .filter(row -> needle.isEmpty() || matches(needle,
+                            String.valueOf(row.getLocalPort()), row.getLocal(), row.getProcess(),
+                            row.getProtocol(), row.getState()))
+                    .toList();
+            return slice(filtered, no, limit);
+        });
     }
 
     @Override
-    public ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size) {
-        int no = page == null || page < 1 ? 1 : page;
-        int limit = size == null || size < 1 ? DEFAULT_SECTION_SIZE : Math.min(size, 500);
-        return collect(hostId, (provider, host) -> provider.services(host, no, limit));
+    public ReturnResult<List<FirewallRuleRowVO>> firewall(Long hostId, Integer page, Integer size, String keyword) {
+        // 防火墙规则后端分页：规则名/链/方向/动作/协议/端口任一命中即保留，再按页切片。
+        int no = pageOf(page);
+        int limit = sizeOf(size);
+        String needle = lower(keyword);
+        return collect(hostId, (provider, host) -> {
+            List<FirewallRuleRowVO> filtered = provider.firewallRules(host).stream()
+                    .filter(row -> needle.isEmpty() || matches(needle,
+                            row.getName(), row.getChain(), row.getDirection(), row.getAction(),
+                            row.getProfile(), row.getProtocol(), String.valueOf(row.getLocalPort()),
+                            row.getTarget(), row.getSource(), row.getDestination()))
+                    .toList();
+            return slice(filtered, no, limit);
+        });
+    }
+
+    @Override
+    public ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size, String keyword) {
+        int no = pageOf(page);
+        int limit = sizeOf(size);
+        String needle = lower(keyword);
+        if (needle.isEmpty()) {
+            return collect(hostId, (provider, host) -> provider.processes(host, no, limit));
+        }
+        return collect(hostId, (provider, host) -> slice(provider.processes(host, 1, KEYWORD_SCAN_LIMIT).stream()
+                .filter(row -> matches(needle, String.valueOf(row.getPid()), row.getName(), row.getUser(),
+                        row.getCommand(), row.getPath()))
+                .toList(), no, limit));
+    }
+
+    @Override
+    public ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size, String keyword) {
+        int no = pageOf(page);
+        int limit = sizeOf(size);
+        String needle = lower(keyword);
+        if (needle.isEmpty()) {
+            return collect(hostId, (provider, host) -> provider.services(host, no, limit));
+        }
+        return collect(hostId, (provider, host) -> slice(provider.services(host, 1, KEYWORD_SCAN_LIMIT).stream()
+                .filter(row -> matches(needle, row.getName(), row.getDisplayName(), row.getState(),
+                        row.getStartType(), String.valueOf(row.getPid())))
+                .toList(), no, limit));
     }
 
     @Override
@@ -173,6 +330,69 @@ public class HostProfileServiceImpl implements HostProfileService {
     }
 
     /**
+     * 归一化页码，非法值按第一页处理。
+     *
+     * @param page 页码，可为 null
+     * @return 从 1 开始的页码
+     */
+    private static int pageOf(Integer page) {
+        return page == null || page < 1 ? 1 : page;
+    }
+
+    /**
+     * 归一化每页条数，避免无上限抓取打爆通道。
+     *
+     * @param size 每页条数，可为 null
+     * @return 生效条数
+     */
+    private static int sizeOf(Integer size) {
+        return size == null || size < 1 ? DEFAULT_SECTION_SIZE : Math.min(size, MAX_SECTION_SIZE);
+    }
+
+    /**
+     * 关键字归一化：两端空白去掉并转小写，空串表示不过滤。
+     *
+     * @param keyword 原始关键字，可为 null
+     * @return 可直接比对的关键字
+     */
+    private static String lower(String keyword) {
+        return keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 任一展示字段命中关键字即保留（忽略大小写）。
+     *
+     * @param needle 已归一化的关键字
+     * @param fields 参与匹配的字段，可为 null
+     * @return 是否命中
+     */
+    private static boolean matches(String needle, String... fields) {
+        for (String field : fields) {
+            if (field != null && field.toLowerCase(Locale.ROOT).contains(needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 对内存候选集按请求页切片。
+     *
+     * @param rows 过滤后的全部命中行
+     * @param page 页码，从 1 开始
+     * @param size 每页条数
+     * @param <T>  行类型
+     * @return 当前页数据，越界返回空列表
+     */
+    private static <T> List<T> slice(List<T> rows, int page, int size) {
+        int from = (page - 1) * size;
+        if (from >= rows.size()) {
+            return List.of();
+        }
+        return rows.subList(from, Math.min(from + size, rows.size()));
+    }
+
+    /**
      * 由同一次采集的基础信息、磁盘与进程结果推导实时指标。
      *
      * @param provider 采集通道
@@ -182,34 +402,48 @@ public class HostProfileServiceImpl implements HostProfileService {
      */
     private HostMetricsVO metrics(SystemInfoProvider provider, MsServerHost host, HostInfoVO info) {
         HostMetricsVO metrics = new HostMetricsVO();
-        metrics.setCpuPercent(value(info.getCpuPercent()));
+        // 百分比 / 速率统一保留 1 位小数，避免下发长浮点（总量 / 计数为整数不收敛）
+        metrics.setCpuPercent(round(value(info.getCpuPercent())));
         metrics.setMemoryTotalMb(value(info.getMemoryTotalMb()));
         metrics.setMemoryUsedMb(value(info.getMemoryUsedMb()));
-        metrics.setMemoryPercent(value(info.getMemoryUsage()));
+        metrics.setMemoryPercent(round(value(info.getMemoryUsage())));
         metrics.setUptimeSec(value(info.getUptimeSec()));
+        metrics.setNetworkPercent(round(value(info.getNetworkPercent())));
+        metrics.setNetworkRxKb(round(value(info.getNetworkRxKb())));
+        metrics.setNetworkTxKb(round(value(info.getNetworkTxKb())));
+        metrics.setDiskReadKbs(round(value(info.getDiskReadKbs())));
+        metrics.setDiskWriteKbs(round(value(info.getDiskWriteKbs())));
         metrics.setCollectTime(LocalDateTime.now().toString());
 
         double diskTotal = 0.0;
         double diskUsed = 0.0;
-        List<DiskRowVO> disks = provider.disks(host);
-        if (disks != null) {
-            for (DiskRowVO disk : disks) {
-                diskTotal += disk.getTotalGb();
-                diskUsed += disk.getUsedGb();
+        if (info.getDiskTotalGb() != null && info.getDiskTotalGb() > 0 && info.getDiskUsedGb() != null) {
+            // 合并采集通道（Windows SSH）已随概览一次返回磁盘汇总，避免再发一次往返
+            diskTotal = info.getDiskTotalGb();
+            diskUsed = info.getDiskUsedGb();
+        } else {
+            List<DiskRowVO> disks = provider.disks(host);
+            if (disks != null) {
+                for (DiskRowVO disk : disks) {
+                    diskTotal += disk.getTotalGb();
+                    diskUsed += disk.getUsedGb();
+                }
             }
         }
         metrics.setDiskTotalGb(round(diskTotal));
         metrics.setDiskUsedGb(round(diskUsed));
         metrics.setDiskPercent(diskTotal <= 0 ? 0.0 : round(diskUsed * 100.0 / diskTotal));
 
-        List<ProcessRowVO> processes = provider.processes(host, 1, 10000);
-        if (processes != null) {
-            long threads = 0L;
-            for (ProcessRowVO process : processes) {
-                threads += process.getThreads();
+        if (info.getProcessCount() != null) {
+            // 合并采集通道已随概览返回进程/线程总数
+            metrics.setProcessCount(info.getProcessCount());
+            metrics.setThreadCount(info.getThreadCount() == null ? 0 : info.getThreadCount());
+        } else {
+            ProcessSummaryVO summary = provider.processSummary(host);
+            if (summary != null) {
+                metrics.setProcessCount(summary.processCount());
+                metrics.setThreadCount((int) summary.threadCount());
             }
-            metrics.setProcessCount(processes.size());
-            metrics.setThreadCount((int) threads);
         }
         return metrics;
     }
@@ -221,7 +455,7 @@ public class HostProfileServiceImpl implements HostProfileService {
      * @param info    基础信息
      * @param metrics 实时指标
      */
-    private void persistSnapshot(MsServerHost host, HostInfoVO info, HostMetricsVO metrics) {
+    private void persistSnapshot(MsServerHost host, HostInfoVO info, HostMetricsVO metrics, SystemInfoProvider provider) {
         if (notEmpty(info.getOsVersion())) {
             host.setServerHostOsVersion(info.getOsVersion());
         }
@@ -243,15 +477,53 @@ public class HostProfileServiceImpl implements HostProfileService {
         if (notEmpty(info.getPublicIp())) {
             host.setServerHostPublicIp(info.getPublicIp());
         }
+        if (notEmpty(info.getHostCode())) {
+            host.setServerHostCode(info.getHostCode());
+        }
+        if (notEmpty(info.getMac())) {
+            host.setServerHostMac(info.getMac());
+        }
+        if (notEmpty(info.getHostname())) {
+            host.setServerHostOsHostname(info.getHostname());
+        }
+        if (notEmpty(info.getJavaVersion())) {
+            host.setServerHostJavaVersion(info.getJavaVersion());
+        }
+        if (info.getUptimeSec() != null && info.getUptimeSec() > 0) {
+            host.setServerHostUptimeSec(info.getUptimeSec());
+        }
+        // 网卡完整列表落库：本机通道已内嵌，其余通道补一次采集
+        List<NetworkInterfaceRowVO> nics = info.getNetworkInterfaces();
+        if (nics == null || nics.isEmpty()) {
+            try {
+                nics = provider.networkInterfaces(host);
+            } catch (Exception ignore) {
+                nics = java.util.Collections.emptyList();
+            }
+        }
+        if (nics != null && !nics.isEmpty()) {
+            try {
+                host.setServerHostNetworks(objectMapper.writeValueAsString(nics));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException ignore) {
+                // 序列化失败不阻断主流程
+            }
+        }
         host.setServerHostCpuUsage(metrics.getCpuPercent());
         host.setServerHostMemUsage(metrics.getMemoryPercent());
         host.setServerHostDiskUsage(metrics.getDiskPercent());
+        host.setServerHostDiskReadKbs(metrics.getDiskReadKbs());
+        host.setServerHostDiskWriteKbs(metrics.getDiskWriteKbs());
+        // 软件实例：由进程列表按软件特征派生（同软件多实例按 PID），JSON 落库
+        String softwareJson = deriveSoftware(provider, host);
+        if (softwareJson != null) {
+            host.setServerHostSoftware(softwareJson);
+        }
 
         LocalDateTime now = LocalDateTime.now();
         host.setServerHostOnline(1);
         host.setServerHostOnlineTime(now);
         host.setServerHostLastCollectTime(now);
-        if (isAgentChannel(host)) {
+        if (isAgentProvider(provider)) {
             host.setServerHostAgentTime(now);
             host.setServerHostAgentInstalled(1);
             host.setServerHostAgentPort(agentClient.portOf(host));
@@ -262,6 +534,59 @@ public class HostProfileServiceImpl implements HostProfileService {
         hostMapper.updateById(host);
         // 采集成功即清掉历史失败原因（updateById 会跳过 null 字段，必须走显式置空）
         clearError(host.getId());
+    }
+
+    /**
+     * 由通道进程列表派生软件实例 JSON。
+     *
+     * @param provider 采集通道
+     * @param host     主机
+     * @return 软件实例 JSON；无已知软件返回 null
+     */
+    private String deriveSoftware(SystemInfoProvider provider, MsServerHost host) {
+        try {
+            List<ProcessRowVO> procs = provider.processes(host, 1, 300);
+            if (procs == null || procs.isEmpty()) {
+                return null;
+            }
+            List<com.chua.starter.server.support.software.SoftwareInstanceVO> list =
+                    new java.util.ArrayList<>();
+            for (ProcessRowVO p : procs) {
+                String cmd = p.getCommand() != null && !p.getCommand().isBlank()
+                        ? p.getCommand() : p.getPath();
+                String type = com.chua.starter.server.support.software.SoftwareCatalog
+                        .match(p.getName(), cmd);
+                if (type == null) {
+                    continue;
+                }
+                list.add(com.chua.starter.server.support.software.SoftwareCatalog.instance(type,
+                        (int) p.getPid(), p.getCpu(), p.getMemory(),
+                        uptimeFromStart(p.getStartTime()), cmd == null ? p.getName() : cmd));
+            }
+            return list.isEmpty() ? null : objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            log.debug("[profile] 软件派生失败 hostId={}: {}", host.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 由启动时间文本（yyyy-MM-dd HH:mm:ss）换算运行秒数，解析失败为 0。
+     *
+     * @param startTime 启动时间
+     * @return 运行秒数
+     */
+    private static long uptimeFromStart(String startTime) {
+        if (startTime == null || startTime.isBlank()) {
+            return 0;
+        }
+        try {
+            LocalDateTime start = LocalDateTime.parse(startTime,
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            return Math.max(0, java.time.Duration.between(start, LocalDateTime.now()).getSeconds());
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**
@@ -291,10 +616,20 @@ public class HostProfileServiceImpl implements HostProfileService {
      * 主机是否经 Agent 接入。
      *
      * @param host 主机
-     * @return 台账 osType 为 AGENT 时返回 true
+     * @return 采集方式为 AGENT 时返回 true
      */
     private static boolean isAgentChannel(MsServerHost host) {
-        return CHANNEL_AGENT.equalsIgnoreCase(host.getServerHostOsType());
+        return CHANNEL_AGENT.equalsIgnoreCase(host.getServerHostCollectMode());
+    }
+
+    /**
+     * 实际服务本次采集的是否为 Agent 通道（按 Provider 实例判定，而非配置值）。
+     *
+     * @param provider 实际命中的采集实现
+     * @return 为 AgentProvider 时返回 true
+     */
+    private static boolean isAgentProvider(SystemInfoProvider provider) {
+        return provider instanceof AgentProvider;
     }
 
     /**
@@ -309,9 +644,8 @@ public class HostProfileServiceImpl implements HostProfileService {
             return;
         }
         host.setServerHostAgentError(cut(reason));
-        if (isAgentChannel(host)) {
-            host.setServerHostAgentInstalled(0);
-        }
+        // 不在此把 agent_installed 置 0：installed 是部署生命周期状态（仅由部署=1/卸载=0 改变），
+        // 一次瞬时采集超时/分区失败只记录原因，否则健康 Agent 会因偶发抖动被整体判不可用。
         hostMapper.updateById(host);
     }
 

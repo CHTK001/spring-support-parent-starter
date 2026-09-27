@@ -6,136 +6,136 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 商户支付方式视图对象
+ * 客户支付渠道视图对象
  * @author CH
  * @since 4.0.0
  */
 @Data
 public class MerchantChannelVO implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 
     /**
      * 标识
-    */
+     */
     private Long id;
 
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
 
     /**
-     * Merchant名称
-    */
+     * 商户名称
+     */
     private String merchantName;
 
     /**
-     * 通道类型
-    */
+     * 渠道类型
+     */
     private String channelType;
 
     /**
-     * 通道SUB类型
-    */
+     * 渠道SUB类型
+     */
     private String channelSubType;
 
     /**
-     * 通道名称
-    */
+     * 渠道名称
+     */
     private String channelName;
 
     /**
      * APPID
-    */
+     */
     private String appId;
 
     /**
-     * merchantno
-    */
+     * 商户号
+     */
     private String merchantNo;
 
     /**
-     * API密钥configured
-    */
+     * API密钥是否已配置
+     */
     private Boolean apiKeyConfigured;
 
     /**
-     * 私有密钥configured
-    */
+     * 私钥是否已配置
+     */
     private Boolean privateKeyConfigured;
 
     /**
-     * 公开密钥configured
-    */
+     * 公钥是否已配置
+     */
     private Boolean publicKeyConfigured;
 
     /**
-     * 证书configured
-    */
+     * 证书是否已配置
+     */
     private Boolean certConfigured;
 
     /**
      * Sandbox模式
-    */
+     */
     private Integer sandboxMode;
 
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
 
     /**
      * 返回值URL
-    */
+     */
     private String returnUrl;
 
     /**
      * 状态
-    */
+     */
     private Integer status;
 
     /**
-     * 状态desc
-    */
+     * 状态描述
+     */
     private String statusDesc;
 
     /**
      * EXT配置
-    */
+     */
     private String extConfig;
 
     /**
-     * Guide标题
-    */
+     * 引导标题
+     */
     private String guideTitle;
 
     /**
-     * guideurl
-    */
+     * 引导链接
+     */
     private String guideUrl;
 
     /**
-     * 通道类型desc
-    */
+     * 渠道类型描述
+     */
     private String channelTypeDesc;
 
     /**
-     * effectivenotifyurl
-    */
+     * 生效通知URL
+     */
     private String effectiveNotifyUrl;
 
     /**
-     * Effective返回值URL
-    */
+     * 生效返回值URL
+     */
     private String effectiveReturnUrl;
 
     /**
-     * 创建时间AT
-    */
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 
     /**
-     * 更新时间AT
-    */
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }

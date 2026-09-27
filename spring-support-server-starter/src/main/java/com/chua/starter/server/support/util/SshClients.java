@@ -53,11 +53,26 @@ public final class SshClients {
      * @throws IOException 私钥临时文件写入失败时抛出
      */
     public static Handle open(String address, Integer port, SshCredential credential) throws IOException {
+        // 默认超时（秒）：连接/会话 15s，命令执行 60s
+        return open(address, port, credential, 15, 15, 60L);
+    }
+
+    /**
+     * 打开已配置（未连接）的 SSH 客户端句柄，并显式指定各级超时。
+     *
+     * @param connectTimeoutSec TCP 连接/握手超时（秒）
+     * @param sessionTimeoutSec 认证/会话建立超时（秒）
+     * @param execTimeoutSec    单条命令执行/读取超时（秒）
+     */
+    public static Handle open(String address, Integer port, SshCredential credential,
+                              int connectTimeoutSec, int sessionTimeoutSec, long execTimeoutSec) throws IOException {
         var builder = SshClient.builder()
                 .host(address)
                 .port(port == null || port <= 0 ? DEFAULT_PORT : port)
                 .username(credential.username())
-                .connectTimeout(8);
+                .connectTimeout(connectTimeoutSec)
+                .sessionTimeout(sessionTimeoutSec)
+                .execTimeout(execTimeoutSec);
         Path tempKeyPath = null;
         if (credential.hasKey()) {
             // 底层库仅支持路径方式加载私钥：落盘受限临时文件，关闭时删除

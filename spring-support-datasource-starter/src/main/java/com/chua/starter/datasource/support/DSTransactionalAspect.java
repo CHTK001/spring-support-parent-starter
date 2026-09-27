@@ -25,7 +25,6 @@ import java.util.Optional;
  *   <li>方法抛出异常时回滚所有连接</li>
  *   <li>清理连接资源</li>
  * </ul>
- * </p>
  *
  * <h3>优先级说明</h3>
  * <p>

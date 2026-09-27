@@ -4,7 +4,6 @@ import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
@@ -104,12 +103,18 @@ public class MonitoringStatement implements InvocationHandler {
                 new MonitoringStatement(statement, dataSourceName, monitor, sql));
     }
 
-    @Override
     /**
-     * 调用
-    */
+     * 处理代理调用并记录 SQL 执行耗时。
+     *
+     * @param proxy JDK 动态代理对象
+     * @param method JDK 代理契约传入的方法元数据；实际调用统一委托 {@link ReflectUtils#invokeProxy(Object, Method, Object[])}
+     * @param args 方法参数
+     * @return 方法返回值
+     * @throws Throwable 目标方法异常
+     */
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        String name = method.getName();
+        String name = ReflectUtils.methodName(method);
 
         // 拦截执行方法，计时上报
         for (String execMethod : EXECUTE_METHODS) {
@@ -117,7 +122,7 @@ public class MonitoringStatement implements InvocationHandler {
  // 使用 nano时间 计时，避免受系统时钟调整影响
                 long start = System.nanoTime();
                 try {
-                    Object result = invokeTarget(method, args);
+                    Object result = ReflectUtils.invokeProxy(delegate, method, args);
                     long costMs = (System.nanoTime() - start) / 1_000_000;
                     monitor.recordExecution(dataSourceName, resolveSql(args), costMs, true, null);
                     return result;
@@ -144,14 +149,17 @@ public class MonitoringStatement implements InvocationHandler {
             if (iface.isInstance(proxy)) {
                 return iface.cast(proxy);
             }
-            return invokeTarget(method, args);
+            return ReflectUtils.invokeProxy(delegate, method, args);
         }
         if ("isWrapperFor".equals(name)) {
             Class<?> iface = (Class<?>) args[0];
-            return iface.isInstance(proxy) || (Boolean) invokeTarget(method, args);
+            if (iface.isInstance(proxy)) {
+                return true;
+            }
+            return ReflectUtils.invokeProxy(delegate, method, args);
         }
 
-        return invokeTarget(method, args);
+        return ReflectUtils.invokeProxy(delegate, method, args);
     }
 
     /**
@@ -167,21 +175,5 @@ public class MonitoringStatement implements InvocationHandler {
         }
  // prepared对账单 模板 SQL
         return sql;
-    }
-
-    /**
-     * 调用目标 对账单 对应方法
-     *
-     * @param method 方法
-     * @param args   参数
-     * @return 方法返回值
-     * @throws Throwable 目标 对账单 抛出的异常
-     */
-    private Object invokeTarget(Method method, Object[] args) throws Throwable {
-        try {
-            return method.invoke(delegate, args);
-        } catch (InvocationTargetException e) {
-            throw e.getCause();
-        }
     }
 }

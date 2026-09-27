@@ -167,7 +167,8 @@ public class RedisLocalProvider implements MetricProvider {
         addMetric(result, "redis_used_memory_bytes", metrics.get("used_memory"));
         addMetric(result, "redis_used_memory_peak_bytes", metrics.get("used_memory_peak"));
         addMetric(result, "redis_maxmemory_bytes", metrics.get("maxmemory"));
-        addMetric(result, "redis_total_keys", metrics.get("total_keys"));
+ // INFO 无 total_keys 键，键总数由 keyspace 段各 db 累加得到
+        addMetric(result, "redis_total_keys", metrics.get("_db_keys_total"));
         addMetric(result, "redis_expired_keys", metrics.get("expired_keys"));
         addMetric(result, "redis_hits", metrics.get("keyspace_hits"));
         addMetric(result, "redis_misses", metrics.get("keyspace_misses"));

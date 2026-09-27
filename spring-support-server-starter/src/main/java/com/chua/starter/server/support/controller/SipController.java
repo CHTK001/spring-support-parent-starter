@@ -2,6 +2,8 @@ package com.chua.starter.server.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
+import com.chua.starter.server.support.model.vo.SipConfigVO;
+import com.chua.starter.server.support.model.vo.SipDeployCmdsVO;
 import com.chua.starter.server.support.service.ServerConfigService;
 import com.chua.starter.server.support.sip.SipServiceManager;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +29,13 @@ import java.util.Map;
 public class SipController {
 
     private static final Logger log = LoggerFactory.getLogger(SipController.class);
+
+    /** 中继控制端口默认值 */
+    private static final int DEFAULT_PORT = 7822;
+    /** 中继服务器地址默认值 */
+    private static final String DEFAULT_HOST = "124.221.230.112";
+    /** 共享口令默认值 */
+    private static final String DEFAULT_SECRET = "lvzhou2011";
 
     /**
      * 服务器配置服务
@@ -55,30 +64,42 @@ public class SipController {
      */
     @Operation(summary = "获取 SIP 状态与配置")
     @GetMapping("/config")
-    public ReturnResult<Map<String, Object>> getConfig() {
-        Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("sip.enabled", configService.getString("sip.enabled", "false"));
-        cfg.put("sip.control.port", configService.getInt("sip.control.port", 7822));
-        cfg.put("sip.secret", configService.getString("sip.secret", "lvzhou2011"));
-        cfg.put("sip.server.host", configService.getString("sip.server.host", "124.221.230.112"));
-        cfg.put("running", sipManager.isRunning());
-        return ReturnResult.success(cfg);
+    public ReturnResult<SipConfigVO> getConfig() {
+        return ReturnResult.ok(new SipConfigVO(
+                configService.getString("sip.enabled", "false"),
+                configService.getInt("sip.control.port", DEFAULT_PORT),
+                configService.getString("sip.secret", DEFAULT_SECRET),
+                configService.getString("sip.server.host", DEFAULT_HOST),
+                sipManager.isRunning()));
     }
 
     /**
      * 保存 SIP 配置，并根据 sip.enabled 自动启停中继服务
      *
-     * @param body 配置键值对（sip.enabled / sip.control.port / sip.secret 等）
+     * @param body SIP 配置项（未知字段忽略，running 由服务端决定）
      * @return 成功返回空数据；启停异常时返回错误信息
      */
     @Operation(summary = "保存 SIP 配置（自动启停）")
     @PostMapping("/config")
-    public ReturnResult<Void> saveConfig(@RequestBody Map<String, Object> body) {
-        configService.saveConfig(body);
+    public ReturnResult<Void> saveConfig(@RequestBody SipConfigVO body) {
+        Map<String, Object> kv = new LinkedHashMap<>();
+        if (body.enabled() != null) {
+            kv.put("sip.enabled", body.enabled());
+        }
+        if (body.controlPort() != null) {
+            kv.put("sip.control.port", body.controlPort());
+        }
+        if (body.secret() != null) {
+            kv.put("sip.secret", body.secret());
+        }
+        if (body.serverHost() != null) {
+            kv.put("sip.server.host", body.serverHost());
+        }
+        configService.saveConfig(kv);
         // 根据 enabled 自动启停
-        boolean enabled = "true".equalsIgnoreCase(String.valueOf(body.getOrDefault("sip.enabled", "false")));
-        int port = Integer.parseInt(String.valueOf(body.getOrDefault("sip.control.port", 7822)));
-        String secret = String.valueOf(body.getOrDefault("sip.secret", "lvzhou2011"));
+        boolean enabled = "true".equalsIgnoreCase(body.enabled() == null ? "false" : body.enabled());
+        int port = body.controlPort() == null ? DEFAULT_PORT : body.controlPort();
+        String secret = body.secret() == null ? DEFAULT_SECRET : body.secret();
         try {
             if (enabled && !sipManager.isRunning()) {
                 sipManager.start(port, secret);
@@ -100,8 +121,8 @@ public class SipController {
     @Operation(summary = "手动启动 SIP")
     @PostMapping("/start")
     public ReturnResult<Void> start() {
-        int port = configService.getInt("sip.control.port", 7822);
-        String secret = configService.getString("sip.secret", "lvzhou2011");
+        int port = configService.getInt("sip.control.port", DEFAULT_PORT);
+        String secret = configService.getString("sip.secret", DEFAULT_SECRET);
         try {
             sipManager.start(port, secret);
             configService.saveConfig(Map.of("sip.enabled", "true"));
@@ -131,17 +152,16 @@ public class SipController {
      */
     @Operation(summary = "生成部署命令")
     @GetMapping("/deploy-cmds")
-    public ReturnResult<Map<String, String>> deployCmds() {
-        String host = configService.getString("sip.server.host", "124.221.230.112");
-        int port = configService.getInt("sip.control.port", 7822);
-        String secret = configService.getString("sip.secret", "lvzhou2011");
+    public ReturnResult<SipDeployCmdsVO> deployCmds() {
+        String host = configService.getString("sip.server.host", DEFAULT_HOST);
+        int port = configService.getInt("sip.control.port", DEFAULT_PORT);
+        String secret = configService.getString("sip.secret", DEFAULT_SECRET);
 
-        Map<String, String> cmds = new LinkedHashMap<>();
-        cmds.put("server", "java -cp sip.jar com.chua.starter.server.support.sip.SipTunnel server " + port + " " + secret);
-        cmds.put("provider", "java -cp sip.jar com.chua.starter.server.support.sip.SipTunnel provider "
-                + host + " " + port + " win-test-01 " + secret + " \"rdp:3389,ssh:22\"");
-        cmds.put("visit", "java -cp sip.jar com.chua.starter.server.support.sip.SipTunnel visit "
-                + host + " " + port + " win-test-01 rdp 13389 " + secret);
-        return ReturnResult.success(cmds);
+        return ReturnResult.ok(new SipDeployCmdsVO(
+                "java -cp sip.jar com.chua.starter.server.support.sip.SipTunnel server " + port + " " + secret,
+                "java -cp sip.jar com.chua.starter.server.support.sip.SipTunnel provider "
+                        + host + " " + port + " win-test-01 " + secret + " \"rdp:3389,ssh:22\"",
+                "java -cp sip.jar com.chua.starter.server.support.sip.SipTunnel visit "
+                        + host + " " + port + " win-test-01 rdp 13389 " + secret));
     }
 }

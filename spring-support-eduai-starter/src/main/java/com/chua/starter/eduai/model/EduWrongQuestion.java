@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import java.time.LocalDateTime;
 
 /**
@@ -15,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("edu_wrong_question")
-public class EduWrongQuestion {
+public class EduWrongQuestion extends SysBase {
 
     /**
      * 错题记录标识
@@ -71,16 +74,6 @@ public class EduWrongQuestion {
      * 状态
      */
     private Integer wrongQuestionStatus;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime wrongQuestionCreateTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime wrongQuestionUpdateTime;
 
     /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）

@@ -85,7 +85,6 @@ public class MultiDataSource implements DataSource {
      * 创建 multi数据源 实例
      * @param dataSources 数据源
      * @param applicationContext application上下文
-     * @param applicationContext application上下文
      */
     public MultiDataSource(List<DataSource> dataSources, ApplicationContext applicationContext) {
         this.dataSources = dataSources;

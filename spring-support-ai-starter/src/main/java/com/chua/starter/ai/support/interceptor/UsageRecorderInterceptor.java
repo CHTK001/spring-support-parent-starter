@@ -59,4 +59,31 @@ public class UsageRecorderInterceptor {
             log.error("[UsageRecorder] 记录失败: {}", e.getMessage(), e);
         }
     }
+
+    /**
+     * 异步记录用量，并显式标注来源（service/third_party/self）。
+     *
+     * @param source 用量来源；为空时退回默认口径
+     */
+    @Async
+    public void record(String groupName, String provider, String model, String callType,
+                       AiUsage usage, String requestId, String userId, String source) {
+        if (usage == null) {
+            return;
+        }
+        boolean enabled = settingReader.getBool("global", "enable_usage_recorder", true);
+        if (!enabled) {
+            log.debug("[UsageRecorder] 用量记录已关闭，跳过: model={}", model);
+            return;
+        }
+        try {
+            if (source == null || source.isBlank()) {
+                usageService.record(groupName, provider, model, callType, usage, requestId, userId);
+            } else {
+                usageService.record(groupName, provider, model, callType, usage, requestId, userId, source);
+            }
+        } catch (Exception e) {
+            log.error("[UsageRecorder] 记录失败: {}", e.getMessage(), e);
+        }
+    }
 }

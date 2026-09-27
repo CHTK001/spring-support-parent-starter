@@ -1,9 +1,9 @@
 package com.chua.starter.server.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.server.support.model.vo.MailMessageVO;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 邮箱账号(MAILBOX 身份)读取服务
@@ -22,7 +22,7 @@ public interface MailboxService {
      * @param limit      最大条数（默认 20）
      * @return 邮件列表；字段 主题/从/日期/大小/内容(截断)
      */
-    ReturnResult<List<Map<String, Object>>> list(Long identityId, String folder, int limit);
+    ReturnResult<List<MailMessageVO>> list(Long identityId, String folder, int limit);
 
     /**
      * 读取单封邮件正文全文（可选按 主题 或序号定位；此处返回最新 限制 内的首条 detail 供查看）。
@@ -32,5 +32,5 @@ public interface MailboxService {
      * @param subject    邮件主题关键字（按包含匹配定位）
      * @return 邮件详情（含完整 内容）
      */
-    ReturnResult<Map<String, Object>> detail(Long identityId, String folder, String subject);
+    ReturnResult<MailMessageVO> detail(Long identityId, String folder, String subject);
 }

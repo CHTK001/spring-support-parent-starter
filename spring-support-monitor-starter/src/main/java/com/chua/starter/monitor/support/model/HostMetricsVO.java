@@ -49,6 +49,16 @@ public class HostMetricsVO {
     private double diskPercent;
 
     /**
+     * 磁盘读取速率，单位 KB/s
+     */
+    private double diskReadKbs;
+
+    /**
+     * 磁盘写入速率，单位 KB/s
+     */
+    private double diskWriteKbs;
+
+    /**
      * 进程数
      */
     private int processCount;
@@ -62,6 +72,21 @@ public class HostMetricsVO {
      * 开机时长，单位秒
      */
     private long uptimeSec;
+
+    /**
+     * 网络接收速率，单位 KB/s
+     */
+    private double networkRxKb;
+
+    /**
+     * 网络发送速率，单位 KB/s
+     */
+    private double networkTxKb;
+
+    /**
+     * 网络带宽使用率（0-100）
+     */
+    private double networkPercent;
 
     /**
      * 采集时间文本

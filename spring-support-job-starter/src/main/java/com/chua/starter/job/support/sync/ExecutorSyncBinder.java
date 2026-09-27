@@ -3,13 +3,20 @@ package com.chua.starter.job.support.sync;
 import com.chua.common.support.network.sync.SyncClient;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.job.support.JobProperties;
+import com.chua.starter.job.support.execute.ScriptGlueHandlers;
+import com.chua.starter.job.support.glue.GlueTypes;
+import com.chua.starter.job.support.glue.JavaGlueHandlers;
+import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.log.JobLogEvent;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -61,9 +68,19 @@ public class ExecutorSyncBinder {
     private final String nodeId;
 
     /**
+     * 宿主容器，片段正文同步时用于给 Java 片段做 {@code @Autowired} 预装配
+     */
+    private final ApplicationContext applicationContext;
+
+    /**
      * 任务 CMD 监听器
      */
     private SyncMessageHandler cmdHandler;
+
+    /**
+     * 脚本正文同步监听器
+     */
+    private SyncMessageHandler glueHandler;
 
     /**
      * 日志 转发器 (持有, 用于注销)
@@ -79,6 +96,11 @@ public class ExecutorSyncBinder {
      * 标记是否已注册 (成功后置 true, 避免重复 日志)
      */
     private final AtomicBoolean registered = new AtomicBoolean(false);
+
+    /**
+     * 上一次已上报的处理器清单（变化检测，避免每 5s 重复上报）
+     */
+    private volatile Set<String> lastReportedHandlers = Set.of();
 
     /**
      * 最近一次 连接/注册 尝试时间戳 (毫秒), 用于周期性心跳式重连
@@ -102,6 +124,30 @@ public class ExecutorSyncBinder {
             bus.publish(topic, nodeId, payload);
         };
         syncClient.subscribe(JobSyncTopics.TASK_COMMAND, cmdHandler);
+
+        // 片段正文同步（调度中心保存/重连后推送）：落本地缓存，派发命令只带版本号
+        glueHandler = (topic, payload) -> {
+            JobSyncTopics.Command command = JobSyncTopics.parse(payload == null ? null : String.valueOf(payload));
+            if (!GlueTypes.isGlue(command.glueType())
+                    || command.glueSource() == null || command.glueSource().isBlank()) {
+                return;
+            }
+            try {
+                if (GlueTypes.isJava(command.glueType())) {
+                    JavaGlueHandlers.store(command.jobName(), command.glueSource(),
+                            command.glueUpdatetimeMs(), applicationContext);
+                } else {
+                    ScriptGlueHandlers.store(command.jobName(), command.glueType(),
+                            command.glueSource(), command.glueUpdatetimeMs(), applicationContext);
+                }
+                log.info("[job] EXECUTOR 已同步片段正文 job={} glueType={} glueAt={}",
+                        command.jobName(), command.glueType(), command.glueUpdatetimeMs());
+            } catch (Throwable ex) {
+                log.warn("[job] 片段正文同步失败 job={} glueType={} cause={}",
+                        command.jobName(), command.glueType(), ex.getMessage());
+            }
+        };
+        syncClient.subscribe(JobSyncTopics.GLUE, glueHandler);
 
         logForwarder = (source, payload) -> {
             if (!(payload instanceof JobLogEvent event)) {
@@ -155,6 +201,10 @@ public class ExecutorSyncBinder {
             return t;
         });
         reconnectExecutor.scheduleWithFixedDelay(() -> {
+            // 处理器集合变化（如采集流程新增/删除）时即时上报，调度中心才能校正"未注册"判定
+            if (registered.get()) {
+                reportHandlersIfChanged();
+            }
             // 周期心跳式重连策略:
  // - 已 注册 时每 心跳_间隔_MS 调一次 同步客户端.断开连接()+连接() 强制重建连接
  // 解决 tcp同步客户端 在对端 (调度器) 重启后因连接断开没通知 监听器 而永久失联的问题
@@ -190,12 +240,39 @@ public class ExecutorSyncBinder {
         try {
             syncClient.connect();
             syncClient.send(JobSyncTopics.REGISTER, buildRegisterPayload());
+            lastReportedHandlers = currentHandlerNames();
             if (registered.compareAndSet(false, true)) {
-                log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={}",
-                        properties.getSync().getExecutor().getServerUrl(), nodeId);
+                log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={} handlers={}",
+                        properties.getSync().getExecutor().getServerUrl(), nodeId, lastReportedHandlers.size());
             }
         } catch (Exception ex) {
             log.warn("[job] ExecutorSyncBinder 连接失败 cause={}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 当前本节点处理器名集合。
+     *
+     * @return 处理器名集合
+     */
+    private static Set<String> currentHandlerNames() {
+        return new HashSet<>(JobHandlerFactory.getInstance().names());
+    }
+
+    /**
+     * 处理器集合变化时上报清单（运行时注册/注销后调度中心才能校正"未注册"判定）。
+     */
+    private void reportHandlersIfChanged() {
+        Set<String> current = currentHandlerNames();
+        if (current.equals(lastReportedHandlers)) {
+            return;
+        }
+        try {
+            syncClient.send(JobSyncTopics.HANDLERS, JobSyncTopics.handlers(current));
+            lastReportedHandlers = current;
+            log.info("[job] EXECUTOR 处理器清单已上报 count={}", current.size());
+        } catch (Throwable ex) {
+            log.debug("[job] 处理器清单上报失败 cause={}", ex.getMessage());
         }
     }
 
@@ -210,6 +287,9 @@ public class ExecutorSyncBinder {
         if (cmdHandler != null) {
             syncClient.unsubscribe(JobSyncTopics.TASK_COMMAND);
         }
+        if (glueHandler != null) {
+            syncClient.unsubscribe(JobSyncTopics.GLUE);
+        }
         if (logForwarder != null) {
             bus.unsubscribe(JobSyncTopics.TASK_LOG, logForwarder);
         }
@@ -222,15 +302,12 @@ public class ExecutorSyncBinder {
     }
 
     /**
-     * 构建注册上行 payload。
+     * 构建注册上行 payload（含当前处理器清单）。
      *
      * @return 注册信息
      */
-    private Map<String, Object> buildRegisterPayload() {
-        return Map.of(
-                "nodeId", nodeId,
-                "role", "EXECUTOR",
-                "serverUrl", properties.getSync().getExecutor().getServerUrl()
-        );
+    private String buildRegisterPayload() {
+        return JobSyncTopics.register(nodeId, "EXECUTOR",
+                properties.getSync().getExecutor().getServerUrl(), currentHandlerNames());
     }
 }

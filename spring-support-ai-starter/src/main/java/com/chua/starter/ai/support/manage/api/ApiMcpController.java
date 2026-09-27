@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
@@ -26,10 +27,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP �������������� nomicore �� {@code /api/mcp/*} ��Լ��
+ * MCP 服务端管理控制器，兼容 nomicore 的 {@code /api/mcp/*} 路径。
  *
- * <p>ά�� MCP ������������{@code mcp_server_id} ���������������롢��ͣ�л������Ӳ�����
- * o认证 ����·�ɡ������־û��� {@code sys_ai_mcp_server} ����MySQL����</p>
+ * <p>维护 MCP 服务端的注册、配置、启停、连通性测试和认证状态。服务端注册表没有用户维度，
+ * 由 {@code sys_ai_mcp_server} 持久化并共享给所有会话。</p>
+ *
+ * <p>隔离口径：MCP 服务器注册表没有用户维度（{@code sys_ai_mcp_server} 全表共享），列表里的 stdio
+ * 命令由本机进程执行、启停结果对所有用户的会话同时生效，因此本控制器的全部写出口与连通性测试
+ * （新建/导入/更新/删除/启停/test-connection/OAuth 登录登出/市场开关）仅管理员可用；
+ * 读取出口（服务器列表、市场状态、已认证列表）保持开放，供普通用户渲染可用工具。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -42,37 +48,37 @@ import java.util.Map;
 public class ApiMcpController {
 
     /**
-     * MCP �г����ÿ���飺MCP �г�����״̬�洢�ڴ˷����档
+     * MCP 市场分组名称：MCP 市场配置存储在参数档案中。
      */
     private static final String MCP_MARKET_GROUP = "mcp";
 
     /**
-     * MCP �г������ֶΣ�true=������false=�رա�
+     * MCP 市场启用字段：true 表示启用，false 表示关闭。
      */
     private static final String MCP_MARKET_ENABLED_FIELD = "market_enabled";
 
     /**
-     * ��������������洢����
+     * 会话存储服务，用于生成服务端标识。
      */
     private final SysAiConversationStore conversationStore;
 
     /**
-     * WS �¼����ͷ���
+     * WebSocket 事件推送服务。
      */
     private final ApiWebSocketPushService pushService;
 
     /**
-     * MCP ��ʵ���ӷ���SDK ���� + �����о٣�
+     * MCP 实例连接服务，负责 SDK 连接和连接状态维护。
      */
     private final McpConnectionService mcpConnectionService;
 
     /**
-     * MCP �������������ݿ�洢
+     * MCP 服务端配置持久化存储。
      */
     private final McpServerStore mcpServerStore;
 
     /**
-     * ȫ���������񣨶�ȡ/д�� MCP �г����ؿ���
+     * 全局设置服务，用于读取和写入 MCP 市场开关。
      */
     private final SysAiGlobalSettingService globalSettingService;
 
@@ -85,6 +91,7 @@ public class ApiMcpController {
         return ApiResult.ok(mcpServerStore.listAll());
     }
 
+    @Permission("admin")
     @PostMapping("/servers")
     /**
      * 创建服务端。
@@ -107,6 +114,7 @@ public class ApiMcpController {
         return ApiResult.ok(mcpServerStore.insert(server));
     }
 
+    @Permission("admin")
     @PostMapping("/servers/import")
     /**
      * 导入服务端。
@@ -127,6 +135,7 @@ public class ApiMcpController {
         return ApiResult.ok(created);
     }
 
+    @Permission("admin")
     @PutMapping("/servers/{serverId}")
     public ApiResult<Map<String, Object>> updateServer(@PathVariable String serverId,
                                                         @RequestBody Map<String, Object> body) {
@@ -140,6 +149,7 @@ public class ApiMcpController {
         return ApiResult.ok(mcpServerStore.update(server));
     }
 
+    @Permission("admin")
     @DeleteMapping("/servers/{serverId}")
     /**
      * 删除服务端。
@@ -156,6 +166,7 @@ public class ApiMcpController {
         return ApiResult.ok();
     }
 
+    @Permission("admin")
     @PostMapping("/servers/{serverId}/toggle")
     /**
      * toggle服务端。
@@ -180,6 +191,7 @@ public class ApiMcpController {
         return ApiResult.ok(new ArrayList<>());
     }
 
+    @Permission("admin")
     @PostMapping("/test-connection")
     /**
      * 测试connection。
@@ -191,7 +203,24 @@ public class ApiMcpController {
         @SuppressWarnings("unchecked")
         Map<String, Object> transport =
                 body.get("transport") instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
-        return ApiResult.ok(mcpConnectionService.testConnection(name, transport));
+        Map<String, Object> result = mcpConnectionService.testConnection(name, transport);
+
+        // 对已存在的服务器，回写本次连接状态（成功 connected / 失败 failed）与连接时间
+        Object idObj = body.get("mcp_server_id");
+        if (idObj != null) {
+            Map<String, Object> existing = mcpServerStore.get(String.valueOf(idObj));
+            if (existing != null) {
+                boolean ok = Boolean.TRUE.equals(result.get("success"));
+                long now = System.currentTimeMillis();
+                existing.put("last_test_status", ok ? "connected" : "failed");
+                if (ok) {
+                    existing.put("last_connected", now);
+                }
+                existing.put("updated_at", now);
+                mcpServerStore.update(existing);
+            }
+        }
+        return ApiResult.ok(result);
     }
 
     @PostMapping("/oauth/check-status")
@@ -206,6 +235,7 @@ public class ApiMcpController {
         return ApiResult.ok(result);
     }
 
+    @Permission("admin")
     @PostMapping("/oauth/login")
     /**
      * oauthlogin。
@@ -219,6 +249,7 @@ public class ApiMcpController {
         return ApiResult.ok(result);
     }
 
+    @Permission("admin")
     @PostMapping("/oauth/logout")
     /**
      * oauthlogout。
@@ -244,6 +275,7 @@ public class ApiMcpController {
      *
      * @return 成功信封
      */
+    @Permission("admin")
     @PostMapping("/market/enable")
     public ApiResult<Void> mcpMarketEnable() {
         globalSettingService.upsertValue(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, "true", "MCP 市场是否启用");
@@ -257,6 +289,7 @@ public class ApiMcpController {
      *
      * @return 成功信封
      */
+    @Permission("admin")
     @PostMapping("/market/disable")
     public ApiResult<Void> mcpMarketDisable() {
         globalSettingService.upsertValue(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, "false", "MCP 市场是否启用");

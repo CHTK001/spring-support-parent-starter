@@ -42,6 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(properties = {
         "plugin.osgi.enabled=true",
         "plugin.osgi.storage=target/osgi-cache-bundle-startup",
+        // 测试环境每次从干净 storage 开始，避免历史 bundle 被恢复后与本轮装卸竞争
+        "plugin.osgi.storage-clean=onInit",
         "plugin.osgi.shell.enabled=false",
         "plugin.osgi.framework-properties[org.osgi.framework.system.packages.extra]=com.chua.starter.test.osgi",
         "plugin.bundle.enabled=true",

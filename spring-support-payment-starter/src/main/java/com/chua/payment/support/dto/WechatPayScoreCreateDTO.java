@@ -14,71 +14,70 @@ import java.util.Map;
 @Data
 public class WechatPayScoreCreateDTO {
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
-     * 通道标识
-    */
+     * 渠道标识
+     */
     private Long channelId;
     /**
      * 用户标识
-    */
+     */
     private Long userId;
     /**
-     * 出排序NO
-    */
+     * 分订单号
+     */
     private String outOrderNo;
     /**
      * 服务标识
-    */
+     */
     private String serviceId;
     /**
-     * 打开标识
-    */
+     * 用户OpenId标识
+     */
     private String openId;
     /**
-     * 总数amount
-    */
+     * 总金额
+     */
     private BigDecimal totalAmount;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
-     * 服务introduction
-    */
+     * 服务介绍
+     */
     private String serviceIntroduction;
     /**
      * 开始时间
-    */
+     */
     private String startTime;
     /**
      * 结束时间
-    */
+     */
     private String endTime;
     /**
-     * ReasonMLmlml
-    */
+     * 创建原因
+     */
     private String reason;
     /**
-     * 饰面类型
-    */
+     * 完成类型
+     */
     private String finishType;
     /**
-     * Need用户confirm
-    */
+     * 是否需要用户确认
+     */
     private Boolean needUserConfirm;
     /**
-     * Attach
-    */
+     * 附加数据
+     */
     private String attach;
-    private List<Map<String, Object>> postPayments; // postpayments
-    private List<Map<String, Object>> postDiscounts; // postdiscounts
+    private List<Map<String, Object>> postPayments; // 后付商品列表
+    private List<Map<String, Object>> postDiscounts; // 后付优惠列表
     private Map<String, Object> extraParams; // extra参数
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }
-

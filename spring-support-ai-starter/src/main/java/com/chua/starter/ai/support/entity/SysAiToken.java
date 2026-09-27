@@ -148,7 +148,7 @@ public class SysAiToken {
      * 删除标记：0 未删除，1 已删除
      */
     @TableField("sys_ai_token_delete")
-    private Integer delete; // 删除
+    private Integer deleted; // 删除
 
     /**
      * 允许的模型列表（逗号分隔）

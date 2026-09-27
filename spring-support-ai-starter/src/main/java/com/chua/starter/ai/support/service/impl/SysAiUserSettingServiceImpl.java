@@ -72,6 +72,15 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
         return globalSettingService.getValue(group, field);
     }
 
+    /**
+     * 解析布尔配置值，用户未覆盖时使用全局配置或默认值。
+     *
+     * @param userId 用户标识，可为空
+     * @param group 配置分组
+     * @param field 配置字段
+     * @param defaultValue 全局配置不存在时的默认值
+     * @return 解析后的布尔值
+     */
     @Override
     public boolean resolveBoolean(String userId, String group, String field, boolean defaultValue) {
         return resolve(userId, group, field)
@@ -82,6 +91,14 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
                 .orElse(defaultValue);
     }
 
+    /**
+     * 获取用户在指定分组中的配置覆盖值。
+     *
+     * @param userId 用户标识
+     * @param group 配置分组
+     * @param field 配置字段
+     * @return 用户覆盖值，不存在时返回空值
+     */
     @Override
     public Optional<String> getUserValue(String userId, String group, String field) {
         if (isBlank(userId) || isBlank(group) || isBlank(field)) {
@@ -98,6 +115,13 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
         return Optional.of(setting.getValue());
     }
 
+    /**
+     * 合并全局配置和用户覆盖配置。
+     *
+     * @param userId 用户标识
+     * @param group 配置分组
+     * @return 合并后的配置列表
+     */
     @Override
     public List<Map<String, Object>> listMerged(String userId, String group) {
         List<Map<String, Object>> merged = new ArrayList<>();
@@ -132,6 +156,13 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
         return merged;
     }
 
+    /**
+     * 查询用户在指定分组中的全部配置覆盖。
+     *
+     * @param userId 用户标识
+     * @param group 配置分组
+     * @return 用户覆盖配置列表
+     */
     @Override
     public List<Map<String, Object>> listOverrides(String userId, String group) {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -148,6 +179,16 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
         return result;
     }
 
+    /**
+     * 新增或更新用户配置覆盖。
+     *
+     * @param userId 用户标识
+     * @param group 配置分组
+     * @param field 配置字段
+     * @param value 配置值
+     * @param valueType 值类型
+     * @param description 配置说明
+     */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "T(com.chua.starter.ai.support.service.impl.SysAiUserSettingServiceImpl).resolveKey(#userId, #group, #field)")
@@ -191,6 +232,14 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
         log.info("[SysAiUserSetting] 用户 {} 覆盖 {}.{} 已写入", userId, group, field);
     }
 
+    /**
+     * 删除用户配置覆盖。
+     *
+     * @param userId 用户标识
+     * @param group 配置分组
+     * @param field 配置字段
+     * @return 删除记录数
+     */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "T(com.chua.starter.ai.support.service.impl.SysAiUserSettingServiceImpl).resolveKey(#userId, #group, #field)")
@@ -207,6 +256,13 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
         return rows;
     }
 
+    /**
+     * 清空用户在指定分组中的配置覆盖。
+     *
+     * @param userId 用户标识
+     * @param group 配置分组
+     * @return 删除记录数
+     */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     @Transactional(rollbackFor = Exception.class)

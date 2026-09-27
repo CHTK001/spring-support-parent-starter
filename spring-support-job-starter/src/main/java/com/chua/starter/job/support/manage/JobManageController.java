@@ -4,16 +4,18 @@ import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.job.support.dispatch.JobQuery;
-import com.chua.starter.job.support.dispatch.JobRuntime;
+import com.chua.starter.job.support.log.JobLogQuery;
 import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
+import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobNodeVO;
+import com.chua.starter.job.support.manage.vo.JobLogVO;
 import com.chua.starter.job.support.manage.vo.JobRuntimeVO;
-import com.chua.starter.job.support.operate.JobOperator;
+import com.chua.starter.job.support.manage.vo.JobSummaryVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,35 +26,33 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BooleanSupplier;
 
 /**
- * 任务治理外部接口 (HTTP)。
+ * 任务治理外部接口 (HTTP, 平台管理员鉴权)。
  *
- * <p>与进程内 {@link JobOperator} 同一套语义, 只多做一层入出参转换。调度配置落库后立即失效
- * 触发器缓存, 因此改期/启停无需重启。</p>
+ * <p>与进程内 {@code JobOperator} 同一套语义, 实现全部落在 {@link JobGovernanceService},
+ * 本类只做路径绑定。调度配置落库后立即失效触发器缓存, 因此改期/启停无需重启。</p>
  *
  * <p>{@code sys_job} 没有归属列, 任务是全局资源, 故整组出口按管理员权限收口;
- * 业务侧面向用户的任务页应走各自的归属接口 (如采集任务走 {@code /v2/edu/collect/**}),
- * 由业务服务在内部委托本治理接口, 不要放开本组地址给普通登录用户。</p>
+ * 业务侧面向用户的任务页应走各自的归属接口, 由业务服务在内部委托治理实现。
+ * 用不到统一认证的宿主 (如采集控制台自带会话) 不要放开本组地址, 改为自带一个
+ * 带 {@code @Ignore} 的控制台出口复用同一治理实现, 见类注释中的先例。</p>
  *
  * @since 4.0.0.42
  * @author CH
  */
-@Slf4j
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/v2/job")
-@RequiredArgsConstructor
 @Permission("admin")
 @Tag(name = "任务治理")
 public class JobManageController {
 
     /**
-     * 任务治理接口
+     * 治理实现
      */
-    private final JobOperator jobOperator;
+    private final JobGovernanceService governance;
 
     /**
      * 分页查询任务运行态。
@@ -63,20 +63,7 @@ public class JobManageController {
     @Operation(summary = "分页查询任务")
     @GetMapping("/page")
     public ReturnResult<PageResult<JobRuntimeVO>> page(JobQuery query) {
-        PageResult<JobRuntime> source = jobOperator.page(query);
-        List<JobRuntimeVO> rows = new ArrayList<>();
-        if (source.getData() != null) {
-            for (JobRuntime runtime : source.getData()) {
-                rows.add(JobRuntimeVO.of(runtime));
-            }
-        }
-        return ReturnResult.ok(PageResult.<JobRuntimeVO>builder()
-                .pageNo(source.getPageNo())
-                .pageSize(source.getPageSize())
-                .totalPages(source.getTotalPages())
-                .total(source.getTotal())
-                .data(rows)
-                .build());
+        return governance.page(query);
     }
 
     /**
@@ -88,11 +75,7 @@ public class JobManageController {
     @Operation(summary = "按分组列出任务")
     @GetMapping("/list")
     public ReturnResult<List<JobRuntimeVO>> list(@RequestParam(required = false) String group) {
-        List<JobRuntimeVO> rows = new ArrayList<>();
-        for (JobRuntime runtime : jobOperator.list(group)) {
-            rows.add(JobRuntimeVO.of(runtime));
-        }
-        return ReturnResult.ok(rows);
+        return governance.list(group);
     }
 
     /**
@@ -104,8 +87,7 @@ public class JobManageController {
     @Operation(summary = "任务详情")
     @GetMapping("/detail/{jobKey}")
     public ReturnResult<JobRuntimeVO> detail(@PathVariable String jobKey) {
-        JobRuntimeVO vo = JobRuntimeVO.of(jobOperator.runtime(jobKey));
-        return vo == null ? ReturnResult.error("任务不存在: " + jobKey) : ReturnResult.ok(vo);
+        return governance.detail(jobKey);
     }
 
     /**
@@ -117,8 +99,7 @@ public class JobManageController {
     @Operation(summary = "登记或更新任务")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody JobSpecDTO dto) {
-        return execute("save", dto == null ? null : dto.getJobKey(),
-                () -> jobOperator.declare(dto.toSpec()));
+        return governance.save(dto);
     }
 
     /**
@@ -130,8 +111,7 @@ public class JobManageController {
     @Operation(summary = "修改调度配置")
     @PutMapping("/schedule")
     public ReturnResult<Boolean> updateSchedule(@RequestBody JobScheduleDTO dto) {
-        return execute("schedule", dto == null ? null : dto.getJobKey(),
-                () -> jobOperator.updateSchedule(dto.getJobKey(), dto.getScheduleType(), dto.getScheduleTime()));
+        return governance.updateSchedule(dto);
     }
 
     /**
@@ -143,15 +123,11 @@ public class JobManageController {
     @Operation(summary = "启停自动调度")
     @PutMapping("/status")
     public ReturnResult<Boolean> changeStatus(@RequestBody JobStatusDTO dto) {
-        if (dto == null || dto.getEnabled() == null) {
-            return ReturnResult.illegal("enabled 不能为空");
-        }
-        boolean enabled = dto.getEnabled();
-        return execute("status", dto.getJobKey(), () -> jobOperator.changeStatus(dto.getJobKey(), enabled));
+        return governance.changeStatus(dto);
     }
 
     /**
-     * 立即派发一次 (停用状态同样可用)。
+     * 立即派发一次 (停用任务会被拒绝, 需先启用; 与治理实现的把关口径一致, 避免绕过页面点起停用任务)。
      *
      * @param jobKey 任务键
      * @return 是否已投递
@@ -159,7 +135,7 @@ public class JobManageController {
     @Operation(summary = "立即派发一次")
     @PostMapping("/trigger")
     public ReturnResult<Boolean> trigger(@RequestParam String jobKey) {
-        return execute("trigger", jobKey, () -> jobOperator.trigger(jobKey));
+        return governance.trigger(jobKey);
     }
 
     /**
@@ -171,30 +147,63 @@ public class JobManageController {
     @Operation(summary = "删除任务")
     @DeleteMapping("/{jobKey}")
     public ReturnResult<Boolean> remove(@PathVariable String jobKey) {
-        return execute("remove", jobKey, () -> jobOperator.remove(jobKey));
+        return governance.remove(jobKey);
     }
 
     /**
-     * 统一执行入口: 校验任务键、把非法调度配置等参数问题转成可读提示。
+     * 分页查询任务执行日志 (按触发时刻倒序)。
      *
-     * @param action 动作名 (仅用于日志)
-     * @param jobKey 任务键
-     * @param call   治理调用
-     * @return 结果
+     * @param query 查询条件
+     * @return 分页结果
      */
-    private ReturnResult<Boolean> execute(String action, String jobKey, BooleanSupplier call) {
-        if (jobKey == null || jobKey.isBlank()) {
-            return ReturnResult.illegal("jobKey 不能为空");
-        }
-        try {
-            return call.getAsBoolean()
-                    ? ReturnResult.ok(true)
-                    : ReturnResult.error("任务不存在或未被更新: " + jobKey);
-        } catch (IllegalArgumentException ex) {
-            return ReturnResult.illegal(ex.getMessage());
-        } catch (Exception ex) {
-            log.error("[job] 治理接口执行失败 action={} job={}", action, jobKey, ex);
-            return ReturnResult.error("操作失败: " + ex.getMessage());
-        }
+    @Operation(summary = "分页查询执行日志")
+    @GetMapping("/log/page")
+    public ReturnResult<PageResult<JobLogVO>> pageLogs(JobLogQuery query) {
+        return governance.pageLogs(query);
+    }
+
+    /**
+     * 清理执行日志。
+     *
+     * @param retentionDays 保留天数, 0 表示清空全部, 负数会被拒绝 (全清必须显式传 0)
+     * @return 删除条数
+     */
+    @Operation(summary = "清理执行日志")
+    @PostMapping("/log/cleanup")
+    public ReturnResult<Integer> cleanupLogs(@RequestParam(defaultValue = "30") int retentionDays) {
+        return governance.cleanupLogs(retentionDays);
+    }
+
+    /**
+     * 列出本进程已注册的执行器。
+     *
+     * @return 执行器清单, 按名称排序
+     */
+    @Operation(summary = "已注册执行器清单")
+    @GetMapping("/executors")
+    public ReturnResult<List<JobExecutorVO>> executors() {
+        return governance.executors();
+    }
+
+    /**
+     * 在线执行器节点清单（远程作业页）。
+     *
+     * @return 节点清单, 按首次登记时间升序
+     */
+    @Operation(summary = "在线执行器节点清单")
+    @GetMapping("/nodes")
+    public ReturnResult<List<JobNodeVO>> nodes() {
+        return governance.nodes();
+    }
+
+    /**
+     * 工作台概览: 本节点角色与选主态 + 任务与日志计数。
+     *
+     * @return 概览
+     */
+    @Operation(summary = "调度概览")
+    @GetMapping("/summary")
+    public ReturnResult<JobSummaryVO> summary() {
+        return governance.summary();
     }
 }

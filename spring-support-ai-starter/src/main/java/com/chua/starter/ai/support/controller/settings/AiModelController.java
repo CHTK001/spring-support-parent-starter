@@ -1,5 +1,11 @@
 package com.chua.starter.ai.support.controller.settings;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.settings.AiModelService;
 import com.chua.starter.common.support.annotations.Permission;
@@ -16,7 +22,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI 模型定义控制器，提供模型的增删改查和连通性测试。
@@ -31,6 +39,7 @@ import java.util.List;
 public class AiModelController {
 
     private final AiModelService modelService;
+    private final SysAiProviderModelMapper providerModelMapper;
 
     /**
      * 列出。
@@ -88,5 +97,47 @@ public class AiModelController {
     @PostMapping("/{modelId}/test-latency")
     public AiModelDTO testLatency(@Parameter(description = "模型主键") @PathVariable Long modelId) {
         return modelService.testLatency(modelId);
+    }
+
+    /**
+     * 切换某提供商下某模型的启用状态。
+     *
+     * <p>guada 模型管理页使用复合 id {@code providerId:modelName}（如
+     * {@code 1789547286889:agnes-2.5-flash}），启停结果持久化到
+     * {@code sys_ai_provider_model} 表。</p>
+     *
+     * @param compositeId 复合模型标识 providerId:modelName
+     * @return 包含最新启用状态的对象 {@code {isActive:boolean}}
+     */
+    @Permission("admin")
+    @Operation(summary = "切换模型启用状态")
+    @PutMapping("/{compositeId}/toggle-active")
+    public Map<String, Object> toggleActive(@Parameter(description = "复合模型ID providerId:modelName")
+                                            @PathVariable("compositeId") String compositeId) {
+        int separator = compositeId.indexOf(':');
+        if (separator <= 0 || separator >= compositeId.length() - 1) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "模型ID格式非法，应为 providerId:modelName");
+        }
+        String providerId = compositeId.substring(0, separator);
+        String modelName = compositeId.substring(separator + 1);
+
+        SysAiProviderModel entity = providerModelMapper.selectOne(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId)
+                        .eq(SysAiProviderModel::getModel, modelName));
+        if (entity == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在: " + modelName);
+        }
+
+        boolean active = !Boolean.TRUE.equals(entity.getEnabled());
+        entity.setEnabled(active);
+        entity.setUpdatedAt(System.currentTimeMillis());
+        providerModelMapper.update(entity, new LambdaUpdateWrapper<SysAiProviderModel>()
+                .eq(SysAiProviderModel::getProviderId, providerId)
+                .eq(SysAiProviderModel::getModel, modelName));
+
+        Map<String, Object> result = new LinkedHashMap<>(2);
+        result.put("isActive", active);
+        return result;
     }
 }

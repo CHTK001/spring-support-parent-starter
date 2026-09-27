@@ -10,6 +10,8 @@ import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
+import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -91,7 +93,7 @@ public class TsharkCaptureService {
             return ReturnResult.ok(ifaces);
         } catch (Exception e) {
             log.error("tshark list interfaces failed", e);
-            return ReturnResult.error("无法列出网卡，请确认 tshark 已安装: " + e.getMessage());
+            return ReturnResult.error("无法列出网卡: " + execHint(e));
         }
     }
 
@@ -118,8 +120,24 @@ public class TsharkCaptureService {
             boolean ok = p.waitFor(10L, TimeUnit.SECONDS) && sb.length() > 0;
             return ok ? ReturnResult.ok(true) : ReturnResult.error("tshark 不可用");
         } catch (Exception e) {
-            return ReturnResult.error("tshark 不可用: " + e.getMessage());
+            return ReturnResult.error("tshark 不可用: " + execHint(e));
         }
+    }
+
+    /**
+     * 把进程启动异常还原成运维可读的原因。
+     *
+     * <p>JVM 在可执行文件缺失时抛出的是 {@code Cannot run program "tshark": CreateProcess error=2, ...}，
+     * 直接把原文回显给使用者既看不懂也无处可查，这里识别「找不到文件」一类并给出处置建议。</p>
+     * @param e 进程调用异常
+     * @return 面向使用者的原因描述
+     */
+    private String execHint(Exception e) {
+        String raw = String.valueOf(e.getMessage());
+        if (raw.contains("error=2") || raw.contains("No such file or directory")) {
+            return "未找到 tshark 可执行文件（" + TSHARK_BIN + "），请安装 Wireshark 或设置环境变量 TSHARK_BIN 指向绝对路径";
+        }
+        return raw;
     }
 
     /**
@@ -177,7 +195,7 @@ public class TsharkCaptureService {
             return ReturnResult.ok(session);
         } catch (Exception e) {
             log.error("start capture failed", e);
-            return ReturnResult.error("启动抓包失败: " + e.getMessage());
+            return ReturnResult.error("启动抓包失败: " + execHint(e));
         }
     }
 
@@ -375,23 +393,19 @@ public class TsharkCaptureService {
      * @param sessionId 会话标识
      * @return 协议stats的结果
      */
-    public ReturnResult<List<Map<String, Object>>> protocolStats(Long sessionId) {
+    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(Long sessionId) {
         List<MsTsharkPacket> packets = this.packetMapper.selectList(
                 new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId));
-        Map<String, int[]> counter = new LinkedHashMap<>();
+        Map<String, long[]> counter = new LinkedHashMap<>();
         for (MsTsharkPacket p : packets) {
             String proto = (p.getProtocol() == null || p.getProtocol().isBlank()) ? "OTHER" : p.getProtocol();
-            int[] c = counter.computeIfAbsent(proto, k -> new int[2]);
+            long[] c = counter.computeIfAbsent(proto, k -> new long[2]);
             c[0]++;
             c[1] += p.getPacketLength() != null ? p.getPacketLength() : 0;
         }
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<String, int[]> e : counter.entrySet()) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("protocol", e.getKey());
-            m.put("count", e.getValue()[0]);
-            m.put("bytes", e.getValue()[1]);
-            result.add(m);
+        List<TsharkProtocolStatVO> result = new ArrayList<>(counter.size());
+        for (Map.Entry<String, long[]> e : counter.entrySet()) {
+            result.add(new TsharkProtocolStatVO(e.getKey(), (int) e.getValue()[0], e.getValue()[1]));
         }
         return ReturnResult.ok(result);
     }
@@ -402,28 +416,24 @@ public class TsharkCaptureService {
      * @param limit 限制
      * @return top流的结果
      */
-    public ReturnResult<List<Map<String, Object>>> topFlows(Long sessionId, int limit) {
+    public ReturnResult<List<TsharkFlowVO>> topFlows(Long sessionId, int limit) {
         List<MsTsharkPacket> packets = this.packetMapper.selectList(
                 new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId));
-        Map<String, int[]> counter = new LinkedHashMap<>();
+        Map<String, long[]> counter = new LinkedHashMap<>();
         for (MsTsharkPacket p : packets) {
             String src = p.getSourceIp() != null ? p.getSourceIp() : "?";
             String dst = p.getDestIp() != null ? p.getDestIp() : "?";
             String flow = src + ":" + p.getSourcePort() + " -> " + dst + ":" + p.getDestPort();
-            int[] c = counter.computeIfAbsent(flow, k -> new int[2]);
+            long[] c = counter.computeIfAbsent(flow, k -> new long[2]);
             c[0]++;
             c[1] += p.getPacketLength() != null ? p.getPacketLength() : 0;
         }
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<String, int[]> e : counter.entrySet()) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("flow", e.getKey());
-            m.put("count", e.getValue()[0]);
-            m.put("bytes", e.getValue()[1]);
-            result.add(m);
+        List<TsharkFlowVO> result = new ArrayList<>(counter.size());
+        for (Map.Entry<String, long[]> e : counter.entrySet()) {
+            result.add(new TsharkFlowVO(e.getKey(), (int) e.getValue()[0], e.getValue()[1]));
         }
-        result.sort((a, b) -> (Integer) b.get("count") - (Integer) a.get("count"));
-        return ReturnResult.ok(result.subList(0, Math.min(limit, result.size())));
+        result.sort((a, b) -> Integer.compare(b.count(), a.count()));
+        return ReturnResult.ok(result.subList(0, Math.min(Math.max(0, limit), result.size())));
     }
 
     /**

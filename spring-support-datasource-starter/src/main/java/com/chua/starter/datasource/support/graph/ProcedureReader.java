@@ -91,13 +91,10 @@ public class ProcedureReader {
              */
             try (ResultSet rs = meta.getProcedures(catalog, schema, "%")) {
                 while (rs.next()) {
-                    ProcedureInfo p = new ProcedureInfo();
-                    p.setName(rs.getString("PROCEDURE_NAME"));
-                    p.setSchema(rs.getString("PROCEDURE_SCHEM"));
-                    p.setRemark(rs.getString("REMARKS"));
                     String pt = rs.getString("PROCEDURE_TYPE");
-                    p.setType("1".equals(pt) ? "PROCEDURE" : "FUNCTION");
-                    list.add(p);
+                    list.add(new ProcedureInfo(rs.getString("PROCEDURE_NAME"),
+                            "1".equals(pt) ? "PROCEDURE" : "FUNCTION",
+                            rs.getString("PROCEDURE_SCHEM"), rs.getString("REMARKS"), null));
                 }
             }
  // 单独补函数（部分驱动 获取procedures 不返回函数）
@@ -107,11 +104,13 @@ public class ProcedureReader {
              */
             try (ResultSet rs = meta.getFunctions(catalog, schema, "%")) {
                 while (rs.next()) {
-                    ProcedureInfo p = new ProcedureInfo();
-                    p.setName(rs.getString("FUNCTION_NAME"));
-                    p.setSchema(rs.getString("FUNCTION_SCHEM"));
-                    p.setRemark(rs.getString("REMARKS"));
-                    p.setType("FUNCTION");
+                    ProcedureInfo p = new ProcedureInfo(
+                            rs.getString("FUNCTION_NAME"),
+                            "FUNCTION",
+                            rs.getString("FUNCTION_SCHEM"),
+                            rs.getString("REMARKS"),
+                            null
+                    );
                     list.add(p);
                 }
             }
@@ -123,11 +122,11 @@ public class ProcedureReader {
     }
 
     /**
-     * 读取mysqllike
-    */
- // 豁免：查询 信息_模式.惯例 系统视图，无用户可控参数，仅读取数据库元数据
-    /**
      * 读取mysqllike。
+     *
+     * <p>安全豁免：查询 information_schema.ROUTINES 系统视图，SQL 为 MySQL/MariaDB/H2
+     * 底层方言固定语句，不拼接用户输入或用户值。</p>
+     *
      * @param conn conn
      * @return 读取mysqllike的结果
      */
@@ -142,11 +141,13 @@ public class ProcedureReader {
         try (var stmt = conn.createStatement();
              var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                ProcedureInfo p = new ProcedureInfo();
-                p.setName(rs.getString("ROUTINE_NAME"));
-                p.setType(rs.getString("ROUTINE_TYPE"));
-                p.setSchema(rs.getString("ROUTINE_SCHEMA"));
-                p.setRemark(rs.getString("ROUTINE_COMMENT"));
+                ProcedureInfo p = new ProcedureInfo(
+                        rs.getString("ROUTINE_NAME"),
+                        rs.getString("ROUTINE_TYPE"),
+                        rs.getString("ROUTINE_SCHEMA"),
+                        rs.getString("ROUTINE_COMMENT"),
+                        null
+                );
                 list.add(p);
             }
         }
@@ -155,6 +156,7 @@ public class ProcedureReader {
 
     /**
      * 读取PostgreSQL
+     * <p>安全豁免：查询 information_schema.routines 固定系统视图，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取postgresql的结果
@@ -170,10 +172,13 @@ public class ProcedureReader {
         try (var stmt = conn.createStatement();
              var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                ProcedureInfo p = new ProcedureInfo();
-                p.setName(rs.getString("routine_name"));
-                p.setType(rs.getString("routine_type"));
-                p.setSchema(rs.getString("specific_schema"));
+                ProcedureInfo p = new ProcedureInfo(
+                        rs.getString("routine_name"),
+                        rs.getString("routine_type"),
+                        rs.getString("specific_schema"),
+                        null,
+                        null
+                );
                 list.add(p);
             }
         }
@@ -182,6 +187,8 @@ public class ProcedureReader {
 
     /**
      * 读取Oracle
+     *
+     * <p>安全豁免：查询 Oracle ALL_OBJECTS 固定系统视图，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取oracle的结果
@@ -197,10 +204,13 @@ public class ProcedureReader {
         try (var stmt = conn.createStatement();
              var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                ProcedureInfo p = new ProcedureInfo();
-                p.setName(rs.getString("OBJECT_NAME"));
-                p.setType(rs.getString("OBJECT_TYPE"));
-                p.setSchema("CURRENT");
+                ProcedureInfo p = new ProcedureInfo(
+                        rs.getString("OBJECT_NAME"),
+                        rs.getString("OBJECT_TYPE"),
+                        "CURRENT",
+                        null,
+                        null
+                );
                 list.add(p);
             }
         }
@@ -209,6 +219,7 @@ public class ProcedureReader {
 
     /**
      * 读取SQL服务端
+     * <p>安全豁免：查询 SQL Server sys.objects 固定系统视图，不含用户可控参数或值。</p>
      *
      * @param conn conn
      * @return 读取sql服务端的结果
@@ -224,13 +235,13 @@ public class ProcedureReader {
         try (var stmt = conn.createStatement();
              var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                ProcedureInfo p = new ProcedureInfo();
-                p.setName(rs.getString("name"));
                 String type = rs.getString("type_desc");
-                p.setType(type != null && type.toUpperCase(Locale.ROOT).contains("FUNCTION") ? "FUNCTION" : "PROCEDURE");
-                list.add(p);
+                list.add(new ProcedureInfo(rs.getString("name"),
+                        type != null && type.toUpperCase(Locale.ROOT).contains("FUNCTION") ? "FUNCTION" : "PROCEDURE",
+                        null, null, null));
             }
         }
         return list;
     }
 }
+

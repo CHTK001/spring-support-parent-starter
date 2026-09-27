@@ -112,7 +112,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      */
     protected AbstractOpenApiSession(DeviceConnectInfo info, String baseUrl) {
         this.info = info;
-        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
+        Object extra = info.extra() == null ? null : info.extra().get("baseUrl");
         this.baseUrl = extra instanceof String s ? s : baseUrl;
     }
 
@@ -308,7 +308,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      * 获取deviceid
     */
     public String getDeviceId() {
-        return info.getDeviceSerial() != null ? info.getDeviceSerial() : info.getIp();
+        return info.deviceSerial() != null ? info.deviceSerial() : info.ip();
     }
 
     @Override

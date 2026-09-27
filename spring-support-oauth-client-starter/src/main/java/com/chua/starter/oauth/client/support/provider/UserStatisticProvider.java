@@ -218,7 +218,7 @@ public class UserStatisticProvider {
      * @param userDashboard 用户面板
      * @param username      用户名
      * @param roles         角色
-     * @return {@link 结果}< 0 >
+     * @return {@link 结果}<0>
      * @param @UserValue("userId" @用户值("用户标识"
      */
     @GetMapping("/menus/my/**")
@@ -230,13 +230,13 @@ public class UserStatisticProvider {
         if(roles.isEmpty() && !ADMIN.equalsIgnoreCase(username)) {
             return ReturnResult.error("联系管理员分配权限");
         }
-        UserMenuResult userMenuResult = new UserMenuResult();
-        userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
+        Set<String> permissions = AuthClientExecute.getInstance().getUserResult().getPermission();
         Environment environment = OauthClientRuntimeContext.getEnvironment();
         /**
          * 尝试。
          * @param UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp( 用户statisticprovider.类.getresourceasstream(stringutils.defaultstring(authproperties.gettemp(
          */
+        List<RouteVO> menu;
         try (InputStream resourceAsStream = UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5"));){
             List<RouteVO> routeVOS =
                     Json5.fromJsonList(IoUtils.asString(resourceAsStream, StandardCharsets.UTF_8), RouteVO.class);
@@ -260,15 +260,15 @@ public class UserStatisticProvider {
                 }
 
             }
-            userMenuResult.setMenu(result);
+            menu = result;
         } catch (Exception ignored) {
-            userMenuResult.setMenu(Collections.emptyList());
+            menu = Collections.emptyList();
         }
+        Set<String> dashboardGrid = new HashSet<>();
         try {
-            userMenuResult.setDashboardGrid(new HashSet<>(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(userGrid)));
+            dashboardGrid = new HashSet<>(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(userGrid));
         } catch (Exception ignored) {
         }
-        userMenuResult.setDashboard(userDashboard);
-        return ReturnResult.ok(userMenuResult);
+        return ReturnResult.ok(new UserMenuResult(menu, permissions, dashboardGrid, userDashboard));
     }
 }

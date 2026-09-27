@@ -56,7 +56,7 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
                 // ==================== 文生图 ====================
                 new SettingItem("image_enabled", "true", "BOOLEAN", "是否启用全局文生图会话（false 时 ImageClient 禁用）", 1),
                 new SettingItem("image_provider", "", "STRING", "文生图供应商（zhipu / qwen / baidu / seedream 等）", 2),
-                new SettingItem("image_model", "", "STRING", "默认文生图模型（如 cogview-3-flash / stable-diffusion）", 3),
+                new SettingItem("image_model", "", "STRING", "默认文生图模型", 3),
                 new SettingItem("image_base_url", "", "STRING", "文生图 API 基础地址", 4),
                 new SettingItem("image_api_key", "", "STRING", "文生图 API Key", 5),
                 new SettingItem("image_size", "1024x1024", "STRING", "默认出图尺寸（如 1024x1024）", 6),

@@ -1213,6 +1213,17 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             Path rollbackDirectory,
             List<RollbackEntry> entries
     ) {
+
+        /**
+         * 规范构造器：回滚条目做防御性拷贝。
+         *
+         * <p>value class 前置条件——集合组件必须深不可变。</p>
+         *
+         * @param entries 回滚条目
+         */
+        public RollbackSnapshot {
+            entries = List.copyOf(Objects.requireNonNull(entries, "entries 不能为 null"));
+        }
     }
 
     /**

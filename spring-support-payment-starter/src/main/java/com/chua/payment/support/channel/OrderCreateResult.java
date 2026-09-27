@@ -10,20 +10,19 @@ import lombok.Data;
 @Data
 public class OrderCreateResult {
     /**
-     * 成功
-    */
+     * 是否成功
+     */
     private boolean success;
     /**
-     * 排序NO
-    */
+     * 订单号
+     */
     private String orderNo;
     /**
-     * 消息
-    */
+     * 提示消息
+     */
     private String message;
     /**
-     * RAW响应
-    */
+     * 渠道 RAW 响应
+     */
     private String rawResponse;
 }
-

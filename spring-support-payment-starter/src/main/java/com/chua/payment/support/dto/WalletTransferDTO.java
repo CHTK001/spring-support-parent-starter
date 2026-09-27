@@ -18,36 +18,35 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class WalletTransferDTO {
     /**
-     * merchantid
-    */
+     * 商户ID
+     */
     private Long merchantId;
     /**
-     * 从用户标识
-    */
+     * 转出用户标识
+     */
     private Long fromUserId;
     /**
-     * 转为用户标识
-    */
+     * 转入用户标识
+     */
     private Long toUserId;
     /**
-     * 调动no
-    */
+     * 调拨单号
+     */
     private String transferNo;
     /**
-     * 通知url
-    */
+     * 通知URL
+     */
     private String notifyUrl;
     /**
-     * Amount
-    */
+     * 金额
+     */
     private BigDecimal amount;
     /**
-     * 操作符
-    */
+     * 操作人
+     */
     private String operator;
     /**
-     * 评论
-    */
+     * 备注
+     */
     private String remark;
 }
-

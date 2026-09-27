@@ -15,10 +15,6 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
-  h2:
-    console:
-      enabled: false
-
 logging:
   level:
     com.chua.starter.monitor.support: info

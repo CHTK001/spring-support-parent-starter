@@ -1285,6 +1285,10 @@
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <skipTests>${skipTests}</skipTests>
+                    <!-- 本机物理内存 49G，JVM 按 1/4 推算出的最大堆会让 G1 在启动时
+                         mmap 数 GB 连续区而提交失败（insufficient memory / G1 virtual space），
+                         surefire fork 直接起不来。这里显式限制堆，使测试可稳定启动。 -->
+                    <argLine>-Xms256m -Xmx2g</argLine>
                     <!-- 逆字母序执行：RealPortE2ETest（RANDOM_PORT Tomcat）必须先于
                          Osgi*Test（Felix 框架启动注册 JVM 全局 URLStreamHandlerFactory）
                          运行——否则 Tomcat 初始化撞 "factory already defined"
@@ -1366,6 +1370,7 @@
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED</arg>
                         <arg>-parameters</arg>
                         <arg>-proc:full</arg>
@@ -1457,25 +1462,23 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- 全平台 SQL 汇总：扫描所有子模块 db/init（含 jar 外源码目录），合并为运行期可直接执行的两份：
-                 target/db/V{最高版本}__init_all.sql（结构/补丁，同步执行）
-                 target/db/V{最高版本}__initdata_all.sql（初始化数据，异步执行）
-                 仅父工程执行（inherited=false），不继承到子模块；可用 -Dflyway.merge.mode=single 回退单份。 -->
+            <!-- 构建期合并「本模块」src/main/resources/db/init → target/db/V{版本}__init_all.sql 与
+                 V{版本}__initdata_all.sql（无 db/init 的模块只告警跳过）。
+                 扫描范围是本模块自身目录，因此 packaging=pom 的父工程不会产出聚合脚本；
+                 也不跨模块，已退出 reactor 但目录仍在的模块不会被卷入。
+                 execution id 与 spring-support-datasource-starter 自带的同名，由 Maven 合并为一次执行。 -->
             <plugin>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-flyway-maven-plugin</artifactId>
                 <version>${project.version}</version>
-                <inherited>false</inherited>
                 <executions>
                     <execution>
-                        <id>generate-platform-init-sql</id>
+                        <id>generate-module-init-sql</id>
                         <phase>generate-resources</phase>
                         <goals>
                             <goal>generate-init-sql</goal>
                         </goals>
                         <configuration>
-                            <sourceRoot>${project.basedir}</sourceRoot>
                             <mode>initdata</mode>
                             <failIfNoScripts>false</failIfNoScripts>
                         </configuration>

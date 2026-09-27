@@ -13,9 +13,12 @@ import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry.RuntimeServer;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
+import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
+import com.chua.starter.monitor.support.server.model.ServerPluginParamVO;
+import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
 import com.chua.starter.monitor.support.service.ServerManageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -185,7 +188,7 @@ public class ServerManageServiceImpl implements ServerManageService {
             nodeRegistry.remove(id);
             nodeMapper.deleteById(id);
             log.info("[ServerManage] 节点已删除: {} [{}]", node.getName(), node.getProtocol());
-            return ReturnResult.ok(null);
+            return ReturnResult.success();
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
         }
@@ -399,20 +402,13 @@ public class ServerManageServiceImpl implements ServerManageService {
             Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http");
 
     @Override
-    public ReturnResult<List<Map<String, Object>>> protocols() {
-        List<Map<String, Object>> result = new ArrayList<>();
+    public ReturnResult<List<ServerProtocolMetaVO>> protocols() {
+        List<ServerProtocolMetaVO> result = new ArrayList<>();
         Set<String> covered = new HashSet<>();
         // 1. 内置四类基础协议（含默认端口/引擎等富元数据）
         for (ServerNodeProtocol protocol : ServerNodeProtocol.values()) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("code", protocol.getCode());
-            item.put("alias", protocol.getAlias());
-            item.put("desc", protocol.getDesc());
-            item.put("defaultPort", protocol.getDefaultPort());
-            item.put("defaultEngine", protocol.getDefaultEngine());
-            item.put("requiresBackend", protocol.isRequiresBackend());
-            item.put("spi", false);
-            result.add(item);
+            result.add(new ServerProtocolMetaVO(protocol.getCode(), protocol.getAlias(), protocol.getDesc(),
+                    protocol.getDefaultPort(), protocol.getDefaultEngine(), protocol.isRequiresBackend(), false, null));
             covered.add(protocol.getAlias().toLowerCase());
         }
         // 2. SPI 动态发现的其它 Server 实现（去重、剔除 HTTP 引擎变体）
@@ -425,16 +421,8 @@ public class ServerManageServiceImpl implements ServerManageService {
             if (covered.contains(alias) || HTTP_ENGINE_ALIASES.contains(alias)) {
                 return;
             }
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("code", name);
-            item.put("alias", alias);
-            item.put("desc", describeOf(definition, alias));
-            item.put("defaultPort", null);
-            item.put("defaultEngine", alias);
-            item.put("requiresBackend", alias.contains("proxy") && !alias.contains("socks"));
-            item.put("spi", true);
-            item.put("params", paramsOf(definition));
-            result.add(item);
+            result.add(new ServerProtocolMetaVO(name, alias, describeOf(definition, alias), null, alias,
+                    alias.contains("proxy") && !alias.contains("socks"), true, paramsOf(definition)));
             covered.add(alias);
         });
         return ReturnResult.ok(result);
@@ -448,8 +436,7 @@ public class ServerManageServiceImpl implements ServerManageService {
      * 与宿主应用无关，因此改走 {@link #FILTER_NODE_DETAIL_TYPES} 的节点地址直开。</p>
      */
     private static final Map<String, String> FILTER_DETAIL_PAGES = Map.of(
-            "service-discovery", "/discovery",
-            "reverse-proxy", "/proxy");
+            "service-discovery", "/discovery");
     /**
      * 过滤器类型 → 深度查看目标为「节点自身访问地址」。
      *
@@ -463,34 +450,34 @@ public class ServerManageServiceImpl implements ServerManageService {
     */
     private static final Map<String, String> FILTER_DETAIL_LABELS = Map.of(
             "file-storage", "打开文件管理器",
-            "service-discovery", "查看服务实例",
-            "reverse-proxy", "打开代理管理");
+            "service-discovery", "查看服务实例");
     /**
      * 过滤器类型 → 前端分组（左栏归类）
     */
     private static final Map<String, String> FILTER_GROUPS = Map.of(
             "file-storage", "storage",
             "service-discovery", "discovery",
-            "reverse-proxy", "proxy",
             "url-mapping", "routing",
             "shell-url-mapping", "routing");
 
     @Override
-    public ReturnResult<List<Map<String, Object>>> filterTypes() {
-        List<Map<String, Object>> result = new ArrayList<>();
+    public ReturnResult<List<ServerFilterTypeMetaVO>> filterTypes() {
+        List<ServerFilterTypeMetaVO> result = new ArrayList<>();
         // 1. 内置预设: 文件服务器(FileStorageServerFilter)
-        Map<String, Object> fileStorage = new LinkedHashMap<>();
-        fileStorage.put("type", "file-storage");
-        fileStorage.put("desc", "文件服务器插件(FileStorageServerFilter), 将 HTTP 服务器变为文件服务器");
-        fileStorage.put("params", fileStorageParams());
-        fileStorage.put("require", "classpath 需包含 spring-support-filesystem-starter; 存储桶自动取容器中的 FileStorage Bean");
-        fileStorage.put("group", groupOf(null, "file-storage"));
-        fileStorage.put("detailPage", detailPageOf("file-storage"));
-        fileStorage.put("detailKind", detailKindOf("file-storage"));
-        fileStorage.put("detailLabel", detailLabelOf("file-storage"));
-        fileStorage.put("spi", false);
-        result.add(fileStorage);
-        // 2. SPI 动态发现的 ServerFilter(仅暴露带 @SpiDescribe 元数据的对外过滤器)
+        result.add(new ServerFilterTypeMetaVO("file-storage",
+                "文件服务器插件(FileStorageServerFilter), 将 HTTP 服务器变为文件服务器",
+                fileStorageParams(),
+                "classpath 需包含 spring-support-filesystem-starter; 存储桶自动取容器中的 FileStorage Bean",
+                groupOf(null, "file-storage"), detailPageOf("file-storage"), detailKindOf("file-storage"),
+                detailLabelOf("file-storage"), false));
+        // 2. 内置预设: 服务发现(ServiceDiscoveryServerFilter, 未注册为 ServerFilter SPI, 按别名装配)
+        result.add(new ServerFilterTypeMetaVO("service-discovery",
+                "服务发现插件(ServiceDiscoveryServerFilter), 按服务名把请求路由到已注册实例",
+                serviceDiscoveryParams(),
+                "classpath 需含 ServiceDiscovery SPI(内置 peerMesh); discoveryName 留空取 peerMesh",
+                groupOf(null, "service-discovery"), detailPageOf("service-discovery"),
+                detailKindOf("service-discovery"), detailLabelOf("service-discovery"), false));
+        // 3. SPI 动态发现的 ServerFilter(仅暴露带 @SpiDescribe 元数据的对外过滤器)
         ServiceProvider.of(ServerFilter.class).forDefinitionEach(definition -> {
             String describe = definition.getDescribe();
             if (describe == null || describe.isBlank()) {
@@ -501,28 +488,13 @@ public class ServerManageServiceImpl implements ServerManageService {
             if (name == null || name.isBlank()) {
                 return;
             }
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("type", name);
-            item.put("desc", describe);
-            item.put("params", paramsOf(definition));
-            item.put("group", groupOf(definition, name));
-            item.put("detailPage", detailPageOf(name));
-            item.put("detailKind", detailKindOf(name));
-            item.put("detailLabel", detailLabelOf(name));
-            item.put("spi", true);
-            result.add(item);
+            result.add(new ServerFilterTypeMetaVO(name, describe, paramsOf(definition), null,
+                    groupOf(definition, name), detailPageOf(name), detailKindOf(name), detailLabelOf(name), true));
         });
-        // 3. 通用插件: ServerFilter 全限定类名
-        Map<String, Object> custom = new LinkedHashMap<>();
-        custom.put("type", "ServerFilter 全限定类名");
-        custom.put("desc", "任意 ServerFilter 实现(优先无参构造, 其次 (ServerSetting) 构造); params 经 init(ServerFilterConfig) 注入");
-        custom.put("params", List.of());
-        custom.put("group", "custom");
-        custom.put("detailPage", null);
-        custom.put("detailKind", null);
-        custom.put("detailLabel", null);
-        custom.put("spi", false);
-        result.add(custom);
+        // 4. 通用插件: ServerFilter 全限定类名
+        result.add(new ServerFilterTypeMetaVO("ServerFilter 全限定类名",
+                "任意 ServerFilter 实现(优先无参构造, 其次 (ServerSetting) 构造); params 经 init(ServerFilterConfig) 注入",
+                List.of(), null, "custom", null, null, null, false));
         return ReturnResult.ok(result);
     }
 
@@ -531,8 +503,8 @@ public class ServerManageServiceImpl implements ServerManageService {
      *
      * @return 参数列表
      */
-    private List<Map<String, Object>> fileStorageParams() {
-        List<Map<String, Object>> params = new ArrayList<>();
+    private List<ServerPluginParamVO> fileStorageParams() {
+        List<ServerPluginParamVO> params = new ArrayList<>();
         params.add(param("openPreview", "true", "是否允许内联预览", "boolean"));
         params.add(param("openDownload", "true", "是否允许附件下载", "boolean"));
         params.add(param("openRange", "true", "是否支持 Range 分段", "boolean"));
@@ -551,6 +523,22 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
+     * 服务发现预设参数（与 {@code ServerFilterFactory} 实际落位的 setter 一致）。
+     *
+     * @return 参数列表
+     */
+    private List<ServerPluginParamVO> serviceDiscoveryParams() {
+        List<ServerPluginParamVO> params = new ArrayList<>();
+        params.add(param("discoveryName", "peerMesh", "ServiceDiscovery SPI 名", "string"));
+        params.add(param("protocol", "", "限定发现协议(留空不限)", "string"));
+        params.add(param("balance", "weight", "负载均衡策略", "string"));
+        params.add(param("scatterId", "", "分组/散列标识", "string"));
+        params.add(param("excludeServerId", "", "排除的服务标识", "string"));
+        params.add(param("routes", "", "路由映射, 形如 /api/order=ORDER-SVC,/api/user=USER-SVC", "string"));
+        return params;
+    }
+
+    /**
      * 构造一个普通参数描述。
      *
      * @param name         参数名
@@ -559,13 +547,8 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param type         类型(boolean/string/number/enum)
      * @return 参数描述
      */
-    private Map<String, Object> param(String name, String defaultValue, String desc, String type) {
-        Map<String, Object> item = new LinkedHashMap<>();
-        item.put("name", name);
-        item.put("defaultValue", defaultValue);
-        item.put("desc", desc);
-        item.put("type", type);
-        return item;
+    private ServerPluginParamVO param(String name, String defaultValue, String desc, String type) {
+        return new ServerPluginParamVO(name, defaultValue, desc, type, null);
     }
 
     /**
@@ -578,11 +561,9 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param options      可选项
      * @return 参数描述
      */
-    private Map<String, Object> paramEnum(String name, String defaultValue, String desc, String type,
+    private ServerPluginParamVO paramEnum(String name, String defaultValue, String desc, String type,
                                           List<String> options) {
-        Map<String, Object> item = param(name, defaultValue, desc, type);
-        item.put("options", options);
-        return item;
+        return new ServerPluginParamVO(name, defaultValue, desc, type, options);
     }
 
     /**
@@ -807,19 +788,14 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param definition SPI 定义
      * @return 参数列表（name/defaultValue/desc/type）
      */
-    private List<Map<String, Object>> paramsOf(ServiceDefinition definition) {
-        List<Map<String, Object>> params = new ArrayList<>();
+    private List<ServerPluginParamVO> paramsOf(ServiceDefinition definition) {
+        List<ServerPluginParamVO> params = new ArrayList<>();
         List<DescribeOptional> optional = definition.getDescribeOptional();
         if (optional == null || optional.isEmpty()) {
             return params;
         }
         for (DescribeOptional o : optional) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("name", o.getName());
-            item.put("defaultValue", o.getDefaultValue());
-            item.put("desc", o.getDescribe());
-            item.put("type", o.getType());
-            params.add(item);
+            params.add(new ServerPluginParamVO(o.getName(), o.getDefaultValue(), o.getDescribe(), o.getType(), null));
         }
         return params;
     }

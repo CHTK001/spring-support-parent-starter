@@ -33,6 +33,19 @@ public final class AiUserContext {
     public static final String USER_ID_ATTRIBUTE = "userId";
 
     /**
+     * WebSocket 握手阶段写入的完整用户信息（UserResume），WS 工作线程据此显式建立身份
+     */
+    public static final String RESUME_ATTRIBUTE = "userResume";
+
+    /**
+     * 异步线程身份快照。
+     *
+     * <p>只在 {@link #capturing(Runnable)} 包装的任务执行期间存在： holder 在场即代表身份已在提交线程
+     * 解析完毕（{@code resume} 为空表示提交线程本就匿名），工作线程不再回读请求对象。</p>
+     */
+    private static final ThreadLocal<AsyncIdentity> ASYNC_IDENTITY = new ThreadLocal<>();
+
+    /**
      * 只读角色：与权限拦截器保持一致
      */
     private static final String READ_ONLY_ROLE = "READ_ONLY";
@@ -41,11 +54,23 @@ public final class AiUserContext {
     }
 
     /**
+     * 提交线程解析出的身份快照。
+     *
+     * @param resume 身份，{@code null} 表示提交线程未登录
+     */
+    private record AsyncIdentity(UserResume resume) {
+    }
+
+    /**
      * 当前用户信息。
      *
      * @return 已登录返回用户信息，未登录或机器流量（AppKey）返回 {@code null}
      */
     public static UserResume currentUser() {
+        AsyncIdentity snapshot = ASYNC_IDENTITY.get();
+        if (snapshot != null) {
+            return snapshot.resume();
+        }
         UserResume resume = AuthSessionUtils.getUserInfo(UserResume.class);
         if (resume != null && StringUtils.isNotBlank(resume.getUserId())) {
             return resume;
@@ -132,27 +157,67 @@ public final class AiUserContext {
      *
      * <p>请求上下文挂在请求线程上，SSE 回调和线程池任务里 {@link #currentUserId()} 只会取到空，
      * 用量记录与消息落库因此落成无主数据，归属校验也被当作机器流量跳过。
-     * 包装后的任务在执行期间借用提交线程的上下文，执行完再还原工作线程原有状态，不会把身份残留给下一个任务。</p>
+     * 包装后的任务在执行期间借用提交线程的身份快照，执行完再还原工作线程原有状态，不会把身份残留给下一个任务。</p>
+     *
+     * <p>身份必须在提交线程内解析好：请求一旦结束，其 {@code RequestFacade} 就被 Tomcat 回收，
+     * 届时再走会话读取会抛「The request object has been recycled」，整段落库回调连带失败。</p>
      *
      * @param task 异步任务，由调用方保证非空
-     * @return 携带提交线程请求上下文的包装任务
+     * @return 携带提交线程身份快照的包装任务
      */
     public static Runnable capturing(Runnable task) {
+        AsyncIdentity identity = new AsyncIdentity(currentUser());
         RequestAttributes captured = RequestContextHolder.getRequestAttributes();
+        // 捕获提交线程（请求线程）的上下文类加载器：ForkJoinPool 工作线程的 contextClassLoader
+        // 在 fat jar 下可能无法枚举嵌套 jar 中的 ServiceLoader 注册（如 McpJsonMapperSupplier）
+        ClassLoader capturedClassLoader = Thread.currentThread().getContextClassLoader();
         return () -> {
             RequestAttributes previous = RequestContextHolder.getRequestAttributes();
+            AsyncIdentity previousIdentity = ASYNC_IDENTITY.get();
+            ClassLoader previousClassLoader = Thread.currentThread().getContextClassLoader();
             if (captured != null) {
                 RequestContextHolder.setRequestAttributes(captured);
             }
+            if (capturedClassLoader != null) {
+                Thread.currentThread().setContextClassLoader(capturedClassLoader);
+            }
+            ASYNC_IDENTITY.set(identity);
             try {
                 task.run();
             } finally {
+                if (previousIdentity != null) {
+                    ASYNC_IDENTITY.set(previousIdentity);
+                } else {
+                    ASYNC_IDENTITY.remove();
+                }
                 if (previous != null) {
                     RequestContextHolder.setRequestAttributes(previous);
                 } else {
                     RequestContextHolder.resetRequestAttributes();
                 }
+                Thread.currentThread().setContextClassLoader(previousClassLoader);
             }
         };
+    }
+
+    /**
+     * 以显式给定的用户身份执行任务（WebSocket 等无请求上下文的通道使用）。
+     *
+     * <p>与 {@link #capturing(Runnable)} 的区别：身份不依赖调用线程的请求上下文，直接用握手阶段
+     * 解析好的 {@link UserResume} 建立；执行期间不设置 RequestAttributes（WS 没有 HTTP 请求）。
+     * 后续再经 {@link #capturing(Runnable)} 提交异步任务时，会从当前线程捕获到该身份并继续传递。</p>
+     *
+     * @param resume 显式身份，不允许为 null
+     * @param task   任务，不允许为 null
+     */
+    public static void runWith(UserResume resume, Runnable task) {
+        ClassLoader previousClassLoader = Thread.currentThread().getContextClassLoader();
+        ASYNC_IDENTITY.set(new AsyncIdentity(resume));
+        try {
+            task.run();
+        } finally {
+            ASYNC_IDENTITY.remove();
+            Thread.currentThread().setContextClassLoader(previousClassLoader);
+        }
     }
 }

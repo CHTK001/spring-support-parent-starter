@@ -9,3 +9,4 @@ com.chua.starter.ai.support.configuration.input.InputOptimizeGlobalSettingProvid
 com.chua.starter.ai.support.configuration.runtime.RuntimeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.generate.GenerateGlobalSettingProvider
 com.chua.starter.ai.support.configuration.usage.UsageGlobalSettingProvider
+com.chua.starter.ai.support.configuration.memory.MemoryGlobalSettingProvider

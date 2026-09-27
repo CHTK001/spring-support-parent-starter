@@ -2,6 +2,9 @@ package com.chua.starter.server.support.provider.remote;
 
 
 import com.chua.common.support.spi.annotations.Spi;
+import com.chua.ssh.support.client.SftpClient;
+import com.chua.ssh.support.client.SshClient;
+import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostHealthType;
@@ -10,89 +13,63 @@ import com.chua.starter.server.support.spi.HostRemoteProvider;
 import com.chua.starter.server.support.spi.HostShellDialect;
 import com.chua.starter.server.support.spi.RemoteExecResult;
 import com.chua.starter.server.support.spi.RemoteLogChunk;
-import com.chua.winrm.support.client.WinRmExecClient;
-import java.io.InputStream;
+import com.chua.starter.server.support.util.SshClients;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Windows 主机远程操作实现（WinRM + PowerShell）
+ * Windows 主机远程操作实现（OpenSSH + PowerShell）
  * <p>
- * 为什么必须独立实现而不是复用 SSH：Windows 默认不提供 SSH 服务，
- * 把 cmd/PowerShell 命令塞进 SSH 通道在真实 Windows 主机上根本连不上。
- * 本实现走 WinRM（Windows 远程管理，默认端口 5985/HTTP），
- * 所有命令以 PowerShell 脚本经 {@code -EncodedCommand}（UTF-16LE + Base64）下发，
- * 从根本上规避多行脚本与引号的转义问题。
+ * 除 RDP 远控外，Windows 的命令执行、文件分发、指标采集、健康探测等全部走 OpenSSH：
+ * PowerShell 脚本统一以 {@code -EncodedCommand}（UTF-16LE + Base64）下发，由 Windows
+ * 自带 OpenSSH 的默认外壳（cmd / powershell）拉起 powershell 执行，规避多行脚本与引号
+ * 的转义问题；文件传输走同端口的 SFTP，不再有 WinRM 分块上传的大小限制。
  * </p>
  *
  * <p>
- * 文件传输说明：WinRM 协议本身不提供文件传输能力，上传只能以「Base64 分块 + PowerShell 追加写入」
- * 实现，并受单条命令行长上限约束，因此仅适用于配置/脚本这类小文件；
- * 大文件（如 agent 包）必须由目标机经 HTTP 自行拉取，超过阈值本实现直接快速失败。
+ * 前提：目标机必须安装并启动 OpenSSH Server（sshd）。可由主机编辑页的「安装/启用 OpenSSH」
+ * 动作经现有通道一次性引导安装，之后全部操作均走 OpenSSH。
  * </p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
-@Spi(value = "winrm", order = 100)
+@Spi(value = "windows-ssh", order = 100)
 public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     /**
-     * 默认 WinRM 端口（HTTP）
-    */
-    private static final int DEFAULT_WINRM_PORT = 5985;
+     * 默认 OpenSSH 端口
+     */
+    private static final int DEFAULT_SSH_PORT = 22;
 
     /**
      * 命令执行默认超时（秒）
-    */
+     */
     private static final int DEFAULT_TIMEOUT_SECONDS = 120;
 
     /**
-     * WinRM 连接超时（毫秒）
-    */
-    private static final int CONNECT_TIMEOUT_MS = 10_000;
-
-    /**
      * 健康探测最短超时（秒）
-    */
+     */
     private static final int MIN_HEALTH_TIMEOUT_SECONDS = 10;
 
     /**
      * HTTP 探测超时上限（秒）
-    */
+     */
     private static final int HTTP_PROBE_MAX_SECONDS = 10;
 
     /**
-     * 单次上传分块字节数
-     * <p>
-     * 瓶颈不是 WinRM 报文额度，而是最终落到远端 cmd.exe 的命令行长（上限 8191 字符）：
-     * 脚本本身还要经 {@code -EncodedCommand} 再 Base64 一次，命令行按原始字节约 2.67 倍膨胀。
-     * 实测 6KB 块报「The command line is too long.」、12KB 块直接 SoapFault，故取 1536 字节。
-     * </p>
-     */
-    private static final int UPLOAD_CHUNK_BYTES = 1536;
-
-    /**
-     * 分块上传可接受的文件大小上限（约 170 次往返）
-     * <p>
-     * 超过这个规模的文件必须由目标机自行 HTTP 拉取，不能靠命令行搬运。
-     * </p>
-     */
-    private static final long MAX_UPLOAD_BYTES = 256 * 1024L;
-
-    /**
      * 远端临时目录
-    */
+     */
     private static final String TEMP_DIR = "C:\\Windows\\Temp";
 
     /**
      * 路径分隔符
-    */
+     */
     private static final String SEPARATOR = "\\";
 
     @Override
@@ -107,67 +84,42 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     @Override
     public HostShellDialect shellDialect() {
-        // WinRM 通道下发的是 PowerShell 脚本（-EncodedCommand），AI 生成脚本与高危审计都须按 PS 语法
+        // SSH 通道下发的是 PowerShell 脚本（-EncodedCommand），AI 生成脚本与高危审计都须按 PS 语法
         return HostShellDialect.POWERSHELL;
     }
 
     @Override
     public RemoteExecResult exec(MsServerHost host, SshCredential credential, String command, int timeoutSeconds) throws Exception {
-        try (WinRmExecClient client = open(host, credential, timeoutSeconds)) {
-            return execOn(client, command);
+        try (SshClients.Handle handle = openSsh(host, credential)) {
+            return execOn(handle.client(), command);
         }
     }
 
     @Override
     public RemoteExecResult upload(MsServerHost host, SshCredential credential, String remotePath, Path localFile) throws Exception {
         long localSize = Files.size(localFile);
-        if (localSize > MAX_UPLOAD_BYTES) {
-            // 上千次命令行往返不是「慢」而是必然超时，直接给出可执行的处置方式
-            throw new IllegalStateException("WinRM 通道不支持传输 " + localSize + " 字节的文件（上限 "
-                    + MAX_UPLOAD_BYTES + " 字节），请配置 monitor.agent.jar-url 让目标机自行下载");
-        }
-        try (WinRmExecClient client = open(host, credential, 0)) {
-            String parent = parentOf(remotePath);
-            if (parent != null) {
-                RemoteExecResult mk = mkdirsOn(client, parent);
+        String parent = parentOf(remotePath);
+        if (parent != null) {
+            // PowerShell New-Item -Force 会递归创建中间目录
+            try (SshClients.Handle handle = openSsh(host, credential)) {
+                RemoteExecResult mk = execOn(handle.client(),
+                        "New-Item -ItemType Directory -Path '" + psEscape(parent) + "' -Force | Out-Null");
                 if (!mk.success()) {
                     throw new IllegalStateException("创建远端目录失败: " + mk.failureMessage());
                 }
             }
-            // 以空内容创建/截断目标文件，后续分块统一走追加模式
-            RemoteExecResult truncate = execOn(client,
-                    "[IO.File]::WriteAllBytes('" + psEscape(remotePath) + "', (New-Object byte[] 0))");
-            if (!truncate.success()) {
-                throw new IllegalStateException("初始化远端文件失败: " + truncate.failureMessage());
-            }
-            byte[] buffer = new byte[UPLOAD_CHUNK_BYTES];
-            try (InputStream in = Files.newInputStream(localFile)) {
-                int read;
-                while ((read = in.read(buffer)) > 0) {
-                    byte[] chunk = read == buffer.length ? buffer : Arrays.copyOf(buffer, read);
-                    String script = "$p='" + psEscape(remotePath) + "';"
-                            + "$b=[Convert]::FromBase64String('" + Base64.getEncoder().encodeToString(chunk) + "');"
-                            + "$fs=[IO.File]::Open($p,'Append','Write');"
-                            + "try { $fs.Write($b,0,$b.Length) } finally { $fs.Dispose() }";
-                    RemoteExecResult part = execOn(client, script);
-                    if (!part.success()) {
-                        throw new IllegalStateException("分块上传失败: " + part.failureMessage());
-                    }
-                }
-            }
-            long remoteSize = fileSizeOn(client, remotePath);
-            if (remoteSize >= 0 && remoteSize != localSize) {
-                throw new IllegalStateException("上传后字节数不一致: 本地 " + localSize + " 字节, 远端 " + remoteSize + " 字节");
-            }
+        }
+        // SFTP 流式上传，无大小限制
+        try (SftpClient client = buildConnectedSftp(host, credential)) {
+            client.upload().local(localFile.toString()).remote(remotePath).exec();
         }
         return RemoteExecResult.ok("上传完成: " + remotePath + " (" + localSize + " 字节)");
     }
 
     @Override
     public RemoteExecResult mkdirs(MsServerHost host, SshCredential credential, String path) throws Exception {
-        try (WinRmExecClient client = open(host, credential, 0)) {
-            return mkdirsOn(client, path);
-        }
+        return exec(host, credential,
+                "New-Item -ItemType Directory -Path '" + psEscape(path) + "' -Force | Out-Null", 0);
     }
 
     @Override
@@ -183,7 +135,7 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     @Override
     public RemoteExecResult extract(MsServerHost host, SshCredential credential, String archivePath, String fileName, String dir) throws Exception {
-        String name = fileName == null ? "" : fileName.toLowerCase(java.util.Locale.ROOT);
+        String name = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
         String script;
         if (name.endsWith(".zip")) {
             script = "New-Item -ItemType Directory -Path '" + psEscape(dir) + "' -Force | Out-Null;"
@@ -206,8 +158,8 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     @Override
     public long fileSize(MsServerHost host, SshCredential credential, String file) {
-        try (WinRmExecClient client = open(host, credential, 0)) {
-            return fileSizeOn(client, file);
+        try (SshClients.Handle handle = openSsh(host, credential)) {
+            return fileSizeOn(handle.client(), file);
         } catch (Exception e) {
             log.debug("[remote] 文件大小探测失败 {}: {}", file, e.getMessage());
             return -1L;
@@ -217,7 +169,8 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     @Override
     public RemoteLogChunk tail(MsServerHost host, SshCredential credential, String file, Long cursor, int lines) throws Exception {
         long startCursor = cursor == null ? 0L : Math.max(0L, cursor);
-        try (WinRmExecClient client = open(host, credential, 0)) {
+        try (SshClients.Handle handle = openSsh(host, credential)) {
+            SshClient client = handle.client();
             long size = fileSizeOn(client, file);
             // 日志轮转/截断：文件比上次记录的光标还小 → 当作新文件从头拉取
             if (size >= 0 && startCursor > size) {
@@ -281,11 +234,10 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
             return Double.NaN;
         }
         if (type == HostMetricType.PORT_ALIVE && !key.chars().allMatch(Character::isDigit)) {
-            // 端口号非数字时直接判为无数据：Get-NetTCPConnection 的参数绑定错误会以非 0 退出码返回，
-            // 若在此抛出会污染整轮采集（调用方按「连接失败」短路后续命令）
+            // 端口号非数字时直接判为无数据，避免把任意串拼进命令（注入风险）
             return Double.NaN;
         }
-        // 全部以 PowerShell 脚本下发（exec 内部走 -EncodedCommand），因此只需处理 PowerShell 单引号转义
+        // 全部以 PowerShell 脚本下发（exec 内部走 -EncodedCommand），只需处理 PowerShell 单引号转义
         String script = switch (type) {
             // Win32_Process 的 Name 只含可执行文件名，故按关键字 -match 匹配；累加工作集后换算 MB
             case PROCESS_MEM_MB -> "$p = Get-CimInstance Win32_Process | Where-Object { $_.Name -match '"
@@ -359,76 +311,63 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     }
 
     /**
-     * 建立 WinRM 连接
+     * 打开并连接 SSH 通道（SshClients 内部处理私钥临时文件）
      *
-     * @param host           主机
-     * @param credential     凭据（WinRM 仅支持用户名/密码）
-     * @param timeoutSeconds 会话超时秒数，&lt;=0 取默认
-     * @return 已连接客户端（调用方负责关闭）
+     * @param host       主机
+     * @param credential 凭据
+     * @return 已连接的 SSH 句柄（调用方负责关闭）
+     * @throws IOException 私钥临时文件写入失败时抛出
      */
-    private WinRmExecClient open(MsServerHost host, SshCredential credential, int timeoutSeconds) {
-        if (credential == null || credential.username() == null || credential.username().isBlank()) {
-            throw new IllegalStateException("Windows 主机需要用户名/密码凭据（WinRM 不支持密钥认证）");
-        }
-        if (credential.hasKey() && (credential.password() == null || credential.password().isBlank())) {
-            throw new IllegalStateException("WinRM 不支持密钥认证，请为该主机配置密码凭据");
-        }
-        int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0
-                ? DEFAULT_WINRM_PORT : host.getServerHostPort();
-        int timeout = timeoutSeconds > 0 ? timeoutSeconds : DEFAULT_TIMEOUT_SECONDS;
-        WinRmExecClient client = WinRmExecClient.builder()
-                .host(host.getServerHostAddress())
-                .port(port)
-                .username(credential.username())
-                .password(credential.password() == null ? "" : credential.password())
-                .connectTimeout(CONNECT_TIMEOUT_MS)
-                .sessionTimeout(timeout * 1000)
-                .build();
-        client.connect();
-        return client;
+    private SshClients.Handle openSsh(MsServerHost host, SshCredential credential) throws IOException {
+        SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), credential);
+        handle.client().connect();
+        return handle;
     }
 
     /**
-     * 在既有连接上执行 PowerShell 脚本
+     * SSH 端口：优先主机登录端口，否则回退 22
      *
-     * @param client  已连接客户端
-     * @param script  PowerShell 脚本
+     * @param host 主机
+     * @return 端口
+     */
+    private int portOf(MsServerHost host) {
+        return host.getServerHostPort() != null && host.getServerHostPort() > 0
+                ? host.getServerHostPort() : DEFAULT_SSH_PORT;
+    }
+
+    /**
+     * 在既有 SSH 连接上执行 PowerShell 脚本（内部包 EncodedCommand）
+     *
+     * @param client 已连接 SSH 客户端
+     * @param script PowerShell 脚本
      * @return 执行结果
      */
-    private RemoteExecResult execOn(WinRmExecClient client, String script) {
-        var result = client.exec().command(encode(script)).execute();
-        return new RemoteExecResult(result.exitCode(), result.stdout(), result.stderr());
+    private RemoteExecResult execOn(SshClient client, String script) {
+        try {
+            SshClient.ExecResult result = client.exec().command(encode(script)).execute();
+            return new RemoteExecResult(result.exitCode(), result.stdout(), result.stderr());
+        } catch (Exception e) {
+            throw new IllegalStateException("PowerShell 执行失败: " + e.getMessage(), e);
+        }
     }
 
     /**
-     * 在既有连接上确保目录存在
+     * 在既有 SSH 连接上查询文件字节大小
      *
-     * @param client 已连接客户端
-     * @param path   远端目录
-     * @return 执行结果
-     */
-    private RemoteExecResult mkdirsOn(WinRmExecClient client, String path) {
-        return execOn(client, "New-Item -ItemType Directory -Path '" + psEscape(path) + "' -Force | Out-Null");
-    }
-
-    /**
-     * 在既有连接上查询文件字节大小
-     *
-     * @param client 已连接客户端
+     * @param client 已连接 SSH 客户端
      * @param file   远端文件
      * @return 字节数；不存在或探测失败为 -1
      */
-    private long fileSizeOn(WinRmExecClient client, String file) {
+    private long fileSizeOn(SshClient client, String file) {
+        String script = "$p='" + psEscape(file) + "';"
+                + "if (Test-Path -LiteralPath $p) { [Console]::Write((Get-Item -LiteralPath $p).Length) } else { [Console]::Write('-1') }";
+        RemoteExecResult result = execOn(client, script);
+        if (!result.success() || result.stdout() == null || result.stdout().isBlank()) {
+            return -1L;
+        }
         try {
-            String script = "$p='" + psEscape(file) + "';"
-                    + "if (Test-Path -LiteralPath $p) { [Console]::Write((Get-Item -LiteralPath $p).Length) } else { [Console]::Write('-1') }";
-            RemoteExecResult result = execOn(client, script);
-            if (!result.success() || result.stdout() == null || result.stdout().isBlank()) {
-                return -1L;
-            }
             return (long) Double.parseDouble(result.stdout().trim());
-        } catch (Exception e) {
-            log.debug("[remote] 文件大小探测失败 {}: {}", file, e.getMessage());
+        } catch (NumberFormatException e) {
             return -1L;
         }
     }
@@ -444,9 +383,7 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
      * @return 完整命令行
      */
     private String encode(String script) {
-        String text = script == null ? "" : script;
-        String base64 = Base64.getEncoder().encodeToString(text.getBytes(StandardCharsets.UTF_16LE));
-        return "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + base64;
+        return PowerShellCommand.encoded(script);
     }
 
     /**
@@ -474,5 +411,46 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
         }
         int idx = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'));
         return idx > 0 ? path.substring(0, idx) : null;
+    }
+
+    /**
+     * 构建并连接 SFTP 客户端（凭据装配后立即清理私钥临时文件）
+     *
+     * @param host       主机
+     * @param credential 凭据
+     * @return 已连接的 SFTP 客户端（调用方负责关闭）
+     * @throws IOException 连接失败时抛出
+     */
+    private SftpClient buildConnectedSftp(MsServerHost host, SshCredential credential) throws IOException {
+        var builder = SftpClient.builder()
+                .host(host.getServerHostAddress())
+                .port(portOf(host))
+                .username(credential.username())
+                .connectTimeout(8);
+        Path tempKey = null;
+        try {
+            if (credential.hasKey()) {
+                // 底层库仅支持路径方式加载私钥：落盘受限临时文件，装配后立即删除
+                tempKey = Files.createTempFile("ms-host-remote-key-", ".pem");
+                Files.writeString(tempKey, credential.privateKey());
+                builder.privateKey(tempKey.toString());
+                if (credential.password() != null && !credential.password().isBlank()) {
+                    builder.password(credential.password());
+                }
+            } else {
+                builder.password(credential.password() == null ? "" : credential.password());
+            }
+            SftpClient client = builder.build();
+            client.connect();
+            return client;
+        } finally {
+            if (tempKey != null) {
+                try {
+                    Files.deleteIfExists(tempKey);
+                } catch (IOException ignored) {
+                    // 临时私钥清理失败不影响主流程
+                }
+            }
+        }
     }
 }
