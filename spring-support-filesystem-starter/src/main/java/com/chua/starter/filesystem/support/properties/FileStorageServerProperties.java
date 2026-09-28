@@ -124,4 +124,57 @@ public class FileStorageServerProperties {
      * 该值同时用于关闭 X-Frame-Options（避免 DENY 阻断 iframe 渲染）。</p>
      */
     private String frameAncestors = "*";
+
+    /**
+     * 跨域配置（默认开启）。
+     *
+     * <p>文件服务器是独立端口的网关（见 {@link #port}），前端页面基本都是跨源访问它，
+     * 因此默认开启 CORS。需要收紧时把 {@code enable} 置 false，
+     * 或把 {@code allowedOrigins} 从 {@code *} 收成来源白名单。</p>
+     */
+    private Cors cors = new Cors();
+
+    /**
+     * 跨域（CORS）配置项。
+     */
+    @Data
+    public static class Cors {
+
+        /**
+         * 是否开启 CORS（默认开启）
+         */
+        private boolean enable = true;
+
+        /**
+         * 允许的来源，逗号分隔；{@code *} 表示任意来源。
+         *
+         * <p>注意：开启 {@link #allowCredentials} 后，即使是 {@code *} 也不会字面返回通配符，
+         * 而是回显实际请求来源——规范禁止「凭据 + 通配来源」并用。</p>
+         */
+        private String allowedOrigins = "*";
+
+        /**
+         * 是否允许携带凭据（Cookie / Authorization）。默认开启。
+         *
+         * <p>预览页会以 {@code credentials:'include'} 发起跨域 fetch，此时浏览器强制要求
+         * 响应带 {@code Access-Control-Allow-Credentials: true}，缺失会导致整个响应不可读。</p>
+         */
+        private boolean allowCredentials = true;
+
+        /**
+         * 允许的请求头
+         */
+        private String allowedHeaders = "Content-Type,Authorization,X-Requested-With,X-Req-Fingerprint";
+
+        /**
+         * 允许前端 JavaScript 读取的响应头（跨域下自定义头默认不可读）
+         */
+        private String exposeHeaders = "Content-Disposition,Content-Range,Accept-Ranges,"
+                + "X-FileStorage-Preview,X-FileStorage-Client-Renderer";
+
+        /**
+         * 允许的请求方法
+         */
+        private String allowedMethods = "GET,HEAD,POST,PUT,DELETE,PATCH,OPTIONS";
+    }
 }
