@@ -35,7 +35,13 @@ CREATE TABLE IF NOT EXISTS edu_knowledge_point (
     KEY edu_knowledge_point_parent_id (knowledge_point_parent_id),
     KEY edu_knowledge_point_subject (knowledge_point_subject),
     KEY edu_knowledge_point_grade_level (knowledge_point_grade_level),
-    KEY edu_knowledge_point_grade (knowledge_point_grade)
+    KEY edu_knowledge_point_grade (knowledge_point_grade),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -76,7 +82,18 @@ CREATE TABLE IF NOT EXISTS edu_question (
     KEY edu_question_year (question_year),
     KEY edu_question_difficulty (question_difficulty),
     KEY edu_question_audit_status (question_audit_status),
-    KEY edu_question_status (question_status)
+    KEY edu_question_status (question_status),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+    UNIQUE KEY uk_edu_question_stem (question_stem(255)),
+      -- 题库：被加入试卷的次数,
+      -- 说明：与「使用次数」区分 —— 使用次数是答题/引用统计，,
+      --      本列只统计「被新加入某张试卷」的次数，改分不重复计。,
+    question_add_count INT DEFAULT 0 COMMENT '被加入试卷的次数'
 );
 
 -- ----------------------------
@@ -102,7 +119,32 @@ CREATE TABLE IF NOT EXISTS edu_paper (
     paper_update_by VARCHAR(64) COMMENT '更新人',
     KEY edu_paper_subject (paper_subject),
     KEY edu_paper_grade_level (paper_grade_level),
-    KEY edu_paper_status (paper_status)
+    KEY edu_paper_status (paper_status),
+      -- 手动组卷：试卷表扩展（唯一编号 / 纸张 / 模板 / 页头页脚 / 版本）,
+    paper_no VARCHAR(64) DEFAULT NULL COMMENT '试卷唯一编号（业务码，对外标识）',
+    paper_page_size VARCHAR(30) DEFAULT 'A4' COMMENT '纸张规格: A4/A3/A5/B5/LETTER',
+    paper_page_orientation VARCHAR(20) DEFAULT 'PORTRAIT' COMMENT '纸张方向: PORTRAIT/LANDSCAPE',
+    paper_template VARCHAR(64) DEFAULT 'default' COMMENT '首页模板标识',
+    paper_header TEXT DEFAULT NULL COMMENT '页头（富文本）',
+    paper_footer TEXT DEFAULT NULL COMMENT '页脚（富文本）',
+    paper_version INT DEFAULT 1 COMMENT '当前版本号（每次改动 +1）',
+    paper_subject_locked TINYINT DEFAULT 0 COMMENT '学科/学段是否锁定: 0-否 1-是',
+    UNIQUE INDEX uk_edu_paper_no (paper_no),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+      -- 手动组卷：试卷难度与模板引用,
+      -- 背景：手动组卷建卷时前端可指定整卷难度与引用的组卷模板，,
+      --       两个字段随建卷/更新接口写入 edu_paper，详情接口回读。,
+    paper_difficulty TINYINT DEFAULT 3 COMMENT '试卷整体难度 1-5',
+    paper_template_id BIGINT DEFAULT NULL COMMENT '引用的模板ID',
+      -- 手动组卷：首页大标题风格,
+      -- 背景：大标题风格原先只在前端设置弹框里可选，edu_paper 无对应列，,
+      --       保存时被静默丢弃，重新进入组卷页又回到默认值。,
+    paper_title_style VARCHAR(20) DEFAULT 'default' COMMENT '首页大标题风格: default/line/double/calligraphy'
 );
 
 -- ----------------------------
@@ -119,28 +161,20 @@ CREATE TABLE IF NOT EXISTS edu_paper_question (
     paper_question_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     UNIQUE KEY edu_paper_question_paper_question (paper_question_paper_id, paper_question_question_id),
     KEY edu_paper_question_paper_id (paper_question_paper_id),
-    KEY edu_paper_question_question_id (paper_question_question_id)
+    KEY edu_paper_question_question_id (paper_question_question_id),
+      -- 手动组卷：题项表扩展（唯一编号 = 二维码内容 / 版本）,
+    paper_question_no VARCHAR(64) DEFAULT NULL COMMENT '试卷题唯一编号（二维码内容，AI 凭此定位题目）',
+    paper_question_version INT DEFAULT 1 COMMENT '所属试卷版本号',
+    paper_question_section VARCHAR(64) DEFAULT NULL COMMENT '题组/大题标识（可选）',
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
--- ----------------------------
--- 手动组卷：试卷表扩展（唯一编号 / 纸张 / 模板 / 页头页脚 / 版本）
--- ----------------------------
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_no VARCHAR(64) DEFAULT NULL COMMENT '试卷唯一编号（业务码，对外标识）';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_page_size VARCHAR(30) DEFAULT 'A4' COMMENT '纸张规格: A4/A3/A5/B5/LETTER';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_page_orientation VARCHAR(20) DEFAULT 'PORTRAIT' COMMENT '纸张方向: PORTRAIT/LANDSCAPE';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_template VARCHAR(64) DEFAULT 'default' COMMENT '首页模板标识';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_header TEXT DEFAULT NULL COMMENT '页头（富文本）';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_footer TEXT DEFAULT NULL COMMENT '页脚（富文本）';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_version INT DEFAULT 1 COMMENT '当前版本号（每次改动 +1）';
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS paper_subject_locked TINYINT DEFAULT 0 COMMENT '学科/学段是否锁定: 0-否 1-是';
-ALTER TABLE edu_paper ADD UNIQUE INDEX IF NOT EXISTS uk_edu_paper_no (paper_no);
 
--- ----------------------------
--- 手动组卷：题项表扩展（唯一编号 = 二维码内容 / 版本）
--- ----------------------------
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS paper_question_no VARCHAR(64) DEFAULT NULL COMMENT '试卷题唯一编号（二维码内容，AI 凭此定位题目）';
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS paper_question_version INT DEFAULT 1 COMMENT '所属试卷版本号';
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS paper_question_section VARCHAR(64) DEFAULT NULL COMMENT '题组/大题标识（可选）';
 
 -- ----------------------------
 -- 试卷历史表（防篡改留痕：每次改动落一条不可变快照）
@@ -184,7 +218,13 @@ CREATE TABLE IF NOT EXISTS edu_exam (
     exam_update_by VARCHAR(64) COMMENT '更新人',
     KEY edu_exam_paper_id (exam_paper_id),
     KEY edu_exam_status (exam_status),
-    KEY edu_exam_start_time (exam_start_time)
+    KEY edu_exam_start_time (exam_start_time),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -203,7 +243,27 @@ CREATE TABLE IF NOT EXISTS edu_answer_sheet (
     answer_sheet_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     UNIQUE KEY edu_answer_sheet_exam_student (answer_sheet_exam_id, answer_sheet_student_id),
     KEY edu_answer_sheet_exam_id (answer_sheet_exam_id),
-    KEY edu_answer_sheet_student_id (answer_sheet_student_id)
+    KEY edu_answer_sheet_student_id (answer_sheet_student_id),
+      -- V1.8 的成语唯一约束已规范化为本脚本中的唯一索引，避免重复 CREATE/ALTER。,
+      -- 兼容 ALTER：补齐 SysBase 审计列,
+      -- 背景：eduai 下 17 个实体继承 com.chua.starter.mybatis.pojo.SysBase，,
+      --       该基类提供无前缀的 6 个审计字段：create_name / create_by / create_time /,
+      --       update_time / update_name / update_by。MyBatis-Plus 生成 SELECT/INSERT 时,
+      --       必然带上这些列，因此对应表**必须**存在这 6 列，否则全新安装首启即失败：,
+      --         Column "create_name" not found; SQL statement: SELECT ... FROM edu_collect_task,
+      --       （EduCollectTaskServiceImpl#run 启动时做调度对账会立即查 edu_collect_task）,
+      -- 说明：,
+      --   1) 既有库历史上已被手工/早期脚本补过这些列，ADD COLUMN IF NOT EXISTS 对它们是空操作；,
+      --      全新库建表后由本段补齐，两条路径统一。,
+      --   2) 列类型与既有库实测一致（create_name/update_name VARCHAR(255)，create_by/update_by INT，,
+      --      create_time/update_time DATETIME；create_time 带 CURRENT_TIMESTAMP 默认值）。,
+      --   3) 不含 SysBase 的表（edu_subject / edu_grade / edu_class / edu_student / edu_teacher）不加。,
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -228,7 +288,13 @@ CREATE TABLE IF NOT EXISTS edu_marking_result (
     marking_result_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     KEY edu_marking_result_answer_sheet (marking_result_answer_sheet_id),
     KEY edu_marking_result_question_id (marking_result_question_id),
-    KEY edu_marking_result_status (marking_result_status)
+    KEY edu_marking_result_status (marking_result_status),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -252,7 +318,13 @@ CREATE TABLE IF NOT EXISTS edu_wrong_question (
     UNIQUE KEY edu_wrong_question_student_question (wrong_question_student_id, wrong_question_question_id),
     KEY edu_wrong_question_student_id (wrong_question_student_id),
     KEY edu_wrong_question_question_id (wrong_question_question_id),
-    KEY edu_wrong_question_mastery (wrong_question_mastery_level)
+    KEY edu_wrong_question_mastery (wrong_question_mastery_level),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -275,7 +347,13 @@ CREATE TABLE IF NOT EXISTS edu_knowledge_doc (
     knowledge_doc_create_by VARCHAR(64) COMMENT '创建人',
     knowledge_doc_update_by VARCHAR(64) COMMENT '更新人',
     KEY edu_knowledge_doc_subject (knowledge_doc_subject),
-    KEY edu_knowledge_doc_status (knowledge_doc_status)
+    KEY edu_knowledge_doc_status (knowledge_doc_status),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 -- ============================================
 -- 教育 AI 维度表增量脚本
@@ -325,7 +403,7 @@ CREATE TABLE IF NOT EXISTS edu_class (
     KEY edu_class_owner (class_owner_user_id),
     class_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '班级ID',
     class_code VARCHAR(64) NOT NULL COMMENT '班级编码',
-    class_name VARCHAR(100) NOT NULL COMMENT '班级名',
+    class_name VARCHAR(100) NOT NULL COMMENT '班级名（业务唯一，全库不允许重名）',
     class_grade_level VARCHAR(20) COMMENT '学段',
     class_grade VARCHAR(20) COMMENT '年级',
     class_teacher_id BIGINT COMMENT '班主任 userId',
@@ -333,6 +411,7 @@ CREATE TABLE IF NOT EXISTS edu_class (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     UNIQUE KEY edu_class_class_code (class_code),
+    UNIQUE KEY uk_edu_class_name (class_name),
     KEY edu_class_teacher (class_teacher_id)
 );
 
@@ -351,13 +430,15 @@ CREATE TABLE IF NOT EXISTS edu_student (
     student_grade_level VARCHAR(20) COMMENT '学段',
     student_grade VARCHAR(20) COMMENT '年级',
     student_enroll_year INT COMMENT '入学年份',
+    student_parent_phone VARCHAR(20) COMMENT '家长手机号（学生端可用它登录；非唯一，同号可带多个孩子）',
     student_status TINYINT DEFAULT 1 COMMENT '状态: 0-离校 1-在读',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     UNIQUE KEY edu_student_student_no (student_no),
     UNIQUE KEY uk_edu_student_account (student_account),
     KEY edu_student_user (student_user_id),
-    KEY edu_student_class (student_class_id)
+    KEY edu_student_class (student_class_id),
+    KEY edu_student_parent_phone (student_parent_phone)
 );
 
 -- ----------------------------
@@ -403,7 +484,11 @@ CREATE TABLE IF NOT EXISTS edu_fun_config (
     config_json TEXT COMMENT '扩展配置JSON',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY edu_fun_config_module_level (module_code, fun_config_grade_level)
+    UNIQUE KEY edu_fun_config_module_level (module_code, fun_config_grade_level),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -425,7 +510,11 @@ CREATE TABLE IF NOT EXISTS edu_idiom (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     KEY edu_idiom_content (idiom_content),
-    KEY edu_idiom_difficulty (idiom_difficulty)
+    KEY edu_idiom_difficulty (idiom_difficulty),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -442,7 +531,12 @@ CREATE TABLE IF NOT EXISTS edu_idiom_grade (
     textbook_version VARCHAR(50) COMMENT '教材版本',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     KEY edu_idiom_grade_idiom (idiom_id),
-    KEY edu_idiom_grade_level (grade_level)
+    KEY edu_idiom_grade_level (grade_level),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -458,14 +552,20 @@ CREATE TABLE IF NOT EXISTS edu_poem (
     poem_content TEXT NOT NULL COMMENT '正文（整首，句间用换行或标点分隔）',
     poem_translation TEXT COMMENT '白话译文',
     poem_appreciation TEXT COMMENT '赏析',
-    poem_notes VARCHAR(1000) COMMENT '注释',
-    poem_tags VARCHAR(255) COMMENT '标签，逗号分隔',
+    poem_notes TEXT COMMENT '注释',
+    poem_tags VARCHAR(500) COMMENT '标签，逗号分隔',
     poem_difficulty INT DEFAULT 1 COMMENT '难度: 1-5',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     KEY edu_poem_title (poem_title),
     KEY edu_poem_author (poem_author),
-    KEY edu_poem_difficulty (poem_difficulty)
+    KEY edu_poem_difficulty (poem_difficulty),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+      -- 古诗：同一「标题 + 作者」视为同一首（与采集入库处理器的唯一键一致），保证种子脚本幂等,
+    UNIQUE KEY uk_edu_poem_title_author (poem_title(191), poem_author(64))
 );
 
 -- ----------------------------
@@ -480,7 +580,17 @@ CREATE TABLE IF NOT EXISTS edu_poem_grade (
     `grade` VARCHAR(20) COMMENT '年级',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     KEY edu_poem_grade_poem (poem_id),
-    KEY edu_poem_grade_level (grade_level)
+    KEY edu_poem_grade_level (grade_level),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+      -- 古诗学段映射：采集入库处理器判定「已存在」用的就是 (poem_id, grade_level),
+      -- （见 ImportProcessor#bindPoemGrade），这里补同款唯一索引，让 initdata 的映射行也能幂等。,
+      -- 注意 grade 允许为 NULL（表示该学段通用），而 MySQL/MariaDB 中 NULL 互不相等，,
+      -- 因此唯一键不能包含 grade，否则通用年级行重复插入拦不住。,
+    UNIQUE KEY uk_edu_poem_grade_poem_level (poem_id, grade_level)
 );
 
 -- ----------------------------
@@ -514,7 +624,11 @@ CREATE TABLE IF NOT EXISTS edu_insect (
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     KEY edu_insect_code (insect_code),
     KEY edu_insect_order (insect_order),
-    KEY edu_insect_metamorphosis (insect_metamorphosis)
+    KEY edu_insect_metamorphosis (insect_metamorphosis),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -536,7 +650,11 @@ CREATE TABLE IF NOT EXISTS edu_insect_guide (
     guide_habitat_body TEXT COMMENT '栖境正文',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    KEY edu_insect_guide_code (insect_code)
+    KEY edu_insect_guide_code (insect_code),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -567,7 +685,13 @@ CREATE TABLE IF NOT EXISTS edu_collect_task (
     collect_task_update_by VARCHAR(64) COMMENT '更新人',
     KEY edu_collect_task_status (collect_task_status),
     KEY edu_collect_task_next_run_time (collect_task_next_run_time),
-    KEY edu_collect_task_source_type (collect_task_source_type)
+    KEY edu_collect_task_source_type (collect_task_source_type),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -588,7 +712,13 @@ CREATE TABLE IF NOT EXISTS edu_collect_log (
     collect_log_end_time DATETIME COMMENT '结束时间',
     collect_log_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     KEY edu_collect_log_task_id (collect_log_task_id),
-    KEY edu_collect_log_status (collect_log_status)
+    KEY edu_collect_log_status (collect_log_status),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
 );
 
 -- ----------------------------
@@ -647,157 +777,26 @@ CREATE TABLE IF NOT EXISTS edu_student_daily (
     KEY edu_student_daily_date (stat_date)
 );
 
--- ----------------------------
--- 兼容 ALTER：老库补列（新库已在建表语句里带上，这里是幂等的 no-op）
--- H2 / MariaDB 均支持 ADD COLUMN IF NOT EXISTS。
--- ----------------------------
-ALTER TABLE edu_student ADD COLUMN IF NOT EXISTS student_account VARCHAR(64) COMMENT '绑定的登录账号';
-ALTER TABLE edu_teacher ADD COLUMN IF NOT EXISTS teacher_account VARCHAR(64) COMMENT '绑定的登录账号';
 
--- V1.8 的成语唯一约束已规范化为本脚本中的唯一索引，避免重复 CREATE/ALTER。
 
--- ----------------------------
--- 兼容 ALTER：补齐 SysBase 审计列
--- ----------------------------
--- 背景：eduai 下 17 个实体继承 com.chua.starter.mybatis.pojo.SysBase，
---       该基类提供无前缀的 6 个审计字段：create_name / create_by / create_time /
---       update_time / update_name / update_by。MyBatis-Plus 生成 SELECT/INSERT 时
---       必然带上这些列，因此对应表**必须**存在这 6 列，否则全新安装首启即失败：
---         Column "create_name" not found; SQL statement: SELECT ... FROM edu_collect_task
---       （EduCollectTaskServiceImpl#run 启动时做调度对账会立即查 edu_collect_task）
---
--- 说明：
---   1) 既有库历史上已被手工/早期脚本补过这些列，ADD COLUMN IF NOT EXISTS 对它们是空操作；
---      全新库建表后由本段补齐，两条路径统一。
---   2) 列类型与既有库实测一致（create_name/update_name VARCHAR(255)，create_by/update_by INT，
---      create_time/update_time DATETIME；create_time 带 CURRENT_TIMESTAMP 默认值）。
---   3) 不含 SysBase 的表（edu_subject / edu_grade / edu_class / edu_student / edu_teacher）不加。
--- ----------------------------
 
-ALTER TABLE edu_answer_sheet ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_answer_sheet ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_answer_sheet ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_answer_sheet ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_answer_sheet ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_answer_sheet ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_collect_log ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_collect_log ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_collect_log ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_collect_log ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_collect_log ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_collect_log ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_collect_task ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_collect_task ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_collect_task ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_collect_task ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_collect_task ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_collect_task ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_exam ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_exam ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_exam ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_exam ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_exam ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_exam ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_fun_config ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_fun_config ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_fun_config ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_fun_config ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_fun_config ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_fun_config ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_idiom ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_idiom ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_idiom ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_idiom ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_idiom ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_idiom ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_idiom_grade ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_idiom_grade ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_idiom_grade ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_idiom_grade ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_idiom_grade ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_idiom_grade ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_insect ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_insect ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_insect ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_insect ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_insect ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_insect ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_insect_guide ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_insect_guide ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_insect_guide ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_insect_guide ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_insect_guide ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_insect_guide ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_knowledge_doc ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_knowledge_doc ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_knowledge_doc ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_knowledge_doc ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_knowledge_doc ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_knowledge_doc ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_knowledge_point ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_knowledge_point ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_knowledge_point ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_knowledge_point ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_knowledge_point ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_knowledge_point ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_marking_result ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_marking_result ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_marking_result ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_marking_result ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_marking_result ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_marking_result ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_paper ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_paper_question ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_question ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_question ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_question ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_question ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_question ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_question ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_wrong_question ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_wrong_question ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_wrong_question ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_wrong_question ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_wrong_question ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_wrong_question ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_poem ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_poem ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_poem ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE edu_poem ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_poem ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_poem ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
-ALTER TABLE edu_poem_grade ADD COLUMN IF NOT EXISTS create_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_poem_grade ADD COLUMN IF NOT EXISTS create_by INT DEFAULT NULL;
-ALTER TABLE edu_poem_grade ADD COLUMN IF NOT EXISTS update_time DATETIME DEFAULT NULL;
-ALTER TABLE edu_poem_grade ADD COLUMN IF NOT EXISTS update_name VARCHAR(255) DEFAULT NULL;
-ALTER TABLE edu_poem_grade ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
 -- ----------------------------
 -- 兼容 ALTER：为种子数据补唯一索引（保证 initdata 幂等）
@@ -816,15 +815,38 @@ ALTER TABLE edu_poem_grade ADD COLUMN IF NOT EXISTS update_by INT DEFAULT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_edu_idiom_content ON edu_idiom (idiom_content);
 
-ALTER TABLE edu_question ADD UNIQUE KEY IF NOT EXISTS uk_edu_question_stem (question_stem(255));
 
--- 古诗：同一「标题 + 作者」视为同一首（与采集入库处理器的唯一键一致），保证种子脚本幂等
-ALTER TABLE edu_poem ADD UNIQUE KEY IF NOT EXISTS uk_edu_poem_title_author (poem_title(191), poem_author(64));
 
--- 古诗学段映射：采集入库处理器判定「已存在」用的就是 (poem_id, grade_level)
--- （见 ImportProcessor#bindPoemGrade），这里补同款唯一索引，让 initdata 的映射行也能幂等。
--- 注意 grade 允许为 NULL（表示该学段通用），而 MySQL/MariaDB 中 NULL 互不相等，
--- 因此唯一键不能包含 grade，否则通用年级行重复插入拦不住。
-ALTER TABLE edu_poem_grade ADD UNIQUE KEY IF NOT EXISTS uk_edu_poem_grade_poem_level (poem_id, grade_level);
+
+
+
+
+
+
+
+-- ----------------------------
+-- 组卷模板表
+-- 说明：保存大标题风格、页眉页脚（富文本）与纸张规格/方向；
+--      模板归属列为 template_owner_user_id，审计列沿用 SysBase 的无前缀六列。
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_paper_template (
+    template_owner_user_id VARCHAR(64) COMMENT '归属用户ID',
+    KEY edu_paper_template_owner (template_owner_user_id),
+    template_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '模板ID',
+    template_name VARCHAR(100) NOT NULL COMMENT '模板名称',
+    template_style VARCHAR(40) DEFAULT 'classic' COMMENT '大标题风格: classic/modern/simple/exam',
+    template_header TEXT COMMENT '页眉（富文本）',
+    template_footer TEXT COMMENT '页脚（富文本）',
+    template_page_size VARCHAR(30) DEFAULT 'A4' COMMENT '纸张规格',
+    template_orientation VARCHAR(20) DEFAULT 'PORTRAIT' COMMENT '纸张方向',
+    template_status TINYINT DEFAULT 1 COMMENT '状态 0-停用 1-启用',
+    create_name VARCHAR(255) COMMENT '创建人姓名',
+    create_by INT COMMENT '创建人',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME COMMENT '更新时间',
+    update_name VARCHAR(255) COMMENT '更新人姓名',
+    update_by INT COMMENT '更新人',
+    KEY edu_paper_template_status (template_status)
+) COMMENT '组卷模板';
 
 
