@@ -163,8 +163,18 @@ public class FileStorageServerProperties {
 
         /**
          * 允许的请求头
+         *
+         * <p><b>必须与前端实际发出的自定义头一致</b>：跨域预检时浏览器会把
+         * {@code Access-Control-Request-Headers} 里的每个头与本列表比对，缺一个就整条预检失败
+         * （控制台报 {@code Request header field xxx is not allowed by
+         * Access-Control-Allow-Headers in preflight response}），业务请求根本发不出去。
+         * 本系统 axios 拦截器会给<b>每个</b>请求附加两个第一方头
+         * （见前端 {@code packages/utils/src/http.ts} 的
+         * {@code FIRST_PARTY_HEADER_A = "X-Trace-Id"} 与
+         * {@code FIRST_PARTY_HEADER_B = "X-Requested-With"}），
+         * 另由加密管线附加 {@code X-Req-Fingerprint}。三者缺一不可。</p>
          */
-        private String allowedHeaders = "Content-Type,Authorization,X-Requested-With,X-Req-Fingerprint";
+        private String allowedHeaders = "Content-Type,Authorization,X-Requested-With,X-Trace-Id,X-Req-Fingerprint";
 
         /**
          * 允许前端 JavaScript 读取的响应头（跨域下自定义头默认不可读）
