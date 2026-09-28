@@ -84,15 +84,20 @@ public class FileStorageServerLauncher implements AutoCloseable {
                     .host(properties.getHost())
                     .port(properties.getPort())
                     .build();
-            // 开启框架内置 CorsFilter（AbstractServer 默认挂载，此处打开开关），供系统应用内嵌页面跨域直连
+            // 跨域（CORS）：文件服务器是独立端口网关，前端基本都是跨源访问，故默认开启。
+            // 配置来源 plugin.filesystem.storage-server.cors.*（见 FileStorageServerProperties.Cors），
+            // 默认开启且允许携带凭据——预览页以 credentials:'include' 发起跨域 fetch，
+            // 缺 Access-Control-Allow-Credentials 会让浏览器拦掉整个响应。
             ServerSetting.CorsConfig cors = built.getSetting().getCors();
-            cors.setAllowOrigin(true);
-            cors.setAllowedOrigins("*");
-            cors.setAllowedHeaders("Content-Type,Authorization,X-Requested-With,X-Req-Fingerprint");
+            FileStorageServerProperties.Cors corsProperties = properties.getCors();
+            cors.setAllowOrigin(corsProperties.isEnable());
+            cors.setAllowedOrigins(corsProperties.getAllowedOrigins());
+            cors.setAllowedMethods(corsProperties.getAllowedMethods());
+            cors.setAllowedHeaders(corsProperties.getAllowedHeaders());
             // 暴露自定义响应头：Content-Disposition（前端读文件名）与预览通道标识
             // （X-FileStorage-Preview / X-FileStorage-Client-Renderer，前端据此选择渲染器）
-            cors.setExposeHeaders("Content-Disposition,Content-Range,Accept-Ranges,"
-                    + "X-FileStorage-Preview,X-FileStorage-Client-Renderer");
+            cors.setExposeHeaders(corsProperties.getExposeHeaders());
+            cors.setAllowCredentials(corsProperties.isAllowCredentials());
             // 预览统一走 iframe：显式开启安全头过滤器，但关闭 X-Frame-Options
             // 并用 CSP frame-ancestors 限定可嵌入来源（SecurityHeadersConfig 默认
             // enabled=false，此处按文件服务器需要显式开启）

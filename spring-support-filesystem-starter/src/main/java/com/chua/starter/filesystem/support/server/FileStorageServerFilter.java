@@ -311,19 +311,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 响应式执行过滤
     */
     public CompletionStage<Void> doFilter(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
- // 统一 跨域资源共享 支持（独立部署时浏览器跨域访问列表/上传/删除必需）
-        applyCorsHeaders(request, response);
-
- // 期权 预检请求直接放行
+        // CORS 由框架 CorsFilter 统一负责（其 order 最小，最先执行）：开关与白名单来自
+        // plugin.filesystem.storage-server.cors.*（默认开启、允许携带凭据），
+        // 由 FileStorageServerLauncher 注入。此处不再重复设置，避免两处真相。
+        // 这里只兜底处理「非预检」的裸 OPTIONS（真正的预检带 Access-Control-Request-Method，
+        // 已在框架 CorsFilter 里 204 结束，不会走到这里）。
         if (request.getMethod() == HttpMethod.OPTIONS) {
-            // 回显浏览器请求的自定义头（如 x-req-fingerprint），否则预检拒绝导致跨域请求全部失败
-            String requestedHeaders = request.getHeader("Access-Control-Request-Headers");
             response.setStatus(204)
-                    .setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
-                    .setHeader("Access-Control-Allow-Headers",
-                            requestedHeaders == null || requestedHeaders.isBlank()
-                                    ? "Content-Type, Authorization" : requestedHeaders)
-                    .setHeader("Access-Control-Max-Age", "3600")
+                    .setHeader("Allow", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
                     .end();
             return CompletableFuture.completedFuture(null);
         }
@@ -346,6 +341,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 return error(response, 405, "Method Not Allowed");
             }
             return handleConfig(request, response);
+        }
+
+        // 预览页同源静态资源：各 preview provider 生成的 HTML 引用 /preview-vendor/**
+        // （Univer 表格 / pdf.js / highlight.js / mammoth 等前端库），按约定由本服务以
+        // classpath:/static/preview-vendor 同源提供，避免依赖公网 CDN。
+        // 必须放在下面"未注册存储放行"之前——否则会被当成 bucket=preview-vendor 一路 passthrough
+        // 出去，最终 404，预览整条链路（样式/脚本全部加载不到）就废了。
+        if (PREVIEW_VENDOR_PREFIX.equalsIgnoreCase(bucket)) {
+            return servePreviewVendor(request, response, path);
         }
 
         FileStorage storage = storageMap.get(bucket);
@@ -780,25 +784,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             this.ttlMillis = ttlMillis;
             this.once = once;
         }
-    }
-
-    /**
-     * 为响应追加 跨域资源共享 头（回显 Origin，支持任意来源跨域）。
-     *
-     * <p>无 Origin 头的请求（同源/直连工具）不做任何处理。</p>
-     *
-     * @param request  请求
-     * @param response 响应
-     */
-    private void applyCorsHeaders(ServerRequest request, ServerResponse response) {
-        String origin = request.getHeader("Origin");
-        if (origin == null || origin.isEmpty()) {
-            return;
-        }
-        response.setHeader("Access-Control-Allow-Origin", origin);
-        response.setHeader("Access-Control-Expose-Headers",
-                "Content-Disposition, X-FileStorage-Preview, X-FileStorage-Client-Renderer, Content-Range, Accept-Ranges");
-        response.setHeader("Vary", "Origin");
     }
 
     /**
@@ -2100,6 +2085,54 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .replace("'", "&#39;");
     }
 
+    /** 预览页同源静态资源的前缀（preview provider 生成的 HTML 按此路径引用前端库） */
+    private static final String PREVIEW_VENDOR_PREFIX = "preview-vendor";
+
+    /** 预览静态资源在 classpath 下的根（随本模块打包在 resources/static 下） */
+    private static final String PREVIEW_VENDOR_CLASSPATH = "static/preview-vendor/";
+
+    /**
+     * 提供预览页同源静态资源。
+     *
+     * <p>{@code UniverPreviewProvider} / {@code PdfViewerPreviewProvider} / {@code CodePreviewProvider}
+     * 生成的预览 HTML 会引用 {@code /preview-vendor/**}（Univer 表格、pdf.js、highlight.js、mammoth 等
+     * 前端库），并约定由宿主服务**同源**提供，从而不依赖公网 CDN。这些文件随本模块打包在
+     * {@code resources/static/preview-vendor} 下，这里按请求路径从 classpath 取出返回。</p>
+     *
+     * <p>路径收敛：只读取 {@code static/preview-vendor/} 下的文件，并拦截 {@code ..} 穿越，
+     * 避免把 classpath 上任意资源变成可下载的静态文件。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     * @param path     请求路径，形如 {@code /preview-vendor/univer/sheets-core.css}
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> servePreviewVendor(ServerRequest request, ServerResponse response, String path) {
+        if (request.getMethod() != HttpMethod.GET && request.getMethod() != HttpMethod.HEAD) {
+            return error(response, 405, "Method Not Allowed");
+        }
+        String relative = path.startsWith("/") ? path.substring(1) : path;
+        if (relative.contains("..")) {
+            return error(response, 400, "Invalid path");
+        }
+        String resource = PREVIEW_VENDOR_CLASSPATH + relative.substring(PREVIEW_VENDOR_PREFIX.length() + 1);
+        try (InputStream in = FileStorageServerFilter.class.getClassLoader().getResourceAsStream(resource)) {
+            if (in == null) {
+                return error(response, 404, "Not Found: " + path);
+            }
+            byte[] data = in.readAllBytes();
+            response.setStatus(200)
+                    .setHeader("Cache-Control", "public, max-age=86400")
+                    .setContentType(resolveContentType(relative))
+                    .setBody(data)
+                    .end();
+            return CompletableFuture.completedFuture(null);
+        } catch (Exception e) {
+            log.error("预览静态资源读取失败: {} - {}", path, e.getMessage(), e);
+            return error(response, 500, "Internal Error: " + e.getMessage());
+        }
+    }
+
     /**
      * 处理对象下载/预览请求。
      *
@@ -2118,8 +2151,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      */
     private CompletionStage<Void> handleGet(FileStorage storage, ServerRequest request, String bucket, ServerResponse response, String key) {
         applyWatermarkHeader(response);
-        // 路径以 / 结尾视为明确的目录访问
-        boolean directoryIntent = request.getPath().endsWith("/");
+        // 目录访问意图：路径以 / 结尾，或显式 ?format=json（前端 Vue API 拉目录列表的统一约定）。
+        // ?format=json 必须一并识别——否则 GET /{bucket}/{子目录}?format=json 会落到下面的
+        // "读对象"分支，读内容时抛"是一个目录"，最终把"点进文件夹"变成 500。
+        boolean directoryIntent = request.getPath().endsWith("/") || wantsJsonListing(request);
 
         // 远程文件透传：Key 为完整 http(s) 地址时直接拉取
         if (setting.isOpenRemoteFile() && (key.startsWith("http://") || key.startsWith("https://"))) {
@@ -2145,12 +2180,16 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return error(response, 404, "Object Not Found: " + key);
         }
         if (directoryIntent) {
-            // 显式目录访问：直接列出（空目录返回空列表而非 404）
+            // 显式目录访问：直接列出。
+            // 空目录要返回空列表而非 404（前端据此显示"空目录"）；但"列表为空"同时也可能是
+            // 路径根本不存在，故必须再用存在性探测区分，否则访问不存在的目录会被当成空目录。
             ListObjectResult list = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
                     .limit(Integer.MAX_VALUE)
                     .build());
-            if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS) {
+            if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS
+                    && ((list.getMetadata() != null && !list.getMetadata().isEmpty())
+                    || objectExists(storage, key))) {
                 return writeList(bucket, key, list, request, response);
             }
             return error(response, 404, "Directory Not Found: " + key);
@@ -2165,6 +2204,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         try (InputStream in = result.getInputStream()) {
             data = in.readAllBytes();
         } catch (Exception e) {
+            // 读不出内容，多半是因为该 key 其实是目录（部分存储对目录的 getObject 也返回 SUCCESS）。
+            // 兜底再尝试按目录列出：只有列出【非空子项】才认定为目录——空结果不足以区分
+            // "空目录"与"文件本身损坏"，此时如实报错，避免把真实读取失败伪装成空目录。
+            ListObjectResult fallback = storage.listObject(ListObjectRequest.builder()
+                    .filePath(key)
+                    .limit(Integer.MAX_VALUE)
+                    .build());
+            if (fallback.getResultCode() == ObjectResult.ResultCode.SUCCESS
+                    && fallback.getMetadata() != null && !fallback.getMetadata().isEmpty()) {
+                return writeList(bucket, key, fallback, request, response);
+            }
             log.error("读取对象失败: {} - {}", key, e.getMessage(), e);
             return error(response, 500, "Read Object Failed");
         }
@@ -2939,6 +2989,23 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             throw new FileActionException(500, errMsg + (result.getMessage() == null ? "" : ": " + result.getMessage()));
         }
+    }
+
+    /**
+     * 请求是否显式要求"目录列表 JSON"。
+     *
+     * <p>前端（Vue API）统一用 {@code ?format=json} 拉目录列表。这个约定此前只在桶根生效：
+     * 子目录路径会落到 {@link #handleGet} 的"读对象"分支，读内容时抛"是一个目录"，
+     * 最终把"点进文件夹"变成 500 Internal Server Error。</p>
+     *
+     * <p>与"路径以 {@code /} 结尾"同等对待即可：两者都是"我要看这个目录里有什么"。</p>
+     *
+     * @param request 请求
+     * @return true 表示要求目录列表
+     */
+    private static boolean wantsJsonListing(ServerRequest request) {
+        Map<String, String> params = request.getParams();
+        return params != null && "json".equalsIgnoreCase(params.get("format"));
     }
 
     /**
