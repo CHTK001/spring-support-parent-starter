@@ -58,6 +58,15 @@ public class GenerateService {
     private static final String LOCAL_SYNC_PREFIX = "sync-";
 
     /**
+     * 任务多久没有推进就判定为僵死（毫秒）：5 分钟。
+     *
+     * <p>超时的非终态任务不会再自愈——没有任何在跑的线程会回写它，只能由服务端
+     * 主动判失败。过短会误杀正在正常生成的任务（图像生成实测约 30 秒，视频可到数分钟），
+     * 故取一个明显长于常见生成时长的值。</p>
+     */
+    private static final long STALE_TASK_MILLIS = 5 * 60 * 1000L;
+
+    /**
      * 参考图入库长度上限（字符数，data URI 约为二进制字节数的 1.33 倍）。
      *
      * <p>前端已在浏览器里按长边 1024 缩放，正常请求到这里只有几百 KB；
@@ -133,12 +142,33 @@ public class GenerateService {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void failStaleLocalTasks() {
+        // 重启遗留：只覆盖 PENDING/RUNNING。
+        // 若不限定状态，已完成的行会被无差别改写成失败——这是本方法唯一要防的破坏。
+        failStale("服务重启，任务已中断");
+    }
+
+    /**
+     * 把僵死任务收敛为失败。
+     *
+     * <p>用于两种都会让前端永久停在「排队中 / 0%」的情形：</p>
+     * <ul>
+     *   <li><b>服务重启</b>：本地线程池执行的任务随进程退出而中断，库里的行永远停在
+     *       PENDING/RUNNING；</li>
+     *   <li><b>异步提交丢失</b>：记录已入库，但提交上游的线程在回写前丢失（或提交前就异常），
+     *       同样没有机会落终态。此类任务再等下去也不会有结果，因为没有任何在跑的线程会回写它。</li>
+     * </ul>
+     * <p>两者都无法在前端或轮询里察觉——只能查库，而查库发现「它还在非终态」时，
+     * 唯一合理的处置就是判失败：与其让用户对着一个永不推进的 0% 发呆，
+     * 不如明确告诉他这条没跑成。</p>
+     *
+     * @param reason 写入 errorMessage 的原因
+     */
+    private void failStale(String reason) {
         try {
             List<SysAiGenerateTask> stale = taskMapper.selectList(
                     new LambdaQueryWrapper<SysAiGenerateTask>()
                             .in(SysAiGenerateTask::getStatus,
-                                    SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING)
-                            .likeRight(SysAiGenerateTask::getTaskId, LOCAL_SYNC_PREFIX));
+                                    SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING));
             if (stale.isEmpty()) {
                 return;
             }
@@ -147,11 +177,11 @@ public class GenerateService {
                 patch.setTaskId(task.getTaskId());
                 patch.setStatus(SysAiGenerateTask.STATUS_FAILED);
                 patch.setProgress(100);
-                patch.setErrorMessage("服务重启，任务已中断");
+                patch.setErrorMessage(reason);
                 patch.setUpdatedAt(System.currentTimeMillis());
                 taskMapper.updateById(patch);
             }
-            log.warn("[Generate] 启动收敛僵死任务 {} 条（服务重启导致）", stale.size());
+            log.warn("[Generate] 收敛僵死任务 {} 条：{}", stale.size(), reason);
         } catch (Exception e) {
             log.warn("[Generate] 收敛僵死任务失败: {}", e.getMessage());
         }
@@ -208,6 +238,14 @@ public class GenerateService {
         String type = request.type() == null || request.type().isBlank()
                 ? GenerateConfigSupport.TYPE_IMAGE : request.type();
 
+        // 先把僵死任务收敛掉，再查「有没有在跑」：否则一条卡住的任务会永远占着名额，
+        // 让用户既等不到结果也发不出新任务。
+        failStaleBeforeSubmit();
+        // 一次只允许一个未完成任务。
+        // 前端禁用了发送按钮，但那只是体验；并发提交、多标签页、直接调接口都能绕开，
+        // 故服务端必须自己拦一道。共用额度被打爆、结果互相穿插都源于并发。
+        requireNoRunningTask(request.userId());
+
         SysAiGenerateTask task = buildTask(request, type);
         // 视频原先是「先提交上游、成功后才 insert」，主键由上游任务号回填；
         // 改为先落库后主键必须在 insert 之前就有，否则 sysAiGenerateTaskId 为空。
@@ -243,6 +281,27 @@ public class GenerateService {
     }
 
     /**
+     * 校验该用户没有未完成的任务，有则拒绝。
+     *
+     * @param userId 用户标识
+     * @throws IllegalStateException 存在未完成任务时抛出
+     */
+    private void requireNoRunningTask(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+        List<SysAiGenerateTask> running = taskMapper.selectList(
+                new LambdaQueryWrapper<SysAiGenerateTask>()
+                        .eq(SysAiGenerateTask::getUserId, userId)
+                        .in(SysAiGenerateTask::getStatus,
+                                SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING)
+                        .last("LIMIT 1"));
+        if (running != null && !running.isEmpty()) {
+            throw new IllegalStateException("已有生成中的任务，请等它完成后再提交");
+        }
+    }
+
+    /**
      * 异步提交视频任务，失败回写 FAILED。
      *
      * <p>记录已先落库，故提交失败也要把状态与原因写回去——用户刷新时看到的是
@@ -271,6 +330,42 @@ public class GenerateService {
                 log.warn("[Generate] 视频任务提交失败 taskId={}: {}", task.getTaskId(), e.getMessage());
             }
         });
+    }
+
+    /**
+     * 提交前兜底：把「长时间没有进展」的非终态任务判为失败。
+     *
+     * <p>为什么必须有这一步：一旦某条任务卡在 PENDING/RUNNING，它会一直占着
+     * 「一次只能有一个在跑」的名额，让后续所有提交都被 409 拒掉——用户既等不到结果、
+     * 也发不出新任务，整页等于不可用。而这种僵死在轮询里看不出破绽，因为前端能正常
+     * 查到这条记录，只是它自己不再变化。</p>
+     *
+     * <p>判据用「创建至今已超过阈值」而不是「距上次更新超过阈值」：本地线程池任务
+     * 执行期间根本不回写进度，用 updatedAt 判断会把正在正常生成的任务误杀。</p>
+     */
+    private void failStaleBeforeSubmit() {
+        try {
+            long cutoff = System.currentTimeMillis() - STALE_TASK_MILLIS;
+            List<SysAiGenerateTask> stale = taskMapper.selectList(
+                    new LambdaQueryWrapper<SysAiGenerateTask>()
+                            .in(SysAiGenerateTask::getStatus,
+                                    SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING)
+                            .lt(SysAiGenerateTask::getCreatedAt, cutoff));
+            for (SysAiGenerateTask task : stale) {
+                SysAiGenerateTask patch = new SysAiGenerateTask();
+                patch.setTaskId(task.getTaskId());
+                patch.setStatus(SysAiGenerateTask.STATUS_FAILED);
+                patch.setProgress(100);
+                patch.setErrorMessage("任务长时间没有进展，已终止，请重新提交");
+                patch.setUpdatedAt(System.currentTimeMillis());
+                taskMapper.updateById(patch);
+            }
+            if (!stale.isEmpty()) {
+                log.warn("[Generate] 提交前收敛超时任务 {} 条", stale.size());
+            }
+        } catch (Exception e) {
+            log.warn("[Generate] 提交前收敛超时任务失败: {}", e.getMessage());
+        }
     }
 
     /**
