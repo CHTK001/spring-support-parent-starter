@@ -85,6 +85,11 @@ public class OsgiProperties {
     private Bridge bridge = new Bridge();
 
     /**
+     * 源码扩展点配置。
+     */
+    private Source source = new Source();
+
+    /**
      * 远程管理配置（SSH 或 Telnet，二选一）。
      */
     private Shell shell = new Shell();
@@ -137,6 +142,92 @@ public class OsgiProperties {
          * 需由使用方显式开启并纳入既有的接口鉴权体系。</p>
          */
         private boolean enabled = false;
+    }
+
+    /**
+     * 源码扩展点配置：把源码目录变成可随时改代码即生效的 SPI 扩展点。
+     *
+     * <p>与 {@link Deploy} 的分工：{@code deploy} 面向<b>已构建好的 bundle jar</b>，
+     * 需要先把源码打成 jar；本配置面向<b>源码本身</b>——放进目录即可，
+     * 由 {@code javax.tools.JavaCompiler} 现场编译并注册进
+     * {@code ServiceProvider} 扩展点表。适用于开发、测试与低频变更的扩展场景。</p>
+     *
+     * <p><b>默认开启</b>（2026-09-29 用户裁定：starter 的配置默认都是开启的）。
+     * 未开启时该 starter 的其余能力仍照常工作，只是不做源码编译。</p>
+     *
+     * <p>注意：源码热重载会在运行期编译并加载外部代码。源码目录不存在时按
+     * 「无源码」处理，不创建输出目录、也不注册任何扩展点，因此默认开启对
+     * 不使用该能力的应用是无害的；一旦真的往目录里放源码，即等同于授权运行期加载代码。</p>
+     *
+     * <p>用法：</p>
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     source:
+     *       enabled: true      # 默认已是 true，通常无需显式写
+     *       directory: ./osgi-source
+     * </pre>
+     * <p>目录里放一个带 {@code @SourceSpi} 的类即可（Java 或 Groovy）：</p>
+     * <pre>{@code
+     * @SourceSpi
+     * public class MyExtensions {
+     *     public final MySpi myExt = new MySpiImpl();   // 扩展名 = 字段名 myExt
+     * }
+     * }</pre>
+     *
+     * @author CH
+     * @since 4.0.0.43
+     */
+    @Data
+    public static class Source {
+
+        /**
+         * 是否启用源码扩展点热重载（默认开启）。
+         */
+        private boolean enabled = true;
+
+        /**
+         * 源码目录。
+         *
+         * <p>目录不存在时按「无源码」处理，不报错——配置项可以先开起来再放源码。</p>
+         */
+        private String directory = "./osgi-source";
+
+        /**
+         * 编译产物输出目录。
+         *
+         * <p>留空时取 {@code <directory>/../osgi-source-classes}。</p>
+         *
+         * <p><b>磁盘占用提示</b>：应用以 Spring Boot fat jar 部署时，编译器必须把
+         * {@code BOOT-INF/lib} 里的依赖<b>抽出到该目录</b> 才能让 javac 读到它们
+         * （javac 不认 {@code jar:nested:} 协议）。这意味着该目录会占用
+         * <b>与一份 BOOT-INF/lib 相当的空间</b>——实测 eduai 约 685MB。
+         * 抽取结果跨轮复用、不会重复增长；应用停止时自动清理。
+         * 磁盘紧张的应用可把该目录指向大容量卷，或改用解压式部署
+         * （非 fat jar，此时不产生这份开销）。</p>
+         */
+        private String outputDirectory = "";
+
+        /**
+         * 扫描间隔（毫秒）。
+         *
+         * <p>源码指纹（路径 + 大小 + 修改时间）未变化时不会触发编译。</p>
+         */
+        private long pollingInterval = 5000L;
+
+        /**
+         * 是否启用 Groovy 脚本扩展点。
+         *
+         * <p>开启后目录下的 {@code .groovy} 也会被加载，走既有
+         * {@code ScriptProvider} SPI。若 classpath 中没有对应引擎实现，
+         * 该部分会告警并降级为「只支持 Java 源码」，不影响启动。</p>
+         */
+        private boolean groovyEnabled = true;
+
+        /**
+         * 脚本引擎名，对应 {@code ScriptProvider#engineName}。
+         */
+        private String scriptEngine = "groovy";
     }
 
     /**

@@ -730,8 +730,19 @@ public class ReleaseServiceImpl implements ReleaseService {
             if (autoExtract && isArchive(packagePath)) {
                 steps.add(new ProjectStep("解压新版本包", extractCommand(win, path, packagePath), 2));
             } else {
-                steps.add(new ProjectStep("投放新版本文件",
-                        placeCommand(win, path, packagePath, project.getMainEntry()), 2));
+                // SDK 优先：文件投放用 SFTP rename（同文件系统内即移动），SDK 不可用才回退平台命令
+                String sdkTarget = (path.endsWith("/") ? path : path + "/") + project.getMainEntry();
+                steps.add(new ProjectStep("投放新版本文件", "", 2, () -> {
+                    ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null,
+                            packagePath.replace('\\', '/'), sdkTarget.replace('\\', '/'));
+                    if (mv.isOk()) {
+                        return java.util.List.of("sftp rename " + packagePath + " -> " + sdkTarget);
+                    }
+                    // 跨设备等 SFTP rename 不可用的场景：回退到平台命令（cp -f / Copy-Item）
+                    execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                            placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
+                    return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + mv.getMsg());
+                }));
             }
         }
         if (autoRollback && !isBlank(project.getStatusScript())) {

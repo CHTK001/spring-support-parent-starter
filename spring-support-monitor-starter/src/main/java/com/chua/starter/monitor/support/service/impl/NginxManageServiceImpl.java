@@ -1886,7 +1886,9 @@ public class NginxManageServiceImpl implements NginxManageService {
                 log.debug("[nginx] 定位 nginx 可执行文件失败: {}", e.getMessage());
             }
         }
-        while (prefix.endsWith("/")) {
+        // 去尾部分隔符：POSIX 给的是 '/etc/nginx'，Windows 的 %%~dpf 给的是 'C:\nginx\'
+        // ——两种都要去，否则 Windows 上会拼出 'C:\nginx\/conf/nginx.conf' 这种混合形态
+        while (prefix.endsWith("/") || prefix.endsWith("\\")) {
             prefix = prefix.substring(0, prefix.length() - 1);
         }
 
@@ -2255,8 +2257,68 @@ public class NginxManageServiceImpl implements NginxManageService {
     private ExecResult exec(DataSourceVO ds, String cmd, long seconds) {
         // 执行改走 SPI 通道：远端 SSH（POSIX / Windows 同一段代码，命令文本已按平台拼好），
         // 或本机直接执行（数据源 host 为空 / 为 local 时）。本方法不再自建 SshClient。
-        NginxExecutor.ExecResult r = runtime(ds).exec(cmd, seconds);
-        return new ExecResult(r.exitCode(), r.stdout(), r.stderr());
+        String key = trim(ds.host()) + ":" + (ds.port() == null ? 0 : ds.port());
+        Long until = connectFailUntil.get(key);
+        long now = System.currentTimeMillis();
+        if (until != null && now < until) {
+            // 快速失败：目标最近连不上，冷却期内连试都不试。
+            // 不加这层的话，一次 overview 会顺序发多条命令、每条白等一次连接超时，
+            // 实测不可达主机要 ~70 秒才返回；并发下会长时间占住线程。
+            throw new IllegalStateException("目标主机 " + key + " 最近一次连接失败，"
+                    + Math.max(1, (until - now) / 1000) + " 秒内快速失败（不再重试）。");
+        }
+        try {
+            NginxExecutor.ExecResult r = runtime(ds).exec(cmd, seconds);
+            // 成功即清掉冷却：恢复后立刻回归正常，不必等冷却自然过期
+            connectFailUntil.remove(key);
+            return new ExecResult(r.exitCode(), r.stdout(), r.stderr());
+        } catch (RuntimeException e) {
+            // 只有**连接级**失败才开断路器。命令级失败（如 nginx -t 报语法错）不能算，
+            // 否则一次配置写错会把整台机器判成不可达、后面全部快速失败。
+            if (isConnectFailure(e)) {
+                connectFailUntil.put(key, System.currentTimeMillis() + CONNECT_FAIL_COOLDOWN_MILLIS);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 连接级失败的冷却时长（毫秒）。
+     *
+     * <p><strong>必须大于「一次请求的耗时」，否则冷却会在请求中途过期、又开始重试。</strong>
+     * 实测（198 → 不可达主机 192.0.2.1）：单条命令失败要 10s，而一次 overview/config 请求会
+     * 顺序发多条命令、log/files 还要先走 resolvePaths，总耗时可达 70~180s。冷却设 20s 时
+     * 只挡住了头几条命令，后面又全量重试——表现为「有点效果但依然极慢」。
+     * 60s 让首条命令失败后，本次请求剩下的命令与紧随其后的请求全部瞬间失败。</p>
+     */
+    private static final long CONNECT_FAIL_COOLDOWN_MILLIS = 60_000L;
+
+    /**
+     * 「host:port → 冷却截止时刻」。
+     *
+     * <p>只记录连接级失败，成功即清除。</p>
+     */
+    private final Map<String, Long> connectFailUntil = new ConcurrentHashMap<>();
+
+    /**
+     * 判断异常是否为**连接级**失败（而非远端命令执行失败）。
+     *
+     * <p>按消息关键字判定，因为通道实现抛出的都是 {@link IllegalStateException}，
+     * 类型上分不开。宁可漏判（退回逐条重试的老行为，只是慢），也不要误判——
+     * 误判会把「命令报错」升级成「整机不可达」。</p>
+     *
+     * @param e 异常
+     * @return 是连接级失败返回 true
+     */
+    private static boolean isConnectFailure(Throwable e) {
+        String m = e == null || e.getMessage() == null ? "" : e.getMessage();
+        return m.contains("SSH 连接失败")
+                || m.contains("Timed out")
+                || m.contains("Connection refused")
+                || m.contains("Auth fail")
+                || m.contains("认证失败")
+                || m.contains("No route to host")
+                || m.contains("不可达");
     }
 
     /**

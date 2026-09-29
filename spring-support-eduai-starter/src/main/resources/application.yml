@@ -83,6 +83,16 @@ plugin:
       - /logout
       # 附件直链预览：iframe/img 无法带请求头，路径含随机 UUID + 扩展名白名单
       - /v2/edu/knowledge-point/file
+  # OSGi 源码扩展点：学生凭据校验等 SPI 实现改由源码声明，改完即生效，
+  # 不必为调整一条登录规则重新构建 600MB+ 的 fat jar。
+  # 源码目录刻意放在 jar 之外（WorkingDirectory 相对路径），fat jar 内的资源不可热改。
+  osgi:
+    source:
+      enabled: true
+      directory: ./osgi-source
+      polling-interval: 5000
+      groovy-enabled: true
+      script-engine: groovy
   datasource:
     script:
       enable: true

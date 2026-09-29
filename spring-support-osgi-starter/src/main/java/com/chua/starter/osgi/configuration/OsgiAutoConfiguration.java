@@ -6,6 +6,10 @@ import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.deploy.BundleDeployWatcher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
+import com.chua.osgi.support.source.SourceContextHolder;
+import com.chua.osgi.support.source.SourceExtensionScheduler;
+import com.chua.osgi.support.source.SourceGroovyLoader;
+import com.chua.osgi.support.source.SourceJavaCompiler;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.osgi.controller.OsgiMonitorController;
 import com.chua.starter.osgi.properties.OsgiProperties;
@@ -16,10 +20,14 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,6 +41,8 @@ import java.util.Map;
  *   <li>优先使用 Apache SSHD OSGi bundle 提供 SSH 远程管理（端口默认 8122）</li>
  *   <li>Telnet 回退：当 SSHD bundle 不可用时，使用 Gogo telnet（端口 6666）</li>
  *   <li>目录热部署：周期扫描部署目录，自动安装新 bundle、卸载已移除的 bundle</li>
+ *   <li>源码扩展点热重载：源码目录下的 Java/Groovy 改动自动编译并注册为 SPI 扩展点，
+ *       无需先打包成 bundle jar（见 {@link SourceExtensionScheduler}）</li>
  *   <li>将 OSGi 服务桥接到 Spring {@link ObjectContext}，跨容器查询 OSGi 注册的服务</li>
  * </ul>
  *
@@ -116,6 +126,85 @@ public class OsgiAutoConfiguration {
                 deploy.getPollingInterval(), deploy.isUninstallOnRemoved(), deploy.isUpdateOnChanged());
         watcher.start();
         return watcher;
+    }
+
+    /**
+     * 创建源码扩展点热重载调度器。
+     *
+     * <p>默认即开启：把 Java/Groovy 源码放进
+     * {@code plugin.osgi.source.directory}，改动会被自动编译并注册成 SPI 扩展点。
+     * 不依赖 Felix 框架是否启动成功——源码扩展点走
+     * {@code ServiceProvider} 扩展点表，与 bundle 机制相互独立，
+     * 这样即便框架启动失败，源码里的实现仍然可用。</p>
+     *
+     * <p>调度器作为 {@code BeanFactoryPostProcessor} 的收尾动作启动：源码可能需要
+     * 取容器 Bean（见 {@link SourceContextHolder}），而单例 Bean 可能尚未全部就绪，
+     * 因此在容器 refresh 末尾统一安装上下文并启动首轮编译，此时 Bean 已可用于注入。</p>
+     *
+     * @param properties osgi 配置
+     * @param context    Spring 容器上下文，用于把 Bean 暴露给源码
+     * @return 调度器，配置未启用时返回 {@code null}
+     */
+    @Bean(destroyMethod = "stop")
+    @ConditionalOnProperty(prefix = "plugin.osgi.source", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    public SourceExtensionScheduler sourceExtensionScheduler(OsgiProperties properties,
+                                                             ConfigurableApplicationContext context) {
+        OsgiProperties.Source source = properties.getSource();
+        // 开关判断不能只依赖 @ConditionalOnProperty：该注解只在 Spring 按注解创建 bean 时生效，
+        // 直接调用本方法（测试、按名字取 bean、其他自动配置复用）会绕过它，
+        // 导致未启用却仍创建出后台线程。
+        if (source == null || !source.isEnabled()) {
+            return null;
+        }
+        Path sourceDirectory = Paths.get(blankToDefault(source.getDirectory(), "./osgi-source"));
+        Path outputDirectory = Paths.get(blankToDefault(source.getOutputDirectory(),
+                sourceDirectory.toAbsolutePath().getParent() + File.separator + "osgi-source-classes"));
+
+        var javaCompiler = new SourceJavaCompiler(sourceDirectory, outputDirectory, null);
+        SourceGroovyLoader groovyLoader = source.isGroovyEnabled()
+                ? new SourceGroovyLoader(sourceDirectory, source.getScriptEngine())
+                : null;
+
+        var scheduler = new SourceExtensionScheduler(javaCompiler, groovyLoader,
+                source.getPollingInterval());
+        // 顺序至关重要：先安装容器上下文，再启动调度器。
+        // scheduler.start() 会以 0 延迟立即跑首轮编译，此时源码会去取容器 Bean
+        // （典型如 Mapper）；若上下文尚未安装，扩展点字段拿到 null 被跳过，
+        // 表现为「编译成功但扩展点为空」——且不会报错，极易误判。
+        // 装完上下文后显式同步跑一轮，避开 start() 的异步首轮。
+        SourceContextHolder.install(contextBeans(context));
+        scheduler.start();
+        scheduler.reloadIfChanged();
+        log.info("[OSGi] 源码扩展点热重载已启用: {} -> {}（Groovy {}，间隔 {}ms）",
+                sourceDirectory.toAbsolutePath(), outputDirectory.toAbsolutePath(),
+                source.isGroovyEnabled() ? source.getScriptEngine() : "关闭",
+                source.getPollingInterval());
+        return scheduler;
+    }
+
+    /**
+     * 收集容器内可安全暴露给源码的单例 Bean。
+     *
+     * <p>逐个 {@code getBean} 而非一次性导出，是为了跳过正在创建中的 Bean
+     * （否则会触发提前初始化，把「懒加载」变成「启动即加载」）与懒加载原型。</p>
+     *
+     * @param context 容器上下文
+     * @return Bean 名到实例的映射
+     */
+    private Map<String, Object> contextBeans(ConfigurableApplicationContext context) {
+        Map<String, Object> beans = new HashMap<>();
+        for (String name : context.getBeanDefinitionNames()) {
+            try {
+                if (context.isSingleton(name)) {
+                    beans.put(name, context.getBean(name));
+                }
+            } catch (Exception e) {
+                // 单个 Bean 正在创建中或初始化失败不应阻断整个上下文暴露
+                log.debug("[OSGi] 跳过无法暴露给源码的 Bean {}: {}", name, e.getMessage());
+            }
+        }
+        return beans;
     }
 
     /**
@@ -416,5 +505,16 @@ public class OsgiAutoConfiguration {
      */
     private boolean isClassAvailable(String className) {
         return ReflectUtils.forName(className) != null;
+    }
+
+    /**
+     * 取非空默认值。
+     *
+     * @param value        配置值
+     * @param defaultValue 默认值
+     * @return 值非空白时返回该值，否则返回默认值
+     */
+    private static String blankToDefault(String value, String defaultValue) {
+        return value == null || value.isBlank() ? defaultValue : value;
     }
 }

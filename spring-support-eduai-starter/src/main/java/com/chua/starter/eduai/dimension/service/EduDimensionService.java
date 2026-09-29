@@ -71,9 +71,21 @@ public class EduDimensionService {
     private static final int DEFAULT_IMPERSONATE_SECONDS = 300;
 
     /**
-     * 管理员代入学生的默认可访问路径：只放开学生端，不放开管理端
+     * 管理员代入学生的默认可访问路径前缀：只放开学生端，不放开管理端。
+     *
+     * <p><b>为什么不止 {@code /v2/edu/student} 一个</b>：学生门户首屏除了
+     * {@code student/me}、{@code student/overview} 之外，还要拉
+     * {@code eduaiApi.funModules}（趣味学习模块列表，见
+     * {@code StudentPortalView} 第 185 行）。那个端点在
+     * {@code /v2/edu/fun/modules} 下，早期只放开 {@code /v2/edu/student}
+     * 一个前缀，导致代入后首屏直接 403「用户信息不存在/请重新登录」——
+     * 学生本人登录不受影响（只有临时令牌走路径校验），所以这个缺口很容易漏掉。</p>
+     *
+     * <p>匹配方式是 {@code startsWith} 前缀匹配（见
+     * {@code TemporaryToken.isPathAllowed}），故每个前缀都不带尾部斜杠。</p>
      */
-    private static final String STUDENT_SCOPE_PATH = "/v2/edu/student";
+    private static final List<String> STUDENT_SCOPE_PATHS =
+            List.of("/v2/edu/student", "/v2/edu/fun");
 
     /**
      * Subjectmapper
@@ -401,7 +413,7 @@ public class EduDimensionService {
      * <p>用途是排查「这个学生看到的是什么」：管理员不必索要学生密码，
      * 也不必真的用学生账号登录，避免污染学生的学习记录。</p>
      *
-     * <p>默认只允许访问学生端接口（{@value #STUDENT_SCOPE_PATH}）。
+     * <p>默认只允许访问学生端接口（{@link #STUDENT_SCOPE_PATHS}）。
      * 开放管理端路径等于把管理员权限借出去，因此必须由调用方显式传入才会生效。</p>
      *
      * @param studentId     学生标识
@@ -426,7 +438,7 @@ public class EduDimensionService {
                 ? DEFAULT_IMPERSONATE_SECONDS
                 : expireSeconds;
         List<String> scope = allowedUrls == null || allowedUrls.isEmpty()
-                ? List.of(STUDENT_SCOPE_PATH)
+                ? STUDENT_SCOPE_PATHS
                 : allowedUrls;
 
         Map<String, Object> ext = new LinkedHashMap<>();
