@@ -48,13 +48,16 @@ mybatis-plus:
 plugin:
   async:
     enable: false
-  # 本地 static 鉴权：自校验令牌，不外呼 OAuth 服务端（否则登录报「鉴权服务器异常」）
+  # tcp 鉴权：登录请求发往独立部署的 OAuth 服务端（长度帧协议，帧格式 topic:body）。
+  # 注意：TcpProtocol 只发送 x-oauth-username / x-oauth-password，
+  # **不会**转发 accountType —— 本进程内注册的凭据扩展点（student）
+  # 在 tcp 链路上不参与解析，账号来源由 OAuth 服务端侧决定。
   oauth:
     enable: true
-    protocol: static
+    protocol: tcp
     # isFailure() 要求 loginAddress/auth-address 非空，留空会直接判鉴权失败
-    address: http://127.0.0.1:19095/login
-    auth-address: http://127.0.0.1:19095/login
+    address: tcp://192.168.50.198:19180
+    auth-address: tcp://192.168.50.198:19180
     login-address: /#/login
     token-name: x-oauth-token
     static-token-expire-seconds: 7200

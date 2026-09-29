@@ -164,7 +164,11 @@ public class DefaultJobOperator implements JobOperator {
                         runtime == null ? null : runtime.getExceptionCallbackBean(),
                         runtime == null ? null : runtime.getAlarmEmail(),
                         runtime == null ? null : runtime.getAlarmType(),
-                        runtime == null ? null : runtime.getExecuteParam()));
+                        runtime == null ? null : runtime.getExecuteParam(),
+                        // 台账的并发策略必须随命令下发：否则执行器拿不到 SKIP，
+                        // 会落到 JobExecutor 的默认策略（JobAutoConfiguration 注入的是 CONCURRENT_ALLOW），
+                        // 表现为「台账写着 SKIP，手动触发并发时两份都在跑，且没有任何 skipped 日志」。
+                        runtime == null ? null : runtime.getConcurrentPolicy()));
         log.info("[job] 手动派发已投递 job={} nodeId={}", key, nodeId);
         return true;
     }
