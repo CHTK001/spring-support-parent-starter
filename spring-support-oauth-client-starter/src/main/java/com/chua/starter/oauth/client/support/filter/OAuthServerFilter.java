@@ -431,7 +431,11 @@ public class OAuthServerFilter implements ServerFilter {
             return;
         }
         response.setHeader("Access-Control-Allow-Origin", origin);
-        response.setHeader("Access-Control-Expose-Headers", "Content-Disposition, X-FileStorage-Preview, Content-Range, Accept-Ranges");
+        // X-FileStorage-ImageOp / -Reason 是「图片处理是否真的执行」的信号：
+        // 超像素预算或转码失败时服务端会兜底吐原图，浏览器必须能读到这两个头
+        // 才能提示用户，否则会静默拿到未处理的图片。
+        response.setHeader("Access-Control-Expose-Headers",
+                "Content-Disposition, X-FileStorage-Preview, Content-Range, Accept-Ranges, X-FileStorage-ImageOp, X-FileStorage-ImageOp-Reason");
         response.setHeader("Vary", "Origin");
     }
 
