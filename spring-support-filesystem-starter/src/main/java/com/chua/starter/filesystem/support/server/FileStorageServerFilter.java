@@ -936,17 +936,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @return 处理后的字节；非图片或无操作时返回 {@code null}（交回原流程）
      */
     private ImageOpResult applyFileOperations(byte[] data, String fileName, ServerRequest request) {
-        String ext = simpleExtOf(fileName);
-        if (ext == null || !isImageExt(ext)) {
-            return ImageOpResult.passThrough();
-        }
         FileOperationSetting ops = parseFileOps(request);
-        if (ops == null) {
-            return ImageOpResult.passThrough();
-        }
-        if (!ops.hasOperation()) {
+        if (ops == null || !ops.hasOperation()) {
             log.debug("[FileStorage] 无图片处理操作，透传原图: {}", fileName);
             return ImageOpResult.passThrough();
+        }
+        String ext = simpleExtOf(fileName);
+        if (ext == null || !isImageExt(ext)) {
+            // 带了处理参数却碰上白名单外的扩展名（tiff/ico/…），也必须说一声。
+            // 修复前这里直接 return null，客户端拿到的响应里连 imageop 头都没有，
+            // 与「处理成功」完全无法区分。
+            return ImageOpResult.skipped("unsupported-image-ext:" + (ext == null ? "none" : ext));
         }
         // extensions 文件里 ImageOperation 只注册了具名扩展 jdk=，没有无名默认项，
         // 因此必须按名字取；FileStorageFileSetting 有无名默认项，两种取法都成立。
