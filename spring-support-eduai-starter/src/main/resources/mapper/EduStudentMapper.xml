@@ -25,4 +25,26 @@
         ORDER BY st.student_id ASC
     </select>
 
+    <!-- 按学号取学生：学生端改密、登录态定位档案都走这里。
+         不加归属过滤——学生端令牌里的 userId 就是学号，天然只对应自己。 -->
+    <select id="selectByStudentNo" resultType="com.chua.starter.eduai.dimension.entity.EduStudent">
+        SELECT st.* FROM edu_student st
+        WHERE st.student_no = #{studentNo}
+        LIMIT 1
+    </select>
+
+    <!-- 学号是否已存在：生成学号时的插入前查重，让报错更友好；
+         并发下的最终保证仍是库上的 UNIQUE 约束。 -->
+    <select id="existsByStudentNo" resultType="java.lang.Integer">
+        SELECT 1 FROM edu_student st WHERE st.student_no = #{studentNo} LIMIT 1
+    </select>
+
+    <!-- 取某前缀下的最大学号：用于生成下一个顺序号。只认纯数字后缀，
+         避免历史脏数据（如手工填的 ACC2026001）干扰顺序号推进。 -->
+    <select id="selectMaxStudentNoByPrefix" resultType="java.lang.String">
+        SELECT MAX(st.student_no) FROM edu_student st
+        WHERE st.student_no LIKE CONCAT(#{prefix}, '%')
+        AND st.student_no REGEXP CONCAT('^', #{prefix}, '[0-9]+$')
+    </select>
+
 </mapper>
