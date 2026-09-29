@@ -19,6 +19,14 @@ import com.chua.starter.monitor.support.spi.Platforms;
 public class PosixNginxCommandProvider implements NginxCommandProvider {
 
     /**
+     * 单次增量读取的字节上限（256KB）。
+     *
+     * <p>与既有行为一致：日志暴涨时不能一次把几十 MB 拽回来。放在实现里而不是让调用方
+     * 拼 {@code | head -c}，是因为那是 POSIX 管道，Windows 没有对应写法。</p>
+     */
+    private static final int MAX_DELTA_BYTES = 262144;
+
+    /**
      * POSIX 自证命令：输出内核名（{@code Linux} / {@code Darwin}）。
      *
      * <p>不加 {@code 2>/dev/null}：路由器用退出码 + 输出双重判定，错误信息留在输出里
@@ -143,13 +151,61 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String bytesFrom(String path, long start) {
-        // tail -c +N 的 N 是 1 基，从第 N 个字节开始
-        return "tail -c +" + (start + 1) + " " + quote(path);
+        // tail -c +N 的 N 是 1 基，从第 N 个字节开始；再截断到 256KB，
+        // 避免日志暴涨时一次传输过大（调用方不再自己拼 head）
+        return "tail -c +" + (start + 1) + " " + quote(path) + " 2>/dev/null | head -c " + MAX_DELTA_BYTES;
     }
 
     @Override
     public String findFiles(String root, String pattern) {
         return "find " + quote(root) + " -name " + quote(pattern) + " -type f 2>/dev/null";
+    }
+
+    @Override
+    public String listFilesWithMeta(String root, String namePattern, boolean recursive) {
+        // 不用 find -printf（GNU 扩展，BSD/macOS 没有）；时间戳走 date -r，
+        // 失败再退到 stat -c，两个平台分支都保留
+        String scope = recursive ? "" : " -maxdepth 1";
+        return "find " + quote(root) + scope + " -name " + quote(namePattern) + " -type f 2>/dev/null | while read -r f; do "
+                + "printf '%s\\t%s\\t%s\\n' \"$f\" \"$(wc -c < \"$f\" 2>/dev/null | tr -d ' ')\" "
+                + "\"$(date -r \"$f\" '+%Y-%m-%d %H:%M' 2>/dev/null || stat -c '%y' \"$f\" 2>/dev/null | cut -d. -f1)\"; "
+                + "done";
+    }
+
+    @Override
+    public String writeFile(String path, String base64Content) {
+        // 语义与原先的 writeFile 完全一致（printf | base64 -d >），只是搬到这里
+        return "printf '%s' " + quote(base64Content) + " | base64 -d > " + quote(path);
+    }
+
+    @Override
+    public String dirExists(String path) {
+        return "test -d " + quote(path);
+    }
+
+    @Override
+    public String parentDir(String path) {
+        // cd 到父目录再 pwd：pwd 会解析软链接，拿到真实目录
+        return "cd \"$(dirname " + quote(path) + ")\" && pwd";
+    }
+
+    @Override
+    public String homeDir() {
+        return "printf '%s' \"$HOME\"";
+    }
+
+    @Override
+    public String configDump(String binary) {
+        // -T 把配置打到 stderr，必须合并，否则调用方读到空
+        return binary(binary) + " -T 2>&1";
+    }
+
+    @Override
+    public String directiveMatches(String root, String namePattern, String directive, int maxLines) {
+        // 保留原写法：无行首锚点、字面量指令名 + POSIX 空白类 + 排除分号
+        String grep = "grep -rhoE " + quote(directive + "[[:space:]]+[^;]+") + " " + quote(root)
+                + " --include=" + quote(namePattern) + " 2>/dev/null";
+        return maxLines > 0 ? grep + " | head -" + maxLines : grep;
     }
 
     @Override

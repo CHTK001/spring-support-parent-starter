@@ -31,6 +31,11 @@ import com.chua.starter.monitor.support.spi.Platforms;
 public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     /**
+     * 单次增量读取的字节上限（256KB），与 POSIX 实现保持一致。
+     */
+    private static final int MAX_DELTA_BYTES = 262144;
+
+    /**
      * Windows 自证命令。
      *
      * <p>用 {@code ver} 而不是 {@code uname}：{@code ver} 是 {@code cmd} 内置命令，
@@ -160,11 +165,14 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String bytesFrom(String path, long start) {
-        // 从第 start 字节开始读（1 基，与 POSIX tail -c +N 对齐）
+        // 从第 start 字节（0 基）起读，最多 MAX_DELTA_BYTES，
+        // 按 UTF-8 解出，避免中文日志乱码
         return "powershell -NoProfile -Command \""
-                + "$fs = [System.IO.File]::Open(" + psQuote(path) + ",'Open','Read','ReadWrite');"
-                + "try { $fs.Seek(" + start + ",'Begin') | Out-Null;"
-                + "$sr = New-Object System.IO.StreamReader($fs);$sr.ReadToEnd() } finally { $fs.Close() }\"";
+                + "$fs=[System.IO.File]::Open(" + psQuote(winPath(path)) + ",'Open','Read','ReadWrite');"
+                + "try{$fs.Seek(" + start + ",'Begin')|Out-Null;"
+                + "$buf=New-Object byte[] " + MAX_DELTA_BYTES + ";"
+                + "$n=$fs.Read($buf,0," + MAX_DELTA_BYTES + ");"
+                + "[System.Text.Encoding]::UTF8.GetString($buf,0,$n)}finally{$fs.Close()}\"";
     }
 
     @Override
@@ -172,6 +180,64 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
         return "powershell -NoProfile -Command \""
                 + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(pattern)
                 + " -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }\"";
+    }
+
+    @Override
+    public String listFilesWithMeta(String root, String namePattern, boolean recursive) {
+        // 用 [char]9 表示制表符，避免在 cmd → powershell 两层引号里再嵌 \t 的转义
+        String recurse = recursive ? " -Recurse" : "";
+        return "powershell -NoProfile -Command \""
+                + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(namePattern) + recurse
+                + " -File -ErrorAction SilentlyContinue | ForEach-Object { "
+                + "$_.FullName + [char]9 + $_.Length + [char]9 + $_.LastWriteTime.ToString('yyyy-MM-dd HH:mm') }\"";
+    }
+
+    @Override
+    public String writeFile(String path, String base64Content) {
+        // Windows 没有 base64 命令。用 .NET 直接解码落盘，绕开所有引号/转义层。
+        // 注意：命令长度受 cmd 约 8K 上限约束，与 POSIX 侧同样是既有局限；
+        // 站点配置通常几 KB，够用。
+        return "powershell -NoProfile -Command \""
+                + "$b=[Convert]::FromBase64String(" + psQuote(base64Content) + ");"
+                + "[System.IO.File]::WriteAllBytes(" + psQuote(winPath(path)) + ",$b)\"";
+    }
+
+    @Override
+    public String dirExists(String path) {
+        // 不能用 `if exist "path\*"`：那只在目录非空时为真，空目录会误判为不存在。
+        // Test-Path -PathType Container 对空目录同样正确。
+        return "powershell -NoProfile -Command \""
+                + "if (Test-Path -LiteralPath " + psQuote(winPath(path)) + " -PathType Container)"
+                + " { exit 0 } else { exit 1 }\"";
+    }
+
+    @Override
+    public String parentDir(String path) {
+        return "powershell -NoProfile -Command \""
+                + "Split-Path -LiteralPath " + psQuote(winPath(path)) + " -Parent\"";
+    }
+
+    @Override
+    public String homeDir() {
+        return "echo %USERPROFILE%";
+    }
+
+    @Override
+    public String configDump(String binary) {
+        return binary(binary) + " -T 2>&1";
+    }
+
+    @Override
+    public String directiveMatches(String root, String namePattern, String directive, int maxLines) {
+        // .NET 正则不认 [[:space:]]，用 \s；语义与原 POSIX 写法一致
+        String regex = directive + "\\s+[^;]+";
+        String limit = maxLines > 0 ? " | Select-Object -First " + maxLines : "";
+        return "powershell -NoProfile -Command \""
+                + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(namePattern) + " -Recurse -File"
+                + " -ErrorAction SilentlyContinue | ForEach-Object { "
+                + "Select-String -LiteralPath $_.FullName -Pattern " + psQuote(regex) + " -AllMatches"
+                + " -ErrorAction SilentlyContinue | ForEach-Object { $_.Matches } | ForEach-Object { $_.Value } }"
+                + limit + "\"";
     }
 
     @Override

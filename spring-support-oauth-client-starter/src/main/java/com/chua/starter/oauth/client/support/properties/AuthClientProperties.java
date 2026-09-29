@@ -245,7 +245,6 @@ public class AuthClientProperties {
      * 可选值：
      * <ul>
      * <li><strong>tcp</strong> - TCP协议，基于原生 Socket，默认</li>
-     * <li><strong>armeria</strong> - Armeria协议，基于Netty的高性能异步框架，需额外依赖</li>
      * <li><strong>http</strong> - HTTP协议，基于Unirest，同步实现</li>
      * <li><strong>oauth2</strong> - OAuth2 协议</li>
      * <li><strong>rsocket</strong> - RSocket 协议</li>

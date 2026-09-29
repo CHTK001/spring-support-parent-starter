@@ -7,6 +7,10 @@ import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.monitor.support.entity.MsMonitorNginxMetric;
 import com.chua.starter.monitor.support.mapper.MsMonitorNginxMetricMapper;
 import com.chua.starter.monitor.support.middleware.MiddlewareHttp;
+import com.chua.starter.monitor.support.nginx.spi.NginxCommandProvider;
+import com.chua.starter.monitor.support.nginx.spi.NginxExecutor;
+import com.chua.starter.monitor.support.nginx.spi.NginxRuntimeRouter;
+import com.chua.starter.monitor.support.spi.Platforms;
 import com.chua.starter.monitor.support.model.NginxApplyResultVO;
 import com.chua.starter.monitor.support.model.NginxBackupDiffVO;
 import com.chua.starter.monitor.support.model.NginxBackupVO;
@@ -240,6 +244,16 @@ public class NginxManageServiceImpl implements NginxManageService {
     private final ObjectProvider<ServerConfigService> configServiceProvider;
 
     /**
+     * Nginx 运行时路由器：按数据源解析出「平台 + 命令文本 + 执行通道」。
+     *
+     * <p>本类原先自建 {@code SshClient} 并把 POSIX 命令硬编码在方法里，导致 Windows 上
+     * 一条都跑不了（不是没测，是结构上不可能跑）。现在命令文本由
+     * {@code NginxCommandProvider} 按平台给出，执行由 {@code NginxExecutor} 承担，
+     * 二者都走 SPI；本类只负责业务编排。</p>
+     */
+    private final NginxRuntimeRouter nginxRuntimeRouter;
+
+    /**
      * 路径解析结果的缓存有效期（毫秒）。
      *
      * <p>prefix / confPath 正常情况下是编译期常量，缓存只是为省掉每次命令多开一次
@@ -324,11 +338,9 @@ public class NginxManageServiceImpl implements NginxManageService {
     public List<NginxConfigFileVO> listFiles(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
         String root = confRoot(ds);
-        // -printf 是 GNU find 扩展，BSD/macOS 上不可用；因此改用 stat 的可移植组合
-        String out = exec(ds, "find " + shQuote(root) + " -name '*.conf' -type f 2>/dev/null | while read -r f; do "
-                + "printf '%s\\t%s\\t%s\\n' \"$f\" \"$(wc -c < \"$f\" 2>/dev/null | tr -d ' ')\" "
-                + "\"$(date -r \"$f\" '+%Y-%m-%d %H:%M' 2>/dev/null || stat -c '%y' \"$f\" 2>/dev/null | cut -d. -f1)\"; "
-                + "done").stdout();
+        // -printf 是 GNU find 扩展，BSD/macOS 上不可用；具体实现由平台提供者负责，
+        // 这里只要「路径 + 字节数 + 修改时间」这份语义结果
+        String out = exec(ds, commands(ds).listFilesWithMeta(root, "*.conf", true)).stdout();
         List<NginxConfigFileVO> result = new ArrayList<>();
         for (String raw : out.split("\n")) {
             String line = raw.trim();
@@ -349,7 +361,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     public String readConfig(Long datasourceId, String path) {
         DataSourceVO ds = requireDatasource(datasourceId);
         String safePath = requireText(path, "配置文件路径不能为空");
-        return exec(ds, "cat " + shQuote(safePath)).stdout();
+        return exec(ds, commands(ds).readFile(safePath)).stdout();
     }
 
     @Override
@@ -419,7 +431,7 @@ public class NginxManageServiceImpl implements NginxManageService {
                 // 新建配置时原文件尚不存在，backup() 里的 cp 会失败并被当成
                 // 「备份失败」而中止整个保存流程；但这种情况本就没有可备份的原件，
                 // 跳过即可——否则「用模板新建站点」这条核心链路根本走不通。
-                if (exec(ds, "test -f " + shQuote(path)).exitCode() == 0) {
+                if (exec(ds, commands(ds).fileExists(path)).exitCode() == 0) {
                     backupPath = backup(request.datasourceId(), path, "保存前自动备份").path();
                     steps.add("已备份原配置到 " + backupPath);
                 } else {
@@ -742,7 +754,9 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return 命令串
      */
     private String systemctlCmd(String unit, String action) {
-        return "sudo -n systemctl " + action + " " + shQuote(unit);
+        // systemd 是 POSIX 专有：能走到这里就说明调用方已通过 usableInitUnit 判定该机被
+        // systemd 托管（Windows 上恒判否）。所以命令文本固定取 POSIX 实现，不按数据源平台猜。
+        return nginxRuntimeRouter.commandsOf(Platforms.LINUX).serviceControl(unit, action);
     }
 
     /**
@@ -806,7 +820,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     public NginxVersionVO version(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
         // nginx -V 的编译参数输出在 stderr
-        ExecResult r = exec(ds, "nginx -V 2>&1");
+        ExecResult r = exec(ds, commands(ds).versionDump(""));
         String raw = mergeOut(r.stdout(), r.stderr()).trim();
         String version = null;
         String configure = null;
@@ -884,10 +898,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     public List<NginxLogFileVO> listLogFiles(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
         String dir = logDir(ds);
-        String out = exec(ds, "ls -1 " + shQuote(dir) + "/*.log 2>/dev/null | while read -r f; do "
-                + "printf '%s\\t%s\\t%s\\n' \"$f\" \"$(wc -c < \"$f\" 2>/dev/null | tr -d ' ')\" "
-                + "\"$(date -r \"$f\" '+%Y-%m-%d %H:%M' 2>/dev/null || stat -c '%y' \"$f\" 2>/dev/null | cut -d. -f1)\"; "
-                + "done").stdout();
+        String out = exec(ds, commands(ds).listFilesWithMeta(dir, "*.log", false)).stdout();
         List<NginxLogFileVO> result = new ArrayList<>();
         for (String raw : out.split("\n")) {
             String line = raw.trim();
@@ -911,7 +922,7 @@ public class NginxManageServiceImpl implements NginxManageService {
         if (safePath.isEmpty()) {
             safePath = defaultAccessLog(ds);
         }
-        return exec(ds, "tail -n " + n + " " + shQuote(safePath) + " 2>&1").stdout();
+        return exec(ds, commands(ds).tailLines(safePath, n)).stdout();
     }
 
     @Override
@@ -929,12 +940,12 @@ public class NginxManageServiceImpl implements NginxManageService {
             rotated = size == null || size < cursor;
         }
         if (cursor == null || cursor <= 0 || rotated) {
-            String all = exec(ds, "tail -n " + n + " " + shQuote(safePath) + " 2>&1").stdout();
+            String all = exec(ds, commands(ds).tailLines(safePath, n)).stdout();
             return new NginxLogChunkVO(all, size, size, rotated, safePath);
         }
-        // 只取游标之后新增的字节；单次最多 256KB，避免日志暴涨时一次传输过大
-        String delta = exec(ds, "tail -c +" + (cursor + 1) + " " + shQuote(safePath)
-                + " 2>/dev/null | head -c 262144").stdout();
+        // 只取游标之后新增的字节；单次上限 256KB，由命令提供者按平台各自实现
+        // （原先在这里拼 `| head -c 262144`，那是 POSIX 管道，Windows 没有）。
+        String delta = exec(ds, commands(ds).bytesFrom(safePath, cursor)).stdout();
         return new NginxLogChunkVO(delta, size, size, false, safePath);
     }
 
@@ -947,7 +958,7 @@ public class NginxManageServiceImpl implements NginxManageService {
      */
     private Long fileSize(DataSourceVO ds, String path) {
         try {
-            ExecResult r = exec(ds, "wc -c < " + shQuote(path) + " 2>/dev/null | tr -d ' '");
+            ExecResult r = exec(ds, commands(ds).fileSize(path));
             return parseLong(r.stdout().trim());
         } catch (RuntimeException e) {
             log.debug("[nginx] 读取文件大小失败 path={} err={}", path, e.getMessage());
@@ -964,12 +975,16 @@ public class NginxManageServiceImpl implements NginxManageService {
         String dir = resolvePaths(ds).backupDir();
         String name = trim(safePath).replace('/', '_') + "." + LocalDateTime.now().format(BACKUP_STAMP) + ".bak";
         String target = dir + "/" + name;
-        ExecResult r = exec(ds, "mkdir -p " + shQuote(dir) + " && cp -p " + shQuote(safePath)
-                + " " + shQuote(target) + " && printf '%s' \"$(wc -c < " + shQuote(target) + " | tr -d ' ')\"");
-        if (r.exitCode() != 0) {
-            throw new IllegalStateException("备份失败: " + mergeOut(r.stdout(), r.stderr()));
+        // 拆成三步平台中立调用：建目录 → 复制 → 取大小。
+        // 原先是一条 `mkdir -p … && cp -p … && printf "%s" "$(wc -c < …)"` 复合命令，
+        // 三处都是 POSIX 专有语法。
+        exec(ds, commands(ds).makeDirs(dir));
+        ExecResult cp = exec(ds, commands(ds).copyFile(safePath, target));
+        if (cp.exitCode() != 0) {
+            throw new IllegalStateException("备份失败: " + mergeOut(cp.stdout(), cp.stderr()));
         }
-        return new NginxBackupVO(name, target, parseLong(r.stdout().trim()), LocalDateTime.now().toString(),
+        ExecResult sized = exec(ds, commands(ds).fileSize(target));
+        return new NginxBackupVO(name, target, parseLong(sized.stdout().trim()), LocalDateTime.now().toString(),
                 null, trim(reason).isEmpty() ? "手动备份" : reason);
     }
 
@@ -977,22 +992,63 @@ public class NginxManageServiceImpl implements NginxManageService {
     public List<NginxBackupVO> listBackups(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
         String dir = resolvePaths(ds).backupDir();
-        String out = exec(ds, "ls -1t " + shQuote(dir) + " 2>/dev/null | while read -r n; do "
-                + "printf '%s\\t%s\\t%s\\n' \"$n\" \"$(wc -c < \"" + dir + "/$n\" 2>/dev/null | tr -d ' ')\" "
-                + "\"$(date -r \"" + dir + "/$n\" '+%Y-%m-%d %H:%M' 2>/dev/null)\"; "
-                + "done").stdout();
-        List<NginxBackupVO> result = new ArrayList<>();
+        // 统一走「路径 + 大小 + 修改时间」能力。原先靠 `ls -1t` 在 shell 里排序、
+        // 并反复拼 dir/$n，既依赖 POSIX，又和配置/日志列表各写一份同样的脚本。
+        // 排序改在本地做：时间格式固定 yyyy-MM-dd HH:mm，字典序即时间序。
+        String out = exec(ds, commands(ds).listFilesWithMeta(dir, "*", false)).stdout();
+        List<String[]> rows = new ArrayList<>();
         for (String raw : out.split("\n")) {
             String line = raw.trim();
             if (line.isEmpty()) {
                 continue;
             }
-            String[] parts = line.split("\t", 3);
-            result.add(new NginxBackupVO(parts[0], dir + "/" + parts[0],
+            rows.add(line.split("\t", 3));
+        }
+        // 最新在前，与原 `ls -1t` 的呈现一致；缺失时间的排最后
+        rows.sort((a, b) -> (b.length >= 3 ? b[2] : "").compareTo(a.length >= 3 ? a[2] : ""));
+        List<NginxBackupVO> result = new ArrayList<>();
+        for (String[] parts : rows) {
+            String full = parts[0];
+            result.add(new NginxBackupVO(baseName(full), full,
                     parts.length >= 2 ? parseLong(parts[1]) : null,
                     parts.length >= 3 ? parts[2] : null, null, null));
         }
         return result;
+    }
+
+    /**
+     * 取路径的父目录，{@code /} 与 {@code \} 都认。
+     *
+     * <p>纯字符串运算，只用于解析配置里已给出的路径；需要软链接规范化的场合
+     * （如定位 nginx 可执行目录）必须走 {@code NginxCommandProvider.parentDir}，
+     * 不能用本方法代替。</p>
+     *
+     * @param path 路径
+     * @return 父目录；无分隔符返回空串
+     */
+    private static String parentOf(String path) {
+        if (path == null) {
+            return "";
+        }
+        int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return slash > 0 ? path.substring(0, slash) : "";
+    }
+
+    /**
+     * 取路径的文件名部分，{@code /} 与 {@code \} 都认。
+     *
+     * <p>不能只用 {@code lastIndexOf('/')}：Windows 返回的是反斜杠路径，
+     * 那样会取到整条路径当作文件名。</p>
+     *
+     * @param path 路径
+     * @return 文件名
+     */
+    private static String baseName(String path) {
+        if (path == null) {
+            return "";
+        }
+        int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
     @Override
@@ -1144,11 +1200,11 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return 文件内容
      */
     private String readRemoteFile(DataSourceVO ds, String path) {
-        ExecResult exists = exec(ds, "test -f " + shQuote(path));
+        ExecResult exists = exec(ds, commands(ds).fileExists(path));
         if (exists.exitCode() != 0) {
             throw new IllegalStateException("文件不存在: " + path);
         }
-        ExecResult r = exec(ds, "cat " + shQuote(path));
+        ExecResult r = exec(ds, commands(ds).readFile(path));
         if (r.exitCode() != 0) {
             throw new IllegalStateException("读取失败: " + mergeOut(r.stdout(), r.stderr()));
         }
@@ -1237,44 +1293,14 @@ public class NginxManageServiceImpl implements NginxManageService {
      */
     private String detectRunning(DataSourceVO ds) {
         String confTail = confTail(ds);
-        // 有 conf 时按 conf 过滤；没有则退回「只看进程名」的原行为
+        // 命令文本整体交给平台实现。原先这里是一段内联 shell 脚本，自带 pgrep → ps -e
+        // → tasklist 三段平台分支——正是「把平台差异硬编码在业务方法里」的写法。
+        // 现在 POSIX 实现保留 pgrep/ps 两级退化，Windows 实现走 Get-Process。
         //
-        // 踩过的坑：这里一度用 Pattern.quote(conf) 生成片段再塞进
-        // '[]' 字符类，拼出来是 [\Qnginx.conf\E]。shell 里的 grep/pgrep 走的是
-        // POSIX 正则，\Q..\E 不是它的语法，字符类因 \E 提前闭合而退化成
-        // 「任意字符」——实测把 init、kworker 这些内核线程全匹配上了，
-        // 于是永远返回 ON，看起来像「过滤生效了」，实则完全没在过滤。
-        //
-        // 现在改成「先用 fgrep 做字面量比对」，不依赖任何正则元字符语义：
-        // conf 文件名是纯字面量，直接匹配最稳，也不会被 . * [ 这类字符坑到。
-        String script = """
-                if command -v pgrep >/dev/null 2>&1; then
-                  pgrep -x nginx >/dev/null 2>&1 || { echo OFF; exit 0; }
-                  %FILTER%
-                  echo ON
-                  exit 0
-                fi
-                if ps -e >/dev/null 2>&1; then
-                  %FILTER_ALL%
-                  exit 0
-                fi
-                if command -v tasklist >/dev/null 2>&1; then
-                  tasklist 2>/dev/null | grep -qi 'nginx' && echo ON || echo OFF
-                  exit 0
-                fi
-                echo UNKNOWN
-                """;
-        // 有 conf：逐个 nginx 进程做字面量比对，命中才算运行
-        String filter = confTail.isEmpty()
-                ? "echo ON"
-                : "for p in $(pgrep -x nginx 2>/dev/null); do\n"
-                + "  ps -o args= -p \"$p\" 2>/dev/null | grep -qF -- " + shQuote(confTail) + " && { echo ON; exit 0; }\n"
-                + "done\necho OFF";
-        // ps -e 退化分支：同样只认带该 conf 字面量的命令行
-        String filterAll = confTail.isEmpty()
-                ? "ps -e 2>/dev/null | grep -qi '[n]ginx' && echo ON || echo OFF"
-                : "ps -e 2>/dev/null | grep -F -- " + shQuote(confTail) + " | grep -qi '[n]ginx' && echo ON || echo OFF";
-        String out = exec(ds, script.replace("%FILTER%", filter).replace("%FILTER_ALL%", filterAll)).stdout().trim();
+        // 踩过的坑（保留在实现里）：曾用 Pattern.quote(conf) 塞进 '[]' 字符类，
+        // 拼出 [\Qnginx.conf\E]，而 \Q..\E 不是 POSIX 正则语法，字符类提前闭合退化成
+        // 「任意字符」，把内核线程全匹配上，永远返回 ON。现在一律用字面量比对。
+        String out = exec(ds, commands(ds).processAlive(confTail)).stdout().trim();
         if ("ON".equals(out)) {
             return "RUNNING";
         }
@@ -1308,6 +1334,12 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return 单元名（如 {@code nginx.service}），或 {@link #INIT_OWNER_NONE} 表示无托管者
      */
     private String detectInitOwner(DataSourceVO ds) {
+        // Windows 没有 systemd：托管者概念不存在，直接返回 NONE 让调用方退回「裸信号」
+        // 方式。不这么做的话，下面几段探针脚本都是 POSIX（systemctl / ps -o / sudo -l），
+        // 在 Windows 上会以「命令不存在」的形态失败，被消费成误判而不是「不支持」。
+        if (runtime(ds).windows()) {
+            return INIT_OWNER_NONE;
+        }
         String key = trim(ds.host()) + ":" + (ds.port() == null ? "" : ds.port());
         CachedInitOwner cached = initOwnerCache.get(key);
         long now = System.currentTimeMillis();
@@ -1499,6 +1531,12 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return 该单元的 MainPID 是否等于本数据源的 master PID
      */
     private boolean ownsUnit(DataSourceVO ds, String unit) {
+        // 纵深防御：当前唯一调用点 probeUnitByCgroup 已在 detectInitOwner 的 Windows 守卫之内，
+        // 但本方法体是 POSIX（systemctl show），一旦将来被直接调用会在 Windows 上跑出
+        // 「命令不存在」并被误读成「不是它的单元」。这里再挡一道。
+        if (runtime(ds).windows()) {
+            return false;
+        }
         Long master = detectMasterPid(ds);
         if (master == null) {
             return false;
@@ -1554,6 +1592,12 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return 是否可执行 systemctl
      */
     private boolean canSudo(DataSourceVO ds, String unit) {
+        // Windows 没有 sudo，也没有 systemd：判为「不能免密 systemctl」即可，
+        // 调用方随后会退回裸信号方式。这一步必须挡在拼脚本之前，否则会在 Windows 上
+        // 执行 `sudo -n -l` 并把「命令不存在」当成「没权限」。
+        if (runtime(ds).windows()) {
+            return false;
+        }
         // 单元名先剥掉 .service 后缀：sudoers 里带后缀与不带后缀两种写法都常见，
         // 匹配时统一按「无后缀名 + 可选 .service」处理，避免漏判。
         String bare = unit.endsWith(".service") ? unit.substring(0, unit.length() - ".service".length()) : unit;
@@ -1650,7 +1694,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     private String confTail(DataSourceVO ds) {
         try {
             String conf = trim(resolvePaths(ds).confPath());
-            return conf.isEmpty() ? "" : conf.substring(conf.lastIndexOf('/') + 1);
+            return conf.isEmpty() ? "" : baseName(conf);
         } catch (RuntimeException e) {
             return "";
         }
@@ -1692,8 +1736,9 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return 端口列表，去重且按升序
      */
     private List<Integer> detectListenPorts(DataSourceVO ds, String root) {
-        ExecResult r = exec(ds, "grep -rhoE 'listen[[:space:]]+[^;]+' " + shQuote(root)
-                + " --include='*.conf' 2>/dev/null | head -80");
+        // 指令名交给平台实现去拼本机正则：POSIX 用 grep -E，Windows 用 .NET；
+        // 传正则会逼调用方按平台分叉（[[:space:]] 在 .NET 里不成立）。
+        ExecResult r = exec(ds, commands(ds).directiveMatches(root, "*.conf", "listen", 80));
         Set<Integer> ports = new LinkedHashSet<>();
         for (String raw : r.stdout().split("\n")) {
             String line = raw.trim();
@@ -1752,18 +1797,9 @@ public class NginxManageServiceImpl implements NginxManageService {
      */
     private String nginxCmd(DataSourceVO ds, String action) {
         NginxPaths paths = resolvePaths(ds);
-        StringBuilder sb = new StringBuilder("nginx");
-        if (!paths.prefix().isEmpty()) {
-            sb.append(" -p ").append(shQuote(paths.prefix()));
-        }
-        if (!paths.confPath().isEmpty()) {
-            sb.append(" -c ").append(shQuote(paths.confPath()));
-        }
-        String act = trim(action);
-        if (!act.isEmpty()) {
-            sb.append(' ').append(act);
-        }
-        return sb.toString();
+        // 命令文本按平台分派：Windows 要 cd /d 先切盘符，POSIX 不要；引号规则也不同
+        // （cmd 不认单引号）。这些差异全部收敛在 NginxCommandProvider 实现里。
+        return commands(ds).nginxInvocation("nginx", paths.prefix(), paths.confPath(), action);
     }
 
     /**
@@ -1817,9 +1853,17 @@ public class NginxManageServiceImpl implements NginxManageService {
         String buildArgs = "";
         try {
             // 逐 token 取 --xxx= 参数：--conf-path 与 --pid-path 相邻，
-            // 用 grep -A1 之类的写法会取到下一个参数，必须按前缀精确匹配
-            ExecResult r = exec(ds, "nginx -V 2>&1 | tr ' ' '\\n' | grep -E '^--[a-z-]+=' || true");
-            buildArgs = r.stdout();
+            // 用 grep -A1 之类的写法会取到下一个参数，必须按前缀精确匹配。
+            // 原先是在远端 `tr ' ' '\n' | grep -E '^--[a-z-]+='`；改为取回原文后在本地切分，
+            // 那两个工具都是 POSIX 专有，Windows 上没有。
+            ExecResult r = exec(ds, commands(ds).versionDump(""));
+            StringBuilder tokens = new StringBuilder();
+            for (String token : mergeOut(r.stdout(), r.stderr()).split("\\s+")) {
+                if (token.startsWith("--") && token.contains("=")) {
+                    tokens.append(token).append('\n');
+                }
+            }
+            buildArgs = tokens.toString();
         } catch (RuntimeException e) {
             log.debug("[nginx] 读取 nginx -V 失败: {}", e.getMessage());
         }
@@ -1827,10 +1871,10 @@ public class NginxManageServiceImpl implements NginxManageService {
         if (prefix.isEmpty()) {
             // prefix 为空（Windows 版即如此）时，取可执行文件所在目录
             try {
-                ExecResult r = exec(ds, "command -v nginx 2>/dev/null || which nginx 2>/dev/null");
+                ExecResult r = exec(ds, commands(ds).which("nginx"));
                 String bin = firstLine(r.stdout().trim(), "");
                 if (!bin.isEmpty()) {
-                    ExecResult dir = exec(ds, "cd \"$(dirname " + shQuote(bin) + ")\" && pwd");
+                    ExecResult dir = exec(ds, commands(ds).parentDir(bin));
                     prefix = dir.stdout().trim();
                 }
             } catch (RuntimeException e) {
@@ -1867,8 +1911,8 @@ public class NginxManageServiceImpl implements NginxManageService {
             configured = "/var/log/nginx-console-backup";
         }
         try {
-            ExecResult probe = exec(ds, "mkdir -p " + shQuote(configured) + " 2>/dev/null && echo __WRITABLE__");
-            if (probe.stdout().contains("__WRITABLE__")) {
+            ExecResult probe = exec(ds, commands(ds).makeDirs(configured));
+            if (probe.exitCode() == 0) {
                 return configured;
             }
             log.info("[nginx] 备份目录 {} 不可写，退回家目录", configured);
@@ -1876,10 +1920,14 @@ public class NginxManageServiceImpl implements NginxManageService {
             log.debug("[nginx] 备份目录探测失败: {}", e.getMessage());
         }
         try {
-            ExecResult fallback = exec(ds, "d=\"$HOME/.nginx-console-backup\"; mkdir -p \"$d\" && printf '%s' \"$d\"");
-            String dir = fallback.stdout().trim();
-            if (!dir.isEmpty()) {
-                return dir;
+            // 回退到当前用户家目录下的固定目录名。家目录的取法按平台分派
+            // （POSIX 是 $HOME，Windows 是 %USERPROFILE%），不再拼 "$HOME" 这种 POSIX 专有写法。
+            String home = trim(exec(ds, commands(ds).homeDir()).stdout());
+            if (!home.isEmpty()) {
+                String dir = home + (home.endsWith("/") || home.endsWith("\\") ? "" : "/") + ".nginx-console-backup";
+                if (exec(ds, commands(ds).makeDirs(dir)).exitCode() == 0) {
+                    return dir;
+                }
             }
         } catch (RuntimeException e) {
             log.debug("[nginx] 备份目录回退失败: {}", e.getMessage());
@@ -2001,15 +2049,39 @@ public class NginxManageServiceImpl implements NginxManageService {
     private String logPathDir(DataSourceVO ds) {
         // 一次 nginx -T 就能同时拿到 access_log 与 error_log，取其中任意一个的目录即可：
         // 两者通常同目录，分开放也没关系——这里只要「能列出 *.log 的目录」。
-        ExecResult r = exec(ds, "nginx -T 2>/dev/null | grep -oE '^[[:space:]]*(access_log|error_log)[[:space:]]+[^;]+'"
-                + " | head -5 | awk '{print $2}' | sed 's/^\"//; s/\"$//' | xargs -n1 dirname 2>/dev/null | head -1");
-        String dir = trim(r.stdout());
+        // 原先在远端 `grep -oE … | head -5 | awk | sed | xargs dirname | head -1`——
+        // 五个 POSIX 工具串成管道；改为取回 -T 原文后在本地解析。
+        ExecResult r = exec(ds, commands(ds).configDump(""));
+        String dir = "";
+        int seen = 0;
+        for (String raw : mergeOut(r.stdout(), r.stderr()).split("\n")) {
+            String line = raw.trim();
+            if (!line.startsWith("access_log") && !line.startsWith("error_log")) {
+                continue;
+            }
+            if (++seen > 5) {
+                // 与原 `head -5` 一致：只看前 5 条，避免遍历整个配置树
+                break;
+            }
+            String[] parts = line.split("\\s+");
+            if (parts.length < 2) {
+                continue;
+            }
+            String path = parts[1].replace("\"", "").replace("'", "");
+            if (path.isEmpty() || "off".equals(path)) {
+                continue;
+            }
+            dir = parentOf(path);
+            if (!dir.isEmpty()) {
+                break;
+            }
+        }
         if (dir.isEmpty() || "/".equals(dir)) {
             return "";
         }
         // 解析出来却不存在，比解析失败更可疑：说明配置里的路径与磁盘对不上，
         // 此时回退默认值并留日志，比让用户对着空列表猜要强
-        if (exec(ds, "test -d " + shQuote(dir)).exitCode() != 0) {
+        if (exec(ds, commands(ds).dirExists(dir)).exitCode() != 0) {
             log.debug("[nginx] 配置里的日志目录 {} 不存在，回退 {}", dir, DEFAULT_LOG_DIR);
             return "";
         }
@@ -2120,7 +2192,9 @@ public class NginxManageServiceImpl implements NginxManageService {
      */
     private void writeFile(DataSourceVO ds, String path, String content) {
         String b64 = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
-        ExecResult r = exec(ds, "printf '%s' " + shQuote(b64) + " | base64 -d > " + shQuote(path));
+        // 写路径交给平台实现：POSIX 是 printf|base64 -d，Windows 没有 base64 命令，
+        // 由实现改用 .NET 解码落盘。这是「保存配置」的主干，Windows 上必须通。
+        ExecResult r = exec(ds, commands(ds).writeFile(path, b64));
         if (r.exitCode() != 0) {
             throw new IllegalStateException("写入配置失败: " + mergeOut(r.stdout(), r.stderr()));
         }
@@ -2158,41 +2232,32 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @throws IllegalStateException 连接或执行失败
      */
     private ExecResult exec(DataSourceVO ds, String cmd, long seconds) {
-        String host = trim(ds.host());
-        if (host.isEmpty()) {
-            throw new IllegalStateException("Nginx 数据源未配置主机地址");
-        }
-        int port = ds.port() != null && ds.port() > 0 ? ds.port() : DEFAULT_SSH_PORT;
-        String username = trim(ds.username());
-        if (username.isEmpty()) {
-            throw new IllegalStateException("Nginx 数据源未配置 SSH 用户名");
-        }
-        String password = ds.password() == null ? "" : ds.password();
-        com.chua.ssh.support.client.SshClient ssh = com.chua.ssh.support.client.SshClient.builder()
-                .host(host)
-                .port(port)
-                .username(username)
-                .password(password)
-                .connectTimeout(CONNECT_TIMEOUT_SECONDS)
-                .sessionTimeout((int) seconds)
-                .execTimeout(seconds)
-                .build();
-        try {
-            ssh.connect();
-            com.chua.ssh.support.client.SshClient.ExecResult r = ssh.exec().command(cmd).execute();
-            return new ExecResult(r.exitCode(),
-                    r.stdout() == null ? "" : r.stdout(),
-                    r.stderr() == null ? "" : r.stderr());
-        } catch (Exception e) {
-            throw new IllegalStateException("SSH 执行失败 " + host + ":" + port + " 命令[" + cmd + "]: "
-                    + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()), e);
-        } finally {
-            try {
-                ssh.disconnect();
-            } catch (Exception ignored) {
-                // 关闭失败不影响结果
-            }
-        }
+        // 执行改走 SPI 通道：远端 SSH（POSIX / Windows 同一段代码，命令文本已按平台拼好），
+        // 或本机直接执行（数据源 host 为空 / 为 local 时）。本方法不再自建 SshClient。
+        NginxExecutor.ExecResult r = runtime(ds).exec(cmd, seconds);
+        return new ExecResult(r.exitCode(), r.stdout(), r.stderr());
+    }
+
+    /**
+     * 取数据源对应的运行时（平台 + 命令文本提供者 + 执行通道）。
+     *
+     * <p>平台首次解析需要一次探测往返，路由器内部按 host:port:user 缓存，后续不再探测。</p>
+     *
+     * @param ds 数据源
+     * @return 运行时
+     */
+    private NginxRuntimeRouter.Runtime runtime(DataSourceVO ds) {
+        return nginxRuntimeRouter.resolve(ds);
+    }
+
+    /**
+     * 取数据源对应的命令文本提供者（拼命令用）。
+     *
+     * @param ds 数据源
+     * @return 命令文本提供者
+     */
+    private NginxCommandProvider commands(DataSourceVO ds) {
+        return runtime(ds).commands();
     }
 
     /**
@@ -2405,9 +2470,9 @@ public class NginxManageServiceImpl implements NginxManageService {
         int top = topN == null || topN <= 0 ? 10 : Math.min(topN, 50);
         int mins = minutes == null ? 0 : Math.max(minutes, 0);
         DataSourceVO ds = requireDatasource(datasourceId);
-        String text = exec(ds, "tail -n " + n + " " + shQuote(logPath) + " 2>&1").stdout();
+        String text = exec(ds, commands(ds).tailLines(logPath, n)).stdout();
         LocalDateTime since = mins > 0 ? LocalDateTime.now().minusMinutes(mins) : null;
-        String name = logPath.substring(logPath.lastIndexOf('/') + 1);
+        String name = baseName(logPath);
         return NginxAccessLogParser.parse(text, top, since, name);
     }
 
@@ -2422,8 +2487,8 @@ public class NginxManageServiceImpl implements NginxManageService {
         int n = lines == null || lines <= 0 ? 5000 : Math.min(lines, 20_000);
         int cap = topN == null || topN <= 0 ? 5 : Math.min(topN, 10);
         DataSourceVO ds = requireDatasource(datasourceId);
-        String text = exec(ds, "tail -n " + n + " " + shQuote(logPath) + " 2>&1").stdout();
-        String name = logPath.substring(logPath.lastIndexOf('/') + 1);
+        String text = exec(ds, commands(ds).tailLines(logPath, n)).stdout();
+        String name = baseName(logPath);
         return NginxAccessLogParser.urlTrend(text, cap, name);
     }
 
