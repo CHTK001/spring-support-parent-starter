@@ -16,6 +16,7 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -27,6 +28,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.Ordered;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,20 @@ import java.util.Map;
 public class AiConfiguration {
 
     /**
+     * YAML 配置的对话客户端参数。
+     */
+    private final AiChatProperties aiChatProperties;
+
+    /**
+     * 构造方法，创建 AiConfiguration 实例。
+     *
+     * @param aiChatProperties YAML 配置，不允许为 null
+     */
+    public AiConfiguration(AiChatProperties aiChatProperties) {
+        this.aiChatProperties = aiChatProperties;
+    }
+
+    /**
      * YAML 配置的对话客户端。
      *
      * <p>声明在 {@link #defaultChatClient(ApplicationContext)} 之前：后者带
@@ -74,11 +90,15 @@ public class AiConfiguration {
      * <p>只在 {@code chua.ai.chat.enabled=true} 时创建；没配密钥的环境不会凭空多出一个
      * 必然调用失败的客户端。</p>
      *
+     * <p>{@code app-key} 为空时同样不创建 —— 否则能力门会报「可用」而调用必然 401，
+     * 前端会显示成可用状态、点下去才失败。缺密钥由 {@code onApplicationReady} 打 WARN 说明。</p>
+     *
      * @param properties YAML 配置
      * @return 对话客户端
      */
     @Bean
     @ConditionalOnProperty(prefix = "chua.ai.chat", name = "enabled", havingValue = "true")
+    @ConditionalOnExpression("'${chua.ai.chat.app-key:}'.trim().length() > 0")
     public ChatClient yamlChatClient(AiChatProperties properties) {
         return AiChatClientFactory.create(properties);
     }
@@ -175,6 +195,14 @@ public class AiConfiguration {
         ApplicationContext context = event.getApplicationContext();
         ChatClientRegistry chatClientRegistry = context.getBean(ChatClientRegistry.class);
         AgentRegistry agentRegistry = context.getBean(AgentRegistry.class);
+
+        // 开了 chua.ai.chat.enabled 却没配密钥时，bean 会被下面的条件挡掉（不创建调用必失败的客户端），
+        // 这里补一条可操作的告警 —— 否则现象只是「AI 不可用」，看不出是漏配了密钥。
+        if (aiChatProperties.enabled() && !StringUtils.hasText(aiChatProperties.appKey())) {
+            log.warn("[AiConfiguration] chua.ai.chat.enabled=true 但未配置密钥，AI 对话客户端不会创建；"
+                    + "请设置 chua.ai.chat.app-key 或环境变量 AI_CHAT_APP_KEY（provider={}）",
+                    aiChatProperties.provider());
+        }
 
  // 收集所有 对话客户端 Bean
         Map<String, ChatClient> chatClients = context.getBeansOfType(ChatClient.class);

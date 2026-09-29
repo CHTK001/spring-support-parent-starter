@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.model.vo.EduAiCapabilityVO;
+import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,15 @@ public class EduAiService {
      */
     @Autowired(required = false)
     private ChatClient chatClient;
+
+    /**
+     * YAML 配置（{@code chua.ai.chat}）。
+     *
+     * <p>只为「能力探测」回显实际生效的厂商/模型、并识别「开了却没配密钥」用；
+     * 没有该配置时保持为 null，不影响原有判定。</p>
+     */
+    @Autowired(required = false)
+    private AiChatProperties aiChatProperties;
     /**
      * 对话客户端注册表；仅在显式指定 eduai.ai.provider 时用于取对应厂商的客户端
      */
@@ -83,18 +93,36 @@ public class EduAiService {
     /**
      * 探测 AI 能力，给出「可用与否 + 不可用的具体原因」。
      *
-     * <p>判定只看一件事：后端有没有可用的 {@link ChatClient} bean。该 bean 由
+     * <p>判定只看一件事：有没有可用的 {@link ChatClient} bean。该 bean 由
      * spring-support-ai-starter 提供，因此这一条同时覆盖了「没依赖该 starter」
      * 与「依赖了但一个实现都没有」两种情况。业务侧不区分底层是本地模型还是远端大模型、
      * 是哪个厂商 —— 那是 spring-support-ai-starter 的事。</p>
      *
+     * <p>另外单独检查 YAML 配置（{@code chua.ai.chat}）是否「开了却没配密钥」：
+     * 那种情形下 ai-starter 按条件不创建客户端，这里给出**可操作**的原因，
+     * 而不是笼统的「未提供客户端」。</p>
+     *
      * @return AI 能力探测结果
      */
     public EduAiCapabilityVO capability() {
-        String provider = properties.getAi().getProvider();
-        String model = properties.getAi().getModel();
+        // 回显「实际生效」的厂商与模型：YAML 配置优先，回落到 eduai 自身配置。
+        // 前端只用 available/reason，这两个字段是给人看的，取生效值才不会误导。
+        String provider = firstNonBlank(
+                aiChatProperties == null ? null : aiChatProperties.provider(),
+                properties.getAi().getProvider());
+        String model = firstNonBlank(
+                aiChatProperties == null ? null : aiChatProperties.model(),
+                properties.getAi().getModel());
+
         if (!properties.getAi().isEnabled()) {
             return new EduAiCapabilityVO(false, "AI 总开关已关闭（eduai.ai.enabled=false）", provider, model);
+        }
+        if (aiChatProperties != null && aiChatProperties.enabled()
+                && !StringUtils.hasText(aiChatProperties.appKey())) {
+            return new EduAiCapabilityVO(false,
+                    "YAML 已开启 AI 对话客户端（chua.ai.chat.enabled=true）但未配置密钥，"
+                            + "客户端未创建；请设置 chua.ai.chat.app-key 或环境变量 AI_CHAT_APP_KEY",
+                    provider, model);
         }
         if (resolveClient() == null) {
             return new EduAiCapabilityVO(false,
@@ -102,6 +130,20 @@ public class EduAiService {
                     provider, model);
         }
         return new EduAiCapabilityVO(true, "AI 组卷可用", provider, model);
+    }
+
+    /**
+     * 取第一个非空白字符串。
+     *
+     * @param first  首选值，可为 null
+     * @param second 回落值，可为 null
+     * @return 首个非空白值；都为空白时返回 null
+     */
+    private static String firstNonBlank(String first, String second) {
+        if (StringUtils.hasText(first)) {
+            return first.trim();
+        }
+        return StringUtils.hasText(second) ? second.trim() : null;
     }
 
     /**
