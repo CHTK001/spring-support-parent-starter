@@ -2,6 +2,7 @@ package com.chua.starter.eduai.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
@@ -37,8 +38,16 @@ import java.util.Map;
 public class EduAiService {
 
     /**
-     * 对话客户端注册表
-    */
+     * AI 对话客户端。
+     *
+     * <p>直接使用 spring-support-ai-starter 提供的 ChatClient bean（其 AiConfiguration
+     * 会把类路径上全部 ChatClient 实现聚合为一个），业务侧不关心底层是哪个厂商、哪种形态。</p>
+     */
+    @Autowired(required = false)
+    private ChatClient chatClient;
+    /**
+     * 对话客户端注册表；仅在显式指定 eduai.ai.provider 时用于取对应厂商的客户端
+     */
     @Autowired(required = false)
     private ChatClientRegistry chatClientRegistry;
     /**
@@ -74,9 +83,10 @@ public class EduAiService {
     /**
      * 探测 AI 能力，给出「可用与否 + 不可用的具体原因」。
      *
-     * <p>前端据此决定 AI 组卷入口是可用还是禁用：AI 组卷能力依赖 spring-support-ai-starter
-     * 提供的对话客户端注册表，没引入该 starter（或没配可用模型）时入口应当禁用并说明原因，
-     * 而不是让用户点下去再失败。</p>
+     * <p>判定只看一件事：后端有没有可用的 {@link ChatClient} bean。该 bean 由
+     * spring-support-ai-starter 提供，因此这一条同时覆盖了「没依赖该 starter」
+     * 与「依赖了但一个实现都没有」两种情况。业务侧不区分底层是本地模型还是远端大模型、
+     * 是哪个厂商 —— 那是 spring-support-ai-starter 的事。</p>
      *
      * @return AI 能力探测结果
      */
@@ -86,13 +96,10 @@ public class EduAiService {
         if (!properties.getAi().isEnabled()) {
             return new EduAiCapabilityVO(false, "AI 总开关已关闭（eduai.ai.enabled=false）", provider, model);
         }
-        if (chatClientRegistry == null) {
-            return new EduAiCapabilityVO(false,
-                    "后端未引入 spring-support-ai-starter，或未注册任何 AI 对话客户端", provider, model);
-        }
         if (resolveClient() == null) {
             return new EduAiCapabilityVO(false,
-                    "AI 对话客户端不可用：未配置可用的模型提供商或密钥（eduai.ai.provider）", provider, model);
+                    "后端未提供可用的 AI 对话客户端（未引入 spring-support-ai-starter，或没有任何 ChatClient 实现）",
+                    provider, model);
         }
         return new EduAiCapabilityVO(true, "AI 组卷可用", provider, model);
     }
@@ -328,7 +335,7 @@ public class EduAiService {
      * @return call的结果
      */
     private ChatResponse call(String systemPrompt, String userPrompt) {
-        com.chua.common.support.ai.chat.ChatClient commonClient = resolveClient();
+        ChatClient commonClient = resolveClient();
         if (commonClient == null) {
             return new ChatResponse("");
         }
@@ -345,22 +352,23 @@ public class EduAiService {
     }
 
     /**
-     * 解析 对话客户端：优先按 提供者 配置查找，再回退到默认（聚合）客户端。
-     * @return resolve客户端的结果
+     * 解析 对话客户端。
+     *
+     * <p>默认直接用注入的聚合 {@link ChatClient} bean —— 业务不关心背后是哪个厂商或形态。
+     * 仅当显式配置了 {@code eduai.ai.provider} 时，才优先取该 provider 对应的客户端，
+     * 取不到就仍回落到聚合 bean。</p>
+     *
+     * @return 可用的对话客户端；都没有时返回 null
      */
-    private com.chua.common.support.ai.chat.ChatClient resolveClient() {
-        if (chatClientRegistry == null) {
-            return null;
-        }
+    private ChatClient resolveClient() {
         String provider = properties.getAi().getProvider();
-        com.chua.common.support.ai.chat.ChatClient client = null;
-        if (StringUtils.isNotBlank(provider)) {
-            client = chatClientRegistry.getByProvider(provider);
+        if (chatClientRegistry != null && StringUtils.isNotBlank(provider)) {
+            ChatClient byProvider = chatClientRegistry.getByProvider(provider);
+            if (byProvider != null) {
+                return byProvider;
+            }
         }
-        if (client == null) {
-            client = chatClientRegistry.getDefault();
-        }
-        return client;
+        return chatClient;
     }
 
     /**
