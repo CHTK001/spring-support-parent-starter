@@ -6,6 +6,8 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.configuration.chat.AiChatClientFactory;
+import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
@@ -15,7 +17,9 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
@@ -56,7 +60,28 @@ import java.util.Map;
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.ai.support")
 @MapperScan("com.chua.starter.ai.support.mapper")
+@EnableConfigurationProperties(AiChatProperties.class)
 public class AiConfiguration {
+
+    /**
+     * YAML 配置的对话客户端。
+     *
+     * <p>声明在 {@link #defaultChatClient(ApplicationContext)} 之前：后者带
+     * {@code @ConditionalOnMissingBean(ChatClient)}，本 bean 先注册后它就会被跳过，
+     * 从而不会出现「聚合客户端」和「YAML 客户端」两个 ChatClient bean 相互干扰。
+     * 注册中心在 {@code ApplicationReadyEvent} 时按类型收集 ChatClient，本 bean 会被收进去。</p>
+     *
+     * <p>只在 {@code chua.ai.chat.enabled=true} 时创建；没配密钥的环境不会凭空多出一个
+     * 必然调用失败的客户端。</p>
+     *
+     * @param properties YAML 配置
+     * @return 对话客户端
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "chua.ai.chat", name = "enabled", havingValue = "true")
+    public ChatClient yamlChatClient(AiChatProperties properties) {
+        return AiChatClientFactory.create(properties);
+    }
 
     /**
      * 全局 对话客户端 注册中心。
