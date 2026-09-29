@@ -113,6 +113,20 @@ plugin:
     marking:
       async: true
 
+# AI 对话客户端：由 YAML 声明用哪个厂商/网关/模型（spring-support-ai-starter 读取）。
+# 密钥不入仓库：app-key 走环境变量 AI_CHAT_APP_KEY 注入（systemd / 容器里设置），
+# 本地未设该变量时 app-key 为空，AI 相关功能按不可用处理。
+chua:
+  ai:
+    chat:
+      enabled: true
+      # 厂商标识对应各实现类 @Spi 的别名：zhipu/glm、zai、openai/siliconflow/sensetime/github/gitee/dots
+      provider: zhipu
+      base-url: https://open.bigmodel.cn/api/paas/v4
+      app-key: ${AI_CHAT_APP_KEY:}
+      model: glm-4-flash
+      timeout-millis: 60000
+
 logging:
   level:
     com.chua.starter.eduai: INFO
