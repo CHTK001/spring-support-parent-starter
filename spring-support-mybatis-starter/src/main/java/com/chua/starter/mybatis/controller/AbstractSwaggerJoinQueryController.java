@@ -1,7 +1,7 @@
 package com.chua.starter.mybatis.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.chua.common.support.base.validator.group.SelectGroup;
 import com.chua.starter.common.support.lang.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;

@@ -973,7 +973,12 @@ public class NginxManageServiceImpl implements NginxManageService {
         DataSourceVO ds = requireDatasource(datasourceId);
         String safePath = requireText(path, "配置文件路径不能为空");
         String dir = resolvePaths(ds).backupDir();
-        String name = trim(safePath).replace('/', '_') + "." + LocalDateTime.now().format(BACKUP_STAMP) + ".bak";
+        // 名字里不能带平台非法字符：Windows 的 ':'（盘符）与 '\' 会让 copy 直接报
+        // 「文件名语法不正确」。Linux 路径本来就没有这两个字符，替换后行为不变。
+        // 代价：Windows 上无法从备份名还原盘符（originPathOfBackup 逆映射得到 /nginx/...），
+        // 恢复时应显式传目标路径——这与该方法注释里的既有取舍一致。
+        String name = trim(safePath).replace('/', '_').replace('\\', '_').replace(':', '_')
+                + "." + LocalDateTime.now().format(BACKUP_STAMP) + ".bak";
         String target = dir + "/" + name;
         // 拆成三步平台中立调用：建目录 → 复制 → 取大小。
         // 原先是一条 `mkdir -p … && cp -p … && printf "%s" "$(wc -c < …)"` 复合命令，
@@ -2051,7 +2056,12 @@ public class NginxManageServiceImpl implements NginxManageService {
         // 两者通常同目录，分开放也没关系——这里只要「能列出 *.log 的目录」。
         // 原先在远端 `grep -oE … | head -5 | awk | sed | xargs dirname | head -1`——
         // 五个 POSIX 工具串成管道；改为取回 -T 原文后在本地解析。
-        ExecResult r = exec(ds, commands(ds).configDump(""));
+        // 取 nginx -T 的配置全文。必须走 nginxInvocation 而不是裸 `nginx -T`：
+        // 实测 Windows 上裸 `nginx -T` 会因「按当前工作目录找 logs/error.log」而
+        // CreateFile 失败、exit=1、只回 351 字符错误文本；带 cd /d + -c 后才是
+        // 完整配置（10725 字符）。POSIX 侧的 -p/-c 同理，只是恰好没暴露。
+        NginxPaths paths = resolvePaths(ds);
+        ExecResult r = exec(ds, commands(ds).nginxInvocation("nginx", paths.prefix(), paths.confPath(), "-T"));
         String dir = "";
         int seen = 0;
         for (String raw : mergeOut(r.stdout(), r.stderr()).split("\n")) {
@@ -2219,8 +2229,19 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @throws IllegalStateException 连接或执行失败
      */
     private ExecResult exec(DataSourceVO ds, String cmd) {
-        return exec(ds, cmd, EXEC_TIMEOUT_SECONDS);
+        // 默认超时按平台给：Windows 侧命令要经 cmd → PowerShell 两层进程，
+        // 实测冷启动约 9.5s、机器繁忙时可达 27s；沿用 10s 会间歇性超时
+        // （表现为「同一个接口时好时坏」，很难查）。POSIX 侧维持原值不动。
+        return exec(ds, cmd, runtime(ds).windows() ? WINDOWS_EXEC_TIMEOUT_SECONDS : EXEC_TIMEOUT_SECONDS);
     }
+
+    /**
+     * Windows 侧默认执行超时（秒）。
+     *
+     * <p>PowerShell 冷启动实测约 9.5s，与原先 10s 的默认值几乎贴边，必然间歇失败。
+     * 放宽到 60s 只影响「等多久才放弃」，不改变成功路径。</p>
+     */
+    private static final long WINDOWS_EXEC_TIMEOUT_SECONDS = 60L;
 
     /**
      * 在目标主机执行一条命令（可指定超时）。

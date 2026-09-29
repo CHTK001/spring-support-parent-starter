@@ -195,12 +195,6 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
     }
 
     @Override
-    public String configDump(String binary) {
-        // -T 把配置打到 stderr，必须合并，否则调用方读到空
-        return binary(binary) + " -T 2>&1";
-    }
-
-    @Override
     public String directiveMatches(String root, String namePattern, String directive, int maxLines) {
         // 保留原写法：无行首锚点、字面量指令名 + POSIX 空白类 + 排除分号
         String grep = "grep -rhoE " + quote(directive + "[[:space:]]+[^;]+") + " " + quote(root)

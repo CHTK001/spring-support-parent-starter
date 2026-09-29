@@ -298,6 +298,47 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         graphRefMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
                 .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId));
         pruneOrphans(libraryId);
+        // 整个知识库都没了，库行没有存在价值，一并回收（见 pruneEmptyLibrary）
+        pruneEmptyLibrary(libraryId);
+    }
+
+    /**
+     * 图谱库被清空后回收库行，避免空壳库无限累积。
+     *
+     * <p>{@link #pruneOrphans(Integer)} 只回收实体/关系/关联三类数据，<b>不会删库行</b>；
+     * 而库行是 {@link #ensureLibrary} 懒创建的 —— 建知识库、写第一篇文档都会建一行。
+     * 于是「建库 → 删库」每轮都留下一行空壳，实测累积到 <b>50 行</b>
+     * （其中 31 行还带着无人引用的孤儿数据，累计 529 条关系 / 472 个实体 / 1105 条关联）。
+     * 这些库按 {@code name = 'kb:' || knowledge_base_id} 映射到已不存在的知识库，
+     * 永远不可能再被访问，属于纯粹的死数据。</p>
+     *
+     * <p><b>只在库行名带 {@code kb:} 前缀时才删</b>：内置库（默认知识库 / 三国演义等）
+     * 不走这个映射，绝不能被误删。该前缀直接写进 delete 的 where 条件，
+     * 即使传进来的是内置库ID，SQL 也匹配不到任何行。</p>
+     *
+     * <p>只在 {@link #deleteByKnowledgeBase(String)} 里调用，<b>不</b>在
+     * {@link #deleteByKnowledgePoint(String, String)} 里调用：单文档删除后知识库仍然存在，
+     * 库行上还挂着该库的 LLM provider / model / 温度 / 提示词等配置，
+     * 跟着删掉会静默把配置打回默认值。</p>
+     *
+     * @param libraryId 图谱库ID
+     */
+    private void pruneEmptyLibrary(Integer libraryId) {
+        long entityCount = graphEntityMapper.selectCount(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
+                        .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId));
+        long relationCount = graphRelationMapper.selectCount(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
+                        .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId));
+        long refCount = graphRefMapper.selectCount(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
+                        .eq(SysAiKnowledgeGraphRef::getLibraryId, libraryId));
+        if (entityCount > 0 || relationCount > 0 || refCount > 0) {
+            return;
+        }
+        knowledgeLibraryMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeLibrary>()
+                .eq(SysAiKnowledgeLibrary::getId, libraryId)
+                .likeRight(SysAiKnowledgeLibrary::getName, LIBRARY_NAME_PREFIX));
     }
 
     @Override
