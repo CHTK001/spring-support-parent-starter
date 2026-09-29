@@ -183,6 +183,30 @@ public class EduPaperController {
     }
 
     /**
+     * 下架试卷（已发布 → 草稿）
+     *
+     * @param id 试卷标识
+     * @return 是否成功
+     */
+    @Operation(summary = "下架试卷")
+    @PutMapping("/{id}/unpublish")
+    public ReturnResult<Boolean> unpublish(@PathVariable Long id) {
+        return ReturnResult.ok(paperService.unpublishPaper(id));
+    }
+
+    /**
+     * 归档试卷（草稿/已发布 → 已归档，之后只读）
+     *
+     * @param id 试卷标识
+     * @return 是否成功
+     */
+    @Operation(summary = "归档试卷")
+    @PutMapping("/{id}/archive")
+    public ReturnResult<Boolean> archive(@PathVariable Long id) {
+        return ReturnResult.ok(paperService.archivePaper(id));
+    }
+
+    /**
      * 试卷历史列表
      *
      * @param id 试卷标识
