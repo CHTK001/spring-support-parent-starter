@@ -86,6 +86,16 @@ public class FileStorageSetting {
     private Set<String> privateBuckets = ConcurrentHashMap.newKeySet();
 
     /**
+     * 访问链接默认有效期（毫秒）
+     *
+     * <p>创建链接未显式指定过期时间时使用。原先是 {@code FileStorageServerFilter} 里的
+     * {@code static final long ONE_TIME_TTL_MILLIS} 硬编码常量（10 分钟），管理员无法调整，
+     * 只能在前端 9 档预设里挑。改为配置项后可由系统配置面板调整，改完立即生效。</p>
+     */
+    @Builder.Default
+    private long oneTimeTtlMs = 10 * 60 * 1000L;
+
+    /**
      * 文件列表布局类型。
      * @author CH
      * @since 4.0.0

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -90,13 +91,15 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
 
     /**
      * 最大值
+     *
+     * <p><strong>属性名刻意不叫 maxValue</strong>：同 {@link MsMonitorMetricStatistics}，
+     * {@code MAXVALUE} 是 MySQL 保留字，作未加反引号的列别名会报 {@code ERROR 1064}，
+     * 使 Redis 侧小时聚合整条 SQL 失败。改名治别名，{@link JsonProperty} 保住 JSON 契约。</p>
      */
     @TableField("ms_monitor_redis_metric_statistics_max_value")
     @Schema(description = "最大值", example = "78.0")
-    /**
-     * 最大值值
-    */
-    private Double maxValue;
+    @JsonProperty("maxValue")
+    private Double maxVal;
 
     /**
      * 样本数

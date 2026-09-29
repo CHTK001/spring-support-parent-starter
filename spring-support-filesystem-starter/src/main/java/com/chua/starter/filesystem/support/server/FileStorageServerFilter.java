@@ -129,9 +129,26 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private final ConcurrentHashMap<String, OneTimeEntry> oneTimeMap = new ConcurrentHashMap<>();
 
     /**
-     * 一次性链接默认有效期（毫秒）：10 分钟
+     * 一次性链接默认有效期（毫秒）
+     *
+     * <p>原先是 {@code static final} 硬编码常量，管理员无法调整。现改为读
+     * {@link FileStorageSetting#getOneTimeTtlMs()}，改配置后立即生效（热更新）。
+     * 配置值非正时回退到 10 分钟，避免把链接生成成出生即死。</p>
      */
-    private static final long ONE_TIME_TTL_MILLIS = 10 * 60 * 1000;
+    private static final long DEFAULT_ONE_TIME_TTL_MILLIS = 10 * 60 * 1000L;
+
+    /**
+     * 取当前生效的一次性链接默认有效期
+     *
+     * @return 毫秒数；配置缺失或非正时返回 10 分钟
+     */
+    private long oneTimeTtlMillis() {
+        if (setting == null) {
+            return DEFAULT_ONE_TIME_TTL_MILLIS;
+        }
+        long v = setting.getOneTimeTtlMs();
+        return v > 0 ? v : DEFAULT_ONE_TIME_TTL_MILLIS;
+    }
 
     /**
      * 一次性链接清理阈值：最近清理后新增多少条触发一次清扫
@@ -600,7 +617,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * <ul>
      *   <li>{@code type=once}（默认）— 一次性，访问即销毁，无论过期时间</li>
      *   <li>{@code type=expiry} — 限时链接，有效期内可多次访问，到期失效</li>
-     *   <li>{@code expires} — 有效期（秒），默认 {@link #ONE_TIME_TTL_MILLIS}</li>
+     *   <li>{@code expires} — 有效期（秒），缺省用配置的 {@link #oneTimeTtlMillis()}</li>
      * </ul>
      * <p>消费：{@code GET /ot/{token}} — 返回文件内容（一次性模式同时销毁）</p>
      *
@@ -717,14 +734,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 解析一次性链接过期时长。
      *
      * <p>支持秒数（expires=60）或带单位的时长（30s/5m/2h/1d）；
-     * 未传或非法值时使用默认 {@link #ONE_TIME_TTL_MILLIS}。</p>
+     * 未传或非法值时使用配置的默认有效期 {@link #oneTimeTtlMillis()}。</p>
      *
      * @param expires 原始参数
      * @return 过期毫秒数
      */
     private long parseOneTimeExpiry(String expires) {
         if (expires == null || expires.isEmpty()) {
-            return ONE_TIME_TTL_MILLIS;
+            return oneTimeTtlMillis();
         }
         String v = expires.trim().toLowerCase();
         try {
@@ -742,7 +759,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
             return Math.max(1000, Long.parseLong(v) * 1000);
         } catch (NumberFormatException e) {
-            return ONE_TIME_TTL_MILLIS;
+            return oneTimeTtlMillis();
         }
     }
 
@@ -756,7 +773,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         oneTimeSinceClean = 0;
         long now = System.currentTimeMillis();
         oneTimeMap.entrySet().removeIf(e ->
-                now - e.getValue().createTime > ONE_TIME_TTL_MILLIS);
+                now - e.getValue().createTime > e.getValue().ttlMillis);
     }
 
     /**
@@ -785,7 +802,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         final boolean once;
 
         OneTimeEntry(String bucket, String key, long createTime) {
-            this(bucket, key, createTime, ONE_TIME_TTL_MILLIS, true);
+            this(bucket, key, createTime, DEFAULT_ONE_TIME_TTL_MILLIS, true);
         }
 
         OneTimeEntry(String bucket, String key, long createTime, long ttlMillis) {
@@ -1266,7 +1283,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"imageFilter\":\"" + escapeJson(setting.getImageFilter() == null ? "NONE" : setting.getImageFilter()) + "\""
                 + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
                 + ",\"privateBuckets\":" + privateBucketsJson()
-                + ",\"oneTimeTtlMs\":" + ONE_TIME_TTL_MILLIS
+                + ",\"oneTimeTtlMs\":" + oneTimeTtlMillis()
                 + "}";
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
@@ -1653,7 +1670,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             scan = ArchivePreviewProvider.scan(data, ext);
         } catch (Exception e) {
             log.warn("压缩包条目解析失败[{}]: {}", fileName, e.getMessage());
-            return error(response, 422, "Unprocessable Entity: 压缩包解析失败");
+            // 回可读 JSON 而不是纯文本 422：前端 isScanResponse 会据此给出
+            // 「这不是可识别的压缩包」错误态；纯文本错误页只能整体弹成加载失败。
+            String reason = e.getMessage() == null ? "压缩包解析失败" : e.getMessage();
+            String err = "{\"error\":\"" + escapeJson(reason) + "\",\"entries\":[]}";
+            response.setStatus(422)
+                    .setHeader("X-FileStorage-Preview", "archive-json")
+                    .setContentType("application/json;charset=UTF-8")
+                    .setBody(err)
+                    .end();
+            return CompletableFuture.completedFuture(null);
         }
 
         long archiveSize = data.length;
@@ -1720,12 +1746,38 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * }
      * }</pre>
      *
-     * @param fileName 文件名
-     * @param data     文件字节
-     * @param response 响应
+     * <p>带 {@code inner} 时（{@code ?format=cad&inner=包内路径}）先从压缩包中取出该条目
+     * 再解析，{@code fileName} 会被替换为条目路径；条目取不到时返回 404 + 可读 JSON，
+     * 而不是让整个预览面板炸成白屏。</p>
+     *
+     * @param fileName  文件名（传入 inner 时为压缩包名）
+     * @param data      文件字节（传入 inner 时为压缩包字节）
+     * @param innerPath 包内条目路径，null 或空表示不按下钻处理
+     * @param response  响应
      * @return 异步阶段
      */
-    private CompletionStage<Void> writeCadInfo(String fileName, byte[] data, ServerResponse response) {
+    private CompletionStage<Void> writeCadInfo(String fileName, byte[] data, String innerPath,
+                                               ServerResponse response) {
+        // 压缩包下钻：?format=cad&inner=包内路径 时解析的是「条目」而不是压缩包本体。
+        // 不支持 inner 的话包内 DXF 只能落回 ?preview=true 的 SPI 通道并被三维提供者抢走，
+        // 同一张图在顶层和包内会呈现成两套完全不同的界面。
+        if (innerPath != null && !innerPath.isEmpty()) {
+            byte[] entryBytes = extractArchiveEntry(data, fileName, innerPath);
+            if (entryBytes == null) {
+                String err = "{\"name\":\"" + escapeJson(innerPath)
+                        + "\",\"renderable\":false,\"error\":\"压缩包内条目不存在："
+                        + escapeJson(innerPath) + "\"}";
+                response.setStatus(404)
+                        .setHeader("X-FileStorage-Preview", "cad-json")
+                        .setContentType("application/json;charset=UTF-8")
+                        .setBody(err)
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
+            // 条目名用包内路径，面板标题能看清它在压缩包里的位置
+            return writeCadInfo(innerPath, entryBytes, null, response);
+        }
+
         String ext = simpleExtOf(fileName);
         StringBuilder json = new StringBuilder(4096);
         json.append("{\"name\":\"").append(escapeJson(fileName)).append("\"")
@@ -2767,7 +2819,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
 
         // CAD 图纸查询（?format=cad）：DXF 出图形，DWG 只出头信息
         if (stringParam(request, "format", "cad")) {
-            return writeCadInfo(fileName, data, response);
+            return writeCadInfo(fileName, data, request.getParams().get("inner"), response);
         }
 
         response.setHeader("Content-Disposition", buildDisposition(download, fileName));
@@ -3177,6 +3229,21 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
             setting.setImageFilter(upper);
         }
+        // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
+        // 避免传 0 把链接生成成出生即死，也避免传超大值让过期链接永不回收。
+        String ttlText = extractScalar(body, "oneTimeTtlMs");
+        if (ttlText != null && !ttlText.isBlank()) {
+            long ttl;
+            try {
+                ttl = Long.parseLong(ttlText.trim());
+            } catch (NumberFormatException e) {
+                throw new FileActionException(400, "oneTimeTtlMs 必须是整数毫秒数: " + ttlText);
+            }
+            if (ttl < 1_000L || ttl > 30L * 24 * 3_600_000L) {
+                throw new FileActionException(400, "oneTimeTtlMs 超出范围（1 秒 ~ 30 天）: " + ttl);
+            }
+            setting.setOneTimeTtlMs(ttl);
+        }
         // 访问权限热更新：private=true/false 针对 URL 中的当前桶；privateBuckets 直接替换全部私有桶
         Boolean privateFlag = extractBoolean(body, "private");
         if (privateFlag != null) {
@@ -3259,6 +3326,26 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     private static String extractString(String json, String key) {
         Matcher matcher = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
         return matcher.find() ? unescapeJson(matcher.group(1)) : null;
+    }
+
+    /**
+     * 从 JSON 文本中提取标量字段，数字与字符串都吃。
+     *
+     * <p>{@link #extractString} 的正则要求值带引号（{@code "key":"v"}），
+     * 传 {@code {"oneTimeTtlMs":180000}} 这种**裸数字**时永远匹配不上、返回 null，
+     * 于是配置改不动。数值型配置项统一走这里。</p>
+     *
+     * @param json JSON 文本
+     * @param key  字段名
+     * @return 字段值的字面文本；字段不存在返回 null
+     */
+    private static String extractScalar(String json, String key) {
+        Matcher quoted = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
+        if (quoted.find()) {
+            return unescapeJson(quoted.group(1));
+        }
+        Matcher bare = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)").matcher(json);
+        return bare.find() ? bare.group(1) : null;
     }
 
     /**
@@ -4042,23 +4129,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      */
     private CompletionStage<Void> writeInnerEntryPreview(byte[] archiveData, String fileName,
                                                          String innerPath, ServerResponse response) {
-        // 安全校验：拒绝路径穿越、反斜杠、绝对路径与盘符
-        boolean safe = innerPath != null
-                && !innerPath.contains("..")
-                && !innerPath.contains("\\")
-                && !innerPath.startsWith("/")
-                && innerPath.indexOf(':') < 0;
-
-        byte[] entryBytes = null;
-        if (safe) {
-            String ext = simpleExtOf(fileName);
-            for (String candidate : buildExtCandidates(fileName, ext)) {
-                entryBytes = ArchivePreviewProvider.extractFile(archiveData, candidate, innerPath);
-                if (entryBytes != null) {
-                    break;
-                }
-            }
-        }
+        byte[] entryBytes = extractArchiveEntry(archiveData, fileName, innerPath);
 
         if (entryBytes == null) {
             String html = buildInnerMessagePage("压缩包内条目不存在或不支持预览：" + innerPath);
@@ -4093,6 +4164,39 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .setBody(entryBytes)
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 从压缩包字节中取出指定条目。
+     *
+     * <p>{@code ?preview&inner=}（通用下钻）与 {@code ?format=cad&inner=}（CAD 下钻）
+     * 共用同一套提取与安全校验，避免两条通道对同一条目的存在性判断出现分歧。</p>
+     *
+     * <p>安全校验拒绝路径穿越（{@code ..}）、反斜杠、绝对路径与盘符：条目路径来自
+     * URL 查询参数，不做校验就等于把压缩包内的任意路径读取能力暴露给调用方。</p>
+     *
+     * @param archiveData 压缩包字节
+     * @param fileName    压缩包文件名（用于推断归档类型与扩展名候选）
+     * @param innerPath   包内条目路径
+     * @return 条目字节；路径非法或条目不存在时返回 null
+     */
+    private byte[] extractArchiveEntry(byte[] archiveData, String fileName, String innerPath) {
+        if (innerPath == null
+                || innerPath.isEmpty()
+                || innerPath.contains("..")
+                || innerPath.contains("\\")
+                || innerPath.startsWith("/")
+                || innerPath.indexOf(':') >= 0) {
+            return null;
+        }
+        String ext = simpleExtOf(fileName);
+        for (String candidate : buildExtCandidates(fileName, ext)) {
+            byte[] bytes = ArchivePreviewProvider.extractFile(archiveData, candidate, innerPath);
+            if (bytes != null) {
+                return bytes;
+            }
+        }
+        return null;
     }
 
     /**
@@ -4561,6 +4665,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     /**
      * 转义 JSON 字符串中的特殊字符。
      *
+     * <p>必须转义控制字符（换行、制表、0x00-0x1F）：JSON 字符串里出现裸控制字符
+     * 是<b>非法</b>的，前端 {@code JSON.parse} 会直接抛错，表现为「预览面板报错」
+     * 而不是「文件名显示错」。而文件名来自文件系统，Linux 下可以合法包含换行与
+     * 控制字节，DXF 解析出的图层名/文字同理，故这不是理论风险。</p>
+     *
+     * <p>对普通可打印字符的输出与旧的「仅处理 \\ 与 "」实现完全一致，
+     * 因此本方法所有既有调用点行为不变，只是不再产生非法 JSON。</p>
+     *
      * @param value 原始字符串
      * @return 转义后的字符串
      */
@@ -4568,7 +4680,28 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (value == null) {
             return "";
         }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        int len = value.length();
+        StringBuilder sb = new StringBuilder(len + 16);
+        for (int i = 0; i < len; i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format(Locale.ENGLISH, "\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 
     /**

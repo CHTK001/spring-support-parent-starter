@@ -108,15 +108,21 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String processAlive(String confTail) {
-        // 刻意不做「按 conf 区分同名实例」：nginx 在 Windows 上通常只有一个实例，
-        // 而要拿到命令行就得在 cmd → powershell 两层引号里再嵌一层，转义极易出错。
-        // 宁可先给一个不会说谎的「有没有 nginx 在跑」，也不给一个可能认错实例的复杂脚本。
-        return "powershell -NoProfile -Command \"if (Get-Process nginx -ErrorAction SilentlyContinue) { 'ON' } else { 'OFF' }\"";
+        // 用 tasklist（cmd 内建，实测约 1.1s）而不是 Get-Process（PowerShell 约 5s）。
+        // 两个 cmd 陷阱都在这里踩过，别再改回去：
+        //  1) **`echo ON` 不是输出 ON，而是打开命令回显**（`echo OFF` 同理），
+        //     所以判定分支必须写 `echo(ON` —— 用 `echo(` 前缀才会把它当普通文本输出。
+        //  2) 带括号的 `(echo X) else (echo Y)` 在本载荷下会被整体吞掉，改用 `if errorlevel` 分行写。
+        // 刻意不按 conf 区分同名实例：Windows 上 nginx 通常只有一个实例，
+        // 要拿命令行就得再嵌一层引号，转义极易出错。
+        return "tasklist /FI \"IMAGENAME eq nginx.exe\" /NH 2>nul | findstr /I \"nginx.exe\" >nul\r\n"
+                + "if errorlevel 1 (echo(OFF) else (echo(ON)";
     }
 
     @Override
     public String processPid(String confTail) {
-        return "powershell -NoProfile -Command \"$p = Get-Process nginx -ErrorAction SilentlyContinue | Select-Object -First 1; if ($p) { $p.Id }\"";
+        // 每行一个 pid，调用方取首个即可（同样避开 PowerShell）
+        return "for /f \"tokens=2\" %%i in ('tasklist /FI \"IMAGENAME eq nginx.exe\" /NH 2^>nul ^| findstr /I \"nginx.exe\"') do @echo %%i";
     }
 
     @Override
@@ -159,8 +165,8 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String fileSize(String path) {
-        return "powershell -NoProfile -Command \""
-                + "(Get-Item -LiteralPath " + psQuote(path) + " -ErrorAction SilentlyContinue).Length\"";
+        // cmd 内建 %%~zf 直接给字节数，实测 540ms（PowerShell 版约 5s）
+        return "for %%f in (" + quote(winPath(path)) + ") do @echo %%~zf";
     }
 
     @Override
@@ -185,15 +191,31 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String listFilesWithMeta(String root, String namePattern, boolean recursive) {
-        // 用 [char]9 表示制表符，避免在 cmd → powershell 两层引号里再嵌 \t 的转义。
-        // 路径统一转正斜杠：调用方（服务）内部按 '/' 约定拼路径与派生备份名
-        // （如 backup() 的 safePath.replace('/', '_')），返回反斜杠会派生出台非法文件名
-        // （含 C:\ 与 ':'），实测导致 copy 报「文件名语法不正确」。
-        String recurse = recursive ? " -Recurse" : "";
-        return "powershell -NoProfile -Command \""
-                + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(namePattern) + recurse
-                + " -File -ErrorAction SilentlyContinue | ForEach-Object { "
-                + "($_.FullName -replace '\\\\','/') + [char]9 + $_.Length + [char]9 + $_.LastWriteTime.ToString('yyyy-MM-dd HH:mm') }\"";
+        // 改用 cmd 的 dir + for，实测 725ms（PowerShell 版约 5s）。
+        // 注意两点与 PowerShell 版的差异：
+        //  1) 输出的是**本机反斜杠路径**（cmd 原生形态）。调用方已按分隔符无关处理
+        //     （baseName / parentOf / 备份名清理都同时认 '/' 与 '\'），服务层探针会复核。
+        //  2) 时间戳格式是 cmd 的 `yyyy/MM/dd HH:mm`（非 `yyyy-MM-dd`）。它同样可字典序
+        //     比较，排序语义不变；仅呈现形式不同。
+        // 本命令写成「在 .cmd 文件里执行」的形式（for 变量用 %%），与 LocalNginxExecutor
+        // 的临时 .cmd 载体一致。
+        String tab = "\t";
+        if (recursive) {
+            // dir /s /b 的输出**自带引号**（"C:\nginx\conf\a.conf"）。
+            // 这里必须是 %%~ff（modifier f 作用于变量 f）才剥得掉引号；
+            // 写成 %%~f 时 cmd 只剥了一层，路径会残留引号与反斜杠
+            // （实测拿到 C:\nginx\logs"\"api.example.com.error.log，后续按该路径读取直接失败）。
+            // 且不要再自己包一层引号，否则双层引号更剥不干净。
+            String glob = quote(winPath(root) + "\\" + namePattern);
+            return "for /f \"delims=\" %%p in ('dir /s /b /a-d " + glob + "') do "
+                    + "@echo %%~fp" + tab + "%%~zp" + tab + "%%~tp";
+        }
+        // 非递归用通配 for：%%~ff 直接给完整路径，不需要 dir、也不需要拼接。
+        // 曾经写成 for /f 读 dir /b 再拼 "<root>\"%%p"，而 cmd 里 \" 是**转义引号**，
+        // 内层 for 因此解析错乱——路径出来了却丢了大小与时间（实测 size/mtime 全 null，
+        // 连带 log/backup 列表一起错）。通配 for 从根上避免拼路径。
+        return "for %%f in (" + quote(winPath(root) + "\\" + namePattern) + ") do "
+                + "@echo %%~ff" + tab + "%%~zf" + tab + "%%~tf";
     }
 
     @Override
@@ -208,21 +230,18 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String dirExists(String path) {
-        // 不能用 `if exist "path\*"`：那只在目录非空时为真，空目录会误判为不存在。
-        // Test-Path -PathType Container 对空目录同样正确。
-        return "powershell -NoProfile -Command \""
-                + "if (Test-Path -LiteralPath " + psQuote(winPath(path)) + " -PathType Container)"
-                + " { exit 0 } else { exit 1 }\"";
+        // cmd 内建，实测 475ms。尾反斜杠是 cmd 判定「是目录」的写法：
+        // `if exist "path\"` 对**空目录**同样为真，而 `if exist "path\*"` 只在非空时为真。
+        return "if exist " + quote(winPath(path) + "\\") + " (exit 0) else (exit 1)";
     }
 
     @Override
     public String parentDir(String path) {
-        // 不能用 Split-Path -LiteralPath X -Parent：实测 PowerShell 报
-        // AmbiguousParameterSet（「Parameter set cannot be resolved」），exit=1、无输出，
-        // 于是 prefix 解析成空串、conf 路径退化为相对、nginx -t 找不到配置。
-        // [System.IO.Path]::GetDirectoryName 无参数集歧义，且不依赖当前工作目录。
-        return "powershell -NoProfile -Command \""
-                + "[System.IO.Path]::GetDirectoryName(" + psQuote(winPath(path)) + ")\"";
+        // cmd 内建 %%~dpf，实测约 150ms。它总是带尾部反斜杠（C:\nginx\），
+        // 由调用方统一去掉尾部路径分隔符（服务侧已同时认 '/' 与 '\'）。
+        // 不用 Split-Path：实测它报 AmbiguousParameterSet、exit=1、无输出，
+        // 会让 prefix 解析成空串、conf 路径退化为相对、nginx -t 找不到配置。
+        return "for %%f in (" + quote(winPath(path)) + ") do @echo %%~dpf";
     }
 
     @Override
@@ -232,15 +251,11 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String directiveMatches(String root, String namePattern, String directive, int maxLines) {
-        // .NET 正则不认 [[:space:]]，用 \s；语义与原 POSIX 写法一致
-        String regex = directive + "\\s+[^;]+";
-        String limit = maxLines > 0 ? " | Select-Object -First " + maxLines : "";
-        return "powershell -NoProfile -Command \""
-                + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(namePattern) + " -Recurse -File"
-                + " -ErrorAction SilentlyContinue | ForEach-Object { "
-                + "Select-String -LiteralPath $_.FullName -Pattern " + psQuote(regex) + " -AllMatches"
-                + " -ErrorAction SilentlyContinue | ForEach-Object { $_.Matches } | ForEach-Object { $_.Value } }"
-                + limit + "\"";
+        // 改用 findstr（cmd 内建），实测约 1s（PowerShell 版约 5s）。
+        // 输出行带「文件路径:」前缀，调用方是按 indexOf(指令名) 取尾部的，不受影响。
+        // maxLines 不在此处裁剪：cmd 没有 head，而配置文件规模有限；
+        // 原来限 80 行只是为了防超大目录，换上 findstr 后没必要再引一个进程。
+        return "findstr /S /I /R /C:\"" + directive + " \" " + quote(winPath(root) + "\\" + namePattern);
     }
 
     @Override

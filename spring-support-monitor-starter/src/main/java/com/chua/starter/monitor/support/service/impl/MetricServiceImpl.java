@@ -306,7 +306,7 @@ public class MetricServiceImpl implements MetricService {
                 stat.setHourBucket(hourStart);
                 stat.setAvgValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).average().orElse(0.0));
                 stat.setMinValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).min().orElse(0.0));
-                stat.setMaxValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).max().orElse(0.0));
+                stat.setMaxVal(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).max().orElse(0.0));
                 stat.setCountValue((long) items.size());
                 statsToSave.add(stat);
             }
@@ -355,7 +355,7 @@ public class MetricServiceImpl implements MetricService {
                 stat.setHourBucket(hourStart);
                 stat.setAvgValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).average().orElse(0.0));
                 stat.setMinValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).min().orElse(0.0));
-                stat.setMaxValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).max().orElse(0.0));
+                stat.setMaxVal(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).max().orElse(0.0));
                 stat.setCountValue((long) items.size());
                 if (stat.getId() == null) {
                     redisMetricStatsMapper.insert(stat);

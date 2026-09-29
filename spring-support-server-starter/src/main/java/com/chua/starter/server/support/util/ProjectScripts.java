@@ -185,7 +185,11 @@ public final class ProjectScripts {
                 // 静态项目因此无法在自己的目录里独立运行。前缀所需目录由脚本自行补齐。
                 String pid = "logs/nginx.pid";
                 String dirs = "mkdir -p logs temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp temp/scgi_temp\n";
-                String nginx = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf";
+                // 启动必须把 nginx 的 stdio 重定向掉：nginx 会 daemon 化，若继承 SSH channel 的 stdout/stderr，
+                // 执行器等不到 channel EOF 会一直挂到超时（退出码 -1），并留下不受管的 nginx 与 pid 文件竞态；
+                // 桌面实测「主机上手工跑没问题、经执行器下发就失败」即此因。
+                String nginxCtl = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf";
+                String nginx = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf > /dev/null 2>&1 < /dev/null";
                 // 先读取 pid 再停止：若写成 `[ -f pid ]` 之后再 `cat`，nginx 退出时会删除 pid 文件，
                 // 两次操作之间产生竞态并输出「cat: logs/nginx.pid: 没有那个文件」噪声；
                 // 更关键的是必须先取到 pid —— `nginx -s stop` 成功后 nginx 会自行删除 pid 文件，
@@ -197,9 +201,13 @@ public final class ProjectScripts {
                         // 「读到死 pid → 判定已停止 → 不执行停止」，真实进程继续占端口，
                         // 紧接着的 start 撞 bind: Address already in use。
                         + "if [ -n \"$pid\" ] && ! kill -0 \"$pid\" 2>/dev/null; then pid=\"\"; fi\n"
-                        // 兜底：无 pid（或 pid 已陈旧）时按前缀找回真实 master，
-                        // 否则 nginx -s stop 与 pid kill 都失效，会留下占着端口且无法停止的孤儿进程。
-                        + "if [ -z \"$pid\" ]; then pid=$(pgrep -f 'master process nginx -p " + PH_PATH + "' 2>/dev/null | head -1); fi\n";
+                        // 兜底：无 pid（或 pid 已陈旧）时按前缀找回真实 master。
+                        // 模式必须用括号转义（nginx: [m]aster ...）：执行器以 `bash -c '<脚本文本>'`
+                        // 下发时，脚本自身 shell 的命令行就包含这段模式串，未转义的 pgrep -f 会匹配到
+                        // 自己 → kill -0 永远为真 → 等待循环耗满预算 → 执行器超时（退出码 -1），
+                        // 且随后的 kill -9 可能误杀执行 shell。主机上手工 `sh stop.sh` 不复现该问题。
+                        + "if [ -z \"$pid\" ]; then pid=$(pgrep -f 'nginx: [m]aster process nginx -p "
+                        + PH_PATH + "' 2>/dev/null | head -1); fi\n";
                 // pid 文件只能在确认进程已退出后删除：先删掉会让运行中的实例失去唯一句柄
                 String stopBody = readPid
                         + "if [ -n \"$pid\" ]; then\n"
@@ -207,16 +215,16 @@ public final class ProjectScripts {
                         // 之后 pgrep -P 再也找不到它们；而 kill -9 master 会留下继承监听套接字的孤儿 worker，
                         // 表现为「端口仍被占用但 status 显示 stopped」且无法再停止。
                         + "  kids=$(pgrep -P $pid 2>/dev/null)\n"
-                        + "  " + nginx + " -s stop 2>/dev/null || true\n"
+                        + "  " + nginxCtl + " -s stop 2>/dev/null || true\n"
                         + "  i=0\n"
-                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 10 ]; do\n"
+                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 5 ]; do\n"
                         + "    sleep 1\n"
                         + "    i=$((i + 1))\n"
                         + "  done\n"
                         + "  kill -9 $pid 2>/dev/null\n"
                         + "  if [ -n \"$kids\" ]; then kill -9 $kids 2>/dev/null; fi\n"
                         + "  i=0\n"
-                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 5 ]; do\n"
+                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 3 ]; do\n"
                         + "    sleep 1\n"
                         + "    i=$((i + 1))\n"
                         + "  done\n"
@@ -225,7 +233,7 @@ public final class ProjectScripts {
                 String runningCheck = readPid + "if [ -n \"$pid\" ] && kill -0 $pid 2>/dev/null; then\n";
                 start = dirs + nginx;
                 restart = runningCheck
-                        + "  " + nginx + " -s reload\n"
+                        + "  " + nginxCtl + " -s reload > /dev/null 2>&1\n"
                         + "else\n"
                         + indent(stopBody, "  ") + "\n"
                         + "  sleep 2\n"

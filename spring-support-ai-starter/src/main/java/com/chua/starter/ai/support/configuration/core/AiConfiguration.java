@@ -173,12 +173,38 @@ public class AiConfiguration {
         if (!spiClients.isEmpty() || !springClients.isEmpty()) {
             AggregateChatClientSetting config = new AggregateChatClientSetting();
             config.setStrategy("failover");
-            /**
-             * aggregate对话客户端。
-             * @param config 配置
-             * @return aggregate对话客户端的结果
-             */
-            return new AggregateChatClient(config);
+            AggregateChatClient aggregate = new AggregateChatClient(config);
+            // 必须把发现到的客户端**真正装载进聚合路由**，否则聚合是个空壳：
+            // AggregateChatClient 只持有 allClients，配置里的 clients 是「provider/apiKey」
+            // 这类描述性 DTO，装不下已经是实例的 ChatClient，只能用 addClient 注入。
+            // 少了这段的后果不是启动失败，而是运行期每次调用都抛
+            //   IllegalArgumentException: No clients configured
+            // 并被 RagClientManager 包成
+            //   AggregateChatClient failed: No clients configured
+            // 表现为 /ask 等所有对话接口 100% 返回 500「Node execution failed: generate」，
+            // 启动日志一切正常（因为判定条件只检查集合非空），非常难定位。
+            List<ChatClient> loaded = new java.util.ArrayList<>(spiClients);
+            int index = 0;
+            for (ChatClient client : spiClients) {
+                aggregate.addClient("spi-" + index++, null, 1, client);
+            }
+            for (Map.Entry<String, ChatClient> entry : springClients.entrySet()) {
+                // 同一个实例可能既被 SPI 发现又被 Spring 收录，按身份去重避免重复装载
+                if (loaded.contains(entry.getValue())) {
+                    continue;
+                }
+                loaded.add(entry.getValue());
+                aggregate.addClient(entry.getKey(), null, 1, entry.getValue());
+            }
+            log.info("[AiConfiguration] 聚合客户端装载完成: spi={} spring={} 聚合内实际={}",
+                    spiClients.size(), springClients.size(), aggregate.clientCount());
+            if (aggregate.clientCount() == 0) {
+                // 走到这里说明发现到的客户端都装载失败，宁可返回 null 让上层明确报
+                // 「未配置可用 AI 客户端」，也不要交出一个必然抛 No clients configured 的空壳
+                log.error("[AiConfiguration] 聚合客户端为空，对话能力不可用");
+                return null;
+            }
+            return aggregate;
         }
 
         log.warn("[AiConfiguration] 未发现任何 ChatClient 实现");
