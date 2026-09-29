@@ -31,4 +31,47 @@
         LIMIT 1
     </select>
 
+    <!--
+      按主键加行锁取试卷。同一张卷的写操作由此串行化，
+      消除「读-改-写」并发下的 edu_paper_question 记录冲突。
+
+      @param paperId 试卷标识
+    -->
+    <select id="selectByIdForUpdate" resultType="com.chua.starter.eduai.model.EduPaper">
+        SELECT p.* FROM edu_paper p
+        WHERE p.paper_id = #{paperId}
+        FOR UPDATE
+    </select>
+
+    <!--
+      原子状态流转（compare-and-set）。与上面的行锁配合：
+      行锁保证同一张卷串行，CAS 保证状态转移只可能发生一次。
+
+      @param paperId        试卷标识
+      @param expectedStatus 期望的当前状态
+      @param targetStatus   目标状态
+    -->
+    <update id="updateStatusIfCurrent">
+        UPDATE edu_paper
+        SET paper_status = #{targetStatus},
+            update_time  = NOW()
+        WHERE paper_id = #{paperId}
+          AND paper_status = #{expectedStatus}
+    </update>
+
+    <!--
+      归档的原子流转：只排除「已归档」，草稿与已发布都可归档。
+
+      @param paperId      试卷标识
+      @param targetStatus 目标状态
+      @return 影响行数（1=本次归档成功，0=已是归档态）
+    -->
+    <update id="archiveIfNotArchived">
+        UPDATE edu_paper
+        SET paper_status = #{targetStatus},
+            update_time  = NOW()
+        WHERE paper_id = #{paperId}
+          AND paper_status &lt;&gt; #{archivedStatus}
+    </update>
+
 </mapper>
