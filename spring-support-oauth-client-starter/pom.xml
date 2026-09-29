@@ -54,15 +54,12 @@
             
         </dependency>
 
-        <!-- Armeria 协议支持（可选）：仅当显式使用 Armeria OAuth 协议时才引入。
-             设为 optional 使其不传递给下游（如 eduai 后端），避免拖入 armeria + netty-all (~30MB)。
-             ArmeriaProtocol 已加 @ConditionalOnClass，缺 armeria 时自动失效。 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-armeria-starter</artifactId>
-            <version>${utils.version}</version>
-            <optional>true</optional>
-        </dependency>
+        <!-- Armeria 协议已整体移除（2026-09-29）。
+             原 ArmeriaProtocol 直接 import com.linecorp.armeria.*，是本模块唯一的直接 armeria 依赖，
+             也是 utils 父 pom 里 armeria 版本号（现 1.41.1，本地仓库无此版本）唯一被真正解析的地方。
+             删掉它以后本模块不再需要 armeria，也不再传递 armeria + netty-all (~30MB)。
+             注意：服务端 spring-api-support-oauth-starter 侧的 armeria 尚未处理，
+             那里走 utils-support-protocol-starter 的 SPI 名解析，与本模块无关。 -->
 
         <dependency>
             <groupId>com.chua</groupId>

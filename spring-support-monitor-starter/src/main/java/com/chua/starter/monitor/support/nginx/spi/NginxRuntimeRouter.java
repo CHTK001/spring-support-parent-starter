@@ -89,6 +89,20 @@ public class NginxRuntimeRouter {
     }
 
     /**
+     * 取指定平台对应的命令文本提供者。
+     *
+     * <p>用于「命令文本天然属于某个平台」的场景：例如 systemd 只存在于 POSIX，
+     * 构造 systemctl 命令时就不该按数据源平台去猜——按数据源猜会在 Windows 目标上
+     * 取到 sc，而调用方压根不会在 Windows 上走 systemd 分支。</p>
+     *
+     * @param platform 平台标识
+     * @return 命令文本提供者
+     */
+    public NginxCommandProvider commandsOf(String platform) {
+        return pickCommands(platform);
+    }
+
+    /**
      * 解析数据源对应的运行时。
      *
      * @param datasource 数据源

@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.generate;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.ai.AiProviderException;
 import com.chua.common.support.ai.image.ImageClient;
 import com.chua.common.support.ai.image.ImageResponse;
 import com.chua.common.support.ai.video.VideoClient;
@@ -208,29 +209,68 @@ public class GenerateService {
                 ? GenerateConfigSupport.TYPE_IMAGE : request.type();
 
         SysAiGenerateTask task = buildTask(request, type);
-        if (GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(type)) {
-            submitVideo(task, request);
-            task.setCreatedAt(System.currentTimeMillis());
-            task.setUpdatedAt(task.getCreatedAt());
-            taskMapper.insert(task);
-            log.info("[Generate] 任务已创建 type={} model={} taskId={}", type, request.model(), task.getTaskId());
-            return task;
+        // 视频原先是「先提交上游、成功后才 insert」，主键由上游任务号回填；
+        // 改为先落库后主键必须在 insert 之前就有，否则 sysAiGenerateTaskId 为空。
+        // 这里先给一个本地占位号，submitVideoAsync 提交成功后会被上游任务号覆盖。
+        if (task.getTaskId() == null || task.getTaskId().isBlank()) {
+            task.setTaskId(LOCAL_SYNC_PREFIX + UUID.randomUUID());
         }
-
-        // 图像：先落库再执行，让前端能立刻拿到 taskId 轮询。
-        // 不能沿用「生成完再 insert」——那会让 HTTP 阻塞十几秒，前端拿不到任何中间态。
-        SyncImage pending = prepareImage(task, request);
         task.setCreatedAt(System.currentTimeMillis());
         task.setUpdatedAt(task.getCreatedAt());
+        // 图像与视频一律「先落库再执行」，理由与图像一致：
+        // ① 让 HTTP 立即返回，前端拿得到 taskId 去轮询，不被上游十几秒的调用阻塞；
+        // ② 上游失败（限流 / 队列满 / Key 失效）时记录仍然存在，用户能在历史里看到
+        //    失败原因并在刷新时看到状态变化，而不是只拿到一个 500 且查无此事。
+        // 视频此前是「先同步打上游、成功才 insert」，限流时一条记录都不留，与图像不一致。
         taskMapper.insert(task);
         log.info("[Generate] 任务已创建 type={} model={} taskId={} status={}",
                 type, request.model(), task.getTaskId(), task.getStatus());
 
+        if (GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(type)) {
+            // 视频是上游异步接口，提交本身只是一次 HTTP 调用；失败回写 FAILED 即可，
+            // 不必重试——重试由「刷新时回源」与「换 API Key」两条路径各自负责。
+            submitVideoAsync(task, request);
+            return task;
+        }
+
+        // 图像：先落库再执行，让前端能立刻拿到 taskId 轮询。
+        SyncImage pending = prepareImage(task, request);
         if (pending != null) {
             // 同步实现：交线程池执行，HTTP 线程立即返回
             runImageAsync(task, pending.client(), request.prompt());
         }
         return task;
+    }
+
+    /**
+     * 异步提交视频任务，失败回写 FAILED。
+     *
+     * <p>记录已先落库，故提交失败也要把状态与原因写回去——用户刷新时看到的是
+     * 一条带原因的失败记录，而不是凭空消失。</p>
+     *
+     * @param task    任务行（已 insert）
+     * @param request 生成请求
+     */
+    private void submitVideoAsync(SysAiGenerateTask task, Request request) {
+        imageExecutor.execute(() -> {
+            long startedAt = System.currentTimeMillis();
+            try {
+                submitVideo(task, request);
+                task.setElapsedMillis(System.currentTimeMillis() - startedAt);
+                task.setUpdatedAt(System.currentTimeMillis());
+                taskMapper.updateById(task);
+                log.info("[Generate] 视频任务已提交 taskId={} elapsed={}ms",
+                        task.getTaskId(), task.getElapsedMillis());
+            } catch (Exception e) {
+                task.setElapsedMillis(System.currentTimeMillis() - startedAt);
+                task.setStatus(SysAiGenerateTask.STATUS_FAILED);
+                task.setProgress(100);
+                task.setErrorMessage(e.getMessage());
+                task.setUpdatedAt(System.currentTimeMillis());
+                taskMapper.updateById(task);
+                log.warn("[Generate] 视频任务提交失败 taskId={}: {}", task.getTaskId(), e.getMessage());
+            }
+        });
     }
 
     /**
@@ -553,12 +593,57 @@ public class GenerateService {
      * @param request 生成请求
      */
     private void submitVideo(SysAiGenerateTask task, Request request) {
-        GenerateClientResolver.Resolved<VideoClient> resolved = clientResolver.resolveVideo(request.model());
-        if (!resolved.ok()) {
+        GenerateClientResolver.Resolved<VideoClient> first = clientResolver.resolveVideo(request.model());
+        if (!first.ok()) {
             throw new IllegalStateException("该模型未配置可用的视频生成实现，请在模型管理中检查供应商与密钥");
         }
-        SysAiProviderModel modelCfg = resolved.modelCfg();
-        GenerateConfigSupport.View view = GenerateConfigSupport.read(modelCfg, GenerateConfigSupport.TYPE_VIDEO);
+        int keyCount = clientResolver.keyCount(first.provider());
+        AiProviderException last = null;
+        // 遇限流换下一个 API Key 重试：模型与全部参数保持不变
+        for (int i = 0; i < Math.max(1, keyCount); i++) {
+            GenerateClientResolver.Resolved<VideoClient> resolved =
+                    i == 0 ? first : clientResolver.resolveVideo(request.model(), i);
+            if (!resolved.ok()) {
+                continue;
+            }
+            try {
+                submitVideoWith(task, request, resolved);
+                return;
+            } catch (AiProviderException e) {
+                if (!worthRetryWithNextKey(e) || i >= keyCount - 1) {
+                    throw e;
+                }
+                log.warn("[Generate] 视频接口被限流/鉴权拒绝，模型不变、换 API Key 重试 {} -> {}", i, i + 1);
+                last = e;
+            }
+        }
+        throw last == null ? new IllegalStateException("该模型可用的 API Key 均已失效") : last;
+    }
+
+    /**
+     * 判断该失败是否值得换 API Key 重试。
+     *
+     * <p>只认 429/401/403：限流与 Key 失效都是<em>单 Key</em>问题，换一个 Key 就能继续，
+     * 而模型不变。5xx 是供应商整体故障（换 Key 同样不通，重试只会放大流量），
+     * 404 是接口不存在（换 Key 无意义），这些必须原样抛出。</p>
+     *
+     * @param e 上游失败异常
+     * @return true 表示应换 Key 重试
+     */
+    private static boolean worthRetryWithNextKey(AiProviderException e) {
+        Integer status = e.getStatus();
+        return status != null && (status == 429 || status == 401 || status == 403);
+    }
+
+    /**
+     * 用给定客户端提交视频任务。
+     *
+     * @param task     任务行
+     * @param request  生成请求
+     * @param resolved 已解析的客户端与供应商
+     */
+    private void submitVideoWith(SysAiGenerateTask task, Request request,
+            GenerateClientResolver.Resolved<VideoClient> resolved) {
         VideoClient client = resolved.client()
                 .size(splitWidth(request.size()), splitHeight(request.size()))
                 .duration(request.duration())

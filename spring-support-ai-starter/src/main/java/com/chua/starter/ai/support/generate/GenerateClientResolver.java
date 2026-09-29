@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -89,6 +90,17 @@ public class GenerateClientResolver {
      * @return 解析结果
      */
     public Resolved<ImageClient> resolveImage(String model) {
+        return resolveImage(model, 0);
+    }
+
+    /**
+     * 解析图像生成客户端（指定用第几个 API Key）。
+     *
+     * @param model   模型名，可为空
+     * @param keyIndex API Key 下标，越界时回退到第一个
+     * @return 解析结果
+     */
+    public Resolved<ImageClient> resolveImage(String model, int keyIndex) {
         SysAiProvider provider = resolveProviderByModel(model);
         if (provider == null) {
             return new Resolved<>(null, null, null);
@@ -99,7 +111,7 @@ public class GenerateClientResolver {
             log.warn("[Generate] 供应商无图像生成实现 platform={} spi={}", provider.getPlatform(), spi);
             return new Resolved<>(null, provider, modelCfg);
         }
-        String cacheKey = "image::" + provider.getProviderId() + "::" + spi;
+        String cacheKey = "image::" + provider.getProviderId() + "::" + spi + "::k" + keyIndex;
         ImageClient cached = (ImageClient) clientHolder.get(cacheKey);
         if (cached != null && !expired(cacheKey)) {
             return new Resolved<>(applyImageModel(cached, model), provider, modelCfg);
@@ -107,7 +119,7 @@ public class GenerateClientResolver {
         try {
             ImageClientSetting setting = ImageClientSetting.builder()
                     .provider(spi)
-                    .appKey(ProviderCredentials.firstApiKey(provider.getCredentials()))
+                    .appKey(keyAt(provider, keyIndex))
                     .baseUrl(provider.getBaseUrl())
                     .build();
             ImageClient client = ImageClient.create(setting);
@@ -124,12 +136,51 @@ public class GenerateClientResolver {
     }
 
     /**
+     * 供应商可用的 API Key 数量。
+     *
+     * <p>限流时靠换 Key 重试（模型不变），故需要知道有几个可换的。</p>
+     *
+     * @param provider 供应商
+     * @return Key 数量，至少为 1
+     */
+    public int keyCount(SysAiProvider provider) {
+        return provider == null ? 1
+                : Math.max(1, ProviderCredentials.apiKeys(provider.getCredentials()).size());
+    }
+
+    /**
+     * 取指定下标的 API Key。
+     *
+     * @param provider 供应商
+     * @param index    下标
+     * @return Key 文本；下标越界时回退到第一个
+     */
+    private static String keyAt(SysAiProvider provider, int index) {
+        List<String> keys = ProviderCredentials.apiKeys(provider.getCredentials());
+        if (keys.isEmpty()) {
+            return null;
+        }
+        return index >= 0 && index < keys.size() ? keys.get(index) : keys.getFirst();
+    }
+
+    /**
      * 解析视频生成客户端。
      *
      * @param model 模型名，可为空
      * @return 解析结果
      */
     public Resolved<VideoClient> resolveVideo(String model) {
+        return resolveVideo(model, 0);
+    }
+
+    /**
+     * 解析视频生成客户端（指定用第几个 API Key）。
+     *
+     * @param model   模型名，可为空
+     * @param keyIndex API Key 下标，越界时回退到第一个
+     * @return 解析结果
+     */
+    public Resolved<VideoClient> resolveVideo(String model, int keyIndex) {
         SysAiProvider provider = resolveProviderByModel(model);
         if (provider == null) {
             return new Resolved<>(null, null, null);
@@ -140,7 +191,7 @@ public class GenerateClientResolver {
             log.warn("[Generate] 供应商无视频生成实现 platform={} spi={}", provider.getPlatform(), spi);
             return new Resolved<>(null, provider, modelCfg);
         }
-        String cacheKey = "video::" + provider.getProviderId() + "::" + spi;
+        String cacheKey = "video::" + provider.getProviderId() + "::" + spi + "::k" + keyIndex;
         VideoClient cached = (VideoClient) clientHolder.get(cacheKey);
         if (cached != null && !expired(cacheKey)) {
             return new Resolved<>(applyVideoModel(cached, model), provider, modelCfg);
@@ -148,7 +199,7 @@ public class GenerateClientResolver {
         try {
             VideoClientSetting setting = VideoClientSetting.builder()
                     .provider(spi)
-                    .appKey(ProviderCredentials.firstApiKey(provider.getCredentials()))
+                    .appKey(keyAt(provider, keyIndex))
                     .baseUrl(provider.getBaseUrl())
                     .build();
             VideoClient client = VideoClient.create(setting);
