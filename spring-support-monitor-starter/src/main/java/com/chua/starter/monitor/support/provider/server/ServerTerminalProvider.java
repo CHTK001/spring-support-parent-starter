@@ -19,7 +19,7 @@ import reactor.core.scheduler.Schedulers;
 /**
  * 服务器终端采集 提供者(SSH)
  * <p>
- * 通过 SSH 在目标服务器执行自定义命令, 原始输出存于 {@link CollectResult#getRawOutput()},
+ * 通过 SSH 在目标服务器执行自定义命令, 原始输出存于 {@link CollectResult#rawOutput},
  * 由调度器结合任务关联的解析规则生成指标点。
  * </p>
  *
@@ -40,27 +40,43 @@ public class ServerTerminalProvider implements MetricProvider {
      */
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
-    @Override
     /**
-     * 提供者类型
-    */
+     * 本采集通道的类型标识。
+     *
+     * <p>用于把采集结果归到「终端 / SSH」这一通道名下，与其它采集通道（如 HTTP、Agent）
+     * 区分开。</p>
+     *
+     * @return 恒为 {@link ProviderType#TERMINAL}
+     */
+    @Override
     public ProviderType providerType() {
         return ProviderType.TERMINAL;
     }
 
-    @Override
     /**
-     * 支持服务类型
-    */
+     * 本通道可采集的服务类型。
+     *
+     * <p>走 SSH 到目标机执行命令采集，因此凡是在目标机上以进程/客户端形式存在的服务
+     * 都能覆盖。{@link ServiceType#SERVER} 表示主机整体指标（负载、内存、磁盘等）。</p>
+     *
+     * @return 支持的服务类型集合，始终非空
+     */
+    @Override
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER, ServiceType.REDIS, ServiceType.MYSQL,
                 ServiceType.PG, ServiceType.ORACLE, ServiceType.MSSQL, ServiceType.MQ);
     }
 
-    @Override
     /**
-     * Collect
-    */
+     * 采集入口（响应式包装）。
+     *
+     * <p>真正的采集逻辑在 {@code doCollect}，其中是阻塞的 SSH 调用，
+     * 因此这里调度到 {@link Schedulers#boundedElastic()}，避免占用事件循环线程。</p>
+     *
+     * @param context 采集上下文，含目标连接信息与要采的服务类型
+     * @return 包含单条采集结果的 {@link Mono}；执行过程中的异常以错误信号返回
+     */
+    @Override
     public Mono<CollectResult> collect(CollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
                 .subscribeOn(Schedulers.boundedElastic());

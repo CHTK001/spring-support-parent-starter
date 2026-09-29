@@ -1,8 +1,11 @@
 package com.chua.starter.eduai.dimension.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
+import com.chua.starter.eduai.model.dto.EduImpersonateDTO;
+import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 教育 AI 维度管理 REST 控制器。
@@ -225,6 +230,33 @@ public class EduDimensionController {
      */
     public ReturnResult<Boolean> deleteStudent(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteStudent(id));
+    }
+
+    @Operation(summary = "代入指定学生（管理员）")
+    @PostMapping("/students/impersonate")
+    /**
+     * 签发一个代入指定学生的临时令牌。
+     *
+     * <p>管理员用它打开某个学生的学生端页面排查问题，不必索要学生密码，
+     * 也不会污染学生的学习记录。仅管理员可用，令牌只读、短效、且被限制在学生端路径内。</p>
+     *
+     * @param dto 学生标识、有效期与可访问路径
+     * @return 临时令牌及其有效期、可访问路径；无权或档案不存在时返回错误
+     */
+    public ReturnResult<Map<String, Object>> impersonateStudent(@RequestBody EduImpersonateDTO dto) {
+        LoginAuthResult result = dimensionService.impersonateStudent(
+                dto.studentId(), dto.expireSeconds(), dto.allowedUrls());
+        if (result == null || result.getCode() == null || result.getCode() != 200) {
+            String message = result == null ? null : result.getMessage();
+            return ReturnResult.error(StringUtils.defaultString(message, "签发临时令牌失败"));
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("accessToken", result.getToken());
+        data.put("expires", result.getUserResume() == null ? null : result.getUserResume().getExpireTime());
+        data.put("readonly", result.getUserResume() != null && result.getUserResume().isReadonly());
+        data.put("userId", result.getUserResume() == null ? null : result.getUserResume().getUserId());
+        data.put("nickname", result.getUserResume() == null ? null : result.getUserResume().getNickName());
+        return ReturnResult.ok(data);
     }
 
     // ===== 教师 =====

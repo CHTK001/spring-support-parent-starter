@@ -1,6 +1,6 @@
 package com.chua.starter.eduai.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.starter.eduai.mapper.EduFunConfigMapper;
 import com.chua.starter.eduai.model.EduFunConfig;
 import com.chua.starter.eduai.service.IEduFunConfigService;

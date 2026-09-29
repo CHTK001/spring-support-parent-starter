@@ -12,6 +12,7 @@ import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.impersonation.TemporaryToken;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
@@ -76,9 +77,71 @@ public class StaticProtocol extends AbstractProtocol {
             clearAuthenticationInformation(getCacheKey(cookies, token));
             return AuthenticationInformation.noAuth();
         }
+        // 临时令牌必须在读缓存之前先判有效期与路径：
+        // 父类的 approve 会先命中认证缓存直接返回，缓存里存的是签发那一刻的放行结果，
+        // 若校验放在其后，管理员关掉页面后旧令牌仍会被缓存兜住而继续放行。
+        if (!rejectTemporaryToken(token, cookies)) {
+            return AuthenticationInformation.noAuth();
+        }
         AuthenticationInformation information = super.approve(cookies, token, subProtocol);
         recordSession(token, cookies, information);
         return information;
+    }
+
+    /**
+     * 临时令牌的额外准入校验：有效期与可访问路径。
+     *
+     * <p>之所以要独立于认证缓存再判一次：静态协议的鉴权链路只判断「有没有携带令牌」，
+     * 并不比对 {@code expireTime}，认证缓存又会缓存放行结果。
+     * 两层叠加意味着管理员关掉页面后，临时令牌仍能继续用，
+     * 「5 分钟临时令牌」就成了永久有效的学生账号。两处都拦不住才算真正拦下。</p>
+     *
+     * @param token   请求携带的令牌，允许为 {@code null}（此时回落到 Cookie 里的令牌）
+     * @param cookies 请求 Cookie，允许为 {@code null}
+     * @return 允许通过返回 {@code true}；不通过返回 {@code false}
+     */
+    private boolean rejectTemporaryToken(String token, Cookie[] cookies) {
+        String credential = resolveCredential(token, cookies);
+        if (StringUtils.isBlank(credential)) {
+            return true;
+        }
+        UserResult userResult = TokenCipher.decryptToUser(credential);
+        if (!TemporaryToken.isTemporary(userResult)) {
+            return true;
+        }
+        if (!TemporaryToken.isUsable(userResult)) {
+            log.warn("[StaticProtocol]临时令牌已过期，拒绝认证");
+            return false;
+        }
+        String path = currentRequestPath();
+        if (!TemporaryToken.isPathAllowed(userResult, path)) {
+            log.warn("[StaticProtocol]临时令牌无权访问该路径 - path: {}", path);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 取本次请求实际使用的令牌：优先 Authorization 头，其次 {@code x-oauth-cookie} Cookie。
+     *
+     * @param token   请求携带的令牌
+     * @param cookies 请求 Cookie
+     * @return 令牌字符串；两者都取不到时返回 {@code null}
+     */
+    private String resolveCredential(String token, Cookie[] cookies) {
+        if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
+            return token;
+        }
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (cookie != null && "x-oauth-cookie".equals(cookie.getName())
+                    && StringUtils.isNotBlank(cookie.getValue())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     /**
@@ -170,6 +233,17 @@ public class StaticProtocol extends AbstractProtocol {
                 log.warn("[StaticProtocol]token解密或解析失败，拒绝认证 - token长度: {}", token.length());
                 return AuthenticationInformation.noAuth();
             }
+            // 临时令牌额外校验。静态协议的 hasValid 只判断「有没有携带令牌」，
+            // 并不比对 expireTime，因此管理员关掉页面后临时令牌不会自动作废；
+            // 不在这里补校验，「5 分钟临时令牌」就等于一个永久有效的学生账号。
+            if (!TemporaryToken.isUsable(userResult)) {
+                log.warn("[StaticProtocol]临时令牌已过期，拒绝认证 - token长度: {}", token.length());
+                return AuthenticationInformation.noAuth();
+            }
+            if (!TemporaryToken.isPathAllowed(userResult, currentRequestPath())) {
+                log.warn("[StaticProtocol]临时令牌无权访问该路径 - path: {}", currentRequestPath());
+                return AuthenticationInformation.noAuth();
+            }
         }
 
  // 如果通过令牌未能获取到用户信息，则尝试从Cookie中解析
@@ -238,6 +312,19 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
+     * 取当前请求路径，供临时令牌做可访问范围校验。
+     *
+     * <p>调度线程等无请求上下文的场景取不到路径，返回 {@code null}，
+     * 由 {@link TemporaryToken#isPathAllowed} 按「路径未知即拒绝受限令牌」处理。</p>
+     *
+     * @return 请求路径；无请求上下文时返回 {@code null}
+     */
+    private String currentRequestPath() {
+        var request = RequestUtils.getRequest();
+        return request == null ? null : request.getRequestURI();
+    }
+
+    /**
      * 升级认证信息
      *
      * @param cookie        Cookie数组
@@ -250,6 +337,16 @@ public class StaticProtocol extends AbstractProtocol {
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
         String sourceToken = StringUtils.isNotBlank(refreshToken) ? refreshToken : token;
         if (StringUtils.isBlank(sourceToken)) {
+            return null;
+        }
+
+        // 临时令牌不得续期。本方法会把 expireTime 重置成完整有效期，
+        // 因此一次续期就能把「5 分钟的代入令牌」变成长期令牌，
+        // 「临时」二字当场失效。令牌上的临时标记随 ext 保留（路径限制不会失效），
+        // 所以这里必须按标记主动拒绝，而不是指望前端不去续期。
+        UserResult sourceUser = TokenCipher.decryptToUser(sourceToken);
+        if (TemporaryToken.isTemporary(sourceUser)) {
+            log.warn("[StaticProtocol]临时令牌不允许续期，拒绝 - token长度: {}", sourceToken.length());
             return null;
         }
 

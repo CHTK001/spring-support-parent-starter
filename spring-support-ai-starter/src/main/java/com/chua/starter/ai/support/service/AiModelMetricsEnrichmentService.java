@@ -776,6 +776,108 @@ public class AiModelMetricsEnrichmentService {
     }
     /**
      * 单条模型指标记录。
+     *
+     * <p>数据源为 Artificial Analysis（{@code SOURCE_NAME}），在线抓取失败时回退本地磁盘快照，
+     * 因此除 {@code normalizedKey} 外所有组件都可能为 {@code null}——语义是「该模型没有这项数据」，
+     * 而不是「这项数据为 0」。所以对外写出时一律走 {@code putIfNotNull}，为 {@code null} 的项直接不出现在结果行里，
+     * 下游必须按「键不存在」而不是「键值为空」来理解缺省。</p>
+     *
+     * <p>量纲分三类，不要混用：价格为 <b>USD / 百万 Token</b>（源字段名即 {@code price1m*}），
+     * 基准分为 <b>0~1 的小数</b>（不是百分制，展示时需自行乘 100），速度与延迟为 <b>Token/秒</b>与 <b>秒</b>。
+     * {@code intelligenceIndex}、{@code omniscienceIndex}、{@code elo}、{@code costPerTask} 不在这三类之内，
+     * 各自的换算与边界见对应标签。
+     * 七个布尔型组件（{@code reasoning} / {@code webSearch} / {@code imageInput} / {@code functionCalling} /
+     * {@code jsonMode} / {@code openaiCompatible} / {@code intelligenceIndexEstimated}）都是三态的：
+     * {@code null} 表示数据源未给出（未知），不能当作 {@code false} 用。</p>
+     *
+     * @param normalizedKey 归一化后的模型名，同时充当指标索引的键，不允许为 {@code null}（规范构造器强制校验）。
+     *                      由 {@link #normalize} 生成：转小写 → 取最后一个 {@code /} 之后的部分（剥掉厂商前缀）
+     *                      → 非字母数字（含中文）连续段合并为单个连字符，如 {@code OpenAI/GPT-4o} → {@code gpt-4o}。
+     *                      精确匹配失败后还参与包含式模糊匹配，此时要求长度不小于 6 以免误命中
+     * @param provider     模型提供厂商（创造者）名称，允许为 {@code null}。取值来源为 {@code ModelDefinition#getProvider()}，
+     *                      Artificial Analysis 侧取自模型目录的 creatorName；目录缺失时退化为 slug
+     * @param inputPerMillion 输入单价，单位 <b>USD / 百万 Token</b>，允许为 {@code null}（该模型未报此项）。
+     *                      源字段 {@code price1mInputTokens}，经 {@code scale} 统一保留 4 位小数（HALF_UP）并去掉尾随零；
+     *                      免费模型记为 0（意为不计费），与缺数据的 {@code null} 含义不同，不要混判
+     * @param outputPerMillion 输出单价，单位 <b>USD / 百万 Token</b>，允许为 {@code null}。源字段
+     *                      {@code price1mOutputTokens}，同样经 {@code scale} 规范化；通常高于输入价
+     * @param intelligenceIndex 智能指数（Artificial Analysis Intelligence Index），允许为 {@code null}。
+     *                      本类对它不做归一化，与下方各 0~1 基准分不是同一量纲，不可按百分制解读；
+     *                      源字段 {@code intelligenceIndex}，是否可信另看 {@code intelligenceIndexEstimated}
+     * @param outputSpeedTps 输出速度，单位 <b>Token / 秒</b>，允许为 {@code null}。源字段
+     *                      {@code medianOutputTokensPerSecond}，取的是实测中位吞吐而非峰值
+     * @param latencyFirstTokenSeconds 首 Token 延迟，单位 <b>秒</b>，允许为 {@code null}。源字段
+     *                      {@code medianTimeToFirstTokenSeconds}，是中位耗时不是最坏值；端到端总耗时是数据源的另一个字段，不在本记录内
+     * @param iconUrl      厂商图标绝对地址（HTTP/HTTPS URL），允许为 {@code null}。源字段可能只是文件名或站内相对路径，
+     *                      抓取侧已统一补全为 {@code https://artificialanalysis.ai/img/logos/<file>} 形式，可直接渲染；
+     *                      落盘时经 {@code esc} 转义反斜杠与双引号，读回时按 JSON 字符串还原
+     * @param reasoning    是否为推理（深度思考 / CoT）模型，允许为 {@code null}。源字段 {@code reasoningModel}；
+     *                      {@code null} 表示数据源未给出，应按未知处理而非按不支持处理
+     * @param webSearch    是否支持联网检索（内置搜索 / 在线检索），允许为 {@code null}。数据源无显式字段，
+     *                      抓取侧按模型名包含 {@code search} / {@code online} 推断，人工配置可覆盖；
+     *                      从旧磁盘快照恢复时可能为 {@code null}
+     * @param imageInput   是否支持图片识别（视觉输入），允许为 {@code null}。同样无显式字段，按模型名规律
+     *                      （{@code vision}、{@code -v} 结尾等）匹配推断，人工配置可覆盖
+     * @param functionCalling 是否支持函数调用（工具调用），允许为 {@code null}。源字段 {@code functionCalling}，
+     *                      能力标签 {@code function_calling} 由本项为真时追加
+     * @param cacheHitPrice 提示词缓存命中（读缓存）输入价，单位 <b>USD / 百万 Token</b>，允许为 {@code null}。
+     *                      源字段 {@code cacheHitPrice}，通常约为 {@code inputPerMillion} 的一半；不支持缓存的模型为 {@code null}
+     * @param cacheWritePrice 提示词缓存写入价，单位 <b>USD / 百万 Token</b>，允许为 {@code null}。
+     *                      源字段 {@code cacheWritePrice}，多数模型不提供写入计价，此时为 {@code null}
+     * @param contextWindowTokens 上下文窗口上限，单位 <b>Token</b>，允许为 {@code null}。源字段
+     *                      {@code contextWindowTokens}，如 {@code 262144} 表示 256K；超长上下文模型可能超出 int 范围故用
+     *                      {@code Long}，快照恢复时只取整数部分
+     * @param hleScore     HLE（Humanity's Last Exam，人类最后考试）得分，取值 <b>0~1 的小数，不是百分制</b>，
+     *                      允许为 {@code null}。源字段 {@code hle}；未参加该基准的模型为空，不要按 0 解读
+     * @param omniscienceIndex 全知指数（Omniscience Index），允许为 {@code null} 且<b>可为负</b>——它是知识准确率与幻觉水平的差值，
+     *                      负值代表幻觉多于准确，因此不能套用 0~1 区间。源字段 {@code omniscience}；其两个分量另见
+     *                      {@code omniscienceAccuracy} 与 {@code omniscienceNonHallucination}
+     * @param gpqaScore    GPQA 得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code gpqa}
+     * @param aime25Score  AIME 2025 数学基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code aime25}
+     * @param livecodebenchScore LiveCodeBench 编程基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code livecodebench}
+     * @param scicodeScore SciCode 科学编程基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code scicode}
+     * @param ifbenchScore IFBench 指令遵循基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code ifbench}
+     * @param critptScore  CritPt 物理基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code critpt}
+     * @param mmmuProScore MMMU-Pro 多模态基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code mmmuPro}
+     * @param tau2Score    Tau2-Bench 工具调用基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code tau2}
+     * @param tauBankingScore Tau-Banking 银行场景基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code tauBanking}
+     * @param lcrScore     LCR 长上下文推理得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段 {@code lcr}
+     * @param terminalbenchHardScore Terminal-Bench Hard 得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code terminalbenchHard}
+     * @param terminalBench21Score Terminal-Bench 2.1 得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code terminalBench21}；与 {@code terminalBench40Score} 分属不同基准版本，跨版本分数不可直接比较
+     * @param terminalBench40Score Terminal-Bench 4.0 得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code terminalBench40}
+     * @param automationBenchScore AutomationBench 自动化基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为
+     *                      {@code null}。源字段 {@code automationBench}
+     * @param gdpvalNormalizedScore GDPval 归一化得分，取值 <b>0~1 的小数</b>（数据源已归一化，故非百分制），允许为
+     *                      {@code null}。源字段 {@code gdpvalNormalized}
+     * @param briefcaseScore Briefcase 专业任务基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code briefcase}
+     * @param harveyLabScore Harvey Lab 法律任务基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code harveyLab}
+     * @param apexAgentsScore Apex Agents 基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code apexAgents}
+     * @param itbenchSreScore ITBench SRE 运维基准得分，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。源字段
+     *                      {@code itbenchSre}
+     * @param omniscienceAccuracy 全知指数中的知识准确率分量，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。
+     *                      源字段 {@code omniscienceAccuracy}，与 {@code omniscienceIndex}（准确率减幻觉率）配套
+     * @param omniscienceNonHallucination 全知指数中的非幻觉率分量，取值 <b>0~1 的小数，不是百分制</b>，允许为 {@code null}。
+     *                      源字段 {@code omniscienceNonHallucination}，越高表示编造越少
+     * @param elo          Artificial Analysis Elo 评分，允许为 {@code null}。<b>既不是 0~1 小数也不是百分制</b>，
+     *                      是相对分而非绝对量，只适合横向排序，不能按固定区间解读。源字段 {@code elo}
+     * @param costPerTask  单任务平均成本，单位 <b>USD / 次任务</b>（不是每 Token 单价，也不是每次调用价），允许为 {@code null}。
+     *                      源字段 {@code costPerTask}，折算口径由数据源在其基准任务上定义，本类不参与计算，
+     *                      仅可用于跨模型比价，不能当作精确计费依据
+     * @param jsonMode     是否支持 JSON 输出（结构化输出）模式，允许为 {@code null}。源字段 {@code jsonMode}；
+     *                      {@code null} 表示数据源未给出
+     * @param openaiCompatible 是否兼容 OpenAI 协议（可用 OpenAI SDK / 兼容端点接入），允许为 {@code null}。源字段
+     *                      {@code openaiCompatible}
+     * @param intelligenceIndexEstimated {@code intelligenceIndex} 是否为估算值，允许为 {@code null}。源字段
+     *                      {@code intelligenceIndexIsEstimated}；为 {@code true} 表示该分并非实测跑分而是推算，
+     *                      与 {@code null}（数据源未标注）含义不同
      */
     public record MetricsRecord(
             /**

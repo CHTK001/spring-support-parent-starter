@@ -5,6 +5,11 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
+import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.credential.CredentialProvider;
+import com.chua.starter.oauth.client.support.credential.CredentialRequest;
+import com.chua.starter.oauth.client.support.credential.CredentialResolver;
+import com.chua.starter.oauth.client.support.credential.StaticCredentialConfig;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -61,16 +66,17 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
      * 获取access令牌
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        AuthClientProperties.TempUser temp = getAuthClientProperties().getTemp();
-        String rawConfig = temp != null ? temp.getUser() : null;
-        // 读可变凭据存储：改密后登录鉴权使用新口令（首次按配置初始化）
-        String rawUsers = StringUtils.isBlank(rawConfig) ? rawConfig
-                : com.chua.starter.oauth.client.support.user.StaticUserStore.get().effective(rawConfig);
+        CredentialRequest request = new CredentialRequest(username, password, authType,
+                readAccountType(ext), ext, StaticCredentialConfig.tokenTtlSeconds());
+        // 先问凭据扩展点：命中即由它接管，业务方新增账号来源不必修改 oauth 模块
+        CredentialProvider provider = CredentialResolver.resolve(request);
+        if (provider != null) {
+            return provider.authenticate(request);
+        }
+
+        String rawUsers = StaticCredentialConfig.effectiveUserConfig();
         if (StringUtils.isBlank(rawUsers)) {
-            LoginAuthResult empty = new LoginAuthResult();
-            empty.setCode(403);
-            empty.setMessage("静态临时账号未配置");
-            return empty;
+            return StaticCredentialConfig.denied(403, "静态临时账号未配置");
         }
         // 短信 / 邮箱登录：验证码归属已在业务层校验，令牌签发免口令，仅按用户名匹配
         if (authType == AuthType.SMS || authType == AuthType.EMAIL) {
@@ -78,10 +84,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                     rawUsers, username, authType.getCode(),
                     getAuthClientProperties().getClampedStaticTokenExpireSeconds());
             if (codeResult == null) {
-                LoginAuthResult denied = new LoginAuthResult();
-                denied.setCode(403);
-                denied.setMessage("账号未配置，无法登录");
-                return denied;
+                return StaticCredentialConfig.denied(403, "账号未配置，无法登录");
             }
             return codeResult;
         }
@@ -89,12 +92,23 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                 authType != null ? authType.getCode() : "STATIC",
                 getAuthClientProperties().getClampedStaticTokenExpireSeconds());
         if (result == null) {
-            LoginAuthResult denied = new LoginAuthResult();
-            denied.setCode(403);
-            denied.setMessage("账号或密码错误");
-            return denied;
+            return StaticCredentialConfig.denied(403, "账号或密码错误");
         }
         return result;
+    }
+
+    /**
+     * 读取扩展参数里声明的账号来源。
+     *
+     * @param ext 扩展参数，允许为 {@code null}
+     * @return 账号来源；未声明时返回 {@code null}，由 {@link CredentialRequest} 回落到认证类型
+     */
+    private String readAccountType(Map<String, Object> ext) {
+        if (ext == null) {
+            return null;
+        }
+        Object value = ext.get(AuthConstant.ACCOUNT_TYPE_KEY);
+        return value == null ? null : String.valueOf(value);
     }
 
     @Override

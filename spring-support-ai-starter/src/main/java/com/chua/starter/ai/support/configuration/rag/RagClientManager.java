@@ -91,6 +91,20 @@ public class RagClientManager {
             Set.of("memory", "onnx", "bge", "minilm", "wemm");
 
     /**
+     * 本地推理类 embedding 引擎标识集合（只读）。
+     *
+     * <p>这些引擎无需 apiKey / baseUrl，由本地 ONNX 模型或内置实现直接推理。
+     * 对外暴露给「引擎列表」这类只读展示接口使用：调用方原本去查
+     * {@code VectorService} SPI，而该 SPI 并没有任何实现，
+     * 会导致引擎列表恒为空、前端下拉框无选项。</p>
+     *
+     * @return 本地引擎标识集合
+     */
+    public Set<String> localEmbeddingEngines() {
+        return LOCAL_EMBEDDING_ENGINES;
+    }
+
+    /**
      * 全局设置读取工具
      */
     private final GlobalSettingReader settingReader;

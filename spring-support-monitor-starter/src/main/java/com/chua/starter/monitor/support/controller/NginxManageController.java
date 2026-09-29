@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.model.NginxApplyResultVO;
 import com.chua.starter.monitor.support.model.NginxBackupVO;
+import com.chua.starter.monitor.support.model.NginxBackupDiffVO;
 import com.chua.starter.monitor.support.model.NginxCommandResultVO;
 import com.chua.starter.monitor.support.model.NginxConfigFileVO;
 import com.chua.starter.monitor.support.model.NginxConfigParseVO;
@@ -15,9 +16,11 @@ import com.chua.starter.monitor.support.model.NginxAccessTopVO;
 import com.chua.starter.monitor.support.model.NginxStatusVO;
 import com.chua.starter.monitor.support.model.NginxTrendVO;
 import com.chua.starter.monitor.support.model.NginxTemplateVO;
+import com.chua.starter.monitor.support.model.NginxUrlTrendVO;
 import com.chua.starter.monitor.support.model.NginxVersionVO;
 import com.chua.starter.monitor.support.model.dto.NginxApplyDTO;
 import com.chua.starter.monitor.support.model.dto.NginxSaveConfigDTO;
+import com.chua.starter.monitor.support.nginx.NginxMetricStreamRegistry;
 import com.chua.starter.monitor.support.service.NginxManageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * Nginx 管理 REST 接口。
@@ -55,6 +59,11 @@ public class NginxManageController {
      * Nginx 管理服务
      */
     private final NginxManageService nginxManageService;
+
+    /**
+     * SSE 订阅者注册表
+     */
+    private final NginxMetricStreamRegistry streamRegistry;
 
     // ==================== 总览 ====================
 
@@ -233,6 +242,55 @@ public class NginxManageController {
         return call("停止 Nginx", () -> nginxManageService.stop(datasourceId));
     }
 
+    // ==================== 备份 ====================
+
+    /**
+     * 读取备份文件内容。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @param name         备份文件名，只允许纯文件名
+     * @return 备份文件全文
+     */
+    @Operation(summary = "读取备份内容")
+    @GetMapping("/backup/content")
+    public ReturnResult<String> backupContent(@RequestParam(required = false) Long datasourceId,
+            @RequestParam String name) {
+        return call("读取备份内容", () -> nginxManageService.readBackupContent(datasourceId, name));
+    }
+
+    /**
+     * 对比备份与当前配置的差异。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @param name         备份文件名，只允许纯文件名
+     * @param target       对比目标（当前配置文件）绝对路径
+     * @return 差异结果
+     */
+    @Operation(summary = "对比备份与当前配置")
+    @GetMapping("/backup/diff")
+    public ReturnResult<NginxBackupDiffVO> backupDiff(@RequestParam(required = false) Long datasourceId,
+            @RequestParam String name, @RequestParam String target) {
+        return call("对比备份差异", () -> nginxManageService.diffBackup(datasourceId, name, target));
+    }
+
+    /**
+     * 按 URL 维度统计访问趋势。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @param path         日志文件路径，空则取配置里的 access_log
+     * @param lines        扫描的尾部行数
+     * @param topN         取前几个 URL
+     * @return URL 趋势
+     */
+    @Operation(summary = "URL 访问趋势")
+    @GetMapping("/log/url-trend")
+    public ReturnResult<NginxUrlTrendVO> urlTrend(@RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String path,
+            @RequestParam(required = false) Integer lines,
+            @RequestParam(required = false) Integer topN) {
+        return call("统计 URL 访问趋势", () -> nginxManageService.urlTrend(datasourceId, path, lines, topN));
+    }
+
     // ==================== 状态 ====================
 
     /**
@@ -299,6 +357,50 @@ public class NginxManageController {
                                                     @RequestParam(required = false) Integer topN) {
         return call("读取 Nginx 访问日志 Top 统计",
                 () -> nginxManageService.accessTop(datasourceId, path, lines, minutes, topN));
+    }
+
+    /**
+     * 订阅指标 / 运行态实时推送（SSE）。
+     *
+     * <p>建连即回一个 {@code ready} 事件，之后每轮采集（默认 30s）推两个事件：</p>
+     * <ul>
+     *   <li>{@code metric}：该数据源每个指标的最后一个点（已换算速率）</li>
+     *   <li>{@code runtime}：实时运行态（运行中 / 已停止 / PID / 已运行时长 / 活跃连接）</li>
+     * </ul>
+     * <p>另有 20s 一次的注释帧保活，前端不会把它当事件。</p>
+     *
+     * <p><strong>首屏历史不在这里给</strong>：SSE 只做增量。首屏仍走
+     * {@code GET /metric/trend}，否则建连那一刻就要推 288 个点，
+     * 而页面往往在历史拉到之前就断开了。</p>
+     *
+     * @param datasourceId 数据源 ID
+     * @return SSE 连接
+     */
+    @Operation(summary = "Nginx 指标与运行态实时推送（SSE）")
+    @GetMapping("/metric/stream")
+    public SseEmitter metricStream(@RequestParam(required = false) Long datasourceId) {
+        Long id = datasourceId;
+        if (id == null) {
+            id = defaultDatasourceId();
+        }
+        return streamRegistry.subscribe(id);
+    }
+
+    /**
+     * 解析缺省数据源：第一个 nginx 类型数据源。
+     *
+     * <p>SSE 建连是长连接，参数缺失时若直接返回空推送，前端会一直连着一个
+     * 永远不说话的连接且不报错——比直接报错更难排查。这里退化成「第一个 nginx
+     * 数据源」，取不到就抛出，由统一异常处理转成业务错误。</p>
+     *
+     * @return 数据源 id
+     */
+    private Long defaultDatasourceId() {
+        List<Long> ids = nginxManageService.listNginxDatasourceIds();
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("没有可用的 nginx 数据源");
+        }
+        return ids.get(0);
     }
 
     // ==================== 日志 ====================

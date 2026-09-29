@@ -70,7 +70,11 @@ public final class StaticUserStore {
     }
 
     /**
-     * 校验账号口令是否匹配（与登录同一判定：明文或配置明文的 MD5）。
+     * 校验账号口令是否匹配。
+     *
+     * <p>与登录同一判定（{@link StaticTempLogin#isMatch}）：优先识别加盐摘要格式
+     * {@code <盐>$<摘要>}，否则回落历史兼容的「明文或明文的 MD5」。两处判定必须同源，
+     * 否则会出现「能改密但登不进去」或反之。</p>
      *
      * @param username 用户名
      * @param password 提交的口令
@@ -84,11 +88,19 @@ public final class StaticUserStore {
         if (null == stored) {
             return false;
         }
+        if (SaltedPassword.isSalted(stored)) {
+            return SaltedPassword.matches(password, stored);
+        }
         return stored.equals(password) || DigestUtils.md5(stored).equals(password);
     }
 
     /**
-     * 更新账号口令（明文）。
+     * 更新账号口令。
+     *
+     * <p>明文提交，落库前按加盐格式转成 {@code <盐>$<摘要>}，
+     * 使内存副本与 {@link #render()} 的输出里都不再出现明文。
+     * 盐每次重新生成：同一账号改密后摘要必须变化，否则新旧摘要相同，
+     * 等于没改。</p>
      *
      * @param username    用户名
      * @param newPassword 新口令明文
@@ -101,7 +113,7 @@ public final class StaticUserStore {
         if (!credentials.containsKey(username)) {
             return false;
         }
-        credentials.put(username, newPassword);
+        credentials.put(username, SaltedPassword.encode(newPassword));
         return true;
     }
 

@@ -1322,6 +1322,83 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
+     * 写出压缩包条目清单 JSON（{@code ?format=archive}）。
+     *
+     * <p>与 {@code ?preview=true} 的服务端渲染是<b>并列</b>的两条通道而非替代关系：
+     * 服务端渲染把整个浏览器页面交给 iframe（独立文档，拿不到主应用的
+     * Element Plus / koi 主题变量）；本接口只回数据，由主应用内的 Vue 组件
+     * 渲染，才能真正跟随系统主题与暗色模式。</p>
+     *
+     * <p>结构：</p>
+     * <pre>{@code
+     * {
+     *   "name": "施工图3-2-804.zip",
+     *   "extension": "zip",
+     *   "archiveSize": 2867200,
+     *   "fileCount": 15, "dirCount": 2, "totalSize": 8912896,
+     *   "compressRate": 68,
+     *   "entries": [
+     *     {"path":"现场照片/IMG_1.jpg","name":"IMG_1.jpg","directory":false,
+     *      "size":243558,"compressedSize":201234,"modified":1753936260000}
+     *   ]
+     * }
+     * }</pre>
+     *
+     * @param fileName 压缩包文件名
+     * @param data     压缩包字节内容
+     * @param response 响应
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> writeArchiveEntries(String fileName, byte[] data, ServerResponse response) {
+        String ext = simpleExtOf(fileName);
+        ArchivePreviewProvider.ArchiveScan scan;
+        try {
+            scan = ArchivePreviewProvider.scan(data, ext);
+        } catch (Exception e) {
+            log.warn("压缩包条目解析失败[{}]: {}", fileName, e.getMessage());
+            return error(response, 422, "Unprocessable Entity: 压缩包解析失败");
+        }
+
+        long archiveSize = data.length;
+        long totalSize = scan.totalSize();
+        // 压缩率 = 压缩后体积 / 解压后总体积（%），是压缩包语境下的通行口径。
+        // totalSize 为 0（空包）时无法计算，如实回 0，不做除零兜底成 100%。
+        int compressRate = totalSize > 0 ? (int) Math.round(archiveSize * 100.0d / totalSize) : 0;
+
+        StringBuilder json = new StringBuilder(1024 + scan.entries().size() * 160);
+        json.append("{\"name\":\"").append(escapeJson(fileName)).append("\"")
+                .append(",\"extension\":\"").append(escapeJson(ext)).append("\"")
+                .append(",\"archiveSize\":").append(archiveSize)
+                .append(",\"fileCount\":").append(scan.fileCount())
+                .append(",\"dirCount\":").append(scan.dirCount())
+                .append(",\"totalSize\":").append(totalSize)
+                .append(",\"compressRate\":").append(compressRate)
+                .append(",\"entries\":[");
+        List<ArchivePreviewProvider.ArchiveEntryItem> entries = scan.entries();
+        for (int i = 0; i < entries.size(); i++) {
+            ArchivePreviewProvider.ArchiveEntryItem item = entries.get(i);
+            if (i > 0) {
+                json.append(",");
+            }
+            json.append("{\"path\":\"").append(escapeJson(item.path())).append("\"")
+                    .append(",\"name\":\"").append(escapeJson(item.name())).append("\"")
+                    .append(",\"directory\":").append(item.directory())
+                    .append(",\"size\":").append(Math.max(0L, item.size()))
+                    // compressedSize 为 -1 表示归档未记录该值；原样透出由前端显示为 "-"
+                    .append(",\"compressedSize\":").append(item.compressedSize())
+                    .append(",\"modified\":").append(item.modified())
+                    .append("}");
+        }
+        json.append("]}");
+        response.setStatus(200)
+                .setHeader("X-FileStorage-Preview", "archive-json")
+                .setContentType("application/json;charset=UTF-8")
+                .setBody(json.toString())
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
      * 渲染文件列表页面。
      *
      * <p>按 {@link FileStorageSetting#getLayoutType()} 分流：</p>
@@ -2244,6 +2321,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             download = false;
         }
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+
+        // 压缩包结构查询（?format=archive）：返回条目清单 JSON，供主应用内的 Vue 组件渲染。
+        // 与 ?preview=true 是并列的另一条通道——后者把整个页面交给 iframe（独立文档，
+        // 拿不到主应用的 Element Plus / koi 主题变量），本接口只回数据。
+        // 放在访问模式判定之前：它是纯数据查询，与 openPreview / openDownload 开关无关。
+        if (stringParam(request, "format", "archive")) {
+            return writeArchiveEntries(fileName, data, response);
+        }
+
         response.setHeader("Content-Disposition", buildDisposition(download, fileName));
 
         // 显式 ?preview=true 时按渲染通道分流处理
@@ -3468,6 +3554,25 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return true;
         }
         return false;
+    }
+
+    /**
+     * 判断查询参数是否取到指定值（大小写不敏感，null 安全）。
+     *
+     * <p>与 {@link #boolParam} 的标志式语义互补：这里比对具体取值，
+     * 用于 {@code ?format=json} / {@code ?format=capabilities} 这类互斥分支。</p>
+     *
+     * @param request 请求
+     * @param name    参数名
+     * @param value   期望取值
+     * @return true 表示参数存在且取值匹配
+     */
+    private boolean stringParam(ServerRequest request, String name, String value) {
+        Map<String, String> params = request.getParams();
+        if (params == null) {
+            return false;
+        }
+        return value.equalsIgnoreCase(params.get(name));
     }
 
     /**

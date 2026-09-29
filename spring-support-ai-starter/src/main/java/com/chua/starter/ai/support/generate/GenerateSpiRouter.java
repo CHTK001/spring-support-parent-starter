@@ -92,8 +92,16 @@ public final class GenerateSpiRouter {
     /**
      * 业务供应商标识 → 视频生成 SPI 名。
      *
-     * <p>当前 SPI 侧仅 {@code zhipu} 落地了 {@code VideoClient}；阿里（万相）
-     * 已归一到 {@code alibaba} 占位，待 {@code AlibabaVideoClient} 落地后即可生效，
+     * <p>与 {@link #IMAGE_SPI} 同构：同一个供应商，图像与视频各自归一。
+     * 绝大多数 OpenAI 兼容渠道两种媒体的端点形状一致，统一归到 {@code openai}；
+     * 形状特殊的（如智谱自有视频接口）才单独映射。库中 platform 存成
+     * {@code openai} 的聚合渠道（如 Agnes）也归到 openai，由
+     * {@code OpenAiVideoClient} 先打标准路径、404 时降级到独立的
+     * {@code AgnesVideoClient} —— 与它对图像靠 {@code baseUrl} 直通来适配
+     * 聚合站的做法保持一致。降级判据只取 404：401/403 是密钥问题、429 是限流、
+     * 5xx 是服务端故障，必须原样暴露，不能被掩盖成「路径不对」。
+     *
+     * <p>{@code alibaba}（万相）已占位，待 {@code AlibabaVideoClient} 落地后即可生效。
      * 在此之前前端按 {@link #supportsVideo(String)} 的结果隐藏视频入口。</p>
      */
     private static final Map<String, String> VIDEO_SPI = Map.ofEntries(
@@ -103,7 +111,11 @@ public final class GenerateSpiRouter {
             Map.entry("aliyun", "alibaba"),
             Map.entry("alibaba", "alibaba"),
             Map.entry("dashscope", "alibaba"),
-            Map.entry("bailian", "alibaba")
+            Map.entry("bailian", "alibaba"),
+            Map.entry("openai", "openai"),
+            Map.entry("agnes", "openai"),
+            Map.entry("openrouter", "openai"),
+            Map.entry("siliconflow", "openai")
     );
 
     /**
@@ -117,8 +129,14 @@ public final class GenerateSpiRouter {
 
     /**
      * 已登记视频 SPI 名集合
+     *
+     * <p>{@code openai} 对应 {@code OpenAiVideoClient}（轮询端点标准的渠道），
+     * {@code agnes} 对应 {@code AgnesVideoClient}（轮询挪到根路径 {@code /agnesapi}），
+     * {@code zhipu} 对应 {@code ZhipuVideoClient}。
+     * {@code alibaba} 尚未落地实现，故<b>刻意不列入</b>——列进去前端会放出视频入口，
+     * 用户提交后才失败。</p>
      */
-    private static final Set<String> KNOWN_VIDEO_SPI = Set.of("zhipu");
+    private static final Set<String> KNOWN_VIDEO_SPI = Set.of("openai", "agnes", "zhipu");
 
     /**
      * 工具类不允许实例化

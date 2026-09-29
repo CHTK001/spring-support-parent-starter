@@ -41,7 +41,22 @@
                 </when>
             </choose>
         </where>
-        ORDER BY q.create_time DESC
+        <!--
+          排序字段走白名单 choose，不用 ${} 拼接，避免 SQL 注入；
+          次序用 ASC/DESC 字面量切换，同样不用 ${}。
+        -->
+        ORDER BY
+        <choose>
+            <when test="query.orderBy == 'addCount'">q.question_add_count</when>
+            <when test="query.orderBy == 'useCount'">q.question_use_count</when>
+            <when test="query.orderBy == 'difficulty'">q.question_difficulty</when>
+            <otherwise>q.create_time</otherwise>
+        </choose>
+        <choose>
+            <when test="query.orderDir != null and query.orderDir.toUpperCase() == 'ASC'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+        , q.question_id DESC
     </select>
 
     <!-- 学段年级组合维度：按题目行聚合，学段与年级皆空的行不作为候选 -->
@@ -80,6 +95,13 @@
             AND (question_owner_user_id = #{ownerUserId} OR question_owner_user_id IS NULL)
         </if>
     </select>
+
+    <!-- 题目被加入试卷的次数 +1：仅在新加入试卷时调用，改分走 upsert 分支不重复计 -->
+    <update id="incrAddCount">
+        UPDATE edu_question
+        SET question_add_count = COALESCE(question_add_count, 0) + 1
+        WHERE question_id = #{questionId}
+    </update>
 
     <!-- 组卷候选题目：按题目ID倒序取样并限制条数 -->
     <select id="selectCandidates" resultType="com.chua.starter.eduai.model.EduQuestion">

@@ -1,0 +1,2 @@
+com.chua.starter.monitor.support.nginx.spi.impl.SshNginxExecutor
+com.chua.starter.monitor.support.nginx.spi.impl.LocalNginxExecutor

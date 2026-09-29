@@ -20,6 +20,8 @@ package com.chua.starter.datasourcehub.support.model;
  * @param sessionLatencyMs 会话延迟（毫秒），从未测试过时为 null
  * @param lastTestTime 最近一次测试时间（ISO-8601 文本）
  * @param lastTestOk 最近一次测试是否连通，null 表示从未测试
+ * @param controlMode 进程控制方式：{@code systemd} / {@code local}；null 表示自动探测
+ * @param controlTarget systemd 方式的托管单元名；null 或空表示自动探测
  * @author CH
  * @since 4.0.0.42
  */
@@ -40,6 +42,8 @@ public record DataSourceVO(
         Long connectLatencyMs,
         Long sessionLatencyMs,
         String lastTestTime,
-        Integer lastTestOk
+        Integer lastTestOk,
+        String controlMode,
+        String controlTarget
 ) {
 }

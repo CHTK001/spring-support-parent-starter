@@ -144,6 +144,24 @@ public class MsDatasource implements Serializable {
     private Integer datasourceLastTestOk;
 
     /**
+     * 进程控制方式：{@code systemd} / {@code local}；为 null 表示自动探测。
+     *
+     * <p>仅 nginx 类型数据源使用。{@code systemd} 表示 start/stop/restart 交给
+     * {@code systemctl}，{@code local} 表示直接用 {@code nginx -s} 与裸启动。
+     * 为 null 时由后端自动判断，与该字段引入前的行为一致。</p>
+     */
+    @TableField("datasource_control_mode")
+    @Schema(description = "进程控制方式 systemd/local，空为自动探测", example = "systemd")
+    private String datasourceControlMode;
+
+    /**
+     * 控制方式为 {@code systemd} 时的托管单元名，如 {@code nginx.service}
+     */
+    @TableField("datasource_control_target")
+    @Schema(description = "托管单元名", example = "nginx.service")
+    private String datasourceControlTarget;
+
+    /**
      * 创建时间
      */
     @TableField("datasource_create_time")

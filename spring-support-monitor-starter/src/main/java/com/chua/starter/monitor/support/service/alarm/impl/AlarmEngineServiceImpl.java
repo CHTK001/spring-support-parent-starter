@@ -58,7 +58,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>静默期：Redis SETNX + TTL，静默窗口内不重复告警；</li>
  *   <li>真实触发：落事件表 + 遍历全部 NotifySender 渠道投递。</li>
  * </ol>
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

@@ -26,7 +26,6 @@ import org.springframework.context.annotation.Configuration;
  * </ul>
  * 前端 subscribe("monitor", "host-delay" / "host-online") 接收推送；
  * 告警规则引擎未装配或 socket 未启用时静默跳过，不影响主链路。
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

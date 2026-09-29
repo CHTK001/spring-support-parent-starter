@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduPaperTemplateMapper">
+
+    <!-- 分页查询组卷模板：名称模糊 + 风格/状态筛选 + 归属隔离 + 模板ID倒序 -->
+    <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduPaperTemplate">
+        SELECT t.* FROM edu_paper_template t
+        <where>
+            <if test="name != null and name != ''">
+                AND t.template_name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="style != null and style != ''">
+                AND t.template_style = #{style}
+            </if>
+            <if test="status != null">
+                AND t.template_status = #{status}
+            </if>
+            <choose>
+                <when test="scope.ownerPredicate != null">
+                    AND (t.template_owner_user_id IS NULL OR t.template_owner_user_id = #{scope.ownerPredicate})
+                </when>
+            </choose>
+        </where>
+        ORDER BY t.template_id DESC
+    </select>
+
+</mapper>

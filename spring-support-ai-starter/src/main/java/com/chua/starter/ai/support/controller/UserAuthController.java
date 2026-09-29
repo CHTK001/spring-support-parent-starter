@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
@@ -75,7 +76,7 @@ public class UserAuthController {
         }
 
         LoginAuthResult result = AuthClientExecute.getInstance()
-                .getAccessToken(username, password, AuthType.WEB, Map.of());
+                .getAccessToken(username, password, resolveAuthType(body), resolveExt(body));
         if (result == null || result.getCode() == null || result.getCode() != 200) {
             // 区分「口令错误」与「静态账号未配置」等原因，否则配置缺失只会被当成密码错
             String message = result == null ? null : result.getMessage();
@@ -111,6 +112,38 @@ public class UserAuthController {
         data.put("roles", roles);
         data.put("expires", userResume.getExpireTime());
         return ReturnResult.ok(data);
+    }
+
+    /**
+     * 解析本次登录的认证类型。
+     *
+     * <p>缺省为 {@link AuthType#WEB}：未声明认证类型的老调用方行为不变。</p>
+     *
+     * @param body 请求体
+     * @return 认证类型；请求体未声明或声明为空时返回 {@link AuthType#WEB}
+     */
+    private AuthType resolveAuthType(Map<String, String> body) {
+        String code = body.get("authType");
+        return StringUtils.isBlank(code) ? AuthType.WEB : AuthType.fromCode(code);
+    }
+
+    /**
+     * 解析本次登录的扩展参数。
+     *
+     * <p>目前只透传「账号来源」：它决定登录名去哪儿查（静态配置 / 学生档案 / 企业目录），
+     * 由 oauth 的凭据扩展点解释。未声明时不放入任何键，交由 oauth 回落到默认逻辑。</p>
+     *
+     * @param body 请求体
+     * @return 扩展参数，可为空映射
+     */
+    private Map<String, Object> resolveExt(Map<String, String> body) {
+        String accountType = body.get(AuthConstant.ACCOUNT_TYPE_KEY);
+        if (StringUtils.isBlank(accountType)) {
+            return Map.of();
+        }
+        var ext = new LinkedHashMap<String, Object>();
+        ext.put(AuthConstant.ACCOUNT_TYPE_KEY, accountType);
+        return ext;
     }
 
     /**

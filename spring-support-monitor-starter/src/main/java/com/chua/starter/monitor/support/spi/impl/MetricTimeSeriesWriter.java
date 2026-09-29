@@ -89,19 +89,55 @@ public class MetricTimeSeriesWriter {
     }
 
     /**
-     * 均值曲线查询。
+     * 列出某目标下已写入的全部指标名，供调用方确定要查询哪条曲线。
+     *
+     * <p>同一 target 下可并存多个指标，曲线查询必须显式指定指标，
+     * 否则后端无法唯一确定时会抛异常。本方法就是配套的发现入口。</p>
      *
      * @param target    目标表 / 测量名
      * @param monitorId 监控标识
-     * @param hours     回溯小时数
+     * @return 指标名升序列表，无数据或引擎不可用时为空列表
+     */
+    public List<String> metrics(String target, Long monitorId) {
+        if (!isAvailable()) {
+            return List.of();
+        }
+        return seriesEngine.metrics(target, monitorId);
+    }
+
+    /**
+     * 均值曲线查询（显式指定指标维度）。
+     *
+     * @param target     目标表 / 测量名
+     * @param monitorId  监控标识
+     * @param metricName 指标名；{@code null} 表示由引擎按唯一性规则推断，
+     *                   该 target 下存在多个指标时会抛
+     *                   {@link IllegalArgumentException} 而非合并成一条曲线
+     * @param hours      回溯小时数，必须大于 0
+     * @param window     聚合窗口
+     * @return {@code [[ts, value], ...]} 升序，引擎不可用时为空列表
+     */
+    public List<List<Object>> series(String target, Long monitorId, String metricName, int hours, String window) {
+        if (!isAvailable()) {
+            return List.of();
+        }
+        return seriesEngine.series(target, monitorId, metricName, hours, window);
+    }
+
+    /**
+     * 均值曲线查询（由引擎按唯一性规则推断指标）。
+     *
+     * <p>保留本重载仅为兼容既有调用方；它无法表达「要哪条曲线」，
+     * 建议改用显式传 {@code metricName} 的重载。</p>
+     *
+     * @param target    目标表 / 测量名
+     * @param monitorId 监控标识
+     * @param hours     回溯小时数，必须大于 0
      * @param window    聚合窗口
      * @return {@code [[ts, value], ...]} 升序，引擎不可用时为空列表
      */
     public List<List<Object>> series(String target, Long monitorId, int hours, String window) {
-        if (!isAvailable()) {
-            return List.of();
-        }
-        return seriesEngine.series(target, monitorId, hours, window);
+        return series(target, monitorId, null, hours, window);
     }
 
     /**

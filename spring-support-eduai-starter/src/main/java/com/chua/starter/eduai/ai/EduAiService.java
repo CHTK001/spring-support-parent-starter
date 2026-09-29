@@ -6,6 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
+import com.chua.starter.eduai.model.vo.EduAiCapabilityVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -68,6 +69,32 @@ public class EduAiService {
             return false;
         }
         return resolveClient() != null;
+    }
+
+    /**
+     * 探测 AI 能力，给出「可用与否 + 不可用的具体原因」。
+     *
+     * <p>前端据此决定 AI 组卷入口是可用还是禁用：AI 组卷能力依赖 spring-support-ai-starter
+     * 提供的对话客户端注册表，没引入该 starter（或没配可用模型）时入口应当禁用并说明原因，
+     * 而不是让用户点下去再失败。</p>
+     *
+     * @return AI 能力探测结果
+     */
+    public EduAiCapabilityVO capability() {
+        String provider = properties.getAi().getProvider();
+        String model = properties.getAi().getModel();
+        if (!properties.getAi().isEnabled()) {
+            return new EduAiCapabilityVO(false, "AI 总开关已关闭（eduai.ai.enabled=false）", provider, model);
+        }
+        if (chatClientRegistry == null) {
+            return new EduAiCapabilityVO(false,
+                    "后端未引入 spring-support-ai-starter，或未注册任何 AI 对话客户端", provider, model);
+        }
+        if (resolveClient() == null) {
+            return new EduAiCapabilityVO(false,
+                    "AI 对话客户端不可用：未配置可用的模型提供商或密钥（eduai.ai.provider）", provider, model);
+        }
+        return new EduAiCapabilityVO(true, "AI 组卷可用", provider, model);
     }
 
     /**

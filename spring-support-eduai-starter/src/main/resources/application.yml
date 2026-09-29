@@ -59,8 +59,13 @@ plugin:
     token-name: x-oauth-token
     static-token-expire-seconds: 7200
     temp:
-      # 格式 用户名:密码;用户名:密码；登录 /v2/user/login 走 static 自签
-      user: "admin:admin123;alice:alice123;bob:bob123"
+      # 格式 用户名:口令;用户名:口令；登录 /v2/user/login 走 static 自签
+      #
+      # [安全警告] 这里刻意留空，与 spring-support-ai-starter 保持同一口径。
+      # 曾硬编码 admin123 / alice123 / bob123，等于把三个可登录的弱口令
+      # 提交进版本库。现改为由部署方通过启动参数显式传入：
+      #   --plugin.oauth.temp.user='<用户名>:<口令>'
+      user: ""
     # 不继承框架默认白名单（混有其它应用历史路径），按本应用显式放行
     use-default-whitelist: false
     whitelist:

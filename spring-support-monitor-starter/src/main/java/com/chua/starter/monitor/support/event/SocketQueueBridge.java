@@ -28,7 +28,6 @@ import jakarta.annotation.PreDestroy;
  * 与 spring-support-socket-starter 自带的 com.chua.socket.support.bridge.SocketQueueBridge
  * 功能重叠且同名，二者同时装配会触发 ConflictingBeanDefinitionException；
  * 故本类 Bean 命名加 monitor 前缀避免跨 jar 冲突（同一 socket:push 订阅逻辑仅其一生效）。
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

@@ -2,7 +2,7 @@ package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.ai.rag.RagClient;
 import com.chua.common.support.ai.rag.RagDocument;
 import com.chua.common.support.lang.code.PageResult;

@@ -549,6 +549,23 @@ public class DatasourceServiceImpl implements DatasourceService {
         // 状态为空按启用处理，老调用方（只传 8 个字段）不会把数据源误停用
         entity.setDatasourceStatus(data.status() == null ? 1 : data.status());
         entity.setDatasourceDriverClassName(nullToEmpty(data.driverClassName()).trim());
+        // 控制方式只对 nginx 有意义，其余类型一律清空。
+        //
+        // 踩过的坑：原先只校验取值是否在白名单里、没看 type，
+        // 于是把一个 nginx 数据源 PUT 成 type=jdbc 时，controlMode=systemd
+        // 与 controlTarget 会被照单全收地留在库里。实测是验收脚本直调
+        // PUT 接口时发现的——前端的 onTypeChange 虽然不清这两个字段，
+        // 但接口能被绕过，数据不干净就是数据不干净，不能指望调用方守规矩。
+        // 留在库里的代价：一条 jdbc 数据源带着「systemd 托管」这种无意义状态，
+        // 将来排查时无从判断它是脏数据还是新语义。
+        boolean nginx = DatasourceHubConstants.DS_TYPE_NGINX.equals(trim(data.type()).toLowerCase());
+        String mode = nginx ? trim(data.controlMode()).toLowerCase() : "";
+        // 取值不在白名单内则按空处理（自动探测），不报错也不静默生效
+        entity.setDatasourceControlMode(DatasourceHubConstants.CONTROL_MODES.contains(mode) ? mode : "");
+        // 单元名只有 systemd 方式用得上；local 方式存进去会造成「配置与实际不符」的迷惑
+        entity.setDatasourceControlTarget(
+                DatasourceHubConstants.CONTROL_SYSTEMD.equals(entity.getDatasourceControlMode())
+                        ? nullToEmpty(data.controlTarget()).trim() : "");
     }
 
     /**
@@ -569,7 +586,8 @@ public class DatasourceServiceImpl implements DatasourceService {
                 row.getUpdateTime() == null ? null : row.getUpdateTime().toString(),
                 row.getDatasourceConnectLatencyMs(), row.getDatasourceSessionLatencyMs(),
                 row.getDatasourceLastTestTime() == null ? null : row.getDatasourceLastTestTime().toString(),
-                row.getDatasourceLastTestOk());
+                row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
+                nullToEmpty(row.getDatasourceControlTarget()));
     }
 
     /**

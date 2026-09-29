@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 监控目标探针上下文
  * <p>
  * 内存维护每个监控目标(Agent)的最后心跳时间，供在线判定使用。
- * 判定规则：距最后一次心跳超过 {@code timeoutMinutes} 即视为离线；
+ * 判定规则：距最后一次心跳超过 {@link #DEFAULT_OFFLINE_MINUTES} 分钟即视为离线；
  * 从未上报过心跳的目标不纳入本上下文（视为从未上线）。
  * </p>
  *
@@ -41,7 +41,7 @@ public class MonitorAgentContext {
     /**
      * 标记目标心跳活跃
      *
-     * @param monitorId 目标 标识
+     * @param monitorId 目标标识，为 {@code null} 时本方法直接返回，不记录心跳
      */
     public void markActive(Long monitorId) {
         if (monitorId == null) {
@@ -54,7 +54,7 @@ public class MonitorAgentContext {
     /**
      * 判断目标当前是否在线
      *
-     * @param monitorId 目标 标识
+     * @param monitorId 目标标识，允许为 {@code null}（查不到心跳即视为离线）
      * @return true 表示在超时窗口内有心跳
      */
     public boolean isOnline(Long monitorId) {
@@ -65,7 +65,10 @@ public class MonitorAgentContext {
     /**
      * 扫描并翻转离线状态（由定时任务调用）
      *
-     * @return 本轮新转为离线的目标 标识 列表
+     * <p>只上报「本轮由在线首次翻转为离线」的目标；已处于离线状态的目标不会重复上报。
+     * 每上报一个都会把该目标的翻转标记置为已离线，因此下一轮它不会被再次计入。</p>
+     *
+     * @return 本轮新转为离线的目标标识列表；本轮无翻转时返回空列表（非 {@code null}）
      */
     public List<Long> sweepOffline() {
         List<Long> newlyOffline = new ArrayList<>();
@@ -83,7 +86,18 @@ public class MonitorAgentContext {
     /**
      * 全量状态快照
      *
-     * @return monitorId -> [最后一个心跳, online]
+     * <p>遍历<b>所有已上报过心跳的目标</b>，逐个按当前时刻重新判定在线与否——
+     * 注意这是即时计算，与 {@link #sweepOffline()} 依赖的 {@code offlineFlagMap}
+     * 翻转状态是两套机制：本方法不读也不更新翻转标记，因此同一目标在两次调用之间
+     * 跨越超时阈值时，本方法会立刻反映为离线，而 {@code sweepOffline()} 要等下一次
+     * 扫描才会把它计入「新转为离线」。</p>
+     *
+     * <p>从未上报过心跳的目标不在 {@code lastHeartbeatMap} 中，故不出现在快照里
+     * （与本类的「从未上线」语义一致）。</p>
+     *
+     * @return 每个已上报目标的 {@link AgentStatus} 列表（元素顺序取决于
+     *         {@code ConcurrentHashMap} 的迭代顺序，<b>不保证稳定</b>，不要依赖其顺序）；
+     *         没有任何目标上报过时返回空列表
      */
     public List<AgentStatus> snapshot() {
         List<AgentStatus> list = new ArrayList<>(lastHeartbeatMap.size());
@@ -97,10 +111,9 @@ public class MonitorAgentContext {
     /**
      * 探针在线状态视图
      *
-     * @param monitorId     目标 标识
-     * @param lastHeartbeat 最后心跳时间
+     * @param monitorId 目标标识
+     * @param lastHeartbeat 最后心跳时间，取自内部心跳表，不可为 {@code null}
      * @param online        是否在线
-     * @return Agent状态的结果
      */
     public record AgentStatus(Long monitorId, LocalDateTime lastHeartbeat, boolean online) {
     }
