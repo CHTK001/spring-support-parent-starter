@@ -25,11 +25,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * <ol>
  *   <li>片段类型（{@code GLUE_*}）先用 {@link GlueScriptSynthesizer} 合成完整脚本；
  *       脚本类型（裸引擎名）本身就是完整文件，原样使用；</li>
- *   <li>正文按 {@code 任务名 + 版本} 落成本地文件；</li>
+ *   <li>正文按 {@code 任务名 + 版本} 落成临时文件；</li>
  *   <li>{@link ScriptFlow#load(Path)} 做**预编译并缓存编译产物**——保存期校验走的就是这一步；</li>
- *   <li>{@link ScriptFlow#execute(Path, Object)} 复用上一步的同一份编译产物执行，
+ *   <li>编译成功后**立刻删掉那个临时文件**：两个引擎执行时都只读内存里的编译产物
+ *       （{@code JavaScriptProvider} 的 {@code Compiled}、{@code GroovyScriptProvider} 的
+ *       {@code classCache}），不会回读文件，落盘内容对执行已无用；</li>
+ *   <li>{@link ScriptFlow#execute(Path, Object)} 以文件路径为键复用上一步的同一份编译产物执行，
  *       不再重复编译、不新建第二个引擎对象。</li>
  * </ol>
+ *
+ * <p>第 4 步是刻意的：状态一律以「引擎缓存里的编译产物」为准，不以落盘文件为准。
+ * 保留文件会带来两个真问题——单节点下「保存期校验写了文件、任务最终没建成功」会留下无主孤儿；
+ * 集群下执行器节点收到删除请求的概率本就低，文件更会永久残留。删掉之后
+ * 「哪个节点负责回收脚本文件」这个问题就不存在了，跨节点删除通知、磁盘对账都不再需要。</p>
  *
  * <p>引擎一律经仓库公共 SPI {@code ScriptProvider} 解析（见 {@link ScriptFlow}），
  * 本类不再区分 Java 与脚本两条链路。引擎未安装时抛出带引导语的可读异常，
@@ -45,7 +53,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ScriptGlueHandlers {
 
     /**
-     * 缓存：任务名 → 已落盘的脚本文件与生效引擎
+     * 缓存：任务名 → 编译产物的键（文件路径）、版本与生效引擎
+     *
+     * <p>文件本身在编译成功后即被删除，路径只作为引擎缓存的键使用。</p>
      */
     private static final Map<String, CachedScript> CACHE = new ConcurrentHashMap<>();
 
@@ -99,9 +109,11 @@ public final class ScriptGlueHandlers {
             throw new IllegalStateException("片段任务缺少任务键");
         }
         var cached = CACHE.get(jobName);
-        if (cached == null || !Files.exists(cached.file())) {
+        // 判据是「本地有没有这份编译产物」，不是「落盘文件在不在」——文件在编译成功后
+        // 就被删掉了，它不再代表任何状态。缓存条目在，才说明调度中心的正文同步到过本节点。
+        if (cached == null) {
             throw new IllegalStateException("片段正文未同步: " + jobName
-                    + "，请在调度中心重新保存该任务，或等待执行器重连后自动同步");
+                    + "（本节点没有该任务的编译产物），请在调度中心重新保存该任务，或等待执行器重连后自动同步");
         }
         long expected = glueAtMs == null ? 0L : glueAtMs;
         if (expected > 0 && cached.version() != expected) {
@@ -173,7 +185,9 @@ public final class ScriptGlueHandlers {
 
         ScriptFlow flow = flowOf(engine);
         Path scriptFile = CACHE.compute(jobName, (key, cached) -> {
-            if (cached != null && cached.version() == version && Files.exists(cached.file())) {
+            // 版本一致即命中。落盘文件在编译成功后就被删掉（见下方），拿"文件是否存在"
+            // 当判据会让每次执行都重写 + 重编译。
+            if (cached != null && cached.version() == version) {
                 return cached;
             }
             try {
@@ -205,7 +219,31 @@ public final class ScriptGlueHandlers {
             discardQuietly(jobName, glueType, scriptFile);
             throw ex;
         }
+        // 编译完成后落盘文件即无用：两个引擎执行时都只读内存里的编译产物
+        // （JavaScriptProvider 的 Compiled / GroovyScriptProvider 的 classCache），
+        // 不会回读文件。立刻删掉，落盘残留与「哪个节点负责回收」这个问题一并消失——
+        // 集群下执行器节点曾因删除通知发不到而永久残留脚本文件。
+        discardScriptFile(jobName, scriptFile);
         return new Prepared(engine, glueType, scriptFile);
+    }
+
+    /**
+     * 编译成功后清理落盘脚本文件（只删文件，编译产物与缓存条目保留给后续执行复用）。
+     *
+     * <p>删不掉只告警：文件已经是可有可无的残留物，为此让整次准备失败不划算；
+     * 残留文件会在下次同任务重新编译时被覆盖，或由 {@link #release(String)} 清掉。</p>
+     *
+     * @param jobName 任务名（仅用于日志）
+     * @param file    编译所用的落盘文件
+     */
+    private static void discardScriptFile(String jobName, Path file) {
+        try {
+            if (Files.deleteIfExists(file)) {
+                log.info("[job] 片段已编译并清理落盘文件 job={} file={}", jobName, file);
+            }
+        } catch (IOException ex) {
+            log.warn("[job] 片段落盘文件清理失败 job={} file={} cause={}", jobName, file, ex.getMessage());
+        }
     }
 
     /**
@@ -235,11 +273,14 @@ public final class ScriptGlueHandlers {
     }
 
     /**
-     * 释放某个任务占用的脚本资源：引擎缓存里的编译产物、类加载器与落盘文件。
+     * 释放某个任务占用的脚本资源：引擎缓存里的编译产物与类加载器。
      *
      * <p>任务删除时必须调用。{@code ScriptProvider} 的缓存以「脚本文件路径」为键，
-     * 而每次保存都会生成新版本文件；不主动 unload，旧版本的 Class 与其类加载器
+     * 而每次保存都会生成新版本路径；不主动 unload，旧版本的 Class 与其类加载器
      * 就会一直挂在引擎缓存里，Metaspace 只涨不落。</p>
+     *
+     * <p>落盘文件在编译成功后已被删除，这里再删一次是幂等的，顺带清掉升级前
+     * 或历史异常留下的旧文件。</p>
      *
      * @param jobName 任务名，允许为 null
      */
@@ -306,7 +347,15 @@ public final class ScriptGlueHandlers {
                                         ApplicationContext applicationContext) {
         String param = executeParam == null ? "" : executeParam;
         ScriptFlow flow = flowOf(prepared.engine());
-        flow.load(prepared.file());
+        // 编译产物在 prepare 时已进入引擎缓存，这里命中即无操作。命中不了（引擎缓存被清、
+        // 而落盘文件已随编译删除）只能明确失败：原来还能靠回读文件静默恢复，现在不行了，
+        // 所以把失败翻译成可读原因，别让引擎的 FileNotFound 冒到上层。
+        try {
+            flow.load(prepared.file());
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("片段编译产物已失效: " + jobName
+                    + "（本节点的引擎缓存里没有它），请在调度中心重新保存该任务以重新同步", ex);
+        }
         return new JobHandler() {
             @Override
             public String name() {
