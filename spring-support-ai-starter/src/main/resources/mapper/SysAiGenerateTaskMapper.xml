@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.manage.mapper.SysAiGenerateTaskMapper">
+
+    <!--
+        找出仍把整张图以 base64 存在列里的存量行。
+
+        为什么必须是 XML、且只取 taskId：
+        ① result 列映射了 JacksonTypeHandler。若在 Java 侧用 LambdaQueryWrapper.like
+           下条件，MyBatis-Plus 会用该 handler 绑定查询参数，字符串 data:image 被
+           序列化成 "data:image"（带引号），于是 LIKE '%data:image%' 永远不中 ——
+           实测正是如此：库里 32 行带 data:image，按条件却只捞出 4 行。
+        ② 同理也不宜在 XML 里直接把 result 映射成实体，自动映射不会走那个 handler。
+           故这里只取主键，再回服务层用 selectById 取完整行（那条路径的 handler 是对的）。
+    -->
+    <select id="selectIdsWithInlineMedia" resultType="java.lang.String">
+        SELECT sys_ai_generate_task_id
+        FROM sys_ai_generate_task
+        WHERE sys_ai_generate_task_result LIKE CONCAT('%', #{pattern}, '%')
+           OR sys_ai_generate_task_reference LIKE CONCAT('%', #{pattern}, '%')
+        ORDER BY sys_ai_generate_task_create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.controller;
 import com.chua.common.support.ai.AiProviderException;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.generate.GenerateConfigSupport;
+import com.chua.starter.ai.support.generate.GenerateMediaStore;
 import com.chua.starter.ai.support.generate.GenerateSpiRouter;
 import com.chua.starter.ai.support.generate.GenerateService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
@@ -425,7 +426,7 @@ public class GenerateController {
         if (raw == null || raw.isBlank()) {
             return null;
         }
-        return GenerateMediaController.isInline(raw)
+        return GenerateMediaStore.isStored(raw)
                 ? GenerateMediaController.INLINE_PATH_PREFIX + task.getTaskId() + "/reference"
                 : raw;
     }
@@ -448,7 +449,7 @@ public class GenerateController {
         List<String> view = new ArrayList<>(raw.size());
         for (int i = 0; i < raw.size(); i++) {
             String item = raw.get(i);
-            view.add(GenerateMediaController.isInline(item)
+            view.add(GenerateMediaStore.isStored(item)
                     ? GenerateMediaController.INLINE_PATH_PREFIX + task.getTaskId() + "/media/" + i
                     : item);
         }

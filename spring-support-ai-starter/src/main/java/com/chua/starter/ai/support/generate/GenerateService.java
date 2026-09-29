@@ -82,7 +82,35 @@ public class GenerateService {
      * 4M 字符 ≈ 3MB 二进制是给「绕过前端直接调接口」的兜底，
      * 超限时只放弃持久化，不影响生成本身。</p>
      */
+    /**
+     * 参考图在存储里的下标名。
+     *
+     * <p>与结果图共用一套「按任务号分目录、按下标命名」的落盘规则，
+     * 便于整个任务被删除时一次性清理。</p>
+     */
+    private static final String REFERENCE_INDEX = "reference";
+
+    /**
+     * 判定「列里还存着整张图」的内容片段
+     */
+    private static final String INLINE_MEDIA_MARKER = "data:image";
+
+    /**
+     * 单次回填最多扫描多少行。
+     *
+     * <p>给个上限：一次全表扫描会把 80MB 级的 LONGTEXT 全部读进 JVM，
+     * 分批执行更稳；方法幂等，重复调用即可推进到全部完成。</p>
+     */
+    private static final int INLINE_MEDIA_SCAN_LIMIT = 200;
+
+    /**
+     * 参考图请求原文的字符上限。
+     *
+     * <p>参考图现在落盘、库里只留句柄，不再受列长度限制；这个上限只用于挡住
+     * 「请求原文本身大得离谱」的情况，避免绕过存储层的体积上限。</p>
+     */
     private static final int REFERENCE_IMAGE_MAX_CHARS = 4 * 1024 * 1024;
+
 
     /** 进度阶段：线程已接手，排队完成 */
     private static final int PROGRESS_QUEUED = 5;
@@ -97,6 +125,11 @@ public class GenerateService {
      * 生成任务映射器
      */
     private final SysAiGenerateTaskMapper taskMapper;
+
+    /**
+     * 生成媒体落盘存储：把内联 base64 挡在库外，列表体积与图片大小脱钩
+     */
+    private final GenerateMediaStore mediaStore;
 
     /**
      * 生成客户端解析器
@@ -258,10 +291,14 @@ public class GenerateService {
         SysAiGenerateTask task = buildTask(request, type);
         // 视频原先是「先提交上游、成功后才 insert」，主键由上游任务号回填；
         // 改为先落库后主键必须在 insert 之前就有，否则 sysAiGenerateTaskId 为空。
-        // 这里先给一个本地占位号，submitVideoAsync 提交成功后会被上游任务号覆盖。
+        // 这里先给一个本地占位号。注意它此后**不再被上游任务号覆盖**：
+        // 上游号存进 result 的 providerTaskId，主键一旦落库与返回就必须保持不变。
         if (task.getTaskId() == null || task.getTaskId().isBlank()) {
             task.setTaskId(LOCAL_SYNC_PREFIX + UUID.randomUUID());
         }
+        // 参考图落盘：库里只留句柄，不再把整张图的 base64 塞进参考图列。
+        // 必须在此处做而不是 buildTask 里——句柄要按任务号分目录，而任务号刚定下来。
+        task.setReferenceImage(persistReference(task.getTaskId(), request.referenceImage()));
         task.setCreatedAt(System.currentTimeMillis());
         task.setUpdatedAt(task.getCreatedAt());
         // 图像与视频一律「先落库再执行」，理由与图像一致：
@@ -428,6 +465,104 @@ public class GenerateService {
     }
 
     /**
+     * 把存量行里的内联 base64 回填到磁盘。
+     *
+     * <p>落盘改造只对新行生效，改造前入库的 32 条结果行与 4 条参考图行仍把整张图
+     * 存在 LONGTEXT 里（实测 result 83.2MB + reference 9.1MB），只读的历史列表
+     * 每次都要把页内这些行读回来——列表慢的账全在这里，不回填就等于没修。</p>
+     *
+     * <p><b>顺序保证不丢数据</b>：先写文件、确认写成功，再把库里那一项换成句柄。
+     * 写失败的行原样保留 base64，宁可它继续重，也不能出现「库里的值与磁盘上的文件
+     * 两边都没有」的状态。因此本方法是幂等的，可以反复执行，中断后重跑会跳过已完成的行。</p>
+     *
+     * @param dryRun 只清点不写库，用于先看清会影响多少行
+     * @return 统计：扫描行数、已转换项数、跳过项数、失败项数、影响行数
+     */
+    public Map<String, Object> backfillInlineMedia(boolean dryRun) {
+        List<String> ids = taskMapper.selectIdsWithInlineMedia(INLINE_MEDIA_MARKER, INLINE_MEDIA_SCAN_LIMIT);
+        List<SysAiGenerateTask> candidates = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            SysAiGenerateTask task = taskMapper.selectById(id);
+            if (task != null) {
+                candidates.add(task);
+            }
+        }
+        int scanned = candidates.size();
+        int converted = 0;
+        int skipped = 0;
+        int failed = 0;
+        int touchedRows = 0;
+        for (SysAiGenerateTask task : candidates) {
+            boolean changed = false;
+            List<String> raw = task.resultUrls();
+            if (!raw.isEmpty()) {
+                List<String> stored = new ArrayList<>(raw.size());
+                for (int i = 0; i < raw.size(); i++) {
+                    String url = raw.get(i);
+                    if (!GenerateMediaStore.isInlineData(url)) {
+                        stored.add(url);
+                        skipped++;
+                        continue;
+                    }
+                    if (dryRun) {
+                        stored.add(url);
+                        converted++;
+                        changed = true;
+                        continue;
+                    }
+                    String handle = mediaStore.save(task.getTaskId(), String.valueOf(i), url);
+                    if (handle == null) {
+                        stored.add(url);
+                        failed++;
+                        continue;
+                    }
+                    stored.add(handle);
+                    converted++;
+                    changed = true;
+                }
+                if (changed && !dryRun) {
+                    putResult(task, stored, String.valueOf(task.getResult().get("mediaType")));
+                }
+            }
+            String reference = task.getReferenceImage();
+            if (GenerateMediaStore.isInlineData(reference)) {
+                if (dryRun) {
+                    converted++;
+                    changed = true;
+                } else {
+                    // 同一任务重复回填时直接覆盖同名文件，不先删——
+                    // 先删后写会在两次操作之间留下「文件没了、库里还是 base64」的空窗
+                    String handle = mediaStore.save(task.getTaskId(), REFERENCE_INDEX, reference);
+                    if (handle == null) {
+                        failed++;
+                    } else {
+                        task.setReferenceImage(handle);
+                        converted++;
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) {
+                touchedRows++;
+                if (!dryRun) {
+                    task.setUpdatedAt(System.currentTimeMillis());
+                    taskMapper.updateById(task);
+                }
+            }
+        }
+        Map<String, Object> report = new LinkedHashMap<>(8);
+        report.put("dryRun", dryRun);
+        report.put("candidateRows", scanned);
+        report.put("touchedRows", touchedRows);
+        report.put("convertedItems", converted);
+        report.put("skippedItems", skipped);
+        report.put("failedItems", failed);
+        log.warn("[Generate] 存量媒体回填 dryRun={} 候选 {} 行，影响 {} 行，转换 {} 项，跳过 {} 项，失败 {} 项",
+                dryRun, scanned, touchedRows, converted, skipped, failed);
+        return report;
+    }
+
+    /**
      * 写回结果，同时保住上游任务号。
      *
      * <p>结果地图在生成完成与回源刷新两处会被整体重建。若重建时直接
@@ -439,17 +574,40 @@ public class GenerateService {
      * @param urls      媒体地址列表
      * @param mediaType 媒体类型
      */
-    private static void putResult(SysAiGenerateTask task, List<String> urls, String mediaType) {
+    private void putResult(SysAiGenerateTask task, List<String> urls, String mediaType) {
         String providerId = providerTaskIdOf(task);
         Map<String, Object> result = new LinkedHashMap<>(4);
         if (providerId != null) {
             result.put(PROVIDER_TASK_ID_KEY, providerId);
         }
-        result.put("urls", urls);
+        result.put("urls", persistUrls(task, urls));
         result.put("mediaType", mediaType);
         task.setResult(result);
     }
 
+    /**
+     * 把内联 base64 换成本存储句柄，其余值原样保留。
+     *
+     * <p>落盘失败时退回存原文：宁可这一行像改造前一样重，也不能让已经生成出来的产物
+     * 在库里凭空消失——列表变慢是可以接受的，丢结果不是。</p>
+     *
+     * @param task 任务行
+     * @param urls 媒体值列表
+     * @return 可入库的媒体值列表
+     */
+    private List<String> persistUrls(SysAiGenerateTask task, List<String> urls) {
+        List<String> stored = new ArrayList<>(urls.size());
+        for (int i = 0; i < urls.size(); i++) {
+            String url = urls.get(i);
+            if (!GenerateMediaStore.isInlineData(url)) {
+                stored.add(url);
+                continue;
+            }
+            String handle = mediaStore.save(task.getTaskId(), String.valueOf(i), url);
+            stored.add(handle == null ? url : handle);
+        }
+        return stored;
+    }
     /**
      * 图像任务准备：优先走 provider 原生异步提交；不支持则返回待执行的同步客户端。
      *
@@ -727,7 +885,12 @@ public class GenerateService {
                 canceledTaskIds.add(taskId);
             }
         }
-        return taskMapper.deleteById(taskId) > 0;
+        boolean removed = taskMapper.deleteById(taskId) > 0;
+        if (removed) {
+            // 记录删了、磁盘上的图片也要跟着删，否则留下没有归属的字节
+            mediaStore.deleteAll(taskId);
+        }
+        return removed;
     }
 
     /**
@@ -746,6 +909,8 @@ public class GenerateService {
         int removed = 0;
         for (SysAiGenerateTask task : failed) {
             if (taskMapper.deleteById(task.getTaskId()) > 0) {
+                // 失败记录一般没有产物，但视频失败行仍可能留有已落盘的参考图，一并清理
+                mediaStore.deleteAll(task.getTaskId());
                 removed++;
             }
         }
@@ -959,28 +1124,54 @@ public class GenerateService {
         task.setQuality(blankToNull(request.quality()));
         task.setSteps(request.steps());
         task.setUserId(request.userId());
-        // 参考图必须落库：历史卡片靠它还原「参考图 → 箭头 → 结果」的对应关系，
-        // 不存的话每条图生图记录都退化成纯文本卡，事后完全看不出用了哪张图。
-        task.setReferenceImage(capReference(request.referenceImage()));
+        // 参考图不在此处落库：句柄要按任务号分目录，而任务号在 create 里才定下来，
+        // 由 create 调 persistReference 写入。这里留空。
         return task;
+    }
+
+    /**
+     * 参考图落盘并返回句柄。
+     *
+     * <p>改造前参考图以 data URI 原文落库，一张 1200 万像素手机照片就能把单行撑到十几 MB，
+     * 而历史列表每次都要把它读回来。这里只保留字节在磁盘上的句柄，
+     * 列表因此与参考图大小无关；字节仍按需经 {@code /reference} 吐出，前端无需改动。</p>
+     *
+     * <p>落盘失败或超限时返回 null（卡片退化成纯文本卡），但生成本身不受影响：
+     * 下发给上游的仍是请求里的原始字节，与持久化无关。</p>
+     *
+     * @param taskId         任务号
+     * @param referenceImage data URI 或裸 base64
+     * @return 句柄；无参考图或落盘失败时返回 null
+     */
+    private String persistReference(String taskId, String referenceImage) {
+        String capped = capReference(referenceImage);
+        if (capped == null) {
+            return null;
+        }
+        if (!GenerateMediaStore.isInlineData(capped)) {
+            // 裸 base64（无 data: 前缀）：补一个自述头再走同一条落盘路径
+            return mediaStore.save(taskId, REFERENCE_INDEX, "data:image/png;base64," + capped);
+        }
+        return mediaStore.save(taskId, REFERENCE_INDEX, capped);
     }
 
     /**
      * 参考图入库前的长度裁剪。
      *
-     * <p>参考图以 data URI 原文落库。过大的原图（如 1200 万像素手机照片）会把每行撑到十几 MB，
-     * 而历史列表接口每次都要把这些长字段读回来，代价与收益不成比例；
-     * 超限时放弃持久化（卡片退化成纯文本卡），但生成本身不受影响，仍按内存里的字节下发给上游。</p>
+     * <p>参考图现在落盘、库里只留句柄，不再受列长度限制；本方法仅在
+     * 「请求原文本身大得离谱」时兜底拒绝持久化，避免绕过存储层的体积上限。
+     * 超限时放弃持久化（卡片退化成纯文本卡），但生成本身不受影响，
+     * 仍按内存里的字节下发给上游。</p>
      *
      * @param referenceImage data URI 或裸 base64
-     * @return 可安全入库的文本；空白或超限时返回 null
+     * @return 可安全处理的文本；空白或超限时返回 null
      */
     private static String capReference(String referenceImage) {
         if (referenceImage == null || referenceImage.isBlank()) {
             return null;
         }
         if (referenceImage.length() > REFERENCE_IMAGE_MAX_CHARS) {
-            log.warn("[Generate] 参考图 {} 字符超过上限 {}，本次不落库（卡片将不显示参考图）",
+            log.warn("[Generate] 参考图 {} 字符超过上限 {}，本次不落盘（卡片将不显示参考图）",
                     referenceImage.length(), REFERENCE_IMAGE_MAX_CHARS);
             return null;
         }
