@@ -115,6 +115,15 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      */
     private static final ObjectMapper SNAPSHOT_MAPPER = new ObjectMapper();
 
+    /** 试卷状态：草稿。可编辑；学生端（扫码）不可见。 */
+    private static final int STATUS_DRAFT = 0;
+
+    /** 试卷状态：已发布。学生端可见；改动前必须先下架。 */
+    private static final int STATUS_PUBLISHED = 1;
+
+    /** 试卷状态：已归档。只读留档，不可修改、不可再发布。 */
+    private static final int STATUS_ARCHIVED = 2;
+
     /**
      * Paperquestionmapper
     */
@@ -459,8 +468,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         if (items == null || items.isEmpty()) {
             return 0;
         }
-        EduPaper paper = requirePaper(paperId);
-        EduUserContext.checkWritable(paper.getOwnerUserId());
+        EduPaper paper = requireEditableDraft(paperId);
         int nextSeq = nextQuestionSeq(paperId, paper.getPaperNo());
         int nextOrder = nextOrder(paperId);
         int added = 0;
@@ -530,8 +538,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 移除题目的结果
      */
     public boolean removeQuestion(Long paperId, Long questionId) {
-        EduPaper paper = requirePaper(paperId);
-        EduUserContext.checkWritable(paper.getOwnerUserId());
+        EduPaper paper = requireEditableDraft(paperId);
         EduPaperQuestion exists = paperQuestionMapper.selectByPaperAndQuestion(paperId, questionId);
         if (exists == null) {
             throw new BusinessException("题目不在该试卷中");
@@ -552,8 +559,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 按编号列表重排题目的结果
      */
     public boolean sortQuestions(Long paperId, List<String> questionNos) {
-        EduPaper paper = requirePaper(paperId);
-        EduUserContext.checkWritable(paper.getOwnerUserId());
+        EduPaper paper = requireEditableDraft(paperId);
         // 历史行可能没有题项编号，先补齐再校验，否则会被判为「重复或缺失」直接拒掉保存
         backfillMissingQuestionNos(paper);
         List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
@@ -593,8 +599,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 按题数均分满分的结果
      */
     public boolean evenQuestionScores(Long paperId) {
-        EduPaper paper = requirePaper(paperId);
-        EduUserContext.checkWritable(paper.getOwnerUserId());
+        EduPaper paper = requireEditableDraft(paperId);
         List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
         if (relations.isEmpty()) {
             throw new BusinessException("试卷没有题目，无法均分");
@@ -623,8 +628,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 更新试卷卷头信息的结果
      */
     public PaperVO updatePaper(Long paperId, PaperComposeUpdateDTO dto) {
-        EduPaper paper = requirePaper(paperId);
-        EduUserContext.checkWritable(paper.getOwnerUserId());
+        EduPaper paper = requireEditableDraft(paperId);
         if (dto == null) {
             return toVO(paper);
         }
@@ -709,6 +713,13 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     public boolean publishPaper(Long paperId) {
         EduPaper paper = requirePaper(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
+        int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
+        if (status == STATUS_ARCHIVED) {
+            throw new BusinessException("试卷已归档，不能再发布");
+        }
+        if (status == STATUS_PUBLISHED) {
+            throw new BusinessException("试卷已发布；如需修改请先下架，再重新发布");
+        }
         backfillMissingQuestionNos(paper);
         List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
         int total = 0;
@@ -719,9 +730,51 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         if (total != expectScore) {
             throw new BusinessException("试卷总分必须为 " + expectScore + " 分，当前为 " + total + " 分");
         }
-        paper.setPaperStatus(1);
+        paper.setPaperStatus(STATUS_PUBLISHED);
         syncVersionAndPersist(paper, "PUBLISH");
         log.info("[EduAi] 发布试卷完成: paperId={}, version={}", paperId, paper.getPaperVersion());
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    /**
+     * 下架试卷（已发布 → 草稿）
+     *
+     * @param paperId paperid
+     * @return 下架试卷的结果
+     */
+    public boolean unpublishPaper(Long paperId) {
+        EduPaper paper = requirePaper(paperId);
+        EduUserContext.checkWritable(paper.getOwnerUserId());
+        int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
+        if (status != STATUS_PUBLISHED) {
+            throw new BusinessException("只有已发布的试卷可以下架");
+        }
+        paper.setPaperStatus(STATUS_DRAFT);
+        syncVersionAndPersist(paper, "UNPUBLISH");
+        log.info("[EduAi] 下架试卷完成: paperId={}, version={}", paperId, paper.getPaperVersion());
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    /**
+     * 归档试卷（草稿/已发布 → 已归档，之后只读）
+     *
+     * @param paperId paperid
+     * @return 归档试卷的结果
+     */
+    public boolean archivePaper(Long paperId) {
+        EduPaper paper = requirePaper(paperId);
+        EduUserContext.checkWritable(paper.getOwnerUserId());
+        int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
+        if (status == STATUS_ARCHIVED) {
+            throw new BusinessException("试卷已归档，无需重复归档");
+        }
+        paper.setPaperStatus(STATUS_ARCHIVED);
+        syncVersionAndPersist(paper, "ARCHIVE");
+        log.info("[EduAi] 归档试卷完成: paperId={}, version={}", paperId, paper.getPaperVersion());
         return true;
     }
 
@@ -771,6 +824,12 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         }
         EduPaper paper = requirePaper(relation.getPaperQuestionPaperId());
         EduUserContext.checkReadable(paper.getOwnerUserId());
+        // 方案 A：未发布的卷学生端不可见。已发布任何人可扫码看；
+        // 草稿/归档只允许本人（或管理员）扫码核对，避免草稿内容提前外泄。
+        int qrStatus = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
+        if (qrStatus != STATUS_PUBLISHED) {
+            EduUserContext.checkWritable(paper.getOwnerUserId());
+        }
         EduQuestion question = questionMapper.selectById(relation.getPaperQuestionQuestionId());
         return new PaperQuestionQrVO(
                 paper.getPaperId(),
@@ -800,6 +859,28 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         EduPaper paper = baseMapper.selectById(paperId);
         if (paper == null) {
             throw new BusinessException("试卷不存在");
+        }
+        return paper;
+    }
+
+    /**
+     * 取试卷并校验「必须是草稿」，同时校验写权限。
+     *
+     * <p>业务口径（发布=冻结）：只有草稿可改。已发布要先下架，已归档只读留档。
+     * 所有改动试卷内容的入口都必须走这里，否则会出现「学生扫过的卷还能被改」。</p>
+     *
+     * @param paperId 试卷标识
+     * @return 处于草稿态的试卷
+     */
+    private EduPaper requireEditableDraft(Long paperId) {
+        EduPaper paper = requirePaper(paperId);
+        EduUserContext.checkWritable(paper.getOwnerUserId());
+        int status = paper.getPaperStatus() == null ? 0 : paper.getPaperStatus();
+        if (status == STATUS_PUBLISHED) {
+            throw new BusinessException("试卷已发布，改动前请先下架");
+        }
+        if (status == STATUS_ARCHIVED) {
+            throw new BusinessException("试卷已归档，不能再修改");
         }
         return paper;
     }

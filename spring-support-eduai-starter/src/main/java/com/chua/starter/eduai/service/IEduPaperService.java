@@ -116,6 +116,22 @@ public interface IEduPaperService extends IService<EduPaper> {
     boolean publishPaper(Long paperId);
 
     /**
+     * 下架试卷（已发布 → 草稿）。下架后学生端不再可见，可继续编辑并重新发布。
+     *
+     * @param paperId 试卷标识
+     * @return 是否成功
+     */
+    boolean unpublishPaper(Long paperId);
+
+    /**
+     * 归档试卷（草稿/已发布 → 已归档）。归档后只读留档，不可修改、不可再发布。
+     *
+     * @param paperId 试卷标识
+     * @return 是否成功
+     */
+    boolean archivePaper(Long paperId);
+
+    /**
      * 试卷历史列表（按版本倒序，不含快照大字段）。
      *
      * @param paperId 试卷标识
