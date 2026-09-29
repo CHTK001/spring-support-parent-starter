@@ -847,10 +847,14 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
                         .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId));
         Set<String> existingEntityUids = new HashSet<>();
         for (SysAiKnowledgeGraphEntity entity : entities) {
-            existingEntityUids.add(entity.getUid());
             if (!aliveEntities.contains(entity.getUid())) {
                 graphEntityMapper.deleteById(entity.getId());
+                // 必须 continue：被删掉的实体不能再计入「仍存在」。否则下面判断关系端点时
+                // 会认为它还在，端点已消失的悬空边这一轮就漏掉了；要等下一次 pruneOrphans
+                // 才清，而库往往已被弃用，于是永久残留（表现为删库后关系表仍有大量行）
+                continue;
             }
+            existingEntityUids.add(entity.getUid());
         }
         List<SysAiKnowledgeGraphRelation> relations = graphRelationMapper.selectList(
                 new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()

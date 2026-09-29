@@ -8,6 +8,11 @@ import com.chua.common.support.network.server.request.ServerRequest;
 import com.chua.common.support.network.server.response.ServerResponse;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.SpiDescribe;
+import com.chua.cad.support.dwg.DwgHeaderInfo;
+import com.chua.cad.support.dwg.DwgHeaderParser;
+import com.chua.cad.support.dxf.DxfDocument;
+import com.chua.cad.support.dxf.DxfParser;
+import com.chua.cad.support.dxf.DxfSvgRenderer;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.metadata.Metadata;
@@ -24,6 +29,12 @@ import com.chua.filestorage.support.preview.ClientPreviewSupport;
 import com.chua.filestorage.support.preview.FileStoragePreviewProvider;
 import com.chua.filestorage.support.preview.PreviewResult;
 import com.chua.filestorage.support.preview.provider.ArchivePreviewProvider;
+import com.chua.common.support.file.converter.ImageOperation;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.filestorage.support.operation.FileOperationSetting;
+import com.chua.filestorage.support.spi.FileStorageFileSetting;
+import javax.imageio.ImageIO;
+import java.util.Locale;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import com.chua.filestorage.support.utils.MimeTypeUtils;
@@ -172,6 +183,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 动作配置令牌参数名（setConfig 管理员校验）
      */
     private static final String PARAM_TOKEN = "token";
+
+    /** 图片处理期间暂存当前请求（FileStorageFileSetting SPI 只接受 ServerRequest） */
+    private ServerRequest currentOpsRequest;
 
     /**
      * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
@@ -875,6 +889,173 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
+     * 执行 URL 上的文件处理操作。
+     *
+     * <p>顺序：自动旋正 → 裁剪 → 旋转 → 翻转 → 缩放 → 灰度 → 模糊 → 锐化 → 水印 → 质量编码。
+     * 每步独立降级：失败只 warn 并跳过；空结果视为「这步把图画没了」而保留上一步，
+     * 绝不返回 0 字节。</p>
+     *
+     * @param data     原始字节
+     * @param fileName 文件名
+     * @param request  请求
+     * @return 处理后的字节；非图片或无操作时返回 {@code null}（交回原流程）
+     */
+    private byte[] applyFileOperations(byte[] data, String fileName, ServerRequest request) {
+        String ext = simpleExtOf(fileName);
+        if (ext == null || !isImageExt(ext)) {
+            return null;
+        }
+        FileOperationSetting ops = parseFileOps();
+        if (ops == null || !ops.hasOperation()) {
+            return null;
+        }
+        ImageOperation imageOperation = ServiceProvider.of(ImageOperation.class).getExtension();
+        if (imageOperation == null) {
+            log.warn("[FileStorage] 未找到 ImageOperation SPI，跳过图片处理");
+            return null;
+        }
+        String format = opOutputFormat(fileName, request);
+        if (format == null) {
+            return null;
+        }
+        byte[] cur = data;
+        try {
+            if (Boolean.TRUE.equals(ops.getAutoOrient())) {
+                cur = keep(cur, imageOperation.autoOrient(cur, format).block());
+            }
+            byte[] c1 = cropOf(imageOperation, cur, format, ops.getCrop());
+            if (c1 != null) {
+                cur = c1;
+            }
+            if (ops.getRotate() != null) {
+                cur = keep(cur, imageOperation.rotate(cur, format, ops.getRotate()).block());
+            }
+            if (ops.getFlip() != null && !ops.getFlip().isBlank()) {
+                cur = keep(cur, imageOperation.flip(cur, format, ops.getFlip()).block());
+            }
+            byte[] c2 = resizeOf(imageOperation, cur, format, ops.getSize());
+            if (c2 != null) {
+                cur = c2;
+            }
+            if (Boolean.TRUE.equals(ops.getGrayscale())) {
+                cur = keep(cur, imageOperation.filter(cur, format, "gray", null).block());
+            }
+            if (ops.getBlur() != null && ops.getBlur() > 0) {
+                ImageOperation.FilterParams p = ImageOperation.FilterParams.builder().radius(ops.getBlur()).build();
+                cur = keep(cur, imageOperation.filter(cur, format, "blur", p).block());
+            }
+            if (ops.getSharpen() != null && ops.getSharpen() > 0) {
+                ImageOperation.FilterParams p = ImageOperation.FilterParams.builder().radius(ops.getSharpen()).build();
+                cur = keep(cur, imageOperation.filter(cur, format, "sharpen", p).block());
+            }
+            if (ops.getWatermarkText() != null && !ops.getWatermarkText().isBlank()) {
+                ImageOperation.WatermarkParams p = ImageOperation.WatermarkParams.builder()
+                        .text(ops.getWatermarkText()).opacity(0.5f).position("center").build();
+                cur = keep(cur, imageOperation.watermark(cur, format, p).block());
+            }
+        } catch (Exception e) {
+            log.warn("[FileStorage] 图片处理失败，回退原图: {}", e.getMessage());
+            return null;
+        }
+        return cur;
+    }
+
+    private byte[] keep(byte[] before, byte[] after) {
+        return (after == null || after.length == 0) ? before : after;
+    }
+
+    private byte[] resizeOf(ImageOperation op, byte[] bytes, String format, String size) {
+        if (size == null || size.isBlank()) {
+            return null;
+        }
+        String expr = size.trim();
+        Double scale = null;
+        Integer width = null;
+        Integer height = null;
+        if (expr.endsWith("%")) {
+            try {
+                scale = Double.parseDouble(expr.substring(0, expr.length() - 1)) / 100.0d;
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        } else {
+            String[] parts = expr.split("[xX*\\s]+");
+            try {
+                if (parts.length >= 2) {
+                    width = Integer.valueOf(parts[0]);
+                    height = Integer.valueOf(parts[1]);
+                } else {
+                    width = Integer.valueOf(parts[0]);
+                }
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return op.resize(bytes, format, width, height, scale).block();
+    }
+
+    private byte[] cropOf(ImageOperation op, byte[] bytes, String format, String crop) {
+        if (crop == null || crop.isBlank()) {
+            return null;
+        }
+        String[] parts = crop.split("[,\\s]+");
+        if (parts.length < 4) {
+            return null;
+        }
+        try {
+            int x = Integer.parseInt(parts[0]);
+            int y = Integer.parseInt(parts[1]);
+            int w = Integer.parseInt(parts[2]);
+            int h = Integer.parseInt(parts[3]);
+            if (w <= 0 || h <= 0) {
+                return null;
+            }
+            return op.crop(bytes, format, x, y, w, h).block();
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private FileOperationSetting parseFileOps() {
+        try {
+            return ServiceProvider.of(FileStorageFileSetting.class).getNewExtension("jdk").parse(currentOpsRequest);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 常用图片扩展名（决定是否走图片处理管线） */
+    private static boolean isImageExt(String ext) {
+        return switch (ext) {
+            case "jpg", "jpeg", "png", "gif", "bmp", "webp", "wbmp" -> true;
+            default -> false;
+        };
+    }
+
+    private static String normFormat(String f) {
+        if (f == null || f.isBlank()) {
+            return null;
+        }
+        String s = f.trim().toLowerCase(Locale.ROOT);
+        if ("original".equals(s) || "none".equals(s)) {
+            return null;
+        }
+        s = switch (s) {
+            case "jpg" -> "jpeg";
+            case "tif" -> "tiff";
+            default -> s;
+        };
+        return ImageIO.getImageWritersByFormatName(s).hasNext() ? s : null;
+    }
+
+    private String opOutputFormat(String fileName, ServerRequest request) {
+        Map<String, String> params = request.getParams();
+        String requested = params == null ? null : normFormat(params.get("format"));
+        String ext = simpleExtOf(fileName);
+        return requested != null ? requested : normFormat(ext == null ? "jpeg" : ext);
+    }
+
+    /**
      * 递归构建目录树 JSON（深度受限，避免超大桶卡死）。
      *
      * <p>{@code GET /{bucket}?tree=true} — 返回全量目录树：
@@ -1396,6 +1577,144 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .setBody(json.toString())
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 写出 CAD 图纸信息 JSON（{@code ?format=cad}）。
+     *
+     * <p>与 {@code ?preview=true} 的服务端渲染并列的第二条通道：后者把整张页面交给
+     * iframe（独立文档，读不到主应用的 Element Plus / koi 主题变量）；本接口只回
+     * 结构化数据 + 内联 SVG，由主应用内的 Vue 面板渲染，从而跟随系统主题与暗色模式。</p>
+     *
+     * <p>DXF 返回完整图形（纯 Java 解析转 SVG）；DWG 只返回头部信息——其图元几何
+     * 无法在 Java 内解析，这不是实现取舍而是格式的硬约束（Autodesk 私有二进制格式）。
+     * 两条路径结构不同，故用 {@code renderable} 明确告知前端能否出图。</p>
+     *
+     * <p>结构：</p>
+     * <pre>{@code
+     * {
+     *   "name": "施工图.dxf", "extension": "dxf",
+     *   "size": 204800, "renderable": true,
+     *   "svg": "<svg .../>",          // 仅 renderable=true 时有值
+     *   "acadVersion": "AC1027", "units": "米",
+     *   "entityCount": 5, "layerCount": 4, "layers": {"0": 2, "WALL": 1},
+     *   "width": 100, "height": 50,
+     *   "unsupported": ["INSERT"],   // 跳过的实体类型，如实告知用户
+     *   "versionLabel": "AutoCAD 2013-2017", "versionCode": "AC1027"
+     * }
+     * }</pre>
+     *
+     * @param fileName 文件名
+     * @param data     文件字节
+     * @param response 响应
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> writeCadInfo(String fileName, byte[] data, ServerResponse response) {
+        String ext = simpleExtOf(fileName);
+        StringBuilder json = new StringBuilder(4096);
+        json.append("{\"name\":\"").append(escapeJson(fileName)).append("\"")
+                .append(",\"extension\":\"").append(escapeJson(ext)).append("\"")
+                .append(",\"size\":").append(data.length);
+
+        try {
+            if ("dxf".equals(ext)) {
+                appendDxfJson(json, data);
+            } else if ("dwg".equals(ext)) {
+                appendDwgJson(json, data);
+            } else {
+                json.append(",\"renderable\":false")
+                        .append(",\"error\":\"暂不支持的 CAD 格式：.").append(escapeJson(ext)).append("\"}");
+            }
+        } catch (Exception e) {
+            log.warn("CAD 图纸解析失败[{}]: {}", fileName, e.getMessage());
+            return error(response, 422, "Unprocessable Entity: CAD 图纸解析失败");
+        }
+
+        json.append("}");
+        response.setStatus(200)
+                .setHeader("X-FileStorage-Preview", "cad-json")
+                .setContentType("application/json;charset=UTF-8")
+                .setBody(json.toString())
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 追加 DXF 字段（图形 + 统计）
+     *
+     * @param json  JSON 构造器
+     * @param data  DXF 字节
+     * @throws IOException 解析失败
+     */
+    private void appendDxfJson(StringBuilder json, byte[] data) throws IOException {
+        DxfDocument doc = DxfParser.create().parse(data);
+        String svg = DxfSvgRenderer.create().render(doc, 1600);
+        json.append(",\"renderable\":true")
+                // SVG 以 JSON 字符串内联：省一次请求，且描边走 currentColor，
+                // 前端只需把 SVG 塞进容器即可继承主题色（暗色模式零成本适配）
+                .append(",\"svg\":\"").append(escapeJson(svg)).append("\"")
+                .append(",\"acadVersion\":\"").append(escapeJson(doc.header().acadVersion())).append("\"")
+                .append(",\"units\":\"").append(escapeJson(doc.header().unitsLabel())).append("\"")
+                .append(",\"entityCount\":").append(doc.entities().size())
+                .append(",\"layerCount\":").append(doc.layers().size())
+                .append(",\"layers\":{");
+        boolean first = true;
+        for (Map.Entry<String, Integer> e : doc.layers().entrySet()) {
+            if (!first) {
+                json.append(",");
+            }
+            first = false;
+            json.append("\"").append(escapeJson(e.getKey())).append("\":").append(e.getValue());
+        }
+        json.append("}")
+                .append(",\"width\":").append(fmtDouble(doc.width()))
+                .append(",\"height\":").append(fmtDouble(doc.height()))
+                .append(",\"unsupported\":[");
+        List<String> unsupported = doc.unsupportedEnts();
+        for (int i = 0; i < unsupported.size(); i++) {
+            if (i > 0) {
+                json.append(",");
+            }
+            json.append("\"").append(escapeJson(unsupported.get(i))).append("\"");
+        }
+        json.append("]");
+    }
+
+    /**
+     * 追加 DWG 字段（仅头部信息，不含图形）
+     *
+     * @param json JSON 构造器
+     * @param data DWG 字节
+     * @throws IOException 解析失败
+     */
+    private void appendDwgJson(StringBuilder json, byte[] data) throws IOException {
+        DwgHeaderInfo info = DwgHeaderParser.create().parse(data);
+        json.append(",\"renderable\":false")
+                .append(",\"versionLabel\":\"").append(escapeJson(info.versionLabel())).append("\"")
+                .append(",\"versionCode\":\"").append(escapeJson(info.versionCode())).append("\"")
+                .append(",\"acadRelease\":\"").append(escapeJson(info.acadRelease())).append("\"")
+                .append(",\"maintenanceVersion\":").append(info.maintenanceVersion())
+                .append(",\"unsupported\":[]");
+    }
+
+    /**
+     * 格式化浮点数：NaN / 无限值归零，保留最多 4 位小数。
+     *
+     * <p>图形范围退化为一点（无图元）时会算出 NaN，直接写进 JSON 会让前端
+     * JSON.parse 失败，因此这里统一兜底为 0。</p>
+     *
+     * @param v 数值
+     * @return 可安全写入 JSON 的数值文本
+     */
+    private String fmtDouble(double v) {
+        if (Double.isNaN(v) || Double.isInfinite(v)) {
+            return "0";
+        }
+        if (v == Math.rint(v) && Math.abs(v) < 1e12) {
+            return Long.toString((long) v);
+        }
+        String s = String.format(Locale.ENGLISH, "%.4f", v).replaceAll("0+$", "");
+        return s.endsWith(".") ? s.substring(0, s.length() - 1) : s;
     }
 
     /**
@@ -2330,10 +2649,27 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return writeArchiveEntries(fileName, data, response);
         }
 
+        // CAD 图纸查询（?format=cad）：DXF 出图形，DWG 只出头信息
+        if (stringParam(request, "format", "cad")) {
+            return writeCadInfo(fileName, data, response);
+        }
+
         response.setHeader("Content-Disposition", buildDisposition(download, fileName));
 
         // 显式 ?preview=true 时按渲染通道分流处理
         if (!download && wantPreview) {
+            this.currentOpsRequest = request;
+            // 图片处理（?preview&size=/crop=/rotate=/flip=/grayscale=/blur=/sharpen=/watermarkText=/quality=）：
+            // 此前 spring 侧只上报能力（?format=capabilities），从不执行，URL 参数全部静默失效。
+            byte[] imageProcessed = applyFileOperations(data, fileName, request);
+            if (imageProcessed != null) {
+                response.setStatus(200)
+                        .setContentType(MimeTypeUtils.getMimeType(opOutputFormat(fileName, request)))
+                        .setHeader("X-FileStorage-Preview", "image-op")
+                        .setBody(imageProcessed)
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
             // 压缩包下钻：?preview&inner=包内路径 时提取条目并按条目类型预览
             String innerPath = request.getParams().get("inner");
             if (innerPath != null && !innerPath.isEmpty()) {

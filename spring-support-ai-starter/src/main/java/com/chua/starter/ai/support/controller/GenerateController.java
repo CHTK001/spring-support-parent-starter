@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.common.support.ai.AiProviderException;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.generate.GenerateConfigSupport;
 import com.chua.starter.ai.support.generate.GenerateSpiRouter;
@@ -226,6 +227,11 @@ public class GenerateController {
         } catch (IllegalArgumentException e) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, e.getMessage());
         } catch (IllegalStateException e) {
+            throw new ApiException(ApiErrorCode.NO_COMPLETER, e.getMessage());
+        } catch (AiProviderException e) {
+            // 供应商侧的失败（限流 / 队列满 / 鉴权 / 不支持）必须把上游原文透出去：
+            // 这两类都是用户能据此行动的（等额度恢复、稍后重试、换 Key），
+            // 压成「系统繁忙」等于让用户面对一句废话。
             throw new ApiException(ApiErrorCode.NO_COMPLETER, e.getMessage());
         }
     }

@@ -88,14 +88,43 @@ public final class ProjectScripts {
      * Windows 停止片段：优先按 app.pid 结束（taskkill /T 连子进程），
      * <p>不依赖 WMI（{@code Get-CimInstance Win32_Process} 普通用户会被拒），
      * 启动模板会把进程号写入 app.pid，停/重启/状态均以它为准。</p>
+     * <p>末尾做终态校验：进程树未真正结束时报错，不再无条件成功。
+     * 变量名避开 PowerShell 只读自动变量 {@code $PID}。</p>
      */
     private static final String WIN_PID_STOP_BODY = "$ErrorActionPreference = 'SilentlyContinue'\n"
-            + "if (Test-Path 'app.pid') { Get-Content 'app.pid' | ForEach-Object { & taskkill.exe /PID $_ /T /F | Out-Null }; Remove-Item 'app.pid' -Force }";
+            + "$stopIds = @()\n"
+            + "if (Test-Path 'app.pid') { $stopIds = @(Get-Content 'app.pid' | Where-Object { $_ -match '^\\d+$' } | ForEach-Object { [int]$_ }) }\n"
+            + "foreach ($sid in $stopIds) { & taskkill.exe /PID $sid /T /F | Out-Null }\n"
+            + "Remove-Item 'app.pid' -Force\n"
+            + "$stillAlive = @()\n"
+            + "for ($i = 0; $i -lt 10; $i++) {\n"
+            + "  $stillAlive = @($stopIds | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })\n"
+            + "  if ($stillAlive.Count -eq 0) { break }\n"
+            + "  Start-Sleep -Milliseconds 500\n"
+            + "}\n"
+            + "if ($stillAlive.Count -gt 0) { throw ('停止失败: 进程仍在运行 pid=' + ($stillAlive -join ',')) }";
 
     /**
-     * Windows 停止脚本（独立使用，末尾 exit 0 保证「停止」任务成功）
+     * Windows 停止脚本（独立使用，终态输出 stopped）
      */
-    private static final String WIN_PID_STOP = WIN_PID_STOP_BODY + "\nexit 0";
+    private static final String WIN_PID_STOP = WIN_PID_STOP_BODY + "\nWrite-Output 'stopped'";
+
+    /**
+     * Windows 启动终态校验：app.pid 已写入且进程存活才算启动成功。
+     *
+     * <p>Windows 上 {@code cmd /c} 托管的程序（典型是 nginx）会立刻返回 0，
+     * 启动失败只体现在日志里，任务却报「启动成功」；显式校验可把
+     * 「报了成功但 status=stopped」提前暴露为任务失败。</p>
+     */
+    private static final String WIN_VERIFY_RUNNING = "$pidFile = 'app.pid'\n"
+            + "if (-not (Test-Path $pidFile)) { throw '启动校验失败: 未写入 app.pid' }\n"
+            + "$procId = (Get-Content $pidFile -Raw).Trim()\n"
+            + "for ($i = 0; $i -lt 10; $i++) {\n"
+            + "  if (Get-Process -Id $procId -ErrorAction SilentlyContinue) { break }\n"
+            + "  Start-Sleep -Milliseconds 500\n"
+            + "}\n"
+            + "if (-not (Get-Process -Id $procId -ErrorAction SilentlyContinue)) { throw ('启动校验失败: 进程未运行 pid=' + $procId) }\n"
+            + "Write-Output ('running pid=' + $procId)";
 
     /**
      * Windows 状态脚本：仅以 app.pid 为准（SSH 会话内 WMI 枚举常被拒，故不走命令行匹配）
@@ -150,23 +179,41 @@ public final class ProjectScripts {
                 restart = LINUX_PID_STOP + "\nsleep 2\n" + start;
             }
             case "static", "nginx" -> {
-                // nginx 自建 pid 文件（相对项目目录），状态/停止只认本项目，避免误杀/误报其它项目的 nginx
+                // nginx 自建 pid 文件（相对前缀目录），状态/停止只认本项目，避免误杀/误报其它项目的 nginx。
+                // 必须显式给出 -p/-c：nginx 默认使用编译期前缀（Debian 为 /usr/share/nginx），
+                // 裸 nginx 会去读系统配置并抢占系统端口（实测撞 0.0.0.0:8080），
+                // 静态项目因此无法在自己的目录里独立运行。前缀所需目录由脚本自行补齐。
                 String pid = "logs/nginx.pid";
-                start = "nginx";
-                restart = "if [ -f " + pid + " ] && kill -0 $(cat " + pid + ") 2>/dev/null; then\n"
-                        + "  nginx -s reload\n"
+                String dirs = "mkdir -p logs temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp temp/scgi_temp\n";
+                String nginx = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf";
+                // 先读取 pid 再做判断：若写成 `[ -f pid ]` 之后再 `cat`，nginx 退出时会删除 pid 文件，
+                // 两次操作之间产生竞态，输出「cat: logs/nginx.pid: 没有那个文件」噪声（结果虽正确但会误导排查）。
+                String readPid = "pid=$(cat " + pid + " 2>/dev/null || true)\n";
+                String stopBody = nginx + " -s stop 2>/dev/null || true\n"
+                        + readPid
+                        + "if [ -n \"$pid\" ]; then\n"
+                        + "  kill $pid 2>/dev/null\n"
+                        + "  i=0\n"
+                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 10 ]; do\n"
+                        + "    sleep 1\n"
+                        + "    i=$((i + 1))\n"
+                        + "  done\n"
+                        + "  kill -9 $pid 2>/dev/null\n"
+                        + "fi\n"
+                        + "rm -f " + pid;
+                String runningCheck = readPid + "if [ -n \"$pid\" ] && kill -0 $pid 2>/dev/null; then\n";
+                start = dirs + nginx;
+                restart = runningCheck
+                        + "  " + nginx + " -s reload\n"
                         + "else\n"
-                        + "  nginx\n"
+                        + indent(stopBody, "  ") + "\n"
+                        + "  sleep 2\n"
+                        + indent(start, "  ") + "\n"
                         + "fi";
                 return new Scripts(start,
-                        "nginx -s stop 2>/dev/null\n"
-                                + "if [ -f " + pid + " ]; then kill $(cat " + pid + ") 2>/dev/null; rm -f " + pid + "; fi",
+                        stopBody,
                         restart,
-                        "if [ -f " + pid + " ] && kill -0 $(cat " + pid + ") 2>/dev/null; then\n"
-                                + "  echo running\n"
-                                + "else\n"
-                                + "  echo stopped\n"
-                                + "fi");
+                        runningCheck + "  echo running\nelse\n  echo stopped\nfi");
             }
             case "separated" -> {
                 start = linuxEnter()
@@ -200,24 +247,41 @@ public final class ProjectScripts {
                 + "Write-Output $r.ProcessId";
     }
 
+    /**
+     * Windows 静态/nginx 启动片段：先补齐 nginx 前缀所需目录，再以显式前缀与配置启动。
+     *
+     * <p>与 Linux 侧同理必须给出 {@code -p/-c}：让 nginx 只在项目目录内取配置与写日志，
+     * 而不是落到安装目录的 config。{@code temp/*} 缺失时 nginx 启动即报
+     * {@code CreateDirectory() ... failed}，故由脚本自行补齐，不依赖宿主预置。</p>
+     *
+     * @return 启动脚本
+     */
+    private static String winStaticStart() {
+        return "foreach ($d in @('logs', 'temp', 'temp\\client_body_temp', 'temp\\proxy_temp', "
+                + "'temp\\fastcgi_temp', 'temp\\uwsgi_temp', 'temp\\scgi_temp')) {\n"
+                + "  New-Item -ItemType Directory -Force -Path $d | Out-Null\n"
+                + "}\n"
+                + winStart("nginx.exe", "-p " + PH_PATH + " -c conf/nginx.conf");
+    }
+
     private static Scripts builtinWindows(String projectType, String mainEntry) {
         String type = projectType == null ? "" : projectType.trim().toLowerCase();
         String entry = mainEntry == null ? "" : mainEntry.trim().toLowerCase();
         switch (type) {
             case "springboot", "fatjar" -> {
-                String start = winStart("java", "-jar " + PH_ENTRY);
+                String start = winStart("java", "-jar " + PH_ENTRY) + "\n" + WIN_VERIFY_RUNNING;
                 return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP_BODY + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             case "static", "nginx" -> {
-                // 与其他类型一致：WMI 脱离会话启动（Start-Process 起的 nginx 会随 SSH 会话被回收），
-                // cmd 托管 nginx 主子进程并把 cmd pid 写入 app.pid，停止/状态按 app.pid（taskkill /T 连带 nginx）
-                String start = winStart("nginx.exe", "");
-                return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+                // 停/重启用 WIN_PID_STOP_BODY（不带末尾 exit 0）：WIN_PID_STOP 会以 exit 0 结束整个脚本，
+                // 重启时停完即退出、启动段永不执行，表现为「restart 报成功但 STATUS 是 stopped」。
+                String start = winStaticStart() + "\n" + WIN_VERIFY_RUNNING;
+                return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP_BODY + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             case "separated" -> {
-                String start = entry.endsWith(".ps1")
+                String start = (entry.endsWith(".ps1")
                         ? winStart("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + PH_ENTRY)
-                        : winStart(PH_ENTRY, "");
+                        : winStart(PH_ENTRY, "")) + "\n" + WIN_VERIFY_RUNNING;
                 return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP_BODY + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             default -> {
@@ -279,5 +343,30 @@ public final class ProjectScripts {
 
     private static String trim(String v) {
         return v == null ? "" : v.trim();
+    }
+
+    /**
+     * 给多行文本的每一行加前缀（用于把片段嵌入 if/else 分支时保持缩进可读）。
+     *
+     * @param text   多行文本
+     * @param prefix 前缀
+     * @return 加前缀后的文本
+     */
+    private static String indent(String text, String prefix) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        String[] lines = text.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].isEmpty()) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append('\n');
+            }
+            sb.append(prefix).append(lines[i]);
+        }
+        return sb.toString();
     }
 }

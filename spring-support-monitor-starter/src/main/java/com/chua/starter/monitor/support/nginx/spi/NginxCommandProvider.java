@@ -194,8 +194,12 @@ public interface NginxCommandProvider {
     /**
      * 从指定字节偏移开始取文件内容（用于增量读取日志）。
      *
+     * <p><strong>截断上限由各平台实现自己决定</strong>（约定 256KB），调用方不要再拼
+     * {@code | head -c N}：那是 POSIX 管道，Windows 上没有。上限放在实现里，
+     * 才能两个平台都被约束住。</p>
+     *
      * @param path  文件路径
-     * @param start 起始字节（1 基）
+     * @param start 起始字节（0 基）
      * @return 完整命令行
      */
     String bytesFrom(String path, long start);
@@ -208,6 +212,100 @@ public interface NginxCommandProvider {
      * @return 完整命令行
      */
     String findFiles(String root, String pattern);
+
+    /**
+     * 列出文件及其字节数与修改时间。
+     *
+     * <p>输出每行一条、制表符分隔：{@code 完整路径 \t 字节数 \t 修改时间}，时间格式
+     * {@code yyyy-MM-dd HH:mm}。配置列表、日志列表、备份列表三处都需要同一份信息，
+     * 原先各写一段 {@code find|while read} / {@code ls -1t|while read} 脚本（含
+     * {@code date -r} 与 {@code stat -c} 两种回退），既重复又全是 POSIX。收敛成一个
+     * 语义能力后，新增平台只需实现一次。</p>
+     *
+     * @param root        目录
+     * @param namePattern 文件名模式，如 {@code *.conf}
+     * @param recursive   是否递归子目录
+     * @return 完整命令行
+     */
+    String listFilesWithMeta(String root, String namePattern, boolean recursive);
+
+    /**
+     * 以 base64 内容写入文件。
+     *
+     * <p>为什么用 base64 而不是明文：配置里含引号、反斜杠、换行与中文，直接拼进命令行会被
+     * 各层 shell 反复转义，一次都不出错几乎不可能。由调用方编码、实现负责解码落盘，
+     * 转义问题就只剩「一层」。</p>
+     *
+     * <p>这是<strong>写路径</strong>，比读路径更要紧：读挂了只是看不到，写挂了用户就丢配置。
+     * 各平台实现必须真的落盘并让非零退出码如实返回，不要吞掉错误。</p>
+     *
+     * @param path          目标路径
+     * @param base64Content 内容的 base64（UTF-8 编码后的结果）
+     * @return 完整命令行
+     */
+    String writeFile(String path, String base64Content);
+
+    /**
+     * 判断目录是否存在。
+     *
+     * <p>与 {@link #fileExists(String)} 分开：{@code test -f} 对目录恒为假，
+     * 而探测备份目录、日志目录存在性时问的是目录。</p>
+     *
+     * @param path 目录路径
+     * @return 完整命令行
+     */
+    String dirExists(String path);
+
+    /**
+     * 取路径的父目录（绝对路径）。
+     *
+     * <p>POSIX 实现刻意用 {@code cd "$(dirname …)" && pwd} 而不是在 Java 里截字符串：
+     * {@code pwd} 会把软链接规范化（如 {@code /usr/sbin/nginx} 实为 {@code /usr/bin/nginx}），
+     * 而 nginx 的 prefix 解析依赖真实路径。改成 Java 截串会悄悄改变 Linux 上已有的
+     * prefix 结果——那是正在生产运行的路径，不能为了「统一」而动。</p>
+     *
+     * @param path 文件路径
+     * @return 完整命令行
+     */
+    String parentDir(String path);
+
+    /**
+     * 取当前用户家目录的绝对路径。
+     *
+     * <p>备份目录不可写时的回退位置选在用户家目录下，所以必须知道它。
+     * POSIX 读 {@code $HOME}，Windows 读 {@code %USERPROFILE%}。</p>
+     *
+     * @return 完整命令行
+     */
+    String homeDir();
+
+    /**
+     * 导出 nginx 生效配置（{@code nginx -T}）。
+     *
+     * <p>调用方需要从「实际生效的配置」里读日志路径等指令——只看主配置会漏掉
+     * {@code include} 进来的站点配置。{@code -T} 会把结果写到 <strong>stderr</strong>，
+     * 所以实现必须做 {@code 2>&1} 合并，否则调用方拿到空串。</p>
+     *
+     * @param binary nginx 可执行文件（空则用默认）
+     * @return 完整命令行
+     */
+    String configDump(String binary);
+
+    /**
+     * 在目录下的匹配文件里找出某个指令的匹配文本。
+     *
+     * <p>入参是<strong>语义</strong>（指令名）而不是正则：POSIX 的 {@code grep -E} 与
+     * .NET 的正则对字符类的写法不同（{@code [[:space:]]} 在 .NET 里不成立），
+     * 传正则会逼调用方按平台分叉——那正是本扩展点要消除的东西。指令名交给各平台
+     * 自己去拼本机正则。</p>
+     *
+     * @param root        起始目录
+     * @param namePattern 文件名模式，如 {@code *.conf}
+     * @param directive   指令名，如 {@code listen}
+     * @param maxLines    最多返回多少条，0 表示不限
+     * @return 完整命令行
+     */
+    String directiveMatches(String root, String namePattern, String directive, int maxLines);
 
     /**
      * 探测可执行文件是否在 PATH 中。
