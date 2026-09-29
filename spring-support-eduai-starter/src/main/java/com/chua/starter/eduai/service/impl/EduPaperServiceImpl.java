@@ -711,7 +711,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 发布试卷的结果
      */
     public boolean publishPaper(Long paperId) {
-        EduPaper paper = requirePaper(paperId);
+        // 加锁取卷：并发发布/下架在同一张卷上串行执行
+        EduPaper paper = requirePaperLocked(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
         int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
         if (status == STATUS_ARCHIVED) {
@@ -730,9 +731,15 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         if (total != expectScore) {
             throw new BusinessException("试卷总分必须为 " + expectScore + " 分，当前为 " + total + " 分");
         }
-        paper.setPaperStatus(STATUS_PUBLISHED);
-        syncVersionAndPersist(paper, "PUBLISH");
-        log.info("[EduAi] 发布试卷完成: paperId={}, version={}", paperId, paper.getPaperVersion());
+        // 原子占位：并发下只有一个请求能把「草稿」改成「已发布」。
+        // 先读判断再写会 TOCTOU —— 多个请求同时通过判断后会一起去改题目版本号而当 500。
+        int won = baseMapper.updateStatusIfCurrent(paperId, STATUS_DRAFT, STATUS_PUBLISHED);
+        if (won == 0) {
+            throw new BusinessException("试卷已发布；如需修改请先下架，再重新发布");
+        }
+        EduPaper latest = requirePaper(paperId);
+        syncVersionAndPersist(latest, "PUBLISH");
+        log.info("[EduAi] 发布试卷完成: paperId={}, version={}", paperId, latest.getPaperVersion());
         return true;
     }
 
@@ -745,15 +752,19 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 下架试卷的结果
      */
     public boolean unpublishPaper(Long paperId) {
-        EduPaper paper = requirePaper(paperId);
+        EduPaper paper = requirePaperLocked(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
-        int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
-        if (status != STATUS_PUBLISHED) {
-            throw new BusinessException("只有已发布的试卷可以下架");
+        // 原子占位：并发下只有一个请求能把「已发布」改回「草稿」
+        int won = baseMapper.updateStatusIfCurrent(paperId, STATUS_PUBLISHED, STATUS_DRAFT);
+        if (won == 0) {
+            int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
+            throw new BusinessException(status == STATUS_ARCHIVED
+                    ? "试卷已归档，不能下架"
+                    : "只有已发布的试卷可以下架");
         }
-        paper.setPaperStatus(STATUS_DRAFT);
-        syncVersionAndPersist(paper, "UNPUBLISH");
-        log.info("[EduAi] 下架试卷完成: paperId={}, version={}", paperId, paper.getPaperVersion());
+        EduPaper latest = requirePaper(paperId);
+        syncVersionAndPersist(latest, "UNPUBLISH");
+        log.info("[EduAi] 下架试卷完成: paperId={}, version={}", paperId, latest.getPaperVersion());
         return true;
     }
 
@@ -766,15 +777,16 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 归档试卷的结果
      */
     public boolean archivePaper(Long paperId) {
-        EduPaper paper = requirePaper(paperId);
+        EduPaper paper = requirePaperLocked(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
-        int status = paper.getPaperStatus() == null ? STATUS_DRAFT : paper.getPaperStatus();
-        if (status == STATUS_ARCHIVED) {
+        // 原子占位：并发下只有一个请求能归档（草稿与已发布都可归档，已归档则 affected=0）
+        int won = baseMapper.archiveIfNotArchived(paperId, STATUS_ARCHIVED, STATUS_ARCHIVED);
+        if (won == 0) {
             throw new BusinessException("试卷已归档，无需重复归档");
         }
-        paper.setPaperStatus(STATUS_ARCHIVED);
-        syncVersionAndPersist(paper, "ARCHIVE");
-        log.info("[EduAi] 归档试卷完成: paperId={}, version={}", paperId, paper.getPaperVersion());
+        EduPaper latest = requirePaper(paperId);
+        syncVersionAndPersist(latest, "ARCHIVE");
+        log.info("[EduAi] 归档试卷完成: paperId={}, version={}", paperId, latest.getPaperVersion());
         return true;
     }
 
@@ -864,6 +876,27 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     /**
+     * 取试卷并加行锁（{@code SELECT ... FOR UPDATE}）。
+     *
+     * <p>所有改卷的入口都走这里：把**同一张卷**的「读-改-写」串行化，
+     * 避免并发下多个事务同时改 {@code edu_paper_question} 而抛
+     * 「Record has changed since last read」（实测并发发布/下架会冒 500）。
+     * 不同试卷之间不互相阻塞。</p>
+     *
+     * <p>必须在 {@code @Transactional} 内调用，锁随事务结束释放。</p>
+     *
+     * @param paperId 试卷标识
+     * @return 加了行锁的试卷
+     */
+    private EduPaper requirePaperLocked(Long paperId) {
+        EduPaper paper = baseMapper.selectByIdForUpdate(paperId);
+        if (paper == null) {
+            throw new BusinessException("试卷不存在");
+        }
+        return paper;
+    }
+
+    /**
      * 取试卷并校验「必须是草稿」，同时校验写权限。
      *
      * <p>业务口径（发布=冻结）：只有草稿可改。已发布要先下架，已归档只读留档。
@@ -873,7 +906,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 处于草稿态的试卷
      */
     private EduPaper requireEditableDraft(Long paperId) {
-        EduPaper paper = requirePaper(paperId);
+        // 加锁取卷：同一张卷的编辑串行化，避免并发改题时的事务冲突
+        EduPaper paper = requirePaperLocked(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
         int status = paper.getPaperStatus() == null ? 0 : paper.getPaperStatus();
         if (status == STATUS_PUBLISHED) {
