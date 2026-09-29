@@ -733,12 +733,19 @@ public class ReleaseServiceImpl implements ReleaseService {
                 // SDK 优先：文件投放用 SFTP rename（同文件系统内即移动），SDK 不可用才回退平台命令
                 String sdkTarget = (path.endsWith("/") ? path : path + "/") + project.getMainEntry();
                 steps.add(new ProjectStep("投放新版本文件", "", 2, () -> {
-                    ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null,
-                            packagePath.replace('\\', '/'), sdkTarget.replace('\\', '/'));
-                    if (mv.isOk()) {
-                        return java.util.List.of("sftp rename " + packagePath + " -> " + sdkTarget);
+                    String src = packagePath.replace('\\', '/');
+                    String dst = sdkTarget.replace('\\', '/');
+                    ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
+                    if (!mv.isOk()) {
+                        // 多数 SFTP 实现不支持覆盖式 rename（目标已存在的升级场景必然失败）：
+                        // 先删目标再 rename，仍走 SDK；只有删除后仍失败才回退命令。
+                        sftpService.delete(ctx.hostId, null, dst, false);
+                        mv = sftpService.rename(ctx.hostId, null, src, dst);
                     }
-                    // 跨设备等 SFTP rename 不可用的场景：回退到平台命令（cp -f / Copy-Item）
+                    if (mv.isOk()) {
+                        return java.util.List.of("sftp rename " + src + " -> " + dst);
+                    }
+                    // 跨设备等场景：回退到平台命令（cp -f / Copy-Item）
                     execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
                             placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
                     return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + mv.getMsg());
