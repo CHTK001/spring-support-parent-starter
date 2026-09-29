@@ -120,11 +120,13 @@ chua:
   ai:
     chat:
       enabled: true
-      # 厂商标识对应各实现类 @Spi 的别名：zhipu/glm、zai、openai/siliconflow/sensetime/github/gitee/dots
-      provider: zhipu
-      base-url: https://open.bigmodel.cn/api/paas/v4
+      # Agnes AI 走 OpenAI 兼容协议（/v1/chat/completions），因此落到 OpenAiChatClient；
+      # 别名只在 @Spi 里用于 SPI 注册，这里可以不等于 openai/siliconflow 那几个，
+      # 实际端点由下面的 base-url 决定。
+      provider: agnes
+      base-url: https://apihub.agnes-ai.com/v1
       app-key: ${AI_CHAT_APP_KEY:}
-      model: glm-4-flash
+      model: agnes-3.0-flash
       timeout-millis: 60000
 
 logging:
