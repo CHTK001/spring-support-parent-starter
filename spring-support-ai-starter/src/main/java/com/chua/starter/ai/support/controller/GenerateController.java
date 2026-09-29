@@ -370,6 +370,21 @@ public class GenerateController {
     /**
      * 任务行转前端视图。
      *
+     * <p><b>内联 base64 一律换成可寻址路径。</b>本方法同时服务「创建响应」「单任务查询」
+     * 与「历史列表」三个出口，历史上把 {@code referenceImage} 与 {@code urls} 原样吐出，
+     * 于是只读的历史列表会带着几十 MB 纯文本回来（实测 30 条 = 77.5MB / 5.2 秒，
+     * 全部来自 1 条带 28 张图 + 1 张 2.38MB 参考图的记录）。改成返回
+     * {@code /v2/ai/generate/tasks/{taskId}/media/{i}} 后，列表只带元数据，
+     * 字节流由 {@link GenerateMediaController} 在 {@code <img>} 真正要显示时才吐一次。</p>
+     *
+     * <p><b>「怎么区分」在服务端做完。</b>判据只有一条：内联 base64 以
+     * {@code data:} 开头（见 {@link GenerateMediaController#isInline}），
+     * 供应商本来就给的 http/https 地址原样透传。两种情况对前端都是
+     * 「一个字符串塞进 img.src」，浏览器都能加载，所以前端不需要判断、不需要分支。</p>
+     *
+     * <p>路径是相对路径（不含主机名）：开发态前端与后端不同源，生产态经 nginx 同源，
+     * 两种拓扑下都由前端按自己的 API 基址补全，写死主机名反而会在其中一种下出错。</p>
+     *
      * @param task 任务行
      * @return 前端结构
      */
@@ -387,12 +402,56 @@ public class GenerateController {
         map.put("count", task.getCount());
         map.put("seed", task.getSeed());
         map.put("style", task.getStyle());
-        map.put("referenceImage", task.getReferenceImage());
+        map.put("referenceImage", referenceView(task));
         map.put("elapsedMillis", task.getElapsedMillis());
-        map.put("urls", task.resultUrls());
+        map.put("urls", mediaView(task));
         map.put("errorMessage", task.getErrorMessage());
         map.put("createdAt", task.getCreatedAt());
         map.put("updatedAt", task.getUpdatedAt());
         return map;
+    }
+
+    /**
+     * 参考图转前端视图：内联的换成可寻址路径，其余原样。
+     *
+     * <p>「再次生成」会把这里的值回填进提交参数，所以前端拿到路径后需要
+     * 先按地址取回字节再转成 data URI，见前端 {@code regenerate} 的处理。</p>
+     *
+     * @param task 任务行
+     * @return 参考图地址，无参考图时返回 null
+     */
+    private static String referenceView(SysAiGenerateTask task) {
+        String raw = task.getReferenceImage();
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return GenerateMediaController.isInline(raw)
+                ? GenerateMediaController.INLINE_PATH_PREFIX + task.getTaskId() + "/reference"
+                : raw;
+    }
+
+    /**
+     * 结果地址列表转前端视图：逐项判断，内联的换成可寻址路径，其余原样。
+     *
+     * <p>下标必须与库里 {@code urls} 的位置严格一致，因为
+     * {@code /media/{i}} 就是按下标取字节的；这里按下标替换而不是过滤，
+     * 正是为了不打乱对应关系（过滤会让后面所有图错位一张）。</p>
+     *
+     * @param task 任务行
+     * @return 结果地址列表
+     */
+    private static List<String> mediaView(SysAiGenerateTask task) {
+        List<String> raw = task.resultUrls();
+        if (raw.isEmpty()) {
+            return raw;
+        }
+        List<String> view = new ArrayList<>(raw.size());
+        for (int i = 0; i < raw.size(); i++) {
+            String item = raw.get(i);
+            view.add(GenerateMediaController.isInline(item)
+                    ? GenerateMediaController.INLINE_PATH_PREFIX + task.getTaskId() + "/media/" + i
+                    : item);
+        }
+        return view;
     }
 }
