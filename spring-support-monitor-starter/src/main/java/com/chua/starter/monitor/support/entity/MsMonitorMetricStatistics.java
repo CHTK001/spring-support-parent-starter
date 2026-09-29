@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -90,13 +91,18 @@ public class MsMonitorMetricStatistics implements Serializable {
 
     /**
      * 最大值
+     *
+     * <p><strong>属性名刻意不叫 maxValue</strong>：MyBatis 会用属性名当列别名
+     * （生成 {@code ... AS <属性名>}），而 {@code MAXVALUE} 是 MySQL 保留字
+     * （分区语法 {@code VALUES LESS THAN MAXVALUE}），不加反引号的别名会直接报
+     * {@code ERROR 1064} —— 后果是整条小时聚合 SQL 失败，统计表永远写不进去。
+     * 属性改名即可让别名变成 {@code AS maxVal}；接口契约用 {@link JsonProperty}
+     * 把 JSON 字段名锁回 {@code maxValue}，对外不变。</p>
      */
     @TableField("ms_monitor_metric_statistics_max_value")
     @Schema(description = "最大值", example = "78.2")
-    /**
-     * 最大值值
-    */
-    private Double maxValue;
+    @JsonProperty("maxValue")
+    private Double maxVal;
 
     /**
      * 样本数

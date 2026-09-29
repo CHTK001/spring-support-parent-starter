@@ -747,15 +747,20 @@ public class GenerateService {
                 .style(blankToNull(request.style()))
                 .quality(blankToNull(request.quality()))
                 .seed(request.seed());
+        // 这些字段必须在 createTask 之前写进任务行。
+        // createTask 是唯一会抛异常的一步（限流 429 / 队列满 503 / Key 失效），
+        // 写在它后面就等于「只在上游受理成功时才记录本任务的参数」——
+        // 而失败恰恰是最常见的情形（实测视频行 19/19 的 size 与 duration 全为空），
+        // 结果是失败卡片不显示分辨率与时长，且「再次生成」会丢掉这两个参数。
+        task.setProviderId(resolved.provider() == null ? null : resolved.provider().getProviderId());
+        task.setDuration(request.duration());
+        task.setSize(request.size());
         byte[] reference = decodeReference(request.referenceImage());
         if (reference != null) {
             client = clientReference(client, reference);
         }
         String taskId = client.createTask(request.prompt());
         task.setTaskId(taskId);
-        task.setProviderId(resolved.provider() == null ? null : resolved.provider().getProviderId());
-        task.setDuration(request.duration());
-        task.setSize(request.size());
         task.setStatus(SysAiGenerateTask.STATUS_PENDING);
     }
 

@@ -112,6 +112,14 @@
             <artifactId>spring-support-oauth-client-starter</artifactId>
         </dependency>
 
+        <!-- OSGi 源码扩展点：把「学生凭据校验」这类 SPI 实现改为源码声明，
+             改动源码即生效、无需重新构建整个 jar。默认配置已开启，
+             未放置源码时自动跳过，不产生任何副作用。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-osgi-starter</artifactId>
+        </dependency>
+
         <!-- Swagger 注解 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>

@@ -129,13 +129,43 @@ public class ProjectTaskService {
     private final AtomicInteger seq = new AtomicInteger(0);
 
     /**
+     * 步骤动作：能在 SDK/服务层完成的动作用它表达，避免退回命令行。
+     *
+     * <p>发布链路里多数步骤本质是远端命令（systemctl / launchctl / schtasks / tar / nginx 等无 SDK 等价物），
+     * 但文件搬运有 SFTP SDK（{@code rename/upload/...}）。此接口让这类步骤直接走 SDK，
+     * 只有 SDK 不可用时才回退到平台命令（「SDK 优先、命令兜底」）。</p>
+     */
+    @FunctionalInterface
+    public interface StepAction {
+        /**
+         * 执行动作。
+         *
+         * @return 需要回显的输出行；无输出返回 null 或空列表
+         * @throws Exception 执行失败（按步骤失败处理）
+         */
+        List<String> run() throws Exception;
+    }
+
+    /**
      * 步骤定义
      *
      * @param name     步骤名
-     * @param command  远端命令
+     * @param command  远端命令；SDK 动作步骤可为空串
      * @param weight   步骤权重（用于按权重计算总进度）
+     * @param action   SDK 动作；非空时优先执行，命令不再下发
      */
-    public record ProjectStep(String name, String command, int weight) {
+    public record ProjectStep(String name, String command, int weight, StepAction action) {
+
+        /**
+         * 命令步骤（保持既有调用签名）。
+         *
+         * @param name    步骤名
+         * @param command 远端命令
+         * @param weight  步骤权重
+         */
+        public ProjectStep(String name, String command, int weight) {
+            this(name, command, weight, null);
+        }
     }
 
     /**
@@ -272,7 +302,11 @@ public class ProjectTaskService {
                 emit(state, PHASE_STEP, step.name(), null, percent(accWeight, totalWeight), null);
                 long stepStart = System.currentTimeMillis();
                 logBanner(state, "▶ [" + stepNo + "/" + steps.size() + "] " + step.name());
-                logBanner(state, "  $ " + compactCommand(step.command()));
+                if (step.action() != null) {
+                    logBanner(state, "  ~ SDK 调用（不走命令行）");
+                } else {
+                    logBanner(state, "  $ " + compactCommand(step.command()));
+                }
 
                 stepOut.clear();
                 java.util.function.Consumer<String> stepLineHandler = (line) -> {
@@ -282,7 +316,23 @@ public class ProjectTaskService {
 
                 int exitCode;
                 String stderr;
-                if (windows) {
+                if (step.action() != null) {
+                    // SDK 优先：能在 SDK 完成的动作不落命令行
+                    try {
+                        List<String> outs = step.action().run();
+                        if (outs != null) {
+                            for (String l : outs) {
+                                stepLineHandler.accept(l);
+                            }
+                        }
+                        exitCode = 0;
+                        stderr = "";
+                    } catch (Exception e) {
+                        exitCode = 1;
+                        stderr = e.getMessage() == null ? e.toString() : e.getMessage();
+                        stepLineHandler.accept("SDK 调用失败: " + stderr);
+                    }
+                } else if (windows) {
                     WindowsSshShell.Result r = windowsSshShell.execLines(host, rr.getData(), step.command(),
                             DEFAULT_STEP_TIMEOUT_SECONDS, stepLineHandler);
                     exitCode = r.exitCode();

@@ -5,6 +5,8 @@ import com.chua.common.support.vector.VectorCompareAlgorithm;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
+import com.chua.deeplearning.support.image.ImagePipeline;
+import com.chua.deeplearning.support.image.ImageSearchHit;
 import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -45,7 +47,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 通过 {@link FeatureExtractor#create(String)} 构建。</p>
  *
  * <p>向量存储的维度在首次取到特征时才确定（不同模型维度不同），因此
- * {@link #ensureStorage(int)} 采用懒建；元数据（名称/缩略图/尺寸）与原始向量
+ * {@link #ensurePipeline(int)} 采用懒建；元数据（名称/缩略图/尺寸）与原始向量
  * 另外落一份 JSON 快照，启动时据此重建向量索引，使底库可跨重启保留。</p>
  *
  * @author CH
@@ -79,6 +81,14 @@ public class ImageSearchStore {
     private volatile FeatureExtractor extractor;
     /** 向量存储实例（按首次确定的维度懒建） */
     private volatile VectorStorage storage;
+    /**
+     * 特征向量管线：入库 / 检索 / 删除的唯一入口。
+     *
+     * <p>本类只负责业务侧的事（快照、原图、元数据、管理员操作），
+     * 「提特征 → 写向量」的顺序编排与失败校验交给
+     * {@link ImagePipeline}，避免同一套编排在多个模块里各写一遍。</p>
+     */
+    private volatile ImagePipeline pipeline;
     /** 向量存储实际维度 */
     private volatile int storageDimension;
     /** 向量存储实现名（用于状态展示） */
@@ -86,7 +96,7 @@ public class ImageSearchStore {
     /**
      * 当前向量索引对应的特征模型标识。
      *
-     * <p>参与 {@link #ensureStorage(int)} 的复用判定：换了特征模型意味着整个特征空间
+     * <p>参与 {@link #ensurePipeline(int)} 的复用判定：换了特征模型意味着整个特征空间
      * 变了，旧索引里的向量与新查询向量不可比，必须重建。只比维度是不够的——
      * 不同模型完全可能输出同样的维度，那样会静默沿用旧索引，检索结果看似正常、实则无意义。</p>
      */
@@ -307,11 +317,11 @@ public class ImageSearchStore {
      * @param dimension 实际特征维度
      * @return 向量存储
      */
-    private VectorStorage ensureStorage(int dimension) {
+    private ImagePipeline ensurePipeline(int dimension) {
         // 复用条件必须同时覆盖 维度 / 存储实现 / 特征模型 三者。
         // 早期实现只比维度，于是「在默认模型里改了 vector_storage_engine」不会生效：
         // 维度没变就直接复用旧实例，用户改完配置却毫无反应，只能靠重启碰运气。
-        VectorStorage current = storage;
+        ImagePipeline current = pipeline;
         if (current != null && current.dimension() == dimension
                 && currentStorageEngine().equals(storageEngine)
                 && currentModel().equals(storageModel)) {
@@ -320,9 +330,9 @@ public class ImageSearchStore {
         synchronized (this) {
             String engine = currentStorageEngine();
             String model = currentModel();
-            if (storage != null && storage.dimension() == dimension
+            if (pipeline != null && pipeline.dimension() == dimension
                     && engine.equals(storageEngine) && model.equals(storageModel)) {
-                return storage;
+                return pipeline;
             }
             if (storage != null) {
                 log.info("[ImageSearch] 向量存储配置已变更（engine: {} -> {}, model: {} -> {}），重建索引",
@@ -333,6 +343,7 @@ public class ImageSearchStore {
                     log.debug("[ImageSearch] 重建前关闭旧存储失败: {}", ex.getMessage());
                 }
                 storage = null;
+                pipeline = null;
             }
             int configured = readInt("feature_dimension", 0);
             if (configured > 0 && configured != dimension) {
@@ -381,20 +392,24 @@ public class ImageSearchStore {
                     }
                 }
                 storage = created;
+                // 入库/检索/删除统一走 ImagePipeline，本类只管快照、原图、元数据。
+                // 管线内部负责「提特征 → 写向量」的编排与失败校验，业务侧不再各自手写，
+                // 避免出现「有的地方漏判返回值、有的地方漏删向量」这类分散缺陷。
+                pipeline = new ImagePipeline(extractor(), created, null, null, null);
                 storageDimension = dimension;
                 storageEngine = engine;
                 storageModel = model;
-                log.info("[ImageSearch] 向量存储已就绪: engine={}, model={}, dimension={}, 已灌入={} 条, 跳过={} 条",
+                log.info("[ImageSearch] 图像管线已就绪: engine={}, model={}, dimension={}, 已灌入={} 条, 跳过={} 条",
                         engine, model, dimension, restored, skipped);
                 if (stale > 0) {
                     log.warn("[ImageSearch] 特征模型已由旧模型切换为 {}，{} 条历史记录的向量属于旧特征空间、"
                                     + "已跳过重建，这些图在重新入库前检索不到（记录与缩略图仍在列表中，可正常查看和删除）",
                             model, stale);
                 }
-                return created;
+                return pipeline;
             } catch (Exception ex) {
                 throw new IllegalStateException(
-                        "以图搜图向量存储不可用：engine=" + engine + ", dimension=" + dimension + " -> " + ex.getMessage(), ex);
+                        "以图搜图图像管线不可用：engine=" + engine + ", dimension=" + dimension + " -> " + ex.getMessage(), ex);
             }
         }
     }
@@ -408,7 +423,7 @@ public class ImageSearchStore {
      * @return 入库记录
      */
     public StoredImage add(String name, byte[] imageData, float[] vector) {
-        VectorStorage store = ensureStorage(vector.length);
+        ImagePipeline store = ensurePipeline(vector.length);
         long id = sequence.incrementAndGet();
         StoredImage item = new StoredImage();
         item.setId(id);
@@ -427,11 +442,19 @@ public class ImageSearchStore {
         // 底库的核心价值是向量，缺一张原图只影响查看，不该让整次上传失败。
         String fileName = writeOriginal(id, imageData);
         item.setImageFile(fileName);
-        if (!store.add(vectorId(id), vector)) {
+        try {
+            // ImagePipeline.enroll 以 boolean 表达成败（与人脸侧 FacePipeline 同一约定），
+            // 所以这里必须显式判返回值 —— 这正是本次统一管线要根治的问题：
+            // 早先直接调 vectorStorage.add 时漏判过一次 false，向量没写进去却当成成功。
+            if (!store.enroll(vectorId(id), vector)) {
+                throw new IllegalStateException("向量库拒绝写入");
+            }
+        } catch (Exception ex) {
             // 原图已在上一步落盘，这里必须回滚，否则每次失败的入库都会在 images/
             // 下留一个没有任何记录指向的孤儿文件（实测 id=8 即为如此）。
             deleteOriginal(item);
-            throw new IllegalStateException("以图搜图向量写入失败：engine=" + storageEngine + ", id=" + id);
+            throw new IllegalStateException(
+                    "以图搜图向量写入失败：engine=" + storageEngine + ", id=" + id + " -> " + ex.getMessage(), ex);
         }
         synchronized (images) {
             images.put(id, item);
@@ -581,14 +604,16 @@ public class ImageSearchStore {
      * @return 命中的结果，按相似度降序
      */
     public List<Match> search(float[] query, int topK, double minSim) {
-        VectorStorage store = ensureStorage(query.length);
-        List<Vector> hits = store.search(query, Math.max(1, topK));
+        ImagePipeline store = ensurePipeline(query.length);
+        // ImagePipeline.search 返回 ImageSearchHit（与人脸侧同一形态），
+        // 这里只取 id 用于回查快照 —— 分数不采信管线给的近似值，稍后用余弦重算。
+        List<ImageSearchHit> hits = store.search(query, Math.max(1, topK));
         List<Match> out = new ArrayList<>();
-        if (hits == null) {
+        if (hits == null || hits.isEmpty()) {
             return out;
         }
         VectorCompareAlgorithm cosine = VectorCompareAlgorithm.cosine();
-        for (Vector hit : hits) {
+        for (ImageSearchHit hit : hits) {
             Long id = parseId(hit.id());
             if (id == null) {
                 continue;
@@ -660,10 +685,29 @@ public class ImageSearchStore {
         // 原图一并删掉，否则 images/ 会随删除次数无限堆积。
         // 必须在上面把记录移出 images 之前拿到引用 —— 移出后就查不到文件名了。
         deleteOriginal(removedItem);
-        VectorStorage store = storage;
+        // 向量必须一并删掉，否则索引里留下没有记录指向的孤立向量。
+        // 早期实现只在 storage != null 时才删，于是「进程刚启动、还没做过任何增删查」
+        // 时的删除会静默跳过 —— 快照删了、原图删了，向量却留在索引里。
+        // 现在存储未初始化时先把向量索引建起来，保证删除三处（快照 / 原图 / 向量）要么都做、要么明确记下失败。
+        ImagePipeline store = pipeline;
+        if (store == null) {
+            float[] vector = removedItem.getVector();
+            if (vector != null && vector.length > 0) {
+                try {
+                    store = ensurePipeline(vector.length);
+                } catch (Exception ex) {
+                    log.warn("[ImageSearch] 删除时初始化图像管线失败，向量可能在索引中残留: id={} -> {}",
+                            id, ex.getMessage());
+                }
+            }
+        }
         if (store != null) {
             try {
-                store.remove(vectorId(id));
+                if (!store.remove(vectorId(id))) {
+                    // 返回 false 说明索引里本就没有这条（如已随重建被清掉），属正常，
+                    // 但要与「删除失败」区分开，避免排查时误判
+                    log.debug("[ImageSearch] 向量索引中无此条目（可安全忽略）: id={}", id);
+                }
             } catch (Exception ex) {
                 log.warn("[ImageSearch] 向量存储删除失败（快照仍会移除）: id={} -> {}", id, ex.getMessage());
             }
