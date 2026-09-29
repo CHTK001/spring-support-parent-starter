@@ -11,8 +11,8 @@ import java.util.List;
  * <p><strong>为什么必须是字符级而不是行级。</strong>nginx 允许一条指令跨多行
  * （典型如 {@code log_format}、{@code if ($a = b)}、{@code location ~ 正则}），
  * 按行切会切碎。同时 {@code #} 只有出现在<strong>词边界</strong>才是注释，
- * {@code { } ;} 也同理——{@code location ~ ^/a/{x} { } 里 nginx 自己也会把那个
- * {@code {} 当成区块括号。本解析器复刻这条规则（见 {@link #readToken}），
+ * {@code { } ;} 也同理——{@code location ~ ^/a/{x} { } } 里 nginx 自己也会把那个
+ * {@code {}} 当成区块括号。本解析器复刻这条规则（见 {@link #readToken}），
  * 以保证与 nginx 自身的切分行为一致，而不是自创一套"更聪明"的切法。</p>
  *
  * <p><strong>无损保证。</strong>每个节点记录自己在原始文本里的

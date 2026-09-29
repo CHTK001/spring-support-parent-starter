@@ -13,7 +13,6 @@ import com.chua.starter.monitor.support.spi.CollectResult;
  * @param result 采集结果
  * @author CH
  * @since 4.0.0.42
- * @return 指标collected事件的结果
  */
 public record MetricCollectedEvent(CollectResult result) {
 }

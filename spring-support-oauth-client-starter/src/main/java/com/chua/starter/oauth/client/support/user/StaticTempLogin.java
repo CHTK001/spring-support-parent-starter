@@ -143,7 +143,15 @@ public final class StaticTempLogin {
     /**
      * 账号口令是否匹配。
      *
-     * @param parts    配置片段，{@code [用户名]} 或 {@code [用户名, 密码]}
+     * <p>配置口令支持三种写法，按顺序判定：</p>
+     * <ol>
+     *   <li><b>加盐摘要</b>（{@code <盐>$<MD5(盐+明文)>}，推荐）：配置里不落明文，
+     *       且每个账号盐不同，一张彩虹表无法批量比对，见 {@link SaltedPassword}</li>
+     *   <li>明文（历史配置兼容）</li>
+     *   <li>明文的 MD5（历史配置兼容，前端可只提交摘要）</li>
+     * </ol>
+     *
+     * @param parts    配置片段，{@code [用户名]} 或 {@code [用户名, 口令]}
      * @param username 登录名
      * @param password 口令
      * @return 是否匹配
@@ -160,6 +168,10 @@ public final class StaticTempLogin {
             return user.equals(password);
         }
         String passwd = parts.get(1);
+        if (SaltedPassword.isSalted(passwd)) {
+            // 加盐格式下前端仍提交明文口令，服务端按同一规则算摘要后定长比较
+            return SaltedPassword.matches(password, passwd);
+        }
         return passwd.equals(password) || DigestUtils.md5(passwd).equals(password);
     }
 }

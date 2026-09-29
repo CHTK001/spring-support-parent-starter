@@ -363,6 +363,24 @@ public class ApiGrayEvaluator {
 
     /**
      * 灰度上下文（spel 根对象）
+     *
+     * <p>由 {@code createEvaluationContext} 设为 SpEL {@code StandardEvaluationContext} 的根对象，
+     * 同时以 {@code userId} / {@code username} / {@code ip} / {@code roles} / {@code request}
+     * 五个变量名注册为 SpEL 变量，供 {@link ApiGray} 注解的 {@code rule} 表达式引用；
+     * 根对象上的 {@code header} / {@code param} / {@code cookie} 方法则对应三个已注册的 SpEL 函数。</p>
+     *
+     * @param request  当前 HTTP 请求。既作为根对象本体，也是 {@code header} / {@code param} / {@code cookie}
+     *                 三个 SpEL 函数的唯一入参；取值来源为本类 {@code evaluate} 形参传入的请求。不可为 {@code null}：
+     *                 {@code header(String)} 等方法会直接调用其 {@code getHeader} / {@code getParameter} / {@code getCookies}
+     * @param userId   用户标识，SpEL 变量名 {@code userId}。声明为 {@code Object} 是为兼容不同登录体系的主键类型
+     *                 （数字、字符串等）；匿名访问为 {@code null}，此时百分比灰度改用 {@code username} / {@code ip} 兜底
+     * @param username 用户名，SpEL 变量名 {@code username}，与 {@link ApiGray#users()} 白名单按忽略大小写比较；
+     *                 未登录为 {@code null}，空白值同样视为不匹配
+     * @param ip       客户端 IP，SpEL 变量名 {@code ip}。取值来源为 {@link IpUtils#getClientIp} 对当前请求的解析
+     *                 （兼容反向代理头），解析不出为 {@code null}；{@link ApiGray#ips()} 白名单支持通配符匹配
+     * @param roles    当前用户角色集合，SpEL 变量名 {@code roles}，允许为 {@code null}——本类兼容重载
+     *                 {@code evaluate(ApiGray, HttpServletRequest, Object, String)} 传入的就是 {@code null}，
+     *                 {@code hasRole} 已按可空处理；非空时构造器做不可变拷贝，集合元素本身不做非空校验
      */
     public record GrayContext(HttpServletRequest request, Object userId, String username, String ip,
                               java.util.Collection<String> roles) {

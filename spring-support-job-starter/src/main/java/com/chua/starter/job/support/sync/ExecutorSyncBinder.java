@@ -5,7 +5,7 @@ import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.job.support.JobProperties;
 import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.glue.GlueTypes;
-import com.chua.starter.job.support.glue.JavaGlueHandlers;
+import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.log.JobLogEvent;
 import jakarta.annotation.PostConstruct;
@@ -133,13 +133,8 @@ public class ExecutorSyncBinder {
                 return;
             }
             try {
-                if (GlueTypes.isJava(command.glueType())) {
-                    JavaGlueHandlers.store(command.jobName(), command.glueSource(),
-                            command.glueUpdatetimeMs(), applicationContext);
-                } else {
-                    ScriptGlueHandlers.store(command.jobName(), command.glueType(),
-                            command.glueSource(), command.glueUpdatetimeMs(), applicationContext);
-                }
+                ScriptGlueHandlers.store(command.jobName(), command.glueType(),
+                        command.glueSource(), command.glueUpdatetimeMs(), applicationContext);
                 log.info("[job] EXECUTOR 已同步片段正文 job={} glueType={} glueAt={}",
                         command.jobName(), command.glueType(), command.glueUpdatetimeMs());
             } catch (Throwable ex) {

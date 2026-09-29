@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @作者 CH
+ * @author CH
 */
 public interface MonitorConfigService {
     /**

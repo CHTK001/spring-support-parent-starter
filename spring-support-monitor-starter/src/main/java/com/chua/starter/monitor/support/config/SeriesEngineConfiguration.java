@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -234,8 +235,13 @@ public class SeriesEngineConfiguration {
         }
 
         @Override
-        public java.util.List<java.util.List<Object>> series(String target, Long monitorId, int hours, String window) {
-            return java.util.List.of();
+        public List<List<Object>> series(String target, Long monitorId, String metricName, int hours, String window) {
+            return List.of();
+        }
+
+        @Override
+        public List<String> metrics(String target, Long monitorId) {
+            return List.of();
         }
     }
 }

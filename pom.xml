@@ -201,8 +201,8 @@
         <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
         <utils.version>4.0.0.42</utils.version>
-        <spring.boot.version>4.1.0</spring.boot.version>
-        <reactor.core.version>3.8.6</reactor.core.version>
+        <spring.boot.version>4.1.1</spring.boot.version>
+        <reactor.core.version>3.8.7</reactor.core.version>
         <!-- javax 命名空间的 JAXB 实现版本：winrm4j/CXF 走 javax.xml.bind，
              Boot BOM 默认把 com.sun.xml.bind:jaxb-impl 管到 jakarta 系 4.x，故显式钉版 -->
         <javax.jaxb.version>2.3.1</javax.jaxb.version>
@@ -217,55 +217,64 @@
             ============================================================ -->
 
         <!-- 框架和库版本管理 -->
-        <lombok.version>1.18.46</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
+        <lombok.version>1.18.48</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
         <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 下显式启用注解处理 -->
-        <mybatis-plus.version>3.5.16</mybatis-plus.version>  <!-- MyBatis Plus版本：3.5.16 IService 仍在 extension.service 包,3.5.17 改到 spring.service 会破坏现有代码 -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>  <!-- MyBatis Plus版本：3.5.16 IService 仍在 extension.service 包,3.5.17 改到 spring.service 会破坏现有代码 -->
         <mybatis-plus-join.version>1.5.9</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
         <dubbo.version>3.3.6</dubbo.version>                <!-- Dubbo RPC框架版本 -->
         <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
         <p6spy.version>3.9.1</p6spy.version>                <!-- P6Spy SQL监控版本 -->
         <easy-captcha.version>1.6.2</easy-captcha.version>  <!-- 验证码生成器版本 -->
-        <jackson.version>2.19.4</jackson.version>           <!-- Jackson版本，与Spring Boot 3.5.9兼容 -->
-        <calcite.version>1.37.0</calcite.version>
+        <!--
+          Jackson版本。
+          原值 2.19.4，注释写「与 Spring Boot 3.5.9 兼容」，但本仓已统一升级到
+          Spring Boot 4.1.0，该钉值成为 Boot 3 时代的遗留。
+          Jackson 附属模块（datatype / module / dataformat）必须与 jackson-databind
+          保持同 minor，否则会出现 databind 2.21.4 配 datatype 2.19.4 的错配，
+          错配在编译期完全不可见，只在运行期抛 NoSuchMethodError / SerializationException。
+          utils reactor 已统一到 2.21.4（= Boot 4.1.0 BOM 托管值），此处对齐。
+        -->
+        <jackson.version>2.21.4</jackson.version>
+        <calcite.version>1.42.0</calcite.version>
         <druid.version>1.2.28</druid.version>
-        <loki4j.version>2.0.0</loki4j.version>
+        <loki4j.version>2.1.0</loki4j.version>
         <c3p0.version>0.10.1</c3p0.version>
-        <swagger.annotations.v3.version>2.2.15</swagger.annotations.v3.version>
-        <swagger.annotations.v2.version>1.6.14</swagger.annotations.v2.version>
+        <swagger.annotations.v3.version>2.2.55</swagger.annotations.v3.version>
+        <swagger.annotations.v2.version>1.6.16</swagger.annotations.v2.version>
         <ngrok.version>1.1.1</ngrok.version>
         <redisson.version>3.32.0</redisson.version>
         <paho.mqtt.version>1.2.5</paho.mqtt.version>
-        <rocketmq.spring.version>2.3.1</rocketmq.spring.version>
-        <netty.socketio.version>2.0.12</netty.socketio.version>
-        <commons-io.version>2.21.0</commons-io.version>     <!-- Commons IO版本 -->
-        <commons-codec.version>1.20.0</commons-codec.version>     <!-- Commons Codec版本 -->
+        <rocketmq.spring.version>2.3.6</rocketmq.spring.version>
+        <netty.socketio.version>2.0.14</netty.socketio.version>
+        <commons-io.version>2.22.0</commons-io.version>     <!-- Commons IO版本 -->
+        <commons-codec.version>1.21.0</commons-codec.version>     <!-- Commons Codec版本 -->
         <commons-dbutils.version>1.8.1</commons-dbutils.version> <!-- Commons DBUtils版本 -->
         <commons-compress.version>1.28.0</commons-compress.version>
-        <commons-exec.version>1.4.0</commons-exec.version>
+        <commons-exec.version>1.6.0</commons-exec.version>
         <validation-api.version>2.0.1.Final</validation-api.version> <!-- Validation API版本 -->
         <javax.annotation.version>1.3.2</javax.annotation.version>
         <spel-extension.version>1.0.0</spel-extension.version>     <!-- SpEL扩展版本 -->
-        <mybatis-plus-generator.version>3.5.5</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
-        <guava.version>33.4.8-jre</guava.version>                              <!-- Google Guava工具库版本 -->
+        <mybatis-plus-generator.version>3.5.17</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
+        <guava.version>33.7.1-jre</guava.version>                              <!-- Google Guava工具库版本 -->
         <slf4j.version>2.1.0-alpha1</slf4j.version>                           <!-- SLF4J版本 -->
         <unirest.version>3.14.5</unirest.version>
-        <justauth.version>1.16.6</justauth.version>
+        <justauth.version>1.16.7</justauth.version>
         <lock4j.version>2.2.7</lock4j.version>
-        <fastjson2.version>2.0.52</fastjson2.version>
-        <arthas.version>4.0.4</arthas.version>
+        <fastjson2.version>2.0.65</fastjson2.version>
+        <arthas.version>4.3.5</arthas.version>
         <ssh-shell-spring-boot.version>2.7.0</ssh-shell-spring-boot.version>
-        <sshd.version>2.13.2</sshd.version>
-        <hutool.version>5.8.29</hutool.version>
+        <sshd.version>2.20.0</sshd.version>
+        <hutool.version>5.8.47</hutool.version>
         <freemarker.version>2.3.34</freemarker.version>     <!-- FreeMarker模板引擎版本（对齐 Boot 4.1 BOM：2.3.34 起含 freemarker.ext.jakarta 包，Boot starter 需要） -->
         <jsch.version>0.1.55</jsch.version>                 <!-- JSch SSH 客户端版本 -->
         <influxdb-client.version>3.4.0</influxdb-client.version> <!-- InfluxDB 2.x 客户端版本 -->
         <ip2proxy.version>3.6.0</ip2proxy.version>                 <!-- IP2Proxy Java库版本 -->
-        <caffeine.version>3.2.0</caffeine.version>                  <!-- Caffeine缓存库版本 -->
-        <byte-buddy.version>1.17.8</byte-buddy.version>             <!-- ByteBuddy动态代理库版本 -->
+        <caffeine.version>3.3.0</caffeine.version>                  <!-- Caffeine缓存库版本 -->
+        <byte-buddy.version>1.18.14-jdk5</byte-buddy.version>            <!-- ByteBuddy动态代理库版本 -->
         <okhttp.version>4.12.0</okhttp.version>                     <!-- OkHttp HTTP客户端版本 -->
         <wechatpay.version>0.2.17</wechatpay.version>               <!-- 微信支付 Java SDK 版本 -->
-        <alipay.sdk.version>4.40.483.ALL</alipay.sdk.version>       <!-- 支付宝 SDK 版本 -->
-        <statemachine.version>4.0.0</statemachine.version>           <!-- Spring State Machine 版本 -->
+        <alipay.sdk.version>4.40.1026.ALL</alipay.sdk.version>       <!-- 支付宝 SDK 版本 -->
+        <statemachine.version>4.0.2</statemachine.version>           <!-- Spring State Machine 版本 -->
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>    <!-- OS Maven Plugin 版本 -->
         <seata.version>2.6.0</seata.version>                        <!-- Seata 分布式事务版本 -->
         
@@ -278,7 +287,7 @@
        JUnit 4 的 junit:junit（4.13.2），同名属性会把该坐标改写成不存在的 6.0.3，
        导致任何经 groovy-all -> groovy-test 传递引入 junit:junit 的模块解析失败
        （实测 spring-support-report-client-starter 报 junit:junit:jar:6.0.3 缺失）。 -->
-  <junit.jupiter.version>6.0.3</junit.jupiter.version>
+  <junit.jupiter.version>6.1.3</junit.jupiter.version>
         <surefire.jvm.args></surefire.jvm.args>
         <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
         <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
@@ -303,6 +312,15 @@
         <maven.repo.releases.url>https://repo1.maven.org/maven2/</maven.repo.releases.url>
         <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
         <maven.repo.snapshots.url>https://repo1.maven.org/maven2/</maven.repo.snapshots.url>
+        <!--
+          Undertow 嵌入式服务器版本。
+          spring-boot-dependencies BOM 不托管 io.undertow 任何坐标（已实测 BOM 全文不含
+          "undertow"），故本仓自管。原先 spring-common-starter 里两处硬编码 2.3.10.Final，
+          而 utils reactor 的 utils-support-middleware-parent 用属性管到 2.3.13.Final，
+          两个 reactor 对同一坐标给出不同版本。现统一到 central 最新 2.3.18.Final，
+          undertow-core 与 undertow-servlet 同版本发布，必须同号。
+        -->
+        <undertow.version>2.3.26.Final</undertow.version>
     </properties>
 
     <!-- 父模块只提供Lombok作为通用依赖，其他依赖由子模块按需引入 -->
@@ -334,6 +352,22 @@
                 <version>${spring.boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!--
+              Undertow 托管条目。BOM 不含 io.undertow，必须本仓自管，
+              否则各子模块只能各自硬编码版本号（spring-common-starter 此前即如此）。
+              2026-09-28 补齐，与 utils reactor 的 undertow.version 统一到 2.3.18.Final。
+            -->
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-core</artifactId>
+                <version>${undertow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-servlet</artifactId>
+                <version>${undertow.version}</version>
             </dependency>
 
             <!-- WinRM 依赖 javax.xml.bind：Boot BOM 会把这两个坐标管成 jakarta 系实现，此处钉回 javax 系 -->
@@ -444,7 +478,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.20.0</version>
+                <version>1.22.1</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -860,12 +894,12 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.80</version>
+                <version>1.86</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.80</version>
+                <version>1.86</version>
             </dependency>
 
             <dependency>
@@ -886,12 +920,19 @@
                 <artifactId>jackson-datatype-jdk8</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.module</groupId>
-                <artifactId>jackson-module-paramnames</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            
+            <!--
+              2026-09-28 删除 jackson-module-paramnames 托管条目。
+              该 artifactId 在 Maven Central 根本不存在（已实测 HTTP 404）——
+              真实坐标是 jackson-module-parameter-names（多一个 "-parameter-"）。
+              同 groupId 下 jackson-module-parameter-names / jackson-module-blackbird
+              均正常返回 200，可证不是查询方式的问题。
+
+              它此前一直是个死条目：spring-support-common-starter 里唯一的引用
+              已被作者注释掉（旁注「此模块由 Spring Boot 自动提供，无需显式添加」），
+              因此从未触发下载，全仓构建一直是绿的。一旦哪个模块引用它就会直接失败。
+              参数名模块确需使用时，请用正确坐标 jackson-module-parameter-names。
+            -->
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-guava-starter</artifactId>

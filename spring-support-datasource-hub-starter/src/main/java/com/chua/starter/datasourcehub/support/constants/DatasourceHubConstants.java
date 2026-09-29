@@ -25,6 +25,14 @@ public final class DatasourceHubConstants {
             "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx");
 
     /**
+     * nginx 类型标识。
+     *
+     * <p>进程控制方式（{@link #CONTROL_SYSTEMD} / {@link #CONTROL_LOCAL}）只对
+     * nginx 有意义，写入前用它做类型闸门，避免别的类型也带上这两个字段。</p>
+     */
+    public static final String DS_TYPE_NGINX = "nginx";
+
+    /**
      * 各类型的默认端口（未填端口时使用）
      */
     public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.of(
@@ -80,6 +88,24 @@ public final class DatasourceHubConstants {
      * 支持的隧道类型
      */
     public static final List<String> TUNNEL_TYPES = List.of(TUNNEL_LOCAL, TUNNEL_REMOTE, TUNNEL_DYNAMIC);
+
+    /**
+     * 进程控制方式：由 systemctl 托管
+     */
+    public static final String CONTROL_SYSTEMD = "systemd";
+
+    /**
+     * 进程控制方式：本地目录裸进程（直接 {@code nginx -s} 与裸启动）
+     */
+    public static final String CONTROL_LOCAL = "local";
+
+    /**
+     * 支持的进程控制方式。
+     *
+     * <p>不含「自动」：自动探测是「两个都不填」的空值语义，不是三选一里的一个选项，
+     * 否则前端一旦漏传就会退化成自动探测，用户以为自己选的是显式方式。</p>
+     */
+    public static final List<String> CONTROL_MODES = List.of(CONTROL_SYSTEMD, CONTROL_LOCAL);
 
     /**
      * 工具类禁止实例化

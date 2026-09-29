@@ -11,7 +11,6 @@ package com.chua.starter.monitor.support.controller;
  * @param model 指定模型名，可为 null（使用客户端默认模型）
  * @since 2026/8/4
  * @author CH
- * @return 结果值
  */
 public record AiAnalyzeRequest(String prompt, String systemPrompt, String model) {
 }

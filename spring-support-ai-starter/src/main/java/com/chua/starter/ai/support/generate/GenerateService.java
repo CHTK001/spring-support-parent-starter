@@ -56,6 +56,15 @@ public class GenerateService {
     /** 本地线程池执行的任务号前缀：这类任务状态由本进程写库，不回源 provider */
     private static final String LOCAL_SYNC_PREFIX = "sync-";
 
+    /**
+     * 参考图入库长度上限（字符数，data URI 约为二进制字节数的 1.33 倍）。
+     *
+     * <p>前端已在浏览器里按长边 1024 缩放，正常请求到这里只有几百 KB；
+     * 4M 字符 ≈ 3MB 二进制是给「绕过前端直接调接口」的兜底，
+     * 超限时只放弃持久化，不影响生成本身。</p>
+     */
+    private static final int REFERENCE_IMAGE_MAX_CHARS = 4 * 1024 * 1024;
+
     /** 进度阶段：线程已接手，排队完成 */
     private static final int PROGRESS_QUEUED = 5;
 
@@ -74,6 +83,11 @@ public class GenerateService {
      * 生成客户端解析器
      */
     private final GenerateClientResolver clientResolver;
+
+    /**
+     * 参考图发布器（把 base64 参考图换成公网限时地址，供只收 URL 的协议使用）
+     */
+    private final ReferenceImagePublisher referenceImagePublisher;
 
     /**
      * 同步实现的图像生成线程池。
@@ -247,6 +261,8 @@ public class GenerateService {
         ImageClient client = resolved.client()
                 .size(splitWidth(request.size()), splitHeight(request.size()))
                 .negativePrompt(blankToNull(request.negativePrompt()))
+                // style 不再作为上游参数下发（见 OpenAiImageClient 注释），
+                // 风格语义由前端拼进 prompt；这里保留透传以兼容仍支持该参数的实现。
                 .style(blankToNull(request.style()))
                 .quality(blankToNull(request.quality()))
                 .seed(request.seed())
@@ -271,7 +287,24 @@ public class GenerateService {
         }
     }
 
-    /** 待在线程池内同步执行的图像客户端 */
+    /**
+     * 待在线程池内同步执行的图像客户端。
+     *
+     * <p>只作为「该 provider 不支持异步提交任务、必须本地同步出图」这一分支的返回值载体：
+     * {@link #prepareImage} 捕获 {@code ImageClient#createTask} 抛出的
+     * {@code UnsupportedOperationException} 后，返回非空 {@code SyncImage} 表示改走
+     * {@link #runImageAsync}；返回 {@code null} 则表示任务已由 provider 原生异步受理。
+     * 任务行先落库再执行，HTTP 线程不阻塞。</p>
+     *
+     * @param client 已完成参数装配、待在线程池内同步出图的图像客户端。取值来源为
+     *               {@code clientResolver.resolveImage(request.model())} 解析出的实例，
+     *               并已依次设置尺寸（按请求 size 拆分宽高）、负向提示词、风格、质量、随机种子、
+     *               步数（缺省取模型配置默认值）与参考图，因此这里无需再做参数处理；
+     *               后续由 {@link #runImageAsync} 调用其 {@code generate(prompt)} 同步出图。
+     *               该 record 不做校验，实例生命周期由 {@link GenerateClientResolver} 管理，
+     *               调用方不得提前 {@code close}；实际不会为 {@code null}（仅在
+     *               {@code prepareImage} 校验失败时抛异常而非返回包装）
+     */
     private record SyncImage(ImageClient client) {
     }
 
@@ -424,13 +457,17 @@ public class GenerateService {
      * @param userId 用户ID
      * @param type   任务类型，可为空表示全部
      * @param limit  返回条数上限
+     * @param offset 跳过条数，用于滚动分页
      * @return 任务列表，按创建时间倒序
      */
-    public List<SysAiGenerateTask> listRecent(String userId, String type, int limit) {
+    public List<SysAiGenerateTask> listRecent(String userId, String type, int limit, int offset) {
+        int size = Math.max(1, Math.min(limit, 200));
+        int skip = Math.max(0, offset);
         LambdaQueryWrapper<SysAiGenerateTask> wrapper = new LambdaQueryWrapper<SysAiGenerateTask>()
                 .eq(SysAiGenerateTask::getUserId, userId)
                 .orderByDesc(SysAiGenerateTask::getCreatedAt)
-                .last("LIMIT " + Math.max(1, Math.min(limit, 200)));
+                // size / skip 均为已钳制的 int，无注入面；MyBatis-Plus 不支持在 wrapper 上直接分页
+                .last("LIMIT " + skip + "," + size);
         if (type != null && !type.isBlank()) {
             wrapper.eq(SysAiGenerateTask::getType, type);
         }
@@ -460,6 +497,56 @@ public class GenerateService {
 
 
     /**
+     * 删除任务记录。
+     *
+     * <p>进行中的任务先收敛为取消态再删：否则行没了但上游还在算，
+     * 线程回写时 {@code updateById} 命中 0 行，用户看到的是「记录消失但额度被消耗」。
+     * 本地线程池任务登记进 {@link #canceledTaskIds}，让回写主动跳过。</p>
+     *
+     * @param userId 当前用户
+     * @param taskId 任务ID
+     * @return true 表示已删除
+     */
+    public boolean delete(String userId, String taskId) {
+        SysAiGenerateTask task = taskMapper.selectById(taskId);
+        // 归属校验：任务表按 sys_user_id 隔离，不能凭 taskId 删别人的记录
+        if (task == null || userId == null || !userId.equals(task.getUserId())) {
+            return false;
+        }
+        if (!isTerminal(task.getStatus())) {
+            task.setStatus(SysAiGenerateTask.STATUS_CANCELED);
+            task.setUpdatedAt(System.currentTimeMillis());
+            taskMapper.updateById(task);
+            if (isLocalSyncTask(taskId)) {
+                canceledTaskIds.add(taskId);
+            }
+        }
+        return taskMapper.deleteById(taskId) > 0;
+    }
+
+    /**
+     * 批量清理失败任务。
+     *
+     * <p>失败记录没有产出、留着只会一直占列表，所以给一个专门的清理入口；
+     * 与逐条删除一样逐条校验归属，绝不批量删别人的数据。</p>
+     *
+     * @param userId 当前用户
+     * @return 删除条数
+     */
+    public int deleteFailed(String userId) {
+        List<SysAiGenerateTask> failed = taskMapper.selectList(new LambdaQueryWrapper<SysAiGenerateTask>()
+                .eq(SysAiGenerateTask::getUserId, userId)
+                .eq(SysAiGenerateTask::getStatus, SysAiGenerateTask.STATUS_FAILED));
+        int removed = 0;
+        for (SysAiGenerateTask task : failed) {
+            if (taskMapper.deleteById(task.getTaskId()) > 0) {
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    /**
      * 提交视频生成任务。
      *
      * @param task    任务行
@@ -476,12 +563,13 @@ public class GenerateService {
                 .size(splitWidth(request.size()), splitHeight(request.size()))
                 .duration(request.duration())
                 .negativePrompt(blankToNull(request.negativePrompt()))
+                // 同图像：style 由前端拼进 prompt，这里保留透传以兼容支持的实现
                 .style(blankToNull(request.style()))
                 .quality(blankToNull(request.quality()))
                 .seed(request.seed());
         byte[] reference = decodeReference(request.referenceImage());
         if (reference != null) {
-            client = client.referenceImage(reference);
+            client = clientReference(client, reference);
         }
         String taskId = client.createTask(request.prompt());
         task.setTaskId(taskId);
@@ -492,12 +580,44 @@ public class GenerateService {
     }
 
     /**
+     * 把参考图交给视频客户端。
+     *
+     * <p>协议对参考图的形态要求分两类：</p>
+     * <ul>
+     *   <li>收<b>字节</b>的（如 {@code ZhipuVideoClient} 走 base64 字段）→ 直接给字节；</li>
+     *   <li>收<b>公网可访问 URL</b>的（如 {@code AgnesVideoClient} 的 {@code first_frame}）
+     *       → 先经 {@link ReferenceImagePublisher} 落到文件存储服务，换一条限时访问链接。</li>
+     * </ul>
+     *
+     * <p>两条都拿不到时抛异常终止提交，<b>不静默降级为文生视频</b>——用户以为用上了参考图，
+     * 实际生成的是无关内容并照常计费，比报错坏得多。</p>
+     *
+     * @param client 视频客户端
+     * @param bytes  参考图字节
+     * @return 装配好参考图的客户端
+     */
+    private VideoClient clientReference(VideoClient client, byte[] bytes) {
+        if (client.supportsReferenceImageUrl()) {
+            String url = referenceImagePublisher.publish(bytes, "image/jpeg");
+            if (url != null) {
+                return client.referenceImageUrl(url);
+            }
+            log.warn("[Generate] 参考图发布失败，且 {} 只接受公网地址，终止本次提交", client.getClass().getSimpleName());
+            throw new IllegalStateException("图生视频需要可公网访问的参考图，当前文件存储服务不可用，请改用文生视频");
+        }
+        try {
+            return client.referenceImage(bytes);
+        } catch (UnsupportedOperationException e) {
+            throw new IllegalStateException("该模型暂不支持图生视频，请改用文生视频", e);
+        }
+    }
+
+    /**
      * 向 provider 刷新图像任务状态。
      *
      * @param task 任务行
      */
-    private void refreshImage(SysAiGenerateTask task) {
-        GenerateClientResolver.Resolved<ImageClient> resolved = clientResolver.resolveImage(task.getModel());
+    private void refreshImage(SysAiGenerateTask task) {        GenerateClientResolver.Resolved<ImageClient> resolved = clientResolver.resolveImage(task.getModel());
         if (!resolved.ok()) {
             task.setStatus(SysAiGenerateTask.STATUS_FAILED);
             task.setErrorMessage("生成实现不可用");
@@ -588,7 +708,32 @@ public class GenerateService {
         task.setQuality(blankToNull(request.quality()));
         task.setSteps(request.steps());
         task.setUserId(request.userId());
+        // 参考图必须落库：历史卡片靠它还原「参考图 → 箭头 → 结果」的对应关系，
+        // 不存的话每条图生图记录都退化成纯文本卡，事后完全看不出用了哪张图。
+        task.setReferenceImage(capReference(request.referenceImage()));
         return task;
+    }
+
+    /**
+     * 参考图入库前的长度裁剪。
+     *
+     * <p>参考图以 data URI 原文落库。过大的原图（如 1200 万像素手机照片）会把每行撑到十几 MB，
+     * 而历史列表接口每次都要把这些长字段读回来，代价与收益不成比例；
+     * 超限时放弃持久化（卡片退化成纯文本卡），但生成本身不受影响，仍按内存里的字节下发给上游。</p>
+     *
+     * @param referenceImage data URI 或裸 base64
+     * @return 可安全入库的文本；空白或超限时返回 null
+     */
+    private static String capReference(String referenceImage) {
+        if (referenceImage == null || referenceImage.isBlank()) {
+            return null;
+        }
+        if (referenceImage.length() > REFERENCE_IMAGE_MAX_CHARS) {
+            log.warn("[Generate] 参考图 {} 字符超过上限 {}，本次不落库（卡片将不显示参考图）",
+                    referenceImage.length(), REFERENCE_IMAGE_MAX_CHARS);
+            return null;
+        }
+        return referenceImage;
     }
 
     /**

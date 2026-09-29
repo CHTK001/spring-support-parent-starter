@@ -51,7 +51,11 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("rag_embedding_base_url", "", "STRING", "Embedding API 基础地址（留空走 runtime 配置）", 14),
                 new SettingItem("rag_embedding_api_key", "", "STRING", "Embedding API 密钥（留空走 runtime 配置）", 15),
                 new SettingItem("rag_embedding_model_name", "", "STRING", "Embedding 模型标识（如 nvidia/nemotron-3-embed-1b:free）", 16),
-                new SettingItem("rag_client_provider", "pipeline", "STRING", "RAG 客户端类型（pipeline 管线 / memory 内存）", 13)
+                new SettingItem("rag_client_provider", "pipeline", "STRING", "RAG 客户端类型（pipeline 管线 / memory 内存）", 13),
+                new SettingItem("rag_relation_extract_enabled", "true", "BOOLEAN",
+                        "上传知识点时是否抽取实体关系（人物/地点/事件）并写入知识图谱", 17),
+                new SettingItem("rag_relation_extract_model", "", "STRING",
+                        "关系抽取使用的 LLM 模型（留空复用 RAG 问答的 LLM）", 18)
         );
     }
 }

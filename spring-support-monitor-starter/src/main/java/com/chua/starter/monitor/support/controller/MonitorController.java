@@ -922,11 +922,21 @@ public class MonitorController {
     }
 
     /**
-     * 切库前的 catalog/schema 快照，关闭时还原，避免会话状态泄漏给连接池的下一个使用者。
+     * 切库作用域的还原句柄，关闭时把连接切回原库，避免会话状态泄漏给连接池的下一个使用者。
      *
-     * @param conn    被切换的连接
-     * @param catalog 切换前的 catalog
-     * @param schema  切换前的 schema
+     * <p>原先还带 {@code catalog}/{@code schema} 两个快照字段，重构后合并成单库的
+     * {@code database}，注释没跟着改——读代码的人会以为还能拿到 schema 信息。</p>
+     *
+     * @param conn     被切换的连接，close 时负责切回；取自连接池，恒非 null
+     *                  （紧凑构造器已做非空校验）
+     * @param database 切库前所在的库名，close 时按方言还原到这个库。取值来自
+     *                  {@code useSchema} 里的 {@code currentDatabase(conn)}：MySQL 系读
+     *                  {@code SELECT DATABASE()}，其余内核先读 {@code getSchema()} 再退回
+     *                  {@code getCatalog()}，三者都失败时为 null。因此它究竟是 catalog 还是
+     *                  schema 取决于数据库内核，H2 等把库名暴露为 catalog 时即为 catalog。
+     *                  允许为 null 或空白串：那表示本次根本没有发生切库（目标库名本身为空），
+     *                  或没能读到原库名，此时 {@code close()} 直接返回、不做还原，
+     *                  连接将以当前库状态被归还给连接池
      */
     private record SchemaScope(java.sql.Connection conn, String database) implements AutoCloseable {
 
@@ -2016,7 +2026,7 @@ public class MonitorController {
      * 写入当前系统 Redis Key。
      *
      * @param key   键名
-     * @param value 值（请求体）
+     * @param body  值（请求体）
      * @param ttl   过期时间（秒），可选，-1 表示永不过期
      * @return 是否成功
      */

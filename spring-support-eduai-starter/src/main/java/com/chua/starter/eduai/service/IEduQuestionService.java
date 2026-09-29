@@ -1,8 +1,9 @@
 package com.chua.starter.eduai.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.eduai.model.EduQuestion;
+import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
@@ -56,4 +57,15 @@ public interface IEduQuestionService extends IService<EduQuestion> {
      * @return 组合维度列表
      */
     List<QuestionGradeDimensionVO> listGradeDimensions(Integer status);
+
+    /**
+     * AI 选题：按学科/学段/题型/知识点向 AI 要一批题目，用于往**已存在的试卷**里补题。
+     *
+     * <p>AI 不可用（未引入 spring-support-ai-starter、总开关关闭或无可用模型）时
+     * 自动回退到规则选题（按学科+学段取候选题），不抛异常。</p>
+     *
+     * @param dto 选题条件
+     * @return 题目列表，保持 AI 给出的顺序
+     */
+    List<EduQuestion> aiSelect(QuestionAiSelectDTO dto);
 }

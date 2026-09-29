@@ -19,16 +19,16 @@ import java.util.Map;
  * def userService = objectContext.getBean('sysUserService')
  *
  * // Java 类片段：入口方法带一个 JobObjectContext 形参即可收到，
- * // 或者字段上写 @Autowired（由 JavaGlueHandlers 自动装配）
+ * // 或者字段上写 @Autowired（由 JobScriptHost 经 AutowireCapableBeanFactory 装配）
  * public void execute(JobObjectContext objectContext) {
  *     objectContext.log("开始清理 {}", "缓存");
  * }
  * }</pre>
  *
  * <p>Groovy 侧能拿到本类，是因为 {@code GroovyScriptProvider} 会把 {@code context}
- * 映射的每个条目逐个绑成 Groovy 变量（见 {@code utils-support-groovy-starter}）。
- * 本类因此必须留在 Spring 层——{@code utils-support-groovy-starter} 是零三方依赖的
- * 基础模块，塞 {@code ApplicationContext} 进去就是反向依赖。</p>
+ * 映射的每个条目逐个绑成 Groovy 变量（见 {@code utils-support-groovy-starter}）；
+ * Java 侧由 {@code JavaScriptProvider} 按形参类型/名从同一个映射里绑定。
+ * 本类因此必须留在 Spring 层——脚本引擎在 utils 层，不能反向依赖 Spring。</p>
  *
  * <p>实例是不可变值对象，每次派发新建一个。</p>
  *

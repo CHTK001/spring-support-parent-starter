@@ -10,7 +10,7 @@ import com.chua.starter.job.support.dispatch.JobRuntime;
 import com.chua.starter.job.support.dispatch.JobSpec;
 import com.chua.starter.job.support.dispatch.JobTriggering;
 import com.chua.starter.job.support.glue.GlueTypes;
-import com.chua.starter.job.support.glue.compile.SourceCoordinates;
+import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.sync.JobSyncBus;
 import com.chua.starter.job.support.sync.JobSyncTopics;
 import lombok.RequiredArgsConstructor;
@@ -108,11 +108,15 @@ public class DefaultJobOperator implements JobOperator {
             throw new IllegalArgumentException("片段正文过长(上限 " + MAX_GLUE_SOURCE_CHARS + " 字符): "
                     + spec.getGlueSource().length());
         }
-        if (!GlueTypes.isJava(spec.getGlueType())) {
+        if (spec.getJobKey() == null || spec.getJobKey().isBlank()) {
+            // 任务键由上游统一生成，此处拿不到就没法定位缓存文件，跳过预编译校验
             return;
         }
         try {
-            SourceCoordinates.of(spec.getGlueSource());
+            // 保存即校验：片段先合成完整脚本，再交给引擎预编译；编译不过当场报错，
+            // 而不是等到第一拍派发才在执行器上炸。校验与执行命中同一份编译产物缓存。
+            ScriptGlueHandlers.validate(spec.getJobKey(), spec.getGlueType(),
+                    spec.getGlueSource(), null);
         } catch (IllegalStateException ex) {
             throw new IllegalArgumentException(ex.getMessage(), ex);
         }

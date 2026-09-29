@@ -655,6 +655,67 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      * <p>
      * 注意：record 类型不支持 @构建器 注解，直接使用构造函数
      * </p>
+     *
+     * <p>一条绑定记录代表「某个配置键发生变化时，需要把新值写回哪个 Bean 的哪个成员」。
+     * 由 {@code scanFields} / {@code scanMethods} 在 {@code @ConfigValue#hotReload()} 为
+     * {@code true} 时创建，收集进 {@code bindingsByKey}，配置中心推送变更时按配置键
+     * 取出同键的全部绑定逐条回写。因此本 record 同时承载「注入目标」与「回调契约」
+     * 两类信息：{@link #field} 与 {@link #method} 二者互斥，标识注入点；
+     * {@link #targetType} 描述注入点期望的类型；{@link #callback} 是可选的变更回调方法名。</p>
+     *
+     * <p>可空性：{@link #configKey}、{@link #bean}、{@link #beanName}、{@link #targetType}
+     * 在紧凑构造器中已做 {@code requireNonNull} 校验，四个组件不允许为 {@code null}；
+     * {@link #defaultValue}、{@link #field}、{@link #method}、{@link #callback}
+     * 允许为 {@code null}，调用方须按下方说明判空。</p>
+     *
+     * @param configKey 配置 键，作为 {@code bindingsByKey} 的索引键，也是向配置中心
+     *                  注册监听的键与回调方法的第一个入参。取值来源为
+     *                  {@code @ConfigValue#value()} 表达式经
+     *                  {@code parseExpression} 解析出的占位符键（{@code ${key:default}} 中的
+     *                  {@code key} 部分）；表达式不含占位符时整串作为键。紧凑构造器已
+     *                  校验不允许为 {@code null}，但允许为空白串（此时
+     *                  {@code registerBinding} 仍会注册，查找配置时自然取不到值）
+     * @param defaultValue 默认 值，占位符中 {@code :} 之后的回退文本，即
+     *                     {@code ${key:default}} 的 {@code default} 部分。取值来源为
+     *                     {@code parseExpression} 的第二个捕获组；表达式未写默认值时
+     *                     该组为 {@code null}，故本组件<b>允许为 {@code null}</b>。
+     *                     用途有二：初始化时 {@code resolveValue} 在环境取不到值时用它回退；
+     *                     配置被删除（{@code onDelete}）时用它把成员回退到默认值。
+     *                     传入 {@code null} 时两者都变为「无值可写」，成员保持原状
+     * @param bean 目标 Bean 实例，即实际持有被注入成员的 Spring 单例对象，所有字段
+     *             回写与方法调用都作用在它身上。取值来源为
+     *             {@code postProcessAfterInitialization} 收到的 bean 参数。
+     *             紧凑构造器已校验不允许为 {@code null}
+     * @param beanName 目标 Bean 在 容器中的注册名，仅用于日志输出（注册绑定、注入失败、
+     *                热更新成功、回调方法缺失等处的 log）与管理，不参与反射查找，
+     *                因此即使与 {@link #bean} 的实际类不匹配也不影响功能。
+     *                取值来源为 {@code postProcessAfterInitialization} 的 beanName 形参。
+     *                紧凑构造器已校验不允许为 {@code null}
+     * @param field 被注入的 字段，为 {@code scanFields} 路径专属：保存带
+     *              {@code @ConfigValue} 的 {@link Field} 声明，回写时经
+     *              {@code ReflectUtils.getField} 读旧值、{@code ReflectUtils.setField}
+     *              写新值。字段路径下固定为非 {@code null}；方法路径下显式传
+     *              {@code null}，此时<b>允许为 {@code null}</b>，更新逻辑改走
+     *              {@link #method}
+     * @param method 被调用的 注入方法，为 {@code scanMethods} 路径专属：保存带
+     *               {@code @ConfigValue} 的单参 {@link Method}（形参个数不为 1 的方法
+     *               在扫描阶段即被跳过），更新时以单参调用它完成赋值。方法路径下固定为
+     *               非 {@code null}；字段路径下显式传 {@code null}，此时<b>允许为
+     *               {@code null}</b>。与 {@link #field} 严格互斥，更新时按
+     *               {@code field} 优先的顺序二选一
+     * @param callback 配置 变更 回调方法名，为空字符串时表示不回调（此时
+     *                 {@code invokeCallback} 直接返回）。取值来源为
+     *                 {@code @ConfigValue#callback()}，未配置时为 {@code null} 或空串，
+     *                 故本组件<b>允许为 {@code null}</b>。非空时要求该 Bean 中存在
+     *                 同名且形参为 {@code (String, Object, Object)} 的方法，
+     *                 三参依次为「配置键、旧值、新值」，其中新值已按
+     *                 {@link #targetType} 转换；方法不存在时只记警告不抛异常
+     * @param targetType 注入目标的 期望类型，即配置字符串的转换目标类型，也是回调方法
+     *                   新值入参的转换类型。字段路径取 {@code field.getType()}；
+     *                   方法路径取 {@code method.getParameterTypes()[0]}。
+     *                   转换由 {@code Converter.convertIfNecessary} 完成，
+     *                   允许转换失败（异常在注入与回调内被捕获并记日志）。
+     *                   紧凑构造器已校验不允许为 {@code null}
      */
     private record BindingInfo(String configKey,
                                String defaultValue,

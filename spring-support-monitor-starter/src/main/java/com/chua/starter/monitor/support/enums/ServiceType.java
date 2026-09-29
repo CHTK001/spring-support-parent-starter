@@ -37,7 +37,6 @@ public enum ServiceType {
     ORACLE("ORACLE", "Oracle"),
     /**
      * SQL 服务端 实例
-     * @param Server" 服务端"
      */
     MSSQL("MSSQL", "SQL Server"),
     /**

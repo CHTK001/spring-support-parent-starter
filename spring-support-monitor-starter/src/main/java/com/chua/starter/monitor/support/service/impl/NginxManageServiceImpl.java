@@ -8,6 +8,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorNginxMetric;
 import com.chua.starter.monitor.support.mapper.MsMonitorNginxMetricMapper;
 import com.chua.starter.monitor.support.middleware.MiddlewareHttp;
 import com.chua.starter.monitor.support.model.NginxApplyResultVO;
+import com.chua.starter.monitor.support.model.NginxBackupDiffVO;
 import com.chua.starter.monitor.support.model.NginxBackupVO;
 import com.chua.starter.monitor.support.model.NginxCommandResultVO;
 import com.chua.starter.monitor.support.model.NginxConfigFileVO;
@@ -16,11 +17,13 @@ import com.chua.starter.monitor.support.model.NginxDirectiveMetaVO;
 import com.chua.starter.monitor.support.model.NginxLogChunkVO;
 import com.chua.starter.monitor.support.model.NginxLogFileVO;
 import com.chua.starter.monitor.support.model.NginxOverviewVO;
+import com.chua.starter.monitor.support.model.NginxRuntimeVO;
 import com.chua.starter.monitor.support.model.NginxSiteVO;
 import com.chua.starter.monitor.support.model.NginxStatusVO;
 import com.chua.starter.monitor.support.model.NginxAccessTopVO;
 import com.chua.starter.monitor.support.model.NginxTemplateVO;
 import com.chua.starter.monitor.support.model.NginxTrendVO;
+import com.chua.starter.monitor.support.model.NginxUrlTrendVO;
 import com.chua.starter.monitor.support.model.NginxVersionVO;
 import com.chua.starter.monitor.support.model.dto.NginxApplyDTO;
 import com.chua.starter.monitor.support.model.dto.NginxPatchDTO;
@@ -88,12 +91,17 @@ public class NginxManageServiceImpl implements NginxManageService {
     private static final String DEFAULT_CONF_ROOT = "/etc/nginx";
 
     /**
-     * 默认 access 日志
+     * 默认 access 日志。
+     *
+     * <p><strong>只作为解析不出配置时的兜底</strong>，不再是实际读取路径。
+     * 实际路径由 {@link #defaultAccessLog} 从 {@code nginx -T} 的生效配置里解析——
+     * 本机实例就把日志指到了 {@code /opt/ngx-console/nginx/logs/}，
+     * 硬编码这里会永远读到一个 0 字节的旧文件。</p>
      */
     private static final String DEFAULT_ACCESS_LOG = "/var/log/nginx/access.log";
 
     /**
-     * 默认 error 日志
+     * 默认 error 日志（同样只是兜底，见 {@link #DEFAULT_ACCESS_LOG}）
      */
     private static final String DEFAULT_ERROR_LOG = "/var/log/nginx/error.log";
 
@@ -169,9 +177,52 @@ public class NginxManageServiceImpl implements NginxManageService {
     private static final Set<String> CUMULATIVE_METRICS = Set.of("accepts", "handled", "requests");
 
     /**
-     * 退出后等待进程真正结束的轮询上限
+     * SSE 推送取「最近点」时回看的窗口（分钟）。
+     *
+     * <p>累计型指标的速率要靠相邻两点算，窗口至少要覆盖两个采集周期。
+     * 按默认 30s 间隔，5 分钟 ≈ 10 个周期，既够算速率又不会把整张趋势表拉进内存。</p>
      */
-    private static final int QUIT_WAIT_TIMES = 10;
+    private static final int REALTIME_WINDOW_MINUTES = 5;
+
+    /**
+     * 等待 start/stop/restart 真正生效的轮询上限（毫秒）。
+     *
+     * <p>给到 20 秒：裸 {@code nginx -s stop} 通常 1~2 秒就完，但走 systemctl 时
+     * 还要收尾在途请求与 worker，超时设太短会把「正常但稍慢」误报成失败。
+     * 超过仍没生效就如实说明，不谎报成功。</p>
+     */
+    private static final long STOP_WAIT_MILLIS = 20_000L;
+
+    /**
+     * 停止时的轮询间隔（毫秒）
+     */
+    private static final long STOP_POLL_MILLIS = 500L;
+
+    /**
+     * 控制方式：本地目录裸进程。
+     *
+     * <p>与 {@code DatasourceHubConstants.CONTROL_LOCAL} 同值，此处独立定义是为了
+     * 监控模块不因数据源中心的常量变动而重新编译；取值以数据源中心为准。</p>
+     */
+    private static final String CONTROL_MODE_LOCAL = "local";
+
+    /**
+     * 控制方式：由 systemd 托管
+     */
+    private static final String CONTROL_MODE_SYSTEMD = "systemd";
+
+    /**
+     * 托管者探测结果，按数据源缓存。
+     *
+     * <p>探测一次要开一条 SSH 连接，而 start/stop 都会用到，所以缓存；
+     * TTL 见 {@link #INIT_SYSTEM_CACHE_MILLIS}。</p>
+     */
+    private final Map<String, CachedInitOwner> initOwnerCache = new ConcurrentHashMap<>();
+
+    /**
+     * 托管者探测结果的缓存时长（毫秒）
+     */
+    private static final long INIT_SYSTEM_CACHE_MILLIS = 60_000L;
 
     /**
      * 时序指标 Mapper（可选依赖：未装配时趋势与采集自动禁用，不影响其它功能）
@@ -197,14 +248,17 @@ public class NginxManageServiceImpl implements NginxManageService {
      * 生命周期：后续所有命令都带着错误的 prefix 执行，且永远不会自愈。本机验收时
      * 真实踩过：先在 cmd.exe 环境下解析出空 prefix，修好 DefaultShell 后不重启
      * 进程就依旧报 {@code CreateDirectory() "C:\\Users\\.../temp/client_body_temp"}。</p>
+     *
+     * <p>解析成功的结果<strong>长期缓存、不设 TTL</strong>：prefix 与 confPath 来自
+     * nginx 编译期常量，同机不变；而每次重解析要连开两三次 SSH，偶发失败会让
+     * confPath 变空，进而导致同机多实例的进程匹配失效。详见 {@link #resolvePaths}。</p>
      */
-    private static final long PATH_CACHE_TTL_MILLIS = 600_000L;
 
     /**
      * 各目标主机已解析的 nginx prefix / 主配置路径。
      *
-     * <p>取值带时间戳与可用性判定，超过 {@link #PATH_CACHE_TTL_MILLIS} 或解析结果
-     * 不可用时都会重新解析。线程安全由 {@link ConcurrentHashMap} 保证。</p>
+     * <p>解析成功即长期缓存；只有解析结果不可用（prefix 为空）时才不写缓存，
+     * 留待下次调用重新解析以自愈。线程安全由 {@link ConcurrentHashMap} 保证。</p>
      */
     private final Map<String, NginxPaths> pathCache = new ConcurrentHashMap<>();
 
@@ -561,26 +615,32 @@ public class NginxManageServiceImpl implements NginxManageService {
         if ("STOPPED".equals(running)) {
             return new NginxCommandResultVO(false, "nginx 当前未运行，请直接执行「启动」", "", "");
         }
+        // 被 systemd 托管时整件事交给 systemctl restart：
+        // 它自己管「停→等→起」，进程始终在同一个单元内，
+        // 而手工 quit + 裸启动会让新进程脱离单元托管
+        // （本次已启动的能跑，但机器重启后行为与预期不符，很难查）。
+        String unit = usableInitUnit(ds);
+        if (!INIT_OWNER_NONE.equals(unit)) {
+            ExecResult sr = exec(ds, systemctlCmd(unit, "restart"), LIFECYCLE_TIMEOUT_SECONDS);
+            boolean sok = sr.exitCode() == 0 && awaitState(ds, true, STOP_WAIT_MILLIS);
+            return new NginxCommandResultVO(sok,
+                    sok ? "重启完成，nginx 已重新运行（经 " + unit + "）"
+                            : "重启失败: " + mergeOut(sr.stdout(), sr.stderr()),
+                    sr.stdout(), sr.stderr());
+        }
         // quit 是优雅退出：处理完手上的请求再走，比 stop 温和
         ExecResult quit = exec(ds, nginxCmd(ds, "-s quit"), LIFECYCLE_TIMEOUT_SECONDS);
         if (quit.exitCode() != 0) {
             return new NginxCommandResultVO(false,
                     "发送退出信号失败: " + mergeOut(quit.stdout(), quit.stderr()), quit.stdout(), quit.stderr());
         }
-        for (int i = 0; i < QUIT_WAIT_TIMES; i++) {
-            if ("STOPPED".equals(detectRunning(ds))) {
-                break;
-            }
-            sleep(600L);
-        }
-        if (!"STOPPED".equals(detectRunning(ds))) {
+        if (!awaitState(ds, false, STOP_WAIT_MILLIS)) {
             return new NginxCommandResultVO(false,
                     "优雅退出超时，进程仍在运行。为避免双实例冲突已放弃重新拉起，请先确认进程状态",
                     quit.stdout(), quit.stderr());
         }
         ExecResult up = exec(ds, nginxCmd(ds, ""), LIFECYCLE_TIMEOUT_SECONDS);
-        boolean ok = up.exitCode() == 0;
-        String running2 = detectRunning(ds);
+        boolean ok = up.exitCode() == 0 && awaitState(ds, true, STOP_WAIT_MILLIS);
         return new NginxCommandResultVO(ok,
                 ok ? "重启完成，nginx 已重新运行" : "重新拉起失败: " + mergeOut(up.stdout(), up.stderr()),
                 mergeOut(quit.stdout(), up.stdout()), up.stderr());
@@ -592,19 +652,27 @@ public class NginxManageServiceImpl implements NginxManageService {
         if ("STOPPED".equals(detectRunning(ds))) {
             return new NginxCommandResultVO(false, "nginx 当前本就未运行，无需停止", "", "");
         }
-        ExecResult r = exec(ds, nginxCmd(ds, "-s stop"), LIFECYCLE_TIMEOUT_SECONDS);
+        // 先问 nginx 由谁托管：被 systemd 托管时必须走 systemctl，
+        // 否则 Restart=always 会把我们刚停掉的进程按策略拉回来，
+        // 接口却报成功——用户点了停止、实例照跑，每次都这样，最难排查。
+        String unit = usableInitUnit(ds);
+        ExecResult r = INIT_OWNER_NONE.equals(unit)
+                ? exec(ds, nginxCmd(ds, "-s stop"), LIFECYCLE_TIMEOUT_SECONDS)
+                : exec(ds, systemctlCmd(unit, "stop"), LIFECYCLE_TIMEOUT_SECONDS);
         boolean ok = r.exitCode() == 0;
         String msg;
         if (!ok) {
             msg = "停止失败: " + mergeOut(r.stdout(), r.stderr());
+        } else if (awaitState(ds, false, STOP_WAIT_MILLIS)) {
+            msg = INIT_OWNER_NONE.equals(unit) ? "已停止" : "已停止（经 " + unit + "）";
         } else {
-            for (int i = 0; i < QUIT_WAIT_TIMES; i++) {
-                if ("STOPPED".equals(detectRunning(ds))) {
-                    break;
-                }
-                sleep(500L);
-            }
-            msg = "STOPPED".equals(detectRunning(ds)) ? "已停止" : "已发送停止信号，但进程尚未退出，请稍后确认";
+            // 到达等待上限仍没停：如实说明，并给出最可能的原因，
+            // 而不是像改造前那样只留一句「请稍后确认」让用户干等
+            msg = INIT_OWNER_NONE.equals(unit)
+                    ? "已发送停止信号，但进程在 " + (STOP_WAIT_MILLIS / 1000) + " 秒内仍未退出；"
+                    + "若有进程管理器配了自动重启（如 systemd 的 Restart=always），它会立刻把 nginx 拉回"
+                    : "已向 " + unit + " 发出停止指令，但 nginx 在 " + (STOP_WAIT_MILLIS / 1000)
+                    + " 秒内仍未退出，请检查该单元是否有其他守护配置";
         }
         return new NginxCommandResultVO(ok, msg, r.stdout(), r.stderr());
     }
@@ -612,25 +680,124 @@ public class NginxManageServiceImpl implements NginxManageService {
     @Override
     public NginxCommandResultVO start(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
-        if (!"STOPPED".equals(detectRunning(ds))) {
+        String running = detectRunning(ds);
+        if ("RUNNING".equals(running)) {
             return new NginxCommandResultVO(false, "nginx 已在运行，无需重复启动（需要加载新配置请用「重载」）", "", "");
+        }
+        // UNKNOWN 是「查不到」而不是「在运行」——不能一并回「已在运行」。
+        //
+        // 踩过的坑：原来只判 !STOPPED，于是 UNKNOWN 落到「已在运行」分支。
+        // 而 UNKNOWN 恰恰发生在同机有多个 nginx 实例、进程匹配跟错对象时——
+        // 用户明明刚点过停止、端口确实不通，却被告知「已在运行」，
+        // 现象是「停止有效、启动无效」，极难定位。
+        //
+        // 这里对 UNKNOWN 继续往下走（尝试启动）：启动是幂等的，
+        // 已经在跑的话 systemctl start / nginx 启动都会返回「已在运行」或直接成功，
+        // 比拦住不给试安全得多。
+        if ("UNKNOWN".equals(running)) {
+            log.debug("[nginx] 启动前未能确定运行状态（UNKNOWN），按未运行处理并尝试启动");
         }
         NginxCommandResultVO t = test(datasourceId);
         if (!t.success()) {
             return new NginxCommandResultVO(false, "语法检查未通过，已放弃启动", t.stdout(), t.stderr());
         }
-        ExecResult r = exec(ds, nginxCmd(ds, ""), LIFECYCLE_TIMEOUT_SECONDS);
+        // 与 stop 对称：被 systemd 托管时走 systemctl start，
+        // 保证「停」和「起」是同一套控制面，不会停在半路
+        // （用 nginx -s stop 停掉的进程，再 nginx 裸启动会脱离单元，
+        //  下次机器重启后行为与预期不符）。
+        String unit = usableInitUnit(ds);
+        ExecResult r = INIT_OWNER_NONE.equals(unit)
+                ? exec(ds, nginxCmd(ds, ""), LIFECYCLE_TIMEOUT_SECONDS)
+                : exec(ds, systemctlCmd(unit, "start"), LIFECYCLE_TIMEOUT_SECONDS);
         boolean ok = r.exitCode() == 0;
-        String state = detectRunning(ds);
+        boolean started = awaitState(ds, true, STOP_WAIT_MILLIS);
         String msg;
         if (!ok) {
             msg = "启动失败: " + mergeOut(r.stdout(), r.stderr());
-        } else if ("RUNNING".equals(state)) {
-            msg = "启动成功，nginx 已运行";
+        } else if (started) {
+            msg = INIT_OWNER_NONE.equals(unit) ? "启动成功，nginx 已运行" : "启动成功，nginx 已运行（经 " + unit + "）";
         } else {
-            msg = "命令已下发但未检测到运行中的进程，请检查错误日志";
+            msg = INIT_OWNER_NONE.equals(unit)
+                    ? "命令已下发但未检测到运行中的进程，请检查错误日志"
+                    : "已向 " + unit + " 发出启动指令，但未检测到运行中的 nginx 进程，请查看该单元日志";
         }
         return new NginxCommandResultVO(ok, msg, r.stdout(), r.stderr());
+    }
+
+    /**
+     * 构造 systemctl 操作命令。
+     *
+     * <p>带 {@code sudo -n} 前缀：systemctl 改的是系统级服务状态，
+     * 数据源配置的 SSH 用户通常是普通用户（如 {@code kali}），直接调会被拒。
+     * {@code -n} 表示不提示输入密码——不这么做的话，命令会卡在密码输入上直到
+     * SSH 会话超时，表现为「停止」按钮点了没反应。</p>
+     *
+     * <p>不携带任何密码：免密 sudo 规则本身就是授权凭证，
+     * 把密码写进命令行等于留在进程表里给同机所有人看。
+     * 能不能免密由 {@link #canSudo} 预先判定，判为否时会退回裸信号方式，
+     * 所以这里不需要 {@code ||} 兜底重试——那只会让失败信息被第二次尝试覆盖。</p>
+     *
+     * @param unit   单元名
+     * @param action start / stop / restart
+     * @return 命令串
+     */
+    private String systemctlCmd(String unit, String action) {
+        return "sudo -n systemctl " + action + " " + shQuote(unit);
+    }
+
+    /**
+     * 决定本次操作能否走 systemd 通道。
+     *
+     * <p>先看数据源上显式配置的控制方式，再回退到自动探测：</p>
+     * <ul>
+     *   <li>{@code local}：直接返回 {@link #INIT_OWNER_NONE}，永远走裸 {@code nginx -s}。
+     *       用户明确说了「这个实例不归 systemd 管」，探测出来的结果不该再推翻它。</li>
+     *   <li>{@code systemd}：已填单元名就用填的（不再探测，避免同机多实例下探到别人的单元），
+     *       没填才自动探测；探测不到或无免密权限都退回裸信号。</li>
+     *   <li>未配置：维持改造前的自动探测行为，老数据源不受影响。</li>
+     * </ul>
+     *
+     * <p>两条自动探测分支都要求「认得出单元」且「当前 SSH 用户能免密执行该单元的 systemctl」，
+     * 任一不满足就返回 {@link #INIT_OWNER_NONE}，由调用方退回裸 {@code nginx -s}——
+     * 行为与改造前一致，不会更糟。</p>
+     *
+     * @param ds 数据源
+     * @return 可用的单元名，或 {@link #INIT_OWNER_NONE}
+     */
+    private String usableInitUnit(DataSourceVO ds) {
+        String mode = trim(ds.controlMode()).toLowerCase();
+        if (CONTROL_MODE_LOCAL.equals(mode)) {
+            log.debug("[nginx] 数据源显式配置为本地目录方式，跳过 systemd 探测");
+            return INIT_OWNER_NONE;
+        }
+        String unit;
+        if (CONTROL_MODE_SYSTEMD.equals(mode) && !trim(ds.controlTarget()).isEmpty()) {
+            unit = withServiceSuffix(ds.controlTarget());
+        } else {
+            unit = detectInitOwner(ds);
+        }
+        if (INIT_OWNER_NONE.equals(unit)) {
+            return INIT_OWNER_NONE;
+        }
+        if (!canSudo(ds, unit)) {
+            log.debug("[nginx] 识别到托管单元 {} 但当前用户无免密 systemctl 权限，退回 nginx -s 方式", unit);
+            return INIT_OWNER_NONE;
+        }
+        return unit;
+    }
+
+    /**
+     * 给单元名补 {@code .service} 后缀。
+     *
+     * <p>sudoers 两种写法都常见（带后缀与不带），统一补齐后再交给
+     * {@link #canSudo} 处理，避免「用户填了 {@code nginx} 却匹配不上放行规则」。</p>
+     *
+     * @param unit 用户填写的单元名
+     * @return 规范化后的单元名
+     */
+    private static String withServiceSuffix(String unit) {
+        var name = trim(unit);
+        return name.endsWith(".service") ? name : name + ".service";
     }
 
     // ==================== 版本与状态 ====================
@@ -742,7 +909,7 @@ public class NginxManageServiceImpl implements NginxManageService {
         int n = lines == null || lines <= 0 ? 200 : Math.min(lines, 5000);
         String safePath = trim(path);
         if (safePath.isEmpty()) {
-            safePath = DEFAULT_ACCESS_LOG;
+            safePath = defaultAccessLog(ds);
         }
         return exec(ds, "tail -n " + n + " " + shQuote(safePath) + " 2>&1").stdout();
     }
@@ -753,7 +920,7 @@ public class NginxManageServiceImpl implements NginxManageService {
         int n = lines == null || lines <= 0 ? 200 : Math.min(lines, 5000);
         String safePath = trim(path);
         if (safePath.isEmpty()) {
-            safePath = DEFAULT_ACCESS_LOG;
+            safePath = defaultAccessLog(ds);
         }
         Long size = fileSize(ds, safePath);
         boolean rotated = false;
@@ -832,10 +999,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     public NginxCommandResultVO restore(Long datasourceId, String backupName, String targetPath) {
         DataSourceVO ds = requireDatasource(datasourceId);
         String name = requireText(backupName, "备份文件名不能为空");
-        // 只允许纯文件名，禁止出现路径分隔符，避免越权读到备份目录之外
-        if (name.contains("/") || name.contains("\\") || name.contains("..")) {
-            throw new IllegalStateException("备份文件名非法");
-        }
+        String src = resolveBackupFile(ds, name);
         // 优先用调用方指定的目标路径；否则按备份名反推
         String origin = trim(targetPath);
         if (origin.isEmpty()) {
@@ -845,15 +1009,11 @@ public class NginxManageServiceImpl implements NginxManageService {
             return new NginxCommandResultVO(false,
                     "无法从备份文件名还原原始路径（路径含下划线时不可逆），请显式指定还原到的目标文件路径", "", "");
         }
-        String src = resolvePaths(ds).backupDir() + "/" + name;
-        ExecResult exists = exec(ds, "test -f " + shQuote(src));
-        if (exists.exitCode() != 0) {
-            return new NginxCommandResultVO(false, "备份文件不存在: " + name, "", "");
-        }
-        ExecResult r = exec(ds, "cat " + shQuote(src));
-        if (r.exitCode() != 0) {
-            return new NginxCommandResultVO(false, "读取备份失败: " + mergeOut(r.stdout(), r.stderr()),
-                    r.stdout(), r.stderr());
+        String content;
+        try {
+            content = readRemoteFile(ds, src);
+        } catch (RuntimeException e) {
+            return new NginxCommandResultVO(false, e.getMessage(), "", "");
         }
         // 恢复前先把当前内容也备份一份，保证"恢复"这一步本身可逆
         try {
@@ -861,15 +1021,139 @@ public class NginxManageServiceImpl implements NginxManageService {
         } catch (RuntimeException e) {
             return new NginxCommandResultVO(false, "恢复前备份失败，已放弃恢复: " + e.getMessage(), "", "");
         }
-        writeFile(ds, origin, r.stdout());
+        writeFile(ds, origin, content);
         NginxCommandResultVO t = test(datasourceId);
         return new NginxCommandResultVO(t.success(),
                 t.success() ? "已从备份恢复到 " + origin + " 并通过语法检查，请执行「重载」生效"
                         : "已从备份恢复，但语法检查未通过，请立即检查: " + firstLine(t.stderr(), t.stdout()),
-                r.stdout(), t.stderr());
+                content, t.stderr());
+    }
+
+    @Override
+    public String readBackupContent(Long datasourceId, String backupName) {
+        DataSourceVO ds = requireDatasource(datasourceId);
+        return readRemoteFile(ds, resolveBackupFile(ds, backupName));
+    }
+
+    @Override
+    public NginxBackupDiffVO diffBackup(Long datasourceId, String backupName, String targetPath) {
+        DataSourceVO ds = requireDatasource(datasourceId);
+        String backup = readRemoteFile(ds, resolveBackupFile(ds, backupName));
+        String target = readRemoteFile(ds, requireText(targetPath, "对比目标路径不能为空"));
+        List<String> lines = diffLines(backup, target);
+        long added = lines.stream().filter(l -> l.startsWith("+") && !l.startsWith("+++")).count();
+        long removed = lines.stream().filter(l -> l.startsWith("-") && !l.startsWith("---")).count();
+        return new NginxBackupDiffVO(backupName, targetPath, added, removed, lines);
+    }
+
+    /**
+     * 生成 unified-diff 风格的行序列（右侧为「当前文件」）。
+     *
+     * <p>在 Java 侧算而不用远端 {@code diff -u}：远端不一定装了 diffutils，
+     * 而且 diff 的退出码有三种（0 相同 / 1 有差异 / 2 出错），
+     * 「有差异」和「执行失败」用同一个码表达，很容易把「命令没跑起来」当成「内容相同」返回。</p>
+     *
+     * <p>算法是最朴素的 LCS 动态规划。nginx 配置通常几百行，
+     * O(n×m) 完全够用；换成 Myers 只是为省内存，不值得引入可读性成本。</p>
+     *
+     * @param before 旧内容（备份）
+     * @param after  新内容（当前文件）
+     * @return 带 {@code +}/{@code -}/空格 前缀的行序列
+     */
+    private List<String> diffLines(String before, String after) {
+        String[] a = splitLines(before);
+        String[] b = splitLines(after);
+        int n = a.length;
+        int m = b.length;
+        int[][] dp = new int[n + 1][m + 1];
+        for (int i = n - 1; i >= 0; i--) {
+            for (int j = m - 1; j >= 0; j--) {
+                dp[i][j] = a[i].equals(b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+            }
+        }
+        List<String> out = new ArrayList<>();
+        int i = 0;
+        int j = 0;
+        while (i < n && j < m) {
+            if (a[i].equals(b[j])) {
+                out.add("  " + a[i]);
+                i++;
+                j++;
+            } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+                out.add("- " + a[i]);
+                i++;
+            } else {
+                out.add("+ " + b[j]);
+                j++;
+            }
+        }
+        while (i < n) {
+            out.add("- " + a[i]);
+            i++;
+        }
+        while (j < m) {
+            out.add("+ " + b[j]);
+            j++;
+        }
+        return out;
+    }
+
+    /**
+     * 按行切分，末尾空行不保留（{@code split("\n")} 的默认行为正是如此）。
+     *
+     * @param text 文本
+     * @return 行数组
+     */
+    private static String[] splitLines(String text) {
+        return trim(text).split("\n", -1);
     }
 
     // ==================== 内部工具 ====================
+
+    /**
+     * 校验备份文件名并拼出绝对路径。
+     *
+     * <p>只允许纯文件名：出现 {@code /}、{@code \} 或 {@code ..} 一律拒绝。
+     * 备份目录来自配置（{@code datasource.backup}），如果允许路径分隔符，
+     * 调用方就能拼出 {@code dir + "/" + "../../etc/shadow} 这类路径把备份目录之外的文件读出来——
+     * 读取类接口（内容、下载）尤其危险，那等于一个任意文件读取漏洞。</p>
+     *
+     * <p>原先只有 {@link #restore} 里有这段校验，现在读内容与 diff 也要用到，
+     * 抽出来避免三处各写一遍、改一处漏两处。</p>
+     *
+     * @param ds   数据源
+     * @param name 备份文件名
+     * @return 备份文件的绝对路径
+     */
+    private String resolveBackupFile(DataSourceVO ds, String name) {
+        String safe = requireText(name, "备份文件名不能为空");
+        if (safe.contains("/") || safe.contains("\\") || safe.contains("..")) {
+            throw new IllegalStateException("备份文件名非法");
+        }
+        return resolvePaths(ds).backupDir() + "/" + safe;
+    }
+
+    /**
+     * 读一个远端文件的全部内容。
+     *
+     * <p>先 {@code test -f} 再 {@code cat}：目录也会被 {@code cat} 读出内容并报成功，
+     * 分开两步才能把「不是文件」和「读不了」区分开，给出不同的错误。</p>
+     *
+     * @param ds   数据源
+     * @param path 绝对路径
+     * @return 文件内容
+     */
+    private String readRemoteFile(DataSourceVO ds, String path) {
+        ExecResult exists = exec(ds, "test -f " + shQuote(path));
+        if (exists.exitCode() != 0) {
+            throw new IllegalStateException("文件不存在: " + path);
+        }
+        ExecResult r = exec(ds, "cat " + shQuote(path));
+        if (r.exitCode() != 0) {
+            throw new IllegalStateException("读取失败: " + mergeOut(r.stdout(), r.stderr()));
+        }
+        return r.stdout();
+    }
 
     /**
      * 解析 stub_status 纯文本输出。
@@ -940,17 +1224,38 @@ public class NginxManageServiceImpl implements NginxManageService {
      * <p>历史上这里只跑 {@code pgrep -x nginx}，在没装 procps 的环境（Windows 上的
      * Git Bash、各类精简容器）上会稳定返回「未运行」，本机验收时真实复现了该误判。</p>
      *
+     * <p><strong>同机多实例时按 conf 过滤</strong>：光看「有没有 nginx 进程」是错的。
+     * 本机常驻一个 {@code nginx -c /etc/nginx/eduai-web.conf}（别的站点），
+     * 它会让本数据源的 nginx 停掉之后仍被判成「运行中」——
+     * 后果是「启动」按钮一直不出现、「停止」可以无限重复点、
+     * 「重启」因找不到 pid 文件而报错。症状都是「点了没反应」，
+     * 但根因是这个判定跟错了实例。所以有 conf 时只认命令行里带该 conf 的进程，
+     * 与 {@link #detectMasterPid} 保持同一口径。</p>
+     *
      * @param ds 数据源
      * @return RUNNING / STOPPED / UNKNOWN
      */
     private String detectRunning(DataSourceVO ds) {
+        String confTail = confTail(ds);
+        // 有 conf 时按 conf 过滤；没有则退回「只看进程名」的原行为
+        //
+        // 踩过的坑：这里一度用 Pattern.quote(conf) 生成片段再塞进
+        // '[]' 字符类，拼出来是 [\Qnginx.conf\E]。shell 里的 grep/pgrep 走的是
+        // POSIX 正则，\Q..\E 不是它的语法，字符类因 \E 提前闭合而退化成
+        // 「任意字符」——实测把 init、kworker 这些内核线程全匹配上了，
+        // 于是永远返回 ON，看起来像「过滤生效了」，实则完全没在过滤。
+        //
+        // 现在改成「先用 fgrep 做字面量比对」，不依赖任何正则元字符语义：
+        // conf 文件名是纯字面量，直接匹配最稳，也不会被 . * [ 这类字符坑到。
         String script = """
                 if command -v pgrep >/dev/null 2>&1; then
-                  pgrep -x nginx >/dev/null 2>&1 && echo ON || echo OFF
+                  pgrep -x nginx >/dev/null 2>&1 || { echo OFF; exit 0; }
+                  %FILTER%
+                  echo ON
                   exit 0
                 fi
                 if ps -e >/dev/null 2>&1; then
-                  ps -e 2>/dev/null | grep -qi '[n]ginx' && echo ON || echo OFF
+                  %FILTER_ALL%
                   exit 0
                 fi
                 if command -v tasklist >/dev/null 2>&1; then
@@ -959,7 +1264,17 @@ public class NginxManageServiceImpl implements NginxManageService {
                 fi
                 echo UNKNOWN
                 """;
-        String out = exec(ds, script).stdout().trim();
+        // 有 conf：逐个 nginx 进程做字面量比对，命中才算运行
+        String filter = confTail.isEmpty()
+                ? "echo ON"
+                : "for p in $(pgrep -x nginx 2>/dev/null); do\n"
+                + "  ps -o args= -p \"$p\" 2>/dev/null | grep -qF -- " + shQuote(confTail) + " && { echo ON; exit 0; }\n"
+                + "done\necho OFF";
+        // ps -e 退化分支：同样只认带该 conf 字面量的命令行
+        String filterAll = confTail.isEmpty()
+                ? "ps -e 2>/dev/null | grep -qi '[n]ginx' && echo ON || echo OFF"
+                : "ps -e 2>/dev/null | grep -F -- " + shQuote(confTail) + " | grep -qi '[n]ginx' && echo ON || echo OFF";
+        String out = exec(ds, script.replace("%FILTER%", filter).replace("%FILTER_ALL%", filterAll)).stdout().trim();
         if ("ON".equals(out)) {
             return "RUNNING";
         }
@@ -970,6 +1285,315 @@ public class NginxManageServiceImpl implements NginxManageService {
     }
 
     /**
+     * 探测 nginx 进程由谁托管，决定 start/stop 该走哪条通道。
+     *
+     * <p><strong>为什么必须探测而不是直接用 nginx -s stop</strong>：
+     * {@code nginx -s stop} 是给进程发信号，<em>只对「谁启动它谁负责停它」成立</em>。
+     * 一旦 nginx 被 systemd（或其他进程管理器）托管，而那个管理器配了
+     * {@code Restart=always}，就会与我们抢同一个进程：本接口把 nginx 停掉、
+     * 返回成功，管理器几秒后按策略把它拉回来。用户看到的是「停止成功」，
+     * 实例却还在跑，且每次点都这样——比直接报错更难排查。</p>
+     *
+     * <p><strong>怎么认，不认死单元名</strong>：从运行中的 master 进程读
+     * {@code /proc/<pid>/cgroup}，里面带的是<em>实际托管它的那个单元</em>
+     * （形如 {@code /system.slice/xxx.service}）。这样无论单元叫 nginx、nginx-proxy
+     * 还是站点自己的名字都能认出来，也不用在代码里写死任何名字。
+     * 读不到 cgroup（非 Linux、无权限、进程已停）时返回 {@link #INIT_OWNER_NONE}，
+     * 一律回退到裸 {@code nginx -s}，行为与改造前完全一致。</p>
+     *
+     * <p>只认 systemd 是刻意的：supervisor / runit / pm2 的控制面差异太大，
+     * 猜错比不猜更危险。认不出就退回原路径，这是安全的一侧。</p>
+     *
+     * @param ds 数据源
+     * @return 单元名（如 {@code nginx.service}），或 {@link #INIT_OWNER_NONE} 表示无托管者
+     */
+    private String detectInitOwner(DataSourceVO ds) {
+        String key = trim(ds.host()) + ":" + (ds.port() == null ? "" : ds.port());
+        CachedInitOwner cached = initOwnerCache.get(key);
+        long now = System.currentTimeMillis();
+        if (cached != null && now - cached.readAt() < INIT_SYSTEM_CACHE_MILLIS) {
+            return cached.unit();
+        }
+        String unit = probeInitOwner(ds);
+        initOwnerCache.put(key, new CachedInitOwner(unit, now));
+        return unit;
+    }
+
+    /**
+     * 实际执行 cgroup 探测
+     *
+     * <p><strong>必须按 conf 路径定位到「本数据源管的那个 master」</strong>：
+     * 一台机器上同时跑多个 nginx 实例是常态（本机就有一个专供 eduai-web 的
+     * {@code nginx -c /etc/nginx/eduai-web.conf}）。</p>
+     *
+     * <p>踩过的坑：先按「第一个 PPID=1 的 nginx 进程」取，本机两个 master 都满足，
+     * 结果抓到的是 {@code eduai-web.service}——单元名认错了，于是
+     * {@code canSudo} 拿这个名字去试权限，自然 NO，最终还是退回裸信号，
+     * 而我们对着 {@code eduai-web} 做 systemctl 是会去动一台机器上完全无关的服务。
+     * 所以必须用 {@code resolvePaths} 解析出的 conf 路径做过滤：同一个数据源
+     * 解析出的 conf 只会匹配到它自己那个 master。</p>
+     *
+     * <p>conf 匹配不上时不猜，直接返回「无托管者」退回裸信号——
+     * 猜错的后果比不猜严重得多。</p>
+     *
+     * <p><strong>两段式探测（第二段是停机态的补丁）</strong>：先按 cgroup 认运行中的
+     * master；认不到再按 systemd 自己的 {@code ExecStart} 反查，后段不依赖进程是否在跑。
+     * 踩过的坑：只有 cgroup 一段时，nginx 一停就没有 master 进程了，只能退回裸启动；
+     * 而裸启动出来的 nginx <em>不在任何单元里</em>——{@code systemctl status} 看不到它，
+     * 单元仍处于 inactive，机器下次重启时单元照常 ExecStart，直接撞端口。
+     * 现象是「停止有效、启动无效」，与本文档里 {@code UNKNOWN} 那个坑叠在一起极难定位。</p>
+     *
+     * @param ds 数据源
+     * @return 单元名或 {@link #INIT_OWNER_NONE}
+     */
+    private String probeInitOwner(DataSourceVO ds) {
+        String confTail = confTail(ds);
+        if (confTail.isEmpty()) {
+            // 认不出 conf 就无法在同机多实例里定位到「自己那个」，
+            // 宁可放弃走 systemd，也不要冒险停到别人的服务。
+            // 此时第二段也无从匹配（它同样以 conf 为判据），直接放弃。
+            return INIT_OWNER_NONE;
+        }
+        // 步骤 1：实例在跑时，从 master 进程的 cgroup 认单元（最直接，也最可信）。
+        String byCgroup = probeUnitByCgroup(ds, confTail);
+        if (!INIT_OWNER_NONE.equals(byCgroup)) {
+            return byCgroup;
+        }
+        // 步骤 2：实例已停时没有 master 进程，cgroup 读不到，改用 systemd 自己的
+        // ExecStart 元数据反查（不依赖进程是否在跑）。
+        return probeUnitByExecStart(ds, confTail);
+    }
+
+    /**
+     * 第一段探测：从运行中 master 进程的 cgroup 认托管单元。
+     *
+     * <p>本段只处理「认得出」与「认不出」，认不出时统一返回
+     * {@link #INIT_OWNER_NONE}，由 {@link #probeInitOwner} 决定是否进入第二段。</p>
+     *
+     * @param ds       数据源
+     * @param confTail 本数据源的 conf 文件名，已确认非空
+     * @return 单元名，或 {@link #INIT_OWNER_NONE}
+     */
+    private String probeUnitByCgroup(DataSourceVO ds, String confTail) {
+        String script = """
+                command -v systemctl >/dev/null 2>&1 || { echo NONE; exit 0; }
+                master=""
+                if command -v pgrep >/dev/null 2>&1 && ps -o ppid= -p 1 >/dev/null 2>&1; then
+                  master=$(pgrep -x nginx 2>/dev/null | while read -r p; do
+                    [ "$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" = "1" ] || continue
+                    case "$(ps -o args= -p "$p" 2>/dev/null)" in
+                      *%CONF%*) echo "$p"; break ;;
+                    esac
+                  done)
+                fi
+                [ -n "$master" ] || { echo NONE; exit 0; }
+                cg=$(cat "/proc/$master/cgroup" 2>/dev/null)
+                for u in $(printf '%s' "$cg" | tr ',' '\\n' | sed -n 's#.*[/ ]\\([^/]*\\.service\\)$#\\1#p' | sort -u); do
+                  [ "$u" = "init.scope" ] && continue
+                  echo "$u"; exit 0
+                done
+                echo NONE
+                """.replace("%CONF%", confTail);
+        try {
+            String out = trim(exec(ds, script).stdout());
+            // 只接受形如 xxx.service 的单元名；其余一律视为「没认出」
+            if (!out.endsWith(".service") || out.contains(" ")) {
+                return INIT_OWNER_NONE;
+            }
+            // 归属校验：cgroup 认出的单元，必须真的是这个 master 所在的服务。
+            // 认错了就去 systemctl stop 等于停掉一台机器上无关的服务，
+            // 比「按钮不生效」严重得多，所以宁可放弃走 systemd、退回发信号。
+            if (!ownsUnit(ds, out)) {
+                log.warn("[nginx] 单元 {} 不托管本数据源的 nginx 实例（conf={}），退回 nginx -s",
+                        out, confTail);
+                return INIT_OWNER_NONE;
+            }
+            return out;
+        } catch (RuntimeException e) {
+            // 探测失败不能阻断 start/stop：拿不到托管者就按原方式走
+            log.debug("[nginx] cgroup 探测失败，转入 ExecStart 反查 host={}", ds.host(), e);
+            return INIT_OWNER_NONE;
+        }
+    }
+
+    /**
+     * 第二段探测：从 systemd 单元的 {@code ExecStart} 反查托管者。
+     *
+     * <p>只在 cgroup 认不出（即 nginx 处于停机态、没有 master 进程）时才需要这一步。
+     * 它不读进程表，因此停机时同样有效——这正是「停止之后要能启动回来」的前提。</p>
+     *
+     * <p><strong>整机扫描必须放在远端一次做完</strong>：逐个单元在 Java 侧循环
+     * {@code systemctl show}，等于每台机器上的每个 service 都发一次 SSH 往返，
+     * 一台装了几十个 service 的机器会卡到分钟级，而这条路径在「启动」按钮点击时同步执行。
+     * 因此这里把整个筛选下推成一个 shell 脚本，一次 SSH 往返给出结论。</p>
+     *
+     * <p><strong>归属判据是「ExecStart 同时包含 nginx 与本数据源的 conf 文件名」</strong>，
+     * 只认明确命中的，绝不猜：认错单元意味着 {@code systemctl start/stop} 会去动一台
+     * 机器上无关的服务，后果比「按钮不生效」严重得多。认不出就返回
+     * {@link #INIT_OWNER_NONE}，由调用方退回裸信号——这是安全的一侧。</p>
+     *
+     * <p><strong>残留风险（已知且未消除）</strong>：本段的判据是<b>文本包含</b>，
+     * 比第一段的 MainPID 比对弱。构造一个既含 {@code nginx} 又含本数据源 conf 名的
+     * 无关单元（例如某个巡检脚本的 ExecStart 里带上了该 conf 名）会被误认，
+     * 后果是对它执行 {@code systemctl start}。真正能消除它需要 systemd 侧的
+     * 单元反向索引，而 systemd 不提供；缓解手段是「认不出就退回」——
+     * 即便误认，也还有 {@link #canSudo} 与 {@link #ownsUnit} 之外的人工确认环节。</p>
+     *
+     * @param ds       数据源
+     * @param confTail 本数据源的 conf 文件名，已确认非空
+     * @return 单元名，或 {@link #INIT_OWNER_NONE} 表示仍认不出
+     */
+    private String probeUnitByExecStart(DataSourceVO ds, String confTail) {
+        String quotedConf = shQuote(confTail);
+        // 注意 ExecStart 里的 conf 可能带引号或绝对路径，这里只做「包含 confTail」
+        // 的字面量比对，不做正则：路径中 . / 等字符都有正则元字符含义。
+        String script = """
+                command -v systemctl >/dev/null 2>&1 || exit 0
+                conf=%CONF%
+                systemctl list-units --type=service --all --no-legend --no-pager --plain 2>/dev/null \
+                  | awk '{print $1}' \
+                  | while read -r u; do
+                      case "$u" in
+                        *.service) ;;
+                        *) continue ;;
+                      esac
+                      cmd=$(systemctl show "$u" -p ExecStart --value 2>/dev/null) || continue
+                      [ -n "$cmd" ] || continue
+                      case "$cmd" in
+                        *nginx*) ;;
+                        *) continue ;;
+                      esac
+                      case "$cmd" in
+                        *"$conf"*) echo "$u"; break ;;
+                      esac
+                    done
+                """.replace("%CONF%", quotedConf);
+        try {
+            String out = trim(exec(ds, script).stdout());
+            // stdout 可能因 while 子管道缓冲而带多行，只取首个 *.service
+            for (String line : out.split("\\R+")) {
+                String unit = trim(line);
+                if (unit.endsWith(".service") && !unit.contains(" ")) {
+                    log.debug("[nginx] 停机态下按 ExecStart 认出单元 {}（conf={}）", unit, confTail);
+                    return unit;
+                }
+            }
+            return INIT_OWNER_NONE;
+        } catch (RuntimeException e) {
+            log.debug("[nginx] ExecStart 反查失败，按无托管者处理 host={}", ds.host(), e);
+            return INIT_OWNER_NONE;
+        }
+    }
+
+    /**
+     * 判断该单元是否真的托管着本数据源的 nginx 实例。
+     *
+     * <p>做法是让 systemd 自己回答：{@code systemctl show <unit> MainPID}
+     * 就是该单元主进程的 PID，跟我们通过 cgroup 拿到的 master 比一下。
+     * 两者一致才认——这样即使 cgroup 解析出别的名字，也不会误停无关服务。</p>
+     *
+     * <p>不依赖权限：{@code show} 不改任何状态，且通常不需要 root。</p>
+     *
+     * @param ds   数据源
+     * @param unit 单元名
+     * @return 该单元的 MainPID 是否等于本数据源的 master PID
+     */
+    private boolean ownsUnit(DataSourceVO ds, String unit) {
+        Long master = detectMasterPid(ds);
+        if (master == null) {
+            return false;
+        }
+        String script = "systemctl show " + shQuote(unit) + " -p MainPID --value 2>/dev/null";
+        try {
+            return String.valueOf(master).equals(trim(exec(ds, script).stdout()));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 无托管者时的哨兵值
+     */
+    private static final String INIT_OWNER_NONE = "NONE";
+
+    /**
+     * 托管者探测结果
+     *
+     * @param unit   单元名，{@link #INIT_OWNER_NONE} 表示无
+     * @param readAt 读取时刻（毫秒）
+     */
+    private record CachedInitOwner(String unit, long readAt) {
+    }
+
+    /**
+     * 判断能否用 systemctl 操作该单元。
+     *
+     * <p><strong>问 sudo 自己，别去猜它的错误文案</strong>。
+     * {@code sudo -n -l} 会列出当前用户被放行的命令，这正是我们要问的问题，
+     * 且不改变任何状态、不需要密码。</p>
+     *
+     * <p>前面试过三种更「聪明」的办法，全都被实测否掉：</p>
+     * <ul>
+     *   <li>{@code sudo -n true}：只对 {@code NOPASSWD: ALL} 成立。现实部署里运维
+     *       只放行具体某几条 systemctl（本机就是如此），于是永远判否，
+     *       永远退回裸信号、永远被 Restart=always 拉回。</li>
+     *   <li>用 {@code systemctl status} 的<strong>退出码</strong>判：status 在单元未运行
+     *       时返回 3（LSB「服务未运行」），与「没权限」混在一起。实测在 inactive 时
+     *       判成没权限，点启动退回裸 nginx——进程活着却脱离 systemd 托管，
+     *       机器重启不会自启。</li>
+     *   <li>匹配 stderr 里的<strong>权限措辞</strong>：本机 sudo 输出的是中文
+     *       「需要密码」，英文正则 {@code *sudo*assword*} 匹配不上，
+     *       判成「有权限」——放行了 ssh.service 这个反例也被误判通过。</li>
+     * </ul>
+     *
+     * <p>而 {@code sudo -n -l} 的输出是结构化的（每条放行规则一行），
+     * 只按「动词 + 单元名」做文本匹配，不涉及任何语言相关的措辞。</p>
+     *
+     * @param ds   数据源
+     * @param unit 单元名
+     * @return 是否可执行 systemctl
+     */
+    private boolean canSudo(DataSourceVO ds, String unit) {
+        // 单元名先剥掉 .service 后缀：sudoers 里带后缀与不带后缀两种写法都常见，
+        // 匹配时统一按「无后缀名 + 可选 .service」处理，避免漏判。
+        String bare = unit.endsWith(".service") ? unit.substring(0, unit.length() - ".service".length()) : unit;
+        // 只认 start/stop/restart 三个真正要用的动词：status 未必被放行，
+        // 而 reload/test 不走 systemctl，不该作为判据。
+        // sudoers 里记录的是绝对路径，这里用 systemctl 结尾匹配即可，不写死路径。
+        String script = "sudo -n -l 2>/dev/null | tr ',' '\\n' | tr -s ' ' "
+                + "| grep -E 'systemctl' "
+                // 第二个 grep 不能让它把匹配行打到 stdout：Java 侧取的是整个 stdout，
+                // 中间这些规则原文会污染结果。改用 -q 只看退出码。
+                + "| grep -qE '(start|stop|restart) +" + shQuote(bare) + "(\\.service)?( |$)' "
+                + "&& echo YES || echo NO";
+        try {
+            return "YES".equals(trim(exec(ds, script).stdout()));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 等待进程进入期望状态。
+     *
+     * @param ds      数据源
+     * @param wantRun true 等运行，false 等停止
+     * @param millis  最长等待毫秒
+     * @return 是否在期限内达到期望状态
+     */
+    private boolean awaitState(DataSourceVO ds, boolean wantRun, long millis) {
+        long deadline = System.currentTimeMillis() + millis;
+        while (System.currentTimeMillis() < deadline) {
+            boolean running = "RUNNING".equals(detectRunning(ds));
+            if (running == wantRun) {
+                return true;
+            }
+            sleep(STOP_POLL_MILLIS);
+        }
+        return "RUNNING".equals(detectRunning(ds)) == wantRun;
+    }
+
+    /**
      * 取 master 进程 PID。
      *
      * <p>master 由 init 拉起，PPID 为 1，据此与 worker 区分。优先走
@@ -977,27 +1601,58 @@ public class NginxManageServiceImpl implements NginxManageService {
      * （Git Bash / BSD 的列序为 PID PPID PGID ...）。仍取不到时返回 null，
      * 界面显示「未读到 master 进程信息」而不是编一个值。</p>
      *
+     * <p><strong>同机多实例时按 conf 路径过滤</strong>：光靠「PPID=1」是不够的——
+     * 本机两个 nginx master 都满足这个条件（一个是 {@code eduai-web.conf}，
+     * 一个是控制台管的 {@code nginx.conf}），取第一个会拿错。
+     * 这里用 {@link #resolvePaths} 解析出的 conf 文件名做过滤，
+     * 保证拿到的始终是本数据源管的那个。conf 解析不出来时不做过滤，
+     * 退回原行为（此时也只有单实例才谈得准）。</p>
+     *
      * @param ds 数据源
      * @return PID，取不到为 null
      */
     private Long detectMasterPid(DataSourceVO ds) {
+        String confTail = confTail(ds);
         String script = """
                 if command -v pgrep >/dev/null 2>&1 && ps -o ppid= -p 1 >/dev/null 2>&1; then
                   pgrep -x nginx 2>/dev/null | while read -r p; do
-                    if [ "$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" = "1" ]; then echo "$p"; break; fi
+                    [ "$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" = "1" ] || continue
+                    %FILTER%
                   done
                   exit 0
                 fi
                 if ps -e >/dev/null 2>&1; then
-                  ps -e 2>/dev/null | awk 'NR>1 && tolower($0) ~ /nginx/ && $2==1 { print $1; exit }'
+                  ps -e 2>/dev/null | awk 'NR>1 && tolower($0) ~ /nginx/ && $2==1 %AWK% { print $1; exit }'
                   exit 0
                 fi
                 """;
+        // 有 conf 时按命令行匹配；没有就不加过滤条件（保持原行为）
+        String filter = confTail.isEmpty()
+                ? ""
+                : "case \"$(ps -o args= -p \"$p\" 2>/dev/null)\" in *" + confTail + "*) echo \"$p\"; break ;; esac";
+        // ps -e 退化分支同样要按 conf 过滤，否则同机多实例时会拿到别人的 master
+        String awk = confTail.isEmpty() ? "" : "&& index(tolower($0), \"" + confTail.toLowerCase() + "\")";
         try {
-            return parseLong(exec(ds, script).stdout().trim());
+            String out = exec(ds, script.replace("%FILTER%", filter).replace("%AWK%", awk)).stdout().trim();
+            return parseLong(out);
         } catch (RuntimeException e) {
             log.debug("[nginx] 读取 master 进程失败: {}", e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 取本数据源的 conf 文件名（不含目录），供进程匹配用。
+     *
+     * @param ds 数据源
+     * @return 文件名，解析不出时返回空串
+     */
+    private String confTail(DataSourceVO ds) {
+        try {
+            String conf = trim(resolvePaths(ds).confPath());
+            return conf.isEmpty() ? "" : conf.substring(conf.lastIndexOf('/') + 1);
+        } catch (RuntimeException e) {
+            return "";
         }
     }
 
@@ -1123,9 +1778,21 @@ public class NginxManageServiceImpl implements NginxManageService {
      */
     private NginxPaths resolvePaths(DataSourceVO ds) {
         String key = trim(ds.host()) + ":" + (ds.port() == null ? "" : ds.port());
-        long now = System.currentTimeMillis();
+        // 解析成功就长期缓存，不设 TTL。
+        //
+        // prefix 与 confPath 来自 nginx 的编译期常量（--prefix / --conf-path），
+        // 同一台机器上不会变；每次过期重解析要连开两三次 SSH（nginx -V、
+        // command -v、cd），碰上 SSH 慢或超时就会返回空。
+        //
+        // 踩过的坑正是这里：一次重解析失败让 confPath 变空，
+        // 于是同机多实例的「按 conf 过滤」失效——进程匹配退化成只看有没有 nginx，
+        // 结果 edurai-web 的 nginx 冒充了控制台实例，running 判成 UNKNOWN，
+        // 表现成「停止成功、点启动却说已在运行」，非常难查。
+        //
+        // 远端真换了 nginx 安装位置时，重启后端进程即可重新解析；
+        // 代价远小于「偶发解析失败导致状态判断错乱」。
         NginxPaths cached = pathCache.get(key);
-        if (cached != null && cached.usable() && cached.fresh(now)) {
+        if (cached != null && cached.usable()) {
             return cached;
         }
         NginxPaths resolved = computePaths(ds);
@@ -1273,7 +1940,14 @@ public class NginxManageServiceImpl implements NginxManageService {
      *
      * @param prefix     安装前缀目录
      * @param confPath   主配置文件绝对路径
-     * @param resolvedAt 解析时刻（毫秒）
+     * @param backupDir  配置备份目录，备份与回滚的唯一落点，取自 {@link #resolveBackupDir(DataSourceVO)}：
+     *                   先按配置项 {@code monitor.nginx.backup-dir}（默认 {@code /var/log/nginx-console-backup}）
+     *                   探测 {@code mkdir -p} 是否可创建，不可写则退回到 SSH 用户家目录下的
+     *                   {@code ~/.nginx-console-backup}，两处都失败时回退为配置值本身。
+     *                   为目标主机上的路径（远端 POSIX 或 Windows 盘符路径），非空，
+     *                   但回退成配置值那一支并不保证真的可写
+     * @param resolvedAt 解析时刻（毫秒）；仅作诊断留痕，不参与缓存失效判定
+     *                   （解析成功的结果长期缓存，见 {@link #resolvePaths}）
      */
     private record NginxPaths(String prefix, String confPath, String backupDir, long resolvedAt) {
 
@@ -1291,25 +1965,69 @@ public class NginxManageServiceImpl implements NginxManageService {
         boolean usable() {
             return !prefix.isEmpty();
         }
-
-        /**
-         * 本条解析结果是否仍在有效期内。
-         *
-         * @return true 表示未超过缓存有效期
-         */
-        boolean fresh(long now) {
-            return now - resolvedAt < PATH_CACHE_TTL_MILLIS;
-        }
     }
 
     /**
      * 取日志目录。
      *
+     * <p><strong>从 nginx 实际生效的配置里解析，不再硬编码 {@code /var/log/nginx}。</strong></p>
+     *
+     * <p>踩过的坑：原先直接返回 {@link #DEFAULT_LOG_DIR}（方法收了 {@code ds} 参数却完全没用）。
+     * 而本机的实例把日志指到了别处——{@code access_log /opt/ngx-console/nginx/logs/access.log}——
+     * 于是日志面板读的一直是 {@code /var/log/nginx/access.log}，那个文件存在但是 0 字节。
+     * 现象是「面板说日志是空的、访问统计全是 0」，而目标机 {@code nginx -T} 里日志明明有 5000+ 行。
+     * 换个部署目录、换个日志路径就彻底失效，且没有任何报错。</p>
+     *
+     * <p>用 {@code nginx -T} 而不是解析配置文件：它会把 {@code include} 全部展开，
+     * 不用自己递归；且它只读配置、不改状态。实测普通用户即可运行（配置文件 world-readable）。</p>
+     *
+     * <p>解析不到时回退 {@link #DEFAULT_LOG_DIR}：那是绝大多数发行版的默认位置，
+     * 拿它兜底至少不会比改动前更差。</p>
+     *
      * @param ds 数据源
-     * @return 目录路径
+     * @return 日志目录绝对路径
      */
     private String logDir(DataSourceVO ds) {
-        return DEFAULT_LOG_DIR;
+        String dir = logPathDir(ds);
+        return dir.isEmpty() ? DEFAULT_LOG_DIR : dir;
+    }
+
+    /**
+     * 从生效配置里解析日志文件所在目录。
+     *
+     * @param ds 数据源
+     * @return 目录路径；解析不到返回空串
+     */
+    private String logPathDir(DataSourceVO ds) {
+        // 一次 nginx -T 就能同时拿到 access_log 与 error_log，取其中任意一个的目录即可：
+        // 两者通常同目录，分开放也没关系——这里只要「能列出 *.log 的目录」。
+        ExecResult r = exec(ds, "nginx -T 2>/dev/null | grep -oE '^[[:space:]]*(access_log|error_log)[[:space:]]+[^;]+'"
+                + " | head -5 | awk '{print $2}' | sed 's/^\"//; s/\"$//' | xargs -n1 dirname 2>/dev/null | head -1");
+        String dir = trim(r.stdout());
+        if (dir.isEmpty() || "/".equals(dir)) {
+            return "";
+        }
+        // 解析出来却不存在，比解析失败更可疑：说明配置里的路径与磁盘对不上，
+        // 此时回退默认值并留日志，比让用户对着空列表猜要强
+        if (exec(ds, "test -d " + shQuote(dir)).exitCode() != 0) {
+            log.debug("[nginx] 配置里的日志目录 {} 不存在，回退 {}", dir, DEFAULT_LOG_DIR);
+            return "";
+        }
+        return dir;
+    }
+
+    /**
+     * 取默认 access log 的实际路径。
+     *
+     * <p>与 {@link #logDir} 同源：配置里指到别处时就用那个路径，
+     * 否则读一个 0 字节的旧文件会让人以为「没有访问记录」。</p>
+     *
+     * @param ds 数据源
+     * @return access log 绝对路径
+     */
+    private String defaultAccessLog(DataSourceVO ds) {
+        String dir = logDir(ds);
+        return dir + "/access.log";
     }
 
     /**
@@ -1679,7 +2397,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     public NginxAccessTopVO accessTop(Long datasourceId, String path, Integer lines, Integer minutes, Integer topN) {
         String logPath = trim(path);
         if (logPath.isEmpty()) {
-            logPath = DEFAULT_ACCESS_LOG;
+            logPath = defaultAccessLog(requireDatasource(datasourceId));
         }
         // 尾部行数上限放大到 20000：Top 榜需要足够样本才有意义，
         // 但也不能无上限——高流量站的日志一行上百字节，拉 10 万行就是十几 MB。
@@ -1691,6 +2409,92 @@ public class NginxManageServiceImpl implements NginxManageService {
         LocalDateTime since = mins > 0 ? LocalDateTime.now().minusMinutes(mins) : null;
         String name = logPath.substring(logPath.lastIndexOf('/') + 1);
         return NginxAccessLogParser.parse(text, top, since, name);
+    }
+
+    @Override
+    public NginxUrlTrendVO urlTrend(Long datasourceId, String path, Integer lines, Integer topN) {
+        String logPath = trim(path);
+        if (logPath.isEmpty()) {
+            logPath = defaultAccessLog(requireDatasource(datasourceId));
+        }
+        // 尾部行数上限与 accessTop 一致（20000）：URL 趋势需要足够样本才能分出形状，
+        // 但也不能无上限，高流量站一行上百字节，拉 10 万行就是十几 MB。
+        int n = lines == null || lines <= 0 ? 5000 : Math.min(lines, 20_000);
+        int cap = topN == null || topN <= 0 ? 5 : Math.min(topN, 10);
+        DataSourceVO ds = requireDatasource(datasourceId);
+        String text = exec(ds, "tail -n " + n + " " + shQuote(logPath) + " 2>&1").stdout();
+        String name = logPath.substring(logPath.lastIndexOf('/') + 1);
+        return NginxAccessLogParser.urlTrend(text, cap, name);
+    }
+
+    @Override
+    public List<NginxTrendVO.Point> latestPoints(Long datasourceId) {
+        if (datasourceId == null) {
+            return List.of();
+        }
+        MsMonitorNginxMetricMapper mapper = nginxMetricMapper.getIfAvailable();
+        if (mapper == null) {
+            return List.of();
+        }
+        // 窗口 5 分钟：默认 30s 间隔下约 10 个周期，足够算出速率又不至于把整表拉进内存
+        List<MsMonitorNginxMetric> rows = mapper.selectList(
+                new LambdaQueryWrapper<MsMonitorNginxMetric>()
+                        .eq(MsMonitorNginxMetric::getDatasourceId, datasourceId)
+                        .ge(MsMonitorNginxMetric::getCollectTime,
+                                LocalDateTime.now().withNano(0).minusMinutes(REALTIME_WINDOW_MINUTES))
+                        .orderByAsc(MsMonitorNginxMetric::getCollectTime));
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+        // 复用与 HTTP 趋势完全相同的换算逻辑，保证两条口径一致
+        List<NginxTrendVO.Point> points = buildTrendPoints(rows);
+        Map<String, NginxTrendVO.Point> latest = new LinkedHashMap<>();
+        for (NginxTrendVO.Point point : points) {
+            latest.put(point.name(), point);
+        }
+        return List.copyOf(latest.values());
+    }
+
+    @Override
+    public NginxRuntimeVO collectRealtime(Long datasourceId) {
+        if (datasourceId == null) {
+            return new NginxRuntimeVO(null, "UNKNOWN", null, null, null, false,
+                    LocalDateTime.now().withNano(0), "未指定数据源");
+        }
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        DataSourceVO ds;
+        try {
+            ds = requireDatasource(datasourceId);
+        } catch (RuntimeException e) {
+            return new NginxRuntimeVO(datasourceId, "UNKNOWN", null, null, null, false, now,
+                    "读取数据源失败: " + e.getMessage());
+        }
+        // 三项都走总览的同一份实现，口径不许分叉
+        String running = detectRunning(ds);
+        Long pid = null;
+        String uptime = null;
+        try {
+            pid = detectMasterPid(ds);
+            uptime = uptimeText(ds, pid);
+        } catch (RuntimeException e) {
+            log.debug("[nginx] 读取进程信息失败 datasourceId={} reason={}", datasourceId, e.getMessage());
+        }
+        Long active = null;
+        boolean available = false;
+        String message = null;
+        try {
+            NginxStatusVO st = status(datasourceId);
+            available = st != null && st.available();
+            if (available) {
+                active = st.activeConnections();
+                message = st.message();
+            } else {
+                message = st == null ? "未取到 stub_status" : st.message();
+            }
+        } catch (RuntimeException e) {
+            message = "读取 stub_status 失败: " + e.getMessage();
+        }
+        return new NginxRuntimeVO(datasourceId, running, pid, uptime, active, available, now, message);
     }
 
     @Override

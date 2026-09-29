@@ -2594,6 +2594,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             if (models.stream().anyMatch(m -> id.equals(m.get("id")))) {
                 continue;
             }
+            // 外部目录在注册表里是以「绝对路径」为 key 注册的独立条目，会被模型门面
+            // 当作内置模型一并返回；这些模型上面已按模板模型标识登记过，若不去重，
+            // 同一个模型会以目录路径的形态重复出现（「从提供商获取」列表里混进路径）。
+            if (boundDirs.contains(canonicalDir(id)) || isAbsolutePathLike(id)) {
+                continue;
+            }
             if (!Boolean.TRUE.equals(detail.get("available"))) {
                 continue;
             }
@@ -2621,6 +2627,29 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             }
         }
         return false;
+    }
+
+    /**
+     * 判断模型标识是否形态上是一个绝对文件系统路径。
+     *
+     * <p>正常的模型标识是「模板模型名」（如 {@code bge-large-zh-embedding}），
+     * 不应以路径出现；注册表里的外部目录条目则以绝对路径为 key，需要据此识别并过滤。</p>
+     *
+     * @param id 模型标识候选值
+     * @return true 表示形如 {@code /xxx}（Unix）或 {@code X:/xxx} / {@code X:\xxx}（Windows）
+     */
+    private static boolean isAbsolutePathLike(String id) {
+        if (id == null || id.isBlank()) {
+            return false;
+        }
+        String v = id.trim();
+        if (v.startsWith("/") || v.startsWith("\\\\")) {
+            return true;
+        }
+        return v.length() >= 3
+                && Character.isLetter(v.charAt(0))
+                && v.charAt(1) == ':'
+                && (v.charAt(2) == '/' || v.charAt(2) == '\\');
     }
 
     /**

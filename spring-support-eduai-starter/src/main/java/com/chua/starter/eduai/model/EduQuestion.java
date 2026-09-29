@@ -116,6 +116,11 @@ public class EduQuestion extends SysBase {
     private Integer questionUseCount;
 
     /**
+     * 被加入试卷的次数（每次新加入某张试卷 +1，改分不重复计）
+     */
+    private Integer questionAddCount;
+
+    /**
      * 正确率
      */
     private BigDecimal questionCorrectRate;

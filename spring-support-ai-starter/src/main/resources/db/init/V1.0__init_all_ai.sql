@@ -715,6 +715,46 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_library` (
   PRIMARY KEY (`sys_ai_knowledge_library_id`),
   UNIQUE KEY `sys_ai_knowledge_library_lib_name` (`sys_ai_knowledge_library_name`)
 ) COMMENT='AI ';
+-- ---------------------------------------------------------------------
+-- 知识图谱：实体/关系 与「知识点」的关联表。
+--
+-- 为什么单独建表而不是给 entity/relation 加列：
+--   同一个实体（如「关羽」）会出现在多个知识点里，加列会让它按知识点重复成
+--   多行，图被拆成一个个孤立小团体；关联表能保证实体在库内唯一、同时保留
+--   「哪些知识点提到过它」这一反向查询能力。
+--
+-- 为什么不在 sys_ai_knowledge_library 上加 knowledge_base_id 列：
+--   本文件刻意不输出兼容 ALTER（MySQL 的 ADD COLUMN 不支持 IF NOT EXISTS，
+--   留着只会在每次启动报语法错误并被 continue-on-error 静默吞掉）。
+--   因此图谱库与 RAG 知识库的映射走 name 约定：'kb:<knowledge_base_id>'。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_ref` (
+  `sys_ai_knowledge_graph_ref_id`                 INT          NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `sys_ai_knowledge_graph_ref_uid`                VARCHAR(64)  NOT NULL COMMENT '关联记录UID(UUID)',
+  `sys_ai_knowledge_graph_library_id`             INT          NOT NULL DEFAULT 0 COMMENT '图谱库ID(对应sys_ai_knowledge_library)',
+  `sys_ai_knowledge_graph_ref_target_type`        VARCHAR(32)  NOT NULL COMMENT '关联目标类型(entity 实体/relation 关系)',
+  `sys_ai_knowledge_graph_ref_target_uid`         VARCHAR(64)  NOT NULL COMMENT '实体UID或关系UID',
+  `sys_ai_knowledge_graph_ref_knowledge_base_id`  VARCHAR(64)  NOT NULL COMMENT 'RAG知识库ID(knowledge_base_id)',
+  `sys_ai_knowledge_graph_ref_doc_path`           VARCHAR(255) NOT NULL DEFAULT '' COMMENT '知识点在知识库内的相对路径',
+  `sys_ai_knowledge_graph_ref_status`             INT          NOT NULL DEFAULT 1 COMMENT '状态:1有效0失效',
+  `create_name`  VARCHAR(255) DEFAULT NULL COMMENT '创建人',
+  `create_by`    INT          DEFAULT NULL COMMENT '创建人ID',
+  `create_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  `update_name`  VARCHAR(255) DEFAULT NULL COMMENT '更新人',
+  `update_by`    INT          DEFAULT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`sys_ai_knowledge_graph_ref_id`),
+  UNIQUE KEY `sys_ai_knowledge_graph_ref_uid` (`sys_ai_knowledge_graph_ref_uid`),
+  UNIQUE KEY `sys_ai_knowledge_graph_ref_binding` (
+    `sys_ai_knowledge_graph_ref_target_type`,
+    `sys_ai_knowledge_graph_ref_target_uid`,
+    `sys_ai_knowledge_graph_ref_knowledge_base_id`,
+    `sys_ai_knowledge_graph_ref_doc_path`
+  ),
+  KEY `sys_ai_knowledge_graph_ref_kb` (`sys_ai_knowledge_graph_ref_knowledge_base_id`, `sys_ai_knowledge_graph_ref_doc_path`),
+  KEY `sys_ai_knowledge_graph_ref_target` (`sys_ai_knowledge_graph_ref_target_type`, `sys_ai_knowledge_graph_ref_target_uid`),
+  KEY `sys_ai_knowledge_graph_ref_library` (`sys_ai_knowledge_graph_library_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI知识图谱-实体/关系与知识点的关联';
 CREATE TABLE IF NOT EXISTS `sys_ai_reid_library` (
   `sys_ai_reid_library_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_reid_library_face_id` INT DEFAULT NULL COMMENT 'ID',
@@ -1271,8 +1311,8 @@ CREATE TABLE IF NOT EXISTS sys_ai_connector (
   sys_ai_connector_type VARCHAR(64),
   sys_ai_connector_category VARCHAR(64),
   sys_ai_connector_icon VARCHAR(256),
-  sys_ai_connector_endpoint CLOB,
-  sys_ai_connector_params CLOB,
+  sys_ai_connector_endpoint LONGTEXT,
+  sys_ai_connector_params LONGTEXT,
   sys_ai_connector_builtin TINYINT DEFAULT 0,
   sys_ai_connector_enabled TINYINT DEFAULT 1,
   sys_ai_connector_last_test_status VARCHAR(32),
@@ -1321,4 +1361,50 @@ CREATE TABLE IF NOT EXISTS `sys_ai_generate_task` (
     KEY `sys_ai_generate_task_user_type` (`sys_user_id`, `sys_ai_generate_task_type`, `sys_ai_generate_task_create_time`),
     KEY `sys_ai_generate_task_status` (`sys_ai_generate_task_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='生成任务（文生图/文生视频）';
+
+-- ---------------------------------------------------------------------
+-- RAG 知识库元数据
+--
+-- 背景：ApiKnowledgeController 的 bases 之前是纯内存 ConcurrentHashMap，
+--       后端每次重启知识库列表连同文件树一起消失（生产上是数据丢失级问题）。
+--       本表把「库本身」持久化，目录内容仍由 rag-uploads/kb-<id> 承载。
+--
+-- 为什么新建表而不是给 sys_ai_knowledge_library 加列
+--   1) 本仓 init SQL 的 ONCE 语义是「仅当库为空时执行」，而 MySQL 的
+--      ADD COLUMN 不支持 IF NOT EXISTS，两者叠加会导致线上永远加不上列；
+--      sys_ai_knowledge_library 的「不写兼容 ALTER」说明正是这个原因。
+--   2) 语义也不同：sys_ai_knowledge_library 是「图谱/模型库」这一层的资源目录，
+--      而这里的记录是「RAG 知识库」——带 root_path、托管标记、采集来源配置。
+--      两者不是同一层实体，混在一张表里会让 kind/source 这类列对图谱库恒为空。
+--
+-- 与内存 Map 的关系
+--   启动时全量载入内存 Map（保持既有 20 余处读取点行为不变），
+--   之后所有写操作同时落这张表（写穿缓存）。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_base` (
+    `sys_ai_knowledge_base_id`           VARCHAR(64)   NOT NULL COMMENT '主键（UUID，对应内存记录的 knowledge_base_id）',
+    `sys_ai_knowledge_base_name`         VARCHAR(255)  NOT NULL COMMENT '知识库名称',
+    `sys_ai_knowledge_base_description`  TEXT          DEFAULT NULL COMMENT '知识库描述',
+    `sys_ai_knowledge_base_root_path`    VARCHAR(1024) DEFAULT NULL COMMENT '根目录；托管库为 <uploadDir>/kb-<id>，外部库为用户指定目录',
+    `sys_ai_knowledge_base_kind`         VARCHAR(32)   NOT NULL DEFAULT 'local' COMMENT '类型：local 外部本地目录 / web 网址采集',
+    `sys_ai_knowledge_base_managed`      TINYINT       NOT NULL DEFAULT 0 COMMENT '目录是否由本服务托管（托管库删除时可一并清理磁盘）',
+    `sys_ai_knowledge_base_is_public`    TINYINT       NOT NULL DEFAULT 0 COMMENT '是否公开可读（1 公开，0 仅归属人与管理员）',
+    `sys_ai_knowledge_base_tags`         VARCHAR(1024) DEFAULT NULL COMMENT '标签，JSON 数组文本（如 ["三国","验收"]）',
+    `sys_ai_knowledge_base_source`       TEXT          DEFAULT NULL COMMENT '采集来源配置（JSON，{mode,entries[]}）；kind=web 时非空',
+    `sys_ai_knowledge_base_file_count`   BIGINT        NOT NULL DEFAULT 0 COMMENT '文件数（缓存值，读取时按需重算）',
+    `sys_ai_knowledge_base_total_size`   BIGINT        NOT NULL DEFAULT 0 COMMENT '目录总字节数（缓存值，读取时按需重算）',
+    `sys_ai_knowledge_base_chunk_max_size`     INT NOT NULL DEFAULT 1000 COMMENT '分片最大长度（字符）',
+    `sys_ai_knowledge_base_chunk_overlap_size` INT NOT NULL DEFAULT 100  COMMENT '分片重叠长度（字符）',
+    `sys_ai_knowledge_base_chunk_min_size`     INT NOT NULL DEFAULT 50   COMMENT '分片最小长度（字符）',
+    `sys_ai_knowledge_base_user_id`      VARCHAR(64)   DEFAULT NULL COMMENT '归属用户ID（写入者，非空表示仅本人与管理员可见可写）',
+    `create_name`  VARCHAR(255) DEFAULT NULL COMMENT '创建人',
+    `create_by`    INT          DEFAULT NULL COMMENT '创建人ID',
+    `create_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    `update_name`  VARCHAR(255) DEFAULT NULL COMMENT '更新人',
+    `update_by`    INT          DEFAULT NULL COMMENT '更新人ID',
+    PRIMARY KEY (`sys_ai_knowledge_base_id`),
+    KEY `sys_ai_knowledge_base_user` (`sys_ai_knowledge_base_user_id`),
+    KEY `sys_ai_knowledge_base_kind` (`sys_ai_knowledge_base_kind`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='RAG知识库元数据（目录内容由 rag-uploads/kb-<id> 承载）';
 

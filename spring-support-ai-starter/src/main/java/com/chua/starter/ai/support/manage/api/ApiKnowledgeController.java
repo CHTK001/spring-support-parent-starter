@@ -5,6 +5,11 @@ import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
 import com.chua.common.support.ai.rag.RagClient;
 import com.chua.common.support.ai.rag.RagDocument;
+import com.chua.common.support.ai.rag.RagResponse;
+import com.chua.common.support.ai.rag.RagDocument;
+import com.chua.common.support.ai.splitter.TextChunk;
+import com.chua.common.support.ai.splitter.TextSplitter;
+import com.chua.common.support.ai.splitter.TextSplitterProvider;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.utils.StringUtils;
@@ -12,9 +17,20 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.ai.support.configuration.rag.RagProperties;
+import com.chua.starter.ai.support.model.WebPageContent;
+import com.chua.starter.ai.support.service.KnowledgeBaseStore;
+import com.chua.starter.ai.support.service.KnowledgeGraphService;
+import com.chua.starter.ai.support.service.impl.KnowledgeGraphExtractionService;
+import com.chua.starter.ai.support.service.impl.WebPageCollectorService;
+import jakarta.annotation.PostConstruct;
+import com.chua.common.support.storage.metadata.Metadata;
+import com.chua.common.support.storage.result.GetObjectResult;
+import com.chua.common.support.storage.result.ObjectResult;
+import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.manage.knowledge.KnowledgeFileStorage;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
@@ -33,15 +49,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -101,7 +120,63 @@ public class ApiKnowledgeController {
     private final ChatClientRegistry chatClientRegistry;
 
     /**
+     * 知识点关系抽取服务：上传后异步抽取实体关系写知识图谱
+     */
+    private final KnowledgeGraphExtractionService knowledgeGraphExtractionService;
+
+    /**
+     * 知识图谱服务：删除知识点/知识库时同步回收图谱关联
+     */
+    private final KnowledgeGraphService knowledgeGraphService;
+
+    /**
+     * 知识库文件存储：字节读写走 spring-support-filesystem-starter 的 FileStorage SPI
+     */
+    private final KnowledgeFileStorage knowledgeFileStorage;
+
+    /**
+     * 网页采集服务：知识库按网址抓取正文（含 SSRF 防护）
+     */
+    private final WebPageCollectorService webPageCollectorService;
+
+    /**
+     * 知识库元数据持久化：启动时把 {@code sys_ai_knowledge_base} 全量载入 {@link #bases}，
+     * 之后所有写操作同步落库（写穿缓存）。
+     *
+     * <p>本字段存在的原因是 {@link #bases} 原本是纯内存 Map，后端重启会让知识库
+     * 列表连同文件树一起消失。</p>
+     */
+    private final KnowledgeBaseStore knowledgeBaseStore;
+
+    /**
+     * 分片默认值：与前端「最大分块/重叠/最小分块」输入框的默认值一致
+     */
+    private static final int DEFAULT_CHUNK_MAX = 1000;
+
+    /**
+     * 默认重叠长度
+     */
+    private static final int DEFAULT_CHUNK_OVERLAP = 100;
+
+    /**
+     * 默认最小分片长度
+     */
+    private static final int DEFAULT_CHUNK_MIN = 50;
+
+    /**
+     * 分片长度上限：超过这个值按经验召回会明显变差，同时单次向量化成本飙升
+     */
+    private static final int CHUNK_MAX_LIMIT = 8000;
+
+    /**
+     * 分片长度下限：过小的分片几乎没有语义
+     */
+    private static final int CHUNK_MIN_LIMIT = 16;
+
+    /**
      * 知识库元数据表：知识_基础_标识 → 元数据（记录内带创建人 用户标识）
+     *
+     * <p>本 Map 现在是 {@link #knowledgeBaseStore} 的读缓存，不再是唯一数据源。</p>
      */
     private final Map<String, Map<String, Object>> bases = new ConcurrentHashMap<>();
 
@@ -119,6 +194,58 @@ public class ApiKnowledgeController {
      * 检索配置（嵌入 / rerank 两阶段）
      */
     private final Map<String, Object> retrievalConfig = defaultRetrievalConfig();
+
+    /**
+     * 一次「列目录」请求内缓存的「相对路径 → 处理状态」映射。
+     *
+     * <p>{@code treeEntry} 会被每个文件调用一次，而状态要问向量库；
+     * 不缓存的话 30 个文件就是 30 次 {@code listDocuments}。请求结束后由
+     * {@code listTree} 清空，所以不会跨请求读到过期数据。</p>
+     *
+     * <p>值是前端分栏用的状态串：{@code completed} / {@code failed} / {@code uploaded}。
+     * 早先只存「已索引路径集合」，无法表达失败态，导致「失败」分栏恒为 0、
+     * 抽取失败的文件还被算进「已索引」。</p>
+     */
+    private Map<String, String> relPathStatusCache;
+
+    /**
+     * 启动时把持久化的知识库元数据载入内存缓存。
+     *
+     * <p>载入失败（表未迁移、库未连通）时只告警不抛异常：让服务照常启动，
+     * 退化为「知识库列表为空」，好过整个应用起不来。</p>
+     */
+    @PostConstruct
+    public void loadKnowledgeBases() {
+        try {
+            List<Map<String, Object>> rows = knowledgeBaseStore.loadAll();
+            for (Map<String, Object> row : rows) {
+                Object id = row.get("knowledge_base_id");
+                if (id != null) {
+                    bases.put(String.valueOf(id), row);
+                }
+            }
+            log.info("知识库元数据已载入内存缓存: {} 条", bases.size());
+        } catch (Exception e) {
+            log.warn("知识库元数据载入失败，本次启动按空库处理: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 把内存中的知识库记录写穿到数据库。
+     *
+     * <p>落库失败只告警不抛异常：元数据丢失应当降级为「本次改动未持久化」，
+     * 而不是让用户的建库/改名请求直接失败——内存里已经生效，重启后才丢。</p>
+     *
+     * @param base 知识库记录
+     */
+    private void persistBase(Map<String, Object> base) {
+        try {
+            knowledgeBaseStore.update(base);
+        } catch (Exception e) {
+            log.warn("知识库元数据落库失败（改动仅在内存生效，重启后会丢失）: kb={}, err={}",
+                    base.get("knowledge_base_id"), e.getMessage());
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // 知识库 CRUD
@@ -163,6 +290,11 @@ public class ApiKnowledgeController {
         List<String> reqTags = body.get("tags") instanceof List ? (List<String>) body.get("tags") : new ArrayList<>();
         Map<String, Object> source = body.get("source") instanceof Map ? uncheckedCast(body.get("source")) : null;
         boolean isPublic = Boolean.parseBoolean(String.valueOf(body.getOrDefault("is_public", false)));
+        // 分片配置：之前这三个字段前端一直在传、后端却从不读取，导致界面上配了也没效果
+        // （实测 1955 字节的文档 chunkCount 恒为 1）。这里读取并做范围校验。
+        int chunkMax = chunkInt(body, "chunk_max_size", DEFAULT_CHUNK_MAX);
+        int chunkOverlap = chunkInt(body, "chunk_overlap_size", DEFAULT_CHUNK_OVERLAP);
+        int chunkMin = chunkInt(body, "chunk_min_size", DEFAULT_CHUNK_MIN);
 
         boolean managed;
         String kind;
@@ -213,6 +345,9 @@ public class ApiKnowledgeController {
         base.put("tags", new ArrayList<>(reqTags));
         base.put("kind", kind);
         base.put("is_public", isPublic);
+        base.put("chunk_max_size", chunkMax);
+        base.put("chunk_overlap_size", chunkOverlap);
+        base.put("chunk_min_size", chunkMin);
         if (source != null) {
             // 规整来源配置，补齐 entries 默认空列表
             Map<String, Object> src = new LinkedHashMap<>(source);
@@ -229,13 +364,20 @@ public class ApiKnowledgeController {
          */
         refreshStats(base);
         bases.put(baseId, base);
+        // 建库后立即落库：否则重启即丢，用户会以为创建失败
+        try {
+            knowledgeBaseStore.insert(base);
+        } catch (Exception e) {
+            log.warn("知识库元数据落库失败（本次仅在内存生效，重启后会丢失）: kb={}, err={}", baseId, e.getMessage());
+        }
 
         Map<String, Object> result = toBaseResponse(base);
         // 快照型来源在创建时即抓取
         if (source != null && "snapshot".equals(String.valueOf(source.get("mode")))) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> sum = fetchSource(uncheckedCast(base.get("source")), root);
+            Map<String, Object> sum = fetchSource(base, root);
             result.put("source_fetch", sum);
+            // 抓取会改变文件数与目录占用，抓完再落一次库把缓存值刷准
+            persistBase(base);
         }
         pushService.push("knowledge.base-created", toBaseResponse(base));
         return ApiResult.ok(result);
@@ -270,7 +412,21 @@ public class ApiKnowledgeController {
         if (body.containsKey("is_public")) {
             base.put("is_public", Boolean.parseBoolean(String.valueOf(body.get("is_public"))));
         }
+        // 分片参数：改后只影响**后续**上传/重建索引的文件，已入库的分片不会被重切
+        if (body.containsKey("chunk_max_size")) {
+            base.put("chunk_max_size", chunkInt(body, "chunk_max_size", DEFAULT_CHUNK_MAX));
+        }
+        if (body.containsKey("chunk_overlap_size")) {
+            int overlap = chunkInt(body, "chunk_overlap_size", DEFAULT_CHUNK_OVERLAP);
+            int max = chunkInt(base, "chunk_max_size", DEFAULT_CHUNK_MAX);
+            // 重叠必须小于分片大小，否则切分器无法推进
+            base.put("chunk_overlap_size", overlap >= max ? Math.max(0, max / 4) : overlap);
+        }
+        if (body.containsKey("chunk_min_size")) {
+            base.put("chunk_min_size", chunkInt(body, "chunk_min_size", DEFAULT_CHUNK_MIN));
+        }
         base.put("updated_at", System.currentTimeMillis());
+        persistBase(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok(toBaseResponse(base));
     }
@@ -289,6 +445,12 @@ public class ApiKnowledgeController {
             deleteRecursively(root);
         }
         bases.remove(knowledge_base_id);
+        // 同步删掉持久化记录，否则重启后这个库会「复活」
+        try {
+            knowledgeBaseStore.delete(knowledge_base_id);
+        } catch (Exception e) {
+            log.warn("知识库元数据删库失败（重启后该库会重新出现）: kb={}, err={}", knowledge_base_id, e.getMessage());
+        }
         // 按知识库ID前缀回收其全部向量，避免知识库已删但向量残留继续参与召回
         purgeVectorsByPrefix(knowledge_base_id);
         // 清理引用该库的绑定
@@ -508,11 +670,124 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该知识库未配置来源");
         }
         Path root = resolveRoot(base);
-        Map<String, Object> summary = fetchSource(source, root);
+        Map<String, Object> summary = fetchSource(base, root);
         base.put("source", source);
         base.put("updated_at", System.currentTimeMillis());
+        persistBase(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok(summary);
+    }
+
+    /**
+     * 按需生成 / 补全某个知识点的关系图谱。
+     *
+     * <p>用于两种场景：① 知识点是网页采集来的，当初没开关系提取（或抽取失败），事后补一次；
+     * ② 原文改了关系，需要让 AI 重新抽取。抽取走 {@link KnowledgeGraphExtractionService}，
+     * 结果按「合并」语义落库：只补本次抽到、此前没有的关联，已有的原样保留，
+     * 反复调用不会丢数据（早前实现是先清后写，导致抽得少的一次覆盖抽得多的那次）。
+     * 实体按<b>名称</b>唯一（类型只是可升级的属性），关系按 (源, 目标, 类型) 唯一，
+     * 两者都幂等，所以同内容重抽不会让节点或边无理由变多。</p>
+     *
+     * <p>{@code reset=true} 时改为「先清空该知识点的全部关联再抽」，用于原文被改过、
+     * 或想让图谱回到只反映当前文本的干净状态。默认 false，即安全的增量补充。</p>
+     *
+     * <p>放在本控制器而不是图谱控制器，是因为只有这里有知识库目录的解析与安全路径拼接能力。</p>
+     *
+     * @param knowledge_base_id 知识库ID
+     * @param docPath            知识点相对路径
+     * @param reset              是否先清空该知识点的已有图谱关联再抽取
+     * @return 抽取汇总：entity_count / relation_count / elapsed_ms
+     */
+    @PostMapping("/bases/{knowledge_base_id}/graph/generate")
+    public ApiResult<Map<String, Object>> generateGraph(@PathVariable String knowledge_base_id,
+                                                         @RequestParam(value = "doc_path", required = false) String docPath,
+                                                         @RequestParam(value = "reset", required = false,
+                                                                 defaultValue = "false") boolean reset) {
+        Map<String, Object> base = requireBase(knowledge_base_id);
+        Path root = resolveRoot(base);
+        long start = System.currentTimeMillis();
+        List<Map<String, Object>> done = new ArrayList<>();
+        int entities = 0;
+        int relations = 0;
+        if (StringUtils.isBlank(docPath)) {
+            // 未指定知识点：对该知识库下全部文本文件跑一遍
+            try (Stream<Path> walk = Files.walk(root)) {
+                for (Path p : walk.filter(Files::isRegularFile).sorted().toList()) {
+                    if (!isTextFile(p)) {
+                        continue;
+                    }
+                    String rel = root.relativize(p).toString().replace('\\', '/');
+                    String text = readTextQuietly(p);
+                    if (text == null || text.isBlank()) {
+                        continue;
+                    }
+                    done.add(singleGraphGenerate(base, rel, text, reset));
+                }
+            } catch (Exception e) {
+                throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "遍历知识库失败: " + e.getMessage());
+            }
+        } else {
+            String rel = docPath.trim();
+            Path file = safeResolve(root, rel);
+            if (!Files.isRegularFile(file)) {
+                throw new ApiException(ApiErrorCode.NOT_FOUND, "知识点不存在: " + rel);
+            }
+            String text = readTextQuietly(file);
+            if (text == null) {
+                throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "知识点内容读取失败: " + rel);
+            }
+            done.add(singleGraphGenerate(base, rel, text, reset));
+        }
+        for (Map<String, Object> item : done) {
+            entities += toIntSafe(item.get("entity_count"), 0);
+            relations += toIntSafe(item.get("relation_count"), 0);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("knowledge_base_id", knowledge_base_id);
+        result.put("files", done.size());
+        result.put("entity_count", entities);
+        result.put("relation_count", relations);
+        result.put("reset", reset);
+        // reset 是「收口」语义，顺手把历史遗留的同名节点与重复边合并掉，
+        // 让图谱回到只反映当前文本的干净状态（不传 reset 的增量补充不做全库扫描）
+        if (reset) {
+            result.put("merged_entities", knowledgeGraphService.collapseDuplicateGraph(knowledge_base_id));
+        }
+        result.put("elapsed_ms", System.currentTimeMillis() - start);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 对单个知识点跑一次关系抽取并落库。
+     *
+     * <p>{@code reset=true} 时先清空该知识点已有的全部图谱关联（含孤立实体/关系回收），
+     * 让图谱回到「只反映当前文本」的干净状态；默认 false 走合并语义，只补不删。</p>
+     *
+     * @param base  知识库元数据
+     * @param rel   知识点相对路径
+     * @param text  知识点正文
+     * @param reset 是否先清空该知识点的已有关联
+     * @return 该知识点的抽取结果摘要
+     */
+    private Map<String, Object> singleGraphGenerate(Map<String, Object> base, String rel, String text,
+                                                    boolean reset) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("doc_path", rel);
+        String kbId = String.valueOf(base.get("knowledge_base_id"));
+        if (reset) {
+            knowledgeGraphService.deleteByKnowledgePoint(kbId, rel);
+        }
+        var extraction = knowledgeGraphExtractionService.extractAndStore(
+                kbId,
+                base.get("name") == null ? null : String.valueOf(base.get("name")),
+                rel, text);
+        int entityCount = extraction == null || extraction.entities() == null
+                ? 0 : (int) extraction.entities().stream().filter(Objects::nonNull).count();
+        int relationCount = extraction == null || extraction.relations() == null
+                ? 0 : (int) extraction.relations().stream().filter(Objects::nonNull).count();
+        item.put("entity_count", entityCount);
+        item.put("relation_count", relationCount);
+        return item;
     }
 
     @PutMapping("/bases/{knowledge_base_id}/source")
@@ -529,12 +804,7 @@ public class ApiKnowledgeController {
             }
             base.put("source", src);
             if ("snapshot".equals(String.valueOf(src.get("mode")))) {
-                /**
-                 * 获取源。
-                 * @param src src
-                 * @param resolveRoot(base resolve根(基础
-                 */
-                fetchSource(src, resolveRoot(base));
+                fetchSource(base, resolveRoot(base));
             }
         } else {
             /**
@@ -546,6 +816,7 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "source 字段格式非法");
         }
         base.put("updated_at", System.currentTimeMillis());
+        persistBase(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok(toBaseResponse(base));
     }
@@ -605,6 +876,7 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "目录不存在: " + path);
         }
         List<Map<String, Object>> tree = buildTree(root, dir, 4);
+        relPathStatusCache = null;
         tree.sort(Comparator.<Map<String, Object>, Boolean>comparing(m -> Boolean.TRUE.equals(m.get("is_dir")))
                 .thenComparing(m -> String.valueOf(m.get("name"))));
         return ApiResult.ok(tree);
@@ -625,16 +897,8 @@ public class ApiKnowledgeController {
         }
         Path root = resolveRoot(requireBase(knowledge_base_id));
         Path folder = safeResolve(root, rel);
-        try {
-            Files.createDirectories(folder);
-        } catch (IOException e) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
-             * @param e.getMessage( e.获取消息(
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建目录失败: " + e.getMessage());
+        if (!knowledgeFileStorage.mkdir(root.toString(), rel)) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建目录失败: " + rel + " -> " + folder);
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
         /**
@@ -675,6 +939,49 @@ public class ApiKnowledgeController {
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok();
+    }
+
+    /**
+     * 查询某个知识点实际切出来的分片，供界面展示「这份文档被切成了什么」。
+     *
+     * <p>前端 {@code getKBFileChunks} 此前标注「后端暂未提供接口」，界面上只能看到
+     * {@code chunkCount} 数字、看不到分片内容。这里按入库时用的同一套分片器
+     * （{@link #splitterOf}）对原文重新切分，保证看到的就是入库时那一份切法；
+     * 读的是磁盘上的原文而不是向量库，因此不依赖检索接口。</p>
+     *
+     * @param knowledge_base_id 知识库ID
+     * @param path              知识点相对路径
+     * @return 分片列表：index / size / start_offset / end_offset / text
+     */
+    @GetMapping("/bases/{knowledge_base_id}/chunks")
+    public ApiResult<List<Map<String, Object>>> listFileChunks(@PathVariable String knowledge_base_id,
+                                                               @RequestParam("path") String path) {
+        Map<String, Object> base = requireBase(knowledge_base_id, false);
+        Path root = resolveRoot(base);
+        Path file = safeResolve(root, path);
+        if (!Files.isRegularFile(file)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "知识点不存在: " + path);
+        }
+        String text = readTextQuietly(file);
+        if (text == null) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "知识点内容读取失败: " + path);
+        }
+        TextSplitter splitter = splitterOf(base);
+        List<TextChunk> chunks = splitter == null
+                ? TextSplitterProvider.create("sentence", DEFAULT_CHUNK_MAX, DEFAULT_CHUNK_OVERLAP).split(text)
+                : splitter.split(text);
+        List<Map<String, Object>> out = new ArrayList<>(chunks.size());
+        for (TextChunk c : chunks) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("index", c.index());
+            item.put("size", c.text() == null ? 0 : c.text().length());
+            item.put("start_offset", c.startOffset());
+            item.put("end_offset", c.endOffset());
+            item.put("type", c.type());
+            item.put("text", c.text());
+            out.add(item);
+        }
+        return ApiResult.ok(out);
     }
 
     @PostMapping("/bases/{knowledge_base_id}/tree/rename")
@@ -742,14 +1049,16 @@ public class ApiKnowledgeController {
     public ApiResult<Map<String, Object>> readFile(@PathVariable String knowledge_base_id,
                                                    @RequestParam String path) {
         Path root = resolveRoot(requireBase(knowledge_base_id, false));
+        // 空 path 以前经 safeResolve 落到根目录、再由 isRegularFile 判否返回 404；
+        // 现在字节读取走 SPI，必须在入口显式挡住空值，否则组件会抛 IllegalArgumentException 变 500
+        if (StringUtils.isBlank(path)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
+        }
         Path file = safeResolve(root, path);
-        if (!Files.isRegularFile(file)) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
-             * @param path 路径
-             * @return api异常的结果
-             */
+        // 存在性与字节读取都走文件存储 SPI；越界校验仍由 safeResolve 给 400 业务提示
+        GetObjectResult got = knowledgeFileStorage.get(root.toString(), path);
+        if (got == null || ObjectResult.ResultCode.FAILURE == got.getResultCode()
+                || got.getInputStream() == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
         }
         if (!isTextFile(file)) {
@@ -762,8 +1071,8 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "仅支持读取文本文件");
         }
         String content;
-        try {
-            content = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        try (InputStream in = got.getInputStream()) {
+            content = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             /**
              * api异常。
@@ -776,8 +1085,9 @@ public class ApiKnowledgeController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("rel_path", root.relativize(file).toString().replace('\\', '/'));
         result.put("content", content);
-        result.put("size", fileSize(file));
-        result.put("modified_at", lastModified(file));
+        Metadata meta = got.getMetadata();
+        result.put("size", meta != null ? meta.getSize() : content.length());
+        result.put("modified_at", meta != null ? meta.getLastModified() : 0L);
         return ApiResult.ok(result);
     }
 
@@ -799,17 +1109,12 @@ public class ApiKnowledgeController {
         Map<String, Object> base = requireBase(knowledge_base_id);
         Path root = resolveRoot(base);
         Path file = safeResolve(root, rel);
-        try {
-            Files.createDirectories(file.getParent());
-            Files.writeString(file, content, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
-             * @param e.getMessage( e.获取消息(
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "写入文件失败: " + e.getMessage());
+        // 落盘改走 spring-support-filesystem-starter 的 FileStorage SPI（对象键 = 相对根目录的路径），
+        // 不再直接 Files.createDirectories + Files.writeString
+        PutObjectResult put = knowledgeFileStorage.writeText(root.toString(), rel, content);
+        if (put == null || ObjectResult.ResultCode.FAILURE == put.getResultCode()) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "写入文件失败: " + rel + " -> " + file
+                    + (put == null ? "" : " (" + put.getMessage() + ")"));
         }
         /**
          * 索引知识文件。
@@ -831,6 +1136,10 @@ public class ApiKnowledgeController {
     public ApiResult<Void> deleteFile(@PathVariable String knowledge_base_id,
                                       @RequestParam String path) {
         Path root = resolveRoot(requireBase(knowledge_base_id));
+        // 同 readFile：空 path 以前是 404，挡住避免走到 SPI 的空值校验
+        if (StringUtils.isBlank(path)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
+        }
         Path file = safeResolve(root, path);
         if (!Files.isRegularFile(file)) {
             /**
@@ -841,16 +1150,9 @@ public class ApiKnowledgeController {
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
         }
-        try {
-            Files.delete(file);
-        } catch (IOException e) {
-            /**
-             * api异常。
-             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
-             * @param e.getMessage( e.获取消息(
-             * @return api异常的结果
-             */
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除文件失败: " + e.getMessage());
+        // 删除同样走文件存储 SPI；这里是文件删除接口，目录删除另有 DELETE /folder
+        if (!knowledgeFileStorage.delete(root.toString(), path)) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除文件失败: " + path);
         }
         Map<String, Object> base = requireBase(knowledge_base_id);
         // 按「知识库ID/相对路径」前缀精确回收该文件产生的向量
@@ -862,6 +1164,139 @@ public class ApiKnowledgeController {
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
         return ApiResult.ok();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 库内问答（RAG 检索 + 大模型作答 + 引用溯源）
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 基于某个知识库提问：向量检索取回相关分片，交大模型作答，并返回可点击的引用。
+     *
+     * <p>与 {@code POST /search} 的区别：那个是<b>关键字匹配</b>，只回片段不出答案；
+     * 本端点走 {@link RagClient#query(String, int, double)}，一次拿到答案与引用源。</p>
+     *
+     * <p><b>刻意不调 {@code temperature()} / {@code system()}</b>：这些是
+     * {@code RagClient} 上的链式 setter，<b>原地修改并返回 this</b>，而
+     * {@code RagClientManager} 存的是进程级共享单例。在这里调会把<b>全应用</b>的
+     * 对话参数一起改掉（前面已经因此把全应用钉成贪心解码并回退过一次）。
+     * 所以只用无副作用的 {@code query(query, topK, threshold)} 重载。</p>
+     *
+     * <p>引用能还原成文件路径，是因为入库时 {@code docId} 固定为
+     * {@code <knowledge_base_id>/<相对路径>}（见 {@link #indexKnowledgeFile}），
+     * 这里剥掉前缀即可拿到 {@code doc_path}，前端拿它去读原文预览。</p>
+     *
+     * <p>注意向量库检索时可能<b>不回传 metadata</b>（jvector 只回 score），
+     * 此时 {@code RagPipeline} 靠 {@code <docId>_<块号>} 的拼接规则从 chunkId 反推 docId。
+     * 换言之入库时若改用不带路径的随机 docId，引用就会退化成一个无法定位文件的
+     * {@code fileName}，前端只能显示 chunkId 且点不开原文——这是曾经的实际故障。</p>
+     *
+     * @param knowledge_base_id 知识库ID
+     * @param body 请求体：query（必填）、top_k（缺省 6）、similarity（缺省 0.35）
+     * @return answer / citations / top_k / elapsed_ms
+     */
+    @PostMapping("/bases/{knowledge_base_id}/ask")
+    public ApiResult<Map<String, Object>> ask(@PathVariable String knowledge_base_id,
+                                               @RequestBody Map<String, Object> body) {
+        String query = body == null || body.get("query") == null ? "" : String.valueOf(body.get("query"));
+        if (StringUtils.isBlank(query)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "query 不能为空");
+        }
+        Map<String, Object> base = requireBase(knowledge_base_id, false);
+        int topK = clampInt(toIntSafe(body.get("top_k"), 6), 1, 20);
+        double similarity = body.get("similarity") instanceof Number num
+                ? Math.max(0.0D, Math.min(1.0D, num.doubleValue()))
+                : 0.35D;
+
+        long start = System.currentTimeMillis();
+        RagClient client = ragClientManager.current();
+        RagResponse response = client.query(query, topK, similarity);
+
+        String prefix = knowledge_base_id + "/";
+        List<Map<String, Object>> citations = new ArrayList<>();
+        if (response != null && response.sources() != null) {
+            int index = 0;
+            for (RagResponse.Source source : response.sources()) {
+                if (source == null) {
+                    continue;
+                }
+                Map<String, Object> meta = source.metadata();
+                String docId = source.documentId() == null ? "" : source.documentId();
+                String docPath = docId.startsWith(prefix) ? docId.substring(prefix.length()) : docId;
+                String fileName = meta == null ? null : String.valueOf(meta.getOrDefault("fileName", ""));
+                index++;
+                Map<String, Object> citation = new LinkedHashMap<>(8);
+                citation.put("index", index);
+                citation.put("doc_id", docId);
+                citation.put("doc_path", docPath);
+                citation.put("file_name", fileName == null || fileName.isBlank()
+                        ? fileNameOf(docPath) : fileName);
+                citation.put("score", round4(source.score()));
+                citation.put("snippet", snippet(source.content(), 400));
+                citations.add(citation);
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>(6);
+        result.put("knowledge_base_id", knowledge_base_id);
+        result.put("query", query);
+        result.put("answer", response == null || response.answer() == null ? "" : response.answer());
+        result.put("citations", citations);
+        result.put("top_k", topK);
+        result.put("elapsed_ms", System.currentTimeMillis() - start);
+        log.info("[Knowledge] 库内问答 kb={} topK={} 命中引用={} 耗时={}ms",
+                knowledge_base_id, topK, citations.size(), result.get("elapsed_ms"));
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 把整数夹到区间内。
+     *
+     * @param value 原始值
+     * @param min 下界
+     * @param max 上界
+     * @return 夹取后的值
+     */
+    private int clampInt(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    /**
+     * 保留四位小数，避免浮点尾数在 JSON 里拖一长串。
+     *
+     * @param value 原始值
+     * @return 四位小数的值
+     */
+    private double round4(double value) {
+        return Math.round(value * 10000.0D) / 10000.0D;
+    }
+
+    /**
+     * 取引用片段的前若干字符，超长补省略号。
+     *
+     * @param content 原文
+     * @param max 保留长度
+     * @return 截断后的片段
+     */
+    private String snippet(String content, int max) {
+        if (content == null) {
+            return "";
+        }
+        String flat = content.replaceAll("\\s+", " ").trim();
+        return flat.length() <= max ? flat : flat.substring(0, max) + "…";
+    }
+
+    /**
+     * 从相对路径里取文件名。
+     *
+     * @param docPath 相对路径
+     * @return 文件名；路径为空时返回空串
+     */
+    private String fileNameOf(String docPath) {
+        if (docPath == null || docPath.isBlank()) {
+            return "";
+        }
+        int idx = docPath.lastIndexOf('/');
+        return idx >= 0 ? docPath.substring(idx + 1) : docPath;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1043,6 +1478,12 @@ public class ApiKnowledgeController {
          */
         refreshStats(base);
         bases.put(baseId, base);
+        // 导入出来的库同样要落库，否则重启即丢
+        try {
+            knowledgeBaseStore.insert(base);
+        } catch (Exception e) {
+            log.warn("导入知识库元数据落库失败（本次仅在内存生效，重启后会丢失）: kb={}, err={}", baseId, e.getMessage());
+        }
         pushService.push("knowledge.base-created", toBaseResponse(base));
         return ApiResult.ok(toBaseResponse(base));
     }
@@ -1155,6 +1596,65 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "标签不存在: " + key);
         }
         return AiMemoryOwnership.requireOwned(tag, writable, "标签");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 列表页统计（一次请求拿全量汇总 + 每库计数）
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 知识库列表页的统计汇总。
+     *
+     * <p>列表页要展示「知识库数 / 文档总量 / 实体节点 / 关系连线」以及每张卡片上的
+     * 实体数、关系数、文档数。{@code toBaseResponse} 只是把存储的 map 原样拷出，
+     * 不带这些计数；而逐个库去调图谱与文件列表就是 N+1 次请求（实测 5 个库要 10 次）。
+     * 所以这里一次算完返回。</p>
+     *
+     * <p>只统计<b>当前用户可见</b>的知识库，口径与 {@code /search} 一致，
+     * 避免通过统计泄露他人私有库的规模。</p>
+     *
+     * @return totals（四个汇总数）+ per_base（每库的 file/entity/relation 计数）
+     */
+    @GetMapping("/bases/overview")
+    public ApiResult<Map<String, Object>> overview() {
+        List<Map<String, Object>> visible = new ArrayList<>(AiMemoryOwnership.visibleToCurrentUser(bases.values()));
+        Map<String, Map<String, Object>> perBase = new LinkedHashMap<>();
+        int totalFiles = 0;
+        int totalEntities = 0;
+        int totalRelations = 0;
+        for (Map<String, Object> base : visible) {
+            String id = String.valueOf(base.get("knowledge_base_id"));
+            int files = 0;
+            try {
+                Path root = resolveRoot(base);
+                if (Files.isDirectory(root)) {
+                    try (Stream<Path> walk = Files.walk(root)) {
+                        files = (int) walk.filter(Files::isRegularFile).count();
+                    }
+                }
+            } catch (Exception e) {
+                // 单个库统计失败不该让整页统计挂掉，记 0 并继续
+                log.debug("[Knowledge] 统计库 {} 的文件数失败: {}", id, e.getMessage());
+            }
+            int[] graph = knowledgeGraphService.countKnowledgeBaseGraph(id);
+            Map<String, Object> one = new LinkedHashMap<>(4);
+            one.put("file_count", files);
+            one.put("entity_count", graph[0]);
+            one.put("relation_count", graph[1]);
+            perBase.put(id, one);
+            totalFiles += files;
+            totalEntities += graph[0];
+            totalRelations += graph[1];
+        }
+        Map<String, Object> totals = new LinkedHashMap<>(4);
+        totals.put("kb_count", visible.size());
+        totals.put("file_count", totalFiles);
+        totals.put("entity_count", totalEntities);
+        totals.put("relation_count", totalRelations);
+        Map<String, Object> result = new LinkedHashMap<>(2);
+        result.put("totals", totals);
+        result.put("per_base", perBase);
+        return ApiResult.ok(result);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1386,7 +1886,8 @@ public class ApiKnowledgeController {
      * @param root 根
      * @return 获取源的结果
      */
-    private Map<String, Object> fetchSource(Map<String, Object> source, Path root) {
+    private Map<String, Object> fetchSource(Map<String, Object> base, Path root) {
+        Map<String, Object> source = uncheckedCast(base.get("source"));
         Object rawEntries = source.get("entries");
         List<?> entries = rawEntries instanceof List ? (List<?>) rawEntries : new ArrayList<>();
         int fetched = 0;
@@ -1412,34 +1913,36 @@ public class ApiKnowledgeController {
             Map<String, Object> e = uncheckedCast(o);
             String url = e.get("url") == null ? null : String.valueOf(e.get("url"));
             String title = e.get("title") == null ? null : String.valueOf(e.get("title"));
+            int maxPages = e.get("max_pages") == null ? 1 : toIntSafe(e.get("max_pages"), 1);
             if (StringUtils.isBlank(url)) {
                 failed++;
                 errors.add("条目缺少 url");
                 continue;
             }
             try {
-                ClientResponse resp = HttpClientFactory.getClient().get(url);
-                if (resp == null || !resp.isSuccess()) {
+                // 按 max_pages 展开同域链接；1 表示只抓入口页
+                List<WebPageContent> pages = maxPages > 1
+                        ? webPageCollectorService.fetchCrawl(url, maxPages)
+                        : List.of(webPageCollectorService.fetch(url));
+                if (pages.isEmpty()) {
                     failed++;
-                    errors.add(url + ": HTTP 抓取失败");
+                    errors.add(url + ": 未取到任何页面");
                     continue;
                 }
-                byte[] bodyBytes = resp.getBody();
-                if (bodyBytes == null || bodyBytes.length == 0) {
-                    failed++;
-                    errors.add(url + ": 内容为空");
-                    continue;
+                for (WebPageContent page : pages) {
+                    String pageTitle = StringUtils.hasText(title) ? title : page.title();
+                    String name = StringUtils.hasText(pageTitle) ? pageTitle : page.url().substring(page.url().lastIndexOf('/') + 1);
+                    if (!name.contains(".")) {
+                        name = "page_" + i + ".md";
+                    }
+                    String relPath = "snapshots/" + sanitize(name);
+                    String text = page.text();
+                    Files.write(snapDir.resolve(sanitize(name)), text.getBytes(StandardCharsets.UTF_8));
+                    // 关键：抓下来的网页必须进向量库，否则「采集」只落盘、前端文件树能看到，
+                    // 但语义检索永远搜不到——早前就是漏了这一步。
+                    indexKnowledgeFile(base, relPath, text);
+                    fetched++;
                 }
-                String text = new String(bodyBytes, StandardCharsets.UTF_8)
-                        .replaceAll("<[^>]+>", " ")
-                        .replaceAll("\\s+", " ")
-                        .trim();
-                String name = (title != null && !title.isBlank()) ? title : url.substring(url.lastIndexOf('/') + 1);
-                if (!name.contains(".")) {
-                    name = "page_" + i + ".md";
-                }
-                Files.write(snapDir.resolve(sanitize(name)), text.getBytes(StandardCharsets.UTF_8));
-                fetched++;
             } catch (Exception ex) {
                 failed++;
                 errors.add(url + ": " + ex.getMessage());
@@ -1453,6 +1956,27 @@ public class ApiKnowledgeController {
         summary.put("errors", errors);
         summary.put("last_fetched_at", source.get("lastFetchedAt"));
         return summary;
+    }
+
+    /**
+     * 把任意对象安全转成 int，无法转换时返回默认值。
+     *
+     * @param value      原始值
+     * @param defaultVal 默认值
+     * @return 转换结果
+     */
+    private int toIntSafe(Object value, int defaultVal) {
+        if (value == null) {
+            return defaultVal;
+        }
+        try {
+            if (value instanceof Number num) {
+                return num.intValue();
+            }
+            return Integer.parseInt(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return defaultVal;
+        }
     }
 
     /**
@@ -1575,12 +2099,90 @@ public class ApiKnowledgeController {
         boolean isDir = Files.isDirectory(entry);
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("name", entry.getFileName() == null ? "" : entry.getFileName().toString());
-        m.put("rel_path", root.relativize(entry).toString().replace('\\', '/'));
+        String relPath = root.relativize(entry).toString().replace('\\', '/');
+        m.put("rel_path", relPath);
         m.put("is_dir", isDir);
         m.put("is_file", !isDir);
         m.put("size", isDir ? null : fileSize(entry));
         m.put("modified_at", lastModified(entry));
+        // 处理状态：目录无意义；文件按「向量库里是否已有它的分片」判定。
+        // 之前这里不返回状态，前端只好在 toKBFile 里硬编码 processingStatus='uploaded'，
+        // 于是「已索引/解析中/失败」三个分栏恒为 0/全部/0；而树组件的点击分支
+        // 又只在 completed||failed 时才 emit('view')——两处硬编码撞在一起，
+        // 导致文件预览永远打不开。
+        if (!isDir) {
+            m.put("processing_status", relPathStatuses().getOrDefault(relPath, "uploaded"));
+        }
         return m;
+    }
+
+    /**
+     * 列出「相对路径 → 处理状态」的映射，状态串与前端分栏一致。
+     *
+     * <p>没有专门的索引状态表，判断依据只能是向量库：{@link RagClient#listDocuments}
+     * 能列出已入库文档，而 docId 固定为 {@code <知识库ID>/<相对路径>}（见 {@link #indexKnowledgeFile}），
+     * 剥掉第一段前缀即得相对路径。</p>
+     *
+     * <p>必须带上文档自身的 {@code status}：{@link RagDocument} 的取值是
+     * {@code READY / PROCESSING / FAILED}，只有 READY 才算「已索引」，FAILED 要落到
+     * 「失败」分栏。早先只按「路径是否出现在文档表里」判断，等于把抽取失败的文件
+     * 也算成已索引，于是「失败」分栏永远是 0。</p>
+     *
+     * <p>同一路径可能有多条记录（重复入库）：{@code listDocuments} 按创建时间倒序，
+     * 因此用 {@code putIfAbsent} 保留最新的那条。</p>
+     *
+     * <p><b>已知局限</b>：{@code listDocuments} 读的是进程内存里的文档登记表，
+     * 进程重启后为空，而向量是持久化的。此时本方法会返回空映射（全部显示为「已上传」），
+     * 属于<b>展示层的保守降级</b>——不会谎称已索引，但也不会谎称未索引失败。</p>
+     *
+     * <p>失败一律降级为空映射（当作全未索引），不抛异常——索引状态只用于展示，
+     * 不该让「列目录」这个基础操作整体失败。结果缓存到本次「列目录」请求内，
+     * 避免每个文件都去问一次向量库。</p>
+     *
+     * @return 相对路径到状态串（completed / failed / uploaded）的映射
+     */
+    private Map<String, String> relPathStatuses() {
+        if (relPathStatusCache != null) {
+            return relPathStatusCache;
+        }
+        try {
+            RagClient client = ragClientManager.current();
+            // 页码从 1 开始（RagClient#listDocuments 契约）；传 0 会让 (page-1)*pageSize 变负，
+            // subList 抛 IndexOutOfBoundsException，被下方 catch 吞掉后全部文件都显示未索引。
+            List<RagDocument> docs = client.listDocuments(1, 10000);
+            Map<String, String> out = new HashMap<>();
+            for (RagDocument doc : docs == null ? List.<RagDocument>of() : docs) {
+                String id = doc == null ? null : doc.id();
+                if (id == null || !id.contains("/")) {
+                    continue;
+                }
+                out.putIfAbsent(id.substring(id.indexOf('/') + 1), toDisplayStatus(doc.status()));
+            }
+            relPathStatusCache = out;
+        } catch (Exception e) {
+            // 用 warn 而不是 debug：这里一旦降级成空映射，页面上所有文件都会显示「已上传」，
+            // 现象与真正的「未索引」完全相同。此前传入非法页码导致 subList 抛异常被静默吞掉，
+            // 排查时只能看到状态不对、看不到任何日志。
+            log.warn("[Knowledge] 读取索引文档列表失败，按全未索引处理: {}", e.getMessage(), e);
+            relPathStatusCache = Map.of();
+        }
+        return relPathStatusCache;
+    }
+
+    /**
+     * 把向量库侧的文档状态翻译成前端分栏用的状态串。
+     *
+     * @param docStatus {@link RagDocument#status()}，取值 READY / PROCESSING / FAILED
+     * @return completed（已索引）/ failed（失败）/ uploaded（解析中或尚未入库）
+     */
+    private static String toDisplayStatus(String docStatus) {
+        if ("FAILED".equalsIgnoreCase(docStatus)) {
+            return "failed";
+        }
+        if ("READY".equalsIgnoreCase(docStatus)) {
+            return "completed";
+        }
+        return "uploaded";
     }
 
     /**
@@ -1616,17 +2218,82 @@ public class ApiKnowledgeController {
      * @param relPath rel路径
      * @param content 内容
      */
+    /**
+     * 按知识库配置构造分片器。
+     *
+     * <p>刻意<b>不</b>去改 {@code RagClientSetting.getTextSplitter()}：那是进程级共享实例，
+     * 改了会影响所有知识库以及并发的其它请求（与 {@code ChatClient.temperature()} 同一类陷阱）。
+     * 这里每次调用现造一个轻量分割器，随本次上传传入。</p>
+     *
+     * @param base 知识库元数据
+     * @return 分片器；配置非法或创建失败时返回 null，由 RAG 客户端回退到全局分片器
+     */
+    private TextSplitter splitterOf(Map<String, Object> base) {
+        try {
+            int max = chunkInt(base, "chunk_max_size", DEFAULT_CHUNK_MAX);
+            int overlap = chunkInt(base, "chunk_overlap_size", DEFAULT_CHUNK_OVERLAP);
+            // 重叠不能大于分片大小，否则切分器无法推进
+            if (overlap >= max) {
+                overlap = Math.max(0, max / 4);
+            }
+            return TextSplitterProvider.create("sentence", max, overlap);
+        } catch (Exception e) {
+            log.warn("构造分片器失败，回退全局分片器: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从请求体或知识库记录里取分片整数，缺失/非法时用默认值，并夹到安全区间。
+     *
+     * @param src        请求体或知识库 Map
+     * @param key        字段名
+     * @param fallback   缺省值
+     * @return 合法分片整数
+     */
+    private int chunkInt(Map<String, Object> src, String key, int fallback) {
+        Object v = src == null ? null : src.get(key);
+        if (v == null) {
+            return fallback;
+        }
+        int n;
+        try {
+            n = v instanceof Number num ? num.intValue() : Integer.parseInt(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+        if (n < CHUNK_MIN_LIMIT) {
+            return CHUNK_MIN_LIMIT;
+        }
+        return Math.min(n, CHUNK_MAX_LIMIT);
+    }
+
     private void indexKnowledgeFile(Map<String, Object> base, String relPath, String content) {
+        String knowledgeBaseId = String.valueOf(base.get("knowledge_base_id"));
         try {
             RagClient client = ragClientManager.current();
             if (client == null) {
                 return;
             }
-            client.uploadDocument(String.valueOf(base.get("knowledge_base_id")) + "/" + relPath,
-                    content.getBytes(StandardCharsets.UTF_8));
+            // docId 必须是 <知识库ID>/<相对路径>：检索时向量库可能不回传 metadata，
+            // RagPipeline 只能按 <docId>_<块号> 从 chunkId 反推 docId，
+            // docId 不带路径的话引用溯源就退化成无法定位文件的 chunkId。
+            // fileName 单独传纯文件名——它决定文本抽取器与 fileType，不能塞路径。
+            client.uploadDocumentWithId(knowledgeBaseId + "/" + relPath,
+                    fileNameOf(relPath), content.getBytes(StandardCharsets.UTF_8), splitterOf(base));
         } catch (Exception e) {
-            log.debug("[ApiKnowledgeController] RAG 索引文件失败(忽略): {}", e.getMessage());
+            // 索引失败不阻断文件写入（文件本身已落盘，检索侧只是查不到），
+            // 但必须让管理员看得见：早前用 debug 记录，导致向量库写入彻底失败时
+            // 线上只表现为「引用 0 条」，无从定位。
+            log.warn("[ApiKnowledgeController] RAG 索引失败(文件已保存但检索不到) docId={}/{}, 原因: {}",
+                    knowledgeBaseId, relPath, e.getMessage(), e);
         }
+        // 向量化之后异步抽取实体关系写知识图谱（人物/地点/事件），由开关
+        // rag_relation_extract_enabled 控制（默认开启）。放到异步是因为上传接口本身
+        // 要等向量化完成才返回，再串一次 LLM 往返会明显拉长响应；抽取失败也不影响入库。
+        knowledgeGraphExtractionService.submitAsync(knowledgeBaseId,
+                base.get("name") == null ? null : String.valueOf(base.get("name")),
+                relPath, content);
     }
 
     /**
@@ -1646,6 +2313,9 @@ public class ApiKnowledgeController {
      * @param idPrefix 文档名 / 向量标识前缀
      */
     private void purgeVectorsByPrefix(String idPrefix) {
+        // 同步清理知识图谱关联。前缀语义与向量完全一致（知识库ID 或 知识库ID/相对路径），
+        // 放在最前面是因为图谱清理不依赖向量客户端——下面 client == null 时会提前 return。
+        purgeGraphByPrefix(idPrefix);
         try {
             RagClient client = ragClientManager.current();
             if (client == null) {
@@ -1671,6 +2341,33 @@ public class ApiKnowledgeController {
         //    故前缀直删对现网无效；文档记录里的 fileName 才是「知识库ID/相对路径」，
         //    借 deleteDocument 由 pipeline 连带回收其向量。
         purgeDocumentsByNamePrefix(idPrefix);
+    }
+
+    /**
+     * 按前缀清理知识图谱关联。
+     *
+     * <p>前缀语义与向量清理保持一致：不含 {@code /} 视为整个知识库（删该库全部图谱
+     * 关联），含 {@code /} 视为单个知识点（删该知识点关联）。删除后会回收不再被任何
+     * 知识点引用的孤立实体与关系，避免图上留下指向空节点的悬空边。</p>
+     *
+     * @param idPrefix 知识库ID 或 知识库ID/相对路径
+     */
+    private void purgeGraphByPrefix(String idPrefix) {
+        if (StringUtils.isBlank(idPrefix)) {
+            return;
+        }
+        try {
+            int slash = idPrefix.indexOf('/');
+            if (slash < 0) {
+                knowledgeGraphService.deleteByKnowledgeBase(idPrefix);
+            } else {
+                knowledgeGraphService.deleteByKnowledgePoint(
+                        idPrefix.substring(0, slash), idPrefix.substring(slash + 1));
+            }
+        } catch (Exception e) {
+            log.debug("[ApiKnowledgeController] 知识图谱关联清理失败(忽略), 前缀={}: {}",
+                    idPrefix, e.getMessage());
+        }
     }
 
     /**

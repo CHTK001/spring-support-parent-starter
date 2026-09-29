@@ -3,12 +3,14 @@ package com.chua.starter.job.support.manage;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.network.server.SyncServer;
+import com.chua.common.support.task.script.ScriptFlow;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.job.support.JobProperties;
 import com.chua.starter.job.support.cluster.LeaderElector;
 import com.chua.starter.job.support.dispatch.JobQuery;
 import com.chua.starter.job.support.dispatch.JobRuntime;
 import com.chua.starter.job.support.dispatch.JobSpec;
+import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.handler.BeanJobHandler;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
@@ -34,7 +36,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -147,6 +151,27 @@ public class JobGovernanceService {
     }
 
     /**
+     * 列出当前进程可用的脚本引擎（驱动前端「片段语言」下拉）。
+     *
+     * <p>由 SPI 运行时枚举，装了新引擎前端自动出现，不需要改前端枚举表。</p>
+     *
+     * <p>统一小写后再返回：SPI 注册表归一后的扩展名是大写（如 {@code JAVA}），
+     * 而本模块 {@code GlueTypes.engineOf} 与 {@code sys_job_glue_type} 的口径都是小写，
+     * 两者混用会让前端下拉的「值」与「选项」对不上，所以在这里收口成引擎名。</p>
+     *
+     * @return 去重升序的引擎名列表
+     */
+    public ReturnResult<List<String>> glueEngines() {
+        var engines = new TreeSet<String>();
+        for (String engine : ScriptFlow.engines()) {
+            if (engine != null && !engine.isBlank()) {
+                engines.add(engine.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        return ReturnResult.ok(new ArrayList<>(engines));
+    }
+
+    /**
      * 登记或更新任务 (调度配置、启停一次写入)。
      *
      * @param dto 任务规格
@@ -250,7 +275,13 @@ public class JobGovernanceService {
      * @return 是否成功
      */
     public ReturnResult<Boolean> remove(String jobKey) {
-        return execute("remove", jobKey, () -> jobOperator.remove(jobKey));
+        ReturnResult<Boolean> result = execute("remove", jobKey, () -> jobOperator.remove(jobKey));
+        if (result != null && result.isOk()) {
+            // 台账行删了，执行器侧缓存的编译产物、类加载器与落盘片段也要一起释放，
+            // 否则 ScriptProvider 缓存与临时目录只涨不落
+            ScriptGlueHandlers.release(jobKey);
+        }
+        return result;
     }
 
     /**

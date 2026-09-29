@@ -39,6 +39,15 @@ import java.util.List;
  * <p>
  * 提供消息提供商、消息模板的管理接口，以及统一的消息发送接口。
  * </p>
+ * <p>
+ * 默认 bean 名 {@code sysMessageController}，与 {@code com.chua.starter.system.controller.SysMessageController}
+ * 同名简名。两者路由前缀不同（本类 {@code /v2/message}，system 侧 {@code /v2/message/sys-message}）本可共存，
+ * 但组件扫描在遇到同名 bean 时直接抛 {@code ConflictingBeanDefinitionException}，
+ * 而 {@code allow-bean-definition-overriding} 只放行已注册定义被覆盖，不放行扫描期冲突。
+ * 也就是说：**同时引入消息模块与 system 模块的应用无法启动**，
+ * 这不是这里改个 bean 名能解决的——重名面覆盖 4 个 Mapper 与 4 组 Service/Impl。
+ * 要共存必须先在两个子系统之间做一次取舍（合并或退役其一），单点改名只会把冲突挪到下一个类上。
+ * </p>
  *
  * @since 2026/08/03
  * @author CH

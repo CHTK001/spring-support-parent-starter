@@ -41,9 +41,6 @@ import java.util.concurrent.TimeUnit;
  *         return kvEngine.findAllByPrefix("user:" + userId + ":");
  *     }
  * }
- * }</pre>"用户:" + 用户标识 + ":");
- *     }
- * }
  * }</pre>
  *
  * @since 4.0.0.42
@@ -64,7 +61,7 @@ public class RedisKvEngine implements KvEngine {
     /**
      * 构造基于指定 {@link StringRedisTemplate} 的 KV 引擎。
      *
-     * @param redisTemplate 不可为 空
+     * @param redisTemplate 不可为 {@code null}
      */
     public RedisKvEngine(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -99,6 +96,14 @@ public class RedisKvEngine implements KvEngine {
             delete(key);
             return;
         }
+        // 契约要求 ttl 不可为 null；不校验会把入参失误推迟成底层 NPE，且错误现场难以定位
+        if (ttl == null) {
+            throw new IllegalArgumentException("过期时长不可为 null（如需永不过期请调用 put(String,String)）");
+        }
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("过期时长必须大于 0: " + ttl
+                    + "（Redis 会把 0 与负数当作立即删除该键，如需删除请调用 delete）");
+        }
         redisTemplate.opsForValue().set(key, value, ttl);
     }
 
@@ -131,7 +136,27 @@ public class RedisKvEngine implements KvEngine {
      * Expire
     */
     public void expire(String key, long seconds) {
+        // 契约要求 seconds 必须大于 0，而 Redis 的 EXPIRE 对 0 与负数是「立即删除该键」。
+        // 若放任通过，调用方一次入参失误就会静默丢数据，故在此显式拒绝并指向 delete
+        if (seconds <= 0) {
+            throw new IllegalArgumentException("过期秒数必须大于 0: " + seconds
+                    + "（Redis 会把 0 与负数当作立即删除该键，如需删除请调用 delete）");
+        }
         redisTemplate.expire(key, seconds, TimeUnit.SECONDS);
+    }
+
+    @Override
+    /**
+     * 后端支持 TTL：Redis 原生支持 EXPIRE / PEXPIREAT，因此返回 {@code true}。
+     *
+     * <p>KvEngine 契约要求「覆写了任一 TTL 操作的实现类必须同时覆写本方法返回 true」，
+     * 本类覆写了 {@link #put(String, String, Duration)}、{@link #expire(String, long)}
+     * 与 {@link #ttl(String)}，故必须覆写。</p>
+     *
+     * @return 支持 TTL 返回 {@code true}
+     */
+    public boolean supportsTtl() {
+        return true;
     }
 
     @Override
@@ -146,8 +171,8 @@ public class RedisKvEngine implements KvEngine {
      * 使用 扫描 命令查找所有以指定前缀开头的键值对。
      * <p>SCAN 不会阻塞 Redis 实例，适合生产环境使用。每批次扫描 1000 个键。</p>
      *
-     * @param prefix 键前缀，不可为 空
-     * @return 匹配前缀的键值对映射；无匹配时返回空 映射
+     * @param prefix 键前缀，不可为 {@code null}
+     * @return 匹配前缀的键值对映射；无匹配时返回空映射
      */
     @Override
     public Map<String, String> findAllByPrefix(String prefix) {
@@ -160,16 +185,16 @@ public class RedisKvEngine implements KvEngine {
                         .match(prefix + "*")
                         .count(SCAN_BATCH_SIZE)
                         .build();
-        /**
-         * 尝试。
-         * @param redisTemplate.scan(options redistemplate.扫描(期权
-         */
         try (var cursor = redisTemplate.scan(options)) {
             while (cursor.hasNext()) {
                 String key = cursor.next();
                 if (key != null && key.startsWith(prefix)) {
                     String value = redisTemplate.opsForValue().get(key);
-                    result.put(key, value);
+                    // SCAN 与 GET 之间存在竞态窗口，键可能已过期；此时跳过，
+                    // 避免向调用方返回 value 为 null 的「键值对」
+                    if (value != null) {
+                        result.put(key, value);
+                    }
                 }
             }
         }

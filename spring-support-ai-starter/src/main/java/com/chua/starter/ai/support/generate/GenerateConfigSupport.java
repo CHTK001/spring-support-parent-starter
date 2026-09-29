@@ -83,6 +83,8 @@ public final class GenerateConfigSupport {
      * @param stepsMin        推理步数下限
      * @param stepsMax        推理步数上限
      * @param stepsDefault    推理步数默认值
+     * @param styles          模型支持的风格 key 列表；为空表示沿用前端的默认风格表
+     * @param style           是否支持 style 参数；false 时不下发该参数
      */
     public record View(
             boolean referenceImage,
@@ -93,7 +95,9 @@ public final class GenerateConfigSupport {
             List<Integer> durations,
             Integer stepsMin,
             Integer stepsMax,
-            Integer stepsDefault
+            Integer stepsDefault,
+            List<String> styles,
+            boolean style
     ) {
         /**
          * 规范构造器：对分辨率列表与时长列表做防御性拷贝。
@@ -110,10 +114,14 @@ public final class GenerateConfigSupport {
          * @param stepsMin       推理步数下限
          * @param stepsMax       推理步数上限
          * @param stepsDefault   推理步数默认值
+         * @param styles         模型支持的风格 key 列表；为空表示沿用前端的默认风格表
+         * @param style          是否支持 style 参数；false 时不下发该参数
+         *                       （如 Agnes 会直接拒绝），前端也应隐藏风格选择
          */
         public View {
             sizes = List.copyOf(Objects.requireNonNull(sizes, "sizes 不能为 null"));
             durations = List.copyOf(Objects.requireNonNull(durations, "durations 不能为 null"));
+            styles = List.copyOf(Objects.requireNonNull(styles, "styles 不能为 null"));
         }
     }
 
@@ -141,7 +149,11 @@ public final class GenerateConfigSupport {
                 intList(gen.get("durations")),
                 intOrNull(gen, "stepsMin"),
                 intOrNull(gen, "stepsMax"),
-                intOrNull(gen, "stepsDefault")
+                intOrNull(gen, "stepsDefault"),
+                stringList(gen.get("styles")),
+                // 默认 true：风格是「拼进提示词的描述」，不依赖上游参数，
+                // 因此对任何模型都可用；只有模型显式声明不支持时才关闭。
+                boolOrDefault(gen, "style", true)
         );
     }
 
@@ -181,6 +193,11 @@ public final class GenerateConfigSupport {
         gen.put("sizes", view.sizes());
         if (view.durations() != null && !view.durations().isEmpty()) {
             gen.put("durations", view.durations());
+        }
+        // 只在声明了风格时才写回：空列表表示该模型不支持 style 参数
+        gen.put("style", view.style());
+        if (view.styles() != null && !view.styles().isEmpty()) {
+            gen.put("styles", view.styles());
         }
         if (view.stepsMin() != null) {
             gen.put("stepsMin", view.stepsMin());
@@ -260,6 +277,29 @@ public final class GenerateConfigSupport {
             }
         }
         return result;
+    }
+
+    /**
+     * 读取字符串列表（去空、去重、保序）。
+     *
+     * @param raw 原始值
+     * @return 字符串列表，未配置返回空列表
+     */
+    private static List<String> stringList(Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return List.of();
+        }
+        Set<String> set = new LinkedHashSet<>(list.size());
+        for (Object item : list) {
+            if (item == null) {
+                continue;
+            }
+            String s = item.toString().trim();
+            if (!s.isEmpty()) {
+                set.add(s);
+            }
+        }
+        return new ArrayList<>(set);
     }
 
     /**

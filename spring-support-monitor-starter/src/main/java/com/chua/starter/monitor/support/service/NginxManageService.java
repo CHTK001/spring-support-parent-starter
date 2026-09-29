@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.service;
 
 import com.chua.starter.monitor.support.model.NginxAccessTopVO;
 import com.chua.starter.monitor.support.model.NginxApplyResultVO;
+import com.chua.starter.monitor.support.model.NginxBackupDiffVO;
 import com.chua.starter.monitor.support.model.NginxBackupVO;
 import com.chua.starter.monitor.support.model.NginxCommandResultVO;
 import com.chua.starter.monitor.support.model.NginxConfigFileVO;
@@ -10,10 +11,12 @@ import com.chua.starter.monitor.support.model.NginxDirectiveMetaVO;
 import com.chua.starter.monitor.support.model.NginxLogChunkVO;
 import com.chua.starter.monitor.support.model.NginxLogFileVO;
 import com.chua.starter.monitor.support.model.NginxOverviewVO;
+import com.chua.starter.monitor.support.model.NginxRuntimeVO;
 import com.chua.starter.monitor.support.model.NginxSiteVO;
 import com.chua.starter.monitor.support.model.NginxStatusVO;
 import com.chua.starter.monitor.support.model.NginxTrendVO;
 import com.chua.starter.monitor.support.model.NginxTemplateVO;
+import com.chua.starter.monitor.support.model.NginxUrlTrendVO;
 import com.chua.starter.monitor.support.model.NginxVersionVO;
 import com.chua.starter.monitor.support.model.dto.NginxApplyDTO;
 import com.chua.starter.monitor.support.model.dto.NginxSaveConfigDTO;
@@ -233,6 +236,28 @@ public interface NginxManageService {
     NginxCommandResultVO restore(Long datasourceId, String backupName, String targetPath);
 
     /**
+     * 读取备份文件内容，供界面预览与下载使用。
+     *
+     * <p>下载不单独开接口：前端拿到文本后自己转 Blob 落盘即可，
+     * 让后端再出一个二进制流接口只会多一处需要做 Content-Disposition 转义的地方。</p>
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @param backupName   备份文件名，只允许纯文件名
+     * @return 备份文件全文
+     */
+    String readBackupContent(Long datasourceId, String backupName);
+
+    /**
+     * 对比备份与当前配置文件的差异。
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @param backupName   备份文件名，只允许纯文件名
+     * @param targetPath   对比目标（当前配置文件）的绝对路径
+     * @return 差异结果，含增删行数与行序列
+     */
+    NginxBackupDiffVO diffBackup(Long datasourceId, String backupName, String targetPath);
+
+    /**
      * 采集一次 stub_status 并落库。
      *
      * <p>取不到数据（{@code available=false}）时静默跳过，不写脏数据，
@@ -252,6 +277,37 @@ public interface NginxManageService {
      * @return 趋势数据
      */
     NginxTrendVO trend(Long datasourceId, Integer hours, Integer interval);
+
+    /**
+     * 取最近若干个采样点，用于 SSE 推送。
+     *
+     * <p><strong>为什么不给前端推原始值</strong>：累计型指标（accepts / handled / requests）
+     * 的 {@code rate} 必须由「相邻两点差值 ÷ 实际时间差」算出来，采集那一刻还没有上一点。
+     * 这里把最近窗口的原始行交给 {@code buildTrendPoints} 用与 HTTP 路径
+     * <strong>完全相同</strong> 的逻辑换算后再返回，保证 SSE 曲线与刷新后的 HTTP 曲线
+     * 严丝合缝；否则两条路各算一套，同一个点会显示成两个值。</p>
+     *
+     * <p>窗口取 5 分钟：按默认 30s 采集间隔算是 10 个周期，足够算出速率，
+     * 又不会把整张趋势表拉进内存。</p>
+     *
+     * @param datasourceId 数据源 ID
+     * @return 按指标名去重后、每个指标最后一个点；无数据返回空列表
+     */
+    List<NginxTrendVO.Point> latestPoints(Long datasourceId);
+
+    /**
+     * 采集一次实时运行态，供 SSE 推送。
+     *
+     * <p>与 {@link #overview(Long)} 同口径但只取胶囊与图表要用的字段，
+     * 不做目录遍历、不跑 {@code nginx -t}。单次 SSH 往返与总览同量级。</p>
+     *
+     * <p>取不到值的字段为 null（<strong>不填 0</strong>），由 {@code message} 说明原因；
+     * 本方法不抛异常，采集失败也是返回带 message 的对象。</p>
+     *
+     * @param datasourceId 数据源 ID
+     * @return 实时运行态
+     */
+    NginxRuntimeVO collectRealtime(Long datasourceId);
 
     /**
      * 列出全部 nginx 类型的数据源 id。
@@ -275,4 +331,19 @@ public interface NginxManageService {
      * @return Top 统计
      */
     NginxAccessTopVO accessTop(Long datasourceId, String path, Integer lines, Integer minutes, Integer topN);
+
+    /**
+     * 按 URL 维度统计访问趋势。
+     *
+     * <p>与 {@link #trend} 是两条独立数据来源：本方法直接解析 access log 尾部，
+     * 时间跨度由日志密度决定（高流量时可能只覆盖几分钟），
+     * 因此返回值里带实际起止时间，界面必须把它标出来。</p>
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @param path         日志文件路径；为空时取配置里的 access_log
+     * @param lines        扫描的尾部行数
+     * @param topN         取前几个 URL
+     * @return URL 趋势结果
+     */
+    NginxUrlTrendVO urlTrend(Long datasourceId, String path, Integer lines, Integer topN);
 }

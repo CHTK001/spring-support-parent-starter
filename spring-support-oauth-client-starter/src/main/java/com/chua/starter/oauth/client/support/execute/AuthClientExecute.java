@@ -7,10 +7,13 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.watch.Watch;
+import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.credential.CredentialIssuer;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.impersonation.TemporaryToken;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.ratelimit.RateLimitService;
@@ -26,6 +29,8 @@ import com.google.common.cache.CacheBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -684,6 +689,46 @@ public class AuthClientExecute {
              */
             return new LoginAuthResult(500, "创建临时令牌失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 为指定身份签发一个临时令牌（管理员代入他人身份）。
+     *
+     * <p>与 {@link #createTemporaryTokenByToken(String, int, List)} 的区别：后者换的是
+     * 「当前登录者自己」的短期令牌，这里换的是<b>另一个身份</b>的令牌，
+     * 用于「管理员打开某个学生的页面看他看到什么」这类排查场景。</p>
+     *
+     * <p>三道限制同时生效：</p>
+     * <ol>
+     *     <li>只有管理员可调用，非管理员一律 403；</li>
+     *     <li>有效期封顶 {@value #MAX_TEMPORARY_TOKEN_EXPIRE} 秒；</li>
+     *     <li>令牌自带 {@code readonly} 与可访问路径白名单，
+     *     由 {@code StaticProtocol} 在鉴权时强制校验。</li>
+     * </ol>
+     *
+     * <p>「目标身份是什么」由调用方决定 —— 本方法只管签发，不认识任何业务表。</p>
+     *
+     * @param target        目标身份；{@code userId} 为空直接拒绝
+     * @param expireSeconds 有效期（秒），实际取值被夹到 1 到 {@value #MAX_TEMPORARY_TOKEN_EXPIRE}
+     * @param allowedUrls   允许访问的路径前缀；为空表示不限路径
+     * @return 含令牌的登录结果；非管理员或入参非法时返回对应错误码
+     */
+    public LoginAuthResult createTemporaryTokenFor(UserResult target, int expireSeconds, List<String> allowedUrls) {
+        UserResume operator = getSafeUserResult();
+        if (operator == null || StringUtils.isBlank(operator.getUserId())) {
+            return new LoginAuthResult(401, "未登录或令牌无效");
+        }
+        if (!AuthConstant.isAdmin(operator.getRoles())) {
+            Logger logger = LoggerFactory.getLogger(AuthClientExecute.class);
+            logger.warn("非管理员尝试签发临时令牌 - 操作人: {}", operator.getUsername());
+            return new LoginAuthResult(403, "只有管理员可以签发临时令牌");
+        }
+        if (target == null || StringUtils.isBlank(target.getUserId())) {
+            return new LoginAuthResult(400, "目标身份不能为空");
+        }
+        int actualExpire = Math.max(1, Math.min(expireSeconds, MAX_TEMPORARY_TOKEN_EXPIRE));
+        TemporaryToken.mark(target, operator.getUsername(), actualExpire, allowedUrls);
+        return CredentialIssuer.issue(target, actualExpire);
     }
 
     /**

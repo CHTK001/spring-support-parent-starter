@@ -58,7 +58,38 @@ public class RuntimeLogService {
                 out == null ? null : out.getAbsolutePath(), out != null && out.exists());
     }
 
-    /** 一条日志行 */
+    /**
+     * 一条日志行。
+     *
+     * <p>{@code tail} 从日志文件尾部逐行读出后，逐行产出一条本记录：先剥离 ANSI
+     * 颜色转义序列、按长度上限截断得到可直接展示的 {@link #raw}，再从该行文本中
+     * 正则识别出 {@link #level}。两者是同一行日志的两种视角——{@code raw} 给
+     * 人看，{@code level} 给管理端的过滤 / 着色等交互逻辑用。</p>
+     *
+     * <p>可空性：规范构造器不做任何校验。实际由 {@code tail} 构造时，
+     * {@link #raw} 已由 {@code truncate} 兜底为非 {@code null}（入参为 {@code null}
+     * 时返回空串），因此生产路径上它**保证非 null**；{@link #level} 则可能为
+     * {@code null}，表示该行未匹配到任何可识别的级别关键字，消费方须判空。
+     * 手工构造本 record 时两个分量均允许为 {@code null}。</p>
+     *
+     * @param raw 该行日志的 <b>展示用原文</b>：取自文件实际字节按 UTF-8 解码的
+     *            文本（CRLF 中的 CR 与行尾换行已被剔除，行内不含换行符），
+     *            再经两步清洗——先由 {@code stripAnsi} 去掉 logback 彩色输出留下的
+     *            ANSI 控制转义序列（{@code ESC[...m} 形式），再由 {@code truncate}
+     *            在超过 {@code MAX_LINE_LEN}（4000 字符）时截断并追加省略号
+     *            {@code "…"}。因此**长度上限为 4001 字符**（4000 + 省略号），
+     *            且控制字符已不可见，可直接交给前端渲染而无需再转义。
+     *            由 {@code tail} 构造时保证非 {@code null}（源行为 {@code null}
+     *            时降级为空串），手工构造时允许为 {@code null}
+     * @param level 从 {@link #raw} 正则识别出的 日志级别，匹配
+     *             {@code \b(TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL)\b}，
+     *             取第一个命中的分组（因此是全大写文本，不是枚举）。
+     *             唯一的归一化处理：{@code WARNING} 会折叠为 {@code WARN}，
+     *             故实际可能取值为 TRACE / DEBUG / INFO / WARN / ERROR / FATAL
+     *             之一。允许为 {@code null}，表示该行未出现任何上述关键字
+     *             （例如纯异常堆栈行、多行日志的续行、或自定义格式），
+     *             此时消费方应按「无级别」渲染而不是默认成 INFO
+     */
     public record LogLine(String raw, String level) {
     }
 

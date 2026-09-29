@@ -195,7 +195,6 @@ public class AgentEndpointController {
      * }
      * }</pre>
      * targetTable 缺省时落通用表 ms_monitor_metric。
-     * </p>
      *
      * @param agentKey 探针标识
      * @param body     指标载荷

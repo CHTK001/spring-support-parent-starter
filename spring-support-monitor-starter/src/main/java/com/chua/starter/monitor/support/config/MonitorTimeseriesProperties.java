@@ -13,7 +13,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   <li>{@code datasource}：写入 MySQL/H2 明细表（由 SeriesEngineConfiguration 装配 JDBC 实现）</li>
  *   <li>{@code none}：仅 MySQL 明细表，关闭时序双写</li>
  * </ul>
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

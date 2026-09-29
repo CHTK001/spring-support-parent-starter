@@ -196,8 +196,13 @@ public class UsageController {
             for (UsageParser parser : springBeans.values()) {
                 allParsers.putIfAbsent(parser.name(), parser);
             }
-        } catch (Exception e) {
-            log.warn("[Usage] 收集 Spring UsageParser 失败: {}", e.getMessage());
+        } catch (Throwable e) {
+            // 必须捕获 Throwable 而非 Exception：解析器是 SPI 插件，任一实现类初始化失败抛的是
+            // ExceptionInInitializerError（Error 分支），catch (Exception) 抓不住，
+            // 会让整个目录接口 500。实测 GooseUsageParser 因 APPDATA 环境变量缺失即触发此路径
+            // （2026-09-29，GET /v2/usage/parsers 返回 S9999C0000）。
+            // 插件装载是「尽力而为」，一个坏实现应被降级跳过，而不是拖垮整个接口。
+            log.warn("[Usage] 收集 Spring UsageParser 失败: {}", e.toString());
         }
 
         // 2. 再收集 SPI 注册的外部工具解析器（opencode/codex 等）
@@ -208,8 +213,9 @@ public class UsageController {
                     allParsers.putIfAbsent(entry.getKey(), entry.getValue());
                 }
             }
-        } catch (Exception e) {
-            log.warn("[Usage] SPI 收集 UsageParser 失败: {}", e.getMessage());
+        } catch (Throwable e) {
+            // 同上：SPI 插件类初始化失败抛的是 Error，catch (Exception) 抓不住。
+            log.warn("[Usage] SPI 收集 UsageParser 失败: {}", e.toString());
         }
 
         List<AiUsageParserVO> result = new ArrayList<>();
@@ -218,7 +224,12 @@ public class UsageController {
             if (e.getKey() == null || e.getValue() == null) {
                 continue;
             }
-            result.add(new AiUsageParserVO(e.getKey(), e.getValue().getClass().getSimpleName(), true));
+            // 单条读取名称也要兜底：这里的异常一旦逃出去同样是整个接口 500
+            try {
+                result.add(new AiUsageParserVO(e.getKey(), e.getValue().getClass().getSimpleName(), true));
+            } catch (Throwable ex) {
+                log.warn("[Usage] 读取解析器条目失败，已跳过: {} ({})", e.getKey(), ex.toString());
+            }
         }
         return ReturnResult.ok(result);
     }

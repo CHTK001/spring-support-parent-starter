@@ -2,14 +2,16 @@ package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.ai.EduAiService;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
 import com.chua.starter.eduai.model.EduQuestion;
+import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
@@ -23,7 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 题目服务实现
@@ -44,6 +50,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
 
     /** 手动录入未填来源名时的兜底文案 */
     private static final String DEFAULT_SOURCE_NAME = "手动录入";
+
+    /**
+     * 属性
+     */
+    private final EduAiService eduAiService;
 
     @Override
     /**
@@ -218,5 +229,53 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     public List<QuestionGradeDimensionVO> listGradeDimensions(Integer status) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         return baseMapper.selectGradeDimensions(status, scope);
+    }
+
+    @Override
+    /**
+     * AI 选题
+     */
+    public List<EduQuestion> aiSelect(QuestionAiSelectDTO dto) {
+        int count = dto.getCount() == null || dto.getCount() <= 0 ? 10 : Math.min(dto.getCount(), 100);
+        // 前端可能传码值（PRIMARY），而库里存中文名，不归一化会选不出题
+        String gradeLevel = GradeLevels.normalize(dto.getGradeLevel());
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+
+        // 规则选题作为兜底：AI 不可用或解析失败时由 EduAiService 直接返回这份候选
+        List<EduQuestion> candidates =
+                baseMapper.selectCandidates(dto.getSubject(), gradeLevel, scope, Math.max(count * 3, count));
+        List<Long> fallbackIds = candidates.stream()
+                .map(EduQuestion::getQuestionId)
+                .collect(Collectors.toList());
+        if (fallbackIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> ids = eduAiService.generatePaperOutline(
+                dto.getSubject(), gradeLevel, dto.getGrade(),
+                dto.getTypes(), dto.getKnowledgePointIds(), count, fallbackIds);
+        if (ids.size() > count) {
+            ids = new ArrayList<>(ids.subList(0, count));
+        }
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        // 按 AI 给出的顺序回读，不能直接 listByIds —— 那样会按主键顺序，丢掉 AI 的排序意图
+        Map<Long, EduQuestion> byId = new HashMap<>();
+        for (EduQuestion q : listByIds(ids)) {
+            byId.put(q.getQuestionId(), q);
+        }
+        List<EduQuestion> ordered = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            EduQuestion q = byId.get(id);
+            // 模型可能编出不存在的题号，跳过而不是塞 null 进结果
+            if (q != null) {
+                ordered.add(q);
+            }
+        }
+        log.info("[EduAi] AI 选题: subject={}, gradeLevel={}, 期望={}, 候选={}, 实得={}",
+                dto.getSubject(), gradeLevel, count, fallbackIds.size(), ordered.size());
+        return ordered;
     }
 }

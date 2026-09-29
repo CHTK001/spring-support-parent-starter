@@ -155,7 +155,26 @@ public class TavernChatController {
         }
     }
 
-    /** 一位成员流式回复的结果：使用的模型 + 完整正文。 */
+    /**
+     * 一位成员流式回复的结果：使用的模型 + 完整正文。
+     *
+     * <p>由 {@link #streamOne(OutputStream, Long, SysAiTavernGroup, SysAiTavernMember, String)}
+     * 在 SSE 已全部下发完毕后产出，唯一用途是把这轮回复落库
+     * （见 {@link #saveAiMessage(Long, SysAiTavernMember, String, String)}），
+     * 因此它不参与任何对外响应体。</p>
+     *
+     * @param model 本轮实际使用的模型标识（不含 {@code provider:} 前缀），
+     *              由 {@link #resolveModel(SysAiTavernMember, SysAiRole)} 决定：
+     *              优先该成员的「模型覆盖」配置，其次角色的模型配置，
+     *              最后取全局默认模型（依次读 {@code runtime.default_model}、
+     *              {@code models.defaultChatModelId}、{@code runtime.default_chat_model}，
+     *              均未配置时回落 {@code agnes-2.5-flash}）。
+     *              不允许为 {@code null}——它在流式回调触发前就已确定
+     * @param text  本轮回复的完整正文，即 SSE 逐块下发的增量 chunk 按到达顺序拼接的结果。
+     *              <b>不含</b>「{@code [角色名] }」前缀（该前缀只加在写回聊天历史的副本上），
+     *              也不含「{@code [群成员刚说完…]}」这类拼接用的提示语。
+     *              中途报错而中断时为已收到的部分，可能是空串，不允许为 {@code null}
+     */
     private record Streamed(String model, String text) {}
 
     /**
