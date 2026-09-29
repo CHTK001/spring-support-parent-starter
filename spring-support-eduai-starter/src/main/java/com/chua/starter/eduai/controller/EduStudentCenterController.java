@@ -1,9 +1,12 @@
 package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.eduai.dimension.service.EduDimensionService;
+import com.chua.starter.eduai.model.dto.EduChangePasswordDTO;
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
 import com.chua.starter.eduai.service.IEduStudentCenterService;
+import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,11 @@ import java.util.Map;
 public class EduStudentCenterController {
 
     private final IEduStudentCenterService studentCenterService;
+
+    /**
+     * 档案与口令服务：改密需要复用它的摘要与归属校验，不另起一份实现
+     */
+    private final EduDimensionService dimensionService;
 
     /**
      * 当前账号的绑定状态（学生端进入时必须先调这个）
@@ -76,5 +84,22 @@ public class EduStudentCenterController {
     @PostMapping("/study/report")
     public ReturnResult<Boolean> report(@RequestBody StudyReportDTO dto) {
         return ReturnResult.ok(studentCenterService.reportStudy(dto));
+    }
+
+    /**
+     * 学生自助修改登录口令。
+     *
+     * <p>放在学生中心而非管理端：登录态中的 {@code userId} 就是学号，
+     * 由服务端自行解析，学生改不了别人的口令。管理员重置他人口令走
+     * 管理端 {@code /v2/edu/dimension/students/reset-password}。</p>
+     *
+     * @param dto 旧口令与新口令
+     * @return 是否修改成功
+     */
+    @Operation(summary = "学生自助修改登录口令")
+    @PostMapping("/change-password")
+    public ReturnResult<Boolean> changePassword(@RequestBody EduChangePasswordDTO dto) {
+        return ReturnResult.ok(dimensionService.changeOwnPassword(
+                EduUserContext.requireUserId(), dto.oldPassword(), dto.newPassword()));
     }
 }

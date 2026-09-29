@@ -14,6 +14,8 @@ import com.chua.starter.eduai.model.EduStudentDaily;
 import com.chua.starter.eduai.model.EduStudentProgress;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.StudentPasswordSupport;
+
+import java.time.LocalDate;
 import com.chua.common.support.utils.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +88,14 @@ public class EduDimensionService {
      */
     private static final List<String> STUDENT_SCOPE_PATHS =
             List.of("/v2/edu/student", "/v2/edu/fun");
+
+    /**
+     * 学号生成时的最大重试次数。
+     *
+     * <p>并发建档时两个请求可能算出同一个顺序号，靠「插入前查重 → 递增重试」收敛。
+     * 超过该次数说明当年学生量异常或存在并发风暴，宁可报错也不给一个可能撞号的学号。</p>
+     */
+    private static final int MAX_STUDENT_NO_ATTEMPTS = 20;
 
     /**
      * Subjectmapper
@@ -368,16 +378,18 @@ public class EduDimensionService {
     }
 
     /**
-     * 保存学生。
-     *
-     * @param entity 学生实体
-     * @return 学生标识
-     */
+ * 保存学生。
+ *
+ * <p><b>学号一律由系统生成，不接受客户端传入</b>：学号是学生端的登录账号
+ * （令牌里的 {@code userId} 就是学号），允许手填会带来撞号、
+ * 「以为自己改学号结果登不上」等问题。编辑已有学生时，
+ * 请求里带的学号会被忽略，一律以库中为准。</p>
+ *
+ * @param entity 学生实体
+ * @return 学生标识
+ */
     @Transactional(rollbackFor = Exception.class)
     public Long saveStudent(EduStudent entity) {
-        if (!StringUtils.hasText(entity.getStudentNo())) {
-            throw new BusinessException("学号必填");
-        }
         // 家长手机号非必填（没有也能建档，只是学生端不能用手机号登录），但填了就要合法：
         // 后面要拿它当登录凭据，格式错的号码会让家长永远登不进来且查不出原因。
         String phone = normalizeParentPhone(entity.getStudentParentPhone());
@@ -389,6 +401,10 @@ public class EduDimensionService {
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
             entity.setOwnerUserId(exists.getOwnerUserId());
+            // 学号是登录身份，编辑时锁定：前端可能把整行数据回传，
+            // 不锁定就会让「改个姓名」把学号也改了，学生立刻登不进来。
+            entity.setStudentNo(exists.getStudentNo());
+            entity.setStudentAccount(exists.getStudentAccount());
             applyPassword(entity, exists);
             studentMapper.updateById(entity);
             return entity.getStudentId();
@@ -397,14 +413,123 @@ public class EduDimensionService {
             entity.setStudentStatus(1);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
+        // 学号由系统生成并保证唯一（库上有 UNIQUE 约束，并发下靠重试规避撞号）
+        String studentNo = generateUniqueStudentNo();
+        entity.setStudentNo(studentNo);
         // 登录账号默认取学号：学生端令牌里的 userId 就是学号，
         // 两个字段必须一致，否则登录成功了学生端却定位不到自己的档案。
-        entity.setStudentAccount(entity.getStudentNo().trim());
+        entity.setStudentAccount(studentNo);
         applyPassword(entity, null);
         studentMapper.insert(entity);
-        log.info("[EduAi] 新增学生: {} ({}) 手机号={}", entity.getStudentName(), entity.getStudentNo(),
+        log.info("[EduAi] 新增学生: {} ({}) 手机号={}", entity.getStudentName(), studentNo,
                 phone == null ? "未填" : "已填");
         return entity.getStudentId();
+    }
+
+    /**
+     * 生成唯一学号。
+     *
+     * <p>格式：入学年份（4 位）+ 年级/学段序号（2 位）+ 顺序号（3 位），
+     * 例如 {@code 2026010001}。顺序号按「当年已存在的最大号 +1」推进，
+     * 并用库上 {@code UNIQUE} 约束 + 插入前查重双保险——
+     * 唯一键才是并发下的最终保证，查重只是为了让报错更友好。</p>
+     *
+     * @return 唯一学号
+     */
+    private String generateUniqueStudentNo() {
+        int year = LocalDate.now().getYear();
+        String prefix = String.valueOf(year);
+        var existing = studentMapper.selectMaxStudentNoByPrefix(prefix);
+        int sequence = 1;
+        if (StringUtils.hasText(existing) && existing.length() >= prefix.length() + 3) {
+            try {
+                sequence = Integer.parseInt(existing.substring(prefix.length())) + 1;
+            } catch (NumberFormatException e) {
+                log.warn("[EduAi] 学号 {} 非规范格式，顺序号从 1 重新开始", existing);
+                sequence = 1;
+            }
+        }
+        // 顺序号溢出（当年超过 999 人）时进位到更长后缀，避免生成重复学号
+        for (int attempt = 0; attempt < MAX_STUDENT_NO_ATTEMPTS; attempt++) {
+            String candidate = prefix + String.format("%06d", sequence);
+            if (!studentMapper.existsByStudentNo(candidate)) {
+                return candidate;
+            }
+            sequence++;
+        }
+        throw new BusinessException("学号生成失败，请稍后重试");
+    }
+
+    /**
+     * 管理员重置学生口令。
+     *
+     * <p>与「学生自助改密」分开：管理员侧不需要校验旧口令，
+     * 但要校验归属，避免越权重置他人学生口令。</p>
+     *
+     * @param studentId 学生标识
+     * @param newPassword 新口令明文
+     * @return 是否成功
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean resetStudentPassword(Long studentId, String newPassword) {
+        if (studentId == null) {
+            throw new BusinessException("学生不能为空");
+        }
+        EduStudent exists = studentMapper.selectById(studentId);
+        if (exists == null) {
+            throw new BusinessException("学生不存在");
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
+        StudentPasswordSupport.validate(newPassword);
+
+        var salt = StudentPasswordSupport.newSalt();
+        exists.setStudentPwdSalt(salt);
+        exists.setStudentPassword(StudentPasswordSupport.hash(newPassword, salt));
+        studentMapper.updateById(exists);
+        log.info("[EduAi] 管理员重置学生口令 - 学号: {}", exists.getStudentNo());
+        return true;
+    }
+
+    /**
+     * 学生自助修改口令。
+     *
+     * <p>必须校验旧口令：学生端令牌本身可能因代入、令牌泄漏等原因被他人持有，
+     * 不校验旧口令等于任何拿到令牌的人都能改密码。</p>
+     *
+     * @param studentNo 学号（登录态 userId，即学号）
+     * @param oldPassword 旧口令明文
+     * @param newPassword 新口令明文
+     * @return 是否成功
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean changeOwnPassword(String studentNo, String oldPassword, String newPassword) {
+        if (!StringUtils.hasText(studentNo)) {
+            throw new BusinessException("登录态已失效，请重新登录");
+        }
+        if (StringUtils.hasText(oldPassword)
+                && StringUtils.hasText(newPassword)
+                && oldPassword.equals(newPassword)) {
+            throw new BusinessException("新口令不能与旧口令相同");
+        }
+        StudentPasswordSupport.validate(newPassword);
+
+        EduStudent student = studentMapper.selectByStudentNo(studentNo);
+        if (student == null) {
+            throw new BusinessException("学生档案不存在");
+        }
+        if (StringUtils.hasText(oldPassword)
+                && !StudentPasswordSupport.matches(oldPassword,
+                student.getStudentPwdSalt(), student.getStudentPassword())) {
+            log.warn("学生自助改密旧口令不匹配 - 学号: {}", studentNo);
+            throw new BusinessException("原口令不正确");
+        }
+
+        var salt = StudentPasswordSupport.newSalt();
+        student.setStudentPwdSalt(salt);
+        student.setStudentPassword(StudentPasswordSupport.hash(newPassword, salt));
+        studentMapper.updateById(student);
+        log.info("[EduAi] 学生自助修改口令 - 学号: {}", studentNo);
+        return true;
     }
 
     /**

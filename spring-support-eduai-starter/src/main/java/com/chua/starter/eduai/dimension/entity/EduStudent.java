@@ -84,6 +84,23 @@ public class EduStudent {
     private String studentParentPhone;
 
     /**
+     * 学生头像（URL 或 Base64）
+     *
+     * <p>与系统用户头像同口径：存相对路径、完整 URL 或 Base64 均可，
+     * 前端按 {@code <img src>} 直接渲染。</p>
+     */
+    private String studentAvatar;
+
+    /**
+     * 身份证号
+     *
+     * <p><b>敏感字段</b>：属个人证件信息，只在管理端维护与展示，
+     * 学生端接口一律不下发。列表接口若要透出需由服务层裁剪，
+     * 不可直接把本实体交给学生端序列化。</p>
+     */
+    private String studentIdCard;
+
+    /**
      * 登录口令摘要
      *
      * <p>存的是 {@code hmacSha256(明文, 盐)} 的十六进制，不是明文，也不是裸摘要：
