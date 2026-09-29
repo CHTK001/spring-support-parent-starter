@@ -1,8 +1,11 @@
 package com.chua.starter.job.support.execute;
 
 import com.chua.common.support.task.script.ScriptFlow;
+import com.chua.common.support.task.script.ScriptProviders;
+import com.chua.starter.job.support.glue.GlueScriptSynthesizer;
 import com.chua.starter.job.support.glue.GlueTypes;
 import com.chua.starter.job.support.glue.JobObjectContext;
+import com.chua.starter.job.support.glue.JobScriptHost;
 import com.chua.starter.job.support.handler.JobHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -11,25 +14,29 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 脚本任务的执行器侧处理器工厂。
+ * 片段任务的执行器侧处理器工厂（脚本与片段共用一条链路）。
  *
- * <p>脚本引擎走仓库公共 SPI：{@code com.chua.common.support.task.script.ScriptProvider}
- * （{@link ScriptFlow} 封装），当前仓库提供 {@code groovy} 实现
- * （utils-support-groovy-starter）。脚本正文随派发命令下发（Base64 单行），
- * 执行前落成本地临时文件（{@link ScriptFlow} 的 API 是文件路径式），
- * 按 任务名 + 版本时刻 缓存：glueAt 变化才重写文件，避免每拍落盘。</p>
+ * <p>链路只有一条：</p>
+ * <ol>
+ *   <li>片段类型（{@code GLUE_*}）先用 {@link GlueScriptSynthesizer} 合成完整脚本；
+ *       脚本类型（裸引擎名）本身就是完整文件，原样使用；</li>
+ *   <li>正文按 {@code 任务名 + 版本} 落成本地文件；</li>
+ *   <li>{@link ScriptFlow#load(Path)} 做**预编译并缓存编译产物**——保存期校验走的就是这一步；</li>
+ *   <li>{@link ScriptFlow#execute(Path, Object)} 复用上一步的同一份编译产物执行，
+ *       不再重复编译、不新建第二个引擎对象。</li>
+ * </ol>
  *
- * <p>引擎未安装（classpath 缺 ScriptProvider 实现）时抛出带引导语的可读异常，
+ * <p>引擎一律经仓库公共 SPI {@code ScriptProvider} 解析（见 {@link ScriptFlow}），
+ * 本类不再区分 Java 与脚本两条链路。引擎未安装时抛出带引导语的可读异常，
  * 由 {@link JobExecutor} 记成 FAILURE，而不是静默跳过。</p>
  *
- * <p>脚本正文能拿 Spring bean：绑定上下文里带一个 {@link JobObjectContext}
- * （见 {@link #contextOf}），Groovy 引擎会把它绑成同名变量。
- * Java 代码片段类型（{@code GLUE_JAVA}）不在本类，由
- * {@link com.chua.starter.job.support.glue.JavaGlueHandlers} 承载。</p>
+ * <p>正文能拿 Spring bean：绑定上下文里带 {@link JobObjectContext}（Groovy 引擎绑成同名变量）
+ * 与 {@link JobScriptHost}（Java 引擎靠它做字段装配）。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -38,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ScriptGlueHandlers {
 
     /**
-     * 缓存：任务名 → 已落盘的脚本文件
+     * 缓存：任务名 → 已落盘的脚本文件与生效引擎
      */
     private static final Map<String, CachedScript> CACHE = new ConcurrentHashMap<>();
 
@@ -55,36 +62,116 @@ public final class ScriptGlueHandlers {
     }
 
     /**
-     * 解析脚本任务的处理器。
+     * 解析片段任务的处理器（命令带正文时调用）。
      *
-     * @param jobName             任务名（兼作脚本标识）
-     * @param engine              脚本引擎名（SPI key，如 groovy）
-     * @param source              脚本正文
-     * @param glueAtMs            版本时刻（毫秒），null/0 时按正文哈希
-     * @param executeParam        台账执行参数（脚本内以 {@code executeParam} 变量读取）
-     * @param applicationContext  宿主容器，允许为 null（此时脚本不可取 bean）
+     * @param jobName            任务名（兼作脚本标识）
+     * @param glueType           执行类型（{@code GLUE_*} 片段或裸引擎名脚本）
+     * @param source             正文
+     * @param glueAtMs           版本时刻（毫秒），null/0 时按正文哈希
+     * @param executeParam       台账执行参数（片段内以 {@code executeParam} 变量读取）
+     * @param applicationContext 宿主容器，允许为 null（此时片段不可取 bean）
      * @return 可执行处理器
-     * @throws IllegalStateException 引擎未安装或脚本文件写入失败
+     * @throws IllegalStateException 正文缺失、引擎未安装、编译失败或文件写入失败
      */
-    public static JobHandler resolve(String jobName, String engine, String source, Long glueAtMs,
+    public static JobHandler resolve(String jobName, String glueType, String source, Long glueAtMs,
                                      String executeParam, ApplicationContext applicationContext) {
+        Prepared prepared = prepare(jobName, glueType, source, glueAtMs);
+        return handlerOf(jobName, prepared, executeParam, applicationContext);
+    }
+
+    /**
+     * 从本地缓存解析处理器（派发命令只带版本号时使用）。
+     *
+     * <p>正文未同步（执行器刚重启、调度中心未推送成功）或版本不一致时给出可读失败，
+     * 由执行器记成 FAILURE，而不是静默跳过。</p>
+     *
+     * @param jobName            任务名
+     * @param glueType           执行类型
+     * @param glueAtMs           期望版本时刻
+     * @param executeParam       台账执行参数
+     * @param applicationContext 宿主容器，允许为 null
+     * @return 可执行处理器
+     * @throws IllegalStateException 正文未同步或引擎未安装
+     */
+    public static JobHandler resolveCached(String jobName, String glueType, Long glueAtMs,
+                                           String executeParam, ApplicationContext applicationContext) {
         if (jobName == null || jobName.isBlank()) {
-            throw new IllegalStateException("脚本任务缺少任务键");
+            throw new IllegalStateException("片段任务缺少任务键");
+        }
+        var cached = CACHE.get(jobName);
+        if (cached == null || !Files.exists(cached.file())) {
+            throw new IllegalStateException("片段正文未同步: " + jobName
+                    + "，请在调度中心重新保存该任务，或等待执行器重连后自动同步");
+        }
+        long expected = glueAtMs == null ? 0L : glueAtMs;
+        if (expected > 0 && cached.version() != expected) {
+            throw new IllegalStateException("片段版本未同步: " + jobName
+                    + " 期望 glueAt=" + expected + "，本地=" + cached.version());
+        }
+        Prepared prepared = new Prepared(engineNameOf(cached.glueType()), cached.glueType(), cached.file());
+        return handlerOf(jobName, prepared, executeParam, applicationContext);
+    }
+
+    /**
+     * 缓存正文（调度中心 job-glue 主题推送落地方使用）。
+     *
+     * @param jobName            任务名
+     * @param glueType           执行类型
+     * @param source             正文
+     * @param glueAtMs           版本时刻
+     * @param applicationContext 宿主容器，允许为 null
+     */
+    public static void store(String jobName, String glueType, String source, Long glueAtMs,
+                             ApplicationContext applicationContext) {
+        prepare(jobName, glueType, source, glueAtMs);
+    }
+
+    /**
+     * 保存期校验：合成 + 落盘 + 预编译，编译失败抛可读异常。
+     *
+     * <p>刻意复用 {@link #prepare} 的落盘路径：校验与执行命中**同一个文件**，
+     * 因而命中同一份编译产物缓存，不会为了校验而多编译一次。</p>
+     *
+     * <p>引擎不在本进程时跳过而不是报错：调度中心不一定装了所有脚本引擎，
+     * 装不装是部署问题，不该让保存失败；真正编译不过才是要挡住的问题。</p>
+     *
+     * @param jobName  任务名
+     * @param glueType 执行类型
+     * @param source   正文
+     * @param glueAtMs 版本时刻（毫秒），允许为 null
+     * @throws IllegalStateException 正文缺失或编译失败
+     */
+    public static void validate(String jobName, String glueType, String source, Long glueAtMs) {
+        String engine = engineNameOf(glueType);
+        if (ScriptProviders.resolve(engine) == null) {
+            log.warn("[job] 保存校验跳过：本进程未安装脚本引擎 job={} engine={}", jobName, engine);
+            return;
+        }
+        prepare(jobName, glueType, source, glueAtMs);
+    }
+
+    /**
+     * 合成、落盘、预编译，返回可直接执行的准备结果。
+     *
+     * @param jobName  任务名
+     * @param glueType 执行类型
+     * @param source   正文
+     * @param glueAtMs 版本时刻（毫秒），允许为 null
+     * @return 准备结果
+     * @throws IllegalStateException 正文缺失、引擎未安装、编译失败或文件写入失败
+     */
+    private static Prepared prepare(String jobName, String glueType, String source, Long glueAtMs) {
+        if (jobName == null || jobName.isBlank()) {
+            throw new IllegalStateException("片段任务缺少任务键");
         }
         if (source == null || source.isBlank()) {
-            throw new IllegalStateException("脚本任务缺少脚本正文: " + jobName);
+            throw new IllegalStateException("片段任务缺少正文: " + jobName);
         }
-        long version = glueAtMs == null || glueAtMs <= 0 ? source.hashCode() : glueAtMs;
+        String engine = engineNameOf(glueType);
+        String synthesized = GlueScriptSynthesizer.synthesize(glueType, source, jobName);
+        long version = glueAtMs == null || glueAtMs <= 0 ? synthesized.hashCode() : glueAtMs;
 
-        // 提前探一次引擎：SPI 缺实现时给出可读引导，而不是等脚本文件落盘后才报
-        ScriptFlow flow;
-        try {
-            flow = ScriptFlow.of(engineNameOf(engine));
-        } catch (Throwable ex) {
-            throw new IllegalStateException("脚本引擎 '" + engineNameOf(engine) + "' 不可用，请引入对应引擎依赖"
-                    + "（如 utils-support-groovy-starter）: " + ex.getMessage(), ex);
-        }
-
+        ScriptFlow flow = flowOf(engine);
         Path scriptFile = CACHE.compute(jobName, (key, cached) -> {
             if (cached != null && cached.version() == version && Files.exists(cached.file())) {
                 return cached;
@@ -92,88 +179,134 @@ public final class ScriptGlueHandlers {
             try {
                 Files.createDirectories(SCRIPT_DIR);
                 Path file = SCRIPT_DIR.resolve(safeFileName(jobName) + "-" + version
-                        + suffixOf(engineNameOf(engine)));
-                Files.writeString(file, source, StandardCharsets.UTF_8);
+                        + suffixOf(engine));
+                Files.writeString(file, synthesized, StandardCharsets.UTF_8);
                 if (cached != null) {
+                    // 换版本了：先把旧文件的编译产物从引擎里卸载掉，再删文件。
+                    // 不卸载的话 ScriptProvider 的缓存会一直持有旧版本的 Class 及其类加载器，
+                    // Metaspace 只涨不落（脚本反复保存必然踩到）。
+                    unloadQuietly(cached.glueType(), cached.file());
                     Files.deleteIfExists(cached.file());
                 }
-                log.info("[job] 脚本已落盘 job={} engine={} version={} file={}",
-                        jobName, engineNameOf(engine), version, file);
-                return new CachedScript(version, file);
+                log.info("[job] 片段已落盘 job={} engine={} fragment={} version={} file={}",
+                        jobName, engine, GlueTypes.isFragment(glueType), version, file);
+                return new CachedScript(version, glueType, file);
             } catch (IOException ex) {
-                throw new IllegalStateException("脚本文件写入失败: " + ex.getMessage(), ex);
+                throw new IllegalStateException("片段文件写入失败: " + ex.getMessage(), ex);
             }
         }).file();
 
-        return handlerOf(jobName, flow, scriptFile, executeParam, applicationContext);
-    }
-
-    /**
-     * 缓存脚本正文（调度中心 job-glue 主题推送落地方使用）。
-     *
-     * @param jobName             任务名
-     * @param engine              脚本引擎名
-     * @param source              脚本正文
-     * @param glueAtMs            版本时刻
-     * @param applicationContext  宿主容器，允许为 null
-     */
-    public static void store(String jobName, String engine, String source, Long glueAtMs,
-                             ApplicationContext applicationContext) {
-        resolve(jobName, engine, source, glueAtMs, null, applicationContext);
-    }
-
-    /**
-     * 从本地缓存解析脚本处理器（派发命令只带版本号时使用）。
-     *
-     * <p>正文未同步（执行器刚重启、调度中心未推送成功）或版本不一致时给出可读失败，
-     * 由执行器记成 FAILURE，而不是静默跳过。</p>
-     *
-     * @param jobName             任务名
-     * @param engine              脚本引擎名
-     * @param glueAtMs            期望版本时刻
-     * @param executeParam        台账执行参数（脚本内以 {@code executeParam} 变量读取）
-     * @param applicationContext  宿主容器，允许为 null
-     * @return 可执行处理器
-     * @throws IllegalStateException 正文未同步或引擎未安装
-     */
-    public static JobHandler resolveCached(String jobName, String engine, Long glueAtMs,
-                                           String executeParam, ApplicationContext applicationContext) {
-        if (jobName == null || jobName.isBlank()) {
-            throw new IllegalStateException("脚本任务缺少任务键");
-        }
-        var cached = CACHE.get(jobName);
-        if (cached == null || !Files.exists(cached.file())) {
-            throw new IllegalStateException("脚本正文未同步: " + jobName
-                    + "，请在调度中心重新保存该任务，或等待执行器重连后自动同步");
-        }
-        long expected = glueAtMs == null ? 0L : glueAtMs;
-        if (expected > 0 && cached.version() != expected) {
-            throw new IllegalStateException("脚本版本未同步: " + jobName
-                    + " 期望 glueAt=" + expected + "，本地=" + cached.version());
-        }
-        ScriptFlow flow;
+        // 预编译并缓存编译产物；执行时复用同一份，不重复编译
         try {
-            flow = ScriptFlow.of(engineNameOf(engine));
-        } catch (Throwable ex) {
-            throw new IllegalStateException("脚本引擎 '" + engineNameOf(engine) + "' 不可用，请引入对应引擎依赖"
-                    + "（如 utils-support-groovy-starter）: " + ex.getMessage(), ex);
+            flow.load(scriptFile);
+        } catch (RuntimeException ex) {
+            // 编译没过，保存必然失败。这份文件与缓存条目对谁都没用，而且任务没建成功，
+            // 永远等不到删除来触发 release，必须当场丢弃，否则按任务数永久残留。
+            discardQuietly(jobName, glueType, scriptFile);
+            throw ex;
         }
-        return handlerOf(jobName, flow, cached.file(), executeParam, applicationContext);
+        return new Prepared(engine, glueType, scriptFile);
     }
 
     /**
-     * 构造脚本处理器。
+     * 丢弃一次准备失败的片段资源：只清当次这一份，之前能跑的那版不动。
      *
-     * @param jobName             任务名
-     * @param flow                已解析的脚本引擎
-     * @param file                脚本文件
-     * @param executeParam        执行参数（脚本内以 {@code executeParam} 变量读取）
-     * @param applicationContext  宿主容器，允许为 null
+     * <p>保存期校验是先 prepare 再决定能不能存，编译不过时任务根本没进台账，
+     * 不会有删除动作来释放它。这里按文件路径做条件删除，避免把上一版
+     * 已经验证可用的片段一起清掉。</p>
+     *
+     * @param jobName  任务名
+     * @param glueType 执行类型（用于还原引擎名）
+     * @param file     当次准备出的文件
+     */
+    private static void discardQuietly(String jobName, String glueType, Path file) {
+        try {
+            CACHE.computeIfPresent(jobName, (key, cur) -> cur.file().equals(file) ? null : cur);
+        } catch (RuntimeException ex) {
+            log.warn("[job] 片段缓存清理失败 job={} file={} cause={}", jobName, file, ex.getMessage());
+        }
+        unloadQuietly(glueType, file);
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException ex) {
+            log.warn("[job] 片段文件删除失败 file={} cause={}", file, ex.getMessage());
+        }
+        log.info("[job] 片段准备失败已丢弃 job={} file={}", jobName, file);
+    }
+
+    /**
+     * 释放某个任务占用的脚本资源：引擎缓存里的编译产物、类加载器与落盘文件。
+     *
+     * <p>任务删除时必须调用。{@code ScriptProvider} 的缓存以「脚本文件路径」为键，
+     * 而每次保存都会生成新版本文件；不主动 unload，旧版本的 Class 与其类加载器
+     * 就会一直挂在引擎缓存里，Metaspace 只涨不落。</p>
+     *
+     * @param jobName 任务名，允许为 null
+     */
+    public static void release(String jobName) {
+        if (jobName == null || jobName.isBlank()) {
+            return;
+        }
+        var cached = CACHE.remove(jobName.trim());
+        if (cached == null) {
+            return;
+        }
+        unloadQuietly(cached.glueType(), cached.file());
+        try {
+            Files.deleteIfExists(cached.file());
+        } catch (IOException ex) {
+            log.warn("[job] 片段文件删除失败 job={} file={} cause={}", jobName, cached.file(), ex.getMessage());
+        }
+        log.info("[job] 片段资源已释放 job={} version={} file={}", jobName, cached.version(), cached.file());
+    }
+
+    /**
+     * 从引擎卸载某个已落盘脚本，释放其编译产物与类加载器。
+     *
+     * <p>卸载失败只告警不抛：释放资源是「尽力而为」，不该把任务流程带崩。</p>
+     *
+     * @param glueType 执行类型（用于还原引擎名）
+     * @param file     已落盘脚本文件
+     */
+    private static void unloadQuietly(String glueType, Path file) {
+        try {
+            flowOf(engineNameOf(glueType)).unload(file);
+        } catch (Throwable ex) {
+            log.warn("[job] 片段卸载失败 file={} cause={}", file, ex.getMessage());
+        }
+    }
+
+    /**
+     * 解析脚本引擎，缺实现时给出可读引导。
+     *
+     * @param engine 引擎名
+     * @return 脚本引擎流程对象
+     * @throws IllegalStateException 引擎未安装
+     */
+    private static ScriptFlow flowOf(String engine) {
+        try {
+            return ScriptFlow.of(engine);
+        } catch (Throwable ex) {
+            throw new IllegalStateException("脚本引擎 '" + engine + "' 不可用，请引入对应引擎依赖"
+                    + "（groovy 用 utils-support-groovy-starter，java 已随 utils-support-common-starter 提供）"
+                    + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * 构造处理器：执行时复用已缓存的编译产物。
+     *
+     * @param jobName            任务名
+     * @param prepared           准备结果
+     * @param executeParam       执行参数（片段内以 {@code executeParam} 变量读取）
+     * @param applicationContext 宿主容器，允许为 null
      * @return 处理器
      */
-    private static JobHandler handlerOf(String jobName, ScriptFlow flow, Path file, String executeParam,
+    private static JobHandler handlerOf(String jobName, Prepared prepared, String executeParam,
                                         ApplicationContext applicationContext) {
         String param = executeParam == null ? "" : executeParam;
+        ScriptFlow flow = flowOf(prepared.engine());
+        flow.load(prepared.file());
         return new JobHandler() {
             @Override
             public String name() {
@@ -182,41 +315,41 @@ public final class ScriptGlueHandlers {
 
             @Override
             public void execute() {
-                flow.execute(file, contextOf(jobName, param, applicationContext));
+                flow.execute(prepared.file(), contextOf(jobName, param, applicationContext));
             }
         };
     }
 
     /**
-     * 组装脚本执行上下文。
+     * 组装片段执行上下文。
      *
-     * <p>{@code GroovyScriptProvider} 会把这里的每个条目逐个绑成 Groovy 变量，
-     * 所以 {@code objectContext} 在脚本里就是可直接调用的对象，无需 import。</p>
+     * <p>Groovy 引擎会把这里的每个条目逐个绑成变量，所以 {@code objectContext} 在脚本里
+     * 可直接调用；Java 引擎按形参类型/名绑定，并从 {@code scriptHost} 取装配能力。</p>
      *
-     * @param jobName             任务名
-     * @param executeParam        执行参数
-     * @param applicationContext  宿主容器，允许为 null
+     * @param jobName            任务名
+     * @param executeParam       执行参数
+     * @param applicationContext 宿主容器，允许为 null
      * @return 绑定上下文
      */
     private static Map<String, Object> contextOf(String jobName, String executeParam,
                                                  ApplicationContext applicationContext) {
-        var context = new java.util.LinkedHashMap<String, Object>(4);
+        var context = new LinkedHashMap<String, Object>(4);
         context.put("jobName", jobName);
         context.put("executeParam", executeParam);
         context.put("objectContext",
                 new JobObjectContext(applicationContext, jobName, jobName, executeParam));
+        context.put("scriptHost", new JobScriptHost(applicationContext));
         return context;
     }
 
     /**
-     * 归一脚本引擎名：{@code GLUE_GROOVY} 与裸值 {@code groovy} 等价，
-     * 空白/空值按 {@code groovy} 处理（与本类历史行为一致）。
+     * 归一脚本引擎名：{@code GLUE_GROOVY} 与裸值 {@code groovy} 都归一成 {@code groovy}。
      *
-     * @param engine 原始执行类型，允许为 null
+     * @param glueType 原始执行类型，允许为 null
      * @return SPI 引擎名
      */
-    private static String engineNameOf(String engine) {
-        var name = GlueTypes.engineOf(engine);
+    private static String engineNameOf(String glueType) {
+        var name = GlueTypes.engineOf(glueType);
         return name.isEmpty() ? GlueTypes.ENGINE_GROOVY : name;
     }
 
@@ -238,6 +371,7 @@ public final class ScriptGlueHandlers {
      */
     private static String suffixOf(String engine) {
         return switch (engine.toLowerCase()) {
+            case "java" -> ".java";
             case "groovy" -> ".groovy";
             case "js", "javascript" -> ".js";
             case "python", "py" -> ".py";
@@ -247,11 +381,22 @@ public final class ScriptGlueHandlers {
     }
 
     /**
-     * 已落盘脚本缓存项。
+     * 已落盘片段缓存项。
      *
-     * @param version 版本时刻
-     * @param file    脚本文件
+     * @param version  版本时刻
+     * @param glueType 执行类型（用于缓存命中时还原引擎）
+     * @param file     片段文件
      */
-    private record CachedScript(long version, Path file) {
+    private record CachedScript(long version, String glueType, Path file) {
+    }
+
+    /**
+     * 准备结果：引擎名、执行类型与已落盘文件。
+     *
+     * @param engine   引擎名
+     * @param glueType 执行类型
+     * @param file     已落盘并预编译的片段文件
+     */
+    private record Prepared(String engine, String glueType, Path file) {
     }
 }

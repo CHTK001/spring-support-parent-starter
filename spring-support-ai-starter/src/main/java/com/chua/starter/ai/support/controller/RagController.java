@@ -36,11 +36,13 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * RAG REST 控制器。
@@ -365,18 +367,31 @@ public class RagController {
     /**
      * 列出所有可用的 Embedding 引擎。
      *
-     * @return VectorService SPI 扩展名列表（value / label 形式）
+     * <p>引擎来源有两处，取并集：</p>
+     * <ol>
+     *   <li>{@code VectorService} SPI 扩展（远端/自定义实现，当前部署下可能为空）</li>
+     *   <li>{@link RagClientManager} 的本地推理引擎集合（{@code memory}/{@code onnx}/
+     *       {@code bge}/{@code minilm}/{@code wemm}）——这些是 RAG 实际能直接使用的引擎，
+     *       也是 {@code /v2/rag/runtime-status} 里 {@code engine} 字段的取值来源</li>
+     * </ol>
+     *
+     * <p>只查 SPI 会得到空列表：该 SPI 没有任何实现类，引擎实际由本地白名单构建。</p>
+     *
+     * @return 引擎列表（value / label 形式），按名称排序
      */
-    @Operation(summary = "Embedding 引擎列表", description = "获取所有可用的 Embedding 引擎（VectorService SPI 实现）")
+    @Operation(summary = "Embedding 引擎列表", description = "获取所有可用的 Embedding 引擎（本地推理引擎 + VectorService SPI 扩展）")
     @GetMapping("/embedding-engines")
     public ReturnResult<List<Map<String, String>>> listEmbeddingEngines() {
-        Set<String> engines = ServiceProvider.of(VectorService.class).getExtensions();
-        List<Map<String, String>> result = engines.stream().map(name -> {
-            Map<String, String> item = new LinkedHashMap<>();
+        Set<String> engines = new TreeSet<>(ServiceProvider.of(VectorService.class).getExtensions());
+        engines.addAll(ragClientManager.localEmbeddingEngines());
+        List<Map<String, String>> result = new ArrayList<>(engines.size());
+        for (String name : engines) {
+            Map<String, String> item = new LinkedHashMap<>(4);
             item.put("value", name);
             item.put("label", name);
-            return item;
-        }).toList();
+            item.put("local", String.valueOf(ragClientManager.localEmbeddingEngines().contains(name)));
+            result.add(item);
+        }
         return ReturnResult.ok(result);
     }
 

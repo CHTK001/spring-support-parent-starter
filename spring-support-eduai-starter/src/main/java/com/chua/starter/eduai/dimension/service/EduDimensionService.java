@@ -2,6 +2,10 @@ package com.chua.starter.eduai.dimension.service;
 
 import com.chua.starter.common.support.constant.CacheConstant;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
+import com.chua.starter.oauth.client.support.user.LoginAuthResult;
+import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.mapper.*;
 import com.chua.starter.eduai.mapper.EduStudentDailyMapper;
@@ -9,6 +13,7 @@ import com.chua.starter.eduai.mapper.EduStudentProgressMapper;
 import com.chua.starter.eduai.model.EduStudentDaily;
 import com.chua.starter.eduai.model.EduStudentProgress;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.StudentPasswordSupport;
 import com.chua.common.support.utils.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +23,11 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 维度管理服务。
@@ -55,6 +64,16 @@ public class EduDimensionService {
      * 字典下拉缓存名
      */
     private static final String CACHE_DROPDOWN = "edu:dimension:dropdown";
+
+    /**
+     * 管理员代入学生的默认有效期（秒）
+     */
+    private static final int DEFAULT_IMPERSONATE_SECONDS = 300;
+
+    /**
+     * 管理员代入学生的默认可访问路径：只放开学生端，不放开管理端
+     */
+    private static final String STUDENT_SCOPE_PATH = "/v2/edu/student";
 
     /**
      * Subjectmapper
@@ -268,6 +287,7 @@ public class EduDimensionService {
                 throw new BusinessException("班级不存在");
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
+            checkClassNameUnique(entity.getClassName().trim(), entity.getClassId());
             entity.setOwnerUserId(exists.getOwnerUserId());
             classMapper.updateById(entity);
             return entity.getClassId();
@@ -275,10 +295,29 @@ public class EduDimensionService {
         if (entity.getClassStatus() == null) {
             entity.setClassStatus(1);
         }
+        checkClassNameUnique(entity.getClassName().trim(), null);
         entity.setOwnerUserId(EduUserContext.requireUserId());
         classMapper.insert(entity);
         log.info("[EduAi] 新增班级: {} ({})", entity.getClassName(), entity.getClassCode());
         return entity.getClassId();
+    }
+
+    /**
+     * 班级名称业务唯一校验。
+     *
+     * <p>表上有唯一索引 {@code uk_edu_class_name} 兜底，但那只会抛一条看不懂的
+     * {@code Duplicate entry}；这里先查一次并给出人话，编辑态要排除自己。</p>
+     *
+     * @param className  班级名（已 trim）
+     * @param excludeId  编辑时要排除的班级标识，新增传 null
+     */
+    private void checkClassNameUnique(String className, Long excludeId) {
+        Long same = classMapper.selectCount(new QueryWrapper<EduClass>()
+                .eq("class_name", className)
+                .ne(excludeId != null, "class_id", excludeId));
+        if (same != null && same > 0) {
+            throw new BusinessException("班级名称「" + className + "」已存在，请换一个名称");
+        }
     }
 
     /**
@@ -327,6 +366,10 @@ public class EduDimensionService {
         if (!StringUtils.hasText(entity.getStudentNo())) {
             throw new BusinessException("学号必填");
         }
+        // 家长手机号非必填（没有也能建档，只是学生端不能用手机号登录），但填了就要合法：
+        // 后面要拿它当登录凭据，格式错的号码会让家长永远登不进来且查不出原因。
+        String phone = normalizeParentPhone(entity.getStudentParentPhone());
+        entity.setStudentParentPhone(phone);
         if (entity.getStudentId() != null && entity.getStudentId() > 0) {
             EduStudent exists = studentMapper.selectById(entity.getStudentId());
             if (exists == null) {
@@ -334,6 +377,7 @@ public class EduDimensionService {
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
             entity.setOwnerUserId(exists.getOwnerUserId());
+            applyPassword(entity, exists);
             studentMapper.updateById(entity);
             return entity.getStudentId();
         }
@@ -341,9 +385,119 @@ public class EduDimensionService {
             entity.setStudentStatus(1);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
+        // 登录账号默认取学号：学生端令牌里的 userId 就是学号，
+        // 两个字段必须一致，否则登录成功了学生端却定位不到自己的档案。
+        entity.setStudentAccount(entity.getStudentNo().trim());
+        applyPassword(entity, null);
         studentMapper.insert(entity);
-        log.info("[EduAi] 新增学生: {} ({})", entity.getStudentName(), entity.getStudentNo());
+        log.info("[EduAi] 新增学生: {} ({}) 手机号={}", entity.getStudentName(), entity.getStudentNo(),
+                phone == null ? "未填" : "已填");
         return entity.getStudentId();
+    }
+
+    /**
+     * 管理员代入指定学生：签发一个短期、只读、限定路径的临时令牌。
+     *
+     * <p>用途是排查「这个学生看到的是什么」：管理员不必索要学生密码，
+     * 也不必真的用学生账号登录，避免污染学生的学习记录。</p>
+     *
+     * <p>默认只允许访问学生端接口（{@value #STUDENT_SCOPE_PATH}）。
+     * 开放管理端路径等于把管理员权限借出去，因此必须由调用方显式传入才会生效。</p>
+     *
+     * @param studentId     学生标识
+     * @param expireSeconds 有效期（秒）；为空用 {@value #DEFAULT_IMPERSONATE_SECONDS} 秒
+     * @param allowedUrls   允许访问的路径前缀；为空时收窄到学生端路径
+     * @return 含临时令牌的结果；无权、档案不存在或签发失败时返回对应错误码
+     */
+    public LoginAuthResult impersonateStudent(Long studentId, Integer expireSeconds, List<String> allowedUrls) {
+        if (!EduUserContext.isAdmin()) {
+            throw new BusinessException("只有管理员可以代入学生身份");
+        }
+        if (studentId == null) {
+            throw new BusinessException("学生不能为空");
+        }
+        EduStudent student = studentMapper.selectById(studentId);
+        if (student == null) {
+            throw new BusinessException("学生不存在");
+        }
+        // 管理员可越过归属过滤，但归属字段仍要带进令牌，
+        // 否则学生端接口按 owner 过滤时会查不到这个学生的数据
+        int seconds = expireSeconds == null || expireSeconds <= 0
+                ? DEFAULT_IMPERSONATE_SECONDS
+                : expireSeconds;
+        List<String> scope = allowedUrls == null || allowedUrls.isEmpty()
+                ? List.of(STUDENT_SCOPE_PATH)
+                : allowedUrls;
+
+        Map<String, Object> ext = new LinkedHashMap<>();
+        ext.put("studentId", student.getStudentId());
+        ext.put("studentNo", student.getStudentNo());
+        ext.put("studentName", student.getStudentName());
+        ext.put("studentClassId", student.getStudentClassId());
+        ext.put("studentGradeLevel", student.getStudentGradeLevel());
+        ext.put("studentGrade", student.getStudentGrade());
+        ext.put("accountType", "student");
+
+        var target = new UserResult();
+        target.setUserId(student.getStudentNo());
+        target.setUsername(student.getStudentNo());
+        target.setNickName(StringUtils.defaultString(student.getStudentName(), student.getStudentNo()));
+        target.setPhone(student.getStudentParentPhone());
+        target.setLoginType("student-impersonate");
+        target.setRoles(Set.of(AuthConstant.STUDENT));
+        target.setPermission(Collections.emptySet());
+        target.setExt(ext);
+        // 归属字段随令牌带过去：学生端查进度/错题时按 owner 过滤，缺了就查不到
+        if (StringUtils.hasText(student.getOwnerUserId())) {
+            ext.put("ownerUserId", student.getOwnerUserId());
+        }
+        return AuthClientExecute.getInstance().createTemporaryTokenFor(target, seconds, scope);
+    }
+
+    /**
+     * 处理登录口令：把表单里的明文转成摘要加盐写回实体。
+     *
+     * <p>更新场景下表单没提交新口令时，必须把库中既有的摘要与盐原样带回：
+     * 否则管理员改个姓名就会把学生的登录口令清空，且清空后没有任何提示。</p>
+     *
+     * @param entity 本次提交的实体
+     * @param exists 库中既有档案；新增时为 {@code null}
+     */
+    private void applyPassword(EduStudent entity, EduStudent exists) {
+        String raw = entity.getStudentPwdInput();
+        if (!StringUtils.hasText(raw)) {
+            if (exists != null) {
+                entity.setStudentPassword(exists.getStudentPassword());
+                entity.setStudentPwdSalt(exists.getStudentPwdSalt());
+            }
+            return;
+        }
+        StudentPasswordSupport.validate(raw);
+        String salt = StudentPasswordSupport.newSalt();
+        entity.setStudentPwdSalt(salt);
+        entity.setStudentPassword(StudentPasswordSupport.hash(raw, salt));
+        entity.setStudentPwdInput(null);
+    }
+
+    /**
+     * 归一化并校验家长手机号。
+     *
+     * <p>去掉分隔符（空格/短横线）后要求是 11 位、以 1 开头。空值（含全空格）
+     * 视为「未填」返回 null，而不是报错 —— 家长手机号是可选增强项，
+     * 不该因为没填就建不了档。</p>
+     *
+     * @param raw 表单原值
+     * @return 归一化后的 11 位号码；未填返回 null
+     */
+    private String normalizeParentPhone(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String digits = raw.replaceAll("[\\s\\-()]", "");
+        if (!digits.matches("1\\d{10}")) {
+            throw new BusinessException("家长手机号格式不对，应为 11 位手机号");
+        }
+        return digits;
     }
 
     /**
@@ -439,7 +593,7 @@ public class EduDimensionService {
      */
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = CACHE_DROPDOWN,
-            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate()",
+            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':'",
             unless = "#result == null")
     public DimensionDropdown getDropdown() {
         // 学科 / 年级并行查询，缩短下拉首屏

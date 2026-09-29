@@ -60,4 +60,14 @@ public class QuestionQueryDTO {
      * 状态
      */
     private Integer status;
+
+    /**
+     * 排序字段: createTime（默认）/ addCount（被加入试卷次数）/ useCount（使用次数）/ difficulty
+     */
+    private String orderBy;
+
+    /**
+     * 排序方向: asc / desc（默认 desc）
+     */
+    private String orderDir;
 }

@@ -2,7 +2,7 @@ package com.chua.starter.job.support.execute;
 
 import com.chua.starter.job.support.dispatch.JobSpec;
 import com.chua.starter.job.support.glue.GlueTypes;
-import com.chua.starter.job.support.glue.JavaGlueHandlers;
+import com.chua.starter.job.support.glue.GlueTypes;
 import com.chua.starter.job.support.handler.JobDispatchContext;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
@@ -318,9 +318,10 @@ public class JobExecutor {
     /**
      * 解析代码片段任务的处理器。
      *
-     * <p>命令带正文时直接编译/落盘，只带版本号时从本地缓存取（正文已由
-     * {@code job-glue} 主题单独同步）。{@code GLUE_JAVA} 与脚本是两条独立链路：
-     * 前者进程内 {@code javax.tools} 编译，后者走 {@code ScriptProvider} SPI。</p>
+     * <p>命令带正文时直接合成/预编译，只带版本号时从本地缓存取（正文已由
+     * {@code job-glue} 主题单独同步）。脚本与片段、Java 与 Groovy 都是**同一条 SPI 链路**：
+     * 片段类型先合成完整脚本，再统一交给 {@code ScriptProvider} 引擎执行，
+     * 不再有旁路编译器。</p>
      *
      * @param command 派发命令
      * @param jobName 任务名
@@ -329,13 +330,6 @@ public class JobExecutor {
      */
     private JobHandler resolveGlueHandler(JobSyncTopics.Command command, String jobName) {
         boolean inlineSource = command.glueSource() != null && !command.glueSource().isBlank();
-        if (GlueTypes.isJava(command.glueType())) {
-            return inlineSource
-                    ? JavaGlueHandlers.resolve(jobName, command.glueSource(),
-                            command.glueUpdatetimeMs(), command.executeParam(), applicationContext)
-                    : JavaGlueHandlers.resolveCached(jobName, command.glueUpdatetimeMs(),
-                            command.executeParam(), applicationContext);
-        }
         return inlineSource
                 ? ScriptGlueHandlers.resolve(jobName, command.glueType(), command.glueSource(),
                         command.glueUpdatetimeMs(), command.executeParam(), applicationContext)

@@ -87,6 +87,18 @@ public class PaperVO {
      */
     private Integer paperSubjectLocked;
     /**
+     * 试卷整体难度 1-5
+     */
+    private Integer paperDifficulty;
+    /**
+     * 引用的组卷模板ID
+     */
+    private Long paperTemplateId;
+    /**
+     * 首页大标题风格: default/line/double/calligraphy
+     */
+    private String paperTitleStyle;
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

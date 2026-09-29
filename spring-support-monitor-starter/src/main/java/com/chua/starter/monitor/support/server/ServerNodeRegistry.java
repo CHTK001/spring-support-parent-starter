@@ -118,8 +118,6 @@ public class ServerNodeRegistry {
 
     /**
      * 应用就绪后自动拉起启用节点。
-     *
-     * @param event 就绪事件
      */
     @EventListener(ApplicationReadyEvent.class)
     public void autoStart() {

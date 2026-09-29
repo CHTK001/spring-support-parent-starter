@@ -431,6 +431,8 @@ CREATE TABLE IF NOT EXISTS edu_student (
     student_grade VARCHAR(20) COMMENT '年级',
     student_enroll_year INT COMMENT '入学年份',
     student_parent_phone VARCHAR(20) COMMENT '家长手机号（学生端可用它登录；非唯一，同号可带多个孩子）',
+    student_password VARCHAR(64) COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
+    student_pwd_salt VARCHAR(32) COMMENT '口令盐（随机十六进制，与 student_password 一一对应）',
     student_status TINYINT DEFAULT 1 COMMENT '状态: 0-离校 1-在读',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -848,5 +850,18 @@ CREATE TABLE IF NOT EXISTS edu_paper_template (
     update_by INT COMMENT '更新人',
     KEY edu_paper_template_status (template_status)
 ) COMMENT '组卷模板';
+
+-- ----------------------------
+-- 兼容既有库：学生登录口令列
+-- ----------------------------
+-- 说明：
+--   1) 全新安装走上面的 CREATE TABLE，这一段是空操作；
+--      既有库（本次加列之前建的）才会真正补列，因此两条路径统一。
+--   2) 刻意不加 NOT NULL：老学生没有口令，列必须允许 NULL，
+--      由「没有口令 → 首次登录要求设置」的业务规则兜底，而不是让迁移失败。
+--   3) student_account 的历史数据回填属于 DML，按仓库规范放在 initdata，不在本文件。
+ALTER TABLE edu_student
+    ADD COLUMN IF NOT EXISTS student_password VARCHAR(64) DEFAULT NULL COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
+    ADD COLUMN IF NOT EXISTS student_pwd_salt VARCHAR(32) DEFAULT NULL COMMENT '口令盐（随机十六进制，与 student_password 一一对应）';
 
 

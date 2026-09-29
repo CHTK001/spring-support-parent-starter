@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -128,8 +129,24 @@ public class GenerateController {
 
         /**
          * 参考图（data URL 或 base64）
+         *
+         * <p>前端已在浏览器里按长边缩放过，这里收到的是缩放后的图，
+         * 用于减少请求体与落库体积；图生图只需看清构图，不影响质量。</p>
          */
         private String referenceImage;
+
+        /**
+         * 参考图的原始像素宽（缩放前）
+         *
+         * <p>缩放后的 data URL 里已经没有原始尺寸，而历史卡片要按原比例渲染，
+         * 所以由前端单独带上。缺省时按缩放后图的比例兜底。</p>
+         */
+        private Integer referenceWidth;
+
+        /**
+         * 参考图的原始像素高（缩放前）
+         */
+        private Integer referenceHeight;
     }
 
     /**
@@ -189,11 +206,23 @@ public class GenerateController {
     public ReturnResult<Map<String, Object>> create(@RequestBody CreateBody body) {
         String userId = AiUserContext.requireUserId();
         try {
-            SysAiGenerateTask task = generateService.create(new GenerateService.Request(
+            GenerateService.Request request = new GenerateService.Request(
                     body.getType(), body.getModel(), body.getPrompt(), body.getNegativePrompt(),
                     body.getSize(), body.getCount(), body.getDuration(), body.getSeed(),
-                    body.getStyle(), body.getQuality(), body.getSteps(), body.getReferenceImage(), userId));
-            return ReturnResult.success(toView(task));
+                    body.getStyle(), body.getQuality(), body.getSteps(), body.getReferenceImage(), userId);
+            SysAiGenerateTask task = generateService.create(request);
+            // 原始尺寸只在响应里回带，不落库：它只服务于「渲染还原比例」，
+            // 存成两个数字列不值当，而落进参考图列会与缩放后的图对不上。
+            Map<String, Object> view = toView(task);
+            if (task.getReferenceImage() != null) {
+                if (body.getReferenceWidth() != null) {
+                    view.put("referenceWidth", body.getReferenceWidth());
+                }
+                if (body.getReferenceHeight() != null) {
+                    view.put("referenceHeight", body.getReferenceHeight());
+                }
+            }
+            return ReturnResult.success(view);
         } catch (IllegalArgumentException e) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, e.getMessage());
         } catch (IllegalStateException e) {
@@ -232,19 +261,51 @@ public class GenerateController {
     }
 
     /**
+     * 删除单条生成记录。
+     *
+     * <p>进行中的任务会先收敛为取消态再删除：直接删会让行消失但上游仍在计算，
+     * 用户看到的是「记录没了、额度却花了」。归属在服务层校验，非本人记录一律不删。</p>
+     *
+     * @param taskId 任务ID
+     * @return 是否删除成功
+     */
+    @DeleteMapping("/tasks/{taskId}")
+    @Operation(summary = "删除生成记录")
+    public ReturnResult<Boolean> delete(@PathVariable String taskId) {
+        String userId = AiUserContext.requireUserId();
+        return ReturnResult.success(generateService.delete(userId, taskId));
+    }
+
+    /**
+     * 清理当前用户的全部失败记录。
+     *
+     * <p>失败记录没有产出、留着只会持续占列表。逐条按归属删除，不做跨用户批量操作。</p>
+     *
+     * @return 删除条数
+     */
+    @DeleteMapping("/tasks/failed")
+    @Operation(summary = "清理失败记录")
+    public ReturnResult<Integer> deleteFailed() {
+        String userId = AiUserContext.requireUserId();
+        return ReturnResult.success(generateService.deleteFailed(userId));
+    }
+
+    /**
      * 生成任务历史。
      *
-     * @param type  任务类型，可为空
-     * @param limit 条数上限
+     * @param type   任务类型，可为空
+     * @param limit  条数上限
+     * @param offset 跳过条数，用于滚动分页
      * @return 任务视图列表
      */
     @GetMapping("/tasks")
     @Operation(summary = "生成任务历史")
     public ReturnResult<List<Map<String, Object>>> history(
             @RequestParam(required = false) String type,
-            @RequestParam(required = false, defaultValue = "30") int limit) {
+            @RequestParam(required = false, defaultValue = "30") int limit,
+            @RequestParam(required = false, defaultValue = "0") int offset) {
         String userId = AiUserContext.requireUserId();
-        List<SysAiGenerateTask> tasks = generateService.listRecent(userId, type, limit);
+        List<SysAiGenerateTask> tasks = generateService.listRecent(userId, type, limit, offset);
         return ReturnResult.success(tasks.stream().map(GenerateController::toView).toList());
     }
 
@@ -295,6 +356,8 @@ public class GenerateController {
         map.put("stepsMin", view.stepsMin());
         map.put("stepsMax", view.stepsMax());
         map.put("stepsDefault", view.stepsDefault());
+        map.put("styles", view.styles());
+        map.put("style", view.style());
         return map;
     }
 

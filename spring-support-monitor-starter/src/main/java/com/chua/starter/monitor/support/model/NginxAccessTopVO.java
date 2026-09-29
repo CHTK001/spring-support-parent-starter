@@ -24,6 +24,15 @@ import java.util.List;
  * @param ips      客户端 IP Top N
  * @param statuses 状态码类别分布
  * @param message  面向用户的说明（无数据 / 日志为空时说明原因）
+ * @param bytesSent 本次扫描的出站字节总量（{@code $body_bytes_sent} 求和）。
+ *                  <strong>为 null 表示无法统计</strong>——所有行都缺这一列时
+ *                  （自定义 log_format），此时不能返回 0：那会让界面显示「零流量」，
+ *                  而真实情况是「不知道」。原因写在 {@code message} 里
+ * @param uniqueIps  独立客户端 IP 总数。
+ *                  必须单独给出而不是让界面数 {@code ips.size()}——{@code ips} 只含 Top N，
+ *                  拿它当总数会在高访问量站点上严重低估（Top 10 常年是固定几个来源）
+ * @param clientErrors 4xx 请求数
+ * @param serverErrors 5xx 请求数
  * @author CH
  * @since 4.0.0
  */
@@ -33,7 +42,11 @@ public record NginxAccessTopVO(
         List<Item> paths,
         List<Item> ips,
         List<StatusItem> statuses,
-        String message
+        String message,
+        Long bytesSent,
+        int uniqueIps,
+        int clientErrors,
+        int serverErrors
 ) {
 
     /**
@@ -63,6 +76,6 @@ public record NginxAccessTopVO(
      * @return 统计结果
      */
     public static NginxAccessTopVO empty(int scanned, String message) {
-        return new NginxAccessTopVO(0, scanned, List.of(), List.of(), List.of(), message);
+        return new NginxAccessTopVO(0, scanned, List.of(), List.of(), List.of(), message, null, 0, 0, 0);
     }
 }

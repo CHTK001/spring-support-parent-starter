@@ -33,8 +33,14 @@ public class AgentController {
      * Windows 走 WinRM 通道，单条命令行只有约 8KB，平台无法把 6MB 级的包推进去，
      * 只能让目标机按 monitor.agent.jar-url 反向拉取这个端点。
      * </p>
+     * <p>
+     * 响应直接写入 {@code HttpServletResponse}（本方法返回 void）：包体以
+     * {@code application/octet-stream} 流式下发，带 {@code Cache-Control: no-store}。
+     * <b>定位不到 agent 包时返回 404</b>（{@code deployService.packageFile()} 抛异常
+     * 的分支），此时响应体不是包内容。
+     * </p>
      *
-     * @return agent 包字节流；定位不到包时 404
+     * @param response 响应容器，由容器注入；本方法直接写入其输出流并负责刷出
      */
     @GetMapping("/package")
     public void packageFile(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {

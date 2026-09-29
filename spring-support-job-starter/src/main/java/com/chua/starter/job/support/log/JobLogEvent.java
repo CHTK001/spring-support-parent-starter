@@ -20,6 +20,44 @@ import java.util.regex.Pattern;
  * <p>EXECUTOR → SCHEDULER 上行采用紧凑 JSON 序列化, logContent 字段使用 Base64 编码
  * 确保多行/特殊字符不会破坏解析。</p>
  *
+ * <p>本 record 没有紧凑构造器, 因此九个组件都不做校验: 除 {@code status} 之外全部
+ * 允许为 {@code null}（{@code costMs} / {@code executedAtMs} 为基本类型, 反序列化缺失时
+ * 补 0）。取值来源与约束见各组件说明。</p>
+ *
+ * @param jobName 作业名称, 即被触发的 JobHandler 标识, 落库时写入
+ *                {@code sys_job_log_trigger_bean}, 同时用于反查任务台账补齐触发方式。
+ *                取值来源为 EXECUTOR 收到的派发命令; wire 上允许为 {@code null}
+ * @param status  本轮执行的终态, 取值仅 {@link Status#SUCCESS} / {@link Status#FAILURE} /
+ *                {@link Status#SKIPPED}, 落库时同时写入 {@code sys_job_log_trigger_code} 与
+ *                {@code sys_job_log_execute_code}。允许为 {@code null}（仅 wire 状态字段缺失时出现）
+ * @param costMs  本轮执行耗时, 单位毫秒, 取值 {@code 结束时刻 - 开始时刻}, 含全部重试与重试间隔,
+ *                不是单次尝试耗时; {@link Status#SKIPPED} 固定记 0。落库写入 {@code sys_job_log_cost}。
+ *                不允许为负; 反序列化缺失时补 0
+ * @param exception 失败原因文本, 仅在 {@link Status#FAILURE} 时由 {@code extractMessage} 从抛出对象
+ *                  逐层上溯（最多 10 层）取首个非空 message, 全为空时退化为异常类简名;
+ *                  {@link Status#SKIPPED} 时存放跳过原因（如 handler 未注册）,
+ *                  {@link Status#SUCCESS} 时为 {@code null}。允许为 {@code null};
+ *                  wire 上经 Base64 编码以防多行栈信息破坏行协议
+ * @param executedAtMs 本轮执行的开始时刻, 为 {@code System.currentTimeMillis()} 得到的 epoch 毫秒
+ *                    时间戳（不是结束时刻, 也不是 {@code timestamp}）, 落库时同时写入
+ *                    {@code sys_job_log_trigger_time} 与 {@code sys_job_log_trigger_date}。
+ *                    必须为正数; 反序列化缺失或非法时补 0
+ * @param nodeId  执行节点标识, 用于区分同一任务由哪个实例跑完。取值来源为
+ *               {@code JobProperties#nodeId}, 未显式配置时由 {@code jobNodeId} Bean 按
+ *               JVM 运行名 + UUID 哈希派生, 落库时写入 {@code sys_job_log_node_id}。
+ *               允许为 {@code null}
+ * @param timestamp 事件构造时刻, 取 {@code Instant.now()}, 表示这条日志被组装的时间,
+ *                  与 {@code executedAtMs} 的执行开始时刻语义不同, 二者可能相差一次执行时长。
+ *                  wire 上以 {@code toEpochMilli()} 平铺传输, 空值序列化为 0;
+ *                  {@code fromJson} 以 {@code Instant.ofEpochMilli} 反解。允许为 {@code null}
+ * @param logContent 执行日志正文, 为多行文本（重试轨迹、回调执行、脚本输出等）,
+ *                  由 EXECUTOR 侧 {@code JobLogHelper} 收集拼接; 无正文时为 {@code null}。
+ *                  允许为 {@code null}; wire 上经 UTF-8 + Base64 编码保证单行安全,
+ *                  落库时与 {@code exception} 合并成结果说明（超 4000 列截断）
+ * @param triggerType 本轮触发方式, 用于区分调度中心手动触发与定时触发。
+ *                  已知取值 {@link #TRIGGER_MANUAL}（{@code MANUAL}）表示调度中心点的
+ *                  立即运行/立即触发; 定时触发时传 {@code null}。落库时非空照记,
+ *                  为空则由 {@code MybatisJobLogSink} 回退到任务台账的调度类型（缺省 {@code CRON}）
  * @since 4.0.0.42
  * @author CH
  */

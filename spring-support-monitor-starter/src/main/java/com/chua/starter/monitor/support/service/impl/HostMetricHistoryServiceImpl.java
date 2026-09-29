@@ -25,7 +25,7 @@ import java.util.TreeMap;
  *   <li>清理：委托 {@link SeriesEngine#purge}。</li>
  * </ul>
  * 当前 JDBC 实现为 {@link DataSourceSeriesEngine}，后续切换 InfluxDB / Redis 只需改
- * {@code monitor.timeseries.engine}，本类无感知。</p>
+ * {@code monitor.timeseries.engine}，本类无感知。
  *
  * @author CH
  * @since 4.0.0.42
@@ -38,6 +38,16 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
      * 主机指标宽表物理名（writeBatch / purge 的 target）
      */
     private static final String HOST_TABLE = "ms_host_metric_history";
+
+    /**
+     * 允许的最小回溯小时数
+     */
+    private static final int MIN_LOOKBACK_HOURS = 1;
+
+    /**
+     * 允许的最大回溯小时数（7 天，与 {@link HostMetricHistoryService#list(Long, int)} 声明一致）
+     */
+    private static final int MAX_LOOKBACK_HOURS = 24 * 7;
 
     /**
      * 五个逻辑 target 与输出行下标顺序：CPU / 内存 / 磁盘 / 磁盘读 / 磁盘写
@@ -94,14 +104,20 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
         if (hostId == null || !seriesEngine.isAvailable()) {
             return List.of();
         }
-        int range = Math.max(1, Math.min(hours, 24 * 7));
-        String window = windowForHours(range);
+        // 接口声明的回溯范围是 1..168 小时。原来用 Math.max(1, Math.min(hours, 24*7))
+        // 夹取：传 0 被悄悄当成 1 小时、传 720 被悄悄砍成 7 天，调用方拿到的曲线
+        // 与自己的请求不符却毫无察觉。范围既已写进契约，就显式拒绝越界而不是改写入参。
+        if (hours < MIN_LOOKBACK_HOURS || hours > MAX_LOOKBACK_HOURS) {
+            throw new IllegalArgumentException("回溯小时数必须在 " + MIN_LOOKBACK_HOURS
+                    + ".." + MAX_LOOKBACK_HOURS + " 之间: " + hours);
+        }
+        String window = windowForHours(hours);
         // ts → [cpu, mem, disk, read, write]，按时间升序
         TreeMap<Long, Double[]> merged = new TreeMap<>();
         for (int i = 0; i < CURVE_TARGETS.size(); i++) {
             List<List<Object>> curve;
             try {
-                curve = seriesEngine.series(CURVE_TARGETS.get(i), hostId, range, window);
+                curve = seriesEngine.series(CURVE_TARGETS.get(i), hostId, hours, window);
             } catch (RuntimeException e) {
                 log.debug("[HostHistory] 查询曲线失败 host={} target={}: {}",
                         hostId, CURVE_TARGETS.get(i), e.getMessage());
@@ -141,8 +157,11 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
         try {
             return seriesEngine.purge(HOST_TABLE, null, cutoff);
         } catch (RuntimeException e) {
-            log.debug("[HostHistory] 保留期清理失败: {}", e.getMessage());
-            return 0;
+            // 清理失败不能降级成 0：0 在契约里表示「后端不支持清理」或「本批无过期点」，
+            // 把它当成正常返回值会让保留期策略静默失效、时序表无限增长。
+            // 定时任务里抛出即可交由 Spring 的错误处理器记录，不再吞成 debug 日志。
+            log.error("[HostHistory] 保留期清理失败 target={} 保留天数={}", HOST_TABLE, retentionDays, e);
+            throw e;
         }
     }
 

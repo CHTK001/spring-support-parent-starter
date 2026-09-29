@@ -22,6 +22,10 @@ import com.chua.starter.server.support.service.ReleaseService;
 import com.chua.starter.server.support.service.SftpService;
 import com.chua.starter.server.support.spi.PackageManagerProvider;
 import com.chua.starter.server.support.spi.PackageManagerRouter;
+import com.chua.starter.server.support.spi.SystemServiceContext;
+import com.chua.starter.server.support.spi.SystemServiceProvider;
+import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
+import com.chua.starter.server.support.util.HostPlatforms;
 import com.chua.starter.server.support.util.ProjectScripts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -66,6 +70,11 @@ public class ReleaseServiceImpl implements ReleaseService {
     private final PackageManagerRouter packageManagerRouter;
 
     /**
+     * 系统服务挂载路由器（按操作系统选择 SPI 实现：systemd / launchd / 计划任务）
+     */
+    private final SystemServiceProviderRegistry systemServiceRouter;
+
+    /**
      * 系统配置 Mapper（读写升级全局/最近配置的原始 JSON）
      */
     private final MsServerConfigMapper serverConfigMapper;
@@ -85,6 +94,10 @@ public class ReleaseServiceImpl implements ReleaseService {
     private static class OperationContext {
         private MsServerProject project;
         private Long hostId;
+        /** 目标主机（挂载服务时取运行账户，避免 unit 以 root 常驻） */
+        private MsServerHost host;
+        /** 归一后的系统类型（HostPlatforms 取值域），系统服务挂载按此路由 SPI 实现 */
+        private String osType;
         /** 目标主机是否为 Windows（决定命令按 PowerShell 还是 bash 构造） */
         private boolean windows;
     }
@@ -581,10 +594,15 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (isBlank(project.getProjectPath())) {
             return ReturnResult.error("项目地址未配置，无法挂载服务");
         }
-        String svc = isBlank(project.getServiceName()) ? serviceKey(project) : project.getServiceName();
-        String command = ctx.windows
-                ? installServiceCommandWin(project, svc)
-                : installServiceCommand(project, svc);
+        var provider = systemServiceRouter.resolve(ctx.osType);
+        if (provider.isEmpty()) {
+            return ReturnResult.error("目标主机系统类型「" + ctx.osType + "」暂不支持挂载系统服务");
+        }
+        var serviceContext = serviceContext(ctx);
+        String svc = isBlank(project.getServiceName())
+                ? provider.get().defaultServiceName(serviceContext)
+                : project.getServiceName();
+        String command = provider.get().install(serviceContext, svc);
         List<ProjectStep> steps = List.of(new ProjectStep("挂载系统服务", command, 1));
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
                 "install-service", steps, null);
@@ -601,10 +619,15 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         OperationContext ctx = prepared.getData();
         MsServerProject project = ctx.project;
-        String svc = isBlank(project.getServiceName()) ? serviceKey(project) : project.getServiceName();
-        String command = ctx.windows
-                ? uninstallServiceCommandWin(project, svc)
-                : uninstallServiceCommand(project, svc);
+        var provider = systemServiceRouter.resolve(ctx.osType);
+        if (provider.isEmpty()) {
+            return ReturnResult.error("目标主机系统类型「" + ctx.osType + "」暂不支持卸载系统服务");
+        }
+        var serviceContext = serviceContext(ctx);
+        String svc = isBlank(project.getServiceName())
+                ? provider.get().defaultServiceName(serviceContext)
+                : project.getServiceName();
+        String command = provider.get().uninstall(serviceContext, svc);
         List<ProjectStep> steps = List.of(new ProjectStep("卸载系统服务", command, 1));
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
                 "uninstall-service", steps, null);
@@ -614,6 +637,35 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     // ==================== 升级配置 ====================
+
+    /**
+     * 装配系统服务挂载上下文：把项目实体与结构化变量转换为 SPI 输入
+     *
+     * @param ctx 操作上下文
+     * @return 挂载上下文
+     */
+    private SystemServiceContext serviceContext(OperationContext ctx) {
+        var env = new LinkedHashMap<String, String>();
+        for (EnvVar e : readEnvList(ctx.project.getEnvVars())) {
+            env.put(e.key, e.value);
+        }
+        return new SystemServiceContext(
+                ctx.project.getProjectName(),
+                ctx.project.getId(),
+                ctx.project.getProjectType(),
+                ctx.project.getMainEntry(),
+                ctx.project.getProjectPath(),
+                ctx.project.getLogPath(),
+                ctx.project.getStartScript(),
+                ctx.project.getStopScript(),
+                ctx.project.getStatusScript(),
+                env,
+                readStringList(ctx.project.getJvmArgs()),
+                readStringList(ctx.project.getCmdArgs()),
+                ctx.host == null ? "" : ctx.host.getServerHostAccount(),
+                Boolean.TRUE.equals(ctx.project.getAutostart()),
+                Boolean.TRUE.equals(ctx.project.getGuardian()));
+    }
 
     @Override
     public ReturnResult<Map<String, Object>> getUpgradeConfig() {
@@ -785,7 +837,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         OperationContext context = new OperationContext();
         context.project = project;
         context.hostId = release.getHostId();
-        context.windows = "WINDOWS".equalsIgnoreCase(targetHost.getServerHostOsType());
+        context.osType = HostPlatforms.normalize(targetHost.getServerHostOsType());
+        context.host = targetHost;
+        context.windows = HostPlatforms.WINDOWS.equals(context.osType);
         return ReturnResult.ok(context);
     }
 
@@ -1335,18 +1389,6 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     // ---------- 系统服务（Linux systemd）----------
 
-    /**
-     * 生成确定性服务名：ms-<名称>-<项目ID>
-     */
-    private String serviceKey(MsServerProject p) {
-        String base = isBlank(p.getProjectName()) ? "project" : p.getProjectName();
-        String s = base.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
-        if (s.isEmpty()) {
-            s = "project";
-        }
-        return "ms-" + s + "-" + p.getId();
-    }
-
     private String sq(String value) {
         return value == null ? "" : value.replace("'", "'\\''");
     }
@@ -1377,118 +1419,6 @@ public class ReleaseServiceImpl implements ReleaseService {
         } catch (Exception e) {
             return Collections.emptyList();
         }
-    }
-
-    /**
-     * 前台启动器（systemd ExecStart，exec 接管进程，stdout 入 journal）。
-     */
-    private String buildLauncherBash(MsServerProject p) {
-        StringBuilder sb = new StringBuilder("#!/bin/bash\n");
-        sb.append("cd '").append(sq(p.getProjectPath())).append("'\n");
-        for (EnvVar e : readEnvList(p.getEnvVars())) {
-            sb.append("export ").append(e.key).append("='").append(sq(e.value)).append("'\n");
-        }
-        sb.append("JVM_ARGS='").append(sq(String.join(" ", readStringList(p.getJvmArgs())))).append("'\n");
-        sb.append("APP_ARGS='").append(sq(String.join(" ", readStringList(p.getCmdArgs())))).append("'\n");
-        sb.append("exec ").append(foregroundBash(p)).append("\n");
-        return sb.toString();
-    }
-
-    private String foregroundBash(MsServerProject p) {
-        String t = p.getProjectType() == null ? "" : p.getProjectType();
-        switch (t) {
-            case "springboot":
-            case "fatjar":
-                return "java $JVM_ARGS -jar '" + sq(p.getMainEntry()) + "' $APP_ARGS";
-            case "separated":
-                return "'./" + sq(p.getMainEntry()) + "' $JVM_ARGS $APP_ARGS";
-            case "nginx":
-            case "static":
-                return "nginx -g 'daemon off;'";
-            default:
-                return "'./" + sq(p.getMainEntry()) + "' $APP_ARGS";
-        }
-    }
-
-    private String buildUnit(MsServerProject p, String svc, String launcher, boolean guardian) {
-        StringBuilder sb = new StringBuilder("[Unit]\n");
-        sb.append("Description=").append(isBlank(p.getProjectName()) ? svc : p.getProjectName()).append("\n");
-        sb.append("After=network.target\n\n[Service]\nType=simple\n");
-        sb.append("WorkingDirectory=").append(p.getProjectPath()).append("\n");
-        sb.append("ExecStart=").append(launcher).append("\n");
-        sb.append("Restart=").append(guardian ? "always" : "no").append("\nRestartSec=5\n\n");
-        sb.append("[Install]\nWantedBy=multi-user.target\n");
-        return sb.toString();
-    }
-
-    private String installServiceCommand(MsServerProject p, String svc) {
-        String dir = p.getProjectPath() + "/.ms";
-        String launcher = dir + "/" + svc + ".run.sh";
-        String launchContent = buildLauncherBash(p);
-        String unitContent = buildUnit(p, svc, launcher, Boolean.TRUE.equals(p.getGuardian()));
-        StringBuilder sb = new StringBuilder("set -e\n");
-        sb.append("mkdir -p '").append(sq(dir)).append("'\n");
-        sb.append("cat > '").append(sq(launcher)).append("' <<'MS_LAUNCHER_EOF'\n")
-          .append(launchContent).append("MS_LAUNCHER_EOF\n");
-        sb.append("chmod +x '").append(sq(launcher)).append("'\n");
-        sb.append("sudo tee '/etc/systemd/system/").append(svc).append(".service' > /dev/null <<'MS_UNIT_EOF'\n")
-          .append(unitContent).append("MS_UNIT_EOF\n");
-        sb.append("sudo systemctl daemon-reload\n");
-        if (Boolean.TRUE.equals(p.getAutostart())) {
-            sb.append("sudo systemctl enable '").append(svc).append("'\n");
-        } else {
-            sb.append("sudo systemctl disable '").append(svc).append("' || true\n");
-        }
-        sb.append("sudo systemctl restart '").append(svc).append("'\n");
-        sb.append("systemctl is-active '").append(svc).append("'\n");
-        return sb.toString();
-    }
-
-    private String uninstallServiceCommand(MsServerProject p, String svc) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("sudo systemctl stop '").append(svc).append("' || true\n");
-        sb.append("sudo systemctl disable '").append(svc).append("' || true\n");
-        sb.append("sudo rm -f '/etc/systemd/system/").append(svc).append(".service'\n");
-        sb.append("sudo systemctl daemon-reload\n");
-        if (!isBlank(p.getProjectPath())) {
-            sb.append("rm -f '").append(sq(p.getProjectPath())).append("/.ms/").append(svc).append(".run.sh'\n");
-        }
-        return sb.toString();
-    }
-
-    // ---------- 系统服务（Windows 计划任务：开机自启 + 守护）----------
-
-    private String installServiceCommandWin(MsServerProject p, String svc) {
-        String dir = p.getProjectPath() + "\\.ms";
-        String autoPath = dir + "\\" + svc + ".autostart.ps1";
-        String watchPath = dir + "\\" + svc + ".watchdog.ps1";
-        StringBuilder ps = new StringBuilder();
-        ps.append("New-Item -ItemType Directory -Force -Path '").append(dir).append("' | Out-Null\n");
-        // 开机自启脚本：定位到项目目录后执行启动脚本
-        ps.append("$auto = @'\nSet-Location -LiteralPath '").append(p.getProjectPath()).append("'\n")
-          .append(p.getStartScript() == null ? "" : p.getStartScript()).append("\n'@\n");
-        ps.append("[IO.File]::WriteAllText('").append(autoPath).append("', $auto)\n");
-        // 以 SYSTEM 账户 + ONSTART 创建：不依赖交互登录（SSH/无登录的服务器上 ONLOGON/交互令牌任务不会执行）
-        ps.append("schtasks /Create /TN '").append(svc).append("-autostart' /SC ONSTART /RU SYSTEM ")
-          .append("/TR \"powershell -ExecutionPolicy BYPASS -File '").append(autoPath).append("'\" /F\n");
-        if (Boolean.TRUE.equals(p.getGuardian()) && !isBlank(p.getStatusScript())) {
-            // 守护脚本：状态不含 running 则执行启动脚本
-            ps.append("$wd = @'\nSet-Location -LiteralPath '").append(p.getProjectPath()).append("'\n")
-              .append("$s = ").append(p.getStatusScript()).append("\n")
-              .append("if ($s -notmatch 'running') {\n").append(p.getStartScript() == null ? "" : p.getStartScript())
-              .append("\n}\n'@\n");
-            ps.append("[IO.File]::WriteAllText('").append(watchPath).append("', $wd)\n");
-ps.append("schtasks /Create /TN '").append(svc).append("-guard' /SC MINUTE /MO 1 /RU SYSTEM ")
-          .append("/TR \"powershell -ExecutionPolicy BYPASS -File '").append(watchPath).append("'\" /F\n");
-        }
-        return ps.toString();
-    }
-
-    private String uninstallServiceCommandWin(MsServerProject p, String svc) {
-        // 容忍任务不存在：逐个删除并抑制错误，最后强制成功（未挂守护时 -guard 任务本就不存在）
-        return "schtasks /Delete /TN '" + svc + "-autostart' /F 2>$null\n"
-                + "schtasks /Delete /TN '" + svc + "-guard' /F 2>$null\n"
-                + "exit 0";
     }
 
     /** 环境变量键值（仅服务启动器内部使用） */

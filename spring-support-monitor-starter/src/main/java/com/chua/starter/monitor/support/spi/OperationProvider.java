@@ -114,7 +114,6 @@ public interface OperationProvider {
      *
      * @param keys 本次返回的 键
      * @param nextCursor 下一次游标, 空 表示已结束
-     * @return 扫描结果的结果
      */
     public record ScanResult(List<String> keys, String nextCursor) {
 

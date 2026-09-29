@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+import java.util.Map;
+
 /**
  * AI 输入优化服务实现。
  *
@@ -57,7 +60,7 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
             """;
 
     /**
-     * 内置默认优化提示词
+     * 内置默认优化提示词（通用场景）
      */
     private static final String DEFAULT_OPTIMIZE_PROMPT = """
             你是一个输入优化助手。
@@ -67,6 +70,53 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
             输入：
             %s
             """;
+
+    /**
+     * 内置默认优化提示词（图像生成场景）
+     *
+     * <p>与通用版的区别：要求输出「画面要素」而不是通顺的句子。
+     * 通用指令会把「一只猫」原样留着（模型认为已经很清晰），
+     * 或改写成散文，画面里该有的主体、构图、光线、材质、镜头全丢了。</p>
+     */
+    private static final String DEFAULT_IMAGE_PROMPT = """
+            你是图像生成提示词专家。把用户的输入扩写成一条高质量的中文画面提示词。
+
+            要求：
+            1. 补齐画面要素：主体、动作与神态、构图与视角、光线、色彩、材质质感、背景与氛围。
+            2. 保留用户已给出的信息，不要替换主体、不要改变意图，不要凭空加入文字、水印、logo。
+            3. 保持用户使用的语言。
+            4. 直接输出提示词本身，单行、用逗号分隔，不要序号、不要标题、
+               不要「优化后的提示词：」之类的前缀，不要用引号或代码块包裹，不要解释。
+
+            输入：
+            %s
+            """;
+
+    /**
+     * 内置默认优化提示词（视频生成场景）
+     *
+     * <p>在图像要素之上补时间维度：动作过程、镜头运动、时长节奏。</p>
+     */
+    private static final String DEFAULT_VIDEO_PROMPT = """
+            你是视频生成提示词专家。把用户的输入扩写成一条高质量的中文视频提示词。
+
+            要求：
+            1. 补齐要素：主体、动作过程、场景、光线、色彩、氛围、镜头运动（推拉摇移或固定）、节奏。
+            2. 保留用户已给出的信息，不要替换主体、不要改变意图，不要凭空加入文字、水印、字幕。
+            3. 保持用户使用的语言。
+            4. 直接输出提示词本身，单行、用逗号分隔，不要序号、不要标题、
+               不要「优化后的提示词：」之类的前缀，不要用引号或代码块包裹，不要解释。
+
+            输入：
+            %s
+            """;
+
+    /**
+     * 场景 → 内置默认提示词
+     */
+    private static final Map<String, String> SCENE_PROMPTS = Map.of(
+            "image", DEFAULT_IMAGE_PROMPT,
+            "video", DEFAULT_VIDEO_PROMPT);
 
     /**
      * 全局设置读取器
@@ -120,10 +170,14 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
                 return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start);
             }
 
-            // 解析提示词：请求 > 全局配置 > 内置默认
+            // 解析提示词：请求 > 全局配置 > 场景内置默认 > 通用内置默认
             String template = request.getSystemPrompt();
             if (StringUtils.isBlank(template)) {
                 template = globalSettingReader.getStr(GROUP, "optimizer_prompt");
+            }
+            if (StringUtils.isBlank(template)) {
+                template = SCENE_PROMPTS.get(
+                        StringUtils.defaultString(request.getScene(), "").trim().toLowerCase(Locale.ROOT));
             }
             if (StringUtils.isBlank(template)) {
                 template = DEFAULT_OPTIMIZE_PROMPT;

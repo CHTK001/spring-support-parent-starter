@@ -24,7 +24,6 @@ import java.util.Map;
  *   <li>最新指标 Socket 实时推送（新增实时能力）</li>
  * </ul>
  * 事件由 监控调度器 采集成功后发布；监听器内异常只记日志，不阻断主链路。
- * </p>
  *
  * @author CH
  * @since 4.0.0.42

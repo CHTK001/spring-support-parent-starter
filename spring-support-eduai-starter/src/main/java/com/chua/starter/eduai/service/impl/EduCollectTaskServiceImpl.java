@@ -2,8 +2,11 @@ package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.PageResult;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.chua.starter.eduai.collect.job.EduCollectJobHandler;
 import com.chua.starter.eduai.collect.spi.CollectedQuestion;
 import com.chua.starter.eduai.collect.spi.QuestionSourceContext;
@@ -75,6 +78,11 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
      * 学科兜底值
      */
     private static final String DEFAULT_SUBJECT = "综合";
+
+    /**
+     * JSON 处理（分片合并与配置解析共用）
+     */
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     /**
      * 学段兜底值
@@ -512,7 +520,7 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
                         SourceConfigReader.text(configJson, "url"),
                         SourceConfigReader.text(configJson, "apiUrl"));
                 if (StringUtils.hasText(rawUrl)) {
-                    raw = fetchRawWithFallback(configJson, rawUrl.trim());
+                    raw = fetchMergedRaw(configJson, rawUrl.trim());
                 }
             }
             // 4) 兜底：Provider 产出的题目列表转行（如 GROOVY 脚本）
@@ -644,6 +652,60 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
             }
         }
         throw new IllegalStateException("数据源拉取失败: " + (last == null ? rawUrl : describe(last)), last);
+    }
+
+    /**
+     * 拉取主地址，并把 {@code urls} 列出的额外分片合并成一个 JSON 数组。
+     *
+     * <p>公开数据集常按「每片 1000 条」切分（如 chinese-poetry 的全唐诗 58 片）。
+     * 单靠 apiUrl 一次只能取一片，想看全量就得配 58 个任务。这里允许用
+     * {@code urls} 一次声明多片，逐片拉取后合并数组再交给下游的字段映射与入库，
+     * 任务数仍是一个。</p>
+     *
+     * <p>与 {@code fallbackUrls} 的区别：后者是同一份数据的镜像（失败才用），
+     * 这里的 {@code urls} 是**不同切片**（全部都要）。</p>
+     *
+     * @param configJson 来源配置
+     * @param rawUrl     主地址
+     * @return 合并后的 JSON 文本；无 urls 或合并失败时退回主地址结果
+     */
+    private Object fetchMergedRaw(String configJson, String rawUrl) {
+        Object primary = fetchRawWithFallback(configJson, rawUrl);
+        String extra = SourceConfigReader.text(configJson, "urls");
+        if (!StringUtils.hasText(extra) || !(primary instanceof String primaryText)) {
+            return primary;
+        }
+        List<String> slices = new ArrayList<>();
+        for (String part : extra.split(",")) {
+            String url = part.trim();
+            if (!url.isEmpty() && !url.equals(rawUrl)) {
+                slices.add(url);
+            }
+        }
+        if (slices.isEmpty()) {
+            return primary;
+        }
+        try {
+            JsonNode root = JSON.readTree(primaryText);
+            if (!root.isArray()) {
+                return primary;
+            }
+            ArrayNode merged = (ArrayNode) root;
+            for (String slice : slices) {
+                Object body = fetchRawWithFallback(configJson, slice);
+                if (body instanceof String text) {
+                    JsonNode node = JSON.readTree(text);
+                    if (node.isArray()) {
+                        merged.addAll((ArrayNode) node);
+                        log.info("[collect] 分片合并: {} 累计 {} 条", slice, merged.size());
+                    }
+                }
+            }
+            return JSON.writeValueAsString(merged);
+        } catch (Exception e) {
+            log.warn("[collect] 分片合并失败，仅使用主地址数据: {}", e.getMessage());
+            return primary;
+        }
     }
 
     /**

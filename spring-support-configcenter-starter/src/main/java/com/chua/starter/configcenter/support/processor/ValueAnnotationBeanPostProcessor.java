@@ -613,6 +613,40 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
      * 绑定信息
+     *
+     * <p>一条「配置键 → 注入目标」的绑定记录，由 {@code scanFields} / {@code scanMethods}
+     * 在扫描到 {@code @Value} 注解且启用热更新时创建，随后以 {@code configKey} 为键
+     * 归入 {@code bindingsByKey}，供配置中心回调时按键批量重注入。</p>
+     *
+     * <p>本 record 组件均为不可变（只含引用型与基本类型），但因携带
+     * {@link Field} / {@link Method} 这类无法证明深不可变的反射句柄，
+     * 不作为 value class 目标，只做空值敌对约束。</p>
+     *
+     * @param configKey     占位符里解析出的配置键，即 {@code @Value("${key:default}")} 中的
+     *                      {@code key} 部分（不含 {@code ${}} 与 {@code :}）；不允许为 {@code null}
+     *                      （紧凑构造器 {@code requireNonNull} 校验），是配置中心注册监听与
+     *                      按键归并绑定列表的唯一索引
+     * @param defaultValue  占位符中 {@code :} 之后的默认值文本，来源为正则
+     *                      {@code \$\{([^}:]+)(?::([^}]*))?\}} 的第 2 个捕获组；
+     *                      表达式中未写默认值时为 {@code null}，此时配置缺失会导致注入值为
+     *                      {@code null}；配置项被删除（{@code onDelete}）时回落到该值，
+     *                      故允许为 {@code null}（紧凑构造器刻意不校验）
+     * @param bean          持有该 {@code @Value} 的 Bean 实例，即 {@code postProcessAfterInitialization}
+     *                      传入的单例 Bean；不允许为 {@code null}，热更新时作为反射注入的接收者
+     * @param beanName      该 Bean 在 {@code BeanFactory} 中的注册名，来自
+     *                      {@code postProcessAfterInitialization(Object, String)} 的第二参数；
+     *                      不允许为 {@code null}，用于 {@code isSingleton} 单例判定与热更新日志，
+     *                      不参与反射定位
+     * @param field         被 {@code @Value} 标注的目标字段（字段注入路径）；允许为 {@code null}，
+     *                      字段注入时取 {@code field.getType()} 作目标类型、方法注入时显式传 {@code null}，
+     *                      与 {@link #method} 严格互斥，二者有且仅有一个非空
+     * @param method        被 {@code @Value} 标注的单参 setter/更新方法（方法注入路径）；允许为 {@code null}，
+     *                      方法注入时取 {@code method.getParameterTypes()[0]} 作目标类型、
+     *                      字段注入时显式传 {@code null}；与 {@link #field} 严格互斥。
+     *                      仅接受形参个数为 1 的方法，{@code scanMethods} 靠该约定筛掉无参方法
+     * @param targetType    注入值的转换目标类型：字段路径取 {@code field.getType()}，
+     *                      方法路径取唯一形参类型；不允许为 {@code null}，用于
+     *                      {@code Converter.convertIfNecessary(String, Class)} 把字符串配置值转成目标类型
      */
     @lombok.Builder
     private record ValueBindingInfo(String configKey,

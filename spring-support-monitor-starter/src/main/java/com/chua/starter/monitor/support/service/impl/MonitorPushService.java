@@ -20,7 +20,7 @@ import java.util.Map;
  * 队列 未启用时推送静默跳过，不影响主链路。
  * </p>
  *
- * <h3>事件协议（前端 socket.subscribe(module, event, handler) 接收）</h3>
+ * <h2>事件协议（前端 socket.subscribe(module, event, handler) 接收）</h2>
  * <pre>
  * 告警事件：
  *   module = "monitor", event = "alarm"
@@ -154,7 +154,6 @@ public class MonitorPushService {
      * @param address  地址
      * @param port     端口
      * @param delayMs  延迟毫秒（-1 表示不可达）
-     * @return 主机延迟的结果
      */
     public record HostDelay(Long hostId, String hostName, String address, Integer port, Long delayMs) {
 

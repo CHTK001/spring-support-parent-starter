@@ -33,6 +33,19 @@ public class AuthConstant {
     public static final String BUILTIN_ADMIN_USERNAME = "admin";
 
     /**
+     * 登录扩展参数中的「账号来源」键名。
+     *
+     * <p>用于告诉凭据校验扩展点「这个登录名该去哪儿查」（静态配置 / 学生档案 / 企业目录）。
+     * 缺省不传时回落为 {@code AuthType#getCode()}，既有调用方行为不变。</p>
+     */
+    public static final String ACCOUNT_TYPE_KEY = "accountType";
+
+    /**
+     * 学生角色名：学生端登录后写入令牌的唯一角色，不含任何管理权限
+     */
+    public static final String STUDENT = "STUDENT";
+
+    /**
      * 验证码会话 Key
      *
      * <p>必须与写入方 {@code CaptchaProvider} 保持一致，直接引用

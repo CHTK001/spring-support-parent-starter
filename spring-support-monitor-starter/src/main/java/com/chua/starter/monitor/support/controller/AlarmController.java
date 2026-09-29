@@ -132,7 +132,6 @@ public class AlarmController {
      *
      * @param policyId 策略过滤，可为空
      * @return 规则列表
-     * @param false false
      */
     @Operation(summary = "规则列表")
     @GetMapping("/rule")
@@ -145,7 +144,6 @@ public class AlarmController {
      *
      * @param status 状态过滤，可为空
      * @return 事件列表
-     * @param false false
      */
     @Operation(summary = "事件列表")
     @GetMapping("/event")

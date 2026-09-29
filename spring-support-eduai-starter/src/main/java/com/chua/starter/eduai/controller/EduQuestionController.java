@@ -3,6 +3,7 @@ package com.chua.starter.eduai.controller;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.eduai.model.EduQuestion;
+import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
@@ -120,5 +121,20 @@ public class EduQuestionController {
     public ReturnResult<Boolean> delete(@PathVariable Long id) {
         boolean success = questionService.deleteQuestion(id);
         return ReturnResult.ok(success);
+    }
+
+    /**
+     * AI 选题：按条件向 AI 要一批题目，供组卷页往已存在的试卷里补题。
+     *
+     * <p>AI 能力依赖 spring-support-ai-starter；不可用时服务端回退到规则选题，
+     * 调用方应先用 {@code GET /v2/edu/ai/capability} 判断是否展示 AI 入口。</p>
+     *
+     * @param dto 选题条件
+     * @return 题目列表，保持 AI 给出的顺序
+     */
+    @Operation(summary = "AI 选题")
+    @PostMapping("/ai-select")
+    public ReturnResult<List<EduQuestion>> aiSelect(@RequestBody QuestionAiSelectDTO dto) {
+        return ReturnResult.ok(questionService.aiSelect(dto));
     }
 }

@@ -2,7 +2,7 @@ package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.ai.EduAiService;
@@ -71,9 +71,24 @@ import java.util.stream.Collectors;
 public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> implements IEduPaperService {
 
     /**
-     * 手动组卷试卷满分（发布校验与均分基准）
+     * 手动组卷试卷默认满分（未显式配置满分时的兜底值）
      */
     private static final int PAPER_FULL_SCORE = 100;
+
+    /**
+     * 取试卷满分。
+     *
+     * <p>满分可配置（建卷时通过 totalScore 指定），发布校验与「均分」都以试卷自身的
+     * 满分为基准；老数据或异常值（null / 非正数）回退到默认满分，避免出现除零或
+     * 「满分 0 分」这类不可能通过的校验。</p>
+     *
+     * @param paper 试卷，不能为 null
+     * @return 该试卷的满分，始终为正数
+     */
+    private int resolveFullScore(EduPaper paper) {
+        Integer configured = paper.getPaperTotalScore();
+        return configured == null || configured <= 0 ? PAPER_FULL_SCORE : configured;
+    }
 
     /**
      * 空白卷默认名称
@@ -128,6 +143,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     */
     public PageResult<PaperVO> pageQuery(PaperQueryDTO query) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        // 列表下拉提交的是学段码值（PRIMARY/JUNIOR/…），而库里 paper_grade_level 存的是中文名。
+        // mapper 是原值等值比较，不归一化就会「选了学段查不到任何卷」。normalize 对中文名幂等，两种入参都安全。
+        query.setGradeLevel(GradeLevels.normalize(query.getGradeLevel()));
         Page<EduPaper> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<EduPaper> result = baseMapper.pageSelect(page, query, scope);
 
@@ -158,6 +176,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         EduUserContext.checkReadable(paper.getOwnerUserId());
         PaperVO vo = toVO(paper);
 
+        // 读详情即补齐历史缺失的题项编号：编号是每题二维码的内容，缺失会导致二维码为空
+        backfillMissingQuestionNos(paper);
         List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
 
         if (!relations.isEmpty()) {
@@ -205,7 +225,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         EduPaper paper = new EduPaper();
         paper.setPaperName(dto.getName());
         paper.setPaperSubject(dto.getSubject());
-        paper.setPaperGradeLevel(dto.getGradeLevel());
+        // 学段与手动组卷保持同一口径：库里存中文名（PRIMARY -> 小学）。
+        // 此前 AI 路径直接存前端传来的码值，会让「学段」筛选查不到 AI 组的卷。
+        paper.setPaperGradeLevel(GradeLevels.normalize(dto.getGradeLevel()));
         paper.setPaperGrade(dto.getGrade());
         paper.setPaperTotalScore(dto.getTotalScore() != null ? dto.getTotalScore() : properties.getPaper().getMaxTotalScore());
         paper.setPaperDuration(dto.getDuration());
@@ -370,6 +392,20 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             if (StringUtils.hasText(dto.name())) {
                 paper.setPaperName(dto.name());
             }
+            /*
+              paper_subject / paper_grade_level / paper_grade 在 edu_paper 上是 NOT NULL 且无默认值，
+              缺失时若直接落库会抛 SQLIntegrityConstraintViolation（HTTP 500 「必填字段不能为空」），
+              对使用者是不可理解的报错。这里前置校验，给出可操作的提示。
+             */
+            if (!StringUtils.hasText(dto.subject())) {
+                throw new BusinessException("学科不能为空");
+            }
+            if (!StringUtils.hasText(dto.gradeLevel())) {
+                throw new BusinessException("学段不能为空");
+            }
+            if (!StringUtils.hasText(dto.grade())) {
+                throw new BusinessException("年级不能为空");
+            }
             paper.setPaperSubject(dto.subject());
             paper.setPaperGradeLevel(GradeLevels.normalize(dto.gradeLevel()));
             paper.setPaperGrade(dto.grade());
@@ -388,8 +424,14 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             if (dto.subjectLocked() != null) {
                 paper.setPaperSubjectLocked(dto.subjectLocked());
             }
+            if (dto.difficulty() != null) {
+                paper.setPaperDifficulty(dto.difficulty());
+            }
+            paper.setPaperTemplateId(dto.templateId());
         }
-        paper.setPaperTotalScore(PAPER_FULL_SCORE);
+        // 满分：优先取入参，未传时按默认满分；负数/0 视为未传
+        Integer wantScore = dto == null ? null : dto.totalScore();
+        paper.setPaperTotalScore(wantScore != null && wantScore > 0 ? wantScore : PAPER_FULL_SCORE);
         paper.setPaperQuestionCount(0);
         paper.setPaperStatus(0);
         paper.setPaperSource("MANUAL");
@@ -422,13 +464,31 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         int nextSeq = nextQuestionSeq(paperId, paper.getPaperNo());
         int nextOrder = nextOrder(paperId);
         int added = 0;
+        int updated = 0;
         for (PaperQuestionItemDTO item : items) {
             if (item == null || item.questionId() == null) {
                 throw new BusinessException("题目标识不能为空");
             }
             EduPaperQuestion exists = paperQuestionMapper.selectByPaperAndQuestion(paperId, item.questionId());
             if (exists != null) {
-                log.debug("[EduAi] 题目已在试卷中，跳过: paperId={}, questionId={}", paperId, item.questionId());
+                /*
+                  已存在的题按「同题幂等写入」处理：分值变了必须更新。
+                  前端改分会复用本接口（契约里没有单独的改分接口），
+                  若这里直接跳过，界面上改的分值永远落不了库，
+                  会导致「前端显示合计已满、后端实际合计不符」→ 发布被满分闸门拒掉。
+                */
+                int wantedScore = item.score() == null ? 0 : item.score();
+                Integer currentScore = exists.getPaperQuestionScore();
+                if (currentScore != null && currentScore == wantedScore) {
+                    log.debug("[EduAi] 题目已在试卷中且分值未变，跳过: paperId={}, questionId={}", paperId, item.questionId());
+                    continue;
+                }
+                exists.setPaperQuestionScore(wantedScore);
+                exists.setPaperQuestionVersion(currentVersion(paper) + 1);
+                paperQuestionMapper.updateById(exists);
+                updated++;
+                log.info("[EduAi] 题目已在试卷中，更新分值: paperId={}, questionId={}, {} -> {}",
+                        paperId, item.questionId(), currentScore, wantedScore);
                 continue;
             }
             EduQuestion question = questionMapper.selectById(item.questionId());
@@ -447,15 +507,17 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             relation.setOwnerUserId(paper.getOwnerUserId());
             relation.setCreateTime(LocalDateTime.now());
             paperQuestionMapper.insert(relation);
+            // 题库「被加入次数」+1：只在新插入时计，改分/重复提交不重复累加
+            questionMapper.incrAddCount(item.questionId());
             nextSeq++;
             nextOrder++;
             added++;
         }
-        if (added > 0) {
+        if (added > 0 || updated > 0) {
             syncVersionAndPersist(paper, "ADD_QUESTION");
         }
-        log.info("[EduAi] 批量加题完成: paperId={}, added={}", paperId, added);
-        return added;
+        log.info("[EduAi] 批量加题完成: paperId={}, added={}, updated={}", paperId, added, updated);
+        return added + updated;
     }
 
     @Override
@@ -492,6 +554,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     public boolean sortQuestions(Long paperId, List<String> questionNos) {
         EduPaper paper = requirePaper(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
+        // 历史行可能没有题项编号，先补齐再校验，否则会被判为「重复或缺失」直接拒掉保存
+        backfillMissingQuestionNos(paper);
         List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
         if (questionNos == null || questionNos.size() != relations.size()) {
             throw new BusinessException("排序编号数量与试卷题目不一致");
@@ -536,8 +600,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             throw new BusinessException("试卷没有题目，无法均分");
         }
         int count = relations.size();
-        int base = PAPER_FULL_SCORE / count;
-        int remainder = PAPER_FULL_SCORE % count;
+        int fullScore = resolveFullScore(paper);
+        int base = fullScore / count;
+        int remainder = fullScore % count;
         for (int index = 0; index < count; index++) {
             EduPaperQuestion relation = relations.get(index);
             relation.setPaperQuestionScore(base + (index < remainder ? 1 : 0));
@@ -596,6 +661,10 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             paper.setPaperTemplate(dto.template());
             changed = true;
         }
+        if (dto.titleStyle() != null) {
+            paper.setPaperTitleStyle(dto.titleStyle());
+            changed = true;
+        }
         if (dto.header() != null) {
             paper.setPaperHeader(dto.header());
             changed = true;
@@ -606,6 +675,19 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         }
         if (dto.subjectLocked() != null) {
             paper.setPaperSubjectLocked(dto.subjectLocked());
+            changed = true;
+        }
+        if (dto.difficulty() != null) {
+            paper.setPaperDifficulty(dto.difficulty());
+            changed = true;
+        }
+        if (dto.templateId() != null) {
+            paper.setPaperTemplateId(dto.templateId());
+            changed = true;
+        }
+        // 满分可改：仅接受正数，避免把满分误置为 0/负数
+        if (dto.totalScore() != null && dto.totalScore() > 0) {
+            paper.setPaperTotalScore(dto.totalScore());
             changed = true;
         }
         if (!changed) {
@@ -627,13 +709,15 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     public boolean publishPaper(Long paperId) {
         EduPaper paper = requirePaper(paperId);
         EduUserContext.checkWritable(paper.getOwnerUserId());
+        backfillMissingQuestionNos(paper);
         List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
         int total = 0;
         for (EduPaperQuestion relation : relations) {
             total += relation.getPaperQuestionScore() == null ? 0 : relation.getPaperQuestionScore();
         }
-        if (total != PAPER_FULL_SCORE) {
-            throw new BusinessException("试卷总分必须为 100 分，当前为 " + total + " 分");
+        int expectScore = resolveFullScore(paper);
+        if (total != expectScore) {
+            throw new BusinessException("试卷总分必须为 " + expectScore + " 分，当前为 " + total + " 分");
         }
         paper.setPaperStatus(1);
         syncVersionAndPersist(paper, "PUBLISH");
@@ -759,6 +843,53 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     /**
+     * 为缺失题项编号的历史行补号。
+     *
+     * <p>{@code paper_question_no} 是后加的列，早于该列建表的历史题项这一列全为 NULL。
+     * 后果有二：排序接口会因「重复或缺失的题项编号」直接拒绝保存，
+     * 且每题二维码内容为空（编号就是二维码内容）。</p>
+     *
+     * <p>补号规则与 {@link #addQuestions} 新增时一致：{@code 卷号-序号}，
+     * 序号接着现有最大后缀往后排，因此不会与已有编号冲突。
+     * 只补 NULL 与空串，已有编号一律不动，保证幂等。</p>
+     *
+     * @param paper 试卷
+     * @return 实际补号的行数；无需补号时为 0
+     */
+    private int backfillMissingQuestionNos(EduPaper paper) {
+        List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paper.getPaperId());
+        if (relations.isEmpty()) {
+            return 0;
+        }
+        /*
+          paper_no 同样是后加的列，历史试卷可能为 NULL。
+          题项编号以卷号为前缀，卷号缺失会拼出字面量 "null-001" 这种编号
+          （而编号就是每题二维码的内容），因此先补卷号再补题项编号。
+        */
+        if (paper.getPaperNo() == null || paper.getPaperNo().isBlank()) {
+            paper.setPaperNo(generatePaperNo());
+            baseMapper.updateById(paper);
+            log.info("[EduAi] 历史试卷补卷号: paperId={}, paperNo={}", paper.getPaperId(), paper.getPaperNo());
+        }
+        int next = nextQuestionSeq(paper.getPaperId(), paper.getPaperNo());
+        int fixed = 0;
+        for (EduPaperQuestion relation : relations) {
+            String no = relation.getPaperQuestionNo();
+            if (no != null && !no.isBlank()) {
+                continue;
+            }
+            relation.setPaperQuestionNo(paper.getPaperNo() + "-" + formatOrder(next));
+            paperQuestionMapper.updateById(relation);
+            next++;
+            fixed++;
+        }
+        if (fixed > 0) {
+            log.info("[EduAi] 历史题项补编号: paperId={}, fixed={}", paper.getPaperId(), fixed);
+        }
+        return fixed;
+    }
+
+    /**
      * 计算下一个题目顺序（按现有最大顺序 +1）
      *
      * @param paperId 试卷标识
@@ -842,6 +973,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         root.put("paperFooter", paper.getPaperFooter());
         root.put("paperVersion", paper.getPaperVersion());
         root.put("paperSubjectLocked", paper.getPaperSubjectLocked());
+        root.put("paperDifficulty", paper.getPaperDifficulty());
+        root.put("paperTemplateId", paper.getPaperTemplateId());
 
         List<Map<String, Object>> questions = new ArrayList<>();
         if (relations != null) {
@@ -968,6 +1101,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         vo.setPaperFooter(paper.getPaperFooter());
         vo.setPaperVersion(paper.getPaperVersion());
         vo.setPaperSubjectLocked(paper.getPaperSubjectLocked());
+        vo.setPaperDifficulty(paper.getPaperDifficulty());
+        vo.setPaperTemplateId(paper.getPaperTemplateId());
+        vo.setPaperTitleStyle(paper.getPaperTitleStyle());
         vo.setCreateTime(paper.getCreateTime());
         return vo;
     }

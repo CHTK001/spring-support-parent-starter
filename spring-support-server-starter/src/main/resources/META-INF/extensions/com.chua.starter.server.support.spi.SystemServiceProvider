@@ -1,0 +1,3 @@
+com.chua.starter.server.support.provider.service.SystemdSystemServiceProvider
+com.chua.starter.server.support.provider.service.LaunchdSystemServiceProvider
+com.chua.starter.server.support.provider.service.WindowsSystemServiceProvider

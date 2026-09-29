@@ -1,5 +1,9 @@
 package com.chua.starter.monitor.support.scheduler;
 
+import com.chua.starter.monitor.support.model.NginxMetricPushVO;
+import com.chua.starter.monitor.support.model.NginxRuntimeVO;
+import com.chua.starter.monitor.support.model.NginxTrendVO;
+import com.chua.starter.monitor.support.nginx.NginxMetricStreamRegistry;
 import com.chua.starter.monitor.support.service.NginxManageService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +38,11 @@ public class NginxMetricScheduler {
     private final ObjectProvider<NginxManageService> nginxServiceProvider;
 
     /**
+     * SSE 订阅者注册表（可选依赖：未装配时只落库不推送）
+     */
+    private final ObjectProvider<NginxMetricStreamRegistry> streamRegistryProvider;
+
+    /**
      * 定时采集 stub_status。
      *
      * <p>首次延迟 20s：避开应用刚启动时数据源尚未就绪的窗口，否则头几轮必然全失败并刷警告。</p>
@@ -45,6 +54,7 @@ public class NginxMetricScheduler {
         if (service == null) {
             return;
         }
+        NginxMetricStreamRegistry streamRegistry = streamRegistryProvider.getIfAvailable();
         List<Long> ids = service.listNginxDatasourceIds();
         if (ids.isEmpty()) {
             return;
@@ -52,13 +62,60 @@ public class NginxMetricScheduler {
         int total = 0;
         for (Long id : ids) {
             try {
-                total += service.collectMetric(id);
+                int written = service.collectMetric(id);
+                total += written;
+                if (streamRegistry != null) {
+                    // 采集有落库才推趋势点：没写成时不推，前端曲线就不会出现「跳一个空档再跳回来」
+                    if (written > 0) {
+                        pushTrend(service, streamRegistry, id);
+                    }
+                    // 实时态与落库无关，照推：nginx 被 stop / 崩溃时页面要立刻变状态
+                    pushRuntime(service, streamRegistry, id);
+                }
             } catch (RuntimeException e) {
                 log.warn("[nginx] 指标采集失败 datasourceId={} reason={}", id, e.getMessage());
             }
         }
         if (total > 0) {
             log.debug("[nginx] 指标采集完成 数据源 {} 个, 写入 {} 条", ids.size(), total);
+        }
+    }
+
+    /**
+     * 广播趋势新点。
+     *
+     * <p>推送失败只记日志：SSE 是展示增强，订阅端异常不该中断本轮其它数据源的采集。</p>
+     *
+     * @param service nginx 服务
+     * @param id      数据源 id
+     */
+    private void pushTrend(NginxManageService service, NginxMetricStreamRegistry streamRegistry, Long id) {
+        try {
+            List<NginxTrendVO.Point> points = service.latestPoints(id);
+            if (points.isEmpty()) {
+                return;
+            }
+            int sent = streamRegistry.broadcast(id, NginxMetricStreamRegistry.EVENT_METRIC,
+                    new NginxMetricPushVO(id, points));
+            log.trace("[nginx] 推送趋势点 datasourceId={} 点数={} 送达={}", id, points.size(), sent);
+        } catch (RuntimeException e) {
+            log.debug("[nginx] 推送趋势点失败 datasourceId={} reason={}", id, e.getMessage());
+        }
+    }
+
+    /**
+     * 广播实时运行态。
+     *
+     * @param service nginx 服务
+     * @param id      数据源 id
+     */
+    private void pushRuntime(NginxManageService service, NginxMetricStreamRegistry streamRegistry, Long id) {
+        try {
+            NginxRuntimeVO runtime = service.collectRealtime(id);
+            int sent = streamRegistry.broadcast(id, NginxMetricStreamRegistry.EVENT_RUNTIME, runtime);
+            log.trace("[nginx] 推送运行态 datasourceId={} running={} 送达={}", id, runtime.running(), sent);
+        } catch (RuntimeException e) {
+            log.debug("[nginx] 推送运行态失败 datasourceId={} reason={}", id, e.getMessage());
         }
     }
 }

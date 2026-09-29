@@ -54,6 +54,16 @@ public interface EduQuestionMapper extends BaseMapper<EduQuestion> {
                            @Param("ownerUserId") String ownerUserId);
 
     /**
+     * 题目被加入试卷的次数 +1（XML 语句 incrAddCount）。
+     *
+     * <p>用 {@code COALESCE(question_add_count, 0) + 1} 保证该列历史为 NULL 时也能累加。</p>
+     *
+     * @param questionId 题目标识
+     * @return 受影响行数
+     */
+    int incrAddCount(@Param("questionId") Long questionId);
+
+    /**
      * 组卷候选题目取样（XML 语句 selectCandidates）。
      *
      * @param subject    学科

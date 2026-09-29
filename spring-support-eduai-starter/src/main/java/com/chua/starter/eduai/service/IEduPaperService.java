@@ -1,6 +1,6 @@
 package com.chua.starter.eduai.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.eduai.model.EduPaper;
 import com.chua.starter.eduai.model.dto.PaperComposeUpdateDTO;
