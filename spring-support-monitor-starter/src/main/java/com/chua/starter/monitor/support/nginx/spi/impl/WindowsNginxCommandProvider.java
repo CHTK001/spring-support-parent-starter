@@ -177,19 +177,23 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String findFiles(String root, String pattern) {
+        // 同 listFilesWithMeta：路径统一正斜杠，避免调用方按 '/' 约定处理时出错
         return "powershell -NoProfile -Command \""
                 + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(pattern)
-                + " -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }\"";
+                + " -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName -replace '\\\\','/' }\"";
     }
 
     @Override
     public String listFilesWithMeta(String root, String namePattern, boolean recursive) {
-        // 用 [char]9 表示制表符，避免在 cmd → powershell 两层引号里再嵌 \t 的转义
+        // 用 [char]9 表示制表符，避免在 cmd → powershell 两层引号里再嵌 \t 的转义。
+        // 路径统一转正斜杠：调用方（服务）内部按 '/' 约定拼路径与派生备份名
+        // （如 backup() 的 safePath.replace('/', '_')），返回反斜杠会派生出台非法文件名
+        // （含 C:\ 与 ':'），实测导致 copy 报「文件名语法不正确」。
         String recurse = recursive ? " -Recurse" : "";
         return "powershell -NoProfile -Command \""
                 + "Get-ChildItem -LiteralPath " + psQuote(root) + " -Filter " + psQuote(namePattern) + recurse
                 + " -File -ErrorAction SilentlyContinue | ForEach-Object { "
-                + "$_.FullName + [char]9 + $_.Length + [char]9 + $_.LastWriteTime.ToString('yyyy-MM-dd HH:mm') }\"";
+                + "($_.FullName -replace '\\\\','/') + [char]9 + $_.Length + [char]9 + $_.LastWriteTime.ToString('yyyy-MM-dd HH:mm') }\"";
     }
 
     @Override
@@ -213,18 +217,17 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String parentDir(String path) {
+        // 不能用 Split-Path -LiteralPath X -Parent：实测 PowerShell 报
+        // AmbiguousParameterSet（「Parameter set cannot be resolved」），exit=1、无输出，
+        // 于是 prefix 解析成空串、conf 路径退化为相对、nginx -t 找不到配置。
+        // [System.IO.Path]::GetDirectoryName 无参数集歧义，且不依赖当前工作目录。
         return "powershell -NoProfile -Command \""
-                + "Split-Path -LiteralPath " + psQuote(winPath(path)) + " -Parent\"";
+                + "[System.IO.Path]::GetDirectoryName(" + psQuote(winPath(path)) + ")\"";
     }
 
     @Override
     public String homeDir() {
         return "echo %USERPROFILE%";
-    }
-
-    @Override
-    public String configDump(String binary) {
-        return binary(binary) + " -T 2>&1";
     }
 
     @Override

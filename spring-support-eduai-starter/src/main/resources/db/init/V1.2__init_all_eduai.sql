@@ -355,6 +355,32 @@ CREATE TABLE IF NOT EXISTS edu_knowledge_doc (
     update_name VARCHAR(255) DEFAULT NULL,
     update_by INT DEFAULT NULL
 );
+-- ----------------------------
+-- 知识卡片附件表
+-- 说明：/v2/edu/knowledge-point/cards 的 file_count 子查询与附件绑定/列表功能
+--       都依赖本表；此前只有实体 EduKnowledgeFile 与 Mapper，缺建表语句，
+--       导致知识库页面 500（Table 'eduai.edu_knowledge_file' doesn't exist）。
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS edu_knowledge_file (
+    knowledge_file_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_knowledge_file_owner (knowledge_file_owner_user_id),
+    knowledge_file_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '附件条目标识',
+    knowledge_point_id BIGINT NOT NULL COMMENT '所属知识点（卡片）标识',
+    knowledge_file_name VARCHAR(255) COMMENT '附件原始文件名',
+    knowledge_file_path VARCHAR(500) COMMENT '附件存储相对路径',
+    knowledge_file_type VARCHAR(20) COMMENT '附件扩展名: png/jpg/pdf/docx 等',
+    knowledge_file_size BIGINT COMMENT '附件字节数',
+    knowledge_file_sort_order INT DEFAULT 0 COMMENT '排序号',
+    knowledge_file_status TINYINT DEFAULT 1 COMMENT '状态: 0-停用 1-启用',
+    KEY edu_knowledge_file_point (knowledge_point_id),
+    KEY edu_knowledge_file_status (knowledge_file_status),
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL
+);
 -- ============================================
 -- 教育 AI 维度表增量脚本
 -- 版本：V1.1

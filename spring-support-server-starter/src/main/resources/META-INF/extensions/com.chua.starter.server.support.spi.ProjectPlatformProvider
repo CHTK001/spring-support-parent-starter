@@ -1,0 +1,3 @@
+com.chua.starter.server.support.provider.project.PosixProjectPlatformProvider
+com.chua.starter.server.support.provider.project.MacosProjectPlatformProvider
+com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider

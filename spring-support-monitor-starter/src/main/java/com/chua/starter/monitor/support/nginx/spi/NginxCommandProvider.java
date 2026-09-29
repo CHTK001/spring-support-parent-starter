@@ -280,18 +280,6 @@ public interface NginxCommandProvider {
     String homeDir();
 
     /**
-     * 导出 nginx 生效配置（{@code nginx -T}）。
-     *
-     * <p>调用方需要从「实际生效的配置」里读日志路径等指令——只看主配置会漏掉
-     * {@code include} 进来的站点配置。{@code -T} 会把结果写到 <strong>stderr</strong>，
-     * 所以实现必须做 {@code 2>&1} 合并，否则调用方拿到空串。</p>
-     *
-     * @param binary nginx 可执行文件（空则用默认）
-     * @return 完整命令行
-     */
-    String configDump(String binary);
-
-    /**
      * 在目录下的匹配文件里找出某个指令的匹配文本。
      *
      * <p>入参是<strong>语义</strong>（指令名）而不是正则：POSIX 的 {@code grep -E} 与

@@ -319,6 +319,8 @@ public class ImageSearchController {
         item.put("hasOriginal", img.getImageFile() != null && !img.getImageFile().isBlank());
         item.put("width", img.getWidth());
         item.put("height", img.getHeight());
+        // 原图字节数；历史记录为 null，前端按「未知」展示而不是拿缩略图长度冒充
+        item.put("size", img.getSizeBytes());
         item.put("createdAt", img.getCreatedAt());
         item.put("score", score);
         return item;
