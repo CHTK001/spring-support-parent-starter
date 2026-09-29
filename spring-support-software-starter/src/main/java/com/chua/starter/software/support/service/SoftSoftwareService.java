@@ -6,7 +6,7 @@ import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.software.support.entity.SoftSoftware;
 import com.chua.starter.software.support.pojo.software.SoftwarePageRequest;
 import com.chua.starter.software.support.spi.SoftwareSource;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 import java.util.Collection;
 import java.util.List;

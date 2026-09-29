@@ -186,19 +186,40 @@ public final class ProjectScripts {
                 String pid = "logs/nginx.pid";
                 String dirs = "mkdir -p logs temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp temp/scgi_temp\n";
                 String nginx = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf";
-                // 先读取 pid 再做判断：若写成 `[ -f pid ]` 之后再 `cat`，nginx 退出时会删除 pid 文件，
-                // 两次操作之间产生竞态，输出「cat: logs/nginx.pid: 没有那个文件」噪声（结果虽正确但会误导排查）。
-                String readPid = "pid=$(cat " + pid + " 2>/dev/null || true)\n";
-                String stopBody = nginx + " -s stop 2>/dev/null || true\n"
-                        + readPid
+                // 先读取 pid 再停止：若写成 `[ -f pid ]` 之后再 `cat`，nginx 退出时会删除 pid 文件，
+                // 两次操作之间产生竞态并输出「cat: logs/nginx.pid: 没有那个文件」噪声；
+                // 更关键的是必须先取到 pid —— `nginx -s stop` 成功后 nginx 会自行删除 pid 文件，
+                // 之后再读就取不到 pid，「等待退出」整段会被跳过，脚本立刻返回而 nginx 仍在退出，
+                // 紧随其后的 start 就会撞端口（bind: Address already in use）。
+                String readPid = "pid=$(cat " + pid + " 2>/dev/null || true)\n"
+                        // 陈旧 pid 必须视为无效：回滚会把备份里的 logs/nginx.pid 还原回来，
+                        // 那份 pid 指向的是备份时刻的旧进程（通常早已退出），若直接采用会导致
+                        // 「读到死 pid → 判定已停止 → 不执行停止」，真实进程继续占端口，
+                        // 紧接着的 start 撞 bind: Address already in use。
+                        + "if [ -n \"$pid\" ] && ! kill -0 \"$pid\" 2>/dev/null; then pid=\"\"; fi\n"
+                        // 兜底：无 pid（或 pid 已陈旧）时按前缀找回真实 master，
+                        // 否则 nginx -s stop 与 pid kill 都失效，会留下占着端口且无法停止的孤儿进程。
+                        + "if [ -z \"$pid\" ]; then pid=$(pgrep -f 'master process nginx -p " + PH_PATH + "' 2>/dev/null | head -1); fi\n";
+                // pid 文件只能在确认进程已退出后删除：先删掉会让运行中的实例失去唯一句柄
+                String stopBody = readPid
                         + "if [ -n \"$pid\" ]; then\n"
-                        + "  kill $pid 2>/dev/null\n"
+                        // 必须在下发 stop 之前抓子进程：master 一退出，worker 会被 reparent 到 init，
+                        // 之后 pgrep -P 再也找不到它们；而 kill -9 master 会留下继承监听套接字的孤儿 worker，
+                        // 表现为「端口仍被占用但 status 显示 stopped」且无法再停止。
+                        + "  kids=$(pgrep -P $pid 2>/dev/null)\n"
+                        + "  " + nginx + " -s stop 2>/dev/null || true\n"
                         + "  i=0\n"
                         + "  while kill -0 $pid 2>/dev/null && [ $i -lt 10 ]; do\n"
                         + "    sleep 1\n"
                         + "    i=$((i + 1))\n"
                         + "  done\n"
                         + "  kill -9 $pid 2>/dev/null\n"
+                        + "  if [ -n \"$kids\" ]; then kill -9 $kids 2>/dev/null; fi\n"
+                        + "  i=0\n"
+                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 5 ]; do\n"
+                        + "    sleep 1\n"
+                        + "    i=$((i + 1))\n"
+                        + "  done\n"
                         + "fi\n"
                         + "rm -f " + pid;
                 String runningCheck = readPid + "if [ -n \"$pid\" ] && kill -0 $pid 2>/dev/null; then\n";

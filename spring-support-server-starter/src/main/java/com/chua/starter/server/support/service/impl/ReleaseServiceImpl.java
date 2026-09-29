@@ -22,6 +22,8 @@ import com.chua.starter.server.support.service.ReleaseService;
 import com.chua.starter.server.support.service.SftpService;
 import com.chua.starter.server.support.spi.PackageManagerProvider;
 import com.chua.starter.server.support.spi.PackageManagerRouter;
+import com.chua.starter.server.support.spi.ProjectPlatformProvider;
+import com.chua.starter.server.support.spi.ProjectPlatformProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.spi.SystemServiceProvider;
 import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
@@ -73,6 +75,13 @@ public class ReleaseServiceImpl implements ReleaseService {
      * 系统服务挂载路由器（按操作系统选择 SPI 实现：systemd / launchd / 计划任务）
      */
     private final SystemServiceProviderRegistry systemServiceRouter;
+
+    /**
+     * 平台命令路由器（按操作系统选择 SPI 实现：POSIX / Windows）。
+     * 备份/回滚/执行包装/变量块/外部配置/解压投放等平台命令一律经它取得，
+     * 业务层不再出现 tar/robocopy/powershell 等平台字面量与 windows 命令二选一。
+     */
+    private final ProjectPlatformProviderRegistry projectPlatformRouter;
 
     /**
      * 系统配置 Mapper（读写升级全局/最近配置的原始 JSON）
@@ -245,7 +254,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 return ReturnResult.error("项目已在运行，无需重复启动");
             }
         }
-        boolean win = prepared.getData().windows;
+        ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         String path = project.getProjectPath();
         List<ProjectStep> steps = new ArrayList<>();
         ProjectStep cfg = springConfigStep(win, project);
@@ -270,7 +279,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("停止脚本未配置");
         }
         List<ProjectStep> steps = List.of(new ProjectStep("停止项目",
-                buildCommand(prepared.getData().windows, project.getProjectPath(), project.getStopScript()), 1));
+                buildCommand(projectPlatformRouter.resolveOrPosix(prepared.getData().osType), project.getProjectPath(), project.getStopScript()), 1));
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
                 "stop", steps, "stopped");
         return task(taskId);
@@ -284,7 +293,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         MsServerProject project = prepared.getData().project;
         String path = project.getProjectPath();
-        boolean win = prepared.getData().windows;
+        ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         List<ProjectStep> steps = new ArrayList<>();
         ProjectStep cfg = springConfigStep(win, project);
         if (cfg != null) {
@@ -312,7 +321,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
-        boolean win = prepared.getData().windows;
+        ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         String path = project.getProjectPath();
         List<ProjectStep> steps = new ArrayList<>();
         ProjectStep cfg = springConfigStep(win, project);
@@ -340,7 +349,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         MsServerProject project = prepared.getData().project;
         List<ProjectStep> steps = List.of(new ProjectStep("备份项目",
-                backupCommand(prepared.getData().windows, project.getProjectPath()), 1));
+                backupCommand(projectPlatformRouter.resolveOrPosix(prepared.getData().osType), project.getProjectPath()), 1));
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
                 "backup", steps, null);
         return task(taskId);
@@ -353,7 +362,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
-        boolean win = prepared.getData().windows;
+        ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         List<ProjectStep> steps = new ArrayList<>();
         if (!isBlank(project.getStopScript())) {
             steps.add(new ProjectStep("停止服务", buildCommand(win, project.getProjectPath(), project.getStopScript()), 1));
@@ -375,7 +384,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         OperationContext ctx = prepared.getData();
-        String command = backupListCommand(ctx.windows, ctx.project.getProjectPath());
+        String command = backupListCommand(projectPlatformRouter.resolveOrPosix(ctx.osType), ctx.project.getProjectPath());
         ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
                 execService.runCommand(Collections.singletonList(ctx.hostId), command, 30, null);
         List<ProjectBackupVO> rows = new ArrayList<>();
@@ -430,32 +439,8 @@ public class ReleaseServiceImpl implements ReleaseService {
     /**
      * 构造「列出 backups/ 备份记录」命令，输出每行 name|epochSeconds|size|kind
      */
-    private String backupListCommand(boolean windows, String projectPath) {
-        if (windows) {
-            StringBuilder ps = new StringBuilder();
-            if (!isBlank(projectPath)) {
-                ps.append("Set-Location -LiteralPath '").append(projectPath.replace("'", "''")).append("'\n");
-            }
-            ps.append("if (Test-Path 'backups') {\n");
-            ps.append("  Get-ChildItem 'backups' -Filter 'backup_*' | ForEach-Object {\n");
-            ps.append("    $kind = 'file'; $size = $_.Length\n");
-            ps.append("    if ($_.PSIsContainer) { $kind = 'dir'; $size = '' }\n");
-            ps.append("    $epoch = [int][double]::Parse((Get-Date $_.LastWriteTime -UFormat %s))\n");
-            ps.append("    $_.Name + '|' + $epoch + '|' + $size + '|' + $kind\n");
-            ps.append("  }\n");
-            ps.append("}");
-            return ps.toString();
-        }
-        StringBuilder sh = new StringBuilder();
-        if (!isBlank(projectPath)) {
-            sh.append("cd '").append(projectPath.replace("'", "'\\''")).append("' && ");
-        }
-        sh.append("if [ -d backups ]; then find backups -maxdepth 1 -name 'backup_*' | while read p; do ")
-          .append("f=$(basename \"$p\"); ")
-          .append("if [ -d \"$p\" ]; then kind=dir; size=; else kind=file; size=$(stat -c %s \"$p\"); fi; ")
-          .append("epoch=$(stat -c %Y \"$p\"); ")
-          .append("echo \"$f|$epoch|$size|$kind\"; done; fi");
-        return sh.toString();
+    private String backupListCommand(ProjectPlatformProvider pf, String projectPath) {
+        return pf.listBackups(projectPath);
     }
 
     // ==================== 日志 ====================
@@ -470,11 +455,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (isBlank(project.getLogPath())) {
             return ReturnResult.ok("未配置日志路径");
         }
-        // 按操作系统生成读取命令：Windows 无 tail，用 PowerShell Get-Content -Tail
+        // 按操作系统生成读取命令（由平台 SPI 提供：POSIX tail / Windows Get-Content -Tail）
         String logPath = project.getLogPath();
-        String command = prepared.getData().windows
-                ? "if (Test-Path '" + logPath + "') { Get-Content -Path '" + logPath + "' -Tail 100 }"
-                : "tail -n 100 " + logPath;
+        String command = projectPlatformRouter.resolveOrPosix(prepared.getData().osType).tailLog(logPath, 100);
         ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
                 execService.runCommand(Collections.singletonList(prepared.getData().hostId), command, 30, null);
 
@@ -572,7 +555,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (isBlank(project.getStatusScript())) {
             return ReturnResult.error("状态脚本未配置");
         }
-        String command = buildCommand(ctx.windows, project.getProjectPath(), project.getStatusScript());
+        String command = buildCommand(projectPlatformRouter.resolveOrPosix(ctx.osType), project.getProjectPath(), project.getStatusScript());
         ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
                 execService.runCommand(Collections.singletonList(ctx.hostId), command, 20, null);
         if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
@@ -722,7 +705,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         OperationContext ctx = prepared.getData();
         MsServerProject project = ctx.project;
-        boolean win = ctx.windows;
+        ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(ctx.osType);
         String path = project.getProjectPath();
         Map<String, Object> cfg = config == null ? new java.util.LinkedHashMap<>() : config;
         boolean autoBackup = boolCfg(cfg, "autoBackup", true);
@@ -874,11 +857,11 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @param project 项目
      */
     private void expandProjectScripts(MsServerProject project) {
-        boolean windows = isWindowsProject(project);
+        ProjectPlatformProvider pf = projectPlatformRouter.resolveOrPosix(osTypeOfProject(project));
         // 结构化变量（envVars/jvmArgs/cmdArgs）注入 VARS 块 + 展开 __JVMARGS__/__ARGS__，
         // 使「API 创建 / 内置模板」的项目也能生效（此前仅前端保存时注入）
-        String start = materializeVars(project.getStartScript(), project, windows);
-        String restart = materializeVars(project.getRestartScript(), project, windows);
+        String start = materializeVars(project.getStartScript(), project, pf);
+        String restart = materializeVars(project.getRestartScript(), project, pf);
         project.setStartScript(ProjectScripts.apply(start,
                 project.getMainEntry(), project.getProjectPath(), project.getLogPath(), project.getProjectName()));
         project.setStopScript(ProjectScripts.apply(project.getStopScript(),
@@ -892,11 +875,27 @@ public class ReleaseServiceImpl implements ReleaseService {
     /**
      * 判断项目目标主机是否 Windows（按所属发布绑定的主机）
      */
-    private boolean isWindowsProject(MsServerProject project) {
+    /**
+     * 取项目目标主机归一后的系统类型（供平台 SPI 路由）。
+     *
+     * @param project 项目
+     * @return 系统类型（HostPlatforms 取值域）；主机缺失返回空串
+     */
+    private String osTypeOfProject(MsServerProject project) {
         MsServerRelease release = project.getReleaseId() == null ? null : releaseMapper.selectById(project.getReleaseId());
         MsServerHost host = (release != null && release.getHostId() != null)
                 ? hostMapper.selectById(release.getHostId()) : null;
-        return host != null && "WINDOWS".equalsIgnoreCase(host.getServerHostOsType());
+        return host == null ? "" : HostPlatforms.normalize(host.getServerHostOsType());
+    }
+
+    /**
+     * 判断项目目标主机是否 Windows（按所属发布绑定的主机）
+     *
+     * @param project 项目
+     * @return 是否 Windows
+     */
+    private boolean isWindowsProject(MsServerProject project) {
+        return HostPlatforms.WINDOWS.equals(osTypeOfProject(project));
     }
 
     /**
@@ -904,10 +903,10 @@ public class ReleaseServiceImpl implements ReleaseService {
      *
      * @param script  脚本（可为空）
      * @param project 项目（读取 envVars/jvmArgs/cmdArgs）
-     * @param windows 是否 Windows
+     * @param pf      平台命令提供者（变量块与参数展开的平台差异由其负责）
      * @return 注入后的脚本
      */
-    private String materializeVars(String script, MsServerProject project, boolean windows) {
+    private String materializeVars(String script, MsServerProject project, ProjectPlatformProvider pf) {
         if (script == null || script.isEmpty()) {
             return script;
         }
@@ -916,79 +915,29 @@ public class ReleaseServiceImpl implements ReleaseService {
         List<String> args = readStringList(project.getCmdArgs());
         String out = script;
         if (!envs.isEmpty() || !jvms.isEmpty() || !args.isEmpty()) {
-            StringBuilder b = new StringBuilder(VARS_BEGIN).append('\n');
-            if (windows) {
-                for (EnvVar e : envs) {
-                    if (!isBlank(e.key)) {
-                        b.append("$env:").append(e.key.trim()).append(" = '")
-                                .append(e.value == null ? "" : e.value.replace("'", "''")).append("'\n");
-                    }
+            List<String> names = new ArrayList<>();
+            List<String> values = new ArrayList<>();
+            for (EnvVar e : envs) {
+                if (!isBlank(e.key)) {
+                    names.add(e.key.trim());
+                    values.add(e.value == null ? "" : e.value);
                 }
-                b.append("$JvmArgs = @(").append(csv(jvms, true)).append(")\n");
-                b.append("$AppArgs = @(").append(csv(args, true)).append(")\n");
-            } else {
-                for (EnvVar e : envs) {
-                    if (!isBlank(e.key)) {
-                        b.append("export ").append(e.key.trim()).append("='")
-                                .append(e.value == null ? "" : e.value.replace("'", "'\\''")).append("'\n");
-                    }
-                }
-                b.append("JVM_ARGS='").append(csv(jvms, false)).append("'\n");
-                b.append("APP_ARGS='").append(csv(args, false)).append("'\n");
             }
+            StringBuilder b = new StringBuilder(VARS_BEGIN).append('\n');
+            b.append(pf.varsBlock(names, values, jvms, args));
             b.append(VARS_END).append('\n');
             out = injectVarsBlock(out, b.toString());
         }
-        out = out.replace("__JVMARGS__", windows ? "$JvmArgs" : quotedArgs(jvms))
-                 .replace("__ARGS__", windows ? "$AppArgs" : quotedArgs(args));
+        out = out.replace("__JVMARGS__", pf.jvmArgsLiteral(jvms))
+                .replace("__ARGS__", pf.appArgsLiteral(args));
         return out;
     }
 
     /**
-     * 把参数列表展开为<b>逐个单引号包裹</b>的 shell 字面量。
-     *
-     * <p>不能改成 {@code "$APP_ARGS"} 形式依赖 shell 的单词拆分：bash 会把未加引号的参数展开按
-     * 空白拆成多个参数，而 <b>zsh 默认不拆分</b>（非交互式 zsh 需显式 {@code setopt shwordsplit}
-     * 或 {@code ${=VAR}}），Kali 等默认 shell 为 zsh 的主机上整串参数会被当成<b>一个</b>参数传入，
-     * 表现为 Spring 报 {@code Invalid value '8112 --monitor.xxx=...' for configuration property
-     * 'server.port'}。生成期逐个加引号可让 bash / zsh / ash 行为一致。</p>
-     *
-     * @param items 参数列表
-     * @return 可直接内联进命令行的字符串（空列表返回空串）
-     */
-    private String quotedArgs(List<String> items) {
-        if (items == null || items.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        for (String it : items) {
-            if (isBlank(it)) {
-                continue;
-            }
-            if (sb.length() > 0) {
-                sb.append(' ');
-            }
-            sb.append('\'').append(it.trim().replace("'", "'\\''")).append('\'');
-        }
-        return sb.toString();
-    }
-
-    /**
-     * 拼接参数数组/串：Windows 为 PS 数组元素（单引号，逗号分隔）；Linux 为空格分隔
-     */
-    private String csv(List<String> items, boolean windows) {
-        List<String> parts = new ArrayList<>();
-        for (String it : items) {
-            if (isBlank(it)) {
-                continue;
-            }
-            parts.add(windows ? ("'" + it.replace("'", "''") + "'") : it.replace("'", "'\\''"));
-        }
-        return windows ? String.join(",", parts) : String.join(" ", parts);
-    }
-
-    /**
      * 幂等注入 VARS 托管块：已存在则替换，不存在则前插
+     */
+    /**
+     * 幂等注入 VARS 托管块：已存在则替换，不存在则前置
      */
     private String injectVarsBlock(String script, String block) {
         Matcher m = VARS_BLOCK_RE.matcher(script);
@@ -1017,9 +966,6 @@ public class ReleaseServiceImpl implements ReleaseService {
     /** 变量托管块匹配（幂等替换用） */
     private static final Pattern VARS_BLOCK_RE =
             Pattern.compile("# >>> VARS \\(auto-managed\\) >>>[\\s\\S]*?# <<< VARS \\(auto-managed\\) <<<\\n?");
-    /** 托管块内环境变量行：Linux `export NAME='VALUE'`、Windows `$env:NAME = 'VALUE'` */
-    private static final Pattern ENV_NIX = Pattern.compile("^export\\s+([A-Za-z_][A-Za-z0-9_]*)='(.*)'$");
-    private static final Pattern ENV_WIN = Pattern.compile("^\\$env:([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*'(.*)'$");
 
     /**
      * 执行前解析变量托管块中的占位符，支持：
@@ -1027,7 +973,7 @@ public class ReleaseServiceImpl implements ReleaseService {
      * 仅处理托管块，避免误改脚本中正常的 shell / PowerShell 语法；
      * 无法解析的占位符保留原样（交给 shell），不中断执行。
      */
-    private String resolveScriptPlaceholders(String script, boolean windows) {
+    private String resolveScriptPlaceholders(String script, ProjectPlatformProvider pf) {
         if (script == null) {
             return null;
         }
@@ -1044,7 +990,7 @@ public class ReleaseServiceImpl implements ReleaseService {
 
         // 收集块内已定义的环境变量作为占位符上下文（KEY -> 原始值）
         Map<String, Object> ctx = new LinkedHashMap<>();
-        Pattern pat = windows ? ENV_WIN : ENV_NIX;
+        Pattern pat = Pattern.compile(pf.envPattern());
         for (String line : block.split("\n")) {
             Matcher m = pat.matcher(line.trim());
             if (m.find()) {
@@ -1062,20 +1008,8 @@ public class ReleaseServiceImpl implements ReleaseService {
      * 构建执行命令。
      * Linux：bash（cd path && script）；Windows：PowerShell（Set-Location 后执行，PS4.0 不支持 &&）。
      */
-    private String buildCommand(boolean windows, String projectPath, String script) {
-        script = resolveScriptPlaceholders(script, windows);
-        if (windows) {
-            if (isBlank(projectPath)) {
-                return script;
-            }
-            String p = projectPath.replace("'", "''");
-            return "if (-not (Test-Path -LiteralPath '" + p + "')) { New-Item -ItemType Directory -Force -Path '"
-                    + p + "' | Out-Null }\nSet-Location -LiteralPath '" + p + "'\n" + script;
-        }
-        if (!isBlank(projectPath)) {
-            return "mkdir -p '" + sq(projectPath) + "' && cd '" + sq(projectPath) + "' && " + script;
-        }
-        return script;
+    private String buildCommand(ProjectPlatformProvider pf, String projectPath, String script) {
+        return pf.wrap(projectPath, resolveScriptPlaceholders(script, pf));
     }
 
     /**
@@ -1087,36 +1021,22 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @param project 项目
      * @return 步骤；无配置项时返回 null
      */
-    private ProjectStep springConfigStep(boolean windows, MsServerProject project) {
+    private ProjectStep springConfigStep(ProjectPlatformProvider pf, MsServerProject project) {
         List<EnvVar> entries = readEnvList(project.getAppConfig());
         if (entries.isEmpty()) {
             return null;
         }
-        StringBuilder sb = new StringBuilder();
-        if (windows) {
-            sb.append("New-Item -ItemType Directory -Force -Path 'config' | Out-Null\r\n");
-            // 逐行写入，避免 PowerShell 数组字面量的尾随逗号导致 "Missing expression after ','"
-            sb.append("[IO.File]::WriteAllLines((Get-Location).Path + '\\config\\application.properties', @(\r\n");
-            List<String> cfgLines = new ArrayList<>();
-            for (EnvVar e : entries) {
-                if (e.key != null && !e.key.isBlank()) {
-                    cfgLines.add("  '" + winPsEscape(e.key) + "=" + winPsEscape(e.value) + "'");
-                }
+        List<String> keys = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+        for (EnvVar e : entries) {
+            if (e.key != null && !e.key.isBlank()) {
+                keys.add(e.key);
+                values.add(e.value == null ? "" : e.value);
             }
-            sb.append(String.join(",\r\n", cfgLines)).append("\r\n");
-            sb.append("))\r\n");
-        } else {
-            sb.append("mkdir -p config\n");
-            sb.append("cat > config/application.properties <<'MS_CFG_EOF'\n");
-            for (EnvVar e : entries) {
-                if (e.key != null && !e.key.isBlank()) {
-                    sb.append(e.key).append('=').append(e.value == null ? "" : e.value).append('\n');
-                }
-            }
-            sb.append("MS_CFG_EOF\n");
         }
         // 必须在项目目录下执行：否则 config/application.properties 会写到 SSH 默认工作目录
-        return new ProjectStep("生成项目配置", buildCommand(windows, project.getProjectPath(), sb.toString()), 1);
+        return new ProjectStep("生成项目配置",
+                pf.wrap(project.getProjectPath(), pf.springConfigScript(keys, values)), 1);
     }
 
     /**
@@ -1127,85 +1047,31 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @param projectPath 项目地址
      * @return 步骤
      */
-    private ProjectStep pidStep(boolean windows, String projectPath) {
-        String cmd = windows
-                ? "if (Test-Path 'app.pid') { Get-Content 'app.pid' }"
-                : "cat app.pid 2>/dev/null || true";
-        return new ProjectStep("记录PID", buildCommand(windows, projectPath, cmd), 1);
+    private ProjectStep pidStep(ProjectPlatformProvider pf, String projectPath) {
+        return new ProjectStep("记录PID", pf.wrap(projectPath, pf.readPid()), 1);
     }
 
     /**
-     * PowerShell 单引号字符串转义（单引号翻倍）。
+     * 构建备份命令（平台实现由 {@link ProjectPlatformProvider} 提供）。
+     *
+     * @param pf          平台命令提供者
+     * @param projectPath 项目地址
+     * @return 备份命令
      */
-    private String winPsEscape(String value) {
-        return value == null ? "" : value.replace("'", "''");
+    private String backupCommand(ProjectPlatformProvider pf, String projectPath) {
+        return pf.backup(projectPath, MAX_BACKUPS);
     }
 
     /**
-     * 构建备份命令。
-     * Linux：tar.gz 写入 backups/ 并排除自身；Windows：robocopy 镜像到 backups\backup_<毫秒时间戳>
-     * （robocopy 为 Win2012R2 自带，PS4.0 无 Compress-Archive；返回码 0-7 均为成功）。
+     * 构建回滚命令（恢复指定/最新备份），平台实现由 {@link ProjectPlatformProvider} 提供。
+     *
+     * @param pf          平台命令提供者
+     * @param projectPath 项目地址
+     * @param backupName  备份名；为空表示最新
+     * @return 回滚命令
      */
-    private String backupCommand(boolean windows, String projectPath) {
-        if (windows) {
-            StringBuilder ps = new StringBuilder();
-            if (!isBlank(projectPath)) {
-                ps.append("Set-Location -LiteralPath '").append(projectPath).append("'\n");
-            }
-            ps.append("if (-not (Test-Path 'backups')) { New-Item -ItemType Directory -Path 'backups' | Out-Null }\n");
-            // 用 Get-Date 生成固定长度(yyyyMMddHHmmssfff)时间戳；ToUnixTimeMilliseconds 需 .NET4.6+，Win2012R2(.NET4.5.2) 不支持
-            ps.append("$stamp = Get-Date -Format 'yyyyMMddHHmmssfff'\n");
-            ps.append("$dest = Join-Path 'backups' ('backup_' + $stamp)\n");
-            ps.append("New-Item -ItemType Directory -Force -Path $dest | Out-Null\n");
-            // /XF app.pid：排除运行态 PID 文件，避免备份/还原把过期 PID 带回来导致状态误判
-            ps.append("robocopy '.' $dest /E /NFL /NDL /NJH /NJS /NP /XD backups /XF app.pid | Out-Null\n");
-            ps.append("if ($LASTEXITCODE -gt 7) { throw 'robocopy backup failed' }\n");
-            // 保留策略：只保留最新 MAX_BACKUPS 个，清理更旧的，避免备份无限增长撑满磁盘
-            ps.append("Get-ChildItem -Directory -Path 'backups' -Filter 'backup_*' | ")
-              .append("Sort-Object Name -Descending | Select-Object -Skip ").append(MAX_BACKUPS)
-              .append(" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue\n");
-            ps.append("Write-Output ('backup created: ' + $dest)");
-            return ps.toString();
-        }
-        String file = "backup_" + System.currentTimeMillis() + ".tar.gz";
-        String prefix = isBlank(projectPath) ? "" : ("cd " + projectPath + " && ");
-        // 备份统一写入 backups/ 子目录并排除该目录，避免 tar 把正在写入的备份打包进自身；
-        // 保留最新 MAX_BACKUPS 个，清理更旧的防止磁盘被备份撑满
-        return prefix + "mkdir -p backups && tar -czf backups/" + file + " --exclude='./backups' . ; "
-                + "ls -1dt backups/backup_* 2>/dev/null | tail -n +" + (MAX_BACKUPS + 1) + " | xargs -r rm -rf";
-    }
-
-    /**
-     * 构建回滚命令（恢复最新备份）。
-     * Linux：解最新 tar.gz；Windows：robocopy /MIR 从最新 backups\backup_* 目录恢复。
-     */
-    private String rollbackCommand(boolean windows, String projectPath, String backupName) {
-        boolean named = !isBlank(backupName);
-        if (windows) {
-            StringBuilder ps = new StringBuilder();
-            if (!isBlank(projectPath)) {
-                ps.append("Set-Location -LiteralPath '").append(projectPath).append("'\n");
-            }
-            if (named) {
-                String safe = backupName.replace("'", "''");
-                ps.append("$latest = Get-Item -LiteralPath (Join-Path 'backups' '").append(safe).append("')\n");
-            } else {
-                ps.append("$latest = Get-ChildItem -Directory -Path 'backups' -Filter 'backup_*' | ")
-                  .append("Sort-Object Name -Descending | Select-Object -First 1\n");
-            }
-            ps.append("if (-not $latest) { throw 'no backup found' }\n");
-            // /E 覆盖恢复备份内容；/XD backups 排除备份目录（不能用 /MIR，否则会尝试删除正在读取的 backups 源目录而自引用失败）
-            ps.append("robocopy $latest.FullName '.' /E /XD backups /XF app.pid /NFL /NDL /NJH /NJS /NP | Out-Null\n");
-            ps.append("if ($LASTEXITCODE -gt 7) { throw 'robocopy rollback failed' }\n");
-            ps.append("Write-Output 'rollback done'");
-            return ps.toString();
-        }
-        String prefix = isBlank(projectPath) ? "" : ("cd " + projectPath + " && ");
-        if (named) {
-            String safe = backupName.replace("'", "'\\''");
-            return prefix + "latest='backups/" + safe + "' && [ -f \"$latest\" ] && tar -xzf \"$latest\"";
-        }
-        return prefix + "latest=$(ls -t backups/backup_*.tar.gz | head -1) && tar -xzf \"$latest\"";
+    private String rollbackCommand(ProjectPlatformProvider pf, String projectPath, String backupName) {
+        return pf.rollback(projectPath, backupName);
     }
 
     /**
@@ -1288,110 +1154,30 @@ public class ReleaseServiceImpl implements ReleaseService {
                 || n.endsWith(".zip") || n.endsWith(".gz");
     }
 
-    private String extractCommand(boolean windows, String projectPath, String packagePath) {
-        String n = packagePath.toLowerCase();
-        if (windows) {
-            String pkg = packagePath.replace("'", "''");
-            String dst = projectPath.replace("'", "''");
-            if (n.endsWith(".zip")) {
-                // 逐项解压并覆盖同名文件：ExtractToDirectory 遇已存在文件会抛异常，无法用于重复升级
-                return "Add-Type -AssemblyName System.IO.Compression.FileSystem\n"
-                        + "$zip = [IO.Compression.ZipFile]::OpenRead('" + pkg + "')\n"
-                        + "try {\n"
-                        + "  foreach ($e in $zip.Entries) {\n"
-                        + "    $dest = Join-Path '" + dst + "' $e.FullName\n"
-                        + "    if ([string]::IsNullOrEmpty($e.Name)) { New-Item -ItemType Directory -Force -Path $dest | Out-Null }\n"
-                        + "    else { $dir = Split-Path $dest -Parent; if ($dir) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; [IO.Compression.ZipFileExtensions]::ExtractToFile($e, $dest, $true) }\n"
-                        + "  }\n"
-                        + "} finally { $zip.Dispose() }";
-            }
-            // tar / tar.gz / tgz / gz：Windows 10 1803+ 自带 tar.exe；旧系统无内置工具，给出明确提示
-            String tarFlag = n.endsWith(".tar") ? "-xf" : "-xzf";
-            return "if (-not (Get-Command tar.exe -ErrorAction SilentlyContinue)) { throw 'Windows 未内置 tar，无法解压 ' + n + '，请改用 zip 包' }\n"
-                    + "tar.exe " + tarFlag + " '" + pkg + "' -C '" + dst + "'";
-        }
-        String prefix = isBlank(projectPath) ? "" : ("cd " + projectPath + " && ");
-        if (n.endsWith(".zip")) {
-            return prefix + "unzip -o '" + packagePath + "'";
-        }
-        if (n.endsWith(".gz") && !n.endsWith(".tar.gz")) {
-            return prefix + "gunzip -f '" + packagePath + "'";
-        }
-        return prefix + "tar -xzf '" + packagePath + "'";
+    private String extractCommand(ProjectPlatformProvider pf, String projectPath, String packagePath) {
+        return pf.extract(projectPath, packagePath);
     }
 
-    private String placeCommand(boolean windows, String projectPath, String packagePath, String mainEntry) {
-        String target = isBlank(mainEntry)
-                ? baseName(packagePath)
-                : mainEntry;
-        if (windows) {
-            return "Copy-Item -LiteralPath '" + packagePath + "' -Destination '"
-                    + projectPath + "\\" + target + "' -Force";
-        }
-        return "cp -f '" + packagePath + "' '" + projectPath + "/" + target + "'";
-    }
-
-    private String baseName(String path) {
-        String n = path.replace('\\', '/');
-        int idx = n.lastIndexOf('/');
-        return idx >= 0 ? n.substring(idx + 1) : n;
+    private String placeCommand(ProjectPlatformProvider pf, String projectPath, String packagePath, String mainEntry) {
+        return pf.place(projectPath, packagePath, mainEntry);
     }
 
     /**
-     * 重启后健康检测，失败则回滚（Linux）。
+     * 重启后健康检测，失败则回滚（平台实现由 {@link ProjectPlatformProvider} 提供）。
+     *
+     * @param pf          平台命令提供者
+     * @param projectPath 项目地址
+     * @param project     项目
+     * @param restart     是否重启（false 时仅健康检查）
+     * @return 命令
      */
-    private String guardedRestartCommand(boolean windows, String projectPath,
+    private String guardedRestartCommand(ProjectPlatformProvider pf, String projectPath,
                                          MsServerProject project, boolean restart) {
-        if (windows) {
-            String restartCmd = restart && !isBlank(project.getRestartScript())
-                    ? buildCommand(true, projectPath, project.getRestartScript())
-                    : (buildCommand(true, projectPath, project.getStopScript()) + "\n"
-                       + buildCommand(true, projectPath, project.getStartScript()));
-            String statusCmd = buildCommand(true, projectPath, project.getStatusScript());
-            String rollbackCmd = buildCommand(true, projectPath, rollbackCommand(true, projectPath, null));
-            String startCmd = buildCommand(true, projectPath, project.getStartScript());
-            StringBuilder ps = new StringBuilder();
-            ps.append(restartCmd).append('\n');
-            ps.append("Start-Sleep -Seconds 4\n");
-            ps.append("$out = $(").append(statusCmd).append(") -join ' '\n");
-            ps.append("if (\"$out\" -match 'running') { 'health ok' }\n");
-            ps.append("else {\n")
-              .append("  'health failed, rolling back...'\n  ")
-              .append(rollbackCmd).append('\n')
-              // 回滚文件后重启旧版本，再做二次健康检查
-              .append("  ").append(startCmd.replace("\n", "\n  ")).append('\n')
-              .append("  Start-Sleep -Seconds 4\n")
-              .append("  $out2 = $(").append(statusCmd).append(") -join ' '\n")
-              .append("  if (\"$out2\" -match 'running') { 'rollback ok' } else { 'rollback failed'; exit 1 }\n")
-              .append("}");
-            return ps.toString();
-        }
-        StringBuilder sb = new StringBuilder();
-        if (restart) {
-            String rc = isBlank(project.getRestartScript())
-                    ? (buildCommand(false, projectPath, project.getStopScript()) + "\n"
-                       + buildCommand(false, projectPath, project.getStartScript()))
-                    : buildCommand(false, projectPath, project.getRestartScript());
-            sb.append(rc).append('\n');
-        }
-        sb.append("sleep 4\n");
-        sb.append("out=$(").append(buildCommand(false, projectPath, project.getStatusScript())).append(")\n");
-        sb.append("if echo \"$out\" | grep -qi running; then\n  echo 'health ok'\nelse\n")
-          .append("  echo 'health failed, rolling back...'\n  ")
-          .append(buildCommand(false, projectPath, rollbackCommand(false, projectPath, null))).append('\n')
-          .append("  ").append(buildCommand(false, projectPath, project.getStartScript()).replace("\n", "\n  ")).append('\n')
-          .append("  sleep 4\n")
-          .append("  out2=$(").append(buildCommand(false, projectPath, project.getStatusScript())).append(")\n")
-          .append("  if echo \"$out2\" | grep -qi running; then echo 'rollback ok'; else echo 'rollback failed'; exit 1; fi\n")
-          .append("fi");
-        return sb.toString();
+        return pf.guardedRestart(projectPath, project.getRestartScript(), project.getStopScript(),
+                project.getStartScript(), project.getStatusScript(), restart);
     }
 
     // ---------- 系统服务（Linux systemd）----------
-
-    private String sq(String value) {
-        return value == null ? "" : value.replace("'", "'\\''");
-    }
 
     private List<String> readStringList(String json) {
         if (isBlank(json)) {

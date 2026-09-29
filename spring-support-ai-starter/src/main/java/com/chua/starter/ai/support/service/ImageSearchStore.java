@@ -143,6 +143,7 @@ public class ImageSearchStore {
                     if (item == null) {
                         continue;
                     }
+                    backfillSize(item);
                     images.put(item.getId(), item);
                     maxId = Math.max(maxId, item.getId());
                 }
@@ -151,6 +152,43 @@ public class ImageSearchStore {
             log.info("[ImageSearch] 底库快照加载完成: {} 条 ({})", images.size(), file.toAbsolutePath());
         } catch (Exception ex) {
             log.warn("[ImageSearch] 底库加载失败，按空库启动: {} -> {}", file.toAbsolutePath(), ex.getMessage());
+        }
+    }
+
+    /**
+     * 补齐历史记录缺失的体积。
+     *
+     * <p>统计卡要显示「占用体积」，而 {@code sizeBytes} 是后加的字段，
+     * 早期入库的记录没有它 —— 不补的话整块统计长期显示「未知」，
+     * 用户会以为统计坏了。口径取「该记录真实占用」：</p>
+     * <ul>
+     *   <li>有原图文件 → 取文件实际字节数（可能是更早版本写入的，以磁盘为准）</li>
+     *   <li>无原图（只有内嵌缩略图）→ 取缩略图 base64 解码后的字节数</li>
+     * </ul>
+     *
+     * <p>每次启动补一次，随后会随快照一并落盘，不是每请求都做 IO。</p>
+     *
+     * @param item 待补齐的记录
+     */
+    private void backfillSize(StoredImage item) {
+        if (item.getSizeBytes() != null && item.getSizeBytes() > 0) {
+            return;
+        }
+        if (item.getImageFile() != null && !item.getImageFile().isBlank()) {
+            try {
+                Path original = imageDir().resolve(item.getImageFile());
+                if (Files.isRegularFile(original)) {
+                    item.setSizeBytes(Files.size(original));
+                    return;
+                }
+            } catch (Exception ex) {
+                log.debug("[ImageSearch] 原图体积读取失败: id={} -> {}", item.getId(), ex.getMessage());
+            }
+        }
+        // 退回缩略图体积：base64 解出来的字节数才是真实占用，不能直接取字符串长度
+        String thumb = item.getThumb();
+        if (thumb != null && !thumb.isBlank()) {
+            item.setSizeBytes((long) (thumb.length() / 4 * 3));
         }
     }
 
@@ -379,6 +417,8 @@ public class ImageSearchStore {
         item.setVector(vector);
         item.setFeatureModel(currentModel());
         item.setCreatedAt(System.currentTimeMillis());
+        // 记原图真实字节数：列表要展示体积，而尺寸无法由缩略图反推
+        item.setSizeBytes((long) imageData.length);
         item.setThumb(thumbnailBase64(imageData));
         int[] size = imageSize(imageData);
         item.setWidth(size[0]);
@@ -883,6 +923,25 @@ public class ImageSearchStore {
 
         public void setImageFile(String imageFile) {
             this.imageFile = imageFile;
+        }
+
+        /**
+         * 原图字节数。
+         *
+         * <p>列表页要显示「640×480 · 186 KB」这类信息，而底库原先只存了维度与缩略图，
+         * 尺寸得由前端拿 base64 去反推（不准）。入库时记一份真实字节数最省事。</p>
+         *
+         * <p>本字段之前入库的历史记录为 {@code null}，前端按「未知」展示，
+         * 不用缩略图长度冒充原图大小 —— 那会把 30KB 的缩略图显示成原图体积。</p>
+         */
+        private Long sizeBytes;
+
+        public Long getSizeBytes() {
+            return sizeBytes;
+        }
+
+        public void setSizeBytes(Long sizeBytes) {
+            this.sizeBytes = sizeBytes;
         }
 
         public int getWidth() {

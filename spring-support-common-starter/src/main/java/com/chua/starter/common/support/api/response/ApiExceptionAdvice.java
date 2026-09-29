@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
@@ -770,15 +771,41 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         return ReturnResult.error(SYSTEM_EXECUTION_ERROR.getCode(), "系统繁忙，请稍后重试");
     }
 
+    /**
+     * 处理「响应已不可用」异常（SSE / 流式响应中断）。
+     *
+     * <p>流式响应一旦开始输出，{@code Content-Type} 已被固化为 {@code text/event-stream}
+     * 且响应多半已提交，此时再回写任何 body 都会二次失败，且失败本身还会掩盖真实原因：
+     * 此前表现为 {@code AsyncRequestNotUsableException} 之后紧跟
+     * {@code HttpMessageNotWritableException: No converter for [ReturnResult] with preset
+     * Content-Type 'text/event-stream'}，日志里一条真实异常被三条噪音盖住。</p>
+     *
+     * <p>这里返回 {@code void}：只记日志，不写响应体，让 Spring 认为已处理。
+     * 客户端此时连接已断开，本就收不到任何东西。</p>
+     *
+     * @param e 响应不可用异常
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsable(AsyncRequestNotUsableException e) {
+        logWarn("流式响应已中断，响应不可回写（不回写 body 以免二次失败）: " + e.getMessage(), e);
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     /**
      * 处理异常。
      * @param e e
+     * @param response 响应
      * @return 处理异常的结果
      */
-    public <T> ReturnResult<T> handleException(Exception e) {
+    public <T> ReturnResult<T> handleException(Exception e, HttpServletResponse response) {
         logError("系统异常", e);
+        // 兜底守卫：响应已提交时不能再写 body（例如 SSE 已输出过内容后又抛异常），
+        // 返回 null 表示「已处理但无响应体」，避免 converter 找不到匹配器而二次抛错。
+        if (response != null && response.isCommitted()) {
+            logWarn("响应已提交，跳过错误响应体回写: " + e.getMessage(), e);
+            return null;
+        }
         return ReturnResult.error(SYSTEM_SERVER_OTHER_ERROR.getCode(), "系统繁忙，请稍后重试");
     }
 

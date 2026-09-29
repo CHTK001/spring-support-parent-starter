@@ -4,7 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.software.support.entity.SoftInstallRecord;
 import com.chua.starter.software.support.pojo.install.InstallDetailResponse;
 import com.chua.starter.software.support.pojo.install.InstallRequest;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 import java.util.List;
 

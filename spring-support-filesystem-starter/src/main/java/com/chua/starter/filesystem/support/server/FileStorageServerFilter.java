@@ -34,6 +34,10 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.filestorage.support.operation.FileOperationSetting;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import javax.imageio.ImageIO;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageWriteParam;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.Locale;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
@@ -183,9 +187,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 动作配置令牌参数名（setConfig 管理员校验）
      */
     private static final String PARAM_TOKEN = "token";
-
-    /** 图片处理期间暂存当前请求（FileStorageFileSetting SPI 只接受 ServerRequest） */
-    private ServerRequest currentOpsRequest;
 
     /**
      * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
@@ -905,19 +906,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (ext == null || !isImageExt(ext)) {
             return null;
         }
-        FileOperationSetting ops = parseFileOps();
-        if (ops == null || !ops.hasOperation()) {
+        FileOperationSetting ops = parseFileOps(request);
+        if (ops == null) {
             return null;
         }
-        ImageOperation imageOperation = ServiceProvider.of(ImageOperation.class).getExtension();
+        if (!ops.hasOperation()) {
+            log.debug("[FileStorage] 无图片处理操作，透传原图: {}", fileName);
+            return null;
+        }
+        // extensions 文件里 ImageOperation 只注册了具名扩展 jdk=，没有无名默认项，
+        // 因此必须按名字取；FileStorageFileSetting 有无名默认项，两种取法都成立。
+        ImageOperation imageOperation = ServiceProvider.of(ImageOperation.class).getExtension("jdk");
         if (imageOperation == null) {
             log.warn("[FileStorage] 未找到 ImageOperation SPI，跳过图片处理");
             return null;
         }
-        String format = opOutputFormat(fileName, request);
-        if (format == null) {
+        // 中间一律用 PNG：无损，避免每一步都做一次有损 JPEG 转码叠加失真，
+        // 也避免「输入已是 jpeg、末尾再转 jpeg」时读到自己写的字节。
+        // 目标格式只在末尾一次性转码（见下方 encode 收尾）。
+        String target = opOutputFormat(fileName, request);
+        if (target == null) {
             return null;
         }
+        String format = "png";
         byte[] cur = data;
         try {
             if (Boolean.TRUE.equals(ops.getAutoOrient())) {
@@ -940,6 +951,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             if (Boolean.TRUE.equals(ops.getGrayscale())) {
                 cur = keep(cur, imageOperation.filter(cur, format, "gray", null).block());
             }
+            if (ops.getBrightness() != null && ops.getBrightness() > 0
+                    && Math.abs(ops.getBrightness() - 1.0f) > 0.001f) {
+                ImageOperation.FilterParams bp = ImageOperation.FilterParams.builder()
+                        .brightness(ops.getBrightness()).build();
+                cur = keep(cur, imageOperation.filter(cur, format, "brightness", bp).block());
+            }
             if (ops.getBlur() != null && ops.getBlur() > 0) {
                 ImageOperation.FilterParams p = ImageOperation.FilterParams.builder().radius(ops.getBlur()).build();
                 cur = keep(cur, imageOperation.filter(cur, format, "blur", p).block());
@@ -953,11 +970,109 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                         .text(ops.getWatermarkText()).opacity(0.5f).position("center").build();
                 cur = keep(cur, imageOperation.watermark(cur, format, p).block());
             }
+            // 转码收尾：把无损中间结果一次性转到目标格式。
+            // 早期版本把 format 同时当「中间编码格式」和「最终输出格式」，导致
+            // ① 每步都做有损 JPEG 转码、叠加失真；② 无几何/滤镜操作时 cur 仍是源文件
+            // 原始 PNG 字节，Content-Type 却被标成 image/jpeg，客户端按 JPEG 解码直接失败；
+            // ③ quality 完全没参与编码。
+            boolean needEncode = ops.getFormat() != null || ops.getQuality() != null || !"png".equals(target);
+            if (needEncode) {
+                byte[] encoded = encode(cur, target, ops.getQuality());
+                if (encoded == null) {
+                    // 转码失败：保留上一步字节，Content-Type 由 detectFormat 按实际内容判定
+                    log.warn("[FileStorage] 转码到 {} 失败，回退上一步结果", target);
+                } else {
+                    cur = encoded;
+                }
+            }
         } catch (Exception e) {
             log.warn("[FileStorage] 图片处理失败，回退原图: {}", e.getMessage());
             return null;
         }
         return cur;
+    }
+
+    /**
+     * 按目标格式与质量重新编码。
+     *
+     * <p>质量参数只对 JPEG 有意义（走 ImageWriteParam 显式压缩模式），
+     * PNG/WEBP 等由 ImageIO 自身决定，属预期行为。</p>
+     *
+     * @param src     源字节
+     * @param format  目标格式
+     * @param quality 1-100，为空时用 ImageIO 默认
+     * @return 编码后字节；失败返回 {@code null} 交回上一步
+     */
+    private byte[] encode(byte[] src, String format, Integer quality) {
+        try {
+            var image = ImageIO.read(new ByteArrayInputStream(src));
+            if (image == null) {
+                return null;
+            }
+            var out = new ByteArrayOutputStream();
+            if (quality != null && quality > 0 && "jpeg".equals(format)) {
+                var writers = ImageIO.getImageWritersByFormatName("jpeg");
+                if (!writers.hasNext()) {
+                    return null;
+                }
+                var writer = writers.next();
+                var param = writer.getDefaultWriteParam();
+                var q = Math.max(0.01d, Math.min(1.0d, quality / 100.0d));
+                if (param.canWriteCompressed()) {
+                    param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    param.setCompressionQuality((float) q);
+                }
+                try (var ios = ImageIO.createImageOutputStream(out)) {
+                    writer.setOutput(ios);
+                    writer.write(null, new IIOImage(image, null, null), param);
+                } finally {
+                    writer.dispose();
+                }
+                return out.size() == 0 ? null : out.toByteArray();
+            }
+            if (!ImageIO.write(image, format, out) || out.size() == 0) {
+                return null;
+            }
+            return out.toByteArray();
+        } catch (Exception e) {
+            log.warn("[FileStorage] 编码为 {} 失败: {}", format, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
+     *
+     * @param bytes    响应体
+     * @param fileName 原文件名
+     * @param request  请求
+     * @return 实际格式；无法识别时回退到「URL 指定的格式 → 原扩展名 → jpeg」
+     */
+    private String detectFormat(byte[] bytes, String fileName, ServerRequest request) {
+        if (bytes != null && bytes.length > 3) {
+            int b0 = bytes[0] & 0xFF;
+            int b1 = bytes[1] & 0xFF;
+            int b2 = bytes[2] & 0xFF;
+            int b3 = bytes[3] & 0xFF;
+            if (b0 == 0x89 && b1 == 0x50 && b2 == 0x4E && b3 == 0x47) {
+                return "png";
+            }
+            if (b0 == 0xFF && b1 == 0xD8) {
+                return "jpeg";
+            }
+            if (b0 == 0x47 && b1 == 0x49 && b2 == 0x46) {
+                return "gif";
+            }
+            if (b0 == 0x42 && b1 == 0x4D) {
+                return "bmp";
+            }
+        }
+        String target = opOutputFormat(fileName, request);
+        if (target != null) {
+            return target;
+        }
+        String ext = simpleExtOf(fileName);
+        return ext == null ? "jpeg" : ext;
     }
 
     private byte[] keep(byte[] before, byte[] after) {
@@ -1016,10 +1131,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    private FileOperationSetting parseFileOps() {
+    private FileOperationSetting parseFileOps(ServerRequest request) {
         try {
-            return ServiceProvider.of(FileStorageFileSetting.class).getNewExtension("jdk").parse(currentOpsRequest);
+            return ServiceProvider.of(FileStorageFileSetting.class).getNewExtension("jdk").parse(request);
         } catch (Exception e) {
+            log.warn("[FileStorage] 解析文件操作参数失败: {}", e.getMessage());
             return null;
         }
     }
@@ -2658,13 +2774,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
 
         // 显式 ?preview=true 时按渲染通道分流处理
         if (!download && wantPreview) {
-            this.currentOpsRequest = request;
             // 图片处理（?preview&size=/crop=/rotate=/flip=/grayscale=/blur=/sharpen=/watermarkText=/quality=）：
             // 此前 spring 侧只上报能力（?format=capabilities），从不执行，URL 参数全部静默失效。
             byte[] imageProcessed = applyFileOperations(data, fileName, request);
             if (imageProcessed != null) {
+                // Content-Type 必须与实际字节一致：encode 失败会回退到上一步的字节，
+                // 此时若仍按目标格式声明，浏览器会按错误格式解码。
+                String servedFormat = detectFormat(imageProcessed, fileName, request);
                 response.setStatus(200)
-                        .setContentType(MimeTypeUtils.getMimeType(opOutputFormat(fileName, request)))
+                        .setContentType(MimeTypeUtils.getMimeType(servedFormat))
                         .setHeader("X-FileStorage-Preview", "image-op")
                         .setBody(imageProcessed)
                         .end();
