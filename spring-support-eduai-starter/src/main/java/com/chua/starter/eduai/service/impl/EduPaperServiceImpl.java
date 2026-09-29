@@ -25,6 +25,7 @@ import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.QuestionVO;
 import com.chua.starter.eduai.service.IEduPaperService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import com.chua.starter.eduai.support.util.GradeLevels;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -155,7 +156,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         // 列表下拉提交的是学段码值（PRIMARY/JUNIOR/…），而库里 paper_grade_level 存的是中文名。
         // mapper 是原值等值比较，不归一化就会「选了学段查不到任何卷」。normalize 对中文名幂等，两种入参都安全。
         query.setGradeLevel(GradeLevels.normalize(query.getGradeLevel()));
-        Page<EduPaper> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 分页参数来自请求，必须收敛边界（页码<1 归 1；pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduPaper> page = new Page<>(PageBounds.pageNum(query.getPageNum()),
+                PageBounds.pageSize(query.getPageSize()));
         IPage<EduPaper> result = baseMapper.pageSelect(page, query, scope);
 
         List<PaperVO> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());

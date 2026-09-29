@@ -10,6 +10,7 @@ import com.chua.starter.eduai.model.EduPaperTemplate;
 import com.chua.starter.eduai.model.dto.PaperTemplateSaveDTO;
 import com.chua.starter.eduai.service.IEduPaperTemplateService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -57,8 +58,9 @@ public class EduPaperTemplateServiceImpl extends ServiceImpl<EduPaperTemplateMap
      */
     public PageResult<EduPaperTemplate> pageQuery(String name, String style, Integer status,
                                                   Integer pageNum, Integer pageSize) {
-        long current = pageNum == null || pageNum < 1 ? DEFAULT_PAGE_NUM : pageNum;
-        long size = pageSize == null || pageSize < 1 ? DEFAULT_PAGE_SIZE_VALUE : pageSize;
+        // 分页参数来自请求，必须收敛边界（pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        long current = PageBounds.pageNum(pageNum);
+        long size = PageBounds.pageSize(pageSize);
         Page<EduPaperTemplate> page = new Page<>(current, size);
         IPage<EduPaperTemplate> result = baseMapper.pageSelect(page, name, style, status, EduUserContext.ownerScope());
         return PageResult.<EduPaperTemplate>builder()

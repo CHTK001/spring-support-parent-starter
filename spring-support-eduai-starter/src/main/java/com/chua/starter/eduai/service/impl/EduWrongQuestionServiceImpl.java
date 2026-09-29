@@ -11,6 +11,7 @@ import com.chua.starter.eduai.model.dto.WrongQueryDTO;
 import com.chua.starter.eduai.model.vo.WrongQuestionVO;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -72,7 +73,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     */
     public PageResult<WrongQuestionVO> pageQuery(WrongQueryDTO query) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        Page<EduWrongQuestion> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 分页参数来自请求，必须收敛边界（页码<1 归 1；pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduWrongQuestion> page = new Page<>(PageBounds.pageNum(query.getPageNum()),
+                PageBounds.pageSize(query.getPageSize()));
         IPage<EduWrongQuestion> result = baseMapper.pageSelect(page, query, scope);
 
         List<WrongQuestionVO> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());

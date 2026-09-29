@@ -9,6 +9,7 @@ import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.service.IEduExamService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +32,8 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
     */
     public PageResult<EduExam> pageQuery(EduExam exam, long page, long pageSize) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        Page<EduExam> pageInfo = new Page<>(page, pageSize);
+        // 分页参数来自请求，必须收敛边界（pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduExam> pageInfo = new Page<>(PageBounds.pageNum(page), PageBounds.pageSize(pageSize));
         IPage<EduExam> result = baseMapper.pageSelect(pageInfo, exam, scope);
         return PageResult.<EduExam>builder()
                 .pageNo((int) result.getCurrent())
