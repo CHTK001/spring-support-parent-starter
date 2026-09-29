@@ -58,6 +58,15 @@ public class GenerateService {
     private static final String LOCAL_SYNC_PREFIX = "sync-";
 
     /**
+     * result JSON 里存上游任务号的键。
+     *
+     * <p>上游任务号不能占用主键：主键在 insert 时已定并已作为响应返回前端，
+     * 后续再改它，前端就会拿着一个库里不存在的 id 去轮询（卡片永远 0%，
+     * 按该 id 取消还会返回 200 却什么都没取消）。放这里不需要改表结构。</p>
+     */
+    private static final String PROVIDER_TASK_ID_KEY = "providerTaskId";
+
+    /**
      * 任务多久没有推进就判定为僵死（毫秒）：5 分钟。
      *
      * <p>超时的非终态任务不会再自愈——没有任何在跑的线程会回写它，只能由服务端
@@ -371,11 +380,74 @@ public class GenerateService {
     /**
      * 判断是否为本地同步执行的任务。
      *
-     * @param taskId 任务ID
+     * @param task 任务行
      * @return true 表示本地执行，不应回源
      */
-    private static boolean isLocalSyncTask(String taskId) {
-        return taskId != null && taskId.startsWith(LOCAL_SYNC_PREFIX);
+    private static boolean isLocalSyncTask(SysAiGenerateTask task) {
+        // 判据从「主键是否带 sync- 前缀」换成「有没有上游任务号」。
+        // 用前缀判断曾经是可行的，因为只有异步受理成功的行才会把主键改成上游号；
+        // 现在主键一律不再改动，前缀对每一行都成立，用它判断会让所有任务都不再回源。
+        // 没有上游任务号就是没有可回源的对象，这才是真正要表达的意思。
+        return task != null && providerTaskIdOf(task) == null;
+    }
+
+    /**
+     * 记录上游任务号。
+     *
+     * <p>写进 result JSON 的同名键，而不是主键——主键在 insert 时已定并已返回前端，
+     * 任何后续改动都会让前端拿着一个库里不存在的 id 去轮询。选择 result 是因为
+     * 它已经是这一行的自由字段，不需要改表结构。</p>
+     *
+     * @param task       任务行
+     * @param providerId 上游任务号
+     */
+    private static void putProviderTaskId(SysAiGenerateTask task, String providerId) {
+        if (providerId == null || providerId.isBlank()) {
+            return;
+        }
+        Map<String, Object> result = task.getResult();
+        if (result == null) {
+            result = new LinkedHashMap<>(4);
+            task.setResult(result);
+        }
+        result.put(PROVIDER_TASK_ID_KEY, providerId);
+    }
+
+    /**
+     * 读取上游任务号。
+     *
+     * @param task 任务行
+     * @return 上游任务号；无从回源时返回 null
+     */
+    private static String providerTaskIdOf(SysAiGenerateTask task) {
+        if (task == null || task.getResult() == null) {
+            return null;
+        }
+        Object value = task.getResult().get(PROVIDER_TASK_ID_KEY);
+        return value == null ? null : value.toString();
+    }
+
+    /**
+     * 写回结果，同时保住上游任务号。
+     *
+     * <p>结果地图在生成完成与回源刷新两处会被整体重建。若重建时直接
+     * {@code new LinkedHashMap} 放 urls，上游任务号会被静默抹掉，
+     * 下一次回源就查不到自己的上游任务——表现为任务卡在非终态再不动。
+     * 故所有结果写入都必须经此处。</p>
+     *
+     * @param task      任务行
+     * @param urls      媒体地址列表
+     * @param mediaType 媒体类型
+     */
+    private static void putResult(SysAiGenerateTask task, List<String> urls, String mediaType) {
+        String providerId = providerTaskIdOf(task);
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        if (providerId != null) {
+            result.put(PROVIDER_TASK_ID_KEY, providerId);
+        }
+        result.put("urls", urls);
+        result.put("mediaType", mediaType);
+        task.setResult(result);
     }
 
     /**
@@ -405,16 +477,18 @@ public class GenerateService {
         applyReference(client, request.referenceImage());
         task.setProviderId(resolved.provider() == null ? null : resolved.provider().getProviderId());
         task.setSize(request.size());
-        // 异步优先：多数国产厂商是「提交任务 + 轮询」
+        // 异步优先：多数厂商是「提交任务 + 轮询」
         try {
-            task.setTaskId(client.createTask(request.prompt()));
+            // 上游任务号另存，绝不写回主键：主键在 insert 时就已定下并已返回给前端，
+            // 再改它等于让前端拿着一个库里不存在的 id 去轮询（表现为卡片永远 0%）。
+            putProviderTaskId(task, client.createTask(request.prompt()));
             task.setCount(count);
             task.setStatus(SysAiGenerateTask.STATUS_PENDING);
             return null;
         } catch (UnsupportedOperationException e) {
             // 同步实现没有异步任务口径：先落 RUNNING 让前端能轮询到进度，
             // 真正生成放线程池，避免 HTTP 请求阻塞十几秒。
-            task.setTaskId(LOCAL_SYNC_PREFIX + UUID.randomUUID());
+            // 这里不再另起一个 UUID 覆盖主键 —— 主键已落库、已返回，改了就是同一个 bug。
             task.setCount(1);
             task.setStatus(SysAiGenerateTask.STATUS_RUNNING);
             task.setProgress(PROGRESS_QUEUED);
@@ -479,10 +553,7 @@ public class GenerateService {
                 task.setElapsedMillis(System.currentTimeMillis() - startedAt);
                 task.setStatus(SysAiGenerateTask.STATUS_SUCCESS);
                 task.setProgress(100);
-                Map<String, Object> result = new LinkedHashMap<>(4);
-                result.put("urls", List.of(url));
-                result.put("mediaType", "image");
-                task.setResult(result);
+                putResult(task, List.of(url), "image");
                 log.info("[Generate] 图像生成完成 taskId={} elapsed={}ms",
                         task.getTaskId(), task.getElapsedMillis());
             } catch (Exception e) {
@@ -566,10 +637,10 @@ public class GenerateService {
         if (isTerminal(task.getStatus())) {
             return task;
         }
-        // sync- 前缀是「同步实现 + 本地线程池执行」的任务，没有 provider 任务号可回源。
+        // 没有上游任务号就没有可回源的对象（同步实现 + 本地线程池执行）。
         // 必须直接返回库里的状态，否则每次轮询都会回源失败并被 catch 吞掉，
         // 任务会永远停在 RUNNING，前端看不到进度推进。
-        if (isLocalSyncTask(taskId)) {
+        if (isLocalSyncTask(task)) {
             return task;
         }
         try {
@@ -624,7 +695,7 @@ public class GenerateService {
         task.setUpdatedAt(System.currentTimeMillis());
         taskMapper.updateById(task);
         // 本地线程池任务无法真正中断，但要让回写看到取消态、不再覆盖成 SUCCESS
-        if (isLocalSyncTask(taskId)) {
+        if (isLocalSyncTask(task)) {
             canceledTaskIds.add(taskId);
         }
         return true;
@@ -652,7 +723,7 @@ public class GenerateService {
             task.setStatus(SysAiGenerateTask.STATUS_CANCELED);
             task.setUpdatedAt(System.currentTimeMillis());
             taskMapper.updateById(task);
-            if (isLocalSyncTask(taskId)) {
+            if (isLocalSyncTask(task)) {
                 canceledTaskIds.add(taskId);
             }
         }
@@ -760,7 +831,8 @@ public class GenerateService {
             client = clientReference(client, reference);
         }
         String taskId = client.createTask(request.prompt());
-        task.setTaskId(taskId);
+        // 同图像：上游任务号另存，主键自 insert 起不再改动
+        putProviderTaskId(task, taskId);
         task.setStatus(SysAiGenerateTask.STATUS_PENDING);
     }
 
@@ -808,17 +880,14 @@ public class GenerateService {
             task.setErrorMessage("生成实现不可用");
             return;
         }
-        ImageResponse resp = resolved.client().queryTask(task.getTaskId());
+        ImageResponse resp = resolved.client().queryTask(providerTaskIdOf(task));
         if (resp == null) {
             return;
         }
         applyStatus(task, resp.getStatus() == null ? null : resp.getStatus().name(),
                 resp.getProgress(), resp.getErrorMessage());
         if (resp.getImageUrl() != null && !resp.getImageUrl().isBlank()) {
-            Map<String, Object> result = new LinkedHashMap<>(4);
-            result.put("urls", List.of(resp.getImageUrl()));
-            result.put("mediaType", "image");
-            task.setResult(result);
+            putResult(task, List.of(resp.getImageUrl()), "image");
         }
     }
 
@@ -834,17 +903,14 @@ public class GenerateService {
             task.setErrorMessage("生成实现不可用");
             return;
         }
-        VideoResponse resp = resolved.client().queryTask(task.getTaskId());
+        VideoResponse resp = resolved.client().queryTask(providerTaskIdOf(task));
         if (resp == null) {
             return;
         }
         applyStatus(task, resp.getStatus() == null ? null : resp.getStatus().name(),
                 resp.getProgress(), resp.getErrorMessage());
         if (resp.getVideoUrl() != null && !resp.getVideoUrl().isBlank()) {
-            Map<String, Object> result = new LinkedHashMap<>(4);
-            result.put("urls", List.of(resp.getVideoUrl()));
-            result.put("mediaType", "video");
-            task.setResult(result);
+            putResult(task, List.of(resp.getVideoUrl()), "video");
         }
     }
 
