@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.dto.EduImpersonateDTO;
+import com.chua.starter.eduai.model.dto.EduResetPasswordDTO;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -213,11 +214,30 @@ public class EduDimensionController {
     /**
      * 保存Student
      *
+     * <p>学号由系统自动生成，请求里带的 {@code studentNo} 会被忽略；
+     * 编辑时学号锁定不变（它是学生的登录身份）。</p>
+     *
      * @param entity 实体
      * @return 保存student的结果
      */
     public ReturnResult<Long> saveStudent(@RequestBody EduStudent entity) {
         return ReturnResult.ok(dimensionService.saveStudent(entity));
+    }
+
+    @Operation(summary = "重置学生登录口令（管理员）")
+    @PostMapping("/students/reset-password")
+    /**
+     * 管理员重置学生登录口令。
+     *
+     * <p>不需要旧口令——管理员本就掌握档案；但服务层仍校验归属，
+     * 避免越权重置他人学生口令。学生自助改密走
+     * {@code /v2/edu/student/change-password}，那条会校验旧口令。</p>
+     *
+     * @param dto 学生标识与新口令
+     * @return 是否重置成功
+     */
+    public ReturnResult<Boolean> resetStudentPassword(@RequestBody EduResetPasswordDTO dto) {
+        return ReturnResult.ok(dimensionService.resetStudentPassword(dto.studentId(), dto.newPassword()));
     }
 
     @Operation(summary = "删除学生")

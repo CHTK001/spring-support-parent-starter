@@ -30,4 +30,34 @@ public interface EduStudentMapper extends BaseMapper<EduStudent> {
                                   @Param("gradeLevel") String gradeLevel,
                                   @Param("grade") String grade,
                                   @Param("scope") EduUserContext.OwnerScope scope);
+
+    /**
+     * 按学号取学生（XML 语句 selectByStudentNo）。
+     *
+     * <p>学生端令牌里的 {@code userId} 就是学号，故此查询<b>不加归属过滤</b>——
+     * 归属字段是给管理端列表用的隔离依据，登录态自身已限定身份。</p>
+     *
+     * @param studentNo 学号
+     * @return 学生档案，不存在返回 {@code null}
+     */
+    EduStudent selectByStudentNo(@Param("studentNo") String studentNo);
+
+    /**
+     * 判断学号是否已存在（XML 语句 existsByStudentNo）。
+     *
+     * <p>用于学号生成的插入前查重。并发下的最终保证仍是库上的
+     * {@code UNIQUE(student_no)} 约束，此处只是让报错更友好。</p>
+     *
+     * @param studentNo 学号
+     * @return 存在返回 1，否则返回 {@code null}
+     */
+    Integer existsByStudentNo(@Param("studentNo") String studentNo);
+
+    /**
+     * 取某前缀下最大的纯数字后缀学号（XML 语句 selectMaxStudentNoByPrefix）。
+     *
+     * @param prefix 学号前缀（入学年份）
+     * @return 最大学号，无匹配返回 {@code null}
+     */
+    String selectMaxStudentNoByPrefix(@Param("prefix") String prefix);
 }

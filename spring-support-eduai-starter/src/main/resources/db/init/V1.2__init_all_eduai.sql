@@ -457,6 +457,8 @@ CREATE TABLE IF NOT EXISTS edu_student (
     student_grade VARCHAR(20) COMMENT '年级',
     student_enroll_year INT COMMENT '入学年份',
     student_parent_phone VARCHAR(20) COMMENT '家长手机号（学生端可用它登录；非唯一，同号可带多个孩子）',
+    student_avatar VARCHAR(500) COMMENT '学生头像（URL 或 Base64，与系统用户头像同口径）',
+    student_id_card VARCHAR(32) COMMENT '身份证号（仅管理端维护，学生端不可见）',
     student_password VARCHAR(64) COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
     student_pwd_salt VARCHAR(32) COMMENT '口令盐（随机十六进制，与 student_password 一一对应）',
     student_status TINYINT DEFAULT 1 COMMENT '状态: 0-离校 1-在读',

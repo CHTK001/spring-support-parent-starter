@@ -2285,13 +2285,15 @@ public class NginxManageServiceImpl implements NginxManageService {
     /**
      * 连接级失败的冷却时长（毫秒）。
      *
-     * <p><strong>必须大于「一次请求的耗时」，否则冷却会在请求中途过期、又开始重试。</strong>
-     * 实测（198 → 不可达主机 192.0.2.1）：单条命令失败要 10s，而一次 overview/config 请求会
-     * 顺序发多条命令、log/files 还要先走 resolvePaths，总耗时可达 70~180s。冷却设 20s 时
-     * 只挡住了头几条命令，后面又全量重试——表现为「有点效果但依然极慢」。
-     * 60s 让首条命令失败后，本次请求剩下的命令与紧随其后的请求全部瞬间失败。</p>
+     * <p><strong>必须明显大于「一次请求的耗时」，否则冷却会在请求中途过期、又开始重试。</strong>
+     * 实测（198 → 不可达主机 192.0.2.1）：单条命令失败要 10s，而一次请求会顺序发多条命令
+     * （log/files 还要先走 resolvePaths），总耗时可达 40~180s。冷却设 20s 时只挡住头几条命令，
+     * 之后又全量重试——表现为「有点效果但依然极慢」。</p>
+     *
+     * <p>取 120s 的权衡：目标不可达通常意味着它长时间不在线，用「最多 2 分钟才重新探测一次」
+     * 换「故障期间全程秒失败」是划算的；恢复后第一次访问仍会真连一次，成功后立即清除冷却。</p>
      */
-    private static final long CONNECT_FAIL_COOLDOWN_MILLIS = 60_000L;
+    private static final long CONNECT_FAIL_COOLDOWN_MILLIS = 120_000L;
 
     /**
      * 「host:port → 冷却截止时刻」。
