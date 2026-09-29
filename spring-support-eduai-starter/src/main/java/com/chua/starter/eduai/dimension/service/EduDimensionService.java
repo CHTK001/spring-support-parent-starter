@@ -452,7 +452,9 @@ public class EduDimensionService {
         // 顺序号溢出（当年超过 999 人）时进位到更长后缀，避免生成重复学号
         for (int attempt = 0; attempt < MAX_STUDENT_NO_ATTEMPTS; attempt++) {
             String candidate = prefix + String.format("%06d", sequence);
-            if (!studentMapper.existsByStudentNo(candidate)) {
+            // existsByStudentNo 返回 Integer（命中为 1、未命中为 null），
+            // 不能直接当 boolean 用——Integer 为 null 时拆箱会 NPE
+            if (studentMapper.existsByStudentNo(candidate) == null) {
                 return candidate;
             }
             sequence++;
