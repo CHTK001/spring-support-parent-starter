@@ -14,6 +14,7 @@ import com.chua.starter.eduai.model.dto.KnowledgeDocUploadDTO;
 import com.chua.starter.eduai.model.vo.KnowledgeDocVO;
 import com.chua.starter.eduai.service.IEduKnowledgeDocService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -58,7 +59,8 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     */
     public PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        Page<EduKnowledgeDoc> pageInfo = new Page<>(page, pageSize);
+        // 分页参数来自请求，必须收敛边界（pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduKnowledgeDoc> pageInfo = new Page<>(PageBounds.pageNum(page), PageBounds.pageSize(pageSize));
         IPage<EduKnowledgeDoc> result = baseMapper.pageSelect(pageInfo, query, scope);
         List<KnowledgeDocVO> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.<KnowledgeDocVO>builder()

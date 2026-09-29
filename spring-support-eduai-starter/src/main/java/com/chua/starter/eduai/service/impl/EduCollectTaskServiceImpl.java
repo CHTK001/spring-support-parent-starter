@@ -33,6 +33,7 @@ import com.chua.starter.eduai.model.vo.CollectTriggerVO;
 import com.chua.starter.eduai.service.IEduCollectTaskService;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import com.chua.starter.job.support.dispatch.JobRuntime;
 import com.chua.starter.job.support.dispatch.JobSpec;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
@@ -145,7 +146,9 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
     */
     public PageResult<CollectTaskVO> pageQuery(CollectTaskQueryDTO query) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        Page<EduCollectTask> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 分页参数来自请求，必须收敛边界（pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduCollectTask> page = new Page<>(PageBounds.pageNum(query.getPageNum()),
+                PageBounds.pageSize(query.getPageSize()));
         IPage<EduCollectTask> result = baseMapper.pageSelect(page, query, scope);
         Map<String, JobRuntime> runtimes = jobRuntimes();
         List<CollectTaskVO> rows = new ArrayList<>(result.getRecords().size());
@@ -317,8 +320,9 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
      */
     public PageResult<EduCollectLog> pageLogs(Long taskId, Integer pageNum, Integer pageSize) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        Page<EduCollectLog> page = new Page<>(pageNum == null ? 1 : pageNum,
-                pageSize == null ? 10 : pageSize);
+        // 分页参数来自请求，必须收敛边界（pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduCollectLog> page = new Page<>(PageBounds.pageNum(pageNum),
+                PageBounds.pageSize(pageSize));
         IPage<EduCollectLog> result = collectLogMapper.pageSelect(page, taskId, scope);
         return PageResult.<EduCollectLog>builder()
                 .pageNo((int) result.getCurrent())

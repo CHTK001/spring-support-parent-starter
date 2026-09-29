@@ -17,6 +17,7 @@ import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import com.chua.starter.eduai.support.util.GradeLevels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +65,9 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         // 前端下拉传 PRIMARY/JUNIOR 等码值，库里存中文名，不归一化学段筛选恒为 0 条
         query.setGradeLevel(GradeLevels.normalize(query.getGradeLevel()));
-        Page<EduQuestion> page = new Page<>(query.getPageNum(), query.getPageSize());
+        // 分页参数来自请求，必须收敛边界（页码<1 归 1；pageSize 封顶，否则 pageSize=1000000 会拉全表）
+        Page<EduQuestion> page = new Page<>(PageBounds.pageNum(query.getPageNum()),
+                PageBounds.pageSize(query.getPageSize()));
         IPage<EduQuestion> result = baseMapper.pageSelect(page, query, scope);
         return PageResult.<EduQuestion>builder()
                 .pageNo((int) result.getCurrent())
