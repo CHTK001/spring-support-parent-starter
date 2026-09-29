@@ -49,14 +49,6 @@ public class NginxRuntimeRouter {
             ServiceProvider.of(NginxExecutor.class);
 
     /**
-     * 平台探测缓存：键为 {@code host:port:user}。
-     *
-     * <p>只缓存「探测成功」的结果。探测失败不缓存——否则一次网络抖动会把整台机器
-     * 永久钉在错误的平台上，而用户改完网络也不会自愈。</p>
-     */
-    private final Map<String, String> platformCache = new ConcurrentHashMap<>();
-
-    /**
      * 一次执行所需的全部上下文。
      *
      * @param platform 平台标识
@@ -89,6 +81,36 @@ public class NginxRuntimeRouter {
     }
 
     /**
+     * 已解析的运行时（<strong>不含凭据</strong>）：平台 + 命令文本 + 通道。
+     *
+     * <p>缓存的理由：一次请求里 {@code commands(ds)} 与 {@code exec(ds,…)} 都会调
+     * {@link #resolve}，若每次都重新探测平台，不可达主机上每个调用点都要白等一次连接超时。
+     * 只缓存「解析结果」而把 {@link NginxExecutor.Target}（含口令）每次新建，
+     * 是为了避免口令在缓存里滞留、改了口令却不生效。</p>
+     */
+    private record Resolved(String platform, NginxCommandProvider commands, NginxExecutor executor) {
+    }
+
+    /**
+     * 平台解析结果缓存（仅缓存<strong>成功</strong>解析）。
+     */
+    private final Map<String, Resolved> resolvedCache = new ConcurrentHashMap<>();
+
+    /**
+     * 平台探测失败的冷却截止时刻。
+     *
+     * <p>与成功缓存分开：连接不上时探测必然失败，但「连不上」是可恢复的，
+     * 不该像成功的平台结论那样长期钉住。冷却期内直接用兜底平台、不再探测。</p>
+     */
+    private final Map<String, Long> probeFailUntil = new ConcurrentHashMap<>();
+
+    /**
+     * 探测失败冷却时长（毫秒）。与 {@code NginxManageServiceImpl} 的断路器同一量级，
+     * 保证「一次请求内 + 紧随其后的请求」都不会重复探测。</p>
+     */
+    private static final long PROBE_FAIL_COOLDOWN_MILLIS = 120_000L;
+
+    /**
      * 取指定平台对应的命令文本提供者。
      *
      * <p>用于「命令文本天然属于某个平台」的场景：例如 systemd 只存在于 POSIX，
@@ -115,17 +137,39 @@ public class NginxRuntimeRouter {
         boolean local = NginxExecutor.Target.isLocalMarker(datasource.host());
         int port = datasource.port() == null ? 0 : datasource.port();
         String user = datasource.username() == null ? "" : datasource.username();
+        // Target 每次新建（含口令），不进缓存
         NginxExecutor.Target target = new NginxExecutor.Target(
                 datasource.host(), port, user, datasource.password(), local);
+        String key = cacheKey(datasource);
+
+        Resolved cached = resolvedCache.get(key);
+        if (cached != null) {
+            return new Runtime(cached.platform(), cached.commands(), cached.executor(), target);
+        }
+
         NginxExecutor executor = pickExecutor(target);
-        // 本机执行时不探测：控制台自身的 OS 就是权威答案，探测结果反而可能被 SSH 误判覆盖。
-        // 非本机才需要探测，因为数据源没有平台字段。
-        String platform = local
-                ? com.chua.starter.monitor.support.nginx.spi.impl.LocalNginxExecutor.localPlatform()
-                : detectPlatform(datasource, executor, target);
-        // pickCommands 在平台无实现时会抛异常，这本身就是一道一致性校验：
-        // 命令文本与执行通道是两个独立扩展点，配错不会编译失败，只会在运行时报语法错。
+        String platform;
+        if (local) {
+            // 本机执行：控制台自身 OS 就是权威答案，不探测
+            platform = com.chua.starter.monitor.support.nginx.spi.impl.LocalNginxExecutor.localPlatform();
+        } else {
+            Long failUntil = probeFailUntil.get(key);
+            if (failUntil != null && System.currentTimeMillis() < failUntil) {
+                // 最近探测失败，冷却期内直接兜底，不再白等一次连接超时
+                platform = Platforms.LINUX;
+            } else {
+                platform = detectPlatform(datasource, executor, target);
+                if (platform == null || platform.isEmpty()) {
+                    probeFailUntil.put(key, System.currentTimeMillis() + PROBE_FAIL_COOLDOWN_MILLIS);
+                    platform = Platforms.LINUX;
+                }
+            }
+        }
         NginxCommandProvider commands = pickCommands(platform);
+        // 只有成功判定出平台才进长期缓存；兜底结果按失败处理，到期后重新探测以自愈
+        if (local || !Platforms.LINUX.equals(platform) || probeFailUntil.get(key) == null) {
+            resolvedCache.put(key, new Resolved(platform, commands, executor));
+        }
         return new Runtime(platform, commands, executor, target);
     }
 
@@ -182,14 +226,9 @@ public class NginxRuntimeRouter {
      * @param datasource 数据源
      * @param executor   通道
      * @param target     执行目标（探测命令也要送到同一个目标上）
-     * @return 平台
+     * @return 探测到的平台；**探测失败返回空串**（由调用方决定兜底与负缓存）
      */
     private String detectPlatform(DataSourceVO datasource, NginxExecutor executor, NginxExecutor.Target target) {
-        String key = cacheKey(datasource);
-        String cached = platformCache.get(key);
-        if (cached != null) {
-            return cached;
-        }
         for (NginxCommandProvider provider : orderedCommands()) {
             String probe = provider.probePlatform();
             if (probe == null || probe.isBlank()) {
@@ -199,17 +238,26 @@ public class NginxRuntimeRouter {
                 NginxExecutor.ExecResult result = executor.exec(target, probe, 15);
                 String platform = provider.parsePlatform(result.output());
                 if (platform != null && !platform.isEmpty()) {
-                    platformCache.put(key, platform);
                     log.info("[nginx] 平台探测命中 {} -> {}（数据源 {}）", provider.name(), platform, datasource.name());
                     return platform;
                 }
             } catch (Exception e) {
-                log.debug("[nginx] 平台探测失败 provider={} err={}", provider.name(), e.getMessage());
+                String msg = e.getMessage() == null ? "" : e.getMessage();
+                // 连接类失败要**立即跳出**：连接都断了，再试下一个实现的自证命令
+                // 只会再白等一次连接超时（实测两个实现各 10s → 一次探测 20s）。
+                // 这不是「命令写错了」，换命令也救不回来。
+                if (msg.contains("连接失败") || msg.contains("Timed out") || msg.contains("refused")
+                        || msg.contains("不可达") || msg.contains("No route")) {
+                    log.warn("[nginx] 平台探测因连接失败中止 provider={} 主机={} err={}",
+                            provider.name(), datasource.host(), msg);
+                    return "";
+                }
+                log.debug("[nginx] 平台探测失败 provider={} err={}", provider.name(), msg);
             }
         }
-        log.warn("[nginx] 平台探测全部失败，按 LINUX 处理（数据源 {}，主机 {}）。"
-                + "若目标是 Windows，请确认本机执行模式或 SSH 可达性。", datasource.name(), datasource.host());
-        return Platforms.LINUX;
+        log.warn("[nginx] 平台探测未命中（数据源 {}，主机 {}）。若目标是 Windows，"
+                + "请确认本机执行模式或 SSH 可达性。", datasource.name(), datasource.host());
+        return "";
     }
 
     /**
@@ -225,13 +273,18 @@ public class NginxRuntimeRouter {
     }
 
     /**
-     * 使某数据源的平台缓存失效（改配置后调用）。
+     * 使某数据源的解析缓存失效（改配置 / 改口令后调用）。
+     *
+     * <p>三处都要清：成功解析缓存、探测失败冷却。只清前者会让「刚改完配置仍被判成
+     * 不可达」一直持续到冷却自然过期。</p>
      *
      * @param datasource 数据源
      */
     public void invalidate(DataSourceVO datasource) {
         if (datasource != null) {
-            platformCache.remove(cacheKey(datasource));
+            String key = cacheKey(datasource);
+            resolvedCache.remove(key);
+            probeFailUntil.remove(key);
         }
     }
 

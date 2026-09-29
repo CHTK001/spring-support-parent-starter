@@ -36,6 +36,7 @@ import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import javax.imageio.ImageIO;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Locale;
@@ -97,6 +98,22 @@ import java.util.zip.ZipOutputStream;
  */
 @Slf4j
 public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilter {
+
+    /**
+     * 单张图片允许解码的最大像素数（宽 × 高）。
+     *
+     * <p>取值 8000 万：约等于 10000×8000，足够覆盖绝大多数印刷与摄影原件；
+     * 一张 ARGB {@code BufferedImage} 需 4 字节/像素，即峰值约 320MB，
+     * 在 {@code -Xmx1g} 下留出了余量。超过此值（例如 30000×30000 的压缩炸弹）
+     * 一律在解码前拒绝，避免单个请求把堆打满。</p>
+     */
+    private static final long MAX_PREVIEW_PIXELS = 80_000_000L;
+
+    /** 响应头：图片处理是否真正执行（{@code applied} / {@code skipped}）。 */
+    private static final String HEADER_IMAGE_OP = "X-FileStorage-ImageOp";
+
+    /** 响应头：跳过的原因码（如 {@code pixel-budget-exceeded:30000x30000}）。 */
+    private static final String HEADER_IMAGE_OP_REASON = "X-FileStorage-ImageOp-Reason";
 
     /**
      * 存储映射
@@ -918,32 +935,41 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @param request  请求
      * @return 处理后的字节；非图片或无操作时返回 {@code null}（交回原流程）
      */
-    private byte[] applyFileOperations(byte[] data, String fileName, ServerRequest request) {
+    private ImageOpResult applyFileOperations(byte[] data, String fileName, ServerRequest request) {
         String ext = simpleExtOf(fileName);
         if (ext == null || !isImageExt(ext)) {
-            return null;
+            return ImageOpResult.passThrough();
         }
         FileOperationSetting ops = parseFileOps(request);
         if (ops == null) {
-            return null;
+            return ImageOpResult.passThrough();
         }
         if (!ops.hasOperation()) {
             log.debug("[FileStorage] 无图片处理操作，透传原图: {}", fileName);
-            return null;
+            return ImageOpResult.passThrough();
         }
         // extensions 文件里 ImageOperation 只注册了具名扩展 jdk=，没有无名默认项，
         // 因此必须按名字取；FileStorageFileSetting 有无名默认项，两种取法都成立。
         ImageOperation imageOperation = ServiceProvider.of(ImageOperation.class).getExtension("jdk");
         if (imageOperation == null) {
             log.warn("[FileStorage] 未找到 ImageOperation SPI，跳过图片处理");
-            return null;
+            return ImageOpResult.skipped("no-image-operation-spi");
+        }
+        // 解码预算闸门：必须在任何 ImageIO.read / operations 之前跑。
+        // 压缩炸弹（30000x30000 全零 PNG，压缩后 2.6MB、解压后 2.7GB）会
+        // 直接把 RSS 顶到堆上限以上，一个请求就能打满 -Xmx1g。这里只读文件头
+        // （ImageReader.getWidth/Height 不解像素），命中就在分配像素缓冲前拒绝。
+        String budget = guardPixelBudget(data);
+        if (budget != null) {
+            log.warn("[FileStorage] 图片像素数超预算，跳过处理: {} ({})", fileName, budget);
+            return ImageOpResult.skipped(budget);
         }
         // 中间一律用 PNG：无损，避免每一步都做一次有损 JPEG 转码叠加失真，
         // 也避免「输入已是 jpeg、末尾再转 jpeg」时读到自己写的字节。
         // 目标格式只在末尾一次性转码（见下方 encode 收尾）。
         String target = opOutputFormat(fileName, request);
         if (target == null) {
-            return null;
+            return ImageOpResult.passThrough();
         }
         String format = "png";
         byte[] cur = data;
@@ -996,17 +1022,63 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             if (needEncode) {
                 byte[] encoded = encode(cur, target, ops.getQuality());
                 if (encoded == null) {
-                    // 转码失败：保留上一步字节，Content-Type 由 detectFormat 按实际内容判定
+                    // 转码失败：保留上一步字节，Content-Type 由 detectFormat 按实际内容判定。
+                    // 早期版本只 log.warn 就返回，客户端拿到的仍是 200 + 原图，
+                    // 表现为「要了 JPEG 却拿到 PNG」且无任何提示——必须带原因回去。
                     log.warn("[FileStorage] 转码到 {} 失败，回退上一步结果", target);
-                } else {
-                    cur = encoded;
+                    return ImageOpResult.of(cur, "transcode-failed:" + target);
                 }
+                cur = encoded;
             }
         } catch (Exception e) {
             log.warn("[FileStorage] 图片处理失败，回退原图: {}", e.getMessage());
+            return ImageOpResult.passThrough();
+        }
+        return ImageOpResult.applied(cur);
+    }
+
+    /**
+     * 解码前的像素预算闸门（压缩炸弹防护）。
+     *
+     * <p>只读图片文件头拿宽高，<b>不解码像素</b>，因此对 30000x30000 这种
+     * 压缩后仅 2.6MB、解压后 2.7GB 的输入也能零成本拒绝。反过来，若等到
+     * {@code ImageIO.read} 之后再判断，{@code BufferedImage} 已经分配完了，
+     * 判断毫无意义——这正是修复前单个炸弹请求就把 RSS 顶到 1.2GB 的原因。</p>
+     *
+     * <p>头信息读不出来（截断/纯文本冒充）不拦：那类输入本来也解不出像素，
+     * 交给后面的操作自然失败并走「跳过」分支，不必在这里误伤。</p>
+     *
+     * @param data 源字节
+     * @return 超预算时返回原因码，未超或读不出头返回 {@code null}
+     */
+    private String guardPixelBudget(byte[] data) {
+        try (var ios = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
+            if (ios == null) {
+                return null;
+            }
+            var readers = ImageIO.getImageReaders(ios);
+            if (!readers.hasNext()) {
+                return null;
+            }
+            var reader = readers.next();
+            try {
+                reader.setInput(ios, true, true);
+                int w = reader.getWidth(0);
+                int h = reader.getHeight(0);
+                if (w <= 0 || h <= 0) {
+                    return null;
+                }
+                long pixels = (long) w * (long) h;
+                if (pixels > MAX_PREVIEW_PIXELS) {
+                    return "pixel-budget-exceeded:" + w + "x" + h;
+                }
+                return null;
+            } finally {
+                reader.dispose();
+            }
+        } catch (Exception e) {
             return null;
         }
-        return cur;
     }
 
     /**
@@ -1090,6 +1162,63 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String ext = simpleExtOf(fileName);
         return ext == null ? "jpeg" : ext;
+    }
+
+    /**
+     * 图片处理结果。
+     *
+     * <p>存在的唯一理由：让「处理失败、按原图兜底」这件事<b>可观测</b>。
+     * 修复前 {@code applyFileOperations} 失败时只 {@code return null}，
+     * 调用方继续往下走到「客户端直渲染/服务端渲染」分支，最后吐出原始字节 +
+     * HTTP 200，客户端无法区分「处理成功」和「压根没处理」。实测后果是
+     * {@code ?format=jpeg} 在 30000x30000 输入上返回 image/png 原图，
+     * 2.6MB 一字节没少，用户完全无感。</p>
+     *
+     * @param data    最终响应字节（可能被处理过，也可能是原图）
+     * @param applied 是否真的执行了处理；false 表示走了兜底
+     * @param reason  跳过原因码，{@link #passThrough()} 时为 {@code null}
+     */
+    private record ImageOpResult(byte[] data, boolean applied, String reason) {
+
+        /**
+         * 全部处理成功。
+         *
+         * @param data 处理后字节
+         * @return 结果
+         */
+        static ImageOpResult applied(byte[] data) {
+            return new ImageOpResult(data, true, null);
+        }
+
+        /**
+         * 请求没带任何处理参数，不是失败。
+         *
+         * @return 结果
+         */
+        static ImageOpResult passThrough() {
+            return new ImageOpResult(null, false, null);
+        }
+
+        /**
+         * 带了参数但处理没能执行。
+         *
+         * @param reason 原因码
+         * @return 结果
+         */
+        static ImageOpResult skipped(String reason) {
+            return new ImageOpResult(null, false, reason);
+        }
+
+        /**
+         * 处理中途失败，吐出已算出的字节并带上原因。
+         *
+         * @param data   兜底字节
+         * @param reason 原因码
+         * @return 结果
+         */
+        static ImageOpResult of(byte[] data, String reason) {
+            return new ImageOpResult(data, false, reason);
+        }
     }
 
     private byte[] keep(byte[] before, byte[] after) {
@@ -2828,17 +2957,26 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (!download && wantPreview) {
             // 图片处理（?preview&size=/crop=/rotate=/flip=/grayscale=/blur=/sharpen=/watermarkText=/quality=）：
             // 此前 spring 侧只上报能力（?format=capabilities），从不执行，URL 参数全部静默失效。
-            byte[] imageProcessed = applyFileOperations(data, fileName, request);
-            if (imageProcessed != null) {
+            ImageOpResult imageProcessed = applyFileOperations(data, fileName, request);
+            if (imageProcessed != null && imageProcessed.data() != null) {
                 // Content-Type 必须与实际字节一致：encode 失败会回退到上一步的字节，
                 // 此时若仍按目标格式声明，浏览器会按错误格式解码。
-                String servedFormat = detectFormat(imageProcessed, fileName, request);
+                String servedFormat = detectFormat(imageProcessed.data(), fileName, request);
                 response.setStatus(200)
                         .setContentType(MimeTypeUtils.getMimeType(servedFormat))
                         .setHeader("X-FileStorage-Preview", "image-op")
-                        .setBody(imageProcessed)
-                        .end();
+                        .setHeader(HEADER_IMAGE_OP, imageProcessed.applied() ? "applied" : "skipped");
+                if (imageProcessed.reason() != null) {
+                    response.setHeader(HEADER_IMAGE_OP_REASON, imageProcessed.reason());
+                }
+                response.setBody(imageProcessed.data()).end();
                 return CompletableFuture.completedFuture(null);
+            }
+            if (imageProcessed != null && imageProcessed.reason() != null) {
+                // 请求带了处理参数、但服务端决定不处理（例如超像素预算）。
+                // 不能无声吐原图：客户端需要知道「我要的转码没生效」。
+                response.setHeader(HEADER_IMAGE_OP, "skipped")
+                        .setHeader(HEADER_IMAGE_OP_REASON, imageProcessed.reason());
             }
             // 压缩包下钻：?preview&inner=包内路径 时提取条目并按条目类型预览
             String innerPath = request.getParams().get("inner");
