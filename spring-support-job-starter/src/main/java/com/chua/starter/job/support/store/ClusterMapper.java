@@ -1,6 +1,7 @@
 package com.chua.starter.job.support.store;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.sql.Timestamp;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -15,26 +16,38 @@ import org.apache.ibatis.annotations.Param;
 public interface ClusterMapper extends BaseMapper<ClusterEntity> {
 
     /**
+     * 取数据库当前时刻。
+     *
+     * <p>刻意只用标准的 {@code CURRENT_TIMESTAMP}：SQL 里不含任何库专用时间函数，
+     * 由调用方在 Java 侧换算成毫秒，使该语句在 MySQL 与 H2 上都能执行。</p>
+     *
+     * @return 数据库当前时刻
+     */
+    Timestamp selectDbNow();
+
+    /**
      * 抢占租约（CAS）：无人持有 / 持有者是自己 / 租约已过期 三种情况可抢。
      *
      * @param group        命名空间
      * @param nodeId       节点标识
-     * @param leaseSeconds 租约时长（秒）
+     * @param nowMs        数据库当前时刻（毫秒，调用方读取后传入；SQL 内不含时间函数）
+     * @param leaseUntilMs 本次租约截止时刻（毫秒，= nowMs + 租约时长）
      * @return 影响行数，1 表示抢到
      */
     int tryAcquire(@Param("group") String group, @Param("nodeId") String nodeId,
-                   @Param("leaseSeconds") int leaseSeconds);
+                   @Param("nowMs") long nowMs, @Param("leaseUntilMs") long leaseUntilMs);
 
     /**
      * 续约：仅当自己仍是持有者时推进租约。
      *
      * @param group        命名空间
      * @param nodeId       节点标识
-     * @param leaseSeconds 租约时长（秒）
+     * @param nowMs        数据库当前时刻（毫秒，调用方读取后传入；SQL 内不含时间函数）
+     * @param leaseUntilMs 本次租约截止时刻（毫秒，= nowMs + 租约时长）
      * @return 影响行数，1 表示续约成功
      */
     int renew(@Param("group") String group, @Param("nodeId") String nodeId,
-              @Param("leaseSeconds") int leaseSeconds);
+              @Param("nowMs") long nowMs, @Param("leaseUntilMs") long leaseUntilMs);
 
     /**
      * 释放：仅当自己仍是持有者时清空。
