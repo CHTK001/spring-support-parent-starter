@@ -126,3 +126,110 @@ R5 租约丢失接管：起 A 后删键，再起 B（或等 B 的心跳）
 坏 Redis：不配 resolver 也照样启动失败（redissonClient Bean 创建失败）——平台既有行为，
       与选主实现无关；resolver=redis 时不会误当选，但进程同样退出。
 REDIS_DOC
+
+# ============================================================================
+# Redis 选主自动验收段（门控执行）
+#   默认不跑：它会【停现网】让出固定端口（18080 等）并起临时实例，属破坏性操作。
+#   执行：JOB_SMOKE_REDIS=1 sh smoke.sh     （结束后会自动把现网拉回）
+#   注意：本应用优雅关闭本身要 30~40s，故 SIGTERM 后必须等 ≥45s 再取样，且不能用 kill -9。
+# ============================================================================
+if [ "${JOB_SMOKE_REDIS:-0}" != "1" ]; then
+  echo
+  echo "===== Redis 段：已跳过（设 JOB_SMOKE_REDIS=1 可自动执行）====="
+  exit 0
+fi
+
+echo
+echo "===== 8. Redis 选主（自动段）====="
+RCLI="redis-cli -n ${JOB_REDIS_DB:-6}"     # 注意：app 用的是 DB 6，不是默认的 0
+GRP=smoke
+RKEY="job:leader:$GRP"
+RPORT=18230
+APIPORT=18170
+JAR=/opt/app/system/api/spring-api-support-system-starter-4.0.0.42.jar
+su_do() { echo kali | sudo -S "$@" 2>/dev/null; }
+kill_port_term() { for p in $(ps -eo pid,args | grep '[s]pring-api-support-system' | grep "server.port=$1" | awk '{print $1}'); do kill $p; done; }
+kill_port_kill() { for p in $(ps -eo pid,args | grep '[s]pring-api-support-system' | grep "server.port=$1" | awk '{print $1}'); do kill -9 $p; done; }
+start_redis_node() { # $1 server.port  $2 sync.port  $3 node-id
+  cd /opt/app/system/api
+  nohup java -Dfile.encoding=UTF-8 -Xms256m -Xmx1g -XX:MaxMetaspaceSize=320m -jar "$JAR" \
+    --server.port=$1 --plugin.sync.server.port=$2 --spring.application.name=$GRP \
+    --plugin.job.node-id=$3 --plugin.job.cluster.group=$GRP \
+    --plugin.job.cluster.resolver=redis > /tmp/smoke-redis.log 2>&1 &
+}
+wait_prod() { for i in $(seq 1 30); do sleep 5
+    H=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" "$API/actuator/health")
+    [ "$H" = "200" ] && return 0
+  done; return 1; }
+
+echo "  ---- 停现网让出端口 ----"
+su_do systemctl stop system-api
+sleep 3
+for p in $(ps -eo args | grep -c '[s]pring-api-support-system' >/dev/null; ps -eo pid,args | grep '[s]pring-api-support-system' | awk '{print $1}'); do kill -9 $p 2>/dev/null; done
+sleep 2
+
+echo "  ---- R1/R3: 起单一实例，应被选中并抢到租约 ----"
+$RCLI del "$RKEY" >/dev/null 2>&1
+start_redis_node 18230 19430 smoke-A
+GOT=""
+for i in $(seq 1 24); do
+  sleep 5
+  GOT=$($RCLI get "$RKEY")
+  [ -n "$GOT" ] && break
+done
+if [ -n "$GOT" ]; then ok "R3 抢到租约：key=$GOT TTL=$($RCLI pttl "$RKEY")ms"; else bad "R3 未抢到租约（等 120s）"; fi
+if grep -aq '选主扩展已注册键 = \[IN-MEMORY, REDIS\]' /tmp/smoke-redis.log; then
+  ok "R1 探针含 REDIS"
+else
+  bad "R1 探针未见 [IN-MEMORY, REDIS]"
+fi
+if grep -aq '选主实现经 SPI 切换' /tmp/smoke-redis.log && ! grep -aq '未注册该选主实现' /tmp/smoke-redis.log; then
+  ok "R1 经 SPI 切换且未回落"
+else
+  bad "R1 未切换或发生回落"
+fi
+
+echo "  ---- R4: 优雅 SIGTERM 后租约应被释放（等 45s）----"
+kill_port_term 18230
+for i in 1 2 3 4 5 6 7 8 9; do
+  sleep 5
+  [ -z "$($RCLI get "$RKEY")" ] && break
+done
+if [ -z "$($RCLI get "$RKEY")" ]; then
+  ok "R4 优雅释放：SIGTERM 后租约键已删除（等待 $((i*5))s）"
+else
+  bad "R4 租约键未被释放（仍为 $($RCLI get "$RKEY")）"
+fi
+if grep -aq '释放 Leader 异常\|Redis 释放异常' /tmp/smoke-redis.log; then
+  bad "R4 释放过程有异常日志"
+else
+  ok "R4 释放无异常日志"
+fi
+kill_port_kill 18230
+
+echo "  ---- R2: 唯一性（预置外来持有者，本实例必须抢不到）----"
+$RCLI set "$RKEY" foreign-node EX 300 >/dev/null 2>&1
+start_redis_node 18230 19430 smoke-B
+wait_prod_ok=0
+for i in $(seq 1 20); do sleep 5; grep -aq '选主扩展已注册键' /tmp/smoke-redis.log && { wait_prod_ok=1; break; }; done
+sleep 15
+HB=$($RCLI get "$RKEY")
+ACQ=$(grep -ac '抢占 Leader 成功 (Redis)' /tmp/smoke-redis.log)
+LM=$(grep -ac '本地标记为 Leader' /tmp/smoke-redis.log)
+if [ "$HB" = "foreign-node" ] && [ "$ACQ" = "0" ] && [ "$LM" = "0" ]; then
+  ok "R2 唯一性：抢到=0、未标记 Leader，键仍为 foreign-node"
+else
+  bad "R2 唯一性失败：键=$HB 抢到=$ACQ 标记Leader=$LM"
+fi
+kill_port_kill 18230
+$RCLI del "$RKEY" >/dev/null 2>&1
+
+echo "  ---- 拉回现网 ----"
+for p in $(ps -eo pid,args | grep '[s]pring-api-support-system' | awk '{print $1}'); do kill -9 $p 2>/dev/null; done
+sleep 3
+su_do systemctl start system-api
+if wait_prod; then ok "现网已恢复 health=200"; else bad "现网未恢复"; fi
+
+echo
+echo "===== 含 Redis 段的结果：PASS=$PASS  FAIL=$FAIL ====="
+[ "$FAIL" = "0" ] && echo "SMOKE_OK" || echo "SMOKE_FAILED"
