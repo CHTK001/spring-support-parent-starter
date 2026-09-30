@@ -363,7 +363,8 @@ public class JobAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
     @org.springframework.context.annotation.Primary
     public com.chua.starter.job.support.cluster.LeaderElectionResolver mysqlLeaderElectionResolver(
-            com.chua.starter.job.support.store.ClusterMapper clusterMapper) {
+            com.chua.starter.job.support.store.ClusterMapper clusterMapper,
+            org.springframework.context.ApplicationContext applicationContext) {
         String resolverKey = properties.getCluster().getResolver();
         // mysql 是内置默认实现：直接构造，不走 SPI 也不告警，保证「不配置」时与历史行为逐字一致。
         // 原因：ServiceProvider 的「带参实例化」是按实参运行时类型匹配构造器的，
@@ -374,11 +375,28 @@ public class JobAutoConfiguration {
             ServiceProvider<com.chua.starter.job.support.cluster.LeaderElectionResolver> provider =
                     ServiceProvider.of(com.chua.starter.job.support.cluster.LeaderElectionResolver.class);
             com.chua.starter.job.support.cluster.LeaderElectionResolver spi = null;
+            // 反射式取 Redis 模板：本方法不能在编译期引用 Redis 类型，
+            // 否则没有引入 Redis 依赖的使用方会在本自动配置类加载时 NoClassDefFoundError。
+            Object redisTemplate = null;
             try {
-                spi = provider.getNewExtension(resolverKey.trim(), clusterMapper);
-            } catch (RuntimeException ex) {
-                log.debug("[job] 选主扩展带参实例化失败, 试无参 resolver={} cause={}",
-                        resolverKey, ex.getMessage());
+                Class<?> redisType = Class.forName("org.springframework.data.redis.core.StringRedisTemplate");
+                redisTemplate = applicationContext.getBeanProvider(redisType).getIfAvailable();
+            } catch (Throwable ignored) {
+                // 无 Redis 依赖 / 无该 Bean：正常情况，继续走下面的无参或数据库回落分支
+            }
+            Object[] deps = redisTemplate == null
+                    ? new Object[] {clusterMapper}
+                    : new Object[] {redisTemplate, clusterMapper};
+            for (Object dep : deps) {
+                try {
+                    spi = provider.getNewExtension(resolverKey.trim(), dep);
+                } catch (RuntimeException ex) {
+                    log.debug("[job] 选主扩展带参实例化失败 key={} dep={} cause={}",
+                            resolverKey, dep.getClass().getSimpleName(), ex.getMessage());
+                }
+                if (spi != null) {
+                    break;
+                }
             }
             if (spi == null) {
                 try {

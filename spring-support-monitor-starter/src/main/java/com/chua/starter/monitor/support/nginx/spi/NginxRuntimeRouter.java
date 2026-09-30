@@ -87,6 +87,10 @@ public class NginxRuntimeRouter {
      * {@link #resolve}，若每次都重新探测平台，不可达主机上每个调用点都要白等一次连接超时。
      * 只缓存「解析结果」而把 {@link NginxExecutor.Target}（含口令）每次新建，
      * 是为了避免口令在缓存里滞留、改了口令却不生效。</p>
+     *
+     * @param platform 解析出的目标平台
+     * @param commands 该平台的命令提供者：命令文本由它给出
+     * @param executor 该平台的执行通道：真正下发命令用
      */
     private record Resolved(String platform, NginxCommandProvider commands, NginxExecutor executor) {
     }
