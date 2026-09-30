@@ -1,4 +1,7 @@
 # 选主实现扩展注册（键=插件名，大小写不敏感；由 plugin.job.cluster.resolver 选择）
 # 取不到 / 未注册 / 实例化失败时一律回落数据库实现，见 JobAutoConfiguration#mysqlLeaderElectionResolver
+# 注意 mysql 是内置默认（直接构造，不走 SPI），列出仅为说明可用键。
 mysql=com.chua.starter.job.support.store.MysqlLeaderElectionResolver
 in-memory=com.chua.starter.job.support.cluster.InMemoryLeaderElectionResolver
+# Redis 版：仅当 classpath 有 spring-data-redis 且提供 StringRedisTemplate Bean 时可用
+redis=com.chua.starter.job.support.store.RedisLeaderElectionResolver

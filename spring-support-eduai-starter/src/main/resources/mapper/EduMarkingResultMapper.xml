@@ -34,4 +34,18 @@
           AND marking_result_question_id = #{questionId}
     </update>
 
+    <!-- 扫描阅卷单题结果落库：与 updateAiOutcome 同口径，额外写入批改详情（学生作答/对错/来源/识别题号） -->
+    <update id="updateScanOutcome">
+        UPDATE edu_marking_result
+        SET marking_result_ai_score = #{aiScore},
+            marking_result_ai_comment = #{aiComment},
+            marking_result_score = #{aiScore},
+            marking_result_comment = #{aiComment},
+            marking_result_detail = #{detail},
+            marking_result_status = 1,
+            update_time = #{now}
+        WHERE marking_result_task_id = #{taskId}
+          AND marking_result_question_id = #{questionId}
+    </update>
+
 </mapper>

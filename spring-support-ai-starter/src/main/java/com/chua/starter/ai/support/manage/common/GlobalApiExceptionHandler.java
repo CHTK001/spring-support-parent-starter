@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import java.util.regex.Pattern;
 
@@ -44,6 +45,27 @@ public class GlobalApiExceptionHandler {
         log.warn("[api-ex] 业务异常: code={}, message={}", code.getCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.valueOf(code.getHttpStatus()))
                 .body(ApiResult.error(code.getCode(), ex.getMessage()));
+    }
+
+    /**
+     * 处理「缺少必填请求参数」。
+     *
+     * <p>这类错误的成因在**调用方**，必须回 400。此前没有任何分支接住它，
+     * 于是落进下面 {@code Exception} 的兜底分支变成 HTTP 500 + {@code INTERNAL_ERROR}：
+     * 实测 {@code GET /api/requirements/board} 少传 {@code tag} 时返回 500，
+     * 调用方漏参被报成服务端故障，会直接污染错误率监控与告警（4xx 本来不该计入 5xx 指标）。
+     * 同族的 {@code /api/requirements}、{@code /tags}、{@code /data-sources} 都是正常 200，
+     * 说明只是缺了这条映射，不是接口本身坏了。</p>
+     *
+     * @param ex 缺少必填参数异常
+     * @return 400 与参数错误信封
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResult<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
+        log.warn("[api-ex] 缺少必填参数: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResult.error(ApiErrorCode.INVALID_PARAM.getCode(),
+                        "缺少必填参数：" + ex.getParameterName()));
     }
 
     /**

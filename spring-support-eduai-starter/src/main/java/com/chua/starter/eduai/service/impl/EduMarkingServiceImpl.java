@@ -1,7 +1,10 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.ai.EduAiService;
+import com.chua.starter.eduai.ai.EduPaperScanner;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
@@ -76,6 +79,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     private static final int STATUS_TEACHER_DONE = 2;
 
     /**
+     * 题号里的首个数字（用于把「第1题」「1.」「(2)」这类写法折算成卷内顺序）
+     */
+    private static final java.util.regex.Pattern FIRST_DIGITS = java.util.regex.Pattern.compile("\\d+");
+
+    /**
      * Answersheetmapper
     */
     private final EduAnswerSheetMapper answerSheetMapper;
@@ -111,6 +119,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 错题服务
     */
     private final IEduWrongQuestionService wrongQuestionService;
+    /**
+     * 试卷扫描器（版面还原 + 文字提取 + 结构化，内部复用 ai-starter 全局 Bean）
+     */
+    private final EduPaperScanner paperScanner;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -291,6 +303,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             if (score != null && score > 0) {
                 continue;
             }
+            // 任意卷没有题库记录（题目标识记 0），错题本只登记真实题目标识
+            if (result.getMarkingResultQuestionId() == null || result.getMarkingResultQuestionId() <= 0) {
+                continue;
+            }
             wrongQuestionService.recordWrongQuestion(sheet.getAnswerSheetStudentId(),
                     result.getMarkingResultQuestionId(), sheet.getAnswerSheetExamId(), sheet.getOwnerUserId());
             recorded++;
@@ -307,6 +323,182 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     public void applyOutcome(String taskId, EduQuestion question, EduAiService.MarkingOutcome outcome) {
         markingResultMapper.updateAiOutcome(taskId, question.getQuestionId(),
                 outcome.getScore(), outcome.getComment(), LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String scanAndMark(byte[] imageData, String mode, Long paperId, String studentId,
+                              Long examId, Integer maxScore) {
+        // 1. 版面还原 + 文字提取（本地 ONNX：版面 pp-doc-layout、文字 paddleocrv6 检测+识别）
+        EduPaperScanner.ScanResult scan = paperScanner.scan(imageData);
+        if (StringUtils.isBlank(scan.text())) {
+            throw new BusinessException("未从图片识别到文字，请确认图片清晰、方向正确后重试");
+        }
+
+        boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(mode);
+        // 2. 结构化：自有卷只抽「题号 + 作答」，任意卷还要抽题干
+        List<EduPaperScanner.ScannedQuestion> scanned = anyMode
+                ? paperScanner.extractAnyQuestions(scan.text())
+                : paperScanner.extractSelfQuestions(scan.text());
+        if (scanned.isEmpty()) {
+            throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
+        }
+
+        // 3. 自有卷：题号 → 试卷题项索引。分值与题目 ID 一律取自数据库，这是「准确」的来源
+        Map<String, EduPaperQuestion> byNo = new HashMap<>();
+        Map<String, EduPaperQuestion> byOrder = new HashMap<>();
+        if (!anyMode) {
+            if (paperId == null) {
+                throw new BusinessException("自有卷必须指定试卷 ID");
+            }
+            List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
+            if (relations.isEmpty()) {
+                throw new BusinessException("该试卷下没有题目，无法按题号取准确分值");
+            }
+            int order = 1;
+            for (EduPaperQuestion relation : relations) {
+                if (StringUtils.isNotBlank(relation.getPaperQuestionNo())) {
+                    byNo.put(normalizeNo(relation.getPaperQuestionNo()), relation);
+                }
+                byOrder.put(String.valueOf(order), relation);
+                order++;
+            }
+        }
+
+        // 4. 落答题卡（复用既有表；content 存识别全文，便于事后核对）
+        EduAnswerSheet sheet = new EduAnswerSheet();
+        sheet.setOwnerUserId(EduUserContext.requireUserId());
+        sheet.setAnswerSheetExamId(examId);
+        sheet.setAnswerSheetStudentId(studentId);
+        sheet.setAnswerSheetContent(scan.text());
+        sheet.setAnswerSheetSubmitTime(LocalDateTime.now());
+        sheet.setAnswerSheetStatus(1);
+        sheet.setCreateTime(LocalDateTime.now());
+        sheet.setUpdateTime(LocalDateTime.now());
+        answerSheetMapper.insert(sheet);
+
+        String taskId = UUID.randomUUID().toString().replace("-", "");
+        int fallbackScore = maxScore != null && maxScore > 0
+                ? maxScore : properties.getMarking().getMaxScore();
+        int graded = 0;
+        for (EduPaperScanner.ScannedQuestion item : scanned) {
+            EduPaperQuestion relation = anyMode ? null : matchRelation(item.no(), byNo, byOrder);
+            if (!anyMode && relation == null) {
+                log.warn("[EduAi] 扫描阅卷：题号 {} 在试卷 {} 中找不到对应题项，跳过", item.no(), paperId);
+                continue;
+            }
+            Long questionId = relation == null ? 0L : relation.getPaperQuestionQuestionId();
+            int score = relation == null || relation.getPaperQuestionScore() == null
+                    || relation.getPaperQuestionScore() <= 0
+                    ? fallbackScore : relation.getPaperQuestionScore();
+
+            // 预占结果行（保持与手工提交一致的状态机：先 PENDING，再写 AI 结果）
+            EduMarkingResult row = new EduMarkingResult();
+            row.setOwnerUserId(sheet.getOwnerUserId());
+            row.setMarkingResultAnswerSheetId(sheet.getAnswerSheetId());
+            row.setMarkingResultQuestionId(questionId);
+            row.setMarkingResultTaskId(taskId);
+            row.setMarkingResultStatus(STATUS_PENDING);
+            row.setCreateTime(LocalDateTime.now());
+            row.setUpdateTime(LocalDateTime.now());
+            markingResultMapper.insert(row);
+
+            // 5. 判分：自有卷用题库标准答案（客观题精确比对、主观题 AI）；任意卷全靠 AI
+            EduAiService.MarkingOutcome outcome;
+            if (anyMode) {
+                outcome = paperScanner.markAnyQuestion(item, score);
+            } else {
+                EduQuestion question = questionMapper.selectById(questionId);
+                if (question == null) {
+                    log.warn("[EduAi] 扫描阅卷：题目 {} 不在题库，跳过", questionId);
+                    continue;
+                }
+                outcome = eduAiService.markQuestionWithAi(question.getQuestionType(),
+                        question.getQuestionStem(), question.getQuestionAnswer(), item.answer(), score);
+            }
+            markingResultMapper.updateScanOutcome(taskId, questionId, outcome.getScore(),
+                    outcome.getComment(), buildScanDetail(item, outcome, score), LocalDateTime.now());
+            graded++;
+        }
+        if (graded == 0) {
+            throw new BusinessException("识别到题目但未能匹配到可判分的题项，请确认试卷选择是否正确");
+        }
+        recordWrongQuestions(taskId, sheet);
+        log.info("[EduAi] 扫描阅卷完成: taskId={}, mode={}, 识别题目={}, 已判分={}, 版面={}",
+                taskId, anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF,
+                scanned.size(), graded, scan.layoutRegions());
+        return taskId;
+    }
+
+    /**
+     * 把识别出的题号匹配到试卷题项。
+     *
+     * <p>识别文本里的题号写法很杂（{@code 1.} / {@code 第1题} / {@code (2)} / 二维码编号），
+     * 因此依次尝试：题项唯一编号精确匹配 → 去掉标点后匹配 → 取首个数字按卷内顺序匹配。</p>
+     *
+     * @param no      识别出的题号
+     * @param byNo    题项唯一编号 → 关联
+     * @param byOrder 卷内顺序（字符串）→ 关联
+     * @return 命中的关联；未命中返回 {@code null}
+     */
+    private EduPaperQuestion matchRelation(String no,
+                                           Map<String, EduPaperQuestion> byNo,
+                                           Map<String, EduPaperQuestion> byOrder) {
+        if (StringUtils.isBlank(no)) {
+            return null;
+        }
+        EduPaperQuestion hit = byNo.get(no.trim());
+        if (hit != null) {
+            return hit;
+        }
+        hit = byNo.get(normalizeNo(no));
+        if (hit != null) {
+            return hit;
+        }
+        var matcher = FIRST_DIGITS.matcher(no);
+        if (matcher.find()) {
+            return byOrder.get(matcher.group());
+        }
+        return null;
+    }
+
+    /**
+     * 题号归一化：只保留字母与数字并转小写，消除 {@code 1.} / {@code 1、} / {@code (1)} 等写法差异。
+     *
+     * @param raw 原始题号
+     * @return 归一化题号
+     */
+    private static String normalizeNo(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.trim().toLowerCase().replaceAll("[^0-9a-z]", "");
+    }
+
+    /**
+     * 组装扫描阅卷的批改详情 JSON。
+     *
+     * <p>现有表没有「学生作答」列，用闲置的 {@code marking_result_detail} 承载，
+     * 同时记录对错判定与来源，便于前端与后续统计。</p>
+     *
+     * @param item    识别出的题目
+     * @param outcome 判分结果
+     * @param maxScore 本题满分
+     * @return 详情 JSON
+     */
+    private static String buildScanDetail(EduPaperScanner.ScannedQuestion item,
+                                          EduAiService.MarkingOutcome outcome,
+                                          int maxScore) {
+        var detail = new java.util.LinkedHashMap<String, Object>();
+        detail.put("scan", true);
+        detail.put("recognizedNo", item.no());
+        detail.put("stem", item.stem());
+        detail.put("studentAnswer", item.answer());
+        detail.put("maxScore", maxScore);
+        detail.put("score", outcome.getScore());
+        detail.put("correct", maxScore > 0 && outcome.getScore() >= maxScore);
+        detail.put("source", outcome.getSource());
+        return Json.toJson(detail);
     }
 
     @Override

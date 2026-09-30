@@ -49,4 +49,27 @@ public interface EduMarkingResultMapper extends BaseMapper<EduMarkingResult> {
                        @Param("aiScore") Integer aiScore,
                        @Param("aiComment") String aiComment,
                        @Param("now") LocalDateTime now);
+
+    /**
+     * 把扫描阅卷的单题结果写入库（XML 语句 updateScanOutcome）。
+     *
+     * <p>与 {@link #updateAiOutcome} 同口径（AI/统一得分评语 + 状态置为 AI 已批改），
+     * 额外写入 {@code marking_result_detail} —— 该列原本闲置，这里用来保存
+     * 识别到的学生作答、对错判定、来源与识别题号。既有的表结构没有「学生作答」列，
+     * 用该 JSON 列承载可避免为此单独改表。</p>
+     *
+     * @param taskId     阅卷任务标识
+     * @param questionId 题目标识（任意卷题库无对应记录时写 0）
+     * @param aiScore    AI 得分
+     * @param aiComment  AI 评语
+     * @param detail     批改详情 JSON
+     * @param now        更新时刻
+     * @return 更新行数
+     */
+    int updateScanOutcome(@Param("taskId") String taskId,
+                          @Param("questionId") Long questionId,
+                          @Param("aiScore") Integer aiScore,
+                          @Param("aiComment") String aiComment,
+                          @Param("detail") String detail,
+                          @Param("now") LocalDateTime now);
 }
