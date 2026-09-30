@@ -1,5 +1,6 @@
 package com.chua.starter.job.support.cluster;
 
+import com.chua.common.support.spi.annotations.Spi;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentMap;
  * @since 4.0.0.42
  * @author CH
  */
+@Spi("in-memory")
 public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
 
     /**
