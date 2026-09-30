@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.job.support.store.ClusterMapper">
+
+    <!--
+      抢租约（CAS）。三种情况可抢：无人持有 / 持有者是自己 / 租约已过期。
+      租约截止时刻由【数据库时钟】计算（UNIX_TIMESTAMP(NOW(3))），
+      这样多机部署下各节点本机时钟漂移不会进入「租约是否过期」的判据。
+    -->
+    <update id="tryAcquire">
+        UPDATE sys_job_cluster
+           SET sys_job_cluster_leader_node = #{nodeId},
+               sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + #{leaseSeconds}) * 1000,
+               sys_job_cluster_version = sys_job_cluster_version + 1
+         WHERE sys_job_cluster_id = #{group}
+           AND ( sys_job_cluster_leader_node IS NULL
+              OR sys_job_cluster_leader_node = #{nodeId}
+              OR sys_job_cluster_lease_until_ms &lt; UNIX_TIMESTAMP(NOW(3)) * 1000 )
+    </update>
+
+    <!-- 续约：仅当前持有者可推进租约 -->
+    <update id="renew">
+        UPDATE sys_job_cluster
+           SET sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + #{leaseSeconds}) * 1000,
+               sys_job_cluster_version = sys_job_cluster_version + 1
+         WHERE sys_job_cluster_id = #{group}
+           AND sys_job_cluster_leader_node = #{nodeId}
+    </update>
+
+    <!-- 释放：仅当前持有者可清空，避免把别人的租约清掉 -->
+    <update id="release">
+        UPDATE sys_job_cluster
+           SET sys_job_cluster_leader_node = NULL,
+               sys_job_cluster_lease_until_ms = 0,
+               sys_job_cluster_version = sys_job_cluster_version + 1
+         WHERE sys_job_cluster_id = #{group}
+           AND sys_job_cluster_leader_node = #{nodeId}
+    </update>
+
+</mapper>

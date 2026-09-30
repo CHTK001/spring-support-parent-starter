@@ -1,6 +1,5 @@
 package com.chua.starter.job.support.store;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.job.support.cluster.LeaderElectionResolver;
 import lombok.RequiredArgsConstructor;
@@ -59,17 +58,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
                     log.debug("[job] 初始化集群命名空间跳过 group={} cause={}", group, dupOrOther.getMessage());
                 }
             }
-            int rows = clusterMapper.update(
-                    null,
-                    Wrappers.<ClusterEntity>lambdaUpdate()
-                            .set(ClusterEntity::getSysJobClusterLeaderNode, nodeId)
-                            .setSql("sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + " + leaseSeconds + ") * 1000")
-                            .setSql("sys_job_cluster_version = sys_job_cluster_version + 1")
-                            .eq(ClusterEntity::getSysJobClusterId, group)
-                            .and(w -> w.isNull(ClusterEntity::getSysJobClusterLeaderNode)
-                                    .or().eq(ClusterEntity::getSysJobClusterLeaderNode, nodeId)
-                                    .or().apply("sys_job_cluster_lease_until_ms < UNIX_TIMESTAMP(NOW(3)) * 1000"))
-            );
+            int rows = clusterMapper.tryAcquire(group, nodeId, leaseSeconds);
             if (rows > 0) {
                 if (existing != null && nodeId.equals(existing.getSysJobClusterLeaderNode())) {
                     log.debug("[job] Leader 续约成功 (MySQL) group={} nodeId={} lease={}s",
@@ -100,14 +89,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
         // 租约截止时刻统一由数据库时钟（NOW(3)）计算：多机部署下各节点时钟漂移
         // 不再影响"租约是否过期"的判据，NTP 由硬要求降级为可选
         try {
-            int rows = clusterMapper.update(
-                    null,
-                    Wrappers.<ClusterEntity>lambdaUpdate()
-                            .setSql("sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + " + leaseSeconds + ") * 1000")
-                            .setSql("sys_job_cluster_version = sys_job_cluster_version + 1")
-                            .eq(ClusterEntity::getSysJobClusterId, group)
-                            .eq(ClusterEntity::getSysJobClusterLeaderNode, nodeId)
-            );
+            int rows = clusterMapper.renew(group, nodeId, leaseSeconds);
             return rows > 0;
         } catch (Exception ex) {
             log.warn("[job] Leader 续约异常 group={} nodeId={} cause={}",
@@ -122,15 +104,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
     */
     public void release(String group, String nodeId) {
         try {
-            int rows = clusterMapper.update(
-                    null,
-                    Wrappers.<ClusterEntity>lambdaUpdate()
-                            .set(ClusterEntity::getSysJobClusterLeaderNode, null)
-                            .set(ClusterEntity::getSysJobClusterLeaseUntilMs, 0L)
-                            .setSql("sys_job_cluster_version = sys_job_cluster_version + 1")
-                            .eq(ClusterEntity::getSysJobClusterId, group)
-                            .eq(ClusterEntity::getSysJobClusterLeaderNode, nodeId)
-            );
+            int rows = clusterMapper.release(group, nodeId);
             log.info("[job] 释放 Leader 权 (MySQL) group={} nodeId={} rows={}",
                     group, nodeId, rows);
         } catch (Exception ex) {
