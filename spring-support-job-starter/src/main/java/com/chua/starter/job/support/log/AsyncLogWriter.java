@@ -41,11 +41,13 @@ public class AsyncLogWriter implements JobLogSink {
     public AsyncLogWriter(List<JobLogSink> sinks, int queueSize, String threadName) {
         this.sinks = sinks;
         this.queue = new LinkedBlockingQueue<>(queueSize);
-        this.worker = new Thread(this::drainLoop, threadName);
-        this.worker.setDaemon(true);
+        // 消费端是「阻塞式 JDBC 插入 + 文件写入」，正是虚拟线程的适用场景：JDBC 阻塞时
+        // 会释放载体线程，不会因为一个慢 sink 就占住平台线程（原实现是一条常驻平台线程，
+        // 队列积压时它与业务线程池争抢载体）。虚拟线程天然是 daemon，进程退出不会被它拖住。
+        this.worker = Thread.ofVirtual().name(threadName).unstarted(this::drainLoop);
         this.worker.start();
-        log.info("[job] AsyncLogWriter 已启动 thread={} queueSize={} sinks={}",
-                threadName, queueSize, sinks.size());
+        log.info("[job] AsyncLogWriter 已启动 thread={}(virtual={}) queueSize={} sinks={}",
+                threadName, worker.isVirtual(), queueSize, sinks.size());
     }
 
     @Override

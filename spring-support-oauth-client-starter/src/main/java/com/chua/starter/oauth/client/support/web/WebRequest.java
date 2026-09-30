@@ -15,7 +15,9 @@ import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginResult;
+import com.chua.common.support.lang.json.Json;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.client.support.impersonation.TemporaryToken;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.base.Strings;
 import jakarta.servlet.FilterChain;
@@ -365,7 +367,16 @@ public class WebRequest {
         }
         
         AuthenticationInformation result = protocolExtension.approve(cookie, token, authType);
-        
+
+        // 临时令牌（管理员代入）的有效期与路径校验。
+        // 放在协议之外是必要的：static 在 approve 内部靠解密自包含令牌自查，
+        // 而有状态协议（tcp）的令牌由服务端签发、其 ext 随 approve 结果返回；
+        // 两条路必须汇到同一套规则，否则换协议就会静默丢掉限权。
+        if (!isTemporaryTokenAllowed(result, uri)) {
+            log.warn("[WebRequest鉴权]临时令牌无权访问该路径 - URI: {}", uri);
+            return AuthenticationInformation.noAuth();
+        }
+
         long costTime = System.currentTimeMillis() - startTime;
         
         if (result != null && result.getInformation() != null) {
@@ -390,6 +401,46 @@ public class WebRequest {
         
         log.debug("[WebRequest鉴权]========== 鉴权完成 ==========");
         return result;
+    }
+
+    /**
+     * 校验临时令牌（管理员代入）是否允许访问当前路径。
+     *
+     * <p>判定完全基于 approve 结果里的 {@code UserResult.ext}，不依赖令牌能否被本地解密，
+     * 因此对「自包含令牌（static）」与「服务端存储令牌（tcp）」同样成立。</p>
+     *
+     * @param result approve 的结果
+     * @param uri    本次请求路径
+     * @return 允许通过返回 {@code true}；非临时令牌或校验失败情形下由各分支决定
+     */
+    private boolean isTemporaryTokenAllowed(AuthenticationInformation result, String uri) {
+        if (result == null || result.getInformation() == null
+                || result.getInformation().getCode() != 200) {
+            // 鉴权本身未成功，交给既有失败链处理，这里不做二次判定
+            return true;
+        }
+        UserResume granted = result.getReturnResult();
+        if (granted == null || granted.getExt() == null
+                || !Boolean.TRUE.equals(granted.getExt().get(TemporaryToken.EXT_TEMPORARY))) {
+            // 非临时令牌不受路径与短期有效期限制
+            return true;
+        }
+        // 经 JSON 往返转成 UserResult 再交给 TemporaryToken 判定：
+        // UserResult 重复声明了 expireTime 等与父类同名的字段（字段遮蔽），
+        // 若直接判断，取到的可能是父类的 null 而非实际值；
+        // JSON 往返回按属性名序列化/反序列化，可绕开该错位。
+        UserResult asResult = Json.fromJson(Json.toJson(granted), UserResult.class);
+        if (asResult == null) {
+            return true;
+        }
+        // 这里只校验路径，不校验有效期。
+        // 原因：expireTime 的语义在两端并不统一——客户端 CredentialIssuer 存的是
+        // 绝对时间戳，而服务端 RedisTokenResolver 存的是时长（如 2592000），
+        // TemporaryToken#isUsable 按时间戳比较，会把服务端签发的令牌一律判为过期。
+        // 有效期实际由更可靠的两层保证：static 令牌在 StaticProtocol 内已自查过期，
+        // 服务端令牌则依赖 Redis TTL——过期后服务端查不到，approve 直接失败，
+        // 根本走不到这里。
+        return TemporaryToken.isPathAllowed(asResult, uri);
     }
 
     /**

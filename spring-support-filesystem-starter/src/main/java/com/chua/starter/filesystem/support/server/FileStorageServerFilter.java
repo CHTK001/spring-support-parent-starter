@@ -1,6 +1,7 @@
 package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.network.http.HttpMethod;
+import com.chua.common.support.file.converter.ConvertSupport;
 import com.chua.common.support.network.server.filter.ReactiveFilterChain;
 import com.chua.common.support.network.server.filter.ReactiveServerFilter;
 import com.chua.common.support.network.server.filter.ServerFilter;
@@ -114,6 +115,43 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
     /** 响应头：跳过的原因码（如 {@code pixel-budget-exceeded:30000x30000}）。 */
     private static final String HEADER_IMAGE_OP_REASON = "X-FileStorage-ImageOp-Reason";
+
+    /**
+     * 响应头：{@code ?format=pdf} 的转换结果。
+     *
+     * <p>取值 {@code pdf}（转换成功，响应体是 PDF）或 {@code unavailable}
+     * （没有匹配的转换器）。客户端据此区分「拿到了 PDF」与「没转成」，
+     * 避免把原始 Office 字节当成 PDF 去渲染。</p>
+     */
+    private static final String HEADER_CONVERT = "X-FileStorage-Convert";
+
+    /** ZIP 容器魔数（OOXML / ODF 都是 ZIP） */
+    private static final byte[] ZIP_MAGIC = {(byte) 0x50, (byte) 0x4B, 0x03, (byte) 0x04};
+
+    /** OLE2 复合文档魔数（传统 .doc / .xls / .ppt） */
+    private static final byte[] OLE2_MAGIC = {
+            (byte) 0xD0, (byte) 0xCF, (byte) 0x11, (byte) 0xE0,
+            (byte) 0xA1, (byte) 0xB1, (byte) 0x1A, (byte) 0xE1
+    };
+
+    /**
+     * 判断字节是否以指定魔数开头。
+     *
+     * @param data  待判定字节
+     * @param magic 魔数
+     * @return 以魔数开头返回 true
+     */
+    private static boolean startsWith(byte[] data, byte[] magic) {
+        if (data == null || data.length < magic.length) {
+            return false;
+        }
+        for (int i = 0; i < magic.length; i++) {
+            if (data[i] != magic[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /**
      * 存储映射
@@ -1127,6 +1165,63 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             log.warn("[FileStorage] 编码为 {} 失败: {}", format, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 把可转换的文档转成 PDF。
+     *
+     * <p>走 {@code FileConvertSystem} SPI（实现在 utils-support-aspose-starter）：
+     * aspose-word 覆盖 doc/docx/wps，aspose-excel 覆盖 xls/xlsx/csv，
+     * aspose-ppt 覆盖 ppt/pptx。找不到匹配实现时 {@code ConvertSupport.convert()}
+     * 抛 {@code UnsupportedOperationException}，这里统一收敛为 {@code null}
+     * （表示「转不了」，不是「转换出错」）。</p>
+     *
+     * <p>已经是 PDF 的直接原样返回，不再走一遍转换。</p>
+     *
+     * @param data     源字节
+     * @param fileName 文件名（决定源格式）
+     * @return PDF 字节；不可转换或转换失败返回 {@code null}
+     */
+    private byte[] convertToPdf(byte[] data, String fileName) {
+        String src = simpleExtOf(fileName);
+        if (src == null) {
+            return null;
+        }
+        src = src.toLowerCase(Locale.ROOT);
+        if ("pdf".equals(src)) {
+            return data;
+        }
+        // 容器闸门：源必须是 ZIP（OOXML/ODF）或 OLE2（传统二进制）容器。
+        // 实测纯垃圾字节（4 字节循环 500 次）交给 Aspose.Words 不会抛异常，
+        // 而是**产出一个空白 PDF** 并返回 200——调用方拿到的是静默错误的结果。
+        // 这里先按魔数挡掉，让它走 unavailable 分支。
+        if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC)) {
+            log.warn("[FileStorage] 源不是文档容器，跳过转 PDF: {}", fileName);
+            return null;
+        }
+        try {
+            var out = new ByteArrayOutputStream();
+            ConvertSupport.convert(src, "pdf")
+                    .from(new ByteArrayInputStream(data), src)
+                    .to(out, "pdf")
+                    .convert();
+            byte[] pdf = out.toByteArray();
+            return pdf.length == 0 ? null : pdf;
+        } catch (Exception e) {
+            log.warn("[FileStorage] 转 PDF 失败: {} - {}", fileName, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 把文件名扩展名换成 {@code .pdf}，用于转换后的下载名。
+     *
+     * @param fileName 原文件名
+     * @return 扩展名为 .pdf 的文件名；无扩展名时直接追加
+     */
+    private static String withPdfExtension(String fileName) {
+        int dot = fileName.lastIndexOf('.');
+        return dot > 0 ? fileName.substring(0, dot) + ".pdf" : fileName + ".pdf";
     }
 
     /**
@@ -2920,23 +3015,55 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
             // 严格模式：预览与下载均关闭 → 拒绝所有请求
             return error(response, 403, "Access Denied: preview/download disabled");
-        } else if (wantPreview && setting.isOpenPreview()) {
+        }
+        if (wantPreview && !setting.isOpenPreview()) {
+            // 显式要预览但预览被关闭：必须明确拒绝，**不能悄悄改成下载**。
+            // 客户端拿到 200 + attachment 会以为服务端出错了，或直接弹出一个
+            // 用户毫无预期的下载——两者都比一句 403 更糟。
+            return error(response, 403, "Access Denied: preview disabled");
+        }
+        if (wantDownload && !setting.isOpenDownload()) {
+            return error(response, 403, "Access Denied: download disabled");
+        }
+        if (wantPreview) {
             // 显式 ?preview=true 且 openPreview 已启用 → 内联预览
             download = false;
-        } else if (wantDownload && setting.isOpenDownload()) {
+        } else if (wantDownload) {
             // 显式 ?download=true → 附件下载
             download = true;
-        } else if (!wantPreview && !wantDownload) {
-            // 无 ?preview 也无 ?download → 默认 inline（不强制下载，不触发 SPI）
-            download = false;
-        } else if (setting.isOpenDownload()) {
-            // ?preview=false 或 openPreview 未启用 → 退回下载
-            download = true;
         } else {
-            // ?download=false 且 openPreview 已启用 → inline
-            download = false;
+            // 无 ?preview 也无 ?download：按开关决定默认行为。
+            // 这里**必须**看 openPreview——此前固定 inline，导致「只开下载」
+            // 的桶用一个裸 URL 就能内联预览，等于开关形同虚设。
+            download = !setting.isOpenPreview();
         }
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+
+        // ?format=pdf：把 Office 文档转成 PDF 再返回（走 FileConvertSystem SPI，
+        // 实现在 utils-support-aspose-starter）。
+        //
+        // 必须放在「客户端直渲染」分支**之前**：docx/xlsx/pptx 会被
+        // resolveClientRenderer 判成 client 并直接回吐原始字节，转换分支永远命中不了
+        // ——实测 ?format=pdf 一直无效就是这个原因（当时 classpath 上也确实没有任何
+        // FileConvertSystem 实现）。也正因为如此，这里不能只加 SPI 依赖就完事。
+        if (stringParam(request, "format", "pdf")) {
+            byte[] pdf = convertToPdf(data, fileName);
+            if (pdf != null) {
+                response.setStatus(200)
+                        .setHeader(ClientPreviewSupport.HEADER_PREVIEW, "pdf")
+                        .setHeader(HEADER_CONVERT, "pdf")
+                        .setContentType("application/pdf")
+                        .setHeader("Content-Disposition", buildDisposition(download, withPdfExtension(fileName)))
+                        .setBody(pdf)
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
+            // 转不了（该格式没有匹配的转换器，或转换本身失败）：带原因继续走原通道，
+            // 让客户端能区分「拿到了 PDF」与「没转成」，而不是把原始 Office 字节
+            // 当成 PDF 塞进 PDF 阅读器。
+            log.warn("[FileStorage] ?format=pdf 转换不可用: {}", fileName);
+            response.setHeader(HEADER_CONVERT, "unavailable");
+        }
 
         // 压缩包结构查询（?format=archive）：返回条目清单 JSON，供主应用内的 Vue 组件渲染。
         // 与 ?preview=true 是并列的另一条通道——后者把整个页面交给 iframe（独立文档，

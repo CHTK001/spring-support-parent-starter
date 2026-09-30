@@ -21,6 +21,7 @@ import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
 import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobLogContentVO;
 import com.chua.starter.job.support.manage.vo.JobLogVO;
 import com.chua.starter.job.support.manage.vo.JobNodeVO;
 import com.chua.starter.job.support.manage.vo.JobRuntimeVO;
@@ -32,6 +33,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -64,6 +70,14 @@ public class JobGovernanceService {
      * 统计「最近失败」时回溯的时间窗毫秒
      */
     private static final long FAILURE_WINDOW_MS = 24L * 60L * 60 * 1000L;
+
+    /**
+     * 单次执行日志的读取上限（字节）。
+     *
+     * <p>日志正文是整份读进内存再返回给浏览器的，不设上限时一个刷屏任务能把堆和响应体
+     * 一起打爆；超限时取尾部，因为长任务里失败原因总在最后。</p>
+     */
+    private static final int MAX_LOG_CONTENT_BYTES = 512 * 1024;
 
     /**
      * 任务治理接口
@@ -305,6 +319,71 @@ public class JobGovernanceService {
                 .total(source.getTotal())
                 .data(rows)
                 .build());
+    }
+
+    /**
+     * 读取单次执行的日志文件正文。
+     *
+     * <p>入参是日志行记录的相对路径（{@code sys_job_log_file_path}），可能为空 —— 那说明本节点的
+     * {@code plugin.job.log.enabled} 没开、这次执行根本没落文件。这种情况明确回「文件不存在」，
+     * 不能回空白：空白会被读成「这次执行没打任何日志」，是两回事。</p>
+     *
+     * <p>路径来自前端，读取前必须规范化并确认它落在 {@code plugin.job.log.base-path} 之内，
+     * 否则一个 {@code ../../} 就能把任意文件读出来。</p>
+     *
+     * @param filePath 日志文件相对路径
+     * @return 日志正文, 含文件是否存在与是否只返回了尾部
+     */
+    public ReturnResult<JobLogContentVO> logContent(String filePath) {
+        String relative = filePath == null ? "" : filePath.trim();
+        if (relative.isEmpty()) {
+            return ReturnResult.ok(new JobLogContentVO("", false, false, ""));
+        }
+        var base = Path.of(jobProperties.getLog().getBasePath()).toAbsolutePath().normalize();
+        var target = base.resolve(relative).normalize();
+        if (!target.startsWith(base)) {
+            log.warn("[job] 拒绝越界的日志文件读取 path={}", relative);
+            return ReturnResult.error("日志文件路径越界: " + relative);
+        }
+        if (!Files.isRegularFile(target)) {
+            return ReturnResult.ok(new JobLogContentVO(relative, false, false, ""));
+        }
+        try {
+            long size = Files.size(target);
+            boolean truncated = size > MAX_LOG_CONTENT_BYTES;
+            byte[] bytes = readLogBytes(target, size, truncated);
+            return ReturnResult.ok(new JobLogContentVO(relative, true, truncated,
+                    new String(bytes, StandardCharsets.UTF_8)));
+        } catch (IOException ex) {
+            log.warn("[job] 读取日志文件失败 path={} cause={}", relative, ex.getMessage());
+            return ReturnResult.error("读取日志文件失败: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * 读取日志字节：未超上限全读，超了只读尾部。
+     *
+     * <p>按字节定位可能把首字符的 UTF-8 序列切开，解码后第一个字符可能是替换符。
+     * 调用方据 {@code truncated} 已知道前面被截掉了，不影响判读。</p>
+     *
+     * @param file      日志文件
+     * @param size      文件字节数
+     * @param truncated 是否只读尾部
+     * @return 读到的字节
+     * @throws IOException 读取失败
+     */
+    private static byte[] readLogBytes(Path file, long size, boolean truncated) throws IOException {
+        if (!truncated) {
+            return Files.readAllBytes(file);
+        }
+        var buffer = ByteBuffer.allocate(MAX_LOG_CONTENT_BYTES);
+        try (var channel = Files.newByteChannel(file)) {
+            channel.position(size - MAX_LOG_CONTENT_BYTES);
+            while (buffer.hasRemaining() && channel.read(buffer) > 0) {
+                // 一次 read 不保证填满，继续读到满或流结束
+            }
+        }
+        return buffer.array();
     }
 
     /**

@@ -671,11 +671,17 @@ public class NginxManageServiceImpl implements NginxManageService {
         ExecResult r = INIT_OWNER_NONE.equals(unit)
                 ? exec(ds, nginxCmd(ds, "-s stop"), LIFECYCLE_TIMEOUT_SECONDS)
                 : exec(ds, systemctlCmd(unit, "stop"), LIFECYCLE_TIMEOUT_SECONDS);
-        boolean ok = r.exitCode() == 0;
+        boolean cmdOk = r.exitCode() == 0;
+        // 成功标志必须包含「状态真的收敛了」。原先只看 exitCode，导致 systemctl stop
+        // 返回 0、但 nginx 其实没停时，接口照样回 success=true + 「操作成功」，
+        // 而 message 里写的却是「仍未退出」——同一个响应里自相矛盾，用户无从判断。
+        // 实测（生产 198）就是这样：stop 返回成功、8080 也确实断了，但
+        // 随后的 start 被 processAlive 的误判挡回「已在运行」，界面陷入死结。
+        boolean stopped = cmdOk && awaitState(ds, false, STOP_WAIT_MILLIS);
         String msg;
-        if (!ok) {
+        if (!cmdOk) {
             msg = "停止失败: " + mergeOut(r.stdout(), r.stderr());
-        } else if (awaitState(ds, false, STOP_WAIT_MILLIS)) {
+        } else if (stopped) {
             msg = INIT_OWNER_NONE.equals(unit) ? "已停止" : "已停止（经 " + unit + "）";
         } else {
             // 到达等待上限仍没停：如实说明，并给出最可能的原因，
@@ -686,7 +692,7 @@ public class NginxManageServiceImpl implements NginxManageService {
                     : "已向 " + unit + " 发出停止指令，但 nginx 在 " + (STOP_WAIT_MILLIS / 1000)
                     + " 秒内仍未退出，请检查该单元是否有其他守护配置";
         }
-        return new NginxCommandResultVO(ok, msg, r.stdout(), r.stderr());
+        return new NginxCommandResultVO(stopped, msg, r.stdout(), r.stderr());
     }
 
     @Override
@@ -721,10 +727,12 @@ public class NginxManageServiceImpl implements NginxManageService {
         ExecResult r = INIT_OWNER_NONE.equals(unit)
                 ? exec(ds, nginxCmd(ds, ""), LIFECYCLE_TIMEOUT_SECONDS)
                 : exec(ds, systemctlCmd(unit, "start"), LIFECYCLE_TIMEOUT_SECONDS);
-        boolean ok = r.exitCode() == 0;
-        boolean started = awaitState(ds, true, STOP_WAIT_MILLIS);
+        boolean cmdOk = r.exitCode() == 0;
+        // 与 stop 同一个口径：成功 = 命令成功 **且** 状态真的变成运行中。
+        // 只看 exitCode 的话，「systemctl start 返回 0 但 nginx 没起来」会被报成成功。
+        boolean started = cmdOk && awaitState(ds, true, STOP_WAIT_MILLIS);
         String msg;
-        if (!ok) {
+        if (!cmdOk) {
             msg = "启动失败: " + mergeOut(r.stdout(), r.stderr());
         } else if (started) {
             msg = INIT_OWNER_NONE.equals(unit) ? "启动成功，nginx 已运行" : "启动成功，nginx 已运行（经 " + unit + "）";
@@ -733,7 +741,7 @@ public class NginxManageServiceImpl implements NginxManageService {
                     ? "命令已下发但未检测到运行中的进程，请检查错误日志"
                     : "已向 " + unit + " 发出启动指令，但未检测到运行中的 nginx 进程，请查看该单元日志";
         }
-        return new NginxCommandResultVO(ok, msg, r.stdout(), r.stderr());
+        return new NginxCommandResultVO(started, msg, r.stdout(), r.stderr());
     }
 
     /**
