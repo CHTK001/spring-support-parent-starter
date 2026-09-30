@@ -83,7 +83,15 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("protocol_server_enabled", "false", "BOOLEAN", "是否启用聚合协议服务（独立端口，提供 OpenAI/Claude/Gemini 三协议端点）", 18),
                 new SettingItem("protocol_server_port", "8090", "NUMBER", "聚合协议服务端口（OpenAI/Claude/Gemini 三协议统一入口）", 19),
                 new SettingItem("protocol_server_host", "0.0.0.0", "STRING", "聚合协议服务绑定地址", 20),
-                new SettingItem("extra_headers", "", "JSON", "自定义请求头（JSON 格式，如 {\"X-Custom\": \"value\"}）", 21)
+                new SettingItem("extra_headers", "", "JSON", "自定义请求头（JSON 格式，如 {\"X-Custom\": \"value\"}）", 21),
+                // ==================== Agent 工具权限 ====================
+                // 管理员专属：普通账号不得看到、不得修改。默认 false 表示普通账号的 agent 不启用任何工具。
+                // 管理员自己的工具能力不受本开关影响。
+                // 服务端三处必须配合：定义出口按角色过滤、取值出口剔除、写入出口拒绝（否则普通账号
+                // 可以走 /v2/settings/{group} 写自己的覆盖层把权限给自己打开）。
+                new SettingItem("user_tool_access", "false", "BOOLEAN",
+                        "是否允许普通账号调用工具（关闭时普通账号的 agent 不启用任何工具；管理员不受影响）",
+                        22, true)
         );
     }
 }

@@ -52,6 +52,9 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -1043,25 +1046,40 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 管理员会话统一把已配置的直连客户端包装为 Agent 运行时客户端。
+     * 会话统一包装为 Agent 运行时客户端。
      *
-     * <p>判定：当前用户为管理员即包装（无工具/非 Plan 时为 SINGLE 模式，等价于直答）；
-     * 角色 settings.plugins 中 MCP / 子代理 / 任意本地工具启用时，Agent 具备相应执行能力；
-     * 请求 mode=plan 时首轮即进入只读规划。普通用户原样返回直连客户端。</p>
+     * <p>管理员与普通账号都走 Agent —— 统一之后大家才有各自的工作间
+     * （{@code <基路径>/<账号>/agent}）。差别只在工具：</p>
+     * <ul>
+     *   <li><b>管理员</b>：按角色 settings.plugins 启用 MCP / 子代理 / 本地工具，
+     *       且<b>不受</b>「普通账号工具权限」开关影响；</li>
+     *   <li><b>普通账号</b>：开关关闭（默认）时插件集合整体清空，只建 agent、不给工具；
+     *       开关打开后才按角色配置启用。</li>
+     * </ul>
+     * <p>请求 mode=plan 时首轮即进入只读规划。</p>
      *
      * @param configured 已完成参数配置的直连客户端
      * @param request    对话请求（携带 roleSettings、mode）
      * @return Agent 包装客户端或原直连客户端
      */
     private ChatClient maybeWrapAgent(ChatClient configured, AiChatRequest request) {
-        // 仅管理员经 Agent 运行时；普通用户保持直连
-        if (!AiUserContext.isAdmin()) {
-            return configured;
-        }
+        boolean admin = AiUserContext.isAdmin();
 
         Map<String, Object> roleSettings = request.getRoleSettings();
         Map<?, ?> plugins = roleSettings != null && roleSettings.get("plugins") instanceof Map<?, ?> p
                 ? p : null;
+
+        // 工具权限总闸：默认只对管理员开放。
+        // 关闸时把插件集合整体清空，等价于「建 agent 但不启用任何工具」——
+        // 普通账号仍能得到 agent 运行时（从而拿到自己的工作间），只是没有工具。
+        // 开关本身是管理员专属配置项，普通账号看不到也改不了（见 SettingsController 的三处过滤）。
+        boolean userToolAccess = isUserToolAccessAllowed();
+        if (!admin && !userToolAccess) {
+            plugins = null;
+        }
+        if (!admin && !userToolAccess && (request.getRoleSettings() != null && request.getRoleSettings().get("plugins") != null)) {
+            log.info("[AiChat] 普通账号工具权限未开启，本次不启用任何工具 userId={}", AiUserContext.currentUserId());
+        }
 
         boolean mcpOn = false;
         boolean subAgentOn = false;
@@ -1084,9 +1102,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // Plan 只读模式（Build 为默认）；仅管理员经 Agent 生效
         boolean planOn = "plan".equalsIgnoreCase(request.getMode());
 
-        // MCP / 本地工具 / 子代理 / Plan 均未开启：无需 Agent 运行时，
-        // 直接使用标准非 Agent 客户端（等价普通直答），避免无谓的 Agent 开销与状态
-        if (!mcpOn && !localOn && !subAgentOn && !planOn) {
+        // MCP / 本地工具 / 子代理 / Plan 均未开启：
+        //  - 管理员保持原行为（直连，等价普通直答），避免给纯聊天凭空加一层 Agent 开销；
+        //  - 普通账号仍然构建 Agent —— 统一之后他们要的正是「有自己的工作间」，
+        //    即便本次没有工具可用。若在这里一并早退，非管理员就永远拿不到工作间了。
+        if (!mcpOn && !localOn && !subAgentOn && !planOn && admin) {
             log.debug("[AiChat] 管理员会话未启用任何 Agent 能力，保持标准非 Agent 客户端 model={}",
                     request.getModel());
             return configured;
@@ -1173,12 +1193,59 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return null;
         }
         try {
-            java.nio.file.Path basePath = java.nio.file.Paths.get(base.trim()).toAbsolutePath().normalize();
-            java.nio.file.Files.createDirectories(basePath);
-            return basePath.toString();
+            Path basePath = Paths.get(base.trim()).toAbsolutePath().normalize();
+            // 账号段用于数据隔离：同一基路径下每个账号各自一棵子树，互不可见。
+            // 账号标识必须净化成单个目录名，否则一个形如 ../../etc 的账号标识就能把
+            // 工作间指到基路径之外——隔离在这里就要挡住，不能指望下游的路径拼接。
+            Path accountRoot = basePath.resolve(safeSegment(AiUserContext.currentUserId()));
+            Path workspace = accountRoot.resolve("agent").normalize();
+            // 二次确认：即便净化逻辑今后被改动，也不允许解析结果越出基路径
+            if (!workspace.startsWith(basePath)) {
+                log.warn("[AiChat] 工作间解析越界，已拒绝 userId={} 解析结果={}", AiUserContext.currentUserId(), workspace);
+                return null;
+            }
+            Files.createDirectories(workspace);
+            return workspace.toString();
         } catch (Exception e) {
             log.warn("[AiChat] 解析/创建工作目录基路径失败 base={}: {}", base, e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 把账号标识净化为可安全用作单个目录名的片段。
+     *
+     * <p>与知识库上传目录同一套口径：只留字母数字与 {@code . _ -}，其余替换为下划线；
+     * 空值回落 {@code anonymous}。这样账号标识不可能携带路径分隔符或 {@code ..}。</p>
+     *
+     * @param raw 原始账号标识
+     * @return 安全的目录名片段
+     */
+    private static String safeSegment(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "anonymous";
+        }
+        String cleaned = raw.replaceAll("[^A-Za-z0-9._-]", "_");
+        return cleaned.isEmpty() ? "anonymous" : cleaned;
+    }
+
+    /**
+     * 普通账号是否被允许调用工具。
+     *
+     * <p>读「对话路由」分组的 {@code user_tool_access}（管理员专属配置项，默认 false）。
+     * 读取失败一律按 false 处理：闸门出故障时应偏向收紧，不能偏向放开。</p>
+     *
+     * @return true 表示普通账号可用工具
+     */
+    private boolean isUserToolAccessAllowed() {
+        try {
+            String value = globalSettingService
+                    .getValue("runtime", "user_tool_access")
+                    .orElse(null);
+            return Boolean.parseBoolean(String.valueOf(value).trim());
+        } catch (Exception e) {
+            log.warn("[AiChat] 读取 user_tool_access 失败，按关闭处理: {}", e.getMessage());
+            return false;
         }
     }
 
