@@ -10,9 +10,11 @@
           AND sys_job_is_deleted = 0
     </select>
 
-    <!-- 数据库当前时刻（毫秒）：调度判据统一以库时钟为准，避免各节点时钟漂移平移触发相位 -->
-    <select id="selectDbNowMs" resultType="java.lang.Long">
-        SELECT UNIX_TIMESTAMP(NOW(3)) * 1000
+    <!-- 数据库当前时刻：调度判据统一以库时钟为准（多机时钟漂移不进入判据）。
+         刻意只用标准 CURRENT_TIMESTAMP、不含任何库专用时间函数，由调用方在 Java 侧换算毫秒，
+         使该语句在 MySQL 与 H2 上都能执行。 -->
+    <select id="selectDbNow" resultType="java.sql.Timestamp">
+        SELECT CURRENT_TIMESTAMP
     </select>
 
 </mapper>
