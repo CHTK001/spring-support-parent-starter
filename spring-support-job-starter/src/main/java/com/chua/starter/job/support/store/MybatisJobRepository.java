@@ -755,6 +755,17 @@ public class MybatisJobRepository implements JobRepository {
                         .or().eq(JobEntity::getSysJobName, entity.getSysJobName()));
             }
             addExpectedNextFilter(wrapper, entity);
+            // 追加 last_time 期望值做二次判定：
+            // next_time 在「本次触发槽位 == 库里已记录的下次槽位」时不会变化，此时仅凭 next_time
+            // 的条件更新两个扫描者都会命中（Connector/J 默认 CLIENT_FOUND_ROWS，同值写入也返回 1）
+            // → 同一槽位被派发两次。
+            // last_time 每次真实触发都会前进，用它的旧值当期望值即可让第二个扫描者匹配 0 行、自然不派发；
+            // 注意【不能】像跳过分枝那样直接 return false —— 那会让派发序列不前进，任务永久停摆。
+            if (entity.getSysJobTriggerLastTime() == null) {
+                wrapper.isNull(JobEntity::getSysJobTriggerLastTime);
+            } else {
+                wrapper.eq(JobEntity::getSysJobTriggerLastTime, entity.getSysJobTriggerLastTime());
+            }
             return jobMapper.update(null, wrapper) > 0;
         } catch (Exception ex) {
             log.warn("[job] 触发时刻回写失败 job={} cause={}", stateKey(entity), ex.getMessage());
