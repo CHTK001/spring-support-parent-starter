@@ -2,6 +2,7 @@ package com.chua.starter.job.support.cluster;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.springframework.context.SmartLifecycle;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class ClusterElectionHeartbeat {
+public class ClusterElectionHeartbeat implements SmartLifecycle {
 
     /**
      * 心跳周期占租约比例 (心跳 = lease / 3)
@@ -63,6 +64,32 @@ public class ClusterElectionHeartbeat {
      * 运行标记
      */
     private final AtomicBoolean running = new AtomicBoolean(false);
+
+    /**
+     * 是否仍在运行。
+     *
+     * @return 心跳线程在跑返回 true
+     */
+    @Override
+    public boolean isRunning() {
+        return running.get();
+    }
+
+    /**
+     * 关闭阶段：取最大值使本组件<b>最先</b>停止。
+     *
+     * <p>关键：{@code Stop} 发生在 Spring 的 {@code stopBeans()} 阶段，<b>早于</b>
+     * {@code destroyBeans()}（即早于各 Bean 的 {@code @PreDestroy}）。
+     * 而 Redis 选主实现的模板是经 SpringBeanUtils 惰性取的 —— Spring 并不知道
+     * "心跳 → Redis 客户端"这条依赖，销毁顺序不受保证，若等 {@code @PreDestroy} 才释放，
+     * Redis 客户端往往已经不可用，租约只能等 TTL 过期（表现为优雅重启后一个 ≤租约时长的派发空窗）。</p>
+     *
+     * @return 最大 phase
+     */
+    @Override
+    public int getPhase() {
+        return Integer.MAX_VALUE;
+    }
 
     /**
      * 启动心跳。
