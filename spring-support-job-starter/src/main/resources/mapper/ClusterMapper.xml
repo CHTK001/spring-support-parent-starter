@@ -3,25 +3,33 @@
 <mapper namespace="com.chua.starter.job.support.store.ClusterMapper">
 
     <!--
+      数据库当前时刻。刻意只用标准 CURRENT_TIMESTAMP：SQL 内不含任何库专用时间函数
+      （如 MySQL 的 UNIX_TIMESTAMP(NOW(3))），毫秒换算交给调用方，使语句在 MySQL 与 H2 上都能执行。
+    -->
+    <select id="selectDbNow" resultType="java.sql.Timestamp">
+        SELECT CURRENT_TIMESTAMP
+    </select>
+
+    <!--
       抢租约（CAS）。三种情况可抢：无人持有 / 持有者是自己 / 租约已过期。
-      租约截止时刻由【数据库时钟】计算（UNIX_TIMESTAMP(NOW(3))），
-      这样多机部署下各节点本机时钟漂移不会进入「租约是否过期」的判据。
+      nowMs 与 leaseUntilMs 均由调用方用【数据库时钟】算出后传入，
+      这样"租约是否过期"用的是同一个时钟（库时钟），各节点本机时钟漂移不进入判据。
     -->
     <update id="tryAcquire">
         UPDATE sys_job_cluster
            SET sys_job_cluster_leader_node = #{nodeId},
-               sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + #{leaseSeconds}) * 1000,
+               sys_job_cluster_lease_until_ms = #{leaseUntilMs},
                sys_job_cluster_version = sys_job_cluster_version + 1
          WHERE sys_job_cluster_id = #{group}
            AND ( sys_job_cluster_leader_node IS NULL
               OR sys_job_cluster_leader_node = #{nodeId}
-              OR sys_job_cluster_lease_until_ms &lt; UNIX_TIMESTAMP(NOW(3)) * 1000 )
+              OR sys_job_cluster_lease_until_ms &lt; #{nowMs} )
     </update>
 
     <!-- 续约：仅当前持有者可推进租约 -->
     <update id="renew">
         UPDATE sys_job_cluster
-           SET sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + #{leaseSeconds}) * 1000,
+           SET sys_job_cluster_lease_until_ms = #{leaseUntilMs},
                sys_job_cluster_version = sys_job_cluster_version + 1
          WHERE sys_job_cluster_id = #{group}
            AND sys_job_cluster_leader_node = #{nodeId}
