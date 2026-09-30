@@ -62,14 +62,20 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("image_size", "1024x1024", "STRING", "默认出图尺寸（如 1024x1024）", 6),
                 new SettingItem("image_negative_prompt", "", "STRING", "默认负面提示词（留空关闭）", 7),
                 new SettingItem("image_device", "cpu", "STRING", "推理设备（cpu / cuda，本地模型）", 8),
+                // ==================== 生成文件目录 ====================
+                // 落盘层级：{基路径}/{账号}/{image|video}/{上传目录}/{taskId}/…
+                // 生成结果落在类型目录下；参考图等上传件落在类型目录的「上传目录」子目录下，
+                // 两者分开是为了让「产出」与「上传」在磁盘上一眼可分，备份/清理策略也能不同。
+                new SettingItem("media_base_path", "data/generate-media", "STRING", "生成文件根目录（相对工作目录的基路径，其下按 账号 / 类型 / 上传目录 分层）", 9),
+                new SettingItem("media_upload_dir", "upload", "STRING", "上传目录名（参考图等上传件在类型目录下的子目录名）", 10),
                 // ==================== 文生视频 ====================
-                new SettingItem("video_enabled", "true", "BOOLEAN", "是否启用全局文生视频会话（false 时 VideoClient 禁用）", 9),
-                new SettingItem("video_provider", "", "STRING", "文生视频供应商（zhipu / qwen / baidu 等）", 10),
-                new SettingItem("video_model", "", "STRING", "默认文生视频模型", 11),
-                new SettingItem("video_base_url", "", "STRING", "文生视频 API 基础地址", 12),
-                new SettingItem("video_api_key", "", "STRING", "文生视频 API Key", 13),
-                new SettingItem("video_duration", "5", "NUMBER", "默认视频时长（秒）", 14),
-                new SettingItem("video_ratio", "16:9", "STRING", "默认视频比例（16:9 / 9:16 / 1:1）", 15)
+                new SettingItem("video_enabled", "true", "BOOLEAN", "是否启用全局文生视频会话（false 时 VideoClient 禁用）", 11),
+                new SettingItem("video_provider", "", "STRING", "文生视频供应商（zhipu / qwen / baidu 等）", 12),
+                new SettingItem("video_model", "", "STRING", "默认文生视频模型", 13),
+                new SettingItem("video_base_url", "", "STRING", "文生视频 API 基础地址", 14),
+                new SettingItem("video_api_key", "", "STRING", "文生视频 API Key", 15),
+                new SettingItem("video_duration", "5", "NUMBER", "默认视频时长（秒）", 16),
+                new SettingItem("video_ratio", "16:9", "STRING", "默认视频比例（16:9 / 9:16 / 1:1）", 17)
         );
     }
 }

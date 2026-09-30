@@ -1,7 +1,8 @@
 package com.chua.starter.ai.support.generate;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -9,6 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -36,6 +39,7 @@ import java.util.stream.Stream;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class GenerateMediaStore {
 
     /**
@@ -73,14 +77,37 @@ public class GenerateMediaStore {
     private static final long MAX_BYTES = 64L * 1024 * 1024;
 
     /**
-     * 媒体根目录。
-     *
-     * <p>默认相对进程工作目录。部署机上 systemd 的 WorkingDirectory 是
-     * {@code /opt/ai-starter/runtime}，因此落在其下 {@code data/} 内；
-     * 需要固定位置时用配置覆盖，不要在代码里写死某台机器的绝对路径。</p>
+     * 设置分组名（与 {@code GenerateGlobalSettingProvider} 一致）
      */
-    @Value("${ai.generate.media-dir:./data/generate-media}")
-    private String mediaDir;
+    private static final String SETTING_GROUP = "generate";
+
+    /**
+     * 生成文件根目录的默认值
+     */
+    private static final String DEFAULT_BASE_PATH = "data/generate-media";
+
+    /**
+     * 上传目录名的默认值
+     */
+    private static final String DEFAULT_UPLOAD_DIR = "upload";
+
+    /**
+     * 生成结果在磁盘上的相对路径中，标识「这是产出而非上传」的层级位置。
+     *
+     * <p>层级：{@code {账号}/{image|video}/{taskId}/{序号}.ext}；
+     * 上传件多一层上传目录：{@code {账号}/{image|video}/{上传目录}/{taskId}/…}。</p>
+     */
+    private static final String CATEGORY_GENERATED = "generated";
+
+    /**
+     * 上传件（参考图等）
+     */
+    private static final String CATEGORY_UPLOAD = "upload";
+
+    /**
+     * 全局设置读取器：基路径与上传目录名都取运行时设置，改完即时生效
+     */
+    private final GlobalSettingReader globalSettingReader;
 
     /**
      * 落盘的媒体。
@@ -127,28 +154,65 @@ public class GenerateMediaStore {
     }
 
     /**
-     * 把内联 base64 落盘，返回句柄。
+     * 把内联 base64 落盘为<b>生成结果</b>，返回句柄。
+     *
+     * <p>落盘层级：{@code {基路径}/{账号}/{image|video}/{taskId}/{序号}.ext}。</p>
      *
      * <p>任何失败都只记日志并返回 null：媒体落盘失败不该把一个已经生成成功的任务打成失败，
      * 调用方拿到 null 会退回「本次不持久化该产物」，与改造前超限时的行为一致。</p>
      *
-     * @param taskId  任务号，用作子目录，便于按任务清理
-     * @param index   产物下标，用作文件名，便于按位取回
-     * @param dataUri data URI 原文
+     * @param userId    账号，作为第一层目录，便于按账号备份与配额统计
+     * @param mediaType 媒体类型（image / video），作为第二层目录
+     * @param taskId    任务号，作为任务目录，便于整目录清理
+     * @param index     产物下标，用作文件名，便于按位取回
+     * @param dataUri   data URI 原文
      * @return 句柄；解析失败、超限或落盘失败时返回 null
      */
-    public String save(String taskId, String index, String dataUri) {
+    public String save(String userId, String mediaType, String taskId, String index, String dataUri) {
+        return save(userId, mediaType, taskId, CATEGORY_GENERATED, index, dataUri);
+    }
+
+    /**
+     * 把内联 base64 落盘为<b>上传件</b>（参考图等），返回句柄。
+     *
+     * <p>比生成结果多一层上传目录：{@code {账号}/{image|video}/{上传目录}/{taskId}/…}，
+     * 让「产出」与「上传」在磁盘上天然分开，备份与清理策略可以不同。</p>
+     *
+     * @param userId    账号
+     * @param mediaType 媒体类型（image / video）
+     * @param taskId    任务号
+     * @param name      文件名（不含扩展名）
+     * @param dataUri   data URI 原文
+     * @return 句柄；失败时返回 null
+     */
+    public String saveUpload(String userId, String mediaType, String taskId, String name, String dataUri) {
+        return save(userId, mediaType, taskId, CATEGORY_UPLOAD, name, dataUri);
+    }
+
+    /**
+     * 落盘的统一实现。
+     *
+     * @param userId    账号
+     * @param mediaType 媒体类型
+     * @param taskId    任务号
+     * @param category  类别（generated / upload）
+     * @param index     文件名（不含扩展名）
+     * @param dataUri   data URI 原文
+     * @return 句柄；失败时返回 null
+     */
+    private String save(String userId, String mediaType, String taskId, String category,
+            String index, String dataUri) {
         if (taskId == null || dataUri == null) {
             return null;
         }
-        int marker = dataUri.indexOf(";base64,");
-        if (!dataUri.startsWith("data:") || marker < 0) {
+        int marker = dataUri.indexOf(BASE64_MARKER);
+        if (!dataUri.startsWith(DATA_URI_PREFIX) || marker < 0) {
             return null;
         }
-        String declared = dataUri.substring("data:".length(), marker);
+        String declared = dataUri.substring(DATA_URI_PREFIX.length(), marker);
         byte[] bytes;
         try {
-            bytes = Base64.getDecoder().decode(dataUri.substring(marker + ";base64,".length()).trim());
+            bytes = Base64.getDecoder().decode(dataUri.substring(marker + BASE64_MARKER.length()).trim());
         } catch (IllegalArgumentException e) {
             log.warn("[GenerateMedia] 内联媒体 base64 解析失败 taskId={} index={}", taskId, index);
             return null;
@@ -159,7 +223,8 @@ public class GenerateMediaStore {
             return null;
         }
         String name = safeName(index) + extensionOf(declared);
-        Path target = root().resolve(safeName(taskId)).resolve(name);
+        String relative = relativePath(userId, mediaType, category, taskId, name);
+        Path target = root().resolve(relative);
         try {
             Files.createDirectories(target.getParent());
             Files.write(target, bytes);
@@ -167,7 +232,31 @@ public class GenerateMediaStore {
             log.warn("[GenerateMedia] 落盘失败 taskId={} index={}: {}", taskId, index, e.getMessage());
             return null;
         }
-        return HANDLE_PREFIX + safeName(taskId) + "/" + name;
+        return HANDLE_PREFIX + relative.replace('\\', '/');
+    }
+
+    /**
+     * 拼出相对根目录的落盘路径。
+     *
+     * <p>层级固定为 {@code {账号}/{类型}/{taskId}/{文件名}}；上传件在类型目录后多插一层上传目录。
+     * 全部路径段都过一遍白名单字符收口，避免账号名或文件名里的字符改变路径解析。</p>
+     *
+     * @param userId    账号
+     * @param mediaType 媒体类型
+     * @param category  类别（generated / upload）
+     * @param taskId    任务号
+     * @param name      文件名
+     * @return 相对路径（以 / 分隔）
+     */
+    private String relativePath(String userId, String mediaType, String category, String taskId, String name) {
+        String type = "video".equalsIgnoreCase(mediaType) ? "video" : "image";
+        StringBuilder sb = new StringBuilder(64);
+        sb.append(safeName(userId)).append('/').append(type).append('/');
+        if (CATEGORY_UPLOAD.equals(category)) {
+            sb.append(safeName(uploadDirName())).append('/');
+        }
+        sb.append(safeName(taskId)).append('/').append(name);
+        return sb.toString();
     }
 
     /**
@@ -201,41 +290,128 @@ public class GenerateMediaStore {
      * <p>任务记录被删除时一并清理，避免磁盘上留下没有归属的图片。
      * 单文件删除失败不影响其余文件，也不影响记录删除本身。</p>
      *
+     * <p><b>为什么是「递归找一个同名目录」而不是拼一个固定路径。</b>
+     * 任务目录的深度随布局变化：新布局在 {@code {账号}/{类型}/{taskId}} 或
+     * {@code {账号}/{类型}/{上传目录}/{taskId}}，而改造前的旧布局在 {@code {根}/{taskId}}。
+     * 拼路径就得知道它是哪一种；按名字限深查找则两种都能覆盖，
+     * 也不会因为用户改了基路径配置就漏删旧文件。</p>
+     *
      * @param taskId 任务号
      */
     public void deleteAll(String taskId) {
         if (taskId == null) {
             return;
         }
-        Path dir = root().resolve(safeName(taskId));
-        if (!Files.isDirectory(dir)) {
+        Path dir = findTaskDir(root(), safeName(taskId), 4);
+        if (dir == null) {
             return;
         }
-        try (Stream<Path> files = Files.list(dir)) {
-            files.forEach(file -> {
+        deleteRecursively(dir);
+    }
+
+    /**
+     * 在限定的深度内找出名为 taskId 的目录。
+     *
+     * @param dir    当前目录
+     * @param taskId 目标目录名（已收口）
+     * @param depth  剩余可下探的层数
+     * @return 命中目录；未命中返回 null
+     */
+    private static Path findTaskDir(Path dir, String taskId, int depth) {
+        if (depth < 0 || !Files.isDirectory(dir)) {
+            return null;
+        }
+        try (Stream<Path> children = Files.list(dir)) {
+            List<Path> dirs = children
+                    .filter(Files::isDirectory)
+                    .sorted(Comparator.naturalOrder())
+                    .toList();
+            for (Path child : dirs) {
+                if (taskId.equals(child.getFileName().toString())) {
+                    return child;
+                }
+            }
+            for (Path child : dirs) {
+                Path hit = findTaskDir(child, taskId, depth - 1);
+                if (hit != null) {
+                    return hit;
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * 递归删除目录及其内容，并顺带清掉因此变空的父目录。
+     *
+     * @param dir 待删除目录
+     */
+    private void deleteRecursively(Path dir) {
+        try (Stream<Path> walk = Files.walk(dir)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(path -> {
                 try {
-                    Files.deleteIfExists(file);
+                    Files.deleteIfExists(path);
                 } catch (IOException e) {
-                    log.warn("[GenerateMedia] 删除失败 {}: {}", file, e.getMessage());
+                    log.warn("[GenerateMedia] 删除失败 {}: {}", path, e.getMessage());
                 }
             });
         } catch (IOException e) {
-            log.warn("[GenerateMedia] 列举 media 失败 taskId={}: {}", taskId, e.getMessage());
-        }
-        try {
-            Files.deleteIfExists(dir);
-        } catch (IOException e) {
-            log.debug("[GenerateMedia] 目录残留 taskId={}: {}", taskId, e.getMessage());
+            log.warn("[GenerateMedia] 清理目录失败 {}: {}", dir, e.getMessage());
         }
     }
 
     /**
      * 媒体根目录（解析为绝对路径）。
      *
+     * <p>取运行时设置项而不是启动时注入的属性：目录这是用户在设置页里能改的东西，
+     * 用 {@code @Value} 读到的是启动那一刻的值，改了要重启才生效。
+     * 读不到时回落默认值，设置表缺项也能正常落盘。</p>
+     *
      * @return 绝对规范化的根目录
      */
     private Path root() {
-        return Paths.get(mediaDir).toAbsolutePath().normalize();
+        return Paths.get(basePath()).toAbsolutePath().normalize();
+    }
+
+    /**
+     * 生成文件根目录（相对工作目录的基路径）。
+     *
+     * @return 基路径
+     */
+    private String basePath() {
+        String value = readSetting("media_base_path", DEFAULT_BASE_PATH);
+        return value.isBlank() ? DEFAULT_BASE_PATH : value;
+    }
+
+    /**
+     * 上传目录名。
+     *
+     * @return 上传目录名
+     */
+    private String uploadDirName() {
+        String value = readSetting("media_upload_dir", DEFAULT_UPLOAD_DIR);
+        return value.isBlank() ? DEFAULT_UPLOAD_DIR : value;
+    }
+
+    /**
+     * 读一个生成分组的设置项。
+     *
+     * @param field        字段名
+     * @param defaultValue 缺省值
+     * @return 设置值；读取失败时返回缺省值
+     */
+    private String readSetting(String field, String defaultValue) {
+        try {
+            String value = globalSettingReader.getStr(SETTING_GROUP, field);
+            return value == null ? defaultValue : value.trim();
+        } catch (Exception e) {
+            // 设置读取失败不该让落盘整体不可用：目录用默认值即可，任务本身不受影响
+            log.debug("[GenerateMedia] 读取设置项 {} 失败，回落默认值 {}: {}",
+                    field, defaultValue, e.getMessage());
+            return defaultValue;
+        }
     }
 
     /**
