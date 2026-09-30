@@ -317,6 +317,45 @@ public class GenerateController {
     }
 
     /**
+     * 批量删除指定任务（勾选后删除）。
+     *
+     * @param body 待删除的任务号列表
+     * @return 实际删除条数
+     */
+    @PostMapping("/tasks/batch-delete")
+    @Operation(summary = "批量删除生成记录")
+    public ReturnResult<Integer> batchDelete(@RequestBody BatchDeleteBody body) {
+        String userId = AiUserContext.requireUserId();
+        return ReturnResult.success(generateService.deleteBatch(userId, body == null ? null : body.getTaskIds()));
+    }
+
+    /**
+     * 清空当前用户的全部生成记录。
+     *
+     * <p>不可恢复，会连已生成的作品一起删；前端须在用户输入确认词后才调用。</p>
+     *
+     * @return 实际删除条数
+     */
+    @DeleteMapping("/tasks/all")
+    @Operation(summary = "清空全部生成记录")
+    public ReturnResult<Integer> deleteAll() {
+        String userId = AiUserContext.requireUserId();
+        return ReturnResult.success(generateService.deleteAll(userId));
+    }
+
+    /**
+     * 批量删除的请求体。
+     */
+    @Data
+    public static class BatchDeleteBody {
+
+        /**
+         * 待删除的任务号
+         */
+        private List<String> taskIds;
+    }
+
+    /**
      * 判断模型行是否属于指定生成任务。
      *
      * @param row  模型行
