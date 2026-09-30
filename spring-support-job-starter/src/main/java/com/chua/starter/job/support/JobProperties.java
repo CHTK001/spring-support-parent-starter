@@ -186,6 +186,15 @@ public class JobProperties {
          */
         private String group = "default";
 
+    /**
+     * 选主实现（SPI 键, 大小写不敏感）: 默认 {@code mysql} 走数据库租约;
+     * 注册在 {@code META-INF/extensions/com.chua.starter.job.support.cluster.LeaderElectionResolver}。
+     *
+     * <p>留空或取不到该键时<b>回落</b>数据库实现, 保证默认路径与历史行为一致 ——
+     * 选非 DB 实现的人自带其基础设施（如 Redis），不强制单机用户引入额外中间件。</p>
+     */
+    private String resolver = "mysql";
+
         /**
          * 选主租约命名空间, 留空时按 {@link #resolveElectionNamespace(String)} 推导。
          *

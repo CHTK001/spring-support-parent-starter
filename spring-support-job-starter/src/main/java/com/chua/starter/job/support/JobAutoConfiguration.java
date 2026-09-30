@@ -364,6 +364,32 @@ public class JobAutoConfiguration {
     @org.springframework.context.annotation.Primary
     public com.chua.starter.job.support.cluster.LeaderElectionResolver mysqlLeaderElectionResolver(
             com.chua.starter.job.support.store.ClusterMapper clusterMapper) {
+        String resolverKey = properties.getCluster().getResolver();
+        if (resolverKey != null && !resolverKey.isBlank()) {
+            ServiceProvider<com.chua.starter.job.support.cluster.LeaderElectionResolver> provider =
+                    ServiceProvider.of(com.chua.starter.job.support.cluster.LeaderElectionResolver.class);
+            com.chua.starter.job.support.cluster.LeaderElectionResolver spi = null;
+            try {
+                spi = provider.getNewExtension(resolverKey.trim(), clusterMapper);
+            } catch (RuntimeException ex) {
+                log.debug("[job] 选主扩展带参实例化失败, 试无参 resolver={} cause={}",
+                        resolverKey, ex.getMessage());
+            }
+            if (spi == null) {
+                try {
+                    spi = provider.getExtension(resolverKey.trim());
+                } catch (RuntimeException ex) {
+                    log.debug("[job] 选主扩展无参实例化失败 resolver={} cause={}",
+                            resolverKey, ex.getMessage());
+                }
+            }
+            if (spi != null) {
+                log.info("[job] 选主实现经 SPI 切换 resolver={} impl={}",
+                        resolverKey, spi.getClass().getSimpleName());
+                return spi;
+            }
+            log.warn("[job] 未注册该选主实现, 回落数据库实现 resolver={}", resolverKey);
+        }
         return new com.chua.starter.job.support.store.MysqlLeaderElectionResolver(clusterMapper);
     }
 
