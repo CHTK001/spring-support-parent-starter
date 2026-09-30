@@ -17,6 +17,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.ai.support.configuration.rag.RagProperties;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.model.WebPageContent;
 import com.chua.starter.ai.support.service.KnowledgeBaseStore;
 import com.chua.starter.ai.support.service.KnowledgeGraphService;
@@ -113,6 +114,9 @@ public class ApiKnowledgeController {
      * RAG 配置属性（提供上传目录与检索默认值）
      */
     private final RagProperties ragProperties;
+
+    /** 全局设置：读取工作目录基路径（system.workspaceBaseDir），用于按账号做目录隔离 */
+    private final SysAiGlobalSettingService globalSettingService;
 
     /**
      * 全局 对话客户端 注册中心（AI 生成类接口解析对话客户端）
@@ -302,7 +306,7 @@ public class ApiKnowledgeController {
             // URL 来源型知识库：托管目录 + 来源配置
             kind = "web";
             managed = true;
-            rootPath = Paths.get(ragProperties.getUploadDir(), "kb-" + baseId).toString();
+            rootPath = resolveManagedRoot(baseId);
         } else if (StringUtils.hasText(rootPath)) {
             // 外部本地目录（非托管）
             kind = "local";
@@ -312,7 +316,7 @@ public class ApiKnowledgeController {
             // 空白托管知识库
             kind = "blank";
             managed = true;
-            rootPath = Paths.get(ragProperties.getUploadDir(), "kb-" + baseId).toString();
+            rootPath = resolveManagedRoot(baseId);
         }
 
         Path root = Paths.get(rootPath);
@@ -1442,7 +1446,7 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "源包不存在: " + srcPath);
         }
         String baseId = conversationStore.newId();
-        Path root = Paths.get(ragProperties.getUploadDir(), "kb-" + baseId);
+        Path root = Paths.get(resolveManagedRoot(baseId));
         try {
             Files.createDirectories(root);
             /**
@@ -1739,13 +1743,93 @@ public class ApiKnowledgeController {
     }
 
     /**
+     * 计算托管知识库的根目录：&lt;工作目录基路径&gt;/&lt;当前账号&gt;/rag/&lt;上传目录名&gt;/kb-&lt;库ID&gt;。
+     *
+     * <p>账号段用于**数据隔离**：同一上传目录下每个账号各自一棵子树，互不可见。
+     * 工作目录基路径取全局设置 {@code system.workspaceBaseDir}；未配置时回落到上传目录配置本身
+     * （行为与老版本一致），避免升级后既有知识库全部找不到文件。</p>
+     *
+     * @param baseId 知识库 ID
+     * @return 托管根目录
+     */
+    private String resolveManagedRoot(String baseId) {
+        return managedBase().resolve("kb-" + baseId).toString();
+    }
+
+    /**
+     * 工作目录基路径；未配置时为 {@code null}。
+     *
+     * @return 工作目录基路径，或 null
+     */
+    private Path workspaceBasePath() {
+        String base = globalSettingService.getValue("system", "workspaceBaseDir").orElse(null);
+        if (!StringUtils.hasText(base)) {
+            return null;
+        }
+        return Paths.get(base).toAbsolutePath().normalize();
+    }
+
+    /**
+     * 当前账号的托管上传目录基路径。
+     *
+     * <p>有工作目录基路径时返回 {@code <基路径>/<账号>/rag/<上传目录名>}；
+     * 未配置时返回上传目录本身。</p>
+     *
+     * @return 托管上传目录基路径
+     */
+    private Path managedBase() {
+        String uploadDir = StringUtils.hasText(ragProperties.getUploadDir()) ? ragProperties.getUploadDir() : "./rag-uploads";
+        Path workspace = workspaceBasePath();
+        if (workspace == null) {
+            return Paths.get(uploadDir).toAbsolutePath().normalize();
+        }
+        Path uploadPath = Paths.get(uploadDir).normalize();
+        String leaf = uploadPath.getNameCount() == 0
+                ? "rag-uploads"
+                : uploadPath.getName(uploadPath.getNameCount() - 1).toString();
+        return workspace.resolve(safeSegment(AiUserContext.currentUserId())).resolve("rag").resolve(leaf);
+    }
+
+    /**
+     * 把账号标识净化为可安全用作单个目录名的片段。
+     *
+     * @param raw 原始账号标识
+     * @return 只含字母数字与 . _ - 的片段；空值回落 anonymous
+     */
+    private String safeSegment(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "anonymous";
+        }
+        String cleaned = raw.replaceAll("[^A-Za-z0-9._-]", "_");
+        return cleaned.isEmpty() ? "anonymous" : cleaned;
+    }
+
+    /**
+     * 判断目标路径是否落在「任意账号的托管 RAG 目录」内，即 {@code <工作目录基路径>/<账号>/rag/...}。
+     *
+     * <p>必须按**所有账号**判而不是只判当前账号：否则 A 账号可以把 root_path 指到
+     * {@code <基路径>/B/rag/...} 去读 B 的数据，隔离就白做了。</p>
+     *
+     * @param target 目标绝对路径
+     * @return true 表示落在托管 RAG 区内，必须拒绝
+     */
+    private boolean insideAnyAccountRag(Path target) {
+        Path workspace = workspaceBasePath();
+        if (workspace == null || !target.startsWith(workspace)) {
+            return false;
+        }
+        Path relative = workspace.relativize(target);
+        return relative.getNameCount() >= 2 && "rag".equals(relative.getName(1).toString());
+    }
+
+    /**
      * 校验客户端自报的外部目录：托管上传目录归各自创建人，不允许挂载为他人知识库目录。
      * @param rootPath 根路径
      */
     private void assertExternalRoot(String rootPath) {
-        Path upload = Paths.get(ragProperties.getUploadDir()).toAbsolutePath().normalize();
         Path target = Paths.get(rootPath).toAbsolutePath().normalize();
-        if (target.startsWith(upload)) {
+        Path upload = Paths.get(ragProperties.getUploadDir()).toAbsolutePath().normalize();
+        if (insideAnyAccountRag(target) || target.startsWith(upload)) {
             /**
              * api异常。
              * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数

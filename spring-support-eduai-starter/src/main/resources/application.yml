@@ -59,6 +59,12 @@ plugin:
     address: tcp://192.168.50.198:19180
     auth-address: tcp://192.168.50.198:19180
     login-address: /#/login
+    # TCP 链路不加密：服务端是否解密由请求头 x-oauth-encode 决定，
+    # 而 TcpProtocol 不带该头（只有 HttpProtocol/RSocketProtocol 带），
+    # 服务端因此按明文解析。若这里开着，body 会被 Codec.encodeHex 成 hex，
+    # 服务端拿明文解析 hex 串 -> 解不出 x-oauth-username，
+    # 实测报「登录失败: 密码错误 null」。
+    enable-encryption: false
     token-name: x-oauth-token
     static-token-expire-seconds: 7200
     temp:

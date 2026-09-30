@@ -36,7 +36,7 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     */
     public List<SettingItem> getItems() {
         return List.of(
-                new SettingItem("rag_embedding_model", "memory", "STRING", "Embedding 模型（memory / openai / siliconflow）", 1),
+                new SettingItem("rag_embedding_model", "memory", "STRING", "Embedding 引擎（memory / openai / siliconflow / sensetime / onnx）", 1),
                 new SettingItem("rag_vector_storage", "jvector", "STRING", "向量存储（jvector / milvus / mysql / memory）", 2),
                 new SettingItem("rag_llm_model", "", "STRING", "RAG 问答使用的 LLM 模型名（留空走全局默认）", 3),
                 new SettingItem("rag_chunk_size", "1000", "NUMBER", "分块大小", 4),
@@ -51,7 +51,7 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("rag_embedding_base_url", "", "STRING", "Embedding API 基础地址（留空走 runtime 配置）", 14),
                 new SettingItem("rag_embedding_api_key", "", "STRING", "Embedding API 密钥（留空走 runtime 配置）", 15),
                 new SettingItem("rag_embedding_model_name", "", "STRING", "Embedding 模型标识（如 nvidia/nemotron-3-embed-1b:free）", 16),
-                new SettingItem("rag_client_provider", "pipeline", "STRING", "RAG 客户端类型（pipeline 管线 / memory 内存）", 13),
+                new SettingItem("rag_client_provider", "pipeline", "STRING", "RAG 客户端类型（pipeline 管线）", 13),
                 new SettingItem("rag_relation_extract_enabled", "true", "BOOLEAN",
                         "上传知识点时是否抽取实体关系（人物/地点/事件）并写入知识图谱", 17),
                 new SettingItem("rag_relation_extract_model", "", "STRING",
