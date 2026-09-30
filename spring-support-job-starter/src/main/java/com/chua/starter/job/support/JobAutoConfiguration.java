@@ -365,7 +365,12 @@ public class JobAutoConfiguration {
     public com.chua.starter.job.support.cluster.LeaderElectionResolver mysqlLeaderElectionResolver(
             com.chua.starter.job.support.store.ClusterMapper clusterMapper) {
         String resolverKey = properties.getCluster().getResolver();
-        if (resolverKey != null && !resolverKey.isBlank()) {
+        // mysql 是内置默认实现：直接构造，不走 SPI 也不告警，保证「不配置」时与历史行为逐字一致。
+        // 原因：ServiceProvider 的「带参实例化」是按实参运行时类型匹配构造器的，
+        // 而 ClusterMapper 传进来是 JDK 动态代理（类不是 ClusterMapper 本身）→ 匹配不到
+        // (ClusterMapper) 构造器（对比：SyncClient 那条链传的是 String，能匹配）。
+        // 因此其它实现若需要依赖，请提供无参构造器，或用简单值类型作参数。
+        if (resolverKey != null && !resolverKey.isBlank() && !"mysql".equalsIgnoreCase(resolverKey.trim())) {
             ServiceProvider<com.chua.starter.job.support.cluster.LeaderElectionResolver> provider =
                     ServiceProvider.of(com.chua.starter.job.support.cluster.LeaderElectionResolver.class);
             com.chua.starter.job.support.cluster.LeaderElectionResolver spi = null;
