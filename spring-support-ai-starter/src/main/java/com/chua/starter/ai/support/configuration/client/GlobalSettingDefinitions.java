@@ -106,6 +106,8 @@ public class GlobalSettingDefinitions {
                 itemMap.put("valueType", item.valueType());
                 itemMap.put("description", item.description());
                 itemMap.put("sort", item.sort());
+                // 管理员专属标记：出口按角色过滤要用，故必须随定义一起下发
+                itemMap.put("adminOnly", item.adminOnly());
                 items.add(itemMap);
             }
         }
