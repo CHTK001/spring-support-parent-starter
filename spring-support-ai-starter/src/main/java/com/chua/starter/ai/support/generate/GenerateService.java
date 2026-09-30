@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.generate;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.AiProviderException;
+import com.chua.common.support.ai.GenerateProgressEstimator;
 import com.chua.common.support.ai.image.ImageClient;
 import com.chua.common.support.ai.image.ImageResponse;
 import com.chua.common.support.ai.video.VideoClient;
@@ -112,14 +113,19 @@ public class GenerateService {
     private static final int REFERENCE_IMAGE_MAX_CHARS = 4 * 1024 * 1024;
 
 
-    /** 进度阶段：线程已接手，排队完成 */
+    /** 进度阶段：线程已接手，排队完成（也是「生成中」估算的下限） */
     private static final int PROGRESS_QUEUED = 5;
 
-    /** 进度阶段：已向 provider 发出请求，等待返回（心跳维持） */
-    private static final int PROGRESS_GENERATING = 30;
+    /**
+     * 「生成中」这一档的上限（不含）。
+     *
+     * <p>估算进度必须压在这条线以下：85 起的「结果编码」是真实可观测的阶段，
+     * 让估算越过它等于用假数据冒充真阶段。</p>
+     */
+    private static final int PROGRESS_ENCODING_BAND_START = 85;
 
     /** 进度阶段：已拿到图，正在 base64 编码 */
-    private static final int PROGRESS_ENCODING = 85;
+    private static final int PROGRESS_ENCODING = PROGRESS_ENCODING_BAND_START;
 
     /**
      * 生成任务映射器
@@ -298,7 +304,7 @@ public class GenerateService {
         }
         // 参考图落盘：库里只留句柄，不再把整张图的 base64 塞进参考图列。
         // 必须在此处做而不是 buildTask 里——句柄要按任务号分目录，而任务号刚定下来。
-        task.setReferenceImage(persistReference(task.getTaskId(), request.referenceImage()));
+        task.setReferenceImage(persistReference(task, request.referenceImage()));
         task.setCreatedAt(System.currentTimeMillis());
         task.setUpdatedAt(task.getCreatedAt());
         // 图像与视频一律「先落库再执行」，理由与图像一致：
@@ -514,7 +520,8 @@ public class GenerateService {
                         changed = true;
                         continue;
                     }
-                    String handle = mediaStore.save(task.getTaskId(), String.valueOf(i), url);
+                    String handle = mediaStore.save(task.getUserId(), task.getType(),
+                            task.getTaskId(), String.valueOf(i), url);
                     if (handle == null) {
                         stored.add(url);
                         failed++;
@@ -536,7 +543,8 @@ public class GenerateService {
                 } else {
                     // 同一任务重复回填时直接覆盖同名文件，不先删——
                     // 先删后写会在两次操作之间留下「文件没了、库里还是 base64」的空窗
-                    String handle = mediaStore.save(task.getTaskId(), REFERENCE_INDEX, reference);
+                    String handle = mediaStore.saveUpload(task.getUserId(), task.getType(),
+                            task.getTaskId(), REFERENCE_INDEX, reference);
                     if (handle == null) {
                         failed++;
                     } else {
@@ -607,7 +615,8 @@ public class GenerateService {
                 stored.add(url);
                 continue;
             }
-            String handle = mediaStore.save(task.getTaskId(), String.valueOf(i), url);
+            String handle = mediaStore.save(task.getUserId(), task.getType(), task.getTaskId(),
+                    String.valueOf(i), url);
             stored.add(handle == null ? url : handle);
         }
         return stored;
@@ -704,15 +713,15 @@ public class GenerateService {
     /**
      * 异步执行同步图像生成。
      *
-     * <p>进度按「真实可观测的阶段」推进，不做时间插值：
+     * <p>进度分两个来源，都不含凭空插值：
      * <ol>
      *   <li>{@link #PROGRESS_QUEUED} 线程已接手，排队完成</li>
-     *   <li>{@link #PROGRESS_GENERATING} 已向 provider 发出请求，等待返回（期间心跳续 updatedAt）</li>
+     *   <li>{@code PROGRESS_QUEUED..84} 已向 provider 发出请求、等待返回。
+     *       上游在这段不给任何中间量，故由 {@link GenerateProgressEstimator}（SPI）
+     *       按耗时估算，并夹在本档内——不让估算越过 85 去冒充「结果编码」这个真实阶段</li>
      *   <li>{@link #PROGRESS_ENCODING} 已拿到图，正在 base64 编码（这一步对 1024 图约需数百毫秒，是真耗时）</li>
-     *   <li>100 终态</li>
+     *   <li>100 终态，只由真实完成事件写入</li>
      * </ol>
-     * 同步 provider 的 generate() 是单次阻塞调用，内部没有更细的中间量，
-     * 所以阶段之间不再细分——凭空插值出来的百分比是假进度。
      *
      * @param task   任务行
      * @param client 图像客户端
@@ -730,7 +739,7 @@ public class GenerateService {
             // 心跳：provider 计算期间无法报进度，但要让前端看得出任务还活着
             Thread heartbeat = startHeartbeat(task, finished);
             try {
-                markProgress(task, PROGRESS_GENERATING);
+                markProgress(task, generatingProgress(task, startedAt));
                 BufferedImage image = client.generate(prompt);
                 markProgress(task, PROGRESS_ENCODING);
                 String url = imageDataUrl(image);
@@ -771,13 +780,44 @@ public class GenerateService {
     }
 
     /**
-     * 启动进度心跳线程：只续 updatedAt，不改 progress。
+     * 把一个任务的「生成中」进度估算出来。
+     *
+     * <p>估算值由 {@link GenerateProgressEstimator}（SPI）给出，落在 1..99；
+     * 这里再把它压进「生成中」这一档（{@link #PROGRESS_QUEUED}..84），原因有二：</p>
+     * <ul>
+     *   <li>85 以上的「结果编码」是真实可观测的阶段，不该由估算伪造——
+     *       否则前端会把「模型生成中」错说成「结果编码中」；</li>
+     *   <li>100 只能由真实完成事件写入。</li>
+     * </ul>
+     *
+     * @param task      任务行
+     * @param startedAt 任务开始时间（毫秒）
+     * @return 落在 PROGRESS_QUEUED..84 的估算进度
+     */
+    private static int generatingProgress(SysAiGenerateTask task, long startedAt) {
+        int estimated = GenerateProgressEstimator.estimateWith(new GenerateProgressEstimator.Context(
+                task.getType(), task.getModel(), task.getSize(), task.getCount(),
+                task.getDuration(), System.currentTimeMillis() - startedAt));
+        int span = PROGRESS_ENCODING_BAND_START - PROGRESS_QUEUED;
+        return PROGRESS_QUEUED + (int) Math.round(span * (estimated - 1) / 98.0D);
+    }
+
+    /**
+     * 启动进度心跳线程：每 2 秒续一次 updatedAt，并在上游不给中间进度时写估算进度。
+     *
+     * <p>把两件事放在同一个线程里，是因为它们的节奏与生命周期完全一致
+     * （都是「任务还在跑」的体现，都随 finished 退出）；分成两个线程只是多一份调度开销，
+     * 还会让「谁先退出」变成一个新的竞态面。</p>
+     *
+     * <p>估算值由 {@link GenerateProgressEstimator} 给出，封顶 99；
+     * 真实进度（若能拿到）由调用方写入，本线程只在仍是进行中时推进。</p>
      *
      * @param task     任务行
      * @param finished 完成标记，置位后心跳退出
      * @return 心跳线程
      */
     private Thread startHeartbeat(SysAiGenerateTask task, AtomicBoolean finished) {
+        long startedAt = task.getCreatedAt() == null ? System.currentTimeMillis() : task.getCreatedAt();
         Thread thread = new Thread(() -> {
             while (!finished.get() && !Thread.currentThread().isInterrupted()) {
                 try {
@@ -790,10 +830,21 @@ public class GenerateService {
                     return;
                 }
                 try {
+                    int estimated = generatingProgress(task, startedAt);
+                    // 单调保护：估算只许往前推。心跳每 2 秒一次，而指数曲线的后段增量很小，
+                    // 不设保护时同一档位会被反复写库；更要紧的是别让进度回退。
+                    Integer current = task.getProgress();
+                    if (current != null && estimated <= current) {
+                        estimated = current;
+                    }
                     SysAiGenerateTask patch = new SysAiGenerateTask();
                     patch.setTaskId(task.getTaskId());
                     patch.setUpdatedAt(System.currentTimeMillis());
+                    if (estimated > PROGRESS_QUEUED) {
+                        patch.setProgress(estimated);
+                    }
                     taskMapper.updateById(patch);
+                    task.setProgress(estimated);
                 } catch (Exception e) {
                     log.debug("[Generate] 心跳续期失败 taskId={}: {}", task.getTaskId(), e.getMessage());
                 }
@@ -1256,16 +1307,18 @@ public class GenerateService {
      * @param referenceImage data URI 或裸 base64
      * @return 句柄；无参考图或落盘失败时返回 null
      */
-    private String persistReference(String taskId, String referenceImage) {
+    private String persistReference(SysAiGenerateTask task, String referenceImage) {
         String capped = capReference(referenceImage);
         if (capped == null) {
             return null;
         }
         if (!GenerateMediaStore.isInlineData(capped)) {
             // 裸 base64（无 data: 前缀）：补一个自述头再走同一条落盘路径
-            return mediaStore.save(taskId, REFERENCE_INDEX, "data:image/png;base64," + capped);
+            return mediaStore.saveUpload(task.getUserId(), task.getType(), task.getTaskId(),
+                    REFERENCE_INDEX, "data:image/png;base64," + capped);
         }
-        return mediaStore.save(taskId, REFERENCE_INDEX, capped);
+        return mediaStore.saveUpload(task.getUserId(), task.getType(), task.getTaskId(),
+                REFERENCE_INDEX, capped);
     }
 
     /**
