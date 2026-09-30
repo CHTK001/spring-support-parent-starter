@@ -384,7 +384,10 @@ public class EduAiService {
 
  // 对话客户端registry 提供的是 通用 对话客户端，调用 对话同步 即可
         long timeout = properties.getMarking().getTimeout() * 1000L;
-        String text = timeout > 0 ? commonClient.chatSync(userPrompt, timeout) : commonClient.chatSync(userPrompt);
+        // ChatClient 只有单段提示词入口，必须把 system 指令并进 user 提示词：
+        // 原实现直接丢弃 systemPrompt（只发 userPrompt），会让「只返回 JSON」这类约束静默失效
+        String combined = StringUtils.isBlank(systemPrompt) ? userPrompt : systemPrompt + "\n\n" + userPrompt;
+        String text = timeout > 0 ? commonClient.chatSync(combined, timeout) : commonClient.chatSync(combined);
         /**
          * 对话响应。
          * @param text 文本

@@ -25,6 +25,14 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Redis 选主实现（可选依赖）：不引入时该扩展取不到，自动回落数据库实现，
+             因此不会把"必须装 Redis"变成任何使用方的启动前提。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
