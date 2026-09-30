@@ -1166,8 +1166,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         AgentChatClient wrapper = new AgentChatClient(agent)
                 .withCloseHook(runtime != null ? runtime::close : null);
-        log.info("[AiChat] 管理员会话切换到 Agent 运行时 agentId={}, mode={}, mcp={}, subAgent={}, local={}, plan={}",
-                agentId, subAgentOn ? "AUTO" : "SINGLE", mcpOn, subAgentOn, localOn, planOn);
+        // 日志文案不能写死「管理员会话」：统一之后普通账号也走这条路径，
+        // 写死会在排查时把人引到「这一定是管理员在操作」的错误结论上。
+        log.info("[AiChat] 会话切换到 Agent 运行时 userId={}, admin={}, agentId={}, mode={}, mcp={}, subAgent={}, local={}, plan={}",
+                AiUserContext.currentUserId(), admin, agentId, subAgentOn ? "AUTO" : "SINGLE",
+                mcpOn, subAgentOn, localOn, planOn);
         return wrapper;
     }
 
