@@ -79,7 +79,8 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
                     log.debug("[job] 初始化集群命名空间跳过 group={} cause={}", group, dupOrOther.getMessage());
                 }
             }
-            int rows = clusterMapper.tryAcquire(group, nodeId, leaseSeconds);
+            long nowMs = currentDbTimeMs();
+            int rows = clusterMapper.tryAcquire(group, nodeId, nowMs, nowMs + leaseSeconds * 1000L);
             if (rows > 0) {
                 if (existing != null && nodeId.equals(existing.getSysJobClusterLeaderNode())) {
                     log.debug("[job] Leader 续约成功 (MySQL) group={} nodeId={} lease={}s",
@@ -110,7 +111,8 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
         // 租约截止时刻统一由数据库时钟（NOW(3)）计算：多机部署下各节点时钟漂移
         // 不再影响"租约是否过期"的判据，NTP 由硬要求降级为可选
         try {
-            int rows = clusterMapper.renew(group, nodeId, leaseSeconds);
+            long nowMs = currentDbTimeMs();
+            int rows = clusterMapper.renew(group, nodeId, nowMs, nowMs + leaseSeconds * 1000L);
             return rows > 0;
         } catch (Exception ex) {
             log.warn("[job] Leader 续约异常 group={} nodeId={} cause={}",
