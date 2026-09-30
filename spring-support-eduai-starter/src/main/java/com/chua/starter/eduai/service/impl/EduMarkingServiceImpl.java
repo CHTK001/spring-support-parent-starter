@@ -5,6 +5,9 @@ import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.ai.EduAiService;
 import com.chua.starter.eduai.ai.EduPaperScanner;
+import com.chua.starter.eduai.model.EduMarkingTask;
+import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
@@ -25,12 +28,18 @@ import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.queue.MessageTemplate;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -123,6 +132,15 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 试卷扫描器（版面还原 + 文字提取 + 结构化，内部复用 ai-starter 全局 Bean）
      */
     private final EduPaperScanner paperScanner;
+    /**
+     * 阅卷任务映射器（异步任务的状态载体，支撑重启续跑）
+     */
+    private final EduMarkingTaskMapper taskMapper;
+
+    /**
+     * JSON 解析器（还原识别详情，供判分与续跑使用）
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -307,9 +325,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             if (result.getMarkingResultQuestionId() == null || result.getMarkingResultQuestionId() <= 0) {
                 continue;
             }
-            wrongQuestionService.recordWrongQuestion(sheet.getAnswerSheetStudentId(),
-                    result.getMarkingResultQuestionId(), sheet.getAnswerSheetExamId(), sheet.getOwnerUserId());
-            recorded++;
+            try {
+                wrongQuestionService.recordWrongQuestion(sheet.getAnswerSheetStudentId(),
+                        result.getMarkingResultQuestionId(), sheet.getAnswerSheetExamId(), sheet.getOwnerUserId());
+                recorded++;
+            } catch (Exception e) {
+                // 错题登记是「判分之后的附加动作」，单条失败不能让整个阅卷任务判为失败
+                // （实测曾因唯一键冲突把已判分完成的任务标成 FAILED）
+                log.warn("[EduAi] 错题登记失败(忽略): taskId={}, questionId={}, err={}",
+                        taskId, result.getMarkingResultQuestionId(), e.getMessage());
+            }
         }
         log.info("[EduAi] 错题登记完成: taskId={}, 未得分题数={}", taskId, recorded);
     }
@@ -325,18 +350,212 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 outcome.getScore(), outcome.getComment(), LocalDateTime.now());
     }
 
+    /**
+     * 进程是否正在关闭。关闭期中断不能写成业务失败，否则任务成终态、启动续跑不会再捞起。
+     */
+    private volatile boolean shuttingDown;
+
+    /**
+     * 标记进程进入关闭（SIGTERM / 优雅停机时由 Spring 调用）。
+     */
+    @PreDestroy
+    public void markShuttingDown() {
+        this.shuttingDown = true;
+    }
+
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String scanAndMark(byte[] imageData, String mode, Long paperId, String studentId,
                               Long examId, Integer maxScore) {
-        // 1. 版面还原 + 文字提取（本地 ONNX：版面 pp-doc-layout、文字 paddleocrv6 检测+识别）
+        // 入参快速校验（不落库）
+        boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(mode);
+        if (!anyMode && paperId == null) {
+            throw new BusinessException("自有卷必须指定试卷 ID");
+        }
+        if (imageData == null || imageData.length == 0) {
+            throw new BusinessException("上传图片为空");
+        }
+
+        String taskId = UUID.randomUUID().toString().replace("-", "");
+        // 1. 图片落盘：任务可重启续跑，输入必须还能取到（内存里的字节在重启后不复存在）
+        String imagePath = saveTaskImage(taskId, imageData);
+
+        // 2. 落任务（待处理）后【立即返回】taskId。
+        //    不在此处做识别与判分：版面+OCR 为本地推理（实测约 13 秒）、判分还要多次调用大模型，
+        //    放在请求线程会超过前端 HTTP 客户端的 10 秒超时（实测前端报 timeout of 10000ms exceeded，
+        //    表现为「点了没反应」），且进程重启会丢掉全部中间状态。
+        EduMarkingTask task = new EduMarkingTask();
+        task.setOwnerUserId(EduUserContext.requireUserId());
+        task.setMarkingTaskTaskId(taskId);
+        task.setMarkingTaskStatus(EduMarkingTask.STATUS_PENDING);
+        task.setMarkingTaskMode(anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF);
+        task.setMarkingTaskPaperId(paperId);
+        task.setMarkingTaskExamId(examId);
+        task.setMarkingTaskStudentId(StringUtils.isBlank(studentId) ? "anonymous" : studentId);
+        task.setMarkingTaskMaxScore(maxScore);
+        task.setMarkingTaskImagePath(imagePath);
+        task.setMarkingTaskStage("排队中");
+        task.setMarkingTaskTotal(0);
+        task.setMarkingTaskDoneCount(0);
+        task.setCreateTime(LocalDateTime.now());
+        task.setUpdateTime(LocalDateTime.now());
+        taskMapper.insert(task);
+        log.info("[EduAi] 阅卷任务已创建: taskId={}, mode={}, paperId={}",
+                taskId, task.getMarkingTaskMode(), paperId);
+
+        // 3. 唤醒后台处理；此处即使失败也不影响任务本身（下次启动续跑会捡起 PENDING）
+        kickTask(taskId);
+        return taskId;
+    }
+
+    /**
+     * 唤醒后台处理一个任务（虚拟线程，任务状态已落库，故线程丢失可恢复）。
+     *
+     * @param taskId 任务业务标识
+     */
+    private void kickTask(String taskId) {
+        Thread.ofVirtual().name("edu-mark-" + taskId).start(() -> {
+            try {
+                processTask(taskId);
+            } catch (Exception e) {
+                log.error("[EduAi] 阅卷任务处理异常: taskId={}", taskId, e);
+            }
+        });
+    }
+
+    /**
+     * 启动续跑：把上次进程遗留的「待处理 / 处理中」任务重新入队。
+     *
+     * <p>这是「重启会继续处理」的落地：处理中状态可能因进程被杀而中断，
+     * 因此处理流程本身设计为可重入（识别产物落库、判分按结果行状态跳过已完成项）。</p>
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void resumeUnfinishedTasks() {
+        List<EduMarkingTask> tasks;
+        try {
+            tasks = taskMapper.selectResumable(properties.getMarking().getResumeLimit());
+        } catch (Exception e) {
+            log.warn("[EduAi] 续跑查询失败（阅卷任务表可能尚未建立）: {}", e.getMessage());
+            return;
+        }
+        if (tasks == null || tasks.isEmpty()) {
+            return;
+        }
+        log.info("[EduAi] 发现 {} 个未完成的阅卷任务，开始续跑", tasks.size());
+        for (EduMarkingTask t : tasks) {
+            kickTask(t.getMarkingTaskTaskId());
+        }
+    }
+
+    /**
+     * 处理一个阅卷任务（可重入：重启续跑会再次进入）。
+     *
+     * <p>分两个阶段，各自可独立续跑：</p>
+     * <ol>
+     *   <li>识别阶段：读图片 → 版面+OCR → 结构化 → 落答题卡与结果行（PENDING）</li>
+     *   <li>判分阶段：对仍为 PENDING 的结果行逐个判分（已完成的跳过）</li>
+     * </ol>
+     *
+     * @param taskId 任务业务标识
+     */
+    public void processTask(String taskId) {
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            log.warn("[EduAi] 阅卷任务不存在: taskId={}", taskId);
+            return;
+        }
+        if (Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(task.getMarkingTaskStatus())) {
+            return;
+        }
+        // 乐观抢占：正常提交是 0→1；续跑时可能已是 1，claim 影响 0 行但仍需继续处理
+        taskMapper.claimPending(taskId, LocalDateTime.now());
+        changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "识别中", null, null, null, false);
+        try {
+            boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(task.getMarkingTaskMode());
+            // 识别阶段：仅在尚未产出答题卡时执行（续跑时跳过，直接进判分）
+            if (task.getMarkingTaskAnswerSheetId() == null) {
+                recognizeAndPrepare(task, anyMode);
+            }
+            int graded = gradePendingOfTask(taskId, anyMode);
+            EduMarkingTask latest = taskMapper.selectByTaskId(taskId);
+            changeStage(taskId, EduMarkingTask.STATUS_DONE, "已完成",
+                    latest == null ? null : latest.getMarkingTaskTotal(), graded, null, true);
+            // 错题登记放在判分完成后（未得分题目），归属用户从答题卡继承
+            if (latest != null && latest.getMarkingTaskAnswerSheetId() != null) {
+                recordWrongQuestions(taskId, answerSheetMapper.selectById(latest.getMarkingTaskAnswerSheetId()));
+            }
+            log.info("[EduAi] 阅卷任务完成: taskId={}, 已判分={}", taskId, graded);
+        } catch (BusinessException be) {
+            if (isInterruptedByShutdown(be)) {
+                keepResumable(taskId, be);
+                return;
+            }
+            changeStage(taskId, EduMarkingTask.STATUS_FAILED, "失败", null, null, be.getMessage(), true);
+            log.warn("[EduAi] 阅卷任务失败(业务): taskId={}, msg={}", taskId, be.getMessage());
+        } catch (Exception e) {
+            // 进程关闭引起的异常不能写成终态：写成 FAILED 后，启动续跑只捞 PENDING/PROCESSING，
+            // 任务就永远不会再被处理，与「重启会继续处理」的要求冲突。
+            if (isInterruptedByShutdown(e)) {
+                keepResumable(taskId, e);
+                return;
+            }
+            changeStage(taskId, EduMarkingTask.STATUS_FAILED, "失败", null, null,
+                    e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(), true);
+            log.error("[EduAi] 阅卷任务失败: taskId={}", taskId, e);
+        }
+    }
+
+    /**
+     * 判断异常是否由「进程关闭」引起，而不是业务失败。
+     *
+     * <p>优雅关闭时 Spring 先销毁 Bean，ONNX Runtime 运行环境随之释放；此刻仍在跑 OCR 的后台
+     * 虚拟线程会抛 {@code ORT_FAIL ... Attempt to use DefaultLogger but none has been registered}。
+     * 实测这正是「提交任务后立刻重启」时的表现。</p>
+     *
+     * @param e 捕获到的异常
+     * @return 是否属于关闭期中断
+     */
+    private boolean isInterruptedByShutdown(Throwable e) {
+        if (shuttingDown) {
+            return true;
+        }
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String msg = t.getMessage();
+            if (msg != null && msg.contains("DefaultLogger but none has been registered")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 关闭期中断：保持任务为可续跑状态，不写终态。
+     *
+     * <p>任务此前已置为 PROCESSING，启动时由 {@code resumeUnfinishedTasks} 捞起重跑；
+     * 识别阶段可重入（未产出答题卡则重做），因此不需在这里做任何回滚。</p>
+     *
+     * @param taskId 任务标识
+     * @param e      中断异常
+     */
+    private void keepResumable(String taskId, Throwable e) {
+        log.warn("[EduAi] 进程关闭中断，任务保持可续跑（下次启动续跑）: taskId={}, msg={}",
+                taskId, e.getMessage());
+    }
+
+    /**
+     * 识别阶段：图片 → 版面+OCR → 结构化 → 落答题卡与全部结果行（PENDING）。
+     *
+     * @param task    任务
+     * @param anyMode 是否任意卷
+     */
+    private void recognizeAndPrepare(EduMarkingTask task, boolean anyMode) {
+        String taskId = task.getMarkingTaskTaskId();
+        byte[] imageData = readTaskImage(task.getMarkingTaskImagePath());
         EduPaperScanner.ScanResult scan = paperScanner.scan(imageData);
         if (StringUtils.isBlank(scan.text())) {
             throw new BusinessException("未从图片识别到文字，请确认图片清晰、方向正确后重试");
         }
+        changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "解析题目", null, null, null, false);
 
-        boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(mode);
-        // 2. 结构化：自有卷只抽「题号 + 作答」，任意卷还要抽题干
         List<EduPaperScanner.ScannedQuestion> scanned = anyMode
                 ? paperScanner.extractAnyQuestions(scan.text())
                 : paperScanner.extractSelfQuestions(scan.text());
@@ -344,14 +563,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
         }
 
-        // 3. 自有卷：题号 → 试卷题项索引。分值与题目 ID 一律取自数据库，这是「准确」的来源
+        // 自有卷：题号 → 试卷题项索引；分值与题目标识一律取自数据库（「准确」的来源）
         Map<String, EduPaperQuestion> byNo = new HashMap<>();
         Map<String, EduPaperQuestion> byOrder = new HashMap<>();
         if (!anyMode) {
-            if (paperId == null) {
+            if (task.getMarkingTaskPaperId() == null) {
                 throw new BusinessException("自有卷必须指定试卷 ID");
             }
-            List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(paperId);
+            List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(task.getMarkingTaskPaperId());
             if (relations.isEmpty()) {
                 throw new BusinessException("该试卷下没有题目，无法按题号取准确分值");
             }
@@ -365,134 +584,213 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
         }
 
-        // 4. 落答题卡（复用既有表；content 是 JSON 列，必须存合法 JSON，故包成对象，
-        //    顺带记录模式与版面区域统计，便于事后核对识别质量）
-        // 学生 ID 兜底：前端允许留空（先扫描、后绑定学生是合理场景），
-        // 但 answer_sheet_student_id 是 NOT NULL，缺值会让 INSERT 直接失败
-        // （实测前端不填该字段时报 "Field 'answer_sheet_student_id' doesn't have a default value"）。
-        // 这里统一落一个可检索的占位值，而不是要求前端必填。
-        String effectiveStudentId = StringUtils.isBlank(studentId) ? "anonymous" : studentId;
-
+        // 答题卡（content 是 JSON 列，必须存合法 JSON）
         var content = new java.util.LinkedHashMap<String, Object>();
-        content.put("mode", anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF);
-        content.put("paperId", paperId);
+        content.put("mode", task.getMarkingTaskMode());
+        content.put("paperId", task.getMarkingTaskPaperId());
         content.put("text", scan.text());
         content.put("layoutRegions", scan.layoutRegions());
         content.put("blockCount", scan.blocks().size());
         EduAnswerSheet sheet = new EduAnswerSheet();
-        sheet.setOwnerUserId(EduUserContext.requireUserId());
-        sheet.setAnswerSheetExamId(examId);
-        sheet.setAnswerSheetStudentId(effectiveStudentId);
+        sheet.setOwnerUserId(task.getOwnerUserId());
+        sheet.setAnswerSheetExamId(task.getMarkingTaskExamId());
+        sheet.setAnswerSheetStudentId(task.getMarkingTaskStudentId());
         sheet.setAnswerSheetContent(Json.toJson(content));
         sheet.setAnswerSheetSubmitTime(LocalDateTime.now());
         sheet.setAnswerSheetStatus(1);
         sheet.setCreateTime(LocalDateTime.now());
         sheet.setUpdateTime(LocalDateTime.now());
         answerSheetMapper.insert(sheet);
+        taskMapper.updateArtifacts(taskId, sheet.getAnswerSheetId(), null, LocalDateTime.now());
 
-        String taskId = UUID.randomUUID().toString().replace("-", "");
-        int fallbackScore = maxScore != null && maxScore > 0
-                ? maxScore : properties.getMarking().getMaxScore();
-
-        // 先建全部结果行（PENDING），把「需要 LLM 的判分」交给后台线程。
-        // 为什么必须异步：扫描阅卷每道题要调一次大模型，串行 3 题实测耗时 37 秒，
-        // 同步会让 HTTP 请求长时间挂住（前端表现为「点了没反应」而非报错）。
-        // 这与既有手工提交链路一致（plugin.eduai.marking.async 默认 true，先返回 taskId 再轮询）。
-        var pending = new ArrayList<PendingItem>();
+        int fallbackScore = task.getMarkingTaskMaxScore() != null && task.getMarkingTaskMaxScore() > 0
+                ? task.getMarkingTaskMaxScore() : properties.getMarking().getMaxScore();
+        int total = 0;
         for (EduPaperScanner.ScannedQuestion item : scanned) {
             EduPaperQuestion relation = anyMode ? null : matchRelation(item.no(), byNo, byOrder);
             if (!anyMode && relation == null) {
-                log.warn("[EduAi] 扫描阅卷：题号 {} 在试卷 {} 中找不到对应题项，跳过", item.no(), paperId);
+                log.warn("[EduAi] 阅卷任务：题号 {} 在试卷 {} 中找不到对应题项，跳过",
+                        item.no(), task.getMarkingTaskPaperId());
                 continue;
             }
             Long questionId = relation == null ? 0L : relation.getPaperQuestionQuestionId();
-            int score = relation == null || relation.getPaperQuestionScore() == null
+            int maxScore = relation == null || relation.getPaperQuestionScore() == null
                     || relation.getPaperQuestionScore() <= 0
                     ? fallbackScore : relation.getPaperQuestionScore();
 
-            // 预占结果行（保持与手工提交一致的状态机：先 PENDING，再写 AI 结果）
             EduMarkingResult row = new EduMarkingResult();
-            row.setOwnerUserId(sheet.getOwnerUserId());
+            row.setOwnerUserId(task.getOwnerUserId());
             row.setMarkingResultAnswerSheetId(sheet.getAnswerSheetId());
             row.setMarkingResultQuestionId(questionId);
             row.setMarkingResultTaskId(taskId);
             row.setMarkingResultStatus(STATUS_PENDING);
+            // 识别信息先落到 detail：判分阶段（乃至重启后续跑）都要用它，
+            // 不能只放在内存里，否则续跑时无从得知这道题识别出了什么
+            row.setMarkingResultDetail(buildScanBaseDetail(item, maxScore));
             row.setCreateTime(LocalDateTime.now());
             row.setUpdateTime(LocalDateTime.now());
             markingResultMapper.insert(row);
-            pending.add(new PendingItem(row.getMarkingResultId(), questionId, score, item));
+            total++;
         }
-        if (pending.isEmpty()) {
+        if (total == 0) {
             throw new BusinessException("识别到题目但未能匹配到可判分的题项，请确认试卷选择是否正确");
         }
+        changeStage(taskId, EduMarkingTask.STATUS_PROCESSING,
+                "判分中 0/" + total, total, 0, null, false);
+    }
 
-        Thread.ofVirtual().name("edu-scan-mark-" + taskId).start(() -> {
-            try {
-                gradePending(pending, anyMode);
-                log.info("[EduAi] 扫描阅卷后台判分完成: taskId={}, 已判分={}", taskId, pending.size());
-            } catch (Exception e) {
-                log.error("[EduAi] 扫描阅卷后台判分失败: taskId={}", taskId, e);
+    /**
+     * 判分阶段：对仍为 PENDING 的结果行逐题判分（可重入，已完成的跳过）。
+     *
+     * @param taskId  任务标识
+     * @param anyMode 是否任意卷
+     * @return 已判分题数
+     */
+    private int gradePendingOfTask(String taskId, boolean anyMode) {
+        List<EduMarkingResult> rows = markingResultMapper.selectByTaskId(taskId);
+        int total = rows.size();
+        int done = 0;
+        for (EduMarkingResult row : rows) {
+            if (row.getMarkingResultStatus() != null && row.getMarkingResultStatus() != STATUS_PENDING) {
+                done++;
+                continue;
             }
-        });
-        recordWrongQuestions(taskId, sheet);
-        log.info("[EduAi] 扫描阅卷已提交: taskId={}, mode={}, 识别题目={}, 待判分={}, 版面={}",
-                taskId, anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF,
-                scanned.size(), pending.size(), scan.layoutRegions());
-        return taskId;
-    }
-
-    /**
-     * 一条待判分的题目。
-     *
-     * @param resultId   结果行主键（按主键更新，避免任意卷 question_id 全为 0 时互相覆盖）
-     * @param questionId 题目标识（任意卷为 0）
-     * @param maxScore   本题满分
-     * @param item       识别出的题目（题号 / 题干 / 作答）
-     */
-    private record PendingItem(Long resultId, Long questionId, int maxScore,
-                               EduPaperScanner.ScannedQuestion item) {
-    }
-
-    /**
-     * 后台逐题判分并写库。
-     *
-     * @param pending 待判分列表
-     * @param anyMode 是否任意卷（任意卷全靠模型判定）
-     */
-    private void gradePending(List<PendingItem> pending, boolean anyMode) {
-        for (PendingItem p : pending) {
+            EduPaperScanner.ScannedQuestion item = parseScanDetail(row.getMarkingResultDetail());
+            int maxScore = parseDetailMaxScore(row.getMarkingResultDetail());
             try {
                 EduAiService.MarkingOutcome outcome;
                 if (anyMode) {
-                    outcome = paperScanner.markAnyQuestion(p.item(), p.maxScore());
+                    outcome = paperScanner.markAnyQuestion(item, maxScore);
                 } else {
-                    EduQuestion question = questionMapper.selectById(p.questionId());
+                    EduQuestion question = questionMapper.selectById(row.getMarkingResultQuestionId());
                     if (question == null) {
-                        log.warn("[EduAi] 扫描阅卷：题目 {} 不在题库，跳过", p.questionId());
-                        markingResultMapper.updateScanOutcomeById(p.resultId(), 0,
-                                "题目不在题库", buildScanDetail(p.item(), null, p.maxScore()),
+                        markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), 0,
+                                "题目不在题库", buildScanFinalDetail(item, null, maxScore),
                                 LocalDateTime.now());
+                        done++;
                         continue;
                     }
-                    outcome = tolerantObjectiveOutcome(question, p.item().answer(), p.maxScore());
+                    outcome = tolerantObjectiveOutcome(question, item.answer(), maxScore);
                 }
-                // 按【行主键】写结果：任意卷 question_id 统一为 0，
-                // 若按 (taskId, questionId) 更新会命中该任务下所有 0 号行、互相覆盖（实测 3 行内容完全相同）
-                markingResultMapper.updateScanOutcomeById(p.resultId(), outcome.getScore(),
-                        outcome.getComment(), buildScanDetail(p.item(), outcome, p.maxScore()),
+                // 按【行主键】更新：任意卷 question_id 统一为 0，按 (taskId,questionId) 会命中多行互相覆盖
+                markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), outcome.getScore(),
+                        outcome.getComment(), buildScanFinalDetail(item, outcome, maxScore),
                         LocalDateTime.now());
             } catch (Exception e) {
-                // 单题失败不能让它永久停在 PENDING：既会卡住轮询的 finished 判定，
-                // 也让老师看不到是哪一题出了问题。写入失败原因后继续处理其余题目。
-                log.error("[EduAi] 扫描阅卷单题判分失败: resultId={}, no={}", p.resultId(), p.item().no(), e);
+                // 单题失败不能让该行永久停在 PENDING：否则 finished 永远为 false、老师也看不到哪题出错
+                log.error("[EduAi] 单题判分失败: resultId={}, no={}", row.getMarkingResultId(), item.no(), e);
                 try {
-                    markingResultMapper.updateScanOutcomeById(p.resultId(), 0,
-                            "判分失败：" + e.getMessage(), buildScanDetail(p.item(), null, p.maxScore()),
+                    markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), 0,
+                            "判分失败：" + e.getMessage(), buildScanFinalDetail(item, null, maxScore),
                             LocalDateTime.now());
                 } catch (Exception ex) {
-                    log.error("[EduAi] 写入判分失败结果也失败: resultId={}", p.resultId(), ex);
+                    log.error("[EduAi] 写入判分失败结果也失败: resultId={}", row.getMarkingResultId(), ex);
                 }
             }
+            done++;
+            changeStage(taskId, EduMarkingTask.STATUS_PROCESSING,
+                    "判分中 " + done + "/" + total, total, done, null, false);
+        }
+        return done;
+    }
+
+    /**
+     * 更新任务状态 / 阶段 / 进度。
+     *
+     * @param taskId 任务标识
+     * @param status 状态
+     * @param stage  阶段描述
+     * @param total  题目总数（可为空）
+     * @param done   已判分数（可为空）
+     * @param error  失败原因（可为空）
+     * @param finish 是否写完成时间
+     */
+    private void changeStage(String taskId, int status, String stage,
+                             Integer total, Integer done, String error, boolean finish) {
+        try {
+            taskMapper.updateProgress(taskId, status, stage, total, done, error, finish, LocalDateTime.now());
+        } catch (Exception e) {
+            log.warn("[EduAi] 更新任务进度失败: taskId={}, stage={}, err={}", taskId, stage, e.getMessage());
+        }
+    }
+
+    /**
+     * 保存任务图片到配置目录。
+     *
+     * @param taskId    任务标识
+     * @param imageData 图片字节
+     * @return 落盘路径
+     */
+    private String saveTaskImage(String taskId, byte[] imageData) {
+        try {
+            Path dir = Paths.get(properties.getMarking().getImageDir());
+            Files.createDirectories(dir);
+            Path file = dir.resolve(taskId + ".png");
+            Files.write(file, imageData);
+            return file.toAbsolutePath().toString();
+        } catch (Exception e) {
+            throw new BusinessException("保存试卷图片失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 读取任务图片（续跑时用）。
+     *
+     * @param imagePath 图片路径
+     * @return 图片字节
+     */
+    private byte[] readTaskImage(String imagePath) {
+        if (StringUtils.isBlank(imagePath)) {
+            throw new BusinessException("任务缺少图片路径，无法继续处理");
+        }
+        try {
+            Path p = Paths.get(imagePath);
+            if (!Files.isRegularFile(p)) {
+                throw new BusinessException("任务图片已不存在: " + imagePath);
+            }
+            return Files.readAllBytes(p);
+        } catch (BusinessException be) {
+            throw be;
+        } catch (Exception e) {
+            throw new BusinessException("读取任务图片失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从 detail JSON 还原识别到的题目（判分与续跑阶段使用）。
+     *
+     * @param detail 详情 JSON
+     * @return 题目（题号 / 题干 / 作答）
+     */
+    private EduPaperScanner.ScannedQuestion parseScanDetail(String detail) {
+        if (StringUtils.isBlank(detail)) {
+            return new EduPaperScanner.ScannedQuestion("", null, "");
+        }
+        try {
+            var node = MAPPER.readTree(detail);
+            return new EduPaperScanner.ScannedQuestion(
+                    node.path("recognizedNo").asText(""),
+                    node.hasNonNull("stem") ? node.path("stem").asText("") : null,
+                    node.path("studentAnswer").asText(""));
+        } catch (Exception e) {
+            log.warn("[EduAi] 解析识别详情失败: {}", e.getMessage());
+            return new EduPaperScanner.ScannedQuestion("", null, "");
+        }
+    }
+
+    /**
+     * 从 detail JSON 取本题满分。
+     *
+     * @param detail 详情 JSON
+     * @return 满分；缺失时回退配置值
+     */
+    private int parseDetailMaxScore(String detail) {
+        try {
+            var node = MAPPER.readTree(detail);
+            int v = node.path("maxScore").asInt(0);
+            return v > 0 ? v : properties.getMarking().getMaxScore();
+        } catch (Exception e) {
+            return properties.getMarking().getMaxScore();
         }
     }
 
@@ -649,28 +947,46 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 组装扫描阅卷的批改详情 JSON。
+     * 组装识别信息（判分前写入）。
      *
-     * <p>现有表没有「学生作答」列，用闲置的 {@code marking_result_detail} 承载，
-     * 同时记录对错判定与来源，便于前端与后续统计。</p>
+     * <p>现有表没有「学生作答」列，用闲置的 {@code marking_result_detail} 承载。
+     * 识别阶段先写入题号/题干/作答/满分 —— 判分阶段与<b>重启续跑</b>都要靠它还原题目，
+     * 因此不能只放在内存里。</p>
      *
-     * @param item    识别出的题目
-     * @param outcome 判分结果
+     * @param item     识别出的题目
      * @param maxScore 本题满分
-     * @return 详情 JSON
+     * @return 详情 JSON（尚无得分）
      */
-    private static String buildScanDetail(EduPaperScanner.ScannedQuestion item,
-                                          EduAiService.MarkingOutcome outcome,
-                                          int maxScore) {
+    private static String buildScanBaseDetail(EduPaperScanner.ScannedQuestion item, int maxScore) {
         var detail = new java.util.LinkedHashMap<String, Object>();
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
         detail.put("studentAnswer", item.answer());
         detail.put("maxScore", maxScore);
-        detail.put("score", outcome.getScore());
-        detail.put("correct", maxScore > 0 && outcome.getScore() >= maxScore);
-        detail.put("source", outcome.getSource());
+        return Json.toJson(detail);
+    }
+
+    /**
+     * 组装最终批改详情（判分后写入，含得分 / 对错 / 来源）。
+     *
+     * @param item     识别出的题目
+     * @param outcome  判分结果（可为 null，表示判分失败或题目不在题库）
+     * @param maxScore 本题满分
+     * @return 详情 JSON
+     */
+    private static String buildScanFinalDetail(EduPaperScanner.ScannedQuestion item,
+                                               EduAiService.MarkingOutcome outcome,
+                                               int maxScore) {
+        var detail = new java.util.LinkedHashMap<String, Object>();
+        detail.put("scan", true);
+        detail.put("recognizedNo", item.no());
+        detail.put("stem", item.stem());
+        detail.put("studentAnswer", item.answer());
+        detail.put("maxScore", maxScore);
+        detail.put("score", outcome == null ? 0 : outcome.getScore());
+        detail.put("correct", outcome != null && maxScore > 0 && outcome.getScore() >= maxScore);
+        detail.put("source", outcome == null ? "FALLBACK" : outcome.getSource());
         return Json.toJson(detail);
     }
 
@@ -721,22 +1037,47 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 获取结果
     */
     public MarkingResultVO getResult(String taskId) {
+        // 先取任务：异步模式下「刚提交、识别尚未产出结果行」是正常状态，
+        // 此时不能报「任务不存在」，而要如实回报「排队中 / 处理中」。
+        EduMarkingTask task = null;
+        try {
+            task = taskMapper.selectByTaskId(taskId);
+        } catch (Exception e) {
+            log.debug("[EduAi] 查询阅卷任务失败（表可能尚未建立）: {}", e.getMessage());
+        }
+        boolean taskFailed = task != null && Integer.valueOf(EduMarkingTask.STATUS_FAILED).equals(task.getMarkingTaskStatus());
+        boolean taskDone = task != null && Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(task.getMarkingTaskStatus());
+
         List<EduMarkingResult> results = markingResultMapper.selectTaskResults(
                 taskId, EduUserContext.ownerScope());
 
         if (results.isEmpty()) {
-            /**
-             * 业务异常。
-             * @param "任务不存在" "任务不存在"
-             * @return 业务异常的结果
-             */
-            throw new BusinessException("任务不存在");
+            if (task == null) {
+                throw new BusinessException("任务不存在");
+            }
+            // 任务已创建但尚无结果行：回报任务状态与阶段，让前端继续轮询 / 展示失败原因
+            MarkingResultVO pendingVo = new MarkingResultVO();
+            pendingVo.setTaskId(taskId);
+            pendingVo.setStatus(task.getMarkingTaskStatus());
+            pendingVo.setTaskStatus(task.getMarkingTaskStatus());
+            pendingVo.setStage(task.getMarkingTaskStage());
+            pendingVo.setError(task.getMarkingTaskError());
+            pendingVo.setTotal(0);
+            pendingVo.setTotalScore(0);
+            pendingVo.setResults(new ArrayList<>());
+            pendingVo.setFinished(taskFailed);
+            return pendingVo;
         }
 
         MarkingResultVO vo = new MarkingResultVO();
         vo.setTaskId(taskId);
         vo.setStatus(results.getFirst().getMarkingResultStatus());
         vo.setTotal(results.size());
+        if (task != null) {
+            vo.setTaskStatus(task.getMarkingTaskStatus());
+            vo.setStage(task.getMarkingTaskStage());
+            vo.setError(task.getMarkingTaskError());
+        }
 
         int fallbackScore = properties.getMarking().getMaxScore();
         Map<Long, Integer> fullScores = resolveFullScores(
@@ -762,7 +1103,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         vo.setResults(list);
         vo.setTotalScore(totalScore);
-        vo.setFinished(allDone);
+        // 完成判定：任务已完结，或所有结果行都已批改（兼容手工提交链路）
+        vo.setFinished(taskDone || allDone);
         return vo;
     }
 

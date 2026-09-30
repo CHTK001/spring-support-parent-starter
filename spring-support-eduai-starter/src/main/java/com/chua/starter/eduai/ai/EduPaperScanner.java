@@ -181,11 +181,28 @@ public class EduPaperScanner {
         if (StringUtils.isBlank(text)) {
             return List.of();
         }
+        // 1) 优先用确定性行规则：自有卷只需要「题号 + 学生作答」，而 OCR 文本里两者本就
+        //    同一行（如 "L.主次不分"），属确定性工作。实测交给模型会引入随机性：
+        //    连续 5 次同一张图，有 1 次模型不返回 questions 数组，整个任务被判
+        //    「未能从图片中解析出题目」而失败 —— 而 SELF 的定位是「客观题准确」，
+        //    不允许这种随机失败。
+        List<ScannedQuestion> byRule = parseSelfByLines(text);
+        if (!byRule.isEmpty()) {
+            log.info("[EduScan] SELF 行规则解析出题目 {} 道", byRule.size());
+            return byRule;
+        }
+        // 2) 兜底：版面换行不规则（一题跨多块、题号形式未覆盖）时再交给模型抽取。
+        log.info("[EduScan] SELF 行规则未识别到题号，回退模型抽取");
         String systemPrompt = "你是试卷结构解析器。只输出 JSON，禁止解释。";
         String userPrompt = """
-                下面是一份试卷/答题卡的图片识别文本。请抽取每一道题的「题号」与「学生手写作答」。
-                题号可能是 1. / 一、 / 第1题 / 编号(如 65-1) 等形式，原样保留。
-                学生作答是学生写在该题下方的答案内容；没写就留空字符串。
+                下面是一份试卷/答题卡的图片识别文本。逐行处理：以「题号开头」的行为一道题的起点，
+                其后直到下一道题号之前的行都属于这道题的内容。
+
+                题号形式：1. / 一、 / 第1题 / 编号(如 65-1)，原样保留。
+                L./l./I. 这类字形（数字 1 被 OCR 误识）也视为题号。
+
+                学生作答 = 该题内容里属于学生书写答案的部分；没写就留空字符串。
+                不要把题号与内容合并成一个字段。
 
                 JSON Schema:
                 {"questions":[{"no":"1","answer":"学生作答"}]}
@@ -194,8 +211,109 @@ public class EduPaperScanner {
                 %s
                 """.formatted(text);
         String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
-        return parseQuestions(raw, false);
+        List<ScannedQuestion> list = parseQuestions(raw, false);
+        // 兜底：模型偶尔会把「题号 + 作答」合并成一个 no（如 no="L.主次不分"、answer=""）。
+        // 拆分是确定性工作，不该交给模型 —— 这里按「题号后紧跟内容」把 no 再拆一次。
+        return list.stream().map(EduPaperScanner::splitMergedNo).toList();
     }
+
+    /**
+     * 自有卷的确定性行解析：以「题号开头」的行为一道题的起点，题号后紧跟的内容即学生作答；
+     * 其后直到下一道题号之前的行作为该题作答的续行拼接。
+     *
+     * <p>页眉（姓名 / 学号等）不以题号开头，直接忽略。这样自有卷的抽取结果只取决于
+     * OCR 文本本身，不受模型随机性影响。</p>
+     *
+     * @param text 版面全文
+     * @return 解析出的题目；未识别到任何题号时返回空列表（由调用方回退到模型抽取）
+     */
+    private static List<ScannedQuestion> parseSelfByLines(String text) {
+        List<ScannedQuestion> list = new ArrayList<>();
+        String no = null;
+        var answer = new StringBuilder();
+        for (String rawLine : text.split("\\R")) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            var matcher = SELF_NO_PREFIX.matcher(line);
+            if (matcher.find()) {
+                appendQuestion(list, no, answer);
+                no = matcher.group().trim();
+                answer = new StringBuilder(line.substring(matcher.end()).trim());
+            } else if (no != null) {
+                // 当前题的作答续行
+                if (answer.length() > 0) {
+                    answer.append(' ');
+                }
+                answer.append(line);
+            }
+            // no == null 且未匹配到题号：页眉/说明行，忽略
+        }
+        appendQuestion(list, no, answer);
+        return list;
+    }
+
+    /**
+     * 收尾一道题：题号为空则跳过（尚未遇到第一道题）。
+     *
+     * @param list   题目列表
+     * @param no     题号
+     * @param answer 作答
+     */
+    private static void appendQuestion(List<ScannedQuestion> list, String no, StringBuilder answer) {
+        if (no == null) {
+            return;
+        }
+        list.add(new ScannedQuestion(no, null, answer.toString().trim()));
+    }
+
+    /**
+     * 自有卷题号前缀：兼容 {@code 1.} / {@code L.} / {@code （1）} / {@code 第1题} / {@code 一、} 等形式。
+     */
+    private static final java.util.regex.Pattern SELF_NO_PREFIX =
+            java.util.regex.Pattern.compile(
+                    "^\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.、,)：:]\\s*"
+                            + "|^\\s*[（(]\\s*[0-9lLI]{1,3}\\s*[)）]\\s*"
+                            + "|^\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.、:：]?\\s*"
+                            + "|^\\s*[一二三四五六七八九十]{1,3}\\s*[、.．]\\s*");
+
+    /**
+     * 拆分被模型合并的「题号 + 作答」。
+     *
+     * <p>实测：同一张图同一次识别，模型有时返回 {@code no="L." answer="主次不分"}（正确），
+     * 有时返回 {@code no="L.主次不分" answer=""}（合并）—— 这是模型的随机性，
+     * 一旦合并就会把正确答案判成「未作答」。拆分本可用确定性规则完成，故在此兜底。</p>
+     *
+     * @param q 模型抽出的题目
+     * @return 拆分后的题目；无需拆分时原样返回
+     */
+    private static ScannedQuestion splitMergedNo(ScannedQuestion q) {
+        if (q == null || StringUtils.isNotBlank(q.answer())) {
+            return q;
+        }
+        String no = q.no() == null ? "" : q.no().trim();
+        if (no.isEmpty()) {
+            return q;
+        }
+        // 题号前缀：数字/字母 1（OCR 常见误识 l/L/I）+ 分隔符（. 、 ) 等）
+        var m = NO_PREFIX.matcher(no);
+        if (m.find() && m.end() < no.length()) {
+            String head = no.substring(0, m.end()).trim();
+            String tail = no.substring(m.end()).trim();
+            if (!tail.isEmpty()) {
+                log.info("[EduScan] 拆分合并的题号与作答: {} -> no={} answer={}", no, head, tail);
+                return new ScannedQuestion(head, q.stem(), tail);
+            }
+        }
+        return q;
+    }
+
+    /**
+     * 题号前缀：可选「第」+ 数字或字形近似的 1(l/L/I) + 可选分隔符。
+     */
+    private static final java.util.regex.Pattern NO_PREFIX =
+            java.util.regex.Pattern.compile("^\\s*(?:第\\s*)?[0-9]+[a-zA-Z]{0,3}\\s*[.、,)]\\s*|^\\s*[lLI1]\\s*[.、,)]\\s*");
 
     /**
      * 任意卷：让模型同时抽出「题干 + 学生作答」。

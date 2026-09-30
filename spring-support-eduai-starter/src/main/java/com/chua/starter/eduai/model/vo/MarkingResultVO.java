@@ -48,6 +48,21 @@ public class MarkingResultVO {
     */
     private List<QuestionResult> results;
 
+    /**
+     * 任务状态：0-待处理 1-处理中 2-已完成 3-失败（异步任务的对外状态）
+     */
+    private Integer taskStatus;
+
+    /**
+     * 当前阶段描述（如「识别中」「判分中 2/3」），供前端展示进度
+     */
+    private String stage;
+
+    /**
+     * 失败原因（taskStatus=3 时）
+     */
+    private String error;
+
     @Data
     /**
      * question结果类。

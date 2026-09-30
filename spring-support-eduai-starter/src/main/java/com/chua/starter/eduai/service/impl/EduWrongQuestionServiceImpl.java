@@ -44,6 +44,15 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId) {
         EduWrongQuestion existing = baseMapper.selectOneByStudentQuestionOwner(studentId, questionId, ownerUserId);
 
+        if (existing == null) {
+            // 兜底：唯一键是 (student_id, question_id) 两列，不含归属；
+            // 若既有行的 owner 与本次不同（例如历史数据 owner 为 NULL），
+            // 上面的三条件查询会查不到，直接 INSERT 会撞唯一键
+            // （实测：Duplicate entry 'anonymous-327' for key 'edu_wrong_question_student_question'）。
+            // 因此按唯一键口径再查一次，命中则累加而非插入。
+            existing = baseMapper.selectByStudentAndQuestion(studentId, questionId);
+        }
+
         if (existing != null) {
             existing.setWrongQuestionWrongCount(existing.getWrongQuestionWrongCount() + 1);
             existing.setWrongQuestionLastWrongTime(LocalDateTime.now());
