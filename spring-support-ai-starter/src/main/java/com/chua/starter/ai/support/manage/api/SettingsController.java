@@ -1,7 +1,10 @@
 package com.chua.starter.ai.support.manage.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingDefinitions;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiUserSettingService;
@@ -10,10 +13,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 全局设置 Controller
@@ -27,6 +33,21 @@ import java.util.Map;
 @RequestMapping("/v2/settings")
 @RequiredArgsConstructor
 public class SettingsController {
+
+    /**
+     * 普通账号可写的分组白名单。
+     *
+     * <p>只放**纯个人偏好**：外观（语言/主题）与浏览器（链接打开方式/侧栏）。
+     * 其余分组一律只有管理员能写，理由不是「保守」，而是证据：</p>
+     * <ul>
+     *   <li>{@code system} —— 里面有 {@code workspaceBaseDir}，可写等于能把工作间基路径挪走；</li>
+     *   <li>{@code runtime} / {@code generate} / {@code asr} / {@code bot} 等 —— 模型与供应商配置；</li>
+     *   <li>{@code search} —— 里面是搜索供应商的 API Key（bocha / tavily）；</li>
+     * </ul>
+     * <p>这些字段写进的是「自己的覆盖层」，虽不改全局，但会让该账号把请求指向自己的
+     * 地址与凭据（例如 {@code provider_base_url}），等于把提示词外送，必须拦在接口层。</p>
+     */
+    private static final Set<String> USER_WRITABLE_GROUPS = Set.of("appearance", "browser");
 
     /**
      * 凭据类字段：值不外发给非管理员
@@ -49,6 +70,11 @@ public class SettingsController {
     private final SysAiUserSettingService userSettingService;
 
     /**
+     * 分组定义（管理员专属字段清单从这里取，不硬编码字段名）
+     */
+    private final GlobalSettingDefinitions globalSettingDefinitions;
+
+    /**
      * 获取指定分组对本人生效的设置
      *
      * <p>管理员读全局默认层；普通用户读「全局默认 + 自己的覆盖」的合并结果，响应形状仍是
@@ -63,7 +89,15 @@ public class SettingsController {
     @GetMapping("/{group}")
     public ApiResult<Map<String, Object>> getGroupSettings(@PathVariable String group) {
         if (!AiUserContext.isAdmin()) {
-            return ApiResult.ok(effectiveSettingsFor(AiUserContext.requireUserId(), group));
+            Map<String, Object> effective = effectiveSettingsFor(AiUserContext.requireUserId(), group);
+            // 取值出口也要剔除管理员专属项：普通账号的合并层里本来就可能有该字段
+            // （历史数据、或别人替他写过），不回显才谈得上「仅限管理员能看到」。
+            Set<String> hidden = adminOnlyFieldSet(group);
+            if (!hidden.isEmpty()) {
+                effective = new HashMap<>(effective);
+                hidden.forEach(effective::remove);
+            }
+            return ApiResult.ok(effective);
         }
         List<Map<String, Object>> settings = globalSettingService.list(group);
 
@@ -93,6 +127,10 @@ public class SettingsController {
             @RequestBody Map<String, Object> settings) {
 
         if (!AiUserContext.isAdmin()) {
+            // 普通账号只允许写纯个人偏好的分组，且不得写管理员专属字段。
+            // 两处 PUT（/{group} 与 /{group}/overrides）必须走同一道守卫：
+            // 后者原先没有任何检查，只堵前者等于留了个旁路。
+            assertWritableByUser(group, settings);
             String userId = AiUserContext.requireUserId();
             writeOverrides(userId, group, settings);
             return ApiResult.ok(effectiveSettingsFor(userId, group));
@@ -110,6 +148,81 @@ public class SettingsController {
         log.info("更新分组设置: group={}, fields={}", group, settings.keySet());
 
         return ApiResult.ok(getGroupSettings(group).getData());
+    }
+
+    /**
+     * 校验普通账号是否有权写该分组。
+     *
+     * <p>两道判定缺一不可：</p>
+     * <ol>
+     *   <li><b>分组白名单</b>：只放纯个人偏好（外观 / 浏览器）。其余分组里有工作间基路径、
+     *       供应商凭据、模型地址等系统级配置，普通账号写进自己的覆盖层同样能把请求
+     *       指向外部地址，属于必须拦在接口层的事；</li>
+     *   <li><b>管理员专属字段</b>：即便分组在白名单内，也逐字段再挡一次
+     *       （例如把 {@code user_tool_access} 塞进任何分组的请求体里）。</li>
+     * </ol>
+     *
+     * @param group    设置分组
+     * @param settings 待写入的字段集合
+     * @throws ApiException 普通账号越权时抛出 403
+     */
+    private void assertWritableByUser(String group, Map<String, Object> settings) {
+        if (!USER_WRITABLE_GROUPS.contains(group)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN,
+                    "该配置分组仅管理员可修改：" + group);
+        }
+        List<String> forbidden = adminOnlyFields(group);
+        List<String> hit = settings.keySet().stream().filter(forbidden::contains).toList();
+        if (!hit.isEmpty()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN,
+                    "以下配置项仅管理员可修改：" + String.join("、", hit));
+        }
+    }
+
+    /**
+     * 列出某分组下仅管理员可改的字段。
+     *
+     * <p>字段清单来自 SPI 定义（{@code adminOnly} 标记），而不是在这里硬编码字段名：
+     * 各模块自己声明哪些项是管理员专属，这里只负责执行。</p>
+     *
+     * @param group 设置分组
+     * @return 管理员专属字段名列表
+     */
+    private List<String> adminOnlyFields(String group) {
+        List<String> fields = new ArrayList<>();
+        for (Map<String, Object> item : settingDefinitions(group)) {
+            if (Boolean.TRUE.equals(item.get("adminOnly")) && item.get("field") != null) {
+                fields.add(String.valueOf(item.get("field")));
+            }
+        }
+        return fields;
+    }
+
+    /**
+     * 取某分组下管理员专属的字段集合（用于取值出口剔除）。
+     *
+     * @param group 设置分组
+     * @return 管理员专属字段名集合
+     */
+    private Set<String> adminOnlyFieldSet(String group) {
+        return new HashSet<>(adminOnlyFields(group));
+    }
+
+    /**
+     * 取某分组的分组定义项（来自启动期预热缓存）。
+     *
+     * @param group 设置分组
+     * @return 该分组的 items；分组不存在时返回空列表
+     */
+    private List<Map<String, Object>> settingDefinitions(String group) {
+        for (Map<String, Object> def : globalSettingDefinitions.definitions()) {
+            if (group != null && group.equals(def.get("group")) && def.get("items") instanceof List<?> items) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> typed = (List<Map<String, Object>>) items;
+                return typed;
+            }
+        }
+        return List.of();
     }
 
     /**
@@ -145,6 +258,10 @@ public class SettingsController {
             @PathVariable String group,
             @RequestBody Map<String, Object> settings) {
 
+        // 与 /{group} 同一道守卫：本接口原先没有任何检查，只堵那一个等于留了旁路
+        if (!AiUserContext.isAdmin()) {
+            assertWritableByUser(group, settings);
+        }
         String userId = AiUserContext.requireUserId();
         writeOverrides(userId, group, settings);
 
