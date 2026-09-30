@@ -66,7 +66,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "扫描试卷图片并阅卷")
     @PostMapping("/scan")
-    public ReturnResult<String> scan(@RequestParam("file") MultipartFile file,
+    public ReturnResult<String> scan(@RequestParam(value = "file", required = false) MultipartFile file,
                                      @RequestParam(value = "mode", required = false, defaultValue = "SELF") String mode,
                                      @RequestParam(value = "paperId", required = false) Long paperId,
                                      @RequestParam(value = "studentId", required = false) String studentId,

@@ -83,6 +83,18 @@ public class EduAiProperties {
          * 单题最大分（兜底值）
          */
         private int maxScore = 5;
+
+        /**
+         * 扫描阅卷的图片存放目录。
+         *
+         * <p>任务是异步且可重启续跑的，输入图片必须持久保存；不能只留在内存里。</p>
+         */
+        private String imageDir = "./data/marking";
+
+        /**
+         * 启动时最多续跑多少个未完成任务（防止历史积压一次性打满）。
+         */
+        private int resumeLimit = 50;
     }
 
     @Data

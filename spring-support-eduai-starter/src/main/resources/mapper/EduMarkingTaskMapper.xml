@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduMarkingTaskMapper">
+
+    <!-- 按业务标识取任务 -->
+    <select id="selectByTaskId" resultType="com.chua.starter.eduai.model.EduMarkingTask">
+        SELECT t.* FROM edu_marking_task t
+        WHERE t.marking_task_task_id = #{taskId}
+        LIMIT 1
+    </select>
+
+    <!-- 取待处理/处理中的任务（重启续跑）：先提交先处理 -->
+    <select id="selectResumable" resultType="com.chua.starter.eduai.model.EduMarkingTask">
+        SELECT t.* FROM edu_marking_task t
+        WHERE t.marking_task_status IN (0, 1)
+        ORDER BY t.marking_task_id ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 乐观抢占：仅当仍为「待处理」时置为「处理中」 -->
+    <update id="claimPending">
+        UPDATE edu_marking_task
+        SET marking_task_status = 1,
+            marking_task_start_time = #{now},
+            marking_task_stage = '识别中',
+            marking_task_error = NULL,
+            update_time = #{now}
+        WHERE marking_task_task_id = #{taskId}
+          AND marking_task_status = 0
+    </update>
+
+    <!-- 更新状态与进度 -->
+    <update id="updateProgress">
+        UPDATE edu_marking_task
+        <set>
+            <if test="status != null">marking_task_status = #{status},</if>
+            <if test="stage != null">marking_task_stage = #{stage},</if>
+            <if test="total != null">marking_task_total = #{total},</if>
+            <if test="done != null">marking_task_done_count = #{done},</if>
+            <if test="error != null">marking_task_error = #{error},</if>
+            <if test="finish">marking_task_finish_time = #{now},</if>
+            update_time = #{now}
+        </set>
+        WHERE marking_task_task_id = #{taskId}
+    </update>
+
+    <!-- 写回答题卡与图片路径 -->
+    <update id="updateArtifacts">
+        UPDATE edu_marking_task
+        <set>
+            <if test="answerSheetId != null">marking_task_answer_sheet_id = #{answerSheetId},</if>
+            <if test="imagePath != null">marking_task_image_path = #{imagePath},</if>
+            update_time = #{now}
+        </set>
+        WHERE marking_task_task_id = #{taskId}
+    </update>
+
+</mapper>

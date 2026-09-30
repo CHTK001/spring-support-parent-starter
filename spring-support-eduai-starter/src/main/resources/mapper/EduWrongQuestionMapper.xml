@@ -11,6 +11,14 @@
         LIMIT 1
     </select>
 
+    <!-- 按学生/题目取错题记录（与唯一键口径一致，供登记幂等兜底） -->
+    <select id="selectByStudentAndQuestion" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
+        SELECT w.* FROM edu_wrong_question w
+        WHERE w.wrong_question_student_id = #{studentId}
+          AND w.wrong_question_question_id = #{questionId}
+        LIMIT 1
+    </select>
+
     <!-- 分页查询错题：多条件筛选（学科走题目子查询）+ 归属隔离 + 最近错误时间倒序 -->
     <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
         SELECT w.* FROM edu_wrong_question w

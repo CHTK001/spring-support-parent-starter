@@ -33,6 +33,20 @@ public interface EduWrongQuestionMapper extends BaseMapper<EduWrongQuestion> {
                                                      @Param("ownerUserId") String ownerUserId);
 
     /**
+     * 按「学生 + 题目」取错题记录（与唯一键 edu_wrong_question_student_question 口径一致）。
+     *
+     * <p>为什么需要它：唯一键不含归属列，而 {@link #selectOneByStudentQuestionOwner} 带归属条件；
+     * 当既有行的归属与本次不同（历史数据 owner 为 NULL 等）时会查不到，此时直接 INSERT 会撞唯一键。
+     * 本方法用于兜底，保证登记错题幂等。</p>
+     *
+     * @param studentId  学生标识
+     * @param questionId 题目标识
+     * @return 错题记录，不存在时返回 {@code null}
+     */
+    EduWrongQuestion selectByStudentAndQuestion(@Param("studentId") String studentId,
+                                                @Param("questionId") Long questionId);
+
+    /**
      * 分页查询错题（XML 语句 pageSelect，学科条件走题目子查询）。
      *
      * @param page  分页参数
