@@ -39,8 +39,8 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
      * 尝试获取
     */
     public boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
-        long now = System.currentTimeMillis();
-        long leaseUntil = now + leaseSeconds * 1000L;
+        // 租约截止时刻统一由数据库时钟（NOW(3)）计算：多机部署下各节点时钟漂移
+        // 不再影响"租约是否过期"的判据，NTP 由硬要求降级为可选
         try {
             ClusterEntity existing = clusterMapper.selectById(group);
             if (existing == null) {
@@ -61,12 +61,12 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
                     null,
                     Wrappers.<ClusterEntity>lambdaUpdate()
                             .set(ClusterEntity::getSysJobClusterLeaderNode, nodeId)
-                            .set(ClusterEntity::getSysJobClusterLeaseUntilMs, leaseUntil)
+                            .setSql("sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + " + leaseSeconds + ") * 1000")
                             .setSql("sys_job_cluster_version = sys_job_cluster_version + 1")
                             .eq(ClusterEntity::getSysJobClusterId, group)
                             .and(w -> w.isNull(ClusterEntity::getSysJobClusterLeaderNode)
                                     .or().eq(ClusterEntity::getSysJobClusterLeaderNode, nodeId)
-                                    .or().lt(ClusterEntity::getSysJobClusterLeaseUntilMs, now))
+                                    .or().apply("sys_job_cluster_lease_until_ms < UNIX_TIMESTAMP(NOW(3)) * 1000"))
             );
             if (rows > 0) {
                 if (existing != null && nodeId.equals(existing.getSysJobClusterLeaderNode())) {
@@ -95,13 +95,13 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
      * @return 续约成功返回 true
      */
     public boolean renew(String group, String nodeId, int leaseSeconds) {
-        long now = System.currentTimeMillis();
-        long leaseUntil = now + leaseSeconds * 1000L;
+        // 租约截止时刻统一由数据库时钟（NOW(3)）计算：多机部署下各节点时钟漂移
+        // 不再影响"租约是否过期"的判据，NTP 由硬要求降级为可选
         try {
             int rows = clusterMapper.update(
                     null,
                     Wrappers.<ClusterEntity>lambdaUpdate()
-                            .set(ClusterEntity::getSysJobClusterLeaseUntilMs, leaseUntil)
+                            .setSql("sys_job_cluster_lease_until_ms = (UNIX_TIMESTAMP(NOW(3)) + " + leaseSeconds + ") * 1000")
                             .setSql("sys_job_cluster_version = sys_job_cluster_version + 1")
                             .eq(ClusterEntity::getSysJobClusterId, group)
                             .eq(ClusterEntity::getSysJobClusterLeaderNode, nodeId)

@@ -231,6 +231,12 @@ public class JobSpec {
     private String originJobKey;
 
     /**
+     * 编辑前读到的乐观锁版本 (仅治理保存用): 非空时按此版本做一次 CAS 更新，
+     * 版本不一致说明台账已被他人改过，拒绝保存而不是静默覆盖
+     */
+    private Long version;
+
+    /**
      * 获取业务编号。
      *
      * @return 编号, 可为空
@@ -678,5 +684,23 @@ public class JobSpec {
      */
     public void setOriginJobKey(String originJobKey) {
         this.originJobKey = originJobKey;
+    }
+
+    /**
+     * 获取编辑前读到的乐观锁版本。
+     *
+     * @return 版本, 为空表示本次保存不做并发校验
+     */
+    public Long getVersion() {
+        return version;
+    }
+
+    /**
+     * 设置编辑前读到的乐观锁版本。
+     *
+     * @param version 版本
+     */
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }
