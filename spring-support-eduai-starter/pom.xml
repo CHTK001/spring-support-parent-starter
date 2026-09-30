@@ -120,6 +120,16 @@
             <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
 
+        <!-- 单元测试：覆盖学生口令摘要/校验这类安全核心逻辑。
+             刻意不引 mockito：被测对象是纯函数（无外部依赖），
+             打桩只会掩盖真实行为。 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>6.1.3</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Swagger 注解 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
