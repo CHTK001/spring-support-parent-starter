@@ -716,8 +716,8 @@ public class MybatisJobRepository implements JobRepository {
      */
     private long currentDbTimeMs(long fallback) {
         try {
-            Long dbNow = jobMapper.selectDbNowMs();
-            return dbNow == null ? fallback : dbNow;
+            var dbNow = jobMapper.selectDbNow();
+            return dbNow == null ? fallback : dbNow.getTime();
         } catch (Exception ex) {
             log.warn("[job] 取数据库时间失败, 回落到本机时钟 cause={}", ex.getMessage());
             return fallback;
