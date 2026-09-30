@@ -75,6 +75,15 @@ public class MybatisJobLogSink implements JobLogSink {
     private final boolean fileLoggingEnabled;
 
     /**
+     * 本节点标识（形如 {@code pid@host-token}）。
+     *
+     * <p>用来判断某一轮执行是不是跑在本节点上：角色拆分（SCHEDULER + EXECUTOR）下执行器节点
+     * 也会把日志回报到这里落库，只按台账派发方式判定会把它们错记成「本地」。允许为 空
+     * （拿不到本节点标识时退化为只看派发方式）。</p>
+     */
+    private final String localNodeId;
+
+    /**
      * 创建 MyBatis作业日志sink 实例
      * @param jobLogMapper 作业日志映射器
      */
@@ -99,9 +108,23 @@ public class MybatisJobLogSink implements JobLogSink {
      * @param fileLoggingEnabled 文件日志已启用
      */
     public MybatisJobLogSink(JobLogMapper jobLogMapper, JobMapper jobMapper, boolean fileLoggingEnabled) {
+        this(jobLogMapper, jobMapper, fileLoggingEnabled, null);
+    }
+
+    /**
+     * 创建带本节点标识的 MyBatis 作业日志 sink 实例。
+     *
+     * @param jobLogMapper       作业日志映射器
+     * @param jobMapper          作业映射器, 为空则日志行不落任务编号
+     * @param fileLoggingEnabled 文件日志是否启用
+     * @param localNodeId        本节点标识, 允许为 空
+     */
+    public MybatisJobLogSink(JobLogMapper jobLogMapper, JobMapper jobMapper, boolean fileLoggingEnabled,
+                             String localNodeId) {
         this.jobLogMapper = jobLogMapper;
         this.jobMapper = jobMapper;
         this.fileLoggingEnabled = fileLoggingEnabled;
+        this.localNodeId = localNodeId;
     }
 
     @Override
@@ -142,7 +165,7 @@ public class MybatisJobLogSink implements JobLogSink {
         entity.setSysJobLogCost(BigDecimal.valueOf(event.costMs()));
         entity.setSysJobLogTriggerMsg(buildMessage(event));
         entity.setSysJobLogNodeId(event.nodeId());
-        entity.setSysJobLogTriggerAddress(resolveClientAddress(ledger));
+        entity.setSysJobLogTriggerAddress(resolveClientAddress(event, ledger));
         Date executedAt = new Date(event.executedAtMs());
         entity.setSysJobLogTriggerTime(executedAt);
         entity.setSysJobLogTriggerDate(executedAt);
@@ -185,27 +208,49 @@ public class MybatisJobLogSink implements JobLogSink {
     /**
      * 解析「运行客户端」地址。
      *
-     * <p>远端派发的任务记台账登记的远端执行器地址（控制台那一列要的就是「他们的 IP」）；
-     * 本地一律记 {@link #LOCAL_CLIENT}。这里以台账的派发方式为准，不拿 {@code nodeId} 反推：
-     * 日志行的执行者身份由 {@code sys_job_log_node_id} 承担，而本轮究竟派到了哪个客户端
-     * 只有台账知道，且 {@code nodeId} 是「主机名+pid」，本来就不是地址。</p>
+     * <p>判据按优先级：</p>
+     * <ol>
+     *   <li>本轮执行节点就是本节点 → {@link #LOCAL_CLIENT}；</li>
+     *   <li>台账登记了远端执行器地址（{@code dispatchMode=REMOTE}）→ 记该地址，也就是「他们的 IP」；</li>
+     *   <li>执行节点另有其人（角色拆分下的执行器、或事件由远端上行而来）→ 记该节点标识，
+     *       <b>不能记「本地」</b>：那一轮确实不跑在本机，谎报本地会让排障时找错机器。</li>
+     * </ol>
      *
+     * <p>第 1 步依赖注入进来的本节点标识，拿不到时退化成只看台账派发方式。只按
+     * {@code dispatchMode} 判定是不够的：角色拆分走作业同步通道，台账里是 LOCAL，
+     * 但实际由执行器节点执行。</p>
+     *
+     * @param event  日志事件（取执行节点标识），允许为 null
      * @param ledger 台账行, 可为 空 (任务已删除或回查不到)
      * @return 运行客户端地址
      */
-    private static String resolveClientAddress(JobEntity ledger) {
-        if (ledger == null) {
+    private String resolveClientAddress(JobLogEvent event, JobEntity ledger) {
+        String node = event == null ? null : event.nodeId();
+        if (localNodeId != null && !localNodeId.isBlank() && localNodeId.equals(node)) {
             return LOCAL_CLIENT;
         }
+        if (ledger != null && isRemoteDispatch(ledger)) {
+            String address = ledger.getSysJobRemoteExecutorAddress();
+            if (address == null || address.isBlank()) {
+                return REMOTE_CLIENT_UNKNOWN;
+            }
+            return address.trim();
+        }
+        if (node != null && !node.isBlank()) {
+            return node;
+        }
+        return LOCAL_CLIENT;
+    }
+
+    /**
+     * 台账这一行是否为「远端派发」（按登记的远端执行器地址下发）。
+     *
+     * @param ledger 台账行
+     * @return true 表示台账登记了远端派发
+     */
+    private static boolean isRemoteDispatch(JobEntity ledger) {
         String mode = ledger.getSysJobDispatchMode();
-        if (mode == null || !"REMOTE".equalsIgnoreCase(mode.trim())) {
-            return LOCAL_CLIENT;
-        }
-        String address = ledger.getSysJobRemoteExecutorAddress();
-        if (address == null || address.isBlank()) {
-            return REMOTE_CLIENT_UNKNOWN;
-        }
-        return address.trim();
+        return mode != null && "REMOTE".equalsIgnoreCase(mode.trim());
     }
 
     /**
