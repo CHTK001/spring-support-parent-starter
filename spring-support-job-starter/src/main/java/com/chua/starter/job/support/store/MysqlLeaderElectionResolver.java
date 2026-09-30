@@ -1,6 +1,7 @@
 package com.chua.starter.job.support.store;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.job.support.cluster.LeaderElectionResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author CH
  */
 @Slf4j
+@Spi("mysql")
 @RequiredArgsConstructor
 public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
 
