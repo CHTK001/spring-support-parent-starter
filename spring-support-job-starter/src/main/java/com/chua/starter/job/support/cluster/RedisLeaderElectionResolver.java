@@ -63,15 +63,32 @@ public class RedisLeaderElectionResolver implements LeaderElectionResolver {
             Long.class);
 
     /**
-     * 解析 Redis 模板：不可用（无 Redis 依赖 / 无该 Bean / 上下文未就绪）时返回 null，
-     * 由调用方按"未抢到"处理，绝不抛异常穿透到调度循环。
+     * 已解析到的 Redis 模板缓存。
+     *
+     * <p>必须缓存：优雅关闭时 Spring 容器正在拆（Hikari、同步服等都已在 shutdown hook 里停掉），
+     * 此时再经 {@link SpringBeanUtils} 查找模板会失败，导致 {@code release} 删不掉租约键，
+     * 只能等 TTL 自然过期（表现为"优雅重启后有一个 ≤租约时长的派发空窗"）。</p>
+     */
+    private volatile StringRedisTemplate cachedTemplate;
+
+    /**
+     * 解析 Redis 模板（首次成功后缓存；不可用时返回 null，由调用方按"未抢到"处理）。
      *
      * @return Redis 模板，或 null
      */
     private StringRedisTemplate redis() {
+        StringRedisTemplate cached = cachedTemplate;
+        if (cached != null) {
+            return cached;
+        }
         try {
             ApplicationContext context = SpringBeanUtils.getApplicationContextOrNull();
-            return context == null ? null : SpringBeanUtils.getBean(context, StringRedisTemplate.class, null);
+            StringRedisTemplate template = context == null ? null
+                    : SpringBeanUtils.getBean(context, StringRedisTemplate.class, null);
+            if (template != null) {
+                cachedTemplate = template;
+            }
+            return template;
         } catch (Exception ex) {
             log.warn("[job] 取 Redis 模板失败 cause={}", ex.getMessage());
             return null;
