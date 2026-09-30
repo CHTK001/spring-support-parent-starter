@@ -15,7 +15,9 @@ import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.impersonation.TemporaryToken;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.protocol.AbstractProtocol;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
+import com.chua.common.support.lang.json.Json;
 import com.chua.starter.oauth.client.support.ratelimit.RateLimitService;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
@@ -225,17 +227,44 @@ public class AuthClientExecute {
     }
 
     /**
+     * Bearer 前缀
+     */
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    /**
      * 从请求中获取 令牌
+     *
+     * <p><b>取值顺序必须与 {@code OAuthServerFilter#resolveToken} 一致</b>：
+     * 自定义头 → Authorization Bearer → 参数 → Cookie。
+     * 两者不一致会导致登出清不掉本地缓存：鉴权过滤器认得
+     * {@code Authorization: Bearer xxx}（这是前端与 curl 最常用的携带方式），
+     * 而本方法原先只认自定义头、Cookie、参数，于是取到空值，
+     * {@code CACHE.invalidate(token)} 根本不执行，3 分钟内存缓存继续放行已登出的令牌，
+     * 表现为「登出后旧 token 仍能访问业务接口（HTTP 200）」。</p>
+     *
      * @param request 请求
      * @return 获取令牌从请求的结果
      */
     private String getTokenFromRequest(HttpServletRequest request) {
- // 从 头部 获取
-        String token = request.getHeader(getAuthClientProperties().getTokenName());
+        String tokenName = getAuthClientProperties().getTokenName();
+ // 从 自定义头 获取
+        String token = request.getHeader(tokenName);
         if (StringUtils.isNotBlank(token)) {
             return token;
         }
-        
+
+        // 从 Authorization: Bearer 获取
+        String authorization = request.getHeader("Authorization");
+        if (StringUtils.isNotBlank(authorization) && authorization.startsWith(BEARER_PREFIX)) {
+            return authorization.substring(BEARER_PREFIX.length()).trim();
+        }
+
+        // 从参数获取
+        String param = request.getParameter(tokenName);
+        if (StringUtils.isNotBlank(param)) {
+            return param;
+        }
+
         // 从 Cookie 获取
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -245,9 +274,8 @@ public class AuthClientExecute {
                 }
             }
         }
-        
-        // 从参数获取
-        return request.getParameter(getAuthClientProperties().getTokenName());
+
+        return null;
     }
 
     /**
@@ -267,11 +295,12 @@ public class AuthClientExecute {
              */
             return new LoginAuthResult(400, "未登录");
         }
-        // 清除本地缓存
-        /**
-         * clear本地缓存。
-         */
+        // 清除本地缓存 + 登记吊销（revokeToken 内部会顺带 invalidateCache）
         clearLocalCache();
+        // 已知本次登出的令牌，再显式作废一次，避免 clearLocalCache 从请求头
+        // 反解失败（如自定义头/参数/Cookie 都没带）时缓存残留
+        CACHE.invalidate(userResult.getToken());
+        AbstractProtocol.revokeToken(userResult.getToken(), userResult.getExpireTime());
  // 使用 令牌 作为 uid 参数，logout类型.LOGOUT 表示单设备登出
         return logout(userResult.getToken(), userResult.getLoginType(), LogoutType.LOGOUT);
     }
@@ -293,11 +322,14 @@ public class AuthClientExecute {
              */
             return new LoginAuthResult(400, "未登录");
         }
-        // 清除本地缓存
-        /**
-         * clear本地缓存。
-         */
+        // 清除本地缓存 + 登记吊销：本机的当前令牌同样要作废本地缓存与登记吊销；
+        // 其它设备上的令牌由服务端删除（本进程无法枚举它们，其本地缓存只能等自然过期）
         clearLocalCache();
+        String currentToken = userResult.getToken();
+        if (StringUtils.isNotBlank(currentToken)) {
+            CACHE.invalidate(currentToken);
+            AbstractProtocol.revokeToken(currentToken, userResult.getExpireTime());
+        }
         return logout(userResult.getUid(), userResult.getLoginType(), LogoutType.LOGOUT_ALL);
     }
 
@@ -337,6 +369,15 @@ public class AuthClientExecute {
              */
             return new LoginAuthResult(400, "Token不能为空");
         }
+        // 清除本地缓存：必须做，否则登出后旧令牌仍会被放行。
+        // 客户端有两层进程内缓存，另外还登记一份吊销名单，三处都要处理：
+        //   1) 本类的 CACHE（token → 用户信息，expireAfterWrite 3 分钟）
+        //   2) AbstractProtocol 的 CACHEABLE（cacheKey → 认证结果，命中即返回、不再问服务端）
+        //   3) AbstractProtocol 的 REVOKED 吊销名单（approve 会在读缓存【之前】查它）
+        // revokeToken 内部已顺带调用 invalidateCache，故 2) 3) 一步到位。
+        clearLocalCache();
+        CACHE.invalidate(token);
+        AbstractProtocol.revokeToken(token, null);
         return logout(token, null, LogoutType.LOGOUT);
     }
 
@@ -598,6 +639,22 @@ public class AuthClientExecute {
     private static final int MAX_TEMPORARY_TOKEN_EXPIRE = 3600;
 
     /**
+     * 代入目标的 ext 键。
+     *
+     * <p>与服务端 {@code OauthProtocolHandler} 读取的键名必须一致，
+     * 改名需两端同步，否则代入会静默退化为「换自己」。</p>
+     */
+    private static final String EXT_IMPERSONATE = "impersonate";
+
+    /**
+     * 协议默认实现返回的「不支持临时令牌」状态码。
+     *
+     * <p>{@code Protocol#createTemporaryToken} 的默认实现即以该码表示不支持，
+     * 据此判定是「协议不支持」而非「签发失败」，从而回落到本地签发。</p>
+     */
+    private static final int UNSUPPORTED_BY_PROTOCOL_CODE = 501;
+
+    /**
      * 创建临时令牌（使用当前登录用户，默认10秒过期）
      * <p>基于当前登录用户的令牌创建一个短期有效的临时令牌</p>
      *
@@ -714,7 +771,7 @@ public class AuthClientExecute {
      * @return 含令牌的登录结果；非管理员或入参非法时返回对应错误码
      */
     public LoginAuthResult createTemporaryTokenFor(UserResult target, int expireSeconds, List<String> allowedUrls) {
-        UserResume operator = getSafeUserResult();
+        UserResult operator = getSafeUserResult();
         if (operator == null || StringUtils.isBlank(operator.getUserId())) {
             return new LoginAuthResult(401, "未登录或令牌无效");
         }
@@ -727,8 +784,61 @@ public class AuthClientExecute {
             return new LoginAuthResult(400, "目标身份不能为空");
         }
         int actualExpire = Math.max(1, Math.min(expireSeconds, MAX_TEMPORARY_TOKEN_EXPIRE));
+        // 先打标记：目标身份的 ext 里写入「临时 / 可访问路径 / 生效期」，
+        // 服务端签发时会原样存下，鉴权时供各协议统一读取校验。
         TemporaryToken.mark(target, operator.getUsername(), actualExpire, allowedUrls);
+
+        // 优先由服务端签发。
+        // 为什么必须走服务端：static 令牌是自包含的（本地签发、本地解密校验），
+        // 而 tcp 等有状态协议的令牌由服务端存 Redis、鉴权时回查。
+        // 若在 tcp 下仍本地签发，服务端查不到该令牌，代入后所有请求都会 401
+        // ——这正是切入 tcp 后代入功能失效的原因。
+        LoginAuthResult viaServer = issueTemporaryTokenByServer(operator, target, actualExpire, allowedUrls);
+        if (viaServer != null) {
+            return viaServer;
+        }
+        // 协议不支持服务端签发（static 的默认实现返回 501）时回落本地签发，行为与改动前一致
         return CredentialIssuer.issue(target, actualExpire);
+    }
+
+    /**
+     * 尝试由服务端签发代入令牌。
+     *
+     * @param operator     操作人（管理员）的登录态，其令牌作为源凭据
+     * @param target       目标身份（已由调用方打好临时标记）
+     * @param actualExpire 有效期（秒）
+     * @param allowedUrls  允许访问的路径前缀
+     * @return 服务端签发结果；协议不支持或调用失败时返回 {@code null}，由调用方回落本地签发
+     */
+    private LoginAuthResult issueTemporaryTokenByServer(UserResult operator, UserResult target,
+                                                        int actualExpire, List<String> allowedUrls) {
+        String sourceToken = operator.getToken();
+        if (StringUtils.isBlank(sourceToken)) {
+            return null;
+        }
+        try {
+            Protocol protocol = WebRequest.getProtocolExtension(getAuthClientProperties());
+            if (protocol == null) {
+                return null;
+            }
+            Map<String, Object> ext = new HashMap<>();
+            ext.put("expireTime", actualExpire);
+            if (allowedUrls != null && !allowedUrls.isEmpty()) {
+                ext.put("allowedUrls", String.join(",", allowedUrls));
+            }
+            // 目标身份整体下发：服务端不认识业务表，只负责「校验来源 + 拒绝提权 + 签发」
+            ext.put(EXT_IMPERSONATE, Json.toJson(target));
+            LoginAuthResult result = protocol.createTemporaryToken(sourceToken, ext);
+            // 501 是协议默认实现的「不支持临时令牌」信号，据此回落而不是当成失败
+            if (result == null || result.getCode() == UNSUPPORTED_BY_PROTOCOL_CODE) {
+                return null;
+            }
+            return result;
+        } catch (Exception e) {
+            Logger logger = LoggerFactory.getLogger(AuthClientExecute.class);
+            logger.warn("服务端签发代入令牌失败，回落本地签发: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

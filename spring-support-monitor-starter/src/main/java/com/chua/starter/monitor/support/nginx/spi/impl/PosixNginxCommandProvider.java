@@ -103,15 +103,59 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String processAlive(String confTail) {
-        // 三级退化：pgrep（Linux / 部分 BSD）→ ps -e | grep
-        String byPgrep = "pgrep -af nginx 2>/dev/null | grep -F -- " + quote(confTail) + " >/dev/null && echo ON || echo OFF";
-        String byPs = "ps -e 2>/dev/null | grep -F -- " + quote(confTail) + " | grep -qi '[n]ginx' && echo ON || echo OFF";
-        return "if command -v pgrep >/dev/null 2>&1; then\n  " + byPgrep + "\nelse\n  " + byPs + "\nfi";
+        // 只认「argv[0] 就是 nginx」的进程，conf 比对交给 awk 的 index()，
+        // 模式串用 -v 传进去，不出现在脚本正文里。
+        //
+        // 踩过的坑（生产 198 实测，100% 必现，不是概率问题）：原先是
+        //   pgrep -af nginx | grep -F -- 'nginx.conf' >/dev/null && echo ON
+        // pgrep -f 匹配的是**完整命令行**，管道里那个 grep 自己的 argv 里同时含
+        // 「nginx」和「nginx.conf」——它被 pgrep 列出来，又被自己匹配上，
+        // 于是「有没有在跑」恒为 ON。实测证据：nginx 确实已停（systemd inactive、
+        // 8080 不通）时，该行输出为 `10689 grep -F -- nginx-stopped-probe.conf`。
+        // 后果是停止后仍判运行中（等满 20 秒后报「未退出」）、
+        // 点启动永远回「已在运行」——「停止有效、启动无效」，最难定位的一组症状。
+        //
+        // 为什么只在这一类 conf 名上暴露：conf 名不含「nginx」时 pgrep 不会列出 grep，
+        // 老写法侥幸正确。默认名恰好是 nginx.conf，所以必踩。
+        //
+        // 同源的第二处：confTail 解析不出时为空串，`grep -F -- ''` 匹配**所有行**，
+        // 同样恒为 ON。这里对空串直接回 UNKNOWN，交给调用方按「查不到」处理
+        //（调用方只认 ON / OFF，其余一律 UNKNOWN，见 NginxManageServiceImpl#detectRunning）。
+        String quoted = quote(confTail);
+        // $2 是 argv[0]：`nginx:` 开头 = 改过进程名的 master / worker；
+        // 以 /nginx 结尾 = 未改名的绝对路径。这一层把 bash / grep / awk 全部排除在外。
+        String byPgrep = "  pgrep -af nginx 2>/dev/null | awk -v pat=" + quoted + " '\n"
+                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (index($0, pat)) f = 1 }\n"
+                + "    END { print (f ? \"ON\" : \"OFF\") }'\n";
+        String byPs = "  ps -e 2>/dev/null | awk -v pat=" + quoted + " '\n"
+                + "    { for (i = 1; i <= NF; i++) if ($i ~ /(^|\\/)nginx$/) { if (index($0, pat)) f = 1 } }\n"
+                + "    END { print (f ? \"ON\" : \"OFF\") }'\n";
+        return "pat=" + quoted + "\n"
+                + "[ -n \"$pat\" ] || { echo UNKNOWN; exit 0; }\n"
+                + "if command -v pgrep >/dev/null 2>&1; then\n" + byPgrep
+                + "else\n" + byPs
+                + "fi\n";
     }
 
     @Override
     public String processPid(String confTail) {
-        return "pgrep -af nginx 2>/dev/null | grep -F -- " + quote(confTail) + " | head -1 | cut -d' ' -f1";
+        // 与 processAlive 同一个坑：原先 `pgrep -af nginx | grep -F -- <conf> | cut -d' ' -f1`，
+        // nginx 停掉后 grep 自己就是唯一命中行，于是把 **grep 的 PID** 当成 nginx PID 返回。
+        // 服务层当前走的是 NginxManageServiceImpl#detectMasterPid（用 pgrep -x，不带 -f），
+        // 不受此影响；但这是已发布的 SPI 扩展点，谁调用谁拿到错 PID，必须一并修掉。
+        //
+        // 选取口径保持原样：pgrep 输出里第一个 argv[0] 为 nginx 且命令行含 conf 的进程，
+        // 只是把非 nginx 进程（grep / bash / awk）排除在外。
+        String quoted = quote(confTail);
+        String byPgrep = "  pgrep -af nginx 2>/dev/null | awk -v pat=" + quoted + " '\n"
+                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (index($0, pat)) { print $1; exit } }'\n";
+        String byPs = "  ps -e 2>/dev/null | awk -v pat=" + quoted + " '\n"
+                + "    { for (i = 1; i <= NF; i++) if ($i ~ /(^|\\/)nginx$/) { if (index($0, pat)) { print $1; exit } } }'\n";
+        return "pat=" + quoted + "\n"
+                + "[ -n \"$pat\" ] || exit 0\n"
+                + "if command -v pgrep >/dev/null 2>&1; then\n" + byPgrep
+                + "else\n" + byPs
+                + "fi\n";
     }
 
     @Override

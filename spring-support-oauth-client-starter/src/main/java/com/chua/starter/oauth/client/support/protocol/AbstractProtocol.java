@@ -373,6 +373,16 @@ public abstract class AbstractProtocol implements Protocol {
      * Approve
     */
     public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
+        // 已吊销令牌的判定必须【先于】认证缓存读取：
+        // 缓存里存的是签发那一刻的放行结果，若先读缓存，
+        // 登出 / 被踢出 的令牌会在缓存有效期内继续放行，而且不再询问服务端
+        // （表现为「登出后旧令牌仍可访问业务接口，且鉴权日志显示耗时 0ms」）。
+        // StaticProtocol 已在自己的 approve 里做了这一步，但 tcp/http/rsocket 等协议
+        // 直接继承本方法，此前没有这层保护，因此补到父类让各协议一致生效。
+        if (isTokenRevoked(token)) {
+            clearAuthenticationInformation(getCacheKey(cookies, token));
+            return AuthenticationInformation.noAuth();
+        }
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
         String cacheKey = getCacheKey(cookies, token);
         AuthenticationInformation cached = readAuthenticationInformation(cacheKey);
@@ -525,8 +535,20 @@ public abstract class AbstractProtocol implements Protocol {
  // 根据加密配置决定是否解密（Key 为 空 时说明服务端未加密响应，直接用原始数据）
             if (authClientProperties.isEnableEncryption() && key != null) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
+            } else if (data instanceof String) {
+                // 服务端把数据 包成 JSON 字符串 返回（HTTP/RSocket 协议的老形状），
+                // 本身就是可解析文本，直接用
+                body = (String) data;
             } else {
-                body = data.toString();
+                // 服务端把数据 作为 嵌套 JSON 对象 返回（TCP 协议的形状，例如 登录 返回的
+                // {"token":..,"refreshToken":..,"userResume":{..}}），反序列化后是 Map。
+                // Map.toString() 产出的是 {key=value} 这种 Java toString 形式，
+                // 键值之间用 = 而不是 :，不是合法 JSON，直接丢给 Json.fromJson 会抛
+                // JsonParseException: Unexpected character ('=' ...): was expecting a colon
+                // to separate field name and value，
+                // 最终在调用方表现为「鉴权服务器异常」，登录/升級整体失败。
+                // 因此这里必须先转回 JSON 文本。
+                body = Json.toJson(data);
             }
             LoginResult loginResult = Json.fromJson(body, LoginResult.class);
             UserResume userResume = BeanUtils.copyProperties(loginResult.getUserResume(), UserResume.class);
@@ -598,8 +620,20 @@ public abstract class AbstractProtocol implements Protocol {
  // 根据加密配置决定是否解密（Key 为 空 时说明服务端未加密响应，直接用原始数据）
             if (authClientProperties.isEnableEncryption() && key != null) {
                 body = Codec.build(encryption, key).decodeHex(data.toString());
+            } else if (data instanceof String) {
+                // 服务端把数据 包成 JSON 字符串 返回（HTTP/RSocket 协议的老形状），
+                // 本身就是可解析文本，直接用
+                body = (String) data;
             } else {
-                body = data.toString();
+                // 服务端把数据 作为 嵌套 JSON 对象 返回（TCP 协议的形状，例如 登录 返回的
+                // {"token":..,"refreshToken":..,"userResume":{..}}），反序列化后是 Map。
+                // Map.toString() 产出的是 {key=value} 这种 Java toString 形式，
+                // 键值之间用 = 而不是 :，不是合法 JSON，直接丢给 Json.fromJson 会抛
+                // JsonParseException: Unexpected character ('=' ...): was expecting a colon
+                // to separate field name and value，
+                // 最终在调用方表现为「鉴权服务器异常」，登录/升級整体失败。
+                // 因此这里必须先转回 JSON 文本。
+                body = Json.toJson(data);
             }
 
             if(path != null && path.endsWith("login")) {
@@ -631,10 +665,27 @@ public abstract class AbstractProtocol implements Protocol {
                 return new AuthenticationInformation(Information.OK, null);
             }
 
- // temporary-令牌 路径：服务端返回的 数据 是 令牌 字符串
+ // temporary-token 路径：服务端返回的是完整登录结果（token/refreshToken/userResume），
+ // 与 login 同形状。早期这里直接把整个响应体当令牌，调用方拿到的
+ // "令牌"其实是一段 JSON（`{"token":"AT..."}`），拿去鉴权必然失败——
+ // 该缺陷此前未暴露是因为 tcp 协议的临时令牌一直没被真正使用。
             if(path != null && path.endsWith("temporary-token")) {
-                AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, null);
-                authenticationInformation.setToken(body);
+                LoginResult tempResult = null;
+                try {
+                    tempResult = Json.fromJson(body, LoginResult.class);
+                } catch (Exception e) {
+                    log.debug("临时令牌响应非 LoginResult 形状，按裸令牌处理: {}", e.getMessage());
+                }
+                if (tempResult == null || tempResult.getToken() == null) {
+                    // 兼容服务端直接返回裸令牌字符串的实现
+                    AuthenticationInformation bare = new AuthenticationInformation(OK, null);
+                    bare.setToken(body);
+                    return bare;
+                }
+                AuthenticationInformation authenticationInformation =
+                        new AuthenticationInformation(OK, tempResult.getUserResume());
+                authenticationInformation.setToken(tempResult.getToken());
+                authenticationInformation.setRefreshToken(tempResult.getRefreshToken());
                 return authenticationInformation;
             }
 

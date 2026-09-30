@@ -89,6 +89,17 @@ public enum AuthType {
     EMAIL("email", "邮箱验证码认证"),
 
     /**
+     * 学生登录
+     * <p>面向教育域学生账号：登录标识为学号或家长手机号，
+     * 由 OAuth 服务端的 {@code StudentLoginService} 校验（注册名 {@code STUDENT}）。
+     * 与 WEB 的差别是账号体系不同——学生不是 sys_user，而是 edu_student。</p>
+     * @param "student" "学生"
+     * @param "学生登录" "学生登录"
+     * @return 学生的结果
+     */
+    STUDENT("student", "学生登录"),
+
+    /**
      * 无认证类型
      * <p>用于默认值或未指定认证类型的场景</p>
      * @param "none" "无"

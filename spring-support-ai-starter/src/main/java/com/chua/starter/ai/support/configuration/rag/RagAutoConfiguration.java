@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.configuration.rag;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingDefinitions;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -29,12 +30,13 @@ public class RagAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public GlobalSettingInitializer globalSettingInitializer(SysAiGlobalSettingService globalSettingService) {
+    public GlobalSettingInitializer globalSettingInitializer(SysAiGlobalSettingService globalSettingService,
+                                                             GlobalSettingDefinitions globalSettingDefinitions) {
         /**
          * 全局settinginitializer。
          * @param globalSettingService 全局setting服务
          * @return 全局settinginitializer的结果
          */
-        return new GlobalSettingInitializer(globalSettingService);
+        return new GlobalSettingInitializer(globalSettingService, globalSettingDefinitions);
     }
 }

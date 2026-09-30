@@ -3,7 +3,7 @@ package com.chua.starter.ai.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.service.ImageSearchStore;
-import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.ai.support.service.ImageSearchStores;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,21 @@ import java.util.Map;
  * 以图搜图控制器。
  *
  * <p>提供「提特征入库」与「按图检索底库」能力，特征模型来自
- * {@code image_search} 分组全局设置，底库由 {@link ImageSearchStore} 负责。</p>
+ * {@code image_search} 分组全局设置，底库由 {@link ImageSearchStores} 按当前登录账号路由，
+ * 每个账号读写的是**自己的**那份底库。</p>
+ *
+ * <p><b>鉴权口径：登录即可用，不再要求管理员。</b>原先这里 6 个接口全标
+ * {@code @Permission("admin")}，理由是「底库是全局共享资源，普通用户能改等于向量索引
+ * 可被任意污染」。改成按账号隔离后该理由不再成立——每个账号只能污染自己的库，
+ * 删也只删自己的，因此把门槛降到「必须登录」。</p>
+ *
+ * <p><b>匿名访问仍被拒</b>：所有出口最终都会走到 {@code AiUserContext.requireUserId()}
+ * （经底库门面解析账号），未登录时抛 401。这里刻意不做「匿名可用」的放宽，
+ * 免得底库变成可被任意读取的资源。</p>
+ *
+ * <p><b>全局参数（特征模型 / 相似度下限 / 返回条数上限）仍只有管理员能改</b>，
+ * 见 {@code SettingsController#assertWritableByUser}：普通账号写入会被 403 拦下
+ * （{@code image_search} 不在可写分组白名单内），所以放开底库不会连带放开这些系统级配置。</p>
  *
  * <p>未配置特征模型时，错误信息中会包含 {@code feature_model} 或「未启用」，
  * 前端据此把入口置灰。</p>
@@ -63,7 +77,12 @@ public class ImageSearchController {
     private static final int MIN_TOP_K = 1;
     private static final int MAX_TOP_K = 200;
 
-    private final ImageSearchStore imageSearchStore;
+    /**
+     * 底库门面：按当前登录账号路由到各自的底库（数据按账号隔离）。
+     * 嵌套类型 {@link ImageSearchStore.StoredImage} / {@link ImageSearchStore.Match}
+     * 仍定义在单个账号的底库类上，这里只借用其类型。
+     */
+    private final ImageSearchStores imageSearchStores;
     private final GlobalSettingReader settingReader;
 
     /**
@@ -71,16 +90,15 @@ public class ImageSearchController {
      *
      * @return {@code available} 表示是否已配置特征模型，{@code model} 为当前模型标识
      */
-    @Permission("admin")
     @Operation(summary = "以图搜图状态", description = "返回是否已配置特征模型及当前模型标识")
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {
         Map<String, Object> out = new LinkedHashMap<>(6);
-        out.put("available", imageSearchStore.available());
-        out.put("model", imageSearchStore.currentModel());
-        out.put("storage", imageSearchStore.currentStorageEngine());
-        out.put("count", imageSearchStore.size());
-        out.put("dimension", imageSearchStore.dimension());
+        out.put("available", imageSearchStores.available());
+        out.put("model", imageSearchStores.currentModel());
+        out.put("storage", imageSearchStores.currentStorageEngine());
+        out.put("count", imageSearchStores.size());
+        out.put("dimension", imageSearchStores.dimension());
         return ReturnResult.ok(out);
     }
 
@@ -91,7 +109,6 @@ public class ImageSearchController {
      * @param name 展示名，缺省取文件名
      * @return 入库记录标识与名称
      */
-    @Permission("admin")
     @Operation(summary = "加入图片库", description = "上传图片并提取特征后写入底库")
     @PostMapping("/index")
     public ReturnResult<Map<String, Object>> index(@RequestParam("file") MultipartFile file,
@@ -101,12 +118,12 @@ public class ImageSearchController {
         }
         try {
             byte[] data = file.getBytes();
-            float[] vector = imageSearchStore.extract(data);
+            float[] vector = imageSearchStores.extract(data);
             String shown = name;
             if (shown == null || shown.isBlank()) {
                 shown = file.getOriginalFilename();
             }
-            ImageSearchStore.StoredImage saved = imageSearchStore.add(shown, data, vector);
+            ImageSearchStore.StoredImage saved = imageSearchStores.add(shown, data, vector);
             Map<String, Object> out = new LinkedHashMap<>(4);
             out.put("id", saved.getId());
             out.put("name", saved.getName());
@@ -125,7 +142,6 @@ public class ImageSearchController {
      * @param topK 返回条数上限；不传则取 {@code image_search.search_top_k} 配置
      * @return 命中列表，按相似度降序；每项含 id/name/tags/thumbnail/score
      */
-    @Permission("admin")
     @Operation(summary = "以图搜图", description = "上传查询图，返回底库中相似度最高的若干张")
     @PostMapping("/search")
     public ReturnResult<List<Map<String, Object>>> search(@RequestParam("file") MultipartFile file,
@@ -135,8 +151,8 @@ public class ImageSearchController {
         }
         try {
             int k = resolveTopK(topK);
-            float[] query = imageSearchStore.extract(file.getBytes());
-            List<ImageSearchStore.Match> matches = imageSearchStore.search(query, k, minSimilarity());
+            float[] query = imageSearchStores.extract(file.getBytes());
+            List<ImageSearchStore.Match> matches = imageSearchStores.search(query, k, minSimilarity());
             List<Map<String, Object>> out = new ArrayList<>(matches.size());
             for (ImageSearchStore.Match m : matches) {
                 out.add(toItem(m.image(), m.score()));
@@ -156,14 +172,13 @@ public class ImageSearchController {
      * @param keyword 名称关键词，可为空
      * @return 含 records 风格字段的 {@code items} 与 {@code total}
      */
-    @Permission("admin")
     @Operation(summary = "图片库列表", description = "分页查看底库图片（不含原始特征值）")
     @GetMapping("/list")
     public ReturnResult<Map<String, Object>> list(@RequestParam(value = "page", defaultValue = "1") int page,
                                                   @RequestParam(value = "size", defaultValue = "24") int size,
                                                   @RequestParam(value = "keyword", required = false) String keyword) {
         try {
-            Map<String, Object> raw = imageSearchStore.list(page, size, keyword);
+            Map<String, Object> raw = imageSearchStores.list(page, size, keyword);
             Object items = raw.get("items");
             List<Map<String, Object>> out = new ArrayList<>();
             if (items instanceof List<?> list) {
@@ -191,12 +206,11 @@ public class ImageSearchController {
      * @param id 记录标识
      * @return true 表示删除成功
      */
-    @Permission("admin")
     @Operation(summary = "删除图片", description = "按标识从底库删除一条记录")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable("id") long id) {
         try {
-            boolean removed = imageSearchStore.remove(id);
+            boolean removed = imageSearchStores.remove(id);
             if (!removed) {
                 return ReturnResult.error("记录不存在: " + id);
             }
@@ -216,11 +230,10 @@ public class ImageSearchController {
      * @param id 记录标识
      * @return 原图字节；记录不存在时返回 404
      */
-    @Permission("admin")
     @Operation(summary = "图片原图", description = "按标识返回底库图片的原图字节（无原图时回退缩略图）")
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> image(@PathVariable("id") long id) {
-        byte[] original = imageSearchStore.readOriginal(id);
+        byte[] original = imageSearchStores.readOriginal(id);
         if (original != null && original.length > 0) {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -228,7 +241,7 @@ public class ImageSearchController {
                     .cacheControl(CacheControl.maxAge(Duration.ofSeconds(300)).cachePrivate())
                     .body(original);
         }
-        byte[] thumb = imageSearchStore.readThumbnail(id);
+        byte[] thumb = imageSearchStores.readThumbnail(id);
         if (thumb == null) {
             return ResponseEntity.notFound().build();
         }

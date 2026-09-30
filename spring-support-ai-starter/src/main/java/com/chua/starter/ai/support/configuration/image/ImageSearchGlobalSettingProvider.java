@@ -15,7 +15,9 @@ import java.util.List;
  *
  * <p><b>只暴露代码真正读取的字段</b>：分组里曾经存在的 {@code max_image_size} 与
  * {@code face_enhance_enabled} 在实现中并未生效，暴露出去会造成「改了配置没反应」
- * 的误解，故不在此声明（历史数据仍保留在库中，不影响读取）。</p>
+ * 的误解，故不在此声明（历史数据仍保留在库中，不影响读取）。
+ * {@code feature_dimension} 同属此类：维度由所选模型的实际输出决定，配置值只被用来
+ * 打一条告警，改了不会有任何效果。已一并移除，库中的历史行由升级脚本清理。</p>
  *
  * <p>检索链路：上传图片 → {@code default_image_feature_model} 抽取特征 →
  * {@code vector_storage_engine} 指定的向量库写入/检索 → 按 {@code min_similarity}
@@ -69,13 +71,15 @@ public class ImageSearchGlobalSettingProvider implements GlobalSettingProvider {
                 // 更换特征模型后该阈值需重新标定，否则会过松或过紧。
                 new GlobalSettingProvider.SettingItem("min_similarity", "0.76", "NUMBER",
                         "检索相似度下限（0~1）；默认值按 cn-clip-rn50 真实照片标定，换模型需重新标定", 3),
-                // 仅作对照参考：实现以模型实际输出维度为准，不一致时记录告警而非截断
-                new GlobalSettingProvider.SettingItem("feature_dimension", "1024", "NUMBER",
-                        "特征维度（参考值；实际以模型输出为准，不一致会记录告警）", 4),
+                // 原有一个 feature_dimension=1024 的配置项，已移除。
+                // 原因：它不驱动任何逻辑——向量维度由所选特征模型的实际输出决定，
+                // 配置值只被用来打一条「与模型不一致」的告警，用户改了不会有任何效果，
+                // 属于典型「改了没反应」的误导性配置。
+                // （人脸分组同名项不在此列：FaceClientManager 真的用它建索引，那项保留。）
                 // 原先由前端写死 30、后端 defaultValue 再写死一次，属于「不来自默认模型」
                 // 的参数。归入本分组后，用户改设置即刻生效，不必改代码重新打包。
                 new GlobalSettingProvider.SettingItem("search_top_k", "30", "NUMBER",
-                        "单次检索返回的相似图片条数上限（1~200）", 5)
+                        "单次检索返回的相似图片条数上限（1~200）", 4)
         );
     }
 }

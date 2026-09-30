@@ -173,8 +173,14 @@ public class FileStorageServerProperties {
          * {@code FIRST_PARTY_HEADER_A = "X-Trace-Id"} 与
          * {@code FIRST_PARTY_HEADER_B = "X-Requested-With"}），
          * 另由加密管线附加 {@code X-Req-Fingerprint}。三者缺一不可。</p>
+         *
+         * <p>{@code x-oauth-token} 是文件服务器的**默认令牌入口**（服务端解析顺序为
+         * 自定义头 → Authorization Bearer → 查询参数 → Cookie）。前端 {@code storageHttp()}
+         * 与 {@code putObject()} 都会带这个头，跨域下它同样会进预检，漏了会让整个文件管理页
+         * 的请求在预检阶段被拦掉。查询参数形式仍保留，供 img / iframe / 下载链接使用。</p>
          */
-        private String allowedHeaders = "Content-Type,Authorization,X-Requested-With,X-Trace-Id,X-Req-Fingerprint";
+        private String allowedHeaders = "Content-Type,Authorization,x-oauth-token,"
+                + "X-Requested-With,X-Trace-Id,X-Req-Fingerprint";
 
         /**
          * 允许前端 JavaScript 读取的响应头（跨域下自定义头默认不可读）

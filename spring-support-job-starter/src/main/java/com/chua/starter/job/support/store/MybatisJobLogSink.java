@@ -45,6 +45,23 @@ public class MybatisJobLogSink implements JobLogSink {
     private static final int MAX_MESSAGE_CHARS = 4000;
 
     /**
+     * 运行客户端为本地时的展示值。
+     *
+     * <p>台账派发方式不是 {@code REMOTE}（含空值）时，这一轮就跑在本调度节点上，记「本地」
+     * 而不是记节点标识：节点标识另有 {@code sys_job_log_node_id} 承载，两列记同一串会让
+     * 「到底是不是远端跑的」看不出来。</p>
+     */
+    private static final String LOCAL_CLIENT = "本地";
+
+    /**
+     * 远端派发但台账没登记地址时的展示值。
+     *
+     * <p>记「本地」是错的（这一轮确实不在本机），记空又会被当成"没采集到"，
+     * 所以显式说明缺什么。</p>
+     */
+    private static final String REMOTE_CLIENT_UNKNOWN = "远端（未登记地址）";
+
+    /**
      * 作业日志映射器
     */
     private final JobLogMapper jobLogMapper;
@@ -125,6 +142,7 @@ public class MybatisJobLogSink implements JobLogSink {
         entity.setSysJobLogCost(BigDecimal.valueOf(event.costMs()));
         entity.setSysJobLogTriggerMsg(buildMessage(event));
         entity.setSysJobLogNodeId(event.nodeId());
+        entity.setSysJobLogTriggerAddress(resolveClientAddress(ledger));
         Date executedAt = new Date(event.executedAtMs());
         entity.setSysJobLogTriggerTime(executedAt);
         entity.setSysJobLogTriggerDate(executedAt);
@@ -162,6 +180,32 @@ public class MybatisJobLogSink implements JobLogSink {
         }
         String message = sb.toString();
         return message.length() <= MAX_MESSAGE_CHARS ? message : message.substring(0, MAX_MESSAGE_CHARS);
+    }
+
+    /**
+     * 解析「运行客户端」地址。
+     *
+     * <p>远端派发的任务记台账登记的远端执行器地址（控制台那一列要的就是「他们的 IP」）；
+     * 本地一律记 {@link #LOCAL_CLIENT}。这里以台账的派发方式为准，不拿 {@code nodeId} 反推：
+     * 日志行的执行者身份由 {@code sys_job_log_node_id} 承担，而本轮究竟派到了哪个客户端
+     * 只有台账知道，且 {@code nodeId} 是「主机名+pid」，本来就不是地址。</p>
+     *
+     * @param ledger 台账行, 可为 空 (任务已删除或回查不到)
+     * @return 运行客户端地址
+     */
+    private static String resolveClientAddress(JobEntity ledger) {
+        if (ledger == null) {
+            return LOCAL_CLIENT;
+        }
+        String mode = ledger.getSysJobDispatchMode();
+        if (mode == null || !"REMOTE".equalsIgnoreCase(mode.trim())) {
+            return LOCAL_CLIENT;
+        }
+        String address = ledger.getSysJobRemoteExecutorAddress();
+        if (address == null || address.isBlank()) {
+            return REMOTE_CLIENT_UNKNOWN;
+        }
+        return address.trim();
     }
 
     /**

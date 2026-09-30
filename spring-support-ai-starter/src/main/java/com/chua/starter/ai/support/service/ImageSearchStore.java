@@ -11,11 +11,7 @@ import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -25,7 +21,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -37,7 +32,16 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 以图搜图底库：图像特征向量的存取与相似度检索。
+ * <b>单个账号</b>的以图搜图底库：图像特征向量的存取与相似度检索。
+ *
+ * <p><b>本类不是 Spring Bean</b>：每个账号各有一个实例，由
+ * {@link ImageSearchStores} 按当前登录账号创建与持有。账号之间在**磁盘与内存
+ * 两个维度都隔离**——各自一个目录（{@code <base>/<账号>/imagesearch}）、
+ * 各自一份快照与 id 水位、各自一套特征抽取器与向量索引。因此 A 账号看不到
+ * B 账号的图，删除也不会互相影响。</p>
+ *
+ * <p>账号的解析口径统一走 {@link com.chua.starter.ai.support.util.AiUserContext}，
+ * 静态账号的 userId 就是用户名（见 {@code StaticTempLogin}），跨登录稳定。</p>
  *
  * <p><b>向量存储按配置选择</b>：读取 {@code image_search.vector_storage_engine}
  * （缺省 {@code jvector}），通过 {@link VectorStorageProvider#create} 构建，
@@ -54,8 +58,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 4.0.0.42
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class ImageSearchStore {
 
     /** 配置分组名 */
@@ -69,11 +71,39 @@ public class ImageSearchStore {
     /** 归一化前的最小模长，避免除零 */
     private static final double MIN_NORM = 1e-12d;
 
+    /** 本实例所属账号（用于日志与向量标识前缀区分） */
+    private final String account;
+
+    /** 本账号的底库目录（{@code <base>/<账号>/imagesearch}） */
+    private final Path dir;
+
     private final GlobalSettingReader settingReader;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<Long, StoredImage> images = new LinkedHashMap<>();
     private final AtomicLong sequence = new AtomicLong();
+
+    /**
+     * 构造一个账号的底库实例。
+     *
+     * @param account      账号标识（即 userId）
+     * @param dir          该账号的底库目录，已由调用方解析并确保位于 base 之下
+     * @param settingReader 全局设置读取器（特征模型 / 向量引擎等为全局配置）
+     */
+    ImageSearchStore(String account, Path dir, GlobalSettingReader settingReader) {
+        this.account = account;
+        this.dir = dir;
+        this.settingReader = settingReader;
+    }
+
+    /**
+     * 本实例所属账号。
+     *
+     * @return 账号标识
+     */
+    String account() {
+        return account;
+    }
 
     /** 当前生效的特征模型标识（空表示未配置） */
     private volatile String modelName = "";
@@ -102,8 +132,19 @@ public class ImageSearchStore {
      */
     private volatile String storageModel = "";
 
+    /**
+     * 本账号的底库目录。
+     *
+     * <p>由 {@link ImageSearchStores} 在创建实例时解析并注入，形如
+     * {@code <base>/<账号>/imagesearch}；base 可用系统属性
+     * {@code image.search.store.dir} 覆盖，缺省为进程工作目录。
+     * 目录只在这里取，别处一律经 {@link #storeDir()} 派生，
+     * 避免再出现「某个文件悄悄落到别处」的分叉。</p>
+     *
+     * @return 本账号底库目录
+     */
     private Path storeDir() {
-        return Paths.get(System.getProperty("image.search.store.dir", "./image-search-store"));
+        return dir;
     }
 
     /**
@@ -122,9 +163,9 @@ public class ImageSearchStore {
     /**
      * 底库快照文件路径。
      *
-     * <p>默认落在工作目录下的 {@code image-search-store/index.json}（远端即
-     * {@code /opt/ai-starter/runtime/image-search-store/index.json}），
-     * 可用系统属性 {@code image.search.store.dir} 覆盖。</p>
+     * <p>落在本账号目录下：{@code <base>/<账号>/imagesearch/index.json}。
+     * 远端服务的工作目录是 {@code /opt/ai-starter/runtime}，故 admin 账号的
+     * 快照为 {@code /opt/ai-starter/runtime/admin/imagesearch/index.json}。</p>
      *
      * @return 快照文件路径
      */
@@ -133,14 +174,23 @@ public class ImageSearchStore {
     }
 
     /**
-     * 启动时加载底库快照；向量索引在首次取到维度后重建。
+     * 加载本账号的底库快照；向量索引在首次取到维度后重建。
+     *
+     * <p><b>由 {@link ImageSearchStores} 调用</b>（启动时批量加载磁盘上已有的账号目录，
+     * 或某个账号首次被访问时懒建），因此这里不再标 {@code @PostConstruct}：
+     * 一个 Spring 容器里会有多个本类实例，生命周期由持有者管。</p>
+     *
+     * <p>同时恢复 id 分配水位：只按「存活记录的最大 id」恢复会让删掉尾部之后
+     * 的 id 被重新发放（删 8、9 后再新增就会又拿到 8、9），而向量索引、外部
+     * 引用、用户记住的编号都假设 id 不复用。水位文件记录**历史发放过的最大值**，
+     * 与存活记录解耦。</p>
      */
-    @PostConstruct
-    public void load() {
+    void load() {
         Path file = storeFile();
         try {
             if (!Files.isRegularFile(file)) {
                 log.info("[ImageSearch] 底库快照不存在，从空库开始: {}", file.toAbsolutePath());
+                loadIdWatermark();
                 return;
             }
             byte[] raw = Files.readAllBytes(file);
@@ -162,6 +212,61 @@ public class ImageSearchStore {
             log.info("[ImageSearch] 底库快照加载完成: {} 条 ({})", images.size(), file.toAbsolutePath());
         } catch (Exception ex) {
             log.warn("[ImageSearch] 底库加载失败，按空库启动: {} -> {}", file.toAbsolutePath(), ex.getMessage());
+        }
+        loadIdWatermark();
+    }
+
+    /**
+     * id 分配水位文件路径。
+     *
+     * <p>与快照分开放：快照是「当前有什么」，水位是「曾经发到几号」，
+     * 两者语义不同，混在一起会让快照的读写都要带上一个不是记录的东西。</p>
+     *
+     * @return 水位文件路径
+     */
+    private Path idWatermarkFile() {
+        return storeDir().resolve("next-id");
+    }
+
+    /**
+     * 恢复 id 分配水位，取「存活记录最大 id」与「历史水位」的较大者。
+     *
+     * <p>任一来源缺失都不影响启动：水位缺失（首次部署或旧版本升级上来）时
+     * 退化为按存活记录最大 id，与旧行为一致，不会更差。</p>
+     */
+    private void loadIdWatermark() {
+        try {
+            Path f = idWatermarkFile();
+            if (!Files.isRegularFile(f)) {
+                log.info("[ImageSearch] id 水位文件不存在，按存活记录最大 id 继续: {}", sequence.get());
+                return;
+            }
+            long persisted = Long.parseLong(Files.readString(f).trim());
+            long current = sequence.get();
+            if (persisted > current) {
+                sequence.set(persisted);
+                log.info("[ImageSearch] id 水位已恢复: {}（存活记录最大 id={}），历史 id 不再复用",
+                        persisted, current);
+            }
+        } catch (Exception ex) {
+            log.warn("[ImageSearch] id 水位读取失败，按存活记录最大 id 继续: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 持久化 id 分配水位。
+     *
+     * <p>只在发放到新高时写：水位是单调不减的，回写旧值没有意义。</p>
+     *
+     * @param id 刚发放的 id
+     */
+    private void persistIdWatermark(long id) {
+        try {
+            Path f = idWatermarkFile();
+            Files.createDirectories(f.getParent());
+            Files.writeString(f, Long.toString(id));
+        } catch (Exception ex) {
+            log.warn("[ImageSearch] id 水位写入失败（重启后可能复用 id）: {} -> {}", id, ex.getMessage());
         }
     }
 
@@ -203,10 +308,11 @@ public class ImageSearchStore {
     }
 
     /**
-     * 关闭向量存储，释放其持有的资源（如 jvector 的文件句柄）。
+     * 关闭本账号的向量存储，释放其持有的资源（如 jvector 的文件句柄）。
+     *
+     * <p>由 {@link ImageSearchStores#shutdown()} 遍历全部账号调用。</p>
      */
-    @PreDestroy
-    public void shutdown() {
+    void shutdown() {
         VectorStorage current = storage;
         if (current != null) {
             try {
@@ -310,9 +416,8 @@ public class ImageSearchStore {
     /**
      * 确保向量存储已按指定维度构建，并把已有向量灌入。
      *
-     * <p>维度由模型输出决定，因此只能在首次取到特征后构建。若与配置的
-     * {@code feature_dimension} 不一致，以实际维度为准并告警——写死配置维度会让
-     * 向量写入失败或静默截断。</p>
+     * <p>维度由模型输出决定，因此只能在首次取到特征后构建。此处**不再**读取
+     * {@code feature_dimension}：该配置项不驱动逻辑，配了也只打告警，已从设置分组移除。</p>
      *
      * @param dimension 实际特征维度
      * @return 向量存储
@@ -345,11 +450,10 @@ public class ImageSearchStore {
                 storage = null;
                 pipeline = null;
             }
-            int configured = readInt("feature_dimension", 0);
-            if (configured > 0 && configured != dimension) {
-                log.warn("[ImageSearch] 配置 feature_dimension={} 与实际模型输出 {} 不一致，以实际维度为准",
-                        configured, dimension);
-            }
+            // 维度以模型实际输出为准，不再有可配置的 feature_dimension（见
+            // ImageSearchGlobalSettingProvider 的说明：那个配置项改了没用，已移除）。
+            // 这里只把实际维度记下来，便于排查「换模型后维度变了」。
+            log.info("[ImageSearch] 本底库向量维度={}（由所选特征模型的输出决定）", dimension);
             try {
                 // jvector 必须显式给出索引落盘路径：只传默认值时会落到相对目录，
                 // 写入直接返回 false（表现为「向量写入失败」）。与 RAG 的做法一致，
@@ -425,6 +529,9 @@ public class ImageSearchStore {
     public StoredImage add(String name, byte[] imageData, float[] vector) {
         ImagePipeline store = ensurePipeline(vector.length);
         long id = sequence.incrementAndGet();
+        // 立刻落水位：水位是「曾发到几号」的单调记录，与快照解耦，
+        // 这样删掉尾部记录后重启也不会把同一个 id 再发一次。
+        persistIdWatermark(id);
         StoredImage item = new StoredImage();
         item.setId(id);
         item.setName(name == null || name.isBlank() ? ("未命名-" + id) : name.trim());
@@ -746,25 +853,6 @@ public class ImageSearchStore {
             }
         }
         return 0;
-    }
-
-    /**
-     * 读取整数配置，未配置或非法时返回默认值。
-     *
-     * @param field        字段名
-     * @param defaultValue 默认值
-     * @return 配置值
-     */
-    private int readInt(String field, int defaultValue) {
-        try {
-            String v = settingReader.getStr(GROUP, field);
-            if (v == null || v.isBlank()) {
-                return defaultValue;
-            }
-            return Integer.parseInt(v.trim());
-        } catch (Exception ex) {
-            return defaultValue;
-        }
     }
 
     /**

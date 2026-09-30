@@ -386,8 +386,8 @@ public final class NginxDirectiveRegistry {
                 TYPE_NUMBER, false, false, "文件被访问多少次后才开始缓存", "1"));
         put(NginxDirectiveMeta.of("open_file_cache_errors", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION),
                 TYPE_FLAG, false, false, "是否缓存文件错误（404 等）", "on"));
-        put(NginxDirectiveMeta.of("output_buffers", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_NUMBER,
-                false, false, "用于输出响应的缓冲区数量与大小，如 2 32k", "2 32k"));
+        put(NginxDirectiveMeta.of("output_buffers", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_STRING,
+                false, false, "用于输出响应的缓冲区数量与大小（语法：<number> <size>，如 2 32k）", "2 32k"));
         put(NginxDirectiveMeta.of("postpone_output", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_SIZE,
                 false, false, "数据累积到该大小才真正发给客户端", "1460"));
         put(NginxDirectiveMeta.of("read_ahead", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_SIZE, false,
@@ -434,8 +434,8 @@ public final class NginxDirectiveRegistry {
                 TYPE_FLAG, false, false, "是否缓冲转发给后端的请求体", "on"));
         put(NginxDirectiveMeta.of("proxy_buffer_size", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_SIZE,
                 false, false, "缓冲区大小，需容纳单个响应头", "4k"));
-        put(NginxDirectiveMeta.of("proxy_buffers", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_NUMBER,
-                false, false, "缓冲区数量与单块大小，如 8 4k", "8 4k"));
+        put(NginxDirectiveMeta.of("proxy_buffers", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_STRING,
+                false, false, "缓冲区数量与单块大小（语法：<number> <size>，如 8 4k）", "8 4k"));
         put(NginxDirectiveMeta.of("proxy_busy_buffers_size", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION),
                 TYPE_SIZE, false, false, "上游正在发数据时允许转发的缓冲区总量上限", "8k"));
         put(NginxDirectiveMeta.of("proxy_max_temp_file_size", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION),
@@ -552,8 +552,8 @@ public final class NginxDirectiveRegistry {
                 TYPE_STRING, false, false, "限流事件的日志级别", "error"));
         put(NginxDirectiveMeta.of("limit_conn_zone", Set.of(SCOPE_HTTP), TYPE_STRING, false, false,
                 "定义连接数限流维度", "$binary_remote_addr zone=conn:10m"));
-        put(NginxDirectiveMeta.of("limit_conn", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_NUMBER,
-                false, false, "每个 key 允许的最大并发连接数", "100"));
+        put(NginxDirectiveMeta.of("limit_conn", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION), TYPE_STRING,
+                false, false, "每个 key 允许的最大并发连接数（语法：<zone> <数字>，如 conn 100）", "conn 100"));
         put(NginxDirectiveMeta.of("limit_conn_status", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION),
                 TYPE_NUMBER, false, false, "触发连接限流时返回的状态码", "503"));
         put(NginxDirectiveMeta.of("limit_conn_log_level", Set.of(SCOPE_HTTP, SCOPE_SERVER, SCOPE_LOCATION),
