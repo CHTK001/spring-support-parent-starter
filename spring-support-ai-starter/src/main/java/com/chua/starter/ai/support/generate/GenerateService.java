@@ -320,6 +320,10 @@ public class GenerateService {
         // 图像：先落库再执行，让前端能立刻拿到 taskId 轮询。
         SyncImage pending = prepareImage(task, request);
         if (pending != null) {
+            // 排队态要落库。prepareImage 只把 PROGRESS_QUEUED 写进了内存对象，
+            // 而这一行早已 insert 完毕，于是前端第一眼看到的就是「模型生成中 30%」——
+            // 看不到「已入队」。这一步是真实可观测的（线程还没接手），因此补一次持久化。
+            markProgress(task, PROGRESS_QUEUED);
             // 同步实现：交线程池执行，HTTP 线程立即返回
             runImageAsync(task, pending.client(), request.prompt());
         }
@@ -676,6 +680,28 @@ public class GenerateService {
     }
 
     /**
+     * 判断该任务此刻是否已被取消。
+     *
+     * <p>两处取或，缺一不可：</p>
+     * <ul>
+     *   <li><b>本进程的取消登记</b>：同一代次内取消得最快，不必回库；</li>
+     *   <li><b>库里当前状态</b>：覆盖「进程重启后才取消」「被别的路径（删除/批量删除）取消」，
+     *       这些情况下内存集合里没有它。行已被删除也视为取消——
+     *       用户把记录删了，不该让一个已完成的 worker 把它复活。</li>
+     * </ul>
+     *
+     * @param task 任务行
+     * @return true 表示已被取消或记录已不存在
+     */
+    private boolean isCanceledNow(SysAiGenerateTask task) {
+        if (canceledTaskIds.contains(task.getTaskId())) {
+            return true;
+        }
+        SysAiGenerateTask fresh = taskMapper.selectById(task.getTaskId());
+        return fresh == null || SysAiGenerateTask.STATUS_CANCELED.equals(fresh.getStatus());
+    }
+
+    /**
      * 异步执行同步图像生成。
      *
      * <p>进度按「真实可观测的阶段」推进，不做时间插值：
@@ -708,6 +734,14 @@ public class GenerateService {
                 BufferedImage image = client.generate(prompt);
                 markProgress(task, PROGRESS_ENCODING);
                 String url = imageDataUrl(image);
+                // 末态回写前必须再确认一次是否已被取消。
+                // 只在开工前查一次是不够的：generate() 会阻塞十几秒，用户在这期间点取消，
+                // 下面那句 setStatus(SUCCESS) 会把 CANCELED 冲成成功——实测「已取消」的记录
+                // 15 秒后自己变成 SUCCESS，于是「清理失败」点下去只能报「没有可清理的记录」。
+                if (isCanceledNow(task)) {
+                    log.info("[Generate] 任务在生成期间被取消，丢弃结果 taskId={}", task.getTaskId());
+                    return;
+                }
                 task.setElapsedMillis(System.currentTimeMillis() - startedAt);
                 task.setStatus(SysAiGenerateTask.STATUS_SUCCESS);
                 task.setProgress(100);
@@ -715,6 +749,11 @@ public class GenerateService {
                 log.info("[Generate] 图像生成完成 taskId={} elapsed={}ms",
                         task.getTaskId(), task.getElapsedMillis());
             } catch (Exception e) {
+                // 取消同样不该被失败冲掉：用户主动停的任务保持取消态，重试由用户决定
+                if (isCanceledNow(task)) {
+                    log.info("[Generate] 任务已取消，失败原因不再回写 taskId={}: {}", task.getTaskId(), e.getMessage());
+                    return;
+                }
                 task.setElapsedMillis(System.currentTimeMillis() - startedAt);
                 task.setStatus(SysAiGenerateTask.STATUS_FAILED);
                 task.setProgress(100);
@@ -894,20 +933,94 @@ public class GenerateService {
     }
 
     /**
-     * 批量清理失败任务。
+     * 批量删除指定任务（勾选后删除）。
      *
-     * <p>失败记录没有产出、留着只会一直占列表，所以给一个专门的清理入口；
+     * <p>逐条校验归属：只删属于当前用户的行，不属于的静默跳过而不是报错——
+     * 前端可能拿着一个过期的选择集（其间记录已被别处删掉或换了归属），
+     * 为其中一条失败把整批回滚反而更差。有产物的行一并清磁盘。</p>
+     *
+     * @param userId  当前用户
+     * @param taskIds 待删除的任务号
+     * @return 实际删除条数
+     */
+    public int deleteBatch(String userId, List<String> taskIds) {
+        if (userId == null || taskIds == null || taskIds.isEmpty()) {
+            return 0;
+        }
+        int removed = 0;
+        for (String taskId : taskIds) {
+            if (taskId == null || taskId.isBlank()) {
+                continue;
+            }
+            SysAiGenerateTask task = taskMapper.selectById(taskId);
+            if (task == null || !userId.equals(task.getUserId())) {
+                continue;
+            }
+            if (!isTerminal(task.getStatus())) {
+                // 进行中的先收敛为取消态，避免「记录没了但上游还在算」
+                task.setStatus(SysAiGenerateTask.STATUS_CANCELED);
+                task.setUpdatedAt(System.currentTimeMillis());
+                taskMapper.updateById(task);
+                if (isLocalSyncTask(task)) {
+                    canceledTaskIds.add(taskId);
+                }
+            }
+            if (taskMapper.deleteById(taskId) > 0) {
+                mediaStore.deleteAll(taskId);
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    /**
+     * 清空当前用户的全部任务记录。
+     *
+     * <p>这是一个不可恢复的破坏性操作（会删掉已生成的作品），
+     * 归属校验逐条做，绝不跨用户批量删。前端要求输入确认词后才调用。</p>
+     *
+     * @param userId 当前用户
+     * @return 实际删除条数
+     */
+    public int deleteAll(String userId) {
+        if (userId == null) {
+            return 0;
+        }
+        List<SysAiGenerateTask> mine = taskMapper.selectList(new LambdaQueryWrapper<SysAiGenerateTask>()
+                .eq(SysAiGenerateTask::getUserId, userId));
+        int removed = 0;
+        for (SysAiGenerateTask task : mine) {
+            if (taskMapper.deleteById(task.getTaskId()) > 0) {
+                mediaStore.deleteAll(task.getTaskId());
+                removed++;
+            }
+        }
+        log.warn("[Generate] 清空全部记录 userId={} 删除 {} 条", userId, removed);
+        return removed;
+    }
+
+    /**
+     * 批量清理失败与已取消的任务。
+     *
+     * <p>这两类都没有产出、留着只会一直占列表，所以给一个专门的清理入口；
      * 与逐条删除一样逐条校验归属，绝不批量删别人的数据。</p>
+     *
+     * <p><b>为什么必须一起清 CANCELED。</b>前端那个按钮的徽标统计的是
+     * FAILED + CANCELED，标题也写着「清理失败与已取消的记录」；此前这里只筛 FAILED，
+     * 于是当页内剩余的都是取消记录时，徽标明明显示有 N 条，点下去却回
+     * 「没有可清理的记录」——数字与行为对不上，用户会以为功能坏了。实测复现：
+     * 当页 SUCCESS=17 / CANCELED=5 / FAILED=0，徽标 5，可删 0。</p>
      *
      * @param userId 当前用户
      * @return 删除条数
      */
     public int deleteFailed(String userId) {
-        List<SysAiGenerateTask> failed = taskMapper.selectList(new LambdaQueryWrapper<SysAiGenerateTask>()
+        List<SysAiGenerateTask> voided = taskMapper.selectList(new LambdaQueryWrapper<SysAiGenerateTask>()
                 .eq(SysAiGenerateTask::getUserId, userId)
-                .eq(SysAiGenerateTask::getStatus, SysAiGenerateTask.STATUS_FAILED));
+                .in(SysAiGenerateTask::getStatus,
+                        SysAiGenerateTask.STATUS_FAILED, SysAiGenerateTask.STATUS_CANCELED));
         int removed = 0;
-        for (SysAiGenerateTask task : failed) {
+        for (SysAiGenerateTask task : voided) {
             if (taskMapper.deleteById(task.getTaskId()) > 0) {
                 // 失败记录一般没有产物，但视频失败行仍可能留有已落盘的参考图，一并清理
                 mediaStore.deleteAll(task.getTaskId());
