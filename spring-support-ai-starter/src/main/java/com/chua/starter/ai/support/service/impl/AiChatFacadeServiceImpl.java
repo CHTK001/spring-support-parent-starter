@@ -1153,6 +1153,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (workspace != null) {
             agent.workspace(workspace);
         }
+        // shell 通道只留给管理员。
+        // 文件工具由框架的路径白名单挡住越界（默认 ROOTED，实测 .. 与绝对路径都被拒），
+        // 但 shell 是一条命令字符串，`cat /etc/passwd`、`curl` 外发这类都绕得过去——
+        // 对「不准出工作间」的账号，只能把整条通道关掉，不能指望路径规则兜住。
+        if (!admin) {
+            agent.shellTool(false);
+        }
         if (runtime != null) {
             agent.mcpManager(runtime.getManager());
         }
