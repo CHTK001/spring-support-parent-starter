@@ -2082,6 +2082,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private void appendDwgJson(StringBuilder json, byte[] data) throws IOException {
         DwgHeaderInfo info = DwgHeaderParser.create().parse(data);
         json.append(",\"renderable\":false")
+                // 版本代码为空 = 头部连 AC10xx / MC0.0 都对不上，说明这**根本不是 DWG**。
+                // 实测桶里那个 .dwg 与那个坏 .docx 的前 6 字节完全相同（402128152a2d…），
+                // 是同一批上传损坏，而不是「DWG 版本不认识」。
+                // 前端据此区分「文件损坏，请重新上传」与「真 DWG 但几何需外部转换器」——
+                // 混为一谈会让用户以为是格式兼容性问题，白折腾。
+                .append(",\"notDwg\":").append(info.versionCode().isEmpty())
                 .append(",\"versionLabel\":\"").append(escapeJson(info.versionLabel())).append("\"")
                 .append(",\"versionCode\":\"").append(escapeJson(info.versionCode())).append("\"")
                 .append(",\"acadRelease\":\"").append(escapeJson(info.acadRelease())).append("\"")

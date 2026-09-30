@@ -86,8 +86,11 @@ plugin:
       - /v3/api-docs/**
       - /doc.html
       - /webjars/**
-      - /actuator/**
-      - /actuator
+      # Actuator 只放行 health（监控探活用）。其余端点（env / beans / configprops /
+      # loggers / threaddump / mappings 等）刻意不在此列出，因此仍需经 AuthFilter 鉴权
+      # —— 与「暴露面收窄」构成两道互补防线：即便将来有人把暴露面调回 '*'，
+      # 未带有效令牌的请求仍会被 403 拦下，而不是直接可读可写。
+      - /actuator/health
       - /login
       - /logout
       # 附件直链预览：iframe/img 无法带请求头，路径含随机 UUID + 扩展名白名单
@@ -153,3 +156,25 @@ logging:
     com.chua.starter.eduai: INFO
   file:
     name: ./logs/eduai.log
+
+# ===========================================
+# Actuator 暴露面（安全收紧）
+# ===========================================
+# 背景：框架的 DatabaseSettingEnvironmentPostProcessor 会把
+# management.endpoints.web.exposure.include 作为「启动期默认设置」种进 sys_setting，
+# 默认值是 "*" —— 即 env / beans / configprops / loggers / threaddump / mappings
+# 全部无鉴权对外暴露。其中 /actuator/loggers 允许 POST 修改运行期日志级别，
+# 可被用来刷 DEBUG 打满磁盘或关闭安全日志，属真实攻击面。
+#
+# 与白名单的关系：白名单放行在前（不放行则需鉴权），暴露面收窄在后（不暴露则 404）。
+# 两者都做才是完整修复：只收窄暴露面，则一旦有人把 DB 里的设置调回 '*'，
+# 漏洞立刻复现；只改白名单，则任何被放行的端点都无需鉴权。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      # 不对外暴露组件明细（DB / 磁盘等），避免信息泄露
+      show-details: never

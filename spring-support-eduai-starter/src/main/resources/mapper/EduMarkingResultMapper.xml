@@ -48,4 +48,17 @@
           AND marking_result_question_id = #{questionId}
     </update>
 
+    <!-- 按行主键更新：任意卷 question_id 统一为 0，按 (taskId,questionId) 会命中多行互相覆盖 -->
+    <update id="updateScanOutcomeById">
+        UPDATE edu_marking_result
+        SET marking_result_ai_score = #{aiScore},
+            marking_result_ai_comment = #{aiComment},
+            marking_result_score = #{aiScore},
+            marking_result_comment = #{aiComment},
+            marking_result_detail = #{detail},
+            marking_result_status = 1,
+            update_time = #{now}
+        WHERE marking_result_id = #{resultId}
+    </update>
+
 </mapper>
