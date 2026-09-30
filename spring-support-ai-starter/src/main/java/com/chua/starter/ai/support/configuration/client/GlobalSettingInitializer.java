@@ -30,6 +30,11 @@ public class GlobalSettingInitializer implements ApplicationRunner {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
+     * 分组定义缓存：启动期在这里预热，请求线程直接读，绕开 SPI 发现在请求线程返回空的问题
+     */
+    private final GlobalSettingDefinitions globalSettingDefinitions;
+
+    /**
      * 启动时同步所有 SPI 模块的默认全局配置项。
      *
      * <p>动态同步语义：分组已有部分配置时，仅补充 provider 定义但 DB 缺失的配置项，
@@ -39,6 +44,11 @@ public class GlobalSettingInitializer implements ApplicationRunner {
      */
     @Override
     public void run(ApplicationArguments args) {
+        // 预热分组定义缓存：本线程（main）上的 SPI 发现是正常的，而请求线程里会返回空，
+        // 详细原因见 GlobalSettingDefinitions 的说明。必须在 collect() 之前调用，
+        // 让请求线程从一开始就有数据可读。
+        globalSettingDefinitions.warmUp();
+
         ServiceProvider<GlobalSettingProvider> provider = ServiceProvider.of(GlobalSettingProvider.class);
         List<GlobalSettingProvider> providers = provider.collect();
 
