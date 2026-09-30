@@ -72,4 +72,25 @@ public interface EduMarkingResultMapper extends BaseMapper<EduMarkingResult> {
                           @Param("aiComment") String aiComment,
                           @Param("detail") String detail,
                           @Param("now") LocalDateTime now);
+
+    /**
+     * 按【结果行主键】写入扫描阅卷的单题结果（XML 语句 updateScanOutcomeById）。
+     *
+     * <p><b>为什么必须按主键而不是 (taskId, questionId)</b>：任意卷没有题库记录，
+     * 题目标识统一记 0，若按 (taskId, questionId) 更新，一次 UPDATE 会命中该任务下
+     * 所有 question_id=0 的行，导致多道题被最后一批数据覆盖（实测 3 行 detail 完全相同）。
+     * 按行主键更新可保证每行独立。</p>
+     *
+     * @param resultId  阅卷结果行主键
+     * @param aiScore   AI 得分
+     * @param aiComment AI 评语
+     * @param detail    批改详情 JSON
+     * @param now       更新时刻
+     * @return 更新行数
+     */
+    int updateScanOutcomeById(@Param("resultId") Long resultId,
+                              @Param("aiScore") Integer aiScore,
+                              @Param("aiComment") String aiComment,
+                              @Param("detail") String detail,
+                              @Param("now") LocalDateTime now);
 }

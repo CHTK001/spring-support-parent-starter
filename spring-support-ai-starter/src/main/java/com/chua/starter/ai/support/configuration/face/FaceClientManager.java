@@ -497,6 +497,18 @@ public class FaceClientManager {
         }
         builder.vectorStorage(currentVectorStorage());
         builder.topK(settingReader.getInt(GROUP, "top_k", 5));
+        // 1:1 比对判定阈值：此前管线里写死 0.5，设置页的 compare_threshold 读都没读 ——
+        // 用户在界面上改它不会有任何效果。这里把配置接上（缺省 0.5，与写死值一致，行为不变）。
+        BigDecimal compareThreshold = settingReader.getDecimalOrNull(GROUP, "compare_threshold");
+        if (compareThreshold != null) {
+            builder.compareThreshold(compareThreshold.floatValue());
+        }
+        // 1:N 命中阈值：同样是「声明了但从未读取」的配置项，接上后 1:N 会按相似度下限过滤，
+        // 不再把 topK 全量当命中（缺省 0.5，与登记默认一致，行为不变）。
+        BigDecimal matchThreshold = settingReader.getDecimalOrNull(GROUP, "match_threshold");
+        if (matchThreshold != null) {
+            builder.matchThreshold(matchThreshold.floatValue());
+        }
  // 辅助能力（已启用 开关 + 配置模型均满足才注入，保持懒加载）
         injectOptional(builder, "anime_enabled", "anime_detector_model", (m) -> builder.anime(m));
         injectOptional(builder, "super_resolution_enabled", "super_resolution_model", (m) -> builder.superResolution(m));

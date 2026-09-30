@@ -312,6 +312,7 @@ public class JobAutoConfiguration {
      * 当 {@code plugin.job.log.enabled=true} 时额外启用文件日志和异步写入。
      * @param jobLogMapper 作业日志映射器
      * @param jobMapperProvider 作业映射器提供者, 缺失时日志行不落任务编号
+     * @param jobNodeId 本节点标识, 供「运行客户端」列判定某一轮是否本节点执行
      * @return mybatis作业日志sink的结果
      */
     @Bean
@@ -319,11 +320,12 @@ public class JobAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
     @org.springframework.context.annotation.Primary
     public JobLogSink mybatisJobLogSink(com.chua.starter.job.support.store.JobLogMapper jobLogMapper,
-                                        org.springframework.beans.factory.ObjectProvider<com.chua.starter.job.support.store.JobMapper> jobMapperProvider) {
+                                        org.springframework.beans.factory.ObjectProvider<com.chua.starter.job.support.store.JobMapper> jobMapperProvider,
+                                        String jobNodeId) {
         List<JobLogSink> sinks = new ArrayList<>(2);
         com.chua.starter.job.support.store.MybatisJobLogSink dbSink =
                 new com.chua.starter.job.support.store.MybatisJobLogSink(jobLogMapper,
-                        jobMapperProvider.getIfAvailable(), properties.getLog().isEnabled());
+                        jobMapperProvider.getIfAvailable(), properties.getLog().isEnabled(), jobNodeId);
         sinks.add(dbSink);
         if (properties.getLog().isEnabled()) {
             FileJobLogSink fileSink = new FileJobLogSink(properties.getLog().getBasePath());
@@ -363,8 +365,7 @@ public class JobAutoConfiguration {
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
     @org.springframework.context.annotation.Primary
     public com.chua.starter.job.support.cluster.LeaderElectionResolver mysqlLeaderElectionResolver(
-            com.chua.starter.job.support.store.ClusterMapper clusterMapper,
-            org.springframework.context.ApplicationContext applicationContext) {
+            com.chua.starter.job.support.store.ClusterMapper clusterMapper) {
         String resolverKey = properties.getCluster().getResolver();
         // mysql 是内置默认实现：直接构造，不走 SPI 也不告警，保证「不配置」时与历史行为逐字一致。
         // 原因：ServiceProvider 的「带参实例化」是按实参运行时类型匹配构造器的，
@@ -375,28 +376,18 @@ public class JobAutoConfiguration {
             ServiceProvider<com.chua.starter.job.support.cluster.LeaderElectionResolver> provider =
                     ServiceProvider.of(com.chua.starter.job.support.cluster.LeaderElectionResolver.class);
             com.chua.starter.job.support.cluster.LeaderElectionResolver spi = null;
-            // 反射式取 Redis 模板：本方法不能在编译期引用 Redis 类型，
-            // 否则没有引入 Redis 依赖的使用方会在本自动配置类加载时 NoClassDefFoundError。
-            Object redisTemplate = null;
+            // Redis 等"需要依赖"的实现一律走无参构造（SPI 只支持无参 / 具体类参数），
+            // 其依赖由实现自己用 common 层工具获取；此处不做反射、不引入 Redis 类型，
+            // 没有 Redis 依赖的使用方因此不会被牵连。
+            // 诊断探针：先列出该 SPI 点上"已注册的键"，用于区分
+            // 「扩展没注册」与「注册了但实例化失败（异常被 SPI 内部吞掉）」这两种回落原因。
+            log.info("[job] 选主扩展已注册键 = {} (请求 resolver={})",
+                    provider.getExtensions(), resolverKey);
             try {
-                Class<?> redisType = Class.forName("org.springframework.data.redis.core.StringRedisTemplate");
-                redisTemplate = applicationContext.getBeanProvider(redisType).getIfAvailable();
-            } catch (Throwable ignored) {
-                // 无 Redis 依赖 / 无该 Bean：正常情况，继续走下面的无参或数据库回落分支
-            }
-            Object[] deps = redisTemplate == null
-                    ? new Object[] {clusterMapper}
-                    : new Object[] {redisTemplate, clusterMapper};
-            for (Object dep : deps) {
-                try {
-                    spi = provider.getNewExtension(resolverKey.trim(), dep);
-                } catch (RuntimeException ex) {
-                    log.debug("[job] 选主扩展带参实例化失败 key={} dep={} cause={}",
-                            resolverKey, dep.getClass().getSimpleName(), ex.getMessage());
-                }
-                if (spi != null) {
-                    break;
-                }
+                spi = provider.getNewExtension(resolverKey.trim(), clusterMapper);
+            } catch (RuntimeException ex) {
+                log.debug("[job] 选主扩展带参实例化失败, 试无参 resolver={} cause={}",
+                        resolverKey, ex.getMessage());
             }
             if (spi == null) {
                 try {

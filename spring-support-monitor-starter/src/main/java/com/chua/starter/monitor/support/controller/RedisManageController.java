@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -79,10 +78,10 @@ public class RedisManageController {
      * @return 键详情
      */
     @Operation(summary = "键详情")
-    @GetMapping("/key/{key}")
+    @GetMapping("/key")
     public ReturnResult<RedisKeyDetailVO> keyDetail(@RequestParam Long datasourceId,
                                                     @RequestParam(defaultValue = "0") int db,
-                                                    @PathVariable String key) {
+                                                    @RequestParam String key) {
         return call("读取键详情", () -> redisManageService.keyDetail(datasourceId, db, key));
     }
 
@@ -112,10 +111,10 @@ public class RedisManageController {
      * @return 是否成功
      */
     @Operation(summary = "更新 STRING 值")
-    @PutMapping("/key/{key}")
+    @PutMapping("/key")
     public ReturnResult<Boolean> setString(@RequestParam Long datasourceId,
                                           @RequestParam(defaultValue = "0") int db,
-                                          @PathVariable String key,
+                                          @RequestParam String key,
                                           @RequestBody RedisValueVO body) {
         return call("保存 STRING", () -> redisManageService.setString(datasourceId, db, key, body.value()));
     }
@@ -147,10 +146,10 @@ public class RedisManageController {
      * @return 是否成功
      */
     @Operation(summary = "设置 TTL")
-    @PostMapping("/key/{key}/expire")
+    @PostMapping("/key/expire")
     public ReturnResult<Boolean> expire(@RequestParam Long datasourceId,
                                        @RequestParam(defaultValue = "0") int db,
-                                       @PathVariable String key,
+                                       @RequestParam String key,
                                        @RequestParam long ttl) {
         return call("设置 TTL", () -> redisManageService.expireKey(datasourceId, db, key, ttl));
     }
@@ -165,10 +164,10 @@ public class RedisManageController {
      * @return 是否成功
      */
     @Operation(summary = "重命名键")
-    @PostMapping("/key/{key}/rename")
+    @PostMapping("/key/rename")
     public ReturnResult<Boolean> rename(@RequestParam Long datasourceId,
                                        @RequestParam(defaultValue = "0") int db,
-                                       @PathVariable String key,
+                                       @RequestParam String key,
                                        @RequestParam String newKey) {
         return call("重命名键", () -> redisManageService.renameKey(datasourceId, db, key, newKey));
     }
@@ -207,10 +206,10 @@ public class RedisManageController {
      * @return 是否新增
      */
     @Operation(summary = "写入哈希字段")
-    @PostMapping("/key/{key}/hash")
+    @PostMapping("/key/hash")
     public ReturnResult<Boolean> hset(@RequestParam Long datasourceId,
                                      @RequestParam(defaultValue = "0") int db,
-                                     @PathVariable String key,
+                                     @RequestParam String key,
                                      @RequestBody RedisHashFieldVO field) {
         return call("写入哈希字段", () -> redisManageService.hset(datasourceId, db, key, field.field(), field.value()));
     }
@@ -225,10 +224,10 @@ public class RedisManageController {
      * @return 删除数量
      */
     @Operation(summary = "删除哈希字段")
-    @DeleteMapping("/key/{key}/hash")
+    @DeleteMapping("/key/hash")
     public ReturnResult<Long> hdel(@RequestParam Long datasourceId,
                                   @RequestParam(defaultValue = "0") int db,
-                                  @PathVariable String key,
+                                  @RequestParam String key,
                                   @RequestParam String field) {
         return call("删除哈希字段", () -> redisManageService.hdel(datasourceId, db, key, field));
     }
@@ -243,10 +242,10 @@ public class RedisManageController {
      * @return 列表长度
      */
     @Operation(summary = "追加列表元素")
-    @PostMapping("/key/{key}/list")
+    @PostMapping("/key/list")
     public ReturnResult<Long> rpush(@RequestParam Long datasourceId,
                                    @RequestParam(defaultValue = "0") int db,
-                                   @PathVariable String key,
+                                   @RequestParam String key,
                                    @RequestBody RedisValueVO element) {
         return call("追加列表元素", () -> redisManageService.rpush(datasourceId, db, key, element.value()));
     }
@@ -261,10 +260,10 @@ public class RedisManageController {
      * @return 是否成功
      */
     @Operation(summary = "覆盖列表元素")
-    @PutMapping("/key/{key}/list")
+    @PutMapping("/key/list")
     public ReturnResult<Boolean> lset(@RequestParam Long datasourceId,
                                     @RequestParam(defaultValue = "0") int db,
-                                    @PathVariable String key,
+                                    @RequestParam String key,
                                     @RequestBody RedisListElementVO element) {
         return call("覆盖列表元素", () -> redisManageService.lset(datasourceId, db, key, element.index(), element.value()));
     }
@@ -279,10 +278,10 @@ public class RedisManageController {
      * @return 删除数量
      */
     @Operation(summary = "删除列表元素")
-    @DeleteMapping("/key/{key}/list")
+    @DeleteMapping("/key/list")
     public ReturnResult<Long> lrem(@RequestParam Long datasourceId,
                                  @RequestParam(defaultValue = "0") int db,
-                                 @PathVariable String key,
+                                 @RequestParam String key,
                                  @RequestParam long index) {
         return call("删除列表元素", () -> redisManageService.lremIndex(datasourceId, db, key, index));
     }
@@ -297,10 +296,10 @@ public class RedisManageController {
      * @return 是否新增
      */
     @Operation(summary = "添加集合成员")
-    @PostMapping("/key/{key}/set")
+    @PostMapping("/key/set")
     public ReturnResult<Boolean> sadd(@RequestParam Long datasourceId,
                                     @RequestParam(defaultValue = "0") int db,
-                                    @PathVariable String key,
+                                    @RequestParam String key,
                                     @RequestBody RedisValueVO member) {
         return call("添加集合成员", () -> redisManageService.sadd(datasourceId, db, key, member.value()));
     }
@@ -315,10 +314,10 @@ public class RedisManageController {
      * @return 删除数量
      */
     @Operation(summary = "删除集合成员")
-    @DeleteMapping("/key/{key}/set")
+    @DeleteMapping("/key/set")
     public ReturnResult<Long> srem(@RequestParam Long datasourceId,
                                   @RequestParam(defaultValue = "0") int db,
-                                  @PathVariable String key,
+                                  @RequestParam String key,
                                   @RequestParam String member) {
         return call("删除集合成员", () -> redisManageService.srem(datasourceId, db, key, member));
     }
@@ -333,10 +332,10 @@ public class RedisManageController {
      * @return 是否新增
      */
     @Operation(summary = "写入有序集合成员")
-    @PostMapping("/key/{key}/zset")
+    @PostMapping("/key/zset")
     public ReturnResult<Boolean> zadd(@RequestParam Long datasourceId,
                                     @RequestParam(defaultValue = "0") int db,
-                                    @PathVariable String key,
+                                    @RequestParam String key,
                                     @RequestBody RedisMemberScoreVO member) {
         return call("写入有序集合成员", () -> redisManageService.zadd(datasourceId, db, key, member.member(), member.score()));
     }
@@ -351,10 +350,10 @@ public class RedisManageController {
      * @return 删除数量
      */
     @Operation(summary = "删除有序集合成员")
-    @DeleteMapping("/key/{key}/zset")
+    @DeleteMapping("/key/zset")
     public ReturnResult<Long> zrem(@RequestParam Long datasourceId,
                                   @RequestParam(defaultValue = "0") int db,
-                                  @PathVariable String key,
+                                  @RequestParam String key,
                                   @RequestParam String member) {
         return call("删除有序集合成员", () -> redisManageService.zrem(datasourceId, db, key, member));
     }
@@ -369,10 +368,10 @@ public class RedisManageController {
      * @return 新消息 ID
      */
     @Operation(summary = "追加流消息")
-    @PostMapping("/key/{key}/stream")
+    @PostMapping("/key/stream")
     public ReturnResult<String> xadd(@RequestParam Long datasourceId,
                                    @RequestParam(defaultValue = "0") int db,
-                                   @PathVariable String key,
+                                   @RequestParam String key,
                                    @RequestBody RedisStreamEntryVO entry) {
         return call("追加流消息", () -> redisManageService.xadd(datasourceId, db, key, entry.fields()));
     }

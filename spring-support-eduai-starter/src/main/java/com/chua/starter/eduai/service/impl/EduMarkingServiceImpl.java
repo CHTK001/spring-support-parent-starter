@@ -365,12 +365,25 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
         }
 
-        // 4. 落答题卡（复用既有表；content 存识别全文，便于事后核对）
+        // 4. 落答题卡（复用既有表；content 是 JSON 列，必须存合法 JSON，故包成对象，
+        //    顺带记录模式与版面区域统计，便于事后核对识别质量）
+        // 学生 ID 兜底：前端允许留空（先扫描、后绑定学生是合理场景），
+        // 但 answer_sheet_student_id 是 NOT NULL，缺值会让 INSERT 直接失败
+        // （实测前端不填该字段时报 "Field 'answer_sheet_student_id' doesn't have a default value"）。
+        // 这里统一落一个可检索的占位值，而不是要求前端必填。
+        String effectiveStudentId = StringUtils.isBlank(studentId) ? "anonymous" : studentId;
+
+        var content = new java.util.LinkedHashMap<String, Object>();
+        content.put("mode", anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF);
+        content.put("paperId", paperId);
+        content.put("text", scan.text());
+        content.put("layoutRegions", scan.layoutRegions());
+        content.put("blockCount", scan.blocks().size());
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setOwnerUserId(EduUserContext.requireUserId());
         sheet.setAnswerSheetExamId(examId);
-        sheet.setAnswerSheetStudentId(studentId);
-        sheet.setAnswerSheetContent(scan.text());
+        sheet.setAnswerSheetStudentId(effectiveStudentId);
+        sheet.setAnswerSheetContent(Json.toJson(content));
         sheet.setAnswerSheetSubmitTime(LocalDateTime.now());
         sheet.setAnswerSheetStatus(1);
         sheet.setCreateTime(LocalDateTime.now());
@@ -380,7 +393,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         String taskId = UUID.randomUUID().toString().replace("-", "");
         int fallbackScore = maxScore != null && maxScore > 0
                 ? maxScore : properties.getMarking().getMaxScore();
-        int graded = 0;
+
+        // 先建全部结果行（PENDING），把「需要 LLM 的判分」交给后台线程。
+        // 为什么必须异步：扫描阅卷每道题要调一次大模型，串行 3 题实测耗时 37 秒，
+        // 同步会让 HTTP 请求长时间挂住（前端表现为「点了没反应」而非报错）。
+        // 这与既有手工提交链路一致（plugin.eduai.marking.async 默认 true，先返回 taskId 再轮询）。
+        var pending = new ArrayList<PendingItem>();
         for (EduPaperScanner.ScannedQuestion item : scanned) {
             EduPaperQuestion relation = anyMode ? null : matchRelation(item.no(), byNo, byOrder);
             if (!anyMode && relation == null) {
@@ -402,32 +420,80 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             row.setCreateTime(LocalDateTime.now());
             row.setUpdateTime(LocalDateTime.now());
             markingResultMapper.insert(row);
-
-            // 5. 判分：自有卷用题库标准答案（客观题精确比对、主观题 AI）；任意卷全靠 AI
-            EduAiService.MarkingOutcome outcome;
-            if (anyMode) {
-                outcome = paperScanner.markAnyQuestion(item, score);
-            } else {
-                EduQuestion question = questionMapper.selectById(questionId);
-                if (question == null) {
-                    log.warn("[EduAi] 扫描阅卷：题目 {} 不在题库，跳过", questionId);
-                    continue;
-                }
-                outcome = eduAiService.markQuestionWithAi(question.getQuestionType(),
-                        question.getQuestionStem(), question.getQuestionAnswer(), item.answer(), score);
-            }
-            markingResultMapper.updateScanOutcome(taskId, questionId, outcome.getScore(),
-                    outcome.getComment(), buildScanDetail(item, outcome, score), LocalDateTime.now());
-            graded++;
+            pending.add(new PendingItem(row.getMarkingResultId(), questionId, score, item));
         }
-        if (graded == 0) {
+        if (pending.isEmpty()) {
             throw new BusinessException("识别到题目但未能匹配到可判分的题项，请确认试卷选择是否正确");
         }
+
+        Thread.ofVirtual().name("edu-scan-mark-" + taskId).start(() -> {
+            try {
+                gradePending(pending, anyMode);
+                log.info("[EduAi] 扫描阅卷后台判分完成: taskId={}, 已判分={}", taskId, pending.size());
+            } catch (Exception e) {
+                log.error("[EduAi] 扫描阅卷后台判分失败: taskId={}", taskId, e);
+            }
+        });
         recordWrongQuestions(taskId, sheet);
-        log.info("[EduAi] 扫描阅卷完成: taskId={}, mode={}, 识别题目={}, 已判分={}, 版面={}",
+        log.info("[EduAi] 扫描阅卷已提交: taskId={}, mode={}, 识别题目={}, 待判分={}, 版面={}",
                 taskId, anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF,
-                scanned.size(), graded, scan.layoutRegions());
+                scanned.size(), pending.size(), scan.layoutRegions());
         return taskId;
+    }
+
+    /**
+     * 一条待判分的题目。
+     *
+     * @param resultId   结果行主键（按主键更新，避免任意卷 question_id 全为 0 时互相覆盖）
+     * @param questionId 题目标识（任意卷为 0）
+     * @param maxScore   本题满分
+     * @param item       识别出的题目（题号 / 题干 / 作答）
+     */
+    private record PendingItem(Long resultId, Long questionId, int maxScore,
+                               EduPaperScanner.ScannedQuestion item) {
+    }
+
+    /**
+     * 后台逐题判分并写库。
+     *
+     * @param pending 待判分列表
+     * @param anyMode 是否任意卷（任意卷全靠模型判定）
+     */
+    private void gradePending(List<PendingItem> pending, boolean anyMode) {
+        for (PendingItem p : pending) {
+            try {
+                EduAiService.MarkingOutcome outcome;
+                if (anyMode) {
+                    outcome = paperScanner.markAnyQuestion(p.item(), p.maxScore());
+                } else {
+                    EduQuestion question = questionMapper.selectById(p.questionId());
+                    if (question == null) {
+                        log.warn("[EduAi] 扫描阅卷：题目 {} 不在题库，跳过", p.questionId());
+                        markingResultMapper.updateScanOutcomeById(p.resultId(), 0,
+                                "题目不在题库", buildScanDetail(p.item(), null, p.maxScore()),
+                                LocalDateTime.now());
+                        continue;
+                    }
+                    outcome = tolerantObjectiveOutcome(question, p.item().answer(), p.maxScore());
+                }
+                // 按【行主键】写结果：任意卷 question_id 统一为 0，
+                // 若按 (taskId, questionId) 更新会命中该任务下所有 0 号行、互相覆盖（实测 3 行内容完全相同）
+                markingResultMapper.updateScanOutcomeById(p.resultId(), outcome.getScore(),
+                        outcome.getComment(), buildScanDetail(p.item(), outcome, p.maxScore()),
+                        LocalDateTime.now());
+            } catch (Exception e) {
+                // 单题失败不能让它永久停在 PENDING：既会卡住轮询的 finished 判定，
+                // 也让老师看不到是哪一题出了问题。写入失败原因后继续处理其余题目。
+                log.error("[EduAi] 扫描阅卷单题判分失败: resultId={}, no={}", p.resultId(), p.item().no(), e);
+                try {
+                    markingResultMapper.updateScanOutcomeById(p.resultId(), 0,
+                            "判分失败：" + e.getMessage(), buildScanDetail(p.item(), null, p.maxScore()),
+                            LocalDateTime.now());
+                } catch (Exception ex) {
+                    log.error("[EduAi] 写入判分失败结果也失败: resultId={}", p.resultId(), ex);
+                }
+            }
+        }
     }
 
     /**
@@ -459,6 +525,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (matcher.find()) {
             return byOrder.get(matcher.group());
         }
+        // 兜底：题号可能被识别成字母（如「1.」→「L.」），折算后再取数字
+        var fixed = FIRST_DIGITS.matcher(fixOcrDigits(no));
+        if (fixed.find()) {
+            return byOrder.get(fixed.group());
+        }
         return null;
     }
 
@@ -473,6 +544,108 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             return "";
         }
         return raw.trim().toLowerCase().replaceAll("[^0-9a-z]", "");
+    }
+
+    /**
+     * 修正 OCR 常见「字母↔数字」混淆，用于题号兜底匹配。
+     *
+     * <p>实测：题号 {@code 1.} 会被识别成 {@code L.}（数字 1 与字母 l/L/I 字形相近），
+     * 若只按 {@code \d+} 找数字就会整道题漏掉。这里把常见混淆统一折算回数字：
+     * {@code l/L/I → 1}、{@code O/o → 0}、{@code S/s → 5}、{@code B → 8}、
+     * {@code Z/z → 2}、{@code g → 9}。</p>
+     *
+     * @param raw 识别出的题号
+     * @return 折算后的文本
+     */
+    private static String fixOcrDigits(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.replace('l', '1').replace('L', '1').replace('I', '1')
+                .replace('O', '0').replace('o', '0')
+                .replace('S', '5').replace('s', '5')
+                .replace('B', '8')
+                .replace('Z', '2').replace('z', '2')
+                .replace('g', '9');
+    }
+
+    /**
+     * 该题类型是否为客观题（可精确比对，不依赖模型理解）。
+     *
+     * @param questionType 题型
+     * @return 是否客观题
+     */
+    public static boolean isObjectiveType(String questionType) {
+        if (questionType == null) {
+            return false;
+        }
+        String type = questionType.trim().toUpperCase();
+        return "SINGLE_CHOICE".equals(type) || "MULTIPLE_CHOICE".equals(type)
+                || "JUDGE".equals(type) || "FILL".equals(type) || "BLANK".equals(type);
+    }
+
+    /**
+     * 答案相似度（0~1），用于容忍 OCR 个别错字。
+     *
+     * <p>先归一化（去空白与中英标点、统一小写），再用编辑距离折算：
+     * {@code 1 - 距离 / 较长串长度}。例如「做了湖涂事」与「做了糊涂事」
+     * 只差 1 个字，相似度 0.8。</p>
+     *
+     * @param standard 标准答案
+     * @param student  学生作答（可能含 OCR 错字）
+     * @return 相似度；任一侧为空返回 0
+     */
+    public static double similarity(String standard, String student) {
+        String a = normalizeText(standard);
+        String b = normalizeText(student);
+        if (a.isEmpty() || b.isEmpty()) {
+            return 0d;
+        }
+        if (a.equals(b)) {
+            return 1d;
+        }
+        int maxLen = Math.max(a.length(), b.length());
+        return 1d - (double) editDistance(a, b) / maxLen;
+    }
+
+    /**
+     * 归一化文本：去掉空白与中英文标点，统一小写。
+     *
+     * @param value 原文本
+     * @return 归一化文本
+     */
+    private static String normalizeText(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim().toLowerCase()
+                .replaceAll("[\\s\\p{Punct}，。、；：？！（）〔〕《》〈〉“”‘’·—…￥【】]", "");
+    }
+
+    /**
+     * 编辑距离（Levenshtein），用于答案容错比对。
+     *
+     * @param a 串 a
+     * @param b 串 b
+     * @return 编辑距离
+     */
+    private static int editDistance(String a, String b) {
+        int[] prev = new int[b.length() + 1];
+        int[] curr = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) {
+            prev[j] = j;
+        }
+        for (int i = 1; i <= a.length(); i++) {
+            curr[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            }
+            int[] swap = prev;
+            prev = curr;
+            curr = swap;
+        }
+        return prev[b.length()];
     }
 
     /**
@@ -500,6 +673,48 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("source", outcome.getSource());
         return Json.toJson(detail);
     }
+
+    /**
+     * 自有卷客观题的容忍判分。
+     *
+     * <p>扫描阅卷的作答来自 OCR，<b>必然存在个别错字</b>（实测「糊涂」被识成「湖涂」）。
+     * 而自有卷的标准答案就在题库里，若坚持严格相等，正确答案也会被判 0 分。</p>
+     *
+     * <p>策略：客观题先做「归一化 + 编辑距离相似度」比对，达到
+     * {@link #SIMILARITY_THRESHOLD} 即给满分；不达标才交回原有链路
+     * （客观题严格比对，主观题交 AI）。这样既容忍识别误差，又不放过真正答错的。</p>
+     *
+     * @param question      题库题目（提供题型与标准答案）
+     * @param studentAnswer 识别出的学生作答
+     * @param maxScore      本题满分
+     * @return 判分结果
+     */
+    private EduAiService.MarkingOutcome tolerantObjectiveOutcome(EduQuestion question,
+                                                                 String studentAnswer,
+                                                                 int maxScore) {
+        if (isObjectiveType(question.getQuestionType())) {
+            double sim = similarity(question.getQuestionAnswer(), studentAnswer);
+            if (sim >= SIMILARITY_THRESHOLD) {
+                var outcome = new EduAiService.MarkingOutcome();
+                outcome.setSource("AI");
+                outcome.setScore(maxScore);
+                outcome.setComment(sim >= 1d
+                        ? "与标准答案一致"
+                        : String.format("与标准答案一致（容忍识别误差，相似度 %.0f%%）", sim * 100));
+                return outcome;
+            }
+        }
+        return eduAiService.markQuestionWithAi(question.getQuestionType(),
+                question.getQuestionStem(), question.getQuestionAnswer(), studentAnswer, maxScore);
+    }
+
+    /**
+     * 客观题答案相似度阈值：低于该值视为答错。
+     *
+     * <p>取 0.7 —— 能容忍 1~2 个字的识别误差（如「做了湖涂事」vs「做了糊涂事」相似度 0.8），
+     * 又不会把明显不同的作答判成正确。</p>
+     */
+    private static final double SIMILARITY_THRESHOLD = 0.7d;
 
     @Override
     /**
