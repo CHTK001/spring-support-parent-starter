@@ -2,6 +2,7 @@ package com.chua.starter.job.support.store;
 
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.job.support.cluster.LeaderElectionResolver;
+import java.sql.Timestamp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,6 +30,26 @@ import lombok.extern.slf4j.Slf4j;
 @Spi("mysql")
 @RequiredArgsConstructor
 public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
+
+    /**
+     * 取数据库当前时刻（毫秒）。
+     *
+     * <p>SQL 里刻意不含任何库专用时间函数（多机时钟对齐的诉求靠"用库时钟"满足，
+     * 而非靠 {@code UNIX_TIMESTAMP(NOW(3))} 这类写法），因此先读一次库时间，
+     * 再由 Java 换算成毫秒并作为参数参与比较与写入 —— 这样同一条语句在 MySQL 与 H2
+     * 上都能执行。读与写之间只差同库的毫秒级时间，不影响租约语义。</p>
+     *
+     * @return 数据库当前毫秒时间戳；读取失败时回落到本机时钟
+     */
+    private long currentDbTimeMs() {
+        try {
+            Timestamp dbNow = clusterMapper.selectDbNow();
+            return dbNow == null ? System.currentTimeMillis() : dbNow.getTime();
+        } catch (Exception ex) {
+            log.warn("[job] 取数据库时间失败, 回落到本机时钟 cause={}", ex.getMessage());
+            return System.currentTimeMillis();
+        }
+    }
 
     /**
      * sys_作业_cluster 映射器
