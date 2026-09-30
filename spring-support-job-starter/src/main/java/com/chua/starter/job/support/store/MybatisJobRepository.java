@@ -92,6 +92,9 @@ public class MybatisJobRepository implements JobRepository {
         if (group != null && !group.isBlank()) {
             query.eq(JobEntity::getSysJobGroup, group.trim());
         }
+        // 多机部署时各节点本机时钟可能漂移，而"到点没有""错过没有"全靠本机 now 判定；
+        // 统一改用数据库时钟，触发相位不再随当前 leader 是哪台机器而平移。
+        now = currentDbTimeMs(now);
         long upperBound = now + Math.max(preReadMs, 0L);
         query.and(w -> w.isNull(JobEntity::getSysJobTriggerNextTime)
                 .or().eq(JobEntity::getSysJobTriggerNextTime, 0L)
@@ -205,6 +208,9 @@ public class MybatisJobRepository implements JobRepository {
                     existing.setSysJobDesc(definition.getDesc());
                     existing.setSysJobTriggerStatus(1);
                     existing.setSysJobIsDeleted(0);
+                    // 注解侧改了调度/分组也是"台账被改过"：推进版本，让同时在编辑的人保存时被拦下
+                    existing.setSysJobVersion(
+                            existing.getSysJobVersion() == null ? 1L : existing.getSysJobVersion() + 1);
                     jobMapper.updateById(existing);
                     syncNextFireTime(definition.getName());
                     log.info("[job] 注解任务调度配置更新 name={} type={} time={} group={}",
@@ -261,6 +267,9 @@ public class MybatisJobRepository implements JobRepository {
             // 未删除的行都没有: 再认一次逻辑删除的墓碑行, 走下面的更新分支把它复活（含 set isDeleted=0）
             existing = selectByKey(jobKey, false);
         }
+        // 乐观锁基准版本: 任何更新都把版本 +1, 否则"不校验版本"的调用方会悄悄钝化 CAS 判据
+        long currentVersion = existing == null || existing.getSysJobVersion() == null
+                ? 0L : existing.getSysJobVersion();
         if (existing == null) {
             JobEntity entity = new JobEntity();
             entity.setSysJobNo(isBlank(spec.getJobNo()) ? jobKey : spec.getJobNo().trim());
@@ -287,6 +296,7 @@ public class MybatisJobRepository implements JobRepository {
             entity.setSysJobAlarmEmail(trimToNull(spec.getAlarmEmail()));
             entity.setSysJobAlarmType(trimToNull(spec.getAlarmType()));
             entity.setSysJobIsDeleted(0);
+            entity.setSysJobVersion(0L);
             // 新建行: 未显式指定并发策略时落 SKIP (安全默认), 与建表列默认值一致。
             // 存量行为 NULL, 读侧按 ALLOW 兼容, 见 readConcurrentPolicy。
             entity.setSysJobConcurrentPolicy(
@@ -301,7 +311,7 @@ public class MybatisJobRepository implements JobRepository {
             log.info("[job] 任务登记成功 job={} type={} time={} enabled={} dispatch={}",
                     jobKey, scheduleType, scheduleTime, enabled, dispatchMode);
         } else {
-            jobMapper.update(null, rowFilter(existing)
+            LambdaUpdateWrapper<JobEntity> update = rowFilter(existing)
                     .set(JobEntity::getSysJobName, isBlank(spec.getJobName()) ? jobKey : spec.getJobName())
                     .set(JobEntity::getSysJobDesc, spec.getDesc())
                     .set(JobEntity::getSysJobGroup, groupOrDefault(spec.getGroup()))
@@ -328,7 +338,16 @@ public class MybatisJobRepository implements JobRepository {
                     // 更新时未显式给并发策略则保持原值, 不覆盖存量行既定的 ALLOW
                     .set(isBlank(spec.getConcurrentPolicy()), JobEntity::getSysJobConcurrentPolicy,
                             JobSpec.normalizeConcurrentPolicy(spec.getConcurrentPolicy()))
-                    .set(JobEntity::getSysJobIsDeleted, 0));
+                    .set(JobEntity::getSysJobIsDeleted, 0)
+                    // 版本前进: 让带版本的调用方下次拿到的基准一定变化
+                    .set(JobEntity::getSysJobVersion, currentVersion + 1);
+            // 调用方回传了编辑前读到的版本才做 CAS; 不回传则保持历史行为(后写覆盖), 兼容未升级调用方
+            if (spec.getVersion() != null) {
+                update.eq(JobEntity::getSysJobVersion, spec.getVersion());
+            }
+            if (jobMapper.update(null, update) == 0 && spec.getVersion() != null) {
+                throw new IllegalArgumentException("配置已被修改，请刷新后重试");
+            }
             log.info("[job] 任务更新成功 job={} type={} time={} enabled={} dispatch={}",
                     jobKey, scheduleType, scheduleTime, enabled, dispatchMode);
         }
@@ -356,7 +375,11 @@ public class MybatisJobRepository implements JobRepository {
         }
         for (JobEntity entity : entities) {
             boolean enabled = entity.getSysJobTriggerStatus() != null && entity.getSysJobTriggerStatus() == 1;
-            long next = enabled ? computeNextFireMs(toDefinition(entity)) : 0L;
+            long next = enabled
+                    ? computeNextFireMs(toDefinition(entity),
+                            entity.getSysJobTriggerLastTime() == null ? 0L : entity.getSysJobTriggerLastTime())
+                    : 0L;
+            // 运行态回写：刻意不推进 sys_job_version（每拍都会写，推进会让版本疯涨、编辑恒冲突）
             jobMapper.update(null, Wrappers.<JobEntity>lambdaUpdate()
                     .eq(JobEntity::getSysJobId, entity.getSysJobId())
                     .set(JobEntity::getSysJobTriggerNextTime, Math.max(next, 0L)));
@@ -458,7 +481,7 @@ public class MybatisJobRepository implements JobRepository {
         }
         String type = isBlank(scheduleType) ? JobSpec.TYPE_NONE : scheduleType.trim();
         String time = isBlank(scheduleTime) ? null : scheduleTime.trim();
-        jobMapper.update(null, rowFilter(row)
+        jobMapper.update(null, rowFilterNextVersion(row)
                 .set(JobEntity::getSysJobScheduleType, type)
                 .set(JobEntity::getSysJobScheduleTime, time));
         syncNextFireTime(jobKey.trim());
@@ -480,7 +503,7 @@ public class MybatisJobRepository implements JobRepository {
         if (row == null) {
             return false;
         }
-        jobMapper.update(null, rowFilter(row)
+        jobMapper.update(null, rowFilterNextVersion(row)
                 .set(JobEntity::getSysJobTriggerStatus, enabled ? 1 : 0));
         syncNextFireTime(key);
         refresh(key);
@@ -500,7 +523,7 @@ public class MybatisJobRepository implements JobRepository {
         if (row == null) {
             return false;
         }
-        jobMapper.update(null, rowFilter(row)
+        jobMapper.update(null, rowFilterNextVersion(row)
                 .set(JobEntity::getSysJobIsDeleted, 1)
                 .set(JobEntity::getSysJobTriggerStatus, 0)
                 .set(JobEntity::getSysJobTriggerNextTime, 0L));
@@ -592,6 +615,26 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
+     * 按主键限定单行，并在同一次更新里推进乐观锁版本。
+     *
+     * <p><b>为什么每条写路径都要推进版本</b>：编辑保存靠 {@code version} 做 CAS，
+     * 只要有任何一条写路径不推进，持旧版本的编辑弹窗就会在下一次保存时仍然比对成功，
+     * 把别人的启停 / 调度 / 删除改动静默覆盖——这正是乐观锁要拦的事。</p>
+     *
+     * <p><b>反例（刻意不推进）</b>：{@link #syncNextFireTime}、{@link #persistFireTimes} 等
+     * 是每拍调度回写运行态（下次触发时刻 / 已派发时刻），一秒可能写多次。
+     * 给它们推进版本会让版本无意义地疯涨，所有编辑一保存就"冲突"，
+     * 所以运行态回写一律<b>不</b>参与版本推进。</p>
+     *
+     * @param row 目标行
+     * @return 已带上版本推进的按主键更新条件
+     */
+    private LambdaUpdateWrapper<JobEntity> rowFilterNextVersion(JobEntity row) {
+        long current = row.getSysJobVersion() == null ? 0L : row.getSysJobVersion();
+        return rowFilter(row).set(JobEntity::getSysJobVersion, current + 1);
+    }
+
+    /**
      * 实体转运行态快照, 下次触发时间按当前配置现算 (不复用派发序列的触发器, 避免只读操作推进调度)。
      *
      * @param entity 实体
@@ -618,6 +661,7 @@ public class MybatisJobRepository implements JobRepository {
         runtime.setExecuteTimeout(entity.getSysJobExecuteTimeout());
         runtime.setMisfireStrategy(entity.getSysJobExecuteMisfireStrategy());
         runtime.setConcurrentPolicy(readConcurrentPolicy(entity));
+        runtime.setVersion(entity.getSysJobVersion() == null ? 0L : entity.getSysJobVersion());
         runtime.setGlueType(normalizeGlueType(entity.getSysJobGlueType()));
         runtime.setGlueSource(entity.getSysJobGlueSource());
         runtime.setGlueUpdatetimeMs(entity.getSysJobGlueUpdatetime() == null
@@ -629,7 +673,10 @@ public class MybatisJobRepository implements JobRepository {
         runtime.setLastFireMs(persistedLastFireMs(entity));
         // 停用任务不预告触发时刻：按 cron 现算会让前端显示"下次执行"，但它永远不会跑
         boolean enabled = entity.getSysJobTriggerStatus() != null && entity.getSysJobTriggerStatus() == 1;
-        runtime.setNextFireMs(enabled ? computeNextFireMs(toDefinition(entity)) : 0L);
+        runtime.setNextFireMs(enabled
+                ? computeNextFireMs(toDefinition(entity),
+                        entity.getSysJobTriggerLastTime() == null ? 0L : entity.getSysJobTriggerLastTime())
+                : 0L);
         runtime.setHandlerRegistered(!isBlank(key) && JobHandlerFactory.getInstance().contains(key));
         return runtime;
     }
@@ -654,12 +701,33 @@ public class MybatisJobRepository implements JobRepository {
      * 现算下一次触发时刻。
      *
      * @param definition 任务定义
+     * @param lastFireMs 上次触发时刻（0 表示无历史，基准回落到当前时间）
      * @return 毫秒时间戳, 未配置或表达式非法返回 -1
      */
-    private long computeNextFireMs(JobDefinition definition) {
+    /**
+     * 取数据库当前时刻（毫秒）。
+     *
+     * <p>多机部署时各节点本机时钟可能漂移，而"任务是否到点""是否错过"全部由本机 now 判定；
+     * 统一改用数据库时钟后，触发相位不再随当前 leader 是哪台机器而平移，
+     * 多机部署对 NTP 的依赖由硬要求降级为可选。</p>
+     *
+     * @param fallback 取不到数据库时间时的回落值（本机时钟）
+     * @return 数据库当前毫秒时间戳
+     */
+    private long currentDbTimeMs(long fallback) {
+        try {
+            Long dbNow = jobMapper.selectDbNowMs();
+            return dbNow == null ? fallback : dbNow;
+        } catch (Exception ex) {
+            log.warn("[job] 取数据库时间失败, 回落到本机时钟 cause={}", ex.getMessage());
+            return fallback;
+        }
+    }
+
+    private long computeNextFireMs(JobDefinition definition, long lastFireMs) {
         try {
             com.chua.common.support.task.scheduler.Trigger trigger = JobTriggering.createTrigger(definition);
-            return JobTriggering.nextFireMs(definition, trigger, 0L, System.currentTimeMillis());
+            return JobTriggering.nextFireMs(definition, trigger, lastFireMs, System.currentTimeMillis());
         } catch (Exception ex) {
             return -1L;
         }

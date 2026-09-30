@@ -136,6 +136,12 @@ public class JobSpecDTO {
     private String originJobKey;
 
     /**
+     * 编辑前读到的乐观锁版本：非空时后端按此版本做 CAS 更新，
+     * 版本不一致说明台账已被他人改过，保存会被拒绝
+     */
+    private Long version;
+
+    /**
      * 转换为调度侧任务规格。
      *
      * @return 任务规格, 当前对象为空时返回 {@code null}
@@ -166,6 +172,7 @@ public class JobSpecDTO {
         spec.setAlarmEmail(alarmEmail);
         spec.setAlarmType(alarmType);
         spec.setOriginJobKey(originJobKey);
+        spec.setVersion(version);
         return spec;
     }
 }

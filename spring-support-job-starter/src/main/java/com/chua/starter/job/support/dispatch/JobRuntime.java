@@ -101,6 +101,11 @@ public class JobRuntime {
     private String concurrentPolicy;
 
     /**
+     * 乐观锁版本: 编辑保存时回传, 用于检测台账是否已被他人修改
+     */
+    private Long version;
+
+    /**
      * 执行类型: BEAN=本机处理器; 其它值为脚本引擎名 (如 groovy)
      */
     private String glueType;

@@ -23,4 +23,14 @@ public interface JobMapper extends BaseMapper<JobEntity> {
      * @param @Param("group" @参数("群体"
      */
     List<String> selectJobNosByGroup(@Param("group") String group);
+
+    /**
+     * 取数据库当前时刻（毫秒）。
+     *
+     * <p>调度判据（是否到点、是否错过）必须用同一个时钟，多机部署下各节点本机时钟漂移
+     * 会把触发相位整体平移，故统一以数据库时钟为准。</p>
+     *
+     * @return 数据库当前毫秒时间戳
+     */
+    Long selectDbNowMs();
 }

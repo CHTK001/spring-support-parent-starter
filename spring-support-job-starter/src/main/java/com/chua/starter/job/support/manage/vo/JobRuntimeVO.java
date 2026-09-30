@@ -119,6 +119,11 @@ public class JobRuntimeVO {
     private String concurrentPolicy;
 
     /**
+     * 乐观锁版本: 编辑保存时原样回传, 后端据此判断台账是否已被他人修改
+     */
+    private Long version;
+
+    /**
      * 执行类型: BEAN=本机处理器; 其它值为脚本引擎名 (如 groovy)
      */
     private String glueType;
@@ -184,6 +189,7 @@ public class JobRuntimeVO {
         vo.setExecuteTimeout(runtime.getExecuteTimeout());
         vo.setMisfireStrategy(runtime.getMisfireStrategy());
         vo.setConcurrentPolicy(runtime.getConcurrentPolicy());
+        vo.setVersion(runtime.getVersion());
         vo.setGlueType(runtime.getGlueType());
         vo.setGlueSource(runtime.getGlueSource());
         vo.setGlueUpdatetimeMs(runtime.getGlueUpdatetimeMs());
