@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -68,7 +69,15 @@ public class AuthLoginCompatController {
         data.put("userId", userResume != null ? userResume.getUserId() : username);
         data.put("username", username);
         data.put("nickname", username);
-        data.put("roles", java.util.List.of("ADMIN"));
+        // roles / perms 必须来自本次登录的真实身份，不能写死。
+        // 此前这里固定返回 ["ADMIN"]，于是任何账号（含非管理员的 ops）在前端
+        // isAdmin() 里都判为管理员：能看到管理员菜单，点进去才吃 403。
+        // 而 token 里的真实角色（admin → {SUPER_ADMIN, admin}；ops → {OPS}）
+        // 在前端 hasRole() 里本来就能正确匹配 —— 它忽略大小写，不需要这层「兜底」。
+        data.put("roles", userResume != null && userResume.getRoles() != null
+                ? List.copyOf(userResume.getRoles()) : List.of());
+        data.put("perms", userResume != null && userResume.getPermission() != null
+                ? List.copyOf(userResume.getPermission()) : List.of());
         data.put("expires", System.currentTimeMillis() + 86400000L);
 
         resp.put("code", "00000");
