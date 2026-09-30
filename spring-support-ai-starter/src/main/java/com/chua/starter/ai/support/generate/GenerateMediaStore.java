@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.generate;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -50,6 +52,19 @@ public class GenerateMediaStore {
      * 供应商理论上可以返回相对路径，那样会被误当成本地句柄。</p>
      */
     public static final String HANDLE_PREFIX = "media:";
+
+    /**
+     * 句柄里「基路径」与「相对路径」的分隔符。
+     *
+     * <p>句柄必须自带写入时的基路径：否则它只能相对**当前**基路径解析，
+     * 一改 {@code media_base_path} 就把此前写下的所有句柄指到错的地方 ——
+     * 实测改一次再改回来，之前那条任务的参考图立刻 404。分隔符取 {@code |}：
+     * 路径里不会出现它（Linux 与 Windows 文件名都不允许）。</p>
+     *
+     * <p>改造前写下的旧句柄没有这个分隔符，按「相对当前基路径」解析，
+     * 行为与当时一致，因此不需要迁移存量。</p>
+     */
+    private static final String HANDLE_SEP = "|";
 
     /**
      * data URI 的固定开头（改造前的存量形态）
@@ -232,7 +247,8 @@ public class GenerateMediaStore {
             log.warn("[GenerateMedia] 落盘失败 taskId={} index={}: {}", taskId, index, e.getMessage());
             return null;
         }
-        return HANDLE_PREFIX + relative.replace('\\', '/');
+        // 句柄带上写入时的基路径：之后用户改配置也不会让这条记录读不到自己的文件
+        return HANDLE_PREFIX + basePath() + HANDLE_SEP + relative.replace('\\', '/');
     }
 
     /**
@@ -269,10 +285,8 @@ public class GenerateMediaStore {
         if (!isHandle(handle)) {
             return null;
         }
-        Path root = root();
-        Path file = root.resolve(relativize(handle)).normalize();
-        // 目录穿越防护：句柄来自库里，但仍是拼接出来的路径，必须确认解析结果落在根目录内
-        if (!file.startsWith(root) || !Files.isRegularFile(file)) {
+        Path file = resolveHandle(handle);
+        if (file == null || !Files.isRegularFile(file)) {
             log.warn("[GenerateMedia] 句柄不可达或越界: {}", handle);
             return null;
         }
@@ -285,28 +299,125 @@ public class GenerateMediaStore {
     }
 
     /**
+     * 把句柄解析成文件路径。
+     *
+     * <p>两种形态：</p>
+     * <ul>
+     *   <li><b>带基路径</b>（{@code media:{基路径}|{相对路径}}）：按句柄自带的基路径解析。
+     *       这是现在的形态，保证改了配置之后旧记录仍读得到自己的文件；</li>
+     *   <li><b>不带基路径</b>（{@code media:{相对路径}}）：改造前写下的存量句柄，
+     *       按当前基路径解析，与当时的行为一致。</li>
+     * </ul>
+     *
+     * <p>两条路径都做越界校验：句柄来自库里，但仍是拼接出来的路径，
+     * 必须确认解析结果落在所选根目录内（带基路径时以该基路径为界）。</p>
+     *
+     * @param handle 句柄
+     * @return 绝对规范化路径；解析不出或越界时返回 null
+     */
+    private Path resolveHandle(String handle) {
+        String body = handle.substring(HANDLE_PREFIX.length());
+        int sep = body.indexOf(HANDLE_SEP);
+        if (sep < 0) {
+            Path base = root();
+            Path file = base.resolve(body).normalize();
+            return file.startsWith(base) ? file : null;
+        }
+        String basePath = body.substring(0, sep);
+        String relative = body.substring(sep + 1);
+        if (basePath.isBlank() || relative.isBlank()) {
+            return null;
+        }
+        Path base = Paths.get(basePath).toAbsolutePath().normalize();
+        Path file = base.resolve(relative).normalize();
+        return file.startsWith(base) ? file : null;
+    }
+
+    /**
      * 删除某个任务的全部媒体文件。
      *
-     * <p>任务记录被删除时一并清理，避免磁盘上留下没有归属的图片。
-     * 单文件删除失败不影响其余文件，也不影响记录删除本身。</p>
+     * <p>按<b>该任务行自己记录的句柄</b>逐个删，而不是按名字去某个根目录下找：
+     * 句柄自带写入时的基路径，所以即使用户改过 {@code media_base_path}，
+     * 也能删到当年真正写下的那些文件；按名字扫描则要猜根目录，改过配置就漏删。</p>
      *
-     * <p><b>为什么是「递归找一个同名目录」而不是拼一个固定路径。</b>
-     * 任务目录的深度随布局变化：新布局在 {@code {账号}/{类型}/{taskId}} 或
-     * {@code {账号}/{类型}/{上传目录}/{taskId}}，而改造前的旧布局在 {@code {根}/{taskId}}。
-     * 拼路径就得知道它是哪一种；按名字限深查找则两种都能覆盖，
-     * 也不会因为用户改了基路径配置就漏删旧文件。</p>
+     * <p>顺带清掉因此变空的父目录。旧记录若没有句柄（改造前形态），
+     * 回落到按名字限深查找，两种形态都覆盖。</p>
      *
-     * @param taskId 任务号
+     * @param task 任务行
      */
-    public void deleteAll(String taskId) {
-        if (taskId == null) {
+    public void deleteAll(SysAiGenerateTask task) {
+        if (task == null) {
             return;
         }
-        Path dir = findTaskDir(root(), safeName(taskId), 4);
-        if (dir == null) {
+        List<Path> files = new ArrayList<>();
+        for (String handle : handlesOf(task)) {
+            Path file = resolveHandle(handle);
+            if (file != null) {
+                files.add(file);
+            }
+        }
+        if (!files.isEmpty()) {
+            for (Path file : files) {
+                try {
+                    Files.deleteIfExists(file);
+                    pruneEmptyParents(file.getParent());
+                } catch (IOException e) {
+                    log.warn("[GenerateMedia] 删除失败 {}: {}", file, e.getMessage());
+                }
+            }
             return;
         }
-        deleteRecursively(dir);
+        // 旧记录：没有句柄可循，按名字在限定的深度内找任务目录
+        String taskId = task.getTaskId();
+        if (taskId != null) {
+            Path dir = findTaskDir(root(), safeName(taskId), 4);
+            if (dir != null) {
+                deleteRecursively(dir);
+            }
+        }
+    }
+
+    /**
+     * 取出任务行涉及的全部媒体句柄。
+     *
+     * @param task 任务行
+     * @return 句柄列表（结果 + 参考图）
+     */
+    private static List<String> handlesOf(SysAiGenerateTask task) {
+        List<String> handles = new ArrayList<>();
+        for (String url : task.resultUrls()) {
+            if (isHandle(url)) {
+                handles.add(url);
+            }
+        }
+        if (isHandle(task.getReferenceImage())) {
+            handles.add(task.getReferenceImage());
+        }
+        return handles;
+    }
+
+    /**
+     * 自下而上删除空目录，最多上溯若干层，避免留下空壳目录。
+     *
+     * @param dir 起始目录
+     */
+    private void pruneEmptyParents(Path dir) {
+        Path current = dir;
+        for (int i = 0; i < 5 && current != null; i++) {
+            try (Stream<Path> children = Files.list(current)) {
+                if (children.findAny().isPresent()) {
+                    return;
+                }
+            } catch (IOException e) {
+                return;
+            }
+            try {
+                Files.deleteIfExists(current);
+            } catch (IOException e) {
+                return;
+            }
+            current = current.getParent();
+        }
     }
 
     /**
@@ -415,13 +526,15 @@ public class GenerateMediaStore {
     }
 
     /**
-     * 从句柄切出相对路径部分。
+     * 从句柄切出相对路径部分（仅用于诊断输出）。
      *
      * @param handle 句柄
-     * @return 相对路径
+     * @return 相对路径或原样返回
      */
     private static String relativize(String handle) {
-        return handle.substring(HANDLE_PREFIX.length());
+        String body = handle.substring(HANDLE_PREFIX.length());
+        int sep = body.indexOf(HANDLE_SEP);
+        return sep < 0 ? body : body.substring(sep + 1);
     }
 
     /**
