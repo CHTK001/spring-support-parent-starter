@@ -977,8 +977,9 @@ public class GenerateService {
         }
         boolean removed = taskMapper.deleteById(taskId) > 0;
         if (removed) {
-            // 记录删了、磁盘上的图片也要跟着删，否则留下没有归属的字节
-            mediaStore.deleteAll(taskId);
+            // 记录删了、磁盘上的图片也要跟着删，否则留下没有归属的字节。
+            // 传整行而不是 taskId：句柄自带写入时的基路径，用它才能删到真正的文件。
+            mediaStore.deleteAll(task);
         }
         return removed;
     }
@@ -1017,7 +1018,7 @@ public class GenerateService {
                 }
             }
             if (taskMapper.deleteById(taskId) > 0) {
-                mediaStore.deleteAll(taskId);
+                mediaStore.deleteAll(task);
                 removed++;
             }
         }
@@ -1042,7 +1043,7 @@ public class GenerateService {
         int removed = 0;
         for (SysAiGenerateTask task : mine) {
             if (taskMapper.deleteById(task.getTaskId()) > 0) {
-                mediaStore.deleteAll(task.getTaskId());
+                mediaStore.deleteAll(task);
                 removed++;
             }
         }
@@ -1074,7 +1075,7 @@ public class GenerateService {
         for (SysAiGenerateTask task : voided) {
             if (taskMapper.deleteById(task.getTaskId()) > 0) {
                 // 失败记录一般没有产物，但视频失败行仍可能留有已落盘的参考图，一并清理
-                mediaStore.deleteAll(task.getTaskId());
+                mediaStore.deleteAll(task);
                 removed++;
             }
         }
