@@ -242,7 +242,23 @@ public class EduPaperScanner {
                 // 也不并入上一题作答（会把作答拉长、稀释相似度：实测 13 字标准答案并进子项后
                 // 只剩 0.6，正确作答被判 0 分）。故与「大节标题」同样丢弃。
                 log.debug("[EduScan] 跳过子项: {}", line);
-            } else if (matcher.find()) {
+                continue;
+            }
+            var inlineSpans = findInlineItemSpans(line);
+            if (inlineSpans.size() >= 2) {
+                // 一行多题（真实答题卡的选择题常见）：逐个切成独立题目，
+                // 否则 Q2/Q3 会被并进 Q1 的作答（实测 15 题只出 11 行）。
+                log.info("[EduScan] 一行识别到 {} 个题号，按题号切分: {}", inlineSpans.size(), line);
+                for (int k = 0; k < inlineSpans.size(); k++) {
+                    int contentStart = inlineSpans.get(k)[1];
+                    int contentEnd = k + 1 < inlineSpans.size() ? inlineSpans.get(k + 1)[0] : line.length();
+                    appendQuestion(list, no, answer);
+                    no = line.substring(inlineSpans.get(k)[0], inlineSpans.get(k)[1]).trim();
+                    answer = new StringBuilder(line.substring(contentStart, contentEnd).trim());
+                }
+                continue;
+            }
+            if (matcher.find()) {
                 appendQuestion(list, no, answer);
                 no = matcher.group().trim();
                 answer = new StringBuilder(line.substring(matcher.end()).trim());
@@ -335,6 +351,32 @@ public class EduPaperScanner {
      */
     private static final java.util.regex.Pattern SECTION_KEYWORD =
             java.util.regex.Pattern.compile("(选择|填空|判断|简答|阅读|应用|计算|作文|听力|连线|画图|问答|口语|默写)");
+
+    /**
+     * 行内题号（不带行首锚点）：用于「一行多题」的切分。
+     *
+     * <p>真实答题卡的选择题常把多题排在一行：{@code 1.(A) 2.(B) 3.(C)}（OCR 常把空格吃掉，
+     * 变成 {@code 1.(A)2.(B)3.(C)}）。按行解析会把 Q2/Q3 吞进 Q1 的作答 —— 实测 15 题只出 11 行。</p>
+     */
+    private static final java.util.regex.Pattern INLINE_ITEM =
+            java.util.regex.Pattern.compile("(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*");
+
+    /**
+     * 找出该行内所有题号片段（起始/结束偏移）。
+     *
+     * @param line 单行文本
+     * @return 题号片段列表；无则为空
+     */
+    private static List<int[]> findInlineItemSpans(String line) {
+        var spans = new ArrayList<int[]>();
+        var matcher = INLINE_ITEM.matcher(line);
+        int from = 0;
+        while (matcher.find(from)) {
+            spans.add(new int[]{matcher.start(), matcher.end()});
+            from = Math.max(matcher.end(), matcher.start() + 1);
+        }
+        return spans;
+    }
 
     /**
      * 是否为大节标题（一、选择题 / 二、填空题 / 四、简答题 …）。
