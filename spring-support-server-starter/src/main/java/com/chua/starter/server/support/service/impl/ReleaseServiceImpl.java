@@ -30,6 +30,7 @@ import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
 import com.chua.starter.server.support.util.HostPlatforms;
 import com.chua.starter.server.support.util.ProjectScripts;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -49,6 +50,7 @@ import java.util.regex.Pattern;
  * @author CH
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class ReleaseServiceImpl implements ReleaseService {
 
@@ -1257,11 +1259,40 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (isBlank(json)) {
             return Collections.emptyList();
         }
+        String text = json.trim();
+        // 正常来源是前端 JSON.stringify(string[])，即 JSON 数组；但手工写入或历史数据
+        // 往往是「--server.port=8112 --spring.profiles.active=prod」这样的裸串。
+        // 原实现遇到裸串时 JSON 解析抛错并静默返回空列表 —— 用户填了参数却毫无提示地被丢弃，
+        // 表现为「端口/参数没生效」，很难排查。此处改为：非 JSON 数组一律按空白切分。
+        if (!text.startsWith("[")) {
+            return splitArgs(text);
+        }
         try {
-            return JSON.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
+            return JSON.readValue(text, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
         } catch (Exception e) {
+            // JSON 数组解析失败同样不能静默丢参：剥掉括号与引号后按空白切分，并留下告警
+            log.warn("[release] 参数不是合法 JSON 数组，已按空白切分兜底: {}", text);
+            return splitArgs(text.replaceAll("[\\[\\]\"]", " "));
+        }
+    }
+
+    /**
+     * 把裸参数串按空白切分为列表。
+     *
+     * @param text 参数串（如 {@code --server.port=8112 --spring.profiles.active=prod}）
+     * @return 非空参数项列表
+     */
+    private List<String> splitArgs(String text) {
+        if (isBlank(text)) {
             return Collections.emptyList();
         }
+        List<String> out = new ArrayList<>();
+        for (String part : text.trim().split("\\s+")) {
+            if (!part.isBlank()) {
+                out.add(part);
+            }
+        }
+        return out;
     }
 
     private List<EnvVar> readEnvList(String json) {
