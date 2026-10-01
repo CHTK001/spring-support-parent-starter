@@ -47,7 +47,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.UUID;
 
 /**
@@ -455,13 +459,43 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 return;
             }
             try {
-                processTask(taskId);
-            } catch (Exception e) {
-                log.error("[EduAi] 阅卷任务处理异常: taskId={}", taskId, e);
+                runWithTimeout(taskId);
             } finally {
                 markingPermits.release();
             }
         });
+    }
+
+    /**
+     * 带硬超时地处理一个任务。
+     *
+     * <p>OCR 与大模型调用都可能长时间不返回；单任务挂死会永久占住并发闸门的唯一许可，
+     * 把后续任务全部堵死（实测 ANY 任务在「识别中」卡 10 分钟以上，整个队列停摆 ——
+     * 限流闸门反而成了单点堵死）。故用 {@link FutureTask} 施加超时：到点中断并判失败，
+     * 闸门照常释放，队列继续。</p>
+     *
+     * @param taskId 任务业务标识
+     */
+    private void runWithTimeout(String taskId) {
+        long timeoutSeconds = Math.max(30, properties.getMarking().getTimeout());
+        var future = new FutureTask<Void>(() -> {
+            processTask(taskId);
+            return null;
+        });
+        Thread.ofVirtual().name("edu-mark-run-" + taskId).start(future);
+        try {
+            future.get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException te) {
+            future.cancel(true);
+            log.error("[EduAi] 阅卷任务处理超时（>{}s），已中止: taskId={}", timeoutSeconds, taskId);
+            changeStage(taskId, EduMarkingTask.STATUS_FAILED, "失败", null, null,
+                    "处理超时（>" + timeoutSeconds + "s），已中止", true);
+        } catch (ExecutionException ee) {
+            log.error("[EduAi] 阅卷任务处理异常: taskId={}", taskId, ee.getCause());
+        } catch (InterruptedException ie) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
