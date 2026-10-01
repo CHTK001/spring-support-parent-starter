@@ -149,6 +149,29 @@ public interface ProjectPlatformProvider {
                           String startScript, String statusScript, boolean restart);
 
     /**
+     * 生成「重启 → 健康检查（就绪等待 + 端口探活 + 稳定窗口）→ 失败回滚 → 二次检查」命令。
+     *
+     * <p>与 6 参版本的区别是多了 {@code port}：给定端口时，健康检查除「状态脚本报告运行中」外
+     * 还要求该端口处于监听状态，从而识别「进程活着但端口没绑上」这类状态脚本查不出的故障
+     * （典型：SpringBoot 启动失败但仍驻留、或业务端口被占用后静默退化）。</p>
+     *
+     * <p>默认实现忽略 {@code port} 并委托给 6 参版本，便于既有实现平滑升级。</p>
+     *
+     * @param projectPath   项目地址
+     * @param restartScript 重启脚本（可为空，空则用 停止+启动 组合）
+     * @param stopScript    停止脚本
+     * @param startScript   启动脚本
+     * @param statusScript  状态脚本
+     * @param restart       是否为重启场景（false 时只做健康检查）
+     * @param port          业务端口；{@code <=0} 表示不探活
+     * @return 包装后的命令
+     */
+    default String guardedRestart(String projectPath, String restartScript, String stopScript,
+                                  String startScript, String statusScript, boolean restart, int port) {
+        return guardedRestart(projectPath, restartScript, stopScript, startScript, statusScript, restart);
+    }
+
+    /**
      * 生成读取日志尾部的命令。
      *
      * @param logPath 日志文件路径

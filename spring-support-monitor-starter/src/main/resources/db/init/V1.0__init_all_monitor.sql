@@ -446,9 +446,12 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
 -- 说明：stub_status 的 accepts/handled/requests 是「worker 启动以来」的累计计数，
 --      画趋势必须换算成速率（差值 / 间隔），直接画累计值只会得到单调上升的直线。
 --      本表存原始计数，速率在查询侧按相邻两点差值计算。
+-- 幂等建表：这里刻意不写 DROP TABLE，改为 CREATE TABLE IF NOT EXISTS。
+-- 原先写成「DROP + CREATE」后，一旦 plugin.datasource.script.enable 打开
+-- （或本脚本在 sys_database_version 里被记为 FAILED 而每次启动重跑），
+-- nginx 指标历史会被整体清空——属于静默数据丢失，因此必须改成幂等形态。
 -- ============================================================
-DROP TABLE IF EXISTS `ms_monitor_nginx_metric`;
-CREATE TABLE `ms_monitor_nginx_metric`
+CREATE TABLE IF NOT EXISTS `ms_monitor_nginx_metric`
 (
     `id`                             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `ms_monitor_nginx_metric_datasource_id` BIGINT NOT NULL COMMENT 'ms_datasource.id',
@@ -466,4 +469,31 @@ CREATE TABLE `ms_monitor_nginx_metric`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT 'Nginx 时序指标';
+
+-- ============================================================
+-- 20. 主机内置指标历史（宽表）
+-- 写入方：HostMetricHistoryServiceImpl → SeriesEngine.writeBatch(target, hostId, metrics, ts)
+-- 读取方：DataSourceSeriesEngine 的列规约 ——
+--   监控列 = {target}_monitor_id、时间列 = {target}_collect_time、
+--   数值列 = {target}_{指标名}，因此下面 5 个指标列名必须与
+--   HostMetricHistoryServiceImpl.CURVE_TARGETS 逐字一致：
+--   cpu_usage / mem_usage / disk_usage / disk_read_kbs / disk_write_kbs
+--   （改任一侧都要同时改另一侧，否则会静默变成 Unknown column）。
+-- 时间列必须是 DATETIME：引擎写入用 java.sql.Timestamp，查询也按 Timestamp 比较。
+--
+-- ⚠ 本表此前全仓没有任何 DDL：只在 Java 里被引用，于是每次主机采集都报
+--   `Table 'monitordb.ms_host_metric_history' doesn't exist`，指标历史永久写不进去。
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
+    `id`                                        BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_host_metric_history_monitor_id`         BIGINT   NOT NULL COMMENT '主机 ID(ms_server_node.id)',
+    `ms_host_metric_history_cpu_usage`          DOUBLE   DEFAULT NULL COMMENT 'CPU 使用率(0-100)',
+    `ms_host_metric_history_mem_usage`          DOUBLE   DEFAULT NULL COMMENT '内存使用率(0-100)',
+    `ms_host_metric_history_disk_usage`         DOUBLE   DEFAULT NULL COMMENT '磁盘使用率(0-100)',
+    `ms_host_metric_history_disk_read_kbs`      DOUBLE   DEFAULT NULL COMMENT '磁盘读(KB/s)',
+    `ms_host_metric_history_disk_write_kbs`     DOUBLE   DEFAULT NULL COMMENT '磁盘写(KB/s)',
+    `ms_host_metric_history_collect_time`       DATETIME NOT NULL COMMENT '采集时刻',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_host_metric_history_monitor_time` (`ms_host_metric_history_monitor_id`, `ms_host_metric_history_collect_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='主机内置指标历史(宽表)';
 

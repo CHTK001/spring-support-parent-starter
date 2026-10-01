@@ -17,6 +17,20 @@ import java.util.List;
 @Spi(value = "linux", order = 100)
 public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
 
+    /**
+     * 健康检查「就绪等待」上限（秒）：轮询状态脚本直到报告运行中。
+     *
+     * <p>替代原先固定的 {@code sleep 4}——4 秒对 SpringBoot 类应用过短，
+     * 会把正常慢启动误判成失败并触发回滚。</p>
+     */
+    private static final int READY_WAIT_SECONDS = 20;
+
+    /**
+     * 健康检查「稳定窗口」（秒）：就绪后要求连续该时长仍报告运行中，
+     * 用于捕捉「启动完成即退出」的崩溃循环。
+     */
+    private static final int SETTLE_SECONDS = 10;
+
     @Override
     public String osType() {
         return "LINUX";
@@ -132,21 +146,76 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
     @Override
     public String guardedRestart(String projectPath, String restartScript, String stopScript,
                                  String startScript, String statusScript, boolean restart) {
+        return guardedRestart(projectPath, restartScript, stopScript, startScript, statusScript, restart, 0);
+    }
+
+    @Override
+    public String guardedRestart(String projectPath, String restartScript, String stopScript,
+                                 String startScript, String statusScript, boolean restart, int port) {
+        var status = wrap(projectPath, statusScript);
+        var start = wrap(projectPath, startScript);
         var sb = new StringBuilder();
         if (restart) {
             sb.append(restartScript == null || restartScript.isBlank()
-                    ? wrap(projectPath, stopScript) + "\n" + wrap(projectPath, startScript)
+                    ? wrap(projectPath, stopScript) + "\n" + start
                     : wrap(projectPath, restartScript)).append('\n');
         }
-        sb.append("sleep 4\n");
-        sb.append("out=$(").append(wrap(projectPath, statusScript)).append(")\n");
-        sb.append("if echo \"$out\" | grep -qi running; then\n  echo 'health ok'\nelse\n")
+        if (port > 0) {
+            // 端口探活实现：优先 ss（Linux），退而 netstat（macOS 及多数发行版）。
+            // 两者都不存在时返回 0（视为通过）——不能因为在最小化系统上探不了端口
+            // 就把正常启动判成失败，那会把「探活增强」变成「误回滚」。
+            sb.append("listening_port() {\n");
+            sb.append("  if command -v ss >/dev/null 2>&1; then\n");
+            sb.append("    ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE \"[:.]$1$\"\n");
+            sb.append("  elif command -v netstat >/dev/null 2>&1; then\n");
+            sb.append("    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -qE \"[:.]$1$\"\n");
+            sb.append("  else\n");
+            sb.append("    return 0\n");
+            sb.append("  fi\n");
+            sb.append("}\n");
+        }
+        // 原实现是「sleep 4 后查一次状态」：既把慢启动应用误判成失败（4 秒起不完就回滚好版本），
+        // 也把「起来后立刻崩」误判成成功（4 秒窗口内恰好还活着）。改为三段式：
+        //   阶段1 就绪等待：轮询状态脚本直到报告运行中，最多 READY_WAIT_SECONDS 秒
+        //   阶段2 端口探活：给定端口时确认其已监听（识别「进程活着但没绑上端口」）
+        //   阶段3 稳定窗口：连续 SETTLE_SECONDS 秒仍报告运行中，捕捉启动后退出
+        sb.append("__up=0; __i=0\n");
+        sb.append("while [ $__i -lt ").append(READY_WAIT_SECONDS).append(" ]; do\n");
+        sb.append("  __o=$(").append(status).append(")\n");
+        sb.append("  if echo \"$__o\" | grep -qi running; then __up=1; break; fi\n");
+        sb.append("  sleep 2; __i=$((__i+2))\n");
+        sb.append("done\n");
+        if (port > 0) {
+            sb.append("if [ $__up -eq 1 ]; then\n");
+            sb.append("  __i=0\n");
+            sb.append("  while [ $__i -lt ").append(READY_WAIT_SECONDS).append(" ]; do\n");
+            sb.append("    if listening_port ").append(port).append("; then break; fi\n");
+            sb.append("    sleep 2; __i=$((__i+2))\n");
+            sb.append("  done\n");
+            sb.append("  if ! listening_port ").append(port).append("; then\n");
+            sb.append("    echo 'health failed: 端口 ").append(port).append(" 未监听'\n");
+            sb.append("    __up=0\n");
+            sb.append("  fi\n");
+            sb.append("fi\n");
+        }
+        sb.append("if [ $__up -eq 1 ]; then\n");
+        sb.append("  __i=0\n");
+        sb.append("  while [ $__i -lt ").append(SETTLE_SECONDS).append(" ]; do\n");
+        sb.append("    sleep 2; __i=$((__i+2))\n");
+        sb.append("    __o=$(").append(status).append(")\n");
+        sb.append("    if ! echo \"$__o\" | grep -qi running; then\n");
+        sb.append("      echo 'health failed: 启动后退出'\n");
+        sb.append("      __up=0; break\n");
+        sb.append("    fi\n");
+        sb.append("  done\n");
+        sb.append("fi\n");
+        sb.append("if [ $__up -eq 1 ]; then\n  echo 'health ok'\nelse\n")
                 .append("  echo 'health failed, rolling back...'\n  ")
-                .append(wrap(projectPath, rollback(projectPath, null))).append('\n')
-                .append("  ").append(wrap(projectPath, startScript).replace("\n", "\n  ")).append('\n')
-                .append("  sleep 4\n")
-                .append("  out2=$(").append(wrap(projectPath, statusScript)).append(")\n")
-                .append("  if echo \"$out2\" | grep -qi running; then echo 'rollback ok'; else echo 'rollback failed'; exit 1; fi\n")
+                .append(rollback(projectPath, null)).append('\n')
+                .append("  ").append(start.replace("\n", "\n  ")).append('\n')
+                .append("  sleep ").append(SETTLE_SECONDS + 4).append('\n')
+                .append("  __o2=$(").append(status).append(")\n")
+                .append("  if echo \"$__o2\" | grep -qi running; then echo 'rollback ok'; else echo 'rollback failed'; exit 1; fi\n")
                 .append("fi");
         return sb.toString();
     }
