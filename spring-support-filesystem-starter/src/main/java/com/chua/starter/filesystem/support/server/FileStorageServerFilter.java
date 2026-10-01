@@ -261,6 +261,20 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private static final String PARAM_TOKEN = "token";
 
     /**
+     * {@link #updateConfig(Map)} 接受的布尔参数名。
+     *
+     * <p>与 {@code ServerNodeRegistry} 侧服务管理 schema（{@code fileStorageParams}）一一对应。</p>
+     */
+    private static final Set<String> BOOLEAN_PARAM_KEYS = Set.of(
+            "openPreview", "openDownload", "openRange", "openWatermark", "openWebjars",
+            "openRemoteFile", "layout", "showFormat", "showSize", "showTime");
+
+    /**
+     * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
+     */
+    private static final Set<String> STRING_PARAM_KEYS = Set.of("watermark", "layoutType", "imageFilter");
+
+    /**
      * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
      * 用 Class.forName 加载以避免 utils-support-image-starter 缺失时编译/类加载失败）
      */
@@ -3448,58 +3462,19 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             throw new FileActionException(400, "Empty request body");
         }
         String body = new String(raw, StandardCharsets.UTF_8);
-        Boolean flag;
-        if ((flag = extractBoolean(body, "openPreview")) != null) {
-            setting.setOpenPreview(flag);
-        }
-        if ((flag = extractBoolean(body, "openDownload")) != null) {
-            setting.setOpenDownload(flag);
-        }
-        if ((flag = extractBoolean(body, "openRange")) != null) {
-            setting.setOpenRange(flag);
-        }
-        if ((flag = extractBoolean(body, "openWatermark")) != null) {
-            setting.setOpenWatermark(flag);
-        }
-        if ((flag = extractBoolean(body, "openWebjars")) != null) {
-            setting.setOpenWebjars(flag);
-        }
-        if ((flag = extractBoolean(body, "openRemoteFile")) != null) {
-            setting.setOpenRemoteFile(flag);
-        }
-        if ((flag = extractBoolean(body, "layout")) != null) {
-            setting.setLayout(flag);
-        }
-        if ((flag = extractBoolean(body, "showFormat")) != null) {
-            setting.setShowFormat(flag);
-        }
-        if ((flag = extractBoolean(body, "showSize")) != null) {
-            setting.setShowSize(flag);
-        }
-        if ((flag = extractBoolean(body, "showTime")) != null) {
-            setting.setShowTime(flag);
-        }
-        String text;
-        if ((text = extractString(body, "watermark")) != null) {
-            setting.setWatermark(text.isEmpty() ? null : text);
-        }
-        if ((text = extractString(body, "layoutType")) != null) {
-            String upper = text.trim().toUpperCase(Locale.ROOT);
-            if (!FileStorageSetting.LayoutType.SIMPLE.name().equals(upper)
-                    && !FileStorageSetting.LayoutType.SYSTEM.name().equals(upper)) {
-                throw new FileActionException(400, "layoutType 仅支持 SIMPLE/SYSTEM: " + text);
-            }
-            setting.setLayoutType(upper);
-        }
-        if ((text = extractString(body, "imageFilter")) != null) {
-            String upper = text.trim().toUpperCase(Locale.ROOT);
-            // 原图固定合法；其余取值必须是 ImageFilter SPI 真实注册的扩展名
-            if (!"NONE".equals(upper) && !resolveImageFilterNames().contains(upper)) {
-                throw new FileActionException(400,
-                        "imageFilter 不支持的滤镜: " + text + "，可用值: NONE/" + String.join("/", resolveImageFilterNames()));
-            }
-            setting.setImageFilter(upper);
-        }
+        applyBooleanSetting("openPreview", extractBoolean(body, "openPreview"));
+        applyBooleanSetting("openDownload", extractBoolean(body, "openDownload"));
+        applyBooleanSetting("openRange", extractBoolean(body, "openRange"));
+        applyBooleanSetting("openWatermark", extractBoolean(body, "openWatermark"));
+        applyBooleanSetting("openWebjars", extractBoolean(body, "openWebjars"));
+        applyBooleanSetting("openRemoteFile", extractBoolean(body, "openRemoteFile"));
+        applyBooleanSetting("layout", extractBoolean(body, "layout"));
+        applyBooleanSetting("showFormat", extractBoolean(body, "showFormat"));
+        applyBooleanSetting("showSize", extractBoolean(body, "showSize"));
+        applyBooleanSetting("showTime", extractBoolean(body, "showTime"));
+        applyStringSetting("watermark", extractString(body, "watermark"));
+        applyStringSetting("layoutType", extractString(body, "layoutType"));
+        applyStringSetting("imageFilter", extractString(body, "imageFilter"));
         // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
         // 避免传 0 把链接生成成出生即死，也避免传超大值让过期链接永不回收。
         String ttlText = extractScalar(body, "oneTimeTtlMs");
@@ -3547,6 +3522,129 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 String.join(",", setting.getPrivateBuckets()));
         notifyConfigChanged();
         return writeActionSuccess(response, "\"configUpdated\":true");
+    }
+
+    /**
+     * 服务管理热更新入口：把节点过滤器参数就地落到共享 {@link FileStorageSetting}。
+     *
+     * <p>由 {@code ServerNodeRegistry#hotUpdateFilterParams} 调用，对应 HTTP
+     * {@code POST /ms/monitor/server/{id}/filters/{i}/params}。本类原先<b>没有</b>覆写本方法，
+     * 于是落到接口的空默认实现：参数已落库、前端也提示「已热更新」，运行中的过滤器却毫无变化
+     * （表现为「必须停→起才生效」）。覆写后与管理员配置页共用同一套校验。</p>
+     *
+     * <p>仅接受服务管理 schema 声明的参数（{@code openPreview/openDownload/openRange/
+     * openWatermark/openRemoteFile/openWebjars/watermark/layout/showFormat/showSize/showTime/
+     * layoutType/imageFilter}）；{@code privateBuckets}、{@code oneTimeTtlMs} 等属管理员令牌页面
+     * 的能力，不在此入口开放。未知键只记 WARN 后忽略，不抛错——避免历史遗留参数导致整次热更新失败。</p>
+     *
+     * @param config 新参数（值为字符串或布尔，键大小写敏感）
+     */
+    @Override
+    public void updateConfig(Map<String, Object> config) {
+        if (config == null || config.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : config.entrySet()) {
+            String key = entry.getKey();
+            Object raw = entry.getValue();
+            if (key == null || raw == null) {
+                continue;
+            }
+            String text = String.valueOf(raw).trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            if (BOOLEAN_PARAM_KEYS.contains(key)) {
+                applyBooleanSetting(key, parseBooleanText(text));
+            } else if (STRING_PARAM_KEYS.contains(key)) {
+                applyStringSetting(key, text);
+            } else {
+                log.warn("文件存储过滤器热更新忽略未知参数: {}={}", key, text);
+            }
+        }
+        log.info("服务管理热更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
+                        + "openWatermark={}, openRemoteFile={}, layout={}, layoutType={}, "
+                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}",
+                setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
+                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isLayout(),
+                setting.getLayoutType(), setting.isShowFormat(), setting.isShowSize(),
+                setting.isShowTime(), setting.getImageFilter());
+        notifyConfigChanged();
+    }
+
+    /**
+     * 落位单个布尔参数（{@code value} 为 {@code null} 表示本次不带该键，保持原值）。
+     *
+     * @param key   参数名
+     * @param value 布尔值，可为 {@code null}
+     */
+    private void applyBooleanSetting(String key, Boolean value) {
+        if (value == null) {
+            return;
+        }
+        switch (key) {
+            case "openPreview" -> setting.setOpenPreview(value);
+            case "openDownload" -> setting.setOpenDownload(value);
+            case "openRange" -> setting.setOpenRange(value);
+            case "openWatermark" -> setting.setOpenWatermark(value);
+            case "openWebjars" -> setting.setOpenWebjars(value);
+            case "openRemoteFile" -> setting.setOpenRemoteFile(value);
+            case "layout" -> setting.setLayout(value);
+            case "showFormat" -> setting.setShowFormat(value);
+            case "showSize" -> setting.setShowSize(value);
+            case "showTime" -> setting.setShowTime(value);
+            default -> log.warn("文件存储配置忽略未知布尔参数: {}={}", key, value);
+        }
+    }
+
+    /**
+     * 落位单个字符串参数并做枚举校验（{@code value} 为 {@code null} 表示本次不带该键）。
+     *
+     * <p>非法枚举值抛 {@link IllegalArgumentException}：服务管理侧的调用方
+     * （{@code ServerNodeRegistry#hotUpdateFilterParams}）会把它作为热更新失败上报，
+     * 从而在落库之前中止，不会把非法值写进节点定义。</p>
+     *
+     * @param key   参数名（watermark / layoutType / imageFilter）
+     * @param value 参数值，可为 {@code null}
+     */
+    private void applyStringSetting(String key, String value) {
+        if (value == null) {
+            return;
+        }
+        switch (key) {
+            case "watermark" -> setting.setWatermark(value.isEmpty() ? null : value);
+            case "layoutType" -> {
+                String upper = value.trim().toUpperCase(Locale.ROOT);
+                if (!FileStorageSetting.LayoutType.SIMPLE.name().equals(upper)
+                        && !FileStorageSetting.LayoutType.SYSTEM.name().equals(upper)) {
+                    throw new IllegalArgumentException("layoutType 仅支持 SIMPLE/SYSTEM: " + value);
+                }
+                setting.setLayoutType(upper);
+            }
+            case "imageFilter" -> {
+                String upper = value.trim().toUpperCase(Locale.ROOT);
+                // 原图固定合法；其余取值必须是 ImageFilter SPI 真实注册的扩展名
+                if (!"NONE".equals(upper) && !resolveImageFilterNames().contains(upper)) {
+                    throw new IllegalArgumentException("imageFilter 不支持的滤镜: " + value
+                            + "，可用值: NONE/" + String.join("/", resolveImageFilterNames()));
+                }
+                setting.setImageFilter(upper);
+            }
+            default -> log.warn("文件存储配置忽略未知字符串参数: {}={}", key, value);
+        }
+    }
+
+    /**
+     * 宽松解析布尔文本：仅 {@code true/false} 视为布尔，其余按 {@code false} 处理。
+     *
+     * <p>服务管理侧参数统一以字符串传递（{@code Map<String, String>}），这里不抛错，
+     * 避免一个笔误值让整次热更新失败。</p>
+     *
+     * @param text 参数文本
+     * @return 布尔值
+     */
+    private Boolean parseBooleanText(String text) {
+        return Boolean.parseBoolean(text);
     }
 
     /**

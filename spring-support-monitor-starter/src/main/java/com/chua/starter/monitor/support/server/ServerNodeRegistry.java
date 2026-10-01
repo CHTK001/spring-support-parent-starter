@@ -490,6 +490,13 @@ public class ServerNodeRegistry {
                                   List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         Server server = ServiceProvider.of(Server.class).getNewExtension(node.getProtocol(), setting);
         if (server == null) {
+            // 区分「SPI 名字没登记」与「登记了但实例化失败」：后者是构造器签名不匹配或构造过程
+            // 抛异常（SPI 内部会把异常吞掉、只返回 null）。原先一律报「未注册」，把构造异常
+            // 完全掩盖，排查时只能靠猜——FTPS 就因此长期显示「未注册」，真因是自签证书未预处理。
+            if (ServiceProvider.of(Server.class).isSupport(node.getProtocol())) {
+                throw new IllegalStateException("Server SPI 已注册但实例化失败(构造器签名不匹配或构造抛异常): "
+                        + node.getProtocol());
+            }
             throw new IllegalStateException("Server SPI 未注册: " + node.getProtocol());
         }
         attachFilters(server, node, descriptors, setting, managed);
