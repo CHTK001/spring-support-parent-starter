@@ -1072,6 +1072,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (a.equals(b)) {
             return 1d;
         }
+        // 包含判定：学生作答完整包含标准答案即算对。
+        // 否则 LCS 的对称分母会惩罚「答对但啰嗦」—— 实测把阅读题的子项 (1)(2) 并入作答后，
+        // 13 字标准答案 vs 30 字作答只剩 0.6，正确作答被判 0 分。
+        // 门槛取 3 字：避免把「A」对「AB」、「对」对「对错」这类短答案误判为包含。
+        if (a.length() >= 3 && b.contains(a)) {
+            return 1d;
+        }
         int lcs = lcsLength(a, b);
         return 2d * lcs / (a.length() + b.length());
     }
