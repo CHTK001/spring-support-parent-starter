@@ -151,8 +151,24 @@ public final class MiddlewareHttp {
      * @throws IOException 连接失败或响应非 2xx
      */
     public static String delete(String url, Map<String, String> query) throws IOException {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(appendQuery(url, query)))
-                .timeout(REQUEST_TIMEOUT)
+        return delete(url, query, Map.of());
+    }
+
+    /**
+     * DELETE 请求，可带自定义请求头。
+     *
+     * <p>InfluxDB 的删除桶接口要求 {@code Authorization: Token xxx}，而两个参数的
+     * {@link #delete(String, Map)} 不带任何头，用它必然 401 —— 实测删除桶接口因此完全不可用。</p>
+     *
+     * @param url     不含查询串的地址
+     * @param query   查询参数，可为空
+     * @param headers 请求头，可为空
+     * @return 响应体文本
+     * @throws IOException 连接失败或响应非 2xx
+     */
+    public static String delete(String url, Map<String, String> query,
+                               Map<String, String> headers) throws IOException {
+        HttpRequest request = builder(appendQuery(url, query), headers)
                 .DELETE()
                 .build();
         return send(request);
