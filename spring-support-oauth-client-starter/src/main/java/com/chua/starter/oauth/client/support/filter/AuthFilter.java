@@ -3,6 +3,9 @@ package com.chua.starter.oauth.client.support.filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.constant.Constant;
@@ -202,6 +205,20 @@ public class AuthFilter implements Filter {
             return;
         }
 
+ // 只读身份（管理员代入签发的临时令牌，或账号级 readonly）只允许读操作。
+        // 为什么必须在过滤器里兜这一层：@Permission 的只读校验只对「标注了该注解」的
+        // 类/方法生效，未标注的路径会完全绕过 PermissionInterceptor —— eduai 学生端
+        // 就是这种情形，表现为「界面写着只读、POST 却能落库」。
+        // 这里按 HTTP 方法做统一兜底，与 PermissionInterceptor 的判定口径一致。
+        if (userResume != null && userResume.isReadonly() && !isSafeMethod(method)) {
+            log.warn("[AuthFilter只读拦截]只读身份禁止写操作 - URI: {}, 方法: {}, 用户: {}",
+                    requestURI, method, userResume.getUsername());
+            writeReadOnlyDenied((HttpServletResponse) response);
+            log.debug("[AuthFilter]请求处理完成(只读拦截) - URI: {}, 耗时: {}ms",
+                    requestURI, System.currentTimeMillis() - startTime);
+            return;
+        }
+
  // 渲染用户信息到会话
         /**
          * render。
@@ -269,6 +286,39 @@ public class AuthFilter implements Filter {
             };
         }
         return "OAUTH";
+    }
+
+    /**
+     * 是否安全方法（只读方法）。
+     *
+     * <p>与 {@code PermissionInterceptor} 的口径保持一致：GET/HEAD/OPTIONS 放行，
+     * 其余（POST/PUT/DELETE/PATCH）视为写操作。</p>
+     *
+     * @param method HTTP 方法名
+     * @return 安全方法返回 {@code true}
+     */
+    private boolean isSafeMethod(String method) {
+        return "GET".equalsIgnoreCase(method)
+                || "HEAD".equalsIgnoreCase(method)
+                || "OPTIONS".equalsIgnoreCase(method);
+    }
+
+    /**
+     * 返回「只读身份禁止写操作」的 403 响应。
+     *
+     * <p>码值刻意用 {@link ReturnCode#ACCESS_DENIED}，而不是 403 的通用业务码：
+     * 通用码属于「请重新登录」码段，前端收到会清空令牌；只读拦截是会话仍然有效期间的
+     * 授权结果，用重新登录码会把「越权提示」变成「强制登出」。
+     * 这与 {@code OauthExceptionAdvice} 对只读异常的处理保持同一约定。</p>
+     *
+     * @param response HTTP 响应
+     * @throws IOException 写入响应体失败
+     */
+    private void writeReadOnlyDenied(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(Json.toJson(
+                ReturnResult.error(ReturnCode.ACCESS_DENIED.getCode(), "只读身份不允许执行写操作")));
     }
 
     /**
