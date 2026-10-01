@@ -161,20 +161,25 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
                     : wrap(projectPath, restartScript)).append('\n');
         }
         if (port > 0) {
-            // 端口探活必须确认「监听者是 app.pid 记录的那个进程」。
-            // 只查「端口有没有人在听」会被无关进程或残留孤儿进程骗过（实测：别的会话在
-            // 同端口起了个 mock 服务，于是新版本压根没绑上端口，健康检查却报 ok）。
-            // ss -ltnp 的 users:(("java",pid=123,fd=4)) 正好给出监听者 pid，做归属比对。
+            // 必须确认「监听者是 app.pid 记录的那个进程」，否则无关进程/残留孤儿监听同端口
+            // 会被误判成「新版本健康」（实测：别的会话在同端口起 mock 服务，新版本压根没绑上，
+            // 健康检查却报 ok）。
+            //
+            // ⚠ 这里刻意用 awk 的 index() 做全字面匹配，不用 grep 的 [[:space:]] 字符类：
+            // 下发命令由目标机登录 shell 执行，kali 的登录 shell 是 zsh，而 zsh 会把
+            // 双引号内的 [[:space:]] 当作 printf 格式说明符并报
+            // 「bad output format specification」，导致函数恒返回失败 —— 健康检查
+            // 于是把正常启动的应用判成失败并回滚（实测踩到）。sh/bash 下无此问题。
             sb.append("listening_port() {\n");
             sb.append("  __want=$1\n");
             sb.append("  [ -f app.pid ] || return 1\n");
             sb.append("  __owner=$(cat app.pid 2>/dev/null)\n");
             sb.append("  [ -n \"$__owner\" ] || return 1\n");
             sb.append("  if command -v ss >/dev/null 2>&1; then\n");
-            sb.append("    ss -ltnp 2>/dev/null | grep -E \"[:.]$__want[[:space:]]\" | grep -q \"pid=$__owner\"\n");
+            sb.append("    ss -ltnp 2>/dev/null | awk -v p=\":$__want \" -v o=\"pid=$__owner\" 'index($0,p) && index($0,o) { f=1 } END { exit(f?0:1) }'\n");
             sb.append("  elif command -v netstat >/dev/null 2>&1; then\n");
-            // netstat 不带 -p 时拿不到 pid；退回「端口存在即可」，属于已知的弱化路径
-            sb.append("    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -qE \"[:.]$__want$\"\n");
+            // netstat 不带 -p 拿不到 pid；退回「端口存在即可」，属已知的弱化路径
+            sb.append("    netstat -ltn 2>/dev/null | awk -v p=\":$__want\" '$4 ~ (p \"$\") { f=1 } END { exit(f?0:1) }'\n");
             sb.append("  else\n");
             sb.append("    return 0\n");
             sb.append("  fi\n");
