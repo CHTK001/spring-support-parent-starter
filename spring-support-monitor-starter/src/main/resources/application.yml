@@ -40,11 +40,14 @@ spring:
       # ms_monitor_alarm_rule 三张表全为空（保留期配置与 4 条项目守护告警规则从未落地）。
       # 这几份 initdata 都是幂等的（monitor 每条 INSERT 带 WHERE/AND NOT EXISTS，
       # server 用 INSERT IGNORE / ON DUPLICATE KEY），因此 mode=always 下反复执行不会产生重复行。
+      #
+      # ⚠ 只能列「有实际语句」的文件：ai 与 datasource_hub 的 initdata 是纯注释占位，
+      # 而 Spring 的 ScriptUtils.splitSqlScript 对空脚本会直接抛
+      # `IllegalArgumentException: 'script' must not be null or empty`，
+      # 且该异常发生在脚本级、continue-on-error 拦不住 → 整个应用启动失败。
       data-locations:
         - classpath:db/init/V1.0__initdata_all_monitor.sql
         - classpath:db/init/V1.0__initdata_all_server.sql
-        - classpath:db/init/V1.0__initdata_all_ai.sql
-        - classpath:db/init/V1.0__initdata_all_datasource_hub.sql
         # 注：bot_binding 补列 / tshark / exec_job type / host ssh_enabled 等脚本
         # 在本次重构中被合并/删除（本地脚本易被还原），故不再单列，避免启动缺文件拦截
 
