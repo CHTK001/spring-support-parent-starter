@@ -161,14 +161,20 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
                     : wrap(projectPath, restartScript)).append('\n');
         }
         if (port > 0) {
-            // 端口探活实现：优先 ss（Linux），退而 netstat（macOS 及多数发行版）。
-            // 两者都不存在时返回 0（视为通过）——不能因为在最小化系统上探不了端口
-            // 就把正常启动判成失败，那会把「探活增强」变成「误回滚」。
+            // 端口探活必须确认「监听者是 app.pid 记录的那个进程」。
+            // 只查「端口有没有人在听」会被无关进程或残留孤儿进程骗过（实测：别的会话在
+            // 同端口起了个 mock 服务，于是新版本压根没绑上端口，健康检查却报 ok）。
+            // ss -ltnp 的 users:(("java",pid=123,fd=4)) 正好给出监听者 pid，做归属比对。
             sb.append("listening_port() {\n");
+            sb.append("  __want=$1\n");
+            sb.append("  [ -f app.pid ] || return 1\n");
+            sb.append("  __owner=$(cat app.pid 2>/dev/null)\n");
+            sb.append("  [ -n \"$__owner\" ] || return 1\n");
             sb.append("  if command -v ss >/dev/null 2>&1; then\n");
-            sb.append("    ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE \"[:.]$1$\"\n");
+            sb.append("    ss -ltnp 2>/dev/null | grep -E \"[:.]$__want[[:space:]]\" | grep -q \"pid=$__owner\"\n");
             sb.append("  elif command -v netstat >/dev/null 2>&1; then\n");
-            sb.append("    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -qE \"[:.]$1$\"\n");
+            // netstat 不带 -p 时拿不到 pid；退回「端口存在即可」，属于已知的弱化路径
+            sb.append("    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -qE \"[:.]$__want$\"\n");
             sb.append("  else\n");
             sb.append("    return 0\n");
             sb.append("  fi\n");
