@@ -9,6 +9,7 @@ import com.chua.common.support.network.sip.SipConfig;
 import com.chua.common.support.network.sip.SipServer;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
@@ -494,8 +495,12 @@ public class ServerNodeRegistry {
             // 抛异常（SPI 内部会把异常吞掉、只返回 null）。原先一律报「未注册」，把构造异常
             // 完全掩盖，排查时只能靠猜——FTPS 就因此长期显示「未注册」，真因是自签证书未预处理。
             if (ServiceProvider.of(Server.class).isSupport(node.getProtocol())) {
-                throw new IllegalStateException("Server SPI 已注册但实例化失败(构造器签名不匹配或构造抛异常): "
-                        + node.getProtocol());
+                // 配合 utils 侧 ServiceDefinition 的失败记录：把可读原因一并带出，使节点 error
+                // 字段直接说明是「构造器签名不匹配」还是「构造过程产不出实例」，而不是只给一个
+                // 无指向性的结论。FTPS 的排查曾因此绕了远路。
+                ServiceDefinition definition = ServiceProvider.of(Server.class).getDefinition(node.getProtocol());
+                throw new IllegalStateException("Server SPI 已注册但实例化失败: " + node.getProtocol()
+                        + " 原因=" + (definition == null ? "未知" : definition.getFailureMessage()));
             }
             throw new IllegalStateException("Server SPI 未注册: " + node.getProtocol());
         }
