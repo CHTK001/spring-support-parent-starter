@@ -266,8 +266,12 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
         ps.append("}\n");
         ps.append("if ($up) { 'health ok' }\n");
         ps.append("else {\n")
-                .append("  'health failed, rolling back...'\n  ")
-                .append(rollbackCmd).append('\n')
+                .append("  'health failed, rolling back...'\n  ");
+        // 与 Posix 同源：先停掉刚起的失败实例再回滚，否则新进程会与仍存活的旧进程抢端口/文件
+        if (stopScript != null && !stopScript.isBlank()) {
+            ps.append(wrap(projectPath, stopScript).replace("\n", "\n  ")).append('\n');
+        }
+        ps.append(rollbackCmd).append('\n')
                 // 回滚文件后重启旧版本，再做二次健康检查
                 .append("  ").append(startCmd.replace("\n", "\n  ")).append('\n')
                 .append("  Start-Sleep -Seconds ").append(SETTLE_SECONDS + 4).append('\n')

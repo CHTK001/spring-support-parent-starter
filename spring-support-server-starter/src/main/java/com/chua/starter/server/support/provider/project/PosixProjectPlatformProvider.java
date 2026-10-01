@@ -221,8 +221,15 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
         sb.append("  done\n");
         sb.append("fi\n");
         sb.append("if [ $__up -eq 1 ]; then\n  echo 'health ok'\nelse\n")
-                .append("  echo 'health failed, rolling back...'\n  ")
-                .append(rollback(projectPath, null)).append('\n')
+                .append("  echo 'health failed, rolling back...'\n");
+        // 必须先停掉刚起的失败实例再回滚：失败可能是「进程仍在跑但端口没绑上」，
+        // 此时直接回滚并重启，新进程会与它抢端口、抢 jar 文件（Windows 上 jar 还被占用），
+        // 实测表现为「回滚后 rollback failed」——旧进程活着、新进程起不来。
+        if (stopScript != null && !stopScript.isBlank()) {
+            sb.append("  ").append(wrap(projectPath, stopScript).replace("\n", "\n  ")).append('\n');
+        }
+        sb.append("  ").append(rollback(projectPath, null)).append('\n')
+                .append("  sleep 2\n")
                 .append("  ").append(start.replace("\n", "\n  ")).append('\n')
                 .append("  sleep ").append(SETTLE_SECONDS + 4).append('\n')
                 .append("  __o2=$(").append(status).append(")\n")
