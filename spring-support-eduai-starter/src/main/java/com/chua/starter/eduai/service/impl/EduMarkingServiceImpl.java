@@ -45,6 +45,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.Semaphore;
 import java.util.UUID;
 
@@ -630,11 +632,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 自有卷：题号 → 试卷题项索引；分值与题目标识一律取自数据库（「准确」的来源）
         Map<String, EduPaperQuestion> byNo = new HashMap<>();
         Map<String, EduPaperQuestion> byOrder = new HashMap<>();
+        List<EduPaperQuestion> relations = List.of();
         if (!anyMode) {
             if (task.getMarkingTaskPaperId() == null) {
                 throw new BusinessException("自有卷必须指定试卷 ID");
             }
-            List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(task.getMarkingTaskPaperId());
+            relations = paperQuestionMapper.selectByPaperId(task.getMarkingTaskPaperId());
             if (relations.isEmpty()) {
                 throw new BusinessException("该试卷下没有题目，无法按题号取准确分值");
             }
@@ -671,12 +674,28 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         int fallbackScore = task.getMarkingTaskMaxScore() != null && task.getMarkingTaskMaxScore() > 0
                 ? task.getMarkingTaskMaxScore() : properties.getMarking().getMaxScore();
         int total = 0;
+        // 同一道题只允许产出一行：真实卷里「两位数题号被 OCR 读成个位」很常见（11.→1.），
+        // 会把另一处的作答再次配到第 1 题，导致同一题多行互相覆盖、总题数虚高（实测 13 题产出 15 行）。
+        Set<Long> usedQuestionIds = new HashSet<>();
         for (EduPaperScanner.ScannedQuestion item : scanned) {
             EduPaperQuestion relation = anyMode ? null : matchRelation(item.no(), byNo, byOrder);
+            if (!anyMode && relation != null && usedQuestionIds.contains(relation.getPaperQuestionQuestionId())) {
+                EduPaperQuestion reassigned = findNextUnusedByPrefix(item.no(), relations, usedQuestionIds);
+                if (reassigned == null) {
+                    log.warn("[EduAi] 题号 {} 重复命中已用题项且无可改派目标，跳过（避免同题多行）", item.no());
+                    continue;
+                }
+                log.warn("[EduAi] 题号 {} 命中已用题项，改派到未使用题项 {}",
+                        item.no(), reassigned.getPaperQuestionNo());
+                relation = reassigned;
+            }
             if (!anyMode && relation == null) {
                 log.warn("[EduAi] 阅卷任务：题号 {} 在试卷 {} 中找不到对应题项，跳过",
                         item.no(), task.getMarkingTaskPaperId());
                 continue;
+            }
+            if (!anyMode) {
+                usedQuestionIds.add(relation.getPaperQuestionQuestionId());
             }
             Long questionId = relation == null ? 0L : relation.getPaperQuestionQuestionId();
             int maxScore = relation == null || relation.getPaperQuestionScore() == null
@@ -875,6 +894,38 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 题号重复命中时，找一个「未使用且题号数字前缀相容」的题项来改派。
+     *
+     * <p>针对真实卷高频现象：两位数题号被 OCR 读成个位（{@code 11.} → {@code 1.}）。
+     * 此时 {@code 1.} 会先命中第 1 题，但第 1 题已被前页正解占用，于是把这一处改派给
+     * 尚未使用、且数字前缀相容（{@code 11} 以 {@code 1} 开头）的题项。
+     * 找不到则返回 {@code null}，由调用方跳过 —— 宁可少一行，也不要同题多行互相覆盖。</p>
+     *
+     * @param no        识别到的题号
+     * @param relations 试卷题项（按卷内顺序）
+     * @param used      已使用的题目标识
+     * @return 可改派的题项；无则 {@code null}
+     */
+    private static EduPaperQuestion findNextUnusedByPrefix(String no, List<EduPaperQuestion> relations,
+                                                           Set<Long> used) {
+        String digits = normalizeNo(no).replaceAll("[^0-9]", "");
+        if (digits.isEmpty() || relations == null || relations.isEmpty()) {
+            return null;
+        }
+        for (EduPaperQuestion relation : relations) {
+            if (relation.getPaperQuestionQuestionId() == null
+                    || used.contains(relation.getPaperQuestionQuestionId())) {
+                continue;
+            }
+            String candidate = normalizeNo(relation.getPaperQuestionNo()).replaceAll("[^0-9]", "");
+            if (!candidate.isEmpty() && (candidate.startsWith(digits) || digits.startsWith(candidate))) {
+                return relation;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 把识别出的题号匹配到试卷题项。
      *
      * <p>识别文本里的题号写法很杂（{@code 1.} / {@code 第1题} / {@code (2)} / 二维码编号），
@@ -963,11 +1014,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 答案相似度（0~1），用于容忍 OCR 个别错字。
+     * 答案相似度（0~1），用于容忍 OCR 个别错字与「答对但啰嗦」。
      *
-     * <p>先归一化（去空白与中英标点、统一小写），再用编辑距离折算：
-     * {@code 1 - 距离 / 较长串长度}。例如「做了湖涂事」与「做了糊涂事」
-     * 只差 1 个字，相似度 0.8。</p>
+     * <p>先归一化（去空白与中英标点、统一小写），再取<b>最长公共子序列</b>的对称比率：
+     * {@code 2 * LCS / (len(a) + len(b))}。</p>
+     *
+     * <p>为什么不用编辑距离：编辑距离以「较长串」作分母，正确但啰嗦的作答会被压低。
+     * 真实卷实测：「短文主要写丫小兴安岭一年四李的美丽景色」对标准
+     * 「小兴安岭一年四季的美丽景色」（含 2 个 OCR 错字）编辑距离口径仅 0.6 判 0 分，
+     * LCS 口径 0.77 可判满分；「做工湖涂事」对「做了糊涂事」也从 0.6 升到 0.8。
+     * LCS 对插入/删减同样宽容，且是<b>对称量</b>（与参数顺序无关）。</p>
      *
      * @param standard 标准答案
      * @param student  学生作答（可能含 OCR 错字）
@@ -982,8 +1038,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (a.equals(b)) {
             return 1d;
         }
-        int maxLen = Math.max(a.length(), b.length());
-        return 1d - (double) editDistance(a, b) / maxLen;
+        int lcs = lcsLength(a, b);
+        return 2d * lcs / (a.length() + b.length());
     }
 
     /**
@@ -1001,23 +1057,22 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 编辑距离（Levenshtein），用于答案容错比对。
+     * 最长公共子序列长度（字符级，滚动数组实现）。
      *
      * @param a 串 a
      * @param b 串 b
-     * @return 编辑距离
+     * @return LCS 长度
      */
-    private static int editDistance(String a, String b) {
+    private static int lcsLength(String a, String b) {
         int[] prev = new int[b.length() + 1];
         int[] curr = new int[b.length() + 1];
-        for (int j = 0; j <= b.length(); j++) {
-            prev[j] = j;
-        }
         for (int i = 1; i <= a.length(); i++) {
-            curr[0] = i;
             for (int j = 1; j <= b.length(); j++) {
-                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+                if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                    curr[j] = prev[j - 1] + 1;
+                } else {
+                    curr[j] = Math.max(prev[j], curr[j - 1]);
+                }
             }
             int[] swap = prev;
             prev = curr;

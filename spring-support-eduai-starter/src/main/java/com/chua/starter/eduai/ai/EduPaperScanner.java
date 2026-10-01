@@ -241,6 +241,9 @@ public class EduPaperScanner {
                 appendQuestion(list, no, answer);
                 no = matcher.group().trim();
                 answer = new StringBuilder(line.substring(matcher.end()).trim());
+            } else if (isSectionHeader(line)) {
+                // 大节标题：丢弃。绝不能并入上一题作答（实测会把 Q10 的「错」污染成「错儿、简答影」→ 0 分）
+                log.debug("[EduScan] 跳过大节标题: {}", line);
             } else if (no != null) {
                 // 当前题的作答续行
                 if (answer.length() > 0) {
@@ -269,17 +272,55 @@ public class EduPaperScanner {
     }
 
     /**
-     * 自有卷题号前缀：兼容 {@code 1.} / {@code L.} / {@code （1）} / {@code 第1题} / {@code 一、} 等形式。
+     * 自有卷题号前缀：兼容 {@code 1.} / {@code L.} / {@code 第1题} 等形式。
      *
      * <p>分隔符必须同时收半角与全角：OCR 实测会把「1.」识成「L，」（全角逗号）、「1、」等，
      * 只认半角点会漏题（漏掉的题就是「未作答」0 分）。</p>
+     *
+     * <p><b>刻意不收</b>两种形态：</p>
+     * <ul>
+     *   <li>{@code （1）} 括号子题号：真实卷里它是「大题的子项」，与主题号 {@code 1.} 撞号；
+     *       收入后归一化会得到 {@code 1}，会把子项错配到第 1 题（实测把阅读题的 (1)(2)
+     *       判成了选择题 1、2）。故按「上一题的续行」处理。</li>
+     *   <li>中文数字 {@code 一、二、}：真实卷里它是<b>大节标题</b>（如「一、选择题」），不是题目。
+     *       由 {@link #isSectionHeader} 拦截并丢弃。</li>
+     * </ul>
      */
     private static final java.util.regex.Pattern SELF_NO_PREFIX =
             java.util.regex.Pattern.compile(
                     "^\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;）)]\\s*"
-                            + "|^\\s*[（(]\\s*[0-9lLI]{1,3}\\s*[)）]\\s*"
-                            + "|^\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.。、,，：:；;]?\\s*"
-                            + "|^\\s*[一二三四五六七八九十]{1,3}\\s*[、.。，．]\\s*");
+                            + "|^\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.。、,，：:；;]?\\s*");
+
+    /**
+     * 中文数字序号开头的大节标题形态（一、二、三、…）。
+     */
+    private static final java.util.regex.Pattern CN_SECTION_NO =
+            java.util.regex.Pattern.compile("^\\s*[一二三四五六七八九十]{1,3}\\s*[、.．]");
+
+    /**
+     * 题型关键词：用于兜住「序号被 OCR 认错」的大节标题（实测「四、简答题」被识成「儿、简答影」）。
+     */
+    private static final java.util.regex.Pattern SECTION_KEYWORD =
+            java.util.regex.Pattern.compile("(选择|填空|判断|简答|阅读|应用|计算|作文|听力|连线|画图|问答|口语|默写)");
+
+    /**
+     * 是否为大节标题（一、选择题 / 二、填空题 / 四、简答题 …）。
+     *
+     * <p>大节标题既不是题目，也<b>不是上一题的作答</b>：若当续行并入，会把上一题的正确答案
+     * 污染成 0 分（实测 Q10「错」被并成「错儿、简答影」）。</p>
+     *
+     * @param line 单行文本
+     * @return 是否大节标题
+     */
+    private static boolean isSectionHeader(String line) {
+        if (line == null || line.length() > 16) {
+            return false;
+        }
+        if (CN_SECTION_NO.matcher(line).find()) {
+            return true;
+        }
+        return line.length() <= 10 && SECTION_KEYWORD.matcher(line).find();
+    }
 
     /**
      * 拆分被模型合并的「题号 + 作答」。
