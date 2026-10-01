@@ -513,9 +513,12 @@ public class ServerManageServiceImpl implements ServerManageService {
      * 反之像 {@code layout} 这类必填开关若漏声明，前端 schema 驱动表单就渲染不出它，
      * 只能改数据库，用户无从开启（目录列表页曾因此恒为 404）。</p>
      *
+     * <p>包级可见以便 {@code FileStorageParamSchemaTest} 直接断言这份清单，
+     * 无需构造本服务（依赖 mapper/registry）。</p>
+     *
      * @return 参数列表
      */
-    private List<ServerPluginParamVO> fileStorageParams() {
+    static List<ServerPluginParamVO> fileStorageParams() {
         List<ServerPluginParamVO> params = new ArrayList<>();
         params.add(param("openPreview", "true", "是否允许内联预览", "boolean"));
         params.add(param("openDownload", "true", "是否允许附件下载", "boolean"));
@@ -540,7 +543,7 @@ public class ServerManageServiceImpl implements ServerManageService {
      *
      * @return 参数列表
      */
-    private List<ServerPluginParamVO> serviceDiscoveryParams() {
+    private static List<ServerPluginParamVO> serviceDiscoveryParams() {
         List<ServerPluginParamVO> params = new ArrayList<>();
         params.add(param("discoveryName", "peerMesh", "ServiceDiscovery SPI 名", "string"));
         params.add(param("protocol", "", "限定发现协议(留空不限)", "string"));
@@ -560,7 +563,7 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param type         类型(boolean/string/number/enum)
      * @return 参数描述
      */
-    private ServerPluginParamVO param(String name, String defaultValue, String desc, String type) {
+    private static ServerPluginParamVO param(String name, String defaultValue, String desc, String type) {
         return new ServerPluginParamVO(name, defaultValue, desc, type, null);
     }
 
@@ -574,7 +577,7 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param options      可选项
      * @return 参数描述
      */
-    private ServerPluginParamVO paramEnum(String name, String defaultValue, String desc, String type,
+    private static ServerPluginParamVO paramEnum(String name, String defaultValue, String desc, String type,
                                           List<String> options) {
         return new ServerPluginParamVO(name, defaultValue, desc, type, options);
     }

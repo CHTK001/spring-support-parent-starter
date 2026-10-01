@@ -3550,16 +3550,19 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             if (key == null || raw == null) {
                 continue;
             }
-            String text = String.valueOf(raw).trim();
-            if (text.isEmpty()) {
-                continue;
-            }
             if (BOOLEAN_PARAM_KEYS.contains(key)) {
-                applyBooleanSetting(key, parseBooleanText(text));
+                String flag = String.valueOf(raw).trim();
+                if (flag.isEmpty()) {
+                    // 布尔键不接受空串：无法判定用户意图，按「本次不带该键」处理
+                    continue;
+                }
+                applyBooleanSetting(key, parseBooleanText(flag));
             } else if (STRING_PARAM_KEYS.contains(key)) {
-                applyStringSetting(key, text);
+                // 字符串键不过滤空串：空串是「清空该配置」的合法语义（管理员配置页即如此），
+                // 若一并跳过，用户将永远无法通过服务管理清除水印文本。
+                applyStringSetting(key, raw instanceof String text ? text : String.valueOf(raw));
             } else {
-                log.warn("文件存储过滤器热更新忽略未知参数: {}={}", key, text);
+                log.warn("文件存储过滤器热更新忽略未知参数: {}={}", key, raw);
             }
         }
         log.info("服务管理热更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
