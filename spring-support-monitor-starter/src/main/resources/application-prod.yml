@@ -1,0 +1,37 @@
+# ===========================================
+# 生产环境覆盖配置（--spring.profiles.active=prod）
+# ===========================================
+# 这个 profile 存在的唯一理由：把「本地联调免鉴权」与「生产必须鉴权」之间的
+# 缺口变成 fail-safe，而不是靠人记得改配置。
+#
+# 默认 application.yml 里写着（注释也自认是本地联调用）：
+#   plugin.oauth.enable: false
+#   plugin.oauth.whitelist: [/ms/**]
+# 实测在该配置下，任何能连到服务端口的人都可以**无凭据**创建 / 启动 / 停止 / 删除
+# 服务节点，而节点能拉起任意协议服务器（代理节点可指向内网地址，文件存储节点可指定
+# 读取根路径）。此前没有任何机制阻止这份「本地便利」配置被原样带到生产。
+#
+# require-auth=true 会装配 ProductionAuthGuard：启动期逐条检查鉴权是否被绕过
+# （enable=false / local-admin-fallback=true / 白名单覆盖 /ms），
+# 只要发现任何一条就拒绝启动并打印全部原因，而不是等出事才发现。
+#
+# ⚠ 上线前必须确认：auth-address 指向的鉴权服务可达，否则所有人都会被挡在门外。
+#   这是「宁可不可用也不裸奔」的取舍，需要在上线 checklist 里显式核对。
+
+plugin:
+  oauth:
+    # 打开 fail-safe 守卫（本地联调不启用，故对现有行为零影响）
+    require-auth: true
+    # 生产必须启用鉴权
+    enable: true
+    # 不允许「取不到用户上下文就按本地 admin 放行」——该兜底等价于绕过鉴权
+    local-admin-fallback: false
+    # 不放行任何 /ms 路径。此处为空表示只保留内置默认白名单
+    # （captcha / login / oauth / doc.html 等），服务管理接口全部需要凭据。
+    whitelist: []
+    # 鉴权服务地址（按实际部署覆盖；留空会导致登录不可用）
+    auth-address: ${OAUTH_AUTH_ADDRESS:}
+  file-storage:
+    # 文件服务器私有桶保持开启：enable=false 或留空时按公共桶运行，
+    # 目录列表与文件内容将对能连到端口的人可读
+    private-buckets: localFileStorage
