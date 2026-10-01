@@ -89,7 +89,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://172.16.0.40:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: root
-    password: root@
+    password: ${AI_DB_PASSWORD:}
     hikari:
         maximum-pool-size: 20
         minimum-idle: 5
@@ -243,7 +243,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
     username: root
-    password: root
+    password: ${AI_DB_PASSWORD:}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5

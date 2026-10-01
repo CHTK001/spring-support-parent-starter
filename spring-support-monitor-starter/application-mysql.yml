@@ -6,7 +6,7 @@ spring:
     url: jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: root@
+    password: ${MONITOR_DB_PASSWORD:}
     hikari:
       pool-name: MonitorHikariPool
       minimum-idle: 5
