@@ -114,3 +114,29 @@ ssh <host> 'sudo systemctl stop oauth-server.service; sleep 2; \
 | C | 存量库结构漂移 | `deploy.sh` 记账告警为空；`ngxacc` / `monitordb` 等同类库由各自 owner 用同一招收敛 |
 
 > B 若无法在本轮解决，须由发布决定人**书面豁免**并写进报告，不得默认放过。
+
+## 7. 资源基线（终验时必须记录）
+
+实测（2026-10-01，目标机）：
+
+```
+Mem total 16165 MB / available ~2.9 GB ；Swap 845/953 MB（接近满）
+/tmp = tmpfs 2.9G：曾 100% 打满（**吃的是内存，不是磁盘**），现 39%
+java 进程 12 个。RSS 前几：
+  eduai 2666MB(-Xmx2g) · app.jar 1357MB · nacos 1262MB · app.jar 1160MB
+  · monitor 854MB · … · oauth 604MB(-Xmx512m)
+根分区 39G 空闲；eduai jar 备份累计 7.1G
+```
+
+放行判据（不满足则不予承诺可用性，须书面豁免）：
+
+1. `available ≥ 1.5 GB` 且 swap 使用率 `< 80%`，稳态观察 ≥ 10 分钟；
+2. 自本清单最后一次重启起，`dmesg` 无 `oom-kill`（历史上曾杀过 eduai）；
+3. `/tmp`（tmpfs）使用率 `< 80%`。
+
+建议：
+
+- 明确「交付必需」的服务清单，非必需的同机服务在验收窗口内停掉；
+- 备份按**文件名里的时间戳**保留 newest N —— 不要用 mtime 排序，
+  `cp -p` 会让多份备份 mtime 并列（仓库里记过这个坑）。
+
