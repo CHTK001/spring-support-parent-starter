@@ -22,7 +22,7 @@ public final class DatasourceHubConstants {
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
-            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx");
+            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx", "etcd");
 
     /**
      * nginx 类型标识。
@@ -37,7 +37,7 @@ public final class DatasourceHubConstants {
      */
     public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.of(
             "jdbc", 3306, "redis", 6379, "influxdb", 8086,
-            "neo4j", 7474, "nacos", 8848, "zookeeper", 2181, "nginx", 80);
+            "neo4j", 7474, "nacos", 8848, "zookeeper", 2181, "nginx", 80, "etcd", 2379);
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接
