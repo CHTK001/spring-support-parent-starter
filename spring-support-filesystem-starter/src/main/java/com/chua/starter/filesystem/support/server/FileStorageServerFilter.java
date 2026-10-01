@@ -40,6 +40,7 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Base64;
 import java.util.Locale;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
@@ -455,6 +456,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
         FileStorage storage = storageMap.get(bucket);
         if (storage == null) {
+            if (storageMap.isEmpty()) {
+                return error(response, 503, "No FileStorage bucket registered: file-storage filter has no storage backend. "
+                        + "Ensure a FileStorage bean exists in the container, or fileStorageTemplate.getStorageMap() is non-empty.");
+            }
             // 未注册的存储路径放行，交由后续链路处理
             return passthrough(request, response, chain);
         }
@@ -1236,6 +1241,137 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private static String withPdfExtension(String fileName) {
         int dot = fileName.lastIndexOf('.');
         return dot > 0 ? fileName.substring(0, dot) + ".pdf" : fileName + ".pdf";
+    }
+
+    /**
+     * 判断是否为 Markdown 文档（.md / .markdown）。
+     *
+     * @param fileName 文件名
+     * @return true 表示按 Markdown 预览处理
+     */
+    private static boolean isMarkdownFile(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        return lower.endsWith(".md") || lower.endsWith(".markdown");
+    }
+
+    /**
+     * 是否通过开关关闭 X-Markdown 渲染（关闭后 md 退回普通文本预览）。
+     *
+     * <p>开关优先级：系统属性 {@code filesystem.markdown.x-markdown} &gt;
+     * 环境变量 {@code FILESYSTEM_MARKDOWN_XMARKDOWN}；取值为 {@code false} 或 {@code 0} 视为关闭。</p>
+     *
+     * @return true 表示已关闭
+     */
+    private boolean isMarkdownRendererDisabled() {
+        String v = System.getProperty("filesystem.markdown.x-markdown");
+        if (v == null) {
+            v = System.getenv("FILESYSTEM_MARKDOWN_XMARKDOWN");
+        }
+        return "false".equalsIgnoreCase(v) || "0".equals(v);
+    }
+
+    /**
+     * 生成 Markdown 预览页（React + X-Markdown 同源渲染）。
+     *
+     * <p>正文以 Base64 内联后再用 {@code TextDecoder} 还原：直接拼进 JS 字符串时，
+     * 正文里的 {@code </script>} 会把 inline script 截断（实测白屏）。</p>
+     *
+     * <p>渲染器任一资源失败时降级为纯文本并说明原因，不显示空白。</p>
+     *
+     * @param fileName 文件名（用于标题）
+     * @param data     原始字节
+     * @return 预览页 HTML 字节
+     */
+    private byte[] buildMarkdownPreviewPage(String fileName, byte[] data) {
+        String md = decodeText(data);
+        String b64 = Base64.getEncoder().encodeToString(md.getBytes(StandardCharsets.UTF_8));
+        String title = escapeHtml(fileName);
+        StringBuilder h = new StringBuilder(md.length() + 4096);
+        h.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
+                .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
+                .append("<title>")
+                .append(title)
+                .append("</title>")
+                .append("<link rel=\"stylesheet\" href=\"/preview-vendor/xmarkdown/x-markdown.min.css\">")
+                .append("<style>")
+                .append(":root{--bg:#fff;--fg:#303133;--muted:#909399;--bd:#ebeef5;--code-bg:#f6f8fa;--link:#409eff}")
+                .append("@media (prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e5eaf3;--muted:#8d9095;--bd:#3a3a3a;--code-bg:#2b2b2b;--link:#79bbff}}")
+                .append("html,body{margin:0;height:100%}")
+                .append("body{background:var(--bg);color:var(--fg);")
+                .append("font-family:system-ui,-apple-system,'Segoe UI','Microsoft YaHei',sans-serif}")
+                .append("#root{padding:20px 26px;box-sizing:border-box}")
+                .append("img{max-width:100%;height:auto}")
+                .append("a{color:var(--link)}")
+                .append("pre{background:var(--code-bg);border:1px solid var(--bd);border-radius:8px;")
+                .append("padding:12px 14px;overflow:auto}")
+                .append("code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px}")
+                .append("table{border-collapse:collapse;display:block;overflow:auto}")
+                .append("th,td{border:1px solid var(--bd);padding:6px 12px}")
+                .append("blockquote{margin:0;padding-left:12px;border-left:3px solid var(--bd);color:var(--muted)}")
+                .append("#fb{display:none;padding:16px 20px}")
+                .append("#fb .tip{color:#e6a23c;font-size:13px;margin:0 0 10px}")
+                .append("#fb pre{white-space:pre-wrap;word-break:break-word}")
+                .append("</style></head><body>")
+                .append("<div id=\"root\"></div>")
+                .append("<div id=\"fb\"><p class=\"tip\" id=\"fbtip\"></p><pre id=\"fbsrc\"></pre></div>")
+                .append("<script src=\"/preview-vendor/xmarkdown/react.production.min.js\"></script>")
+                .append("<script src=\"/preview-vendor/xmarkdown/react-dom.production.min.js\"></script>")
+                .append("<script src=\"/preview-vendor/xmarkdown/x-markdown.min.js\"></script>")
+                .append("<script>(function(){")
+                .append("var b64=\"")
+                .append(b64)
+                .append("\";")
+                .append("var md;")
+                .append("try{")
+                .append("var bin=atob(b64),arr=new Uint8Array(bin.length);")
+                .append("for(var i=0;i<bin.length;i++){arr[i]=bin.charCodeAt(i);}")
+                .append("md=new TextDecoder('utf-8').decode(arr);")
+                .append("}catch(e){md=atob(b64);}")
+                .append("function fail(msg){")
+                .append("var fb=document.getElementById('fb');")
+                .append("document.getElementById('root').style.display='none';")
+                .append("fb.style.display='block';")
+                .append("document.getElementById('fbtip').textContent=")
+                .append("'Markdown 渲染器不可用，已回退为纯文本：'+msg;")
+                .append("document.getElementById('fbsrc').textContent=md;")
+                .append("}")
+                .append("try{")
+                .append("if(!window.React||!window.ReactDOM){throw new Error('React 未加载');}")
+                .append("if(!window.XMarkdown){throw new Error('X-Markdown 未加载');}")
+                .append("var X=window.XMarkdown.XMarkdown||window.XMarkdown.default||window.XMarkdown;")
+                .append("if(!X||(typeof X!=='function'&&!X.$$typeof)){")
+                .append("throw new Error('X-Markdown 导出异常: '+typeof X);}")
+                .append("ReactDOM.createRoot(document.getElementById('root'))")
+                .append(".render(React.createElement(X,{content:md}));")
+                .append("}catch(e){fail(e&&e.message?e.message:String(e));}")
+                .append("})();</script>")
+                .append("</body></html>");
+        return h.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 按 UTF-8 解码文本，兼容 BOM 与 GBK 回退。
+     *
+     * @param data 原始字节
+     * @return 解码后的文本；空数据返回空串
+     */
+    private static String decodeText(byte[] data) {
+        if (data == null || data.length == 0) {
+            return "";
+        }
+        int off = data.length >= 3 && (data[0] & 0xFF) == 239 && (data[1] & 0xFF) == 187 && (data[2] & 0xFF) == 191 ? 3 : 0;
+        try {
+            return new String(data, off, data.length - off, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            try {
+                return new String(data, off, data.length - off, "GBK");
+            } catch (Exception ignored) {
+                return new String(data, off, data.length - off, StandardCharsets.ISO_8859_1);
+            }
+        }
     }
 
     /**
@@ -3146,6 +3282,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
+            // Markdown：用 Ant Design X 的 X-Markdown 出独立预览页（同源 vendor，不依赖 CDN）
+            if (isMarkdownFile(fileName) && !isMarkdownRendererDisabled()) {
+                response.setStatus(200)
+                        .setHeader("X-FileStorage-Preview", "xmarkdown")
+                        .setContentType("text/html;charset=UTF-8")
+                        .setBody(buildMarkdownPreviewPage(fileName, data))
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
             // 服务端渲染：SPI 提供者（Univer / 打开文档 / Visio 等）
             byte[] previewPage = trySpiPreview(data, fileName);
             if (previewPage != null) {
@@ -3194,10 +3339,95 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
         }
 
+        String inlineType = resolveContentType(fileName);
+        if (wantPreview && !isBrowserInlineType(inlineType)) {
+            // 浏览器不能内联渲染的类型（exe/dll/msi/iso 等）：给 HTML 提示页，
+            // 既不把二进制丢进 iframe，也避免浏览器直接触发下载
+            return writeUnsupportedPreview(fileName, inlineType, response);
+        }
         response.setStatus(200)
                 .setHeader("Accept-Ranges", setting.isOpenRange() ? "bytes" : "none")
-                .setContentType(resolveContentType(fileName))
+                .setContentType(inlineType)
                 .setBody(data)
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 判断该 Content-Type 能否由浏览器内联渲染。
+     *
+     * <p>不能内联的类型走 {@link #writeUnsupportedPreview}，避免「一预览就下载」。</p>
+     *
+     * @param contentType 响应内容类型
+     * @return true 表示浏览器可内联显示
+     */
+    private static boolean isBrowserInlineType(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return false;
+        }
+        String ct = contentType.toLowerCase(Locale.ROOT);
+        return ct.startsWith("text/") || ct.startsWith("image/") || ct.startsWith("video/") || ct.startsWith("audio/")
+                || ct.startsWith("font/") || ct.contains("application/pdf") || ct.contains("application/json")
+                || ct.contains("application/xml") || ct.contains("application/javascript")
+                || ct.contains("opendocument") || ct.contains("officedocument");
+    }
+
+    /**
+     * 输出「暂不支持在线预览」的 HTML 提示页。
+     *
+     * <p>替代把不可内联的二进制直接回给浏览器（会变成下载）。页面给出文件名、
+     * 扩展名与 Content-Type，并在允许下载时提供下载入口。</p>
+     *
+     * @param fileName    文件名
+     * @param contentType 响应内容类型
+     * @param response    响应
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> writeUnsupportedPreview(String fileName, String contentType, ServerResponse response) {
+        String ext = simpleExtOf(fileName);
+        String extLabel = ext == null || ext.isEmpty() ? "（无扩展名）" : "." + ext.toUpperCase(Locale.ROOT);
+        StringBuilder html = new StringBuilder(2048);
+        html.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
+                .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
+                .append("<title>暂不支持预览 - ")
+                .append(escapeAttr(fileName))
+                .append("</title>")
+                .append("<style>")
+                .append("html,body{margin:0;height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;")
+                .append("background:#f5f7fa;color:#303133}")
+                .append(".wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;box-sizing:border-box}")
+                .append(".ico{width:64px;height:64px;border-radius:16px;background:#fff;border:1px solid #dcdfe6;")
+                .append("display:flex;align-items:center;justify-content:center;font-size:26px;color:#909399}")
+                .append("h1{font-size:17px;font-weight:600;margin:0}")
+                .append(".m{font-size:13px;color:#606266;line-height:1.8;text-align:center;max-width:520px;margin:0}")
+                .append(".tag{display:inline-block;padding:1px 8px;border-radius:6px;background:#eef2f7;color:#606266;font-size:12px}")
+                .append(".acts{display:flex;gap:10px;margin-top:6px}")
+                .append("a.btn{display:inline-block;padding:7px 18px;border-radius:8px;font-size:13px;text-decoration:none;")
+                .append("background:#409eff;color:#fff;border:1px solid #409eff}")
+                .append("a.btn.ghost{background:#fff;color:#606266;border-color:#dcdfe6}")
+                .append("</style></head><body><div class=\"wrap\">")
+                .append("<div class=\"ico\">&#128193;</div>")
+                .append("<h1>该类型暂不支持在线预览</h1>")
+                .append("<p class=\"m\">")
+                .append(escapeHtml(fileName))
+                .append("<br>")
+                .append("<span class=\"tag\">")
+                .append(escapeHtml(extLabel))
+                .append("</span> ")
+                .append("<span class=\"tag\">")
+                .append(escapeHtml(contentType == null ? "unknown" : contentType))
+                .append("</span></p>")
+                .append("<p class=\"m\">下载到本地后用对应的软件打开即可。</p>")
+                .append("<div class=\"acts\">");
+        if (setting.isOpenDownload()) {
+            html.append("<a class=\"btn\" href=\"?download=true\" download>下载文件</a>");
+        }
+        html.append("<a class=\"btn ghost\" href=\"javascript:history.back()\">返回</a>")
+                .append("</div></div></body></html>");
+        response.setStatus(200)
+                .setHeader("X-FileStorage-Preview", "unsupported")
+                .setContentType("text/html;charset=UTF-8")
+                .setBody(html.toString())
                 .end();
         return CompletableFuture.completedFuture(null);
     }
