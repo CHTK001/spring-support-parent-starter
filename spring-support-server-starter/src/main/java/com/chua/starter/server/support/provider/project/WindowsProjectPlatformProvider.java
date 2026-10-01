@@ -21,6 +21,19 @@ import java.util.List;
 @Spi(value = "windows", order = 100)
 public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
 
+    /**
+     * 健康检查「就绪等待」上限（秒）：轮询状态脚本直到报告运行中。
+     *
+     * <p>替代原先固定的 {@code Start-Sleep -Seconds 4}——4 秒对 SpringBoot 类应用过短。</p>
+     */
+    private static final int READY_WAIT_SECONDS = 20;
+
+    /**
+     * 健康检查「稳定窗口」（秒）：就绪后要求连续该时长仍报告运行中，
+     * 用于捕捉「启动完成即退出」的崩溃循环。
+     */
+    private static final int SETTLE_SECONDS = 10;
+
     @Override
     public String osType() {
         return "WINDOWS";
@@ -203,6 +216,12 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
     @Override
     public String guardedRestart(String projectPath, String restartScript, String stopScript,
                                  String startScript, String statusScript, boolean restart) {
+        return guardedRestart(projectPath, restartScript, stopScript, startScript, statusScript, restart, 0);
+    }
+
+    @Override
+    public String guardedRestart(String projectPath, String restartScript, String stopScript,
+                                 String startScript, String statusScript, boolean restart, int port) {
         var restartCmd = restart && restartScript != null && !restartScript.isBlank()
                 ? wrap(projectPath, restartScript)
                 : (wrap(projectPath, stopScript) + "\n" + wrap(projectPath, startScript));
@@ -211,15 +230,38 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
         var startCmd = wrap(projectPath, startScript);
         var ps = new StringBuilder();
         ps.append(restartCmd).append('\n');
-        ps.append("Start-Sleep -Seconds 4\n");
-        ps.append("$out = $(").append(statusCmd).append(") -join ' '\n");
-        ps.append("if (\"$out\" -match 'running') { 'health ok' }\n");
+        // 与 Posix 同构的三段式健康检查（详见 PosixProjectPlatformProvider 的注释）：
+        // 就绪等待 → 端口探活 → 稳定窗口，替代原先固定 Start-Sleep 4 后单次判定。
+        ps.append("$up = $false\n");
+        ps.append("for ($i = 0; $i -lt ").append(READY_WAIT_SECONDS).append("; $i += 2) {\n");
+        ps.append("  $o = $(").append(statusCmd).append(") -join ' '\n");
+        ps.append("  if ($o -match 'running') { $up = $true; break }\n");
+        ps.append("  Start-Sleep -Seconds 2\n");
+        ps.append("}\n");
+        if (port > 0) {
+            ps.append("if ($up) {\n");
+            ps.append("  $lis = $false\n");
+            ps.append("  for ($i = 0; $i -lt ").append(READY_WAIT_SECONDS).append("; $i += 2) {\n");
+            ps.append("    if (netstat -ano | Select-String -Pattern ':").append(port).append("\\s' | Select-String -Pattern 'LISTENING') { $lis = $true; break }\n");
+            ps.append("    Start-Sleep -Seconds 2\n");
+            ps.append("  }\n");
+            ps.append("  if (-not $lis) { 'health failed: 端口 ").append(port).append(" 未监听'; $up = $false }\n");
+            ps.append("}\n");
+        }
+        ps.append("if ($up) {\n");
+        ps.append("  for ($i = 0; $i -lt ").append(SETTLE_SECONDS).append("; $i += 2) {\n");
+        ps.append("    Start-Sleep -Seconds 2\n");
+        ps.append("    $o = $(").append(statusCmd).append(") -join ' '\n");
+        ps.append("    if ($o -notmatch 'running') { 'health failed: 启动后退出'; $up = $false; break }\n");
+        ps.append("  }\n");
+        ps.append("}\n");
+        ps.append("if ($up) { 'health ok' }\n");
         ps.append("else {\n")
                 .append("  'health failed, rolling back...'\n  ")
                 .append(rollbackCmd).append('\n')
                 // 回滚文件后重启旧版本，再做二次健康检查
                 .append("  ").append(startCmd.replace("\n", "\n  ")).append('\n')
-                .append("  Start-Sleep -Seconds 4\n")
+                .append("  Start-Sleep -Seconds ").append(SETTLE_SECONDS + 4).append('\n')
                 .append("  $out2 = $(").append(statusCmd).append(") -join ' '\n")
                 .append("  if (\"$out2\" -match 'running') { 'rollback ok' } else { 'rollback failed'; exit 1 }\n")
                 .append("}");

@@ -48,6 +48,39 @@ CREATE TABLE IF NOT EXISTS `ms_datasource`
 CREATE INDEX IF NOT EXISTS `idx_ms_datasource_name` ON `ms_datasource` (`datasource_name`);
 CREATE INDEX IF NOT EXISTS `idx_ms_datasource_type` ON `ms_datasource` (`datasource_type`);
 
+-- ------------------------------------------------------------
+-- 存量库兼容 ALTER（新建库上方 CREATE TABLE 已含这些列，此处只对老库生效）
+-- 连接性指标：点「测试连接」时回写，覆盖写、不留历史
+-- connect_latency：建立连接耗时（TCP + 协议握手）
+-- session_latency：已建立连接上一次往返耗时（jdbc=SELECT 1 / redis=PING / 其余=TCP 探活）
+--
+-- 刻意写裸 ADD COLUMN，不写 ADD COLUMN IF NOT EXISTS：
+--   幂等写法要靠 MysqlScriptConverter 改写成 information_schema 判定的动态 SQL，
+--   而该转换器在 utils-support-mysql-starter 里，本应用并未依赖它
+--   （线上 jar 无此 jar、无 META-INF/services 的 ScriptConverter 注册），
+--   写 IF NOT EXISTS 会原样送进 MySQL，直接语法错误。
+-- 重复执行报 1060 由 DataSourceFlyway 的 continueOnError（默认 true）逐语句跳过；
+-- 代价是该脚本会被记为 FAILED 因而每次启动重跑，本文件其余语句均幂等，可接受。
+-- ⚠ 正因为该错误是静默的，列没建成要等到运行期 SELECT 才暴露成 Unknown column，
+--   所以必须靠 information_schema 断言来验证（见 final-check.sh）。
+-- ------------------------------------------------------------
+ALTER TABLE `ms_datasource`
+    ADD COLUMN `datasource_connect_latency_ms` BIGINT NULL COMMENT '连接延迟(毫秒)，最近一次测试回写' AFTER `datasource_status`,
+    ADD COLUMN `datasource_session_latency_ms` BIGINT NULL COMMENT '会话延迟(毫秒)，最近一次测试回写' AFTER `datasource_connect_latency_ms`,
+    ADD COLUMN `datasource_last_test_time` DATETIME NULL COMMENT '最近一次连通性测试时间' AFTER `datasource_session_latency_ms`,
+    ADD COLUMN `datasource_last_test_ok` INT NULL COMMENT '最近一次测试是否连通 - 0:失败, 1:成功' AFTER `datasource_last_test_time`;
+
+-- ------------------------------------------------------------
+-- 进程控制方式（仅 nginx 类型使用）
+-- systemd：start/stop/restart 交给 systemctl，control_target 存托管单元名（如 nginx.service）
+-- local  ：直接用 nginx -s 与裸启动，永不 systemctl
+-- 空     ：自动探测（认得出单元且当前用户有免密 systemctl 权限才走 systemd）
+-- 老数据源保持为空即维持原行为，不受本次改动影响
+-- ------------------------------------------------------------
+ALTER TABLE `ms_datasource`
+    ADD COLUMN `datasource_control_mode` VARCHAR(16) NULL DEFAULT '' COMMENT '进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测' AFTER `datasource_last_test_ok`,
+    ADD COLUMN `datasource_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测' AFTER `datasource_control_mode`;
+
 
 
 -- ------------------------------------------------------------
