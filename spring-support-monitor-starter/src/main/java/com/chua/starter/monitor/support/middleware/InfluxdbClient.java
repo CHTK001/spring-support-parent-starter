@@ -157,6 +157,9 @@ public class InfluxdbClient {
      */
     public List<JsonObject> query(Target target, String flux) {
         Map<String, Object> dialect = new LinkedHashMap<>();
+        // 注：tableResponse 是照早期实现留的，InfluxDB 2.7 实测**忽略**它
+        // （无论 Accept 给 application/json 还是别的，都回注解 CSV），
+        // 所以下面的解析不依赖它。
         dialect.put("tableResponse", false);
         dialect.put("annotations", List.of());
         Map<String, Object> body = new LinkedHashMap<>();
@@ -164,6 +167,28 @@ public class InfluxdbClient {
         body.put("type", "flux");
         body.put("dialect", dialect);
         String text = postJson(target, QUERY_PATH, target.query(), Json.toJson(body));
+        // 实测（2.7.11）：/api/v2/query 返回的是**注解 CSV**，不是 JSON-lines。
+        // 早先按"每行一个 JSON"解析，结果**每一行都解析成空对象**且不报错——
+        // 表现是「/query 有行数但表格全空、/measurements 恒空、字段/标签统计恒空」，
+        // 整块读数能力静默失效。这里先探测首行：以 '{' 开头才走 JSON 分支（兼容早期实现）。
+        for (String line : text.split("\r?\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                continue;
+            }
+            return trimmed.startsWith("{") ? parseJsonLines(text) : parseCsv(text);
+        }
+        return List.of();
+    }
+
+    /**
+     * 解析 JSON-lines 响应（早期 InfluxDB 在 {@code tableResponse=false} 下的形态）。
+     *
+     * @param text 响应体
+     * @return 行数据
+     * @throws IllegalStateException 服务端在流里回报查询错误
+     */
+    private List<JsonObject> parseJsonLines(String text) {
         List<JsonObject> rows = new ArrayList<>();
         for (String line : text.split("\n")) {
             String trimmed = line.trim();
@@ -183,6 +208,115 @@ public class InfluxdbClient {
             rows.add(item);
         }
         return rows;
+    }
+
+    /**
+     * 解析 InfluxDB 的注解 CSV。
+     *
+     * <p>形态（{@code #} 开头是注解行，第一行非注解行是表头，且**首列为空**）：</p>
+     * <pre>
+     * #datatype,string,long,string
+     * ,result,table,_value
+     * ,_result,0,diag_123
+     * </pre>
+     *
+     * <p>值为字符串，按数值/布尔尽可能还原类型——调用方（如 {@code countBy}）会做
+     * {@code intOrNull(row.get("count"))}，全留字符串会统计不出来。字段内可能含逗号或换行，
+     * 因此必须用引号感知的切分，不能直接 {@code split(",")}。</p>
+     *
+     * @param text 响应体
+     * @return 行数据
+     */
+    private List<JsonObject> parseCsv(String text) {
+        List<JsonObject> rows = new ArrayList<>();
+        List<String> header = null;
+        for (String line : text.split("\r?\n")) {
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            List<String> cells = splitCsv(line);
+            if (header == null) {
+                header = cells;
+                continue;
+            }
+            JsonObject row = new JsonObject();
+            for (int i = 0; i < header.size(); i++) {
+                String key = header.get(i).trim();
+                if (key.isEmpty()) {
+                    continue;
+                }
+                row.fluentPut(key, coerceCsvValue(i < cells.size() ? cells.get(i) : ""));
+            }
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    /**
+     * 引号感知的 CSV 切分。
+     *
+     * @param line 一行 CSV
+     * @return 单元格列表
+     */
+    private static List<String> splitCsv(String line) {
+        List<String> cells = new ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        boolean quoted = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (quoted) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                        cur.append('"');
+                        i++;
+                    } else {
+                        quoted = false;
+                    }
+                } else {
+                    cur.append(c);
+                }
+            } else if (c == '"') {
+                quoted = true;
+            } else if (c == ',') {
+                cells.add(cur.toString());
+                cur.setLength(0);
+            } else {
+                cur.append(c);
+            }
+        }
+        cells.add(cur.toString());
+        return cells;
+    }
+
+    /**
+     * CSV 单元格取值并还原基础类型。
+     *
+     * @param raw 原始单元格
+     * @return Boolean / Long / Double / String；空串保持空串
+     */
+    private static Object coerceCsvValue(String raw) {
+        String v = raw == null ? "" : raw.trim();
+        if (v.isEmpty()) {
+            return "";
+        }
+        if ("true".equalsIgnoreCase(v) || "false".equalsIgnoreCase(v)) {
+            return Boolean.parseBoolean(v);
+        }
+        if (v.matches("[-+]?\\d+")) {
+            try {
+                return Long.parseLong(v);
+            } catch (NumberFormatException ignore) {
+                return v;
+            }
+        }
+        if (v.matches("[-+]?(\\d+\\.\\d*|\\.\\d+)([eE][-+]?\\d+)?")) {
+            try {
+                return Double.parseDouble(v);
+            } catch (NumberFormatException ignore) {
+                return v;
+            }
+        }
+        return v;
     }
 
     /**
@@ -240,7 +374,10 @@ public class InfluxdbClient {
      */
     public void deleteBucket(Target target, String bucketId) {
         try {
-            MiddlewareHttp.delete(target.endpoint().url("/api/v2/buckets/" + trim(bucketId)), target.query());
+            // 必须带 Authorization：实测两参数的 delete 不带任何头，InfluxDB 直接回 401，
+            // 表现为"删除桶点了没反应/报未授权"，而创建与改保留期都正常。
+            MiddlewareHttp.delete(target.endpoint().url("/api/v2/buckets/" + trim(bucketId)),
+                    target.query(), headers(target.endpoint()));
         } catch (Exception e) {
             throw failure(target.endpoint(), "/api/v2/buckets", e);
         }
