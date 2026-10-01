@@ -151,7 +151,10 @@ public class NacosManageServiceImpl implements NacosManageService {
                 "dataId", keyword,
                 "search", keyword.isEmpty() ? "accurate" : "blur");
         JsonObject json = client.getObject(endpoint, "/v1/cs/configs", params);
-        JsonArray items = json.getJsonArray("items");
+        // 实测（2.4.3）：配置列表的条目数组字段名是 pageItems，1.x/2.x 一致。
+        // 原先读的是 items，取不到 → list 永远空但 total 正确（totalCount 能读到），
+        // 表现为"列表有总条数却一条都渲染不出来"。这里按 pageItems 优先、items 兜底。
+        JsonArray items = firstArray(json, "pageItems", "items");
         List<NacosConfigVO> list = new ArrayList<>(items.size());
         for (int i = 0; i < items.size(); i++) {
             JsonObject item = items.getJsonObject(i);
@@ -388,10 +391,15 @@ public class NacosManageServiceImpl implements NacosManageService {
     }
 
     /**
-     * 集群节点响应在 1.x 是顶层数组、2.x 包在 members 字段里。
+     * 集群节点响应的数组位置在版本间换过名，逐个尝试。
+     *
+     * <p>实测（2.4.3）：{@code GET /v1/core/cluster/nodes} 返
+     * {@code {"code":200,"message":null,"data":[...]}}，数组在 {@code data} 里；
+     * 旧版曾把数组包在 {@code members} 里，1.x 还有直接回顶层数组的形态。
+     * 原先只认 {@code members}，导致 2.x 上"集群节点"面板恒为空。</p>
      *
      * @param body 响应体
-     * @return 节点数组
+     * @return 节点数组，取不到时为空数组
      */
     private static JsonArray members(String body) {
         String text = body == null ? "" : body.trim();
@@ -401,7 +409,24 @@ public class NacosManageServiceImpl implements NacosManageService {
         if (text.startsWith("[")) {
             return Json.getJsonArray(text);
         }
-        return Json.getJsonObject(text).getJsonArray("members");
+        return firstArray(Json.getJsonObject(text), "data", "members");
+    }
+
+    /**
+     * 依次尝试若干字段名，取第一个真实存在的 JSON 数组。
+     *
+     * @param json    响应对象
+     * @param keyCandidates 候选字段名，按优先级排列
+     * @return 命中的数组，全都不存在或不是数组时返回空数组（不返回 null，避免调用方再判空）
+     */
+    private static JsonArray firstArray(JsonObject json, String... keyCandidates) {
+        for (String key : keyCandidates) {
+            JsonArray array = json.getJsonArray(key);
+            if (array != null && !array.isEmpty()) {
+                return array;
+            }
+        }
+        return new JsonArray();
     }
 
     /**
@@ -452,14 +477,20 @@ public class NacosManageServiceImpl implements NacosManageService {
     }
 
     /**
-     * 校验 Nacos 写接口的返回值，其成功响应是纯文本 true。
+     * 校验 Nacos 写接口的返回值。
+     *
+     * <p>成功标记在模块之间**不一致**（实测 2.4.3）：
+     * 配置 {@code POST /v1/cs/configs} 与命名空间 {@code POST /v1/console/namespaces} 回 {@code true}；
+     * 而命名模块的 {@code POST|PUT /v1/ns/instance} 回 {@code ok}。
+     * 早先只认 {@code true}，导致实例上下线/改权重**明明生效却抛"Nacos 拒绝了该请求: ok"**——
+     * 比单纯失败更糟：用户看到失败提示去重试，线上流量权重其实已经改了。</p>
      *
      * @param body 响应体
      * @throws IllegalStateException 服务端明确拒绝
      */
     private static void accepted(String body) {
         String text = body == null ? "" : body.trim();
-        if (text.isEmpty() || "true".equalsIgnoreCase(text)) {
+        if (text.isEmpty() || "true".equalsIgnoreCase(text) || "ok".equalsIgnoreCase(text)) {
             return;
         }
         throw new IllegalStateException("Nacos 拒绝了该请求: " + text);
