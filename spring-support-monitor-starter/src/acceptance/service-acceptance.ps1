@@ -177,6 +177,17 @@ $r = New-Node -Spec ([ordered]@{ name = 'acc-conflict'; protocol = 'jdk-tcp'; en
 Add-Result '端口被占用时 success=false' (-not $r.Json.success) ("success=" + $r.Json.success + " msg=" + $r.Json.msg)
 if ($r.Json.data) { $null = Remove-Node -Id $r.Json.data.id }
 & $plink -ssh -pw $SshPass -batch -hostkey $SshHostKey "$SshUser@${Host_}" "pkill -f '[n]c -l -p $conflictPort'" 2>&1 | Out-Null
+# 冲突用例的错误响应体不带 data，拿不到 id，故按名字兜底清理：验收套件自身不能在被验收的
+# 环境里留下残留节点（首版就因此漏了一个 acc-conflict 在交付环境里跑着）。
+Start-Sleep -Seconds 3
+$conflictCleaned = $true
+foreach ($n in @((Get-Api '/ms/monitor/server') | ConvertFrom-Json).data) {
+    if ($n.name -like 'acc-conflict*') {
+        if (Remove-Node -Id $n.id) { Add-Result '冲突用例残留已清理' $true ("已删除 " + $n.name) }
+        else { $conflictCleaned = $false }
+    }
+}
+if ($conflictCleaned) { Add-Result '无验收残留节点' $true '' }
 $ok = New-Node -Spec ([ordered]@{ name = 'acc-ok'; protocol = 'jdk-tcp'; engine = 'jdk-tcp'; host = '0.0.0.0'; port = 21501; enabled = 1; remark = 'acceptance'; filters = @() })
 Add-Result '正常节点仍 success=true' ([bool]$ok.Json.success) ("status=" + $(if ($ok.Json.success) { $ok.Json.data.status } else { '-' }))
 if ($ok.Json.success) { $null = Remove-Node -Id $ok.Json.data.id }
