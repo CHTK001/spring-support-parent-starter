@@ -12,10 +12,12 @@
 #   曾因此让「热更新无效」「参数不生效」两类缺陷长期无人察觉。
 #
 # 已踩过的坑（AGENTS.md 有完整记录，此处只列与本文件相关的）：
-#   - paths 必须含 .github/workflows 自身，否则只改 CI 定义的提交不触发任何检查，
+#   - paths 含 src/acceptance：改动验收脚本时必须触发本门禁（否则改门禁不触发门禁）
+#     注意措辞：本 workflow **不执行**该验收脚本——它需要对运行中的后台做黑盒
+#     验证，凭据来自 MS_SSH_PASS / MS_SSH_HOSTKEY 等环境变量，CI 里没有。
+#     因此验收套件目前仍是**手工执行**，这是已知未覆盖面，不是本门禁的功劳。
+#   - paths 含 .github/workflows 自身：只改 CI 定义的提交不触发任何检查，
 #     CI 配置会未经检验就合入
-#   - paths 必须含 src/acceptance，门禁会执行其中的验收脚本；漏掉会导致
-#     「改了验收脚本但 0-job 空跑」
 #   - concurrency 的 group 含 event_name、cancel-in-progress 写成表达式，
 #     使 workflow_dispatch 不被并发 push 取消
 #   - 本仓 POM 把 surefire 的 argLine 写死，命令行 -DargLine 不生效；
