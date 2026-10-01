@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+
 /**
  * 阅卷管理控制器
  *
@@ -51,12 +53,15 @@ public class EduMarkingController {
     }
 
     /**
-     * 扫描试卷图片并阅卷（自有卷 / 任意卷）。
+     * 扫描试卷图片并阅卷（自有卷 / 任意卷，<b>支持多张图片</b>）。
      *
      * <p>支持两类试卷：{@code mode=SELF} 自有卷（题目在本系统，分值与标准答案回数据库取，准确）、
      * {@code mode=ANY} 任意卷（外来试卷，题干与作答由模型抽取并判定）。</p>
      *
-     * @param file      试卷/答题卡图片
+     * <p>一份试卷通常跨多页，因此图片按页顺序可传多张：表单里重复出现同名的 {@code file} 字段即可
+     * （单张也兼容）。服务端逐张识别后按顺序拼接文本，再统一结构化与判分。</p>
+     *
+     * @param files     试卷/答题卡图片，按页顺序（同名 file 字段重复出现）
      * @param mode      试卷类型：SELF（默认）/ ANY
      * @param paperId   自有卷对应的试卷 ID
      * @param studentId 学生标识
@@ -64,20 +69,29 @@ public class EduMarkingController {
      * @param maxScore  任意卷每题满分
      * @return 任务 ID，用 {@code GET /result/{taskId}} 轮询结果
      */
-    @Operation(summary = "扫描试卷图片并阅卷")
+    @Operation(summary = "扫描试卷图片并阅卷（支持多张）")
     @PostMapping("/scan")
-    public ReturnResult<String> scan(@RequestParam(value = "file", required = false) MultipartFile file,
+    public ReturnResult<String> scan(@RequestParam(value = "file", required = false) MultipartFile[] files,
                                      @RequestParam(value = "mode", required = false, defaultValue = "SELF") String mode,
                                      @RequestParam(value = "paperId", required = false) Long paperId,
                                      @RequestParam(value = "studentId", required = false) String studentId,
                                      @RequestParam(value = "examId", required = false) Long examId,
                                      @RequestParam(value = "maxScore", required = false) Integer maxScore) {
-        if (file == null || file.isEmpty()) {
+        if (files == null || files.length == 0) {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
+            var images = new ArrayList<byte[]>(files.length);
+            for (MultipartFile item : files) {
+                if (item != null && !item.isEmpty()) {
+                    images.add(item.getBytes());
+                }
+            }
+            if (images.isEmpty()) {
+                return ReturnResult.error("上传文件不能为空");
+            }
             return ReturnResult.ok(markingService.scanAndMark(
-                    file.getBytes(), mode, paperId, studentId, examId, maxScore));
+                    images, mode, paperId, studentId, examId, maxScore));
         } catch (BusinessException e) {
             return ReturnResult.error(e.getMessage());
         } catch (Exception e) {

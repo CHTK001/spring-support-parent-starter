@@ -351,6 +351,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 单次扫描允许的最大图片张数（防止误传整册导致无限识别）。
+     */
+    private static final int MAX_SCAN_IMAGES = 20;
+
+    /**
      * 进程是否正在关闭。关闭期中断不能写成业务失败，否则任务成终态、启动续跑不会再捞起。
      */
     private volatile boolean shuttingDown;
@@ -364,20 +369,25 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     @Override
-    public String scanAndMark(byte[] imageData, String mode, Long paperId, String studentId,
+    public String scanAndMark(List<byte[]> images, String mode, Long paperId, String studentId,
                               Long examId, Integer maxScore) {
         // 入参快速校验（不落库）
         boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(mode);
         if (!anyMode && paperId == null) {
             throw new BusinessException("自有卷必须指定试卷 ID");
         }
-        if (imageData == null || imageData.length == 0) {
+        List<byte[]> validImages = images == null ? List.of()
+                : images.stream().filter(v -> v != null && v.length > 0).toList();
+        if (validImages.isEmpty()) {
             throw new BusinessException("上传图片为空");
+        }
+        if (validImages.size() > MAX_SCAN_IMAGES) {
+            throw new BusinessException("单次扫描最多 " + MAX_SCAN_IMAGES + " 张图片");
         }
 
         String taskId = UUID.randomUUID().toString().replace("-", "");
         // 1. 图片落盘：任务可重启续跑，输入必须还能取到（内存里的字节在重启后不复存在）
-        String imagePath = saveTaskImage(taskId, imageData);
+        String imagePath = saveTaskImages(taskId, validImages);
 
         // 2. 落任务（待处理）后【立即返回】taskId。
         //    不在此处做识别与判分：版面+OCR 为本地推理（实测约 13 秒）、判分还要多次调用大模型，
@@ -549,16 +559,40 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private void recognizeAndPrepare(EduMarkingTask task, boolean anyMode) {
         String taskId = task.getMarkingTaskTaskId();
-        byte[] imageData = readTaskImage(task.getMarkingTaskImagePath());
-        EduPaperScanner.ScanResult scan = paperScanner.scan(imageData);
-        if (StringUtils.isBlank(scan.text())) {
+        List<byte[]> images = readTaskImages(task.getMarkingTaskImagePath());
+        // 多页支持：一份试卷常跨多页，逐张做版面还原 + OCR，再按页序拼接文本后统一结构化。
+        // 拼接（而不是分别抽取）的原因：题号可能跨页连续，一起解析才能保证题序与去重正确。
+        var mergedText = new StringBuilder();
+        var mergedLayoutRegions = new HashMap<String, Integer>();
+        int blockCount = 0;
+        int pageNo = 0;
+        for (byte[] imageData : images) {
+            pageNo++;
+            EduPaperScanner.ScanResult pageScan = paperScanner.scan(imageData);
+            if (pageScan == null) {
+                continue;
+            }
+            if (StringUtils.isNotBlank(pageScan.text())) {
+                if (mergedText.length() > 0) {
+                    mergedText.append('\n');
+                }
+                mergedText.append(pageScan.text());
+            }
+            if (pageScan.layoutRegions() != null) {
+                pageScan.layoutRegions().forEach((k, v) -> mergedLayoutRegions.merge(k, v == null ? 0 : v, Integer::sum));
+            }
+            blockCount += pageScan.blocks() == null ? 0 : pageScan.blocks().size();
+            log.info("[EduScan] 第 {}/{} 页识别完成，累计文本长度={}", pageNo, images.size(), mergedText.length());
+        }
+        String text = mergedText.toString();
+        if (StringUtils.isBlank(text)) {
             throw new BusinessException("未从图片识别到文字，请确认图片清晰、方向正确后重试");
         }
         changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "解析题目", null, null, null, false);
 
         List<EduPaperScanner.ScannedQuestion> scanned = anyMode
-                ? paperScanner.extractAnyQuestions(scan.text())
-                : paperScanner.extractSelfQuestions(scan.text());
+                ? paperScanner.extractAnyQuestions(text)
+                : paperScanner.extractSelfQuestions(text);
         if (scanned.isEmpty()) {
             throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
         }
@@ -588,9 +622,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         var content = new java.util.LinkedHashMap<String, Object>();
         content.put("mode", task.getMarkingTaskMode());
         content.put("paperId", task.getMarkingTaskPaperId());
-        content.put("text", scan.text());
-        content.put("layoutRegions", scan.layoutRegions());
-        content.put("blockCount", scan.blocks().size());
+        content.put("text", text);
+        content.put("layoutRegions", mergedLayoutRegions);
+        content.put("blockCount", blockCount);
+        content.put("pageCount", images.size());
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setOwnerUserId(task.getOwnerUserId());
         sheet.setAnswerSheetExamId(task.getMarkingTaskExamId());
@@ -715,45 +750,60 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 保存任务图片到配置目录。
+     * 保存任务图片到配置目录（多页按页序编号，路径以逗号连接后落库）。
      *
-     * @param taskId    任务标识
-     * @param imageData 图片字节
-     * @return 落盘路径
+     * @param taskId 任务标识
+     * @param images 图片字节（按页顺序）
+     * @return 逗号连接的落盘路径
      */
-    private String saveTaskImage(String taskId, byte[] imageData) {
+    private String saveTaskImages(String taskId, List<byte[]> images) {
         try {
             Path dir = Paths.get(properties.getMarking().getImageDir());
             Files.createDirectories(dir);
-            Path file = dir.resolve(taskId + ".png");
-            Files.write(file, imageData);
-            return file.toAbsolutePath().toString();
+            var paths = new ArrayList<String>(images.size());
+            for (int i = 0; i < images.size(); i++) {
+                Path file = dir.resolve(taskId + "-" + (i + 1) + ".png");
+                Files.write(file, images.get(i));
+                paths.add(file.toAbsolutePath().toString());
+            }
+            return String.join(",", paths);
         } catch (Exception e) {
             throw new BusinessException("保存试卷图片失败: " + e.getMessage());
         }
     }
 
     /**
-     * 读取任务图片（续跑时用）。
+     * 读取任务图片（续跑时用），支持多页（路径以逗号分隔）。
      *
-     * @param imagePath 图片路径
-     * @return 图片字节
+     * @param imagePaths 逗号连接的图片路径
+     * @return 图片字节列表（按原页序）
      */
-    private byte[] readTaskImage(String imagePath) {
-        if (StringUtils.isBlank(imagePath)) {
+    private List<byte[]> readTaskImages(String imagePaths) {
+        if (StringUtils.isBlank(imagePaths)) {
             throw new BusinessException("任务缺少图片路径，无法继续处理");
         }
-        try {
-            Path p = Paths.get(imagePath);
-            if (!Files.isRegularFile(p)) {
-                throw new BusinessException("任务图片已不存在: " + imagePath);
+        var result = new ArrayList<byte[]>();
+        for (String item : imagePaths.split(",")) {
+            String path = item.trim();
+            if (path.isEmpty()) {
+                continue;
             }
-            return Files.readAllBytes(p);
-        } catch (BusinessException be) {
-            throw be;
-        } catch (Exception e) {
-            throw new BusinessException("读取任务图片失败: " + e.getMessage());
+            try {
+                Path p = Paths.get(path);
+                if (!Files.isRegularFile(p)) {
+                    throw new BusinessException("任务图片已不存在: " + path);
+                }
+                result.add(Files.readAllBytes(p));
+            } catch (BusinessException be) {
+                throw be;
+            } catch (Exception e) {
+                throw new BusinessException("读取任务图片失败: " + e.getMessage());
+            }
         }
+        if (result.isEmpty()) {
+            throw new BusinessException("任务缺少图片路径，无法继续处理");
+        }
+        return result;
     }
 
     /**
