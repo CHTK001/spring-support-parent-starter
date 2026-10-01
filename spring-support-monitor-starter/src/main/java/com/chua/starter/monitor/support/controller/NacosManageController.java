@@ -148,8 +148,8 @@ public class NacosManageController {
      * @return 配置详情
      */
     @Operation(summary = "Nacos 配置详情")
-    @GetMapping("/config/{dataId}")
-    public ReturnResult<NacosConfigDetailVO> configDetail(@PathVariable String dataId,
+    @GetMapping("/config")
+    public ReturnResult<NacosConfigDetailVO> configDetail(@RequestParam String dataId,
                                                           @RequestParam(required = false) Long datasourceId,
                                                           @RequestParam(required = false) String namespace,
                                                           @RequestParam(required = false) String group) {
@@ -179,8 +179,8 @@ public class NacosManageController {
      * @return 是否成功
      */
     @Operation(summary = "删除 Nacos 配置")
-    @DeleteMapping("/config/{dataId}")
-    public ReturnResult<Boolean> deleteConfig(@PathVariable String dataId,
+    @DeleteMapping("/config")
+    public ReturnResult<Boolean> deleteConfig(@RequestParam String dataId,
                                               @RequestParam(required = false) Long datasourceId,
                                               @RequestParam(required = false) String namespace,
                                               @RequestParam(required = false) String group) {
