@@ -11,6 +11,7 @@ import com.chua.deeplearning.support.feature.FeatureExtractor;
 import com.chua.deeplearning.support.image.ImageClassifier;
 import com.chua.deeplearning.support.image.ImageEnhancer;
 import com.chua.deeplearning.support.liveness.LivenessDetector;
+import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -476,6 +481,25 @@ public class FaceClientManager {
      * @return 检测管线
      */
     private FacePipeline buildPipeline() {
+        return buildPipeline(currentVectorStorage());
+    }
+
+    /**
+     * 用**指定的向量存储**构建人脸管线。
+     *
+     * <p>为什么需要这个重载：按账号隔离后，每个账号要有自己的向量库（各自一个索引文件），
+     * 但检测/特征/活体等 ONNX 模型是**共享**的 —— 它们只是包住单例引擎的轻量包装，
+     * 重的是引擎本身。因此这里把「向量存储」抽成参数，模型实例仍由本单例提供，
+     * 每账号只是换一个 storage，不会重复加载模型。</p>
+     *
+     * @param storage 该账号的向量存储
+     * @return 人脸管线；检测模型未配置时返回 {@code null}
+     */
+    public FacePipeline buildPipelineWith(VectorStorage storage) {
+        return buildPipeline(storage);
+    }
+
+    private FacePipeline buildPipeline(VectorStorage vectorStorageForPipeline) {
         // detector 为空 = 人脸检测未启用：ONNX 模型未配置时该模型并不存在，
         // 此时不构建管线（与 buildLiveness() 的空值语义一致），调用方按「未开启」处理
         String detectorModel = settingReader.getStr(GROUP, "detector_model");
@@ -495,7 +519,7 @@ public class FaceClientManager {
         if (StringUtils.isNotBlank(featureModel)) {
             builder.feature(featureModel);
         }
-        builder.vectorStorage(currentVectorStorage());
+        builder.vectorStorage(vectorStorageForPipeline);
         builder.topK(settingReader.getInt(GROUP, "top_k", 5));
         // 1:1 比对判定阈值：此前管线里写死 0.5，设置页的 compare_threshold 读都没读 ——
         // 用户在界面上改它不会有任何效果。这里把配置接上（缺省 0.5，与写死值一致，行为不变）。
@@ -566,6 +590,20 @@ public class FaceClientManager {
      * @return 向量库
      */
     private VectorStorage buildVectorStorage() {
+        return buildStorageFor(faceIndexPath());
+    }
+
+    /**
+     * 用**指定的索引路径**构建人脸向量库。
+     *
+     * <p>按账号隔离的关键：每个账号的索引文件必须分开。以图搜图的教训是
+     * 「不允许依赖第三方默认相对路径」—— 多个业务共用同一个索引文件，
+     * 换维度即互相破坏（实测：维度 256→512 后 1:N 直接抛 search 失败）。</p>
+     *
+     * @param indexPath 索引路径（不含扩展名，jvector 自行追加 .vectors）
+     * @return 向量库
+     */
+    public VectorStorage buildStorageFor(Path indexPath) {
         String name = settingReader.getStr(GROUP, "vector_storage");
         if (StringUtils.isBlank(name)) {
             name = "jvector";
@@ -573,7 +611,32 @@ public class FaceClientManager {
         String algorithm = settingReader.getStr(GROUP, "vector_algorithm");
         VectorCompareAlgorithm compare = resolveAlgorithm(algorithm);
         int dimension = settingReader.getInt(GROUP, "feature_dimension", DEFAULT_FEATURE_DIMENSION);
-        return VectorStorageProvider.create(name, dimension, compare);
+        Map<String, Object> config = new LinkedHashMap<>(2);
+        // jvector **不会自动创建缺失的父目录**：父目录不存在时写入静默失败，
+        // 表现为「登记成功但重启即丢」。所以必须先建目录。
+        try {
+            Files.createDirectories(indexPath.toAbsolutePath().getParent());
+        } catch (Exception ex) {
+            log.warn("[Face] 人脸向量索引目录创建失败，索引可能无法落盘: {} -> {}",
+                    indexPath.getParent(), ex.getMessage());
+        }
+        config.put(JVectorVectorStorageProvider.KEY_INDEX_PATH, indexPath.toAbsolutePath().toString());
+        return VectorStorageProvider.createDynamic(name, dimension, compare, config);
+    }
+
+    /**
+     * 人脸向量索引的落盘路径。
+     *
+     * <p>根目录取系统属性 {@code face.store.dir}，缺省为进程工作目录（远端即
+     * {@code /opt/ai-starter/runtime}）；索引落在 {@code <根>/face/face-index}。
+     * 与「以图搜图」同一套思路：**不允许依赖第三方默认相对路径**，
+     * 否则多个业务会共用同一个索引文件，换维度即互相破坏。</p>
+     *
+     * @return 索引路径（不含扩展名，jvector 会自行追加 .vectors）
+     */
+    private Path faceIndexPath() {
+        String base = System.getProperty("face.store.dir", ".");
+        return Paths.get(base).resolve("face").resolve("face-index");
     }
 
     /**

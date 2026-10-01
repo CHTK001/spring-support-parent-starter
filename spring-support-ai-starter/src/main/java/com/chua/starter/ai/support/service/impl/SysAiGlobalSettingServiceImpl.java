@@ -269,17 +269,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         log.info("[SysAiGlobalSetting] 分组 {} 配置已更新，共 {} 项", group, fields == null ? 0 : fields.size());
 
         // 发布配置变更事件，触发对应能力模块热重建（如人脸识别实时生效）
-        try {
-            eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
-            if ("ocr".equals(group)) {
-                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
-            }
-            if ("rag".equals(group)) {
-                eventPublisher.publishEvent(new RagSettingsChangedEvent(group));
-            }
-        } catch (Exception e) {
-            log.warn("[SysAiGlobalSetting] 发布配置变更事件失败: {}", e.getMessage());
-        }
+        publishSettingsChanged(group);
     }
 
     /**
@@ -331,6 +321,33 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
         evictCache(group, field);
         log.debug("[SysAiGlobalSetting] upsertValue: group={}, field={}, value={}", group, field, value);
+        // 必须发变更事件：管理员在页面上改配置走的就是这个方法（逐字段 upsert），
+        // 而热重建（人脸 / OCR / RAG）只监听事件。此前这里**只 evict 缓存、不发事件**，
+        // 于是「在界面上改了人脸检测模型，必须重启才生效」—— 与「改配置即刻生效」的设计相悖。
+        // 实测：PUT /v2/settings/face 后 /v2/face/models 仍报「人脸能力未启用」，重启才恢复。
+        publishSettingsChanged(group);
+    }
+
+    /**
+     * 发布某个分组的配置变更事件，触发对应能力模块热重建。
+     *
+     * <p>各能力模块自己按 {@code group} 过滤（例如 {@code FaceClientManager} 只处理 face），
+     * 因此这里对所有分组统一发一次即可。</p>
+     *
+     * @param group 配置分组名
+     */
+    private void publishSettingsChanged(String group) {
+        try {
+            eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
+            if ("ocr".equals(group)) {
+                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
+            }
+            if ("rag".equals(group)) {
+                eventPublisher.publishEvent(new RagSettingsChangedEvent(group));
+            }
+        } catch (Exception e) {
+            log.warn("[SysAiGlobalSetting] 发布配置变更事件失败: {}", e.getMessage());
+        }
     }
 
     /**

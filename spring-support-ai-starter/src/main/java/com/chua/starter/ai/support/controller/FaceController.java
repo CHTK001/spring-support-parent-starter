@@ -9,14 +9,15 @@ import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.starter.ai.support.service.AiFaceService;
-import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,18 @@ import java.util.Map;
  *
  * <p>提供人脸识别单独能力、链式管线能力与辅助能力的对外接口，
  * 全部配置读取自 {@code face} 分组全局设置，配置变更实时生效。</p>
+ *
+ * <p><b>鉴权口径：登录即可用，不再要求管理员。</b>改造前这里 19 个接口全标
+ * {@code @Permission("admin")}，理由是「人脸库是全局共享资源」。现在底库已
+ * **按账号隔离**（{@code <工作目录>/<账号>/face/}，各账号一个索引文件与一份快照），
+ * 每个账号只增删自己的库，该理由不再成立，因此把门槛降到「必须登录」。</p>
+ *
+ * <p><b>匿名访问仍被拒</b>：所有出口最终都会走到 {@code AiUserContext.requireUserId()}
+ * （经底库门面解析账号），未登录时抛 401。</p>
+ *
+ * <p><b>人脸库现在会持久化</b>：改造前完全依赖 jvector 自身落盘，实测「登记后重启，
+ * 1:N 命中从 1 条变 0 条」；现在每个账号另有 {@code index.json} 快照（含向量），
+ * 启动据此重建索引，与「以图搜图」同一套做法。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -57,7 +71,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸检测", description = "检测图片中的人脸位置、数量与活体状态")
     @PostMapping("/detect")
     public ReturnResult<?> detect(@RequestParam("file") MultipartFile file) {
@@ -85,7 +98,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸特征提取", description = "提取图片中人脸的特征向量")
     @PostMapping("/feature")
     public ReturnResult<?> feature(@RequestParam("file") MultipartFile file) {
@@ -96,7 +108,7 @@ public class FaceController {
             float[] feature = faceService.extractFeature(file.getBytes());
             return ReturnResult.ok(Map.of("feature", feature));
         } catch (Exception e) {
-            log.error("[Face] 特征提取失败: {}", e.getMessage());
+            log.error("[Face] 特征提取失败", e);
             return ReturnResult.error("特征提取失败: " + e.getMessage());
         }
     }
@@ -110,7 +122,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸对齐", description = "detect→crop→liveness→align，返回 5 点仿射旋转后的对齐人脸图")
     @PostMapping(value = "/align", produces = MediaType.APPLICATION_JSON_VALUE)
     public ReturnResult<?> align(@RequestParam("file") MultipartFile file) {
@@ -122,15 +133,17 @@ public class FaceController {
             if (r == null) {
                 return ReturnResult.ok(Map.of("matched", false));
             }
-            return ReturnResult.ok(Map.of(
-                    "matched", true,
-                    "box", r.box(),
-                    "alignedFace", r.alignedFace(),
-                    "live", r.live(),
-                    "liveScore", r.liveScore(),
-                    "elapsedMs", r.elapsedMs()));
+            // alignedFace 在「未能对齐」时可能为 null，而 Map.of 会拒绝 null 值 → 用容忍 null 的 Map
+            Map<String, Object> body = new LinkedHashMap<>(7);
+            body.put("matched", true);
+            body.put("box", r.box());
+            body.put("alignedFace", r.alignedFace());
+            body.put("live", r.live());
+            body.put("liveScore", r.liveScore());
+            body.put("elapsedMs", r.elapsedMs());
+            return ReturnResult.ok(body);
         } catch (Exception e) {
-            log.error("[Face] 人脸对齐失败: {}", e.getMessage());
+            log.error("[Face] 人脸对齐失败", e);
             return ReturnResult.error("人脸对齐失败: " + e.getMessage());
         }
     }
@@ -143,7 +156,6 @@ public class FaceController {
      * @return 相似度与判定
      * @param @RequestParam("fileA" @请求参数("文件a"
      */
-    @Permission("admin")
     @Operation(summary = "人脸比对", description = "1:1 人脸比对（detect→crop→liveness→align→feature→cosine），返回相似度与是否同一人")
     @PostMapping("/compare")
     public ReturnResult<?> compare(@RequestParam("fileA") MultipartFile fileA,
@@ -174,7 +186,7 @@ public class FaceController {
                     "elapsedMs", r.elapsedMs()
             ));
         } catch (Exception e) {
-            log.error("[Face] 人脸比对失败: {}", e.getMessage());
+            log.error("[Face] 人脸比对失败", e);
             return ReturnResult.error("人脸比对失败: " + e.getMessage());
         }
     }
@@ -188,7 +200,6 @@ public class FaceController {
      * @return 登记结果
      * @param @RequestParam("id" @请求参数("标识"
      */
-    @Permission("admin")
     @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库，取最大人脸")
     @PostMapping("/enroll")
     public ReturnResult<?> enroll(@RequestParam("id") String id,
@@ -205,7 +216,7 @@ public class FaceController {
             boolean success = faceService.enrollPipeline(id, file.getBytes(), meta);
             return success ? ReturnResult.ok("登记成功") : ReturnResult.error("登记失败");
         } catch (Exception e) {
-            log.error("[Face] 人脸登记失败: {}", e.getMessage());
+            log.error("[Face] 人脸登记失败", e);
             return ReturnResult.error("人脸登记失败: " + e.getMessage());
         }
     }
@@ -219,7 +230,6 @@ public class FaceController {
      * @return 登记结果
      * @param @RequestParam("id" @请求参数("标识"
      */
-    @Permission("admin")
     @Operation(summary = "人脸登记（特征向量）", description = "直接用特征向量入库，不跑管线；适用已提取特征或外部导入场景")
     @PostMapping("/enroll-feature")
     public ReturnResult<?> enrollFeature(@RequestParam("id") String id,
@@ -234,7 +244,7 @@ public class FaceController {
             boolean success = faceService.enrollFeature(id, vector, meta);
             return success ? ReturnResult.ok("登记成功") : ReturnResult.error("登记失败");
         } catch (Exception e) {
-            log.error("[Face] 特征入库失败: {}", e.getMessage());
+            log.error("[Face] 特征入库失败", e);
             return ReturnResult.error("特征入库失败: " + e.getMessage());
         }
     }
@@ -248,7 +258,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸识别", description = "1:N 人脸识别，返回 TopK 命中")
     @PostMapping("/identify")
     public ReturnResult<?> identify(@RequestParam("file") MultipartFile file) {
@@ -260,14 +269,17 @@ public class FaceController {
             if (hit == null) {
                 return ReturnResult.ok(Map.of("matched", false, "hits", List.of()));
             }
-            return ReturnResult.ok(Map.of(
-                    "matched", hit.bestId() != null,
-                    "bestId", hit.bestId(),
-                    "bestScore", hit.bestScore(),
-                    "hits", hit.hits() == null ? List.of() : hit.hits()
-            ));
+            // 必须用容忍 null 的 Map：库为空时 hit.bestId() 是 null，
+            // 而 Map.of(...) **拒绝 null 值**，会直接抛 NPE ——
+            // 表现为「新账号/空库第一次识别就报 人脸识别失败: null」。
+            Map<String, Object> body = new LinkedHashMap<>(4);
+            body.put("matched", hit.bestId() != null);
+            body.put("bestId", hit.bestId());
+            body.put("bestScore", hit.bestScore());
+            body.put("hits", hit.hits() == null ? List.of() : hit.hits());
+            return ReturnResult.ok(body);
         } catch (Exception e) {
-            log.error("[Face] 人脸识别失败: {}", e.getMessage());
+            log.error("[Face] 人脸识别失败", e);
             return ReturnResult.error("人脸识别失败: " + e.getMessage());
         }
     }
@@ -280,7 +292,6 @@ public class FaceController {
      * @return 检索结果
      * @param @RequestParam("feature" @请求参数("特征"
      */
-    @Permission("admin")
     @Operation(summary = "人脸检索", description = "按特征向量检索人脸库")
     @GetMapping("/search")
     public ReturnResult<?> search(@RequestParam("feature") String feature,
@@ -290,8 +301,45 @@ public class FaceController {
             List<FaceSearchHit> hits = faceService.search(vector, topK);
             return ReturnResult.ok(Map.of("hits", hits));
         } catch (Exception e) {
-            log.error("[Face] 人脸检索失败: {}", e.getMessage());
+            log.error("[Face] 人脸检索失败", e);
             return ReturnResult.error("人脸检索失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 列出当前账号人脸库中已登记的条目。
+     *
+     * <p>改造前后端没有这个出口，前端只能把「登记簿」存在浏览器本地（见
+     * {@code useFaceRegistry.ts}）—— 于是同一份服务端人脸的档案在不同浏览器/账号下
+     * 看到的并不一致。快照里本来就存了登记时传入的元数据，这里把它读回来。</p>
+     *
+     * @return 已登记条目（id + 元数据，不含向量）
+     */
+    @Operation(summary = "人脸库列表", description = "列出当前账号人脸库中已登记的条目")
+    @GetMapping("/list")
+    public ReturnResult<?> list() {
+        try {
+            return ReturnResult.ok(Map.of("items", faceService.list(), "total", faceService.list().size()));
+        } catch (Exception e) {
+            log.error("[Face] 人脸库列表失败", e);
+            return ReturnResult.error("人脸库列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从当前账号人脸库删除一条（向量索引与快照同步删除）。
+     *
+     * @param id 人脸 标识
+     * @return 是否删除成功
+     */
+    @Operation(summary = "删除人脸", description = "从当前账号人脸库删除一条记录")
+    @DeleteMapping("/{id}")
+    public ReturnResult<?> delete(@PathVariable("id") String id) {
+        try {
+            return ReturnResult.ok(faceService.remove(id));
+        } catch (Exception e) {
+            log.error("[Face] 人脸删除失败", e);
+            return ReturnResult.error("人脸删除失败: " + e.getMessage());
         }
     }
 
@@ -303,7 +351,6 @@ public class FaceController {
      * @return 核验结果
      * @param @RequestParam("id" @请求参数("标识"
      */
-    @Permission("admin")
     @Operation(summary = "人脸核验", description = "核验指定人脸 ID 与图片是否匹配")
     @PostMapping("/verify")
     public ReturnResult<?> verify(@RequestParam("id") String id,
@@ -315,7 +362,7 @@ public class FaceController {
             boolean matched = faceService.verify(id, file.getBytes());
             return ReturnResult.ok(Map.of("matched", matched));
         } catch (Exception e) {
-            log.error("[Face] 人脸核验失败: {}", e.getMessage());
+            log.error("[Face] 人脸核验失败", e);
             return ReturnResult.error("人脸核验失败: " + e.getMessage());
         }
     }
@@ -329,7 +376,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "活体检测", description = "检测人脸是否为活体")
     @PostMapping("/liveness")
     public ReturnResult<?> liveness(@RequestParam("file") MultipartFile file) {
@@ -341,7 +387,7 @@ public class FaceController {
             float score = faceService.liveScore(file.getBytes());
             return ReturnResult.ok(Map.of("live", live, "score", score));
         } catch (Exception e) {
-            log.error("[Face] 活体检测失败: {}", e.getMessage());
+            log.error("[Face] 活体检测失败", e);
             return ReturnResult.error("活体检测失败: " + e.getMessage());
         }
     }
@@ -355,7 +401,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "动漫人脸检测", description = "检测动漫/二次元图片中的人脸")
     @PostMapping("/anime-detect")
     public ReturnResult<?> animeDetect(@RequestParam("file") MultipartFile file) {
@@ -366,7 +411,7 @@ public class FaceController {
             List<DetectionInfo> results = faceService.animeDetect(file.getBytes());
             return ReturnResult.ok(Map.of("count", results.size(), "faces", results));
         } catch (Exception e) {
-            log.error("[Face] 动漫人脸检测失败: {}", e.getMessage());
+            log.error("[Face] 动漫人脸检测失败", e);
             return ReturnResult.error("动漫人脸检测失败: " + e.getMessage());
         }
     }
@@ -380,7 +425,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸超分", description = "GFPGAN/ESRGAN 人脸超分辨率")
     @PostMapping(value = "/super-resolution", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> superResolution(@RequestParam("file") MultipartFile file) {
@@ -404,7 +448,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸修复", description = "CodeFormer 人脸修复（老照片/模糊人脸）")
     @PostMapping(value = "/restore", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> restore(@RequestParam("file") MultipartFile file) {
@@ -414,7 +457,7 @@ public class FaceController {
                     .contentType(MediaType.IMAGE_PNG)
                     .body(result);
         } catch (Exception e) {
-            log.error("[Face] 人脸修复失败: {}", e.getMessage());
+            log.error("[Face] 人脸修复失败", e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -428,7 +471,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸属性分析", description = "年龄/性别/种族属性识别")
     @PostMapping("/attributes")
     public ReturnResult<?> attributes(@RequestParam("file") MultipartFile file) {
@@ -439,7 +481,7 @@ public class FaceController {
             String result = faceService.analyzeAttributes(file.getBytes());
             return ReturnResult.ok(Map.of("attributes", result));
         } catch (Exception e) {
-            log.error("[Face] 人脸属性分析失败: {}", e.getMessage());
+            log.error("[Face] 人脸属性分析失败", e);
             return ReturnResult.error("人脸属性分析失败: " + e.getMessage());
         }
     }
@@ -453,7 +495,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸表情识别", description = "识别图片中的人脸表情")
     @PostMapping("/emotion")
     public ReturnResult<?> emotion(@RequestParam("file") MultipartFile file) {
@@ -464,7 +505,7 @@ public class FaceController {
             String result = faceService.analyzeEmotion(file.getBytes());
             return ReturnResult.ok(Map.of("emotion", result));
         } catch (Exception e) {
-            log.error("[Face] 人脸表情识别失败: {}", e.getMessage());
+            log.error("[Face] 人脸表情识别失败", e);
             return ReturnResult.error("人脸表情识别失败: " + e.getMessage());
         }
     }
@@ -478,7 +519,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸关键点", description = "人脸 106 点关键点定位")
     @PostMapping("/landmark")
     public ReturnResult<?> landmark(@RequestParam("file") MultipartFile file) {
@@ -489,7 +529,7 @@ public class FaceController {
             float[] points = faceService.landmark(file.getBytes());
             return ReturnResult.ok(Map.of("points", points));
         } catch (Exception e) {
-            log.error("[Face] 人脸关键点失败: {}", e.getMessage());
+            log.error("[Face] 人脸关键点失败", e);
             return ReturnResult.error("人脸关键点失败: " + e.getMessage());
         }
     }
@@ -503,7 +543,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "人脸质量评估", description = "评估人脸图片质量（模糊/亮度/人脸占比）")
     @PostMapping("/quality")
     public ReturnResult<?> quality(@RequestParam("file") MultipartFile file) {
@@ -524,7 +563,7 @@ public class FaceController {
                     "faceOk", info.faceOk()
             ));
         } catch (Exception e) {
-            log.error("[Face] 人脸质量评估失败: {}", e.getMessage());
+            log.error("[Face] 人脸质量评估失败", e);
             return ReturnResult.error("人脸质量评估失败: " + e.getMessage());
         }
     }
@@ -538,7 +577,6 @@ public class FaceController {
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Permission("admin")
     @Operation(summary = "换脸检测", description = "检测图片是否疑似 AI 换脸")
     @PostMapping("/deepfake")
     public ReturnResult<?> deepfake(@RequestParam("file") MultipartFile file) {
@@ -549,7 +587,7 @@ public class FaceController {
             boolean result = faceService.isDeepfake(file.getBytes());
             return ReturnResult.ok(Map.of("deepfake", result));
         } catch (Exception e) {
-            log.error("[Face] 换脸检测失败: {}", e.getMessage());
+            log.error("[Face] 换脸检测失败", e);
             return ReturnResult.error("换脸检测失败: " + e.getMessage());
         }
     }
@@ -559,7 +597,6 @@ public class FaceController {
      *
      * @return 可用模型清单
      */
-    @Permission("admin")
     @Operation(summary = "人脸模型清单", description = "枚举可用的人脸检测/特征/活体/超分等模型")
     @GetMapping("/models")
     public ReturnResult<?> models() {
