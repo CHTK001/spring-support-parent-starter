@@ -237,13 +237,27 @@ public class EduPaperScanner {
                 continue;
             }
             var matcher = SELF_NO_PREFIX.matcher(line);
-            if (matcher.find()) {
+            if (SUB_ITEM_PREFIX.matcher(line).find()) {
+                // 子项（1）/1）：既不新起一题（会与主题号撞号，实测把选择题判成 0 分），
+                // 也不并入上一题作答（会把作答拉长、稀释相似度：实测 13 字标准答案并进子项后
+                // 只剩 0.6，正确作答被判 0 分）。故与「大节标题」同样丢弃。
+                log.debug("[EduScan] 跳过子项: {}", line);
+            } else if (matcher.find()) {
                 appendQuestion(list, no, answer);
                 no = matcher.group().trim();
                 answer = new StringBuilder(line.substring(matcher.end()).trim());
             } else if (isSectionHeader(line)) {
                 // 大节标题：丢弃。绝不能并入上一题作答（实测会把 Q10 的「错」污染成「错儿、简答影」→ 0 分）
                 log.debug("[EduScan] 跳过大节标题: {}", line);
+            } else if (no != null && LOOSE_ITEM_PREFIX.matcher(line).find()) {
+                // OCR 把题号读错（8. → B.）时这一行其实是下一题的起点；
+                // 若当续行并入上一题，会把上一题的正确答案污染成 0 分、下一题整题消失。
+                var loose = LOOSE_ITEM_PREFIX.matcher(line);
+                loose.find();
+                log.info("[EduScan] 宽松识别到疑似新题号: {}", loose.group().trim());
+                appendQuestion(list, no, answer);
+                no = loose.group().trim();
+                answer = new StringBuilder(line.substring(loose.end()).trim());
             } else if (no != null) {
                 // 当前题的作答续行
                 if (answer.length() > 0) {
@@ -288,8 +302,27 @@ public class EduPaperScanner {
      */
     private static final java.util.regex.Pattern SELF_NO_PREFIX =
             java.util.regex.Pattern.compile(
-                    "^\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;）)]\\s*"
+                    "^\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*"
                             + "|^\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.。、,，：:；;]?\\s*");
+
+    /**
+     * 子项前缀：{@code 1）} / {@code 1)} / {@code （1）} 这类「括号编号」。
+     *
+     * <p>真实卷里它是大题下面的小问，与主题号 {@code 1.} 撞号。归入上一题作答，
+     * 绝不作为独立题号参与匹配（实测会把它配到第 1、2 题，把选择题判成 0 分）。</p>
+     */
+    private static final java.util.regex.Pattern SUB_ITEM_PREFIX =
+            java.util.regex.Pattern.compile("^\\s*[（(]?\\s*[0-9lLI]{1,3}\\s*[)）]\\s*");
+
+    /**
+     * 宽松的「新条目」前缀：开头 1~3 个字母/数字 + 分隔符（如 {@code 8.} 被 OCR 读成 {@code B.}）。
+     *
+     * <p>用于兜住「题号被认错 → 下一题被并进上一题作答」：实测干净硬卷里 {@code 8.} 被读成
+     * {@code B.}，于是 Q8 的作答并进了 Q7，Q7 变成 {@code 主次不分 B.做了糊涂事} 判 0 分、
+     * 且 Q8 整题消失。这里把它当新条目切出来，匹配交由 matchRelation + 前缀改派处理。</p>
+     */
+    private static final java.util.regex.Pattern LOOSE_ITEM_PREFIX =
+            java.util.regex.Pattern.compile("^\\s*[0-9A-Za-zlLIgGqQ]{1,3}\\s*[.。、,，．：:；;]\\s*");
 
     /**
      * 中文数字序号开头的大节标题形态（一、二、三、…）。
