@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -78,14 +79,30 @@ public class ServerFilterFactory {
 
     /**
      * 文件storagesetting 布尔开关映射的参数名
+     *
+     * <p>必须与 {@code ServerManageServiceImpl#fileStorageParams} 声明的 schema 保持一致：
+     * 此处缺失的键会被 {@link #applySettingParams} 记 WARN 后丢弃，schema 却仍显示可配。</p>
      */
     private static final List<String> SETTING_BOOLEAN_KEYS = List.of(
-            "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars", "layout");
+            "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars",
+            "layout", "showFormat", "showSize", "showTime");
 
     /**
      * 文件storagesetting 字符串参数映射的参数名
+     *
+     * <p>与 {@link #SETTING_BOOLEAN_KEYS} 同源约束，须与 schema 声明保持一致。</p>
      */
-    private static final List<String> SETTING_STRING_KEYS = List.of("watermark", "layoutType");
+    private static final List<String> SETTING_STRING_KEYS = List.of("watermark", "layoutType", "imageFilter");
+
+    /**
+     * 枚举型字符串参数的枚举类简单名（定义在 {@code FileStorageSetting} 的嵌套枚举里）。
+     *
+     * <p>只有 {@code layoutType} 在此校验；{@code imageFilter} 的合法值取决于 ImageFilter SPI
+     * 实际注册了哪些扩展名，由运行期的 {@code FileStorageServerFilter} 用 SPI 名单校验，
+     * 启动路径拿不到该名单，故不在这里重复。</p>
+     */
+    private static final Map<String, String> SETTING_ENUM_TYPES = Map.of(
+            "layoutType", "LayoutType");
 
     /**
      * 应用上下文
@@ -341,6 +358,7 @@ public class ServerFilterFactory {
                     Method method = storageSetting.getClass().getMethod(setter, boolean.class); // [P3C 1.10 豁免] 动态 setter 定位需保留失败即抛语义，ReflectUtils 静默降级不适用
                     method.invoke(storageSetting, parseBoolean(value));
                 } else if (SETTING_STRING_KEYS.contains(key)) {
+                    validateEnumParam(key, value, storageSetting);
                     Method method = storageSetting.getClass().getMethod(setter, String.class); // [P3C 1.10 豁免] 动态 setter 定位需保留失败即抛语义，ReflectUtils 静默降级不适用
                     method.invoke(storageSetting, value);
                 } else {
@@ -351,6 +369,45 @@ public class ServerFilterFactory {
                         + " (" + e.getMessage() + ")", e);
             }
         }
+    }
+
+    /**
+     * 校验枚举型字符串参数取值合法。
+     *
+     * <p>运行期的热更新由插件自身校验（{@code FileStorageServerFilter#applyStringSetting}），
+     * 但启动与过滤器重建走的是本方法 {@link #applySettingParams}。此处不拦一道的话，
+     * 非法值会被直接 set 进 setting：节点照常启动、端口照常监听，只是布局永远落到 else 分支，
+     * 直到用户在页面上看到一个下拉框里根本不存在的选项才发现。</p>
+     *
+     * @param key            参数名
+     * @param value          参数值
+     * @param storageSetting 目标 setting 实例（用于定位其嵌套枚举类）
+     * @throws IllegalArgumentException 取值不在枚举常量集合内
+     */
+    private void validateEnumParam(String key, String value, Object storageSetting) {
+        String enumSimpleName = SETTING_ENUM_TYPES.get(key);
+        if (enumSimpleName == null) {
+            return;
+        }
+        Class<?> enumClass;
+        try {
+            // [P3C 1.10 豁免] 需按 setting 实例的运行时类定位其嵌套枚举，ReflectUtils 无对应入口
+            enumClass = Class.forName(storageSetting.getClass().getName() + "$" + enumSimpleName);
+        } catch (ClassNotFoundException e) {
+            log.debug("[ServerFilterFactory] 未找到枚举类，跳过校验: {}${}", storageSetting.getClass().getName(), enumSimpleName);
+            return;
+        }
+        Object[] constants = enumClass.getEnumConstants();
+        if (constants == null) {
+            return;
+        }
+        String trimmed = value == null ? "" : value.trim();
+        for (Object constant : constants) {
+            if (String.valueOf(constant).equalsIgnoreCase(trimmed)) {
+                return;
+            }
+        }
+        throw new IllegalArgumentException(key + " 取值非法: " + value + "，可选值: " + Arrays.toString(constants));
     }
 
     /**

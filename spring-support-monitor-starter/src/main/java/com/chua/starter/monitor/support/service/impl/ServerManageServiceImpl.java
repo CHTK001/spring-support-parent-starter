@@ -249,11 +249,11 @@ public class ServerManageServiceImpl implements ServerManageService {
             node.setCreateName(exists.getCreateName());
             node.setCreateBy(exists.getCreateBy());
             node.setCreateTime(exists.getCreateTime());
-            nodeMapper.updateById(node);
 
             ServerHotUpdateResult result = new ServerHotUpdateResult();
             if (!wasRunning) {
                 // 未运行：仅持久化定义，等待下次启动
+                nodeMapper.updateById(node);
                 result.setHotApplied(false);
                 result.setRestarted(false);
                 result.addAppliedItem("定义已保存(节点未运行, 下次启动生效)");
@@ -262,10 +262,15 @@ public class ServerManageServiceImpl implements ServerManageService {
                 return ReturnResult.ok(result);
             }
 
+            // 运行中：先落到运行态、成功后再落库。运行态构造/装配失败（如过滤器参数非法）
+            // 时抛错，此时尚未持久化，不会留下「库里存着非法值、运行态却是旧值」的分叉；
+            // 那种分叉要等下次启动才暴露，而启动路径同样会因非法值报错、把节点直接打成 ERROR。
+            // start/hotUpdateFilters 均使用内存中的 node，不回读数据库，故后移落库是安全的。
             if (listeningChanged) {
                 // 监听参数变更：先停后起
                 nodeRegistry.stop(id);
                 nodeRegistry.start(node);
+                nodeMapper.updateById(node);
                 result.setHotApplied(false);
                 result.setRestarted(true);
                 result.addAppliedItem("监听参数变更, 服务器已重启");
@@ -277,6 +282,7 @@ public class ServerManageServiceImpl implements ServerManageService {
 
             // 监听参数未变：仅热更新过滤器链
             nodeRegistry.hotUpdateFilters(node);
+            nodeMapper.updateById(node);
             result.setHotApplied(true);
             result.setRestarted(false);
             result.addAppliedItem("过滤器链已热更新");
@@ -501,6 +507,12 @@ public class ServerManageServiceImpl implements ServerManageService {
     /**
      * 文件服务器预设参数（含枚举选项，前端可直接渲染下拉）。
      *
+     * <p>与 {@code ServerFilterFactory} 的 {@code SETTING_BOOLEAN_KEYS} /
+     * {@code SETTING_STRING_KEYS} 白名单严格一致：该白名单之外的键只会被
+     * {@code applySettingParams} 记一条 WARN 后丢弃，即「声明了但不生效」。
+     * 反之像 {@code layout} 这类必填开关若漏声明，前端 schema 驱动表单就渲染不出它，
+     * 只能改数据库，用户无从开启（目录列表页曾因此恒为 404）。</p>
+     *
      * @return 参数列表
      */
     private List<ServerPluginParamVO> fileStorageParams() {
@@ -512,6 +524,7 @@ public class ServerManageServiceImpl implements ServerManageService {
         params.add(param("openRemoteFile", "false", "是否允许远程文件透传", "boolean"));
         params.add(param("openWebjars", "true", "是否开放 webjars", "boolean"));
         params.add(param("watermark", "", "水印文本", "string"));
+        params.add(param("layout", "false", "是否开启目录列表页（关闭时访问目录返回 404）", "boolean"));
         params.add(param("showFormat", "true", "目录列表显示文件格式", "boolean"));
         params.add(param("showSize", "true", "目录列表显示文件大小", "boolean"));
         params.add(param("showTime", "true", "目录列表显示修改时间", "boolean"));
@@ -655,7 +668,21 @@ public class ServerManageServiceImpl implements ServerManageService {
             try {
                 nodeRegistry.start(node);
             } catch (Exception e) {
+                // 定义已落库（用户能在列表里看到并修正），但运行态没起来。
+                // 此时必须让 success=false：原先只记一条 WARN 后一律返回 ok，于是出现
+                // 「HTTP 200 + success=true」而载荷里 status=ERROR 的自相矛盾结果，
+                // 只看 success 的调用方（含前端列表刷新逻辑）会把失败当成成功。
                 log.warn("[ServerManage] 节点 [{}] 启动失败(定义已保存): {}", node.getName(), e.getMessage());
+                return ReturnResult.error("节点已保存但启动失败: " + e.getMessage());
+            }
+            // start 未抛异常不等于真的起来了：SPI 内部会把实例化异常吞成 null，
+            // 或服务器在 doStart 阶段静默失败。这里再核一次运行态，避免漏判。
+            RuntimeServer runtime = nodeRegistry.get(node.getId());
+            if (runtime == null || !"RUNNING".equals(runtime.status())) {
+                String reason = runtime != null && runtime.getError() != null
+                        ? runtime.getError() : "运行态未进入 RUNNING 状态";
+                log.warn("[ServerManage] 节点 [{}] 启动未成功(定义已保存): {}", node.getName(), reason);
+                return ReturnResult.error("节点已保存但启动失败: " + reason);
             }
         }
         return ReturnResult.ok(toView(node));
