@@ -35,6 +35,16 @@ spring:
         - classpath:db/init/V1.0__init_all_ai.sql
         # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
         - classpath:db/init/V1.0__init_all_datasource_hub.sql
+      # 种子数据必须显式列出 data-locations，否则 initdata 从不执行：
+      # 早先只配了 schema-locations，导致 ms_monitor_config / ms_monitor_alarm_policy /
+      # ms_monitor_alarm_rule 三张表全为空（保留期配置与 4 条项目守护告警规则从未落地）。
+      # 这几份 initdata 都是幂等的（monitor 每条 INSERT 带 WHERE/AND NOT EXISTS，
+      # server 用 INSERT IGNORE / ON DUPLICATE KEY），因此 mode=always 下反复执行不会产生重复行。
+      data-locations:
+        - classpath:db/init/V1.0__initdata_all_monitor.sql
+        - classpath:db/init/V1.0__initdata_all_server.sql
+        - classpath:db/init/V1.0__initdata_all_ai.sql
+        - classpath:db/init/V1.0__initdata_all_datasource_hub.sql
         # 注：bot_binding 补列 / tshark / exec_job type / host ssh_enabled 等脚本
         # 在本次重构中被合并/删除（本地脚本易被还原），故不再单列，避免启动缺文件拦截
 

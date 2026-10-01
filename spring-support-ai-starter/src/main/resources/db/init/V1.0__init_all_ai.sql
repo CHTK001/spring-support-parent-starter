@@ -1428,3 +1428,16 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
     KEY `sys_ai_service_instance_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 服务实例（端口/协议开关/用量记录）';
 
+-- ------------------------------------------------------------
+-- 存量库兼容 ALTER（新建库上方 CREATE TABLE 已含该列，此处只对老库生效）
+-- sys_ai_generate_task_elapsed：生成耗时（毫秒），由任务完成时回写。
+-- 该列在 sys_ai_generate_task 建表之后才加入，老库靠 CREATE TABLE IF NOT EXISTS
+-- 不会补列，运行期 SELECT 因而报 Unknown column 'sys_ai_generate_task_elapsed'
+-- （实测每个轮询周期一条，日志被刷满）。
+-- 刻意写裸 ADD COLUMN 的理由与 datasource_hub 的兼容 ALTER 相同：
+-- 幂等写法依赖未引入的 MysqlScriptConverter，重复执行报 1060 由
+-- DataSourceFlyway 的 continueOnError 跳过。
+-- ------------------------------------------------------------
+ALTER TABLE `sys_ai_generate_task`
+    ADD COLUMN `sys_ai_generate_task_elapsed` BIGINT NULL COMMENT '生成耗时（毫秒）';
+

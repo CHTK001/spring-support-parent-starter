@@ -62,6 +62,16 @@ public class ReleaseServiceImpl implements ReleaseService {
      * 备份保留数量：每次备份后只保留最新 N 个，清理更旧的，防止备份无限增长撑满磁盘
      */
     private static final int MAX_BACKUPS = 10;
+
+    /**
+     * 启动参数里的业务端口：{@code --server.port=8112}
+     */
+    private static final Pattern SERVER_PORT_ARG = Pattern.compile("--server\\.port=(\\d{1,5})");
+
+    /**
+     * 外部配置里的业务端口：{@code server.port=8112}
+     */
+    private static final Pattern SERVER_PORT_PROP = Pattern.compile("server\\.port\\s*=\\s*(\\d{1,5})");
     /**
      * SFTP 服务（拖拽升级上传安装包，Linux）
      */
@@ -1192,7 +1202,53 @@ public class ReleaseServiceImpl implements ReleaseService {
     private String guardedRestartCommand(ProjectPlatformProvider pf, String projectPath,
                                          MsServerProject project, boolean restart) {
         return pf.guardedRestart(projectPath, project.getRestartScript(), project.getStopScript(),
-                project.getStartScript(), project.getStatusScript(), restart);
+                project.getStartScript(), project.getStatusScript(), restart, resolveHealthPort(project));
+    }
+
+    /**
+     * 从项目配置里解析业务端口，供健康检查做端口探活。
+     *
+     * <p>解析顺序与「实际生效」一致：显式启动参数（{@code --server.port=}）优先于
+     * 外部配置文件里的 {@code server.port=}，两者都没有则返回 0（不做端口探活）。
+     * 解析失败一律返回 0 而不是抛错——端口只是增强判据，不能因为它让升级流程中断。</p>
+     *
+     * @param project 项目配置
+     * @return 端口号；无法确定时为 0
+     */
+    private int resolveHealthPort(MsServerProject project) {
+        int port = firstPort(SERVER_PORT_ARG, project.getCmdArgs());
+        if (port <= 0) {
+            port = firstPort(SERVER_PORT_ARG, project.getJvmArgs());
+        }
+        if (port <= 0) {
+            port = firstPort(SERVER_PORT_PROP, project.getAppConfig());
+        }
+        return port;
+    }
+
+    /**
+     * 取文本中第一个匹配到的合法端口号。
+     *
+     * @param pattern 端口正则（首个捕获组为端口）
+     * @param text    待解析文本，可为空
+     * @return 合法端口号；未匹配或越界时为 0
+     */
+    private int firstPort(Pattern pattern, String text) {
+        if (isBlank(text)) {
+            return 0;
+        }
+        Matcher m = pattern.matcher(text);
+        while (m.find()) {
+            try {
+                int v = Integer.parseInt(m.group(1));
+                if (v > 0 && v <= 65535) {
+                    return v;
+                }
+            } catch (NumberFormatException ignored) {
+                // 超出 int 范围的数字串直接跳过，继续找下一个候选
+            }
+        }
+        return 0;
     }
 
     // ---------- 系统服务（Linux systemd）----------
