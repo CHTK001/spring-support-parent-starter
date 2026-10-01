@@ -10,6 +10,7 @@ import com.chua.common.support.network.sip.SipServer;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
@@ -185,10 +186,41 @@ public class ServerNodeRegistry {
             runtimes.put(node.getId(), runtime);
             return runtime;
         } catch (Exception e) {
-            runtime.setError(e.getMessage());
+            runtime.setError(describeFailure(e));
             runtimes.put(node.getId(), runtime);
             throw e;
         }
+    }
+
+    /**
+     * 生成写入运行态快照的失败描述：外层消息 + 最内层根因。
+     *
+     * <p>原实现只取 {@code e.getMessage()}，于是节点 error 里只有
+     * 「FTPS 服务器启动失败」这种包装文案，真实原因（实测为
+     * {@code java.net.BindException: Address already in use}，出在
+     * {@code FtpsServer.doStart} 的 bind 调用）完全看不到 ——
+     * 这正是 FTPS 间歇性启动失败长期无法定位的直接原因：日志里有完整 cause 链，
+     * 但接口和界面上的错误字段把它丢了。</p>
+     *
+     * <p>下钻规则复用 {@link ClassUtils#describeRootCause(Throwable)}，
+     * 不在此处另写一份，避免两处规则日后分叉。</p>
+     *
+     * @param e 捕获到的异常
+     * @return 可直接写入 error 字段的描述
+     */
+    static String describeFailure(Exception e) {
+        var outer = e.getMessage();
+        // 没有 cause 就没有「更内层」可言，直接返回外层消息。
+        // 不能靠比较字符串去重：describeRootCause 返回的是「类型名: 消息」，
+        // 与裸消息永远不相等，那样判据形同虚设，反而把同一句话拼两遍。
+        if (null == e.getCause()) {
+            return outer;
+        }
+        var root = ClassUtils.describeRootCause(e);
+        if (null == root) {
+            return outer;
+        }
+        return outer + "；根因：" + root;
     }
 
     /**
