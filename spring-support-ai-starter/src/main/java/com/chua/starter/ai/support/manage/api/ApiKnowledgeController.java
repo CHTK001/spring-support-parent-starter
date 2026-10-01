@@ -312,6 +312,9 @@ public class ApiKnowledgeController {
             kind = "local";
             managed = false;
             assertExternalRoot(rootPath);
+            // 统一存绝对路径：相对路径依赖进程 CWD，历史上因此出现过「同一个库两套结果」
+            // （不同工作目录的实例对 ./rag-uploads 解析到不同位置，一个 200 一个 404）。
+            rootPath = Paths.get(rootPath).toAbsolutePath().normalize().toString();
         } else {
             // 空白托管知识库
             kind = "blank";
@@ -1214,7 +1217,14 @@ public class ApiKnowledgeController {
 
         long start = System.currentTimeMillis();
         RagClient client = ragClientManager.current();
-        RagResponse response = client.query(query, topK, similarity);
+        RagResponse response;
+        try {
+            response = client.query(query, topK, similarity);
+        } catch (RuntimeException e) {
+            // 失败注入映射：外部 embedding SDK 的异常经 RagPipeline 包装后只剩
+            // 「Node execution failed: embedQuery」，前端无法分辨余额不足/密钥无效/限流/维度不符。
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, friendlyEmbeddingError(e));
+        }
 
         String prefix = knowledge_base_id + "/";
         List<Map<String, Object>> citations = new ArrayList<>();
@@ -1838,6 +1848,48 @@ public class ApiKnowledgeController {
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "root_path 不能指向托管上传目录: " + rootPath);
         }
+    }
+
+    /**
+     * 把 RAG 检索失败的原因链翻译成可操作的业务提示。
+     *
+     * <p>外部 embedding SDK 的异常（OpenAI 系 402/401/429 等）经 {@code RagPipeline} 包装后，
+     * 报文只剩「Node execution failed: embedQuery [node=embedQuery]」，前端只能看到
+     * {@code INTERNAL_ERROR}，无法判断到底是余额不足、密钥失效、被限流还是维度不符。
+     * 这里按报文特征识别常见几类，并给出下一步动作。</p>
+     *
+     * @param error 原始异常（可为 null）
+     * @return 面向用户的提示，尾部保留原始首行便于排查
+     */
+    private String friendlyEmbeddingError(Throwable error) {
+        String raw = error == null || error.getMessage() == null ? "" : error.getMessage();
+        String deepest = "";
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            if (StringUtils.hasText(t.getMessage())) {
+                deepest = t.getMessage();
+            }
+        }
+        String all = (raw + " " + deepest).toLowerCase();
+        if (all.contains("insufficient") || all.contains("balance") || all.contains("402")
+                || all.contains("欠费") || all.contains("余额")) {
+            return "向量模型调用被拒：账户余额不足。请到「设置中心 → 默认模型 → RAG」更换 Embedding 密钥或提供方，"
+                    + "或改用本地 onnx 引擎（免凭证）。原始信息: " + raw;
+        }
+        if (all.contains("401") || all.contains("unauthorized") || all.contains("invalid api key")
+                || all.contains("invalid_api_key")) {
+            return "向量模型调用被拒：API Key 无效或已过期。请到「设置中心 → 默认模型 → RAG → Embedding密钥」更新。原始信息: " + raw;
+        }
+        if (all.contains("429") || all.contains("rate limit") || all.contains("too many")) {
+            return "向量模型调用被限流（429）。请稍后重试，或更换提供方。原始信息: " + raw;
+        }
+        if (all.contains("模型未注册")) {
+            return "本地 embedding 模型未注册：" + deepest
+                    + "。请到「设置中心 → 默认模型 → RAG → Embedding模型」填写注册表里的模型 id（如 bge-large-zh-embedding）。";
+        }
+        if (all.contains("dimension") || all.contains("维度") || all.contains("shape")) {
+            return "向量维度不匹配：更换过 embedding 模型但向量库仍是旧维度。请用当前模型重新入库，或改用同维度模型。原始信息: " + raw;
+        }
+        return "知识库检索失败：embedding 调用未成功。请检查「设置中心 → 默认模型 → RAG」的引擎 / 模型 / 地址 / 密钥。原始信息: " + raw;
     }
 
     /**
