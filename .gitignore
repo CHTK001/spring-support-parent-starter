@@ -153,3 +153,6 @@ skills/
 e2e/playwright-report/
 monitor-agent/
 **/monitor-agent/
+
+# 部署打包产物（deploy/package.sh 输出，单个 ~800MB，不入库）
+dist/
