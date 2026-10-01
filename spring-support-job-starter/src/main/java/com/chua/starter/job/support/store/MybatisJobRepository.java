@@ -137,32 +137,33 @@ public class MybatisJobRepository implements JobRepository {
                 boolean doNothing = JobSpec.MISFIRE_DO_NOTHING.equalsIgnoreCase(
                         trimToNull(entity.getSysJobExecuteMisfireStrategy()));
                 if (missed && doNothing) {
-                    log.info("[job] misfire 跳过 job={} expected={} now={} strategy=DO_NOTHING",
-                            key, nextFire, now);
-                    // 必须跳到「再下一个槽位」并同时推进持久化基线, 否则派发序列不前进:
+                    log.info("[job] misfire 跳过 job={} expected={} now={} skipped={} strategy=DO_NOTHING",
+                            key, nextFire, now, missedSlotsBetween(entity, key, nextFire, now));
+                    // 跳过的同时把基线一次推过 now：错过的槽位**不再逐个跳**，否则每个槽位要占掉
+                    // 一个扫描拍次（leader 单秒扫描），落后一小时、周期 30 秒的任务就要空转 120 拍。
+                    // 必须同时推进持久化基线, 否则派发序列不前进:
                     // ① next_time 此时通常已经等于 nextFire, 写它是空写(且 Connector/J 默认
                     //    带 CLIENT_FOUND_ROWS, 空写也返回匹配行数, 看起来"成功"了);
                     // ② 跳过分支只写 next_time 不写 last_time, 持久化基线仍停在被跳过的槽位,
                     //    于是换个进程重算 nextFire 仍是同一个过期槽位 —— 该任务就永久不再触发,
                     //    表现为日志里反复出现同一 expected 的「misfire 跳过」。
-                    // 把 last_time 推到被跳过的槽位、next_time 推到下一个槽位, 跨进程才能收敛,
-                    // 追平未来后恢复正常派发。
-                    long pushed = nextFireAfter(entity, key, nextFire, now);
-                    if (pushed > 0L && pushed != nextFire && persistSkippedSlot(entity, nextFire, pushed)) {
-                        // 进程内基线必须与 persistSkippedSlot 写入的 last_time 保持一致（都是被跳过的
-                        // 那个槽位 nextFire），不能记成 pushed。记成 pushed 会让下一拍从 pushed 之后
-                        // 重新起算, 于是 pushed 这个槽位既没触发也没被跳过, 永远轮不到 —— 任务再也不跑。
-                        lastFireMs.put(key, nextFire);
+                    long skipTo = nextFireAfter(entity, key, now, now);
+                    if (skipTo > 0L && persistSkippedSlot(entity, now, skipTo)) {
+                        // 进程内基线必须与落库的 last_time 保持一致（都是 now），不能记成 skipTo:
+                        // 记成 skipTo 会让下一拍从 skipTo 之后起算, 于是 skipTo 这个槽位既没触发
+                        // 也没被跳过, 永远轮不到 —— 任务再也不跑。
+                        lastFireMs.put(key, now);
                     } else {
-                        log.warn("[job] misfire 跳过但无法推进派发序列 job={} expected={} pushed={}",
-                                key, nextFire, pushed);
+                        log.warn("[job] misfire 跳过但无法推进派发序列 job={} expected={} skipTo={}",
+                                key, nextFire, skipTo);
                     }
                     continue;
                 }
                 if (missed) {
-                    log.warn("[job] misfire 补发 1 次 job={} expected={} now={}", key, nextFire, now);
+                    log.warn("[job] misfire 补发 1 次并跳过历史槽位 job={} expected={} now={} skipped={}",
+                            key, nextFire, now, missedSlotsBetween(entity, key, nextFire, now));
                 }
-                // 落库的两个时刻都必须是「槽位」，不能一个是槽位一个是墙钟：
+                // 落库的两个时刻语义必须与扫描谓词自洽：
                 // last_time 是下一次计算的基线来源（lastFireBaseline 直接读它），
                 // next_time 是扫描谓词的比较对象（next_time <= now + preReadMs）。
                 // 原实现把墙钟 now 写进 last_time、把「刚派发完的那个槽位」写进 next_time，后果有两条：
@@ -170,12 +171,16 @@ public class MybatisJobRepository implements JobRepository {
                 //   ② last_time(墙钟) 与进程内基线 lastFireMs(槽位) 不同源，Leader 切换或进程重启后
                 //      会从墙钟重新追槽位，形成一串补发（线上实测：30 秒周期的 cron 在 35 秒内补发 6 次，
                 //      台账 last=06:40:38 而 next=06:40:30，即 next 小于 last）。
-                // 这里与 misfire 跳过分支（persistSkippedSlot）用同一套语义：基线=被处理的槽位，
-                // 下次触发点=再下一个槽位。墙钟信息由 sys_job_log 承担，不进这两列。
-                long pushed = nextFireAfter(entity, key, nextFire, now);
-                if (persistFireTimes(entity, nextFire, pushed)) {
+                // missed（补发）时基线取 now 而不是被补发的那个历史槽位：历史槽位已经过期，
+                // 拿它当基线会让下一拍又算出一个更早的历史槽位，于是**每个扫描拍补一个槽位**，
+                // 一直补到追平当下 —— 实测 30 秒周期、基线落后 47 分钟时，35 秒内连续派发 35 次，
+                // 风暴长度 ≈（now − 基线）÷ 周期。取 now 之后，下一拍的基线已经追平，
+                // 算出的下一个槽位落在未来，只剩正常的预读提前派发。
+                long baseline = missed ? now : nextFire;
+                long pushed = nextFireAfter(entity, key, baseline, now);
+                if (persistFireTimes(entity, baseline, pushed)) {
                     due.add(toDefinition(entity));
-                    lastFireMs.put(key, nextFire);
+                    lastFireMs.put(key, baseline);
                 }
             }
             // 未到期时保留已派发的触发时刻：清掉会让下一拍以 now 重算出同一个触发点，
@@ -953,6 +958,32 @@ public class MybatisJobRepository implements JobRepository {
             triggerCache.put(key, new CachedTrigger(signature, trigger));
         }
         return com.chua.starter.job.support.dispatch.JobTriggering.nextFireMs(definition, trigger, baseline, now);
+    }
+
+    /**
+     * 估算「从 {@code fromSlot} 到 {@code now} 之间有多少个被错过的触发槽位」，只用于日志。
+     *
+     * <p>逐槽推进一次并计数，设上限防止日志本身成为负担（错过的槽位可能上万）。</p>
+     *
+     * @param entity   任务行
+     * @param key      派发序列键
+     * @param fromSlot 起点槽位
+     * @param now      当前时刻
+     * @return 估算的错过槽位数，超出上限或无法计算时返回 -1
+     */
+    private int missedSlotsBetween(JobEntity entity, String key, long fromSlot, long now) {
+        int missed = 0;
+        long cursor = fromSlot;
+        // 上限 1000：错过的槽位再多，日志只需要表达「不止一两个」这个量级
+        while (cursor > 0L && cursor <= now && missed < 1000) {
+            long following = nextFireAfter(entity, key, cursor, now);
+            if (following <= 0L || following <= cursor) {
+                return -1;
+            }
+            cursor = following;
+            missed++;
+        }
+        return cursor <= now ? -1 : missed;
     }
 
     /**
