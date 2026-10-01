@@ -207,7 +207,7 @@ public final class ProjectScripts {
         }
         return "\n# 兜底：app.pid 陈旧/丢失时回收本项目残留进程。模式首字符用字符类以免匹配到脚本自身；\n"
                 + "# 并限定「工作目录=本项目目录」，避免误杀主入口同名的其它项目。\n"
-                + "if [ -d /proc ]; then\n"
+                + "if [ -d /proc ] && [ -n '" + PH_PATH + "' ]; then\n"
                 + "  for __p in $(pgrep -f '" + pat + "' 2>/dev/null); do\n"
                 + "    [ \"$__p\" = \"$$\" ] && continue\n"
                 + "    [ \"$(readlink /proc/$__p/cwd 2>/dev/null)\" = '" + PH_PATH + "' ] && kill -9 \"$__p\" 2>/dev/null\n"
