@@ -143,7 +143,108 @@ public final class ProjectScripts {
         if (windows) {
             return builtinWindows(projectType, mainEntry);
         }
-        return builtinLinux(projectType);
+        return builtinLinux(projectType, mainEntry);
+    }
+
+    /**
+     * 由主入口名生成「不会匹配到脚本自身命令行」的进程匹配模式。
+     *
+     * <p>直接用 {@code pgrep -f '<主入口>'} 会匹配到执行脚本的 shell 自身
+     * （其命令行即整段脚本文本，含主入口字面量），造成「永远匹配到、永远杀不干净」。
+     * 把首字符写成字符类 {@code [x]yyy} 后可避开：脚本自身命令行里是 {@code [x]yyy}，
+     * {@code x} 之后紧跟 {@code ]}，与模式要求的下一个字符不符；而目标进程命令行里是
+     * 裸的 {@code xyyy}，能被匹配。</p>
+     *
+     * <p>同时把正则元字符转义，避免入口名里的 {@code + * ( )} 等改变匹配语义。</p>
+     *
+     * @param mainEntry 主入口名（可含路径，只取文件名部分）
+     * @return 自安全匹配模式；入口为空时返回 {@code null}
+     */
+    private static String selfSafePattern(String mainEntry) {
+        if (mainEntry == null || mainEntry.isBlank()) {
+            return null;
+        }
+        String e = mainEntry.trim();
+        int slash = Math.max(e.lastIndexOf('/'), e.lastIndexOf('\\'));
+        if (slash >= 0) {
+            e = e.substring(slash + 1);
+        }
+        if (e.isEmpty()) {
+            return null;
+        }
+        var sb = new StringBuilder(e.length() + 4);
+        for (int i = 0; i < e.length(); i++) {
+            char c = e.charAt(i);
+            if ("\\+*?()[]{}|^$".indexOf(c) >= 0) {
+                sb.append('\\');
+            }
+            sb.append(c);
+        }
+        String esc = sb.toString();
+        if (Character.isLetterOrDigit(esc.charAt(0))) {
+            return "[" + esc.charAt(0) + "]" + esc.substring(1);
+        }
+        return esc;
+    }
+
+    /**
+     * Linux 停止脚本的孤儿兜底：{@code app.pid} 陈旧或丢失时回收本项目的残留进程。
+     *
+     * <p>只按 {@code app.pid} 停止是不够的：pid 文件一旦指向已退出的进程（回滚还原备份会
+     * 带回当时的旧 pid、异常中断会留下未更新的 pid），真实进程就再也停不掉，残留进程会
+     * 一直占着端口，使后续启动 bind 失败。实测出现过三个同类进程并存。</p>
+     *
+     * <p>为避免误杀「主入口同名但属于别的项目」的进程，Linux 下再按
+     * {@code /proc/<pid>/cwd} 限定为本项目目录；无 {@code /proc} 的平台退化为仅按模式匹配。</p>
+     *
+     * @param mainEntry 主入口名
+     * @return 兜底片段；无法生成模式时返回空串
+     */
+    private static String linuxOrphanReaper(String mainEntry) {
+        String pat = selfSafePattern(mainEntry);
+        if (pat == null) {
+            return "";
+        }
+        return "\n# 兜底：app.pid 陈旧/丢失时回收本项目残留进程。模式首字符用字符类以免匹配到脚本自身；\n"
+                + "# 并限定「工作目录=本项目目录」，避免误杀主入口同名的其它项目。\n"
+                + "if [ -d /proc ]; then\n"
+                + "  for __p in $(pgrep -f '" + pat + "' 2>/dev/null); do\n"
+                + "    [ \"$__p\" = \"$$\" ] && continue\n"
+                + "    [ \"$(readlink /proc/$__p/cwd 2>/dev/null)\" = '" + PH_PATH + "' ] && kill -9 \"$__p\" 2>/dev/null\n"
+                + "  done\n"
+                + "else\n"
+                + "  pkill -9 -f '" + pat + "' 2>/dev/null\n"
+                + "fi\n"
+                + "true";
+    }
+
+    /**
+     * Windows 停止脚本的孤儿兜底：{@code app.pid} 陈旧或丢失时按命令行回收本项目残留进程。
+     *
+     * <p>与 Linux 同理，只按 {@code app.pid} 结束进程在 pid 陈旧时完全失效。
+     * Windows 上获取「某 pid 的工作目录」没有等价于 {@code /proc/<pid>/cwd} 的廉价手段，
+     * 因此按命令行匹配；为不误伤主入口同名的其它项目，模式仍走
+     * {@link #selfSafePattern(String)}（首字符字符类），并排除当前 PowerShell 自身。</p>
+     *
+     * <p>普通用户执行 {@code Get-CimInstance Win32_Process} 可能被拒（本项目既有约定），
+     * 故整体 try/catch：CIM 不可用时静默跳过，不影响按 app.pid 停止这条主路径。</p>
+     *
+     * @param mainEntry 主入口名
+     * @return 兜底片段；无法生成模式时返回空串
+     */
+    private static String winOrphanReaper(String mainEntry) {
+        String pat = selfSafePattern(mainEntry);
+        if (pat == null) {
+            return "";
+        }
+        return "\n# 兜底：app.pid 陈旧/丢失时按命令行回收本项目残留进程（CIM 不可用时静默跳过）\n"
+                + "try {\n"
+                + "  $re = '" + pat.replace("'", "''") + "'\n"
+                + "  foreach ($op in (Get-CimInstance Win32_Process -ErrorAction Stop |\n"
+                + "      Where-Object { $_.CommandLine -and $_.ProcessId -ne $PID -and $_.CommandLine -match $re })) {\n"
+                + "    & taskkill.exe /PID $op.ProcessId /T /F | Out-Null\n"
+                + "  }\n"
+                + "} catch { }";
     }
 
     /**
@@ -161,8 +262,10 @@ public final class ProjectScripts {
         return "cd '" + PH_PATH + "' 2>/dev/null || true;\n";
     }
 
-    private static Scripts builtinLinux(String projectType) {
+    private static Scripts builtinLinux(String projectType, String mainEntry) {
         String type = projectType == null ? "" : projectType.trim().toLowerCase();
+        // 停止 = 按 app.pid 停止 + 回收本项目残留进程（app.pid 陈旧时唯一兜底）
+        String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
         String start;
         String restart;
         switch (type) {
@@ -170,13 +273,13 @@ public final class ProjectScripts {
                 start = linuxEnter()
                         + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ --spring.profiles.active=prod > " + PH_LOG + " 2>&1 &\n"
                         + "echo $! > app.pid";
-                restart = LINUX_PID_STOP + "\nsleep 2\n" + start;
+                restart = stop + "\nsleep 2\n" + start;
             }
             case "fatjar" -> {
                 start = linuxEnter()
                         + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
                         + "echo $! > app.pid";
-                restart = LINUX_PID_STOP + "\nsleep 2\n" + start;
+                restart = stop + "\nsleep 2\n" + start;
             }
             case "static", "nginx" -> {
                 // nginx 自建 pid 文件（相对前缀目录），状态/停止只认本项目，避免误杀/误报其它项目的 nginx。
@@ -249,13 +352,13 @@ public final class ProjectScripts {
                         + "chmod +x " + PH_ENTRY + ";\n"
                         + "nohup ./" + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
                         + "echo $! > app.pid";
-                restart = LINUX_PID_STOP + "\nsleep 2\n" + start;
+                restart = stop + "\nsleep 2\n" + start;
             }
             default -> {
                 return new Scripts("./start.sh", "./stop.sh", "./restart.sh", LINUX_STATUS);
             }
         }
-        return new Scripts(start, LINUX_PID_STOP, restart, LINUX_PID_STATUS);
+        return new Scripts(start, stop, restart, LINUX_PID_STATUS);
     }
 
     /**
@@ -296,22 +399,25 @@ public final class ProjectScripts {
     private static Scripts builtinWindows(String projectType, String mainEntry) {
         String type = projectType == null ? "" : projectType.trim().toLowerCase();
         String entry = mainEntry == null ? "" : mainEntry.trim().toLowerCase();
+        // 停止/重启前的停止段都带上孤儿兜底（app.pid 陈旧时唯一能真正停掉进程的手段）
+        String stop = WIN_PID_STOP + winOrphanReaper(mainEntry);
+        String stopBody = WIN_PID_STOP_BODY + winOrphanReaper(mainEntry);
         switch (type) {
             case "springboot", "fatjar" -> {
                 String start = winStart("java", "-jar " + PH_ENTRY) + "\n" + WIN_VERIFY_RUNNING;
-                return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP_BODY + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             case "static", "nginx" -> {
                 // 停/重启用 WIN_PID_STOP_BODY（不带末尾 exit 0）：WIN_PID_STOP 会以 exit 0 结束整个脚本，
                 // 重启时停完即退出、启动段永不执行，表现为「restart 报成功但 STATUS 是 stopped」。
                 String start = winStaticStart() + "\n" + WIN_VERIFY_RUNNING;
-                return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP_BODY + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             case "separated" -> {
                 String start = (entry.endsWith(".ps1")
                         ? winStart("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + PH_ENTRY)
                         : winStart(PH_ENTRY, "")) + "\n" + WIN_VERIFY_RUNNING;
-                return new Scripts(start, WIN_PID_STOP, WIN_PID_STOP_BODY + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             default -> {
                 return new Scripts(".\\start.ps1", ".\\stop.ps1", ".\\restart.ps1", WIN_STATUS);
