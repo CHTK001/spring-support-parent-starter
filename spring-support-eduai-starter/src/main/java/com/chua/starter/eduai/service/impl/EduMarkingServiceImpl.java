@@ -28,6 +28,7 @@ import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.queue.MessageTemplate;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 import java.util.UUID;
 
 /**
@@ -356,6 +358,22 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     private static final int MAX_SCAN_IMAGES = 20;
 
     /**
+     * 后台处理并发闸门：同时只允许 N 个任务进入识别 + 判分（默认 1，见
+     * {@link EduAiProperties.Marking#getMaxConcurrent()}）。防止多路 ONNX 并发把整机内存打满。
+     */
+    private Semaphore markingPermits;
+
+    /**
+     * 初始化并发闸门（按配置的并发数）。
+     */
+    @PostConstruct
+    public void initMarkingPermits() {
+        int permits = Math.max(1, properties.getMarking().getMaxConcurrent());
+        this.markingPermits = new Semaphore(permits, true);
+        log.info("[EduAi] 阅卷后台并发闸门初始化: permits={}", permits);
+    }
+
+    /**
      * 进程是否正在关闭。关闭期中断不能写成业务失败，否则任务成终态、启动续跑不会再捞起。
      */
     private volatile boolean shuttingDown;
@@ -424,10 +442,22 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private void kickTask(String taskId) {
         Thread.ofVirtual().name("edu-mark-" + taskId).start(() -> {
+            // 并发闸门：同时只跑 N 个任务（默认串行）。
+            // 每个任务都要跑 ONNX 版面 + OCR，原生内存不受 -Xmx 约束；多路并发会触发内核
+            // OOM 杀掉本服务，重启后同样续跑多路 → 崩溃循环、任务永远卡在「识别中」。
+            try {
+                markingPermits.acquire();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                log.warn("[EduAi] 阅卷任务等待并发闸门被中断: taskId={}", taskId);
+                return;
+            }
             try {
                 processTask(taskId);
             } catch (Exception e) {
                 log.error("[EduAi] 阅卷任务处理异常: taskId={}", taskId, e);
+            } finally {
+                markingPermits.release();
             }
         });
     }
