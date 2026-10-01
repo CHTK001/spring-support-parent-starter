@@ -59,7 +59,20 @@ public class RagStatusController {
 
         // 检查是否需要配置
         boolean needLlmConfig = config.get("llm_model") == null || config.get("llm_model").isEmpty();
-        boolean needEmbeddingConfig = "memory".equalsIgnoreCase(config.get("embedding_model"));
+        // embedding 自检：不再只看引擎是否 memory —— 引擎对但模型 id / 凭证缺失时同样不可用，
+        // 而 createEmbeddingClient 会静默回落成内存占位，状态必须如实报出来。
+        String embeddingIssue = null;
+        try {
+            embeddingIssue = ragClientManager.embeddingIssue();
+        } catch (Throwable e) {
+            embeddingIssue = "embedding 自检异常: " + e;
+            log.debug("[RagStatus] embedding 自检失败: {}", e.toString());
+        }
+        boolean needEmbeddingConfig = embeddingIssue != null;
+        status.put("embeddingReady", !needEmbeddingConfig);
+        if (needEmbeddingConfig) {
+            status.put("embeddingIssue", embeddingIssue);
+        }
         boolean needVectorStorageConfig = config.get("vector_storage") == null || config.get("vector_storage").isEmpty();
 
         status.put("needLlmConfig", needLlmConfig);
@@ -71,7 +84,7 @@ public class RagStatusController {
             status.put("message", "RAG 服务未初始化，请先配置对话模型");
             status.put("configPath", "/settings/default-models");
         } else if (needEmbeddingConfig) {
-            status.put("message", "未配置向量模型，知识库功能将使用内存向量存储（不持久化）");
+            status.put("message", embeddingIssue);
             status.put("configPath", "/settings/rag");
         } else {
             status.put("message", "RAG 服务正常");

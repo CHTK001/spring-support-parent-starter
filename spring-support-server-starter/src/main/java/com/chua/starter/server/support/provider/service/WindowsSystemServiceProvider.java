@@ -55,17 +55,27 @@ public class WindowsSystemServiceProvider implements SystemServiceProvider {
         var watchPath = dir + "\\" + serviceName + ".watchdog.ps1";
         var ps = new StringBuilder();
         ps.append("$ErrorActionPreference = 'Stop'\n");
+        // 本平台只靠计划任务表达挂载，两个开关都不开就一个任务都不会建，
+        // 此时若继续执行只会写一个无人引用的 autostart.ps1 再打印「挂载完成」——
+        // 挂载成功但什么都没发生，调用方无从分辨。这里直接判失败并说明原因。
+        boolean createsAutostart = ctx.autostart();
+        boolean createsGuard = ctx.guardian() && !isBlank(ctx.statusScript());
+        if (!createsAutostart && !createsGuard) {
+            ps.append("throw '挂载失败: 未启用开机自启与守护进程，Windows 平台靠计划任务表达挂载，")
+                    .append("两者都不启用不会创建任何系统服务'\n");
+            return ps.toString();
+        }
         ps.append("New-Item -ItemType Directory -Force -Path '").append(dir).append("' | Out-Null\n");
         // 开机自启脚本：定位到项目目录后执行启动脚本
         ps.append("$auto = @'\nSet-Location -LiteralPath '").append(ctx.projectPath()).append("'\n")
                 .append(orEmpty(ctx.startScript())).append("\n'@\n");
         ps.append("[IO.File]::WriteAllText('").append(autoPath).append("', $auto)\n");
-        if (ctx.autostart()) {
+        if (createsAutostart) {
             // SYSTEM 账户 + ONSTART：不依赖交互登录（SSH/无登录的服务器上 ONLOGON 任务不会执行）
             ps.append("schtasks /Create /TN '").append(serviceName).append("-autostart' /SC ONSTART /RU SYSTEM ")
                     .append("/TR \"powershell -ExecutionPolicy BYPASS -File '").append(autoPath).append("'\" /F\n");
         }
-        if (ctx.guardian() && !isBlank(ctx.statusScript())) {
+        if (createsGuard) {
             // 看门狗脚本：状态不含 running 则执行启动脚本
             ps.append("$wd = @'\nSet-Location -LiteralPath '").append(ctx.projectPath()).append("'\n")
                     .append("$s = ").append(ctx.statusScript()).append("\n")
@@ -76,11 +86,11 @@ public class WindowsSystemServiceProvider implements SystemServiceProvider {
                     .append("/TR \"powershell -ExecutionPolicy BYPASS -File '").append(watchPath).append("'\" /F\n");
         }
         // 终态校验：按需建立的任务必须真实存在
-        if (ctx.autostart()) {
+        if (createsAutostart) {
             ps.append("if (-not (schtasks /Query /TN '").append(serviceName)
                     .append("-autostart' 2>$null)) { throw '挂载失败: 自启动任务未创建' }\n");
         }
-        if (ctx.guardian() && !isBlank(ctx.statusScript())) {
+        if (createsGuard) {
             ps.append("if (-not (schtasks /Query /TN '").append(serviceName)
                     .append("-guard' 2>$null)) { throw '挂载失败: 守护任务未创建' }\n");
         }

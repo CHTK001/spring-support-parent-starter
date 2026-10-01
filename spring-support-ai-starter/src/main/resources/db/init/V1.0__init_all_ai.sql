@@ -1408,3 +1408,23 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_base` (
     KEY `sys_ai_knowledge_base_kind` (`sys_ai_knowledge_base_kind`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='RAG知识库元数据（目录内容由 rag-uploads/kb-<id> 承载）';
 
+-- AI 服务实例：端口 / 协议开关 / 用量记录配置。
+-- 此前只有实体 SysAiServiceInstance（@TableName）而没有 DDL，导致
+-- ServiceInstanceManager.recoverInstances 在全新库上抛
+-- `Table 'ai_test.sys_ai_service_instance' doesn't exist`（实测新环境必现）。
+CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
+    `instance_id`     VARCHAR(64)  NOT NULL COMMENT '实例 ID',
+    `instance_name`   VARCHAR(128) DEFAULT NULL COMMENT '实例名称',
+    `port`            INT          DEFAULT NULL COMMENT '端口',
+    `enabled`         TINYINT      DEFAULT 1 COMMENT '是否启用',
+    `openai_enabled`  TINYINT      DEFAULT 0 COMMENT 'OpenAI 协议开关',
+    `cc_enabled`      TINYINT      DEFAULT 0 COMMENT 'Claude Code 协议开关',
+    `gemini_enabled`  TINYINT      DEFAULT 0 COMMENT 'Gemini 协议开关',
+    `record_usage`    TINYINT      DEFAULT 0 COMMENT '是否记录用量',
+    `user_id`         VARCHAR(64)  DEFAULT NULL COMMENT '所属用户ID',
+    `create_time`     DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`     DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`instance_id`),
+    KEY `sys_ai_service_instance_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 服务实例（端口/协议开关/用量记录）';
+

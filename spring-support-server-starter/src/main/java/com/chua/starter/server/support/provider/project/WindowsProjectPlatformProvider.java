@@ -38,7 +38,8 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
         ps.append("$dest = Join-Path 'backups' ('backup_' + $stamp)\n");
         ps.append("New-Item -ItemType Directory -Force -Path $dest | Out-Null\n");
         // /XF app.pid /XF nginx.pid：排除运行态 PID 文件，避免备份/还原把过期 PID 带回来导致状态误判
-        ps.append("robocopy '.' $dest /E /NFL /NDL /NJH /NJS /NP /XD backups /XF app.pid nginx.pid | Out-Null\n");
+        // /R:1 /W:1：同回滚，源文件正被服务进程追加时默认重试会长时间卡住
+        ps.append("robocopy '.' $dest /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP /XD backups /XF app.pid nginx.pid | Out-Null\n");
         ps.append("if ($LASTEXITCODE -gt 7) { throw 'robocopy backup failed' }\n");
         ps.append("Get-ChildItem -Directory -Path 'backups' -Filter 'backup_*' | ")
                 .append("Sort-Object Name -Descending | Select-Object -Skip ").append(keep)
@@ -77,10 +78,30 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
                     .append("Sort-Object Name -Descending | Select-Object -First 1\n");
         }
         ps.append("if (-not $latest) { throw 'no backup found' }\n");
-        // /E 覆盖恢复；/XD backups 排除备份目录（用 /MIR 会尝试删除正在读取的源目录而自引用失败）
-        ps.append("robocopy $latest.FullName '.' /E /XD backups /XF app.pid nginx.pid /NFL /NDL /NJH /NJS /NP | Out-Null\n");
-        ps.append("if ($LASTEXITCODE -gt 7) { throw 'robocopy rollback failed' }\n");
-        ps.append("Write-Output 'rollback done'");
+        // robocopy 只负责目录结构与新增文件（长路径处理比 .NET 更稳），内容以随后的强制覆盖为准。
+        // 因此不因它的返回码中断：服务运行中时 logs/access.log 等正被追加的文件必然拷贝失败，
+        // 按默认重试会长时间卡死（实测 90s 不返回），收敛为 /R:1 /W:1 后又会返回失败码 (>7)，
+        // 若据此中断就会出现「日志没拷到 → 整个回滚报失败」的假失败。
+        // /XD backups 排除备份目录（用 /MIR 会尝试删除正在读取的源目录而自引用失败）
+        ps.append("robocopy $latest.FullName '.' /E /XD backups /XF app.pid nginx.pid /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null\n");
+        ps.append("$roboRc = $LASTEXITCODE\n");
+        ps.append("$src = $latest.FullName\n");
+        ps.append("$skipped = New-Object System.Collections.ArrayList\n");
+        ps.append("Get-ChildItem -LiteralPath $src -Recurse -File | ForEach-Object {\n");
+        ps.append("  $rel = $_.FullName.Substring($src.Length).Trim([char[]]'\\/')\n");
+        ps.append("  if ($rel -eq 'app.pid' -or $rel -like '*\\nginx.pid') { return }\n");
+        ps.append("  $dst = Join-Path '.' $rel\n");
+        ps.append("  $dir = Split-Path $dst -Parent\n");
+        ps.append("  if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }\n");
+        ps.append("  try { Copy-Item -LiteralPath $_.FullName -Destination $dst -Force -ErrorAction Stop }\n");
+        // 非日志文件被占用必须抛出：宁可回滚报错，也不能报成功后内容没回退（robocopy 的假成功根源）
+        ps.append("  catch { if ($rel -like '*\\logs\\*' -or $rel -like '*.log') { [void]$skipped.Add($rel) } else { throw } }\n");
+        ps.append("}\n");
+        ps.append("if ($skipped.Count -gt 0) {\n");
+        ps.append("  Write-Output ('rollback done, skipped locked log file(s): ' + ($skipped -join ', '))\n");
+        ps.append("} else {\n");
+        ps.append("  Write-Output ('rollback done (robocopy rc=' + $roboRc + ')')\n");
+        ps.append("}\n");
         return ps.toString();
     }
 
