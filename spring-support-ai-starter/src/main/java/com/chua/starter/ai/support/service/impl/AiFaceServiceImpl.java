@@ -14,6 +14,7 @@ import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.deeplearning.support.model.PredictRectangle;
 import com.chua.starter.ai.support.configuration.face.FaceClientManager;
+import com.chua.starter.ai.support.service.FaceStores;
 import com.chua.starter.ai.support.service.AiFaceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,20 +39,28 @@ public class AiFaceServiceImpl implements AiFaceService {
 
     /**
      * 人脸客户端管理器（懒加载 + 热重建）
+     *
+     * <p>只用于**模型类**能力（活体/动漫/超分/修复/属性/表情/关键点/质量/换脸）——
+     * 这些是全局共享的 ONNX 模型，与账号无关。</p>
      */
     private final FaceClientManager faceClientManager;
+
+    /**
+     * 人脸底库门面：**按当前登录账号**路由到各自的人脸库（数据隔离 + 快照持久化）。
+     */
+    private final FaceStores faceStores;
 
     /**
      * 取人脸管线，未启用时给出明确业务异常。
      *
      * <p>人脸检测模型（{@code detector_model}）留空即视为人脸能力未启用 —— ONNX 模型
-     * 未配置时模型文件并不存在，此时 {@code FaceClientManager.currentPipeline()} 返回 null。
+     * 未配置时模型文件并不存在，此时 {@code FaceStores.currentPipeline()} 返回 null。
      * 这里统一拦截，避免各方法直接对 null 调用产生 NPE，同时把「为什么没生效」讲清楚。</p>
      *
      * @return 可用的人脸管线
      */
     private FacePipeline pipeline() {
-        FacePipeline current = faceClientManager.currentPipeline();
+        FacePipeline current = faceStores.currentPipeline();
         if (current == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "人脸能力未启用：请先在「系统配置 → 人脸识别」中配置人脸检测模型");
         }
@@ -168,7 +177,8 @@ public class AiFaceServiceImpl implements AiFaceService {
     @Override
     public boolean enroll(String id, byte[] imageData, Map<String, Object> metadata) {
         float[] feature = extractFeature(imageData);
-        return pipeline().enroll(id, feature, metadata, id);
+        // 走门面：入库的同时写入本账号快照（否则重启即丢 —— 改造前就是这样）
+        return faceStores.enroll(id, feature, metadata);
     }
 
     /**
@@ -181,7 +191,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata) {
-        return pipeline().enrollPipeline(id, imageData, metadata);
+        return faceStores.enrollFromImage(id, imageData, metadata);
     }
 
     @Override
@@ -189,7 +199,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      * enroll特征
     */
     public boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata) {
-        return pipeline().enroll(id, feature, metadata, id);
+        return faceStores.enroll(id, feature, metadata);
     }
 
     /**
@@ -223,7 +233,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public List<FaceSearchHit> search(float[] feature, int topK) {
-        return faceClientManager.currentVectorStorage().search(feature, topK)
+        return faceStores.currentVectorStorage().search(feature, topK)
                 .stream()
                 .map(v -> new FaceSearchHit(
                         v.id(),
@@ -236,6 +246,27 @@ public class AiFaceServiceImpl implements AiFaceService {
                         v.metadata() == null ? Map.of() : v.metadata(),
                         v.content()))
                 .toList();
+    }
+
+    /**
+     * 列出当前账号人脸库中已登记的条目。
+     *
+     * @return 条目列表（id + 元数据）
+     */
+    @Override
+    public List<Map<String, Object>> list() {
+        return faceStores.list();
+    }
+
+    /**
+     * 从当前账号人脸库删除一条。
+     *
+     * @param id 人脸 标识
+     * @return 是否删除成功
+     */
+    @Override
+    public boolean remove(String id) {
+        return faceStores.remove(id);
     }
 
     /**

@@ -164,6 +164,25 @@ public interface AiFaceService {
     List<FaceSearchHit> search(float[] feature, int topK);
 
     /**
+     * 列出**当前账号**人脸库里已登记的条目（id + 元数据，不含向量）。
+     *
+     * <p>改造前后端没有列举出口，前端只能自己在浏览器本地存一份「登记簿」——
+     * 于是同一份服务端人脸的档案在不同浏览器/账号下看到的并不一致。
+     * 快照已经保存了登记时传入的元数据，因此这里可以把它读回来。</p>
+     *
+     * @return 条目列表（按登记顺序）
+     */
+    List<Map<String, Object>> list();
+
+    /**
+     * 从**当前账号**人脸库里删除一条（向量索引与快照同步删除）。
+     *
+     * @param id 人脸 标识
+     * @return 是否删除成功
+     */
+    boolean remove(String id);
+
+    /**
      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
      *
      * @param id       人脸 标识
