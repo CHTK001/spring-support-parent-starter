@@ -95,6 +95,17 @@ public class EduAiProperties {
          * 启动时最多续跑多少个未完成任务（防止历史积压一次性打满）。
          */
         private int resumeLimit = 50;
+
+        /**
+         * 后台同时处理的阅卷任务数上限（默认 1 = 串行）。
+         *
+         * <p>每个任务都要跑 ONNX 版面 + OCR，原生/直连内存占用大且不受 {@code -Xmx} 约束；
+         * 并发跑多路会把整机内存打满 —— 实测 5 路并发触发内核 OOM 杀掉本服务
+         * （{@code journalctl -u eduai-backend} 可见 {@code Failed with result 'oom-kill'}），
+         * 重启后又续跑同样多的任务，形成崩溃循环、任务永久卡在「识别中」。
+         * 故默认串行；内存充裕的机器可调大。</p>
+         */
+        private int maxConcurrent = 1;
     }
 
     @Data
