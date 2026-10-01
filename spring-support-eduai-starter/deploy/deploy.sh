@@ -95,6 +95,12 @@ fi
 systemctl daemon-reload
 systemctl enable "$UNIT_NAME" >/dev/null 2>&1 || true
 
+# 把 deploy/ 留在 app 目录里：升级时可直接用 app 内的脚本，
+# 不必每次再单独上传一份（oauth 侧同理，其解包目录本就是持久的 app 目录）。
+rm -rf "$APP_DIR/deploy"
+cp -r "$STAGE/deploy" "$APP_DIR/deploy"
+log "    deploy/ 已留在 $APP_DIR/deploy"
+
 # ---------- 4. 重启 ----------
 log "==> 4/5 重启服务"
 systemctl restart "$UNIT_NAME"
