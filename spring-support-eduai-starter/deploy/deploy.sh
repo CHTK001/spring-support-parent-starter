@@ -130,6 +130,23 @@ done
 _DDL_TBL=$(mariadb --defaults-extra-file="$_DDL_CNF" -N -e \
     "select count(*) from information_schema.tables where table_schema='$DBNAME';" 2>/dev/null || echo '?')
 log "    结构脚本：整份成功 $_DDL_OK、含容错跳过 $_DDL_SKIP；$DBNAME 现有表 $_DDL_TBL"
+# 把「记账里没成功的脚本」报出来。这类脚本框架不会重跑：
+#   结构脚本按 (版本,脚本名) 记账，成功过就跳过；
+#   initdata 在 data-scan-mode=ONCE 且库非空时直接跳过。
+# **不能**由本脚本自动重放 initdata：种子脚本靠 INSERT IGNORE 去重，而它依赖
+# 唯一键——没有唯一键的表会被重复灌进去（仓库里记过 edu_poem_grade 967→2901 的事故）。
+# 所以这里只上报，把判断交给人。
+if _VERSION_BAD=$(mariadb --defaults-extra-file="$_DDL_CNF" -N -e \
+    "select concat(sys_database_version_script_name, '(', ifnull(sys_database_version_success,'-'), ')') from $DBNAME.sys_database_version where ifnull(sys_database_version_success,'') <> 'true';" 2>/dev/null); then
+    if [ -n "$_VERSION_BAD" ]; then
+        log "    [警告] 以下脚本在 $DBNAME.sys_database_version 里不是成功状态，框架不会重跑，请人工确认是否已落地："
+        printf '%s\n' "$_VERSION_BAD" | sed 's/^/      /'
+    else
+        log "    迁移记账：全部为成功状态"
+    fi
+else
+    log "    迁移记账：读不到 $DBNAME.sys_database_version（跳过检查）"
+fi
 rm -rf "$SQLDIR" "$STAGE/_libs"
 
 # ---------- 3. 安装 unit（先备份、再校验） ----------
