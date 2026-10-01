@@ -105,6 +105,57 @@ public class RagClientManager {
     }
 
     /**
+     * embedding 配置自检：返回问题描述，{@code null} 表示配置完整。
+     *
+     * <p>为什么需要单独自检：{@code /v2/rag/status} 的 {@code available} 只校验
+     * ChatClient 与向量存储能否构建，<b>不校验 embedding</b>。embedding 静默回落成
+     * {@link MemoryEmbeddingClient}（维度全 0、检索质量为零）时状态照样报「正常」，
+     * 会把故障掩盖掉。这里按「引擎 → SPI 是否注册 → 模型 id → 凭证」逐层判，
+     * 与 {@link #createEmbeddingClient(String, int)} 的回落条件一一对应。</p>
+     *
+     * @return 问题描述；配置完整时返回 null
+     */
+    public String embeddingIssue() {
+        String engine = settingReader.getStr(GROUP, "rag_embedding_model");
+        if (!StringUtils.hasText(engine) || "memory".equalsIgnoreCase(engine)) {
+            return "embedding 引擎为 memory，向量不落库（检索不可用）";
+        }
+        Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
+        boolean registered = false;
+        for (String provider : providers) {
+            if (provider != null && provider.equalsIgnoreCase(engine)) {
+                registered = true;
+                break;
+            }
+        }
+        if (!registered) {
+            return "embedding 引擎『" + engine + "』未在 SPI 注册，已回落内存占位；已注册: " + providers;
+        }
+        String model = settingReader.getStr(GROUP, "rag_embedding_model_name");
+        boolean local = LOCAL_EMBEDDING_ENGINES.contains(engine.toLowerCase());
+        if (local) {
+            // 本地引擎（onnx 等）凭模型 id 选模型；缺了会退默认模型，或直接抛「模型未注册」
+            if (!StringUtils.hasText(model)) {
+                return "本地 embedding 引擎『" + engine + "』未填 rag_embedding_model_name（模型 id）";
+            }
+            return null;
+        }
+        // 三方引擎：与 createEmbeddingClient 一致，允许回落到 runtime 的凭证
+        String key = settingReader.getStr(GROUP, "rag_embedding_api_key");
+        String base = settingReader.getStr(GROUP, "rag_embedding_base_url");
+        if (!StringUtils.hasText(key)) {
+            key = settingReader.getStr("runtime", "provider_api_key");
+        }
+        if (!StringUtils.hasText(base)) {
+            base = settingReader.getStr("runtime", "provider_base_url");
+        }
+        if (!StringUtils.hasText(key) || !StringUtils.hasText(base)) {
+            return "三方 embedding 引擎『" + engine + "』缺少 apiKey / baseUrl（本库或 runtime 都未配置）";
+        }
+        return null;
+    }
+
+    /**
      * 全局设置读取工具
      */
     private final GlobalSettingReader settingReader;
