@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.PageResult;
+import com.chua.common.support.task.scheduler.Trigger;
 import com.chua.starter.job.support.dispatch.JobDefinition;
 import com.chua.starter.job.support.dispatch.JobQuery;
 import com.chua.starter.job.support.dispatch.JobRepository;
@@ -59,9 +60,15 @@ public class MybatisJobRepository implements JobRepository {
     private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
-     * 触发器缓存, Key 为 执行Bean/名称 (复用固定序列推进)
+     * 触发器缓存, Key 为 执行Bean/名称 (复用固定序列推进)。
+     *
+     * <p><b>值里带调度签名</b>：{@code CronTrigger} 在构造时就把 cron 表达式烤死, 而 Key 里不含调度配置,
+     * 所以只要改过 cron 而缓存没被清掉, 这个任务就会一直按旧表达式派发, 且没有任何日志。
+     * {@link #updateSchedule} 会 {@code refresh} 清缓存, 但并非所有写入方都走它 ——
+     * 实测采集侧改流程 cron 全历史 0 次走该路径 (「[job] 调度配置已更新并失效缓存」日志出现 0 次),
+     * 于是缓存实际只在进程存活期内有效。这里把签名一起缓存, 签名不符即重建, 使正确性不再依赖调用方。</p>
      */
-    private final ConcurrentMap<String, com.chua.common.support.task.scheduler.Trigger> triggerCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CachedTrigger> triggerCache = new ConcurrentHashMap<>();
 
     /**
      * 任务 映射器
@@ -155,7 +162,18 @@ public class MybatisJobRepository implements JobRepository {
                 if (missed) {
                     log.warn("[job] misfire 补发 1 次 job={} expected={} now={}", key, nextFire, now);
                 }
-                if (persistFireTimes(entity, now, nextFire)) {
+                // 落库的两个时刻都必须是「槽位」，不能一个是槽位一个是墙钟：
+                // last_time 是下一次计算的基线来源（lastFireBaseline 直接读它），
+                // next_time 是扫描谓词的比较对象（next_time <= now + preReadMs）。
+                // 原实现把墙钟 now 写进 last_time、把「刚派发完的那个槽位」写进 next_time，后果有两条：
+                //   ① next_time 永远落在过去 → 该行每拍都重新命中，靠预读窗宽度而不是靠 next_time 收敛；
+                //   ② last_time(墙钟) 与进程内基线 lastFireMs(槽位) 不同源，Leader 切换或进程重启后
+                //      会从墙钟重新追槽位，形成一串补发（线上实测：30 秒周期的 cron 在 35 秒内补发 6 次，
+                //      台账 last=06:40:38 而 next=06:40:30，即 next 小于 last）。
+                // 这里与 misfire 跳过分支（persistSkippedSlot）用同一套语义：基线=被处理的槽位，
+                // 下次触发点=再下一个槽位。墙钟信息由 sys_job_log 承担，不进这两列。
+                long pushed = nextFireAfter(entity, key, nextFire, now);
+                if (persistFireTimes(entity, nextFire, pushed)) {
                     due.add(toDefinition(entity));
                     lastFireMs.put(key, nextFire);
                 }
@@ -726,7 +744,7 @@ public class MybatisJobRepository implements JobRepository {
 
     private long computeNextFireMs(JobDefinition definition, long lastFireMs) {
         try {
-            com.chua.common.support.task.scheduler.Trigger trigger = JobTriggering.createTrigger(definition);
+            Trigger trigger = JobTriggering.createTrigger(definition);
             return JobTriggering.nextFireMs(definition, trigger, lastFireMs, System.currentTimeMillis());
         } catch (Exception ex) {
             return -1L;
@@ -739,15 +757,20 @@ public class MybatisJobRepository implements JobRepository {
      * <p>按主键定位而不是按任务键，是因为多条台账行可以共用一个执行器 Bean；按 Bean 回写会把其中一行的
      * 触发时刻盖到另一行上，两条各自独立的调度就互相看见对方的排队时间。</p>
      *
-     * @param entity   本次派发的任务行
-     * @param fireMs   本次派发时刻
-     * @param nextFire 下次触发时刻
+     * <p><b>两个入参都必须是 cron 槽位，不能是墙钟</b>：{@code last_time} 是下一轮
+     * {@code nextFireAfter} 的基线（{@code lastFireBaseline} 直接读这一列），{@code next_time}
+     * 是扫描谓词 {@code next_time <= now + preReadMs} 的比较对象。写入墙钟会让基线与扫描窗口
+     * 失去可比性，写入已派发完的槽位会让谓词永久成立。</p>
+     *
+     * @param entity    本次派发的任务行
+     * @param firedSlot 本次已派发的触发槽位（作为后续计算的基线）
+     * @param nextSlot  再下一个触发槽位（扫描谓词的比较对象）
      */
-    private boolean persistFireTimes(JobEntity entity, long fireMs, long nextFire) {
+    private boolean persistFireTimes(JobEntity entity, long firedSlot, long nextSlot) {
         try {
             LambdaUpdateWrapper<JobEntity> wrapper = Wrappers.<JobEntity>lambdaUpdate()
-                    .set(JobEntity::getSysJobTriggerLastTime, fireMs)
-                    .set(JobEntity::getSysJobTriggerNextTime, Math.max(nextFire, 0L));
+                    .set(JobEntity::getSysJobTriggerLastTime, firedSlot)
+                    .set(JobEntity::getSysJobTriggerNextTime, Math.max(nextSlot, 0L));
             if (entity.getSysJobId() != null) {
                 wrapper.eq(JobEntity::getSysJobId, entity.getSysJobId());
             } else {
@@ -756,11 +779,11 @@ public class MybatisJobRepository implements JobRepository {
             }
             addExpectedNextFilter(wrapper, entity);
             // 追加 last_time 期望值做二次判定：
-            // next_time 在「本次触发槽位 == 库里已记录的下次槽位」时不会变化，此时仅凭 next_time
-            // 的条件更新两个扫描者都会命中（Connector/J 默认 CLIENT_FOUND_ROWS，同值写入也返回 1）
-            // → 同一槽位被派发两次。
-            // last_time 每次真实触发都会前进，用它的旧值当期望值即可让第二个扫描者匹配 0 行、自然不派发；
-            // 注意【不能】像跳过分枝那样直接 return false —— 那会让派发序列不前进，任务永久停摆。
+            // 两个扫描者读到同一份 next_time 时，仅凭 next_time 的条件更新都会命中
+            //（Connector/J 默认 CLIENT_FOUND_ROWS，同值写入也返回 1）→ 同一槽位被派发两次。
+            // last_time 每次真实派发都会前进到新的槽位，用它的旧值当期望值即可让第二个扫描者匹配
+            // 0 行、自然不派发；注意【不能】像跳过分枝那样直接 return false —— 那会让派发序列不前进，
+            // 任务永久停摆。
             if (entity.getSysJobTriggerLastTime() == null) {
                 wrapper.isNull(JobEntity::getSysJobTriggerLastTime);
             } else {
@@ -800,9 +823,11 @@ public class MybatisJobRepository implements JobRepository {
     /**
      * 写入「跳过某个槽位」的结果: 基线推到被跳过的槽位, 下次触发点推到下一个槽位。
      *
-     * <p>与 {@link #persistFireTimes(JobEntity, long, long)} 的区别是不写派发墙钟 ——
-     * 被跳过的槽位并未真正执行, 若把 {@code now} 写进 last_time 就等于谎报执行时刻;
-     * 但基线必须前进, 否则换进程重算仍是同一个过期槽位。</p>
+     * <p>与 {@link #persistFireTimes(JobEntity, long, long)} 的区别只在于「被跳过的槽位没有真正执行」，
+     * 但两者的列语义完全一致：{@code last_time} 放被处理的槽位（推进基线），
+     * {@code next_time} 放再下一个槽位（供扫描谓词比较）。基线必须前进，否则换进程重算仍是同一个
+     * 过期槽位。历史实现曾把派发墙钟 {@code now} 写进 {@code last_time}，使基线与进程内
+     * {@code lastFireMs} 不同源、扫描谓词每拍成立，已一并改为写槽位。</p>
      *
      * @param entity      任务行
      * @param skippedSlot 被跳过的触发点
@@ -916,15 +941,42 @@ public class MybatisJobRepository implements JobRepository {
      */
     private long nextFireAfter(JobEntity entity, String key, long baseline, long now) {
         JobDefinition definition = toDefinition(entity);
-        com.chua.common.support.task.scheduler.Trigger trigger = triggerCache.get(key);
-        if (trigger == null) {
+        String signature = scheduleSignature(definition);
+        CachedTrigger cached = triggerCache.get(key);
+        Trigger trigger = cached == null ? null : cached.trigger();
+        // 签名不符 = 调度配置改过而缓存没被清掉, 必须重建, 否则会一直按旧表达式派发
+        if (trigger == null || !signature.equals(cached.signature())) {
             trigger = com.chua.starter.job.support.dispatch.JobTriggering.createTrigger(definition);
             if (trigger == null) {
                 return -1L;
             }
-            triggerCache.put(key, trigger);
+            triggerCache.put(key, new CachedTrigger(signature, trigger));
         }
         return com.chua.starter.job.support.dispatch.JobTriggering.nextFireMs(definition, trigger, baseline, now);
+    }
+
+    /**
+     * 计算调度签名: 三个字段共同决定触发器形态 —— toDefinition 会按调度类型把配置写进 cron 或
+     * fixedDelayMs / fixedRateMs 其中之一 (三者只有一个非空), 所以这三个字段相同即视为同一套调度。
+     * JobDefinition 本身不携带调度类型字段, 因此签名里也不含类型。
+     *
+     * @param definition 任务定义
+     * @return 调度签名, 不为 null
+     */
+    private String scheduleSignature(JobDefinition definition) {
+        String cron = definition == null ? null : definition.getCron();
+        long delay = definition == null ? 0L : definition.getFixedDelayMs();
+        long rate = definition == null ? 0L : definition.getFixedRateMs();
+        return String.valueOf(cron) + '|' + delay + '|' + rate;
+    }
+
+    /**
+     * 缓存中的触发器及其调度签名。
+     *
+     * @param signature 调度签名, 签名不符即视为过期
+     * @param trigger   已构建好的触发器
+     */
+    private record CachedTrigger(String signature, Trigger trigger) {
     }
 
     /**
