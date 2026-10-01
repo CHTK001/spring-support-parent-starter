@@ -13,7 +13,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://172.16.0.40:3306/softdb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: root@
+    password: ${SOFTWARE_DB_PASSWORD:}
   sql:
     init:
       mode: never

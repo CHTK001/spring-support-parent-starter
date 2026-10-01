@@ -13,7 +13,7 @@ spring:
     url: jdbc:mysql://172.16.0.40:3306/hotsport?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
-    password: root@
+    password: ${HOTSPORT_DB_PASSWORD:}
   # 关闭 SQL 初始化（无建表脚本）
   sql:
     init:
