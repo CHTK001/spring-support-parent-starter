@@ -77,6 +77,61 @@ fi
 install -m 0644 "$STAGE/$JAR_SRC" "$APP_DIR/$JAR_DST"
 log "    现役 sha=$(sha256sum "$APP_DIR/$JAR_DST" | cut -c1-16)"
 
+# ---------- 2.5 确保 schema 收敛 ----------
+# 为什么需要这一步：框架的迁移是「按脚本名记账，成功过就不再执行」——
+# 一旦某个 V1.0 脚本在记账**之后**被追加了建表语句，存量库永远不会补上。
+# 实测：eduai 库缺 sys_ai_service_instance，而 ai-starter 的实体/Mapper 持续报
+#   Table 'eduai.sys_ai_service_instance' doesn't exist（每个轮询周期一条）。
+# 这里把产物内各模块的**结构脚本**再幂等执行一遍：DDL 都是
+# CREATE TABLE IF NOT EXISTS，重复执行无副作用；少数裸 ADD COLUMN 的兼容 ALTER
+# 重复执行会报 1060，与框架自身的 continueOnError 语义一致，这里同样容错跳过。
+log "==> 2.5/5 确保 schema 收敛（幂等执行产物内的结构脚本）"
+DBURL=$(sed -n 's/^SPRING_DATASOURCE_URL=//p' "$ENV_FILE" | head -1)
+DBUSER_ENV=$(sed -n 's/^SPRING_DATASOURCE_USERNAME=//p' "$ENV_FILE" | head -1)
+DBPASS_ENV=$(sed -n 's/^SPRING_DATASOURCE_PASSWORD=//p' "$ENV_FILE" | head -1)
+[ -n "$DBURL" ] || die "凭据文件缺少 SPRING_DATASOURCE_URL"
+# jdbc:mysql://host:port/db?params -> host / port / db（不用嵌套引号，避免多层转义）
+_REST=${DBURL#jdbc:mysql://}
+_HOSTPORT=${_REST%%/*}
+_DB_AND_Q=${_REST#*/}
+DBNAME=${_DB_AND_Q%%\?*}
+DBHOST=${_HOSTPORT%%:*}
+DBPORT=${_HOSTPORT##*:}
+SQLDIR="$STAGE/_ddl"
+rm -rf "$SQLDIR"
+mkdir -p "$SQLDIR/init"
+unzip -o -j -q "$STAGE/$JAR_SRC" 'BOOT-INF/classes/db/init/V*__init_all_*.sql' -d "$SQLDIR/init" 2>/dev/null || true
+rm -rf "$STAGE/_libs"
+mkdir -p "$STAGE/_libs"
+unzip -o -q "$STAGE/$JAR_SRC" 'BOOT-INF/lib/*.jar' -d "$STAGE/_libs" 2>/dev/null || true
+for _j in "$STAGE"/_libs/BOOT-INF/lib/*.jar; do
+    [ -f "$_j" ] || continue
+    unzip -l "$_j" 2>/dev/null | grep -q 'db/init/.*\.sql' || continue
+    unzip -o -j -q "$_j" 'db/init/V*__init_all_*.sql' -d "$SQLDIR/init" 2>/dev/null || true
+done
+_DDL_N=$(ls -1 "$SQLDIR/init"/*.sql 2>/dev/null | wc -l)
+log "    抽出结构脚本 $_DDL_N 个"
+_DDL_CNF=$(mktemp)
+chmod 600 "$_DDL_CNF"
+trap 'rm -f "$_DDL_CNF"' EXIT
+{
+    printf '[client]\n'
+    printf 'host=%s\nport=%s\nuser=%s\npassword=%s\n' "$DBHOST" "$DBPORT" "$DBUSER_ENV" "$DBPASS_ENV"
+} > "$_DDL_CNF"
+_DDL_OK=0
+_DDL_SKIP=0
+for _f in $(ls -1 "$SQLDIR/init"/*.sql 2>/dev/null | sort); do
+    if mariadb --defaults-extra-file="$_DDL_CNF" "$DBNAME" < "$_f" >/dev/null 2>&1; then
+        _DDL_OK=$((_DDL_OK + 1))
+    else
+        _DDL_SKIP=$((_DDL_SKIP + 1))
+    fi
+done
+_DDL_TBL=$(mariadb --defaults-extra-file="$_DDL_CNF" -N -e \
+    "select count(*) from information_schema.tables where table_schema='$DBNAME';" 2>/dev/null || echo '?')
+log "    结构脚本：整份成功 $_DDL_OK、含容错跳过 $_DDL_SKIP；$DBNAME 现有表 $_DDL_TBL"
+rm -rf "$SQLDIR" "$STAGE/_libs"
+
 # ---------- 3. 安装 unit（先备份、再校验） ----------
 log "==> 3/5 安装 systemd unit"
 if [ -f "$UNIT_DST" ] && ! cmp -s "$STAGE/deploy/$UNIT_NAME" "$UNIT_DST"; then
