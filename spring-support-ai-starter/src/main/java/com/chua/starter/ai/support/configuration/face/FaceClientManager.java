@@ -441,18 +441,29 @@ public class FaceClientManager {
      * 配置热更新：按最新配置重建全部人脸实例，替换引用并关闭旧实例。
      */
     public synchronized void rebuild() {
+        // 这里【不再】顺手建单例的 vectorStorage / pipeline。
+        //
+        // 原因：按账号隔离后，人脸数据的唯一入口是 FaceStores（每账号
+        // buildStorageFor + buildPipelineWith）。全仓核查调用方：
+        //   FaceClientManager.currentPipeline()       唯一调用方是
+        //       GlobalModelServiceImpl#getFacePipeline()，而该方法【零调用方】
+        //       （GlobalModelController 只用 getConfigSummary / getConfig /
+        //         getBoolConfig / getIntConfig）
+        //   FaceClientManager.currentVectorStorage() 零外部调用方
+        //   真正的业务链路 AiFaceServiceImpl:63 / :236 走的是 faceStores.*（按账号）
+        // 所以这两个字段是纯死重。而在 rebuild() 里 eager 建它有两个实际代价：
+        //   1) 建出 <CWD>/face/face-index 目录 —— 线上表现为 /opt/ai-starter/runtime/face
+        //      这个空目录（功能上已不再使用，却每次启动 / 改配置都出现）；
+        //   2) 那条路径是【跨账号共享】的，正是本类注释里警告的
+        //      「多个业务共用同一个索引文件，换维度即互相破坏」隐患本身。
+        // 改为不 eager 建：currentVectorStorage() / currentPipeline() 本身已是懒加载，
+        // 真有调用方时再按需建 —— 行为不变，只是不再凭空产生。
         VectorStorage oldVectorStorage = this.vectorStorage;
-        VectorStorage nextVectorStorage = buildVectorStorage();
-        this.vectorStorage = nextVectorStorage;
-        FacePipeline nextPipeline = buildPipeline();
+        this.vectorStorage = null;
+        this.pipeline = null;
         LivenessDetector nextLiveness = buildLiveness();
         FaceQualityAssessor nextQuality = buildQualityAssessor();
 
-        FacePipeline oldPipeline = pipeline;
-        LivenessDetector oldLiveness = liveness;
-        FaceQualityAssessor oldQuality = qualityAssessor;
-
-        this.pipeline = nextPipeline;
         this.liveness = nextLiveness;
         this.qualityAssessor = nextQuality;
 
@@ -467,10 +478,8 @@ public class FaceClientManager {
         this.deepfakeClassifier = ImageClassifier.create(settingReader.getStr(GROUP, "deepfake_model"));
         this.landmarkExtractor = FeatureExtractor.create(settingReader.getStr(GROUP, "landmark_model"));
 
-        /**
-         * 关闭quietly。
-         * @param oldVectorStorage 旧向量storage
-         */
+        // 单例存储若此前被懒加载建过（当前无调用方，理论上不会发生），这里仍要关掉，
+        // 不能让它白持有。closeQuietly 内部已判空。
         closeQuietly(oldVectorStorage);
         log.info("[FaceClientManager] 人脸识别实例热更新完成");
     }
