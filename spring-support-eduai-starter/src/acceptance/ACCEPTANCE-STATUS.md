@@ -150,5 +150,9 @@ sudo systemctl start <unit>.service
 ```
 
 > 这是一次**共享主机操作**，会影响其它会话；故不做静默处理，在此留痕。
-> 另外 `logrotate.service` 自 00:14 起失败（`collect` 侧：重复日志条目 +
-> `/opt/collect/logs/*.log` 权限），属 collect 域，未在本交付范围内改动。
+> 另外 `logrotate.service` 自 00:14 起失败（`collect` 侧：重复条目 +
+> `/opt/collect/logs/*.log` 属主不符），**已于 2026-10-02 修复**：
+> 补丁入 `spring-api-support-collect-starter/deploy/logrotate/`（api 仓 `a1b1166b`），
+> 并已应用到主机（原配置备份在 `/home/kali/eduai/backups/logrotate-20261002/`）。
+> 复核：精确干跑无 duplicate / Permission denied，实跑生成 `.1.gz` 且原文件截断，
+> `systemctl start logrotate.service` → `Finished`、`is-failed=inactive`。
