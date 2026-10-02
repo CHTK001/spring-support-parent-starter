@@ -4,13 +4,16 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
-> ## ✅ 当前状态（2026-10-02 02:17）：**已签收**
+> ## ✅ 当前状态（2026-10-03）：**已签收**
 >
-> 来源自证已做掉：线上现役 eduai jar `81d7c0e1…` **== 开发机从 HEAD `198d379c6`
-> 构建的 jar**。对应报告 `ACCEPTANCE-REPORT-20261002-r3.md`
+> 来源自证已做掉：线上现役 eduai jar `75e228fc…` **== 开发机从 HEAD `2bc2fe52b`
+> 构建的 jar**。对应报告 `ACCEPTANCE-REPORT-20261003.md`
 > （API 49/49、并发 60/60、故障注入、资源判据全 PASS）。
-> 复核：`python3 report-staleness.py --live-eduai 81d7c0e1… --live-oauth ca4ce0b3…`
-> → 该报告 `VALID`，其余三份已标注失效。
+> 复核：`python3 report-staleness.py --live-eduai 75e228fc… --live-oauth ca4ce0b3…`
+> → 该报告 `VALID`，其余报告均已标注失效。
+>
+> （前一次自证 r3 绑定 `81d7c0e1`，其 jar 随后被并发会话替换为 `e7ee42b8`，故 r3 已失效；
+> 本次重新构建并部署，绑定到新的现役 `75e228fc`。）
 
 ## 1. 交付面
 
@@ -70,21 +73,24 @@ f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
 → a27b3ccf → 399da04b → 9a93b672           （并发会话）
 → a2d012b5                                  （本会话从 HEAD 自建，PROVENANCE_OK）
 → 186767230c → 6f13188c → 95f3db7c → e82f6dd6  （并发会话）
-→ 81d7c0e1                                  （本会话从 HEAD 198d379c6 自建，PROVENANCE_OK ✅ 现役）
+→ 81d7c0e1                                  （本会话从 HEAD 198d379c6 自建，r3 PROVENANCE_OK）
+→ e7ee42b8                                  （并发会话，替换掉 r3）
+→ 75e228fc                                  （本会话从 HEAD 2bc2fe52b 自建，r4 PROVENANCE_OK ✅ 现役）
 ```
-
-于是前几份报告先后失效，**而最后一份不再失效**：
 
 | 报告 | 绑定 | 状态 |
 |---|---|---|
 | `ACCEPTANCE-REPORT-20261001.md` | `9a93b672` | 已失效（换包）|
 | `ACCEPTANCE-REPORT-20261002.md` | `a2d012b5` | 已失效（换包，10 分钟内）|
 | `ACCEPTANCE-REPORT-20261002-r2.md` | `6f13188c` | 已失效（换包）|
-| **`ACCEPTANCE-REPORT-20261002-r3.md`** | **`81d7c0e1`** | **VALID（== 现役）** |
+| `ACCEPTANCE-REPORT-20261002-r3.md` | `81d7c0e1` | 已失效（被 `e7ee42b8` 替换）|
+| **`ACCEPTANCE-REPORT-20261003.md`** | **`75e228fc`** | **VALID（== 现役）** |
 
-**关键澄清**：前三份失效抹掉的是「报告与二进制的绑定」，**不是修复本身**；
-而 r3 之所以成立，是因为它把「构建 → 部署 → 断言线上==本地」串成了一条命令
+**关键澄清**：前几份失效抹掉的是「报告与二进制的绑定」，**不是修复本身**；
+而自证报告之所以成立，是因为它把「构建 → 部署 → 断言线上==本地」串成了一条命令
 （`release-run.sh`，传入 `EXPECTED_JAR_SHA`，不一致即 `PROVENANCE_FAIL` 并中止）。
+**任何一份报告都可能被下一次并发换包作废** —— 签收前必须用 `report-staleness.py`
+复核；若已失效，就再跑一次 `release-run.sh` 绑定新的现役产物。
 
 ## 5. 来源自证：已完成
 
