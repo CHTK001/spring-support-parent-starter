@@ -345,10 +345,49 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     private RemoteExecResult execOn(SshClient client, String script) {
         try {
             SshClient.ExecResult result = client.exec().command(encode(script)).execute();
-            return new RemoteExecResult(result.exitCode(), result.stdout(), result.stderr());
+            RemoteExecResult r = new RemoteExecResult(result.exitCode(), result.stdout(), result.stderr());
+            if (!r.success()) {
+                // PowerShell 起不来时远端以「正常返回 + 非零退出码 + stderr」的形式回传，
+                // 并不抛异常，因此提示必须补在结果分支上，否则操作员只能看到裸的
+                // "Access is denied." 而不知从何查起。
+                String hint = diagnosePowerShellLaunch(r.stderr());
+                if (!hint.isEmpty()) {
+                    String err = r.stderr() == null ? "" : r.stderr();
+                    return new RemoteExecResult(r.exitCode(), r.stdout(), err + hint);
+                }
+            }
+            return r;
         } catch (Exception e) {
-            throw new IllegalStateException("PowerShell 执行失败: " + e.getMessage(), e);
+            throw new IllegalStateException("PowerShell 执行失败: " + e.getMessage()
+                    + diagnosePowerShellLaunch(e.getMessage()), e);
         }
+    }
+
+    /**
+     * 针对「PowerShell 起不来」追加可执行的排查提示。
+     *
+     * <p>远端只回 {@code Access is denied.} 时，最容易被误判成「账户权限不足」，
+     * 于是去查账户/ACL/sshd 配置，全部正常后无从下手。实测存在一类完全不同的成因：
+     * 第三方安全产品按**精确路径**拦截
+     * {@code C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe} 的执行——
+     * 同一条二进制拷到别的目录就能跑、只有原路径被拒。此时账户、ACL、sshd 配置都正常，
+     * 平台也无自愈路径（{@code ensure-ssh} 自身就走这条通道）。</p>
+     *
+     * @param message 原始错误信息
+     * @return 追加的提示文本；不匹配特定措辞时返回空串
+     */
+    private String diagnosePowerShellLaunch(String message) {
+        if (message == null) {
+            return "";
+        }
+        // 中英文本地化措辞都要认：Windows 中文版报「拒绝访问。」
+        if (message.toLowerCase(Locale.ROOT).contains("access is denied") || message.contains("拒绝访问")) {
+            return "（排查提示：该错误未必是权限问题。若主机装有第三方安全产品，"
+                    + "它可能按精确路径拦截 powershell.exe 的执行——"
+                    + "判据是「把 powershell.exe 复制到其它目录能运行、而原路径被拒」。"
+                    + "详见 src/acceptance/WIN-EXEC-DENIED-CHECKLIST.md）";
+        }
+        return "";
     }
 
     /**
