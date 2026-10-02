@@ -27,6 +27,7 @@ import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
+import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.queue.MessageTemplate;
 import jakarta.annotation.PostConstruct;
@@ -1068,62 +1069,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return 相似度；任一侧为空返回 0
      */
     public static double similarity(String standard, String student) {
-        String a = normalizeText(standard);
-        String b = normalizeText(student);
-        if (a.isEmpty() || b.isEmpty()) {
-            return 0d;
-        }
-        if (a.equals(b)) {
-            return 1d;
-        }
-        // 包含判定：学生作答完整包含标准答案即算对。
-        // 否则 LCS 的对称分母会惩罚「答对但啰嗦」—— 实测把阅读题的子项 (1)(2) 并入作答后，
-        // 13 字标准答案 vs 30 字作答只剩 0.6，正确作答被判 0 分。
-        // 门槛取 3 字：避免把「A」对「AB」、「对」对「对错」这类短答案误判为包含。
-        if (a.length() >= 3 && b.contains(a)) {
-            return 1d;
-        }
-        int lcs = lcsLength(a, b);
-        return 2d * lcs / (a.length() + b.length());
-    }
-
-    /**
-     * 归一化文本：去掉空白与中英文标点，统一小写。
-     *
-     * @param value 原文本
-     * @return 归一化文本
-     */
-    private static String normalizeText(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.trim().toLowerCase()
-                .replaceAll("[\\s\\p{Punct}，。、；：？！（）〔〕《》〈〉“”‘’·—…￥【】]", "");
-    }
-
-    /**
-     * 最长公共子序列长度（字符级，滚动数组实现）。
-     *
-     * @param a 串 a
-     * @param b 串 b
-     * @return LCS 长度
-     */
-    private static int lcsLength(String a, String b) {
-        int[] prev = new int[b.length() + 1];
-        int[] curr = new int[b.length() + 1];
-        for (int i = 1; i <= a.length(); i++) {
-            for (int j = 1; j <= b.length(); j++) {
-                if (a.charAt(i - 1) == b.charAt(j - 1)) {
-                    curr[j] = prev[j - 1] + 1;
-                } else {
-                    curr[j] = Math.max(prev[j], curr[j - 1]);
-                }
-            }
-            int[] swap = prev;
-            prev = curr;
-            curr = swap;
-        }
-        return prev[b.length()];
+        return AnswerSimilarity.similarity(standard, student);
     }
 
     /**
@@ -1176,8 +1122,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * <p>扫描阅卷的作答来自 OCR，<b>必然存在个别错字</b>（实测「糊涂」被识成「湖涂」）。
      * 而自有卷的标准答案就在题库里，若坚持严格相等，正确答案也会被判 0 分。</p>
      *
-     * <p>策略：客观题先做「归一化 + 编辑距离相似度」比对，达到
-     * {@link #SIMILARITY_THRESHOLD} 即给满分；不达标才交回原有链路
+     * <p>策略：客观题先做「归一化 + 最长公共子序列相似度」比对，达到
+     * {@link AnswerSimilarity#SIMILARITY_THRESHOLD} 即给满分；不达标才交回原有链路
      * （客观题严格比对，主观题交 AI）。这样既容忍识别误差，又不放过真正答错的。</p>
      *
      * @param question      题库题目（提供题型与标准答案）
@@ -1190,7 +1136,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                                                                  int maxScore) {
         if (isObjectiveType(question.getQuestionType())) {
             double sim = similarity(question.getQuestionAnswer(), studentAnswer);
-            if (sim >= SIMILARITY_THRESHOLD) {
+            if (sim >= AnswerSimilarity.SIMILARITY_THRESHOLD) {
                 var outcome = new EduAiService.MarkingOutcome();
                 outcome.setSource("AI");
                 outcome.setScore(maxScore);
@@ -1203,14 +1149,6 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         return eduAiService.markQuestionWithAi(question.getQuestionType(),
                 question.getQuestionStem(), question.getQuestionAnswer(), studentAnswer, maxScore);
     }
-
-    /**
-     * 客观题答案相似度阈值：低于该值视为答错。
-     *
-     * <p>取 0.7 —— 能容忍 1~2 个字的识别误差（如「做了湖涂事」vs「做了糊涂事」相似度 0.8），
-     * 又不会把明显不同的作答判成正确。</p>
-     */
-    private static final double SIMILARITY_THRESHOLD = 0.7d;
 
     @Override
     /**
