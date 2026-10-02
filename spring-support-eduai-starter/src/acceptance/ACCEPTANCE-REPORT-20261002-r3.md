@@ -1,5 +1,13 @@
 # eduai 终验报告（2026-10-02 · r3，来源自证版）
 
+> ## ⚠️ 本报告已失效（2026-10-03，换包）
+>
+> 依据 AGENTS.md §4.6：本报告绑定的 eduai jar 是
+> `81d7c0e17bf765eafff584d6143632dfcf44fc0476cb5a83c0edc48a87cd281d`，
+> 其后线上产物被并发会话替换为 `e7ee42b8c8d21a9d…`。**报告证明的二进制已不在线上。**
+> 已由 `ACCEPTANCE-REPORT-20261003.md`（绑定 `75e228fc…`）接替。
+> 复核：`python3 report-staleness.py --live-eduai <sha> --live-oauth <sha>`。
+
 > 本报告按 `RELEASE-CHECKLIST.md` 执行，**报告与产物 sha256 绑定**：
 > 下列指纹在「部署后」与「验收后」两次采集中**逐字相同**；任何一次换包都会让本报告作废。
 > 与前两份（`-20261001.md` / `-20261002.md` / `-20261002-r2.md`）不同，本份是
