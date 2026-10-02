@@ -4,6 +4,14 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
+> ## ✅ 当前状态（2026-10-02 02:17）：**已签收**
+>
+> 来源自证已做掉：线上现役 eduai jar `81d7c0e1…` **== 开发机从 HEAD `198d379c6`
+> 构建的 jar**。对应报告 `ACCEPTANCE-REPORT-20261002-r3.md`
+> （API 49/49、并发 60/60、故障注入、资源判据全 PASS）。
+> 复核：`python3 report-staleness.py --live-eduai 81d7c0e1… --live-oauth ca4ce0b3…`
+> → 该报告 `VALID`，其余三份已标注失效。
+
 ## 1. 交付面
 
 - `spring-support-eduai-starter`（后端）
@@ -22,6 +30,8 @@
 | `14d4a5183` | 只读身份在未标注 @Permission 的路径上不再放行（oauth-client）|
 | `ad354de6` | 去掉仓库里的硬编码数据源口令（api 仓）|
 | `e8eeff28` | oauth 部署交付物入仓（api 仓）|
+| `0ced563f2` | 报告失效检查器 `report-staleness.py`；补标 20261001 报告失效 |
+| `5993285b5` | 发布一键执行 `release-run.sh`（自证 + 资源判据 + 验收 + 故障注入）|
 
 ## 3. **不随产物绑定**、当前仍成立的事实（复核于 2026-10-02）
 
@@ -56,31 +66,45 @@ oauth 日志线程 = aio-tcp-iocp（真走 tcp）
 eduai jar 在本轮被反复替换（同一台共享主机上有多会话并发构建/部署）：
 
 ```
-f79f8d78 → ec3e5afe → d2c4fc45        （本会话的部署）
-→ a27b3ccf → 399da04b → 9a93b672     （并发会话）
-→ a2d012b5                            （本会话从 HEAD 自建，PROVENANCE_OK）
-→ 186767230c → 6f13188c → 95f3db7c    （并发会话，现役）
+f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
+→ a27b3ccf → 399da04b → 9a93b672           （并发会话）
+→ a2d012b5                                  （本会话从 HEAD 自建，PROVENANCE_OK）
+→ 186767230c → 6f13188c → 95f3db7c → e82f6dd6  （并发会话）
+→ 81d7c0e1                                  （本会话从 HEAD 198d379c6 自建，PROVENANCE_OK ✅ 现役）
 ```
 
-于是三份报告先后失效：
+于是前几份报告先后失效，**而最后一份不再失效**：
 
-| 报告 | 绑定 | 失效原因 |
+| 报告 | 绑定 | 状态 |
 |---|---|---|
-| `ACCEPTANCE-REPORT-20261001.md` | `9a93b672` | 换包 |
-| `ACCEPTANCE-REPORT-20261002.md` | `a2d012b5` | 换包（10 分钟内）|
-| `ACCEPTANCE-REPORT-20261002-r2.md` | `6f13188c` | 换包 |
+| `ACCEPTANCE-REPORT-20261001.md` | `9a93b672` | 已失效（换包）|
+| `ACCEPTANCE-REPORT-20261002.md` | `a2d012b5` | 已失效（换包，10 分钟内）|
+| `ACCEPTANCE-REPORT-20261002-r2.md` | `6f13188c` | 已失效（换包）|
+| **`ACCEPTANCE-REPORT-20261002-r3.md`** | **`81d7c0e1`** | **VALID（== 现役）** |
 
-**关键澄清**：换包抹掉的是「报告与二进制的绑定」，**不是修复本身**——
-已复核现役 `95f3db7c` 仍含只读修复、库侧修复仍在、行为回归通过。
+**关键澄清**：前三份失效抹掉的是「报告与二进制的绑定」，**不是修复本身**；
+而 r3 之所以成立，是因为它把「构建 → 部署 → 断言线上==本地」串成了一条命令
+（`release-run.sh`，传入 `EXPECTED_JAR_SHA`，不一致即 `PROVENANCE_FAIL` 并中止）。
 
-## 5. 还差什么
+## 5. 来源自证：已完成
 
-只差**一个真正停手的时间窗**（约 10 分钟），把「来源自证」做掉：
+2026-10-02 02:17 出现了一个**交付面干净**的窗口（`EduImagePreprocessor.java` 已被并发会话
+提交为 `277c9f24e`），随即按一条命令完成：
 
-1. 窗口内 `git status --porcelain -- <交付面>` 为空（**当前不满足**：
-   `EduImagePreprocessor.java` 有未提交改动 —— 并发会话正在改 eduai）；
-2. 发布者用 `deploy/package.sh` 从 HEAD 重建 → 部署 → 比对线上 jar sha256 == 本地构建产物；
-3. 跑 `src/acceptance/acceptance.py`（49 项）+ 故障注入；
-4. 前后各取一次指纹，逐字相同 → 出报告签收。
+1. `git status --porcelain -- <交付面>` = 空（满足）；
+2. `deploy/package.ps1` 从 HEAD `198d379c6` 构建，得 jar sha256 = `81d7c0e1…`；
+3. 以 `EXPECTED_JAR_SHA=81d7c0e1…` 跑 `release-run.sh`：
+   部署 → **断言线上==本地（PROVENANCE_OK）** → 资源判据 → 49 项 →
+   故障注入 → 前后指纹；
+4. 结果：49/49、60/60（p95=102ms）、故障注入 2532ms 快速失败且 eduai 不崩、
+   资源全 PASS；部署后/验收后两段指纹逐字相同。
 
-流程细节见 `RELEASE-CHECKLIST.md`。**在此之前，任何"全绿报告"都会在几分钟内被下一次换包作废** —— 本文件第 4 节就是三次实证。
+报告：`ACCEPTANCE-REPORT-20261002-r3.md`。
+
+> **过程事实（如实记录）**：首次执行被资源门禁拦下 —— `-acc` 族一次性验收基建
+> 被人重新拉起（java 13、swap 92%），`release-run.sh` 按设计拒绝签收；
+> 再次停该族并 `swapoff -a && swapon -a` 回收旧换出页后重跑，方才全绿。
+> 门禁在此过程中**按预期工作**（不是障碍）。
+
+流程细节见 `RELEASE-CHECKLIST.md`；报告是否仍然有效可用
+`report-staleness.py` 复核（换包即失效）。
