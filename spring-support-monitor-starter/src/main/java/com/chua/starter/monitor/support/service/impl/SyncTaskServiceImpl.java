@@ -30,9 +30,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.sql.Connection;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +44,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 数据同步任务服务实现。
@@ -74,11 +75,6 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * 默认批量提交条数
      */
     private static final int DEFAULT_BATCH_SIZE = 500;
-
-    /**
-     * 源读取与写入的阻塞上限（分钟）
-     */
-    private static final long RUN_TIMEOUT_MINUTES = 10L;
 
     /**
      * 结果说明字段的最大长度（与 ms_sync_task_last_message 的 512 留出余量）
@@ -304,9 +300,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         try {
             List<SyncColumnVO> sourceColumns = loadSourceColumns(task.getSyncTaskSourceDatasourceId(), task.getSyncTaskSourceSql());
             List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
-            List<Map<String, Object>> rows = readRows(task, sourceColumns);
-            readCount = rows.size();
-            long writeCount = writeRows(task, mapping, transformRows(rows, mapping));
+            AtomicLong readCounter = new AtomicLong();
+            long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter);
+            readCount = readCounter.get();
             result = SyncTaskRunVO.success(readCount, writeCount, costMs(startNanos), runTime);
         } catch (Exception e) {
             String message = rootMessage(e);
@@ -348,75 +344,58 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     /**
-     * 用引擎的 JDBC 源读取全部数据。
+     * 流式执行：引擎源读取 → 引擎字段映射转换 → 本模块 Sink 分批写入。
+     *
+     * <p>刻意不把整表读进 List：2026-10-02 实测 20 万行就会把堆顶到上限
+     * （{@code -Xmx1500m} 下 RSS 1452MB），百万行必然 OOM。改流式后常驻内存只与批量大小有关。</p>
      *
      * @param task          任务
+     * @param mapping       字段映射
      * @param sourceColumns 源结果集列（引擎按列名取值，必须与读取 SQL 的结果集一致）
-     * @return 源数据行
-     * @throws Exception 建连或读取失败
+     * @param readCounter   出参：累计读取行数（流式管线里没法用返回值一起带回来）
+     * @return 实际写入行数
+     * @throws Exception 建连、读取或写入失败
      */
-    private List<Map<String, Object>> readRows(MsSyncTask task, List<SyncColumnVO> sourceColumns) throws Exception {
+    private long streamAndWrite(MsSyncTask task, List<SyncFieldMappingVO> mapping,
+                                List<SyncColumnVO> sourceColumns, AtomicLong readCounter) throws Exception {
         DatasourceJdbcInfo sourceInfo = datasourceService.jdbcInfo(task.getSyncTaskSourceDatasourceId());
         String[] columnNames = sourceColumns.stream().map(SyncColumnVO::name).toArray(String[]::new);
-        var source = new JdbcDataSyncAgentSource(
-                "sync-src-" + task.getId(), "sync-in-" + task.getId(),
-                sourceInfo.url(), sourceInfo.username(), sourceInfo.password(),
-                task.getSyncTaskSourceSql(), columnNames);
-        List<Map<String, Object>> rows;
-        try {
-            // 引擎的源以 Flux 暴露数据；这里收敛成一次性读取，params 不含 offset 即全量读
-            rows = source.read(new HashMap<>()).collectList().block(Duration.ofMinutes(RUN_TIMEOUT_MINUTES));
-        } finally {
-            source.close();
-        }
-        return rows == null ? List.of() : rows;
-    }
-
-    /**
-     * 用引擎的字段映射转换器把源行转成目标行。
-     *
-     * <p>转换器只保留映射到目标字段的键，且会丢掉 空 值——目标行缺键时写入端按 空 处理，
-     * 这正是「源列为 空 时目标列写 空」的预期语义。</p>
-     *
-     * @param rows    源行
-     * @param mapping 字段映射
-     * @return 目标行
-     */
-    private List<Map<String, Object>> transformRows(List<Map<String, Object>> rows, List<SyncFieldMappingVO> mapping) {
         List<DataSyncFieldMapping> engineMappings = new ArrayList<>(mapping.size());
         for (SyncFieldMappingVO item : mapping) {
             engineMappings.add(new SimpleFieldMapping(item.source(), item.target(), null));
         }
-        List<Map<String, Object>> transformed = new ArrayList<>(rows.size());
-        for (Map<String, Object> row : rows) {
-            transformed.add(fieldMappingConverter.applyMappings(row, engineMappings));
+        var source = new JdbcDataSyncAgentSource(
+                "sync-src-" + task.getId(), "sync-in-" + task.getId(),
+                sourceInfo.url(), sourceInfo.username(), sourceInfo.password(),
+                task.getSyncTaskSourceSql(), columnNames);
+        try {
+            // 引擎的源以 Flux 暴露数据；params 不含 offset 即全量读
+            Flux<Map<String, Object>> rows = source.read(new HashMap<>())
+                    .doOnNext(row -> readCounter.incrementAndGet())
+                    .map(row -> fieldMappingConverter.applyMappings(row, engineMappings));
+            return buildSink(task, mapping).writeStream(rows);
+        } finally {
+            source.close();
         }
-        return transformed;
     }
 
     /**
-     * 写入目标表，返回真实写入行数。
+     * 按任务配置构造目标 Sink。
      *
      * @param task    任务
      * @param mapping 字段映射（目标列顺序决定占位符顺序）
-     * @param rows    目标行
-     * @return 写入行数
-     * @throws Exception 建连或写入失败
+     * @return 目标 Sink
+     * @throws Exception 目标数据源不可用或目标表名非法
      */
-    private long writeRows(MsSyncTask task, List<SyncFieldMappingVO> mapping, List<Map<String, Object>> rows) throws Exception {
+    private MonitorJdbcSyncSink buildSink(MsSyncTask task, List<SyncFieldMappingVO> mapping) throws Exception {
         List<String> targetColumns = mapping.stream().map(SyncFieldMappingVO::target).toList();
         DatasourceJdbcInfo targetInfo = datasourceService.jdbcInfo(task.getSyncTaskTargetDatasourceId());
         String quotedTable = SyncJdbcSupport.quoteTable(task.getSyncTaskTargetTable());
         SyncWriteMode mode = SyncWriteMode.from(task.getSyncTaskWriteMode());
         String writeSql = buildWriteSql(mode, quotedTable, targetColumns);
-        var sink = new MonitorJdbcSyncSink(
+        return new MonitorJdbcSyncSink(
                 "sync-sink-" + task.getId(), targetInfo, writeSql, targetColumns,
                 batchSize(task), quotedTable, mode == SyncWriteMode.OVERWRITE);
-        try {
-            return sink.runOnce(rows);
-        } finally {
-            sink.close();
-        }
     }
 
     /**
