@@ -17,7 +17,12 @@
 #   4. 每个 sha 只留文件名最新的那份（便于人工确认留下的就是最近的）
 #
 # 用法: dedupe-identical-jars.sh <dir> <glob> [-x <exclude-pattern>]
-#   例: dedupe-identical-jars.sh /home/kali/eduai/backend 'eduai-backend.jar.bak-*' -x 'eduai-backend.jar'
+#   例: dedupe-identical-jars.sh /home/kali/eduai/backend 'eduai-backend.jar.bak-*' -x 'eduai-backend\.jar$'
+#
+# ⚠ 排除模式必须**锚定**（用 grep -E 语法，通常加 `$`）。反例：写
+#   -x 'eduai-backend.jar' 时，它是 'eduai-backend.jar.bak-2026...' 的**子串**，
+#   `grep -vE` 会把**所有候选**都滤掉，报 NOTHING_TO_MATCH —— 看起来像「没有重复」，
+#   其实是排除条件把自己排除了。2026-10-02 实测踩到（26 份候选被报成 0 份）。
 set +u
 DIR=${1:-}
 GLOB=${2:-'*.jar*'}
