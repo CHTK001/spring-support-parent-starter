@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 @Configuration
-@EnableConfigurationProperties(ApiCorsProperties.class)
+@EnableConfigurationProperties({ApiCorsProperties.class, ApiSecurityHeaderFilter.ApiSecurityHeaderProperties.class})
 @ConditionalOnProperty(name = "plugin.api.cors.enable", matchIfMissing = true, havingValue = "true")
 public class ApiCorsConfiguration  {
     /**
@@ -55,6 +55,21 @@ public class ApiCorsConfiguration  {
          * X_头部_版本
         */
         private static final String X_HEADER_VERSION = "x-response-version";
+
+        /**
+         * 响应加密相关头（与前端 packages/core/src/httpCrypto.ts 的常量一一对应）
+         */
+        private static final String ENCRYPT_HEADER = "x-ec";
+
+        /**
+         * 响应密钥头
+         */
+        private static final String KEY_HEADER = "x-ck";
+
+        /**
+         * 噪声等级头
+         */
+        private static final String NOISE_LEVEL_HEADER = "x-ot";
 
     /**
      * 跨域资源共享属性
@@ -67,6 +82,30 @@ public class ApiCorsConfiguration  {
      */
     public ApiCorsConfiguration(ApiCorsProperties corsProperties) {
         this.corsProperties = corsProperties;
+    }
+
+    /**
+     * 安全响应头过滤器注册
+     *
+     * <p>与 CORS 过滤器同一生命周期开关：关掉跨域同时也关掉安全头
+     * （两者都由 {@code plugin.api.cors.enable} 控制，避免出现
+     * 「CORS 关了但安全头还在」这种难以排查的半开状态）。</p>
+     *
+     * <p>独立配置项 {@code plugin.api.security.header.enable} 可单独关闭过滤器，
+     * 但它只在 cors.enable 为 true 时才被创建。</p>
+     *
+     * @param properties 安全响应头配置
+     * @return 过滤器注册Bean
+     */
+    @Bean("apiSecurityHeaderFilterRegistrationBean")
+    public FilterRegistrationBean<ApiSecurityHeaderFilter> apiSecurityHeaderFilterRegistrationBean(
+            ApiSecurityHeaderFilter.ApiSecurityHeaderProperties properties) {
+        FilterRegistrationBean<ApiSecurityHeaderFilter> registrationBean =
+                new FilterRegistrationBean<>(new ApiSecurityHeaderFilter(properties));
+        // 比 CORS 稍后：让 CORS 先写完 Access-Control-* 头，本过滤器只补安全头
+        registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
+        registrationBean.addUrlPatterns("/*");
+        return registrationBean;
     }
 
     /**
@@ -83,19 +122,37 @@ public class ApiCorsConfiguration  {
                 "x-oauth-token",
                 "content-type",
                 "X-Requested-With",
-                "XMLHttpRequest"
+                "XMLHttpRequest",
+                // 前端 packages/core/src/httpCrypto.ts 会读这四个响应头：
+                // 缺任何一个都会让响应加密/密钥协商/噪声等级静默失效。
+                // 移除了原来的 addExposedHeader("*")，必须在此显式列出。
+                ENCRYPT_HEADER,
+                KEY_HEADER,
+                NOISE_LEVEL_HEADER
         );
-        // 放行所有原始域
-        config.addAllowedOriginPattern("*");
-        // 是否发送Cookie
-        config.setAllowCredentials(true);
+        // 允许的来源：按白名单放行，白名单为空则不放行任何跨域来源（同源访问不受影响）。
+        //
+        // 原实现是 addAllowedOriginPattern("*") + setAllowCredentials(true)，
+        // 实测（2026-10-01，198）任意 Origin（https://evil.example.com 与 null）
+        // 都会被原样反射回 Access-Control-Allow-Origin，并带
+        // Access-Control-Allow-Credentials: true —— 任意网站可携带用户凭证读接口响应。
+        // 改为显式白名单；确需放开时用端口通配如 http://192.168.50.*:8096，而不是 "*"。
+        if (corsProperties.getAllowedOrigins().isEmpty()) {
+            log.warn("[cors] 未配置 plugin.api.cors.allowed-origins，已禁用跨域来源放行。"
+                    + "前端与服务端不同源时必须在配置中显式列出白名单。");
+        } else {
+            for (String origin : corsProperties.getAllowedOrigins()) {
+                config.addAllowedOriginPattern(origin);
+            }
+            log.info("[cors] 跨域来源白名单: {}", corsProperties.getAllowedOrigins());
+        }
+        // 是否发送Cookie：默认关闭；打开前必须确认白名单已配好
+        config.setAllowCredentials(corsProperties.isAllowCredentials());
         // 放行所有请求方式
         config.addAllowedMethod("*");
         config.setExposedHeaders(exposedHeaders);
         // 放行所有请求头部信息
         config.addAllowedHeader("*");
-        // 暴露所有头部信息
-        config.addExposedHeader("*");
 
         // 2. 添加映射路径
         UrlBasedCorsConfigurationSource corsConfigurationSource = new UrlBasedCorsConfigurationSource();
