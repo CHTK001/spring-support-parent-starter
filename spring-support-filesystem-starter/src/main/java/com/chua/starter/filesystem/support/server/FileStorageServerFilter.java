@@ -136,6 +136,20 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     };
 
     /**
+     * RTF 文件头 {@code {\rtf}（{@code { \ r t f}）。
+     *
+     * <p>RTF 是纯文本，**既不落在 ZIP 也不落在 OLE2** 闸门里。若不在容器闸门
+     * 里单独放行，它会在到达 Aspose 之前就被挡掉 —— 实测表现为
+     * {@code ?format=pdf} 直接 {@code conv=unavailable}（876 B 的 SPI 提示页），
+     * 而同样的文件交给 Aspose.Words 能转出中文完整的 17 KB PDF。
+     * 而 SPI 预览对 RTF 会把中文的 Unicode 转义（反斜杠 u 加四位十六进制）
+     * 抽成 {@code ???}。</p>
+     */
+    private static final byte[] RTF_MAGIC = {
+            (byte) 0x7B, (byte) 0x5C, (byte) 0x72, (byte) 0x74, (byte) 0x66
+    };
+
+    /**
      * 判断字节是否以指定魔数开头。
      *
      * @param data  待判定字节
@@ -1214,7 +1228,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         // 实测纯垃圾字节（4 字节循环 500 次）交给 Aspose.Words 不会抛异常，
         // 而是**产出一个空白 PDF** 并返回 200——调用方拿到的是静默错误的结果。
         // 这里先按魔数挡掉，让它走 unavailable 分支。
-        if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC)) {
+        // RTF 是纯文本，不在上述两类容器里，单独放行（见 RTF_MAGIC 注释）。
+        if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC) && !startsWith(data, RTF_MAGIC)) {
             log.warn("[FileStorage] 源不是文档容器，跳过转 PDF: {}", fileName);
             return null;
         }
