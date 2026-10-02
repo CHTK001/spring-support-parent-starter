@@ -156,6 +156,22 @@
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- 数据同步：复用本仓 datasync 引擎的**数据面**（JDBC 源 + 字段映射转换 + Sink 契约）。
+             刻意不引 spring-support-datasync-starter：它带 ssh/osgi/datalake 重依赖，且在 spring 层
+             只做「映射加载」不提供接口；引擎的 Scheduler/Executor 走 Chronicle 且有「同 topic 只订阅
+             一次」语义（改任务后仍会写旧 Sink），控制台改用 Spring 定时器驱动，理由见
+             SyncTaskServiceImpl 类注释。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasync-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <!-- 引擎的源/Sink 以响应式 Flux 为数据面，契约在本模块直接使用 -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+
         <!-- Curator 5.9.0 传递依赖 3.9.3，本仓已备 3.9.4 补丁版，就近覆盖以免重复拉取 -->
         <dependency>
             <groupId>org.apache.zookeeper</groupId>
