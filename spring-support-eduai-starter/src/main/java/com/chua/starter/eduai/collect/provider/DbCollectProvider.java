@@ -44,7 +44,7 @@ import java.util.Map;
  *   "script": "item.my = item.word?.size()",                    // 可选：Groovy 处理脚本（可用 item/log，返回值可改 item）
  *   "gradeLevel": "小学", "grade": "一年级"                       // 写 edu_idiom 时附带学段映射
  * }
- * </pre></p>
+ * </pre>
  *
  * @since 4.0.0.42
  * @author CH

@@ -35,7 +35,7 @@ import java.util.Map;
  *   "gradeLevel": "小学", "grade": "一年级"
  * }
  * </pre>
- * 缺省映射即 chinese-xinhua 词库（word/pinyin/explanation/derivation/example）。</p>
+ * 缺省映射即 chinese-xinhua 词库（word/pinyin/explanation/derivation/example）。
  *
  * @since 4.0.0.42
  * @author CH
