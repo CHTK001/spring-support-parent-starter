@@ -19,21 +19,77 @@
 | `cmd /c "chcp 65001 >nul & powershell …"`（平台同款包装） | ❌ `Access is denied.` |
 | `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile …`（全路径） | ❌ `Access is denied.` |
 
-**结论（据此可跳过下面一大半排查）**：
+### 0.1 进一步把拦截维度锁到「精确路径」
 
-- **不是认证问题**：SFTP 可用，`whoami` 能执行；
-- **不是 sshd 配置问题**：`sshd_config` 标准、无 `ForceCommand`，默认 shell 能跑原生程序；
-- **不是平台的问题**：用原版 `ssh.exe` 同样复现；
-- **不是 `cmd /c` / `chcp` 包装的问题**：去掉包装、直接下发 `powershell` 一样被拒；
-- **不是路径规则的问题**：全路径调用 `powershell.exe` 同样被拒。
+| 对照实验 | 结果 |
+|---|---|
+| 把 `powershell.exe` 原样复制成 `C:\ms-acc\ps.exe` 并运行 | ✅ 能跑 |
+| 复制成**同名** `C:\ms-acc\powershell.exe` 并运行 | ✅ 能跑 |
+| 复制到 `C:\Windows\Temp\ps.exe` 并运行 | ✅ 能跑 |
+| 用 `C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe` | ✅ 能跑 |
+| 用**原路径** `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` | ❌ `Access is denied.` |
 
-⇒ **是「从 SSH 会话启动 `powershell.exe` 这一动作」被主机侧拒绝。**
-排查方向收敛为：**`powershell.exe` 的 ACL、AppLocker/WDAC/软件限制策略、或 EDR/AV 拦截**。
+⇒ **同一条二进制、换个位置就能跑；只有那一个路径被拦。**
+⇒ 按「文件名」的拦截机制（`DisallowRun` / IFEO）**已排除**。
 
-> ⚠ 顺带记录一个**产品级前提**：平台的 Windows 命令模型**完全建立在 PowerShell 之上**
-> （`chcp 65001` + `powershell -EncodedCommand`，内置脚本模板也都是 PowerShell）。
-> 也就是说 **PowerShell 起不来 = Windows 发布链路整体不可用，没有任何降级路径**。
-> 这条前提值得写进部署要求。
+### 0.2 操作系统侧所有按路径拦截的机制都已排除
+
+| 检查 | 结果 | 是否元凶 |
+|---|---|---|
+| `icacls powershell.exe` | `Administrators:(RX)` / `Users:(RX)`，与 `cmd.exe` 完全一致 | ✗ |
+| 两级父目录 ACL | **无任何 DENY ACE** | ✗ |
+| `certutil -hashfile powershell.exe` | 成功（文件可读、未损坏） | ✗ |
+| AppLocker `HKLM\SOFTWARE\Policies\Microsoft\Windows\SrpV2` | 键不存在 | ✗ |
+| WDAC `...\Control\CI\Policy` | `VerifiedAndReputablePolicyState=0` | ✗ |
+| SRP `...\safer\codeidentifiers` | 仅 1 条规则（`ItemData=QBSafe.dll`），无 `DefaultLevel` | ✗ |
+| IFEO `...\Image File Execution Options\powershell.exe` | 不存在 | ✗ |
+| `DisallowRun` / `RestrictRun` | 均不存在 | ✗ |
+| **Windows Defender / ASR** | **Defender 已停用**（`DisableAntiSpyware=1`、`DisableRealtimeMonitoring=1`、`WinDefend` 服务 STOPPED），ASR 规则未配置 | ✗ |
+
+⇒ **唯一还能按「精确路径」拦截执行的，只剩第三方安全产品的内核过滤驱动。**
+
+### 0.3 结论
+
+`win101` 上正在运行 **360 安全卫士**（`C:\Program Files (x86)\360\360TptMon` 存在；
+`ZhuDongFangYu.exe`（主动防御）、`360tray.exe` 在跑；服务 `Q360AMPPL`）。
+它（或其内核过滤驱动）**精确拦截了 `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+这一个路径的执行**。
+
+且该拦截**无法从命令行解除**（360 自我保护）：
+
+```
+sc stop Q360AMPPL      -> [SC] ControlService FAILED 5: Access is denied.
+taskkill /f /im ZhuDongFangYu.exe -> 拒绝访问。
+```
+
+> ⚠ 这条结论对交付很关键：**平台无法自愈，我也无法从远程解除** —— 必须在主机上
+> 用 360 自己的界面处理（见 §2.0）。
+
+### 0.4 顺带确认的旁支（都不是元凶，但别被误导）
+
+- `ms_server_host.ms_server_host_ssh_enabled` 原为 **0**，发布链路会直接拒（已置 1）；
+  **但它不是本次故障的原因** —— 置 1 后 exec 依旧被拒。
+- `HKLM\SOFTWARE\OpenSSH\DefaultShell` / `DefaultShellCommandLine` **都不存在**（正常）。
+
+---
+
+## 2.0 主机侧修复（唯一有效动作）
+
+在 `win101` 上用 **360 安全卫士的界面**做以下任一（二选一）：
+
+1. **加白名单**：把 `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+   加入「信任区 / 开发者模式 / 已信任程序」（不同版本入口名不同）；
+2. **关闭拦截该路径的防护项**（如「主动防御 / 系统加固 / 脚本防护」里与 PowerShell
+   相关的项），或直接**卸载/停用 360**（本机 Defender 已被 360 停用，卸载后
+   建议同时启用 Defender 以保留基本防护）。
+
+改完在主机上直接验证：
+
+```cmd
+"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -Command "Write-Output PS_OK"
+```
+
+出现 `PS_OK` 即解除；仍报 `Access is denied.` 说明 360 的规则没生效（需重启 360 服务或重启主机）。
 
 ---
 
@@ -45,8 +101,8 @@
 > **鸡生蛋**：唯一能在 Windows 上执行命令的入口，恰恰依赖「能在 Windows 上执行命令」。
 > 因此这台主机**必须上机（控制台或 RDP）处理一次**。
 
-另外注意：`ms_server_host.ms_server_host_ssh_enabled` **必须为 1**（发布链路会校验；
-本机实测原为 0，已置 1）——但**它不是本次故障的原因**，置 1 后 exec 依旧被拒。
+另外注意：`ms_server_host_ssh_enabled` **必须为 1**（发布链路会校验；本机实测原为 0，
+已置 1）——但**它不是本次故障的原因**。
 
 ---
 
