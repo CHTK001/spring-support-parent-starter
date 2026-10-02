@@ -106,6 +106,14 @@ public class EduAiProperties {
          * 故默认串行；内存充裕的机器可调大。</p>
          */
         private int maxConcurrent = 1;
+
+        /**
+         * 是否对上传图片做预处理（照度校正去阴影 + 灰度归一化）后再识别。
+         *
+         * <p>拍照卷常见「一侧亮一侧暗」，暗部题号会被识别成别的字符（实测 D→0）、
+         * 题号与作答被切成不同文字块。属于输入质量问题，调模型解决不了。</p>
+         */
+        private boolean preprocess = true;
     }
 
     @Data

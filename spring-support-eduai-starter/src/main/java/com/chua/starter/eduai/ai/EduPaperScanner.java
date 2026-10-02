@@ -318,8 +318,8 @@ public class EduPaperScanner {
      */
     private static final java.util.regex.Pattern SELF_NO_PREFIX =
             java.util.regex.Pattern.compile(
-                    "^\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*"
-                            + "|^\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.。、,，：:；;]?\\s*");
+                    "^\\s*[\\[【「『{]?\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*"
+                            + "|^\\s*[\\[【「『{]?\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.。、,，：:；;]?\\s*");
 
     /**
      * 子项前缀：{@code 1）} / {@code 1)} / {@code （1）} 这类「括号编号」。
@@ -338,7 +338,7 @@ public class EduPaperScanner {
      * 且 Q8 整题消失。这里把它当新条目切出来，匹配交由 matchRelation + 前缀改派处理。</p>
      */
     private static final java.util.regex.Pattern LOOSE_ITEM_PREFIX =
-            java.util.regex.Pattern.compile("^\\s*[0-9A-Za-zlLIgGqQ]{1,3}\\s*[.。、,，．：:；;]\\s*");
+            java.util.regex.Pattern.compile("^\\s*[\\[【「『{]?\\s*[0-9A-Za-zlLIgGqQ]{1,3}\\s*[.。、,，．：:；;]\\s*");
 
     /**
      * 中文数字序号开头的大节标题形态（一、二、三、…）。
@@ -359,7 +359,7 @@ public class EduPaperScanner {
      * 变成 {@code 1.(A)2.(B)3.(C)}）。按行解析会把 Q2/Q3 吞进 Q1 的作答 —— 实测 15 题只出 11 行。</p>
      */
     private static final java.util.regex.Pattern INLINE_ITEM =
-            java.util.regex.Pattern.compile("(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*");
+            java.util.regex.Pattern.compile("[\\[【「『{]?\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*");
 
     /**
      * 找出该行内所有题号片段（起始/结束偏移）。
