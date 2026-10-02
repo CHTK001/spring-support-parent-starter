@@ -175,7 +175,8 @@ public final class ProjectScripts {
         var sb = new StringBuilder(e.length() + 4);
         for (int i = 0; i < e.length(); i++) {
             char c = e.charAt(i);
-            if ("\\+*?()[]{}|^$".indexOf(c) >= 0) {
+            // . 也要转义：不转义时 "smoke.jar" 作为正则会连带匹配 "smokeXjar" 这类无关进程
+            if ("\\+*?()[]{}|^$.".indexOf(c) >= 0) {
                 sb.append('\\');
             }
             sb.append(c);
