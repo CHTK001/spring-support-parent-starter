@@ -241,17 +241,22 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
         if (port > 0) {
             // 与 Posix 同源：必须确认监听者是 app.pid 记录的那个进程，
             // 否则无关进程/残留孤儿监听同端口会被误判成「新版本健康」。
+            // 刻意定义成命名函数（与 Posix 的 listening_port 对称）：便于目标机自检脚本
+            // 脱离整段健康检查单独调用它做真机验证。
+            ps.append("function listening_port([int]$want) {\n");
+            ps.append("  $owner = (Get-Content 'app.pid' -ErrorAction SilentlyContinue | Select-Object -First 1)\n");
+            ps.append("  if (-not $owner) { return $false }\n");
+            ps.append("  foreach ($ln in (netstat -ano | Select-String -Pattern (':' + $want + '\\s') | Select-String -Pattern 'LISTENING')) {\n");
+            ps.append("    $f = ($ln.Line -split '\\s+') | Where-Object { $_ -ne '' }\n");
+            ps.append("    if ($f[-1].Trim() -eq \"$owner\".Trim()) { return $true }\n");
+            ps.append("  }\n");
+            ps.append("  return $false\n");
+            ps.append("}\n");
+            // 调用点：就绪后轮询探活，最多 READY_WAIT_SECONDS 秒
             ps.append("if ($up) {\n");
             ps.append("  $lis = $false\n");
-            ps.append("  $owner = (Get-Content 'app.pid' -ErrorAction SilentlyContinue | Select-Object -First 1)\n");
             ps.append("  for ($i = 0; $i -lt ").append(READY_WAIT_SECONDS).append("; $i += 2) {\n");
-            ps.append("    if ($owner) {\n");
-            ps.append("      foreach ($ln in (netstat -ano | Select-String -Pattern ':").append(port).append("\\s' | Select-String -Pattern 'LISTENING')) {\n");
-            ps.append("        $f = ($ln.Line -split '\\s+') | Where-Object { $_ -ne '' }\n");
-            ps.append("        if ($f[-1].Trim() -eq \"$owner\".Trim()) { $lis = $true; break }\n");
-            ps.append("      }\n");
-            ps.append("    }\n");
-            ps.append("    if ($lis) { break }\n");
+            ps.append("    if (listening_port ").append(port).append(") { $lis = $true; break }\n");
             ps.append("    Start-Sleep -Seconds 2\n");
             ps.append("  }\n");
             ps.append("  if (-not $lis) { 'health failed: 端口 ").append(port).append(" 未由本项目进程监听'; $up = $false }\n");

@@ -174,6 +174,17 @@ public final class ReleaseScriptProbe {
         check("F3 Windows 未给端口时不探活",
                 !windows.guardedRestart(win, "", "", "S", "T", false, 0).contains("netstat -ano"),
                 "");
+        // 与 Posix 对称：Windows 也把归属探活定义成命名函数，便于目标机自检脚本单独调用
+        check("F4 Windows 定义 listening_port 函数并调用",
+                gw.contains("function listening_port") && gw.contains("listening_port 18091"),
+                gw);
+        check("F5 Windows 探活按 netstat -ano 末列 pid 与 app.pid 归属比对",
+                gw.contains("netstat -ano") && gw.contains("app.pid") && gw.contains("$f[-1]"),
+                gw);
+        // 敏感性对照：不带端口时不应出现探活函数（否则说明条件分支写反了）
+        check("F6 敏感性对照：不带端口时无 listening_port 函数",
+                !windows.guardedRestart(win, "", "", "S", "T", false, 0).contains("function listening_port"),
+                "");
 
         // ---------- G. 其它命令生成的基础约束 ----------
         String backup = posix.backup(linux, 10);
