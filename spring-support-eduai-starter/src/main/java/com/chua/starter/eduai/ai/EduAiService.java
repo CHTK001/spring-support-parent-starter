@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.model.vo.EduAiCapabilityVO;
+import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -255,21 +256,23 @@ public class EduAiService {
             fallback.setComment("未作答");
             return fallback;
         }
-        boolean exact = standardAnswer != null
-                && standardAnswer.trim().equalsIgnoreCase(studentAnswer.trim());
-        if (exact) {
+        // 兜底也走相似度而非严格相等：OCR 错字与「答对但啰嗦」不该被判 0，
+        // 并与客观题容忍比对（EduMarkingServiceImpl）保持同一阈值口径。
+        boolean matched = standardAnswer != null
+                && AnswerSimilarity.similarity(standardAnswer, studentAnswer) >= AnswerSimilarity.SIMILARITY_THRESHOLD;
+        if (matched) {
             fallback.setScore(maxScore);
             fallback.setComment("与标准答案一致");
         } else {
             fallback.setScore(0);
             fallback.setComment("与标准答案不一致");
         }
-        fallback.setFallbackReason("字符串匹配结果");
+        fallback.setFallbackReason("相似度匹配结果");
         return fallback;
     }
 
     /**
-     * AI 阅卷 — 实际调用大模型，结果不可用时回退到 {@link #markQuestion} 的字符串比较结果。
+     * AI 阅卷 — 实际调用大模型，结果不可用时回退到 {@link #markQuestion} 的相似度比对结果。
      */
     public MarkingOutcome markQuestionWithAi(
             String questionType,
@@ -280,7 +283,7 @@ public class EduAiService {
     ) {
         MarkingOutcome fallback = markQuestion(questionType, questionStem, standardAnswer, studentAnswer, maxScore);
         if (!isAvailable() || isObjectiveQuestion(questionType)) {
-            // 客观题直接使用字符串匹配，避免 AI 幻觉
+            // 客观题直接使用相似度匹配，避免 AI 幻觉
             return fallback;
         }
 
@@ -330,7 +333,7 @@ public class EduAiService {
 
         try {
             ChatResponse response = call(systemPrompt, userPrompt);
-            JsonNode node = objectMapper.readTree(response.content());
+            JsonNode node = objectMapper.readTree(extractJson(response.content()));
             int score = node.path("score").asInt(0);
             String comment = node.path("comment").asText("");
             if (score < 0) {
@@ -345,9 +348,44 @@ public class EduAiService {
             outcome.setComment(comment);
             return outcome;
         } catch (Exception e) {
-            log.warn("[EduAi] AI 阅卷失败，回退字符串匹配: {}", e.getMessage());
+            log.warn("[EduAi] AI 阅卷失败，回退相似度匹配: {}", e.getMessage());
             return fallback;
         }
+    }
+
+    /**
+     * 从模型输出中提取 JSON 对象文本。
+     *
+     * <p>模型常把结果包在 Markdown 代码围栏里（如 {@code ```json ... ```}），
+     * 直接 {@code readTree} 会因首个字符是反引号而抛
+     * {@code Unexpected character ('`')}，进而错误回退到字符串匹配、把正确作答判 0。
+     * 这里先剥离围栏，再截取首个花括号块。</p>
+     *
+     * @param content 模型原始输出
+     * @return 提取到的 JSON 文本；无花括号块时返回去空白后的原文
+     */
+    private static String extractJson(String content) {
+        if (content == null) {
+            return "";
+        }
+        var text = content.trim();
+        if (text.startsWith("```")) {
+            int firstLine = text.indexOf('\n');
+            if (firstLine >= 0) {
+                text = text.substring(firstLine + 1);
+            }
+            int fence = text.lastIndexOf("```");
+            if (fence >= 0) {
+                text = text.substring(0, fence);
+            }
+            text = text.trim();
+        }
+        int start = text.indexOf('{');
+        int end = text.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return text.substring(start, end + 1);
+        }
+        return text;
     }
 
     /**
