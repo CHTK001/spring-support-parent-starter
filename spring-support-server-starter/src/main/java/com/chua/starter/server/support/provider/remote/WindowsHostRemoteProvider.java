@@ -343,8 +343,25 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
      * @return 执行结果
      */
     private RemoteExecResult execOn(SshClient client, String script) {
+        // 优先 PowerShell 7、失败回退 5.1：实测安全产品可能只拦 5.1 的 canonical 路径
+        RemoteExecResult r = execOnce(client, PowerShellCommand.MODERN_SHELL, script);
+        if (r.success() || !PowerShellCommand.looksLikeShellUnavailable(r.stderr())) {
+            return r;
+        }
+        return execOnce(client, PowerShellCommand.LEGACY_SHELL, script);
+    }
+
+    /**
+     * 用指定外壳执行一次并做失败诊断。
+     *
+     * @param client 已连接 SSH 客户端
+     * @param shell  外壳可执行名
+     * @param script PowerShell 脚本
+     * @return 执行结果（失败时 stderr 追加排查提示）
+     */
+    private RemoteExecResult execOnce(SshClient client, String shell, String script) {
         try {
-            SshClient.ExecResult result = client.exec().command(encode(script)).execute();
+            SshClient.ExecResult result = client.exec().command(encode(shell, script)).execute();
             RemoteExecResult r = new RemoteExecResult(result.exitCode(), result.stdout(), result.stderr());
             if (!r.success()) {
                 // PowerShell 起不来时远端以「正常返回 + 非零退出码 + stderr」的形式回传，
@@ -423,6 +440,17 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
      */
     private String encode(String script) {
         return PowerShellCommand.encoded(script);
+    }
+
+    /**
+     * 用指定外壳编码（配合「优先 pwsh、失败回退 powershell」）。
+     *
+     * @param shell  外壳可执行名
+     * @param script PowerShell 脚本
+     * @return 完整命令行
+     */
+    private String encode(String shell, String script) {
+        return PowerShellCommand.encoded(shell, script);
     }
 
     /**
