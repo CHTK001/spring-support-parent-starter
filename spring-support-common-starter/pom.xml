@@ -272,7 +272,27 @@
         </dependency>
 
         <!-- 单元测试 (仅 test scope, 不传递给消费方) -->
-        
+
+    <!--
+        CORS 白名单回归测试依赖（ApiCorsConfigurationTest，2026-10-01 高危缺陷的防护网）。
+
+        刻意不用 spring-boot-starter-test：它会传递引入 mockito-core，
+        而 AGENTS.md §3 明令「禁止 mockito / @MockBean / @SpyBean / mockStatic（含 pom 依赖）」。
+        这里只需要 JUnit 5 与 spring-test 的 Mock* 夹具（Spring 自带测试夹具，不是 mock 框架）。
+        junit-jupiter 的版本由父 pom 的 junit.jupiter.version 托管，不在此声明。
+        spring-test 的版本由 Spring Boot BOM 托管。
+    -->
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+
     </dependencies>
     <build>
         <plugins>
