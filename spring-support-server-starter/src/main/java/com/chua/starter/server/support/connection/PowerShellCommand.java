@@ -2,6 +2,7 @@ package com.chua.starter.server.support.connection;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Locale;
 
 /**
  * Windows 远端 PowerShell 下发工具。
@@ -18,6 +19,20 @@ import java.util.Base64;
  * @since 4.0.0.42
  */
 public final class PowerShellCommand {
+
+    /**
+     * 优先使用的外壳：PowerShell 7。
+     *
+     * <p>原生 UTF-8、跨平台，且不受针对 Windows PowerShell 5.1 canonical 路径的拦截
+     * （实测 360 只拦 {@code C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe}，
+     * 同机 {@code pwsh} 正常）。</p>
+     */
+    public static final String MODERN_SHELL = "pwsh";
+
+    /**
+     * 回退外壳：Windows PowerShell 5.1（所有 Windows 都自带）
+     */
+    public static final String LEGACY_SHELL = "powershell";
 
     /**
      * 代码页前缀：chcp 的输出本身不需要，重定向掉以免污染首行
@@ -44,9 +59,44 @@ public final class PowerShellCommand {
      * @return 完整命令行，脚本为空时也只是合法的纯前言命令
      */
     public static String encoded(String ps) {
+        return encoded(LEGACY_SHELL, ps);
+    }
+
+    /**
+     * 用指定外壳包装 EncodedCommand 行。
+     *
+     * <p>外壳可执行名由调用方给出，用于「优先 PowerShell 7、不可用再回退 Windows PowerShell」。
+     * 见 {@link #looksLikeShellUnavailable(String)}。</p>
+     *
+     * @param shell 外壳可执行名（{@code pwsh} 或 {@code powershell}）
+     * @param ps    PowerShell 脚本
+     * @return 完整命令行
+     */
+    public static String encoded(String shell, String ps) {
         String body = QUIET_PROLOGUE + (ps == null ? "" : ps);
         String b64 = Base64.getEncoder().encodeToString(body.getBytes(StandardCharsets.UTF_16LE));
-        return UTF8_PREFIX + "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text"
+        return UTF8_PREFIX + shell + " -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text"
                 + " -EncodedCommand " + b64 + "\"";
+    }
+
+    /**
+     * 判断一次失败是否「这个外壳根本起不来」，用于决定是否换外壳重试。
+     *
+     * <p>覆盖两类：主机上不存在该外壳（{@code 'pwsh' 不是内部或外部命令} /
+     * {@code 'pwsh' is not recognized}），以及外壳被安全产品按路径拦截
+     * （{@code Access is denied.} / {@code 拒绝访问}，实测 360 只拦 Windows PowerShell 5.1
+     * 的 canonical 路径，PowerShell 7 不受影响）。</p>
+     *
+     * @param stderr 远端 stderr
+     * @return 像「外壳不可用」时返回 true
+     */
+    public static boolean looksLikeShellUnavailable(String stderr) {
+        if (stderr == null || stderr.isBlank()) {
+            return false;
+        }
+        String s = stderr.toLowerCase(Locale.ROOT);
+        return s.contains("access is denied") || stderr.contains("拒绝访问")
+                || s.contains("is not recognized") || stderr.contains("不是内部或外部命令")
+                || s.contains("cannot find the file") || stderr.contains("系统找不到指定的文件");
     }
 }

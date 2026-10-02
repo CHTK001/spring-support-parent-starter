@@ -90,11 +90,35 @@ public class WindowsSshShell {
      * @return 执行结果
      */
     public Result exec(MsServerHost host, SshCredential cred, String psCommand, int timeoutSeconds) {
-        String command = powershell(psCommand);
+        // 优先 PowerShell 7：原生 UTF-8，且不受「按 5.1 canonical 路径拦截」的影响
+        // （实测 360 只拦 C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe，
+        //   同机 pwsh 正常）。不可用时（不存在 / 被拦）立即回退 5.1 —— 两条路都是
+        //   一次 exec，失败路径才多一次往返。
+        Result r = execOnce(host, cred, PowerShellCommand.MODERN_SHELL, psCommand, timeoutSeconds);
+        if (r.exitCode() == 0 || !PowerShellCommand.looksLikeShellUnavailable(r.stderr())) {
+            return verify(host, r);
+        }
+        Result legacy = execOnce(host, cred, PowerShellCommand.LEGACY_SHELL, psCommand, timeoutSeconds);
+        return verify(host, legacy);
+    }
+
+    /**
+     * 用指定外壳执行一次 PowerShell 命令。
+     *
+     * @param host           主机
+     * @param cred           凭据
+     * @param shell          外壳可执行名（{@code pwsh} 或 {@code powershell}）
+     * @param psCommand      PowerShell 命令
+     * @param timeoutSeconds 超时（秒）
+     * @return 执行结果
+     */
+    private Result execOnce(MsServerHost host, SshCredential cred, String shell,
+                            String psCommand, int timeoutSeconds) {
+        String command = PowerShellCommand.encoded(shell, psCommand);
         try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
             handle.client().connect();
             SshClient.ExecResult r = handle.client().exec().command(command).execute();
-            return verify(host, new Result(r.exitCode(), r.stdout(), r.stderr()));
+            return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (WindowsSshExecException e) {
             throw e;
         } catch (Exception e) {
