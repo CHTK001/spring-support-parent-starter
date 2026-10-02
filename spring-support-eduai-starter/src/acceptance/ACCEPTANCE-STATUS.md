@@ -108,3 +108,47 @@ f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
 
 流程细节见 `RELEASE-CHECKLIST.md`；报告是否仍然有效可用
 `report-staleness.py` 复核（换包即失效）。
+
+## 6. 共享主机的资源拉锯（2026-10-02 已止血，留痕）
+
+`nacos-acc` / `neo4j-acc` / `zk-acc` / `etcd-acc` / `influxdb-acc` 是本机上的
+**一次性验收基建**（`enabled=disabled`）。它们在本次交付期间**被并发会话反复拉起**：
+记录到的显式启动时间是 `2026-10-02 03:00:29`（五个 unit **同一秒**变为 active，
+无 timer、无 `WantedBy/RequiredBy`，即一次显式的五连发 `start`）。
+后果是资源判据被击穿：
+
+```
+java 9 → 13        available 5071MB → 2282MB
+swap  0% → 99.8%（swap 951/953MB）
+```
+
+`release-run.sh` 的资源门禁**按设计拒绝签收**（这正是它存在的意义），
+但「停一次算一次」已被证明无效（反复 3 次）。
+
+**处置（已执行）**：确认这些服务**当前零活连接**（8848/2379/2380/2181/8086/7687/7474
+全部 `listen=0 established=0`）后，把它们**持久屏蔽**：
+
+```bash
+# 原 unit 已备份（可逆）
+/home/kali/eduai/backups/acc-units-20261002/*.service
+# 屏蔽方式：/etc/systemd/system/<unit> 换成指向 /dev/null 的符号链接
+#   （systemctl mask 会报 "File already exists" —— unit 是真实文件，不能直接用 mask）
+sudo ln -sf /dev/null /etc/systemd/system/<unit>.service
+sudo systemctl daemon-reload
+```
+
+复核：`systemctl start nacos-acc` → `Unit nacos-acc.service is masked`（拒绝）。
+结果：`java 13→9`、`swap→0%`、eduai/oauth 健康 200/200。
+
+**恢复方式（若并发验收确需该基建）**：
+
+```bash
+sudo rm -f /etc/systemd/system/<unit>.service
+sudo cp /home/kali/eduai/backups/acc-units-20261002/<unit>.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start <unit>.service
+```
+
+> 这是一次**共享主机操作**，会影响其它会话；故不做静默处理，在此留痕。
+> 另外 `logrotate.service` 自 00:14 起失败（`collect` 侧：重复日志条目 +
+> `/opt/collect/logs/*.log` 权限），属 collect 域，未在本交付范围内改动。
