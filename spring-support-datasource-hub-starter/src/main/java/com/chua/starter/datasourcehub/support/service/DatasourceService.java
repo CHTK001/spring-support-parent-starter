@@ -3,6 +3,7 @@ package com.chua.starter.datasourcehub.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasourcehub.support.model.DataSourceTestVO;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
+import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datasourcehub.support.model.dto.DataSourceDTO;
 
 import java.sql.Connection;
@@ -81,4 +82,19 @@ public interface DatasourceService {
      * @throws Exception 数据源不存在、类型不受支持或连接失败
      */
     Connection connection(Long datasourceId) throws Exception;
+
+    /**
+     * 解析 JDBC 连接三元组（URL / 账号 / 明文口令 / 驱动类名）。
+     *
+     * <p>供需要自行建连、且只接受 URL 与账号口令的调用方使用（例如数据同步的 源 与 Sink）。
+     * 与 {@link #connection(Long)} 不同，本方法**不建立连接**，只做台账读取与 URL 拼装，
+     * 因此不需要关闭任何资源。拼装规则与 {@link #connection(Long)} 完全一致。</p>
+     *
+     * @param datasourceId 数据源 ID；**不允许**为 null/0（应用默认主数据源的连接串由 Spring 装配，
+     *                     台账里没有它的主机/库名，无法拼出 URL）
+     * @return 连接三元组
+     * @throws IllegalStateException    数据源不存在、为默认主数据源或缺少主机/库名
+     * @throws UnsupportedOperationException 非 JDBC 数据源类型
+     */
+    DatasourceJdbcInfo jdbcInfo(Long datasourceId);
 }
