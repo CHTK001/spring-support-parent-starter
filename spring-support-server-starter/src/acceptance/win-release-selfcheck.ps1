@@ -35,9 +35,20 @@ function Check([string]$name, [bool]$ok, [string]$detail) {
 }
 
 # 按平台的派发方式执行一段 PowerShell：EncodedCommand（UTF-16LE base64）
+# 经 cmd 重定向到文件再读：直接用 `& powershell ...` 捕获输出时，
+# 在「标准输出已被上层重定向」的调用上下文里会报
+# "StandardOutputEncoding is only supported when standard output is redirected"，
+# 导致脚本根本没执行（实测踩到，表现为 T2/T3 全挂）。
 function InvokeEncoded([string]$script) {
     $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
-    return (& powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $b64 2>&1) -join "`n"
+    $out = Join-Path $env:TEMP ('enc-' + [guid]::NewGuid().ToString('N') + '.out')
+    cmd /c "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $b64 > `"$out`" 2>&1"
+    $t = ''
+    if (Test-Path $out) {
+        $t = (Get-Content $out -Raw -ErrorAction SilentlyContinue)
+        Remove-Item $out -Force -ErrorAction SilentlyContinue
+    }
+    return $t
 }
 
 function CountByPattern([string]$pat) {
