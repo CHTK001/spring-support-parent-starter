@@ -124,6 +124,16 @@ public final class ProjectScripts {
             + "  Start-Sleep -Milliseconds 500\n"
             + "}\n"
             + "if (-not (Get-Process -Id $procId -ErrorAction SilentlyContinue)) { throw ('启动校验失败: 进程未运行 pid=' + $procId) }\n"
+            // 稳定窗口：Windows 启动经 `cmd /c` 托管，若被托管的命令解析失败
+            // （最典型：java 不在机器级 PATH 上，因为 Win32_Process.Create 起的进程
+            // 继承的是机器/用户环境，JAVA_HOME 不会被继承），cmd 会「先存在、随即退出」。
+            // 上面只校验了「进程曾经存在」，会把这种情况判成启动成功（实测踩到：
+            // 启动脚本打印 running pid=…，4 秒后进程数已为 0）。
+            // 因此再观察一段时间，进程若在其中退出即判失败。
+            + "for ($i = 0; $i -lt 4; $i++) {\n"
+            + "  Start-Sleep -Milliseconds 750\n"
+            + "  if (-not (Get-Process -Id $procId -ErrorAction SilentlyContinue)) { throw ('start verify failed: process exited right after start pid=' + $procId) }\n"
+            + "}\n"
             + "Write-Output ('running pid=' + $procId)";
 
     /**

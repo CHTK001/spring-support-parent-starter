@@ -114,6 +114,11 @@ public final class ReleaseScriptProbe {
         check("B4 Windows 停止段模式经自安全处理（[s]moke）",
                 wb.stop().contains("[s]moke"),
                 wb.stop());
+        // 启动校验必须有稳定窗口：否则 `cmd /c` 解析失败（如 java 不在机器级 PATH）时
+        // 会「先存在、随即退出」而被判成启动成功（真实踩到过）
+        check("B4b Windows 启动校验含稳定窗口（失败时抛错）",
+                wb.start().contains("exited right after start") && wb.start().contains("Start-Sleep -Milliseconds 750"),
+                wb.start());
         // 敏感性对照：构造「旧写法」的停止脚本，证明 B2 的断言确实能识别它（不是恒真）
         String oldStyleStop = "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*smoke.jar*' }"
                 + " | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }";
