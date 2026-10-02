@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * @作者 CH
+ * 阅卷结果 Mapper。
+ *
+ * @author CH
  */
 
 @Mapper

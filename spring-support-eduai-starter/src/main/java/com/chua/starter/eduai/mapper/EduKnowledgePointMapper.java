@@ -10,7 +10,9 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * @作者 CH
+ * 知识点 Mapper。
+ *
+ * @author CH
  */
 
 @Mapper

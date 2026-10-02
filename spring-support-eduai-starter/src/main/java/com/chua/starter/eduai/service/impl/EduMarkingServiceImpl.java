@@ -63,7 +63,7 @@ import java.util.UUID;
  * <ol>
  *   <li>持久化 {@code edu_answer_sheet} 答题卡</li>
  *   <li>生成 taskId，写入 {@code edu_marking_result} 状态 = PENDING</li>
- *   <li>异步路径（{@link #markAsync}）通过 {@link MessageTemplate} 派发到
+ *   <li>异步路径（{@link #dispatchAsync}）通过 {@link MessageTemplate} 派发到
  *       {@code edu.marking} 队列，由 {@link MarkingMessageListener} 异步消费</li>
  *   <li>同步路径立即执行阅卷并把结果落库</li>
  * </ol>

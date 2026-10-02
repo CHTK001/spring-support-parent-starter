@@ -72,7 +72,6 @@ public class EduKnowledgePointController {
      * @param gradeLevel 学段
      * @param grade      年级
      * @return 知识点树
-     * @param false false
      */
     @Operation(summary = "查询知识点树")
     @GetMapping("/tree")
