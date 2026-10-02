@@ -4,6 +4,7 @@ import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.ai.EduAiService;
+import com.chua.starter.eduai.ai.EduImagePreprocessor;
 import com.chua.starter.eduai.ai.EduPaperScanner;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
@@ -634,7 +635,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         int pageNo = 0;
         for (byte[] imageData : images) {
             pageNo++;
-            EduPaperScanner.ScanResult pageScan = paperScanner.scan(imageData);
+            // 预处理：照度校正去阴影 + 灰度归一化（可配置关闭）。拍照卷的暗部最易被识别错。
+            byte[] prepared = properties.getMarking().isPreprocess()
+                    ? EduImagePreprocessor.preprocess(imageData) : imageData;
+            EduPaperScanner.ScanResult pageScan = paperScanner.scan(prepared);
             if (pageScan == null) {
                 continue;
             }
