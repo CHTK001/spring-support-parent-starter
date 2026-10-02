@@ -173,7 +173,29 @@ public class WindowsSshShell {
      */
     public Result execLines(MsServerHost host, SshCredential cred, String psCommand,
                             int timeoutSeconds, Consumer<String> onLine) {
-        String command = powershell(psCommand);
+        // 优先 PowerShell 7、失败回退 5.1 —— 与 exec 同源（发布任务的步骤执行走这里，
+        // 此前只修了 exec 而漏了本方法，导致「/exec/command 已通、发布链路仍 Access is denied」）。
+        Result r = execLinesOnce(host, cred, PowerShellCommand.MODERN_SHELL, psCommand, timeoutSeconds, onLine);
+        if (r.exitCode() == 0 || !PowerShellCommand.looksLikeShellUnavailable(r.stderr())) {
+            return verify(host, r);
+        }
+        return verify(host, execLinesOnce(host, cred, PowerShellCommand.LEGACY_SHELL, psCommand, timeoutSeconds, onLine));
+    }
+
+    /**
+     * 用指定外壳流式执行一次。
+     *
+     * @param host           主机
+     * @param cred           凭据
+     * @param shell          外壳可执行名
+     * @param psCommand      PowerShell 命令
+     * @param timeoutSeconds 超时（秒）
+     * @param onLine         每行输出回调（stdout / stderr 合并）
+     * @return 执行结果
+     */
+    private Result execLinesOnce(MsServerHost host, SshCredential cred, String shell, String psCommand,
+                                 int timeoutSeconds, Consumer<String> onLine) {
+        String command = PowerShellCommand.encoded(shell, psCommand);
         try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
             handle.client().connect();
             SshClient.ExecResult r = handle.client().exec().command(command).stream(onLine, onLine);
