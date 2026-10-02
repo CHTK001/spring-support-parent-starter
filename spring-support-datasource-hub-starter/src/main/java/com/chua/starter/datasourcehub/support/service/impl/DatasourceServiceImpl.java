@@ -10,6 +10,7 @@ import com.chua.starter.datasourcehub.support.entity.MsDatasource;
 import com.chua.starter.datasourcehub.support.mapper.MsDatasourceMapper;
 import com.chua.starter.datasourcehub.support.model.DataSourceTestVO;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
+import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datasourcehub.support.model.dto.DataSourceDTO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.datasourcehub.support.service.DatasourceTunnelService;
@@ -327,6 +328,26 @@ public class DatasourceServiceImpl implements DatasourceService {
             props.setProperty("useInformationSchema", "true");
         }
         return cachedJdbcConnection(row.getId(), url, props);
+    }
+
+    @Override
+    public DatasourceJdbcInfo jdbcInfo(Long datasourceId) {
+        if (datasourceId == null || datasourceId == DatasourceHubConstants.DEFAULT_DATASOURCE_ID) {
+            throw new IllegalStateException("本操作必须显式指定数据源，不能用应用默认主数据源");
+        }
+        MsDatasource row = datasourceMapper.selectById(datasourceId);
+        if (row == null) {
+            throw new IllegalStateException("数据源不存在: " + datasourceId);
+        }
+        if (!"jdbc".equalsIgnoreCase(trim(row.getDatasourceType()))) {
+            throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
+        }
+        return new DatasourceJdbcInfo(
+                resolveJdbcUrl(row),
+                row.getDatasourceUsername() == null ? "" : row.getDatasourceUsername(),
+                // 台账里明文与 b64: 前缀两种存法共存，见 DatasourceSecrets
+                DatasourceSecrets.decode(row.getDatasourcePassword()),
+                row.getDatasourceDriverClassName());
     }
 
     /**
