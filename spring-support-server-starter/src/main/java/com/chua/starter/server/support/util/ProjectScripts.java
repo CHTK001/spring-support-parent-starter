@@ -381,10 +381,21 @@ public final class ProjectScripts {
      * @return 启动脚本
      */
     private static String winStart(String exe, String args) {
-        String cmd = exe + (args == null || args.isEmpty() ? "" : " " + args);
-        return "$cmd = 'cmd /c " + cmd + " > \"" + PH_LOG + "\" 2>&1'\n"
+        String inner = exe + (args == null || args.isEmpty() ? "" : " " + args);
+        return "$inner = '" + inner + "'\n"
+                + "$cmd = 'cmd /c ' + $inner + ' > \"" + PH_LOG + "\" 2>&1'\n"
                 + "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = '"
                 + PH_PATH + "' }\n"
+                // 回退：安全产品会拦截「经 WMI 创建进程」（实测 cmd.exe 返回 ReturnValue=2、
+                // java.exe 创建后秒死，而 Start-Process 正常且能跨 SSH 会话存活）。
+                // 仅在 WMI 失败时走这条，健康主机行为完全不变。
+                + "if ($r.ReturnValue -ne 0) {\n"
+                + "  $wmiCode = $r.ReturnValue\n"
+                + "  $sp = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/c ' + $inner + ' > \"" + PH_LOG
+                + "\" 2>&1') -WorkingDirectory '" + PH_PATH + "' -WindowStyle Hidden -PassThru\n"
+                + "  $r = [pscustomobject]@{ ReturnValue = 0; ProcessId = $sp.Id }\n"
+                + "  Write-Output ('WMI 创建进程被拒(code=' + $wmiCode + ')，已回退 Start-Process pid=' + $sp.Id)\n"
+                + "}\n"
                 + "if ($r.ReturnValue -ne 0) { throw ('启动失败 Win32_Process.Create code=' + $r.ReturnValue) }\n"
                 + "$r.ProcessId | Out-File 'app.pid' -Encoding ascii\n"
                 + "Write-Output $r.ProcessId";
