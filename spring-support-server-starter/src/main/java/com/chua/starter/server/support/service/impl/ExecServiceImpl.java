@@ -380,8 +380,8 @@ public class ExecServiceImpl implements ExecService {
                 item.setMsExecLogOutput(truncate(r.stdout()));
                 item.setMsExecLogExitCode(r.exitCode());
                 if (r.exitCode() != 0) {
-                    throw new IllegalStateException((r.stderr() == null || r.stderr().isBlank())
-                            ? "退出码非 0: " + r.exitCode() : r.stderr().trim());
+                    throw new IllegalStateException(withPowerShellLaunchHint((r.stderr() == null || r.stderr().isBlank())
+                            ? "退出码非 0: " + r.exitCode() : r.stderr().trim()));
                 }
             } else if (localFile != null) {
                 /**
@@ -427,6 +427,34 @@ public class ExecServiceImpl implements ExecService {
      * @param item       待填充日志
      * @throws Exception 连接或执行失败时抛出
      */
+    /**
+     * 为「PowerShell 起不来」这类失败补上可执行的排查提示。
+     *
+     * <p>远端只回 {@code Access is denied.} 时，最容易被误判成「账户权限不足」，
+     * 于是去查账户/ACL/sshd 配置，全都正常后无从下手。实测存在一类完全不同的成因：
+     * 第三方安全产品按<b>精确路径</b>拦截
+     * {@code C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe} 的执行 ——
+     * 同一条二进制拷到别的目录就能跑、只有原路径被拒；此时账户、ACL、sshd 配置
+     * 与 AppLocker/WDAC/Defender 全部正常，且平台无自愈路径
+     * （{@code ensure-ssh} 自身就走这条 exec 通道）。</p>
+     *
+     * @param reason 原始失败原因
+     * @return 追加提示后的原因；不匹配特定措辞时原样返回
+     */
+    private String withPowerShellLaunchHint(String reason) {
+        if (reason == null) {
+            return null;
+        }
+        String lower = reason.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("access is denied") || reason.contains("拒绝访问")) {
+            return reason.trim() + "（排查提示：该错误未必是权限问题。若主机装有第三方安全产品，"
+                    + "它可能按精确路径拦截 powershell.exe 的执行 —— 判据是"
+                    + "「把 powershell.exe 复制到其它目录能运行、而原路径被拒」。"
+                    + "详见 src/acceptance/WIN-EXEC-DENIED-CHECKLIST.md）";
+        }
+        return reason;
+    }
+
     private void execViaSsh(MsServerHost host, SshCredential credential, String command,
                             int timeout, MsExecLog item) throws Exception {
         SshClients.Handle handle = null;
@@ -449,7 +477,7 @@ public class ExecServiceImpl implements ExecService {
                  * @param result.stderr( 结果.stderr(
                  * @return illegal状态异常的结果
                  */
-                throw new IllegalStateException(result.stderr());
+                throw new IllegalStateException(withPowerShellLaunchHint(result.stderr()));
             }
         } finally {
             if (handle != null) {
