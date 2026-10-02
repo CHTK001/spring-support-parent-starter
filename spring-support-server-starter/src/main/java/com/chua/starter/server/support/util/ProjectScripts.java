@@ -415,7 +415,11 @@ public final class ProjectScripts {
         String stopBody = WIN_PID_STOP_BODY + winOrphanReaper(mainEntry);
         switch (type) {
             case "springboot", "fatjar" -> {
-                String start = winStart("java", "-jar " + PH_ENTRY) + "\n" + WIN_VERIFY_RUNNING;
+                // 与 Linux 模板对齐：必须把 JVM 参数与应用参数传下去。
+                // 原先写成 `-jar <入口>` 而不带 __JVMARGS__/__ARGS__，项目里配的
+                // cmdArgs（如 --server.port=NNNN）与 jvmArgs 会被静默忽略。
+                String start = winStart("java", "__JVMARGS__ -jar " + PH_ENTRY + " __ARGS__")
+                        + "\n" + WIN_VERIFY_RUNNING;
                 return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             case "static", "nginx" -> {
@@ -425,9 +429,10 @@ public final class ProjectScripts {
                 return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             case "separated" -> {
+                // 与 Linux 模板对齐：分离式应用同样要能收到 __ARGS__
                 String start = (entry.endsWith(".ps1")
                         ? winStart("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + PH_ENTRY)
-                        : winStart(PH_ENTRY, "")) + "\n" + WIN_VERIFY_RUNNING;
+                        : winStart(PH_ENTRY, "__ARGS__")) + "\n" + WIN_VERIFY_RUNNING;
                 return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
             default -> {

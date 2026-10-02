@@ -34,7 +34,7 @@ public final class ReleaseScriptPrinter {
             System.err.println("usage: ReleaseScriptPrinter <linux|windows> <type> <entry> <path> <log> <appName> [port]");
             System.exit(2);
         }
-        boolean windows = "windows".equalsIgnoreCase(args[0]);
+        boolean windows = "linux".equalsIgnoreCase(args[0]) ? false : "windows".equalsIgnoreCase(args[0]);
         String type = args[1];
         String entry = args[2];
         String path = args[3];
@@ -42,10 +42,13 @@ public final class ReleaseScriptPrinter {
         String appName = args[5];
         int port = args.length > 6 ? Integer.parseInt(args[6]) : 0;
 
+        // __JVMARGS__ / __ARGS__ 在真实发布链路由 ReleaseServiceImpl 替换，生成器这里也要处理，
+        // 否则吐出来的脚本会带着字面占位符。端口给定时把 __ARGS__ 填成 --server.port。
+        String argLiteral = port > 0 ? "--server.port=" + port : "";
         ProjectScripts.Scripts raw = ProjectScripts.builtin(windows, type, entry);
-        section("START", ProjectScripts.apply(raw.start(), entry, path, log, appName));
+        section("START", subst(ProjectScripts.apply(raw.start(), entry, path, log, appName), argLiteral));
         section("STOP", ProjectScripts.apply(raw.stop(), entry, path, log, appName));
-        section("RESTART", ProjectScripts.apply(raw.restart(), entry, path, log, appName));
+        section("RESTART", subst(ProjectScripts.apply(raw.restart(), entry, path, log, appName), argLiteral));
         section("STATUS", ProjectScripts.apply(raw.status(), entry, path, log, appName));
 
         String guarded = windows
@@ -53,12 +56,26 @@ public final class ReleaseScriptPrinter {
                 raw.start(), raw.status(), true, port)
                 : new PosixProjectPlatformProvider().guardedRestart(path, raw.restart(), raw.stop(),
                 raw.start(), raw.status(), true, port);
-        section("GUARDED", guarded);
+        section("GUARDED", subst(guarded, argLiteral));
 
         // 单独抽出端口探活函数：自检脚本要能脱离整段健康检查单独调用它
         if (port > 0) {
             section("LPORT", extractListeningPort(guarded));
         }
+    }
+
+    /**
+     * 替换 JVM 参数与应用参数占位符。
+     *
+     * @param text       脚本文本
+     * @param argLiteral 应用参数字面量
+     * @return 替换后的文本
+     */
+    private static String subst(String text, String argLiteral) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("__JVMARGS__", "").replace("__ARGS__", argLiteral);
     }
 
     /**
