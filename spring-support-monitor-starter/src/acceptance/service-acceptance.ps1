@@ -39,6 +39,18 @@ function Add-Result {
     Write-Host ("  [{0}] {1}{2}" -f $tag, $Name, $(if ($Detail) { "  -- $Detail" } else { '' }))
 }
 
+# 三态里的第三态：未覆盖。
+#
+# 为什么必须单独一态：把「没验」记成 FAIL 会让套件长期红灯，最终被人加忽略；
+# 记成 PASS 则是撒谎 —— 读报告的人会把 ACCEPTANCE_OK 当成「全部已验证」。
+# 所以未覆盖项既不算失败也不算通过，并且**汇总标记会随之改变**
+# （ACCEPTANCE_OK_WITH_GAPS 而非 ACCEPTANCE_OK），让绿灯本身带上信息。
+function Add-Unverified {
+    param([string]$Name, [string]$Reason)
+    $script:results.Add([PSCustomObject]@{ Name = $Name; Pass = $null; Detail = $Reason })
+    Write-Host ("  [UNVERIFIED] {0}  -- {1}" -f $Name, $Reason)
+}
+
 function Get-Api {
     param([string]$Path)
     $r = Invoke-WebRequest -Uri "$base$Path" -UseBasicParsing -TimeoutSec 60
@@ -214,14 +226,68 @@ $dbLayout = (@($view.data.filters)[0].params.PSObject.Properties | Where-Object 
 Add-Result '非法值未落库' ($dbLayout -eq 'SYSTEM') ("db layoutType=" + $dbLayout)
 if ($fsId) { $null = Remove-Node -Id $fsId }
 
+# ---------- 6. 管理接口鉴权（无凭据写操作必须被拒） ----------
+#
+# 这一项与前五项性质不同：它是**部署配置的验收**，不是代码行为的验收。
+# 后台代码里鉴权组件（AuthFilter / PermissionControlInterceptor）是存在的，
+# 但默认 application.yml 明确写着「本地联调免鉴权」：
+#   plugin.oauth.enable: false
+#   plugin.oauth.whitelist: [/ms/**]
+# 生产 profile（application-prod.yml）会打开 ProductionAuthGuard 并拒绝这种配置启动。
+# 因此在**未启用 prod profile** 的部署上，这一条只能是「未覆盖」而不是「通过」——
+# 把它记成 PASS 就是谎报安全状态。
+Write-Host "`n[6] 管理接口鉴权"
+$authzProbeName = 'acc-authz-probe'
+$authzPort = 21599
+$authzSpec = [ordered]@{
+    name = $authzProbeName; protocol = 'jdk-tcp'; engine = 'jdk-tcp'; host = '0.0.0.0'
+    port = $authzPort; enabled = 0; remark = 'authz probe'; filters = @()
+}
+$authzStatus = 0
+$authzBody = ''
+try {
+    # 刻意不带任何凭据：这是「无凭据能否写入」的判据
+    $probe = Invoke-Api -Path '/ms/monitor/server' -Body ($authzSpec | ConvertTo-Json -Depth 6 -Compress)
+    $authzStatus = 200
+    $authzBody = "success=" + $probe.Json.success
+} catch {
+    $authzStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+    $authzBody = $_.Exception.Message
+}
+# 只有 401 / 403 才算「被拒」。这里刻意不用 `$authzStatus -or ...` 的写法：
+# PowerShell 里 200 是 truthy，那样写会让「写入成功」也落进「被拒」分支，
+# 断言从此永远通过 —— 正是本套件要抓的那类假绿。
+if ($authzStatus -eq 401 -or $authzStatus -eq 403) {
+    Add-Result '无凭据写操作被拒（401/403）' $true ("HTTP " + $authzStatus)
+} else {
+    # 清理：这一项可能已经把探针节点建出来了
+    $made = @((Get-Api '/ms/monitor/server') | ConvertFrom-Json).data |
+            Where-Object { $_.name -eq $authzProbeName }
+    foreach ($n in $made) { $null = Remove-Node -Id $n.id }
+    Add-Unverified '无凭据写操作被拒' ("HTTP " + $authzStatus + " " + $authzBody +
+        ' —— 当前部署为免鉴权联调配置（plugin.oauth.enable=false 且 /ms/** 在白名单）。' +
+        '启用 prod profile 后 ProductionAuthGuard 会在启动期拒绝该配置；届时本项才会转为 PASS。')
+}
+
 # ---------- 汇总 ----------
 Start-Sleep -Seconds 3
 Write-Host "`n=== 汇总 ==="
-$failed = @($script:results | Where-Object { -not $_.Pass })
-Write-Host ("  总计 {0} 项，通过 {1}，失败 {2}" -f $script:results.Count, ($script:results.Count - $failed.Count), $failed.Count)
+$failed = @($script:results | Where-Object { $_.Pass -eq $false })
+$unverified = @($script:results | Where-Object { $null -eq $_.Pass })
+$passed = $script:results.Count - $failed.Count - $unverified.Count
+Write-Host ("  总计 {0} 项，通过 {1}，失败 {2}，未覆盖 {3}" -f $script:results.Count, $passed, $failed.Count, $unverified.Count)
+if ($unverified.Count -gt 0) {
+    Write-Host "  -- 未覆盖项（**不算通过**，绿灯标记会随之降级） --"
+    foreach ($u in $unverified) { Write-Host ("  UNVERIFIED: " + $u.Name + "  " + $u.Detail) }
+}
 if ($failed.Count -gt 0) {
     foreach ($f in $failed) { Write-Host ("  FAILED: " + $f.Name + "  " + $f.Detail) }
     exit 1
+}
+if ($unverified.Count -gt 0) {
+    # 绿灯但带信息：不要让「OK」被读成「全部已验证」
+    Write-Host ("  ACCEPTANCE_OK_WITH_GAPS ({0} 项未覆盖)" -f $unverified.Count)
+    exit 0
 }
 Write-Host '  ACCEPTANCE_OK'
 exit 0
