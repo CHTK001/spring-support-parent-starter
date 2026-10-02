@@ -122,14 +122,20 @@ while true; do
       # 于是每份证据的 mtime 都等于 app.jar 的构建时间 —— 实测三份证据的
       # mtime 完全相同（都是 Oct 1 05:33），`ls -1t` 在这种并列下顺序不确定，
       # 「保留最新 3 份」就退化成了「随机删 3 份」，可能删掉新证据、留下旧证据。
-      # 文件名里的 app.jar.replaced-YYYYmmdd-HHMMSS 才是真正的**留证时刻**，
-      # 且该格式按字符串排序即为时间顺序。mtime 保留着，供取证看构建时间。
-      #
-      # 注意 `sort -r` 的方向：降序才是「新 → 旧」，`tail -n +$((KEEP+1))` 删掉的
-      # 才是**最旧**的那些。写成升序 `sort` 会反过来删掉最新留证 —— 实测踩过：
-      # 造 7 份同 mtime 的证据，期望留 5/6/7，实际留下 1/2/3。
+      # 排序键取**文件名末尾**的 YYYYmmdd-HHMMSS（= 留证时刻），两种命名都覆盖：
+      #   app.jar.replaced-YYYYmmdd-HHMMSS        每次失配都留
+      #   app.jar.rolledback-from-YYYYmmdd-HHMMSS 每次自动回滚留
+      # 不能直接对文件名 `sort -r`：两个前缀不同，字典序会把它们**分组**而不是按时间混排。
+      # 也不能只 glob replaced-*：2026-10-01 20:45 实测 auto-rollback 触发后，
+      # rolledback-from-* 落在保留策略之外**永不清理**；开关打开后每回滚一次漏一份
+      # （回滚一个 562MB 的真包就漏 562MB）。
       EVIDENCE_KEEP=3
-      ls -1 "$EVIDENCE"/app.jar.replaced-* 2>/dev/null | sort -r | tail -n +$((EVIDENCE_KEEP + 1)) | xargs -r rm -f
+      ls -1 "$EVIDENCE"/app.jar.*-* 2>/dev/null | while read -r f; do
+        [ -z "$f" ] && continue
+        b=${f##*/}
+        ts=$(printf '%s' "$b" | grep -oE '[0-9]{8}-[0-9]{6}$')
+        [ -n "$ts" ] && printf '%s %s\n' "$ts" "$f"
+      done | sort -r | tail -n +$((EVIDENCE_KEEP + 1)) | cut -d' ' -f2- | xargs -r rm -f
 
       # ---- 可选自动回滚 ----
       if [ -f "$FLAG" ]; then
