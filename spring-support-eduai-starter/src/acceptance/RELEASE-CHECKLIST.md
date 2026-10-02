@@ -58,9 +58,19 @@ ssh <user>@<host> 'sudo BUNDLE=/home/<user>/eduai/eduai-app.tar.gz \
 
 ```bash
 # 3.1 记下验收前指纹（同 §1）
-# 3.2 API 生产级验收（纯标准库，在目标机上跑）
-ssh <host> 'cd /home/<user>/eduai/backend && python3 src/acceptance/acceptance.py'
-#     期望：生产级验收: 通过 49 / 失败 0
+# 3.2 API 生产级验收 + 来源自证（一条命令；在目标机上跑）
+#     先在开发机 deploy/package.sh 构建，记下打印的 jar sha256，再：
+ssh <host> 'sudo EXPECTED_JAR_SHA=<开发机构建的 sha256> \
+            BUNDLE=/home/<user>/eduai/eduai-app.tar.gz \
+            bash /home/<user>/eduai/backend/deploy/release-run.sh'
+#     它会：部署 -> 断言线上 jar == 本地构建（PROVENANCE）-> 资源判据 ->
+#           49 项 API 验收 -> 故障注入 -> 前后指纹。任一项不过即非 0 退出。
+#     只做只读体检：bash release-run.sh --check
+#
+# 3.3 报告失效核查（在**仓库侧**跑，因为报告在 src/acceptance/）
+python3 src/acceptance/report-staleness.py \
+    --live-eduai <线上 eduai jar sha256> --live-oauth <线上 oauth jar sha256>
+#     期望：所有历史报告要么 VALID，要么已标注失效（REPORT_VALID / 均已标注）
 # 3.3 故障注入：停 oauth -> 登录应秒级失败且 eduai 不崩 -> 恢复后自动可用
 ssh <host> 'sudo systemctl stop oauth-server.service; sleep 2; \
             curl -s -o /dev/null -w "%{http_code}\n" --max-time 30 \
