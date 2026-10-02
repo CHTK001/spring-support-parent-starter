@@ -195,4 +195,33 @@ if [ "$ok" != "1" ]; then
     tail -30 "$APP_DIR/logs/be.out.log" 2>/dev/null | cut -c1-160 | sed 's/^/      /'
     die "部署失败；可用 $JAR_DST.bak-$TS 与 $(basename "$UNIT_DST").bak-$TS 回滚"
 fi
+
+# ---------- 5.5 清理旧回滚包（防无限增长） ----------
+# 每次部署都留一份 .bak-<TS>（约 800MB）。不清理的话，共享主机上几十次部署就能
+# 吃掉几十 G —— 实测 2026-10-02 累积到 26 份 = 21G，根分区 66% → 72%（约 1.5h +4G）。
+# 按**文件名里的时间戳**保留最新 JAR_KEEP 份（不按 mtime：备份用 cp -p，
+# mtime 会继承源文件的时间，多份并列时按 mtime 排序等于随机删）。
+# 现役 jar（$JAR_DST 本身）不匹配 *.bak-*，天然被排除。
+JAR_KEEP=${JAR_KEEP:-5}
+log "==> 5.5/5 清理旧回滚包（保留最新 $JAR_KEEP 份）"
+BAKS=$(ls -1 "$APP_DIR/$JAR_DST".bak-[0-9]* 2>/dev/null | sort -r)
+BN=$(echo "$BAKS" | grep -c . || true)
+if [ "$BN" -le "$JAR_KEEP" ]; then
+    log "    现有 $BN 份 <= $JAR_KEEP，无需清理"
+else
+    # 方向断言：保留的第一份必须比将删的第一份「新」（字典序 = 时间序）。
+    # 写成升序 sort 会反过来删最新的，而份数不变 —— 只数份数发现不了。
+    NEWEST_KEPT=$(echo "$BAKS" | head -n 1)
+    OLDEST_DROPPED=$(echo "$BAKS" | tail -n +$((JAR_KEEP + 1)) | head -n 1)
+    if [ "$NEWEST_KEPT" \> "$OLDEST_DROPPED" ]; then
+        echo "$BAKS" | tail -n +$((JAR_KEEP + 1)) | while read -r f; do
+            [ -z "$f" ] && continue
+            rm -f "$f" && log "    删除旧回滚包 $(basename "$f")"
+        done
+        log "    剩余 $(ls -1 "$APP_DIR/$JAR_DST".bak-[0-9]* 2>/dev/null | wc -l) 份"
+    else
+        log "    [跳过清理] 方向断言失败：保留的 '$NEWEST_KEPT' 不比将删的 '$OLDEST_DROPPED' 新"
+    fi
+fi
+
 log "==> 部署完成（jar=$NEW_SHA）"
