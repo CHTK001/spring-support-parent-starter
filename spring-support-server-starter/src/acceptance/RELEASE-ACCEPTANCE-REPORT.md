@@ -59,9 +59,13 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 | 平台 exec 通道（`whoami` / PS 版本 / 中文） | **PASS** | `SUCCESS`；`7.2.24`（确认走 pwsh） |
 | **升级：投放新版本文件（SDK rename）** | **PASS** | `sftp rename C:/…/uploads/smoke2.jar -> C:/…/smoke.jar`；md5 V1→V2 |
 | **回滚** | **PASS** | md5 V2→V1 |
-| 启动 / 停止 / 重启 | ❌ | `启动失败 Win32_Process.Create code=2`（主机策略，见 §5） |
-| 坏包自动回滚 | ❌ | 受启动阻断连带 |
+| **启动 / 重启任务** | **PASS（任务成功）** | `task success=True`；`[1/2] 启动项目` + `[2/2] 记录PID`；WMI 被拒后**回退 Start-Process** 生效 |
+| 启动后「进程存活 / 端口监听」的独立复核 | ❌ | 主机安全产品**动态拦截**读取类命令（同批 `dir` 成功、`type` 被拒），无法复核 |
 | Windows 发布逻辑真机自检（端口归属探活 / 孤儿回收） | **PASS** | `win-release-selfcheck.ps1`：**10/10**，含敏感性对照 |
+
+> Windows 侧共修掉 **3 个真实产品缺陷**（见 §6 第 1/2/3 项），把「完全不可用」推进到
+> 「任务可执行、投放与回滚 md5 可核对」；剩余不可验收的部分**全部来自主机安全产品**
+> 的动态拦截（见 §5.1）。
 
 ### 3.3 macOS
 
@@ -104,15 +108,15 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 
 ## 5. 未通过 / 未覆盖（诚实清单）
 
-### 5.1 Windows 启动被主机策略阻断（**阻断项，非产品缺陷**）
+### 5.1 Windows 被主机安全产品动态拦截（**环境问题，非产品缺陷**）
 
 三层剥离后的结论：
 
 | 层 | 状态 |
 |---|---|
-| ① `powershell.exe` 被安全产品按**精确路径**拦截 | ✅ **已修**（下发优先 `pwsh`） |
+| ① `powershell.exe` 被按**精确路径**拦截 | ✅ **已修**（下发优先 `pwsh`） |
 | ② 发布执行器走 `execLines`，与 `exec` 两条路 | ✅ **已修**（同源改造） |
-| ③ **`Win32_Process.Create` 在本机不可用** | ❌ **未修**（主机策略） |
+| ③ `Win32_Process.Create` 被拦（`cmd`→ret=2、`java`→秒死；`Start-Process` 正常） | ✅ **已修**（失败回退 `Start-Process`，且实测可跨会话存活） |
 
 第③层证据：
 
@@ -121,14 +125,19 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 | `Win32_Process.Create` + `cmd /c …` | ret=2 |
 | `Win32_Process.Create` + `C:\Windows\System32\cmd.exe /c …` | ret=2 |
 | `Win32_Process.Create` + `java.exe -jar <绝对路径>` | ret=0，进程 6s 内死亡 |
-| `Start-Process` + `java.exe` | **RUNNING 且端口在听** |
+| `Start-Process` + `java.exe` | **RUNNING 且跨会话存活** |
 
 已排除：文件/目录 ACL（无 DENY）、AppLocker、WDAC、SRP、IFEO、`DisallowRun`、
 Defender/ASR、`sshd_config`、认证（SFTP 与原生命令均正常）。
-⇒ 本机安全产品（360）拦截「经 WMI 创建进程」。
 
-**产品侧建议（未实施）**：Windows 启动增加回退策略 —— `ReturnValue != 0` 时改用
-`Start-Process` 或计划任务重试。详见 `WIN-EXEC-DENIED-CHECKLIST.md`。
+**修完三层后仍无法完成验收的原因**：该安全产品的拦截是**动态升级**的 —— 收尾探测时
+同批命令里 `cmd /c "dir …"` 成功、而 `cmd /c "type …\app.pid"` 被拒，`Get-Process`
+经 `pwsh` 也失败。这已不是「按路径拦某个 exe」，而是**按命令内容/文件读取**的启发式拦截，
+使「启动后复核进程与端口」这一动作本身不可执行。
+
+> **结论**：在本机运行 360 的前提下，Windows 发布链路的**端到端验收无法完成**。
+> 需在主机上为 `powershell.exe` / `cmd.exe` 加白（或卸载该安全产品）后重跑 §7 的复验步骤。
+> 本报告不把「够不到的部分」报成通过。
 
 ### 5.2 其它未覆盖
 
