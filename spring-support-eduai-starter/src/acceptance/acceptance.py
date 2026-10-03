@@ -56,13 +56,20 @@ def ck(name: str, cond: bool, detail: str = "") -> None:
 
 
 def http(method: str, path: str, body=None, token: str = None,
-         raw: bytes = None, timeout: float = 20.0) -> tuple[int, str]:
-    """发一个请求，返回 (状态码, 响应体)。连接失败返回 (0, 原因)。"""
+         raw: bytes = None, timeout: float = 20.0,
+         origin: str = None) -> tuple[int, str]:
+    """发一个请求，返回 (状态码, 响应体)。连接失败返回 (0, 原因)。
+
+    origin 非空时带上 Origin 头 —— 用于覆盖**浏览器真实路径**：浏览器发 POST
+    必带 Origin，而 curl 不带，所以只测 curl 会漏掉整条 CORS 判定。
+    """
     data = raw if raw is not None else (
         json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None)
     req = urllib.request.Request(BASE + path, data=data, method=method)
     req.add_header("Content-Type", "application/json")
     req.add_header("User-Agent", UA)
+    if origin:
+        req.add_header("Origin", origin)
     if token:
         req.add_header("Authorization", "Bearer " + token)
     try:
@@ -243,6 +250,21 @@ def main() -> int:
         p95 = sorted(lat)[int(len(lat) * 0.95) - 1]
         print(f"    延迟 p50={p50:.0f}ms  p95={p95:.0f}ms  max={max(lat):.0f}ms")
         ck("F2 p95 延迟 < 1500ms", p95 < 1500, f"p95={p95:.0f}ms")
+
+    print("\n=== G 跨域（浏览器真实路径：带 Origin）===")
+    # 浏览器发 POST 必带 Origin；vite 代理的 changeOrigin 只改 Host、**不改 Origin**，
+    # 会把它原样转给后端。allowed-origins 为空时 POST /v2/user/login 会返回
+    # 403 "Invalid CORS request" —— 这正是「登录 403」的成因（2026-10-04 实测）。
+    # 只测 curl 会漏掉整条 CORS 判定，所以这里显式带 Origin。
+    c, t = http("POST", "/v2/user/login",
+                body={"username": ADMIN_USER, "password": ADMIN_PWD},
+                origin="http://localhost:19093")
+    ck("G1 白名单内的来源可登录（不被 Invalid CORS request 拦）",
+       c == 200 and jget(t, "ok") is True, f"http={c}")
+    c, _ = http("POST", "/v2/user/login",
+                body={"username": ADMIN_USER, "password": ADMIN_PWD},
+                origin="http://evil.example.com")
+    ck("G2 未列入白名单的来源被拒（白名单未退化为通配）", c == 403, f"http={c}")
 
     print(f"\n  ===== 生产级验收: 通过 {passed} / 失败 {failed} =====")
     if fails:
