@@ -111,11 +111,38 @@
         </dependency>
 
         <!-- 测试 -->
-        
+        <!-- JUnit Jupiter：发布脚本生成回归探针 ReleaseScriptProbe 以 @Test 承载，
+             使改动 ProjectScripts / 平台 Provider 时能由 mvn test 直接拦住，
+             不再依赖只能手工执行的 main() 运行器。与 monitor-starter 保持同源依赖。 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- 本仓约定非 example 模块不新增 *Test 类，回归脚本以 *Probe 承载。
+                         但 surefire 默认只按文件名匹配 Test*/*Test/*Tests/*TestCase，
+                         *Probe 类即使带 @Test 注解也永远不会被发现（表现为构建全绿、
+                         却没有任何 Tests run 输出）。此处补上 Probe 模式；
+                         注意声明 includes 会整体替换默认值，故四种默认模式必须一并保留。 -->
+                    <includes>
+                        <include>**/Test*.java</include>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                        <include>**/*TestCase.java</include>
+                        <include>**/*Probe.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
