@@ -49,11 +49,78 @@ public final class PowerShellCommand {
     }
 
     /**
+     * 内联 {@code -EncodedCommand} 的 base64 安全上限。
+     *
+     * <p><b>这是实测踩出来的硬上限，不是保守估计。</b>脚本按 UTF-16LE 编码再 base64，
+     * 膨胀到 4/3；外面还要套 {@code cmd /c "chcp 65001 >nul & pwsh ... -EncodedCommand "}
+     * （约 150 字符固定外壳）。{@code cmd.exe} 的命令行上限 8191 字符，超出即整条命令被拒：
+     * 实测 base64 6104 正常、8072 起必定失败，悬崖落在 base64 ≈ 8040。
+     * 症状是 <b>0 秒退出、exit 1、且错误信息是十来个别名（U+FFFD）</b>——
+     * 也就是说超限时既失败又完全看不出原因。</p>
+     *
+     * <p>取 7000 而不是贴着 8040，是为了给固定外壳留余量；这个余量不能省，
+     * 因为超限的失败形态是「别名错误」，现场根本无法判断是长度问题。</p>
+     *
+     * <p>真实脚本尺寸：Windows 启动段 base64 6612~6720（仍在限内，所以「启动」一直好用），
+     * 重启段 9116（超限），带三段式健康检查的升级/回滚命令 29076（远超）。
+     * 「启动能用、重启和升级必挂」这种现象的根因就在这里，而不是脚本内容有问题。</p>
+     */
+    public static final int INLINE_BASE64_LIMIT = 7000;
+
+    /**
+     * 完整脚本正文（含进度抑制前言），即内联执行时实际交给外壳的内容。
+     *
+     * @param ps 业务脚本
+     * @return 前言 + 业务脚本
+     */
+    public static String body(String ps) {
+        return QUIET_PROLOGUE + (ps == null ? "" : ps);
+    }
+
+    /**
+     * 脚本内联下发时的 base64 长度。
+     *
+     * @param ps 业务脚本
+     * @return base64 字符数
+     */
+    public static int base64Length(String ps) {
+        return Base64.getEncoder().encodeToString(body(ps).getBytes(StandardCharsets.UTF_16LE)).length();
+    }
+
+    /**
+     * 判断脚本是否超出内联下发能力。
+     *
+     * @param ps 业务脚本
+     * @return 超出内联上限时为 {@code true}，需要改走「落盘 + -File」
+     */
+    public static boolean exceedsInlineLimit(String ps) {
+        return base64Length(ps) > INLINE_BASE64_LIMIT;
+    }
+
+    /**
+     * 改用 {@code -File} 执行远端已落盘的脚本。
+     *
+     * <p>脚本本体不再挤进命令行，因此不受 {@code cmd.exe} 的 8191 字符上限约束；
+     * 外层仍保留 {@code chcp 65001} 前缀，与内联路径保持同一套编码约定。</p>
+     *
+     * @param shell      外壳可执行名
+     * @param remotePath 远端脚本绝对路径
+     * @return 完整命令行
+     */
+    public static String fileBased(String shell, String remotePath) {
+        return UTF8_PREFIX + shell + " -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""
+                + remotePath + "\"";
+    }
+
+    /**
      * 包装成切到 UTF-8 代码页后由 cmd 发起的 EncodedCommand 行（脚本按 UTF-16LE Base64）。
      *
      * <p>必须走 EncodedCommand：内联 {@code -Command "..."} 会被 cmd.exe 在第一个换行处截断，
      * 多行脚本只剩首行，且 PowerShell 的解析错误仍带着 0 退出码回来。
      * {@code -NonInteractive} 防止无人值守的远端卡在控制台提示上。</p>
+     *
+     * <p>长度超过 {@link #INLINE_BASE64_LIMIT} 时不要用本方法，请改走
+     * {@link #fileBased(String, String)}。</p>
      *
      * @param ps PowerShell 脚本
      * @return 完整命令行，脚本为空时也只是合法的纯前言命令
@@ -73,8 +140,7 @@ public final class PowerShellCommand {
      * @return 完整命令行
      */
     public static String encoded(String shell, String ps) {
-        String body = QUIET_PROLOGUE + (ps == null ? "" : ps);
-        String b64 = Base64.getEncoder().encodeToString(body.getBytes(StandardCharsets.UTF_16LE));
+        String b64 = Base64.getEncoder().encodeToString(body(ps).getBytes(StandardCharsets.UTF_16LE));
         return UTF8_PREFIX + shell + " -NoProfile -NonInteractive -ExecutionPolicy Bypass -OutputFormat Text"
                 + " -EncodedCommand " + b64 + "\"";
     }

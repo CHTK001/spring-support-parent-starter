@@ -7,6 +7,8 @@ import com.chua.ssh.support.client.SshClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -25,6 +27,22 @@ import java.util.function.Consumer;
 @Slf4j
 @Component
 public class WindowsSshShell {
+
+    /**
+     * 超长脚本落盘时的远端临时目录。
+     *
+     * <p>固定用 {@code %SystemRoot%\Temp}（此处即 {@code C:\Windows\Temp}）而不是用户临时目录：
+     * sshd 的服务账号与管理员账号不同，用户临时目录可能不可写。</p>
+     */
+    private static final String REMOTE_TMP_DIR = "C:\\Windows\\Temp";
+
+    /**
+     * 落盘时单个分块的 base64 字符数。
+     *
+     * <p>每块自身也要内联下发，仍受 {@link PowerShellCommand#INLINE_BASE64_LIMIT} 约束，
+     * 故取其一半再留出固定外壳开销的余量。</p>
+     */
+    private static final int CHUNK_BASE64 = 2400;
 
     /**
      * Windows OpenSSH 默认端口
@@ -114,7 +132,82 @@ public class WindowsSshShell {
      */
     private Result execOnce(MsServerHost host, SshCredential cred, String shell,
                             String psCommand, int timeoutSeconds) {
+        if (PowerShellCommand.exceedsInlineLimit(psCommand)) {
+            return execViaRemoteFile(host, cred, shell, psCommand);
+        }
         String command = PowerShellCommand.encoded(shell, psCommand);
+        try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
+            handle.client().connect();
+            SshClient.ExecResult r = handle.client().exec().command(command).execute();
+            return new Result(r.exitCode(), r.stdout(), r.stderr());
+        } catch (WindowsSshExecException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WindowsSshExecException("OpenSSH 执行失败: " + rootMessage(e), e);
+        }
+    }
+
+    /**
+     * 把超长脚本分块写到远端临时文件，再用 {@code -File} 执行。
+     *
+     * <p>存在的理由：内联 {@code -EncodedCommand} 会把 base64 塞进命令行，而 {@code cmd.exe}
+     * 命令行上限 8191 字符。实测 base64 超过约 8K 就整条被拒，症状是 0 秒退出 + exit 1
+     * + 十来个别名错误（错误信息本身也被同一层截断损坏）。重启段（9116）与带健康检查的
+     * 升级/回滚命令（29076）都超限，会稳定失败。</p>
+     *
+     * <p>分块本身仍走 {@code -EncodedCommand}，所以每块的引号与转义都不成问题；
+     * 远端文件写成带 BOM 的 UTF-8，保证回退到 Windows PowerShell 5.1 时中文也不会乱码。</p>
+     *
+     * @param host      主机
+     * @param cred      凭据
+     * @param shell     外壳可执行名
+     * @param psCommand PowerShell 命令
+     * @return 执行结果
+     */
+    private Result execViaRemoteFile(MsServerHost host, SshCredential cred, String shell, String psCommand) {
+        String path = REMOTE_TMP_DIR + "\\ms-exec-" + Long.toHexString(System.nanoTime()) + ".ps1";
+        byte[] raw = PowerShellCommand.body(psCommand).getBytes(StandardCharsets.UTF_8);
+        byte[] withBom = new byte[raw.length + 3];
+        withBom[0] = (byte) 0xEF;
+        withBom[1] = (byte) 0xBB;
+        withBom[2] = (byte) 0xBF;
+        System.arraycopy(raw, 0, withBom, 3, raw.length);
+        String b64 = Base64.getEncoder().encodeToString(withBom);
+        try {
+            runRaw(host, cred, PowerShellCommand.encoded(shell,
+                    "$d = '" + REMOTE_TMP_DIR + "'\n"
+                            + "if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }\n"
+                            + "[IO.File]::WriteAllText('" + path + "', '')"));
+            for (int off = 0; off < b64.length(); off += CHUNK_BASE64) {
+                String chunk = b64.substring(off, Math.min(b64.length(), off + CHUNK_BASE64));
+                runRaw(host, cred, PowerShellCommand.encoded(shell,
+                        "[IO.File]::AppendAllText('" + path + "',"
+                                + " [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + chunk + "')))"));
+            }
+            Result r = runRaw(host, cred, PowerShellCommand.fileBased(shell, path));
+            try {
+                runRaw(host, cred, PowerShellCommand.encoded(shell,
+                        "Remove-Item -LiteralPath '" + path + "' -Force -ErrorAction SilentlyContinue"));
+            } catch (Exception ignored) {
+                // 清理失败不影响本次执行结果，远端会残留一个临时脚本
+            }
+            return r;
+        } catch (WindowsSshExecException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WindowsSshExecException("脚本落盘执行失败: " + rootMessage(e), e);
+        }
+    }
+
+    /**
+     * 用给定命令行执行一次，不做超限改写、不做退化校验。
+     *
+     * @param host    主机
+     * @param cred    凭据
+     * @param command 完整命令行
+     * @return 执行结果
+     */
+    private Result runRaw(MsServerHost host, SshCredential cred, String command) {
         try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
             handle.client().connect();
             SshClient.ExecResult r = handle.client().exec().command(command).execute();
@@ -195,6 +288,10 @@ public class WindowsSshShell {
      */
     private Result execLinesOnce(MsServerHost host, SshCredential cred, String shell, String psCommand,
                                  int timeoutSeconds, Consumer<String> onLine) {
+        if (PowerShellCommand.exceedsInlineLimit(psCommand)) {
+            // 落盘路径没有流式回调：先分块写文件，再用 -File 执行一次取回完整输出。
+            return execViaRemoteFile(host, cred, shell, psCommand);
+        }
         String command = PowerShellCommand.encoded(shell, psCommand);
         try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
             handle.client().connect();
