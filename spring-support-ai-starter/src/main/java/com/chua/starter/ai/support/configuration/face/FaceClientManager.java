@@ -58,6 +58,11 @@ public class FaceClientManager {
     private static final int DEFAULT_FEATURE_DIMENSION = 512;
 
     /**
+     * 人脸超分模型的缺省标识（配置留空时回退，与 face 全局 setting 提供者的默认值一致）
+     */
+    private static final String DEFAULT_SUPER_RESOLUTION_MODEL = "gfpgan-face-super-resolution";
+
+    /**
      * 全局设置读取工具
      */
     private final GlobalSettingReader settingReader;
@@ -299,12 +304,7 @@ public class FaceClientManager {
         if (current == null) {
             synchronized (this) {
                 if (superResolution == null) {
-                    String model = settingReader.getStr(GROUP, "super_resolution_model");
- // 未配置时回退默认（与 face全局setting提供者 默认一致）
-                    if (model == null || model.isBlank()) {
-                        model = "gfpgan-face-super-resolution";
-                    }
-                    superResolution = ImageEnhancer.create(model);
+                    superResolution = ImageEnhancer.create(superResolutionModel());
                 }
                 current = superResolution;
             }
@@ -471,7 +471,7 @@ public class FaceClientManager {
         this.featureExtractor = FeatureExtractor.create(settingReader.getStr(GROUP, "feature_model"));
         this.detector = buildDetector(settingReader.getStr(GROUP, "detector_model"));
         this.animeDetector = buildDetector(settingReader.getStr(GROUP, "anime_detector_model"));
-        this.superResolution = ImageEnhancer.create(settingReader.getStr(GROUP, "super_resolution_model"));
+        this.superResolution = ImageEnhancer.create(superResolutionModel());
         this.restorer = ImageEnhancer.create(settingReader.getStr(GROUP, "restore_model"));
         this.attributeClassifier = ImageClassifier.create(settingReader.getStr(GROUP, "attribute_model"));
         this.emotionClassifier = ImageClassifier.create(settingReader.getStr(GROUP, "emotion_model"));
@@ -572,6 +572,21 @@ public class FaceClientManager {
      */
     private boolean isModelConfigured(String field) {
         return StringUtils.isNotBlank(settingReader.getStr(GROUP, field));
+    }
+
+    /**
+     * 读取人脸超分模型标识，配置留空时回退默认。
+     *
+     * <p>懒加载与 {@link #rebuild()} 两条创建路径必须走同一个方法。此前 rebuild()
+     * 直接把配置值丢给 create()，而懒加载路径带回退：于是「超分模型留空」在刚启动时
+     * 能用默认模型，管理员一旦改过任意 face 配置，字段就变成绑定空模型标识的包装，
+     * getter 的懒加载分支被跳过，调用时才抛 {@code IllegalStateException: 模型未注册}。</p>
+     *
+     * @return 人脸超分模型标识（非空）
+     */
+    private String superResolutionModel() {
+        String model = settingReader.getStr(GROUP, "super_resolution_model");
+        return StringUtils.isNotBlank(model) ? model : DEFAULT_SUPER_RESOLUTION_MODEL;
     }
 
     /**
