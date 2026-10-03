@@ -104,6 +104,14 @@ public class AiConfiguration {
     }
 
     /**
+     * YAML 对话客户端的 Bean 名。
+     *
+     * <p>容器就绪后 {@link #onApplicationReady} 收集客户端时按 Bean 名登记，
+     * 该常量用于识别「这就是 YAML 装配的那个客户端」，以便再按其 provider 补登记一次。</p>
+     */
+    private static final String YAML_CHAT_CLIENT_BEAN = "yamlChatClient";
+
+    /**
      * 全局 对话客户端 注册中心。
      * @return 对话客户端registry的结果
      */
@@ -245,6 +253,18 @@ public class AiConfiguration {
                 chatClientRegistry.register("aggregate", "aggregate", aggregate, "chat", "routing", "aggregate");
             } else {
                 chatClientRegistry.register(entry.getKey(), client);
+                // YAML 装配的客户端再按「配置里的 provider」补登记一次。
+                // 否则它只挂在 Bean 名（yamlChatClient）下，调用方按 provider 取客户端
+                // （如 ChatClientRegistry#getByProvider("agnes")）永远取不到，
+                // 「按 provider 指定模型」就成了一个设了不报错、也不生效的开关。
+                String configuredProvider = aiChatProperties.provider();
+                if (YAML_CHAT_CLIENT_BEAN.equals(entry.getKey())
+                        && StringUtils.hasText(configuredProvider)
+                        && !configuredProvider.trim().equalsIgnoreCase(entry.getKey())) {
+                    chatClientRegistry.register(configuredProvider.trim(), client);
+                    log.info("[AiConfiguration] 额外按 provider 登记 YAML 对话客户端: provider={}",
+                            configuredProvider.trim());
+                }
  // 无聚合客户端时，用首个普通客户端兜底默认，保证 resolve对话客户端 永不落空
                 if (chatClientRegistry.getDefault() == null) {
                     chatClientRegistry.setDefault(client);
