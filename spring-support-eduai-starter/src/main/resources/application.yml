@@ -46,6 +46,30 @@ mybatis-plus:
 
 # 数据源脚本（db/init 下 V*__*.sql 建表 + initdata）
 plugin:
+  # 跨域来源白名单。
+  #
+  # 框架 ApiCorsConfiguration 是**白名单制**：allowed-origins 为空时
+  # 「不放行任何跨域来源」（同源不受影响）。这是 2026-10-01 的安全加固
+  # （撤销原先的 allowedOriginPatterns("*") + allowCredentials(true)）。
+  #
+  # 为什么 eduai 必须配（2026-10-04 实测）：浏览器发 POST 必带 Origin，而
+  # vite dev 代理的 changeOrigin **只改 Host、不改 Origin**，会把它原样转给后端；
+  # 后端据此判定为跨域，白名单为空 -> 403 "Invalid CORS request"，表现为「登录 403」。
+  # 登录页正是 POST /v2/user/login，于是整站登录被 403 打断。
+  # 而 curl 不带 Origin，所以之前的验收套件从未覆盖到这条路径 —— 该回归
+  # 是 2026-10-01 加固时漏配本项造成的。
+  #
+  # 不放 "*"：框架文档明确「通配来源 + 允许携带凭证」等于任意站点可带用户
+  # 凭证读接口响应。这里只列开发来源，端口用通配（Spring 原生支持 http://host:*）。
+  api:
+    cors:
+      enable: true
+      allowed-origins:
+        # 本机前端（vite dev，端口不固定，故用通配）
+        - "http://localhost:*"
+        - "http://127.0.0.1:*"
+        # 局域网内前端（含直接以 198 的前端端口打开的场景）
+        - "http://192.168.50.*:*"
   async:
     enable: false
   # tcp 鉴权：登录请求发往独立部署的 OAuth 服务端（长度帧协议，帧格式 topic:body）。
