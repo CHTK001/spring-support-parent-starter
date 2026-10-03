@@ -250,9 +250,12 @@ public final class DbExporter {
              ResultSet rs = st.executeQuery("SHOW CREATE TABLE " + quoted)) {
             if (rs.next()) {
                 int count = rs.getMetaData().getColumnCount();
+                // 判定用「去空白后以 CREATE 开头」：SHOW CREATE TABLE 的第一列是表名，
+                // 用「包含 CREATE」会在表名带 create 字样时取错列
                 for (int i = 1; i <= count; i++) {
                     Object value = rs.getObject(i);
-                    if (value instanceof String text && text.toUpperCase(java.util.Locale.ROOT).contains("CREATE")) {
+                    if (value instanceof String text
+                            && text.strip().toUpperCase(java.util.Locale.ROOT).startsWith("CREATE")) {
                         return text;
                     }
                 }

@@ -747,6 +747,305 @@ public class MonitorController {
      */
     private static final int SQL_MAX_ROWS = 1000;
 
+    // ==================== 数据库对象（存储过程 / 函数 / 触发器 / 事件）与外键 ====================
+
+    /**
+     * 各类对象的数量（树上的分类节点角标）。
+ *
+     * <p>一次返回四类计数，前端展开一个库时只多打一个请求，而不是四个。</p>
+ *
+ * @param datasourceId 数据源 ID
+ * @param database 库名
+ * @return 各类计数与错误信息
+ */
+@Operation(summary = "数据库对象分类计数")
+    @GetMapping("/db/objects/summary")
+    public ReturnResult<Map<String, Object>> dbObjectSummary(
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+             SchemaScope scope = useSchema(conn, database)) {
+            String schema = requireSchema(conn, database);
+            Map<String, Object> counts = new java.util.LinkedHashMap<>();
+            Map<String, String> errors = new java.util.LinkedHashMap<>();
+            for (var type : com.chua.starter.monitor.support.support.DbObjectDialect.Category.values()) {
+                try {
+                    counts.put(type.name().toLowerCase(java.util.Locale.ROOT),
+                            com.chua.starter.monitor.support.support.DbObjectDialect
+                                    .list(conn, schema, type).size());
+                } catch (Exception e) {
+                    // 某一类读不到（权限不足 / 内核无此概念）不该拖垮整棵树：
+                    // 记 0 并把原因带上，前端在节点上显示「不可用」
+                    counts.put(type.name().toLowerCase(java.util.Locale.ROOT), 0);
+                    errors.put(type.name().toLowerCase(java.util.Locale.ROOT), e.getMessage());
+                }
+            }
+            Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("counts", counts);
+            payload.put("errors", errors);
+            return ReturnResult.ok(payload);
+        } catch (Exception e) {
+            return ReturnResult.error("获取对象计数失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 数据库对象类别。
+     *
+     * @param category 类别名（procedure / function / trigger / event）
+     * @return 类别
+     */
+    private static com.chua.starter.monitor.support.support.DbObjectDialect.Category objectCategory(String category) {
+        return com.chua.starter.monitor.support.support.DbObjectDialect.Category.of(category);
+    }
+
+    /**
+     * 列出数据库对象。
+     *
+     * <p>树上的「存储过程 / 函数 / 触发器 / 事件」四个分类节点都由它驱动。</p>
+     *
+     * @param category 类别名
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 对象清单
+     */
+    @Operation(summary = "列出数据库对象（存储过程/函数/触发器/事件）")
+    @GetMapping("/db/objects/{category}")
+    public ReturnResult<java.util.List<Map<String, Object>>> listDbObjects(
+            @PathVariable String category,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        try {
+            var type = objectCategory(category);
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                return ReturnResult.ok(com.chua.starter.monitor.support.support.DbObjectDialect
+                        .list(conn, requireSchema(conn, database), type));
+            }
+        } catch (IllegalArgumentException e) {
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            return ReturnResult.error("获取" + category + "列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 读取单个对象的定义。
+     *
+     * @param category 类别名
+     * @param name     对象名
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 定义文本
+     */
+    @Operation(summary = "读取数据库对象定义")
+    @GetMapping("/db/objects/{category}/{name}/definition")
+    public ReturnResult<String> getDbObjectDefinition(
+            @PathVariable String category,
+            @PathVariable String name,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        return callDb("读取对象定义", () -> {
+            var type = objectCategory(category);
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                return com.chua.starter.monitor.support.support.DbObjectDialect
+                        .definition(conn, requireSchema(conn, database), name, type);
+            }
+        });
+    }
+
+    /**
+     * 新建或整体替换一个对象。
+     *
+     * <p>传 {@code existOk=true} 时先删后建，实现「改定义」。</p>
+     *
+     * @param category 类别名
+     * @param body     请求体（definition / existOk）
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 是否成功
+     */
+    @Operation(summary = "新建或替换数据库对象")
+    @PostMapping("/db/objects/{category}")
+    public ReturnResult<Boolean> upsertDbObject(
+            @PathVariable String category,
+            @RequestBody Map<String, Object> body,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String definition = body.get("definition") == null ? "" : String.valueOf(body.get("definition")).trim();
+        boolean existOk = Boolean.TRUE.equals(body.get("existOk"));
+        // datasourceId / database 允许放在 body 或 query：与外键端点保持一致，
+        // 否则只传 query 时会被静默当成「默认主数据源的默认库」——
+        // 实测曾把存储过程建到 ngxacc 而不是请求的 jdbc_acc，且只在后续调用时才报错。
+        Long dsId = bodyDatasourceId(body) != null ? bodyDatasourceId(body) : datasourceId;
+        String db = bodyDatabase(body) != null ? bodyDatabase(body) : database;
+        return callDb("保存" + category, () -> {
+            var type = objectCategory(category);
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                String schema = requireSchema(conn, db);
+                if (existOk) {
+                    // 「改定义」= 先删后建；对象不存在就跳过删除
+                    try {
+                        com.chua.starter.monitor.support.support.DbObjectDialect.drop(conn, schema, nameFrom(definition), type, true);
+                    } catch (Exception ignored) {
+                        // 对象本来就不存在
+                    }
+                }
+                com.chua.starter.monitor.support.support.DbObjectDialect.executeDefinition(conn, definition);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 删除对象。
+     *
+     * @param category 类别名
+     * @param name     对象名
+     * @param ifExists 对象不存在时是否静默
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 是否成功
+     */
+    @Operation(summary = "删除数据库对象")
+    @DeleteMapping("/db/objects/{category}/{name}")
+    public ReturnResult<Boolean> dropDbObject(
+            @PathVariable String category,
+            @PathVariable String name,
+            @RequestParam(required = false, defaultValue = "true") boolean ifExists,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        return callDb("删除" + category, () -> {
+            var type = objectCategory(category);
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                com.chua.starter.monitor.support.support.DbObjectDialect
+                        .drop(conn, requireSchema(conn, database), name, type, ifExists);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 从 DDL 文本里取对象名（用于 existOk 的先删后建）。
+     *
+     * <p>形如 {@code CREATE [DEFINER=…] PROCEDURE/FUNCTION/TRIGGER/EVENT 名(…)}，
+     * 取该关键字<strong>之后</strong>的第一个标识符。</p>
+     *
+     * <p><b>必须从「关键字结尾」开始匹配，不能从 {@code lastIndexOf} 命中位置 +1 开始。</b>
+     * {@code "CREATE PROCEDURE"} 里 {@code lastIndexOf("PROCEDURE")} 命中的是 {@code CREATE}
+     * 之后那个单词的首字母，+1 会落进单词内部，先匹配到 {@code ROCEDURE} ——
+     * 实测因此发出 {@code DROP PROCEDURE ROCEDURE}（IF EXISTS 静默通过），
+     * 紧接着 CREATE 就报 "already exists"。</p>
+     *
+     * @param definition DDL 文本
+     * @return 对象名，取不到返回空串（此时 existOk 分支跳过删除，不会误删）
+     */
+    private static String nameFrom(String definition) {
+        String text = definition == null ? "" : definition;
+        String upper = text.toUpperCase(java.util.Locale.ROOT);
+        for (String keyword : new String[]{"PROCEDURE", "FUNCTION", "TRIGGER", "EVENT"}) {
+            int at = upper.lastIndexOf(keyword);
+            if (at < 0) {
+                continue;
+            }
+            var matcher = java.util.regex.Pattern.compile("[A-Za-z0-9_]+").matcher(text);
+            // +keyword.length() 跳过关键字本身，避免匹配到关键字的残片
+            if (matcher.find(at + keyword.length())) {
+                return matcher.group();
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 取目标库名；为空时用连接当前所在的库。
+     *
+     * <p><b>必须走 {@link #currentDatabase} 而不是 {@code getCatalog()}／{@code getSchema()}。</b>
+     * MySQL Connector/J 的 {@code getCatalog()} 只反映驱动内部记录的 URL 里的库，
+     * {@code USE} 切库后它**不会变**。因此这里若用 {@code getCatalog()}，会出现
+     * 「对象已建在 jdbc_acc、查询却打到 ngxacc」的错位：建的过程不报错，
+     * 紧接着的列表/读定义/删除全部查不到，像是对象没建上。
+     * {@link #currentDatabase} 用 {@code SELECT DATABASE()} 取服务端会话库，才是权威值。</p>
+     *
+     * @param conn     数据库连接
+     * @param database 目标库名，可为空
+     * @return 库名
+     * @throws java.sql.SQLException 读取失败
+     */
+    private static String requireSchema(java.sql.Connection conn, String database) throws java.sql.SQLException {
+        if (database != null && !database.isBlank()) {
+            return database;
+        }
+        return currentDatabase(conn);
+    }
+
+    /**
+     * 新增外键。
+     *
+     * @param tableName 表名
+     * @param body      外键定义（name / columns / refTable / refColumns / onUpdate / onDelete）
+     * @return 是否成功
+     */
+    @Operation(summary = "新增外键")
+    @PostMapping("/db/table/{tableName}/foreign-key")
+    public ReturnResult<Boolean> addForeignKey(
+            @PathVariable String tableName,
+            @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        String fkName = safeIdent(String.valueOf(body.get("name")), "约束名");
+        String refTable = safeIdent(String.valueOf(body.get("refTable")), "引用表");
+        String onUpdate = body.get("onUpdate") == null ? null : String.valueOf(body.get("onUpdate"));
+        String onDelete = body.get("onDelete") == null ? null : String.valueOf(body.get("onDelete"));
+        @SuppressWarnings("unchecked")
+        List<String> columns = (List<String>) body.get("columns");
+        @SuppressWarnings("unchecked")
+        List<String> refColumns = (List<String>) body.get("refColumns");
+        Long dsId = bodyDatasourceId(body);
+        String db = bodyDatabase(body);
+        return callDb("新增外键", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, t);
+                requireTable(conn, refTable);
+                var fk = new com.chua.starter.monitor.support.support.DbObjectDialect.ForeignKeyDefinition(
+                        fkName, columns, refTable, refColumns, onUpdate, onDelete);
+                com.chua.starter.monitor.support.support.DbObjectDialect.addForeignKey(conn, t, fk);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 删除外键。
+     *
+     * @param tableName 表名
+     * @param fkName    约束名
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 是否成功
+     */
+    @Operation(summary = "删除外键")
+    @DeleteMapping("/db/table/{tableName}/foreign-key/{fkName}")
+    public ReturnResult<Boolean> dropForeignKey(
+            @PathVariable String tableName,
+            @PathVariable String fkName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String t = safeIdent(tableName, "表名");
+        String name = safeIdent(fkName, "约束名");
+        return callDb("删除外键", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                requireTable(conn, t);
+                com.chua.starter.monitor.support.support.DbObjectDialect.dropForeignKey(conn, t, name);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
     /**
      * 把连接切到指定库，并在返回的作用域关闭时还原。
      *
@@ -1189,10 +1488,11 @@ public class MonitorController {
             try (java.sql.Statement st = conn.createStatement();
                  java.sql.ResultSet rs = st.executeQuery("SHOW CREATE TABLE " + quoted)) {
                 if (rs.next()) {
-                    // MySQL 第 2 列为 DDL；部分内核列名不同，取首个含 CREATE 的文本列
+                    // SHOW CREATE TABLE 的列是「表名 / 建表语句」；判定必须用「以 CREATE 开头」，
+                    // 用「包含 CREATE」会命中相邻的表名列（表名里带 create 字样时）
                     for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
                         Object v = rs.getObject(i);
-                        if (v instanceof String s && s.toUpperCase().contains("CREATE")) {
+                        if (v instanceof String s && s.strip().toUpperCase().startsWith("CREATE")) {
                             return ReturnResult.ok(s);
                         }
                     }
