@@ -302,6 +302,118 @@ if [ "$((N2-N1))" != "0" ]; then
 fi
 
 echo
+echo "################ 10. 补齐此前未覆盖的端点 ################"
+# 本组来源：对 /v2/face + /v2/image-search + /v2/image-recognition 全端点做
+# 「实际端点 vs 验收引用路径」对齐，再让浏览器真跑一遍取后端收到的请求增量，
+# 发现 19 个端点三套验收都没碰过（浏览器九套实际上不测 /v2/face/*）。
+#
+# 断言分三类，都按【实测行为 + 设计意图】写，不按猜测：
+#   (a) 必选链路（detector/feature 已配置）应可用 -> 200 + code 00000
+#   (b) 可选能力关闭时 -> 必须是 200 + 结构完整信封（业务错误），
+#       **不得是 5xx / 容器错误页**。不断言具体 code：
+#       它取决于该能力是否被配置，属环境状态而非契约。
+#   (c) 二进制端点（超分/修复）关闭时 -> 不得返回 200 图像
+G10ID="facegrade-g10-$$"
+
+# 顶层 code 读取：不能用 jq_ —— 它会把 data 解包，而业务错误信封没有 data，
+# 于是对「未配置」这类响应会取到空串，断言变成假失败。
+topcode() {
+  python3 -c "
+import json
+try: o=json.load(open('$1',encoding='utf-8'))
+except Exception: print(''); raise SystemExit
+print(o.get('code') or '')"
+}
+
+# --- 10.1 人脸对齐（必选链路，纯图像处理）---
+ck "人脸对齐可用" "$(api 60 -F "file=@$F" -o /tmp/g10_align.json -w '%{http_code}' "$B/v2/face/align")" "200"
+ck "人脸对齐返回成功码" "$(topcode /tmp/g10_align.json)" "00000"
+
+# --- 10.2 特征向量直入 -> 列表可见 -> 核验命中 -> 删除（全环自清）---
+api 60 -F "file=@$F" -o /tmp/g10_feat.json "$B/v2/face/feature" > /dev/null
+FT=$(jq_ /tmp/g10_feat.json "import json as _j; print(_j.dumps((d or {}).get('feature') or []))")
+FTLEN=$(python3 -c "import json;print(len(json.loads('''$FT''')))" 2>/dev/null)
+ck "特征维度与 feature_dimension 一致" "$FTLEN" "512"
+
+ck "特征向量直入可用" "$(api 60 -F "id=$G10ID" -F "feature=$FT" -o /tmp/g10_enr.json -w '%{http_code}' "$B/v2/face/enroll-feature")" "200"
+ck "特征向量直入返回成功码" "$(topcode /tmp/g10_enr.json)" "00000"
+ck "直入后列表可见" "$(api 30 "$B/v2/face/list" | grep -c "$G10ID")" "1"
+
+# 核验：同一张图应与刚直入的特征匹配
+ck "人脸核验可用" "$(api 60 -F "id=$G10ID" -F "file=@$F" -o /tmp/g10_ver.json -w '%{http_code}' "$B/v2/face/verify")" "200"
+ck "核验命中（同一张图）" "$(jq_ /tmp/g10_ver.json 'print((d or {}).get("matched"))')" "True"
+
+# 检索：维度守卫（用小向量，避免触发下面 10.3 记录的 URI 长度问题）
+SMALL=$(api 60 --get --data-urlencode "feature=[0.1,0.2,0.3,0.4]" --data-urlencode "topK=5" \
+        -o /tmp/g10_se.json -w '%{http_code}' "$B/v2/face/search")
+ck "人脸检索对维度不符给出业务错误（非 5xx）" "$SMALL" "200"
+ck "维度不符时返回结构完整信封" "$(topcode /tmp/g10_se.json)" "S0503C0000"
+
+# 清理并确认删除生效
+ck "删除直入条目" "$(api 30 -X DELETE -o /tmp/g10_del.json -w '%{http_code}' "$B/v2/face/$G10ID")" "200"
+ck "删除后列表已不可见" "$(api 30 "$B/v2/face/list" | grep -c "$G10ID")" "0"
+
+# --- 10.3 检索端点的一个已知缺陷（不断言为「正常」，只钉住现状，避免回归时静默）---
+# GET /v2/face/search 用 【正确的 512 维向量】时 URL 约 6.8KB，超过 Tomcat 的
+# 请求行/头上限，被容器以 400 + 默认 HTML 错误页拒绝 —— 连业务信封都到不了。
+# 即该端点按设计用法（512 维）不可用。详情见交付说明 §20。
+# 这里只断言「小向量走业务信封」已在 10.2 覆盖；512 维路径不做 200 断言，
+# 否则等于把缺陷写进契约。前后端均无调用方（已核查），故未单方面改 HTTP 契约。
+SEARCH512=$(api 60 --get --data-urlencode "feature=$FT" -o /tmp/g10_s512.out -w '%{http_code}' "$B/v2/face/search")
+echo "  [记录] GET /v2/face/search 传 512 维实际返回 HTTP=$SEARCH512（容器层拒绝，代码契约应为业务信封）"
+
+# --- 10.4 配置端点（@Permission admin）---
+ck "读取人脸配置可用" "$(api 30 -o /tmp/g10_cfg.json -w '%{http_code}' "$B/v2/face/config")" "200"
+ck "配置字段数（SPI 声明 31 项）" "$(jq_ /tmp/g10_cfg.json 'print(len(d or []))')" "31"
+# 必须精确匹配字段名：子串匹配会把 anime_detector_model 也算成 detector_model（第一版就这么假失败过）
+FIELD_HIT() {
+  python3 -c "
+import json
+try: d=json.load(open('$1',encoding='utf-8')).get('data') or []
+except Exception: print('no'); raise SystemExit
+print('yes' if any(isinstance(x,dict) and x.get('field')=='$2' for x in d) else 'no')"
+}
+ck "配置含必选 detector_model" "$(FIELD_HIT /tmp/g10_cfg.json detector_model)" "yes"
+ck "配置含必选 feature_model" "$(FIELD_HIT /tmp/g10_cfg.json feature_model)" "yes"
+ck "模型清单可用" "$(api 120 -o /tmp/g10_models.json -w '%{http_code}' "$B/v2/face/config/models")" "200"
+ck "模型清单含检测/特征/超分三类" "$(jq_ /tmp/g10_models.json 'print(",".join(k for k in ("detector","feature","superResolution") if d.get(k)))')" "detector,feature,superResolution"
+
+# --- 10.5 可选能力关闭时：必须降级成结构完整信封，不得 5xx ---
+for ep in liveness anime-detect attributes emotion deepfake; do
+  ST=$(api 60 -F "file=@$F" -o /tmp/g10_opt.json -w '%{http_code}' "$B/v2/face/$ep")
+  CC=$(topcode /tmp/g10_opt.json)
+  ck "可选能力 $ep 关闭时不返回 5xx" "$ST" "200"
+  ck "可选能力 $ep 关闭时信封结构完整" "$(python3 -c "print('yes' if '''$CC''' else 'no')")" "yes"
+done
+
+# --- 10.6 二进制端点关闭时不得返回 200 图像 ---
+for ep in super-resolution restore; do
+  ST=$(api 180 -F "file=@$F" -o /dev/null -w '%{http_code}' "$B/v2/face/$ep")
+  ck "二进制端点 $ep 关闭时不返回 200" "$(python3 -c "print('not200' if '$ST' != '200' else '200')")" "not200"
+  echo "         （实测 HTTP=$ST；控制器代码意图是 badRequest=400）"
+done
+
+# --- 10.7 图像识别（image 分组，未配置能力应降级）---
+ck "图像综合分析可用" "$(api 120 -F "file=@$F" -o /tmp/g10_ia.json -w '%{http_code}' "$B/v2/image-recognition/analyze")" "200"
+ck "图像综合分析返回成功码" "$(topcode /tmp/g10_ia.json)" "00000"
+ck "图像模型清单可用" "$(api 60 -o /tmp/g10_im.json -w '%{http_code}' "$B/v2/image-recognition/models")" "200"
+ck "图像超分未启用时返回 409（已在控制器判定）" "$(api 120 -F "file=@$F" -o /tmp/g10_isr.out -w '%{http_code}' "$B/v2/image-recognition/super-resolution")" "409"
+
+# --- 10.8 以图搜图缩略图（浏览器经 <img src> 触达，后端这里独立钉住）---
+IMGID=$(api 30 "$B/v2/image-search/list" | jq_ /dev/stdin "print((d or {}).get('items',[{}])[0].get('id') if isinstance(d,dict) else '')" 2>/dev/null)
+if [ -n "$IMGID" ]; then
+  api 30 -o /tmp/g10_thumb.png -D /tmp/g10_thumb.h "$B/v2/image-search/$IMGID/image" > /dev/null
+  # 按魔数判定，不按 Content-Type：该端点实际返回 application/octet-stream，
+  # 而字节是真 PNG（89 50 4E 47）。魔数才是「这是不是一张图」的确证。
+  ck "底库缩略图是真实 PNG（魔数）" "$(python3 -c "print('png' if open('/tmp/g10_thumb.png','rb').read(4)==b'\x89PNG' else 'notpng')")" "png"
+  ck "底库缩略图非空" "$(python3 -c "import os;print('yes' if os.path.getsize('/tmp/g10_thumb.png')>0 else 'no')")" "yes"
+  # 记录（不断言）：Content-Type 与实际字节不符，且响应带 nosniff。见交付说明 §20。
+  echo "  [记录] 缩略图 Content-Type=$(grep -i '^content-type' /tmp/g10_thumb.h | tr -d '\r' | cut -d' ' -f2-)，实际字节为 PNG"
+else
+  echo "  [SKIP] 底库为空，缩略图用例跳过"
+fi
+
+echo
 echo "################ 小结 ################"
 echo "  PASS=$P  FAIL=$F_FAIL"
 echo "  说明：本套件自清理 —— 测试条目 $PROBE 已在第 7 组删除并验证"
