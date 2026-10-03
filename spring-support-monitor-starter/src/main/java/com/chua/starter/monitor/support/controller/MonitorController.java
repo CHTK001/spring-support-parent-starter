@@ -75,6 +75,7 @@ import org.springframework.beans.factory.ObjectProvider;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1684,6 +1685,285 @@ public class MonitorController {
             }
         });
 
+    }
+
+    // ==================== 数据导入 / 导出（对齐 Navicat 导入导出向导） ====================
+
+    /**
+     * 导入预览：解析上传文件、回显列名与前若干行，供用户在向导第一步确认解析结果。
+     *
+     * <p>只解析不落库，因此不会对目标库产生任何副作用。</p>
+     *
+     * @param file     上传的数据文件
+     * @param format   格式：auto / csv / tsv / json
+     * @param hasHeader 首行是否为表头
+     * @param encoding  字符集名，可为空
+     * @return 预览结果
+     */
+    @Operation(summary = "导入预览（解析文件但不写库）")
+    @PostMapping("/db/import/preview")
+    public ReturnResult<com.chua.starter.monitor.support.model.DbImportPreviewVO> previewImportFile(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(required = false) String format,
+            @RequestParam(required = false, defaultValue = "true") boolean hasHeader,
+            @RequestParam(required = false) String encoding) {
+        int previewSize = 50;
+        return callDb("解析导入文件", () -> {
+            byte[] bytes = file.getBytes();
+            String text = com.chua.starter.monitor.support.support.DbTransferCodec.decode(bytes, encoding);
+            String resolvedFormat = resolveImportFormat(format, file.getOriginalFilename(), text);
+            if ("sql".equals(resolvedFormat)) {
+                int statements = com.chua.starter.monitor.support.support.DbTransferCodec.splitSqlStatements(text).size();
+                return new com.chua.starter.monitor.support.model.DbImportPreviewVO(
+                        List.of(), List.of(), statements, 0, ";", encoding == null ? "UTF-8" : encoding);
+            }
+            char delimiter = resolveDelimiter(resolvedFormat, text);
+            var table = "json".equals(resolvedFormat)
+                    ? com.chua.starter.monitor.support.support.DbTransferCodec.parseJson(text, List.of())
+                    : com.chua.starter.monitor.support.support.DbTransferCodec.parseDelimited(text, delimiter, hasHeader);
+            var rows = table.rows();
+            var preview = rows.size() <= previewSize ? rows : rows.subList(0, previewSize);
+            return new com.chua.starter.monitor.support.model.DbImportPreviewVO(
+                    table.columns(), preview, rows.size(), previewSize,
+                    delimiter == '\t' ? "\\t" : String.valueOf(delimiter),
+                    encoding == null ? "UTF-8" : encoding);
+        });
+    }
+
+    /**
+     * 执行导入：按字段映射把上传文件写入目标表。
+     *
+     * <p>安全豁免：目标表名与参与写入的列名经标识符白名单与 JDBC 元数据校验后引用；
+     * 单元格值全部走 PreparedStatement 参数绑定。字段映射为空时报错而非静默按表结构硬套。</p>
+     *
+     * @param file   上传的数据文件
+     * @param option 导入选项（格式 / 表头 / 映射 / 冲突策略 / 是否先清空）
+     * @return 导入统计
+     */
+    @Operation(summary = "执行数据导入")
+    @PostMapping("/db/import")
+    public ReturnResult<com.chua.starter.monitor.support.support.DbImporter.ImportResult> importDataFile(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "option", required = false) String optionJson) {
+        return callDb("导入数据", () -> {
+            com.chua.starter.monitor.support.model.dto.DbImportDTO option = parseImportOption(optionJson);
+            if (option == null) {
+                throw new IllegalArgumentException("缺少导入选项 option");
+            }
+            String table = safeIdent(option.tableName(), "表名");
+            String format = resolveImportFormat(option.format(), file.getOriginalFilename(), null);
+            byte[] bytes = file.getBytes();
+            String text = com.chua.starter.monitor.support.support.DbTransferCodec.decode(bytes, option.encoding());
+            if ("sql".equals(format)) {
+                return executeSqlScript(text, option);
+            }
+            var options = new com.chua.starter.monitor.support.support.DbImporter.ImportOptions(
+                    table,
+                    option.sourceColumns().isEmpty() ? List.of() : option.sourceColumns(),
+                    option.columnMapping() == null ? Map.of() : option.columnMapping(),
+                    option.truncateFirst(),
+                    option.onConflict(),
+                    List.of(),
+                    option.batchSize() == null ? 0 : option.batchSize());
+            try (java.sql.Connection conn = datasourceService.connection(option.datasourceId());
+                 SchemaScope scope = useSchema(conn, option.database())) {
+                requireTable(conn, table);
+                if (option.truncateFirst()) {
+                    try (java.sql.Statement stmt = conn.createStatement()) {
+                        stmt.executeUpdate("TRUNCATE TABLE " + SqlName.quoteMysql(table, "表名"));
+                    } catch (java.sql.SQLException fallback) {
+                        try (java.sql.Statement stmt = conn.createStatement()) {
+                            stmt.executeUpdate("DELETE FROM " + SqlName.quoteMysql(table, "表名"));
+                        }
+                    }
+                }
+                char delimiter = resolveDelimiter(format, text);
+                var parsed = "json".equals(format)
+                        ? com.chua.starter.monitor.support.support.DbTransferCodec.parseJson(text, List.of())
+                        : com.chua.starter.monitor.support.support.DbTransferCodec.parseDelimited(
+                                text, delimiter, !Boolean.FALSE.equals(option.hasHeader()));
+                if (options.sourceColumns().isEmpty() && option.columnMapping() == null) {
+                    throw new IllegalArgumentException("请先配置字段映射");
+                }
+                return com.chua.starter.monitor.support.support.DbImporter.importRows(conn, parsed.rows(), options);
+            }
+        });
+    }
+
+    /**
+     * 解析导入选项 JSON（前端以字符串形式随 multipart 一起提交）。
+     *
+     * @param optionJson 选项 JSON
+     * @return 导入选项；输入为空返回 null
+     */
+    private static com.chua.starter.monitor.support.model.dto.DbImportDTO parseImportOption(String optionJson) {
+        if (optionJson == null || optionJson.isBlank()) {
+            return null;
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(optionJson, com.chua.starter.monitor.support.model.dto.DbImportDTO.class);
+        } catch (java.io.IOException e) {
+            throw new IllegalArgumentException("导入选项格式不正确: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 导入 SQL 脚本：逐条执行，支持空行与注释跳过。
+     *
+     * @param text   SQL 文本
+     * @param option 导入选项（取 datasourceId / database）
+     * @return 导入统计
+     * @throws Exception 任一语句失败或取连接失败
+     */
+    private com.chua.starter.monitor.support.support.DbImporter.ImportResult executeSqlScript(
+            String text, com.chua.starter.monitor.support.model.dto.DbImportDTO option) throws Exception {
+        var statements = com.chua.starter.monitor.support.support.DbTransferCodec.splitSqlStatements(text);
+        int affected = 0;
+        try (java.sql.Connection conn = datasourceService.connection(option.datasourceId());
+             SchemaScope scope = useSchema(conn, option.database());
+             java.sql.Statement stmt = conn.createStatement()) {
+            for (String statement : statements) {
+                affected += stmt.executeUpdate(statement);
+            }
+        }
+        return new com.chua.starter.monitor.support.support.DbImporter.ImportResult(
+                statements.size(), affected, 0, 0, List.of());
+    }
+
+    /**
+     * 导出：把表（或其结构 / 数据）序列化为目标格式。
+     *
+     * <p>安全豁免：表名、排序列经标识符白名单与 JDBC 元数据校验；WHERE 条件仅允许
+     * 单条筛选语句（已剔除分隔符与注释符）。行数上限 {@value #EXPORT_MAX_ROWS}。</p>
+     *
+     * @param request 导出请求（tableName / format / scope / limit / where / orderBy）
+     * @return 导出内容（字符串，前端侧落盘为文件）
+     */
+    @Operation(summary = "导出数据")
+    @PostMapping("/db/export")
+    public ReturnResult<Map<String, Object>> exportData(@RequestBody Map<String, Object> request) {
+        String table = safeIdent(String.valueOf(request.get("tableName")), "表名");
+        String format = String.valueOf(request.getOrDefault("format", "csv"));
+        String scopeName = String.valueOf(request.getOrDefault("scope", "data"));
+        int limit = intOrDefault(request.get("limit"), 0);
+        String where = request.get("where") == null ? null : sanitizeWhere(String.valueOf(request.get("where")));
+        String orderBy = request.get("orderBy") == null ? null
+                : safeIdent(String.valueOf(request.get("orderBy")), "排序列");
+        String orderDir = request.get("orderDir") == null ? "ASC" : String.valueOf(request.get("orderDir"));
+        Long dsId = bodyDatasourceId(request);
+        String db = bodyDatabase(request);
+        return callDb("导出数据", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, table);
+                var formatEnum = com.chua.starter.monitor.support.support.DbExporter.Format.of(format);
+                var scopeEnum = com.chua.starter.monitor.support.support.DbExporter.Scope.of(scopeName);
+                var options = new com.chua.starter.monitor.support.support.DbExporter.ExportOptions(
+                        table, formatEnum, scopeEnum, limit, where, orderBy, orderDir, 100);
+                var result = com.chua.starter.monitor.support.support.DbExporter.export(conn, options);
+                Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                payload.put("content", result.content());
+                payload.put("rowCount", result.rowCount());
+                payload.put("truncated", result.truncated());
+                payload.put("format", formatEnum.name().toLowerCase(java.util.Locale.ROOT));
+                payload.put("fileName", table + "_" + com.chua.starter.monitor.support.support.DbTransferCodec.timestamp()
+                        + "." + formatEnum.extension());
+                return payload;
+            }
+        });
+    }
+
+    /**
+     * 导出格式与范围的可选值（供前端下拉，避免前后端枚举各写一份）。
+     *
+     * @return 格式列表与范围列表
+     */
+    @Operation(summary = "导出格式与范围枚举")
+    @GetMapping("/db/export/options")
+    public ReturnResult<Map<String, Object>> exportOptions() {
+        List<Map<String, String>> formats = Arrays.stream(
+                        com.chua.starter.monitor.support.support.DbExporter.Format.values())
+                .map(f -> Map.of("value", f.name().toLowerCase(java.util.Locale.ROOT), "label", switch (f) {
+                    case CSV -> "CSV（逗号分隔）";
+                    case TSV -> "TSV（制表符分隔）";
+                    case JSON -> "JSON";
+                    case XML -> "XML";
+                    case SQL -> "SQL 脚本";
+                }))
+                .toList();
+        List<Map<String, String>> scopes = Arrays.stream(
+                        com.chua.starter.monitor.support.support.DbExporter.Scope.values())
+                .map(s -> Map.of("value", s.name().toLowerCase(java.util.Locale.ROOT), "label", switch (s) {
+                    case STRUCTURE -> "仅结构";
+                    case DATA -> "仅数据";
+                    case ALL -> "结构 + 数据";
+                }))
+                .toList();
+        return ReturnResult.ok(Map.of("formats", formats, "scopes", scopes));
+    }
+
+    /** 导出单次行数上限 */
+    private static final int EXPORT_MAX_ROWS = com.chua.starter.monitor.support.support.DbTransferCodec.MAX_EXPORT_ROWS;
+
+    /**
+     * 从请求体取整数，缺失或非数字时用默认值。
+     */
+    private static int intOrDefault(Object value, int defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 判定导入文件格式：显式指定优先，否则按后缀，再否则按内容首字符。
+     *
+     * @param format    前端指定的格式
+     * @param fileName  原始文件名
+     * @param text      文件文本（可能为 null）
+     * @return 格式标识
+     */
+    private static String resolveImportFormat(String format, String fileName, String text) {
+        String explicit = format == null ? "" : format.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!explicit.isEmpty() && !"auto".equals(explicit)) {
+            return explicit;
+        }
+        String name = fileName == null ? "" : fileName.toLowerCase(java.util.Locale.ROOT);
+        if (name.endsWith(".sql")) {
+            return "sql";
+        }
+        if (name.endsWith(".json")) {
+            return "json";
+        }
+        if (name.endsWith(".tsv") || name.endsWith(".tab")) {
+            return "tsv";
+        }
+        if (name.endsWith(".csv")) {
+            return "csv";
+        }
+        String sample = text == null ? "" : text.stripLeading();
+        if (sample.startsWith("[") || sample.startsWith("{")) {
+            return "json";
+        }
+        return sample.toUpperCase(java.util.Locale.ROOT).startsWith("INSERT") ? "sql" : "csv";
+    }
+
+    /**
+     * 判定分隔符：TSV 固定制表符，其余按内容探测（首行含制表符则视为 TSV）。
+     */
+    private static char resolveDelimiter(String format, String text) {
+        if ("tsv".equals(format)) {
+            return '\t';
+        }
+        if (text == null) {
+            return ',';
+        }
+        return com.chua.starter.monitor.support.support.DbTransferCodec.detectDelimiter(text);
     }
 
     /**
