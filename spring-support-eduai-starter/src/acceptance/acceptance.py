@@ -124,8 +124,18 @@ def main() -> int:
     ck("A4 无令牌访问学生端被拒", c in (401, 403), f"http={c}")
     c, _ = http("GET", "/v2/edu/dimension/students")
     ck("A5 无令牌访问管理端被拒", c in (401, 403), f"http={c}")
-    c, _ = http("GET", "/v2/edu/dimension/students", token=student)
-    ck("A6 学生令牌访问管理端被拒", c == 403, f"http={c}")
+    # A6 必须用**新鲜**的学生令牌，且必须先证明它确实有效 —— 否则 403 可能是
+    # 「令牌已失效」而非「鉴权拒绝」。此前这里用的是脚本更早取得、且在断言前
+    # 已被单点登录/代入踢掉的令牌，所以 403 是假绿（实测新鲜令牌访问管理端返回 200）。
+    student_fresh = login(STUDENT_NO, STUDENT_PWD, "STUDENT")
+    ck("A6 前置：取到新鲜学生令牌", len(student_fresh) > 20, f"len={len(student_fresh)}")
+    c_me, _ = http("GET", "/v2/edu/student/me", token=student_fresh)
+    ck("A6 前置：该令牌在学生端可用（证明令牌有效）", c_me == 200, f"http={c_me}")
+    c, _ = http("GET", "/v2/edu/dimension/students", token=student_fresh)
+    ck("A6 学生令牌访问管理端被拒（同一有效令牌，仅因目标是管理端）", c == 403, f"http={c}")
+    c, _ = http("POST", "/v2/edu/dimension/students/save",
+                body={"studentName": "A6-越权新增探针"}, token=student_fresh)
+    ck("A6+ 学生令牌写管理端被拒（不得创建学生）", c == 403, f"http={c}")
     c, _ = http("GET", "/v2/edu/dimension/students", token=imp)
     ck("A7 代入令牌访问管理端被拒", c == 403, f"http={c}")
     c, _ = http("POST", "/v2/edu/student/study/report", body={}, token=imp)

@@ -2,6 +2,7 @@ package com.chua.starter.eduai.dimension.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.dto.EduImpersonateDTO;
@@ -29,12 +30,29 @@ import java.util.Map;
  * <p>对外暴露：学科 / 年级 / 班级 / 学生 / 教师 5 个维度的 CRUD；
  * 路径前缀 {@code /v2/edu/dimension/**}。</p>
  *
+ * <p><b>整个控制器是管理员专属（2026-10-03 加）</b>：本控制器原先一个
+ * {@code @Permission} 都没有，而登录鉴权只校验「有没有有效令牌」，于是
+ * <b>任何已登录用户（含学生）都能全量读写这 5 个维度</b> —— 实测学生令牌
+ * {@code POST /students/save} 真的 INSERT 出一条学生记录。
+ * 修法用类级注解一次覆盖本类全部端点，避免逐个方法标注时漏掉新加的接口。</p>
+ *
+ * <p>为什么是「类级」而不是逐方法：本类端点全部只被管理端页面使用
+ * （{@code /dropdown} 也只被 StudentManageView/PaperView/QuestionView 等管理页调用，
+ * 学生端无依赖），逐个标注没有例外可保留；而类级能保证以后新增的方法
+ * 默认就是管理员专属。</p>
+ *
+ * <p>取值 {@code "admin"}：由 {@code PermissionRules.evaluate} 判定 ——
+ * 命中 {@code roles ∪ permissions}（忽略大小写）即放行，{@code ADMIN} /
+ * {@code SUPER_ADMIN} 角色直接放行。故 {@code admin}（ADMIN 角色）与
+ * {@code sa}（SUPER_ADMIN）不受影响；学生令牌无该角色/权限，会被 403。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
 @RestController
 @RequestMapping("/v2/edu/dimension")
 @RequiredArgsConstructor
+@Permission("admin")
 @Tag(name = "教育AI-维度管理")
 public class EduDimensionController {
 
