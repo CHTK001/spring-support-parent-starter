@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -69,6 +70,19 @@ public class EduAiService {
      * Objectmapper
     */
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * 模型限流（429）时的最大重试次数。
+     *
+     * <p>限流往往是短时窗口内的：一次失败就降级到相似度匹配，等于白白丢掉模型评分。
+     * 这里做有限次指数退避重试；仍失败才降级，保证判分链路不被外部配额拖住。</p>
+     */
+    private static final int RATE_LIMIT_RETRY = 2;
+
+    /**
+     * 限流重试的基础退避毫秒（后续按倍数递增）。
+     */
+    private static final long RATE_LIMIT_BACKOFF_MILLIS = 1000L;
 
     /**
      * 构造方法，创建 EduAi服务 实例。
@@ -332,7 +346,7 @@ public class EduAiService {
         );
 
         try {
-            ChatResponse response = call(systemPrompt, userPrompt);
+            ChatResponse response = callWithRateLimitRetry(systemPrompt, userPrompt);
             JsonNode node = objectMapper.readTree(extractJson(response.content()));
             int score = node.path("score").asInt(0);
             String comment = node.path("comment").asText("");
@@ -432,6 +446,59 @@ public class EduAiService {
          * @return 对话响应的结果
          */
         return new ChatResponse(text);
+    }
+
+    /**
+     * 调用模型，遇限流（429）做有限次指数退避重试。
+     *
+     * <p>只对限流重试：网络抖动、鉴权失败、模型不存在等错误重试没有意义，直接抛出交给
+     * 上层降级。限流之外一律不重试，避免把一次判分的耗时成倍放大。</p>
+     *
+     * @param systemPrompt 系统提示词
+     * @param userPrompt   用户提示词
+     * @return 模型响应
+     */
+    private ChatResponse callWithRateLimitRetry(String systemPrompt, String userPrompt) {
+        long backoff = RATE_LIMIT_BACKOFF_MILLIS;
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return call(systemPrompt, userPrompt);
+            } catch (RuntimeException e) {
+                if (!isRateLimited(e) || attempt >= RATE_LIMIT_RETRY) {
+                    throw e;
+                }
+                log.warn("[EduAi] 模型限流，第 {} 次重试（退避 {}ms）", attempt + 1, backoff);
+                try {
+                    Thread.sleep(backoff);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+                backoff *= 2;
+            }
+        }
+    }
+
+    /**
+     * 判断异常链里是否出现限流（429 / rate limit）。
+     *
+     * <p>不同厂商的异常类型不一致（OpenAI SDK 抛 {@code RateLimitException}，
+     * 其他网关可能只把 429 写在消息里），因此类名与消息都匹配。</p>
+     *
+     * @param error 异常
+     * @return true 表示是限流
+     */
+    private static boolean isRateLimited(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("ratelimit")) {
+                return true;
+            }
+            String message = t.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains("rate limit")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
