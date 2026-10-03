@@ -1,5 +1,6 @@
 package com.chua.starter.server.support.probe;
 
+import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.provider.project.PosixProjectPlatformProvider;
 import com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider;
 import com.chua.starter.server.support.util.ProjectScripts;
@@ -75,6 +76,7 @@ public final class ReleaseScriptProbe {
         probe.sectionERollbackOrder();
         probe.sectionFWindowsHealth();
         probe.sectionGMiscCommands();
+        probe.sectionHInlineLengthLimit();
         System.out.println("[probe] ---- 汇总：passed=" + probe.passed + " failed=" + probe.failures.size() + " ----");
         probe.failures.forEach(f -> System.out.println("[probe] FAIL " + f));
         if (!probe.failures.isEmpty()) {
@@ -322,6 +324,54 @@ public final class ReleaseScriptProbe {
         String quoted = posix.quote("a'b");
         check("G3 POSIX 单引号转义", quoted.equals("a'\\''b"), quoted);
         check("G4 Windows 单引号转义为双写", windows.quote("a'b").equals("a''b"), windows.quote("a'b"));
+    }
+
+    // ==================== H. 内联下发长度上限（超限必须落盘） ====================
+
+    /**
+     * H 段：Windows 命令行长度上限导致的「启动能用、重启必挂」。
+     */
+    @Test
+    void hInlineLengthLimit() {
+        sectionHInlineLengthLimit();
+        assertSectionDone("H");
+    }
+
+    private void sectionHInlineLengthLimit() {
+        ProjectScripts.Scripts wb = ProjectScripts.builtin(true, "springboot", "smoke.jar");
+        ProjectScripts.Scripts wbFull = filled(wb, "smoke.jar", WIN, WIN + "\\app.log", "demo");
+        String startLen = String.valueOf(PowerShellCommand.base64Length(wbFull.start()));
+        String restartLen = String.valueOf(PowerShellCommand.base64Length(wbFull.restart()));
+        check("H1 Windows 启动段仍在内联上限内（否则 start 也会挂）",
+                PowerShellCommand.base64Length(wbFull.start()) <= PowerShellCommand.INLINE_BASE64_LIMIT,
+                "start base64=" + startLen);
+        // 这条是本缺陷的钉子：重启段 = 停止段 + 启动段，必然比启动段长，
+        // 一旦超过内联上限就会被 cmd.exe 整条拒掉（0 秒退出、错误信息是别名）。
+        check("H2 Windows 重启段超过内联上限，必须走落盘 + -File",
+                PowerShellCommand.exceedsInlineLimit(wbFull.restart()),
+                "start=" + startLen + " restart=" + restartLen);
+        check("H3 短脚本不被误判为超限",
+                !PowerShellCommand.exceedsInlineLimit("'ok'"),
+                PowerShellCommand.base64Length("'ok'") + " vs limit " + PowerShellCommand.INLINE_BASE64_LIMIT);
+        // 敏感性对照：把上限调到极小后，短脚本也必须被判超限，
+        // 证明 H3 不是恒真的假绿。
+        int tiny = 1;
+        check("H4 敏感性对照：上限为 1 时短脚本也会被判超限",
+                PowerShellCommand.base64Length("'ok'") > tiny,
+                "base64=" + PowerShellCommand.base64Length("'ok'") + " > " + tiny);
+        String fileCmd = PowerShellCommand.fileBased("pwsh", "C:\\Windows\\Temp\\ms-exec-ab.ps1");
+        check("H5 落盘命令用 -File 且保留 chcp 65001 前缀",
+                fileCmd.contains("-File \"C:\\Windows\\Temp\\ms-exec-ab.ps1\"")
+                        && fileCmd.startsWith("cmd /c \"chcp 65001 >nul & ") && fileCmd.contains("pwsh "),
+                fileCmd);
+        check("H6 落盘命令不再内联 EncodedCommand（那正是超限的来源）",
+                !fileCmd.contains("-EncodedCommand"), fileCmd);
+        // body() 必须是「前言 + 脚本」，落盘内容与内联执行的内容必须完全一致，
+        // 否则同一条命令在两条路径下行为会不同。
+        check("H7 body() 含进度抑制前言且以业务脚本结尾",
+                PowerShellCommand.body("XYZ").endsWith("XYZ")
+                        && PowerShellCommand.body("XYZ").contains("$ProgressPreference"),
+                PowerShellCommand.body("XYZ").replace("\r", "\\r").replace("\n", "\\n"));
     }
 
     // ==================== 断言基础设施 ====================
