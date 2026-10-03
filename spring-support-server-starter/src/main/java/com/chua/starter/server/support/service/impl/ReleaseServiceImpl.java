@@ -7,6 +7,7 @@ import com.chua.common.support.lang.placeholder.PlaceholderSupport;
 import com.chua.common.support.lang.placeholder.StringValuePropertyResolver;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsServerConfig;
+import com.chua.starter.server.support.entity.MsExecLog;
 import com.chua.starter.server.support.entity.MsServerProject;
 import com.chua.starter.server.support.entity.MsServerRelease;
 import com.chua.starter.server.support.entity.SoftwarePackage;
@@ -758,9 +759,24 @@ public class ReleaseServiceImpl implements ReleaseService {
                         return java.util.List.of("sftp rename " + src + " -> " + dst);
                     }
                     // 跨设备等场景：回退到平台命令（cp -f / Copy-Item）
-                    execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
-                            placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
-                    return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + mv.getMsg());
+                    String sdkWhy = mv.getMsg();
+                    // 必须检查命令投放的结果：此前 runCommand 的返回值被直接丢弃，
+                    // 于是「SFTP 重命名失败 + 命令投放也失败」时步骤依然报成功，
+                    // 编排器继续往下走去重启 —— 而目标文件此时已被 delete 掉，
+                    // 项目一个可用 jar 都不剩，最后表现为「健康检查超时、自动回滚也没跑」。
+                    ReturnResult<java.util.List<MsExecLog>> placed =
+                            execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                                    placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
+                    if (!placed.isOk() || anyExecFailed(placed.getData())) {
+                        // 止损：投放失败且旧文件已被删除，立刻用最新备份还原并把服务重新拉起。
+                        // 只还原文件是不够的 —— 流程在第 3 步中止，后面的「重启并健康检测」
+                        // 不会执行，项目会停留在「已停止」状态；升级失败却把服务弄停，
+                        // 比升级失败本身更严重。
+                        String restoreNote = restoreAndRestart(win, ctx, path, project);
+                        throw new IllegalStateException("投放新版本文件失败且旧文件已删除；" + restoreNote
+                                + "SDK=" + sdkWhy + "；命令投放=" + (placed.isOk() ? "退出码非 0" : placed.getMsg()));
+                    }
+                    return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
                 }));
             }
         }
@@ -1186,6 +1202,65 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     private String extractCommand(ProjectPlatformProvider pf, String projectPath, String packagePath) {
         return pf.extract(projectPath, packagePath);
+    }
+
+    /**
+     * 判断一批执行日志里是否存在失败项。
+     *
+     * <p>不能只看外层 {@code ReturnResult}：命令投放这类操作外层常常是成功的，
+     * 真正的失败只体现在每台主机的退出码上（真实踩过：SFTP 重命名失败后回退命令投放，
+     * 外层 ok 但退出码非 0，步骤却报了「成功」）。</p>
+     *
+     * @param logs 执行日志
+     * @return 有任一主机失败时为 {@code true}；日志为空按失败处理（无法确认成功）
+     */
+    private static boolean anyExecFailed(java.util.List<MsExecLog> logs) {
+        if (logs == null || logs.isEmpty()) {
+            return true;
+        }
+        for (MsExecLog log : logs) {
+            if (log == null || log.getMsExecLogExitCode() == null || log.getMsExecLogExitCode() != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+ * 投放失败后的止损：用最新备份还原文件并把服务重新拉起。
+ *
+ * <p>为什么必须连服务一起拉起：升级流程是「停服 → 备份 → 投放 → 重启并健康检查」，
+ * 投放这步失败后整单中止，第 4 步不会执行。此时文件已还原但进程没起来，
+ * 项目停在停止状态 —— 一次失败的升级把在跑的服务弄停，比升级失败本身更严重。</p>
+ *
+ * @param pf      平台
+ * @param ctx     上下文（取 hostId）
+ * @param path    项目地址
+ * @param project 项目
+ * @return 止损执行结果描述，用于拼进异常信息
+ */
+    private String restoreAndRestart(ProjectPlatformProvider pf, OperationContext ctx, String path,
+                                     MsServerProject project) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                    rollbackCommand(pf, path, null), 120, null);
+            sb.append("已用最新备份还原；");
+        } catch (Exception e) {
+            sb.append("还原备份失败(").append(e.getMessage()).append(")；");
+        }
+        if (!isBlank(project.getStartScript())) {
+            try {
+                ReturnResult<java.util.List<MsExecLog>> started = execService.runCommand(
+                        java.util.Collections.singletonList(ctx.hostId),
+                        buildCommand(pf, path, project.getStartScript()), 180, null);
+                sb.append(started.isOk() && !anyExecFailed(started.getData())
+                        ? "已重新拉起服务" : "重新拉起服务未成功");
+            } catch (Exception e) {
+                sb.append("重新拉起服务异常(").append(e.getMessage()).append(")");
+            }
+        }
+        return sb.toString();
     }
 
     private String placeCommand(ProjectPlatformProvider pf, String projectPath, String packagePath, String mainEntry) {

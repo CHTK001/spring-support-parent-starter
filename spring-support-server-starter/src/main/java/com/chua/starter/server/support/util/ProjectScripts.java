@@ -373,32 +373,82 @@ public final class ProjectScripts {
     }
 
     /**
-     * Windows 启动片段：经 WMI {@code Win32_Process.Create} 脱离 SSH/WinRM 会话启动
-     * （直接 Start-Process 的子进程会随会话作业结束被回收），并把进程号写入 app.pid。
+     * Windows 启动片段：优先经 WMI {@code Win32_Process.Create} 脱离 SSH/WinRM 会话启动，
+     * 并把进程号写入 app.pid。
+     *
+     * <p>WMI 被主机安全产品拦截时（实测 {@code ReturnValue=2}）回退到<b>计划任务</b>：
+     * 进程由 Task Scheduler 服务拉起，完全脱离会话与作业对象。</p>
+     *
+     * <p>回退方案的选择是实测结论，不能想当然：{@code Start-Process} 看起来能"脱离"，但
+     * 它的子进程仍属于调用方会话的作业对象，会话关闭即被回收 —— 实测启动后在全新
+     * exec 会话里已是 DEAD，且端口从未进入监听（app.log 有 LISTENING 但进程已消失）。
+     * 计划任务方式实测跨会话存活、端口归属正确。</p>
+     *
+     * <p>命令行放进启动器 {@code .cmd} 再把 {@code .cmd} 交给 {@code schtasks /tr}：
+     * {@code /tr} 只接受单个不含空格的路径，把含空格的可执行文件路径直接塞进去会被
+     * 拆成多个参数（实测报 {@code Invalid argument/option - 'Files\Amazon'}）。</p>
+     *
+     * @param exe       可执行程序
+     * @param args      参数串
+     * @param matchName 计划任务回退时用于定位目标进程的命令行特征（一般是主入口名）
+     * @return 启动脚本
+     */
+    private static String winStart(String exe, String args, String matchName) {
+        String tail = args == null || args.isEmpty() ? "" : " " + args;
+        String inner = exe + tail;
+        String match = matchName == null || matchName.isBlank() ? exe : matchName;
+        // 启动器内容由 Java 侧拼好，避免在 PowerShell 里再拼一次命令行导致引号层级失控。
+        // 启动器必须先 cd 到项目目录：计划任务的工作目录默认是 C:\Windows\System32，
+        // 而入口名是相对路径（smoke.jar），不切目录会「java 起来了又立刻退出」。
+        // 注意每条命令各占一个数组元素 —— PowerShell 单引号字符串里写 \r\n 是字面文本，不是换行。
+        String cdLine = "cd /d \"" + PH_PATH + "\"";
+        String startLine = "start \"\" /b \"" + exe + "\"" + tail + " > \"" + PH_LOG + "\" 2>&1";
+        String launcherPs = startLine.replace("'", "''");
+        String cdPs = cdLine.replace("'", "''");
+        return "$inner = '" + inner + "'\n"
+                + "$cmd = 'cmd /c ' + $inner + ' > \"" + PH_LOG + "\" 2>&1'\n"
+                + "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = '"
+                + PH_PATH + "' }\n"
+                + "$procId = 0\n"
+                + "if ($r.ReturnValue -ne 0) {\n"
+                + "  # WMI 创建进程被拒：主机安全产品拦截（实测 ReturnValue=2）。\n"
+                + "  # 回退到计划任务 —— 进程由 Task Scheduler 拉起，真正脱离会话。\n"
+                + "  $task = 'ms-launch-' + ('" + PH_PATH + "' -replace '[^0-9A-Za-z]', '_')\n"
+                + "  $launcher = Join-Path '" + PH_PATH + "' 'ms-launch.cmd'\n"
+                + "  [IO.File]::WriteAllLines($launcher, @('@echo off', '" + cdPs + "', '" + launcherPs + "'))\n"
+                + "  & schtasks.exe /delete /tn $task /f 2>&1 | Out-Null\n"
+                + "  $c = & schtasks.exe /create /tn $task /tr $launcher /sc once /st '23:59' /f 2>&1\n"
+                + "  if ($LASTEXITCODE -ne 0) { throw ('计划任务创建失败: ' + ($c -join ' ')) }\n"
+                + "  & schtasks.exe /run /tn $task 2>&1 | Out-Null\n"
+                + "  if ($LASTEXITCODE -ne 0) { throw ('计划任务触发失败: ' + $task) }\n"
+                + "  # 计划任务不返回进程号，按命令行特征回查；取最新的那个，避免命中旧实例残留。\n"
+                + "  $want = '" + match.replace("'", "''") + "'\n"
+                + "  for ($i = 0; $i -lt 40; $i++) {\n"
+                + "    $hit = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |\n"
+                + "        Where-Object { $_.CommandLine -and $_.ProcessId -ne $PID -and $_.CommandLine -like ('*' + $want + '*') } |\n"
+                + "        Sort-Object CreationDate -Descending)\n"
+                + "    if ($hit.Count -gt 0) { $procId = [int]$hit[0].ProcessId; break }\n"
+                + "    Start-Sleep -Milliseconds 500\n"
+                + "  }\n"
+                + "  & schtasks.exe /delete /tn $task /f 2>&1 | Out-Null\n"
+                + "  if ($procId -le 0) { throw ('计划任务已触发但未找到目标进程: ' + $want) }\n"
+                + "  Write-Output ('WMI 创建进程被拒(code=' + $r.ReturnValue + ')，已回退计划任务启动 pid=' + $procId)\n"
+                + "}\n"
+                + "if ($procId -le 0) { $procId = [int]$r.ProcessId }\n"
+                + "if ($procId -le 0) { throw ('启动失败 Win32_Process.Create code=' + $r.ReturnValue) }\n"
+                + "$procId | Out-File 'app.pid' -Encoding ascii\n"
+                + "Write-Output $procId";
+    }
+
+    /**
+     * Windows 启动片段（进程特征取可执行文件名）。
      *
      * @param exe  可执行程序
      * @param args 参数串
      * @return 启动脚本
      */
     private static String winStart(String exe, String args) {
-        String inner = exe + (args == null || args.isEmpty() ? "" : " " + args);
-        return "$inner = '" + inner + "'\n"
-                + "$cmd = 'cmd /c ' + $inner + ' > \"" + PH_LOG + "\" 2>&1'\n"
-                + "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = '"
-                + PH_PATH + "' }\n"
-                // 回退：安全产品会拦截「经 WMI 创建进程」（实测 cmd.exe 返回 ReturnValue=2、
-                // java.exe 创建后秒死，而 Start-Process 正常且能跨 SSH 会话存活）。
-                // 仅在 WMI 失败时走这条，健康主机行为完全不变。
-                + "if ($r.ReturnValue -ne 0) {\n"
-                + "  $wmiCode = $r.ReturnValue\n"
-                + "  $sp = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/c ' + $inner + ' > \"" + PH_LOG
-                + "\" 2>&1') -WorkingDirectory '" + PH_PATH + "' -WindowStyle Hidden -PassThru\n"
-                + "  $r = [pscustomobject]@{ ReturnValue = 0; ProcessId = $sp.Id }\n"
-                + "  Write-Output ('WMI 创建进程被拒(code=' + $wmiCode + ')，已回退 Start-Process pid=' + $sp.Id)\n"
-                + "}\n"
-                + "if ($r.ReturnValue -ne 0) { throw ('启动失败 Win32_Process.Create code=' + $r.ReturnValue) }\n"
-                + "$r.ProcessId | Out-File 'app.pid' -Encoding ascii\n"
-                + "Write-Output $r.ProcessId";
+        return winStart(exe, args, exe);
     }
 
     /**
@@ -429,7 +479,7 @@ public final class ProjectScripts {
                 // 与 Linux 模板对齐：必须把 JVM 参数与应用参数传下去。
                 // 原先写成 `-jar <入口>` 而不带 __JVMARGS__/__ARGS__，项目里配的
                 // cmdArgs（如 --server.port=NNNN）与 jvmArgs 会被静默忽略。
-                String start = winStart("java", "__JVMARGS__ -jar " + PH_ENTRY + " __ARGS__")
+                String start = winStart("java", "__JVMARGS__ -jar " + PH_ENTRY + " __ARGS__", mainEntry)
                         + "\n" + WIN_VERIFY_RUNNING;
                 return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
             }
