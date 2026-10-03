@@ -117,4 +117,37 @@ class ProductionAuthGuardTest {
         assertFalse(ProductionAuthGuard.covers(null, "/ms"));
         assertFalse(ProductionAuthGuard.covers("/ms/**", null));
     }
+
+    @Test
+    @DisplayName("protocol=static 却没有配置任何账号时必须被判为不可用")
+    void staticProtocolWithoutAccountIsUnusable() {
+        var reasons = ProductionAuthGuard.detectUnusableConfigs("static", null);
+        assertEquals(1, reasons.size(), "实际: " + reasons);
+        assertTrue(reasons.get(0).contains("OAUTH_TEMP_USER"),
+                "原因里必须点出该配哪个项，否则运维只能靠猜。实际: " + reasons.get(0));
+
+        assertEquals(1, ProductionAuthGuard.detectUnusableConfigs("static", "").size(),
+                "空串等同于未配置");
+        assertEquals(1, ProductionAuthGuard.detectUnusableConfigs("static", "   ").size(),
+                "纯空白等同于未配置");
+        assertEquals(1, ProductionAuthGuard.detectUnusableConfigs("  STATIC  ", null).size(),
+                "协议名大小写与首尾空白都应被识别，否则配了 STATIC 却仍被拒启动");
+    }
+
+    @Test
+    @DisplayName("protocol=static 且配了账号时判为可用")
+    void staticProtocolWithAccountIsUsable() {
+        assertTrue(ProductionAuthGuard.detectUnusableConfigs("static", "admin:secret").isEmpty());
+    }
+
+    @Test
+    @DisplayName("非 static 协议不因「查不到本地账号」而误判（避免守卫在正常配置上误报）")
+    void nonStaticProtocolIsNotJudgedByLocalAccount() {
+        // tcp / oauth2 的凭据由远端鉴权服务提供，本进程看不到账号，
+        // 查不到不等于没有。此时拒绝启动属于误报，而守卫一旦误报就会被当成噪声关掉。
+        for (String protocol : new String[]{"tcp", "oauth2", "http", null}) {
+            assertTrue(ProductionAuthGuard.detectUnusableConfigs(protocol, null).isEmpty(),
+                    "protocol=" + protocol + " 不应被判为不可用");
+        }
+    }
 }

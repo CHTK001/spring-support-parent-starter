@@ -15,8 +15,36 @@
 # （enable=false / local-admin-fallback=true / 白名单覆盖 /ms），
 # 只要发现任何一条就拒绝启动并打印全部原因，而不是等出事才发现。
 #
-# ⚠ 上线前必须确认：auth-address 指向的鉴权服务可达，否则所有人都会被挡在门外。
-#   这是「宁可不可用也不裸奔」的取舍，需要在上线 checklist 里显式核对。
+# ------------------------------------------------------------------
+# 为什么 protocol 用 static 而不是 tcp（2026-10-03 实测后修正）
+# ------------------------------------------------------------------
+# 本文件此前写的是 protocol 走默认 tcp，并注明「auth-address 留空会导致登录不可用」，
+# 隐含前提是「鉴权必须有一个外部服务」。**这个前提经查证不成立**：
+#
+#   oauth-client-starter 里 StaticProtocol（@Spi("Static")）是完整的本地实现 ——
+#   TokenCipher 用内置 SM4 密钥对用户信息加解密、StaticSessionRegistry 维护本地会话、
+#   StaticUserStore 校验静态凭据。**全程不发起任何远程调用**。
+#
+# 而 tcp 走 TcpProtocol，必须有一个 address 指向的鉴权服务在线。
+# 本仓当前并没有部署这样的服务，实测 Kali 上 9848/9849/19180/19181/19182/19185/
+# 19380/19390 无一响应，9848 与 9849 是 java 进程但并非鉴权服务。
+# 也就是说：按 tcp 部署的结果不是「更安全」，而是**没有人能登录** ——
+# 把「任何人可写」换成「谁也用不了」，这不是可接受的生产状态。
+#
+# 因此生产默认走 static：凭据由 plugin.oauth.temp.user 提供，密钥内置，
+# 不依赖任何外部服务即可完成鉴权。**若将来真的部署了统一鉴权服务，
+# 改成 protocol: tcp 并填 auth-address 即可，无需改动其他项。**
+#
+# ------------------------------------------------------------------
+# 上线前必须做的事（否则启动即失败，这是有意为之）
+# ------------------------------------------------------------------
+# 必须设置 OAUTH_TEMP_USER，格式为「用户名:密码」或「用户名:<盐>$<摘要>」，
+# 多个账号用分号分隔。**没设置就启动会失败** —— 由 ProductionAuthGuard 判定，
+# 属于刻意的 fail-safe：宁可启动失败让人来配，也不要出现「服务起来了、
+# 鉴权也标着启用、但没有任何账号能登录」这种要等用户投诉才发现的状态。
+# 生成加盐摘要：
+#   HTPASSWD=$(openssl passwd -apr1 -salt <自定义盐> '<明文密码>')
+#   export OAUTH_TEMP_USER="admin:$HTPASSWD"
 
 plugin:
   oauth:
@@ -26,11 +54,21 @@ plugin:
     enable: true
     # 不允许「取不到用户上下文就按本地 admin 放行」——该兜底等价于绕过鉴权
     local-admin-fallback: false
+    # 本地验签，不依赖任何外部鉴权服务（依据见上方说明）
+    protocol: static
+    # 静态账号。为空时**不会**静默放行任何空口令账号 —— ProductionAuthGuard 会
+    # 检测到「protocol=static 却没有账号」并拒绝启动（见 detectUnusableConfigs）。
+    # 这样配置缺失在启动期就暴露，而不是等真实用户发现「所有人都登不进去」。
+    temp:
+      user: ${OAUTH_TEMP_USER:}
+    # 静态 token 有效期。24h 偏长：服务管理属于管理面操作，
+    # 缩短到 2h 让泄露的 token 更难被利用；配合重新登录成本可接受。
+    static-token-expire-seconds: 7200
     # 不放行任何 /ms 路径。此处为空表示只保留内置默认白名单
     # （captcha / login / oauth / doc.html 等），服务管理接口全部需要凭据。
+    # 已核对 AuthClientProperties.DEFAULT_WHITELIST：其中不含 /ms，
+    # 所以开 enable=true 后管理接口确实会被保护。
     whitelist: []
-    # 鉴权服务地址（按实际部署覆盖；留空会导致登录不可用）
-    auth-address: ${OAUTH_AUTH_ADDRESS:}
   file-storage:
     # 文件服务器私有桶保持开启：enable=false 或留空时按公共桶运行，
     # 目录列表与文件内容将对能连到端口的人可读
