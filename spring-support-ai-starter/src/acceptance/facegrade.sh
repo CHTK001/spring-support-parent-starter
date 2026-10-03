@@ -1,8 +1,8 @@
 #!/bin/bash
 # 人脸识别生产级验收（可重复跑，对标以图搜图的 prodgrade.sh）
 #
-# 覆盖 7 组：能力与输入健壮性 / 检测 / 特征 / 1:1 比对 / 1:N 登记识别 /
-#            快照持久化 / 鉴权与清理
+# 覆盖：能力与输入健壮性 / 检测 / 特征 / 1:1 比对 / 1:N 登记识别 /
+#            快照持久化 / 鉴权与清理 / 配置热更新后能力保持可用（rebuild 回归）
 #
 # 依赖：一张含人脸的测试图。
 #   仓库来源（已入库，勿再从别处找）：
@@ -246,6 +246,60 @@ echo
 echo "################ 8. 鉴权 ################"
 ck "匿名访问被拒" "$(curl -s -m 20 -A "$UA" -o /dev/null -w '%{http_code}' "$B/v2/face/models")" "403"
 ck "伪 token 被拒" "$(curl -s -m 20 -A "$UA" -H 'x-oauth-token: forged' -o /dev/null -w '%{http_code}' "$B/v2/face/models")" "403"
+
+echo
+echo "################ 9. 配置热更新后能力保持可用（rebuild 回归） ################"
+# 这组针对一个真实缺陷：超分模型是唯一带「留空回退默认」的字段，
+# 而 rebuild() 曾经直接 create(配置值) 不带回退。于是配置留空时
+# 「刚启动能用 -> 改过任意 face 配置就用不了」，调用抛
+# IllegalStateException: 模型未注册，表现为 HTTP 500。
+#
+# 线上 super_resolution_model 就是空字符串，所以这个组合是现场成立的，
+# 且触发 rebuild 的正是管理员改配置这条主路径。
+#
+# 断言必须打在【服务端日志签名】上，不能打 HTTP 响应体：
+# 框架对未捕获异常返回的是通用信封 {"msg":"数据处理异常，请稍后重试"}，
+# 「模型未注册」四个字只出现在 app-out.log 里。
+# 第一版断言查响应体，于是在坏产物上照样打出 [PASS] —— 假绿灯。
+#
+# 也不用「必须 200」：回退到的默认模型另有独立的 DJL 侧问题（见交付说明），
+# 那是另一件事。本组只钉住本缺陷的签名。
+#
+# 日志路径不硬编码：与 11-log.conf 的 StandardOutput 保持一致，可用 AI_APP_LOG 覆盖。
+SRLOG=${AI_APP_LOG:-/opt/ai-starter/app-out.log}
+sr_sig() { sudo_ bash -c "grep -ac '模型未注册' '$SRLOG' 2>/dev/null" 2>/dev/null || echo 0; }
+
+N0=$(sr_sig)
+SR_BEFORE=$(api 180 -F "file=@$F" -o /tmp/f_sr_b.json -w '%{http_code}' "$B/v2/face/super-resolution")
+N1=$(sr_sig)
+echo "  热更新前（刚重启，走留空回退）：HTTP=$SR_BEFORE  日志签名增量=$((N1-N0))"
+
+ck "热更新前超分不因「模型未注册」失败" "$((N1-N0))" "0"
+
+TOPK0=$(api 30 "$B/v2/settings/face" | python3 -c "
+import json,sys
+try: o=json.load(sys.stdin)
+except Exception: print(''); raise SystemExit
+d=o.get('data') or o
+if isinstance(d,dict) and isinstance(d.get('data'),dict): d=d['data']
+print((d or {}).get('top_k') or '')" 2>/dev/null)
+
+# 改一个与模型无关的字段，触发 FaceSettingsChangedEvent -> rebuild()
+api 40 -X PUT -H 'Content-Type: application/json' -d '{"top_k":"6"}' -o /dev/null "$B/v2/settings/face"
+sleep 4
+api 40 -X PUT -H 'Content-Type: application/json' -d "{\"top_k\":\"${TOPK0:-5}\"}" -o /dev/null "$B/v2/settings/face"
+echo "  已触发一次 rebuild（PUT face.top_k）并复原"
+
+SR_AFTER=$(api 180 -F "file=@$F" -o /tmp/f_sr_a.json -w '%{http_code}' "$B/v2/face/super-resolution")
+N2=$(sr_sig)
+echo "  热更新后（走 rebuild）：HTTP=$SR_AFTER  日志签名增量=$((N2-N1))"
+
+ck "热更新后超分不因「模型未注册」失败" "$((N2-N1))" "0"
+ck "热更新前后超分状态码一致（rebuild 不应改变能力）" "$SR_AFTER" "$SR_BEFORE"
+if [ "$((N2-N1))" != "0" ]; then
+  echo "         根因: rebuild() 未对 super_resolution_model 应用留空回退默认，"
+  echo "         把绑定默认模型的包装换成了绑定空模型标识的包装"
+fi
 
 echo
 echo "################ 小结 ################"
