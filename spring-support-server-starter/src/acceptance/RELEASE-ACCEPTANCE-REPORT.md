@@ -10,13 +10,25 @@
 
 | 项 | 值 |
 |---|---|
-| 线上 jar md5 | `67468b438936de9d46e79be043d81a96` |
+| 线上 jar md5 | `8ed15b3865312b2e23add23431119cfa` |
 | 本地/远端一致性 | 上传前后 md5 双向核对一致 |
 | 运行进程 = 该 jar | `RUNNING_NEW_JAR`（进程启动时刻晚于 jar 写入时刻） |
 | 服务 | `ms-monitor-platform` `active` + `enabled`，单实例，HTTP 200 |
 | 启动参数 | `-XX:+UseCompactObjectHeaders`；`jdbc:mysql://…/monitordb`（非 H2） |
 
 > 报告只对上述 md5 有效。重新构建/部署后须重跑本报告的复验步骤。
+
+> ⚠ **线上产物已落后于 HEAD（2026-10-03 记录）**：本次部署之后又有提交
+> `07eeda925 fix(auth): 生产改用本地静态验签` 改了
+> `spring-support-monitor-starter/src/main/java/…/ProductionAuthGuard.java` 与
+> `application-prod.yml`。也就是说**本报告验证的是 `07eeda925` 之前的代码**。
+> 该提交未经本轮验收，且当时工作区还有另一会话未提交的 DB 导入导出在施工，
+> 因此**刻意未重新部署** —— 避免把未验收的他人改动一起打进产物。
+> 要让本报告覆盖 HEAD，必须重新出包、部署并重跑 §7。
+
+> 本轮（`c0623678e` 后端 / `2d08ce127` 前端 / 本文件）只动了 `src/test`、
+> `pom.xml` 的 **test 作用域与 surefire includes**、验收文档与前端模板 ——
+> **均不进入 jar**，因此不影响上表 md5。
 
 ---
 
@@ -146,9 +158,76 @@ Defender/ASR、`sshd_config`、认证（SFTP 与原生命令均正常）。
 | macOS 真机 | 无机器 |
 | 并发 / 压测 / 长稳 | 未做；仅做了「并发启动→单实例」这一条正确性用例 |
 | Windows 完整链路 | 受 §5.1 阻断（投放/回滚已单点验证通过） |
-| 模板双份维护 | 后端 `ProjectScripts.java` 与前端 `projectTemplates.ts` 各一份模板，**必然漂移**，建议收敛为单一来源 |
-| `monitor-starter` 的 `test-compile` | **在 HEAD 上就是坏的**（5 个已入库测试引用不存在的包），导致探针无法进常规构建；已用独立运行器绕过 |
+| **Windows 前端模板与后端未对齐** | 见 §5.3：**UI 建的项目用的是前端模板**，而 Windows 侧两侧是**不同设计**（后端 21 行 `$stopIds` 累积式 vs 前端 11 行内联 `taskkill /T`），非过期副本。Linux 侧已对齐（STOP/STATUS 逐字节相同） |
 | `EtcdManageServiceImpl.java` | 存量 1 个 `U+FFFD`（非本次改动，mtime 2026-10-01 19:13） |
+
+### 5.3 前端模板双份问题（**已定性、Linux 已修、Windows 未对齐**）
+
+**根因不是「两份模板」，而是「后端默认对 UI 建的项目根本不生效」**：
+
+```java
+// ReleaseServiceImpl#applyDefaultScripts
+if (isBlank(project.getStopScript())) { project.setStopScript(def.stop()); }
+```
+
+后端只在脚本字段**为空**时填默认值，而创建表单总是填好并提交非空脚本 ——
+所以 **UI 建的项目实际执行的是前端模板**，后端 `ProjectScripts` 的修复对它一律无效。
+
+**模板其实有三份，其中一份是死的：**
+
+| 位置 | 状态 |
+|---|---|
+| 后端 `ProjectScripts.java` | 权威源（`applyDefaultScripts` 兜底时使用） |
+| `packages/ui/src/components/ReCommand/templates.ts` | **活副本**（`ProjectsView.vue` + `ReCommand/index.vue` 引用） |
+| `apps/.../utils/projectTemplates.ts` | **死孤儿，零引用** —— 已删除 |
+
+> 前几轮「把修复同步到 `projectTemplates.ts`」因此是**无效功**：同步到了死文件。
+> 本轮改为同步活副本。
+
+**Linux 侧已对齐（逐字节比对，同一输入，后端 `ReleaseScriptPrinter` vs 前端 esbuild+node）：**
+
+| 节 | 结果 |
+|---|---|
+| STOP | **IDENTICAL（22 行）** |
+| STATUS | **IDENTIAL（5 行）** |
+| START / RESTART | 仅空格差异（shell 等价） |
+
+顺带修掉前端 `LINUX_PID_STATUS` 里一个**一直无效**的过滤器：
+`pgrep -f <entry> | grep -qv "^$$\\$"` —— 双引号里 `$$` 展开成 shell 的 pid、`\$` 是字面量 `$`，
+拼出来是 `^<pid>$`，而 `pgrep` 输出的是裸 pid 行，**永远匹配不上**，等于没过滤；
+而裸 `pgrep -f` 又必然匹配到执行脚本的 shell 自身。已按后端改为「只以 `app.pid` 为准」。
+
+**Windows 侧未对齐，且不能盲改**：两侧是不同设计而非同一份代码的不同版本。
+后端停止段用 `$stopIds` 累积 + CIM 兜底（21 行），前端是内联 `taskkill /T`（11 行）。
+本轮已把后端的三项**能力**补进前端（CIM 孤儿回收、`-match` + 排除 `$PID`、
+WMI→`Start-Process` 回退），功能上不再缺；但**没有**改写成后端那种写法 ——
+停止脚本是直接杀掉生产进程的那一段，在无法端到端验收（§5.1）的前提下盲改风险不可接受。
+
+> **建议的根治方向**（未实施，需先确认）：让后端提供一个「按上下文返回将要下发的四段脚本」的只读接口，
+> 前端只做**预览**、提交时脚本字段留空由后端填充。这样模板就只有一份，
+> 前端也就不再有「预览与实际不一致」的可能。当前保留双份 + 逐字节比对作为过渡手段。
+
+### 5.4 回归探针已进常规构建
+
+`ReleaseScriptProbe` 此前只是 `main()` 程序，**42 条断言一条都不在常规构建里** ——
+改 `ProjectScripts` 或平台 Provider 后「`mvn test` 全绿」并不能证明生成的命令还对。
+
+两个前提已不成立（`spring-support-server-starter` 与 `spring-support-monitor-starter`
+的 `clean test-compile` 现均为绿），故本轮接入：
+
+1. `pom.xml` 增加 `org.junit.jupiter:junit-jupiter`（test scope，与 monitor-starter 同源）；
+2. `pom.xml` 增加 surefire `includes` 补 `**/*Probe.java` ——
+   surefire 默认只按文件名匹配 `Test*/*Test/*Tests/*TestCase`，
+   `*Probe` 类即使带 `@Test` 也不会被发现（**表现为构建全绿却没有 `Tests run` 输出**）。
+   声明 `includes` 会整体替换默认值，故四种默认模式一并保留；
+3. 探针按段拆成 7 个 `@Test` 方法，**42 条断言一条未改**，敏感性对照全部保留；
+   同时保留 `main()` 入口与退出码语义供现场取证；
+4. `run-release-probe.ps1` 改为委托 `mvn test` —— 手写 `javac` 解析 classpath 会漏掉 JUnit，
+   探针一旦加 `@Test` 就编译失败（本轮已实际踩到）。
+
+**敏感性对照**：临时把 `selfSafePattern` 的转义集合去掉 `.`（真实踩过的坑），
+段 A 有 **5 条断言同时变红**（A2/A8/A9/A10/A11）、`exit=1`，证明这些断言不是恒真的假绿；
+随后按字节恢复，md5 复原，重新回到 `Tests run: 7, Failures: 0`。
 
 ---
 
@@ -180,8 +259,13 @@ Defender/ASR、`sshd_config`、认证（SFTP 与原生命令均正常）。
 plink … 'md5sum /home/kali/ms-accept/jars/spring-support-monitor-starter-4.0.0.42-exec.jar'
 plink … 'bash /home/kali/ms-accept/scripts/svc-action.sh prove'      # 期望 RUNNING_NEW_JAR
 
-# 2) 回归探针
-pwsh -File spring-support-server-starter/src/acceptance/run-release-probe.ps1   # 期望 42/0
+# 2) 回归探针（现在同时在常规测试生命周期里，两处都应绿）
+pwsh -File spring-support-server-starter/src/acceptance/run-release-probe.ps1
+#   期望 probe exit=0 且 Tests run: 7, Failures: 0（7 个 @Test 覆盖 42 条断言）
+mvn -o -pl spring-support-server-starter -DskipTests=false test
+#   期望 Tests run: 7, Failures: 0 —— 这一条能证明探针真的进了常规构建；
+#   若只跑上面的 ps1，探针没被发现时它照样会「通过」（main 入口独立可执行），
+#   属于假绿，必须以 mvn test 的 Tests run 数字为准。
 
 # 3) Windows 发布逻辑真机自检
 pwsh -File spring-support-server-starter/src/acceptance/win-release-selfcheck.ps1 -Port 18091  # 期望 10/0
