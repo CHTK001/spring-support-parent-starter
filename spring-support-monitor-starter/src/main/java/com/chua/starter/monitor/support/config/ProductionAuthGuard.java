@@ -53,6 +53,14 @@ public class ProductionAuthGuard implements InitializingBean {
     private static final List<String> PROTECTED_PREFIXES = List.of("/ms");
 
     /**
+     * 本地验签协议的 SPI 名（{@code StaticProtocol} 上的 {@code @Spi("Static")}）。
+     *
+     * <p>写成常量而不是内联字符串：协议名一旦写错，判断就会静默失效 ——
+     * 而静默失效的守卫比没有守卫更危险，因为它看起来在工作。</p>
+     */
+    private static final String STATIC_PROTOCOL = "static";
+
+    /**
      * 绑定后的鉴权配置
      */
     private final AuthClientProperties authProperties;
@@ -78,16 +86,63 @@ public class ProductionAuthGuard implements InitializingBean {
                 authProperties.isLocalAdminFallback(),
                 authProperties.getEffectiveWhitelist(),
                 PROTECTED_PREFIXES);
+        bypasses.addAll(detectUnusableConfigs(authProperties.getProtocol(), staticUserConfig()));
         if (bypasses.isEmpty()) {
             log.info("[生产鉴权守卫] 校验通过：鉴权已启用，/ms 未被白名单放行");
             return;
         }
-        bypasses.forEach(reason -> log.error("[生产鉴权守卫] 鉴权被绕过：{}", reason));
+        bypasses.forEach(reason -> log.error("[生产鉴权守卫] 鉴权不可用：{}", reason));
         throw new IllegalStateException(
-                "生产环境禁止免鉴权运行，已发现 " + bypasses.size() + " 处绕过："
+                "生产环境禁止免鉴权运行，已发现 " + bypasses.size() + " 处问题："
                         + String.join("；", bypasses)
                         + "。请启用 plugin.oauth.enable、移除覆盖 /ms 的白名单条目、"
-                        + "并关闭 plugin.oauth.local-admin-fallback 后重启。");
+                        + "关闭 plugin.oauth.local-admin-fallback，"
+                        + "并配置可用的鉴权方式（protocol=static 需设 OAUTH_TEMP_USER）后重启。");
+    }
+
+    /**
+     * 判定是否存在「鉴权开着但根本没法用」的配置。
+     *
+     * <p>这一类问题和「被绕过」是<b>相反</b>的失效方向：不是敞开了，而是把所有人
+     * 都挡在门外。原守卫只覆盖前者，于是漏掉了这个更隐蔽的坑 ——
+     * {@code protocol=static} 却不配置任何静态账号时，服务能正常启动、配置看上去
+     * 也「已启用鉴权」，但没有任何凭据能通过校验，只能等真实用户发现。
+     * 用配置项去开一个用不了的鉴权，比不开更糟：它会让人误以为安全已经就绪。</p>
+     *
+     * <p>只对 {@code static} 判定：{@code tcp}/{@code oauth2} 等协议的凭据由远端
+     * 服务提供，本进程里看不到账号，查不到不等于没有，此时拒绝启动属于误报 ——
+     * 而守卫一旦在正常配置上误报，就会被人当成噪声关掉，那等于把 fail-safe
+     * 又关回去了。</p>
+     *
+     * @param protocol        生效的鉴权协议名
+     * @param staticUserConfig 生效的静态账号配置（应传已生效的那一份）
+     * @return 每条一个可读原因；配置可用时返回空列表
+     */
+    public static List<String> detectUnusableConfigs(String protocol, String staticUserConfig) {
+        List<String> reasons = new ArrayList<>(1);
+        if (protocol != null && STATIC_PROTOCOL.equalsIgnoreCase(protocol.trim())) {
+            if (null == staticUserConfig || staticUserConfig.isBlank()) {
+                reasons.add("plugin.oauth.protocol=static 但未配置任何静态账号"
+                        + "（plugin.oauth.temp.user / OAUTH_TEMP_USER 为空），"
+                        + "此时无人能登录，等同于把服务整体锁死");
+            }
+        }
+        return reasons;
+    }
+
+    /**
+     * 取当前生效的静态账号配置。
+     *
+     * <p>放在守卫里而不是让调用方自己取：{@code temp} 允许为 {@code null}，
+     * 取值链有 {@code getTemp().getUser()} 这一层可空跳转，散在调用点容易漏判。
+     * 这里统一收口，并给出与 {@code StaticCredentialConfig.effectiveUserConfig}
+     * 一致的语义（取绑定后的值，而不是再解析一次配置文件）。</p>
+     *
+     * @return 静态账号配置，未配置时返回 {@code null}
+     */
+    private String staticUserConfig() {
+        var temp = authProperties.getTemp();
+        return null == temp ? null : temp.getUser();
     }
 
     /**
