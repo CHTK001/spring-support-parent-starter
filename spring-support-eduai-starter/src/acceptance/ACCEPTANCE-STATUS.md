@@ -6,14 +6,18 @@
 
 > ## ✅ 当前状态（2026-10-03）：**已签收**
 >
-> 来源自证已做掉：线上现役 eduai jar `75e228fc…` **== 开发机从 HEAD `2bc2fe52b`
-> 构建的 jar**。对应报告 `ACCEPTANCE-REPORT-20261003.md`
-> （API 49/49、并发 60/60、故障注入、资源判据全 PASS）。
-> 复核：`python3 report-staleness.py --live-eduai 75e228fc… --live-oauth ca4ce0b3…`
+> 来源自证已做掉：线上现役 eduai jar `563dce91…` **== 开发机从 HEAD `c60f8b90b`
+> 构建的 jar**。对应报告 `ACCEPTANCE-REPORT-20261003-r5.md`
+> （**含越权修复**：dimension 管理端补 `@Permission`；53/53 + 19/19 + 15/15 全绿）。
+> 复核：`python3 report-staleness.py --live-eduai 563dce91… --live-oauth ca4ce0b3…`
 > → 该报告 `VALID`，其余报告均已标注失效。
 >
-> （前一次自证 r3 绑定 `81d7c0e1`，其 jar 随后被并发会话替换为 `e7ee42b8`，故 r3 已失效；
-> 本次重新构建并部署，绑定到新的现役 `75e228fc`。）
+> **本版修掉一个真实越权漏洞**：学生（任何已登录用户）原先能全量读写
+> `/v2/edu/dimension/**`，实测真的 INSERT 出了学生记录；同时修掉原验收 A6
+> 「学生令牌访问管理端被拒」的**假绿**（它用的是已被顶掉的令牌，403 来自令牌失效
+> 而非鉴权）。详见报告 §1–§2。
+>
+> （更早的 r4 绑定 `75e228fc`，其 jar 含越权漏洞，已失效。）
 
 ## 1. 交付面
 
@@ -84,7 +88,8 @@ f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
 | `ACCEPTANCE-REPORT-20261002.md` | `a2d012b5` | 已失效（换包，10 分钟内）|
 | `ACCEPTANCE-REPORT-20261002-r2.md` | `6f13188c` | 已失效（换包）|
 | `ACCEPTANCE-REPORT-20261002-r3.md` | `81d7c0e1` | 已失效（被 `e7ee42b8` 替换）|
-| **`ACCEPTANCE-REPORT-20261003.md`** | **`75e228fc`** | **VALID（== 现役）** |
+| `ACCEPTANCE-REPORT-20261003.md` | `75e228fc` | 已失效（被 `563dce91` 替换；**该 jar 含越权漏洞**）|
+| **`ACCEPTANCE-REPORT-20261003-r5.md`** | **`563dce91`** | **VALID（== 现役）** |
 
 **关键澄清**：前几份失效抹掉的是「报告与二进制的绑定」，**不是修复本身**；
 而自证报告之所以成立，是因为它把「构建 → 部署 → 断言线上==本地」串成了一条命令
