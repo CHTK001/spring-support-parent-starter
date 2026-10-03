@@ -136,6 +136,13 @@ def main() -> int:
     c, _ = http("POST", "/v2/edu/dimension/students/save",
                 body={"studentName": "A6-越权新增探针"}, token=student_fresh)
     ck("A6+ 学生令牌写管理端被拒（不得创建学生）", c == 403, f"http={c}")
+    # A6 里重新登录了**同一个学生**，SINGLE 单点登录会把先前签发的代入令牌顶掉，
+    # 所以 A7/A8/A9/A12 不能继续用最早那个 imp —— 否则它们的 403/200 会由
+    # 「令牌已失效」造成（既可能假绿也可能假红，A9 就这样红过）。这里重新签发。
+    c, t = http("POST", "/v2/edu/dimension/students/impersonate",
+                body={"studentId": 1}, token=admin)
+    imp = jget(t, "data", "accessToken") or ""
+    ck("A7 前置：重新签发代入令牌", len(imp) > 20, f"len={len(imp)}")
     c, _ = http("GET", "/v2/edu/dimension/students", token=imp)
     ck("A7 代入令牌访问管理端被拒", c == 403, f"http={c}")
     c, _ = http("POST", "/v2/edu/student/study/report", body={}, token=imp)
@@ -143,7 +150,7 @@ def main() -> int:
     c, _ = http("GET", "/v2/edu/student/overview", token=imp)
     ck("A9 代入令牌读学生端放行", c == 200, f"http={c}")
     c, t = http("POST", "/v2/edu/dimension/students/impersonate",
-                body={"studentId": 1}, token=student)
+                body={"studentId": 1}, token=student_fresh)
     ck("A10 学生令牌不能代入", c in (400, 403), f"http={c} msg={jget(t, 'msg')}")
     c, t = http("POST", "/v2/user/login", body={"username": ADMIN_USER, "password": "wrong-x"})
     ck("A11 错误口令被拒", jget(t, "ok") is False, f"body={t[:80]}")
