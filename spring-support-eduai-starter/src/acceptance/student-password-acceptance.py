@@ -133,3 +133,6 @@ print("\n===== 学生改密三项验收: 通过 %d / 失败 %d =====" % (passed,
 for good, name, detail in results:
     if not good:
         print("  FAIL -> " + name + "  " + detail)
+
+# 必须以非 0 退出：发布脚本只看退出码，只打印不退出会让「有失败」被当成通过。
+raise SystemExit(0 if passed == len(results) else 1)
