@@ -16,6 +16,8 @@ import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.mapper.EduMarkingResultMapper;
 import com.chua.starter.eduai.mapper.EduPaperQuestionMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
+import com.chua.starter.eduai.mapper.EduKnowledgePointMapper;
+import com.chua.starter.eduai.model.EduKnowledgePoint;
 import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.model.EduMarkingResult;
@@ -51,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
@@ -116,6 +119,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * Questionmapper
     */
     private final EduQuestionMapper questionMapper;
+
+    /**
+     * 知识点 Mapper：结构化解析里把题目的知识点 id 解析成名称与描述
+     */
+    private final EduKnowledgePointMapper knowledgePointMapper;
     /**
      * 考试映射器
     */
@@ -1372,6 +1380,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 EduQuestion question = questionMapper.selectById(row.getMarkingResultQuestionId());
                 if (question != null) {
                     item.put("knowledgePointIds", question.getQuestionKnowledgePointIds());
+                    item.put("knowledgePoints", resolveKnowledgePoints(question.getQuestionKnowledgePointIds()));
                 }
             }
             questions.add(item);
@@ -1411,6 +1420,45 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 把题目的知识点 id 串解析为「id + 名称 + 描述」列表，供前端展示与点击。
+     *
+     * <p>只返回 id 串的话前端拿不到名称，按 id 去搜关键字也搜不到，点开只能是空的；
+     * 这里一次性取回，前端直接渲染名称、点开即出描述。</p>
+     *
+     * @param idsCsv 逗号分隔的知识点 id 串，可为空
+     * @return 知识点列表；无有效 id 时返回空列表
+     */
+    private List<Map<String, Object>> resolveKnowledgePoints(String idsCsv) {
+        var out = new ArrayList<Map<String, Object>>();
+        if (StringUtils.isBlank(idsCsv)) {
+            return out;
+        }
+        var ids = new ArrayList<Long>();
+        for (String part : idsCsv.split("[,，\\s]+")) {
+            String text = part.trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            try {
+                ids.add(Long.parseLong(text));
+            } catch (NumberFormatException ignored) {
+                // 非数字的知识点标识直接忽略
+            }
+        }
+        if (ids.isEmpty()) {
+            return out;
+        }
+        for (EduKnowledgePoint point : knowledgePointMapper.selectBatchIds(ids)) {
+            var node = new LinkedHashMap<String, Object>();
+            node.put("id", point.getKnowledgePointId());
+            node.put("name", point.getKnowledgePointName());
+            node.put("description", point.getKnowledgePointDescription());
+            out.add(node);
+        }
+        return out;
+    }
+
+    /**
      * 把 JSON 文本解析为 Map。
      *
      * @param json JSON 文本
@@ -1433,19 +1481,62 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 获取结果
     */
     public MarkingResultVO getResult(String taskId) {
-        // 先取任务：异步模式下「刚提交、识别尚未产出结果行」是正常状态，
-        // 此时不能报「任务不存在」，而要如实回报「排队中 / 处理中」。
-        EduMarkingTask task = null;
-        try {
-            task = taskMapper.selectByTaskId(taskId);
-        } catch (Exception e) {
-            log.debug("[EduAi] 查询阅卷任务失败（表可能尚未建立）: {}", e.getMessage());
-        }
-        boolean taskFailed = task != null && Integer.valueOf(EduMarkingTask.STATUS_FAILED).equals(task.getMarkingTaskStatus());
-        boolean taskDone = task != null && Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(task.getMarkingTaskStatus());
-
+        EduMarkingTask task = loadTaskQuietly(taskId);
         List<EduMarkingResult> results = markingResultMapper.selectTaskResults(
                 taskId, EduUserContext.ownerScope());
+        return buildResultVo(taskId, task, results);
+    }
+
+    @Override
+    /**
+     * 学生查看自己的阅卷结果。
+     *
+     * <p>归属以「任务上的学生标识」为准，而不是任务归属人：教师上传答卷时把 studentId
+     * 记在任务上，学生端只能看 studentId 等于自己学号的任务。此处**不再叠加 ownerScope**
+     * ——任务归属人是上传的教师，用学生身份去过滤会一行都查不到。</p>
+     *
+     * @param taskId    任务标识
+     * @param studentId 当前学生学号（登录态 userId）
+     * @return 阅卷结果
+     */
+    public MarkingResultVO getResultForStudent(String taskId, String studentId) {
+        EduMarkingTask task = loadTaskQuietly(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        if (!Objects.equals(task.getMarkingTaskStudentId(), studentId)) {
+            throw new BusinessException("无权查看该阅卷结果");
+        }
+        return buildResultVo(taskId, task, markingResultMapper.selectByTaskId(taskId));
+    }
+
+    /**
+     * 查任务并容错：异步模式下「刚提交、识别尚未产出结果行」是正常状态，
+     * 表未建立或查询异常时返回 null，由调用方按「排队中」处理，而不是直接报「任务不存在」。
+     *
+     * @param taskId 任务标识
+     * @return 任务实体或 null
+     */
+    private EduMarkingTask loadTaskQuietly(String taskId) {
+        try {
+            return taskMapper.selectByTaskId(taskId);
+        } catch (Exception e) {
+            log.debug("[EduAi] 查询阅卷任务失败（表可能尚未建立）: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 把任务与结果行装配成前端 VO。
+     *
+     * @param taskId  任务标识
+     * @param task    任务实体，可为 null
+     * @param results 结果行（已按调用方口径过滤）
+     * @return 阅卷结果 VO
+     */
+    private MarkingResultVO buildResultVo(String taskId, EduMarkingTask task, List<EduMarkingResult> results) {
+        boolean taskFailed = task != null && Integer.valueOf(EduMarkingTask.STATUS_FAILED).equals(task.getMarkingTaskStatus());
+        boolean taskDone = task != null && Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(task.getMarkingTaskStatus());
 
         if (results.isEmpty()) {
             if (task == null) {
