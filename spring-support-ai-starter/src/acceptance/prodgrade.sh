@@ -53,11 +53,40 @@ ck(){ if [ "$2" = "$3" ]; then echo "  [PASS] $1 -> $2"; P=$((P+1)); else echo "
 # 必须先确认夹具与判据本身是对的。
 api(){ local _t="${1:-30}"; shift; curl -s -m "$_t" -A "$UA" -H "x-oauth-token: $TOKEN" "$@"; }
 
-TOKEN=$(curl -s -m 25 -A "$UA" -X POST -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"admin123"}' "$B/v2/user/login" \
-  | python3 -c "import json,sys;print((json.load(sys.stdin).get('data') or {}).get('accessToken') or '')" 2>/dev/null)
+# 就绪等待 + 登录重试：本服务常有多会话并发重启，撞上重启窗口会拿不到令牌。
+# 但**重试不等于容忍**：等满仍拿不到就 FATAL 退出 —— 不允许在不可达状态下继续断言
+# （否则断言拿到空值，会产出「看起来跑完了」的假结论）。
+wait_ready() {
+  local i c
+  for i in $(seq 1 30); do
+    c=$(curl -s -f -m 3 -o /dev/null -w '%{http_code}' -A "$UA" "$B/v1/captcha" 2>/dev/null)
+    [ "$c" = "200" ] && return 0
+    sleep 5
+  done
+  return 1
+}
+login_admin() {
+  local i t
+  for i in $(seq 1 24); do
+    t=$(curl -s -m 25 -A "$UA" -X POST -H 'Content-Type: application/json' \
+      -d '{"username":"admin","password":"admin123"}' "$B/v2/user/login" \
+      | python3 -c "import json,sys;print((json.load(sys.stdin).get('data') or {}).get('accessToken') or '')" 2>/dev/null)
+    [ -n "$t" ] && { echo "$t"; return 0; }
+    sleep 5
+  done
+  return 1
+}
+if ! wait_ready; then
+  echo "  [FATAL] 服务 150s 内未就绪（/v1/captcha 非 200）；拒绝在不可达状态下继续断言"
+  exit 1
+fi
+TOKEN=$(login_admin)
 AUTH="x-oauth-token: $TOKEN"
-if [ -z "$TOKEN" ]; then echo "[FATAL] 未取得令牌"; exit 1; fi
+if [ -z "$TOKEN" ]; then
+  echo "  [FATAL] 未取得令牌（等待 120s 仍失败）；可能并发重启或鉴权服务不可达，拒绝继续"
+  exit 1
+fi
+echo "  [INFO] 就绪并取得令牌（长度 ${#TOKEN}）"
 
 # 基线 **id 集合**（不是条数）。
 # 教训：曾用 `id > 条数` 判断「新增记录」，而基线是 ids=[1,2,3,4,7,8] / 条数=6，
