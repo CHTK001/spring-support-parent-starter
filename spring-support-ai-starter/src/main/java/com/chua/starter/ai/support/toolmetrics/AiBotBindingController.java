@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.service.AiBotBindingService;
 import com.chua.starter.ai.support.service.AiBotChatService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiUserSettingService;
 import com.chua.common.support.ai.bot.BotSendResult;
 import com.chua.starter.ai.support.manage.LocalTrustAuthFilter;
 import com.chua.starter.ai.support.util.AiBotCaller;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -47,6 +49,16 @@ import java.util.stream.Collectors;
 public class AiBotBindingController {
 
     /**
+     * 配置中心 Bot 分组
+     */
+    private static final String GROUP_BOT = "bot";
+
+    /**
+     * Bot 默认模型字段名
+     */
+    private static final String FIELD_DEFAULT_MODEL = "default_model";
+
+    /**
      * 机器人 绑定服务
      */
     private final AiBotBindingService botBindingService;
@@ -60,6 +72,11 @@ public class AiBotBindingController {
      * 全局设置服务（机器人 默认模型等键值配置）
      */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
+
+    /**
+     * 用户级设置服务（Bot 默认模型按用户隔离，用户覆盖优先于全局）
+     */
+    private final SysAiUserSettingService sysAiUserSettingService;
 
     /**
      * 模型表 映射器（机器人 可选的对话模型来自模型管理配置的 提供者_模型）
@@ -331,40 +348,76 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询 机器人 默认 AI 模型（全局设置 机器人.默认_模型，机器人 未单独配置时兜底）。
+     * 查询当前用户生效的 机器人 默认 AI 模型。
      *
-     * @return 默认模型名（可能为空）
+     * <p>Bot 默认模型按用户隔离：优先返回该用户自己的覆盖，未设置时回落全局默认。</p>
+     *
+     * @return 默认模型名（可能为空）与来源（user/global）
      */
     @GetMapping("/default-model")
-    public ReturnResult<Map<String, Object>> getDefaultModel() {
-        String model = sysAiGlobalSettingService.getValue("bot", "default_model").orElse(null);
+    public ReturnResult<Map<String, Object>> getDefaultModel(HttpServletRequest httpRequest) {
+        String userId = currentUserIdFromRequest(httpRequest);
+        Optional<String> userValue = userId == null
+                ? Optional.empty()
+                : sysAiUserSettingService.getUserValue(userId, GROUP_BOT, FIELD_DEFAULT_MODEL);
+        // 直读库：getValue 走 Redis 缓存，缓存不可用时会 500，模型解析不应被缓存层拖垮
+        String model = userValue.orElseGet(() ->
+                sysAiGlobalSettingService.getValueDirect(GROUP_BOT, FIELD_DEFAULT_MODEL).orElse(null));
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("model", model);
+        data.put("source", userValue.isPresent() ? "user" : "global");
+        data.put("overridden", userValue.isPresent());
         return ReturnResult.ok(data);
     }
 
     /**
-     * 设置 机器人 默认 AI 模型（全局兜底，避免每个用户单独配置模型）。
+     * 设置当前用户的 机器人 默认 AI 模型（用户级，不再要求管理员、不再改全局）。
      *
-     * <p>写入全局设置表，影响所有用户的 机器人 行为，因此仅管理员（或本地信任的桌面端）可改。</p>
+     * <p>与设置中心「默认模型」一致：写入 {@code sys_ai_user_setting} 的
+     * {@code bot/default_model} 覆盖行，仅影响本人；全局默认由管理员在设置中心维护。</p>
      *
-     * @param body        请求体：模型
+     * @param body        请求体：模型（空串表示撤销覆盖，回落全局）
      * @param httpRequest HTTP 请求（用于解析当前身份）
-     * @return 更新后的默认模型名
+     * @return 更新后的默认模型名与来源
      */
     @PutMapping("/default-model")
     public ReturnResult<Map<String, Object>> setDefaultModel(@RequestBody Map<String, String> body,
                                                              HttpServletRequest httpRequest) {
-        requireGlobalAdmin(httpRequest);
+        // 本控制器在鉴权白名单内，AiUserContext 为空，必须按令牌解析身份
+        String userId = currentUserIdFromRequest(httpRequest);
+        if (userId == null) {
+            return ReturnResult.illegal("无法识别当前用户，请先登录");
+        }
         String model = body.get("model");
         if (StringUtils.isBlank(model)) {
-            return ReturnResult.illegal("model 不能为空");
+            // 空值即撤销覆盖 → 回落全局默认（与设置中心 override 语义一致）
+            sysAiUserSettingService.deleteValue(userId, GROUP_BOT, FIELD_DEFAULT_MODEL);
+            return getDefaultModel(httpRequest);
         }
-        sysAiGlobalSettingService.upsertValue("bot", "default_model", model.trim(),
-                "Bot 默认 AI 模型（未单独配置时的全局兜底）");
+        sysAiUserSettingService.upsertValue(userId, GROUP_BOT, FIELD_DEFAULT_MODEL, model.trim(),
+                "STRING", "Bot 默认 AI 模型（按用户隔离，未配置时回落全局）");
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("model", model.trim());
+        data.put("source", "user");
+        data.put("overridden", true);
         return ReturnResult.ok(data);
+    }
+
+    /**
+     * 当前登录用户标识（按请求身份解析）。
+     *
+     * <p>本控制器在鉴权白名单内，{@code AiUserContext} 不含用户；用
+     * {@link AiBotCaller#userId()} 从令牌归属中取用户标识，设备指纹/匿名返回 空。</p>
+     *
+     * @param request HTTP 请求
+     * @return 用户标识，取不到返回 空
+     */
+    private String currentUserIdFromRequest(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        // AiBotCaller.userId()：登录态返回用户标识；设备指纹归属与匿名返回 空
+        return caller(request).userId();
     }
 
     /**
