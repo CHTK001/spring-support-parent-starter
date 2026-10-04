@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,11 @@ public class AiSessionController {
      * 生效对话模型解析器（压缩时选模型，不写死）
      */
     private final com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver effectiveChatModelResolver;
+
+    /**
+     * 全局设置服务（取"系统/工作目录基路径" system.workspaceBaseDir）
+     */
+    private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService;
 
     /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
@@ -228,6 +234,16 @@ public class AiSessionController {
      */
     // 前端 UUID sessionId -> 后端 Long sessionId 的映射（与 ChatStreamController 共享）
     public static final java.util.Map<String, Long> SESSION_DIALOG_MAP = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 工作目录树最大展开深度（0 表示只列一层）
+     */
+    private static final int WORKSPACE_MAX_DEPTH = 2;
+
+    /**
+     * 工作目录树每个目录最多列出的条目数
+     */
+    private static final int WORKSPACE_MAX_ENTRIES = 200;
 
     @GetMapping("/{id}/messages")
     public ReturnResult<Map<String, Object>> messages(
@@ -637,6 +653,226 @@ public class AiSessionController {
             return Long.parseLong(id);
         }
         return SESSION_DIALOG_MAP.get(id);
+    }
+
+    /**
+     * 取会话的 token 统计（上下文占用）。
+     *
+     * <p>两段来源：① 消息表累计的真实 token（prompt / completion）；
+     * ② 会话 settings 的 {@code contextStats} —— 前端在流式 finish 事件里拿到
+     * 「已用 / 有效窗口」后回写，刷新页面时靠它恢复占用率。</p>
+     *
+     * @param id 会话标识
+     * @return usedTokens / effectiveContextWindow / promptTokens / completionTokens / totalTokens
+     */
+    @GetMapping("/{id}/token-stats")
+    public ReturnResult<Map<String, Object>> tokenStats(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        SysAiSession session = sessionMapper.selectById(sessionId);
+
+        long usedTokens = 0L;
+        long effectiveContextWindow = 0L;
+        Object contextStats = readSettings(session == null ? null : session.getSettings()).get("contextStats");
+        if (contextStats instanceof Map<?, ?> stats) {
+            usedTokens = longOf(stats.get("usedTokens"));
+            effectiveContextWindow = longOf(stats.get("effectiveContextWindow"));
+        }
+
+        LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
+        long promptTokens = 0L;
+        long completionTokens = 0L;
+        for (SysAiMessage m : messageMapper.selectList(wrapper)) {
+            promptTokens += m.getPromptTokens() == null ? 0 : m.getPromptTokens();
+            completionTokens += m.getCompletionTokens() == null ? 0 : m.getCompletionTokens();
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("usedTokens", usedTokens);
+        result.put("effectiveContextWindow", effectiveContextWindow);
+        result.put("promptTokens", promptTokens);
+        result.put("completionTokens", completionTokens);
+        result.put("totalTokens", Math.max(usedTokens, promptTokens + completionTokens));
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 回写会话的上下文占用（前端在流式 finish 之后调用）。
+     *
+     * <p>落到会话 settings 的 {@code contextStats}，刷新后由
+     * {@link #tokenStats} 读回，避免占用率归零；不建新表。</p>
+     *
+     * @param id   会话标识
+     * @param body 含 usedTokens / effectiveContextWindow
+     * @return 是否写入成功
+     */
+    @PutMapping("/{id}/token-stats")
+    public ReturnResult<Map<String, Object>> saveTokenStats(@PathVariable("id") String id,
+                                                            @RequestBody Map<String, Object> body) {
+        Long sessionId = resolveSessionId(id);
+        SysAiSession session = sessionId == null ? null : sessionMapper.selectById(sessionId);
+        if (session == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+
+        Map<String, Object> settings = new HashMap<>(readSettings(session.getSettings()));
+        Map<String, Object> contextStats = new HashMap<>();
+        contextStats.put("usedTokens", longOf(body.get("usedTokens")));
+        contextStats.put("effectiveContextWindow", longOf(body.get("effectiveContextWindow")));
+        settings.put("contextStats", contextStats);
+        session.setSettings(writeSettings(settings));
+        session.setUpdateTime(LocalDateTime.now());
+        sessionMapper.updateById(session);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 取会话待办列表。
+     *
+     * <p>后端目前没有待办存储，这里**如实返回空列表**：前端据此显示「暂无待办」，
+     * 而不是因为 404 在控制台报「资源不存在」并把面板置为错误态。
+     * 待办要真做需要独立的存储与写入链路，属另一个功能。</p>
+     *
+     * @param id 会话标识
+     * @return items（当前恒为空数组）
+     */
+    @GetMapping("/{id}/todo")
+    public ReturnResult<Map<String, Object>> todo(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("items", new ArrayList<>());
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 取会话工作目录的文件树。
+     *
+     * <p>目录口径与对话写入侧一致：{@code <system.workspaceBaseDir>/<当前账号>/agent}
+     * （按账号隔离，不按会话）；基路径未配置时返回空树。</p>
+     *
+     * @param id 会话标识
+     * @return tree（目录/文件节点数组，结构与前端 WorkspaceSidebar 一致）
+     */
+    @GetMapping("/{id}/workspace/tree")
+    public ReturnResult<Map<String, Object>> workspaceTree(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        java.nio.file.Path root = resolveAgentWorkspace();
+        Map<String, Object> result = new HashMap<>();
+        result.put("tree", root == null ? new ArrayList<>() : listWorkspace(root, 0));
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 解析当前账号的工作目录（{@code <基路径>/<账号标识>/agent}）。
+     *
+     * <p>账号标识做安全清洗，并在解析后校验仍落在基路径内，防 {@code ../} 越界。</p>
+     *
+     * @return 工作目录；基路径未配置或越界时返回 {@code null}
+     */
+    private java.nio.file.Path resolveAgentWorkspace() {
+        String base;
+        try {
+            base = globalSettingService.getValue("system", "workspaceBaseDir").orElse(null);
+        } catch (Exception e) {
+            log.warn("[Session] 读取工作目录基路径失败: {}", e.getMessage());
+            return null;
+        }
+        if (base == null || base.isBlank()) {
+            return null;
+        }
+        try {
+            java.nio.file.Path basePath = java.nio.file.Paths.get(base.trim()).toAbsolutePath().normalize();
+            String account = java.util.Objects.toString(AiUserContext.currentUserId(), "public")
+                    .replaceAll("[^A-Za-z0-9_-]", "_");
+            java.nio.file.Path workspace = basePath.resolve(account).resolve("agent").normalize();
+            if (!workspace.startsWith(basePath)) {
+                log.warn("[Session] 工作目录越界，已拒绝: {}", workspace);
+                return null;
+            }
+            return workspace;
+        } catch (Exception e) {
+            log.warn("[Session] 解析工作目录失败 base={}: {}", base, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 递归列目录为前端可渲染的节点数组。
+     *
+     * <p>深度与同级条数都有上限：工作目录可能很大，全量递归会把响应与前端
+     * 渲染一起拖垮，所以只展开到 {@value #WORKSPACE_MAX_DEPTH} 层、每层最多
+     * {@value #WORKSPACE_MAX_ENTRIES} 条。</p>
+     *
+     * @param dir   目录
+     * @param depth 当前深度（0 起）
+     * @return 节点数组；目录不可读时返回空数组
+     */
+    private List<Map<String, Object>> listWorkspace(java.nio.file.Path dir, int depth) {
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        if (depth > WORKSPACE_MAX_DEPTH || !java.nio.file.Files.isDirectory(dir)) {
+            return nodes;
+        }
+        try (java.util.stream.Stream<java.nio.file.Path> children = java.nio.file.Files.list(dir)) {
+            List<java.nio.file.Path> sorted = children
+                    .sorted(Comparator.comparing((java.nio.file.Path p) -> !java.nio.file.Files.isDirectory(p))
+                            .thenComparing(p -> p.getFileName().toString()))
+                    .limit(WORKSPACE_MAX_ENTRIES)
+                    .toList();
+            for (java.nio.file.Path child : sorted) {
+                Map<String, Object> node = new HashMap<>();
+                node.put("name", child.getFileName().toString());
+                node.put("path", child.toString());
+                boolean directory = java.nio.file.Files.isDirectory(child);
+                node.put("isDirectory", directory);
+                if (!directory) {
+                    try {
+                        node.put("size", java.nio.file.Files.size(child));
+                    } catch (Exception ignored) {
+                        node.put("size", 0L);
+                    }
+                }
+                if (directory) {
+                    node.put("children", listWorkspace(child, depth + 1));
+                }
+                nodes.add(node);
+            }
+        } catch (Exception e) {
+            log.warn("[Session] 列目录失败 dir={}: {}", dir, e.getMessage());
+        }
+        return nodes;
+    }
+
+    /**
+     * 把对象转成 long，null / 非法值按 0。
+     *
+     * @param value 原值
+     * @return long 值
+     */
+    private static long longOf(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return value == null ? 0L : Long.parseLong(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     /**
