@@ -26,6 +26,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.vector.VectorCompareAlgorithm;
 import com.chua.common.support.vector.VectorStorage;
+import com.chua.common.support.vector.VectorStorageDescriptor;
+import com.chua.common.support.vector.VectorStorageField;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -48,6 +50,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,6 +115,24 @@ public class RagClientManager {
      * jvector 索引文件名（jvector 自行追加 {@code .vectors}）。
      */
     private static final String INDEX_NAME = "jvector-index";
+
+    /**
+     * 命名空间型落盘位置可能用到的字段键（表名 / 集合名）。
+     *
+     * <p>按描述器是否声明这些键来决定能否按账号隔离，不硬编码具体向量库名：
+     * mysql / postgresql 声明 {@code tableName}，milvus 声明 {@code collection}。</p>
+     */
+    private static final List<String> NAMESPACE_FIELD_KEYS = List.of("tableName", "collection");
+
+    /**
+     * 命名空间字段未配置时使用的默认名（与各向量库实现自身的默认值一致）。
+     */
+    private static final String DEFAULT_NAMESPACE = "vector_store";
+
+    /**
+     * 账号后缀的最大长度：{@code vector_store}(13) + 下划线 + 后缀 + 可选哈希 ≤ 64。
+     */
+    private static final int MAX_NAMESPACE_SUFFIX = 40;
 
     /**
      * 无用户上下文时使用的账号标识占位值（健康检查等场景）。
@@ -1088,29 +1109,82 @@ public class RagClientManager {
     }
 
     /**
-     * 把 jvector 的索引路径改写成**按账号分开**的路径。
+     * 把向量库的落盘位置改写成**按账号分开**的位置。
      *
      * <p>必须覆盖而不是只在缺失时补默认值：{@code rag_vector_storage_config} 里保存的
-     * {@code indexPath}（线上实测 {@code /opt/ai-starter/workspace/rag/jvector-index}）
-     * 是<b>全局同一份</b>索引文件。不覆盖的话所有账号会共用一个索引：
+     * 落盘位置（线上实测 jvector 的 {@code indexPath=/opt/ai-starter/workspace/rag/jvector-index}）
+     * 是<b>全局同一份</b>索引。不覆盖的话所有账号会共用一个索引：
      * 一是换 embedding 维度即互相破坏（人脸那边已实测过，维度 256→512 直接抛 search 失败），
-     * 二是 A 账号的文档能被 B 账号检索出来。这里以 {@link #accountUploadDir} 已按账号分好的
-     * {@code uploadDir} 为基准派生，保证索引与分块缓存同目录、生命周期一致。</p>
+     * 二是 A 账号的文档能被 B 账号检索出来。</p>
+     *
+     * <p>按向量库描述器（{@link VectorStorageDescriptor}）声明的字段判定落盘位置，
+     * 不硬编码库名：声明 {@code indexPath} 的（jvector）改成账号内路径；
+     * 声明 {@code tableName} / {@code collection} 的（mysql、postgresql、milvus）
+     * 改成带账号后缀的表名/集合名——这些实现都是 {@code CREATE TABLE IF NOT EXISTS}，
+     * 首次写入时自建，无需预建。都不声明的库无从隔离，只能明确 WARN，
+     * 不能让它静默变成共享索引。</p>
      *
      * <p>jvector <b>不会自动创建缺失的父目录</b>（写入静默失败，表现为「入库成功但重启即丢」），
-     * 因此建目录必须由业务侧做。</p>
+     * 因此文件型落盘位置的建目录动作必须由业务侧做。</p>
      *
-     * @param name   存储名
-     * @param config 待改写的配置（原地修改）
+     * @param name      存储名
+     * @param config    待改写的配置（原地修改）
      * @param uploadDir 已按账号分桶的上传目录
-     * @param userId 账号标识，允许为 {@code null}（系统桶）
+     * @param userId    账号标识，允许为 {@code null}（系统桶）
      */
     private void applyPerUserIsolation(String name, Map<String, Object> config, String uploadDir, String userId) {
-        if (!"jvector".equals(name)) {
-            // 其余向量库（mysql/postgresql/milvus…）由 SPI 自己决定落盘位置，
-            // 这里不猜它们的表名规则；要按账号隔离需各自 SPI 支持，不支持的保持原行为。
+        var keys = declaredFieldKeys(name);
+        if (keys.contains(JVectorVectorStorageProvider.KEY_INDEX_PATH)) {
+            isolateFileIndex(config, uploadDir, userId, JVectorVectorStorageProvider.KEY_INDEX_PATH);
             return;
         }
+        for (String namespaceKey : NAMESPACE_FIELD_KEYS) {
+            if (keys.contains(namespaceKey)) {
+                isolateNamedNamespace(config, namespaceKey, userId);
+                return;
+            }
+        }
+        log.warn("[RagClientManager] 向量库 [{}] 未声明可隔离的落盘字段（已声明: {}），"
+                        + "账号 {} 的向量将与其它账号共用同一处落盘位置——换 embedding 维度会互相破坏，"
+                        + "且跨账号可检索到对方分块",
+                name, keys, StringUtils.defaultString(userId, SYSTEM_ACCOUNT));
+    }
+
+    /**
+     * 取出某向量库描述器里声明的字段键集合。
+     *
+     * @param name 存储名
+     * @return 字段键集合；查不到描述器时返回空集合
+     */
+    private Set<String> declaredFieldKeys(String name) {
+        try {
+            for (VectorStorageDescriptor descriptor : VectorStorageProvider.descriptors()) {
+                if (descriptor != null && name.equalsIgnoreCase(descriptor.name())
+                        && descriptor.fields() != null) {
+                    var keys = new LinkedHashSet<String>();
+                    for (VectorStorageField field : descriptor.fields()) {
+                        if (field != null && StringUtils.hasText(field.key())) {
+                            keys.add(field.key());
+                        }
+                    }
+                    return keys;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 读取向量库 [{}] 描述器失败: {}", name, e.getMessage());
+        }
+        return Set.of();
+    }
+
+    /**
+     * 文件型索引（jvector）改写为账号内路径，并预先创建父目录。
+     *
+     * @param config      待改写的配置（原地修改）
+     * @param uploadDir   已按账号分桶的上传目录
+     * @param userId      账号标识，允许为 {@code null}
+     * @param pathKey     路径字段键
+     */
+    private void isolateFileIndex(Map<String, Object> config, String uploadDir, String userId, String pathKey) {
         var indexPath = Path.of(uploadDir).resolve(INDEX_NAME).toAbsolutePath().normalize();
         try {
             Files.createDirectories(indexPath.getParent());
@@ -1118,12 +1192,62 @@ public class RagClientManager {
             log.warn("[RagClientManager] 账号 {} 的向量索引目录创建失败，索引可能无法落盘: {} -> {}",
                     StringUtils.defaultString(userId, SYSTEM_ACCOUNT), indexPath.getParent(), e.getMessage());
         }
-        Object saved = config.get(JVectorVectorStorageProvider.KEY_INDEX_PATH);
-        config.put(JVectorVectorStorageProvider.KEY_INDEX_PATH, indexPath.toString());
+        Object saved = config.get(pathKey);
+        config.put(pathKey, indexPath.toString());
         if (saved != null && !String.valueOf(saved).equals(indexPath.toString())) {
-            log.info("[RagClientManager] 账号 {} 的 jvector 索引路径由全局共享改为按账号隔离: {} -> {}",
+            log.info("[RagClientManager] 账号 {} 的索引路径由全局共享改为按账号隔离: {} -> {}",
                     StringUtils.defaultString(userId, SYSTEM_ACCOUNT), saved, indexPath);
         }
+    }
+
+    /**
+     * 命名空间型落盘位置（表名 / 集合名）改写为带账号后缀的名称。
+     *
+     * <p>后缀必须满足 SQL 标识符白名单 {@code [A-Za-z_][A-Za-z0-9_]{0,63}}：
+     * 向量库实现会用 {@code checkIdentifier} 校验，非字母数字（含 {@code -} 与 {@code .}）
+     * 会被直接判非法并抛异常；总长超 64 也要截断。截断后补一段账号标识的短哈希，
+     * 避免两个长账号截成同一个表名而互相串数据。</p>
+     *
+     * @param config       待改写的配置（原地修改）
+     * @param namespaceKey 命名空间字段键（{@code tableName} / {@code collection}）
+     * @param userId       账号标识，允许为 {@code null}
+     */
+    private void isolateNamedNamespace(Map<String, Object> config, String namespaceKey, String userId) {
+        Object saved = config.get(namespaceKey);
+        String base = saved != null && StringUtils.hasText(String.valueOf(saved))
+                ? String.valueOf(saved).trim()
+                : DEFAULT_NAMESPACE;
+        String namespaced = base + "_" + identifierSuffix(userId);
+        config.put(namespaceKey, namespaced);
+        if (saved != null && !String.valueOf(saved).equals(namespaced)) {
+            log.info("[RagClientManager] 账号 {} 的向量库 {} 由 {} 改为按账号隔离: {} -> {}",
+                    StringUtils.defaultString(userId, SYSTEM_ACCOUNT), namespaceKey, saved, namespaced);
+        }
+    }
+
+    /**
+     * 把账号标识收敛成可作 SQL 标识符后缀的片段。
+     *
+     * @param userId 账号标识，允许为 {@code null}
+     * @return 只含字母数字与下划线、长度受控的后缀
+     */
+    private static String identifierSuffix(String userId) {
+        String raw = StringUtils.hasText(userId) ? userId : SYSTEM_ACCOUNT;
+        var sb = new StringBuilder(raw.length());
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            sb.append(Character.isLetterOrDigit(c) && c < 128 ? c : '_');
+        }
+        String cleaned = sb.toString().replaceAll("^_+", "");
+        if (cleaned.isBlank()) {
+            cleaned = SYSTEM_ACCOUNT;
+        }
+        // 保留 base 的默认长度预算：DEFAULT_NAMESPACE(13) + '_' + 50 = 64，仍在白名单内
+        if (cleaned.length() > MAX_NAMESPACE_SUFFIX) {
+            cleaned = cleaned.substring(0, MAX_NAMESPACE_SUFFIX)
+                    + "_" + Integer.toHexString(raw.hashCode());
+        }
+        return cleaned;
     }
 
     /**
