@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.filter.ServerFilter;
@@ -673,7 +674,21 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
- * 构造「已落库但运行态操作失败」的失败结果，并把节点视图一并回传。
+ * 「已落库但运行态操作失败」的业务码
+ *
+ * <p>刻意走三参重载 {@code error(code, msg, data)} 而非两参形式：两参的
+ * {@code error(String, String)} 与「携带载荷」的语义在签名上无法区分 ——
+ * 载荷类型恰好是 {@code String} 时，编译器会选中前者，把错误信息当成业务码、
+ * 同时静默丢掉载荷。这是实测踩到的，不是推演。</p>
+     *
+     * @return 业务码
+     */
+    private static String partialFailureCode() {
+        return ReturnCode.SYSTEM_SERVER_BUSINESS_ERROR.getCode();
+    }
+
+    /**
+     * 构造「已落库但运行态操作失败」的失败结果，并把节点视图一并回传。
      *
      * <p>抽成方法是因为热更新与热启停两条路径犯的是同一个错：都先把变更
      * {@code updateById} 写进库，再执行运行态操作；后者失败时若只返回文字，
@@ -701,7 +716,7 @@ public class ServerManageServiceImpl implements ServerManageService {
             // 查不到说明记录已被回滚，此时没有半成品需要交代，按普通失败返回
             return ReturnResult.error(reason);
         }
-        return ReturnResult.error(reason, payload.apply(toView(node)));
+        return ReturnResult.error(partialFailureCode(), reason, payload.apply(toView(node)));
     }
 
     /**
@@ -729,7 +744,7 @@ public class ServerManageServiceImpl implements ServerManageService {
                 // 必须把已落库的节点视图放进 data：定义已经写进库了，调用方拿不到 id
                 // 就无法自行回滚。此前只返回文字，响应里 data=null，而库里明明多了一条，
                 // 调用方按 id 清理会直接漏掉它，留下只能靠人按名字猜着删的僵尸节点。
-                return ReturnResult.error("节点已保存但启动失败: " + e.getMessage(), toView(node));
+                return ReturnResult.error(partialFailureCode(), "节点已保存但启动失败: " + e.getMessage(), toView(node));
             }
             // start 未抛异常不等于真的起来了：SPI 内部会把实例化异常吞成 null，
             // 或服务器在 doStart 阶段静默失败。这里再核一次运行态，避免漏判。
@@ -739,7 +754,7 @@ public class ServerManageServiceImpl implements ServerManageService {
                         ? runtime.getError() : "运行态未进入 RUNNING 状态";
                 log.warn("[ServerManage] 节点 [{}] 启动未成功(定义已保存): {}", node.getName(), reason);
                 // 同上：运行态没起来时定义仍在库里，必须把 id 回给调用方
-                return ReturnResult.error("节点已保存但启动失败: " + reason, toView(node));
+                return ReturnResult.error(partialFailureCode(), "节点已保存但启动失败: " + reason, toView(node));
             }
         }
         return ReturnResult.ok(toView(node));
