@@ -33,6 +33,9 @@ import com.chua.starter.monitor.support.support.DbFilter;
 import com.chua.starter.monitor.support.support.DbDialectSupport;
 import com.chua.starter.monitor.support.support.DbObjectDialect;
 import com.chua.starter.monitor.support.support.DbTableDialect;
+import com.chua.starter.monitor.support.support.DbTxRegistry;
+import com.chua.starter.monitor.support.support.DbTxSession;
+import com.chua.starter.monitor.support.support.DbTxStatus;
 import com.chua.starter.monitor.support.support.SqlScriptSplitter;
 import com.chua.starter.monitor.support.support.SqlParameterBinder;
 import com.chua.starter.monitor.support.model.DbSqlResultVO;
@@ -171,6 +174,28 @@ public class MonitorController {
      * 数据源服务（数据源配置落库与 JDBC 连接构建）
      */
     private final DatasourceService datasourceService;
+
+    /**
+     * 显式事务会话注册表（查询控制台的「事务」开关用）
+     *
+     * <p>为空时事务端点不可用：不要给个默认实现，
+     * 那会让「事务没生效」变成一个静默的功能缺失。</p>
+     */
+    private final ObjectProvider<DbTxRegistry> dbTxRegistryProvider;
+
+    /**
+     * 取事务注册表。
+     *
+     * @return 注册表
+     * @throws IllegalStateException 未装配事务支持
+     */
+    private DbTxRegistry dbTxRegistry() {
+        DbTxRegistry registry = dbTxRegistryProvider.getIfAvailable();
+        if (registry == null) {
+            throw new IllegalStateException("当前实例未启用显式事务支持");
+        }
+        return registry;
+    }
 
     /**
      * AI 对话门面服务（宿主未装配 ai-starter 时为空，接口返回未启用提示）
@@ -2016,6 +2041,82 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @param request SQL 执行请求（sql / datasourceId / database）
      * @return 执行结果
      */
+    // ---------- 显式事务（Navicat 的「事务」模式） ----------
+
+    /** 开启事务的请求体 */
+    public record DbTxBeginRequest(Long datasourceId, String database) {
+    }
+
+    /** 提交 / 回滚的请求体 */
+    public record DbTxActionRequest(String txId) {
+    }
+
+    /**
+     * 开启一个显式事务会话。
+     *
+     * <p>开启后这条连接被注册表持有，后续带 {@code txId} 的
+     * {@code /db/execute}、{@code /db/execute-batch}、单元格编辑、清空表
+     * 都在**同一条连接**上执行，直到显式提交或回滚。
+     * 不带 {@code txId} 的请求不受影响，仍各自独立自动提交。</p>
+     *
+     * @param request 数据源与库
+     * @return 新建的事务标识
+     */
+    @Operation(summary = "开启显式事务")
+    @PostMapping("/db/tx/begin")
+    public ReturnResult<Map<String, Object>> beginDbTx(@RequestBody DbTxBeginRequest request) {
+        return callDb("开启事务", () -> {
+            DbTxSession session = dbTxRegistry().begin(
+                    request == null ? null : request.datasourceId(),
+                    request == null ? null : request.database());
+            return Map.<String, Object>of(
+                    "txId", session.txId(),
+                    "datasourceId", session.datasourceId() == null ? 0L : session.datasourceId(),
+                    "database", session.database() == null ? "" : session.database());
+        });
+    }
+
+    /**
+     * 提交事务。
+     *
+     * @param request 事务标识
+     * @return 是否成功
+     */
+    @Operation(summary = "提交显式事务")
+    @PostMapping("/db/tx/commit")
+    public ReturnResult<Boolean> commitDbTx(@RequestBody DbTxActionRequest request) {
+        return callDb("提交事务", () -> {
+            dbTxRegistry().commit(request == null ? null : request.txId());
+            return Boolean.TRUE;
+        });
+    }
+
+    /**
+     * 回滚事务。
+     *
+     * @param request 事务标识
+     * @return 是否成功
+     */
+    @Operation(summary = "回滚显式事务")
+    @PostMapping("/db/tx/rollback")
+    public ReturnResult<Boolean> rollbackDbTx(@RequestBody DbTxActionRequest request) {
+        return callDb("回滚事务", () -> {
+            dbTxRegistry().rollback(request == null ? null : request.txId());
+            return Boolean.TRUE;
+        });
+    }
+
+    /**
+     * 当前未结束的事务列表。
+     *
+     * @return 事务状态
+     */
+    @Operation(summary = "查询未结束的事务")
+    @GetMapping("/db/tx/status")
+    public ReturnResult<List<DbTxStatus>> dbTxStatus() {
+        return callDb("查询事务", () -> dbTxRegistry().status());
+    }
+
     @Operation(summary = "执行 SQL")
     @PostMapping("/db/execute")
     public ReturnResult<DbSqlResultVO> executeDbSql(@RequestBody DbSqlExecuteDTO request) {
@@ -2030,6 +2131,26 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             return ReturnResult.error("SQL 参数错误: " + e.getMessage());
         }
         Long datasourceId = request.datasourceId();
+        // 事务里跑：复用注册表持有的那条连接，不新建。
+        // 语句失败**不自动回滚整段事务** —— 「一条失败就整体回滚」是用户显式
+        // 点回滚时的语义；批量执行更是要「继续跑完并逐条记账」。
+        if (request.inTransaction()) {
+            try {
+                DbTxSession session = dbTxRegistry().require(request.txId());
+                DbSqlResultVO result = session.run(conn -> {
+                    try (java.sql.Statement stmt = conn.createStatement()) {
+                        return runOneStatement(stmt, bound);
+                    } catch (java.sql.SQLException e) {
+                        throw new IllegalStateException(e.getMessage(), e);
+                    }
+                });
+                return ReturnResult.ok(result);
+            } catch (IllegalStateException e) {
+                return ReturnResult.error("SQL 执行失败: " + e.getMessage());
+            } catch (IllegalArgumentException e) {
+                return ReturnResult.error("SQL 执行失败: " + e.getMessage());
+            }
+        }
         // 顺序要求：先切库、再建 Statement。
         // Connector/J 的 Statement 会在执行时按**创建时**捕获的 catalog 还原会话库，
         // 若在 USE 之前创建 Statement，USE 会被它覆盖 —— 实测 `database=sync_src` 的查询
@@ -2160,42 +2281,99 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         // 根因（替换早于切分）却完全不在报错信息里。
         boolean stopOnError = request.stopOnErrorOrDefault();
         java.util.List<DbSqlResultVO> results = new java.util.ArrayList<>(statements.size());
+        // 事务里跑：整段脚本共用注册表持有的那条连接，
+        // 这样「BEGIN 在这条连接上、COMMIT 也在同一条连接上」才成立。
+        if (request.inTransaction()) {
+            try {
+                DbTxSession session = dbTxRegistry().require(request.txId());
+                return ReturnResult.ok(session.run(conn -> {
+                    try (java.sql.Statement stmt = conn.createStatement()) {
+                        DbSqlBatchVO early = runStatementList(statements, request.params(),
+                                stopOnError, results, stmt);
+                        if (early != null) {
+                            return early;
+                        }
+                        return summarizeBatch(statements.size(), results);
+                    } catch (java.sql.SQLException e) {
+                        throw new IllegalStateException("批量执行失败: " + e.getMessage(), e);
+                    }
+                }));
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                return ReturnResult.error(e.getMessage());
+            }
+        }
         try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
              SchemaScope scope = useSchema(conn, request.database());
              java.sql.Statement stmt = conn.createStatement()) {
-            for (int i = 0; i < statements.size(); i++) {
-                String one;
-                try {
-                    one = bindParams(statements.get(i), request.params());
-                } catch (IllegalArgumentException e) {
-                    // 参数缺失是「脚本问题」，不是「执行失败」，但要按同一条的失败口径报，
-                    // 否则 UI 上会显示成执行期错误，看不出是没传参数
-                    String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句参数错误: "
-                            + e.getMessage() + "；语句=" + abbreviate(statements.get(i));
-                    if (stopOnError) {
-                        return ReturnResult.ok(new DbSqlBatchVO(results, statements.size(), i,
-                                statements.get(i), summary));
-                    }
-                    results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
-                    continue;
-                }
-                try {
-                    results.add(runOneStatement(stmt, one));
-                } catch (Exception e) {
-                    String reason = e.getMessage();
-                    String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句失败: " + reason
-                            + "；语句=" + abbreviate(one);
-                    if (stopOnError) {
-                        return ReturnResult.ok(new DbSqlBatchVO(results, statements.size(), i,
-                                statements.get(i), summary));
-                    }
-                    // 继续执行：把失败也记成一条结果，rowCount=0 且带上原因
-                    results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
-                }
+            DbSqlBatchVO early = runStatementList(statements, request.params(), stopOnError, results, stmt);
+            if (early != null) {
+                return ReturnResult.ok(early);
             }
         } catch (Exception e) {
             return ReturnResult.error("批量执行失败: " + e.getMessage());
         }
+        return ReturnResult.ok(summarizeBatch(statements.size(), results));
+    }
+
+    /**
+     * 逐条执行脚本，把结果累加进 {@code results}。
+     *
+     * <p>事务与非事务两条路径共用这一段：两条路径的**逐条语义必须完全一致**
+     * （同样替换参数、同样记账失败、同样按 stopOnError 提前收尾），
+     * 各写一份的话，事务模式下就会出现「同样的脚本，非事务能跑完、事务跑到一半就停」
+     * 这类只在开了事务才复现的偏差。</p>
+     *
+     * @param statements  已切分的语句
+     * @param params      {@code ${name}} 取值表
+     * @param stopOnError 遇错是否停止
+     * @param results     结果累加容器
+     * @param stmt        已创建的 Statement
+     * @return 遇错停止时的结果；正常跑完返回 null
+     */
+    private DbSqlBatchVO runStatementList(java.util.List<String> statements,
+                                         Map<String, Object> params,
+                                         boolean stopOnError,
+                                         java.util.List<DbSqlResultVO> results,
+                                         java.sql.Statement stmt) {
+        for (int i = 0; i < statements.size(); i++) {
+            String one;
+            try {
+                one = bindParams(statements.get(i), params);
+            } catch (IllegalArgumentException e) {
+                // 参数缺失是「脚本问题」，不是「执行失败」，但要按同一条的失败口径报，
+                // 否则 UI 上会显示成执行期错误，看不出是没传参数
+                String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句参数错误: "
+                        + e.getMessage() + "；语句=" + abbreviate(statements.get(i));
+                if (stopOnError) {
+                    return new DbSqlBatchVO(results, statements.size(), i, statements.get(i), summary);
+                }
+                results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
+                continue;
+            }
+            try {
+                results.add(runOneStatement(stmt, one));
+            } catch (Exception e) {
+                String reason = e.getMessage();
+                String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句失败: " + reason
+                        + "；语句=" + abbreviate(one);
+                if (stopOnError) {
+                    return new DbSqlBatchVO(results, statements.size(), i, statements.get(i), summary);
+                }
+                // 继续执行：把失败也记成一条结果，rowCount=0 且带上原因
+                results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 汇总批量执行结果。
+     *
+     * @param total   语句总数
+     * @param results 逐条结果
+     * @return 汇总视图
+     */
+    private DbSqlBatchVO summarizeBatch(int total, java.util.List<DbSqlResultVO> results) {
         int queryCount = 0;
         int updateCount = 0;
         for (DbSqlResultVO r : results) {
@@ -2205,8 +2383,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 queryCount++;
             }
         }
-        return ReturnResult.ok(DbSqlBatchVO.allOk(results, statements.size(),
-                "共 " + statements.size() + " 条语句执行完成（查询 " + queryCount + " 条，更新 " + updateCount + " 条）"));
+        return DbSqlBatchVO.allOk(results, total,
+                "共 " + total + " 条语句执行完成（查询 " + queryCount + " 条，更新 " + updateCount + " 条）");
     }
 
     /**
@@ -2458,9 +2636,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
         Long dsId = queryOrBodyDatasourceId(datasourceId, body);
         String db = queryOrBodyDatabase(database, body);
-        return callDb("更新单元格", () -> {
-            try (java.sql.Connection conn = datasourceService.connection(dsId);
-                 SchemaScope scope = useSchema(conn, db)) {
+        Object txIdRaw = body.get("txId");
+        String txId = txIdRaw == null ? null : String.valueOf(txIdRaw);
+        boolean inTx = txId != null && !txId.isBlank();
+        // 「事务内更新」的共用实现：连接由调用方给（要么是新建的，要么是事务持有的），
+        // 所以校验、base64 解码、绑定三段逻辑只能写一次。
+        java.util.function.Function<java.sql.Connection, Integer> update = conn -> {
+            try {
                 requireTable(conn, t);
                 requireColumn(conn, t, column);
                 for (Map.Entry<String, Object> entry : primaryKey.entrySet()) {
@@ -2479,8 +2661,18 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     }
                     return ps.executeUpdate();
                 }
+            } catch (java.sql.SQLException e) {
+                throw new IllegalStateException(e.getMessage(), e);
             }
-
+        };
+        if (inTx) {
+            return callDb("更新单元格", () -> dbTxRegistry().require(txId).run(update));
+        }
+        return callDb("更新单元格", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                return update.apply(conn);
+            }
         });
     }
 
@@ -2959,11 +3151,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     public ReturnResult<Boolean> truncateTable(
             @PathVariable String tableName,
             @RequestParam(required = false) Long datasourceId,
-            @RequestParam(required = false) String database) {
+            @RequestParam(required = false) String database,
+            @RequestParam(required = false) String txId) {
         String t = safeIdent(tableName, "表名");
-        return callDb("清空表", () -> {
-            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
-                 SchemaScope scope = useSchema(conn, database)) {
+        java.util.function.Function<java.sql.Connection, Boolean> truncate = conn -> {
+            try {
                 requireTable(conn, t);
                 try {
                     try (java.sql.PreparedStatement stmt = conn.prepareStatement("TRUNCATE TABLE " + SqlName.quoteMysql(t, "表名"))) {
@@ -2975,6 +3167,20 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     }
                 }
                 return Boolean.TRUE;
+            } catch (java.sql.SQLException e) {
+                throw new IllegalStateException(e.getMessage(), e);
+            }
+        };
+        // 事务内清空：TRUNCATE 在 MySQL 是 DDL，**本身就会隐式提交**，
+        // 所以事务里执行它不会像 UPDATE 那样可以回滚。
+        // 界面必须如实告知，否则用户会以为「回滚能把数据找回来」而实际数据已经没了。
+        if (txId != null && !txId.isBlank()) {
+            return callDb("清空表", () -> dbTxRegistry().require(txId).run(truncate));
+        }
+        return callDb("清空表", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                return truncate.apply(conn);
             }
         });
 
