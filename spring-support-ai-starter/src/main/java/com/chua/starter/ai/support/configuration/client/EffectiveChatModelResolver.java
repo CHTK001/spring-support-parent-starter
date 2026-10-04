@@ -96,9 +96,11 @@ public class EffectiveChatModelResolver {
      */
     public List<String> candidates(String explicitModel) {
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
-        // ① 调用方显式指定（连接器 / Bot 绑定自己的模型）
+        // ① 调用方显式指定（连接器 / Bot 绑定自己的模型）—— 优先级最高
         addCandidate(ordered, explicitModel);
-        // ② 当前用户自己的默认对话模型（按 userId 隔离，管理员不代管）
+        // ② 配置中心 Bot 分组全局默认（用户要求：连接器模型 > bot 模型 > 默认模型）
+        addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_BOT, FIELD_DEFAULT_MODEL));
+        // ③ 当前用户自己的默认对话模型（按 userId 隔离，管理员不代管）
         //
         //    判据是「用户层有没有覆盖行」，不是「值是否为空」：
         //    用户**显式清空**（有覆盖行、值为空）时必须**就此停住**，不再回退全局 ——
@@ -108,8 +110,6 @@ public class EffectiveChatModelResolver {
             addCandidate(ordered, userRaw.get());
             return List.copyOf(ordered);
         }
-        // ③ 配置中心 Bot 分组全局默认
-        addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_BOT, FIELD_DEFAULT_MODEL));
         // ④ 配置中心「对话路由」的默认对话模型（含两个旧键兼容）
         addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_RUNTIME, FIELD_DEFAULT_MODEL));
         addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_MODELS, "defaultChatModelId"));
