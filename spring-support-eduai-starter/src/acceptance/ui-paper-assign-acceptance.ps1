@@ -204,33 +204,51 @@ try {
     if ($pk.idx -lt 0) { throw 'no published paper' }
 
     Js 'window.__ac=0;document.querySelectorAll(".tp-assign-open").forEach(function(b){b.addEventListener("click",function(){window.__ac++},true)});"ok"' | Out-Null
-    Ab scrollintoview '.tp-assign-open' | Out-Null; Start-Sleep -Milliseconds 700
-    Ab find nth $pk.idx '.tp-assign-open' click | Out-Null
+    # Scroll the TARGET button (not just any element with that class) and click it by
+    # coordinates. Scrolling `.tp-assign-open` (the first match) and then clicking the Nth
+    # was observed to miss when the target was a later row: the wrong element got scrolled
+    # into view, so the nth-click landed outside the viewport.
+    $btnJs = '(function(){var b=document.querySelectorAll(".tp-assign-open")[' + $pk.idx + '];if(!b)return JSON.stringify({err:1});b.scrollIntoView({block:"center"});var r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})})()'
+    $btn = Js $btnJs | ConvertFrom-Json
+    if ($btn.err) { throw 'assign button not found' }
+    Ab mouse move ([int]$btn.x) ([int]$btn.y) | Out-Null
+    Ab mouse down | Out-Null
+    Ab mouse up | Out-Null
     Start-Sleep -Seconds 2
-    Ck 'pointer click reached the assign button' ((Js 'String(window.__ac)') -eq '1')
+    Ck 'pointer click reached the assign button' ((Js 'String(window.__ac)') -eq '1') "btn=$($btn.x),$($btn.y)"
     Ck 'assign dialog opened' ((Js 'String((document.querySelector(".el-dialog__title")||{}).textContent||"")') -match '.') (Js 'String((document.querySelector(".el-dialog__title")||{}).textContent||"")')
 
+    # Select the fixture class by TYPING it. The class list grows with every acceptance run
+    # (dozens of rows by now), so arrow-key stepping is fragile; the dialog's select is
+    # filterable precisely so this stays deterministic.
     Ab click '.el-dialog .el-select' | Out-Null
+    Start-Sleep -Milliseconds 600
+    Ab type '.el-dialog .el-select input' $className | Out-Null
     $dropPred = '(function(){return Array.from(document.querySelectorAll(".el-select-dropdown__item")).some(function(e){return e.textContent.indexOf("' + $className + '")>=0})})()'
-    $drop = WaitTrue $dropPred 'class dropdown open' 25
-    Ck 'class dropdown opened with the fixture class' $drop
-
-    # arrow steps = target position minus currently selected position, within its own list
-    $steps = Js ('(function(){var t=Array.from(document.querySelectorAll(".el-select-dropdown__item")).filter(function(e){return e.textContent.indexOf("' + $className + '")>=0})[0];if(!t)return "-999";var k=Array.from(t.parentElement.children);var pos=k.indexOf(t);var cur=k.findIndex(function(x){return (x.className||"").indexOf("is-selected")>=0});return String(pos-(cur>=0?cur:0))})()')
-    if ([int]$steps -lt 0 -or [int]$steps -eq -999) { throw "cannot compute arrow steps ($steps)" }
-    for ($k = 0; $k -lt [int]$steps; $k++) { Ab press ArrowDown | Out-Null; Start-Sleep -Milliseconds 150 }
-    Ab press Enter | Out-Null
+    $drop = WaitTrue $dropPred 'class filtered down to the fixture class' 20
+    Ck 'class dropdown filtered to the fixture class' $drop
+    # Click the (now unique) filtered option by coordinates with a hit-test guard.
+    # Pressing Enter alone does NOT select it: with a filtered list Element Plus only
+    # selects on Enter if an option is highlighted, and typing does not highlight one.
+    $optJs = '(function(){var t=Array.from(document.querySelectorAll(".el-select-dropdown__item")).filter(function(e){return e.textContent.indexOf("' + $className + '")>=0 && e.getBoundingClientRect().width>10})[0];if(!t)return JSON.stringify({err:1});t.scrollIntoView({block:"center"});var r=t.getBoundingClientRect();var h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2),hit:h===t})})()'
+    $opt = Js $optJs | ConvertFrom-Json
+    if ($opt.err -or -not $opt.hit) { throw ('class option not clickable: ' + $optJs) }
+    Ab mouse move ([int]$opt.x) ([int]$opt.y) | Out-Null
+    Ab mouse down | Out-Null
+    Ab mouse up | Out-Null
     Start-Sleep -Seconds 2
     $selOk = Js ('String((document.querySelector(".el-dialog .el-select")||{}).textContent||"").indexOf("' + $className + '")>=0 ? "true" : "false"')
-    Ck 'fixture class selected in the dialog' ($selOk -eq 'true') "arrowSteps=$steps"
+    Ck 'fixture class selected in the dialog' ($selOk -eq 'true') ("sel=" + (Js 'String((document.querySelector(".el-dialog .el-select")||{}).textContent.trim().slice(0,40))'))
 
     Ab click '.el-dialog .el-button--primary' | Out-Null
     Start-Sleep -Seconds 5
     # Compare INSIDE JS and pass back a boolean: Chinese that travels through the
     # console/stdout pipeline gets re-encoded and cannot be matched reliably in PowerShell.
-    $rowPred = '(function(){var r=document.querySelector(".tp-assign tbody tr");if(!r)return "false";var t=r.textContent;return (t.indexOf("' + $className + '")>=0 && t.indexOf("\u5DF2\u5E03\u7F6E")>=0)?"true":"false"})()'
+    # Search ALL rows for the fixture class -- the list keeps rows from earlier runs
+    # (revoked ones included), so "the first row" is not necessarily this run's assignment.
+    $rowPred = '(function(){var rs=document.querySelectorAll(".tp-assign tbody tr");for(var i=0;i<rs.length;i++){var t=rs[i].textContent;if(t.indexOf("' + $className + '")>=0 && t.indexOf("\u5DF2\u5E03\u7F6E")>=0)return "true"}return "false"})()'
     $rowOk = (Js $rowPred) -eq 'true'
-    Ck 'assignment list shows the fixture class as assigned' $rowOk ("row=" + (Js 'String((document.querySelector(".tp-assign tbody tr")||{}).textContent.replace(/\s+/g," ").trim().slice(0,60)||"")'))
+    Ck 'assignment list shows the fixture class as assigned' $rowOk ("rows=" + (Js 'String(document.querySelectorAll(".tp-assign tbody tr").length)'))
     Ab screenshot "$PSScriptRoot/ui-assign-teacher.png" | Out-Null
 
     # Pull the expected question count as a NUMBER from the API: numbers survive every
