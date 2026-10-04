@@ -779,6 +779,31 @@ public class AiSessionController {
     }
 
     /**
+     * 取会话工作目录路径。
+     *
+     * <p>前端打开工作区面板时会问一次目录路径；此前该端点不存在（404）。
+     * 口径与 {@link #workspaceTree} 完全一致。同时给出 {@code path} 与
+     * {@code workspacePath} 两个键名，兼容前端不同版本的读取方式。</p>
+     *
+     * @param id 会话标识
+     * @return 目录路径（未配置基路径时为空串）
+     */
+    @GetMapping("/{id}/workspace-path")
+    public ReturnResult<Map<String, Object>> workspacePath(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        java.nio.file.Path root = resolveAgentWorkspace();
+        String path = root == null ? "" : root.toString();
+        Map<String, Object> result = new HashMap<>();
+        result.put("path", path);
+        result.put("workspacePath", path);
+        return ReturnResult.ok(result);
+    }
+
+    /**
      * 解析当前账号的工作目录（{@code <基路径>/<账号标识>/agent}）。
      *
      * <p>账号标识做安全清洗，并在解析后校验仍落在基路径内，防 {@code ../} 越界。</p>
