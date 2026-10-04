@@ -85,6 +85,36 @@ public class ChatStreamOrchestrator {
     }
 
     /**
+     * 取会话内最后一条用户消息的数据库 id。
+     *
+     * <p>用于「重新回答」时前端传来的是本地消息 id（刚流式产出那一轮用的是前端 UUID，
+     * 不是数据库数字主键）的场景：重新回答只作用于最后一轮，
+     * 所以该会话的最后一条用户消息就是这一轮的提问。</p>
+     *
+     * @param dialogId 会话标识
+     * @return 最后一条用户消息 id；会话内没有用户消息时返回 {@code null}
+     */
+    private Long lastUserMessageId(Long dialogId) {
+        try {
+            List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
+            if (history == null) {
+                return null;
+            }
+            for (int i = history.size() - 1; i >= 0; i--) {
+                ChatMessage m = history.get(i);
+                if (!"user".equals(m.getRole())) {
+                    continue;
+                }
+                Object rawId = m.getId();
+                return rawId == null ? null : parseNumericId(String.valueOf(rawId));
+            }
+        } catch (Exception e) {
+            log.warn("[ChatStream] 解析最后一条用户消息失败 dialogId={}: {}", dialogId, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
      * 同步准备：解析模型/角色、校验会话归属、落库用户消息（内容为空则不落库）、组装请求。
      *
      * @param body 请求体
@@ -292,6 +322,15 @@ public class ChatStreamOrchestrator {
             // 重答场景：复用前端带来的既有用户消息 id 作为新回复的父消息，
             // 否则新回复会失去父消息，UI 无法把它归回原来那一轮。
             parentUserMessageId = parseNumericId(str(userMessage.get("id")));
+        }
+        if (parentUserMessageId == null && userChatMsg == null) {
+            // 兜底：重答时前端可能给的是「本地消息 id」（刚流式产出的那一轮用的是前端 UUID，
+            // 不是数据库数字主键），此时按会话取「最后一条用户消息」当父消息 ——
+            // 重新回答只作用于最后一轮，这与 /{id}/messages 列表接口的归属规则一致。
+            parentUserMessageId = lastUserMessageId(dialogId);
+            if (parentUserMessageId != null) {
+                log.info("[ChatStream] 重答未取到数字父消息 id，回落为该会话最后一条用户消息 id={}", parentUserMessageId);
+            }
         }
         p.setUserMessageId(parentUserMessageId);
         p.setMessageId(messageId);
