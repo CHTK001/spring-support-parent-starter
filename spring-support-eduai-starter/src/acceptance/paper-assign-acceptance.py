@@ -21,6 +21,7 @@
 """
 import json
 import os
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -99,6 +100,29 @@ def my_assigns(token):
 
 def paper_ids(rows):
     return {r.get("paperId") for r in rows}
+
+
+def set_class_owner(class_id, owner):
+    """把**自建夹具班级**的归属改成另一个账号，用来构造「别人的班」这一前置条件。
+
+    <p>为什么要动库：当前环境只有 1 个教师账号（teacher_account=2），所有班级的
+    class_owner_user_id 都是它，光靠接口构造不出「他人班级」；而这条授权规则
+    （老师只能布置给自己名下的班）不该留成长期未验证。这里只改自己刚建的班、用完即删。</p>
+
+    <p>mariadb 不可用时返回 False（判为 SKIP 而不是 FAIL），避免把环境问题算成产品缺陷。</p>
+
+    :param class_id: 夹具班级标识
+    :param owner: 要改成的归属账号
+    :return: 是否改写成功
+    """
+    try:
+        r = subprocess.run(
+            ["mariadb", "-h", "127.0.0.1", "-P", "3306", "-u", "eduai", "-peduai123", "eduai", "-e",
+             "update edu_class set class_owner_user_id='%s' where class_id=%d;" % (owner, int(class_id))],
+            capture_output=True, timeout=20)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
 
 
 admin = login(ADMIN_USER, ADMIN_PWD)
@@ -311,11 +335,19 @@ try:
     ck("撤回不存在的布置被拒（不 500）", (not d.get("ok")) and c != 500,
        "http=%s msg=%s" % (c, d.get("msg")))
 
-    # 显式记账的覆盖缺口：跨老师越权（布置到别人的班）需要第二个教师账号，
-    # 而当前环境 edu_teacher 只有 1 行（teacher_account=2）、edu_class 的 owner 全是 2，
-    # 构造不出「别人的班」。这一条**不记为通过**，避免整份报告看起来比实际更全。
-    skip("布置到「别人的班」被拒（跨老师越权）",
-         "环境只有一个教师账号，构造不出他人班级；该分支由 requireMyClass 校验，未端到端覆盖")
+    # 跨老师越权：布置到「别人的班」。当前环境只有一个教师账号、所有班 owner 都是它，
+    # 构造不出他人班级 —— 用一次**夹具内**的 SQL 安排造出前置条件（只改自己刚建的班，
+    # 用完即删），而不是把这条授权规则留成未验证。
+    if class_id is not None:
+        if set_class_owner(class_id, "another-teacher-%d" % STAMP):
+            c, d = req("POST", "/v2/edu/paper-assign",
+                       {"paperId": paper_id, "classId": class_id}, token=admin)
+            ck("**布置到「别人的班」被拒**（老师只能布置给自己名下的班级）",
+               (not d.get("ok")) and c != 500, "http=%s msg=%s" % (c, d.get("msg")))
+        else:
+            skip("布置到「别人的班」被拒（跨老师越权）", "夹具安排失败：mariadb 不可用")
+    else:
+        skip("布置到「别人的班」被拒（跨老师越权）", "没有夹具班级")
 
 finally:
     print("=== 11. 清理夹具 ===")
