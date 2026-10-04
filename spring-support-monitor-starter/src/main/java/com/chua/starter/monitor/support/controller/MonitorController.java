@@ -740,7 +740,17 @@ public class MonitorController {
     /**
      * 系统内置 schema，不作为可浏览的数据库展示。
      */
-    private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of("INFORMATION_SCHEMA", "PG_CATALOG", "SYS");
+    /**
+     * 系统库黑名单：不出现在库列表里，也不允许建/删。
+     *
+     * <p>{@code INFORMATION_SCHEMA} 在 MariaDB 上同时是 catalog 与 schema，
+     * {@code SYS} 在 MySQL 上是 catalog，{@code PG_CATALOG} 是 PostgreSQL 的系统 schema。
+     * {@code MYSQL} / {@code PERFORMANCE_SCHEMA} / {@code PG_TOAST} 同理属内核自有库，
+     * 在上面建对象会被拒或产生难以理解的报错。</p>
+     */
+private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
+            "INFORMATION_SCHEMA", "PG_CATALOG", "SYS", "MYSQL",
+            "PERFORMANCE_SCHEMA", "PG_TOAST");
 
     /**
      * SQL 控制台单次查询返回的最大行数（超出置 truncated=true）
@@ -1072,24 +1082,30 @@ public class MonitorController {
             throw new java.sql.SQLException("数据库名不合法");
         }
         String original = currentDatabase(conn);
-        if (database.equalsIgnoreCase(original)) {
+        if (!original.isBlank() && database.equalsIgnoreCase(original)) {
             return new SchemaScope(conn, original);
         }
-        // H2 等内核把「库名」暴露为 catalog（如 file 库 monitordb）而非 schema：
-        // 目标等于当前 catalog 时本就在该库上，无需也无法切换，直接返回。
-        try {
-            if (database.equalsIgnoreCase(conn.getCatalog())) {
-                return new SchemaScope(conn, original);
-            }
-        } catch (java.sql.SQLException ignored) {
-            // 驱动不支持 catalog，继续尝试切换
-        }
+        // original 为空 = 读不到当前会话库（未知）。此时**一律走切换**：
+        // USE 是幂等的，多发一次没有代价；而按「未知 == 目标」早退会漏掉真正的切换。
+        // 这里**不能**再用 conn.getCatalog() 判断「本就在该库上」。
+        // 该值对 MySQL 系只是 JDBC URL 里记录的库名，与服务端会话库无关：连接从池里
+        // 取出后若没发过 USE，会话可能停在别的库（实测数据源 20 的 URL 是 jdbc_acc，
+        // 而会话实际在 ngxacc）。用它早退会导致**不发 USE**，于是整段逻辑静默地
+        // 在错误的库里执行 —— 表现为「指定 database=jdbc_acc 却查不到 jdbc_acc 的对象」，
+        // 甚至在 information_schema 上建对象时报一条无关的权限错误。
+        // currentDatabase 走 SELECT DATABASE()，对 MySQL 系是权威值，
+        // 对 H2/PostgreSQL 走 getSchema() 再退回 getCatalog()，已覆盖原分支的全部场景。
         if (!databaseExists(conn, database)) {
             throw new java.sql.SQLException("数据库 " + database + " 不存在");
         }
         switchDatabase(conn, database);
-        if (!database.equalsIgnoreCase(currentDatabase(conn))) {
-            throw new java.sql.SQLException("无法切换到数据库 " + database);
+        String after = currentDatabase(conn);
+        // 校验必须是**权威**读数：读不到（空串）说明无法确认，就报错。
+        // 绝不能因为"读不到"就放行 —— 那等于在不确定的库里执行用户 SQL，
+        // 且用户看到的仍是成功响应。宁可报「无法确认」，也不能静默跑错库。
+        if (after.isBlank() || !database.equalsIgnoreCase(after)) {
+            throw new java.sql.SQLException("无法确认已切换到数据库 " + database
+                    + "（切换前=" + (original.isBlank() ? "未知" : original) + "）");
         }
         return new SchemaScope(conn, original);
     }
@@ -1115,7 +1131,12 @@ public class MonitorController {
                     }
                 }
             } catch (java.sql.SQLException ignored) {
-                // 退回元数据读取
+                // **不要**在这里回落到 getSchema()/getCatalog()：MySQL Connector/J 的这两个
+                // 方法返回的是 JDBC URL 里记录的库名，与服务端会话库无关（元数据读取偶发失败
+                // 时就会读到它）。一旦把「URL 里的库名」当成「当前会话库」，
+                // useSchema 会误判「已经在目标库上」而**跳过 USE**，语句就静默跑在别的库上。
+                // 读不到就返回空串（= 未知），由调用方按「未知」处理。
+                return "";
             }
         }
         try {
@@ -1144,7 +1165,14 @@ public class MonitorController {
      * @throws java.sql.SQLException 切换失败
      */
     private static void switchDatabase(java.sql.Connection conn, String db) throws java.sql.SQLException {
-        if (isMysqlFamily(conn)) {
+        // 判内核：元数据读取可能偶发失败（连接池里的连接被回收/超时），
+        // 此时 isMysqlFamily 会返回 false。若就此改走 setSchema/setCatalog 路径，
+        // 对 Connector/J 而言**服务端会话库根本没变**（那两个方法只更新驱动内部字段），
+        // 后续校验又用同一个不可靠的元数据读回，于是「静默在错误的库里执行」。
+        // 因此：判定为 MySQL 系**或判定不出来**时，都先试 USE（USE 对非 MySQL 系会报语法错，
+        // 那时再落到 setSchema 路径），不把内核判定的抖动放大成静默跑错库。
+        boolean knownMysql = isMysqlFamily(conn);
+        if (knownMysql || isMysqlFamilyUnknown(conn)) {
             // setCatalog 只更新驱动内部字段（供 getTables/getColumns 等元数据定位库），
             // 不真正切换服务端会话库；USE 才切会话。两者都要，缺一会导致「数据查对库、元数据查错库」。
             try {
@@ -1154,8 +1182,13 @@ public class MonitorController {
             }
             try (java.sql.Statement st = conn.createStatement()) {
                 st.executeUpdate("USE " + SqlName.quoteMysql(db, "数据库名"));
+                return;
+            } catch (java.sql.SQLException useFailed) {
+                if (knownMysql) {
+                    throw useFailed;
+                }
+                // 判定不出来且 USE 被拒（如 H2）→ 落到下面的 setSchema/setCatalog 路径
             }
-            return;
         }
         java.sql.SQLException first = null;
         try {
@@ -1187,6 +1220,24 @@ public class MonitorController {
             return lower.contains("mysql") || lower.contains("mariadb") || lower.contains("oceanbase");
         } catch (java.sql.SQLException e) {
             return false;
+        }
+    }
+
+    /**
+     * 内核判定是否**读不出来**（与「确认不是 MySQL 系」区分开）。
+     *
+     * <p>{@link #isMysqlFamily} 把「元数据读取抛异常」和「确实不是 MySQL 系」
+     * 都返回 false，而这两者必须区别对待：前者不能据此断定要改走 setSchema 路径，
+     * 否则会在 MySQL 上执行一个不切会话库的「切换」。</p>
+     *
+     * @param conn 数据库连接
+     * @return true=读不出内核信息
+     */
+    private static boolean isMysqlFamilyUnknown(java.sql.Connection conn) {
+        try {
+            return conn.getMetaData().getDatabaseProductName() == null;
+        } catch (java.sql.SQLException e) {
+            return true;
         }
     }
 
@@ -1281,7 +1332,13 @@ public class MonitorController {
             try (java.sql.ResultSet rs = conn.getMetaData().getCatalogs()) {
                 while (rs.next()) {
                     String catalog = rs.getString(1);
-                    if (catalog != null && seen.add(catalog.toUpperCase())) {
+                    // 系统库必须一并过滤：MariaDB 的 information_schema 既是 catalog 也是
+                    // schema，只过滤 schema 分支的话它会作为「可浏览的数据库」出现在树上，
+                    // 而在它下面建对象会被内核拒绝（Access denied … to database
+                    // 'information_schema'），用户看到的是一条与操作上下文无关的权限错误。
+                    if (catalog != null
+                            && !SYSTEM_SCHEMAS.contains(catalog.toUpperCase())
+                            && seen.add(catalog.toUpperCase())) {
                         databases.add(catalog);
                     }
                 }
@@ -1596,9 +1653,14 @@ public class MonitorController {
         String trimmed = sql.trim().toUpperCase();
         boolean isQuery = trimmed.startsWith("SELECT") || trimmed.startsWith("SHOW")
                 || trimmed.startsWith("DESC") || trimmed.startsWith("EXPLAIN");
+        // 顺序要求：先切库、再建 Statement。
+        // Connector/J 的 Statement 会在执行时按**创建时**捕获的 catalog 还原会话库，
+        // 若在 USE 之前创建 Statement，USE 会被它覆盖 —— 实测 `database=sync_src` 的查询
+        // 跑在 jdbc_acc 上（返回 jdbc_acc 的表数），而同样带 database 参数的 /db/tables
+        // 因为没有提前建 Statement，切库是正确的。两者行为不一致正是这个顺序问题。
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
-             java.sql.Statement stmt = conn.createStatement();
-             SchemaScope scope = useSchema(conn, request.database())) {
+             SchemaScope scope = useSchema(conn, request.database());
+             java.sql.Statement stmt = conn.createStatement()) {
             if (isQuery) {
                 try (java.sql.ResultSet rs = stmt.executeQuery(sql)) {
                     java.sql.ResultSetMetaData meta = rs.getMetaData();
