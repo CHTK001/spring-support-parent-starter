@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.network.support.tshark.PacketParserService;
-import com.chua.network.support.tshark.PacketRecord;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
@@ -13,7 +11,6 @@ import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -23,7 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,6 +60,31 @@ public class TsharkCaptureService {
     private static final String CAPTURE_DIR = System.getenv()
             .getOrDefault("TSHARK_CAPTURE_DIR",
                     System.getProperty("user.home") + File.separator + "spring-support" + File.separator + "captures"); // CAPTURE_DIR
+
+    /**
+     * {@code tshark -T fields} 的取字段列表，<strong>顺序即输出列顺序</strong>。
+     *
+     * <p>逐列含义：0 时间戳(秒) · 1 协议 · 2 IPv4源 · 3 IPv6源 · 4 TCP源端口 ·
+     * 5 UDP源端口 · 6 IPv4目的 · 7 IPv6目的 · 8 TCP目的端口 · 9 UDP目的端口 ·
+     * 10 帧长 · 11 人可读摘要。IPv4/IPv6 与 TCP/UDP 成对给出，某层不存在时该列为空串，
+     * 由 {@code firstNonBlank} 取非空的那个。</p>
+     *
+     * <p>用 {@code _ws.col.Info} 而非 {@code -x} 的十六进制展开：前者就是 tshark
+     * 「Info」列（如 {@code GET /ms/... HTTP/1.1}），正是实体里「人可读摘要」要的东西。</p>
+     */
+    private static final String[] TSHARK_FIELDS = {
+            "frame.time_epoch",
+            "_ws.col.Protocol",
+            "ip.src", "ipv6.src",
+            "tcp.srcport", "udp.srcport",
+            "ip.dst", "ipv6.dst",
+            "tcp.dstport", "udp.dstport",
+            "frame.len",
+            "_ws.col.Info"
+    };
+
+    /** {@link #TSHARK_FIELDS} 的列数；列数不足说明输出异常，该行丢弃 */
+    private static final int TSHARK_FIELD_COUNT = TSHARK_FIELDS.length;
 
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
@@ -293,7 +317,20 @@ public class TsharkCaptureService {
     }
 
     /**
-     * 解析 pcap 文件: 用 tshark 输出 JSON 数组, 遍历每个元素入库。
+     * 解析 pcap 文件入库。
+     *
+     * <p><b>为什么不用 {@code -T json}：</b>原实现用 {@code tshark -r <pcap> -T json
+     * -E separator=, -x --no-duplicate-keys}，再按行读取、只把以 {@code &#123;} 开头的
+     * 行当 JSON 交给解析器。但 {@code -T json} 的输出<strong>不是行分隔的</strong>：
+     * 一个包是一个跨很多行的嵌套对象，整体还包在 {@code [ ... ]} 里。实测 60 个包的
+     * pcap 会输出 56291 行，其中只有 136 行以 {@code &#123;} 开头，且那 136 行全是嵌套
+     * 对象的<strong>起始行</strong>（去掉空白后内容就是几个字符的 {@code &#123;}），
+     * 逐行读到的永远是残缺对象，解析必然失败 —— 最终入库 0 条、包数恒为 0，
+     * 而抓包本身其实是成功的（pcap 有真实报文）。</p>
+     *
+     * <p>改用 {@code -T fields}：它保证<strong>每个包一行</strong>、字段用制表符分隔，
+     * 不需要任何 JSON 解析，顺带省掉展开十六进制带来的巨量输出。</p>
+     *
      * @param sessionId 会话标识
      * @param filePath 文件路径
      */
@@ -303,34 +340,24 @@ public class TsharkCaptureService {
                 log.warn("capture file empty, session={}", sessionId);
                 return;
             }
-            // 逐事件流式输出（-T json 每行一个对象），边解析边入库+实时推送
-            ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-r", filePath.toString(),
-                    "-T", "json", "-E", "separator=,", "-x", "--no-duplicate-keys");
+            List<String> cmd = new ArrayList<>(List.of(TSHARK_BIN, "-r", filePath.toString(),
+                    "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=f"));
+            // 字段顺序即输出列顺序，逐列含义见 TSHARK_FIELDS 的注释
+            for (String field : TSHARK_FIELDS) {
+                cmd.add("-e");
+                cmd.add(field);
+            }
+            ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             Process p = pb.start();
             int batch = 0;
-            /**
-             * 尝试。
-             * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
-             */
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8), 0x100000)) {
                 String line;
                 while ((line = r.readLine()) != null) {
-                    if (line.isBlank() || line.length() < 2) {
+                    if (line.isBlank()) {
                         continue;
                     }
-                    String trimmed = line.trim();
-                    // 兼容数组格式：去掉行首 [ / 行尾 , ] 等包装符
-                    if (trimmed.startsWith("[")) {
-                        trimmed = trimmed.substring(1);
-                    }
-                    while (trimmed.endsWith(",") || trimmed.endsWith("]")) {
-                        trimmed = trimmed.substring(0, trimmed.length() - 1);
-                    }
-                    if (trimmed.isBlank() || !trimmed.startsWith("{")) {
-                        continue;
-                    }
-                    if (this.savePacket(sessionId, trimmed)) {
+                    if (this.savePacket(sessionId, line.split("\t", -1))) {
                         batch++;
                     }
                 }
@@ -341,6 +368,10 @@ public class TsharkCaptureService {
                     session.setPacketCount(batch);
                     this.sessionMapper.updateById(session);
                 }
+            } else {
+                // 0 条必须出声：否则页面只显示「抓完了但一个包都没有」，
+                // 用户无从判断是没流量还是解析坏了
+                log.warn("capture parsed 0 packet, session={}, file={}", sessionId, filePath);
             }
             p.waitFor(60L, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -349,36 +380,100 @@ public class TsharkCaptureService {
     }
 
     /**
-     * 保存数据包。
+     * 落库一个数据包。
+     *
      * @param sessionId 会话标识
-     * @param jsonLine json线
-     * @return 保存数据包的结果
+     * @param cols      按 {@link #TSHARK_FIELDS} 顺序切出的列（制表符分隔）
+     * @return 是否成功入库
      */
-    private boolean savePacket(Long sessionId, String jsonLine) {
+    private boolean savePacket(Long sessionId, String[] cols) {
         try {
-            PacketRecord rec = PacketParserService.parse(jsonLine);
-            if (rec == null) {
+            if (cols.length < TSHARK_FIELD_COUNT) {
                 return false;
             }
             MsTsharkPacket packet = new MsTsharkPacket();
             packet.setSessionId(sessionId);
-            packet.setPacketTime(LocalDateTime.now());
-            packet.setSourceIp(rec.sourceIp());
-            packet.setDestIp(rec.destinationIp());
-            packet.setSourcePort(rec.sourcePort());
-            packet.setDestPort(rec.destinationPort());
-            packet.setProtocol(rec.protocol());
-            packet.setPacketLength(rec.length());
-            packet.setPacketInfo(rec.info());
-            packet.setRawData(rec.rawData());
-            packet.setRestoredText(rec.restoredText());
+            packet.setPacketTime(epochToDateTime(cols[0]));
+            packet.setProtocol(blankToNull(cols[1]));
+            // IPv4 / IPv6 各取第一个非空；端口同理（TCP 优先，其次 UDP）
+            packet.setSourceIp(firstNonBlank(cols[2], cols[3]));
+            packet.setSourcePort(parseIntOrNull(firstNonBlank(cols[4], cols[5])));
+            packet.setDestIp(firstNonBlank(cols[6], cols[7]));
+            packet.setDestPort(parseIntOrNull(firstNonBlank(cols[8], cols[9])));
+            packet.setPacketLength(parseIntOrNull(cols[10]));
+            packet.setPacketInfo(blankToNull(cols[11]));
             this.packetMapper.insert(packet);
- // 实时推送：每包广播（数据id=会话id，前端按当前会话过滤）
+            // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
             this.pushService.pushTsharkPacket(packet, sessionId);
             return true;
         } catch (Exception e) {
-            log.debug("skip packet parse error: {}", e.getMessage());
+            log.debug("skip packet save error: {}", e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * 取第一个非空值。
+     *
+     * @param values 候选值
+     * @return 第一个非空值；全空返回 null
+     */
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) {
+                return v;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 空串转 null（避免把「无此字段」写成空字符串入库）。
+     *
+     * @param v 原始值
+     * @return 去空白后的值；空白则 null
+     */
+    private static String blankToNull(String v) {
+        return v == null || v.isBlank() ? null : v.trim();
+    }
+
+    /**
+     * 宽松解析整数。
+     *
+     * @param v 原始值
+     * @return 整数；无法解析返回 null
+     */
+    private static Integer parseIntOrNull(String v) {
+        String t = blankToNull(v);
+        if (t == null) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(t);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 秒级时间戳转时间。
+     *
+     * <p>用包自带的时间戳而非入库时刻：抓包结束后会一次性解析整个文件，
+     * 用 {@code LocalDateTime.now()} 会让同一批包全挤在同一秒上。</p>
+     *
+     * @param epochSeconds 秒级时间戳（可带小数）
+     * @return 时间；无法解析返回当前时间
+     */
+    private static LocalDateTime epochToDateTime(String epochSeconds) {
+        String t = blankToNull(epochSeconds);
+        if (t == null) {
+            return LocalDateTime.now();
+        }
+        try {
+            long ms = (long) (Double.parseDouble(t) * 1000D);
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(ms), ZoneId.systemDefault());
+        } catch (NumberFormatException e) {
+            return LocalDateTime.now();
         }
     }
 
