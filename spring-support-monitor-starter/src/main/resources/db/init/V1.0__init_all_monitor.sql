@@ -508,8 +508,11 @@ CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
 CREATE TABLE IF NOT EXISTS `ms_sync_task` (
     `id`                                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `ms_sync_task_name`                     VARCHAR(128) NOT NULL COMMENT '任务名称',
-    `ms_sync_task_source_datasource_id`     BIGINT       NOT NULL COMMENT '源数据源 ID(ms_datasource.id)',
-    `ms_sync_task_source_sql`               TEXT         NOT NULL COMMENT '源读取 SQL，必须是 SELECT',
+    `ms_sync_task_source_type`              VARCHAR(16)  NOT NULL DEFAULT 'JDBC' COMMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML',
+    `ms_sync_task_source_datasource_id`     BIGINT       DEFAULT NULL COMMENT '源数据源 ID(ms_datasource.id)，仅 JDBC 源使用',
+    `ms_sync_task_source_sql`               TEXT         DEFAULT NULL COMMENT '源读取 SQL，必须是 SELECT，仅 JDBC 源使用',
+    `ms_sync_task_source_path`              VARCHAR(512) DEFAULT NULL COMMENT '源定位：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址',
+    `ms_sync_task_source_options`           TEXT         DEFAULT NULL COMMENT '输入源扩展选项 JSON：文件族 {format,delimiter,sheetIndex,pattern,recursive,afterProcess}；HTTP 族 {method,headers,body,encoding,jsonPath,rowSelector,cellSelector,headerRow,timeoutSeconds}',
     `ms_sync_task_target_datasource_id`     BIGINT       NOT NULL COMMENT '目标数据源 ID(ms_datasource.id)',
     `ms_sync_task_target_table`             VARCHAR(128) NOT NULL COMMENT '目标表名',
     `ms_sync_task_column_mapping`           TEXT         DEFAULT NULL COMMENT '字段映射 JSON 数组 [{"source":"a","target":"b"}]，空表示按同名匹配',

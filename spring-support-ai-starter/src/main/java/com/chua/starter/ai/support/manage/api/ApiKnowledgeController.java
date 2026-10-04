@@ -1144,6 +1144,100 @@ public class ApiKnowledgeController {
         return ApiResult.ok();
     }
 
+    /**
+     * 添加网页到知识库：抓取网页正文并落成 Markdown 文件（含索引与统计刷新）。
+     *
+     * <p>与「来源（URL 抓取）」的区别：来源是知识库级的<b>长效配置</b>，按快照批量同步；
+     * 这里是「添加一条」的<b>一次性动作</b>——把单页（或按 {@code max_pages} 展开的少数页）
+     * 直接写进指定/默认目录，用户在文件树里立刻能看到并检索到。</p>
+     *
+     * <p>抓取走 {@link WebPageCollectorService}（含 SSRF 防护：拒绝内网/非法地址）。</p>
+     *
+     * @param knowledge_base_id 知识库标识
+     * @param body              {url, path?, max_pages?, title?}
+     * @return {added:[相对路径], failed:[错误], pages:抓取页数}
+     */
+    @PostMapping("/bases/{knowledge_base_id}/web")
+    public ApiResult<Map<String, Object>> addWebPage(@PathVariable String knowledge_base_id,
+                                                     @RequestBody Map<String, Object> body) {
+        String url = body.get("url") == null ? null : String.valueOf(body.get("url")).trim();
+        if (StringUtils.isBlank(url)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "url 不能为空");
+        }
+        if (!webPageCollectorService.isSafeUrl(url)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "URL 不合法或指向内网地址");
+        }
+        int maxPages = body.get("max_pages") == null ? 1 : toIntSafe(body.get("max_pages"), 1);
+        String dir = body.get("path") == null ? "web" : String.valueOf(body.get("path")).trim();
+        String titleOverride = body.get("title") == null ? null : String.valueOf(body.get("title")).trim();
+
+        Map<String, Object> base = requireBase(knowledge_base_id);
+        Path root = resolveRoot(base);
+
+        List<WebPageContent> pages = maxPages > 1
+                ? webPageCollectorService.fetchCrawl(url, maxPages)
+                : List.of(webPageCollectorService.fetch(url));
+
+        List<String> added = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        for (WebPageContent page : pages) {
+            if (page == null || StringUtils.isBlank(page.text())) {
+                failed.add(url + ": 未取到正文");
+                continue;
+            }
+            String name = StringUtils.hasText(titleOverride) ? titleOverride : page.title();
+            if (StringUtils.isBlank(name)) {
+                String tail = page.url().substring(page.url().lastIndexOf('/') + 1);
+                name = StringUtils.hasText(tail) ? tail : "web-page";
+            }
+            String fileName = sanitizeFileBase(name);
+            String rel = (StringUtils.hasText(dir) ? dir + "/" : "") + fileName + ".md";
+            assertAllowedFileExtension(rel);
+            // 同目录同名（同标题不同页）自动加序号，避免互相覆盖
+            int seq = 2;
+            while (added.contains(rel)) {
+                rel = (StringUtils.hasText(dir) ? dir + "/" : "") + fileName + "-" + seq + ".md";
+                seq++;
+            }
+            String content = "# " + name + "\n\n> 来源：" + page.url() + "\n\n" + page.text();
+            PutObjectResult put = knowledgeFileStorage.writeText(root.toString(), rel, content);
+            if (put == null || ObjectResult.ResultCode.FAILURE == put.getResultCode()) {
+                failed.add(rel + ": 写入失败");
+                continue;
+            }
+            indexKnowledgeFile(base, rel, content);
+            added.add(rel);
+        }
+        refreshStats(base);
+        pushService.push("knowledge.base-updated", toBaseResponse(base));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("added", added);
+        result.put("failed", failed);
+        result.put("pages", pages.size());
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 把网页标题规整为可用作文件名的片段。
+     *
+     * <p>只保留中英文、数字、连字符与下划线，其余（含路径分隔符与 Windows 非法字符）
+     * 统一替换为连字符；过长截断，避免超出文件系统限制。</p>
+     *
+     * @param raw 原始标题
+     * @return 安全文件名片段（不含扩展名）
+     */
+    private String sanitizeFileBase(String raw) {
+        String name = raw == null ? "" : raw.trim();
+        name = name.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]+", "-");
+        name = name.replaceAll("\\s+", "-");
+        name = name.replaceAll("^[.\\-]+|[.\\-]+$", "");
+        if (name.isEmpty()) {
+            name = "web-page";
+        }
+        return name.length() > 80 ? name.substring(0, 80) : name;
+    }
+
     @DeleteMapping("/bases/{knowledge_base_id}/file")
     public ApiResult<Void> deleteFile(@PathVariable String knowledge_base_id,
                                       @RequestParam String path) {

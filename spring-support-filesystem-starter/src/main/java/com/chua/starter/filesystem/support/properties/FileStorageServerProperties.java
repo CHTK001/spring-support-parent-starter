@@ -186,7 +186,8 @@ public class FileStorageServerProperties {
          * 允许前端 JavaScript 读取的响应头（跨域下自定义头默认不可读）
          */
         private String exposeHeaders = "Content-Disposition,Content-Range,Accept-Ranges,"
-                + "X-FileStorage-Preview,X-FileStorage-Client-Renderer";
+                + "X-FileStorage-Preview,X-FileStorage-Client-Renderer,"
+                + "X-FileStorage-Convert,X-FileStorage-ImageOp,X-FileStorage-ImageOp-Reason";
 
         /**
          * 允许的请求方法

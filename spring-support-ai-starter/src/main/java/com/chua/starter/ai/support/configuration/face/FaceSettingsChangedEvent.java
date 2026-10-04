@@ -29,12 +29,20 @@ public class FaceSettingsChangedEvent {
     private final boolean userScoped;
 
     /**
+     * 触发变更的用户标识（仅用户级写入时有值；全局写入为 空）。
+     *
+     * <p>按账号构建的实例（{@code FaceStores} 的账户管线、{@code ImageSearchStores} 的账户库）
+     * 据此**只重建受影响账号**，避免在某一用户的身份下把其配置串到其他账号。</p>
+     */
+    private final String userId;
+
+    /**
      * 构造事件（全局写入）。
      *
      * @param group 变更的分组
      */
     public FaceSettingsChangedEvent(String group) {
-        this(group, false);
+        this(group, false, null);
     }
 
     /**
@@ -44,8 +52,20 @@ public class FaceSettingsChangedEvent {
      * @param userScoped 是否由用户级覆盖写入触发
      */
     public FaceSettingsChangedEvent(String group, boolean userScoped) {
+        this(group, userScoped, null);
+    }
+
+    /**
+     * 构造事件（用户级写入，携带归属用户）。
+     *
+     * @param group      变更的分组
+     * @param userScoped 是否由用户级覆盖写入触发
+     * @param userId     触发变更的用户标识，可为空
+     */
+    public FaceSettingsChangedEvent(String group, boolean userScoped, String userId) {
         this.group = group;
         this.userScoped = userScoped;
+        this.userId = userId;
     }
 
     /**
@@ -64,5 +84,14 @@ public class FaceSettingsChangedEvent {
      */
     public boolean isUserScoped() {
         return userScoped;
+    }
+
+    /**
+     * 触发变更的用户标识。
+     *
+     * @return 用户标识，全局写入时为空
+     */
+    public String getUserId() {
+        return userId;
     }
 }
