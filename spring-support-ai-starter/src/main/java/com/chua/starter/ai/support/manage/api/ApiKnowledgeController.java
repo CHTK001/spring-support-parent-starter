@@ -62,6 +62,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -1014,6 +1015,8 @@ public class ApiKnowledgeController {
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "新名称不能包含路径分隔符");
         }
+        // 重命名也要过扩展名白名单：否则可先把文本文件传进来、再改名成 .sh 绕开
+        assertAllowedFileExtension(newName);
         Path root = resolveRoot(requireBase(knowledge_base_id));
         Path target = safeResolve(root, rel);
         Path parent = target.getParent();
@@ -1111,6 +1114,8 @@ public class ApiKnowledgeController {
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 不能为空");
         }
+        // 服务端扩展名白名单：拒绝可执行 / 脚本类文件（前端 accept 可被绕过）
+        assertAllowedFileExtension(rel);
         Object rawContent = body.get("content");
         String content = rawContent == null ? "" : String.valueOf(rawContent);
         Map<String, Object> base = requireBase(knowledge_base_id);
@@ -1909,6 +1914,41 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "知识库目录不存在: " + root);
         }
         return root;
+    }
+
+    private static final Set<String> BLOCKED_FILE_EXTENSIONS = Set.of(
+            "exe", "dll", "so", "dylib", "sh", "bat", "cmd", "ps1",
+            "jar", "war", "class", "php", "jsp", "asp", "aspx", "py", "rb", "pl", "cgi");
+
+    /**
+     * 校验文件名扩展名不在禁止清单内。
+     *
+     * <p>知识库只承载文本知识点；这些类型即便后端按文本落盘、不会被直接执行，也不该被
+     * 索引与分发（纵深防御）。注意：前端 {@code KBFileUploader} 的 {@code accept}
+     * 只是浏览器侧提示，可直接 PUT 绕过，服务端必须自己拦。</p>
+     *
+     * <p>只取最后一段路径名；无扩展名（目录）放行，有扩展名才判。</p>
+     *
+     * @param relPath 相对路径（文件名或含目录的路径）
+     */
+    private void assertAllowedFileExtension(String relPath) {
+        if (relPath == null || relPath.isBlank()) {
+            return;
+        }
+        String name = relPath.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) {
+            name = name.substring(slash + 1);
+        }
+        int dot = name.lastIndexOf('.');
+        if (dot < 0 || dot == name.length() - 1) {
+            return;
+        }
+        String ext = name.substring(dot + 1).toLowerCase();
+        if (BLOCKED_FILE_EXTENSIONS.contains(ext)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "不允许上传/重命名为该类型文件: ." + ext + "（知识库仅支持文本类知识点）");
+        }
     }
 
     /**

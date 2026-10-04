@@ -1,5 +1,13 @@
 # eduai 终验报告（2026-10-03 · r5，鉴权修复版）
 
+> ## ⚠️ 本报告已失效（2026-10-04，被最新代码版替换）
+>
+> 依据 AGENTS.md §4.6：本报告绑定的 eduai jar 是
+> `563dce9195bc865f6ffa1cb6c75251c79b07c9d8a88eda9aad0ccadcf6c115db`，
+> 其后线上产物被替换为 `e7824e44483798e2…`（补齐 CORS 白名单 + 用最新 HEAD 重建）。
+> 该 jar 仍有「浏览器登录 403 Invalid CORS request」缺陷，不得作为签收依据。
+> 已由 `ACCEPTANCE-REPORT-20261004.md` 接替。
+
 > 报告与产物 sha256 绑定：下列指纹在「部署后」与「验收后」两次采集中**逐字相同**；
 > 任何一次换包都会让本报告作废。复核：
 > `python3 report-staleness.py --live-eduai <线上 sha> --live-oauth <线上 sha>`。
