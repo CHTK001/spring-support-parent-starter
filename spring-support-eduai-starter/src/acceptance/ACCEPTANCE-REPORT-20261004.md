@@ -1,5 +1,12 @@
 # eduai 终验报告（2026-10-04 · r6，最新代码版）
 
+> ## ⚠️ 本报告已失效（2026-10-04，被 r7 替换）
+>
+> 本报告绑定的 eduai jar 是
+> `e7824e44483798e2b17a3a988b41838066652432ead4827aa300fb51048fed78`，
+> 其后线上被并发会话替换为 `a3c6dfd1…`，再由本会话用最新 HEAD 重建为 `d00d1c45…`。
+> 已由 `ACCEPTANCE-REPORT-20261004-r7.md` 接替。
+
 > 报告与产物 sha256 绑定；换包即失效。复核：
 > `python3 report-staleness.py --live-eduai <sha> --live-oauth <sha>`。
 
