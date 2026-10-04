@@ -17,6 +17,7 @@
 脚本自建自删测试数据，结束时清理，不污染其它验收脚本依赖的学生集合。
 """
 import json
+import urllib.parse
 import urllib.request
 
 BASE = "http://127.0.0.1:19095"
@@ -110,7 +111,11 @@ try:
                 q.append("gradeLevel=%s" % target["studentGradeLevel"])
             if target.get("studentGrade"):
                 q.append("grade=%s" % target["studentGrade"])
-            c, d = req("GET", "/v2/edu/dimension/students?" + "&".join(q), token=admin)
+            # 参数值必须百分号编码：grade 是中文（如「三年级」），直接拼进 URL 会让
+            # urllib 在编码阶段抛异常，被 req() 的 except 吞成「0 行」，
+            # 于是这条用例稳定报「筛选后=0」的假失败（2026-10-04 实测，排查了一轮）。
+            c, d = req("GET", "/v2/edu/dimension/students?"
+                       + urllib.parse.quote("&".join(q), safe="=&"), token=admin)
             sub = as_list(d)
             hit = any(s.get("studentId") == target["studentId"] for s in sub)
             ck("按 classId/gradeLevel/grade 筛选：命中的源学生仍在结果内且不多于全量",
@@ -189,3 +194,7 @@ print("\n===== 学生管理专项验收: 通过 %d / 失败 %d =====" % (passed,
 for good, name, detail in results:
     if not good:
         print("  FAIL -> %s  %s" % (name, detail))
+
+# 必须以非 0 退出：release-run.sh 只看退出码。只打印不退出会让「有失败」被当成通过
+# （2026-10-04 实测：本套件报「通过 19 / 失败 1」，发布却照打 API=OK）。
+raise SystemExit(0 if passed == len(results) else 1)
