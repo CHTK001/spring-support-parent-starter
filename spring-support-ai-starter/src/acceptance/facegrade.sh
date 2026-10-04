@@ -312,7 +312,7 @@ echo "################ 10. 补齐此前未覆盖的端点 ################"
 #   (b) 可选能力关闭时 -> 必须是 200 + 结构完整信封（业务错误），
 #       **不得是 5xx / 容器错误页**。不断言具体 code：
 #       它取决于该能力是否被配置，属环境状态而非契约。
-#   (c) 二进制端点（超分/修复）关闭时 -> 不得返回 200 图像
+#   (c) 二进制端点（超分/修复）未配置模型时 -> 干净失败 400，不得 5xx
 G10ID="facegrade-g10-$$"
 
 # 顶层 code 读取：不能用 jq_ —— 它会把 data 解包，而业务错误信封没有 data，
@@ -349,18 +349,28 @@ SMALL=$(api 60 --get --data-urlencode "feature=[0.1,0.2,0.3,0.4]" --data-urlenco
 ck "人脸检索对维度不符给出业务错误（非 5xx）" "$SMALL" "200"
 ck "维度不符时返回结构完整信封" "$(topcode /tmp/g10_se.json)" "S0503C0000"
 
+# 检索：正确维度。GET 放不下（见 10.3），必须用 POST 重载。
+printf '{"feature":%s,"topK":5}' "$FT" > /tmp/g10_sb.json
+ck "人脸检索 POST 接受 512 维真实特征" "$(api 60 -X POST -H 'Content-Type: application/json' --data-binary @/tmp/g10_sb.json -o /tmp/g10_sp.json -w '%{http_code}' "$B/v2/face/search")" "200"
+ck "  POST 检索返回成功码" "$(topcode /tmp/g10_sp.json)" "00000"
+# feature 传数组（而非字符串）也要能用：List.toString 恰好是 "[0.1, 0.2, ...]"
+printf '{"feature":[%s],"topK":5}' "$(echo "$FT" | sed 's/^\[//; s/\]$//')" > /tmp/g10_sb2.json
+ck "人脸检索 POST 接受数组写法" "$(api 60 -X POST -H 'Content-Type: application/json' --data-binary @/tmp/g10_sb2.json -o /tmp/g10_sp2.json -w '%{http_code}' "$B/v2/face/search")" "200"
+
 # 清理并确认删除生效
 ck "删除直入条目" "$(api 30 -X DELETE -o /tmp/g10_del.json -w '%{http_code}' "$B/v2/face/$G10ID")" "200"
 ck "删除后列表已不可见" "$(api 30 "$B/v2/face/list" | grep -c "$G10ID")" "0"
 
-# --- 10.3 检索端点的一个已知缺陷（不断言为「正常」，只钉住现状，避免回归时静默）---
-# GET /v2/face/search 用 【正确的 512 维向量】时 URL 约 6.8KB，超过 Tomcat 的
-# 请求行/头上限，被容器以 400 + 默认 HTML 错误页拒绝 —— 连业务信封都到不了。
-# 即该端点按设计用法（512 维）不可用。详情见交付说明 §20。
-# 这里只断言「小向量走业务信封」已在 10.2 覆盖；512 维路径不做 200 断言，
-# 否则等于把缺陷写进契约。前后端均无调用方（已核查），故未单方面改 HTTP 契约。
+# --- 10.3 GET 版检索的容器上限（已保留，但不再阻断检索能力）---
+# GET /v2/face/search 用【正确的 512 维向量】时 URL 约 6.8KB，超过 Tomcat 默认
+# maxHttpRequestHeaderSize=8192，被容器以 400 + 默认 HTML 错误页拒绝，连业务信封都到不了。
+# 三点对照（同一端点，只改向量文本）：真实全精度 6778B -> 400；0.01×512 3072B -> 200。
+#
+# 处置：保留 GET（兼容既有调用方），新增 POST 重载把向量放请求体 —— 10.2 已断言 POST 可用。
+# 这里只断言「GET 大向量仍失败」，把容器的行为钉住，避免将来有人以为 GET 能用。
 SEARCH512=$(api 60 --get --data-urlencode "feature=$FT" -o /tmp/g10_s512.out -w '%{http_code}' "$B/v2/face/search")
-echo "  [记录] GET /v2/face/search 传 512 维实际返回 HTTP=$SEARCH512（容器层拒绝，代码契约应为业务信封）"
+ck "GET 版 512 维仍受 URI 上限限制（故必须用 POST）" "$(python3 -c "print('limited' if '$SEARCH512' in ('400','414') else '$SEARCH512')")" "limited"
+echo "         （GET 实测 HTTP=$SEARCH512；POST 版见 10.2 的绿灯）"
 
 # --- 10.4 配置端点（@Permission admin）---
 ck "读取人脸配置可用" "$(api 30 -o /tmp/g10_cfg.json -w '%{http_code}' "$B/v2/face/config")" "200"
@@ -386,11 +396,14 @@ for ep in liveness anime-detect attributes emotion deepfake; do
   ck "可选能力 $ep 关闭时信封结构完整" "$(python3 -c "print('yes' if '''$CC''' else 'no')")" "yes"
 done
 
-# --- 10.6 二进制端点关闭时不得返回 200 图像 ---
+# --- 10.6 二进制端点在能力未配置时必须干净失败（400），不得 5xx ---
+# 修复前实测是 500：映射声明了 produces=image/png，失败时 ResponseEntity.badRequest()
+# 的写出阶段按 image/png 选到字节数组转换器，连 advice 的 JSON 信封也被它拿去写，
+# 抛 ClassCastException: ReturnResult cannot be cast to [B，把 400 升级成 500。
+# 去掉 produces 后回到控制器本来的意图 400。这里断言 400，钉住该修复。
 for ep in super-resolution restore; do
   ST=$(api 180 -F "file=@$F" -o /dev/null -w '%{http_code}' "$B/v2/face/$ep")
-  ck "二进制端点 $ep 关闭时不返回 200" "$(python3 -c "print('not200' if '$ST' != '200' else '200')")" "not200"
-  echo "         （实测 HTTP=$ST；控制器代码意图是 badRequest=400）"
+  ck "二进制端点 $ep 未配置模型时返回 400（非 5xx）" "$ST" "400"
 done
 
 # --- 10.7 图像识别（image 分组，未配置能力应降级）---
@@ -403,12 +416,15 @@ ck "图像超分未启用时返回 409（已在控制器判定）" "$(api 120 -F
 IMGID=$(api 30 "$B/v2/image-search/list" | jq_ /dev/stdin "print((d or {}).get('items',[{}])[0].get('id') if isinstance(d,dict) else '')" 2>/dev/null)
 if [ -n "$IMGID" ]; then
   api 30 -o /tmp/g10_thumb.png -D /tmp/g10_thumb.h "$B/v2/image-search/$IMGID/image" > /dev/null
-  # 按魔数判定，不按 Content-Type：该端点实际返回 application/octet-stream，
-  # 而字节是真 PNG（89 50 4E 47）。魔数才是「这是不是一张图」的确证。
   ck "底库缩略图是真实 PNG（魔数）" "$(python3 -c "print('png' if open('/tmp/g10_thumb.png','rb').read(4)==b'\x89PNG' else 'notpng')")" "png"
   ck "底库缩略图非空" "$(python3 -c "import os;print('yes' if os.path.getsize('/tmp/g10_thumb.png')>0 else 'no')")" "yes"
-  # 记录（不断言）：Content-Type 与实际字节不符，且响应带 nosniff。见交付说明 §20。
-  echo "  [记录] 缩略图 Content-Type=$(grep -i '^content-type' /tmp/g10_thumb.h | tr -d '\r' | cut -d' ' -f2-)，实际字节为 PNG"
+  # Content-Type 必须与字节一致：修复前原图分支写死 application/octet-stream，而字节是 PNG，
+  # 响应还带 nosniff。现在按魔数给出类型，两者应一致。
+  CT=$(grep -i '^content-type' /tmp/g10_thumb.h | tr -d '\r' | cut -d' ' -f2- | cut -d';' -f1)
+  WANT=$(python3 -c "
+b=open('/tmp/g10_thumb.png','rb').read(4)
+print('image/png' if b==b'\x89PNG' else ('image/jpeg' if b[:2]==b'\xff\xd8' else 'other'))")
+  ck "缩略图 Content-Type 与字节一致" "$CT" "$WANT"
 else
   echo "  [SKIP] 底库为空，缩略图用例跳过"
 fi
