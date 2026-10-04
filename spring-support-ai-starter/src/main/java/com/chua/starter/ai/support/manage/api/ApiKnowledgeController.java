@@ -1232,7 +1232,7 @@ public class ApiKnowledgeController {
         } catch (RuntimeException e) {
             // 失败注入映射：外部 embedding SDK 的异常经 RagPipeline 包装后只剩
             // 「Node execution failed: embedQuery」，前端无法分辨余额不足/密钥无效/限流/维度不符。
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, friendlyEmbeddingError(e));
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, friendlyRagError(e));
         }
 
         String prefix = knowledge_base_id + "/";
@@ -1862,15 +1862,17 @@ public class ApiKnowledgeController {
     /**
      * 把 RAG 检索失败的原因链翻译成可操作的业务提示。
      *
-     * <p>外部 embedding SDK 的异常（OpenAI 系 402/401/429 等）经 {@code RagPipeline} 包装后，
-     * 报文只剩「Node execution failed: embedQuery [node=embedQuery]」，前端只能看到
+     * <p>外部 SDK 的异常（OpenAI 系 402/401/429 等）经 {@code RagPipeline} 包装后，
+     * 报文只剩「Node execution failed: embedQuery/generate [node=...]」，前端只能看到
      * {@code INTERNAL_ERROR}，无法判断到底是余额不足、密钥失效、被限流还是维度不符。
-     * 这里按报文特征识别常见几类，并给出下一步动作。</p>
+     * 这里按报文特征识别常见几类，<b>并按失败节点区分归因</b>
+     * （{@code node=embedQuery} 归 Embedding、{@code node=generate} 归对话模型），
+     * 避免把「对话模型配错/限流」误报成「Embedding 配错」而带偏排查方向。</p>
      *
      * @param error 原始异常（可为 null）
      * @return 面向用户的提示，尾部保留原始首行便于排查
      */
-    private String friendlyEmbeddingError(Throwable error) {
+    private String friendlyRagError(Throwable error) {
         String raw = error == null || error.getMessage() == null ? "" : error.getMessage();
         String deepest = "";
         for (Throwable t = error; t != null; t = t.getCause()) {
@@ -1879,26 +1881,39 @@ public class ApiKnowledgeController {
             }
         }
         String all = (raw + " " + deepest).toLowerCase();
+        // 按失败节点区分归因：embedQuery = Embedding（向量化）失败；generate = 对话模型（LLM）失败。
+        // 此前一律按 Embedding 报，用户会把「对话模型配错/限流」当成「Embedding 配错」，排查方向被带偏。
+        boolean generateNode = all.contains("node=generate") || all.contains("generate [pipeline");
+        boolean embedNode = all.contains("node=embedquery") || all.contains("embedquery");
+        String subject = generateNode ? "对话模型（LLM）" : "Embedding 模型";
         if (all.contains("insufficient") || all.contains("balance") || all.contains("402")
                 || all.contains("欠费") || all.contains("余额")) {
-            return "向量模型调用被拒：账户余额不足。请到「设置中心 → 默认模型 → RAG」更换 Embedding 密钥或提供方，"
-                    + "或改用本地 onnx 引擎（免凭证）。原始信息: " + raw;
+            return subject + "调用被拒：账户余额不足。请到「设置中心 → 默认模型 → RAG」更换密钥或提供方"
+                    + (generateNode ? "（或改选可用的默认模型）" : "，或改用本地 onnx 引擎（免凭证）")
+                    + "。原始信息: " + raw;
         }
         if (all.contains("401") || all.contains("unauthorized") || all.contains("invalid api key")
                 || all.contains("invalid_api_key")) {
-            return "向量模型调用被拒：API Key 无效或已过期。请到「设置中心 → 默认模型 → RAG → Embedding密钥」更新。原始信息: " + raw;
+            return subject + "调用被拒：API Key 无效或已过期。请到「设置中心 → 默认模型 → RAG」更新对应密钥。原始信息: " + raw;
         }
         if (all.contains("429") || all.contains("rate limit") || all.contains("too many")) {
-            return "向量模型调用被限流（429）。请稍后重试，或更换提供方。原始信息: " + raw;
+            return subject + "调用被限流（429）。请稍后重试，或更换提供方。原始信息: " + raw;
         }
         if (all.contains("模型未注册")) {
-            return "本地 embedding 模型未注册：" + deepest
-                    + "。请到「设置中心 → 默认模型 → RAG → Embedding模型」填写注册表里的模型 id（如 bge-large-zh-embedding）。";
+            return subject + "未注册：" + deepest
+                    + "。请到「设置中心 → 默认模型 → RAG」选择已注册的模型。";
         }
         if (all.contains("dimension") || all.contains("维度") || all.contains("shape")) {
             return "向量维度不匹配：更换过 embedding 模型但向量库仍是旧维度。请用当前模型重新入库，或改用同维度模型。原始信息: " + raw;
         }
-        return "知识库检索失败：embedding 调用未成功。请检查「设置中心 → 默认模型 → RAG」的引擎 / 模型 / 地址 / 密钥。原始信息: " + raw;
+        if (generateNode) {
+            return "知识库生成失败：对话模型（LLM）调用未成功。请到「设置中心 → 默认模型 → RAG」检查 RAG LLM 模型 / 默认模型"
+                    + "（须在「模型管理」中存在且启用、供应商密钥有效）。原始信息: " + raw;
+        }
+        if (embedNode) {
+            return "知识库检索失败：Embedding 调用未成功。请检查「设置中心 → 默认模型 → RAG」的引擎 / 模型 / 地址 / 密钥。原始信息: " + raw;
+        }
+        return "知识库问答失败：请检查「设置中心 → 默认模型 → RAG」的 Embedding 与 LLM 模型配置。原始信息: " + raw;
     }
 
     /**
