@@ -430,6 +430,13 @@ public class FaceClientManager {
         if (!GROUP.equals(event.getGroup())) {
             return;
         }
+        if (event.isUserScoped()) {
+            // 共享实例（检测器 / 分类器 / 活体 / 质量）只承载**全局**配置。
+            // 按触发者的身份重建会把他的模型烘进共享实例、串掉其他用户 —— 而这些字段
+            // 本就不是按用户的（按用户的是 FaceStores 里按账号构建的管线，它自己响应）。
+            log.debug("[FaceClientManager] 收到用户级 face 配置写入，共享实例不重建（按账号管线由 FaceStores 重建）");
+            return;
+        }
         log.info("[FaceClientManager] 收到 face 分组配置变更，开始热重建");
         /**
          * rebuild。

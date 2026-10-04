@@ -178,6 +178,12 @@ public class OcrClientManager {
         if (event == null || !GROUP.equals(event.getGroup())) {
             return;
         }
+        if (event.isUserScoped()) {
+            // OCR 管线是**全局共享**实例，只承载全局配置。按触发者的身份重建会把
+            // 他的模型烘进去、串掉其他用户；按用户的 OCR 配置暂不支持（需按用户实例化）。
+            log.debug("[OcrClientManager] 收到用户级 ocr 配置写入，共享 OCR 管线不重建");
+            return;
+        }
         log.info("[OcrClientManager] 收到 ocr 分组配置变更，开始热重建");
         /**
          * rebuild。
