@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.MemoryChatClient;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
 import com.chua.common.support.ai.embedding.EmbeddingClientSetting;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;
@@ -340,26 +341,48 @@ public class RagClientManager {
      * @return Chat客户端 对象
      */
     private ChatClient resolveChatClient(String ragLlmModel) {
-        if (chatClientRegistry != null) {
-            if (StringUtils.hasText(ragLlmModel)) {
+        // 1. 指定了 LLM 模型：先精确查注册中心，再按「供应商ID:模型名」从供应商表解析真实凭据。
+        //    必须优先于「注册中心默认」——默认可能是聚合客户端，早先它内部混着演示用的
+        //    内存客户端且排在前面，永远「成功」返回固定文案，真实模型根本没机会被调用
+        //    （表现为 /ask 静默返回「【内存模式】…」假答案）。
+        if (StringUtils.hasText(ragLlmModel)) {
+            if (chatClientRegistry != null) {
                 ChatClient byModel = chatClientRegistry.getByModel(ragLlmModel);
-                if (byModel != null) {
+                if (isRealChatClient(byModel)) {
                     return byModel;
                 }
-                log.warn("[RagClientManager] RAG LLM 模型 {} 未注册，回退全局默认", ragLlmModel);
             }
+            ChatClient byProvider = buildProviderChatClient(ragLlmModel);
+            if (isRealChatClient(byProvider)) {
+                return byProvider;
+            }
+            log.warn("[RagClientManager] RAG LLM 模型 {} 未能解析为真实对话客户端", ragLlmModel);
+        }
+        // 2. 注册中心默认客户端（装配时已剔除内存演示实现）
+        if (chatClientRegistry != null) {
             ChatClient defaultClient = chatClientRegistry.getDefault();
-            if (defaultClient != null) {
+            if (isRealChatClient(defaultClient)) {
                 return defaultClient;
             }
         }
-        // registry 无客户端 → 先按「供应商ID:模型名」从供应商表解析真实凭据
-        ChatClient byProvider = buildProviderChatClient(ragLlmModel);
-        if (byProvider != null) {
-            return byProvider;
+        // 3. runtime 全局设置直接构建
+        ChatClient runtime = buildRuntimeChatClient();
+        if (isRealChatClient(runtime)) {
+            return runtime;
         }
-        // 供应商表也解析不出 → 从 runtime 全局设置直接构建
-        return buildRuntimeChatClient();
+        // 4. 都没有 → 返回 null，让 RAG 明确不可用；绝不回落到内存模拟客户端
+        log.warn("[RagClientManager] 未解析到真实对话客户端，RAG 不可用（请配置 RAG LLM 模型）");
+        return null;
+    }
+
+    /**
+     * 判断是否为可用的真实对话客户端（排除演示用的内存实现）。
+     *
+     * @param client 待判定的客户端
+     * @return true 表示可用于真实生成
+     */
+    private boolean isRealChatClient(ChatClient client) {
+        return client != null && !(client instanceof MemoryChatClient);
     }
 
     /**
