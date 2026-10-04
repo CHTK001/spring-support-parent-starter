@@ -64,7 +64,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     public List<SettingItem> getItems() {
         return List.of(
                 new SettingItem("enabled", "true", "BOOLEAN", "是否启用全局对话路由（false 时 ChatClient 禁用）", 1),
-                new SettingItem("provider", "openai", "STRING", "LLM 供应商（openai / zhipu / deepseek / qwen 等）", 2),
+                new SettingItem("provider", "", "STRING", "LLM 供应商（openai / zhipu / deepseek / qwen 等）", 2),
                 new SettingItem("factory", "default", "STRING", "LLM 工厂实现（default 使用供应商默认实现）", 3),
                 new SettingItem("provider_base_url", "", "STRING", "LLM 供应商接口地址（如 https://api.openai.com/v1）", 4),
                 new SettingItem("provider_api_key", "", "STRING", "LLM API Key", 5),
