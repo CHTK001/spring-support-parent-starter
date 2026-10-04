@@ -2,7 +2,11 @@ package com.chua.starter.eduai.service;
 
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
+import com.chua.starter.eduai.model.EduMarkingTask;
+import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.StudentWrongQuestionVO;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -46,4 +50,38 @@ public interface IEduStudentCenterService {
      * @return 是否记录成功
      */
     boolean reportStudy(StudyReportDTO dto);
+
+    /**
+     * 我的答题/阅卷记录：按任务上的学生标识等于本人学号过滤
+     *
+     * @param limit 最多返回条数；非正数按 20、上限 100
+     * @return 阅卷任务列表
+     */
+    List<EduMarkingTask> myMarkingTasks(int limit);
+
+    /**
+     * 查看我自己的某次阅卷结果（任务上的学生标识必须是本人）
+     *
+     * @param taskId 任务标识
+     * @return 阅卷结果
+     */
+    MarkingResultVO myMarkingResult(String taskId);
+
+    /**
+     * 我的错题卡（带题干/选项/答案），可按学科与掌握度筛选
+     *
+     * @param subject      学科，可空
+     * @param masteryLevel 掌握度筛选，可空
+     * @return 错题卡列表
+     */
+    List<StudentWrongQuestionVO> myWrongQuestions(String subject, Integer masteryLevel);
+
+    /**
+     * 更新我的错题掌握度
+     *
+     * @param wrongId      错题记录标识；必须属于本人
+     * @param masteryLevel 掌握度：0 未掌握 / 1 复习中 / 2 已掌握
+     * @return 是否成功
+     */
+    boolean updateMyWrongMastery(Long wrongId, Integer masteryLevel);
 }

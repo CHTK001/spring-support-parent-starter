@@ -5,17 +5,24 @@ import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.dto.EduChangePasswordDTO;
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
+import com.chua.starter.eduai.model.EduMarkingTask;
+import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.StudentWrongQuestionVO;
 import com.chua.starter.eduai.service.IEduStudentCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -101,5 +108,63 @@ public class EduStudentCenterController {
     public ReturnResult<Boolean> changePassword(@RequestBody EduChangePasswordDTO dto) {
         return ReturnResult.ok(dimensionService.changeOwnPassword(
                 EduUserContext.requireUserId(), dto.oldPassword(), dto.newPassword()));
+    }
+
+    // ==================== 我的答题 / 阅卷 ====================
+
+    /**
+     * 我的答题/阅卷记录（按任务上的学生标识等于本人学号）
+     *
+     * @param limit 最多返回条数，默认 20、上限 100
+     * @return 阅卷任务列表
+     */
+    @Operation(summary = "我的答题/阅卷记录")
+    @GetMapping("/marking/tasks")
+    public ReturnResult<List<EduMarkingTask>> markingTasks(
+            @RequestParam(value = "limit", defaultValue = "20") int limit) {
+        return ReturnResult.ok(studentCenterService.myMarkingTasks(limit));
+    }
+
+    /**
+     * 查看我自己的某次阅卷结果
+     *
+     * @param taskId 任务标识
+     * @return 阅卷结果
+     */
+    @Operation(summary = "我的阅卷结果")
+    @GetMapping("/marking/result/{taskId}")
+    public ReturnResult<MarkingResultVO> markingResult(@PathVariable String taskId) {
+        return ReturnResult.ok(studentCenterService.myMarkingResult(taskId));
+    }
+
+    // ==================== 我的错题本 ====================
+
+    /**
+     * 我的错题卡（带题干/选项/答案）
+     *
+     * @param subject      学科，可空
+     * @param masteryLevel 掌握度筛选，可空
+     * @return 错题卡列表
+     */
+    @Operation(summary = "我的错题本")
+    @GetMapping("/wrongbook")
+    public ReturnResult<List<StudentWrongQuestionVO>> wrongbook(
+            @RequestParam(value = "subject", required = false) String subject,
+            @RequestParam(value = "masteryLevel", required = false) Integer masteryLevel) {
+        return ReturnResult.ok(studentCenterService.myWrongQuestions(subject, masteryLevel));
+    }
+
+    /**
+     * 更新我的错题掌握度
+     *
+     * @param wrongId      错题记录标识
+     * @param masteryLevel 掌握度 0/1/2
+     * @return 是否成功
+     */
+    @Operation(summary = "更新我的错题掌握度")
+    @PutMapping("/wrongbook/mastery")
+    public ReturnResult<Boolean> updateWrongMastery(@RequestParam Long wrongId,
+                                                    @RequestParam Integer masteryLevel) {
+        return ReturnResult.ok(studentCenterService.updateMyWrongMastery(wrongId, masteryLevel));
     }
 }

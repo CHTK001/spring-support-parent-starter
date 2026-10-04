@@ -11,11 +11,18 @@ import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
 import com.chua.starter.eduai.mapper.EduStudentDailyMapper;
 import com.chua.starter.eduai.mapper.EduStudentProgressMapper;
 import com.chua.starter.eduai.mapper.EduWrongQuestionMapper;
+import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
+import com.chua.starter.eduai.mapper.EduQuestionMapper;
+import com.chua.starter.eduai.model.EduMarkingTask;
+import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.EduStudentDaily;
 import com.chua.starter.eduai.model.EduStudentProgress;
 import com.chua.starter.eduai.model.EduWrongQuestion;
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
+import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.StudentWrongQuestionVO;
+import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.service.IEduStudentCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
@@ -70,6 +77,86 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
     private final EduStudentDailyMapper dailyMapper;
 
     private final EduWrongQuestionMapper wrongQuestionMapper;
+
+    private final EduMarkingTaskMapper markingTaskMapper;
+
+    private final IEduMarkingService markingService;
+
+    private final EduQuestionMapper questionMapper;
+
+    @Override
+    public List<EduMarkingTask> myMarkingTasks(int limit) {
+        String me = EduUserContext.requireUserId();
+        int size = limit <= 0 ? 20 : Math.min(limit, 100);
+        // 学生端按任务上的学生标识过滤（不是任务归属人——那是上传答卷的老师）
+        return markingTaskMapper.selectList(new QueryWrapper<EduMarkingTask>()
+                .eq("marking_task_student_id", me)
+                .orderByDesc("marking_task_id")
+                .last("LIMIT " + size));
+    }
+
+    @Override
+    public MarkingResultVO myMarkingResult(String taskId) {
+        return markingService.getResultForStudent(taskId, EduUserContext.requireUserId());
+    }
+
+    @Override
+    public List<StudentWrongQuestionVO> myWrongQuestions(String subject, Integer masteryLevel) {
+        String me = EduUserContext.requireUserId();
+        List<EduWrongQuestion> rows = wrongQuestionMapper.selectList(new QueryWrapper<EduWrongQuestion>()
+                .eq("wrong_question_student_id", me)
+                .eq("wrong_question_status", WRONG_STATUS_VALID)
+                .eq(masteryLevel != null, "wrong_question_mastery_level", masteryLevel)
+                .orderByDesc("wrong_question_last_wrong_time"));
+        List<StudentWrongQuestionVO> out = new ArrayList<>();
+        for (EduWrongQuestion wrong : rows) {
+            EduQuestion question = wrong.getWrongQuestionQuestionId() == null
+                    ? null : questionMapper.selectById(wrong.getWrongQuestionQuestionId());
+            if (subject != null && !subject.isBlank()
+                    && (question == null || !subject.equals(question.getQuestionSubject()))) {
+                continue;
+            }
+            out.add(new StudentWrongQuestionVO(
+                    wrong.getWrongQuestionId(),
+                    wrong.getWrongQuestionQuestionId(),
+                    question == null ? null : question.getQuestionType(),
+                    question == null ? null : question.getQuestionSubject(),
+                    question == null ? null : question.getQuestionGradeLevel(),
+                    question == null ? null : question.getQuestionGrade(),
+                    question == null ? null : question.getQuestionDifficulty(),
+                    question == null ? null : question.getQuestionStem(),
+                    question == null ? null : question.getQuestionOptions(),
+                    question == null ? null : question.getQuestionAnswer(),
+                    wrong.getWrongQuestionWrongCount(),
+                    wrong.getWrongQuestionMasteryLevel(),
+                    wrong.getWrongQuestionReviewCount(),
+                    wrong.getWrongQuestionLastWrongTime()));
+        }
+        return out;
+    }
+
+    @Override
+    public boolean updateMyWrongMastery(Long wrongId, Integer masteryLevel) {
+        if (wrongId == null) {
+            throw new BusinessException("错题记录不能为空");
+        }
+        if (masteryLevel == null || masteryLevel < 0 || masteryLevel > MASTERY_DONE) {
+            throw new BusinessException("掌握度只能是 0 / 1 / 2");
+        }
+        EduWrongQuestion wrong = wrongQuestionMapper.selectById(wrongId);
+        if (wrong == null) {
+            throw new BusinessException("错题记录不存在");
+        }
+        if (!EduUserContext.requireUserId().equals(wrong.getWrongQuestionStudentId())) {
+            throw new BusinessException("无权操作该错题");
+        }
+        wrong.setWrongQuestionMasteryLevel(masteryLevel);
+        wrong.setWrongQuestionLastReviewTime(LocalDateTime.now());
+        wrong.setWrongQuestionReviewCount(
+                (wrong.getWrongQuestionReviewCount() == null ? 0 : wrong.getWrongQuestionReviewCount()) + 1);
+        wrongQuestionMapper.updateById(wrong);
+        return true;
+    }
 
     @Override
     public Map<String, Object> me() {
