@@ -4,14 +4,23 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
-> ## ✅ 当前状态（2026-10-04）：**可交付**
+> ## ✅ 当前状态（2026-10-04）：**源码可交付；本轮改动尚未发布到 198**
 >
-> 最新 HEAD `22c19a5e3` 重建发布，线上 jar `df7b2ead…` == 本地构建（**PROVENANCE_OK**）。
-> 对应报告 `ACCEPTANCE-REPORT-20261004-r8.md`。
+> **本轮 4 项改动已在浏览器实测通过（证据见 §7），源码已入库**：
 >
-> 本版新增**学生头像上传/预览**端点（点头像换头像），并统一按钮圆角、修操作列表头
-> 配色、让 Tab 吃满高度。API 55/55 + 故障注入（恢复 200）+ 头像端点六项实测全 PASS。
-> 复核：`python3 report-staleness.py --live-eduai df7b2ead… --live-oauth ca4ce0b3…`
+> | 提交（仓） | 内容 |
+> |---|---|
+> | `bcc38b336`（spring 仓） | 班级试卷布置后端：`edu_paper_assign` 建表 + `/v2/edu/paper-assign` 四接口 |
+> | `d87e901af`（vue 仓） | 登录错误文案根因修复 / 记住我 / 学号复制 / 分组导航去折叠 / 老师端布置入口 |
+>
+> ⚠ **「老师给班级组卷」只到「源码 + 编译 + 类型检查」，尚未做端到端业务验收。**
+> 它的接口与建表必须**重新发布后端**（`release-run.sh`）才会在 198 上线；
+> 在那之前线上仍是旧产物，**老师端点「布置给班级」会 404**。
+> 本文件里此前写明的产物绑定（jar 摘要 / 各份 `ACCEPTANCE-REPORT-*.md`）
+> **不覆盖**本轮改动 —— 发布后必须重跑验收并**重新绑定新的 md5**，旧报告按 §4 视为失效。
+>
+> 复核：`python3 report-staleness.py --live-eduai <现役 md5> --live-oauth <现役 md5>`
+> （线上 jar 会被并发会话替换，签收前必须现场取值，不要引用本文件里的历史摘要。）
 
 ## 1. 交付面
 
@@ -33,6 +42,10 @@
 | `e8eeff28` | oauth 部署交付物入仓（api 仓）|
 | `0ced563f2` | 报告失效检查器 `report-staleness.py`；补标 20261001 报告失效 |
 | `5993285b5` | 发布一键执行 `release-run.sh`（自证 + 资源判据 + 验收 + 故障注入）|
+| `1af06e1df` | 学生首次登录引导改密（`student_pwd_must_change` 标记 + `/me` 带出）|
+| `5e036620a` | release-run 加 3.5「鉴权热就绪」门禁（修部署后假红：立即跑 35/55，热后 55/55）|
+| `bcc38b336` | 班级试卷布置后端（`edu_paper_assign` + `/v2/edu/paper-assign` 四接口）|
+| `d87e901af` | vue：登录错误文案根因修复、记住我、学号复制、分组导航去折叠、老师端布置入口 |
 
 ## 3. **不随产物绑定**、当前仍成立的事实（复核于 2026-10-02）
 
@@ -164,3 +177,34 @@ sudo systemctl start <unit>.service
 > 并已应用到主机（原配置备份在 `/home/kali/eduai/backups/logrotate-20261002/`）。
 > 复核：精确干跑无 duplicate / Permission denied，实跑生成 `.1.gz` 且原文件截断，
 > `systemctl start logrotate.service` → `Finished`、`is-failed=inactive`。
+
+## 7. 2026-10-04 本轮：前端 4 项改动的浏览器实测（不随产物绑定）
+
+被测前端：`apps/vue-support-eduai-starter` 的 dev（`127.0.0.1:19093`，`/v2` 经 vite
+代理到 `192.168.50.198:19095` 的**旧产物**）。工具：`agent-browser`（CDP）+
+`.local-run/verify-*.ps1`（脚本落盘、pwsh 7 `-File` 执行，探针走 base64 传参，
+避免内联 JS 的引号被多层 shell 吃掉）。下表每个数字都是页内实测，不以「没报错」当结论。
+
+| 项 | 判据（实测值） | 结果 |
+|---|---|---|
+| 登录失败文案 | 修复前同场景渲染 `[object Object]`（已复现并截图留档）；修复后渲染「学号或家长手机号不存在，还剩 4 次尝试机会」 | PASS |
+| 上述根因 | 页内探针打印抛出物：`isError=false`、`ctor=Object`，形状 `{code,msg,message,success,ok}` —— 与 `@repo/core` 响应拦截器里的 `Promise.reject({...})` 逐字段吻合。**不是登录页的问题**，是拦截器抛裸对象 | 已定位 |
+| 记住我 | 重开页面：`account=9999999999`、`checked=true`、`stored=9999999999`；取消勾选并提交后 `stored=null`；再刷新 `account=""` | PASS |
+| 学号复制 | 学生管理页 `rows=100`、`copyButtons=90`（空学号行不出按钮）、`firstNo=2026000001`；点击后出现「已复制学号 2026000001」，且 `overlaysVisible=0`（**没有**误弹编辑框，`.stop` 生效） | PASS |
+| 分组导航去折叠 | `titles=3`（题库资源/考试流程/数据配置）、`allSpan=true`、`carets=0`、`groupButtons=0`；点标题前后 `items` 均为 `15`（不再收起） | PASS |
+| 前端类型检查 | `apps/vue-support-eduai-starter/node_modules/.bin/vue-tsc --noEmit` → `EXIT=0`，`error TS` 0 条（两次，93s / 133s） | PASS |
+| 后端编译 | `mvn -f spring-support-eduai-starter/pom.xml -DskipTests clean compile` → BUILD SUCCESS | PASS |
+
+**明确未做**（避免被当成已验）：
+
+1. 「老师布置试卷给班级 → 班内学生看到」的**端到端业务验收**：需先发布后端
+   （新表 + 4 个接口），本轮未发布。
+2. 登录**成功路径**的回归只覆盖到「admin 登入 /home」；学生学号登录本轮未重跑。
+3. 分组导航改动在 `packages/theme`，属**共享主题**，会影响所有开启
+   `menuConfig.groupNav` 的应用；本轮只回归了 eduai 一处。
+
+**排查期间的既有故障（与本轮改动无关，留痕以免误判）**：`packages/ui/src/components/ReCron/ReCron.vue`
+曾把 cron 字面量（形如 0 斜杠15 9 星号 星号 星号）写进块注释，其中的 `*/` 提前闭合了注释，
+dev 弹出 Vite 编译错误遮罩、整页不可用。该文件当时正被**另一会话**编辑
+（mtime 距今 0 分钟），因此未接管，后由其自行修复。判据：截图里的
+`[plugin:vite:vue] Missing semicolon` + 逐行找「`*/` 之后仍有内容」的位置。
