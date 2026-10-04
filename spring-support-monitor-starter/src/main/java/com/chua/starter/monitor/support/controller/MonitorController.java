@@ -89,6 +89,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
@@ -2465,6 +2466,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 for (Map.Entry<String, Object> entry : primaryKey.entrySet()) {
                     requireColumn(conn, t, safeIdent(entry.getKey(), "主键列"));
                 }
+                // 二进制列必须把 base64 **解成字节**再绑定。
+                // 不解的话内核会把 base64 的 ASCII 文本原样存进去：
+                // 界面看着「保存成功」，实际数据已经被改坏，
+                // 而且再次读出来是一段「base64 文本的 base64」，越改越离谱。
+                if (newValue instanceof String text && isBinaryColumn(conn, t, column)) {
+                    params.set(0, decodeBase64(text));
+                }
                 try (java.sql.PreparedStatement ps = conn.prepareStatement(sql.toString())) {
                     for (int i = 0; i < params.size(); i++) {
                         ps.setObject(i + 1, params.get(i));
@@ -2474,6 +2482,68 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             }
 
         });
+    }
+
+    /** 二进制列的类型名（小写比较） */
+    private static final Set<String> BINARY_TYPES = Set.of(
+            "binary", "varbinary", "blob", "tinyblob", "mediumblob", "longblob", "bytea");
+
+    /**
+     * 判断某列是不是二进制类型。
+     *
+     * <p>走 {@link java.sql.DatabaseMetaData#getColumns} 而不在 SQL 里查
+     * {@code information_schema}：前者对各内核通用，
+     * 且与 {@link #requireColumn} 的存在性校验走同一套元数据口径。</p>
+     *
+     * @param conn   连接
+     * @param table  表名
+     * @param column 列名
+     * @return true=二进制列
+     */
+    private static boolean isBinaryColumn(java.sql.Connection conn, String table, String column) {
+        java.sql.ResultSet rs = null;
+        try {
+            java.sql.DatabaseMetaData md = conn.getMetaData();
+            String catalog = conn.getCatalog();
+            String schema = conn.getSchema();
+            // 与 hasTable 同样的四种 (catalog,schema) 组合，逐个试
+            for (int[] shape : new int[][] {{0, 1}, {0, 0}, {1, 1}, {1, 0}}) {
+                rs = md.getColumns(shape[0] == 0 ? catalog : null,
+                        shape[1] == 1 ? schema : null, table, column);
+                if (rs.next()) {
+                    String type = String.valueOf(rs.getString("TYPE_NAME")).toLowerCase(java.util.Locale.ROOT);
+                    return BINARY_TYPES.contains(type) || type.contains("blob") || type.contains("binary");
+                }
+                rs.close();
+                rs = null;
+            }
+        } catch (java.sql.SQLException ignored) {
+            // 读不到类型就当不是二进制列：走原有行为，不因元数据缺失而拒绝写入
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (java.sql.SQLException ignored) {
+                    // 关闭失败无需处理
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 解 base64 为字节。
+     *
+     * @param text base64 文本（允许含空白）
+     * @return 字节
+     * @throws IllegalArgumentException 不是合法 base64
+     */
+    private static byte[] decodeBase64(String text) {
+        try {
+            return java.util.Base64.getDecoder().decode(text.replaceAll("\\s", ""));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("内容不是合法的 base64（无法写入二进制列）: " + e.getMessage());
+        }
     }
 
     /**
