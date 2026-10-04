@@ -156,9 +156,9 @@ def main():
         print("     逐题评语:", [(r.get("comment") or "")[:36] for r in rows])
         if len(rows) == 3:
             s = [r.get("score") for r in rows]
-            ck("ANY-第1题(选B正确)得满分", s[0] == 5, "实际 %s" % s[0])
-            ck("ANY-第2题(选A错误)不得满分", s[1] is not None and s[1] < 5, "实际 %s" % s[1])
-            ck("ANY-第3题(简答要点不全)为部分分", s[2] is not None and 0 < s[2] < 5, "实际 %s" % s[2])
+            ck("ANY-第1题(正确作答)得满分", s[0] == 5, "实际 %s" % s[0])
+            ck("ANY-第2题(要点不全)为部分分", s[1] is not None and 0 < s[1] < 5, "实际 %s" % s[1])
+            ck("ANY-第3题(答非所问)判 0 分", s[2] == 0, "实际 %s" % s[2])
             ck("ANY-判分有区分度(非全同)", len(set(s)) > 1, "得分序列 %s" % s)
             ck("ANY-每题都有评语/解析", all((r.get("comment") or "").strip() for r in rows))
 
