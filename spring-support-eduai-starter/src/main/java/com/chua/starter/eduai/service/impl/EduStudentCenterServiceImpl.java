@@ -313,6 +313,10 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         }
         out.put("className", className);
         out.put("stage", student.getStudentGradeLevel());
+        // 首次登录改密引导：管理员设/重置过初始口令且学生还没自己改过时为 true。
+        // 学生端进入 /student 时据此弹一次性引导（改完服务端会置 0，不再弹）。
+        out.put("mustChangePassword",
+                student.getStudentPwdMustChange() != null && student.getStudentPwdMustChange() == 1);
         return out;
     }
 
