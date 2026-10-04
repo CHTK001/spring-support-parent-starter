@@ -64,7 +64,6 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public Long saveHanzi(EduHanzi entity) {
         if (entity == null || !StringUtils.hasText(entity.getHanziChar())) {
             throw new BusinessException("汉字不能为空");
@@ -82,22 +81,59 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
             if (exists == null) {
                 throw new BusinessException("汉字不存在");
             }
-            EduUserContext.checkWritable(exists.getOwnerUserId());
-            entity.setOwnerUserId(exists.getOwnerUserId());
-            updateById(entity);
-            return entity.getHanziId();
+            return updateExisting(exists, entity);
         }
-        // 按字查重：唯一键保证一个字一条，重复提交同一个字则更新而不是撞唯一键
-        EduHanzi same = getOne(new QueryWrapper<EduHanzi>().eq("hanzi_char", ch).last("LIMIT 1"), false);
+        // 按字查重：唯一键保证一个字一条，重复提交同一个字则更新而不是新增
+        EduHanzi same = findByChar(ch);
         if (same != null) {
-            EduUserContext.checkWritable(same.getOwnerUserId());
-            entity.setHanziId(same.getHanziId());
-            entity.setOwnerUserId(same.getOwnerUserId());
-            updateById(entity);
-            return entity.getHanziId();
+            return updateExisting(same, entity);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
-        save(entity);
+        try {
+            save(entity);
+            return entity.getHanziId();
+        } catch (RuntimeException ex) {
+            // 并发竞态：两个请求同时判定「库里没有这个字」，后落库的会撞唯一键。
+            // 回查一次，谁先落库谁赢，另一个转为更新 —— 这是「两人同时录入同一个字」
+            // 的正常冲突，不该以「系统繁忙」的形式抛给用户。
+            //
+            // 注意两个已实测的坑：
+            // ① 本方法**不能**套 @Transactional：MySQL/MariaDB 默认 REPEATABLE READ，
+            //    同一事务的快照看不到并发事务刚提交的行，回查仍为空 → 依旧报错；
+            // ② 回查也**不能**用 FOR UPDATE：MariaDB 在快照外的行上做锁定读会抛
+            //    「Record has changed since last read in table」（SQLState HY000 / 1020），
+            //    实测把失败数从 1 次放大到 4 次。
+            // 去掉显式事务后每条语句自动提交，回查即为最新已提交数据，冲突被正常吸收。
+            EduHanzi raced = findByChar(ch);
+            if (raced == null) {
+                throw ex;
+            }
+            return updateExisting(raced, entity);
+        }
+    }
+
+    /**
+     * 按字查已有记录（唯一键保证最多一条）。
+     *
+     * @param ch 汉字
+     * @return 记录；不存在返回 null
+     */
+    private EduHanzi findByChar(String ch) {
+        return getOne(new QueryWrapper<EduHanzi>().eq("hanzi_char", ch).last("LIMIT 1"), false);
+    }
+
+    /**
+     * 用本次提交覆盖库中已有记录（先做归属写权限校验）。
+     *
+     * @param target 库中已有记录
+     * @param entity 本次提交
+     * @return 汉字标识
+     */
+    private Long updateExisting(EduHanzi target, EduHanzi entity) {
+        EduUserContext.checkWritable(target.getOwnerUserId());
+        entity.setHanziId(target.getHanziId());
+        entity.setOwnerUserId(target.getOwnerUserId());
+        updateById(entity);
         return entity.getHanziId();
     }
 
