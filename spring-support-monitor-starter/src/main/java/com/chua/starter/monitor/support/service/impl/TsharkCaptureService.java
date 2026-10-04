@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -208,7 +209,8 @@ public class TsharkCaptureService {
             this.sessionMapper.insert(session);
             this.running.put(session.getId(), proc);
             this.pushService.pushTsharkSession(session, session.getId());
-            this.asyncFinalize(session.getId(), proc, filePath);
+            // 自调用不会走 Spring 代理，@Async 在这里不生效，必须显式切线程（见 asyncFinalize 的注释）
+            CompletableFuture.runAsync(() -> this.asyncFinalize(session.getId(), proc, filePath));
             return ReturnResult.ok(session);
         } catch (Exception e) {
             log.error("start capture failed", e);
@@ -216,12 +218,23 @@ public class TsharkCaptureService {
         }
     }
 
-    @Async
     /**
-     * Asyncfinalize。
+     * 等待抓包进程结束并把 pcap 解析入库。
+     *
+     * <p><b>这里刻意用 {@code CompletableFuture.runAsync} 而不是 {@code @Async}：</b>
+     * 原实现给本方法标了 {@code @Async}，但调用方 {@link #startCapture} 是**同一个对象
+     * 的自调用**（{@code this.asyncFinalize(...)}）。Spring 的 {@code @Async} 靠代理
+     * 生效，自调用不经过代理 → 注解完全失效 → 方法在调用线程上同步执行，
+     * {@code proc.waitFor(...)} 直接把 {@code startCapture} 阻塞住。</p>
+     *
+     * <p>实测症状：{@code POST /tshark/capture} 的响应时长跟着抓包时长走
+     * （timeout=20s 时响应 24.6s、timeout=5s 时响应 7.8s），页面「开始抓包」按钮
+     * 整段抓包期间都转圈；不限时长（timeout 为空）时更会占住 HTTP 线程直到
+     * waitFor 的 60 分钟上限。副作用是抓包窗口里没有业务流量，包数为 0。</p>
+     *
      * @param sessionId 会话标识
-     * @param proc proc
-     * @param filePath 文件路径
+     * @param proc 抓包进程
+     * @param filePath pcap 路径
      */
     public void asyncFinalize(Long sessionId, Process proc, Path filePath) {
         try {

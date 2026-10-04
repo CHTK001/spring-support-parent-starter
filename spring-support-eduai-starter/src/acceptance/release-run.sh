@@ -137,13 +137,27 @@ else
     log "    [警告] 24 次探测（约 120s）仍未见「登录+管理端 200」，继续跑验收（结果可能含假红）"
 fi
 
-log "== 4. API 生产级验收 =="
+log "== 4. API 生产级验收（主套件 + 各专项套件；任一失败即整体不通过）=="
 cd "$APP_DIR"
-if PYTHONIOENCODING=utf-8 python3 "$ACCEPT" ; then
-    ACC=OK
-else
-    ACC=FAIL
-fi
+# 顺序有依赖：student-password-acceptance 会临时改口令并在结束时改回，
+# 排在 student-manage-acceptance 之前，保证后者依赖的 2026000001/stu123456 在它跑完后仍有效。
+# 新增功能必须把自己的专项套件加进这个列表，否则「测过」只停留在开发机。
+SUITES="acceptance.py student-password-acceptance.py student-manage-acceptance.py first-login-password-acceptance.py paper-assign-acceptance.py marking-acceptance.py"
+ACC=OK
+SUITE_RESULT=""
+for s in $SUITES; do
+    if [ ! -f "src/acceptance/$s" ]; then
+        log "    [缺失] $s —— 套件没随发布上传（这类「静默跳过」会让报告假绿）"
+        ACC=FAIL; SUITE_RESULT="$SUITE_RESULT ${s%%.py}=MISSING"; continue
+    fi
+    log "    --- $s ---"
+    if PYTHONIOENCODING=utf-8 python3 "src/acceptance/$s"; then
+        SUITE_RESULT="$SUITE_RESULT ${s%%.py}=OK"
+    else
+        ACC=FAIL; SUITE_RESULT="$SUITE_RESULT ${s%%.py}=FAIL"
+    fi
+done
+log "    套件:$SUITE_RESULT"
 log "    API 验收=$ACC"
 
 log "== 5. 故障注入 =="
