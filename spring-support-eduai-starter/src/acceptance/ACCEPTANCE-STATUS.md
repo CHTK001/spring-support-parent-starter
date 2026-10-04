@@ -4,23 +4,36 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
-> ## ✅ 当前状态（2026-10-04）：**源码可交付；本轮改动尚未发布到 198**
+> ## ✅ 当前状态（2026-10-04 · r9）：**已发布、已签收**
 >
-> **本轮 4 项改动已在浏览器实测通过（证据见 §7），源码已入库**：
+> 线上 jar `8ad6d0bfdbe675d3afed9a8a1249b86ca09c08339ade3ca3fb2eaf1572c6bdbc`
+> == 本地构建（**PROVENANCE_OK**），对应报告 `ACCEPTANCE-REPORT-20261004-r9.md`。
 >
-> | 提交（仓） | 内容 |
+> 本轮把「老师给班级组卷 → 班内学生看到（含题目）」做成端到端可用，
+> 并在过程中用生产级验收**抓到并修掉 2 个真缺陷 + 2 个验收门禁自身缺陷**：
+>
+> | 提交 | 内容 |
 > |---|---|
-> | `bcc38b336`（spring 仓） | 班级试卷布置后端：`edu_paper_assign` 建表 + `/v2/edu/paper-assign` 四接口 |
-> | `d87e901af`（vue 仓） | 登录错误文案根因修复 / 记住我 / 学号复制 / 分组导航去折叠 / 老师端布置入口 |
+> | `bcc38b336` | 班级试卷布置后端：`edu_paper_assign` + `/v2/edu/paper-assign` 接口组 |
+> | `8b5ede6ac` | 补 `create_time`：布置/撤回 500（`Unknown column`）的根因修复 |
+> | `c50fcbaa2` | 学生端按**布置关系**授权查看试卷详情（原来按归属人，学生被 400 拒） |
+> | `8662975a9` | 验收门禁自修：套件失败必须非 0 退出；中文查询参数必须百分号编码 |
+> | `d87e901af`（vue 仓） | 登录错误文案根因 / 记住我 / 学号复制 / 分组导航去折叠 / 老师端布置入口 |
+> | `4c1e8dfd`（vue 仓） | 学生端「查看试卷」改走按布置授权的接口 |
 >
-> ⚠ **「老师给班级组卷」只到「源码 + 编译 + 类型检查」，尚未做端到端业务验收。**
-> 它的接口与建表必须**重新发布后端**（`release-run.sh`）才会在 198 上线；
-> 在那之前线上仍是旧产物，**老师端点「布置给班级」会 404**。
-> 本文件里此前写明的产物绑定（jar 摘要 / 各份 `ACCEPTANCE-REPORT-*.md`）
-> **不覆盖**本轮改动 —— 发布后必须重跑验收并**重新绑定新的 md5**，旧报告按 §4 视为失效。
+> **验收**：`release-run.sh` 单命令跑完 —— 6 套件 **152 条断言 0 失败**、
+> 故障注入正常、**PROVENANCE_OK / API=OK / 可签收**（日志
+> `release-run-20261004-083454.log`）。
+> **浏览器业务验收**：老师用界面布置 → 学生在学生端看到该卷且**点开有 10 道题**
+> （见 r9 报告 §6，截图 `biz-A-teacher-done.png` / `biz-B3-detail.png`）。
+>
+> ⚠ 两点必须知道：
+> 1. 共享主机上 jar 被并发会话反复替换。**签收后若线上 sha 变化，r9 立即失效**，
+>    需按 `report-staleness.py` 重新判定。
+> 2. 该 jar 的构建工作区里**混有另一会话未提交的 eduai 改动**（EduIdiom/EduHanzi 等），
+>    它们一并进了产物，未随本报告评审。
 >
 > 复核：`python3 report-staleness.py --live-eduai <现役 md5> --live-oauth <现役 md5>`
-> （线上 jar 会被并发会话替换，签收前必须现场取值，不要引用本文件里的历史摘要。）
 
 ## 1. 交付面
 
@@ -261,4 +274,71 @@ collect / data-config / question）。用同一探针逐个复扫，均为 `bloc
 >    换成题干单元格后 `tableClicks=1 / dialogOpen=1` —— 是**选点问题**，不是行点击坏了；
 > ② 底部 `.btn-next` 在视口下方（`rect.top=578`、`elementFromPoint=null`），
 >    不 `scrollintoview` 直接点会落空 —— 补上滚动后翻页正常。
+
+## 9. 2026-10-04 本轮：班级试卷布置的发布与四个缺陷
+
+产物 jar `8ad6d0bf…`（报告 r9）。四个缺陷都是**跑起来才暴露**的，编译、类型检查、
+接口冒烟一个都拦不住：
+
+### 9.1 真缺陷 A：布置/撤回 500（建表少一列）
+
+```
+POST /v2/edu/paper-assign        -> 500 S0512C0000「系统繁忙」
+DELETE /v2/edu/paper-assign/{id} -> 500
+GET    /mine, /my-class          -> 200（正常）
+服务端原文: Unknown column 'create_time' in 'SELECT'
+### SQL: SELECT ... create_name,create_by,create_time,update_time,... FROM edu_paper_assign
+```
+
+`SysBase` 带 `createTime`，实体走 MyBatis-Plus 自动映射 → 少一列就是 SQL 报错；
+而我自己写列名的 XML 查询幸免 —— **「读写两条路径不一致」正是暴露它的线索**。
+修：建表补 `create_time` + 兼容 ALTER（首次发布已在线上建出缺列的表，
+`CREATE TABLE IF NOT EXISTS` 治不了它）。
+
+### 9.2 真缺陷 B：学生看不了「布置给本班」的试卷题目
+
+```
+学生令牌 GET /v2/edu/paper/9020 -> 400 B0500S0001
+根因: EduPaperServiceImpl.getPaperDetail 里
+      EduUserContext.checkReadable(paper.getOwnerUserId()) 按**归属人**鉴权，
+      学生永远不是归属人 → 学生只看到卷名，点「查看试卷」弹空对话框。
+```
+
+修：学生端改按**布置关系**授权 ——
+新增 `GET /v2/edu/paper-assign/paper/{paperId}`：先证明「学生已分班 + 该卷
+已布置给该班且已发布」，再取详情；服务层抽出 `getPaperDetailUnchecked`
+（不做归属校验，Javadoc 写明只给已自行授权者）。实测学生端从此带出 10 道题。
+
+### 9.3 验收门禁自身缺陷（这两条会制造假绿，最危险）
+
+1. **套件失败退出码仍为 0**：`student-password` / `student-manage` /
+   `first-login-password` / `marking` 四个脚本结尾只 `print` 不 `sys.exit`。
+   实测后果：`学生管理专项验收: 通过 19 / 失败 1`，而发布照打 `API=OK`
+   —— 一条 FAIL 被整份报告吞掉。已补非 0 退出。
+2. **中文查询参数未百分号编码**：`grade=三年级` 直接拼进 URL，
+   urllib 编码阶段抛异常后被 `req()` 的 `except` 吞成「0 行」，
+   稳定报「筛选后=0」的**假失败**。用 `urllib.parse.quote(..., safe="=&")`
+   复现同一组合返回 23 行且含样本 —— 证明是测试错，不是产品错。已修。
+
+### 9.4 浏览器验收里踩到的测试陷阱（都已记账）
+
+- **页签没切过去时，隐藏面板里的按钮仍存在于 DOM 但 rect 为 0×0** ——
+  只数「元素个数」会误判成「已就绪」。就绪判据要用**真实尺寸**。
+- **下拉有 max-height**，被裁剪的选项 `getBoundingClientRect().width` 仍 > 0，
+  但 `elementFromPoint` 命中它背后的元素 → 坐标点击静默落空。
+  `scrollIntoView` 也不总能救（Element Plus 弹层不在点击层里）；
+  最终用**方向键 + 回车**（el-select 原生支持）定位，步数按「目标所在列表内、
+  相对当前选中项的偏移」算 —— 用全页下拉项下标会算成 65，直接冲过头。
+- **视口必须在导航之后设置并回读**：默认 569px 高时，对话框+下拉的关键项在视口外，
+  点击会落空。
+- **PowerShell 侧比较中文字符串不可信**，比较放回 JS 里做，只传布尔出来。
+- **登录页 `fill` 必须带重试 + 回读**：偶发早于 SPA hydrate，值被清空。
+
+### 9.5 资源门禁真的会拦人（不是形式）
+
+首轮发布在步骤 0 就被拦：`swap=99%`、`available=991MB`（门禁要求 <80% / ≥1536MB）。
+现场查明：虚拟机 `MemTotal` 从 15361MB 掉到 11880MB，叠加并发会话新起
+`ai-starter`(1.75G) 与 `ms-monitor-platform`(1.15G)。**等了约 10 分钟**门禁自然放行
+（available 5105MB / swap 33%）后再发布。**没有为了过门禁去动别人的进程。**
+
 
