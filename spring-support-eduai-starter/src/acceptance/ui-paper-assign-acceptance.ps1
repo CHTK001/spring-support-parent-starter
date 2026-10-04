@@ -126,7 +126,7 @@ function Api {
     $r = Invoke-WebRequest @a
     $json = $null
     try { $json = $r.Content | ConvertFrom-Json } catch { }
-    return @{ code = [int]$r.StatusCode; json = $json }
+    return @{ code = [int]$r.StatusCode; json = $json; raw = [string]$r.Content }
 }
 
 # ---------- 0. preconditions ----------
@@ -240,7 +240,7 @@ try {
     foreach ($row in @($r.json.data)) {
         if ($row.classId -eq $classId -and $row.paperId) { $paperQ = [int]$row.paperQuestionCount }
     }
-    Ck 'assign record exposes a question count for the assertion' ($paperQ -gt 0) "paperQuestionCount=$paperQ"
+    Ck 'assign record exposes a question count for the assertion' ($paperQ -gt 0) ("http=" + $r.code + " rows=" + @($r.json.data).Count + " raw=" + $r.raw.Substring(0, [Math]::Min(120, $r.raw.Length)))
 
     # ---------- 3. student side (UI) ----------
     Write-Host '########## 3. student sees it in the portal ##########'
@@ -259,6 +259,11 @@ try {
     Ck 'student logged in and reached the portal' $sLogged
 
     Ab set viewport 1440 1000 | Out-Null; Start-Sleep -Milliseconds 800
+    # The packaged site renders the portal from an API call; on a cold load the cards appear
+    # a moment AFTER the route changes. Wait for the card before measuring coordinates --
+    # otherwise the lookup finds nothing and the run dies for a timing reason.
+    $cardVisible = WaitTrue '(function(){return Array.from(document.querySelectorAll("*")).some(function(e){var s=(e.textContent||"").trim();var r=e.getBoundingClientRect();return s.indexOf("\u6211\u7684\u8BD5\u5377")===0 && r.width>80 && r.height>20})})()' 'my-papers card present' 30
+    Ck 'my-papers card present in the portal' $cardVisible
     # The card's text is "title + subtitle"; take the SMALLEST element whose text
     # starts with the module title (that is the card itself, not its wrapper).
     $cardJs = '(function(){var all=Array.from(document.querySelectorAll("*"));var t=all.filter(function(e){var s=e.textContent.trim();var r=e.getBoundingClientRect();return s.indexOf("\u6211\u7684\u8BD5\u5377")===0 && r.width>80 && r.height>20 && r.width<700});if(!t.length)return JSON.stringify({err:1});t.sort(function(a,b){var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();return ra.width*ra.height-rb.width*rb.height});var e=t[0],r=e.getBoundingClientRect();return JSON.stringify({x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)})})()'
@@ -284,6 +289,11 @@ try {
     # The decisive cross-check: the UI must show exactly as many questions as the paper has.
     Ck 'rendered question count equals the paper question count' ($qCount -eq $paperQ) "ui=$qCount api=$paperQ"
     Ab screenshot "$PSScriptRoot/ui-student-detail.png" | Out-Null
+}
+catch {
+    # Record the abort as a failure so the summary still prints (a gate that dies silently
+    # without its FAIL list is hard to act on) and the exit code stays non-zero.
+    Ck 'script aborted before completing' $false $_.Exception.Message
 }
 finally {
     Write-Host '########## 4. cleanup ##########'
