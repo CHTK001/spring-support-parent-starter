@@ -439,7 +439,8 @@ public class AiOpenaiExtendedController extends BaseAiController {
         if (!authCheck(servletRequest)) {
             return authErrorResponse();
         }
-        return ResponseEntity.ok(fineTuneResponse("queued"));
+        return ResponseEntity.ok(fineTuneResponse("queued",
+                request.get("model") == null ? null : String.valueOf(request.get("model"))));
     }
 
     /**
@@ -479,7 +480,8 @@ public class AiOpenaiExtendedController extends BaseAiController {
         if (!authCheck(servletRequest)) {
             return authErrorResponse();
         }
-        return ResponseEntity.ok(fineTuneResponse("unknown"));
+        // 该桩不记录任务所属模型，model 字段留空而不是凭空写一个模型名
+        return ResponseEntity.ok(fineTuneResponse("unknown", null));
     }
 
     /**
@@ -498,7 +500,8 @@ public class AiOpenaiExtendedController extends BaseAiController {
         if (!authCheck(servletRequest)) {
             return authErrorResponse();
         }
-        return ResponseEntity.ok(fineTuneResponse("cancelled"));
+        // 同上：拿不到任务模型时留空，不写死
+        return ResponseEntity.ok(fineTuneResponse("cancelled", null));
     }
 
     // ==================== 响应构建器 ====================
@@ -594,15 +597,20 @@ public class AiOpenaiExtendedController extends BaseAiController {
     /**
      * 构建微调任务响应。
      *
+     * <p>{@code model} 字段优先回显请求携带的模型，拿不到时留空。
+     * 以前写死 {@code gpt-3.5-turbo}：无论请求什么模型响应都声称用它，
+     * 而它未必在「模型管理」里存在、也根本没被调用，属误导性响应。</p>
+     *
      * @param status 任务状态
+     * @param model  请求携带的模型名，可为空
      * @return 微调任务信息
      */
-    private static Map<String, Object> fineTuneResponse(String status) {
+    private static Map<String, Object> fineTuneResponse(String status, String model) {
         String jobId = "ftjob-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("id", jobId);
         body.put("object", "fine_tuning.job");
-        body.put("model", "gpt-3.5-turbo");
+        body.put("model", model == null ? "" : model);
         body.put("training_file", "");
         body.put("status", status);
         body.put("created_at", (int) (System.currentTimeMillis() / 1000));

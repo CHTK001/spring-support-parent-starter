@@ -13,6 +13,7 @@ import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -46,7 +47,10 @@ public class ChatStreamOrchestrator {
     /**
      * 默认模型（fallback）
      */
-    private static final String DEFAULT_MODEL_FALLBACK = "agnes-2.5-flash";
+    /**
+     * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
+     */
+    private final EffectiveChatModelResolver effectiveChatModelResolver;
 
     private final AiChatFacadeService aiChatFacadeService;
     private final AIDialogRecordService aiDialogRecordService;
@@ -812,8 +816,15 @@ public class ChatStreamOrchestrator {
                 return idx >= 0 ? configured.substring(idx + 1) : configured;
             }
         }
-        log.warn("[ChatStream] 未配置默认模型，使用 fallback: {}", DEFAULT_MODEL_FALLBACK);
-        return DEFAULT_MODEL_FALLBACK;
+        // 不写死兜底模型名：三级配置都不可用时直接报明确错误，让用户知道该去配哪里，
+        // 而不是悄悄用一个可能根本不存在的模型名（历史问题：agnes-2.5-flash / gpt-4o 写死导致必失败）。
+        String resolved = effectiveChatModelResolver.resolve(null);
+        if (resolved == null) {
+            throw new IllegalStateException("未配置可用的默认对话模型：请在「系统设置 → 对话路由」"
+                    + "把默认对话模型设为「模型管理」中已启用模型里的一个");
+        }
+        log.info("[ChatStream] 使用配置中心默认对话模型: {}", resolved);
+        return resolved;
     }
 
     private SysAiRole loadRole(String characterId) {

@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
@@ -55,6 +56,28 @@ public class AiProtocolController extends BaseAiController {
      * AI 对话门面服务，负责模型路由与对话执行
      */
     private final AiChatFacadeService aiChatFacadeService;
+
+    /**
+     * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
+     */
+    private final EffectiveChatModelResolver effectiveChatModelResolver;
+
+    /**
+     * 兼容协议响应里的 model 字段：优先回显请求模型，其次配置中心默认对话模型。
+     *
+     * <p>以前在没有请求模型时写死 {@code claude-3-haiku-20240307}：
+     * 响应会声称用了某个未必存在、也未必真被调用的模型，误导排障。</p>
+     *
+     * @param model 请求携带的模型名，可为空
+     * @return 回显或解析出的模型名；都拿不到时返回空串
+     */
+    private String echoModel(String model) {
+        if (StringUtils.isNotBlank(model)) {
+            return model;
+        }
+        String resolved = effectiveChatModelResolver.resolve(null);
+        return resolved == null ? "" : resolved;
+    }
 
     /**
      * SSE 超时时间（毫秒）
@@ -679,7 +702,7 @@ public class AiProtocolController extends BaseAiController {
         body.put("id", id);
         body.put("type", "message");
         body.put("role", "assistant");
-        body.put("model", StringUtils.isNotBlank(model) ? model : "claude-3-haiku-20240307");
+        body.put("model", echoModel(model));
         body.put("content", List.of());
         body.put("stop_reason", null);
         body.put("stop_sequence", null);
@@ -701,7 +724,7 @@ public class AiProtocolController extends BaseAiController {
         body.put("id", id);
         body.put("type", "message");
         body.put("role", "assistant");
-        body.put("model", StringUtils.isNotBlank(model) ? model : "claude-3-haiku-20240307");
+        body.put("model", echoModel(model));
         body.put("content", List.of(Map.of("type", "text", "text", text != null ? text : "")));
         body.put("stop_reason", "end_turn");
         body.put("stop_sequence", null);
