@@ -230,25 +230,24 @@ public class MybatisJobLogRepository implements JobLogRepository {
      * @return 记录
      */
     private JobLogRecord toRecord(JobLogEntity entity) {
-        JobLogRecord record = new JobLogRecord();
-        record.setLogId(entity.getSysJobLogId() == null ? null : String.valueOf(entity.getSysJobLogId()));
-        record.setJobId(entity.getSysJobId() == null ? null : String.valueOf(entity.getSysJobId()));
-        record.setJobNo(entity.getSysJobNo());
-        record.setJobKey(entity.getSysJobLogTriggerBean());
-        record.setApp(entity.getSysJobLogApp());
-        record.setTriggerType(entity.getSysJobLogTriggerType());
-        record.setTriggerCode(entity.getSysJobLogTriggerCode());
-        record.setExecuteCode(entity.getSysJobLogExecuteCode());
         BigDecimal cost = entity.getSysJobLogCost();
-        record.setCostMs(cost == null ? null : cost.longValue());
-        record.setMessage(entity.getSysJobLogTriggerMsg());
-        record.setExecuteParam(entity.getSysJobLogTriggerParam());
-        record.setAddress(entity.getSysJobLogTriggerAddress());
-        record.setNodeId(entity.getSysJobLogNodeId());
-        record.setFilePath(entity.getSysJobLogFilePath());
         Date triggerTime = entity.getSysJobLogTriggerTime();
-        record.setTriggerTimeMs(triggerTime == null ? null : triggerTime.getTime());
-        return record;
+        return new JobLogRecord(
+                entity.getSysJobLogId() == null ? null : String.valueOf(entity.getSysJobLogId()),
+                entity.getSysJobNo(),
+                entity.getSysJobLogTriggerBean(),
+                entity.getSysJobId() == null ? null : String.valueOf(entity.getSysJobId()),
+                entity.getSysJobLogApp(),
+                entity.getSysJobLogTriggerType(),
+                entity.getSysJobLogTriggerCode(),
+                entity.getSysJobLogExecuteCode(),
+                cost == null ? null : cost.longValue(),
+                entity.getSysJobLogTriggerMsg(),
+                entity.getSysJobLogTriggerParam(),
+                entity.getSysJobLogTriggerAddress(),
+                entity.getSysJobLogNodeId(),
+                entity.getSysJobLogFilePath(),
+                triggerTime == null ? null : triggerTime.getTime());
     }
 
     /**

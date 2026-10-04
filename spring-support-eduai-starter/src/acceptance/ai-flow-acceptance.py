@@ -74,6 +74,30 @@ def find_key(obj, key):
     return None
 
 
+def scan_files(paths, token, fields, timeout=300):
+    boundary = "----acceptmulti"
+    parts = []
+    for p in paths:
+        with open(p, "rb") as fh:
+            parts.append(("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n"
+                          "Content-Type: image/png\r\n\r\n" % (boundary, p.split("/")[-1])).encode())
+            parts.append(fh.read())
+            parts.append(b"\r\n")
+    for k, v in fields.items():
+        parts.append(("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"
+                      % (boundary, k, v)).encode())
+    parts.append(("--%s--\r\n" % boundary).encode())
+    r = urllib.request.Request(BASE + "/v2/edu/marking/scan", data=b"".join(parts), method="POST")
+    r.add_header("Content-Type", "multipart/form-data; boundary=" + boundary)
+    r.add_header("User-Agent", "Mozilla/5.0 acceptance")
+    r.add_header("Authorization", "Bearer " + token)
+    try:
+        with urllib.request.urlopen(r, timeout=timeout) as resp:
+            return find_key(json.loads(resp.read().decode("utf-8")), "data")
+    except urllib.error.HTTPError as e:
+        return None
+
+
 def main():
     jar_md5 = subprocess.run(["md5sum", "/home/kali/eduai/backend/eduai-backend.jar"],
                              capture_output=True, text=True).stdout.split()[0]
@@ -196,8 +220,31 @@ def main():
         except Exception as e:
             ck("结构-答卷原图可取(PNG)", False, str(e)[:80])
 
-    # ---------- 5. 错题 ----------
-    print("\n===== 5. 错题本 =====")
+    # ---------- 5. 自有卷结构 + 知识点（同版式视图「知识点」列的数据源）----------
+    print("\n===== 5. 自有卷结构 + 知识点 =====")
+    self_task = scan_files(["/home/kali/hard-c1.png", "/home/kali/hard-c2.png", "/home/kali/hard-c3.png"],
+                           token, {"mode": "SELF", "paperId": "9003"})
+    ck("自有卷-提交返回任务ID", isinstance(self_task, str) and len(self_task) > 8, self_task)
+    if self_task:
+        for _ in range(120):
+            time.sleep(3)
+            if find_key(req("GET", "/v2/edu/marking/result/%s" % self_task, token=token), "finished"):
+                break
+        sd = find_key(req("GET", "/v2/edu/marking/structure/%s" % self_task, token=token), "data") or {}
+        sq = sd.get("questions") or []
+        sa = sd.get("questionAnchors") or []
+        ck("自有卷-结构含全部题目", len(sq) == 21, "questions=%d" % len(sq))
+        ck("自有卷-题号锚点齐全", len(sa) >= 1, "anchors=%d" % len(sa))
+        with_kp = [q for q in sq if (q.get("knowledgePoints") or [])]
+        ck("自有卷-知识点解析为名称+描述", len(with_kp) == len(sq) and len(sq) > 0,
+           "带知识点 %d/%d" % (len(with_kp), len(sq)))
+        if with_kp:
+            kp = with_kp[0]["knowledgePoints"][0]
+            ck("自有卷-知识点含名称", bool((kp.get("name") or "").strip()),
+               "%s / %s" % (kp.get("name"), (kp.get("description") or "")[:24]))
+
+    # ---------- 6. 错题 ----------
+    print("\n===== 6. 错题本 =====")
     wb = req("GET", "/v2/edu/wrongbook/page?pageNum=1&pageSize=20", token=token)
     rows = find_key(wb, "data") or []
     if isinstance(rows, dict):

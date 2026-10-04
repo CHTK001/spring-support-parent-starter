@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 生效对话模型解析器：全项目唯一的「该用哪个模型对话」解析入口。
@@ -98,7 +99,15 @@ public class EffectiveChatModelResolver {
         // ① 调用方显式指定（连接器 / Bot 绑定自己的模型）
         addCandidate(ordered, explicitModel);
         // ② 当前用户自己的默认对话模型（按 userId 隔离，管理员不代管）
-        addCandidate(ordered, userDefaultChatModel());
+        //
+        //    判据是「用户层有没有覆盖行」，不是「值是否为空」：
+        //    用户**显式清空**（有覆盖行、值为空）时必须**就此停住**，不再回退全局 ——
+        //    否则「重置成空」永远做不到（清完又被全局/yaml 顶回来，这正是此前的现象）。
+        Optional<String> userRaw = userChatModelOverride();
+        if (userRaw.isPresent()) {
+            addCandidate(ordered, userRaw.get());
+            return List.copyOf(ordered);
+        }
         // ③ 配置中心 Bot 分组全局默认
         addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_BOT, FIELD_DEFAULT_MODEL));
         // ④ 配置中心「对话路由」的默认对话模型（含两个旧键兼容）
@@ -124,27 +133,31 @@ public class EffectiveChatModelResolver {
     }
 
     /**
-     * 读取当前用户自己的默认对话模型。
+     * 读取当前用户的默认对话模型**覆盖**。
+     *
+     * <p>返回 {@link Optional#empty()} 表示「该用户没设过」（应回退全局）；
+     * 返回 {@code Optional.of("")} 表示「显式清空」（应停住，不回退全局）。
+     * 这个区分是「重置成空」能生效的前提 —— 用「值是否为空」判据做不到。</p>
      *
      * <p>取不到用户上下文（后台线程、未登录）时返回 空，由全局默认兜底。</p>
      *
-     * @return 用户自己的默认对话模型，未设置时返回 {@code null}
+     * @return 用户覆盖值；未覆盖或取不到用户时为空
      */
-    private String userDefaultChatModel() {
+    private Optional<String> userChatModelOverride() {
         String userId;
         try {
             userId = AiUserContext.currentUserId();
         } catch (Exception e) {
-            return null;
+            return Optional.empty();
         }
         if (userId == null || userId.isBlank()) {
-            return null;
+            return Optional.empty();
         }
         try {
-            return userSettingService.getUserValue(userId, GROUP_RUNTIME, FIELD_DEFAULT_MODEL).orElse(null);
+            return userSettingService.getUserValue(userId, GROUP_RUNTIME, FIELD_DEFAULT_MODEL);
         } catch (Exception e) {
             log.warn("[ModelResolver] 读取用户默认模型失败 userId={}: {}", userId, e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 

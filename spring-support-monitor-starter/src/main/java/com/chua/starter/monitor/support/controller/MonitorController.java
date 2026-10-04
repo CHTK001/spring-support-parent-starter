@@ -27,10 +27,12 @@ import com.chua.starter.monitor.support.model.AiStatusVO;
 import com.chua.starter.monitor.support.model.DashboardOverviewVO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.monitor.support.model.DbColumnVO;
+import com.chua.starter.monitor.support.model.DbSqlBatchVO;
 import com.chua.starter.monitor.support.support.DbColumnDef;
 import com.chua.starter.monitor.support.support.DbDialectSupport;
 import com.chua.starter.monitor.support.support.DbObjectDialect;
 import com.chua.starter.monitor.support.support.DbTableDialect;
+import com.chua.starter.monitor.support.support.SqlScriptSplitter;
 import com.chua.starter.monitor.support.model.DbSqlResultVO;
 import com.chua.starter.monitor.support.model.DbTableDataVO;
 import com.chua.starter.monitor.support.model.dto.DbSqlExecuteDTO;
@@ -1858,9 +1860,6 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             return ReturnResult.error("SQL 不能为空");
         }
         Long datasourceId = request.datasourceId();
-        String trimmed = sql.trim().toUpperCase();
-        boolean isQuery = trimmed.startsWith("SELECT") || trimmed.startsWith("SHOW")
-                || trimmed.startsWith("DESC") || trimmed.startsWith("EXPLAIN");
         // 顺序要求：先切库、再建 Statement。
         // Connector/J 的 Statement 会在执行时按**创建时**捕获的 catalog 还原会话库，
         // 若在 USE 之前创建 Statement，USE 会被它覆盖 —— 实测 `database=sync_src` 的查询
@@ -1869,33 +1868,126 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
              SchemaScope scope = useSchema(conn, request.database());
              java.sql.Statement stmt = conn.createStatement()) {
-            if (isQuery) {
-                try (java.sql.ResultSet rs = stmt.executeQuery(sql)) {
-                    java.sql.ResultSetMetaData meta = rs.getMetaData();
-                    int colCount = meta.getColumnCount();
-                    java.util.List<String> columns = new java.util.ArrayList<>(colCount);
-                    for (int i = 1; i <= colCount; i++) {
-                        columns.add(meta.getColumnLabel(i));
-                    }
-                    java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
-                    int rowCount = 0;
-                    while (rs.next() && rowCount < SQL_MAX_ROWS) {
-                        Map<String, Object> row = new java.util.LinkedHashMap<>(colCount);
-                        for (int i = 1; i <= colCount; i++) {
-                            row.put(columns.get(i - 1), rs.getObject(i));
-                        }
-                        rows.add(row);
-                        rowCount++;
-                    }
-                    return ReturnResult.ok(new DbSqlResultVO(columns, rows, rowCount, rowCount >= SQL_MAX_ROWS, null, null));
-                }
-            }
-            int affectedRows = stmt.executeUpdate(sql);
-            return ReturnResult.ok(new DbSqlResultVO(null, null, null, null, affectedRows,
-                    "执行成功，影响 " + affectedRows + " 行"));
+            return ReturnResult.ok(runOneStatement(stmt, sql));
         } catch (Exception e) {
             return ReturnResult.error("SQL 执行失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 执行单条语句并把结果集读成 {@link DbSqlResultVO}。
+     *
+     * <p>单条端点与批量端点**必须**共用这一份实现，否则同一条 SQL 在两条路径下
+     * 会出现「一条当查询、一条当更新」的行为差异（表现为同一句 {@code WITH ...}
+     * 在批量里被当成更新语句、影响行数为 0）。</p>
+     *
+     * @param stmt 已建好的语句（调用方保证已完成切库）
+     * @param sql  单条 SQL
+     * @return 执行结果
+     * @throws java.sql.SQLException 内核报错
+     */
+    private static DbSqlResultVO runOneStatement(java.sql.Statement stmt, String sql) throws java.sql.SQLException {
+        if (SqlScriptSplitter.isQuery(sql)) {
+            try (java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+                java.sql.ResultSetMetaData meta = rs.getMetaData();
+                int colCount = meta.getColumnCount();
+                java.util.List<String> columns = new java.util.ArrayList<>(colCount);
+                for (int i = 1; i <= colCount; i++) {
+                    columns.add(meta.getColumnLabel(i));
+                }
+                java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
+                int rowCount = 0;
+                while (rs.next() && rowCount < SQL_MAX_ROWS) {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>(colCount);
+                    for (int i = 1; i <= colCount; i++) {
+                        row.put(columns.get(i - 1), rs.getObject(i));
+                    }
+                    rows.add(row);
+                    rowCount++;
+                }
+                return new DbSqlResultVO(columns, rows, rowCount, rowCount >= SQL_MAX_ROWS, null, null);
+            }
+        }
+        int affectedRows = stmt.executeUpdate(sql);
+        return new DbSqlResultVO(null, null, null, null, affectedRows,
+                "执行成功，影响 " + affectedRows + " 行");
+    }
+
+    /**
+     * 批量执行 SQL 脚本，逐条返回结果（查询控制台的「执行脚本」）。
+     *
+     * <p><b>为什么不复用 {@code /db/execute}</b>：那个端点的响应形状被 5 个 UI 套件
+     * 与 4 个接口套件按 {@code data.columns} / {@code data.rows} 读着，
+     * 往里加多结果集字段会让既有断言全部失效。批量另开端点、形状自由。</p>
+     *
+     * <p>逐条执行、遇错即停（可由 {@code stopOnError=false} 改为继续），
+     * 失败时仍返回已执行部分的结果与失败语句的下标，
+     * 便于定位「第几条开始错」。</p>
+     *
+     * @param request SQL 执行请求（sql / datasourceId / database / stopOnError）
+     * @return 批量执行结果
+     */
+    @Operation(summary = "批量执行 SQL 脚本")
+    @PostMapping("/db/execute-batch")
+    public ReturnResult<DbSqlBatchVO> executeDbSqlBatch(@RequestBody DbSqlExecuteDTO request) {
+        String sql = request.sql();
+        if (sql == null || sql.trim().isEmpty()) {
+            return ReturnResult.error("SQL 不能为空");
+        }
+        java.util.List<String> statements;
+        try {
+            statements = SqlScriptSplitter.split(sql);
+        } catch (IllegalArgumentException e) {
+            return ReturnResult.error("SQL 脚本无法切分: " + e.getMessage());
+        }
+        if (statements.isEmpty()) {
+            return ReturnResult.ok(DbSqlBatchVO.allOk(java.util.List.of(), 0, "脚本里没有可执行的语句"));
+        }
+        boolean stopOnError = request.stopOnError() == null || request.stopOnError();
+        java.util.List<DbSqlResultVO> results = new java.util.ArrayList<>(statements.size());
+        try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+             SchemaScope scope = useSchema(conn, request.database());
+             java.sql.Statement stmt = conn.createStatement()) {
+            for (int i = 0; i < statements.size(); i++) {
+                String one = statements.get(i);
+                try {
+                    results.add(runOneStatement(stmt, one));
+                } catch (Exception e) {
+                    String reason = e.getMessage();
+                    String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句失败: " + reason
+                            + "；语句=" + abbreviate(one);
+                    if (stopOnError) {
+                        return ReturnResult.ok(new DbSqlBatchVO(results, statements.size(), i, one, summary));
+                    }
+                    // 继续执行：把失败也记成一条结果，rowCount=0 且带上原因
+                    results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
+                }
+            }
+        } catch (Exception e) {
+            return ReturnResult.error("批量执行失败: " + e.getMessage());
+        }
+        int queryCount = 0;
+        int updateCount = 0;
+        for (DbSqlResultVO r : results) {
+            if (r.affectedRows() != null) {
+                updateCount++;
+            } else if (r.columns() != null) {
+                queryCount++;
+            }
+        }
+        return ReturnResult.ok(DbSqlBatchVO.allOk(results, statements.size(),
+                "共 " + statements.size() + " 条语句执行完成（查询 " + queryCount + " 条，更新 " + updateCount + " 条）"));
+    }
+
+    /**
+     * 把语句缩到可放进提示的长度。
+     *
+     * @param sql 语句原文
+     * @return 截断后的文本
+     */
+    private static String abbreviate(String sql) {
+        String flat = sql.replaceAll("\\s+", " ").strip();
+        return flat.length() <= 120 ? flat : flat.substring(0, 120) + "…";
     }
 
     /**

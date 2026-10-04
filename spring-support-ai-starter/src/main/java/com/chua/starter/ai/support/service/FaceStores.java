@@ -309,9 +309,14 @@ public class FaceStores {
      * 这类操作不该要求重新上传照片、也不该重跑检测 —— 重跑一次既慢，又可能因原照片
      * 质量被判失败，把一次纯文本修改变成一次可能失败的登记。</p>
      *
-     * <p>实现要点：快照是唯一权威源，改完必须 {@code persist}；**同时要更新向量存储里的
-     * 元数据**，否则 1:N 命中回传的仍是旧档案（快照新、索引旧 —— 两处真相），
-     * 表现为「列表里名字已改，识别出来还是旧名字」。</p>
+     * <p>实现要点：快照是唯一权威源，改完必须 {@code persist}。</p>
+     *
+     * <p><b>关于向量索引</b>：实测索引**不回传档案** ——
+     * {@code identify} 的 hit 是 {@code {id, score, feature}}（没有 metadata 字段），
+     * {@code search} 的 hit 里那个 {@code metadata} 只是 {@code {score}}，不是登记时写入的档案。
+     * 所以档案的权威只有快照一处，调用方（前端）是拿 hit 的 id 回列表/登记簿取档案。
+     * 下面重推一次向量**只为保证索引与快照一致**（防御索引与快照分叉），
+     * 不是为了让识别回传新档案 —— 后者本来就不由索引负责。</p>
      *
      * @param id       人脸标识
      * @param metadata 新元数据（整体替换；{@code null} 视为空档案）
@@ -326,7 +331,7 @@ public class FaceStores {
         // 复用 put：它会把 feature 拷一份、metadata 拷成新的可变更
         st.put(id, old.feature(), metadata);
         st.persist();
-        // 同步向量存储里的元数据（识别命中要回传新档案）
+        // 防御索引与快照分叉：用同一特征重推一次（档案本身不随索引回传，见上）
         FacePipeline pipeline = st.pipeline();
         if (pipeline != null && old.feature() != null && old.feature().length > 0) {
             try {
