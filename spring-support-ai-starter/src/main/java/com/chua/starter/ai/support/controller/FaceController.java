@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -285,17 +286,65 @@ public class FaceController {
     }
 
     /**
-     * 1:N 特征检索。
+     * 1:N 特征检索（GET，query 传参）。
+     *
+     * <p><b>大向量请用 POST 重载。</b>512 维特征的 JSON 文本约 6.8KB，经 URL 编码后
+     * 超过 Tomcat 默认 {@code maxHttpRequestHeaderSize=8192}，会被容器以
+     * 400 + 默认 HTML 错误页拒绝，**连本方法的业务信封都到不了**。
+     * 实测：真实全精度特征(6778B) -> 400；低位精度文本(3072B) -> 200。</p>
      *
      * @param feature 特征向量（JSON 数组）
      * @param topK    topk
      * @return 检索结果
      * @param @RequestParam("feature" @请求参数("特征"
      */
-    @Operation(summary = "人脸检索", description = "按特征向量检索人脸库")
+    @Operation(summary = "人脸检索(GET)", description = "按特征向量检索人脸库；向量较大时请用 POST 重载")
     @GetMapping("/search")
     public ReturnResult<?> search(@RequestParam("feature") String feature,
                                   @RequestParam(value = "topK", defaultValue = "5") int topK) {
+        return doSearch(feature, topK);
+    }
+
+    /**
+     * 1:N 特征检索（POST，JSON body 传参）。
+     *
+     * <p>存在的理由：GET 版把向量放在 query string，512 维真实特征必然超限
+     * （见 {@link #search(String, int)}）。本重载把向量放进请求体，不受 URI 长度限制。</p>
+     *
+     * <p>请求体：{@code {"feature": [0.1, 0.2, ...], "topK": 5}}；
+     * {@code feature} 接受数组或字符串两种写法，{@code topK} 缺省为 5。</p>
+     *
+     * @param body 请求体
+     * @return 检索结果
+     */
+    @Operation(summary = "人脸检索(POST)", description = "按特征向量检索人脸库；向量放请求体，不受 URI 长度限制")
+    @PostMapping(value = "/search", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ReturnResult<?> searchByBody(@RequestBody Map<String, Object> body) {
+        Object raw = body == null ? null : body.get("feature");
+        // List<Double> 的 toString 恰好是 "[0.1, 0.2, ...]"，与 parseFeature 期望的格式一致
+        String feature = raw == null ? "" : String.valueOf(raw);
+        int topK = 5;
+        Object t = body == null ? null : body.get("topK");
+        if (t instanceof Number number) {
+            topK = number.intValue();
+        } else if (t != null && !String.valueOf(t).isBlank()) {
+            try {
+                topK = Integer.parseInt(String.valueOf(t).trim());
+            } catch (NumberFormatException ignored) {
+                // 非法 topK 用默认值，与 GET 版 defaultValue="5" 的语义一致
+            }
+        }
+        return doSearch(feature, topK);
+    }
+
+    /**
+     * 1:N 特征检索的公共实现（GET / POST 共用，避免两处各写一份 try/catch 后走偏）。
+     *
+     * @param feature 特征向量（JSON 数组文本）
+     * @param topK    返回条数
+     * @return 检索结果
+     */
+    private ReturnResult<?> doSearch(String feature, int topK) {
         try {
             float[] vector = parseFeature(feature);
             List<FaceSearchHit> hits = faceService.search(vector, topK);
@@ -419,6 +468,15 @@ public class FaceController {
     /**
      * 人脸超分。
      *
+     * <p>注意：**不要**给这个映射加 {@code produces = MediaType.IMAGE_PNG_VALUE}。</p>
+     *
+     * <p>加过，代价是错误响应永远发不出去：端点声明只产出 image/png 后，
+     * 失败时 {@code ResponseEntity.badRequest()} 的写出阶段会按 image/png 选到
+     * 字节数组转换器；连 {@code ApiExceptionAdvice} 返回的 JSON 信封也被它拿去写，
+     * 于是抛 {@code ClassCastException: ReturnResult cannot be cast to [B}，
+     * 把本该是 400 的业务错误升级成 500。成功路径本来就显式设了
+     * {@code .contentType(MediaType.IMAGE_PNG)}，这个 produces 是多余且有害的。</p>
+     *
      * @param file 图片文件
      * @return 超分后图片
      * @param @RequestParam("file" @请求参数("文件"
@@ -426,7 +484,7 @@ public class FaceController {
      * @param @RequestParam("file" @RequestParam("file"
      */
     @Operation(summary = "人脸超分", description = "GFPGAN/ESRGAN 人脸超分辨率")
-    @PostMapping(value = "/super-resolution", produces = MediaType.IMAGE_PNG_VALUE)
+    @PostMapping("/super-resolution")
     public ResponseEntity<byte[]> superResolution(@RequestParam("file") MultipartFile file) {
         try {
             byte[] result = faceService.superResolution(file.getBytes());
@@ -449,7 +507,7 @@ public class FaceController {
      * @param @RequestParam("file" @RequestParam("file"
      */
     @Operation(summary = "人脸修复", description = "CodeFormer 人脸修复（老照片/模糊人脸）")
-    @PostMapping(value = "/restore", produces = MediaType.IMAGE_PNG_VALUE)
+    @PostMapping("/restore")
     public ResponseEntity<byte[]> restore(@RequestParam("file") MultipartFile file) {
         try {
             byte[] result = faceService.restore(file.getBytes());
