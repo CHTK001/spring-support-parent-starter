@@ -28,7 +28,9 @@ import java.util.Properties;
  * <ul>
  *   <li>{@code datasource}：用 Spring DataSource 独立构造 JDBC Engine，再包一层 DataSourceSeriesEngine</li>
  *   <li>{@code influxdb} / {@code redis}：走自研 SPI 发现（各 starter 的
- *       {@code META-INF/extensions/…SeriesEngine}），以 {@link Properties} 传连接参数</li>
+ *       {@code META-INF/extensions/…SeriesEngine}），以 {@link Properties} 传连接参数。
+ *       {@code influxdb} 用 {@code monitor.timeseries.url}；{@code redis} 优先用
+ *       配置为 Redis 协议的 {@code monitor.timeseries.url}，否则回退 {@code spring.data.redis.*}</li>
  *   <li>{@code none} / 空 / 扩展缺失：空实现，保证消费方注入不为 null</li>
  * </ul>
  *
@@ -91,17 +93,23 @@ public class SeriesEngineConfiguration {
     }
 
     /**
-     * 组装 SPI 构造参数：各引擎的 url 语义不同，redis 取容器已配的 Redis 地址。
+     * 组装 SPI 构造参数：各引擎的 url 语义不同，redis 优先取显式配置的 Redis 地址，
+     * 否则回退容器已配的 {@code spring.data.redis.*}。
      *
      * @param selected    配置的引擎名
      * @param properties  时序配置
      * @param environment 容器环境
      * @return 构造参数
      */
-    private Properties spiProperties(String selected, MonitorTimeseriesProperties properties, Environment environment) {
+    Properties spiProperties(String selected, MonitorTimeseriesProperties properties, Environment environment) {
         Properties props = new Properties();
         if (ENGINE_REDIS.equals(selected)) {
-            props.setProperty("url", redisUrl(environment));
+            props.setProperty("url", redisUrl(properties, environment));
+            // database 对 Redis 而言是逻辑库下标：数字生效，influxdb 语义下的 monitor 之类非数字由引擎忽略
+            String database = properties == null ? null : properties.getDatabase();
+            if (database != null && !database.isBlank()) {
+                props.setProperty("database", database.trim());
+            }
             return props;
         }
         props.setProperty("url", properties.getUrl());
@@ -110,18 +118,53 @@ public class SeriesEngineConfiguration {
     }
 
     /**
-     * 从 {@code spring.data.redis.*} 拼出 Lettuce 连接串，与告警静默期共用同一 Redis。
+     * 解析 Lettuce 连接串。
      *
+     * <p>优先级：{@code monitor.timeseries.url} 显式配置为 Redis 地址时直接使用；
+     * 否则从 {@code spring.data.redis.*} 拼出，与告警静默期共用同一 Redis。</p>
+     *
+     * <p>之所以要区分协议而不是「非空即用」：{@code monitor.timeseries.url} 的
+     * 默认值是 InfluxDB 用的 {@code http://127.0.0.1:8086}，直接把它塞给 Lettuce
+     * 会因协议不认识而连接失败。因此仅当该值是 Redis 地址（{@code redis://} /
+     * {@code rediss://} / {@code redis-socket://} / {@code redis-sentinel://} 前缀，
+     * 或无协议的 {@code host:port}）时才覆盖。</p>
+     *
+     * @param properties  时序配置
      * @param environment 容器环境
      * @return redis:// 或 rediss:// 连接串
      */
-    private String redisUrl(Environment environment) {
+    static String redisUrl(MonitorTimeseriesProperties properties, Environment environment) {
+        String explicit = properties == null ? null : properties.getUrl();
+        if (isRedisAddress(explicit)) {
+            return explicit.trim();
+        }
         String host = environment.getProperty("spring.data.redis.host", "127.0.0.1");
         String port = environment.getProperty("spring.data.redis.port", "6379");
         String password = environment.getProperty("spring.data.redis.password", "");
         boolean ssl = Boolean.parseBoolean(environment.getProperty("spring.data.redis.ssl.enabled", "false"));
         String authority = password.isEmpty() ? "" : ":" + password + "@";
         return (ssl ? "rediss://" : "redis://") + authority + host + ":" + port;
+    }
+
+    /**
+     * 判断配置值是否为 Redis 地址。
+     *
+     * @param url 配置值
+     * @return 是 Redis 地址返回 true
+     */
+    static boolean isRedisAddress(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
+        String lower = url.trim().toLowerCase();
+        if (lower.contains("://")) {
+            return lower.startsWith("redis://")
+                    || lower.startsWith("rediss://")
+                    || lower.startsWith("redis-socket://")
+                    || lower.startsWith("redis-sentinel://");
+        }
+        // 无协议前缀：形如 host:port，交由 Lettuce 按默认 redis:// 解析
+        return lower.contains(":");
     }
 
     /**
