@@ -528,6 +528,8 @@ public class EduDimensionService {
         var salt = StudentPasswordSupport.newSalt();
         exists.setStudentPwdSalt(salt);
         exists.setStudentPassword(StudentPasswordSupport.hash(newPassword, salt));
+        // 重置的同样是初始口令：学生下次登录应被引导改成自己的
+        exists.setStudentPwdMustChange(1);
         studentMapper.updateById(exists);
         log.info("[EduAi] 管理员重置学生口令 - 学号: {}", exists.getStudentNo());
         return true;
@@ -570,6 +572,8 @@ public class EduDimensionService {
         var salt = StudentPasswordSupport.newSalt();
         student.setStudentPwdSalt(salt);
         student.setStudentPassword(StudentPasswordSupport.hash(newPassword, salt));
+        // 学生自己改过了，清掉「首次需引导改密」标记
+        student.setStudentPwdMustChange(0);
         studentMapper.updateById(student);
         log.info("[EduAi] 学生自助修改口令 - 学号: {}", studentNo);
         return true;
@@ -649,6 +653,9 @@ public class EduDimensionService {
             if (exists != null) {
                 entity.setStudentPassword(exists.getStudentPassword());
                 entity.setStudentPwdSalt(exists.getStudentPwdSalt());
+                // 没改口令时要把「待引导改密」标记一并带回：否则管理员改个姓名
+                // 就会把该标记清掉，学生再也收不到首次改密引导。
+                entity.setStudentPwdMustChange(exists.getStudentPwdMustChange());
             }
             return;
         }
@@ -657,6 +664,8 @@ public class EduDimensionService {
         entity.setStudentPwdSalt(salt);
         entity.setStudentPassword(StudentPasswordSupport.hash(raw, salt));
         entity.setStudentPwdInput(null);
+        // 管理员设/改的是**初始口令**，学生首次登录后要引导改成自己的口令
+        entity.setStudentPwdMustChange(1);
     }
 
     /**
