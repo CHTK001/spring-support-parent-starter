@@ -33,6 +33,7 @@ import com.chua.starter.monitor.support.support.DbDialectSupport;
 import com.chua.starter.monitor.support.support.DbObjectDialect;
 import com.chua.starter.monitor.support.support.DbTableDialect;
 import com.chua.starter.monitor.support.support.SqlScriptSplitter;
+import com.chua.starter.monitor.support.support.SqlParameterBinder;
 import com.chua.starter.monitor.support.model.DbSqlResultVO;
 import com.chua.starter.monitor.support.model.DbTableDataVO;
 import com.chua.starter.monitor.support.model.dto.DbSqlExecuteDTO;
@@ -1859,6 +1860,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         if (sql == null || sql.trim().isEmpty()) {
             return ReturnResult.error("SQL 不能为空");
         }
+        String bound;
+        try {
+            bound = bindParams(sql, request.params());
+        } catch (IllegalArgumentException e) {
+            return ReturnResult.error("SQL 参数错误: " + e.getMessage());
+        }
         Long datasourceId = request.datasourceId();
         // 顺序要求：先切库、再建 Statement。
         // Connector/J 的 Statement 会在执行时按**创建时**捕获的 catalog 还原会话库，
@@ -1868,10 +1875,51 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
              SchemaScope scope = useSchema(conn, request.database());
              java.sql.Statement stmt = conn.createStatement()) {
-            return ReturnResult.ok(runOneStatement(stmt, sql));
+            return ReturnResult.ok(runOneStatement(stmt, bound));
         } catch (Exception e) {
             return ReturnResult.error("SQL 执行失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 把 {@code ${name}} 占位符替换成字面量。
+     *
+     * <p>参数错误**在连库之前**就抛出来：拿到「参数 x 未提供」比先建立连接、
+     * 再等内核报一个语法错误要快得多，也更容易看懂。</p>
+     *
+     * @param sql    原始 SQL
+     * @param params 变量表
+     * @return 替换后的 SQL
+     * @throws IllegalArgumentException 变量名不合法或引用了未提供的变量
+     */
+    private static String bindParams(String sql, Map<String, Object> params) {
+        if (params == null || params.isEmpty()) {
+            if (SqlParameterBinder.hasPlaceholder(sql)) {
+                throw new IllegalArgumentException("SQL 里有 " + SqlParameterBinder.requiredNames(sql)
+                        + " 占位符，但没有提供参数");
+            }
+            return sql;
+        }
+        return SqlParameterBinder.substitute(sql, SqlParameterBinder.normalize(params));
+    }
+
+    /**
+     * 扫描 SQL 里的 {@code ${name}} 占位符，供 UI 提示「这个脚本需要哪些变量」。
+     *
+     * <p>不连库、也不执行，纯文本扫描 —— 编辑器每次改动都问一次后端的话，
+     * 成本会体现在每次按键的延迟上。</p>
+     *
+     * @param sql 待扫描 SQL
+     * @return 占位符名列表
+     */
+    @Operation(summary = "扫描 SQL 参数占位符")
+    @PostMapping("/db/scan-params")
+    public ReturnResult<List<String>> scanSqlParams(@RequestBody DbSqlExecuteDTO request) {
+        String sql = request.sql();
+        if (sql == null || sql.isBlank()) {
+            return ReturnResult.ok(List.of());
+        }
+        return ReturnResult.ok(SqlParameterBinder.requiredNames(sql));
     }
 
     /**
@@ -1924,7 +1972,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 失败时仍返回已执行部分的结果与失败语句的下标，
      * 便于定位「第几条开始错」。</p>
      *
-     * @param request SQL 执行请求（sql / datasourceId / database / stopOnError）
+     * @param request SQL 执行请求（sql / datasourceId / database / stopOnError / params）
      * @return 批量执行结果
      */
     @Operation(summary = "批量执行 SQL 脚本")
@@ -1943,13 +1991,31 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         if (statements.isEmpty()) {
             return ReturnResult.ok(DbSqlBatchVO.allOk(java.util.List.of(), 0, "脚本里没有可执行的语句"));
         }
-        boolean stopOnError = request.stopOnError() == null || request.stopOnError();
+        // 顺序要求：**先切分、后替换参数**。
+        // 反过来做的话，参数值里只要带 `;`（'a;b' 这种完全合法的值）
+        // 就会被当成语句分隔符，把一条语句拦腰截断 —— 现象是「脚本莫名其妙多切了几条」，
+        // 根因（替换早于切分）却完全不在报错信息里。
+        boolean stopOnError = request.stopOnErrorOrDefault();
         java.util.List<DbSqlResultVO> results = new java.util.ArrayList<>(statements.size());
         try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
              SchemaScope scope = useSchema(conn, request.database());
              java.sql.Statement stmt = conn.createStatement()) {
             for (int i = 0; i < statements.size(); i++) {
-                String one = statements.get(i);
+                String one;
+                try {
+                    one = bindParams(statements.get(i), request.params());
+                } catch (IllegalArgumentException e) {
+                    // 参数缺失是「脚本问题」，不是「执行失败」，但要按同一条的失败口径报，
+                    // 否则 UI 上会显示成执行期错误，看不出是没传参数
+                    String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句参数错误: "
+                            + e.getMessage() + "；语句=" + abbreviate(statements.get(i));
+                    if (stopOnError) {
+                        return ReturnResult.ok(new DbSqlBatchVO(results, statements.size(), i,
+                                statements.get(i), summary));
+                    }
+                    results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
+                    continue;
+                }
                 try {
                     results.add(runOneStatement(stmt, one));
                 } catch (Exception e) {
@@ -1957,7 +2023,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句失败: " + reason
                             + "；语句=" + abbreviate(one);
                     if (stopOnError) {
-                        return ReturnResult.ok(new DbSqlBatchVO(results, statements.size(), i, one, summary));
+                        return ReturnResult.ok(new DbSqlBatchVO(results, statements.size(), i,
+                                statements.get(i), summary));
                     }
                     // 继续执行：把失败也记成一条结果，rowCount=0 且带上原因
                     results.add(new DbSqlResultVO(null, java.util.List.of(), 0, false, null, summary));
