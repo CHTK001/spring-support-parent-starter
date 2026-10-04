@@ -291,7 +291,18 @@ public class ServerManageServiceImpl implements ServerManageService {
             return ReturnResult.ok(result);
         } catch (Exception e) {
             log.error("[ServerManage] 热更新失败: id={} - {}", id, e.getMessage(), e);
-            return ReturnResult.error("热更新失败: " + e.getMessage());
+            // 同类问题：过滤器参数此时已 updateById 落库，热应用失败只影响运行态。
+            // 回传节点视图（含 id），调用方才能自行决定重试热更新还是回滚配置。
+            // hotUpdate 的载荷是 ServerHotUpdateResult（不是 ServerNodeView），要单独包一层，
+            // 并如实标记 hotApplied=false：调用方不能从「有载荷」推断成「已热生效」
+            return hotUpdateFailure(id, e.getMessage(), view -> {
+                ServerHotUpdateResult payload = new ServerHotUpdateResult();
+                payload.setHotApplied(false);
+                payload.setRestarted(false);
+                payload.setMessage("配置已保存但热更新未生效");
+                payload.setNode(view);
+                return payload;
+            });
         }
     }
 
@@ -320,7 +331,8 @@ public class ServerManageServiceImpl implements ServerManageService {
             return ReturnResult.ok(toView(node));
         } catch (Exception e) {
             log.error("[ServerManage] 过滤器热启停失败: id={} index={} - {}", id, index, e.getMessage(), e);
-            return ReturnResult.error("过滤器热启停失败: " + e.getMessage());
+            // 同上：enabled 已落库，热启停失败只影响运行态，回传节点视图供调用方处置
+            return hotUpdateFailure(id, "过滤器热启停失败: " + e.getMessage(), java.util.function.Function.identity());
         }
     }
 
@@ -661,7 +673,45 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
+ * 构造「已落库但运行态操作失败」的失败结果，并把节点视图一并回传。
+     *
+     * <p>抽成方法是因为热更新与热启停两条路径犯的是同一个错：都先把变更
+     * {@code updateById} 写进库，再执行运行态操作；后者失败时若只返回文字，
+     * 调用方拿不到 id，既无法回滚配置、也无法定位是哪条记录出了问题。
+     * 两条路径各写一遍的话，下一次新增路径又会漏掉。</p>
+     *
+     * <p>做成泛型 + 载荷构造器，是因为两条路径的载荷类型本就不一样：
+     * {@code hotUpdate} 返回 {@link ServerHotUpdateResult}，而
+     * {@code hotToggleFilter} 返回 {@link ServerNodeView}。曾试过把泛型写死成其中
+     * 一个，编译期立刻报了另一个方法无法转换 —— 这正是把类型差异显式化的好处：
+     * 写错当场编译失败，而不是等到线上序列化时才暴露。</p>
+     *
+     * <p>刻意按 id 重新查库，而不是复用 catch 块附近的局部变量：那些 node 可能已不是
+     * 最新一次落库后的状态，重新查更贴近调用方随后实际会读到的内容。</p>
+     *
+     * @param id      节点 id
+     * @param reason  失败原因
+     * @param payload 由节点视图构造载荷的函数
+     * @param <T>     载荷类型
+     * @return 带载荷的失败结果；节点已查不到时退回不带载荷的形式
+     */
+    private <T> ReturnResult<T> hotUpdateFailure(Long id, String reason, java.util.function.Function<ServerNodeView, T> payload) {
+        MsServerNode node = nodeMapper.selectById(id);
+        if (node == null) {
+            // 查不到说明记录已被回滚，此时没有半成品需要交代，按普通失败返回
+            return ReturnResult.error(reason);
+        }
+        return ReturnResult.error(reason, payload.apply(toView(node)));
+    }
+
+    /**
      * 启用=1 时按定义拉起节点并返回视图。
+     *
+     * <p>启动失败时<b>仍把已落库的节点视图放进 data 返回</b>：定义已经写进库了，
+     * 调用方必须拿得到 id 才能自行决定是回滚删除、还是保留下来改配置后重试。
+     * 此前这里只返回一段文字，于是响应里 {@code data=null} —— 而此时库里明明多了一条
+     * 记录，调用方按 id 清理时会直接漏掉它，留下的僵尸节点只能靠人按名字猜着删。
+     * 这正是「失败但留下半成品」时最需要把处置权交出去的地方。</p>
      *
      * @param node 节点定义
      * @return 节点视图
@@ -676,7 +726,10 @@ public class ServerManageServiceImpl implements ServerManageService {
                 // 「HTTP 200 + success=true」而载荷里 status=ERROR 的自相矛盾结果，
                 // 只看 success 的调用方（含前端列表刷新逻辑）会把失败当成成功。
                 log.warn("[ServerManage] 节点 [{}] 启动失败(定义已保存): {}", node.getName(), e.getMessage());
-                return ReturnResult.error("节点已保存但启动失败: " + e.getMessage());
+                // 必须把已落库的节点视图放进 data：定义已经写进库了，调用方拿不到 id
+                // 就无法自行回滚。此前只返回文字，响应里 data=null，而库里明明多了一条，
+                // 调用方按 id 清理会直接漏掉它，留下只能靠人按名字猜着删的僵尸节点。
+                return ReturnResult.error("节点已保存但启动失败: " + e.getMessage(), toView(node));
             }
             // start 未抛异常不等于真的起来了：SPI 内部会把实例化异常吞成 null，
             // 或服务器在 doStart 阶段静默失败。这里再核一次运行态，避免漏判。
@@ -685,7 +738,8 @@ public class ServerManageServiceImpl implements ServerManageService {
                 String reason = runtime != null && runtime.getError() != null
                         ? runtime.getError() : "运行态未进入 RUNNING 状态";
                 log.warn("[ServerManage] 节点 [{}] 启动未成功(定义已保存): {}", node.getName(), reason);
-                return ReturnResult.error("节点已保存但启动失败: " + reason);
+                // 同上：运行态没起来时定义仍在库里，必须把 id 回给调用方
+                return ReturnResult.error("节点已保存但启动失败: " + reason, toView(node));
             }
         }
         return ReturnResult.ok(toView(node));
