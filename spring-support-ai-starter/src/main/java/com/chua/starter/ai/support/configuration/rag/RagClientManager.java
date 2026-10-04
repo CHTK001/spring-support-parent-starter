@@ -245,6 +245,12 @@ public class RagClientManager {
         if (event == null || !"ocr".equals(event.getGroup())) {
             return;
         }
+        if (event.isUserScoped()) {
+            // 共享 RAG 客户端的 OCR 文本提取器只承载全局配置；按用户的 OCR 模型
+            // 会串掉其他用户，这里只保证「全局改动实时生效」。
+            log.debug("[RagClientManager] 收到用户级 ocr 配置写入，共享客户端不重建");
+            return;
+        }
         log.info("[RagClientManager] 收到 OCR 设置变更事件，重建 RAG 客户端");
         rebuild();
     }
@@ -992,6 +998,13 @@ public class RagClientManager {
     @EventListener
     public void onRagSettingsChanged(RagSettingsChangedEvent event) {
         if (event == null || !GROUP.equals(event.getGroup())) {
+            return;
+        }
+        if (event.isUserScoped()) {
+            // 共享 RAG 客户端的嵌入/向量实例只承载全局配置（按用户的 RAG LLM 走
+            // UserRagChatClient，在请求期按当前用户解析，不依赖这里重建）。
+            // 若按触发者重建，会把他的配置烘进共享实例、串掉其他用户。
+            log.debug("[RagClientManager] 收到用户级 rag 配置写入，共享客户端不重建");
             return;
         }
         log.info("[RagClientManager] 收到 rag 设置变更事件，重建 RAG 客户端");

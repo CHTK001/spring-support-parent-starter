@@ -207,16 +207,24 @@ public final class AiUserContext {
      * 解析好的 {@link UserResume} 建立；执行期间不设置 RequestAttributes（WS 没有 HTTP 请求）。
      * 后续再经 {@link #capturing(Runnable)} 提交异步任务时，会从当前线程捕获到该身份并继续传递。</p>
      *
+     * <p><b>可嵌套</b>：执行完还原线程原有身份（而不是一律清空），因此在已有身份的线程里
+     * 再按另一个身份执行一段（如「重建某个账号的实例」）不会把外层身份弄丢。</p>
+     *
      * @param resume 显式身份，不允许为 null
      * @param task   任务，不允许为 null
      */
     public static void runWith(UserResume resume, Runnable task) {
         ClassLoader previousClassLoader = Thread.currentThread().getContextClassLoader();
+        AsyncIdentity previousIdentity = ASYNC_IDENTITY.get();
         ASYNC_IDENTITY.set(new AsyncIdentity(resume));
         try {
             task.run();
         } finally {
-            ASYNC_IDENTITY.remove();
+            if (previousIdentity != null) {
+                ASYNC_IDENTITY.set(previousIdentity);
+            } else {
+                ASYNC_IDENTITY.remove();
+            }
             Thread.currentThread().setContextClassLoader(previousClassLoader);
         }
     }

@@ -1,6 +1,9 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiUserSetting;
 import com.chua.starter.ai.support.mapper.SysAiUserSettingMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -9,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +55,15 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
      * 全局默认层服务
      */
     private final SysAiGlobalSettingService globalSettingService;
+
+    /**
+     * 配置变更事件发布器。
+     *
+     * <p>用户覆盖写入必须和全局写入一样触发热重建，否则用户在设置页改了自己的模型
+     * 「保存成功却不生效」（已缓存的管线/客户端不重建）。见
+     * {@code SysAiGlobalSettingServiceImpl#publishSettingsChanged}，两处语义保持一致。</p>
+     */
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 解析字段值：用户覆盖优先，缺失回落全局默认。
@@ -230,6 +243,7 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
             userSettingMapper.insert(row);
         }
         log.info("[SysAiUserSetting] 用户 {} 覆盖 {}.{} 已写入", userId, group, field);
+        publishSettingsChanged(group);
     }
 
     /**
@@ -253,6 +267,9 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
                 .eq(SysAiUserSetting::getSettingGroup, group)
                 .eq(SysAiUserSetting::getField, field));
         log.info("[SysAiUserSetting] 用户 {} 撤销覆盖 {}.{}，影响 {} 行", userId, group, field, rows);
+        if (rows > 0) {
+            publishSettingsChanged(group);
+        }
         return rows;
     }
 
@@ -274,7 +291,47 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
                 .eq(SysAiUserSetting::getUserId, userId)
                 .eq(SysAiUserSetting::getSettingGroup, group));
         log.info("[SysAiUserSetting] 用户 {} 清空分组 {} 覆盖，影响 {} 行", userId, group, rows);
+        if (rows > 0) {
+            publishSettingsChanged(group);
+        }
         return rows;
+    }
+
+    /**
+     * 发布某个分组的配置变更事件，触发对应能力模块热重建。
+     *
+     * <p>与 {@code SysAiGlobalSettingServiceImpl#publishSettingsChanged} 完全一致：
+     * 各能力模块自己按 {@code group} 过滤（例如 {@code FaceClientManager} 只处理 face），
+     * 因此这里对所有分组统一发一次即可。</p>
+     *
+     * <p><b>为什么用户写入也必须发</b>：默认模型已改为「每个用户管自己的」，用户覆盖
+     * 才是实际生效的那一层。只 evict 解析缓存只能让**下次读取**拿到新值，对
+     * 「构建期读一次、之后缓存住」的实例（人脸管线 / 以图搜图 store / OCR / 排版）
+     * 无效 —— 表现为「设置里改了模型，功能还是旧的，重启才好」。</p>
+     *
+     * <p><b>但绝不能把共享单例也重建了</b>：{@code FaceClientManager} 的检测器 / 分类器
+     * 等字段是**全局共享**的，按触发者的用户身份重建会把他的模型烘进去、串掉其他用户。
+     * 因此这里把事件标记为 {@code userScoped=true}，由各监听方自行决定：
+     * 共享单例跳过，**按账号**构建的一方（{@code FaceStores}）重建并绑定各账号自己的身份。</p>
+     *
+     * @param group 配置分组名
+     */
+    private void publishSettingsChanged(String group) {
+        if (isBlank(group)) {
+            return;
+        }
+        try {
+            eventPublisher.publishEvent(new FaceSettingsChangedEvent(group, true));
+            if ("ocr".equals(group)) {
+                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group, true));
+            }
+            if ("rag".equals(group)) {
+                eventPublisher.publishEvent(new RagSettingsChangedEvent(group, true));
+            }
+        } catch (Exception e) {
+            // 事件发布失败不得影响配置写入本身：上层已落库并清缓存，功能最多退化为「重启后生效」
+            log.warn("[SysAiUserSetting] 发布配置变更事件失败(group={}): {}", group, e.getMessage());
+        }
     }
 
     /**
