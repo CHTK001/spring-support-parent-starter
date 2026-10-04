@@ -14,6 +14,11 @@ import java.util.Map;
  * @param params       {@code ${name}} 占位符的取值表；为空表示脚本里没有占位符。
  *                     取值会被转成**字面量**再内联（见
  *                     {@code SqlParameterBinder#toLiteral}），不是原样拼接。
+ * @param txId         显式事务 ID；不为空时在**该事务的连接**上执行
+ *                     （连接由 {@code DbTxRegistry} 跨请求持有）。
+ *                     此时 datasourceId / database 被忽略 ——
+ *                     事务的库在开启时就定了，中途换库会让
+ *                     「已经改过的行」和「要提交的行」落在不同库里。
  * @author CH
  * @since 4.0.0.42
  */
@@ -23,7 +28,8 @@ public record DbSqlExecuteDTO(
         Long datasourceId,
         String database,
         Boolean stopOnError,
-        Map<String, Object> params
+        Map<String, Object> params,
+        String txId
 ) {
     /**
      * 兼容旧调用方：只有三个字段的构造。
@@ -37,7 +43,7 @@ public record DbSqlExecuteDTO(
      * @return 请求对象
      */
     public static DbSqlExecuteDTO of(String sql, Long datasourceId, String database) {
-        return new DbSqlExecuteDTO(sql, datasourceId, database, null, null);
+        return new DbSqlExecuteDTO(sql, datasourceId, database, null, null, null);
     }
 
     /**
@@ -51,7 +57,16 @@ public record DbSqlExecuteDTO(
      */
     public static DbSqlExecuteDTO withParams(String sql, Long datasourceId, String database,
                                              Map<String, Object> params) {
-        return new DbSqlExecuteDTO(sql, datasourceId, database, null, params);
+        return new DbSqlExecuteDTO(sql, datasourceId, database, null, params, null);
+    }
+
+    /**
+     * 是否在既有事务里执行。
+     *
+     * @return true=在事务里跑
+     */
+    public boolean inTransaction() {
+        return txId != null && !txId.isBlank();
     }
 
     /**
