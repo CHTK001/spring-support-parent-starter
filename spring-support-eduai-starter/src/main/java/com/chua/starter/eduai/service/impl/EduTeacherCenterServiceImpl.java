@@ -8,6 +8,9 @@ import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.dimension.mapper.EduClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduStudentMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
+import com.chua.starter.eduai.dimension.service.EduDimensionService;
+import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
+import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
@@ -24,6 +27,11 @@ import java.util.Map;
 /**
  * 教师中心服务实现
  *
+ * <p>教师端所有写操作都先做两层授权：
+ * ① 账号必须已绑定教师工号（{@link #requireTeacher()}）；
+ * ② 目标班级的 {@code class_owner_user_id} 必须等于当前账号（{@link #requireMyClass(Long)}）。
+ * 二者缺一即抛业务异常，因此教师无法通过改 URL 里的 ID 去动别人的班或学生。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -32,11 +40,32 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
 
+    /**
+     * 阅卷任务默认返回条数
+     */
+    private static final int DEFAULT_TASK_LIMIT = 20;
+
+    /**
+     * 阅卷任务最大返回条数
+     */
+    private static final int MAX_TASK_LIMIT = 100;
+
     private final EduTeacherMapper teacherMapper;
 
     private final EduClassMapper classMapper;
 
     private final EduStudentMapper studentMapper;
+
+    /**
+     * 教师端复用管理端的学生 / 班级写逻辑：学号生成、口令加盐、手机号校验、级联清理
+     * 都在 {@link EduDimensionService} 里，重复实现会与用户体系分叉。
+     */
+    private final EduDimensionService dimensionService;
+
+    /**
+     * 阅卷任务：教师端「阅卷」页要列出自己发起过的任务
+     */
+    private final EduMarkingTaskMapper markingTaskMapper;
 
     @Override
     public Map<String, Object> me() {
@@ -123,6 +152,172 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         result.put("classCount", classRows.size());
         result.put("studentCount", totalStudents);
         return result;
+    }
+
+    // ==================== 教师端：我的班级 ====================
+
+    @Override
+    public List<EduClass> myClasses() {
+        requireTeacher();
+        return classMapper.selectList(new QueryWrapper<EduClass>()
+                .eq("class_owner_user_id", EduUserContext.requireUserId())
+                .orderByAsc("class_id"));
+    }
+
+    @Override
+    public Long saveClass(EduClass entity) {
+        requireTeacher();
+        if (entity == null) {
+            throw new BusinessException("班级信息不能为空");
+        }
+        if (entity.getClassId() != null && entity.getClassId() > 0) {
+            // 编辑：必须是自己的班级；owner 在 dimensionService 里会沿用库中值
+            requireMyClass(entity.getClassId());
+        }
+        return dimensionService.saveClass(entity);
+    }
+
+    @Override
+    public boolean deleteClass(Long classId) {
+        requireTeacher();
+        EduClass exists = requireMyClass(classId);
+        Long studentCount = studentMapper.selectCount(new QueryWrapper<EduStudent>()
+                .eq("student_class_id", exists.getClassId()));
+        if (studentCount != null && studentCount > 0) {
+            throw new BusinessException("班级下还有 " + studentCount + " 名学生，请先转出或删除后再删班");
+        }
+        return dimensionService.deleteClass(classId);
+    }
+
+    // ==================== 教师端：我的班级学生 ====================
+
+    @Override
+    public List<EduStudent> classStudents(Long classId) {
+        requireTeacher();
+        EduClass clazz = requireMyClass(classId);
+        return studentMapper.selectList(new QueryWrapper<EduStudent>()
+                .eq("student_class_id", clazz.getClassId())
+                .orderByAsc("student_id"));
+    }
+
+    @Override
+    public Long saveStudent(EduStudent entity) {
+        requireTeacher();
+        if (entity == null) {
+            throw new BusinessException("学生信息不能为空");
+        }
+        EduClass target = requireMyClass(entity.getStudentClassId());
+        if (entity.getStudentId() != null && entity.getStudentId() > 0) {
+            EduStudent exists = studentMapper.selectById(entity.getStudentId());
+            if (exists == null) {
+                throw new BusinessException("学生不存在");
+            }
+            // 学生当前所在班也必须是自己的，防止把别人的学生「拉」进我的班
+            requireMyClass(exists.getStudentClassId());
+        }
+        // 学段 / 年级 / 班级随班级，不接受客户端自行指定，避免学生与班级对不上
+        entity.setStudentGradeLevel(target.getClassGradeLevel());
+        entity.setStudentGrade(target.getClassGrade());
+        entity.setStudentClassId(target.getClassId());
+        return dimensionService.saveStudent(entity);
+    }
+
+    @Override
+    public boolean deleteStudent(Long studentId) {
+        requireTeacher();
+        if (studentId == null) {
+            return false;
+        }
+        EduStudent exists = studentMapper.selectById(studentId);
+        if (exists == null) {
+            return false;
+        }
+        requireMyClass(exists.getStudentClassId());
+        return dimensionService.deleteStudent(studentId);
+    }
+
+    @Override
+    public boolean resetStudentPassword(Long studentId, String newPassword) {
+        requireTeacher();
+        if (studentId == null) {
+            throw new BusinessException("学生不能为空");
+        }
+        EduStudent exists = studentMapper.selectById(studentId);
+        if (exists == null) {
+            throw new BusinessException("学生不存在");
+        }
+        requireMyClass(exists.getStudentClassId());
+        return dimensionService.resetStudentPassword(studentId, newPassword);
+    }
+
+    @Override
+    public EduDimensionService.DimensionDropdown dropdown() {
+        // 只读字典，归属过滤由 dimensionService 内部的 ownerScope 保证，不放宽可见范围
+        return dimensionService.getDropdown();
+    }
+
+    // ==================== 教师端：我的阅卷任务 ====================
+
+    @Override
+    public List<EduMarkingTask> myMarkingTasks(int limit) {
+        String me = EduUserContext.requireUserId();
+        int size = limit <= 0 ? DEFAULT_TASK_LIMIT : Math.min(limit, MAX_TASK_LIMIT);
+        // size 是经上限裁剪的 int，非用户可控字符串，不存在注入面（AGENTS.md 禁的是拼接 SQL 片段）
+        return markingTaskMapper.selectList(new QueryWrapper<EduMarkingTask>()
+                .eq("marking_task_owner_user_id", me)
+                .orderByDesc("marking_task_id")
+                .last("LIMIT " + size));
+    }
+
+    // ==================== 内部工具 ====================
+
+    /**
+     * 要求当前账号已绑定教师工号
+     *
+     * @return 教师档案
+     * @throws BusinessException 未绑定时抛出
+     */
+    private EduTeacher requireTeacher() {
+        EduTeacher teacher = findMyTeacher();
+        if (teacher == null) {
+            throw new BusinessException("请先在老师端绑定教师工号");
+        }
+        return teacher;
+    }
+
+    /**
+     * 取「我的班级」，顺带做归属校验
+     *
+     * @param classId 班级标识
+     * @return 班级实体
+     * @throws BusinessException 班级不存在或不属于当前账号时抛出
+     */
+    private EduClass requireMyClass(Long classId) {
+        if (classId == null) {
+            throw new BusinessException("请选择班级");
+        }
+        EduClass clazz = classMapper.selectById(classId);
+        if (clazz == null) {
+            throw new BusinessException("班级不存在");
+        }
+        assertOwned(EduUserContext.requireUserId(), clazz.getOwnerUserId());
+        return clazz;
+    }
+
+    /**
+     * 归属守卫：当前账号必须等于数据行的归属账号，否则拒绝。
+     *
+     * <p>抽成包级静态方法是为了能被单元测试直接覆盖（{@code TeacherOwnershipGuardTest}）——
+     * 这是教师端隔离的核心断言，不能只靠集成测试。</p>
+     *
+     * @param currentAccount 当前登录账号
+     * @param ownerAccount   数据行归属账号
+     * @throws BusinessException 两者不一致（含任一为 null）时抛出
+     */
+    static void assertOwned(String currentAccount, String ownerAccount) {
+        if (currentAccount == null || !currentAccount.equals(ownerAccount)) {
+            throw new BusinessException("无权操作该班级");
+        }
     }
 
     /**
