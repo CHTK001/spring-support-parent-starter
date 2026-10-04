@@ -21,6 +21,15 @@ F=${AI_FACE_IMG:-/opt/ai-starter/acceptance-20261001/fixtures/face_probe.jpg}
 set -u
 B=${AI_BASE:-http://127.0.0.1:8787}
 UA="Mozilla/5.0"
+# 定义必须在**首次使用之前**：第 5 组（L129/L139）就要用它探空库，
+# 而此前它写在第 6 组附近（原 L174），导致第 5 组里 `sudo_ ...` 是「命令不存在」、
+# 输出为空，`${BEFORE_N:-0}` 退化成 "0"、被误判成「库为空」→ 在**非空库**上照跑断言。
+# 2026-10-04 实测：admin 库里有 2 条，却被判成空库而假红 1 条。
+sudo_() { echo kali | sudo -S "$@" 2>/dev/null; }
+# 被测产物指纹：报告必须与它绑定，换包即失效（运行期自报，不写死在注释里）
+APPJAR=${AI_JAR:-/opt/ai-starter/app.jar}
+ACC_MD5=$(sudo_ md5sum "$APPJAR" 2>/dev/null | cut -c1-8)
+ACC_MD5=${ACC_MD5:-未取到}
 P=0; F_FAIL=0
 ck(){ if [ "$2" = "$3" ]; then echo "  [PASS] $1 -> $2"; P=$((P+1)); else echo "  [FAIL] $1 (实际=$2 期望=$3)"; F_FAIL=$((F_FAIL+1)); fi; }
 
@@ -126,26 +135,53 @@ ck "人脸 vs 无人脸 = 不匹配 / 明确报错" "$c_ok" "ok"
 
 echo
 echo "################ 5. 1:N 登记与识别 ################"
-echo "  入库前库内条目数: $(sudo_ bash -c "python3 -c \"
-import json
+# 空库行为必须被验到（新账号第一次识别的场景）：报明确业务码 + matched=false，而不是 NPE。
+#
+# 判据必须走 **API**（GET /v2/face/list），不要读快照文件：
+#   ① 快照路径随「账号按用户隔离」的布局变过（runtime/<账号>/face 与 <账号>/face 两种历史写法），
+#      写死路径读不到就得到 0 或 -1，而 0 恰好等于「空库」—— 断言于是在**非空库**上照跑。
+#   ② 文件是持久化视图，与运行期内存库不一定同步；API 才是权威。
+# 并且**失败不能伪装成 0**：非 00000 / 解析失败一律回 ERR，绝不回 0（否则又是同一个坑）。
+libn() { # $1=令牌 → 该账号人脸库条目数（0=空库；ERR=读不到，绝不当成 0）
+  if [ -z "${1:-}" ]; then echo ERR; return; fi
+  curl -s -m 60 -A "$UA" -H "x-oauth-token: $1" "$B/v2/face/list" \
+    | python3 -c "
+import json,sys
 try:
-    print(len(json.load(open('/opt/ai-starter/runtime/admin/face/index.json',encoding='utf-8'))))
-except Exception: print('?')
-\"" 2>/dev/null)"
-# 空库行为必须被验到（新账号第一次识别的场景）：报明确业务码 + matched=false，而不是 NPE
-R=$(api 200 -F "file=@$F" -o /tmp/f_idempty.json -w '%{http_code}' "$B/v2/face/identify")
-EMPTYRES=$(jq_ /tmp/f_idempty.json "
-print('%s|%s' % (o.get('code'), (d or {}).get('matched')))")
-BEFORE_N=$(sudo_ bash -c "python3 -c \"
-import json
-try:
-    print(len(json.load(open('/opt/ai-starter/runtime/admin/face/index.json',encoding='utf-8'))))
-except Exception: print(-1)
-\"" 2>/dev/null)
-if [ "${BEFORE_N:-0}" = "0" ]; then
-  ck "空库识别：明确业务码且不报错（原为 NPE）" "$EMPTYRES" "00000|False"
+    o=json.load(sys.stdin)
+except Exception:
+    print('ERR'); raise SystemExit
+if str(o.get('code')) != '00000':
+    print('ERR'); raise SystemExit
+d=o.get('data') or {}
+if isinstance(d.get('data'),dict): d=d['data']
+print(len(d.get('items') or []))" 2>/dev/null
+}
+# 空库样本账号可用 AI_EMPTY_USER / AI_EMPTY_PASS 覆盖
+EMPTY_USER=${AI_EMPTY_USER:-ops}
+EMPTY_PASS=${AI_EMPTY_PASS:-Ops@Guada2026}
+ADMIN_N=$(libn "$TOKEN"); ADMIN_N=${ADMIN_N:-ERR}
+echo "  入库前 admin 库内条目数(API)=$ADMIN_N"
+if [ "$ADMIN_N" = "0" ]; then
+  PROBE_TOK="$TOKEN"; PROBE_WHO=admin
 else
-  echo "  [SKIP] 库非空（$BEFORE_N 条），空库场景留待空库时验证"
+  # admin 库非空时**不跳过**：换成另一个确实为空的账号去验「新账号第一次识别」。
+  # 跳过等于这条防 NPE 的覆盖在真实环境里永远不跑 —— 而它正是防 NPE 回归的那一条。
+  ETOK=$(curl -s -m 25 -A "$UA" -X POST -H 'Content-Type: application/json' \
+    -d "{\"username\":\"$EMPTY_USER\",\"password\":\"$EMPTY_PASS\"}" "$B/v2/user/login" \
+    | python3 -c "import json,sys;print((json.load(sys.stdin).get('data') or {}).get('accessToken') or '')" 2>/dev/null)
+  EN=$(libn "$ETOK"); EN=${EN:-ERR}
+  echo "  admin 库非空($ADMIN_N 条)；改用账号 '$EMPTY_USER' 验空库场景，其库内条目数(API)=$EN"
+  if [ "$EN" = "0" ]; then PROBE_TOK="$ETOK"; PROBE_WHO="$EMPTY_USER"
+  else PROBE_TOK=""; PROBE_WHO=""; fi
+fi
+if [ -n "$PROBE_TOK" ]; then
+  R=$(curl -s -m 200 -A "$UA" -H "x-oauth-token: $PROBE_TOK" -F "file=@$F" -o /tmp/f_idempty.json -w '%{http_code}' "$B/v2/face/identify")
+  EMPTYRES=$(jq_ /tmp/f_idempty.json "print('%s|%s' % (o.get('code'), (d or {}).get('matched')))")
+  ck "空库识别（账号 $PROBE_WHO）：明确业务码且 matched=false、不报错" "$EMPTYRES" "00000|False"
+else
+  echo "  [SKIP] admin($ADMIN_N) 与 $EMPTY_USER($EN) 的库都非空，本次拿不到空库样本"
+  echo "         用 AI_EMPTY_USER/AI_EMPTY_PASS 指向一个空库账号即可恢复这条覆盖"
 fi
 
 PROBE="facegrade-$RANDOM$RANDOM"
@@ -171,7 +207,7 @@ ck "无人脸的图返回 00000 且 matched=false 且 hits 为空" "$NOFALSE" "0
 
 echo
 echo "################ 6. 快照持久化（重启后仍在）################"
-sudo_() { echo kali | sudo -S "$@" 2>/dev/null; }
+# sudo_ 已在文件顶部定义（第 5 组就要用），此处不再重复定义
 SNAP_OK=$(sudo_ bash -c "python3 -c \"
 import json
 try:
@@ -432,5 +468,6 @@ fi
 echo
 echo "################ 小结 ################"
 echo "  PASS=$P  FAIL=$F_FAIL"
+echo "  被测产物 $APPJAR md5=$ACC_MD5  （报告须与它绑定；换包即失效）"
 echo "  说明：本套件自清理 —— 测试条目 $PROBE 已在第 7 组删除并验证"
 echo FACEGRADE_DONE

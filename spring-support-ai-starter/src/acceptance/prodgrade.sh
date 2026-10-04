@@ -1,5 +1,9 @@
 #!/bin/bash
-# 生产级验收（对当前构建 b8f7059bbbe3c7ec92a3b991abb836a1）
+# 生产级验收（对**当前现役构建**）
+#
+# 产物 md5 由套件**运行时自报**（见下面的 [INFO] 与被测产物 md5），不写死在注释里：
+# 写死的值必然过期 —— 2026-10-04 实测：报告里绑的还是 f3bd9c5b，而现役已经过了
+# 五代（f3bd9c5b → a53fe1c4 → 4751c634 → be89ac13 → c7e96094 → 97804124）。
 #
 # 覆盖 7 组：输入健壮性 / 并发与幂等 / 数据完整性 / 重启一致性 /
 #           鉴权 / 配置热更新 / 资源与落盘
@@ -10,6 +14,10 @@ set -u
 B=${AI_BASE:-http://127.0.0.1:8787}
 UA="Mozilla/5.0"
 sudo_() { echo kali | sudo -S "$@" 2>/dev/null; }
+# 被测产物指纹：报告必须与它绑定，换包即失效
+APPJAR=${AI_JAR:-/opt/ai-starter/app.jar}
+ACC_MD5=$(sudo_ md5sum "$APPJAR" 2>/dev/null | cut -c1-8)
+ACC_MD5=${ACC_MD5:-未取到}
 # 以图搜图已改为「按账号隔离」布局：<runtime>/<账号>/imagesearch/{index.json,images/,next-id,*.vectors}。
 # 旧默认值 /opt/ai-starter/runtime/image-search-store 是隔离改造前的单账号路径，**已不存在**：
 # 用它统计 images/ 文件数会前后都得到 0（0 < 0 为假 -> 断言恒假），
@@ -27,6 +35,7 @@ if ! sudo_ test -d "$STORE"; then
   exit 2
 fi
 echo "  [INFO] ACC=$ACC  STORE=$STORE"
+echo "  [INFO] 被测产物 $APPJAR md5=$ACC_MD5"
 LOG=${AI_LOG:-/opt/ai-starter/app-out.log}
 # 必须 export：第 7 组的期望值是在 python 里用 subprocess 起内层 bash 读 $STORE/index.json，
 # 不 export 的话内层 bash 看到的是空变量，期望值恒为空、该条断言永远失败（实际发生过）。
@@ -325,4 +334,5 @@ echo "  /opt 可用: $(df -BG /opt | tail -1 | awk '{print $4}')   备份包: $(
 echo
 echo "################ 小结 ################"
 echo "  PASS=$P  FAIL=$F"
+echo "  被测产物 $APPJAR md5=$ACC_MD5  （报告须与它绑定；换包即失效）"
 echo "PRODGRADE_DONE"
