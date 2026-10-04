@@ -426,7 +426,8 @@ public class EduDimensionService {
         entity.setOwnerUserId(EduUserContext.requireUserId());
         // 登录账号默认取学号：学生端令牌里的 userId 就是学号，
         // 两个字段必须一致，否则登录成功了学生端却定位不到自己的档案。
-        applyPassword(entity, null);
+        // 口令在循环内随学号一起设置：未填时**默认口令 = 学号**（用户预期），
+        // 并置「首次登录须改密」，学生登录后由引导改成自己的口令。
         // 学号由系统生成并保证唯一。**并发下只靠「插入前查重」是不够的**：
         // 两个请求可能同时查到同一个候选号、同时认为它可用，随后唯一索引会拒绝其中一个
         // （实测 30 并发建档有 12 个 500「学号已存在」）。真正的收敛点在**插入失败后的重试**，
@@ -436,6 +437,7 @@ public class EduDimensionService {
             entity.setStudentId(null);
             entity.setStudentNo(studentNo);
             entity.setStudentAccount(studentNo);
+            applyPassword(entity, null, studentNo);
             try {
                 studentMapper.insert(entity);
                 log.info("[EduAi] 新增学生: {} ({}) 手机号={}", entity.getStudentName(), studentNo,
@@ -648,6 +650,22 @@ public class EduDimensionService {
      * @param exists 库中既有档案；新增时为 {@code null}
      */
     private void applyPassword(EduStudent entity, EduStudent exists) {
+        applyPassword(entity, exists, null);
+    }
+
+    /**
+     * 处理登录口令（可指定「新增且未填口令」时的默认明文）。
+     *
+     * <p><b>默认口令 = 学号</b>：教师/管理员建档时通常不填口令，若因此留空，
+     * 学生永远登不进来（登录返回「密码错误」且查不出原因——实测用户反馈）。
+     * 未填时用学号作为初始口令，并置 {@code studentPwdMustChange=1}，
+     * 由学生端首次登录引导改成自己的口令。</p>
+     *
+     * @param entity     本次提交的实体
+     * @param exists     库中既有档案；新增时为 {@code null}
+     * @param defaultRaw 新增且未填口令时使用的默认明文（学号）；为 null 表示不设口令
+     */
+    private void applyPassword(EduStudent entity, EduStudent exists, String defaultRaw) {
         String raw = entity.getStudentPwdInput();
         if (!StringUtils.hasText(raw)) {
             if (exists != null) {
@@ -656,8 +674,12 @@ public class EduDimensionService {
                 // 没改口令时要把「待引导改密」标记一并带回：否则管理员改个姓名
                 // 就会把该标记清掉，学生再也收不到首次改密引导。
                 entity.setStudentPwdMustChange(exists.getStudentPwdMustChange());
+                return;
             }
-            return;
+            if (!StringUtils.hasText(defaultRaw)) {
+                return;
+            }
+            raw = defaultRaw;
         }
         StudentPasswordSupport.validate(raw);
         String salt = StudentPasswordSupport.newSalt();
