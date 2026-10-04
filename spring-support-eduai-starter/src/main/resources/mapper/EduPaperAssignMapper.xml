@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduPaperAssignMapper">
+
+    <!--
+      列名以**线上库实际结构**为准（edu_paper_assign / edu_paper / edu_class 的真实列）。
+      之前 edu_fun_config 就是因为按「想当然的前缀」写列名导致三个接口全 500，
+      这里每条 select 都对着 DDL 写。
+      下划线转驼峰由全局 mapUnderscoreToCamelCase 承担，无需逐个起别名。
+    -->
+
+    <!-- 我（老师）布置过的试卷：布置时间倒序，带班级名与试卷摘要 -->
+    <select id="selectByTeacher" resultType="com.chua.starter.eduai.model.vo.PaperAssignVO">
+        SELECT a.assign_id,
+               a.paper_id,
+               a.class_id,
+               a.teacher_account,
+               a.assign_status,
+               a.assign_remark,
+               a.assign_time,
+               p.paper_no,
+               p.paper_name,
+               p.paper_subject,
+               p.paper_grade_level,
+               p.paper_grade,
+               p.paper_total_score,
+               p.paper_question_count,
+               p.paper_duration,
+               c.class_name
+        FROM edu_paper_assign a
+        LEFT JOIN edu_paper p ON p.paper_id = a.paper_id
+        LEFT JOIN edu_class c ON c.class_id = a.class_id
+        WHERE a.teacher_account = #{teacherAccount}
+        ORDER BY a.assign_time DESC, a.assign_id DESC
+    </select>
+
+    <!-- 某班级当前可见的试卷：只取「已布置」且「试卷已发布」的，
+         撤布置或下架后学生端立即看不到 -->
+    <select id="selectByClass" resultType="com.chua.starter.eduai.model.vo.PaperAssignVO">
+        SELECT a.assign_id,
+               a.paper_id,
+               a.class_id,
+               a.teacher_account,
+               a.assign_status,
+               a.assign_remark,
+               a.assign_time,
+               p.paper_no,
+               p.paper_name,
+               p.paper_subject,
+               p.paper_grade_level,
+               p.paper_grade,
+               p.paper_total_score,
+               p.paper_question_count,
+               p.paper_duration,
+               c.class_name
+        FROM edu_paper_assign a
+        JOIN edu_paper p ON p.paper_id = a.paper_id
+        LEFT JOIN edu_class c ON c.class_id = a.class_id
+        WHERE a.class_id = #{classId}
+          AND a.assign_status = 1
+          AND p.paper_status = 1
+        ORDER BY a.assign_time DESC, a.assign_id DESC
+    </select>
+
+</mapper>

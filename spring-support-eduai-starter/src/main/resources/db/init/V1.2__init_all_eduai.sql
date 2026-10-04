@@ -896,4 +896,34 @@ ALTER TABLE edu_student
     -- 老数据默认 0（EOF NULL 由业务按「无口令」处理），不回溯逼改，避免上线即扰民。
     ADD COLUMN IF NOT EXISTS student_pwd_must_change TINYINT DEFAULT 0 COMMENT '是否需引导改密: 0-否 1-是';
 
+-- ----------------------------
+-- 班级试卷布置（老师给班级组卷 -> 班内学生可见）
+-- ----------------------------
+-- 说明：
+--   1) 一张试卷布置给一个班级 = 一行；(paper_id, class_id) 唯一，重复布置走更新而不是插新行。
+--   2) 老师端只允许布置到「自己的班级」（class_owner_user_id = 登录账号），
+--      学生端按自己的 student_class_id 反查本班已布置且已发布的试卷。
+--   3) teacher_account 存登录账号（与 edu_class.class_owner_user_id 同口径），
+--      这样「我布置的」不需要再关联班级表即可直接过滤。
+CREATE TABLE IF NOT EXISTS edu_paper_assign (
+    paper_assign_owner_user_id VARCHAR(64) COMMENT '归属用户 ID（布置人账号）',
+    KEY edu_paper_assign_owner (paper_assign_owner_user_id),
+    assign_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '布置ID',
+    paper_id BIGINT NOT NULL COMMENT '试卷ID',
+    class_id BIGINT NOT NULL COMMENT '班级ID',
+    teacher_account VARCHAR(64) COMMENT '布置人账号（老师登录名）',
+    assign_status TINYINT DEFAULT 1 COMMENT '状态: 0-已撤回 1-已布置',
+    assign_remark VARCHAR(200) COMMENT '备注（如截止时间/说明）',
+    assign_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '布置时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+    UNIQUE KEY uk_edu_paper_assign (paper_id, class_id),
+    KEY edu_paper_assign_class (class_id),
+    KEY edu_paper_assign_paper (paper_id),
+    KEY edu_paper_assign_teacher (teacher_account)
+) COMMENT '班级试卷布置';
+
 
