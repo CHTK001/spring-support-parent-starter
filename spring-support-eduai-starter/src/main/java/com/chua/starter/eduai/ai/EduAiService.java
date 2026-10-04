@@ -74,10 +74,11 @@ public class EduAiService {
     /**
      * 模型限流（429）时的最大重试次数。
      *
-     * <p>限流往往是短时窗口内的：一次失败就降级到相似度匹配，等于白白丢掉模型评分。
-     * 这里做有限次指数退避重试；仍失败才降级，保证判分链路不被外部配额拖住。</p>
+     * <p>限流往往是短时窗口内的：一次失败就降级（判分）或整卷失败（抽取），代价都不小。
+     * 这里做 3 次指数退避重试（1s/2s/4s）；仍失败才降级/报错，
+     * 保证链路不被外部配额的一次抖动打断。判分与抽取两条路径共用该重试。</p>
      */
-    private static final int RATE_LIMIT_RETRY = 2;
+    private static final int RATE_LIMIT_RETRY = 3;
 
     /**
      * 限流重试的基础退避毫秒（后续按倍数递增）。
@@ -414,7 +415,7 @@ public class EduAiService {
             return "AI 模块未启用，无法回答";
         }
         try {
-            ChatResponse response = call(systemPrompt, userPrompt);
+            ChatResponse response = callWithRateLimitRetry(systemPrompt, userPrompt);
             return response.content();
         } catch (Exception e) {
             log.warn("[EduAi] AI 问答异常: {}", e.getMessage());
@@ -463,16 +464,20 @@ public class EduAiService {
         for (int attempt = 0; ; attempt++) {
             try {
                 return call(systemPrompt, userPrompt);
-            } catch (RuntimeException e) {
+            } catch (Exception e) {
                 if (!isRateLimited(e) || attempt >= RATE_LIMIT_RETRY) {
-                    throw e;
+                    if (e instanceof RuntimeException runtime) {
+                        throw runtime;
+                    }
+                    throw new IllegalStateException(e.getMessage(), e);
                 }
-                log.warn("[EduAi] 模型限流，第 {} 次重试（退避 {}ms）", attempt + 1, backoff);
+                log.warn("[EduAi] 模型限流，第 {} 次重试（退避 {}ms，原因: {}）",
+                        attempt + 1, backoff, e.getMessage());
                 try {
                     Thread.sleep(backoff);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    throw e;
+                    throw e instanceof RuntimeException runtime ? runtime : new IllegalStateException(e);
                 }
                 backoff *= 2;
             }
