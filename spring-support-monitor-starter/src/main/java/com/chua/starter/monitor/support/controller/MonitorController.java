@@ -29,6 +29,7 @@ import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.monitor.support.model.DbColumnVO;
 import com.chua.starter.monitor.support.model.DbSqlBatchVO;
 import com.chua.starter.monitor.support.support.DbColumnDef;
+import com.chua.starter.monitor.support.support.DbFilter;
 import com.chua.starter.monitor.support.support.DbDialectSupport;
 import com.chua.starter.monitor.support.support.DbObjectDialect;
 import com.chua.starter.monitor.support.support.DbTableDialect;
@@ -1650,7 +1651,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database,
             @RequestParam(defaultValue = "true") boolean count,
-            @RequestParam(required = false) String where) {
+            @RequestParam(required = false) String where,
+            @RequestParam(required = false) String filters) {
         int normalizedPage = Math.max(1, page);
         int normalizedPageSize = Math.min(500, Math.max(1, pageSize));
         long offset = (long) (normalizedPage - 1) * normalizedPageSize;
@@ -1659,6 +1661,23 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         String direction = "DESC".equalsIgnoreCase(orderDir) ? "DESC" : "ASC";
         // WHERE 过滤：允许 Navicat 式自由条件，但拒绝语句分隔符/注释，避免堆叠多条语句
         String whereClause = sanitizeWhere(where);
+        // 结构化筛选（高级筛选）：列名走白名单、值走 PreparedStatement 绑定，
+        // 与上面那条「自由文本 + 黑名单」路径是**两套独立机制**，不互相兜底。
+        // 两者同时给出时按 AND 组合（用户在文本框里写的条件仍生效）。
+        DbFilter.Compiled compiled;
+        try {
+            compiled = DbFilter.compile(parseFilters(filters));
+        } catch (IllegalArgumentException e) {
+            return ReturnResult.error("筛选条件非法: " + e.getMessage());
+        }
+        List<String> both = new ArrayList<>(2);
+        if (whereClause != null) {
+            both.add(whereClause);
+        }
+        if (!compiled.isEmpty()) {
+            both.add(compiled.whereSql());
+        }
+        String whereSql = both.isEmpty() ? "" : " WHERE " + String.join(" AND ", both);
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
              SchemaScope scope = useSchema(conn, database)) {
             requireTable(conn, table);
@@ -1666,7 +1685,6 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 requireColumn(conn, table, column);
             }
             String quotedTable = SqlName.quoteMysql(table, "表名");
-            String whereSql = whereClause == null ? "" : " WHERE " + whereClause;
             String orderClause = column == null ? ""
                     : " ORDER BY " + SqlName.quoteMysql(column, "排序列") + " " + direction;
             String dataSql = "SELECT * FROM " + quotedTable + whereSql + orderClause + " LIMIT ? OFFSET ?";
@@ -1674,8 +1692,14 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             java.util.List<String> columns;
             java.util.List<Map<String, Object>> rows;
             try (java.sql.PreparedStatement stmt = conn.prepareStatement(dataSql)) {
-                stmt.setInt(1, normalizedPageSize);
-                stmt.setLong(2, offset);
+                // 绑定顺序必须是「筛选参数 → 分页参数」：whereSql 在 SQL 文本里
+                // 位于 LIMIT/OFFSET 之前，顺序反了不会报错、只会查错行。
+                int idx = 1;
+                for (Object p : compiled.params()) {
+                    stmt.setObject(idx++, p);
+                }
+                stmt.setInt(idx++, normalizedPageSize);
+                stmt.setLong(idx, offset);
                 try (java.sql.ResultSet rs = stmt.executeQuery()) {
                     java.sql.ResultSetMetaData meta = rs.getMetaData();
                     int colCount = meta.getColumnCount();
@@ -1695,10 +1719,16 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             }
             long total = -1;
             if (count) {
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(countSql);
-                     java.sql.ResultSet countRs = stmt.executeQuery()) {
-                    if (countRs.next()) {
-                        total = countRs.getLong(1);
+                // countSql 里没有 LIMIT/OFFSET，只绑筛选参数
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement(countSql)) {
+                    int idx = 1;
+                    for (Object p : compiled.params()) {
+                        stmt.setObject(idx++, p);
+                    }
+                    try (java.sql.ResultSet countRs = stmt.executeQuery()) {
+                        if (countRs.next()) {
+                            total = countRs.getLong(1);
+                        }
                     }
                 }
             }
@@ -1729,6 +1759,138 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             }
         }
         return value;
+    }
+
+    /**
+     * 解析结构化筛选条件（JSON 数组）。
+     *
+     * <p>刻意**用原始字符串手工解析**而不是引入 Jackson 树：
+     * 这层已经有 {@code ReturnResult} 的 Jackson 配置，再引一份 ObjectMapper
+     * 只会带来「两套配置不一致」的坑，而这里的结构极简
+     * （列名/运算符/值1/值2 四个字符串字段）。</p>
+     *
+     * @param json JSON 数组文本；为空视为无条件
+     * @return 条件列表
+     * @throws IllegalArgumentException 结构不是数组或含非对象元素
+     */
+    private static List<DbFilter.Condition> parseFilters(String json) {
+        List<DbFilter.Condition> out = new ArrayList<>();
+        if (json == null || json.isBlank()) {
+            return out;
+        }
+        String text = json.strip();
+        if (!text.startsWith("[")) {
+            throw new IllegalArgumentException("filters 必须是 JSON 数组");
+        }
+        int depth = 0;
+        boolean inStr = false;
+        StringBuilder cur = new StringBuilder();
+        java.util.List<String> items = new java.util.ArrayList<>();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (inStr) {
+                if (c == '\\' && i + 1 < text.length()) {
+                    cur.append(c).append(text.charAt(++i));
+                } else {
+                    if (c == '"') {
+                        inStr = false;
+                    }
+                    cur.append(c);
+                }
+                continue;
+            }
+            if (c == '"') {
+                inStr = true;
+                cur.append(c);
+                continue;
+            }
+            if (c == '{') {
+                depth++;
+                cur.append(c);
+                continue;
+            }
+            if (c == '}') {
+                depth--;
+                cur.append(c);
+                continue;
+            }
+            if (c == ']' && depth == 0) {
+                break;
+            }
+            if (c == '}' && depth == 0) {
+                throw new IllegalArgumentException("filters 的对象没有正确闭合");
+            }
+            if (c == ',' && depth == 0) {
+                if (!cur.isEmpty()) {
+                    items.add(cur.toString());
+                    cur.setLength(0);
+                }
+                continue;
+            }
+            cur.append(c);
+        }
+        if (!cur.isEmpty()) {
+            items.add(cur.toString());
+        }
+        for (String item : items) {
+            out.add(new DbFilter.Condition(
+                    jsonField(item, "column"),
+                    jsonField(item, "op"),
+                    jsonField(item, "value"),
+                    jsonField(item, "value2")));
+        }
+        return out;
+    }
+
+    /**
+     * 从一个 JSON 对象文本里取字符串字段。
+     *
+     * <p>只支持字符串与数字两种取值 —— 够用且不必处理转义地狱；
+     * 解析不出来返回空串，由 {@link DbFilter#compile} 按「空值跳过」处理。</p>
+     *
+     * @param obj   对象文本
+     * @param field 字段名
+     * @return 字段值；不存在或非标量返回空串
+     */
+    private static String jsonField(String obj, String field) {
+        String needle = "\"" + field + "\"";
+        int at = obj.indexOf(needle);
+        if (at < 0) {
+            return "";
+        }
+        int i = obj.indexOf(':', at + needle.length());
+        if (i < 0) {
+            return "";
+        }
+        i++;
+        while (i < obj.length() && Character.isWhitespace(obj.charAt(i))) {
+            i++;
+        }
+        if (i >= obj.length()) {
+            return "";
+        }
+        char c = obj.charAt(i);
+        if (c != '"') {
+            // 数字 / 布尔 / null：读到下一个分隔符为止
+            int end = i;
+            while (end < obj.length() && ",}".indexOf(obj.charAt(end)) < 0) {
+                end++;
+            }
+            return obj.substring(i, end).trim();
+        }
+        StringBuilder sb = new StringBuilder();
+        for (i++; i < obj.length(); i++) {
+            char ch = obj.charAt(i);
+            if (ch == '\\' && i + 1 < obj.length()) {
+                sb.append(obj.charAt(++i));
+                continue;
+            }
+            if (ch == '"') {
+                break;
+            }
+            sb.append(ch);
+        }
+        return sb.toString();
     }
 
     /**
