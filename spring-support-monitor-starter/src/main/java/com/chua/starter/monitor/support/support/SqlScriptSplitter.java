@@ -281,6 +281,66 @@ public final class SqlScriptSplitter {
     }
 
     /**
+     * 一段「代码」区间（半开区间 [start, end)）。
+     *
+     * @param start 起始下标（含）
+     * @param end   结束下标（不含）
+     */
+    public record Span(int start, int end) {
+    }
+
+    /**
+     * 找出脚本里属于**代码**的区间（排除字符串字面量与注释）。
+     *
+     * <p>给参数替换用：{@code ${name}} 出现在字符串里时**不应该**被替换 ——
+     * 替换值自带引号，配上原文那对引号会拼出坏 SQL，
+     * 用户看到的是语法错误，完全指不到「你把占位符写在了引号里」。</p>
+     *
+     * <p>与 {@link #split(String)} 共用同一套词法状态，
+     * 所以「哪些内容是代码」在切分与替换两条路径上的判定完全一致 ——
+     * 不一致会出现「切分时认为在注释里、替换时认为不在」这种极难查的偏差。</p>
+     *
+     * @param script 脚本原文
+     * @return 代码区间列表（按出现顺序，不重叠）
+     */
+    public static List<Span> codeSpans(String script) {
+        List<Span> spans = new ArrayList<>();
+        if (script == null || script.isEmpty()) {
+            return spans;
+        }
+        int n = script.length();
+        int codeStart = 0;
+        int i = 0;
+        while (i < n) {
+            char c = script.charAt(i);
+            char next = i + 1 < n ? script.charAt(i + 1) : '\0';
+            if ((c == '-' && next == '-') || c == '#') {
+                spans.add(new Span(codeStart, i));
+                i = skipLineComment(script, i);
+                codeStart = i;
+                continue;
+            }
+            if (c == '/' && next == '*') {
+                spans.add(new Span(codeStart, i));
+                i = skipBlockComment(script, i);
+                codeStart = i;
+                continue;
+            }
+            if (c == '\'' || c == '"' || c == '`') {
+                spans.add(new Span(codeStart, i));
+                i = skipQuoted(script, i, c);
+                codeStart = i;
+                continue;
+            }
+            i++;
+        }
+        spans.add(new Span(codeStart, n));
+        // 去掉长度为 0 的区间（连续两个非代码片段之间会出现）
+        spans.removeIf(s -> s.end() <= s.start());
+        return spans;
+    }
+
+    /**
      * 判断一条语句是否是查询类（返回结果集而非影响行数）。
      *
      * <p>与 {@code MonitorController#executeDbSql} 的口径保持一致：两条路径必须同口径，
