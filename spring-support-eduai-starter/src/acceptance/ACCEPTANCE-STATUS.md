@@ -4,28 +4,32 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
-> ## ✅ 当前状态（2026-10-04 · r11）：**已交付：工作区重建发布 + 前端打包 + 打包缺陷已修**
+> ## ✅ 当前状态（2026-10-05 · r12）：**交付面已闭合：后端 + 前端都可复现地交付与验收**
 >
-> 一个 jar 指纹已达成并复核过 `PROVENANCE_OK`（**线上 == 我的工作区构建**）：
-> `62a5dce1011909f1efdb7420b31d1e95053b757474dc9983e38ff804d5692890`（见 r11 §3 的日志）。
-> 写本文件时线上已被并发会话换成 `81810d88…`（对它也复验 153/0 全绿）。
+> 本版补上了上一版遗留的最后一个交付缺口：**前端没有可复现的交付物**
+> （后端早有 `deploy/`，前端一直靠临时命令）。现已有与后端同一形态的
+> `apps/vue-support-eduai-starter/deploy/{package.sh,package.ps1,deploy.sh,verify.sh,README.md}`，
+> 并**实跑通过**：`package` → `deploy`（备份+原子换目录+自检）→ `verify`
+> → **`INDEX_MD5_MATCH` / `WEB_PROVENANCE_OK`**。
 >
-> | 面 | 内容 | 验收 |
+> 当前状态的验收快照（详见 r12）：
+>
+> | 面 | 判据 | 结果 |
 > |---|---|---|
-> | 后端 | 班级试卷布置（老师布置 → 班内学生可见**且能看题**） | 目标机 6 套件 **153 条断言 0 失败** + 故障注入 |
-> | 前端 | **已打包**并部署到 `/var/www/eduai`（`eduai-web.service`/19093） | 打包站点 UI **21/21**；品牌名码点逐位一致；管理员登录 → /home |
-> | 修复 | 打包后 portal 永久「加载中…」（`useRoute()` 取不到注入） | `vite.config.ts` 加 `runtimeDedupe()`（vue/vue-router/pinia dedupe）；修后学生端全绿 |
-> | 门禁 | 套件失败非 0 退出 / 中文参数编码 / 浏览器调用 90s 超时 | 见 r9 §9 与 r11 §6 |
+> | 后端 API | 6 套件（现役 jar `81810d88…`，跑前/跑后/故障注入后 sha 三次一致） | **153 条断言 0 失败**，`ARTIFACT_STABLE_FINAL_OK` |
+> | 后端故障注入 | 停 oauth 2.5s | 登录失败、eduai 健康 200、restarts=0；恢复 ok |
+> | 前端站点 | `deploy/verify.sh <index.md5>` | `WEB_PROVENANCE_OK`（线上 == 本地构建的 dist） |
+> | 前端业务 | `ui-paper-assign-acceptance.ps1 -Base http://<host>:19093` | **21/21**（老师布置 → 学生看到 → 题目 10 == 接口 10） |
 >
-> 报告：`ACCEPTANCE-REPORT-20261004-r11.md`（换包即失效，复核用 `report-staleness.py`）。
-> 前端 UI 验收脚本（已入库、ASCII-only）：`ui-paper-assign-acceptance.ps1`，
-> 跑法见 `RELEASE-CHECKLIST.md` §3.4；跑法：`pwsh -File ... -Base http://192.168.50.198:19093`。
+> 完整一次交付的五步命令见 `apps/vue-support-eduai-starter/deploy/README.md`，
+> 发布侧流程见 `RELEASE-CHECKLIST.md` §2.3 / §3.4。
 >
 > ⚠ 两点必须知道：
-> 1. **共享主机上 jar 与前端目录都会持续被并发会话替换**（本小时 jar 至少 5 次）。
->    sha 一变，r11 §3 的「线上 == 我的构建」即失效，需重跑（目标机 6 分钟 / UI 3 分钟）。
-> 2. 本次是**从工作区**构建：工作区里含他会话未提交的后端（EduIdiom/EduPoem/EduHanzi）
->    与前端（18 改 + 3 新视图）改动，一并进了产物，**未随本报告评审**。
+> 1. **共享主机上 jar 与 web root 都会被并发会话替换**。r12 绑定的
+>    `81810d88…`（后端）与 `index.html md5=6730b738…`（前端）只在当时成立；
+>    任一变化即失效，需重跑（后端 6 分钟 / 前端 3 分钟 / UI 3 分钟）。
+> 2. 本次是从**工作区**构建：工作区含他会话未提交的后端与前端改动，
+>    一并进了产物，**未随报告评审**。
 >
 > 复核：`python3 report-staleness.py --live-eduai <现役 md5> --live-oauth <现役 md5>`
 
