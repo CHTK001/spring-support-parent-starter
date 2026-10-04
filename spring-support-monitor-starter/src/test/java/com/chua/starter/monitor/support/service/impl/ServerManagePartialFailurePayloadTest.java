@@ -33,9 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ServerManagePartialFailurePayloadTest {
 
     @Test
-    @DisplayName("error(msg, data) 必须保留 data 且 success 仍为 false")
+    @DisplayName("error(code, msg, data) 必须保留 data 且 success 仍为 false")
     void errorWithPayloadKeepsDataButStillFails() {
-        ReturnResult<ServerNodeView> result = ReturnResult.error("节点已保存但启动失败: 端口被占用", view(7001L));
+        ReturnResult<ServerNodeView> result = ReturnResult.error(
+                "BIZ_NODE_START_FAILED", "节点已保存但启动失败: 端口被占用", view(7001L));
 
         assertFalse(result.isSuccess(),
                 "带载荷不能让 success 变 true —— 否则只看 success 的调用方会把失败当成功");
@@ -46,14 +47,20 @@ class ServerManagePartialFailurePayloadTest {
     }
 
     @Test
-    @DisplayName("error(code, msg, data) 与 error(msg, data) 语义一致")
-    void errorWithCodeAndPayloadBehavesSame() {
-        ReturnResult<ServerNodeView> withCode =
-                ReturnResult.error("BIZ_001", "配置已保存但热更新未生效", view(7002L));
+    @DisplayName("两参 error(code, msg) 不得携带载荷 —— 这是被删掉的歧义重载的陷阱本身")
+    void twoArgErrorIsCodeAndMsgNotPayload() {
+        // 曾经存在 error(String msg, T data)：当第二个实参恰好是 String 时，
+        // 它与 error(String code, String msg) 都是 (String,String) 完美匹配，
+        // 编译器会静默选中先声明的那个 —— 错误信息被当成业务码，载荷被丢弃。
+        // 现在只保留三参形式，这里的断言锁住「两参 == (code, msg)」这一语义，
+        // 防止有人日后再加回一个 (String, String) 的携带载荷重载。
+        ReturnResult<ServerNodeView> result = ReturnResult.error("BIZ_NODE_START_FAILED", "节点已保存但启动失败");
 
-        assertFalse(withCode.isSuccess());
-        assertEquals(7002L, withCode.getData().getId());
-        assertEquals("BIZ_001", withCode.getCode(), "显式传入的业务码必须保留");
+        assertFalse(result.isSuccess());
+        assertEquals("BIZ_NODE_START_FAILED", result.getCode(), "两参的第一位是业务码，不是错误信息");
+        assertEquals("节点已保存但启动失败", result.getMsg(), "两参的第二位是错误信息");
+        assertNull(result.getData(), "两参形式没有载荷位，data 必须为 null —— "
+                + "若这里非 null，说明有 (String,String) 携带载荷的重载被加回来了");
     }
 
     @Test
