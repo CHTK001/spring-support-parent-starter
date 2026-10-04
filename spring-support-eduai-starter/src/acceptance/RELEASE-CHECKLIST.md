@@ -54,6 +54,23 @@ ssh <user>@<host> 'sudo BUNDLE=/home/<user>/eduai/eduai-app.tar.gz \
 `deploy.sh` 会打印：jar 备份名、schema 收敛结果、**记账异常告警**、健康自检。
 **记账告警里有非空列表就要人工确认**（框架不会重跑这类脚本；见 `deploy.sh` 内注释）。
 
+```bash
+# 2.3 前端（静态站点 -> /var/www/eduai，由 eduai-web.service 的 nginx 在 19093 提供）
+#     与后端同一形态：package（构建+打包） / deploy（备份+原子换+自检） / verify（来源自证）
+cd <vue-support-parent-starter>/apps/vue-support-eduai-starter
+bash deploy/package.sh                     # 或 pwsh -File deploy/package.ps1
+#     会打印 bundle sha256 与 dist/index.html 的 md5 —— 第 4 步要拿它做来源自证
+pscp -batch -pw <pass> dist/eduai-web.tar.gz <user>@<host>:/home/<user>/eduai/eduai-web.tar.gz
+#     部署脚本单独传，**不要**打进 web bundle：web root 是公开目录，脚本会被直接下载
+pscp -batch -pw <pass> deploy/deploy.sh deploy/verify.sh <user>@<host>:/home/<user>/eduai/web-deploy/
+ssh <user>@<host> 'sha256sum /home/<user>/eduai/eduai-web.tar.gz'     # 与 package 输出比对
+ssh <user>@<host> 'sudo BUNDLE=/home/<user>/eduai/eduai-web.tar.gz \
+                   bash /home/<user>/eduai/web-deploy/deploy.sh'
+# 4) 来源自证：线上站点 == 本地构建的 dist
+ssh <user>@<host> 'bash /home/<user>/eduai/web-deploy/verify.sh <dist/index.html 的 md5>'
+#    期望输出 WEB_PROVENANCE_OK（内含 INDEX_MD5_MATCH）；否则线上不是这份构建
+```
+
 ## 3. 终验（全部跑完才可签）
 
 ```bash
@@ -80,12 +97,14 @@ ssh <host> 'sudo systemctl stop oauth-server.service; sleep 2; \
             curl -s -o /dev/null -w "eduai=%{http_code}\n" http://127.0.0.1:19095/actuator/health; \
             sudo systemctl start oauth-server.service'
 #     判据：登录 3s 级返回 ok=false（HTTP 200 但 ok=false）、eduai 健康 200、restarts 不增
-# 3.4 UI（需要本机前端 19093，见 apps/vue-support-eduai-starter）
-#     学生登录、管理员代入（横幅/只读/sessionStorage）、白名单边界
-#     班级试卷布置的**浏览器业务验收**已脚本化入库，在**开发机**跑（198 没有浏览器）：
-#       pwsh -File src/acceptance/ui-paper-assign-acceptance.ps1        # 期望 20/20，退出码 0
-#     它会自建夹具（班级+学生）→ 老师用界面布置 → 学生端看到并点开题目
-#     （UI 题数 == 接口题数）→ 撤回/删学生/删班级；失败即非 0 退出。
+# 3.4 UI（需要真实浏览器，只能在**开发机**跑；目标机没有浏览器）
+#     班级试卷布置的浏览器业务验收已脚本化入库：
+#       pwsh -File src/acceptance/ui-paper-assign-acceptance.ps1                              # 开发机 dev（19093）
+#       pwsh -File src/acceptance/ui-paper-assign-acceptance.ps1 -Base http://<host>:19093    # **打包部署后的站点**
+#     期望 21/21、退出码 0。它会自建夹具（班级+学生，自建自删）→ 老师用界面布置 →
+#     学生端看到并点开题目（UI 题数 == 接口题数）→ 撤回/删学生/删班级。
+#     截图默认落 %TEMP%/eduai-ui-acceptance（-OutDir 可改）：不要让它写进仓库，会污染历史。
+#     部署后的静态站点本身由 2.3 的 deploy/verify.sh 做来源自证（WEB_PROVENANCE_OK）。
 # 3.5 复核指纹：必须与 3.1 逐一相同
 ```
 
