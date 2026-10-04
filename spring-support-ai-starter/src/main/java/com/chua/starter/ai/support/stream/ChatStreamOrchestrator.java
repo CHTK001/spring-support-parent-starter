@@ -57,6 +57,11 @@ public class ChatStreamOrchestrator {
     private final ObjectMapper objectMapper;
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
+
+    /**
+     * 会话压缩记录服务：把摘要覆盖的历史替换成一条摘要
+     */
+    private final com.chua.starter.ai.support.service.SysAiSessionCompressionService sessionCompressionService;
     private final SysAiRoleMapper sysAiRoleMapper;
     private final SysAiSessionMapper sysAiSessionMapper;
     private final WebSearchService webSearchService;
@@ -94,6 +99,21 @@ public class ChatStreamOrchestrator {
      * @param dialogId 会话标识
      * @return 最后一条用户消息 id；会话内没有用户消息时返回 {@code null}
      */
+    /**
+     * 读取会话的压缩记录（无记录或读取失败时返回 {@code null}）。
+     *
+     * @param dialogId 会话标识
+     * @return 压缩记录或 {@code null}
+     */
+    private com.chua.starter.ai.support.entity.SysAiSessionCompression loadCompression(Long dialogId) {
+        try {
+            return sessionCompressionService.getBySessionId(dialogId);
+        } catch (Exception e) {
+            log.warn("[ChatStream] 读取压缩记录失败 sessionId={}: {}", dialogId, e.getMessage());
+            return null;
+        }
+    }
+
     private Long lastUserMessageId(Long dialogId) {
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
@@ -202,11 +222,35 @@ public class ChatStreamOrchestrator {
         }
         final String memoryUser = AiUserContext.currentUserId();
 
+        // 上下文压缩：命中压缩记录时，把「摘要覆盖的那段历史」替换成一条 system 摘要 ——
+        // 既省 token 又保留结论。会话内置命令「压缩上下文」写入的记录就在这里生效。
+        final com.chua.starter.ai.support.entity.SysAiSessionCompression compression =
+                loadCompression(dialogId);
+        final Long compressionUpTo =
+                compression == null || compression.getSysAiCompressionFromMessageId() == null
+                        ? null
+                        : compression.getSysAiCompressionFromMessageId().longValue();
+
         List<Map<String, Object>> msgList = new ArrayList<>();
+        if (compression != null && compression.getSysAiCompressionContext() != null
+                && !compression.getSysAiCompressionContext().isBlank()) {
+            Map<String, Object> summaryMessage = new LinkedHashMap<>();
+            summaryMessage.put("role", "system");
+            summaryMessage.put("content", "以下为本会话较早内容的压缩摘要：\n"
+                    + compression.getSysAiCompressionContext());
+            msgList.add(summaryMessage);
+        }
+        int compressedOut = 0;
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
             if (history != null) {
                 for (ChatMessage m : history) {
+                    // 已被摘要覆盖的那段历史不再逐条送入模型
+                    Long messageId = m.getId() == null ? null : parseNumericId(String.valueOf(m.getId()));
+                    if (compressionUpTo != null && messageId != null && messageId <= compressionUpTo) {
+                        compressedOut++;
+                        continue;
+                    }
                     Map<String, Object> mm = new LinkedHashMap<>();
                     mm.put("role", m.getRole() != null ? m.getRole() : "user");
                     mm.put("content", m.getContent() != null ? m.getContent() : "");
@@ -215,6 +259,9 @@ public class ChatStreamOrchestrator {
             }
         } catch (Exception e) {
             log.warn("[ChatStream] 加载历史失败 sessionId={}: {}", sessionId, e.getMessage());
+        }
+        if (compressedOut > 0) {
+            log.info("[ChatStream] 已用压缩摘要替代 {} 条历史消息 sessionId={}", compressedOut, sessionId);
         }
         if (msgList.isEmpty()) {
             Map<String, Object> mm = new LinkedHashMap<>();
