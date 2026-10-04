@@ -56,6 +56,15 @@ public interface IEduMarkingService {
     MarkingResultVO getResult(String taskId);
 
     /**
+     * 学生查看自己的阅卷结果（归属按任务上的学生标识，而非任务归属人）
+     *
+     * @param taskId    任务标识
+     * @param studentId 当前学生学号
+     * @return 阅卷结果
+     */
+    MarkingResultVO getResultForStudent(String taskId, String studentId);
+
+    /**
      * 获取「与图片同版式」的结构化解析结果。
      *
      * <p>返回逐页的版面区域坐标、文字块坐标、页尺寸，以及题号锚点与判分明细（含知识点），
