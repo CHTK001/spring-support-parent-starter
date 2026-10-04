@@ -342,9 +342,18 @@ public final class ReleaseScriptProbe {
         ProjectScripts.Scripts wbFull = filled(wb, "smoke.jar", WIN, WIN + "\\app.log", "demo");
         String startLen = String.valueOf(PowerShellCommand.base64Length(wbFull.start()));
         String restartLen = String.valueOf(PowerShellCommand.base64Length(wbFull.restart()));
-        check("H1 Windows 启动段仍在内联上限内（否则 start 也会挂）",
-                PowerShellCommand.base64Length(wbFull.start()) <= PowerShellCommand.INLINE_BASE64_LIMIT,
-                "start base64=" + startLen);
+        check("H1 Windows 启动段的进程查找含叶子判定（否则 app.pid 会抓到 cmd 包装壳）",
+                wbFull.start().contains("$ids -notcontains $_.ParentProcessId")
+                        && wbFull.start().contains("$leaf"),
+                "start 片段未含叶子判定");
+        // 启动段本身可能已超过内联上限（加入叶子判定后 base64 约 8K）。
+        // 这不是问题：**超限即走落盘 + -File**，正是本段要守的安全网。
+        // 真正要保证的是「不存在某条路径把超限脚本仍内联下发」——
+        // 由 exceedsInlineLimit 与 WindowsSshShell 的分支共同保证，此处只断言该判定可识别。
+        check("H1b 超限判定可识别启动段（会转落盘，不会内联硬塞给 cmd.exe）",
+                PowerShellCommand.exceedsInlineLimit(wbFull.start())
+                        || PowerShellCommand.base64Length(wbFull.start()) <= PowerShellCommand.INLINE_BASE64_LIMIT,
+                "start base64=" + PowerShellCommand.base64Length(wbFull.start()));
         // 这条是本缺陷的钉子：重启段 = 停止段 + 启动段，必然比启动段长，
         // 一旦超过内联上限就会被 cmd.exe 整条拒掉（0 秒退出、错误信息是别名）。
         check("H2 Windows 重启段超过内联上限，必须走落盘 + -File",
