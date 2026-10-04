@@ -219,7 +219,7 @@ public class TsharkCaptureService {
             cmd.add(filePath.toString());
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
-            pb.redirectOutput(new File(CAPTURE_DIR + "/" + fileName + ".log"));
+            pb.redirectOutput(new File(filePath + ".log"));
             Process proc = pb.start();
             MsTsharkSession session = new MsTsharkSession();
             session.setSessionName(name == null || name.isBlank() ? iface + " 抓包" : name);
@@ -576,8 +576,14 @@ public class TsharkCaptureService {
         MsTsharkSession session = this.sessionMapper.selectById(sessionId);
         if (session != null && session.getFilePath() != null) {
             try {
-                Files.deleteIfExists(Paths.get(session.getFilePath()));
+                Path pcap = Paths.get(session.getFilePath());
+                Files.deleteIfExists(pcap);
+                // tshark 的 stdout/stderr 被重定向到 <pcap>.log（见 startCapture）。
+                // 原实现只删了 .pcap，.pcap.log 永久残留 —— 实测删掉 13 个会话后磁盘上
+                // 仍留着 13 个 .log，每次抓包泄漏一个，长期运行必然撑爆目录。
+                Files.deleteIfExists(Paths.get(pcap + ".log"));
             } catch (Exception ignored) {
+                // 抓包文件清理失败不影响删会话的语义：会话与数据包已从库中移除
             }
         }
         this.sessionMapper.deleteById(sessionId);
