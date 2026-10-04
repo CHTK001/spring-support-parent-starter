@@ -27,7 +27,8 @@ public class MonitorTimeseriesProperties {
     private String engine = "influxdb";
 
     /**
-     * influxdb 地址（v1 兼容端点，如 http://127.0.0.1:8086）
+     * 时序存储地址：influxdb / questdb 用作服务地址（如 http://127.0.0.1:8086）；
+     * redis 配置为 redis:// 地址（或 host:port）时覆盖 spring.data.redis.*，否则回退后者
      */
     private String url = "http://127.0.0.1:8086";
 

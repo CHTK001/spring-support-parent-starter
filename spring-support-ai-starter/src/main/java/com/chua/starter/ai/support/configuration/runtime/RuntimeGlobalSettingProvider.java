@@ -71,6 +71,8 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("provider_app_key", "", "STRING", "LLM App Key（部分供应商使用）", 6),
                 new SettingItem("provider_app_secret", "", "STRING", "LLM App Secret（部分供应商使用）", 7),
                 new SettingItem("default_model", "", "STRING", "默认对话模型（留空=自动使用模型管理中第一个启用的模型）", 8),
+            new SettingItem("default_image_feature_model", "", "STRING", "默认图像特征模型（ONNX 模型标识；以图搜图未单独配置时兜底）", 30),
+            new SettingItem("default_face_model", "", "STRING", "默认人脸模型（ONNX 模型标识；人脸检测/特征未单独配置时兜底）", 31),
                 new SettingItem("compression_model", "", "STRING", "上下文压缩模型（空=使用默认模型）", 9),
                 new SettingItem("system_prompt", "", "STRING", "默认系统提示词", 10),
                 new SettingItem("temperature", "0.7", "NUMBER", "默认生成温度", 11),
