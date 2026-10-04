@@ -976,9 +976,25 @@ public class AiBotChatService {
         if (bot != null && bot.getModel() != null && !bot.getModel().isBlank()) {
             modelName = bot.getModel();
         } else {
+            // 连接器没单独选模型时：Bot 全局默认 → 运行时默认，逐级回退。
+            // 此前只读 bot.default_model，runtime.default_model 完全被忽略，
+            // 于是「只在系统设置里配了默认模型」的场景解析不到任何模型。
             modelName = globalSettingReader.getStr("bot", "default_model");
+            if (modelName == null || modelName.isBlank()) {
+                modelName = globalSettingReader.getStr("runtime", "default_model");
+            }
         }
-        return normalizeModelName(modelName);
+        String normalized = normalizeModelName(modelName);
+        if (isModelAvailable(normalized)) {
+            return normalized;
+        }
+        // 配置值缺失、或指向一个模型管理里不存在的模型（例如种子里硬编码的 gpt-4o）时，
+        // 退到第一个启用的模型；否则润色 / 会话摘要这类只走单模型的入口会静默失效。
+        String fallback = firstEnabledModel();
+        if (fallback != null) {
+            log.warn("[BotChat] Bot 模型 {} 不可用，回退到模型管理中第一个启用模型: {}", normalized, fallback);
+        }
+        return fallback;
     }
 
     /**
@@ -1399,12 +1415,37 @@ public class AiBotChatService {
         addCandidate(candidates, bot.getModel());
         addCandidate(candidates, globalSettingReader.getStr("bot", "default_model"));
         addCandidate(candidates, globalSettingReader.getStr("runtime", "default_model"));
-        if (candidates.isEmpty()) {
-            return "请先为该 Bot 设置 AI 模型，或在设置中配置默认模型。";
+
+        // 先把「模型管理里不存在 / 已停用」的候选剔掉再用。
+        //
+        // 历史问题：runtime.default_model 的种子默认值被硬编码成 gpt-4o，而现场只启用了
+        // agnes-* 系列，于是候选链里最后那个不可用的 gpt-4o 成了「最后一个候选」，
+        // 报错就永远是「模型 gpt-4o 未在模型管理中配置」——真正的失败原因（连接器自己的模型
+        // 调用失败）被完全盖住，用户也看不懂为什么提示一个自己从没配过的模型。
+        LinkedHashSet<String> usable = new LinkedHashSet<>();
+        for (String candidate : candidates) {
+            if (isModelAvailable(candidate)) {
+                usable.add(candidate);
+            } else {
+                log.warn("[BotChat] 候选模型 {} 未在模型管理中配置或已停用，跳过", candidate);
+            }
+        }
+        // 配置里一个可用模型都没有（连接器没单独选、Bot 默认留空、运行时默认是失效值）时，
+        // 退到模型管理里第一个启用的模型，保证「连接器没选模型」也能用既有配置跑起来。
+        if (usable.isEmpty()) {
+            String fallback = firstEnabledModel();
+            if (fallback != null) {
+                log.warn("[BotChat] 连接器与默认模型均不可用，回退到模型管理中第一个启用模型: {}", fallback);
+                usable.add(fallback);
+            }
+        }
+        if (usable.isEmpty()) {
+            return "AI 回复失败：没有可用的 AI 模型，请先在「模型管理」中启用至少一个模型。";
         }
         long timeoutMs = resolveBotTimeout();
+        Exception firstError = null;
         Exception lastError = null;
-        for (String candidate : candidates) {
+        for (String candidate : usable) {
             try {
                 String reply = attemptReply(bot, candidate, userMsg, timeoutMs, history);
                 if (reply != null && !reply.isBlank()) {
@@ -1412,12 +1453,61 @@ public class AiBotChatService {
                 }
                 log.warn("[BotChat] 候选模型 {} 无有效回复，尝试下一个", candidate);
             } catch (Exception e) {
+                if (firstError == null) {
+                    firstError = e;
+                }
                 lastError = e;
                 log.warn("[BotChat] 候选模型 {} 调用失败（{}），尝试下一个", candidate, e.getMessage());
             }
         }
-        String reason = describeAiError(lastError, "所有候选模型均无响应");
+        // 报第一个候选的失败原因：它是用户真正指定（或最优先）的那个模型；
+        // 只报最后一个会把「连接器模型调用失败」误报成「默认模型没配置」。
+        String reason = describeAiError(firstError != null ? firstError : lastError, "所有候选模型均无响应");
         return "AI 回复失败：" + reason;
+    }
+
+    /**
+     * 判断模型是否已在「模型管理」中配置且启用。
+     *
+     * <p>查询异常时不拦截（返回 true），让调用阶段去暴露真实错误，
+     * 避免把一次数据库抖动变成「模型不存在」的误判。</p>
+     *
+     * @param modelName 已归一化的模型名，可为空
+     * @return 已配置且启用时为 true
+     */
+    private boolean isModelAvailable(String modelName) {
+        if (modelName == null || modelName.isBlank()) {
+            return false;
+        }
+        try {
+            return providerModelMapper.selectCount(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getModel, modelName)
+                            .eq(SysAiProviderModel::getEnabled, true)) > 0;
+        } catch (Exception e) {
+            log.warn("[BotChat] 查询模型是否可用失败 model={}: {}", modelName, e.getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * 取「模型管理」里第一个启用的模型（先按排序、再按模型名），作为最终兜底。
+     *
+     * @return 模型名；一个启用的模型都没有时返回 {@code null}
+     */
+    private String firstEnabledModel() {
+        try {
+            SysAiProviderModel first = providerModelMapper.selectOne(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getEnabled, true)
+                            .orderByAsc(SysAiProviderModel::getSortOrder)
+                            .orderByAsc(SysAiProviderModel::getModel)
+                            .last("LIMIT 1"));
+            return first == null ? null : first.getModel();
+        } catch (Exception e) {
+            log.warn("[BotChat] 查询首个启用模型失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

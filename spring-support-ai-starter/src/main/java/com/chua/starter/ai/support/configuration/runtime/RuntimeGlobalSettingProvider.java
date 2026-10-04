@@ -70,7 +70,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("provider_api_key", "", "STRING", "LLM API Key", 5),
                 new SettingItem("provider_app_key", "", "STRING", "LLM App Key（部分供应商使用）", 6),
                 new SettingItem("provider_app_secret", "", "STRING", "LLM App Secret（部分供应商使用）", 7),
-                new SettingItem("default_model", "gpt-4o", "STRING", "默认对话模型", 8),
+                new SettingItem("default_model", "", "STRING", "默认对话模型（留空=自动使用模型管理中第一个启用的模型）", 8),
                 new SettingItem("compression_model", "", "STRING", "上下文压缩模型（空=使用默认模型）", 9),
                 new SettingItem("system_prompt", "", "STRING", "默认系统提示词", 10),
                 new SettingItem("temperature", "0.7", "NUMBER", "默认生成温度", 11),
