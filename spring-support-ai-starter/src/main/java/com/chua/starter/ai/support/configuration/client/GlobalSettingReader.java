@@ -58,6 +58,31 @@ public class GlobalSettingReader {
     }
 
     /**
+     * 读取字符串值（<b>不经缓存</b>，直连数据库）。
+     *
+     * <p>为什么需要它：{@link #getStr} 走的是 {@code @Cacheable(REDIS_CACHE_ALWAYS)} 的
+     * Redis 缓存，只有页面的保存路径会主动失效。绕过页面直接改库（运维改库、脚本改库）时
+     * 会读到旧值 —— 线上实测过：默认模型在库里已是新值，缓存里仍是已废弃的旧模型名，
+     * 进程就一直按旧值解析，报出来的错误与库里配置完全对不上，极难排查。</p>
+     *
+     * <p>因此「错一次就整条链路失败」的模型解析必须走本方法。</p>
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @return 值，未配置时返回 空
+     */
+    public String getStrDirect(String group, String field) {
+        String raw;
+        try {
+            raw = sysAiGlobalSettingService.getValueDirect(group, field).orElse(null);
+        } catch (Exception e) {
+            log.warn("[GlobalSettingReader] 直读数据库失败(group={},field={}): {}", group, field, e.getMessage());
+            raw = null;
+        }
+        return externalModelSupport.prepare(group, field, raw);
+    }
+
+    /**
      * 读取布尔值。
      *
      * @param group        分组
