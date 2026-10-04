@@ -336,7 +336,12 @@ public class ImageSearchStore {
     public String currentModel() {
         try {
             String v = settingReader.getStr(GROUP, "default_image_feature_model");
-            return v == null ? "" : v.trim();
+            if (v != null && !v.isBlank()) {
+                return v.trim();
+            }
+            // 兜底：默认模型设置里的图像特征模型默认项（同为 ONNX 模型命名空间）
+            String fallback = settingReader.getStr("runtime", "default_image_feature_model");
+            return fallback == null ? "" : fallback.trim();
         } catch (Exception ex) {
             log.warn("[ImageSearch] 读取特征模型配置失败: {}", ex.getMessage());
             return "";

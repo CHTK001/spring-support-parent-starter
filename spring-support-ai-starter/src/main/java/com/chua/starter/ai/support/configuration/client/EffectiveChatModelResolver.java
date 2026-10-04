@@ -19,11 +19,13 @@ import java.util.Optional;
  * <p>优先级（第一个可用者胜出）：</p>
  * <ol>
  *   <li>调用方显式指定的模型（例如连接器/Bot 绑定自己配的模型）</li>
- *   <li><b>当前用户自己的</b>默认对话模型（{@code sys_ai_user_setting}，按 userId 隔离）</li>
- *   <li>配置中心 Bot 全局默认：{@code bot/default_model}</li>
+ *   <li>配置中心 Bot 分组默认：{@code bot/default_model}（该用户的覆盖优先，其次全局）</li>
  *   <li>配置中心「对话路由」的默认对话模型：{@code runtime/default_model}
- *       （兼容旧键 {@code models/defaultChatModelId}、{@code runtime/default_chat_model}）</li>
+ *       （该用户的覆盖优先，其次全局；兼容旧键 {@code models/defaultChatModelId}、
+ *       {@code runtime/default_chat_model}）</li>
  * </ol>
+ *
+ * <p>即连接器链路的兜底顺序为 <b>连接器模型 &gt; Bot 模型 &gt; 默认模型</b>。</p>
  *
  * <p><b>刻意不做的两件事：</b></p>
  * <ul>
@@ -96,21 +98,27 @@ public class EffectiveChatModelResolver {
      */
     public List<String> candidates(String explicitModel) {
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
-        // ① 调用方显式指定（连接器 / Bot 绑定自己的模型）—— 优先级最高
+        // ① 调用方显式指定（连接器 / Bot 绑定自己的模型）
         addCandidate(ordered, explicitModel);
-        // ② 配置中心 Bot 分组全局默认（用户要求：连接器模型 > bot 模型 > 默认模型）
-        addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_BOT, FIELD_DEFAULT_MODEL));
-        // ③ 当前用户自己的默认对话模型（按 userId 隔离，管理员不代管）
+        // ② Bot 模型：bot/default_model（用户覆盖优先，其次全局）
+        //    连接器未单独配模型时，Bot 模型是它的第一层兜底。
+        //    该层「用户覆盖行为空」视为未配置，继续往下走默认模型。
+        Optional<String> userBot = userOverride(GROUP_BOT, FIELD_DEFAULT_MODEL);
+        if (userBot.isPresent()) {
+            addCandidate(ordered, userBot.get());
+        } else {
+            addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_BOT, FIELD_DEFAULT_MODEL));
+        }
+        // ③ 默认模型：runtime/default_model（用户覆盖优先，其次全局 + 两个旧键兼容）
         //
         //    判据是「用户层有没有覆盖行」，不是「值是否为空」：
         //    用户**显式清空**（有覆盖行、值为空）时必须**就此停住**，不再回退全局 ——
         //    否则「重置成空」永远做不到（清完又被全局/yaml 顶回来，这正是此前的现象）。
-        Optional<String> userRaw = userChatModelOverride();
-        if (userRaw.isPresent()) {
-            addCandidate(ordered, userRaw.get());
+        Optional<String> userDefault = userOverride(GROUP_RUNTIME, FIELD_DEFAULT_MODEL);
+        if (userDefault.isPresent()) {
+            addCandidate(ordered, userDefault.get());
             return List.copyOf(ordered);
         }
-        // ④ 配置中心「对话路由」的默认对话模型（含两个旧键兼容）
         addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_RUNTIME, FIELD_DEFAULT_MODEL));
         addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_MODELS, "defaultChatModelId"));
         addCandidate(ordered, globalSettingReader.getStrDirect(GROUP_RUNTIME, "default_chat_model"));
@@ -133,17 +141,18 @@ public class EffectiveChatModelResolver {
     }
 
     /**
-     * 读取当前用户的默认对话模型**覆盖**。
+     * 读取当前用户在指定分组的**覆盖**值。
      *
      * <p>返回 {@link Optional#empty()} 表示「该用户没设过」（应回退全局）；
-     * 返回 {@code Optional.of("")} 表示「显式清空」（应停住，不回退全局）。
-     * 这个区分是「重置成空」能生效的前提 —— 用「值是否为空」判据做不到。</p>
+     * 返回 {@code Optional.of("")} 表示「显式清空」。这个区分是「重置成空」能生效的前提。</p>
      *
      * <p>取不到用户上下文（后台线程、未登录）时返回 空，由全局默认兜底。</p>
      *
+     * @param group 分组
+     * @param field 字段名
      * @return 用户覆盖值；未覆盖或取不到用户时为空
      */
-    private Optional<String> userChatModelOverride() {
+    private Optional<String> userOverride(String group, String field) {
         String userId;
         try {
             userId = AiUserContext.currentUserId();
@@ -154,9 +163,9 @@ public class EffectiveChatModelResolver {
             return Optional.empty();
         }
         try {
-            return userSettingService.getUserValue(userId, GROUP_RUNTIME, FIELD_DEFAULT_MODEL);
+            return userSettingService.getUserValue(userId, group, field);
         } catch (Exception e) {
-            log.warn("[ModelResolver] 读取用户默认模型失败 userId={}: {}", userId, e.getMessage());
+            log.warn("[ModelResolver] 读取用户覆盖失败 userId={} {}/{}: {}", userId, group, field, e.getMessage());
             return Optional.empty();
         }
     }
