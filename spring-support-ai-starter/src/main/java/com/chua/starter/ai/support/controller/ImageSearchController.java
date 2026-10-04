@@ -236,7 +236,7 @@ public class ImageSearchController {
         byte[] original = imageSearchStores.readOriginal(id);
         if (original != null && original.length > 0) {
             return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentType(imageMediaType(original))
                     // 图片字节可被任意变换后缓存，这里给短 max-age，避免改库后仍看到旧图
                     .cacheControl(CacheControl.maxAge(Duration.ofSeconds(300)).cachePrivate())
                     .body(original);
@@ -246,9 +246,33 @@ public class ImageSearchController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
+                .contentType(imageMediaType(thumb))
                 .cacheControl(CacheControl.maxAge(Duration.ofSeconds(300)).cachePrivate())
                 .body(thumb);
+    }
+
+    /**
+     * 按字节魔数判定图片类型。
+     *
+     * <p>此前原图分支写死 {@code APPLICATION_OCTET_STREAM}、缩略图分支写死
+     * {@code IMAGE_JPEG}，与真实字节常常不符：实测一条 PNG 原图被以
+     * {@code application/octet-stream} 发出，而响应还带
+     * {@code X-Content-Type-Options: nosniff}。浏览器实测仍能渲染，但
+     * 「声明类型与内容不一致 + nosniff」是明确的错误声明，按魔数给出真实类型即可。</p>
+     *
+     * @param bytes 图片字节
+     * @return 依魔数判定的媒体类型；无法识别时回退 JPEG（历史行为）
+     */
+    private static MediaType imageMediaType(byte[] bytes) {
+        if (bytes != null && bytes.length >= 4
+                && (bytes[0] & 0xFF) == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G') {
+            return MediaType.IMAGE_PNG;
+        }
+        if (bytes != null && bytes.length >= 3
+                && bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F') {
+            return MediaType.IMAGE_GIF;
+        }
+        return MediaType.IMAGE_JPEG;
     }
 
     /**
