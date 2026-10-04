@@ -915,6 +915,11 @@ CREATE TABLE IF NOT EXISTS edu_paper_assign (
     assign_status TINYINT DEFAULT 1 COMMENT '状态: 0-已撤回 1-已布置',
     assign_remark VARCHAR(200) COMMENT '备注（如截止时间/说明）',
     assign_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '布置时间',
+    -- 审计列必须与 SysBase（create_time/update_time/create_name/create_by/update_name/update_by）
+    -- 逐列对齐：实体走 MyBatis-Plus 的自动映射，少一列就是 500。
+    -- 首次发布时这里漏了 create_time，实测「布置/撤回」全 500（Unknown column 'create_time'
+    -- in 'SELECT'），而按列名手写的 XML 查询（/mine、/my-class）却正常 —— 正是这个差异暴露了它。
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     create_name VARCHAR(255) DEFAULT NULL,
     create_by INT DEFAULT NULL,
@@ -925,5 +930,12 @@ CREATE TABLE IF NOT EXISTS edu_paper_assign (
     KEY edu_paper_assign_paper (paper_id),
     KEY edu_paper_assign_teacher (teacher_account)
 ) COMMENT '班级试卷布置';
+
+-- 兼容既有库：首次发布（2026-10-04 06:14）建出的 edu_paper_assign 缺 create_time。
+-- 上面的 CREATE TABLE 只对全新库生效，既有库必须靠这条 ALTER 补齐，
+-- 否则「布置/撤回」会一直 500（这正是本次验收抓到的失败）。
+ALTER TABLE edu_paper_assign
+    ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
 
 

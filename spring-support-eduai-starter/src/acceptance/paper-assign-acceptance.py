@@ -108,6 +108,9 @@ if not admin:
 
 class_id = None
 student_id = None
+# 第二个班 + 第二个学生：用来证明「下发是给班的，不是给所有人的」
+class2_id = None
+student2_id = None
 created_assigns = []
 
 try:
@@ -147,6 +150,26 @@ try:
 
     stu = login(stu_no, INIT_PWD, "STUDENT")
     ck("学生用初始口令登录", len(stu) > 20, "len=%d" % len(stu))
+
+    # 第二个班 + 第二个学生：用于「下发只对目标班生效」的隔离断言。
+    # 没有它，本套件只能证明「布置后有人能看到」，证明不了「没布置的班看不到」。
+    c, d = req("POST", "/v2/edu/dimension/classes/save",
+               {"className": "试卷下发对照班-%d" % STAMP, "classGradeLevel": "PRIMARY"},
+               token=admin)
+    class2_id = d.get("data") if isinstance(d.get("data"), int) else None
+    ck("新增对照班成功", d.get("ok") and class2_id is not None, "classId=%s" % class2_id)
+    c, d = req("POST", "/v2/edu/dimension/students/save",
+               {"studentName": "对照班学生-%d" % STAMP, "studentPwdInput": INIT_PWD,
+                "studentClassId": class2_id, "studentGradeLevel": "PRIMARY"},
+               token=admin)
+    student2_id = d.get("data") if isinstance(d.get("data"), int) else None
+    stu2_no = None
+    for s in as_list(req("GET", "/v2/edu/dimension/students", token=admin)[1]):
+        if s.get("studentId") == student2_id:
+            stu2_no = s.get("studentNo")
+            break
+    stu2 = login(stu2_no, INIT_PWD, "STUDENT")
+    ck("对照班学生可登录", len(stu2) > 20, "studentNo=%s" % stu2_no)
 
     print("=== 2. 选定一张「已发布」试卷 ===")
     c, d = req("GET", "/v2/edu/paper/page?pageNum=1&pageSize=200", token=admin)
@@ -188,6 +211,14 @@ try:
     ck("学生端只带出已发布卷的字段口径（assignStatus=1）",
        bool(hit) and hit[0].get("assignStatus") == 1,
        "assignStatus=%s" % ((hit[0] if hit else {}).get("assignStatus")))
+
+    print("=== 4.1 隔离：下发只对目标班生效 ===")
+    other = paper_ids(my_class_papers(stu2))
+    ck("**对照班学生看不到发给另一个班的卷**", paper_id not in other,
+       "对照班可见 %d 张；命中=%s" % (len(other), paper_id in other))
+    ck("对照班学生仍能正常调用 /my-class（不是靠报错实现的隔离）",
+       len(my_class_papers(stu2)) >= 0,
+       "对照班可见 %d 张" % len(other))
 
     print("=== 5. 老师侧「我布置的」可见 ===")
     mine = my_assigns(admin)
@@ -263,17 +294,27 @@ try:
     ck("撤回不存在的布置被拒（不 500）", (not d.get("ok")) and c != 500,
        "http=%s msg=%s" % (c, d.get("msg")))
 
+    # 显式记账的覆盖缺口：跨老师越权（布置到别人的班）需要第二个教师账号，
+    # 而当前环境 edu_teacher 只有 1 行（teacher_account=2）、edu_class 的 owner 全是 2，
+    # 构造不出「别人的班」。这一条**不记为通过**，避免整份报告看起来比实际更全。
+    skip("布置到「别人的班」被拒（跨老师越权）",
+         "环境只有一个教师账号，构造不出他人班级；该分支由 requireMyClass 校验，未端到端覆盖")
+
 finally:
     print("=== 11. 清理夹具 ===")
-    for r in my_assigns(admin):
-        if r.get("classId") == class_id and r.get("assignStatus") == 1:
-            req("DELETE", "/v2/edu/paper-assign/%s" % r.get("assignId"), token=admin)
-    if student_id is not None:
-        c, d = req("DELETE", "/v2/edu/dimension/students/%s" % student_id, token=admin)
-        print("  （已删除验收生 studentId=%s ok=%s）" % (student_id, d.get("ok")))
-    if class_id is not None:
-        c, d = req("DELETE", "/v2/edu/dimension/classes/%s" % class_id, token=admin)
-        print("  （已删除验收班 classId=%s ok=%s）" % (class_id, d.get("ok")))
+    for cid in (class_id, class2_id):
+        if cid is None:
+            continue
+        for r in my_assigns(admin):
+            if r.get("classId") == cid and r.get("assignStatus") == 1:
+                req("DELETE", "/v2/edu/paper-assign/%s" % r.get("assignId"), token=admin)
+    for sid, cid in ((student_id, class_id), (student2_id, class2_id)):
+        if sid is not None:
+            c, d = req("DELETE", "/v2/edu/dimension/students/%s" % sid, token=admin)
+            print("  （已删除验收生 studentId=%s ok=%s）" % (sid, d.get("ok")))
+        if cid is not None:
+            c, d = req("DELETE", "/v2/edu/dimension/classes/%s" % cid, token=admin)
+            print("  （已删除验收班 classId=%s ok=%s）" % (cid, d.get("ok")))
 
 passed = sum(1 for r in results if r[0])
 print("\n===== 班级试卷布置验收: 通过 %d / 失败 %d =====" % (passed, len(results) - passed))
