@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.config;
 
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.user.SaltedPassword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -125,6 +126,70 @@ public class ProductionAuthGuard implements InitializingBean {
                 reasons.add("plugin.oauth.protocol=static 但未配置任何静态账号"
                         + "（plugin.oauth.temp.user / OAUTH_TEMP_USER 为空），"
                         + "此时无人能登录，等同于把服务整体锁死");
+                return reasons;
+            }
+            // 只判空是不够的：一条【格式错误】的凭据同样登不进去，
+            // 但服务能正常启动、配置上也「已启用鉴权」，比完全不配置更难发现。
+            // 最容易被写出来的就是这种 —— 见 application-prod.yml 里
+            // openssl passwd -apr1 那条命令（它产出的 $apr1$... 不被识别）
+            reasons.addAll(detectMalformedAccounts(staticUserConfig));
+        }
+        return reasons;
+    }
+
+    /**
+     * 逐条校验静态账号配置里每一项的格式。
+     *
+     * <p><b>为什么不能只判空</b>：{@code StaticUserStore} 认可的口令只有两种形态 ——
+     * 明文，或 {@code <32位十六进制盐>$<32位十六进制摘要>}（摘要为 {@code MD5(盐+口令)}）。
+     * 任何第三种形态（最典型是 {@code $apr1$...} 这类 htpasswd 串、base64、JSON）
+     * 都<b>永远匹配不上</b>：它既不等于明文，也不满足 {@code isSalted} 的定长十六进制校验，
+     * 于是走到兜底分支后必然返回 false。</p>
+     *
+     * <p>后果是「服务起来了、鉴权也标着启用、但没有任何账号能登录」，
+     * 与「没配账号」是同一种故障，却完全躲过了原先的空值检查。</p>
+     *
+     * <p>刻意<b>不</b>拒绝明文口令：明文是 {@code StaticUserStore} 明确支持的形态，
+     * 在这里报错会把「配置能用」误判成「配置有问题」。守卫一旦在正常配置上误报，
+     * 就会被人当成噪声关掉，那等于把 fail-safe 又关回去了。</p>
+     *
+     * @param staticUserConfig 生效的静态账号配置
+     * @return 每条一个可读原因；全部合法时返回空列表
+     */
+    public static List<String> detectMalformedAccounts(String staticUserConfig) {
+        List<String> reasons = new ArrayList<>(0);
+        if (null == staticUserConfig || staticUserConfig.isBlank()) {
+            return reasons;
+        }
+        // 与 StaticUserStore 的切分口径保持一致：分号分账号、冒号分用户名与口令
+        for (String rawEntry : staticUserConfig.split(";")) {
+            String entry = rawEntry.trim();
+            if (entry.isEmpty()) {
+                continue;
+            }
+            int sep = entry.indexOf(':');
+            if (sep < 0) {
+                reasons.add("静态账号条目 '" + entry + "' 缺少冒号，"
+                        + "应为「用户名:口令」或「用户名:<盐>$<摘要>」");
+                continue;
+            }
+            String user = entry.substring(0, sep).trim();
+            String secret = entry.substring(sep + 1).trim();
+            if (user.isEmpty()) {
+                reasons.add("静态账号条目 '" + entry + "' 缺少用户名");
+                continue;
+            }
+            if (secret.isEmpty()) {
+                reasons.add("账号 '" + user + "' 没有口令");
+                continue;
+            }
+            // 含 $ 说明调用方以为自己写了加盐摘要，那就必须是合法形态。
+            // 判据用 SaltedPassword.isSalted 而不是自己数长度，避免两处口径漂移。
+            if (secret.indexOf('$') >= 0 && !SaltedPassword.isSalted(secret)) {
+                reasons.add("账号 '" + user + "' 的口令不是合法的加盐摘要"
+                        + "（应为 32 位十六进制盐 + $ + 32 位十六进制摘要，摘要为 MD5(盐+口令)）；"
+                        + "若使用了 openssl passwd -apr1，其 $apr1$... 格式不被识别，"
+                        + "会导致服务能启动但无人能登录");
             }
         }
         return reasons;

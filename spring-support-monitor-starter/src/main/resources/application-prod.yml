@@ -42,9 +42,23 @@
 # 多个账号用分号分隔。**没设置就启动会失败** —— 由 ProductionAuthGuard 判定，
 # 属于刻意的 fail-safe：宁可启动失败让人来配，也不要出现「服务起来了、
 # 鉴权也标着启用、但没有任何账号能登录」这种要等用户投诉才发现的状态。
-# 生成加盐摘要：
-#   HTPASSWD=$(openssl passwd -apr1 -salt <自定义盐> '<明文密码>')
-#   export OAUTH_TEMP_USER="admin:$HTPASSWD"
+# 生成加盐摘要（**不是 openssl passwd**）：
+#   格式必须是 <32位十六进制盐>$<32位十六进制摘要>，摘要 = MD5(盐 + 明文口令)，
+#   由 com.chua.starter.oauth.client.support.user.SaltedPassword 校验。
+#   openssl passwd -apr1 产出的 $apr1$<盐>$<哈希> **不被识别** —— 它既不是明文，
+#   也不满足定长十六进制校验，于是永远匹配不上：服务能正常启动、配置上也标着
+#   「已启用鉴权」，但没有任何账号能登录。此前本文件给出的正是这条命令，
+#   照做就会踩进这个坑；ProductionAuthGuard 现已改为逐条校验格式并在启动期拒绝。
+#
+#   正确生成方式（任选其一）：
+#   1) 直接用明文（StaticUserStore 明确支持，最省事）：
+#        export OAUTH_TEMP_USER="admin:<明文口令>"
+#   2) 用加盐摘要（避免配置泄露即口令曝光）：
+#        SALT=$(openssl rand -hex 16)                 # 恰好 32 位十六进制
+#        DIGEST=$(printf '%s' "${SALT}<明文口令>" | openssl dgst -md5 -hex | awk '{print $NF}')
+#        export OAUTH_TEMP_USER="admin:${SALT}\$${DIGEST}"
+#
+#   多个账号用分号分隔：export OAUTH_TEMP_USER="admin:<口令>;ops:<口令>"
 
 plugin:
   oauth:
