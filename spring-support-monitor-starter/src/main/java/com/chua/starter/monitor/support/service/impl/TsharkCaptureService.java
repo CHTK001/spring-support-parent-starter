@@ -42,7 +42,24 @@ import java.util.concurrent.TimeUnit;
 public class TsharkCaptureService {
 
     private static final String TSHARK_BIN = System.getenv().getOrDefault("TSHARK_BIN", "tshark"); // TSHARK_BIN
-    private static final String CAPTURE_DIR = System.getenv().getOrDefault("TSHARK_CAPTURE_DIR", "/opt/spring-support/captures"); // CAPTURE_DIR
+
+    /**
+     * pcap 落盘目录。
+     *
+     * <p><b>为什么默认值放在用户主目录而不是 {@code /opt/spring-support/captures}</b>：
+     * 原默认值假定服务以 root 运行。实际部署里平台由 systemd 以普通用户拉起
+     * （{@code User=kali}），而 {@code /opt} 归 root，{@code Files.createDirectories}
+     * 会以 AccessDeniedException 失败，异常消息只带上一级路径，最终表现为
+     * 「启动抓包失败: /opt/spring-support」—— 功能已实现但在真实部署里完全不可用
+     * （实测该目录当时甚至不存在，且普通用户无权在 /opt 下创建）。</p>
+     *
+     * <p>改为用户主目录后，任何非 root 部署都能直接跑通；需要固定路径时用环境变量
+     * {@code TSHARK_CAPTURE_DIR} 覆盖即可（原先也是这个约定，只是不该把不可写路径
+     * 设为默认）。</p>
+     */
+    private static final String CAPTURE_DIR = System.getenv()
+            .getOrDefault("TSHARK_CAPTURE_DIR",
+                    System.getProperty("user.home") + File.separator + "spring-support" + File.separator + "captures"); // CAPTURE_DIR
 
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
