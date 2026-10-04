@@ -134,9 +134,37 @@ public class FaceStores {
         if (event == null || !GROUP.equals(event.getGroup())) {
             return;
         }
-        // 用户级写入**也要**重建：按用户生效的人脸模型就落在这里（每个账号按自己的配置建管线）。
-        // 与 FaceClientManager 相反 —— 那个是全局共享实例，收到用户级写入必须跳过。
-        reloadAll(event.isUserScoped() ? "人脸设置变更（用户级）" : "人脸设置变更");
+        // 用户级写入只重建**触发者自己的**账号库：账号库按账号隔离，在某一用户的身份下
+        // 重建全部账号会把该用户的覆盖串到其他账号，故定向重建；
+        // 未建过库的账号无需处理，下次按需构建即用最新配置。
+        if (event.isUserScoped()) {
+            reloadAccount(event.getUserId(), "人脸设置变更（用户级）");
+            return;
+        }
+        reloadAll("人脸设置变更");
+    }
+
+    /**
+     * 重建指定账号的人脸库（用户级设置变更专用）。
+     *
+     * @param userId 账号标识（为空表示无归属，此时不重建，避免按错误身份重建）
+     * @param reason 触发原因（只用于日志）
+     */
+    private void reloadAccount(String userId, String reason) {
+        if (userId == null || userId.isBlank()) {
+            log.debug("[Face] {} 但事件未携带账号，跳过重建", reason);
+            return;
+        }
+        AccountFace account = accounts.get(userId);
+        if (account == null) {
+            return;
+        }
+        try {
+            account.reload();
+            log.info("[Face] {}，重建账号 '{}' 的人脸库", reason, userId);
+        } catch (Exception ex) {
+            log.warn("[Face] 账号 '{}' 人脸库重建失败: {}", userId, ex.getMessage());
+        }
     }
 
     /**

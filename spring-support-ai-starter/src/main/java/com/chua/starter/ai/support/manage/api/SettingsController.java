@@ -351,7 +351,7 @@ public class SettingsController {
                     : value instanceof Number ? "NUMBER" : "STRING";
             userSettingService.upsertValue(userId, group, field, value.toString(), valueType, null);
         }
-        publishUserSettingsChanged(group);
+        publishUserSettingsChanged(group, userId);
     }
 
     /**
@@ -366,26 +366,24 @@ public class SettingsController {
      *
      * @param group 设置分组名称
      */
-    private void publishUserSettingsChanged(String group) {
+    private void publishUserSettingsChanged(String group, String userId) {
         if (group == null || group.isBlank()) {
             return;
         }
         try {
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                try {
-                    eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
-                    if ("ocr".equals(group)) {
-                        eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
-                    }
-                    if ("rag".equals(group)) {
-                        eventPublisher.publishEvent(new RagSettingsChangedEvent(group));
-                    }
-                } catch (Exception e) {
-                    log.warn("[用户覆盖设置] 发布分组 {} 变更事件失败: {}", group, e.getMessage());
-                }
-            });
+            // 同步发布：处理链需要当前用户身份才能按「该用户的覆盖」重建其账号级实例。
+            // 标记 userScoped=true 后，全局共享实例（FaceClientManager / RagClientManager）会
+            // 主动跳过，只由按账号维度的持有者（FaceStores / ImageSearchStores）定向重建，
+            // 因此不会把发起人的配置串到其他用户。
+            eventPublisher.publishEvent(new FaceSettingsChangedEvent(group, true, userId));
+            if ("ocr".equals(group)) {
+                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group, true, userId));
+            }
+            if ("rag".equals(group)) {
+                eventPublisher.publishEvent(new RagSettingsChangedEvent(group, true, userId));
+            }
         } catch (Exception e) {
-            log.warn("[用户覆盖设置] 提交分组 {} 变更事件失败: {}", group, e.getMessage());
+            log.warn("[用户覆盖设置] 发布分组 {} 变更事件失败: {}", group, e.getMessage());
         }
     }
 
@@ -417,7 +415,7 @@ public class SettingsController {
         String userId = AiUserContext.requireUserId();
         int deleted = userSettingService.clearGroup(userId, group);
         log.info("[用户覆盖设置] user={} 撤销分组 {} 的 {} 项覆盖", userId, group, deleted);
-        publishUserSettingsChanged(group);
+        publishUserSettingsChanged(group, userId);
         return ApiResult.ok(userSettingService.listMerged(userId, group));
     }
 
