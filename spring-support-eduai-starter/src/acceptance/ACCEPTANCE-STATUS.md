@@ -6,18 +6,19 @@
 
 > ## ✅ 当前状态（2026-10-04）：**可交付**
 >
-> 用**最新 HEAD `d9941f9b2`** 重建并发布，线上 jar `e7824e44…` == 本地构建
-> （**PROVENANCE_OK**）。对应报告 `ACCEPTANCE-REPORT-20261004.md`。
+> 用**最新 HEAD `b23b3373`** 重建发布，线上 jar `d00d1c45…` == 本地构建
+> （**PROVENANCE_OK**）。对应报告 `ACCEPTANCE-REPORT-20261004-r7.md`。
 >
-> 本版含两个修复：① dimension 管理端越权（`@Permission("admin")`）；
-> ② **CORS 白名单**（修浏览器登录 403 `Invalid CORS request`）。
-> 验收：主 55/55 + 学生管理 19/19 + 改密 15/15 + 故障注入 + 浏览器业务验收全 PASS。
+> 验收：API 55/55 + 学生管理 19/19 + 改密 15/15 + 并发 60/60 + 故障注入
+> + **浏览器业务验收**（学生登录 / 管理员登录 / 学生管理页 / 编辑弹窗左右结构）全 PASS。
 >
 > 核对项：紧凑对象头 ✅ / 非 H2（MariaDB）✅ / 升级前先停端口 ✅ /
-> 前端本机 pnpm 直跑不打包 ✅ / 本机无后台 java ✅。
+> 前端本机 pnpm 直跑不打包 ✅ / 只一个前端实例 ✅ / 本机无后台 java ✅。
 >
-> 复核：`python3 report-staleness.py --live-eduai e7824e44… --live-oauth ca4ce0b3…`
-> → 该报告 `VALID`，其余报告均已标注失效。
+> 本版还修了 `release-run.sh` 的一个**假阴性**：故障注入恢复窗口 100s 小于
+> 实测 120s 的 oauth 冷启动，会把「恢复成功」误报成 `oauth=000`；已改为 240s。
+>
+> 复核：`python3 report-staleness.py --live-eduai d00d1c45… --live-oauth ca4ce0b3…`
 
 ## 1. 交付面
 
@@ -90,7 +91,8 @@ f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
 | `ACCEPTANCE-REPORT-20261002-r3.md` | `81d7c0e1` | 已失效（被 `e7ee42b8` 替换）|
 | `ACCEPTANCE-REPORT-20261003.md` | `75e228fc` | 已失效（被 `563dce91` 替换；**该 jar 含越权漏洞**）|
 | `ACCEPTANCE-REPORT-20261003-r5.md` | `563dce91` | 已失效（被 `e7824e44` 替换；该 jar 有浏览器登录 CORS 缺陷）|
-| **`ACCEPTANCE-REPORT-20261004.md`** | **`e7824e44`** | **VALID（== 现役）** |
+| `ACCEPTANCE-REPORT-20261004.md` | `e7824e44` | 已失效（被 `a3c6dfd1` 替换）|
+| **`ACCEPTANCE-REPORT-20261004-r7.md`** | **`d00d1c45`** | **VALID（== 现役）** |
 
 **关键澄清**：前几份失效抹掉的是「报告与二进制的绑定」，**不是修复本身**；
 而自证报告之所以成立，是因为它把「构建 → 部署 → 断言线上==本地」串成了一条命令

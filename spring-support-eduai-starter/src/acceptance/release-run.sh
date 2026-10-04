@@ -134,7 +134,10 @@ sleep 2
 T0=$(date +%s%3N); R=$(probe); T1=$(date +%s%3N)
 log "    停 oauth: 耗时=$((T1-T0))ms $R  eduai健康=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 $BASE/actuator/health)  restarts=$(S systemctl show eduai-backend -p NRestarts --value)"
 S systemctl start oauth-server.service
-for i in $(seq 1 20); do
+# 窗口必须 >= 实测冷启动时长：2026-10-04 实测 oauth 停机后恢复健康需 **120s**
+# （原窗口 20×5=100s，比它短 —— 于是恢复其实成功却报 oauth=000，是**假阴性**，
+#  差点把「依赖恢复」判成失败）。这里放到 48×5=240s 留足余量。
+for i in $(seq 1 48); do
     oh=$(curl -s -o /dev/null -w '%{http_code}' --max-time 4 http://127.0.0.1:19181/oauth/actuator/health 2>/dev/null || true)
     [ "$oh" = "200" ] && break
     sleep 5
