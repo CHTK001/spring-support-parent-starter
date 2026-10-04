@@ -12,6 +12,7 @@ import com.chua.starter.ai.support.mapper.SysAiServiceInstanceMapper;
 import com.chua.starter.ai.support.mapper.SysAiServiceTokenMapper;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.sun.net.httpserver.HttpExchange;
@@ -55,6 +56,11 @@ public class ServiceInstanceManager {
     private final AiChatFacadeService facade;
     private final SysAiGlobalSettingService globalSettingService;
 
+    /**
+     * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
+     */
+    private final EffectiveChatModelResolver effectiveChatModelResolver;
+
     private final Map<String, HttpServer> servers = new ConcurrentHashMap<>();
     private final Map<String, ExecutorService> pools = new ConcurrentHashMap<>();
 
@@ -67,19 +73,22 @@ public class ServiceInstanceManager {
      * @param registry 聊天客户端注册表
      * @param facade 聊天调用门面
      * @param globalSettingService 全局设置服务
+     * @param effectiveChatModelResolver 生效对话模型解析器
      */
     public ServiceInstanceManager(SysAiServiceInstanceMapper instanceMapper,
                                   SysAiServiceTokenMapper tokenMapper,
                                   SysAiServiceAccessLogMapper accessLogMapper,
                                   ChatClientRegistry registry,
                                   AiChatFacadeService facade,
-                                  SysAiGlobalSettingService globalSettingService) {
+                                  SysAiGlobalSettingService globalSettingService,
+                                  EffectiveChatModelResolver effectiveChatModelResolver) {
         this.instanceMapper = instanceMapper;
         this.tokenMapper = tokenMapper;
         this.accessLogMapper = accessLogMapper;
         this.registry = registry;
         this.facade = facade;
         this.globalSettingService = globalSettingService;
+        this.effectiveChatModelResolver = effectiveChatModelResolver;
     }
 
     // ==================== 实例启停 ====================
@@ -1452,7 +1461,9 @@ public class ServiceInstanceManager {
             } catch (Exception ignored) {
             }
         }
-        return "agnes-2.5-flash";
+        // 不写死兜底模型名：上面三级都取不到时交给统一解析器（它会连带 Bot 默认一起看），
+        // 仍解析不到就返回 空，由调用方报明确错误，绝不悄悄用一个可能不存在的模型名
+        return effectiveChatModelResolver.resolve(null);
     }
 
     // ==================== IO 工具 ====================

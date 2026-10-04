@@ -60,7 +60,8 @@ public class AsrGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("provider", "whisper", "STRING", "ASR 服务商（whisper 本地 / openai / alibaba-asr 等）", 1),
                 new SettingItem("provider_api_key", "", "STRING", "API Key（本地 whisper 无需密钥，云端 ASR 必填）", 2),
                 new SettingItem("provider_base_url", "", "STRING", "API 基础地址（云端 ASR 使用，本地留空）", 3),
-                new SettingItem("default_model", "whisper-tiny", "STRING", "ASR 默认模型", 4),
+                new SettingItem("default_model", "", "STRING", "ASR 默认模型（留空/auto=由所选引擎自动使用推荐档位，"
+                        + "如本地 whisper 的 whisper-tiny）", 4),
                 new SettingItem("language", "zh", "STRING", "默认音频语言（ISO 639-1，如 zh / en，留空自动检测）", 5)
         );
     }

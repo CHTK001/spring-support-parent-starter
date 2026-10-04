@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.entity.AIDialog;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,23 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ChatSendController {
 
-    private static final String DEFAULT_MODEL = "agnes-2.5-flash";
+    /**
+     * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
+     */
+    private final EffectiveChatModelResolver effectiveChatModelResolver;
+
+    /**
+     * 解析本次异步对话使用的模型，<b>不写死任何模型名</b>。
+     *
+     * @return 模型名；未配置可用模型时返回 空
+     */
+    private String resolvedModel() {
+        String model = effectiveChatModelResolver.resolve(null);
+        if (model == null) {
+            log.warn("[ChatSend] 未配置可用的默认对话模型，本次异步对话无法执行");
+        }
+        return model;
+    }
 
     private final AiChatFacadeService aiChatFacadeService;
     private final AIDialogRecordService aiDialogRecordService;
@@ -96,7 +113,8 @@ public class ChatSendController {
                 }
                 chatMemorySupport.inject(memoryUser, sid, userContent, msgList);
                 AiChatRequest req = new AiChatRequest();
-                req.setModel(DEFAULT_MODEL);
+                final String modelToUse = resolvedModel();
+                req.setModel(modelToUse);
                 req.setStream(true);
                 req.setUseSkill(true);
                 req.setMessages(msgList);
@@ -108,7 +126,7 @@ public class ChatSendController {
                     } catch (Exception e) {
                         log.warn("[ChatSend] 保存助手消息失败: {}", e.getMessage());
                     }
-                    chatMemorySupport.remember(memoryUser, sid, userContent, finalText, DEFAULT_MODEL);
+                    chatMemorySupport.remember(memoryUser, sid, userContent, finalText, modelToUse);
                     log.info("[ChatSend] 异步对话完成 sessionId={}, 回复长度={}", sid, finalText.length());
                 }, error -> log.error("[ChatSend] 异步对话失败 sessionId={}", sid, error));
             } catch (Exception e) {
