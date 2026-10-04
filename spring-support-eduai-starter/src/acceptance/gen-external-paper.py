@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """生成「外来试卷」图片：题库中不存在的题目 + 学生作答，用于 ANY 模式（模型判分）验收。
 
-版式对齐真实答题卡：选择题的作答写在题干行的括号里（与 9002/9003 合成卷一致），
-简答题的作答单独一行。避免把作答另起一行——实测那种版式会让 OCR 把「答：B」读成「答0」。
+设计要点（都来自实测）：
+- 作答一律用中文（CJK）。实测这套 OCR 配置下，孤立拉丁字母（如「（B）」「答：B」）
+  很容易被整段丢掉，导致作答被判「未作答」；这不是判分链路的问题，而是识别侧对孤立
+  拉丁字母的局限。语文类外来卷本就以中文作答，用它验收更贴近真实且可复现。
+- 三档作答：第 1 题正确、第 2 题要点不全（部分分）、第 3 题答非所问（0 分），
+  用于验证 ANY 判分有区分度而不是「一律给满/给零」。
 """
 from PIL import Image, ImageDraw, ImageFont
 
@@ -12,57 +16,43 @@ OUT = "/home/kali/external-paper.png"
 W, H = 1240, 1754
 BLACK = (0, 0, 0)
 
-# (题干含作答括号, 选项块, 是否简答)
 BLOCKS = [
     (
-        "1. 下列关于光合作用的说法，正确的是（  B  ）",
-        ["A. 光合作用只在夜间进行", "B. 光合作用把光能转化为化学能",
-         "C. 光合作用不需要水参与", "D. 光合作用只发生在叶片表面"],
-        False,
+        "1. 请写出「床前明月光」的下一句。",
+        "答：疑是地上霜",
     ),
     (
-        "2. 下列动物中，属于哺乳动物的是（  A  ）",
-        ["A. 鲤鱼", "B. 青蛙", "C. 蝴蝶", "D. 鲸鱼"],
-        False,
+        "2. 请简述记叙文写作中比喻的作用。（不少于两点）",
+        "答：比喻能表达感情。",
     ),
     (
-        "3. 请简述记叙文写作中比喻的作用。（不少于两点）",
-        [],
-        True,
+        "3. 请说出一位唐代诗人的名字。",
+        "答：我喜欢打篮球。",
     ),
 ]
-
-ANSWER3 = "答：比喻能把事物写得形象生动，也能表达作者的思想感情。"
 
 
 def main() -> None:
     img = Image.new("RGB", (W, H), (255, 255, 255))
     d = ImageDraw.Draw(img)
-    f_title = ImageFont.truetype(FONT_PATH, 44)
-    f_q = ImageFont.truetype(FONT_PATH, 34)
-    f_opt = ImageFont.truetype(FONT_PATH, 31)
-    f_ans = ImageFont.truetype(FONT_PATH, 33)
+    f_title = ImageFont.truetype(FONT_PATH, 46)
+    f_q = ImageFont.truetype(FONT_PATH, 36)
+    f_ans = ImageFont.truetype(FONT_PATH, 36)
 
-    y = 90
-    d.text((W // 2 - 200, y), "期 中 测 验 试 卷", font=f_title, fill=BLACK)
-    y += 92
-    d.text((90, y), "姓名：李明    学号：20260099    班级：初二(3)班", font=f_opt, fill=BLACK)
-    y += 82
+    y = 110
+    d.text((W // 2 - 210, y), "外 来 验 收 卷", font=f_title, fill=BLACK)
+    y += 100
+    d.text((90, y), "姓名：李明    学号：20260099", font=f_ans, fill=BLACK)
+    y += 90
     d.line([(80, y), (W - 80, y)], fill=BLACK, width=3)
-    y += 52
+    y += 70
 
-    for stem, opts, subjective in BLOCKS:
+    for stem, ans in BLOCKS:
         d.text((90, y), stem, font=f_q, fill=BLACK)
-        y += 64
-        for opt in opts:
-            d.text((140, y), opt, font=f_opt, fill=BLACK)
-            y += 54
-        if subjective:
-            d.text((120, y), ANSWER3, font=f_ans, fill=BLACK)
-            y += 60
-        y += 26
+        y += 74
+        d.text((120, y), ans, font=f_ans, fill=BLACK)
+        y += 110
 
-    d.text((90, y), "评分：__________", font=f_opt, fill=BLACK)
     img.save(OUT)
     print("GENERATED " + OUT)
 
