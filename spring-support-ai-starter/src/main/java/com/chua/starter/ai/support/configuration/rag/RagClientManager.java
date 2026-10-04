@@ -300,6 +300,22 @@ public class RagClientManager {
     private RagClient build() {
         String ragEmbeddingModel = settingReader.getStr(GROUP, "rag_embedding_model");
         String ragLlmModel = settingReader.getStr(GROUP, "rag_llm_model");
+        // 兜底：知识库未单独配置模型时，回落「默认模型」——
+        // LLM 用默认对话模型；embedding 用默认模型所属供应商作为 embedding 引擎
+        // （该供应商未注册 EmbeddingClient SPI 时仍按原逻辑降级为占位实现并 WARN）。
+        if (!StringUtils.hasText(ragLlmModel)) {
+            ragLlmModel = settingReader.getStr("runtime", "default_model");
+            if (StringUtils.hasText(ragLlmModel)) {
+                log.info("[RagClientManager] rag_llm_model 未配置，回落默认模型: {}", ragLlmModel);
+            }
+        }
+        if (!StringUtils.hasText(ragEmbeddingModel)) {
+            ragEmbeddingModel = settingReader.getStr("runtime", "provider");
+            if (StringUtils.hasText(ragEmbeddingModel)) {
+                log.info("[RagClientManager] rag_embedding_model 未配置，回落默认模型供应商作为 embedding 引擎: {}",
+                        ragEmbeddingModel);
+            }
+        }
         String ragOcrModel = settingReader.getStr(GROUP, "rag_ocr_model");
         String ragUploadDir = settingReader.getStr(GROUP, "rag_upload_dir");
         String ragVectorStorage = settingReader.getStr(GROUP, "rag_vector_storage");

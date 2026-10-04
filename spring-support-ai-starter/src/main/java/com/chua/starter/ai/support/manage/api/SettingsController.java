@@ -2,6 +2,10 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingDefinitions;
+import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -104,6 +108,10 @@ public class SettingsController {
      */
     private final GlobalSettingDefinitions globalSettingDefinitions;
 
+    /**
+     * 事件发布器：用户覆盖写完后触发热更新（与全局写入同口径）
+     */
+    private final ApplicationEventPublisher eventPublisher;
     /**
      * 获取指定分组对本人生效的设置
      *
@@ -343,6 +351,42 @@ public class SettingsController {
                     : value instanceof Number ? "NUMBER" : "STRING";
             userSettingService.upsertValue(userId, group, field, value.toString(), valueType, null);
         }
+        publishUserSettingsChanged(group);
+    }
+
+    /**
+     * 用户覆盖写入后发布配置变更事件，使依赖该分组的缓存/派生实例失效。
+     *
+     * <p><b>为什么放到独立线程发布：</b>本应用的 {@code FaceClientManager}、
+     * {@code RagClientManager} 持有全局单例并按事件重建，而它们读取配置走
+     * {@code GlobalSettingReader}（用户覆盖优先）。若在请求线程直接发布，
+     * 重建会把「发起人这一名用户的覆盖」固化成全局实例，等于把个人配置泄漏给所有人。
+     * 换到无请求身份的新线程发布，重建只读到全局配置，行为与管理员改全局时一致；
+     * 用户级差异仍由消费端按请求身份实时解析。</p>
+     *
+     * @param group 设置分组名称
+     */
+    private void publishUserSettingsChanged(String group) {
+        if (group == null || group.isBlank()) {
+            return;
+        }
+        try {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
+                    if ("ocr".equals(group)) {
+                        eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
+                    }
+                    if ("rag".equals(group)) {
+                        eventPublisher.publishEvent(new RagSettingsChangedEvent(group));
+                    }
+                } catch (Exception e) {
+                    log.warn("[用户覆盖设置] 发布分组 {} 变更事件失败: {}", group, e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[用户覆盖设置] 提交分组 {} 变更事件失败: {}", group, e.getMessage());
+        }
     }
 
     /**
@@ -373,6 +417,7 @@ public class SettingsController {
         String userId = AiUserContext.requireUserId();
         int deleted = userSettingService.clearGroup(userId, group);
         log.info("[用户覆盖设置] user={} 撤销分组 {} 的 {} 项覆盖", userId, group, deleted);
+        publishUserSettingsChanged(group);
         return ApiResult.ok(userSettingService.listMerged(userId, group));
     }
 
