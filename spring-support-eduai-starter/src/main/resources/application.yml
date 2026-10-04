@@ -119,6 +119,9 @@ plugin:
       - /logout
       # 附件直链预览：iframe/img 无法带请求头，路径含随机 UUID + 扩展名白名单
       - /v2/edu/knowledge-point/file
+      # 学生头像直链预览：同上 —— <img> 带不了 Authorization，必须放行；
+      # 上传端点(/student-avatar/upload)仍在白名单之外，且带 @Permission("admin")。
+      - /v2/edu/student-avatar/file
   # OSGi 源码扩展点：学生凭据校验等 SPI 实现改由源码声明，改完即生效，
   # 不必为调整一条登录规则重新构建 600MB+ 的 fat jar。
   # 源码目录刻意放在 jar 之外（WorkingDirectory 相对路径），fat jar 内的资源不可热改。
