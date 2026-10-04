@@ -1,5 +1,12 @@
 # eduai 终验报告（2026-10-04 · r7，最新代码 + 浏览器业务验收）
 
+> ## ⚠️ 本报告已失效（2026-10-04，被 r8 替换）
+>
+> 本报告绑定的 eduai jar 是
+> `d00d1c451144c8e15f4ef98f9ff12fa2dd403fff0d4284d801de1987e4830c49`，
+> 其后线上被替换为 `df7b2ead…`（新增学生头像上传端点 + UI 统一）。
+> 已由 `ACCEPTANCE-REPORT-20261004-r8.md` 接替。
+
 > 报告与产物 sha256 绑定；换包即失效。复核：
 > `python3 report-staleness.py --live-eduai <sha> --live-oauth <sha>`。
 
