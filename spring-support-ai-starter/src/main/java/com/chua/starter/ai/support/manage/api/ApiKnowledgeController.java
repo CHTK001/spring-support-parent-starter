@@ -1284,8 +1284,9 @@ public class ApiKnowledgeController {
      *
      * <p><b>刻意不调 {@code temperature()} / {@code system()}</b>：这些是
      * {@code RagClient} 上的链式 setter，<b>原地修改并返回 this</b>，而
-     * {@code RagClientManager} 存的是进程级共享单例。在这里调会把<b>全应用</b>的
-     * 对话参数一起改掉（前面已经因此把全应用钉成贪心解码并回退过一次）。
+     * {@code RagClientManager} 缓存的客户端在账号维度上被复用（同一账号的多次请求拿到同一实例）。
+     * 在这里调会把<b>该账号全部</b>知识库问答的对话参数一起改掉（前面已经因此把全应用钉成
+     * 贪心解码并回退过一次；按账号隔离后影响面从全应用收窄到本账号，但依然是跨请求污染）。
      * 所以只用无副作用的 {@code query(query, topK, threshold)} 重载。</p>
      *
      * <p>引用能还原成文件路径，是因为入库时 {@code docId} 固定为

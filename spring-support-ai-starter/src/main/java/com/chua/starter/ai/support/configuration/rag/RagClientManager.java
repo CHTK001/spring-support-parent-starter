@@ -33,6 +33,8 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -42,19 +44,29 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PreDestroy;
 import javax.sql.DataSource;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 全局 RAG 客户端管理器。
+ * RAG 客户端管理器（<b>按账号隔离</b>）。
  *
- * <p>引入 AI 模块即提供全局 RAG 客户端，配置读取自 {@code sys_ai_global_setting}
- * 键值表（分组 {@code global}：向量模型、向量数据库、上传目录、RAG 系统提示词、RAG LLM 模型、
- * 切片大小、切片重叠、OCR 模型）。
- * 配置通过全局配置面板修改后调用 {@link #rebuild()} 热更新，无需重启。</p>
+ * <p>引入 AI 模块即提供 RAG 客户端，配置读取自 {@code sys_ai_global_setting}
+ * 键值表（分组 {@code rag}：向量模型、向量数据库、上传目录、RAG 系统提示词、RAG LLM 模型、
+ * 切片大小、切片重叠、OCR 模型），并叠加 {@code GlobalSettingReader} 的「用户覆盖优先」：
+ * 每个账号取到自己的配置。</p>
+ *
+ * <p><b>隔离到什么程度</b>：embedding 客户端、向量索引文件、分块内容缓存、上传目录
+ * 全部按 userId 分目录（{@code <rag_upload_dir>/<账号>/rag}），所以
+ * ① 两个账号互不检索到对方的分块；
+ * ② 一个账号换 embedding 维度不会破坏另一个账号的索引；
+ * ③ 用户级设置改动只重建触发者自己的客户端（{@link #reloadUser}），
+ * 不会被烘进别人的实例。全局配置改动才重建全部（{@link #rebuild()}），无需重启。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -84,9 +96,36 @@ public class RagClientManager {
 
 
     /**
-     * 全局 RAG 客户端在 Spring 容器中的 Bean 名称
+     * 全局 RAG 客户端在 Spring 容器中的 Bean 名称（保留给无用户上下文的调用方，如健康检查）。
      */
     private static final String RAG_CLIENT_BEAN_NAME = "globalRagClient";
+
+    /**
+     * 按账号隔离 RAG 资源时，每个账号索引文件所在的子目录名。
+     *
+     * <p>取 {@code rag} 而不是直接用账号名，是为了让同一账号的索引、上传目录、
+     * 分块内容缓存聚在一个目录下，便于备份与清理。</p>
+     */
+    private static final String ACCOUNT_LEAF = "rag";
+
+    /**
+     * jvector 索引文件名（jvector 自行追加 {@code .vectors}）。
+     */
+    private static final String INDEX_NAME = "jvector-index";
+
+    /**
+     * 无用户上下文时使用的账号标识占位值（健康检查等场景）。
+     *
+     * <p>这些调用没有登录身份，既读不到用户覆盖也定位不到个人索引。
+     * 单独给一个占位桶，而不是回落到管理员的桶，避免健康检查在管理员
+     * 的索引上做 {@code rebuild()} 之类的写操作。</p>
+     */
+    private static final String SYSTEM_ACCOUNT = "_system";
+
+    /**
+     * 账号客户端缓存的上限（防止账号数无限增长把内存吃光）。
+     */
+    private static final int MAX_USER_CLIENTS = 64;
 
     /**
      * 本地推理类 embedding 引擎：不需要 apiKey / baseUrl 即可构建。
@@ -214,26 +253,101 @@ public class RagClientManager {
 
 
     /**
-     * 当前生效的全局 RAG 客户端（懒构建，热更新时替换）。
+     * 每个账号一个 RAG 客户端：索引 / 分块缓存 / embedding 都按账号独立。
+     *
+     * <p>账号为 null 的系统桶放在 {@link #systemClient}，不放进这里。</p>
      */
-    private volatile RagClient ragClient;
+    private final Map<String, RagClient> userClients = new ConcurrentHashMap<>();
 
     /**
-     * 获取当前 RAG 客户端，未构建时按全局配置懒构建。
+     * 无用户上下文（健康检查 / 状态探针）时使用的 RAG 客户端（懒构建，热更新时替换）。
+     */
+    private volatile RagClient systemClient;
+
+    /**
+     * 获取当前用户生效的 RAG 客户端，未构建时按该用户配置懒构建。
      *
-     * @return RAG 客户端（配置缺失时可能为 空）
+     * <p>模型与索引都已按 userId 隔离：不同账号各有自己的 embedding 与
+     * 向量索引，换 embedding 模型 / 维度时不会互相破坏，也不会检索到别人的分块。</p>
+     *
+     * @return RAG 客户端（配置缺失时可能为空）
      */
     public RagClient current() {
-        RagClient client = ragClient;
-        if (client == null) {
-            synchronized (this) {
-                if (ragClient == null) {
-                    ragClient = build();
+        String userId = AiUserContext.currentUserId();
+        if (!StringUtils.hasText(userId)) {
+            // 健康检查等无身份调用：走系统桶，不占用也不污染任何账号的索引
+            RagClient system = systemClient;
+            if (system == null) {
+                synchronized (this) {
+                    if (systemClient == null) {
+                        systemClient = build(null);
+                        registerBean(systemClient);
+                    }
+                    system = systemClient;
                 }
-                client = ragClient;
+            }
+            return system;
+        }
+        RagClient client = userClients.get(userId);
+        if (client != null) {
+            return client;
+        }
+        synchronized (userClients) {
+            client = userClients.get(userId);
+            if (client == null) {
+                client = build(userId);
+                if (client != null) {
+                    evictOverflowUsers();
+                    userClients.put(userId, client);
+                    log.info("[RagClientManager] 已为账号 {} 构建独立 RAG 客户端（当前账号数 {}）",
+                            userId, userClients.size());
+                }
             }
         }
         return client;
+    }
+
+    /**
+     * 账号数超过 {@link #MAX_USER_CLIENTS} 时关闭并移除最早构建的客户端。
+     *
+     * <p>按插入顺序而非最近使用时间淘汰：{@link ConcurrentHashMap} 的迭代顺序
+     * 不保证稳定，硬凑 LRU 反而不可预期。淘汰时先 {@code close()} 让向量索引落盘，
+     * 否则该账号的索引会丢。</p>
+     */
+    private void evictOverflowUsers() {
+        while (userClients.size() > MAX_USER_CLIENTS) {
+            String oldest = null;
+            for (String key : userClients.keySet()) {
+                if (oldest == null || key.compareTo(oldest) < 0) {
+                    oldest = key;
+                }
+            }
+            if (oldest == null) {
+                return;
+            }
+            RagClient evicted = userClients.remove(oldest);
+            if (evicted != null) {
+                closeQuietly(evicted);
+                log.info("[RagClientManager] 账号客户端超出上限 {}，已关闭账号 {} 的 RAG 客户端",
+                        MAX_USER_CLIENTS, oldest);
+            }
+        }
+    }
+
+    /**
+     * 关闭客户端并吞掉异常（关闭失败不应影响主流程）。
+     *
+     * @param client 待关闭的客户端，允许为 {@code null}
+     */
+    private void closeQuietly(RagClient client) {
+        if (client == null) {
+            return;
+        }
+        try {
+            client.close();
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 关闭 RAG 客户端失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -246,9 +360,9 @@ public class RagClientManager {
             return;
         }
         if (event.isUserScoped()) {
-            // 共享 RAG 客户端的 OCR 文本提取器只承载全局配置；按用户的 OCR 模型
-            // 会串掉其他用户，这里只保证「全局改动实时生效」。
-            log.debug("[RagClientManager] 收到用户级 ocr 配置写入，共享客户端不重建");
+            // 客户端已按账号隔离，用户级 OCR 改动只重建触发者那一个；
+            // 重建全部账号会把他的 OCR 模型烘进别人的客户端。
+            reloadUser(event.getUserId());
             return;
         }
         log.info("[RagClientManager] 收到 OCR 设置变更事件，重建 RAG 客户端");
@@ -257,22 +371,56 @@ public class RagClientManager {
 
     /**
      * 按最新全局配置重建 RAG 客户端（热更新）。
+     *
+     * <p>全局配置（向量库类型、切片、上传目录…）影响每个账号，所以重建全部已缓存账号；
+     * 用户级改动走 {@link #reloadUser} 定向重建触发者那一个，
+     * 否则会把他的覆盖烘进别人的客户端。</p>
      */
     public synchronized void rebuild() {
-        RagClient next = build();
-        RagClient old = ragClient;
-        this.ragClient = next;
-        registerBean(next);
-        if (old != null) {
-            try {
-                old.close();
-            } catch (Exception e) {
-                log.warn("[RagClientManager] 关闭旧 RAG 客户端失败: {}", e.getMessage());
-            }
+        log.info("[RagClientManager] 重建 RAG 客户端（已缓存账号数 {}）", userClients.size());
+        for (String userId : new ArrayList<>(userClients.keySet())) {
+            rebuildUser(userId);
         }
-        if (next != null) {
-            log.info("[RagClientManager] 全局 RAG 客户端已热更新");
+        RagClient oldSystem = systemClient;
+        RagClient nextSystem = build(null);
+        systemClient = nextSystem;
+        registerBean(nextSystem);
+        if (oldSystem != null) {
+            closeQuietly(oldSystem);
         }
+    }
+
+    /**
+     * 重建单个账号的 RAG 客户端（用户级设置变更）。
+     *
+     * @param userId 账号标识；为空表示无归属，此时不重建，避免按错误身份重建
+     */
+    private void reloadUser(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            log.debug("[RagClientManager] 收到用户级 rag 配置写入但事件未带账号，跳过重建");
+            return;
+        }
+        if (!userClients.containsKey(userId)) {
+            // 该账号还没建过客户端，下次用到时按最新配置懒构建即可
+            return;
+        }
+        rebuildUser(userId);
+    }
+
+    /**
+     * 重建并替换指定账号的客户端（旧客户端先落盘再关闭）。
+     *
+     * @param userId 账号标识，非空
+     */
+    private void rebuildUser(String userId) {
+        RagClient old = userClients.remove(userId);
+        RagClient next = build(userId);
+        if (next == null) {
+            log.warn("[RagClientManager] 账号 {} 重建后不可用，已移除其客户端", userId);
+            return;
+        }
+        userClients.put(userId, next);
+        closeQuietly(old);
     }
 
     /**
@@ -294,10 +442,33 @@ public class RagClientManager {
     }
 
     /**
-     * 基于全局配置构建 RAG 客户端。
+     * 基于指定账号的配置构建 RAG 客户端（索引与上传目录按账号隔离）。
+     *
+     * <p>整段构建都在 {@code userId} 的身份下执行：{@link GlobalSettingReader}
+     * 按当前用户读覆盖，所以 embedding 引擎 / 模型 / 维度、切片、上传目录等
+     * 取到的都是**这个账号自己的**配置。</p>
+     *
+     * @param userId 账号标识；为 {@code null} 表示无用户上下文（健康检查等），
+     *               此时读全局配置，落在系统桶目录
      * @return 构建的结果
      */
-    private RagClient build() {
+    private RagClient build(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return doBuild(null);
+        }
+        var resume = new UserResume().setUserId(userId);
+        var holder = new RagClient[1];
+        AiUserContext.runWith(resume, () -> holder[0] = doBuild(userId));
+        return holder[0];
+    }
+
+    /**
+     * 在当前线程身份下真正执行构建（供 {@link #build(String)} 包装身份后调用）。
+     *
+     * @param userId 账号标识，允许为 {@code null}
+     * @return 构建的结果
+     */
+    private RagClient doBuild(String userId) {
         String ragEmbeddingModel = settingReader.getStr(GROUP, "rag_embedding_model");
         String ragLlmModel = settingReader.getStr(GROUP, "rag_llm_model");
         // 兜底：知识库未单独配置模型时，回落「默认模型」——
@@ -331,14 +502,17 @@ public class RagClientManager {
         int embeddingDimensions = settingReader.getInt(GROUP, "rag_embedding_dimensions",
                 DEFAULT_EMBEDDING_DIMENSIONS);
 
-        // 按用户解析模型：不再在建库时固定一个全局模型，改为「每次生成时解析当前用户」，
+        // 按用户解析模型：不在建库时固定一个全局模型，改为「每次生成时解析当前用户」，
         // 让「设置中心 → 默认模型」里用户自己的 RAG LLM / 默认模型真正生效。
-        ChatClient chatClient = new UserRagChatClient();
+        ChatClient chatClient = new UserRagChatClient(userId);
 
-        String uploadDir = StringUtils.hasText(ragUploadDir) ? ragUploadDir : properties.getUploadDir();
+        // 上传目录按账号分桶：分块内容缓存（chunk-content-cache.tsv）落在 uploadDir 下，
+        // 共用一个目录会让不同账号的分块原文互相覆盖，检索结果串到别人文档上。
+        String baseUploadDir = StringUtils.hasText(ragUploadDir) ? ragUploadDir : properties.getUploadDir();
+        String uploadDir = accountUploadDir(baseUploadDir, userId);
 
         EmbeddingClient embeddingClient = createEmbeddingClient(ragEmbeddingModel, embeddingDimensions);
-        VectorStorage vectorStorage = createVectorStorage(ragVectorStorage, uploadDir, embeddingDimensions);
+        VectorStorage vectorStorage = createVectorStorage(ragVectorStorage, uploadDir, embeddingDimensions, userId);
         if (vectorStorage == null) {
             log.error("[RagClientManager] 向量存储不可用，RAG 客户端不构建。"
                     + "请到 RAG 设置里选择一个已注册的向量库并检查其配置");
@@ -359,7 +533,8 @@ public class RagClientManager {
 
         RagClient client = createClient(setting);
         if (client != null) {
-            log.info("[RagClientManager] RAG 客户端构建完成: embedding={}, storage={}, uploadDir={}, splitter={}, chunkSize={}, overlap={}",
+            log.info("[RagClientManager] RAG 客户端构建完成: account={}, embedding={}, storage={}, uploadDir={}, splitter={}, chunkSize={}, overlap={}",
+                    StringUtils.defaultString(userId, SYSTEM_ACCOUNT),
                     StringUtils.defaultString(ragEmbeddingModel, "memory"),
                     StringUtils.defaultString(ragVectorStorage, properties.getVectorStorage()),
                     uploadDir, StringUtils.defaultString(ragSplitter, "sentence"), chunkSize, chunkOverlap);
@@ -454,21 +629,38 @@ public class RagClientManager {
     }
 
     /**
-     * 「按当前用户解析模型」的对话客户端代理。
+     * 「按账号解析模型」的对话客户端代理。
      *
      * <p>RAG 管线在生成阶段调用 {@link #chatSync(String)}。这里每次调用都重新解析模型：
-     * 用户自己的 {@code rag/rag_llm_model} → 用户默认模型 → Bot → 全局默认
-     * （后三者由 {@link EffectiveChatModelResolver} 负责），从而做到
-     * 「知识库按当前用户读取默认模型」，而向量存储/索引仍全局共享。</p>
+     * 该账号自己的 {@code rag/rag_llm_model} → 该账号默认模型 → Bot → 全局默认
+     * （后三者由 {@link EffectiveChatModelResolver} 负责）。</p>
+     *
+     * <p>解析时必须切到本代理<b>绑定的账号</b>身份下（{@link #account}），而不是直接读线程上下文：
+     * 管线可能被后台线程、{@code @PreDestroy} 收尾或 WebSocket 通道调用，那些线程没有请求身份，
+     * 直接读会退化成全局配置，用错模型。绑定后即使在无身份线程上也解析到该账号自己的模型。</p>
      *
      * <p>解析到的模型对应的 {@link ChatClient} 按「模型引用」缓存，避免每次调用重复建客户端。</p>
      */
     private final class UserRagChatClient implements ChatClient {
 
         /**
+         * 本代理绑定的账号标识；{@code null} 表示系统桶（读全局配置）。
+         */
+        private final String account;
+
+        /**
          * 模型引用 → 已构建的对话客户端
          */
         private final Map<String, ChatClient> cache = new java.util.concurrent.ConcurrentHashMap<>();
+
+        /**
+         * 构造按账号解析的对话客户端代理。
+         *
+         * @param account 账号标识，允许为 {@code null}（系统桶）
+         */
+        private UserRagChatClient(String account) {
+            this.account = account;
+        }
 
         @Override
         public String chatSync(String prompt) {
@@ -476,11 +668,36 @@ public class RagClientManager {
         }
 
         /**
-         * 解析当前用户应使用的对话客户端。
+         * 解析该账号应使用的对话客户端。
          *
          * @return 对话客户端
          */
         private ChatClient delegate() {
+            if (!StringUtils.hasText(account)) {
+                return delegateAsSystem();
+            }
+            // 切到本代理绑定的账号身份再解析：settingReader / 解析链都按当前用户读覆盖
+            var resume = new UserResume().setUserId(account);
+            var holder = new ChatClient[1];
+            AiUserContext.runWith(resume, () -> holder[0] = resolveDelegate());
+            return holder[0];
+        }
+
+        /**
+         * 系统桶（无账号身份）的模型解析：直接用当前线程身份读全局配置。
+         *
+         * @return 对话客户端
+         */
+        private ChatClient delegateAsSystem() {
+            return resolveDelegate();
+        }
+
+        /**
+         * 在当前线程身份下解析「用户 RAG LLM → 默认模型 → Bot → 全局默认」并构建客户端。
+         *
+         * @return 对话客户端
+         */
+        private ChatClient resolveDelegate() {
             // ① 当前用户自己的 RAG LLM（GlobalSettingReader 已实现「用户覆盖优先、全局兜底」）
             String model = settingReader.getStr(GROUP, "rag_llm_model");
             // ② 兜底：当前用户默认模型 → Bot → 全局默认
@@ -491,7 +708,8 @@ public class RagClientManager {
                 throw new IllegalStateException(
                         "未配置可用的对话模型：请在「设置中心 → 默认模型」选择 RAG LLM 或默认模型");
             }
-            log.info("[RagClientManager] RAG 生成按用户解析到模型: {}", model);
+            log.info("[RagClientManager] RAG 生成按用户解析到模型: account={}, model={}",
+                    StringUtils.defaultString(account, SYSTEM_ACCOUNT), model);
             ChatClient client = cache.get(model);
             if (client != null) {
                 return client;
@@ -841,7 +1059,8 @@ public class RagClientManager {
      * @param embeddingDimensions 向量维度
      * @return VectorStorage 实例；创建失败返回 null
      */
-    private VectorStorage createVectorStorage(String storageName, String uploadDir, int embeddingDimensions) {
+    private VectorStorage createVectorStorage(String storageName, String uploadDir, int embeddingDimensions,
+                String userId) {
         String name = StringUtils.hasText(storageName)
                 ? storageName.trim().toLowerCase()
                 : properties.getVectorStorage();
@@ -852,17 +1071,58 @@ public class RagClientManager {
         int dim = embeddingDimensions > 0 ? embeddingDimensions : properties.getEmbeddingDimensions();
         try {
             Map<String, Object> config = resolveVectorStorageConfig(name, uploadDir);
+            applyPerUserIsolation(name, config, uploadDir, userId);
             VectorStorage storage = VectorStorageProvider.createDynamic(
                     name, dim, algorithm, config, resolveDataSource());
             if (storage != null) {
-                log.info("[RagClientManager] 向量存储已就绪: name={}, dim={}, 字段={}",
-                        name, dim, config.keySet());
+                log.info("[RagClientManager] 向量存储已就绪: name={}, account={}, dim={}, 字段={}, indexPath={}",
+                        name, StringUtils.defaultString(userId, SYSTEM_ACCOUNT), dim, config.keySet(),
+                        config.get(JVectorVectorStorageProvider.KEY_INDEX_PATH));
             }
             return storage;
         } catch (Throwable e) {
             log.error("[RagClientManager] 向量存储 [{}] 初始化失败，RAG 不可用（已注册: {}）: {}",
                     name, VectorStorageProvider.providers(), e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 把 jvector 的索引路径改写成**按账号分开**的路径。
+     *
+     * <p>必须覆盖而不是只在缺失时补默认值：{@code rag_vector_storage_config} 里保存的
+     * {@code indexPath}（线上实测 {@code /opt/ai-starter/workspace/rag/jvector-index}）
+     * 是<b>全局同一份</b>索引文件。不覆盖的话所有账号会共用一个索引：
+     * 一是换 embedding 维度即互相破坏（人脸那边已实测过，维度 256→512 直接抛 search 失败），
+     * 二是 A 账号的文档能被 B 账号检索出来。这里以 {@link #accountUploadDir} 已按账号分好的
+     * {@code uploadDir} 为基准派生，保证索引与分块缓存同目录、生命周期一致。</p>
+     *
+     * <p>jvector <b>不会自动创建缺失的父目录</b>（写入静默失败，表现为「入库成功但重启即丢」），
+     * 因此建目录必须由业务侧做。</p>
+     *
+     * @param name   存储名
+     * @param config 待改写的配置（原地修改）
+     * @param uploadDir 已按账号分桶的上传目录
+     * @param userId 账号标识，允许为 {@code null}（系统桶）
+     */
+    private void applyPerUserIsolation(String name, Map<String, Object> config, String uploadDir, String userId) {
+        if (!"jvector".equals(name)) {
+            // 其余向量库（mysql/postgresql/milvus…）由 SPI 自己决定落盘位置，
+            // 这里不猜它们的表名规则；要按账号隔离需各自 SPI 支持，不支持的保持原行为。
+            return;
+        }
+        var indexPath = Path.of(uploadDir).resolve(INDEX_NAME).toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(indexPath.getParent());
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 账号 {} 的向量索引目录创建失败，索引可能无法落盘: {} -> {}",
+                    StringUtils.defaultString(userId, SYSTEM_ACCOUNT), indexPath.getParent(), e.getMessage());
+        }
+        Object saved = config.get(JVectorVectorStorageProvider.KEY_INDEX_PATH);
+        config.put(JVectorVectorStorageProvider.KEY_INDEX_PATH, indexPath.toString());
+        if (saved != null && !String.valueOf(saved).equals(indexPath.toString())) {
+            log.info("[RagClientManager] 账号 {} 的 jvector 索引路径由全局共享改为按账号隔离: {} -> {}",
+                    StringUtils.defaultString(userId, SYSTEM_ACCOUNT), saved, indexPath);
         }
     }
 
@@ -907,8 +1167,50 @@ public class RagClientManager {
                 && !config.containsKey(JVectorVectorStorageProvider.KEY_INDEX_PATH)
                 && StringUtils.hasText(uploadDir)) {
             config.put(JVectorVectorStorageProvider.KEY_INDEX_PATH,
-                    uploadDir + "/jvector-index");
+                    uploadDir + "/" + INDEX_NAME);
         }
+    }
+
+    /**
+     * 计算某账号的 RAG 上传目录（{@code <基础目录>/<账号>/rag}）。
+     *
+     * <p>必须按账号分开的原因有两处，都不是洁癖：
+     * {@code RagPipeline} 的分块内容缓存固定写在 {@code uploadDir} 下
+     * （{@code chunk-content-cache.tsv}），共用目录时 A 账号的分块原文会被 B 覆盖，
+     * 检索出来的是别人的正文；向量索引路径也由同一个目录派生（见
+     * {@link #applyPerUserIsolation}），换 embedding 维度会互相破坏。</p>
+     *
+     * @param baseUploadDir 配置的基础目录（{@code rag_upload_dir} 或属性默认值）
+     * @param userId        账号标识；为空时用系统桶占位名
+     * @return 该账号独占的上传目录
+     */
+    private String accountUploadDir(String baseUploadDir, String userId) {
+        String bucket = StringUtils.hasText(userId) ? sanitize(userId) : SYSTEM_ACCOUNT;
+        String base = StringUtils.hasText(baseUploadDir) ? baseUploadDir : ".";
+        return base.replace('\\', '/') + "/" + bucket + "/" + ACCOUNT_LEAF;
+    }
+
+    /**
+     * 把账号标识收敛成安全的单级目录名，避免把写入引出根目录。
+     *
+     * <p>与 {@code FaceStores#sanitize} 同一套规则：替换路径分隔符与 Windows 保留字符、
+     * 折叠 {@code ..}、去掉首尾点与空白。留空时回落到系统桶名，
+     * 而不是空串（空串会让路径塌成 {@code base/rag} 这种跨账号共享的位置）。</p>
+     *
+     * @param account 原始账号标识，允许为 {@code null}
+     * @return 可安全作为单级目录名的字符串
+     */
+    private static String sanitize(String account) {
+        if (account == null || account.isBlank()) {
+            return SYSTEM_ACCOUNT;
+        }
+        String s = account.trim()
+                .replace("\\", "_").replace("/", "_").replace(":", "_")
+                .replace("*", "_").replace("?", "_").replace("\"", "_")
+                .replace("<", "_").replace(">", "_").replace("|", "_");
+        s = s.replace("..", "_");
+        s = s.replaceAll("^[.\\s]+|[.\\s]+$", "");
+        return s.isBlank() ? SYSTEM_ACCOUNT : s;
     }
 
     /**
@@ -1017,10 +1319,11 @@ public class RagClientManager {
             return;
         }
         if (event.isUserScoped()) {
-            // 共享 RAG 客户端的嵌入/向量实例只承载全局配置（按用户的 RAG LLM 走
-            // UserRagChatClient，在请求期按当前用户解析，不依赖这里重建）。
-            // 若按触发者重建，会把他的配置烘进共享实例、串掉其他用户。
-            log.debug("[RagClientManager] 收到用户级 rag 配置写入，共享客户端不重建");
+            // 客户端已按账号隔离：定向重建触发者自己那一个即可。
+            // 仍重建全部账号的话，会把触发者的 embedding / 切片 / 上传目录
+            // 烘进其他账号的客户端，正是这次要消除的串号。
+            log.info("[RagClientManager] 收到用户级 rag 配置写入，定向重建该账号的 RAG 客户端");
+            reloadUser(event.getUserId());
             return;
         }
         log.info("[RagClientManager] 收到 rag 设置变更事件，重建 RAG 客户端");
@@ -1028,22 +1331,26 @@ public class RagClientManager {
     }
 
     /**
-     * 应用关闭时关闭当前 RAG 客户端。
+     * 应用关闭时关闭全部 RAG 客户端（每个账号一个 + 系统桶一个）。
      *
      * <p>关键：让 {@link RagPipeline#close()} 落盘并关闭向量存储。否则实现层
-     * （jvector ON_DISK 等）不会 flush 索引，进程重启后历史文档检索不到。</p>
+     * （jvector ON_DISK 等）不会 flush 索引，进程重启后历史文档检索不到。
+     * 只关一个是不够的——按账号隔离后每个账号都有自己的索引都要落盘。</p>
      */
     @PreDestroy
     public void destroy() {
-        RagClient client = this.ragClient;
-        if (client == null) {
-            return;
+        var all = new ArrayList<>(userClients.values());
+        userClients.clear();
+        if (systemClient != null) {
+            all.add(systemClient);
+            systemClient = null;
         }
-        try {
-            client.close();
-            log.info("[RagClientManager] 已在关闭阶段关闭 RAG 客户端");
-        } catch (Exception e) {
-            log.warn("[RagClientManager] 关闭 RAG 客户端失败: {}", e.getMessage());
+        for (RagClient client : all) {
+            closeQuietly(client);
+        }
+        if (!all.isEmpty()) {
+            log.info("[RagClientManager] 已在关闭阶段关闭 {} 个 RAG 客户端（含账号 {}）",
+                    all.size(), userClients.size());
         }
     }
 
