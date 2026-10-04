@@ -282,20 +282,32 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
+     * 核验管线（detect → 特征 → 与库中检索，取最大人脸，判断**该 id** 是否命中）。
+     *
+     * <p><b>判据是「命中」而不是「排第一」。</b>同一张脸被重复登记（多个 id）时，
+     * 各条目相似度可能都是 1.0，谁排第一取决于向量存储的返回顺序；用
+     * 「top-1 必须等于 id」会随数据漂移而误报 false。2026-10-04 实测：
+     * 库内存在 2 条同源记录时，对**刚登记**的那条调 {@code /v2/face/verify}
+     * 返回 {@code matched=false}，而 {@code /v2/face/identify} 的命中列表里
+     * 该 id 的 score 正是 1.0 —— 同一事实两个端点给出相反结论。</p>
+     *
+     * <p>命中列表已由管线按 {@code face.match_threshold} 过滤
+     * （见 {@code FacePipeline.searchFeature}），因此这里无需再判阈值。</p>
      *
      * @param id        人脸 标识
      * @param imageData 图片字节
-     * @return 是否匹配
+     * @return 该 id 是否命中
      */
     @Override
     public boolean verify(String id, byte[] imageData) {
-        FaceIdentifyHit hit = pipeline().identifyPipelineLargest(imageData);
-        if (hit == null) {
+        if (id == null) {
             return false;
         }
-        String bestId = hit.bestId();
-        return bestId != null && bestId.equals(id);
+        FaceIdentifyHit hit = pipeline().identifyPipelineLargest(imageData);
+        if (hit == null || hit.hits() == null || hit.hits().isEmpty()) {
+            return false;
+        }
+        return hit.hits().stream().anyMatch(h -> id.equals(h.id()));
     }
 
     /**
