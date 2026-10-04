@@ -27,6 +27,10 @@ import com.chua.starter.monitor.support.model.AiStatusVO;
 import com.chua.starter.monitor.support.model.DashboardOverviewVO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.monitor.support.model.DbColumnVO;
+import com.chua.starter.monitor.support.support.DbColumnDef;
+import com.chua.starter.monitor.support.support.DbDialectSupport;
+import com.chua.starter.monitor.support.support.DbObjectDialect;
+import com.chua.starter.monitor.support.support.DbTableDialect;
 import com.chua.starter.monitor.support.model.DbSqlResultVO;
 import com.chua.starter.monitor.support.model.DbTableDataVO;
 import com.chua.starter.monitor.support.model.dto.DbSqlExecuteDTO;
@@ -778,10 +782,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             String schema = requireSchema(conn, database);
             Map<String, Object> counts = new java.util.LinkedHashMap<>();
             Map<String, String> errors = new java.util.LinkedHashMap<>();
-            for (var type : com.chua.starter.monitor.support.support.DbObjectDialect.Category.values()) {
+            for (var type : DbObjectDialect.Category.values()) {
                 try {
                     counts.put(type.name().toLowerCase(java.util.Locale.ROOT),
-                            com.chua.starter.monitor.support.support.DbObjectDialect
+                            DbObjectDialect
                                     .list(conn, schema, type).size());
                 } catch (Exception e) {
                     // 某一类读不到（权限不足 / 内核无此概念）不该拖垮整棵树：
@@ -799,14 +803,187 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
+    // ==================== 表属性 / 索引增强 / 主键（Navicat 表属性三页） ====================
+
+    /**
+     * 读取列的属性维度（UNSIGNED / ZEROFILL / AUTO_INCREMENT / 字符集 / 排序规则 / ENUM 取值）。
+     *
+     * <p>JDBC 的 {@code getColumns} 不提供这些，必须查 {@code information_schema.COLUMNS}。
+     * 键统一大写，便于与内核返回的列名对齐。</p>
+     *
+     * @param conn  数据库连接
+     * @param table 表名
+     * @return 列名（大写）→ 属性
+     */
+    private static Map<String, Map<String, Object>> readColumnAttributes(
+            java.sql.Connection conn, String table) {
+        Map<String, Map<String, Object>> result = new java.util.LinkedHashMap<>();
+        String sql = "SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, EXTRA, CHARACTER_SET_NAME,"
+                + " COLLATION_NAME, COLUMN_DEFAULT, CHARACTER_MAXIMUM_LENGTH, NUMERIC_SCALE"
+                + " FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?"
+                + " ORDER BY ORDINAL_POSITION";
+        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, table);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String columnName = rs.getString("COLUMN_NAME");
+                    if (columnName == null) {
+                        continue;
+                    }
+                    int length = rs.getInt("CHARACTER_MAXIMUM_LENGTH");
+                    String extra = rs.getString("EXTRA");
+                    var parsed = DbColumnDef.parseAttributes(
+                            rs.getString("COLUMN_TYPE"),
+                            rs.wasNull() ? 0 : length,
+                            !"NO".equalsIgnoreCase(rs.getString("IS_NULLABLE")),
+                            DbColumnDef.normalizeDefault(rs.getString("COLUMN_DEFAULT")),
+                            extra != null && extra.toUpperCase(java.util.Locale.ROOT).contains("AUTO_INCREMENT"));
+                    parsed.put("charset", rs.getString("CHARACTER_SET_NAME"));
+                    parsed.put("collation", rs.getString("COLLATION_NAME"));
+                    int scale = rs.getInt("NUMERIC_SCALE");
+                    parsed.put("scale", rs.wasNull() ? 0 : scale);
+                    result.put(columnName.toUpperCase(java.util.Locale.ROOT), parsed);
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            // 降级为「只给基础字段」是对的（非 MySQL 系内核没有 information_schema.COLUMNS），
+            // 但**必须留下痕迹**：本方法早前引用了一个没写进 SELECT 的列
+            // （CHARACTER_MAXIMUM_LENGTH），异常被这里静默吞掉，整张属性表退化成空 Map，
+            // 表现为「所有列的无符号 / 字符集 / 枚举取值全是空」，前端据此回填弹窗就会把
+            // 属性清空后再保存 —— 一路走到内核才报 400，根因完全不可见。
+            // 所以：先打日志，别让这类「静默降级」再发生。
+            log.warn("读取列属性维度失败，本次降级为只返回基础字段。table={} cause={}",
+                    table, e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 读取表属性（引擎 / 字符集 / 排序规则 / 注释 / 自增起始值 / 行数）。
+     *
+     * @param tableName 表名
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 表属性
+     */
+    @Operation(summary = "读取表属性")
+    @GetMapping("/db/table/{tableName}/options")
+    public ReturnResult<Map<String, Object>> getTableOptions(
+            @PathVariable String tableName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String t = safeIdent(tableName, "表名");
+        Long dsId = queryOrBodyDatasourceId(datasourceId, null);
+        String db = queryOrBodyDatabase(database, null);
+        return callDb("读取表属性", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, t);
+                return DbTableDialect.readOptions(conn, t);
+            }
+        });
+    }
+
+    /**
+     * 修改表属性。
+     *
+     * @param tableName 表名
+     * @param body      属性请求体
+     * @return 是否成功
+     */
+    @Operation(summary = "修改表属性")
+    @PutMapping("/db/table/{tableName}/options")
+    public ReturnResult<Boolean> updateTableOptions(
+            @PathVariable String tableName,
+            @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        Long autoIncrement = intOrNull(body.get("autoIncrement")) == null
+                ? null : intOrNull(body.get("autoIncrement")).longValue();
+        var options = new DbTableDialect.TableOptions(
+                body.get("engine") == null ? null : String.valueOf(body.get("engine")),
+                body.get("charset") == null ? null : String.valueOf(body.get("charset")),
+                body.get("collation") == null ? null : String.valueOf(body.get("collation")),
+                body.get("comment") == null ? null : String.valueOf(body.get("comment")),
+                autoIncrement);
+        Long dsId = queryOrBodyDatasourceId(null, body);
+        String db = queryOrBodyDatabase(null, body);
+        return callDb("修改表属性", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, t);
+                DbTableDialect.alterOptions(conn, t, options);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 列出可用的存储引擎、字符集与排序规则（前端下拉的数据源）。
+     *
+     * <p>刻意由内核下发而不是前端硬编码：不同内核、不同版本的可用值不同，
+     * 前端写死会让用户选到一个内核不认的值。</p>
+     *
+     * @param charset 限定字符集，可为空
+     * @param datasourceId 数据源 ID
+     * @param database 库名
+     * @return 引擎列表与排序规则列表
+     */
+    @Operation(summary = "列出可用引擎/字符集/排序规则")
+    @GetMapping("/db/table-options/available")
+    public ReturnResult<Map<String, Object>> listTableOptionValues(
+            @RequestParam(required = false) String charset,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        return callDb("读取可用表属性值", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                payload.put("engines", DbTableDialect.listEngines(conn));
+                payload.put("collations",
+                        DbTableDialect.listCollations(conn, charset));
+                return payload;
+            }
+        });
+    }
+
+    /**
+     * 设置主键（可改可加可清空）。
+     *
+     * @param tableName 表名
+     * @param body      columns 为主键列（顺序即复合主键列序），传空数组表示清除
+     * @return 是否成功
+     */
+    @Operation(summary = "设置主键")
+    @PutMapping("/db/table/{tableName}/primary-key")
+    public ReturnResult<Boolean> setTablePrimaryKey(
+            @PathVariable String tableName,
+            @RequestBody Map<String, Object> body) {
+        String t = safeIdent(tableName, "表名");
+        @SuppressWarnings("unchecked")
+        List<String> columns = (List<String>) body.get("columns");
+        Long dsId = queryOrBodyDatasourceId(null, body);
+        String db = queryOrBodyDatabase(null, body);
+        return callDb("设置主键", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(dsId);
+                 SchemaScope scope = useSchema(conn, db)) {
+                requireTable(conn, t);
+                for (String column : columns == null ? List.<String>of() : columns) {
+                    requireColumn(conn, t, safeIdent(column, "主键列"));
+                }
+                DbTableDialect.setPrimaryKey(conn, t, columns);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
     /**
      * 数据库对象类别。
      *
      * @param category 类别名（procedure / function / trigger / event）
      * @return 类别
      */
-    private static com.chua.starter.monitor.support.support.DbObjectDialect.Category objectCategory(String category) {
-        return com.chua.starter.monitor.support.support.DbObjectDialect.Category.of(category);
+    private static DbObjectDialect.Category objectCategory(String category) {
+        return DbObjectDialect.Category.of(category);
     }
 
     /**
@@ -829,7 +1006,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             var type = objectCategory(category);
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
-                return ReturnResult.ok(com.chua.starter.monitor.support.support.DbObjectDialect
+                return ReturnResult.ok(DbObjectDialect
                         .list(conn, requireSchema(conn, database), type));
             }
         } catch (IllegalArgumentException e) {
@@ -859,7 +1036,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             var type = objectCategory(category);
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
-                return com.chua.starter.monitor.support.support.DbObjectDialect
+                return DbObjectDialect
                         .definition(conn, requireSchema(conn, database), name, type);
             }
         });
@@ -898,12 +1075,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 if (existOk) {
                     // 「改定义」= 先删后建；对象不存在就跳过删除
                     try {
-                        com.chua.starter.monitor.support.support.DbObjectDialect.drop(conn, schema, nameFrom(definition), type, true);
+                        DbObjectDialect.drop(conn, schema, nameFrom(definition), type, true);
                     } catch (Exception ignored) {
                         // 对象本来就不存在
                     }
                 }
-                com.chua.starter.monitor.support.support.DbObjectDialect.executeDefinition(conn, definition);
+                DbObjectDialect.executeDefinition(conn, definition);
                 return Boolean.TRUE;
             }
         });
@@ -931,7 +1108,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             var type = objectCategory(category);
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
-                com.chua.starter.monitor.support.support.DbObjectDialect
+                DbObjectDialect
                         .drop(conn, requireSchema(conn, database), name, type, ifExists);
                 return Boolean.TRUE;
             }
@@ -1003,7 +1180,9 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @PostMapping("/db/table/{tableName}/foreign-key")
     public ReturnResult<Boolean> addForeignKey(
             @PathVariable String tableName,
-            @RequestBody Map<String, Object> body) {
+            @RequestBody Map<String, Object> body,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
         String t = safeIdent(tableName, "表名");
         String fkName = safeIdent(String.valueOf(body.get("name")), "约束名");
         String refTable = safeIdent(String.valueOf(body.get("refTable")), "引用表");
@@ -1013,16 +1192,16 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         List<String> columns = (List<String>) body.get("columns");
         @SuppressWarnings("unchecked")
         List<String> refColumns = (List<String>) body.get("refColumns");
-        Long dsId = bodyDatasourceId(body);
-        String db = bodyDatabase(body);
+        Long dsId = queryOrBodyDatasourceId(datasourceId, body);
+        String db = queryOrBodyDatabase(database, body);
         return callDb("新增外键", () -> {
             try (java.sql.Connection conn = datasourceService.connection(dsId);
                  SchemaScope scope = useSchema(conn, db)) {
                 requireTable(conn, t);
                 requireTable(conn, refTable);
-                var fk = new com.chua.starter.monitor.support.support.DbObjectDialect.ForeignKeyDefinition(
+                var fk = new DbObjectDialect.ForeignKeyDefinition(
                         fkName, columns, refTable, refColumns, onUpdate, onDelete);
-                com.chua.starter.monitor.support.support.DbObjectDialect.addForeignKey(conn, t, fk);
+                DbObjectDialect.addForeignKey(conn, t, fk);
                 return Boolean.TRUE;
             }
         });
@@ -1050,7 +1229,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
                 requireTable(conn, t);
-                com.chua.starter.monitor.support.support.DbObjectDialect.dropForeignKey(conn, t, name);
+                DbObjectDialect.dropForeignKey(conn, t, name);
                 return Boolean.TRUE;
             }
         });
@@ -1078,7 +1257,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         if (database == null || database.isBlank()) {
             return new SchemaScope(conn, null);
         }
-        if (!com.chua.starter.monitor.support.support.DbDialectSupport.isSafeIdentifier(database)) {
+        if (!DbDialectSupport.isSafeIdentifier(database)) {
             throw new java.sql.SQLException("数据库名不合法");
         }
         String original = currentDatabase(conn);
@@ -1403,17 +1582,46 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 }
             }
             java.util.List<DbColumnVO> columns = new java.util.ArrayList<>();
+            // 属性维度（UNSIGNED/ZEROFILL/AUTO_INCREMENT/字符集/排序规则/ENUM 取值）
+            // JDBC 的 getColumns 不给，只能查 information_schema.COLUMNS；查不到时降级为
+            // 「只给基础字段」，而不是让整个接口失败 —— 基础信息仍然可用。
+            Map<String, Map<String, Object>> attrs = readColumnAttributes(conn, table);
             try (java.sql.ResultSet rs = conn.getMetaData().getColumns(catalog, schema, table, "%")) {
                 while (rs.next()) {
                     String name = rs.getString("COLUMN_NAME");
-                    columns.add(new DbColumnVO(name,
-                            rs.getString("TYPE_NAME"),
+                    String typeName = rs.getString("TYPE_NAME");
+                    Map<String, Object> attr = attrs.get(name == null ? "" : name.toUpperCase(java.util.Locale.ROOT));
+                    if (attr == null) {
+                        columns.add(DbColumnVO.basic(name, typeName, rs.getInt("COLUMN_SIZE"),
+                                rs.getInt("NULLABLE") == 1, rs.getString("REMARKS"),
+                                DbColumnDef.normalizeDefault(rs.getString("COLUMN_DEF")),
+                                rs.getInt("ORDINAL_POSITION"), pkCols.contains(name)));
+                        continue;
+                    }
+                    @SuppressWarnings("unchecked")
+                    List<String> enumValues = (List<String>) attr.getOrDefault("enumValues", List.of());
+                    columns.add(new DbColumnVO(
+                            name,
+                            typeName,
                             rs.getInt("COLUMN_SIZE"),
                             rs.getInt("NULLABLE") == 1,
                             rs.getString("REMARKS"),
-                            rs.getString("COLUMN_DEF"),
+                            // 用归一化后的默认值，而不是 JDBC 的 COLUMN_DEF 原文：
+                            // 后者对「可空且无显式默认值」的列是字面文本 NULL，
+                            // 原样回填会让用户改个注释也撞上 Invalid default value。
+                            String.valueOf(attr.getOrDefault("defaultValue", "")),
                             rs.getInt("ORDINAL_POSITION"),
-                            pkCols.contains(name)));
+                            pkCols.contains(name),
+                            String.valueOf(attr.getOrDefault("baseType", typeName)),
+                            Boolean.TRUE.equals(attr.get("unsigned")),
+                            Boolean.TRUE.equals(attr.get("zerofill")),
+                            // parseAttributes 放进来的是 Boolean，不是内核 EXTRA 的 "YES"/"no" 文本；
+                            // 之前按 "YES" 文本比较，结果自增列恒为 false（且不报错，很难发现）。
+                            Boolean.TRUE.equals(attr.get("autoIncrement")),
+                            String.valueOf(attr.getOrDefault("charset", "")),
+                            String.valueOf(attr.getOrDefault("collation", "")),
+                            enumValues,
+                            attr.get("scale") instanceof Integer i ? i : 0));
                 }
             }
             return ReturnResult.ok(columns);
@@ -1718,7 +1926,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 新建数据库。
      *
      * <p>库的 DDL 随内核不同（MySQL 用 DATABASE、H2/PostgreSQL 用 SCHEMA），
-     * 交由 {@link com.chua.starter.monitor.support.support.DbDialectSupport} 选型。</p>
+     * 交由 {@link DbDialectSupport} 选型。</p>
      *
      * @param request 请求，不允许为 null
      * @return Return结果 对象
@@ -1727,12 +1935,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @PostMapping("/db/database")
     public ReturnResult<Boolean> createDatabase(@RequestBody com.chua.starter.monitor.support.model.dto.DbDatabaseDTO request) {
         String name = request.name() == null ? "" : request.name().trim();
-        if (!com.chua.starter.monitor.support.support.DbDialectSupport.isSafeIdentifier(name)
+        if (!DbDialectSupport.isSafeIdentifier(name)
                 || SYSTEM_SCHEMAS.contains(name.toUpperCase())) {
             return ReturnResult.error("数据库名只能由字母、数字和下划线组成，且不能以数字开头");
         }
         try (java.sql.Connection conn = datasourceService.connection(request.datasourceId())) {
-            com.chua.starter.monitor.support.support.DbDialectSupport.createDatabase(
+            DbDialectSupport.createDatabase(
                     conn, name, request.charset(), request.collation());
             return ReturnResult.ok(true);
         } catch (Exception e) {
@@ -1753,12 +1961,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             @RequestParam(required = false) Long datasourceId,
             @RequestParam String name) {
         String database = name == null ? "" : name.trim();
-        if (!com.chua.starter.monitor.support.support.DbDialectSupport.isSafeIdentifier(database)
+        if (!DbDialectSupport.isSafeIdentifier(database)
                 || SYSTEM_SCHEMAS.contains(database.toUpperCase())) {
             return ReturnResult.error("数据库名只能由字母、数字和下划线组成，且不能以数字开头");
         }
         try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
-            com.chua.starter.monitor.support.support.DbDialectSupport.dropDatabase(conn, database);
+            DbDialectSupport.dropDatabase(conn, database);
             return ReturnResult.ok(true);
         } catch (Exception e) {
             return ReturnResult.error("删除数据库失败: " + e.getMessage());
@@ -1768,7 +1976,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     // ==================== 数据库表级编辑（单元格 / 索引 / 清空表 / 列） ====================
 
-    /** 允许通过 DDL 拼接的列类型白名单，杜绝把前端传入的类型字段拼进 SQL 造成注入 */
+    /**
+     * 允许通过 DDL 拼接的列类型白名单。
+     *
+     * @deprecated 类型白名单已移到 {@link DbColumnDef#SUPPORTED_TYPES}，
+     *     并且扩展到 40 余种（含 ENUM / SET / JSON / 日期时间 / 二进制等）。本常量不再使用。
+     */
+    @Deprecated
     private static final java.util.Set<String> SAFE_COLUMN_TYPES =
             java.util.Set.of("VARCHAR", "INT", "BIGINT", "TEXT", "DATETIME", "DECIMAL", "FLOAT", "DOUBLE", "BOOLEAN", "BLOB");
 
@@ -1895,7 +2109,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      */
     @Operation(summary = "更新单元格")
     @PutMapping("/db/table/{tableName}/cell")
-    public ReturnResult<Integer> updateCell(@PathVariable String tableName, @RequestBody Map<String, Object> body) {
+    public ReturnResult<Integer> updateCell(@PathVariable String tableName,
+                                         @RequestBody Map<String, Object> body,
+                                         @RequestParam(required = false) Long datasourceId,
+                                         @RequestParam(required = false) String database) {
         String t = safeIdent(tableName, "表名");
         String column = safeIdent(String.valueOf(body.get("column")), "列名");
         Object newValue = body.get("newValue");
@@ -1917,8 +2134,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             params.add(e.getValue());
             first = false;
         }
-        Long dsId = bodyDatasourceId(body);
-        String db = bodyDatabase(body);
+        Long dsId = queryOrBodyDatasourceId(datasourceId, body);
+        String db = queryOrBodyDatabase(database, body);
         return callDb("更新单元格", () -> {
             try (java.sql.Connection conn = datasourceService.connection(dsId);
                  SchemaScope scope = useSchema(conn, db)) {
@@ -1983,27 +2200,23 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      */
     @Operation(summary = "新建索引")
     @PostMapping("/db/table/{tableName}/index")
-    public ReturnResult<Boolean> createIndex(@PathVariable String tableName, @RequestBody Map<String, Object> body) {
+    public ReturnResult<Boolean> createIndex(@PathVariable String tableName,
+                                            @RequestBody Map<String, Object> body,
+                                            @RequestParam(required = false) Long datasourceId,
+                                            @RequestParam(required = false) String database) {
         String t = safeIdent(tableName, "表名");
-        String indexName = safeIdent(String.valueOf(body.get("indexName")), "索引名");
+        String indexName = safeIdent(String.valueOf(body.getOrDefault("indexName", "idx")), "索引名");
         @SuppressWarnings("unchecked")
         List<String> columns = (List<String>) body.get("columns");
         boolean unique = Boolean.TRUE.equals(body.get("unique"));
+        boolean primary = Boolean.TRUE.equals(body.get("primary"));
+        String indexType = body.get("indexType") == null ? null : String.valueOf(body.get("indexType"));
+        List<Integer> prefixes = intListOrNull(body.get("prefixes"));
         if (columns == null || columns.isEmpty()) {
             return ReturnResult.error("请至少选择一列");
         }
-        StringBuilder sql = new StringBuilder(unique ? "CREATE UNIQUE INDEX " : "CREATE INDEX ");
-        sql.append(SqlName.quoteMysql(indexName, "索引名"))
-                .append(" ON ").append(SqlName.quoteMysql(t, "表名")).append(" (");
-        for (int i = 0; i < columns.size(); i++) {
-            if (i > 0) {
-                sql.append(", ");
-            }
-            sql.append(SqlName.quoteMysql(safeIdent(columns.get(i), "索引列"), "索引列"));
-        }
-        sql.append(")");
-        Long dsId = bodyDatasourceId(body);
-        String db = bodyDatabase(body);
+        Long dsId = queryOrBodyDatasourceId(datasourceId, body);
+        String db = queryOrBodyDatabase(database, body);
         return callDb("新建索引", () -> {
             try (java.sql.Connection conn = datasourceService.connection(dsId);
                  SchemaScope scope = useSchema(conn, db)) {
@@ -2011,13 +2224,30 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 for (String indexColumn : columns) {
                     requireColumn(conn, t, safeIdent(indexColumn, "索引列"));
                 }
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-                    stmt.executeUpdate();
-                }
+                // 列序即复合索引的列序，原样透传（不排序），否则索引前缀语义会变
+                DbTableDialect
+                        .createIndex(conn, t, indexName, columns, prefixes, unique, indexType, primary);
                 return Boolean.TRUE;
             }
         });
 
+    }
+
+    /**
+     * 把请求里的整数数组解析出来。
+     *
+     * @param value 原始值，可为空
+     * @return 整数列表；输入为空返回 null
+     */
+    private static List<Integer> intListOrNull(Object value) {
+        if (!(value instanceof List<?> list) || list.isEmpty()) {
+            return null;
+        }
+        List<Integer> result = new java.util.ArrayList<>(list.size());
+        for (Object item : list) {
+            result.add(intOrNull(item));
+        }
+        return result;
     }
 
     /**
@@ -2360,116 +2590,146 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * 拼接列定义片段（类型 + 可空 + 默认值 + 注释），类型走白名单。
-     */
-    private static String buildColumnDef(Map<String, Object> body) {
-        String rawType = body.get("type") == null ? "" : String.valueOf(body.get("type")).trim().toUpperCase();
-        if (!SAFE_COLUMN_TYPES.contains(rawType)) {
-            throw new IllegalArgumentException("不支持的列类型: " + body.get("type"));
-        }
-        StringBuilder ddl = new StringBuilder(rawType);
-        if (rawType.equals("VARCHAR") || rawType.equals("DECIMAL")) {
-            int size;
-            try {
-                size = body.get("size") == null || String.valueOf(body.get("size")).isBlank()
-                        ? (rawType.equals("VARCHAR") ? 255 : 10)
-                        : Integer.parseInt(String.valueOf(body.get("size")).trim());
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("长度必须是整数: " + body.get("size"));
-            }
-            if (size <= 0 || size > 10000) {
-                throw new IllegalArgumentException("长度必须在 1 到 10000 之间");
-            }
-            ddl.append(rawType.equals("VARCHAR") ? "(" + size + ")" : "(" + size + ",2)");
-
-        }
-        boolean nullable = !Boolean.FALSE.equals(body.get("nullable"));
-        ddl.append(nullable ? " NULL" : " NOT NULL");
-        return ddl.toString();
-    }
-
-/**
-     * 仅取类型定义（如 VARCHAR(80)），供跨方言 ALTER COLUMN 使用。
+     * 从请求体构造完整列定义。
+     *
+     * <p>所有属性由 {@link DbColumnDef} 在构造期校验，
+     * 校验不通过直接抛 {@link IllegalArgumentException}，由 {@link #callDb} 转成可读错误。</p>
      *
      * @param body 列定义请求体
-     * @return 类型定义
+     * @return 完整列定义
      */
-    private static String columnTypeDef(Map<String, Object> body) {
-        String rawType = body.get("type") == null ? "" : String.valueOf(body.get("type")).trim().toUpperCase();
-        if (!SAFE_COLUMN_TYPES.contains(rawType)) {
-            throw new IllegalArgumentException("不支持的列类型: " + body.get("type"));
+    private static DbColumnDef columnDef(Map<String, Object> body) {
+        String columnName = String.valueOf(body.getOrDefault("columnName", ""));
+        String type = String.valueOf(body.getOrDefault("type", ""));
+        Integer size = intOrNull(body.get("size"));
+        Integer scale = intOrNull(body.get("scale"));
+        @SuppressWarnings("unchecked")
+        List<String> enumValues = (List<String>) body.get("enumValues");
+        return new DbColumnDef(
+                columnName,
+                type,
+                size,
+                scale,
+                Boolean.TRUE.equals(body.get("unsigned")),
+                Boolean.TRUE.equals(body.get("zerofill")),
+                body.get("charset") == null ? "" : String.valueOf(body.get("charset")),
+                body.get("collation") == null ? "" : String.valueOf(body.get("collation")),
+                !Boolean.FALSE.equals(body.get("nullable")),
+                body.get("defaultValue") == null ? "" : String.valueOf(body.get("defaultValue")),
+                body.get("onUpdate") == null ? "" : String.valueOf(body.get("onUpdate")),
+                Boolean.TRUE.equals(body.get("autoIncrement")),
+                enumValues,
+                Boolean.TRUE.equals(body.get("generated")),
+                body.get("comment") == null ? "" : String.valueOf(body.get("comment")));
+    }
+
+    /**
+     * 数据源 ID：body 优先，query 兜底。
+     *
+     * <p>新增端点历史上只从 query 取，前端把参数放 body 时就被静默忽略，
+     * 于是 {@code useSchema} 收到 null、语句跑在连接默认库上（表现为
+     * 「建到了 ngxacc 而不是请求的 jdbc_acc」，且建的过程不报错）。
+     * 与 {@code DbObjectDialect} 那次是同一个坑，这里统一。</p>
+     *
+     * @param queryValue query 参数
+     * @param body       请求体，可为空
+     * @return 数据源 ID
+     */
+    private static Long queryOrBodyDatasourceId(Long queryValue, Map<String, Object> body) {
+        return body == null ? queryValue : (bodyDatasourceId(body) != null ? bodyDatasourceId(body) : queryValue);
+    }
+
+    /**
+     * 目标库：body 优先，query 兜底。
+     *
+     * @param queryValue query 参数
+     * @param body       请求体，可为空
+     * @return 库名，可为空（表示沿用连接默认库）
+     */
+    private static String queryOrBodyDatabase(String queryValue, Map<String, Object> body) {
+        String fromBody = body == null ? null : bodyDatabase(body);
+        return fromBody != null ? fromBody : queryValue;
+    }
+
+    /**
+     * 取整数，缺失或非数字返回 null。
+     *
+     * @param value 原始值
+     * @return 整数或 null
+     */
+    private static Integer intOrNull(Object value) {
+        if (value == null) {
+            return null;
         }
-        if (rawType.equals("VARCHAR") || rawType.equals("DECIMAL")) {
-            int size;
-            try {
-                size = body.get("size") == null || String.valueOf(body.get("size")).isBlank()
-                        ? (rawType.equals("VARCHAR") ? 255 : 10)
-                        : Integer.parseInt(String.valueOf(body.get("size")).trim());
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("长度必须是整数: " + body.get("size"));
-            }
-            if (size <= 0 || size > 10000) {
-                throw new IllegalArgumentException("长度必须在 1 到 10000 之间");
-            }
-            return rawType.equals("VARCHAR") ? "VARCHAR(" + size + ")" : "DECIMAL(" + size + ",2)";
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty()) {
+            return null;
         }
-        return rawType;
+        try {
+            return Integer.valueOf(text);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("必须是整数: " + value);
+        }
     }
 
     /**
      * 新增列（ALTER TABLE ADD COLUMN）。
      *
-     * <p>安全豁免：表名和列名经严格校验；默认值与注释由
-     * {@link com.chua.starter.monitor.support.support.DbDialectSupport} 参数绑定。</p>
+     * <p>走完整列定义：类型全集 + UNSIGNED/ZEROFILL + 字符集/排序规则 +
+     * AUTO_INCREMENT + ON UPDATE + ENUM/SET 取值 + 生成列 + 注释。</p>
+     *
+     * @param tableName 表名
+     * @param body      列定义
+     * @return 是否成功
      */
     @Operation(summary = "新增列")
     @PostMapping("/db/table/{tableName}/column")
-    public ReturnResult<Boolean> addColumn(@PathVariable String tableName, @RequestBody Map<String, Object> body) {
+    public ReturnResult<Boolean> addColumn(@PathVariable String tableName,
+                                           @RequestBody Map<String, Object> body,
+                                           @RequestParam(required = false) Long datasourceId,
+                                           @RequestParam(required = false) String database) {
         String t = safeIdent(tableName, "表名");
-        String col = safeIdent(String.valueOf(body.get("columnName")), "列名");
-        String typeDefinition = buildColumnDef(body);
-        boolean nullable = !Boolean.FALSE.equals(body.get("nullable"));
-        String defaultValue = body.get("defaultValue") == null ? null : String.valueOf(body.get("defaultValue"));
-        String comment = body.get("comment") == null ? null : String.valueOf(body.get("comment"));
-        Long dsId = bodyDatasourceId(body);
-        String db = bodyDatabase(body);
+        var def = columnDef(body);
+        Long dsId = queryOrBodyDatasourceId(datasourceId, body);
+        String db = queryOrBodyDatabase(database, body);
         return callDb("新增列", () -> {
             try (java.sql.Connection conn = datasourceService.connection(dsId);
                  SchemaScope scope = useSchema(conn, db)) {
-                requireMissingColumn(conn, t, col);
-                com.chua.starter.monitor.support.support.DbDialectSupport.addColumn(
-                        conn, t, col, typeDefinition, nullable, defaultValue, comment);
+                requireMissingColumn(conn, t, def.name());
+                DbDialectSupport.addColumn(conn, t, def);
                 return Boolean.TRUE;
             }
         });
-
     }
 
     /**
      * 修改列（ALTER TABLE MODIFY COLUMN）。
      *
-     * <p>安全豁免：标识符和类型定义经白名单校验；默认值与注释全部参数绑定。</p>
+     * @param tableName  表名
+     * @param columnName 列名
+     * @param body       完整列定义（列名以路径参数为准）
+     * @return 是否成功
      */
     @Operation(summary = "修改列")
     @PutMapping("/db/table/{tableName}/column/{columnName}")
     public ReturnResult<Boolean> modifyColumn(
             @PathVariable String tableName,
             @PathVariable String columnName,
-            @RequestBody Map<String, Object> body) {
+            @RequestBody Map<String, Object> body,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
         String t = safeIdent(tableName, "表名");
         String col = safeIdent(columnName, "列名");
-        String typeDef = columnTypeDef(body);
-        boolean nullable = !Boolean.FALSE.equals(body.get("nullable"));
-        String defaultValue = body.get("defaultValue") == null ? null : String.valueOf(body.get("defaultValue"));
-        String comment = body.get("comment") == null ? null : String.valueOf(body.get("comment"));
-        Long dsId = bodyDatasourceId(body);
-        String db = bodyDatabase(body);
+        // 改列时列名不可变：忽略请求体里的 columnName，强制用路径参数
+        body.put("columnName", col);
+        var def = columnDef(body);
+        Long dsId = queryOrBodyDatasourceId(datasourceId, body);
+        String db = queryOrBodyDatabase(database, body);
         return callDb("修改列", () -> {
             try (java.sql.Connection conn = datasourceService.connection(dsId);
                  SchemaScope scope = useSchema(conn, db)) {
                 requireColumn(conn, t, col);
-                com.chua.starter.monitor.support.support.DbDialectSupport.alterColumn(
-                        conn, t, col, typeDef, nullable, defaultValue, comment);
+                DbDialectSupport.alterColumn(conn, t, def);
                 return Boolean.TRUE;
             }
         });

@@ -25,7 +25,10 @@ public final class DbDialectSupport {
 
     /**
      * 列类型定义白名单，只允许类型名、数字、长度参数与逗号。
+     *
+     * @deprecated 类型与属性校验已移到 {@link DbColumnDef}，本常量不再使用。
      */
+    @Deprecated
     private static final Pattern TYPE_DEFINITION = Pattern.compile("[A-Za-z0-9_(), ]{1,128}");
 
     private DbDialectSupport() {
@@ -140,110 +143,98 @@ public final class DbDialectSupport {
     /**
      * 修改列定义（跨方言）。
      *
-     * <p>安全豁免：表名、列名与类型定义均经白名单校验；默认值和注释属于用户可控值，
-     * 全部通过 {@link PreparedStatement} 参数绑定，不拼入 DDL 文本。</p>
+     * <p>走 {@link DbColumnDef}：DDL 片段由该类型自己拼，其中每个片段都已过白名单
+     * （见 {@link DbColumnDef} 类注释的「安全豁免」）。非 MySQL 系逐项映射到该内核语法，
+     * 拿不准的属性（如 ENUM / ZEROFILL）交给内核报错而**不静默丢弃** ——
+     * 静默丢弃会让用户以为改成功了。</p>
      *
-     * @param conn         数据库连接
-     * @param table        表名
-     * @param column       列名
-     * @param typeDef      仅类型定义（如 {@code VARCHAR(80)}）
-     * @param nullable     是否可空
-     * @param defaultValue 默认值，可为空
-     * @param comment      注释，可为空
+     * @param conn  数据库连接
+     * @param table 表名
+     * @param def   完整列定义
+     * @throws SQLException 修改失败
      */
-    public static void alterColumn(Connection conn, String table, String column,
-                                   String typeDef, boolean nullable, String defaultValue, String comment) {
+    public static void alterColumn(Connection conn, String table, DbColumnDef def) throws SQLException {
         String safeTable = SqlName.checkSimple(table, "表名");
-        String safeColumn = SqlName.checkSimple(column, "列名");
-        String safeType = checkTypeDefinition(typeDef);
+        String safeColumn = SqlName.checkSimple(def.name(), "列名");
         if (isMysqlFamilyQuiet(conn)) {
-            StringBuilder ddl = new StringBuilder("ALTER TABLE ")
-                    .append(SqlName.quoteMysql(safeTable, "表名"))
-                    .append(" MODIFY COLUMN ")
-                    .append(SqlName.quoteMysql(safeColumn, "列名"))
-                    .append(' ').append(safeType)
-                    .append(nullable ? " NULL" : " NOT NULL");
-            List<Object> params = new ArrayList<>(2);
-            if (defaultValue != null && !defaultValue.isBlank()) {
-                ddl.append(" DEFAULT ?");
-                params.add(defaultValue);
-            }
-            if (comment != null && !comment.isBlank()) {
-                ddl.append(" COMMENT ?");
-                params.add(comment);
-            }
-            executePreparedFirstQuietly(conn, List.of(ddl.toString()), params);
+            execute(conn, "ALTER TABLE " + SqlName.quoteMysql(safeTable, "表名")
+                    + " MODIFY COLUMN " + SqlName.quoteMysql(safeColumn, "列名") + " " + def.toSqlFragment());
             return;
         }
         String quotedTable = SqlName.quote(safeTable, "表名");
         String quotedColumn = SqlName.quote(safeColumn, "列名");
+        String typeOnly = typeFragment(def);
         executeFirstQuietly(conn, List.of(
-                "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " " + safeType,
-                "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " TYPE " + safeType,
-                "ALTER TABLE " + quotedTable + " MODIFY COLUMN " + quotedColumn + " " + safeType));
-        executeFirstQuietly(conn, List.of(nullable
+                "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " " + typeOnly,
+                "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " TYPE " + typeOnly,
+                "ALTER TABLE " + quotedTable + " MODIFY COLUMN " + quotedColumn + " " + typeOnly));
+        executeFirstQuietly(conn, List.of(def.nullable()
                 ? "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " DROP NOT NULL"
                 : "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " SET NOT NULL"));
-        if (defaultValue != null && !defaultValue.isBlank()) {
+        if (!def.defaultValue().isEmpty()) {
             executePreparedFirstQuietly(conn, List.of(
                     "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " SET DEFAULT ?"),
-                    List.of(defaultValue));
+                    List.of(def.defaultValue()));
         } else {
             executeFirstQuietly(conn, List.of(
                     "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " DROP DEFAULT"));
         }
-        applyColumnComment(conn, safeTable, safeColumn, comment);
+        applyColumnComment(conn, safeTable, safeColumn, def.comment());
+    }
+
+    /**
+     * 只取类型片段（去掉 NULL / DEFAULT / COMMENT 等），供跨内核的类型改写使用。
+     *
+     * @param def 列定义
+     * @return 类型片段
+     */
+    private static String typeFragment(DbColumnDef def) {
+        DbColumnDef typeOnly = new DbColumnDef(
+                def.name(), def.type(), def.size(), def.scale(), def.unsigned(), def.zerofill(),
+                "", "", def.nullable(), "", "", false, List.of(), false, "");
+        return typeOnly.toSqlFragment();
+    }
+
+    /**
+     * 执行一条 DDL。
+     *
+     * @param conn 数据库连接
+     * @param ddl  DDL 文本
+     * @throws SQLException 执行失败
+     */
+    private static void execute(Connection conn, String ddl) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(ddl);
+        }
     }
 
     /**
      * 新增列（跨方言）。
      *
-     * <p>安全豁免：标识符和类型定义经白名单校验，默认值与注释通过
-     * {@link PreparedStatement} 参数绑定。</p>
+     * <p>安全豁免同 {@link #alterColumn}：整段 DDL 由 {@link DbColumnDef} 拼装，
+     * 每个片段各自过白名单。</p>
      *
-     * @param conn         数据库连接
-     * @param table        表名
-     * @param column       列名
-     * @param typeDef      类型定义
-     * @param nullable     是否可空
-     * @param defaultValue 默认值，可为空
-     * @param comment      注释，可为空
-     * @throws SQLException 所有候选 DDL 都失败
+     * @param conn  数据库连接
+     * @param table 表名
+     * @param def   完整列定义
+     * @throws SQLException 内核拒绝
      */
-    public static void addColumn(Connection conn, String table, String column, String typeDef,
-                                 boolean nullable, String defaultValue, String comment) throws SQLException {
+    public static void addColumn(Connection conn, String table, DbColumnDef def) throws SQLException {
         String safeTable = SqlName.checkSimple(table, "表名");
-        String safeColumn = SqlName.checkSimple(column, "列名");
-        String safeType = checkTypeDefinition(typeDef);
-        StringBuilder ddl = new StringBuilder("ALTER TABLE ");
-        if (isMysqlFamily(conn)) {
-            ddl.append(SqlName.quoteMysql(safeTable, "表名"))
-                    .append(" ADD COLUMN ")
-                    .append(SqlName.quoteMysql(safeColumn, "列名"));
-        } else {
-            ddl.append(SqlName.quote(safeTable, "表名"))
-                    .append(" ADD COLUMN ")
-                    .append(SqlName.quote(safeColumn, "列名"));
+        String quotedColumn = SqlName.quoteMysql(SqlName.checkSimple(def.name(), "列名"), "列名");
+        if (isMysqlFamilyQuiet(conn)) {
+            execute(conn, "ALTER TABLE " + SqlName.quoteMysql(safeTable, "表名")
+                    + " ADD COLUMN " + quotedColumn + " " + def.toSqlFragment());
+            return;
         }
-        ddl.append(' ').append(safeType).append(nullable ? " NULL" : " NOT NULL");
-        List<Object> params = new ArrayList<>(2);
-        if (defaultValue != null && !defaultValue.isBlank()) {
-            ddl.append(" DEFAULT ?");
-            params.add(defaultValue);
+        executeFirstQuietly(conn, List.of("ALTER TABLE " + SqlName.quote(safeTable, "表名")
+                + " ADD COLUMN " + SqlName.quote(def.name(), "列名") + " " + typeFragment(def)));
+        if (!def.defaultValue().isEmpty()) {
+            executePreparedFirstQuietly(conn, List.of("ALTER TABLE " + SqlName.quote(safeTable, "表名")
+                    + " ALTER COLUMN " + SqlName.quote(def.name(), "列名") + " SET DEFAULT ?"),
+                    List.of(def.defaultValue()));
         }
-        if (comment != null && !comment.isBlank() && isMysqlFamily(conn)) {
-            ddl.append(" COMMENT ?");
-            params.add(comment);
-        }
-        executePreparedFirst(conn, List.of(ddl.toString()), params);
-        applyColumnComment(conn, safeTable, safeColumn, comment);
-    }
-
-    private static String checkTypeDefinition(String typeDef) {
-        if (typeDef == null || !TYPE_DEFINITION.matcher(typeDef).matches()) {
-            throw new IllegalArgumentException("列类型定义不合法: " + typeDef);
-        }
-        return typeDef;
+        applyColumnComment(conn, safeTable, def.name(), def.comment());
     }
 
     /**
