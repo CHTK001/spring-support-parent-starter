@@ -234,6 +234,12 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
                 .append("  sleep ").append(SETTLE_SECONDS + 4).append('\n')
                 .append("  __o2=$(").append(status).append(")\n")
                 .append("  if echo \"$__o2\" | grep -qi running; then echo 'rollback ok'; else echo 'rollback failed'; exit 1; fi\n")
+                // 回滚成功也必须以非 0 退出：对「把新版本放上去并让它跑起来」这个操作而言，
+                // 健康检查失败即操作失败，回滚只是止损。实测踩过：回滚成功后 exit 0，
+                // 升级任务整体被判 success、日志末尾打「升级成功」，运维据此以为新版本已上线，
+                // 而线上跑的是旧版本 —— 这种谎报比直接报错更危险。
+                .append("  echo 'upgrade failed, rolled back to previous version'\n")
+                .append("  exit 1\n")
                 .append("fi");
         return sb.toString();
     }
