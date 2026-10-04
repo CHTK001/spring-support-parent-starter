@@ -58,6 +58,49 @@ public class EduIdiomController {
     }
 
     /**
+     * 成语接龙：服务端自动出题（首尾相接）。
+     *
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param length     期望步数（服务端夹在 3~10）
+     * @return 起始成语 + 步数（不含答案）
+     */
+    @Operation(summary = "成语接龙-生成题目")
+    @GetMapping("/chain/start")
+    public ReturnResult<Map<String, Object>> chainStart(
+            @RequestParam(required = false) String gradeLevel,
+            @RequestParam(required = false) String grade,
+            @RequestParam(defaultValue = "5") int length) {
+        return ReturnResult.ok(idiomService.generateChain(gradeLevel, grade, length));
+    }
+
+    /**
+     * 成语接龙：校验一步。
+     *
+     * @param params 含 current（当前成语）与 answer（用户接的成语）
+     * @return ok/message/next/meaning
+     */
+    @Operation(summary = "成语接龙-校验一步")
+    @PostMapping("/chain/validate")
+    public ReturnResult<Map<String, Object>> chainValidate(@RequestBody Map<String, Object> params) {
+        String current = params.get("current") == null ? null : params.get("current").toString();
+        String answer = params.get("answer") == null ? null : params.get("answer").toString();
+        return ReturnResult.ok(idiomService.validateChain(current, answer));
+    }
+
+    /**
+     * 成语接龙：给当前成语一个提示答案。
+     *
+     * @param current 当前成语
+     * @return ok + content/pinyin/meaning
+     */
+    @Operation(summary = "成语接龙-提示")
+    @GetMapping("/chain/hint")
+    public ReturnResult<Map<String, Object>> chainHint(@RequestParam String current) {
+        return ReturnResult.ok(idiomService.chainHint(current));
+    }
+
+    /**
      * 校验Pair。
      *
      * @param params 参数，不允许为 null
