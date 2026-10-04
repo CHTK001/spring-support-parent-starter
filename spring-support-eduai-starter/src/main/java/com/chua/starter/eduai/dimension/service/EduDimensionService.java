@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,6 +97,16 @@ public class EduDimensionService {
      * 超过该次数说明当年学生量异常或存在并发风暴，宁可报错也不给一个可能撞号的学号。</p>
      */
     private static final int MAX_STUDENT_NO_ATTEMPTS = 20;
+
+    /**
+     * 学号顺序号（本 JVM 原子发号；-1 表示尚未从库中取种）
+     */
+    private long studentNoSequence = -1L;
+
+    /**
+     * {@link #studentNoSequence} 对应的年份；跨年重新从库中取种
+     */
+    private int studentNoSequenceYear = 0;
 
     /**
      * Subjectmapper
@@ -413,53 +424,83 @@ public class EduDimensionService {
             entity.setStudentStatus(1);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
-        // 学号由系统生成并保证唯一（库上有 UNIQUE 约束，并发下靠重试规避撞号）
-        String studentNo = generateUniqueStudentNo();
-        entity.setStudentNo(studentNo);
         // 登录账号默认取学号：学生端令牌里的 userId 就是学号，
         // 两个字段必须一致，否则登录成功了学生端却定位不到自己的档案。
-        entity.setStudentAccount(studentNo);
         applyPassword(entity, null);
-        studentMapper.insert(entity);
-        log.info("[EduAi] 新增学生: {} ({}) 手机号={}", entity.getStudentName(), studentNo,
-                phone == null ? "未填" : "已填");
-        return entity.getStudentId();
+        // 学号由系统生成并保证唯一。**并发下只靠「插入前查重」是不够的**：
+        // 两个请求可能同时查到同一个候选号、同时认为它可用，随后唯一索引会拒绝其中一个
+        // （实测 30 并发建档有 12 个 500「学号已存在」）。真正的收敛点在**插入失败后的重试**，
+        // 因此这里以唯一索引为最终保证，撞号就换一个再插。
+        for (int attempt = 0; attempt < MAX_STUDENT_NO_ATTEMPTS; attempt++) {
+            String studentNo = generateUniqueStudentNo();
+            entity.setStudentId(null);
+            entity.setStudentNo(studentNo);
+            entity.setStudentAccount(studentNo);
+            try {
+                studentMapper.insert(entity);
+                log.info("[EduAi] 新增学生: {} ({}) 手机号={}", entity.getStudentName(), studentNo,
+                        phone == null ? "未填" : "已填");
+                return entity.getStudentId();
+            } catch (DataIntegrityViolationException conflict) {
+                log.warn("[EduAi] 学号 {} 并发冲突，重试第 {} 次", studentNo, attempt + 1);
+            }
+        }
+        throw new BusinessException("学号生成失败，请稍后重试");
     }
 
     /**
      * 生成唯一学号。
      *
-     * <p>格式：入学年份（4 位）+ 年级/学段序号（2 位）+ 顺序号（3 位），
-     * 例如 {@code 2026010001}。顺序号按「当年已存在的最大号 +1」推进，
-     * 并用库上 {@code UNIQUE} 约束 + 插入前查重双保险——
-     * 唯一键才是并发下的最终保证，查重只是为了让报错更友好。</p>
+     * <p>格式：入学年份（4 位）+ 顺序号（6 位），例如 {@code 2026000001}。
+     * <b>并发正确性依赖三层</b>：① 本 JVM 内用 {@link #nextStudentNoSequence(int)}
+     * 原子发号，避免同进程并发算出同一个号；② 发号后用 {@code existsByStudentNo}
+     * 查重，兜住「号已被其它实例或其它入口占用」；③ 最终保证是库上 UNIQUE 约束 ——
+     * 插入撞号时由 {@link #saveStudent} 捕获 {@code DataIntegrityViolationException} 换号重试。</p>
+     *
+     * <p>只靠「查当年最大值 +1」在并发下必错：所有线程会算出同一个候选号
+     * （实测 30 并发建档时大量 500/400「学号已存在/生成失败」）。</p>
      *
      * @return 唯一学号
      */
     private String generateUniqueStudentNo() {
         int year = LocalDate.now().getYear();
         String prefix = String.valueOf(year);
-        var existing = studentMapper.selectMaxStudentNoByPrefix(prefix);
-        int sequence = 1;
-        if (StringUtils.hasText(existing) && existing.length() >= prefix.length() + 3) {
-            try {
-                sequence = Integer.parseInt(existing.substring(prefix.length())) + 1;
-            } catch (NumberFormatException e) {
-                log.warn("[EduAi] 学号 {} 非规范格式，顺序号从 1 重新开始", existing);
-                sequence = 1;
-            }
-        }
-        // 顺序号溢出（当年超过 999 人）时进位到更长后缀，避免生成重复学号
         for (int attempt = 0; attempt < MAX_STUDENT_NO_ATTEMPTS; attempt++) {
-            String candidate = prefix + String.format("%06d", sequence);
-            // existsByStudentNo 返回 Integer（命中为 1、未命中为 null），
-            // 不能直接当 boolean 用——Integer 为 null 时拆箱会 NPE
+            String candidate = prefix + String.format("%06d", nextStudentNoSequence(year));
+            // existsByStudentNo 返回 Integer（命中为 1、未命中为 null），不能直接当 boolean 用
             if (studentMapper.existsByStudentNo(candidate) == null) {
                 return candidate;
             }
-            sequence++;
         }
         throw new BusinessException("学号生成失败，请稍后重试");
+    }
+
+    /**
+     * 原子发号：本 JVM 内保证每次返回不同的顺序号。
+     *
+     * <p>首次调用（或跨年）时从库中「当年最大号」起算；之后纯内存自增，不再每号查库。
+     * 跨实例仍可能发到同号，但那由库 UNIQUE 约束 + 插入重试兜底。</p>
+     *
+     * @param year 当年年份（学号前缀）
+     * @return 下一个顺序号
+     */
+    private synchronized long nextStudentNoSequence(int year) {
+        if (studentNoSequence < 0 || studentNoSequenceYear != year) {
+            String prefix = String.valueOf(year);
+            String existing = studentMapper.selectMaxStudentNoByPrefix(prefix);
+            long base = 1L;
+            if (StringUtils.hasText(existing) && existing.length() >= prefix.length() + 3) {
+                try {
+                    base = Long.parseLong(existing.substring(prefix.length())) + 1;
+                } catch (NumberFormatException e) {
+                    log.warn("[EduAi] 学号 {} 非规范格式，顺序号从 1 重新开始", existing);
+                    base = 1L;
+                }
+            }
+            studentNoSequence = base;
+            studentNoSequenceYear = year;
+        }
+        return studentNoSequence++;
     }
 
     /**
