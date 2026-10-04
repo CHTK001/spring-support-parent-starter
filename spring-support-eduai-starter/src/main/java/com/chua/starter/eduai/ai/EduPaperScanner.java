@@ -273,6 +273,9 @@ public class EduPaperScanner {
                 %s
                 """.formatted(text);
         String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
+        // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，
+        // 直接喂给 JSON 解析只会得到「解析失败」，把真因（如 429 限流）埋掉。
+        requireModelOutput(raw);
         List<ScannedQuestion> list = parseQuestions(raw, false);
         // 兜底：模型偶尔会把「题号 + 作答」合并成一个 no（如 no="L.主次不分"、answer=""）。
         // 拆分是确定性工作，不该交给模型 —— 这里按「题号后紧跟内容」把 no 再拆一次。
@@ -527,6 +530,9 @@ public class EduPaperScanner {
                 %s
                 """.formatted(text);
         String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
+        // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，
+        // 直接喂给 JSON 解析只会得到「解析失败」，把真因（如 429 限流）埋掉。
+        requireModelOutput(raw);
         return parseQuestions(raw, true);
     }
 
@@ -560,6 +566,9 @@ public class EduPaperScanner {
                 question.answer() == null ? "" : question.answer(), maxScore, maxScore);
         try {
             String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
+        // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，
+        // 直接喂给 JSON 解析只会得到「解析失败」，把真因（如 429 限流）埋掉。
+        requireModelOutput(raw);
             JsonNode node = MAPPER.readTree(extractJson(raw));
             int score = node.path("score").asInt(0);
             score = Math.max(0, Math.min(score, maxScore));
@@ -610,6 +619,28 @@ public class EduPaperScanner {
                     e.getMessage(), StringUtils.substring(raw, 0, 200));
         }
         return list;
+    }
+
+    /**
+     * 校验模型输出不是「失败提示串」。
+     *
+     * <p>{@link com.chua.starter.eduai.ai.EduAiService#answerQuestion} 在模型不可用或调用失败时
+     * 返回 {@code "AI 模块未启用…"} / {@code "AI 响应失败: …"} 这类<b>字符串</b>而不是抛异常。
+     * 调用方若直接拿去解析 JSON，只会得到「解析失败」，把真正原因（如 429 限流）埋掉 ——
+     * 实测 ANY 抽取整卷失败，任务错误只写「未能从图片中解析出题目」，真因是限流。
+     * 这里显式识别并抛出，让错误信息直接可读。</p>
+     *
+     * @param raw 模型输出
+     * @throws IllegalStateException 输出为失败提示串或为空时
+     */
+    private static void requireModelOutput(String raw) {
+        if (raw == null) {
+            throw new IllegalStateException("模型无输出");
+        }
+        String text = raw.trim();
+        if (text.startsWith("AI 响应失败") || text.startsWith("AI 模块未启用")) {
+            throw new IllegalStateException("模型调用失败：" + StringUtils.substring(text, 0, 120));
+        }
     }
 
     /**
