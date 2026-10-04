@@ -220,6 +220,23 @@ try:
        len(my_class_papers(stu2)) >= 0,
        "对照班可见 %d 张" % len(other))
 
+    print("=== 4.2 学生查看试卷详情（按「布置关系」授权）===")
+    c, d = req("GET", "/v2/edu/paper-assign/paper/%s" % paper_id, token=stu)
+    detail = d.get("data") or {}
+    qs = detail.get("questions")
+    ck("学生能查看「布置给本班」的试卷详情", d.get("ok"), "http=%s msg=%s" % (c, d.get("msg")))
+    ck("**详情里带出题目**（学生看得到题，不是空壳对话框）",
+       isinstance(qs, list) and len(qs) > 0,
+       "questions=%s" % (len(qs) if isinstance(qs, list) else qs))
+    others = [p for p in published if p.get("paperId") != paper_id]
+    if others:
+        c, d = req("GET", "/v2/edu/paper-assign/paper/%s" % others[0].get("paperId"), token=stu)
+        ck("**未布置给本班的卷看不到详情**（不是按试卷归属放行）",
+           (not d.get("ok")) and c != 500,
+           "http=%s msg=%s paperId=%s" % (c, d.get("msg"), others[0].get("paperId")))
+    c, d = req("GET", "/v2/edu/paper-assign/paper/%s" % paper_id, token=None)
+    ck("无令牌不能看试卷详情", not d.get("ok"), "http=%s" % c)
+
     print("=== 5. 老师侧「我布置的」可见 ===")
     mine = my_assigns(admin)
     mine_hit = [r for r in mine if r.get("paperId") == paper_id and r.get("classId") == class_id]
