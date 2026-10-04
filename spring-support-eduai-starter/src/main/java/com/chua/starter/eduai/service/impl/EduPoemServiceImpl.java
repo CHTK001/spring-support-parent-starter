@@ -10,6 +10,7 @@ import com.chua.starter.eduai.model.EduPoem;
 import com.chua.starter.eduai.model.EduPoemGrade;
 import com.chua.starter.eduai.service.IEduPoemService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.GradeLevels;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -60,7 +61,10 @@ public class EduPoemServiceImpl extends ServiceImpl<EduPoemMapper, EduPoem>
         applyOwnerScope(wrapper);
 
         if (StringUtils.hasText(gradeLevel)) {
-            List<Long> ids = poemIdsOfLevel(gradeLevel.trim(), StringUtils.hasText(grade) ? grade.trim() : null);
+            // 学段可能来自「码值」（PRIMARY/JUNIOR/SENIOR）或中文名，映射表（edu_poem_grade）
+            // 里存的是中文名，不归一化就会静默查空 —— 表现为「一选学段就一道题都没有」。
+            List<Long> ids = poemIdsOfLevel(GradeLevels.normalize(gradeLevel.trim()),
+                    StringUtils.hasText(grade) ? grade.trim() : null);
             if (ids.isEmpty()) {
                 return List.of();
             }
@@ -115,6 +119,13 @@ public class EduPoemServiceImpl extends ServiceImpl<EduPoemMapper, EduPoem>
         int target = Math.max(1, count);
         // 多取一些，保证有足够句子充当干扰项
         List<EduPoem> poems = listByGradeLevel(gradeLevel, grade, target * 3);
+        String scope = StringUtils.hasText(gradeLevel) ? "level" : "all";
+        if (poems.isEmpty() && StringUtils.hasText(gradeLevel)) {
+            // 本学段查不到诗（没建映射 / 建了映射但没诗）：回落全库出题，
+            // 宁可让学生玩到通用题库，也不要给一盘空局；管理员补上映射后自动按学段取材。
+            poems = listByGradeLevel(null, null, target * 3);
+            scope = "all";
+        }
 
         List<Map<String, Object>> items = new ArrayList<>();
         List<String> distractorPool = new ArrayList<>();
@@ -172,6 +183,8 @@ public class EduPoemServiceImpl extends ServiceImpl<EduPoemMapper, EduPoem>
         result.put("totalItems", items.size());
         result.put("gradeLevel", gradeLevel);
         result.put("grade", grade);
+        // level=按学段取材；all=本学段无内容、整盘来自全库
+        result.put("scope", scope);
         return result;
     }
 
