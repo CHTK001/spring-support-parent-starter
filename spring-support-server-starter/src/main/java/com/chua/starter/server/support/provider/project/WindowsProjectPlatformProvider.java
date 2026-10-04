@@ -282,6 +282,9 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
                 .append("  Start-Sleep -Seconds ").append(SETTLE_SECONDS + 4).append('\n')
                 .append("  $out2 = $(").append(statusCmd).append(") -join ' '\n")
                 .append("  if (\"$out2\" -match 'running') { 'rollback ok' } else { 'rollback failed'; exit 1 }\n")
+                // 与 Posix 侧同口径：回滚成功也以非 0 退出，避免升级任务被判成功、日志打「升级成功」。
+                .append("  'upgrade failed, rolled back to previous version'\n")
+                .append("  exit 1\n")
                 .append("}");
         return ps.toString();
     }
