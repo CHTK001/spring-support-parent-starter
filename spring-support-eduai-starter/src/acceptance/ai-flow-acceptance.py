@@ -162,8 +162,42 @@ def main():
             ck("ANY-判分有区分度(非全同)", len(set(s)) > 1, "得分序列 %s" % s)
             ck("ANY-每题都有评语/解析", all((r.get("comment") or "").strip() for r in rows))
 
-    # ---------- 4. 错题 ----------
-    print("\n===== 4. 错题本 =====")
+    # ---------- 4. 同版式结构化解析（图片→结构化 + 坐标 + 题号锚点 + 原图）----------
+    print("\n===== 4. 同版式结构化解析（前端「同版式解析」视图的数据源）=====")
+    if task_id:
+        st = req("GET", "/v2/edu/marking/structure/%s" % task_id, token=token)
+        d = find_key(st, "data") or {}
+        pages = d.get("pages") or []
+        anchors = d.get("questionAnchors") or []
+        ck("结构-逐页版面存在", len(pages) >= 1, "pages=%d" % len(pages))
+        if pages:
+            lay = pages[0].get("layout") or []
+            blk = pages[0].get("blocks") or []
+            ck("结构-版面区域带坐标", len(lay) >= 1, "layout=%d" % len(lay))
+            ck("结构-文字块带坐标", len(blk) >= 1, "blocks=%d" % len(blk))
+            ok_range = True
+            for item in (lay[:3] + blk[:3]):
+                try:
+                    if not (0.0 <= float(item.get("x")) <= 1.0 and 0.0 <= float(item.get("y")) <= 1.0):
+                        ok_range = False
+                except Exception:
+                    ok_range = False
+            ck("结构-坐标已归一化到 0~1", ok_range)
+        ck("结构-题号锚点(用于定位分数标记)", len(anchors) >= 1, "anchors=%d" % len(anchors))
+        # 答卷原图（打底图）
+        img_req = urllib.request.Request(BASE + "/v2/edu/marking/image/%s?page=1" % task_id)
+        img_req.add_header("Authorization", "Bearer " + token)
+        img_req.add_header("User-Agent", "Mozilla/5.0 acceptance")
+        try:
+            with urllib.request.urlopen(img_req, timeout=60) as resp:
+                raw = resp.read()
+            ck("结构-答卷原图可取(PNG)", resp.status == 200 and raw[:8] == b"\x89PNG\r\n\x1a\n",
+               "status=%s bytes=%d" % (resp.status, len(raw)))
+        except Exception as e:
+            ck("结构-答卷原图可取(PNG)", False, str(e)[:80])
+
+    # ---------- 5. 错题 ----------
+    print("\n===== 5. 错题本 =====")
     wb = req("GET", "/v2/edu/wrongbook/page?pageNum=1&pageSize=20", token=token)
     rows = find_key(wb, "data") or []
     if isinstance(rows, dict):
