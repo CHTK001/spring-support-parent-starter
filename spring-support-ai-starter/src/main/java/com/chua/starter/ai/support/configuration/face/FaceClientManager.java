@@ -515,10 +515,27 @@ public class FaceClientManager {
         return buildPipeline(storage);
     }
 
+    /**
+     * 解析人脸模型标识：优先本分组字段，留空时回落到「默认模型」里的 {@code runtime/default_face_model}。
+     *
+     * <p>两者同为 ONNX 模型命名空间，故可安全回落；若仍为空表示该能力未启用。</p>
+     *
+     * @param field 本分组字段名（detector_model / feature_model 等）
+     * @return 模型标识，未配置返回 空
+     */
+    private String resolveFaceModel(String field) {
+        String v = settingReader.getStr(GROUP, field);
+        if (StringUtils.isNotBlank(v)) {
+            return v;
+        }
+        return settingReader.getStr("runtime", "default_face_model");
+    }
+
     private FacePipeline buildPipeline(VectorStorage vectorStorageForPipeline) {
         // detector 为空 = 人脸检测未启用：ONNX 模型未配置时该模型并不存在，
-        // 此时不构建管线（与 buildLiveness() 的空值语义一致），调用方按「未开启」处理
-        String detectorModel = settingReader.getStr(GROUP, "detector_model");
+        // 此时不构建管线（与 buildLiveness() 的空值语义一致），调用方按「未开启」处理。
+        // 兜底：默认模型设置里的 default_face_model（同为 ONNX 模型命名空间）。
+        String detectorModel = resolveFaceModel("detector_model");
         if (StringUtils.isBlank(detectorModel)) {
             return null;
         }
@@ -531,7 +548,7 @@ public class FaceClientManager {
             builder.livenessThreshold(readFloat("liveness_threshold", 0.5f));
         }
  // 识别链路（特征 + 向量库）
-        String featureModel = settingReader.getStr(GROUP, "feature_model");
+        String featureModel = resolveFaceModel("feature_model");
         if (StringUtils.isNotBlank(featureModel)) {
             builder.feature(featureModel);
         }
