@@ -624,10 +624,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     /**
      * 把题号锚定到「哪个 OCR 文字块」上。
      *
-     * <p>题目来自合并后的全文，锚点要回到逐页文字块里按题号前缀定位，
-     * 前端才能把分数标记贴到原图的对应位置。定位不到时返回 {@code null}，前端退化为列表展示。</p>
+     * <p>优先按题号前缀定位；题号可能被检测框切出文字块（实测外来卷大字版式如此），
+     * 此时改用题干前 8 字做兜底特征。定位不到时返回 {@code null}，前端退化为列表展示。</p>
      *
-     * @param no    题号（如 "1" / "1."）
+     * @param no    题号（如 "1" / "1."），可为空
+     * @param stem  题干（兜底定位用），可为空
      * @param pages 逐页结构化数据（含 blocks）
      * @return 锚点（no/page/x/y/width/height）；定位不到时返回 {@code null}
      */
@@ -636,7 +637,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             return null;
         }
         String wantNo = StringUtils.isBlank(no) ? "" : normalizeNo(no);
-        String wantStem = StringUtils.isBlank(stem) ? "" : normalizeNo(stem);
+        // 注意：题干的归一化必须保留中文。normalizeNo 只留 [0-9a-z]，会把题干汉字全剥掉，
+        // 「题干特征」就恒为空、兜底永不生效（这正是第一版没生效的原因）。
+        String wantStem = normalizeText(stem);
         // 题号可能根本没进文字块：实测外来卷大字版式下，检测框把「1.」与题干切成两块，
         // 文字块里只剩题干，于是按题号前缀永远匹配不到。这里用题干前 8 字做兜底特征。
         String stemProbe = wantStem.length() > 8 ? wantStem.substring(0, 8) : wantStem;
@@ -655,9 +658,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 if (text == null) {
                     continue;
                 }
-                String blockText = normalizeNo(String.valueOf(text));
-                boolean hit = (!wantNo.isEmpty() && blockText.startsWith(wantNo))
-                        || (!stemProbe.isEmpty() && blockText.contains(stemProbe));
+                String rawText = String.valueOf(text);
+                boolean hit = (!wantNo.isEmpty() && normalizeNo(rawText).startsWith(wantNo))
+                        || (!stemProbe.isEmpty() && normalizeText(rawText).contains(stemProbe));
                 if (hit) {
                     var anchor = new LinkedHashMap<String, Object>();
                     anchor.put("no", no);
@@ -1166,6 +1169,22 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             return "";
         }
         return raw.trim().toLowerCase().replaceAll("[^0-9a-z]", "");
+    }
+
+    /**
+     * 文本归一化：保留中英文与数字，去掉空白与中英标点。
+     *
+     * <p>用于「按题干特征定位文字块」。不能复用 {@link #normalizeNo}：它只保留 {@code [0-9a-z]}，
+     * 会把题干里的汉字全部剥掉，导致特征恒为空。中文题干的匹配必须走这里。</p>
+     *
+     * @param raw 原始文本
+     * @return 归一化文本
+     */
+    private static String normalizeText(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.replaceAll("[\\s\\p{Punct}，。、；：？！（）〔〕《》〈〉“”‘’·—…￥【】]", "");
     }
 
     /**
