@@ -31,6 +31,7 @@ import com.chua.starter.monitor.support.model.DbSqlBatchVO;
 import com.chua.starter.monitor.support.support.DbColumnDef;
 import com.chua.starter.monitor.support.support.DbFilter;
 import com.chua.starter.monitor.support.support.DbDialectSupport;
+import com.chua.starter.monitor.support.support.DbErDiagram;
 import com.chua.starter.monitor.support.support.DbObjectDialect;
 import com.chua.starter.monitor.support.support.DbTableDialect;
 import com.chua.starter.monitor.support.support.DbTxRegistry;
@@ -2115,6 +2116,31 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @GetMapping("/db/tx/status")
     public ReturnResult<List<DbTxStatus>> dbTxStatus() {
         return callDb("查询事务", () -> dbTxRegistry().status());
+    }
+
+    /**
+     * 库级 ER 图元数据：表清单 + 全部外键关系。
+     *
+     * <p>一次连接读完整库，而不是让前端逐表调外键端点 ——
+     * 40 张表就是 40 次往返，每次重新连库重新切 catalog，整体视图会明显卡住。</p>
+     *
+     * @param datasourceId 数据源 ID
+     * @param database     目标库，为空用连接当前库
+     * @param tables       表名过滤（LIKE 模式，可为空表示全部）
+     * @return 表清单与外键关系
+     */
+    @Operation(summary = "读取 ER 图元数据")
+    @GetMapping("/db/er-diagram")
+    public ReturnResult<Map<String, Object>> erDiagram(
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database,
+            @RequestParam(required = false) String tables) {
+        return callDb("读取 ER 图", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                return DbErDiagram.load(conn, database, tables);
+            }
+        });
     }
 
     @Operation(summary = "执行 SQL")
