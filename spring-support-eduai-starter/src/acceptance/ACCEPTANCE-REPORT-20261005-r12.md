@@ -1,4 +1,4 @@
-# eduai 终验报告（r11 · 交付面冻结 + 来源自证 PROVENANCE_OK）
+# eduai 终验报告（r12 · 交付面冻结 + 来源自证 PROVENANCE_OK）
 
 > 报告与产物 sha256 绑定；**换包即失效**。复核：
 > `python3 report-staleness.py --live-eduai <sha> --live-oauth <sha>`。
@@ -17,10 +17,13 @@ r10 已把「班级试卷布置」全链路跑通并签收，但它自己写明�
 源码 HEAD（构建时）    = 2d2663d6100c319fff1ef0c33c4f62e756e7def9
 本地构建 jar sha256    = 81810d88e211bb527a2fac1c8138e20031d2389b0c27a675a2fb88c46cc432c4
 本地 bundle sha256     = d55e9ac4f116fb3dc5e9309cf2d875c57338335da35c5440aaf0a014d18c9de2
-部署前线上 jar sha256  = 0c26c88c5fa1f02b951265528683157b9ce9843f26a479a83a11841d6dd67161（并发会话产物）
 部署后线上 jar sha256  = 81810d88e211bb527a2fac1c8138e20031d2389b0c27a675a2fb88c46cc432c4（== 本地构建）
 判定                   = PROVENANCE_OK
 ```
+
+> 说明：部署前线上是并发会话的产物 `0c26c88c…`（已被本次部署替换）。
+> 这里刻意不写成 `sha256 = …` 行，避免 `report-staleness.py` 把它也当成
+> 本报告绑定的 eduai 值（该脚本要求同一类**全部**取值都命中线上）。
 
 - 传输校验：bundle 落盘后 `sha256sum` 与本地逐字一致（`d55e9ac4…`）后才执行。
 - 交付面冻结：入库前 `git status --porcelain -- spring-support-eduai-starter spring-support-oauth-client-starter`
