@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.configuration.client;
 
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiUserSettingService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -56,11 +57,56 @@ public class GlobalSettingReader {
      * @return 值，未配置时返回 空
      */
     public String getStr(String group, String field) {
-        String userValue = userOverride(group, field);
-        if (userValue != null) {
-            // ONNX 外部目录：若是已存在的服务器目录，按字段模板动态注册为可运行模型
-            return externalModelSupport.prepare(group, field, userValue);
+        return getStrAs(currentUserIdOrNull(), group, field);
+    }
+
+    /**
+     * 按**指定用户**读取字符串值（不依赖调用线程的登录上下文）。
+     *
+     * <p>用于「重建某个账号的实例」这类场景：重建线程上往往没有该账号的上下文
+     * （例如由用户 A 触发、却要重建**所有账号**的管线）。此时必须显式传入账号，
+     * 否则会把所有账号都按触发者的配置建 —— 那比「改了不生效」更糟。</p>
+     *
+     * <p>语义与 {@link #getStr(String, String)} 一致：用户覆盖优先，
+     * 且**有覆盖行就以它为准**（哪怕值为空，即「显式清空」不回退全局）。</p>
+     *
+     * @param userId 用户标识；为空表示只读全局层
+     * @param group  分组
+     * @param field  字段名
+     * @return 生效值，未配置时返回 空
+     */
+    public String getStrAs(String userId, String group, String field) {
+        if (userId != null && !userId.isBlank()) {
+            String userValue = userOverrideOf(userId, group, field);
+            if (userValue != null) {
+                // ONNX 外部目录：若是已存在的服务器目录，按字段模板动态注册为可运行模型
+                return externalModelSupport.prepare(group, field, userValue);
+            }
         }
+        return getStrGlobal(group, field);
+    }
+
+    /**
+     * 取当前登录用户标识；无请求上下文（后台线程、未登录）时返回 空。
+     *
+     * @return 用户标识或 空
+     */
+    private static String currentUserIdOrNull() {
+        try {
+            return StringUtils.trimToNull(AiUserContext.currentUserId());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 只读全局层（不带用户覆盖）。
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @return 全局值，未配置时返回 空
+     */
+    private String getStrGlobal(String group, String field) {
         String raw;
         try {
             raw = sysAiGlobalSettingService.getValue(group, field).orElse(null);
@@ -88,9 +134,8 @@ public class GlobalSettingReader {
      * @param field 字段名
      * @return 用户覆盖值；未登录或该字段未覆盖时返回 {@code null}
      */
-    private String userOverride(String group, String field) {
+    private String userOverrideOf(String userId, String group, String field) {
         try {
-            String userId = AiUserContext.currentUserId();
             if (userId == null || userId.isBlank()) {
                 return null;
             }

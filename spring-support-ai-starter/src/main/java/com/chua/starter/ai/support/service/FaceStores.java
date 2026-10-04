@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.configuration.face.FaceClientManager;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.manage.service.OnnxModelDirsChangedEvent;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.oauth.client.support.user.UserResume;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -133,7 +134,9 @@ public class FaceStores {
         if (event == null || !GROUP.equals(event.getGroup())) {
             return;
         }
-        reloadAll("人脸设置变更");
+        // 用户级写入**也要**重建：按用户生效的人脸模型就落在这里（每个账号按自己的配置建管线）。
+        // 与 FaceClientManager 相反 —— 那个是全局共享实例，收到用户级写入必须跳过。
+        reloadAll(event.isUserScoped() ? "人脸设置变更（用户级）" : "人脸设置变更");
     }
 
     /**
@@ -482,6 +485,19 @@ public class FaceStores {
          * （快照是唯一权威源，索引完全可由它重建）。</p>
          */
         synchronized void reload() {
+            // 重建必须绑定「该账号自己」的配置上下文。
+            // 用户覆盖优先的取值走 AiUserContext（见 GlobalSettingReader#getStr），
+            // 而重建线程上往往没有该账号的身份：由用户 A 触发却要重建**所有**账号，
+            // 或启动期（ApplicationReadyEvent）根本没有请求上下文。
+            // 不绑定的话，各账号的管线会全部按触发者（或全局）的模型构建 ——
+            // 那比「改了不生效」更糟：一改就把别人的模型串掉。
+            AiUserContext.runWith(new UserResume().setUserId(account), this::doReload);
+        }
+
+        /**
+         * 重建主体（此时的线程身份已绑定为 {@link #account}）。
+         */
+        private void doReload() {
             close();
             try {
                 Files.createDirectories(dir);
