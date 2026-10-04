@@ -36,6 +36,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PreDestroy;
 import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -893,6 +894,26 @@ public class RagClientManager {
         }
         log.info("[RagClientManager] 收到 rag 设置变更事件，重建 RAG 客户端");
         rebuild();
+    }
+
+    /**
+     * 应用关闭时关闭当前 RAG 客户端。
+     *
+     * <p>关键：让 {@link RagPipeline#close()} 落盘并关闭向量存储。否则实现层
+     * （jvector ON_DISK 等）不会 flush 索引，进程重启后历史文档检索不到。</p>
+     */
+    @PreDestroy
+    public void destroy() {
+        RagClient client = this.ragClient;
+        if (client == null) {
+            return;
+        }
+        try {
+            client.close();
+            log.info("[RagClientManager] 已在关闭阶段关闭 RAG 客户端");
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 关闭 RAG 客户端失败: {}", e.getMessage());
+        }
     }
 
     /**
