@@ -208,3 +208,57 @@ sudo systemctl start <unit>.service
 dev 弹出 Vite 编译错误遮罩、整页不可用。该文件当时正被**另一会话**编辑
 （mtime 距今 0 分钟），因此未接管，后由其自行修复。判据：截图里的
 `[plugin:vite:vue] Missing semicolon` + 逐行找「`*/` 之后仍有内容」的位置。
+
+## 8. 2026-10-04 追加：学生管理页签点不动 + 题库管理迁移 ReTable
+
+提交 `b47bc273`（vue 仓）。两处都是**用户实测报出来的现象**，各自先复现再修。
+
+### 8.1 学生管理「学生 / 班级 / 教师」页签点不动（缺陷，已修）
+
+复现：点第 2、3 个页签后 `activeTabIndex` 恒为 `0`、`pane-class`/`pane-teacher` 恒 `display:none`。
+
+根因**不在 `el-tabs`**，在版式：
+
+```css
+.top-zone  { margin-bottom: -74px; z-index: 2; position: relative; }  /* 通栏，统计卡上提悬浮 */
+.table-card{ z-index: 1; }                                            /* 页签在它内部 */
+```
+
+`.top-zone` 是通栏 flex 容器，上提 74px 后它的**透明空白区**正好压在页签上；因 `z-index` 更高，
+它把点击全吃了。判据：页签中心 `document.elementFromPoint` 命中的是 `DIV.top-zone` 而非页签。
+
+修法（视觉零变化）：`.top-zone { pointer-events: none }` + `.stat-card { pointer-events: auto }`
+（统计卡的 hover 浮起反馈保留）。
+
+| 步骤 | 实测 |
+|---|---|
+| 点「班级」 | `activeTabIndex 0→1`，`pane-class display:flex` |
+| 点「教师」 | `activeTabIndex 1→2`，`pane-teacher display:flex` |
+| 点回「学生」 | `activeTabIndex 2→0`，`pane-student display:flex` |
+| **灵敏度对照** | 运行时把 `.top-zone` 还原成吃指针 → 探针立刻报 `blocked=3`，命中物即三个页签；移除注入后回到 `blocked=0` |
+
+**同版式回归**：`margin-bottom:-74px` 在 eduai 另有 6 个页面复用（poems / idioms / knowledge /
+collect / data-config / question）。用同一探针逐个复扫，均为 `blocked=0`；该探针在修复前
+页面上能报出 3 处，故 `0` 不是「探针看不见」。
+
+### 8.2 题库管理列表迁移到 ReTable（最后一个还在用裸 el-table 的管理页）
+
+`QuestionView` 是唯一一处：`el-table` 计数 12，其余 9 个管理页均为 `ReTable`。
+改用 `:columns` + `#col-<prop>` 插槽（与 `PoemBankView` 同一约定）；本页自己的
+「列表/卡片」切换与底部 `el-pagination` 保留，故关掉 ReTable 的 `toolbar` / `pagination`。
+
+| 判据 | 实测 |
+|---|---|
+| 结构 | `reTables=1`；11 列表头齐全（ID/题型/学科/学段·年级/难度/题干摘要/使用次数/添加次数/审核状态/状态/操作）；20 行 |
+| 排序页签（仍是 ReTab） | `sortActive` 最新 → 使用最多 |
+| 点题干单元格 | `dialogOpen=1`（编辑对话框打开） |
+| 卡片视图（原有能力） | `reTables=0`、`q-card=20` |
+| 翻页 | `activePage 1→2`、首行 `9415→9316`；再回退 `2→1`、`9316→9415` |
+| 操作列编辑按钮 | `dialogOpen=1`（`.stop` 未把行点击也带出来） |
+
+> 测试自身踩到的两个坑，已记账以免把「测试问题」当成「产品问题」：
+> ① 点击目标 `.re-table tbody tr td` 的中心落在被遮挡处（捕获探针 `tableClicks=0`），
+>    换成题干单元格后 `tableClicks=1 / dialogOpen=1` —— 是**选点问题**，不是行点击坏了；
+> ② 底部 `.btn-next` 在视口下方（`rect.top=578`、`elementFromPoint=null`），
+>    不 `scrollintoview` 直接点会落空 —— 补上滚动后翻页正常。
+
