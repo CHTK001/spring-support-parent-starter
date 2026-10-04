@@ -183,6 +183,15 @@ public interface AiFaceService {
     boolean remove(String id);
 
     /**
+     * 更新一条人脸的元数据（只改档案字段，不重跑检测、不动向量）。
+     *
+     * @param id       人脸标识
+     * @param metadata 新元数据（整体替换）
+     * @return 是否更新成功（条目不存在返回 false）
+     */
+    boolean updateMetadata(String id, Map<String, Object> metadata);
+
+    /**
      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
      *
      * @param id       人脸 标识

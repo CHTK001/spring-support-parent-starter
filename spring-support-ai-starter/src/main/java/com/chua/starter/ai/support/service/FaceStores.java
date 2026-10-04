@@ -303,6 +303,43 @@ public class FaceStores {
     }
 
     /**
+     * 更新一条人脸的**元数据**（向量与快照里的特征都不动）。
+     *
+     * <p>为什么要有独立入口：{@code enroll} 需要图片或向量，而「只改姓名/年龄/身份证」
+     * 这类操作不该要求重新上传照片、也不该重跑检测 —— 重跑一次既慢，又可能因原照片
+     * 质量被判失败，把一次纯文本修改变成一次可能失败的登记。</p>
+     *
+     * <p>实现要点：快照是唯一权威源，改完必须 {@code persist}；**同时要更新向量存储里的
+     * 元数据**，否则 1:N 命中回传的仍是旧档案（快照新、索引旧 —— 两处真相），
+     * 表现为「列表里名字已改，识别出来还是旧名字」。</p>
+     *
+     * @param id       人脸标识
+     * @param metadata 新元数据（整体替换；{@code null} 视为空档案）
+     * @return 是否更新成功（条目不存在返回 false）
+     */
+    public boolean updateMetadata(String id, Map<String, Object> metadata) {
+        AccountFace st = st();
+        Entry old = st.snapshot.get(id);
+        if (old == null) {
+            return false;
+        }
+        // 复用 put：它会把 feature 拷一份、metadata 拷成新的可变更
+        st.put(id, old.feature(), metadata);
+        st.persist();
+        // 同步向量存储里的元数据（识别命中要回传新档案）
+        FacePipeline pipeline = st.pipeline();
+        if (pipeline != null && old.feature() != null && old.feature().length > 0) {
+            try {
+                pipeline.enroll(id, old.feature(), metadata == null ? Map.of() : metadata, id);
+            } catch (Exception ex) {
+                log.warn("[Face] 账号 '{}' 元数据更新后同步向量索引失败: id={} -> {}",
+                        st.account, id, ex.getMessage());
+            }
+        }
+        return true;
+    }
+
+    /**
      * 当前账号已登记的人脸数量。
      *
      * @return 数量

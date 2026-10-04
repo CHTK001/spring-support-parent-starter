@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -389,6 +390,32 @@ public class FaceController {
         } catch (Exception e) {
             log.error("[Face] 人脸删除失败", e);
             return ReturnResult.error("人脸删除失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新一条人脸的元数据（姓名/年龄/性别/发型/身份证/备注等）。
+     *
+     * <p>与 {@code enroll} 的区别：本接口**只改档案字段**，不重跑检测、不动特征向量。
+     * 「只改个名字」不该要求重新上传照片，也不该因为原照片质量被判失败。</p>
+     *
+     * @param id       人脸 标识
+     * @param metadata 新元数据（整体替换）
+     * @return 更新结果
+     */
+    @Operation(summary = "更新人脸信息", description = "只更新档案字段（姓名/年龄/身份证等），不重跑检测、不动特征向量")
+    @PutMapping("/{id}")
+    public ReturnResult<?> update(@PathVariable("id") String id,
+                                  @RequestBody Map<String, Object> metadata) {
+        if (id == null || id.isBlank()) {
+            return ReturnResult.error("人脸 ID 不能为空");
+        }
+        try {
+            boolean ok = faceService.updateMetadata(id, metadata);
+            return ok ? ReturnResult.ok("更新成功") : ReturnResult.error("未找到该人脸：" + id);
+        } catch (Exception e) {
+            log.error("[Face] 人脸信息更新失败", e);
+            return ReturnResult.error("人脸信息更新失败: " + e.getMessage());
         }
     }
 
