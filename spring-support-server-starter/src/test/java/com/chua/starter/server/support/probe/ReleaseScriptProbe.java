@@ -4,9 +4,14 @@ import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.provider.project.PosixProjectPlatformProvider;
 import com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider;
 import com.chua.starter.server.support.util.ProjectScripts;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,9 +27,13 @@ import org.junit.jupiter.api.Test;
  *
  * <p>命名用 {@code Probe} 而非 {@code Test}：本仓约定非 example 模块不新增
  * {@code *Test} 类。但「命名不带 Test」并不妨碍它进入常规构建——JUnit 5 按
- * {@code @Test} 注解发现测试类，不看类名。因此本探针按段拆成 7 个 {@code @Test} 方法，
+ * {@code @Test} 注解发现测试类，不看类名。因此本探针按段拆成 9 个 {@code @Test} 方法，
  * 由 {@code mvn -pl spring-support-server-starter test -DskipTests=false} 直接执行，
  * 改动 {@code ProjectScripts} 或平台 Provider 时不再依赖「记得手工跑一下运行器」。</p>
+ *
+ * <p>I 段需要本机存在 PowerShell 宿主（pwsh 或 powershell），缺失时整段 skip；
+ * 注意 skip 与「校验通过」在 surefire 汇总里都体现为不失败，必须看 {@code Skipped} 计数
+ * 才能确认这段校验到底跑没跑。</p>
  *
  * <p>同时保留 {@link #main(String[])} 入口，供不跑 surefire 的场景
  * （现场快速取证、目标机回归）使用，退出码语义与断言结果一致。</p>
@@ -77,6 +86,7 @@ public final class ReleaseScriptProbe {
         probe.sectionFWindowsHealth();
         probe.sectionGMiscCommands();
         probe.sectionHInlineLengthLimit();
+        probe.sectionIPowerShellSyntax();
         System.out.println("[probe] ---- 汇总：passed=" + probe.passed + " failed=" + probe.failures.size() + " ----");
         probe.failures.forEach(f -> System.out.println("[probe] FAIL " + f));
         if (!probe.failures.isEmpty()) {
@@ -342,10 +352,25 @@ public final class ReleaseScriptProbe {
         ProjectScripts.Scripts wbFull = filled(wb, "smoke.jar", WIN, WIN + "\\app.log", "demo");
         String startLen = String.valueOf(PowerShellCommand.base64Length(wbFull.start()));
         String restartLen = String.valueOf(PowerShellCommand.base64Length(wbFull.restart()));
-        check("H1 Windows 启动段的进程查找含叶子判定（否则 app.pid 会抓到 cmd 包装壳）",
-                wbFull.start().contains("$ids -notcontains $_.ParentProcessId")
-                        && wbFull.start().contains("$leaf"),
-                "start 片段未含叶子判定");
+        // 这条是本缺陷的要害：WMI 成功时 Invoke-CimMethod 返回的是 cmd /c 包装壳的 pid，
+// 而包装壳不是程序本身。进程解析若只放在「WMI 被拒」的分支里，WMI 一恢复正常就完全失效
+        // ——实测正是如此（父进程为 WmiPrvSE.exe 说明走了 WMI 路径，app.pid 却抓到 cmd）。
+        // 因此断言的是「解析逻辑在两个分支之外」，而不是某个局部变量名。
+        int wmiBranch = wbFull.start().indexOf("if (-not $wmiOk)");
+        int resolveAt = wbFull.start().indexOf("$isWrap");
+        int writePid = wbFull.start().indexOf("$procId | Out-File");
+        // 用「判定逻辑 → 写 app.pid」这一段的文本作为判据：中间若还有别的分支内内容也不影响，
+        // 关键是这段必须位于 WMI 分支之后、且是唯一写 app.pid 的地方。
+        check("H1 进程解析在 WMI 分支之外无条件执行（WMI 成功时也必须解析真实进程）",
+                wmiBranch >= 0 && resolveAt > wmiBranch && writePid > resolveAt
+                        && !wbFull.start().substring(wmiBranch, resolveAt).contains("$procId = [int]$hit[0].ProcessId"),
+                "wmiBranch=" + wmiBranch + " resolveAt=" + resolveAt + " writePid=" + writePid);
+        check("H1b 进程解析按「无候选后代」判定目标（方向错过一次，必须钉住）",
+                wbFull.start().contains("$isWrap = $true") && wbFull.start().contains("if (-not $isWrap) { $target += $h }"),
+                "start 片段未含后代判定");
+        check("H1c WMI 成功时才允许回退到 $r.ProcessId",
+                wbFull.start().contains("if ($procId -le 0 -and $wmiOk) { $procId = [int]$r.ProcessId }"),
+                "缺少 wmiOk 约束的兜底");
         // 启动段本身可能已超过内联上限（加入叶子判定后 base64 约 8K）。
         // 这不是问题：**超限即走落盘 + -File**，正是本段要守的安全网。
         // 真正要保证的是「不存在某条路径把超限脚本仍内联下发」——
@@ -383,6 +408,123 @@ public final class ReleaseScriptProbe {
                 PowerShellCommand.body("XYZ").replace("\r", "\\r").replace("\n", "\\n"));
     }
 
+    // ==================== I. PowerShell 语法校验 ====================
+
+    /**
+     * I 段：把生成的 Windows 脚本交给 PowerShell 解析器实判语法。
+     */
+    @Test
+    void iPowerShellSyntax() {
+        sectionIPowerShellSyntax();
+        assertSectionDone("I");
+    }
+
+    private void sectionIPowerShellSyntax() {
+        String exe = resolveShellExe();
+        Assumptions.assumeTrue(exe != null,
+                "本机既无 pwsh 也无 powershell，无法做 PowerShell 语法校验，跳过 I 段");
+        var wb = ProjectScripts.builtin(true, "springboot", "smoke.jar");
+        var wbFull = filled(wb, "smoke.jar", WIN, WIN + "\\app.log", "demo");
+        // 敏感性对照：PowerShell **不支持**用行尾 + 续行表达式，换行即被当作新语句，
+        // 上行未闭合的括号会直接报 ParserError。真实踩过：诊断输出写成多行 + 拼接，
+        // 生成出来的启动脚本整段语法错误、启动直接失败，而当时探针只查长度上限与
+        // 判定位置，对语法完全无感，直到真机 C6 才暴露。
+        var broken = "Write-Output ('a=' + $x\n  + ' b=' + $y)\n";
+        int brokenErr = countPowerShellErrors(exe, broken);
+        check("I1 敏感性对照：换行 + 续行的表达式必须被判为语法错误",
+                brokenErr > 0,
+                "解析器对已知错误脚本返回 " + brokenErr + "（<=0 说明本段校验本身失效）");
+        check("I2 Windows 启动段无语法错误",
+                countPowerShellErrors(exe, wbFull.start()) == 0,
+                wbFull.start());
+        check("I3 Windows 停止段无语法错误",
+                countPowerShellErrors(exe, wbFull.stop()) == 0,
+                wbFull.stop());
+        check("I4 Windows 重启段无语法错误",
+                countPowerShellErrors(exe, wbFull.restart()) == 0,
+                wbFull.restart());
+        check("I5 Windows 状态段无语法错误",
+                countPowerShellErrors(exe, wbFull.status()) == 0,
+                wbFull.status());
+        // 完整性：四段都要真的送进解析器，不能因为取不到文本就当成「无错误」。
+        check("I6 四段文本非空且互不相同（防止上面几条实际校验了空串）",
+                wbFull.start().length() > 200 && wbFull.stop().length() > 200
+                        && wbFull.restart().length() > 200 && wbFull.status().length() > 100
+                        && !wbFull.start().equals(wbFull.stop())
+                        && !wbFull.stop().equals(wbFull.status()),
+                "start=" + wbFull.start().length() + " stop=" + wbFull.stop().length()
+                        + " restart=" + wbFull.restart().length() + " status=" + wbFull.status().length());
+    }
+
+    /**
+     * 找一个可用的 PowerShell 宿主，优先 pwsh。
+     *
+     * @return 可执行文件名；都找不到时返回 {@code null}
+     */
+    private static String resolveShellExe() {
+        for (var candidate : new String[] {"pwsh", "powershell"}) {
+            try {
+                var proc = new ProcessBuilder(candidate, "-NoProfile", "-NonInteractive",
+                        "-Command", "exit 0").redirectErrorStream(true).start();
+                if (proc.waitFor(60, TimeUnit.SECONDS) && proc.exitValue() == 0) {
+                    return candidate;
+                }
+            } catch (Exception e) {
+                // 换下一个候选
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 用 PowerShell 解析器实判一段脚本的语法错误数。
+     *
+     * <p>刻意走真实解析器而不是文本启发式：唯一能可靠识别「换行 + 续行」这类
+     * 结构性语法错误的办法，就是让 PowerShell 自己解析一次。</p>
+     *
+     * @param exe    PowerShell 宿主名
+     * @param script 待解析脚本
+     * @return 错误条数；无法完成解析时返回负数（-1 临时文件失败、-2 无数字输出、-3 宿主执行失败）
+     */
+    private static int countPowerShellErrors(String exe, String script) {
+        Path file;
+        try {
+            file = Files.createTempFile("probe-syntax-", ".ps1");
+            Files.writeString(file, script, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return -1;
+        }
+        try {
+            var escaped = file.toString().replace("'", "''");
+            var probe = "$errs = $null; $toks = $null; "
+                    + "[System.Management.Automation.Language.Parser]::ParseFile('" + escaped
+                    + "', [ref]$toks, [ref]$errs) | Out-Null; "
+                    + "Write-Output ('COUNT=' + $errs.Count); "
+                    + "foreach ($e in $errs) { Write-Output ('AT=' + $e.Extent.StartLineNumber + ' ' + $e.Message) }";
+            var proc = new ProcessBuilder(exe, "-NoProfile", "-NonInteractive",
+                    "-Command", probe).redirectErrorStream(true).start();
+            var out = new String(proc.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            if (!proc.waitFor(120, TimeUnit.SECONDS)) {
+                return -3;
+            }
+            for (var line : out.split("\r?\n")) {
+                var t = line.trim();
+                if (t.startsWith("COUNT=")) {
+                    return Integer.parseInt(t.substring("COUNT=".length()).trim());
+                }
+            }
+            return -2;
+        } catch (Exception e) {
+            return -3;
+        } finally {
+            try {
+                Files.deleteIfExists(file);
+            } catch (Exception e) {
+                // 临时文件删不掉不影响判定结果
+            }
+        }
+    }
+
     // ==================== 断言基础设施 ====================
 
     /**
@@ -390,7 +532,7 @@ public final class ReleaseScriptProbe {
      *
      * <p>失败信息一次性带出全部断言名与现场文本，避免断言失败时只能看到第一条。</p>
      *
-     * @param section 段标识（A~G）
+     * @param section 段标识（A~I）
      */
     private void assertSectionDone(String section) {
         if (failures.isEmpty()) {
