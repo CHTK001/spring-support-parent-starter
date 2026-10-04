@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.configuration.rag;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
@@ -27,7 +29,9 @@ import com.chua.common.support.vector.VectorStorage;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -198,6 +202,16 @@ public class RagClientManager {
      */
     private final SysAiProviderMapper providerMapper;
 
+    /**
+     * 生效对话模型解析器：为 RAG 提供「当前用户默认模型 → Bot → 全局默认」的兜底链。
+     */
+    private final EffectiveChatModelResolver effectiveChatModelResolver;
+
+    /**
+     * 供应商模型表 Mapper：把「裸模型名」定位到其供应商，再按供应商凭据构建 ChatClient。
+     */
+    private final SysAiProviderModelMapper providerModelMapper;
+
 
     /**
      * 当前生效的全局 RAG 客户端（懒构建，热更新时替换）。
@@ -295,11 +309,9 @@ public class RagClientManager {
         int embeddingDimensions = settingReader.getInt(GROUP, "rag_embedding_dimensions",
                 DEFAULT_EMBEDDING_DIMENSIONS);
 
-        ChatClient chatClient = resolveChatClient(ragLlmModel);
-        if (chatClient == null) {
-            log.warn("[RagClientManager] 全局 ChatClient 未初始化，RAG 客户端暂不可用");
-            return null;
-        }
+        // 按用户解析模型：不再在建库时固定一个全局模型，改为「每次生成时解析当前用户」，
+        // 让「设置中心 → 默认模型」里用户自己的 RAG LLM / 默认模型真正生效。
+        ChatClient chatClient = new UserRagChatClient();
 
         String uploadDir = StringUtils.hasText(ragUploadDir) ? ragUploadDir : properties.getUploadDir();
 
@@ -387,6 +399,96 @@ public class RagClientManager {
      */
     private boolean isRealChatClient(ChatClient client) {
         return client != null && !(client instanceof MemoryChatClient);
+    }
+
+    /**
+     * 把「裸模型名」定位到供应商并按供应商凭据构建 ChatClient。
+     *
+     * <p>模型引用形如 {@code 供应商ID:模型名} 时由 {@link #buildProviderChatClient} 直接构建；
+     * 而默认模型链（{@link EffectiveChatModelResolver}）返回的是<b>裸模型名</b>，
+     * 需要先查 {@code sys_ai_provider_model} 找到 providerId 再构建。</p>
+     *
+     * @param modelName 裸模型名
+     * @return 对话客户端；查不到或构建失败时返回 空
+     */
+    private ChatClient buildChatClientByModelName(String modelName) {
+        if (StringUtils.isBlank(modelName)) {
+            return null;
+        }
+        try {
+            SysAiProviderModel model = providerModelMapper.selectOne(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getModel, modelName)
+                            .eq(SysAiProviderModel::getEnabled, true)
+                            .last("limit 1"));
+            if (model == null || StringUtils.isBlank(model.getProviderId())) {
+                return null;
+            }
+            return buildProviderChatClient(model.getProviderId() + ":" + modelName);
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 按模型名定位供应商失败 model={}: {}", modelName, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 「按当前用户解析模型」的对话客户端代理。
+     *
+     * <p>RAG 管线在生成阶段调用 {@link #chatSync(String)}。这里每次调用都重新解析模型：
+     * 用户自己的 {@code rag/rag_llm_model} → 用户默认模型 → Bot → 全局默认
+     * （后三者由 {@link EffectiveChatModelResolver} 负责），从而做到
+     * 「知识库按当前用户读取默认模型」，而向量存储/索引仍全局共享。</p>
+     *
+     * <p>解析到的模型对应的 {@link ChatClient} 按「模型引用」缓存，避免每次调用重复建客户端。</p>
+     */
+    private final class UserRagChatClient implements ChatClient {
+
+        /**
+         * 模型引用 → 已构建的对话客户端
+         */
+        private final Map<String, ChatClient> cache = new java.util.concurrent.ConcurrentHashMap<>();
+
+        @Override
+        public String chatSync(String prompt) {
+            return delegate().chatSync(prompt);
+        }
+
+        /**
+         * 解析当前用户应使用的对话客户端。
+         *
+         * @return 对话客户端
+         */
+        private ChatClient delegate() {
+            // ① 当前用户自己的 RAG LLM（GlobalSettingReader 已实现「用户覆盖优先、全局兜底」）
+            String model = settingReader.getStr(GROUP, "rag_llm_model");
+            // ② 兜底：当前用户默认模型 → Bot → 全局默认
+            if (!StringUtils.hasText(model)) {
+                model = effectiveChatModelResolver.resolve(null);
+            }
+            if (!StringUtils.hasText(model)) {
+                throw new IllegalStateException(
+                        "未配置可用的对话模型：请在「设置中心 → 默认模型」选择 RAG LLM 或默认模型");
+            }
+            log.info("[RagClientManager] RAG 生成按用户解析到模型: {}", model);
+            ChatClient client = cache.get(model);
+            if (client != null) {
+                return client;
+            }
+            // 形如 供应商ID:模型名 直接构建；裸模型名先定位供应商
+            client = buildProviderChatClient(model);
+            if (client == null) {
+                client = buildChatClientByModelName(model);
+            }
+            if (client == null && chatClientRegistry != null) {
+                client = chatClientRegistry.getByModel(model);
+            }
+            if (!isRealChatClient(client)) {
+                throw new IllegalStateException("模型 " + model
+                        + " 无法构建对话客户端：请在「模型管理」确认该模型的供应商与密钥");
+            }
+            cache.put(model, client);
+            return client;
+        }
     }
 
     /**
