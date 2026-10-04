@@ -30,7 +30,8 @@ public interface IEduIdiomService extends IService<EduIdiom> {
      * @param gradeLevel 学段
      * @param grade      年级
      * @param count      成语数量
-     * @return 游戏数据（包含成语、拼音、释义等）
+     * @return 游戏数据（包含成语、拼音、释义等；{@code scope} 表明取材范围：
+     *         {@code level} 按学段 / {@code mixed} 本学段不够用全库补齐 / {@code all} 整盘来自全库）
      */
     Map<String, Object> generateIdiomGame(String gradeLevel, String grade, int count);
 
@@ -43,4 +44,36 @@ public interface IEduIdiomService extends IService<EduIdiom> {
      * @return 是否匹配
      */
     boolean validateIdiomPair(Long idiomId, String pinyin, String meaning);
+
+    /**
+     * 自动生成成语接龙题目。
+     *
+     * <p>规则：下一个成语的**首字**等于当前成语的**末字**。服务端从成语库
+     * （按学段过滤）挑一个可接续的起点，并按该规则向后推演出期望步数；
+     * 返回值**不含答案**，答案由 {@link #validateChain(String, String)} 校验，
+     * 避免前端拿到答案直接通关。</p>
+     *
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param length     期望步数，服务端夹在 3~10
+     * @return start（起始成语）+ length（实际步数）+ 规则说明
+     */
+    Map<String, Object> generateChain(String gradeLevel, String grade, int length);
+
+    /**
+     * 校验一步接龙。
+     *
+     * @param current 当前成语
+     * @param answer  用户接的成语
+     * @return ok / message / next（接上后的末字）/ meaning
+     */
+    Map<String, Object> validateChain(String current, String answer);
+
+    /**
+     * 接龙提示：为当前成语给出一个可用答案。
+     *
+     * @param current 当前成语
+     * @return ok + content/pinyin/meaning；无可用答案时 ok=false
+     */
+    Map<String, Object> chainHint(String current);
 }

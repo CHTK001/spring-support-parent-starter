@@ -30,7 +30,7 @@ public interface IEduPoemService extends IService<EduPoem> {
      * @param gradeLevel 学段（可为空）
      * @param grade      年级（可为空）
      * @param count      题目数量
-     * @return 游戏数据
+     * @return 游戏数据；{@code scope} 表明取材范围：{@code level} 按学段 / {@code all} 本学段无内容时来自全库
      */
     Map<String, Object> generatePoemGame(String gradeLevel, String grade, int count);
 }

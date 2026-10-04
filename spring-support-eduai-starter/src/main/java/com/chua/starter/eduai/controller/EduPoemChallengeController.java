@@ -204,7 +204,13 @@ public class EduPoemChallengeController {
      * @return 诗池
      */
     private List<EduPoem> pool(String gradeLevel, String grade, int count) {
-        List<EduPoem> poems = poemService.listByGradeLevel(gradeLevel, grade, Math.max(count * POOL_MULTIPLIER, 60));
+        int need = Math.max(count * POOL_MULTIPLIER, 60);
+        List<EduPoem> poems = poemService.listByGradeLevel(gradeLevel, grade, need);
+        boolean hasLevel = gradeLevel != null && !gradeLevel.isBlank();
+        if (hasLevel && (poems == null || poems.isEmpty())) {
+            // 本学段查不到诗（映射缺失/传了码值）：回落全库，否则各玩法都会出空题
+            poems = poemService.listByGradeLevel(null, null, need);
+        }
         return poems == null ? new ArrayList<>() : poems;
     }
 
