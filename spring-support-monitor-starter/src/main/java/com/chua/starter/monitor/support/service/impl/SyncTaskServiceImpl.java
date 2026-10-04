@@ -319,6 +319,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             if (sourceType == SyncSourceType.DIR) {
                 // 目录模式：逐个文件独立映射与写入，单文件失败不影响其余文件
                 result = executeDirectory(task, runTime, startNanos);
+            } else if (sourceType.isHttp()) {
+                // 网络源：单次请求同时取列与数据（见 executeHttp）
+                result = executeHttp(task, runTime, startNanos);
             } else {
                 List<SyncColumnVO> sourceColumns = resolveSourceColumns(task);
                 List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
@@ -470,10 +473,6 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     private long streamAndWrite(MsSyncTask task, List<SyncFieldMappingVO> mapping,
                                 List<SyncColumnVO> sourceColumns, AtomicLong readCounter, Path file) throws Exception {
         String[] columnNames = sourceColumns.stream().map(SyncColumnVO::name).toArray(String[]::new);
-        List<DataSyncFieldMapping> engineMappings = new ArrayList<>(mapping.size());
-        for (SyncFieldMappingVO item : mapping) {
-            engineMappings.add(new SimpleFieldMapping(item.source(), item.target(), null));
-        }
         JdbcDataSyncAgentSource jdbcSource = null;
         SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
         Flux<Map<String, Object>> rows;
@@ -486,23 +485,92 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                     task.getSyncTaskSourceSql(), columnNames);
             rows = jdbcSource.read(new HashMap<>());
         } else if (type.isHttp()) {
-            // HTTP-JSON / HTTP-HTML：真实请求一次，响应解析成行
-            rows = MonitorHttpRowsSupport.read(type, task.getSyncTaskSourcePath(), httpOptionsOf(task));
+            // 网络源由 executeHttp 走「单次请求」路径，这里不该被调到；显式抛错而不是静默走错
+            throw new IllegalStateException("HTTP 源不走流式路径");
         } else {
             // 文件：csv 走引擎定界符源，excel 走 POI（见 MonitorFileRowsSupport）
             rows = MonitorFileRowsSupport.read(file, optionsOf(task));
         }
         try {
-            // 引擎的源以 Flux 暴露数据；params 不含 offset 即全量读
-            Flux<Map<String, Object>> mapped = rows
-                    .doOnNext(row -> readCounter.incrementAndGet())
-                    .map(row -> fieldMappingConverter.applyMappings(row, engineMappings));
-            return buildSink(task, mapping).writeStream(mapped);
+            return writeRows(task, mapping, rows, readCounter);
         } finally {
             if (jdbcSource != null) {
                 jdbcSource.close();
             }
         }
+    }
+
+    /**
+     * 网络源执行：<b>只发一次</b>请求，响应同时用于推导源列与写库。
+     *
+     * <p>为什么不「先探列再取数」：HTTP 接口常见一次性 token、签名时间戳、限流，
+     * 打两次请求时第二次就会失败或拿到与第一次不同的快照，表现为字段映射对不上、或干脆 401。
+     * 先取一次数据、由数据推列名，既省一次往返，也保证列与数据同源。</p>
+     *
+     * @param task       任务
+     * @param runTime    本次执行时间
+     * @param startNanos 起始纳秒
+     * @return 执行结果
+     * @throws Exception 请求或写入失败
+     */
+    private SyncTaskRunVO executeHttp(MsSyncTask task, LocalDateTime runTime, long startNanos) throws Exception {
+        SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
+        List<Map<String, Object>> rows = MonitorHttpRowsSupport.rows(type, task.getSyncTaskSourcePath(), httpOptionsOf(task));
+        if (rows.isEmpty()) {
+            return SyncTaskRunVO.success(0L, 0L, costMs(startNanos), runTime);
+        }
+        List<SyncColumnVO> sourceColumns = columnsOfRows(rows);
+        List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
+        AtomicLong readCounter = new AtomicLong();
+        long writeCount = writeRows(task, mapping, Flux.fromIterable(rows), readCounter);
+        return SyncTaskRunVO.success(readCounter.get(), writeCount, costMs(startNanos), runTime);
+    }
+
+    /**
+     * 由行数据推出源列（各行键的并集，按首次出现顺序）。
+     *
+     * <p>JSON 里各对象的字段常常不齐（有的行没有 {@code remark}），取并集才能让可选列
+     * 也出现在字段映射的可选项里。</p>
+     *
+     * @param rows 行数据
+     * @return 源列
+     */
+    private List<SyncColumnVO> columnsOfRows(List<Map<String, Object>> rows) {
+        List<String> names = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            for (String key : row.keySet()) {
+                if (!names.contains(key)) {
+                    names.add(key);
+                }
+            }
+        }
+        if (names.isEmpty()) {
+            throw new IllegalStateException("HTTP 响应里没有解析到任何列");
+        }
+        return names.stream().map(name -> new SyncColumnVO(name, "string", "")).toList();
+    }
+
+    /**
+     * 写入：字段映射转换 + 目标 Sink 分批提交。
+     *
+     * @param task        任务
+     * @param mapping     字段映射
+     * @param rows        源行流
+     * @param readCounter 出参：累计读取行数
+     * @return 实际写入行数
+     * @throws Exception 映射转换或写入失败
+     */
+    private long writeRows(MsSyncTask task, List<SyncFieldMappingVO> mapping,
+                           Flux<Map<String, Object>> rows, AtomicLong readCounter) throws Exception {
+        List<DataSyncFieldMapping> engineMappings = new ArrayList<>(mapping.size());
+        for (SyncFieldMappingVO item : mapping) {
+            engineMappings.add(new SimpleFieldMapping(item.source(), item.target(), null));
+        }
+        // 引擎的源以 Flux 暴露数据；params 不含 offset 即全量读
+        Flux<Map<String, Object>> mapped = rows
+                .doOnNext(row -> readCounter.incrementAndGet())
+                .map(row -> fieldMappingConverter.applyMappings(row, engineMappings));
+        return buildSink(task, mapping).writeStream(mapped);
     }
 
     /**
