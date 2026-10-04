@@ -801,7 +801,9 @@ public class ChatStreamOrchestrator {
                 {"runtime", "default_chat_model"}
         };
         for (String[] k : keys) {
-            String configured = sysAiGlobalSettingService.getValue(k[0], k[1])
+            // 直读数据库（不走 Redis 缓存）：默认模型被改后必须立刻生效，
+            // 缓存里残留的旧模型名会让整条对话链路按已废弃的模型解析，且报错与配置对不上。
+            String configured = sysAiGlobalSettingService.getValueDirect(k[0], k[1])
                     .map(String::trim)
                     .filter(value -> !value.isEmpty())
                     .orElse(null);
