@@ -399,7 +399,10 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
             className = clazz == null ? null : clazz.getClassName();
         }
         out.put("className", className);
-        out.put("stage", student.getStudentGradeLevel());
+        // 学段统一归一化成 PRIMARY / JUNIOR / SENIOR 再下发：库里可能是中文「小学」
+        // （管理员建班时手填），前端按 === 'PRIMARY' 判断学段，原样下发会让小学学生
+        // 落到高中版式（实测用户反馈「不显示小学的」）。
+        out.put("stage", normalizeLevel(student.getStudentGradeLevel()));
         // 首次登录改密引导：管理员设/重置过初始口令且学生还没自己改过时为 true。
         // 学生端进入 /student 时据此弹一次性引导（改完服务端会置 0，不再弹）。
         out.put("mustChangePassword",
