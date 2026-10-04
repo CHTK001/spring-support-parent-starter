@@ -8,9 +8,15 @@ import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.datasync.mapping.DataSyncFieldMapping;
 import com.chua.starter.datasync.mapping.DefaultFieldMappingConverter;
+import com.chua.starter.monitor.support.datasync.MonitorFileRowsSupport;
+import com.chua.starter.monitor.support.datasync.MonitorHttpRowsSupport;
 import com.chua.starter.monitor.support.datasync.MonitorJdbcSyncSink;
 import com.chua.starter.monitor.support.datasync.SimpleFieldMapping;
+import com.chua.starter.monitor.support.datasync.SyncDirWatcher;
+import com.chua.starter.monitor.support.datasync.SyncHttpOptions;
 import com.chua.starter.monitor.support.datasync.SyncJdbcSupport;
+import com.chua.starter.monitor.support.datasync.SyncSourceOptions;
+import com.chua.starter.monitor.support.datasync.SyncSourceType;
 import com.chua.starter.monitor.support.datasync.SyncWriteMode;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.mapper.MsSyncTaskMapper;
@@ -32,9 +38,13 @@ import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 /**
  * 数据同步任务服务实现。
@@ -117,6 +128,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     private final Map<Long, AtomicBoolean> runningTasks = new ConcurrentHashMap<>();
 
     /**
+     * 目录源任务的目录监听器（任务 ID → 监听）
+     */
+    private final Map<Long, SyncDirWatcher> dirWatchers = new ConcurrentHashMap<>();
+
+    /**
      * 启动时恢复定时任务。
      *
      * <p>建表由 Flyway 在上下文启动前完成；这里仍做兜底：表还没建好时只记警告，
@@ -147,10 +163,12 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     @PreDestroy
     public void destroyScheduler() {
         scheduledTasks.keySet().forEach(this::cancelSchedule);
+        // 目录源的监听不在 scheduledTasks 里（没有 cron 也可能监听），单独收一遍
+        new ArrayList<>(dirWatchers.keySet()).forEach(this::stopWatch);
         if (scheduler != null) {
             scheduler.shutdown();
         }
-        log.info("[sync-task] 调度器已关闭");
+        log.info("[sync-task] 调度器与目录监听已关闭");
     }
 
     @Override
@@ -260,8 +278,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             if (request == null) {
                 throw new IllegalArgumentException("预览参数不能为空");
             }
-            validateSelectSql(request.sourceSql());
-            List<SyncColumnVO> sourceColumns = loadSourceColumns(request.sourceDatasourceId(), request.sourceSql());
+            List<SyncColumnVO> sourceColumns = resolvePreviewSourceColumns(request);
             List<SyncColumnVO> targetColumns = loadTargetColumns(request.targetDatasourceId(), request.targetTable());
             List<SyncFieldMappingVO> mapping = request.mapping();
             boolean configured = mapping != null && !mapping.isEmpty();
@@ -298,12 +315,19 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         long readCount = 0L;
         SyncTaskRunVO result;
         try {
-            List<SyncColumnVO> sourceColumns = loadSourceColumns(task.getSyncTaskSourceDatasourceId(), task.getSyncTaskSourceSql());
-            List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
-            AtomicLong readCounter = new AtomicLong();
-            long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter);
-            readCount = readCounter.get();
-            result = SyncTaskRunVO.success(readCount, writeCount, costMs(startNanos), runTime);
+            SyncSourceType sourceType = SyncSourceType.from(task.getSyncTaskSourceType());
+            if (sourceType == SyncSourceType.DIR) {
+                // 目录模式：逐个文件独立映射与写入，单文件失败不影响其余文件
+                result = executeDirectory(task, runTime, startNanos);
+            } else {
+                List<SyncColumnVO> sourceColumns = resolveSourceColumns(task);
+                List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
+                AtomicLong readCounter = new AtomicLong();
+                Path file = sourceType == SyncSourceType.FILE ? Path.of(task.getSyncTaskSourcePath()) : null;
+                long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
+                readCount = readCounter.get();
+                result = SyncTaskRunVO.success(readCount, writeCount, costMs(startNanos), runTime);
+            }
         } catch (Exception e) {
             String message = rootMessage(e);
             log.error("[sync-task] 任务执行失败, id={}, message={}", taskId, message, e);
@@ -313,6 +337,93 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         }
         persistRunResult(taskId, result);
         return result;
+    }
+
+    /**
+     * 目录模式执行：逐个匹配文件独立「读 → 映射 → 写」，并应用处理完动作。
+     *
+     * <p>单个文件失败不中断整轮：目录里常同时存在正在写入的半成品文件，
+     * 一次失败就让整轮失败，会让「实时录入」永远卡在第一个坏文件上。结果给出成功/失败计数
+     * 与失败文件名，便于定位。</p>
+     *
+     * @param task       任务
+     * @param runTime    本次执行时间
+     * @param startNanos 起始纳秒
+     * @return 执行结果
+     */
+    private SyncTaskRunVO executeDirectory(MsSyncTask task, LocalDateTime runTime, long startNanos) {
+        SyncSourceOptions options = optionsOf(task);
+        long readTotal = 0L;
+        long writeTotal = 0L;
+        int okCount = 0;
+        int failedCount = 0;
+        StringBuilder problems = new StringBuilder();
+        List<Path> files;
+        try {
+            files = listFiles(Path.of(task.getSyncTaskSourcePath()), options);
+        } catch (Exception e) {
+            return SyncTaskRunVO.failed(0L, costMs(startNanos), rootMessage(e), runTime);
+        }
+        if (files.isEmpty()) {
+            // 空目录不是错误：实时录入场景下一次触发可能刚好没有待处理文件
+            return SyncTaskRunVO.success(0L, 0L, costMs(startNanos), runTime);
+        }
+        for (Path file : files) {
+            try {
+                List<SyncColumnVO> sourceColumns = headersOf(file, options);
+                List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
+                AtomicLong readCounter = new AtomicLong();
+                long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
+                readTotal += readCounter.get();
+                writeTotal += writeCount;
+                okCount++;
+                afterProcess(task, file, options);
+            } catch (Exception e) {
+                failedCount++;
+                if (problems.length() < 300) {
+                    problems.append(file.getFileName()).append(": ").append(rootMessage(e)).append("; ");
+                }
+                log.warn("[sync-task] 文件同步失败, task={}, file={}, message={}", task.getId(), file, rootMessage(e));
+            }
+        }
+        if (failedCount == 0) {
+            return SyncTaskRunVO.success(readTotal, writeTotal, costMs(startNanos), runTime);
+        }
+        String message = "处理 " + files.size() + " 个文件，成功 " + okCount + " / 失败 " + failedCount + "：" + problems;
+        return SyncTaskRunVO.failed(readTotal, costMs(startNanos), message, runTime);
+    }
+
+    /**
+     * 预览用：按输入源类型取源列。
+     *
+     * <p>与执行路径同源（{@link #resolveSourceColumns} 也是这套分支），避免「预览能配、执行时报错」。
+     * 差别只有一点：预览拿不到任务实体，用的是请求里的临时参数。</p>
+     *
+     * @param request 预览入参
+     * @return 源列
+     * @throws Exception 源不可用
+     */
+    private List<SyncColumnVO> resolvePreviewSourceColumns(SyncPreviewDTO request) throws Exception {
+        SyncSourceType type = SyncSourceType.from(request.sourceType());
+        if (type == SyncSourceType.JDBC) {
+            validateSelectSql(request.sourceSql());
+            return loadSourceColumns(request.sourceDatasourceId(), request.sourceSql());
+        }
+        String path = request.sourcePath() == null ? "" : request.sourcePath().trim();
+        if (path.isBlank()) {
+            throw new IllegalArgumentException("源地址不能为空（文件/目录填本地路径，HTTP 源填请求地址）");
+        }
+        if (type.isHttp()) {
+            return httpColumnsOf(type, path, parseHttpOptions(request.sourceOptions()));
+        }
+        SyncSourceOptions options = parseSourceOptions(request.sourceOptions());
+        Path sample = type == SyncSourceType.FILE
+                ? Path.of(path)
+                : listFiles(Path.of(path), options).stream().findFirst().orElse(null);
+        if (sample == null) {
+            throw new IllegalStateException("目录下没有匹配 " + options.pattern() + " 的文件: " + path);
+        }
+        return headersOf(sample, options);
     }
 
     /**
@@ -357,25 +468,40 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * @throws Exception 建连、读取或写入失败
      */
     private long streamAndWrite(MsSyncTask task, List<SyncFieldMappingVO> mapping,
-                                List<SyncColumnVO> sourceColumns, AtomicLong readCounter) throws Exception {
-        DatasourceJdbcInfo sourceInfo = datasourceService.jdbcInfo(task.getSyncTaskSourceDatasourceId());
+                                List<SyncColumnVO> sourceColumns, AtomicLong readCounter, Path file) throws Exception {
         String[] columnNames = sourceColumns.stream().map(SyncColumnVO::name).toArray(String[]::new);
         List<DataSyncFieldMapping> engineMappings = new ArrayList<>(mapping.size());
         for (SyncFieldMappingVO item : mapping) {
             engineMappings.add(new SimpleFieldMapping(item.source(), item.target(), null));
         }
-        var source = new JdbcDataSyncAgentSource(
-                "sync-src-" + task.getId(), "sync-in-" + task.getId(),
-                sourceInfo.url(), sourceInfo.username(), sourceInfo.password(),
-                task.getSyncTaskSourceSql(), columnNames);
+        JdbcDataSyncAgentSource jdbcSource = null;
+        SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
+        Flux<Map<String, Object>> rows;
+        if (type == SyncSourceType.JDBC) {
+            // JDBC：引擎的 JDBC 源
+            DatasourceJdbcInfo sourceInfo = datasourceService.jdbcInfo(task.getSyncTaskSourceDatasourceId());
+            jdbcSource = new JdbcDataSyncAgentSource(
+                    "sync-src-" + task.getId(), "sync-in-" + task.getId(),
+                    sourceInfo.url(), sourceInfo.username(), sourceInfo.password(),
+                    task.getSyncTaskSourceSql(), columnNames);
+            rows = jdbcSource.read(new HashMap<>());
+        } else if (type.isHttp()) {
+            // HTTP-JSON / HTTP-HTML：真实请求一次，响应解析成行
+            rows = MonitorHttpRowsSupport.read(type, task.getSyncTaskSourcePath(), httpOptionsOf(task));
+        } else {
+            // 文件：csv 走引擎定界符源，excel 走 POI（见 MonitorFileRowsSupport）
+            rows = MonitorFileRowsSupport.read(file, optionsOf(task));
+        }
         try {
             // 引擎的源以 Flux 暴露数据；params 不含 offset 即全量读
-            Flux<Map<String, Object>> rows = source.read(new HashMap<>())
+            Flux<Map<String, Object>> mapped = rows
                     .doOnNext(row -> readCounter.incrementAndGet())
                     .map(row -> fieldMappingConverter.applyMappings(row, engineMappings));
-            return buildSink(task, mapping).writeStream(rows);
+            return buildSink(task, mapping).writeStream(mapped);
         } finally {
-            source.close();
+            if (jdbcSource != null) {
+                jdbcSource.close();
+            }
         }
     }
 
@@ -558,21 +684,51 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (request.name() == null || request.name().isBlank()) {
             throw new IllegalArgumentException("任务名称不能为空");
         }
-        if (request.sourceDatasourceId() == null) {
-            throw new IllegalArgumentException("源数据源不能为空");
-        }
         if (request.targetDatasourceId() == null) {
             throw new IllegalArgumentException("目标数据源不能为空");
         }
-        validateSelectSql(request.sourceSql());
+        // 输入源按类型校验：JDBC 用数据源 + SELECT；FILE/DIR 用服务器本地绝对路径；
+        // HTTP_JSON/HTTP_HTML 用 http(s) 地址 + 各自选项，并在**保存时**就真打一次请求确认能取到列——
+        // 网络源最容易配错（地址拼错、需要鉴权、选择器写错），存下来不校验等于把问题留到定时执行时才炸
+        SyncSourceType sourceType = SyncSourceType.from(request.sourceType());
+        String sourcePath = request.sourcePath() == null ? null : request.sourcePath().trim();
+        SyncSourceOptions sourceOptions = SyncSourceOptions.defaults();
+        SyncHttpOptions httpOptions = SyncHttpOptions.defaults().normalized();
+        if (sourceType == SyncSourceType.JDBC) {
+            if (request.sourceDatasourceId() == null) {
+                throw new IllegalArgumentException("源数据源不能为空");
+            }
+            validateSelectSql(request.sourceSql());
+            // 源/目标数据源在**保存时**就校验存在且为 jdbc：否则任务能存下来，
+            // 直到执行才报「数据源不存在」，白白浪费一次执行与一轮排查
+            validateDatasource(request.sourceDatasourceId(), "源数据源");
+        } else if (sourceType.isHttp()) {
+            if (sourcePath == null || sourcePath.isBlank()) {
+                throw new IllegalArgumentException("请求地址不能为空");
+            }
+            httpOptions = parseHttpOptions(request.sourceOptions());
+            assertHttpSourceReachable(sourceType, sourcePath, httpOptions);
+        } else {
+            if (sourcePath == null || sourcePath.isBlank()) {
+                throw new IllegalArgumentException("文件/目录路径不能为空");
+            }
+            Path path = Path.of(sourcePath);
+            if (!path.isAbsolute()) {
+                throw new IllegalArgumentException("文件/目录必须使用服务器本地绝对路径: " + sourcePath);
+            }
+            if (sourceType == SyncSourceType.FILE && !Files.isRegularFile(path)) {
+                throw new IllegalArgumentException("文件不存在或不是普通文件: " + sourcePath);
+            }
+            if (sourceType == SyncSourceType.DIR && !Files.isDirectory(path)) {
+                throw new IllegalArgumentException("目录不存在: " + sourcePath);
+            }
+            sourceOptions = parseSourceOptions(request.sourceOptions());
+        }
         if (request.targetTable() == null || request.targetTable().isBlank()) {
             throw new IllegalArgumentException("目标表名不能为空");
         }
         // 提前跑一次白名单校验，别等执行时才拒
         SyncJdbcSupport.quoteTable(request.targetTable());
-        // 源/目标数据源在**保存时**就校验存在且为 jdbc：否则任务能存下来，
-        // 直到执行才报「数据源不存在」，白白浪费一次执行与一轮排查
-        validateDatasource(request.sourceDatasourceId(), "源数据源");
         validateDatasource(request.targetDatasourceId(), "目标数据源");
         if (request.enabled() != null && request.enabled() == 1
                 && (request.cron() == null || request.cron().isBlank())) {
@@ -587,8 +743,12 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         parseMapping(request.columnMapping());
 
         task.setSyncTaskName(request.name().trim());
-        task.setSyncTaskSourceDatasourceId(request.sourceDatasourceId());
-        task.setSyncTaskSourceSql(request.sourceSql().trim());
+        task.setSyncTaskSourceType(sourceType.name());
+        task.setSyncTaskSourceDatasourceId(sourceType == SyncSourceType.JDBC ? request.sourceDatasourceId() : null);
+        task.setSyncTaskSourceSql(sourceType == SyncSourceType.JDBC ? request.sourceSql().trim() : null);
+        task.setSyncTaskSourcePath(sourceType == SyncSourceType.JDBC ? null : sourcePath);
+        task.setSyncTaskSourceOptions(sourceType == SyncSourceType.JDBC ? null
+                : (sourceType.isHttp() ? toJson(httpOptions) : toJson(sourceOptions)));
         task.setSyncTaskTargetDatasourceId(request.targetDatasourceId());
         task.setSyncTaskTargetTable(request.targetTable().trim());
         task.setSyncTaskColumnMapping(normalizeMapping(request.columnMapping()));
@@ -596,6 +756,29 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         task.setSyncTaskBatchSize(batchSizeOf(request.batchSize()));
         task.setSyncTaskCron(request.cron() == null || request.cron().isBlank() ? null : request.cron().trim());
         task.setSyncTaskEnabled(request.enabled() == null ? 0 : (request.enabled() == 1 ? 1 : 0));
+    }
+
+    /**
+     * 校验 HTTP 源可用：保存时真打一次请求并取列。
+     *
+     * <p>网络源是所有源类型里最脆的——地址拼错、要鉴权、JSON 路径写错、选择器写错，
+     * 存下来不校验就等于把问题推迟到下一次定时执行才炸，那时任务已经处于"启用"状态，
+     * 失败原因还可能与真正的错因隔了几小时。</p>
+     *
+     * @param type    源类型
+     * @param url     请求地址
+     * @param options HTTP 选项
+     * @throws IllegalArgumentException 请求失败或响应里取不到列
+     */
+    private void assertHttpSourceReachable(SyncSourceType type, String url, SyncHttpOptions options) {
+        try {
+            List<SyncColumnVO> columns = httpColumnsOf(type, url, options);
+            log.info("[sync-task] HTTP 源校验通过, type={}, url={}, columns={}", type, url, columns.size());
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("HTTP 源校验失败: " + rootMessage(e));
+        }
     }
 
     /**
@@ -682,6 +865,194 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     /**
+     * 解析输入源选项 JSON（统一归一化，空值走默认）。
+     *
+     * @param json JSON，可为 空
+     * @return 归一化后的选项
+     */
+    private SyncSourceOptions parseSourceOptions(String json) {
+        if (json == null || json.isBlank()) {
+            return SyncSourceOptions.defaults().normalized();
+        }
+        try {
+            SyncSourceOptions parsed = objectMapper.readValue(json, SyncSourceOptions.class);
+            return (parsed == null ? SyncSourceOptions.defaults() : parsed).normalized();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("输入源选项格式不合法: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 解析 HTTP 源选项 JSON。
+     *
+     * @param json JSON，可为 空
+     * @return 归一化后的选项
+     */
+    private SyncHttpOptions parseHttpOptions(String json) {
+        if (json == null || json.isBlank()) {
+            return SyncHttpOptions.defaults().normalized();
+        }
+        try {
+            SyncHttpOptions parsed = objectMapper.readValue(json, SyncHttpOptions.class);
+            return (parsed == null ? SyncHttpOptions.defaults() : parsed).normalized();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("HTTP 输入源选项格式不合法: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 取任务上的输入源选项（按源类型分派：网络族用 HTTP 选项，文件族用文件选项）。
+     *
+     * @param task 任务
+     * @return 归一化后的 HTTP 选项（非 HTTP 源时为全默认值）
+     */
+    private SyncHttpOptions httpOptionsOf(MsSyncTask task) {
+        if (!SyncSourceType.from(task.getSyncTaskSourceType()).isHttp()) {
+            return SyncHttpOptions.defaults().normalized();
+        }
+        return parseHttpOptions(task.getSyncTaskSourceOptions());
+    }
+
+    /**
+     * 取任务上的文件选项（按源类型分派）。
+     *
+     * @param task 任务
+     * @return 归一化后的文件选项（非文件族时为全默认值）
+     */
+    private SyncSourceOptions optionsOf(MsSyncTask task) {
+        if (!SyncSourceType.from(task.getSyncTaskSourceType()).isFile()) {
+            return SyncSourceOptions.defaults().normalized();
+        }
+        return parseSourceOptions(task.getSyncTaskSourceOptions());
+    }
+
+    /**
+     * 对象转 JSON。
+     *
+     * @param value 对象
+     * @return JSON 字符串
+     */
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new IllegalStateException("输入源选项序列化失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 文件表头转源列（文件源的「源列」就是表头）。
+     *
+     * @param file    文件
+     * @param options 选项
+     * @return 源列
+     */
+    private List<SyncColumnVO> headersOf(Path file, SyncSourceOptions options) {
+        List<String> headers = MonitorFileRowsSupport.headers(file, options);
+        if (headers.isEmpty()) {
+            throw new IllegalStateException("文件没有可用表头: " + file);
+        }
+        return headers.stream().map(name -> new SyncColumnVO(name, "string", "")).toList();
+    }
+
+    /**
+     * 解析本次执行的输入源列。
+     *
+     * <p>JDBC 走结果集元数据；文件/目录走文件表头；HTTP 走真实请求一次取列。
+     * 目录模式取首个匹配文件当样本——同一目录下的文件应保持同一套表头，否则字段映射无法统一。</p>
+     *
+     * @param task 任务
+     * @return 源列
+     * @throws Exception 源不可用
+     */
+    private List<SyncColumnVO> resolveSourceColumns(MsSyncTask task) throws Exception {
+        SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
+        if (type == SyncSourceType.JDBC) {
+            return loadSourceColumns(task.getSyncTaskSourceDatasourceId(), task.getSyncTaskSourceSql());
+        }
+        if (type.isHttp()) {
+            return httpColumnsOf(type, task.getSyncTaskSourcePath(), httpOptionsOf(task));
+        }
+        SyncSourceOptions options = optionsOf(task);
+        Path sample = type == SyncSourceType.FILE
+                ? Path.of(task.getSyncTaskSourcePath())
+                : listFiles(Path.of(task.getSyncTaskSourcePath()), options).stream().findFirst().orElse(null);
+        if (sample == null) {
+            throw new IllegalStateException("目录下没有匹配 " + options.pattern() + " 的文件: " + task.getSyncTaskSourcePath());
+        }
+        return headersOf(sample, options);
+    }
+
+    /**
+     * HTTP 源列：真实请求一次取列名。
+     *
+     * <p>不用「配置里手填列名」的做法——接口返回什么列是外部决定的，猜错就会静默丢数据；
+     * 预览时打一次真实请求换来准确列名，比事后排查划算。</p>
+     *
+     * @param type    源类型
+     * @param url     请求地址
+     * @param options 选项
+     * @return 源列
+     * @throws Exception 请求失败或响应无法解析
+     */
+    private List<SyncColumnVO> httpColumnsOf(SyncSourceType type, String url, SyncHttpOptions options) throws Exception {
+        List<String> headers = MonitorHttpRowsSupport.headers(type, url, options);
+        if (headers.isEmpty()) {
+            throw new IllegalStateException("HTTP 响应里没有解析到任何列: " + url);
+        }
+        return headers.stream().map(name -> new SyncColumnVO(name, "string", "")).toList();
+    }
+
+    /**
+     * 列出目录下匹配的数据文件。
+     *
+     * <p>归档子目录 {@code done/} 会被排除：它与源文件同处一个目录，递归模式下若不排除，
+     * 「处理完归档」的文件下一轮会被再次同步，形成自增回环。</p>
+     *
+     * @param dir     目录
+     * @param options 选项
+     * @return 文件列表（按文件名排序，顺序稳定）
+     * @throws Exception 遍历失败
+     */
+    private List<Path> listFiles(Path dir, SyncSourceOptions options) throws Exception {
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+        int depth = options.normalized().recursive() ? Integer.MAX_VALUE : 1;
+        Path doneDir = dir.resolve("done");
+        try (Stream<Path> stream = Files.walk(dir, depth)) {
+            return stream.filter(Files::isRegularFile)
+                    .filter(path -> !path.startsWith(doneDir))
+                    .filter(options::matches)
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                    .toList();
+        }
+    }
+
+    /**
+     * 目录模式：单个文件处理完后的动作（保留 / 归档到 done/ / 删除）。
+     *
+     * @param task    任务
+     * @param file    已处理成功的文件
+     * @param options 选项
+     */
+    private void afterProcess(MsSyncTask task, Path file, SyncSourceOptions options) {
+        String action = options.normalized().afterProcess();
+        try {
+            if (SyncSourceOptions.AFTER_DELETE.equals(action)) {
+                Files.deleteIfExists(file);
+            } else if (SyncSourceOptions.AFTER_ARCHIVE.equals(action)) {
+                Path doneDir = file.getParent().resolve("done");
+                Files.createDirectories(doneDir);
+                Files.move(file, doneDir.resolve(file.getFileName()),
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Exception e) {
+            log.warn("[sync-task] 处理完动作失败, task={}, file={}, message={}", task.getId(), file, e.getMessage());
+        }
+    }
+
+    /**
      * 取任务批量大小。
      *
      * @param task 任务
@@ -739,18 +1110,104 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         }
         boolean enabled = task.getSyncTaskEnabled() != null && task.getSyncTaskEnabled() == 1;
         String cron = task.getSyncTaskCron();
-        if (!enabled || cron == null || cron.isBlank()) {
+        if (enabled && cron != null && !cron.isBlank()) {
+            try {
+                ScheduledFuture<?> future = scheduler.schedule(() -> triggerScheduled(id), new CronTrigger(cron.trim()));
+                if (future != null) {
+                    scheduledTasks.put(id, future);
+                    log.info("[sync-task] 任务 {} 已排定定时: {}", id, cron);
+                }
+            } catch (Exception e) {
+                log.warn("[sync-task] 任务 {} 排定定时失败: {}", id, e.getMessage());
+            }
+        }
+        // 目录源：启用后挂目录监听，实现新文件实时录入（可与 cron 共存：cron 负责补扫，监听负责实时）
+        watchDir(task);
+    }
+
+    /**
+     * 挂载 / 卸载目录监听。
+     *
+     * <p>只有「目录源 + 已启用」才监听；其余情况先卸载，保证改任务后不会残留旧目录的监听。</p>
+     *
+     * @param task 任务
+     */
+    private void watchDir(MsSyncTask task) {
+        Long id = task.getId();
+        stopWatch(id);
+        if (id == null || SyncSourceType.from(task.getSyncTaskSourceType()) != SyncSourceType.DIR) {
+            return;
+        }
+        if (task.getSyncTaskEnabled() == null || task.getSyncTaskEnabled() != 1) {
+            return;
+        }
+        Path dir = Path.of(task.getSyncTaskSourcePath());
+        if (!Files.isDirectory(dir)) {
+            log.warn("[sync-task] 目录不存在，跳过实时监听, id={}, dir={}", id, dir);
             return;
         }
         try {
-            ScheduledFuture<?> future = scheduler.schedule(() -> triggerScheduled(id), new CronTrigger(cron.trim()));
-            if (future != null) {
-                scheduledTasks.put(id, future);
-                log.info("[sync-task] 任务 {} 已排定定时: {}", id, cron);
-            }
+            SyncDirWatcher watcher = new SyncDirWatcher(dir, optionsOf(task), file -> ingestFile(id, file));
+            watcher.start();
+            dirWatchers.put(id, watcher);
         } catch (Exception e) {
-            log.warn("[sync-task] 任务 {} 排定定时失败: {}", id, e.getMessage());
+            log.warn("[sync-task] 启动目录监听失败, id={}, message={}", id, e.getMessage());
         }
+    }
+
+    /**
+     * 停掉某个任务的目录监听。
+     *
+     * @param id 任务 ID
+     */
+    private void stopWatch(Long id) {
+        SyncDirWatcher watcher = id == null ? null : dirWatchers.remove(id);
+        if (watcher != null) {
+            watcher.close();
+        }
+    }
+
+    /**
+     * 实时录入单个文件（目录监听回调）。
+     *
+     * <p>与整目录执行共用同一套「表头 → 映射 → 写入 → 处理完动作」，只是范围缩到单文件；
+     * 走 runningTasks 同一把锁，避免与 cron 补扫同时写同一张表。</p>
+     *
+     * @param taskId 任务 ID
+     * @param file   已落定的文件
+     */
+    private void ingestFile(Long taskId, Path file) {
+        MsSyncTask task = taskMapper.selectById(taskId);
+        if (task == null) {
+            stopWatch(taskId);
+            return;
+        }
+        AtomicBoolean running = runningTasks.computeIfAbsent(taskId, key -> new AtomicBoolean(false));
+        if (!running.compareAndSet(false, true)) {
+            // 正在跑别的文件或整目录补扫；该文件会在下一轮补扫/事件里被覆盖
+            log.info("[sync-task] 任务 {} 正在执行，跳过一次实时录入: {}", taskId, file.getFileName());
+            return;
+        }
+        LocalDateTime runTime = LocalDateTime.now();
+        long startNanos = System.nanoTime();
+        SyncTaskRunVO result;
+        try {
+            SyncSourceOptions options = optionsOf(task);
+            List<SyncColumnVO> sourceColumns = headersOf(file, options);
+            List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
+            AtomicLong readCounter = new AtomicLong();
+            long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
+            result = SyncTaskRunVO.success(readCounter.get(), writeCount, costMs(startNanos), runTime);
+            afterProcess(task, file, options);
+            log.info("[sync-task] 实时录入完成, id={}, file={}, read={}, write={}",
+                    taskId, file.getFileName(), readCounter.get(), writeCount);
+        } catch (Exception e) {
+            result = SyncTaskRunVO.failed(0L, costMs(startNanos), rootMessage(e), runTime);
+            log.warn("[sync-task] 实时录入失败, id={}, file={}, message={}", taskId, file, rootMessage(e));
+        } finally {
+            running.set(false);
+        }
+        persistRunResult(taskId, result);
     }
 
     /**
@@ -784,6 +1241,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (future != null) {
             future.cancel(false);
         }
+        stopWatch(taskId);
     }
 
     /**

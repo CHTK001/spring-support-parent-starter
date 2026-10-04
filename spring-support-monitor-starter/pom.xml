@@ -17,6 +17,8 @@
         <!-- 本模块既独立启动也被宿主当库依赖：默认跳过 fat-jar repackage，保证库坐标下是薄 jar；
              需要可执行包时构建传 -Dspring-boot.repackage.skip=false，产物为 *-exec.jar，不替换主构件 -->
         <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
+        <!-- 网页解析（HTTP-HTML 数据源）；与 spring-support-ai-starter 保持同版本，避免同进程内两份 -->
+        <jsoup.version>1.23.2</jsoup.version>
     </properties>
 
     <dependencies>
@@ -37,6 +39,13 @@
             <artifactId>spring-support-datasource-hub-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 设备模块：/api/device/** 的唯一实现方。device-starter 本身是纯库（无启动类），
+             必须由应用显式依赖，其 DeviceAutoConfiguration 才会经 AutoConfiguration.imports 生效。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-device-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -52,6 +61,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- 网页解析：数据同步的 HTTP-HTML 源按 CSS 选择器抓表格行（MonitorHttpRowsSupport）。
+             版本与 spring-support-ai-starter 保持一致；此前只由它传递进来，本模块直接 import 故显式声明 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
         </dependency>
 
         <!-- 数据访问 -->

@@ -1216,46 +1216,98 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @return PDF 字节；不可转换或转换失败返回 {@code null}
      */
     private byte[] convertToPdf(byte[] data, String fileName) {
+        return convertDocumentTo(data, fileName, "pdf");
+    }
+
+    /**
+     * 把 Office 文档转换成指定的目标格式。
+     *
+     * <p>走 {@code FileConvertSystem} SPI（实现在 utils-support-aspose-starter）：
+     * aspose-word 覆盖 doc/docx/wps（目标含 docx），aspose-excel 覆盖 xls/xlsx/csv
+     * （目标含 xlsx），aspose-ppt 覆盖 ppt/pptx。找不到匹配实现时
+     * {@code ConvertSupport.convert()} 抛 {@code UnsupportedOperationException}，
+     * 这里统一收敛为 {@code null}（表示「转不了」，不是「转换出错」）。</p>
+     *
+     * <p>用于「客户端组件吃不下、服务端也没有 HTML 渲染器」的传统二进制文档：
+     * 与其退回 PDF 交给浏览器阅读器，不如转成 OOXML（doc→docx / xls→xlsx），
+     * 复用前端的 {@code @vue-office/*} 组件，保真度更高、还能分页/表格交互。</p>
+     *
+     * @param data     源字节
+     * @param fileName 文件名（决定源格式）
+     * @param target   目标格式（如 {@code pdf} / {@code docx} / {@code xlsx}）
+     * @return 转换后的字节；不可转换或转换失败返回 {@code null}
+     */
+    private byte[] convertDocumentTo(byte[] data, String fileName, String target) {
         String src = simpleExtOf(fileName);
         if (src == null) {
             return null;
         }
         src = src.toLowerCase(Locale.ROOT);
-        if ("pdf".equals(src)) {
+        if (target.equalsIgnoreCase(src)) {
             return data;
         }
         // 容器闸门：源必须是 ZIP（OOXML/ODF）或 OLE2（传统二进制）容器。
         // 实测纯垃圾字节（4 字节循环 500 次）交给 Aspose.Words 不会抛异常，
-        // 而是**产出一个空白 PDF** 并返回 200——调用方拿到的是静默错误的结果。
+        // 而是**产出一个空白文档**并返回 200——调用方拿到的是静默错误的结果。
         // 这里先按魔数挡掉，让它走 unavailable 分支。
         // RTF 是纯文本，不在上述两类容器里，单独放行（见 RTF_MAGIC 注释）。
         if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC) && !startsWith(data, RTF_MAGIC)) {
-            log.warn("[FileStorage] 源不是文档容器，跳过转 PDF: {}", fileName);
+            log.warn("[FileStorage] 源不是文档容器，跳过转 {}: {}", target, fileName);
             return null;
         }
         try {
             var out = new ByteArrayOutputStream();
-            ConvertSupport.convert(src, "pdf")
+            ConvertSupport.convert(src, target)
                     .from(new ByteArrayInputStream(data), src)
-                    .to(out, "pdf")
+                    .to(out, target)
                     .convert();
-            byte[] pdf = out.toByteArray();
-            return pdf.length == 0 ? null : pdf;
+            byte[] result = out.toByteArray();
+            return result.length == 0 ? null : result;
         } catch (Exception e) {
-            log.warn("[FileStorage] 转 PDF 失败: {} - {}", fileName, e.getMessage());
+            log.warn("[FileStorage] 转 {} 失败: {} - {}", target, fileName, e.getMessage());
             return null;
         }
     }
 
     /**
-     * 把文件名扩展名换成 {@code .pdf}，用于转换后的下载名。
+     * 把文档转成目标格式并作为预览响应返回。
+     *
+     * @param data     源字节
+     * @param fileName 原文件名
+     * @param target   目标格式（{@code docx} / {@code xlsx}）
+     * @param download 是否按附件下载
+     * @param response 响应
+     * @return 转换成功返回已完成的 stage；不可转换返回 {@code null}
+     *         （调用方继续走原通道），同时写 {@code X-FileStorage-Convert: unavailable}
+     */
+    private CompletionStage<Void> serveConvertedDocument(byte[] data, String fileName, String target,
+                                                         boolean download, ServerResponse response) {
+        byte[] converted = convertDocumentTo(data, fileName, target);
+        if (converted == null) {
+            log.warn("[FileStorage] ?format={} 转换不可用: {}", target, fileName);
+            response.setHeader(HEADER_CONVERT, "unavailable");
+            return null;
+        }
+        response.setStatus(200)
+                .setHeader(ClientPreviewSupport.HEADER_PREVIEW, target)
+                .setHeader(HEADER_CONVERT, target)
+                .setContentType(MimeTypeUtils.getMimeType(target))
+                .setHeader("Content-Disposition", buildDisposition(download, withExtension(fileName, target)))
+                .setBody(converted)
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 把文件名扩展名换成指定后缀，用于转换后的下载名。
      *
      * @param fileName 原文件名
-     * @return 扩展名为 .pdf 的文件名；无扩展名时直接追加
+     * @param ext      目标扩展名（不带点）
+     * @return 换好扩展名的文件名；原文件名无扩展名时直接追加
      */
-    private static String withPdfExtension(String fileName) {
+    private static String withExtension(String fileName, String ext) {
         int dot = fileName.lastIndexOf('.');
-        return dot > 0 ? fileName.substring(0, dot) + ".pdf" : fileName + ".pdf";
+        return dot > 0 ? fileName.substring(0, dot) + "." + ext : fileName + "." + ext;
     }
 
     /**
@@ -3224,7 +3276,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .setHeader(ClientPreviewSupport.HEADER_PREVIEW, "pdf")
                         .setHeader(HEADER_CONVERT, "pdf")
                         .setContentType("application/pdf")
-                        .setHeader("Content-Disposition", buildDisposition(download, withPdfExtension(fileName)))
+                        .setHeader("Content-Disposition", buildDisposition(download, withExtension(fileName, "pdf")))
                         .setBody(pdf)
                         .end();
                 return CompletableFuture.completedFuture(null);
@@ -3234,6 +3286,26 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             // 当成 PDF 塞进 PDF 阅读器。
             log.warn("[FileStorage] ?format=pdf 转换不可用: {}", fileName);
             response.setHeader(HEADER_CONVERT, "unavailable");
+        }
+
+        // ?format=docx：把传统二进制 Word（.doc / .wps 等）转成 docx 再返回。
+        //
+        // 场景：@vue-office/docx 只认 OOXML，遇到真 OLE2 的 .doc 解析不了；
+        // 前端请求本参数拿转换后的 docx，继续用客户端组件渲染（保真度与交互
+        // 都优于服务端拼的 HTML 或转 PDF）。转换器仍是 FileConvertSystem SPI。
+        CompletionStage<Void> docxStage = stringParam(request, "format", "docx")
+                ? serveConvertedDocument(data, fileName, "docx", download, response)
+                : null;
+        if (docxStage != null) {
+            return docxStage;
+        }
+
+        // ?format=xlsx：把传统二进制 Excel（.xls 等）转成 xlsx 再返回，同上。
+        CompletionStage<Void> xlsxStage = stringParam(request, "format", "xlsx")
+                ? serveConvertedDocument(data, fileName, "xlsx", download, response)
+                : null;
+        if (xlsxStage != null) {
+            return xlsxStage;
         }
 
         // 压缩包结构查询（?format=archive）：返回条目清单 JSON，供主应用内的 Vue 组件渲染。

@@ -249,6 +249,38 @@ public class ImageSearchStores {
     // ==================== 内部：账号解析 ====================
 
     /**
+     * 以图搜图相关分组配置变更：使受影响账号的底库实例失效，下次访问按新配置重建。
+     *
+     * <p>特征模型（{@code default_image_feature_model}）在底库实例内被缓存（{@code extractor}），
+     * 不失效就永远是旧模型；这里直接移除实例，由 {@code storeOf} 懒建时按最新配置重取。</p>
+     *
+     * <p>用户级写入只失效**触发者自己的**账号：在某一用户身份下重建全部账号会把该用户的
+     * 覆盖串到其他账号。</p>
+     *
+     * @param event 配置变更事件
+     */
+    @org.springframework.context.event.EventListener
+    public void onSettingsChanged(com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent event) {
+        if (event == null || !"image_search".equals(event.getGroup())) {
+            return;
+        }
+        if (event.isUserScoped()) {
+            String userId = event.getUserId();
+            if (userId == null || userId.isBlank()) {
+                return;
+            }
+            if (accounts.remove(userId) != null) {
+                log.info("[ImageSearch] 图像特征模型变更（用户级），已失效账号 '{}' 的底库实例", userId);
+            }
+            return;
+        }
+        if (!accounts.isEmpty()) {
+            log.info("[ImageSearch] 图像特征模型变更（全局），失效全部账号底库实例（账号数 {}）", accounts.size());
+            accounts.clear();
+        }
+    }
+
+    /**
      * 当前账号的底库实例（不存在则懒建）。
      *
      * @return 底库实例

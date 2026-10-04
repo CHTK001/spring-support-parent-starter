@@ -50,18 +50,39 @@ public class MsSyncTask extends SysBase {
     private String syncTaskName;
 
     /**
-     * 源数据源 ID
+     * 输入源类型：JDBC / FILE / DIR
+     */
+    @TableField("ms_sync_task_source_type")
+    @Schema(description = "输入源类型 JDBC/FILE/DIR", example = "JDBC")
+    private String syncTaskSourceType;
+
+    /**
+     * 源数据源 ID（仅 JDBC 源使用；文件/目录源为 null）
      */
     @TableField("ms_sync_task_source_datasource_id")
-    @Schema(description = "源数据源 ID", example = "20")
+    @Schema(description = "源数据源 ID，仅 JDBC 源使用", example = "20")
     private Long syncTaskSourceDatasourceId;
 
     /**
-     * 源读取 SQL，必须是 SELECT
+     * 源读取 SQL，必须是 SELECT（仅 JDBC 源使用；文件/目录源为 null）
      */
     @TableField("ms_sync_task_source_sql")
-    @Schema(description = "源读取 SQL，必须是 SELECT")
+    @Schema(description = "源读取 SQL，必须是 SELECT，仅 JDBC 源使用")
     private String syncTaskSourceSql;
+
+    /**
+     * 输入源路径：FILE=文件路径 / DIR=目录路径（服务器本地绝对路径）
+     */
+    @TableField("ms_sync_task_source_path")
+    @Schema(description = "输入源路径：FILE=文件 / DIR=目录（服务器本地绝对路径）")
+    private String syncTaskSourcePath;
+
+    /**
+     * 输入源扩展选项 JSON：{@code {format,delimiter,sheetIndex,pattern,recursive,afterProcess}}
+     */
+    @TableField("ms_sync_task_source_options")
+    @Schema(description = "输入源扩展选项 JSON {format,delimiter,sheetIndex,pattern,recursive,afterProcess}")
+    private String syncTaskSourceOptions;
 
     /**
      * 目标数据源 ID

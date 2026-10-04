@@ -21,11 +21,16 @@ public class OcrSettingsChangedEvent {
     private final boolean userScoped;
 
     /**
+     * 触发变更的用户标识（仅用户级写入时有值）。
+     */
+    private final String userId;
+
+    /**
      * ocrsettings改变事件。
      * @param group 群体
      */
     public OcrSettingsChangedEvent(String group) {
-        this(group, false);
+        this(group, false, null);
     }
 
     /**
@@ -34,8 +39,19 @@ public class OcrSettingsChangedEvent {
      * @param userScoped 是否由用户级覆盖写入触发
      */
     public OcrSettingsChangedEvent(String group, boolean userScoped) {
+        this(group, userScoped, null);
+    }
+
+    /**
+     * ocrsettings改变事件。
+     * @param group 群体
+     * @param userScoped 是否由用户级覆盖写入触发
+     * @param userId 触发变更的用户标识，可为空
+     */
+    public OcrSettingsChangedEvent(String group, boolean userScoped, String userId) {
         this.group = group;
         this.userScoped = userScoped;
+        this.userId = userId;
     }
 
     /**
@@ -53,5 +69,14 @@ public class OcrSettingsChangedEvent {
      */
     public boolean isUserScoped() {
         return userScoped;
+    }
+
+    /**
+     * 触发变更的用户标识。
+     *
+     * @return 用户标识，全局写入时为空
+     */
+    public String getUserId() {
+        return userId;
     }
 }

@@ -35,6 +35,10 @@ spring:
         - classpath:db/init/V1.0__init_all_ai.sql
         # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
         - classpath:db/init/V1.0__init_all_datasource_hub.sql
+        # 设备台账（spring-support-device-starter 自有脚本）：device_* 七张表。
+        # device-starter 为纯库，其 db/init 不在 monitor 的 resources 下，靠 jar 依赖进入 classpath。
+        # 表名无 ms_ 前缀且与 ms_monitor_/ms_server_/sys_ai_/ms_datasource_ 无重名冲突。
+        - classpath:db/init/V1.0__init_all_device.sql
       # 种子数据必须显式列出 data-locations，否则 initdata 从不执行：
       # 早先只配了 schema-locations，导致 ms_monitor_config / ms_monitor_alarm_policy /
       # ms_monitor_alarm_rule 三张表全为空（保留期配置与 4 条项目守护告警规则从未落地）。
