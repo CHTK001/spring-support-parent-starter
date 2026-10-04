@@ -1442,7 +1442,8 @@ public class ServiceInstanceManager {
         };
         for (String[] k : keys) {
             try {
-                String configured = globalSettingService.getValue(k[0], k[1])
+                // 直读数据库（不走 Redis 缓存），理由同 ChatStreamOrchestrator.getDefaultModel
+                String configured = globalSettingService.getValueDirect(k[0], k[1])
                         .map(String::trim).filter(v -> !v.isEmpty()).orElse(null);
                 if (configured != null) {
                     int idx = configured.indexOf(':');

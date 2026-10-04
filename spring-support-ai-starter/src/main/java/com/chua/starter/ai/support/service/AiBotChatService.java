@@ -979,9 +979,9 @@ public class AiBotChatService {
             // 连接器没单独选模型时：Bot 全局默认 → 运行时默认，逐级回退。
             // 此前只读 bot.default_model，runtime.default_model 完全被忽略，
             // 于是「只在系统设置里配了默认模型」的场景解析不到任何模型。
-            modelName = globalSettingReader.getStr("bot", "default_model");
+            modelName = globalSettingReader.getStrDirect("bot", "default_model");
             if (modelName == null || modelName.isBlank()) {
-                modelName = globalSettingReader.getStr("runtime", "default_model");
+                modelName = globalSettingReader.getStrDirect("runtime", "default_model");
             }
         }
         String normalized = normalizeModelName(modelName);
@@ -1413,8 +1413,8 @@ public class AiBotChatService {
         // 候选模型（按优先级、去重）：Bot 单独模型 → Bot 默认模型 → 运行时默认模型
         LinkedHashSet<String> candidates = new LinkedHashSet<>();
         addCandidate(candidates, bot.getModel());
-        addCandidate(candidates, globalSettingReader.getStr("bot", "default_model"));
-        addCandidate(candidates, globalSettingReader.getStr("runtime", "default_model"));
+        addCandidate(candidates, globalSettingReader.getStrDirect("bot", "default_model"));
+        addCandidate(candidates, globalSettingReader.getStrDirect("runtime", "default_model"));
 
         // 先把「模型管理里不存在 / 已停用」的候选剔掉再用。
         //
