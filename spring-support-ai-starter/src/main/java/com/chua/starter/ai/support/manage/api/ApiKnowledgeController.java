@@ -1222,6 +1222,10 @@ public class ApiKnowledgeController {
 
         long start = System.currentTimeMillis();
         RagClient client = ragClientManager.current();
+        if (client == null) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR,
+                    "RAG 不可用：请先在「设置中心 → 模型设置 → RAG」配置 RAG LLM 模型");
+        }
         RagResponse response;
         try {
             response = client.query(query, topK, similarity);

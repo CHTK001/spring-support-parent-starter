@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.configuration.core;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.MemoryChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
@@ -169,8 +170,13 @@ public class AiConfiguration {
     public ChatClient defaultChatClient(ApplicationContext applicationContext) {
         log.info("[AiConfiguration] 发现 ChatClient 实现...");
 
-        List<ChatClient> spiClients = ServiceProvider.of(ChatClient.class).collect();
-        log.info("[AiConfiguration] SPI 发现 {} 个 ChatClient", spiClients.size());
+        // collect() 返回不可变集合，removeIf 会抛 UnsupportedOperationException，必须先拷成可变列表
+        List<ChatClient> spiClients = new java.util.ArrayList<>(ServiceProvider.of(ChatClient.class).collect());
+        // 剔除演示用的内存客户端：它永远「成功」返回固定文案，一旦进入 failover 聚合且排在
+        // 前面（SPI 收集顺序），真实供应商永远不会被调用，RAG 会静默产出「内存模式」假答案。
+        // 它不是真实能力，任何生产装配都不应带上它。
+        spiClients.removeIf(c -> c instanceof MemoryChatClient);
+        log.info("[AiConfiguration] SPI 发现 {} 个 ChatClient（已剔除内存演示客户端）", spiClients.size());
 
         Map<String, ChatClient> springClients = applicationContext.getBeansOfType(ChatClient.class);
         // 排除注册中心自身
