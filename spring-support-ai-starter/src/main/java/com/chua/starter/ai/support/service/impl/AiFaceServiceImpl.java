@@ -270,6 +270,18 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
+     * 更新一条人脸的元数据（只改档案字段）。
+     *
+     * @param id       人脸 标识
+     * @param metadata 新元数据
+     * @return 是否更新成功
+     */
+    @Override
+    public boolean updateMetadata(String id, Map<String, Object> metadata) {
+        return faceStores.updateMetadata(id, metadata);
+    }
+
+    /**
      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
      *
      * @param id        人脸 标识
