@@ -172,20 +172,30 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     @Override
-    /**
-     * 获取paperdetail
-    */
     public PaperVO getPaperDetail(Long paperId) {
-        EduPaper paper = baseMapper.selectById(paperId);
-        if (paper == null) {
-            /**
-             * 业务异常。
-             * @param "试卷不存在" "试卷不存在"
-             * @return 业务异常的结果
-             */
-            throw new BusinessException("试卷不存在");
-        }
+        EduPaper paper = requirePaper(paperId);
         EduUserContext.checkReadable(paper.getOwnerUserId());
+        return buildPaperDetail(paper);
+    }
+
+    @Override
+    public PaperVO getPaperDetailUnchecked(Long paperId) {
+        return buildPaperDetail(requirePaper(paperId));
+    }
+
+    /**
+     * 组装试卷详情（含题目）。
+     *
+     * <p>**本方法不做归属校验**，授权必须由调用方完成。抽出它的原因：
+     * 学生端要按「是否布置给我班」授权，而不是按「试卷归属人」——
+     * 学生永远不是归属人，走 {@link #getPaperDetail} 会被 checkReadable 拒掉
+     * （实测 400 B0500S0001），于是学生只能看到卷名、点「查看试卷」是空的。</p>
+     *
+     * @param paper 已确认存在的试卷实体
+     * @return 试卷详情
+     */
+    private PaperVO buildPaperDetail(EduPaper paper) {
+        Long paperId = paper.getPaperId();
         PaperVO vo = toVO(paper);
 
         // 读详情即补齐历史缺失的题项编号：编号是每题二维码的内容，缺失会导致二维码为空
