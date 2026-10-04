@@ -3398,6 +3398,130 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      * @param response    响应
      * @return 异步阶段
      */
+    /**
+     * 按扩展名给出「用哪个本地软件打开」的建议。
+     *
+     * <p>不支持预览时只说「下载后用对应软件打开」等于没说 —— 用户仍然不知道用哪个。
+     * 这里按格式给出**具体软件名**，把提示变成可执行的动作。取不到对应项时返回通用引导，
+     * 不做「猜一个软件」这种可能误导的事。</p>
+     *
+     * @param ext 小写扩展名（可为 null / 空）
+     * @return 建议软件文本
+     */
+    private String openWithHint(String ext) {
+        if (ext == null || ext.isEmpty()) {
+            return "能打开该格式的本地软件";
+        }
+        switch (ext) {
+            // WPS 系（国内办公常见）
+            case "wps":
+            case "wpt":
+            case "et":
+            case "ett":
+            case "dps":
+            case "dpt":
+                return "WPS Office";
+            // CAD / 制图
+            case "dwg":
+            case "dwt":
+            case "dws":
+            case "dxf":
+            case "dgn":
+                return "AutoCAD、中望 CAD、浩辰 CAD，或 CAD 看图王";
+            // Visio / 流程图
+            case "vsd":
+            case "vsdx":
+            case "vssx":
+            case "vstx":
+            case "vdx":
+                return "Microsoft Visio，或 draw.io（免安装、可直接打开 .vsd/.vsdx）";
+            // Apple iWork
+            case "pages":
+            case "numbers":
+            case "key":
+                return "macOS 上的 Pages / Numbers / Keynote，或 iCloud 网页版";
+            // Microsoft 其他
+            case "one":
+                return "Microsoft OneNote";
+            case "pub":
+                return "Microsoft Publisher";
+            case "mpp":
+                return "Microsoft Project";
+            case "xps":
+                return "Windows 自带的 XPS Viewer";
+            // 图片类
+            case "heic":
+            case "heif":
+                return "Windows「照片」应用（需装 HEIF 图像扩展）或 macOS「预览」";
+            case "cr2":
+            case "cr3":
+            case "nef":
+            case "arw":
+            case "raf":
+            case "rw2":
+            case "orf":
+                return "Adobe Lightroom、Capture One，或相机厂商自带软件";
+            case "ai":
+            case "eps":
+                return "Adobe Illustrator，或 Inkscape（开源、免费）";
+            case "wmf":
+            case "emf":
+                return "Office、画图，或 Inkscape";
+            case "psd":
+            case "psb":
+                return "Adobe Photoshop，或 GIMP（开源、免费）";
+            // 设计稿
+            case "sketch":
+                return "macOS 上的 Sketch";
+            case "fig":
+                return "Figma（网页版可直接打开）";
+            case "xd":
+                return "Adobe XD";
+            // 电子书
+            case "mobi":
+            case "azw":
+            case "azw3":
+                return "Kindle 阅读器，或 Calibre（开源、可互转格式）";
+            case "djvu":
+                return "WinDjView、DjView";
+            // 办公套件旧版 / 其他
+            case "odg":
+                return "LibreOffice Draw（开源、免费）";
+            case "sxw":
+            case "sxc":
+            case "sxi":
+                return "LibreOffice（开源、免费）";
+            case "hwp":
+            case "hwpx":
+                return "한글(Hangul) 或 LibreOffice";
+            case "wpd":
+                return "Corel WordPerfect";
+            // 压缩 / 媒体
+            case "cab":
+            case "lzh":
+            case "lha":
+                return "7-Zip 或 WinRAR";
+            case "wma":
+            case "ape":
+            case "flac2":
+                return "VLC、foobar2000";
+            // 数据 / 列式存储
+            case "avro":
+            case "orc":
+                return "DuckDB、Spark 或 Pandas 等数据工具";
+            default:
+                return "能打开该格式的本地软件";
+        }
+    }
+
+    /**
+     * 生成「不支持预览」页面。
+     *
+     * @param fileName    文件名
+     * @param contentType 响应内容类型
+     * @param response    响应
+     * @return 异步阶段
+     */
     private CompletionStage<Void> writeUnsupportedPreview(String fileName, String contentType, ServerResponse response) {
         String ext = simpleExtOf(fileName);
         String extLabel = ext == null || ext.isEmpty() ? "（无扩展名）" : "." + ext.toUpperCase(Locale.ROOT);
@@ -3432,7 +3556,9 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .append("<span class=\"tag\">")
                 .append(escapeHtml(contentType == null ? "unknown" : contentType))
                 .append("</span></p>")
-                .append("<p class=\"m\">下载到本地后用对应的软件打开即可。</p>")
+                .append("<p class=\"m\">该格式浏览器无法直接渲染。建议下载后用 <b>")
+                .append(escapeHtml(openWithHint(ext)))
+                .append("</b> 打开。</p>")
                 .append("<div class=\"acts\">");
         if (setting.isOpenDownload()) {
             html.append("<a class=\"btn\" href=\"?download=true\" download>下载文件</a>");
