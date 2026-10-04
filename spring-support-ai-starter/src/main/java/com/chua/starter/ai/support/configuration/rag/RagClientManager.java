@@ -6,6 +6,8 @@ import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.MemoryChatClient;
+import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
+import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
 import com.chua.common.support.ai.embedding.EmbeddingClientSetting;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;
@@ -35,6 +37,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -422,28 +425,51 @@ public class RagClientManager {
                 log.warn("[RagClientManager] 供应商 {} 已禁用，无法构建 ChatClient", provider.getName());
                 return null;
             }
-            String apiKey = extractApiKey(provider.getCredentials());
-            if (StringUtils.isBlank(apiKey)) {
+            List<String> apiKeys = extractApiKeys(provider.getCredentials());
+            if (apiKeys.isEmpty()) {
                 log.warn("[RagClientManager] 供应商 {} 未配置 API Key，无法构建 ChatClient",
                         provider.getName());
                 return null;
             }
-            ChatClientSetting setting = ChatClientSetting.builder()
-                    .provider(StringUtils.isBlank(provider.getPlatform())
-                            ? "openai" : provider.getPlatform().trim())
-                    .appKey(apiKey)
-                    .baseUrl(StringUtils.hasText(provider.getBaseUrl())
-                            ? provider.getBaseUrl().trim() : null)
-                    .model(modelName)
-                    .authScheme(StringUtils.hasText(provider.getAuthScheme())
-                            ? provider.getAuthScheme().trim() : null)
-                    .build();
-            ChatClient client = ChatClient.create(setting);
-            if (client != null) {
+            String platform = StringUtils.isBlank(provider.getPlatform())
+                    ? "openai" : provider.getPlatform().trim();
+            String baseUrl = StringUtils.hasText(provider.getBaseUrl())
+                    ? provider.getBaseUrl().trim() : null;
+            String authScheme = StringUtils.hasText(provider.getAuthScheme())
+                    ? provider.getAuthScheme().trim() : null;
+            List<ChatClient> keyClients = new ArrayList<>();
+            for (String apiKey : apiKeys) {
+                ChatClientSetting setting = ChatClientSetting.builder()
+                        .provider(platform)
+                        .appKey(apiKey)
+                        .baseUrl(baseUrl)
+                        .model(modelName)
+                        .authScheme(authScheme)
+                        .build();
+                ChatClient c = ChatClient.create(setting);
+                if (c != null) {
+                    keyClients.add(c);
+                }
+            }
+            if (keyClients.isEmpty()) {
+                return null;
+            }
+            if (keyClients.size() == 1) {
                 log.info("[RagClientManager] 按供应商表创建真实 ChatClient: provider={}, model={}",
                         provider.getName(), modelName);
+                return keyClients.get(0);
             }
-            return client;
+            // 多 Key failover：单个 Key 被上游限流(429)或失败时自动切到下一个。
+            // 否则「供应商配了多个 Key 却只用第一个」会在该 Key 限流时直接让 /ask 失败。
+            AggregateChatClientSetting aggregateSetting = new AggregateChatClientSetting();
+            aggregateSetting.setStrategy("failover");
+            AggregateChatClient aggregate = new AggregateChatClient(aggregateSetting);
+            for (int i = 0; i < keyClients.size(); i++) {
+                aggregate.addClient("key-" + i, null, 1, keyClients.get(i));
+            }
+            log.info("[RagClientManager] 按供应商表创建 {}-Key failover ChatClient 组: provider={}, model={}",
+                    keyClients.size(), provider.getName(), modelName);
+            return aggregate;
         } catch (Exception e) {
             log.warn("[RagClientManager] 供应商表 ChatClient 创建失败({}): {}", modelRef, e.getMessage());
             return null;
@@ -451,32 +477,36 @@ public class RagClientManager {
     }
 
     /**
-     * 从供应商 credentials 中提取可用 API Key。
+     * 从供应商 credentials 中提取全部可用 API Key（用于多 Key failover）。
      *
      * <p>兼容两种存储形态：{@code api_keys} 为字符串列表（多 Key 轮换），
-     * {@code api_key} 为单值。取第一个非空项。</p>
+     * {@code api_key} 为单值；按出现顺序去重返回。</p>
      *
      * @param credentials 凭证 JSON，允许为 空
-     * @return API Key；不存在时返回 空
+     * @return API Key 列表；不存在时返回空列表
      */
-    private String extractApiKey(Map<String, Object> credentials) {
+    private List<String> extractApiKeys(Map<String, Object> credentials) {
+        List<String> keys = new ArrayList<>();
         if (credentials == null || credentials.isEmpty()) {
-            return null;
+            return keys;
         }
         Object multi = credentials.get("api_keys");
         if (multi instanceof List<?> list) {
             for (Object item : list) {
                 String key = item == null ? null : String.valueOf(item).trim();
-                if (StringUtils.hasText(key)) {
-                    return key;
+                if (StringUtils.hasText(key) && !keys.contains(key)) {
+                    keys.add(key);
                 }
             }
         }
         Object single = credentials.get("api_key");
-        if (single != null && StringUtils.hasText(String.valueOf(single).trim())) {
-            return String.valueOf(single).trim();
+        if (single != null) {
+            String key = String.valueOf(single).trim();
+            if (StringUtils.hasText(key) && !keys.contains(key)) {
+                keys.add(key);
+            }
         }
-        return null;
+        return keys;
     }
 
     /**
