@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.configuration.client;
 
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiUserSettingService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,6 +29,11 @@ public class GlobalSettingReader {
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
+     * 用户级设置服务：读取当前用户的覆盖值（{@code sys_ai_user_setting}，按 userId 隔离）
+     */
+    private final SysAiUserSettingService userSettingService;
+
+    /**
      * 外部服务器目录模型绑定支持
      */
     private final ExternalModelSupport externalModelSupport;
@@ -34,11 +41,26 @@ public class GlobalSettingReader {
     /**
      * 读取字符串值。
      *
+     * <p><b>分层语义：当前用户的覆盖优先，其次全局默认。</b>
+     * 后端把 runtime / rag / face / ocr / image / image_search / generate / layout /
+     * input / memory / bot / asr 等分组声明为「每个用户管自己的默认」
+     * （见 {@code SettingsController.USER_WRITABLE_GROUPS}），而各业务消费端
+     * （FaceClientManager / ImageRecognitionClientManager / LayoutClientManager /
+     * RagClientManager / 记忆抽取 / 输入优化 …）统一走本方法取值，
+     * 所以用户层必须在这里生效，否则用户在设置页改的模型「保存成功却不生效」。</p>
+     *
+     * <p>没有用户覆盖时行为与以前完全一致（只读全局层）。</p>
+     *
      * @param group 分组
      * @param field 字段名
      * @return 值，未配置时返回 空
      */
     public String getStr(String group, String field) {
+        String userValue = userOverride(group, field);
+        if (userValue != null) {
+            // ONNX 外部目录：若是已存在的服务器目录，按字段模板动态注册为可运行模型
+            return externalModelSupport.prepare(group, field, userValue);
+        }
         String raw;
         try {
             raw = sysAiGlobalSettingService.getValue(group, field).orElse(null);
@@ -55,6 +77,29 @@ public class GlobalSettingReader {
         }
         // ONNX 外部目录：若是已存在的服务器目录，按字段模板动态注册为可运行模型
         return externalModelSupport.prepare(group, field, raw);
+    }
+
+    /**
+     * 读取当前用户在该字段上的覆盖值。
+     *
+     * <p>取不到用户上下文（后台线程、启动期、未登录）时返回 空，由全局默认兜底。</p>
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @return 用户覆盖值；未登录或该字段未覆盖时返回 {@code null}
+     */
+    private String userOverride(String group, String field) {
+        try {
+            String userId = AiUserContext.currentUserId();
+            if (userId == null || userId.isBlank()) {
+                return null;
+            }
+            return userSettingService.getUserValue(userId, group, field).orElse(null);
+        } catch (Exception e) {
+            log.debug("[GlobalSettingReader] 读取用户覆盖失败(group={},field={}): {}",
+                    group, field, e.getMessage());
+            return null;
+        }
     }
 
     /**
