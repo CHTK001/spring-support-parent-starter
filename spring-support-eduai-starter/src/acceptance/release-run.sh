@@ -109,6 +109,34 @@ log "== 3. 服务健康 =="
 H=$(wait_health) || die "eduai 未在窗口内健康（=$H）"
 log "    eduai=$H  oauth=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:19181/oauth/actuator/health)"
 
+# 3.5 鉴权热就绪 —— health=200 **不代表**鉴权链已就绪。
+# 实测（2026-10-04）：部署重启后立刻跑验收，首轮出现**系统性假红** ——
+# 「管理员代入得到临时令牌: len=0」、B1~B15 与 D1/D2 全 403（35/55），
+# 而同一套件稍后重跑就是 55/55。判据必须是「真实带令牌请求成功」，
+# 不能用 health 或「套件没报连接错」代替。
+log "== 3.5 鉴权热就绪 =="
+ADMIN_USER=${ADMIN_USER:-admin}
+ADMIN_PWD=${ADMIN_PWD:-admin123}
+UA_READY='Mozilla/5.0 (eduai-release-readiness)'
+ready=0
+for i in $(seq 1 24); do
+    tok=$(curl -s --max-time 10 -X POST "$BASE/v2/user/login" \
+        -H 'Content-Type: application/json' -H "User-Agent: $UA_READY" \
+        --data-binary "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PWD\"}" \
+        | python3 -c "import sys,json
+try: print((json.load(sys.stdin).get('data') or {}).get('accessToken') or '')
+except Exception: print('')" 2>/dev/null)
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/v2/edu/dimension/students" \
+        -H "User-Agent: $UA_READY" -H "Authorization: Bearer $tok" 2>/dev/null)
+    if [ -n "$tok" ] && [ "$code" = "200" ]; then ready=1; break; fi
+    sleep 5
+done
+if [ "$ready" = "1" ]; then
+    log "    已就绪（约 $((i * 5))s）"
+else
+    log "    [警告] 24 次探测（约 120s）仍未见「登录+管理端 200」，继续跑验收（结果可能含假红）"
+fi
+
 log "== 4. API 生产级验收 =="
 cd "$APP_DIR"
 if PYTHONIOENCODING=utf-8 python3 "$ACCEPT" ; then
