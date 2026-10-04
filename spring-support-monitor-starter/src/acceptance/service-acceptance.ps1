@@ -19,11 +19,20 @@ param(
     [int]$Port = $(if ($env:MS_PORT) { [int]$env:MS_PORT } else { 8112 }),
     [string]$SshUser = $(if ($env:MS_SSH_USER) { $env:MS_SSH_USER } else { 'kali' }),
     [string]$SshPass = $env:MS_SSH_PASS,
-    [string]$SshHostKey = $env:MS_SSH_HOSTKEY
+    [string]$SshHostKey = $env:MS_SSH_HOSTKEY,
+    # Auth-instance credential. When supplied, the suite logs in before starting
+    # and sends the token on every request. When omitted it runs against a
+    # no-auth instance and item [6] records UNVERIFIED.
+    [string]$AuthUser = $env:MS_AUTH_USER,
+    [string]$AuthPassword = $env:MS_AUTH_PASSWORD
 )
 
 $ErrorActionPreference = 'Stop'
 $base = "http://${Host_}:$Port"
+
+# Bearer token obtained from login; empty means "no auth configured".
+# Kept in $script: scope so Get-Api / Invoke-Api (functions) can see it.
+$script:authHeader = $null
 $plink = 'C:\Program Files\PuTTY\plink.exe'
 
 if (-not $SshPass) { throw '缺少 MS_SSH_PASS 环境变量' }
@@ -53,17 +62,49 @@ function Add-Unverified {
 
 function Get-Api {
     param([string]$Path)
-    $r = Invoke-WebRequest -Uri "$base$Path" -UseBasicParsing -TimeoutSec 60
+    $headers = @{}
+    if ($script:authHeader) { $headers['Authorization'] = $script:authHeader }
+    $r = Invoke-WebRequest -Uri "$base$Path" -UseBasicParsing -TimeoutSec 60 -Headers $headers
     $ms = New-Object IO.MemoryStream
     $r.RawContentStream.CopyTo($ms)
     [Text.Encoding]::UTF8.GetString($ms.ToArray())
 }
 
+# 从 PowerShell 的异常链里取出 HttpWebResponse。
+#
+# 为什么需要它：在 $ErrorActionPreference='Stop' 下，HttpWebRequest.GetResponse()
+# 遇到非 2xx 抛出的并不是 WebException 本身，而是被 PowerShell 包了一层的
+# MethodInvocationException（报错文本形如 'Exception calling "GetResponse" with
+# "0" argument(s)'）。MethodInvocationException 上没有 .Response 属性，于是
+# `$_ .Exception.Response` 取到 null，状态码被静默退化成 0。
+#
+# 不修的后果（实测于 2026-10-04 的 prod profile 实例）：服务端明明正确回了 403，
+# 验收套件却把状态码记成 0、该项判为 UNVERIFIED —— 也就是「鉴权确实生效」
+# 这件事在本套件里永远证明不了。所有依赖真实 HTTP 错误码的项都受影响。
+function Get-HttpResponseFrom($err) {
+    $e = $err
+    # 深度上限防御异常自引用导致的死循环；实测链长最多 3 层（MethodInvocation
+    # -> WebException -> HttpWebResponse）
+    for ($i = 0; $i -lt 6 -and $null -ne $e; $i++) {
+        if ($e -is [Net.HttpWebResponse]) { return $e }
+        $resp = $null
+        try { $resp = $e.Response } catch { }
+        if ($resp -is [Net.HttpWebResponse]) { return $resp }
+        $e = $e.InnerException
+    }
+    return $null
+}
+
 function Invoke-Api {
-    param([string]$Path, [string]$Method = 'POST', $Body)
+    param([string]$Path, [string]$Method = 'POST', $Body, [switch]$NoAuth)
     $req = [Net.HttpWebRequest]::Create("$base$Path")
     $req.Method = $Method
     $req.Timeout = 60000
+    # -NoAuth exists for item [6]: that item exists to prove an UNAUTHENTICATED
+    # write is rejected, so it must not silently inherit the suite's token.
+    if (-not $NoAuth -and $script:authHeader) {
+        $req.Headers['Authorization'] = $script:authHeader
+    }
     if ($null -ne $Body) {
         $req.ContentType = 'application/json; charset=utf-8'
         $bytes = [Text.Encoding]::UTF8.GetBytes($Body)
@@ -77,12 +118,14 @@ function Invoke-Api {
         $code = [int]$resp.StatusCode; $resp.Close()
         return @{ Code = $code; Json = ([Text.Encoding]::UTF8.GetString($ms.ToArray()) | ConvertFrom-Json) }
     } catch {
-        $resp = $null; try { $resp = $_.Exception.Response } catch { }
+        $resp = Get-HttpResponseFrom $_.Exception
         if ($resp) {
             $sr = New-Object IO.StreamReader($resp.GetResponseStream())
-            $text = $sr.ReadToEnd()
-            $parsed = $null; try { $parsed = $text | ConvertFrom-Json } catch { }
-            return @{ Code = [int]$resp.StatusCode; Json = $parsed }
+            $bodyText = $sr.ReadToEnd()
+            $parsed = $null; try { $parsed = $bodyText | ConvertFrom-Json } catch { }
+            $status = [int]$resp.StatusCode
+            $resp.Close()
+            return @{ Code = $status; Json = $parsed }
         }
         throw
     }
@@ -119,6 +162,49 @@ function New-Node {
     param([hashtable]$Spec)
     $json = $Spec | ConvertTo-Json -Depth 8 -Compress
     return Invoke-Api -Path '/ms/monitor/server' -Body $json
+}
+
+# Login and keep the token for the rest of the run.
+#
+# Why the Bearer prefix matters: OAuthServerFilter.resolveToken only accepts the
+# Authorization header when it starts with "Bearer ". A bare token is silently
+# treated as "no credential", which looks identical to auth being broken (both
+# 403). Measured on 2026-10-04 against the prod probe.
+function Connect-Auth {
+    $body = @{ username = $AuthUser; password = $AuthPassword } | ConvertTo-Json -Compress
+    $req = [Net.HttpWebRequest]::Create("$base/v2/user/login")
+    $req.Method = 'POST'
+    $req.Timeout = 30000
+    $req.ContentType = 'application/json; charset=utf-8'
+    $bytes = [Text.Encoding]::UTF8.GetBytes($body)
+    $req.ContentLength = $bytes.Length
+    $rs = $req.GetRequestStream(); $rs.Write($bytes, 0, $bytes.Length); $rs.Close()
+    try {
+        $resp = $req.GetResponse()
+        $ms = New-Object IO.MemoryStream
+        $resp.GetResponseStream().CopyTo($ms)
+        $txt = [Text.Encoding]::UTF8.GetString($ms.ToArray())
+        $resp.Close()
+        $j = $txt | ConvertFrom-Json
+        $token = $j.data.accessToken
+        if (-not $token) { throw 'login response carries no accessToken' }
+        $script:authHeader = "Bearer $token"
+        Write-Host ("  [AUTH] login ok, token length {0}" -f $token.Length)
+    } catch {
+        $resp = $null; try { $resp = $_.Exception.Response } catch { }
+        if ($resp) {
+            $sr = New-Object IO.StreamReader($resp.GetResponseStream())
+            $detail = $sr.ReadToEnd()
+            throw ("login failed HTTP {0}: {1}" -f [int]$resp.StatusCode, $detail)
+        }
+        throw
+    }
+}
+
+if ($AuthUser -and $AuthPassword) {
+    Connect-Auth
+} else {
+    Write-Host '  [AUTH] no credential supplied; running against a no-auth instance (item [6] will be UNVERIFIED)'
 }
 
 Write-Host "=== 服务管理验收套件  target=$base ==="
@@ -247,11 +333,19 @@ $authzStatus = 0
 $authzBody = ''
 try {
     # 刻意不带任何凭据：这是「无凭据能否写入」的判据
-    $probe = Invoke-Api -Path '/ms/monitor/server' -Body ($authzSpec | ConvertTo-Json -Depth 6 -Compress)
-    $authzStatus = 200
-    $authzBody = "success=" + $probe.Json.success
+    # -NoAuth is mandatory here: this item asserts that a request WITHOUT a
+    # credential is rejected. Inheriting the suite token would turn it into
+    # 'an authenticated request is accepted', and it would pass for the wrong reason.
+    $probe = Invoke-Api -Path '/ms/monitor/server' -NoAuth -Body ($authzSpec | ConvertTo-Json -Depth 6 -Compress)
+    # 状态码取 Invoke-Api 的【返回值】，而不是等异常抛出来。
+    # Invoke-Api 已经把 HTTP 错误状态转成 Code=<状态码> 返回了；原来在这里等异常，
+    # 结果即使服务端正确回了 403，本项也只会报 0 -> UNVERIFIED，
+    # 也就是「鉴权确实生效」这件事在本套件里永远无法被证明。
+    $authzStatus = [int]$probe.Code
+    $authzBody = if ($probe.Json) { "code=" + $probe.Json.code } else { 'no body' }
 } catch {
-    $authzStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+    $resp = Get-HttpResponseFrom $_.Exception
+    $authzStatus = if ($resp) { [int]$resp.StatusCode } else { 0 }
     $authzBody = $_.Exception.Message
 }
 # 只有 401 / 403 才算「被拒」。这里刻意不用 `$authzStatus -or ...` 的写法：
