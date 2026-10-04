@@ -517,6 +517,99 @@ public class AiSessionController {
     }
 
     /**
+     * 从此处分叉：把源会话中「分叉点及其之前」的消息复制到一个新会话。
+     *
+     * <p>前端会话里「从此处分叉」按钮调用本接口（此前它调的就是这个路径，但后端没有实现，
+     * 点一次必然 404 并提示「分叉失败」）。复制按消息主键升序进行，并把助手消息的
+     * {@code parentId} 重新指向**复制出来的**那条用户消息，这样新会话里的
+     * 「多版本」归属关系依然正确；不直接沿用源消息 id，避免跨会话串父。</p>
+     *
+     * @param id   源会话标识
+     * @param body 请求体，含分叉点消息 id（字段名 messageId）
+     * @return 新会话 id、标题与复制条数
+     */
+    @PostMapping("/{id}/fork")
+    public ReturnResult<Map<String, Object>> fork(@PathVariable("id") String id,
+                                                  @RequestBody Map<String, Object> body) {
+        Long sourceSessionId = parseLongOrNull(id);
+        SysAiSession source = sourceSessionId == null ? null : sessionMapper.selectById(sourceSessionId);
+        if (source == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        // 读出口校验：他人会话不可分叉（管理员只读放行在外层统一处理）
+        requireReadableSession(sourceSessionId);
+
+        Long anchorId = parseLongOrNull(String.valueOf(body.get("messageId")));
+        if (anchorId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "缺少分叉点消息 id");
+        }
+
+        LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiMessage::getSysAiSessionId, sourceSessionId);
+        wrapper.orderByAsc(SysAiMessage::getId);
+        List<SysAiMessage> all = messageMapper.selectList(wrapper);
+
+        // 截取到分叉点（含）为止；没截到说明分叉点不属于本会话
+        List<SysAiMessage> picked = new ArrayList<>();
+        for (SysAiMessage m : all) {
+            picked.add(m);
+            if (anchorId.equals(m.getId())) {
+                break;
+            }
+        }
+        if (picked.isEmpty() || !anchorId.equals(picked.get(picked.size() - 1).getId())) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "分叉点消息不存在");
+        }
+
+        SysAiSession target = new SysAiSession();
+        String sourceTitle = source.getTitle() == null ? "" : source.getTitle();
+        target.setTitle(sourceTitle + "-分叉");
+        target.setSysAiModuleCode(source.getSysAiModuleCode());
+        target.setModelId(source.getModelId());
+        target.setCharacterId(source.getCharacterId());
+        target.setMcpServerIds(source.getMcpServerIds());
+        target.setSettings(source.getSettings());
+        target.setSysUserId(AiUserContext.requireUserId());
+        target.setCreateTime(LocalDateTime.now());
+        target.setUpdateTime(LocalDateTime.now());
+        target.setStatus(1);
+        target.setIsArchived(false);
+        sessionMapper.insert(target);
+
+        Long lastUserId = null;
+        int copied = 0;
+        for (SysAiMessage src : picked) {
+            SysAiMessage copy = new SysAiMessage();
+            copy.setSysAiSessionId(target.getId());
+            copy.setRole(src.getRole());
+            copy.setType(src.getType());
+            copy.setContent(src.getContent());
+            copy.setAttachment(src.getAttachment());
+            copy.setModelName(src.getModelName());
+            copy.setPromptTokens(src.getPromptTokens());
+            copy.setCompletionTokens(src.getCompletionTokens());
+            copy.setTotalTokens(src.getTotalTokens());
+            copy.setUserId(AiUserContext.requireUserId());
+            copy.setCreateTime(src.getCreateTime());
+            copy.setUpdateTime(LocalDateTime.now());
+            // 用户消息不带父；助手消息挂到本次复制出来的那条用户消息上
+            copy.setParentId("user".equals(src.getRole()) ? null : lastUserId);
+            messageMapper.insert(copy);
+            if ("user".equals(src.getRole())) {
+                lastUserId = copy.getId();
+            }
+            copied++;
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", String.valueOf(target.getId()));
+        result.put("title", target.getTitle());
+        result.put("copiedMessages", copied);
+        log.info("[Session] 分叉会话: 源={}, 新={}, 复制消息={}", sourceSessionId, target.getId(), copied);
+        return ReturnResult.ok(result);
+    }
+
+    /**
      * 解析角色 id 字符串为 Long，非数字 / 空值返回 null。
      * @param raw 原始字符串
      * @return Long 或 null
