@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * 阅卷管理控制器
@@ -110,6 +113,37 @@ public class EduMarkingController {
     @GetMapping("/result/{taskId}")
     public ReturnResult<MarkingResultVO> result(@PathVariable String taskId) {
         return ReturnResult.ok(markingService.getResult(taskId));
+    }
+
+    /**
+     * 获取「与图片同版式」的结构化解析结果。
+     *
+     * <p>返回逐页的版面区域/文字块坐标与页尺寸，以及题号锚点和判分明细（含知识点），
+     * 供前端按原图位置叠放分数标记、对错与知识点，并支持点击编辑。</p>
+     *
+     * @param taskId 任务标识
+     * @return 结构化数据
+     */
+    @Operation(summary = "获取结构化解析（同版式展示用）")
+    @GetMapping("/structure/{taskId}")
+    public ReturnResult<Map<String, Object>> structure(@PathVariable String taskId) {
+        return ReturnResult.ok(markingService.getStructure(taskId));
+    }
+
+    /**
+     * 获取阅卷所用答卷图片的指定页（同版式展示的打底图）。
+     *
+     * @param taskId 任务标识
+     * @param page   页码（从 1 开始）
+     * @return 图片字节
+     */
+    @Operation(summary = "获取答卷图片（按页）")
+    @GetMapping("/image/{taskId}")
+    public ResponseEntity<byte[]> image(@PathVariable String taskId,
+                                        @RequestParam(value = "page", defaultValue = "1") int page) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(markingService.getSheetImage(taskId, page));
     }
 
     /**

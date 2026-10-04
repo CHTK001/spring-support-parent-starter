@@ -9,6 +9,7 @@ import com.chua.starter.eduai.ai.EduPaperScanner;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
@@ -45,6 +46,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -620,6 +622,123 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 把题号锚定到「哪个 OCR 文字块」上。
+     *
+     * <p>题目来自合并后的全文，锚点要回到逐页文字块里按题号前缀定位，
+     * 前端才能把分数标记贴到原图的对应位置。定位不到时返回 {@code null}，前端退化为列表展示。</p>
+     *
+     * @param no    题号（如 "1" / "1."）
+     * @param pages 逐页结构化数据（含 blocks）
+     * @return 锚点（no/page/x/y/width/height）；定位不到时返回 {@code null}
+     */
+    private static Map<String, Object> locateAnchor(String no, List<Map<String, Object>> pages) {
+        if (StringUtils.isBlank(no) || pages == null) {
+            return null;
+        }
+        String want = normalizeNo(no);
+        if (want.isEmpty()) {
+            return null;
+        }
+        for (Map<String, Object> pageNode : pages) {
+            if (!(pageNode.get("blocks") instanceof List<?> list)) {
+                continue;
+            }
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> block)) {
+                    continue;
+                }
+                Object text = block.get("text");
+                if (text != null && !String.valueOf(text).isBlank()
+                        && normalizeNo(String.valueOf(text)).startsWith(want)) {
+                    var anchor = new LinkedHashMap<String, Object>();
+                    anchor.put("no", no);
+                    anchor.put("page", pageNode.get("page"));
+                    anchor.put("x", block.get("x"));
+                    anchor.put("y", block.get("y"));
+                    anchor.put("width", block.get("width"));
+                    anchor.put("height", block.get("height"));
+                    return anchor;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 把版面区域坐标归一化到 0~1。
+     *
+     * <p>扫描用的是预处理图（可能被缩放），展示用的是原图，两者尺寸不一定相同；
+     * 归一化后与展示尺寸解耦，前端按渲染尺寸相乘即可。</p>
+     *
+     * @param boxes  版面区域（像素空间）
+     * @param width  该页像素宽
+     * @param height 该页像素高
+     * @return 归一化后的区域列表
+     */
+    private static List<Map<String, Object>> normalizeLayout(List<EduPaperScanner.LayoutBox> boxes,
+                                                             int width, int height) {
+        var out = new ArrayList<Map<String, Object>>();
+        if (boxes == null) {
+            return out;
+        }
+        for (EduPaperScanner.LayoutBox box : boxes) {
+            var node = new LinkedHashMap<String, Object>();
+            node.put("label", box.label());
+            node.put("x", ratio(box.x(), width));
+            node.put("y", ratio(box.y(), height));
+            node.put("width", ratio(box.width(), width));
+            node.put("height", ratio(box.height(), height));
+            out.add(node);
+        }
+        return out;
+    }
+
+    /**
+     * 把文字块坐标归一化到 0~1（保留文本与置信度）。
+     *
+     * @param blocks 文字块（像素空间）
+     * @param width  该页像素宽
+     * @param height 该页像素高
+     * @return 归一化后的文字块列表
+     */
+    private static List<Map<String, Object>> normalizeBlocks(List<EduPaperScanner.ScanBlock> blocks,
+                                                             int width, int height) {
+        var out = new ArrayList<Map<String, Object>>();
+        if (blocks == null) {
+            return out;
+        }
+        for (EduPaperScanner.ScanBlock block : blocks) {
+            var node = new LinkedHashMap<String, Object>();
+            node.put("text", block.text());
+            node.put("confidence", block.confidence());
+            node.put("x", ratio(block.x(), width));
+            node.put("y", ratio(block.y(), height));
+            node.put("width", ratio(block.width(), width));
+            node.put("height", ratio(block.height(), height));
+            out.add(node);
+        }
+        return out;
+    }
+
+    /**
+     * 归一化单个坐标分量（裁剪到 0~1）。
+     *
+     * @param value 像素值
+     * @param total 该轴总像素
+     * @return 0~1 的比值；{@code total} 非法时返回 0
+     */
+    private static double ratio(float value, int total) {
+        if (total <= 0) {
+            return 0d;
+        }
+        double value0 = value / total;
+        if (value0 < 0d) {
+            return 0d;
+        }
+        return Math.min(value0, 1d);
+    }
+
+    /**
      * 识别阶段：图片 → 版面+OCR → 结构化 → 落答题卡与全部结果行（PENDING）。
      *
      * @param task    任务
@@ -632,6 +751,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 拼接（而不是分别抽取）的原因：题号可能跨页连续，一起解析才能保证题序与去重正确。
         var mergedText = new StringBuilder();
         var mergedLayoutRegions = new HashMap<String, Integer>();
+        var pages = new ArrayList<Map<String, Object>>();
         int blockCount = 0;
         int pageNo = 0;
         for (byte[] imageData : images) {
@@ -653,6 +773,19 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 pageScan.layoutRegions().forEach((k, v) -> mergedLayoutRegions.merge(k, v == null ? 0 : v, Integer::sum));
             }
             blockCount += pageScan.blocks() == null ? 0 : pageScan.blocks().size();
+            // 结构化页面：坐标原样落库，供前端按原图等比叠放。
+            // 只存数量的话前端无法还原版式，这正是「同版式展示」缺的那一段数据。
+            // 坐标在扫描器里是「预处理图」的像素空间，而展示用的是原图（可能被缩放），
+            // 因此这里统一归一化到 0~1，与展示尺寸解耦，避免整体错位。
+            int pw = pageScan.pageWidth();
+            int ph = pageScan.pageHeight();
+            var pageNode = new LinkedHashMap<String, Object>();
+            pageNode.put("page", pageNo);
+            pageNode.put("width", pw);
+            pageNode.put("height", ph);
+            pageNode.put("layout", normalizeLayout(pageScan.layoutBoxes(), pw, ph));
+            pageNode.put("blocks", normalizeBlocks(pageScan.blocks(), pw, ph));
+            pages.add(pageNode);
             log.info("[EduScan] 第 {}/{} 页识别完成，累计文本长度={}", pageNo, images.size(), mergedText.length());
         }
         String text = mergedText.toString();
@@ -690,6 +823,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
         }
 
+        // 题号锚点：抽取出的题目来自合并文本，这里回到逐页文字块按题号前缀定位，
+        // 前端据此把分数标记贴到原图的对应位置。
+        var questionAnchors = new ArrayList<Map<String, Object>>();
+        for (EduPaperScanner.ScannedQuestion q : scanned) {
+            Map<String, Object> anchor = locateAnchor(q.no(), pages);
+            if (anchor != null) {
+                questionAnchors.add(anchor);
+            }
+        }
+
         // 答题卡（content 是 JSON 列，必须存合法 JSON）
         var content = new java.util.LinkedHashMap<String, Object>();
         content.put("mode", task.getMarkingTaskMode());
@@ -698,6 +841,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         content.put("layoutRegions", mergedLayoutRegions);
         content.put("blockCount", blockCount);
         content.put("pageCount", images.size());
+        content.put("pages", pages);
+        content.put("questionAnchors", questionAnchors);
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setOwnerUserId(task.getOwnerUserId());
         sheet.setAnswerSheetExamId(task.getMarkingTaskExamId());
@@ -1148,6 +1293,111 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         return eduAiService.markQuestionWithAi(question.getQuestionType(),
                 question.getQuestionStem(), question.getQuestionAnswer(), studentAnswer, maxScore);
+    }
+
+    /**
+     * 获取「与图片同版式」的结构化解析结果。
+     *
+     * <p>逐页返回版面区域与文字块的像素坐标、页尺寸，再附题号锚点与判分明细（含知识点），
+     * 前端据此把分数标记/对错/知识点按原图位置叠放并支持点击编辑。</p>
+     *
+     * @param taskId 任务标识
+     * @return 结构化数据
+     */
+    @Override
+    public Map<String, Object> getStructure(String taskId) {
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        var out = new LinkedHashMap<String, Object>();
+        out.put("taskId", taskId);
+        out.put("mode", task.getMarkingTaskMode());
+        out.put("paperId", task.getMarkingTaskPaperId());
+
+        Map<String, Object> content = Map.of();
+        if (task.getMarkingTaskAnswerSheetId() != null) {
+            EduAnswerSheet sheet = answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+            if (sheet != null) {
+                content = parseJsonMap(sheet.getAnswerSheetContent());
+            }
+        }
+        out.put("pageCount", content.getOrDefault("pageCount", 0));
+        out.put("pages", content.getOrDefault("pages", List.of()));
+        out.put("questionAnchors", content.getOrDefault("questionAnchors", List.of()));
+
+        var questions = new ArrayList<Map<String, Object>>();
+        for (EduMarkingResult row : markingResultMapper.selectTaskResults(taskId, EduUserContext.ownerScope())) {
+            var item = new LinkedHashMap<String, Object>();
+            item.put("resultId", row.getMarkingResultId());
+            item.put("questionId", row.getMarkingResultQuestionId());
+            item.put("score", row.getMarkingResultAiScore());
+            item.put("teacherScore", row.getMarkingResultTeacherScore());
+            item.put("comment", row.getMarkingResultAiComment());
+            Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
+            item.put("no", detail.get("recognizedNo"));
+            item.put("stem", detail.get("stem"));
+            item.put("studentAnswer", detail.get("studentAnswer"));
+            item.put("maxScore", detail.get("maxScore"));
+            item.put("source", detail.get("source"));
+            if (row.getMarkingResultQuestionId() != null) {
+                EduQuestion question = questionMapper.selectById(row.getMarkingResultQuestionId());
+                if (question != null) {
+                    item.put("knowledgePointIds", question.getQuestionKnowledgePointIds());
+                }
+            }
+            questions.add(item);
+        }
+        out.put("questions", questions);
+        return out;
+    }
+
+    /**
+     * 读取答卷图片的指定页（同版式展示的打底图）。
+     *
+     * <p>只按「配置目录 + 任务号 + 页码」重建路径，不采信数据库里存的原串，
+     * 并做目录包含校验，从根上避免路径穿越。</p>
+     *
+     * @param taskId 任务标识
+     * @param page   页码（从 1 开始）
+     * @return 图片字节
+     */
+    @Override
+    public byte[] getSheetImage(String taskId, int page) {
+        if (StringUtils.isBlank(taskId) || page < 1) {
+            throw new BusinessException("图片参数不合法");
+        }
+        Path dir = Paths.get(properties.getMarking().getImageDir()).toAbsolutePath().normalize();
+        Path file = dir.resolve(taskId + "-" + page + ".png").normalize();
+        if (!file.startsWith(dir)) {
+            throw new BusinessException("非法的图片请求");
+        }
+        if (!Files.isRegularFile(file)) {
+            throw new BusinessException("答卷图片不存在: 第 " + page + " 页");
+        }
+        try {
+            return Files.readAllBytes(file);
+        } catch (Exception e) {
+            throw new BusinessException("读取答卷图片失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 把 JSON 文本解析为 Map。
+     *
+     * @param json JSON 文本
+     * @return 键值映射；为空或解析失败时返回空 Map
+     */
+    private static Map<String, Object> parseJsonMap(String json) {
+        if (StringUtils.isBlank(json)) {
+            return Map.of();
+        }
+        try {
+            return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 
     @Override

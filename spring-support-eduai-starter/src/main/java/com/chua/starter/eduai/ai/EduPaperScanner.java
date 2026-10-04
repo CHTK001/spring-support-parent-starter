@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,19 +78,39 @@ public class EduPaperScanner {
      * @param blocks        文字块（按阅读顺序）
      * @param text          按阅读顺序拼接的全文
      */
-    public record ScanResult(java.util.Map<String, Integer> layoutRegions, List<ScanBlock> blocks, String text) {
+    public record ScanResult(java.util.Map<String, Integer> layoutRegions, List<ScanBlock> blocks,
+                             List<LayoutBox> layoutBoxes, int pageWidth, int pageHeight, String text) {
 
         /**
          * 规范化构造器：集合组件做防御性拷贝。
          *
          * @param layoutRegions 版面区域统计
          * @param blocks        文字块
-         * @param text          全文
+         * @param layoutBoxes   版面区域坐标（语义标签 + 像素框）
+         * @param pageWidth      页面像素宽（读不到时为 0）
+         * @param pageHeight     页面像素高（读不到时为 0）
+         * @param text           全文
          */
         public ScanResult {
             layoutRegions = layoutRegions == null ? java.util.Map.of() : java.util.Map.copyOf(layoutRegions);
             blocks = blocks == null ? List.of() : List.copyOf(blocks);
+            layoutBoxes = layoutBoxes == null ? List.of() : List.copyOf(layoutBoxes);
         }
+    }
+
+    /**
+     * 一个版面区域（语义标签 + 像素坐标）。
+     *
+     * <p>用于「与图片同版式」的结构化展示：把 layout 模型检出的标题/正文/编号等区域
+     * 按原图位置叠放，而不是只保留数量。</p>
+     *
+     * @param label  语义标签（如 title / text / figure）
+     * @param x      左上角 x
+     * @param y      左上角 y
+     * @param width  宽
+     * @param height 高
+     */
+    public record LayoutBox(String label, float x, float y, float width, float height) {
     }
 
     /**
@@ -125,14 +147,25 @@ public class EduPaperScanner {
      */
     public ScanResult scan(byte[] imageData) {
         var layoutRegions = new java.util.LinkedHashMap<String, Integer>();
+        var layoutBoxes = new ArrayList<LayoutBox>();
         LayoutClientManager layout = layoutProvider.getIfAvailable();
         if (layout != null) {
             try {
                 var regions = layout.detect(imageData);
                 if (regions != null) {
-                    regions.forEach((k, v) -> layoutRegions.put(k, v == null ? 0 : v.size()));
+                    regions.forEach((label, list) -> {
+                        layoutRegions.put(label, list == null ? 0 : list.size());
+                        if (list != null) {
+                            for (var rect : list) {
+                                if (rect != null) {
+                                    layoutBoxes.add(new LayoutBox(label, rect.x(), rect.y(),
+                                            rect.width(), rect.height()));
+                                }
+                            }
+                        }
+                    });
                 }
-                log.info("[EduScan] 版面区域: {}", layoutRegions);
+                log.info("[EduScan] 版面区域: {}（保留坐标 {} 个）", layoutRegions, layoutBoxes.size());
             } catch (Exception e) {
                 // 版面是增强能力：失败不阻断，OCR 文本链路仍可阅卷
                 log.warn("[EduScan] 版面分析失败，降级为纯 OCR: {}", e.getMessage());
@@ -140,6 +173,8 @@ public class EduPaperScanner {
         } else {
             log.warn("[EduScan] LayoutClientManager 不可用，跳过版面分析");
         }
+
+        int[] size = imageSize(imageData);
 
         OcrClientManager ocr = ocrProvider.getIfAvailable();
         if (ocr == null) {
@@ -165,7 +200,34 @@ public class EduPaperScanner {
             }
         }
         log.info("[EduScan] OCR 文字块={}，文本长度={}", blocks.size(), text.length());
-        return new ScanResult(layoutRegions, blocks, text.toString());
+        return new ScanResult(layoutRegions, blocks, layoutBoxes, size[0], size[1], text.toString());
+    }
+
+    /**
+     * 读取图片像素尺寸（宽、高）。
+     *
+     * <p>版面区域与文字块都是像素坐标，前端要按原图等比叠放就必须知道页尺寸；
+     * 读不到时返回 0，前端退化为按容器自适应。只读文件头，不做整图解码。</p>
+     *
+     * @param imageData 图片字节
+     * @return [宽, 高]；读取失败返回 [0, 0]
+     */
+    private static int[] imageSize(byte[] imageData) {
+        try (var stream = ImageIO.createImageInputStream(new ByteArrayInputStream(imageData))) {
+            var readers = ImageIO.getImageReaders(stream);
+            if (readers.hasNext()) {
+                var reader = readers.next();
+                try {
+                    reader.setInput(stream);
+                    return new int[]{reader.getWidth(0), reader.getHeight(0)};
+                } finally {
+                    reader.dispose();
+                }
+            }
+        } catch (Exception ignored) {
+            // 尺寸读不到不阻断识别
+        }
+        return new int[]{0, 0};
     }
 
     /**

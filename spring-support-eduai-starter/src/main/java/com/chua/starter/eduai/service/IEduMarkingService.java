@@ -5,6 +5,7 @@ import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 阅卷服务接口
@@ -53,6 +54,26 @@ public interface IEduMarkingService {
      * @return 阅卷结果
      */
     MarkingResultVO getResult(String taskId);
+
+    /**
+     * 获取「与图片同版式」的结构化解析结果。
+     *
+     * <p>返回逐页的版面区域坐标、文字块坐标、页尺寸，以及题号锚点与判分明细（含知识点），
+     * 供前端把分数标记/对错/知识点按原图位置叠放并能点击编辑。</p>
+     *
+     * @param taskId 任务标识
+     * @return 结构化数据
+     */
+    Map<String, Object> getStructure(String taskId);
+
+    /**
+     * 读取阅卷所用答卷图片的指定页（同版式展示的打底图）。
+     *
+     * @param taskId 任务标识
+     * @param page   页码（从 1 开始）
+     * @return 图片字节
+     */
+    byte[] getSheetImage(String taskId, int page);
 
     /**
      * 教师确认或修正评分
