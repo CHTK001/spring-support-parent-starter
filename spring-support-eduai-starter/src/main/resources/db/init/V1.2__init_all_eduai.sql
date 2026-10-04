@@ -461,6 +461,7 @@ CREATE TABLE IF NOT EXISTS edu_student (
     student_id_card VARCHAR(32) COMMENT '身份证号（仅管理端维护，学生端不可见）',
     student_password VARCHAR(64) COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
     student_pwd_salt VARCHAR(32) COMMENT '口令盐（随机十六进制，与 student_password 一一对应）',
+    student_pwd_must_change TINYINT DEFAULT 0 COMMENT '是否需引导改密: 0-否 1-是（管理员设/重置的初始口令置 1，学生自助改密后置 0）',
     student_status TINYINT DEFAULT 1 COMMENT '状态: 0-离校 1-在读',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -890,6 +891,9 @@ CREATE TABLE IF NOT EXISTS edu_paper_template (
 --   3) student_account 的历史数据回填属于 DML，按仓库规范放在 initdata，不在本文件。
 ALTER TABLE edu_student
     ADD COLUMN IF NOT EXISTS student_password VARCHAR(64) DEFAULT NULL COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
-    ADD COLUMN IF NOT EXISTS student_pwd_salt VARCHAR(32) DEFAULT NULL COMMENT '口令盐（随机十六进制，与 student_password 一一对应）';
+    ADD COLUMN IF NOT EXISTS student_pwd_salt VARCHAR(32) DEFAULT NULL COMMENT '口令盐（随机十六进制，与 student_password 一一对应）',
+    -- 首次登录引导改密：管理员设的初始口令置 1，学生自助改密后置 0。
+    -- 老数据默认 0（EOF NULL 由业务按「无口令」处理），不回溯逼改，避免上线即扰民。
+    ADD COLUMN IF NOT EXISTS student_pwd_must_change TINYINT DEFAULT 0 COMMENT '是否需引导改密: 0-否 1-是';
 
 
