@@ -14,6 +14,8 @@ import com.chua.starter.eduai.mapper.EduPaperMapper;
 import com.chua.starter.eduai.model.EduPaperAssign;
 import com.chua.starter.eduai.model.dto.PaperAssignDTO;
 import com.chua.starter.eduai.model.vo.PaperAssignVO;
+import com.chua.starter.eduai.model.vo.PaperVO;
+import com.chua.starter.eduai.service.IEduPaperService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 班级试卷布置：老师给班级组卷，班内学生可见。
@@ -77,6 +80,11 @@ public class EduPaperAssignController {
      * 试卷：校验试卷存在
      */
     private final EduPaperMapper paperMapper;
+
+    /**
+     * 试卷详情：学生端按「布置关系」授权后取详情（不走归属校验）
+     */
+    private final IEduPaperService paperService;
 
     /**
      * 老师把一张试卷布置给一个班级。
@@ -175,6 +183,35 @@ public class EduPaperAssignController {
             return ReturnResult.ok(List.of());
         }
         return ReturnResult.ok(assignMapper.selectByClass(student.getStudentClassId()));
+    }
+
+    /**
+     * 学生：查看布置给本班的某张试卷详情（含题目）。
+     *
+     * <p>为什么不能复用 {@code GET /v2/edu/paper/{id}}：那个接口按**试卷归属人**鉴权
+     * （{@code EduUserContext.checkReadable}），学生永远不是归属人，实测返回
+     * 400 {@code B0500S0001} —— 结果就是学生能看到卷名、点「查看试卷」却是空的。
+     * 这里改用**布置关系**授权：只有「已布置给我班 + 该卷已发布」才放行。</p>
+     *
+     * @param paperId 试卷标识
+     * @return 试卷详情（含题目）
+     */
+    @Operation(summary = "学生：查看布置给本班的试卷详情")
+    @GetMapping("/paper/{paperId}")
+    public ReturnResult<PaperVO> studentPaperDetail(@PathVariable Long paperId) {
+        String account = EduUserContext.requireUserId();
+        EduStudent student = studentMapper.selectOne(new QueryWrapper<EduStudent>()
+                .eq("student_account", account)
+                .last("LIMIT 1"));
+        if (student == null || student.getStudentClassId() == null) {
+            throw new BusinessException("你还未分班，看不到班级试卷");
+        }
+        boolean visible = assignMapper.selectByClass(student.getStudentClassId()).stream()
+                .anyMatch(row -> Objects.equals(row.getPaperId(), paperId));
+        if (!visible) {
+            throw new BusinessException("这张试卷没有布置给你的班级");
+        }
+        return ReturnResult.ok(paperService.getPaperDetailUnchecked(paperId));
     }
 
     /**

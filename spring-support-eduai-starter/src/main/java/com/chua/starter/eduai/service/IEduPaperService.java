@@ -38,6 +38,17 @@ public interface IEduPaperService extends IService<EduPaper> {
     PaperVO getPaperDetail(Long paperId);
 
     /**
+     * 取试卷详情（含题目），**不做归属校验**。
+     *
+     * <p>只给「已自行完成授权」的调用方用：学生端必须先证明该卷已布置给学生所在班级，
+     * 再调用本方法。不要把它直接暴露成对外接口。</p>
+     *
+     * @param paperId 试卷标识
+     * @return 试卷详情
+     */
+    PaperVO getPaperDetailUnchecked(Long paperId);
+
+    /**
      * AI生成试卷
      *
      * @param dto 组卷配置
