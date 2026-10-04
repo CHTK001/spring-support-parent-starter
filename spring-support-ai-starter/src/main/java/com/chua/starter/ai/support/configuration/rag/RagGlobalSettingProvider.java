@@ -36,7 +36,8 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     */
     public List<SettingItem> getItems() {
         return List.of(
-                new SettingItem("rag_embedding_model", "memory", "STRING", "Embedding 引擎（memory / openai / siliconflow / sensetime / onnx）", 1),
+                new SettingItem("rag_embedding_model", "", "STRING", "Embedding 引擎（memory / openai / siliconflow / sensetime / onnx；"
+                        + "留空=未配置，RAG 检索会提示缺少 embedding 引擎）", 1),
                 new SettingItem("rag_vector_storage", "jvector", "STRING", "向量存储（jvector / milvus / mysql / memory）", 2),
                 new SettingItem("rag_llm_model", "", "STRING", "RAG 问答使用的 LLM 模型名（留空走全局默认）", 3),
                 new SettingItem("rag_chunk_size", "1000", "NUMBER", "分块大小", 4),
