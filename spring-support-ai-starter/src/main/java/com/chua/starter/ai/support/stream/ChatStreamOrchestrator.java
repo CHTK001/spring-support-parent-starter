@@ -61,7 +61,27 @@ public class ChatStreamOrchestrator {
     private final ChatStreamRegistry registry;
 
     /**
-     * 同步准备：解析模型/角色、校验会话归属、落库用户消息、组装请求。
+     * 把前端带来的消息 id 解析为数据库自增主键。
+     *
+     * <p>前端在重答时只传既有用户消息的 id，形如 "13"（后端用 String.valueOf(msg.getId()) 产出）。
+     * 非数字或长度超过 18 位（会溢出 long）时返回 null，由调用方按「没有父消息」处理。
+     *
+     * @param raw 原始 id 文本
+     * @return 解析出的 id，无法解析时为 null
+     */
+    private static Long parseNumericId(String raw) {
+        if (raw == null || raw.isBlank() || raw.length() > 18) {
+            return null;
+        }
+        try {
+            return Long.valueOf(raw);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 同步准备：解析模型/角色、校验会话归属、落库用户消息（内容为空则不落库）、组装请求。
      *
      * @param body 请求体
      * @return 准备结果
@@ -133,9 +153,19 @@ public class ChatStreamOrchestrator {
             log.info("[ChatStream] 会话级 MCP 服务器: {}", sessionMcpIds);
         }
 
-        ChatMessage userChatMsg = new ChatMessage("user", content);
-        aiDialogRecordService.addMessage(dialogId, userChatMsg);
-        log.info("[ChatStream] 用户消息已保存 id={}", userChatMsg.getId());
+        // 只在真正带了用户输入时才落库。
+        //
+        // 重新回答（multi_version）时前端只传 userMessage.id 作为父消息、不传 content，
+        // 若照样落库就会插入一条空内容的用户消息：它随后被 getDialogMessages 读进 LLM 请求，
+        // 被上游以 "messages: Validation error: message content cannot be empty" 400 拒绝，
+        // 并且新回复会挂到这条空消息上，UI 因此多出一个空的用户轮次。
+        final ChatMessage userChatMsg = (content == null || content.isBlank())
+                ? null
+                : new ChatMessage("user", content);
+        if (userChatMsg != null) {
+            aiDialogRecordService.addMessage(dialogId, userChatMsg);
+            log.info("[ChatStream] 用户消息已保存 id={}", userChatMsg.getId());
+        }
         final String memoryUser = AiUserContext.currentUserId();
 
         List<Map<String, Object>> msgList = new ArrayList<>();
@@ -253,7 +283,13 @@ public class ChatStreamOrchestrator {
         p.setContent(content);
         p.setModelToUse(modelToUse);
         p.setDialogId(dialogId);
-        p.setUserMessageId(userChatMsg.getId());
+        Long parentUserMessageId = userChatMsg != null ? userChatMsg.getId() : null;
+        if (parentUserMessageId == null && userMessage != null) {
+            // 重答场景：复用前端带来的既有用户消息 id 作为新回复的父消息，
+            // 否则新回复会失去父消息，UI 无法把它归回原来那一轮。
+            parentUserMessageId = parseNumericId(str(userMessage.get("id")));
+        }
+        p.setUserMessageId(parentUserMessageId);
         p.setMessageId(messageId);
         p.setTurnsId(turnsId);
         p.setContentId(contentId);
