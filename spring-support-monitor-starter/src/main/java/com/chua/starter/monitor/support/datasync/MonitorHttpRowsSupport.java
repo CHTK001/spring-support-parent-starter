@@ -90,7 +90,7 @@ public final class MonitorHttpRowsSupport {
 
     /**
      * 读取全部行。
-     *
+ *
      * @param type    源类型（HTTP_JSON / HTTP_HTML）
      * @param url     请求地址
      * @param options 源选项
@@ -98,11 +98,27 @@ public final class MonitorHttpRowsSupport {
      * @throws Exception 请求失败或响应无法解析
      */
     public static Flux<Map<String, Object>> read(SyncSourceType type, String url, SyncHttpOptions options) throws Exception {
+        return Flux.fromIterable(rows(type, url, options));
+    }
+
+    /**
+     * 读取全部行（列表形态）。
+     *
+     * <p>执行路径用这个而不是 {@link #read}：一次请求的响应同时用来「推导源列」和「写库」，
+     * 避免两次请求——接口带一次性 token 或限流时，第二次请求会直接失败或拿到不同快照。</p>
+     *
+     * @param type    源类型（HTTP_JSON / HTTP_HTML）
+     * @param url     请求地址
+     * @param options 源选项
+     * @return 行列表，每行是「列名 → 字符串值」
+     * @throws Exception 请求失败或响应无法解析
+     */
+    public static List<Map<String, Object>> rows(SyncSourceType type, String url, SyncHttpOptions options) throws Exception {
         SyncHttpOptions effective = normalize(options);
         String body = fetch(url, effective);
-        return Flux.fromIterable(type == SyncSourceType.HTTP_HTML
+        return type == SyncSourceType.HTTP_HTML
                 ? rowsOfHtml(body, url, effective)
-                : rowsOfJson(body, effective));
+                : rowsOfJson(body, effective);
     }
 
     /**
