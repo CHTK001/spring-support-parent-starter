@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.starter.monitor.support.support.SqlScriptSplitter.Span;
 
 /**
  * SQL 参数占位符替换（查询控制台的「参数化」）。
@@ -50,17 +51,31 @@ public final class SqlParameterBinder {
             return script;
         }
         Map<String, Object> table = params == null ? Map.of() : params;
-        // 第一遍只收集用到的变量名，缺一个就整体报错。
-        // 不这么做的后果：循环里替换到第 3 个占位符才发现第 1 个缺参数，
-        // 异常从 matcher.appendReplacement 之间抛出，报错位置与真正的缺参位置对不上，
-        // 而 StringBuffer 里还留着一段替换到一半的脚本，很容易被误当成「脚本被改坏了」。
+        // 只在「代码」区间里找占位符：字符串字面量与注释里的 ${x} 是普通文本。
+        // 若也替换，值自带引号会与原文那对引号叠成 ''value''，
+        // 用户看到的是语法错误，指不到「占位符写在了引号里」。
+        List<int[]> hits = new ArrayList<>();
+        List<String> used = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (Span span : SqlScriptSplitter.codeSpans(script)) {
+            Matcher m = PLACEHOLDER.matcher(script);
+            m.region(span.start(), span.end());
+            while (m.find()) {
+                hits.add(new int[] {m.start(), m.end()});
+                seen.add(m.group(1));
+                if (!used.contains(m.group(1))) {
+                    used.add(m.group(1));
+                }
+            }
+        }
+        if (hits.isEmpty()) {
+            return script;
+        }
+        // 先校验再替换：中途才发现缺参数会留下替换到一半的脚本，
+        // 报错位置也与真正的缺参位置对不上。
         List<String> missing = new ArrayList<>();
-        Set<String> used = new LinkedHashSet<>();
-        Matcher scan = PLACEHOLDER.matcher(script);
-        while (scan.find()) {
-            String name = scan.group(1);
-            used.add(name);
-            if (!table.containsKey(name) && !missing.contains(name)) {
+        for (String name : used) {
+            if (!table.containsKey(name)) {
                 missing.add(name);
             }
         }
@@ -68,13 +83,22 @@ public final class SqlParameterBinder {
             throw new IllegalArgumentException("参数 " + String.join("、", missing) + " 未提供"
                     + "（脚本里用到了 " + used.size() + " 个占位符: " + String.join("、", used) + "）");
         }
-        StringBuffer sb = new StringBuffer(script.length() + 32);
-        Matcher matcher = PLACEHOLDER.matcher(script);
-        while (matcher.find()) {
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(toLiteral(table.get(matcher.group(1)))));
+        StringBuilder out = new StringBuilder(script.length() + 32);
+        int cursor = 0;
+        for (int[] hit : hits) {
+            out.append(script, cursor, hit[0]);
+            Matcher one = PLACEHOLDER.matcher(script);
+            one.region(hit[0], hit[1]);
+            if (!one.find()) {
+                // 理论上不可能：hit 就是这么匹配出来的。留这条分支是为了
+                // 万一 pattern 变了，这里会显式炸掉而不是静默吞掉一个占位符
+                throw new IllegalStateException("占位符区间与 pattern 不一致: " + script.substring(hit[0], hit[1]));
+            }
+            out.append(toLiteral(table.get(one.group(1))));
+            cursor = hit[1];
         }
-        matcher.appendTail(sb);
-        return sb.toString();
+        out.append(script, cursor, script.length());
+        return out.toString();
     }
 
     /**
@@ -92,9 +116,15 @@ public final class SqlParameterBinder {
         if (script == null) {
             return List.of();
         }
-        Matcher matcher = PLACEHOLDER.matcher(script);
-        while (matcher.find()) {
-            names.add(matcher.group(1));
+        // 与 substitute 同一套判定（只看代码区间）：
+        // 若这里按纯文本扫，UI 会为一个不会被替换的 ${x} 弹输入框，
+        // 用户填完发现结果没变，而界面上没有任何地方说明为什么。
+        for (Span span : SqlScriptSplitter.codeSpans(script)) {
+            Matcher m = PLACEHOLDER.matcher(script);
+            m.region(span.start(), span.end());
+            while (m.find()) {
+                names.add(m.group(1));
+            }
         }
         return List.copyOf(names);
     }
@@ -106,7 +136,17 @@ public final class SqlParameterBinder {
      * @return true=有
      */
     public static boolean hasPlaceholder(String script) {
-        return script != null && PLACEHOLDER.matcher(script).find();
+        if (script == null) {
+            return false;
+        }
+        for (Span span : SqlScriptSplitter.codeSpans(script)) {
+            Matcher m = PLACEHOLDER.matcher(script);
+            m.region(span.start(), span.end());
+            if (m.find()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
