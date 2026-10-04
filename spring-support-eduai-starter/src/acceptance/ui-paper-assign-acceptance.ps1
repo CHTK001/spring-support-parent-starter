@@ -48,8 +48,13 @@ param(
     [string]$Base = 'http://127.0.0.1:19093',
     [string]$AdminUser = 'admin',
     [string]$AdminPwd = 'admin123',
-    [string]$StudentPwd = 'UiAccept#2026'
+    [string]$StudentPwd = 'UiAccept#2026',
+    # Where the evidence screenshots go. Defaults to a temp dir on purpose: writing them
+    # next to the script drops PNGs into the repo (they show up as untracked noise and
+    # bloat history) -- observed exactly that before adding this parameter.
+    [string]$OutDir = (Join-Path ([IO.Path]::GetTempPath()) 'eduai-ui-acceptance')
 )
+if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 
 $ErrorActionPreference = 'Stop'
 $script:Results = @()
@@ -249,7 +254,7 @@ try {
     $rowPred = '(function(){var rs=document.querySelectorAll(".tp-assign tbody tr");for(var i=0;i<rs.length;i++){var t=rs[i].textContent;if(t.indexOf("' + $className + '")>=0 && t.indexOf("\u5DF2\u5E03\u7F6E")>=0)return "true"}return "false"})()'
     $rowOk = (Js $rowPred) -eq 'true'
     Ck 'assignment list shows the fixture class as assigned' $rowOk ("rows=" + (Js 'String(document.querySelectorAll(".tp-assign tbody tr").length)'))
-    Ab screenshot "$PSScriptRoot/ui-assign-teacher.png" | Out-Null
+    Ab screenshot (Join-Path $OutDir "ui-assign-teacher.png") | Out-Null
 
     # Pull the expected question count as a NUMBER from the API: numbers survive every
     # encoding hop, so the later UI assertion can be exact without transporting Chinese.
@@ -297,7 +302,7 @@ try {
     # the console gets re-encoded, so the old `-match` style check reported false failures.)
     $cardCount = [int](Js 'String(document.querySelectorAll(".sp-card").length)')
     Ck 'exactly the one assigned paper is listed for the student' ($cardCount -eq 1) "cards=$cardCount"
-    Ab screenshot "$PSScriptRoot/ui-student-list.png" | Out-Null
+    Ab screenshot (Join-Path $OutDir "ui-student-list.png") | Out-Null
 
     Ab scrollintoview '.sp-card .el-button' | Out-Null; Start-Sleep -Milliseconds 700
     Ab click '.sp-card .el-button' | Out-Null
@@ -306,7 +311,7 @@ try {
     Ck 'view paper: questions rendered (not an empty shell)' $qs "qCount=$qCount"
     # The decisive cross-check: the UI must show exactly as many questions as the paper has.
     Ck 'rendered question count equals the paper question count' ($qCount -eq $paperQ) "ui=$qCount api=$paperQ"
-    Ab screenshot "$PSScriptRoot/ui-student-detail.png" | Out-Null
+    Ab screenshot (Join-Path $OutDir "ui-student-detail.png") | Out-Null
 }
 catch {
     # Record the abort as a failure so the summary still prints (a gate that dies silently
