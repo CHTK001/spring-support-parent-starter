@@ -48,16 +48,36 @@ public class SettingsController {
      * 地址与凭据（例如 {@code provider_base_url}），等于把提示词外送，必须拦在接口层。</p>
      */
     /**
-     * 可「按用户隔离」的分组：默认模型相关（对话路由 / RAG / 生成 / OCR / 以图搜图 / 人脸 等）。
-     *
-     * <p>这些分组改为 <b>每个用户管理自己的默认</b>：写入一律落到当前用户的覆盖层
-     * （{@code sys_ai_user_setting}），不再让管理员的一次修改全局生效；读取时
-     * 用户覆盖优先、全局默认兜底。外观 / 浏览器本就是纯个人偏好，一并纳入。</p>
+     * 整组放行的**纯个人偏好**分组：这些组里没有凭据/地址/系统级配置，全部字段都可用户自管。
      */
-    private static final Set<String> USER_WRITABLE_GROUPS = Set.of(
-            "appearance", "browser",
+    private static final Set<String> USER_WRITABLE_GROUPS = Set.of("appearance", "browser");
+
+    /**
+     * 「按用户隔离的默认模型」分组：**只放行模型类字段**，其余仍管理员专属。
+     *
+     * <p>这些分组改为每个用户管理自己的默认模型：写入落到当前用户的覆盖层
+     * （{@code sys_ai_user_setting}），读取时用户覆盖优先、全局默认兜底。</p>
+     *
+     * <p><b>为什么不能整组放行</b>：这些组里同时装着模型选择项与凭据/地址 ——
+     * {@code provider_api_key} / {@code provider_base_url} / {@code provider_app_secret} /
+     * {@code rag_embedding_api_key} / {@code image_api_key} / {@code workspaceBaseDir} 等。
+     * 整组放行等于让普通账号把请求指向自己的地址与凭据（提示词外送）。
+     * 实测这些分组的字段中，含 {@code model} 的 35 个全部是模型选择项，
+     * 无一涉及地址、密钥、路径。</p>
+     */
+    private static final Set<String> USER_MODEL_GROUPS = Set.of(
             "runtime", "rag", "generate", "ocr", "image_search", "face",
             "image", "memory", "layout", "input", "bot", "asr");
+
+    /**
+     * 判断某分组是否按用户隔离写入（纯偏好组 ∪ 默认模型组）。
+     *
+     * @param group 设置分组
+     * @return true 表示写入当前用户的覆盖层
+     */
+    private static boolean isUserScopedGroup(String group) {
+        return USER_WRITABLE_GROUPS.contains(group) || USER_MODEL_GROUPS.contains(group);
+    }
 
     /**
      * 凭据类字段：值不外发给非管理员
@@ -131,7 +151,7 @@ public class SettingsController {
 
         // 用户隔离分组（默认模型相关）：无论管理员还是普通账号，都写入「自己」的覆盖层，
         // 不再让管理员的一次修改全局影响所有人（每个用户管理自己的默认）。
-        boolean userScoped = USER_WRITABLE_GROUPS.contains(group);
+        boolean userScoped = isUserScopedGroup(group);
         if (!AiUserContext.isAdmin() || userScoped) {
             if (!AiUserContext.isAdmin()) {
                 // 普通账号：先校验分组白名单与管理员专属字段。
@@ -174,15 +194,12 @@ public class SettingsController {
      * @throws ApiException 普通账号越权时抛出 403
      */
     private void assertWritableByUser(String group, Map<String, Object> settings) {
-        // 分组白名单：纯个人偏好分组整组放行
-        boolean groupAllowed = USER_WRITABLE_GROUPS.contains(group);
-        // 字段级放行：**按字段名**放行「模型类」字段（默认模型由每个用户自己管）。
-        // 为什么不整组放开：这些分组里混着凭据与系统级配置
-        // （provider_api_key / provider_base_url / provider_app_secret / workspaceBaseDir …），
-        // 整组放开等于把「把请求指向外部地址」的能力交给普通账号。
-        // 实测全部分组字段中，含 model 的 35 个全部是模型选择项，无一涉及地址/密钥。
+        // ① 纯个人偏好组（appearance / browser）：整组放行
+        boolean wholeGroupAllowed = USER_WRITABLE_GROUPS.contains(group);
+        // ② 默认模型组：**只放行模型类字段**（按字段名判定，不按分组）
+        boolean modelGroup = USER_MODEL_GROUPS.contains(group);
         List<String> notAllowed = settings.keySet().stream()
-                .filter(f -> !groupAllowed && !isUserWritableField(f))
+                .filter(f -> !wholeGroupAllowed && !(modelGroup && isUserWritableField(f)))
                 .toList();
         if (!notAllowed.isEmpty()) {
             throw new ApiException(ApiErrorCode.FORBIDDEN,
