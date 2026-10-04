@@ -158,8 +158,8 @@ public class JobGovernanceService {
      */
     private JobRuntimeVO toVo(JobRuntime runtime) {
         JobRuntimeVO vo = JobRuntimeVO.of(runtime);
-        if (vo != null && !vo.isHandlerRegistered() && remoteHandlerRegistry.contains(vo.getJobKey())) {
-            vo.setHandlerRegistered(true);
+        if (vo != null && !vo.handlerRegistered() && remoteHandlerRegistry.contains(vo.jobKey())) {
+            return vo.withHandlerRegistered(true);
         }
         return vo;
     }
@@ -195,18 +195,19 @@ public class JobGovernanceService {
         if (dto == null) {
             return ReturnResult.illegal("任务规格不能为空");
         }
+        JobSpec spec = dto.toSpec();
         // 脚本任务不强制任务键：生成全局唯一标识（与 DefaultJobOperator 同一规则），供后续正文推送使用
-        String glueType = dto.getGlueType();
+        String glueType = dto.glueType();
         boolean script = glueType != null && !glueType.isBlank()
                 && !JobSpec.GLUE_BEAN.equalsIgnoreCase(glueType.trim());
-        if (script && (dto.getJobKey() == null || dto.getJobKey().isBlank())) {
-            dto.setJobKey(JobSpec.SCRIPT_JOB_KEY_PREFIX + IdUtils.createSnowflakeId());
+        if (script && (spec.getJobKey() == null || spec.getJobKey().isBlank())) {
+            spec.setJobKey(JobSpec.SCRIPT_JOB_KEY_PREFIX + IdUtils.createSnowflakeId());
         }
-        ReturnResult<Boolean> result = execute("save", dto.getJobKey(),
-                () -> jobOperator.declare(dto.toSpec()));
+        ReturnResult<Boolean> result = execute("save", spec.getJobKey(),
+                () -> jobOperator.declare(spec));
         // 脚本任务保存成功后立即推送正文，执行器不必等下一次派发
         if (result.isOk()) {
-            pushGlue(dto.getJobKey());
+            pushGlue(spec.getJobKey());
         }
         return result;
     }
@@ -231,8 +232,8 @@ public class JobGovernanceService {
      * @return 是否成功
      */
     public ReturnResult<Boolean> updateSchedule(JobScheduleDTO dto) {
-        return execute("schedule", dto == null ? null : dto.getJobKey(),
-                () -> jobOperator.updateSchedule(dto.getJobKey(), dto.getScheduleType(), dto.getScheduleTime()));
+        return execute("schedule", dto == null ? null : dto.jobKey(),
+                () -> jobOperator.updateSchedule(dto.jobKey(), dto.scheduleType(), dto.scheduleTime()));
     }
 
     /**
@@ -242,11 +243,11 @@ public class JobGovernanceService {
      * @return 是否成功
      */
     public ReturnResult<Boolean> changeStatus(JobStatusDTO dto) {
-        if (dto == null || dto.getEnabled() == null) {
+        if (dto == null || dto.enabled() == null) {
             return ReturnResult.illegal("enabled 不能为空");
         }
-        boolean enabled = dto.getEnabled();
-        return execute("status", dto.getJobKey(), () -> jobOperator.changeStatus(dto.getJobKey(), enabled));
+        boolean enabled = dto.enabled();
+        return execute("status", dto.jobKey(), () -> jobOperator.changeStatus(dto.jobKey(), enabled));
     }
 
     /**
@@ -419,13 +420,11 @@ public class JobGovernanceService {
         List<JobExecutorVO> rows = new ArrayList<>();
         Set<String> localNames = new HashSet<>();
         for (JobHandler handler : JobHandlerFactory.getInstance().all()) {
-            JobExecutorVO vo = new JobExecutorVO();
-            vo.setName(handler.name());
-            vo.setDesc(handler.desc());
-            vo.setHandlerClass(handler.getClass().getName());
-            vo.setSource(handler instanceof BeanJobHandler
-                    ? JobExecutorVO.SOURCE_ANNOTATION : JobExecutorVO.SOURCE_INJECTED);
-            localNames.add(vo.getName());
+            JobExecutorVO vo = new JobExecutorVO(handler.name(), handler.desc(),
+                    handler instanceof BeanJobHandler
+                            ? JobExecutorVO.SOURCE_ANNOTATION : JobExecutorVO.SOURCE_INJECTED,
+                    handler.getClass().getName());
+            localNames.add(vo.name());
             rows.add(vo);
         }
         // 合并在线执行器上报的远端处理器：调度中心节点本地没有业务处理器，不代表任务跑不了
@@ -433,12 +432,9 @@ public class JobGovernanceService {
             if (localNames.contains(name)) {
                 continue;
             }
-            JobExecutorVO vo = new JobExecutorVO();
-            vo.setName(name);
-            vo.setSource(JobExecutorVO.SOURCE_REMOTE);
-            rows.add(vo);
+            rows.add(new JobExecutorVO(name, null, JobExecutorVO.SOURCE_REMOTE, null));
         }
-        rows.sort(Comparator.comparing(JobExecutorVO::getName, Comparator.nullsLast(String::compareTo)));
+        rows.sort(Comparator.comparing(JobExecutorVO::name, Comparator.nullsLast(String::compareTo)));
         return ReturnResult.ok(rows);
     }
 
@@ -450,17 +446,10 @@ public class JobGovernanceService {
     public ReturnResult<List<JobNodeVO>> nodes() {
         List<JobNodeVO> rows = new ArrayList<>();
         for (RemoteHandlerRegistry.NodeInfo info : remoteHandlerRegistry.nodes()) {
-            JobNodeVO vo = new JobNodeVO();
-            vo.setClientId(info.clientId());
-            vo.setNodeId(info.nodeId());
-            vo.setRole(info.role());
-            vo.setServerUrl(info.serverUrl());
             List<String> handlers = new ArrayList<>(info.handlers());
             handlers.sort(Comparator.naturalOrder());
-            vo.setHandlers(handlers);
-            vo.setHandlerCount(handlers.size());
-            vo.setRegisteredAt(info.registeredAtMs());
-            rows.add(vo);
+            rows.add(new JobNodeVO(info.clientId(), info.nodeId(), info.role(), info.serverUrl(),
+                    handlers, handlers.size(), true, info.registeredAtMs()));
         }
         return ReturnResult.ok(rows);
     }
@@ -471,23 +460,26 @@ public class JobGovernanceService {
      * @return 概览
      */
     public ReturnResult<JobSummaryVO> summary() {
-        JobSummaryVO vo = new JobSummaryVO();
-        vo.setRole(jobProperties.getRole() == null ? null : jobProperties.getRole().name());
-        vo.setNodeId(jobLeaderElector.nodeId());
-        vo.setLeader(jobLeaderElector.isLeader());
+        String role = jobProperties.getRole() == null ? null : jobProperties.getRole().name();
+        String nodeId = jobLeaderElector.nodeId();
+        boolean leader = jobLeaderElector.isLeader();
         String group = jobProperties.getCluster().getGroup();
-        vo.setGroup(group);
-        vo.setScanIntervalMs(jobProperties.getCluster().getScanIntervalMs());
-        vo.setPreReadMs(jobProperties.getCluster().getPreReadMs());
+        long scanIntervalMs = jobProperties.getCluster().getScanIntervalMs();
+        long preReadMs = jobProperties.getCluster().getPreReadMs();
         JobHandlerFactory registry = JobHandlerFactory.getInstance();
-        vo.setRegisteredHandlers(registry.size());
+        int registeredHandlers = registry.size();
         // 计数必须与管辖范围一致：findDue 只扫本 group 的行，这里若传 null 就是全表统计，
         // 会把别的 group 的任务算进"本节点概览"，让 totalJobs/localJobs/remoteJobs 全部失真。
         // 注意：历史脏数据里 sys_job_group 为 default 或空的行本就永远不会被 findDue 派发
         // （见 MybatisJobRepository#defaultGroup 的说明），按 group 收敛后它们不再出现在概览里，
         // 这是与实际可调度范围对齐的结果，不是丢数据。
         List<JobRuntime> rows = jobOperator.list(group);
+        long totalJobs = 0L;
+        long runningJobs = 0L;
+        long stoppedJobs = 0L;
+        long localJobs = 0L;
         long remoteCount = 0L;
+        long unregisteredJobs = 0L;
         // 启用中的远程行数：只有当本节点确实会下发、却没有任何在线执行器时，这些行才真正不可达
         long remoteEnabledCount = 0L;
         // "未注册"按本地 + 在线执行器上报的并集判定：分布式下调度中心本地没有业务处理器是常态
@@ -496,11 +488,11 @@ public class JobGovernanceService {
         knownHandlers.addAll(localHandlers);
         knownHandlers.addAll(remoteHandlerRegistry.all());
         for (JobRuntime row : rows) {
-            vo.setTotalJobs(vo.getTotalJobs() + 1);
+            totalJobs++;
             if (row.isEnabled()) {
-                vo.setRunningJobs(vo.getRunningJobs() + 1);
+                runningJobs++;
             } else {
-                vo.setStoppedJobs(vo.getStoppedJobs() + 1);
+                stoppedJobs++;
             }
             boolean isRemote = JobSpec.DISPATCH_REMOTE.equalsIgnoreCase(row.getDispatchMode());
             if (isRemote) {
@@ -509,23 +501,23 @@ public class JobGovernanceService {
                     remoteEnabledCount++;
                 }
             } else {
-                vo.setLocalJobs(vo.getLocalJobs() + 1);
+                localJobs++;
             }
             // 远程行的处理器本就在执行器节点上, 本机没有同名处理器不算漏登记; 脚本任务不依赖处理器表, 同样不算
             boolean isScript = row.getGlueType() != null
                     && !JobSpec.GLUE_BEAN.equalsIgnoreCase(row.getGlueType());
             boolean handlerKnown = knownHandlers.contains(row.getJobKey());
             if (row.isEnabled() && !isRemote && !isScript && !handlerKnown) {
-                vo.setUnregisteredJobs(vo.getUnregisteredJobs() + 1);
+                unregisteredJobs++;
             }
         }
-        vo.setRemoteJobs(remoteCount);
         // 远程派发已内聚到带 Leader 循环的角色（单机/调度中心）的同步通道
-        vo.setRemoteDispatchOwnedByMe(jobProperties.isScheduler() || jobProperties.isSingle());
+        boolean remoteDispatchOwnedByMe = jobProperties.isScheduler() || jobProperties.isSingle();
         SyncServer server = syncServerProvider.getIfAvailable();
+        List<String> onlineExecutors = List.of();
         if (server != null) {
             List<String> clients = server.getConnectedClients();
-            vo.setOnlineExecutors(clients == null ? List.of() : new ArrayList<>(clients));
+            onlineExecutors = clients == null ? List.of() : new ArrayList<>(clients);
         }
         // 无人领取的远程行：单机角色的远程行由本机 JobExecutor 就地消费，不依赖在线执行器，
         // 因此只有「Leader + 调度中心角色 + 零在线执行器」这个组合下，启用的远程行才真正发不出去。
@@ -540,17 +532,19 @@ public class JobGovernanceService {
         //   4) 60s 节流意味着丢 1 次与丢 100 次在日志里长得一样。
         // 本计数是对台账直接求和的实时量, 不依赖日志是否写成功、是否有人翻日志、是否配了告警。
         // TODO 待验证: SKIPPED 丢单记录是否真的落库, 需在隔离节点上按 executeCode=SKIPPED 复查。
-        if (jobProperties.isScheduler() && vo.isLeader() && vo.getOnlineExecutors().isEmpty()) {
-            vo.setUnclaimedRemoteJobs(remoteEnabledCount);
-        }
+        long unclaimedRemoteJobs = jobProperties.isScheduler() && leader && onlineExecutors.isEmpty()
+                ? remoteEnabledCount : 0L;
         JobLogQuery failure = new JobLogQuery();
         failure.setExecuteCode("FAILURE");
         // 必须带上本节点分组: 不带就是全库失败计数, 概览会把别的 group 的失败算到自己头上
         // （集群里各 group 各自为政，这个数字此前一直串味）。
         failure.setGroup(group);
         failure.setStartTime(System.currentTimeMillis() - FAILURE_WINDOW_MS);
-        vo.setRecentFailures(jobLogRepository.count(failure));
-        return ReturnResult.ok(vo);
+        long recentFailures = jobLogRepository.count(failure);
+        return ReturnResult.ok(new JobSummaryVO(role, nodeId, leader, group, scanIntervalMs, preReadMs,
+                totalJobs, runningJobs, stoppedJobs, localJobs, remoteCount, unregisteredJobs,
+                unclaimedRemoteJobs, registeredHandlers, recentFailures, remoteDispatchOwnedByMe,
+                onlineExecutors));
     }
 
     /**

@@ -413,10 +413,10 @@ public class GroupScopeProbe {
             checkNum("分页 alpha 行数=6", 6, page.getData().size());
             boolean allAlpha = true;
             for (JobLogRecord record : page.getData()) {
-                if (!ALPHA_JOB_IDS.contains(record.getJobId())) {
+                if (!ALPHA_JOB_IDS.contains(record.jobId())) {
                     allAlpha = false;
                     log.error("[probe] 分页混入了非 alpha 任务行 jobId={} jobNo={}",
-                            record.getJobId(), record.getJobNo());
+                            record.jobId(), record.jobNo());
                 }
             }
             check("分页不含 beta 任务行（含编号复用行）", true, allAlpha);
