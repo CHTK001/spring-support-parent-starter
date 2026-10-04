@@ -82,6 +82,10 @@ ssh <host> 'sudo systemctl stop oauth-server.service; sleep 2; \
 #     判据：登录 3s 级返回 ok=false（HTTP 200 但 ok=false）、eduai 健康 200、restarts 不增
 # 3.4 UI（需要本机前端 19093，见 apps/vue-support-eduai-starter）
 #     学生登录、管理员代入（横幅/只读/sessionStorage）、白名单边界
+#     班级试卷布置的**浏览器业务验收**已脚本化入库，在**开发机**跑（198 没有浏览器）：
+#       pwsh -File src/acceptance/ui-paper-assign-acceptance.ps1        # 期望 20/20，退出码 0
+#     它会自建夹具（班级+学生）→ 老师用界面布置 → 学生端看到并点开题目
+#     （UI 题数 == 接口题数）→ 撤回/删学生/删班级；失败即非 0 退出。
 # 3.5 复核指纹：必须与 3.1 逐一相同
 ```
 
