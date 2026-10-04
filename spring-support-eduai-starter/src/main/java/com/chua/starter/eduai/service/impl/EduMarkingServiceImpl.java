@@ -631,12 +631,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param pages 逐页结构化数据（含 blocks）
      * @return 锚点（no/page/x/y/width/height）；定位不到时返回 {@code null}
      */
-    private static Map<String, Object> locateAnchor(String no, List<Map<String, Object>> pages) {
-        if (StringUtils.isBlank(no) || pages == null) {
+    private static Map<String, Object> locateAnchor(String no, String stem, List<Map<String, Object>> pages) {
+        if (pages == null) {
             return null;
         }
-        String want = normalizeNo(no);
-        if (want.isEmpty()) {
+        String wantNo = StringUtils.isBlank(no) ? "" : normalizeNo(no);
+        String wantStem = StringUtils.isBlank(stem) ? "" : normalizeNo(stem);
+        // 题号可能根本没进文字块：实测外来卷大字版式下，检测框把「1.」与题干切成两块，
+        // 文字块里只剩题干，于是按题号前缀永远匹配不到。这里用题干前 8 字做兜底特征。
+        String stemProbe = wantStem.length() > 8 ? wantStem.substring(0, 8) : wantStem;
+        if (wantNo.isEmpty() && stemProbe.isEmpty()) {
             return null;
         }
         for (Map<String, Object> pageNode : pages) {
@@ -648,8 +652,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     continue;
                 }
                 Object text = block.get("text");
-                if (text != null && !String.valueOf(text).isBlank()
-                        && normalizeNo(String.valueOf(text)).startsWith(want)) {
+                if (text == null) {
+                    continue;
+                }
+                String blockText = normalizeNo(String.valueOf(text));
+                boolean hit = (!wantNo.isEmpty() && blockText.startsWith(wantNo))
+                        || (!stemProbe.isEmpty() && blockText.contains(stemProbe));
+                if (hit) {
                     var anchor = new LinkedHashMap<String, Object>();
                     anchor.put("no", no);
                     anchor.put("page", pageNode.get("page"));
@@ -827,7 +836,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 前端据此把分数标记贴到原图的对应位置。
         var questionAnchors = new ArrayList<Map<String, Object>>();
         for (EduPaperScanner.ScannedQuestion q : scanned) {
-            Map<String, Object> anchor = locateAnchor(q.no(), pages);
+            Map<String, Object> anchor = locateAnchor(q.no(), q.stem(), pages);
             if (anchor != null) {
                 questionAnchors.add(anchor);
             }
