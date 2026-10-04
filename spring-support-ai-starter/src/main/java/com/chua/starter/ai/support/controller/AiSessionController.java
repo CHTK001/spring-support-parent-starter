@@ -39,6 +39,21 @@ public class AiSessionController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
+     * 对话门面（压缩时用它同步调用模型生成摘要）
+     */
+    private final com.chua.starter.ai.support.service.AiChatFacadeService aiChatFacadeService;
+
+    /**
+     * 会话压缩记录服务
+     */
+    private final com.chua.starter.ai.support.service.SysAiSessionCompressionService sessionCompressionService;
+
+    /**
+     * 生效对话模型解析器（压缩时选模型，不写死）
+     */
+    private final com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver effectiveChatModelResolver;
+
+    /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
      */
     private String writeSettings(Object settingsObj) {
@@ -514,6 +529,114 @@ public class AiSessionController {
 
         log.info("[Session] 创建会话: id={}, title={}, characterId={}", session.getId(), title, session.getCharacterId());
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 手动压缩会话上下文。
+     *
+     * <p>把「除最近保留条数外」的历史交给模型生成摘要并落库到
+     * {@code sys_ai_session_compression}；后续对话会把这段历史替换成该摘要
+     * （见 {@code ChatStreamOrchestrator} 组装 messages 的分支）。
+     * 会话内置命令「压缩上下文」调用的就是本接口 —— 此前这个接口不存在，
+     * 前端一点就只能收到 404。</p>
+     *
+     * <p>失败不抛异常，统一返回 {@code success=false} + 可读 message，
+     * 让前端按业务提示展示而不是报「请求错误」。</p>
+     *
+     * @param id 会话标识（数字主键，或前端会话 UUID —— 与 /{id}/messages 取值一致）
+     * @return success / removedMessages / summary
+     */
+    @PostMapping("/{id}/compress")
+    public ReturnResult<Map<String, Object>> compress(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+
+        LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
+        wrapper.orderByAsc(SysAiMessage::getId);
+        List<SysAiMessage> all = messageMapper.selectList(wrapper);
+
+        // 保留最近 4 条原文，更早的才值得压成摘要
+        final int keep = 4;
+        Map<String, Object> result = new HashMap<>();
+        if (all.size() < keep + 2) {
+            result.put("success", false);
+            result.put("message", "消息较少，无需压缩");
+            result.put("removedMessages", 0);
+            return ReturnResult.ok(result);
+        }
+
+        List<SysAiMessage> older = all.subList(0, all.size() - keep);
+        StringBuilder transcript = new StringBuilder();
+        for (SysAiMessage m : older) {
+            transcript.append("user".equals(m.getRole()) ? "[用户] " : "[助手] ")
+                    .append(m.getContent() == null ? "" : m.getContent())
+                    .append('\n');
+        }
+
+        String summary;
+        try {
+            com.chua.starter.ai.support.model.AiChatRequest request =
+                    new com.chua.starter.ai.support.model.AiChatRequest();
+            request.setModel(effectiveChatModelResolver.resolve(null));
+            request.setStream(false);
+            request.setSystemPrompt("你是一名对话摘要助手。请把用户提供的对话压缩成简洁摘要，"
+                    + "保留事实、结论、待办与关键约束，直接输出摘要，不要添加解释。");
+            request.setMessages(List.of(Map.of("role", "user", "content",
+                    "请把以下对话压缩成摘要：\n" + transcript)));
+            Map<String, Object> response = aiChatFacadeService.call(request);
+            Object text = response == null ? null : response.get("text");
+            summary = text == null ? "" : String.valueOf(text).trim();
+        } catch (Exception e) {
+            log.warn("[Session] 压缩会话失败: sessionId={}, {}", sessionId, e.getMessage());
+            result.put("success", false);
+            result.put("message", "压缩失败：" + e.getMessage());
+            result.put("removedMessages", 0);
+            return ReturnResult.ok(result);
+        }
+        if (summary.isEmpty()) {
+            result.put("success", false);
+            result.put("message", "压缩失败：模型未返回摘要");
+            result.put("removedMessages", 0);
+            return ReturnResult.ok(result);
+        }
+
+        com.chua.starter.ai.support.entity.SysAiSessionCompression record =
+                new com.chua.starter.ai.support.entity.SysAiSessionCompression();
+        record.setSysAiSessionId(sessionId);
+        record.setSysAiCompressionFromMessageId(older.get(0).getId().intValue());
+        record.setSysAiCompressionMessageCount((long) older.size());
+        record.setSysAiCompressionContext(summary);
+        record.setUserId(AiUserContext.requireUserId());
+        record.setCreateTime(LocalDateTime.now());
+        record.setUpdateTime(LocalDateTime.now());
+        sessionCompressionService.saveOrUpdate(record);
+
+        result.put("success", true);
+        result.put("removedMessages", older.size());
+        result.put("summary", summary);
+        log.info("[Session] 压缩会话: sessionId={}, 压缩 {} 条, 摘要 {} 字",
+                sessionId, older.size(), summary.length());
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 解析会话标识为数字主键：数字直接用，前端 UUID 查会话映射表（不创建新会话）。
+     *
+     * @param id 会话标识
+     * @return 数字主键；解析不到时返回 {@code null}
+     */
+    private static Long resolveSessionId(String id) {
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        if (id.matches("\\d+")) {
+            return Long.parseLong(id);
+        }
+        return SESSION_DIALOG_MAP.get(id);
     }
 
     /**
