@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,7 +59,10 @@ import java.util.concurrent.CountDownLatch;
 @Slf4j
 public class TavernChatController {
 
-    private static final String DEFAULT_MODEL_FALLBACK = "agnes-2.5-flash";
+    /**
+     * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
+     */
+    private final EffectiveChatModelResolver effectiveChatModelResolver;
 
     private final SysAiTavernGroupMapper groupMapper;
     private final SysAiTavernMemberMapper memberMapper;
@@ -378,7 +382,8 @@ public class TavernChatController {
                 return idx >= 0 ? v.substring(idx + 1) : v;
             }
         }
-        return DEFAULT_MODEL_FALLBACK;
+        // 不写死兜底模型名：解析不到时返回 空，由调用方报明确错误
+        return effectiveChatModelResolver.resolve(null);
     }
 
     private SysAiTavernGroup requireOwned(Long id) {
