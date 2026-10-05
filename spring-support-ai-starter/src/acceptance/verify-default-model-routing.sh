@@ -183,24 +183,39 @@ echo
 echo "############ 2. ⑤ 知识库 rag：rag 组按账号隔离 ############"
 jget "$AT" "/v2/rag/status" >/dev/null
 ADMIN_RAG=$(jcfg llm_model); ADMIN_NEED=$(jfield needLlmConfig)
-echo "  admin(全局) rag/rag_llm_model=[$ADMIN_RAG] needLlmConfig=[$ADMIN_NEED]"
-if [ -z "$ADMIN_RAG" ] || [ "$ADMIN_RAG" = "ERR" ]; then echo "  [FATAL] 读不到全局 rag 模型，停机"; exit 2; fi
+# ★ 真正的全局值必须**从全局表直读**，不能拿 admin 的 status 当代理。
+#   admin 是超级管理员，可能自己就有 rag 覆盖行；实测就出现过
+#   admin=[agnes-3.0-flash] 而 sys_ai_global_setting 里是 [agnes-2.0-flash] 的情况。
+#   拿 admin 当全局代理，会把「回落全局」这条判据的期望值写成 admin 的覆盖值 ——
+#   产品行为是对的、判据却判 FAIL。判据的前提假设错，比判据失效更隐蔽。
+GLOB_RAG=$(Q "SELECT sys_ai_global_setting_value FROM sys_ai_global_setting
+             WHERE sys_ai_global_setting_group='rag'
+               AND sys_ai_global_setting_field='rag_llm_model';")
+echo "  admin 自己读到的 rag/rag_llm_model = [$ADMIN_RAG]  needLlmConfig=[$ADMIN_NEED]"
+echo "  全局表 sys_ai_global_setting.rag/rag_llm_model = [$GLOB_RAG]   ← 回落判据的期望值取自这里"
+if [ -z "$ADMIN_RAG" ] || [ "$ADMIN_RAG" = "ERR" ]; then echo "  [FATAL] 读不到 admin 的 rag 模型，停机"; exit 2; fi
+# 守卫要把 mysql 的报错串一起挡住：Q() 失败时返回的是 `ERROR 1698 (28000): ...` 而非空值，
+# 只判 -z 会让期望值变成一句报错，然后判出一条看不懂的 FAIL。
+case "$GLOB_RAG" in
+  ""|ERR|ERROR*) echo "  [FATAL] 读不到全局 rag 模型（GLOB_RAG=[$GLOB_RAG]），停机"; exit 2 ;;
+esac
 put "$OT" rag '{"rag_llm_model":"agnes:agnes-3.0-flash"}' >/dev/null; sleep 4
 jget "$OT" "/v2/rag/status" >/dev/null
 ck "ops 自配 rag 模型后按账号生效" "$(jcfg llm_model)" "agnes:agnes-3.0-flash"
 ck "ops 已配置故 needLlmConfig=false" "$(jfield needLlmConfig)" "false"
 jget "$AT" "/v2/rag/status" >/dev/null
 ck "★admin 未受影响（隔离不变量）" "$(jcfg llm_model)" "$ADMIN_RAG"
-# ★ 兜底分支证明：同样用**空值覆盖行**把 tier-1 读成空（注意不是 clr——clr 是删行，删了会回落全局，
+# 兜底分支证明：同样用**空值覆盖行**把 tier-1 读成空（注意不是 clr——clr 是删行，删了会回落全局，
 #   那样就测不到兜底了；put "" 留的是空值行，getStrAs 不会回落全局）。
 put "$OT" rag '{"rag_llm_model":""}' >/dev/null; sleep 5
 jget "$OT" "/v2/rag/status" >/dev/null
 ck "⑤兜底分支：tier-1 空值覆盖 -> needLlmConfig=true" "$(jfield needLlmConfig)" "true"
 ck "⑤兜底分支：tier-1 原始值确实为空" "$(jcfg llm_model)" ""
 # 语义对照：clr 删行 -> 回落全局。这一条把「空值行」与「删行」两种语义分开钉死。
+# 期望值是 GLOB_RAG（全局表的真值），不是 ADMIN_RAG（admin 的覆盖行）。
 clr "$OT" rag >/dev/null; sleep 5
 jget "$OT" "/v2/rag/status" >/dev/null
-ck "对照：clr 删行后回落全局（与空值行语义不同）" "$(jcfg llm_model)" "$ADMIN_RAG"
+ck "对照：clr 删行后回落全局（与空值行语义不同）" "$(jcfg llm_model)" "$GLOB_RAG"
 ck "对照：回落全局后 needLlmConfig=false" "$(jfield needLlmConfig)" "false"
 echo "  [边界] 兜底后解析出的具体模型名无法按普通账号观测：触发点 resolveDelegate()"
 echo "         只挂在 RagController.query 上，该方法带 @Permission(\"admin\")（RagController:256）。"
