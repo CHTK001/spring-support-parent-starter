@@ -89,5 +89,28 @@ public class SysAiGlobalSetting {
      * 更新时间
     */
     private LocalDateTime updateTime;
+
+    /**
+     * 创建人（用户名）。
+     *
+     * <p><b>为空即代表「这行从未被人配置过」，是系统内置默认值</b>。
+     * 这一列此前没被实体映射，导致写入路径也无法记录操作人，
+     * 于是 2026-09-30 那批一次性种子与管理员后来手工改过的值在库里完全一样，
+     * 界面上只能显示「继承全局：xxx」，把系统默认说成别人配的。</p>
+     */
+    @TableField("create_name")
+    /**
+     * 创建人
+     */
+    private String createName;
+
+    /**
+     * 更新人（用户名）；同样为空表示从未被人工修改过。
+     */
+    @TableField("update_name")
+    /**
+     * 更新人
+     */
+    private String updateName;
 }
 
