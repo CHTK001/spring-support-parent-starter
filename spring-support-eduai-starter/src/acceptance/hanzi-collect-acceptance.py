@@ -32,8 +32,8 @@ import urllib.request
 BASE = os.environ.get("BASE", "http://127.0.0.1:19095")
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PWD = os.environ.get("ADMIN_PWD", "admin123")
-# 采集一次要下 27MB 单字字典 + 2.5MB IDS，给足超时
-COLLECT_TIMEOUT = int(os.environ.get("COLLECT_TIMEOUT", "300"))
+# 采集一次要下 27MB 单字字典 + 2.5MB IDS；触发是**同步**执行的，超时给到 900s
+COLLECT_TIMEOUT = int(os.environ.get("COLLECT_TIMEOUT", "900"))
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/131.0 Safari/537.36")
 
@@ -321,16 +321,32 @@ def main():
     ck("no duplicates after second run", after_second_total == after_collect_total,
        "%d -> %d" % (after_collect_total, after_second_total))
 
-    print("########## 6. failure path: unreachable source must fail loudly ##########")
-    # 把任务配置改成不可达地址：任务应报错。若"静默成功"，说明失败被吞了。
-    bad_cfg = dict(cfg)
-    bad_cfg["url"] = "http://127.0.0.1:9/definitely-not-there.json"
-    c, d = save_task(1, bad_cfg)   # 保持启用，否则触发会被「任务未启用」先挡掉
-    ck("save broken config accepted", c == 200, "http=%d" % c)
+    print("########## 6. source policy: mirror fallback vs strict pin ##########")
+    # 6a 默认（允许镜像兜底）：配置的地址不可达时应自动换镜像并**成功**。
+    #     这条断言是镜像容错本身的价值证明 —— 上一版把它写成「必须失败」，
+    #     结果与新增的镜像能力自相矛盾（实测 status=success，因为镜像取到了数据）。
+    fallback_cfg = dict(cfg)
+    fallback_cfg["url"] = "http://127.0.0.1:9/definitely-not-there.json"
+    fallback_cfg["useMirrors"] = True
+    c, d = save_task(1, fallback_cfg)
+    ck("save fallback config accepted", c == 200, "http=%d" % c)
     c, d = req("POST", "/v2/edu/collect/task/trigger/%d" % task["collectTaskId"],
-               token=admin, timeout=120)
+               token=admin, timeout=COLLECT_TIMEOUT)
     trigger = d.get("data") or {}
-    ck("unreachable source reports failure", trigger.get("status") == "fail",
+    ck("broken configured url still succeeds via mirror", trigger.get("status") == "success",
+       "status=%s msg=%s" % (trigger.get("status"), (trigger.get("message") or "")[:70]))
+
+    # 6b useMirrors=false（严格 pin 住配置的地址）：不可达必须**报错**。
+    #     没有这条就等于没有「只用我配的源」这个能力，出错也被兜底掩盖。
+    strict_cfg = dict(cfg)
+    strict_cfg["url"] = "http://127.0.0.1:9/definitely-not-there.json"
+    strict_cfg["useMirrors"] = False
+    c, d = save_task(1, strict_cfg)
+    ck("save strict config accepted", c == 200, "http=%d" % c)
+    c, d = req("POST", "/v2/edu/collect/task/trigger/%d" % task["collectTaskId"],
+               token=admin, timeout=180)
+    trigger = d.get("data") or {}
+    ck("strict pin + unreachable source reports failure", trigger.get("status") == "fail",
        "status=%s msg=%s" % (trigger.get("status"), (trigger.get("message") or "")[:90]))
 
     # 还原配置与默认「停用」状态（别把共享环境留成启用+坏地址）
