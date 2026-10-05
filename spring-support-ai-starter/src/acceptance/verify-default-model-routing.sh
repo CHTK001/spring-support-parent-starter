@@ -23,7 +23,7 @@
 #       对照组：把两个假名换位后，顺序必须跟着翻转 —— 否则说明判据没有牙。
 #
 # ── 纪律 ──────────────────────────────────────────────────────────────────
-#  * 只删 ops 自己���覆盖行（DELETE ... WHERE user_id='ops'），绝不全表删除；
+#  * 只删 ops 自己「的」覆盖行（DELETE ... WHERE user_id='ops'），绝不全表删除；
 #    tester 那一行是别人的，全程只读并断言其未被改动。
 #  * 日志一律 grep -a（app-out.log 含 NUL/ANSI），匹配串只用 ASCII，
 #    中文部分用 .* 跳过 —— 避免远端 locale 影响匹配。
@@ -336,6 +336,113 @@ else
      "$(win | grep -acF "$CB" | head -1 | awk '{print ($1>0)?"1":"0"}')" "1"
   ck "收尾前：连接器绑定未被本套件改动" \
      "$(Q "SELECT ifnull(group_concat(distinct sys_ai_bot_binding_model),'-') FROM sys_ai_bot_binding;" | tr -d '\r')" "$BM1"
+fi
+
+echo
+echo "############ 3c. ④ 同一规格的**另一个入口**：/v2/connectors/{id}/ai-send ############"
+# §3b 走的是 BotSimulateController（模拟入站）。**真实使用路径**是 ai-send，本段单独取证。
+# 链路：POST /v2/connectors/{id}/ai-send (ConnectorController:260)
+#     -> AiBotChatService.aiSendToConversation:718 -> aiReply:726
+#     -> resolveModelName(bot):985 -> resolve(bot.getModel())   ← 与 §3b 同一个 ① 档来源
+# 为什么 §3b 没顺带覆盖它、而这里要单列：两个入口的**触发与鉴权**不同（本段要 admin 令牌，
+#   §3b 用 ops 令牌），②③ 档因此取的是**不同账号**的生效值，不是一次观测。
+# 关键更正（此前报告写的「ai-send 要求 client != null，难确定性复现」**不成立**）：
+#   aiReply 在 L726 就已调用完（模型已解析、**已实际调用**），L737 的 client==null 检查在**其后**。
+#   所以 sent=false 并不妨碍取证：
+#     - 连接器**没在跑**时 -> L737 短路，data.sent=false，errorMessage=「连接器未在运行」，零对外调用；
+#     - 连接器**在跑**时（实测 7fd39be6 就是在跑）-> 走到 dispatch 真发一次，
+#       我编的假 chatId 被真机拒掉（ret=-3 invalid arguments），data.sent 仍为 false。
+#   两种情况下 **[Usage] 都已打出本次真正使用的模型**，正是要的观测点。
+#   故本段只断言 sent=false + reply 非空，**不断言 errorMessage 字面量**
+#   （那是与本规格无关的外部服务返回码，见判据3 处的说明）。
+#   §5.5.12(6) 里「ai-send 未单独取证」那条旧边界据此改为已覆盖。
+# 归属纪律：该绑定 owner=u:admin，ops 无权读（AiBotCaller.requireReadable），故本段用 admin 令牌。
+#   ②③ 档按 resolve 的口径**只读库**算出 admin 名下的生效值（覆盖优先、其次全局），
+#   **全程不写 admin 的任何一行**，也不改绑定、不发消息、不落库。
+if [ -z "${BND:-}" ] || [ -z "${BM1:-}" ]; then
+  echo "  [SKIP] §3b 已判定库里没有「配了模型的连接器绑定」，3c 同样无法取证 —— 不谎称验过"
+else
+  A_ADM_CNT_BEFORE=$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='admin' AND sys_ai_user_setting_group IN ('bot','runtime') AND sys_ai_user_setting_field='default_model';" | tr -d '\r')
+  # 按 candidates() 的口径算 admin 名下 ②③ 的生效值（只读；覆盖行存在就以覆盖为准）
+  A_BOT_OVR=$(Q "SELECT sys_ai_user_setting_value FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='admin' AND sys_ai_user_setting_group='bot' AND sys_ai_user_setting_field='default_model';" | tr -d '\r')
+  A_RUN_OVR=$(Q "SELECT sys_ai_user_setting_value FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='admin' AND sys_ai_user_setting_group='runtime' AND sys_ai_user_setting_field='default_model';" | tr -d '\r')
+  G_BOT=$(Q "SELECT sys_ai_global_setting_value FROM sys_ai_global_setting WHERE sys_ai_global_setting_group='bot' AND sys_ai_global_setting_field='default_model';" | tr -d '\r')
+  G_RUN=$(Q "SELECT sys_ai_global_setting_value FROM sys_ai_global_setting WHERE sys_ai_global_setting_group='runtime' AND sys_ai_global_setting_field='default_model';" | tr -d '\r')
+  # 注意：判据口径是「有没有覆盖行」，不是「值是否为空」——
+  #   有行、值为空 = 用户显式清空，此时**不再回退全局**（EffectiveChatModelResolver:112-121）。
+  #   所以这里用「行是否存在」判断，-n 会把空值误判成「没设过」。改用行数判断。
+  A_BOT_HAS=$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='admin' AND sys_ai_user_setting_group='bot' AND sys_ai_user_setting_field='default_model';" | tr -d '\r')
+  A_RUN_HAS=$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='admin' AND sys_ai_user_setting_group='runtime' AND sys_ai_user_setting_field='default_model';" | tr -d '\r')
+  if [ "$A_BOT_HAS" -ge 1 ] 2>/dev/null; then A_BOT="$A_BOT_OVR"; else A_BOT="$G_BOT"; fi
+  if [ "$A_RUN_HAS" -ge 1 ] 2>/dev/null; then A_RUN="$A_RUN_OVR"; else A_RUN="$G_RUN"; fi
+  echo "  admin 名下 ②bot 档生效值 = [$A_BOT]   （覆盖行数=$A_BOT_HAS 覆盖值=[$A_BOT_OVR] 全局=[$G_BOT]）"
+  echo "  admin 名下 ③默认档生效值 = [$A_RUN]   （覆盖行数=$A_RUN_HAS 覆盖值=[$A_RUN_OVR] 全局=[$G_RUN]）"
+  # ②/③ 任一为空 -> ① 胜出就属平凡，判据无牙。必须**分别**判空：
+  #   写成 case "$A_BOT$A_RUN" in ""|"") 只能匹配「两者皆空」（两个分支是同一个模式），
+  #   「② 有值、③ 为空」会被漏过去、照样跑出一组看着很绿的平凡结论。
+  if [ -z "$A_BOT" ] || [ -z "$A_RUN" ]; then
+    echo "  [SKIP] admin 名下 ② 或 ③ 为空 -> ① 胜出属平凡，本段判据无牙，跳过而不谎称验过"
+  else
+      echo
+      echo "-- ★主判据：走**真实发送入口** ai-send，实际服务的模型仍必须是 ① 连接器档 --"
+      mark
+      CCHAT="vmdr-aisend-$$"
+      curl -s -m 120 -A "$UA" -H "x-oauth-token: $AT" -H 'Content-Type: application/json' \
+        -d "{\"chatId\":\"$CCHAT\",\"prompt\":\"say one word: ok\",\"contextCount\":0}" \
+        "$B/v2/connectors/$BND/ai-send" -o /tmp/dmr_aisend.json -w '  ai-send HTTP=%{http_code}\n'
+      sleep 8
+      echo "  --- 响应（reply / sent / errorMessage） ---"
+      python3 -c "import json;d=(json.load(open('/tmp/dmr_aisend.json')).get('data') or {});print('    reply        =',repr(d.get('reply'))[:100]);print('    sent         =',d.get('sent'));print('    errorMessage =',d.get('errorMessage'))" 2>/dev/null || head -c 300 /tmp/dmr_aisend.json
+      echo "  --- 窗口内 Connector / Usage / ModelResolver ---"
+      win | grep -aE '\[Connector\]|\[Usage\]|ModelResolver' | cut -c1-170 | sed 's/^/    /'
+      A_REPLY=$(python3 -c "import json;print(((json.load(open('/tmp/dmr_aisend.json')).get('data') or {}).get('reply')) or '')" 2>/dev/null)
+      A_SENT=$(python3 -c "import json;print((json.load(open('/tmp/dmr_aisend.json')).get('data') or {}).get('sent'))" 2>/dev/null)
+      A_EMSG=$(python3 -c "import json;print((json.load(open('/tmp/dmr_aisend.json')).get('data') or {}).get('errorMessage') or '')" 2>/dev/null)
+      # 判据1：确认打到的确实是本段要验的那个入口（排除误打别处）
+      ckge "3c 走的是 ai-send 入口（[Connector] AI 发送 id=$BND 在场）" \
+          "$(win | grep -acF "[Connector] AI 发送 id=$BND" | head -1)" 1
+      # 判据2：模型**确实被解析并调用了**（reply 非空）—— ai-send 这条腿成立的前提
+      ckge "3c ai-send 拿到非空 reply（证明模型已解析并调用）" "${#A_REPLY}" 1
+      # 判据3：走到发送分支才说明 aiReply 已跑完。sent=false 只是**没发出去**，
+      #   而这里的具体原因取决于**运行态**（wechat 连接器是否真在跑），不是判据能固定的：
+      #   实测 7fd39be6 上连接器**确实在运行**（runningBots 有它），
+      #   于是走到 dispatch -> ILinkBotClient 真发了一次，真机返回 ret=-3 invalid arguments
+      #   （chatId 是我编的假会话号），data.sent 照样 false，但 errorMessage 是
+      #   「invalid arguments」而不是「连接器未在运行」。
+      #   **不断言 errorMessage 的字面量**：那是在断言一个与本规格无关的外部服务返回码。
+      #   这里只断言「没发送成功」+ 判据2 已证明 reply 非空（即模型确已解析并调用）。
+      ck "3c sent=false（未对外发送成功、零副作用）" "$A_SENT" "False"
+      # 打印实测到的原因原文，留证据而不设期望值
+      echo "    （实测 errorMessage = [$A_EMSG] —— 取决于连接器运行态与外部服务返回码，不作断言）"
+      # 判据4：★实际服务的模型 = ① 连接器档；②③ 各 0 次（这一段才是需求④「另一条腿」的正面证据）
+      ckge "★3c 实际服务的模型 = 连接器自配的 ① 档" "$(win | grep -acF "model=$BM1" | head -1)" 1
+      ck "★3c bot 档 ②（$A_BOT）根本没被用过" "$(win | grep -acF "model=$A_BOT" | head -1)" 0
+      ck "★3c 默认档 ③（$A_RUN）根本没被用过" "$(win | grep -acF "model=$A_RUN" | head -1)" 0
+      # 判据5：反证 —— 窗口内无过滤行 = ②③ 都在册启用，① 靠**优先级**胜出，不是「只有①合法」
+      ck "★3c 三档全合法（无 ModelResolver 过滤行，胜出靠优先级不靠过滤）" \
+         "$(win | grep -acF '[ModelResolver]' | head -1)" 0
+
+      echo
+      echo "-- ★敏感性对照：空 prompt 必须在**触碰模型之前**被拒 --"
+      # 若那条 Usage 与「端点存在」无关（而是别处 echo 的），空 prompt 也会打出模型信号。
+      mark
+      curl -s -m 60 -A "$UA" -H "x-oauth-token: $AT" -H 'Content-Type: application/json' \
+        -d "{\"chatId\":\"$CCHAT\",\"prompt\":\"   \"}" \
+        "$B/v2/connectors/$BND/ai-send" -o /tmp/dmr_aisend2.json -w '  ai-send(空prompt) HTTP=%{http_code}\n'
+      sleep 5
+      echo "  --- 空 prompt 对照的窗口 ---"
+      win | grep -aE '\[Usage\]|ModelResolver|\[Connector\]' | cut -c1-170 | sed 's/^/    /'
+      ck "对照 空 prompt 被参数校验拒绝（返回「请输入要让 AI 处理的内容」）" \
+         "$(grep -acF '请输入要让 AI 处理的内容' /tmp/dmr_aisend2.json | head -1)" "1"
+      ck "对照 空 prompt 时窗口内没有任何模型调用（Usage 信号来自真调用，不是端点存在即有）" \
+         "$(win | grep -acF '[Usage]' | head -1)" "0"
+
+      # 判据6：只读证明 —— 绑定与 admin 的行都没被本段改动（纪律：只读 admin）
+      ck "收尾前：连接器绑定仍未被本套件改动" \
+         "$(Q "SELECT ifnull(group_concat(distinct sys_ai_bot_binding_model),'-') FROM sys_ai_bot_binding;" | tr -d '\r')" "$BM1"
+      ck "收尾前：admin 的 bot/runtime default_model 覆盖行数未被本段写入" \
+         "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='admin' AND sys_ai_user_setting_group IN ('bot','runtime') AND sys_ai_user_setting_field='default_model';" | tr -d '\r')" "$A_ADM_CNT_BEFORE"
+  fi
 fi
 
 echo
