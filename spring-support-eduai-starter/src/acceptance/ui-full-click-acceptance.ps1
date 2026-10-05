@@ -216,6 +216,12 @@ $jsProbe = @'
     path: location.pathname,
     dialogs: Array.from(document.querySelectorAll('.el-dialog, .el-drawer, .el-message-box')).filter(vis).length,
     toasts: Array.from(document.querySelectorAll('.el-message, .el-notification')).filter(vis).length,
+    // Text of the visible toasts, not just how many. ElMessage stacks up (it defaults to
+    // 3000ms), so when a previous click's toast is still on screen the COUNT does not
+    // change on the next click and the click looks dead. Comparing the text catches the
+    // new toast as long as it differs from the stale one.
+    toastText: Array.from(document.querySelectorAll('.el-message, .el-notification')).filter(vis)
+      .map(t => ((t.innerText || '').trim().slice(0, 30))).join(' // '),
     bodyLen: (document.body.innerText || '').replace(/\s+/g, '').length,
     rows: document.querySelectorAll('.el-table__body-wrapper tbody tr').length,
     loading: Array.from(document.querySelectorAll('.el-loading-mask')).filter(vis).length,
@@ -284,6 +290,44 @@ function Build-InventoryJs {
     else if (cls.indexOf('el-menu-item') >= 0) kind = 'menu';
     else if (!label) kind = 'icon-button';
     out.push({ id: id, kind: kind, label: label, tag: el.tagName.toLowerCase(), active: active });
+  });
+  // ---- second pass: clickable things that are not buttons ----
+  // A button-only inventory silently skips the student portal module cards: they are
+  // <div class="pp-card"> / <span class="pp-card__title"> with an @click handler and
+  // cursor:pointer, but no button tag, no .el-button class and no role="button".
+  // `cursor` is an inherited CSS property, so the whole subtree of a card reports
+  // pointer; tag only the OUTERMOST pointer element of a chain so one card costs one
+  // click instead of one click per nested span.
+  const pointerLike = el => {
+    try { return getComputedStyle(el).cursor === 'pointer'; } catch (e) { return false; }
+  };
+  const SEL2 = 'div, span, li, i, svg, img, section, article, td, tr, label, a';
+  root.querySelectorAll(SEL2).forEach(el => {
+    if (el.hasAttribute('data-uitest')) return;
+    if (!vis(el)) return;
+    if (el.closest('.el-select-dropdown, .el-popper')) return;
+    if (!pointerLike(el)) return;
+    // outermost-only: an ancestor that is itself pointer-like owns this interaction
+    let p = el.parentElement, skip = false;
+    while (p && p !== root) {
+      if (p.hasAttribute('data-uitest') || pointerLike(p)) { skip = true; break; }
+      p = p.parentElement;
+    }
+    if (skip) return;
+    const label = (el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().slice(0, 26);
+    if (!label) return;
+    // a huge pointer area is almost always a layout container inheriting a rule, not a control
+    const r = el.getBoundingClientRect();
+    if (r.width * r.height > innerWidth * innerHeight * 0.7) return;
+    const cls = (el.className || '').toString();
+    const key = el.tagName + '|' + cls.slice(0, 30) + '|' + label;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const id = 'u' + out.length;
+    el.setAttribute('data-uitest', id);
+    const active = /\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
+      el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true' ? 'Y' : 'N';
+    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), active: active });
   });
   return JSON.stringify(out);
 })()
@@ -626,6 +670,12 @@ if (-not $SkipContent) {
                 }
             }
             $before = (Js $jsProbe) | ConvertFrom-Json
+            # Let a leftover toast from an earlier click expire before baselining, so the
+            # next click's toast is a clean delta instead of a no-op on the count.
+            if ($before.toasts -gt 0) {
+                WaitJs 'document.querySelectorAll(".el-message, .el-notification").length === 0' 5 | Out-Null
+                $before = (Js $jsProbe) | ConvertFrom-Json
+            }
             Clear-Evidence
             $clickRes = Js (Get-ClickJs $it.id)
             if ($clickRes -ne 'ok') {
@@ -659,7 +709,7 @@ if (-not $SkipContent) {
             $ev = Read-Evidence
             $effect = 'none'
             if ($after.dialogs -gt $before.dialogs) { $effect = 'dialog' }
-            elseif ($after.toasts -gt $before.toasts) { $effect = 'toast' }
+            elseif ($after.toasts -gt $before.toasts -or $after.toastText -ne $before.toastText) { $effect = 'toast' }
             elseif ($after.rows -ne $before.rows) { $effect = 'table' }
             elseif ($after.firstCell -ne $before.firstCell) { $effect = 'page-data' }
             elseif ($after.act -ne $before.act) { $effect = 'state' }
@@ -688,7 +738,7 @@ if (-not $SkipContent) {
                 $effect2 = 'none'
                 if ($after2.path -ne $after.path) { $effect2 = 'route' }
                 elseif ($after2.dialogs -gt $after.dialogs) { $effect2 = 'dialog' }
-                elseif ($after2.toasts -gt $after.toasts) { $effect2 = 'toast' }
+                elseif ($after2.toasts -gt $after.toasts -or $after2.toastText -ne $after.toastText) { $effect2 = 'toast' }
                 elseif ($after2.rows -ne $after.rows) { $effect2 = 'table' }
                 elseif ($after2.act -ne $after.act) { $effect2 = 'state' }
                 elseif ($after2.inputs -ne $after.inputs) { $effect2 = 'input' }
