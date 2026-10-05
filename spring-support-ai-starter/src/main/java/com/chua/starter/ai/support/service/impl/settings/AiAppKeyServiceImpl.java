@@ -9,10 +9,10 @@ import com.chua.starter.ai.support.manage.common.ApiException;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 import org.springframework.cache.annotation.CacheEvict;
 import com.chua.starter.ai.support.entity.settings.SysAiGroup;
-import com.chua.starter.ai.support.entity.settings.SysAiProvider;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
-import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -54,7 +54,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     /**
      * 提供者映射器
     */
-    private final AiProviderMapper providerMapper;
+    private final SysAiProviderMapper providerMapper;
     /**
      * 分组映射器
     */
@@ -74,8 +74,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
                                 .orderByDesc(SysAiAppKey::getId))
                 .stream().toList();
 
-        Map<Long, String> providerNames = providerMapper.selectList(null).stream()
-                .collect(Collectors.toMap(SysAiProvider::getProviderId, SysAiProvider::getProviderName, (a, b) -> a));
+        // providerId 是**供应商编码**（String，如 openai / agnes / onnx），
+        // 字段名在正确实体上是 getName() 而不是 getProviderName()。
+        Map<String, String> providerNames = providerMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SysAiProvider::getProviderId, SysAiProvider::getName, (a, b) -> a));
         Map<Integer, String> groupNames = resolveGroupNames();
 
         return ReturnResult.ok(keys.stream()
@@ -225,12 +227,12 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * @param providerId 供应商 标识
      * @return 供应商名称
      */
-    private String resolveProvider(Long providerId) {
-        if (providerId == null) {
+    private String resolveProvider(String providerId) {
+        if (providerId == null || providerId.isBlank()) {
             return null;
         }
         return Optional.ofNullable(providerMapper.selectById(providerId))
-                .map(SysAiProvider::getProviderName)
+                .map(SysAiProvider::getName)
                 .orElse(null);
     }
 

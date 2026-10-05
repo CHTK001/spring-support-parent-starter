@@ -547,7 +547,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `sys_ai_app_key_secret` VARCHAR(256) NOT NULL COMMENT 'Secret',
   `sys_ai_app_key_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `sys_ai_app_key_value` VARCHAR(512) DEFAULT NULL COMMENT '',
-  `sys_ai_app_key_provider_id` BIGINT DEFAULT NULL COMMENT ' ID',
+  `sys_ai_app_key_provider_id` VARCHAR(64) DEFAULT NULL COMMENT '供应商编码（openai/agnes/onnx 等）',
   `sys_ai_app_key_model` VARCHAR(255) DEFAULT NULL COMMENT '',
   `sys_ai_app_key_max_use` BIGINT DEFAULT NULL COMMENT 'null ',
   `sys_ai_app_key_enabled` INT DEFAULT 1 COMMENT '',

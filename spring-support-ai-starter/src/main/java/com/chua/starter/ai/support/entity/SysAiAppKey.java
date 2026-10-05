@@ -83,9 +83,13 @@ public class SysAiAppKey {
 
     /**
      * 关联供应商 标识（面板层字段）
+     *
+     * <p>是供应商**编码**而不是自增主键：库里其它 provider 引用列
+     * （sys_ai_provider_model / sys_ai_agent / sys_ai_provider_connection …）
+     * 全是 varchar，存 openai、agnes、onnx 这类编码，前端提交的也是编码。</p>
      */
     @TableField("sys_ai_app_key_provider_id")
-    private Long providerId; // 提供者标识
+    private String providerId; // 提供者标识（编码，如 openai / agnes / onnx）
 
     /**
      * 限定使用的模型（面板层字段）
