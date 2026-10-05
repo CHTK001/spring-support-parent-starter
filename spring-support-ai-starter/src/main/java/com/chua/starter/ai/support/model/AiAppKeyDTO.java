@@ -46,11 +46,11 @@ public class AiAppKeyDTO implements Serializable {
     /**
      * 关联供应商 标识
      */
-    @Schema(description = "关联供应商 ID")
+    @Schema(description = "关联供应商编码（如 openai / agnes / onnx）")
     /**
      * 提供者
     */
-    private Long provider;
+    private String provider;
 
     /**
      * 供应商名称
