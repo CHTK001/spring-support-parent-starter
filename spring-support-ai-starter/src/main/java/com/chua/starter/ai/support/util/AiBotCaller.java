@@ -43,7 +43,10 @@ public record AiBotCaller(String ownerKey, boolean admin) {
      */
     public static AiBotCaller fromLogin() {
         String userId = AiUserContext.currentUserId();
-        return new AiBotCaller(userId == null ? null : USER_PREFIX + userId, AiUserContext.isAdmin());
+        // admin 位取「业务数据能否跨账号」，而不是 isAdmin()：
+        // 管理员在业务数据侧与普通账号同权（见 AiUserContext#canAccessOthersData）。
+        return new AiBotCaller(userId == null ? null : USER_PREFIX + userId,
+                AiUserContext.canAccessOthersData());
     }
 
     /**

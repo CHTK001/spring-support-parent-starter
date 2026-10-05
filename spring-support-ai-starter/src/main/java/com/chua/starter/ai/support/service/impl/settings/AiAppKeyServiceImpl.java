@@ -61,13 +61,13 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     private final AiGroupMapper groupMapper;
 
     /**
-     * 查询 appKey：管理员全量，普通用户仅本人名下。
+     * 查询 appKey：仅本人名下（管理员在业务数据侧与普通账号同权）。
      *
      * @return 操作结果
      */
     @Override
     public ReturnResult<List<AiAppKeyDTO>> list() {
-        String scopeUserId = AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
+        String scopeUserId = AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();
         List<SysAiAppKey> keys = appKeyMapper.selectList(
                         new LambdaQueryWrapper<SysAiAppKey>()
                                 .eq(scopeUserId != null, SysAiAppKey::getUserId, scopeUserId)
@@ -210,14 +210,11 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         String userId = AiUserContext.requireUserId();
         String owner = existing.getUserId();
         if (owner == null || owner.isBlank()) {
-            if (!AiUserContext.isAdmin()) {
-                throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人 AppKey");
-            }
-            return existing;
+            // 无归属的历史行视为无主：任何登录账号（含管理员）都不能改写，避免被随意接管
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人 AppKey");
         }
         if (!userId.equals(owner)) {
-            throw new ApiException(ApiErrorCode.FORBIDDEN, AiUserContext.isAdmin()
-                    ? "管理员对他人数据只读，不可修改或删除" : "无权访问他人 AppKey");
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人 AppKey");
         }
         return existing;
     }

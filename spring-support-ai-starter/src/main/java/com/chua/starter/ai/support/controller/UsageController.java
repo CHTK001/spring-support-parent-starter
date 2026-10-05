@@ -515,11 +515,11 @@ public class UsageController {
     }
 
     /**
-     * 当前请求的用量统计口径：管理员返回 {@code null} 表示全量，普通用户返回本人 ID。
+     * 当前请求的用量统计口径：仅跨账号放行时返回 {@code null}（看全量），否则返回本人 ID。
      *
-     * @return 归属用户标识，管理员为 null
+     * @return 归属用户标识；跨账号放行时为 null
      */
     private String currentScopeUserId() {
-        return AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
+        return AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();
     }
 }

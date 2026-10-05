@@ -280,14 +280,14 @@ public class SysAiMemoryStore {
         if (userId == null) {
             return memory;
         }
-        if (!userId.equals(memory.getUserId()) && !AiUserContext.isAdmin()) {
+        if (!userId.equals(memory.getUserId()) && !AiUserContext.canAccessOthersData()) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人的记忆");
         }
         return memory;
     }
 
     /**
-     * 读取记忆并校验写权限（只认归属人，管理员只读，只读账号一律拒绝）。
+     * 读取记忆并校验写权限（只认归属人，只读账号一律拒绝）。
      *
      * @param memoryId 记忆 标识
      * @return 通过校验的记忆
@@ -299,7 +299,7 @@ public class SysAiMemoryStore {
         }
         String userId = AiUserContext.currentUserId();
         if (userId != null && !userId.equals(memory.getUserId())) {
-            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "不可修改或删除他人的记忆");
         }
         return memory;
     }

@@ -17,7 +17,9 @@ import java.util.Map;
  * {@code user_id} 列，因此归属以记录内的 {@code user_id} 字段为准：创建时由服务端按当前登录用户
  * 写入，客户端传入的值一律覆盖。</p>
  *
- * <p>口径与落库表保持一致：本人可读写；管理员可读他人记录但不可修改或删除；他人一律 403。
+ * <p>口径与落库表保持一致：**仅本人**可读写；他人一律 403。
+ * 管理员在业务数据侧与普通账号同权（见 {@code AiUserContext#canAccessOthersData()}），
+ * 只有「记录被显式标记为公开可见」这一种情况才对所有登录用户可读。
  * 没有 {@code user_id} 的历史记录（改造前遗留）视为无主，任何登录用户都不能改写，避免被随意接管。</p>
  *
  * @author CH
@@ -92,7 +94,7 @@ public final class AiMemoryOwnership {
         if (owner != null && userId.equals(String.valueOf(owner))) {
             return record;
         }
-        if (!writable && AiUserContext.isAdmin()) {
+        if (!writable && AiUserContext.canAccessOthersData()) {
             return record;
         }
         throw new ApiException(ApiErrorCode.FORBIDDEN,
@@ -129,14 +131,14 @@ public final class AiMemoryOwnership {
         if (owner != null && userId.equals(String.valueOf(owner))) {
             return record;
         }
-        if (AiUserContext.isAdmin() || isPublic(record)) {
+        if (AiUserContext.canAccessOthersData() || isPublic(record)) {
             return record;
         }
         throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人的" + what);
     }
 
     /**
-     * 按归属过滤列表：管理员可见全部，其余仅本人记录（不包含他人公开记录）。
+     * 按归属过滤列表：仅本人记录（不包含他人公开记录）。
      *
      * @param records 全量内存记录
      * @return 当前用户可见的记录
@@ -146,7 +148,7 @@ public final class AiMemoryOwnership {
     }
 
     /**
-     * 按归属过滤列表：管理员可见全部；其余可见本人记录，且在 {@code includePublic=true}
+     * 按归属过滤列表：可见本人记录，且在 {@code includePublic=true}
      * 时额外包含他人标记为公开可见的记录。
      *
      * @param records       全量内存记录
@@ -156,11 +158,11 @@ public final class AiMemoryOwnership {
     public static List<Map<String, Object>> visibleToCurrentUser(Collection<Map<String, Object>> records,
                                                                  boolean includePublic) {
         String userId = AiUserContext.requireUserId();
-        boolean admin = AiUserContext.isAdmin();
+        boolean crossAccount = AiUserContext.canAccessOthersData();
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> record : records) {
             Object owner = record.get(USER_ID_FIELD);
-            if (admin || (owner != null && userId.equals(String.valueOf(owner)))
+            if (crossAccount || (owner != null && userId.equals(String.valueOf(owner)))
                     || (includePublic && isPublic(record))) {
                 result.add(record);
             }

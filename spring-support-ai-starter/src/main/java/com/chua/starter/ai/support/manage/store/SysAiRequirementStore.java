@@ -663,7 +663,7 @@ public class SysAiRequirementStore {
      * @param wrapper 查询条件
      */
     private void scopeRequirement(LambdaQueryWrapper<SysAiRequirement> wrapper) {
-        if (!AiUserContext.isAdmin()) {
+        if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(SysAiRequirement::getUserId, AiUserContext.currentUserId());
         }
     }
@@ -674,19 +674,19 @@ public class SysAiRequirementStore {
      * @param wrapper 查询条件
      */
     private void scopeDataSource(LambdaQueryWrapper<SysAiDataSource> wrapper) {
-        if (!AiUserContext.isAdmin()) {
+        if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(SysAiDataSource::getUserId, AiUserContext.currentUserId());
         }
     }
 
     /**
-     * 读归属判定：管理员可跨用户读取，其余仅本人。
+     * 读归属判定：仅本人（管理员在业务数据侧与普通账号同权）。
      *
      * @param owner 数据归属用户标识
      * @return 当前用户是否可读
      */
     private boolean readableByCurrent(String owner) {
-        return AiUserContext.isAdmin() || AiUserContext.requireUserId().equals(owner);
+        return AiUserContext.canAccessOthersData() || AiUserContext.requireUserId().equals(owner);
     }
 
     /**

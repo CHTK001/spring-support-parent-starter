@@ -221,16 +221,16 @@ public class SshTerminalSessionManager {
     }
 
     /**
-     * 当前登录用户可见的会话列表（管理员可见全部，其余仅本人）。
+     * 当前登录用户可见的会话列表（仅本人；管理员在业务数据侧与普通账号同权）。
      *
      * @return 会话列表（按标识稳定排序）
      */
     public List<SshTerminalSession> listVisible() {
         String userId = AiUserContext.requireUserId();
-        boolean admin = AiUserContext.isAdmin();
+        boolean crossAccount = AiUserContext.canAccessOthersData();
         List<SshTerminalSession> result = new ArrayList<>();
         for (SshTerminalSession session : sessions.values()) {
-            if (admin || userId.equals(session.userId)) {
+            if (crossAccount || userId.equals(session.userId)) {
                 result.add(session);
             }
         }
@@ -242,7 +242,7 @@ public class SshTerminalSessionManager {
      * 取回会话并校验归属。
      *
      * @param terminalId 终端 标识
-     * @param writable   是否要求写权限（{@code false} 表示只读，管理员可读他人会话）
+     * @param writable   是否要求写权限（{@code false} 表示只读）
      * @return 通过校验的会话
      */
     public SshTerminalSession requireOwned(String terminalId, boolean writable) {
@@ -254,7 +254,7 @@ public class SshTerminalSessionManager {
         if (userId.equals(session.userId)) {
             return session;
         }
-        if (!writable && AiUserContext.isAdmin()) {
+        if (!writable && AiUserContext.canAccessOthersData()) {
             return session;
         }
         throw new ApiException(ApiErrorCode.FORBIDDEN,

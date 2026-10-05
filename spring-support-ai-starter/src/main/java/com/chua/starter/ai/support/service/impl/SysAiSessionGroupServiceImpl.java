@@ -161,7 +161,7 @@ public class SysAiSessionGroupServiceImpl implements SysAiSessionGroupService {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许删除");
         }
         boolean owner = AiUserContext.requireUserId().equals(group.getUserId());
-        if (!owner && !AiUserContext.isAdmin()) {
+        if (!owner) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "不可删除他人的分组");
         }
         return group;
