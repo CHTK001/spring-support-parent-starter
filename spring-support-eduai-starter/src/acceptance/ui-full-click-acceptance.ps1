@@ -186,6 +186,113 @@ function Walk-DialogControls {
     }
 }
 
+# Same story for poppers: Element Plus teleports dropdown menus, select option lists and
+# popovers to <body>, so they were outside the content inventory too. Across the whole
+# sweep zero dropdown items had ever been clicked -- "the trigger opened something" was
+# being accepted as proof that everything inside it worked.
+# Items that end the session (logout) are never pressed.
+$lblLogout = @(
+    (-join @([char]0x9000, [char]0x51FA))
+    (-join @([char]0x767B, [char]0x51FA))
+    (-join @([char]0x6CE8, [char]0x9500))
+) -join '|'
+$jsPopperInventory = @"
+(() => {
+  const LOGOUT = new RegExp('$lblLogout');
+  const vis = (el) => { if (!el) return false; const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false; const st = getComputedStyle(el);
+    return !(st.visibility === 'hidden' || st.display === 'none' || parseFloat(st.opacity || '1') === 0); };
+  document.querySelectorAll('[data-uitest-p]').forEach((e) => e.removeAttribute('data-uitest-p'));
+  const SEL = '[role="menuitem"], .el-dropdown-menu__item, .el-select-dropdown__item, li[role="option"], .el-popper li, .el-popper button, .el-popper a, .el-popper .el-checkbox, .el-popper .el-radio';
+  const out = [];
+  Array.from(document.querySelectorAll('.el-popper')).filter(vis).forEach((pop) => {
+    // a popper anchored inside a dialog is walked with the dialog's own controls
+    if (pop.closest('.el-dialog, .el-drawer')) return;
+    const label0 = ((pop.querySelector('.el-popper__title, .el-select__placeholder') || {}).innerText || '').trim().slice(0, 20);
+    pop.querySelectorAll(SEL).forEach((el) => {
+      if (el.hasAttribute('data-uitest-p')) return;
+      if (!vis(el)) return;
+      const label = (el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().slice(0, 24);
+      if (!label) return;
+      const id = 'p' + out.length;
+      el.setAttribute('data-uitest-p', id);
+      const kind = el.classList.contains('el-select-dropdown__item') || el.getAttribute('role') === 'option' ? 'option'
+        : (el.classList.contains('el-dropdown-menu__item') || el.getAttribute('role') === 'menuitem' ? 'menu-item' : 'control');
+      out.push({ id: id, kind: kind, label: label, title: label0, skip: LOGOUT.test(label) ? 1 : 0 });
+    });
+  });
+  return JSON.stringify(out);
+})()
+"@
+
+function Walk-PopperControls {
+    param([string]$Rname, [string]$Path, [string]$Trig, $AfterState)
+    $raw = ''
+    try { $raw = [string](Js $jsPopperInventory 40000) } catch { $raw = '' }
+    if (-not $raw -or -not $raw.StartsWith('[')) { return }
+    $items = @()
+    try { $items = @($raw | ConvertFrom-Json) } catch { return }
+    if ($items.Count -eq 0) { return }
+    Write-Host ('    -> popover controls: {0} (trigger ''{1}'')' -f $items.Count, $Trig)
+    foreach ($c in $items) {
+        if ([int]$c.skip -eq 1) {
+            [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|skipped-logout|$Path|0|0|0|0"))
+            $script:SkipDestructive++
+            continue
+        }
+        $sel = '[data-uitest-p=' + $c.id + ']'
+        Clear-Evidence
+        $res = ''
+        try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
+        if ($res -ne 'ok') {
+            [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0"))
+            continue
+        }
+        $script:Clicks++
+        Start-Sleep -Milliseconds $SettleMs
+        $aft = $null
+        try { $aft = (Js $jsProbe) | ConvertFrom-Json } catch { $aft = $null }
+        if (-not $aft) { [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|probe-failed|$Path|0|0|0|0")); break }
+        $ev = Read-Evidence
+        $eff = 'none'
+        if ($aft.path -ne $AfterState.path) { $eff = 'navigate' }
+        elseif ($aft.dialogs -lt $AfterState.dialogs) { $eff = 'closed-dialog' }
+        elseif ($aft.poppers -lt $AfterState.poppers) { $eff = 'closed-popper' }
+        elseif ($aft.inputs -ne $AfterState.inputs) { $eff = 'input' }
+        elseif ($aft.nodes -ne $AfterState.nodes) { $eff = 'dom' }
+        elseif ($aft.htmlLen -ne $AfterState.htmlLen) { $eff = 'style' }
+        elseif ($ev.reqTotal -gt 0) { $eff = 'request' }
+        [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|$eff|$($aft.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
+        if ($ev.pageErr -gt 0) { Ck "$Rname popover '$($c.label)' no page error" $false '' }
+        elseif ($ev.consoleErr -gt 0) { Ck "$Rname popover '$($c.label)' no console error" $false '' }
+        elseif ($ev.http5xx -gt 0) { Ck "$Rname popover '$($c.label)' no 5xx" $false ("5xx=" + $ev.first5) }
+        else { $script:Pass++ }
+        if ($aft.path -ne $AfterState.path) { break }
+        if ($aft.poppers -lt $AfterState.poppers) { break }
+    }
+}
+
+# Hover-triggered dropdowns never open for a synthetic click (Element Plus defaults to
+# trigger="hover"), and dispatching synthetic mouseover does not open them either -- only a
+# real pointer move does. Without this the header's module switcher / avatar menu and every
+# hover dropdown were reported as dead buttons while working perfectly.
+function Try-HoverOpen {
+    param([string]$Rname, [string]$Path, $It, [string]$Label)
+    $cls = [string]$It.cls
+    # the trigger may be a plain span/div INSIDE the dropdown (the header's module
+    # switcher is span.el-breadcrumb__inner), so the inventory marks it via closest() and
+    # the class check alone misses it
+    if ($It.hov -ne 'Y' -and $cls -notmatch 'el-dropdown|el-tooltip|el-popper|el-cascader|el-select') { return '' }
+    $sel = Get-TagSelector $It.id
+    AbRaw @('hover', $sel) 30000 | Out-Null
+    Start-Sleep -Milliseconds 800
+    $st = $null
+    try { $st = (Js $jsProbe) | ConvertFrom-Json } catch { $st = $null }
+    if (-not $st -or $st.poppers -le 0) { return '' }
+    Walk-PopperControls -Rname $Rname -Path $Path -Trig ('hover:' + $Label) -AfterState $st
+    return 'popover'
+}
+
 function Snapshot-Layout {
     $script:LayoutSnap = ''
     try {
@@ -310,6 +417,7 @@ $jsProbe = @'
   return JSON.stringify({
     path: location.pathname,
     dialogs: Array.from(document.querySelectorAll('.el-dialog, .el-drawer, .el-message-box')).filter(vis).length,
+    poppers: Array.from(document.querySelectorAll('.el-popper')).filter(vis).length,
     toasts: Array.from(document.querySelectorAll('.el-message, .el-notification')).filter(vis).length,
     // Text of the visible toasts, not just how many. ElMessage stacks up (it defaults to
     // 3000ms), so when a previous click's toast is still on screen the COUNT does not
@@ -382,7 +490,7 @@ function Build-InventoryJs {
     else if (cls.indexOf('el-pager') >= 0) kind = 'pager';
     else if (cls.indexOf('el-menu-item') >= 0) kind = 'menu';
     else if (!label) kind = 'icon-button';
-    out.push({ id: id, kind: kind, label: label, tag: el.tagName.toLowerCase(), cls: cls.slice(0, 40), active: active });
+    out.push({ id: id, kind: kind, label: label, tag: el.tagName.toLowerCase(), cls: cls.slice(0, 40), active: active, hov: (el.closest('.el-dropdown, .el-cascader, .el-select, [aria-haspopup]') ? 'Y' : 'N') });
   });
   // ---- pass 2: pointer-driven controls (student cards are div/span, not buttons) ----
   // outermost pointer element only: `cursor` is inherited, so a card would otherwise
@@ -414,7 +522,10 @@ function Build-InventoryJs {
     if (el.closest(CHROME)) return;
     const clickable = hasHandler(el) || el.tagName === 'A' || el.getAttribute('role') === 'button' ||
       el.hasAttribute('tabindex') || el.hasAttribute('onclick');
-    if (!clickable) return;
+    // dropdown / select / cascader triggers are clickable-or-hover surfaces even when they
+    // carry neither a handler nor cursor:pointer (the module switcher is a plain span)
+    const hoverTarget = !!el.closest('.el-dropdown, .el-cascader, .el-select, [aria-haspopup]');
+    if (!clickable && !hoverTarget) return;
     if (!pointerLike(el)) return;
     // outermost-only: an ancestor that is itself pointer-like owns this interaction
     let p = el.parentElement, skip = false;
@@ -445,7 +556,7 @@ function Build-InventoryJs {
         const href = a.getAttribute('href') || '';
         activeHref = !!href && href !== '#' && location.pathname.indexOf(href) === 0;
     }
-    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), cls: cls.slice(0, 40), active: (activeCls || activeHref) ? 'Y' : 'N' });
+    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), cls: cls.slice(0, 40), active: (activeCls || activeHref) ? 'Y' : 'N', hov: (el.closest('.el-dropdown, .el-cascader, .el-select, [aria-haspopup]') ? 'Y' : 'N') });
   });
   // prefix the scope so the caller learns WHICH area was inventoried
   const scopeKind = (document.querySelector('main.el-main') ? 'main'
@@ -461,7 +572,11 @@ $jsInvContent = Build-InventoryJs -ScopeJs "(document.querySelector('main.el-mai
     '.el-pagination button', '.el-pager li'
 )
 $jsInvChrome = Build-InventoryJs -ScopeJs "document.body" -Selectors @(
-    '.layout-header button', '.layout-aside .el-menu-item', '.layout-aside .el-sub-menu__title',
+    # the header's module switcher / avatar menu trigger is a plain span (el-breadcrumb__inner),
+    # not a button, so a button-only chrome list never touched it -- and it opens on hover,
+    # so its 4 menu items were never clicked either
+    '.layout-header button', '.layout-header .el-dropdown', '.layout-header [aria-haspopup]',
+    '.layout-header .el-tooltip__trigger', '.layout-aside .el-menu-item', '.layout-aside .el-sub-menu__title',
     '.layout-aside a', '.app-tabs .el-tabs__item', '.el-tabs--header > .el-tabs__item'
 )
 
@@ -1169,6 +1284,11 @@ if (-not $SkipContent) {
                 if ($cur -and $cur -eq $lbl) { $effect = 'already-current-page' }
             }
             if ($effect -eq 'none' -and $expectNoop) { $effect = 'already-applied-live-filter' }
+            # still nothing? a hover-triggered dropdown only opens under a real pointer.
+            if ($effect -eq 'none') {
+                $hov = Try-HoverOpen -Rname $rname -Path $path -It $it -Label $lbl
+                if ($hov) { $effect = $hov }
+            }
             # Reset / search with nothing in the filter is a no-op by design, not a dead button.
             # Pressing search with an empty query asks for exactly the rows already shown
             # (ReTable does not even issue a request), and reset has nothing to clear.
@@ -1187,11 +1307,26 @@ if (-not $SkipContent) {
                 try { $tabLbl = [string](Js $jsActiveTabLabel 20000) } catch { $tabLbl = '' }
                 if ($tabLbl -and $lbl -and $tabLbl.Contains($lbl)) { $effect = 'already-on-this-page' }
             }
+            if ($effect -eq 'none') {
+                # last resort before judging: a hover-triggered dropdown needs a real pointer
+                $hov = Try-HoverOpen -Rname $rname -Path $path -It $it -Label $lbl
+                if ($hov) { $effect = $hov }
+            }
             if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' tag=$($it.tag) cls='$($it.cls)' (no visible effect, wasActive=$($it.active))") }
 
             # A trigger that opened a dialog also means that dialog's own controls are now
             # on screen and reachable -- click them too (see Walk-DialogControls).
-            if ($after.dialogs -gt $before.dialogs) { Walk-DialogControls -Rname $rname -Path $path -Trig $lbl -AfterState $after }
+            if ($after.dialogs -gt $before.dialogs) {
+                Walk-DialogControls -Rname $rname -Path $path -Trig $lbl -AfterState $after
+                # a dialog's own select/dropdown opens a popper of its own
+                $after2 = $null
+                try { $after2 = (Js $jsProbe) | ConvertFrom-Json } catch { $after2 = $null }
+                if ($after2 -and $after2.poppers -gt 0) { Walk-PopperControls -Rname $rname -Path $path -Trig ($lbl + '/dialog') -AfterState $after2 }
+            }
+            # Not a count delta: a tooltip popper may already be on screen, so "poppers grew"
+            # misses real dropdowns. The pre-click guard closes every overlay, so any popper
+            # visible after the click was opened by that click.
+            elseif ($after.poppers -gt 0) { Walk-PopperControls -Rname $rname -Path $path -Trig $lbl -AfterState $after }
             Js $jsReset | Out-Null
             Start-Sleep -Milliseconds 200
         }
@@ -1236,6 +1371,16 @@ if (-not $SkipChrome) {
         elseif ($ev.consoleErr -gt 0) { Ck "chrome/$($it.kind) '$lbl' no console error" $false $detail }
         elseif ($ev.http5xx -gt 0) { Ck "chrome/$($it.kind) '$lbl' no 5xx" $false ($detail + ' ' + $ev.first5) }
         else { $script:Pass++ }
+        # The header's module switcher and avatar menu open on hover, so a click leaves no
+        # trace; hover them for real and walk whatever menu appears.
+        if ($it.cls -match 'el-dropdown|el-tooltip|el-popper') {
+            $hstate = $null
+            try { $hstate = (Js $jsProbe) | ConvertFrom-Json } catch { $hstate = $null }
+            if ($hstate) {
+                $r = [string](Try-HoverOpen -Rname 'chrome' -Path '/home' -It $it -Label $lbl)
+                if ($r) { $script:Pass++ }
+            }
+        }
         # always come back to a known-good page
         Js $jsReset | Out-Null
         Open-Route $homePath
