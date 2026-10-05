@@ -80,30 +80,59 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
             "https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt";
 
     /**
-     * 字表镜像（主源不可用时依次尝试）
+     * 字典源镜像。jsdelivr **不可用**于本字典：文件 27MB 超过它的 20MB 限制
+     * （实测返回 "File size exceeded the configured limit of 20 MB."），所以只有 raw 与代理。
      */
-    private static final List<String> CHAR_LIST_MIRRORS = List.of(
-            DEFAULT_CHAR_LIST_URL,
-            "https://cdn.jsdelivr.net/gh/elephantnose/characters@master/3500%E5%B8%B8%E7%94%A8%E6%B1%89%E5%AD%97.txt"
+    private static final List<String> DICT_MIRRORS = List.of(
+            DEFAULT_DICT_URL,
+            // 代理镜像由主地址拼出来，不再重复写字面量：手抄长 URL 容易混入同形异码字符
+            // （本次就踩到：肉眼是 xinhua，字节却不是，Contains 都不匹配）
+            "https://ghproxy.net/" + DEFAULT_DICT_URL
     );
 
     /**
-     * IDS 源镜像
+     * 字表镜像。
+     *
+     * <p>顺序按实测可用性排（2026-10-05，目标机）：jsdelivr 0.33s / fastly 0.36s /
+     * ghproxy 0.98s，而 raw.githubusercontent 出现过「200 但 0 字节」与「挂死 120s」。
+     * 所以 jsdelivr 排第一，raw 放最后兜底。</p>
+     */
+    private static final List<String> CHAR_LIST_MIRRORS = List.of(
+            "https://cdn.jsdelivr.net/gh/elephantnose/characters@master/3500%E5%B8%B8%E7%94%A8%E6%B1%89%E5%AD%97.txt",
+            "https://fastly.jsdelivr.net/gh/elephantnose/characters@master/3500%E5%B8%B8%E7%94%A8%E6%B1%89%E5%AD%97.txt",
+            "https://ghproxy.net/https://raw.githubusercontent.com/elephantnose/characters/master/3500%E5%B8%B8%E7%94%A8%E6%B1%89%E5%AD%97.txt",
+            DEFAULT_CHAR_LIST_URL
+    );
+
+    /**
+     * IDS 源镜像（实测 jsdelivr 0.21s / raw 0.57s）
      */
     private static final List<String> IDS_MIRRORS = List.of(
-            DEFAULT_IDS_URL,
-            "https://cdn.jsdelivr.net/gh/skishore/makemeahanzi@master/dictionary.txt"
+            "https://cdn.jsdelivr.net/gh/skishore/makemeahanzi@master/dictionary.txt",
+            DEFAULT_IDS_URL
     );
 
     /**
      * 字典响应体上限（实测 27,354,320 B，留一档余量）
      */
+    /**
+     * 文本类数据源（字表 / IDS）的响应体上限：字表 17KB、IDS 2.5MB，8MB 足够
+     */
+    private static final int MAX_TEXT_BYTES = 8 * 1024 * 1024;
     private static final int DICT_MAX_BYTES = 48 * 1024 * 1024;
 
     /**
      * 字典下载超时：27MB 慢网也要给够时间
      */
     private static final Duration DICT_TIMEOUT = Duration.ofSeconds(300);
+
+    /**
+     * 小文件（字表 / IDS）的单地址超时。
+     *
+     * <p>取 20s 而不是默认 120s：这两个文件只有 17KB / 2.5MB，正常 1s 内取回；
+     * 某镜像卡住时要的是尽快换下一个，等满 120s 会让一次采集白等两分钟。</p>
+     */
+    private static final Duration SMALL_FILE_TIMEOUT = Duration.ofSeconds(20);
 
     /**
      * 单次写库的批大小（逐条 SELECT 去重，批太大会长时间占连接）
@@ -246,10 +275,13 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @return 汉字列表
      */
     private List<Character> loadCharList(String configuredUrl) {
-        List<String> urls = configuredUrl == null || configuredUrl.isBlank()
-                ? CHAR_LIST_MIRRORS
-                : List.of(configuredUrl.trim());
-        String text = fetchFirst(urls, "字表");
+        // 配置的地址优先，但**不排他**：外部源随时会挂（实测 raw 对 17KB 字表返回过
+        // 「200 但 0 字节」和挂死 120s），只认配置里的那一个地址等于把采集交给运气。
+        List<String> urls = new ArrayList<>(CHAR_LIST_MIRRORS);
+        if (configuredUrl != null && !configuredUrl.isBlank()) {
+            urls.add(0, configuredUrl.trim());
+        }
+        String text = fetchFirst(urls, "字表", SMALL_FILE_TIMEOUT);
         List<Character> chars = new ArrayList<>();
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
@@ -264,21 +296,23 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
     /**
      * 流式读取单字字典，只保留字表里要的字。
      *
-     * @param url    字典地址
-     * @param wanted 字表
+     * <p>多镜像容错：27MB 的文件在目标机上实测 raw 要 30s+（还可能超时），
+     * 而代理镜像 1.3s 就够；单镜像等于把采集交给网络运气。</p>
+     *
+     * @param url     字典地址（配置的地址优先，其后是内置镜像）
+     * @param wanted  字表
      * @return 字 -> 条目
      */
     private Map<Character, DictEntry> loadDict(String url, List<Character> wanted) {
-        byte[] body;
-        try {
-            body = HttpFetchSupport.getBytes(url, DICT_MAX_BYTES, DICT_TIMEOUT);
-        } catch (IOException e) {
-            throw new IllegalStateException("单字字典拉取失败: " + e.getMessage(), e);
+        List<String> urls = new ArrayList<>(DICT_MIRRORS);
+        if (url != null && !url.isBlank()) {
+            urls.add(0, url.trim());
         }
+        byte[] body = fetchBytesFirst(urls, "单字字典", DICT_MAX_BYTES, DICT_TIMEOUT);
         Map<Character, DictEntry> map = new LinkedHashMap<>();
         try (JsonParser parser = FACTORY.createParser(new ByteArrayInputStream(body))) {
             if (parser.nextToken() != JsonToken.START_ARRAY) {
-                throw new IllegalStateException("单字字典不是 JSON 数组（源结构可能已变）: " + url);
+                throw new IllegalStateException("单字字典不是 JSON 数组（源结构可能已变）");
             }
             while (parser.nextToken() == JsonToken.START_OBJECT) {
                 JsonNode node = MAPPER.readTree(parser);
@@ -310,9 +344,13 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      */
     private Map<Character, IdsEntry> loadIds(String url, List<Character> wanted) {
         Map<Character, IdsEntry> map = new LinkedHashMap<>();
+        List<String> urls = new ArrayList<>(IDS_MIRRORS);
+        if (url != null && !url.isBlank()) {
+            urls.add(0, url.trim());
+        }
         String text;
         try {
-            text = fetchFirst(IDS_MIRRORS.contains(url) ? IDS_MIRRORS : List.of(url), "IDS");
+            text = fetchFirst(urls, "IDS", SMALL_FILE_TIMEOUT);
         } catch (IllegalStateException e) {
             log.warn("[collect] IDS 源不可用，部首/结构将留空: {}", e.getMessage());
             return map;
@@ -348,17 +386,31 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param label 用途标签（日志用）
      * @return 响应文本
      */
-    private String fetchFirst(List<String> urls, String label) {
+    private String fetchFirst(List<String> urls, String label, Duration timeout) {
+        return new String(fetchBytesFirst(urls, label, MAX_TEXT_BYTES, timeout), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 依次尝试多个地址取二进制内容，全部失败抛异常（不静默降级）。
+     *
+     * @param urls     地址列表（配置地址应在最前）
+     * @param label    用途标签（日志与报错用）
+     * @param maxBytes 单地址响应体上限
+     * @param timeout  单地址超时（这是「快速切换镜像」的关键：不能等满默认 120s）
+     * @return 响应体字节
+     */
+    private byte[] fetchBytesFirst(List<String> urls, String label, int maxBytes, Duration timeout) {
         Exception last = null;
         for (String url : urls) {
             try {
-                return HttpFetchSupport.get(url);
+                return HttpFetchSupport.getBytes(url, maxBytes, timeout);
             } catch (Exception e) {
                 last = e;
-                log.warn("[collect] 汉字{}源不可用，尝试下一个: {} 原因: {}", label, url, e.getMessage());
+                log.warn("[collect] 汉字{}源不可用，换下一个镜像: {} 原因: {}", label, url, e.getMessage());
             }
         }
-        throw new IllegalStateException("汉字" + label + "源全部镜像不可用: " + (last == null ? "" : last.getMessage()), last);
+        throw new IllegalStateException("汉字" + label + "源全部镜像不可用: "
+                + (last == null ? "" : last.getMessage()), last);
     }
 
     /**

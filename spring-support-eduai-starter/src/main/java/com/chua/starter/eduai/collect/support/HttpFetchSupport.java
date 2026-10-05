@@ -76,6 +76,23 @@ public final class HttpFetchSupport {
     }
 
     /**
+     * GET 抓取文本，指定超时且**不走缓存**。
+     *
+     * <p>用于「同一份数据有多个镜像、按顺序快速切换」的场景：小文件在某个镜像上
+     * 卡住时要的是尽快换下一个，而不是把默认 120s 等满再换 —— 实测某镜像对
+     * 17KB 字表挂死 120s，换镜像只要 0.3s。走镜像的请求也不该进缓存，
+     * 否则换 URL 后仍可能拿到旧内容。</p>
+     *
+     * @param url     地址（仅允许 http/https）
+     * @param timeout 含下载的总超时
+     * @return 响应文本
+     * @throws IOException 网络或协议错误，或响应体超过默认上限
+     */
+    public static String get(String url, Duration timeout) throws IOException {
+        return new String(send(url, MAX_BODY_BYTES, timeout), StandardCharsets.UTF_8);
+    }
+
+    /**
      * GET 抓取二进制内容（归档类数据源，如 zip 数据集）。
      *
      * @param url 地址（仅允许 http/https）
