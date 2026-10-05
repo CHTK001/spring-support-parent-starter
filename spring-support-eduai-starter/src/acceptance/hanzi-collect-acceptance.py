@@ -88,22 +88,73 @@ def login(username, password):
     return ""
 
 
-def page_hanzi(token, keyword=None, page_size=100):
-    q = {"pageNum": 1, "pageSize": page_size}
+def page_rows(payload):
+    """取分页体里的列表。
+
+    实测坑：分页响应的外层 data 是**分页体**，列表在**内层 data**（不是 records）。
+    keys = pageNo, pageSize, totalPages, total, data
+    写错键名不会报错，只会「查到 0 行」，看起来像数据没落库 ——
+    本套件第一版就栽在这里（seed total=3496 却说抽查的字找不到）。
+    这里兼容两种键名，并对「都没有」显式报错而不是静默返回空。
+    """
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in ("data", "records", "list", "rows"):
+            rows = data.get(key)
+            if isinstance(rows, list):
+                return rows
+        raise AssertionError("分页体里没有列表字段：keys=%s" % ",".join(sorted(data)))
+    return []
+
+
+def page_hanzi(token, keyword=None, page_num=1, page_size=100):
+    q = {"pageNum": page_num, "pageSize": page_size}
     if keyword:
         q["keyword"] = keyword
     c, d = req("GET", "/v2/edu/hanzi/page?" + urllib.parse.urlencode(q), token=token)
     data = d.get("data") or {}
-    return c, data.get("total") or 0, (data.get("records") or [])
+    return c, data.get("total") or 0, page_rows(d)
+
+
+def load_index(token, chars, page_size=500, max_pages=12):
+    """按分页扫描建 {字: 行} 索引，返回 (索引, 扫过的页数, 总数)。
+
+    为什么不用 keyword 查单字：keyword 同时匹配「字 / 拼音 / 释义」，
+    查「明」会命中成千上万条「释义里含明」的行（如「聪明」），
+    目标字自己未必落在前 50 条 —— 那样断言会**假失败**。
+    分页扫一遍既确定又不依赖排序。
+    """
+    want = set(chars)
+    index = {}
+    total = 0
+    pages = 0
+    for page in range(1, max_pages + 1):
+        c, total, records = page_hanzi(token, page_num=page, page_size=page_size)
+        pages = page
+        if c != 200 or not records:
+            break
+        for row in records:
+            ch = row.get("hanziChar")
+            if ch in want and ch not in index:
+                index[ch] = row
+        if len(index) == len(want) or page * page_size >= total:
+            break
+    return index, pages, total
 
 
 def find_by_keyword(token, char):
-    """按字精确查（keyword 会命中拼音/释义，故取回后按 hanziChar 过滤）。"""
+    """按字精确查（keyword 会命中拼音/释义，故取回后按 hanziChar 过滤）。
+
+    仅用于**抽查**：命中不到就按分页扫描兜底，避免释义里含该字的其它行把它挤掉。
+    """
     c, total, records = page_hanzi(token, keyword=char, page_size=50)
     for r in records:
         if r.get("hanziChar") == char:
             return r
-    return None
+    index, _, _ = load_index(token, [char])
+    return index.get(char)
 
 
 def main():
@@ -149,13 +200,31 @@ def main():
     ck("V1.10 stroke order preserved", bool(ren and ren.get("hanziStrokeOrder")),
        "order=%s" % ((ren or {}).get("hanziStrokeOrder") or "<空>"))
 
+    print("########## 2.5 the hanzi game can actually use the seed ##########")
+    # 种子数据的最终消费者是「汉字识字」玩法（edu_fun_config 的 hanzi-learn 模块）。
+    # 只验「库里有多少行」不够：还得证明服务端能拿这批数据出题，且题目里带得上
+    # 笔画数/读音/释义（否则玩法页面只能显示空壳）。
+    c, d = req("GET", "/v2/edu/hanzi/practice?count=8", token=admin)
+    qs = d.get("data") or []
+    ck("practice api returns questions", c == 200 and len(qs) >= 5, "http=%d n=%d" % (c, len(qs)))
+    if qs:
+        q0 = qs[0] or {}
+        ck("practice question carries the character", bool(q0.get("hanziChar") or q0.get("char")),
+           "keys=%s" % ",".join(sorted(q0)[:8]))
+        # 出题接口的字段名是 pinyin/strokes/meaning/radical（不是库表列名），
+        # 所以这里必须按**键**判断，不能拿值去搜中文词 —— 上一版就这么写错了，
+        # 结果 meaning 有值却判成 False。
+        ck("practice question carries stroke/meaning context",
+           bool(q0.get("strokes")) and bool(q0.get("meaning")),
+           "strokes=%s meaning_len=%s" % (q0.get("strokes"), len(str(q0.get("meaning") or ""))))
+
     print("########## 3. collect task registered ##########")
     c, d = req("GET", "/v2/edu/collect/source-types", token=admin)
     types = d.get("data") or []
     ck("HANZI in source-types", "HANZI" in types, "types=%s" % ",".join(types))
 
     c, d = req("GET", "/v2/edu/collect/task/page?pageNum=1&pageSize=50", token=admin)
-    records = (d.get("data") or {}).get("records") or []
+    records = page_rows(d)
     hanzi_tasks = [t for t in records if t.get("collectTaskSourceType") == "HANZI"]
     ck("HANZI task exists", len(hanzi_tasks) >= 1, "found=%d" % len(hanzi_tasks))
     task = hanzi_tasks[0] if hanzi_tasks else None
@@ -174,11 +243,34 @@ def main():
     ck("task config has no importProcessor (must use self-persisted path)",
        "importProcessor" not in cfg, "keys=%s" % ",".join(sorted(cfg)))
 
+    def save_task(status, config=None):
+        """保存任务（触发前后都要用：触发接口拒绝执行「停用」的任务）。"""
+        return req("POST", "/v2/edu/collect/task/save", {
+            "collectTaskId": task["collectTaskId"],
+            "collectTaskName": task["collectTaskName"],
+            "collectTaskSourceType": "HANZI",
+            "collectTaskSourceConfig": json.dumps(config if config is not None else cfg,
+                                                   ensure_ascii=False),
+            "collectTaskSubject": task.get("collectTaskSubject"),
+            "collectTaskGradeLevel": task.get("collectTaskGradeLevel"),
+            "collectTaskGrade": task.get("collectTaskGrade"),
+            "collectTaskDifficulty": task.get("collectTaskDifficulty") or 3,
+            "collectTaskStatus": status,
+            "collectTaskRemark": task.get("collectTaskRemark"),
+        }, token=admin)
+
+    # 触发接口对「停用」任务直接返回 status=skip / 任务未启用（实测），
+    # 所以采集链路验证必须先启用；验完恢复停用，别把共享环境的默认态改掉。
+    c, d = save_task(1)
+    ck("task enabled for the round-trip", c == 200, "http=%d" % c)
+
     print("########## 4. collect round-trip (delete then recollect) ##########")
     _, before_total, _ = page_hanzi(admin, page_size=1)
+    index, pages, scanned_total = load_index(admin, RECOLLECT)
+    print("        分页扫描 %d 页/共 %d 条，取到待验证字 %d 个" % (pages, scanned_total, len(index)))
     ids = {}
     for char in RECOLLECT:
-        row = find_by_keyword(admin, char)
+        row = index.get(char)
         if row is None:
             ck("recollect target exists: %s" % char, False)
             continue
@@ -233,18 +325,7 @@ def main():
     # 把任务配置改成不可达地址：任务应报错。若"静默成功"，说明失败被吞了。
     bad_cfg = dict(cfg)
     bad_cfg["url"] = "http://127.0.0.1:9/definitely-not-there.json"
-    c, d = req("POST", "/v2/edu/collect/task/save", {
-        "collectTaskId": task["collectTaskId"],
-        "collectTaskName": task["collectTaskName"],
-        "collectTaskSourceType": "HANZI",
-        "collectTaskSourceConfig": json.dumps(bad_cfg, ensure_ascii=False),
-        "collectTaskSubject": task.get("collectTaskSubject"),
-        "collectTaskGradeLevel": task.get("collectTaskGradeLevel"),
-        "collectTaskGrade": task.get("collectTaskGrade"),
-        "collectTaskDifficulty": task.get("collectTaskDifficulty") or 3,
-        "collectTaskStatus": 0,
-        "collectTaskRemark": task.get("collectTaskRemark"),
-    }, token=admin)
+    c, d = save_task(1, bad_cfg)   # 保持启用，否则触发会被「任务未启用」先挡掉
     ck("save broken config accepted", c == 200, "http=%d" % c)
     c, d = req("POST", "/v2/edu/collect/task/trigger/%d" % task["collectTaskId"],
                token=admin, timeout=120)
@@ -252,25 +333,14 @@ def main():
     ck("unreachable source reports failure", trigger.get("status") == "fail",
        "status=%s msg=%s" % (trigger.get("status"), (trigger.get("message") or "")[:90]))
 
-    # 还原配置（别把库里留成坏地址）
-    c, d = req("POST", "/v2/edu/collect/task/save", {
-        "collectTaskId": task["collectTaskId"],
-        "collectTaskName": task["collectTaskName"],
-        "collectTaskSourceType": "HANZI",
-        "collectTaskSourceConfig": json.dumps(cfg, ensure_ascii=False),
-        "collectTaskSubject": task.get("collectTaskSubject"),
-        "collectTaskGradeLevel": task.get("collectTaskGradeLevel"),
-        "collectTaskGrade": task.get("collectTaskGrade"),
-        "collectTaskDifficulty": task.get("collectTaskDifficulty") or 3,
-        "collectTaskStatus": 0,
-        "collectTaskRemark": task.get("collectTaskRemark"),
-    }, token=admin)
+    # 还原配置与默认「停用」状态（别把共享环境留成启用+坏地址）
+    c, d = save_task(0, cfg)
     ck("restore original config", c == 200, "http=%d" % c)
 
     print("########## 7. collect log ##########")
     c, d = req("GET", "/v2/edu/collect/log/page?taskId=%d&pageNum=1&pageSize=5"
                % task["collectTaskId"], token=admin)
-    logs = (d.get("data") or {}).get("records") or []
+    logs = page_rows(d)
     ck("collect log written", len(logs) >= 1, "logs=%d" % len(logs))
     if logs:
         last = logs[0]
