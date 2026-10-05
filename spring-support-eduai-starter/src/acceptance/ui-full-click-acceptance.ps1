@@ -50,6 +50,17 @@ $script:AbTimeoutMs = 90000
 foreach ($c in (Get-Command agent-browser -All -ErrorAction SilentlyContinue)) {
     if ($c.Source -like '*.cmd') { $script:AbExe = $c.Source; break }
 }
+# Prefer the real .exe over the .cmd wrapper. The wrapper hands the arguments to
+# cmd.exe, whose command line caps at 8191 chars; calling the exe directly raises that to
+# the CreateProcess limit (32767). It matters because every page script travels as one
+# base64 argument, and a long inventory script overflowed the wrapper silently -- the
+# browser answered "The command line is too long." and the crawler read that as "0
+# controls on this page", which looks exactly like a clean pass.
+if ($script:AbExe -and $script:AbExe -like '*.cmd') {
+    $abDir = Split-Path -Parent $script:AbExe
+    $abExe = Join-Path $abDir 'node_modules\agent-browser\bin\agent-browser-win32-x64.exe'
+    if (Test-Path $abExe) { $script:AbExe = $abExe }
+}
 if (-not $script:AbExe) { $c = Get-Command agent-browser -ErrorAction SilentlyContinue; if ($c) { $script:AbExe = $c.Source } }
 if (-not $script:AbExe) { Write-Host 'agent-browser not found in PATH'; exit 2 }
 
@@ -76,6 +87,12 @@ function AbRaw {
 function Js {
     param([string]$Script, [int]$TimeoutMs = 0)
     $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Script))
+    # The exe is called directly (see AbExe resolution), so the limit is CreateProcess'
+    # 32767 rather than cmd.exe's 8191. Keep a margin: AbRaw joins args and a wrapper
+    # could reappear.
+    if ($b64.Length -gt 24000) {
+        throw ("eval payload is {0} base64 chars, far past the command-line limit; split the page script" -f $b64.Length)
+    }
     $raw = AbRaw @('eval', '-b', $b64) $TimeoutMs
     if ([string]::IsNullOrWhiteSpace($raw) -or $raw -eq 'null' -or $raw -eq 'undefined') { return '' }
     if ($raw -match 'Evaluation error') { return '' }
@@ -266,10 +283,8 @@ function Build-InventoryJs {
     if (el.closest('.el-select-dropdown, .el-popper') && !el.classList.contains('el-dropdown-menu__item')) return;
     const label = (el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().slice(0, 26);
     const cls = (el.className || '').toString();
-    // "Already selected" tokens, including the product's own state classes: the insect 3D
-    // hotspot marks its open dot with `is-open` (see InsectStage3D.vue styles), so pressing
-    // an open hotspot CLOSES the card and the before/after state is identical -- without
-    // this it was reported as a dead button.
+    // "Already selected" tokens, incl. product state classes: the insect 3D hotspot marks
+    // its open dot `is-open`, so pressing an open hotspot CLOSES it (identical state).
     const active = (/\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
       /--active\b/.test(cls) ||
       el.getAttribute('aria-checked') === 'true' ||
@@ -290,23 +305,39 @@ function Build-InventoryJs {
     else if (cls.indexOf('el-pager') >= 0) kind = 'pager';
     else if (cls.indexOf('el-menu-item') >= 0) kind = 'menu';
     else if (!label) kind = 'icon-button';
-    out.push({ id: id, kind: kind, label: label, tag: el.tagName.toLowerCase(), active: active });
+    out.push({ id: id, kind: kind, label: label, tag: el.tagName.toLowerCase(), cls: cls.slice(0, 40), active: active });
   });
-  // ---- second pass: clickable things that are not buttons ----
-  // A button-only inventory silently skips the student portal module cards: they are
-  // <div class="pp-card"> / <span class="pp-card__title"> with an @click handler and
-  // cursor:pointer, but no button tag, no .el-button class and no role="button".
-  // `cursor` is an inherited CSS property, so the whole subtree of a card reports
-  // pointer; tag only the OUTERMOST pointer element of a chain so one card costs one
-  // click instead of one click per nested span.
+  // ---- pass 2: pointer-driven controls (student cards are div/span, not buttons) ----
+  // outermost pointer element only: `cursor` is inherited, so a card would otherwise
+  // cost one click per nested span.
   const pointerLike = el => {
     try { return getComputedStyle(el).cursor === 'pointer'; } catch (e) { return false; }
   };
+  // cursor:pointer alone is NOT evidence of a control: the weather widget paints its seven
+  // forecast columns with pointer cursors and hover styles but binds no handler at all,
+  // so a pointer-only scan reported 7 dead buttons. Require a real handler.
+  const hasHandler = el => {
+    try {
+      const vei = el._vei;
+      if (vei && vei.on) { for (const k in vei.on) { if (/^on(click|pointer|mouse)/i.test(k)) return true; } }
+      const vn = el.__vnode;
+      if (vn && vn.props) { for (const k in vn.props) { if (/^on(click|pointer|mouse)/i.test(k)) return true; } }
+      const pc = el.__vueParentComponent;
+      if (pc && pc.vnode && pc.vnode.props) { for (const k in pc.vnode.props) { if (/^on(click|pointer|mouse)/i.test(k)) return true; } }
+    } catch (e) {}
+    return false;
+  };
   const SEL2 = 'div, span, li, i, svg, img, section, article, td, tr, label, a';
+  // never walk layout chrome here; pass 2 matches almost anything with cursor:pointer
+  const CHROME = '.layout-aside, .layout-tabs-bar, .layout-header, .layout-logo, aside.el-aside, header.el-header';
   root.querySelectorAll(SEL2).forEach(el => {
     if (el.hasAttribute('data-uitest')) return;
     if (!vis(el)) return;
     if (el.closest('.el-select-dropdown, .el-popper')) return;
+    if (el.closest(CHROME)) return;
+    const clickable = hasHandler(el) || el.tagName === 'A' || el.getAttribute('role') === 'button' ||
+      el.hasAttribute('tabindex') || el.hasAttribute('onclick');
+    if (!clickable) return;
     if (!pointerLike(el)) return;
     // outermost-only: an ancestor that is itself pointer-like owns this interaction
     let p = el.parentElement, skip = false;
@@ -326,11 +357,8 @@ function Build-InventoryJs {
     seen.add(key);
     const id = 'u' + out.length;
     el.setAttribute('data-uitest', id);
-    // "Already active" cannot be hardcoded to N for this pass. Element Plus puts
-    // `is-active` on the <li class="el-menu-item">, one level ABOVE the <span> that
-    // carries cursor:pointer, and a sidebar entry for the route you are already on is a
-    // no-op by design. Hardcoding N reported the current menu item as a dead button
-    // twice on /home.
+    // active must consider ancestors: el-menu-item carries is-active one level ABOVE the
+    // pointer span, and a nav entry for the current route is a no-op by design
     const activeCls = /\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
       el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true' ||
       !!el.closest('.is-active, .is-checked, [aria-current="page"], [aria-selected="true"]');
@@ -340,9 +368,12 @@ function Build-InventoryJs {
         const href = a.getAttribute('href') || '';
         activeHref = !!href && href !== '#' && location.pathname.indexOf(href) === 0;
     }
-    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), active: (activeCls || activeHref) ? 'Y' : 'N' });
+    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), cls: cls.slice(0, 40), active: (activeCls || activeHref) ? 'Y' : 'N' });
   });
-  return JSON.stringify(out);
+  // prefix the scope so the caller learns WHICH area was inventoried
+  const scopeKind = (document.querySelector('main.el-main') ? 'main'
+    : (document.querySelector('.main-content') ? 'main-content' : (document.querySelector('main') ? 'main-tag' : 'body')));
+  return '##' + scopeKind + '##' + JSON.stringify(out);
 })()
 "@
 }
@@ -366,6 +397,14 @@ $jsReset = @'
     '.el-dialog__headerbtn, .el-drawer__close-btn, .el-message-box__headerbtn, .ant-modal-close'))
     .filter(vis).forEach(b => { try { b.click(); } catch (e) {} });
   return 'ok';
+})()
+'@
+
+$jsOverlayCount = @'
+(() => {
+  const vis = el => { if (!el) return false; const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
+  return String(Array.from(document.querySelectorAll('.el-dialog, .el-drawer, .el-message-box')).filter(vis).length);
 })()
 '@
 
@@ -418,6 +457,7 @@ $jsSeedSearch = @'
 })()
 '@
 $searchLabel = -join @([char]0x641C, [char]0x7D22)
+$searchRx = [regex]::Escape($searchLabel) + '|^search$'
 # Judging a reset button must look at page state: with nothing typed into the filter
 # inputs, reset is SUPPOSED to change nothing, and calling that a dead button is a false
 # positive (measured on /edu/fun/config: seeding live-filters 42->0, reset restores 0->42,
@@ -441,6 +481,24 @@ $jsFilterState = @'
   const filled = inputs.filter(i => (i.value || '').trim().length > 0);
   return JSON.stringify({ inputs: inputs.length, filled: filled.length,
     firstFilled: filled.length ? ((filled[0].value || '').trim().slice(0, 24)) : '' });
+})()
+'@
+
+$jsActiveTabLabel = @'
+(() => {
+  const t = document.querySelector('.layout-tabs-bar__item.is-active, .el-tabs__item.is-active, [aria-selected="true"]');
+  return t ? ((t.innerText || '').trim().slice(0, 26)) : '';
+})()
+'@
+
+$jsLayoutSnapshot = @'
+(() => {
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && /layout/i.test(k)) out[k] = localStorage.getItem(k);
+  }
+  return JSON.stringify(out);
 })()
 '@
 
@@ -506,7 +564,14 @@ $jsInstall = @'
       }, function (err) { window.__uit.urls.push(url); window.__uit.statuses.push(0); throw err; });
     };
   }
+  const ow = window.open;
   const XO = XMLHttpRequest.prototype.open;
+  window.open = function (u) {
+    // A shortcut that opens a new tab changes nothing in THIS document, so without this
+    // hook the click looks dead. Record it as a request instead of guessing.
+    try { window.__uit.urls.push('WINDOW_OPEN ' + String(u || '')); window.__uit.statuses.push(200); } catch (e) {}
+    return ow.apply(window, arguments);
+  };
   XMLHttpRequest.prototype.open = function (method, url) {
     this.__uitUrl = String(url || '');
     return XO.apply(this, arguments);
@@ -656,6 +721,15 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
     }
     Ck 'admin logged in' $logged
     if (-not $logged) { Write-Host 'no session, abort'; exit 2 }
+
+# The crawl mutates persisted UI state (dashboard widgets). Snapshot it now so the run is
+# repeatable and leaves the environment as it found it.
+$script:LayoutSnap = ''
+try {
+    $snapRaw = [string](Js $jsLayoutSnapshot 30000)
+    if ($snapRaw -and $snapRaw.StartsWith('{')) { $script:LayoutSnap = $snapRaw }
+} catch { $script:LayoutSnap = '' }
+Write-Host ('  dashboard layout snapshot: {0} key(s)' -f (@($script:LayoutSnap | ConvertFrom-Json -AsHashtable).Keys.Count))
 }
 
 # ---------- Phase 1: page content controls ----------
@@ -684,11 +758,36 @@ if (-not $SkipContent) {
             Js $jsResetEv | Out-Null
         }
 
-        $i = 0; $restarts = 0; $clicked = 0
+        $i = 0; $restarts = 0; $clicked = 0; $prevCount = 0; $modeRestarts = 0
         while ($true) {
             $inv = Js $jsInvContent
+            $scopeKind = 'main'
+            if ($inv -match '^##([^#]+)##') { $scopeKind = $Matches[1]; $inv = $inv.Substring(4 + $scopeKind.Length) }
+            if ($scopeKind -eq 'body') {
+                Write-Host '    [WARN] inventory scope degraded to body (main.el-main not rendered yet)'
+            }
             if (-not $inv) { Ck "$rname inventory readable" $false ''; break }
-            $items = @($inv | ConvertFrom-Json)
+            $items = @()
+            try { $items = @($inv | ConvertFrom-Json) }
+            catch {
+                # An unparseable inventory used to be swallowed silently and showed up as
+                # "0 clicks, 0 dead", which reads exactly like a clean pass. Print the head
+                # of what came back so the failure is visible instead of silent.
+                $head = $inv.Substring(0, [Math]::Min(200, $inv.Length))
+                Ck "$rname inventory readable" $false ("raw=" + $head)
+                break
+            }
+            # A control can switch the page into another mode: /home's "custom layout"
+            # button replaces the widget board with the component palette, so everything
+            # after it in the walk belonged to the new mode and the widgets were never
+            # clicked. When the control count collapses, walk the page again from the top
+            # (bounded, so two modes toggling cannot loop forever).
+            if ($prevCount -ge 4 -and $items.Count -lt [Math]::Floor($prevCount / 2) -and $modeRestarts -lt 3) {
+                $modeRestarts++
+                Write-Host ('    [mode switch] controls {0} -> {1}: re-walking this page' -f $prevCount, $items.Count)
+                $i = 0
+            }
+            $prevCount = $items.Count
             if ($i -ge $items.Count) { break }
             $it = $items[$i]
             $i++
@@ -709,6 +808,22 @@ if (-not $SkipContent) {
                 if ($postSeed.rows -ne $preSeed.rows -or $postSeed.htmlLen -ne $preSeed.htmlLen) {
                     $expectNoop = $true
                 }
+            }
+            # Close whatever the previous click opened and wait for the close animation.
+            # A control sitting behind an open modal is unreachable for a real user too --
+            # and clicking it anyway produced a bogus verdict: the previous dialog was
+            # still open, so openAdd() re-assigned identical state, Vue changed nothing,
+            # and the button looked dead. (Bookmark widget on /home, student session.)
+            $guard = 0
+            while ($guard -lt 10) {
+                if ((Js $jsOverlayCount 20000) -eq '0') { break }
+                Js $jsReset | Out-Null
+                Start-Sleep -Milliseconds 300
+                $guard++
+            }
+            if ($guard -ge 10) {
+                [void]$script:Rows.Add(("$path|$($it.kind)|$($it.label)|blocked-by-modal|$path|0|0|0|0"))
+                continue
             }
             $before = (Js $jsProbe) | ConvertFrom-Json
             # Let a leftover toast from an earlier click expire before baselining, so the
@@ -841,13 +956,25 @@ if (-not $SkipContent) {
                 if ($cur -and $cur -eq $lbl) { $effect = 'already-current-page' }
             }
             if ($effect -eq 'none' -and $expectNoop) { $effect = 'already-applied-live-filter' }
-            # Reset with nothing to clear is a no-op by design, not a dead button.
-            if ($effect -eq 'none' -and $lbl -match $resetRx) {
+            # Reset / search with nothing in the filter is a no-op by design, not a dead button.
+            # Pressing search with an empty query asks for exactly the rows already shown
+            # (ReTable does not even issue a request), and reset has nothing to clear.
+            # The real defect is the opposite: a filled filter that a click leaves untouched.
+            if ($effect -eq 'none' -and ($lbl -match $resetRx -or $lbl -match $searchRx)) {
                 $fs = $null
                 try { $fs = (Js $jsFilterState 20000) | ConvertFrom-Json } catch { $fs = $null }
-                if ($fs -and $fs.filled -eq 0) { $effect = 'no-filter-to-clear' }
+                if ($fs -and $fs.filled -eq 0) { $effect = 'no-filter-applied' }
             }
-            if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' (no visible effect, wasActive=$($it.active))") }
+            # A shortcut that points at the page you are already on is a no-op by design
+            # (the dashboard quick-access widget pushes router paths, and pushing the
+            # current path changes nothing). Match on the active tab's label rather than
+            # hard-coding that one widget.
+            if ($effect -eq 'none' -and ($it.kind -eq 'clickable' -or $it.kind -eq 'link')) {
+                $tabLbl = ''
+                try { $tabLbl = [string](Js $jsActiveTabLabel 20000) } catch { $tabLbl = '' }
+                if ($tabLbl -and $lbl -and $tabLbl.Contains($lbl)) { $effect = 'already-on-this-page' }
+            }
+            if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' tag=$($it.tag) cls='$($it.cls)' (no visible effect, wasActive=$($it.active))") }
 
             Js $jsReset | Out-Null
             Start-Sleep -Milliseconds 200
@@ -866,6 +993,7 @@ if (-not $SkipChrome) {
     $i = 0; $restarts = 0
     while ($true) {
         $inv = Js $jsInvChrome
+            if ($inv -match '^##[^#]+##') { $inv = $inv.Substring($inv.IndexOf('##', 2) + 2) }
         if (-not $inv) { Ck 'chrome inventory readable' $false ''; break }
         $items = @($inv | ConvertFrom-Json)
         if ($i -ge $items.Count) { break }
@@ -899,6 +1027,19 @@ if (-not $SkipChrome) {
         if ($restarts -gt 60) { break }
     }
     AbRaw @('screenshot', (Join-Path $OutDir 'chrome-after.png')) 60000 | Out-Null
+}
+
+# ---------- restore the dashboard layout the crawl mutated ----------
+# Clicking the dashboard's "remove widget" control really does delete a widget, and the
+# layout is cached in localStorage ("...:layout"). Left alone, every run would cover less
+# than the previous one -- the dashboard ended up with 3 controls instead of 49. Snapshot
+# before the crawl, put it back afterwards, and assert the restore.
+if ($script:LayoutSnap) {
+    $enc = [uri]::EscapeDataString($script:LayoutSnap)
+    $restoreJs = "(() => { const s = JSON.parse(decodeURIComponent('$enc')); const ks = Object.keys(s); ks.forEach(k => localStorage.setItem(k, s[k])); return ks.join(','); })()"
+    $done = ''
+    try { $done = [string](Js $restoreJs 40000) } catch { $done = '' }
+    Ck 'dashboard layout restored after the crawl' (($done -split ',').Count -ge 1) "keys=$done"
 }
 
 # ---------- report ----------
