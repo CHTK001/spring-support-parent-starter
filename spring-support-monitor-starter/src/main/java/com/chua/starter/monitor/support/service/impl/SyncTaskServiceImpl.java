@@ -140,6 +140,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      */
     @PostConstruct
     public void initScheduler() {
+        addMissingSourceColumns();
         scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(2);
         scheduler.setThreadNamePrefix("sync-task-");
@@ -155,6 +156,110 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         } catch (Exception e) {
             log.warn("[sync-task] 恢复定时任务失败（同步任务表可能尚未建立）: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 输入源扩展列（旧库缺失时补齐）。
+     *
+     * <p>表名与列名均为本类固定注册项，不接收外部标识符；值定义不属于 DDL 参数绑定范围。</p>
+     */
+    private static final Map<String, String> SOURCE_MISSING_COLUMNS = Map.of(
+            "ms_sync_task_source_type", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_type VARCHAR(16) NOT NULL DEFAULT 'JDBC' COMMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML'",
+            "ms_sync_task_source_path", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_path VARCHAR(512) DEFAULT NULL COMMENT '源定位：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址'",
+            "ms_sync_task_source_options", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_options TEXT DEFAULT NULL COMMENT '输入源扩展选项 JSON'");
+
+    /**
+     * 旧库里存在但被建成 NOT NULL 的列（应为可空）。
+     *
+     * <p>FILE / DIR / HTTP 三种输入源<b>没有</b>源数据源，也没有源 SQL，旧库把这两列建成
+     * NOT NULL，于是插这类任务报 {@code Column 'ms_sync_task_source_datasource_id' cannot be null}。</p>
+     *
+     * <p>表名与列名均为本类固定注册项，不接收外部标识符。</p>
+     */
+    private static final Map<String, String> SOURCE_NULLABLE_COLUMNS = Map.of(
+            "ms_sync_task_source_datasource_id",
+            "ALTER TABLE ms_sync_task MODIFY COLUMN ms_sync_task_source_datasource_id BIGINT DEFAULT NULL COMMENT '源数据源 ID(ms_datasource.id)，仅 JDBC 源使用'",
+            "ms_sync_task_source_sql",
+            "ALTER TABLE ms_sync_task MODIFY COLUMN ms_sync_task_source_sql TEXT DEFAULT NULL COMMENT '源读取 SQL，必须是 SELECT，仅 JDBC 源使用'");
+
+    /**
+     * 把旧库的 {@code ms_sync_task} 结构对齐到建表脚本：补齐缺失列 + 放宽应为可空的列。
+     *
+     * <p><b>为什么必须在这里做</b>：建表语句用的是 {@code CREATE TABLE IF NOT EXISTS}，
+     * 对<b>已存在</b>的表既不补列也不改约束。旧库实测有三处漂移，缺一不可：</p>
+     * <ol>
+     *   <li>缺 {@code source_type / source_path / source_options} 三列 ——
+     *       {@code taskMapper.insert} 一律报
+     *       {@code Unknown column 'ms_sync_task_source_type'}，<b>任何同步任务都建不出来</b>，
+     *       连只需 source_type 取默认值的 JDBC 任务也建不了；</li>
+     *   <li>{@code source_datasource_id} 与 {@code source_sql} 被建成 NOT NULL ——
+     *       FILE / DIR / HTTP 源天然没有这两项，插入必报 cannot be null；</li>
+     *   <li>{@code initScheduler} 恢复定时那段把异常吞成一条 warn，启动日志完全看不出问题，
+     *       功能却是全废的。</li>
+     * </ol>
+     *
+     * <p>做法与数据源中心给 {@code sys_setting} 补列一致：读表结构 → 缺则 ADD / 约束不符则 MODIFY
+     * → 单项失败不阻断启动。</p>
+     */
+    private void addMissingSourceColumns() {
+        // connection(null) 取的是平台默认数据源 —— 要改的正是平台自己库里 ms_sync_task 的结构，
+        // 不能借数据源中心里配置的业务数据源（那些连的是外部库，改了也没用）
+        try (Connection connection = datasourceService.connection(null)) {
+            Map<String, Boolean> columns = columnNullability(connection, "ms_sync_task");
+            if (columns.isEmpty()) {
+                log.warn("[sync-task] ms_sync_task 尚不存在或读不到列，跳过结构对齐");
+                return;
+            }
+            try (java.sql.Statement statement = connection.createStatement()) {
+                for (Map.Entry<String, String> entry : SOURCE_MISSING_COLUMNS.entrySet()) {
+                    if (columns.containsKey(entry.getKey())) {
+                        continue;
+                    }
+                    try {
+                        statement.execute(entry.getValue());
+                        log.info("[sync-task] 已补齐表 ms_sync_task 缺失列 {}", entry.getKey());
+                    } catch (java.sql.SQLException e) {
+                        log.warn("[sync-task] 补齐列 {} 失败: {}", entry.getKey(), e.getMessage());
+                    }
+                }
+                for (Map.Entry<String, String> entry : SOURCE_NULLABLE_COLUMNS.entrySet()) {
+                    Boolean nullable = columns.get(entry.getKey());
+                    if (nullable == null || nullable) {
+                        continue;
+                    }
+                    try {
+                        statement.execute(entry.getValue());
+                        log.info("[sync-task] 已把表 ms_sync_task 的 {} 放宽为可空", entry.getKey());
+                    } catch (java.sql.SQLException e) {
+                        log.warn("[sync-task] 放宽列 {} 为可空失败: {}", entry.getKey(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[sync-task] 对齐 ms_sync_task 表结构失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 读取表的列名与是否可空。
+     *
+     * @param connection 数据库连接
+     * @param tableName  表名
+     * @return 列名（小写）到可空标记的映射；读不到返回空映射
+     */
+    private Map<String, Boolean> columnNullability(Connection connection, String tableName) {
+        Map<String, Boolean> columns = new LinkedHashMap<>();
+        try (java.sql.Statement statement = connection.createStatement();
+             java.sql.ResultSet rs = statement.executeQuery(
+                     "SELECT COLUMN_NAME, IS_NULLABLE FROM information_schema.COLUMNS "
+                             + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + tableName + "'")) {
+            while (rs.next()) {
+                columns.put(rs.getString(1).toLowerCase(Locale.ROOT), "YES".equalsIgnoreCase(rs.getString(2)));
+            }
+        } catch (Exception e) {
+            log.warn("[sync-task] 读取 {} 列结构失败: {}", tableName, e.getMessage());
+        }
+        return columns;
     }
 
     /**
