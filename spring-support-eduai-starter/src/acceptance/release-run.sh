@@ -142,7 +142,9 @@ cd "$APP_DIR"
 # 顺序有依赖：student-password-acceptance 会临时改口令并在结束时改回，
 # 排在 student-manage-acceptance 之前，保证后者依赖的 2026000001/stu123456 在它跑完后仍有效。
 # 新增功能必须把自己的专项套件加进这个列表，否则「测过」只停留在开发机。
-SUITES="acceptance.py student-password-acceptance.py student-manage-acceptance.py first-login-password-acceptance.py paper-assign-acceptance.py marking-acceptance.py"
+# hanzi-collect-acceptance 会真触发一次采集（下载 27MB 公开字典），耗时按分钟计，
+# 且需要目标机能出网；出网不通时它会把采集段判失败（这是应有行为，不是环境问题）。
+SUITES="acceptance.py student-password-acceptance.py student-manage-acceptance.py first-login-password-acceptance.py paper-assign-acceptance.py marking-acceptance.py hanzi-collect-acceptance.py"
 ACC=OK
 SUITE_RESULT=""
 for s in $SUITES; do
