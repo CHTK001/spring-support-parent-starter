@@ -163,12 +163,16 @@ Ab open "$Base/edu/hanzi" | Out-Null
 WaitTrue 'document.querySelectorAll(".el-table__body-wrapper tbody tr").length > 0' 'hanzi rows rendered' 45 | Out-Null
 $rowCount = [int](Js 'document.querySelectorAll(".el-table__body-wrapper tbody tr").length')
 Ck 'hanzi table has rows' ($rowCount -gt 0) "rows=$rowCount"
-# el-pagination total text, e.g. "GONG 3496 TIAO" (Chinese labels, digits are ASCII)
-$pagination = Js '(() => { const el = document.querySelector(".el-pagination"); return el ? el.innerText.replace(/\s+/g, " ") : ""; })()'
-Ck 'pagination shows total text' ($pagination -match '\d') "text=$pagination"
-$uiTotal = 0
-if ($pagination -match '(\d+)') { $uiTotal = [int]$Matches[1] }
-Ck 'ui total equals api total' ($uiTotal -eq $apiTotal) "ui=$uiTotal api=$apiTotal"
+# Element Plus pagination footer prints only "<size>TIAO/YE" here (no "GONG N TIAO"),
+# so the total is derived from the pager itself: pages = last pager button, and
+# total must satisfy (pages-1)*size < total <= pages*size. That is a real cross-check
+# against the API total, not a restatement of it.
+$pager = Js '(() => { const el = document.querySelector(".el-pagination"); if (!el) return "{}"; const items = Array.from(el.querySelectorAll(".el-pager li")).map(li => (li.innerText || "").trim()); const nums = items.map(t => parseInt(t, 10)).filter(n => !isNaN(n)); const sizeSel = el.querySelector(".el-select input, select"); const m = (el.innerText || "").match(/(\d+)/); return JSON.stringify({ pages: nums.length ? Math.max.apply(null, nums) : 0, size: m ? parseInt(m[1], 10) : 0, text: (el.innerText || "").replace(/\s+/g, " ").trim() }); })()'
+$pagerObj = $pager | ConvertFrom-Json
+Ck 'pagination shows pager and page size' (($pagerObj.pages -gt 0) -and ($pagerObj.size -gt 0)) ("pages={0} size={1} text={2}" -f $pagerObj.pages, $pagerObj.size, $pagerObj.text)
+$lo = ($pagerObj.pages - 1) * $pagerObj.size
+$hi = $pagerObj.pages * $pagerObj.size
+Ck 'ui page count matches api total' (($apiTotal -gt $lo) -and ($apiTotal -le $hi)) ("pages={0} size={1} -> ({2},{3}] contains api={4}" -f $pagerObj.pages, $pagerObj.size, $lo, $hi, $apiTotal)
 Ab screenshot (Join-Path $OutDir 'ui-hanzi-list.png') | Out-Null
 
 # ---------- 2. search a seeded character and read its cells ----------
@@ -176,6 +180,7 @@ Write-Host '########## 2. search a seeded character (UI cells carry the seeded v
 # Keyword is a draft + explicit search button: typing does NOT query, so the
 # script must click the search button (v-model=searchDraft + commitSearch).
 $jsSearch = @"
+(() => {
   const target = String.fromCharCode(0x660E);
   const box = document.querySelector('.filter-card input');
   if (!box) return 'no-input';
@@ -183,7 +188,7 @@ $jsSearch = @"
   Object.getOwnPropertyDescriptor(proto, 'value').set.call(box, target);
   box.dispatchEvent(new Event('input', { bubbles: true }));
   box.dispatchEvent(new Event('change', { bubbles: true }));
-      const label = String.fromCharCode(0x641C, 0x7D22); // search button label
+  const label = String.fromCharCode(0x641C, 0x7D22); // search button label
   const btn = Array.from(document.querySelectorAll('.filter-actions button'))
       .find(b => b.offsetParent !== null && (b.innerText || '').trim().indexOf(label) >= 0);
   if (!btn) return 'typed-no-button';
@@ -197,6 +202,7 @@ Start-Sleep -Seconds 2
 # Column order: char / pinyin / strokes / radical / structure / stroke-order /
 # meaning / image / grade / actions
 $jsRead = @"
+(() => {
   const target = String.fromCharCode(0x660E);
   const rows = Array.from(document.querySelectorAll('.el-table__body-wrapper tbody tr'));
   const row = rows.find(r => (r.innerText || '').indexOf(target) >= 0);
@@ -209,7 +215,9 @@ $readRaw = Js $jsRead
 Ck 'search finds the character' ($readRaw -match '"found":\s*true') "raw=$($readRaw.Substring(0, [Math]::Min(240, $readRaw.Length)))"
 # Real assertion: the pinyin / strokes / radical cells must equal the seeded values.
 # Expected values are built from code points so this file stays ASCII.
-$expectRadical = [string][char]0x65E5                                        # ri (sun radical)
+$expectPinyin  = "m$([char]0x00ED)ng"                              # ming, tone mark via code point
+$expectRadical = [string][char]0x65E5                                    # ri (sun radical)
+$expectStrokes = '8'                                       # seeded stroke count for the char
 if ($readRaw -match '"cells":\s*\[(.*?)\]\s*\}') {
     $cellsJson = $Matches[1]
     $cellValues = [regex]::Matches($cellsJson, '"((?:[^"\\]|\\.)*)"') | ForEach-Object { $_.Groups[1].Value }
@@ -217,7 +225,7 @@ if ($readRaw -match '"cells":\s*\[(.*?)\]\s*\}') {
     if ($cellValues.Count -ge 5) {
         # cells[0]=char cells[1]=pinyin cells[2]=strokes cells[3]=radical cells[4]=structure
         Ck 'UI pinyin cell matches the seed' ($cellValues[1] -eq $expectPinyin) "ui='$($cellValues[1])' expect='$expectPinyin'"
-        Ck 'UI strokes cell matches the seed' ($cellValues[2] -eq '8') "ui='$($cellValues[2])' expect=8"
+        Ck 'UI strokes cell matches the seed' ($cellValues[2] -eq $expectStrokes) "ui='$($cellValues[2])' expect=$expectStrokes"
         Ck 'UI radical cell matches the seed' ($cellValues[3] -eq $expectRadical) "ui='$($cellValues[3])'"
     }
 } else {

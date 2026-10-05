@@ -339,7 +339,11 @@ def main():
     # 6b useMirrors=false（严格 pin 住配置的地址）：不可达必须**报错**。
     #     没有这条就等于没有「只用我配的源」这个能力，出错也被兜底掩盖。
     strict_cfg = dict(cfg)
-    strict_cfg["url"] = "http://127.0.0.1:9/definitely-not-there.json"
+    # URL must be UNIQUE per run: the provider caches downloads on disk (12h), and a
+    # cache entry keyed by an earlier bogus URL would make this probe pass for the
+    # wrong reason. Observed exactly that: a "strict" run reported success purely
+    # because a previous fallback run had cached the body under that URL.
+    strict_cfg["url"] = "http://127.0.0.1:9/definitely-not-there.json?probe=%d" % int(time.time() * 1000)
     strict_cfg["useMirrors"] = False
     c, d = save_task(1, strict_cfg)
     ck("save strict config accepted", c == 200, "http=%d" % c)
