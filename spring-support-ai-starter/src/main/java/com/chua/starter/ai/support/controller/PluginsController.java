@@ -64,6 +64,8 @@ public class PluginsController {
     @Permission("admin")
     @PutMapping("/global")
     public ApiResult<Boolean> updateGlobalPluginStatus(@RequestBody Map<String, Object> body) {
+        // ★ 仍限 admin：端点语义就是「改**全局**插件启停状态」，写的是 sys_ai_global_setting。
+        //   普通账号要改自己那份，请走 /custom（账号级注册表）或设置中心的用户覆盖。
         String pluginId = body == null ? null : (String) body.get("pluginId");
         Boolean enabled = body == null ? null : (Boolean) body.get("enabled");
         if (pluginId == null || pluginId.isBlank() || enabled == null) {
@@ -90,6 +92,7 @@ public class PluginsController {
     @Permission("admin")
     @PostMapping("/reload/{pluginId}")
     public ApiResult<Map<String, Object>> reloadPlugin(@PathVariable String pluginId) {
+        // ★ 仍限 admin：重载会作用到运行中的共享插件实例，影响所有账号，不属于个人偏好。
         log.info("重新加载插件: pluginId={}", pluginId);
 
         pluginCatalogService.refresh();
@@ -161,9 +164,12 @@ public class PluginsController {
      * @param body 注册参数
      * @return 注册结果与识别出的工具
      */
-    @Permission("admin")
     @PostMapping("/custom")
     public ApiResult<Map<String, Object>> addCustomTool(@RequestBody Map<String, Object> body) {
+        // 不限管理员：注册表按账号隔离（CustomLocalToolRegistrar 读「用户覆盖→全局」、
+        // 写时管理员落全局、普通账号落自己那份），所以普通账号注册只影响自己。
+        // 注意 pluginCatalogService.refresh() 仍是**全局**快照失效 —— 它只是重建缓存，
+        // 不会把别人的注册项改掉，但普通账号的操作会触发一次全局重建（可接受，非正确性问题）。
         String name = body == null ? null : Objects.toString(body.get("name"), null);
         String path = body == null ? null : Objects.toString(body.get("path"), null);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -184,13 +190,14 @@ public class PluginsController {
     }
 
     /**
-     * 移除自定义本地工具（管理员）。请求体 <code>{pluginId}</code>，
+     * 移除自定义本地工具。请求体 <code>{pluginId}</code>，
      * 仅对 {@code custom:} 前缀的自定义工具生效（id 含斜杠，故走请求体而非路径变量）。
+     *
+     * <p>不限管理员：同 {@link #addCustomTool}，删除只作用于调用者自己那份注册表。</p>
      *
      * @param body {pluginId}
      * @return 移除结果
      */
-    @Permission("admin")
     @DeleteMapping("/custom")
     public ApiResult<Map<String, Object>> removeCustomTool(@RequestBody Map<String, Object> body) {
         String pluginId = body == null ? null : Objects.toString(body.get("pluginId"), null);

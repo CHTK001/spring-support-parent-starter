@@ -29,6 +29,16 @@ import java.util.Map;
 /**
  * AI 模型定义控制器，提供模型的增删改查和连通性测试。
  *
+ * <p><b>按账号隔离，不限管理员</b>：模型清单属于账号自己，与 {@code sys_ai_app_key} /
+ * {@code sys_ai_role} 同口径。控制器层不再挂 {@code @Permission("admin")}，
+ * 隔离改由服务层的归属守卫实施（{@code AiModelServiceImpl}）：管理员看全量，
+ * 普通账号只看自己的，写只认归属人，无归属的历史行谁都不可写。</p>
+ *
+ * <p>此前这里六个端点整类限 admin，但前端并未同步：侧边栏「模型管理」对所有账号可见
+ * （只有「调度」带 {@code adminOnly}），默认模型页写着「请先在『模型管理』中添加对应类型的模型」，
+ * 聊天输入框与模型选择器在没模型时也会「跳转到模型管理页面」。
+ * 结果普通账号按界面指引点进去必然 403 —— 前后端不一致，属实缺陷。</p>
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -46,7 +56,6 @@ public class AiModelController {
      *
      * @return 结果列表，无数据时为空列表
      */
-    @Permission("admin")
     @Operation(summary = "查询所有模型")
     @GetMapping
     public List<AiModelDTO> list() {
@@ -59,14 +68,12 @@ public class AiModelController {
      * @param model 模型，不允许为 null
      * @return Ai模型DTO 对象
      */
-    @Permission("admin")
     @Operation(summary = "新建模型")
     @PostMapping
     public AiModelDTO create(@RequestBody AiModelDTO model) {
         return modelService.create(model);
     }
 
-    @Permission("admin")
     @Operation(summary = "更新模型")
     @PutMapping("/{modelId}")
     public AiModelDTO update(@Parameter(description = "模型主键") @PathVariable Long modelId,
@@ -79,7 +86,6 @@ public class AiModelController {
      *
      * @param modelId 模型ID，不允许为 null
      */
-    @Permission("admin")
     @Operation(summary = "删除模型")
     @DeleteMapping("/{modelId}")
     public void delete(@Parameter(description = "模型主键") @PathVariable Long modelId) {
@@ -92,7 +98,6 @@ public class AiModelController {
      * @param modelId 模型ID，不允许为 null
      * @return Ai模型DTO 对象
      */
-    @Permission("admin")
     @Operation(summary = "测试模型连通性延迟（非本地模型）")
     @PostMapping("/{modelId}/test-latency")
     public AiModelDTO testLatency(@Parameter(description = "模型主键") @PathVariable Long modelId) {
@@ -109,11 +114,17 @@ public class AiModelController {
      * @param compositeId 复合模型标识 providerId:modelName
      * @return 包含最新启用状态的对象 {@code {isActive:boolean}}
      */
-    @Permission("admin")
     @Operation(summary = "切换模型启用状态")
+    @Permission("admin")
     @PutMapping("/{compositeId}/toggle-active")
     public Map<String, Object> toggleActive(@Parameter(description = "复合模型ID providerId:modelName")
                                             @PathVariable("compositeId") String compositeId) {
+        // ★ 本端点与其余五个**不同**：它不经过 AiModelService，而是直接改
+        //   sys_ai_provider_model.enabled —— 那是**全局共享**的模型可用性表，
+        //   EffectiveChatModelResolver / ModelClientResolver / RagClientManager
+        //   都按 enabled=true 读它来决定「谁能用哪些模型」。
+        //   放开它等于让任意账号一键停掉所有人的模型，故仍限 admin。
+        //   待该表也按账号隔离后，本端点才能跟着放开。
         int separator = compositeId.indexOf(':');
         if (separator <= 0 || separator >= compositeId.length() - 1) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "模型ID格式非法，应为 providerId:modelName");

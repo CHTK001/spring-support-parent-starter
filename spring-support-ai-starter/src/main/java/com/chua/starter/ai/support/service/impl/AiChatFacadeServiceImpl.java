@@ -109,8 +109,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * 别名映射缓存 TTL（5 分钟）：别名 → 主模型 code，从 sys_ai_model.sys_ai_model_aliases 加载。
      */
     private static final long ALIAS_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
-    private volatile Map<String, String> aliasToModelCache;
-    private volatile long aliasCacheLoadedAt;
+    /**
+     * 别名映射缓存，**按账号分桶**。
+     *
+     * <p>{@code sys_ai_model} 已按 {@code sys_ai_model_user_id} 隔离，别名是「某个账号自己
+     * 的模型清单」的一部分。若沿用单份全局缓存，别名会跨账号串味 —— A 给自己模型起的别名
+     * 会被拿来改写 B 发出的模型名。故这里按 userId 分桶；无身份上下文（系统线程）用
+     * {@link #SYSTEM_ALIAS_BUCKET} 单独一桶，只放无归属的历史行。</p>
+     */
+    private final Map<String, CachedAliasMap> aliasCacheByUser = new ConcurrentHashMap<>();
+    /**
+     * 无身份线程使用的桶名。刻意与任何真实 userId 区分开（真实 userId 不会等于此常量）。
+     */
+    private static final String SYSTEM_ALIAS_BUCKET = "\u0000system";
     private final Map<String, CachedDbClient> dbClientCache = new ConcurrentHashMap<>(); // db客户端缓存
 
     /**
@@ -717,23 +728,37 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 加载别名→主模型映射（带 TTL 缓存）。
+     * 加载别名→主模型映射（**按账号分桶** + TTL 缓存）。
+     *
+     * <p>桶的取法：管理员与普通账号都只取自己名下的模型（管理员也不跨账号取别名 ——
+     * 别名参与的是「改写谁发出的模型名」，跨账号取只会互相污染）；
+     * 无身份上下文（系统线程/异步线程丢上下文）走独立桶，只加载无归属的历史行。</p>
+     *
      * @return 只读映射，永不返回空
      */
     private Map<String, String> loadAliasMap() {
+        String bucket = resolveAliasBucket();
         long now = System.currentTimeMillis();
-        Map<String, String> cached = aliasToModelCache;
-        if (cached != null && (now - aliasCacheLoadedAt) < ALIAS_CACHE_TTL_MILLIS) {
-            return cached;
+        CachedAliasMap cached = aliasCacheByUser.get(bucket);
+        if (cached != null && (now - cached.loadedAt) < ALIAS_CACHE_TTL_MILLIS) {
+            return cached.map;
         }
-        synchronized (this) {
-            if (aliasToModelCache != null && (System.currentTimeMillis() - aliasCacheLoadedAt) < ALIAS_CACHE_TTL_MILLIS) {
-                return aliasToModelCache;
+        synchronized (aliasCacheByUser) {
+            cached = aliasCacheByUser.get(bucket);
+            if (cached != null && (System.currentTimeMillis() - cached.loadedAt) < ALIAS_CACHE_TTL_MILLIS) {
+                return cached.map;
             }
             Map<String, String> map = new HashMap<>(64); // 别名数量不可预估
+            boolean loadFailed = false;
             try {
+                String owner = SYSTEM_ALIAS_BUCKET.equals(bucket) ? null : bucket;
                 List<SysAiModel> models = aiModelMapper.selectList(
-                        new LambdaQueryWrapper<SysAiModel>().eq(SysAiModel::getModelEnabled, true));
+                        new LambdaQueryWrapper<SysAiModel>()
+                                .eq(SysAiModel::getModelEnabled, true)
+                                // owner 为 null（系统桶）时只取无归属历史行；
+                                // 否则用 isNull 明确排除，避免把无主行混进任何人的别名表
+                                .eq(owner != null, SysAiModel::getUserId, owner)
+                                .isNull(owner == null, SysAiModel::getUserId));
                 for (SysAiModel m : models) {
                     String code = m.getModelCode();
                     if (code == null || code.isBlank()) {
@@ -749,16 +774,38 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("[AiChat] 加载模型别名映射失败: {}", e.getMessage());
-                if (aliasToModelCache != null) {
-                    return aliasToModelCache;
-                }
+                loadFailed = true;
+                log.warn("[AiChat] 加载模型别名映射失败: bucket={}, {}", bucket, e.getMessage());
             }
-            aliasToModelCache = map;
-            aliasCacheLoadedAt = now;
-            log.info("[AiChat] 已加载模型别名映射 {} 条", map.size());
+            // 加载失败时宁可继续用旧值，也不要把一份空表当成功写进去（否则别名会「凭空消失」）
+            if (loadFailed && cached != null) {
+                return cached.map;
+            }
+            aliasCacheByUser.put(bucket, new CachedAliasMap(map, now));
+            log.info("[AiChat] 已加载模型别名映射 bucket={} 共 {} 条", bucket, map.size());
             return map;
         }
+    }
+
+    /**
+     * 解析当前别名缓存桶：无身份上下文时返回系统桶。
+     */
+    private String resolveAliasBucket() {
+        try {
+            String userId = AiUserContext.currentUserId();
+            return (userId == null || userId.isBlank()) ? SYSTEM_ALIAS_BUCKET : userId;
+        } catch (Exception e) {
+            return SYSTEM_ALIAS_BUCKET;
+        }
+    }
+
+    /**
+     * 别名映射缓存项（按账号分桶）。
+     *
+     * @param map      别名 → 主模型 code
+     * @param loadedAt 加载时刻（毫秒）
+     */
+    private record CachedAliasMap(Map<String, String> map, long loadedAt) {
     }
 
     /**
