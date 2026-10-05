@@ -32,6 +32,8 @@ param(
     [string]$OutDir = (Join-Path $env:TEMP 'eduai-click'),
     [string]$AdminUser = 'admin',
     [string]$AdminPwd = 'admin123',
+    [ValidateSet('admin','student')][string]$Role = 'admin',
+    [string]$StudentPwd = 'Uiacc@12345',
     [int]$SettleMs = 700,
     [int]$NavTimeoutSec = 25,
     [string[]]$Only = @(),
@@ -175,8 +177,15 @@ $routes = @(
     @{ path = '/edu/fun/hanzi'; name = 'fun-hanzi' },
     @{ path = '/edu/fun/poem'; name = 'fun-poem' },
     @{ path = '/edu/fun/poem-challenge'; name = 'fun-poem-challenge' },
-    @{ path = '/edu/teacher'; name = 'teacher-portal' }
+    @{ path = '/edu/teacher'; name = 'teacher-portal' },
+    @{ path = '/edu/student'; name = 'student' },
+    @{ path = '/edu/student-login'; name = 'student-login' }
 )
+if ($Role -eq 'student') {
+    # Student identity: the admin console shell is not on the student's screen, so the
+    # chrome phase would only walk the admin's own menu. Student pages are full-screen.
+    $SkipChrome = $true
+}
 if ($Only.Count -gt 0) {
     # `pwsh -File script.ps1 -Only a,b,c` hands over ONE string, while a direct call
     # hands over an array; accept both so the filter works either way.
@@ -486,25 +495,86 @@ function Get-TagSelector {
     return '[data-uitest=' + $q + $Id + $q + ']'
 }
 
-# ---------- login ----------
-Write-Host '########## 0. login ##########'
-AbRaw @('open', "$Base/login") 60000 | Out-Null
-Start-Sleep -Seconds 3
-Js 'localStorage.clear(); sessionStorage.clear(); "c"' | Out-Null
-$phUser = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x7528)$([char]0x6237)$([char]0x540D)"
-$phPwd = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x5BC6)$([char]0x7801)"
-$logged = $false
-for ($t = 1; $t -le 3; $t++) {
-    AbRaw @('open', "$Base/login") 60000 | Out-Null
-    Start-Sleep -Seconds 4
-    AbRaw @('snapshot') 60000 | Out-Null
-    AbRaw @('find', 'placeholder', $phUser, 'fill', $AdminUser) 60000 | Out-Null
-    AbRaw @('find', 'placeholder', $phPwd, 'fill', $AdminPwd) 60000 | Out-Null
-    AbRaw @('press', 'Enter') 60000 | Out-Null
-    if (WaitJs 'location.pathname.indexOf("/login")!==0' 25) { $logged = $true; break }
+# ---------- HTTP helper (used by the student fixture only) ----------
+# Same implementation shape as ui-paper-assign-acceptance.ps1, which is proven against
+# this API. My first version shelled out to curl through AbRaw and silently produced
+# nothing (admin login came back empty), so do not "simplify" this back to curl.
+function Api {
+    param([string]$Method, [string]$Path, $Body = $null, [string]$Token = $null)
+    $h = @{ 'User-Agent' = 'Mozilla/5.0 (eduai-ui-acceptance)' }
+    if ($Token) { $h['Authorization'] = "Bearer $Token" }
+    $a = @{ Method = $Method; Uri = ($Base + $Path); Headers = $h; SkipHttpErrorCheck = $true; TimeoutSec = 30 }
+    if ($null -ne $Body) { $a['ContentType'] = 'application/json'; $a['Body'] = ($Body | ConvertTo-Json -Depth 6 -Compress) }
+    $r = Invoke-WebRequest @a
+    $json = $null
+    try { $json = $r.Content | ConvertFrom-Json } catch { }
+    return @{ code = [int]$r.StatusCode; json = $json; raw = [string]$r.Content }
 }
-Ck 'admin logged in' $logged
-if (-not $logged) { Write-Host 'no session, abort'; exit 2 }
+
+# ---------- login ----------
+if ($Role -eq 'student') {
+    Write-Host '########## 0. student fixture + login ##########'
+    # Same proven path as ui-paper-assign-acceptance.ps1: create a class + student over the
+    # API, clear the mandatory first-login password change, then log in through the real
+    # student login page. Without the password change the portal is blocked by the
+    # first-login guide, so every student page would report the same shell.
+    $adm = Api POST '/v2/user/login' @{ username = $AdminUser; password = $AdminPwd }
+$admTok = if ($adm -and $adm.json) { $adm.json.data.accessToken } else { '' }
+    Ck 'admin login (student fixture)' ([bool]$admTok) ''
+    if (-not $admTok) { Write-Host 'no admin session for fixture'; exit 2 }
+    # Endpoints and field names are copied from ui-paper-assign-acceptance.ps1 (proven
+    # against this API) rather than guessed: dimension/classes + dimension/students.
+    $stamp = [int][double]::Parse((Get-Date -UFormat %s))
+    $cls = Api POST '/v2/edu/dimension/classes/save' @{ className = "UIACC-CLICK-$stamp"; classGradeLevel = 'PRIMARY' } $admTok
+$classId = if ($cls -and $cls.json) { $cls.json.data } else { $null }
+    Ck 'class created' ([bool]$classId) "classId=$classId"
+    $stu = Api POST '/v2/edu/dimension/students/save' @{ studentName = 'UIACC Click'; studentPwdInput = $StudentPwd; studentClassId = $classId; studentGradeLevel = 'PRIMARY' } $admTok
+$studentId = if ($stu -and $stu.json) { $stu.json.data } else { $null }
+    Ck 'student created' ([bool]$studentId) "studentId=$studentId"
+    $list = Api GET '/v2/edu/dimension/students' $null $admTok
+    $studentNo = ''
+if ($list -and $list.json -and $list.json.data) { foreach ($s in @($list.json.data)) { if ($s.studentId -eq $studentId) { $studentNo = $s.studentNo } } }
+    Ck 'student number resolved' ([bool]$studentNo) "studentNo=$studentNo"
+    if (-not $studentNo) { Write-Host 'fixture incomplete'; exit 2 }
+    $slogin = Api POST '/v2/user/login' @{ username = $studentNo; password = $StudentPwd; authType = 'STUDENT' } ''
+$stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { '' }
+    Ck 'student api login' ([bool]$stok) ''
+    if ($stok) {
+        $ch = Api POST '/v2/edu/student/change-password' @{ oldPassword = $StudentPwd; newPassword = $StudentPwd } $stok
+        Ck 'initial password changed (clears first-login gate)' ($null -ne $ch) ''
+    }
+    $logged = $false
+    for ($t = 1; $t -le 3; $t++) {
+        AbRaw @('open', "$Base/edu/student-login") 60000 | Out-Null
+        Start-Sleep -Seconds 4
+        AbRaw @('snapshot') 60000 | Out-Null
+        AbRaw @('fill', 'input[autocomplete="username"]', $studentNo) 60000 | Out-Null
+        AbRaw @('fill', 'input[autocomplete="current-password"]', $StudentPwd) 60000 | Out-Null
+        AbRaw @('press', 'Enter') 60000 | Out-Null
+        if (WaitJs 'location.pathname.indexOf("/edu/student")===0 || location.pathname.indexOf("student-login")!==0' 25) { $logged = $true; break }
+    }
+    Ck 'student logged in via the student login page' $logged
+    if (-not $logged) { Write-Host 'no student session, abort'; exit 2 }
+} else {
+    Write-Host '########## 0. login ##########'
+    AbRaw @('open', "$Base/login") 60000 | Out-Null
+    Start-Sleep -Seconds 3
+    Js 'localStorage.clear(); sessionStorage.clear(); "c"' | Out-Null
+    $phUser = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x7528)$([char]0x6237)$([char]0x540D)"
+    $phPwd = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x5BC6)$([char]0x7801)"
+    $logged = $false
+    for ($t = 1; $t -le 3; $t++) {
+        AbRaw @('open', "$Base/login") 60000 | Out-Null
+        Start-Sleep -Seconds 4
+        AbRaw @('snapshot') 60000 | Out-Null
+        AbRaw @('find', 'placeholder', $phUser, 'fill', $AdminUser) 60000 | Out-Null
+        AbRaw @('find', 'placeholder', $phPwd, 'fill', $AdminPwd) 60000 | Out-Null
+        AbRaw @('press', 'Enter') 60000 | Out-Null
+        if (WaitJs 'location.pathname.indexOf("/login")!==0' 25) { $logged = $true; break }
+    }
+    Ck 'admin logged in' $logged
+    if (-not $logged) { Write-Host 'no session, abort'; exit 2 }
+}
 
 # ---------- Phase 1: page content controls ----------
 if (-not $SkipContent) {
