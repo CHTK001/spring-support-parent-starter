@@ -2,12 +2,14 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -200,6 +202,11 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             item.put("valueType", s.getValueType());
             item.put("description", s.getDescription());
             item.put("sort", s.getSort());
+            // 谁写的：为空=系统种子/默认值（从未有人配置过），非空=人工配置过的用户名。
+            // 合并视图据此区分「系统默认」与「全局配置」，否则界面上只能显示
+            // 「继承全局：xxx」，把一次性种子说成别人配的。
+            item.put("configuredBy", s.getCreateName());
+            item.put("systemDefault", !StringUtils.hasText(s.getCreateName()));
             result.add(item);
         }
         return result;
@@ -299,12 +306,19 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
                         .eq(SysAiGlobalSetting::getSettingGroup, group)
                         .eq(SysAiGlobalSetting::getField, field));
         LocalDateTime now = LocalDateTime.now();
+        // 记录操作人：create_name 为空即代表「这行是系统种子/默认值，从没有人配置过」。
+        // 这一条是「真实配置才生效」得以成立的前提——不记审计字段时，
+        // 2026-09-30 那批一次性种子（实测 172 行 create_name 全为 NULL）与
+        // 管理员后来手工改过的值在库里长得一模一样，界面上也只能显示
+        // 「继承全局：onnx」，把系统默认说成别人配的。
+        String operator = currentOperator();
         if (existing != null) {
             existing.setValue(value);
             if (description != null) {
                 existing.setDescription(description);
             }
             existing.setUpdateTime(now);
+            existing.setUpdateName(operator);
             sysAiGlobalSettingMapper.updateById(existing);
         } else {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
@@ -317,6 +331,8 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             setting.setStatus(1);
             setting.setCreateTime(now);
             setting.setUpdateTime(now);
+            setting.setCreateName(operator);
+            setting.setUpdateName(operator);
             sysAiGlobalSettingMapper.insert(setting);
         }
         evictCache(group, field);
@@ -326,6 +342,23 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         // 于是「在界面上改了人脸检测模型，必须重启才生效」—— 与「改配置即刻生效」的设计相悖。
         // 实测：PUT /v2/settings/face 后 /v2/face/models 仍报「人脸能力未启用」，重启才恢复。
         publishSettingsChanged(group);
+    }
+
+    /**
+ * 取当前操作人标识，写入审计字段。
+ *
+ * <p>取不到登录身份时返回 {@code null}（而不是空串或 "system"）：
+     * {@code null} 与「系统种子」同义，正好用来表达「不是任何人写的」。
+     * 若在此处填 {@code "system"}，就无法再区分机器写入与人工配置。</p>
+ *
+     * @return 用户名；无登录身份（启动期同步定义、定时任务）时返回 {@code null}
+     */
+    private String currentOperator() {
+        try {
+            return AiUserContext.currentUsername();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**

@@ -148,8 +148,16 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
             Map<String, Object> row = new LinkedHashMap<>(item);
             row.put("overridden", override != null);
             row.put("defaultValue", item.get("value"));
+            // 值来源：USER=我的覆盖；GLOBAL=管理员配过的全局值；SYSTEM_DEFAULT=系统内置默认值。
+            // 不区分后两者时，界面只能显示「继承全局：xxx」——实测 2026-09-30 那批一次性种子
+            // （172 行 configuredBy 全为空）与人工改过的值长得一样，用户会以为是自己或别人配的，
+            // 而实际上「onnx / bge-large-zh-embedding」从来没人配过。
+            boolean systemDefault = Boolean.TRUE.equals(item.get("systemDefault"));
             if (override != null) {
                 row.put("value", override.getValue());
+                row.put("origin", "USER");
+            } else {
+                row.put("origin", systemDefault ? "SYSTEM_DEFAULT" : "GLOBAL");
             }
             merged.add(row);
         }
@@ -164,6 +172,8 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
             row.put("sort", override.getSort());
             row.put("overridden", true);
             row.put("defaultValue", null);
+            row.put("origin", "USER");
+            row.put("systemDefault", false);
             merged.add(row);
         }
         return merged;
