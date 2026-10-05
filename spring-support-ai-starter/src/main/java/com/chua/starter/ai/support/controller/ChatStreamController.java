@@ -1,7 +1,10 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.stream.ChatFrameSink;
 import com.chua.starter.ai.support.stream.ChatStreamOrchestrator;
 import com.chua.starter.ai.support.stream.ChatStreamRegistry;
+import com.chua.starter.ai.support.stream.IdleTimeoutChatFrameSink;
 import com.chua.starter.ai.support.stream.PreparedChat;
 import com.chua.starter.ai.support.stream.SseChatFrameSink;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -41,6 +44,81 @@ public class ChatStreamController {
     private final ObjectMapper objectMapper;
 
     /**
+     * 全局设置读取器（用户覆盖优先）：解析会话超时时间
+     */
+    private final GlobalSettingReader globalSettingReader;
+
+    /**
+     * 会话超时配置所在分组（设置中心 → 会话配置）
+     */
+    private static final String GROUP_SESSION = "session";
+
+    /**
+     * 会话超时配置字段名
+     */
+    private static final String FIELD_STREAM_IDLE_TIMEOUT = "stream_idle_timeout_minutes";
+
+    /**
+     * 会话超时兜底值（分钟）：配置缺失/非法时用这个
+     */
+    private static final int DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
+
+    /**
+     * 会话超时可配置区间下限（分钟）
+     */
+    private static final int MIN_IDLE_TIMEOUT_MINUTES = 1;
+
+    /**
+     * 会话超时可配置区间上限（分钟）
+     */
+    private static final int MAX_IDLE_TIMEOUT_MINUTES = 180;
+
+    /**
+     * 给帧槽套上「会话超时」看门狗。
+     *
+     * <p>超时时长按<b>发起本轮的用户</b>解析（该用户的覆盖优先、全局兜底），
+     * 因此每个用户可以有自己的超时时长。配置为 0 表示不限制，此时原样返回、不计时。</p>
+     *
+     * @param sink      真实帧槽，不允许为 null
+     * @param sessionId 会话标识
+     * @param userId    发起本轮的用户标识，可为空
+     * @return 带看门狗的帧槽（已启动计时）
+     */
+    private ChatFrameSink withIdleTimeout(ChatFrameSink sink, String sessionId, String userId) {
+        int minutes = resolveIdleTimeoutMinutes(userId);
+        ChatFrameSink wrapped = IdleTimeoutChatFrameSink.wrap(sink, sessionId, minutes);
+        if (wrapped instanceof IdleTimeoutChatFrameSink watchdog) {
+            watchdog.start();
+        }
+        return wrapped;
+    }
+
+    /**
+     * 解析该用户生效的会话超时时长（分钟）。
+     *
+     * @param userId 用户标识，可为空（此时只读全局层）
+     * @return 超时分钟数；0 表示不限制
+     */
+    private int resolveIdleTimeoutMinutes(String userId) {
+        String raw = globalSettingReader.getStrAs(userId, GROUP_SESSION, FIELD_STREAM_IDLE_TIMEOUT);
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_IDLE_TIMEOUT_MINUTES;
+        }
+        int minutes;
+        try {
+            minutes = Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            log.warn("[ChatStream] {} 非整数，回落默认值: {}", FIELD_STREAM_IDLE_TIMEOUT, raw);
+            return DEFAULT_IDLE_TIMEOUT_MINUTES;
+        }
+        if (minutes <= 0) {
+            // 0 或负数 = 显式关闭超时：不计时，保持原有行为
+            return 0;
+        }
+        return Math.min(Math.max(minutes, MIN_IDLE_TIMEOUT_MINUTES), MAX_IDLE_TIMEOUT_MINUTES);
+    }
+
+    /**
      * SSE 流式聊天。
      *
      * @param body     请求体，不允许为 null
@@ -71,11 +149,15 @@ public class ChatStreamController {
             } catch (Exception ignored) {
             }
         });
-        registry.register(p.getSessionId(), p.getMemoryUser(), sink);
+        // 2.5 帧槽套上「会话超时」看门狗后再注册：
+        // registry 存的是带看门狗的槽，「停止生成」与超时收口才会作用在同一层，
+        // 否则取消会绕过看门狗、直接关掉真实传输，留下一个还在跑的看门狗。
+        ChatFrameSink guarded = withIdleTimeout(sink, p.getSessionId(), p.getMemoryUser());
+        registry.register(p.getSessionId(), p.getMemoryUser(), guarded);
         registerCleanup(emitter, p.getSessionId());
 
         // 3. 异步产出帧
-        orchestrator.execute(p, sink);
+        orchestrator.execute(p, guarded);
         return emitter;
     }
 
@@ -113,7 +195,10 @@ public class ChatStreamController {
         registry.register(p.getSessionId(), p.getMemoryUser(), sink);
         registerCleanup(emitter, p.getSessionId());
 
-        orchestrator.executeResume(p, sink);
+        // 恢复轮次同样套会话超时看门狗（注册的是带看门狗的槽，取消/停止才会作用在真实传输上）
+        ChatFrameSink guardedResume = withIdleTimeout(sink, p.getSessionId(), p.getMemoryUser());
+        registry.register(p.getSessionId(), p.getMemoryUser(), guardedResume);
+        orchestrator.executeResume(p, guardedResume);
         return emitter;
     }
 

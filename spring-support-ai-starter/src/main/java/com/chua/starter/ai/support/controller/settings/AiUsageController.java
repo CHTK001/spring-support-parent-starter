@@ -51,7 +51,7 @@ public class AiUsageController {
             @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @Parameter(description = "结束时间") @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        String userId = AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
+        String userId = AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();
         return usageService.query(model, startTime, endTime, userId);
     }
 }

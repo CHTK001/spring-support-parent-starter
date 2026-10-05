@@ -734,13 +734,13 @@ public class AgentBrowserController {
     /**
      * 给 Lane 查询条件按当前登录用户收窄。
      *
-     * <p>管理员可跨用户查看；普通用户仅本人。无身份时条件恒不匹配，读取失败即关闭。</p>
+     * <p>仅本人（管理员在业务数据侧与普通账号同权）。无身份时条件恒不匹配，读取失败即关闭。</p>
      *
      * @param wrapper 查询条件
      * @return 追加归属条件后的查询条件
      */
     private LambdaQueryWrapper<AgentBrowserLane> scopeToOwner(LambdaQueryWrapper<AgentBrowserLane> wrapper) {
-        if (!AiUserContext.isAdmin()) {
+        if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(AgentBrowserLane::getUserId, AiUserContext.currentUserId());
         }
         return wrapper;
@@ -774,7 +774,7 @@ public class AgentBrowserController {
         if (lane == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
-        if (AiUserContext.isAdmin()) {
+        if (AiUserContext.canAccessOthersData()) {
             return lane;
         }
         String userId = AiUserContext.requireUserId();

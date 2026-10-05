@@ -17,6 +17,7 @@ import com.chua.starter.ai.support.mapper.SysAiMessageMapper;
 import com.chua.starter.ai.support.entity.SysAiSession;
 import com.chua.starter.ai.support.entity.SysAiMessage;
 import com.chua.starter.ai.support.entity.SysAiSessionGroup;
+import com.chua.starter.ai.support.service.SessionNextTaskService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -58,6 +59,14 @@ public class AiSessionController {
      * 全局设置服务（取"系统/工作目录基路径" system.workspaceBaseDir）
      */
     private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService;
+
+    /**
+     * 会话「AI 联想下一个任务」服务
+     *
+     * <p>开关值钉在会话自身的 {@code settings.aiNextTask}（会话保留原始信息），
+     * 联想走 {@code EffectiveChatModelResolver} 解析出的模型，不在此处写死模型名。</p>
+     */
+    private final SessionNextTaskService sessionNextTaskService;
 
     /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
@@ -132,8 +141,8 @@ public class AiSessionController {
             @RequestParam(required = false) Boolean includeArchived) {
 
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
- // 管理员只读全量，其余仅本人会话
-        if (!AiUserContext.isAdmin()) {
+ // 一律按账号隔离（含管理员）：管理员在业务数据侧与普通账号同权
+        if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(SysAiSession::getSysUserId, AiUserContext.requireUserId());
         }
         wrapper.orderByDesc(SysAiSession::getCreateTime);
@@ -166,12 +175,13 @@ public class AiSessionController {
     @GetMapping("/sidebar")
     public ReturnResult<Map<String, Object>> sidebar(@RequestParam(required = false) Integer limit) {
         int pageSize = limit != null ? limit : 15;
-        boolean admin = AiUserContext.isAdmin();
+        // 一律按账号隔离（含管理员）
+        boolean crossAccount = AiUserContext.canAccessOthersData();
         String userId = AiUserContext.requireUserId();
 
-        // 查询分组：管理员可见全量，其余仅本人分组
+        // 查询分组：仅本人分组
         LambdaQueryWrapper<SysAiSessionGroup> groupWrapper = new LambdaQueryWrapper<>();
-        if (!admin) {
+        if (!crossAccount) {
             groupWrapper.eq(SysAiSessionGroup::getUserId, userId);
         }
         groupWrapper.orderByAsc(SysAiSessionGroup::getSortOrder);
@@ -187,10 +197,10 @@ public class AiSessionController {
             groupList.add(groupMap);
         }
 
-        // 查询未归档会话：管理员可见全量，其余仅本人会话
+        // 查询未归档会话：仅本人会话
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiSession::getIsArchived, false);  // 只查询未归档的会话
-        if (!admin) {
+        if (!crossAccount) {
             wrapper.eq(SysAiSession::getSysUserId, userId);
         }
         wrapper.orderByDesc(SysAiSession::getCreateTime);
@@ -471,6 +481,8 @@ public class AiSessionController {
 
         // 更新会话级 MCP 服务器列表（仅管理员可写，非管理员忽略）
         if (body.containsKey("mcpServerIds")) {
+            // 会话级 MCP 服务器仍限管理员配置：这是**服务端能力开关**，
+            // 不是账号数据隔离的一部分（见 canAccessOthersData 的口径说明）。
             String mcpCsvOnUpdate = normalizeIdList(body.get("mcpServerIds"));
             if (!AiUserContext.isAdmin()) {
                 mcpCsvOnUpdate = null;
@@ -754,6 +766,62 @@ public class AiSessionController {
         Map<String, Object> result = new HashMap<>();
         result.put("items", new ArrayList<>());
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 取会话的「AI 联想下一个任务」状态。
+     *
+     * <p>会话尚无自己的取值时，服务端会把**当前默认值钉进该会话**（会话保留原始信息），
+     * 此后管理员改设置中心的默认值不再影响这个已有会话；返回的 {@code defaultValue}
+     * 供前端展示「跟随默认：开/关」。</p>
+     *
+     * @param id 会话标识
+     * @return 开关、是否已钉住、默认值、已联想出的任务列表与生成时间
+     */
+    @GetMapping("/{id}/ai-next-task")
+    public ReturnResult<SessionNextTaskService.NextTaskState> aiNextTask(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        requireReadableSession(sessionId);
+        return ReturnResult.ok(sessionNextTaskService.state(sessionId));
+    }
+
+    /**
+     * 设置该会话的「AI 联想下一个任务」开关。
+     *
+     * <p>{@code enabled} 传 true/false 写入会话自身；传 {@code null} 表示
+     * <b>解除钉住、回到跟随默认值</b>（同时清掉旧开关语义下生成的联想结果）。</p>
+     *
+     * @param id   会话标识
+     * @param body 含 enabled 字段的请求体
+     * @return 设置后的状态
+     */
+    @PutMapping("/{id}/ai-next-task")
+    public ReturnResult<SessionNextTaskService.NextTaskState> setAiNextTask(
+            @PathVariable("id") String id, @RequestBody Map<String, Object> body) {
+        Long sessionId = resolveSessionId(id);
+        requireWritableSession(sessionId);
+        Object enabled = body.get("enabled");
+        Boolean value = null;
+        if (enabled != null && !"null".equals(String.valueOf(enabled))) {
+            value = Boolean.parseBoolean(String.valueOf(enabled));
+        }
+        return ReturnResult.ok(sessionNextTaskService.setEnabled(sessionId, value));
+    }
+
+    /**
+     * 重新联想该会话的下一步任务（服务端同步调用一次模型）。
+     *
+     * <p>模型不可用、对话为空或模型没给出可执行任务时返回空列表 + 原因文案，
+     * 并保留上一次的结果，不把面板打成错误态。</p>
+     *
+     * @param id 会话标识
+     * @return 联想后的状态
+     */
+    @PostMapping("/{id}/ai-next-task/refresh")
+    public ReturnResult<SessionNextTaskService.NextTaskState> refreshAiNextTask(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        requireReadableSession(sessionId);
+        return ReturnResult.ok(sessionNextTaskService.refresh(sessionId));
     }
 
     /**
@@ -1190,7 +1258,7 @@ public class AiSessionController {
     }
 
     /**
-     * 读出口归属校验。
+     * 读出口归属校验：**仅归属人本人**（管理员在业务数据侧与普通账号同权）。
      *
      * @param sessionId 会话 标识
      * @return 校验通过的会话
@@ -1200,10 +1268,6 @@ public class AiSessionController {
         if (session == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
- // 管理员只读全量
-        if (AiUserContext.isAdmin()) {
-            return session;
-        }
         if (!AiUserContext.requireUserId().equals(session.getSysUserId())) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人会话");
         }
@@ -1211,7 +1275,7 @@ public class AiSessionController {
     }
 
     /**
-     * 写出口归属校验：只认归属人本身，管理员对他人数据只读。
+     * 写出口归属校验：只认归属人本人（含管理员）。
      *
      * @param sessionId 会话 标识
      * @return 校验通过的会话
@@ -1222,7 +1286,7 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
         }
         if (!AiUserContext.requireUserId().equals(session.getSysUserId())) {
-            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "不可修改或删除他人的会话");
         }
         return session;
     }

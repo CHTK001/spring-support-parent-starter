@@ -283,12 +283,12 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 读归属校验：管理员可跨用户读取，其余仅本人。
+     * 读归属校验：仅本人（管理员在业务数据侧与普通账号同权）。
      *
      * @param owner 数据归属用户标识
      */
     private void checkReadable(String owner) {
-        if (AiUserContext.isAdmin()) {
+        if (AiUserContext.canAccessOthersData()) {
             return;
         }
         String userId = AiUserContext.requireUserId();
@@ -298,7 +298,7 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 写归属校验：只读账号拒绝，且仅归属者可写（管理员对他人数据只读）。
+     * 写归属校验：只读账号拒绝，且仅归属者可写。
      *
      * @param owner 数据归属用户标识
      */
@@ -308,7 +308,7 @@ public class SysAiCompanionStore {
         }
         String userId = AiUserContext.requireUserId();
         if (!userId.equals(owner)) {
-            throw new ApiException(ApiErrorCode.FORBIDDEN, "管理员对他人数据只读，不可修改或删除");
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "不可修改或删除他人的数据");
         }
     }
 
@@ -317,10 +317,10 @@ public class SysAiCompanionStore {
      * @return 列表companions的结果
      */
     public List<SysAiCompanion> listCompanions() {
-        // 管理员可跨用户查看，普通用户仅本人；无身份时条件恒不匹配（失败即关闭）
+        // 仅本人；无身份时条件恒不匹配（失败即关闭）
         return companionMapper.selectList(
                 new LambdaQueryWrapper<SysAiCompanion>()
-                        .eq(!AiUserContext.isAdmin(), SysAiCompanion::getUserId, AiUserContext.currentUserId())
+                        .eq(!AiUserContext.canAccessOthersData(), SysAiCompanion::getUserId, AiUserContext.currentUserId())
                         .orderByAsc(SysAiCompanion::getSeq));
     }
 
@@ -482,8 +482,8 @@ public class SysAiCompanionStore {
         }
         LambdaQueryWrapper<SysAiCompanionMemory> wrapper = new LambdaQueryWrapper<SysAiCompanionMemory>()
                 .eq(scoped, SysAiCompanionMemory::getCompanionId, companionId)
-                // 未指定伙伴时按归属用户过滤：管理员全量，无身份恒不匹配
-                .eq(!scoped && !AiUserContext.isAdmin(), SysAiCompanionMemory::getUserId, AiUserContext.currentUserId())
+                // 未指定伙伴时按归属用户过滤：无身份恒不匹配
+                .eq(!scoped && !AiUserContext.canAccessOthersData(), SysAiCompanionMemory::getUserId, AiUserContext.currentUserId())
                 .orderByDesc(SysAiCompanionMemory::getCreatedAt);
         if (offset != null && offset > 0) {
             wrapper.last("LIMIT " + (limit == null || limit <= 0 ? 200 : limit) + " OFFSET " + offset);
@@ -717,8 +717,8 @@ public class SysAiCompanionStore {
         }
         LambdaQueryWrapper<SysAiCompanionSkill> wrapper = new LambdaQueryWrapper<SysAiCompanionSkill>()
                 .eq(scoped, SysAiCompanionSkill::getCompanionId, companionId)
-                // 未指定伙伴时按归属用户过滤：管理员全量，无身份恒不匹配
-                .eq(!scoped && !AiUserContext.isAdmin(), SysAiCompanionSkill::getUserId, AiUserContext.currentUserId())
+                // 未指定伙伴时按归属用户过滤：无身份恒不匹配
+                .eq(!scoped && !AiUserContext.canAccessOthersData(), SysAiCompanionSkill::getUserId, AiUserContext.currentUserId())
                 .orderByDesc(SysAiCompanionSkill::getCreatedAt);
         if (offset != null && offset > 0) {
             wrapper.last("LIMIT " + (limit == null || limit <= 0 ? 200 : limit) + " OFFSET " + offset);
@@ -788,7 +788,7 @@ public class SysAiCompanionStore {
      * @return 列表figures的结果
      */
     public List<SysAiCompanionFigure> listFigures() {
-        if (AiUserContext.isAdmin()) {
+        if (AiUserContext.canAccessOthersData()) {
             return figureMapper.selectList(
                     new LambdaQueryWrapper<SysAiCompanionFigure>().orderByDesc(SysAiCompanionFigure::getCreatedAt));
         }

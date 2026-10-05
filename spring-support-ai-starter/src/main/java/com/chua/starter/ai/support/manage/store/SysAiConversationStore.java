@@ -246,12 +246,12 @@ public class SysAiConversationStore {
     }
 
     /**
-     * 归属判定：管理员可读全量，普通用户只能读本人会话。
+     * 归属判定：仅本人会话可读（管理员在业务数据侧与普通账号同权）。
      *
      * @param conversation 会话
      */
     private void assertReadable(SysAiConversation conversation) {
-        if (AiUserContext.isAdmin()) {
+        if (AiUserContext.canAccessOthersData()) {
             return;
         }
         String userId = AiUserContext.currentUserId();
@@ -513,7 +513,7 @@ public class SysAiConversationStore {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> paging =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(current, size);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
-                .eq(!AiUserContext.isAdmin(), SysAiConversationMessage::getUserId, userId)
+                .eq(!AiUserContext.canAccessOthersData(), SysAiConversationMessage::getUserId, userId)
                 .like(keyword != null && !keyword.isBlank(), SysAiConversationMessage::getContent, keyword)
                 .orderByDesc(SysAiConversationMessage::getCreatedAt);
         return messageMapper.selectPage(paging, wrapper);

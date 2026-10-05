@@ -338,17 +338,18 @@ public class ApiCronController {
     }
 
     /**
-     * 读归属判定：管理员可跨用户查看，其余仅本人。
+     * 读归属判定：仅本人（管理员在业务数据侧与普通账号同权）。
      *
      * @param job 任务
      * @return 当前用户是否可读
      */
     private boolean readableByJob(Map<String, Object> job) {
-        return AiUserContext.isAdmin() || AiUserContext.requireUserId().equals(jobPath(job, "user_id"));
+        return AiUserContext.canAccessOthersData()
+                || AiUserContext.requireUserId().equals(jobPath(job, "user_id"));
     }
 
     /**
-     * 写归属校验：只读账号拒绝，仅归属者可改删与立即执行（管理员对他人任务只读）。
+     * 写归属校验：只读账号拒绝，仅归属者可改删与立即执行。
      *
      * @param cronJobId 任务标识
      * @return 可写的任务

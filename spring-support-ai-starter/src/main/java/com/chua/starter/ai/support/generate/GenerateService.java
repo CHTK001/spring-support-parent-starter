@@ -7,6 +7,7 @@ import com.chua.common.support.ai.image.ImageClient;
 import com.chua.common.support.ai.image.ImageResponse;
 import com.chua.common.support.ai.video.VideoClient;
 import com.chua.common.support.ai.video.VideoResponse;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.mapper.SysAiGenerateTaskMapper;
 import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
@@ -68,13 +69,33 @@ public class GenerateService {
     private static final String PROVIDER_TASK_ID_KEY = "providerTaskId";
 
     /**
-     * 任务多久没有推进就判定为僵死（毫秒）：5 分钟。
+     * 任务超时时间缺失/非法时的兜底值（分钟）：5。
      *
-     * <p>超时的非终态任务不会再自愈——没有任何在跑的线程会回写它，只能由服务端
-     * 主动判失败。过短会误杀正在正常生成的任务（图像生成实测约 30 秒，视频可到数分钟），
-     * 故取一个明显长于常见生成时长的值。</p>
+     * <p>真实取值来自配置中心 {@code generate/task_timeout_minutes}（设置中心 → 文生图/文生视频），
+     * 原先是这里写死的常量，改不了。过短会误杀正在正常生成的任务（图像生成实测约 30 秒，
+     * 视频可到数分钟），故兜底取一个明显长于常见生成时长的值。</p>
      */
-    private static final long STALE_TASK_MILLIS = 5 * 60 * 1000L;
+    private static final int DEFAULT_TASK_TIMEOUT_MINUTES = 5;
+
+    /**
+     * 任务超时时间可配置区间的下限（分钟）
+     */
+    private static final int MIN_TASK_TIMEOUT_MINUTES = 1;
+
+    /**
+     * 任务超时配置所在分组（文生图 / 文生视频）
+     */
+    private static final String GROUP_GENERATE = "generate";
+
+    /**
+     * 任务超时配置字段名
+     */
+    private static final String FIELD_TASK_TIMEOUT_MINUTES = "task_timeout_minutes";
+
+    /**
+     * 任务超时时间可配置区间的上限（分钟）
+     */
+    private static final int MAX_TASK_TIMEOUT_MINUTES = 120;
 
     /**
      * 参考图入库长度上限（字符数，data URI 约为二进制字节数的 1.33 倍）。
@@ -131,6 +152,11 @@ public class GenerateService {
      * 生成任务映射器
      */
     private final SysAiGenerateTaskMapper taskMapper;
+
+    /**
+     * 全局设置读取器（用户覆盖优先）：解析 generate/task_timeout_minutes
+     */
+    private final GlobalSettingReader globalSettingReader;
 
     /**
      * 生成媒体落盘存储：把内联 base64 挡在库外，列表体积与图片大小脱钩
@@ -389,39 +415,76 @@ public class GenerateService {
     }
 
     /**
-     * 提交前兜底：把「长时间没有进展」的非终态任务判为失败。
-     *
-     * <p>为什么必须有这一步：一旦某条任务卡在 PENDING/RUNNING，它会一直占着
-     * 「一次只能有一个在跑」的名额，让后续所有提交都被 409 拒掉——用户既等不到结果、
-     * 也发不出新任务，整页等于不可用。而这种僵死在轮询里看不出破绽，因为前端能正常
-     * 查到这条记录，只是它自己不再变化。</p>
-     *
-     * <p>判据用「创建至今已超过阈值」而不是「距上次更新超过阈值」：本地线程池任务
-     * 执行期间根本不回写进度，用 updatedAt 判断会把正在正常生成的任务误杀。</p>
-     */
+     * 提交前兜底：把「超过超时时间」的非终态任务判为失败。
+ *
+ * <p>为什么必须有这一步：一旦某条任务卡在 PENDING/RUNNING，它会一直占着
+ * 「一次只能有一个在跑」的名额，让后续所有提交都被 409 拒掉——用户既等不到结果、
+ * 也发不出新任务，整页等于不可用。而这种僵死在轮询里看不出破绽，因为前端能正常
+ * 查到这条记录，只是它自己不再变化。</p>
+ *
+ * <p>判据用「创建至今已超过阈值」而不是「距上次更新超过阈值」：本地线程池任务
+ * 执行期间根本不回写进度，用 updatedAt 判断会把正在正常生成的任务误杀。</p>
+ *
+ * <p>阈值按**每条任务自己的归属人**解析（用户覆盖优先、全局兜底），因此两个账号
+ * 可以各自设置不同的超时时长；这里刻意不按「发起提交的人」统一取值 —— 那会把
+ * A 的阈值套到 B 的任务上。</p>
+ */
     private void failStaleBeforeSubmit() {
         try {
-            long cutoff = System.currentTimeMillis() - STALE_TASK_MILLIS;
-            List<SysAiGenerateTask> stale = taskMapper.selectList(
+            List<SysAiGenerateTask> candidates = taskMapper.selectList(
                     new LambdaQueryWrapper<SysAiGenerateTask>()
                             .in(SysAiGenerateTask::getStatus,
-                                    SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING)
-                            .lt(SysAiGenerateTask::getCreatedAt, cutoff));
-            for (SysAiGenerateTask task : stale) {
+                                    SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING));
+            if (candidates.isEmpty()) {
+                return;
+            }
+            int failed = 0;
+            for (SysAiGenerateTask task : candidates) {
+                long timeoutMillis = taskTimeoutMillis(task.getUserId());
+                long createdAt = task.getCreatedAt() == null ? 0L : task.getCreatedAt();
+                if (createdAt <= 0L || System.currentTimeMillis() - createdAt <= timeoutMillis) {
+                    continue;
+                }
                 SysAiGenerateTask patch = new SysAiGenerateTask();
                 patch.setTaskId(task.getTaskId());
                 patch.setStatus(SysAiGenerateTask.STATUS_FAILED);
                 patch.setProgress(100);
-                patch.setErrorMessage("任务长时间没有进展，已终止，请重新提交");
+                patch.setErrorMessage("任务超过设定的超时时间（"
+                        + (timeoutMillis / 60000L) + " 分钟）仍未结束，已终止，请重新提交");
                 patch.setUpdatedAt(System.currentTimeMillis());
                 taskMapper.updateById(patch);
+                failed++;
             }
-            if (!stale.isEmpty()) {
-                log.warn("[Generate] 提交前收敛超时任务 {} 条", stale.size());
+            if (failed > 0) {
+                log.warn("[Generate] 提交前收敛超时任务 {} 条", failed);
             }
         } catch (Exception e) {
             log.warn("[Generate] 提交前收敛超时任务失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 解析某账号生效的生成任务超时时长（毫秒）。
+     *
+     * <p>用户覆盖优先、全局兜底；非法值夹到 1-120 分钟，避免有人填 0 造成
+     * 「任务刚创建就被判超时」。</p>
+     *
+     * @param userId 任务归属账号，可为空（无归属时只读全局）
+     * @return 超时时长（毫秒）
+     */
+    private long taskTimeoutMillis(String userId) {
+        String raw = globalSettingReader.getStrAs(userId, GROUP_GENERATE, FIELD_TASK_TIMEOUT_MINUTES);
+        int minutes = DEFAULT_TASK_TIMEOUT_MINUTES;
+        if (raw != null && !raw.isBlank()) {
+            try {
+                minutes = Integer.parseInt(raw.trim());
+            } catch (NumberFormatException e) {
+                log.warn("[Generate] {} 非整数，回落默认值: {}", FIELD_TASK_TIMEOUT_MINUTES, raw);
+                minutes = DEFAULT_TASK_TIMEOUT_MINUTES;
+            }
+        }
+        int clamped = Math.min(Math.max(minutes, MIN_TASK_TIMEOUT_MINUTES), MAX_TASK_TIMEOUT_MINUTES);
+        return clamped * 60_000L;
     }
 
     /**

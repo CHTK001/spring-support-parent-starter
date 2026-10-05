@@ -39,8 +39,8 @@ public class SysAiSessionController {
             @RequestParam(required = false) Integer limit) {
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiSession::getIsArchived, true);  // 只查询已归档的会话
-        // 管理员只读全量，其余用户只能看到自己的归档
-        if (!AiUserContext.isAdmin()) {
+        // 仅本人归档（管理员在业务数据侧与普通账号同权）
+        if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(SysAiSession::getSysUserId, AiUserContext.requireUserId());
         }
         if (keyword != null && !keyword.isEmpty()) {

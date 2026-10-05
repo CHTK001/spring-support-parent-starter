@@ -355,7 +355,7 @@ public class WorkshopAssetService {
         if (asset == null) {
             return null;
         }
-        if (!AiUserContext.isAdmin() && !AiUserContext.requireUserId().equals(asset.getUserId())) {
+        if (!AiUserContext.canAccessOthersData() && !AiUserContext.requireUserId().equals(asset.getUserId())) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人资产");
         }
         return asset;
@@ -370,12 +370,12 @@ public class WorkshopAssetService {
     }
 
     /**
-     * 读查询的归属过滤值：管理员返回 null 表示看全量，其余返回本人用户标识。
+     * 读查询的归属过滤值：仅跨账号放行时返回 null（看全量），其余返回本人用户标识。
      *
      * @return 归属过滤值
      */
     private String scopeUserId() {
-        return AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
+        return AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();
     }
 
     /**

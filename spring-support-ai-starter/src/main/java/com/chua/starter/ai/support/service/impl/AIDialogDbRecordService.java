@@ -214,8 +214,8 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     /**
      * 读出口归属校验。
      *
-     * <p>管理员可读全量；无请求身份（线程池、回复回调、机器流量）按机器信任放行；
-     * 其余仅允许归属人。</p>
+     * <p>仅归属人可读（管理员在业务数据侧与普通账号同权）；无请求身份
+     * （线程池、回复回调、机器流量）按机器信任放行。</p>
      *
      * @param dialogId 会话 标识
      * @return 校验通过的会话
@@ -225,7 +225,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         if (session == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
-        if (AiUserContext.isAdmin()) {
+        if (AiUserContext.canAccessOthersData()) {
             return session;
         }
         String userId = AiUserContext.currentUserId();

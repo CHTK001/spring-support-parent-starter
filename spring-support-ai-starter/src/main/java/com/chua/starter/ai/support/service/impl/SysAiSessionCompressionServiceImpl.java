@@ -82,12 +82,12 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
      *
      * @param compression 压缩上下文实体，不允许为 空
      * @param sessionId   会话 标识
-     * @return 无登录上下文、管理员或归属一致时为 {@code true}
+     * @return 无登录上下文或归属一致时为 {@code true}
      */
     private boolean readableByCurrentUser(SysAiSessionCompression compression, Long sessionId) {
         String userId = AiUserContext.currentUserId();
-        if (userId == null || AiUserContext.isAdmin()) {
-            // 后台线程取不到身份；管理员可跨归属查看
+        if (userId == null || AiUserContext.canAccessOthersData()) {
+            // 后台线程取不到身份（机器流量），按信任放行
             return true;
         }
         String owner = compression.getUserId();
