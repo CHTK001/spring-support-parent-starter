@@ -116,6 +116,7 @@ $script:Fails = New-Object System.Collections.ArrayList
 $script:Rows = New-Object System.Collections.ArrayList
 $script:Dead = New-Object System.Collections.ArrayList
 $script:HarnessErr = New-Object System.Collections.ArrayList
+$script:SkipDestructive = 0
 $script:Vanish = @{}
 $script:Clicks = 0
 
@@ -132,6 +133,59 @@ function Ck {
 # localStorage and the crawl presses "remove widget" / "save" on it. Snapshot it up front so
 # the run is repeatable and leaves the environment as it found it -- an acceptance script
 # that quietly empties the dashboard it is verifying is worse than no script.
+# Click the controls of a dialog that the trigger just opened. Element Plus teleports
+# dialogs to <body>, so the content-phase inventory (scoped to main.el-main) structurally
+# cannot reach them -- across a full sweep not one dialog button was ever clicked. Buttons
+# whose own label or whose dialog title says delete / remove / clear / reset / batch / void
+# are recorded as skipped-destructive and NOT pressed: a real acceptance run must not delete
+# the fixtures the other suites assert on.
+function Walk-DialogControls {
+    param([string]$Rname, [string]$Path, [string]$Trig, $AfterState)
+    $raw = ''
+    try { $raw = [string](Js $jsDialogInventory 40000) } catch { $raw = '' }
+    if (-not $raw -or -not $raw.StartsWith('[')) { return }
+    $items = @()
+    try { $items = @($raw | ConvertFrom-Json) } catch { return }
+    if ($items.Count -eq 0) { return }
+    Write-Host ('    -> dialog controls: {0} (trigger ''{1}'')' -f $items.Count, $Trig)
+    foreach ($c in $items) {
+        if ([int]$c.destructive -eq 1) {
+            [void]$script:Rows.Add(("$Path|dialog:$($c.title)/$($c.kind)|$($c.label)|skipped-destructive|$Path|0|0|0|0"))
+            $script:SkipDestructive++
+            continue
+        }
+        # no quotes around the id: it starts with a letter, so [data-uitest-d=d0] is valid CSS
+        # (quoting it with [char]34 would terminate the PowerShell string that embeds it)
+        $sel = '[data-uitest-d=' + $c.id + ']'
+        Clear-Evidence
+        $res = ''
+        try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
+        if ($res -ne 'ok') {
+            [void]$script:Rows.Add(("$Path|dialog:$($c.title)/$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0"))
+            continue
+        }
+        $script:Clicks++
+        Start-Sleep -Milliseconds $SettleMs
+        $aft = $null
+        try { $aft = (Js $jsProbe) | ConvertFrom-Json } catch { $aft = $null }
+        if (-not $aft) { [void]$script:Rows.Add(("$Path|dialog:$($c.title)/$($c.kind)|$($c.label)|probe-failed|$Path|0|0|0|0")); break }
+        $ev = Read-Evidence
+        $eff = 'none'
+        if ($aft.dialogs -lt $AfterState.dialogs) { $eff = 'closed-dialog' }
+        elseif ($aft.toasts -gt 0 -or $aft.toastText) { $eff = 'toast' }
+        elseif ($aft.inputs -ne $AfterState.inputs) { $eff = 'input' }
+        elseif ($aft.nodes -ne $AfterState.nodes) { $eff = 'dom' }
+        elseif ($aft.htmlLen -ne $AfterState.htmlLen) { $eff = 'style' }
+        elseif ($ev.reqTotal -gt 0) { $eff = 'request' }
+        [void]$script:Rows.Add(("$Path|dialog:$($c.title)/$($c.kind)|$($c.label)|$eff|$($aft.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
+        if ($ev.pageErr -gt 0) { Ck "$Rname dialog '$($c.label)' no page error" $false '' }
+        elseif ($ev.consoleErr -gt 0) { Ck "$Rname dialog '$($c.label)' no console error" $false '' }
+        elseif ($ev.http5xx -gt 0) { Ck "$Rname dialog '$($c.label)' no 5xx" $false ("5xx=" + $ev.first5) }
+        else { $script:Pass++ }
+        if ($aft.dialogs -lt $AfterState.dialogs) { break }
+    }
+}
+
 function Snapshot-Layout {
     $script:LayoutSnap = ''
     try {
@@ -469,6 +523,50 @@ function Seed-Dashboard {
     Ck "$Role dashboard seeded with widgets to click" ($n -gt 0) "widgets=$n"
 }
 
+# Inventory the controls INSIDE an open dialog/drawer. Element Plus teleports dialogs to
+# <body>, so they sit outside `main.el-main` and the content-phase inventory structurally
+# cannot see them: across a full sweep not a single dialog button (confirm / cancel / save)
+# was ever clicked. Opening a dialog was counted as "that button responded" and the dialog's
+# own controls were left untested.
+$dlgKill = @(
+    (-join @([char]0x5220, [char]0x9664))    # delete
+    (-join @([char]0x79FB, [char]0x9664))    # remove
+    (-join @([char]0x6E05, [char]0x7A7A))    # clear
+    (-join @([char]0x91CD, [char]0x7F6E))    # reset
+    (-join @([char]0x6279, [char]0x91CF))    # batch
+    (-join @([char]0x4F5C, [char]0x5E9F))    # void
+) -join '|'
+$jsDialogInventory = @"
+(() => {
+  const KILL = new RegExp('$dlgKill');
+  const vis = (el) => { if (!el) return false; const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false; const st = getComputedStyle(el);
+    return !(st.visibility === 'hidden' || st.display === 'none' || parseFloat(st.opacity || '1') === 0); };
+  document.querySelectorAll('[data-uitest-d]').forEach((e) => e.removeAttribute('data-uitest-d'));
+  const SEL = 'button, .el-button, [role="button"], .el-tabs__item, .el-radio-button, .el-switch, .el-checkbox, a.el-link, .el-pager li, .el-select__wrapper, input[type="radio"], input[type="checkbox"]';
+  const out = [];
+  const panels = Array.from(document.querySelectorAll('.el-dialog, .el-drawer')).filter(vis);
+  panels.forEach((panel) => {
+    const titleEl = panel.querySelector('.el-dialog__title, .el-drawer__title');
+    const title = ((titleEl && titleEl.innerText) || '').trim().slice(0, 24);
+    const titleKill = KILL.test(title);
+    panel.querySelectorAll(SEL).forEach((el) => {
+      if (el.hasAttribute('data-uitest-d')) return;
+      if (el.classList.contains('el-dialog__headerbtn')) return;
+      if (!vis(el)) return;
+      const label = (el.innerText || el.getAttribute('placeholder') || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().slice(0, 24);
+      if (!label) return;
+      const id = 'd' + out.length;
+      el.setAttribute('data-uitest-d', id);
+      const kind = el.tagName === 'BUTTON' || el.classList.contains('el-button') ? 'button' : (el.classList.contains('el-tabs__item') ? 'tab' : 'control');
+      out.push({ id: id, kind: kind, label: label, title: title,
+        destructive: (titleKill || KILL.test(label)) ? 1 : 0 });
+    });
+  });
+  return JSON.stringify(out);
+})()
+"@
+
 $jsOverlayCount = @'
 (() => {
   const vis = el => { if (!el) return false; const r = el.getBoundingClientRect();
@@ -693,6 +791,26 @@ function Open-Route {
     WaitJs 'document.readyState === "complete"' $NavTimeoutSec | Out-Null
     WaitJs '!document.querySelector(".el-loading-mask")' 12 | Out-Null
     Start-Sleep -Milliseconds 500
+    # A full load can land on a DIFFERENT page than the one requested: the framework
+    # restores the previously active tab on boot, which overrode the requested URL
+    # (opening /home ended up on /edu/fun/insect-card, /eduai/paper-compose, ...).
+    # The crawl therefore credited another page's controls to this route -- /home was
+    # never actually crawled. Correct it with an SPA navigation through the app's own
+    # router instance, which the guard lets through untouched.
+    $landed = ''
+    try { $landed = [string](Js 'location.pathname' 20000) } catch { $landed = '' }
+    if ($landed -and ($landed.TrimEnd('/') -ne $Path.TrimEnd('/'))) {
+        $fix = "(() => { const app = document.querySelector('#app'); const r = app && app.__vue_app__ && app.__vue_app__.config.globalProperties.`$router; if (!r) return 'no-router'; r.push('$Path').catch(() => undefined); return 'pushed'; })()"
+        $r1 = ''
+        try { $r1 = [string](Js $fix 30000) } catch { $r1 = '' }
+        WaitJs 'document.readyState === "complete"' $NavTimeoutSec | Out-Null
+        Start-Sleep -Milliseconds 900
+        $now = ''
+        try { $now = [string](Js 'location.pathname' 20000) } catch { $now = '' }
+        if ($now.TrimEnd('/') -ne $Path.TrimEnd('/')) {
+            Write-Host ('    [WARN] {0} landed on {1} (spa fix: {2})' -f $Path, $landed, $r1)
+        }
+    }
     # collectors live in the page, so a full navigation wipes them: re-install
     Js $jsInstall | Out-Null
 }
@@ -1071,6 +1189,9 @@ if (-not $SkipContent) {
             }
             if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' tag=$($it.tag) cls='$($it.cls)' (no visible effect, wasActive=$($it.active))") }
 
+            # A trigger that opened a dialog also means that dialog's own controls are now
+            # on screen and reachable -- click them too (see Walk-DialogControls).
+            if ($after.dialogs -gt $before.dialogs) { Walk-DialogControls -Rname $rname -Path $path -Trig $lbl -AfterState $after }
             Js $jsReset | Out-Null
             Start-Sleep -Milliseconds 200
         }
@@ -1158,7 +1279,7 @@ Write-Host ''
 Write-Host '########## dead clicks ##########'
 if ($script:Dead.Count -eq 0) { Write-Host '  (none)' } else { $script:Dead | ForEach-Object { Write-Host ('  - ' + $_) } }
 Write-Host ''
-Write-Host ('=========== SUMMARY: routes {0} | clicks {1} | passed {2} | failed {3} | dead {4} | harness-err {5} ===========' -f $routes.Count, $script:Clicks, $script:Pass, $script:Fail, $script:Dead.Count, $script:HarnessErr.Count)
+Write-Host ('=========== SUMMARY: routes {0} | clicks {1} | passed {2} | failed {3} | dead {4} | harness-err {5} | skipped-destructive {6} ===========' -f $routes.Count, $script:Clicks, $script:Pass, $script:Fail, $script:Dead.Count, $script:HarnessErr.Count, $script:SkipDestructive)
 Write-Host ("matrix: $csv")
 Write-Host ("        $md")
 if ($script:Fails.Count -gt 0) {
