@@ -346,17 +346,18 @@ public class WorkshopAssetController {
     }
 
     /**
-     * 画布读归属判定：管理员可跨用户读取，其余仅本人。
+     * 画布读归属判定：仅本人（管理员在业务数据侧与普通账号同权）。
      *
      * @param canvas 画布条目
      * @return 当前用户是否可读
      */
     private boolean readableCanvas(Map<String, Object> canvas) {
-        return AiUserContext.isAdmin() || AiUserContext.requireUserId().equals(canvas.get("user_id"));
+        return AiUserContext.canAccessOthersData()
+                || AiUserContext.requireUserId().equals(canvas.get("user_id"));
     }
 
     /**
-     * 画布写归属校验：只读账号拒绝，仅归属者可改写删除（管理员对他人数据只读）。
+     * 画布写归属校验：只读账号拒绝，仅归属者可改写删除。
      *
      * @param canvas 画布条目
      */

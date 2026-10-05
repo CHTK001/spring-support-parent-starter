@@ -85,7 +85,7 @@ public class MiniAppController {
         if (userId.equals(owner)) {
             return app;
         }
-        if (!writable && AiUserContext.isAdmin()) {
+        if (!writable && AiUserContext.canAccessOthersData()) {
             return app;
         }
         throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人的小程序");
@@ -101,11 +101,11 @@ public class MiniAppController {
      */
     public Map<String, Object> list() {
         String userId = AiUserContext.requireUserId();
-        boolean admin = AiUserContext.isAdmin();
+        boolean crossAccount = AiUserContext.canAccessOthersData();
         List<Map<String, Object>> items = new ArrayList<>();
         for (Map<String, Object> item : apps.values()) {
             String owner = item.get("user_id") == null ? null : String.valueOf(item.get("user_id"));
-            if (admin || userId.equals(owner)) {
+            if (crossAccount || userId.equals(owner)) {
                 items.add(item);
             }
         }

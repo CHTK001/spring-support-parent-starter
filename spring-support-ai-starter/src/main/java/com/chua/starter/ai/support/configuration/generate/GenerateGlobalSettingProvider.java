@@ -75,7 +75,13 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("video_base_url", "", "STRING", "文生视频 API 基础地址", 14),
                 new SettingItem("video_api_key", "", "STRING", "文生视频 API Key", 15),
                 new SettingItem("video_duration", "5", "NUMBER", "默认视频时长（秒）", 16),
-                new SettingItem("video_ratio", "16:9", "STRING", "默认视频比例（16:9 / 9:16 / 1:1）", 17)
+                new SettingItem("video_ratio", "16:9", "STRING", "默认视频比例（16:9 / 9:16 / 1:1）", 17),
+                // 生图/生视频的任务超时：原先是代码里写死的 5 分钟（GenerateService.STALE_TASK_MILLIS），
+                // 改不了。暴露成配置后，「一条任务卡住」这件事终于能按部署情况调整，
+                // 不必改代码重新打包。
+                new SettingItem("task_timeout_minutes", "5", "NUMBER",
+                        "生成任务超时时间（分钟）：任务创建后超过这么久仍未结束就判为失败，"
+                                + "并释放「一次只允许一个在跑」的名额（1-120）", 18)
         );
     }
 }

@@ -53,9 +53,9 @@ public class SysAiSshHostStore {
      * @return 主机列表
      */
     public List<SysAiSshHost> listAll() {
-        // 凭据仅归属者可见：管理员可跨用户查看，普通用户仅本人
+        // 凭据仅归属者可见（含管理员）
         LambdaQueryWrapper<SysAiSshHost> wrapper = new LambdaQueryWrapper<SysAiSshHost>()
-                .eq(!AiUserContext.isAdmin(), SysAiSshHost::getUserId, AiUserContext.requireUserId())
+                .eq(!AiUserContext.canAccessOthersData(), SysAiSshHost::getUserId, AiUserContext.requireUserId())
                 .orderByAsc(SysAiSshHost::getCreatedAt);
         return sshHostMapper.selectList(wrapper);
     }
@@ -71,14 +71,14 @@ public class SysAiSshHostStore {
         if (host == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "SSH 主机不存在: " + sshHostId);
         }
-        if (!AiUserContext.isAdmin() && !AiUserContext.requireUserId().equals(host.getUserId())) {
+        if (!AiUserContext.canAccessOthersData() && !AiUserContext.requireUserId().equals(host.getUserId())) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "无权访问他人数据");
         }
         return host;
     }
 
     /**
-     * 写出口主机读取：仅归属者可改删，管理员对他人数据只读，只读账号拒绝。
+     * 写出口主机读取：仅归属者可改删，只读账号拒绝。
      *
      * @param sshHostId 主机 标识
      * @return 主机
