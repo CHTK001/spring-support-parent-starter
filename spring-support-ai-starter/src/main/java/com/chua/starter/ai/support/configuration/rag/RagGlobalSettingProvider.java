@@ -36,8 +36,12 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     */
     public List<SettingItem> getItems() {
         return List.of(
-                new SettingItem("rag_embedding_model", "", "STRING", "Embedding 引擎（memory / openai / siliconflow / sensetime / onnx；"
-                        + "留空=未配置，RAG 检索会提示缺少 embedding 引擎）", 1),
+                // rag_embedding_model（embedding 引擎：onnx/openai/siliconflow…）已移除：
+                // 引擎是实现细节，由所选 Embedding 模型自动推导（命中本地模型库 → onnx；
+                // 否则按供应商 platform 判定是否注册了 EmbeddingClient SPI）。
+                // 让用户选引擎既无意义也容易配错——实测种子把 rag_embedding_model 写成
+                // onnx，界面上显示成「已配置」，但从没有人配置过。
+                // 仅保留模型标识项 rag_embedding_model_name。
                 new SettingItem("rag_vector_storage", "jvector", "STRING", "向量存储（jvector / milvus / mysql / memory）", 2),
                 new SettingItem("rag_llm_model", "", "STRING", "RAG 问答使用的 LLM 模型名（留空走全局默认）", 3),
                 new SettingItem("rag_chunk_size", "1000", "NUMBER", "分块大小", 4),
