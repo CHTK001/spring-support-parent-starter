@@ -41,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +49,9 @@ import jakarta.annotation.PreDestroy;
 import javax.sql.DataSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -277,8 +280,35 @@ public class RagClientManager {
      * 每个账号一个 RAG 客户端：索引 / 分块缓存 / embedding 都按账号独立。
      *
      * <p>账号为 null 的系统桶放在 {@link #systemClient}，不放进这里。</p>
+     *
+     * <p>用 {@link ConcurrentHashMap} 而非 {@code LinkedHashMap}：读路径
+     * {@link #current()} 不加锁，避免一个账号首次构建（要加载 ONNX 模型、可能耗时数秒）
+     * 时把其它账号的读请求一起阻塞。代价是它不保证插入顺序，淘汰顺序改由
+     * {@link #userOrder} 维护。</p>
      */
     private final Map<String, RagClient> userClients = new ConcurrentHashMap<>();
+
+    /**
+     * 账号的插入顺序（队首最旧），仅在 {@link #clientLock} 内访问。
+     *
+     * <p>存在的理由：{@link ConcurrentHashMap} 的迭代顺序既不稳定、也不代表使用顺序，
+     * 直接拿它淘汰会变成「随机删」。而按「最近最少使用」淘汰需要维护访问时间，
+     * 每次问答都更新时间戳会把热账号的锁竞争放大；RAG 客户端本身已经按账号常驻，
+     * 按插入顺序淘汰（重建过的账号视为最新，重新排到队尾）已足够，
+     * 且语义可预期。</p>
+     */
+    private final Deque<String> userOrder = new ArrayDeque<>();
+
+    /**
+     * 客户端缓存的统一锁。
+     *
+     * <p>必须统一：曾经「读路径加 {@code synchronized (userClients)}、而
+     * {@code rebuildUser} 不加锁」，两者并发时会产出一个既没被 {@link #current()}
+     * 持有、也没被 {@code rebuildUser} 持有的孤儿客户端——它不会被 close，
+     * 向量索引不落盘，且可能与另一个实例同时写同一个索引文件。
+     * 现在所有增删改（含 {@link #rebuild()}、{@link #destroy()}）都在这把锁内完成。</p>
+     */
+    private final Object clientLock = new Object();
 
     /**
      * 无用户上下文（健康检查 / 状态探针）时使用的 RAG 客户端（懒构建，热更新时替换）。
@@ -296,62 +326,81 @@ public class RagClientManager {
     public RagClient current() {
         String userId = AiUserContext.currentUserId();
         if (!StringUtils.hasText(userId)) {
-            // 健康检查等无身份调用：走系统桶，不占用也不污染任何账号的索引
-            RagClient system = systemClient;
-            if (system == null) {
-                synchronized (this) {
-                    if (systemClient == null) {
-                        systemClient = build(null);
-                        registerBean(systemClient);
-                    }
-                    system = systemClient;
-                }
-            }
-            return system;
+            return systemRag();
         }
-        RagClient client = userClients.get(userId);
-        if (client != null) {
-            return client;
+        // 快路径：已构建过就无锁返回，避免高并发问答都挤到锁上
+        RagClient cached = userClients.get(userId);
+        if (cached != null) {
+            return cached;
         }
-        synchronized (userClients) {
-            client = userClients.get(userId);
+        synchronized (clientLock) {
+            RagClient client = userClients.get(userId);
             if (client == null) {
                 client = build(userId);
                 if (client != null) {
+                    putUserClient(userId, client);
                     evictOverflowUsers();
-                    userClients.put(userId, client);
                     log.info("[RagClientManager] 已为账号 {} 构建独立 RAG 客户端（当前账号数 {}）",
                             userId, userClients.size());
                 }
             }
+            return client;
         }
-        return client;
     }
 
     /**
-     * 账号数超过 {@link #MAX_USER_CLIENTS} 时关闭并移除最早构建的客户端。
+     * 无用户上下文（健康检查 / 状态探针）时的客户端，落在独立的系统桶。
      *
-     * <p>按插入顺序而非最近使用时间淘汰：{@link ConcurrentHashMap} 的迭代顺序
-     * 不保证稳定，硬凑 LRU 反而不可预期。淘汰时先 {@code close()} 让向量索引落盘，
-     * 否则该账号的索引会丢。</p>
+     * @return RAG 客户端；构建失败时返回空
+     */
+    private RagClient systemRag() {
+        RagClient system = systemClient;
+        if (system != null) {
+            return system;
+        }
+        synchronized (clientLock) {
+            if (systemClient == null) {
+                systemClient = build(null);
+                registerBean(systemClient);
+            }
+            return systemClient;
+        }
+    }
+
+    /**
+     * 登记账号客户端并把该账号排到插入序队尾（重建过的账号视为最新）。
+     *
+     * <p>调用方必须持有 {@link #clientLock}。</p>
+     *
+     * @param userId 账号标识，非空
+     * @param client 客户端，非空
+     */
+    private void putUserClient(String userId, RagClient client) {
+        userClients.put(userId, client);
+        userOrder.remove(userId);
+        userOrder.addLast(userId);
+    }
+
+    /**
+     * 账号数超过 {@link #MAX_USER_CLIENTS} 时关闭并移除<b>最早构建</b>的客户端。
+     *
+     * <p>按 {@link #userOrder} 的插入顺序淘汰，不是「字典序最小」也不是随机：
+     * {@link ConcurrentHashMap} 的迭代顺序不代表时间，直接拿它挑会变成随机删。
+     * 淘汰时先 {@code close()} 让向量索引与分块缓存落盘，否则该账号数据会丢。</p>
+     *
+     * <p>调用方必须持有 {@link #clientLock}。</p>
      */
     private void evictOverflowUsers() {
-        while (userClients.size() > MAX_USER_CLIENTS) {
-            String oldest = null;
-            for (String key : userClients.keySet()) {
-                if (oldest == null || key.compareTo(oldest) < 0) {
-                    oldest = key;
-                }
-            }
-            if (oldest == null) {
-                return;
-            }
+        while (userClients.size() > MAX_USER_CLIENTS && !userOrder.isEmpty()) {
+            String oldest = userOrder.pollFirst();
             RagClient evicted = userClients.remove(oldest);
-            if (evicted != null) {
-                closeQuietly(evicted);
-                log.info("[RagClientManager] 账号客户端超出上限 {}，已关闭账号 {} 的 RAG 客户端",
-                        MAX_USER_CLIENTS, oldest);
+            if (evicted == null) {
+                // 顺序队列里的残留项（该账号已被重建移除），继续看下一个
+                continue;
             }
+            closeQuietly(evicted);
+            log.info("[RagClientManager] 账号客户端超出上限 {}，已关闭最早构建的账号 {}（索引已落盘，"
+                    + "下次访问会按当前配置重新构建）", MAX_USER_CLIENTS, oldest);
         }
     }
 
@@ -397,18 +446,43 @@ public class RagClientManager {
      * 用户级改动走 {@link #reloadUser} 定向重建触发者那一个，
      * 否则会把他的覆盖烘进别人的客户端。</p>
      */
-    public synchronized void rebuild() {
-        log.info("[RagClientManager] 重建 RAG 客户端（已缓存账号数 {}）", userClients.size());
-        for (String userId : new ArrayList<>(userClients.keySet())) {
-            rebuildUser(userId);
+    public void rebuild() {
+        synchronized (clientLock) {
+            log.info("[RagClientManager] 重建 RAG 客户端（已缓存账号数 {}）", userClients.size());
+            for (String userId : new ArrayList<>(userOrder)) {
+                rebuildUserLocked(userId);
+            }
+            RagClient oldSystem = systemClient;
+            RagClient nextSystem = build(null);
+            systemClient = nextSystem;
+            registerBean(nextSystem);
+            if (oldSystem != null) {
+                closeQuietly(oldSystem);
+            }
         }
-        RagClient oldSystem = systemClient;
-        RagClient nextSystem = build(null);
-        systemClient = nextSystem;
-        registerBean(nextSystem);
-        if (oldSystem != null) {
-            closeQuietly(oldSystem);
+    }
+
+    /**
+     * 应用就绪后重建全部客户端。
+     *
+     * <p><b>为什么必须有这一步</b>：ONNX 外部模型根目录由
+     * {@code OnnxExternalDirectoryService} 在启动期设置，而 Tomcat 在那之前就已开始接请求。
+     * 若某个账号的客户端在这之前被懒构建，{@code createEmbeddingClient} 与
+     * {@code resolveTextExtractor} 会把<b>当时的默认模型根</b>烘进该账号的客户端
+     * （例如解析成 {@code models/onnx/arc-face.onnx}），此后 embedding 与图片文字提取
+     * 全部失败，且没有任何异常——配置没变、也没有任何重建机会。
+     * 人脸侧已实测过这条竞态（账号库先建 05:27:56、模型根后设 05:27:58）。
+     * 按账号懒构建让「第一个访问者」决定客户端质量，所以必须在就绪后统一重建一次。</p>
+     *
+     * @param event 应用就绪事件
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady(ApplicationReadyEvent event) {
+        if (userClients.isEmpty() && systemClient == null) {
+            return;
         }
+        log.info("[RagClientManager] 应用就绪，重建全部 RAG 客户端以采用最终的 ONNX 模型根");
+        rebuild();
     }
 
     /**
@@ -421,26 +495,33 @@ public class RagClientManager {
             log.debug("[RagClientManager] 收到用户级 rag 配置写入但事件未带账号，跳过重建");
             return;
         }
-        if (!userClients.containsKey(userId)) {
-            // 该账号还没建过客户端，下次用到时按最新配置懒构建即可
-            return;
+        synchronized (clientLock) {
+            if (!userClients.containsKey(userId)) {
+                // 该账号还没建过客户端，下次用到时按最新配置懒构建即可
+                return;
+            }
+            rebuildUserLocked(userId);
         }
-        rebuildUser(userId);
     }
 
     /**
      * 重建并替换指定账号的客户端（旧客户端先落盘再关闭）。
      *
+     * <p>调用方必须持有 {@link #clientLock}：不持锁会让本方法与 {@link #current()}
+     * 的懒构建并发，产出一个谁都不持有的孤儿客户端（不关闭、索引不落盘、
+     * 且可能与另一个实例并发写同一索引文件）。</p>
+     *
      * @param userId 账号标识，非空
      */
-    private void rebuildUser(String userId) {
+    private void rebuildUserLocked(String userId) {
         RagClient old = userClients.remove(userId);
+        userOrder.remove(userId);
         RagClient next = build(userId);
         if (next == null) {
             log.warn("[RagClientManager] 账号 {} 重建后不可用，已移除其客户端", userId);
             return;
         }
-        userClients.put(userId, next);
+        putUserClient(userId, next);
         closeQuietly(old);
     }
 
@@ -1134,6 +1215,16 @@ public class RagClientManager {
      */
     private void applyPerUserIsolation(String name, Map<String, Object> config, String uploadDir, String userId) {
         var keys = declaredFieldKeys(name);
+        if (keys == null) {
+            // 取不到描述器属于基础设施故障，不是「这个库没有可隔离字段」。
+            // 两者必须分开报：混在一起会让人以为「隔离字段判定」本身是可靠的，
+            // 而这里实际是判定失效后放行了共享落盘位置。
+            log.error("[RagClientManager] 无法读取向量库 [{}] 的描述器，跳过按账号隔离判定，"
+                            + "账号 {} 的向量将与其它账号共用同一处落盘位置（换 embedding 维度会互相破坏、"
+                            + "跨账号可检索到对方分块）。请检查 VectorStorage SPI 注册",
+                    name, StringUtils.defaultString(userId, SYSTEM_ACCOUNT));
+            return;
+        }
         if (keys.contains(JVectorVectorStorageProvider.KEY_INDEX_PATH)) {
             isolateFileIndex(config, uploadDir, userId, JVectorVectorStorageProvider.KEY_INDEX_PATH);
             return;
@@ -1154,26 +1245,33 @@ public class RagClientManager {
      * 取出某向量库描述器里声明的字段键集合。
      *
      * @param name 存储名
-     * @return 字段键集合；查不到描述器时返回空集合
+     * @return 字段键集合；<b>描述器整体不可用时返回 {@code null}</b>，
+     *         与「描述器可用但该库没声明隔离字段」的空集合区分开
      */
     private Set<String> declaredFieldKeys(String name) {
+        List<VectorStorageDescriptor> descriptors;
         try {
-            for (VectorStorageDescriptor descriptor : VectorStorageProvider.descriptors()) {
-                if (descriptor != null && name.equalsIgnoreCase(descriptor.name())
-                        && descriptor.fields() != null) {
-                    var keys = new LinkedHashSet<String>();
-                    for (VectorStorageField field : descriptor.fields()) {
-                        if (field != null && StringUtils.hasText(field.key())) {
-                            keys.add(field.key());
-                        }
-                    }
-                    return keys;
-                }
-            }
+            descriptors = VectorStorageProvider.descriptors();
         } catch (Exception e) {
             log.warn("[RagClientManager] 读取向量库 [{}] 描述器失败: {}", name, e.getMessage());
+            return null;
         }
-        return Set.of();
+        if (descriptors == null) {
+            return null;
+        }
+        for (VectorStorageDescriptor descriptor : descriptors) {
+            if (descriptor != null && name.equalsIgnoreCase(descriptor.name())
+                    && descriptor.fields() != null) {
+                var keys = new LinkedHashSet<String>();
+                for (VectorStorageField field : descriptor.fields()) {
+                    if (field != null && StringUtils.hasText(field.key())) {
+                        keys.add(field.key());
+                    }
+                }
+                return keys;
+            }
+        }
+        return null;
     }
 
     /**
@@ -1463,18 +1561,23 @@ public class RagClientManager {
      */
     @PreDestroy
     public void destroy() {
-        var all = new ArrayList<>(userClients.values());
-        userClients.clear();
-        if (systemClient != null) {
-            all.add(systemClient);
-            systemClient = null;
+        var all = new ArrayList<RagClient>();
+        synchronized (clientLock) {
+            all.addAll(userClients.values());
+            userClients.clear();
+            userOrder.clear();
+            if (systemClient != null) {
+                all.add(systemClient);
+                systemClient = null;
+            }
         }
+        int accountCount = all.size();
         for (RagClient client : all) {
             closeQuietly(client);
         }
         if (!all.isEmpty()) {
-            log.info("[RagClientManager] 已在关闭阶段关闭 {} 个 RAG 客户端（含账号 {}）",
-                    all.size(), userClients.size());
+            log.info("[RagClientManager] 已在关闭阶段关闭 {} 个 RAG 客户端（索引与分块缓存均已落盘）",
+                    accountCount);
         }
     }
 
