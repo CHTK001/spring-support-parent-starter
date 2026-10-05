@@ -1246,7 +1246,7 @@ public class RagClientManager {
     private void logPlaceholderEmbedding(String engine, int embeddingDimensions) {
         log.warn("[RagClientManager] 使用占位向量化 MemoryEmbeddingClient（engine={}, dim={}）："
                         + "该实现无语义能力，任意两条不同文本余弦恒在 0.63~0.69，与默认相似度阈值 0.7 重叠，"
-                        + "语义检索将恒定 0 命中；需要真实召回请配置 rag_embedding_model/base_url/api_key/model_name",
+                        + "语义检索将恒定 0 命中；需要真实召回请在「设置中心 → 默认模型 → RAG」选择 Embedding 模型（引擎由所选模型自动推导）",
                 engine, embeddingDimensions);
     }
 

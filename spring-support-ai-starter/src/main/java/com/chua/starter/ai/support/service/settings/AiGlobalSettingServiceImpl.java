@@ -68,7 +68,10 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         m.put("enableCache", new String[]{"global", "enable_cache"});
         m.put("stream", new String[]{"global", "stream"});
         m.put("systemPrompt", new String[]{"runtime", "system_prompt"});
-        m.put("ragEmbeddingModel", new String[]{"rag", "rag_embedding_model"});
+        // 遗留别名 ragEmbeddingModel 原本指向已废弃的引擎字段 rag_embedding_model。
+        // 改指模型字段 rag_embedding_model_name：既符合「只选模型不选引擎」的契约，
+        // 也避免整包 PUT 把已删除的引擎字段重新写回数据库、让设置接口再次把它暴露出去。
+        m.put("ragEmbeddingModel", new String[]{"rag", "rag_embedding_model_name"});
         m.put("ragLlmModel", new String[]{"rag", "rag_llm_model"});
         m.put("ragOcrModel", new String[]{"rag", "rag_ocr_model"});
         m.put("ragUploadDir", new String[]{"rag", "rag_upload_dir"});
