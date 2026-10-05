@@ -9,15 +9,15 @@
 > 结论由 `ACCEPTANCE-REPORT-20261005-r15.md` 的 §5.0 与 §5.7 给出，绑定**当前线上产物**：
 > 后端 jar sha256 `b824f48588f46688ea66a5f9bfe58e4eb0244135ed492791cdd06e44d64fa4d4`，
 > 前端 `index.html` md5 `d6c645eff6e18f34cbb61831cdc3c4cd`（1104 文件），
-> 日志 `logs/release-final9.log`、`logs/ui-full-click-admin-r18.log`、`logs/ui-full-click-both-r17.log`。
+> 日志 `logs/release-final9.log`、`logs/ui-full-click-both-r20.log`、`logs/ui-full-click-student-r21.log`。
 >
 > | 面 | 判据 | 结果 |
 > |---|---|---|
 > | 一键发布门禁 | 资源 → 部署 → 来源自证 → 鉴权就绪 → 7 套件 → 故障注入 → 前后指纹 | **PROVENANCE_OK / API=OK**，前后指纹一致，崩溃转储 4→4 未新增 |
 > | 后端套件 | 7 套件 | **全部 OK**（含汉字采集 66 条断言 0 失败，含镜像全不可用的负向用例） |
 > | 故障注入 | 停 oauth | 2522ms 内登录失败、eduai 健康 200、`NRestarts=0`；恢复后登录正常 |
-> | 全站点击（管理员） | 27 路由逐控件点击 | **457 次点击 / 513 断言 / 0 失败 / 0 死按钮** |
-> | 全站点击（学生身份） | 同上，`-Role student` 真实学生登录 | **411 次点击 / 472 断言 / 0 失败 / 0 死按钮** |
+> | 全站点击（管理员） | 27 路由逐控件点击 | **458 次点击 / 515 断言 / 0 失败 / 0 死按钮** |
+> | 全站点击（学生身份） | 同上，`-Role student` 真实学生登录 | **395 次点击 / 458 断言 / 0 失败 / 0 死按钮** |
 > | 前端来源自证 | 线上 index.html md5 vs 本地构建 | **一致**（`WEB_PROVENANCE_OK`） |
 > | class 级来源自证 | 线上 jar 内 `HanziQuestionSourceProvider*.class` 三个 entry | **字节全部一致** |
 > | 运行态 | health / NRestarts / hs_err | 200 / 0 / 仍 4 份 |
@@ -30,12 +30,15 @@
 > 「swap<80」对任何人恒不成立。`EDUAI_RELEASE_BREAKGLASS` 默认不放行，必须写明理由，
 > 理由原样进入指纹；`tmpfs` 与 `oom-kill` 仍一票否决。
 >
-> **本轮新查出的产品缺陷（未修，留边界）**：仪表板 `layout.source='remote'` 指向
-> `/v2/user/layout`，该接口在服务端返回「资源不存在」，`saveLayout` 的失败被 `catch` 吞掉，
-> 于是**每个全新用户的仪表板都是空的**（清空本地存储后重新登录，/home 仍显示「尚未配置仪表板」）。
-> 修法二选一：补后端接口，或把 `source` 改成 `local`。两者都要重新出包并重跑门禁。
+> **更正一条我自己的误判**：上一版把「仪表板远端布局指向不存在的 `/v2/user/layout`」记成产品
+> 缺陷，这是**错的**。框架默认就是 `layout.source='local'`（`packages/config/src/shared.ts`），
+> eduai 应用没有任何覆盖，所以那个接口根本不会被调用；我自己的证据 `system:2:layout` 里一直
+> 有落盘数据。决定性实验：加 5 个组件 → 保存 → 落盘 → 渲染全通，且 `layoutRequests=[]`。
+> 「新用户仪表板是空的」是框架初始状态并自带引导文案，属**待产品决策**，不作缺陷记账。
+> 教训：读代码里的条件分支不等于知道运行时取值（同 §5.0.1 的 class 指纹那次一样）。
 >
-> **遍历器这轮改了 13 处判据**，逐条都是为了不再报假缺陷（toast 堆叠、非 button 的可点元素、
+> **遍历器这轮改了 16 处判据**，并自带仪表板 fixture（否则它自己会把 /home 的覆盖从 49 个控件点成 1 个，
+> 而 SUMMARY 仍是全绿）。判据清单：，逐条都是为了不再报假缺陷（toast 堆叠、非 button 的可点元素、
 > 重置/搜索要看筛选状态、模式切换后重走、指向当前页的快捷入口、`window.open`、命令行长度会
 > 静默吞掉整页覆盖、清点范围回退……）。**一个总报假缺陷的验收等于没有验收**，所以这些不是
 > 「已知误报」而是必须修的缺陷。
