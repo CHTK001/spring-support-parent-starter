@@ -56,6 +56,10 @@ ckorder() { # ckorder <标签> <应先出现> <应后出现>：用日志行号�
   if [ "$a" -lt "$b" ]; then PASS=$((PASS+1)); printf '  [PASS] %s : %s(L%s) 先于 %s(L%s)\n' "$1" "$2" "$a" "$3" "$b"
   else FAIL=$((FAIL+1)); printf '  [FAIL] %s : 顺序相反 %s(L%s) 晚于 %s(L%s)\n' "$1" "$2" "$a" "$3" "$b"; fi
 }
+ckge() { # ckge <标签> <实际> <下限>：存在性判据（至少 N 次）
+  if [ -n "$2" ] && [ "$2" -ge "$3" ] 2>/dev/null; then PASS=$((PASS+1)); printf '  [PASS] %s = %s（≥%s）\n' "$1" "$2" "$3"
+  else FAIL=$((FAIL+1)); printf '  [FAIL] %s : 实际=[%s] 要求=[≥%s]\n' "$1" "$2" "$3"; fi
+}
 jget() { # jget <token> <url路径> -> 整个 data 落盘，路径给下游
   curl -s -m 40 -A "$UA" -H "x-oauth-token: $1" "$B$2" -o /tmp/dmr.json -w '%{http_code}'
 }
@@ -258,6 +262,81 @@ curl -s -m 60 -A "$UA" -H "x-oauth-token: $OT" -H 'Content-Type: application/jso
 sleep 6
 win | grep -aE 'ModelResolver' | grep -aF 'zprobe' | cut -c1-170 | sed 's/^/    /'
 ckorder "★换位后顺序翻转（证明上一条不是巧合）" "$BM2" "$RM2"
+
+echo
+echo "############ 3b. ④ 连接器档 > bot 档 > 默认档：判别「实际服务的模型」 ############"
+# §3 只证了 bot 档 > 默认档，且当时的判据原文就是「连接器未配时」——
+#   连接器那一档（①，调用方显式指定）压根没配、也没验。这里补上。
+# ① 档从哪来：EffectiveChatModelResolver.candidates(explicitModel) 的第一个入参，
+#   全项目只有两处传了非 null：AiBotChatService.resolveModelName(bot)/aiReply 传 bot.getModel()，
+#   SessionNextTaskService 传 session.getModelId()。
+#   其中 bot.getModel() 就是 sys_ai_bot_binding.model —— 连接器自己绑的模型，即需求里的「连接器的模型」。
+# 触发口：POST /v2/connectors/simulate/<id>（BotSimulateController，@Profile("local")，
+#   部署态 ExecStart 实测 -Dspring.profiles.active=local，且无令牌打该路径返回 403 而非 404，路径已注册）
+#   -> simulateInbound -> handleMessage -> aiReply(bot,...) -> candidates(bot.getModel())
+#   -> 私聊（fromGroup=false）必走「直接回复」分支，必调 aiReply。
+# 观测点：SysAiUsageServiceImpl 的 "[Usage] 未找到定价: provider=openai, model=<X>"
+#   —— 回显的是**这次调用真正用的模型**。这比 §3 的「候选求值先后」更强：
+#   先后只能说明遍历次序，这条能说明谁真的答了话。
+# 纪律：连接器绑定是 admin 的在线 wechat 连接器，本套件**只读、绝不改**；
+#   写入只发生在 ops 自己的 5 个模型组内。
+BND=$(Q "SELECT sys_ai_bot_binding_id FROM sys_ai_bot_binding WHERE ifnull(sys_ai_bot_binding_model,'')<>'' ORDER BY sys_ai_bot_binding_id LIMIT 1;" | tr -d '\r')
+BM1=$(Q "SELECT sys_ai_bot_binding_model FROM sys_ai_bot_binding WHERE sys_ai_bot_binding_id=$BND;" | tr -d '\r')
+if [ -z "$BND" ] || [ -z "$BM1" ]; then
+  echo "  [SKIP] 库里没有「配了模型的连接器绑定」，本段无法在当前环境取证 —— 不谎称验过 ① 档"
+  echo "  [SKIP] 需求④的「连接器 > bot」这一腿因此仍未取证"
+else
+  echo "  连接器绑定 id=$BND  ①档模型=$BM1（只读，全程不改这行）"
+  echo
+  echo "-- ★主判据：三档全部设为**在册启用**模型，此时胜出者只能由优先级决定 --"
+  # ②/③ 取两个与 ① 名字前缀相近但不同的在册模型，grep -F "model=<X>" 不会互相误命中
+  B2=agnes-3.0-flash; R2=agnes-2.0-flash
+  put "$OT" bot    "{\"default_model\":\"$B2\"}" >/dev/null
+  put "$OT" runtime "{\"default_model\":\"$R2\"}" >/dev/null
+  sleep 5
+  mark
+  MID="vmdr-conn-$$-$(date +%s)"
+  curl -s -m 120 -A "$UA" -H "x-oauth-token: $OT" -H 'Content-Type: application/json' \
+    -d "{\"content\":\"say one word: ok\",\"fromUser\":\"vmdr-probe\",\"fromGroup\":false,\"msgId\":\"$MID\"}" \
+    "$B/v2/connectors/simulate/$BND" -o /tmp/dmr_sim.json -w '  simulate HTTP=%{http_code}\n'
+  sleep 8
+  echo "  --- 响应（outcome 与 sentText） ---"
+  python3 -c "import json;d=json.load(open('/tmp/dmr_sim.json'));r=(d.get('data') or {});print('    outcome  =',r.get('outcome'));t=r.get('sentText');print('    sentText =',repr(t)[:120] if t else t)" 2>/dev/null || head -c 300 /tmp/dmr_sim.json
+  echo "  --- 窗口内 Usage / ModelResolver / BotChat ---"
+  win | grep -aE '\[Usage\]|ModelResolver|BotChat' | cut -c1-170 | sed 's/^/    /'
+  ck "④ 连接器模拟入站拿到回复（私聊必回复分支确实走通）" \
+     "$(python3 -c "import json;print((json.load(open('/tmp/dmr_sim.json')).get('data') or {}).get('outcome'))" 2>/dev/null)" "REPLIED"
+  ckge "★④ 实际服务的模型 = 连接器自配的 ① 档" "$(win | grep -acF "model=$BM1" | head -1)" 1
+  ck "★④ bot 档 ②（$B2，在册启用）根本没被用过" "$(win | grep -acF "model=$B2" | head -1)" 0
+  ck "★④ 默认档 ③（$R2，在册启用）根本没被用过" "$(win | grep -acF "model=$R2" | head -1)" 0
+  # 关键反证：窗口内一条 ModelResolver 都没有 = 三档全被接受、没有任何一档被「不在模型管理中」过滤掉。
+  #   有了这条，才能断言胜出者是**优先级**决定的，而不是「只有 ① 合法」被动造成的。
+  ck "★④ 三档全合法（窗口内无 ModelResolver 过滤行，胜出靠优先级不靠过滤）" \
+     "$(win | grep -acF '[ModelResolver]' | head -1)" 0
+
+  echo
+  echo "-- ★敏感性对照：②③ 换成**假名**（必然被过滤），① 仍须胜出，且这次要看到过滤行 --"
+  CB=zprobe-conn-bot; CR=zprobe-conn-run
+  put "$OT" bot    "{\"default_model\":\"$CB\"}" >/dev/null
+  put "$OT" runtime "{\"default_model\":\"$CR\"}" >/dev/null
+  sleep 5
+  mark
+  MID2="vmdr-conn2-$$-$(date +%s)"
+  curl -s -m 120 -A "$UA" -H "x-oauth-token: $OT" -H 'Content-Type: application/json' \
+    -d "{\"content\":\"say one word: ok\",\"fromUser\":\"vmdr-probe2\",\"fromGroup\":false,\"msgId\":\"$MID2\"}" \
+    "$B/v2/connectors/simulate/$BND" -o /tmp/dmr_sim2.json -w '  simulate HTTP=%{http_code}\n'
+  sleep 8
+  win | grep -aE '\[Usage\]|ModelResolver' | cut -c1-170 | sed 's/^/    /'
+  ck "对照 连接器模拟入站仍拿到回复" \
+     "$(python3 -c "import json;print((json.load(open('/tmp/dmr_sim2.json')).get('data') or {}).get('outcome'))" 2>/dev/null)" "REPLIED"
+  ckge "对照 ②③ 被过滤时，实际服务的仍是 ① 档" "$(win | grep -acF "model=$BM1" | head -1)" 1
+  ckge "对照 本次确实出现了过滤行（与主判据的差别就在 ②③ 合法性）" \
+      "$(win | grep -acF '[ModelResolver]' | head -1)" 1
+  ck "对照 假名 ② 出现在候选里（证明 ② 档确实被读到了，不是压根没读）" \
+     "$(win | grep -acF "$CB" | head -1 | awk '{print ($1>0)?"1":"0"}')" "1"
+  ck "收尾前：连接器绑定未被本套件改动" \
+     "$(Q "SELECT ifnull(group_concat(distinct sys_ai_bot_binding_model),'-') FROM sys_ai_bot_binding;" | tr -d '\r')" "$BM1"
+fi
 
 echo
 echo "############ 4. 回归 ① 隔离不变量 + 收尾 ############"
