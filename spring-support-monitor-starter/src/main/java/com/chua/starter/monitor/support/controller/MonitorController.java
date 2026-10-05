@@ -32,6 +32,7 @@ import com.chua.starter.monitor.support.support.DbColumnDef;
 import com.chua.starter.monitor.support.support.DbFilter;
 import com.chua.starter.monitor.support.support.DbDialectSupport;
 import com.chua.starter.monitor.support.support.DbErDiagram;
+import com.chua.starter.monitor.support.support.DbStructureDiff;
 import com.chua.starter.monitor.support.support.DbObjectDialect;
 import com.chua.starter.monitor.support.support.DbTableDialect;
 import com.chua.starter.monitor.support.support.DbTxRegistry;
@@ -2139,6 +2140,59 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
                 return DbErDiagram.load(conn, database, tables);
+            }
+        });
+    }
+
+    /** 结构对比请求 */
+    public record DbStructureDiffRequest(
+            Long sourceDatasourceId,
+            String sourceDatabase,
+            Long targetDatasourceId,
+            String targetDatabase,
+            String tables) {
+    }
+
+    /**
+     * 比较两个库的结构并生成同步脚本（Navicat 的「比较 / 结构同步」）。
+     *
+     * <p>方向固定「源 → 目标」。结构同步是单向操作 ——
+     * 「以谁为准」必须由用户在界面上选，不该由实现替用户决定。</p>
+     *
+     * <p><b>只生成脚本，不代执行</b>：差异清单里含 {@code DROP INDEX}
+     * 这类不可逆语句，是否执行由用户看过脚本后决定。</p>
+     *
+     * @param request 源/目标数据源与库
+     * @return 差异清单
+     */
+    @Operation(summary = "比较两个库的结构")
+    @PostMapping("/db/structure-diff")
+    public ReturnResult<List<DbStructureDiff.DiffItem>> structureDiff(
+            @RequestBody DbStructureDiffRequest request) {
+        return callDb("比较库结构", () -> {
+            Long srcDs = request.sourceDatasourceId();
+            String srcDb = request.sourceDatabase();
+            Long dstDs = request.targetDatasourceId() == null ? srcDs : request.targetDatasourceId();
+            String dstDb = request.targetDatabase();
+            // 源与目标同库时没有任何差异，直接返回空而不是白开两条连接比一遍
+            if (Objects.equals(srcDs, dstDs) && Objects.equals(srcDb, dstDb)) {
+                return List.of();
+            }
+            // 源与目标**同一个数据源**时只能共用一条连接并切 catalog：
+            // datasourceService.connection(id) 返回的是缓存共享的同一条物理连接，
+            // 两次拿到同一个对象，第二次 USE 会覆盖第一次，
+            // 于是变成「拿目标库跟自己比」并恒返回空列表（2026-10-05 实测）。
+            if (Objects.equals(srcDs, dstDs)) {
+                try (java.sql.Connection conn = datasourceService.connection(srcDs)) {
+                    return DbStructureDiff.diffSameDatasource(
+                            conn, srcDb, dstDb, request.tables());
+                }
+            }
+            try (java.sql.Connection src = datasourceService.connection(srcDs);
+                 SchemaScope srcScope = useSchema(src, srcDb);
+                 java.sql.Connection dst = datasourceService.connection(dstDs);
+                 SchemaScope dstScope = useSchema(dst, dstDb)) {
+                return DbStructureDiff.diffAcrossDatasources(src, dst, request.tables());
             }
         });
     }

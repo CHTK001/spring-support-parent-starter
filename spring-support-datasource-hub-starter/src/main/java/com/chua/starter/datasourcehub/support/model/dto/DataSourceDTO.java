@@ -34,6 +34,7 @@ public record DataSourceDTO(
         String remark,
         Integer status,
         String driverClassName,
+        Long driverJarId,
         String controlMode,
         String controlTarget
 ) {

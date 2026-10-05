@@ -172,7 +172,19 @@ public final class MonitorHttpRowsSupport {
                 .header("Accept", "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8")
                 // 显式声明编码：国内不少接口/页面无视响应头按 UTF-8 解，直接乱码
                 .header("Accept-Charset", options.encoding());
-        options.headers().forEach(builder::header);
+        options.headers().forEach((k, v) -> {
+            // headers 里带了 Cookie、而 Cookie 字段也有值时，只用字段值：
+            // 两个 Cookie 头会被服务端按某种顺序拼起来，得到非预期的会话。
+            if (options.hasCookie() && k != null && "cookie".equalsIgnoreCase(k.trim())) {
+                return;
+            }
+            builder.header(k, v);
+        });
+        // Cookie 单独下发：JDK 的 HttpRequest 对 Connection/Content-Length/Expect/Host/Upgrade
+        // 这些头会直接抛 IllegalArgumentException，Cookie 不在其中，可以正常设置。
+        if (options.hasCookie()) {
+            builder.header("Cookie", options.cookie().trim());
+        }
         if (options.hasBody() && !"GET".equals(options.method())) {
             builder.method(options.method(), HttpRequest.BodyPublishers.ofString(options.body(), options.charset()));
         } else {
