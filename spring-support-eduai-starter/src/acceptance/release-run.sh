@@ -66,6 +66,17 @@ wait_health() {
     return 1
 }
 
+wait_health() {
+    local i h
+    for i in $(seq 1 30); do
+        h=$(curl -s -o /dev/null -w '%{http_code}' --max-time 4 "$BASE/actuator/health" 2>/dev/null || true)
+        [ "$h" = "200" ] && { echo "$h"; return 0; }
+        sleep 10
+    done
+    echo "${h:-000}"
+    return 1
+}
+
 # ---------- --check：只读体检 ----------
 if [ "${1:-}" = "--check" ]; then
     log "== 只读体检（不做任何改动）=="
@@ -100,8 +111,14 @@ S env BUNDLE="$BUNDLE" bash "$APP_DIR/deploy/deploy.sh"
 
 log "== 2. 来源自证 =="
 LIVE=$(sha "$JAR")
-log "    期望（开发机构建）=$EXPECTED_JAR_SHA"
-log "    实际（线上现役）  =$LIVE"
+# 打印长度是刻意的：sha256 是 64 位十六进制，两边只要有一位抄错/漏掉就会不相等，
+# 而「不相等」的两种原因（抄错了 vs 真被换包）必须能一眼分开。
+# 实战踩过：手抄期望值多带了一个字符（65 位），日志看上去像「被换包」，白排查一轮。
+log "    期望（开发机构建）=$EXPECTED_JAR_SHA  长度=${#EXPECTED_JAR_SHA}"
+log "    实际（线上现役）  =$LIVE  长度=${#LIVE}"
+if [ "${#LIVE}" -ne 64 ] || [ "${#EXPECTED_JAR_SHA}" -ne 64 ]; then
+    die "PROVENANCE_FAIL：sha256 长度不是 64（期望 ${#EXPECTED_JAR_SHA} / 实际 ${#LIVE}）——先查 EXPECTED_JAR_SHA 是不是抄错了"
+fi
 [ "$LIVE" = "$EXPECTED_JAR_SHA" ] || die "PROVENANCE_FAIL：线上产物与本地构建不一致（被换包了），本报告作废"
 log "    PROVENANCE_OK"
 
@@ -110,16 +127,20 @@ H=$(wait_health) || die "eduai 未在窗口内健康（=$H）"
 log "    eduai=$H  oauth=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:19181/oauth/actuator/health)"
 
 # 3.5 鉴权热就绪 —— health=200 **不代表**鉴权链已就绪。
-# 实测（2026-10-04）：部署重启后立刻跑验收，首轮出现**系统性假红** ——
-# 「管理员代入得到临时令牌: len=0」、B1~B15 与 D1/D2 全 403（35/55），
-# 而同一套件稍后重跑就是 55/55。判据必须是「真实带令牌请求成功」，
-# 不能用 health 或「套件没报连接错」代替。
-log "== 3.5 鉴权热就绪 =="
+#
+# 判据必须是「登录拿到令牌 + 带令牌请求 200」，不能用 health 或「套件没报连接错」代替。
+# 实测两次踩坑（2026-10-04）：
+#   ① 重启后立刻跑验收，首轮出现**系统性假红**（35/55），稍后重跑即 55/55；
+#   ② 探针 5 秒就判「已就绪」，随后 7 个套件**全部**在「管理员登录」上失败 ——
+#      鉴权链在重启后有几分钟才稳定（OAuth TCP 通道上的凭据/令牌状态要重新落定）。
+# 所以这里既把窗口从 120s 放宽到 6 分钟，也把「未就绪」从**警告**升级为**中止**：
+# 未就绪还继续跑，只会得到一片「管理员登录失败」的假红，看着像代码坏了。
+log "== 3.5 鉴权热就绪（登录 + 带令牌请求，缺一不可）=="
 ADMIN_USER=${ADMIN_USER:-admin}
 ADMIN_PWD=${ADMIN_PWD:-admin123}
 UA_READY='Mozilla/5.0 (eduai-release-readiness)'
 ready=0
-for i in $(seq 1 24); do
+for i in $(seq 1 36); do   # 36 × 10s = 6 分钟
     tok=$(curl -s --max-time 10 -X POST "$BASE/v2/user/login" \
         -H 'Content-Type: application/json' -H "User-Agent: $UA_READY" \
         --data-binary "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PWD\"}" \
@@ -129,12 +150,12 @@ except Exception: print('')" 2>/dev/null)
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/v2/edu/dimension/students" \
         -H "User-Agent: $UA_READY" -H "Authorization: Bearer $tok" 2>/dev/null)
     if [ -n "$tok" ] && [ "$code" = "200" ]; then ready=1; break; fi
-    sleep 5
+    sleep 10
 done
 if [ "$ready" = "1" ]; then
-    log "    已就绪（约 $((i * 5))s）"
+    log "    已就绪（约 $((i * 10))s）"
 else
-    log "    [警告] 24 次探测（约 120s）仍未见「登录+管理端 200」，继续跑验收（结果可能含假红）"
+    die "鉴权链 6 分钟内未就绪（最后一次：token=${#tok} 管理端=$code）——中止，不跑套件（否则是一片假红）"
 fi
 
 log "== 4. API 生产级验收（主套件 + 各专项套件；任一失败即整体不通过）=="
