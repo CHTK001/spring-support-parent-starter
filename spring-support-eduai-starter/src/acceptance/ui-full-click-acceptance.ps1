@@ -289,6 +289,50 @@ $jsReset = @'
 })()
 '@
 
+# Presses the collapsed-filter-panel expander (label built from code points to keep this
+# file ASCII). Returns 'expanded' | 'none'.
+$jsExpand = @'
+(() => {
+  const L = String.fromCharCode(0x5C55, 0x5F00);
+  const root = document.querySelector('main.el-main') || document.body;
+  const all = Array.from(root.querySelectorAll('button, .el-button')).filter(b => {
+    const r = b.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && !b.disabled;
+  });
+  const hit = all.find(b => (b.innerText || '').trim() === L);
+  if (!hit) return 'none';
+  hit.click();
+  return 'expanded';
+})()
+'@
+
+# Types a probe value into the first empty filter input. A search button pressed with an
+# EMPTY keyword is a no-op by design, so clicking it proves nothing; seeding the input
+# first turns the sweep into a real functional test (verified on /edu/insects: typing a
+# value then pressing search took the list from 4 pages to 3, and reset restored it).
+$jsSeedSearch = @'
+(() => {
+  const inputs = Array.from(document.querySelectorAll('main.el-main input'))
+    .filter(i => {
+      const r = i.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && (i.type === 'text' || !i.type) && !i.value;
+    });
+  if (!inputs.length) return 'no-input';
+  const el = inputs[0];
+  const proto = Object.getPrototypeOf(el);
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value');
+  if (!setter || !setter.set) return 'no-setter';
+  // A value that cannot match any row: with a value that matches everything (a single
+  // "a" already matches every module whose code contains an "a", e.g. idiom-game) both
+  // the search AND the reset become no-ops and prove nothing.
+  setter.set.call(el, 'uiacc-no-match-probe');
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return 'seeded';
+})()
+'@
+$searchLabel = -join @([char]0x641C, [char]0x7D22)
+
 # ---------- in-page evidence collectors ----------
 # Own instrumentation instead of the CLI: `network requests` reported "No requests
 # captured" for clicks that had just fired requests, and `errors` returned an empty
@@ -448,6 +492,18 @@ if (-not $SkipContent) {
         Ck "$rname clean load (no page/console error, no 5xx)" (($ev0.pageErr -eq 0) -and ($ev0.consoleErr -eq 0) -and ($ev0.http5xx -eq 0)) `
             ("pageErr=$($ev0.pageErr) consoleErr=$($ev0.consoleErr) 5xx=$($ev0.http5xx) $($ev0.first5)")
 
+        # Open collapsed filter panels before crawling. On /edu/fun/config the ReTable
+        # toolbar starts collapsed, so its search / reset buttons are inert until the
+        # expander is pressed -- a user has to open the panel first, and crawling the
+        # default state reported two working buttons as dead.
+        # a user has to open the panel first, and crawling the default state reported
+        # two working buttons as dead.
+        $expanded = Js $jsExpand
+        if ($expanded -eq 'expanded') {
+            Start-Sleep -Milliseconds 700
+            Js $jsResetEv | Out-Null
+        }
+
         $i = 0; $restarts = 0; $clicked = 0
         while ($true) {
             $inv = Js $jsInvContent
@@ -456,6 +512,12 @@ if (-not $SkipContent) {
             if ($i -ge $items.Count) { break }
             $it = $items[$i]
             $i++
+            # Seed the filter input before pressing a search button, otherwise the click
+            # is a no-op by design and proves nothing (see $jsSeedSearch).
+            if ($it.label -and $it.label.Contains($searchLabel)) {
+                Js $jsSeedSearch | Out-Null
+                Start-Sleep -Milliseconds 250
+            }
             $before = (Js $jsProbe) | ConvertFrom-Json
             Clear-Evidence
             $clickRes = Js (Get-ClickJs $it.id)
