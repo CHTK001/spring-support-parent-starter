@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiUserSettingService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,7 @@ public class CustomLocalToolRegistrar {
     private static final String[] MANIFEST_NAMES = {"plugin.json", "package.json"};
 
     private final SysAiGlobalSettingService globalSettingService;
+    private final SysAiUserSettingService userSettingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -59,7 +62,7 @@ public class CustomLocalToolRegistrar {
      * @return 注册项列表，未配置时为空
      */
     public List<Map<String, String>> listRegistrations() {
-        String raw = globalSettingService.getValue(GROUP, FIELD).orElse(null);
+        String raw = readRegistrationsRaw();
         return parseRegistrations(raw);
     }
 
@@ -331,10 +334,51 @@ public class CustomLocalToolRegistrar {
     private void saveRegistrations(List<Map<String, String>> registrations) {
         try {
             String json = objectMapper.writeValueAsString(registrations);
-            globalSettingService.upsertValue(GROUP, FIELD, json, "自定义本地工具目录注册");
+            // 写出口按身份分流：管理员写全局（= 平台默认清单），普通账号只写自己那份覆盖。
+            // 与 sys_ai_model / sys_ai_app_key 的归属口径一致。
+            if (isAdmin()) {
+                globalSettingService.upsertValue(GROUP, FIELD, json, "自定义本地工具目录注册");
+            } else {
+                userSettingService.upsertValue(AiUserContext.requireUserId(), GROUP, FIELD, json,
+                        "TEXT", "自定义本地工具目录注册（账号级）");
+            }
         } catch (Exception e) {
             log.error("[CustomTool] 保存注册项失败: {}", e.getMessage(), e);
             throw new IllegalStateException("保存自定义工具失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 读取注册表原始值：**用户覆盖优先，无覆盖则回落全局**。
+     *
+     * <p>无身份上下文（系统线程 / 异步线程丢上下文）时只读全局 —— 这与
+     * {@code GlobalSettingReader} 的既有语义一致，不在此处「猜」一个用户。</p>
+     *
+     * @return 原始 JSON 字符串，无值时为 {@code null}
+     */
+    private String readRegistrationsRaw() {
+        try {
+            String userId = AiUserContext.currentUserId();
+            if (userId == null || userId.isBlank()) {
+                // 无身份上下文只读全局：与 GlobalSettingReader 既有语义一致，不在此处「猜」一个用户
+                return globalSettingService.getValue(GROUP, FIELD).orElse(null);
+            }
+            // resolve() 本身就是「用户覆盖优先 → 回落全局」，不重复实现这套语义
+            return userSettingService.resolve(userId, GROUP, FIELD).orElse(null);
+        } catch (Exception e) {
+            log.warn("[CustomTool] 读取注册表失败，回落全局: {}", e.getMessage());
+            return globalSettingService.getValue(GROUP, FIELD).orElse(null);
+        }
+    }
+
+    /**
+     * 当前是否管理员。上下文不可用时按非管理员处理（更保守的一侧）。
+     */
+    private boolean isAdmin() {
+        try {
+            return AiUserContext.isAdmin();
+        } catch (Exception e) {
+            return false;
         }
     }
 

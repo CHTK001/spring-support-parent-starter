@@ -1,6 +1,9 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import com.chua.starter.ai.support.entity.SysAiManufacturerKey;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
@@ -45,8 +48,11 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     public List<AiModelDTO> list() {
+        // 按账号隔离：管理员看全量，普通账号只看自己的模型清单（与 AppKey/角色同口径）。
+        String scopeUserId = AiUserContext.isAdmin() ? null : AiUserContext.requireUserId();
         List<SysAiModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiModel>()
+                        .eq(scopeUserId != null, SysAiModel::getUserId, scopeUserId)
                         .orderByAsc(SysAiModel::getModelSort)
                         .orderByAsc(SysAiModel::getModelCreateTime));
 
@@ -62,7 +68,10 @@ public class AiModelServiceImpl implements AiModelService {
     @Override
     @Transactional
     public AiModelDTO create(AiModelDTO model) {
+        requireWritable();
         SysAiModel entity = toEntity(model);
+        // 模型清单归属创建者本人：普通账号建出来的东西只在自己名下可见
+        entity.setUserId(AiUserContext.requireUserId());
         LocalDateTime now = LocalDateTime.now();
         entity.setModelCreateTime(now);
         entity.setModelUpdateTime(now);
@@ -73,15 +82,19 @@ public class AiModelServiceImpl implements AiModelService {
             entity.setModelDeleted(0);
         }
         modelMapper.insert(entity);
-        log.debug("[SysAiModel] create success: id={}, code={}", entity.getModelId(), entity.getModelCode());
+        log.debug("[SysAiModel] create success: id={}, code={}, owner={}",
+                entity.getModelId(), entity.getModelCode(), entity.getUserId());
         return toDto(entity, resolveProviderName(entity.getModelProviderId(), null));
     }
 
     @Override
     @Transactional
     public AiModelDTO update(Long modelId, AiModelDTO model) {
+        SysAiModel existing = requireWritableModel(modelId);
         SysAiModel entity = toEntity(model);
         entity.setModelId(modelId);
+        // 归属不可通过更新转移，否则就能把别人的模型「过户」到自己名下
+        entity.setUserId(existing.getUserId());
         entity.setModelUpdateTime(LocalDateTime.now());
         modelMapper.updateById(entity);
         log.debug("[SysAiModel] update success: id={}", modelId);
@@ -91,17 +104,55 @@ public class AiModelServiceImpl implements AiModelService {
     @Override
     @Transactional
     public void delete(Long modelId) {
+        requireWritableModel(modelId);
         modelMapper.deleteById(modelId);
         log.debug("[SysAiModel] delete success: id={}", modelId);
+    }
+
+    /**
+     * 写操作前的账号状态校验：只读账号一律拒绝。
+     */
+    private void requireWritable() {
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        AiUserContext.requireUserId();
+    }
+
+    /**
+     * 写出口归属校验：只认归属人本身。
+     *
+     * <p>无归属的历史行（加 {@code user_id} 列之前写入的）视为无主，
+     * 任何登录账号（含管理员）都不能改写，避免被随意接管。</p>
+     *
+     * @param modelId 模型主键
+     * @return 校验通过的原行
+     */
+    private SysAiModel requireWritableModel(Long modelId) {
+        SysAiModel existing = modelMapper.selectById(modelId);
+        if (existing == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在");
+        }
+        if (AiUserContext.isReadonly()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");
+        }
+        String userId = AiUserContext.requireUserId();
+        String owner = existing.getUserId();
+        if (owner == null || owner.isBlank()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权修改他人模型");
+        }
+        if (!userId.equals(owner)) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权修改他人模型");
+        }
+        return existing;
     }
 
     @Override
     @Transactional
     public AiModelDTO testLatency(Long modelId) {
-        SysAiModel model = modelMapper.selectById(modelId);
-        if (model == null) {
-            throw new IllegalArgumentException("Model not found: " + modelId);
-        }
+        // 测延迟会拿模型配置（含供应商 Key）真的发一次请求，等同于使用该模型，故也要归属校验
+        // （requireWritableModel 找不到时已抛 NOT_FOUND，这里不再重复判空）
+        SysAiModel model = requireWritableModel(modelId);
         Long providerId = model.getModelProviderId();
         if (providerId == null) {
             throw new IllegalStateException("Model has no provider configured, cannot test latency");
