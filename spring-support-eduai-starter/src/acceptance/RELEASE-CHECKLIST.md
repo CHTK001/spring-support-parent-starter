@@ -157,7 +157,7 @@ ssh <host> 'sudo systemctl stop oauth-server.service; sleep 2; \
 | 学生登录报 `S0503C0000 账户已被锁定，请 N 分 N 秒后重试` | OAuth 防爆破：并发会话试错或改口令把共享夹具 `2026000001/stu123456` 弄脏了（锁定态在 Redis，自过期） | 等锁过期后用管理接口复位：`POST /v2/edu/dimension/students/reset-password {"studentId":<id>,"newPassword":"stu123456"}`，成功登录一次即清零失败计数。**不要手改库** |
 | 学生登录报 `密码错误，还剩 N 次尝试机会` | 夹具口令被改成了别的值（同上来源） | 同上复位。切勿反复试错 —— 试错会重新锁上 |
 | 前端 `pnpm build` 挂在 `vue-tsc` 且报错指向 `packages/*` | 共享工作区里别人正在改共享包（`@repo/config` / `@repo/core`），导出与引用暂时不一致 | 等对方改完再构建；**不要**去改别人的文件或 stash 别人的 WIP |
-| 前端 `verify.sh` 报「线上不是这份构建」 | 共享主机上 web root 被并发会话重新部署（实测两次：1103↔1104 文件、index.html md5 变） | 用 `apps/vue-support-eduai-starter/dist/eduai-web.tar.gz` 或稳定副本重传 + 重跑 `deploy/verify.sh <index.html md5>`；证明「线上 == 我的构建」只能靠自己再部署一次 || 前端构建在 `transforming...` 后无报错退出（exit 4294967295） | node/rolldown 硬崩（多为资源或并发构建） | 确认无并发 node 进程与内存充足后重跑；必要时先 `pnpm --filter <app> exec vue-tsc --noEmit` 单独验证类型 |
+| 汉字采集偶发「全部镜像不可用: 抓取超时(180s)」 | 外网链路抖动：同一个 URL 实测有时 0.6s 取回 2MB、有时 180s 超时 | 采集侧已做三件事：① 三个数据源各配多个镜像（实测 gh-proxy/ghfast 能取 27MB，jsdelivr **不能**（>20MB 限制））；② 下载内容落 `java.io.tmpdir/eduai-collect-cache` 缓存 12 小时，重复采集不再依赖网络；③ 任务配置可设 `useMirrors=false` 严格 pin 住单一地址（配错即报错，不被兜底掩盖）。仍失败时看 `edu_collect_log.collect_log_error_msg` || 前端 `verify.sh` 报「线上不是这份构建」 | 共享主机上 web root 被并发会话重新部署（实测两次：1103↔1104 文件、index.html md5 变） | 用 `apps/vue-support-eduai-starter/dist/eduai-web.tar.gz` 或稳定副本重传 + 重跑 `deploy/verify.sh <index.html md5>`；证明「线上 == 我的构建」只能靠自己再部署一次 || 前端构建在 `transforming...` 后无报错退出（exit 4294967295） | node/rolldown 硬崩（多为资源或并发构建） | 确认无并发 node 进程与内存充足后重跑；必要时先 `pnpm --filter <app> exec vue-tsc --noEmit` 单独验证类型 |
 
 ## 7. 资源基线（终验时必须记录）
 
