@@ -147,10 +147,22 @@ sudo install -m 644 "$src" /opt/ai-starter/acceptance-20261001/fixtures/face_pro
     验证必须用**字节统计**（`[IO.File]::ReadAllBytes` 数 CR/LF）；
     **不要**用 PowerShell 读 `git cat-file` 的输出来判断 —— PowerShell 按行读取时
     已经把 CR 吃掉，会得出「CRLF 数 = 0」的假结论。
+15. **查库先做连通性自检，再把查询结果当证据。** 查错库 / 写错列名 / sudo 口令错，
+    三者都表现为**空输出**；空输出极易被读成「表不存在」「残留 0 行」——
+    而这恰恰是判据最容易产出**假绿**的地方。
+    任何查库判据的前置必须是：先断言 `SELECT DATABASE()` 与表总数非零，
+    再解读业务查询的结果。**`2>/dev/null` 只可用于已自检过的路径**，
+    探查阶段一律保留 stderr（实测 `echo ai | sudo -S mysql …` 会把库用户名当 sudo 口令，
+    叠加 `2>/dev/null` 后彻底静默）。
+
 ## 环境与工具链的坑（都实测过）
 
 | 坑 | 事实与对策 |
 |---|---|
+| 业务库是 `ai_test`，且**不在 root 的库清单里** | 连法 `mysql -N -B -h 127.0.0.1 -P 3306 -u ai -pai ai_test -e '…'`，**不需要 sudo**。root 走 unix_socket 的 `SHOW DATABASES` **根本不含 `ai_test`**（`oauth` 是用户域），照它判断会误判「表不存在」。库的权威答案在服务启动参数里：`systemctl cat ai-starter \| grep -o 'spring\.datasource\.url=[^ ]*'`。 |
+| 本项目所有列名都带表名前缀 | `sys_database_version_success`、`sys_ai_global_setting_value`、`sys_ai_user_setting_user_id`… 写 SQL 时按 `sys_<表>_<列>` 拼，别按通用命名猜。 |
+| `mysql -N -B -- "$DB" -e …` 会打 3000 行用法 | `--` **不是** mysql 的合法参数。正确写法 `mysql -N -B "$DB" -e …`。 |
+| `sys_ai_user_setting.user_id` 存**用户名**不是数字 id | 判据按用户名查即可（现存 admin 7 行 + 他人 tester 1 行）。 |
 | 应用日志位置 | 在 **`/opt/ai-starter/app-out.log`**（systemd `StandardOutput=append`），**不在 journalctl**。按 journalctl 取日志会得到**全空的证据段落却照样跑完** —— 空证据不是通过。 |
 | 日志文件含 NUL/ANSI | 裸 `grep` 会报 `binary file matches` 并**停止输出** → 假空结果。**必须 `grep -a`**。 |
 | 按时间过滤日志 | 日志自带 `-04:00` 时区，而本机系统时区**重启前后变过**（UTC+8 → EDT），按本地时间比对会错位 12 小时。**改用行号水位线**（`verify-effective.sh` 的做法）。 |
