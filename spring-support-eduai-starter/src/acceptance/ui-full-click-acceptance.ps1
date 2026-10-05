@@ -38,7 +38,8 @@ param(
     [int]$NavTimeoutSec = 25,
     [string[]]$Only = @(),
     [switch]$SkipContent,
-    [switch]$SkipChrome
+    [switch]$SkipChrome,
+    [switch]$NoSeed
 )
 
 $ErrorActionPreference = 'Continue'
@@ -126,6 +127,20 @@ function Ck {
     }
 }
 
+# The crawl mutates persisted UI state: the dashboard caches its widget layout in
+# localStorage and the crawl presses "remove widget" / "save" on it. Snapshot it up front so
+# the run is repeatable and leaves the environment as it found it -- an acceptance script
+# that quietly empties the dashboard it is verifying is worse than no script.
+function Snapshot-Layout {
+    $script:LayoutSnap = ''
+    try {
+        $snapRaw = [string](Js $jsLayoutSnapshot 30000)
+        if ($snapRaw -and $snapRaw.StartsWith('{')) { $script:LayoutSnap = $snapRaw }
+    } catch { $script:LayoutSnap = '' }
+    $n = 0
+    try { $n = @($script:LayoutSnap | ConvertFrom-Json -AsHashtable).Keys.Count } catch { $n = 0 }
+    Write-Host ('  dashboard layout snapshot: {0} key(s)' -f $n)
+}
 function Clear-Evidence {
     # In-page collectors are the source of truth (see $jsInstall); the CLI console
     # buffer is kept as a secondary signal because it does capture console.error,
@@ -400,11 +415,60 @@ $jsReset = @'
 })()
 '@
 
+$lblLayout = -join @([char]0x81EA, [char]0x5B9A, [char]0x4E49, [char]0x5E03, [char]0x5C40)   # customize-layout button
+$lblSave = -join @([char]0x4FDD, [char]0x5B58)                                                 # save button
+$lblWidgets = @(
+    (-join @([char]0x65E5, [char]0x5386))
+    (-join @([char]0x5FEB, [char]0x6377, [char]0x5165, [char]0x53E3))
+    (-join @([char]0x4FBF, [char]0x7B7E))
+    (-join @([char]0x5BA2, [char]0x6237, [char]0x7AEF, [char]0x4FE1, [char]0x606F))
+    (-join @([char]0x5929, [char]0x6C14))
+) -join "','"
+$jsSeedDashboard = @"
+(async () => {
+  const WANT = ['$lblWidgets'];
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const count = () => { try { return (JSON.parse(localStorage.getItem('system:2:layout') || '{}').widgets || []).length; } catch (e) { return 0; } };
+  if (count() > 0) return String(count());
+  const btn = (t) => Array.from(document.querySelectorAll('main.el-main button')).find((b) => (b.innerText || '').trim() === t);
+  btn('$lblLayout') && btn('$lblLayout').click();
+  await sleep(1800);
+  for (const name of WANT) {
+    const all = Array.from(document.querySelectorAll('main.el-main *')).filter((e) => {
+      const t = (e.innerText || '').replace(/\s+/g, ' ').trim();
+      return t.indexOf(name) === 0 && t.length < 80 && e.children.length <= 8;
+    });
+    if (!all.length) continue;
+    all.filter((e) => !all.some((o) => o !== e && o.contains(e)))[0].click();
+    await sleep(650);
+  }
+  await sleep(400);
+  btn('$lblSave') && btn('$lblSave').click();
+  await sleep(2400);
+  return String(count());
+})()
+"@
+
+function Seed-Dashboard {
+    param([string]$Role)
+    if ($script:NoSeed) { return }
+    $n = 0
+    try {
+        Open-Route '/home'
+        Start-Sleep -Seconds 4
+        $n = [int]([string](Js $jsSeedDashboard 90000))
+    } catch { $n = 0 }
+    Ck "$Role dashboard seeded with widgets to click" ($n -gt 0) "widgets=$n"
+}
+
 $jsOverlayCount = @'
 (() => {
   const vis = el => { if (!el) return false; const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
-  return String(Array.from(document.querySelectorAll('.el-dialog, .el-drawer, .el-message-box')).filter(vis).length);
+  // Poppers count too. The page-size dropdown left its .el-popper open, and the next
+  // control (ReTable's "column settings") then reported no effect -- the same "the
+  // previous click's UI is still up" trap as dialogs, just one layer down.
+  return String(Array.from(document.querySelectorAll('.el-dialog, .el-drawer, .el-message-box, .el-popper')).filter(vis).length);
 })()
 '@
 
@@ -700,13 +764,24 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
         AbRaw @('press', 'Enter') 60000 | Out-Null
         if (WaitJs 'location.pathname.indexOf("/edu/student")===0 || location.pathname.indexOf("student-login")!==0' 25) { $logged = $true; break }
     }
+    Snapshot-Layout
+    Seed-Dashboard 'student'
     Ck 'student logged in via the student login page' $logged
     if (-not $logged) { Write-Host 'no student session, abort'; exit 2 }
 } else {
     Write-Host '########## 0. login ##########'
     AbRaw @('open', "$Base/login") 60000 | Out-Null
     Start-Sleep -Seconds 3
-    Js 'localStorage.clear(); sessionStorage.clear(); "c"' | Out-Null
+    # Snapshot BEFORE the storage wipe below. Taking it afterwards captured 0 keys, so the
+    # restore at the end was a no-op and every run left the dashboard layout empty -- the
+    # acceptance script was quietly degrading the environment it was verifying.
+    Snapshot-Layout
+    # Wipe the session but keep the dashboard layout. A blanket localStorage.clear() both
+    # deleted the cached widget layout and told the app "storage was wiped", so it booted
+    # anonymous and cleared the previous account's layout cache -- every run therefore
+    # crawled an EMPTY dashboard (1 control instead of 10) and left it empty. Removing the
+    # non-layout keys one by one keeps the layout and the run stays reproducible.
+    Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /layout/i.test(k)) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
     $phUser = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x7528)$([char]0x6237)$([char]0x540D)"
     $phPwd = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x5BC6)$([char]0x7801)"
     $logged = $false
@@ -719,18 +794,12 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
         AbRaw @('press', 'Enter') 60000 | Out-Null
         if (WaitJs 'location.pathname.indexOf("/login")!==0' 25) { $logged = $true; break }
     }
+    Seed-Dashboard 'admin'
     Ck 'admin logged in' $logged
     if (-not $logged) { Write-Host 'no session, abort'; exit 2 }
 
-# The crawl mutates persisted UI state (dashboard widgets). Snapshot it now so the run is
-# repeatable and leaves the environment as it found it.
-$script:LayoutSnap = ''
-try {
-    $snapRaw = [string](Js $jsLayoutSnapshot 30000)
-    if ($snapRaw -and $snapRaw.StartsWith('{')) { $script:LayoutSnap = $snapRaw }
-} catch { $script:LayoutSnap = '' }
-Write-Host ('  dashboard layout snapshot: {0} key(s)' -f (@($script:LayoutSnap | ConvertFrom-Json -AsHashtable).Keys.Count))
 }
+
 
 # ---------- Phase 1: page content controls ----------
 if (-not $SkipContent) {
