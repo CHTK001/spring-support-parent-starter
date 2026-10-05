@@ -14,9 +14,10 @@
 | `verify-secfix.sh` | 越权修复的**敏感性对照**：凭据类字段必须 403、模型类与纯偏好组必须 200 |
 | `verify-store-isolation.sh` | **账号级向量索引隔离**验收，6 组（目录归属 / 人脸列表跨账号不可见 / 索引文件归属与快照内容 / 删除不串号 / 以图搜图列表跨账号不可见 / **写入侧按 userId 建库**） |
 | `verify-effective.sh` | 「用户改自己的默认模型后**立即生效**」的取证：事件是否发布、重建是否按账号绑定、共享单例是否被误重建 |
-| `verify-default-model-routing.sh` | 五条「默认模型」规格的**运行时路由**：②以图搜图 ④连接器>bot>默认 ⑤知识库rag 的请求期解析 + ①隔离不变量回归。观测点零模型调用、零注册表写入；每条判据都带敏感性对照 |
+| `verify-default-model-routing.sh` | 五条「默认模型」规格的**运行时路由**：②以图搜图 ④连接器>bot>默认 ⑤知识库rag 的请求期解析 + ①隔离不变量回归。观测点零模型调用、零注册表写入；每条判据都带敏感性对照。**§3b 另用 `POST /v2/connectors/simulate/{id}` 判别「实际服务的模型」，把 ④ 的①连接器档补齐**（`48de2d40` 上 37/0） |
+| `verify-model-fallback-tier2.sh` | 「默认模型」三处**兜底分支**的运行时取证：②以图搜图、③人脸识别、⑤知识库rag。**只造 ops 自己的夹具行、只动 `sys_ai_user_setting`，绝不整表删、不碰他人数据**（`48de2d40` 上 37/0 `T2_FALLBACK_OK`） |
 | `cleanup-final-state.sh` | 测试残留清理 + 线上最终状态核对 |
-| `验收报告-20261004.md` | 绑定 md5 `97804124` 的验收报告 |
+| `验收报告-20261004.md` | 验收报告，**当前绑定 md5 `48de2d40`**（此前依次绑过 `97804124` / `c09c01d1` / `95fabe52`） |
 | `KB-DELIVERY.md` / `kb-accept-backend.sh` | 知识库交付与验收（另一条线） |
 | `jar-watch*.sh` / `test-jar-watch-evidence-keep.sh` | jar-watch 证据保留相关 |
 
@@ -73,7 +74,14 @@ sudo install -m 644 "$src" /opt/ai-starter/acceptance-20261001/fixtures/face_pro
 
 - 两套件都会在**输出里自报被测产物 md5**：`被测产物 /opt/ai-starter/app.jar md5=<8位>`。
 - **报告必须与该 md5 绑定；换包即失效，须重跑并重新绑定。** 报告里手写的 md5 迟早过期
-  （2026-10-04 实测：报告绑 `f3bd9c5b`，而现役已过五代到 `97804124`）。
+  （2026-10-04 实测：报告绑 `f3bd9c5b`，而现役已过五代到 `97804124`；
+  2026-10-05 再过一次到 `95fabe52`，又一次到 **`48de2d40`**）。
+- **⚠️ 换包是静默发生的，必须主动核对。** 2026-10-05 实测：我在为需求④补判据做只读探测时，
+  才发现 `md5sum` 已变、`MainPID` 已从 `575743` 变成 `726409`、`NRestarts=0`、服务 `etime=03:46`
+  —— **jar 是在我探测前约 4 分钟刚被并发会话换上去的**。
+  上一轮那套绑在旧 md5 上的全绿证据，对当前运行态**一律失效**。
+  **每轮跑判据前 / 跑完都必须核对 md5 一次**（跑中再核一次，防中途被换），
+  驱动脚本里写成硬守卫：变了就 `exit 4`，而不是继续跑完输出一份看着很绿的报告。
 - 可覆盖：`AI_JAR`（产物路径）、`AI_BASE`（服务基址）、`AI_ACC`/`AI_STORE`（以图搜图账号与底库目录）、
   `AI_APP_LOG`（应用日志路径）、`AI_EMPTY_USER`/`AI_EMPTY_PASS`（空库样本账号）。
 
@@ -169,7 +177,12 @@ sudo install -m 644 "$src" /opt/ai-starter/acceptance-20261001/fixtures/face_pro
 | `/tmp` 会被清空 | 机器重启后 `/tmp` 全空，`bash /tmp/xx.sh` 报 `No such file or directory`。**上传后先确认存在**，且**不要把过滤后的空输出当成"跑完了"** —— 失败信息也会被过滤器吃掉，务必**无条件打印末尾几行**。 |
 | 输出过滤吃掉失败 | 实测：`| Select-String 'PASS=|PRODGRADE_DONE'` 把 `No such file or directory` 全滤掉，看起来是"无输出"。 |
 | 共享实例串号 | 默认模型按用户隔离后，**共享单例**（`FaceClientManager` 的检测器/分类器、`OcrClientManager`、`RagClientManager` 的嵌入实例）只承载**全局**配置；重建时若不绑定身份，会把触发者的配置烘进去串掉其他用户。按账号构建的一方（`FaceStores`）才该响应用户级写入。 |
-| 并发部署 | 本服务常有多会话并发部署/重启。跑重启类用例前先确认没有并发部署在飞，否则会互相打断，表现为「服务反复起停」。 |
+| 并发部署 | 本服务常有多会话并发部署/重启。跑重启类用例前先确认没有并发部署在飞，否则会互相打断，表现为「服务反复起停」。**换包是静默的，跑前必须自己核 md5（见「产物绑定」）。** |
+| 判断端点「是否注册」别读代码推断，**直接打一发** | 无令牌 `curl -X POST <路径> -d '{}'`：**404 = 路径不存在/未注册**，**401/403 = 已注册、只是缺鉴权**。2026-10-05 靠这一枪确认了 `POST /v2/connectors/simulate/1` 确实存在（403），才敢用它当触发口。 |
+| `POST /v2/connectors/simulate/{id}` 是 `@Profile("local")` | 部署态实际 profile 看 `systemctl cat ai-starter \| grep -a ExecStart` 里的 `-Dspring.profiles.active=`（2026-10-05 实测 = `local`）。换非 `local` profile 时该端点不存在，判据必须自动 `[SKIP]` 并明说「不谎称验过」，不能悄悄跳过。 |
+| 要判别「**实际用了哪个模型**」，别只看候选求值先后 | `[ModelResolver] 候选模型 X …跳过` 的**先后**只证明**遍历次序**，不证明谁真的答了话（假名走的是 `addCandidate` 跳过分支）。真正的判别点是 `SysAiUsageServiceImpl` 的 `[Usage] 未找到定价: provider=openai, model=<X>` —— 它回显**这次调用真正使用的模型**。拿到它之后，「三档全合法时①仍胜出、且②③ 一次都没被调用」才成为可能。 |
+| 「重建」类日志只打在**需要重建**时 | `[Face] 人脸设置变更（用户级），重建账号 'X' 的人脸库` **只在管线不可用、要重建时才打**；tier-2 生效、管线直接建起时**不打**。此时该看的正面证据是同窗口的 `[Face] 账号 'X' 人脸库就绪: n/m 条`。2026-10-05 实测：新产物 `48de2d40` 改成了「只在需要重建时打」，绑死前者的判据必红 —— 定性为**判据缺陷**（非产品回归），详见 `验收报告-20261004.md` §6.10。 |
+| 数实例别用 `pgrep -f app.jar` | 同一台机上还有别的项目的 java 进程，`pgrep -f app.jar` 会把它们数进来。口径按 **jar 绝对路径**：`ps -eo args \| grep -a '/opt/ai-starter/app.jar' \| grep -av grep \| wc -l`，再配 `ss -ltn \| grep -c ':8787'` 交叉验证。 |
 
 ## 已知未通过/已记录的缺口
 
@@ -177,3 +190,10 @@ sudo install -m 644 "$src" /opt/ai-starter/acceptance-20261001/fixtures/face_pro
   第 9 组会据此报警（**不是用例缺陷**，属已记录的产品缺口）。
 - 产物侧 `dist/app.yaml` 缺失（落在 `dist/apps/<app>/app.yaml`）→ 运行时取不到配置、
   品牌名退化。属打包侧问题，详见 `验收报告-20261004.md` §7.1。
+- **需求④「连接器 > bot > 默认」已三档全验（`48de2d40`，37/0），但仍留两条腿未单独取证**，
+  如实记录在 `验收报告-20261004.md` §5.5.12(4)：
+  ① 档只经 `POST /v2/connectors/simulate/{id}` 取证，
+  **真实发送路径 `/v2/connectors/{id}/ai-send` 没有单独取证**（代码上二者最终汇到同一个 `aiReply`）；
+  `SessionNextTaskService:265` 那条 `session.getModelId()` 入口**也未单独取证**。
+- **`sys_ai_model` 目录表由 8 行变为 0 行**：**只记现象、不定性为缺陷**（无审计轨迹，
+  无法排除他人按自己的夹具清理）。详见 `验收报告-20261004.md` §7.6。
