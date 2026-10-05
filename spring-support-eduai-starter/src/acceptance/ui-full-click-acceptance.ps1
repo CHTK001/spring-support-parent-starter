@@ -97,6 +97,7 @@ $script:Pass = 0; $script:Fail = 0
 $script:Fails = New-Object System.Collections.ArrayList
 $script:Rows = New-Object System.Collections.ArrayList
 $script:Dead = New-Object System.Collections.ArrayList
+$script:Vanish = @{}
 $script:Clicks = 0
 
 function Ck {
@@ -325,9 +326,21 @@ function Build-InventoryJs {
     seen.add(key);
     const id = 'u' + out.length;
     el.setAttribute('data-uitest', id);
-    const active = /\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
-      el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true' ? 'Y' : 'N';
-    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), active: active });
+    // "Already active" cannot be hardcoded to N for this pass. Element Plus puts
+    // `is-active` on the <li class="el-menu-item">, one level ABOVE the <span> that
+    // carries cursor:pointer, and a sidebar entry for the route you are already on is a
+    // no-op by design. Hardcoding N reported the current menu item as a dead button
+    // twice on /home.
+    const activeCls = /\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
+      el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true' ||
+      !!el.closest('.is-active, .is-checked, [aria-current="page"], [aria-selected="true"]');
+    let activeHref = false;
+    const a = el.closest('a[href]');
+    if (a) {
+        const href = a.getAttribute('href') || '';
+        activeHref = !!href && href !== '#' && location.pathname.indexOf(href) === 0;
+    }
+    out.push({ id: id, kind: 'clickable', label: label, tag: el.tagName.toLowerCase(), active: (activeCls || activeHref) ? 'Y' : 'N' });
   });
   return JSON.stringify(out);
 })()
@@ -405,6 +418,31 @@ $jsSeedSearch = @'
 })()
 '@
 $searchLabel = -join @([char]0x641C, [char]0x7D22)
+# Judging a reset button must look at page state: with nothing typed into the filter
+# inputs, reset is SUPPOSED to change nothing, and calling that a dead button is a false
+# positive (measured on /edu/fun/config: seeding live-filters 42->0, reset restores 0->42,
+# so the button works). The real defect is the opposite: a non-empty filter that a
+# reset click leaves completely unchanged.
+    $resetLabel = -join @([char]0x91CD, [char]0x7F6E)
+    $resetRx = [regex]::Escape($resetLabel) + '|^reset$'
+
+
+# How many visible filter inputs currently carry a value
+$jsFilterState = @'
+(() => {
+  const root = document.querySelector('main.el-main') || document.body;
+  const inputs = Array.from(root.querySelectorAll('input')).filter(i => {
+    const r = i.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) return false;
+    if (i.type && i.type !== 'text') return false;
+    if (i.closest('.el-select, .el-date-editor, .el-cascader')) return false;
+    return true;
+  });
+  const filled = inputs.filter(i => (i.value || '').trim().length > 0);
+  return JSON.stringify({ inputs: inputs.length, filled: filled.length,
+    firstFilled: filled.length ? ((filled[0].value || '').trim().slice(0, 24)) : '' });
+})()
+'@
 
 # Label of the pager's current page, or '' when there is no pager.
 $jsCurrentPager = @'
@@ -663,7 +701,10 @@ if (-not $SkipContent) {
             if ($it.label -and $it.label.Contains($searchLabel)) {
                 $preSeed = (Js $jsProbe) | ConvertFrom-Json
                 Js $jsSeedSearch | Out-Null
-                Start-Sleep -Milliseconds 400
+                # 400ms was too tight: the table live-filters on input and the reload had
+                # not landed yet, so $expectNoop stayed false and a working search button
+                # was reported dead. 900ms is what the live filter actually needs here.
+                Start-Sleep -Milliseconds 900
                 $postSeed = (Js $jsProbe) | ConvertFrom-Json
                 if ($postSeed.rows -ne $preSeed.rows -or $postSeed.htmlLen -ne $preSeed.htmlLen) {
                     $expectNoop = $true
@@ -678,6 +719,20 @@ if (-not $SkipContent) {
             }
             Clear-Evidence
             $clickRes = Js (Get-ClickJs $it.id)
+            if ($clickRes -eq 'gone') {
+                # The control disappeared between inventory and click (a dialog that closed
+                # on its own, a list that re-rendered). It is not a dead button -- there was
+                # nothing left to press. Re-inventory once; if it keeps vanishing, move on.
+                $vkey = "$rname/$($it.kind)/$($it.label)"
+                if (-not $script:Vanish.ContainsKey($vkey)) { $script:Vanish[$vkey] = 0 }
+                $script:Vanish[$vkey]++
+                if ($script:Vanish[$vkey] -le 2) {
+                    $i--
+                    continue
+                }
+                [void]$script:Rows.Add(("$path|$($it.kind)|$($it.label)|vanished|$($before.path)|0|0|0|0"))
+                continue
+            }
             if ($clickRes -ne 'ok') {
                 [void]$script:Dead.Add("$rname/$($it.kind) '$($it.label)' -> click returned '$clickRes'")
                 continue
@@ -786,6 +841,12 @@ if (-not $SkipContent) {
                 if ($cur -and $cur -eq $lbl) { $effect = 'already-current-page' }
             }
             if ($effect -eq 'none' -and $expectNoop) { $effect = 'already-applied-live-filter' }
+            # Reset with nothing to clear is a no-op by design, not a dead button.
+            if ($effect -eq 'none' -and $lbl -match $resetRx) {
+                $fs = $null
+                try { $fs = (Js $jsFilterState 20000) | ConvertFrom-Json } catch { $fs = $null }
+                if ($fs -and $fs.filled -eq 0) { $effect = 'no-filter-to-clear' }
+            }
             if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' (no visible effect, wasActive=$($it.active))") }
 
             Js $jsReset | Out-Null
