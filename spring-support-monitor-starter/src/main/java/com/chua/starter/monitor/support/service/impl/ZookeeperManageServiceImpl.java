@@ -280,7 +280,7 @@ public class ZookeeperManageServiceImpl implements ZookeeperManageService {
         }
         return new DataSourceVO(null, "ad-hoc", ZookeeperClient.DS_TYPE, request.host().trim(),
                 request.port(), request.contextPath(), request.username(), request.password(), null, 1, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     /**
