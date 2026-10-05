@@ -212,7 +212,15 @@ $jsProbe = @'
     loading: Array.from(document.querySelectorAll('.el-loading-mask')).filter(vis).length,
     act: act, inputs: inputs,
     nodes: root.querySelectorAll('*').length,
-    htmlLen: root.innerHTML.length
+    htmlLen: root.innerHTML.length,
+    // First data cell text: catches a page switch whose row count happens to match
+    // (this is how ReTable's own pager changes pages -- clicking page 2 of
+    // /edu/wrongbook takes the rows from 20 to 19, but a same-size page would be
+    // invisible to every other signal).
+    firstCell: (() => {
+      const c = document.querySelector('main.el-main .el-table__body-wrapper tbody tr td .cell');
+      return c ? ((c.innerText || '').trim().slice(0, 24)) : '';
+    })()
   });
 })()
 '@
@@ -242,9 +250,15 @@ function Build-InventoryJs {
     if (el.closest('.el-select-dropdown, .el-popper') && !el.classList.contains('el-dropdown-menu__item')) return;
     const label = (el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().slice(0, 26);
     const cls = (el.className || '').toString();
-    const active = (cls.indexOf('is-active') >= 0 || cls.indexOf('is-checked') >= 0 ||
-      cls.indexOf('active') >= 0 || el.getAttribute('aria-checked') === 'true' ||
-      el.getAttribute('aria-selected') === 'true' || el.getAttribute('aria-pressed') === 'true') ? 'Y' : 'N';
+    // "Already selected" tokens, including the product's own state classes: the insect 3D
+    // hotspot marks its open dot with `is-open` (see InsectStage3D.vue styles), so pressing
+    // an open hotspot CLOSES the card and the before/after state is identical -- without
+    // this it was reported as a dead button.
+    const active = (/\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
+      /--active\b/.test(cls) ||
+      el.getAttribute('aria-checked') === 'true' ||
+      el.getAttribute('aria-selected') === 'true' ||
+      el.getAttribute('aria-pressed') === 'true') ? 'Y' : 'N';
     const key = el.tagName + '|' + cls.slice(0, 30) + '|' + label;
     if (seen.has(key)) return;
     seen.add(key);
@@ -315,7 +329,13 @@ $jsSeedSearch = @'
   const inputs = Array.from(document.querySelectorAll('main.el-main input'))
     .filter(i => {
       const r = i.getBoundingClientRect();
-      return r.width > 0 && r.height > 0 && (i.type === 'text' || !i.type) && !i.value;
+      if (!(r.width > 0 && r.height > 0) || i.value) return false;
+      if (i.type && i.type !== 'text') return false;
+      // Skip select / date-picker inner inputs: typing into them filters nothing, so the
+      // search that follows stays a no-op. (On /edu/fun/config the first empty input is
+      // an el-select, which is why reset looked dead until this was filtered out.)
+      if (i.closest('.el-select, .el-date-editor, .el-cascader')) return false;
+      return true;
     });
   if (!inputs.length) return 'no-input';
   const el = inputs[0];
@@ -332,6 +352,14 @@ $jsSeedSearch = @'
 })()
 '@
 $searchLabel = -join @([char]0x641C, [char]0x7D22)
+
+# Label of the pager's current page, or '' when there is no pager.
+$jsCurrentPager = @'
+(() => {
+  const el = document.querySelector('main.el-main .el-pager li.is-active, main.el-main .el-pager li.active, main.el-main .rm-pager__btn--active');
+  return el ? ((el.innerText || '').trim()) : '';
+})()
+'@
 
 # ---------- in-page evidence collectors ----------
 # Own instrumentation instead of the CLI: `network requests` reported "No requests
@@ -514,9 +542,18 @@ if (-not $SkipContent) {
             $i++
             # Seed the filter input before pressing a search button, otherwise the click
             # is a no-op by design and proves nothing (see $jsSeedSearch).
+            # If seeding itself already changed the table, the page filters live and the
+            # search button is redundant by design -- clicking it then correctly does
+            # nothing, which must not be reported as a dead button.
+            $expectNoop = $false
             if ($it.label -and $it.label.Contains($searchLabel)) {
+                $preSeed = (Js $jsProbe) | ConvertFrom-Json
                 Js $jsSeedSearch | Out-Null
-                Start-Sleep -Milliseconds 250
+                Start-Sleep -Milliseconds 400
+                $postSeed = (Js $jsProbe) | ConvertFrom-Json
+                if ($postSeed.rows -ne $preSeed.rows -or $postSeed.htmlLen -ne $preSeed.htmlLen) {
+                    $expectNoop = $true
+                }
             }
             $before = (Js $jsProbe) | ConvertFrom-Json
             Clear-Evidence
@@ -554,6 +591,7 @@ if (-not $SkipContent) {
             if ($after.dialogs -gt $before.dialogs) { $effect = 'dialog' }
             elseif ($after.toasts -gt $before.toasts) { $effect = 'toast' }
             elseif ($after.rows -ne $before.rows) { $effect = 'table' }
+            elseif ($after.firstCell -ne $before.firstCell) { $effect = 'page-data' }
             elseif ($after.act -ne $before.act) { $effect = 'state' }
             elseif ($after.inputs -ne $before.inputs) { $effect = 'input' }
             elseif ($after.nodes -ne $before.nodes) { $effect = 'node' }
@@ -572,7 +610,9 @@ if (-not $SkipContent) {
                 $sel = Get-TagSelector $it.id
                 AbRaw @('scrollintoview', $sel) 30000 | Out-Null
                 AbRaw @('click', $sel) 45000 | Out-Null
-                Start-Sleep -Milliseconds ($SettleMs + 500)
+                # The 3D hotspot card animates open; give it longer than the plain settle
+                # or the effect is still in flight when we probe and it looks dead.
+                Start-Sleep -Milliseconds ($SettleMs + 1400)
                 $after2 = (Js $jsProbe) | ConvertFrom-Json
                 $ev2 = Read-Evidence
                 $effect2 = 'none'
@@ -617,6 +657,15 @@ if (-not $SkipContent) {
             # A control that was ALREADY selected (active tab / chosen option) is
             # expected to do nothing when clicked again -- that is not a dead button.
             if ($effect -eq 'none' -and $it.active -eq 'Y') { $effect = 'already-active' }
+            # Same for a pager button that is already the current page: pressing it is a
+            # no-op by design. (On /edu/wrongbook page "2" really does work -- rows went
+            # 20 -> 19 -- but after the sweep had already moved there, pressing it again
+            # changed nothing.)
+            if ($effect -eq 'none' -and $it.kind -eq 'pager') {
+                $cur = Js $jsCurrentPager 20000
+                if ($cur -and $cur -eq $lbl) { $effect = 'already-current-page' }
+            }
+            if ($effect -eq 'none' -and $expectNoop) { $effect = 'already-applied-live-filter' }
             if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' (no visible effect, wasActive=$($it.active))") }
 
             Js $jsReset | Out-Null
