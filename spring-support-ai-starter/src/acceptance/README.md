@@ -140,6 +140,13 @@ sudo install -m 644 "$src" /opt/ai-starter/acceptance-20261001/fixtures/face_pro
 > （`AiUserContext` 跨线程传递有效）。若上下文不传递，两个只存在于该用户的标记根本不会出现
 > 在日志里，判据会因「标记缺失」直接 FAIL。
 
+14. **交付的 `.sh` 必须是 LF 换行。** CRLF 会让 bash **每一行**都报 `command not found`
+    （`\r` 会被当成命令名的一部分）。本轮实测踩到：写入时用了会写 CRLF 的
+    `[IO.File]::WriteAllLines`，提交后工作树与 blob 都是 `CR=267 LF=267`。
+    **它当时没暴露**，因为发送到远端时剥掉了 `\r` —— 传输侧的兜底掩盖了文件本身的缺陷。
+    验证必须用**字节统计**（`[IO.File]::ReadAllBytes` 数 CR/LF）；
+    **不要**用 PowerShell 读 `git cat-file` 的输出来判断 —— PowerShell 按行读取时
+    已经把 CR 吃掉，会得出「CRLF 数 = 0」的假结论。
 ## 环境与工具链的坑（都实测过）
 
 | 坑 | 事实与对策 |
