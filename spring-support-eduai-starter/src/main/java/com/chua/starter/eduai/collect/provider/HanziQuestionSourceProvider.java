@@ -129,6 +129,12 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
     private static final Duration DICT_TIMEOUT = Duration.ofSeconds(180);
 
     /**
+     * 字典**首个候选**的超时：配置里的公开源（raw）实测可能慢到 180s+，
+     * 60s 拿不到就换镜像，别把一次采集耗在单个地址上
+     */
+    private static final Duration DICT_FIRST_TIMEOUT = Duration.ofSeconds(60);
+
+    /**
      * 小文件（字表 / IDS）的单地址超时。
      *
      * <p>取 20s 而不是默认 120s：这两个文件只有 17KB / 2.5MB，正常 1s 内取回；
@@ -179,12 +185,14 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
         int offset = intOf(SourceConfigReader.text(config, "offset"), 0);
         log.info("[collect] 汉字采集开始: 库中已有 {} 字，offset={} limit={}", countHanzi(support), offset, limit);
 
-        List<Character> wanted = loadCharList(SourceConfigReader.text(config, "charListUrl"));
+        // useMirrors=false 时只用配置的地址（不再退到内置镜像）：给「我就要 pin 住这个源」的需求用
+        boolean useMirrors = !"false".equalsIgnoreCase(String.valueOf(SourceConfigReader.text(config, "useMirrors")));
+        List<Character> wanted = loadCharList(SourceConfigReader.text(config, "charListUrl"), useMirrors);
         if (wanted.isEmpty()) {
             throw new IllegalStateException("字表为空，无法确定采集范围");
         }
-        Map<Character, DictEntry> dict = loadDict(dictUrl, wanted);
-        Map<Character, IdsEntry> ids = loadIds(idsUrl, wanted);
+        Map<Character, DictEntry> dict = loadDict(dictUrl, wanted, useMirrors);
+        Map<Character, IdsEntry> ids = loadIds(idsUrl, wanted, useMirrors);
         if (dict.isEmpty()) {
             throw new IllegalStateException("单字字典未取到可用条目: " + dictUrl);
         }
@@ -263,6 +271,27 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param support 入库支持
      * @return 已入库的 hanzi_char 集合
      */
+    /**
+     * 组装候选地址列表。
+     *
+     * <p>规则：配置的地址永远排第一；{@code useMirrors=false} 时**只**用它（没配就用默认常量），
+     * 也就是「严格 pin 住这个源，配错了就报错」—— 运营方有时就想要这个确定性，
+     * 而不是悄悄换镜像。反之默认会带上实测可用的镜像兜底。</p>
+     *
+     * @param mirrors      内置镜像（按实测可靠性排序）
+     * @param configuredUrl 配置地址（可空）
+     * @param useMirrors   是否允许镜像兜底
+     * @return 候选地址列表
+     */
+    private List<String> candidates(List<String> mirrors, String configuredUrl, boolean useMirrors) {
+        String primary = configuredUrl == null || configuredUrl.isBlank() ? mirrors.get(0) : configuredUrl.trim();
+        if (!useMirrors) {
+            return List.of(primary);
+        }
+        List<String> urls = new ArrayList<>(mirrors);
+        urls.add(0, primary);
+        return urls;
+    }
     private Set<String> existingChars(DbCollectSupport support) {
         List<String> chars = support.jdbc().queryForList("SELECT hanzi_char FROM edu_hanzi", String.class);
         return chars == null ? new HashSet<>() : new HashSet<>(chars);
@@ -303,7 +332,7 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param configuredUrl 配置里的字表地址（可空，空则用默认）
      * @return 汉字列表
      */
-    private List<Character> loadCharList(String configuredUrl) {
+    private List<Character> loadCharList(String configuredUrl, boolean useMirrors) {
         // 配置的地址优先，但**不排他**：外部源随时会挂（实测 raw 对 17KB 字表返回过
         // 「200 但 0 字节」和挂死 120s），只认配置里的那一个地址等于把采集交给运气。
         List<String> urls = new ArrayList<>(CHAR_LIST_MIRRORS);
@@ -332,12 +361,12 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param wanted  字表
      * @return 字 -> 条目
      */
-    private Map<Character, DictEntry> loadDict(String url, List<Character> wanted) {
+    private Map<Character, DictEntry> loadDict(String url, List<Character> wanted, boolean useMirrors) {
         List<String> urls = new ArrayList<>(DICT_MIRRORS);
         if (url != null && !url.isBlank()) {
             urls.add(0, url.trim());
         }
-        byte[] body = fetchBytesFirst(urls, "单字字典", DICT_MAX_BYTES, DICT_TIMEOUT);
+        byte[] body = fetchBytesFirst(urls, "单字字典", DICT_MAX_BYTES, DICT_FIRST_TIMEOUT, DICT_TIMEOUT);
         Map<Character, DictEntry> map = new LinkedHashMap<>();
         try (JsonParser parser = FACTORY.createParser(new ByteArrayInputStream(body))) {
             if (parser.nextToken() != JsonToken.START_ARRAY) {
@@ -371,7 +400,7 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param wanted 字表
      * @return 字 -> 条目（失败时返回空 Map，只影响部首补缺与结构，不阻断采集）
      */
-    private Map<Character, IdsEntry> loadIds(String url, List<Character> wanted) {
+    private Map<Character, IdsEntry> loadIds(String url, List<Character> wanted, boolean useMirrors) {
         Map<Character, IdsEntry> map = new LinkedHashMap<>();
         List<String> urls = new ArrayList<>(IDS_MIRRORS);
         if (url != null && !url.isBlank()) {
@@ -429,10 +458,30 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @return 响应体字节
      */
     private byte[] fetchBytesFirst(List<String> urls, String label, int maxBytes, Duration timeout) {
+        return fetchBytesFirst(urls, label, maxBytes, timeout, timeout);
+    }
+
+    /**
+     * 同上，但**首个候选**用更短的超时。
+     *
+     * <p>为什么需要：采集任务配置里通常写的是公开源地址（raw.githubusercontent），
+     * 实测它对 27MB 字典可能慢到 180s+，而镜像几十秒就够。「配置优先」的语义要保留，
+     * 但不该为一个慢地址把整次采集的耐心耗光 —— 首地址给 60s，之后的镜像给足时间。</p>
+     *
+     * @param urls         地址列表（配置地址应在最前）
+     * @param label        用途标签（日志与报错用）
+     * @param maxBytes     响应体上限
+     * @param firstTimeout 首个候选的超时
+     * @param timeout      后续候选的超时
+     * @return 响应体字节
+     */
+    private byte[] fetchBytesFirst(List<String> urls, String label, int maxBytes,
+                                  Duration firstTimeout, Duration timeout) {
         Exception last = null;
+        int seen = 0;
         for (String url : urls) {
             try {
-                return HttpFetchSupport.getBytes(url, maxBytes, timeout);
+                return HttpFetchSupport.getBytes(url, maxBytes, seen++ == 0 ? firstTimeout : timeout);
             } catch (Exception e) {
                 last = e;
                 log.warn("[collect] 汉字{}源不可用，换下一个镜像: {} 原因: {}", label, url, e.getMessage());
