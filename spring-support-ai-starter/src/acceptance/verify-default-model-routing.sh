@@ -100,7 +100,16 @@ clr() { # clr <token> <group>  清空该用户该组的全部覆盖（= 前端�
   curl -s -m 40 -A "$UA" -H "x-oauth-token: $1" -X DELETE -o /tmp/dmr.json -w '%{http_code}' \
     "$B/v2/settings/$2/overrides"
 }
-rows() { Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='$1';"; }
+# rows 只数本套件触及的 5 个模型组。
+#   注意：**不能**断言「某用户的覆盖行总数为 0」—— 共享环境里别的会话会合法地给
+#   同一个账号写别的组（实测：并发会话给 ops 写了 session|ai_next_task_max=7，
+#   因为他们把 "session" 加进了 USER_WRITABLE_GROUPS）。整用户计数会被这种
+#   合法写入打破，进而把「别人的正常改动」报成产品缺陷。
+#   本套件的 clr 也只清这 5 个组，绝不碰 session 等其它组。
+#   （与「共享环境里不得全表删除」同源：不按用户/表整体下手，只按本套件的作用域。）
+rows() { Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='$1' AND sys_ai_user_setting_group IN ('runtime','bot','image_search','face','rag');"; }
+# 收尾时如实打印作用域之外的行，证明本套件既没删也没改它们
+out_of_scope_rows() { Q "SELECT sys_ai_user_setting_user_id,sys_ai_user_setting_group,sys_ai_user_setting_field,sys_ai_user_setting_value FROM sys_ai_user_setting WHERE sys_ai_user_setting_group NOT IN ('runtime','bot','image_search','face','rag');" | tr '\t' '|'; }
 allrows() { Q "SELECT sys_ai_user_setting_user_id,sys_ai_user_setting_group,sys_ai_user_setting_field,sys_ai_user_setting_value FROM sys_ai_user_setting;" | tr '\t' '|' ; }
 
 echo "############ 0. 前置 ############"
@@ -113,14 +122,27 @@ OT=$(tok ops 'Ops@Guada2026'); AT=$(tok admin admin123)
 if [ -z "$OT" ] || [ -z "$AT" ]; then echo "  [FATAL] 未取得令牌（ops=${#OT} admin=${#AT}）；拒绝继续"; exit 1; fi
 echo "  令牌已取得 ops=${#OT}B admin=${#AT}B"
 
-TESTER_BEFORE=$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester';")
+TESTER_BEFORE=$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester' AND sys_ai_user_setting_group IN ('runtime','bot','image_search','face','rag');")
 echo "  tester 覆盖行数(基线，只读)=$TESTER_BEFORE"
 echo "  ops 覆盖行数(将被自建基线清空)=$(rows ops)"
 # 自建干净基线：只清 ops 自己，绝不碰 tester / 全表
 for g in runtime bot image_search face rag; do clr "$OT" "$g" >/dev/null; done
 sleep 2
 ck "干净基线：ops 覆盖行数" "$(rows ops)" "0"
-ck "干净基线：tester 行数未被动过" "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester';")" "$TESTER_BEFORE"
+ck "干净基线：tester 行数未被动过" "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester' AND sys_ai_user_setting_group IN ('runtime','bot','image_search','face','rag');")" "$TESTER_BEFORE"
+
+echo
+echo "--- 规格①的正面判据：默认模型设置**不属于管理员**，普通账号就能写 ---"
+# 前面的判据都在验「隔离」，这条正面验「可写」：普通账号 PUT 必须 200，
+# 且落库行必须带 user_id='ops'。若这些组被误设成 adminOnly，这里会 403 且不落库。
+CK_HTTP=$(put "$OT" runtime '{"default_model":"agnes:agnes-3.0-flash"}')
+ck "ops 普通账号 PUT 默认模型组的 HTTP" "$CK_HTTP" "200"
+ck "落库行归属为 ops（userScoped 生效）" \
+   "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='ops' AND sys_ai_user_setting_group='runtime' AND sys_ai_user_setting_field='default_model';")" "1"
+ck "tester 未被连带写入" \
+   "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester' AND sys_ai_user_setting_field='default_model' AND sys_ai_user_setting_value='agnes:agnes-3.0-flash';")" "0"
+clr "$OT" runtime >/dev/null; sleep 2
+ck "撤销后 ops 覆盖行归零" "$(rows ops)" "0"
 
 echo
 echo "############ 1. ② 以图搜图：image_search 组 -> 兜底 runtime 组 ############"
@@ -227,12 +249,14 @@ echo "############ 4. 回归 ① 隔离不变量 + 收尾 ############"
 for g in runtime bot image_search face rag; do clr "$OT" "$g" >/dev/null; done
 sleep 4
 ck "收尾：ops 覆盖行数归零" "$(rows ops)" "0"
-ck "收尾：tester 行数未被改动" "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester';")" "$TESTER_BEFORE"
+ck "收尾：tester 行数未被改动" "$(Q "SELECT COUNT(*) FROM sys_ai_user_setting WHERE sys_ai_user_setting_user_id='tester' AND sys_ai_user_setting_group IN ('runtime','bot','image_search','face','rag');")" "$TESTER_BEFORE"
 jget "$AT" "/v2/rag/status" >/dev/null
 ck "收尾：admin rag 模型仍为全局值" "$(jcfg llm_model)" "$ADMIN_RAG"
 jget "$AT" "/v2/image-search/status" >/dev/null
 ck "收尾：admin 以图搜图模型未被 ops 污染" "$(jfield model)" "$GLOB_IMG"
-echo "  --- sys_ai_user_setting 最终内容 ---"
+echo "  --- 作用域之外的覆盖行（别的会话的合法写入，本套件既没删也没改）---"
+out_of_scope_rows | sed 's/^/    /'
+echo "  --- sys_ai_user_setting 全表 ---"
 allrows | sed 's/^/    /'
 echo
 echo "############ 汇总 ############"
