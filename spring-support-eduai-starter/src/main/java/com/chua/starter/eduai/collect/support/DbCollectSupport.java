@@ -44,6 +44,7 @@ public class DbCollectSupport {
         put("edu_question", "题库");
         put("edu_poem", "古诗库");
         put("edu_knowledge_point", "知识点");
+        put("edu_hanzi", "汉字库");
     }};
 
     /**
@@ -53,7 +54,8 @@ public class DbCollectSupport {
             "edu_idiom", "idiom_content",
             "edu_question", "question_stem",
             "edu_poem", "poem_title,poem_author",
-            "edu_knowledge_point", "knowledge_point_name"
+            "edu_knowledge_point", "knowledge_point_name",
+            "edu_hanzi", "hanzi_char"
     );
 
     private final JdbcTemplate jdbcTemplate;
