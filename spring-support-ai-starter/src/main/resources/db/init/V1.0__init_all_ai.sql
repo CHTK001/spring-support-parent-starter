@@ -1431,42 +1431,14 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 服务实例（端口/协议开关/用量记录）';
 
 -- ------------------------------------------------------------
--- 存量库兼容 ALTER（新建库上方 CREATE TABLE 已含该列，此处只对老库生效）
--- sys_ai_generate_task_elapsed：生成耗时（毫秒），由任务完成时回写。
--- 该列在 sys_ai_generate_task 建表之后才加入，老库靠 CREATE TABLE IF NOT EXISTS
--- 不会补列，运行期 SELECT 因而报 Unknown column 'sys_ai_generate_task_elapsed'
--- （实测每个轮询周期一条，日志被刷满）。
--- 刻意写裸 ADD COLUMN 的理由与 datasource_hub 的兼容 ALTER 相同：
--- 幂等写法依赖未引入的 MysqlScriptConverter，重复执行报 1060 由
--- DataSourceFlyway 的 continueOnError 跳过。
--- ------------------------------------------------------------
-ALTER TABLE `sys_ai_generate_task`
-    ADD COLUMN `sys_ai_generate_task_elapsed` BIGINT NULL COMMENT '生成耗时（毫秒）';
-
--- ------------------------------------------------------------
--- 模型清单按账号隔离（对应 AiModelServiceImpl 的归属守卫）
---   sys_ai_model 原来没有归属列，模型清单是全局的，而 /v2/models 六个端点
---   整类限 admin —— 但前端侧边栏「模型管理」对所有账号可见，默认模型页与
---   聊天输入框还会引导普通账号「跳转到模型管理页面」，点进去必然 403。
+-- 存量库兼容 ALTER 已迁至 V1.1__add_ai_model_owner_and_task_elapsed.sql
 --
--- 唯一键必须一并从「model_code 全局唯一」改成「(归属, code) 复合唯一」：
---   否则两个账号都想登记 gpt-4o 时会撞唯一键，per-user 直接不可用。
---   （MySQL 唯一索引里 NULL 互不相等，故无主历史行之间不受约束，符合预期。）
---
--- 写裸 ALTER 的理由与上面 sys_ai_generate_task 那条一致：幂等写法依赖未引入的
--- MysqlScriptConverter，重复执行报 1060/1091 由 continueOnError 跳过。
--- 注意三条的顺序：先加列，再删旧唯一键，最后建复合唯一键 ——
--- 若中途失败，下次启动会重跑并收敛。
+-- 原先 sys_ai_generate_task_elapsed 与 sys_ai_model 归属列/唯一键的两组 ALTER
+-- 被追加在本文件末尾，对两类库都无效，是纯粹的负债：
+--   * 存量库：本文件自 2026-09-30 起已记入 sys_database_version（success=true），
+--     DataSourceFlyway 按文件名去重、整份跳过，追加在末尾的语句永远不会执行；
+--   * 全新库：两列都已写进各自的 CREATE TABLE，裸 ADD COLUMN 必然报 1060 重复列，
+--     整份脚本被标记 success=false 并在每次启动重试。
+-- 请把新的存量库兼容 DDL 一律写成独立的版本脚本，不要追加到已发布的 V1.0 末尾。
 -- ------------------------------------------------------------
-ALTER TABLE `sys_ai_model`
-    ADD COLUMN `sys_ai_model_user_id` VARCHAR(64) NULL COMMENT '归属账号（按账号隔离；NULL=无主历史行）';
-
-ALTER TABLE `sys_ai_model`
-    ADD KEY `sys_ai_model_user_id` (`sys_ai_model_user_id`);
-
-ALTER TABLE `sys_ai_model`
-    DROP INDEX `sys_ai_model_sys_ai_model_code`;
-
-ALTER TABLE `sys_ai_model`
-    ADD UNIQUE KEY `sys_ai_model_owner_code` (`sys_ai_model_user_id`, `sys_ai_model_code`);
 
