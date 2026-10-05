@@ -115,6 +115,7 @@ $script:Pass = 0; $script:Fail = 0
 $script:Fails = New-Object System.Collections.ArrayList
 $script:Rows = New-Object System.Collections.ArrayList
 $script:Dead = New-Object System.Collections.ArrayList
+$script:HarnessErr = New-Object System.Collections.ArrayList
 $script:Vanish = @{}
 $script:Clicks = 0
 
@@ -212,7 +213,14 @@ $routes = @(
     @{ path = '/edu/fun/poem-challenge'; name = 'fun-poem-challenge' },
     @{ path = '/edu/teacher'; name = 'teacher-portal' },
     @{ path = '/edu/student'; name = 'student' },
-    @{ path = '/edu/student-login'; name = 'student-login' }
+    @{ path = '/edu/student-login'; name = 'student-login' },
+    # Route-coverage audit against pages/eduai/src/router/index.ts found these three
+    # missing: two overlay pages that only appear when a game pops them (remind=true,
+    # showLink=false, so they never show up in a menu-driven crawl) and one redirect.
+    # A menu walk cannot find them; a route list must.
+    @{ path = '/edu/fun/insect-card'; name = 'fun-insect-card' },
+    @{ path = '/edu/fun/idiom-card'; name = 'fun-idiom-card' },
+    @{ path = '/edu/schedule'; name = 'schedule-redirect' }
 )
 if ($Role -eq 'student') {
     # Student identity: the admin console shell is not on the student's screen, so the
@@ -917,6 +925,24 @@ if (-not $SkipContent) {
                 [void]$script:Rows.Add(("$path|$($it.kind)|$($it.label)|vanished|$($before.path)|0|0|0|0"))
                 continue
             }
+            # A dropped browser connection is NOT a verdict about the control. The old code lumped
+            # every non-'ok' return into "dead button", so one websocket hiccup
+            # ("Failed to read ... os error 1006") was reported as a product defect.
+            # Transport failures get retried and then recorded as harness errors.
+            $isTransport = ($clickRes -match 'os error|Failed to read|Connection|closed|timeout|timed out|1006|10054')
+            if ($isTransport) {
+                $tkey = "$rname/$($it.kind)/$($it.label)"
+                if (-not $script:Vanish.ContainsKey($tkey)) { $script:Vanish[$tkey] = 0 }
+                $script:Vanish[$tkey]++
+                if ($script:Vanish[$tkey] -le 3) {
+                    Write-Host ('    [transport] retry {0}/3 after: {1}' -f $script:Vanish[$tkey], $clickRes.Substring(0, [Math]::Min(60, $clickRes.Length)))
+                    Start-Sleep -Milliseconds 800
+                    $i--
+                    continue
+                }
+                [void]$script:HarnessErr.Add("$rname/$($it.kind) '$($it.label)' -> $clickRes")
+                continue
+            }
             if ($clickRes -ne 'ok') {
                 [void]$script:Dead.Add("$rname/$($it.kind) '$($it.label)' -> click returned '$clickRes'")
                 continue
@@ -1132,7 +1158,7 @@ Write-Host ''
 Write-Host '########## dead clicks ##########'
 if ($script:Dead.Count -eq 0) { Write-Host '  (none)' } else { $script:Dead | ForEach-Object { Write-Host ('  - ' + $_) } }
 Write-Host ''
-Write-Host ('=========== SUMMARY: routes {0} | clicks {1} | passed {2} | failed {3} | dead {4} ===========' -f $routes.Count, $script:Clicks, $script:Pass, $script:Fail, $script:Dead.Count)
+Write-Host ('=========== SUMMARY: routes {0} | clicks {1} | passed {2} | failed {3} | dead {4} | harness-err {5} ===========' -f $routes.Count, $script:Clicks, $script:Pass, $script:Fail, $script:Dead.Count, $script:HarnessErr.Count)
 Write-Host ("matrix: $csv")
 Write-Host ("        $md")
 if ($script:Fails.Count -gt 0) {
