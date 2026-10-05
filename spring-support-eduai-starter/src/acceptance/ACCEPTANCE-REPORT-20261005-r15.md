@@ -101,13 +101,14 @@
 
 ## 5. 最终快照
 
-### 5.1 一键发布门禁（`release-run.sh`，日志 `logs/release-final5.log`）
+### 5.1 一键发布门禁（`release-run.sh`，日志 `logs/release-final6.log`，含新增的崩溃转储门禁）
 
 ```
 资源判据   available=4682MB（≥1536）swap=39%（<80）tmpfs=76%（<80）oom-kill=0（=0）java=10
 部署       jar=2c9c1d66593237c5
 来源自证   PROVENANCE_OK
 鉴权就绪   已就绪（约 10s）
+崩溃转储   发布前 4:1791129055 -> 发布后 4:1791129055（本轮新增门禁，通过）
 API 验收   API=OK
 ```
 
@@ -132,7 +133,7 @@ hanzi 套件实测要点：种子 3496 行、抽查 明/花/江/国/鹅 的拼�
 
 ```
 基线          ok=True token_len=178
-停 oauth      耗时=2540ms ok=False token_len=0  eduai健康=200  restarts=0
+停 oauth      耗时=2680ms ok=False token_len=0  eduai健康=200  restarts=0
 恢复后        ok=True token_len=178
 
 eduai jar sha256  2c9c1d66593237c5aceda7d2f7ac7bb02c5cddb35424688fbf74edc82a344ef7   （前后一致）
@@ -151,7 +152,7 @@ INDEX_MD5_MATCH     （线上 == 本地构建的 dist/index.html）
 WEB_PROVENANCE_OK   文件数=1104
 ```
 
-本轮中途该指纹被并发会话替换过一次（`7015e0ed…`、1103 文件），用工作区里保存的
+本轮中途该指纹被并发会话替换过**两次**（`7015e0ed…`、`ae38d778…`，均 1103 文件），用工作区里保存的
 `eduai-web-hanzi.tar.gz`（sha256 `924d9e59…`）重传后复现，并已写进 `RELEASE-CHECKLIST.md` §6.1。
 
 ### 5.5 浏览器验收（真实浏览器，日志 `logs/ui-hanzi-acceptance.log`）
@@ -167,6 +168,33 @@ WEB_PROVENANCE_OK   文件数=1104
 4. UI 单元格值等于种子值：`míng` / `8` / `日`（拼音含 U+00ED，脚本用码点构造保持全 ASCII）；
 5. 采集管理新建弹窗里来源类型含「汉字库」，点「填入汉字采集默认配置」后配置 JSON 里
    是公开字典地址且**没有** `importProcessor`（自落库路径）。
+
+## 5.6 顺带复核：r14 记的「libonnxruntime 打穿 JVM」被证据推翻
+
+复核 4 份崩溃转储与其前后日志后的实测结论（详见 `ACCEPTANCE-STATUS.md` 同名小节）：
+
+- 4/4 崩溃都发生在**进程已经在退出**时 —— 崩溃前最后几行依次是
+  `HikariPool Shutdown completed` → `FelixOsgiLauncher [osgi] framework stopping` →
+  白名单已关闭 → Leader 循环已停止 → 本地队列已关闭；
+- 4/4 出事线程是 `ForkJoinPool-1-worker-N`（`_thread_in_native`），故障地址 3/4 相同
+  （`libonnxruntime.so+0xb66403`），另一次 `+0xb6640a` 相邻；
+- 4 次全在 10-04，本轮在 onnx 已加载的状态下重启 9 次以上，**无新增转储**。
+
+所以「原生库打穿在服 JVM、全员掉线」缺少证据支持；真实性质是
+「重启时若有原生推理在飞，onnxruntime 在拆环境时 SIGSEGV」，代价是污染退出码 +
+留转储，而不是服务中断。由此：
+
+1. OCR / 阅卷的判定从「不应判为可交付」改为**可交付**（AI 阅卷 11/11 已绿）。
+   OCR 识别本身走外部 HTTP 客户端（`OcrClientManager` / `OcrTextExtractor`），
+   全仓无 DJL `Predictor` / `Criteria` 调用，不进 onnxruntime。
+2. **没有**改 ai-starter 的 ONNX 代码：该处有 29 项他人未提交改动，且该崩溃
+   在目标机上**复现不了**，改了无法验证 —— 不拿「看起来对」换「已验证」。
+3. 改为把这类失败变成**门禁**：`release-run.sh` 的 `crash_state()` 把
+   「JVM 崩溃转储份数:最新一份 epoch」纳入前后指纹，基线在部署前取，
+   发布后不一致即 `die` 不予签收。已用假转储正演验证判定有效
+   （`4:1791129055 → 5:1791194295 → 复原`），并在真实发布中通过：
+   `发布前 4:1791129055 -> 发布后 4:1791129055`。
+   也就是说，「部署把 JVM 打断了」从此不再是只有人工翻日志才能发现的事。
 
 ## 6. 明确边界
 
