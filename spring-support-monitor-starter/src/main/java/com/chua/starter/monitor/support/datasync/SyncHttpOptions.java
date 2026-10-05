@@ -25,6 +25,13 @@ import java.util.Map;
  * @param cellSelector   HTML 单元格选择器（对每一行 select），默认 {@code td,th}
  * @param headerRow      HTML 首行是否表头，默认 true
  * @param timeoutSeconds 超时秒数，默认 30
+ * @param cookie         请求 Cookie 整串（形如 {@code a=1; b=2}），默认不带。
+ *                       <p>单独一个字段而不是塞进 {@code headers}：Cookie 常含分号与空格，
+ *                       在「请求头键值对」表里当一行既难读又容易被前端转义坏；
+ *                       而且多数站点只认 {@code Cookie} 这一个头，
+ *                       让用户自己拼一个叫 {@code Cookie} 的请求头反而更容易写错。</p>
+ *                       <p>{@code headers} 里若也带了 {@code Cookie}，以本字段为准，
+ *                       并在日志里提示一次 —— 两个 Cookie 头会被服务端拼接成非预期值。</p>
  * @author CH
  * @since 4.0.0.43
  */
@@ -37,7 +44,8 @@ public record SyncHttpOptions(
         String rowSelector,
         String cellSelector,
         Boolean headerRow,
-        Integer timeoutSeconds) {
+        Integer timeoutSeconds,
+        String cookie) {
 
     /**
      * 默认请求方法
@@ -65,7 +73,7 @@ public record SyncHttpOptions(
      * @return 选项
      */
     public static SyncHttpOptions defaults() {
-        return new SyncHttpOptions(null, null, null, null, null, null, null, null, null);
+        return new SyncHttpOptions(null, null, null, null, null, null, null, null, null, null);
     }
 
     /**
@@ -84,7 +92,17 @@ public record SyncHttpOptions(
                 isBlank(rowSelector) ? DEFAULT_ROW_SELECTOR : rowSelector.trim(),
                 isBlank(cellSelector) ? DEFAULT_CELL_SELECTOR : cellSelector.trim(),
                 headerRow == null || headerRow,
-                timeoutSeconds == null || timeoutSeconds <= 0 ? DEFAULT_TIMEOUT_SECONDS : timeoutSeconds);
+                timeoutSeconds == null || timeoutSeconds <= 0 ? DEFAULT_TIMEOUT_SECONDS : timeoutSeconds,
+                isBlank(cookie) ? "" : cookie.trim());
+    }
+
+    /**
+     * 是否要带 Cookie。
+     *
+     * @return true 表示有非空 Cookie
+     */
+    public boolean hasCookie() {
+        return cookie != null && !cookie.isBlank();
     }
 
     /**

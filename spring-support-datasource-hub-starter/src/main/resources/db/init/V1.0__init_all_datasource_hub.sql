@@ -111,3 +111,26 @@ CREATE TABLE IF NOT EXISTS `ms_datasource_tunnel`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_ms_datasource_tunnel_ds` (`datasource_id`)
 ) COMMENT '数据源 SSH 隧道配置（高级配置）';
+-- ── JDBC 驱动 jar 库（需求：数据源支持上传驱动 jar，本机不可能有全部依赖包）────────────────
+-- 为什么不内置全部驱动：每个 JDBC 驱动的许可、体积、传递依赖都不同，
+--   打进产物等于强制所有部署都带上几十 MB 用不上的 jar；
+--   而让用户「把 jar 放到某个目录」又不可控（版本、命名、驱动类名都得自己对）。
+--   所以做成「上传 -> 落盘 -> 按 jar 建独立类加载器」的窄口子。
+CREATE TABLE IF NOT EXISTS `ms_jdbc_driver_jar`
+    (
+        `id`                 BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+        `jar_name`           VARCHAR(255) NOT NULL COMMENT '上传时的原始文件名',
+        `stored_name`        VARCHAR(255) NOT NULL COMMENT '落盘文件名（含内容指纹，避免同名覆盖）',
+        `driver_class_name`  VARCHAR(255) NOT NULL COMMENT '驱动类全名，如 org.h2.Driver',
+        `jar_size`           BIGINT       NULL COMMENT '字节数',
+        `jar_sha256`         VARCHAR(64)  NULL DEFAULT '' COMMENT '内容 sha256',
+        `jar_remark`         VARCHAR(512) NULL DEFAULT '' COMMENT '备注',
+        `create_time`        DATETIME     NULL COMMENT '上传时间',
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `uk_ms_jdbc_driver_jar_stored` (`stored_name`)
+    ) COMMENT 'JDBC 驱动 jar 库';
+
+-- 数据源引用哪个驱动 jar；为空则走应用 classpath 上的内置驱动
+-- 重复执行会报 1060，已被本脚本 continueOnError 吞掉（见文件头说明）
+ALTER TABLE `ms_datasource`
+    ADD COLUMN `datasource_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(ms_jdbc_driver_jar.id)，空=用内置驱动';

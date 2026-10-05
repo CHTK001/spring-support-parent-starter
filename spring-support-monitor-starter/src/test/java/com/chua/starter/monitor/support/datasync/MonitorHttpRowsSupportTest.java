@@ -55,6 +55,14 @@ class MonitorHttpRowsSupportTest {
      */
     private final AtomicReference<String> lastBody = new AtomicReference<>("");
 
+    /**
+     * 最近一次收到的 Cookie 头。
+     *
+     * <p>断言「Cookie 真的发出去了」而不是「选项对象里存着 cookie」——
+     * 后者只证明 record 有这个字段，前提是它真被拼进请求头。</p>
+     */
+    private final AtomicReference<String> lastCookie = new AtomicReference<>("");
+
     @BeforeEach
     void startServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -81,6 +89,8 @@ class MonitorHttpRowsSupportTest {
     private void serve(String path, int status, String contentType, String body, Charset charset) {
         server.createContext(path, exchange -> {
             lastBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            String cookie = exchange.getRequestHeaders().getFirst("Cookie");
+            lastCookie.set(cookie == null ? "" : cookie);
             byte[] bytes = body.getBytes(charset);
             exchange.getResponseHeaders().add("Content-Type", contentType);
             exchange.sendResponseHeaders(status, bytes.length);
@@ -99,13 +109,13 @@ class MonitorHttpRowsSupportTest {
 
         List<String> columns = MonitorHttpRowsSupport.headers(
                 SyncSourceType.HTTP_JSON, base + "api/orders",
-                new SyncHttpOptions("GET", null, null, "UTF-8", "data.list", null, null, null, 10));
+                new SyncHttpOptions("GET", null, null, "UTF-8", "data.list", null, null, null, 10, null));
 
         assertEquals(List.of("id", "name"), columns);
 
         List<Map<String, Object>> rows = MonitorHttpRowsSupport.rows(
                 SyncSourceType.HTTP_JSON, base + "api/orders",
-                new SyncHttpOptions("GET", null, null, "UTF-8", "data.list", null, null, null, 10));
+                new SyncHttpOptions("GET", null, null, "UTF-8", "data.list", null, null, null, 10, null));
         assertEquals(2, rows.size());
         assertEquals("1", rows.get(0).get("id"));
         assertEquals("B", rows.get(1).get("name"));
@@ -119,7 +129,7 @@ class MonitorHttpRowsSupportTest {
 
         List<Map<String, Object>> rows = MonitorHttpRowsSupport.rows(
                 SyncSourceType.HTTP_JSON, base + "api/auto",
-                new SyncHttpOptions(null, null, null, null, null, null, null, null, null));
+                new SyncHttpOptions(null, null, null, null, null, null, null, null, null, null));
 
         assertEquals(1, rows.size());
         assertEquals("1", rows.get(0).get("a"));
@@ -133,7 +143,7 @@ class MonitorHttpRowsSupportTest {
 
         IllegalStateException error = assertThrows(IllegalStateException.class, () -> MonitorHttpRowsSupport.rows(
                 SyncSourceType.HTTP_JSON, base + "api/obj",
-                new SyncHttpOptions(null, null, null, null, "data", null, null, null, null)));
+                new SyncHttpOptions(null, null, null, null, "data", null, null, null, null, null)));
 
         assertTrue(error.getMessage().contains("数组"), error.getMessage());
     }
@@ -156,7 +166,7 @@ class MonitorHttpRowsSupportTest {
                 """, StandardCharsets.UTF_8);
 
         SyncHttpOptions options = new SyncHttpOptions(
-                null, null, null, "UTF-8", null, "table tbody tr", "td", true, 10);
+                null, null, null, "UTF-8", null, "table tbody tr", "td", true, 10, null);
 
         List<String> columns = MonitorHttpRowsSupport.headers(SyncSourceType.HTTP_HTML, base + "report", options);
         // 两列都叫「金额」：不去重的话 Map 只会剩一列，数据静默少一半
@@ -189,10 +199,46 @@ class MonitorHttpRowsSupportTest {
         serve("/api/query", 200, "application/json; charset=UTF-8", "{\"items\":[]}", StandardCharsets.UTF_8);
 
         SyncHttpOptions options = new SyncHttpOptions(
-                "POST", Map.of("X-Token", "abc123"), "{\"pageNo\":2}", "UTF-8", "items", null, null, null, 10);
+                "POST", Map.of("X-Token", "abc123"), "{\"pageNo\":2}", "UTF-8", "items", null, null, null, 10, null);
         MonitorHttpRowsSupport.rows(SyncSourceType.HTTP_JSON, base + "api/query", options);
 
         assertEquals("{\"pageNo\":2}", lastBody.get());
+    }
+
+    @Test
+    @DisplayName("HTTP：cookie 字段确实作为 Cookie 请求头发出去")
+    void cookieIsSentAsHeader() throws Exception {
+        serve("/api/cookie", 200, "application/json; charset=UTF-8", "{\"items\":[]}", StandardCharsets.UTF_8);
+
+        SyncHttpOptions options = new SyncHttpOptions(
+                "GET", null, null, "UTF-8", "items", null, null, null, 10, "SID=abc123; uid=7");
+        MonitorHttpRowsSupport.rows(SyncSourceType.HTTP_JSON, base + "api/cookie", options);
+
+        assertEquals("SID=abc123; uid=7", lastCookie.get());
+    }
+
+    @Test
+    @DisplayName("HTTP：没配 cookie 时不带 Cookie 头")
+    void noCookieNoHeader() throws Exception {
+        serve("/api/nocookie", 200, "application/json; charset=UTF-8", "{\"items\":[]}", StandardCharsets.UTF_8);
+
+        MonitorHttpRowsSupport.rows(SyncSourceType.HTTP_JSON, base + "api/nocookie",
+                SyncHttpOptions.defaults().normalized());
+
+        assertEquals("", lastCookie.get());
+    }
+
+    @Test
+    @DisplayName("HTTP：headers 里也写了 Cookie 时以 cookie 字段为准，不发两个 Cookie 头")
+    void cookieFieldWinsOverHeaders() throws Exception {
+        serve("/api/both", 200, "application/json; charset=UTF-8", "{\"items\":[]}", StandardCharsets.UTF_8);
+
+        SyncHttpOptions options = new SyncHttpOptions(
+                "GET", Map.of("Cookie", "OLD=1", "X-Token", "t"), null, "UTF-8", "items", null, null, null, 10, "NEW=2");
+        MonitorHttpRowsSupport.rows(SyncSourceType.HTTP_JSON, base + "api/both", options);
+
+        // 两个 Cookie 头会被服务端拼成非预期的会话，所以只允许字段值那一个
+        assertEquals("NEW=2", lastCookie.get());
     }
 
     @Test
@@ -211,7 +257,7 @@ class MonitorHttpRowsSupportTest {
         // 服务端 Content-Type 不给 charset，只能靠显式配置
         List<Map<String, Object>> rows = MonitorHttpRowsSupport.rows(
                 SyncSourceType.HTTP_HTML, base + "gbk",
-                new SyncHttpOptions(null, null, null, "GBK", null, "table tr", "td", true, 10));
+                new SyncHttpOptions(null, null, null, "GBK", null, "table tr", "td", true, 10, null));
 
         assertEquals(1, rows.size());
         assertEquals("张三", rows.get(0).get("姓名"));
