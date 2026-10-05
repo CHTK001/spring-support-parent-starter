@@ -11,6 +11,7 @@ import com.chua.common.support.ai.chat.MemoryChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
+import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.common.support.ai.embedding.EmbeddingClientSetting;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;
 import com.chua.common.support.ai.rag.RagClient;
@@ -188,9 +189,15 @@ public class RagClientManager {
      * @return 问题描述；配置完整时返回 null
      */
     public String embeddingIssue() {
-        String engine = settingReader.getStr(GROUP, "rag_embedding_model");
-        if (!StringUtils.hasText(engine) || "memory".equalsIgnoreCase(engine)) {
-            return "embedding 引擎为 memory，向量不落库（检索不可用）";
+        String model = settingReader.getStr(GROUP, "rag_embedding_model_name");
+        if (!StringUtils.hasText(model)) {
+            return "未配置 Embedding 模型：请到「设置中心 → 默认模型 → RAG 知识库」选择一个 Embedding 模型"
+                    + "（引擎由所选模型自动推导，不需要手动指定）";
+        }
+        String engine = resolveEmbeddingEngineByModel(model);
+        if (!StringUtils.hasText(engine)) {
+            return "Embedding 模型『" + model + "』既不在本地模型库，其供应商也未提供 embedding 能力，"
+                    + "无法确定引擎；请改选一个可用的 Embedding 模型";
         }
         Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
         boolean registered = false;
@@ -201,15 +208,10 @@ public class RagClientManager {
             }
         }
         if (!registered) {
-            return "embedding 引擎『" + engine + "』未在 SPI 注册，已回落内存占位；已注册: " + providers;
+            return "由模型『" + model + "』推导出的引擎『" + engine + "』未在 SPI 注册；已注册: " + providers;
         }
-        String model = settingReader.getStr(GROUP, "rag_embedding_model_name");
         boolean local = LOCAL_EMBEDDING_ENGINES.contains(engine.toLowerCase());
         if (local) {
-            // 本地引擎（onnx 等）凭模型 id 选模型；缺了会退默认模型，或直接抛「模型未注册」
-            if (!StringUtils.hasText(model)) {
-                return "本地 embedding 引擎『" + engine + "』未填 rag_embedding_model_name（模型 id）";
-            }
             return null;
         }
         // 三方引擎：与 createEmbeddingClient 一致，允许回落到 runtime 的凭证
@@ -222,7 +224,8 @@ public class RagClientManager {
             base = settingReader.getStr("runtime", "provider_base_url");
         }
         if (!StringUtils.hasText(key) || !StringUtils.hasText(base)) {
-            return "三方 embedding 引擎『" + engine + "』缺少 apiKey / baseUrl（本库或 runtime 都未配置）";
+            return "Embedding 模型『" + model + "』走三方引擎『" + engine + "』，缺少 apiKey / baseUrl"
+                    + "（RAG 设置或 runtime 都未配置）";
         }
         return null;
     }
@@ -571,7 +574,20 @@ public class RagClientManager {
      * @return 构建的结果
      */
     private RagClient doBuild(String userId) {
-        String ragEmbeddingModel = settingReader.getStr(GROUP, "rag_embedding_model");
+        // 引擎不再读取 rag_embedding_model（那是实现细节，界面上也不该让人选）；
+        // 改为由「所选 Embedding 模型」反推，且不允许回落任何默认引擎。
+        String ragEmbeddingModelId = settingReader.getStr(GROUP, "rag_embedding_model_name");
+        String ragEmbeddingModel = resolveEmbeddingEngineByModel(ragEmbeddingModelId);
+        if (!StringUtils.hasText(ragEmbeddingModelId)) {
+            log.warn("[RagClientManager] 账号 {} 未配置 Embedding 模型，RAG 检索不可用"
+                    + "（请到「设置中心 → 默认模型 → RAG 知识库」选择一个 Embedding 模型；"
+                    + "引擎由所选模型自动推导，无需手动指定）",
+                    StringUtils.defaultString(userId, SYSTEM_ACCOUNT));
+        } else if (!StringUtils.hasText(ragEmbeddingModel)) {
+            log.warn("[RagClientManager] 账号 {} 配置的 Embedding 模型 '{}' 既不在本地模型库、"
+                            + "其供应商也未提供 embedding 能力，无法确定引擎，RAG 检索不可用",
+                    StringUtils.defaultString(userId, SYSTEM_ACCOUNT), ragEmbeddingModelId);
+        }
         String ragLlmModel = settingReader.getStr(GROUP, "rag_llm_model");
         // 兜底：知识库未单独配置模型时，回落「默认模型」——
         // LLM 用默认对话模型；embedding 用默认模型所属供应商作为 embedding 引擎
@@ -580,13 +596,6 @@ public class RagClientManager {
             ragLlmModel = settingReader.getStr("runtime", "default_model");
             if (StringUtils.hasText(ragLlmModel)) {
                 log.info("[RagClientManager] rag_llm_model 未配置，回落默认模型: {}", ragLlmModel);
-            }
-        }
-        if (!StringUtils.hasText(ragEmbeddingModel)) {
-            ragEmbeddingModel = settingReader.getStr("runtime", "provider");
-            if (StringUtils.hasText(ragEmbeddingModel)) {
-                log.info("[RagClientManager] rag_embedding_model 未配置，回落默认模型供应商作为 embedding 引擎: {}",
-                        ragEmbeddingModel);
             }
         }
         String ragOcrModel = settingReader.getStr(GROUP, "rag_ocr_model");
@@ -1046,6 +1055,73 @@ public class RagClientManager {
         } catch (NumberFormatException e) {
             return def;
         }
+    }
+
+    /**
+     * 由「所选 Embedding 模型」反推该用哪个 embedding 引擎（SPI provider）。
+     *
+     * <p>用户只该选模型，不该被要求理解「onnx / openai / siliconflow」这些引擎名——
+     * 引擎是实现细节，由模型本身决定：</p>
+     * <ol>
+     *   <li>模型 id 命中本地 {@code ModelRegistry} → 引擎是 {@code onnx}（本地推理，免凭证）；</li>
+     *   <li>否则按模型名查 {@code sys_ai_provider_model} → 取其供应商的 platform，
+     *       仅当该 platform 在 EmbeddingClient SPI 里注册过才采用；</li>
+     *   <li>两者都不命中 → 返回 {@code null}，<b>不回落任何默认引擎</b>。</li>
+     * </ol>
+     *
+     * <p>第3 条是刻意的：早先「未配置就回落 provider / 占位实现」会让 RAG 带着
+     * 从未有人配置的种子值（实测 {@code rag_embedding_model=onnx}、种子时间
+     * 2026-09-30）悄悄跑起来，用户看到的是「已配置」。未配置就明确报未配置。</p>
+     *
+     * @param modelId 用户选择的 Embedding 模型标识，允许为 {@code null}
+     * @return 引擎名；无法判定时返回 {@code null}
+     */
+    private String resolveEmbeddingEngineByModel(String modelId) {
+        if (!StringUtils.hasText(modelId)) {
+            return null;
+        }
+        String model = modelId.trim();
+        try {
+            // ① 本地模型：ModelRegistry 里有就是 onnx 本地推理
+            ModelRegistry.discoverAll();
+            for (ModelRegistry.Entry entry : ModelRegistry.getAll()) {
+                if (entry != null && model.equalsIgnoreCase(entry.modelId())) {
+                    return "onnx";
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 枚举本地模型失败，无法判断 {} 是否本地模型: {}", model, e.getMessage());
+        }
+        // ② 云端模型：按模型名定位供应商，取其 platform 作为引擎
+        try {
+            SysAiProviderModel row = providerModelMapper.selectOne(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getModel, model)
+                            .eq(SysAiProviderModel::getEnabled, true)
+                            .last("limit 1"));
+            if (row == null || StringUtils.isBlank(row.getProviderId())) {
+                return null;
+            }
+            SysAiProvider provider = providerMapper.selectById(row.getProviderId());
+            if (provider == null || !Boolean.TRUE.equals(provider.getEnabled())) {
+                return null;
+            }
+            String platform = StringUtils.isBlank(provider.getPlatform()) ? null : provider.getPlatform().trim();
+            if (platform == null) {
+                return null;
+            }
+            // 只有真的注册了对应 EmbeddingClient SPI 才算可用引擎，避免选了个跑不了的
+            for (String registered : ServiceProvider.of(EmbeddingClient.class).getExtensions()) {
+                if (registered != null && registered.equalsIgnoreCase(platform)) {
+                    return platform;
+                }
+            }
+            log.warn("[RagClientManager] 供应商 {} 的 platform '{}' 没有注册 EmbeddingClient SPI，无法作为引擎",
+                    provider.getName(), platform);
+        } catch (Exception e) {
+            log.warn("[RagClientManager] 按模型 {} 反查引擎失败: {}", model, e.getMessage());
+        }
+        return null;
     }
 
     /**
