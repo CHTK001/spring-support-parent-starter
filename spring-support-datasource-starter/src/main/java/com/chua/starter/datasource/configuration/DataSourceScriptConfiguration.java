@@ -23,6 +23,7 @@ import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -151,12 +152,47 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 int initDataCount = flyway.migrateInitData();
                 log.info("DataSource [{}] SPI Flyway 迁移完成，执行结构 {} 个脚本、数据 {} 个脚本",
                         beanName, initCount, initDataCount);
+                logSkippedStatements(beanName, flyway);
                 return true;
             }
         } catch (Exception e) {
             log.warn("DataSource [{}] SPI Flyway 不可用，回退内置迁移器: {}", beanName, e.getMessage());
         }
         return false;
+    }
+
+    /**
+     * 打印被容错跳过的迁移语句。
+     *
+     * <p>SPI Flyway 在 {@code continueOnError} 下会跳过方言差异语句并把脚本记为
+     * {@code success=false}，但既不抛异常也不打日志 —— 版本表里只会静静多出一行
+     * {@code false}，排查时无从知道是哪条语句、为什么失败。这里把失败语句补到日志里，
+     * 避免「迁移成功」的汇总行掩盖掉真实的跳过。
+     *
+     * <p>用反射取 {@code getFailedStatements()}：该方法是 {@code DataSourceFlyway} 的额外能力，
+     * 不在 {@link Flyway} 契约内，其它 SPI 实现没有时静默跳过。
+     *
+     * @param beanName 数据源名
+     * @param flyway   迁移器实例
+     */
+    private void logSkippedStatements(String beanName, Flyway flyway) {
+        try {
+            Method method = flyway.getClass().getMethod("getFailedStatements");
+            Object value = method.invoke(flyway);
+            if (!(value instanceof Collection<?> statements) || statements.isEmpty()) {
+                return;
+            }
+            log.warn("DataSource [{}] SPI Flyway 有 {} 条语句被容错跳过（脚本已记为 success=false）：",
+                    beanName, statements.size());
+            for (Object statement : statements) {
+                log.warn("DataSource [{}]   跳过语句: {}", beanName,
+                        String.valueOf(statement).replaceAll("\\s+", " "));
+            }
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // 该 SPI 实现未暴露失败语句明细，属正常情况
+        } catch (Exception e) {
+            log.debug("DataSource [{}] 读取 Flyway 失败语句明细时出错", beanName, e);
+        }
     }
 
     /**
