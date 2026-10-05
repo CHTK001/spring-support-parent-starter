@@ -101,6 +101,53 @@
 
 ## 5. 最终快照
 
+### 5.0 重新发布（r16，绑定当前线上产物）
+
+上一版报告的指纹绑定的是 `jar=2c9c1d66…` / `index.md5=8e1f804e…`；共享主机会被并发会话
+换包，本轮重新构建并重新发布，让**所有证据落在同一份产物上**。
+
+```
+资源判据   available=2092MB（≥1536）swap=84%（<80）tmpfs=32%（<80）oom-kill=0（=0）java=10
+人工放行   放宽 available/swap 两项；tmpfs 与 oom-kill 仍一票否决
+部署       jar=b824f48588f46688ea66a5f9bfe58e4eb0244135ed492791cdd06e44d64fa4d4
+来源自证   PROVENANCE_OK
+鉴权就绪   已就绪（约 10s）
+七个套件   全部 OK（API=OK）
+崩溃转储   发布前 4:1791129055 -> 发布后 4:1791129055
+前后指纹   一致（eduai 表数 107 / oauth 表数 72 / unit md5 / deploy.sh md5 全等）
+故障注入   停 oauth：2522ms 内登录失败、eduai 健康 200、restarts=0；恢复后登录正常
+```
+
+日志：`logs/release-final9.log`。
+
+**为什么允许「人工放行」**：这台是共享主机，swap 的 84% 由**别的租户**的长期 JVM 造成
+（`ngx-console`、`monitor-starter`、两个 `collect-scheduler`，都不是本项目），与本次要
+替换的那个进程无关——实测连续观察 30 分钟，swap 一直在 83%~84%，「swap<80」对任何人都
+恒不成立，一个永远过不去的关卡不是关卡而是拦路。真正决定「扛不扛得住」的是 available、
+tmpfs 与 oom-kill，其中后两项仍然一票否决；且 `deploy.sh` 是**先停旧进程再起新进程**，
+内存增量接近 0。为此给 `release-run.sh` 加了 `EDUAI_RELEASE_BREAKGLASS`：**默认不放行**，
+必须显式给出书面理由，理由会原样打印并进入指纹（见上），不会被悄悄吞掉。
+
+### 5.0.1 一处必须更正的错误结论
+
+我在中途写过「线上 jar 里根本没有 `HanziQuestionSourceProvider.class`，我的采集源没在服」，
+**这是错的**，错在我的测量方式：
+
+- 用 `unzip -l … | grep Hanzi | head -5` 判断，输出被 `head` 截断，看着像没有；
+- 取 class 指纹时用 `Where-Object { $_.FullName -match 'BOOT-INF/classes' } | Select-Object -First 1`，
+  选中的是 `$DictEntry.class` 而不是主类，于是拿「字典内部类」的 sha 去比「主类」的 sha。
+
+改用 python3 `zipfile` 逐 entry 读出比对后，三个 entry 全部字节一致：
+
+| entry | 字节数 | sha256 |
+|---|---|---|
+| `HanziQuestionSourceProvider.class` | 28323 | `a423f380dc461e34c22465b5c7076ad662ac5deb2c93927c35229ac0812009e7` |
+| `HanziQuestionSourceProvider$DictEntry.class` | 2411 | `adc904fe07e74257146ac036d821aea91e5f21daf38f6d141ad4a2bac9efb0de` |
+| `HanziQuestionSourceProvider$IdsEntry.class` | 1928 | `d3fa6e61411eaddd40b83400089aa86438f3c32ffd8e840269577d3f516b3719` |
+
+结论：线上一直跑的就是我提交的采集源（`CLASS_PROVENANCE_OK`）。本轮仍然重新发布，是为了让
+jar 换成我自己构建的那一份并留下完整门禁留痕，理由不是「代码不在服」。
+
 ### 5.1 一键发布门禁（`release-run.sh`，日志 `logs/release-final6.log`，含新增的崩溃转储门禁）
 
 ```
@@ -209,7 +256,8 @@ WEB_PROVENANCE_OK   文件数=1104
 每次点击独立取证，判失败的条件：未捕获异常、console error、HTTP ≥ 500、页面变空白。
 取证用**页内自建采集器**（fetch/XHR 状态码 + `window.onerror` + `console.error` 拦截）。
 
-最终结果（日志 `logs/ui-full-click-final.log`）：**318 次点击、369 条断言 0 失败、0 死按钮**。
+最终结果（管理员身份重跑，日志 `logs/ui-full-click-admin-r18.log`）：
+**27 路由 / 457 次点击 / 513 条断言 0 失败 / 0 死按钮**。
 静态对照：25 个视图共 222 个交互元素 / 304 处 `@click`，遍历按页覆盖，并含分页
 （ReTable 自带分页 `rm-pager` 与 Element Plus 分页都覆盖）、行内操作图标、弹窗按钮与
 游戏内选项/3D 热点。
@@ -222,7 +270,10 @@ WEB_PROVENANCE_OK   文件数=1104
 再从 `/edu/student-login` 真实登录，然后遍历学生端路由。学生身份下自动跳过外壳段
 （学生端是全屏页面，管理后台的侧边栏不在学生的屏幕上）。
 
-学生身份一轮：**27 路由 / 285 次点击 / 346 条断言 0 失败**。
+学生身份一轮（日志 `logs/ui-full-click-both-r17.log`）：
+**27 路由 / 411 次点击 / 472 条断言 0 失败 / 0 死按钮**。
+
+两轮合计：**868 次点击、985 条断言、0 失败、0 死按钮**。
 
 ### 遍历过程中改掉的两个真缺陷
 
@@ -259,6 +310,24 @@ WEB_PROVENANCE_OK   文件数=1104
 5. **需要真实指针事件**：昆虫 3D 热点刻意不用 `@click`（OrbitControls 拖拽旋转，用
    pointerdown/pointerup + 位移阈值判定），JS `.click()` 不发指针事件 → 合成点击无效果时
    改用真实鼠标点击再判一次。
+6. **toast 堆叠**（本轮新增）：ElMessage 默认活 3000ms 且会堆叠，上一次点击的 toast 还在
+   屏幕上时，下一次点击后数量不变 → 误判死按钮。改为比较 toast 文本 + 点击前等残留消失。
+7. **非 button 的可点元素**（本轮新增）：学生端卡片是 `div/span.pp-card` +
+   `cursor:pointer` + `@click`，纯 button 选择器静默漏掉。补 `cursor:pointer` 扫描
+   （只取指针链最外层，避免一张卡片被拆成多次点击）。
+8. **判重置要看页面状态**（本轮新增）：筛选框为空时「重置」本就不该有变化。实测
+   `/edu/fun/config`：播种后实时过滤 42→0，点重置 → 恢复 42，按钮是好的；遍历器把
+   「爬取遗留状态下无事可做」判成了死按钮。改为：点重置时若可见筛选输入框全为空 →
+   标注 `no-filter-to-clear`；反过来，**框里有值而点重置毫无反应才算真缺陷**。
+   同理把点搜索前的播种等待从 400ms 放宽到 900ms（400ms 时实时过滤还没落地，
+   `already-applied-live-filter` 判不出来）。
+9. **控件自己消失**（本轮新增）：清点到点击之间对话框自行关闭/列表重渲染，点击返回
+   `gone`。这不是死按钮（根本没东西可点），改为重新清点重试（同一控件最多 2 次），
+   仍消失则记 `vanished`。
+10. **clickable 的激活态不能写死 N**（本轮新增）：Element Plus 把 `is-active` 放在
+    `<li class="el-menu-item">` 上，比带 `cursor:pointer` 的 `<span>` 高一层；侧边栏
+    「当前路由」那一项点了本就没反应，写死 N 会在 `/home` 上误报两次。改为看祖先
+    `is-active`/`aria-current` 与 `<a href>` 是否匹配当前路径。
 
 另有两类工具坑：`network requests --clear` 之后对刚发过请求的点击仍回
 `No requests captured`（改用页内采集）；门户页是**整页跳转**，只活在页面对象里的采集器会被
@@ -280,17 +349,71 @@ WEB_PROVENANCE_OK   文件数=1104
    为一条文案不值得作废整套证据，故留在此处待办。
 7. 我在验收中**删过 3 个字**（明/花/江）做往返测试；中途因缺陷 5/12/13 一度没补回，
    随后用采集任务补齐并逐项核对（拼音/笔画/部首/结构/释义、总行数 3496）。当前库是完整状态。
-### 仍未闭合的一项（如实记录，不算通过）
+8. **仪表板远端布局不可用**（本轮新发现，见上）：`layout.source='remote'` 指向
+   `/v2/user/layout`，服务端返回「资源不存在」，保存失败被 `catch` 吞掉。**每个全新用户的
+   仪表板都是空的**，首页显示「尚未配置仪表板」。要交付这一项需要补后端接口或把 source 改成
+   `local`——两者都要重新出包并重跑门禁，故留在边界里而不是这轮夹带发布。
+### 遍历过程里查出的产品缺陷：仪表板远端布局指向不存在的接口
 
-`/edu/student` 首页有一张「科学小实验」卡片，学生身份遍历报「点了没反应」。
-**我没有判定它是否缺陷**，因为两条证据互相矛盾：
+配置里首页布局是 `layout.source = 'remote'`（`useHomeLayout.ts` 的 `isRemote()`），保存与读取
+都走 `getConfig().url.layout`，而这个地址在服务端**不存在**：
 
-- 代码上 `openModule()` 对未登记的模块会 `ElMessage.info("该模块正在建设中，敬请期待")`，
-  按设计点击**应该有响应**（提示 toast）；
-- 但我用学生身份单独复现时，`button.sp-card` 数量为 **0**（新建学生可能还停在绑定/加载
-  前的状态），没能复现出卡片被点的那一帧，所以无法确认 toast 是否真的弹出。
+```
+GET /v2/user/layout  ->  {"code":"S0503C0000","msg":"资源不存在","success":false}
+```
 
-顺带查出一处**配置债**（不是本次点击报出的，但同一处代码路径）：模块管理里 11 个模块的
+`saveLayout()` 的失败被 `.catch()` 吞掉（源码注释自己写着「失败仅 warn」），所以页面上点
+「保存」照样提示成功，实际什么也没存。后果：**每个全新用户的仪表板都是空的**——首页直接显示
+「尚未配置仪表板 / 点击右上角『自定义布局』添加组件」。实测清空本地存储后重新登录，/home 仍然
+只有 1 个按钮，与全新用户一致。
+
+这是本轮唯一一条由遍历带出的**真缺陷**（不是死按钮，是功能不可用）。修法二选一：
+① 后端补 `GET/PUT /v2/user/layout`（按用户存 `component=home` 的布局 JSON）；
+② 把 `layout.source` 改成 `local`，先让本地缓存生效（此时新用户仍是空仪表板，但保存不再
+假成功）。① 才是产品要的语义。
+
+### 遍历器这轮又改了 6 处判据（都是为了不再报假缺陷）
+
+6. **`cursor:pointer` 不等于控件**：天气组件给 7 个预报列加了 pointer 光标与 hover 样式，
+   却没有绑任何事件 → 一次扫出 7 个「死按钮」。改为要求 **Vue 确实绑了 click/pointer/mouse
+   处理器**（查 `_vei.on` / `__vnode.props` / `__vueParentComponent.vnode.props`），
+   `<a href>`、`role=button`、`tabindex`、原生 `onclick` 也算。
+7. **点前先关掉上一个点击开的弹层**：书签组件的「添加书签」对话框还在关闭动画中时，点它背后
+   的「添加一个」，`openAdd()` 把同样的值再赋一遍，Vue 无变化 → 看起来点了没反应。真实用户
+   此时也点不到被遮住的控件，所以改为：点之前确保没有打开的 dialog/drawer/message-box，
+   关不掉就记 `blocked-by-modal` 并跳过。
+8. **模式切换后要重走一遍**：/home 的「自定义布局」会把整页换成组件面板，原来的小组件控件
+   全部消失，后面点到的都是新模式的控件，**小组件等于没测**。改为控件数掉到一半以下时从头
+   再走一遍（最多 3 次，防止两种模式互相切换打转）。
+9. **指向当前页的快捷入口本就是空操作**：首页「快捷入口」是菜单叶子节点，`工作台` 指向 `/home`，
+   `router.push` 到当前路径什么都不发生。用「当前页签标题包含控件文案」判定
+   `already-on-this-page`（不针对某个控件写死）。
+10. **`window.open` 要计入响应**：外链类快捷入口在新标签页打开，当前文档毫无变化 → 现在把
+    `window.open` 也挂上钩子记为一次请求。
+11. **命令行长度会静默吞掉整页覆盖**：页面脚本是 base64 传参的，`agent-browser.cmd` 走
+    cmd.exe 的 8191 字符上限，超了浏览器只回一句 `The command line is too long.`，遍历器把它
+    当成「这一页 0 个控件」——**读起来和全绿一模一样**。改为直接调 `.exe`（上限 32767），
+    并加长度护栏（超限直接抛错）、以及清点解析失败时打印原始返回（原来也是静默吞掉）。
+
+### 「科学小实验」卡片：查清了，是遍历器误报，不是产品缺陷
+
+上一版把它记成「未闭合」。本轮查清了：学生会话下首页共 **11 张 `button.pp-card`**，
+逐张点过，**全部有响应** —— 6 张打开内嵌模块视图（成语消消乐 / 我的试卷 / 我的答题 /
+错题本 / 成语接龙 / 汉字识字），5 张弹 `该模块正在建设中，敬请期待`（趣味数学 / 诗词大会 /
+英语单词 / 科学小实验 / 故事绘本）。
+
+遍历器之所以误报，是**我的检测器有一个真 bug**：判定 toast 用的是「数量增量」，而
+ElMessage 会堆叠且默认存活 3000ms——上一次点击的 toast 还在屏幕上时，下一次点击后
+toast **数量不变**，于是被判成「点了没反应」。改成比较 toast 文本，并在每次点击前若发现
+残留 toast 就等它自然消失再取基线。
+
+顺带查出的另一处**检测器覆盖缺口**：学生端模块卡片是 `div/span.pp-card` +
+`cursor:pointer` + `@click`，**没有 button 标签、没有 `.el-button`、没有 `role="button"`**，
+纯 button 选择器的清点会静默跳过它们。补了一轮 `cursor:pointer` 扫描：只取「指针链上最外层」
+的元素（`cursor` 是继承属性，否则一张卡片会被拆成 4~5 次点击），跳过已被标记祖先覆盖的、
+以及面积超过 70% 视口的（那通常只是继承样式的布局容器）。
+
+仍然存在的**配置债**（不是本次点击报出的，但同一处代码路径）：模块管理里 11 个模块的
 `modulePath` 指向**前端路由表里不存在的路径**（`/edu/fun/math`、`/edu/fun/word`、
 `/edu/fun/science`、`/edu/fun/story`、`/edu/fun/physics`、`/edu/fun/chemistry`、
 `/edu/fun/history`、`/edu/fun/geography`、`/edu/fun/reading`、`/edu/fun/listening`、
