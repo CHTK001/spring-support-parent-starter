@@ -902,6 +902,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group_model` (
 ) COMMENT='-';
 CREATE TABLE IF NOT EXISTS `sys_ai_model` (
     `sys_ai_model_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '',
+    `sys_ai_model_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属账号（按账号隔离；NULL=无主历史行）',
     `sys_ai_model_name` VARCHAR(255) NOT NULL COMMENT '',
     `sys_ai_model_code` VARCHAR(255) NOT NULL COMMENT '(gpt-4o, deepseek-chat)',
     `sys_ai_model_provider_id` BIGINT DEFAULT NULL COMMENT ' ID',
@@ -920,7 +921,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model` (
     `sys_ai_model_aliases` VARCHAR(512) DEFAULT NULL COMMENT '模型别名(JSON数组)',
     `sys_ai_model_last_latency` BIGINT DEFAULT NULL COMMENT '最近一次连通性测试延迟(毫秒)',
     `sys_ai_model_last_test_time` DATETIME DEFAULT NULL COMMENT '最近一次连通性测试时间',
-    UNIQUE KEY `sys_ai_model_sys_ai_model_code` (`sys_ai_model_code`)
+    KEY `sys_ai_model_user_id` (`sys_ai_model_user_id`),
+    UNIQUE KEY `sys_ai_model_owner_code` (`sys_ai_model_user_id`, `sys_ai_model_code`)
 ) COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_service_status` (
     `sys_ai_service_status_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '',
@@ -1440,4 +1442,31 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
 -- ------------------------------------------------------------
 ALTER TABLE `sys_ai_generate_task`
     ADD COLUMN `sys_ai_generate_task_elapsed` BIGINT NULL COMMENT '生成耗时（毫秒）';
+
+-- ------------------------------------------------------------
+-- 模型清单按账号隔离（对应 AiModelServiceImpl 的归属守卫）
+--   sys_ai_model 原来没有归属列，模型清单是全局的，而 /v2/models 六个端点
+--   整类限 admin —— 但前端侧边栏「模型管理」对所有账号可见，默认模型页与
+--   聊天输入框还会引导普通账号「跳转到模型管理页面」，点进去必然 403。
+--
+-- 唯一键必须一并从「model_code 全局唯一」改成「(归属, code) 复合唯一」：
+--   否则两个账号都想登记 gpt-4o 时会撞唯一键，per-user 直接不可用。
+--   （MySQL 唯一索引里 NULL 互不相等，故无主历史行之间不受约束，符合预期。）
+--
+-- 写裸 ALTER 的理由与上面 sys_ai_generate_task 那条一致：幂等写法依赖未引入的
+-- MysqlScriptConverter，重复执行报 1060/1091 由 continueOnError 跳过。
+-- 注意三条的顺序：先加列，再删旧唯一键，最后建复合唯一键 ——
+-- 若中途失败，下次启动会重跑并收敛。
+-- ------------------------------------------------------------
+ALTER TABLE `sys_ai_model`
+    ADD COLUMN `sys_ai_model_user_id` VARCHAR(64) NULL COMMENT '归属账号（按账号隔离；NULL=无主历史行）';
+
+ALTER TABLE `sys_ai_model`
+    ADD KEY `sys_ai_model_user_id` (`sys_ai_model_user_id`);
+
+ALTER TABLE `sys_ai_model`
+    DROP INDEX `sys_ai_model_sys_ai_model_code`;
+
+ALTER TABLE `sys_ai_model`
+    ADD UNIQUE KEY `sys_ai_model_owner_code` (`sys_ai_model_user_id`, `sys_ai_model_code`);
 

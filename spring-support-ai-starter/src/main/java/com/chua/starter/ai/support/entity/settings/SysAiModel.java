@@ -15,6 +15,10 @@ import java.time.LocalDateTime;
 /**
  * AI 模型定义表，存储模型标识、关联供应商与能力标签。
  *
+ * <p><b>按账号隔离</b>：模型定义属于账号自己的清单（{@code sys_ai_model_user_id}），
+ * 与 {@code sys_ai_app_key} / {@code sys_ai_role} 同口径 —— 管理员看全量，
+ * 普通账号只看自己的；写操作只认归属人，无归属的历史行谁都不可写。</p>
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -30,6 +34,13 @@ public class SysAiModel implements Serializable {
      * 模型ID
     */
     private Long modelId;
+
+    @TableField("sys_ai_model_user_id")
+    @Schema(description = "归属账号（按账号隔离；为空表示无主历史行）")
+    /**
+     * 归属账号：为空的行是加该列之前的历史数据，任何账号都不可写（见 AiModelServiceImpl 的归属守卫）
+     */
+    private String userId;
 
     @TableField("sys_ai_model_name")
     @Schema(description = "模型显示名称")
