@@ -340,7 +340,8 @@ public class RagController {
             status.put("engineWarning",
                     "当前 embedding 引擎为占位实现 memory，不具备语义能力：任意两条不同文本的余弦恒在 0.63~0.69，"
                             + "与当前阈值 " + threshold + " 重叠，语义检索将恒定 0 命中。"
-                            + "如需真实语义召回，请配置 rag_embedding_model / base_url / api_key / model_name 指向真实 embedding 服务。");
+                            + "如需真实语义召回，请在「设置中心 → 默认模型 → RAG」选择 Embedding 模型，"
+                            + "引擎会由所选模型自动推导，不需要手动指定。");
         }
         return ReturnResult.ok(status);
     }

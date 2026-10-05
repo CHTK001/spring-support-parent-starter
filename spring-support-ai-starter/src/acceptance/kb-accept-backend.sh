@@ -46,16 +46,23 @@ echo "===== 1) 服务与 RAG 状态 ====="
 ST=$(curl -s -m 20 -H "$AUTH" $B/v2/rag/status)
 echo "$ST" | grep -q '"available" : true' && ok "rag/status available=true" || no "rag/status 不可用: $(echo $ST|head -c 160)"
 EM=$(echo "$ST" | sed -n 's/.*"embedding_model"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-chk "embedding_model" "$EM" "onnx"
+EE=$(echo "$ST" | sed -n 's/.*"embedding_engine"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+# embedding_model 上报的是「所选模型」（裸名），embedding_engine 是由它推导出的引擎。
+# 旧断言期望 embedding_model=onnx，那是引擎字段时代的契约——引擎已不再是用户配置项
+# （用户只选模型），引擎由 resolveEmbeddingEngineByModel 推导。
+chk "embedding_model(所选模型)" "$EM" "bge-large-zh-embedding"
+chk "embedding_engine(推导引擎)" "$EE" "onnx"
 echo "$ST" | grep -q '"client_provider" : "pipeline"' && ok "client_provider=pipeline" || no "client_provider 不是 pipeline"
 
-echo "===== 2) 配置：引擎 / 模型 / 维度 ====="
+echo "===== 2) 配置：只应有模型，不应有引擎 ====="
 RG=$(curl -s -m 20 -H "$AUTH" $B/v2/settings/rag | tr -d '\n')
-for kv in "rag_embedding_model:onnx" "rag_embedding_model_name:bge-large-zh-embedding" "rag_embedding_dimensions:1024"; do
-  k=${kv%%:*}; v=${kv##*:}
-  a=$(echo "$RG" | sed -n "s/.*\"$k\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p")
-  chk "$k" "$a" "$v"
-done
+# 注意：模型值形如 onnx:bge-large-zh-embedding，本身含冒号，
+# 不能用 ${kv##*:} 从 "键:值" 里切值（会把 onnx: 前缀切掉），只能显式逐项对照。
+get_val() { echo "$RG" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"; }
+chk "rag_embedding_model_name" "$(get_val rag_embedding_model_name)" "onnx:bge-large-zh-embedding"
+chk "rag_embedding_dimensions" "$(get_val rag_embedding_dimensions)" "1024"
+# 引擎字段必须已从接口移除（否则界面上仍会让人选引擎）
+echo "$RG" | grep -q '"rag_embedding_model"' && no "rag_embedding_model 仍作为设置项暴露" || ok "rag_embedding_model 已不再是设置项"
 
 echo "===== 3) 全链路：上传 -> 向量化 -> 检索 -> 引用 ====="
 KG=$(curl -s -m 30 -H "$AUTH" $B/api/knowledge/bases | sed -n 's/.*"knowledge_base_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
