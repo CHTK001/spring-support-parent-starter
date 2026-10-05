@@ -19,9 +19,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 汉字采集源（自落库型）：从公开单字字典取汉字，写入 edu_hanzi。
@@ -43,7 +45,7 @@ import java.util.Map;
  *   "url":          "https://raw.githubusercontent.com/pwxcoo/chinese-xinhua/master/data/word.json",
  *   "charListUrl":  "https://raw.githubusercontent.com/elephantnose/characters/master/3500常用汉字.txt",
  *   "idsUrl":       "https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt",
- *   "offset":       0,          // 省略时按已入库数量自动续采
+ *   "offset":       0,          // 省略即 0：续采靠跳过已有推进，不靠 offset 推算
  *   "limit":        500,        // 本次最多新增条数
  *   "gradeLevel":   "小学",      // 写 edu_hanzi.hanzi_grade_level
  *   "meaningMaxChars": 90       // 释义保留长度
@@ -122,9 +124,9 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
     private static final int DICT_MAX_BYTES = 48 * 1024 * 1024;
 
     /**
-     * 字典下载超时：27MB 慢网也要给够时间
+     * 字典下载超时（**单镜像**）：27MB 实测走代理镜像几十秒，走 raw 可能 300s 仍超时；`n     * 这里给 180s，卡住就换下一个镜像，而不是把一次采集耗在单个地址上
      */
-    private static final Duration DICT_TIMEOUT = Duration.ofSeconds(300);
+    private static final Duration DICT_TIMEOUT = Duration.ofSeconds(180);
 
     /**
      * 小文件（字表 / IDS）的单地址超时。
@@ -170,8 +172,12 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
         String gradeLevel = firstText(SourceConfigReader.text(config, "gradeLevel"), context.getGradeLevel(), "小学");
         int limit = intOf(SourceConfigReader.text(config, "limit"), 500);
         int meaningMaxChars = intOf(SourceConfigReader.text(config, "meaningMaxChars"), 90);
-        // 未配置起始偏移时自动续采：从已入库数量开始，重复执行每次都有新数据
-        int offset = intOf(SourceConfigReader.text(config, "offset"), (int) countHanzi(support));
+        // offset 缺省必须是 0（从字表头开始扫），续采靠「跳过库里已有的字」推进。
+        // **不能**拿「已入库数量」当 offset：库里只要有一个字表之外的字（老师手工加的、
+        // 或换版后不在表内的），offset 就越过前面所有缺口，结果是
+        // 「删掉几个字 → 触发采集 → 一个都补不回来」（本次实测：offset=3493 只扫了最后 7 个字）。
+        int offset = intOf(SourceConfigReader.text(config, "offset"), 0);
+        log.info("[collect] 汉字采集开始: 库中已有 {} 字，offset={} limit={}", countHanzi(support), offset, limit);
 
         List<Character> wanted = loadCharList(SourceConfigReader.text(config, "charListUrl"));
         if (wanted.isEmpty()) {
@@ -193,7 +199,7 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
     /**
      * 连续抽取：从 offset 起向后扫描，直到本次新增达到 limit 或字表遍历完。
      *
-     * <p>与成语采集同思路：偏移与数据集下标不一定对齐（续采时 offset 是「已入库数量」），
+     * <p>与成语采集同思路：偏移与数据集下标不一定对齐，所以本方法内部还会**逐字跳过库里已有的**；
      * 所以遇到整批都是重复数据时要继续往后扫，不能只试一批就收工。</p>
      *
      * @param support        入库支持
@@ -211,8 +217,14 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
                                   Map<Character, DictEntry> dict, Map<Character, IdsEntry> ids,
                                   int offset, int limit, String gradeLevel, int meaningMaxChars,
                                   String ownerUserId) {
+        // 「续采」的正确语义是**跳过库里已有的字**，而不是「从第 N 个字开始」。
+        // 原来拿「已入库数量」当 offset 是错的：库里只要有任何一个字表之外的字
+        //（老师手工加的、或字表换版后不在表内的），offset 就会越过前面所有缺口，
+        // 结果是「删掉几个字 → 触发采集 → 一个都补不回来」（本次实测踩到）。
+        Set<String> existing = existingChars(support);
         int cursor = Math.max(0, Math.min(offset, wanted.size()));
         int inserted = 0;
+        int skippedExisting = 0;
         while (cursor < wanted.size() && inserted < limit) {
             List<Map<String, Object>> batch = new ArrayList<>(BATCH_SIZE);
             int scanned = cursor;
@@ -224,19 +236,36 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
                 if (entry == null) {
                     continue;
                 }
+                if (existing.contains(String.valueOf(ch))) {
+                    skippedExisting++;
+                    continue;
+                }
                 batch.add(toRow(ch, entry, ids.get(ch), gradeLevel, meaningMaxChars, ownerUserId));
             }
-            if (batch.isEmpty()) {
-                break;
+            if (!batch.isEmpty()) {
+                Map<String, Integer> counter = support.upsert("edu_hanzi", List.of("hanzi_char"), false, batch);
+                inserted += counter.getOrDefault("inserted", 0);
             }
-            Map<String, Integer> counter = support.upsert("edu_hanzi", List.of("hanzi_char"), false, batch);
-            inserted += counter.getOrDefault("inserted", 0);
             cursor = scanned;
             if (cursor >= wanted.size()) {
                 break;
             }
         }
+        if (skippedExisting > 0) {
+            log.info("[collect] 跳过库中已有的字 {} 个（续采按内容判断，不靠 offset 推算）", skippedExisting);
+        }
         return inserted;
+    }
+
+    /**
+     * 取库里已有的汉字（一次查询，不逐行 select）。
+     *
+     * @param support 入库支持
+     * @return 已入库的 hanzi_char 集合
+     */
+    private Set<String> existingChars(DbCollectSupport support) {
+        List<String> chars = support.jdbc().queryForList("SELECT hanzi_char FROM edu_hanzi", String.class);
+        return chars == null ? new HashSet<>() : new HashSet<>(chars);
     }
 
     /**
