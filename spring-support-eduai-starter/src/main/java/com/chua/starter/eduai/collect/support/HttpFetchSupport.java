@@ -67,7 +67,7 @@ public final class HttpFetchSupport {
         if (cached != null && !cached.expired()) {
             return new String(cached.body, StandardCharsets.UTF_8);
         }
-        byte[] body = send(url);
+        byte[] body = send(url, MAX_BODY_BYTES, REQUEST_TIMEOUT);
         CACHE.put(url, new CachedBody(body));
         if (CACHE.size() > 32) {
             CACHE.entrySet().removeIf(e -> e.getValue().expired());
@@ -83,10 +83,28 @@ public final class HttpFetchSupport {
      * @throws IOException 网络或协议错误
      */
     public static byte[] getBytes(String url) throws IOException {
-        return send(url);
+        return send(url, MAX_BODY_BYTES, REQUEST_TIMEOUT);
     }
 
-    private static byte[] send(String url) throws IOException {
+    /**
+     * GET 抓取二进制内容，可指定上限与超时（供大文件数据源使用）。
+     *
+     * <p>为什么需要这个重载：默认上限 20MB，而单字字典 word.json 约 27MB
+     * （实测 27,354,320 B，jsdelivr 对 &gt;20MB 直接拒绝，只有 raw.githubusercontent 取得到）。
+     * 不给大文件开口子的话，汉字采集会稳定失败在「响应体超过上限」；
+     * 而直接调高全局默认值又会削弱其它源的保护。调用方按自己的数据源声明上限。</p>
+     *
+     * @param url      地址（仅允许 http/https）
+     * @param maxBytes 响应体上限（字节）
+     * @param timeout  含下载的总超时
+     * @return 响应体字节
+     * @throws IOException 网络或协议错误，或响应体超过上限
+     */
+    public static byte[] getBytes(String url, int maxBytes, Duration timeout) throws IOException {
+        return send(url, maxBytes, timeout);
+    }
+
+    private static byte[] send(String url, int maxBytes, Duration requestTimeout) throws IOException {
         URI uri = URI.create(url);
         String scheme = uri.getScheme();
         if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
@@ -94,7 +112,7 @@ public final class HttpFetchSupport {
         }
         HttpClient client = CLIENT;
         HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(REQUEST_TIMEOUT)
+                .timeout(requestTimeout)
                 .header("User-Agent", "Mozilla/5.0 (compatible; eduai-collector)")
                 .GET()
                 .build();
@@ -103,17 +121,17 @@ public final class HttpFetchSupport {
             // 这类半开连接上不一定触发，曾出现采集线程永久挂住、任务被「执行中」锁死的情况。
             // Future#get 由调用线程计时，到点必定返回，底层请求随后被取消。
             HttpResponse<byte[]> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray())
-                    .get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                    .get(requestTimeout.toMillis(), TimeUnit.MILLISECONDS);
             byte[] body = response.body();
             if (response.statusCode() >= 400) {
                 throw new IOException("HTTP " + response.statusCode() + ": " + url);
             }
-            if (body != null && body.length > MAX_BODY_BYTES) {
-                throw new IOException("响应体超过上限(" + MAX_BODY_BYTES + "): " + url);
+            if (body != null && body.length > maxBytes) {
+                throw new IOException("响应体超过上限(" + maxBytes + "): " + url);
             }
             return body == null ? new byte[0] : body;
         } catch (TimeoutException e) {
-            throw new IOException("抓取超时(" + REQUEST_TIMEOUT.toSeconds() + "s): " + url, e);
+            throw new IOException("抓取超时(" + requestTimeout.toSeconds() + "s): " + url, e);
         } catch (ExecutionException e) {
             // 还原成 IOException，让上层按「数据源不可用，尝试下一个」处理
             Throwable cause = e.getCause() == null ? e : e.getCause();
