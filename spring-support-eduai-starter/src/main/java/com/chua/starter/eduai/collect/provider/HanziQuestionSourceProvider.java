@@ -15,6 +15,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -87,8 +91,11 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      */
     private static final List<String> DICT_MIRRORS = List.of(
             DEFAULT_DICT_URL,
-            // 代理镜像由主地址拼出来，不再重复写字面量：手抄长 URL 容易混入同形异码字符
-            // （本次就踩到：肉眼是 xinhua，字节却不是，Contains 都不匹配）
+            // 代理镜像由主地址拼出来，不重复写字面量：手抄长 URL 容易混入同形异码字符
+            //（本次就踩到：肉眼是 xinhua，字节却不是，连 String.contains 都不匹配）。
+            // 实测 gh-proxy / ghfast 对 27MB 也能取；ghproxy.net 波动大，放最后兜底。
+            "https://gh-proxy.com/" + DEFAULT_DICT_URL,
+            "https://ghfast.top/" + DEFAULT_DICT_URL,
             "https://ghproxy.net/" + DEFAULT_DICT_URL
     );
 
@@ -111,6 +118,7 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      */
     private static final List<String> IDS_MIRRORS = List.of(
             "https://cdn.jsdelivr.net/gh/skishore/makemeahanzi@master/dictionary.txt",
+            "https://gh-proxy.com/" + DEFAULT_IDS_URL,
             DEFAULT_IDS_URL
     );
 
@@ -147,6 +155,15 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      */
     private static final int BATCH_SIZE = 200;
 
+    /**
+     * 下载内容缓存的有效期：12 小时。
+     *
+     * <p>为什么必须缓存：单字字典 27MB、IDS 2.5MB，而外网链路抖动极大 ——
+     * 实测同一个URL 有时 0.6s 取回 2MB，有时 180s 超时；上一次采集成功后紧接着再跑一次，
+     * 完全可能因为网络抖动而失败（验收里「第二次触发（幂等）」就是这么失败的）。
+     * 缓存后重复采集不再依赖网络，也省掉每次 27MB 的重复下载。</p>
+     */
+    private static final Duration CACHE_TTL = Duration.ofHours(12);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final JsonFactory FACTORY = new JsonFactory();
 
@@ -335,10 +352,7 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
     private List<Character> loadCharList(String configuredUrl, boolean useMirrors) {
         // 配置的地址优先，但**不排他**：外部源随时会挂（实测 raw 对 17KB 字表返回过
         // 「200 但 0 字节」和挂死 120s），只认配置里的那一个地址等于把采集交给运气。
-        List<String> urls = new ArrayList<>(CHAR_LIST_MIRRORS);
-        if (configuredUrl != null && !configuredUrl.isBlank()) {
-            urls.add(0, configuredUrl.trim());
-        }
+        List<String> urls = candidates(CHAR_LIST_MIRRORS, configuredUrl, useMirrors);
         String text = fetchFirst(urls, "字表", SMALL_FILE_TIMEOUT);
         List<Character> chars = new ArrayList<>();
         for (int i = 0; i < text.length(); i++) {
@@ -362,11 +376,8 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @return 字 -> 条目
      */
     private Map<Character, DictEntry> loadDict(String url, List<Character> wanted, boolean useMirrors) {
-        List<String> urls = new ArrayList<>(DICT_MIRRORS);
-        if (url != null && !url.isBlank()) {
-            urls.add(0, url.trim());
-        }
-        byte[] body = fetchBytesFirst(urls, "单字字典", DICT_MAX_BYTES, DICT_FIRST_TIMEOUT, DICT_TIMEOUT);
+        List<String> urls = candidates(DICT_MIRRORS, url, useMirrors);
+        byte[] body = cachedBytes(urls, "dict", "单字字典", DICT_MAX_BYTES, DICT_FIRST_TIMEOUT, DICT_TIMEOUT);
         Map<Character, DictEntry> map = new LinkedHashMap<>();
         try (JsonParser parser = FACTORY.createParser(new ByteArrayInputStream(body))) {
             if (parser.nextToken() != JsonToken.START_ARRAY) {
@@ -402,13 +413,10 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      */
     private Map<Character, IdsEntry> loadIds(String url, List<Character> wanted, boolean useMirrors) {
         Map<Character, IdsEntry> map = new LinkedHashMap<>();
-        List<String> urls = new ArrayList<>(IDS_MIRRORS);
-        if (url != null && !url.isBlank()) {
-            urls.add(0, url.trim());
-        }
+        List<String> urls = candidates(IDS_MIRRORS, url, useMirrors);
         String text;
         try {
-            text = fetchFirst(urls, "IDS", SMALL_FILE_TIMEOUT);
+            text = cachedText(urls, "ids", "IDS", SMALL_FILE_TIMEOUT);
         } catch (IllegalStateException e) {
             log.warn("[collect] IDS 源不可用，部首/结构将留空: {}", e.getMessage());
             return map;
@@ -784,5 +792,77 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param decomposition 部件分解
      */
     private record IdsEntry(String radical, String decomposition) {
+    }
+
+    /**
+     * 取文本（带磁盘缓存）。
+     *
+     * @param urls     候选地址
+     * @param tag      缓存区分标签
+     * @param timeout  单地址超时
+     * @return 文本
+     */
+    private String cachedText(List<String> urls, String tag, String label, Duration timeout) {
+        return new String(cachedBytes(urls, tag, label, MAX_TEXT_BYTES, timeout, timeout),
+                StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 取二进制（带磁盘缓存，12 小时有效）。
+     *
+     * <p>缓存放在 {@code java.io.tmpdir} 下（部署时该目录指向持久盘，见 systemd unit），
+     * 文件名由「主地址+标签」哈希得到：换配置即换缓存键，不会拿到旧源的内容。</p>
+     *
+     * @param urls         候选地址（第一个是主地址）
+     * @param tag          缓存区分标签
+     * @param maxBytes     响应体上限
+     * @param firstTimeout 首地址超时
+     * @param timeout      后续地址超时
+     * @return 响应体字节
+     */
+    private byte[] cachedBytes(List<String> urls, String tag, String label, int maxBytes,
+                                  Duration firstTimeout, Duration timeout) {
+        Path file = cacheFile(urls, tag);
+        try {
+            if (Files.isReadable(file)) {
+                long age = System.currentTimeMillis() - Files.getLastModifiedTime(file).toMillis();
+                if (age < CACHE_TTL.toMillis()) {
+                    byte[] cached = Files.readAllBytes(file);
+                    log.info("[collect] 汉字{}源命中本地缓存（{} KB，age={}min）", label, cached.length / 1024, age / 60000);
+                    return cached;
+                }
+            }
+        } catch (IOException e) {
+            log.warn("[collect] 读取汉字{}源缓存失败，将重新下载: {}", label, e.getMessage());
+        }
+        byte[] body = fetchBytesFirst(urls, label, maxBytes, firstTimeout, timeout);
+        try {
+            Files.createDirectories(file.getParent());
+            Path tmp = file.resolveSibling(file.getFileName() + ".part");
+            Files.write(tmp, body);
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            log.warn("[collect] 写汉字{}源缓存失败（不影响本次采集）: {}", label, e.getMessage());
+        }
+        return body;
+    }
+
+    /**
+     * 缓存文件路径。
+     *
+     * @param urls 候选地址（用主地址参与哈希）
+     * @param tag  缓存区分标签
+     * @return 缓存文件路径
+     */
+    private Path cacheFile(List<String> urls, String tag) {
+        // 键必须包含**全部候选地址**，不能只用主地址：
+        // 「允许镜像」跑过一次之后，内容其实来自镜像；若键只看主地址，随后的
+        // useMirrors=false 严格运行会命中这份缓存并「成功」——实测正是这样让
+        // 「严格 pin + 不可达地址必须报错」这条断言假绿。
+        String key = String.join("|", urls) + "#" + tag;
+        String hex = Integer.toHexString(key.hashCode()) + "-"
+                + Integer.toHexString(key.replaceAll("[^A-Za-z0-9]", "").hashCode());
+        Path base = Paths.get(System.getProperty("java.io.tmpdir", "."), "eduai-collect-cache");
+        return base.resolve(hex + "-" + tag + ".bin");
     }
 }
