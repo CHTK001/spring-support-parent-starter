@@ -1076,27 +1076,53 @@ public class RagClientManager {
      * @param modelId 用户选择的 Embedding 模型标识，允许为 {@code null}
      * @return 引擎名；无法判定时返回 {@code null}
      */
+    /**
+     * 把「界面保存的模型引用」收敛成裸模型名。
+     *
+     * <p>设置页保存的值形如 {@code onnx:bge-large-zh-embedding}、{@code agnes:xxx}，
+     * 而 {@code ModelRegistry} 与 {@code sys_ai_provider_model} 存的都是裸名；
+     * 底层 embedding 实现同样只认裸名——实测带前缀直接传下去会抛
+     * 「模型未注册 onnx:bge-large-zh-embedding」。</p>
+     *
+     * @param modelRef 模型引用，允许为 {@code null}
+     * @return 裸模型名；入参为空时返回空串
+     */
+    private static String bareModelId(String modelRef) {
+        if (!StringUtils.hasText(modelRef)) {
+            return "";
+        }
+        String ref = modelRef.trim();
+        int colon = ref.indexOf(':');
+        if (colon > 0 && colon < ref.length() - 1) {
+            return ref.substring(colon + 1).trim();
+        }
+        return ref;
+    }
+
     private String resolveEmbeddingEngineByModel(String modelId) {
         if (!StringUtils.hasText(modelId)) {
             return null;
         }
-        String model = modelId.trim();
+        String bareModel = bareModelId(modelId);
+        if (bareModel.isEmpty()) {
+            return null;
+        }
         try {
             // ① 本地模型：ModelRegistry 里有就是 onnx 本地推理
             ModelRegistry.discoverAll();
             for (ModelRegistry.Entry entry : ModelRegistry.getAll()) {
-                if (entry != null && model.equalsIgnoreCase(entry.modelId())) {
+                if (entry != null && bareModel.equalsIgnoreCase(entry.modelId())) {
                     return "onnx";
                 }
             }
         } catch (Exception e) {
-            log.warn("[RagClientManager] 枚举本地模型失败，无法判断 {} 是否本地模型: {}", model, e.getMessage());
+            log.warn("[RagClientManager] 枚举本地模型失败，无法判断 {} 是否本地模型: {}", bareModel, e.getMessage());
         }
         // ② 云端模型：按模型名定位供应商，取其 platform 作为引擎
         try {
             SysAiProviderModel row = providerModelMapper.selectOne(
                     Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, model)
+                            .eq(SysAiProviderModel::getModel, bareModel)
                             .eq(SysAiProviderModel::getEnabled, true)
                             .last("limit 1"));
             if (row == null || StringUtils.isBlank(row.getProviderId())) {
@@ -1119,7 +1145,7 @@ public class RagClientManager {
             log.warn("[RagClientManager] 供应商 {} 的 platform '{}' 没有注册 EmbeddingClient SPI，无法作为引擎",
                     provider.getName(), platform);
         } catch (Exception e) {
-            log.warn("[RagClientManager] 按模型 {} 反查引擎失败: {}", model, e.getMessage());
+            log.warn("[RagClientManager] 按模型 {} 反查引擎失败: {}", bareModel, e.getMessage());
         }
         return null;
     }
@@ -1165,7 +1191,9 @@ public class RagClientManager {
             // 优先 rag 分组独立 embedding 配置，其次 runtime 配置
             String embKey = settingReader.getStr(GROUP, "rag_embedding_api_key");
             String embBase = settingReader.getStr(GROUP, "rag_embedding_base_url");
-            String embModel = settingReader.getStr(GROUP, "rag_embedding_model_name");
+            // 界面保存的是「onnx:模型名」，底层实现只认裸名，必须剥掉前缀，
+            // 否则会抛「模型未注册 onnx:xxx」。
+            String embModel = bareModelId(settingReader.getStr(GROUP, "rag_embedding_model_name"));
             boolean local = LOCAL_EMBEDDING_ENGINES.contains(engine.toLowerCase());
             if (!local) {
                 if (!StringUtils.hasText(embKey)) {
@@ -1555,7 +1583,12 @@ public class RagClientManager {
      */
     public Map<String, String> describe() {
         Map<String, String> desc = new LinkedHashMap<>();
-        desc.put("embedding_model", settingReader.getStr(GROUP, "rag_embedding_model"));
+        // 上报「模型 + 推导出的引擎」，不再上报已废弃的 rag_embedding_model：
+        // 该字段为空时旧展示逻辑会回显成 memory，看着像用户配了个内存引擎。
+        String embeddingModelRef = settingReader.getStr(GROUP, "rag_embedding_model_name");
+        desc.put("embedding_model", bareModelId(embeddingModelRef));
+        String derivedEngine = resolveEmbeddingEngineByModel(embeddingModelRef);
+        desc.put("embedding_engine", StringUtils.defaultString(derivedEngine, ""));
         desc.put("llm_model", settingReader.getStr(GROUP, "rag_llm_model"));
         desc.put("vector_storage", settingReader.getStr(GROUP, "rag_vector_storage"));
         desc.put("upload_dir", settingReader.getStr(GROUP, "rag_upload_dir"));
