@@ -166,7 +166,7 @@ class MonitorHttpRowsSupportTest {
                 """, StandardCharsets.UTF_8);
 
         SyncHttpOptions options = new SyncHttpOptions(
-                null, null, null, "UTF-8", null, "table tbody tr", "td", true, 10, null);
+                null, null, null, "UTF-8", null, "table tr", "td,th", true, 10, null);
 
         List<String> columns = MonitorHttpRowsSupport.headers(SyncSourceType.HTTP_HTML, base + "report", options);
         // 两列都叫「金额」：不去重的话 Map 只会剩一列，数据静默少一半
@@ -257,7 +257,7 @@ class MonitorHttpRowsSupportTest {
         // 服务端 Content-Type 不给 charset，只能靠显式配置
         List<Map<String, Object>> rows = MonitorHttpRowsSupport.rows(
                 SyncSourceType.HTTP_HTML, base + "gbk",
-                new SyncHttpOptions(null, null, null, "GBK", null, "table tr", "td", true, 10, null));
+                new SyncHttpOptions(null, null, null, "GBK", null, "table tr", "td,th", true, 10, null));
 
         assertEquals(1, rows.size());
         assertEquals("张三", rows.get(0).get("姓名"));

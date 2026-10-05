@@ -434,8 +434,11 @@ public class OAuthServerFilter implements ServerFilter {
         // X-FileStorage-ImageOp / -Reason 是「图片处理是否真的执行」的信号：
         // 超像素预算或转码失败时服务端会兜底吐原图，浏览器必须能读到这两个头
         // 才能提示用户，否则会静默拿到未处理的图片。
+        // X-FileStorage-Convert 同理：?format=pdf/docx/xlsx 转换失败时服务端仍返回
+        // 200 + 原始字节并带 Convert: unavailable，前端读不到该头会把 Office 二进制
+        // 当成转换结果去解析。X-FileStorage-Client-Renderer 是客户端渲染器标识。
         response.setHeader("Access-Control-Expose-Headers",
-                "Content-Disposition, X-FileStorage-Preview, Content-Range, Accept-Ranges, X-FileStorage-ImageOp, X-FileStorage-ImageOp-Reason");
+                "Content-Disposition, X-FileStorage-Preview, Content-Range, Accept-Ranges, X-FileStorage-ImageOp, X-FileStorage-ImageOp-Reason, X-FileStorage-Convert, X-FileStorage-Client-Renderer");
         response.setHeader("Vary", "Origin");
     }
 
