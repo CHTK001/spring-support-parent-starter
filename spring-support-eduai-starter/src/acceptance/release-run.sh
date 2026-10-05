@@ -39,6 +39,25 @@ fingerprints() {
     echo "    deploy.sh  md5    = $(md5sum "$APP_DIR/deploy/deploy.sh" 2>/dev/null | cut -c1-32)"
     echo "    eduai 表数        = $(mariadb -h 127.0.0.1 -P 3306 -u eduai -peduai123 -N -e "select count(*) from information_schema.tables where table_schema='eduai';" 2>/dev/null)"
     echo "    oauth 表数        = $(mariadb -h 127.0.0.1 -P 3306 -u eduai -peduai123 -N -e "select count(*) from information_schema.tables where table_schema='oauth';" 2>/dev/null)"
+    echo "    JVM 崩溃转储      = $(crash_state)"
+}
+
+# JVM 崩溃转储状态：<份数>:<最新一份的 epoch 秒或 0>
+#
+# 为什么它必须进指纹：原生库（如 onnxruntime）在 JVM **关闭过程中**崩溃时，
+# systemd 只看到一个非零退出码，日志尾部也只有一段 hs_err 文本，很容易被当成
+# 「正常的重启噪声」放过 —— 10-04 的 4 次原生 SIGSEGV 就是这样被漏掉的，
+# 甚至一度被误判成「打穿在服 JVM 的 P0」。把「转储份数 + 最新时间」做成指纹，
+# 就能在**发布期间**直接判定：这次发布有没有把 JVM 打断。
+crash_state() {
+    local n newest
+    n=$(ls -1 "$APP_DIR"/hs_err_pid*.log 2>/dev/null | wc -l | tr -d ' ')
+    newest=$(ls -1t "$APP_DIR"/hs_err_pid*.log 2>/dev/null | head -1)
+    if [ -n "$newest" ]; then
+        echo "$n:$(date -r "$newest" '+%s')"
+    else
+        echo "$n:0"
+    fi
 }
 
 resources() {
@@ -104,6 +123,10 @@ fi
 [ -f "$ACCEPT" ] || die "缺少验收套件 $ACCEPT"
 
 log "== 0. 验收前指纹 ==";  fingerprints
+# 崩溃转储基线：必须在部署**之前**取，因为要抓的正是「本次部署把 JVM 打断」这种情况
+# （含上一个进程在 systemctl restart 时的关闭期原生崩溃）。
+PRE_CRASH=$(crash_state)
+echo "    崩溃转储基线      = $PRE_CRASH"
 log "== 0. 资源判据 ==";    resources
 
 log "== 1. 部署（替换 jar + 装 unit + schema 收敛）=="
@@ -212,6 +235,17 @@ log "    恢复后（oauth=$oh）: $(probe)"
 
 log "== 6. 验收后指纹（必须与前一致）=="
 fingerprints
+
+# 部署/验收期间如果新冒出 JVM 崩溃转储，说明这一轮把 JVM 打断了（哪怕套件全绿、
+# 服务也活着），不予签收：崩溃会掩盖真实退出原因，也说明有原生调用没收干净。
+POST_CRASH=$(crash_state)
+echo "    崩溃转储比对      = 发布前 $PRE_CRASH -> 发布后 $POST_CRASH"
+if [ "$PRE_CRASH" != "$POST_CRASH" ]; then
+    ls -1t "$APP_DIR"/hs_err_pid*.log 2>/dev/null | head -2 | while read -r f; do
+        echo "    [失败] 新增崩溃转储: $f ($(date -r "$f" '+%F %T'))" >&2
+    done
+    die "本次发布期间出现新的 JVM 崩溃转储，不予签收"
+fi
 
 log "== 结果 =="
 log "    PROVENANCE_OK / API=$ACC"
