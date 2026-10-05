@@ -110,6 +110,18 @@ public class MsDatasource implements Serializable {
     private String datasourceDriverClassName;
 
     /**
+     * 引用的驱动 jar（{@code ms_jdbc_driver_jar.id}）；为空则用应用 classpath 上的内置驱动。
+     *
+     * <p>本机不可能备齐所有数据库的驱动 jar：ojdbc、mssql-jdbc 与各类国产库驱动
+     * 体积都在数 MB、许可各异，全打进产物等于让每个部署都背上几十 MB 用不上的东西；
+     * 而让用户「把 jar 丢进某个目录」又不可控（版本、命名、驱动类名都得自己对）。
+     * 所以做成「上传 → 落盘 → 按该 jar 建独立类加载器」的窄口子。</p>
+     */
+    @TableField("datasource_driver_jar_id")
+    @Schema(description = "引用的驱动 jar ID，空则用内置驱动")
+    private Long datasourceDriverJarId;
+
+    /**
      * 连接延迟（毫秒）。
      *
      * <p>建立连接耗时：TCP 建链 + 协议握手。由「测试连接」回写，覆盖写、不留历史。

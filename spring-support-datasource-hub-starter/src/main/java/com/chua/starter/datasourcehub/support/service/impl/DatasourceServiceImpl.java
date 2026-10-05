@@ -13,9 +13,11 @@ import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datasourcehub.support.model.dto.DataSourceDTO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
+import com.chua.starter.datasourcehub.support.service.JdbcDriverJarService;
 import com.chua.starter.datasourcehub.support.service.DatasourceTunnelService;
 import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
 import com.chua.starter.datasourcehub.support.support.DatasourceSecrets;
+import com.chua.starter.datasourcehub.support.support.JdbcDriverSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -67,6 +69,11 @@ public class DatasourceServiceImpl implements DatasourceService {
      * SSH 隧道服务：目标库内网不可直连时，先经隧道中转再测
      */
     private final DatasourceTunnelService tunnelService;
+
+    /**
+     * 驱动 jar 库（数据源引用上传的驱动时用它建连）
+     */
+    private final JdbcDriverJarService driverJarService;
 
     /**
      * JDBC 连接缓存：datasourceId -&gt; 带空闲过期的连接。
@@ -188,7 +195,19 @@ public class DatasourceServiceImpl implements DatasourceService {
         // 目标库内网不可直连时，先按隧道配置开隧道，把目标改写成隧道本地端口
         DatasourceTunnelService.TunnelEndpoint endpoint = tunnelService.openIfEnabled(id);
         String targetHost = endpoint == null ? ds.host() : endpoint.host();
-        Integer targetPort = endpoint == null ? ds.port() : endpoint.port();
+        // 【坑】这里必须保持装箱：三元表达式 `cond ? Integer : int` 会被推断成 int，
+        // 于是 Integer 那一支被自动拆箱，端口为 null 时当场 NPE。
+        // 文件库（H2 / SQLite）与整串 JDBC URL 形态的数据源都没有端口，
+        // 原先写成 `endpoint == null ? ds.port() : endpoint.port()`，
+        // 表现为每个文件库点「测试连接」都是 500（实测 2026-10-05）。
+        Integer targetPort = endpoint == null ? ds.port() : Integer.valueOf(endpoint.port());
+        // 文件库（H2 / SQLite）与「整串 JDBC URL」形态的数据源**没有端口**。
+        // 原先这里把 ds.port() 直接交给下游按 int 取值，端口为 null 时抛 NPE，
+        // 界面上表现为「测试连接」报系统异常 —— 而真因只是「这个库本来就没有端口」。
+        // 实测 2026-10-05：每个 H2/SQLite 数据源点测试连接都是 500。
+        if (targetPort == null) {
+            log.debug("[datasource-hub] 数据源 {} 无端口（文件库或整串 JDBC URL），不做 TCP 目标推断", id);
+        }
         boolean tunneled = endpoint != null;
         if (tunneled) {
             log.info("数据源 {} 经 SSH 隧道中转: {}:{}", id, targetHost, targetPort);
@@ -240,9 +259,23 @@ public class DatasourceServiceImpl implements DatasourceService {
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "数据源不存在");
         }
         String url = resolveJdbcUrl(row);
+        // 探活也必须尊重上传的驱动 jar 与隧道：不走的话，用户点「测试连接」会拿到
+        // ClassNotFoundException 或连不上，而同一个数据源真正使用时是通的 ——
+        // 「测试失败但实际能用」比「测试失败」更难解释。
+        java.io.File driverJar;
+        try {
+            driverJar = driverJarOf(row);
+        } catch (java.io.IOException e) {
+            // 定位不到 jar 文件时给可读原因，而不是让整个探活抛栈
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
+                    "驱动 jar 定位失败: " + e.getMessage());
+        }
+        url = applyTunnel(row, url);
         Properties props = buildJdbcProps(row, url);
         long start = System.nanoTime();
-        try (Connection conn = DriverManager.getConnection(url, props)) {
+        try (Connection conn = driverJar == null
+                ? DriverManager.getConnection(url, props)
+                : JdbcDriverSupport.connect(driverJar, requireDriverClassName(row.getId()), url, props)) {
             long connectMs = (System.nanoTime() - start) / 1_000_000L;
             if (!conn.isValid(Math.max(1, timeoutMs / 1000))) {
                 return new DatasourceProbeSupport.ProbeOutcome(false, connectMs, null, "连接已建立但校验未通过");
@@ -278,7 +311,52 @@ public class DatasourceServiceImpl implements DatasourceService {
                 || url.regionMatches(true, 0, "jdbc:mariadb:", 0, "jdbc:mariadb:".length())) {
             props.setProperty("useInformationSchema", "true");
         }
+        applyConnectTimeout(props, url);
         return props;
+    }
+
+    /**
+     * 按驱动族把「建连超时（秒）」翻译成该驱动认识的属性与单位。
+     *
+     * <p><b>单位不一致是最容易踩的坑</b>：MySQL/MariaDB、Oracle 的
+     * {@code connectTimeout} 收毫秒，PostgreSQL 的同名属性收**秒**，
+     * SQL Server 根本不认 {@code connectTimeout}、只认 {@code loginTimeout}（秒）。
+     * 统一按毫秒写会得到「30 秒」实际变成 30 毫秒（必超时），
+     * 统一按秒写则变成 30 万毫秒（等于没设）。所以这里逐族处理，
+     * 并且最后兜一个 {@code loginTimeout} 给不认得的驱动。</p>
+     *
+     * <p>文件库（{@code jdbc:sqlite:} / {@code jdbc:h2:}）不设任何超时 ——
+     * 它们不建 TCP 连接，超时属性对它们无意义，写进去反而可能被驱动判为非法参数。</p>
+     *
+     * @param props   连接属性（原地写入）
+     * @param url     JDBC 连接串，用于判断驱动族
+     */
+    private void applyConnectTimeout(Properties props, String url) {
+        int seconds = Math.max(1, properties.getConnectTimeoutSeconds());
+        String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+        // 文件库：没有网络连接，跳过
+        if (lower.startsWith("jdbc:sqlite:") || lower.startsWith("jdbc:h2:")
+                || lower.startsWith("jdbc:derby:") || lower.startsWith("jdbc:hsqldb:")) {
+            return;
+        }
+        if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+            props.setProperty("connectTimeout", String.valueOf(seconds * 1000L));
+            props.setProperty("socketTimeout", String.valueOf(seconds * 1000L));
+        } else if (lower.startsWith("jdbc:oracle:")) {
+            props.setProperty("oracle.net.CONNECT_TIMEOUT", String.valueOf(seconds * 1000L));
+            props.setProperty("oracle.jdbc.ReadTimeout", String.valueOf(seconds * 1000L));
+        } else if (lower.startsWith("jdbc:sqlserver:")) {
+            // SQL Server 只认 loginTimeout（秒）
+            props.setProperty("loginTimeout", String.valueOf(seconds));
+        } else if (lower.startsWith("jdbc:postgresql:")) {
+            // PostgreSQL 的 connectTimeout 是**秒**
+            props.setProperty("connectTimeout", String.valueOf(seconds));
+        } else if (lower.startsWith("jdbc:db2:")) {
+            props.setProperty("connectTimeout", String.valueOf(seconds));
+        } else {
+            // 兜底：多数驱动（含 H2 的 TCP 模式）认 loginTimeout（秒）
+            props.setProperty("loginTimeout", String.valueOf(seconds));
+        }
     }
 
     /**
@@ -317,17 +395,110 @@ public class DatasourceServiceImpl implements DatasourceService {
             throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
         }
         String url = resolveJdbcUrl(row);
-        Properties props = new Properties();
-        props.setProperty("user", row.getDatasourceUsername() == null ? "" : row.getDatasourceUsername());
-        // 台账里明文与 b64: 前缀两种存法共存，见 DatasourceSecrets
-        props.setProperty("password", DatasourceSecrets.decode(row.getDatasourcePassword()));
-        // MySQL Connector/J 默认不读 information_schema：列注释/长度、索引元数据会缺失，
-        // 数据库管理器的表结构/索引页依赖这些元数据，故显式开启。
-        if (url.regionMatches(true, 0, "jdbc:mysql:", 0, "jdbc:mysql:".length())
-                || url.regionMatches(true, 0, "jdbc:mariadb:", 0, "jdbc:mariadb:".length())) {
-            props.setProperty("useInformationSchema", "true");
+        // 隧道先行：配置了 SSH 隧道时把连接串的 authority 换成隧道本地端点。
+        // 【实测 2026-10-05】这一步之前完全没接：tunnelService 字段注入了却从未使用，
+        // 于是「配了隧道、内核仍在直连」，目标库只在内网可达时表现为
+        // Communications link failure / The driver has not received any packets，
+        // 看起来像网络故障，实际是隧道没接线。
+        url = applyTunnel(row, url);
+        // 复用同一份 props 构造（原先这里内联抄了一遍 buildJdbcProps 的内容，
+        // 改一处漏一处：加隧道/超时的人只会改其中一份）
+        Properties props = buildJdbcProps(row, url);
+        return cachedJdbcConnection(row.getId(), url, props, driverJarOf(row));
+    }
+
+    /**
+     * 取该数据源引用的驱动 jar 文件；没配就返回 null（走内置驱动）。
+     *
+     * @param row 数据源台账
+     * @return jar 文件；未配置返回 null
+     * @throws IOException 定位 jar 文件失败
+     */
+    private java.io.File driverJarOf(MsDatasource row) throws java.io.IOException {
+        return driverJarService.jarFileOf(row.getDatasourceDriverJarId());
+    }
+
+    /**
+     * 把连接串的 authority 换成 SSH 隧道的本地端点；没配隧道时原样返回。
+     *
+     * <p>探活与真实建连都必须过这一段：只改一处的话，「测试连接」和实际使用
+     * 会连到不同的地方，用户看到的是「测试通了但打开表报错」。</p>
+     *
+     * @param row 数据源台账
+     * @param url 已解析出的连接串
+     * @return 走隧道后的连接串
+     */
+    private String applyTunnel(MsDatasource row, String url) {
+        DatasourceTunnelService.TunnelEndpoint endpoint = openTunnel(row);
+        if (endpoint == null) {
+            return url;
         }
-        return cachedJdbcConnection(row.getId(), url, props);
+        String rewritten = rewriteAuthority(url, endpoint.host(), endpoint.port());
+        if (!rewritten.equals(url)) {
+            log.info("[datasource-hub] 数据源走 SSH 隧道: id={} {} -> {}:{}",
+                    row.getId(), url, endpoint.host(), endpoint.port());
+        }
+        return rewritten;
+    }
+
+    /**
+     * 打开该数据源的 SSH 隧道（未配置或停用时返回 {@code null}）。
+     *
+     * <p>隧道打不开时**不静默降级成直连**：直连必然失败，而且报出来的错
+     * （连不上目标主机）会把用户引到「网络/白名单」方向，真正原因是隧道没起来。
+     * 这里直接把隧道的异常原样抛出去。</p>
+     *
+     * @param row 数据源台账
+     * @return 隧道本地端点；未启用返回 null
+     */
+    private DatasourceTunnelService.TunnelEndpoint openTunnel(MsDatasource row) {
+        try {
+            return tunnelService.openIfEnabled(row.getId());
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "数据源 " + row.getId() + " 配置了 SSH 隧道但隧道建立失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 把 JDBC 连接串里的 authority（主机:端口）替换掉。
+     *
+     * <p>只处理带 {@code //} 的网络型 URL；{@code jdbc:sqlite:}/{@code jdbc:h2:}
+     * 这类文件库没有 authority，原样返回 —— 隧道对文件库无意义，
+     * 硬改会把路径改坏。</p>
+     *
+     * @param url  原连接串
+     * @param host 新主机（隧道本地绑定地址）
+     * @param port 新端口（隧道实际监听端口）
+     * @return 替换后的连接串
+     */
+    private static String rewriteAuthority(String url, String host, int port) {
+        if (url == null || host == null || host.isBlank()) {
+            return url;
+        }
+        int scheme = url.indexOf("://");
+        if (scheme < 0) {
+            return url;
+        }
+        int authorityStart = scheme + 3;
+        // authority 到 '/' '?' ';' 或串尾为止
+        int authorityEnd = url.length();
+        for (int i = authorityStart; i < url.length(); i++) {
+            char c = url.charAt(i);
+            if (c == '/' || c == '?' || c == ';') {
+                authorityEnd = i;
+                break;
+            }
+        }
+        String authority = url.substring(authorityStart, authorityEnd);
+        // authority 形如 host:port 或 host；保留可能存在的 userinfo（@ 之前）
+        String userInfo = "";
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) {
+            userInfo = authority.substring(0, at + 1);
+        }
+        String replacement = userInfo + (port > 0 ? host + ":" + port : host);
+        return url.substring(0, authorityStart) + replacement + url.substring(authorityEnd);
     }
 
     @Override
@@ -363,7 +534,8 @@ public class DatasourceServiceImpl implements DatasourceService {
      * @return 可用连接
      * @throws Exception 建连失败
      */
-    private Connection cachedJdbcConnection(Long datasourceId, String url, Properties props) throws Exception {
+    private Connection cachedJdbcConnection(Long datasourceId, String url, Properties props,
+                                           java.io.File driverJar) throws Exception {
         ExpireValue<Connection> holder = jdbcConnectionCache.computeIfAbsent(
                 datasourceId, id -> newConnectionHolder(null));
         synchronized (holder) {
@@ -373,11 +545,38 @@ public class DatasourceServiceImpl implements DatasourceService {
                 return closeProtected(reusable);
             }
             closeQuietly(reusable);
-            Connection fresh = DriverManager.getConnection(url, props);
+            // 有上传的驱动 jar 就走它自己的类加载器；否则用 DriverManager（应用 classpath 上的内置驱动）
+            Connection fresh = driverJar == null
+                    ? DriverManager.getConnection(url, props)
+                    : JdbcDriverSupport.connect(driverJar, requireDriverClassName(datasourceId), url, props);
             jdbcConnectionCache.put(datasourceId, newConnectionHolder(fresh));
-            log.debug("[datasource-hub] 建立 JDBC 连接: id={} url={}", datasourceId, url);
+            log.debug("[datasource-hub] 建立 JDBC 连接: id={} url={} driverJar={}",
+                    datasourceId, url, driverJar == null ? "内置" : driverJar.getName());
             return closeProtected(fresh);
         }
+    }
+
+    /**
+     * 取数据源上登记的驱动类名；没登记就用 jar 台账里的。
+     *
+     * <p>两者都没有时给出可执行的提示：光说「需要驱动类名」用户不知道去哪填，
+     * 而这正是「上传了 jar 却没填驱动类名」这个最常见的情形。</p>
+     *
+     * @param datasourceId 数据源 ID
+     * @return 驱动类全名
+     */
+    private String requireDriverClassName(Long datasourceId) {
+        MsDatasource row = datasourceMapper.selectById(datasourceId);
+        String fromRow = row == null ? null : row.getDatasourceDriverClassName();
+        String fromJar = driverJarService.driverClassNameOf(
+                row == null ? null : row.getDatasourceDriverJarId(), null);
+        String name = fromJar != null ? fromJar : (fromRow == null ? null : fromRow.trim());
+        if (name == null || name.isEmpty()) {
+            throw new IllegalStateException("数据源 " + datasourceId
+                    + " 使用上传的驱动 jar，但既没登记驱动类名、jar 台账里也没有；"
+                    + "请在数据源上填写驱动类名（如 org.h2.Driver）或重新上传时填写");
+        }
+        return name;
     }
 
     /**
@@ -570,6 +769,8 @@ public class DatasourceServiceImpl implements DatasourceService {
         // 状态为空按启用处理，老调用方（只传 8 个字段）不会把数据源误停用
         entity.setDatasourceStatus(data.status() == null ? 1 : data.status());
         entity.setDatasourceDriverClassName(nullToEmpty(data.driverClassName()).trim());
+        // 引用上传的驱动 jar；为空表示用应用 classpath 上的内置驱动
+        entity.setDatasourceDriverJarId(data.driverJarId());
         // 控制方式只对 nginx 有意义，其余类型一律清空。
         //
         // 踩过的坑：原先只校验取值是否在白名单里、没看 type，
@@ -602,7 +803,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         return new DataSourceVO(row.getId(), row.getDatasourceName(), row.getDatasourceType(),
                 row.getDatasourceHost(), row.getDatasourcePort(), row.getDatasourceDatabase(),
                 row.getDatasourceUsername(), row.getDatasourcePassword(), row.getDatasourceRemark(),
-                row.getDatasourceStatus(), row.getDatasourceDriverClassName(),
+                row.getDatasourceStatus(), row.getDatasourceDriverClassName(), row.getDatasourceDriverJarId(),
                 row.getCreateTime() == null ? null : row.getCreateTime().toString(),
                 row.getUpdateTime() == null ? null : row.getUpdateTime().toString(),
                 row.getDatasourceConnectLatencyMs(), row.getDatasourceSessionLatencyMs(),

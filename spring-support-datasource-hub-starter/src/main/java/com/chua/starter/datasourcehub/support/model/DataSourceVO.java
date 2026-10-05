@@ -37,6 +37,7 @@ public record DataSourceVO(
         String remark,
         Integer status,
         String driverClassName,
+        Long driverJarId,
         String createTime,
         String updateTime,
         Long connectLatencyMs,
