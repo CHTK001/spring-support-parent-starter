@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,7 +55,15 @@ public class SettingsController {
     /**
      * 整组放行的**纯个人偏好**分组：这些组里没有凭据/地址/系统级配置，全部字段都可用户自管。
      */
-    private static final Set<String> USER_WRITABLE_GROUPS = Set.of("appearance", "browser");
+    /**
+     * 「会话行为」分组：只放**行为开关**（是否启用 AI 联想下一个任务、最多联想几条）。
+     *
+     * <p>同口径整组放行，理由与 appearance / browser 一致：组内是布尔/整数开关，
+     * <b>没有任何凭据、地址、路径</b>，它决定的是「我的会话要不要出现联想面板」，
+     * 属于纯个人偏好。真正生效时仍按「会话保留自己的原值」落库 ——
+     * 写这里的只是<b>默认值</b>，已有会话不会被回溯改写（见 SessionNextTaskService）。</p>
+     */
+    private static final Set<String> USER_WRITABLE_GROUPS = Set.of("appearance", "browser", "session");
 
     /**
      * 「按用户隔离的默认模型」分组：**只放行模型类字段**，其余仍管理员专属。
@@ -222,10 +231,23 @@ public class SettingsController {
     }
 
     /**
+     * 「按字段名放行」之外的**显式**用户可写字段白名单。
+     *
+     * <p>{@link #isUserWritableField(String)} 的判据是字段名含 {@code model}，覆盖的是
+     * 「选哪个模型」这一类。这里补的是**行为/时长类**字段：它们同样不含凭据、地址、路径，
+     * 决定的是「我的会话等多久算超时」「我的生成任务多久算卡住」，属于个人偏好。
+     * 不走字段名判定而列在这里，是为了避免把白名单写成「含 timeout 就放行」——
+     * 那会把将来任何带 timeout 字样的凭据类字段一起放开。</p>
+     */
+    private static final Set<String> USER_WRITABLE_FIELDS = Set.of(
+            "stream_idle_timeout_minutes", "task_timeout_minutes");
+
+    /**
      * 判断某字段是否允许普通账号写入自己的覆盖层。
      *
-     * <p>判据是**字段名含 {@code model}**，而不是按分组：分组里同时装着模型选择项与凭据，
-     * 按分组放行会连带放开凭据。实测全仓分组字段中，含 {@code model} 的 35 个
+     * <p>判据是**字段名含 {@code model}**，或命中 {@link #USER_WRITABLE_FIELDS} 显式白名单，
+     * 而不是按分组：分组里同时装着模型选择项与凭据，按分组放行会连带放开凭据。
+     * 实测全仓分组字段中，含 {@code model} 的 35 个
      * （{@code default_model} / {@code detector_model} / {@code rag_embedding_model} …）
      * 全部是模型选择项，没有一个是地址、密钥、路径。</p>
      *
@@ -233,7 +255,11 @@ public class SettingsController {
      * @return true 表示普通账号可写
      */
     private static boolean isUserWritableField(String field) {
-        return field != null && field.toLowerCase().contains("model");
+        if (field == null) {
+            return false;
+        }
+        String lower = field.toLowerCase(Locale.ROOT);
+        return lower.contains("model") || USER_WRITABLE_FIELDS.contains(lower);
     }
 
     /**
@@ -396,11 +422,27 @@ public class SettingsController {
      */
     private Map<String, Object> effectiveSettingsFor(String userId, String group) {
         Map<String, Object> result = new HashMap<>();
+        // 值来源（USER / GLOBAL / SYSTEM_DEFAULT）单独放一个键，不混进 field->value 映射：
+        // 那个映射的键会被前端当成配置字段名遍历，混进去会被当成一个不存在的设置项。
+        // SYSTEM_DEFAULT 必须能传到前端——实测 2026-09-30 那批一次性种子（onnx 等）从来没人配过，
+        // 界面上只显示「继承全局：onnx」会把系统默认说成别人配的。
+        Map<String, Object> origins = new LinkedHashMap<>();
         for (Map<String, Object> item : userSettingService.listMerged(userId, group)) {
             String field = String.valueOf(item.get("field"));
             boolean overridden = Boolean.TRUE.equals(item.get("overridden"));
             result.put(field, overridden || !isSecretField(field) ? item.get("value") : MASKED);
+            Object origin = item.get("origin");
+            if (origin != null) {
+                Map<String, Object> meta = new LinkedHashMap<>(2);
+                meta.put("origin", origin);
+                meta.put("overridden", overridden);
+                if (item.get("configuredBy") != null) {
+                    meta.put("configuredBy", item.get("configuredBy"));
+                }
+                origins.put(field, meta);
+            }
         }
+        result.put("__meta", origins);
         return result;
     }
 
