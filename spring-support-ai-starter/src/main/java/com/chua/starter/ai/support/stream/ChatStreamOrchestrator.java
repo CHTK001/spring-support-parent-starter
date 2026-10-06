@@ -414,7 +414,10 @@ public class ChatStreamOrchestrator {
                 userContent.put("content", finalContent != null ? finalContent : "");
                 userContent.put("state", Map.of("isStreaming", false));
                 Map<String, Object> userMsg = new LinkedHashMap<>();
-                userMsg.put("id", p.getUserMsgId());
+                // 重答回放用户消息时必须沿用既有用户消息的真实 id（数字主键）：
+                // 若按 userMsgId 照发，前端按 id 去重后，补推的副本就是既有轮次本身，
+                // 不会多出一轮；id 对不上则是重复的根因（点一次重新生成多出一对消息）。
+                userMsg.put("id", userMessageId != null ? String.valueOf(userMessageId) : p.getUserMsgId());
                 userMsg.put("role", "user");
                 userMsg.put("contents", List.of(userContent));
                 userMsg.put("state", Map.of("isStreaming", false));
@@ -731,13 +734,17 @@ public class ChatStreamOrchestrator {
                 }
                 wrapper = agentClient;
 
+                // 人工确认恢复的 create 也必须挂到真实用户消息 id 上：
+                // 否则新回复归不回原来那一轮，界面会多出一轮。
+                final String resumeParentId = p.getUserMessageId() != null
+                        ? String.valueOf(p.getUserMessageId()) : p.getUserMsgId();
                 Map<String, Object> createEvent = new LinkedHashMap<>();
                 createEvent.put("type", "create");
                 createEvent.put("messageId", messageId);
                 createEvent.put("turnsId", p.getTurnsId());
                 createEvent.put("contentId", contentId);
                 createEvent.put("modelName", modelToUse);
-                createEvent.put("parentId", p.getUserMsgId());
+                createEvent.put("parentId", resumeParentId);
                 sink.sendEvent(createEvent);
 
                 final StringBuilder fullReply = new StringBuilder();
