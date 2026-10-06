@@ -1,5 +1,11 @@
 # eduai 终验报告（r12 · 交付面冻结 + 来源自证 PROVENANCE_OK）
 
+> ## ⚠️ 本报告已失效（2026-10-06 补标，§4.6 收口）
+>
+> 依据 §4.6：本报告绑定的 eduai jar `81810d88` 其后被多次换包，
+> 现役为 `e4e0b214…`。**报告证明的二进制已不在线上，不得作为签收依据**；
+> 签收口径见 `ACCEPTANCE-STATUS.md`。
+
 > 报告与产物 sha256 绑定；**换包即失效**。复核：
 > `python3 report-staleness.py --live-eduai <sha> --live-oauth <sha>`。
 

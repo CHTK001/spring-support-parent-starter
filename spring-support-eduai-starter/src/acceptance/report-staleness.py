@@ -13,7 +13,8 @@ eduai jar 会被并发会话反复替换，三份报告因此先后作废。人�
 通常这样取得：
     ssh <host> 'sha256sum <eduai jar> <oauth jar>'
 
-退出码：0 全部有效；3 存在失效报告（需按 §4.6 标注失效或重跑）；2 用法错误。
+退出码：0 全部绑定现役产物，或失效报告均已按 §4.6 标注；3 存在**未标注**的失效报告
+（须标注或重跑验收）；2 用法错误。
 """
 
 from __future__ import annotations
@@ -84,6 +85,7 @@ def main() -> int:
         return 2
 
     stale = 0
+    annotated = 0
     print(f"  线上现役：eduai={live['eduai'][:16] or '(未给)'}  oauth={live['oauth'][:16] or '(未给)'}")
     for r in reports:
         bound = extract(r)
@@ -107,14 +109,23 @@ def main() -> int:
         if ok_all:
             print(f"  [VALID]  {r.name}  {' '.join(parts)}")
         else:
-            stale += 1
             tag = "已标注失效" if already else "**需标注失效**"
+            # 已按 §4.6 标注的历史报告不再计入 stale（否则任何一份历史报告都会让
+            # 退出码恒为 3，检查永远红 = 检查失去意义）；未标注的照旧逼人处理。
+            if already:
+                annotated += 1
+            else:
+                stale += 1
             print(f"  [STALE]  {r.name}  {' '.join(parts)}  -> {tag}")
 
     if stale:
-        print(f"\n  REPORT_STALE  有 {stale} 份报告绑定的产物已不在线上；"
+        print(f"\n  REPORT_STALE  有 {stale} 份失效报告**未标注**；"
               f"按 §4.6 标注失效或重跑验收")
         return 3
+    if annotated:
+        print(f"\n  REPORT_STALE_ANNOTATED  {annotated} 份历史报告已失效但均已按 §4.6 标注；"
+              f"绑定现役产物的报告 VALID")
+        return 0
     print("\n  REPORT_VALID  所有报告都绑定当前线上产物")
     return 0
 

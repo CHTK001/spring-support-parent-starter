@@ -4,7 +4,45 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
-## ✅ 当前状态（2026-10-06 · r19）：**重新发布并把全站点击口径补齐到「0 假缺陷」**
+## ✅ 当前状态（2026-10-06 · r20）：**工作区重建换包 + 一键门禁 attempt2 全绿 + 全站点击 r25~r27 三轮 0 断言失败**
+
+> 结论由 `ACCEPTANCE-REPORT-20261005-r15.md` 的 §5.0.2 与 §5.7（r26/r27 节）给出，绑定**当前线上产物**：
+> 后端 jar sha256 `e4e0b2140ee790a2243bc102a43fffefe811cfc354b35a795d7453321160f5fd`
+> （本会话从工作区 HEAD `218dd137a` 自建，837,247,203 B；bundle `b2c73c1b…` pscp 传输后远端逐字一致），
+> 前端 `index.html` md5 `d6c645eff6e18f34cbb61831cdc3c4cd`（1104 文件，本轮未重发前端），
+> 日志 `logs/release-final10.log`（attempt2 全绿）、`logs/release-final10-attempt1-hanzi-statefail.log`（attempt1 证据）、
+> `logs/ui-full-click-both-r25|26|27.log`。r25+r26+r27 三轮合计 **3689 次点击 / 4107 条断言 / 0 失败**。
+>
+> | 面 | 判据 | 结果 |
+> |---|---|---|
+> | 一键发布门禁 | 资源 → 部署 → 来源自证 → 鉴权就绪 → 7 套件 → 故障注入 → 前后指纹 | attempt2 **PROVENANCE_OK / API=OK — 可签收**；attempt1 唯红 = hanzi `task disabled by default`，根因 = 外部并发会话在目标机跑套件改状态（套件收尾自恢复，复测 `edu_collect_task.status=0`），quiet-probe 等静默后重跑即全绿 |
+> | 后端套件 | 7 套件 | **219 断言 0 失败**（55+15+20+12+40+11+66，hanzi 66/0 含镜像全不可用负向用例） |
+> | 并发 | 60 并发 | p50=153ms / p95=329ms / max=360ms |
+> | 故障注入 | 停 oauth | 2608ms 快速失败、`restarts=0`、恢复后登录正常 |
+> | 前后指纹 | jar / unit md5 / 表数 / 崩溃转储 / 脚本 md5 | 逐字一致：eduai `e4e0b214…`、oauth `ca4ce0b3…`、unit `53f648c2…`/`813c6eb1…`、deploy.sh `2419490e…`、表数 107/72、崩溃转储 4→4；breakglass 理由入指纹；部署幂等（回滚包 5 份含 3a7658fa 原件） |
+> | 全站点击（管理员 r25/r26/r27） | 30 路由逐控件点击（含弹窗、浮层、Phase 0b 登录页） | **613/680/0 · 672/739/0 · 664/732/0**，三轮均 0 死按钮 / 0 harness 错误 |
+> | 全站点击（学生 r25/r26/r27） | 同上，`-Role student` 真实学生登录 | **553/625/0 · 594/666/0 · 593/665/0**，死按钮 0/1/2（均 data-config「列设置/刷新」）→ 判上下文相关开放发现，非回归（新 jar 定向复测 0 死按钮） |
+> | 运行态 | health / NRestarts / hs_err | 200 / 0 / 仍 4 份未新增 |
+>
+> **遍历器可信度三件套已固化**（commit `68a0f331a` + `218dd137a`，均已推送）：① PS7 硬门禁
+> （非 pwsh7 直接 exit 2，根绝 PS5.1 `ConvertFrom-Json` 不展开数组造成的 clicks=0 假绿）；
+> ② agent-browser 一律 `--namespace eduai-acceptance`（独立 daemon，根绝他方会话抢活动页污染）；
+> ③ Phase 0b 登录页走查（/login 首次被真正清点）。
+>
+> **发现（记账不阻塞交付）**：① 远端 `ai-flow-acceptance.py` 19/4 红 = 外部 AI 渠道 503
+> （`No available channel for model space-bunny-alpha under group 周卡`）+ 首交断言非幂等，
+> 非后端缺陷，不接门禁；② 学生全量 data-config「列设置/刷新」偶发无可见效果
+> （6 上下文观测：定向与管理员全生效、学生全量 2/6 与 1/6 失效，见报告 §5.7 r27 节）；
+> ③ standing warning：`V1.1__initdata_all_eduai.sql` 在 sys_database_version 非成功状态
+> （框架不重跑、非本轮引入，初始化数据由套件数据断言证明）。
+>
+> **并发他方活动是本轮最大干扰源**：另一会话在目标机直跑套件会改 HANZI 任务状态与学生口令；
+> 门禁前必须 `quiet-probe.sh` 等静默（60s 间隔、连续 2 次 0 活动才 QUIET-GO）。
+>
+> **报告失效收口**：`report-staleness.py` 实跑 **exit 0**——r15 VALID、17 份历史报告全部
+> 「已标注失效」、0 份需标注（`logs/report-staleness-r20.txt`），明细见 §4。
+
+> ## 📌 历史状态（2026-10-06 · r19，已被 r20 接替）：**重新发布并把全站点击口径补齐到「0 假缺陷」**
 
 > 结论由 `ACCEPTANCE-REPORT-20261005-r15.md` 的 §5.0 与 §5.7 给出，绑定**当前线上产物**：
 > 后端 jar sha256 `b824f48588f46688ea66a5f9bfe58e4eb0244135ed492791cdd06e44d64fa4d4`，
@@ -266,7 +304,10 @@ f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
 → 186767230c → 6f13188c → 95f3db7c → e82f6dd6  （并发会话）
 → 81d7c0e1                                  （本会话从 HEAD 198d379c6 自建，r3 PROVENANCE_OK）
 → e7ee42b8                                  （并发会话，替换掉 r3）
-→ 75e228fc                                  （本会话从 HEAD 2bc2fe52b 自建，r4 PROVENANCE_OK ✅ 现役）
+→ 75e228fc                                  （本会话从 HEAD 2bc2fe52b 自建，r4 PROVENANCE_OK；其后又被多次替换）
+→ …（r5~r19 及并发会话的换包，逐份绑定见下表）
+→ 3a7658fa                                  （并发会话 2026-10-06 09:13 工作区构建）
+→ e4e0b214                                  （本会话从 HEAD 218dd137a 自建，r20 门禁 PROVENANCE_OK ✅ 现役）
 ```
 
 | 报告 | 绑定 | 状态 |
@@ -279,7 +320,24 @@ f79f8d78 → ec3e5afe → d2c4fc45              （本会话的部署）
 | `ACCEPTANCE-REPORT-20261003-r5.md` | `563dce91` | 已失效（被 `e7824e44` 替换；该 jar 有浏览器登录 CORS 缺陷）|
 | `ACCEPTANCE-REPORT-20261004.md` | `e7824e44` | 已失效（被 `a3c6dfd1` 替换）|
 | `ACCEPTANCE-REPORT-20261004-r7.md` | `d00d1c45` | 已失效（被 `df7b2ead` 替换）|
-| **`ACCEPTANCE-REPORT-20261004-r8.md`** | **`df7b2ead`** | **VALID（== 现役）** |
+| `ACCEPTANCE-REPORT-20261004-r8.md` | `df7b2ead` | 已失效（2026-10-06 补标；曾误标 VALID）|
+| `ACCEPTANCE-REPORT-20261004-r9.md` | `8ad6d0bf` | 已失效（2026-10-06 补标）|
+| `ACCEPTANCE-REPORT-20261004-r10.md` | `0e663904` | 已失效（已标注）|
+| `ACCEPTANCE-REPORT-20261004-r11.md` | `25169492`/`62a5dce1` | 已失效（已标注）|
+| `ACCEPTANCE-REPORT-20261005-r12.md` | `81810d88` | 已失效（2026-10-06 补标）|
+| `ACCEPTANCE-REPORT-20261005-r13.md` | `81810d88` | 已失效（2026-10-06 补标）|
+| `ACCEPTANCE-REPORT-20261005-r14.md` | 未写 `sha256 =` 绑定行 | SKIP（检查器解析不到，不计入）|
+| **`ACCEPTANCE-REPORT-20261005-r15.md`** | **`e4e0b214` + oauth `ca4ce0b3`** | **VALID（== 现役）** ← 当前签收口径 |
+| `ACCEPTANCE-REPORT-20261005-r16.md` | `a5613a74` | 已失效（2026-10-06 补标）|
+| `ACCEPTANCE-REPORT-20261005-r17.md` | `2c9c1d66` | 已失效（2026-10-06 补标）|
+| `ACCEPTANCE-REPORT-20261005-r18.md` | `6f383dc8` | 已失效（2026-10-06 补标）|
+| `ACCEPTANCE-REPORT-20261005-r19.md` | 未写 `sha256 =` 绑定行 | SKIP（未跟踪文件，不计入）|
+
+**r20 收口实跑（2026-10-06）**：`logs/report-staleness-r20.txt` —— r15 **VALID**、17 份历史
+全部「已标注失效」、**0 份需标注、exit 0**（`REPORT_STALE_ANNOTATED`）。同轮把检查器对齐
+自身注释与 checklist 约定：**已按 §4.6 标注的历史报告不再计入退出码**（改前「已标注仍
+exit 3」状态留档 `logs/report-staleness-r20-pretools-fix.txt`）；**未标注的失效报告依旧
+exit 3，判据不放松**。
 
 **关键澄清**：前几份失效抹掉的是「报告与二进制的绑定」，**不是修复本身**；
 而自证报告之所以成立，是因为它把「构建 → 部署 → 断言线上==本地」串成了一条命令

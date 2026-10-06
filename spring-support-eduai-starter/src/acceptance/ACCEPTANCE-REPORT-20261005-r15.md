@@ -148,6 +148,56 @@ tmpfs 与 oom-kill，其中后两项仍然一票否决；且 `deploy.sh` 是**�
 结论：线上一直跑的就是我提交的采集源（`CLASS_PROVENANCE_OK`）。本轮仍然重新发布，是为了让
 jar 换成我自己构建的那一份并留下完整门禁留痕，理由不是「代码不在服」。
 
+### 5.0.2 重新发布（r20 · 从工作区重建绑定，门禁一败一胜后签收）
+
+**为什么要重建**：现网 jar（`3a7658fa…`）虽与工作区内容等价，但门禁的 `EXPECTED_JAR_SHA`
+要求与**自己本地构建**的 jar sha 逐字相同——只有从工作区重建并部署，门禁才能与工作区绑定。
+重建前核过等价性：待发布提交（df8098998）的 3 个文件全在 eduai-starter 自身 src 内，
+工作区构建必然包含；兄弟模块（oauth-client/filesystem 的他人未提交改动）不在 reactor 内、
+只经 `.m2` 引用，与现网 `3a7658fa` 的构建方式一致。**允许进产物的他人改动仅限兄弟模块
+经 `.m2` 的部分，与 `3a7658fa` 同方式**——此为本报告既定边界。
+
+产物（验收前 = 验收后，逐字相同）：
+
+```
+eduai jar      sha256 = e4e0b2140ee790a2243bc102a43fffefe811cfc354b35a795d7453321160f5fd   （837,247,203 B）
+bundle         sha256 = b2c73c1bade2a29951384ea28b02aa5b3c3dcb36447bd17c40a3560680e639c5   （801,900,889 B，传输后远端 sha 与本地逐字相同）
+oauth jar      sha256 = ca4ce0b3d929c96e6f607950c24ac235a7b69e5266ef23df63ac6e88c6c6a470
+eduai unit     md5    = 53f648c2a893c28e13f37c81333fb5f1
+oauth unit     md5    = 813c6eb1d409753974047c4732eb9dbd
+deploy.sh      md5    = 2419490ef43ce052cc1805710c812255    （本地 = 目标两份副本）
+release-run.sh md5    = ccfd591fa3ae35f144b8ceacd895b70e    （本地 = 目标，脚本无需补同步）
+repo HEAD             = 218dd137a（遍历器 Phase 0b + namespace 隔离 + PS7 门禁，已推送）
+表数 eduai / oauth    = 107 / 72
+```
+
+**门禁 attempt 1：`PROVENANCE_OK / API=FAIL`**（`logs/release-final10-attempt1-hanzi-statefail.log`）
+7 套件唯 hanzi-collect 65/66，挂在 `task disabled by default status=1`。查因不是代码：
+另一会话此刻在**目标机上直接跑验收套件**（`ps` 见 `timeout 300 python3 marking-acceptance.py`），
+采集任务被其开启窗口或中途退出留成启用态；门禁自己那轮的套件结尾 `restore original config`
+恢复成功（门禁后复测 DB `collect_task_status=0`）。attempt 1 里故障注入、前后指纹、
+崩溃转储 4→4 本就全过。处置：**不改断言、不动别人的进程**——60 秒间隔探测，等外部套件
+连续 2 分钟静默（`QUIET-GO`）后重跑。
+
+**门禁 attempt 2：`PROVENANCE_OK / API=OK`，可签收**（`logs/release-final10.log`）
+
+```
+资源判据   available=944MB（<1536，人工放行）swap=79%（<80，人工放行）tmpfs=33% oom-kill=0 java=10
+           放行理由原文进指纹：共享主机 10 个租户 JVM（ai-starter 1.3G / ngx-console 1.1G /
+           monitor 971M / collect×3）占用；eduai 停旧进程自身释放 ~2.4G；tmpfs 与 oom-kill 仍一票否决
+部署       新 jar sha=e4e0b2140ee790a2 → 现役同 sha（幂等重部署；回滚包保留 5 份，含 3a7658fa 原件）
+来源自证   PROVENANCE_OK（期望 == 线上，长度 64）
+鉴权热就绪 已就绪（约 10s）
+7 套件     219 断言 / 0 失败（55 + 15 + 20 + 12 + 40 + 11 + 66）
+并发       60/60；p50=153ms p95=329ms max=360ms
+故障注入   停 oauth 2608ms 内登录失败、eduai 健康 200、restarts=0；恢复后登录正常
+前后指纹   逐字相同；崩溃转储 发布前 4:1791129055 → 发布后 4:1791129055（未新增）
+```
+
+部署段的 standing warning（前几轮即有、非本轮引入）：`V1.1__initdata_all_eduai.sql` 在
+`sys_database_version` 里不是成功状态，框架不会重跑。初始化数据确实在库——套件数据断言
+（seed 3496 条、抽查 明/花/江/国/鹅 字字字齐全、学生 159、试卷 23）全过可证。
+
 ### 5.1 一键发布门禁（`release-run.sh`，日志 `logs/release-final6.log`，含新增的崩溃转储门禁）
 
 ```
@@ -580,3 +630,76 @@ select option / li / button 逐个点，单独记 effect 与异常；文案含 `
 另外：矩阵文件名之前固定为 `click-matrix.csv/md`，管理员轮证据会被学生轮覆盖
 （本轮管理员矩阵已丢，只有日志 SUMMARY）。已改成按角色+时间戳落盘
 （复核产物 `click-matrix-student-20261006-0912.*` 即新命名），并提交。
+
+### r26 之前拔掉的三起「假绿」：判据不修，数字就不可比
+
+commit `68a0f331a` 与 `218dd137a`（均已推送）：
+
+1. **driver 曾用 Windows PowerShell 5.1 跑 → clicks=0 假象**。5.1 的 `ConvertFrom-Json`
+   不展开数组，inventory 恒空：clicks=0、vanished 全假、死按钮误报——与「全绿」无法区分。
+   现在脚本顶部硬门禁 `$PSVersionTable.PSVersion.Major -lt 7 → exit 2`，正式 driver 一律
+   `pwsh.exe`（PS7）。证据对照：`logs/ui-click-fixverify-admin2.txt`（5.1：clicks=0/dead=1
+   假结果）vs `logs/ui-click-fixverify-admin3.txt`（ps7：clicks=137/dead=0）。
+2. **共享浏览器 daemon 被第三方会话抢活动页（污染根因）**。之前用 default namespace，
+   任何其它会话的浏览器调用都可能把活动页抢走。现在所有 agent-browser 调用经 `AbRaw`
+   注入 `--namespace eduai-acceptance`（独立 daemon + 独立 Chrome），脚本从不调 `close`；
+   我方遍历与他方会话互不可见。
+3. **Phase 0b：/login 本身从未被走过查**。凭据录入前先在空表单上走查登录页控件；点击
+   导致离开 /login 时清非 layout 存储后重开；每 pass 重开 /login；仅 admin 路径；
+   navigate 类效果不判健康（落地页是整页跳转），其余仍判 pageErr/consoleErr/5xx；
+   末尾断言 `login page controls walked`。
+
+### r26 双轮全量（0 失败）
+
+`logs/ui-full-click-both-r26.log`（一次跑完两个身份，双 EXIT 0、err 0）：
+
+| 身份 | 路由 | 点击 | 断言 | 失败 | 死按钮 | harness 错误 | skipped-destructive |
+|---|---|---|---|---|---|---|---|
+| 管理员 | 30 | 672 | 739 | 0 | 0 | 0 | 7 |
+| 学生 | 30 | 594 | 666 | 0 | 1（判抖动，见下） | 0 | 6 |
+
+矩阵归档 `logs/click-matrix-r26-admin/`、`logs/click-matrix-r26-student/`。
+
+**唯一死按钮（学生 data-config「列设置」effect=none）当时判为抖动、非缺陷**（该判定
+已被 r27 复现修正，见下 r27 节）：pwsh7 定向复测
+两轮全绿——管理员 `-Only collect,schedule-redirect,data-config`：3 路由 / 137 点击 /
+151 断言 / **0 失败 / 0 死按钮**（弹窗 13~52 控件、浮层、Phase 0b 走查全过）；学生
+`-Only data-config`：2 路由 / 38 点击 / 52 断言 / **0 失败 / 0 死按钮**——r26 的
+「列设置」不复现。证据 `logs/ui-click-fixverify-admin3.txt`、
+`logs/ui-click-fixverify-student1.txt`，矩阵 `click-matrix-*-20261006-1113`。
+
+### r27 双轮全量（r20 新 jar 上首验，0 断言失败）
+
+`logs/ui-full-click-both-r27.log`（换包 `e4e0b214` 之后第一次全站双身份点击验收，
+双 EXIT 0、err 0）：
+
+| 身份 | 路由 | 点击 | 断言 | 失败 | 死按钮 | harness 错误 | skipped-destructive |
+|---|---|---|---|---|---|---|---|
+| 管理员 | 30 | 664 | 732 | 0 | 0 | 0 | 6 |
+| 学生 | 30 | 593 | 665 | 0 | 2（见下） | 0 | 6 |
+
+矩阵归档 `logs/click-matrix-r27-admin/`、`logs/click-matrix-r27-student/`。
+r25+r26+r27 三轮合计 **3689 次点击 / 4107 条断言，断言失败 0**。
+
+**学生 data-config 两死按钮（「列设置」「刷新」effect=none）：判定升级为「上下文相关
+no-op」开放发现，r26 的「抖动」结论被 r27 修正**——同一按钮在 6 个上下文观测里的效果：
+
+| 上下文 | jar | 列设置 | 刷新 |
+|---|---|---|---|
+| 学生全量 r26 | 3a7658fa | none（死） | 生效 |
+| 学生全量 r27 | e4e0b214 | none（死） | none（死） |
+| 学生定向 fixverify1 | 3a7658fa | pointer-style | pointer-dom |
+| 学生定向 fixverify2（本轮） | e4e0b214 | pointer-style | pointer-dom |
+| 管理员全量 r26 / r27 | 各自现役 | 生效 | 生效 |
+
+- **不是换包回归**：新 jar 上学生定向复测 38 点击 / 52 断言 / 0 失败 / 0 死按钮，两按钮
+  均生效（`logs/ui-click-fixverify-student2.txt`，矩阵 `click-matrix-student-20261006-1233`）。
+- **不是稳定缺陷**：`刷新` 在 r26 学生全量生效、r27 失效（1/6 翻转）；`列设置` 学生全量
+  2/6 失效，但在**同路由位置、同遍历结构**（dialog 52 控件 / content 11 点击）的管理员
+  全量两轮里均生效——差异只随「学生 + 全量累计上下文」出现。
+- **复现路径**：学生全量 sweep 走到第 15 站 `/edu/data-config`（前一站 `/edu/students`）；
+  定向、管理员上下文均不复现。根因定位需在全量上下文驻留 DOM 探针，本轮未做
+  （不影响功能定性）。
+- **定性**：两按钮功能可交付（列设置 4/6、刷新 5/6 观测生效，含新 jar定向）；0 断言失败；
+  记开放发现：「学生全量会话后 data-config 工具栏按钮偶发无可见效果」，产品侧跟进
+  会话状态依赖。
