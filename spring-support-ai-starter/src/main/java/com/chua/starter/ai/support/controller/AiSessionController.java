@@ -69,6 +69,11 @@ public class AiSessionController {
     private final SessionNextTaskService sessionNextTaskService;
 
     /**
+     * 工作目录文件变化事件流（工作区侧栏实时刷新用）
+     */
+    private final com.chua.starter.ai.support.service.AiWorkspaceEventStreamService workspaceEventStream;
+
+    /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
      */
     private String writeSettings(Object settingsObj) {
@@ -869,6 +874,37 @@ public class AiSessionController {
         result.put("path", path);
         result.put("workspacePath", path);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 会话工作目录的文件变化事件流（SSE）。
+     *
+     * <p>前端打开工作区侧栏时按会话连上来，智能体往工作目录写文件时就地推送，
+     * 文件树与预览自动刷新，不用手动刷新。归属与目录口径都复用上面两个出口：
+     * 目录按账号隔离（{@link #resolveAgentWorkspace}），会话归属走
+     * {@link #requireReadableSession}。</p>
+     *
+     * <p>基路径未配置时回 404 空响应：前端把 404/405/410 当作「接口不存在」永久停止
+     * 重连；若回一条立刻断开的 200 空流，客户端会按正常断开每 3 秒无限重连。</p>
+     *
+     * @param id 会话标识（原样回填进事件的 {@code sessionId}，前端按它过滤）
+     * @return SSE 事件流（data 为 JSON：{@code {type,path,sessionId,timestamp}}）
+     */
+    @GetMapping("/{id}/workspace/events")
+    public org.springframework.http.ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.SseEmitter> workspaceEvents(
+            @PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        java.nio.file.Path root = resolveAgentWorkspace();
+        if (root == null) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.TEXT_EVENT_STREAM)
+                .body(workspaceEventStream.subscribe(id, root));
     }
 
     /**

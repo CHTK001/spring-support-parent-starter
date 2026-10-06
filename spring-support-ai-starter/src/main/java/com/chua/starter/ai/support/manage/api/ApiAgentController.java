@@ -1094,7 +1094,32 @@ public class ApiAgentController {
         List<Map<String, Object>> list = new ArrayList<>();
         list.add(buildAgent("nomi", "Nomi", "nomi", "builtin", true, true));
         list.add(buildAgent("researcher", "研究员", "nomi", "internal", true, false));
+        // 主 Agent（对齐 OpenCode 的 primary modes）：
+        // plan 只读规划、build 执行落地，两者都是内置且开箱可用。
+        list.add(buildAgent("plan", "Plan 规划", "plan", "builtin", true, true,
+                "只读规划：先调研代码与上下文，产出方案与步骤，不改动任何文件"));
+        list.add(buildAgent("build", "Build 构建", "build", "builtin", true, true,
+                "执行落地：按既定方案直接改动代码与文件，完成后自检并回报"));
         return list;
+    }
+
+    /**
+     * 构建内置 Agent（带描述）。
+     *
+     * @param id          标识
+     * @param name        名称
+     * @param type        类型
+     * @param source      来源
+     * @param enabled     是否启用
+     * @param available   是否可用
+     * @param description 描述
+     * @return 构建结果
+     */
+    private Map<String, Object> buildAgent(String id, String name, String type, String source,
+                                           boolean enabled, boolean available, String description) {
+        Map<String, Object> agent = buildAgent(id, name, type, source, enabled, available);
+        agent.put("description", description);
+        return agent;
     }
 
     /**
