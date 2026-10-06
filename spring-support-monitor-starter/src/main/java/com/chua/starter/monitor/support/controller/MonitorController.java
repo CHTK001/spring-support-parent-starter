@@ -1538,8 +1538,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @GetMapping("/db/databases")
     public ReturnResult<java.util.List<String>> getDbDatabases(@RequestParam(required = false) Long datasourceId) {
         try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
-            java.util.List<String> databases = new java.util.ArrayList<>();
-            java.util.Set<String> seen = new java.util.HashSet<>();
+            java.util.List<String> catalogs = new java.util.ArrayList<>();
+            java.util.List<String> schemas = new java.util.ArrayList<>();
+            java.util.Set<String> seenCatalogs = new java.util.HashSet<>();
+            java.util.Set<String> seenSchemas = new java.util.HashSet<>();
             try (java.sql.ResultSet rs = conn.getMetaData().getCatalogs()) {
                 while (rs.next()) {
                     String catalog = rs.getString(1);
@@ -1549,8 +1551,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     // 'information_schema'），用户看到的是一条与操作上下文无关的权限错误。
                     if (catalog != null
                             && !SYSTEM_SCHEMAS.contains(catalog.toUpperCase())
-                            && seen.add(catalog.toUpperCase())) {
-                        databases.add(catalog);
+                            && seenCatalogs.add(catalog.toUpperCase())) {
+                        catalogs.add(catalog);
                     }
                 }
             }
@@ -1558,13 +1560,20 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             try (java.sql.ResultSet rs = conn.getMetaData().getSchemas()) {
                 while (rs.next()) {
                     String schema = rs.getString(1);
-                    if (schema == null || SYSTEM_SCHEMAS.contains(schema.toUpperCase()) || !seen.add(schema.toUpperCase())) {
+                    if (schema == null
+                            || SYSTEM_SCHEMAS.contains(schema.toUpperCase())
+                            || !seenSchemas.add(schema.toUpperCase())) {
                         continue;
                     }
-                    databases.add(schema);
+                    schemas.add(schema);
                 }
             }
-            return ReturnResult.ok(databases);
+            // 可切 schema 优先：H2 文件库的 catalog 是**文件库名**（如 PR4082F9_H2），
+            // 不是可切的 schema —— useSchema 对它切不动，报「无法确认已切换到数据库」，
+            // 前端拿 databases[0] 建树首节点必失败。MySQL 系 schema 过滤后要么与
+            // catalogs 同集（行为不变）、要么为空（回退 catalogs，等于原逻辑）；
+            // SQLite 两侧皆空返回 []，由前端空树兜底。
+            return ReturnResult.ok(schemas.isEmpty() ? catalogs : schemas);
         } catch (Exception e) {
             return ReturnResult.error("获取数据库列表失败: " + e.getMessage());
         }
