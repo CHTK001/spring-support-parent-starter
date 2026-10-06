@@ -106,9 +106,19 @@ public class EduQuestion extends SysBase {
     private String questionSourceType;
 
     /**
-     * 审核状态
+     * 审核状态（0-待审核 1-通过 2-驳回；只能经专用审核接口流转，save 接口不采信客户端传值）
      */
     private Integer questionAuditStatus;
+
+    /**
+     * 驳回理由（驳回必填，通过时清空）
+     */
+    private String questionAuditRemark;
+
+    /**
+     * 累计审核次数（每次通过/驳回 +1）
+     */
+    private Integer questionAuditCount;
 
     /**
      * 使用次数

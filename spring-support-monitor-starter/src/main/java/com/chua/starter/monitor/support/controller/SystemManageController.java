@@ -19,7 +19,7 @@ import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.model.SystemListVO;
-import com.chua.starter.monitor.support.spi.Platforms;
+import com.chua.starter.datasourcehub.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.monitor.support.support.ShellSupport;

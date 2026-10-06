@@ -105,6 +105,22 @@ ssh <host> 'sudo systemctl stop oauth-server.service; sleep 2; \
 #     学生端看到并点开题目（UI 题数 == 接口题数）→ 撤回/删学生/删班级。
 #     截图默认落 %TEMP%/eduai-ui-acceptance（-OutDir 可改）：不要让它写进仓库，会污染历史。
 #     部署后的静态站点本身由 2.3 的 deploy/verify.sh 做来源自证（WEB_PROVENANCE_OK）。
+#
+#     汉字库的浏览器业务验收：
+#       pwsh -File src/acceptance/ui-hanzi-bank-acceptance.ps1 -Base http://<host>:19093
+#     期望 17/17（列表渲染、分页总数与接口交叉核对、UI 单元格等于种子值、采集页 HANZI 与预设）。
+#
+#     **全站点击遍历**（口径：每个可点击的按钮、图标都测一遍）：
+#       pwsh -File src/acceptance/ui-full-click-acceptance.ps1 -Base http://<host>:19093
+#       pwsh -File src/acceptance/ui-full-click-acceptance.ps1 -Only hanzi,collect   # 只跑指定路由
+#     期望「failed 0 / dead 0」。两段：① 25 个路由的内容控件（清点限定 main.el-main，
+#     每次点击前重新清点，因为一次点击就可能重建表格或换视图）；② 外壳控件（顶栏/侧边栏/页签）。
+#     每次点击独立取证：未捕获异常 / console error / HTTP>=500 / 页面变空白即失败；
+#     合成点击与真实鼠标点击都无效果才算「死按钮」。
+#     矩阵与截图落 %TEMP%/eduai-click（click-matrix.md / click-matrix.csv）。
+#     注意：取证靠页内注入的采集器，不要改回 CLI 的 `network requests` / `errors`
+#     （实测前者回 "No requests captured"、后者对未捕获异常只给空标记）；
+#     门户页是整页跳转，证据必须经 sessionStorage 跨文档传递。
 # 3.5 复核指纹：必须与 3.1 逐一相同
 ```
 
