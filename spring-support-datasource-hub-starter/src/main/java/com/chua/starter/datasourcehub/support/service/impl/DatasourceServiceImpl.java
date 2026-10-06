@@ -17,6 +17,7 @@ import com.chua.starter.datasourcehub.support.service.JdbcDriverJarService;
 import com.chua.starter.datasourcehub.support.service.DatasourceTunnelService;
 import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
 import com.chua.starter.datasourcehub.support.support.DatasourceSecrets;
+import com.chua.starter.datasourcehub.support.support.FileJdbcPathGuard;
 import com.chua.starter.datasourcehub.support.support.JdbcDriverSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -660,13 +661,19 @@ public class DatasourceServiceImpl implements DatasourceService {
      *
      * <p>库名字段允许直接存放完整 JDBC URL，否则按 MySQL 的 主机/端口/库名 三段拼装。</p>
      *
+     * <p>整串 URL 形态且是文件库（SQLite / H2 / Derby / HSQLDB）时，先过
+     * {@link #guardFileJdbcPath(String)}：连接串里带的是磁盘路径，
+     * 不校验就等于台账能指挥应用读写任意文件。探活、建连、事务三条路都从这里过。</p>
+     *
      * @param row 数据源配置
      * @return 可直接交给 {@link DriverManager} 的连接串
+     * @throws IllegalStateException 文件库路径越界
      */
-    private static String resolveJdbcUrl(MsDatasource row) {
+    private String resolveJdbcUrl(MsDatasource row) {
         String database = trim(row.getDatasourceDatabase());
         if (database.regionMatches(true, 0, DatasourceHubConstants.JDBC_URL_PREFIX, 0,
                 DatasourceHubConstants.JDBC_URL_PREFIX.length())) {
+            guardFileJdbcPath(database);
             return database;
         }
         String host = trim(row.getDatasourceHost());
@@ -678,6 +685,33 @@ public class DatasourceServiceImpl implements DatasourceService {
         return String.format(
                 "jdbc:mysql://%s:%d/%s?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai",
                 host, port, database);
+    }
+
+    /**
+     * 文件库 JDBC 路径守卫：越界直接拒绝建连。
+     *
+     * <p>逻辑在 {@link FileJdbcPathGuard}：穿越段 + 白名单两道闸，
+     * 保存时 {@link #validate(DataSourceDTO)} 已拦一道，这里是兜底 ——
+     * 台账若被直改库绕过保存校验，建连前仍会拦下。</p>
+     *
+     * @param url 整串 JDBC URL
+     * @throws IllegalStateException 路径不在白名单目录内
+     */
+    private void guardFileJdbcPath(String url) {
+        String error = FileJdbcPathGuard.pathError(url, properties.getFileJdbcAllowedDirs());
+        if (error != null) {
+            throw new IllegalStateException(error);
+        }
+    }
+
+    /**
+     * 保存前的文件库路径校验。
+     *
+     * @param url 整串 JDBC URL
+     * @return 错误文案；null 表示通过或与本地文件路径无关
+     */
+    private String fileJdbcPathError(String url) {
+        return FileJdbcPathGuard.pathError(url, properties.getFileJdbcAllowedDirs());
     }
 
     /**
@@ -731,6 +765,14 @@ public class DatasourceServiceImpl implements DatasourceService {
                 && nullToEmpty(data.database()).trim().startsWith(DatasourceHubConstants.JDBC_URL_PREFIX);
         if (isBlank(data.host()) && !jdbcUrlForm) {
             return "主机地址不能为空";
+        }
+        // 保存时就拦文件库越界路径：等到建连才发现的话，台账里已经躺着一条
+        // 「存得下、连不上」的记录，用户只能看到连接失败，看不到真正的原因。
+        if (jdbcUrlForm) {
+            String pathError = fileJdbcPathError(nullToEmpty(data.database()).trim());
+            if (pathError != null) {
+                return pathError;
+            }
         }
         return null;
     }
