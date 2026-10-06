@@ -15,6 +15,7 @@ import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.mapper.EduMarkingResultMapper;
+import com.chua.starter.eduai.mapper.EduPaperMapper;
 import com.chua.starter.eduai.mapper.EduPaperQuestionMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
 import com.chua.starter.eduai.mapper.EduKnowledgePointMapper;
@@ -22,6 +23,7 @@ import com.chua.starter.eduai.model.EduKnowledgePoint;
 import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.model.EduMarkingResult;
+import com.chua.starter.eduai.model.EduPaper;
 import com.chua.starter.eduai.model.EduPaperQuestion;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
@@ -130,6 +132,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     */
     private final EduExamMapper examMapper;
     /**
+     * 试卷映射器（阅卷前做试卷校验：存在 / 已发布 / 卷下有题）
+     */
+    private final EduPaperMapper paperMapper;
+    /**
      * 试卷题目关联映射器
     */
     private final EduPaperQuestionMapper paperQuestionMapper;
@@ -176,6 +182,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         //    直接 insert 会以 500 + 数据库原文（含复合主键值）暴露给用户，这里先转成业务提示
         validateSubmitContent(dto.getContent());
         rejectDuplicateSheet(dto.getExamId(), dto.getStudentId());
+        // 0.5 试卷校验：考试必须存在、关联的试卷必须存在且已发布，答案题号必须落在试卷题项上
+        validateExamPaper(dto.getExamId(), dto.getAnswers());
 
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
@@ -222,6 +230,67 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         log.info("[EduAi] 答题卡已提交: taskId={}, student={}, async={}",
                 taskId, dto.getStudentId(), properties.getMarking().isAsync());
         return taskId;
+    }
+
+    /**
+     * 校验考试关联的试卷：考试存在、试卷存在、试卷已发布、答案题号全部落在试卷题项上。
+     *
+     * <p>手工提交链路只传 {@code examId} 不传 {@code paperId}，此前直接落库判分，
+     * 草稿卷/空卷/卷外题都会静默混入成绩。</p>
+     *
+     * @param examId  考试标识
+     * @param answers 作答列表
+     */
+    private void validateExamPaper(Long examId,
+                                   List<MarkingSubmitDTO.AnswerItem> answers) {
+        if (examId == null) {
+            return;
+        }
+        EduExam exam = examMapper.selectById(examId);
+        if (exam == null) {
+            throw new BusinessException("考试不存在，无法阅卷");
+        }
+        if (exam.getExamPaperId() == null) {
+            throw new BusinessException("该考试未关联试卷，无法阅卷");
+        }
+        List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(exam.getExamPaperId());
+        requirePublishedPaper(exam.getExamPaperId(), relations);
+        Set<Long> onPaper = new HashSet<>();
+        for (EduPaperQuestion relation : relations) {
+            onPaper.add(relation.getPaperQuestionQuestionId());
+        }
+        if (answers != null) {
+            for (MarkingSubmitDTO.AnswerItem item : answers) {
+                if (item != null && item.getQuestionId() != null && !onPaper.contains(item.getQuestionId())) {
+                    throw new BusinessException("题目 " + item.getQuestionId() + " 不在试卷上，无法阅卷");
+                }
+            }
+        }
+    }
+
+    /**
+     * 校验单张试卷：存在、已发布（status=1）、卷下有题。
+     *
+     * @param paperId   试卷标识
+     * @param relations 该卷题项（为空时内部重查一次，避免调用方传空集合绕过“有题”检查）
+     * @return 试卷题项
+     */
+    private List<EduPaperQuestion> requirePublishedPaper(Long paperId, List<EduPaperQuestion> relations) {
+        EduPaper paper = paperMapper.selectById(paperId);
+        if (paper == null) {
+            throw new BusinessException("试卷不存在，无法阅卷");
+        }
+        if (!Integer.valueOf(1).equals(paper.getPaperStatus())) {
+            throw new BusinessException("试卷未发布（仅已发布试卷可阅卷）");
+        }
+        List<EduPaperQuestion> rows = relations;
+        if (rows == null || rows.isEmpty()) {
+            rows = paperQuestionMapper.selectByPaperId(paperId);
+        }
+        if (rows == null || rows.isEmpty()) {
+            throw new BusinessException("该试卷下没有题目，无法阅卷");
+        }
+        return rows;
     }
 
     /**
@@ -463,6 +532,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         if (validImages.size() > MAX_SCAN_IMAGES) {
             throw new BusinessException("单次扫描最多 " + MAX_SCAN_IMAGES + " 张图片");
+        }
+        // 试卷校验：自有卷必须存在、已发布、卷下有题；任意卷不校验
+        if (!anyMode) {
+            requirePublishedPaper(paperId, null);
         }
 
         String taskId = UUID.randomUUID().toString().replace("-", "");

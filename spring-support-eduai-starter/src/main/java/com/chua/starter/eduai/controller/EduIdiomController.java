@@ -1,6 +1,7 @@
 package com.chua.starter.eduai.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduIdiomGradeMapper;
@@ -46,6 +47,17 @@ public class EduIdiomController {
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "20") int count) {
         return ReturnResult.ok(idiomService.listByGradeLevel(gradeLevel, grade, count));
+    }
+
+    @Operation(summary = "分页查询成语")
+    @GetMapping("/page")
+    public ReturnResult<PageResult<EduIdiom>> page(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String gradeLevel,
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
+        return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, pageNum, pageSize));
     }
 
     @Operation(summary = "生成成语消消乐游戏数据")

@@ -192,7 +192,15 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
         String config = context.getSourceConfig();
         String dictUrl = firstText(SourceConfigReader.text(config, "url"), DEFAULT_DICT_URL);
         String idsUrl = firstText(SourceConfigReader.text(config, "idsUrl"), DEFAULT_IDS_URL);
-        String gradeLevel = firstText(SourceConfigReader.text(config, "gradeLevel"), context.getGradeLevel(), "小学");
+        // gradeLevel 为空串表示「通用（不分学段）」：落库 hanzi_grade_level=NULL，
+        // 前端学段筛选为空时不过滤、照常可见；只有完全没配才回落任务级/小学。
+        String gradeRaw = SourceConfigReader.text(config, "gradeLevel");
+        String gradeLevel;
+        if (gradeRaw != null && gradeRaw.isBlank()) {
+            gradeLevel = null;
+        } else {
+            gradeLevel = firstText(gradeRaw, context.getGradeLevel(), "小学");
+        }
         int limit = intOf(SourceConfigReader.text(config, "limit"), 500);
         int meaningMaxChars = intOf(SourceConfigReader.text(config, "meaningMaxChars"), 90);
         // offset 缺省必须是 0（从字表头开始扫），续采靠「跳过库里已有的字」推进。
@@ -329,8 +337,16 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
                                       String gradeLevel, int meaningMaxChars, String ownerUserId) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("hanzi_char", String.valueOf(ch));
-        row.put("hanzi_pinyin", normalizePinyin(entry.pinyin()));
-        row.put("hanzi_strokes", entry.strokes());
+        // 读音/笔画：单字字典（word.json）缺生僻字条目时，回落到 IDS 源（makemeahanzi）的
+        // pinyin/strokes——8105 通用规范字里三级字在 word.json 大多查不到，不能整片空拼音。
+        String pinyin = normalizePinyin(entry.pinyin());
+        if (pinyin == null || pinyin.isBlank()) {
+            pinyin = normalizePinyin(idsEntry == null ? null : idsEntry.pinyin());
+        }
+        row.put("hanzi_pinyin", pinyin);
+        Integer strokes = entry.strokes() != null ? entry.strokes()
+                : (idsEntry == null ? null : idsEntry.strokes());
+        row.put("hanzi_strokes", strokes);
         row.put("hanzi_radical", radicalOf(entry, idsEntry));
         row.put("hanzi_structure", structureOf(idsEntry == null ? null : idsEntry.decomposition()));
         // 公开数据集没有笔画名（只有 SVG 笔顺轨迹），笔顺留空由老师按教材口径补
@@ -434,7 +450,10 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
                 }
                 char ch = character.charAt(0);
                 if (wanted.contains(ch) && !map.containsKey(ch)) {
-                    map.put(ch, new IdsEntry(text(node, "radical"), text(node, "decomposition")));
+                    // pinyin/strokes 是 makemeahanzi 自带的（源出 Unihan）：word.json 只收常用字，
+                    // 通用规范汉字表 8105 里的生僻字靠这里兜底读音，避免新字整片空拼音。
+                    map.put(ch, new IdsEntry(text(node, "radical"), text(node, "decomposition"),
+                            firstPinyin(node), intOf(text(node, "strokes"), null)));
                 }
             } catch (Exception e) {
                 // 单行解析失败不影响整体（源文件里混有非 JSON 行）
@@ -748,6 +767,31 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
         return value == null || value.isNull() ? null : value.asText();
     }
 
+    /**
+     * 取首个读音：makemeahanzi 的 {@code "pinyin":["yī",...]} 是数组（多音字按常用度排列），
+     * 兜底场景取第一个即可；若源直接给字符串则原样返回。
+     *
+     * @param node JSON 对象
+     * @return 首个读音，缺失返回 null
+     */
+    private static String firstPinyin(JsonNode node) {
+        if (node == null) {
+            return null;
+        }
+        JsonNode value = node.get("pinyin");
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (value.isTextual()) {
+            return value.asText();
+        }
+        if (value.isArray() && !value.isEmpty()) {
+            JsonNode first = value.get(0);
+            return first == null || first.isNull() ? null : first.asText();
+        }
+        return null;
+    }
+
     private static String firstText(String... values) {
         for (String value : values) {
             if (value != null && !value.isBlank()) {
@@ -791,7 +835,7 @@ public class HanziQuestionSourceProvider implements QuestionSourceProvider {
      * @param radical       部首
      * @param decomposition 部件分解
      */
-    private record IdsEntry(String radical, String decomposition) {
+    private record IdsEntry(String radical, String decomposition, String pinyin, Integer strokes) {
     }
 
     /**

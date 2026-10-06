@@ -1,6 +1,7 @@
 package com.chua.starter.eduai.service;
 
 import com.baomidou.mybatisplus.spring.service.IService;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.eduai.model.EduIdiom;
 
 import java.util.List;
@@ -23,6 +24,19 @@ public interface IEduIdiomService extends IService<EduIdiom> {
      * @return 成语列表
      */
     List<EduIdiom> listByGradeLevel(String gradeLevel, String grade, int count);
+
+    /**
+     * 分页查询成语（管理端全量浏览；稳定排序，非随机）。
+     *
+     * @param keyword    关键字（成语 / 拼音 / 释义），可为空
+     * @param gradeLevel 学段，可为空
+     * @param grade      年级，可为空
+     * @param pageNum    页码
+     * @param pageSize   每页条数
+     * @return 分页结果
+     */
+    PageResult<EduIdiom> pageQuery(String keyword, String gradeLevel, String grade,
+                                  Integer pageNum, Integer pageSize);
 
     /**
      * 生成成语消消乐游戏数据
