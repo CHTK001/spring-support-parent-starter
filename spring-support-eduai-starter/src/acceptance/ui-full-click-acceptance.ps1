@@ -240,7 +240,7 @@ $jsPopperInventory = @"
     if (r.width <= 0 || r.height <= 0) return false; const st = getComputedStyle(el);
     return !(st.visibility === 'hidden' || st.display === 'none' || parseFloat(st.opacity || '1') === 0); };
   document.querySelectorAll('[data-uitest-p]').forEach((e) => e.removeAttribute('data-uitest-p'));
-  const SEL = '[role="menuitem"], .el-dropdown-menu__item, .el-select-dropdown__item, li[role="option"], .el-popper li, .el-popper button, .el-popper a, .el-popper .el-checkbox, .el-popper .el-radio';
+  const SEL = '[role="menuitem"], .el-dropdown-menu__item, .el-select-dropdown__item, li[role="option"], .el-popper li, .el-popper button, .el-popper a, .el-popper .el-checkbox, .el-popper .el-radio, .el-popper .el-switch, .el-popper [role="switch"]';
   const out = [];
   Array.from(document.querySelectorAll('.el-popper')).filter(vis).forEach((pop) => {
     // a popper anchored inside a dialog is walked with the dialog's own controls
@@ -249,13 +249,25 @@ $jsPopperInventory = @"
     pop.querySelectorAll(SEL).forEach((el) => {
       if (el.hasAttribute('data-uitest-p')) return;
       if (!vis(el)) return;
-      const label = (el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().slice(0, 24);
+      let label = (el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+      if (!label) {
+        // An el-switch renders no text of its own (ReTable's table-settings panel: a stack of
+        // div.settings-item rows, each with the label text in a sibling span). The old
+        // empty-label guard silently skipped every one of them -- that panel had never
+        // been walked in any sweep -- so fall back to the surrounding row's title.
+        const host = el.closest('.settings-item, .el-form-item, label, li');
+        if (host) {
+          const t = host.querySelector('.settings-item__title, .el-form-item__label');
+          label = ((t && t.innerText) || host.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+        }
+      }
       if (!label) return;
       const id = 'p' + out.length;
       el.setAttribute('data-uitest-p', id);
       const kind = el.classList.contains('el-select-dropdown__item') || el.getAttribute('role') === 'option' ? 'option'
         : (el.classList.contains('el-dropdown-menu__item') || el.getAttribute('role') === 'menuitem' ? 'menu-item' : 'control');
-      out.push({ id: id, kind: kind, label: label, title: label0, skip: LOGOUT.test(label) ? 1 : 0 });
+      const isSwitch = el.classList.contains('el-switch') || el.getAttribute('role') === 'switch';
+      out.push({ id: id, kind: kind, label: label, title: label0, skip: LOGOUT.test(label) ? 1 : 0, type: isSwitch ? 'switch' : '' });
     });
   });
   return JSON.stringify(out);
@@ -271,49 +283,74 @@ function Walk-PopperControls {
     try { $items = @($raw | ConvertFrom-Json) } catch { return }
     if ($items.Count -eq 0) { return }
     Write-Host ('    -> popover controls: {0} (trigger ''{1}'')' -f $items.Count, $Trig)
-    foreach ($c in $items) {
+    # A switch is exercised twice: once to prove it reacts, once to put it back, so the panel
+    # leaves the page the way a real user's visit would -- ReTable persists these settings
+    # together with the table state whenever a tableId is set. Every other item is one click.
+    :popperItem foreach ($c in $items) {
         if ([int]$c.skip -eq 1) {
             [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|skipped-logout|$Path|0|0|0|0"))
             $script:SkipDestructive++
             continue
         }
-        $sel = '[data-uitest-p=' + $c.id + ']'
-        Clear-Evidence
-        $res = ''
-        try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
-        if ($res -eq 'gone') {
-            # Same re-render story as dialogs: re-locate by label inside visible poppers.
-            # Logout items never reach here (skipped above).
-            $reJs = "(() => { const ps = Array.from(document.querySelectorAll('.el-popper, .el-select__popper, .el-dropdown__popper')).filter(p => { const r = p.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); for (const p of ps) { const b = Array.from(p.querySelectorAll('li, button, .el-dropdown-menu__item')).find(x => ((x.innerText || '').trim().indexOf('$($c.label)') === 0)); if (b) { b.click(); return 'relocated'; } } return 'gone'; })()"
-            try { $res = [string](Js $reJs 40000) } catch { $res = 'transport' }
-            if ($res -eq 'relocated') { $res = 'ok' }
+        $nPass = 1
+        if ($c.type -eq 'switch') { $nPass = 2 }
+        $base = $AfterState
+        for ($pass = 1; $pass -le $nPass; $pass++) {
+            $sel = '[data-uitest-p=' + $c.id + ']'
+            Clear-Evidence
+            $res = ''
+            try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
+            if ($res -eq 'gone') {
+                # Same re-render story as dialogs: re-locate by label inside visible poppers.
+                # Logout items never reach here (skipped above).
+                $reJs = "(() => { const ps = Array.from(document.querySelectorAll('.el-popper, .el-select__popper, .el-dropdown__popper')).filter(p => { const r = p.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); for (const p of ps) { const b = Array.from(p.querySelectorAll('li, button, .el-dropdown-menu__item, .el-switch, [role=switch]')).find(x => ((x.innerText || '').trim().indexOf('$($c.label)') === 0)); if (b) { b.click(); return 'relocated'; } } return 'gone'; })()"
+                try { $res = [string](Js $reJs 40000) } catch { $res = 'transport' }
+                if ($res -eq 'relocated') { $res = 'ok' }
+            }
+            if ($res -ne 'ok') {
+                [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0"))
+                continue popperItem
+            }
+            $script:Clicks++
+            Start-Sleep -Milliseconds $SettleMs
+            $aft = $null
+            try { $aft = (Js $jsProbe) | ConvertFrom-Json } catch { $aft = $null }
+            if (-not $aft) { [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|probe-failed|$Path|0|0|0|0")); break popperItem }
+            $ev = Read-Evidence
+            $eff = 'none'
+            if ($aft.path -ne $base.path) { $eff = 'navigate' }
+            elseif ($aft.dialogs -lt $base.dialogs) { $eff = 'closed-dialog' }
+            elseif ($aft.poppers -lt $base.poppers) { $eff = 'closed-popper' }
+            # class/aria flips inside the panel itself: the popper is teleported to <body> and
+            # nodes/htmlLen only see main.el-main, so an el-switch toggle was invisible to
+            # every other probe -- 'act' is document-wide and catches aria-checked.
+            elseif ($aft.act -ne $base.act) { $eff = 'state' }
+            elseif ($aft.inputs -ne $base.inputs) { $eff = 'input' }
+            elseif ($aft.nodes -ne $base.nodes) { $eff = 'dom' }
+            elseif ($aft.htmlLen -ne $base.htmlLen) { $eff = 'style' }
+            elseif ($ev.reqTotal -gt 0) { $eff = 'request' }
+            [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|$eff|$($aft.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
+            if ($ev.pageErr -gt 0) { Ck "$Rname popover '$($c.label)' no page error" $false '' }
+            elseif ($ev.consoleErr -gt 0) { Ck "$Rname popover '$($c.label)' no console error" $false '' }
+            elseif ($ev.http5xx -gt 0) { Ck "$Rname popover '$($c.label)' no 5xx" $false ("5xx=" + $ev.first5) }
+            else { $script:Pass++ }
+            # the next pass (the restore click) must be judged against THIS pass's end state,
+            # not against the panel's original state -- otherwise undoing a toggle nets to
+            # zero delta and the honest evidence would read 'none'
+            $base = $aft
+            if ($aft.path -ne $AfterState.path) { break popperItem }
+            if ($aft.poppers -lt $AfterState.poppers) { break popperItem }
         }
-        if ($res -ne 'ok') {
-            [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0"))
-            continue
-        }
-        $script:Clicks++
-        Start-Sleep -Milliseconds $SettleMs
-        $aft = $null
-        try { $aft = (Js $jsProbe) | ConvertFrom-Json } catch { $aft = $null }
-        if (-not $aft) { [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|probe-failed|$Path|0|0|0|0")); break }
-        $ev = Read-Evidence
-        $eff = 'none'
-        if ($aft.path -ne $AfterState.path) { $eff = 'navigate' }
-        elseif ($aft.dialogs -lt $AfterState.dialogs) { $eff = 'closed-dialog' }
-        elseif ($aft.poppers -lt $AfterState.poppers) { $eff = 'closed-popper' }
-        elseif ($aft.inputs -ne $AfterState.inputs) { $eff = 'input' }
-        elseif ($aft.nodes -ne $AfterState.nodes) { $eff = 'dom' }
-        elseif ($aft.htmlLen -ne $AfterState.htmlLen) { $eff = 'style' }
-        elseif ($ev.reqTotal -gt 0) { $eff = 'request' }
-        [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|$eff|$($aft.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
-        if ($ev.pageErr -gt 0) { Ck "$Rname popover '$($c.label)' no page error" $false '' }
-        elseif ($ev.consoleErr -gt 0) { Ck "$Rname popover '$($c.label)' no console error" $false '' }
-        elseif ($ev.http5xx -gt 0) { Ck "$Rname popover '$($c.label)' no 5xx" $false ("5xx=" + $ev.first5) }
-        else { $script:Pass++ }
-        if ($aft.path -ne $AfterState.path) { break }
-        if ($aft.poppers -lt $AfterState.poppers) { break }
     }
+    # Panels that carry a reset-to-defaults button -- ReTable's column settings -- have
+    # just had every checkbox toggled and every row reordered. Press it once more while the
+    # panel is still up so a tableId-persisting table is not left with all columns hidden for
+    # the next run or for a real user. Dropdowns/selects have no such button: no-op.
+    $resetLabel = [string][char]0x91CD + [char]0x7F6E
+    $rstJs = "(() => { const ps = Array.from(document.querySelectorAll('.el-popper')).filter(p => { const r = p.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); for (const p of ps) { const b = Array.from(p.querySelectorAll('button')).find(x => ((x.innerText || '').trim() === '$resetLabel')); if (b) { b.click(); return 'reset'; } } return 'no'; })()"
+    $rst = ''
+    try { $rst = [string](Js $rstJs 30000) } catch { $rst = '' }
+    if ($rst -eq 'reset') { Start-Sleep -Milliseconds 400 }
 }
 
 # Hover-triggered dropdowns never open for a synthetic click (Element Plus defaults to
@@ -1049,6 +1086,53 @@ function Get-TagSelector {
     return '[data-uitest=' + $q + $Id + $q + ']'
 }
 
+# Dead-click diagnostics. When a control ends with no observable effect both after the
+# synthetic click AND after the real mouse click, the verdict needs a reason attached:
+# was the button disabled / loading at that moment, did the real click land on something
+# covering it (visible loading mask, overlay, open popper), or was the popover panel
+# absent entirely. This captures that state at the exact failure point. It never changes
+# a verdict -- it only appends facts to the Dead report.
+function Get-DeadDiagJs {
+    param([string]$Id, [string]$Label)
+    $q = [char]0x22
+    $sel = '[data-uitest=' + $q + $Id + $q + ']'
+    $lab = ([string]$Label) -replace "'", ''
+    return @"
+(() => {
+  let el = document.querySelector('$sel');
+  if (!el && '$lab') {
+    el = Array.from(document.querySelectorAll('button, [role=button], .el-button'))
+      .find(b => ((b.innerText || b.getAttribute('aria-label') || '').trim() === '$lab'));
+  }
+  if (!el) return JSON.stringify({ err: 'element-gone' });
+  const r = el.getBoundingClientRect();
+  const cx = Math.round(r.left + r.width / 2), cy = Math.round(r.top + r.height / 2);
+  const hit = document.elementFromPoint(cx, cy);
+  const show = (e) => { const q = e.getBoundingClientRect();
+    return String(e.className || e.tagName).toString().slice(0, 55) + '@' +
+      Math.round(q.left) + ',' + Math.round(q.top) + ',' + Math.round(q.width) + 'x' + Math.round(q.height); };
+  const vis = (e) => { const q = e.getBoundingClientRect(); const s = getComputedStyle(e);
+    return q.width > 0 && q.height > 0 && s.display !== 'none' && s.visibility !== 'hidden'; };
+  const masks = Array.from(document.querySelectorAll(
+    '.el-loading-mask, .vxe-table--loading-wrapper, .vxe-table__loading-wrapper, .el-overlay, .el-drawer__wrapper')).filter(vis);
+  const pops = Array.from(document.querySelectorAll('.el-popper')).filter(vis);
+  return JSON.stringify({
+    dis: !!el.disabled,
+    cls: String(el.className || '').slice(0, 70),
+    rect: Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.width) + 'x' + Math.round(r.height),
+    vp: r.bottom > 0 && r.top < innerHeight,
+    hit: hit ? show(hit) : 'none',
+    hitMe: !!hit && (el === hit || el.contains(hit) || hit.contains(el)),
+    masks: masks.slice(0, 3).map(show),
+    pops: pops.slice(0, 4).map(p => show(p) + '{' + (p.innerText || '').replace(/\s+/g, ' ').slice(0, 36) + '}'),
+    panel: (() => { const p = document.querySelector('.re-table__popover');
+      if (!p) return 'none'; const q = p.getBoundingClientRect();
+      return q.width > 0 ? 'open@' + Math.round(q.left) + ',' + Math.round(q.top) + ',' + Math.round(q.width) + 'x' + Math.round(q.height) : 'closed'; })()
+  });
+})()
+"@
+}
+
 # ---------- HTTP helper (used by the student fixture only) ----------
 # Same implementation shape as ui-paper-assign-acceptance.ps1, which is proven against
 # this API. My first version shelled out to curl through AbRaw and silently produced
@@ -1376,6 +1460,7 @@ if (-not $SkipContent) {
                 WaitJs 'document.querySelectorAll(".el-message, .el-notification").length === 0' 5 | Out-Null
                 $before = (Js $jsProbe) | ConvertFrom-Json
             }
+            $script:DiagSyn = ''; $script:DiagPtr = ''; $ev2 = $null
             Clear-Evidence
             $clickRes = Js (Get-ClickJs $it.id)
             if ($clickRes -eq 'gone') {
@@ -1459,6 +1544,9 @@ if (-not $SkipContent) {
             # being perfectly functional -- a harness artefact that would have been
             # reported as 5 product defects.
             if ($effect -eq 'none' -and $it.active -ne 'Y') {
+                # State snapshot BEFORE the real click: if the synthetic click was a no-op
+                # because the control was disabled/loading/covered, this catches it here.
+                try { $script:DiagSyn = 'syn:' + [string](Js (Get-DeadDiagJs -Id $it.id -Label $it.label) 25000) } catch { $script:DiagSyn = 'syn:diag-err' }
                 $sel = Get-TagSelector $it.id
                 AbRaw @('scrollintoview', $sel) 30000 | Out-Null
                 AbRaw @('click', $sel) 45000 | Out-Null
@@ -1489,17 +1577,33 @@ if (-not $SkipContent) {
                             ("effect=$effect pageErr=$($ev.pageErr) consoleErr=$($ev.consoleErr) 5xx=$($ev.http5xx) $($ev.first5)")
                     }
                     [void]$script:Rows.Add(("$path|$($it.kind)|$($it.label)|$effect|$($after.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
+                    # The synthetic path reaches the dialog/popper walks below; this retry path
+                    # used to `continue` straight past them, so a control that only answers a
+                    # REAL click (ReTable's column/table-settings popover triggers never open on
+                    # el.click()) had its panel contents skipped -- the column-settings
+                    # checkboxes had never once been clicked in any sweep. Mirror the same
+                    # two walks here before resetting.
+                    $wl = if ($it.label) { [string]$it.label } else { '[icon:' + ([string]$it.cls).Trim() + ']' }
+                    if ($after.dialogs -gt $before.dialogs) {
+                        Walk-DialogControls -Rname $rname -Path $path -Trig $wl -AfterState $after
+                        $afterW = $null
+                        try { $afterW = (Js $jsProbe) | ConvertFrom-Json } catch { $afterW = $null }
+                        if ($afterW -and $afterW.poppers -gt 0) { Walk-PopperControls -Rname $rname -Path $path -Trig ($wl + '/dialog') -AfterState $afterW }
+                    }
+                    elseif ($after.poppers -gt 0) { Walk-PopperControls -Rname $rname -Path $path -Trig $wl -AfterState $after }
                     Js $jsReset | Out-Null
                     Start-Sleep -Milliseconds 200
                     continue
                 }
+                # Real click also produced nothing: snapshot the state the click saw.
+                try { $script:DiagPtr = 'ptr:' + [string](Js (Get-DeadDiagJs -Id $it.id -Label $it.label) 25000) } catch { $script:DiagPtr = 'ptr:diag-err' }
             }
 
             # Icon-only controls have no text; without a fallback every such row in the
             # matrix reads as an empty label and the evidence cannot be audited per icon.
             $lbl = $it.label
             if (-not $lbl) { $lbl = '[icon:' + ([string]$it.cls).Trim() + ']' }
-            $detail = "kind=$($it.kind) label='$lbl' effect=$effect pageErr=$($ev.pageErr) consoleErr=$($ev.consoleErr) 5xx=$($ev.http5xx) 4xx=$($ev.http4xx) noise=$($ev.noise)"
+            $detail = "kind=$($it.kind) label='$lbl' effect=$effect pageErr=$($ev.pageErr) consoleErr=$($ev.consoleErr) 5xx=$($ev.http5xx) 4xx=$($ev.http4xx) noise=$($ev.noise) load=$($before.loading)>$($after.loading) pop=$($before.poppers)>$($after.poppers)"
             if ($ev.firstApp) { $detail += " firstErr='" + ($ev.firstApp.Substring(0, [Math]::Min(90, $ev.firstApp.Length))) + "'" }
             [void]$script:Rows.Add(("$path|$($it.kind)|$lbl|$effect|$($after.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
 
@@ -1549,7 +1653,10 @@ if (-not $SkipContent) {
                 $hov = Try-HoverOpen -Rname $rname -Path $path -It $it -Label $lbl
                 if ($hov) { $effect = $hov }
             }
-            if ($effect -eq 'none') { [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' tag=$($it.tag) cls='$($it.cls)' (no visible effect, wasActive=$($it.active))") }
+            if ($effect -eq 'none') {
+                $ptrReq = if ($null -ne $ev2) { [int]$ev2.reqTotal } else { 0 }
+                [void]$script:Dead.Add("$rname/$($it.kind) '$lbl' tag=$($it.tag) cls='$($it.cls)' (no visible effect, wasActive=$($it.active)) req=$($ev.reqTotal)/$ptrReq load=$($before.loading)>$($after.loading) pop=$($before.poppers)>$($after.poppers) $($script:DiagSyn) $($script:DiagPtr)")
+            }
 
             # A trigger that opened a dialog also means that dialog's own controls are now
             # on screen and reachable -- click them too (see Walk-DialogControls).
