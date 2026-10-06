@@ -137,4 +137,37 @@ public class EduQuestionController {
     public ReturnResult<List<EduQuestion>> aiSelect(@RequestBody QuestionAiSelectDTO dto) {
         return ReturnResult.ok(questionService.aiSelect(dto));
     }
+
+    /**
+     * 审核单条题目（通过/驳回）：仅管理员可调。
+     *
+     * @param id     题目标识
+     * @param passed 是否通过
+     * @param remark 驳回理由（驳回必填，通过时忽略）
+     * @return 是否成功
+     */
+    @Operation(summary = "审核题目")
+    @PostMapping("/audit/{id}")
+    public ReturnResult<Boolean> audit(@PathVariable Long id,
+                                       @RequestParam boolean passed,
+                                       @RequestParam(required = false) String remark) {
+        questionService.auditQuestion(id, passed, remark);
+        return ReturnResult.ok(true);
+    }
+
+    /**
+     * 批量审核题目（通过/驳回）：仅管理员可调。
+     *
+     * @param ids    题目ID列表
+     * @param passed 是否通过
+     * @param remark 驳回理由（驳回必填，通过时忽略）
+     * @return 成功条数
+     */
+    @Operation(summary = "批量审核题目")
+    @PostMapping("/audit-batch")
+    public ReturnResult<Integer> auditBatch(@RequestBody List<Long> ids,
+                                            @RequestParam boolean passed,
+                                            @RequestParam(required = false) String remark) {
+        return ReturnResult.ok(questionService.auditQuestions(ids, passed, remark));
+    }
 }

@@ -6,7 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.chua.starter.monitor.support.model.dto.NginxPatchDTO;
+import com.chua.starter.datasourcehub.support.model.dto.NginxPatchDTO;
+import com.chua.starter.datasourcehub.support.nginx.NginxBlockRegistry;
+import com.chua.starter.datasourcehub.support.nginx.NginxConfigModelSupport;
+import com.chua.starter.datasourcehub.support.nginx.NginxNode;
+import com.chua.starter.datasourcehub.support.nginx.NginxParser;
+import com.chua.starter.datasourcehub.support.nginx.NginxRenderer;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

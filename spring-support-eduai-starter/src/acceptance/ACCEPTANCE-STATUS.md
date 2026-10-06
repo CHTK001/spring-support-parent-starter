@@ -4,7 +4,30 @@
 > 与那几份「终验报告」的区别：报告是**某一次运行的快照**，会随换包失效；
 > 本文件区分「随产物绑定的结论」与「不随产物绑定的结论」，并给出闭合流程。
 
-## ✅ 当前状态（2026-10-06 · r20）：**工作区重建换包 + 一键门禁 attempt2 全绿 + 全站点击 r25~r27 三轮 0 断言失败**
+## ✅ 当前状态（2026-10-06 · r21）：**「列设置」死按钮定性为产品缺陷并最小中心修复 + r29 复测 0 失败 0 死按钮**
+
+> 结论由 `ACCEPTANCE-REPORT-20261005-r15.md` 的 **§5.8** 给出，绑定**当前线上前端产物**：
+> 前端 bundle sha256 `599c50847ce3c861df0dda60502839fe6f913f4b708280d2dd21bb7a80fffe67`、
+> `index.html` md5 `99215e6c4ecc666246ef072ac296c514`、asset `index-DQLXI18h.js`、1105 文件；
+> 后端 jar 仍为 `e4e0b214…`（本轮未换后端）。
+> 日志 `logs/fe-build-r29.log`（构建）、`logs/ui-click-r29-admin-dc.log`（管理员定向）、
+> `logs/ui-click-r29-student.log`（学生全量）。
+>
+> | 面 | 判据 | 结果 |
+> |---|---|---|
+> | 定性 | 静态（`ReTable.vue` L4094 `v-if props.columns.length>0`；`ReTableToolbar.vue` L204–206 裸 `ReButton` 无 `@click`）+ 实测 4 页 `wrapped:false` | 「列设置」= **产品缺陷**：8/10 eduai view 由子节点声明列、0 个传 `:columns` → 按钮必然 effect=none，与会话上下文无关（r27「抖动/上下文相关」结论被推翻） |
+> | 修法 | 最小中心：`ReTable.vue` 新增 `effectiveToolbarConfig`，子节点声明列时下传 `columnSettings:false` → slot 与兜底按钮整体不渲染；传 `:columns` 页面逐字不变 | 未采用「从子节点派生列」高风险修法（涉 10 个 view）；10 个 view 零改动 |
+> | 前端发布 | `package.ps1` → `deploy.sh` → `verify.sh` | 1105 文件、备份 `web-20261006-033027.tar.gz`、`INDEX_MD5_MATCH / WEB_PROVENANCE_OK`；日志 `logs/fe-build-r29.log` |
+> | r29 管理员定向 | `-Only data-config` | 2 路由 / 50 点击 / 60 断言 / **0 失败 / 0 死按钮 / 0 harness**；data-config 出现 `popover controls: 5 (trigger '表格设置')` |
+> | r29 学生全量 | 30 路由全量 | **30 路由 / 661 点击 / 733 断言 / 0 失败 / 0 死按钮 / 0 harness**，skipped-destructive 6 |
+>
+> **来源说明**：按「从工作区构建」口径，`ReTable.vue` 相对 HEAD 的 305 行差异含他人未提交
+> 改动（`crosshairHighlight`、auto-refresh 60s 档与倒计时等）**已进产物**；本轮我方仅
+> `effectiveToolbarConfig` + `:config` 改绑。验证新产物必须带 `?v=` 绕浏览器缓存。
+>
+> 以下 r20 结论仍随**后端 jar `e4e0b214…`** 有效（前端部分已被本节 index md5 接替）：
+
+> ## 📌 历史状态（2026-10-06 · r20，前端指纹已被 r21 接替）：**工作区重建换包 + 一键门禁 attempt2 全绿 + 全站点击 r25~r27 三轮 0 断言失败**
 
 > 结论由 `ACCEPTANCE-REPORT-20261005-r15.md` 的 §5.0.2 与 §5.7（r26/r27 节）给出，绑定**当前线上产物**：
 > 后端 jar sha256 `e4e0b2140ee790a2243bc102a43fffefe811cfc354b35a795d7453321160f5fd`
@@ -31,8 +54,9 @@
 >
 > **发现（记账不阻塞交付）**：① 远端 `ai-flow-acceptance.py` 19/4 红 = 外部 AI 渠道 503
 > （`No available channel for model space-bunny-alpha under group 周卡`）+ 首交断言非幂等，
-> 非后端缺陷，不接门禁；② 学生全量 data-config「列设置/刷新」偶发无可见效果
-> （6 上下文观测：定向与管理员全生效、学生全量 2/6 与 1/6 失效，见报告 §5.7 r27 节）；
+> 非后端缺陷，不接门禁；② ~~学生全量 data-config「列设置/刷新」偶发无可见效果~~
+> **已在 r21 闭环**：「列设置」定性为产品缺陷并修复复测通过（报告 §5.8），
+> 「刷新」r29 学生全量 0 死按钮；
 > ③ standing warning：`V1.1__initdata_all_eduai.sql` 在 sys_database_version 非成功状态
 > （框架不重跑、非本轮引入，初始化数据由套件数据断言证明）。
 >

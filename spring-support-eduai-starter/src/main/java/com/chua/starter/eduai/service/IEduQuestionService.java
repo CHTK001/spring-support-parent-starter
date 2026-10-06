@@ -59,7 +59,27 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     List<QuestionGradeDimensionVO> listGradeDimensions(Integer status);
 
     /**
-     * AI 选题：按学科/学段/题型/知识点向 AI 要一批题目，用于往**已存在的试卷**里补题。
+     * 审核题目（通过/驳回）：仅管理员可调。
+     *
+     * @param id     题目标识
+     * @param passed 是否通过
+     * @param remark 驳回理由（驳回必填，通过时忽略并清空）
+     */
+    void auditQuestion(Long id, boolean passed, String remark);
+
+    /**
+     * 批量审核题目（通过/驳回）：仅管理员可调。单条失败不影响其余，
+     * 返回实际成功条数（与 importQuestions 同一容错风格）。
+     *
+     * @param ids    题目ID列表
+     * @param passed 是否通过
+     * @param remark 驳回理由（驳回必填）
+     * @return 成功条数
+     */
+    int auditQuestions(List<Long> ids, boolean passed, String remark);
+
+    /**
+     * AI 选题：按学科/学段/题型/知识点向 AI 要一批题目，用于往**已存在的试卷**里补题.
      *
      * <p>AI 不可用（未引入 spring-support-ai-starter、总开关关闭或无可用模型）时
      * 自动回退到规则选题（按学科+学段取候选题），不抛异常。</p>

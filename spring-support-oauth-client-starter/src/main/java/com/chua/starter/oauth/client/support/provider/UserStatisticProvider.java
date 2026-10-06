@@ -21,6 +21,7 @@ import com.google.common.base.Splitter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -79,6 +81,105 @@ public class UserStatisticProvider {
             return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
+        ReturnResult<LoginResult> result = doLogin(loginData, request);
+        if (!result.isOk() || null == result.getData() || null == result.getData().getAccessToken()) {
+            return result;
+        }
+        // 非分离模式的会话闭环：浏览器表单拿不到请求头，后续导航只能靠 Cookie 带凭据。
+        // 这里把刚换到的 accessToken 写进 HttpOnly 会话 Cookie，各协议本就「头优先、cookie 其次」
+        // 地读 x-oauth-cookie —— 读的那一半早已实现，写的那一半到此才补上。
+        writeSessionCookie(response, result.getData().getAccessToken());
+        return result;
+    }
+
+    /**
+     * 自渲染表单登录端点（{@code POST /login/form}，表单编码）。
+     *
+     * <p>浏览器原生表单只能发 {@code application/x-www-form-urlencoded}，而
+     * {@link #login} 只收 JSON（发 JSON 会 415），所以表单投递到这里。
+     * 成功：写会话 Cookie 后 302 到 {@code redirect_url}（只允许站内相对路径）；
+     * 失败：302 回登录页并带上错误原因（经 HTML 转义后展示）。</p>
+     *
+     * @param username 账号
+     * @param password 密码
+     * @param verifyCode 验证码
+     * @param redirectUrl 回跳地址
+     * @param request 当前请求
+     * @param response 当前响应
+     * @throws IOException 重定向写失败时抛出
+     */
+    @PostMapping(value = "${plugin.oauth.login-form-action:/login/form}", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public void loginForm(@RequestParam(name = "username", required = false) String username,
+                          @RequestParam(name = "password", required = false) String password,
+                          @RequestParam(name = "verifyCode", required = false) String verifyCode,
+                          @RequestParam(name = "redirect_url", required = false) String redirectUrl,
+                          HttpServletRequest request,
+                          HttpServletResponse response) throws IOException {
+        LoginData loginData = new LoginData();
+        loginData.setUsername(username);
+        loginData.setPassword(password);
+        loginData.setVerifyCodeKey(verifyCode);
+
+        ReturnResult<LoginResult> result = doLogin(loginData, request);
+        String contextPath = request.getContextPath();
+        String loginPage = contextPath + authProperties.getLoginPage();
+        if (!result.isOk() || null == result.getData() || null == result.getData().getAccessToken()) {
+            String error = "登录失败";
+            try {
+                String msg = result.getMsg();
+                if (null != msg && !msg.isBlank()) {
+                    error = msg;
+                }
+            } catch (Exception ignored) {
+                // 取不到就用默认文案
+            }
+            response.sendRedirect(loginPage
+                    + "?redirect_url=" + urlEncode(LocalLoginPageProvider.resolveRedirect(redirectUrl))
+                    + "&error=" + urlEncode(error));
+            return;
+        }
+        writeSessionCookie(response, result.getData().getAccessToken());
+        response.sendRedirect(LocalLoginPageProvider.resolveRedirect(redirectUrl));
+    }
+
+    /**
+     * 写会话 Cookie（非分离模式凭据闭环的「写」一半）。
+     *
+     * <p>Cookie 名取 {@code plugin.oauth.cookie-name}（默认 {@code x-oauth-cookie}），
+     * 与各协议读的一侧同名；{@code HttpOnly} 防 JS 窃取；{@code Path=/} 全站携带；
+     * 会话级（maxAge=-1）关闭浏览器即失效；{@code SameSite=Lax} 挡跨站 POST 携带
+     * （顶层 GET 回跳仍可携带，保证从登录页 302 回来时已登录）。</p>
+     *
+     * @param response 当前响应
+     * @param accessToken 刚换到的访问令牌
+     */
+    public void writeSessionCookie(HttpServletResponse response, String accessToken) {
+        // Cookie 值按 RFC 6265 只能是 token68；accessToken 若含非法字符会导致整条 Set-Cookie 被浏览器丢弃。
+        // 先做白名单校验，不合规就拒绝写（调用方已返回 200 则此分支理论不可达，属于纵深防御）。
+        if (null == accessToken || !accessToken.matches("[A-Za-z0-9!#$%&'*+\\-.^_`|~:/=?@\\[\\]]+")) {
+            log.error("[Login]令牌含 Cookie 非法字符，拒绝写会话 Cookie");
+            return;
+        }
+        String name = authProperties.getCookieName();
+        String encoded = java.net.URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
+        StringBuilder header = new StringBuilder(name).append('=').append(encoded)
+                .append("; Path=/; HttpOnly; SameSite=Lax");
+        // Secure 由业务在反向代理层按需补：本机 HTTP 调试若加上，浏览器直接拒收 Cookie。
+        response.addHeader("Set-Cookie", header.toString());
+    }
+
+    private static String urlEncode(String value) {
+        return java.net.URLEncoder.encode(String.valueOf(value), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 登录协议调用（JSON 登录与表单登录共用）。
+     *
+     * @param loginData 登录信息
+     * @param request 当前请求（取验证码 session 与客户端 IP）
+     * @return 登录结果
+     */
+    private ReturnResult<LoginResult> doLogin(LoginData loginData, HttpServletRequest request) {
         var code = loginData.getVerifyCodeKey();
         var sessionKey = Optional.ofNullable(request.getSession().getAttribute(CAPTCHA_SESSION_KEY)).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
@@ -108,8 +209,8 @@ public class UserStatisticProvider {
             return ReturnResult.error("账号或者密码不正确");
         }
 
-        if (accessToken.getCode() != 200) {
-            return ReturnResult.error(accessToken.getMessage());
+        if (null == accessToken.getCode() || accessToken.getCode() != 200) {
+            return ReturnResult.error(String.valueOf(accessToken.getMessage()));
         }
 
         LoginResult loginResult = LoginResult.builder()

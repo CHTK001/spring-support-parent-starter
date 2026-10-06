@@ -11,7 +11,7 @@ import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
-import com.chua.starter.monitor.support.spi.Platforms;
+import com.chua.starter.datasourcehub.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.server.support.entity.MsServerHost;
 import lombok.extern.slf4j.Slf4j;

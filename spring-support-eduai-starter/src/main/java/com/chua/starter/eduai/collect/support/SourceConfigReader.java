@@ -59,4 +59,43 @@ public final class SourceConfigReader {
             return null;
         }
     }
+
+    /**
+     * 读取配置中的布尔字段（true/1/yes/on 视为真，缺失时返回 null）。
+     *
+     * @param json 配置 JSON
+     * @param key 字段名
+     * @return 值（缺失或非法时 null）
+     */
+    public static Boolean bool(String json, String key) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode root = MAPPER.readTree(json);
+            JsonNode value = root.get(key);
+            if (value == null || value.isNull()) {
+                return null;
+            }
+            if (value.isBoolean()) {
+                return value.asBoolean();
+            }
+            String text = value.asText();
+            if (text == null) {
+                return null;
+            }
+            text = text.trim();
+            if (text.equalsIgnoreCase("true") || text.equals("1")
+                    || text.equalsIgnoreCase("yes") || text.equalsIgnoreCase("on")) {
+                return Boolean.TRUE;
+            }
+            if (text.equalsIgnoreCase("false") || text.equals("0")
+                    || text.equalsIgnoreCase("no") || text.equalsIgnoreCase("off")) {
+                return Boolean.FALSE;
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

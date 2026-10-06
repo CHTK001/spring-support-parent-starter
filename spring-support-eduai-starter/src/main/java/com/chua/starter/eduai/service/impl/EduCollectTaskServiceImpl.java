@@ -744,6 +744,15 @@ public class EduCollectTaskServiceImpl extends ServiceImpl<EduCollectTaskMapper,
         dto.setQuestionSourceType("CRAWL");
         dto.setQuestionAuditStatus(0);
         dto.setOwnerUserId(task.getOwnerUserId());
+        // 自动审核开关：任务 sourceConfig 里配 autoAudit=true 时，入库即视为管理员代审通过。
+        // 注意走的是 auditOnSave=true（管理员专属通道）而非直写 auditStatus=1，
+        // 因为 save 接口已不再采信客户端/audit 字段；开关默认关，老任务行为不变。
+        // 权限兜底：只有管理员创建/维护的任务才允许开自动审核——非管理员任务即使配了开关也强制待审，
+        // 否则普通用户可自建采集任务绕过审核。
+        if (Boolean.TRUE.equals(SourceConfigReader.bool(task.getCollectTaskSourceConfig(), "autoAudit"))
+                && EduUserContext.isAdmin()) {
+            dto.setAuditOnSave(true);
+        }
         return dto;
     }
 

@@ -103,12 +103,13 @@
         WHERE question_id = #{questionId}
     </update>
 
-    <!-- 组卷候选题目：按题目ID倒序取样并限制条数 -->
+    <!-- 组卷候选题目：只取已启用且审核通过的；未审核/驳回不在组卷显示 -->
     <select id="selectCandidates" resultType="com.chua.starter.eduai.model.EduQuestion">
         SELECT q.* FROM edu_question q
         <where>
             q.question_subject = #{subject}
             AND q.question_status = 1
+            AND q.question_audit_status = 1
             <if test="gradeLevel != null and gradeLevel != ''">
                 AND q.question_grade_level = #{gradeLevel}
             </if>

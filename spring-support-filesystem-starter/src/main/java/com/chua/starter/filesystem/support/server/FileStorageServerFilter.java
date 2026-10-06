@@ -169,6 +169,45 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
+     * 纯文本源格式白名单：容器闸门里没有魔数可挡，靠扩展名放行。
+     *
+     * <p>CSV 是纯文本，既不是 ZIP 也不是 OLE2，放默认闸门会被当成垃圾字节
+     * 挡掉（{@code X-FileStorage-Convert: unavailable}）。但纯文本扩展名
+     * 不能无条件放行，否则任意二进制改名成 {@code .csv} 也会喂给 Aspose。
+     * 这里配合 {@link #looksLikeText(byte[])} 做内容校验：扩展名 + 内容
+     * 双命中才放行。</p>
+     */
+    private static final java.util.Set<String> TEXT_CONVERT_SOURCES =
+            java.util.Set.of("csv", "tsv");
+
+    /**
+     * 粗判字节是否为纯文本（UTF-8/GBK/GB18030/Latin-1 友好）。
+     *
+     * <p>只看前 4KB：含 NUL 直接判二进制；其余按「可显示字符比例」判定，
+     * 中文 CSV（GBK 编码）高字节多，不能按 ASCII 比例卡。</p>
+     *
+     * @param data 待判定字节
+     * @return 疑似纯文本返回 true
+     */
+    private static boolean looksLikeText(byte[] data) {
+        if (data == null || data.length == 0) {
+            return false;
+        }
+        int len = Math.min(data.length, 4096);
+        int suspicious = 0;
+        for (int i = 0; i < len; i++) {
+            int b = data[i] & 0xFF;
+            if (b == 0) {
+                return false;
+            }
+            if (b < 0x09 || (b > 0x0D && b < 0x20 && b != 0x1B)) {
+                suspicious++;
+            }
+        }
+        return suspicious * 10 < len;
+    }
+
+    /**
      * 存储映射
      */
     private final Map<String, FileStorage> storageMap = new ConcurrentHashMap<>();
@@ -776,25 +815,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 if (storage == null) {
                     return error(response, 404, "Storage not found: " + entry.bucket);
                 }
-                GetObjectResult get = storage.getObject(entry.key);
-                if (get == null || get.getResultCode() != ObjectResult.ResultCode.SUCCESS || get.getInputStream() == null) {
-                    return error(response, 404, "Object not found: " + entry.key);
-                }
-                byte[] data;
-                try (InputStream in = get.getInputStream()) {
-                    data = in.readAllBytes();
-                } catch (Exception e) {
-                    return error(response, 500, "Read failed");
-                }
-                String fileName = entry.key.contains("/")
-                        ? entry.key.substring(entry.key.lastIndexOf('/') + 1) : entry.key;
-                response.setStatus(200)
-                        .setHeader("X-OneTime", entry.once ? "once" : "expiry")
-                        .setHeader("Cache-Control", "no-store, no-cache, must-revalidate")
-                        .setContentType(resolveContentType(fileName))
-                        .setBody(data)
-                        .end();
-                return CompletableFuture.completedFuture(null);
+                // 「消费」与直读走**同一条**渲染通道，而不是在这里复刻一份。
+                //
+                // 一次性链接是浏览器无法带请求头时的替身（<img> / iframe / window.open），
+                // 用途与 /{bucket}/{key} 完全重合，所以能力必须完全一致：预览内联渲染、
+                // 图片处理、format=pdf / format=json / format=archive / format=cad、
+                // inner= 包内下钻、render=server、download 附件、config 文件级配置。
+                // 早期版本在这里自己读字节自己吐，于是每加一条通道就要补一次 ——
+                // ?preview 与 ?download 都是这样漏掉的，而漏掉的直接后果是
+                // 前端为了凑功能又把访问令牌塞回 URL，令牌泄漏又回来了。
+                // 委托给 handleGet 后，两条路径共用一份实现，不可能再分叉。
+                response.setHeader("X-OneTime", entry.once ? "once" : "expiry");
+                response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+                return handleGet(storage, request, entry.bucket, response, entry.key);
             }
             return error(response, 405, "Method Not Allowed");
         } catch (Exception e) {
@@ -1251,7 +1284,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         // 而是**产出一个空白文档**并返回 200——调用方拿到的是静默错误的结果。
         // 这里先按魔数挡掉，让它走 unavailable 分支。
         // RTF 是纯文本，不在上述两类容器里，单独放行（见 RTF_MAGIC 注释）。
-        if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC) && !startsWith(data, RTF_MAGIC)) {
+        // CSV/TSV 同理是纯文本：扩展名在白名单内且内容通过 looksLikeText 才放行，
+        // 避免任意二进制改名后喂给 Aspose。
+        if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC) && !startsWith(data, RTF_MAGIC)
+                && !(TEXT_CONVERT_SOURCES.contains(src) && looksLikeText(data))) {
             log.warn("[FileStorage] 源不是文档容器，跳过转 {}: {}", target, fileName);
             return null;
         }
@@ -2020,7 +2056,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if ("pdf".equals(e)) {
             return "pdf";
         }
-        if (e.matches("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|xmind|rtf|epub")) {
+        if (e.matches("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|xmind|rtf|epub|mobi|azw|azw3|prc|xps|oxps|pages|numbers|key|djvu|djv")) {
             return "office";
         }
         if (e.matches("mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v|3gp")) {
@@ -2801,8 +2837,13 @@ function copyOt(){var i=document.getElementById('otUrl');i.select();try{document
 var b=document.getElementById('otCopyBtn');if(b){b.textContent='已复制';setTimeout(function(){b.textContent='复制';},1500);}}
 function openOnetime(r){
 var bucket=document.querySelector('.content').dataset.bucket,key=rowKey(r);
-fetch('/ot?bucket='+encodeURIComponent(bucket)+'&key='+encodeURIComponent(key),{method:'POST'})
-.then(function(res){return res.json()})
+// 私有桶下「签发一次性链接」已纳入鉴权（只有消费 /ot/{token} 免鉴权）。
+// 本页可能是靠 URL 上的访问令牌打开的（同源 fetch 只会带 Cookie，不会带查询参数），
+// 因此把本页自己携带的令牌回传为请求头，否则签发会被 401。
+var cred=new URLSearchParams(location.search),tk=cred.get('x-oauth-token')||cred.get('token'),
+mkOpt={method:'POST',headers:tk?{'x-oauth-token':tk}:{}};
+fetch('/ot?bucket='+encodeURIComponent(bucket)+'&key='+encodeURIComponent(key),mkOpt)
+.then(function(res){if(!res.ok){return res.text().then(function(t){throw new Error('HTTP '+res.status+' '+t)});}return res.json()})
 .then(function(data){
   var i=document.getElementById('otUrl');i.value=location.origin+data.url;
   document.getElementById('otMask').classList.add('show');})
@@ -5414,6 +5455,25 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (lower.endsWith(".epub")) {
             return "application/epub+zip";
         }
+        if (lower.endsWith(".mobi") || lower.endsWith(".azw") || lower.endsWith(".azw3") || lower.endsWith(".prc")) {
+            return "application/x-mobipocket-ebook";
+        }
+        if (lower.endsWith(".xps")) {
+            return "application/vnd.ms-xpsdocument";
+        }
+        if (lower.endsWith(".oxps")) {
+            return "application/oxps";
+        }
+        if (lower.endsWith(".pages")) {
+            return "application/x-iwork-pages";
+        }
+        if (lower.endsWith(".numbers")) {
+            return "application/x-iwork-numbers";
+        }
+        if (lower.endsWith(".djvu") || lower.endsWith(".djv")) {
+            return "image/vnd.djvu";
+        }
+        // .key 不定制：它同时是 PGP/许可证私钥的常用扩展名，交给通用二进制即可
         if (lower.endsWith(".rtf")) {
             return "application/rtf";
         }

@@ -62,6 +62,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      * Page查询
     */
     public PageResult<EduQuestion> pageQuery(QuestionQueryDTO query) {
+        // 未传审核过滤时默认只看已通过：组卷侧（QuestionMarketDialog 不传 auditStatus）
+        // 不应看到待审/驳回题目；管理端需要时显式传 auditStatus（待审筛选/批量审核）。
+        if (query.getAuditStatus() == null) {
+            query.setAuditStatus(1);
+        }
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         // 前端下拉传 PRIMARY/JUNIOR 等码值，库里存中文名，不归一化学段筛选恒为 0 条
         query.setGradeLevel(GradeLevels.normalize(query.getGradeLevel()));
@@ -87,6 +92,13 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      * @return 保存question的结果
      */
     public Long saveQuestion(QuestionSaveDTO dto) {
+        // 审核状态/理由只经专用审核接口流转：save 接口一律不采信客户端传值，
+        // 否则任何作者都能把自己的题标成已通过（此前 line 106 原样采信 dto.getQuestionAuditStatus）。
+        boolean admin = EduUserContext.isAdmin();
+        boolean auditOnSave = Boolean.TRUE.equals(dto.getAuditOnSave());
+        if (auditOnSave && !admin) {
+            throw new BusinessException("只有管理员可以使用保存并审核");
+        }
         EduQuestion entity = new EduQuestion();
         entity.setQuestionType(dto.getQuestionType());
         entity.setQuestionSubject(dto.getQuestionSubject());
@@ -103,7 +115,6 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         entity.setQuestionAnalysis(dto.getQuestionAnalysis());
         entity.setQuestionSource(dto.getQuestionSource());
         entity.setQuestionSourceType(dto.getQuestionSourceType());
-        entity.setQuestionAuditStatus(dto.getQuestionAuditStatus() != null ? dto.getQuestionAuditStatus() : 0);
         entity.setQuestionStatus(dto.getQuestionStatus() != null ? dto.getQuestionStatus() : 1);
 
         if (dto.getQuestionId() != null && dto.getQuestionId() > 0) {
@@ -113,11 +124,27 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
                 throw new BusinessException("题目不存在");
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
+            // 保存并审核只用于新建：编辑走正常更新+脏检查，不允许顺手自审
+            if (auditOnSave) {
+                throw new BusinessException("保存并审核仅用于新建题目");
+            }
+            // 真实改动才打回待审：比对内容字段，改了任一才重置；
+            // 仅调分值/状态/排序的保存不触发重审（纯运营动作不算改数据）。
+            boolean dirty = contentDirty(exists, entity);
+            if (dirty && !admin) {
+                entity.setQuestionAuditStatus(0);
+                entity.setQuestionAuditRemark(null);
+            } else {
+                // 管理员编辑不改内容时保持原审核态；改了内容同样打回待审（与作者同口径）
+                entity.setQuestionAuditStatus(dirty ? 0 : exists.getQuestionAuditStatus());
+                entity.setQuestionAuditRemark(dirty ? null : exists.getQuestionAuditRemark());
+            }
+            entity.setQuestionAuditCount(exists.getQuestionAuditCount());
             entity.setOwnerUserId(exists.getOwnerUserId());
             entity.setQuestionId(dto.getQuestionId());
             entity.setUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
-            log.info("更新题目成功，ID: {}", dto.getQuestionId());
+            log.info("更新题目成功，ID: {}{}", dto.getQuestionId(), dirty ? "（内容变更，已打回待审）" : "");
             return dto.getQuestionId();
         } else {
             // 新增：请求线程以登录态为准；异步链路（采集）继承任务归属，二者皆无则拒绝
@@ -127,6 +154,16 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             }
             entity.setOwnerUserId(owner);
             entity.setQuestionUseCount(0);
+            entity.setQuestionAuditCount(0);
+            if (auditOnSave) {
+                // 管理员保存并审核：新建即通过
+                entity.setQuestionAuditStatus(1);
+                entity.setQuestionAuditRemark(null);
+            } else {
+                // 老师新建 / 管理员普通保存 / 采集入库：一律待审
+                entity.setQuestionAuditStatus(0);
+                entity.setQuestionAuditRemark(null);
+            }
             // 题库手动新增未填来源时兜底为“手动录入”；采集链路已在 toSaveDto 填好来源，此处不覆盖
             if (!StringUtils.hasText(entity.getQuestionSourceType())) {
                 entity.setQuestionSourceType(SOURCE_TYPE_MANUAL);
@@ -141,6 +178,124 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             log.info("新增题目成功，ID: {}", entity.getQuestionId());
             return entity.getQuestionId();
         }
+    }
+
+    /**
+     * 内容脏检查：只有“真实改过数据”才算。题型/学科/学段/年级/年份/难度/
+     * 题干/题干图/选项/答案/解析/知识点/来源 之一变化即为脏；分值/状态/
+     * 审核态等运营字段不参与（纯调分、上下架不触发重审）。
+     *
+     * <p>选项入参先过 unwrapJsonText 再比，保证与落库口径一致，
+     * 避免「去层转义」这种无实质变化误判为改动。</p>
+     *
+     * @param exists 库里旧行
+     * @param entity 本次组装的新行
+     * @return 是否真实改动
+     */
+    private static boolean contentDirty(EduQuestion exists, EduQuestion entity) {
+        return !equalsText(exists.getQuestionType(), entity.getQuestionType())
+                || !equalsText(exists.getQuestionSubject(), entity.getQuestionSubject())
+                || !equalsText(exists.getQuestionGradeLevel(), entity.getQuestionGradeLevel())
+                || !equalsText(exists.getQuestionGrade(), entity.getQuestionGrade())
+                || !equalsText(exists.getQuestionYear(), entity.getQuestionYear())
+                || !equalsInt(exists.getQuestionDifficulty(), entity.getQuestionDifficulty())
+                || !equalsText(trimOrNull(exists.getQuestionKnowledgePointIds()), trimOrNull(entity.getQuestionKnowledgePointIds()))
+                || !equalsText(trimOrNull(exists.getQuestionStem()), trimOrNull(entity.getQuestionStem()))
+                || !equalsText(trimOrNull(exists.getQuestionStemImages()), trimOrNull(entity.getQuestionStemImages()))
+                || !equalsText(trimOrNull(exists.getQuestionOptions()), trimOrNull(entity.getQuestionOptions()))
+                || !equalsText(trimOrNull(exists.getQuestionAnswer()), trimOrNull(entity.getQuestionAnswer()))
+                || !equalsText(trimOrNull(exists.getQuestionAnalysis()), trimOrNull(entity.getQuestionAnalysis()))
+                || !equalsText(trimOrNull(exists.getQuestionSource()), trimOrNull(entity.getQuestionSource()))
+                || !equalsText(trimOrNull(exists.getQuestionSourceType()), trimOrNull(entity.getQuestionSourceType()));
+    }
+
+    private static boolean equalsText(String a, String b) {
+        if (a == null) {
+            return b == null;
+        }
+        return a.equals(b);
+    }
+
+    private static boolean equalsInt(Integer a, Integer b) {
+        if (a == null) {
+            return b == null;
+        }
+        return a.equals(b);
+    }
+
+    private static String trimOrNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    /**
+     * 审核题目（通过/驳回）：仅管理员可调。
+     *
+     * @param id     题目标识
+     * @param passed 是否通过
+     * @param remark 驳回理由（驳回必填，通过时忽略并清空）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void auditQuestion(Long id, boolean passed, String remark) {
+        if (!EduUserContext.isAdmin()) {
+            throw new BusinessException("只有管理员可以审核题目");
+        }
+        EduQuestion exists = baseMapper.selectById(id);
+        if (exists == null) {
+            throw new BusinessException("题目不存在");
+        }
+        if (!passed && !StringUtils.hasText(remark)) {
+            throw new BusinessException("驳回请填写理由");
+        }
+        EduQuestion patch = new EduQuestion();
+        patch.setQuestionId(id);
+        patch.setQuestionAuditStatus(passed ? 1 : 2);
+        patch.setQuestionAuditRemark(passed ? null : remark.trim());
+        patch.setQuestionAuditCount((exists.getQuestionAuditCount() == null ? 0 : exists.getQuestionAuditCount()) + 1);
+        patch.setUpdateTime(LocalDateTime.now());
+        baseMapper.updateById(patch);
+        log.info("审核题目，ID: {} 结果: {}", id, passed ? "通过" : "驳回");
+    }
+
+    /**
+     * 批量审核题目（通过/驳回）：仅管理员可调。单条失败不影响其余，
+     * 返回实际成功条数（与 importQuestions 同一容错风格）。
+     *
+     * @param ids    题目ID列表
+     * @param passed 是否通过
+     * @param remark 驳回理由（驳回必填）
+     * @return 成功条数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int auditQuestions(List<Long> ids, boolean passed, String remark) {
+        if (!EduUserContext.isAdmin()) {
+            throw new BusinessException("只有管理员可以审核题目");
+        }
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        if (!passed && !StringUtils.hasText(remark)) {
+            throw new BusinessException("驳回请填写理由");
+        }
+        int count = 0;
+        for (Long id : ids) {
+            if (id == null || id <= 0) {
+                continue;
+            }
+            try {
+                auditQuestion(id, passed, remark);
+                count++;
+            } catch (Exception e) {
+                log.warn("审核题目失败 ID {}: {}", id, e.getMessage());
+            }
+        }
+        log.info("批量审核完成，通过={} 成功 {} 条，共 {} 条", passed, count, ids.size());
+        return count;
     }
 
     /**

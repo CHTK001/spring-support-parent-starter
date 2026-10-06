@@ -703,3 +703,51 @@ no-op」开放发现，r26 的「抖动」结论被 r27 修正**——同一按�
 - **定性**：两按钮功能可交付（列设置 4/6、刷新 5/6 观测生效，含新 jar定向）；0 断言失败；
   记开放发现：「学生全量会话后 data-config 工具栏按钮偶发无可见效果」，产品侧跟进
   会话状态依赖。
+
+> ⚠️ **本节「列设置」结论已被 §5.8 推翻并闭环**：r29 静态+实测确证它是**产品缺陷**
+> （不是抖动），已做最小中心修复并复测通过，全站该按钮按预期不再渲染。
+
+### 5.8 「列设置」死按钮闭环（r28 定性 → 修复 → r29 复测，2026-10-06）
+
+**r28 学生全量复现**（`logs/ui-click-r28-student-diag.log`，`routes 30 | clicks 606 |
+passed 678 | failed 0 | dead 0 | harness-err 0`，死按钮清零系诊断插桩只记事实不改判据），
+配合定向实测把「列设置」定性从「上下文相关开放发现」升级为**产品缺陷**：
+
+| 证据 | 结论 |
+|---|---|
+| `ReTable.vue` L4094 ElPopover `v-if="props.columns.length > 0"` | 列设置面板由 `props.columns` 决定，与子节点 `<ReTableColumn>` 无关 |
+| `ReTableToolbar.vue` L204–206 `#column-settings` slot 里裸 `ReButton`（无 `@click`） | 面板不渲染时按钮仍在，点击只出 tooltip → 必然 effect=none |
+| 8/10 eduai view 用 `<ReTableColumn>` 子节点声明列、**0 个**传 `:columns` | 按钮在这些页面 100% 是死按钮，与会话上下文无关（r27 表中「生效」的观测来自传 `:columns` 且 `:toolbar="false"` 之外的管理员上下文差异，历史归因有误） |
+| 实测 data-config / exam / paper / wrongbook 四页 `列设置` 均 `wrapped:false`（无 `.re-table__settings-trigger`），点之面板不存在 | 运行时确证 |
+
+**修法（最小中心修法，不动 10 个 view）**：`ReTable.vue` 新增 computed
+`effectiveToolbarConfig`——`props.columns.length === 0`（列由子节点声明）时下传
+`columnSettings:false`，使 `ReTableToolbar` 的 slot 与裸 `ReButton` 兜底**整体不渲染**；
+传 `:columns` 的页面行为逐字不变。曾评估「从子节点派生列」的高风险修法（涉 10 个 view、
+与默认槽渲染冲突），**已放弃**。
+
+**产物与部署**：`deploy/package.ps1`（vue-tsc + vite build）→ 1105 文件、
+bundle sha256 `599c50847ce3c861df0dda60502839fe6f913f4b708280d2dd21bb7a80fffe67`、
+index md5 `99215e6c4ecc666246ef072ac296c514`、asset `index-DQLXI18h.js`；
+`deploy.sh` 备份 `web-20261006-033027.tar.gz` + staging + 原子 rename + nginx 重载，
+`verify.sh` → `INDEX_MD5_MATCH / WEB_PROVENANCE_OK 文件数=1105`。
+构建日志 `logs/fe-build-r29.log`。
+
+> ⚠️ **来源说明（写入构建产物的他方改动）**：从**工作区**构建，`ReTable.vue` 相对 HEAD
+> 的 305 行差异里含他人未提交改动（`crosshairHighlight`、auto-refresh 60s 档与倒计时等），
+> 已一并进产物；本轮我方仅新增 `effectiveToolbarConfig` 与 `:config` 改绑。
+
+**r29 复测（PASS）**：
+
+| 轮次 | 命令口径 | 路由 | 点击 | 断言 | 失败 | 死按钮 | harness | 证据 |
+|---|---|---|---|---|---|---|---|---|
+| 管理员定向 | `-Only data-config` | 2 | 50 | 60 | **0** | **0** | 0 | `logs/ui-click-r29-admin-dc.log`、`logs/click-matrix-r29-admin-dataconfig/` |
+| 学生全量 | 全量 | 30 | 661 | 733 | **0** | **0** | 0 | `logs/ui-click-r29-student.log`、`logs/click-matrix-r29-student/` |
+
+- data-config 段出现 `popover controls: 5 (trigger '表格设置')`：`表格设置`（wrapped:true）
+  面板被真正打开并走查 5 个控件；`列设置` 按钮已不渲染，故无 dead 行。
+- 新 bundle 定向复核：data-config 组卷模板下 `列设置` 消失、`表格设置` 面板可开
+  （`.re-table__popover` display:block h=351；先前 `display:none` 是开关态恰好为关）。
+  首查见旧按钮系浏览器缓存，带 `?v=` 绕过即正常——**验证新产物必须绕缓存**。
+- 结论：**列设置死按钮已修复闭环**，r27 记的开放发现按「产品缺陷 + 最小中心修法」收口；
+  全站点击判据未改，仍是 0 断言失败 / 0 死按钮 / 0 harness 错误。
