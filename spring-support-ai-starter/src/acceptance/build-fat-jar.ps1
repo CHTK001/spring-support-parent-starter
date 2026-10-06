@@ -38,7 +38,17 @@ param(
   [string]$JavaHome = 'C:\Program Files\Amazon Corretto\jdk25.0.3_9',
   [string]$AppModule = 'D:\ch\project\spring-support-parent-starter\spring-support-ai-starter',
   [string]$RefJar = '',
-  [string[]]$AllowEntries = @()
+  [string[]]$AllowEntries = @(),
+  # Extra -D flags forwarded to the repackage build.
+  #
+  # WHY (2026-10-06): utils-support-flyway-maven-plugin runs at generate-resources
+  # and merges src/main/resources/db/init into target/db/V<version>__init_all.sql.
+  # When the local repo pins utils-support-common-starter to a baseline jar, that
+  # plugin (rebuilt by another session against the NEW utils API) can no longer
+  # resolve its own dependency and fails the build. The merged file is a build-time
+  # artifact only -- it is NOT packaged (the jar ships the raw db/init/*.sql), so
+  # skipping the goal is safe for the deployed artifact. Pass -MvnProps to control it.
+  [string[]]$MvnProps = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,7 +72,7 @@ foreach ($dir in $ModuleDirs) {
 }
 
 Write-Host "=== repackage $AppModule"
-& $Mvn -f (Join-Path $AppModule 'pom.xml') -o "-Dmaven.repo.local=$Repo" "$skipFlag" '-Dspring-boot.repackage.skip=false' clean package
+& $Mvn -f (Join-Path $AppModule 'pom.xml') -o "-Dmaven.repo.local=$Repo" "$skipFlag" @MvnProps '-Dspring-boot.repackage.skip=false' clean package
 if ($LASTEXITCODE -ne 0) { throw 'repackage failed' }
 
 $jar = Get-ChildItem (Join-Path $AppModule 'target') -Filter '*-exec.jar' |
