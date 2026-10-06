@@ -678,6 +678,125 @@ public class AiBotBindingController {
     }
 
     /**
+     * 启动机器人：绑定置为 {@code online} 并拉起消息轮询。
+     *
+     * <p>对应前端 Bots 页开关的「启用」半边。写出口按归属校验（管理员对他人绑定只读）；
+     * 无 {@code botToken} 的绑定拒绝启动——聊天引擎对无凭证记录直接返回，会出现
+     * 「库状态 online、运行态 stopped」的假在线。</p>
+     *
+     * @param id          数据库 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
+     * @return 启动结果（{@code status=online}，{@code runtime=running/stopped}）
+     */
+    @PostMapping("/{id}/start")
+    public ReturnResult<Map<String, Object>> start(@PathVariable Long id, HttpServletRequest httpRequest) {
+        SysAiBotBinding entity = requireOwnedBinding(id, httpRequest);
+        requireLoggedIn(entity);
+        botBindingService.updateStatus(entity.getBotId(), "online");
+        return ReturnResult.ok(runtimeBody(entity, "online"));
+    }
+
+    /**
+     * 停止机器人：绑定置为 {@code offline} 并停止消息轮询。
+     *
+     * <p>对应前端开关的「停用」半边与扫码弹窗的「退出登录」后的自动停止。
+     * 停止只影响本地轮询，不清除登录凭证，可随时再次启动。</p>
+     *
+     * @param id          数据库 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
+     * @return 停止结果（{@code status=offline}，{@code runtime=stopped}）
+     */
+    @PostMapping("/{id}/stop")
+    public ReturnResult<Map<String, Object>> stop(@PathVariable Long id, HttpServletRequest httpRequest) {
+        SysAiBotBinding entity = requireOwnedBinding(id, httpRequest);
+        botBindingService.updateStatus(entity.getBotId(), "offline");
+        return ReturnResult.ok(runtimeBody(entity, "offline"));
+    }
+
+    /**
+     * 重启机器人：先停止再启动消息轮询。
+     *
+     * <p>与手动「停用 → 启用」等价，共用同一套越权与凭证闸门，前端无需两次往返。</p>
+     *
+     * @param id          数据库 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
+     * @return 重启结果（{@code status=online}）
+     */
+    @PostMapping("/{id}/restart")
+    public ReturnResult<Map<String, Object>> restart(@PathVariable Long id, HttpServletRequest httpRequest) {
+        SysAiBotBinding entity = requireOwnedBinding(id, httpRequest);
+        requireLoggedIn(entity);
+        botBindingService.updateStatus(entity.getBotId(), "offline");
+        botBindingService.updateStatus(entity.getBotId(), "online");
+        return ReturnResult.ok(runtimeBody(entity, "online"));
+    }
+
+    /**
+     * 退出登录：停止消息轮询并把绑定置为 {@code offline}。
+     *
+     * <p>iLink 侧没有吊销接口，登出只能结束本地会话；绑定行保留（凭证仍在），
+     * 再次扫码会按 botId 合并回写 token 与 {@code online} 状态，历史消息不丢。
+     * 因此登出后仍可直接重新「启用」，删除绑定才等同于解绑。</p>
+     *
+     * @param id          数据库 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
+     * @return 登出结果（含 {@code message} 供前端提示）
+     */
+    @PostMapping("/{id}/logout")
+    public ReturnResult<Map<String, Object>> logout(@PathVariable Long id, HttpServletRequest httpRequest) {
+        SysAiBotBinding entity = requireOwnedBinding(id, httpRequest);
+        botBindingService.updateStatus(entity.getBotId(), "offline");
+        Map<String, Object> data = runtimeBody(entity, "offline");
+        data.put("message", "已退出登录，重新扫码即可绑定新账号");
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 取绑定并校验写归属（不存在或越权时抛出，由全局异常处理转 404/403）。
+     *
+     * @param id          数据库 标识
+     * @param httpRequest HTTP 请求（用于解析当前身份）
+     * @return 绑定记录
+     */
+    private SysAiBotBinding requireOwnedBinding(Long id, HttpServletRequest httpRequest) {
+        SysAiBotBinding entity = botBindingService.getById(id);
+        if (entity == null || StringUtils.isBlank(entity.getBotId())) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "机器人绑定不存在");
+        }
+        caller(httpRequest).requireWritable(entity.getOwnerKey());
+        return entity;
+    }
+
+    /**
+     * 启动类操作的前置条件：绑定必须已登录（有 botToken/appSecret）。
+     *
+     * @param entity 绑定记录
+     */
+    private void requireLoggedIn(SysAiBotBinding entity) {
+        if (StringUtils.isBlank(entity.getBotToken())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该机器人尚未登录，请先扫码绑定");
+        }
+    }
+
+    /**
+     * 组装启停结果（库状态 + 实时运行态）。
+     *
+     * <p>运行态取聊天引擎的真实存活判定，避免前端把「已写库但未起线程」误读为在线。</p>
+     *
+     * @param entity 绑定记录
+     * @param status 本次写入的库状态（{@code online}/{@code offline}）
+     * @return 结果体
+     */
+    private Map<String, Object> runtimeBody(SysAiBotBinding entity, String status) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("id", entity.getId());
+        data.put("botId", entity.getBotId());
+        data.put("status", status);
+        data.put("runtime", aiBotChatService.runtimeStatus(entity.getBotId()));
+        return data;
+    }
+
+    /**
      * 实体转响应 DTO。
      *
      * @param entity 数据库实体
