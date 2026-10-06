@@ -62,10 +62,13 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      * Page查询
     */
     public PageResult<EduQuestion> pageQuery(QuestionQueryDTO query) {
-        // 未传审核过滤时默认只看已通过：组卷侧（QuestionMarketDialog 不传 auditStatus）
-        // 不应看到待审/驳回题目；管理端需要时显式传 auditStatus（待审筛选/批量审核）。
+        // 未传审核过滤（null 或负数哨兵）时只看已通过：组卷侧（QuestionMarketDialog 不传）
+        // 与题库管理全量拉取（前端传 -1 表“不过滤”意图的兜底）分流——
+        // null → 默认 1（组卷/外部调用）；负数 → 置 null 不过滤（管理端全量+前端本地筛）。
         if (query.getAuditStatus() == null) {
             query.setAuditStatus(1);
+        } else if (query.getAuditStatus() < 0) {
+            query.setAuditStatus(null);
         }
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         // 前端下拉传 PRIMARY/JUNIOR 等码值，库里存中文名，不归一化学段筛选恒为 0 条
