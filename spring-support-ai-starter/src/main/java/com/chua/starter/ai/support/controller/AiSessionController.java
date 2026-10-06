@@ -150,9 +150,29 @@ public class AiSessionController {
         if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(SysAiSession::getSysUserId, AiUserContext.requireUserId());
         }
-        wrapper.orderByDesc(SysAiSession::getCreateTime);
+        // 分组过滤：后端当前没有会话归属分组字段，全部视为未分组。
+        // groupId 非空（真实分组）时返回空页并 hasMore=false，避免把别组数据混进来；
+        // 未分组时按 skip/limit 分页并多取一条判断 hasMore。
+        // 之前这里直接忽略 skip/limit/groupId，侧边栏「加载更多」永远拿不到下一页。
+        boolean ungrouped = groupId == null || groupId.isBlank() || "null".equalsIgnoreCase(groupId)
+                || "undefined".equalsIgnoreCase(groupId);
 
-        List<SysAiSession> sessions = sessionMapper.selectList(wrapper);
+        int offset = skip != null && skip > 0 ? skip : 0;
+        int pageSize = limit != null && limit > 0 ? Math.min(limit, 100) : 15;
+
+        List<SysAiSession> sessions;
+        boolean hasMore;
+        if (!ungrouped) {
+            sessions = java.util.Collections.emptyList();
+            hasMore = false;
+        } else {
+            // 多取一条用于判断 hasMore
+            com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiSession> page =
+                    new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(offset / pageSize + 1, pageSize + 1);
+            List<SysAiSession> fetched = sessionMapper.selectPage(page, wrapper).getRecords();
+            hasMore = fetched.size() > pageSize;
+            sessions = hasMore ? fetched.subList(0, pageSize) : fetched;
+        }
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (SysAiSession session : sessions) {
@@ -161,13 +181,14 @@ public class AiSessionController {
             item.put("title", session.getTitle());
             item.put("createdAt", session.getCreateTime());
             item.put("updatedAt", session.getUpdateTime());
-            
+
             items.add(item);
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("items", items);
-        result.put("total", items.size());
+        result.put("total", offset + items.size() + (hasMore ? 1 : 0));
+        result.put("hasMore", hasMore);
         return ReturnResult.ok(result);
     }
 
@@ -208,9 +229,15 @@ public class AiSessionController {
         if (!crossAccount) {
             wrapper.eq(SysAiSession::getSysUserId, userId);
         }
+        // 未分组会话按创建时间倒序取 pageSize+1 条：多取的一条只用来判断 hasMore，
+        // 之前这里 hasMore 硬编码 false，且未分组会话超过一页时永远翻不到下一页。
         wrapper.orderByDesc(SysAiSession::getCreateTime);
-        wrapper.last("LIMIT " + pageSize);
-        List<SysAiSession> sessions = sessionMapper.selectList(wrapper);
+        List<SysAiSession> sessions = sessionMapper.selectList(
+                wrapper.last("LIMIT " + (pageSize + 1)));
+        boolean ungroupedHasMore = sessions.size() > pageSize;
+        if (ungroupedHasMore) {
+            sessions = sessions.subList(0, pageSize);
+        }
 
         // 构造 groupSessions（未分组）
         List<Map<String, Object>> groupSessions = new ArrayList<>();
@@ -227,7 +254,7 @@ public class AiSessionController {
             items.add(item);
         }
         ungroupedGroup.put("items", items);
-        ungroupedGroup.put("hasMore", false);
+        ungroupedGroup.put("hasMore", ungroupedHasMore);
         groupSessions.add(ungroupedGroup);
 
         Map<String, Object> result = new HashMap<>();
