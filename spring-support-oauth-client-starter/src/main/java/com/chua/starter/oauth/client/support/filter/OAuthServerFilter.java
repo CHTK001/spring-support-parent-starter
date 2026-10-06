@@ -75,6 +75,32 @@ public class OAuthServerFilter implements ServerFilter {
     private static final String PRIVATE_BUCKETS_PROPERTY = "plugin.oauth.file-storage.private-buckets";
 
     /**
+     * 跨域来源白名单环境配置键（逗号分隔，支持 {@code *} 表示全部放行）
+     *
+     * <p><b>存在的理由（修复 CORS 缺陷）</b>：本过滤器原先无条件把请求的
+     * {@code Origin} 回显到 {@code Access-Control-Allow-Origin}。虽然此处未同时下发
+     * {@code Access-Control-Allow-Credentials}，浏览器因此不会把带凭据的响应交给
+     * 恶意页面，但「任意站点都能拿到本服务的跨域响应」本身仍是缺陷：</p>
+     * <ul>
+     *   <li>一旦后续任何一处补上 {@code Allow-Credentials: true}（这是极常见的
+     *       「修前端跨域报错」式改动），立刻升级为可读取用户私有桶文件内容的漏洞；</li>
+     *   <li>错误响应体（鉴权失败原因）可被任意站点读取，便于探测；</li>
+     *   <li>触发浏览器对不同源发起的预检/实际请求，可用于放大与压测。</li>
+     * </ul>
+     * <p>现改为白名单：命中才回显，未命中则<b>不下发任何跨域头</b>（而非回显 + 阻断），
+     * 让浏览器按标准自己拒绝，行为可预期。配置 {@code *} 可保留旧的宽松行为，
+     * 但仅建议用于本地联调。</p>
+     */
+    private static final String CORS_ALLOWED_ORIGINS_PROPERTY = "plugin.oauth.file-storage.cors-allowed-origins";
+
+    /**
+     * 跨域来源白名单（支持 {@code *} 通配）。
+     *
+     * <p>空集合 = 不允许任何跨域来源（fail-closed）。</p>
+     */
+    private volatile Set<String> corsAllowedOrigins = Set.of();
+
+    /**
      * Bearer 前缀
      */
     private static final String BEARER_PREFIX = "Bearer ";
@@ -85,7 +111,10 @@ public class OAuthServerFilter implements ServerFilter {
     private static final int SUCCESS_CODE = 200;
 
     /**
-     * 一次性链接路径段（本身即凭证，放行）
+     * 一次性链接路径段。
+     *
+     * <p>「消费」（{@code GET /ot/{token}}）免鉴权：令牌本身即凭证。
+     * 「签发」（{@code POST /ot}）不豁免：见 {@link #isOneTimeMint}。</p>
      */
     private static final String ONE_TIME_SEGMENT = "ot";
 
@@ -147,6 +176,20 @@ public class OAuthServerFilter implements ServerFilter {
         if (!isBlank(csv)) {
             setPrivateBuckets(parseCsv(csv));
         }
+        // <b>修复</b>：跨域来源此前无条件回显 Origin，现改为白名单。
+        // 未配置时 fail-closed —— 不下发任何跨域头。
+        String origins = config == null ? null : config.getInitParameter("corsAllowedOrigins");
+        if (isBlank(origins)) {
+            origins = environmentProperty(CORS_ALLOWED_ORIGINS_PROPERTY);
+        }
+        if (!isBlank(origins)) {
+            setCorsAllowedOrigins(parseCsv(origins));
+        }
+        if (corsAllowedOrigins.isEmpty()) {
+            log.warn("[OAuthServerFilter] 未配置 {}，跨域请求将不返回任何 CORS 头。"
+                    + "若前端需要跨域访问文件存储，请配置为逗号分隔的来源列表（本地联调可用 *）。",
+                    CORS_ALLOWED_ORIGINS_PROPERTY);
+        }
     }
 
     /**
@@ -167,6 +210,10 @@ public class OAuthServerFilter implements ServerFilter {
         if (enable != null) {
             this.enabled = Boolean.parseBoolean(String.valueOf(enable).trim());
         }
+        Object origins = config.get("corsAllowedOrigins");
+        if (origins != null) {
+            setCorsAllowedOrigins(parseCsv(String.valueOf(origins)));
+        }
     }
 
     /**
@@ -182,6 +229,23 @@ public class OAuthServerFilter implements ServerFilter {
         applyCorsHeaders(request, response);
 
         String bucket = resolveBucket(request.getPath());
+        if (bucket == null && isOneTimeMint(request)) {
+            // 签发一次性链接的目标桶在查询参数里，不在路径里。放行整段 /ot
+            // 等于把私有桶的「读」通道开给了未认证方：任意人 POST /ot?bucket=<私有桶>&key=<已知 key>
+            // 就能换到一条免鉴权的 /ot/{token} 直链。因此签发必须按目标桶鉴权，
+            // 只保留「消费」（GET /ot/{token}）免鉴权 —— 那时令牌本身已是凭证，
+            // 且只有鉴权通过的人才签得出令牌。
+            String mintBucket = request.getParam("bucket");
+            if (isBlank(mintBucket)) {
+                reject(response, 400, "一次性链接缺少 bucket 参数");
+                return;
+            }
+            if (!isPrivate(mintBucket)) {
+                chain.doFilter(request, response);
+                return;
+            }
+            bucket = mintBucket;
+        }
         if (bucket == null || !isPrivate(bucket)) {
             chain.doFilter(request, response);
             return;
@@ -221,6 +285,29 @@ public class OAuthServerFilter implements ServerFilter {
             request.setAttribute("oauth.user", information.getReturnResult());
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * 是否为一次性链接的「签发」请求（{@code POST /ot?bucket=xxx&key=yyy}）。
+     *
+     * <p>「消费」（{@code GET /ot/{token}}）不算 —— 它带令牌段，路径首段仍是 {@code ot}，
+     * 但方法为 GET，由调用方用方法区分。</p>
+     *
+     * @param request 当前请求
+     * @return true 表示这是签发请求
+     */
+    private boolean isOneTimeMint(ServerRequest request) {
+        if (request.getMethod() != HttpMethod.POST) {
+            return false;
+        }
+        String path = request.getPath();
+        if (isBlank(path)) {
+            return false;
+        }
+        String normalized = path.startsWith("/") ? path.substring(1) : path;
+        int index = normalized.indexOf('/');
+        String segment = index < 0 ? normalized : normalized.substring(0, index);
+        return ONE_TIME_SEGMENT.equalsIgnoreCase(segment);
     }
 
     /**
@@ -427,7 +514,9 @@ public class OAuthServerFilter implements ServerFilter {
      */
     private void applyCorsHeaders(ServerRequest request, ServerResponse response) {
         String origin = request.getHeader("Origin");
-        if (isBlank(origin)) {
+        if (isBlank(origin) || !isOriginAllowed(origin)) {
+            // 未命中白名单：一个跨域头都不下发，由浏览器按标准拒绝。
+            // 比「回显 + 别的手段阻断」更可预期，也避免被误读为「已放行」。
             return;
         }
         response.setHeader("Access-Control-Allow-Origin", origin);
@@ -440,6 +529,67 @@ public class OAuthServerFilter implements ServerFilter {
         response.setHeader("Access-Control-Expose-Headers",
                 "Content-Disposition, X-FileStorage-Preview, Content-Range, Accept-Ranges, X-FileStorage-ImageOp, X-FileStorage-ImageOp-Reason, X-FileStorage-Convert, X-FileStorage-Client-Renderer");
         response.setHeader("Vary", "Origin");
+    }
+
+    /**
+     * 判断来源是否在跨域白名单内。
+     *
+     * <p>比对前做归一化：去尾斜杠、scheme/host 小写。Origin 头由浏览器生成、
+     * 不会含路径或大小写抖动，但配置里手写时常带上尾斜杠或大写 scheme，
+     * 不归一化会导致「配了却不生效」这类难排查的问题。</p>
+     *
+     * @param origin 来源
+     * @return 允许返回 true
+     */
+    boolean isOriginAllowed(String origin) {
+        Set<String> allowed = this.corsAllowedOrigins;
+        if (allowed == null || allowed.isEmpty()) {
+            return false;
+        }
+        String normalized = normalizeOrigin(origin);
+        for (String candidate : allowed) {
+            if ("*".equals(candidate) || normalized.equals(normalizeOrigin(candidate))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 归一化 Origin：去尾斜杠并转小写。
+     *
+     * @param origin 原始值
+     * @return 归一化结果
+     */
+    private String normalizeOrigin(String origin) {
+        if (origin == null) {
+            return "";
+        }
+        String value = origin.trim().toLowerCase();
+        while (value.endsWith("/")) {
+            value = value.substring(0, value.length() - 1);
+        }
+        return value;
+    }
+
+    /**
+     * 设置跨域来源白名单。
+     *
+     * @param origins 来源集合
+     */
+    public void setCorsAllowedOrigins(Set<String> origins) {
+        this.corsAllowedOrigins = (origins == null || origins.isEmpty())
+                ? Set.of()
+                : new LinkedHashSet<>(parseCsv(String.join(",", origins)));
+    }
+
+    /**
+     * 读取当前跨域来源白名单。
+     *
+     * @return 集合
+     */
+    public Set<String> getCorsAllowedOrigins() {
+        return corsAllowedOrigins;
     }
 
     /**

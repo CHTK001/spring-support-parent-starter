@@ -62,10 +62,30 @@ public class AuthClientProperties {
 
     /**
      * 内置默认白名单（不会被 yaml 配置覆盖）
+     *
+     * <p><b>修复</b>：原清单里混入了下列「别的应用专用」的路径，而本 starter 是被所有
+     * 服务共用的 —— 任何应用只要恰好注册了同名路由，就会被静默地关闭鉴权。这类
+     * 默认值比不写更危险：它看起来是「框架统一放行的安全路径」，实际是攻击面。
+     * 已从默认值中移除，需要的应用请在自己的 {@code plugin.oauth.whitelist} 里显式声明
+     * （这样「谁放行了什么」是可见的，而不是藏在依赖的默认值里）：</p>
+     * <ul>
+     *   <li>{@code /api/providers/} 下任意深度的 {@code credentials} 子路径 ——
+     *       <b>供应商凭据</b>。把「读密钥」的路径写进免鉴权清单，任何实现该路由的
+     *       服务都会直接泄露凭据。绝不能作为默认值。</li>
+     *   <li>{@code /api/auth/user} —— 当前登录用户信息，未登录也返回即身份信息泄露。</li>
+     *   <li>{@code /api/settings/client} —— 客户端配置。</li>
+     * </ul>
+     *
+     * <p>保留 {@code /v1/sys/setting} 是有意的：它正是前端启动时拉取远程配置的入口，
+     * 必须匿名可访问。它不构成用户数据泄露，但「匿名可写的配置注入」风险由前端侧
+     * 的配置键白名单（见 vue-support-parent-starter 的 config/setting 校验）承担。</p>
      */
     private static final List<String> DEFAULT_WHITELIST = List.of(
             "/**/captcha",
             "/**/login",
+            // 自渲染登录表单提交端点：Ant 下 /**/login 不匹配 /login/form，必须单列深层条目，
+            // 否则表单 POST 会被鉴权拦回登录页（登录页自锁，现象是点登录无限回到登录页）。
+            "/**/login/**",
             "/**/oauth",
             "/**/doLogin",
             "/**/logout",
@@ -91,15 +111,12 @@ public class AuthClientProperties {
             "/**/node/receive_push",
             "/api/system/info",
             "/api/auth/status",
-            "/api/auth/user",
               "/api/extensions/**",
               "/api/workshop/**",
               "/v2/v1/**",
               "/v2/usage/**",
              "/api/terminals",
-            "/api/terminals/**",
-            "/api/providers/**/credentials",
-            "/api/settings/client"
+            "/api/terminals/**"
     );
 
     /**
@@ -273,6 +290,17 @@ public class AuthClientProperties {
      * 登出页
      */
     private String logoutPage = "/logout";
+    /**
+     * 自渲染登录表单提交端点（表单编码 POST）。
+     *
+     * <p>浏览器原生表单只能发 {@code application/x-www-form-urlencoded}，
+     * {@code /v1/users/login} 只收 JSON，表单投递到这里完成
+     * 「验参 + 调协议 + 写 Cookie + 302 回跳」。默认值挂在 loginPage 之下。
+     * 注意 Ant 语义：{@code /**&#47;login} <b>不匹配</b> {@code /login/form}，
+     * 因此该路径必须显式出现在白名单（见 DEFAULT_WHITELIST 的深层条目），否则
+     * 表单提交会被鉴权拦回登录页自锁。</p>
+     */
+    private String loginFormAction = "/login/form";
     /**
      * 临时令牌页
      */

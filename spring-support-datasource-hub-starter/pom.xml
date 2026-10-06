@@ -65,6 +65,22 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- ZooKeeper 管理页：复用本仓 Curator 封装，不额外引入第三方注册中心客户端
+             （坐标照抄 monitor-starter，用于 ZookeeperClient/ZookeeperManageServiceImpl） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-zookeeper-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- Curator 5.9.0 传递依赖 3.9.3，本仓已备 3.9.4 补丁版，就近覆盖以免重复拉取
+             （坐标照抄 monitor-starter，用于 ZookeeperClient/ZookeeperManageServiceImpl） -->
+        <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.9.6</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

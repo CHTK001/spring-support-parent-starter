@@ -382,6 +382,14 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         EduUserContext.checkWritable(paper.getOwnerUserId());
         paperQuestionMapper.deleteByPaperAndQuestion(paperId, oldQuestionId);
 
+        EduQuestion replacement = questionMapper.selectById(newQuestionId);
+        if (replacement == null) {
+            throw new BusinessException("题目不存在: " + newQuestionId);
+        }
+        if (replacement.getQuestionStatus() == null || replacement.getQuestionStatus() != 1
+                || replacement.getQuestionAuditStatus() == null || replacement.getQuestionAuditStatus() != 1) {
+            throw new BusinessException("题目未审核通过，不能加入试卷: " + newQuestionId);
+        }
         EduPaperQuestion pq = new EduPaperQuestion();
         pq.setPaperQuestionPaperId(paperId);
         pq.setPaperQuestionQuestionId(newQuestionId);
@@ -517,6 +525,11 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
                 throw new BusinessException("题目不存在: " + item.questionId());
             }
             EduUserContext.checkReadable(question.getOwnerUserId());
+            // 手动加题同样只允许已审核通过的：否则可绕过候选列表直接灌入待审题
+            if (question.getQuestionStatus() == null || question.getQuestionStatus() != 1
+                    || question.getQuestionAuditStatus() == null || question.getQuestionAuditStatus() != 1) {
+                throw new BusinessException("题目未审核通过，不能加入试卷: " + item.questionId());
+            }
 
             EduPaperQuestion relation = new EduPaperQuestion();
             relation.setPaperQuestionPaperId(paperId);

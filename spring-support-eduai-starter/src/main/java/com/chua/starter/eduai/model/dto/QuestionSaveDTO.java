@@ -92,9 +92,19 @@ public class QuestionSaveDTO {
     private String questionSourceType;
 
     /**
-     * 审核状态（0-待审核 1-通过 2-驳回）
+     * 审核状态（0-待审核 1-通过 2-驳回；save 接口不采信客户端传值，只能经专用审核接口流转）
      */
     private Integer questionAuditStatus;
+
+    /**
+     * 驳回理由（驳回必填；save 接口不采信，只能经专用审核接口写入）
+     */
+    private String questionAuditRemark;
+
+    /**
+     * 保存并审核：管理员新建时直接通过用。非管理员传 true 直接拒绝。
+     */
+    private Boolean auditOnSave;
 
     /**
      * 状态（0-停用 1-启用）
