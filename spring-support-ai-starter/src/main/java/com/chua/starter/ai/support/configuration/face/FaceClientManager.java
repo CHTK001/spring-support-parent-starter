@@ -15,6 +15,8 @@ import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -46,6 +48,22 @@ import java.util.Objects;
 @Component
 @RequiredArgsConstructor
 public class FaceClientManager {
+
+    /**
+     * 人脸模型**兜底取值**观测专用日志器（见 {@link #resolveFaceModel(String)}）。
+     *
+     * <p>为什么不复用 {@code @Slf4j} 生成的类日志器：验收脚本 {@code verify-effective.sh}
+     * 用 {@code grep -aF "FaceClientManager"} 统计「共享单例的重建出现在哪类线程」，
+     * 而 logback 会把 logger 类名（{@code …configuration.face.FaceClientManager}）打在行首 ——
+     * 本类<b>任何</b> INFO 日志都会落进那个统计口径。偏偏兜底回显是在**按账号**管线重建
+     * （{@code FaceStores#reloadAccount}，跑在 {@code *-handler-*} 请求线程）路径上触发的，
+     * 挂类日志器就会被误判成「请求线程重建了共享单例」→ 判定②假红。</p>
+     *
+     * <p>判据不能为了让新日志通过去改（那是放松判据），所以**新日志挪出统计口径**，
+     * 而不是动统计口径：消息前缀仍是 {@code [Face]}、观测点照常可 grep，
+     * {@code t2.sh} 直接数它；{@code ve.sh} 的字面量统计一条未改。</p>
+     */
+    private static final Logger RESOLVE_OBSERVE = LoggerFactory.getLogger("face.model.resolve");
 
     /**
      * 全局设置键值分组
@@ -528,7 +546,17 @@ public class FaceClientManager {
         if (StringUtils.isNotBlank(v)) {
             return v;
         }
-        return settingReader.getStr("runtime", "default_face_model");
+        // 兜底观测点：tier-1（face 分组字段）留空 → tier-2（runtime/default_face_model）。
+        //
+        // 这条链路此前**没有任何日志**：验收只能看到「管线建没建得起来」
+        //（GET /v2/face/models 的 200/400），看不到**实际取用了哪个模型** ——
+        // t2.sh 开篇原话「当时选的观测点看不到解析结果」，规格③因此只验到「兜底分支条件成立」。
+        // 回显解析结果后，「默认模型真的被取用」变成可直接断言的正面证据（t2.sh 规格③ 已挂上判据），
+        // 口径与 RagClientManager「rag_llm_model 未配置，回落默认模型: {}」一致。
+        String fallback = settingReader.getStr("runtime", "default_face_model");
+        RESOLVE_OBSERVE.info("[Face] {} 未配置，回落默认模型: {}", field,
+                StringUtils.isNotBlank(fallback) ? fallback : "(空)=该能力未启用");
+        return fallback;
     }
 
     private FacePipeline buildPipeline(VectorStorage vectorStorageForPipeline) {
