@@ -43,6 +43,18 @@ param(
     [switch]$ChromeForStudent
 )
 
+# PowerShell 5.1 does NOT unroll a JSON array from ConvertFrom-Json: the inventory
+# comes back as ONE element whose kind/label are arrays ($items.Count=1,
+# elem0=System.Object[]). The crawler then builds a garbage click selector, gets
+# 'gone' for every control, records the whole route as a single "vanished" row and
+# reports 0 clicks -- a total false result that reads exactly like a broken product
+# (observed when a verify run was launched via powershell.exe instead of pwsh).
+# PS7 unrolls into real item objects. Every driver uses pwsh; refuse 5.1 outright.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host ('requires PowerShell 7+ (pwsh); running on {0} would silently corrupt every inventory' -f $PSVersionTable.PSVersion)
+    exit 2
+}
+
 $ErrorActionPreference = 'Continue'
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
@@ -70,9 +82,16 @@ function AbRaw {
     param([string[]]$CliArgs, [int]$TimeoutMs = 0)
     if (-not $script:AbExe) { return '' }
     $tmo = if ($TimeoutMs -gt 0) { $TimeoutMs } else { $script:AbTimeoutMs }
+    # Isolate every call in our own daemon + browser (--namespace isolates daemon
+    # sockets and state dirs). The shared "default" session is also used by other
+    # agent sessions and the OpenChamber panel in this workspace; a foreign tab
+    # stealing the active page mid-run yields phantom results (pages with no
+    # main.el-main, session-bounce retries, dead clicks) that read like product bugs
+    # but are just cross-session contamination.
+    $iso = @('--namespace', 'eduai-acceptance')
     $out = [IO.Path]::GetTempFileName()
     $err = "$out.err"
-    $p = Start-Process -FilePath $script:AbExe -ArgumentList $CliArgs -NoNewWindow -PassThru `
+    $p = Start-Process -FilePath $script:AbExe -ArgumentList ($iso + $CliArgs) -NoNewWindow -PassThru `
         -RedirectStandardOutput $out -RedirectStandardError $err
     if (-not $p.WaitForExit($tmo)) {
         try { $p.Kill() } catch { }
@@ -1113,6 +1132,119 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
     # crawled an EMPTY dashboard (1 control instead of 10) and left it empty. Removing the
     # non-layout keys one by one keeps the layout and the run stays reproducible.
     Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /layout/i.test(k)) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
+    # ---- Phase 0b: walk the login page's own controls ----
+    # Until now /login was only ever exercised by typing credentials and pressing
+    # Enter: the password-visibility toggle, the empty-form validation and any
+    # auxiliary links on the page were never clicked, so the entry page of the
+    # whole product had ZERO click coverage. Walk them here, on an EMPTY form
+    # (storage was just wiped, so no autofill): an empty form cannot authenticate,
+    # so the walk cannot consume the login it is about to perform. Each pass
+    # re-opens /login and clicks the first control not yet visited; a control that
+    # navigates ends its pass and the next pass starts from a fresh /login.
+    Write-Host '########## 0b. login page controls ##########'
+    $jsLoginInv = @"
+(() => {
+  const vis = el => { if (!el || el.disabled) return false; const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false; const st = getComputedStyle(el);
+    return st.visibility !== 'hidden' && st.display !== 'none' && parseFloat(st.opacity || '1') !== 0; };
+  const SEL = ['button', 'a[href]', '[role=button]', '.el-input__suffix', '[class*=password-toggle]', '[class*=toggle]', '.el-checkbox', '.el-tabs__item'].join(',');
+  const out = []; const seen = new Set(); let n = 0;
+  document.querySelectorAll(SEL).forEach(el => {
+    if (!vis(el)) return;
+    if (el.closest('.el-popper, .el-select-dropdown')) return;
+    const cls = (el.className || '').toString();
+    const label = ((el.innerText || el.getAttribute('title') || el.getAttribute('aria-label') || '') + '').trim().slice(0, 26);
+    const key = el.tagName + '|' + cls.slice(0, 30) + '|' + label;
+    if (seen.has(key)) return; seen.add(key);
+    const id = 'L' + (n++);
+    el.setAttribute('data-uitest-l', id);
+    let kind = (el.tagName === 'A') ? 'link' : ((el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') ? 'button' : 'field-affordance');
+    if (cls.indexOf('el-checkbox') >= 0) kind = 'checkbox';
+    if (cls.indexOf('el-tabs__item') >= 0) kind = 'tab';
+    out.push({ id: id, kind: kind, label: label, cls: cls.slice(0, 40) });
+  });
+  return JSON.stringify(out);
+})()
+"@
+    $lgVisited = @()
+    for ($lg = 0; $lg -lt 12; $lg++) {
+        AbRaw @('open', "$Base/login") 60000 | Out-Null
+        Start-Sleep -Seconds 4
+        $lgBack = [bool](WaitJs 'location.pathname.indexOf("/login")===0' 10)
+        if (-not $lgBack) {
+            # A walk click ended up authenticated (or anywhere but /login): drop the
+            # session keys again (layout cache stays) so the real login below still runs.
+            Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /layout/i.test(k)) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
+            AbRaw @('open', "$Base/login") 60000 | Out-Null
+            Start-Sleep -Seconds 4
+        }
+        $lgRaw = ''
+        try { $lgRaw = [string](Js $jsLoginInv 40000) } catch { $lgRaw = '' }
+        $lgItems = @()
+        if ($lgRaw -and $lgRaw.StartsWith('[')) { try { $lgItems = @($lgRaw | ConvertFrom-Json) } catch { } }
+        $lgNext = $null
+        foreach ($c in $lgItems) {
+            $lgK = [string]$c.kind + '|' + [string]$c.label
+            if ($lgVisited -notcontains $lgK) { $lgNext = $c; break }
+        }
+        if (-not $lgNext) { break }
+        $lgVisited += ([string]$lgNext.kind + '|' + [string]$lgNext.label)
+        $lgLbl = [string]$lgNext.label
+        if (-not $lgLbl) { $lgLbl = '[icon:' + ([string]$lgNext.cls).Trim() + ']' }
+        $lgSel = '[data-uitest-l=' + $lgNext.id + ']'
+        Clear-Evidence
+        $lgB = (Js $jsProbe) | ConvertFrom-Json
+        $lgRes = ''
+        try { $lgRes = [string](Js ("(() => { const el = document.querySelector('$lgSel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $lgRes = 'transport' }
+        if ($lgRes -ne 'ok') {
+            [void]$script:Dead.Add("login/$($lgNext.kind) '$lgLbl' -> $lgRes")
+            continue
+        }
+        $script:Clicks++
+        Start-Sleep -Milliseconds $SettleMs
+        $lgA = (Js $jsProbe) | ConvertFrom-Json
+        $lgEv = Read-Evidence
+        $lgEff = 'none'
+        if ($lgA.path -ne $lgB.path) { $lgEff = 'navigate' }
+        elseif ($lgA.dialogs -gt $lgB.dialogs) { $lgEff = 'dialog' }
+        elseif ($lgA.toasts -gt $lgB.toasts -or $lgA.toastText -ne $lgB.toastText) { $lgEff = 'toast' }
+        elseif ($lgA.act -ne $lgB.act) { $lgEff = 'state' }
+        elseif ($lgA.inputs -ne $lgB.inputs) { $lgEff = 'input' }
+        elseif ($lgA.nodes -ne $lgB.nodes) { $lgEff = 'node' }
+        elseif ($lgA.htmlLen -ne $lgB.htmlLen) { $lgEff = 'style' }
+        elseif ($lgA.bodyLen -ne $lgB.bodyLen) { $lgEff = 'dom' }
+        elseif ($lgEv.reqTotal -gt 0) { $lgEff = 'request' }
+        if ($lgEff -eq 'none') {
+            # Same fallback as the content phase: some controls ignore synthetic clicks.
+            AbRaw @('scrollintoview', $lgSel) 30000 | Out-Null
+            AbRaw @('click', $lgSel) 45000 | Out-Null
+            Start-Sleep -Milliseconds ($SettleMs + 600)
+            $lgA2 = (Js $jsProbe) | ConvertFrom-Json
+            $lgEv2 = Read-Evidence
+            $lgE2 = 'none'
+            if ($lgA2.path -ne $lgA.path) { $lgE2 = 'route' }
+            elseif ($lgA2.dialogs -gt $lgA.dialogs) { $lgE2 = 'dialog' }
+            elseif ($lgA2.toasts -gt $lgA.toasts -or $lgA2.toastText -ne $lgA.toastText) { $lgE2 = 'toast' }
+            elseif ($lgA2.act -ne $lgA.act) { $lgE2 = 'state' }
+            elseif ($lgA2.inputs -ne $lgA.inputs) { $lgE2 = 'input' }
+            elseif ($lgA2.nodes -ne $lgA.nodes) { $lgE2 = 'node' }
+            elseif ($lgA2.htmlLen -ne $lgA.htmlLen) { $lgE2 = 'style' }
+            elseif ($lgA2.bodyLen -ne $lgA.bodyLen) { $lgE2 = 'dom' }
+            elseif ($lgEv2.reqTotal -gt 0) { $lgE2 = 'request' }
+            if ($lgE2 -ne 'none') { $lgEff = "pointer-$lgE2"; $lgA = $lgA2; $lgEv = $lgEv2 }
+        }
+        [void]$script:Rows.Add(("/login|$($lgNext.kind)|$lgLbl|$lgEff|$($lgA.path)|$($lgEv.pageErr)|$($lgEv.consoleErr)|$($lgEv.http5xx)|$($lgEv.http4xx)"))
+        $lgDetail = "kind=$($lgNext.kind) label='$lgLbl' effect=$lgEff pageErr=$($lgEv.pageErr) consoleErr=$($lgEv.consoleErr) 5xx=$($lgEv.http5xx) 4xx=$($lgEv.http4xx)"
+        if ($lgEff -ne 'navigate') {
+            # Navigating links (anchors) are allowed to leave; the next pass re-opens
+            # /login. Everything else must leave the page healthy.
+            if ($lgEv.pageErr -gt 0) { Ck "login/$($lgNext.kind) '$lgLbl' no page error" $false $lgDetail }
+            elseif ($lgEv.consoleErr -gt 0) { Ck "login/$($lgNext.kind) '$lgLbl' no console error" $false $lgDetail }
+            elseif ($lgEv.http5xx -gt 0) { Ck "login/$($lgNext.kind) '$lgLbl' no 5xx" $false ($lgDetail + ' ' + $lgEv.first5) }
+            else { $script:Pass++ }
+        }
+    }
+    Ck 'login page controls walked' ($lgVisited.Count -gt 0) ('visited=' + $lgVisited.Count + ' [' + ($lgVisited -join '; ') + ']')
     $phUser = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x7528)$([char]0x6237)$([char]0x540D)"
     $phPwd = "$([char]0x8BF7)$([char]0x8F93)$([char]0x5165)$([char]0x5BC6)$([char]0x7801)"
     $logged = $false
