@@ -8,6 +8,7 @@ import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.AiFaceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -486,6 +487,11 @@ public class FaceController {
         try {
             List<DetectionInfo> results = faceService.animeDetect(file.getBytes());
             return ReturnResult.ok(Map.of("count", results.size(), "faces", results));
+        } catch (ApiException e) {
+            // 能力未配置是**可预期业务状态**，不是程序错误：只记一行 WARN，不打异常栈。
+            // 契约不变（fg.sh §10.5：可选能力关闭时 200 + 结构完整信封）。
+            log.warn("[Face] 动漫人脸检测未配置: {}", e.getMessage());
+            return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[Face] 动漫人脸检测失败", e);
             return ReturnResult.error("动漫人脸检测失败: " + e.getMessage());
@@ -541,6 +547,12 @@ public class FaceController {
             return ResponseEntity.ok()
                     .contentType(MediaType.IMAGE_PNG)
                     .body(result);
+        } catch (ApiException e) {
+            // 「restore_model 未配置」是可预期状态：WARN 一行代替 ERROR + 全栈
+            // （验收报告 §7.5 记录的正是修复前的 NPE 噪声）。
+            // 状态码不变：fg.sh §10.6 要求二进制端点未配置模型时 400，不得 5xx。
+            log.warn("[Face] 人脸修复未配置: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("[Face] 人脸修复失败", e);
             return ResponseEntity.badRequest().build();
@@ -565,6 +577,9 @@ public class FaceController {
         try {
             String result = faceService.analyzeAttributes(file.getBytes());
             return ReturnResult.ok(Map.of("attributes", result));
+        } catch (ApiException e) {
+            log.warn("[Face] 人脸属性分析未配置: {}", e.getMessage());
+            return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[Face] 人脸属性分析失败", e);
             return ReturnResult.error("人脸属性分析失败: " + e.getMessage());
@@ -589,6 +604,9 @@ public class FaceController {
         try {
             String result = faceService.analyzeEmotion(file.getBytes());
             return ReturnResult.ok(Map.of("emotion", result));
+        } catch (ApiException e) {
+            log.warn("[Face] 人脸表情识别未配置: {}", e.getMessage());
+            return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[Face] 人脸表情识别失败", e);
             return ReturnResult.error("人脸表情识别失败: " + e.getMessage());
@@ -613,6 +631,9 @@ public class FaceController {
         try {
             float[] points = faceService.landmark(file.getBytes());
             return ReturnResult.ok(Map.of("points", points));
+        } catch (ApiException e) {
+            log.warn("[Face] 人脸关键点未配置: {}", e.getMessage());
+            return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[Face] 人脸关键点失败", e);
             return ReturnResult.error("人脸关键点失败: " + e.getMessage());
@@ -671,6 +692,9 @@ public class FaceController {
         try {
             boolean result = faceService.isDeepfake(file.getBytes());
             return ReturnResult.ok(Map.of("deepfake", result));
+        } catch (ApiException e) {
+            log.warn("[Face] 换脸检测未配置: {}", e.getMessage());
+            return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[Face] 换脸检测失败", e);
             return ReturnResult.error("换脸检测失败: " + e.getMessage());
