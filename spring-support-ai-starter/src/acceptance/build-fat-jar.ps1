@@ -22,12 +22,17 @@
 #     -RefJar 'D:\ch\project\.tmp\sg\reference-app.jar' `
 #     -AllowEntries 'BOOT-INF/lib/utils-support-deeplearning-agentscope-starter-4.0.0.42.jar'
 #
+#   -ModuleDirs defaults to installing nothing (only the app module is
+#   repackaged, using whatever is already in the local repo). It is optional
+#   because a mandatory [string[]] rejects @() with "empty array", which left
+#   the default build with no legal invocation.
+#
 #   -RefJar is optional. When given, the script fails if any entry outside
 #   -AllowEntries differs from the reference -- that is the guard that keeps a
 #   "rebuild" from silently dragging in unrelated changes (config, DDL, other
 #   modules).
 param(
-  [Parameter(Mandatory = $true)][string[]]$ModuleDirs,
+  [string[]]$ModuleDirs = @(),
   [string]$Repo = 'D:\maven-repo',
   [string]$Mvn = 'D:\apache-maven-3.9.9-bin\apache-maven-3.9.9\bin\mvn.cmd',
   [string]$JavaHome = 'C:\Program Files\Amazon Corretto\jdk25.0.3_9',
