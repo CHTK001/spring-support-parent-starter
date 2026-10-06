@@ -432,7 +432,8 @@ public class ChatStreamOrchestrator {
                 createEvent.put("turnsId", p.getTurnsId());
                 createEvent.put("contentId", contentId);
                 createEvent.put("modelName", modelToUse);
-                createEvent.put("parentId", p.getUserMsgId());
+                createEvent.put("parentId", userMessageId != null
+                        ? String.valueOf(userMessageId) : p.getUserMsgId());
                 sink.sendEvent(createEvent);
                 log.info("[ChatStream] 已发送 create sessionId={}", sid);
             } catch (Exception e) {
