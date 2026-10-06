@@ -1,7 +1,10 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import com.chua.common.support.lang.code.PageResult;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.starter.eduai.mapper.EduPoemGradeMapper;
@@ -11,6 +14,7 @@ import com.chua.starter.eduai.model.EduPoemGrade;
 import com.chua.starter.eduai.service.IEduPoemService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.GradeLevels;
+import com.chua.starter.eduai.support.util.PageBounds;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -73,6 +77,41 @@ public class EduPoemServiceImpl extends ServiceImpl<EduPoemMapper, EduPoem>
         // ORDER BY RAND() 在 MySQL / MariaDB 上均可用，保证每次取题不重复
         wrapper.last("ORDER BY RAND() LIMIT " + limit);
         return baseMapper.selectList(wrapper);
+    }
+
+    @Override
+    public PageResult<EduPoem> pageQuery(String keyword, String gradeLevel, String grade,
+                                        Integer pageNum, Integer pageSize) {
+        Page<EduPoem> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
+        QueryWrapper<EduPoem> wrapper = new QueryWrapper<>();
+        applyOwnerScope(wrapper);
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w.like("poem_title", kw)
+                    .or().like("poem_author", kw)
+                    .or().like("poem_content", kw));
+        }
+        if (StringUtils.hasText(gradeLevel)) {
+            List<Long> ids = poemIdsOfLevel(GradeLevels.normalize(gradeLevel.trim()),
+                    StringUtils.hasText(grade) ? grade.trim() : null);
+            if (ids.isEmpty()) {
+                return PageResult.<EduPoem>builder()
+                        .pageNo(PageBounds.pageNum(pageNum) > Integer.MAX_VALUE ? 1
+                                : (int) PageBounds.pageNum(pageNum))
+                        .pageSize((int) PageBounds.pageSize(pageSize))
+                        .totalPages(0).total(0).data(List.of()).build();
+            }
+            wrapper.in("poem_id", ids);
+        }
+        wrapper.orderByDesc("poem_id");
+        IPage<EduPoem> result = baseMapper.selectPage(page, wrapper);
+        return PageResult.<EduPoem>builder()
+                .pageNo((int) result.getCurrent())
+                .pageSize((int) result.getSize())
+                .totalPages((int) result.getPages())
+                .total(result.getTotal())
+                .data(result.getRecords())
+                .build();
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.chua.starter.eduai.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduPoemGradeMapper;
@@ -48,6 +49,17 @@ public class EduPoemController {
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "20") int count) {
         return ReturnResult.ok(poemService.listByGradeLevel(gradeLevel, grade, count));
+    }
+
+    @Operation(summary = "分页查询古诗")
+    @GetMapping("/page")
+    public ReturnResult<PageResult<EduPoem>> page(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String gradeLevel,
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
+        return ReturnResult.ok(poemService.pageQuery(keyword, gradeLevel, grade, pageNum, pageSize));
     }
 
     @Operation(summary = "生成古诗游戏数据（补全下句）")

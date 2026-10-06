@@ -313,12 +313,27 @@
         <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
         <maven.repo.snapshots.url>https://repo1.maven.org/maven2/</maven.repo.snapshots.url>
         <!--
+          2026-10-06 依赖升级保留项说明（同 major 已全量升级，仅低风险跨 major 升级，
+          已升项在对应条目附注释）。以下高风险跨 major 项保留原版本不升：
+            - com.squareup.okhttp3:okhttp → 5：Kotlin 重写、API 不兼容（现 4.12.0）
+            - ssh-shell-spring-boot-starter → 3：主版本 API 变更（现 2.7.0）
+            - com.sun.xml.messaging.saaj:saaj-impl → jakarta 坐标迁移：javax→jakarta 高风险
+              坐标迁移，影响下游依赖方（现 javax.saaj 1.5.1）
+            - undertow → 2.4.x：2.4.x 起不再发布 undertow-servlet，见下方 undertow.version 注释
+            - Tomcat：由 spring-boot-dependencies BOM 统一托管，不单独升级
+            - Groovy → 6：groovy-all 组成与 JUnit 传递依赖规则变化（见下方 junit 注释）
+        -->
+        <!--
           Undertow 嵌入式服务器版本。
           spring-boot-dependencies BOM 不托管 io.undertow 任何坐标（已实测 BOM 全文不含
           "undertow"），故本仓自管。原先 spring-common-starter 里两处硬编码 2.3.10.Final，
           而 utils reactor 的 utils-support-middleware-parent 用属性管到 2.3.13.Final，
           两个 reactor 对同一坐标给出不同版本。现统一到 central 最新 2.3.18.Final，
           undertow-core 与 undertow-servlet 同版本发布，必须同号。
+          2026-10-06 升级依赖时经 Maven Central 核实：2.3.26.Final 是 undertow-servlet
+          的最新发布版；2.4.x 父 POM 只发布 core/examples/benchmarks，不再发布 undertow-servlet，
+          本仓 undertow-core 与 undertow-servlet 共用本属性，升到 2.4.x 会导致 servlet 坐标
+          解析失败，故保留 2.3.26.Final 不做跨 major 升级。
         -->
         <undertow.version>2.3.26.Final</undertow.version>
     </properties>
@@ -357,7 +372,9 @@
             <!--
               Undertow 托管条目。BOM 不含 io.undertow，必须本仓自管，
               否则各子模块只能各自硬编码版本号（spring-common-starter 此前即如此）。
-              2026-09-28 补齐，与 utils reactor 的 undertow.version 统一到 2.3.18.Final。
+              2026-09-28 补齐，与 utils reactor 的 undertow.version 统一到 2.3.18.Final；
+              2026-10-06 统一升级到 2.3.26.Final（undertow-servlet 的最新发布版，
+              2.4.x 起不再发布 undertow-servlet，详见 properties 处注释）。
             -->
             <dependency>
                 <groupId>io.undertow</groupId>

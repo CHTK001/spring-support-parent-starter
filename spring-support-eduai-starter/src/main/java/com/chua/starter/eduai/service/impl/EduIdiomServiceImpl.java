@@ -1,13 +1,20 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.mapper.EduIdiomGradeMapper;
 import com.chua.starter.eduai.mapper.EduIdiomMapper;
 import com.chua.starter.eduai.model.EduIdiom;
+import com.chua.starter.eduai.model.EduIdiomGrade;
 import com.chua.starter.eduai.service.IEduIdiomService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.GradeLevels;
+import com.chua.starter.eduai.support.util.PageBounds;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -27,8 +34,56 @@ import java.util.stream.Collectors;
  * @author CH
  */
 @Service
+@RequiredArgsConstructor
 public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
         implements IEduIdiomService {
+
+    private final EduIdiomGradeMapper idiomGradeMapper;
+
+    @Override
+    public PageResult<EduIdiom> pageQuery(String keyword, String gradeLevel, String grade,
+                                         Integer pageNum, Integer pageSize) {
+        Page<EduIdiom> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
+        QueryWrapper<EduIdiom> wrapper = new QueryWrapper<>();
+        if (!EduUserContext.isAdmin()) {
+            String userId = EduUserContext.currentUserId();
+            wrapper.and(w -> w.isNull("idiom_owner_user_id").or().eq("idiom_owner_user_id", userId));
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w.like("idiom_content", kw)
+                    .or().like("idiom_pinyin", kw)
+                    .or().like("idiom_meaning", kw));
+        }
+        if (gradeLevel != null && !gradeLevel.isBlank()) {
+            QueryWrapper<EduIdiomGrade> gw = new QueryWrapper<EduIdiomGrade>()
+                    .eq("grade_level", GradeLevels.normalize(gradeLevel.trim()));
+            if (grade != null && !grade.isBlank()) {
+                gw.and(w -> w.eq("grade", grade.trim()).or().isNull("grade"));
+            }
+            List<Long> ids = idiomGradeMapper.selectList(gw).stream()
+                    .map(EduIdiomGrade::getIdiomId)
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .toList();
+            if (ids.isEmpty()) {
+                return PageResult.<EduIdiom>builder()
+                        .pageNo((int) PageBounds.pageNum(pageNum))
+                        .pageSize((int) PageBounds.pageSize(pageSize))
+                        .totalPages(0).total(0).data(List.of()).build();
+            }
+            wrapper.in("idiom_id", ids);
+        }
+        wrapper.orderByDesc("idiom_id");
+        IPage<EduIdiom> result = baseMapper.selectPage(page, wrapper);
+        return PageResult.<EduIdiom>builder()
+                .pageNo((int) result.getCurrent())
+                .pageSize((int) result.getSize())
+                .totalPages((int) result.getPages())
+                .total(result.getTotal())
+                .data(result.getRecords())
+                .build();
+    }
 
     @Override
     public List<EduIdiom> listByGradeLevel(String gradeLevel, String grade, int count) {
