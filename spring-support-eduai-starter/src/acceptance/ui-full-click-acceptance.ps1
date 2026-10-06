@@ -162,6 +162,15 @@ function Walk-DialogControls {
         Clear-Evidence
         $res = ''
         try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
+        if ($res -eq 'gone') {
+            # The mark was lost to a re-render (a sibling control re-rendered the panel).
+            # Re-locate by label text inside the same dialog and click that instead.
+            # Destructive controls never reach here (filtered above), so this cannot
+            # press delete/remove/clear by accident.
+            $reJs = "(() => { const ps = Array.from(document.querySelectorAll('.el-dialog, .el-drawer')).filter(p => { const r = p.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); for (const p of ps) { const b = Array.from(p.querySelectorAll('button, .el-button')).find(x => ((x.innerText || '').trim() === '$($c.label)')); if (b) { b.click(); return 'relocated'; } } return 'gone'; })()"
+            try { $res = [string](Js $reJs 40000) } catch { $res = 'transport' }
+            if ($res -eq 'relocated') { $res = 'ok' }
+        }
         if ($res -ne 'ok') {
             # The control re-rendered itself away on click (a select whose option list
             # lives in <body>) -- but that option list may still be open, so walk it
@@ -253,6 +262,13 @@ function Walk-PopperControls {
         Clear-Evidence
         $res = ''
         try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
+        if ($res -eq 'gone') {
+            # Same re-render story as dialogs: re-locate by label inside visible poppers.
+            # Logout items never reach here (skipped above).
+            $reJs = "(() => { const ps = Array.from(document.querySelectorAll('.el-popper, .el-select__popper, .el-dropdown__popper')).filter(p => { const r = p.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); for (const p of ps) { const b = Array.from(p.querySelectorAll('li, button, .el-dropdown-menu__item')).find(x => ((x.innerText || '').trim().indexOf('$($c.label)') === 0)); if (b) { b.click(); return 'relocated'; } } return 'gone'; })()"
+            try { $res = [string](Js $reJs 40000) } catch { $res = 'transport' }
+            if ($res -eq 'relocated') { $res = 'ok' }
+        }
         if ($res -ne 'ok') {
             [void]$script:Rows.Add(("$Path|popper:$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0"))
             continue
