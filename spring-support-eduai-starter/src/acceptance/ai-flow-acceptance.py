@@ -18,6 +18,24 @@ def ck(name, cond, detail=""):
     print("  [%s] %s%s" % ("PASS" if cond else "FAIL", name, ("  -> " + str(detail)) if detail else ""))
 
 
+def resp_status(resp):
+    """统一取 HTTP 状态：成功时从 code 字段读，失败时从 _http 读。"""
+    if "_http" in resp:
+        return resp["_http"]
+    return resp.get("code")
+
+
+def resp_msg(resp):
+    """统一取业务 message：成功体里 message 字段，或失败体 _body 里的 message。"""
+    if "message" in resp:
+        return resp.get("message")
+    try:
+        b = json.loads(resp.get("_body", "") or "{}")
+        return find_key(b, "message") or b.get("msg") or resp.get("_body", "")
+    except Exception:
+        return resp.get("_body", "")
+
+
 def req(method, path, body=None, token=None, timeout=120):
     data = None
     if body is not None:
@@ -260,6 +278,29 @@ def main():
         ck("错题-记录含题目ID", any(r.get("wrongQuestionQuestionId") for r in rows))
         ck("错题-记录含最近错题时间", any(r.get("wrongQuestionLastWrongTime") for r in rows))
     ck("错题-接口可用(返回分页结构)", total is not None and total > 0, "total=%s" % total)
+
+    # ---------- 7. 提交答题卡业务校验（非法 JSON / 重复提交应 400 业务错）----------
+    # 回归：content 非 JSON 曾绕过校验写库触发 longtext CHECK 500；重复 (exam, student)
+    # 曾直接抛 500 泄露复合键值。现在两者都应该是 400 且带可读 message。
+    print("\n===== 7. 提交答题卡业务校验 =====")
+    dup_student = "r19-dup-accept"
+    good = req("POST", "/v2/edu/marking/submit",
+               {"examId": 1, "studentId": dup_student,
+                "content": "{\"1\": \"x\"}", "answers": []}, token=token)
+    ck("提交-首交成功返回任务或完成", bool(find_key(good, "data") or good.get("data") == 0),
+       json.dumps(good, ensure_ascii=False)[:120])
+    bad_json = req("POST", "/v2/edu/marking/submit",
+                   {"examId": 1, "studentId": "r19-badjson-accept",
+                    "content": "abc", "answers": []}, token=token)
+    ck("提交-非法JSON返回400业务错", resp_status(bad_json) == 400
+       and "合法 JSON" in str(resp_msg(bad_json)),
+       "status=%s msg=%s" % (resp_status(bad_json), str(resp_msg(bad_json))[:40]))
+    dup = req("POST", "/v2/edu/marking/submit",
+              {"examId": 1, "studentId": dup_student,
+               "content": "{\"1\": \"x\"}", "answers": []}, token=token)
+    ck("提交-重复提交返回400业务错", resp_status(dup) == 400
+       and "已提交过答题卡" in str(resp_msg(dup)),
+       "status=%s msg=%s" % (resp_status(dup), str(resp_msg(dup))[:40]))
 
     print("\n===== 汇总：PASS %d / FAIL %d =====" % (len(PASS), len(FAIL)))
     if FAIL:
