@@ -39,7 +39,8 @@ param(
     [string[]]$Only = @(),
     [switch]$SkipContent,
     [switch]$SkipChrome,
-    [switch]$NoSeed
+    [switch]$NoSeed,
+    [switch]$ChromeForStudent
 )
 
 $ErrorActionPreference = 'Continue'
@@ -118,6 +119,7 @@ $script:Dead = New-Object System.Collections.ArrayList
 $script:HarnessErr = New-Object System.Collections.ArrayList
 $script:SkipDestructive = 0
 $script:Vanish = @{}
+$script:StudentPwdEff = $StudentPwd   # replaced by the fixture once the forced change succeeds
 $script:Clicks = 0
 
 function Ck {
@@ -383,9 +385,11 @@ $routes = @(
     @{ path = '/edu/fun/idiom-card'; name = 'fun-idiom-card' },
     @{ path = '/edu/schedule'; name = 'schedule-redirect' }
 )
-if ($Role -eq 'student') {
-    # Student identity: the admin console shell is not on the student's screen, so the
-    # chrome phase would only walk the admin's own menu. Student pages are full-screen.
+if ($Role -eq 'student' -and -not $ChromeForStudent) {
+    # The student's OWN portal pages are full-screen, but /home and /edu/* still render the
+    # console shell for a student token (r18 documented the admin layout behind the portal
+    # overlay). Skipping the chrome phase for students therefore left the sidebar / header
+    # untested *as a student* -- pass -ChromeForStudent to walk it in that identity.
     $SkipChrome = $true
 }
 if ($Only.Count -gt 0) {
@@ -635,6 +639,12 @@ function Seed-Dashboard {
         Start-Sleep -Seconds 4
         $n = [int]([string](Js $jsSeedDashboard 90000))
     } catch { $n = 0 }
+    if ($Role -eq 'student') {
+        # The dashboard is an admin-side fixture; a student profile legitimately has none and
+        # reporting it as a failure would be a false red.
+        Write-Host ('    [note] dashboard fixture skipped for the student role (widgets={0})' -f $n)
+        return
+    }
     Ck "$Role dashboard seeded with widgets to click" ($n -gt 0) "widgets=$n"
 }
 
@@ -900,6 +910,40 @@ $jsReadEv = @'
 })()
 '@
 
+# Log back in after the token expires mid-run. Without this the crawl kept going on the
+# login page: a 20-minute run hits the access-token TTL, the guard bounces to /login, and
+# every later route records "0 controls" -- which reads exactly like a clean pass.
+function Invoke-Login {
+    param([switch]$Quiet)
+    $ok = $false
+    if ($Role -eq 'student') {
+        if (-not $script:StudentNo) { return $false }
+        AbRaw @('open', "$Base/edu/student-login") 60000 | Out-Null
+        Start-Sleep -Seconds 4
+        AbRaw @('snapshot') 60000 | Out-Null
+        AbRaw @('fill', 'input[autocomplete="username"]', $script:StudentNo) 60000 | Out-Null
+        AbRaw @('fill', 'input[autocomplete="current-password"]', $script:StudentPwdEff) 60000 | Out-Null
+        AbRaw @('press', 'Enter') 60000 | Out-Null
+        $ok = [bool](WaitJs 'location.pathname.indexOf("/edu/student")===0 || location.pathname.indexOf("student-login")!==0' 25)
+    }
+    else {
+        $q1 = -join @([char]0x8BF7, [char]0x8F93, [char]0x5165, [char]0x7528, [char]0x6237, [char]0x540D)
+        $q2 = -join @([char]0x8BF7, [char]0x8F93, [char]0x5165, [char]0x5BC6, [char]0x7801)
+        AbRaw @('open', "$Base/login") 60000 | Out-Null
+        Start-Sleep -Seconds 3
+        Js '(() => { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && !/layout/i.test(k)) localStorage.removeItem(k); } sessionStorage.clear(); return 1; })()' | Out-Null
+        AbRaw @('open', "$Base/login") 60000 | Out-Null
+        Start-Sleep -Seconds 4
+        AbRaw @('snapshot') 60000 | Out-Null
+        AbRaw @('find', 'placeholder', $q1, 'fill', $AdminUser) 60000 | Out-Null
+        AbRaw @('find', 'placeholder', $q2, 'fill', $AdminPwd) 60000 | Out-Null
+        AbRaw @('press', 'Enter') 60000 | Out-Null
+        $ok = [bool](WaitJs 'location.pathname.indexOf("/login")!==0' 25)
+    }
+    if (-not $Quiet) { Write-Host ('    [re-login] {0}: {1}' -f $Role, $ok) }
+    return $ok
+}
+
 function Open-Route {
     param([string]$Path)
     AbRaw @('open', ($Base + $Path)) 60000 | Out-Null
@@ -914,6 +958,16 @@ function Open-Route {
     # router instance, which the guard lets through untouched.
     $landed = ''
     try { $landed = [string](Js 'location.pathname' 20000) } catch { $landed = '' }
+    if ($landed -and $landed.TrimEnd('/') -match '^/login' -and $Path -notlike '/login*') {
+        Write-Host ('    [session lost] {0} bounced to the login page; re-login and retry' -f $Path)
+        $back = Invoke-Login
+        Ck "session restored before $Path" $back "role=$Role"
+        AbRaw @('open', ($Base + $Path)) 60000 | Out-Null
+        WaitJs 'document.readyState === "complete"' $NavTimeoutSec | Out-Null
+        Start-Sleep -Milliseconds 900
+        Js $jsInstall | Out-Null
+        return
+    }
     if ($landed -and ($landed.TrimEnd('/') -ne $Path.TrimEnd('/'))) {
         $fix = "(() => { const app = document.querySelector('#app'); const r = app && app.__vue_app__ && app.__vue_app__.config.globalProperties.`$router; if (!r) return 'no-router'; r.push('$Path').catch(() => undefined); return 'pushed'; })()"
         $r1 = ''
@@ -992,8 +1046,14 @@ if ($list -and $list.json -and $list.json.data) { foreach ($s in @($list.json.da
 $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { '' }
     Ck 'student api login' ([bool]$stok) ''
     if ($stok) {
-        $ch = Api POST '/v2/edu/student/change-password' @{ oldPassword = $StudentPwd; newPassword = $StudentPwd } $stok
-        Ck 'initial password changed (clears first-login gate)' ($null -ne $ch) ''
+        $final = 'Uiacc@' + (Get-Random -Minimum 10000 -Maximum 99999)
+        $ch = Api POST '/v2/edu/student/change-password' @{ oldPassword = $StudentPwd; newPassword = $final } $stok
+        # A DIFFERENT value on purpose: re-using the same password leaves MUST_CHANGE set, and the
+        # portal then sits behind a non-dismissible 'first login: change the initial password'
+        # dialog (no close button, ESC does nothing) -- that blocked two controls in every
+        # student run until the fixture was fixed.
+        Ck 'initial password changed to a NEW value (clears the forced dialog)' ($null -ne $ch) ''
+        if ($null -ne $ch) { $script:StudentPwdEff = $final }
     }
     $logged = $false
     for ($t = 1; $t -le 3; $t++) {
@@ -1001,12 +1061,13 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
         Start-Sleep -Seconds 4
         AbRaw @('snapshot') 60000 | Out-Null
         AbRaw @('fill', 'input[autocomplete="username"]', $studentNo) 60000 | Out-Null
-        AbRaw @('fill', 'input[autocomplete="current-password"]', $StudentPwd) 60000 | Out-Null
+        AbRaw @('fill', 'input[autocomplete="current-password"]', $script:StudentPwdEff) 60000 | Out-Null
         AbRaw @('press', 'Enter') 60000 | Out-Null
         if (WaitJs 'location.pathname.indexOf("/edu/student")===0 || location.pathname.indexOf("student-login")!==0' 25) { $logged = $true; break }
     }
     Snapshot-Layout
     Seed-Dashboard 'student'
+    $script:StudentNo = $studentNo
     Ck 'student logged in via the student login page' $logged
     if (-not $logged) { Write-Host 'no student session, abort'; exit 2 }
 } else {
@@ -1068,7 +1129,7 @@ if (-not $SkipContent) {
             Js $jsResetEv | Out-Null
         }
 
-        $i = 0; $restarts = 0; $clicked = 0; $prevCount = 0; $modeRestarts = 0
+        $i = 0; $restarts = 0; $clicked = 0; $prevCount = 0; $modeRestarts = 0; $emptyTries = 0
         while ($true) {
             $inv = Js $jsInvContent
             $scopeKind = 'main'
@@ -1098,6 +1159,18 @@ if (-not $SkipContent) {
                 $i = 0
             }
             $prevCount = $items.Count
+            # An empty inventory on the first look means "not rendered yet" on slow pages,
+            # and concluding "this page has no controls" produced 0 clicks that read exactly
+            # like a clean pass (/edu/student needs several seconds to fetch its modules).
+            if ($items.Count -eq 0) {
+                if ($emptyTries -lt 5) {
+                    $emptyTries++
+                    Start-Sleep -Milliseconds 1800
+                    continue
+                }
+                Write-Host ('    [WARN] {0} still shows 0 controls after 5 retries' -f $rname)
+            }
+            else { $emptyTries = 0 }
             if ($i -ge $items.Count) { break }
             $it = $items[$i]
             $i++
@@ -1261,7 +1334,10 @@ if (-not $SkipContent) {
                 }
             }
 
+            # Icon-only controls have no text; without a fallback every such row in the
+            # matrix reads as an empty label and the evidence cannot be audited per icon.
             $lbl = $it.label
+            if (-not $lbl) { $lbl = '[icon:' + ([string]$it.cls).Trim() + ']' }
             $detail = "kind=$($it.kind) label='$lbl' effect=$effect pageErr=$($ev.pageErr) consoleErr=$($ev.consoleErr) 5xx=$($ev.http5xx) 4xx=$($ev.http4xx) noise=$($ev.noise)"
             if ($ev.firstApp) { $detail += " firstErr='" + ($ev.firstApp.Substring(0, [Math]::Min(90, $ev.firstApp.Length))) + "'" }
             [void]$script:Rows.Add(("$path|$($it.kind)|$lbl|$effect|$($after.path)|$($ev.pageErr)|$($ev.consoleErr)|$($ev.http5xx)|$($ev.http4xx)"))
