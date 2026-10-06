@@ -157,12 +157,15 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             }
             entity.setOwnerUserId(owner);
             entity.setQuestionUseCount(0);
-            entity.setQuestionAuditCount(0);
             if (auditOnSave) {
-                // 管理员保存并审核：新建即通过
+                // 管理员保存并审核：新建即通过。这次保存本身就是一次审核动作，
+                // 审核次数从 1 起算，否则列表里这条题显示「已通过」却没有 ×N，
+                // 与后续每次审核 +1 的口径对不上。
                 entity.setQuestionAuditStatus(1);
                 entity.setQuestionAuditRemark(null);
+                entity.setQuestionAuditCount(1);
             } else {
+                entity.setQuestionAuditCount(0);
                 // 老师新建 / 管理员普通保存 / 采集入库：一律待审
                 entity.setQuestionAuditStatus(0);
                 entity.setQuestionAuditRemark(null);
@@ -305,12 +308,19 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      * 剥掉 JSON 字符串标量的外层引号：历史 JSON 列会把绑定的字符串再包一层，
      * 老数据回读后再次保存会不断叠加转义，收敛后落库恒为数组文本。
      *
+     * <p><b>空白入参一律归一为 null</b>：edu_question.question_options 上有
+     * {@code CHECK (json_valid(question_options))}，而 MariaDB 的
+     * {@code json_valid('')} 返回 <b>0</b>（不是 NULL），空串会被约束拒绝、
+     * 报 {@code CONSTRAINT edu_question.question_options failed}（500）。
+     * 判断题/填空题/简答题/作文本就没有选项，前端会传 {@code ""}，
+     * 不归一就必然插不进去。NULL 走 {@code json_valid(NULL)} → NULL → 约束通过。
+     *
      * @param value 客户端提交的选项文本
-     * @return 去掉多余字符串包装后的文本
+     * @return 去掉多余字符串包装后的文本；空白返回 {@code null}
      */
     private static String unwrapJsonText(String value) {
         if (!StringUtils.hasText(value)) {
-            return value;
+            return null;
         }
         String current = value.trim();
         for (int depth = 0; depth < 5 && current.startsWith("\""); depth++) {
