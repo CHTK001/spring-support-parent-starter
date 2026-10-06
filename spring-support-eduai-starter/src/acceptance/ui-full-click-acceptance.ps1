@@ -1480,9 +1480,13 @@ if ($script:LayoutSnap) {
 }
 
 # ---------- report ----------
-$csv = Join-Path $OutDir 'click-matrix.csv'
+# File them per role: admin and student sweeps used to overwrite each other's matrix
+# (both wrote click-matrix.csv/md), so the admin evidence was gone by the time the
+# student sweep finished.
+$stamp = Get-Date -Format 'yyyyMMdd-HHmm'
+$csv = Join-Path $OutDir ('click-matrix-{0}-{1}.csv' -f $Role, $stamp)
 $script:Rows | Set-Content -Path $csv -Encoding UTF8
-$md = Join-Path $OutDir 'click-matrix.md'
+$md = Join-Path $OutDir ('click-matrix-{0}-{1}.md' -f $Role, $stamp)
 $sb = New-Object Text.StringBuilder
 [void]$sb.AppendLine('# Click matrix (every clickable control exercised)')
 [void]$sb.AppendLine()
