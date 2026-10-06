@@ -163,7 +163,13 @@ function Walk-DialogControls {
         $res = ''
         try { $res = [string](Js ("(() => { const el = document.querySelector('$sel'); if (!el) return 'gone'; el.click(); return 'ok'; })()")) } catch { $res = 'transport' }
         if ($res -ne 'ok') {
-            [void]$script:Rows.Add(("$Path|dialog:$($c.title)/$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0"))
+            # The control re-rendered itself away on click (a select whose option list
+            # lives in <body>) -- but that option list may still be open, so walk it
+            # before recording anything.
+            $pz = $null
+            try { $pz = (Js $jsProbe) | ConvertFrom-Json } catch { $pz = $null }
+            if ($pz -and $pz.poppers -gt 0) { Walk-PopperControls -Rname $Rname -Path $Path -Trig ($Trig + '/' + $c.label) -AfterState $pz }
+            else { [void]$script:Rows.Add(("$Path|dialog:$($c.title)/$($c.kind)|$($c.label)|unreachable|$Path|0|0|0|0")) }
             continue
         }
         $script:Clicks++
@@ -592,6 +598,12 @@ $jsReset = @'
   Array.from(document.querySelectorAll(
     '.el-dialog__headerbtn, .el-drawer__close-btn, .el-message-box__headerbtn, .ant-modal-close'))
     .filter(vis).forEach(b => { try { b.click(); } catch (e) {} });
+  // popper leftovers (a select dropdown opened by Walk-DialogControls stays in <body>
+  // and keeps covering the page): a real user taps elsewhere, so do the same, then
+  // remove any still-visible floating layer
+  try { (document.querySelector('main.el-main') || document.body).click(); } catch (e) {}
+  Array.from(document.querySelectorAll('.el-popper, .el-select__popper, .el-dropdown__popper'))
+    .filter(vis).forEach(p => { try { p.remove(); } catch (e) {} });
   return 'ok';
 })()
 '@
