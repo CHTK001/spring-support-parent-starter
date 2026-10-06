@@ -3,6 +3,9 @@ package com.chua.starter.datasourcehub.support.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 数据源中心配置属性。
  *
@@ -60,4 +63,18 @@ public class DatasourceHubProperties {
      * 而后台又是常驻的。</p>
      */
     private long driverJarMaxBytes = 64L * 1024 * 1024;
+
+    /**
+     * 文件库（SQLite / H2 file / Derby / HSQLDB）JDBC URL 允许的根目录白名单。
+     *
+     * <p>这类连接串里带的是**磁盘路径**，而连接串来自数据源台账 ——
+     * 台账里出现 {@code ../../etc/...} 这类穿越路径时，探活与 SQL 执行会去
+     * 读写任意文件。所以解析后必须落在白名单目录内才允许建连。</p>
+     *
+     * <p>留空时默认放行三个目录：<b>工作目录</b>（user.dir）、<b>系统临时目录</b>
+     * （java.io.tmpdir）、<b>用户主目录</b>（user.home）—— 分别覆盖「相对路径落盘」、
+     * 「/tmp 试用一把」、「{@code jdbc:h2:~/data}」三种正常用法；
+     * 要放行别的目录（如 /data/dbs）在此显式追加。</p>
+     */
+    private List<String> fileJdbcAllowedDirs = new ArrayList<>();
 }
