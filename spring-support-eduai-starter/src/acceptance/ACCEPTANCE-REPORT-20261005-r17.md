@@ -1,5 +1,11 @@
 # eduai AI 阅卷终验报告（2026-10-05 · r17，模型 space-bunny-alpha，产物 b98670a7）
 
+> ## ⚠️ 本报告已失效（2026-10-06 补标，§4.6 收口）
+>
+> 依据 §4.6：本报告绑定的 eduai jar `2c9c1d66` 其后被多次换包，
+> 现役为 `e4e0b214…`。**报告证明的二进制已不在线上，不得作为签收依据**；
+> 签收口径见 `ACCEPTANCE-STATUS.md`。
+
 > 报告与产物指纹绑定；**换包即失效**。复核：
 > `python3 report-staleness.py --live-eduai 2c9c1d66593237c5aceda7d2f7ac7bb02c5cddb35424688fbf74edc82a344ef7 --live-oauth ca4ce0b3d929c96e6f607950c24ac235a7b69e5266ef23df63ac6e88c6c6a470`
 > （返回 `[STALE]` 且退出码 3 即表示本报告已作废，须重跑。）

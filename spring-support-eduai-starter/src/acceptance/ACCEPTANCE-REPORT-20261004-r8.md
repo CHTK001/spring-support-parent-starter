@@ -1,5 +1,11 @@
 # eduai 终验报告（2026-10-04 · r8，学生头像上传 + UI 统一）
 
+> ## ⚠️ 本报告已失效（2026-10-06 补标，§4.6 收口）
+>
+> 依据 §4.6：本报告绑定的 eduai jar `df7b2ead` 其后被多次换包，
+> 现役为 `e4e0b214…`。**报告证明的二进制已不在线上，不得作为签收依据**；
+> 签收口径见 `ACCEPTANCE-STATUS.md`。
+
 > 报告与产物 sha256 绑定；换包即失效。复核：
 > `python3 report-staleness.py --live-eduai <sha> --live-oauth <sha>`。
 
