@@ -4,10 +4,14 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.face.FaceAlignResult;
 import com.chua.deeplearning.support.face.FaceCompareResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
+import com.chua.deeplearning.support.face.FaceDetector;
 import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.face.FacePipeline;
+import com.chua.deeplearning.support.feature.FeatureExtractor;
+import com.chua.deeplearning.support.image.ImageClassifier;
+import com.chua.deeplearning.support.image.ImageEnhancer;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.deeplearning.support.model.DetectionInfo;
@@ -65,6 +69,29 @@ public class AiFaceServiceImpl implements AiFaceService {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "人脸能力未启用：请先在「系统配置 → 人脸识别」中配置人脸检测模型");
         }
         return current;
+    }
+
+    /**
+     * 辅助能力的模型字段留空 → 统一抛**业务异常**，不走 NPE。
+     *
+     * <p>{@link FaceClientManager} 的各个 {@code current*()} 对「模型字段留空」一律返回
+     * {@code null}（空值即能力未启用，见其 {@code isModelConfigured}），语义与
+     * {@link #pipeline()} 的空值拦截一致。此前辅助方法直接链式解引用，
+     * 于是「没配模型」这个<b>可预期状态</b>走的是 {@code NullPointerException}
+     * （验收报告 §7.5 实测：{@code ERROR [Face] 人脸修复失败 + NullPointerException: ImageEnhancer.enhance}）——
+     * 异常类型把业务状态伪装成程序缺陷，控制器只能按未知错误打 {@code ERROR + 全栈}。</p>
+     *
+     * <p>改抛 {@link ApiException} 后<b>状态码与信封契约不变</b>：二进制端点（restore）仍 400、
+     * 可选能力端点（attributes/emotion/landmark/anime-detect/deepfake）仍 200 信封
+     * （fg.sh §10.5/§10.6），控制器据此按类型降噪为 WARN 一行。</p>
+     *
+     * @param capability 能力名称（人类可读）
+     * @param field      face 分组下的模型字段名
+     * @return 待抛出的业务异常
+     */
+    private ApiException capabilityDisabled(String capability, String field) {
+        return new ApiException(ApiErrorCode.INVALID_PARAM,
+                capability + "能力未启用：请先在「系统配置 → 人脸识别」中配置 face." + field);
     }
 
     /**
@@ -350,7 +377,11 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public List<DetectionInfo> animeDetect(byte[] imageData) {
-        return faceClientManager.currentAnimeDetector().detectInfo(imageData);
+        FaceDetector current = faceClientManager.currentAnimeDetector();
+        if (current == null) {
+            throw capabilityDisabled("动漫人脸检测", "anime_detector_model");
+        }
+        return current.detectInfo(imageData);
     }
 
     /**
@@ -372,7 +403,11 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public byte[] restore(byte[] imageData) {
-        return faceClientManager.currentRestorer().enhance(imageData);
+        ImageEnhancer current = faceClientManager.currentRestorer();
+        if (current == null) {
+            throw capabilityDisabled("人脸修复", "restore_model");
+        }
+        return current.enhance(imageData);
     }
 
     /**
@@ -383,7 +418,11 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public String analyzeAttributes(byte[] imageData) {
-        return faceClientManager.currentAttributeClassifier().classify(imageData);
+        ImageClassifier current = faceClientManager.currentAttributeClassifier();
+        if (current == null) {
+            throw capabilityDisabled("人脸属性分析", "attribute_model");
+        }
+        return current.classify(imageData);
     }
 
     /**
@@ -394,7 +433,11 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public String analyzeEmotion(byte[] imageData) {
-        return faceClientManager.currentEmotionClassifier().classify(imageData);
+        ImageClassifier current = faceClientManager.currentEmotionClassifier();
+        if (current == null) {
+            throw capabilityDisabled("人脸表情识别", "emotion_model");
+        }
+        return current.classify(imageData);
     }
 
     /**
@@ -405,7 +448,11 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public float[] landmark(byte[] imageData) {
-        return faceClientManager.currentLandmarkExtractor().extract(imageData);
+        FeatureExtractor current = faceClientManager.currentLandmarkExtractor();
+        if (current == null) {
+            throw capabilityDisabled("人脸关键点", "landmark_model");
+        }
+        return current.extract(imageData);
     }
 
     /**
@@ -430,7 +477,11 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public boolean isDeepfake(byte[] imageData) {
-        String result = faceClientManager.currentDeepfakeClassifier().classify(imageData);
+        ImageClassifier current = faceClientManager.currentDeepfakeClassifier();
+        if (current == null) {
+            throw capabilityDisabled("换脸检测", "deepfake_model");
+        }
+        String result = current.classify(imageData);
         if (StringUtils.isBlank(result)) {
             return false;
         }
