@@ -1,5 +1,6 @@
 package com.chua.starter.eduai.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.StringUtils;
@@ -171,6 +172,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return submitAnswerSheet的结果
      */
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
+        // 0. 入参体检：答题内容列带 json_valid 检查约束、(考试, 学生) 上有唯一键，
+        //    直接 insert 会以 500 + 数据库原文（含复合主键值）暴露给用户，这里先转成业务提示
+        validateSubmitContent(dto.getContent());
+        rejectDuplicateSheet(dto.getExamId(), dto.getStudentId());
+
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setOwnerUserId(EduUserContext.requireUserId());
@@ -216,6 +222,44 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         log.info("[EduAi] 答题卡已提交: taskId={}, student={}, async={}",
                 taskId, dto.getStudentId(), properties.getMarking().isAsync());
         return taskId;
+    }
+
+    /**
+     * 校验答题内容：{@code edu_answer_sheet.answer_sheet_content} 上有 {@code CHECK (json_valid(...))}，
+     * 空串或非 JSON 会让 insert 抛数据库约束异常（HTTP 500，且报文带 SQL 原文），这里提前给出可读提示。
+     *
+     * @param content 答题内容，允许为空（为空时落库 NULL，绕过检查约束）
+     */
+    private void validateSubmitContent(String content) {
+        if (StringUtils.isBlank(content)) {
+            return;
+        }
+        try {
+            MAPPER.readTree(content);
+        } catch (Exception e) {
+            log.warn("[EduAi] 答题内容不是合法 JSON，已拒绝: {}", content);
+            throw new BusinessException("答题内容须为合法 JSON");
+        }
+    }
+
+    /**
+     * 同一考试同一学生只允许一份答题卡：唯一键 {@code uk(answer_sheet_exam_id, answer_sheet_student_id)}
+     * 冲突会以 500 + 复合键值暴露，这里先查后插，转成业务提示。
+     *
+     * @param examId    考试 ID，可为空（未绑定考试时不参与唯一键判定）
+     * @param studentId 学生 ID
+     */
+    private void rejectDuplicateSheet(Long examId, String studentId) {
+        if (examId == null || StringUtils.isBlank(studentId)) {
+            return;
+        }
+        Long exists = answerSheetMapper.selectCount(new LambdaQueryWrapper<EduAnswerSheet>()
+                .eq(EduAnswerSheet::getAnswerSheetExamId, examId)
+                .eq(EduAnswerSheet::getAnswerSheetStudentId, studentId));
+        if (exists != null && exists > 0) {
+            log.warn("[EduAi] 重复提交答题卡已拦截: examId={}, studentId={}", examId, studentId);
+            throw new BusinessException("该考试下该学生已提交过答题卡，请勿重复提交");
+        }
     }
 
     /**
@@ -1343,16 +1387,19 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     @Override
     public Map<String, Object> getStructure(String taskId) {
         EduMarkingTask task = taskMapper.selectByTaskId(taskId);
-        if (task == null) {
+        List<EduMarkingResult> rows = markingResultMapper.selectTaskResults(taskId, EduUserContext.ownerScope());
+        // 手工提交答题卡的链路只落结果行、不落任务表：这类任务没有答卷图片与版面可解析，
+        // 但结果本身仍可展示，若一并报「任务不存在」会让同版式解析整页打不开
+        if (task == null && rows.isEmpty()) {
             throw new BusinessException("任务不存在");
         }
         var out = new LinkedHashMap<String, Object>();
         out.put("taskId", taskId);
-        out.put("mode", task.getMarkingTaskMode());
-        out.put("paperId", task.getMarkingTaskPaperId());
+        out.put("mode", task == null ? null : task.getMarkingTaskMode());
+        out.put("paperId", task == null ? null : task.getMarkingTaskPaperId());
 
         Map<String, Object> content = Map.of();
-        if (task.getMarkingTaskAnswerSheetId() != null) {
+        if (task != null && task.getMarkingTaskAnswerSheetId() != null) {
             EduAnswerSheet sheet = answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
             if (sheet != null) {
                 content = parseJsonMap(sheet.getAnswerSheetContent());
@@ -1363,7 +1410,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         out.put("questionAnchors", content.getOrDefault("questionAnchors", List.of()));
 
         var questions = new ArrayList<Map<String, Object>>();
-        for (EduMarkingResult row : markingResultMapper.selectTaskResults(taskId, EduUserContext.ownerScope())) {
+        for (EduMarkingResult row : rows) {
             var item = new LinkedHashMap<String, Object>();
             item.put("resultId", row.getMarkingResultId());
             item.put("questionId", row.getMarkingResultQuestionId());
@@ -1622,9 +1669,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                         adj.getResultId(), result.getMarkingResultQuestionId(), adj.getScore(), maxScore, score);
             }
             result.setMarkingResultTeacherScore(score);
-            result.setMarkingResultTeacherComment(adj.getComment());
             result.setMarkingResultScore(score);
-            result.setMarkingResultComment(adj.getComment());
+            // 评语只在调用方显式给出时才覆盖：同版式解析只改对错（不传评语），
+            // 若无条件写入会把教师已写好的评语冲成 AI 评语或清空
+            if (adj.getComment() != null) {
+                result.setMarkingResultTeacherComment(adj.getComment());
+                result.setMarkingResultComment(adj.getComment());
+            }
             result.setMarkingResultStatus(STATUS_TEACHER_DONE);
             result.setUpdateTime(LocalDateTime.now());
             markingResultMapper.updateById(result);

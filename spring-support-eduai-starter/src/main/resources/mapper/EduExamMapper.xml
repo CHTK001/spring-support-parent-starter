@@ -6,6 +6,8 @@
     <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduExam">
         SELECT e.* FROM edu_exam e
         <where>
+            <!-- 逻辑删除列不会由 MyBatis-Plus 自动追加到自定义 SQL，漏掉会让已删除考试继续出现在列表里 -->
+            AND e.exam_del_flag = 0
             <if test="query.examPaperId != null">
                 AND e.exam_paper_id = #{query.examPaperId}
             </if>
