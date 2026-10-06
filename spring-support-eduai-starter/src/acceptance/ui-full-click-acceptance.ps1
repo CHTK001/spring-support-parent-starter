@@ -165,7 +165,8 @@ function Walk-DialogControls {
         if ($res -ne 'ok') {
             # The control re-rendered itself away on click (a select whose option list
             # lives in <body>) -- but that option list may still be open, so walk it
-            # before recording anything.
+            # before recording anything. Wait first: the popper mounts after the click.
+            Start-Sleep -Milliseconds 700
             $pz = $null
             try { $pz = (Js $jsProbe) | ConvertFrom-Json } catch { $pz = $null }
             if ($pz -and $pz.poppers -gt 0) { Walk-PopperControls -Rname $Rname -Path $Path -Trig ($Trig + '/' + $c.label) -AfterState $pz }
