@@ -39,13 +39,13 @@ r19 修改文件（vue）：`MarkingView.vue`、`ExamView.vue`、`SheetStructure
 
 | 套件 | 通过/失败 | 备注 |
 |---|---|---|
-| acceptance | TBD | 换包重跑 |
-| student-password | TBD | 换包重跑 |
-| student-manage | TBD | 换包重跑 |
-| first-login | TBD | 换包重跑 |
-| paper-assign | TBD | 换包重跑 |
-| marking | TBD | 单独重跑（并行会触发 150s 轮询帽假 FAIL） |
-| ai-flow | TBD | 3 FAIL 预期为外部 AI 渠道 503，非代码回归 |
+| acceptance | 55/0 | r19b-seq 全绿（换包后串行） |
+| student-password | 15/0 | r19b 并行轮 |
+| student-manage | 20/0 | r19b-seq 全绿（换包后串行） |
+| first-login | 12/0 | r19b-seq 全绿（换包后串行） |
+| paper-assign | 40/0 | r19b 并行轮 |
+| marking | 11/11 | 单独重跑全绿（并行 150s 轮询帽假 FAIL 已证伪） |
+| ai-flow | 20/3 | 清理首交后重跑收敛；3 FAIL 均为外部 AI 渠道 503，非代码回归 |
 
 ### 2.1 AI 渠道 503 证据（非代码回归）
 
@@ -84,22 +84,25 @@ r19 修改文件（vue）：`MarkingView.vue`、`ExamView.vue`、`SheetStructure
 
 | # | 复测项 | 换包后结果 |
 |---|---|---|
-| ① | 查询无效 taskId 清旧结果 | TBD |
-| ② | 教师评语「教师确认/修正」落库不覆盖 | TBD |
-| ③ | 提交答题卡非法 JSON 前端预校验 toast | TBD |
-| ④ | 重复提交 400 拦截（行为取证） | TBD |
-| ⑤ | 结构面板 dirty 复位 + 不覆盖教师评语 | TBD |
+| ① | 查询无效 taskId 清旧结果 | PASS（新包：e8a9648c… 21 题/总分 100 复现一致） |
+| ② | 教师评语「教师确认/修正」落库不覆盖 | PASS（新包：9301 teacher_score=5 + teacher_comment=r19评语落库验证keep，`/v2/edu/marking/confirm` 命中） |
+| ③ | 提交答题卡非法 JSON 前端预校验 toast | PASS（新包：`{bad-json` 被预校验拦住，弹窗未关、未发请求） |
+| ④ | 重复提交 400 拦截（行为取证） | PASS（新包：`重复提交答题卡已拦截: examId=1, studentId=r19-dup-accept` + 答题卡数保持 1） |
+| ⑤ | 结构面板 dirty 复位 + 不覆盖教师评语 | PASS（新包：9319 从 AI 0 分修正为教师 5 分，按钮 disabled→enabled→disabled，confirm 命中） |
 
 ## 5. 换包后浏览器闭环（绑定 87c8…）
 
 ### 5.1 题库管理页 `/edu/question` 补测
-回填见第 7 节（搜索/重置/新增题目空表单校验/批量导入弹窗/行操作/分页；换包重启导致的 0 行空态需复验）。
+PASS（新包，本地 dev 代理远端）：搜索「赤道」收敛 1 条、重置回 169、新增空表单被拦（弹窗未关+总数不变+源码 warning）、行内编辑弹窗回填正常+取消关闭、分页下一页首行 9401/上一页回 46985、排序 ReTab「加入最多」首行变 9415（加入 8 次）/「使用最多」回 46985/「最新」复位、批量导入弹窗打开+取消关闭。
 
 ### 5.2 考试删除闭环（新包上重验）
-TBD。
+PASS（远端前端 192.168.50.198:19093）：初始列表「共 0 条」（逻辑删除过滤生效）；新建「删除验证-R19B-勿动」（ID=3，共 1 条）；删除确认框「确认删除考试 删除验证-R19B-勿动？」→ 删除后「共 0 条」+ DB `exam_del_flag=1`。
 
 ### 5.3 知识库/学生登录/学生端/老师端补测
-TBD。
+- 知识库 PASS：搜索「修辞」收敛 1 卡、重置回 5 卡、新增空表单被拦（`请填写卡片名称` 源码校验+弹窗未关）、行内编辑回填（古诗默写 KP-GS-MX）+关闭、卡片点击进详情+保存正文+关闭。
+- 学生登录 PASS：空提交双内联错误（`请输入学号/请输入密码`）、忘记密码/立即注册 info toast、密码眼睛切换。
+- 学生端 PASS：空提交「请填写姓名」、填名进首页（11 功能卡）、成语消消乐进出、我的试卷空态、修改密码弹窗打开+取消。
+- 老师端 PASS：我的班级/组卷/阅卷 3 tabs 切换、阅卷任务列表渲染、首行「查看」出 21 题明细（100 分）。
 
 ## 6. 环境与限制声明
 
@@ -110,4 +113,8 @@ TBD。
 
 ## 7. 执行记录（换包后重跑）
 
-> 回填：套件日志 `r19b-logs/summary.txt`、复测取证时间戳与 DB/日志截取。
+- 套件：`r19b-logs/summary.txt`（并行：student-password 0、paper-assign 0、marking 0；acceptance/first-login/student-manage/ai-flow 并发互踢 exit=1）→ `r19b-seq/summary.txt`（串行：acceptance 0、first-login 0、student-manage 0、ai-flow 1=20/3 收敛）。
+- 阅卷复测：查询/评语落库 (`9301: 5/r19评语落库验证keep`)/非法 JSON 预校验/重复提交拦截 (`examId=1, studentId=r19-dup-accept`，答题卡数 1)/结构修正 (`9319: AI 0→教师 5`)，`/v2/edu/marking/confirm` 多次命中（be.out.log）。
+- 考试删除：`删除验证-R19B-勿动` exam_id=3，`exam_del_flag=1`，列表 0 条。
+- 报告绑定产物：md5 `87c877d6dd478467c6a8a89fb955ea8e` / sha256 `e4e0b2140ee790a2243bc102a43fffefe811cfc354b35a795d7453321160f5fd` / 837247203 字节（fp-check2.sh 取证，服务重启 pid 1150402→1160517 指纹未变）。
+- 我的 r19 包备份：`eduai-backend.jar.bak-20261005-232558`（837224415，md5 4DDE…）。
