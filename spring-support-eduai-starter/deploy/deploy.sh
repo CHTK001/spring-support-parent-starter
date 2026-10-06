@@ -174,13 +174,30 @@ cp -r "$STAGE/deploy" "$APP_DIR/deploy"
 log "    deploy/ 已留在 $APP_DIR/deploy"
 
 # ---------- 4. 重启 ----------
+# 为什么先 stop、睡 15s 再 start，而不用 restart：
+#   restart = 杀旧进程的同时起新进程。旧 JVM 退出要经历 Spring 关闭钩子
+#   （关连接池、刷定时任务、等线程），实测要 10~20s；这期间 systemd 的
+#   Restart=always 还会叠加自动拉起。新 JVM 在这期间启动，会和旧进程抢
+#   19095 端口 + 抢 Spring 状态，固定在启动 30~60s 时 exit 1（2026-10-06
+#   实测：5 次闪退、无 ERROR、无 hs_err，第 6 次旧进程退干净了才成功）。
+#   先停干净再起，彻底避开新旧 JVM 重叠窗口。
 log "==> 4/5 重启服务"
-systemctl restart "$UNIT_NAME"
+systemctl stop "$UNIT_NAME" || true
+for _ in $(seq 1 15); do
+    systemctl is-active --quiet "$UNIT_NAME" || break
+    sleep 1
+done
+systemctl is-active --quiet "$UNIT_NAME" && die "旧进程 15s 内未退出，拒绝启动新进程（防端口争抢）"
+systemctl start "$UNIT_NAME"
 
 # ---------- 5. 自检 ----------
+# 启动要 135~155s（大 fat jar + 迁移 + ONNX 模型加载），30×14s 的窗口理论够，
+# 但健康检查要在「JVM 真正开始启动」之后才计时；stop/start 之间睡过 15s，
+# 这里再多等一轮，避免把旧进程刚退、新进程还没打第一行日志的时间算进去。
 log "==> 5/5 自检"
+sleep 20
 ok=0
-for _ in $(seq 1 30); do
+for _ in $(seq 1 40); do
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 4 \
         http://127.0.0.1:19095/actuator/health 2>/dev/null || true)
     if [ "$code" = "200" ]; then ok=1; break; fi
