@@ -70,6 +70,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
      */
     private static final Map<String, String> SETTING_MISSING_COLUMNS = Map.of(
             "sys_setting_code", "ALTER TABLE sys_setting ADD COLUMN sys_setting_code VARCHAR(255)",
+            "sys_setting_default_value", "ALTER TABLE sys_setting ADD COLUMN sys_setting_default_value VARCHAR(255)",
             "sys_setting_is_sensitive", "ALTER TABLE sys_setting ADD COLUMN sys_setting_is_sensitive INT DEFAULT 0",
             "sys_setting_validate", "ALTER TABLE sys_setting ADD COLUMN sys_setting_validate VARCHAR(512)");
 
@@ -598,6 +599,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                     sys_setting_name VARCHAR(255),
                     sys_setting_code VARCHAR(255),
                     sys_setting_value VARCHAR(255),
+                    sys_setting_default_value VARCHAR(255),
                     sys_setting_config VARCHAR(255),
                     sys_setting_remark VARCHAR(255),
                     sys_setting_sort INT,
