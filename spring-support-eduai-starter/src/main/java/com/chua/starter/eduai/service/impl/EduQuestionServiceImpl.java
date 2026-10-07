@@ -15,6 +15,7 @@ import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
+import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
@@ -342,25 +343,91 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     /**
      * 导入questions
      *
+     * <p><b>失败必须可见</b>：此前逐条吞异常后只回成功条数，payload 缺
+     * NOT NULL 字段（学段/年级等）时接口回 200 {@code data:0}，前端只显示
+     * 「导入成功 0 条」，用户无从得知原因。现改为：逐条前置校验必填字段，
+     * 并把每条失败原因随结果一并返回（{@link QuestionImportResultVO}）。</p>
+     *
      * @param list 列表
-     * @return 导入questions的结果
+     * @return 导入结果（成功/失败条数 + 逐条失败原因）
      */
-    public int importQuestions(List<QuestionSaveDTO> list) {
+    public QuestionImportResultVO importQuestions(List<QuestionSaveDTO> list) {
         int count = 0;
-        for (QuestionSaveDTO dto : list) {
+        List<String> errors = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            String missing = missingRequiredFields(list.get(i));
+            if (missing != null) {
+                errors.add("第" + (i + 1) + "条" + missing);
+                continue;
+            }
             try {
                 /**
                  * 保存question。
                  * @param dto dto
                  */
-                saveQuestion(dto);
+                saveQuestion(list.get(i));
                 count++;
             } catch (Exception e) {
-                log.warn("导入题目失败: {}", e.getMessage());
+                log.warn("导入第 {} 条题目失败: {}", i + 1, e.getMessage());
+                errors.add("第" + (i + 1) + "条" + rootMessage(e));
             }
         }
         log.info("批量导入完成，成功 {} 条，失败 {} 条", count, list.size() - count);
-        return count;
+        return new QuestionImportResultVO(count, list.size() - count, errors);
+    }
+
+    /**
+     * 导入前的必填字段校验：与 edu_question 的 NOT NULL 列一一对应。
+     *
+     * <p>缺这些字段直接落库会报 {@code Field 'x' doesn't have a default value}
+     * （500 且信息对用户无意义），这里提前拦成人话。</p>
+     *
+     * @param dto 单条导入数据
+     * @return 缺失字段的中文描述；齐全时返回 {@code null}
+     */
+    private static String missingRequiredFields(QuestionSaveDTO dto) {
+        if (dto == null) {
+            return "数据为空";
+        }
+        List<String> missing = new ArrayList<>();
+        if (!StringUtils.hasText(dto.getQuestionType())) {
+            missing.add("题型");
+        }
+        if (!StringUtils.hasText(dto.getQuestionSubject())) {
+            missing.add("学科");
+        }
+        if (!StringUtils.hasText(dto.getQuestionGradeLevel())) {
+            missing.add("学段");
+        }
+        if (!StringUtils.hasText(dto.getQuestionGrade())) {
+            missing.add("年级");
+        }
+        if (!StringUtils.hasText(dto.getQuestionStem())) {
+            missing.add("题干");
+        }
+        if (!StringUtils.hasText(dto.getQuestionAnswer())) {
+            missing.add("答案");
+        }
+        return missing.isEmpty() ? null : "缺少必填字段：" + String.join("、", missing);
+    }
+
+    /**
+     * 取异常根因的单行消息（MyBatis 异常消息是多行堆栈摘要，直接透传会刷屏）。
+     *
+     * @param e 异常
+     * @return 根因消息首行（超长截断）；无消息时退回异常类名
+     */
+    private static String rootMessage(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String msg = StringUtils.hasText(root.getMessage()) ? root.getMessage() : e.getMessage();
+        if (!StringUtils.hasText(msg)) {
+            return root.getClass().getSimpleName();
+        }
+        String first = msg.lines().findFirst().orElse(msg).trim();
+        return first.length() > 120 ? first.substring(0, 120) + "..." : first;
     }
 
     @Override
