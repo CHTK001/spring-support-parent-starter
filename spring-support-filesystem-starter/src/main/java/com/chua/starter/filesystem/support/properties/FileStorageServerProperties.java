@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     storage-server:
  *       enable: true          # 是否随应用启动文件服务器
  *       host: 0.0.0.0         # 监听地址
- *       port: 18080           # 监听端口（与前端"文件服务器"页面默认地址对齐）
+ *       port: 18082           # 监听端口（与前端"文件服务器"页面 DEFAULT_SERVER 对齐）
  *       type: jdk             # 服务器引擎: jdk/nio/aio
  *       open-preview: true    # 允许 ?preview 内联预览
  *       open-download: true   # 允许 ?download 附件下载
@@ -52,8 +52,11 @@ public class FileStorageServerProperties {
 
     /**
      * 监听端口（默认与前端文件服务器页 DEFAULT_SERVER 对齐）
+     *
+     * <p>前端 {@code pages/filesystem/src/api/filestorageApi.ts#DEFAULT_SERVER} 缺省
+     * http://127.0.0.1:18082，后端 CORS 默认开启，二者同端口同源即可直连。</p>
      */
-    private int port = 18080;
+    private int port = 18082;
 
     /**
      * 服务器引擎：jdk / nio / aio
@@ -89,6 +92,11 @@ public class FileStorageServerProperties {
      * 允许远程文件透传（http(s) 开头的对象键）
      */
     private boolean openRemoteFile = false;
+
+    /**
+     * 开启三方 URL 预览（{@code ?url=<base64(http(s)://…)>}，拉取远端内容走预览链路）
+     */
+    private boolean openThirdPreview = false;
 
     /**
      * 是否开启目录文件列表页面

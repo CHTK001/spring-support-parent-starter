@@ -78,7 +78,7 @@ public class FileSystemAutoConfiguration {
         return registry -> {
             registry.registerEndpoint("文件系统", "单次上传", "/v2/file/upload", "小文件单次上传");
             registry.registerEndpoint("文件系统", "文件回显", "/v2/file/view/**", "匿名直链读取对象");
-            registry.registerEndpoint("文件系统", "文件服务器", "http://127.0.0.1:18080",
+            registry.registerEndpoint("文件系统", "文件服务器", "http://127.0.0.1:18082",
                     "独立文件存储网关（随应用自动启动，见 plugin.filesystem.storage-server）");
             registry.registerFlag("filesystem", "文件系统", true, "文件存储模块");
         };

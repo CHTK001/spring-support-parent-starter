@@ -44,6 +44,14 @@ public class FileStorageSetting {
     */
     private boolean openRemoteFile;
     /**
+     * 开启三方 URL 预览（{@code ?url=<base64(http(s)://…)>}，拉取远端内容走预览链路）
+     *
+     * <p>外部系统把目标地址 base64 编码后传入，本服务拉取远端内容并走与本地对象
+     * 完全相同的预览分发（{@code preview} / {@code format=pdf} 等参数照常生效）。
+     * 仅放行 http/https，默认关闭。</p>
+     */
+    private boolean openThirdPreview;
+    /**
      * Watermark
     */
     private String watermark;
