@@ -131,6 +131,50 @@ function WaitJs {
     return $false
 }
 
+# ---------- transport self-healing ----------
+# The daemon can stop answering mid-run: observed twice, both times while the shared box was
+# low on RAM (the last content route and the chrome phase died on "transport failure" with
+# the daemon process still listed but its socket answering nothing). The CLI auto-spawns a
+# fresh daemon on the next call, but a half-dead one leaves a stale socket that answers
+# nothing, so the next call would just time out again. Probe cheaply; when the transport is
+# down, kill OUR namespace's daemon (pid read from its own sidecar -- never another session's)
+# plus its browser children, clear the stale sidecars, and log back in.
+function Test-BrowserAlive {
+    $r = ''
+    try { $r = [string](Js '1' 20000) } catch { $r = '' }
+    return ($r -eq '1')
+}
+
+function Reset-Browser {
+    $nsDir = Join-Path $env:USERPROFILE '.agent-browser\namespaces\eduai-acceptance\run'
+    $pidFile = Join-Path $nsDir 'default.pid'
+    if (Test-Path $pidFile) {
+        $dp = ([string](Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1)).Trim()
+        if ($dp -match '^\d+$') {
+            $dpid = [int]$dp
+            Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+                Where-Object { $_.ParentProcessId -eq $dpid } |
+                ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+            Stop-Process -Id $dpid -Force -ErrorAction SilentlyContinue
+            Write-Host ('    [browser] stopped unresponsive daemon pid={0}' -f $dpid)
+        }
+    }
+    Get-ChildItem $nsDir -Filter 'default.*' -ErrorAction SilentlyContinue |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    return (Test-BrowserAlive)
+}
+
+function Ensure-Browser {
+    if (Test-BrowserAlive) { return $true }
+    Write-Host '    [browser] transport unresponsive; restarting this namespace daemon and re-login'
+    [void](Reset-Browser)
+    if (-not (Test-BrowserAlive)) { Start-Sleep -Seconds 4 }
+    if (-not (Test-BrowserAlive)) { return $false }
+    [void](Invoke-Login -Quiet)
+    return $true
+}
+
 $script:Pass = 0; $script:Fail = 0
 $script:Fails = New-Object System.Collections.ArrayList
 $script:Rows = New-Object System.Collections.ArrayList
@@ -487,11 +531,19 @@ $jsProbe = @'
   // Selection state matters as much as text: clicking an answer option or a filter tab
   // often only flips a class, which a text-length diff cannot see. Without this the
   // game pages reported 40+ "dead" buttons that are in fact working selections.
+  // Bare `.active` included: the weather strip marks its selected day with a plain
+  // `active` class, which the is-/aria-only list could never see.
   const act = Array.from(document.querySelectorAll(
-      '.is-active, .is-checked, [aria-checked="true"], [aria-selected="true"], [aria-pressed="true"]'))
+      '.is-active, .is-checked, .active, [aria-checked="true"], [aria-selected="true"], [aria-pressed="true"]'))
     .map(e => ((e.className || '').toString().slice(0, 20)) + '|' + ((e.innerText || '').trim().slice(0, 6))).join(';');
   const inputs = Array.from(document.querySelectorAll('input, textarea'))
     .map(i => (i.type || i.tagName) + (i.checked ? 'C' : 'u') + ':' + ((i.value || '') + '').length).join(',');
+  // Checksums, because LENGTH diffs net out to zero on a pure state swap: a class moving
+  // from one cell to another edits innerHTML by +N and -N at once (htmlLen identical), and
+  // a same-length label swap ("10-07" -> "10-08") leaves bodyLen identical too. The weather
+  // day cells changed BOTH on every working click and still read "no visible effect" x31.
+  // Hash the content, not its size.
+  const sum = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
   // Generic change detector. The game pages mark state with their own class names
   // (ig-card / iw__opt with custom picked/right/wrong classes), so a whitelist of
   // Element Plus classes kept reporting them as dead buttons. Node count and innerHTML
@@ -514,6 +566,8 @@ $jsProbe = @'
     act: act, inputs: inputs,
     nodes: root.querySelectorAll('*').length,
     htmlLen: root.innerHTML.length,
+    htmlSum: sum(root.innerHTML),
+    bodySum: sum(document.body.innerText || ''),
     // First data cell text: catches a page switch whose row count happens to match
     // (this is how ReTable's own pager changes pages -- clicking page 2 of
     // /edu/wrongbook takes the rows from 20 to 19, but a same-size page would be
@@ -553,7 +607,11 @@ function Build-InventoryJs {
     const cls = (el.className || '').toString();
     // "Already selected" tokens, incl. product state classes: the insect 3D hotspot marks
     // its open dot `is-open`, so pressing an open hotspot CLOSES it (identical state).
+    // Bare `active` too: the weather strip's selected day is `week-col active`, and without
+    // it every click on the already-selected day fell through to the dead-button verdict
+    // instead of the already-active exemption.
     const active = (/\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
+      /(^|\s)active(\s|$)/.test(cls) ||
       /--active\b/.test(cls) ||
       el.getAttribute('aria-checked') === 'true' ||
       el.getAttribute('aria-selected') === 'true' ||
@@ -582,8 +640,8 @@ function Build-InventoryJs {
     try { return getComputedStyle(el).cursor === 'pointer'; } catch (e) { return false; }
   };
   // cursor:pointer alone is NOT evidence of a control: the weather widget paints its seven
-  // forecast columns with pointer cursors and hover styles but binds no handler at all,
-  // so a pointer-only scan reported 7 dead buttons. Require a real handler.
+  // forecast columns with pointer cursors and hover styles (an early build bound no @click at
+  // all, and a pointer-only scan reported 7 dead buttons). Require a real handler regardless.
   const hasHandler = el => {
     try {
       const vei = el._vei;
@@ -629,8 +687,11 @@ function Build-InventoryJs {
     const id = 'u' + out.length;
     el.setAttribute('data-uitest', id);
     // active must consider ancestors: el-menu-item carries is-active one level ABOVE the
-    // pointer span, and a nav entry for the current route is a no-op by design
+    // pointer span, and a nav entry for the current route is a no-op by design.
+    // Bare `active` too (same reason as pass 1): the weather strip's selected day is
+    // `week-col active`, and without it a click on the already-selected day was judged dead.
     const activeCls = /\bis-(active|checked|open|selected|picked|matched|current)\b/.test(cls) ||
+      /(^|\s)active(\s|$)/.test(cls) ||
       el.getAttribute('aria-checked') === 'true' || el.getAttribute('aria-selected') === 'true' ||
       !!el.closest('.is-active, .is-checked, [aria-current="page"], [aria-selected="true"]');
     let activeHref = false;
@@ -1295,6 +1356,8 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
         elseif ($lgA.act -ne $lgB.act) { $lgEff = 'state' }
         elseif ($lgA.inputs -ne $lgB.inputs) { $lgEff = 'input' }
         elseif ($lgA.nodes -ne $lgB.nodes) { $lgEff = 'node' }
+        elseif ($lgA.htmlSum -ne $lgB.htmlSum) { $lgEff = 'state' }
+        elseif ($lgA.bodySum -ne $lgB.bodySum) { $lgEff = 'state' }
         elseif ($lgA.htmlLen -ne $lgB.htmlLen) { $lgEff = 'style' }
         elseif ($lgA.bodyLen -ne $lgB.bodyLen) { $lgEff = 'dom' }
         elseif ($lgEv.reqTotal -gt 0) { $lgEff = 'request' }
@@ -1312,6 +1375,8 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
             elseif ($lgA2.act -ne $lgA.act) { $lgE2 = 'state' }
             elseif ($lgA2.inputs -ne $lgA.inputs) { $lgE2 = 'input' }
             elseif ($lgA2.nodes -ne $lgA.nodes) { $lgE2 = 'node' }
+            elseif ($lgA2.htmlSum -ne $lgA.htmlSum) { $lgE2 = 'state' }
+            elseif ($lgA2.bodySum -ne $lgA.bodySum) { $lgE2 = 'state' }
             elseif ($lgA2.htmlLen -ne $lgA.htmlLen) { $lgE2 = 'style' }
             elseif ($lgA2.bodyLen -ne $lgA.bodyLen) { $lgE2 = 'dom' }
             elseif ($lgEv2.reqTotal -gt 0) { $lgE2 = 'request' }
@@ -1375,14 +1440,37 @@ if (-not $SkipContent) {
         }
 
         $i = 0; $restarts = 0; $clicked = 0; $prevCount = 0; $modeRestarts = 0; $emptyTries = 0
+        $transportRetried = $false
         while ($true) {
-            $inv = Js $jsInvContent
+            # The daemon occasionally drops mid-run ("EOF while parsing", os error 10060) and
+            # the CLI's retries surface the transport error text INSTEAD of the inventory --
+            # one hiccup failed /edu/student-login outright and silently killed the whole
+            # chrome phase. Retry the fetch before judging the page.
+            $inv = ''
             $scopeKind = 'main'
-            if ($inv -match '^##([^#]+)##') { $scopeKind = $Matches[1]; $inv = $inv.Substring(4 + $scopeKind.Length) }
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+                $inv = Js $jsInvContent
+                $scopeKind = 'main'
+                if ($inv -match '^##([^#]+)##') { $scopeKind = $Matches[1]; $inv = $inv.Substring(4 + $scopeKind.Length) }
+                if ($inv) {
+                    try { $null = @($inv | ConvertFrom-Json); break } catch { }
+                }
+                $inv = ''
+                Start-Sleep -Seconds 3
+            }
             if ($scopeKind -eq 'body') {
                 Write-Host '    [WARN] inventory scope degraded to body (main.el-main not rendered yet)'
             }
-            if (-not $inv) { Ck "$rname inventory readable" $false ''; break }
+            if (-not $inv) {
+                # A dead transport is an environment fault, not an unreadable page: restart
+                # this namespace's daemon, log back in and walk the route again once.
+                if (-not $transportRetried -and (Ensure-Browser)) {
+                    $transportRetried = $true
+                    continue
+                }
+                Ck "$rname inventory readable" $false 'transport failure after daemon restart'
+                break
+            }
             $items = @()
             try { $items = @($inv | ConvertFrom-Json) }
             catch {
@@ -1532,6 +1620,8 @@ if (-not $SkipContent) {
             elseif ($after.act -ne $before.act) { $effect = 'state' }
             elseif ($after.inputs -ne $before.inputs) { $effect = 'input' }
             elseif ($after.nodes -ne $before.nodes) { $effect = 'node' }
+            elseif ($after.htmlSum -ne $before.htmlSum) { $effect = 'state' }
+            elseif ($after.bodySum -ne $before.bodySum) { $effect = 'state' }
             elseif ($after.htmlLen -ne $before.htmlLen) { $effect = 'style' }
             elseif ($after.bodyLen -ne $before.bodyLen) { $effect = 'dom' }
             elseif ($ev.reqTotal -gt 0) { $effect = 'request' }
@@ -1563,6 +1653,8 @@ if (-not $SkipContent) {
                 elseif ($after2.act -ne $after.act) { $effect2 = 'state' }
                 elseif ($after2.inputs -ne $after.inputs) { $effect2 = 'input' }
                 elseif ($after2.nodes -ne $after.nodes) { $effect2 = 'node' }
+                elseif ($after2.htmlSum -ne $after.htmlSum) { $effect2 = 'state' }
+                elseif ($after2.bodySum -ne $after.bodySum) { $effect2 = 'state' }
                 elseif ($after2.htmlLen -ne $after.htmlLen) { $effect2 = 'style' }
                 elseif ($after2.bodyLen -ne $after.bodyLen) { $effect2 = 'dom' }
                 elseif ($ev2.reqTotal -gt 0) { $effect2 = 'request' }
@@ -1686,11 +1778,35 @@ if (-not $SkipChrome) {
     $homePath = '/home'
     Open-Route $homePath
     $i = 0; $restarts = 0
+    $chromeTransportRetried = $false
     while ($true) {
-        $inv = Js $jsInvChrome
+        # Same transport retry as the content phase: one daemon EOF here aborted the entire
+        # chrome phase with a ConvertFrom-Json error and left the top bar / sidebar / tabs
+        # untested while the summary still said "harness-err 0".
+        $inv = ''
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            $inv = Js $jsInvChrome
             if ($inv -match '^##[^#]+##') { $inv = $inv.Substring($inv.IndexOf('##', 2) + 2) }
-        if (-not $inv) { Ck 'chrome inventory readable' $false ''; break }
-        $items = @($inv | ConvertFrom-Json)
+            if ($inv) {
+                try { $null = @($inv | ConvertFrom-Json); break } catch { }
+            }
+            $inv = ''
+            Start-Sleep -Seconds 3
+        }
+        if (-not $inv) {
+            # Dead transport is an environment fault: restart this namespace's daemon and
+            # re-open the chrome page once before failing the phase.
+            if (-not $chromeTransportRetried -and (Ensure-Browser)) {
+                $chromeTransportRetried = $true
+                Open-Route $homePath
+                continue
+            }
+            Ck 'chrome inventory readable' $false 'transport failure after daemon restart'
+            break
+        }
+        $items = @()
+        try { $items = @($inv | ConvertFrom-Json) }
+        catch { Ck 'chrome inventory readable' $false ("raw=" + $inv.Substring(0, [Math]::Min(200, $inv.Length))); break }
         if ($i -ge $items.Count) { break }
         $it = $items[$i]
         $i++

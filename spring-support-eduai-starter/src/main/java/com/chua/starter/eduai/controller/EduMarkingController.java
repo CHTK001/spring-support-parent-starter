@@ -4,8 +4,10 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
+import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.service.IEduMarkingService;
+import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -42,6 +45,11 @@ public class EduMarkingController {
      * Marking服务
     */
     private final IEduMarkingService markingService;
+
+    /**
+     * 阅卷进度 SSE 推送注册表
+     */
+    private final EduMarkingProgressHub progressHub;
 
     /**
      * 提交答题卡
@@ -156,5 +164,49 @@ public class EduMarkingController {
     @PutMapping("/confirm")
     public ReturnResult<Boolean> confirm(@RequestBody MarkingConfirmDTO dto) {
         return ReturnResult.ok(markingService.confirmMarking(dto));
+    }
+
+    /**
+     * 实时订阅阅卷进度（SSE）。
+     *
+     * <p>上传答题卡拿到 taskId 后立刻建这条流：识别 / 解析 / 判分每推进一步都会收到一帧
+     * {@code progress}，终态（完成或失败）时收到 {@code done} 且服务端主动收流。
+     * 建连瞬间先推一帧当前快照，断线重连 / 判完后再订阅都不会空等。</p>
+     *
+     * @param taskId 任务标识
+     * @return SSE 流
+     */
+    @Operation(summary = "实时订阅阅卷进度（SSE）")
+    @GetMapping(value = "/stream/{taskId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream(@PathVariable String taskId) {
+        SseEmitter emitter = progressHub.subscribe(taskId);
+        try {
+            MarkingProgressVO snapshot = markingService.getProgress(taskId);
+            progressHub.sendTo(emitter, "progress", snapshot);
+            if (Boolean.TRUE.equals(snapshot.getFinished())) {
+                progressHub.complete(taskId, "done", snapshot);
+            }
+        } catch (BusinessException e) {
+            // 任务不存在：显式告诉前端并收流，避免连接挂到超时前端一直「连接中」
+            sendStreamError(taskId, e.getMessage());
+        } catch (Exception e) {
+            log.error("[EduAi] 建立阅卷进度流失败: taskId={}", taskId, e);
+            sendStreamError(taskId, "订阅失败: " + e.getMessage());
+        }
+        return emitter;
+    }
+
+    /**
+     * 收流并推送一条终态错误帧。
+     *
+     * @param taskId  任务标识
+     * @param message 错误信息
+     */
+    private void sendStreamError(String taskId, String message) {
+        MarkingProgressVO error = new MarkingProgressVO();
+        error.setTaskId(taskId);
+        error.setError(message);
+        error.setFinished(true);
+        progressHub.complete(taskId, "done", error);
     }
 }

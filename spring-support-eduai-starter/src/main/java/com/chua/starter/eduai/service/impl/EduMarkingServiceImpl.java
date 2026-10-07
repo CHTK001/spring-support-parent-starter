@@ -28,6 +28,7 @@ import com.chua.starter.eduai.model.EduPaperQuestion;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
+import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
@@ -35,6 +36,7 @@ import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
 import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import com.chua.starter.queue.MessageTemplate;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -163,6 +165,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 阅卷任务映射器（异步任务的状态载体，支撑重启续跑）
      */
     private final EduMarkingTaskMapper taskMapper;
+
+    /**
+     * 阅卷进度 SSE 推送注册表（判分过程中把阶段推给正在看这单的老师）
+     */
+    private final EduMarkingProgressHub progressHub;
 
     /**
      * JSON 解析器（还原识别详情，供判分与续跑使用）
@@ -1135,6 +1142,125 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         } catch (Exception e) {
             log.warn("[EduAi] 更新任务进度失败: taskId={}, stage={}, err={}", taskId, stage, e.getMessage());
         }
+        // 落库之后再推流：断线重订阅的老师能从库里拿到与推送一致的状态
+        publishProgress(taskId, status, stage, total, done, error);
+    }
+
+    /**
+     * 把阶段变化推给订阅了该任务的 SSE 连接。
+     *
+     * <p>推送失败绝不能影响阅卷本身：整段包在 try/catch 里，只记 debug。</p>
+     *
+     * @param taskId 任务业务标识
+     * @param status 任务状态
+     * @param stage  阶段描述
+     * @param total  题目总数（可为空）
+     * @param done   已判分数（可为空）
+     * @param error  失败原因（可为空）
+     */
+    private void publishProgress(String taskId, int status, String stage,
+                                 Integer total, Integer done, String error) {
+        try {
+            boolean terminal = status == EduMarkingTask.STATUS_DONE || status == EduMarkingTask.STATUS_FAILED;
+            MarkingProgressVO vo;
+            if (terminal) {
+                // 终态读库：失败路径传的 total/done 都是 null，而库里保留着最后一次的
+                // 题目数 / 已判分数，直接拿库里的行拼一个准确的收尾快照
+                EduMarkingTask latest = taskMapper.selectByTaskId(taskId);
+                vo = latest != null ? toProgressVo(latest) : buildProgressVo(taskId, status, stage, total, done, error);
+            } else {
+                vo = buildProgressVo(taskId, status, stage, total, done, error);
+            }
+            if (terminal) {
+                // 终态：广播 done 并主动收流，前端不必等下一次轮询或超时
+                progressHub.complete(taskId, "done", vo);
+            } else {
+                progressHub.broadcast(taskId, "progress", vo);
+            }
+        } catch (Exception e) {
+            log.debug("[EduAi] 推送阅卷进度失败(忽略，不影响阅卷): taskId={}, err={}", taskId, e.getMessage());
+        }
+    }
+
+    /**
+     * 由阶段参数拼进度 VO（非终态路径；库里可能还没写入 total/done）。
+     *
+     * @param taskId 任务业务标识
+     * @param status 任务状态
+     * @param stage  阶段描述
+     * @param total  题目总数（可为空）
+     * @param done   已判分数（可为空）
+     * @param error  失败原因（可为空）
+     * @return 进度 VO
+     */
+    private MarkingProgressVO buildProgressVo(String taskId, int status, String stage,
+                                              Integer total, Integer done, String error) {
+        MarkingProgressVO vo = new MarkingProgressVO();
+        vo.setTaskId(taskId);
+        vo.setTaskStatus(status);
+        vo.setStage(stage);
+        vo.setTotal(total);
+        vo.setDoneCount(done);
+        vo.setError(error);
+        vo.setFinished(false);
+        vo.setPercent(percentOf(total, done));
+        vo.setUpdateTime(LocalDateTime.now());
+        return vo;
+    }
+
+    /**
+     * 由任务实体拼进度 VO（建连快照 / 终态收尾）。
+     *
+     * @param task 任务实体
+     * @return 进度 VO
+     */
+    private MarkingProgressVO toProgressVo(EduMarkingTask task) {
+        Integer status = task.getMarkingTaskStatus();
+        boolean terminal = Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(status)
+                || Integer.valueOf(EduMarkingTask.STATUS_FAILED).equals(status);
+        MarkingProgressVO vo = new MarkingProgressVO();
+        vo.setTaskId(task.getMarkingTaskTaskId());
+        vo.setTaskStatus(status);
+        vo.setStage(task.getMarkingTaskStage());
+        vo.setTotal(task.getMarkingTaskTotal());
+        vo.setDoneCount(task.getMarkingTaskDoneCount());
+        vo.setError(task.getMarkingTaskError());
+        vo.setMode(task.getMarkingTaskMode());
+        vo.setStudentId(task.getMarkingTaskStudentId());
+        vo.setFinished(terminal);
+        Integer percent = percentOf(task.getMarkingTaskTotal(), task.getMarkingTaskDoneCount());
+        vo.setPercent(percent == null && terminal ? 100 : percent);
+        vo.setUpdateTime(LocalDateTime.now());
+        return vo;
+    }
+
+    /**
+     * 百分比：题目数未知时返回 null（前端用不确定态进度条），已知时按已判分数折算。
+     *
+     * @param total 题目总数
+     * @param done  已判分数
+     * @return 0-100 或 null
+     */
+    private static Integer percentOf(Integer total, Integer done) {
+        if (total != null && total > 0 && done != null) {
+            return Math.min(100, (int) Math.round(done * 100.0 / total));
+        }
+        return null;
+    }
+
+    /**
+     * 取任务当前进度快照（SSE 建连时先推一帧）。
+     *
+     * @param taskId 任务业务标识
+     * @return 进度快照
+     */
+    @Override
+    public MarkingProgressVO getProgress(String taskId) {
+        EduMarkingTask task = loadTaskQuietly(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        return toProgressVo(task);
     }
 
     /**

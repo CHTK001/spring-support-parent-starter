@@ -2,6 +2,7 @@ package com.chua.starter.eduai.service;
 
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
+import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 
 import java.util.List;
@@ -91,4 +92,12 @@ public interface IEduMarkingService {
      * @return 是否成功
      */
     boolean confirmMarking(MarkingConfirmDTO dto);
+
+    /**
+     * 取任务当前进度快照（SSE 建连时先推一帧，避免前端空等）。
+     *
+     * @param taskId 任务业务标识
+     * @return 进度快照
+     */
+    MarkingProgressVO getProgress(String taskId);
 }
