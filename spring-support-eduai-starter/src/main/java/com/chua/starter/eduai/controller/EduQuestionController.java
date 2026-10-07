@@ -7,6 +7,7 @@ import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
+import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
@@ -98,16 +99,15 @@ public class EduQuestionController {
     }
 
     /**
-     * 批量导入题目
+     * 批量导入题目（逐条容错，返回成功/失败条数与逐条失败原因）
      *
      * @param list 题目列表
-     * @return 导入数量
+     * @return 导入结果
      */
     @Operation(summary = "批量导入题目")
     @PostMapping("/import")
-    public ReturnResult<Integer> importQuestions(@RequestBody List<QuestionSaveDTO> list) {
-        int count = questionService.importQuestions(list);
-        return ReturnResult.ok(count);
+    public ReturnResult<QuestionImportResultVO> importQuestions(@RequestBody List<QuestionSaveDTO> list) {
+        return ReturnResult.ok(questionService.importQuestions(list));
     }
 
     /**
