@@ -3,6 +3,7 @@ package com.chua.starter.eduai.dimension.service;
 import com.chua.starter.common.support.constant.CacheConstant;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -637,7 +638,42 @@ public class EduDimensionService {
         if (StringUtils.hasText(student.getOwnerUserId())) {
             ext.put("ownerUserId", student.getOwnerUserId());
         }
-        return AuthClientExecute.getInstance().createTemporaryTokenFor(target, seconds, scope);
+        LoginAuthResult result = AuthClientExecute.getInstance().createTemporaryTokenFor(target, seconds, scope);
+        if (result == null || result.getCode() == null || result.getCode() != 200) {
+            String message = result == null ? null : result.getMessage();
+            // 操作人自己的登录态已失效（令牌被新的登录顶掉、或已过期/被拉黑）时，
+            // 本地 3 分钟鉴权缓存仍会短暂放行本接口的鉴权，问题一路传到「服务端签发」
+            // 才暴露，服务端只会回一句「未认证」。若按普通业务错误提示，用户看到的是
+            // 一句莫名其妙的提示，且必须自己想到要重新登录才能恢复——
+            // 这里统一升级为 401 会话失效，走前端既有的「登录已过期，请重新登录」流程。
+            if (isOperatorCredentialInvalid(result, message)) {
+                throw new OauthException("登录状态已失效，请重新登录", 401);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 判断签发失败是否源于「操作人（管理员）自己的登录态失效」。
+     *
+     * <p>签发代入令牌要把操作人的令牌作为源凭据送到鉴权服务端换取，服务端拒绝时
+     * 只会给出「未认证 / Token已失效」这类文案（业务码是通用错误码，不便于判定），
+     * 因此这里按消息与既有 401 码共同识别；「代入目标非法」「非管理员」等
+     * 业务性失败不在此列，仍按原错误返回。</p>
+     *
+     * @param result 服务端签发结果，可为 {@code null}
+     * @param message 失败提示，可为 {@code null}
+     * @return 是否属于操作人登录态失效
+     */
+    private boolean isOperatorCredentialInvalid(LoginAuthResult result, String message) {
+        if (result != null && result.getCode() != null && result.getCode() == 401) {
+            return true;
+        }
+        if (message == null || message.isEmpty()) {
+            return false;
+        }
+        return message.contains("未认证") || message.contains("未登录") || message.contains("已失效")
+                || message.contains("已被禁用") || message.contains("黑名单") || message.contains("数据异常");
     }
 
     /**
