@@ -4,6 +4,7 @@ import com.chua.common.support.ai.rag.GlobalSettingProvider;
 import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.deeplearning.support.ocr.OcrPipeline;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.client.ModelIds;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,33 @@ class OcrCorrectorWiringTest {
         OcrPipeline pipeline = new OcrClientManager(reader).current();
 
         assertNotNull(pipeline.corrector(), "配置了文本矫正模型后必须装配到管线（配置要生效）");
+    }
+
+    /**
+     * 设置页模型选择器实际保存的形态是 {@code providerId:model}（如 onnx:macbert4csc），
+     * 注册表按裸名精确匹配——不归一会静默查空（配置了却不生效），锁死该回归。
+     */
+    @Test
+    @DisplayName("配置 onnx:macbert4csc（选择器形态）：剥前缀后装配生效")
+    void prefixedCorrectorIdIsNormalized() {
+        MapSettingReader reader = baseReader().put("corrector_model", "onnx:macbert4csc");
+
+        OcrPipeline pipeline = new OcrClientManager(reader).current();
+
+        assertNotNull(pipeline.corrector(),
+                "带提供商前缀的选择器值必须归一为裸名并装配到管线（否则配置了却不生效）");
+    }
+
+    /**
+     * 裸名归一语义：首冒号前为提供商前缀；无前缀、空串、null 原样保留留空语义。
+     */
+    @Test
+    @DisplayName("ModelIds.bare：剥提供商前缀，空值语义保持")
+    void bareNormalizesProviderPrefix() {
+        assertEquals("macbert4csc", ModelIds.bare("onnx:macbert4csc"), "选择器值剥前缀取裸名");
+        assertEquals("macbert4csc", ModelIds.bare("macbert4csc"), "已是裸名原样返回");
+        assertEquals("", ModelIds.bare(""), "空串原样（留空=关闭）");
+        assertNull(ModelIds.bare(null), "null 原样（留空=关闭）");
     }
 
     /**
