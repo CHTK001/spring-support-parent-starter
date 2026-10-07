@@ -217,11 +217,19 @@ public class DatasourceSchemaServiceImpl implements DatasourceSchemaService {
             if (!exists) {
                 String ddl = JdbcDialectSupport.createTableSql(connection, table, definitions, primaryKey,
                         request.comment());
+                // 非 MySQL 内核的表注释是独立的 COMMENT ON TABLE 语句，预览也要列出来：
+                // 只给 CREATE TABLE 会让用户以为注释没生效（实际执行时它会补上）。
+                List<String> statements = new ArrayList<>();
+                statements.add(ddl);
+                String tableComment = JdbcDialectSupport.tableCommentSql(connection, table, request.comment());
+                if (tableComment != null) {
+                    statements.add(tableComment);
+                }
                 if (execute) {
                     JdbcDialectSupport.createTable(connection, table, definitions, primaryKey, request.comment());
                 }
                 return new TableDdlVO(table, false, execute, List.of(),
-                        execute ? readColumns(connection, table) : resolved, List.of(ddl), warnings);
+                        execute ? readColumns(connection, table) : resolved, statements, warnings);
             }
             String strategy = StringUtils.hasText(request.ifExists())
                     ? request.ifExists().trim().toUpperCase(Locale.ROOT) : STRATEGY_APPEND;
