@@ -1204,7 +1204,19 @@ function Api {
     if ($Token) { $h['Authorization'] = "Bearer $Token" }
     $a = @{ Method = $Method; Uri = ($Base + $Path); Headers = $h; SkipHttpErrorCheck = $true; TimeoutSec = 30 }
     if ($null -ne $Body) { $a['ContentType'] = 'application/json'; $a['Body'] = ($Body | ConvertTo-Json -Depth 6 -Compress) }
-    $r = Invoke-WebRequest @a
+    # Transport retry: SkipHttpErrorCheck already keeps 4xx/5xx out of this catch, so the only
+    # thing caught here is a refused/reset connection (vite proxy under node backlog pressure
+    # did exactly that once, and one refused call failed the whole student fixture chain:
+    # no student token -> no password change -> forced-change dialog blocks every student page).
+    $r = $null
+    for ($t = 1; $t -le 3; $t++) {
+        try { $r = Invoke-WebRequest @a; break }
+        catch {
+            if ($t -lt 3) { Start-Sleep -Seconds 2 }
+            else { Write-Host ("    [api] {0} {1} refused/transport after 3 tries: {2}" -f $Method, $Path, $_.Exception.Message) }
+        }
+    }
+    if ($null -eq $r) { return @{ code = 0; json = $null; raw = '' } }
     $json = $null
     try { $json = $r.Content | ConvertFrom-Json } catch { }
     return @{ code = [int]$r.StatusCode; json = $json; raw = [string]$r.Content }
