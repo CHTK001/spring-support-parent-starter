@@ -391,15 +391,41 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         if (libraryId == null) {
             return new int[]{0, 0};
         }
-        int entityCount = Math.toIntExact(graphRefMapper.selectCount(
-                new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
-                        .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId)
-                        .eq(SysAiKnowledgeGraphRef::getTargetType, TARGET_ENTITY)));
-        int relationCount = Math.toIntExact(graphRefMapper.selectCount(
-                new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
-                        .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId)
-                        .eq(SysAiKnowledgeGraphRef::getTargetType, TARGET_RELATION)));
-        return new int[]{entityCount, relationCount};
+        // 口径必须与 buildView 完全一致：按**去重后的 uid**计数，且目标行要真实存在。
+        //
+        // 原先这里直接 selectCount(ref 表行数)，不过滤 status、不按 uid 去重。一个实体
+        // 被多个知识点/手工挂载引用时 ref 表就有多行，于是页头徽标比实体表多出数字
+        // （2026-10-07 实测：同一实体既有文档引用又有手工关系挂载 → 计数 29、实际实体 28）。
+        // 现在复用 referencedUids（status=1 且按 uid 去重）再回实体/关系表核对存在性，
+        // 保证「页头计数 = 图谱节点数 = 实体表总条数」。
+        Set<String> entityUids = referencedUids(libraryId, TARGET_ENTITY);
+        Set<String> relationUids = referencedUids(libraryId, TARGET_RELATION);
+        if (entityUids.isEmpty() && relationUids.isEmpty()) {
+            return new int[]{0, 0};
+        }
+        Set<String> existingEntityUids = new HashSet<>();
+        if (!entityUids.isEmpty()) {
+            for (SysAiKnowledgeGraphEntity entity : graphEntityMapper.selectList(
+                    new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
+                            .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)
+                            .in(SysAiKnowledgeGraphEntity::getUid, entityUids))) {
+                existingEntityUids.add(entity.getUid());
+            }
+        }
+        int relationCount = 0;
+        if (!relationUids.isEmpty()) {
+            for (SysAiKnowledgeGraphRelation relation : graphRelationMapper.selectList(
+                    new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
+                            .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId)
+                            .in(SysAiKnowledgeGraphRelation::getUid, relationUids))) {
+                // 与 buildView 一致：关系两端都要可见，否则这条边根本不画出来
+                if (existingEntityUids.contains(relation.getSourceEntityUid())
+                        && existingEntityUids.contains(relation.getTargetEntityUid())) {
+                    relationCount++;
+                }
+            }
+        }
+        return new int[]{existingEntityUids.size(), relationCount};
     }
 
     /**
@@ -1188,8 +1214,10 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
             return null;
         }
         String uid = upsertRelation(libraryId, sourceUid, targetUid, normalizeRelationType(type));
-        addRef(libraryId, TARGET_ENTITY, sourceUid, knowledgeBaseId, MANUAL_DOC_PATH);
-        addRef(libraryId, TARGET_ENTITY, targetUid, knowledgeBaseId, MANUAL_DOC_PATH);
+        // 端点用**独立的**保留路径挂载（不是手工实体的 __manual__）：删除本边时才能
+        // 只回收「为连边而挂的端点关联」，不会误伤用户手工补录的实体（见 MANUAL_EDGE_DOC_PATH）
+        addRef(libraryId, TARGET_ENTITY, sourceUid, knowledgeBaseId, MANUAL_EDGE_DOC_PATH);
+        addRef(libraryId, TARGET_ENTITY, targetUid, knowledgeBaseId, MANUAL_EDGE_DOC_PATH);
         addRef(libraryId, TARGET_RELATION, uid, knowledgeBaseId, MANUAL_DOC_PATH);
         pruneOrphans(libraryId);
         return uid;
@@ -1224,9 +1252,48 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         int removed = graphRelationMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
                 .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId)
                 .in(SysAiKnowledgeGraphRelation::getUid, targets));
+        // 回收端点的「连边挂载」：删掉这些边后，端点若不再被本图谱库任何关系使用，
+        // 它身上那条 __manual_edge__ 关联就该撤掉，否则 pruneOrphans 会认为占位实体
+        // 「仍被引用」而不回收 —— 表现为删了手工关系，端点占位实体却留在实体表里。
+        // 只碰 __manual_edge__，用户手工补录实体的 __manual__ 挂载不受影响。
+        releaseUnusedEdgeRefs(knowledgeBaseId, libraryId);
         // 端点实体可能只被这条边引用，pruneOrphans 会把它们一并回收
         pruneOrphans(libraryId);
         return removed;
+    }
+
+    /**
+     * 回收不再被任何关系使用的端点连边挂载。
+     *
+     * <p>与 {@link #addManualRelation} 的 {@code __manual_edge__} 挂载成对：删边时必须擦掉，
+     * 否则端点占位实体会被 {@link #pruneOrphans} 误判为「仍被引用」而永久残留。</p>
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param libraryId       图谱库ID
+     */
+    private void releaseUnusedEdgeRefs(String knowledgeBaseId, Integer libraryId) {
+        Set<String> busyUids = new LinkedHashSet<>();
+        for (SysAiKnowledgeGraphRelation relation : graphRelationMapper.selectList(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
+                        .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId))) {
+            if (StringUtils.hasText(relation.getSourceEntityUid())) {
+                busyUids.add(relation.getSourceEntityUid());
+            }
+            if (StringUtils.hasText(relation.getTargetEntityUid())) {
+                busyUids.add(relation.getTargetEntityUid());
+            }
+        }
+        List<SysAiKnowledgeGraphRef> edgeRefs = graphRefMapper.selectList(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
+                        .eq(SysAiKnowledgeGraphRef::getLibraryId, libraryId)
+                        .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId)
+                        .eq(SysAiKnowledgeGraphRef::getTargetType, TARGET_ENTITY)
+                        .eq(SysAiKnowledgeGraphRef::getDocPath, MANUAL_EDGE_DOC_PATH));
+        for (SysAiKnowledgeGraphRef ref : edgeRefs) {
+            if (!busyUids.contains(ref.getTargetUid())) {
+                graphRefMapper.deleteById(ref.getId());
+            }
+        }
     }
 
     /**
