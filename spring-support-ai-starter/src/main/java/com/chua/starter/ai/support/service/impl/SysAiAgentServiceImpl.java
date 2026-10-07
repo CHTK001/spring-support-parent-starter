@@ -235,6 +235,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
          * @param false false
          */
         applyBody(entity, body, false);
+        if (body.containsKey("sort_order")) {
+            entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
+        }
         entity.setUpdatedAt(System.currentTimeMillis());
         agentMapper.updateById(entity);
         SysAiAgent master = requireAgent(agentId);
