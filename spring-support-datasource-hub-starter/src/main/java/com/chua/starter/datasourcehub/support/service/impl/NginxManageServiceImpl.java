@@ -2553,7 +2553,7 @@ public class NginxManageServiceImpl implements NginxManageService {
         MsMonitorNginxMetric row = new MsMonitorNginxMetric();
         row.setDatasourceId(dsId);
         row.setMetricName(name);
-        row.setValue(value.doubleValue());
+        row.setMetricValue(value.doubleValue());
         row.setCollectTime(time);
         rows.add(row);
     }
@@ -2729,14 +2729,14 @@ public class NginxManageServiceImpl implements NginxManageService {
         Map<String, MsMonitorNginxMetric> prev = new LinkedHashMap<>();
         for (MsMonitorNginxMetric row : rows) {
             String name = row.getMetricName();
-            Double value = row.getValue();
+            Double value = row.getMetricValue();
             Double rate = null;
             if (value != null) {
                 if (CUMULATIVE_METRICS.contains(name)) {
                     MsMonitorNginxMetric last = prev.get(name);
-                    if (last != null && last.getValue() != null) {
+                    if (last != null && last.getMetricValue() != null) {
                         long seconds = Duration.between(last.getCollectTime(), row.getCollectTime()).getSeconds();
-                        double diff = value - last.getValue();
+                        double diff = value - last.getMetricValue();
                         // 负差值 = worker 重启后计数器归零。画成负尖峰会被误读成「流量暴跌」，
                         // 这里直接断线，让前端看到的是「这里重启过」而不是「流量崩了」
                         if (seconds > 0 && diff >= 0) {
