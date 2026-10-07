@@ -80,6 +80,14 @@ public class MarkingResultVO {
         */
         private Long questionId;
         /**
+         * 卷面识别题号（任意卷无题库题号，靠它对位；如 "1." "2."）
+         */
+        private String no;
+        /**
+         * 学生作答原文（从识别明细透出，教师对照作答做修正）
+         */
+        private String studentAnswer;
+        /**
          * 该题在试卷上的满分（取自 edu_paper_question 的每题分值），教师修正不得超过此值
         */
         private Integer maxScore;
