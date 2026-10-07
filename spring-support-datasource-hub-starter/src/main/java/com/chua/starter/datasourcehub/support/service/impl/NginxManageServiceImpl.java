@@ -834,8 +834,15 @@ public class NginxManageServiceImpl implements NginxManageService {
         String configure = null;
         int idx = raw.indexOf("nginx/");
         if (idx >= 0) {
-            int end = raw.indexOf(' ', idx);
-            version = end > idx ? raw.substring(idx, end) : raw.substring(idx);
+            // 按「直到任意空白为止」截断，不能只认空格：nginx -V 的首行是
+            // `nginx version: nginx/1.24.0` + 换行 + `built by gcc ...`，
+            // 版本号后面紧跟的是换行而不是空格，只按空格切会把下一行的
+            // "built" 一起吞进来，界面显示成 `nginx/1.24.0\nbuilt`（101.200.205.64 实测）。
+            int end = idx;
+            while (end < raw.length() && !Character.isWhitespace(raw.charAt(end))) {
+                end++;
+            }
+            version = raw.substring(idx, end);
         }
         int cfgIdx = raw.indexOf("configure arguments:");
         if (cfgIdx >= 0) {
@@ -1668,29 +1675,48 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @param ds 数据源
      * @return PID，取不到为 null
      */
-    private Long detectMasterPid(DataSourceVO ds) {
+        private Long detectMasterPid(DataSourceVO ds) {
         String confTail = confTail(ds);
         String script = """
+                pat=%CONF%
+                defconf=$(nginx -V 2>&1 | tr ' ' '\\n' | sed -n 's/^--conf-path=//p' | head -1)
+                def=${defconf##*/}
+                %MATCH%
                 if command -v pgrep >/dev/null 2>&1 && ps -o ppid= -p 1 >/dev/null 2>&1; then
                   pgrep -x nginx 2>/dev/null | while read -r p; do
                     [ "$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" = "1" ] || continue
+                    args=$(ps -o args= -p "$p" 2>/dev/null)
                     %FILTER%
                   done
                   exit 0
                 fi
                 if ps -e >/dev/null 2>&1; then
-                  ps -e 2>/dev/null | awk 'NR>1 && tolower($0) ~ /nginx/ && $2==1 %AWK% { print $1; exit }'
+                  ps -e 2>/dev/null | awk -v pat="$pat" -v def="$def" 'NR>1 && tolower($0) ~ /nginx/ && $2==1 && (pat != "" && (index(tolower($0), tolower(pat)) || (index($0, " -c ") == 0 && pat == def))) { print $1; exit }'
                   exit 0
                 fi
                 """;
-        // 有 conf 时按命令行匹配；没有就不加过滤条件（保持原行为）
+        // conf 文件名放进单引号里赋值：conf 名由用户配置而来，含引号/空格时不能裸拼
+        String conf = confTail.isEmpty() ? "" : shQuote(confTail);
+        // 判据与 PosixNginxCommandProvider#processAlive 的 matchConf 同源，
+        // 两边必须一致：否则会出现「在运行但取不到 PID」，
+        // 界面拿不到主进程与运行时长，表现与「进程真没起」一样。
+        String match = """
+                match_conf() {
+                  [ -n "$pat" ] || return 0
+                  case "$args" in *"$pat"*) return 0 ;; esac
+                  case "$args" in *" -c "*) return 1 ;; esac
+                  if [ -n "$def" ] && [ "$pat" = "$def" ]; then return 0; fi
+                  return 1
+                }
+                """;
+        // 命中即打印并结束：取「第一个」master，与改动前的口径一致
         String filter = confTail.isEmpty()
-                ? ""
-                : "case \"$(ps -o args= -p \"$p\" 2>/dev/null)\" in *" + confTail + "*) echo \"$p\"; break ;; esac";
-        // ps -e 退化分支同样要按 conf 过滤，否则同机多实例时会拿到别人的 master
-        String awk = confTail.isEmpty() ? "" : "&& index(tolower($0), \"" + confTail.toLowerCase() + "\")";
+                ? "echo \"$p\"; break"
+                : "if match_conf; then echo \"$p\"; break; fi";
         try {
-            String out = exec(ds, script.replace("%FILTER%", filter).replace("%AWK%", awk)).stdout().trim();
+            String out = exec(ds, script.replace("%CONF%", conf)
+                    .replace("%MATCH%", match)
+                    .replace("%FILTER%", filter)).stdout().trim();
             return parseLong(out);
         } catch (RuntimeException e) {
             log.debug("[nginx] 读取 master 进程失败: {}", e.getMessage());
