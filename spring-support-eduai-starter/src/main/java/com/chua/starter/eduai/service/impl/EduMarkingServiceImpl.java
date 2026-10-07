@@ -1229,7 +1229,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         vo.setStudentId(task.getMarkingTaskStudentId());
         vo.setFinished(terminal);
         Integer percent = percentOf(task.getMarkingTaskTotal(), task.getMarkingTaskDoneCount());
-        vo.setPercent(percent == null && terminal ? 100 : percent);
+        // 注意：三元分支含 int 字面量时会自动拆箱 percent，percent 为 null 且非终态会 NPE —— 全部保持 Integer 装箱
+        vo.setPercent(percent != null ? percent : (terminal ? Integer.valueOf(100) : null));
         vo.setUpdateTime(LocalDateTime.now());
         return vo;
     }
