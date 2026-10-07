@@ -1715,6 +1715,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             MarkingResultVO.QuestionResult qr = new MarkingResultVO.QuestionResult();
             qr.setResultId(r.getMarkingResultId());
             qr.setQuestionId(r.getMarkingResultQuestionId());
+            // 任意卷无题库题号（questionId=0），教师要靠卷面题号 + 学生作答对位修正
+            Map<String, Object> detail = parseJsonMap(r.getMarkingResultDetail());
+            Object no = detail.get("recognizedNo");
+            qr.setNo(no == null ? null : String.valueOf(no));
+            Object answer = detail.get("studentAnswer");
+            qr.setStudentAnswer(answer == null ? null : String.valueOf(answer));
             qr.setMaxScore(fullScores.getOrDefault(r.getMarkingResultQuestionId(), fallbackScore));
             qr.setScore(r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
             qr.setTeacherScore(r.getMarkingResultTeacherScore());
