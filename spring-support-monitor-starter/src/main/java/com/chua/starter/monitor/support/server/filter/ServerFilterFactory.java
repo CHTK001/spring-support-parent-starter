@@ -84,8 +84,8 @@ public class ServerFilterFactory {
      * 此处缺失的键会被 {@link #applySettingParams} 记 WARN 后丢弃，schema 却仍显示可配。</p>
      */
     private static final List<String> SETTING_BOOLEAN_KEYS = List.of(
-            "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars",
-            "layout", "showFormat", "showSize", "showTime");
+            "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openThirdPreview",
+            "openWebjars", "layout", "showFormat", "showSize", "showTime");
 
     /**
      * 文件storagesetting 字符串参数映射的参数名

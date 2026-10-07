@@ -687,6 +687,148 @@ public class ApiProviderController {
     }
 
     /**
+     * 一键拉取并**批量录入** 提供者 的全部远端模型。
+     *
+     * <p>「添加模型」要的是一次到位：用 提供者 已保存的地址与凭证真实调用上游
+     * {@code GET {base_url}/models}，把返回的模型目录整批写进
+     * {@code sys_ai_provider_model}，用户不必再在弹窗里逐条点「选择」。</p>
+     *
+     * <p><b>幂等</b>：模型名已存在的直接跳过，**不覆盖**用户改过的别名/参数，
+     * 所以重复点击只会补录新出现的模型。缺模型名的上游条目计入 skipped 而非报错
+     * ——一个坏条目不能让整批失败。</p>
+     *
+     * @param providerId 提供者 标识
+     * @param body       可选 { 尝试_fix }（404 时补全 /v1 重试，与单次拉取同语义）
+     * @return { total, imported, skipped, models }
+     */
+    @SuppressWarnings("unchecked")
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/models/import-all")
+    @Transactional
+    public ApiResult<Map<String, Object>> importAllProviderModels(@PathVariable("provider_id") String providerId,
+                                                                  @RequestBody(required = false) Map<String, Object> body) {
+        SysAiProvider entity = requireProvider(providerId);
+        boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
+        Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
+                entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
+                entity.getProxy(), tryFix);
+        Object rawModels = upstream.get("models");
+        List<Map<String, Object>> upstreamModels = rawModels instanceof List<?> list ? (List<Map<String, Object>>) list
+                : new ArrayList<>(0);
+
+        // 已存在的模型名一次取齐：既是幂等判据，也省掉每条一次 select；
+        // 顺带算出最大排序号，新模型排在既有行之后
+        Set<String> seen = new HashSet<>(16);
+        int maxSort = -1;
+        for (SysAiProviderModel row : modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId))) {
+            seen.add(row.getModel());
+            if (row.getSortOrder() != null && row.getSortOrder() > maxSort) {
+                maxSort = row.getSortOrder();
+            }
+        }
+        // 按上游下标直接落库会和既有行撞出并列序号（并列时显示顺序不稳定），
+        // 统一平移到既有行之后
+        int sortBase = maxSort + 1;
+
+        long now = System.currentTimeMillis();
+        int imported = 0;
+        int skipped = 0;
+        List<Map<String, Object>> importedRows = new ArrayList<>(8);
+        for (int i = 0; i < upstreamModels.size(); i++) {
+            Map<String, Object> m = upstreamModels.get(i);
+            String name = batchModelName(m);
+            // Set#add：新名字返回 true 继续录入，已存在/上游重复返回 false 跳过
+            if (name == null || !seen.add(name)) {
+                skipped++;
+                continue;
+            }
+            SysAiProviderModel row = toModelEntity(providerId, batchModelInput(m, name, sortBase + i), now);
+            enrichFromMetrics(row);
+            modelMapper.insert(row);
+            imported++;
+            importedRows.add(toProviderModelResponse(entity, row));
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("total", upstreamModels.size());
+        out.put("imported", imported);
+        out.put("skipped", skipped);
+        out.put("models", importedRows);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 取上游模型条目的模型名（{@code name} 优先，缺 name 回退 {@code id}）。
+     *
+     * @param m 上游条目
+     * @return 模型名；条目缺失或两个字段都为空返回 null
+     */
+    private String batchModelName(Map<String, Object> m) {
+        if (m == null) {
+            return null;
+        }
+        if (m.get("name") instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        if (m.get("id") instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        return null;
+    }
+
+    /**
+     * 上游条目 → 「保存提供者模型」输入（{@link #toModelEntity} 认识的形态）。
+     *
+     * <p>上游 OpenAI 兼容接口只给 {@code {id,name,tasks,traits}}。这里把它映射成
+     * {@code capabilities[].task / traits} 结构，前端的模型类型标签与能力图标才能与
+     * 单条保存路径一致 —— 不落 capabilities 的话批量录入出来的卡片会全退化成
+     * 「文本」类型，图像/视频模型在模型选择器里也会被分错组。</p>
+     *
+     * @param m     上游条目
+     * @param name  模型名（已判空）
+     * @param sortOrder 排序号（既有行之后的序号，保证不与已有行并列）
+     * @return 模型输入
+     */
+    private Map<String, Object> batchModelInput(Map<String, Object> m, String name, int sortOrder) {
+        Map<String, Object> input = new LinkedHashMap<>(8);
+        input.put("model", name);
+        input.put("enabled", true);
+        input.put("sort_order", sortOrder);
+        if (m.get("description") instanceof String s && !s.isBlank()) {
+            input.put("description", s);
+        }
+        if (m.get("metrics") instanceof Map<?, ?>) {
+            input.put("metrics", m.get("metrics"));
+        }
+
+        List<String> traits = new ArrayList<>(4);
+        if (m.get("traits") instanceof List<?> list) {
+            for (Object t : list) {
+                if (t instanceof String s && !s.isBlank()) {
+                    traits.add(s);
+                }
+            }
+        }
+        List<Map<String, Object>> caps = new ArrayList<>(2);
+        if (m.get("tasks") instanceof List<?> tasks) {
+            for (Object t : tasks) {
+                if (t instanceof String s && !s.isBlank()) {
+                    Map<String, Object> cap = new LinkedHashMap<>(4);
+                    cap.put("task", s);
+                    cap.put("traits", traits);
+                    caps.add(cap);
+                }
+            }
+        }
+        if (!caps.isEmpty()) {
+            input.put("capabilities", caps);
+        }
+        return input;
+    }
+
+    /**
      * 从提供商远程获取模型列表（GET接口，兼容前端调用）。
      *
      * <p>前端guada版本调用的是 GET /providers/{id}/remote_models，
@@ -2186,10 +2328,16 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (lower.contains("whisper") || lower.contains("asr") || lower.contains("speech-recognition")) {
             return List.of("speech_recognition");
         }
-        if (lower.contains("dall-e") || lower.contains("image-gen") || lower.contains("cogview") || lower.contains("flux")) {
+        // 图像/视频：除 dall-e/cogview 这类专名，还要认裸 token。
+        // 「厂商-类型-版本」命名（agnes-image-2.1-flash / agnes-video-2.5）原先只匹配
+        // image-gen/video-gen，全部回落成 chat —— 人工建模时是手选类型，批量录入没
+        // 这个机会，模型选择器就会把图像/视频模型分进「文本」组。
+        // 代价：视频理解类对话模型（video-llava 之类）会被误判成生成类，罕见且只影响分组。
+        if (lower.contains("image") || lower.contains("dall-e") || lower.contains("cogview")
+                || lower.contains("flux") || lower.contains("sdxl")) {
             return List.of("image_generation");
         }
-        if (lower.contains("cogvideo") || lower.contains("video-gen")) {
+        if (lower.contains("video")) {
             return List.of("video_generation");
         }
         if (lower.contains("realtime")) {

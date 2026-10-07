@@ -321,7 +321,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      */
     private static final Set<String> BOOLEAN_PARAM_KEYS = Set.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openWebjars",
-            "openRemoteFile", "layout", "showFormat", "showSize", "showTime");
+            "openRemoteFile", "openThirdPreview", "layout", "showFormat", "showSize", "showTime");
 
     /**
      * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
@@ -543,6 +543,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         HttpMethod method = request.getMethod();
         try {
             if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
+                // 三方 URL 预览：?url=<base64 编码的 http(s) 地址>，受 openThirdPreview 开关控制。
+                // 放在 key 判定之前——调用方无需真实对象键，形如 GET /{bucket}/?url=...&preview=true
+                String thirdUrl = params == null ? null : params.get("url");
+                if (method == HttpMethod.GET && thirdUrl != null && !thirdUrl.isEmpty()) {
+                    return handleThirdUrlPreview(request, response, thirdUrl);
+                }
                 if (key.isEmpty()) {
                     if (method == HttpMethod.HEAD) {
                         return error(response, 400, "HEAD requires object key");
@@ -672,6 +678,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         appendConfigRow(sb, "openWatermark", String.valueOf(setting.isOpenWatermark()));
         appendConfigRow(sb, "openWebjars", String.valueOf(setting.isOpenWebjars()));
         appendConfigRow(sb, "openRemoteFile", String.valueOf(setting.isOpenRemoteFile()));
+        appendConfigRow(sb, "openThirdPreview", String.valueOf(setting.isOpenThirdPreview()));
         appendConfigRow(sb, "watermark", setting.getWatermark());
         appendConfigRow(sb, "layout", String.valueOf(setting.isLayout()));
         appendConfigRow(sb, "layoutType", setting.getLayoutType());
@@ -1751,6 +1758,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"openWatermark\":" + setting.isOpenWatermark()
                 + ",\"openWebjars\":" + setting.isOpenWebjars()
                 + ",\"openRemoteFile\":" + setting.isOpenRemoteFile()
+                + ",\"openThirdPreview\":" + setting.isOpenThirdPreview()
                 + ",\"watermark\":" + (wm == null ? "null" : "\"" + escapeJson(wm) + "\"")
                 + ",\"layout\":" + setting.isLayout()
                 + ",\"layoutType\":\"" + escapeJson(setting.getLayoutType() == null ? "" : setting.getLayoutType()) + "\""
@@ -3271,6 +3279,24 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return error(response, 500, "Read Object Failed");
         }
 
+        return serveObjectContent(request, response, data, key);
+    }
+
+    /**
+     * 输出对象内容：按访问开关与 {@code ?preview/?download/?format=} 参数分发预览/下载。
+     *
+     * <p>从 {@link #handleGet} 抽出的尾段——本地对象与三方 URL 预览
+     * （{@link #handleThirdUrlPreview}）必须走**同一套**分发：转换通道
+     * （format=pdf/docx/xlsx）、压缩包/CAD 结构查询、图片处理、客户端直渲染
+     * 回吐、Markdown/SPI/JSON Hero 页面、Range、内联兜底与 unsupported 提示页。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     * @param data     对象内容字节
+     * @param key      对象键（仅用于取文件名）
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data, String key) {
         // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
         // 参数支持标志式写法（?preview 等价 ?preview=true）
         boolean wantPreview = boolParam(request, "preview");
@@ -3727,6 +3753,70 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     }
 
     /**
+     * 三方 URL 预览：{@code ?url=<base64 编码的 http(s) 地址>}。
+     *
+     * <p>面向外部系统集成：外部系统把远端地址 base64 编码后拼进查询串，本服务解码、
+     * 拉取内容，然后走与本地对象**完全相同**的预览分发（{@link #serveObjectContent}）——
+     * format 转换、客户端直渲染、Markdown/SPI 页面、Range、内联兜底全部复用，
+     * 调用方只需 {@code GET /{bucket}/?url=...&preview=true}。</p>
+     *
+     * <p>安全约束：</p>
+     * <ul>
+     *   <li>受 {@code openThirdPreview} 开关控制，默认关闭（403）——避免无意间开放
+     *       任意地址拉取（SSRF 面）；</li>
+     *   <li>解码后仅允许 {@code http://} / {@code https://}，其余协议拒绝（400）；</li>
+     *   <li>拉取走直连（不走系统代理），超时与 {@link #handleRemoteFile} 一致。</li>
+     * </ul>
+     *
+     * @param request    请求
+     * @param response   响应
+     * @param encodedUrl base64 编码后的远端地址
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> handleThirdUrlPreview(ServerRequest request, ServerResponse response, String encodedUrl) {
+        if (!setting.isOpenThirdPreview()) {
+            return error(response, 403, "Access Denied: third-party preview disabled");
+        }
+        String remoteUrl;
+        try {
+            // 兼容标准与 URL-safe 两种 base64 字母表（外部系统编码方式不可控）
+            byte[] decoded;
+            try {
+                decoded = java.util.Base64.getDecoder().decode(encodedUrl);
+            } catch (IllegalArgumentException e) {
+                decoded = java.util.Base64.getUrlDecoder().decode(encodedUrl);
+            }
+            remoteUrl = new String(decoded, StandardCharsets.UTF_8).trim();
+        } catch (IllegalArgumentException e) {
+            return error(response, 400, "Invalid url: base64 decode failed");
+        }
+        if (!remoteUrl.startsWith("http://") && !remoteUrl.startsWith("https://")) {
+            return error(response, 400, "Invalid url: only http/https is allowed");
+        }
+        byte[] data;
+        try {
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection)
+                    URI.create(remoteUrl).toURL().openConnection(java.net.Proxy.NO_PROXY);
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
+            try (InputStream in = connection.getInputStream()) {
+                data = in.readAllBytes();
+            }
+        } catch (Exception e) {
+            log.warn("三方 URL 预览拉取失败: {} - {}", remoteUrl, e.getMessage());
+            return error(response, 502, "Remote Fetch Failed: " + e.getMessage());
+        }
+        // 取路径最后一段作为文件名（扩展名决定后续分发通道）；根路径等无名场景兜底 index
+        String path = URI.create(remoteUrl).getPath();
+        String fileName = path == null ? "" : path.substring(path.lastIndexOf('/') + 1);
+        if (fileName.isEmpty()) {
+            fileName = "index";
+        }
+        applyWatermarkHeader(response);
+        return serveObjectContent(request, response, data, fileName);
+    }
+
+    /**
      * 处理存在性检查请求。
      *
      * @param storage  存储实例
@@ -3952,6 +4042,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         applyBooleanSetting("openWatermark", extractBoolean(body, "openWatermark"));
         applyBooleanSetting("openWebjars", extractBoolean(body, "openWebjars"));
         applyBooleanSetting("openRemoteFile", extractBoolean(body, "openRemoteFile"));
+        applyBooleanSetting("openThirdPreview", extractBoolean(body, "openThirdPreview"));
         applyBooleanSetting("layout", extractBoolean(body, "layout"));
         applyBooleanSetting("showFormat", extractBoolean(body, "showFormat"));
         applyBooleanSetting("showSize", extractBoolean(body, "showSize"));
@@ -3998,10 +4089,11 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             setting.setPrivateBuckets(buckets);
         }
         log.info("管理员动态更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
-                        + "openWatermark={}, openRemoteFile={}, layout={}, layoutType={}, "
+                        + "openWatermark={}, openRemoteFile={}, openThirdPreview={}, layout={}, layoutType={}, "
                         + "showFormat={}, showSize={}, showTime={}, imageFilter={}, privateBuckets={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
-                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isLayout(), setting.getLayoutType(),
+                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isOpenThirdPreview(),
+                setting.isLayout(), setting.getLayoutType(),
                 setting.isShowFormat(), setting.isShowSize(), setting.isShowTime(), setting.getImageFilter(),
                 String.join(",", setting.getPrivateBuckets()));
         notifyConfigChanged();
@@ -4017,7 +4109,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      * （表现为「必须停→起才生效」）。覆写后与管理员配置页共用同一套校验。</p>
      *
      * <p>仅接受服务管理 schema 声明的参数（{@code openPreview/openDownload/openRange/
-     * openWatermark/openRemoteFile/openWebjars/watermark/layout/showFormat/showSize/showTime/
+     * openWatermark/openRemoteFile/openThirdPreview/openWebjars/watermark/layout/showFormat/showSize/showTime/
      * layoutType/imageFilter}）；{@code privateBuckets}、{@code oneTimeTtlMs} 等属管理员令牌页面
      * 的能力，不在此入口开放。未知键只记 WARN 后忽略，不抛错——避免历史遗留参数导致整次热更新失败。</p>
      *
@@ -4050,10 +4142,11 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
         }
         log.info("服务管理热更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
-                        + "openWatermark={}, openRemoteFile={}, layout={}, layoutType={}, "
+                        + "openWatermark={}, openRemoteFile={}, openThirdPreview={}, layout={}, layoutType={}, "
                         + "showFormat={}, showSize={}, showTime={}, imageFilter={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
-                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isLayout(),
+                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isOpenThirdPreview(),
+                setting.isLayout(),
                 setting.getLayoutType(), setting.isShowFormat(), setting.isShowSize(),
                 setting.isShowTime(), setting.getImageFilter());
         notifyConfigChanged();
@@ -4076,6 +4169,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             case "openWatermark" -> setting.setOpenWatermark(value);
             case "openWebjars" -> setting.setOpenWebjars(value);
             case "openRemoteFile" -> setting.setOpenRemoteFile(value);
+            case "openThirdPreview" -> setting.setOpenThirdPreview(value);
             case "layout" -> setting.setLayout(value);
             case "showFormat" -> setting.setShowFormat(value);
             case "showSize" -> setting.setShowSize(value);
