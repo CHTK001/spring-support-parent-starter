@@ -43,6 +43,7 @@ public class ExternalModelSupport {
             Map.entry("ocr.recognizer_model", "paddleocrv6-rec"),
             Map.entry("ocr.direction_model", "doc-orientation"),
             Map.entry("ocr.restorer_model", "text-bsr"),
+            Map.entry("ocr.corrector_model", "macbert4csc"),
             // 布局识别
         Map.entry("layout.layout_model", "pp-doc-layout"),
             // 图片识别

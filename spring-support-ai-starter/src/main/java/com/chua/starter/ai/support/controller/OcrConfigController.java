@@ -25,7 +25,8 @@ import java.util.stream.Collectors;
  * AI OCR 配置管理控制器。
  *
  * <p>提供 {@code ocr} 分组全局配置的读取与更新。
- * OCR 管线（detector/recognizer/direction/restorer）与检测置信度阈值均可配置。</p>
+ * OCR 管线（detector/recognizer/direction/restorer/corrector）与检测置信度阈值均可配置，
+ * 其中 corrector（文本矫正，如 macbert4csc）非必填，留空关闭。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -53,7 +54,7 @@ public class OcrConfigController {
      * @return 配置列表（field/value/valueType/description/sort）
      */
     @Permission("admin")
-    @Operation(summary = "获取 OCR 配置", description = "返回 ocr 分组全部配置项及当前值（detector/recognizer/threshold/direction/restorer）")
+    @Operation(summary = "获取 OCR 配置", description = "返回 ocr 分组全部配置项及当前值（detector/recognizer/threshold/direction/restorer/corrector）")
     @GetMapping
     public ReturnResult<List<Map<String, Object>>> config() {
         List<Map<String, Object>> fields = new ArrayList<>();
@@ -90,7 +91,7 @@ public class OcrConfigController {
      * @return 更新结果
      */
     @Permission("admin")
-    @Operation(summary = "更新 OCR 配置", description = "整组替换 ocr 配置（detector/recognizer/threshold 等）")
+    @Operation(summary = "更新 OCR 配置", description = "整组替换 ocr 配置（detector/recognizer/threshold/corrector 等）")
     @PutMapping
     public ReturnResult<?> update(@RequestBody Map<String, Object> body) {
         Map<String, Object> replaceBody = new LinkedHashMap<>();

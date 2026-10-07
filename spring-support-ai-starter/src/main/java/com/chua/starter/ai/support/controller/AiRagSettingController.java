@@ -126,7 +126,7 @@ public class AiRagSettingController {
     }
 
     /**
-     * OCR 模型列表：deeplearning 模型registry 中文字识别类模型。
+     * OCR 模型列表：deeplearning 模型registry 中文字识别与文本矫正类模型。
      *
      * @return 模型名列表
      */
@@ -140,7 +140,9 @@ public class AiRagSettingController {
                 if (id.contains("ocr") || id.contains("pp-word") || id.contains("svtr")
                         || id.contains("word-extract") || id.contains("paddle-ocr")
                         || id.contains("table-struct") || id.contains("pp-structure")
-                        || id.contains("docling")) {
+                        || id.contains("docling")
+                        // 文本矫正（非必填能力）：macbert4csc / csc / corrector 系模型归入 OCR 管线候选
+                        || id.contains("macbert") || id.contains("csc") || id.contains("corrector")) {
                     names.add(entry.modelId());
                 }
             }
