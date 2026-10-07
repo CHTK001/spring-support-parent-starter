@@ -272,6 +272,7 @@ public class EduPaperScanner {
         List<ScannedQuestion> list = new ArrayList<>();
         String no = null;
         StringBuilder answer = new StringBuilder();
+        int lastNum = -1;
         for (ScanBlock block : ordered) {
             String line = block.text() == null ? "" : block.text().trim();
             if (line.isEmpty()) {
@@ -281,20 +282,40 @@ public class EduPaperScanner {
                 continue;
             }
             var inlineSpans = findInlineItemSpans(line);
-            if (inlineSpans.size() >= 2) {
-                for (int k = 0; k < inlineSpans.size(); k++) {
-                    int contentStart = inlineSpans.get(k)[1];
-                    int contentEnd = k + 1 < inlineSpans.size() ? inlineSpans.get(k + 1)[0] : line.length();
+            if (inlineSpans.size() >= 2 && fitsProgression(
+                    parseNoNum(line.substring(inlineSpans.get(0)[0], inlineSpans.get(0)[1])), lastNum)) {
+                // 行内多题只认「递进成立」的题号边界：作答里的算式数字（"80," "9," "1/8。"）
+                // 同样带「数字+分隔符」，逐个校验可避免整行作答被拆成幽灵题判 0；
+                // 被拒的边界不算新题，其内容自然并回上一题的作答区间
+                var bounds = new ArrayList<int[]>();
+                bounds.add(inlineSpans.get(0));
+                int prevNum = parseNoNum(line.substring(inlineSpans.get(0)[0], inlineSpans.get(0)[1]));
+                for (int k = 1; k < inlineSpans.size(); k++) {
+                    int n = parseNoNum(line.substring(inlineSpans.get(k)[0], inlineSpans.get(k)[1]));
+                    if (fitsProgression(n, prevNum)) {
+                        bounds.add(inlineSpans.get(k));
+                        prevNum = n;
+                    }
+                }
+                for (int k = 0; k < bounds.size(); k++) {
+                    int contentStart = bounds.get(k)[1];
+                    int contentEnd = k + 1 < bounds.size() ? bounds.get(k + 1)[0] : line.length();
                     appendQuestion(list, no, answer);
-                    no = line.substring(inlineSpans.get(k)[0], inlineSpans.get(k)[1]).trim();
+                    no = line.substring(bounds.get(k)[0], bounds.get(k)[1]).trim();
+                    lastNum = parseNoNum(no);
                     answer = new StringBuilder(line.substring(contentStart, contentEnd).trim());
                 }
                 continue;
             }
             var matcher = SELF_NO_PREFIX.matcher(line);
-            if (matcher.find()) {
+            if (matcher.find()
+                    && fitsProgression(parseNoNum(matcher.group()), lastNum)) {
+                // 题号必须递进（n==1 新大节重来 / n==上题+1），否则当续行：
+                // 实测 "1/8。" 被 OCR 切块后 "8。" 匹配题号格式、"80," "9," 同理，
+                // 误认会把上一题的作答拆成幽灵题（判断(×) 与计算结果整段被判 0）
                 appendQuestion(list, no, answer);
                 no = matcher.group().trim();
+                lastNum = parseNoNum(no);
                 answer = new StringBuilder(line.substring(matcher.end()).trim());
             } else if (no != null) {
                 if (answer.length() > 0) {
@@ -308,6 +329,44 @@ public class EduPaperScanner {
             log.info("[EduScan] 版面块归属解析出题目 {} 道", list.size());
         }
         return list;
+    }
+
+    /**
+     * 解析题号里的数字（{@code 第1题} / {@code 12.} / {@code L.} 都要收）。
+     *
+     * @param no 题号原文
+     * @return 数字值；解析不出返回 -1
+     */
+    private static int parseNoNum(String no) {
+        if (no == null || no.isEmpty()) {
+            return -1;
+        }
+        var m = java.util.regex.Pattern.compile("[0-9lLI]{1,4}").matcher(no);
+        if (!m.find()) {
+            return -1;
+        }
+        String digits = m.group().replace('l', '1').replace('L', '1').replace('I', '1');
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    /**
+     * 题号递进校验：新题号必须是「1（新大节）」或「上一题 + 1」。
+     *
+     * <p>解析不出数字（字母题号等）一律放行 —— 宁可保守，不吞真题。</p>
+     *
+     * @param n       新题号数字（-1 表示解析不出）
+     * @param lastNum 上一题号数字（-1 表示尚无）
+     * @return 是否作为新题起点
+     */
+    private static boolean fitsProgression(int n, int lastNum) {
+        if (n < 0 || lastNum < 0) {
+            return true;
+        }
+        return n == 1 || n == lastNum + 1;
     }
 
     /**
@@ -721,7 +780,12 @@ public class EduPaperScanner {
             var outcome = new EduAiService.MarkingOutcome();
             outcome.setSource("AI");
             outcome.setScore(score);
-            outcome.setComment(node.path("comment").asText(""));
+            String comment = node.path("comment").asText("");
+            if (comment.isBlank()) {
+                // 模型偶尔返回无 comment 的 JSON，落库空串会让结果表出现空白评语
+                comment = score <= 0 ? "回答错误" : score >= maxScore ? "回答正确" : "部分得分";
+            }
+            outcome.setComment(comment);
             return outcome;
         } catch (Exception e) {
             log.warn("[EduScan] 任意卷判分失败，回退 0 分: {}", e.getMessage());
