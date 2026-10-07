@@ -279,9 +279,9 @@ public class DatasourceTunnelServiceImpl implements DatasourceTunnelService {
         config.setSshUsername(data.sshUsername().trim());
         config.setSshAuthType(isBlank(data.sshAuthType())
                 ? DatasourceHubConstants.SSH_AUTH_PASSWORD : trim(data.sshAuthType()).toUpperCase());
-        config.setSshPassword(nullToEmpty(data.sshPassword()));
+        config.setSshPassword(mergeSecret(data.sshPassword(), config.getSshPassword()));
         config.setSshPrivateKey(nullToEmpty(data.sshPrivateKey()));
-        config.setSshPassphrase(nullToEmpty(data.sshPassphrase()));
+        config.setSshPassphrase(mergeSecret(data.sshPassphrase(), config.getSshPassphrase()));
         config.setLocalPort(data.localPort());
         config.setRemoteHost(nullToEmpty(data.remoteHost()));
         config.setRemotePort(data.remotePort());
@@ -372,6 +372,22 @@ public class DatasourceTunnelServiceImpl implements DatasourceTunnelService {
      */
     private static boolean isBlank(String text) {
         return text == null || text.trim().isEmpty();
+    }
+
+    /**
+     * 口令类字段的合并：请求里为空则沿用库里已存的值。
+     *
+     * <p>查询接口不回显 SSH 口令与私钥口令（避免明文外泄），前端自然回显不出来；
+     * 若保存时把空值直接覆盖上去，用户只是改了隧道名就会把已配好的凭据悄悄抹空。
+     * 这里按「空 = 不改」处理，与 {@code sshAuthType} / {@code bindAddress}
+     * 的空值兜底同一条口径。</p>
+     *
+     * @param incoming 请求值
+     * @param stored   库里已有值
+     * @return 入库值
+     */
+    private static String mergeSecret(String incoming, String stored) {
+        return isBlank(incoming) ? nullToEmpty(stored) : incoming;
     }
 
     /**
