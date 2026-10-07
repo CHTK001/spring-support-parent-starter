@@ -4,6 +4,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.ocr.OcrPipeline;
 import com.chua.deeplearning.support.ocr.OcrResult;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.client.ModelIds;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -206,8 +207,9 @@ public class OcrClientManager {
      * @return OCR 管线
      */
     private OcrPipeline build() {
-        String detector = settingReader.getStr(GROUP, "detector_model");
-        String recognizer = settingReader.getStr(GROUP, "recognizer_model");
+        // 设置页模型选择器存「onnx:裸名」，注册表只认裸名——统一归一后再下传
+        String detector = ModelIds.bare(settingReader.getStr(GROUP, "detector_model"));
+        String recognizer = ModelIds.bare(settingReader.getStr(GROUP, "recognizer_model"));
         if (StringUtils.isBlank(detector) && StringUtils.isBlank(recognizer)) {
             /**
              * illegal状态异常。
@@ -226,17 +228,17 @@ public class OcrClientManager {
         var detectorThreshold = settingReader.getDecimalOrNull(GROUP, "detector_threshold");
         builder.minConfidence(detectorThreshold == null ? 0f : detectorThreshold.floatValue());
         builder.sortReadingOrder(settingReader.getBool(GROUP, "sort_reading_order", true));
-        String direction = settingReader.getStr(GROUP, "direction_model");
+        String direction = ModelIds.bare(settingReader.getStr(GROUP, "direction_model"));
         if (StringUtils.isNotBlank(direction)) {
             builder.direction(direction);
         }
-        String restorer = settingReader.getStr(GROUP, "restorer_model");
+        String restorer = ModelIds.bare(settingReader.getStr(GROUP, "restorer_model"));
         if (StringUtils.isNotBlank(restorer)) {
             builder.enhancer(restorer);
             builder.enhanceInPipeline(true);
         }
         // 文本矫正（macbert4csc 等）：非必填，留空关闭；矫正失败时 OcrPipeline 保留原文不阻断
-        String corrector = settingReader.getStr(GROUP, "corrector_model");
+        String corrector = ModelIds.bare(settingReader.getStr(GROUP, "corrector_model"));
         if (StringUtils.isNotBlank(corrector)) {
             builder.corrector(corrector);
         }
