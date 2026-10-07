@@ -889,6 +889,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         var mergedText = new StringBuilder();
         var mergedLayoutRegions = new HashMap<String, Integer>();
         var pages = new ArrayList<Map<String, Object>>();
+        var mergedBlocks = new ArrayList<EduPaperScanner.ScanBlock>();
         int blockCount = 0;
         int pageNo = 0;
         for (byte[] imageData : images) {
@@ -910,6 +911,15 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 pageScan.layoutRegions().forEach((k, v) -> mergedLayoutRegions.merge(k, v == null ? 0 : v, Integer::sum));
             }
             blockCount += pageScan.blocks() == null ? 0 : pageScan.blocks().size();
+            // 版面块跨页合并：抽取时按题号块归属，题号可能跨页连续，合并后统一结构化才能保题序。
+            // 多页 y 坐标会撞车，加页偏移区分（页高未知时用 100000 兜底，只保相对顺序）。
+            int pageH = pageScan.pageHeight() > 0 ? pageScan.pageHeight() : 100000;
+            if (pageScan.blocks() != null) {
+                for (EduPaperScanner.ScanBlock b : pageScan.blocks()) {
+                    mergedBlocks.add(new EduPaperScanner.ScanBlock(b.text(), b.confidence(),
+                            b.x(), b.y() + (float) (pageNo - 1) * pageH, b.width(), b.height()));
+                }
+            }
             // 结构化页面：坐标原样落库，供前端按原图等比叠放。
             // 只存数量的话前端无法还原版式，这正是「同版式展示」缺的那一段数据。
             // 坐标在扫描器里是「预处理图」的像素空间，而展示用的是原图（可能被缩放），
@@ -932,8 +942,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "解析题目", null, null, null, false);
 
         List<EduPaperScanner.ScannedQuestion> scanned = anyMode
-                ? paperScanner.extractAnyQuestions(text)
-                : paperScanner.extractSelfQuestions(text);
+                ? paperScanner.extractAnyQuestions(mergedBlocks, text)
+                : paperScanner.extractSelfQuestions(mergedBlocks, text);
         if (scanned.isEmpty()) {
             throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
         }
@@ -1019,9 +1029,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 usedQuestionIds.add(relation.getPaperQuestionQuestionId());
             }
             Long questionId = relation == null ? 0L : relation.getPaperQuestionQuestionId();
-            int maxScore = relation == null || relation.getPaperQuestionScore() == null
-                    || relation.getPaperQuestionScore() <= 0
-                    ? fallbackScore : relation.getPaperQuestionScore();
+            // 分值优先级：自有卷 DB 为准；DB 无/任意卷用抽取分；最后兜底表单值
+            int maxScore;
+            if (relation != null && relation.getPaperQuestionScore() != null
+                    && relation.getPaperQuestionScore() > 0) {
+                maxScore = relation.getPaperQuestionScore();
+            } else if (item.score() != null && item.score() > 0) {
+                maxScore = item.score();
+                log.info("[EduAi] 题号 {} 采用卷面抽取分值 {}", item.no(), maxScore);
+            } else {
+                maxScore = fallbackScore;
+            }
 
             EduMarkingResult row = new EduMarkingResult();
             row.setOwnerUserId(task.getOwnerUserId());
