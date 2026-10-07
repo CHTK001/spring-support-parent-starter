@@ -176,6 +176,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      * @param flyway   迁移器实例
      */
     private void logSkippedStatements(String beanName, Flyway flyway) {
+        Map<String, String> reasons = readFailureReasons(flyway);
         try {
             Method method = flyway.getClass().getMethod("getFailedStatements");
             Object value = method.invoke(flyway);
@@ -185,13 +186,35 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             log.warn("DataSource [{}] SPI Flyway 有 {} 条语句被容错跳过（脚本已记为 success=false）：",
                     beanName, statements.size());
             for (Object statement : statements) {
-                log.warn("DataSource [{}]   跳过语句: {}", beanName,
-                        String.valueOf(statement).replaceAll("\\s+", " "));
+                String key = String.valueOf(statement);
+                String reason = reasons.get(key);
+                if (reason != null) {
+                    log.warn("DataSource [{}]   跳过语句: {} | 原因: {}", beanName,
+                            key.replaceAll("\\s+", " "), reason.replaceAll("\\s+", " "));
+                } else {
+                    log.warn("DataSource [{}]   跳过语句: {}", beanName, key.replaceAll("\\s+", " "));
+                }
             }
         } catch (NoSuchMethodException | IllegalAccessException e) {
             // 该 SPI 实现未暴露失败语句明细，属正常情况
         } catch (Exception e) {
             log.debug("DataSource [{}] 读取 Flyway 失败语句明细时出错", beanName, e);
+        }
+    }
+
+    /**
+     * 读取 {@code getFailureReasons()}：语句 -&gt; 异常信息。
+     *
+     * @param flyway 迁移器实例
+     * @return 失败原因表，实现未提供时返回空表
+     */
+    private Map<String, String> readFailureReasons(Flyway flyway) {
+        try {
+            Method method = flyway.getClass().getMethod("getFailureReasons");
+            Object value = method.invoke(flyway);
+            return value instanceof Map<?, ?> map ? (Map<String, String>) map : Map.of();
+        } catch (ReflectiveOperationException | ClassCastException e) {
+            return Map.of();
         }
     }
 
