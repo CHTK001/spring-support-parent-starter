@@ -293,6 +293,17 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- 继承父 POM 的堆限制，并补 enable-preview 选项：common-starter 的 DefaultPipeline
+               是 Java 25 preview 类（class file 69.65535），测试 JVM 不开 preview 时
+               凡是构建 OcrPipeline 等任务管线的用例都会抛 UnsupportedClassVersionError。
+               与 utils-support 父 POM 的 enable.preview.jvm.args 语义保持一致。 -->
+          <argLine>-Xms256m -Xmx2g --enable-preview</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>

@@ -13,7 +13,8 @@ import java.util.List;
  * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
  *
  * <p>OCR 核心链路：detect → crop → recognize；可选 directionModel 方向矫正、restorerModel
- * 文字超分修复。检测置信度阈值过滤低分检测框，避免误识别背景噪声。</p>
+ * 文字超分修复、correctorModel 文本矫正（如 macbert4csc，留空关闭、失败保留原文，非必填）。
+ * 检测置信度阈值过滤低分检测框，避免误识别背景噪声。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -61,7 +62,8 @@ public class OcrGlobalSettingProvider implements GlobalSettingProvider {
                 new GlobalSettingProvider.SettingItem("sort_reading_order", "true", "BOOLEAN", "是否按阅读顺序排序（先 y 后 x）", 4),
                 new GlobalSettingProvider.SettingItem("direction_model", "", "STRING", "方向矫正模型（留空关闭）", 5),
                 new GlobalSettingProvider.SettingItem("restorer_model", "", "STRING", "文字超分修复模型（留空关闭）", 6),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 7)
+                new GlobalSettingProvider.SettingItem("corrector_model", "", "STRING", "文本矫正模型（留空关闭，如 macbert4csc；非必填，矫正失败保留原文）", 7),
+                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 8)
         );
     }
 }

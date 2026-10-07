@@ -74,6 +74,25 @@ public class OcrTextExtractor implements TextExtractor {
     public OcrTextExtractor(String detectorModel, String recognizerModel,
                             float minConfidence, boolean sortReadingOrder,
                             String directionModel, String restorerModel) {
+        this(detectorModel, recognizerModel, minConfidence, sortReadingOrder, directionModel, restorerModel, null);
+    }
+
+    /**
+     * 完整 OCR 管线构造（detector + recognizer + 阈值 + 阅读序 + 文本矫正）。
+     *
+     * @param detectorModel    文本检测模型名
+     * @param recognizerModel  文本识别模型名
+     * @param minConfidence    检测置信度阈值（0~1，过滤低置信度文本框）
+     * @param sortReadingOrder 是否按阅读顺序排序（先 y 后 x）
+     * @param directionModel   方向矫正模型（空则关闭）
+     * @param restorerModel    文字超分修复模型（空则关闭）
+     * @param correctorModel   文本矫正模型（空则关闭；非必填，矫正失败保留原文）
+     * @since 4.0.0.42
+     */
+    public OcrTextExtractor(String detectorModel, String recognizerModel,
+                            float minConfidence, boolean sortReadingOrder,
+                            String directionModel, String restorerModel,
+                            String correctorModel) {
         this.modelName = recognizerModel;
         // 保存完整管线参数，懒加载时构建
         this.detectorModel = detectorModel;
@@ -82,8 +101,9 @@ public class OcrTextExtractor implements TextExtractor {
         this.sortReadingOrder = sortReadingOrder;
         this.directionModel = directionModel;
         this.restorerModel = restorerModel;
-        log.info("[OcrTextExtractor] 完整管线 OCR 提取器（懒加载）: detector={}, recognizer={}, threshold={}",
-                detectorModel, recognizerModel, minConfidence);
+        this.correctorModel = correctorModel;
+        log.info("[OcrTextExtractor] 完整管线 OCR 提取器（懒加载）: detector={}, recognizer={}, threshold={}, corrector={}",
+                detectorModel, recognizerModel, minConfidence, correctorModel);
     }
 
     /**
@@ -110,6 +130,10 @@ public class OcrTextExtractor implements TextExtractor {
      * Restorer模型
     */
     private String restorerModel;
+    /**
+     * 文本矫正模型（可空；非必填，矫正失败保留原文）
+     */
+    private String correctorModel;
 
     /**
      * 从图片中提取文本，非图片文件抛出异常触发 UTF-8 降级。
@@ -197,6 +221,9 @@ public class OcrTextExtractor implements TextExtractor {
                     }
                     if (StringUtils.isNotBlank(restorerModel)) {
                         builder.enhancer(restorerModel);
+                    }
+                    if (StringUtils.isNotBlank(correctorModel)) {
+                        builder.corrector(correctorModel);
                     }
                     pipeline = builder.build();
                 }

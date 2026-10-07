@@ -203,7 +203,7 @@ public class AiPipelineController {
                 "基于提示词生成视频，全局 VideoClient 会话由 generate 分组驱动", "/capabilities/text-to-video", "generate"));
         result.add(pipeline("ocr", "OCR 文字识别", "ocr", "ocr",
                 List.of("ocr"), List.of("layout"),
-                "文字检测→矫正→识别管线，检测/识别模型必填，方向与超分模型可选", "/capabilities/ocr", "ocr"));
+                "文字检测→矫正→识别管线，检测/识别模型必填，方向/超分/文本矫正模型可选（非必填，留空关闭）", "/capabilities/ocr", "ocr"));
         result.add(pipeline("layout", "版面布局分析", "layout", "layout",
                 List.of("layout"), List.of("ocr"),
                 "文档版面分析，识别标题/表格/图片等区域", "/capabilities/layout", "layout"));

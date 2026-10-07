@@ -1003,8 +1003,8 @@ public class RagClientManager {
     /**
      * 解析文本提取器：配置了 RAG OCR 模型时使用 OCR 提取器识别图片文字，否则返回 空。
      *
-     * <p>优先使用 ocr 分组的完整管线配置（detector + recognizer + 阈值 + 阅读序 + direction + restorer），
-     * 未配置 detector/recognizer 时回退到旧版单模型 recognizer 路径。</p>
+     * <p>优先使用 ocr 分组的完整管线配置（detector + recognizer + 阈值 + 阅读序 + direction + restorer
+     * + corrector 文本矫正），未配置 detector/recognizer 时回退到旧版单模型 recognizer 路径。</p>
      *
      * @param ocrModel 兜底 OCR 模型名（rag_ocr_模型）
      * @return 文本提取器，未配置 OCR 时返回 空
@@ -1016,14 +1016,15 @@ public class RagClientManager {
         String thresholdStr = settingReader.getStr("ocr", "detector_threshold");
         String directionModel = settingReader.getStr("ocr", "direction_model");
         String restorerModel = settingReader.getStr("ocr", "restorer_model");
+        String correctorModel = settingReader.getStr("ocr", "corrector_model");
 
         if (StringUtils.hasText(detectorModel) && StringUtils.hasText(recognizerModel)) {
-            // 完整 OCR 管线（detect→recognize，含阈值过滤与阅读序）
+            // 完整 OCR 管线（detect→recognize，含阈值过滤与阅读序；文本矫正是非必填）
             float threshold = parseFloatSafe(thresholdStr, 0.5f);
             boolean sort = !"false".equalsIgnoreCase(sortStr);
             try {
                 return new OcrTextExtractor(detectorModel, recognizerModel,
-                        threshold, sort, directionModel, restorerModel);
+                        threshold, sort, directionModel, restorerModel, correctorModel);
             } catch (Exception e) {
                 log.warn("[RagClientManager] 完整 OCR 管线创建失败: {}", e.getMessage());
             }

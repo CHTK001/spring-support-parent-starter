@@ -16,9 +16,10 @@ import java.util.Map;
  * OCR 识别客户端管理器。
  *
  * <p>按 {@code ocr} 分组全局设置（sys_ai_global_setting）懒加载
- * {@link OcrPipeline}（检测 → 裁剪 → 方向矫正 → 修复 → 识别），配置通过
+ * {@link OcrPipeline}（检测 → 裁剪 → 方向矫正 → 修复 → 识别 → 文本矫正），配置通过
  * {@link OcrSettingsChangedEvent} 热重建，实时生效。模型懒加载：
- * 仅在首次调用对应能力时由引擎创建模型实例，避免启动阻塞。</p>
+ * 仅在首次调用对应能力时由引擎创建模型实例，避免启动阻塞。文本矫正
+ * （corrector_model，如 macbert4csc）非必填：留空不启用，矫正失败保留原文。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -234,11 +235,16 @@ public class OcrClientManager {
             builder.enhancer(restorer);
             builder.enhanceInPipeline(true);
         }
-        // 桥接为模型级参数：device 与置信度阈值对 det / rec / direction / restorer 全部生效，
-        // 使 OCR 各模型可分别配置设备（原先 device 只被读取却从未使用）
+        // 文本矫正（macbert4csc 等）：非必填，留空关闭；矫正失败时 OcrPipeline 保留原文不阻断
+        String corrector = settingReader.getStr(GROUP, "corrector_model");
+        if (StringUtils.isNotBlank(corrector)) {
+            builder.corrector(corrector);
+        }
+        // 桥接为模型级参数：device 与置信度阈值对 det / rec / direction / restorer / corrector
+        // 全部生效，使 OCR 各模型可分别配置设备（原先 device 只被读取却从未使用）
         String device = settingReader.getStr(GROUP, "device");
         Float thresholdValue = detectorThreshold == null ? null : detectorThreshold.floatValue();
-        for (String modelId : new String[]{detector, recognizer, direction, restorer}) {
+        for (String modelId : new String[]{detector, recognizer, direction, restorer, corrector}) {
             com.chua.starter.ai.support.configuration.client.ModelParamBridge
                     .bridge(modelId, device, thresholdValue);
         }
