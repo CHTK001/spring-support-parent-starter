@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasourcehub.support.constants.DatasourceHubConstants;
 import com.chua.starter.datasourcehub.support.model.FieldMappingVO;
 import com.chua.starter.datasourcehub.support.model.SchemaColumnVO;
+import com.chua.starter.datasourcehub.support.model.SchemaTableVO;
 import com.chua.starter.datasourcehub.support.model.TableDdlVO;
 import com.chua.starter.datasourcehub.support.model.dto.FieldMappingDTO;
 import com.chua.starter.datasourcehub.support.model.dto.TableDdlDTO;
@@ -53,6 +54,21 @@ public class DatasourceSchemaController {
     @GetMapping("/tables")
     public ReturnResult<List<String>> tables(@RequestParam(required = false) String datasource) {
         return ReturnResult.ok(schemaService.listTables(datasource));
+    }
+
+    /**
+     * 数据源表清单（含表备注与类型）。
+     *
+     * <p>老 {@code /tables} 只给表名串（保留兼容）；前端三联选要显示中文备注时调这里，
+     * 返回「表名 + 表备注 + TABLE/VIEW」，label/subtitle 直接渲染。</p>
+     *
+     * @param datasource 数据源引用：留空或 {@code app} 表示应用主库，否则为台账 ID 或名称
+     * @return 表元数据
+     */
+    @Operation(summary = "数据源表清单（含备注）")
+    @GetMapping("/table-infos")
+    public ReturnResult<List<SchemaTableVO>> tableInfos(@RequestParam(required = false) String datasource) {
+        return ReturnResult.ok(schemaService.listTableInfos(datasource));
     }
 
     /**

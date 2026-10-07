@@ -2,6 +2,7 @@ package com.chua.starter.datasourcehub.support.service;
 
 import com.chua.starter.datasourcehub.support.model.FieldMappingVO;
 import com.chua.starter.datasourcehub.support.model.SchemaColumnVO;
+import com.chua.starter.datasourcehub.support.model.SchemaTableVO;
 import com.chua.starter.datasourcehub.support.model.TableDdlVO;
 import com.chua.starter.datasourcehub.support.model.dto.FieldMappingDTO;
 import com.chua.starter.datasourcehub.support.model.dto.TableDdlDTO;
@@ -27,6 +28,17 @@ public interface DatasourceSchemaService {
      * @return 表名清单，按名称排序去重
      */
     List<String> listTables(String datasource);
+
+    /**
+     * 列出数据源里的表与视图（含表备注与类型）。
+     *
+     * <p>{@link #listTables(String)} 只给表名串，前端三联选的表下拉要显示
+     * 中文备注时调这里：一次拿全「表名 + 表备注 + TABLE/VIEW」，不用逐表再查。</p>
+     *
+     * @param datasource 数据源引用：留空或 {@code app} 表示应用主库，否则为台账 ID 或名称
+     * @return 表元数据，按名称排序去重
+     */
+    List<SchemaTableVO> listTableInfos(String datasource);
 
     /**
      * 列出指定表的列元数据。
