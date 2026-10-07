@@ -6,6 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.ocr.OcrPipeline;
 import com.chua.deeplearning.support.ocr.OcrRecognizer;
 import com.chua.deeplearning.support.ocr.OcrResult;
+import com.chua.starter.ai.support.configuration.client.ModelIds;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -94,14 +95,15 @@ public class OcrTextExtractor implements TextExtractor {
                             String directionModel, String restorerModel,
                             String correctorModel) {
         this.modelName = recognizerModel;
-        // 保存完整管线参数，懒加载时构建
-        this.detectorModel = detectorModel;
-        this.recognizerModel = recognizerModel;
+        // 保存完整管线参数，懒加载时构建——模型引用统一剥「onnx:」等提供商前缀：
+        // 注册表按裸名精确匹配，带前缀下传会静默查空（配置了却不生效）
+        this.detectorModel = ModelIds.bare(detectorModel);
+        this.recognizerModel = ModelIds.bare(recognizerModel);
         this.minConfidence = minConfidence;
         this.sortReadingOrder = sortReadingOrder;
-        this.directionModel = directionModel;
-        this.restorerModel = restorerModel;
-        this.correctorModel = correctorModel;
+        this.directionModel = ModelIds.bare(directionModel);
+        this.restorerModel = ModelIds.bare(restorerModel);
+        this.correctorModel = ModelIds.bare(correctorModel);
         log.info("[OcrTextExtractor] 完整管线 OCR 提取器（懒加载）: detector={}, recognizer={}, threshold={}, corrector={}",
                 detectorModel, recognizerModel, minConfidence, correctorModel);
     }

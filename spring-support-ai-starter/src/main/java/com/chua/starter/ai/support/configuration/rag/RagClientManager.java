@@ -1010,13 +1010,14 @@ public class RagClientManager {
      * @return 文本提取器，未配置 OCR 时返回 空
      */
     private TextExtractor resolveTextExtractor(String ocrModel) {
-        String detectorModel = settingReader.getStr("ocr", "detector_model");
-        String recognizerModel = settingReader.getStr("ocr", "recognizer_model");
+        // 模型引用统一剥「onnx:」前缀：注册表/底层只认裸名（与 bareModelId 同语义）
+        String detectorModel = bareModelId(settingReader.getStr("ocr", "detector_model"));
+        String recognizerModel = bareModelId(settingReader.getStr("ocr", "recognizer_model"));
         String sortStr = settingReader.getStr("ocr", "sort_reading_order");
         String thresholdStr = settingReader.getStr("ocr", "detector_threshold");
-        String directionModel = settingReader.getStr("ocr", "direction_model");
-        String restorerModel = settingReader.getStr("ocr", "restorer_model");
-        String correctorModel = settingReader.getStr("ocr", "corrector_model");
+        String directionModel = bareModelId(settingReader.getStr("ocr", "direction_model"));
+        String restorerModel = bareModelId(settingReader.getStr("ocr", "restorer_model"));
+        String correctorModel = bareModelId(settingReader.getStr("ocr", "corrector_model"));
 
         if (StringUtils.hasText(detectorModel) && StringUtils.hasText(recognizerModel)) {
             // 完整 OCR 管线（detect→recognize，含阈值过滤与阅读序；文本矫正是非必填）
