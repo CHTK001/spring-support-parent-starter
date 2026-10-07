@@ -259,7 +259,14 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (row == null) {
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "数据源不存在");
         }
-        String url = resolveJdbcUrl(row);
+        String url;
+        try {
+            url = resolveJdbcUrl(row);
+        } catch (IllegalStateException e) {
+            // 文件库路径越界等台账配置错误：收成一次「测试失败」而不是抛给 advice 变 409 ——
+            // 用户点「测试连接」期待的是结果面板里的红字，不是一个 HTTP 状态码。
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, e.getMessage());
+        }
         // 探活也必须尊重上传的驱动 jar 与隧道：不走的话，用户点「测试连接」会拿到
         // ClassNotFoundException 或连不上，而同一个数据源真正使用时是通的 ——
         // 「测试失败但实际能用」比「测试失败」更难解释。
