@@ -32,12 +32,12 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param totalFirstTokenLatency 总首字延迟（ms）
      */
     record UsageStatsRow(
-            Integer totalCalls,
-            Integer totalPromptTokens,
-            Integer totalCompletionTokens,
-            Integer totalTokens,
+            Long totalCalls,
+            Long totalPromptTokens,
+            Long totalCompletionTokens,
+            Long totalTokens,
             Double totalCost,
-            Integer totalCachedTokens,
+            Long totalCachedTokens,
             Double standardCost,
             Long totalLatency,
             Long totalFirstTokenLatency
