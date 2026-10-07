@@ -16,7 +16,9 @@
 | 4xx/5xx/failed/pageError | 全路由 **全 0**（点击触发的接口全部成功） |
 | 线上后端 | `192.168.50.198:8787` service **active**，jar `f8aef47d…` 含 `__manual_edge__` 修复（strings=1） |
 
-FAIL=0 且每条 WARN 均完成人工复核（§5），**无真实产品缺陷**。
+FAIL=0 且每条 WARN 均完成人工复核（§5）。**更正（2026-10-08）：本节初稿写「无真实产品缺陷」是不完整的** ——
+本轮验收的 HTTP 台账暴露出一条真实缺陷（`/agents`「工作流配置 → 子Agent管理」的 `GET /{id}/sub-agents` 恒 405、
+页签永远空白），详见 §9 与 SIGNOFF §4。缺陷已修复并独立复验 16/16，故「无未定性 FAIL」成立，但「无缺陷」的表述以 §9 为准。
 
 ## 2. 路由明细（聚合终值）
 
@@ -107,3 +109,47 @@ FAIL=0 且每条 WARN 均完成人工复核（§5），**无真实产品缺陷**
 - 前端仓 HEAD：`df3a9345e`（working tree 有并发会话的进行中改动，均不在被测 app；被测 app 相对遍历基线零 diff）。
 - 后端仓 HEAD：`d47435839`（并发会话 eduai/OCR 文档提交；我的 KB 修复干净、在祖先链）。
 - 本报告及 `sweep-runner.ps1` / `sweep-aggregate.ps1` 为本路径交付物；未推送。
+
+## 9. 补充验收（2026-10-08）：`/agents` 子Agent CRUD（验收暴露的真实缺陷 + 修复复验）
+
+### 9.1 缺陷（真实，非环境）
+
+- **现象**：`/agents` 行内「工作流配置」弹窗的 **子Agent管理** 页签永远空白；
+  其加载调 `GET /api/agents/managed/{id}/sub-agents` **恒 405**。
+- **根因**：后端 `ApiAgentManageController` 对该路径**只有** `@PostMapping` / `@PutMapping` /
+  `@DeleteMapping`，**没有 `@GetMapping`** → Spring 对 GET 回 405；前端 `catch` 后置空数组。
+  且两端字段名不一致（后端出参 `agent_id / sort_order / system_prompt`，前端曾用 `id / order / condition`）
+  —— 只补 GET 也出不来数据，属**契约性缺陷**，非环境失步。
+- **发现途径**：本轮验收的 **HTTP 4xx 台账**（`merge-sweep-chunks.mjs` 的 `summary.httpErrors`）
+  与并发交付线 SIGNOFF §4；本报告 §1 初稿据此更正。
+
+### 9.2 修复（工作树，由并发交付线提交；本报告只做独立复验）
+
+`AgentsPage.vue`：`loadSubAgents()` 改用**已存在的** `GET /api/agents/managed/{agentId}` 详情契约
+（`SysAiAgentServiceImpl.toResponse(agent, true)` 已带完整 `sub_agents`），
+统一 snake_case↔camelCase 视图模型，写请求对齐后端契约（`sort_order` / `system_prompt`），
+删除后端不存在的 `condition` 字段。即 SIGNOFF §4 给出的两条修法中的**选项 A**。
+
+### 9.3 独立定向验收（`agents-subagent-accept.cjs`，dev `15689` → 后端 `192.168.50.198:8787`）
+
+**16 / 16 PASS**（`agents-subagent-accept.report.json`）：
+
+| 判据 | 结果 |
+|---|---|
+| 打开页签期间 `GET …/sub-agents` 请求数 | **0**（405 消失，符合修复预期） |
+| `GET /api/agents/managed/{id}` | **200** 且带 `sub_agents` 数组 |
+| 新增子Agent（POST） | **200**「子Agent添加成功」→ 表格出现该行 |
+| 编辑子Agent（PUT） | **200**「子Agent更新成功」 |
+| 删除子Agent（DELETE） | **200**「删除成功」→ 行消失 |
+| 页面错误 | `pageerror=0` / `console error=0` |
+| 测试数据清理 | 远端复核 `sub_agents=[]`；`GET /sub-agents` 仍 **405**（契约确不存在，前端已不再调用） |
+
+脚本与原始报告随本报告入库：`agents-subagent-accept.cjs` / `agents-subagent-accept.report.json`。
+
+### 9.4 交付状态
+
+- 该缺陷是本轮全站验收浮出的**唯一真实产品缺陷**；修复在**工作树已验证可用**。
+- 由于它属并发交付线（前端）的在途提交，**未由本路径代提交**；生产 `dist` 重建与
+  生产形态 sweep 重绑由该交付线进行（2026-10-08 07:08 起构建中）。
+- 因此交付结论应表述为：**全站 25/25 路由 FAIL=0（生产形态 dist `3f5cf604` 口径）；
+  唯一真实缺陷（/agents 子Agent 405）已修复并独立复验 16/16，待随 dist 重建重绑后即为终版绿。**
