@@ -288,6 +288,51 @@ public final class JdbcDialectSupport {
     }
 
     /**
+     * 应用/清除表注释（跨方言）。
+     *
+     * <p>与 {@link #applyColumnComment} 对称：MySQL 系把表注释内联在
+     * {@code CREATE TABLE} 尾部，本方法无操作；H2/PostgreSQL/Oracle 需 {@code COMMENT ON TABLE}。
+     * 注释属装饰性信息，失败不阻断建表。</p>
+     *
+     * <p>此前表注释只在 MySQL 分支内联，导致 H2/PG/Oracle 上建表请求带了注释
+     * 却静默丢失——表下拉因此拿不到中文名，只能回退显示真实表名。</p>
+     *
+     * @param conn    数据库连接
+     * @param table   表名
+     * @param comment 注释；空值表示清除
+     */
+    public static void applyTableComment(Connection conn, String table, String comment) {
+        if (isMysqlFamily(conn)) {
+            return;
+        }
+        String literal = comment == null || comment.isEmpty() ? "NULL" : "'" + comment.replace("'", "''") + "'";
+        executeFirstQuietly(conn, List.of(
+                "COMMENT ON TABLE " + quote(conn, table) + " IS " + literal,
+                "COMMENT ON TABLE " + table + " IS " + literal));
+    }
+
+    /**
+     * 生成表注释 DDL 文本（不执行）。
+     *
+     * <p>MySQL 系把表注释内联在 CREATE TABLE 里、或本次不带注释时返回 {@code null}
+     * （表示没有额外语句）；其余内核返回待执行的 {@code COMMENT ON TABLE}。</p>
+     *
+     * <p>单独暴露是为了让预览与执行看到同一份语句清单 —— 预览只给 CREATE TABLE
+     * 的话，用户会以为表注释没生效。</p>
+     *
+     * @param conn    数据库连接
+     * @param table   表名
+     * @param comment 表注释，可为空
+     * @return 待执行的注释语句；无额外语句时返回 {@code null}
+     */
+    public static String tableCommentSql(Connection conn, String table, String comment) {
+        if (isMysqlFamily(conn) || comment == null || comment.isEmpty()) {
+            return null;
+        }
+        return "COMMENT ON TABLE " + quote(conn, table) + " IS '" + comment.replace("'", "''") + "'";
+    }
+
+    /**
      * 判断表是否存在。
      *
      * <p>按原样与全大写各查一次：MySQL 保留创建时大小写，H2 默认把未加引号的标识符转大写，
@@ -355,7 +400,8 @@ public final class JdbcDialectSupport {
     /**
      * 建表（跨方言）。
      *
-     * <p>MySQL 系把注释与默认值内联在列定义里；其余内核先建表再逐列补 COMMENT。列名/表名
+     * <p>MySQL 系把注释与默认值内联在列定义里；其余内核先建表再逐列补 COMMENT，
+     * 表注释同样走 {@code COMMENT ON TABLE}。列名/表名
      * 必须已通过 {@link #isSafeIdentifier}，值不参与拼接（DDL 里只有类型与注释）。</p>
      *
      * @param conn        数据库连接
@@ -374,6 +420,7 @@ public final class JdbcDialectSupport {
             for (ColumnDef column : columns) {
                 applyColumnComment(conn, table, column.name(), column.comment());
             }
+            applyTableComment(conn, table, comment);
         }
     }
 

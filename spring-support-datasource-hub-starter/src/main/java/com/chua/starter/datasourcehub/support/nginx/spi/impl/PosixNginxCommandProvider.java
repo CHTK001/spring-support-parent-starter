@@ -103,38 +103,67 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
 
     @Override
     public String processAlive(String confTail) {
-        // 只认「argv[0] 就是 nginx」的进程，conf 比对交给 awk 的 index()，
-        // 模式串用 -v 传进去，不出现在脚本正文里。
+        // 只认「argv[0] 就是 nginx」的进程（$2 形如 `nginx:` 或以 /nginx 结尾），
+        // 这一层把 bash / grep / awk 全部排除在外；conf 匹配交给 awk 里的 matchConf。
         //
-        // 踩过的坑（生产 198 实测，100% 必现，不是概率问题）：原先是
+        // 踩过的坑（生产 198 实测，100% 必现）：原先是
         //   pgrep -af nginx | grep -F -- 'nginx.conf' >/dev/null && echo ON
-        // pgrep -f 匹配的是**完整命令行**，管道里那个 grep 自己的 argv 里同时含
+        // pgrep -f 匹配**完整命令行**，管道里那个 grep 自己的 argv 里同时含
         // 「nginx」和「nginx.conf」——它被 pgrep 列出来，又被自己匹配上，
-        // 于是「有没有在跑」恒为 ON。实测证据：nginx 确实已停（systemd inactive、
-        // 8080 不通）时，该行输出为 `10689 grep -F -- nginx-stopped-probe.conf`。
-        // 后果是停止后仍判运行中（等满 20 秒后报「未退出」）、
-        // 点启动永远回「已在运行」——「停止有效、启动无效」，最难定位的一组症状。
+        // 于是「有没有在跑」恒为 ON（nginx 真停时输出是 `10689 grep -F -- nginx-stopped-probe.conf`）。
+        // 后果：停止后仍判运行中、点启动永远回「已在运行」，一组最难定位的症状。
         //
-        // 为什么只在这一类 conf 名上暴露：conf 名不含「nginx」时 pgrep 不会列出 grep，
-        // 老写法侥幸正确。默认名恰好是 nginx.conf，所以必踩。
-        //
-        // 同源的第二处：confTail 解析不出时为空串，`grep -F -- ''` 匹配**所有行**，
-        // 同样恒为 ON。这里对空串直接回 UNKNOWN，交给调用方按「查不到」处理
-        //（调用方只认 ON / OFF，其余一律 UNKNOWN，见 NginxManageServiceImpl#detectRunning）。
-        String quoted = quote(confTail);
-        // $2 是 argv[0]：`nginx:` 开头 = 改过进程名的 master / worker；
-        // 以 /nginx 结尾 = 未改名的绝对路径。这一层把 bash / grep / awk 全部排除在外。
-        String byPgrep = "  pgrep -af nginx 2>/dev/null | awk -v pat=" + quoted + " '\n"
-                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (index($0, pat)) f = 1 }\n"
+        // 踩过的坑（101.200.205.64 实测，systemd 托管的机器 100% 必现）：
+        // 反过来，「命令行必须含 conf 文件名」这条对 **systemd 启动的 nginx 恒不成立** ——
+        // `ExecStart=/usr/sbin/nginx` 不带 -c，nginx 把自己的进程名改写成
+        // `nginx: master process /usr/sbin/nginx`，里面没有 conf 路径
+        //（conf 来自编译期 --conf-path）。于是明明在跑被判成 STOPPED：
+        // 界面显示「已停止」、巡检报「配置改动不会生效」、凭空冒出「启动」按钮。
+        // 修法见 matchConf 的注释。
+        String head = "  pgrep -af nginx 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
+                + "    function matchConf(   s) {\n"
+                + "      s = $0\n"
+                + "      if (index(s, pat)) return 1\n"
+                + "      if (index(s, \" -c \")) return 0\n"
+                + "      return (def != \"\" && pat == def) ? 1 : 0\n"
+                + "    }\n"
+                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (matchConf()) f = 1 }\n"
                 + "    END { print (f ? \"ON\" : \"OFF\") }'\n";
-        String byPs = "  ps -e 2>/dev/null | awk -v pat=" + quoted + " '\n"
-                + "    { for (i = 1; i <= NF; i++) if ($i ~ /(^|\\/)nginx$/) { if (index($0, pat)) f = 1 } }\n"
+        String byPs = "  ps -e 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
+                + "    function matchConf(   s) {\n"
+                + "      s = $0\n"
+                + "      if (index(s, pat)) return 1\n"
+                + "      if (index(s, \" -c \")) return 0\n"
+                + "      return (def != \"\" && pat == def) ? 1 : 0\n"
+                + "    }\n"
+                + "    { for (i = 1; i <= NF; i++) if ($i ~ /(^|\\/)nginx$/) { if (matchConf()) f = 1 } }\n"
                 + "    END { print (f ? \"ON\" : \"OFF\") }'\n";
-        return "pat=" + quoted + "\n"
-                + "[ -n \"$pat\" ] || { echo UNKNOWN; exit 0; }\n"
-                + "if command -v pgrep >/dev/null 2>&1; then\n" + byPgrep
+        return preamble(confTail)
+                + "if command -v pgrep >/dev/null 2>&1; then\n" + head
                 + "else\n" + byPs
                 + "fi\n";
+    }
+
+    /**
+     * 探针脚本的公共前导（<strong>纯 shell，不能放 awk 语法</strong>）。
+     *
+     * <p>{@code def} 取 {@code nginx -V} 里的 {@code --conf-path}：systemd 启动的 nginx
+     * 命令行里没有 {@code -c}，默认 conf 只能从这里问出来。取不到就留空，
+     * 判据退化成「命令行必须含目标 conf 名」，也就是改动前的行为。</p>
+     *
+     * <p>匹配判据（awk 函数 {@code matchConf}）刻意**不**放这里：它必须定义在
+     * awk 程序内部。曾把它写进这个前导段，bash 遇到 {@code function} 关键字直接语法报错，
+     * 脚本无输出，{@code detectRunning} 收到空串 → 返回 UNKNOWN，
+     * 表现为「主进程取到了、运行态却是未知」这种自相矛盾的状态。</p>
+     *
+     * @param confTail 目标 conf 文件名（不含目录）
+     * @return shell 前导片段
+     */
+    private String preamble(String confTail) {
+        return "pat=" + quote(confTail) + "\n"
+                + "[ -n \"$pat\" ] || { echo UNKNOWN; exit 0; }\n"
+                + "defconf=$(nginx -V 2>&1 | tr ' ' '\\n' | sed -n 's/^--conf-path=//p' | head -1)\n"
+                + "def=${defconf##*/}\n";
     }
 
     @Override
@@ -144,16 +173,27 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
         // 服务层当前走的是 NginxManageServiceImpl#detectMasterPid（用 pgrep -x，不带 -f），
         // 不受此影响；但这是已发布的 SPI 扩展点，谁调用谁拿到错 PID，必须一并修掉。
         //
-        // 选取口径保持原样：pgrep 输出里第一个 argv[0] 为 nginx 且命令行含 conf 的进程，
-        // 只是把非 nginx 进程（grep / bash / awk）排除在外。
-        String quoted = quote(confTail);
-        String byPgrep = "  pgrep -af nginx 2>/dev/null | awk -v pat=" + quoted + " '\n"
-                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (index($0, pat)) { print $1; exit } }'\n";
-        String byPs = "  ps -e 2>/dev/null | awk -v pat=" + quoted + " '\n"
-                + "    { for (i = 1; i <= NF; i++) if ($i ~ /(^|\\/)nginx$/) { if (index($0, pat)) { print $1; exit } } }'\n";
-        return "pat=" + quoted + "\n"
-                + "[ -n \"$pat\" ] || exit 0\n"
-                + "if command -v pgrep >/dev/null 2>&1; then\n" + byPgrep
+        // 选取口径保持原样：pgrep 输出里第一个 argv[0] 为 nginx 且匹配本实例 conf 的进程，
+        // 只是把非 nginx 进程（grep / bash / awk）排除在外；
+        // 匹配判据与 processAlive 逐字相同 —— 两者不一致就会出现「在运行但取不到 PID」。
+        String head = "  pgrep -af nginx 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
+                + "    function matchConf(   s) {\n"
+                + "      s = $0\n"
+                + "      if (index(s, pat)) return 1\n"
+                + "      if (index(s, \" -c \")) return 0\n"
+                + "      return (def != \"\" && pat == def) ? 1 : 0\n"
+                + "    }\n"
+                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (matchConf()) { print $1; exit } }'\n";
+        String byPs = "  ps -e 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
+                + "    function matchConf(   s) {\n"
+                + "      s = $0\n"
+                + "      if (index(s, pat)) return 1\n"
+                + "      if (index(s, \" -c \")) return 0\n"
+                + "      return (def != \"\" && pat == def) ? 1 : 0\n"
+                + "    }\n"
+                + "    { for (i = 1; i <= NF; i++) if ($i ~ /(^|\\/)nginx$/) { if (matchConf()) { print $1; exit } } }'\n";
+        return preamble(confTail)
+                + "if command -v pgrep >/dev/null 2>&1; then\n" + head
                 + "else\n" + byPs
                 + "fi\n";
     }

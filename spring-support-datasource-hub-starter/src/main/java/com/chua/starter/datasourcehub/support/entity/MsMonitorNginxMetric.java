@@ -58,10 +58,18 @@ public class MsMonitorNginxMetric implements Serializable {
 
     /**
      * 指标值
+     *
+     * <p><strong>字段名刻意不叫 {@code value}</strong>：MyBatis-Plus 的
+     * {@code selectList} 会把列名按属性名起别名，于是生成
+     * {@code ms_monitor_nginx_metric_value AS value}；而 {@code value} 是
+     * H2 的保留字，H2 直接报语法错（101.200.205.64 走查时复现：
+     * 「读趋势」500，趋势图永远空白，而采集其实一直在写数据）。
+     * 属性名改成 {@code metricValue} 后别名变成 {@code metricValue}，两个库都安全，
+     * 表结构与接口 JSON 字段都不变（对外仍是 {@code value}，见下方 {@code @JsonProperty} 说明）。</p>
      */
     @TableField("ms_monitor_nginx_metric_value")
     @Schema(description = "指标值（累计类为原始计数）", example = "12.0")
-    private Double value;
+    private Double metricValue;
 
     /**
      * 采集时刻
