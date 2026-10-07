@@ -538,6 +538,7 @@ public class ServerManageServiceImpl implements ServerManageService {
         params.add(param("openRange", "true", "是否支持 Range 分段", "boolean"));
         params.add(param("openWatermark", "false", "是否启用水印", "boolean"));
         params.add(param("openRemoteFile", "false", "是否允许远程文件透传", "boolean"));
+        params.add(param("openThirdPreview", "false", "是否允许三方 URL 预览（?url=base64 编码地址）", "boolean"));
         params.add(param("openWebjars", "true", "是否开放 webjars", "boolean"));
         params.add(param("watermark", "", "水印文本", "string"));
         params.add(param("layout", "false", "是否开启目录列表页（关闭时访问目录返回 404）", "boolean"));

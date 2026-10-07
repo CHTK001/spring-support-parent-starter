@@ -41,7 +41,7 @@ plugin:
 
 ### 2. 文件服务器（plugin.filesystem.storage-server）
 
-随应用启动的独立 HTTP 文件存储网关（默认端口 18080），供"文件服务器"页面直连：
+随应用启动的独立 HTTP 文件存储网关（默认端口 18082），供"文件服务器"页面直连：
 
 ```yaml
 plugin:
@@ -49,7 +49,7 @@ plugin:
     storage-server:
       enable: true               # 是否随应用启动（默认 true）
       host: 0.0.0.0
-      port: 18080
+      port: 18082
       type: jdk                  # 服务器引擎 jdk / nio / aio
       open-preview: true         # 允许 ?preview 内联预览
       open-download: true        # 允许 ?download 附件下载

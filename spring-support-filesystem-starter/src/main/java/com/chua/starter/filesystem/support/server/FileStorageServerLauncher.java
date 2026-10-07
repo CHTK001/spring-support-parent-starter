@@ -220,6 +220,7 @@ public class FileStorageServerLauncher implements AutoCloseable {
                 .openWatermark(properties.isOpenWatermark())
                 .openWebjars(properties.isOpenWebjars())
                 .openRemoteFile(properties.isOpenRemoteFile())
+                .openThirdPreview(properties.isOpenThirdPreview())
                 .watermark(properties.getWatermark())
                 .layout(properties.isLayout())
                 .layoutType(properties.getLayoutType())
