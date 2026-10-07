@@ -7,6 +7,7 @@ import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
+import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
 
 import java.util.List;
 
@@ -35,12 +36,12 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     Long saveQuestion(QuestionSaveDTO dto);
 
     /**
-     * 批量导入题目
+     * 批量导入题目。逐条容错，失败原因随结果返回，不因单条坏数据整体回滚。
      *
      * @param list 题目列表
-     * @return 导入数量
+     * @return 导入结果（成功/失败条数 + 逐条失败原因）
      */
-    int importQuestions(List<QuestionSaveDTO> list);
+    QuestionImportResultVO importQuestions(List<QuestionSaveDTO> list);
 
     /**
      * 删除题目
