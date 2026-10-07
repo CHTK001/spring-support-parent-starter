@@ -5,6 +5,7 @@ import com.chua.starter.datasourcehub.support.entity.MsDatasource;
 import com.chua.starter.datasourcehub.support.mapper.MsDatasourceMapper;
 import com.chua.starter.datasourcehub.support.model.FieldMappingVO;
 import com.chua.starter.datasourcehub.support.model.SchemaColumnVO;
+import com.chua.starter.datasourcehub.support.model.SchemaTableVO;
 import com.chua.starter.datasourcehub.support.model.TableDdlVO;
 import com.chua.starter.datasourcehub.support.model.dto.DdlColumn;
 import com.chua.starter.datasourcehub.support.model.dto.FieldMappingDTO;
@@ -74,19 +75,30 @@ public class DatasourceSchemaServiceImpl implements DatasourceSchemaService {
 
     @Override
     public List<String> listTables(String datasource) {
+        List<SchemaTableVO> infos = listTableInfos(datasource);
+        List<String> names = new ArrayList<>(infos.size());
+        for (SchemaTableVO info : infos) {
+            names.add(info.name());
+        }
+        return names;
+    }
+
+    @Override
+    public List<SchemaTableVO> listTableInfos(String datasource) {
         try (Connection connection = connection(datasource)) {
-            Map<String, String> names = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            Map<String, SchemaTableVO> tables = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             try (ResultSet rs = connection.getMetaData().getTables(connection.getCatalog(), null, "%",
                     new String[]{"TABLE", "VIEW"})) {
                 while (rs.next()) {
                     String name = rs.getString("TABLE_NAME");
                     // 不按 sys 前缀过滤：本仓库业务表就是 sys_xxx，过滤掉等于把可选业务表全藏了
                     if (name != null && !name.isBlank()) {
-                        names.putIfAbsent(name, name);
+                        tables.putIfAbsent(name, new SchemaTableVO(name, rs.getString("REMARKS"),
+                                rs.getString("TABLE_TYPE")));
                     }
                 }
             }
-            return new ArrayList<>(names.values());
+            return new ArrayList<>(tables.values());
         } catch (Exception ex) {
             throw new IllegalStateException("读取表清单失败: " + ex.getMessage(), ex);
         }
