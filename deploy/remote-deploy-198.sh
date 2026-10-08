@@ -97,9 +97,10 @@ nohup java -XX:+UseCompactObjectHeaders -Xmx1500m -Dfile.encoding=UTF-8 -jar "$R
 NEW_PID=$!
 echo "  新进程 pid=$NEW_PID 日志=$LOG"
 
-# 等端口真的起来，而不是死等固定秒数（28s 不足以覆盖并发启动的慢场景）
+# 等端口真的起来，而不是死等固定秒数（实测冷启动 262s：AI/ONNX 预热+DB 列检查，
+# 原 180s 窗口会在启动成功前误判失败，故放宽到 360s）
 READY=0
-for i in $(seq 1 90); do
+for i in $(seq 1 180); do
   if ss -lnt 2>/dev/null | grep -q ":${PORT} "; then READY=$i; break; fi
   if ! kill -0 "$NEW_PID" 2>/dev/null; then
     echo "  !! 进程已退出，日志尾部："
@@ -114,7 +115,7 @@ echo "  紧凑头=$(tr '\0' ' ' < /proc/$NEW_PID/cmdline | grep -c UseCompactObj
 echo "  RSS=$(grep VmRSS /proc/$NEW_PID/status | awk '{print $2}') kB"
 echo "  监听${PORT}进程数=$(ss -lntp 2>/dev/null | grep -c ":${PORT} ")"
 if [ "$READY" = "0" ]; then
-  echo "  !! 180s 内未监听 ${PORT}，日志尾部："
+  echo "  !! 360s 内未监听 ${PORT}，日志尾部："
   tail -25 "$LOG" | sed 's/^/     /'
   exit 3
 fi
