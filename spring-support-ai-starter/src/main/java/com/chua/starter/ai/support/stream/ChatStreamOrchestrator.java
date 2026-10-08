@@ -523,6 +523,8 @@ public class ChatStreamOrchestrator {
             // 工具调用轨迹：随助手消息落库 —— 否则「工具行」只在流式过程中有数据，
             // 刷新/重载后整段消失（用户口径：每个工具调用要单独一行、默认折叠）。
             final java.util.List<Object> collectedToolCalls = new java.util.ArrayList<>();
+            // 智能体（AgentScope）路径的工具信息走 trace（kind/toolName/text），单独收一份
+            final java.util.List<Map<String, Object>> collectedToolTraces = new java.util.ArrayList<>();
 
             aiChatFacadeService.streamWithUsage(request,
                     chunk -> {
@@ -569,14 +571,20 @@ public class ChatStreamOrchestrator {
                             assistantMsg.setTotalTokens(totalTokens);
                             if (pendingConfirmation[0] != null) {
                                 assistantMsg.setConfirmation(buildConfirmationJson(pendingConfirmation[0]));
-                            } else if (!collectedToolCalls.isEmpty()) {
+                            } else if (!collectedToolCalls.isEmpty() || !collectedToolTraces.isEmpty()) {
                                 // 工具轨迹落库：confirmation 是唯一的结构化长文本列；
                                 // 消费方 parsePendingConfirmation 以 status:"pending" 为闸，
                                 // 这类 JSON 不会被误认成待确认请求。
                                 Map<String, Object> toolTrace = new LinkedHashMap<>();
-                                toolTrace.put("toolCalls", collectedToolCalls);
+                                if (!collectedToolCalls.isEmpty()) {
+                                    toolTrace.put("toolCalls", collectedToolCalls);
+                                }
+                                if (!collectedToolTraces.isEmpty()) {
+                                    toolTrace.put("toolTraces", collectedToolTraces);
+                                }
                                 assistantMsg.setConfirmation(objectMapper.writeValueAsString(toolTrace));
-                                log.info("[ChatStream] 工具轨迹已随助手消息落库 sessionId={}, 条数={}", sid, collectedToolCalls.size());
+                                log.info("[ChatStream] 工具轨迹已随助手消息落库 sessionId={}, calls={}, traces={}",
+                                        sid, collectedToolCalls.size(), collectedToolTraces.size());
                             }
                             aiDialogRecordService.addMessage(dialogId, assistantMsg);
                             log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageId, totalTokens);
@@ -631,7 +639,21 @@ public class ChatStreamOrchestrator {
                             sink.sendEvent(thinkEvent);
                         }
                     },
-                    sink::sendTrace,
+                    trace -> {
+                        // 工具类 trace 额外收一份，随助手消息落库（供刷新后渲染工具行）；
+                        // 其余 trace 仍原样转发给前端。
+                        if (trace != null) {
+                            if (trace.getToolName() != null && !trace.getToolName().isBlank()) {
+                                Map<String, Object> t = new LinkedHashMap<>();
+                                t.put("kind", trace.getKind());
+                                t.put("toolName", trace.getToolName());
+                                t.put("text", trace.getText());
+                                t.put("timestamp", trace.getTimestamp());
+                                collectedToolTraces.add(t);
+                            }
+                            sink.sendTrace(trace);
+                        }
+                    },
                     toolCalls -> {
                         if (toolCalls == null || toolCalls.isEmpty()) {
                             return;
