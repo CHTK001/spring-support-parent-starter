@@ -351,6 +351,33 @@ public class ChatStreamOrchestrator {
             log.info("[ChatStream] 应用角色默认在线检索");
         }
 
+        // 思考强度档位：body 传 thinkingEffort（兼容 effectLevel / thinking_effort 别名）。
+        // 值为 'default' 或空 = 「不传」——交由各厂商默认（OpenAI 未传落 high、Claude 未传落 1024）。
+        // 真正生效还要求 think=true，由 AiChatFacadeServiceImpl.configureClient 统一判定；
+        // 这里只负责把档位带进 request.parameters["thinking_effort"]。
+        Object effortObj = body.get("thinkingEffort");
+        if (effortObj == null) {
+            effortObj = body.get("effectLevel");
+        }
+        if (effortObj == null) {
+            effortObj = body.get("thinking_effort");
+        }
+        if (effortObj != null) {
+            String effortLevel = String.valueOf(effortObj).trim();
+            // 'default'/'none' 都表示「不传」——交由各厂商默认；只有真实档位才写进参数
+            if (!effortLevel.isEmpty()
+                    && !"default".equalsIgnoreCase(effortLevel)
+                    && !"none".equalsIgnoreCase(effortLevel)) {
+                Map<String, Object> requestParams = request.getParameters();
+                if (requestParams == null) {
+                    requestParams = new LinkedHashMap<>(4);
+                    request.setParameters(requestParams);
+                }
+                requestParams.put("thinking_effort", effortLevel);
+                log.info("[ChatStream] 应用思考强度档位: {}", effortLevel);
+            }
+        }
+
         String messageId = UUID.randomUUID().toString();
         String turnsId = UUID.randomUUID().toString();
         String contentId = UUID.randomUUID().toString();

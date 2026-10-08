@@ -1444,6 +1444,15 @@ public class ApiProviderController {
                     .findFirst()
                     .orElse(null));
         }
+        // 思考强度档位：与 generate 同款——原样回传 capabilities[].thinking_efforts，
+        // 缺省不返回该键，前端按默认集合（low/medium/high/max）处理
+        if (caps.stream().anyMatch(c -> c.get("thinking_efforts") != null)) {
+            map.put("thinking_efforts", caps.stream()
+                    .map(c -> c.get("thinking_efforts"))
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(null));
+        }
         // 模型指标优先使用自身配置，再从缓存快照补充价格、延迟、智能和速度数据
         Map<String, Object> metrics = model.getMetrics() != null
                 ? new LinkedHashMap<>(model.getMetrics())
@@ -1523,6 +1532,11 @@ public class ApiProviderController {
         // 生成参数节点：白名单式构造会丢字段，这里显式透传，供模型弹框回显与编辑
         if (cap.get("generate") != null) {
             map.put("generate", cap.get("generate"));
+        }
+        // 思考强度档位（low/medium/high/max）：与 generate 同理，显式透传，
+        // 供模型管理弹框回显与编辑；未配置时前端回退到默认集合
+        if (cap.get("thinking_efforts") != null) {
+            map.put("thinking_efforts", cap.get("thinking_efforts"));
         }
         if (cap.get("base_url_override") != null) {
             map.put("base_url_override", cap.get("base_url_override"));
@@ -1620,6 +1634,8 @@ public class ApiProviderController {
         // 生成参数（参考图 / 张数上限 / 分辨率列表 / 时长列表 / 步数区间）：
         // 复用 capabilities[].generate 节点，不新增数据库字段
         applyGenerateConfig(e, input.get("generate"));
+        // 思考强度档位（low/medium/high/max）：同样复用 capabilities[].thinking_efforts
+        applyThinkingEfforts(e, input.get("thinking_efforts"));
         // 指标数据直接保存延迟、智能和输出速度等原始数据
         Object metricsObj = input.get("metrics");
         if (metricsObj instanceof Map<?, ?> metricsMap) {
@@ -1755,6 +1771,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (input.containsKey("generate")) {
             applyGenerateConfig(e, input.get("generate"));
         }
+        // 思考强度档位：按字段存在与否覆盖（复用 capabilities[].thinking_efforts 节点）
+        if (input.containsKey("thinking_efforts")) {
+            applyThinkingEfforts(e, input.get("thinking_efforts"));
+        }
         if (input.containsKey("metrics")) {
             Object metricsObj = input.get("metrics");
             if (metricsObj instanceof Map<?, ?> metricsMap) {
@@ -1797,6 +1817,40 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             caps.set(0, node);
         }
         node.put("generate", gen);
+    }
+
+    /**
+     * 把请求体中的思考强度档位写入实体的 {@code capabilities[].thinking_efforts} 节点。
+     *
+     * <p>与 {@link #applyGenerateConfig} 同款：整段档位清单复用已有 JSON 列，不新增
+     * 数据库字段；空列表表示「未配置」——前端按默认集合（low/medium/high/max）兜底。</p>
+     *
+     * @param entity 模型实体
+     * @param raw    档位清单（List&lt;String&gt;；null 表示本次不改动）
+     */
+    @SuppressWarnings("unchecked")
+    private void applyThinkingEfforts(SysAiProviderModel entity, Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return;
+        }
+        List<String> efforts = new ArrayList<>(list.size());
+        for (Object item : list) {
+            if (item != null && !String.valueOf(item).isBlank()) {
+                efforts.add(String.valueOf(item).trim());
+            }
+        }
+        List<Map<String, Object>> caps = entity.getCapabilities();
+        if (caps == null || caps.isEmpty()) {
+            caps = new ArrayList<>(1);
+            caps.add(new LinkedHashMap<>(4));
+            entity.setCapabilities(caps);
+        }
+        Map<String, Object> node = caps.getFirst();
+        if (node == null) {
+            node = new LinkedHashMap<>(4);
+            caps.set(0, node);
+        }
+        node.put("thinking_efforts", efforts);
     }
 
     /**
