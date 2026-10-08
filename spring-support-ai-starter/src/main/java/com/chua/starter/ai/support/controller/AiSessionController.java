@@ -349,6 +349,25 @@ public class AiSessionController {
 
         List<SysAiMessage> messages = messageMapper.selectList(wrapper);
 
+        // 会话级思考强度档位（settings.thinkingEffort）：随消息 metadata 回显，
+        // 便于历史消息与 UI 知道该会话当前生效的档位；'default'/缺省 = 不传（交由模型默认）
+        String sessionEffort = null;
+        try {
+            SysAiSession effortSession = sessionMapper.selectById(sessionId);
+            if (effortSession != null) {
+                Map<String, Object> settingsMap = readSettings(effortSession.getSettings());
+                Object effortRaw = settingsMap == null ? null : settingsMap.get("thinkingEffort");
+                if (effortRaw != null) {
+                    String effortValue = String.valueOf(effortRaw).trim();
+                    if (!effortValue.isEmpty() && !"default".equalsIgnoreCase(effortValue)) {
+                        sessionEffort = effortValue;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[Messages] 读取会话思考强度失败: {}", ex.getMessage());
+        }
+
         // 反转，按时间升序返回
         List<Map<String, Object>> items = new ArrayList<>();
         String lastUserMessageId = null;
@@ -410,6 +429,10 @@ public class AiSessionController {
                 usage.put("completionTokens", msg.getCompletionTokens());
                 usage.put("totalTokens", msg.getTotalTokens());
                 metadata.put("usage", usage);
+            }
+            // 会话生效的思考强度档位（low/medium/high/max）；未设置则不返回该键
+            if ("assistant".equals(msg.getRole()) && sessionEffort != null) {
+                metadata.put("thinkingEffort", sessionEffort);
             }
             item.put("metadata", metadata);
             items.add(item);
