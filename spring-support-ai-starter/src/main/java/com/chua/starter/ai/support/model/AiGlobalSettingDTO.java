@@ -130,15 +130,6 @@ public class AiGlobalSettingDTO implements Serializable {
     private String ragLlmModel;
 
     /**
-     * RAG OCR 识别模型
-     */
-    @Schema(description = "RAG OCR 识别模型")
-    /**
-     * RAGOCR模型
-    */
-    private String ragOcrModel;
-
-    /**
      * RAG 上传文件目录
      */
     @Schema(description = "RAG 上传文件目录")

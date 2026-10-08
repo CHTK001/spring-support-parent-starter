@@ -3,8 +3,8 @@ package com.chua.starter.ai.support.configuration.rag;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
-import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
+import com.chua.starter.ai.support.configuration.ocr.OcrClientManager;
+import com.chua.starter.ai.support.configuration.ocr.OcrPipelineTextExtractor;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.MemoryChatClient;
@@ -251,6 +251,12 @@ public class RagClientManager {
     private final DefaultListableBeanFactory beanFactory;
 
     /**
+     * 共享 OCR 管线（ocr 分组为单一事实来源）：RAG 图片文字提取直接复用
+     * {@link OcrClientManager}，不再各自构建管线，配置热更新由它负责。
+     */
+    private final OcrClientManager ocrClientManager;
+
+    /**
      * 宿主数据源，供「向量直接存业务库」的向量库实现注入。
      *
      * <p>用 {@code ObjectProvider} 延迟取，避免 jvector / milvus 等不需要数据源时
@@ -424,25 +430,6 @@ public class RagClientManager {
     }
 
     /**
-     * 监听 OCR 设置变更事件，重建 RAG 客户端以使用最新的 OCR 模型配置。
-     * @param event 事件
-     */
-    @EventListener
-    public void onOcrSettingsChanged(OcrSettingsChangedEvent event) {
-        if (event == null || !"ocr".equals(event.getGroup())) {
-            return;
-        }
-        if (event.isUserScoped()) {
-            // 客户端已按账号隔离，用户级 OCR 改动只重建触发者那一个；
-            // 重建全部账号会把他的 OCR 模型烘进别人的客户端。
-            reloadUser(event.getUserId());
-            return;
-        }
-        log.info("[RagClientManager] 收到 OCR 设置变更事件，重建 RAG 客户端");
-        rebuild();
-    }
-
-    /**
      * 按最新全局配置重建 RAG 客户端（热更新）。
      *
      * <p>全局配置（向量库类型、切片、上传目录…）影响每个账号，所以重建全部已缓存账号；
@@ -598,7 +585,6 @@ public class RagClientManager {
                 log.info("[RagClientManager] rag_llm_model 未配置，回落默认模型: {}", ragLlmModel);
             }
         }
-        String ragOcrModel = settingReader.getStr(GROUP, "rag_ocr_model");
         String ragUploadDir = settingReader.getStr(GROUP, "rag_upload_dir");
         String ragVectorStorage = settingReader.getStr(GROUP, "rag_vector_storage");
         String ragSystemPrompt = settingReader.getStr(GROUP, "rag_system_prompt");
@@ -639,7 +625,7 @@ public class RagClientManager {
                 .textSplitter(splitter)
                 .vectorStorage(vectorStorage)
                 .systemPrompt(ragSystemPrompt)
-                .textExtractor(resolveTextExtractor(ragOcrModel))
+                .textExtractor(resolveTextExtractor())
                 .build();
 
         RagClient client = createClient(setting);
@@ -1001,45 +987,19 @@ public class RagClientManager {
     }
 
     /**
-     * 解析文本提取器：配置了 RAG OCR 模型时使用 OCR 提取器识别图片文字，否则返回 空。
+     * 解析文本提取器：直接复用共享的 OCR 管线（ocr 分组为单一事实来源）。
      *
-     * <p>优先使用 ocr 分组的完整管线配置（detector + recognizer + 阈值 + 阅读序 + direction + restorer
-     * + corrector 文本矫正），未配置 detector/recognizer 时回退到旧版单模型 recognizer 路径。</p>
+     * <p>OCR 是否启用由 {@link OcrClientManager} 依 ocr 分组判定；未配置时不做图片 OCR
+     * （上传图片按 UTF-8 降级）。管线配置热更新由 OcrClientManager 负责，这里在提取时
+     * 实时取当前管线，因此 OCR 配置改动无需重建 RAG 客户端。</p>
      *
-     * @param ocrModel 兜底 OCR 模型名（rag_ocr_模型）
-     * @return 文本提取器，未配置 OCR 时返回 空
+     * @return 文本提取器；OCR 未配置时返回 空
      */
-    private TextExtractor resolveTextExtractor(String ocrModel) {
-        // 模型引用统一剥「onnx:」前缀：注册表/底层只认裸名（与 bareModelId 同语义）
-        String detectorModel = bareModelId(settingReader.getStr("ocr", "detector_model"));
-        String recognizerModel = bareModelId(settingReader.getStr("ocr", "recognizer_model"));
-        String sortStr = settingReader.getStr("ocr", "sort_reading_order");
-        String thresholdStr = settingReader.getStr("ocr", "detector_threshold");
-        String directionModel = bareModelId(settingReader.getStr("ocr", "direction_model"));
-        String restorerModel = bareModelId(settingReader.getStr("ocr", "restorer_model"));
-        String correctorModel = bareModelId(settingReader.getStr("ocr", "corrector_model"));
-
-        if (StringUtils.hasText(detectorModel) && StringUtils.hasText(recognizerModel)) {
-            // 完整 OCR 管线（detect→recognize，含阈值过滤与阅读序；文本矫正是非必填）
-            float threshold = parseFloatSafe(thresholdStr, 0.5f);
-            boolean sort = !"false".equalsIgnoreCase(sortStr);
-            try {
-                return new OcrTextExtractor(detectorModel, recognizerModel,
-                        threshold, sort, directionModel, restorerModel, correctorModel);
-            } catch (Exception e) {
-                log.warn("[RagClientManager] 完整 OCR 管线创建失败: {}", e.getMessage());
-            }
+    private TextExtractor resolveTextExtractor() {
+        if (!ocrClientManager.available()) {
+            return null;
         }
-        if (StringUtils.hasText(ocrModel)) {
-            // 回退到单模型 recognizer 路径（仅识别，无检测/阈值）
-            try {
-                return new OcrTextExtractor(ocrModel);
-            } catch (Exception e) {
-                log.warn("[RagClientManager] OCR 提取器创建失败，图片文字提取不可用: {}", e.getMessage());
-                return null;
-            }
-        }
-        return null;
+        return new OcrPipelineTextExtractor(ocrClientManager);
     }
 
     /**
