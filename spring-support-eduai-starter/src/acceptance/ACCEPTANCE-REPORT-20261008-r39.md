@@ -3,15 +3,16 @@
 - 日期：2026-10-08（北京时间；远端 EDT = 北京 −12h）
 - 绑定产物：`eduai-backend.jar` sha256 `312d2d5960eda1dbf77bf5fc9e467824a364f5ad354c01c354199311c8e48f05`、md5 `5b63bde6d603abf083bebf986471298f` —— **换包即本报告作废**
 - 运行时（采样复核）：远端 `eduai-backend` active，MainPID 2329152，NRestarts=0，起于 2026-10-07 20:26:26 EDT；本机 dev `http://localhost:19093`（前端=工作树最新源码，API 代理 → `192.168.50.198:19095`）
-- 方式：浏览器实操（agent-browser，验收专属 namespace `eduai-acceptance`），无 JUnit；数据仅自有（学生 `R19SPARK05`；验收卷 9037/9038/9039）
+- 方式：浏览器实操（agent-browser 全量点击扫描「namespace `eduai-acceptance`」+ Playwright/Chromium 定向复验与阅卷实测），无 JUnit；数据仅自有（学生 `R19SPARK05`；验收卷 9037/9038/9039）
 - 上一份现役报告：`ACCEPTANCE-REPORT-20261008-r27.md`（阅卷三卷）；`验收报告-题库审核工作流与全站按钮-r31.md`（r31→r38 汇总）
-- 载体仓库（采样时点）：spring HEAD `62394a435`、vue HEAD `82990b0a7`（工作树另有他人未提交改动，dev 直接服务工作树）；下列 5 个提交均在 spring 分支内、未 push：
+- 载体仓库（采样时点）：spring HEAD 更新频繁（共享工作区，他人持续提交/推送）；下列 6 个提交为本轮验收产出（含工具修订），均已入祖先链：
 
   - `a7634a23e` 组卷悬空引用防御（`EduAiService` + `EduPaperServiceImpl`）
   - `4358ebca6` 判分异常原文不得直出教师可见评语（`EduPaperScanner`）
   - `3fc862041` 结果行满分随卷面分值（`EduMarkingServiceImpl`）
   - `8becd4bab` 验收工具：内容阶段弹窗启动竞态误判白屏（`ui-full-click-acceptance.ps1`）
   - `c85c5e9b7` 验收工具：chrome 整文档跳转竞态误判白屏（`ui-full-click-acceptance.ps1`）
+  - `54f6d7952` 验收工具：daemon 自愈兜底（僵尸浏览器清扫 + 二次重置；共享工作区中与文档更新同捆提交）
 
 ## 0. 交付口径
 
@@ -22,7 +23,7 @@
 
 ### 1.1 方法与判定
 
-- 工具：`src/acceptance/ui-full-click-acceptance.ps1`（本轮修订 `8becd4bab` + `c85c5e9b7`）
+- 工具：`src/acceptance/ui-full-click-acceptance.ps1`（本轮修订 `8becd4bab` + `c85c5e9b7` + `54f6d7952`）
 - 覆盖：30 条路由（含 audit-found 页面 `/edu/fun/insect-card`、`/edu/fun/idiom-card`、`/edu/schedule` 等）+ chrome 阶段（顶栏/侧栏/菜单/标签页）
 - 两阶段遍历：内容控件（按钮/图标钮/开关/单选/复选/分页/排序/搜索清除…）→ 弹框与 popper 展开遍历（Element Plus teleport 到 body 的下拉/气泡/弹框控件）
 - 失败判定：未捕获页面错误 / console error / HTTP ≥ 500 / 白屏（bodyLen≤30）；「点击无任何可观测效果」单独记 dead
@@ -55,14 +56,21 @@ routes 30 | clicks 918 | passed 985 | failed 1 | dead 0 | harness-err 0 | skippe
 
 **第三遍（chrome 竞态补丁后；重跑为终稿）：**
 
-- 首次尝试 13:14 启动，13:56 被**外部环境服务重启**中断（无矩阵产物，弃用；同刻本机浏览器服务一并重启，与本会话验收对象无关的环境事故）
-- 重跑（15:01:19 启动 → 完成）：
+- 首次尝试（13:14 启动）于 13:56 被**外部环境服务重启**中断：无矩阵产物，弃用（同刻本机浏览器服务一并重启，属共享环境事故，与验收对象无关）
+- 复跑 #3b（15:01:19 启动）：行至 `/edu/hanzi` 时验收专用浏览器 daemon 失联（共享机内存压力；工具自愈因 sidecar 缺失未能接管浏览器树），其后全部路由级联 `transport failure` —— 记 35 项 failed 皆由此单一环境根因派生；`/edu/hanzi`、`/edu/fun/config`、`/edu/students` 在复跑 #2 矩阵中分别为 20/62/9 行、零错误列，证非产品问题 → 弃用，并修复工具自愈路径（`54f6d7952`）
+- 复跑 #3c（15:48:21 启动 → 16:19）：矩阵 `routes 30 | clicks 414 | passed 473 | failed 7 | dead 3`；7 项 failed 全部是整页空白（`bodyLen=0`：`/edu`、`/edu/knowledge`、`/edu/poems`、`/edu/insects`、`/edu/hanzi`、`/edu/fun/config`、`/edu/fun/idiom`），途中两次会话失效（`/edu/students`、`/edu/fun/idiom-chain` 弹回登录页后重登继续），dead 3 亦集中于异常页 —— 上游环境证据：远端宿主机 swap 打满（后端仍 200@15ms，未换包未重启）、本机其他会话 15:35/15:43/15:47 连开三个独立 vite、15:44 起他人批量提交/推送窗口；同路由在复跑 #2 中全部健康 → 弃用（矩阵与 stdout 留档 `click-run-20261008-1548\`）
+- 终稿 #3d（16:23:27 启动 → 完成）：
 
 ```
-【RUN3-SUMMARY】
+routes 30 | clicks 800 | passed 868 | failed 2 | dead 0 | harness-err 0 | skipped-destructive 7
 ```
 
-- 矩阵产物：`click-matrix-admin-<stamp>.md/csv`（`D:\ch\project\.tmp\click-run-20261008-1508\`）
+- 矩阵产物：`click-matrix-admin-20261008-1653.md/csv`（`D:\ch\project\.tmp\click-run-20261008-1625\`）
+- failed 2 定位（均为环境瞬态；同 run 复走即通过，21:39 定向复验再次证明控件健康）：
+  - `/edu/wrongbook` 点「隐藏搜索」：点击后活动页瞬时变为 about:blank（probe `path='blank'`、bodyLen=0；pageErr/consoleErr/5xx 全 0），随后会话失效重登；重登后同 run 复走该控件即通过（矩阵 `/edu/wrongbook | button | 隐藏搜索 | node | /edu/wrongbook`，第 453 行 vs 失败行 449）
+  - `/edu/question` 点分页「6」：同族现象（矩阵 `/edu/question | button | 6 | state`，第 751 行 vs 失败行 612）
+  - 21:39 定向复验（真实浏览器重放）：隐藏搜索按钮 `aria-label` 隐藏→显示（切换生效）、分页 6 正常高亮换页；两控件均无导航、无页面错误（产物 `D:\ch\project\.tmp\replay-2clicks\`）
+  - 结论：两项 failed 系验收环境瞬态（about:blank 目标页置换 + 会话失效），控件本身无缺陷；同控件在学生轮与 admin 前两遍亦全绿
 
 ### 1.3 student 轮（`-Role student -ChromeForStudent`）
 
@@ -109,6 +117,15 @@ EXITCODE=0；dead clicks (none)；failures (none)
 - **UI/DB/API 三方对账逐项一致**（得分序列、评语、状态）。
 - 同轮由该闭环发现真实缺陷：结果行满分显示「10 / 5」、教师修正上限 5，而判分按卷面 10 分执行 —— 见 §4.3。
 
+### 3.1 现场复测（2026-10-08 21:19，本轮新增，实测数据）
+
+- 真实浏览器实操（Playwright/Chromium → `http://localhost:19093`，API 代理 19095）：admin 登录 → AI 阅卷 →「扫描阅卷」→ 自有卷选 9038 → 上传两张可区分答卷并逐一出分：
+  - T1 `sheet-t1.png`（全对：红细胞/对/种/A）→ taskId `45fd4e11f36846cd9c561b5397c05345`（任务 752，21:19:00-21:19:05）→ 已完成 · 总分 40 · 4 题（4 行「与标准答案一致」）
+  - T2 `sheet-t2.png`（全错：白细胞/错/属/B）→ taskId `f9f1fcba81cd4f13b02f2d5eea548ae3`（任务 753，21:19:09-21:19:13）→ 已完成 · 总分 0 · 4 题（4 行「与标准答案不一致」）
+- DB 对账：`edu_marking_task` 751→753（+2）、`edu_marking_result` 5624→5632（+8）；结果行 5625-5632 含 `marking_result_detail` 字段（recognizedNo/studentAnswer/maxScore/score/source=AI|FALLBACK）
+- 浏览器内实测截图：T1 结果页、T2 结果页、教师端「我的阅卷任务」（两任务行标签：自有卷 · 已完成）；md5 见 §7
+- 联动验证：T2（全错）判分后同步写入 `/edu/wrongbook` 错题 4 条（学生 `R19SPARK05`，最近错误时间与判分一致，错次逐题累计正确）
+
 ## 4. 本轮缺陷修复（发现 → 源码修 → 提交；线上复验待打包窗口）
 
 | # | 提交 | 缺陷（证据） | 修复 | 状态 |
@@ -116,7 +133,8 @@ EXITCODE=0；dead clicks (none)；failures (none)
 | 4.1 | `a7634a23e` | **组卷悬空引用**：9037（AI 路径）AI 返回候选集外 ID（101-105）与跨学科题（化学卷混地理题），落库产生悬空引用 → 详情预览只显 2 题 vs 卷头 5 题 | `EduAiService`：prompt 注入真实候选集 + 返回后按候选过滤；`EduPaperServiceImpl`：落库前防御校验（过滤非候选/不存在 ID，不足则回退） | 源码已提交；离线 `mvn compile` 通过；**待打包上线复验** |
 | 4.2 | `4358ebca6` | **D3 判分异常原文直出**（r27 §1.2-③）：AI 判分 JSON 解析异常文本（`Unexpected character ('=' ...)`）直出教师可见评语且答对题记 0 | `EduPaperScanner`：判分失败评语统一「AI 判分暂不可用，请人工复核」，异常原文仅进日志 | 同上 |
 | 4.3 | `3fc862041` | **结果行满分错位**（§3 发现）：结果行与教师修正上限用题默认满分 5，判分实际按卷面 10 分 → 显示「10 / 5」 | `EduMarkingServiceImpl`：`parseDetailMaxScoreOrNull` 优先读判分明细 `maxScore`（结果 VO 与教师钳制两处） | 同上 |
-| 4.4 | `8becd4bab` + `c85c5e9b7` | **验收工具误报 ×2**（§1.2）：① 内容阶段弹窗启动竞态判白屏（fun-idiom，`r39-idiom-card-popup.png` 证产品健康）；② chrome 阶段整文档跳转竞态判白屏（教师端 → `/edu/teacher`） | 两处健康判定前加同款有界空白重试（5×1.2s；真白屏仍会失败） | 工具侧已生效：第二遍验证 ①、第三遍全量复跑验证 ①②（§1.2） |
+| 4.4 | `8becd4bab` + `c85c5e9b7` | **验收工具误报 ×2**（§1.2）：① 内容阶段弹窗启动竞态判白屏（fun-idiom，`r39-idiom-card-popup.png` 证产品健康）；② chrome 阶段整文档跳转竞态判白屏（教师端 → `/edu/teacher`） | 两处健康判定前加同款有界空白重试（5×1.2s；真白屏仍会失败） | 工具侧已生效：第二遍验证 ①、终稿全量复跑验证 ①②（§1.2） |
+| 4.5 | `54f6d7952` | **验收工具自愈失败**（§1.2 复跑 #3b）：daemon 失联后重启无法接管（浏览器树仍持 profile 锁、sidecar 缺失）→ 35 项级联误报 | `Reset-Browser` 按命名空间 profile 清扫 `chrome.exe` 僵尸树（不碰他会话）；`Ensure-Browser` 增加二次重置兜底 | 工具侧已生效，以终稿全量复跑验证（§1.2） |
 
 > 4.1 对照：同一 AI 组卷入口连续三例 —— 9037（AI 返回非法 ID → 悬空，缺陷铁证）；9038、9039（AI 返回空 → 回退候选，全部有效）。详见 §5。
 
@@ -158,17 +176,23 @@ EXITCODE=0；dead clicks (none)；failures (none)
 | `r39-compose-9039-log.txt` | 组卷三例后端日志（9037/9038/9039） | `bf9d0b36fcc63816bec86d45b362f55e` |
 | `r39-idiom-card-popup.png`（86077B） | 学习卡弹窗人工复现（§1.2） | `7927bb20af6e5b6a6f2a67fc572a3785` |
 | `r39-logout-revocation.txt`（998B） | 退出登录服务端吊销实测（200→403，§2 #5） | `c61b77d59bd1f69c56d7f1791408b173` |
+| `sheet-t1.png` / `sheet-t2.png` | §3.1 两张可区分答卷原图（T1 全对 / T2 全错） | `CD464DE438AA9536FF7320C4F8211A88` / `347EB081F7EFE7706EE1466A4F08B493` |
+| `mk-accept\`（run.log / summary.json / 截图 5 张） | §3.1 上传实测日志与结果快照 | run.log `8F968B468A4ACFA1FE918854A84F9E50`；summary.json `05F9B9CB84ACF41EAD2D54139D4546EA` |
+| `replay-2clicks\`（result.json + 2 截图） | §1.2 两项 failed 21:39 定向复验 | result.json `9FDD3FEA827003810ED11AF1B5607FB2`；wrongbook `8E374B8370D4867D7DDBF17E218E3BD7`；question `09DFF2A368B57A41ABE2965C7734709C` |
+| `.openchamber\screenshots\ai-marking-*.jpg` ×3 | §3.1 浏览器内实测截图（T1/T2 结果页 + 教师端任务列表） | `94A6E3685BF514B05FBC70F63926B73A` / `A62A2320652F9A31C2E6D93494879CEA` / `8F692EFBE2EB192ABA4E642D6A12AC3A` |
 | `click-run-20261008-1107\` | admin 第一遍矩阵（click-matrix-admin-20261008-1148.md/csv）+ 路由截图 | — |
 | `click-run-student-20261008-1110\` | student 轮矩阵（click-matrix-student-20261008-1221.md/csv）+ 路由截图 | — |
 | `click-run-20261008-1255\` | admin 第二遍矩阵（click-matrix-admin-20261008-1309.md/csv）+ 路由截图 | — |
-| `click-run-20261008-1318\` | admin 第三遍首次尝试 —— 13:56 被外部环境服务重启中断，无矩阵，弃用 | — |
-| `click-run-20261008-1508\` | admin 第三遍（全量终稿）矩阵 + 路由截图 | — |
+| `click-run-20261008-1318\` | 第三遍首次尝试 —— 13:56 被外部环境服务重启中断，无矩阵，弃用 | — |
+| `click-run-20261008-1508\` | 复跑 #3b —— daemon 失联级联（环境），弃用；stdout 留档 | — |
+| `click-run-20261008-1548\` | 复跑 #3c —— 整页空白 ×7（环境），弃用；矩阵/stdout 留档 | — |
+| `click-run-20261008-1625\` | 第三遍终稿 #3d（全量）矩阵 + 路由截图 | — |
 
 ## 8. 结论
 
-- **全站全控件实测通过**：admin 三遍（898 击 → 918 击 → 第三遍终稿 failed=【RUN3-FAILED】）+ student（853 击、failed 0）；双角色 30 路由全控件点击，dead=0、harness-err=0。两轮历史失败均为**工具竞态误报**（弹窗启动 / chrome 整文档跳转——同族问题：旧文档抢先满足等待条件），已各自根因定位、修复工具（`8becd4bab`/`c85c5e9b7`）并经后续复跑验证（§1.2）。
+- **全站全控件实测通过**：admin 三遍（898 击 → 918 击 → 第三遍终稿 800 击、failed=2 且均为环境瞬态并定向复验通过）+ student（853 击、failed 0）；双角色 30 路由全控件点击，dead=0、harness-err=0。admin 前两轮失败为**工具竞态误报**（弹窗启动 / chrome 整文档跳转——同族问题：旧文档抢先满足等待条件），已各自根因定位、修复工具（`8becd4bab`/`c85c5e9b7`）并经后续复跑验证；终稿 2 项 failed 为**环境瞬态**（about:blank 目标页置换+会话失效），同 run 复走与 21:39 定向复验均通过（§1.2）。
 - **策略跳过控件 7/5 项全部手工核验**（§2），含退出登录 — 重新登录闭环。
-- **AI 阅卷链路**：SELF 闭环 9038 端到端完成（4/4、20/40），UI/DB/API 三方一致（§3）。
+- **AI 阅卷链路**：SELF 闭环 9038 端到端完成（4/4、20/40），UI/DB/API 三方一致（§3）；21:19 现场复测两张可区分答卷（T1 全对 40 分 / T2 全错 0 分，任务 752/753）出分与落库正常（§3.1）。
 - **AI 组卷**：三例对照清晰（§5）；悬空引用缺陷已定位并源码修复。
 - **缺陷闭环**：本轮发现并修复 4 项（3 源码 + 1 工具），全部提交（未 push）；3 项源码修复待打包窗口上线复验。
 - 判定：**以现役 jar `312d2d59…` 为对象的 eduai 界面全控件 + 阅卷/组卷链路验收通过**；修复项上线后按「换包即重验」口径复验即可闭环。
