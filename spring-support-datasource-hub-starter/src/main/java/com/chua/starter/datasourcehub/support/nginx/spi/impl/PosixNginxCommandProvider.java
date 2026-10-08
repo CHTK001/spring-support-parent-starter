@@ -120,6 +120,14 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
         //（conf 来自编译期 --conf-path）。于是明明在跑被判成 STOPPED：
         // 界面显示「已停止」、巡检报「配置改动不会生效」、凭空冒出「启动」按钮。
         // 修法见 matchConf 的注释。
+        //
+        // 踩过的坑（生产 198 实测，同机多实例时 100% 必现）：同机另两个 nginx
+        // 实例（带 -c 自管 conf）的 **worker** 进程 argv 被改写成 `nginx: worker process`，
+        // 既没有 -c 也没有 conf 路径，而 matchConf 的默认 conf 判据（pat == def）
+        // 对它恰好成立 —— 于是本实例停掉后，别人的 worker 仍被当成「我们的实例在跑」：
+        // stop 接口状态轮询 20 秒都收敛不到「已停止」，界面按钮不翻成「启动」，
+        // 点启动又回「已在运行」，和上面两个坑的症状一模一样。
+        // 修法：pgrep 分支必须限定 **master**（worker / cache manager 不代表实例存活）。
         String head = "  pgrep -af nginx 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
                 + "    function matchConf(   s) {\n"
                 + "      s = $0\n"
@@ -127,7 +135,7 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
                 + "      if (index(s, \" -c \")) return 0\n"
                 + "      return (def != \"\" && pat == def) ? 1 : 0\n"
                 + "    }\n"
-                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (matchConf()) f = 1 }\n"
+                + "    ($2 ~ /^nginx:/ && $0 ~ /master process/) || $2 ~ /(^|\\/)nginx$/ { if (matchConf()) f = 1 }\n"
                 + "    END { print (f ? \"ON\" : \"OFF\") }'\n";
         String byPs = "  ps -e 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
                 + "    function matchConf(   s) {\n"
@@ -176,6 +184,7 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
         // 选取口径保持原样：pgrep 输出里第一个 argv[0] 为 nginx 且匹配本实例 conf 的进程，
         // 只是把非 nginx 进程（grep / bash / awk）排除在外；
         // 匹配判据与 processAlive 逐字相同 —— 两者不一致就会出现「在运行但取不到 PID」。
+        // master 限定同理：worker 的 PID 不是实例主进程的 PID，返回它等于报错对象。
         String head = "  pgrep -af nginx 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
                 + "    function matchConf(   s) {\n"
                 + "      s = $0\n"
@@ -183,7 +192,7 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
                 + "      if (index(s, \" -c \")) return 0\n"
                 + "      return (def != \"\" && pat == def) ? 1 : 0\n"
                 + "    }\n"
-                + "    $2 ~ /^nginx:/ || $2 ~ /(^|\\/)nginx$/ { if (matchConf()) { print $1; exit } }'\n";
+                + "    ($2 ~ /^nginx:/ && $0 ~ /master process/) || $2 ~ /(^|\\/)nginx$/ { if (matchConf()) { print $1; exit } }'\n";
         String byPs = "  ps -e 2>/dev/null | awk -v pat=\"$pat\" -v def=\"$def\" '\n"
                 + "    function matchConf(   s) {\n"
                 + "      s = $0\n"
