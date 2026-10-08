@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -155,5 +156,67 @@ class FileStorageServerFilterUpdateConfigTest {
         filter.updateConfig(Map.of("layout", "true"));
 
         assertTrue(called[0], "热更新后应触发配置回调");
+    }
+
+    @Test
+    @DisplayName("openPathGuard / imageFilterEnabled 布尔开关可热更新（默认开启防穿透）")
+    void newBooleansApply() {
+        assertTrue(setting.isOpenPathGuard(), "路径穿透防护默认必须开启");
+        assertFalse(setting.isImageFilterEnabled(), "全局滤镜链默认关闭");
+
+        filter.updateConfig(Map.of("openPathGuard", "false", "imageFilterEnabled", "true"));
+
+        assertFalse(setting.isOpenPathGuard(), "openPathGuard 应被落位为 false");
+        assertTrue(setting.isImageFilterEnabled(), "imageFilterEnabled 应被落位为 true");
+    }
+
+    @Test
+    @DisplayName("filterChain：id 大小写不敏感，规范化小写后落位，参数保留")
+    void filterChainIsNormalised() {
+        filter.updateConfig(Map.of("filterChain", "GRAY;Size:width=200,height=200"));
+
+        assertEquals("gray;size:width=200,height=200", setting.getFilterChain(),
+                "id 应统一小写，参数原样保留");
+    }
+
+    @Test
+    @DisplayName("filterChain：非 SPI 能力 id 抛异常且不改动 setting（滤镜必须来自后台 SPI）")
+    void filterChainRejectsUnknownId() {
+        setting.setFilterChain("gray");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> filter.updateConfig(Map.of("filterChain", "gray;no_such_filter")));
+
+        assertTrue(e.getMessage().contains("no_such_filter"),
+                "异常信息应回显非法 id，实际: " + e.getMessage());
+        assertEquals("gray", setting.getFilterChain(), "校验失败时不得改动 setting");
+    }
+
+    @Test
+    @DisplayName("filterChain：空串等价于清除滤镜链")
+    void filterChainBlankClears() {
+        setting.setFilterChain("gray");
+
+        filter.updateConfig(Map.of("filterChain", ""));
+
+        assertNull(setting.getFilterChain(), "空串应清除滤镜链");
+    }
+
+    @Test
+    @DisplayName("穿越检测矩阵：..、反斜杠、NUL、残留编码都识别，普通名称不误伤")
+    void traversalDetectionMatrix() {
+        assertNotNull(FileStorageServerFilter.findTraversal("../../etc/passwd"), ".. 段必须命中");
+        assertNotNull(FileStorageServerFilter.findTraversal("a/../b"), "中间 .. 段必须命中");
+        assertNotNull(FileStorageServerFilter.findTraversal("..\\..\\evil"), "反斜杠必须命中（Windows 穿越）");
+        assertNotNull(FileStorageServerFilter.findTraversal("a\u0000b"), "NUL 字节必须命中");
+        assertNotNull(FileStorageServerFilter.findTraversal("%2e%2e/evil"),
+                "框架解码后残留的编码 .. 应再解一次识别");
+        assertNotNull(FileStorageServerFilter.findTraversal("sources\r\n../../x"),
+                "换行分隔的多值参数逐段判定");
+
+        assertNull(FileStorageServerFilter.findTraversal("reports/2026/..report.pdf"), "含点文件名不得误伤");
+        assertNull(FileStorageServerFilter.findTraversal("a..b/c...d"), "非独立 .. 段不得误伤");
+        assertNull(FileStorageServerFilter.findTraversal("中文 目录/文件 (1).pdf"), "普通中文路径不得误伤");
+        assertNull(FileStorageServerFilter.findTraversal(""), "空串视为无穿越");
     }
 }

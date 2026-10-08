@@ -119,6 +119,21 @@ public class FileStorageServerProperties {
     private String imageFilter = "NONE";
 
     /**
+     * 是否启用路径穿越防护（默认开启：拦截 ..、反斜杠、NUL 等穿越请求，并筛查文件动作参数）
+     */
+    private boolean openPathGuard = true;
+
+    /**
+     * 是否启用全局图片滤镜链（默认关闭；开启后每次图片请求按 filterChain 顺序施加滤镜）
+     */
+    private boolean imageFilterEnabled = false;
+
+    /**
+     * 全局图片滤镜链（紧凑串 {@code id:key=value;id2}；id 取自后台 FileStorageFilterSetting SPI 能力）
+     */
+    private String filterChain;
+
+    /**
      * 私有桶（逗号分隔，provider 名；{@code *} 表示全部私有）。
      * <p>启动时作为 OAuth 鉴权过滤器（oauth 模块，反射挂载）的初始私有桶；
      * 运行期可在文件服务器页「系统配置」热更新（写入 FileStorageSetting.privateBuckets）。
