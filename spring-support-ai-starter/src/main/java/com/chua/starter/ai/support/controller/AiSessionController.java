@@ -435,8 +435,29 @@ public class AiSessionController {
                 // 工具调用轨迹：随助手消息落库，刷新/重载后仍能渲染「逐行工具行」
                 Map<String, Object> toolTrace = parseToolTrace(msg.getConfirmation());
                 if (toolTrace != null) {
-                    contentMetadata.put("toolCalls", toolTrace.get("toolCalls"));
-                    contentMetadata.put("toolCallsResponse", toolTrace.get("toolCallsResponse"));
+                    Object tcRaw = toolTrace.get("toolCalls");
+                    if (tcRaw != null) {
+                        contentMetadata.put("toolCalls", tcRaw);
+                        contentMetadata.put("toolCallsResponse", toolTrace.get("toolCallsResponse"));
+                    } else {
+                        // 智能体路径只有 trace 形态：把每条工具 trace 合成为一条工具行数据
+                        List<Map<String, Object>> synth = new ArrayList<>();
+                        Object traces = toolTrace.get("toolTraces");
+                        if (traces instanceof List<?> list) {
+                            for (Object o : list) {
+                                if (o instanceof Map<?, ?> mm) {
+                                    Map<String, Object> it = new HashMap<>();
+                                    it.put("name", mm.get("toolName"));
+                                    it.put("arguments", mm.get("text"));
+                                    it.put("outcome", "success");
+                                    synth.add(it);
+                                }
+                            }
+                        }
+                        if (!synth.isEmpty()) {
+                            contentMetadata.put("toolCalls", synth);
+                        }
+                    }
                 }
                 // 待人工确认（plan_exit）：刷新后仍渲染批准卡片
                 Map<String, Object> pendingConfirm = parsePendingConfirmation(msg.getConfirmation());
