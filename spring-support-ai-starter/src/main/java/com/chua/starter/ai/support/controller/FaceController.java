@@ -5,6 +5,7 @@ import com.chua.deeplearning.support.face.FaceAlignResult;
 import com.chua.deeplearning.support.face.FaceCompareResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
+import com.chua.deeplearning.support.face.FaceLandmarkResult;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
@@ -395,6 +396,37 @@ public class FaceController {
     }
 
     /**
+     * 读一条人脸**登记时落存的裁剪图**（PNG）。
+     *
+     * <p>给底库「看图 / 画人脸特征点」用。返回二进制而非统一信封 ——
+     * 前端直接当图片地址用。没有图（改造前登记的老数据、或登记时裁剪失败）时回 404，
+     * 前端据此回落到本地缩略图/占位图，不算错误。</p>
+     *
+     * <p>与 {@code superResolution} 同一条口径：<b>不要</b>在映射上加
+     * {@code produces = MediaType.IMAGE_PNG_VALUE}，否则 404 写出阶段会按 image/png
+     * 选错转换器；类型在 {@link ResponseEntity} 上给。</p>
+     *
+     * @param id 人脸标识
+     * @return PNG 字节；无则 404
+     */
+    @Operation(summary = "人脸登记图", description = "登记时落存的人脸裁剪图（PNG），供底库展示与特征点绘制")
+    @GetMapping("/{id}/image")
+    public ResponseEntity<byte[]> image(@PathVariable("id") String id) {
+        try {
+            byte[] bytes = faceService.faceImage(id);
+            if (bytes == null || bytes.length == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .body(bytes);
+        } catch (Exception e) {
+            log.warn("[Face] 读登记图失败: id={} -> {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
      * 更新一条人脸的元数据（姓名/年龄/性别/发型/身份证/备注等）。
      *
      * <p>与 {@code enroll} 的区别：本接口**只改档案字段**，不重跑检测、不动特征向量。
@@ -631,6 +663,45 @@ public class FaceController {
         try {
             float[] points = faceService.landmark(file.getBytes());
             return ReturnResult.ok(Map.of("points", points));
+        } catch (ApiException e) {
+            log.warn("[Face] 人脸关键点未配置: {}", e.getMessage());
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[Face] 人脸关键点失败", e);
+            return ReturnResult.error("人脸关键点失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 人脸关键点管线（坐标已映射回**原图像素**）。
+     *
+     * <p>与 {@code /landmark} 的差异：{@code /landmark} 是把整图直接喂关键点模型，
+     * 返回相对模型输入图的归一化坐标（±1），前端画不到原图上；本端点先按检测框裁出人脸、
+     * 再取点并映射回原图，返回的 {@code points} 可直接叠加绘制。</p>
+     *
+     * @param file 图片文件
+     * @return 关键点（原图像素）+ 人脸框 + 计数
+     */
+    @Operation(summary = "人脸关键点管线", description = "检测人脸→按框裁剪→关键点，坐标映射回原图像素")
+    @PostMapping("/landmark-pipeline")
+    public ReturnResult<?> landmarkPipeline(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ReturnResult.error("上传文件不能为空");
+        }
+        try {
+            FaceLandmarkResult r = faceService.landmarkPipeline(file.getBytes());
+            if (r == null) {
+                return ReturnResult.ok(Map.of("matched", false, "points", List.of(), "count", 0));
+            }
+            // 必须用容忍 null 的 Map（points 为空时为 List.of()，box 也可能为 null）
+            Map<String, Object> body = new LinkedHashMap<>(8);
+            body.put("matched", true);
+            body.put("box", r.box());
+            body.put("points", r.points());
+            body.put("count", r.count());
+            body.put("signed", r.signed());
+            body.put("elapsedMs", r.elapsedMs());
+            return ReturnResult.ok(body);
         } catch (ApiException e) {
             log.warn("[Face] 人脸关键点未配置: {}", e.getMessage());
             return ReturnResult.error(e.getMessage());

@@ -7,6 +7,7 @@ import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceDetector;
 import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
+import com.chua.deeplearning.support.face.FaceLandmarkResult;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.face.FacePipeline;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
@@ -286,6 +287,17 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
+     * 读一条人脸登记时落存的裁剪图。
+     *
+     * @param id 人脸标识
+     * @return PNG 字节；未落存时返回 空
+     */
+    @Override
+    public byte[] faceImage(String id) {
+        return faceStores.faceImage(id);
+    }
+
+    /**
      * 从当前账号人脸库删除一条。
      *
      * @param id 人脸 标识
@@ -453,6 +465,24 @@ public class AiFaceServiceImpl implements AiFaceService {
             throw capabilityDisabled("人脸关键点", "landmark_model");
         }
         return current.extract(imageData);
+    }
+
+    /**
+     * 人脸关键点管线（坐标为**原图像素**）。
+     *
+     * <p>走 {@code detect → 取最大脸 → 按框裁剪 → 关键点模型 → 映射回原图}。
+     * 与 {@link #landmark(byte[])} 的差异见 {@code FaceLandmarkResult} 的类注释：
+     * 后者的归一化坐标画不到原图上，本方法的坐标可以直接叠加。</p>
+     *
+     * @param imageData 图片字节
+     * @return 关键点结果（原图像素）；未配置关键点模型或未检出人脸时返回 空
+     */
+    @Override
+    public FaceLandmarkResult landmarkPipeline(byte[] imageData) {
+        if (faceClientManager.currentLandmarkExtractor() == null) {
+            throw capabilityDisabled("人脸关键点", "landmark_model");
+        }
+        return pipeline().landmarkPipelineLargest(imageData);
     }
 
     /**
