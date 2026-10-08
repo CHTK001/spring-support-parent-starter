@@ -96,6 +96,10 @@ public class AiDevOpsController {
             return ReturnResult.error("目录已存在: " + dir + "（先改名或删除）");
         }
         List<String> out = exec(ws, 180, "git", "clone", "--depth=1", url, target.toString());
+        // git 失败时必须如实报错：此前无论成败都回 success:true（实测网络抖动时误导用户）
+        if (!Files.isDirectory(target.resolve(".git"))) {
+            return ReturnResult.error("克隆失败（git 输出）：" + String.join(" | ", out));
+        }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("dir", dir);
         data.put("path", target.toString());
@@ -280,9 +284,9 @@ public class AiDevOpsController {
         Path ws = requireWorkspace();
         String dir = str(body.get("dir"));
         Path repo = safeResolve(ws, dir);
-        if (repo == null || !Files.isDirectory(repo)) {
+        if (repo == null || !Files.isDirectory(repo) || !Files.isDirectory(repo.resolve(".git"))) {
             throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.NOT_FOUND, "仓库目录不存在: " + dir);
+                    org.springframework.http.HttpStatus.NOT_FOUND, "不是 git 仓库或目录不存在: " + dir);
         }
         return repo;
     }
