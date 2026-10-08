@@ -86,6 +86,35 @@ public class FileStorageSetting {
     private String imageFilter = "NONE";
 
     /**
+     * 是否启用路径穿透防护（默认开启）。
+     *
+     * <p>开启后对每个请求做统一穿越筛查：路径含 {@code ..} 段、反斜杠（Windows 下的穿越通道）、
+     * NUL 字节或双重编码的 {@code %252e%252e} 直接 400；{@code mkdir/rename/move/copy/unzip}
+     * 等动作的 {@code path/name/target/sources/inner} 参数同样筛查。关闭仅用于兼容排障，
+     * 对象键级的 {@link #sanitizeKey} 防护不受此开关影响（始终生效）。</p>
+     */
+    @Builder.Default
+    private boolean openPathGuard = true;
+
+    /**
+     * 是否启用全局图片滤镜链（默认关闭，对应 utils 侧 {@code FileStorageSetting#imageFilterEnabled}）。
+     *
+     * <p>开启后每次图片请求（除 {@code ?download} 外的常规预览/读取）都会按
+     * {@link #filterChain} 顺序施加滤镜，与 URL 参数叠加：先 URL 操作、后全局链。</p>
+     */
+    @Builder.Default
+    private boolean imageFilterEnabled = false;
+
+    /**
+     * 全局图片滤镜链配置（紧凑串：{@code id:key=value,key=value;id2;id3}）。
+     *
+     * <p>id 必须来自后台 {@code FileStorageFilterSetting} SPI 能力列表（gray、size、blur 等），
+     * 写入时校验并统一小写；运行期由图片管线逐项映射执行，JDK 管线不支持的滤镜跳过并 WARN。
+     * 空串/null 表示无滤镜链。</p>
+     */
+    private String filterChain;
+
+    /**
      * 私有桶集合（支持热更新；空表示全部公共桶）。
      * <p>命中私有桶的请求由 OAuthServerFilter（oauth 模块，反射挂载）校验访问令牌；
      * 本集合为该过滤器的私有桶来源，管理员 setConfig 变更后实时同步。</p>

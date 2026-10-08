@@ -43,6 +43,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.Locale;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
+import com.chua.starter.filesystem.support.spi.FileStorageImageFilterProvider;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import com.chua.filestorage.support.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -321,12 +323,18 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      */
     private static final Set<String> BOOLEAN_PARAM_KEYS = Set.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openWebjars",
-            "openRemoteFile", "openThirdPreview", "layout", "showFormat", "showSize", "showTime");
+            "openRemoteFile", "openThirdPreview", "layout", "showFormat", "showSize", "showTime",
+            "openPathGuard", "imageFilterEnabled");
 
     /**
      * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
      */
-    private static final Set<String> STRING_PARAM_KEYS = Set.of("watermark", "layoutType", "imageFilter");
+    private static final Set<String> STRING_PARAM_KEYS = Set.of("watermark", "layoutType", "imageFilter", "filterChain");
+
+    /**
+     * 路径穿透防护需要筛查的文件动作参数名（取值与对象路径同源，是穿越的另一入口）。
+     */
+    private static final Set<String> PATH_GUARD_PARAM_KEYS = Set.of("path", "name", "target", "sources", "inner");
 
     /**
      * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
@@ -479,6 +487,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
 
         String path = request.getPath();
+        // 路径穿透防护（系统配置「水印与安全 → 路径穿透防护」，默认开启）：
+        // 统一筛查请求路径与文件动作参数中的 ..、反斜杠（Windows 下的穿越通道）、NUL 字节
+        // 与双重编码（%252e%252e）。对象键级的 sanitizeKey 防护始终生效，与本开关无关。
+        if (setting.isOpenPathGuard()) {
+            String guardHit = checkPathGuard(path, request.getParams());
+            if (guardHit != null) {
+                log.warn("[FileStorage] 路径穿透防护拦截: {} {} - {}", request.getMethod(), path, guardHit);
+                return error(response, 400, "Path traversal blocked: " + guardHit);
+            }
+        }
         List<String> segments = splitPath(path);
         if (segments.isEmpty()) {
             return passthrough(request, response, chain);
@@ -686,6 +704,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         appendConfigRow(sb, "showSize", String.valueOf(setting.isShowSize()));
         appendConfigRow(sb, "showTime", String.valueOf(setting.isShowTime()));
         appendConfigRow(sb, "imageFilter", setting.getImageFilter());
+        appendConfigRow(sb, "openPathGuard", String.valueOf(setting.isOpenPathGuard()));
+        appendConfigRow(sb, "imageFilterEnabled", String.valueOf(setting.isImageFilterEnabled()));
+        appendConfigRow(sb, "filterChain", setting.getFilterChain());
         appendConfigRow(sb, "访问令牌(token)", "<code>" + escapeHtml(token) + "</code>");
         sb.append("</table>");
 
@@ -1048,9 +1069,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      */
     private ImageOpResult applyFileOperations(byte[] data, String fileName, ServerRequest request) {
         FileOperationSetting ops = parseFileOps(request);
-        if (ops == null || !ops.hasOperation()) {
+        boolean hasUrlOps = ops != null && ops.hasOperation();
+        // 全局滤镜链（系统配置「图片处理」）：对每张图片强制生效；与 URL 参数叠加时链在后
+        List<FilterChainStep> chain = resolveGlobalFilterChain();
+        if (!hasUrlOps && chain.isEmpty()) {
             log.debug("[FileStorage] 无图片处理操作，透传原图: {}", fileName);
             return ImageOpResult.passThrough();
+        }
+        if (ops == null) {
+            ops = FileOperationSetting.builder().build();
         }
         String ext = simpleExtOf(fileName);
         if (ext == null || !isImageExt(ext)) {
@@ -1084,6 +1111,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String format = "png";
         byte[] cur = data;
+        List<String> chainApplied = new ArrayList<>();
         try {
             if (Boolean.TRUE.equals(ops.getAutoOrient())) {
                 cur = keep(cur, imageOperation.autoOrient(cur, format).block());
@@ -1124,12 +1152,22 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                         .text(ops.getWatermarkText()).opacity(0.5f).position("center").build();
                 cur = keep(cur, imageOperation.watermark(cur, format, p).block());
             }
+            // 全局滤镜链（系统配置「图片处理 → 全局滤镜链」）逐项应用。
+            // 在 URL 操作之后执行：URL 参数是调用方的一次性诉求，链是运维的全局强制策略。
+            for (FilterChainStep step : chain) {
+                byte[] chained = applyFilterChainStep(imageOperation, cur, format, step);
+                if (chained != null) {
+                    cur = keep(cur, chained);
+                    chainApplied.add(step.id());
+                }
+            }
             // 转码收尾：把无损中间结果一次性转到目标格式。
             // 早期版本把 format 同时当「中间编码格式」和「最终输出格式」，导致
             // ① 每步都做有损 JPEG 转码、叠加失真；② 无几何/滤镜操作时 cur 仍是源文件
             // 原始 PNG 字节，Content-Type 却被标成 image/jpeg，客户端按 JPEG 解码直接失败；
             // ③ quality 完全没参与编码。
-            boolean needEncode = ops.getFormat() != null || ops.getQuality() != null || !"png".equals(target);
+            boolean needEncode = ops.getFormat() != null || ops.getQuality() != null || !"png".equals(target)
+                    || !chainApplied.isEmpty();
             if (needEncode) {
                 byte[] encoded = encode(cur, target, ops.getQuality());
                 if (encoded == null) {
@@ -1137,7 +1175,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                     // 早期版本只 log.warn 就返回，客户端拿到的仍是 200 + 原图，
                     // 表现为「要了 JPEG 却拿到 PNG」且无任何提示——必须带原因回去。
                     log.warn("[FileStorage] 转码到 {} 失败，回退上一步结果", target);
-                    return ImageOpResult.of(cur, "transcode-failed:" + target);
+                    return ImageOpResult.of(cur, "transcode-failed:" + target).withChain(chainSummary(chainApplied));
                 }
                 cur = encoded;
             }
@@ -1145,7 +1183,187 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             log.warn("[FileStorage] 图片处理失败，回退原图: {}", e.getMessage());
             return ImageOpResult.passThrough();
         }
-        return ImageOpResult.applied(cur);
+        return ImageOpResult.applied(cur).withChain(chainSummary(chainApplied));
+    }
+
+    /**
+     * 解析当前生效的全局滤镜链（系统配置「图片处理 → 全局滤镜链」）。
+     *
+     * <p>关闭开关或无配置时返回空列表；条目格式 {@code id:key=value,key=value}，
+     * id 写入时已校验属于后台 SPI 能力，这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
+     *
+     * @return 滤镜步骤列表（可能为空）
+     */
+    private List<FilterChainStep> resolveGlobalFilterChain() {
+        if (!setting.isImageFilterEnabled()) {
+            return List.of();
+        }
+        String chain = setting.getFilterChain();
+        if (chain == null || chain.isBlank()) {
+            return List.of();
+        }
+        List<FilterChainStep> steps = new ArrayList<>();
+        for (String raw : chain.split(";")) {
+            String entry = raw.trim();
+            if (entry.isEmpty()) {
+                continue;
+            }
+            String id = entry;
+            String paramsText = "";
+            int colon = entry.indexOf(':');
+            if (colon >= 0) {
+                id = entry.substring(0, colon);
+                paramsText = entry.substring(colon + 1);
+            }
+            id = id.trim().toLowerCase(Locale.ROOT);
+            if (id.isEmpty()) {
+                continue;
+            }
+            Map<String, String> params = new LinkedHashMap<>();
+            for (String pair : paramsText.split(",")) {
+                String p = pair.trim();
+                if (p.isEmpty()) {
+                    continue;
+                }
+                int eq = p.indexOf('=');
+                if (eq <= 0) {
+                    continue;
+                }
+                params.put(p.substring(0, eq).trim().toLowerCase(Locale.ROOT), p.substring(eq + 1).trim());
+            }
+            steps.add(new FilterChainStep(id, params));
+        }
+        return steps;
+    }
+
+    /**
+     * 应用单个全局滤镜步骤（映射到 JDK 图片管线，中间格式固定 png）。
+     *
+     * <p>映射：size/resize→缩放；gray/grayscale→灰度；blur/gaussianBlur→模糊(radius)；
+     * sharpen/usm→锐化(radius)；bright/brightness→亮度(brightness)；rotate→旋转(angle)；
+     * flip→翻转(direction)；autoOrient→EXIF 旋正；watermark/textWatermark→文本水印。
+     * JDK 管线不支持的滤镜（negative/sepia/pixel/mosaic/tile/contrast/imageWatermark 等）
+     * 记 WARN 并跳过；返回 null 表示本步未产生新字节。</p>
+     *
+     * @param imageOperation 图片操作 SPI
+     * @param cur            当前字节（PNG 中间格式）
+     * @param format         中间格式（固定 png）
+     * @param step           链步骤
+     * @return 处理后的字节；跳过或失败返回 null
+     */
+    private byte[] applyFilterChainStep(ImageOperation imageOperation, byte[] cur, String format, FilterChainStep step) {
+        String id = step.id();
+        Map<String, String> params = step.params();
+        try {
+            switch (id) {
+                case "size", "resize" -> {
+                    String size = params.get("width") != null && params.get("height") != null
+                            ? params.get("width") + "x" + params.get("height")
+                            : params.get("size");
+                    if (size == null && params.get("scale") != null) {
+                        size = params.get("scale") + "%";
+                    }
+                    if (size == null) {
+                        log.warn("[FileStorage] 滤镜链 size 缺少 width/height/scale 参数，跳过");
+                        return null;
+                    }
+                    return resizeOf(imageOperation, cur, format, size);
+                }
+                case "gray", "grayscale" -> {
+                    return imageOperation.filter(cur, format, "gray", null).block();
+                }
+                case "blur", "gaussianblur" -> {
+                    ImageOperation.FilterParams p = ImageOperation.FilterParams.builder()
+                            .radius(floatOr(params.get("radius"), 5f)).build();
+                    return imageOperation.filter(cur, format, "blur", p).block();
+                }
+                case "sharpen", "usm" -> {
+                    ImageOperation.FilterParams p = ImageOperation.FilterParams.builder()
+                            .radius(floatOr(params.get("radius"), 1f)).build();
+                    return imageOperation.filter(cur, format, "sharpen", p).block();
+                }
+                case "bright", "brightness" -> {
+                    ImageOperation.FilterParams p = ImageOperation.FilterParams.builder()
+                            .brightness(floatOr(params.get("brightness"), 1.15f)).build();
+                    return imageOperation.filter(cur, format, "brightness", p).block();
+                }
+                case "rotate" -> {
+                    return imageOperation.rotate(cur, format, intOr(params.get("angle"), 90)).block();
+                }
+                case "flip" -> {
+                    return imageOperation.flip(cur, format, params.getOrDefault("direction", "horizontal")).block();
+                }
+                case "autoorient" -> {
+                    return imageOperation.autoOrient(cur, format).block();
+                }
+                case "watermark", "textwatermark" -> {
+                    String text = params.get("text");
+                    if (text == null || text.isBlank()) {
+                        log.warn("[FileStorage] 滤镜链 watermark 缺少 text 参数，跳过");
+                        return null;
+                    }
+                    ImageOperation.WatermarkParams p = ImageOperation.WatermarkParams.builder()
+                            .text(text).opacity(floatOr(params.get("opacity"), 0.5f)).position("center").build();
+                    return imageOperation.watermark(cur, format, p).block();
+                }
+                default -> {
+                    log.warn("[FileStorage] 滤镜链跳过 JDK 管线不支持的滤镜: {}", id);
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[FileStorage] 滤镜链执行失败，跳过该步: {} - {}", id, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 序列化已执行的滤镜链摘要（响应头 {@code X-FileStorage-Filter-Chain}）。
+     *
+     * @param applied 已成功应用的滤镜 id 列表
+     * @return 逗号分隔摘要；空列表返回 null
+     */
+    private static String chainSummary(List<String> applied) {
+        return applied == null || applied.isEmpty() ? null : String.join(",", applied);
+    }
+
+    /**
+     * 宽松解析浮点参数（失败回退默认值）。
+     *
+     * @param text     文本
+     * @param fallback 默认值
+     * @return 解析结果
+     */
+    private static Float floatOr(String text, Float fallback) {
+        try {
+            return text == null || text.isBlank() ? fallback : Float.parseFloat(text.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    /**
+     * 宽松解析整数参数（失败回退默认值）。
+     *
+     * @param text     文本
+     * @param fallback 默认值
+     * @return 解析结果
+     */
+    private static Integer intOr(String text, int fallback) {
+        try {
+            return text == null || text.isBlank() ? fallback : Integer.parseInt(text.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    /**
+     * 全局滤镜链步骤。
+     *
+     * @param id     滤镜 id（来自 FileStorageFilterSetting SPI 能力，已小写）
+     * @param params 键值参数（键已小写）
+     */
+    private record FilterChainStep(String id, Map<String, String> params) {
     }
 
     /**
@@ -1533,7 +1751,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @param applied 是否真的执行了处理；false 表示走了兜底
      * @param reason  跳过原因码，{@link #passThrough()} 时为 {@code null}
      */
-    private record ImageOpResult(byte[] data, boolean applied, String reason) {
+    private record ImageOpResult(byte[] data, boolean applied, String reason, String chain) {
 
         /**
          * 全部处理成功。
@@ -1542,7 +1760,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
          * @return 结果
          */
         static ImageOpResult applied(byte[] data) {
-            return new ImageOpResult(data, true, null);
+            return new ImageOpResult(data, true, null, null);
         }
 
         /**
@@ -1551,7 +1769,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
          * @return 结果
          */
         static ImageOpResult passThrough() {
-            return new ImageOpResult(null, false, null);
+            return new ImageOpResult(null, false, null, null);
         }
 
         /**
@@ -1561,7 +1779,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
          * @return 结果
          */
         static ImageOpResult skipped(String reason) {
-            return new ImageOpResult(null, false, reason);
+            return new ImageOpResult(null, false, reason, null);
         }
 
         /**
@@ -1572,7 +1790,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
          * @return 结果
          */
         static ImageOpResult of(byte[] data, String reason) {
-            return new ImageOpResult(data, false, reason);
+            return new ImageOpResult(data, false, reason, null);
+        }
+
+        /**
+         * 附加已执行的全局滤镜链摘要（用于响应头 {@code X-FileStorage-Filter-Chain}）。
+         *
+         * @param chainSummary 链摘要（如 {@code "size,gray"}）；无链时 null
+         * @return 带链摘要的结果
+         */
+        ImageOpResult withChain(String chainSummary) {
+            return new ImageOpResult(data, applied, reason, chainSummary);
         }
     }
 
@@ -1766,6 +1994,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"showSize\":" + setting.isShowSize()
                 + ",\"showTime\":" + setting.isShowTime()
                 + ",\"imageFilter\":\"" + escapeJson(setting.getImageFilter() == null ? "NONE" : setting.getImageFilter()) + "\""
+                + ",\"openPathGuard\":" + setting.isOpenPathGuard()
+                + ",\"imageFilterEnabled\":" + setting.isImageFilterEnabled()
+                + ",\"filterChain\":" + (setting.getFilterChain() == null ? "null" : "\"" + escapeJson(setting.getFilterChain()) + "\"")
                 + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
                 + ",\"privateBuckets\":" + privateBucketsJson()
                 + ",\"oneTimeTtlMs\":" + oneTimeTtlMillis()
@@ -1907,6 +2138,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      */
     private void appendImageFilters(StringBuilder sb) {
         Set<String> seenFilters = resolveImageFilterNames();
+        Map<String, String> cssMap = resolveImageFilterCss();
         int index = 0;
         for (String name : seenFilters) {
             if (index > 0) {
@@ -1914,8 +2146,37 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
             index++;
             sb.append("{\"name\":\"").append(escapeJson(name)).append("\"");
-            sb.append(",\"label\":\"").append(escapeJson(resolveFilterLabel(name))).append("\"}");
+            sb.append(",\"label\":\"").append(escapeJson(resolveFilterLabel(name))).append("\"");
+            // CSS 预览值同样来自后台 SPI（FileStorageImageFilterProvider#getCssFilter），未知则为空串
+            sb.append(",\"css\":\"").append(escapeJson(cssMap.getOrDefault(name.toUpperCase(Locale.ROOT), ""))).append("\"}");
         }
+    }
+
+    /**
+     * 收集图片滤镜的前端 CSS 预览值（{@code FileStorageImageFilterProvider} SPI）。
+     *
+     * <p>名称统一大写以匹配 {@code imageFilters} 列表；同一名称多个实现时取首个。
+     * 前端据 {@code css} 渲染缩略图即时预览，实际效果以后端处理为准。</p>
+     *
+     * @return 滤镜名（大写）→ CSS 值；SPI 缺失时为空表
+     */
+    private Map<String, String> resolveImageFilterCss() {
+        Map<String, String> cssMap = new LinkedHashMap<>();
+        try {
+            ServiceProvider<FileStorageImageFilterProvider> provider =
+                    ServiceProvider.of(FileStorageImageFilterProvider.class);
+            for (String name : provider.getExtensions()) {
+                FileStorageImageFilterProvider instance = provider.getExtension(name);
+                if (instance == null || instance.getName() == null) {
+                    continue;
+                }
+                cssMap.putIfAbsent(instance.getName().toUpperCase(Locale.ROOT),
+                        instance.getCssFilter() == null ? "" : instance.getCssFilter());
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageImageFilterProvider SPI 加载失败（CSS 预览值缺失）: {}", t.getMessage());
+        }
+        return cssMap;
     }
 
     /**
@@ -3406,6 +3667,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 if (imageProcessed.reason() != null) {
                     response.setHeader(HEADER_IMAGE_OP_REASON, imageProcessed.reason());
                 }
+                // 全局滤镜链摘要（系统配置「图片处理」）：便于调用方确认链是否真的执行
+                if (imageProcessed.chain() != null) {
+                    response.setHeader("X-FileStorage-Filter-Chain", imageProcessed.chain());
+                }
                 response.setBody(imageProcessed.data()).end();
                 return CompletableFuture.completedFuture(null);
             }
@@ -4047,9 +4312,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         applyBooleanSetting("showFormat", extractBoolean(body, "showFormat"));
         applyBooleanSetting("showSize", extractBoolean(body, "showSize"));
         applyBooleanSetting("showTime", extractBoolean(body, "showTime"));
+        applyBooleanSetting("openPathGuard", extractBoolean(body, "openPathGuard"));
+        applyBooleanSetting("imageFilterEnabled", extractBoolean(body, "imageFilterEnabled"));
         applyStringSetting("watermark", extractString(body, "watermark"));
         applyStringSetting("layoutType", extractString(body, "layoutType"));
         applyStringSetting("imageFilter", extractString(body, "imageFilter"));
+        applyStringSetting("filterChain", extractString(body, "filterChain"));
         // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
         // 避免传 0 把链接生成成出生即死，也避免传超大值让过期链接永不回收。
         String ttlText = extractScalar(body, "oneTimeTtlMs");
@@ -4174,6 +4442,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             case "showFormat" -> setting.setShowFormat(value);
             case "showSize" -> setting.setShowSize(value);
             case "showTime" -> setting.setShowTime(value);
+            case "openPathGuard" -> setting.setOpenPathGuard(value);
+            case "imageFilterEnabled" -> setting.setImageFilterEnabled(value);
             default -> log.warn("文件存储配置忽略未知布尔参数: {}={}", key, value);
         }
     }
@@ -4211,8 +4481,172 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 }
                 setting.setImageFilter(upper);
             }
+            case "filterChain" -> setting.setFilterChain(normalizeFilterChain(value));
             default -> log.warn("文件存储配置忽略未知字符串参数: {}={}", key, value);
         }
+    }
+
+    /**
+     * 解析并规范化全局滤镜链配置。
+     *
+     * <p>格式 {@code id:key=value,key=value;id2}；id 必须命中后端
+     * {@code FileStorageFilterSetting} SPI 能力列表（大小写不敏感，统一落小写），
+     * 非法 id 直接抛 {@link IllegalArgumentException}（服务管理侧据此中止热更新，
+     * 管理员配置页则把错误消息回显给用户）。</p>
+     *
+     * @param value 原始链配置串；null 表示本次不带该键，空白串表示清空
+     * @return 规范化后的链配置串；清空时返回 null
+     */
+    private String normalizeFilterChain(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        Set<String> supported = resolveFilterSettingCapabilities();
+        if (supported.isEmpty()) {
+            throw new IllegalArgumentException("filterChain 校验失败：未发现 FileStorageFilterSetting SPI 实现");
+        }
+        List<String> entries = new ArrayList<>();
+        for (String raw : trimmed.split(";")) {
+            String entry = raw.trim();
+            if (entry.isEmpty()) {
+                continue;
+            }
+            String id = entry;
+            String params = null;
+            int colon = entry.indexOf(':');
+            if (colon >= 0) {
+                id = entry.substring(0, colon);
+                params = entry.substring(colon + 1).trim();
+            }
+            id = id.trim().toLowerCase(Locale.ROOT);
+            if (id.isEmpty()) {
+                throw new IllegalArgumentException("filterChain 滤镜 id 不能为空: " + entry);
+            }
+            if (!supported.contains(id)) {
+                throw new IllegalArgumentException("filterChain 不支持的滤镜: " + id
+                        + "，可用值: " + String.join("/", supported));
+            }
+            entries.add(params == null || params.isEmpty() ? id : id + ":" + params);
+            if (entries.size() > 32) {
+                throw new IllegalArgumentException("filterChain 条目过多（最多 32 个）: " + value);
+            }
+        }
+        return entries.isEmpty() ? null : String.join(";", entries);
+    }
+
+    /**
+     * 收集后台 {@code FileStorageFilterSetting} SPI 的全部能力 id（小写去重）。
+     *
+     * <p>与 {@code ?format=capabilities} 下发的是同一来源，保证「滤镜列表来自后台 SPI」
+     * 与写入校验一致：管理界面能选到的 id，写入必然通过。</p>
+     *
+     * @return 能力 id 集合（SPI 缺失时为空集）
+     */
+    private Set<String> resolveFilterSettingCapabilities() {
+        Set<String> ids = new LinkedHashSet<>();
+        try {
+            ServiceProvider<FileStorageFilterSetting> provider = ServiceProvider.of(FileStorageFilterSetting.class);
+            for (String name : provider.getExtensions()) {
+                FileStorageFilterSetting instance = provider.getExtension(name);
+                if (instance == null) {
+                    continue;
+                }
+                for (String capability : instance.capabilities()) {
+                    if (capability != null && !capability.isBlank()) {
+                        ids.add(capability.trim().toLowerCase(Locale.ROOT));
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageFilterSetting SPI 能力加载失败（滤镜链校验不可用）: {}", t.getMessage());
+        }
+        return ids;
+    }
+
+    /**
+     * 路径穿透筛查：命中危险片段时返回原因描述，否则返回 null。
+     *
+     * <p>覆盖：NUL 字节、反斜杠（Windows 分隔符穿越）、{@code ..} 段与双重编码
+     * （{@code %252e%252e}）；{@code sources} 等多值参数按换行拆分逐段判定。</p>
+     *
+     * @param path   已解码的请求路径
+     * @param params 查询参数（文件动作参数 path/name/target/sources/inner 同查）
+     * @return 命中的危险片段描述；未命中返回 null
+     */
+    private String checkPathGuard(String path, Map<String, String> params) {
+        String hit = findTraversal(path);
+        if (hit != null) {
+            return "path contains '" + hit + "'";
+        }
+        if (params != null) {
+            for (String key : PATH_GUARD_PARAM_KEYS) {
+                String value = params.get(key);
+                if (value == null || value.isEmpty()) {
+                    continue;
+                }
+                String paramHit = findTraversal(value);
+                if (paramHit != null) {
+                    return "param " + key + " contains '" + paramHit + "'";
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 在文本中查找穿越特征（按 /、CR、LF 拆分后逐段判定，并做一次再解码）。
+     *
+     * <p>包可见：单测直接调用钉住检测矩阵，避免必须构造完整 HTTP 请求。</p>
+     *
+     * @param text 待查文本
+     * @return 命中的片段（{@code ..} / 反斜杠 / NUL）；未命中返回 null
+     */
+    static String findTraversal(String text) {
+        if (text == null || text.isEmpty()) {
+            return null;
+        }
+        if (text.indexOf('\0') >= 0) {
+            return "\\0";
+        }
+        if (text.indexOf('\\') >= 0) {
+            return "\\";
+        }
+        String hit = scanTraversalSegments(text);
+        if (hit != null) {
+            return hit;
+        }
+        // 双重编码：路径已被框架解过一次，这里再解一次看是否变成 .. 或反斜杠
+        try {
+            String once = URLDecoder.decode(text, StandardCharsets.UTF_8.name());
+            if (!once.equals(text)) {
+                if (once.indexOf('\\') >= 0) {
+                    return "\\";
+                }
+                return scanTraversalSegments(once);
+            }
+        } catch (Exception ignore) {
+            // 非法转义序列按原文处理
+        }
+        return null;
+    }
+
+    /**
+     * 按 /、CR、LF 拆分并检查 {@code ..} 段。
+     *
+     * @param text 文本
+     * @return 命中返回 {@code ..}；否则返回 null
+     */
+    private static String scanTraversalSegments(String text) {
+        for (String segment : text.split("[/\r\n]")) {
+            if ("..".equals(segment.trim())) {
+                return "..";
+            }
+        }
+        return null;
     }
 
     /**
