@@ -1149,12 +1149,18 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // Plan 只读模式（Build 为默认）；仅管理员经 Agent 生效
         boolean planOn = "plan".equalsIgnoreCase(request.getMode());
 
+        // 会话工作间：只要有工作间就必须建 Agent —— HarnessAgent 的文件类工具以
+        // workspace 为根，管理员若在"无能力"时早退，就拿不到 agent+workspace，
+        // AI 只能回「我当前没有可用的文件工具来创建文件」（用户实测 2026-10-08：
+        // 三个模型一致复现）。因此把 hasWorkspace 纳入早退判据。
+        String agentWorkspace = resolveSessionWorkspace(request.getSessionId());
+        boolean hasWorkspace = agentWorkspace != null && !agentWorkspace.isBlank();
+
         // MCP / 本地工具 / 子代理 / Plan 均未开启：
-        //  - 管理员保持原行为（直连，等价普通直答），避免给纯聊天凭空加一层 Agent 开销；
-        //  - 普通账号仍然构建 Agent —— 统一之后他们要的正是「有自己的工作间」，
-        //    即便本次没有工具可用。若在这里一并早退，非管理员就永远拿不到工作间了。
-        if (!mcpOn && !localOn && !subAgentOn && !planOn && admin) {
-            log.debug("[AiChat] 管理员会话未启用任何 Agent 能力，保持标准非 Agent 客户端 model={}",
+        //  - 管理员且**本会话没有工作间**时保持原行为（直连，等价普通直答），避免给纯聊天凭空加一层 Agent 开销；
+        //  - 普通账号、以及任何有工作间的会话仍然构建 Agent —— 他们要的正是「有自己的工作间」+ 文件工具。
+        if (!mcpOn && !localOn && !subAgentOn && !planOn && admin && !hasWorkspace) {
+            log.debug("[AiChat] 管理员会话未启用任何 Agent 能力且无工作间，保持标准非 Agent 客户端 model={}",
                     request.getModel());
             return configured;
         }
@@ -1196,9 +1202,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             agent.sessionId(request.getSessionId());
         }
         // 工作目录：以系统设置「通用设置 - 工作目录基路径」为根，每会话独立子目录，避免跨会话文件冲突
-        String workspace = resolveSessionWorkspace(request.getSessionId());
-        if (workspace != null) {
-            agent.workspace(workspace);
+        // （复用上方已解析的 agentWorkspace：早退判据与这里必须看同一个值）
+        if (agentWorkspace != null) {
+            agent.workspace(agentWorkspace);
         }
         // shell 通道只留给管理员。
         // 文件工具由框架的路径白名单挡住越界（默认 ROOTED，实测 .. 与绝对路径都被拒），
