@@ -1,0 +1,252 @@
+{
+  "rows": [
+    {
+      "route": "/chat/new-session",
+      "name": "Chat",
+      "total": 57,
+      "src": "sweep-final3",
+      "pass": 57,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/characters",
+      "name": "Characters",
+      "total": 191,
+      "src": "sweep-fix-routes",
+      "pass": 189,
+      "warn": 2,
+      "fail": 0
+    },
+    {
+      "route": "/bots",
+      "name": "Bots",
+      "total": 51,
+      "src": "sweep-final3",
+      "pass": 50,
+      "warn": 1,
+      "fail": 0
+    },
+    {
+      "route": "/tavern",
+      "name": "Tavern",
+      "total": 45,
+      "src": "sweep-final3",
+      "pass": 45,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/setting",
+      "name": "SystemSettings",
+      "total": 41,
+      "src": "sweep-final3",
+      "pass": 41,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/setting/default-models",
+      "name": "DefaultModels",
+      "total": 157,
+      "src": "sweep-final3",
+      "pass": 157,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/plugins",
+      "name": "Plugins",
+      "total": 148,
+      "src": "sweep-fix-b",
+      "pass": 148,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/knowledge-base",
+      "name": "KnowledgeBaseList",
+      "total": 62,
+      "src": "sweep-fix-b",
+      "pass": 61,
+      "warn": 1,
+      "fail": 0
+    },
+    {
+      "route": "/knowledge-base/__ID__",
+      "name": "KnowledgeBaseDetail",
+      "total": 102,
+      "src": "sweep-fix-b",
+      "pass": 97,
+      "warn": 5,
+      "fail": 0
+    },
+    {
+      "route": "/scheduler",
+      "name": "Scheduler",
+      "total": 50,
+      "src": "sweep-fix-b",
+      "pass": 50,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/models",
+      "name": "Models",
+      "total": 65,
+      "src": "sweep-fix-b",
+      "pass": 65,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/image-generate",
+      "name": "ImageGenerate",
+      "total": 632,
+      "src": "sweep-fix-imggen",
+      "pass": 631,
+      "warn": 1,
+      "fail": 0
+    },
+    {
+      "route": "/face-search",
+      "name": "FaceSearch",
+      "total": 54,
+      "src": "sweep-fix-b",
+      "pass": 53,
+      "warn": 1,
+      "fail": 0
+    },
+    {
+      "route": "/image-search",
+      "name": "ImageSearch",
+      "total": 50,
+      "src": "sweep-fix-b",
+      "pass": 49,
+      "warn": 1,
+      "fail": 0
+    },
+    {
+      "route": "/app-keys",
+      "name": "AppKeys",
+      "total": 49,
+      "src": "sweep-fix-b",
+      "pass": 49,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/manufacturer-keys",
+      "name": "ManufacturerKeys",
+      "total": 49,
+      "src": "sweep-fix-b",
+      "pass": 49,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/roles",
+      "name": "Roles",
+      "total": 145,
+      "src": "sweep-fix-b",
+      "pass": 145,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/mcp",
+      "name": "Mcp",
+      "total": 49,
+      "src": "sweep-fix-light",
+      "pass": 49,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/agents",
+      "name": "Agents",
+      "total": 60,
+      "src": "sweep-fix-light",
+      "pass": 60,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/usage",
+      "name": "Usage",
+      "total": 62,
+      "src": "sweep-fix-light",
+      "pass": 60,
+      "warn": 2,
+      "fail": 0
+    },
+    {
+      "route": "/usage/sync-logs",
+      "name": "UsageSyncLogs",
+      "total": 55,
+      "src": "sweep-fix-light",
+      "pass": 55,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/skills",
+      "name": "Skills",
+      "total": 78,
+      "src": "sweep-fix-light",
+      "pass": 78,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/connectors",
+      "name": "Connectors",
+      "total": 51,
+      "src": "sweep-fix-b",
+      "pass": 51,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/connectors/chat/__CONN__",
+      "name": "ConnectorChat",
+      "total": 56,
+      "src": "sweep-fix-b",
+      "pass": 56,
+      "warn": 0,
+      "fail": 0
+    },
+    {
+      "route": "/capabilities/ocr",
+      "name": "CapabilityOCR",
+      "total": 46,
+      "src": "sweep-fix-light",
+      "pass": 46,
+      "warn": 0,
+      "fail": 0
+    }
+  ],
+  "totals": {
+    "routes": 25,
+    "total": 2405,
+    "pass": 2391,
+    "warn": 14,
+    "fail": 0
+  },
+  "warns": [
+    "/characters | no-effect | 导入",
+    "/characters | vanished | 角色设置",
+    "/bots | no-effect | 使用说明",
+    "/knowledge-base | vanished | 84",
+    "/knowledge-base/__ID__ | no-effect | 上传文件",
+    "/knowledge-base/__ID__ | no-effect | 上传文件夹",
+    "/knowledge-base/__ID__ | no-effect | 全部 0",
+    "/knowledge-base/__ID__ | state-dependent | 这些文档讲了什么主题",
+    "/knowledge-base/__ID__ | state-dependent | 列出最重要的几个概念",
+    "/image-generate | no-effect | 收藏",
+    "/face-search | no-effect | 选择图片",
+    "/image-search | no-effect | 选择图片",
+    "/usage | no-effect | 按 Token",
+    "/usage | no-effect | 按 Token"
+  ]
+}
