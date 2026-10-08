@@ -168,20 +168,35 @@ public class AiDevOpsController {
             tunnelProcess = proc;
             tunnelPort = port;
             tunnelUrl = null;
+            // 【坑】不能"读到 URL 就 break 并关闭 reader"：关掉子进程 stdout 会让 cloudflared 退出，
+            // 隧道随即变 530（实测 2026-10-08）。这里单线程持续消费输出，读到 URL 只置位+通知。
+            final Object lock = new Object();
+            Thread reader = new Thread(() -> {
+                try (BufferedReader r = new BufferedReader(
+                        new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        if (tunnelUrl == null) {
+                            Matcher m = TRY_URL.matcher(line);
+                            if (m.find()) {
+                                tunnelUrl = m.group();
+                                synchronized (lock) {
+                                    lock.notifyAll();
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // 进程结束即退出
+                }
+            }, "cloudflared-log");
+            reader.setDaemon(true);
+            reader.start();
+
             long deadline = System.currentTimeMillis() + 40_000L;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    Matcher m = TRY_URL.matcher(line);
-                    if (m.find()) {
-                        tunnelUrl = m.group();
-                        log.info("[DevOps] cloudflared 就绪 url={} port={}", tunnelUrl, port);
-                        break;
-                    }
-                    if (System.currentTimeMillis() > deadline) {
-                        break;
-                    }
+            synchronized (lock) {
+                while (tunnelUrl == null && proc.isAlive() && System.currentTimeMillis() < deadline) {
+                    lock.wait(500L);
                 }
             }
             if (tunnelUrl == null) {
@@ -189,16 +204,6 @@ public class AiDevOpsController {
                 tunnelProcess = null;
                 return ReturnResult.error("cloudflared 启动超时或未输出公网地址（检查 /usr/local/bin/cloudflared 与出网）");
             }
-            // 让读取线程继续消费输出，避免缓冲区打满阻塞进程
-            new Thread(() -> {
-                try (BufferedReader r = new BufferedReader(
-                        new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
-                    while (r.readLine() != null) {
-                        // 丢弃后续日志
-                    }
-                } catch (Exception ignored) {
-                }
-            }, "cloudflared-log").start();
             return ReturnResult.ok(Map.of("url", tunnelUrl, "port", port));
         } catch (Exception e) {
             log.warn("[DevOps] 启动 tunnel 失败: {}", e.getMessage());
