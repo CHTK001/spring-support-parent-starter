@@ -14,7 +14,7 @@
 > | 后端现役 | `eduai-backend.jar` sha256 `1bef2cebee8716822505199eb14bc890f67821e1ef1ffec0e8399da0b79f2f18`（858,173,525 B；判分质量修复会话于 07:10–07:11 北京以包 `eduai-app-20261009-a2f35045d.tar.gz`（sha256 `40e5bb85…`）换装，提交 `a2f35045d`，服务 07:11:09 重启 NRestarts=0） | 换装后第一次全量套件证据见下行 |
 > | 后端套件（直跑，不换装） | 等价 `release-run.sh` §3.5–§4：鉴权热就绪 + 7 套件顺序直跑 | **7/7 全绿 = 220 断言 0 失败**（acceptance 55 + student-password 15 + student-manage 20 + first-login 12 + paper-assign 40 + marking 11 + hanzi 67；日志 `.local-run/r42/suite-run-current-run2-allgreen.log` md5 `56979ff61ca099151675e9c9e6624192`） |
 > | 套件缺陷修复（同轮定性） | 第一轮（`d2cb757c`）hanzi FAIL 3 处；根因=套件自身：`find_by_keyword` 兜底扫描上限 12 页×500=6000 < 全表 7420 行且列表 `hanzi_id DESC`（种子老行在尾）；出题断言「单题必须带释义」过严（word.json 释义覆盖 6948/7420） | 修后 `hanzi-collect-acceptance.py` md5 `67ef4f32a23e4053a5cacf7f5226954f`（主机=工作区），单跑 67/67；DB 抽查 国/人 字段齐全（非数据缺陷） |
-> | 古诗数据 | 缺口补采（任务 #2 三轮 +2820/+2619/+970）+ 唯一键全列化（运行库 ALTER；V1.2 种子 SQL 已对齐，下次构建生效） | `edu_poem` 45,803 → **52,212**；权威核对 `poem-gap4.sh` 全 7 片 **missing=0** |
+> | 古诗数据 | 缺口补采（任务 #2 三轮 +2820/+2619/+970）+ 唯一键全列化（运行库 ALTER；V1.2 种子 SQL 已对齐，下次构建生效；任务 #2 已收口=7 片合并配置+备注+status=0） | `edu_poem` 45,803 → **52,212**；权威核对 `poem-gap4.sh` 全 7 片 **missing=0** |
 > | 前端现役 | `/var/www/eduai` `index.html` md5 `3c42b9e465f8ac1f6350b44459747e43`、1117 文件（含古诗页服务端分页修复；r21 的 1105 文件/`99215e6c…` 已被接替） | 生产实测：共 **52212** 条（旧天花板 5000）/ 翻页 2611 页 / 搜索李白=1187 / 本页定向控件矩阵全通过；截图 `.local-run/retable-fix/prod-poems-final-52212.png` |
 > | 汉字 8105 | 三源采集 3,497 → **7,420** 行；gradeLevel 全 NULL（空=不过滤） | 拼音 7420/7420、笔画 7419/7420、释义 6948/7420；任务 #3 收尾 status=0（已复核） |
 > | 历史链 | r39（全站点击矩阵，前端交互面沿用其结论）/ r41（`d2cb757c` 换装复验；按「换包即作废」已被 `1bef2ceb` 接替） | 明细各见其报告 |
