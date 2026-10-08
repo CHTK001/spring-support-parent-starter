@@ -343,6 +343,33 @@ public class SessionNextTaskService {
     }
 
     /**
+     * 「不是下一步任务」的元叙述模式。
+     *
+     * <p>模型在没给出任务时爱写"等待用户进一步提问 / 用户已完成简单问候，建议等待…"这类
+     * 总结式句子。它们被当成任务落库后，面板就会显示一句"思考体"（用户报障：
+     * "这个是 ai 建议还是思考？怎么会在 ai 建议里"）。读侧与写侧都过滤。</p>
+     */
+    private static final java.util.regex.Pattern META_TASK = java.util.regex.Pattern.compile(
+            "等待用户|等待您|建议等待|请提出|无具体|没有具体|无法确定|暂不|无需|寒暄|问候"
+                    + "|waiting for the user|no specific|no further");
+
+    /**
+     * 判断是否是"元叙述"而非可执行任务。
+     *
+     * @param title  标题
+     * @param detail 说明
+     * @return true=应被过滤掉
+     */
+    private static boolean isMetaTask(String title, String detail) {
+        String t = title == null ? "" : title.trim();
+        if (t.isEmpty()) {
+            return true;
+        }
+        String both = t + " " + (detail == null ? "" : detail.trim());
+        return META_TASK.matcher(both).find();
+    }
+
+    /**
      * 读取会话设置里已存的联想结果。
      *
      * @param node 会话设置节点
@@ -357,11 +384,12 @@ public class SessionNextTaskService {
         for (Object element : list) {
             Map<String, Object> item = asMap(element);
             String title = firstText(item, "title", "task", "name");
-            if (title.isBlank()) {
+            String detail = firstText(item, "detail", "description", "desc");
+            // 读侧同样过滤元叙述：历史脏数据（如"等待用户进一步提问"）不再显示在建议里
+            if (isMetaTask(title, detail)) {
                 continue;
             }
-            result.add(new NextTask(title, firstText(item, "detail", "description", "desc"),
-                    result.size() + 1));
+            result.add(new NextTask(title, detail, result.size() + 1));
         }
         return List.copyOf(result);
     }
@@ -410,7 +438,8 @@ public class SessionNextTaskService {
                     continue;
                 }
                 title = truncate(title, TITLE_LIMIT);
-                if (title.isBlank()) {
+                // 写侧过滤：模型没给出任务时写的"等待用户…/建议等待…"一律不进库
+                if (isMetaTask(title, detail)) {
                     continue;
                 }
                 result.add(new NextTask(title, truncate(detail, DETAIL_LIMIT), result.size() + 1));
