@@ -111,6 +111,33 @@ public class AiSessionController {
      * @param json 确认请求 JSON
      * @return 待确认请求 Map；非 pending / 解析失败返回 null
      */
+    /**
+     * 解析随助手消息落库的**工具调用轨迹**（{@code confirmation} 列里的 {@code {toolCalls:[...]}}）。
+     *
+     * <p>为什么需要：工具调用原先只在流式 SSE 事件里出现、从不落库，刷新/重载后
+     * 「逐行工具行」就没有数据。落库后由本方法回传为 {@code metadata.toolCalls}。</p>
+     *
+     * @param json confirmation 原文（可能是待确认请求、也可能没有）
+     * @return 含 {@code toolCalls} 的 Map；无轨迹返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseToolTrace(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            return data.get("toolCalls") == null ? null : data;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析待确认请求
+     *
+     * @return 待确认请求 Map；非 pending / 解析失败返回 null
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parsePendingConfirmation(String json) {
         if (json == null || json.isBlank()) {
@@ -405,6 +432,12 @@ public class AiSessionController {
                 usage.put("completionTokens", msg.getCompletionTokens());
                 usage.put("totalTokens", msg.getTotalTokens());
                 contentMetadata.put("usage", usage);
+                // 工具调用轨迹：随助手消息落库，刷新/重载后仍能渲染「逐行工具行」
+                Map<String, Object> toolTrace = parseToolTrace(msg.getConfirmation());
+                if (toolTrace != null) {
+                    contentMetadata.put("toolCalls", toolTrace.get("toolCalls"));
+                    contentMetadata.put("toolCallsResponse", toolTrace.get("toolCallsResponse"));
+                }
                 // 待人工确认（plan_exit）：刷新后仍渲染批准卡片
                 Map<String, Object> pendingConfirm = parsePendingConfirmation(msg.getConfirmation());
                 if (pendingConfirm != null) {
