@@ -1846,6 +1846,19 @@ if (-not $SkipChrome) {
         WaitJs '!document.querySelector(".el-loading-mask")' 12 | Out-Null
         Start-Sleep -Milliseconds 500
         $after = (Js $jsProbe) | ConvertFrom-Json
+        # Same boot race as the content phase (see the fun-idiom note above), but on the
+        # chrome shortcuts that leave the SPA entirely: clicking one swaps the document
+        # (e.g. -> /edu/teacher) and the readyState wait above is satisfied by the OLD
+        # document before the new one replaces it -- the probe then reads the incoming
+        # document mid-load (bodyLen=0). Observed 2026-10-08 admin sweep #2: chrome
+        # 「教师端」 -> /edu/teacher bodyLen=0 while the route phase passed twice.
+        # Re-probe while blank; a genuinely blank page stays blank through all retries.
+        $blankRetries = 0
+        while (($after.bodyLen -le 30) -and ($blankRetries -lt 5)) {
+            Start-Sleep -Milliseconds 1200
+            $after = (Js $jsProbe) | ConvertFrom-Json
+            $blankRetries++
+        }
         $ev = Read-Evidence
         $lbl = $it.label
         $detail = "kind=$($it.kind) label='$lbl' -> $($after.path) bodyLen=$($after.bodyLen) pageErr=$($ev.pageErr) consoleErr=$($ev.consoleErr) 5xx=$($ev.http5xx)"
