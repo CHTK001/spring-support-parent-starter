@@ -788,9 +788,11 @@ public class EduPaperScanner {
             outcome.setComment(comment);
             return outcome;
         } catch (Exception e) {
-            log.warn("[EduScan] 任意卷判分失败，回退 0 分: {}", e.getMessage());
+            log.warn("[EduScan] 任意卷判分失败，回退 0 分: {}", e.toString());
             fallback.setScore(0);
-            fallback.setComment("AI 判分失败：" + e.getMessage());
+            // 用户可见评语不得直出内部异常原文（可能带限流/服务/堆栈细节），
+            // 真实原因只进服务端日志；界面给出可行动的稳定文案。
+            fallback.setComment("AI 判分暂不可用，请人工复核");
             return fallback;
         }
     }
