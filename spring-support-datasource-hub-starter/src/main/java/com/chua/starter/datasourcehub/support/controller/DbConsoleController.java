@@ -2,6 +2,11 @@ package com.chua.starter.datasourcehub.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.datasource.dialect.SqlName;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
+import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.model.AiChatResult;
+import com.chua.starter.ai.support.model.AiClientProbe;
+import com.chua.starter.datasourcehub.support.dbconsole.DbAiStatusVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnDef;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport;
@@ -12,6 +17,8 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbSqlBatchVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlExecuteDTO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlResultVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbStructureDiff;
+import com.chua.starter.datasourcehub.support.dbconsole.DbText2SqlDTO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbText2SqlVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTableDialect;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTableDataVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTableVO;
@@ -20,6 +27,7 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbTxSession;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTxStatus;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlParameterBinder;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlScriptSplitter;
+import com.chua.starter.datasourcehub.support.config.DatasourceHubProperties;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -73,12 +81,34 @@ public class DbConsoleController {
     private final DatasourceService datasourceService;
 
     /**
+     * 数据源中心配置（语句执行超时等）。
+     */
+    private final DatasourceHubProperties properties;
+
+    /**
      * 显式事务会话注册表（查询控制台的「事务」开关用）。
      *
      * <p>为空时事务端点不可用：不要给个默认实现，
      * 那会让「事务没生效」变成一个静默的功能缺失。</p>
      */
     private final ObjectProvider<DbTxRegistry> dbTxRegistryProvider;
+
+    /**
+     * AI 对话门面（可选）：宿主应用未集成 ai-starter 时取不到实现，
+     * text2sql 能力整体上报为不可用（前端据此隐藏入口），不阻断控制台其余功能。
+     */
+    private final ObjectProvider<com.chua.starter.ai.support.service.AiChatFacadeService> aiChatFacadeProvider;
+
+    /**
+     * 生效对话模型解析器（可选）：全项目统一的「该用哪个模型对话」解析入口
+     * （bot/default_model → runtime/default_model → 旧键兜底，并校验模型已启用）。
+     *
+     * <p>text2sql 若不显式带模型，AiChatFacade 会回退到注册中心默认客户端，
+     * 在「未配置 YAML 密钥」的宿主里那是个必然失败的空聚合壳——表现为按钮可用、
+     * 点下去报「未生成出 SQL」。这里与聊天入口同一条解析链，把请求落到具体模型上，
+     * 由 facade 走 DB 提供商配置（sys_ai_provider*）构建真实客户端。</p>
+     */
+    private final ObjectProvider<EffectiveChatModelResolver> effectiveChatModelResolverProvider;
 
     /**
      * 取事务注册表。
@@ -1051,6 +1081,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             java.util.List<String> columns;
             java.util.List<Map<String, Object>> rows;
             try (java.sql.PreparedStatement stmt = conn.prepareStatement(dataSql)) {
+                applyQueryTimeout(stmt);
                 // 绑定顺序必须是「筛选参数 → 分页参数」：whereSql 在 SQL 文本里
                 // 位于 LIMIT/OFFSET 之前，顺序反了不会报错、只会查错行。
                 int idx = 1;
@@ -1080,6 +1111,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             if (count) {
                 // countSql 里没有 LIMIT/OFFSET，只绑筛选参数
                 try (java.sql.PreparedStatement stmt = conn.prepareStatement(countSql)) {
+                    applyQueryTimeout(stmt);
                     int idx = 1;
                     for (Object p : compiled.params()) {
                         stmt.setObject(idx++, p);
@@ -1528,6 +1560,117 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         });
     }
 
+    @Operation(summary = "AI 文本生成 SQL 可用状态")
+    @GetMapping("ai/status")
+    public ReturnResult<DbAiStatusVO> aiText2SqlStatus() {
+        com.chua.starter.ai.support.service.AiChatFacadeService facade = aiChatFacadeProvider.getIfAvailable();
+        if (facade == null) {
+            return ReturnResult.ok(new DbAiStatusVO(false, null,
+                    "应用未集成 AI 对话能力（spring-support-ai-starter 未引入）"));
+        }
+        // 与真实对话同一条解析链路：「状态可用」即「点下去真能生成」，避免两套判据。
+        // 显式带上「默认模型」解析结果：不带模型时 facade 会落到注册中心默认客户端，
+        // 未配置 YAML 密钥的宿主里那是空聚合壳，会给出假阳性的「可用」。
+        AiClientProbe probe = facade.probeChatClient(resolveDefaultChatModel());
+        return ReturnResult.ok(new DbAiStatusVO(probe.available(), probe.model(), probe.reason()));
+    }
+
+    /**
+     * 解析当前生效的默认对话模型（全项目统一解析链），解析失败或无可用模型时返回 空。
+     *
+     * <p>宿主未集成 ai-starter 时解析器不存在，返回 空，由调用方维持原有兜底行为。</p>
+     *
+     * @return 生效模型名；不可用时为 空
+     */
+    private String resolveDefaultChatModel() {
+        EffectiveChatModelResolver resolver = effectiveChatModelResolverProvider.getIfAvailable();
+        if (resolver == null) {
+            return null;
+        }
+        try {
+            return resolver.resolve(null);
+        } catch (Exception e) {
+            log.warn("[DbConsole] 解析默认对话模型失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    @Operation(summary = "AI 文本生成 SQL")
+    @PostMapping("ai/text2sql")
+    public ReturnResult<DbText2SqlVO> text2sql(@RequestBody DbText2SqlDTO request) {
+        String text = request.text() == null ? "" : request.text().trim();
+        if (text.isEmpty()) {
+            return ReturnResult.error("请先输入查询需求");
+        }
+        com.chua.starter.ai.support.service.AiChatFacadeService facade = aiChatFacadeProvider.getIfAvailable();
+        if (facade == null) {
+            return ReturnResult.error("应用未集成 AI 对话能力，无法使用 text2sql");
+        }
+        StringBuilder system = new StringBuilder(TEXT2SQL_SYSTEM_PROMPT);
+        if (request.context() != null && !request.context().isBlank()) {
+            system.append("\n\n目标数据库结构（仅按此结构生成，不要虚构不存在的表或列）：\n")
+                    .append(request.context().trim());
+        }
+        AiChatRequest chat = new AiChatRequest();
+        chat.setSystemPrompt(system.toString());
+        chat.setPrompt(text);
+        chat.setCallType("db_text2sql");
+        chat.setStream(Boolean.FALSE);
+        // 显式落到「默认模型」解析结果上：不带模型时 facade 会回退到注册中心默认客户端，
+        // 未配置 YAML 密钥的宿主里那是空聚合壳，会让生成必然失败。
+        String model = resolveDefaultChatModel();
+        if (model != null && !model.isBlank()) {
+            chat.setModel(model);
+        }
+        AiChatResult result = facade.callForResult(chat);
+        if (!result.success()) {
+            return ReturnResult.error("AI 生成失败: " + result.errorMessage());
+        }
+        String sql = stripMarkdownFence(result.text());
+        if (sql.isBlank()) {
+            return ReturnResult.error("AI 未生成出 SQL，请补充表结构或换种说法");
+        }
+        return ReturnResult.ok(new DbText2SqlVO(sql, result.model()));
+    }
+
+    /**
+     * text2sql 的系统提示词：约束「只出 SQL、不虚构结构、不擅自执行」。
+     */
+    private static final String TEXT2SQL_SYSTEM_PROMPT = """
+            你是 SQL 生成助手。根据用户的查询需求与提供的数据库结构，生成一条可直接执行的 SQL。
+            规则：
+            1. 只输出 SQL 语句本身，不要任何解释性文字；
+            2. 使用 MySQL/MariaDB 方言；
+            3. 只使用结构信息里真实存在的表与列，不得虚构；
+            4. 信息不足时生成最合理的 SQL，并在语句尾部用 -- 注释说明假设；
+            5. 涉及删除/更新时默认加上 LIMIT 或限定条件，避免全表误操作。
+            """;
+
+    /**
+     * 剥掉模型输出的 markdown 围栏（```sql ... ``` 或 ``` ... ```），无围栏则原样返回。
+     *
+     * @param raw 模型原始输出
+     * @return 纯 SQL 文本
+     */
+    private static String stripMarkdownFence(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String text = raw.strip();
+        if (!text.startsWith("```")) {
+            return text;
+        }
+        int firstLineBreak = text.indexOf('\n');
+        if (firstLineBreak < 0) {
+            return "";
+        }
+        int closing = text.lastIndexOf("```");
+        if (closing <= firstLineBreak) {
+            return text.substring(firstLineBreak + 1).strip();
+        }
+        return text.substring(firstLineBreak + 1, closing).strip();
+    }
+
     @Operation(summary = "执行 SQL")
     @PostMapping("execute")
     public ReturnResult<DbSqlResultVO> executeDbSql(@RequestBody DbSqlExecuteDTO request) {
@@ -1624,12 +1767,17 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 会出现「一条当查询、一条当更新」的行为差异（表现为同一句 {@code WITH ...}
      * 在批量里被当成更新语句、影响行数为 0）。</p>
      *
+     * <p>执行前统一挂上语句级超时（{@code datasource.hub.query-timeout-seconds}）：
+     * 单条 / 事务 / 批量三条路径都汇到这里，挂一处即全部生效 —— 失控 SQL 从
+     * 「无限期挂死到网关超时」变成有界的 {@code SQLTimeoutException}，接口正常失败。</p>
+     *
      * @param stmt 已建好的语句（调用方保证已完成切库）
      * @param sql  单条 SQL
      * @return 执行结果
-     * @throws java.sql.SQLException 内核报错
+     * @throws java.sql.SQLException 内核报错或超时设置失败
      */
-    private static DbSqlResultVO runOneStatement(java.sql.Statement stmt, String sql) throws java.sql.SQLException {
+    private DbSqlResultVO runOneStatement(java.sql.Statement stmt, String sql) throws java.sql.SQLException {
+        applyQueryTimeout(stmt);
         if (SqlScriptSplitter.isQuery(sql)) {
             try (java.sql.ResultSet rs = stmt.executeQuery(sql)) {
                 java.sql.ResultSetMetaData meta = rs.getMetaData();
@@ -1654,6 +1802,23 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         int affectedRows = stmt.executeUpdate(sql);
         return new DbSqlResultVO(null, null, null, null, affectedRows,
                 "执行成功，影响 " + affectedRows + " 行");
+    }
+
+    /**
+     * 给语句挂上统一的执行超时（{@code datasource.hub.query-timeout-seconds}，0 = 不设上限）。
+     *
+     * <p>覆盖不了 {@link #runOneStatement} 的直连语句点（分页/计数、DDL、清表）
+     * 也走这里：大表分页与 {@code TRUNCATE}/{@code DELETE} 在锁等待下同样是
+     * 「无限期挂死」的高发点。</p>
+     *
+     * @param stmt 语句
+     * @throws java.sql.SQLException 驱动不支持超时或参数非法
+     */
+    private void applyQueryTimeout(java.sql.Statement stmt) throws java.sql.SQLException {
+        int seconds = properties.getQueryTimeoutSeconds();
+        if (seconds > 0) {
+            stmt.setQueryTimeout(seconds);
+        }
     }
 
     /**
@@ -1826,6 +1991,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                  SchemaScope scope = useSchema(conn, database)) {
                 requireTable(conn, table);
                 try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP TABLE " + SqlName.quoteMysql(table, "表名"))) {
+                    applyQueryTimeout(stmt);
                     stmt.executeUpdate();
                 }
                 return Boolean.TRUE;
@@ -2356,9 +2522,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 requireTable(conn, table);
                 if (option.truncateFirst()) {
                     try (java.sql.Statement stmt = conn.createStatement()) {
+                        applyQueryTimeout(stmt);
                         stmt.executeUpdate("TRUNCATE TABLE " + SqlName.quoteMysql(table, "表名"));
                     } catch (java.sql.SQLException fallback) {
                         try (java.sql.Statement stmt = conn.createStatement()) {
+                            applyQueryTimeout(stmt);
                             stmt.executeUpdate("DELETE FROM " + SqlName.quoteMysql(table, "表名"));
                         }
                     }
@@ -2570,10 +2738,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 requireTable(conn, t);
                 try {
                     try (java.sql.PreparedStatement stmt = conn.prepareStatement("TRUNCATE TABLE " + SqlName.quoteMysql(t, "表名"))) {
+                        applyQueryTimeout(stmt);
                         stmt.executeUpdate();
                     }
                 } catch (java.sql.SQLException fallback) {
                     try (java.sql.PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + SqlName.quoteMysql(t, "表名"))) {
+                        applyQueryTimeout(stmt);
                         stmt.executeUpdate();
                     }
                 }

@@ -127,7 +127,8 @@ public class AiSessionController {
         }
         try {
             Map<String, Object> data = objectMapper.readValue(json, Map.class);
-            return data.get("toolCalls") == null ? null : data;
+            // 两种形态都认：toolCalls（MCP 路径）/ toolTraces（AgentScope trace 路径）
+            return (data.get("toolCalls") != null || data.get("toolTraces") != null) ? data : null;
         } catch (Exception e) {
             return null;
         }
