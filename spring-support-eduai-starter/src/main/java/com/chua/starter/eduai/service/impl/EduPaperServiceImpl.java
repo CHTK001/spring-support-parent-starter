@@ -314,9 +314,24 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         List<Long> aiIds = eduAiService.generatePaperOutline(
                 dto.getSubject(), dto.getGradeLevel(), dto.getGrade(),
                 types, knowledgeIds, count, candidateIds);
-        if (aiIds.size() > count) {
-            aiIds = aiIds.subList(0, count);
+        // 防御性收口：落库前再次确认题号来自本次候选集（AI 侧已过滤，这里兜住任何漏网之鱼），
+        // 避免悬空引用/跨学科题混入试卷；全部无效时回退候选集，保证「能组出卷」。
+        Set<Long> candidateSet = new HashSet<>(candidateIds);
+        List<Long> safeIds = aiIds.stream()
+                .filter(qid -> qid != null && candidateSet.contains(qid))
+                .distinct()
+                .collect(Collectors.toList());
+        if (safeIds.size() < aiIds.size()) {
+            log.warn("[EduAi] AI 组卷题号 {} 个中 {} 个不在候选集，已丢弃", aiIds.size(),
+                    aiIds.size() - safeIds.size());
         }
+        if (safeIds.isEmpty()) {
+            safeIds = new ArrayList<>(candidateIds);
+        }
+        if (safeIds.size() > count) {
+            safeIds = safeIds.subList(0, count);
+        }
+        aiIds = safeIds;
 
         // 5) 入库关联
         int order = 1;
