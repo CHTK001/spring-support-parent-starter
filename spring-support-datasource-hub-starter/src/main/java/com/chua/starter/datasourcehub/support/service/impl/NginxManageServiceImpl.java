@@ -53,6 +53,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -595,12 +597,69 @@ public class NginxManageServiceImpl implements NginxManageService {
 
     // ==================== 生命周期 ====================
 
+    private static final Pattern SYNTAX_OK = Pattern.compile("syntax is ok");
+    /**
+     * pid/日志文件「打不开且被拒」（EACCES）的行级判据。
+     *
+     * <p>注意别写成「[emerg] 后紧跟 open()」：nginx 落到 stderr 的行带进程头
+     * （{@code [emerg] 2412076#2412076: open() "/run/nginx.pid" failed (13: Permission denied)}），
+     * 两者之间隔着 PID#TID，贴面匹配永远不中（实测 2026-10-08 第一版正则即此坑，
+     * 假阴性未被改判、启动的语法门禁照旧拦住）。</p>
+     */
+    private static final Pattern OPEN_EACCES = Pattern.compile("open\\(\\) \"([^\"]+)\" failed \\(13: Permission denied\\)");
+
     @Override
     public NginxCommandResultVO test(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
         ExecResult r = exec(ds, nginxCmd(ds, "-t"));
-        boolean ok = r.exitCode() == 0;
-        return new NginxCommandResultVO(ok, ok ? "语法检查通过" : "语法检查失败", r.stdout(), r.stderr());
+        if (r.exitCode() == 0) {
+            return new NginxCommandResultVO(true, "语法检查通过", r.stdout(), r.stderr());
+        }
+        String merged = mergeOut(r.stdout(), r.stderr());
+        if (isPrivilegeOnlyTestFailure(merged)) {
+            String unit = usableInitUnit(ds);
+            if (!INIT_OWNER_NONE.equals(unit)) {
+                return new NginxCommandResultVO(
+                    true,
+                    "语法检查通过（以 " + unit + " 的 root 域运行；SSH 用户无权打开 pid 文件不影响真实启停）",
+                    r.stdout(),
+                    r.stderr()
+                );
+            }
+            Matcher m = OPEN_EACCES.matcher(merged);
+            String pidPath = "pid 文件";
+            if (m.find()) {
+                pidPath = m.group(1);
+            }
+            return new NginxCommandResultVO(
+                false,
+                "语法正确，但 " + pidPath + " 不可写（SSH 用户权限不足）：直接以该用户启动 nginx 会在同一步失败；"
+                + "请用 systemd 托管或给该用户加限定 sudo 规则",
+                r.stdout(),
+                r.stderr()
+            );
+        }
+        return new NginxCommandResultVO(false, "语法检查失败", r.stdout(), r.stderr());
+    }
+
+    private boolean isPrivilegeOnlyTestFailure(String merged) {
+        if (!SYNTAX_OK.matcher(merged).find()) {
+            return false;
+        }
+        // 按行判定：每一行 [emerg] 都必须是 open() 的 EACCES（root 可越过的权限类）；
+        // 出现任何其它 [emerg]（真正的语法/语义错误）一律返回 false。
+        int total = 0;
+        int denied = 0;
+        for (String line : merged.split("\\R")) {
+            if (!line.contains("[emerg]")) {
+                continue;
+            }
+            total++;
+            if (OPEN_EACCES.matcher(line).find()) {
+                denied++;
+            }
+        }
+        return total > 0 && total == denied;
     }
 
     @Override
@@ -609,6 +668,19 @@ public class NginxManageServiceImpl implements NginxManageService {
         NginxCommandResultVO t = test(datasourceId);
         if (!t.success()) {
             return new NginxCommandResultVO(false, "语法检查未通过，未执行 reload", t.stdout(), t.stderr());
+        }
+        // 被 systemd 托管时走 systemctl reload：裸 nginx -s reload 是给 master 发信号，
+        // 非 root 的 SSH 用户对 root 启动的 master 必然 EPERM（实测 kill(pid,1)
+        // failed: Operation not permitted），而 stop/start/restart 都已走 systemd 通道，
+        // 唯独 reload 漏了。systemctl 经免密 sudo 由 root 发信号，与其它三个动作对齐。
+        String unit = usableInitUnit(ds);
+        if (!INIT_OWNER_NONE.equals(unit)) {
+            ExecResult sr = exec(ds, systemctlCmd(unit, "reload"), LIFECYCLE_TIMEOUT_SECONDS);
+            boolean sok = sr.exitCode() == 0;
+            return new NginxCommandResultVO(sok,
+                    sok ? "重载成功，新配置已生效（经 " + unit + "）"
+                            : "重载失败: " + mergeOut(sr.stdout(), sr.stderr()),
+                    sr.stdout(), sr.stderr());
         }
         ExecResult r = exec(ds, nginxCmd(ds, "-s reload"));
         boolean ok = r.exitCode() == 0;

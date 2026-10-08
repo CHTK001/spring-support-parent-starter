@@ -22,6 +22,7 @@ import com.chua.starter.datasourcehub.support.support.JdbcDriverSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -84,6 +85,43 @@ public class DatasourceServiceImpl implements DatasourceService {
      * 过期回调自动关闭，连接被服务端断开时自动重建。</p>
      */
     private final Map<Long, ExpireValue<Connection>> jdbcConnectionCache = new ConcurrentHashMap<>();
+
+    /**
+     * 后台清扫：把闲置超过 TTL 的 JDBC 连接真正关闭掉。
+     *
+     * <p>为什么需要：{@link ExpireValue} 的过期是<b>惰性</b>的 —— 只有下一次取连接时
+     * 才会触发过期回调；数据源一旦闲置（页面关了、当天不再查询），期间没有任何取连接
+     * 动作，物理连接就会一直挂到进程重启或数据源被删除，表现为后端 socket 泄漏。
+     * 这里按 {@code datasource.hub.connection-sweep-interval-ms}（默认 60s，0 关闭）
+     * 的节拍主动核对，到期的持锁走一次 {@code getValue()} 触发同一套过期回调
+     * （{@code onExpireNotify → closeQuietly}）关闭连接。</p>
+     *
+     * <p>与复用路径的互斥：{@link #cachedJdbcConnection} 在 {@code synchronized (holder)}
+     * 里复用并 {@code refresh()}，清扫同样持锁后再触发回调 —— 要么清扫先关
+     * （复用方随后拿到 null 走重建），要么复用方先刷新（清扫随后看到未过期跳过），
+     * 不会出现「用到一半被关」。空壳 holder 不从 map 移除：下次取连接会复用它重建，
+     * 避免 remove 与 {@code computeIfAbsent} 的竞争。</p>
+     */
+    @Scheduled(fixedDelayString = "${datasource.hub.connection-sweep-interval-ms:60000}")
+    public void sweepExpiredJdbcConnections() {
+        if (jdbcConnectionCache.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Long, ExpireValue<Connection>> entry : jdbcConnectionCache.entrySet()) {
+            ExpireValue<Connection> holder = entry.getValue();
+            // 空壳（值已清除）没有连接可关；未过期的复用连接不碰
+            if (holder.isNull() || !holder.isExpire()) {
+                continue;
+            }
+            synchronized (holder) {
+                if (holder.isNull() || !holder.isExpire()) {
+                    continue;
+                }
+                holder.getValue();
+            }
+            log.debug("[datasource-hub] 清扫空闲过期连接: datasourceId={}", entry.getKey());
+        }
+    }
 
     @Override
     public List<String> supportedTypes() {

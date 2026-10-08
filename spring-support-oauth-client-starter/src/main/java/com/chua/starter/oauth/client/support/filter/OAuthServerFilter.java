@@ -12,6 +12,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
+import com.chua.starter.oauth.client.support.web.WebRequest;
 import jakarta.servlet.http.Cookie;
 import lombok.extern.slf4j.Slf4j;
 
@@ -365,19 +366,18 @@ public class OAuthServerFilter implements ServerFilter {
     }
 
     /**
-     * 解析鉴权协议实现：客户端配置协议优先，回退默认扩展。
+     * 解析鉴权协议实现（与 Web 侧 {@link WebRequest} 同一解析路径与实例缓存）。
+     *
+     * <p>协议扩展的构造器需要配置实例（如 {@code StaticProtocol(AuthClientProperties)}），
+     * 无参 {@link ServiceProvider#getExtension(String)} 永远构造不出来，会把一切请求
+     * 判成「鉴权协议未注册」401（文件服务器网关私有桶全挂即此因）。
+     * 统一走 {@link WebRequest#getProtocolExtension}：按协议名+关键配置缓存单例，
+     * 构造时携带 {@link AuthClientProperties}。</p>
      *
      * @return 协议实现，均未注册时返回 空
      */
     private Protocol resolveProtocol() {
-        AuthClientProperties properties = OauthClientRuntimeContext.getAuthClientProperties();
-        String protocol = properties == null || isBlank(properties.getProtocol())
-                ? "tcp" : properties.getProtocol();
-        Protocol extension = ServiceProvider.of(Protocol.class).getExtension(protocol);
-        if (extension == null) {
-            extension = ServiceProvider.of(Protocol.class).getExtension("default");
-        }
-        return extension;
+        return WebRequest.getProtocolExtension(OauthClientRuntimeContext.getAuthClientProperties());
     }
 
     /**
