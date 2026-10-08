@@ -4,8 +4,12 @@
 
 覆盖三件事，每件都必须是**真断言**（失败即非 0 退出，不能只 print）：
 
-1. 随包初始化数据（initdata V1.12）确实落库：
-   - 常用字规模 ≥ 3400（一级字表 3500，源数据缺 4 个生僻字）
+1. 汉字库确实落库（initdata V1.12 种子 + HANZI 采集扩容）：
+   - 规模 ≥ 7400（收录目标为通用规范汉字表 8105；实测 7420 = 种子 3497 +
+     采集新增，缺口是公开词典 word.json 未收录的三级生僻字，与
+     「一级字表 3500 缺 4 个」同源，不是链路问题）
+   - **口径：不分学段、全通用**（2026-10-08 变更）：学段列归一为 NULL/空，
+     旧口径固定「小学」与 8105 的收录范围自相矛盾；前端空=不过滤
    - 抽查字的拼音/笔画/部首/结构/释义字段齐全
    - **既有数据未被覆盖**：V1.10 里带笔顺的「人」仍保留 hanzi_stroke_order
      （种子用 INSERT IGNORE，若误改成 UPDATE 覆盖，这条会失败）
@@ -118,13 +122,17 @@ def page_hanzi(token, keyword=None, page_num=1, page_size=100):
     return c, data.get("total") or 0, page_rows(d)
 
 
-def load_index(token, chars, page_size=500, max_pages=12):
+def load_index(token, chars, page_size=500, max_pages=24):
     """按分页扫描建 {字: 行} 索引，返回 (索引, 扫过的页数, 总数)。
 
     为什么不用 keyword 查单字：keyword 同时匹配「字 / 拼音 / 释义」，
     查「明」会命中成千上万条「释义里含明」的行（如「聪明」），
     目标字自己未必落在前 50 条 —— 那样断言会**假失败**。
     分页扫一遍既确定又不依赖排序。
+
+    注意：业务表排序为 hanzi_id DESC，种子行（id 小）在**尾部**；
+    max_pages 必须覆盖全表（当前 7420 行，page_size 500 需 ≥ 15 页），
+    否则 find_by_keyword 兜底会漏掉 VC——旧 12 页上限漏了 V1.12 老行。
     """
     want = set(chars)
     index = {}
@@ -168,7 +176,10 @@ def main():
     print("########## 1. seed data landed ##########")
     c, total, _ = page_hanzi(admin, page_size=1)
     ck("hanzi page api", c == 200, "http=%d" % c)
-    ck("seed row count >= 3400", total >= 3400, "total=%d" % total)
+    # 收录目标 8105（通用规范汉字表）；公开词典实际可覆盖 7420 行。
+    # 阈值卡在「明显高于种子 3497」的下限：源数据缺口不算回归，
+    # 采集链路没跑（缺 600+ 行）才算。
+    ck("hanzi row count >= 7400 (8105 目标)", total >= 7400, "total=%d" % total)
 
     for char, (pinyin, strokes) in SPOT.items():
         row = find_by_keyword(admin, char)
@@ -183,8 +194,11 @@ def main():
            "got=%s" % row.get("hanziRadical"))
         ck("spot %s has meaning" % char, bool(row.get("hanziMeaning")),
            "len=%s" % len(row.get("hanziMeaning") or ""))
-        ck("spot %s grade level" % char, row.get("hanziGradeLevel") == "小学",
-           "got=%s" % row.get("hanziGradeLevel"))
+        # 口径（2026-10-08 变更）：通用规范汉字表全量、**不分学段**，
+        # 学段列归一为 NULL/空 ——「空」= 通用/不限（前端空=不过滤）。
+        # 旧口径固定「小学」（V1.10/V1.12 时代），与新收录范围自相矛盾，已推翻。
+        ck("spot %s grade level 通用(空)" % char, not row.get("hanziGradeLevel"),
+           "got=%s" % (row.get("hanziGradeLevel") or "通用(空)"))
     # 结构字段：IDS 不可靠时留空，这里只断言「有结构的字结构必须在白名单内」
     struct_bad = []
     for char in list(SPOT) + ["丁", "森", "远", "问", "林"]:
@@ -214,9 +228,19 @@ def main():
         # 出题接口的字段名是 pinyin/strokes/meaning/radical（不是库表列名），
         # 所以这里必须按**键**判断，不能拿值去搜中文词 —— 上一版就这么写错了，
         # 结果 meaning 有值却判成 False。
-        ck("practice question carries stroke/meaning context",
-           bool(q0.get("strokes")) and bool(q0.get("meaning")),
-           "strokes=%s meaning_len=%s" % (q0.get("strokes"), len(str(q0.get("meaning") or ""))))
+        #
+        # 注意 word.json 有 472 字无释义（源覆盖上限 ~6948/7420），
+        # 随机抽题可能命中无释义的字。因此不用「单题有释义」硬断言，
+        # 改为按 8 题聚合：笔画几乎所有字都有（7419/7420，允许 ≤1 例缺失向），
+        # 释义但须至少带出 1 条（证明字段链路在）。
+        with_strokes = sum(1 for q in qs if q.get("strokes"))
+        with_meaning = sum(1 for q in qs if q.get("meaning"))
+        ck("practice questions carry strokes context",
+           with_strokes >= len(qs) - 1,
+           "with_strokes=%d/%d" % (with_strokes, len(qs)))
+        ck("practice questions carry meaning context",
+           with_meaning >= 1,
+           "with_meaning=%d/%d (源释义覆盖 6948/7420)" % (with_meaning, len(qs)))
 
     print("########## 3. collect task registered ##########")
     c, d = req("GET", "/v2/edu/collect/source-types", token=admin)
