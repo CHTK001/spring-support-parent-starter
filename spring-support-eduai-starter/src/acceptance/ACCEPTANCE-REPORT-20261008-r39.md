@@ -22,7 +22,7 @@
 
 ### 1.1 方法与判定
 
-- 工具：`src/acceptance/ui-full-click-acceptance.ps1`（本轮修订 `8becd4bab`）
+- 工具：`src/acceptance/ui-full-click-acceptance.ps1`（本轮修订 `8becd4bab` + `c85c5e9b7`）
 - 覆盖：30 条路由（含 audit-found 页面 `/edu/fun/insect-card`、`/edu/fun/idiom-card`、`/edu/schedule` 等）+ chrome 阶段（顶栏/侧栏/菜单/标签页）
 - 两阶段遍历：内容控件（按钮/图标钮/开关/单选/复选/分页/排序/搜索清除…）→ 弹框与 popper 展开遍历（Element Plus teleport 到 body 的下拉/气泡/弹框控件）
 - 失败判定：未捕获页面错误 / console error / HTTP ≥ 500 / 白屏（bodyLen≤30）；「点击无任何可观测效果」单独记 dead
@@ -53,13 +53,16 @@ routes 30 | clicks 918 | passed 985 | failed 1 | dead 0 | harness-err 0 | skippe
 - 结论：工具误报 → 二次修复工具（chrome 健康判定前加同款有界空白重试 5×1.2s，真白屏仍失败），提交 `c85c5e9b7`
 - 矩阵产物：`click-matrix-admin-20261008-1309.md/csv`（`D:\ch\project\.tmp\click-run-20261008-1255\`）
 
-**第三遍（chrome 竞态补丁后，13:18 → 完成）：**
+**第三遍（chrome 竞态补丁后；重跑为终稿）：**
+
+- 首次尝试 13:14 启动，13:56 被**外部环境服务重启**中断（无矩阵产物，弃用；同刻本机浏览器服务一并重启，与本会话验收对象无关的环境事故）
+- 重跑（15:01:19 启动 → 完成）：
 
 ```
 【RUN3-SUMMARY】
 ```
 
-- 矩阵产物：`click-matrix-admin-<stamp>.md/csv`（见 §7）
+- 矩阵产物：`click-matrix-admin-<stamp>.md/csv`（`D:\ch\project\.tmp\click-run-20261008-1508\`）
 
 ### 1.3 student 轮（`-Role student -ChromeForStudent`）
 
@@ -158,7 +161,8 @@ EXITCODE=0；dead clicks (none)；failures (none)
 | `click-run-20261008-1107\` | admin 第一遍矩阵（click-matrix-admin-20261008-1148.md/csv）+ 路由截图 | — |
 | `click-run-student-20261008-1110\` | student 轮矩阵（click-matrix-student-20261008-1221.md/csv）+ 路由截图 | — |
 | `click-run-20261008-1255\` | admin 第二遍矩阵（click-matrix-admin-20261008-1309.md/csv）+ 路由截图 | — |
-| `click-run-20261008-1318\` | admin 第三遍（全量终稿）矩阵 + 路由截图 | — |
+| `click-run-20261008-1318\` | admin 第三遍首次尝试 —— 13:56 被外部环境服务重启中断，无矩阵，弃用 | — |
+| `click-run-20261008-1508\` | admin 第三遍（全量终稿）矩阵 + 路由截图 | — |
 
 ## 8. 结论
 
