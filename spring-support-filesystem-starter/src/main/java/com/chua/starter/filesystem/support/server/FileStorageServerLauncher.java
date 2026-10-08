@@ -225,6 +225,9 @@ public class FileStorageServerLauncher implements AutoCloseable {
                 .layout(properties.isLayout())
                 .layoutType(properties.getLayoutType())
                 .imageFilter(properties.getImageFilter())
+                .openPathGuard(properties.isOpenPathGuard())
+                .imageFilterEnabled(properties.isImageFilterEnabled())
+                .filterChain(properties.getFilterChain())
                 .build();
     }
 
