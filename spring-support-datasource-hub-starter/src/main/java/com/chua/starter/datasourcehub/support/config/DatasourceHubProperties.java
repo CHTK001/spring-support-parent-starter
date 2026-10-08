@@ -27,6 +27,17 @@ public class DatasourceHubProperties {
     private long connectionTtlMinutes = 10L;
 
     /**
+     * 空闲连接后台清扫周期（毫秒），默认 60 秒，0 = 关闭清扫。
+     *
+     * <p>{@link ExpireValue} 的过期是<b>惰性</b>的 —— 只有下一次取连接时才会触发
+     * 过期回调去关闭物理连接；数据源一旦闲置（页面关了、当天不再查询），那条连接
+     * 会一直挂到进程重启或数据源被删除。这里给后台一个定期主动核对的节拍：
+     * 到期的连接由清扫任务触发同一套过期回调关闭，既不泄漏 socket，
+     * 也不影响 TTL 内的复用（正在使用的连接刚刷新过、不会处于过期态）。</p>
+     */
+    private long connectionSweepIntervalMs = 60_000L;
+
+    /**
      * 连通性探测超时（毫秒）
      */
     private int probeTimeoutMs = 5000;
@@ -43,6 +54,20 @@ public class DatasourceHubProperties {
      * 写错单位会让「30 秒」变成 30 毫秒（必超时）或 30 万秒（等于没设）。</p>
      */
     private int connectTimeoutSeconds = 30;
+
+    /**
+     * SQL 执行超时（秒），0 = 不设上限（沿用驱动/数据库默认）。
+     *
+     * <p>对应 JDBC {@code Statement.setQueryTimeout}：一条失控的 SQL（大表全表扫描、
+     * 行锁/表锁等待、笛卡尔积）默认会让请求**无限期**挂在数据库侧 —— 前端表现为
+     * 「执行按钮一直转圈直到网关超时」（用户实测：{@code timeout of 10000ms exceeded}），
+     * 既看不到错误也取消不了。设成有界值后驱动抛 {@code SQLTimeoutException}，
+     * 接口正常失败并把原因带回界面。</p>
+     *
+     * <p>只约束语句级执行（查询/批量/单语句事务），不影响连接本身的建连超时；
+     * 按库的慢查询水位调整，0 关闭。</p>
+     */
+    private int queryTimeoutSeconds = 60;
 
     /**
      * 上传的 JDBC 驱动 jar 落盘目录。

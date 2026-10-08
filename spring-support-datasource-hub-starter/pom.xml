@@ -51,6 +51,15 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- AI 文本生成 SQL（text2sql）：optional —— 只有宿主应用同时引入 ai-starter 时
+             该能力才生效；未引入时 ObjectProvider 取不到实现，ai/status 端点如实上报
+             「不可用」，前端据隐藏 text2sql 入口（不会因缺包而启动失败）。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-ai-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- SSH 隧道（高级配置）：复用 utils 层已有的 MINA SSHD 客户端，
              其 SshTunnel 已支持 LOCAL/REMOTE(-R 反向)/DYNAMIC(SOCKS5)，
              故本模块不再单独引入任何 SSH 第三方依赖 -->
