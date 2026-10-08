@@ -1013,6 +1013,87 @@ public class AiSessionController {
     }
 
     /**
+     * 读取工作目录内的**文本文件**（前端文本预览）。
+     *
+     * <p>此前后端只实现了 {@code /workspace/tree}，而前端取正文走的是
+     * {@code /workspace/file} —— 该端点从未实现（恒 404），所以「文本文件无法预览」
+     * （用户报障 2.1）。这里补齐：越界校验 + 大小上限（2MB）+ 扩展名派生。</p>
+     */
+    @GetMapping("/{id}/workspace/file")
+    public ReturnResult<Map<String, Object>> workspaceFile(@PathVariable("id") String id,
+                                                          @RequestParam("path") String path) {
+        java.nio.file.Path root = resolveAgentWorkspace();
+        if (root == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "工作目录未配置");
+        }
+        java.nio.file.Path target = root.resolve(path == null ? "" : path).normalize();
+        if (!target.startsWith(root)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "路径越界");
+        }
+        if (!java.nio.file.Files.isRegularFile(target)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "文件不存在");
+        }
+        try {
+            long size = java.nio.file.Files.size(target);
+            if (size > 2L * 1024 * 1024) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE, "文件过大（上限 2MB）");
+            }
+            String name = target.getFileName().toString();
+            int dot = name.lastIndexOf('.');
+            String ext = dot > 0 ? name.substring(dot) : "";
+            Map<String, Object> data = new java.util.LinkedHashMap<>(4);
+            data.put("content", java.nio.file.Files.readString(target, java.nio.charset.StandardCharsets.UTF_8));
+            data.put("extension", ext);
+            data.put("name", name);
+            data.put("size", size);
+            return ReturnResult.ok(data);
+        } catch (java.io.IOException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR, "读取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 读取工作目录内的**原始字节**（图片等二进制预览）。
+     *
+     * <p>与 {@link #workspaceFile} 同因：前端用 {@code /workspace/raw-file} 取图，
+     * 后端未实现 → 图片预览也失败。这里按后缀给 Content-Type，越界/不存在返回 404。</p>
+     */
+    @GetMapping("/{id}/workspace/raw-file")
+    public org.springframework.http.ResponseEntity<byte[]> workspaceRawFile(@PathVariable("id") String id,
+                                                                           @RequestParam("path") String path) {
+        java.nio.file.Path root = resolveAgentWorkspace();
+        if (root == null) {
+            return org.springframework.http.ResponseEntity
+                    .status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        java.nio.file.Path target = root.resolve(path == null ? "" : path).normalize();
+        if (!target.startsWith(root) || !java.nio.file.Files.isRegularFile(target)) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        try {
+            byte[] bytes = java.nio.file.Files.readAllBytes(target);
+            String lower = target.getFileName().toString().toLowerCase();
+            String ct = lower.endsWith(".png") ? "image/png"
+                    : (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) ? "image/jpeg"
+                    : lower.endsWith(".gif") ? "image/gif"
+                    : lower.endsWith(".webp") ? "image/webp"
+                    : lower.endsWith(".svg") ? "image/svg+xml"
+                    : "application/octet-stream";
+            return org.springframework.http.ResponseEntity.ok()
+                    .header("Content-Type", ct)
+                    .body(bytes);
+        } catch (java.io.IOException e) {
+            return org.springframework.http.ResponseEntity
+                    .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * 解析当前账号的工作目录（{@code <基路径>/<账号标识>/agent}）。
      *
      * <p>账号标识做安全清洗，并在解析后校验仍落在基路径内，防 {@code ../} 越界。</p>
