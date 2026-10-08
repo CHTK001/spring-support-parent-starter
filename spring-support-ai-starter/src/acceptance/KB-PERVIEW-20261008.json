@@ -1,0 +1,81 @@
+{
+  "base": "http://localhost:15689",
+  "pass": 98,
+  "fail": 0,
+  "warn": 110,
+  "views": [
+    {
+      "tab": "概览",
+      "switched": true,
+      "clickable": 24,
+      "clicked": 13,
+      "skipped": 2,
+      "warn": 9,
+      "fails": []
+    },
+    {
+      "tab": "文档",
+      "switched": true,
+      "clickable": 37,
+      "clicked": 12,
+      "skipped": 2,
+      "warn": 23,
+      "fails": []
+    },
+    {
+      "tab": "搜索",
+      "switched": true,
+      "clickable": 27,
+      "clicked": 12,
+      "skipped": 2,
+      "warn": 13,
+      "fails": []
+    },
+    {
+      "tab": "知识图谱",
+      "switched": true,
+      "clickable": 26,
+      "clicked": 13,
+      "skipped": 2,
+      "warn": 11,
+      "fails": []
+    },
+    {
+      "tab": "智能问答",
+      "switched": true,
+      "clickable": 28,
+      "clicked": 12,
+      "skipped": 2,
+      "warn": 14,
+      "fails": []
+    },
+    {
+      "tab": "实体管理",
+      "switched": true,
+      "clickable": 29,
+      "clicked": 12,
+      "skipped": 3,
+      "warn": 14,
+      "fails": []
+    },
+    {
+      "tab": "关系管理",
+      "switched": false,
+      "clickable": 37,
+      "clicked": 12,
+      "skipped": 2,
+      "warn": 23,
+      "fails": []
+    },
+    {
+      "tab": "设置",
+      "switched": false,
+      "clickable": 16,
+      "clicked": 12,
+      "skipped": 1,
+      "warn": 3,
+      "fails": []
+    }
+  ],
+  "kbId": "01a119dd-9aed-70c0-859c-0742724b6e38"
+}
