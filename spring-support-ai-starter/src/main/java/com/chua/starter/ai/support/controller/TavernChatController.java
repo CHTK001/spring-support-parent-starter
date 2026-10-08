@@ -364,11 +364,22 @@ public class TavernChatController {
     }
 
     private String resolveModel(SysAiTavernMember member, SysAiRole role) {
+        // 成员模型 / 角色模型在库里可能是「providerId:模型名」或「provider名:模型名」的限定写法
+        // （前端模型选择器落库的就是限定写法）。这里必须与 getDefaultModel() 同口径，
+        // 交给 EffectiveChatModelResolver 归一化：命中已启用模型就用其裸模型名，
+        // 否则逐级回落默认模型。直接返回限定串会让「模型管理里根本没有这个名字」，
+        // 全部成员的回复都以「No available ChatClient」失败（用户报障：AI 全报错）。
         if (member.getModelOverride() != null && !member.getModelOverride().isBlank()) {
-            return member.getModelOverride();
+            String resolved = effectiveChatModelResolver.resolve(member.getModelOverride());
+            if (resolved != null && !resolved.isBlank()) {
+                return resolved;
+            }
         }
         if (role != null && role.getModel() != null && !role.getModel().isBlank()) {
-            return role.getModel();
+            String resolved = effectiveChatModelResolver.resolve(role.getModel());
+            if (resolved != null && !resolved.isBlank()) {
+                return resolved;
+            }
         }
         return getDefaultModel();
     }
