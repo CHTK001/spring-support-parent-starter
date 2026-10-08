@@ -523,7 +523,42 @@ public class EduPaperScanner {
         if (no == null) {
             return;
         }
-        list.add(new ScannedQuestion(no, null, answer.toString().trim()));
+        list.add(new ScannedQuestion(no, null, stripAnswerNoise(answer.toString().trim())));
+    }
+
+    /**
+     * 行内大节标题污染：空白 + 中文序号（一、二、…）+ 分隔符。
+     */
+    private static final java.util.regex.Pattern CN_SECTION_AT =
+            java.util.regex.Pattern.compile("\\s+[一二三四五六七八九十]{1,3}\\s*[、.．]");
+
+    /**
+     * 作答文本降噪：OCR 可能把「大节标题」与作答并进同一文字块，行首过滤拦不住时在此剪除。
+     *
+     * <p>只剪「空白 + 中文序号 + 含『题』『分』分值要素 + 直到行尾」的尾段 ——
+     * 覆盖实测的「…（×） 二、判断。对的打√，错的打×。（每题5分）」类污染；
+     * 正常作答里的中文序号不在行尾、也不带分值要素，不受影响。</p>
+     *
+     * @param answer 原始作答
+     * @return 降噪后的作答
+     */
+    private static String stripAnswerNoise(String answer) {
+        if (answer == null || answer.isEmpty()) {
+            return answer;
+        }
+        int cut = -1;
+        var m = CN_SECTION_AT.matcher(answer);
+        while (m.find()) {
+            String rest = answer.substring(m.end());
+            if (rest.contains("题") && rest.contains("分")) {
+                cut = m.start();
+            }
+        }
+        if (cut > 0) {
+            log.info("[EduScan] 作答尾部大节标题污染已剪除: {}", StringUtils.substring(answer, cut, cut + 40));
+            return answer.substring(0, cut).trim();
+        }
+        return answer;
     }
 
     /**
@@ -613,11 +648,15 @@ public class EduPaperScanner {
      * @return 是否大节标题
      */
     private static boolean isSectionHeader(String line) {
-        if (line == null || line.length() > 16) {
+        if (line == null) {
             return false;
         }
         if (CN_SECTION_NO.matcher(line).find()) {
-            return true;
+            // 「一、…」开头：真实大节标题常带「（每题X分）」分值后缀，整体可超 16 字 ——
+            // 实测「二、判断。对的打√，错的打×。（每题5分）」21 字漏过 16 字闸，
+            // 被当续行并进上一题作答、把全对作答污染成 0 分。短行按标题收；
+            // 长行必须同时含「题」「分」两个分值要素才收，避免误伤以中文序号开头的长作答。
+            return line.length() <= 16 || (line.contains("题") && line.contains("分"));
         }
         return line.length() <= 10 && SECTION_KEYWORD.matcher(line).find();
     }
@@ -760,13 +799,19 @@ public class EduPaperScanner {
         String userPrompt = """
                 外来试卷没有标准答案，请依据学科常识判断作答是否正确，并给出简短评语（不超过 50 字）。
 
+                判定要求：
+                1. 作答可能写成「答：X」，或夹带题面文字/栏目字样（如「（每题5分）」），只取学生的实质作答判定；
+                2. 比较类填空（在 ○ / ☐ 里填 >、< 或 =）：先分别算出两边数值，再核对所填符号；
+                3. 判断题（对/错、√/×）：先核算题干陈述本身是否正确，再与学生所写比对；
+                4. 无法辨认或明显残缺的作答按错误处理，并在评语里注明原因。
+
                 题干: %s
                 学生作答: %s
                 满分: %d
 
                 输出 JSON Schema:
                 {"score": 3, "comment": "评语"}
-                注意：评分为 0~%d 之间的整数，只返回 JSON。
+                注意：评分为 0~%d 之间的整数，无论对错都必须给出具体评语，只返回 JSON。
                 """.formatted(question.stem() == null ? "" : question.stem(),
                 question.answer() == null ? "" : question.answer(), maxScore, maxScore);
         try {
@@ -876,7 +921,7 @@ public class EduPaperScanner {
                 if (StringUtils.isBlank(no) && StringUtils.isBlank(stem)) {
                     continue;
                 }
-                list.add(new ScannedQuestion(no, stem, answer, score));
+                list.add(new ScannedQuestion(no, stem, stripAnswerNoise(answer), score));
             }
             log.info("[EduScan] 抽取题目 {} 道", list.size());
         } catch (Exception e) {
