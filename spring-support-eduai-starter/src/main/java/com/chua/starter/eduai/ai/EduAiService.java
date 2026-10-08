@@ -15,10 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 教育 AI 业务使用的统一 AI 调用服务。
@@ -195,6 +198,15 @@ public class EduAiService {
                 你是资深教研专家，擅长根据学科、年级、知识点、题型、难度智能组卷。
                 你必须只返回 JSON，禁止任何解释或 Markdown。
                 """;
+        // 候选题目必须随 Prompt 一起给模型：早期 Prompt 未给候选、示例又写死 [101,102,103]，
+        // 实测模型直接照抄示例数字（101~105 既非本学科也不存在于题库），落库后成为悬空引用。
+        String candidateIdList = fallbackIds == null || fallbackIds.isEmpty()
+                ? ""
+                : fallbackIds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+        String exampleIds = fallbackIds == null || fallbackIds.isEmpty()
+                ? ""
+                : fallbackIds.stream().limit(Math.min(3, fallbackIds.size()))
+                        .map(String::valueOf).collect(Collectors.joining(", "));
         String userPrompt = String.format("""
                 请根据下列要求，输出 JSON 格式的组卷结果。
 
@@ -212,26 +224,43 @@ public class EduAiService {
                 */
                 关联知识点ID(逗号分隔): %s
                 题目数量: %d
+                候选题目ID（只能从这份列表中选择，不得编造）: %s
 
                 输出 JSON Schema:
                 {
-                  "questionIds": [101, 102, 103]
+                  "questionIds": [%s]
                 }
 
                 注意：
                 1. 只返回 JSON，不要 ``` 包裹
-                2. questionIds 中的数字是题库中的题目ID，必须是整数
+                2. questionIds 中的数字必须来自上面的「候选题目ID」列表，必须是整数
                 3. 如果无法满足要求，questionIds 返回空数组
                 """,
                 subject, gradeLevel, grade,
                 String.join(",", types == null ? List.of() : types),
                 knowledgeIds == null ? "" : knowledgeIds.toString(),
-                count
+                count,
+                candidateIdList,
+                exampleIds
         );
 
         try {
             ChatResponse response = call(systemPrompt, userPrompt);
             List<Long> ids = parseLongArray(response.content(), "questionIds");
+            // 只信任候选池里的题号：模型可能编造或照抄示例。候选池之外的 ID 一律丢弃，
+            // 否则会落库成悬空引用/跨学科混题，破坏试卷结构（数据完整性）。
+            if (fallbackIds != null && !fallbackIds.isEmpty()) {
+                Set<Long> candidateSet = new HashSet<>(fallbackIds);
+                List<Long> validIds = ids.stream()
+                        .filter(id -> id != null && candidateSet.contains(id))
+                        .distinct()
+                        .collect(Collectors.toList());
+                if (validIds.size() < ids.size()) {
+                    log.warn("[EduAi] AI 返回 {} 个题号，其中 {} 个不在候选池，已丢弃", ids.size(),
+                            ids.size() - validIds.size());
+                }
+                ids = validIds;
+            }
             if (ids.isEmpty()) {
                 log.warn("[EduAi] AI 组卷返回空，使用回退题目");
                 return fallbackIds == null ? new ArrayList<>() : new ArrayList<>(fallbackIds);
