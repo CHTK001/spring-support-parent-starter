@@ -159,6 +159,15 @@ function Reset-Browser {
             Write-Host ('    [browser] stopped unresponsive daemon pid={0}' -f $dpid)
         }
     }
+    # 2026-10-08 sweep #3b: the daemon died at /edu/hanzi while the box was low on RAM and
+    # the restart above never took -- every later route failed with "transport failure
+    # after daemon restart". Killing the daemon leaves its browser tree behind holding the
+    # user-data-dir lock, so the fresh daemon cannot bring up a usable browser. Sweep this
+    # namespace's browser processes by command line as well -- the profile path carries the
+    # namespace name, so this can never touch another session's browser.
+    Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like '*eduai-acceptance*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     Get-ChildItem $nsDir -Filter 'default.*' -ErrorAction SilentlyContinue |
         Remove-Item -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
@@ -170,6 +179,7 @@ function Ensure-Browser {
     Write-Host '    [browser] transport unresponsive; restarting this namespace daemon and re-login'
     [void](Reset-Browser)
     if (-not (Test-BrowserAlive)) { Start-Sleep -Seconds 4 }
+    if (-not (Test-BrowserAlive)) { [void](Reset-Browser); Start-Sleep -Seconds 4 }
     if (-not (Test-BrowserAlive)) { return $false }
     [void](Invoke-Login -Quiet)
     return $true
