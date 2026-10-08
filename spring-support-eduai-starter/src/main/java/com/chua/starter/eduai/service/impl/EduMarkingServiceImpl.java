@@ -1350,12 +1350,31 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return 满分；缺失时回退配置值
      */
     private int parseDetailMaxScore(String detail) {
+        Integer v = parseDetailMaxScoreOrNull(detail);
+        return v != null ? v : properties.getMarking().getMaxScore();
+    }
+
+    /**
+     * 从 detail JSON 取本题满分（可空版本）。
+     *
+     * <p>扫描链路（SELF/ANY）判分实际采用的是卷面分值（SELF 为 paper_question_score，
+     * ANY 为卷面抽取分值），结果行 detail 里已经存了真实满分；题库分值/配置默认值
+     * 与卷面分值可能不一致（实测 SELF 卷每题 10 分、默认口径 5 分），只信 detail
+     * 才不会出现「得分 10 / 满分 5」与教师修正被钳到 5 分的错位。</p>
+     *
+     * @param detail 详情 JSON
+     * @return 满分；缺失/非法时 null
+     */
+    private Integer parseDetailMaxScoreOrNull(String detail) {
+        if (detail == null || detail.isBlank()) {
+            return null;
+        }
         try {
             var node = MAPPER.readTree(detail);
             int v = node.path("maxScore").asInt(0);
-            return v > 0 ? v : properties.getMarking().getMaxScore();
+            return v > 0 ? v : null;
         } catch (Exception e) {
-            return properties.getMarking().getMaxScore();
+            return null;
         }
     }
 
@@ -1848,7 +1867,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             qr.setNo(no == null ? null : String.valueOf(no));
             Object answer = detail.get("studentAnswer");
             qr.setStudentAnswer(answer == null ? null : String.valueOf(answer));
-            qr.setMaxScore(fullScores.getOrDefault(r.getMarkingResultQuestionId(), fallbackScore));
+            // 扫描链路 detail 里存的是判分实际采用的卷面满分，优先用它，
+            // 避免「得分 10 / 满分 5」这类满分口径错位（教师修正上限同源）
+            Integer detailMax = parseDetailMaxScoreOrNull(r.getMarkingResultDetail());
+            qr.setMaxScore(detailMax != null ? detailMax
+                    : fullScores.getOrDefault(r.getMarkingResultQuestionId(), fallbackScore));
             qr.setScore(r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
             qr.setTeacherScore(r.getMarkingResultTeacherScore());
             qr.setComment(r.getMarkingResultAiComment());
@@ -1886,7 +1909,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 continue;
             }
             EduUserContext.checkWritable(result.getOwnerUserId());
-            Integer maxScore = fullScores.getOrDefault(result.getMarkingResultQuestionId(), fallbackScore);
+            // 教师修正上限：与结果行一致，优先用 detail 里判分实际采用的卷面满分，
+            // 否则 SELF 卷（卷面 10 分）上教师只能改到题库默认的 5 分
+            Integer detailMax = parseDetailMaxScoreOrNull(result.getMarkingResultDetail());
+            Integer maxScore = detailMax != null ? detailMax
+                    : fullScores.getOrDefault(result.getMarkingResultQuestionId(), fallbackScore);
             Integer score = clampScore(adj.getScore(), maxScore);
             if (score != null && !score.equals(adj.getScore())) {
                 log.warn("[EduAi] 教师修正分数超出卷面满分，已收敛: resultId={}, questionId={}, 提交={}, 满分={}, 采用={}",
