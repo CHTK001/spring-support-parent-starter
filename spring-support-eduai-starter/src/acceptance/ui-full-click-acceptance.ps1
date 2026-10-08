@@ -1611,6 +1611,20 @@ if (-not $SkipContent) {
                 WaitJs '!document.querySelector(".el-loading-mask")' 12 | Out-Null
                 Start-Sleep -Milliseconds 600
                 $after = (Js $jsProbe) | ConvertFrom-Json
+                # A click that opens a POPUP (e.g. the idiom learn-card via window.open,
+                # name 'eduai-idiom-learn') switches the daemon's active tab to the new
+                # window while it is still booting: about:blank already reports
+                # readyState "complete" and has no loading mask, so the waits above pass
+                # instantly and bodyLen=0 -- a perfectly healthy page judged blank
+                # (observed 2026-10-08 admin sweep: fun-idiom -> /edu/fun/idiom-card).
+                # Re-probe while the body is still empty: real blank pages stay blank
+                # through every retry and still fail; booting popups get their chance.
+                $blankRetries = 0
+                while (($after.bodyLen -le 30) -and ($blankRetries -lt 5)) {
+                    Start-Sleep -Milliseconds 1200
+                    $after = (Js $jsProbe) | ConvertFrom-Json
+                    $blankRetries++
+                }
                 $ev = Read-Evidence
                 Ck "$rname/$($it.kind) '$($it.label)' navigates to a healthy page" `
                     (($after.bodyLen -gt 30) -and ($ev.pageErr -eq 0) -and ($ev.consoleErr -eq 0) -and ($ev.http5xx -eq 0)) `
