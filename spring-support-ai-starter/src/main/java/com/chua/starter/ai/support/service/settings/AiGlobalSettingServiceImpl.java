@@ -73,7 +73,7 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         // 也避免整包 PUT 把已删除的引擎字段重新写回数据库、让设置接口再次把它暴露出去。
         m.put("ragEmbeddingModel", new String[]{"rag", "rag_embedding_model_name"});
         m.put("ragLlmModel", new String[]{"rag", "rag_llm_model"});
-        m.put("ragOcrModel", new String[]{"rag", "rag_ocr_model"});
+        // ragOcrModel 已移除：OCR 统一走 ocr 分组（见 OcrClientManager），RAG 组不再单独配 OCR。
         m.put("ragUploadDir", new String[]{"rag", "rag_upload_dir"});
         m.put("ragVectorStorage", new String[]{"rag", "rag_vector_storage"});
         m.put("ragVectorStorageConfig", new String[]{"rag", "rag_vector_storage_config"});
@@ -104,7 +104,6 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         dto.setSystemPrompt(getStr("systemPrompt"));
         dto.setRagEmbeddingModel(getStr("ragEmbeddingModel"));
         dto.setRagLlmModel(getStr("ragLlmModel"));
-        dto.setRagOcrModel(getStr("ragOcrModel"));
         dto.setRagUploadDir(getStr("ragUploadDir"));
         dto.setRagVectorStorage(getStr("ragVectorStorage"));
         dto.setRagVectorStorageConfig(readVectorStorageConfig());
@@ -197,12 +196,6 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
          * @param setting.getRagLlmModel( setting.获取ragllm模型(
          */
         put("ragLlmModel", setting.getRagLlmModel());
-        /**
-         * 放入。
-         * @param "ragOcrModel" "ragocr模型"
-         * @param setting.getRagOcrModel( setting.获取ragocr模型(
-         */
-        put("ragOcrModel", setting.getRagOcrModel());
         /**
          * 放入。
          * @param "ragUploadDir" "raguploaddir"
