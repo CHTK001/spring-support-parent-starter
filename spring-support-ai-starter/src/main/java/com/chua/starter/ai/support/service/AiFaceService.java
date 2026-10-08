@@ -4,6 +4,7 @@ import com.chua.deeplearning.support.face.FaceCompareResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
+import com.chua.deeplearning.support.face.FaceLandmarkResult;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
@@ -175,6 +176,18 @@ public interface AiFaceService {
     List<Map<String, Object>> list();
 
     /**
+     * 读一条人脸**登记时落存的裁剪图**（PNG）。
+     *
+     * <p>底库要「看图 + 画人脸特征点」，而缩略图此前只存在登记它的那个浏览器
+     * （localStorage）里 —— 换浏览器 / 换账号就没有图，也就无从绘制。
+     * 登记时把裁剪脸落存到服务端后，这两个能力不再绑定某一台浏览器。</p>
+     *
+     * @param id 人脸标识
+     * @return PNG 字节；改造前的老数据 / 落存失败时返回 空
+     */
+    byte[] faceImage(String id);
+
+    /**
      * 从**当前账号**人脸库里删除一条（向量索引与快照同步删除）。
      *
      * @param id 人脸 标识
@@ -263,6 +276,18 @@ public interface AiFaceService {
      * @return 关键点坐标
      */
     float[] landmark(byte[] imageData);
+
+    /**
+     * 人脸关键点**管线**（detect → 取最大脸 → 按框裁剪 → 关键点模型 → 映射回原图像素）。
+     *
+     * <p>与 {@link #landmark(byte[])} 的区别是坐标口径：后者把整图直接喂模型，返回的是
+     * 相对模型输入图的归一化坐标（±1），无法直接画在原图上；本方法返回**原图像素**坐标，
+     * 前端可直接叠加绘制。</p>
+     *
+     * @param imageData 图片字节
+     * @return 关键点结果（原图像素）；未配置关键点模型或未检出人脸时返回 空
+     */
+    FaceLandmarkResult landmarkPipeline(byte[] imageData);
 
     /**
      * 人脸质量评估（辅助能力）。

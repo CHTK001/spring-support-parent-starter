@@ -66,6 +66,8 @@ public class FaceStores {
     private static final String SNAPSHOT_NAME = "index.json";
     /** 账号目录下的子目录名 */
     private static final String LEAF = "face";
+    /** 登记图子目录名（账号目录下，与索引/快照同级） */
+    private static final String IMAGE_DIR = "img";
     /** 底库根目录的系统属性名（缺省为进程工作目录） */
     private static final String BASE_DIR_PROPERTY = "face.store.dir";
     /** 设置分组名（用于过滤设置变更事件） */
@@ -276,8 +278,77 @@ public class FaceStores {
         if (ok) {
             st.put(id, result.feature(), metadata);
             st.persist();
+            // 一并落存登记时用的裁剪脸：底库要「看图 + 画特征点」，
+            // 而缩略图此前只在登记它的浏览器里，换浏览器就没有图。
+            saveFaceImage(id, result.faceImage());
         }
         return ok;
+    }
+
+    /**
+     * 读一条人脸登记时落存的**裁剪图**。
+     *
+     * @param id 人脸标识
+     * @return PNG 字节；未落存（改造前的老数据 / 落存失败）时返回 空
+     */
+    public byte[] faceImage(String id) {
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        try {
+            Path file = faceImagePath(id);
+            return Files.exists(file) ? Files.readAllBytes(file) : null;
+        } catch (Exception e) {
+            log.warn("[Face] 读登记图失败: id={} -> {}", id, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 落存登记时的人脸**裁剪图**（best-effort）。
+     *
+     * <p>为什么存的是裁剪脸而不是原图：一是不必保存整张原图（隐私暴露面更小），
+     * 二是特征点正是在同一裁剪口径上取的，前端拿它画点最直观。</p>
+     *
+     * <p>失败只记 WARN，绝不影响登记结果 —— 图属于增强展示，向量与档案才是主体。</p>
+     *
+     * @param id   人脸标识
+     * @param face 裁剪人脸图字节（可能为 空）
+     */
+    private void saveFaceImage(String id, byte[] face) {
+        if (face == null || face.length == 0) {
+            return;
+        }
+        try {
+            Path file = faceImagePath(id);
+            Files.createDirectories(file.getParent());
+            Files.write(file, face);
+        } catch (Exception e) {
+            log.warn("[Face] 登记图落存失败（不影响登记）: id={} -> {}", id, e.getMessage());
+        }
+    }
+
+    /**
+     * 删除一条人脸时同步删掉它的登记图（best-effort）。
+     *
+     * @param id 人脸标识
+     */
+    private void deleteFaceImage(String id) {
+        try {
+            Files.deleteIfExists(faceImagePath(id));
+        } catch (Exception e) {
+            log.debug("[Face] 删除登记图失败: id={} -> {}", id, e.getMessage());
+        }
+    }
+
+    /**
+     * 某条人脸的登记图路径（{@code <账号>/face/img/<id>.png}）。
+     *
+     * @param id 人脸标识
+     * @return 文件路径
+     */
+    private Path faceImagePath(String id) {
+        return st().dir.resolve(IMAGE_DIR).resolve(sanitize(id) + ".png");
     }
 
     /**
@@ -301,6 +372,8 @@ public class FaceStores {
         AccountFace st = st();
         st.snapshot.remove(id);
         st.persist();
+        // 登记图与档案同生命周期，别留孤儿文件
+        deleteFaceImage(id);
         VectorStorage storage = st.storage();
         if (storage == null) {
             return false;
@@ -328,6 +401,9 @@ public class FaceStores {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", e.getKey());
             row.put("metadata", e.getValue().metadata() == null ? Map.of() : e.getValue().metadata());
+            // 顺带回一个「服务端有没有登记图」的布尔：底库要区分
+            // 「图在服务端」和「只有登记它的那台浏览器本地有图」，否则统计卡与筛选都是假数。
+            row.put("hasImage", Files.exists(faceImagePath(e.getKey())));
             out.add(row);
         }
         return out;
