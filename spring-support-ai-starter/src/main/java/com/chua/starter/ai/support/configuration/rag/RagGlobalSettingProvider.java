@@ -47,7 +47,6 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("rag_chunk_size", "1000", "NUMBER", "分块大小", 4),
                 new SettingItem("rag_chunk_overlap", "200", "NUMBER", "分块重叠", 5),
                 new SettingItem("rag_upload_dir", "./rag-uploads", "STRING", "文档上传目录", 6),
-                new SettingItem("rag_ocr_model", "", "STRING", "OCR 识别模型（可选）", 7),
                 new SettingItem("rag_system_prompt", "", "STRING", "RAG 问答系统提示词（可选）", 8),
                 new SettingItem("rag_splitter", "sentence", "STRING", "文本分割器（sentence / regex / paragraph）", 9),
                 new SettingItem("rag_default_top_k", "5", "NUMBER", "默认检索 Top-K", 10),
