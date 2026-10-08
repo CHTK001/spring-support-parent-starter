@@ -595,8 +595,12 @@ CREATE TABLE IF NOT EXISTS edu_poem (
     create_by INT DEFAULT NULL,
     update_name VARCHAR(255) DEFAULT NULL,
     update_by INT DEFAULT NULL,
-      -- 古诗：同一「标题 + 作者」视为同一首（与采集入库处理器的唯一键一致），保证种子脚本幂等,
-    UNIQUE KEY uk_edu_poem_title_author (poem_title(191), poem_author(64))
+      -- 古诗：同一「标题 + 作者」视为同一首（与采集入库处理器的唯一键一致），保证种子脚本幂等。
+      -- 必须是全列、不得用 191 前缀：采集器按「全等匹配」查重（WHERE title=? AND author=?），
+      -- 而前缀唯一索引会让共享前 191 字符的长标题变体（如《…（酒令）》组诗）既查不到、又插不进，
+      -- 触发 DuplicateKeyException 令整批采集中止（2026-10-08 补采实案：6 变体×同一前缀）。
+      -- 255 字符 × 4 字节 = 1020B，Dynamic 行格式上限 3072B，可全列索引。
+    UNIQUE KEY uk_edu_poem_title_author (poem_title, poem_author)
 );
 
 -- ----------------------------
