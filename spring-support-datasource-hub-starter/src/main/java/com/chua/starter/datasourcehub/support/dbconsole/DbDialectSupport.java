@@ -71,6 +71,84 @@ public final class DbDialectSupport {
     }
 
     /**
+     * 新建表（跨方言）。
+     *
+     * <p>此前数据库管理器的「新建表」是前端拼一整条 {@code CREATE TABLE `x` (...) COMMENT='..'}
+     * 发给通用 SQL 执行端点，两处都只对 MySQL 成立：反引号引号在 H2/PostgreSQL 会被拒，
+     * 内联 {@code COMMENT} 同样只有 MySQL 认。这里把这两件事收进方言层。</p>
+     *
+     * <p>列定义 {@code fields} 是用户自由文本（{@code id BIGINT PRIMARY KEY, name VARCHAR(255)}），
+     * 原样透传：它已由用户的 SQL 编辑器心智负责，替他解析反而会引入新的歧义。</p>
+     *
+     * @param conn    数据库连接
+     * @param table   表名，需通过 {@link #isSafeIdentifier} 校验
+     * @param fields  列定义原文，可为空（空表在部分内核不合法，由内核报错）
+     * @param comment 表注释，可为空
+     * @throws SQLException 建表失败
+     */
+    public static void createTable(Connection conn, String table, String fields, String comment)
+            throws SQLException {
+        SqlName.checkSimple(table, "表名");
+        boolean mysql = isMysqlFamily(conn);
+        String quotedTable = mysql ? SqlName.quoteMysql(table, "表名") : SqlName.quote(table, "表名");
+        String body = fields == null ? "" : fields.trim();
+        StringBuilder ddl = new StringBuilder("CREATE TABLE ").append(quotedTable)
+                .append(" (").append(body).append(')');
+        if (mysql && comment != null && !comment.isEmpty()) {
+            ddl.append(" COMMENT='").append(comment.replace("'", "''")).append('\'');
+        }
+        execute(conn, ddl.toString());
+        if (!mysql) {
+            applyTableComment(conn, table, comment);
+        }
+    }
+
+    /**
+     * 应用表注释（跨方言）。
+     *
+     * <p>MySQL 内联在 CREATE TABLE 里，本方法无操作；H2/PostgreSQL/Oracle 走
+     * {@code COMMENT ON TABLE}。注释属装饰性信息，失败不阻断建表 ——
+     * 表已经建出来了，为一句注释回滚反而更糟。</p>
+     *
+     * @param conn    数据库连接
+     * @param table   表名
+     * @param comment 注释；空值表示不写注释
+     */    private static void applyTableComment(Connection conn, String table, String comment) {
+        if (comment == null || comment.isEmpty()) {
+            return;
+        }
+        String literal = "'" + comment.replace("'", "''") + "'";
+        executeFirstQuietly(conn, List.of(
+                "COMMENT ON TABLE " + SqlName.quote(table, "表名") + " IS " + literal,
+                "COMMENT ON TABLE " + table + " IS " + literal));
+    }
+
+    /**
+     * 重命名表（跨方言）。
+     *
+     * <p>此前前端拼 {@code ALTER TABLE \`a\` RENAME TO \`b\`}，反引号只对 MySQL 成立，
+     * H2/PostgreSQL 上直接语法错。标准写法 {@code ALTER TABLE a RENAME TO b} 各内核都认，
+     * 但引号仍要按内核给。</p>
+     *
+     * @param conn    数据库连接
+     * @param table   原表名，需通过 {@link #isSafeIdentifier} 校验
+     * @param newName 新表名，需通过 {@link #isSafeIdentifier} 校验
+     * @throws SQLException 重命名失败
+     */
+    public static void renameTable(Connection conn, String table, String newName) throws SQLException {
+        SqlName.checkSimple(table, "表名");
+        SqlName.checkSimple(newName, "新表名");
+        boolean mysql = isMysqlFamily(conn);
+        String from = mysql ? SqlName.quoteMysql(table, "表名") : SqlName.quote(table, "表名");
+        String to = mysql ? SqlName.quoteMysql(newName, "新表名") : SqlName.quote(newName, "新表名");
+        executeFirstSupported(conn, List.of(
+                "ALTER TABLE " + from + " RENAME TO " + to,
+                "ALTER TABLE " + from + " RENAME " + to,
+                "RENAME TABLE " + from + " TO " + to),
+                "重命名表 " + table);
+    }
+
+    /**
      * 删除数据库。
      *
      * @param conn 数据库连接
