@@ -114,6 +114,13 @@
       <artifactId>agrona</artifactId>
       <version>1.20.0</version>
     </dependency>
+    <!-- Milvus 向量数据库（远程服务型：host/port/集合/令牌，由 VectorStorageProvider SPI
+         描述器驱动的配置表单填写；凭据属敏感字段，后端保存后不回显） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-milvus-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
     <!-- RAG 文档文本提取：PDF / Word（按扩展名自动分发） -->
     <dependency>
       <groupId>com.chua</groupId>
