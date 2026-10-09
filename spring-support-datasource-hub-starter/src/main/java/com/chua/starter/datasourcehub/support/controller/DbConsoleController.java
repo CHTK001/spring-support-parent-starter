@@ -2000,6 +2000,66 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
+     * 新建表（跨方言）。
+     *
+     * <p>此前前端自己拼 {@code CREATE TABLE `x` (...) COMMENT='..'} 发给通用 SQL 执行端点，
+     * 反引号与内联 COMMENT 都只对 MySQL 成立，H2/PostgreSQL 上直接语法错。这里改由
+     * {@link DbDialectSupport} 按内核选引号与注释写法。</p>
+     *
+     * <p>安全豁免：表名经标识符白名单后才进入 DDL；{@code fields} 是列定义原文，
+     * 本质上就是用户自己写的 SQL（管理器的定位是数据库管理），不在这里二次解析。</p>
+     *
+     * @param request 请求，不允许为 null
+     * @return 是否成功
+     */
+    @Operation(summary = "新建表")
+    @PostMapping("table")
+    public ReturnResult<Boolean> createTable(@RequestBody com.chua.starter.datasourcehub.support.dbconsole.DbCreateTableDTO request) {
+        String table = safeIdent(request.table(), "表名");
+        String fields = request.fields() == null ? "" : request.fields().trim();
+        if (fields.isEmpty()) {
+            return ReturnResult.error("请填写列定义");
+        }
+        return callDb("新建表", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 SchemaScope scope = useSchema(conn, request.database())) {
+                com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport.createTable(
+                        conn, table, fields, request.comment());
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
+     * 重命名表（跨方言）。
+     *
+     * <p>此前前端拼 {@code ALTER TABLE `a` RENAME TO `b` 送通用 SQL 端点，反引号只对 MySQL 成立。</p>
+     *
+     * @param tableName    原表名
+     * @param newName      新表名
+     * @param datasourceId 数据源 ID（可选）
+     * @param database     目标库名（可选）
+     * @return 是否成功
+     */
+    @Operation(summary = "重命名表")
+    @PutMapping("table/{tableName}/name")
+    public ReturnResult<Boolean> renameTable(
+            @PathVariable String tableName,
+            @RequestParam String newName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String table = safeIdent(tableName, "表名");
+        String target = safeIdent(newName, "新表名");
+        return callDb("重命名表", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport.renameTable(conn, table, target);
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
      * 新建数据库。
      *
      * <p>库的 DDL 随内核不同（MySQL 用 DATABASE、H2/PostgreSQL 用 SCHEMA），
