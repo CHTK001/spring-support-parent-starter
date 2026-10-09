@@ -1,5 +1,6 @@
 package com.chua.starter.filesystem.support.properties;
 
+import com.chua.common.support.network.server.ServerSetting;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -216,5 +217,26 @@ public class FileStorageServerProperties {
          * 允许的请求方法
          */
         private String allowedMethods = "GET,HEAD,POST,PUT,DELETE,PATCH,OPTIONS";
+
+        /**
+         * 将本配置写入服务器 setting 的 CORS 段。
+         *
+         * <p>独立文件服务（{@code FileStorageServerLauncher}）与服务管理节点
+         * （{@code ServerNodeRegistry}，file-storage 过滤器）共用本方法，
+         * 保证两条装配路径的跨域语义一致：谁改默认值，两边同时生效。</p>
+         *
+         * @param target 目标 CORS 配置（服务器 setting 的引用，内置 CorsFilter 每请求实时读取）
+         */
+        public void applyTo(ServerSetting.CorsConfig target) {
+            if (target == null) {
+                return;
+            }
+            target.setAllowOrigin(enable);
+            target.setAllowedOrigins(allowedOrigins);
+            target.setAllowedMethods(allowedMethods);
+            target.setAllowedHeaders(allowedHeaders);
+            target.setExposeHeaders(exposeHeaders);
+            target.setAllowCredentials(allowCredentials);
+        }
     }
 }

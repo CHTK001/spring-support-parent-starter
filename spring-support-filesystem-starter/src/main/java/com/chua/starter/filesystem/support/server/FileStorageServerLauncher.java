@@ -88,16 +88,9 @@ public class FileStorageServerLauncher implements AutoCloseable {
             // 配置来源 plugin.filesystem.storage-server.cors.*（见 FileStorageServerProperties.Cors），
             // 默认开启且允许携带凭据——预览页以 credentials:'include' 发起跨域 fetch，
             // 缺 Access-Control-Allow-Credentials 会让浏览器拦掉整个响应。
-            ServerSetting.CorsConfig cors = built.getSetting().getCors();
+            // 映射经 Cors#applyTo 单点维护，与服务管理节点（ServerNodeRegistry）共用。
             FileStorageServerProperties.Cors corsProperties = properties.getCors();
-            cors.setAllowOrigin(corsProperties.isEnable());
-            cors.setAllowedOrigins(corsProperties.getAllowedOrigins());
-            cors.setAllowedMethods(corsProperties.getAllowedMethods());
-            cors.setAllowedHeaders(corsProperties.getAllowedHeaders());
-            // 暴露自定义响应头：Content-Disposition（前端读文件名）与预览通道标识
-            // （X-FileStorage-Preview / X-FileStorage-Client-Renderer，前端据此选择渲染器）
-            cors.setExposeHeaders(corsProperties.getExposeHeaders());
-            cors.setAllowCredentials(corsProperties.isAllowCredentials());
+            corsProperties.applyTo(built.getSetting().getCors());
             // 预览统一走 iframe：显式开启安全头过滤器，但关闭 X-Frame-Options
             // 并用 CSP frame-ancestors 限定可嵌入来源（SecurityHeadersConfig 默认
             // enabled=false，此处按文件服务器需要显式开启）
