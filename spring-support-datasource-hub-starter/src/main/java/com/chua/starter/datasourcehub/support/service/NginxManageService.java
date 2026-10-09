@@ -7,6 +7,7 @@ import com.chua.starter.datasourcehub.support.model.NginxBackupVO;
 import com.chua.starter.datasourcehub.support.model.NginxCommandResultVO;
 import com.chua.starter.datasourcehub.support.model.NginxConfigFileVO;
 import com.chua.starter.datasourcehub.support.model.NginxConfigParseVO;
+import com.chua.starter.datasourcehub.support.model.NginxDashboardVO;
 import com.chua.starter.datasourcehub.support.model.NginxDirectiveMetaVO;
 import com.chua.starter.datasourcehub.support.model.NginxLogChunkVO;
 import com.chua.starter.datasourcehub.support.model.NginxLogFileVO;
@@ -19,6 +20,7 @@ import com.chua.starter.datasourcehub.support.model.NginxTemplateVO;
 import com.chua.starter.datasourcehub.support.model.NginxUrlTrendVO;
 import com.chua.starter.datasourcehub.support.model.NginxVersionVO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxApplyDTO;
+import com.chua.starter.datasourcehub.support.model.dto.NginxDashboardDTO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxSaveConfigDTO;
 
 import java.util.List;
@@ -346,4 +348,77 @@ public interface NginxManageService {
      * @return URL 趋势结果
      */
     NginxUrlTrendVO urlTrend(Long datasourceId, String path, Integer lines, Integer topN);
+
+    /**
+     * 读取自定义看板。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @return 看板（未保存过时 config 为空串）
+     */
+    NginxDashboardVO getDashboard(Long datasourceId);
+
+    /**
+     * 保存自定义看板（实时保存链路后端入口）。
+     *
+     * @param request 保存请求
+     * @return 保存后的看板（含嵌入令牌）
+     */
+    NginxDashboardVO saveDashboard(NginxDashboardDTO request);
+
+    /**
+     * 重新生成嵌入令牌。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @return 看板
+     */
+    NginxDashboardVO regenerateToken(Long datasourceId);
+
+    /**
+     * 按嵌入令牌读取看板（公开只读，不需要登录态）。
+     *
+     * @param token 嵌入令牌
+     * @return 看板
+     */
+    NginxDashboardVO embedDashboard(String token);
+
+    /**
+     * 嵌入场景读取实时状态（凭令牌代理到对应数据源）。
+     *
+     * @param token 嵌入令牌
+     * @return 状态信息
+     */
+    NginxStatusVO embedStatus(String token);
+
+    /**
+     * 嵌入场景读取指标趋势（凭令牌代理到对应数据源）。
+     *
+     * @param token    嵌入令牌
+     * @param hours    回溯小时数，缺省 24
+     * @param interval 采样间隔（分钟），缺省 30
+     * @return 趋势数据
+     */
+    NginxTrendVO embedTrend(String token, Integer hours, Integer interval);
+
+    /**
+     * 嵌入场景读取访问日志 Top 统计（凭令牌代理到对应数据源）。
+     *
+     * @param token   嵌入令牌
+     * @param path    日志文件路径，缺省 access 日志
+     * @param lines   扫描的尾部行数，缺省 2000
+     * @param minutes 只统计最近 N 分钟，缺省 0（不限）
+     * @param topN    每个维度取前几，缺省 10
+     * @return Top 统计
+     */
+    NginxAccessTopVO embedAccessTop(String token, String path, Integer lines, Integer minutes, Integer topN);
+
+    /**
+     * 嵌入场景读取 URL 访问趋势（凭令牌代理到对应数据源）。
+     *
+     * @param token 嵌入令牌
+     * @param path  日志文件路径，缺省 access 日志
+     * @param lines 扫描的尾部行数
+     * @param topN  取前几个 URL
+     * @return URL 趋势结果
+     */
+    NginxUrlTrendVO embedUrlTrend(String token, String path, Integer lines, Integer topN);
 }

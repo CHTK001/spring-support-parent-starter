@@ -64,7 +64,7 @@ public final class DatasourceTypeInfoSupport {
             switch (normalized) {
                 case "redis" -> readRedis(host, port, timeoutMs, info);
                 case "zookeeper" -> readZookeeper(host, port, timeoutMs, info);
-                case "influxdb", "nacos", "nginx", "neo4j" -> readHttp(normalized, host, port, timeoutMs, info);
+                case "influxdb", "nacos", "nginx", "neo4j", "prometheus" -> readHttp(normalized, host, port, timeoutMs, info);
                 default -> log.debug("类型 {} 无专属信息探针", type);
             }
         } catch (Exception e) {
@@ -122,6 +122,7 @@ public final class DatasourceTypeInfoSupport {
         String path = switch (type) {
             case "influxdb" -> "/health";
             case "nacos" -> "/nacos/v1/console/health/readiness";
+            case "prometheus" -> "/-/healthy";
             case "neo4j" -> "/";
             default -> "/";
         };

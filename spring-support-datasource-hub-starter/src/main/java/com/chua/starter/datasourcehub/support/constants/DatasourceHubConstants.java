@@ -22,7 +22,7 @@ public final class DatasourceHubConstants {
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
-            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx", "etcd");
+            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx", "etcd", "prometheus");
 
     /**
      * nginx 类型标识。
@@ -33,11 +33,37 @@ public final class DatasourceHubConstants {
     public static final String DS_TYPE_NGINX = "nginx";
 
     /**
+     * prometheus 类型标识。
+     *
+     * <p>字段约定与其它类型略有不同，接线时按此理解：</p>
+     * <ul>
+     *   <li>{@code host}：Prometheus 主机（查询走它，配置管理也经 SSH 连它）；</li>
+     *   <li>{@code port}：Prometheus HTTP API 端口（默认 9090），用于连通性探测与查询；
+     *       配置文件管理固定的 SSH 端口为 {@link #SSH_DEFAULT_PORT}；</li>
+     *   <li>{@code database}：配置根目录（默认 {@code /etc/prometheus}）；
+     *       若填完整 http(s) URL，则原样作为 HTTP 基地址（此时配置根目录回退默认值）；</li>
+     *   <li>{@code username}/{@code password}：SSH 凭据（配置文件读写、promtool 校验用）。</li>
+     * </ul>
+     */
+    public static final String DS_TYPE_PROMETHEUS = "prometheus";
+
+    /**
+     * Prometheus 默认 HTTP API 端口
+     */
+    public static final int PROMETHEUS_DEFAULT_HTTP_PORT = 9090;
+
+    /**
+     * Prometheus 默认配置根目录
+     */
+    public static final String PROMETHEUS_DEFAULT_CONFIG_ROOT = "/etc/prometheus";
+
+    /**
      * 各类型的默认端口（未填端口时使用）
      */
     public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.of(
             "jdbc", 3306, "redis", 6379, "influxdb", 8086,
-            "neo4j", 7474, "nacos", 8848, "zookeeper", 2181, "nginx", 80, "etcd", 2379);
+            "neo4j", 7474, "nacos", 8848, "zookeeper", 2181, "nginx", 80, "etcd", 2379,
+            "prometheus", PROMETHEUS_DEFAULT_HTTP_PORT);
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接

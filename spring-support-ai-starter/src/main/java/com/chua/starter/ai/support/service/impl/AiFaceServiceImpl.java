@@ -287,6 +287,23 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
+     * 分页 + 关键词 + 状态筛选的条目列表（委托人脸底库门面）。
+     *
+     * @param keyword   关键词（可空）
+     * @param status    状态筛选（{@code thumb} / {@code noThumb} / 空=全部）
+     * @param sortField 排序字段（可空）：{@code id} / {@code hasImage} / 或元数据键
+     * @param sortOrder 排序方向（{@code asc} / {@code desc} / 空=asc）
+     * @param page      页码（从 1 开始）；&le;0 不切片
+     * @param size      每页条数；&le;0 不切片
+     * @return {@code items} + {@code total} + {@code stats}
+     */
+    @Override
+    public Map<String, Object> listPage(String keyword, String status, String sortField, String sortOrder,
+                                        int page, int size) {
+        return faceStores.listPage(keyword, status, sortField, sortOrder, page, size);
+    }
+
+    /**
      * 读一条人脸登记时落存的裁剪图。
      *
      * @param id 人脸标识

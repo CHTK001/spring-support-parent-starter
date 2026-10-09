@@ -10,6 +10,23 @@ ai:
   skills-market-url: https://skillsmp.com/api/skills
 
   # ==========================================================================
+  # ONNX 本地推理供应商（yaml 侧；对应 sys_ai_provider 表 provider_id=onnx 的内置行，
+  # 与其它供应商同构，只是地址与凭据语义是本机的）：
+  #   * base-url  本地推理地址（默认指向本机推理服务）
+  #   * api-key   ONNX 的 appkey 语义 = 本地模型目录（不是密钥）；页面未选择过目录时兜底
+  #
+  # 目录选择与持久化：页面「模型管理 → ONNX 本地推理 → 添加外部模型目录」按模型逐个绑定
+  # （目录 + 模板模型），结果写入 sys_ai_global_setting 的 onnx.external_directories /
+  # onnx.model_root；本配置项仅在库侧（页面）未选择过目录时兜底，两者需要保持一致。
+  #
+  # 模型目录布局（每模型一目录）：<模型目录>/<modelId>/model.onnx，
+  # modelId 与下方「默认模型」逐模型配置的取值一一对应。
+  # ==========================================================================
+  onnx:
+    base-url: http://127.0.0.1:8080/v1
+    api-key: models/onnx
+
+  # ==========================================================================
   # 默认模型配置（yaml 侧）
   #
   # 对应页面「系统配置 → 默认模型」。优先级：页面配置 > yaml。
@@ -52,13 +69,16 @@ ai:
     depth: # 默认深度估计模型
 
     # ── OCR ──
-    ocr-detect: # 默认 OCR 文字检测模型
-    ocr-recognize: # 默认 OCR 文字识别模型
-    ocr-direction: # 默认 OCR 方向矫正模型
-    ocr-super-resolution: # 默认 OCR 超分模型
+    # 逐模型单独配置，取值为 providerId:model（带提供商前缀，与页面「系统配置 → 默认模型 →
+    # OCR 文字识别」保存的形态一致）。模型由 ONNX 供应商从服务器本地模型目录提供：
+    # <模型目录>/<modelId>/model.onnx（页面值优先，本节为 yaml 兜底）。
+    ocr-detect: onnx:paddleocrv6-det # 默认 OCR 文字检测模型（PaddleOCRv6 tiny 检测）
+    ocr-recognize: onnx:paddleocrv6-rec # 默认 OCR 文字识别模型（PaddleOCRv6 tiny 识别）
+    ocr-direction: onnx:doc-orientation # 默认 OCR 方向矫正模型
+    ocr-super-resolution: # 默认 OCR 超分模型（未部署，留空）
 
     # ── 版面 ──
-    layout: # 默认版面分析模型
+    layout: onnx:pp-doc-layout # 默认版面分析模型（PP-DocLayoutV3）
 
     # ── 人脸 ──
     face-detect: # 默认人脸检测模型
