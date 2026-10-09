@@ -176,6 +176,23 @@ public interface AiFaceService {
     List<Map<String, Object>> list();
 
     /**
+     * 分页 + 关键词 + 状态筛选的条目列表（万级底库与表格视图的数据源）。
+     *
+     * <p>快照全量驻留内存，过滤/切片在内存做；返回结构对齐 ReTable 的分页约定
+     * （{@code items} + {@code total}），另带不受筛选影响的全库统计 {@code stats}
+     * （total / withImage / withIdCard），供统计卡直接用。</p>
+     *
+     * @param keyword   关键词（可空；匹配 id 与元数据字符串字段，大小写不敏感）
+     * @param status    状态筛选：{@code thumb}=有图、{@code noThumb}=无图，其余/空=全部
+     * @param sortField 排序字段（可空）：{@code id} / {@code hasImage} / 或元数据键；空 = 登记顺序
+     * @param sortOrder 排序方向：{@code asc} / {@code desc}
+     * @param page      页码（从 1 开始）；&le;0 表示不切片（返回全部命中）
+     * @param size      每页条数；&le;0 表示不切片
+     * @return {@code items} + {@code total} + {@code stats}
+     */
+    Map<String, Object> listPage(String keyword, String status, String sortField, String sortOrder, int page, int size);
+
+    /**
      * 读一条人脸**登记时落存的裁剪图**（PNG）。
      *
      * <p>底库要「看图 + 画人脸特征点」，而缩略图此前只存在登记它的那个浏览器

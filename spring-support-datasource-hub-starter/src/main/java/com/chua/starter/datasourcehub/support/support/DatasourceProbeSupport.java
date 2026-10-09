@@ -104,7 +104,7 @@ public final class DatasourceProbeSupport {
         try {
             long sessionMs = switch (normalized) {
                 case "redis" -> redisPing(host, port, timeoutMs);
-                case "nginx", "nacos", "influxdb" -> httpRoundTrip(host, port, timeoutMs);
+                case "nginx", "nacos", "influxdb", "prometheus" -> httpRoundTrip(host, port, timeoutMs);
                 // neo4j(Bolt) / zookeeper(ZooKeeper) 为二进制协议，本模块无对应客户端，
                 // 退化为第二次建链作为会话延迟近似值。
                 default -> connectAndMeasure(host, port, timeoutMs);

@@ -7,6 +7,7 @@ import com.chua.starter.datasourcehub.support.model.NginxBackupDiffVO;
 import com.chua.starter.datasourcehub.support.model.NginxCommandResultVO;
 import com.chua.starter.datasourcehub.support.model.NginxConfigFileVO;
 import com.chua.starter.datasourcehub.support.model.NginxConfigParseVO;
+import com.chua.starter.datasourcehub.support.model.NginxDashboardVO;
 import com.chua.starter.datasourcehub.support.model.NginxDirectiveMetaVO;
 import com.chua.starter.datasourcehub.support.model.NginxLogChunkVO;
 import com.chua.starter.datasourcehub.support.model.NginxLogFileVO;
@@ -19,6 +20,7 @@ import com.chua.starter.datasourcehub.support.model.NginxTemplateVO;
 import com.chua.starter.datasourcehub.support.model.NginxUrlTrendVO;
 import com.chua.starter.datasourcehub.support.model.NginxVersionVO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxApplyDTO;
+import com.chua.starter.datasourcehub.support.model.dto.NginxDashboardDTO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxSaveConfigDTO;
 import com.chua.starter.datasourcehub.support.nginx.NginxMetricStreamRegistry;
 import com.chua.starter.datasourcehub.support.service.NginxManageService;
@@ -495,6 +497,122 @@ public class NginxManageController {
                                                       @PathVariable String backupName,
                                                       @RequestParam(required = false) String targetPath) {
         return call("从备份恢复", () -> nginxManageService.restore(datasourceId, backupName, targetPath));
+    }
+
+    // ==================== 自定义看板 ====================
+
+    /**
+     * 读取自定义看板。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @return 看板
+     */
+    @Operation(summary = "读取 Nginx 自定义看板")
+    @GetMapping("/dashboard")
+    public ReturnResult<NginxDashboardVO> dashboard(@RequestParam(required = false) Long datasourceId) {
+        return call("读取 Nginx 看板", () -> nginxManageService.getDashboard(datasourceId));
+    }
+
+    /**
+     * 保存自定义看板（实时保存）。
+     *
+     * @param request 保存请求
+     * @return 保存后的看板
+     */
+    @Operation(summary = "保存 Nginx 自定义看板")
+    @PutMapping("/dashboard")
+    public ReturnResult<NginxDashboardVO> saveDashboard(@RequestBody NginxDashboardDTO request) {
+        return call("保存 Nginx 看板", () -> nginxManageService.saveDashboard(request));
+    }
+
+    /**
+     * 重新生成嵌入令牌。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @return 看板
+     */
+    @Operation(summary = "生成 Nginx 看板嵌入令牌")
+    @PostMapping("/dashboard/token")
+    public ReturnResult<NginxDashboardVO> token(@RequestParam(required = false) Long datasourceId) {
+        return call("生成嵌入令牌", () -> nginxManageService.regenerateToken(datasourceId));
+    }
+
+    /**
+     * 按令牌读取看板（公开只读，需部署侧放行 OAuth 白名单）。
+     *
+     * @param token 嵌入令牌
+     * @return 看板
+     */
+    @Operation(summary = "读取嵌入看板（公开）")
+    @GetMapping("/dashboard/embed/{token}")
+    public ReturnResult<NginxDashboardVO> embedDashboard(@PathVariable String token) {
+        return call("读取嵌入看板", () -> nginxManageService.embedDashboard(token));
+    }
+
+    /**
+     * 嵌入场景读取实时状态（公开只读）。
+     *
+     * @param token 嵌入令牌
+     * @return 状态信息
+     */
+    @Operation(summary = "嵌入看板实时状态（公开）")
+    @GetMapping("/dashboard/embed/{token}/status")
+    public ReturnResult<NginxStatusVO> embedStatus(@PathVariable String token) {
+        return call("嵌入看板实时状态", () -> nginxManageService.embedStatus(token));
+    }
+
+    /**
+     * 嵌入场景读取指标趋势（公开只读）。
+     *
+     * @param token    嵌入令牌
+     * @param hours    回溯小时数，缺省 24
+     * @param interval 采样间隔（分钟），缺省 30
+     * @return 趋势数据
+     */
+    @Operation(summary = "嵌入看板指标趋势（公开）")
+    @GetMapping("/dashboard/embed/{token}/metric/trend")
+    public ReturnResult<NginxTrendVO> embedTrend(@PathVariable String token,
+                                                 @RequestParam(required = false) Integer hours,
+                                                 @RequestParam(required = false) Integer interval) {
+        return call("嵌入看板指标趋势", () -> nginxManageService.embedTrend(token, hours, interval));
+    }
+
+    /**
+     * 嵌入场景读取访问日志 Top 统计（公开只读）。
+     *
+     * @param token   嵌入令牌
+     * @param path    日志文件路径，缺省 access 日志
+     * @param lines   扫描的尾部行数
+     * @param minutes 只统计最近 N 分钟，缺省不限
+     * @param topN    每个维度取前几
+     * @return Top 统计
+     */
+    @Operation(summary = "嵌入看板访问日志 Top 统计（公开）")
+    @GetMapping("/dashboard/embed/{token}/log/top")
+    public ReturnResult<NginxAccessTopVO> embedAccessTop(@PathVariable String token,
+                                                         @RequestParam(required = false) String path,
+                                                         @RequestParam(required = false) Integer lines,
+                                                         @RequestParam(required = false) Integer minutes,
+                                                         @RequestParam(required = false) Integer topN) {
+        return call("嵌入看板访问日志 Top 统计", () -> nginxManageService.embedAccessTop(token, path, lines, minutes, topN));
+    }
+
+    /**
+     * 嵌入场景读取 URL 访问趋势（公开只读）。
+     *
+     * @param token 嵌入令牌
+     * @param path  日志文件路径，缺省 access 日志
+     * @param lines 扫描的尾部行数
+     * @param topN  取前几个 URL
+     * @return URL 趋势
+     */
+    @Operation(summary = "嵌入看板 URL 访问趋势（公开）")
+    @GetMapping("/dashboard/embed/{token}/log/url-trend")
+    public ReturnResult<NginxUrlTrendVO> embedUrlTrend(@PathVariable String token,
+                                                       @RequestParam(required = false) String path,
+                                                       @RequestParam(required = false) Integer lines,
+                                                       @RequestParam(required = false) Integer topN) {
+        return call("嵌入看板 URL 访问趋势", () -> nginxManageService.embedUrlTrend(token, path, lines, topN));
     }
 
     /**
