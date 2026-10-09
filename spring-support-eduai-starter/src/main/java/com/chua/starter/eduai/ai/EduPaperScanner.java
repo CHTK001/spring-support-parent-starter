@@ -853,34 +853,43 @@ public class EduPaperScanner {
      */
     private List<ScannedQuestion> fillStemsByModel(List<ScannedQuestion> byLayout, String text) {
         try {
-            String nos = byLayout.stream().map(ScannedQuestion::no)
-                    .collect(java.util.stream.Collectors.joining("、"));
+            // 题号在「一、二、三」各节间会重复（1./2./…每节重来），绝不能按题号回填 ——
+            // 重复键在建映射时互相覆盖：实测 ds-v4.1 补齐题干后，B/C 卷各节题干被贴到
+            // 最后一节同号题上，判分全部变成「作答与题干无关」为 0。这里改为
+            // 「按顺序列出 → 按顺序数组返回 → 按下标一一对应」，数量不符即整体放弃（保留空题干）。
+            StringBuilder ordered = new StringBuilder();
+            for (int i = 0; i < byLayout.size(); i++) {
+                ScannedQuestion q = byLayout.get(i);
+                ordered.append(i + 1).append(". [题号 ").append(q.no() == null ? "" : q.no().trim())
+                        .append("] ").append(q.answer() == null ? "" : q.answer().trim()).append('\n');
+            }
             String systemPrompt = "你是试卷结构解析器。只输出 JSON，禁止解释。";
             String userPrompt = """
-                    下面是一份外来试卷的图片识别文本，已按题号切好 %d 道题（题号：%s）。
-                    请为每道题给出题干（识别有错字按上下文还原；找不到留空字符串），不要改题号、
+                    下面是一份外来试卷的图片识别文本。已按出现顺序切好 %d 道题：
+                    %s
+                    请依据识别文本，为每道题给出题干（识别有错字按上下文还原；找不到留空字符串），
                     不要合并拆分、不要编造分值。
 
+                    必须严格按上面题目的先后顺序，返回同样数量的题干数组（第 i 个元素对应第 i 道题）：
                     JSON Schema:
-                    {"questions":[{"no":"题号","stem":"题干"}]}
+                    {"stems":["第1道题的题干","第2道题的题干"]}
 
                     识别文本：
                     %s
-                    """.formatted(byLayout.size(), nos, text);
+                    """.formatted(byLayout.size(), ordered, text);
             String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
             requireModelOutput(raw);
             JsonNode root = MAPPER.readTree(extractJson(raw));
-            JsonNode arr = root.path("questions");
-            if (!arr.isArray()) {
+            JsonNode arr = root.path("stems");
+            if (!arr.isArray() || arr.size() != byLayout.size()) {
+                log.warn("[EduScan] 补题干数量不符（期望 {} 实际 {}），放弃补题干保留空题干",
+                        byLayout.size(), arr.isArray() ? arr.size() : -1);
                 return List.of();
             }
-            var stemByNo = new java.util.HashMap<String, String>();
-            for (JsonNode node : arr) {
-                stemByNo.put(node.path("no").asText("").trim(), node.path("stem").asText(""));
-            }
             List<ScannedQuestion> out = new ArrayList<>();
-            for (ScannedQuestion q : byLayout) {
-                String stem = stemByNo.getOrDefault(q.no() == null ? "" : q.no().trim(), "");
+            for (int i = 0; i < byLayout.size(); i++) {
+                ScannedQuestion q = byLayout.get(i);
+                String stem = arr.get(i).asText("").trim();
                 out.add(new ScannedQuestion(q.no(), stem, q.answer(), q.score()));
             }
             return out;
