@@ -4,6 +4,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiUserSettingService;
 import com.chua.starter.ai.support.util.AiUserContext;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,15 @@ import java.math.BigDecimal;
  *
  * <p>各配置消费者（GlobalPanel、RAG、ChatClient、用量任务）统一通过本工具读取
  * 指定分组的键值配置，避免重复手写字符串解析。</p>
+ *
+ * <p><b>取值链（自上而下，命中即止）：</b></p>
+ * <ol>
+ *   <li>YAML 覆盖层 {@code chua.ai.settings.<group>.<field>}（部署级钦定，重启生效）——
+ *       见 {@link AiSettingsYamlProperties}，运维换 layout/OCR 管线走这里；</li>
+ *   <li>用户覆盖 {@code sys_ai_user_setting}（设置页按用户保存）；</li>
+ *   <li>全局数据库 {@code sys_ai_global_setting}（设置页保存，热更新）；</li>
+ *   <li>消费方代码默认值（getBool/getInt 等的 defaultValue 参数）。</li>
+ * </ol>
  *
  * @since 4.0.0.42
  * @author CH
@@ -40,9 +50,27 @@ public class GlobalSettingReader {
     private final ExternalModelSupport externalModelSupport;
 
     /**
+     * YAML 覆盖层（{@code chua.ai.settings.*}）：部署级钦定，优先于用户覆盖与数据库
+     */
+    private final AiSettingsYamlProperties yamlSettings;
+
+    /**
+     * 启动自证：把生效的覆盖清单打进日志，运维改完 yaml 一眼能确认加载成功；
+     * 未配置时保持安静（debug），行为与引入本覆盖层之前完全一致。
+     */
+    @PostConstruct
+    public void logYamlOverrides() {
+        if (yamlSettings == null || yamlSettings.isEmpty()) {
+            log.debug("[GlobalSettingReader] YAML 覆盖层未配置（chua.ai.settings.*），取值链为 用户覆盖 > 数据库 > 代码默认");
+            return;
+        }
+        log.info("[GlobalSettingReader] YAML 覆盖层已加载，命中键优先于用户覆盖与数据库: {}", yamlSettings.summary());
+    }
+
+    /**
      * 读取字符串值。
      *
-     * <p><b>分层语义：当前用户的覆盖优先，其次全局默认。</b>
+     * <p><b>分层语义：YAML 覆盖 &gt; 当前用户的覆盖 &gt; 全局默认。</b>
      * 后端把 runtime / rag / face / ocr / image / image_search / generate / layout /
      * input / memory / bot / asr 等分组声明为「每个用户管自己的默认」
      * （见 {@code SettingsController.USER_WRITABLE_GROUPS}），而各业务消费端
@@ -67,7 +95,7 @@ public class GlobalSettingReader {
      * （例如由用户 A 触发、却要重建**所有账号**的管线）。此时必须显式传入账号，
      * 否则会把所有账号都按触发者的配置建 —— 那比「改了不生效」更糟。</p>
      *
-     * <p>语义与 {@link #getStr(String, String)} 一致：用户覆盖优先，
+     * <p>语义与 {@link #getStr(String, String)} 一致：YAML 覆盖最高，其次用户覆盖，
      * 且**有覆盖行就以它为准**（哪怕值为空，即「显式清空」不回退全局）。</p>
      *
      * @param userId 用户标识；为空表示只读全局层
@@ -76,6 +104,11 @@ public class GlobalSettingReader {
      * @return 生效值，未配置时返回 空
      */
     public String getStrAs(String userId, String group, String field) {
+        String yamlValue = yamlValueOf(group, field);
+        if (yamlValue != null) {
+            // 与数据库值同权：非空同样走 ONNX 外部目录注册；空串为「强制清空」，原样返回
+            return yamlValue.isBlank() ? yamlValue : externalModelSupport.prepare(group, field, yamlValue);
+        }
         if (userId != null && !userId.isBlank()) {
             String userValue = userOverrideOf(userId, group, field);
             if (userValue != null) {
@@ -84,6 +117,20 @@ public class GlobalSettingReader {
             }
         }
         return getStrGlobal(group, field);
+    }
+
+    /**
+     * 读取 YAML 覆盖层的命中值。
+     *
+     * @param group 分组
+     * @param field 字段名
+     * @return 命中返回生效值（可为显式空串）；yaml 未配置该键返回 {@code null}
+     */
+    private String yamlValueOf(String group, String field) {
+        if (yamlSettings == null) {
+            return null;
+        }
+        return yamlSettings.get(group, field);
     }
 
     /**
@@ -155,13 +202,19 @@ public class GlobalSettingReader {
      * 会读到旧值 —— 线上实测过：默认模型在库里已是新值，缓存里仍是已废弃的旧模型名，
      * 进程就一直按旧值解析，报出来的错误与库里配置完全对不上，极难排查。</p>
      *
-     * <p>因此「错一次就整条链路失败」的模型解析必须走本方法。</p>
+     * <p>因此「错一次就整条链路失败」的模型解析必须走本方法。
+     * YAML 覆盖层（{@code chua.ai.settings.*}）不受缓存语义影响，仍在此方法链首命中 ——
+     * 部署钦定的值不存在「读到旧值」的问题。</p>
      *
      * @param group 分组
      * @param field 字段名
      * @return 值，未配置时返回 空
      */
     public String getStrDirect(String group, String field) {
+        String yamlValue = yamlValueOf(group, field);
+        if (yamlValue != null) {
+            return yamlValue.isBlank() ? yamlValue : externalModelSupport.prepare(group, field, yamlValue);
+        }
         String raw;
         try {
             raw = sysAiGlobalSettingService.getValueDirect(group, field).orElse(null);
