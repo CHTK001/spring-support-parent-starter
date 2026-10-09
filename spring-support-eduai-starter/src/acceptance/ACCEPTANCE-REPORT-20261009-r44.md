@@ -1,7 +1,7 @@
 # 判分质量收口：补题干按版面顺序对齐修复与三卷重判报告（r44）
 
 - 日期：2026-10-09（北京时间；远端 EDT = 北京 −12h）
-- 绑定产物：`eduai-backend.jar` sha256 `c51151be79bd6e7ada64732cd2b47180d2db00f341e6381988727e0055985e34`、md5 `514079c9a9c8244fdeccca1207677b79`（858,166,776 B）—— **换包即本报告作废**
+- 绑定产物：`eduai-backend.jar` sha256 = c51151be79bd6e7ada64732cd2b47180d2db00f341e6381988727e0055985e34、md5 = 514079c9a9c8244fdeccca1207677b79（858,166,776 B）—— **换包即本报告作废**
 - 修复提交：`6ec47b6b2`（`EduPaperScanner.fillStemsByModel`：补题干按版面顺序一一对应——修「各节题号重复致题干串位」缺陷）
 - 换装包：`eduai-app-20261009-6ec47b6b2.tar.gz`（sha256 `c815e8da9d530eac7002a5a00a0d1a39571f95a01b4ecf05b0af35f3ce2744c8`，821,574,928 B）
 - 换装记录（08:46 北京）：预检现役=r43 包 `1bef2cee…` 通过 → 备份 `eduai-backend.jar.bak-20261008-204551`；结构脚本 10/10（112 表）；`unit=active`、`NRestarts=0`、health HTTP=200；终验指纹 09:27 北京复核一致（`.tmp\r44-final-fingerprint.txt`）
