@@ -2006,8 +2006,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 反引号与内联 COMMENT 都只对 MySQL 成立，H2/PostgreSQL 上直接语法错。这里改由
      * {@link DbDialectSupport} 按内核选引号与注释写法。</p>
      *
-     * <p>安全豁免：表名经标识符白名单后才进入 DDL；{@code fields} 是列定义原文，
-     * 本质上就是用户自己写的 SQL（管理器的定位是数据库管理），不在这里二次解析。</p>
+     * <p><b>两条入参路径</b>：{@code columns} 非空时是「设计表」的结构化列，
+     * 逐列过 {@link #columnDef}（与新增列端点同一套键与校验）后由方言层拼 DDL；
+     * 否则回退到 {@code fields} 原文 —— 那是用户自己写的 SQL，不在这里二次解析。</p>
+     *
+     * <p>安全豁免：表名经标识符白名单、列名/类型/长度/默认值经 {@link DbColumnDef}
+     * 白名单后才进入 DDL；原文路径同上，不做二次解析。</p>
      *
      * @param request 请求，不允许为 null
      * @return 是否成功
@@ -2016,15 +2020,23 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @PostMapping("table")
     public ReturnResult<Boolean> createTable(@RequestBody com.chua.starter.datasourcehub.support.dbconsole.DbCreateTableDTO request) {
         String table = safeIdent(request.table(), "表名");
+        boolean structured = request.columns() != null && !request.columns().isEmpty();
         String fields = request.fields() == null ? "" : request.fields().trim();
-        if (fields.isEmpty()) {
+        if (!structured && fields.isEmpty()) {
             return ReturnResult.error("请填写列定义");
         }
         return callDb("新建表", () -> {
             try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
                  SchemaScope scope = useSchema(conn, request.database())) {
-                com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport.createTable(
-                        conn, table, fields, request.comment());
+                if (structured) {
+                    List<DbColumnDef> columns = new ArrayList<>(request.columns().size());
+                    for (Map<String, Object> body : request.columns()) {
+                        columns.add(columnDef(body));
+                    }
+                    DbDialectSupport.createTable(conn, table, columns, request.primaryKey(), request.comment());
+                } else {
+                    DbDialectSupport.createTable(conn, table, fields, request.comment());
+                }
                 return Boolean.TRUE;
             }
         });
