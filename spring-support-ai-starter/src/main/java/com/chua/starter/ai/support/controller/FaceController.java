@@ -365,13 +365,32 @@ public class FaceController {
      * {@code useFaceRegistry.ts}）—— 于是同一份服务端人脸的档案在不同浏览器/账号下
      * 看到的并不一致。快照里本来就存了登记时传入的元数据，这里把它读回来。</p>
      *
-     * @return 已登记条目（id + 元数据，不含向量）
+     * <p><b>分页：</b>带 {@code page}（&ge;1）与 {@code size}（&ge;1）时服务端分页 ——
+     * 万级底库不再整包拉回浏览器；不带时返回全量（兼容既有调用方，如以图搜图登记簿）。
+     * {@code keyword} / {@code status} 两种模式都支持，筛选口径与前端一致。</p>
+     *
+     * @param page      页码（从 1 开始）；不传或 &le;0 返回全部命中
+     * @param size      每页条数；不传或 &le;0 返回全部命中（上限 500，防一次拉太大）
+     * @param keyword   关键词（匹配 id 与元数据字符串字段，大小写不敏感）
+     * @param status    状态筛选：{@code thumb}=有图、{@code noThumb}=无图
+     * @param sortField 排序字段：{@code id} / {@code hasImage} / 或元数据键（name/age/idCard…）
+     * @param sortOrder 排序方向：{@code asc} / {@code desc}
+     * @return 已登记条目 {@code items}（id + 元数据，不含向量）+ {@code total}（命中总数）
+     *         + {@code stats}（全库统计 total/withImage/withIdCard，不受筛选影响）
      */
-    @Operation(summary = "人脸库列表", description = "列出当前账号人脸库中已登记的条目")
+    @Operation(summary = "人脸库列表", description = "列出当前账号人脸库中已登记的条目；带 page/size 时服务端分页，不带返回全量")
     @GetMapping("/list")
-    public ReturnResult<?> list() {
+    public ReturnResult<?> list(@RequestParam(value = "page", required = false) Integer page,
+                                @RequestParam(value = "size", required = false) Integer size,
+                                @RequestParam(value = "keyword", required = false) String keyword,
+                                @RequestParam(value = "status", required = false) String status,
+                                @RequestParam(value = "sortField", required = false) String sortField,
+                                @RequestParam(value = "sortOrder", required = false) String sortOrder) {
         try {
-            return ReturnResult.ok(Map.of("items", faceService.list(), "total", faceService.list().size()));
+            boolean paged = page != null && page > 0 && size != null && size > 0;
+            int cap = size == null ? 0 : Math.min(size, 500);
+            return ReturnResult.ok(faceService.listPage(keyword, status, sortField, sortOrder,
+                    paged ? page : 0, paged ? cap : 0));
         } catch (Exception e) {
             log.error("[Face] 人脸库列表失败", e);
             return ReturnResult.error("人脸库列表失败: " + e.getMessage());

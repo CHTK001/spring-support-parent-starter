@@ -136,32 +136,12 @@
             <artifactId>swagger-annotations</artifactId>
         </dependency>
 
-        <!-- ==================== 本地 ONNX 模型资产（阅卷必需） ====================
-             spring-support-ai-starter 刻意「只引实现、不引权重」，模型资产由宿主应用按需选择。
-             这里补齐阅卷链路所需的三类资产，否则运行期会以「取不到资源」失败：
-
-             1) paddleocrv6-tiny  —— OCR 检测 + 识别 + 字符字典
-                translator 从 classpath 读 ocr/PP-OCRv6/tiny/rec_infer/inference.yml 作字符表；
-                缺该 jar 时字典退化为空表，识别结果全部为空串（且不抛错，极难排查）。
-             2) ppdoclayoutv3     —— 版面分析（PP-DocLayoutV3，25 类区域），阅卷的「版面还原」环节
-             3) doc-orientation   —— 整图方向矫正（0/90/180/270）。该模型注册项没有下载 URL，
-                只能随包提供；不引则方向矫正不可用（可选项，缺失不影响识别主干）
+        <!-- ONNX 模型资产（paddleocrv6-tiny / ppdoclayoutv3 / doc-orientation）
+             嵌入式小模型（6.4MB / 124.5MB / 6.5MB，共约 137MB），不走下载：
+             - 已从 maven 依赖移除（com/chua 本地仓库已清理），源文件见 utils-support-models-parent 各模块 src/main/resources；
+             - classpath 相对路径由 OnnxModelRegistrar 注册项约定（ocr/PP-OCRv6/tiny/…、vision/detection/pp_doc_layoutv3/…、ocr/direction/doc_ori/…）；
+             - 部署时随包提供：放入模型目录（-Ddeeplearning.model.root-dir 指定，默认 models/onnx）或直接打入应用资源。
         -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-models-onnx-paddleocrv6-tiny</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-models-onnx-ppdoclayoutv3</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-models-onnx-doc-orientation</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- 测试依赖 -->
         

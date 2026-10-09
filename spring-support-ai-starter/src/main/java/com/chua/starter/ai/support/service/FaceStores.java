@@ -24,8 +24,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -407,6 +409,178 @@ public class FaceStores {
             out.add(row);
         }
         return out;
+    }
+
+    /**
+     * 分页 + 关键词 + 状态筛选的条目列表（万级底库与表格视图的数据源）。
+     *
+     * <p><b>为什么在内存里做而不引数据库：</b>快照（{@code index.json}）本就全量驻留内存，
+     * 过滤与切片是微秒级；1:N 检索必须走 jvector（DB 做 ANN 不现实），档案引库只是多一套双写。
+     * 真正的开销在 {@link Files#exists} —— 本方法**单遍**顺带把全库统计也算了
+     * （旧 {@code FaceController.list()} 把 {@code list()} 调了两遍，等于两遍 stat + 两遍遍历）。</p>
+     *
+     * <p><b>筛选口径与前端一致：</b>关键词对 id 与元数据的字符串字段（姓名/标签/身份证/备注等）
+     * 做大小写不敏感的包含匹配；状态 {@code thumb}/{@code noThumb} 按服务端登记图是否存在分。</p>
+     *
+     * @param keyword   关键词（可空）
+     * @param status    状态筛选：{@code thumb}=有图、{@code noThumb}=无图，其余/空=全部
+     * @param sortField 排序字段（可空）：{@code id} / {@code hasImage} / 或元数据键
+     *                  （{@code name}/{@code age}/{@code idCard} 等）；空 = 登记顺序
+     * @param sortOrder 排序方向：{@code asc} / {@code desc}；空/其余 = asc
+     * @param page      页码（从 1 开始）；&le;0 表示不切片
+     * @param size      每页条数；&le;0 表示不切片
+     * @return {@code items}（本页条目）+ {@code total}（命中总数）+ {@code stats}（全库统计，不受筛选影响）
+     */
+    public Map<String, Object> listPage(String keyword, String status, String sortField,
+                                        String sortOrder, int page, int size) {
+        String kw = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        boolean onlyThumb = "thumb".equals(status);
+        boolean onlyNoThumb = "noThumb".equals(status);
+        List<Map<String, Object>> matched = new ArrayList<>();
+        int statTotal = 0;
+        int statWithImage = 0;
+        int statWithIdCard = 0;
+        for (Map.Entry<String, Entry> e : st().snapshot.entrySet()) {
+            boolean hasImage = Files.exists(faceImagePath(e.getKey()));
+            Map<String, Object> metadata = e.getValue().metadata() == null ? Map.of() : e.getValue().metadata();
+            statTotal++;
+            if (hasImage) {
+                statWithImage++;
+            }
+            if (metadata.get("idCard") instanceof String idCard && !idCard.isBlank()) {
+                statWithIdCard++;
+            }
+            if (onlyThumb && !hasImage) {
+                continue;
+            }
+            if (onlyNoThumb && hasImage) {
+                continue;
+            }
+            if (!kw.isEmpty() && !matchesKeyword(e.getKey(), metadata, kw)) {
+                continue;
+            }
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", e.getKey());
+            row.put("metadata", metadata);
+            row.put("hasImage", hasImage);
+            matched.add(row);
+        }
+        sortRows(matched, sortField, sortOrder);
+        List<Map<String, Object>> items = matched;
+        if (page > 0 && size > 0) {
+            long fromL = (long) (page - 1) * size;
+            int from = (int) Math.min(fromL, matched.size());
+            int to = (int) Math.min(fromL + size, matched.size());
+            matched = new ArrayList<>(matched.subList(from, to));
+            items = matched;
+        }
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("total", statTotal);
+        stats.put("withImage", statWithImage);
+        stats.put("withIdCard", statWithIdCard);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("items", items);
+        out.put("total", matched.size());
+        out.put("stats", stats);
+        return out;
+    }
+
+    /**
+     * 关键词是否命中该条：id 与元数据里的字符串字段做大小写不敏感的包含匹配。
+     *
+     * @param id       人脸标识
+     * @param metadata 登记元数据
+     * @param kw       已转小写的关键词（非空）
+     * @return 是否命中
+     */
+    private static boolean matchesKeyword(String id, Map<String, Object> metadata, String kw) {
+        if (id != null && id.toLowerCase(Locale.ROOT).contains(kw)) {
+            return true;
+        }
+        for (Object v : metadata.values()) {
+            if (v instanceof String s && s.toLowerCase(Locale.ROOT).contains(kw)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 按表格列排序（服务端排序：分页下只排当前页会给出错误的次序感）。
+     *
+     * <p>字段白名单：{@code id} 走标识、{@code hasImage} 走布尔、其余按元数据键取值。
+     * 比较统一「null 后置、数字按数值、其余按字符串忽略大小写」，
+     * 非白名单字段直接不动（保持登记顺序，而不是静默排成全 null 的假有序）。</p>
+     *
+     * @param rows      待排序的命中行（原地）
+     * @param sortField 排序字段；空 = 不排序
+     * @param sortOrder {@code desc} = 降序，其余 = 升序
+     */
+    private static void sortRows(List<Map<String, Object>> rows, String sortField, String sortOrder) {
+        if (sortField == null || sortField.isBlank()) {
+            return;
+        }
+        String field = sortField.trim();
+        boolean desc = "desc".equalsIgnoreCase(sortOrder);
+        Comparator<Map<String, Object>> cmp = (a, b) -> {
+            Object va;
+            Object vb;
+            if ("id".equals(field)) {
+                va = a.get("id");
+                vb = b.get("id");
+            } else if ("hasImage".equals(field)) {
+                va = a.get("hasImage");
+                vb = b.get("hasImage");
+            } else {
+                va = metadataValue(a, field);
+                vb = metadataValue(b, field);
+            }
+            int r = compareValues(va, vb);
+            return desc ? -r : r;
+        };
+        rows.sort(cmp);
+    }
+
+    /**
+     * 取行的元数据值。
+     *
+     * @param row   行
+     * @param field 元数据键
+     * @return 值（缺失为 {@code null}）
+     */
+    private static Object metadataValue(Map<String, Object> row, String field) {
+        Object meta = row.get("metadata");
+        return meta instanceof Map<?, ?> m ? m.get(field) : null;
+    }
+
+    /**
+     * 通用比较：null 后置；两个数字按数值；两个布尔 false &lt; true；其余按字符串。
+     *
+     * @param a 左值
+     * @param b 右值
+     * @return 比较结果
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int compareValues(Object a, Object b) {
+        if (a == null && b == null) {
+            return 0;
+        }
+        if (a == null) {
+            return 1;
+        }
+        if (b == null) {
+            return -1;
+        }
+        if (a instanceof Number na && b instanceof Number nb) {
+            return Double.compare(na.doubleValue(), nb.doubleValue());
+        }
+        if (a instanceof Boolean ba && b instanceof Boolean bb) {
+            return ba.compareTo(bb);
+        }
+        if (a.getClass() == b.getClass() && a instanceof Comparable ca) {
+            return ca.compareTo(b);
+        }
+        return String.valueOf(a).compareToIgnoreCase(String.valueOf(b));
     }
 
     /**

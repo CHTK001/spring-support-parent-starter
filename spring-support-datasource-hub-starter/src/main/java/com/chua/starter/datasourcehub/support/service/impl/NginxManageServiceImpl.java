@@ -5,7 +5,9 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.datasourcehub.support.entity.MsMonitorNginxMetric;
+import com.chua.starter.datasourcehub.support.entity.MsNginxDashboard;
 import com.chua.starter.datasourcehub.support.mapper.MsMonitorNginxMetricMapper;
+import com.chua.starter.datasourcehub.support.mapper.MsNginxDashboardMapper;
 import com.chua.starter.datasourcehub.support.middleware.MiddlewareHttp;
 import com.chua.starter.datasourcehub.support.nginx.spi.NginxCommandProvider;
 import com.chua.starter.datasourcehub.support.nginx.spi.NginxExecutor;
@@ -16,6 +18,7 @@ import com.chua.starter.datasourcehub.support.model.NginxBackupDiffVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupVO;
 import com.chua.starter.datasourcehub.support.model.NginxCommandResultVO;
 import com.chua.starter.datasourcehub.support.model.NginxConfigFileVO;
+import com.chua.starter.datasourcehub.support.model.NginxDashboardVO;
 import com.chua.starter.datasourcehub.support.model.NginxConfigParseVO;
 import com.chua.starter.datasourcehub.support.model.NginxDirectiveMetaVO;
 import com.chua.starter.datasourcehub.support.model.NginxLogChunkVO;
@@ -30,6 +33,7 @@ import com.chua.starter.datasourcehub.support.model.NginxTrendVO;
 import com.chua.starter.datasourcehub.support.model.NginxUrlTrendVO;
 import com.chua.starter.datasourcehub.support.model.NginxVersionVO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxApplyDTO;
+import com.chua.starter.datasourcehub.support.model.dto.NginxDashboardDTO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxPatchDTO;
 import com.chua.starter.datasourcehub.support.model.dto.NginxSaveConfigDTO;
 import com.chua.starter.datasourcehub.support.nginx.NginxAccessLogParser;
@@ -43,6 +47,7 @@ import com.chua.starter.datasourcehub.support.nginx.NginxTemplateLibrary;
 import com.chua.starter.datasourcehub.support.service.NginxManageService;
 import com.chua.starter.datasourcehub.support.spi.NginxConfigLookup;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -159,6 +164,16 @@ public class NginxManageServiceImpl implements NginxManageService {
     private static final DateTimeFormatter BACKUP_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     /**
+     * 看板更新时间文本格式
+     */
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * 嵌入令牌随机源
+     */
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    /**
      * 趋势查询默认回溯小时数
      */
     private static final int TREND_DEFAULT_HOURS = 24;
@@ -254,6 +269,11 @@ public class NginxManageServiceImpl implements NginxManageService {
      * 二者都走 SPI；本类只负责业务编排。</p>
      */
     private final NginxRuntimeRouter nginxRuntimeRouter;
+
+    /**
+     * 自定义看板 Mapper
+     */
+    private final MsNginxDashboardMapper nginxDashboardMapper;
 
     /**
      * 路径解析结果的缓存有效期（毫秒）。
@@ -2562,6 +2582,16 @@ public class NginxManageServiceImpl implements NginxManageService {
         return value == null ? "" : value.trim();
     }
 
+    /**
+     * 空值转空串。
+     *
+     * @param value 原值
+     * @return 非 null 文本
+     */
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
     // ==================== 时序指标：采集与趋势 ====================
 
     @Override
@@ -2681,6 +2711,222 @@ public class NginxManageServiceImpl implements NginxManageService {
         String text = exec(ds, commands(ds).tailLines(logPath, n)).stdout();
         String name = baseName(logPath);
         return NginxAccessLogParser.urlTrend(text, cap, name);
+    }
+
+    // ==================== 自定义看板 ====================
+
+    /**
+     * 读取自定义看板。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @return 看板（未保存过时 config 为空串）
+     */
+    @Override
+    public NginxDashboardVO getDashboard(Long datasourceId) {
+        DataSourceVO ds = requireDatasource(datasourceId);
+        MsNginxDashboard row = selectDashboard(ds.id());
+        return toDashboardVO(ds.id(), row);
+    }
+
+    /**
+     * 保存自定义看板（实时保存链路后端入口）。
+     *
+     * @param request 保存请求
+     * @return 保存后的看板（含嵌入令牌）
+     */
+    @Override
+    public NginxDashboardVO saveDashboard(NginxDashboardDTO request) {
+        if (request == null) {
+            throw new IllegalArgumentException("请求不能为空");
+        }
+        DataSourceVO ds = requireDatasource(request.datasourceId());
+        String config = request.config() == null ? "" : request.config();
+        if (config.trim().isEmpty()) {
+            throw new IllegalArgumentException("看板配置不能为空");
+        }
+        MsNginxDashboard row = selectDashboard(ds.id());
+        LocalDateTime now = LocalDateTime.now();
+        if (row == null) {
+            row = new MsNginxDashboard();
+            row.setDatasourceId(ds.id());
+            row.setDashboardName(trim(request.name()).isEmpty() ? "Nginx 看板" : request.name().trim());
+            row.setDashboardConfig(config);
+            row.setEmbedToken(newToken());
+            row.setCreateTime(now);
+            row.setUpdateTime(now);
+            nginxDashboardMapper.insert(row);
+        } else {
+            if (!trim(request.name()).isEmpty()) {
+                row.setDashboardName(request.name().trim());
+            }
+            row.setDashboardConfig(config);
+            if (trim(row.getEmbedToken()).isEmpty()) {
+                row.setEmbedToken(newToken());
+            }
+            row.setUpdateTime(now);
+            nginxDashboardMapper.updateById(row);
+        }
+        return toDashboardVO(ds.id(), row);
+    }
+
+    /**
+     * 重新生成嵌入令牌。
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @return 看板
+     */
+    @Override
+    public NginxDashboardVO regenerateToken(Long datasourceId) {
+        DataSourceVO ds = requireDatasource(datasourceId);
+        MsNginxDashboard row = selectDashboard(ds.id());
+        if (row == null) {
+            row = new MsNginxDashboard();
+            row.setDatasourceId(ds.id());
+            row.setDashboardName("Nginx 看板");
+            row.setDashboardConfig("{}");
+            row.setCreateTime(LocalDateTime.now());
+            row.setUpdateTime(LocalDateTime.now());
+            row.setEmbedToken(newToken());
+            nginxDashboardMapper.insert(row);
+        } else {
+            row.setEmbedToken(newToken());
+            row.setUpdateTime(LocalDateTime.now());
+            nginxDashboardMapper.updateById(row);
+        }
+        return toDashboardVO(ds.id(), row);
+    }
+
+    /**
+     * 按嵌入令牌读取看板（公开只读，不需要登录态）。
+     *
+     * @param token 嵌入令牌
+     * @return 看板
+     */
+    @Override
+    public NginxDashboardVO embedDashboard(String token) {
+        MsNginxDashboard row = requireDashboardByToken(token);
+        return toDashboardVO(row.getDatasourceId(), row);
+    }
+
+    /**
+     * 嵌入场景读取实时状态（凭令牌代理到对应数据源）。
+     *
+     * @param token 嵌入令牌
+     * @return 状态信息
+     */
+    @Override
+    public NginxStatusVO embedStatus(String token) {
+        return status(requireDashboardByToken(token).getDatasourceId());
+    }
+
+    /**
+     * 嵌入场景读取指标趋势（凭令牌代理到对应数据源）。
+     *
+     * @param token    嵌入令牌
+     * @param hours    回溯小时数，缺省 24
+     * @param interval 采样间隔（分钟），缺省 30
+     * @return 趋势数据
+     */
+    @Override
+    public NginxTrendVO embedTrend(String token, Integer hours, Integer interval) {
+        return trend(requireDashboardByToken(token).getDatasourceId(), hours, interval);
+    }
+
+    /**
+     * 嵌入场景读取访问日志 Top 统计（凭令牌代理到对应数据源）。
+     *
+     * @param token   嵌入令牌
+     * @param path    日志文件路径，缺省 access 日志
+     * @param lines   扫描的尾部行数，缺省 2000
+     * @param minutes 只统计最近 N 分钟，缺省 0（不限）
+     * @param topN    每个维度取前几，缺省 10
+     * @return Top 统计
+     */
+    @Override
+    public NginxAccessTopVO embedAccessTop(String token, String path, Integer lines, Integer minutes, Integer topN) {
+        return accessTop(requireDashboardByToken(token).getDatasourceId(), path, lines, minutes, topN);
+    }
+
+    /**
+     * 嵌入场景读取 URL 访问趋势（凭令牌代理到对应数据源）。
+     *
+     * @param token 嵌入令牌
+     * @param path  日志文件路径，缺省 access 日志
+     * @param lines 扫描的尾部行数
+     * @param topN  取前几个 URL
+     * @return URL 趋势结果
+     */
+    @Override
+    public NginxUrlTrendVO embedUrlTrend(String token, String path, Integer lines, Integer topN) {
+        return urlTrend(requireDashboardByToken(token).getDatasourceId(), path, lines, topN);
+    }
+
+    // ==================== 内部：看板存取 ====================
+
+    /**
+     * 查数据源对应的看板行。
+     *
+     * @param datasourceId 数据源 ID
+     * @return 行，未保存过为 null
+     */
+    private MsNginxDashboard selectDashboard(Long datasourceId) {
+        return nginxDashboardMapper.selectOne(new LambdaQueryWrapper<MsNginxDashboard>()
+                .eq(MsNginxDashboard::getDatasourceId, datasourceId));
+    }
+
+    /**
+     * 按令牌查看板行。
+     *
+     * @param token 令牌
+     * @return 行
+     * @throws IllegalStateException 令牌无效
+     */
+    private MsNginxDashboard requireDashboardByToken(String token) {
+        String value = trim(token);
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("嵌入令牌不能为空");
+        }
+        MsNginxDashboard row = nginxDashboardMapper.selectOne(new LambdaQueryWrapper<MsNginxDashboard>()
+                .eq(MsNginxDashboard::getEmbedToken, value));
+        if (row == null) {
+            throw new IllegalStateException("嵌入链接无效或已失效");
+        }
+        return row;
+    }
+
+    /**
+     * 转看板视图。
+     *
+     * @param datasourceId 数据源 ID
+     * @param row          行，可为 null
+     * @return 视图
+     */
+    private static NginxDashboardVO toDashboardVO(Long datasourceId, MsNginxDashboard row) {
+        if (row == null) {
+            return new NginxDashboardVO(datasourceId, "", "", "", null);
+        }
+        return new NginxDashboardVO(
+                datasourceId,
+                nullToEmpty(row.getDashboardName()),
+                nullToEmpty(row.getDashboardConfig()),
+                nullToEmpty(row.getEmbedToken()),
+                row.getUpdateTime() == null ? null : TIME_FORMAT.format(row.getUpdateTime()));
+    }
+
+    /**
+     * 生成 32 位十六进制随机令牌。
+     *
+     * @return 令牌
+     */
+    private static String newToken() {
+        byte[] buffer = new byte[16];
+        RANDOM.nextBytes(buffer);
+        StringBuilder sb = new StringBuilder(32);
+        for (byte b : buffer) {
+            sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+            sb.append(Character.forDigit(b & 0xF, 16));
+        }
+        return sb.toString();
     }
 
     @Override
