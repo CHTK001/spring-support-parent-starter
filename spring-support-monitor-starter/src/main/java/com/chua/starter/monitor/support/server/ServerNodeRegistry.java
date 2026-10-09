@@ -11,6 +11,7 @@ import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.utils.ClassUtils;
+import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
@@ -65,6 +66,14 @@ public class ServerNodeRegistry {
      * 文件存储网关过滤器类型别名（与 {@code ServerFilterFactory} 预设一致）
      */
     private static final String FILE_STORAGE_ALIAS = "file-storage";
+
+    /**
+     * 节点 config JSON 中文件存储 CORS 覆盖的键名
+     *
+     * <p>值结构与 {@code plugin.filesystem.storage-server.cors.*}（FileStorageServerProperties.Cors）
+     * 同名同义；出现即整体替换默认值。字段见 {@link FileStorageServerProperties.Cors}。</p>
+     */
+    private static final String CORS_CONFIG_KEY = "cors";
 
     /**
      * 文件存储网关过滤器全限定类名（file-storage 预设实例化的目标类）
@@ -244,6 +253,11 @@ public class ServerNodeRegistry {
         }
         List<ServerFilterDescriptor> descriptors = parseFilters(node);
         List<ServerFilter> created = createManagedFilters(node, descriptors, server.getSetting());
+        // 文件存储节点的 CORS 配置在启动与热更新两条路径保持一致：
+        // 内置 CorsFilter 每请求实时读取 setting，就地回填即时生效（服务不中断）
+        if (containsFileStorage(descriptors)) {
+            applyFileStorageCors(server.getSetting(), node);
+        }
         // 先建后删：新插件构建失败时保持原链路可用，避免把服务打成无过滤器状态
         for (ServerFilter old : runtime.getManagedFilters()) {
             try {
@@ -462,6 +476,8 @@ public class ServerNodeRegistry {
                 security.setFrameOptions("");
                 security.setFrameAncestors("*");
             }
+            // 文件存储节点：跨域（CORS）与独立文件服务同语义（见 applyFileStorageCors）
+            applyFileStorageCors(server.getSetting(), node);
         }
         attachFilters(server, node, descriptors, setting, managed);
         return server;
@@ -597,10 +613,19 @@ public class ServerNodeRegistry {
             log.debug("[ServerNodeRegistry] OAuth 鉴权过滤器不可用（oauth-client-starter 未装配），文件服务器按公共桶运行");
             return;
         }
-        Object privateBuckets = parseConfig(node).get("privateBuckets");
+        Map<String, Object> config = parseConfig(node);
+        Object privateBuckets = config.get("privateBuckets");
+        Map<String, Object> updates = new LinkedHashMap<>();
         if (privateBuckets != null && !String.valueOf(privateBuckets).isBlank()) {
-            oauth.updateConfig(Map.of("privateBuckets", String.valueOf(privateBuckets).trim()));
+            updates.put("privateBuckets", String.valueOf(privateBuckets).trim());
         }
+        // 鉴权失败（401/503）响应也必须可跨源读取：该过滤器在 reject 前经
+        // applyCorsHeaders 回显来源，但仅在 corsAllowedOrigins 命中时下发——
+        // 节点不配的话浏览器只能拿到 opaque 网络错误，前端区分不了「未登录」与
+        // 「服务不可用」。来源白名单与节点 CORS（applyFileStorageCors）取同一份，
+        // 节点收紧（config.cors.allowedOrigins）时鉴权侧同步收紧。
+        updates.put("corsAllowedOrigins", resolveFileStorageCors(node).getAllowedOrigins());
+        oauth.updateConfig(updates);
         filters.add(oauth);
         // 私有桶热更新联动：文件存储网关 setConfig 后，把最新私有桶同步给 OAuth 鉴权过滤器
         bindFileStorageConfigListener(filters, oauth);
@@ -744,6 +769,53 @@ public class ServerNodeRegistry {
          */
         applyCommonOptions(setting, config);
         return setting;
+    }
+
+    /**
+     * 文件存储节点的跨域（CORS）配置：与独立文件服务（FileStorageServerLauncher）同语义。
+     *
+     * <p>文件服务器是独立端口网关，前端页面（pages/filesystem 的文件资产页）访问它必然跨源；
+     * 独立服务因此默认开启 CORS（{@code plugin.filesystem.storage-server.cors.*}）。
+     * 服务管理节点此前只做了 SecurityHeaders（iframe 预览可嵌入）而漏了 CORS：
+     * 前端把 {@code filestorage.server} 指到节点地址后，{@code x-oauth-token /
+     * X-Trace-Id / X-Requested-With / X-Req-Fingerprint} 等自定义头会触发预检，
+     * 节点不回 {@code Access-Control-Allow-*} 整页请求被浏览器拦下——「能 curl 不能开」。
+     * 默认值经 {@link FileStorageServerProperties.Cors#applyTo} 单点维护，
+     * 需要收紧时在节点 config JSON 配 {@code cors}（字段与
+     * {@code plugin.filesystem.storage-server.cors.*} 同名，出现即整体替换、非逐项合并）。</p>
+     *
+     * @param setting 服务器配置（内置 CorsFilter 每请求实时读取，就地回填即时生效）
+     * @param node    节点定义（config JSON 提供 cors 覆盖）
+     */
+    private void applyFileStorageCors(ServerSetting setting, MsServerNode node) {
+        ServerSetting.CorsConfig cors = setting.getCors();
+        if (cors == null) {
+            return;
+        }
+        resolveFileStorageCors(node).applyTo(cors);
+        log.debug("[ServerNodeRegistry] 文件存储节点 CORS 已配置: node={}", node.getName());
+    }
+
+    /**
+     * 解析文件存储节点的 CORS 配置（默认镜像独立文件服务；config.cors 可整体覆盖）。
+     *
+     * <p>包内可见：{@code ServerNodeRegistryFileStorageCorsTest} 直接对解析与映射做门禁，
+     * 不为测试反射开洞。</p>
+     *
+     * @param node 节点定义
+     * @return CORS 配置（不为 null）
+     */
+    FileStorageServerProperties.Cors resolveFileStorageCors(MsServerNode node) {
+        Object override = parseConfig(node).get(CORS_CONFIG_KEY);
+        if (override instanceof Map) {
+            try {
+                return objectMapper.convertValue(override, FileStorageServerProperties.Cors.class);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "节点 [" + node.getName() + "] config." + CORS_CONFIG_KEY + " 解析失败: " + e.getMessage(), e);
+            }
+        }
+        return new FileStorageServerProperties.Cors();
     }
 
     /**
