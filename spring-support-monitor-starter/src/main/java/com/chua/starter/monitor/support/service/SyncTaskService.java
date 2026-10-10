@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTaskDTO;
@@ -69,6 +70,17 @@ public interface SyncTaskService {
      * @return 本次执行结果
      */
     ReturnResult<SyncTaskRunVO> runOnce(Long id);
+
+    /**
+     * 查询任务的执行调试日志（过程日志：连源、SQL、列解析、映射、逐文件读写、错误堆栈）。
+     *
+     * <p>数据来自服务端内存缓冲：进行中的执行在最前（可轮询实时追加），其后是已完成的
+     * 最近若干次执行（新在前）；后端重启即清空。</p>
+     *
+     * @param id 任务 ID
+     * @return 日志列表；无记录时为空列表
+     */
+    ReturnResult<List<SyncTaskRunLogVO>> runLogs(Long id);
 
     /**
      * 启用或停用任务的定时调度。
