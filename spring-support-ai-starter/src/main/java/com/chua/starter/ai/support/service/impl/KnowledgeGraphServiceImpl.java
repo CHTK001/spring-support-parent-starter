@@ -489,7 +489,22 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
      * @return 实体 uid
      */
     private String upsertEntity(Integer libraryId, String name, String type, String description) {
+        return upsertEntity(libraryId, name, type, description, null);
+    }
+
+    /**
+     * 落一条实体（同名复用），可附带实体图片。
+     *
+     * @param libraryId 图谱库ID
+     * @param name 实体名称
+     * @param type 已归一化的实体类型
+     * @param description 实体说明，可为空
+     * @param logo 实体图片地址；null/空白表示本次未提供（不改已有图片），非空时覆盖
+     * @return 实体 uid
+     */
+    private String upsertEntity(Integer libraryId, String name, String type, String description, String logo) {
         String trimmed = name.trim();
+        String logoTrimmed = StringUtils.hasText(logo) ? logo.trim() : null;
         List<SysAiKnowledgeGraphEntity> same = graphEntityMapper.selectList(
                 new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
                         .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)
@@ -506,6 +521,10 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
             if (StringUtils.hasText(description) && !StringUtils.hasText(exists.getProperties())) {
                 update.setProperties(descriptionJson(description));
             }
+            // 图片：本次带了才覆盖（模板/手工补录会带图，LLM 抽取不带 → 不动已有图）
+            if (logoTrimmed != null && !logoTrimmed.equals(exists.getLogo())) {
+                update.setLogo(logoTrimmed);
+            }
             String mergedType = mergeType(exists.getType(), type);
             if (!mergedType.equals(exists.getType())) {
                 update.setType(mergedType);
@@ -519,6 +538,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         entity.setName(trimmed);
         entity.setType(type);
         entity.setProperties(descriptionJson(description));
+        entity.setLogo(logoTrimmed);
         entity.setSource(SOURCE_LLM);
         entity.setWeight(1.0D);
         entity.setStatus(STATUS_ENABLED);
@@ -1009,7 +1029,8 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
                     TYPE_COLORS.getOrDefault(entity.getType(), TYPE_COLORS.get("other")),
                     entity.getWeight(),
                     degreeByUid.getOrDefault(entity.getUid(), 0),
-                    entity.getSource()));
+                    entity.getSource(),
+                    entity.getLogo()));
         }
         return new KnowledgeGraphViewVO(nodes, edges, nodes.size(), edges.size(), false);
     }
@@ -1107,12 +1128,12 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String addManualEntity(String knowledgeBaseId, String knowledgeBaseName,
-                                  String name, String type, String description) {
+                                  String name, String type, String description, String logo) {
         if (!StringUtils.hasText(knowledgeBaseId) || !StringUtils.hasText(name)) {
             return null;
         }
         Integer libraryId = ensureLibrary(knowledgeBaseId, knowledgeBaseName);
-        String uid = upsertEntity(libraryId, name.trim(), normalizeType(type), description);
+        String uid = upsertEntity(libraryId, name.trim(), normalizeType(type), description, logo);
         addRef(libraryId, TARGET_ENTITY, uid, knowledgeBaseId, MANUAL_DOC_PATH);
         pruneOrphans(libraryId);
         return uid;
@@ -1121,7 +1142,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateEntity(String knowledgeBaseId, String uid, String name,
-                                String type, String description) {
+                                String type, String description, String logo) {
         if (!StringUtils.hasText(knowledgeBaseId) || !StringUtils.hasText(uid)) {
             return false;
         }
@@ -1147,6 +1168,10 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         }
         if (description != null) {
             update.setProperties(descriptionJson(description));
+        }
+        // 图片：null=不改；空串=清除；有值=覆盖（logo 列允许 null，trim 后落库）
+        if (logo != null) {
+            update.setLogo(StringUtils.hasText(logo) ? logo.trim() : null);
         }
         graphEntityMapper.updateById(update);
         pruneOrphans(libraryId);
