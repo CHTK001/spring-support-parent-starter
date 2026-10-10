@@ -1,5 +1,6 @@
 package com.chua.starter.eduai.service;
 
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.eduai.dimension.entity.EduClass;
 import com.chua.starter.eduai.dimension.entity.EduStudent;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
@@ -128,4 +129,13 @@ public interface IEduTeacherCenterService {
      * @return 阅卷任务列表
      */
     List<EduMarkingTask> myMarkingTasks(int limit);
+
+    /**
+     * 我发起的阅卷任务（分页，按创建时间倒序）
+     *
+     * @param pageNum  页码，从 1 开始；null 按第 1 页
+     * @param pageSize 每页条数；null 按默认档
+     * @return 阅卷任务分页结果
+     */
+    PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize);
 }

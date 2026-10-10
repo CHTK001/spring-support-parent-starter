@@ -1,6 +1,9 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.dimension.entity.EduClass;
 import com.chua.starter.eduai.dimension.entity.EduStudent;
@@ -14,6 +17,7 @@ import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -267,6 +271,22 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
                 .eq("marking_task_owner_user_id", me)
                 .orderByDesc("marking_task_id")
                 .last("LIMIT " + size));
+    }
+
+    @Override
+    public PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize) {
+        String me = EduUserContext.requireUserId();
+        Page<EduMarkingTask> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
+        IPage<EduMarkingTask> result = markingTaskMapper.selectPage(page, new QueryWrapper<EduMarkingTask>()
+                .eq("marking_task_owner_user_id", me)
+                .orderByDesc("marking_task_id"));
+        return PageResult.<EduMarkingTask>builder()
+                .pageNo((int) result.getCurrent())
+                .pageSize((int) result.getSize())
+                .totalPages((int) result.getPages())
+                .total(result.getTotal())
+                .data(result.getRecords())
+                .build();
     }
 
     // ==================== 内部工具 ====================
