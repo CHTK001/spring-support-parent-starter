@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,6 +37,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v2/user")
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "plugin.oauth", name = "enable", havingValue = "true", matchIfMissing = true)
+// 内置 common-system 的应用（如 collect）由 SysUserController 提供 /v2/user/updateOwner，
+// 此时本控制器让位，避免运行期映射歧义；无 common-system 的应用保持原行为。
+@ConditionalOnMissingClass("com.chua.starter.system.controller.SysUserController")
 @Tag(name = "账号安全", description = "当前登录账号口令修改")
 public class OwnerAccountController {
 

@@ -228,6 +228,12 @@ public class PosixNginxCommandProvider implements NginxCommandProvider {
     }
 
     @Override
+    public String deleteFile(String path) {
+        // -- 防文件名以 "-" 开头被当成选项；-f 不存在也算成功（幂等）
+        return "rm -f -- " + quote(path);
+    }
+
+    @Override
     public String listByModifiedDesc(String dir, String suffix) {
         return "ls -1t " + quote(dir) + "/*" + suffix + " 2>/dev/null";
     }

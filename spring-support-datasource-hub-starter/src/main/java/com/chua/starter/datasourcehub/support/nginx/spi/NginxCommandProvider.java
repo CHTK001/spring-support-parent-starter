@@ -166,6 +166,17 @@ public interface NginxCommandProvider {
     String copyFile(String source, String destination);
 
     /**
+     * 删除单个文件（幂等：文件不存在也算成功）。
+     *
+     * <p>与 {@code rm -f} 语义对齐：备份批量删除会先校验文件名、再逐个删除，
+     * 「已经被别处清掉」不应算失败。退出码 0 表示删除成功或本就不存在。</p>
+     *
+     * @param path 文件路径
+     * @return 完整命令行
+     */
+    String deleteFile(String path);
+
+    /**
      * 按修改时间倒序列出目录下匹配后缀的文件。
      *
      * @param dir    目录

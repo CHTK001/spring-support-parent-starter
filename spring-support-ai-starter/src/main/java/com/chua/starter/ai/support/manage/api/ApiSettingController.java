@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +26,9 @@ import java.util.Map;
 @ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/v2/setting")
+// 内置 common-service 的应用（如 collect）由 SysSettingController 提供真实的 /v2/setting/default，
+// 此时空实现让位，避免运行期映射歧义；无 common-service 的应用（如控制台）保持返回空列表。
+@ConditionalOnMissingClass("com.chua.starter.service.controller.SysSettingController")
 @Slf4j
 public class ApiSettingController {
 
