@@ -1,5 +1,6 @@
 package com.chua.starter.eduai.controller;
 
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.eduai.dimension.entity.EduClass;
 import com.chua.starter.eduai.dimension.entity.EduStudent;
@@ -192,5 +193,20 @@ public class EduTeacherCenterController {
     @GetMapping("/marking/tasks")
     public ReturnResult<List<EduMarkingTask>> markingTasks(@RequestParam(value = "limit", defaultValue = "20") int limit) {
         return ReturnResult.ok(teacherCenterService.myMarkingTasks(limit));
+    }
+
+    /**
+     * 我发起的阅卷任务（分页）
+     *
+     * @param pageNum  页码，从 1 开始
+     * @param pageSize 每页条数
+     * @return 阅卷任务分页结果
+     */
+    @Operation(summary = "我的阅卷任务（分页）")
+    @GetMapping("/marking/tasks/page")
+    public ReturnResult<PageResult<EduMarkingTask>> pageMarkingTasks(
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
+        return ReturnResult.ok(teacherCenterService.pageMyMarkingTasks(pageNum, pageSize));
     }
 }
