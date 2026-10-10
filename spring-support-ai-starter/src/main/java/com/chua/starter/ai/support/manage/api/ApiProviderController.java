@@ -483,6 +483,10 @@ public class ApiProviderController {
         entity.setUpdatedAt(System.currentTimeMillis());
         providerMapper.updateById(entity);
 
+        // ONNX 供应商的推理设备取自 provider.extra.device，更新后立即桥接到运行时，
+        // 覆盖原模型参数接口的 device 读取，避免需重启才生效。
+        refreshOnnxDevice(entity);
+
         List<SysAiProviderModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId));
@@ -1223,6 +1227,7 @@ public class ApiProviderController {
             // 新增：模型 ID 确定后，用已采集的指标补全上下文长度等参数（仅未配置时）
             enrichFromMetrics(newModel);
             modelMapper.insert(newModel);
+            refreshOnnxDevice(provider);
             return ApiResult.ok(toProviderModelResponse(provider, newModel));
         } else {
             applyModelInput(existing, modelInput);
@@ -1238,6 +1243,7 @@ public class ApiProviderController {
                     .set(SysAiProviderModel::getTemperature, existing.getTemperature())
                     .set(SysAiProviderModel::getTopP, existing.getTopP())
                     .set(SysAiProviderModel::getFrequencyPenalty, existing.getFrequencyPenalty()));
+            refreshOnnxDevice(provider);
             return ApiResult.ok(toProviderModelResponse(provider, existing));
         }
     }
@@ -1284,6 +1290,7 @@ public class ApiProviderController {
         modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
                 .eq(SysAiProviderModel::getProviderId, providerId)
                 .eq(SysAiProviderModel::getModel, oldName));
+        refreshOnnxDevice(provider);
         return ApiResult.ok(toProviderModelResponse(provider, existing));
     }
 
@@ -1299,7 +1306,7 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
                                                @RequestParam("model") String model) {
-        requireProvider(providerId);
+        SysAiProvider provider = requireProvider(providerId);
         int deleted = modelMapper.delete(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId)
@@ -1307,6 +1314,7 @@ public class ApiProviderController {
         if (deleted == 0) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + model);
         }
+        refreshOnnxDevice(provider);
         return ApiResult.ok();
     }
 
@@ -2439,6 +2447,17 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
         }
         return e;
+    }
+
+    /**
+     * ONNX 供应商或其模型行变更后，刷新 provider 级推理设备覆盖。
+     *
+     * @param provider 供应商行
+     */
+    private void refreshOnnxDevice(SysAiProvider provider) {
+        if (isOnnxRow(provider)) {
+            onnxProviderMaterializer.syncProviderDevice();
+        }
     }
 
     /**
