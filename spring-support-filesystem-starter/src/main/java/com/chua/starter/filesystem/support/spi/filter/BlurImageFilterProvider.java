@@ -44,4 +44,24 @@ public class BlurImageFilterProvider implements FileStorageImageFilterProvider {
     public String getCssFilter() {
         return "blur(3px)";
     }
+
+    /**
+     * 获取图片路径参数。
+     *
+     * @return {@code blur=3}
+     */
+    @Override
+    public String getPathParam() {
+        return "blur=3";
+    }
+
+    /**
+     * 是否由后台图片管线执行。
+     *
+     * @return true（JDK 图片管线支持高斯模糊）
+     */
+    @Override
+    public boolean isServerSide() {
+        return true;
+    }
 }
