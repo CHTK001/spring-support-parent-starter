@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.manage.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.deeplearning.support.engine.ModelParams;
 import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
@@ -143,6 +144,7 @@ public class OnnxProviderMaterializer {
         try {
             SysAiProvider provider = ensureProvider();
             int models = syncModels();
+            syncProviderDevice();
             log.info("[OnnxProvider] 物化完成 provider={} 新增模型={} 恢复目录={}",
                     provider.getProviderId(), models, restored);
         } catch (Exception e) {
@@ -355,6 +357,67 @@ public class OnnxProviderMaterializer {
         log.info("[OnnxProvider] 模型同步完成 清单={} 新增={} 跳过={} 清理={} 模型根={}",
                 entries.size(), created, skipped, purged, currentModelDir());
         return created;
+    }
+
+    /**
+     * 把 ONNX 供应商的 {@code extra.device} 桥接到 {@link ModelParams} 的 Provider 级覆盖。
+     *
+     * <p>{@code provider.extra.device} 由前端在供应商编辑页保存（自动 / CPU / GPU），
+     * 这里按模型镜像行逐个写入覆盖。Provider 级覆盖优先于原模型参数接口
+     * （{@code /v2/onnx/model-params}）中保存的模型级 device，runtime（
+     * {@code GpuHelper}、{@code ModelRegistry}）与接口的 resolvedDevice 共用
+     * {@link ModelParams#deviceOf(String)} 裁决，因此无需改动各推理调用点。</p>
+     *
+     * <p>设备值为空、{@code auto} 或非法值时清除覆盖，让模型级参数重新生效。</p>
+     */
+    public void syncProviderDevice() {
+        SysAiProvider provider = providerMapper.selectById(ONNX_PROVIDER_ID);
+        if (provider == null) {
+            log.info("[OnnxProvider] 推理设备同步跳过：ONNX 供应商不存在");
+            return;
+        }
+        String device = providerDevice(provider.getExtra());
+        List<SysAiProviderModel> models = providerModelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, ONNX_PROVIDER_ID));
+        // 每次重建覆盖集：模型删除 / 改名后，旧 modelId 的覆盖不能残留在运行时。
+        ModelParams.clearDeviceOverrides();
+        for (SysAiProviderModel model : models) {
+            if (device != null) {
+                ModelParams.setDeviceOverride(model.getModel(), device);
+            }
+        }
+        log.info("[OnnxProvider] 推理设备已同步 provider={} device={} models={}",
+                ONNX_PROVIDER_ID, device == null ? "auto(模型级)" : device, models.size());
+    }
+
+    /**
+     * 从供应商扩展配置中解析合法设备值。
+     *
+     * @param extra 供应商扩展配置
+     * @return 归一化设备名（cpu / gpu），未配置或 auto 返回 {@code null}
+     */
+    private String providerDevice(Map<String, Object> extra) {
+        if (extra == null) {
+            return null;
+        }
+        Object value = extra.get("device");
+        if (value == null) {
+            return null;
+        }
+        String raw = String.valueOf(value).trim();
+        if (raw.isBlank() || "auto".equalsIgnoreCase(raw)) {
+            return null;
+        }
+        String lower = raw.toLowerCase();
+        if ("gpu".equals(lower) || "cuda".equals(lower)) {
+            return "gpu";
+        }
+        if ("cpu".equals(lower)) {
+            return "cpu";
+        }
+        log.warn("[OnnxProvider] 忽略未知 device 值: {}", raw);
+        return null;
     }
 
     /**
