@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.datasync.SyncWriteMode;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTaskDTO;
@@ -118,6 +119,18 @@ public class SyncTaskController {
     @PostMapping("/tasks/{id}/run")
     public ReturnResult<SyncTaskRunVO> runOnce(@PathVariable Long id) {
         return syncTaskService.runOnce(id);
+    }
+
+    /**
+     * 查询任务的执行调试日志。
+     *
+     * @param id 任务 ID
+     * @return 日志列表（进行中执行在最前，其后已完成执行新在前）
+     */
+    @Operation(summary = "查询同步执行调试日志")
+    @GetMapping("/tasks/{id}/logs")
+    public ReturnResult<List<SyncTaskRunLogVO>> runLogs(@PathVariable Long id) {
+        return syncTaskService.runLogs(id);
     }
 
     /**
