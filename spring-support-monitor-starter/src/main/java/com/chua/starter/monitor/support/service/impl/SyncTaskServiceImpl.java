@@ -23,6 +23,7 @@ import com.chua.starter.monitor.support.mapper.MsSyncTaskMapper;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncFieldMappingVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTaskDTO;
@@ -131,6 +132,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * 目录源任务的目录监听器（任务 ID → 监听）
      */
     private final Map<Long, SyncDirWatcher> dirWatchers = new ConcurrentHashMap<>();
+
+    /**
+     * 执行调试日志缓冲（内存态，供同步页「日志」弹窗逐步排障）
+     */
+    private final SyncTaskRunLogBuffer runLogBuffer;
 
     /**
      * 启动时恢复定时任务。
@@ -336,6 +342,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             requireTask(id);
             cancelSchedule(id);
             taskMapper.deleteById(id);
+            runLogBuffer.remove(id);
             return ReturnResult.ok(Boolean.TRUE);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ReturnResult.error(e.getMessage());
@@ -368,7 +375,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     public ReturnResult<SyncTaskRunVO> runOnce(Long id) {
         try {
             MsSyncTask task = requireTask(id);
-            return ReturnResult.ok(execute(task));
+            return ReturnResult.ok(execute(task, SyncTaskRunLogVO.TRIGGER_MANUAL));
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
@@ -400,16 +407,33 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         }
     }
 
+    @Override
+    public ReturnResult<List<SyncTaskRunLogVO>> runLogs(Long id) {
+        try {
+            requireTask(id);
+            return ReturnResult.ok(runLogBuffer.list(id));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[sync-task] 查询执行日志失败, id={}", id, e);
+            return ReturnResult.error("查询执行日志失败: " + e.getMessage());
+        }
+    }
+
     /**
      * 执行一次同步：读源、按映射转换、写目标，并回写任务状态。
      *
      * <p>执行本身不抛异常给调用方，而是把失败编码进返回值：同步任务失败是**业务结果**而不是
      * 接口故障，界面需要看到「读了几行、卡在哪一步」，用异常会只剩一句错误。</p>
      *
-     * @param task 任务
+     * <p>全过程同步写入调试日志缓冲（begin → 逐步 info/error → end），
+     * 进行中的日志可被 {@link #runLogs(Long)} 轮询到，用于前端实时排障。</p>
+     *
+     * @param task    任务
+     * @param trigger 触发方式（见 {@link SyncTaskRunLogVO} 的 TRIGGER_* 常量）
      * @return 执行结果
      */
-    private SyncTaskRunVO execute(MsSyncTask task) {
+    private SyncTaskRunVO execute(MsSyncTask task, String trigger) {
         Long taskId = task.getId();
         AtomicBoolean running = runningTasks.computeIfAbsent(taskId, key -> new AtomicBoolean(false));
         if (!running.compareAndSet(false, true)) {
@@ -419,16 +443,28 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         long startNanos = System.nanoTime();
         long readCount = 0L;
         SyncTaskRunVO result;
+        String logStatus = SyncTaskRunVO.STATUS_FAILED;
+        runLogBuffer.begin(taskId, trigger);
         try {
             SyncSourceType sourceType = SyncSourceType.from(task.getSyncTaskSourceType());
+            runLogBuffer.info(taskId, "任务「" + task.getSyncTaskName() + "」开始执行（触发 " + trigger
+                    + "，源类型 " + sourceType + "）");
             if (sourceType == SyncSourceType.DIR) {
                 // 目录模式：逐个文件独立映射与写入，单文件失败不影响其余文件
+                runLogBuffer.info(taskId, "目录源 " + task.getSyncTaskSourcePath());
                 result = executeDirectory(task, runTime, startNanos);
             } else if (sourceType.isHttp()) {
                 // 网络源：单次请求同时取列与数据（见 executeHttp）
                 result = executeHttp(task, runTime, startNanos);
             } else {
+                if (sourceType == SyncSourceType.JDBC) {
+                    runLogBuffer.info(taskId, "源数据源 ID " + task.getSyncTaskSourceDatasourceId()
+                            + "，源 SQL：" + task.getSyncTaskSourceSql());
+                } else {
+                    runLogBuffer.info(taskId, "源文件 " + task.getSyncTaskSourcePath());
+                }
                 List<SyncColumnVO> sourceColumns = resolveSourceColumns(task);
+                runLogBuffer.info(taskId, "源列（" + sourceColumns.size() + " 列）：" + describeColumns(sourceColumns));
                 List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
                 AtomicLong readCounter = new AtomicLong();
                 Path file = sourceType == SyncSourceType.FILE ? Path.of(task.getSyncTaskSourcePath()) : null;
@@ -436,12 +472,15 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 readCount = readCounter.get();
                 result = SyncTaskRunVO.success(readCount, writeCount, costMs(startNanos), runTime);
             }
+            logStatus = result.status();
         } catch (Exception e) {
             String message = rootMessage(e);
             log.error("[sync-task] 任务执行失败, id={}, message={}", taskId, message, e);
+            runLogBuffer.error(taskId, "执行失败：" + message, e);
             result = SyncTaskRunVO.failed(readCount, costMs(startNanos), message, runTime);
         } finally {
             running.set(false);
+            runLogBuffer.end(taskId, logStatus, costMs(startNanos));
         }
         persistRunResult(taskId, result);
         return result;
@@ -470,10 +509,15 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         try {
             files = listFiles(Path.of(task.getSyncTaskSourcePath()), options);
         } catch (Exception e) {
+            runLogBuffer.error(task.getId(), "读取目录失败：" + rootMessage(e), e);
             return SyncTaskRunVO.failed(0L, costMs(startNanos), rootMessage(e), runTime);
         }
+        runLogBuffer.info(task.getId(), "目录选项：pattern=" + options.pattern()
+                + "，format=" + options.format() + "，处理完=" + options.afterProcess()
+                + "，共匹配 " + files.size() + " 个文件");
         if (files.isEmpty()) {
             // 空目录不是错误：实时录入场景下一次触发可能刚好没有待处理文件
+            runLogBuffer.info(task.getId(), "目录下没有待处理文件，本轮结束");
             return SyncTaskRunVO.success(0L, 0L, costMs(startNanos), runTime);
         }
         for (Path file : files) {
@@ -486,14 +530,19 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 writeTotal += writeCount;
                 okCount++;
                 afterProcess(task, file, options);
+                runLogBuffer.info(task.getId(), "文件 " + file.getFileName() + "：读 "
+                        + readCounter.get() + " 行 / 写 " + writeCount + " 行");
             } catch (Exception e) {
                 failedCount++;
                 if (problems.length() < 300) {
                     problems.append(file.getFileName()).append(": ").append(rootMessage(e)).append("; ");
                 }
+                runLogBuffer.error(task.getId(), "文件 " + file.getFileName() + " 同步失败：" + rootMessage(e), e);
                 log.warn("[sync-task] 文件同步失败, task={}, file={}, message={}", task.getId(), file, rootMessage(e));
             }
         }
+        runLogBuffer.info(task.getId(), "目录执行完成：成功 " + okCount + " / 失败 " + failedCount
+                + " 个文件，累计读 " + readTotal + " 行 / 写 " + writeTotal + " 行");
         if (failedCount == 0) {
             return SyncTaskRunVO.success(readTotal, writeTotal, costMs(startNanos), runTime);
         }
@@ -547,15 +596,20 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      */
     private List<SyncFieldMappingVO> resolveMapping(MsSyncTask task, List<SyncColumnVO> sourceColumns) throws Exception {
         List<SyncFieldMappingVO> mapping = parseMapping(task.getSyncTaskColumnMapping());
+        boolean explicit = !mapping.isEmpty();
         if (mapping.isEmpty()) {
             mapping = autoMatch(sourceColumns, loadTargetColumns(task.getSyncTaskTargetDatasourceId(), task.getSyncTaskTargetTable()));
         }
+        runLogBuffer.info(task.getId(), (explicit ? "显式字段映射" : "自动配对字段映射") + "（"
+                + mapping.size() + " 项）：" + describeMapping(mapping));
         if (mapping.isEmpty()) {
+            runLogBuffer.warn(task.getId(), "字段映射为空：源列与目标列没有可配对项");
             throw new IllegalStateException("字段映射为空：源列与目标列没有可配对项，请先在「字段映射」里配置");
         }
         Set<String> sourceNames = SyncJdbcSupport.columnNames(sourceColumns);
         for (SyncFieldMappingVO item : mapping) {
             if (!sourceNames.contains(item.source())) {
+                runLogBuffer.warn(task.getId(), "字段映射引用了源结果集里不存在的列: " + item.source());
                 throw new IllegalStateException("字段映射引用了源结果集里不存在的列: " + item.source());
             }
         }
@@ -584,6 +638,8 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (type == SyncSourceType.JDBC) {
             // JDBC：引擎的 JDBC 源
             DatasourceJdbcInfo sourceInfo = datasourceService.jdbcInfo(task.getSyncTaskSourceDatasourceId());
+            runLogBuffer.info(task.getId(), "源连接：" + sourceInfo.url()
+                    + "（用户 " + sourceInfo.username() + "），开始流式读取");
             jdbcSource = new JdbcDataSyncAgentSource(
                     "sync-src-" + task.getId(), "sync-in-" + task.getId(),
                     sourceInfo.url(), sourceInfo.username(), sourceInfo.password(),
@@ -594,6 +650,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             throw new IllegalStateException("HTTP 源不走流式路径");
         } else {
             // 文件：csv 走引擎定界符源，excel 走 POI（见 MonitorFileRowsSupport）
+            runLogBuffer.info(task.getId(), "解析源文件 " + file);
             rows = MonitorFileRowsSupport.read(file, optionsOf(task));
         }
         try {
@@ -620,14 +677,19 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      */
     private SyncTaskRunVO executeHttp(MsSyncTask task, LocalDateTime runTime, long startNanos) throws Exception {
         SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
+        runLogBuffer.info(task.getId(), "发起 HTTP 请求：" + task.getSyncTaskSourcePath());
         List<Map<String, Object>> rows = MonitorHttpRowsSupport.rows(type, task.getSyncTaskSourcePath(), httpOptionsOf(task));
         if (rows.isEmpty()) {
+            runLogBuffer.warn(task.getId(), "HTTP 响应为空，本轮读 0 行");
             return SyncTaskRunVO.success(0L, 0L, costMs(startNanos), runTime);
         }
         List<SyncColumnVO> sourceColumns = columnsOfRows(rows);
+        runLogBuffer.info(task.getId(), "响应解析：" + rows.size() + " 行 / " + sourceColumns.size()
+                + " 列（" + describeColumns(sourceColumns) + "）");
         List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
         AtomicLong readCounter = new AtomicLong();
         long writeCount = writeRows(task, mapping, Flux.fromIterable(rows), readCounter);
+        runLogBuffer.info(task.getId(), "执行完成：读 " + readCounter.get() + " 行 / 写 " + writeCount + " 行");
         return SyncTaskRunVO.success(readCounter.get(), writeCount, costMs(startNanos), runTime);
     }
 
@@ -675,7 +737,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         Flux<Map<String, Object>> mapped = rows
                 .doOnNext(row -> readCounter.incrementAndGet())
                 .map(row -> fieldMappingConverter.applyMappings(row, engineMappings));
-        return buildSink(task, mapping).writeStream(mapped);
+        long written = buildSink(task, mapping).writeStream(mapped);
+        runLogBuffer.info(task.getId(), "写入完成：读 " + readCounter.get() + " 行 / 写 " + written + " 行");
+        return written;
     }
 
     /**
@@ -692,6 +756,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         String quotedTable = SyncJdbcSupport.quoteTable(task.getSyncTaskTargetTable());
         SyncWriteMode mode = SyncWriteMode.from(task.getSyncTaskWriteMode());
         String writeSql = buildWriteSql(mode, quotedTable, targetColumns);
+        runLogBuffer.info(task.getId(), "写入计划：目标数据源 " + task.getSyncTaskTargetDatasourceId()
+                + "，表 " + task.getSyncTaskTargetTable() + "，模式 " + mode + "，批量 " + batchSize(task));
+        runLogBuffer.info(task.getId(), "写入语句：" + writeSql);
         return new MonitorJdbcSyncSink(
                 "sync-sink-" + task.getId(), targetInfo, writeSql, targetColumns,
                 batchSize(task), quotedTable, mode == SyncWriteMode.OVERWRITE);
@@ -1364,21 +1431,30 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         LocalDateTime runTime = LocalDateTime.now();
         long startNanos = System.nanoTime();
         SyncTaskRunVO result;
+        String logStatus = SyncTaskRunVO.STATUS_FAILED;
+        runLogBuffer.begin(taskId, SyncTaskRunLogVO.TRIGGER_REALTIME);
+        runLogBuffer.info(taskId, "实时录入 " + file.getFileName());
         try {
             SyncSourceOptions options = optionsOf(task);
             List<SyncColumnVO> sourceColumns = headersOf(file, options);
+            runLogBuffer.info(taskId, "文件表头（" + sourceColumns.size() + " 列）：" + describeColumns(sourceColumns));
             List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
             AtomicLong readCounter = new AtomicLong();
             long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
             result = SyncTaskRunVO.success(readCounter.get(), writeCount, costMs(startNanos), runTime);
             afterProcess(task, file, options);
+            logStatus = result.status();
+            runLogBuffer.info(taskId, "实时录入完成：读 " + readCounter.get() + " 行 / 写 " + writeCount
+                    + " 行，处理完动作 " + options.afterProcess());
             log.info("[sync-task] 实时录入完成, id={}, file={}, read={}, write={}",
                     taskId, file.getFileName(), readCounter.get(), writeCount);
         } catch (Exception e) {
             result = SyncTaskRunVO.failed(0L, costMs(startNanos), rootMessage(e), runTime);
+            runLogBuffer.error(taskId, "实时录入失败：" + rootMessage(e), e);
             log.warn("[sync-task] 实时录入失败, id={}, file={}, message={}", taskId, file, rootMessage(e));
         } finally {
             running.set(false);
+            runLogBuffer.end(taskId, logStatus, costMs(startNanos));
         }
         persistRunResult(taskId, result);
     }
@@ -1398,7 +1474,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 cancelSchedule(taskId);
                 return;
             }
-            execute(task);
+            execute(task, SyncTaskRunLogVO.TRIGGER_SCHEDULED);
         } catch (Exception e) {
             log.error("[sync-task] 定时执行异常, id={}", taskId, e);
         }
@@ -1476,5 +1552,54 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             return message;
         }
         return message.substring(0, MESSAGE_MAX_LENGTH);
+    }
+
+    /**
+     * 拼列清单供调试日志展示（最多 50 列，超出以省略号收尾）。
+     *
+     * @param columns 源列
+     * @return {@code 列名, 列名, …}
+     */
+    private static String describeColumns(List<SyncColumnVO> columns) {
+        StringBuilder desc = new StringBuilder();
+        int shown = 0;
+        for (SyncColumnVO column : columns) {
+            if (shown == 50) {
+                desc.append('…');
+                break;
+            }
+            if (shown > 0) {
+                desc.append(", ");
+            }
+            desc.append(column.name());
+            shown++;
+        }
+        return desc.toString();
+    }
+
+    /**
+     * 拼字段映射清单供调试日志展示（最多 30 项，超出以省略号收尾）。
+     *
+     * @param mapping 字段映射
+     * @return {@code 源列→目标列, …}
+     */
+    private static String describeMapping(List<SyncFieldMappingVO> mapping) {
+        if (mapping.isEmpty()) {
+            return "（空）";
+        }
+        StringBuilder desc = new StringBuilder();
+        int shown = 0;
+        for (SyncFieldMappingVO item : mapping) {
+            if (shown == 30) {
+                desc.append('…');
+                break;
+            }
+            if (shown > 0) {
+                desc.append(", ");
+            }
+            desc.append(item.source()).append('→').append(item.target());
+            shown++;
+        }
+        return desc.toString();
     }
 }
