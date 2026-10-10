@@ -174,4 +174,52 @@ public class MsSyncTask extends SysBase {
     @TableField("ms_sync_task_last_message")
     @Schema(description = "最近一次结果说明/错误信息")
     private String syncTaskLastMessage;
+
+    /**
+     * 同步模式：FULL 全量 / INCREMENTAL 增量。
+     *
+     * <p>历史行该列为空时按 {@code FULL} 解析（见 {@code SyncMode.from}）。</p>
+     */
+    @TableField("ms_sync_task_sync_mode")
+    @Schema(description = "同步模式 FULL 全量 / INCREMENTAL 增量", example = "FULL")
+    private String syncTaskSyncMode;
+
+    /**
+     * 增量字段（仅增量模式）：JDBC 源包裹进源 SQL 做水位过滤，HTTP 源作为查询参数携带。
+     * 只允许字母、数字、下划线（服务端校验，防注入）。
+     */
+    @TableField("ms_sync_task_inc_field")
+    @Schema(description = "增量字段（仅增量模式），如 id / updated_at")
+    private String syncTaskIncField;
+
+    /**
+     * 增量每批数量（仅增量模式）：单次执行最多同步条数，空表示不限。
+     */
+    @TableField("ms_sync_task_inc_batch_size")
+    @Schema(description = "增量每批数量：单次执行最多同步条数，空表示不限", example = "10000")
+    private Integer syncTaskIncBatchSize;
+
+    /**
+     * 增量水位：上一次成功同步到的最大增量字段值，下一轮只取新于它的数据。
+     *
+     * <p>服务端执行成功后回写，<b>不接受入参指定</b>（与最近一次执行结果同理，
+     * 否则界面可以伪造水位跳过数据）。</p>
+     */
+    @TableField("ms_sync_task_last_seq")
+    @Schema(description = "增量水位（服务端执行成功后回写，不可由入参指定）")
+    private String syncTaskLastSeq;
+
+    /**
+     * Hook 通知地址（HTTP 回调）：空表示不通知。
+     */
+    @TableField("ms_sync_task_hook_url")
+    @Schema(description = "Hook 通知地址（http/https），空表示不通知")
+    private String syncTaskHookUrl;
+
+    /**
+     * Hook 通知时机：DONE 完成通知 / ROW 每条数据+完成。全量模式固定按完成通知处理。
+     */
+    @TableField("ms_sync_task_hook_notify")
+    @Schema(description = "Hook 通知时机 DONE 完成通知 / ROW 每条数据+完成", example = "DONE")
+    private String syncTaskHookNotify;
 }
