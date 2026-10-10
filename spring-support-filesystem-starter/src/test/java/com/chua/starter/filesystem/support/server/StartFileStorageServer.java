@@ -2,6 +2,7 @@ package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.ServerBuilder;
+import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.filter.StaticResourceServerFilter;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.setting.BucketSetting;
@@ -65,6 +66,17 @@ public class StartFileStorageServer {
                 .host("127.0.0.1")
                 .port(port)
                 .build();
+        // 跨域（CORS）：与 Spring 真实装配路径 FileStorageServerLauncher 保持同一语义。
+        // 文件服务器是独立端口网关，前端（Vue dev server 在另一端口）基本都是跨源访问，
+        // 缺 Access-Control-Allow-Origin 会让浏览器拦掉整个 capabilities/config 响应，
+        // 页面表现为「下拉无选项 / 当前能力空串」——实测踩过。
+        // 这里直接开 allowOrigin + 通配来源，等价于 cors 默认配置（enable=true, *）。
+        ServerSetting.CorsConfig cors = server.getSetting().getCors();
+        cors.setAllowOrigin(true);
+        cors.setAllowedOrigins("*");
+        cors.setAllowedMethods("GET,HEAD,POST,PUT,DELETE,PATCH,OPTIONS");
+        // 预览/缩略图要读 Content-Disposition 与 Content-Length，需显式暴露
+        cors.setExposeHeaders("Content-Disposition,Content-Length,Content-Range,Accept-Ranges");
         // Vue 静态资源（类路径 static/assets/ → /assets/）
         server.addFilter(new StaticResourceServerFilter("/assets", "static/assets"));
         // 文件预览第三方依赖（Univer、PDF.js、highlight.js，类路径 static/preview-vendor/ → /preview-vendor/）
