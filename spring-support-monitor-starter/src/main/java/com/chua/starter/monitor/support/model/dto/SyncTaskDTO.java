@@ -27,6 +27,11 @@ package com.chua.starter.monitor.support.model.dto;
  * @param batchSize          批量提交条数，可为 空，默认 500；小于 1 时按 500 处理
  * @param cron               定时表达式（Spring 6 段 cron），可为 空表示只手动执行
  * @param enabled            是否启用定时，可为 空，默认 0
+ * @param syncMode           同步模式 FULL/INCREMENTAL，可为 空默认 FULL；增量仅 JDBC/HTTP 源可用
+ * @param incField           增量字段，{@code INCREMENTAL} 时必填，只允许字母数字下划线
+ * @param incBatchSize       增量每批数量（单次执行最多同步条数），可为 空表示不限
+ * @param hookUrl            Hook 通知地址（http/https），可为 空表示不通知
+ * @param hookNotify         Hook 通知时机 DONE/ROW，可为 空默认 DONE；全量模式固定按 DONE 处理
  * @author CH
  * @since 4.0.0.43
  */
@@ -43,5 +48,10 @@ public record SyncTaskDTO(
         String writeMode,
         Integer batchSize,
         String cron,
-        Integer enabled) {
+        Integer enabled,
+        String syncMode,
+        String incField,
+        Integer incBatchSize,
+        String hookUrl,
+        String hookNotify) {
 }
