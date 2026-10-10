@@ -44,6 +44,7 @@ import java.util.Base64;
 import java.util.Locale;
 import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.starter.filesystem.support.spi.FileStorageImageFilterProvider;
+import com.chua.starter.filesystem.support.spi.FileStorageUrlPreviewProvider;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import com.chua.filestorage.support.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -323,13 +324,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      */
     private static final Set<String> BOOLEAN_PARAM_KEYS = Set.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openWebjars",
-            "openRemoteFile", "openThirdPreview", "layout", "showFormat", "showSize", "showTime",
+            "openRemoteFile", "layout", "showFormat", "showSize", "showTime",
             "openPathGuard", "imageFilterEnabled");
 
     /**
      * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
      */
-    private static final Set<String> STRING_PARAM_KEYS = Set.of("watermark", "layoutType", "imageFilter", "filterChain");
+    private static final Set<String> STRING_PARAM_KEYS =
+            Set.of("watermark", "layoutType", "imageFilter", "filterChain", "thirdUrlPreview");
 
     /**
      * 路径穿透防护需要筛查的文件动作参数名（取值与对象路径同源，是穿越的另一入口）。
@@ -561,7 +563,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         HttpMethod method = request.getMethod();
         try {
             if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
-                // 三方 URL 预览：?url=<base64 编码的 http(s) 地址>，受 openThirdPreview 开关控制。
+                // 三方 URL 预览：?url=<base64 编码的 http(s) 地址>，受第三方 URL 预览能力（SPI 实现）控制。
                 // 放在 key 判定之前——调用方无需真实对象键，形如 GET /{bucket}/?url=...&preview=true
                 String thirdUrl = params == null ? null : params.get("url");
                 if (method == HttpMethod.GET && thirdUrl != null && !thirdUrl.isEmpty()) {
@@ -696,7 +698,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         appendConfigRow(sb, "openWatermark", String.valueOf(setting.isOpenWatermark()));
         appendConfigRow(sb, "openWebjars", String.valueOf(setting.isOpenWebjars()));
         appendConfigRow(sb, "openRemoteFile", String.valueOf(setting.isOpenRemoteFile()));
-        appendConfigRow(sb, "openThirdPreview", String.valueOf(setting.isOpenThirdPreview()));
+        appendConfigRow(sb, "thirdUrlPreview", setting.getThirdUrlPreview());
         appendConfigRow(sb, "watermark", setting.getWatermark());
         appendConfigRow(sb, "layout", String.valueOf(setting.isLayout()));
         appendConfigRow(sb, "layoutType", setting.getLayoutType());
@@ -1070,7 +1072,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private ImageOpResult applyFileOperations(byte[] data, String fileName, ServerRequest request) {
         FileOperationSetting ops = parseFileOps(request);
         boolean hasUrlOps = ops != null && ops.hasOperation();
-        // 全局滤镜链（系统配置「图片处理」）：对每张图片强制生效；与 URL 参数叠加时链在后
+        // 图片处理步骤（系统配置「图片滤镜」+「全局滤镜链」）：对每张图片强制生效；
+        // 与 URL 参数叠加时步骤在后（URL 参数是一次性诉求，配置是全局强制策略）
         List<FilterChainStep> chain = resolveGlobalFilterChain();
         if (!hasUrlOps && chain.isEmpty()) {
             log.debug("[FileStorage] 无图片处理操作，透传原图: {}", fileName);
@@ -1152,8 +1155,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                         .text(ops.getWatermarkText()).opacity(0.5f).position("center").build();
                 cur = keep(cur, imageOperation.watermark(cur, format, p).block());
             }
-            // 全局滤镜链（系统配置「图片处理 → 全局滤镜链」）逐项应用。
-            // 在 URL 操作之后执行：URL 参数是调用方的一次性诉求，链是运维的全局强制策略。
+            // 图片处理步骤（选中滤镜 + 全局滤镜链）逐项应用。
+            // 在 URL 操作之后执行：URL 参数是调用方的一次性诉求，配置是运维的全局强制策略。
             for (FilterChainStep step : chain) {
                 byte[] chained = applyFilterChainStep(imageOperation, cur, format, step);
                 if (chained != null) {
@@ -1187,22 +1190,55 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 解析当前生效的全局滤镜链（系统配置「图片处理 → 全局滤镜链」）。
+     * 解析当前生效的图片处理步骤：系统配置「图片滤镜」→「全局滤镜链」，按此顺序叠加。
+     *
+     * <p>前半段是「图片滤镜」选中项：选中即对每张图片生效，无需再开滤镜链开关，
+     * 但只下发后台图片管线真正支持处理的滤镜（见
+     * {@link FileStorageImageFilterProvider#isServerSide()}），其余由前端按 CSS 兜底。</p>
+     *
+     * <p>后半段是「全局滤镜链」：开关关闭或无配置时为空；条目格式
+     * {@code id:key=value,key=value;id2}，id 写入时已校验属于后台 SPI 能力，
+     * 这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
+     *
+     * @return 图片处理步骤列表（可能为空）
+     */
+    private List<FilterChainStep> resolveGlobalFilterChain() {
+        List<FilterChainStep> steps = new ArrayList<>();
+        // 系统配置「图片滤镜」：选中即对每张图片生效，先于「全局滤镜链」执行。
+        // 只有后台图片管线真正支持处理的滤镜才生成步骤；不支持的（反色/怀旧/鲜艳）
+        // 由前端按 CSS 兜底，这里不下发无法执行的步骤，避免日志被 WARN 刷满。
+        FileStorageImageFilterProvider filter = resolveImageFilterProvider(setting.getImageFilter());
+        if (filter != null && filter.isServerSide()) {
+            String pathParam = filter.getPathParam();
+            if (pathParam != null && !pathParam.isBlank()) {
+                steps.addAll(parseFilterChainText(pathParam.replace('&', ';')));
+            }
+        }
+        if (!setting.isImageFilterEnabled()) {
+            return steps;
+        }
+        String chain = setting.getFilterChain();
+        if (chain == null || chain.isBlank()) {
+            return steps;
+        }
+        steps.addAll(parseFilterChainText(chain));
+        return steps;
+    }
+
+    /**
+     * 解析滤镜链紧凑串（{@code id:key=value,key=value;id2}）为步骤列表。
      *
      * <p>关闭开关或无配置时返回空列表；条目格式 {@code id:key=value,key=value}，
      * id 写入时已校验属于后台 SPI 能力，这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
      *
+     * @param chain 滤镜链紧凑串
      * @return 滤镜步骤列表（可能为空）
      */
-    private List<FilterChainStep> resolveGlobalFilterChain() {
-        if (!setting.isImageFilterEnabled()) {
-            return List.of();
-        }
-        String chain = setting.getFilterChain();
-        if (chain == null || chain.isBlank()) {
-            return List.of();
-        }
+    private List<FilterChainStep> parseFilterChainText(String chain) {
         List<FilterChainStep> steps = new ArrayList<>();
+        if (chain == null || chain.isBlank()) {
+            return steps;
+        }
         for (String raw : chain.split(";")) {
             String entry = raw.trim();
             if (entry.isEmpty()) {
@@ -1986,7 +2022,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"openWatermark\":" + setting.isOpenWatermark()
                 + ",\"openWebjars\":" + setting.isOpenWebjars()
                 + ",\"openRemoteFile\":" + setting.isOpenRemoteFile()
-                + ",\"openThirdPreview\":" + setting.isOpenThirdPreview()
+                + ",\"thirdUrlPreview\":\"" + escapeJson(setting.getThirdUrlPreview() == null ? "NONE" : setting.getThirdUrlPreview()) + "\""
                 + ",\"watermark\":" + (wm == null ? "null" : "\"" + escapeJson(wm) + "\"")
                 + ",\"layout\":" + setting.isLayout()
                 + ",\"layoutType\":\"" + escapeJson(setting.getLayoutType() == null ? "" : setting.getLayoutType()) + "\""
@@ -2038,11 +2074,22 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * {
      *   "fileSettingCapabilities": [{"spi":"JDK","capabilities":["size","format"]}],
      *   "filterSettingCapabilities": [{"spi":"JDK","capabilities":["grayscale"]}],
-     *   "imageFilters": [{"name":"GRAY","label":"灰度化图像滤镜"}]
+     *   "imageFilters": [{"name":"GRAYSCALE","label":"灰度","css":"grayscale(1)",
+     *                    "path":"grayscale=1","server":true}],
+     *   "urlPreviewers": [{"name":"NONE","label":"关闭","description":"不处理外部地址",
+     *                     "supported":false},
+     *                     {"name":"SERVER","label":"后台","description":"…","supported":true}]
      * }
      * }</pre>
      *
-     * <p>三类能力均通过 ServiceLoader SPI 实时发现，前端不硬编码。</p>
+     * <p>四类能力均通过 SPI 实时发现，前端不硬编码：</p>
+     * <ul>
+     *   <li>{@code imageFilters[].path} 是图片路径参数，选中该滤镜后前端把它拼进
+     *       图片地址，图片渲染因此先走滤镜；</li>
+     *   <li>{@code imageFilters[].server} 为 true 时该滤镜由后台图片管线执行，前端
+     *       不再叠加 CSS 滤镜；</li>
+     *   <li>{@code urlPreviewers[].supported} 为 true 的实现才真正放行 {@code ?url=}。</li>
+     * </ul>
      *
      * @param response 响应
      * @return 写入能力列表的结果
@@ -2061,6 +2108,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         // 图片滤镜实现（ImageFilter SPI 及子 SPI，含 @SpiDescribe 中文标签）
         sb.append(",\"imageFilters\":[");
         appendImageFilters(sb);
+        sb.append("]");
+        // 三方 URL 预览能力实现（FileStorageUrlPreviewProvider SPI）
+        sb.append(",\"urlPreviewers\":[");
+        appendUrlPreviewers(sb);
         sb.append("]");
         sb.append("}");
         response.setStatus(200)
@@ -2145,10 +2196,51 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 sb.append(",");
             }
             index++;
+            String upper = name.toUpperCase(Locale.ROOT);
             sb.append("{\"name\":\"").append(escapeJson(name)).append("\"");
             sb.append(",\"label\":\"").append(escapeJson(resolveFilterLabel(name))).append("\"");
             // CSS 预览值同样来自后台 SPI（FileStorageImageFilterProvider#getCssFilter），未知则为空串
-            sb.append(",\"css\":\"").append(escapeJson(cssMap.getOrDefault(name.toUpperCase(Locale.ROOT), ""))).append("\"}");
+            sb.append(",\"css\":\"").append(escapeJson(cssMap.getOrDefault(upper, ""))).append("\"");
+            // 图片路径参数与执行侧：path 拼进图片地址即「渲染先走滤镜」；
+            // server 为 true 时前台不再叠加 CSS，避免同一滤镜作用两次。
+            FileStorageImageFilterProvider instance = resolveImageFilterProvider(name);
+            String path = instance == null || instance.getPathParam() == null ? "" : instance.getPathParam();
+            boolean serverSide = instance != null && instance.isServerSide();
+            sb.append(",\"path\":\"").append(escapeJson(path)).append("\"");
+            sb.append(",\"server\":").append(serverSide).append("}");
+        }
+    }
+
+    /**
+     * 向 JSON 构造器追加三方 URL 预览能力实现列表（{@code FileStorageUrlPreviewProvider} SPI）。
+     *
+     * <p>每项携带 {@code supported}：只有它为 true 的实现（内置为 {@code SERVER}，即后台拉取）
+     * 被选中时才真正放行 {@code ?url=}，前端据此提示「选择后台才支持」。</p>
+     *
+     * @param sb JSON 构造器
+     */
+    private void appendUrlPreviewers(StringBuilder sb) {
+        int index = 0;
+        try {
+            ServiceProvider<FileStorageUrlPreviewProvider> provider =
+                    ServiceProvider.of(FileStorageUrlPreviewProvider.class);
+            for (String ext : provider.getExtensions()) {
+                FileStorageUrlPreviewProvider instance = provider.getExtension(ext);
+                if (instance == null || instance.getName() == null) {
+                    continue;
+                }
+                if (index > 0) {
+                    sb.append(",");
+                }
+                index++;
+                sb.append("{\"name\":\"").append(escapeJson(instance.getName())).append("\"");
+                sb.append(",\"label\":\"").append(escapeJson(instance.getLabel() == null ? "" : instance.getLabel())).append("\"");
+                sb.append(",\"description\":\"")
+                        .append(escapeJson(instance.getDescription() == null ? "" : instance.getDescription())).append("\"");
+                sb.append(",\"supported\":").append(instance.supportsUrlPreview()).append("}");
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageUrlPreviewProvider SPI 加载失败（URL 预览能力缺失）: {}", t.getMessage());
         }
     }
 
@@ -2156,7 +2248,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 收集图片滤镜的前端 CSS 预览值（{@code FileStorageImageFilterProvider} SPI）。
      *
      * <p>名称统一大写以匹配 {@code imageFilters} 列表；同一名称多个实现时取首个。
-     * 前端据 {@code css} 渲染缩略图即时预览，实际效果以后端处理为准。</p>
+     * 前端据 {@code css} 在后台不处理该滤镜时做即时预览。</p>
      *
      * @return 滤镜名（大写）→ CSS 值；SPI 缺失时为空表
      */
@@ -2177,6 +2269,95 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             log.warn("FileStorageImageFilterProvider SPI 加载失败（CSS 预览值缺失）: {}", t.getMessage());
         }
         return cssMap;
+    }
+
+    /**
+     * 按滤镜名取图片滤镜 SPI 实现（名称匹配 {@link FileStorageImageFilterProvider#getName()}）。
+     *
+     * <p>SPI 的注册键与 {@code getName()} 并不相同（前者形如 {@code image-filter-grayscale}），
+     * 因此必须遍历实现逐个比对名称，不能直接 {@code getExtension(name)}。</p>
+     *
+     * @param name 滤镜名（大小写不敏感；{@code NONE} 或空值返回 null）
+     * @return 实现实例；找不到返回 null
+     */
+    private FileStorageImageFilterProvider resolveImageFilterProvider(String name) {
+        if (name == null || name.isBlank() || "NONE".equalsIgnoreCase(name.trim())) {
+            return null;
+        }
+        String wanted = name.trim();
+        try {
+            ServiceProvider<FileStorageImageFilterProvider> provider =
+                    ServiceProvider.of(FileStorageImageFilterProvider.class);
+            for (String ext : provider.getExtensions()) {
+                FileStorageImageFilterProvider instance = provider.getExtension(ext);
+                if (instance != null && wanted.equalsIgnoreCase(instance.getName())) {
+                    return instance;
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageImageFilterProvider SPI 加载失败（滤镜实现缺失）: {}", t.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 取当前配置选中的第三方 URL 预览能力实现。
+     *
+     * <p>配置值写的是 SPI 实现的 {@link FileStorageUrlPreviewProvider#getName()}
+     * （如 {@code SERVER} / {@code NONE}），同样需要遍历实现比对名称。</p>
+     *
+     * @return 实现实例；未配置、值为 NONE 或找不到实现时返回 null
+     */
+    private FileStorageUrlPreviewProvider resolveThirdUrlPreviewProvider() {
+        return resolveUrlPreviewProvider(setting.getThirdUrlPreview());
+    }
+
+    /**
+     * 按名称取第三方 URL 预览能力实现。
+     *
+     * @param name 实现名（大小写不敏感；{@code NONE} 或空值返回 null）
+     * @return 实现实例；找不到返回 null
+     */
+    private FileStorageUrlPreviewProvider resolveUrlPreviewProvider(String name) {
+        if (name == null || name.isBlank() || "NONE".equalsIgnoreCase(name.trim())) {
+            return null;
+        }
+        String wanted = name.trim();
+        try {
+            ServiceProvider<FileStorageUrlPreviewProvider> provider =
+                    ServiceProvider.of(FileStorageUrlPreviewProvider.class);
+            for (String ext : provider.getExtensions()) {
+                FileStorageUrlPreviewProvider instance = provider.getExtension(ext);
+                if (instance != null && wanted.equalsIgnoreCase(instance.getName())) {
+                    return instance;
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageUrlPreviewProvider SPI 加载失败（URL 预览能力缺失）: {}", t.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 收集全部第三方 URL 预览能力实现名（用于配置写入校验）。
+     *
+     * @return 实现名集合（保持 SPI 发现顺序）
+     */
+    private Set<String> resolveUrlPreviewProviderNames() {
+        Set<String> names = new LinkedHashSet<>();
+        try {
+            ServiceProvider<FileStorageUrlPreviewProvider> provider =
+                    ServiceProvider.of(FileStorageUrlPreviewProvider.class);
+            for (String ext : provider.getExtensions()) {
+                FileStorageUrlPreviewProvider instance = provider.getExtension(ext);
+                if (instance != null && instance.getName() != null) {
+                    names.add(instance.getName().toUpperCase(Locale.ROOT));
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageUrlPreviewProvider SPI 加载失败（能力名单缺失）: {}", t.getMessage());
+        }
+        return names;
     }
 
     /**
@@ -4027,8 +4208,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      *
      * <p>安全约束：</p>
      * <ul>
-     *   <li>受 {@code openThirdPreview} 开关控制，默认关闭（403）——避免无意间开放
-     *       任意地址拉取（SSRF 面）；</li>
+     *   <li>受<b>第三方 URL 预览能力</b>控制：配置值取自
+     *       {@code FileStorageUrlPreviewProvider} SPI 实现名，只有选中声明
+     *       {@code supportsUrlPreview()} 的实现（内置为 {@code SERVER}，即后台拉取）才放行，
+     *       未配置或选到其它实现一律 403——避免无意间开放任意地址拉取（SSRF 面）；</li>
      *   <li>解码后仅允许 {@code http://} / {@code https://}，其余协议拒绝（400）；</li>
      *   <li>拉取走直连（不走系统代理），超时与 {@link #handleRemoteFile} 一致。</li>
      * </ul>
@@ -4039,7 +4222,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      * @return 异步阶段
      */
     private CompletionStage<Void> handleThirdUrlPreview(ServerRequest request, ServerResponse response, String encodedUrl) {
-        if (!setting.isOpenThirdPreview()) {
+        FileStorageUrlPreviewProvider provider = resolveThirdUrlPreviewProvider();
+        if (provider == null || !provider.supportsUrlPreview()) {
             return error(response, 403, "Access Denied: third-party preview disabled");
         }
         String remoteUrl;
@@ -4307,7 +4491,6 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         applyBooleanSetting("openWatermark", extractBoolean(body, "openWatermark"));
         applyBooleanSetting("openWebjars", extractBoolean(body, "openWebjars"));
         applyBooleanSetting("openRemoteFile", extractBoolean(body, "openRemoteFile"));
-        applyBooleanSetting("openThirdPreview", extractBoolean(body, "openThirdPreview"));
         applyBooleanSetting("layout", extractBoolean(body, "layout"));
         applyBooleanSetting("showFormat", extractBoolean(body, "showFormat"));
         applyBooleanSetting("showSize", extractBoolean(body, "showSize"));
@@ -4318,6 +4501,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         applyStringSetting("layoutType", extractString(body, "layoutType"));
         applyStringSetting("imageFilter", extractString(body, "imageFilter"));
         applyStringSetting("filterChain", extractString(body, "filterChain"));
+        applyStringSetting("thirdUrlPreview", extractString(body, "thirdUrlPreview"));
         // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
         // 避免传 0 把链接生成成出生即死，也避免传超大值让过期链接永不回收。
         String ttlText = extractScalar(body, "oneTimeTtlMs");
@@ -4357,10 +4541,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             setting.setPrivateBuckets(buckets);
         }
         log.info("管理员动态更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
-                        + "openWatermark={}, openRemoteFile={}, openThirdPreview={}, layout={}, layoutType={}, "
+                        + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
                         + "showFormat={}, showSize={}, showTime={}, imageFilter={}, privateBuckets={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
-                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isOpenThirdPreview(),
+                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.getThirdUrlPreview(),
                 setting.isLayout(), setting.getLayoutType(),
                 setting.isShowFormat(), setting.isShowSize(), setting.isShowTime(), setting.getImageFilter(),
                 String.join(",", setting.getPrivateBuckets()));
@@ -4377,7 +4561,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      * （表现为「必须停→起才生效」）。覆写后与管理员配置页共用同一套校验。</p>
      *
      * <p>仅接受服务管理 schema 声明的参数（{@code openPreview/openDownload/openRange/
-     * openWatermark/openRemoteFile/openThirdPreview/openWebjars/watermark/layout/showFormat/showSize/showTime/
+     * openWatermark/openRemoteFile/thirdUrlPreview/openWebjars/watermark/layout/showFormat/showSize/showTime/
      * layoutType/imageFilter}）；{@code privateBuckets}、{@code oneTimeTtlMs} 等属管理员令牌页面
      * 的能力，不在此入口开放。未知键只记 WARN 后忽略，不抛错——避免历史遗留参数导致整次热更新失败。</p>
      *
@@ -4410,10 +4594,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
         }
         log.info("服务管理热更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
-                        + "openWatermark={}, openRemoteFile={}, openThirdPreview={}, layout={}, layoutType={}, "
+                        + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
                         + "showFormat={}, showSize={}, showTime={}, imageFilter={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
-                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.isOpenThirdPreview(),
+                setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.getThirdUrlPreview(),
                 setting.isLayout(),
                 setting.getLayoutType(), setting.isShowFormat(), setting.isShowSize(),
                 setting.isShowTime(), setting.getImageFilter());
@@ -4437,7 +4621,6 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             case "openWatermark" -> setting.setOpenWatermark(value);
             case "openWebjars" -> setting.setOpenWebjars(value);
             case "openRemoteFile" -> setting.setOpenRemoteFile(value);
-            case "openThirdPreview" -> setting.setOpenThirdPreview(value);
             case "layout" -> setting.setLayout(value);
             case "showFormat" -> setting.setShowFormat(value);
             case "showSize" -> setting.setShowSize(value);
@@ -4455,7 +4638,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      * （{@code ServerNodeRegistry#hotUpdateFilterParams}）会把它作为热更新失败上报，
      * 从而在落库之前中止，不会把非法值写进节点定义。</p>
      *
-     * @param key   参数名（watermark / layoutType / imageFilter）
+     * @param key   参数名（watermark / layoutType / imageFilter / filterChain / thirdUrlPreview）
      * @param value 参数值，可为 {@code null}
      */
     private void applyStringSetting(String key, String value) {
@@ -4482,6 +4665,18 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 setting.setImageFilter(upper);
             }
             case "filterChain" -> setting.setFilterChain(normalizeFilterChain(value));
+            case "thirdUrlPreview" -> {
+                String upper = value.trim().toUpperCase(Locale.ROOT);
+                // 关闭固定合法；其余取值必须是 URL 预览能力 SPI 真实注册的实现名。
+                // 注意「实现存在」≠「支持 ?url=」：不支持处理的实现选进来只会 403，
+                // 具体放行判定在 handleThirdUrlPreview。
+                Set<String> names = resolveUrlPreviewProviderNames();
+                if (!"NONE".equals(upper) && !names.contains(upper)) {
+                    throw new IllegalArgumentException("thirdUrlPreview 不支持的预览能力: " + value
+                            + "，可用值: NONE/" + String.join("/", names));
+                }
+                setting.setThirdUrlPreview(upper);
+            }
             default -> log.warn("文件存储配置忽略未知字符串参数: {}={}", key, value);
         }
     }

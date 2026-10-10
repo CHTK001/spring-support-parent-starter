@@ -43,4 +43,24 @@ public class InvertImageFilterProvider implements FileStorageImageFilterProvider
     public String getCssFilter() {
         return "invert(1)";
     }
+
+    /**
+     * 获取图片路径参数。
+     *
+     * @return 空串（后台图片管线不提供反色，仅前端 CSS 预览）
+     */
+    @Override
+    public String getPathParam() {
+        return "";
+    }
+
+    /**
+     * 是否由后台图片管线执行。
+     *
+     * @return false
+     */
+    @Override
+    public boolean isServerSide() {
+        return false;
+    }
 }

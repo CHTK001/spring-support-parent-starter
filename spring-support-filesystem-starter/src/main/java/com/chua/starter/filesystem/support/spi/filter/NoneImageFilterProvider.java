@@ -44,4 +44,24 @@ public class NoneImageFilterProvider implements FileStorageImageFilterProvider {
     public String getCssFilter() {
         return "";
     }
+
+    /**
+     * 获取图片路径参数。
+     *
+     * @return 空串（原图不做任何处理）
+     */
+    @Override
+    public String getPathParam() {
+        return "";
+    }
+
+    /**
+     * 是否由后台图片管线执行。
+     *
+     * @return false（原图无需处理）
+     */
+    @Override
+    public boolean isServerSide() {
+        return false;
+    }
 }

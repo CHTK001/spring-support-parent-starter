@@ -95,9 +95,12 @@ public class FileStorageServerProperties {
     private boolean openRemoteFile = false;
 
     /**
-     * 开启三方 URL 预览（{@code ?url=<base64(http(s)://…)>}，拉取远端内容走预览链路）
+     * 三方 URL 预览能力（取值来自 {@code FileStorageUrlPreviewProvider} SPI 实现名，NONE 表示关闭）
+     *
+     * <p>只有选择到声明 {@code supportsUrlPreview()} 的实现（内置为 {@code SERVER}，即后台拉取）
+     * 时，{@code ?url=<base64(http(s)://…)>} 才会被放行。</p>
      */
-    private boolean openThirdPreview = false;
+    private String thirdUrlPreview = "NONE";
 
     /**
      * 是否开启目录文件列表页面
