@@ -43,4 +43,24 @@ public class SaturateImageFilterProvider implements FileStorageImageFilterProvid
     public String getCssFilter() {
         return "saturate(1.8)";
     }
+
+    /**
+     * 获取图片路径参数。
+     *
+     * @return 空串（后台图片管线不提供饱和度调整，仅前端 CSS 预览）
+     */
+    @Override
+    public String getPathParam() {
+        return "";
+    }
+
+    /**
+     * 是否由后台图片管线执行。
+     *
+     * @return false
+     */
+    @Override
+    public boolean isServerSide() {
+        return false;
+    }
 }

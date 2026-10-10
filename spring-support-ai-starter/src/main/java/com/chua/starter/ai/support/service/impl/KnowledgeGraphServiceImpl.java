@@ -1158,22 +1158,43 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         if (exists == null) {
             return false;
         }
-        SysAiKnowledgeGraphEntity update = new SysAiKnowledgeGraphEntity();
-        update.setId(exists.getId());
+        LambdaUpdateWrapper<SysAiKnowledgeGraphEntity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(SysAiKnowledgeGraphEntity::getId, exists.getId());
+        boolean changed = false;
         if (StringUtils.hasText(name)) {
-            update.setName(name.trim());
+            wrapper.set(SysAiKnowledgeGraphEntity::getName, name.trim());
+            changed = true;
         }
         if (StringUtils.hasText(type)) {
-            update.setType(normalizeType(type));
+            wrapper.set(SysAiKnowledgeGraphEntity::getType, normalizeType(type));
+            changed = true;
         }
         if (description != null) {
-            update.setProperties(descriptionJson(description));
+            // descriptionJson 空说明返回 null（列可空）；保持原语义——空描述不清列，
+            // 避免「没改描述」也产生一次无意义 UPDATE
+            String descJson = descriptionJson(description);
+            if (descJson != null) {
+                wrapper.set(SysAiKnowledgeGraphEntity::getProperties, descJson);
+                changed = true;
+            }
         }
-        // 图片：null=不改；空串=清除；有值=覆盖（logo 列允许 null，trim 后落库）
+        // 图片：null=不改；空串=清除；有值=覆盖（值未变化不写）
+        // 用 wrapper.set 而不是实体字段：MP 的 NOT_NULL 字段策略会跳过实体上的
+        // null 值，「清除图片」这类把列置 NULL 的更新永远发不出去；wrapper.set
+        // 是字面 SQL 片段，null 也能落库。
         if (logo != null) {
-            update.setLogo(StringUtils.hasText(logo) ? logo.trim() : null);
+            String trimmedLogo = StringUtils.hasText(logo) ? logo.trim() : null;
+            if (!java.util.Objects.equals(trimmedLogo, exists.getLogo())) {
+                wrapper.set(SysAiKnowledgeGraphEntity::getLogo, trimmedLogo);
+                changed = true;
+            }
         }
-        graphEntityMapper.updateById(update);
+        // 没有字段需要更新时不能发 UPDATE：全空条件会生成「UPDATE table WHERE id=?」
+        // 空 SET 语句并抛 MybatisPlusException，表现为 500「数据操作失败」
+        // （前端只保存不改任何字段/只清空 logo 时必踩）。
+        if (changed) {
+            graphEntityMapper.update(null, wrapper);
+        }
         pruneOrphans(libraryId);
         return true;
     }

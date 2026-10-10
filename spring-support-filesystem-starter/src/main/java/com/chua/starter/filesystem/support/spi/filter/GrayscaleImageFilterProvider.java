@@ -43,4 +43,24 @@ public class GrayscaleImageFilterProvider implements FileStorageImageFilterProvi
     public String getCssFilter() {
         return "grayscale(1)";
     }
+
+    /**
+     * 获取图片路径参数。
+     *
+     * @return {@code grayscale=1}
+     */
+    @Override
+    public String getPathParam() {
+        return "grayscale=1";
+    }
+
+    /**
+     * 是否由后台图片管线执行。
+     *
+     * @return true（JDK 图片管线支持灰度）
+     */
+    @Override
+    public boolean isServerSide() {
+        return true;
+    }
 }

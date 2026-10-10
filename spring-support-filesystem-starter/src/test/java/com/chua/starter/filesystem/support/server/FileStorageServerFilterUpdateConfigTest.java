@@ -203,6 +203,46 @@ class FileStorageServerFilterUpdateConfigTest {
     }
 
     @Test
+    @DisplayName("thirdUrlPreview：合法能力名大小写不敏感，规范化大写后落位")
+    void thirdUrlPreviewAcceptsSpiProviderNames() {
+        assertEquals("NONE", setting.getThirdUrlPreview(), "未配置时应默认为关闭");
+
+        filter.updateConfig(Map.of("thirdUrlPreview", "server"));
+        assertEquals("SERVER", setting.getThirdUrlPreview(),
+                "合法能力名应按大写规范化后落位（server → SERVER）");
+
+        filter.updateConfig(Map.of("thirdUrlPreview", "none"));
+        assertEquals("NONE", setting.getThirdUrlPreview(), "NONE 恒合法，用于选回关闭");
+    }
+
+    @Test
+    @DisplayName("thirdUrlPreview：非法能力名抛异常且不改动 setting（能力必须来自后台 SPI）")
+    void thirdUrlPreviewRejectsUnknownProvider() {
+        setting.setThirdUrlPreview("NONE");
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> filter.updateConfig(Map.of("thirdUrlPreview", "NO_SUCH_PROVIDER")));
+
+        assertTrue(e.getMessage().contains("NO_SUCH_PROVIDER"),
+                "异常信息应回显非法值，实际: " + e.getMessage());
+        assertTrue(e.getMessage().contains("SERVER"),
+                "异常信息应列出可用能力，便于调用方知道有哪些选项，实际: " + e.getMessage());
+        assertEquals("NONE", setting.getThirdUrlPreview(), "校验失败时不得改动 setting");
+    }
+
+    @Test
+    @DisplayName("遗留布尔键 openThirdPreview 不再被接受（能力已是选择，不是开关）")
+    void legacyOpenThirdPreviewIsIgnored() {
+        // 从「布尔开关」迁到「能力选择」后，旧的 openThirdPreview 已不在白名单里。
+        // 它必须被当作未知键忽略，而不是悄悄落位到某个不存在的 setter 上——
+        // 否则调用方会以为「拨了开关就生效」，实际服务端毫无变化。
+        filter.updateConfig(Map.of("openThirdPreview", "true"));
+
+        assertEquals("NONE", setting.getThirdUrlPreview(),
+                "遗留布尔键不得改变能力选择，实测: " + setting.getThirdUrlPreview());
+    }
+
+    @Test
     @DisplayName("穿越检测矩阵：..、反斜杠、NUL、残留编码都识别，普通名称不误伤")
     void traversalDetectionMatrix() {
         assertNotNull(FileStorageServerFilter.findTraversal("../../etc/passwd"), ".. 段必须命中");
