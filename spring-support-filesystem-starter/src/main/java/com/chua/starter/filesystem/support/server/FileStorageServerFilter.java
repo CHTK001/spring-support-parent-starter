@@ -2217,9 +2217,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * <p>每项携带 {@code supported}：只有它为 true 的实现（内置为 {@code SERVER}，即后台拉取）
      * 被选中时才真正放行 {@code ?url=}，前端据此提示「选择后台才支持」。</p>
      *
+     * <p>按实现名去重：{@code META-INF/extensions} 可能出现重复注册（多个 jar 各带一份
+     * 登记），不去重时前端下拉会出现两条一模一样的「后台」，选中后写回配置仍只有一个值——
+     * 界面看起来像有两个能力，实际是同一个，属于纯误导。</p>
+     *
      * @param sb JSON 构造器
      */
     private void appendUrlPreviewers(StringBuilder sb) {
+        Set<String> seen = new LinkedHashSet<>();
         int index = 0;
         try {
             ServiceProvider<FileStorageUrlPreviewProvider> provider =
@@ -2227,6 +2232,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             for (String ext : provider.getExtensions()) {
                 FileStorageUrlPreviewProvider instance = provider.getExtension(ext);
                 if (instance == null || instance.getName() == null) {
+                    continue;
+                }
+                String name = instance.getName().toUpperCase(Locale.ROOT);
+                if (!seen.add(name)) {
                     continue;
                 }
                 if (index > 0) {
@@ -4439,6 +4448,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
         } catch (FileActionException e) {
             return error(response, e.getStatus(), e.getMessage());
+        } catch (IllegalArgumentException e) {
+            // 配置值非法（layoutType / imageFilter / thirdUrlPreview / filterChain 校验失败）
+            // 属于调用方错误，不该记成 500：日志里一条 ERROR 栈顶是这种 400，
+            // 排查时会被当成服务故障，而实际只是前端传了个不存在的枚举值。
+            log.warn("文件管理动作参数非法: action={} - {}", action, e.getMessage());
+            return error(response, 400, e.getMessage());
         } catch (Exception e) {
             log.error("文件管理动作执行失败: action={} - {}", action, e.getMessage(), e);
             return error(response, 500, "Action Failed: " + e.getMessage());
