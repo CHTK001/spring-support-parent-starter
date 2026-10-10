@@ -19,6 +19,7 @@ package com.chua.starter.ai.support.model.vo;
  * @param weight 权重（被提及次数）
  * @param degree 关系条数，用于前端按关系多少缩放节点大小
  * @param source 来源（manual / llm_extracted / imported）
+ * @param image  实体图片地址（logo 列），可为 null；前端有图时节点直接用图渲染
  * @author CH
  * @since 4.0.0.42
  */
@@ -29,6 +30,7 @@ public record KnowledgeGraphNodeVO(
         String color,
         Double weight,
         int degree,
-        String source
+        String source,
+        String image
 ) {
 }

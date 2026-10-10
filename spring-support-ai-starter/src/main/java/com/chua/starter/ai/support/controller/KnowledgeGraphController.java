@@ -126,6 +126,7 @@ public class KnowledgeGraphController {
      * @param name            实体名称
      * @param type            实体类型（person/location/event/organization/other）
      * @param description     实体说明，可为空
+     * @param logo            实体图片地址，可为空；已存在同名实体时带图会覆盖
      * @return 含 uid 的结果
      */
     @Operation(summary = "手工新增实体", description = "同名同类型会复用已有节点，不会产生重复")
@@ -135,12 +136,13 @@ public class KnowledgeGraphController {
             @RequestParam("knowledge_base_name") String knowledgeBaseName,
             @RequestParam("name") String name,
             @RequestParam(value = "type", required = false, defaultValue = "other") String type,
-            @RequestParam(value = "description", required = false) String description) {
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "logo", required = false) String logo) {
         if (!StringUtils.hasText(name)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "实体名称不能为空");
         }
         String uid = knowledgeGraphService.addManualEntity(knowledgeBaseId, knowledgeBaseName,
-                name, type, description);
+                name, type, description, logo);
         Map<String, Object> result = new LinkedHashMap<>(2);
         result.put("uid", uid);
         return ApiResult.ok(result);
@@ -177,21 +179,22 @@ public class KnowledgeGraphController {
     }
 
     /**
-     * 修改实体（名称/类型/说明，null 表示该项不改）。
+     * 修改实体（名称/类型/说明/图片，null 表示该项不改）。
      *
      * @param knowledgeBaseId 知识库ID
      * @param uid             实体 uid
      * @return 是否更新成功
      */
-    @Operation(summary = "修改实体", description = "只传要改的字段")
+    @Operation(summary = "修改实体", description = "只传要改的字段；logo 空串表示清除图片")
     @PostMapping("/entity/update")
     public ApiResult<Map<String, Object>> updateEntity(
             @RequestParam("knowledge_base_id") String knowledgeBaseId,
             @RequestParam("uid") String uid,
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "type", required = false) String type,
-            @RequestParam(value = "description", required = false) String description) {
-        boolean ok = knowledgeGraphService.updateEntity(knowledgeBaseId, uid, name, type, description);
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "logo", required = false) String logo) {
+        boolean ok = knowledgeGraphService.updateEntity(knowledgeBaseId, uid, name, type, description, logo);
         if (!ok) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "实体不存在: " + uid);
         }

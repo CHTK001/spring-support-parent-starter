@@ -2,6 +2,7 @@ package com.chua.starter.datasourcehub.support.service;
 
 import com.chua.starter.datasourcehub.support.model.NginxAccessTopVO;
 import com.chua.starter.datasourcehub.support.model.NginxApplyResultVO;
+import com.chua.starter.datasourcehub.support.model.NginxBackupDeleteVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupDiffVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupVO;
 import com.chua.starter.datasourcehub.support.model.NginxCommandResultVO;
@@ -258,6 +259,18 @@ public interface NginxManageService {
      * @return 差异结果，含增删行数与行序列
      */
     NginxBackupDiffVO diffBackup(Long datasourceId, String backupName, String targetPath);
+
+    /**
+     * 删除备份文件（支持批量）。
+     *
+     * <p>部分成功语义：逐个校验文件名（只允许纯文件名，防穿越）后删除，
+     * 单个失败不影响其余，结果按成功 / 失败分列返回。</p>
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @param backupNames  备份文件名列表，只允许纯文件名；单条删除传单元素列表即可
+     * @return 删除结果
+     */
+    NginxBackupDeleteVO deleteBackups(Long datasourceId, List<String> backupNames);
 
     /**
      * 采集一次 stub_status 并落库。

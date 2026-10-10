@@ -14,6 +14,7 @@ import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +40,9 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/v2/user")
+// 框架 common-system 登录控制器存在时（如 collect 等内置 common-system 的应用），本控制器与其
+// 在 /v2/user/login、/refresh-token、/me、/logout 上产生运行期映射歧义，此时让位给 common-system。
+@ConditionalOnMissingClass("com.chua.starter.system.controller.LoginController")
 @Slf4j
 public class UserAuthController {
 

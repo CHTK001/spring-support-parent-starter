@@ -2,6 +2,7 @@ package com.chua.starter.datasourcehub.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasourcehub.support.model.NginxApplyResultVO;
+import com.chua.starter.datasourcehub.support.model.NginxBackupDeleteVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupDiffVO;
 import com.chua.starter.datasourcehub.support.model.NginxCommandResultVO;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -481,6 +483,23 @@ public class NginxManageController {
     @GetMapping("/backup")
     public ReturnResult<List<NginxBackupVO>> backups(@RequestParam(required = false) Long datasourceId) {
         return call("列出 Nginx 配置备份", () -> nginxManageService.listBackups(datasourceId));
+    }
+
+    /**
+     * 删除备份文件（单条与批量同一个入口）。
+     *
+     * <p>{@code names} 传单个元素即单条删除。文件名逐个经
+     * {@code resolveBackupFile} 校验（只允许纯文件名），结果按成功 / 失败分列。</p>
+     *
+     * @param datasourceId 数据源 ID，可空
+     * @param names        备份文件名列表，如 {@code names=a.bak&names=b.bak}
+     * @return 删除结果
+     */
+    @Operation(summary = "删除 Nginx 配置备份（支持批量）")
+    @DeleteMapping("/backup")
+    public ReturnResult<NginxBackupDeleteVO> deleteBackups(@RequestParam(required = false) Long datasourceId,
+                                                           @RequestParam("names") List<String> names) {
+        return call("删除 Nginx 配置备份", () -> nginxManageService.deleteBackups(datasourceId, names));
     }
 
     /**

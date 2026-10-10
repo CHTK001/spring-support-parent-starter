@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -43,6 +44,7 @@ import java.time.Duration;
 @AutoConfiguration
 @EnableCaching
 @ConditionalOnClass(CacheManager.class)
+@ConditionalOnProperty(value = "chua.ai.cache.enabled", havingValue = "true", matchIfMissing = true)
 public class AiCacheAutoConfiguration {
 
     /**

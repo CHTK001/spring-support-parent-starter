@@ -14,6 +14,7 @@ import com.chua.starter.datasourcehub.support.nginx.spi.NginxExecutor;
 import com.chua.starter.datasourcehub.support.nginx.spi.NginxRuntimeRouter;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
 import com.chua.starter.datasourcehub.support.model.NginxApplyResultVO;
+import com.chua.starter.datasourcehub.support.model.NginxBackupDeleteVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupDiffVO;
 import com.chua.starter.datasourcehub.support.model.NginxBackupVO;
 import com.chua.starter.datasourcehub.support.model.NginxCommandResultVO;
@@ -1212,6 +1213,37 @@ public class NginxManageServiceImpl implements NginxManageService {
         long added = lines.stream().filter(l -> l.startsWith("+") && !l.startsWith("+++")).count();
         long removed = lines.stream().filter(l -> l.startsWith("-") && !l.startsWith("---")).count();
         return new NginxBackupDiffVO(backupName, targetPath, added, removed, lines);
+    }
+
+    @Override
+    public NginxBackupDeleteVO deleteBackups(Long datasourceId, List<String> backupNames) {
+        DataSourceVO ds = requireDatasource(datasourceId);
+        if (backupNames == null || backupNames.isEmpty()) {
+            throw new IllegalArgumentException("要删除的备份文件名不能为空");
+        }
+        if (backupNames.size() > 100) {
+            throw new IllegalArgumentException("一次最多删除 100 个备份文件");
+        }
+        List<String> deleted = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        for (String raw : backupNames) {
+            String name = trim(raw);
+            try {
+                // 逐个校验（只允许纯文件名，防穿越）后再删；单条失败只记结果，不打断整批
+                String file = resolveBackupFile(ds, name);
+                ExecResult r = exec(ds, commands(ds).deleteFile(file));
+                if (r.exitCode() != 0) {
+                    failed.add(name + ": " + mergeOut(r.stdout(), r.stderr()));
+                } else {
+                    // deleteFile 是 rm -f 语义：文件不存在也算成功（幂等），已删或本就没有都归这里
+                    deleted.add(name);
+                }
+            } catch (RuntimeException e) {
+                failed.add((name.isEmpty() ? "(空文件名)" : name) + ": "
+                        + (e.getMessage() == null ? "删除失败" : e.getMessage()));
+            }
+        }
+        return new NginxBackupDeleteVO(deleted, failed);
     }
 
     /**

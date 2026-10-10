@@ -143,10 +143,11 @@ public interface KnowledgeGraphService {
      * @param name              实体名称
      * @param type              实体类型（person/location/event/organization/other）
      * @param description       实体说明，可为空
+     * @param logo              实体图片地址，可为空；实体已存在且本参数非空时会覆盖其图片
      * @return 实体 uid（已存在时返回原 uid）
      */
     String addManualEntity(String knowledgeBaseId, String knowledgeBaseName,
-                           String name, String type, String description);
+                           String name, String type, String description, String logo);
 
     /**
      * 手工新增一条关系。
@@ -165,16 +166,17 @@ public interface KnowledgeGraphService {
                              String source, String target, String type);
 
     /**
-     * 修改实体（可改名称/类型/说明）。
+     * 修改实体（可改名称/类型/说明/图片）。
      *
      * @param knowledgeBaseId 知识库ID
      * @param uid             实体 uid
      * @param name            新名称，null 表示不改
      * @param type            新类型，null 表示不改
      * @param description     新说明，null 表示不改
+     * @param logo            新图片地址，null 表示不改，空串表示清除
      * @return 是否命中并更新
      */
-    boolean updateEntity(String knowledgeBaseId, String uid, String name, String type, String description);
+    boolean updateEntity(String knowledgeBaseId, String uid, String name, String type, String description, String logo);
 
     /**
      * 删除实体（连带删除它的全部关联与不再被引用的关系）。

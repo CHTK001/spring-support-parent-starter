@@ -122,6 +122,13 @@ public final class NginxAccessLogParser {
             String ip = m.group(1);
             String time = m.group(2);
             String request = m.group(3);
+            // 二进制噪声整行丢弃：公网 80 端口常被扫描器用 TLS ClientHello / HTTP/2 PRI
+            // 前言乱打，access log 里会留下 "PRI"、"\x16\x03\x01..."、"\x00"连串之类的
+            // $request —— 这些行的 IP 与状态码同样是垃圾字节，只挡路径会把垃圾漏进
+            // IP Top 与状态分布。计数、带宽、状态、IP、路径一个都不收（2026-10-10 反馈）。
+            if (isBinaryNoise(request)) {
+                continue;
+            }
             int status = Integer.parseInt(m.group(4));
             if (since != null && !withinSince(time, since)) {
                 continue;
@@ -457,28 +464,81 @@ public final class NginxAccessLogParser {
     }
 
     /**
+     * 从 request 里提取请求目标 token。
+     *
+     * <p>{@code $request} 的标准形态是 {@code METHOD PATH PROTOCOL}（如 {@code GET /a/b HTTP/1.1}），
+     * 目标是**第二个** token；也有站点的 log_format 只记路径，此时第一个 token 就是目标。
+     * 早先直接取第一个 token 会把所有条目都统计成 {@code GET}。</p>
+     *
+     * @param request 请求行，如 {@code GET /a/b HTTP/1.1}
+     * @return 目标 token；request 为空时返回空串
+     */
+    private static String extractTarget(String request) {
+        String r = request == null ? "" : request.trim();
+        if (r.isEmpty()) {
+            return "";
+        }
+        String[] parts = r.split("\\s+");
+        if (parts.length >= 2 && HTTP_METHODS.contains(parts[0].toUpperCase(java.util.Locale.ROOT))) {
+            return parts[1];
+        }
+        return parts[0];
+    }
+
+    /**
+     * 判断 {@code $request} 是不是「二进制噪声」——扫描器探测留下的垃圾负载。
+     *
+     * <p>判据两条，满足其一即噪声：</p>
+     * <ul>
+     *   <li>目标不是 origin-form：真实访问行的目标一定以 {@code /} 开头。
+     *       {@code PRI}（HTTP/2 前言）、裸协议 {@code HTTP/1.1}、随机 token 都不以 {@code /} 开头；</li>
+     *   <li>目标含控制字符（{@code 0x00-0x1F} / {@code 7F}）：TLS ClientHello、
+     *       {@code \x00} 连串这类键一旦进榜，Top 榜就是一屏乱码（2026-10-10 用户反馈）。</li>
+     * </ul>
+     *
+     * <p>request 本身为空（有些站点的 log_format 不记 request）**不算噪声**：
+     * 那类行的 IP / 状态 / 带宽仍然有效，只是没有路径可归类。</p>
+     *
+     * @param request {@code $request} 原文
+     * @return true 表示整行是噪声，不计入任何聚合
+     */
+    private static boolean isBinaryNoise(String request) {
+        String target = extractTarget(request);
+        return !target.isEmpty() && (!target.startsWith("/") || hasControlChars(target));
+    }
+
+    /**
+     * 文本是否含控制字符（{@code 0x00-0x1F} 与 {@code 0x7F}）。
+     *
+     * @param text 待检查文本
+     * @return 含有控制字符返回 true
+     */
+    private static boolean hasControlChars(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c <= 0x1F || c == 0x7F) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * 从 request 里取路径并归一化。
+     *
+     * <p>只认 origin-form：目标必须以 {@code /} 开头且不含控制字符——
+     * 裸协议行（{@code HTTP/1.1}）、绝对形式（{@code http://...}）与二进制噪声
+     * （TLS / HTTP2 探测残留）都在这里返回 null，{@code urlTrend} 直接受益。</p>
      *
      * @param request 请求行，如 {@code GET /a/b/12 HTTP/1.1}
      * @return 归一化后的路径；无法解析时返回 null
      */
     private static String normalizePath(String request) {
-        String r = request == null ? "" : request.trim();
-        if (r.isEmpty()) {
+        String target = extractTarget(request);
+        if (target.isEmpty()) {
             return null;
         }
-        // $request 的标准形态是 "METHOD PATH PROTOCOL"（如 "GET /a/b HTTP/1.1"），
-        // 路径是**第二个** token。早先取第一个 token 会把所有条目都统计成 "GET"。
-        // 也有站点把 log_format 写成只记路径（没有方法与协议），这种情况第一个 token 就是路径。
-        String[] parts = r.split("\\s+");
-        String target;
-        if (parts.length >= 2 && HTTP_METHODS.contains(parts[0].toUpperCase(java.util.Locale.ROOT))) {
-            target = parts[1];
-        } else {
-            target = parts[0];
-        }
-        // 形如 HTTP/1.1 的裸协议行（$request 只记了协议）没有路径
-        if (target.startsWith("HTTP/") || target.startsWith("https:") || target.startsWith("http:")) {
+        if (!target.startsWith("/") || hasControlChars(target)) {
             return null;
         }
         int q = target.indexOf('?');

@@ -149,6 +149,13 @@ public class WindowsNginxCommandProvider implements NginxCommandProvider {
     }
 
     @Override
+    public String deleteFile(String path) {
+        // 幂等与 POSIX `rm -f` 对齐：不存在也算成功（exit 0）。
+        // del 对不存在的文件会打印「找不到文件」并留下非 0 退出码，必须先判存在。
+        return "if exist " + quote(winPath(path)) + " (del /F /Q " + quote(winPath(path)) + ") else (exit 0)";
+    }
+
+    @Override
     public String listByModifiedDesc(String dir, String suffix) {
         String pattern = "*" + suffix;
         return "powershell -NoProfile -Command \""
