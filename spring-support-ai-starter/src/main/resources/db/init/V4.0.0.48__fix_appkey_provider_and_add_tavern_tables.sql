@@ -1,5 +1,18 @@
 -- =====================================================================================
--- V1.2 修正两处「实体/表结构对不上」导致的功能 500
+-- V4.0.0.48 修正两处「实体/表结构对不上」导致的功能 500
+--
+-- 【本脚本取代 V1.2__fix_appkey_provider_and_add_tavern_tables.sql】
+--   原脚本的 DDL 在 MySQL 上一直是好的：CREATE TABLE IF NOT EXISTS 与
+--   MODIFY COLUMN 都是合法 MySQL 语法，且天然幂等。**语句每次都执行成功了。**
+--   它唯一的问题是版本号 1.2 与 `sys_database_version` 里其它模块的脚本撞主键
+--   （该表主键是 version 且被所有模块共用），记录执行结果时抛
+--   DuplicateKeyException: Duplicate entry '1.2'，迁移器把这个记录失败
+--   当成脚本失败，于是每次启动重跑一遍。
+--
+--   换句话说：这里的报错日志写着「执行迁移脚本失败」，但语句其实跑完了，
+--   失败的只是「记一笔账」。排查时容易被这句日志带偏，怀疑到 SQL 上去。
+--
+--   本脚本因此只换版本号，不改任何 DDL。
 --
 -- 1) sys_ai_app_key.provider_id 存的是供应商**编码**（openai / agnes / onnx），
 --    与 sys_ai_provider_model、sys_ai_agent、sys_ai_provider_connection 等
