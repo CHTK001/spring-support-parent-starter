@@ -86,7 +86,7 @@ public class DatasourceMetricScheduler {
                     streamRegistry.broadcast(id, DatasourceMetricStreamRegistry.EVENT_METRIC,
                             new DatasourceMetricPushVO(id, null,
                                     push.getMsg() == null ? "探测失败" : push.getMsg(),
-                                    null, null, null, null));
+                                    null, null, null, null, null));
                     continue;
                 }
                 sent += streamRegistry.broadcast(id, DatasourceMetricStreamRegistry.EVENT_METRIC, push.getData());

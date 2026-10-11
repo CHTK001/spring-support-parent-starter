@@ -55,6 +55,7 @@ public record DatasourceMetricTrendVO(
      * @param sessionLatencyMs 会话耗时（毫秒）
      * @param tunneled         是否经隧道
      * @param errorMessage     失败原因
+     * @param connectionCount  采样时刻客户端连接数；类型不支持时为 null（图上缺格）
      */
     public record Point(
             LocalDateTime time,
@@ -62,7 +63,8 @@ public record DatasourceMetricTrendVO(
             Long connectLatencyMs,
             Long sessionLatencyMs,
             Boolean tunneled,
-            String errorMessage
+            String errorMessage,
+            Long connectionCount
     ) {
     }
 
