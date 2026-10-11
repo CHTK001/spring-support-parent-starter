@@ -16,6 +16,8 @@ import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
+import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
+import com.chua.starter.eduai.service.EduAppConfigService;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
@@ -50,13 +52,24 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     /** 手动录入的来源类型 */
     private static final String SOURCE_TYPE_MANUAL = "MANUAL";
 
+    /** 老师上传的来源类型 */
+    private static final String SOURCE_TYPE_TEACHER = "TEACHER";
+
     /** 手动录入未填来源名时的兜底文案 */
     private static final String DEFAULT_SOURCE_NAME = "手动录入";
+
+    /** 老师上传的来源名 */
+    private static final String DEFAULT_TEACHER_SOURCE_NAME = "老师上传";
 
     /**
      * 属性
      */
     private final EduAiService eduAiService;
+
+    /**
+     * 应用配置：老师上传题目是否自动通过（V1.14 起）
+     */
+    private final EduAppConfigService appConfigService;
 
     @Override
     /**
@@ -103,23 +116,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         if (auditOnSave && !admin) {
             throw new BusinessException("只有管理员可以使用保存并审核");
         }
-        EduQuestion entity = new EduQuestion();
-        entity.setQuestionType(dto.getQuestionType());
-        entity.setQuestionSubject(dto.getQuestionSubject());
-        entity.setQuestionGradeLevel(GradeLevels.normalize(dto.getQuestionGradeLevel()));
-        entity.setQuestionGrade(dto.getQuestionGrade());
-        entity.setQuestionYear(dto.getQuestionYear());
-        entity.setQuestionDifficulty(dto.getQuestionDifficulty());
-        entity.setQuestionScore(dto.getQuestionScore() != null && dto.getQuestionScore() > 0 ? dto.getQuestionScore() : 5);
-        entity.setQuestionKnowledgePointIds(dto.getQuestionKnowledgePointIds());
-        entity.setQuestionStem(dto.getQuestionStem());
-        entity.setQuestionStemImages(dto.getQuestionStemImages());
-        entity.setQuestionOptions(unwrapJsonText(dto.getQuestionOptions()));
-        entity.setQuestionAnswer(dto.getQuestionAnswer());
-        entity.setQuestionAnalysis(dto.getQuestionAnalysis());
-        entity.setQuestionSource(dto.getQuestionSource());
-        entity.setQuestionSourceType(dto.getQuestionSourceType());
-        entity.setQuestionStatus(dto.getQuestionStatus() != null ? dto.getQuestionStatus() : 1);
+        EduQuestion entity = toEntity(dto);
 
         if (dto.getQuestionId() != null && dto.getQuestionId() > 0) {
             // 更新：归属校验后锁定为原归属，客户端传值无效
@@ -151,40 +148,122 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             log.info("更新题目成功，ID: {}{}", dto.getQuestionId(), dirty ? "（内容变更，已打回待审）" : "");
             return dto.getQuestionId();
         } else {
-            // 新增：请求线程以登录态为准；异步链路（采集）继承任务归属，二者皆无则拒绝
-            String owner = EduUserContext.currentUserId();
-            if (!StringUtils.hasText(owner)) {
-                owner = StringUtils.hasText(dto.getOwnerUserId()) ? dto.getOwnerUserId() : EduUserContext.requireUserId();
-            }
-            entity.setOwnerUserId(owner);
-            entity.setQuestionUseCount(0);
-            if (auditOnSave) {
-                // 管理员保存并审核：新建即通过。这次保存本身就是一次审核动作，
-                // 审核次数从 1 起算，否则列表里这条题显示「已通过」却没有 ×N，
-                // 与后续每次审核 +1 的口径对不上。
-                entity.setQuestionAuditStatus(1);
-                entity.setQuestionAuditRemark(null);
-                entity.setQuestionAuditCount(1);
-            } else {
-                entity.setQuestionAuditCount(0);
-                // 老师新建 / 管理员普通保存 / 采集入库：一律待审
-                entity.setQuestionAuditStatus(0);
-                entity.setQuestionAuditRemark(null);
-            }
-            // 题库手动新增未填来源时兜底为“手动录入”；采集链路已在 toSaveDto 填好来源，此处不覆盖
-            if (!StringUtils.hasText(entity.getQuestionSourceType())) {
-                entity.setQuestionSourceType(SOURCE_TYPE_MANUAL);
-            }
-            if (!StringUtils.hasText(entity.getQuestionSource())
-                    && SOURCE_TYPE_MANUAL.equalsIgnoreCase(entity.getQuestionSourceType())) {
-                entity.setQuestionSource(DEFAULT_SOURCE_NAME);
-            }
-            entity.setCreateTime(LocalDateTime.now());
-            entity.setUpdateTime(LocalDateTime.now());
-            baseMapper.insert(entity);
-            log.info("新增题目成功，ID: {}", entity.getQuestionId());
-            return entity.getQuestionId();
+            return insertNew(dto, entity, auditOnSave);
         }
+    }
+
+    /**
+     * 题目保存字段拷贝（DTO → 实体）：新增与更新共用同一份拷贝，
+     * 避免两处字段列表漂移（漏拷一个字段即「改了不生效」）。
+     *
+     * @param dto 题目数据
+     * @return 已拷贝字段的实体（主键 / 归属 / 审核态不在此处设置）
+     */
+    private EduQuestion toEntity(QuestionSaveDTO dto) {
+        EduQuestion entity = new EduQuestion();
+        entity.setQuestionType(dto.getQuestionType());
+        entity.setQuestionSubject(dto.getQuestionSubject());
+        entity.setQuestionGradeLevel(GradeLevels.normalize(dto.getQuestionGradeLevel()));
+        entity.setQuestionGrade(dto.getQuestionGrade());
+        entity.setQuestionYear(dto.getQuestionYear());
+        entity.setQuestionDifficulty(dto.getQuestionDifficulty());
+        entity.setQuestionScore(dto.getQuestionScore() != null && dto.getQuestionScore() > 0 ? dto.getQuestionScore() : 5);
+        entity.setQuestionKnowledgePointIds(dto.getQuestionKnowledgePointIds());
+        entity.setQuestionStem(dto.getQuestionStem());
+        entity.setQuestionStemImages(dto.getQuestionStemImages());
+        entity.setQuestionOptions(unwrapJsonText(dto.getQuestionOptions()));
+        entity.setQuestionAnswer(dto.getQuestionAnswer());
+        entity.setQuestionAnalysis(dto.getQuestionAnalysis());
+        entity.setQuestionSource(dto.getQuestionSource());
+        entity.setQuestionSourceType(dto.getQuestionSourceType());
+        entity.setQuestionStatus(dto.getQuestionStatus() != null ? dto.getQuestionStatus() : 1);
+        return entity;
+    }
+
+    /**
+     * 新增题目入库（管理员保存 / 老师上传共用）。
+     *
+     * @param dto      题目数据
+     * @param entity   已拷贝字段的实体
+     * @param approved 审核态的服务端决策：true=新建即已通过
+     *                 （管理员「保存并审核」或老师上传自动通过配置开启）；
+     *                 false=待审。审核态不经客户端传值。
+     * @return 题目标识
+     */
+    private Long insertNew(QuestionSaveDTO dto, EduQuestion entity, boolean approved) {
+        // 新增：请求线程以登录态为准；异步链路（采集）继承任务归属，二者皆无则拒绝
+        String owner = EduUserContext.currentUserId();
+        if (!StringUtils.hasText(owner)) {
+            owner = StringUtils.hasText(dto.getOwnerUserId()) ? dto.getOwnerUserId() : EduUserContext.requireUserId();
+        }
+        entity.setOwnerUserId(owner);
+        entity.setQuestionUseCount(0);
+        if (approved) {
+            // 管理员「保存并审核」/ 老师上传自动通过：新建即通过。这次保存本身就是一次审核动作，
+            // 审核次数从 1 起算，否则列表里这条题显示「已通过」却没有 ×N，
+            // 与后续每次审核 +1 的口径对不上。
+            entity.setQuestionAuditStatus(1);
+            entity.setQuestionAuditRemark(null);
+            entity.setQuestionAuditCount(1);
+        } else {
+            entity.setQuestionAuditCount(0);
+            // 老师新建 / 管理员普通保存 / 采集入库：一律待审
+            entity.setQuestionAuditStatus(0);
+            entity.setQuestionAuditRemark(null);
+        }
+        // 题库手动新增未填来源时兜底为“手动录入”；采集链路已在 toSaveDto 填好来源，此处不覆盖
+        if (!StringUtils.hasText(entity.getQuestionSourceType())) {
+            entity.setQuestionSourceType(SOURCE_TYPE_MANUAL);
+        }
+        if (!StringUtils.hasText(entity.getQuestionSource())
+                && SOURCE_TYPE_MANUAL.equalsIgnoreCase(entity.getQuestionSourceType())) {
+            entity.setQuestionSource(DEFAULT_SOURCE_NAME);
+        }
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
+        baseMapper.insert(entity);
+        log.info("新增题目成功，ID: {}", entity.getQuestionId());
+        return entity.getQuestionId();
+    }
+
+    /**
+     * 老师上传题目（教师端入口）：逐条容错，失败原因随结果返回，不因单条坏数据整体回滚。
+     *
+     * <p>与 {@link #importQuestions(List)} 的区别：来源一律标为「老师上传」，
+     * 审核态由服务端按「老师上传自动通过」配置决定——开启则直接入库为已通过，
+     * 否则进入待审核队列（默认），由管理员在题库「审核状态」里审批。
+     * 客户端传的来源 / 审核标记一律不采信（与 save 接口同一安全口径）。</p>
+     *
+     * @param list 题目列表
+     * @return 上传结果（成功/失败条数 + 逐条失败原因 + 是否自动通过）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TeacherQuestionUploadVO teacherImportQuestions(List<QuestionSaveDTO> list) {
+        boolean autoApprove = appConfigService.isTeacherQuestionAutoApprove();
+        int count = 0;
+        List<String> errors = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            QuestionSaveDTO dto = list.get(i);
+            String missing = missingRequiredFields(dto);
+            if (missing != null) {
+                errors.add("第" + (i + 1) + "条" + missing);
+                continue;
+            }
+            try {
+                // 服务端落库口径：来源标为老师上传，审核态由自动通过配置决定。
+                dto.setQuestionSourceType(SOURCE_TYPE_TEACHER);
+                dto.setQuestionSource(DEFAULT_TEACHER_SOURCE_NAME);
+                dto.setAuditOnSave(false);
+                insertNew(dto, toEntity(dto), autoApprove);
+                count++;
+            } catch (Exception e) {
+                log.warn("老师上传第 {} 条题目失败: {}", i + 1, e.getMessage());
+                errors.add("第" + (i + 1) + "条" + rootMessage(e));
+            }
+        }
+        log.info("老师上传题目完成，自动通过={}，成功 {} 条，失败 {} 条", autoApprove, count, list.size() - count);
+        return new TeacherQuestionUploadVO(count, list.size() - count, errors, autoApprove);
     }
 
     /**

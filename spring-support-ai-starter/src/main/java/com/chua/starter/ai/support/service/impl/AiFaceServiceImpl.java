@@ -315,6 +315,17 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
+     * 读一条人脸登记时落存的原图。
+     *
+     * @param id 人脸标识
+     * @return 原图字节；未落存（改造前的老数据）时返回 {@code null}
+     */
+    @Override
+    public byte[] originalImage(String id) {
+        return faceStores.originalImage(id);
+    }
+
+    /**
      * 从当前账号人脸库删除一条。
      *
      * @param id 人脸 标识

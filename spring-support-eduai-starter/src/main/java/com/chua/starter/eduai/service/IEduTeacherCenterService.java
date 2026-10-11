@@ -15,13 +15,14 @@ import java.util.Map;
  *
  * <p>与 {@link IEduStudentCenterService} 对称：管理端维护教师档案，
  * 这里是教师本人视角 —— 当前账号绑定了谁、我带的班级与学生情况，
- * 以及教师端三大能力：<b>管理我自己的班级学生 / 组卷 / 阅卷</b>。</p>
+ * 以及教师端能力：<b>班级学生管理（限配置班级）/ 组卷 / 布置 / 阅卷</b>。</p>
  *
- * <p><b>归属口径</b>：教师端所有数据都以「当前登录账号」为归属，不接受客户端传教师 ID。
- * 班级归属见 {@code edu_class.class_owner_user_id}；学生归属见
- * {@code edu_student.student_owner_user_id}，但教师端在读写学生时以「该学生所在班级是否属于我」
- * 作为授权依据 —— 这样即使某个学生当初由管理员建在别的班，只要后来转进我的班，
- * 我也能管理它，而不需要把归属字段改来改去。</p>
+ * <p><b>归属口径</b>：教师端所有数据都不接受客户端传教师 ID。
+ * <b>班级归属（V1.14 起）</b>：班级由管理员统一维护，老师的班级列表
+ * 完全来自后台配置（{@code edu_teacher_class}，学生管理 → 教师 → 配置班级）；
+ * 学生归属见 {@code edu_student.student_owner_user_id}，但教师端在读写学生时
+ * 以「该学生所在班级是否配置给我」作为授权依据 —— 这样即使某个学生当初由管理员
+ * 建在别的班，只要后来转进我的班，我也能管理它。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -51,27 +52,30 @@ public interface IEduTeacherCenterService {
     Map<String, Object> overview();
 
     /**
-     * 我带的班级列表（归属取自登录态）
+     * 我带的班级列表（= 后台配置的班级）
      *
-     * @return 我创建的班级，按班级 ID 升序；未绑定教师时抛业务异常
+     * @return 配置给我的启用班级，按班级 ID 升序；未绑定教师时抛业务异常
      */
     List<EduClass> myClasses();
 
     /**
-     * 新建或修改我自己的班级
+     * 新建或修改班级（老师端已停用）
      *
-     * @param entity 班级实体；带 classId 时按「我的班级」校验归属
-     * @return 班级标识
+     * <p>V1.14 起班级由管理员统一维护，本方法一律拒绝：
+     * 老师端只做「布置」等教学功能，数据范围 = 后台配置的班级。</p>
+     *
+     * @param entity 班级实体（忽略）
+     * @return 不会返回，一律抛业务异常
      */
     Long saveClass(EduClass entity);
 
     /**
-     * 删除我自己的班级
+     * 删除班级（老师端已停用）
      *
-     * <p>班级下仍有学生时拒绝删除，避免留下查不到主人的孤儿学生。</p>
+     * <p>V1.14 起班级由管理员统一维护，本方法一律拒绝。</p>
      *
-     * @param classId 班级标识
-     * @return 是否删除成功
+     * @param classId 班级标识（忽略）
+     * @return 不会返回，一律抛业务异常
      */
     boolean deleteClass(Long classId);
 

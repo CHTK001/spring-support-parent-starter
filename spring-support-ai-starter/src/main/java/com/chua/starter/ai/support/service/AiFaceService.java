@@ -205,6 +205,18 @@ public interface AiFaceService {
     byte[] faceImage(String id);
 
     /**
+     * 读一条人脸**登记时的原图**。
+     *
+     * <p>与 {@link #faceImage(String)} 的裁剪脸配套：特征点必须画在原图上才有诊断价值
+     * （裁剪脸已被对齐/裁切，画出来永远是「正的」，看不出关键点偏没偏）。
+     * 登记时同时落存两份，列表缩略图用裁剪脸、特征点标注用原图。</p>
+     *
+     * @param id 人脸标识
+     * @return 原图字节；改造前的老数据 / 落存失败时返回 {@code null}
+     */
+    byte[] originalImage(String id);
+
+    /**
      * 从**当前账号**人脸库里删除一条（向量索引与快照同步删除）。
      *
      * @param id 人脸 标识

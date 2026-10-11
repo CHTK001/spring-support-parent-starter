@@ -181,4 +181,41 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             @Param("endTime") LocalDateTime endTime,
             @Param("userId") String userId
     );
+
+    /**
+     * 「按天 × 按模型」聚合行，供用量管理的每日堆叠柱状图使用。
+     *
+     * @param statDate  统计日期
+     * @param provider  服务商
+     * @param model     模型
+     * @param totalCalls 当日该模型调用次数
+     * @param totalTokens 当日该模型令牌合计
+     * @param totalCost 当日该模型费用
+     */
+    record DailyModelRow(
+            LocalDate statDate,
+            String provider,
+            String model,
+            Long totalCalls,
+            Long totalTokens,
+            Double totalCost
+    ) {}
+
+    /**
+     * 数据库端按「天 + 服务商 + 模型」三维分组聚合。
+     *
+     * <p>与 {@link #selectDailyAggregate} 的区别只在于少了 groupName 一维：
+     * 柱状图要的是「每天一根柱、柱内按模型分段」，分组维度越少，前端需要
+     * 归并的同色段越少、图例越干净。</p>
+     *
+     * @param startTime 开始时间（含），不能为 空
+     * @param endTime   结束时间（不含），不能为 空
+     * @param userId    归属用户（可为空，为空时聚合全部用户）
+     * @return 按天升序、同天内按令牌降序的聚合行列表
+     */
+    List<DailyModelRow> selectDailyModelAggregate(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("userId") String userId
+    );
 }

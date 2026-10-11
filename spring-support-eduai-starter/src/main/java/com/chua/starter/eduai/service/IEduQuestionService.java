@@ -8,6 +8,7 @@ import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
+import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
 
 import java.util.List;
 
@@ -42,6 +43,19 @@ public interface IEduQuestionService extends IService<EduQuestion> {
      * @return 导入结果（成功/失败条数 + 逐条失败原因）
      */
     QuestionImportResultVO importQuestions(List<QuestionSaveDTO> list);
+
+    /**
+     * 老师上传题目（教师端入口）。逐条容错，失败原因随结果返回，不因单条坏数据整体回滚。
+     *
+     * <p>与 {@link #importQuestions(List)} 的区别：来源一律标为「老师上传」，
+     * 审核态由服务端按「老师上传自动通过」配置决定——开启则直接入库为已通过，
+     * 否则进入待审核队列（默认），由管理员在题库「审核状态」里审批。
+     * 客户端传的来源 / 审核标记一律不采信（与 save 接口同一安全口径）。</p>
+     *
+     * @param list 题目列表
+     * @return 上传结果（成功/失败条数 + 逐条失败原因 + 是否自动通过）
+     */
+    TeacherQuestionUploadVO teacherImportQuestions(List<QuestionSaveDTO> list);
 
     /**
      * 删除题目

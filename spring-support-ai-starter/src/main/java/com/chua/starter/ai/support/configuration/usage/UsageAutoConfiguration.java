@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.configuration.usage;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.controller.UsageLiveStreamHub;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
@@ -49,6 +50,7 @@ public class UsageAutoConfiguration {
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
                                                ModelAliasService modelAliasService,
                                                SysAiUsageDailyMapper dailyMapper,
+                                               UsageLiveStreamHub usageLiveStreamHub,
                                                SysAiPricingService pricingService,
                                                IptablesService iptablesService) {
         /**
@@ -56,11 +58,12 @@ public class UsageAutoConfiguration {
          * @param usageMapper usage映射器
          * @param modelAliasService 模型别名服务
          * @param dailyMapper daily映射器
+         * @param usageLiveStreamHub 实时推送中枢
          * @param pricingService pricing服务
          * @param iptablesService iptables服务
          * @return sysAIusage服务impl的结果
          */
-        return new SysAiUsageServiceImpl(usageMapper, modelAliasService, dailyMapper, pricingService, iptablesService);
+        return new SysAiUsageServiceImpl(usageMapper, modelAliasService, dailyMapper, usageLiveStreamHub, pricingService, iptablesService);
     }
 
     @Bean

@@ -335,4 +335,33 @@ public class EduDimensionController {
     public ReturnResult<Boolean> deleteTeacher(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteTeacher(id));
     }
+
+    // ===== 教师班级配置（老师端数据范围） =====
+
+    /**
+     * 教师已配置的班级列表（老师端数据范围）
+     *
+     * @param teacherId 教师标识
+     * @return 已配置的班级列表
+     */
+    @Operation(summary = "教师已配置的班级列表")
+    @GetMapping("/teachers/{teacherId}/classes")
+    public ReturnResult<List<EduClass>> teacherClasses(@PathVariable Long teacherId) {
+        return ReturnResult.ok(dimensionService.listTeacherClasses(teacherId));
+    }
+
+    /**
+     * 保存教师班级配置（全量替换）
+     *
+     * @param teacherId 教师标识
+     * @param classIds  班级标识列表
+     * @return 是否成功
+     */
+    @Operation(summary = "保存教师班级配置（全量替换）")
+    @PostMapping("/teachers/{teacherId}/classes")
+    public ReturnResult<Boolean> saveTeacherClasses(@PathVariable Long teacherId,
+                                                    @RequestBody List<Long> classIds) {
+        dimensionService.saveTeacherClasses(teacherId, classIds);
+        return ReturnResult.ok(true);
+    }
 }

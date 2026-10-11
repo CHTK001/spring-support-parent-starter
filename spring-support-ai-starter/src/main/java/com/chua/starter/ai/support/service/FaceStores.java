@@ -259,10 +259,16 @@ public class FaceStores {
     /**
      * 从图片登记（检测 → 对齐 → 特征 → 入库），并写入快照。
      *
+     * <p><b>只接受单人脸。</b>底层 {@code extractFeatureWithMeta} 只会取面积最大的
+     * 一张脸出特征，过去多脸合影被静默截成「只登记了其中一个人」，用户却收到
+     * 「登记成功」——底库里少了人、当事人毫不知情，等到 1:N 检索认不出人才会发现。
+     * 这里把检出的总脸数一并带出来，多于 1 张直接拒绝，让用户裁剪后重试。</p>
+     *
      * @param id       人脸标识
      * @param imageData 图片字节
      * @param metadata 元数据
      * @return 是否登记成功
+     * @throws MultiFaceEnrollException 图片中检出多于 1 张人脸
      */
     public boolean enrollFromImage(String id, byte[] imageData, Map<String, Object> metadata) {
         AccountFace st = st();
@@ -276,13 +282,19 @@ public class FaceStores {
         if (result == null || result.feature() == null || result.feature().length == 0) {
             return false;
         }
+        if (result.faceCount() > 1) {
+            throw new MultiFaceEnrollException(result.faceCount());
+        }
         boolean ok = pipeline.enroll(id, result.feature(), metadata == null ? Map.of() : metadata, id);
         if (ok) {
             st.put(id, result.feature(), metadata);
             st.persist();
             // 一并落存登记时用的裁剪脸：底库要「看图 + 画特征点」，
             // 而缩略图此前只在登记它的浏览器里，换浏览器就没有图。
-            saveFaceImage(id, result.faceImage());
+            saveFaceImage(id, FaceImageKind.CROP, result.faceImage());
+            // 同时留一份原图。特征点必须画在原图上才有意义（见 originalImage 的说明），
+            // 裁剪脸上只有一张脸，画出来的点永远是「对齐的五点」，看不出任何问题。
+            saveFaceImage(id, FaceImageKind.ORIGINAL, imageData);
         }
         return ok;
     }
@@ -294,39 +306,67 @@ public class FaceStores {
      * @return PNG 字节；未落存（改造前的老数据 / 落存失败）时返回 空
      */
     public byte[] faceImage(String id) {
+        return readFaceImage(id, FaceImageKind.CROP);
+    }
+
+    /**
+     * 读一条人脸登记时落存的**原图**。
+     *
+     * <p>特征点对话框必须画在这张上：关键点是在原图坐标系里由检测框 + 关键点模型
+     * 算出来的，画在裁剪脸上只会得到「已经对齐好的五点」，无论模型偏没偏都看不出问题，
+     * 等于这个功能没在检查任何东西。改造前只存了裁剪脸，所以对话框一直在画裁剪图。</p>
+     *
+     * <p>改造前登记的老数据没有原图，返回 {@code null}；前端此时回退到裁剪图。</p>
+     *
+     * @param id 人脸标识
+     * @return 原图字节；未落存时返回 {@code null}
+     */
+    public byte[] originalImage(String id) {
+        return readFaceImage(id, FaceImageKind.ORIGINAL);
+    }
+
+    /**
+     * 读取指定种类的登记图。
+     *
+     * @param id   人脸标识
+     * @param kind 图种类
+     * @return 图片字节；未落存时返回 {@code null}
+     */
+    private byte[] readFaceImage(String id, FaceImageKind kind) {
         if (id == null || id.isBlank()) {
             return null;
         }
         try {
-            Path file = faceImagePath(id);
+            Path file = faceImagePath(id, kind);
             return Files.exists(file) ? Files.readAllBytes(file) : null;
         } catch (Exception e) {
-            log.warn("[Face] 读登记图失败: id={} -> {}", id, e.getMessage());
+            log.warn("[Face] 读登记图失败: id={} kind={} -> {}", id, kind, e.getMessage());
             return null;
         }
     }
 
     /**
-     * 落存登记时的人脸**裁剪图**（best-effort）。
+     * 落存登记时的人脸图（best-effort）。
      *
-     * <p>为什么存的是裁剪脸而不是原图：一是不必保存整张原图（隐私暴露面更小），
-     * 二是特征点正是在同一裁剪口径上取的，前端拿它画点最直观。</p>
+     * <p>裁剪脸用于列表缩略图（视野一致、体积小），原图用于特征点标注。
+     * 两个都留，才能兼顾「一眼扫完整个底库」和「在真实照片上核对五官位置」。</p>
      *
      * <p>失败只记 WARN，绝不影响登记结果 —— 图属于增强展示，向量与档案才是主体。</p>
      *
      * @param id   人脸标识
-     * @param face 裁剪人脸图字节（可能为 空）
+     * @param kind 图种类
+     * @param data 图片字节（可能为 {@code null}）
      */
-    private void saveFaceImage(String id, byte[] face) {
-        if (face == null || face.length == 0) {
+    private void saveFaceImage(String id, FaceImageKind kind, byte[] data) {
+        if (data == null || data.length == 0) {
             return;
         }
         try {
-            Path file = faceImagePath(id);
+            Path file = faceImagePath(id, kind);
             Files.createDirectories(file.getParent());
-            Files.write(file, face);
+            Files.write(file, data);
         } catch (Exception e) {
-            log.warn("[Face] 登记图落存失败（不影响登记）: id={} -> {}", id, e.getMessage());
+            log.warn("[Face] 登记图落存失败（不影响登记）: id={} kind={} -> {}", id, kind, e.getMessage());
         }
     }
 
@@ -336,21 +376,52 @@ public class FaceStores {
      * @param id 人脸标识
      */
     private void deleteFaceImage(String id) {
-        try {
-            Files.deleteIfExists(faceImagePath(id));
-        } catch (Exception e) {
-            log.debug("[Face] 删除登记图失败: id={} -> {}", id, e.getMessage());
+        for (FaceImageKind kind : FaceImageKind.values()) {
+            try {
+                Files.deleteIfExists(faceImagePath(id, kind));
+            } catch (Exception e) {
+                log.debug("[Face] 删除登记图失败: id={} kind={} -> {}", id, kind, e.getMessage());
+            }
         }
     }
 
     /**
-     * 某条人脸的登记图路径（{@code <账号>/face/img/<id>.png}）。
+     * 登记图的种类（同一 {@code id} 下的两个并存文件）。
      *
-     * @param id 人脸标识
+     * <p>裁剪脸统一落成 {@code .png}（人脸图在管线里已经转过码），原图保留上传时的
+     * 原始字节——它只是给人看的，没必要再解一遍编码。</p>
+     */
+    private enum FaceImageKind {
+        /** 裁剪后的人脸图，列表缩略图用它 */
+        CROP(".png"),
+        /** 登记时的原始照片，特征点标注用它 */
+        ORIGINAL(".orig");
+
+        private final String suffix;
+
+        FaceImageKind(String suffix) {
+            this.suffix = suffix;
+        }
+
+        /**
+         * 文件名后缀。
+         *
+         * @return 含点号的后缀
+         */
+        String suffix() {
+            return suffix;
+        }
+    }
+
+    /**
+     * 某条人脸登记图的路径（{@code <账号>/face/img/<id><后缀>}）。
+     *
+     * @param id   人脸标识
+     * @param kind 图种类
      * @return 文件路径
      */
-    private Path faceImagePath(String id) {
-        return st().dir.resolve(IMAGE_DIR).resolve(sanitize(id) + ".png");
+    private Path faceImagePath(String id, FaceImageKind kind) {
+        return st().dir.resolve(IMAGE_DIR).resolve(sanitize(id) + kind.suffix());
     }
 
     /**
@@ -405,7 +476,10 @@ public class FaceStores {
             row.put("metadata", e.getValue().metadata() == null ? Map.of() : e.getValue().metadata());
             // 顺带回一个「服务端有没有登记图」的布尔：底库要区分
             // 「图在服务端」和「只有登记它的那台浏览器本地有图」，否则统计卡与筛选都是假数。
-            row.put("hasImage", Files.exists(faceImagePath(e.getKey())));
+            row.put("hasImage", Files.exists(faceImagePath(e.getKey(), FaceImageKind.CROP)));
+            // 原图是否存在：特征点对话框画在原图上，老数据没有原图时要回退到裁剪图，
+            // 前端据此决定提示「已按裁剪脸显示」还是直接画原图
+            row.put("hasOriginalImage", Files.exists(faceImagePath(e.getKey(), FaceImageKind.ORIGINAL)));
             out.add(row);
         }
         return out;
@@ -441,7 +515,8 @@ public class FaceStores {
         int statWithImage = 0;
         int statWithIdCard = 0;
         for (Map.Entry<String, Entry> e : st().snapshot.entrySet()) {
-            boolean hasImage = Files.exists(faceImagePath(e.getKey()));
+            boolean hasImage = Files.exists(faceImagePath(e.getKey(), FaceImageKind.CROP));
+            boolean hasOriginal = Files.exists(faceImagePath(e.getKey(), FaceImageKind.ORIGINAL));
             Map<String, Object> metadata = e.getValue().metadata() == null ? Map.of() : e.getValue().metadata();
             statTotal++;
             if (hasImage) {
@@ -463,6 +538,7 @@ public class FaceStores {
             row.put("id", e.getKey());
             row.put("metadata", metadata);
             row.put("hasImage", hasImage);
+            row.put("hasOriginalImage", hasOriginal);
             matched.add(row);
         }
         sortRows(matched, sortField, sortOrder);
