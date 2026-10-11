@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -58,11 +60,18 @@ public abstract class AbstractCapabilityConfigController {
                 .collect(Collectors.toMap(m -> String.valueOf(m.get("field")), m -> m, (a, b) -> a));
 
         List<GlobalSettingProvider> providers = ServiceProvider.of(GlobalSettingProvider.class).collect();
+        // 同一 field 只保留首次出现的定义：框架 SPI 注册表会把部分实现注册成两个实例
+        // （实测 image / image_search / input 三组各返回两份），不去重会让本接口
+        // 对同一个配置项返回重复记录。详见 UsageConfigController#config 的说明。
+        Set<String> seen = new LinkedHashSet<>();
         for (GlobalSettingProvider provider : providers) {
             if (!group().equals(provider.group())) {
                 continue;
             }
             for (GlobalSettingProvider.SettingItem item : provider.getItems()) {
+                if (!seen.add(item.field())) {
+                    continue;
+                }
                 Map<String, Object> field = new LinkedHashMap<>();
                 field.put("field", item.field());
                 field.put("valueType", item.valueType());
