@@ -1,0 +1,1 @@
+import{t as e}from"./_baseGet-DSZshHnQ.js";function t(t,n,r){var i=t==null?void 0:e(t,n);return i===void 0?r:i}export{t};

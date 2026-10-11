@@ -1,0 +1,1 @@
+import{C as e,S as t}from"./file-viewer-text-Dqvivv8T.js";export{t as default,e as shouldVirtualizeMarkdownBuffer};

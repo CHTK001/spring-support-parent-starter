@@ -1,0 +1,1 @@
+import{n as e}from"./client-DTGRysKS.js";export{e as OpenPgpWorkerClient};
