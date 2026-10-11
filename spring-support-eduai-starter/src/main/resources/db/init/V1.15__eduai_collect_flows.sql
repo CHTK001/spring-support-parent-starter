@@ -185,9 +185,15 @@ WHERE NOT EXISTS (
 --
 --   改动这份脚本时请重跑对拍，不要凭肉眼判断。
 --
--- 原 edu_collect_task 的汉字种子行与 HanziQuestionSourceProvider 本轮都保留未删
--- （种子行见 db/init/V1.12__initdata_all_eduai.sql），两条入口暂时并存。
--- 确认采集平台这条跑通后再清理旧路径。
+-- 旧路径已清理：edu_collect_task 相关的控制器、服务、模型、mapper、provider、
+-- JobHandler、11 个 Groovy 脚本，以及对应的前端页面与 API 均已删除，
+-- META-INF/extensions 下那份 QuestionSourceProvider 的 SPI 注册文件也一并删除。
+-- 所以本文件里的流程是汉字采集**唯一**的入口，没有并存的老路径。
+--
+-- 注意：edu_collect_task / edu_collect_log 两张表本身仍然建着（建表语句在
+-- db/init/V1.2__init_all_eduai.sql），种子行也仍在 V1.1 与 V1.12 里。
+-- 本仓库没有 DROP TABLE 的先例，且这两张表已无任何代码引用，
+-- 故按现状保留——表留着无害，留着的目的是让回退代码时有据可依。
 -- ---------------------------------------------------------------------
 INSERT INTO `collect_flow`
     (`collect_flow_name`, `collect_flow_category_id`, `collect_flow_code`, `collect_flow_dsl`,
