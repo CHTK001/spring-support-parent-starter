@@ -497,12 +497,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
                 try {
                     request.getRequestDispatcher(apiGray.fallback()).forward(request, response);
                 } catch (ServletException e) {
-                    /**
-                     * runtime异常。
-                     * @param e e
-                     * @return runtime异常的结果
-                     */
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("灰度降级转发失败: " + e.getMessage(), e);
                 }
                 return false;
             }

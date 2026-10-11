@@ -482,12 +482,7 @@ public class Project {
             cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key.getBytes(java.nio.charset.StandardCharsets.UTF_8), "AES"));
             return Base64.getEncoder().encodeToString(cipher.doFinal(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            /**
-             * runtime异常。
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException(e);
+            throw new RuntimeException("AES 加密失败: " + e.getMessage(), e);
         }
     }
 
@@ -512,12 +507,7 @@ public class Project {
              */
             return new String(cipher.doFinal(Base64.getDecoder().decode(content)), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
-            /**
-             * runtime异常。
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException(e);
+            throw new RuntimeException("AES 解密失败: " + e.getMessage(), e);
         }
     }
 

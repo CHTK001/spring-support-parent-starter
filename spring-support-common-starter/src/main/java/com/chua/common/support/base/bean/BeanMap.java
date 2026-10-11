@@ -58,12 +58,7 @@ public class BeanMap extends HashMap<String, Object> {
             try {
                 beanInfo = java.beans.Introspector.getBeanInfo(source.getClass());
             } catch (java.beans.IntrospectionException e) {
-                /**
-                 * runtime异常。
-                 * @param e e
-                 * @return runtime异常的结果
-                 */
-                throw new RuntimeException(e);
+                throw new RuntimeException("Bean 内省失败: " + e.getMessage(), e);
             }
             java.beans.PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();
             if (null != propertyDescriptors) {
