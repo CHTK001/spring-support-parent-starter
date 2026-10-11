@@ -131,6 +131,13 @@ public class EduDimensionService {
     private final EduTeacherMapper teacherMapper;
 
     /**
+     * 教师班级配置：老师端数据范围。老师只能查看 / 操作
+     * 后台配置给自己的班级（布置、阅卷等教学功能），
+     * 班级本身由管理员统一维护，老师端不自建班级。
+     */
+    private final EduTeacherClassMapper teacherClassMapper;
+
+    /**
      * 学生学习进度：删除学生时连带清理，避免留下孤儿行
      */
     private final EduStudentProgressMapper progressMapper;
@@ -373,6 +380,67 @@ public class EduDimensionService {
         int rows = classMapper.deleteById(id);
         log.info("[EduAi] 删除班级: id={}, rows={}", id, rows);
         return rows > 0;
+    }
+
+    // ==================== 教师班级配置 ====================
+
+    /**
+     * 教师已配置的班级列表（老师端数据范围）。
+     *
+     * <p>班级由管理员在后台统一维护，老师端「我的班级」完全来自本配置：
+     * 老师只能查看 / 操作配置给自己的班级。</p>
+     *
+     * @param teacherId 教师标识
+     * @return 已配置的启用班级，按班级 ID 升序；未配置时为空列表
+     */
+    public List<EduClass> listTeacherClasses(Long teacherId) {
+        if (teacherId == null) {
+            return List.of();
+        }
+        List<Long> classIds = teacherClassMapper.selectClassIdsByTeacher(teacherId);
+        if (classIds.isEmpty()) {
+            return List.of();
+        }
+        return classMapper.selectBatchIds(classIds).stream()
+                .filter(c -> c.getClassStatus() == null || c.getClassStatus() == 1)
+                .sorted(java.util.Comparator.comparing(EduClass::getClassId))
+                .toList();
+    }
+
+    /**
+     * 保存教师班级配置（全量替换）。
+     *
+     * @param teacherId 教师标识
+     * @param classIds  配置给该教师的班级标识列表（可空 = 清空）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void saveTeacherClasses(Long teacherId, List<Long> classIds) {
+        if (teacherId == null) {
+            throw new BusinessException("教师标识不能为空");
+        }
+        if (teacherMapper.selectById(teacherId) == null) {
+            throw new BusinessException("教师不存在");
+        }
+        List<Long> targets = classIds == null ? List.of()
+                : classIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (!targets.isEmpty()) {
+            List<Long> found = classMapper.selectBatchIds(targets).stream()
+                    .map(EduClass::getClassId).toList();
+            for (Long id : targets) {
+                if (!found.contains(id)) {
+                    throw new BusinessException("班级不存在: " + id);
+                }
+            }
+        }
+        teacherClassMapper.deleteByTeacherId(teacherId);
+        for (Long classId : targets) {
+            EduTeacherClass rel = new EduTeacherClass();
+            rel.setTeacherClassTeacherId(teacherId);
+            rel.setTeacherClassClassId(classId);
+            rel.setCreateTime(java.time.LocalDateTime.now());
+            teacherClassMapper.insert(rel);
+        }
+        log.info("[EduAi] 教师班级配置: teacherId={}, classes={}", teacherId, targets);
     }
 
     // ==================== 学生 ====================

@@ -847,6 +847,19 @@
                 <artifactId>utils-support-datasource-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
+            <!-- 数据库文档渲染器：word（POI）/ pdf（HTML + wkhtmltopdf）。
+                 与 markdown/html 不同，这两个渲染器不在 common-starter 里，
+                 不引就没有该导出格式（SPI 查不到，前端据 /document/formats 隐藏入口）。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-word-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-pdf-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
 
             <!-- Apache Calcite SQL解析引擎 -->
             <dependency>
