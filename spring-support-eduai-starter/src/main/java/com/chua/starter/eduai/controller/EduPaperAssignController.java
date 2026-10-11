@@ -8,6 +8,7 @@ import com.chua.starter.eduai.dimension.entity.EduStudent;
 import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.dimension.mapper.EduClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduStudentMapper;
+import com.chua.starter.eduai.dimension.mapper.EduTeacherClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
 import com.chua.starter.eduai.mapper.EduPaperAssignMapper;
 import com.chua.starter.eduai.mapper.EduPaperMapper;
@@ -38,7 +39,8 @@ import java.util.Objects;
  * <p>归属一律取自**登录态**，不接受客户端传「我是谁」：</p>
  * <ul>
  *   <li>老师侧：必须是已绑定工号的教师账号；只能布置到
- *       {@code class_owner_user_id = 登录账号} 的**自己的班级**。</li>
+ *       后台「学生管理 → 教师 → 配置班级」配置的班级
+ *       （{@code edu_teacher_class}，与教师中心数据范围同一口径）。</li>
  *   <li>学生侧：按自己的 {@code student_class_id} 反查本班试卷，
  *       看不到别的班，也不需要传班级 ID。</li>
  * </ul>
@@ -75,6 +77,11 @@ public class EduPaperAssignController {
      * 教师：确认当前账号已绑定工号
      */
     private final EduTeacherMapper teacherMapper;
+
+    /**
+     * 教师班级配置：老师的班级数据范围（V1.14 起布置以此为准）
+     */
+    private final EduTeacherClassMapper teacherClassMapper;
 
     /**
      * 试卷：校验试卷存在
@@ -231,7 +238,9 @@ public class EduPaperAssignController {
     }
 
     /**
-     * 确认该班级属于当前老师（class_owner_user_id = 登录账号）。
+     * 确认该班级已配置给当前老师（V1.14 起按 {@code edu_teacher_class} 判定，
+     * 与教师中心「我的班级」同一口径；不再比对 {@code class_owner_user_id}，
+     * 否则会出现「列表看得到、布置报无权」或「列表看不到、接口能布置」的不一致）。
      *
      * @param classId 班级标识
      * @param account 老师登录账号
@@ -242,8 +251,15 @@ public class EduPaperAssignController {
         if (clazz == null) {
             throw new BusinessException("班级不存在");
         }
-        if (!account.equals(clazz.getOwnerUserId())) {
-            throw new BusinessException("只能给自己名下的班级布置试卷");
+        EduTeacher teacher = teacherMapper.selectOne(new QueryWrapper<EduTeacher>()
+                .eq("teacher_account", account)
+                .last("LIMIT 1"));
+        if (teacher == null) {
+            throw new BusinessException("请先绑定教师工号");
+        }
+        List<Long> myClassIds = teacherClassMapper.selectClassIdsByTeacher(teacher.getTeacherId());
+        if (!myClassIds.contains(classId)) {
+            throw new BusinessException("该班级未配置给当前老师，请联系管理员在后台「学生管理 → 教师」配置班级");
         }
         return clazz;
     }
