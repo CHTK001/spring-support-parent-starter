@@ -586,7 +586,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
                 try {
                     Files.deleteIfExists(p);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("删除文件失败: " + e.getMessage(), e);
                 }
             });
         }

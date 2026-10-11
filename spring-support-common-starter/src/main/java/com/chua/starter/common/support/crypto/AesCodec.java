@@ -41,7 +41,7 @@ public class AesCodec {
             byte[] bytes = data.getBytes("UTF-8");
             return bytesToHex(encrypt(bytes));
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("AES 加密失败: " + e.getMessage(), e);
         }
     }
 
@@ -58,7 +58,7 @@ public class AesCodec {
         try {
             return new String(decrypt(hexToBytes(hex)), "UTF-8");
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("AES 解密失败: " + e.getMessage(), e);
         }
     }
 

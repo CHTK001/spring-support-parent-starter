@@ -38,12 +38,7 @@ public class MultipartFileUtils {
         try {
             return transferTo(multipartFile.getInputStream(), multipartFile.getOriginalFilename(), parent, folder, clearFolder);
         } catch (IOException e) {
-            /**
-             * runtime异常。
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException(e);
+            throw new RuntimeException("上传文件转移失败: " + e.getMessage(), e);
         }
     }
 
@@ -59,12 +54,7 @@ public class MultipartFileUtils {
         try {
             return transferTo(multipartFile.getInputStream(), multipartFile.getOriginalFilename(), parent, clearFolder);
         } catch (IOException e) {
-            /**
-             * runtime异常。
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException(e);
+            throw new RuntimeException("上传文件转移失败: " + e.getMessage(), e);
         }
     }
 
