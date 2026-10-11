@@ -1,6 +1,7 @@
 package com.chua.starter.datasourcehub.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.datasourcehub.support.constants.DatasourceHubConstants;
 import com.chua.starter.datasourcehub.support.model.DataSourceTestVO;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
@@ -79,6 +80,7 @@ public class DatasourceController {
      * @param data 数据源配置
      * @return 更新后的数据源
      */
+    @SysLog(name = "更新数据源")
     @Operation(summary = "更新数据源")
     @PutMapping("/{id}")
     public ReturnResult<DataSourceVO> update(@PathVariable Long id, @RequestBody DataSourceDTO data) {
@@ -91,6 +93,7 @@ public class DatasourceController {
      * @param id 数据源 ID
      * @return 删除结果
      */
+    @SysLog(name = "删除数据源")
     @Operation(summary = "删除数据源")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {
@@ -103,6 +106,7 @@ public class DatasourceController {
      * @param id 数据源 ID
      * @return 测试结果
      */
+    @SysLog(name = "测试数据源连接")
     @Operation(summary = "测试数据源连接")
     @PostMapping("/{id}/test")
     public ReturnResult<DataSourceTestVO> test(@PathVariable Long id) {
