@@ -278,19 +278,128 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     /**
      * 获取用户标识
      *
+     * <p>优先走 {@link RequestUtils}（网关注入的 X-User-Id 头/请求属性）；
+     * 单体部署（OAuth 服务端与本服务同进程）下没有网关写头，此时回退到
+     * {@link #resolveTokenUser(String)} 从令牌解析 —— classpath 无 oauth-client
+     * 时回退静默失效，行为与原来一致。</p>
+     *
      * @return 用户ID
      */
     protected String getUserId() {
-        return RequestUtils.getUserId();
+        String value = RequestUtils.getUserId();
+        if (null != value) {
+            return value;
+        }
+        return resolveTokenUser("getUserId");
     }
 
     /**
      * 获取用户名
      *
+     * <p>回退策略同 {@link #getUserId()}。</p>
+     *
      * @return 用户名
      */
     protected String getUsername() {
-        return RequestUtils.getUsername();
+        String value = RequestUtils.getUsername();
+        if (null != value) {
+            return value;
+        }
+        return resolveTokenUser("getUsername");
+    }
+
+    /**
+     * 从请求令牌解析当前用户属性（单体部署的回退路径）。
+     *
+     * <p>单体模式没有网关写 {@code X-User-Id}/{@code X-Username} 头，而
+     * AuthFilter（写 username 请求属性的组件）在 classpath 含 OAuth 服务端时
+     * 被 {@code @ConditionalOnMissingClass(SsoServer)} 排除，导致操作日志的
+     * 操作人恒为空。这里从 {@code Authorization: Bearer} / {@code x-oauth-token}
+     * 头提取令牌，经 {@code AuthClientExecute#getUserResult(token)}（与
+     * {@code /v2/user/me} 同一解析路径）还原身份。</p>
+     *
+     * <p>common-starter 不依赖 oauth-client（依赖倒置），因此用反射 + 一次性
+     * 类探测：classpath 没有该类时永久跳过，所有反射元数据缓存，任何一步
+     * 失败都静默返回 null —— 操作人缺失只是少一个字段，不能拖垮主流程。</p>
+     *
+     * @param getter 结果对象上的取值方法名（getUserId / getUsername）
+     * @return 用户属性；取不到返回 null
+     */
+    private String resolveTokenUser(String getter) {
+        if (!OAUTH_CLIENT_PRESENT) {
+            return null;
+        }
+        try {
+            HttpServletRequest current = RequestUtils.getRequest();
+            if (null == current) {
+                return null;
+            }
+            String token = current.getHeader("x-oauth-token");
+            if (StringUtils.isEmpty(token)) {
+                String authorization = current.getHeader("Authorization");
+                if (null != authorization && authorization.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                    token = authorization.substring(7).trim();
+                }
+            }
+            if (StringUtils.isEmpty(token)) {
+                return null;
+            }
+            Object execute = OAUTH_GET_INSTANCE.invoke(null);
+            Object userResult = OAUTH_GET_USER_RESULT.invoke(execute, token);
+            if (null == userResult) {
+                return null;
+            }
+            Method accessor = userResult.getClass().getMethod(getter);
+            return (String) accessor.invoke(userResult);
+        } catch (Exception e) {
+            // 令牌解析失败（过期/无 oauth-client/内部异常）只影响操作人字段，静默降级
+            return null;
+        }
+    }
+
+    /**
+     * oauth-client 类是否存在于 classpath（懒探测，一次性）。
+     */
+    private static final boolean OAUTH_CLIENT_PRESENT = detectOauthClient();
+
+    /**
+     * AuthClientExecute.getInstance() 的反射句柄（classpath 有该类时才可用）。
+     */
+    private static final Method OAUTH_GET_INSTANCE = findOauthMethod("getInstance");
+    /**
+     * AuthClientExecute.getUserResult(String) 的反射句柄。
+     */
+    private static final Method OAUTH_GET_USER_RESULT = findOauthMethod("getUserResult");
+
+    /**
+     * 探测 oauth-client 是否在 classpath。
+     *
+     * @return 存在返回 true
+     */
+    private static boolean detectOauthClient() {
+        try {
+            Class.forName("com.chua.starter.oauth.client.support.execute.AuthClientExecute");
+            return true;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /**
+     * 反射定位 AuthClientExecute 的静态方法；类缺失或方法不存在时返回 null（调用侧判空）。
+     *
+     * @param name 方法名
+     * @return 方法句柄或 null
+     */
+    private static Method findOauthMethod(String name) {
+        try {
+            Class<?> clazz = Class.forName("com.chua.starter.oauth.client.support.execute.AuthClientExecute");
+            return "getInstance".equals(name)
+                    ? clazz.getMethod("getInstance")
+                    : clazz.getMethod(name, String.class);
+        } catch (Throwable e) {
+            return null;
+        }
     }
 
     /**
