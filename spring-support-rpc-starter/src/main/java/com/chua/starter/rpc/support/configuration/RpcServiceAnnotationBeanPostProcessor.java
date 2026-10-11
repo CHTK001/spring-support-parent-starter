@@ -646,12 +646,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             constructorArgumentValues.addGenericArgumentValue(rpcServer);
 
         } catch (ClassNotFoundException e) {
-            /**
-             * runtime异常。
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException(e);
+            throw new RuntimeException("RPC 服务类加载失败: " + e.getMessage(), e);
         }
 
         return rootBeanDefinition;
