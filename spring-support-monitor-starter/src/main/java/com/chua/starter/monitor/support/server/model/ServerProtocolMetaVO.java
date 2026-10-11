@@ -13,6 +13,9 @@ import java.util.List;
  * @param requiresBackend 是否必须提供后端地址
  * @param spi             是否来自 Server SPI 动态发现
  * @param params          SPI 参数模板，内置协议为空
+ * @param engines         该协议可选引擎（SPI 注册名）。仅 HTTP 这类「同一实现注册多个引擎名」
+ *                       的协议有多个值；其余协议只有默认引擎一项。
+ *                       前端引擎下拉直接用它渲染，避免在前端硬编码 jdk/nio/aio。
  * @author CH
  * @since 4.0.0.42
  */
@@ -24,19 +27,22 @@ public record ServerProtocolMetaVO(
         String defaultEngine,
         boolean requiresBackend,
         boolean spi,
-        List<ServerPluginParamVO> params
+        List<ServerPluginParamVO> params,
+        List<String> engines
 ) {
 
     /**
-     * 规范构造器：非空时对 SPI 参数模板做防御性拷贝。
+     * 规范构造器：非空时对集合组件做防御性拷贝。
      *
      * <p>value class 前置条件——集合组件必须深不可变。内置协议由
      * {@code ServerManageServiceImpl#protocols()} 显式传 null（对应「SPI 动态发现项为空」语义），
      * 此处保留 null 语义，只在非空时拷贝。</p>
      *
-     * @param params SPI 参数模板，可为 null
+     * @param params  SPI 参数模板，可为 null
+     * @param engines 可选引擎列表，可为 null
      */
     public ServerProtocolMetaVO {
         params = params == null ? null : List.copyOf(params);
+        engines = engines == null ? null : List.copyOf(engines);
     }
 }
