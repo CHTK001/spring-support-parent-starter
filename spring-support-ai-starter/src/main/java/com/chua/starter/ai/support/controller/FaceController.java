@@ -11,6 +11,7 @@ import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.AiFaceService;
+import com.chua.starter.ai.support.service.MultiFaceEnrollException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -204,7 +205,8 @@ public class FaceController {
      * @return 登记结果
      * @param @RequestParam("id" @请求参数("标识"
      */
-    @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库，取最大人脸")
+    @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库；"
+            + "底库只支持单人脸，检出多于一张时拒绝并返回原因")
     @PostMapping("/enroll")
     public ReturnResult<?> enroll(@RequestParam("id") String id,
                                   @RequestParam("file") MultipartFile file,
@@ -219,6 +221,10 @@ public class FaceController {
             Map<String, Object> meta = parseMetadata(metadata);
             boolean success = faceService.enrollPipeline(id, file.getBytes(), meta);
             return success ? ReturnResult.ok("登记成功") : ReturnResult.error("登记失败");
+        } catch (MultiFaceEnrollException e) {
+            // 可预期的业务分支：多脸照片。不打 ERROR 全栈（不是故障），只回明确原因
+            log.info("[Face] 拒绝多脸登记: id={} -> {}", id, e.getMessage());
+            return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[Face] 人脸登记失败", e);
             return ReturnResult.error("人脸登记失败: " + e.getMessage());
@@ -443,6 +449,60 @@ public class FaceController {
             log.warn("[Face] 读登记图失败: id={} -> {}", id, e.getMessage());
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 读一条人脸**登记时的原图**。
+     *
+     * <p>特征点对话框画点必须用原图：关键点是在原图坐标系里算的，画在裁剪脸上
+     * 只会得到「已经摆正的五个点」，模型偏没偏都看不出来，这个功能就等于没做。
+     * 改造前只落存了裁剪脸，所以一直没有这个接口。</p>
+     *
+     * <p>改造前登记的老数据没有原图，回 404；前端据此回退到 {@code /{id}/image}
+     * 的裁剪图并提示用户，不算错误。</p>
+     *
+     * @param id 人脸标识
+     * @return 原图字节；无则 404
+     */
+    @Operation(summary = "人脸登记原图", description = "登记时上传的原始照片，供特征点在真实照片上标注；"
+            + "改造前的旧数据无原图，返回 404")
+    @GetMapping("/{id}/original")
+    public ResponseEntity<byte[]> original(@PathVariable("id") String id) {
+        try {
+            byte[] bytes = faceService.originalImage(id);
+            if (bytes == null || bytes.length == 0) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok()
+                    .contentType(guessImageType(bytes))
+                    .body(bytes);
+        } catch (Exception e) {
+            log.warn("[Face] 读登记原图失败: id={} -> {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * 按字节内容猜测图片 MIME。
+     *
+     * <p>原图是上传时的原始字节，没有统一转码，可能是 JPEG/PNG/WebP。声明成
+     * {@code image/png} 会让浏览器把 JPEG 当 PNG 解析而渲染失败，因此这里必须
+     * 嗅探。嗅探不出时退回 {@code application/octet-stream}，浏览器仍能靠
+     * {@code <img>} 的字节嗅探正常显示。</p>
+     *
+     * @param bytes 图片字节
+     * @return 推断出的媒体类型
+     */
+    private MediaType guessImageType(byte[] bytes) {
+        try (java.io.ByteArrayInputStream in = new java.io.ByteArrayInputStream(bytes)) {
+            String type = java.net.URLConnection.guessContentTypeFromStream(in);
+            if (type != null) {
+                return MediaType.parseMediaType(type);
+            }
+        } catch (Exception e) {
+            log.debug("[Face] 推断图片类型失败: {}", e.getMessage());
+        }
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 
     /**

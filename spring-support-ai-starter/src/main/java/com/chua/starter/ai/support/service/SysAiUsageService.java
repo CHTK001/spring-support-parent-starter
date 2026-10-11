@@ -95,6 +95,22 @@ public interface SysAiUsageService {
             LocalDateTime startTime, LocalDateTime endTime, String userId);
 
     /**
+     * 「按天 × 按模型」聚合趋势（每日模型堆叠柱状图的数据源）。
+     *
+     * <p>与 {@link #getDailyTrend} 的区别：后者把同一天的所有模型合并成一行，
+     * 拿不到「某天各模型分别多少」；本方法保留模型维度，一天内的多行由前端
+     * 归并成同一根柱内的一段。始终走明细表的数据库端聚合而不是日汇总表，
+     * 因为日汇总表的写入有定时延迟，用它会让「今天」的柱子先空一拍。</p>
+     *
+     * @param startTime 开始时间（含）
+     * @param endTime   结束时间（不含）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @return 按天升序、同天内按令牌降序的聚合点列表
+     */
+    List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> getDailyModelTrend(
+            LocalDateTime startTime, LocalDateTime endTime, String userId);
+
+    /**
      * 用量统计摘要
      * @author CH
      * @since 4.0.0

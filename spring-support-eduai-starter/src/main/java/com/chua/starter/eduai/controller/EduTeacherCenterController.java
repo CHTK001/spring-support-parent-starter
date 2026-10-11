@@ -7,7 +7,10 @@ import com.chua.starter.eduai.dimension.entity.EduStudent;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.EduResetPasswordDTO;
+import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
+import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
+import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,6 +48,11 @@ import java.util.Map;
 public class EduTeacherCenterController {
 
     private final IEduTeacherCenterService teacherCenterService;
+
+    /**
+     * 题目服务：老师上传题目（待审核，管理员可配自动通过）
+     */
+    private final IEduQuestionService questionService;
 
     /**
      * 当前账号的教师绑定状态
@@ -208,5 +216,23 @@ public class EduTeacherCenterController {
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
         return ReturnResult.ok(teacherCenterService.pageMyMarkingTasks(pageNum, pageSize));
+    }
+
+    // ==================== 老师上传题目 ====================
+
+    /**
+     * 老师上传题目（待审核，管理员可配自动通过）
+     *
+     * <p>与批量导入同格式的 JSON 数组；来源一律标为「老师上传」，
+     * 审核态由服务端按「老师上传自动通过」配置决定，
+     * 客户端传的审核标记不采信。</p>
+     *
+     * @param list 题目列表
+     * @return 上传结果（成功/失败条数 + 逐条失败原因 + 是否自动通过）
+     */
+    @Operation(summary = "老师上传题目")
+    @PostMapping("/questions")
+    public ReturnResult<TeacherQuestionUploadVO> uploadQuestions(@RequestBody List<QuestionSaveDTO> list) {
+        return ReturnResult.ok(questionService.teacherImportQuestions(list));
     }
 }

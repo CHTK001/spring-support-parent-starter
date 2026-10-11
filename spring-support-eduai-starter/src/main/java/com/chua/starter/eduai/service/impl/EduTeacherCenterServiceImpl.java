@@ -10,6 +10,7 @@ import com.chua.starter.eduai.dimension.entity.EduStudent;
 import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.dimension.mapper.EduClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduStudentMapper;
+import com.chua.starter.eduai.dimension.mapper.EduTeacherClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
@@ -33,8 +34,13 @@ import java.util.Map;
  *
  * <p>教师端所有写操作都先做两层授权：
  * ① 账号必须已绑定教师工号（{@link #requireTeacher()}）；
- * ② 目标班级的 {@code class_owner_user_id} 必须等于当前账号（{@link #requireMyClass(Long)}）。
+ * ② 目标班级必须已配置给当前账号绑定的教师档案
+ * （{@code edu_teacher_class}，见 {@link #requireMyClass(Long)}）。
  * 二者缺一即抛业务异常，因此教师无法通过改 URL 里的 ID 去动别人的班或学生。</p>
+ *
+ * <p><b>V1.14 数据范围调整</b>：班级由管理员统一维护，
+ * 老师端「我的班级」完全来自后台配置（学生管理 → 教师 → 配置班级），
+ * 老师端不再新增/删除班级；学生管理仍可在配置给自己的班级内进行。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -70,6 +76,12 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
      * 阅卷任务：教师端「阅卷」页要列出自己发起过的任务
      */
     private final EduMarkingTaskMapper markingTaskMapper;
+
+    /**
+     * 教师班级配置：老师端数据范围（V1.14 起，班级由管理员配置，
+     * 老师端不再按 class_owner_user_id 自建班级）
+     */
+    private final EduTeacherClassMapper teacherClassMapper;
 
     @Override
     public Map<String, Object> me() {
@@ -132,11 +144,9 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         result.put("bound", true);
         result.put("teacher", describeTeacher(teacher));
 
-        // 带的班级：班主任列（class_teacher_id 是数字 userId，与字符串账号不同源），
-        // 因此这里按班级创建者归属。列名要用 class_owner_user_id ——
-        // 实体字段叫 ownerUserId，默认映射出的 owner_user_id 在库里不存在。
-        List<EduClass> classes = classMapper.selectList(new QueryWrapper<EduClass>()
-                .eq("class_owner_user_id", EduUserContext.requireUserId()));
+        // 带的班级：V1.14 起完全来自后台配置（edu_teacher_class），
+        // 老师端数据范围 = 管理员配置的班级。
+        List<EduClass> classes = myClasses();
         List<Map<String, Object>> classRows = new ArrayList<>();
         int totalStudents = 0;
         for (EduClass clazz : classes) {
@@ -162,35 +172,24 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
 
     @Override
     public List<EduClass> myClasses() {
-        requireTeacher();
-        return classMapper.selectList(new QueryWrapper<EduClass>()
-                .eq("class_owner_user_id", EduUserContext.requireUserId())
-                .orderByAsc("class_id"));
+        EduTeacher teacher = requireTeacher();
+        return dimensionService.listTeacherClasses(teacher.getTeacherId());
     }
 
     @Override
     public Long saveClass(EduClass entity) {
         requireTeacher();
-        if (entity == null) {
-            throw new BusinessException("班级信息不能为空");
-        }
-        if (entity.getClassId() != null && entity.getClassId() > 0) {
-            // 编辑：必须是自己的班级；owner 在 dimensionService 里会沿用库中值
-            requireMyClass(entity.getClassId());
-        }
-        return dimensionService.saveClass(entity);
+        // V1.14 起班级由管理员统一维护（学生管理 → 班级），
+        // 老师端只做「布置」等教学功能，不再新增/修改班级；
+        // 老师的数据范围由「学生管理 → 教师 → 配置班级」决定。
+        throw new BusinessException("班级由管理员统一维护，老师端不可新增/修改；如需调整请在后台「学生管理」中配置");
     }
 
     @Override
     public boolean deleteClass(Long classId) {
         requireTeacher();
-        EduClass exists = requireMyClass(classId);
-        Long studentCount = studentMapper.selectCount(new QueryWrapper<EduStudent>()
-                .eq("student_class_id", exists.getClassId()));
-        if (studentCount != null && studentCount > 0) {
-            throw new BusinessException("班级下还有 " + studentCount + " 名学生，请先转出或删除后再删班");
-        }
-        return dimensionService.deleteClass(classId);
+        // 同 saveClass：班级生命周期归管理员，老师端不可删班。
+        throw new BusinessException("班级由管理员统一维护，老师端不可删除；如需调整请在后台「学生管理」中配置");
     }
 
     // ==================== 教师端：我的班级学生 ====================
@@ -320,7 +319,13 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         if (clazz == null) {
             throw new BusinessException("班级不存在");
         }
-        assertOwned(EduUserContext.requireUserId(), clazz.getOwnerUserId());
+        // V1.14 起归属判定 = 后台班级配置（edu_teacher_class）：
+        // 班级必须配置给当前账号绑定的教师档案，不再比对 class_owner_user_id。
+        EduTeacher teacher = requireTeacher();
+        List<Long> myClassIds = teacherClassMapper.selectClassIdsByTeacher(teacher.getTeacherId());
+        if (!myClassIds.contains(classId)) {
+            throw new BusinessException("无权操作该班级");
+        }
         return clazz;
     }
 

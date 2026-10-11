@@ -328,10 +328,14 @@ public class ChatStreamOrchestrator {
         if (boundRole != null) {
             if (boundRole.getSystemPrompt() != null && !boundRole.getSystemPrompt().isBlank()) {
                 request.setSystemPrompt(boundRole.getSystemPrompt());
+            } else {
+                applyDefaultSystemPrompt(request);
             }
             if (boundRole.getTemperature() != null) {
                 request.setTemperature(boundRole.getTemperature());
             }
+        } else {
+            applyDefaultSystemPrompt(request);
         }
         final Map<?, ?> roleCapabilities = asMap(roleSettings.get("capabilities"));
         Object thinkObj = body.get("think");
@@ -615,6 +619,12 @@ public class ChatStreamOrchestrator {
                     error -> {
                         String msg = error != null && error.getMessage() != null ? error.getMessage() : "未知错误";
                         log.error("[ChatStream] 流式失败 sessionId={}", sid, error);
+                        // 失败的助手回合同样要落库。此前只发 SSE 事件、不写消息，
+                        // 导致刷新后这一轮整个消失，只剩下孤零零的用户消息（数据不成对）。
+                        // 内容优先用已经流出来的片段（有内容才能看出失败在第几步），
+                        // 为空才退回错误文案，保证「每条用户消息都有一条对应的助手消息」。
+                        persistErroredAssistantMessage(sid, dialogId, userMessageId, modelToUse,
+                                fullReply.toString(), msg, collectedToolCalls, collectedToolTraces);
                         Map<String, Object> finishEvent = new LinkedHashMap<>();
                         finishEvent.put("type", "finish");
                         finishEvent.put("finishReason", "error");
@@ -720,6 +730,8 @@ public class ChatStreamOrchestrator {
         if (boundRole != null && boundRole.getSystemPrompt() != null
                 && !boundRole.getSystemPrompt().isBlank()) {
             request.setSystemPrompt(boundRole.getSystemPrompt());
+        } else {
+            applyDefaultSystemPrompt(request);
         }
         Object thinkObj = body.get("think");
         if (thinkObj != null) {
@@ -954,6 +966,66 @@ public class ChatStreamOrchestrator {
 
     // ==================== 内部方法 ====================
 
+    /**
+     * 落库一条「失败」的助手消息。
+     *
+     * <p>为什么必须有：成功分支会 {@code addMessage}，失败分支原先只发 SSE 事件，
+     * 于是「用户提问 + 模型报错」这一轮在刷新后整条消失，只剩下用户消息，
+     * 数据不成对（实测 429 限流后 session 只剩 1 条 user 记录）。
+     * 用户看到的现象是「AI 报错的信息没了」，而实际上是整轮对话丢失。</p>
+     *
+     * <p>内容取已流出的片段：有内容才能看出失败发生在第几步；片段为空才退回错误文案，
+     * 保证任何情况下都会留下一条 assistant 消息与用户消息配对。</p>
+     *
+     * <p>错误详情写入 {@code confirmation} 列（该列已是工具轨迹的载体）：
+     * {@code parsePendingConfirmation} 以 {@code status=="pending"} 为闸，
+     * 本结构没有 status 字段，不会被误判成待确认请求。</p>
+     *
+     * @param sid            会话 ID
+     * @param dialogId       对话 ID
+     * @param userMessageId  父消息（用户消息）ID
+     * @param modelToUse     本轮使用的模型
+     * @param streamedText   已流出的文本片段（可为空）
+     * @param errorMessage   错误文案
+     * @param toolCalls      已收集的工具调用（可为空）
+     * @param toolTraces     已收集的工具轨迹（可为空）
+     */
+    private void persistErroredAssistantMessage(String sid, Long dialogId, Long userMessageId,
+                                                String modelToUse, String streamedText, String errorMessage,
+                                                List<Object> toolCalls,
+                                                List<Map<String, Object>> toolTraces) {
+        try {
+            String partial = streamedText == null ? "" : streamedText.trim();
+            String content = !partial.isEmpty() ? partial : ("[error] " + errorMessage);
+            ChatMessage assistantMsg = new ChatMessage("assistant", content);
+            assistantMsg.setParentId(userMessageId);
+            assistantMsg.setModelName(modelToUse);
+            // 失败轮没有 usage，沿用成功分支的估算口径，避免前端显示 null/NaN
+            int promptTokens = 0;
+            int completionTokens = (int) (content.length() * 1.5);
+            assistantMsg.setPromptTokens(promptTokens);
+            assistantMsg.setCompletionTokens(completionTokens);
+            assistantMsg.setTotalTokens(promptTokens + completionTokens);
+
+            Map<String, Object> errorMeta = new LinkedHashMap<>();
+            errorMeta.put("finishReason", "error");
+            errorMeta.put("errorDetail", errorMessage);
+            if (toolCalls != null && !toolCalls.isEmpty()) {
+                errorMeta.put("toolCalls", toolCalls);
+            }
+            if (toolTraces != null && !toolTraces.isEmpty()) {
+                errorMeta.put("toolTraces", toolTraces);
+            }
+            assistantMsg.setConfirmation(objectMapper.writeValueAsString(errorMeta));
+
+            aiDialogRecordService.addMessage(dialogId, assistantMsg);
+            log.info("[ChatStream] 失败助手消息已落库（保证与用户消息成对）sessionId={}, parentId={}, 片段长度={}",
+                    sid, userMessageId, partial.length());
+        } catch (Exception e) {
+            log.warn("[ChatStream] 落库失败助手消息失败 sessionId={}: {}", sid, e.getMessage());
+        }
+    }
+
     private String getDefaultModel() {
         String[][] keys = {
                 {"runtime", "default_model"},
@@ -982,6 +1054,40 @@ public class ChatStreamOrchestrator {
         log.info("[ChatStream] 使用配置中心默认对话模型: {}", resolved);
         return resolved;
     }
+
+    /**
+     * 套用「设置中心 → 系统提示词」作为**默认**提示词。
+     *
+     * <p><b>为什么之前是坏的。</b>该配置被 {@code ChatClientSettingsResolver} 读进
+     * {@code ChatClientSettings.systemPrompt}，但对话链路上没有任何一处再读它：
+     * {@code AiChatFacadeServiceImpl#configureClient} 只认 {@code request.getSystemPrompt()}。
+     * 结果「未选角色」的会话一路空到 {@code AiChatFacadeServiceImpl} 里硬编码的英文
+     * {@code "You are a helpful assistant."} —— 在全中文产品里既不生效、也不一致。
+     * 设置中心里那个框能看、能改、能存，改了没有任何效果。</p>
+     *
+     * <p>现在补齐回退链：<b>角色提示词 &gt; 全局默认提示词 &gt; 门面兜底</b>。
+     * 与角色已有的 model / temperature 回退语义保持一致（角色为空即沿用全局）。</p>
+     *
+     * @param request 待填充的对话请求
+     */
+    private void applyDefaultSystemPrompt(AiChatRequest request) {
+        String globalPrompt = sysAiGlobalSettingService
+                .getValue(SETTINGS_GROUP_RUNTIME, GLOBAL_FIELD_SYSTEM_PROMPT)
+                .orElse(null);
+        if (globalPrompt != null && !globalPrompt.isBlank()) {
+            request.setSystemPrompt(globalPrompt);
+        }
+    }
+
+    /**
+     * 全局设置分组（与 ChatClientSettingsResolver.GROUP 保持一致）。
+     */
+    private static final String SETTINGS_GROUP_RUNTIME = "runtime";
+
+    /**
+     * 全局默认系统提示词字段名（与 ChatClientSettingsResolver 读取的键一致）。
+     */
+    private static final String GLOBAL_FIELD_SYSTEM_PROMPT = "system_prompt";
 
     private SysAiRole loadRole(String characterId) {
         if (characterId == null || characterId.isBlank()) {

@@ -50,6 +50,11 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     private final SysAiUsageDailyMapper dailyMapper;
 
     /**
+     * 用量实时推送中枢：每次成功写入后通知它「数据变了」，由它合并后经 SSE 推给页面。
+     */
+    private final com.chua.starter.ai.support.controller.UsageLiveStreamHub usageLiveStreamHub;
+
+    /**
      * 定价服务
      */
     private final SysAiPricingService pricingService;
@@ -149,6 +154,23 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         usageMapper.insert(entity);
         log.debug("[Usage] 记录成功: group={}, model={}, tokens={}, cost={}",
                 groupName, model, usage.getTotalTokens(), entity.getSysAiUsageTotalCost());
+        notifyLiveStream();
+    }
+
+    /**
+     * 通知用量实时流「数据变了」。
+     *
+     * <p>挂在事务方法内部是<b>有意为之</b>的简化：这里只置一个内存标记，
+     * 真正的查库与推送发生在 1 秒后的定时任务里，此时上一笔事务早已提交。
+     * 万一某个调用路径上事务回滚了，最多让 SSE 多推一帧未提交的数，
+     * 下一拍就被真实值覆盖 —— 远不值得为它引入事务同步回调。</p>
+     */
+    private void notifyLiveStream() {
+        try {
+            usageLiveStreamHub.markDirty();
+        } catch (Exception e) {
+            log.debug("[Usage] 实时流通知失败（不影响记录）: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -317,6 +339,26 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                     r.totalCompletionTokens() == null ? 0L : r.totalCompletionTokens(),
                     r.totalTokens() == null ? 0L : r.totalTokens(),
                     r.totalCachedTokens() == null ? 0L : r.totalCachedTokens()
+            ));
+        }
+        return result;
+    }
+
+    @Override
+    public List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> getDailyModelTrend(
+            LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        List<SysAiUsageMapper.DailyModelRow> rows =
+                usageMapper.selectDailyModelAggregate(startTime, endTime, userId);
+        List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> result =
+                new ArrayList<>(rows.size());
+        for (SysAiUsageMapper.DailyModelRow r : rows) {
+            result.add(new com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO(
+                    r.statDate() != null ? r.statDate().toString() : null,
+                    r.model(),
+                    r.provider(),
+                    r.totalCalls() == null ? 0L : r.totalCalls(),
+                    r.totalTokens() == null ? 0L : r.totalTokens(),
+                    r.totalCost() == null ? 0D : r.totalCost()
             ));
         }
         return result;

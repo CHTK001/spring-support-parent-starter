@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageSyncLog;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.model.AiUsageDTO;
+import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
 import com.chua.starter.ai.support.model.vo.AiUsagePageVO;
 import com.chua.starter.ai.support.model.vo.AiUsageParserVO;
 import com.chua.starter.ai.support.model.vo.AiUsageStatisticsVO;
@@ -74,6 +75,11 @@ public class UsageController {
      * 用量/定价对账服务
      */
     private final UsagePricingReconService reconService;
+
+    /**
+     * 用量实时推送中枢（合并推送，不在业务线程上直接发网络包）。
+     */
+    private final UsageLiveStreamHub liveStreamHub;
 
     /**
      * Spring 应用上下文，用于收集容器中的用量解析器实现。
@@ -178,6 +184,50 @@ public class UsageController {
             ));
         }
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 查询「按天 × 按模型」的用量聚合（每日模型堆叠柱状图的数据源）。
+     *
+     * <p>与 {@code /trend} 的区别：{@code /trend} 把同一天所有模型合并成一个点，
+     * 拿不到「某天各模型分别占多少」；本接口保留模型维度，一天返回多行，
+     * 前端归并成同一根柱内的分段，从而做到「一天一个柱、一个模型一种颜色、
+     * 分段高度按用量占比」。</p>
+     *
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @return 按天升序、同天内按令牌降序的聚合点列表
+     */
+    @Operation(summary = "用量模型趋势", description = "按天+模型聚合；一天多行，前端归并为同一根柱内的分段")
+    @GetMapping("/model-trend")
+    public ReturnResult<List<AiUsageModelTrendPointVO>> modelTrend(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        return ReturnResult.ok(usageService.getDailyModelTrend(startTime, endTime, currentScopeUserId()));
+    }
+
+    /**
+     * 订阅**实时**用量（Token 计算量）。
+     *
+     * <p>用途：让用量页在不动筛选、不点刷新的情况下也能看到 Token 数在长。
+     * 页面此前只在切筛选时拉一次快照，一次真实调用完全看不出来 —— 用户盯着
+     * 不动的数字，无从判断系统到底在不在跑。</p>
+     *
+     * <p>事件：连接建立先推一帧 {@code snapshot}，之后有新调用时按秒推 {@code update}。
+     * 载荷是**重算后的全量快照**而不是增量，前端直接替换即可；即使丢帧也只会
+     * 慢一拍，不会越错越偏。</p>
+     *
+     * @param startTime 起始时间（含），可为空
+     * @param endTime   结束时间（不含），可为空
+     * @return SSE 通道
+     */
+    @Permission("admin")
+    @Operation(summary = "SSE订阅实时用量", description = "按秒合并推送 Token/调用量快照；页面无需刷新即可看到用量增长")
+    @GetMapping(value = "/live/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter liveStream(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        return liveStreamHub.subscribe(startTime, endTime, currentScopeUserId());
     }
 
     /**

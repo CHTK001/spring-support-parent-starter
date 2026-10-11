@@ -131,5 +131,32 @@
         GROUP BY sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model
         ORDER BY totalTokens DESC
     </select>
+    <!--
+        按 天 + 服务商 + 模型 聚合：每日模型堆叠柱状图的数据源。
+        比 selectDailyAggregate 少 groupName 一维，前端按模型归并成同色段即可。
+    -->
+    <select id="selectDailyModelAggregate" resultType="com.chua.starter.ai.support.mapper.SysAiUsageMapper$DailyModelRow">
+        SELECT
+            DATE(sys_ai_usage_call_time) AS statDate,
+            sys_ai_usage_provider AS provider,
+            sys_ai_usage_model AS model,
+            COUNT(*) AS totalCalls,
+            COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS totalTokens,
+            COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost
+        FROM sys_ai_usage
+        <where>
+            <if test="startTime != null">
+                AND sys_ai_usage_call_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND sys_ai_usage_call_time &lt; #{endTime}
+            </if>
+            <if test="userId != null and userId != ''">
+                AND sys_ai_usage_user_id = #{userId}
+            </if>
+        </where>
+        GROUP BY DATE(sys_ai_usage_call_time), sys_ai_usage_provider, sys_ai_usage_model
+        ORDER BY statDate, totalTokens DESC
+    </select>
 
 </mapper>
