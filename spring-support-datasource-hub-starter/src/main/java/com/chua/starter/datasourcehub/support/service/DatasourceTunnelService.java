@@ -30,8 +30,14 @@ public interface DatasourceTunnelService {
      *
      * <p>幂等：已打开且存活的隧道直接复用，不会重复建连。</p>
      *
+     * <p><b>返回 null 只表示「没配隧道或已停用」，不表示「打不开」。</b>
+     * 已配置且启用、但建连失败时抛 {@link IllegalStateException}。
+     * 调用方不要写 {@code catch -> null} 的兜底：那会把两种情况重新混成 null，
+     * 接着拿未改写的 URL 直连，最后报出「连接测试成功」。</p>
+     *
      * @param datasourceId 数据源 ID
      * @return 隧道本地端点；未启用时 null
+     * @throws IllegalStateException 已配置启用但隧道建立失败
      */
     TunnelEndpoint openIfEnabled(Long datasourceId);
 
