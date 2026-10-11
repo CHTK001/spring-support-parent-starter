@@ -128,12 +128,7 @@ public class MultiDataSource implements DataSource {
             try (Connection connection = dataSource.getConnection()) {
                 catalog = connection.getCatalog();
             } catch (SQLException e) {
-                /**
-                 * runtime异常。
-                 * @param e e
-                 * @return runtime异常的结果
-                 */
-                throw new RuntimeException(e);
+                throw new RuntimeException("获取数据源 catalog 失败: " + e.getMessage(), e);
             }
             JdbcSchema jdbcSchema = JdbcSchema.create(schemaPlus, catalog, dataSource, catalog, null);
             schemaPlus.add(catalog, jdbcSchema);
@@ -258,12 +253,7 @@ public class MultiDataSource implements DataSource {
                     refreshDataSource(calciteConnection.getRootSchema());
                     return calciteConnection;
                 } catch (SQLException e) {
-                    /**
-                     * runtime异常。
-                     * @param e e
-                     * @return runtime异常的结果
-                     */
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("刷新 Calcite 数据源连接失败: " + e.getMessage(), e);
                 }
             }
 
