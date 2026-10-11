@@ -606,12 +606,7 @@ public class MapperReload implements Reload, DisposableBean {
                 }
                 log.info("mapperLocation reload success: '{}'", resource);
             } catch (Exception e) {
-                /**
-                 * runtime异常。
-                 * @param e e
-                 * @return runtime异常的结果
-                 */
-                throw new RuntimeException(e);
+                throw new RuntimeException("Mapper 资源重载失败: " + e.getMessage(), e);
             }
         }
     }

@@ -103,12 +103,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
                 try (OutputStream writer = response.getOutputStream()) {
                     writer.write(Xml.toXmlByte(Json.getJsonObject(Json.toJson(ReturnResult.error("未授权")))));
                 } catch (Exception e) {
-                    /**
-                     * runtime异常。
-                     * @param e e
-                     * @return runtime异常的结果
-                     */
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("未授权响应写出失败: " + e.getMessage(), e);
                 }
                 return;
             }
