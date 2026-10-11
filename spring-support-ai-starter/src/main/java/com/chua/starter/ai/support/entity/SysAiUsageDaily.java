@@ -52,6 +52,16 @@ public class SysAiUsageDaily extends SysBase {
     private String model; // 模型
 
     /**
+     * 归属账号。
+     *
+     * <p>该列在表里一直存在，但实体里一直缺这个字段，导致日汇总写入时该列恒为 NULL：
+     * 表里存的是一份「不分账号」的全局汇总，与明细表口径不一致。补上后按账号分组写入，
+     * 才与明细表对齐。</p>
+     */
+    @TableField("sys_ai_usage_daily_user_id")
+    private String userId; // 归属账号
+
+    /**
      * 总调用次数
      */
     @TableField("sys_ai_usage_daily_total_calls")

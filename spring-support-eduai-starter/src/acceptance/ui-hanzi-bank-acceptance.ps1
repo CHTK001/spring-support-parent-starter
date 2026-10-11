@@ -233,74 +233,10 @@ if ($readRaw -match '"cells":\s*\[(.*?)\]\s*\}') {
 }
 Ab screenshot (Join-Path $OutDir 'ui-hanzi-search.png') | Out-Null
 
-# ---------- 3. collect page offers HANZI + preset ----------
-Write-Host '########## 3. collect page: HANZI source type + preset ##########'
-$apiTypes = Api GET '/v2/edu/collect/source-types' $null $adminToken
-$types = @($apiTypes.json.data)
-Ck 'api exposes HANZI source type' ($types -contains 'HANZI') "types=$($types -join ',')"
-
-Ab open "$Base/edu/collect" | Out-Null
-WaitTrue '!!document.querySelector(".el-table")' 'collect page rendered' 45 | Out-Null
-$jsNew = @"
-(() => {
-  const btn = Array.from(document.querySelectorAll('button')).find(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').indexOf(String.fromCharCode(0x65B0, 0x5EFA)) >= 0);
-  if (!btn) return 'no-create-button';
-  btn.click();
-  return 'clicked';
-})()
-"@
-Js $jsNew | Out-Null
-WaitTrue '!!document.querySelector(".el-dialog__body")' 'create dialog open' 30 | Out-Null
-# HANZI radio label must exist
-$jsRadio = @"
-(() => {
-  const labels = Array.from(document.querySelectorAll('.el-dialog__body .el-radio')).map(el => (el.innerText || '').trim());
-  return JSON.stringify(labels);
-})()
-"@
-$radioRaw = Js $jsRadio
-# label is the Chinese word for the hanzi bank; compare by code point to stay ASCII
-$hanziLabel = [string][char]0x6C49 + [char]0x5B57 + [char]0x5E93
-Ck 'dialog offers the HANZI source type' ($radioRaw -match [regex]::Escape($hanziLabel)) "radios=$($radioRaw.Substring(0, [Math]::Min(200, $radioRaw.Length)))"
-
-# select it, then click the preset button and check the textarea got the public dict url
-$jsPick = @"
-(() => {
-  const label = String.fromCharCode(0x6C49, 0x5B57, 0x5E93);
-  const radios = Array.from(document.querySelectorAll('.el-dialog__body .el-radio'));
-  const hit = radios.find(r => (r.innerText || '').trim() === label);
-  if (!hit) return 'not-found';
-  const input = hit.querySelector('input');
-  if (input) { input.click(); return 'picked'; }
-  hit.click();
-  return 'picked';
-})()
-"@
-Js $jsPick | Out-Null
-Start-Sleep -Milliseconds 800
-$jsPreset = @"
-(() => {
-  const tip = String.fromCharCode(0x586B, 0x5165, 0x6C49, 0x5B57, 0x91C7, 0x96C6, 0x9ED8, 0x8BA4, 0x914D, 0x7F6E);
-  const btn = Array.from(document.querySelectorAll('.el-dialog__body button')).find(b => b.offsetParent !== null && (b.innerText || '').indexOf(tip) >= 0);
-  if (!btn) return 'no-preset-button';
-  btn.click();
-  return 'clicked';
-})()
-"@
-$preset = Js $jsPreset
-Ck 'preset button exists and was clicked' ($preset -eq 'clicked') "result=$preset"
-Start-Sleep -Milliseconds 600
-$jsTextarea = @"
-(() => {
-  const ta = document.querySelector('.el-dialog__body textarea');
-  return ta ? ta.value : '';
-})()
-"@
-$cfg = Js $jsTextarea
-Ck 'preset filled the public dict url' ($cfg -match 'word\.json') "cfg=$($cfg.Substring(0, [Math]::Min(160, $cfg.Length)))"
-Ck 'preset config has no importProcessor (self-persisted)' (-not ($cfg -match 'importProcessor'))
-Ab screenshot (Join-Path $OutDir 'ui-collect-hanzi.png') | Out-Null
-
+# 原第 3 节（collect page offers HANZI + preset）随 eduai 采集管理一起移除：
+#   它打 /v2/edu/collect/source-types，并操作 /edu/collect 页里的「新建任务」弹窗，
+#   那套 UI 与后端控制器已整体删除，采集能力改由采集平台的 /v2/collect/** 提供。
+#   上面的汉字库检索与种子值比对仍然有效，故保留。
 $passed = ($script:Results | Where-Object { $_[0] -eq $true }).Count
 $failed = $script:Results.Count - $passed
 Write-Host ("===== {0}: passed {1} / failed {2} =====" -f $(if ($failed -eq 0) { 'PASS' } else { 'FAIL' }), $passed, $failed)

@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,7 +49,10 @@ import java.util.concurrent.TimeUnit;
  * {@code <根>/<账号>/face/} 下有两个文件 ——</p>
  * <ul>
  *   <li>{@code face-index.vectors}：jvector 的向量索引（可重建，不是权威）</li>
- *   <li>{@code index.json}：**唯一权威源**，存 id + 向量 + 元数据，启动据此重建索引</li>
+ *   <li>{@code index.json}：存 id + 向量 + 元数据，启动据此重建索引。
+ *       <b>档案的权威已是 DB</b>（{@code sys_ai_face_library}），
+ *       此处保留它是因为<b>向量只存在于这里</b>——DB 不存特征，
+ *       索引重建只能靠它。档案与向量靠 {@code vector_id} 关联。</li>
  * </ul>
  *
  * <p><b>模型不重复加载</b>：检测/特征/活体等 ONNX 模型由 {@link FaceClientManager}
@@ -97,6 +101,14 @@ public class FaceStores {
     private final FaceClientManager models;
 
     private final GlobalSettingReader settingReader;
+
+    /**
+     * 底库元数据与向量的联动层（DB 权威）。
+     *
+     * <p>{@link #snapshot}（index.json）仍保留，但角色已降级为<b>向量重建的来源</b>
+     * 而不是唯一权威 —— 档案的权威改由 DB 承担，理由见该类注释。</p>
+     */
+    private final FaceLibraryLinkService library;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -249,11 +261,85 @@ public class FaceStores {
             return false;
         }
         boolean ok = pipeline.enroll(id, feature, metadata == null ? Map.of() : metadata, id);
-        if (ok) {
-            st.put(id, feature, metadata);
-            st.persist();
+        if (!ok) {
+            return false;
         }
-        return ok;
+        Entry prev = st.snapshot.get(id);
+        st.put(id, feature, metadata);
+        try {
+            st.persist();
+        } catch (RuntimeException ex) {
+            // 快照没落盘 = 这次登记等于没发生。必须把内存态和向量一起撤掉：
+            // 只回滚内存的话，jvector 里会多出一条没有档案指向的向量，
+            // identify 仍能命中它，用户却查不到这条人脸 —— 比登记失败更难排查。
+            restoreSnapshot(st, id, prev);
+            deleteVectorQuietly(st, id);
+            throw ex;
+        }
+        // DB 权威：元数据写库（内部已处理「向量失败则回滚 DB 行」）。
+        // 放在快照之后 —— 快照是向量重建的来源，它没了，重启后向量也补不回来；
+        // DB 写失败由联动层回滚，不会留下半截状态。
+        library.insert(st.account, id, strOf(metadata, "name"), metadata, null, null, null);
+        return true;
+    }
+
+    /**
+     * 从向量索引中删掉一条。
+     *
+     * <p>此前 {@link #remove(String)} 写成 {@code if (storage == null) return false}，
+     * 于是「进程刚启动、本账号还没做过任何增删查」时删除会静默跳过向量清理 ——
+     * 快照里没这条了，jvector 里却留着，继续被 {@link #identify} 命中（幽灵向量）。
+     * 以图搜图侧早就修过这个坑（见 {@code ImageSearchStore#remove} 的注释），
+     * 人脸侧当时照抄了旧版本。删除是唯一能制造幽灵向量的操作，这里必须尽力完成：
+     * 存储不可用时就用账号自己的索引路径现建一个，删完立刻关掉。</p>
+     *
+     * @param st 账号库
+     * @param id 人脸标识
+     */
+    private void deleteVectorQuietly(AccountFace st, String id) {
+        VectorStorage storage = st.storage();
+        boolean temporary = false;
+        if (storage == null) {
+            try {
+                storage = models.buildStorageFor(st.dir.resolve(INDEX_NAME));
+                temporary = true;
+            } catch (Exception ex) {
+                log.warn("[Face] 删除前重建向量存储失败，向量可能在索引中残留: id={} -> {}", id, ex.getMessage());
+                return;
+            }
+        }
+        try {
+            if (!storage.remove(id)) {
+                // 返回 false = 索引里本就没有（如已随重建被清空），属正常，
+                // 但要与「删除失败」区分开，避免排查时误判
+                log.debug("[Face] 向量索引中无此条目（可安全忽略）: id={}", id);
+            }
+        } catch (Exception ex) {
+            log.warn("[Face] 向量存储删除失败: id={} -> {}", id, ex.getMessage());
+        } finally {
+            if (temporary) {
+                try {
+                    storage.close();
+                } catch (Exception ignored) {
+                    // 临时句柄关不掉不影响正确性：真正的存储仍由 AccountFace 持有
+                }
+            }
+        }
+    }
+
+    /**
+     * 记录一条到内存快照（不落盘）。
+     *
+     * @param st    账号库
+     * @param id    标识
+     * @param entry 条目；为 {@code null} 表示删除
+     */
+    private static void restoreSnapshot(AccountFace st, String id, Entry entry) {
+        if (entry == null) {
+            st.snapshot.remove(id);
+        } else {
+            st.snapshot.put(id, entry);
+        }
     }
 
     /**
@@ -286,17 +372,69 @@ public class FaceStores {
             throw new MultiFaceEnrollException(result.faceCount());
         }
         boolean ok = pipeline.enroll(id, result.feature(), metadata == null ? Map.of() : metadata, id);
-        if (ok) {
-            st.put(id, result.feature(), metadata);
-            st.persist();
-            // 一并落存登记时用的裁剪脸：底库要「看图 + 画特征点」，
-            // 而缩略图此前只在登记它的浏览器里，换浏览器就没有图。
-            saveFaceImage(id, FaceImageKind.CROP, result.faceImage());
-            // 同时留一份原图。特征点必须画在原图上才有意义（见 originalImage 的说明），
-            // 裁剪脸上只有一张脸，画出来的点永远是「对齐的五点」，看不出任何问题。
-            saveFaceImage(id, FaceImageKind.ORIGINAL, imageData);
+        if (!ok) {
+            return false;
         }
-        return ok;
+        Entry prev = st.snapshot.get(id);
+        st.put(id, result.feature(), metadata);
+        try {
+            st.persist();
+        } catch (RuntimeException ex) {
+            restoreSnapshot(st, id, prev);
+            deleteVectorQuietly(st, id);
+            throw ex;
+        }
+        // 快照已落盘，才轮到写图片文件。反过来做的话，图片写失败会留下一条
+        // 「有档案但没图」的记录，底库统计卡的「有图/无图」从此对不上。
+        //
+        // 一并落存登记时用的裁剪脸：底库要「看图 + 画特征点」，
+        // 而缩略图此前只在登记它的浏览器里，换浏览器就没有图。
+        saveFaceImage(id, FaceImageKind.CROP, result.faceImage());
+        // 同时留一份原图。特征点必须画在原图上才有意义（见 originalImage 的说明），
+        // 裁剪脸上只有一张脸，画出来的点永远是「对齐的五点」，看不出任何问题。
+        saveFaceImage(id, FaceImageKind.ORIGINAL, imageData);
+        // DB 权威：元数据写库。缩略图一并入库，让换浏览器/换机器时列表仍有图 ——
+        // 底库图片只在本机磁盘上，DB 里没有副本就等于「换个环境全库无图」。
+        // DB 写失败要回滚快照与向量，不能让三处状态分叉。
+        if (!library.insert(st.account, id, strOf(metadata, "name"), metadata,
+                base64Of(result.faceImage()), null, null)) {
+            restoreSnapshot(st, id, prev);
+            deleteVectorQuietly(st, id);
+            deleteFaceImage(id);
+            try {
+                st.persist();
+            } catch (RuntimeException ex) {
+                log.error("[Face] 账号 '{}' 登记失败后回滚快照也失败: id={} -> {}",
+                        st.account, id, ex.getMessage());
+            }
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 字节数组转 base64（缩略图入库用）。
+     *
+     * @param data 字节；为空返回 {@code null}
+     * @return base64 字符串；入参为空返回 {@code null}
+     */
+    private static String base64Of(byte[] data) {
+        return data == null || data.length == 0 ? null : Base64.getEncoder().encodeToString(data);
+    }
+
+    /**
+     * 取档案里的字符串字段（展示名落 name 列用）。
+     *
+     * @param metadata 档案；可为空
+     * @param key      键
+     * @return 字符串值；不存在返回 {@code null}
+     */
+    private static String strOf(Map<String, Object> metadata, String key) {
+        if (metadata == null) {
+            return null;
+        }
+        Object v = metadata.get(key);
+        return v == null ? null : String.valueOf(v);
     }
 
     /**
@@ -443,15 +581,35 @@ public class FaceStores {
      */
     public boolean remove(String id) {
         AccountFace st = st();
-        st.snapshot.remove(id);
-        st.persist();
-        // 登记图与档案同生命周期，别留孤儿文件
-        deleteFaceImage(id);
-        VectorStorage storage = st.storage();
-        if (storage == null) {
+        Entry prev = st.snapshot.remove(id);
+        if (prev == null) {
             return false;
         }
-        return storage.remove(id);
+        try {
+            st.persist();
+        } catch (RuntimeException ex) {
+            // 快照没删掉 = 这次删除等于没发生。图、向量、DB 行都还没动，内存态还原即可
+            restoreSnapshot(st, id, prev);
+            throw ex;
+        }
+        // DB 行：DB 化之前登记的存量人脸本来就没有 DB 行，那也算删除成功，
+        // 只有 DB 真的出错才算失败 —— 此时必须把快照也还原，否则三处状态就此分叉：
+        // 列表里已看不到这个人，但 DB 里那行还在，日后按 DB 统计又会把他算回来。
+        if (!library.deleteMeta(st.account, id)) {
+            restoreSnapshot(st, id, prev);
+            try {
+                st.persist();
+            } catch (RuntimeException ex) {
+                log.error("[Face] 账号 '{}' 删除失败后回滚快照也失败，人脸可能已从列表消失: id={} -> {}",
+                        st.account, id, ex.getMessage());
+            }
+            return false;
+        }
+        // 档案本体已删干净，图与向量才是「附属品」：删失败只影响可看性/检索，
+        // 且向量残留会在下次重建索引时自动清掉，不阻断本次删除。
+        deleteFaceImage(id);
+        deleteVectorQuietly(st, id);
+        return true;
     }
 
     /**
@@ -666,13 +824,13 @@ public class FaceStores {
      * 这类操作不该要求重新上传照片、也不该重跑检测 —— 重跑一次既慢，又可能因原照片
      * 质量被判失败，把一次纯文本修改变成一次可能失败的登记。</p>
      *
-     * <p>实现要点：快照是唯一权威源，改完必须 {@code persist}。</p>
+     * <p>实现要点：档案权威在 DB，向量重建靠快照，两处都要写（任一失败即回滚）。</p>
      *
      * <p><b>关于向量索引</b>：实测索引**不回传档案** ——
      * {@code identify} 的 hit 是 {@code {id, score, feature}}（没有 metadata 字段），
      * {@code search} 的 hit 里那个 {@code metadata} 只是 {@code {score}}，不是登记时写入的档案。
-     * 所以档案的权威只有快照一处，调用方（前端）是拿 hit 的 id 回列表/登记簿取档案。
-     * 下面重推一次向量**只为保证索引与快照一致**（防御索引与快照分叉），
+     * 所以档案不由索引承载，调用方（前端）是拿 hit 的 id 回列表/登记簿取档案。
+     * 下面重推一次向量**只为保证索引与档案一致**（防御索引与档案分叉），
      * 不是为了让识别回传新档案 —— 后者本来就不由索引负责。</p>
      *
      * @param id       人脸标识
@@ -687,7 +845,25 @@ public class FaceStores {
         }
         // 复用 put：它会把 feature 拷一份、metadata 拷成新的可变更
         st.put(id, old.feature(), metadata);
-        st.persist();
+        try {
+            st.persist();
+        } catch (RuntimeException ex) {
+            // 写盘失败 = 这次修改没生效，还原成旧档案（向量索引随后才动，不受影响）
+            restoreSnapshot(st, id, old);
+            throw ex;
+        }
+        // DB 权威：同步元数据行。DB 失败要把快照一并还原 ——
+        // 只改一半的话，界面读到的是新档案、DB 里是旧档案，日后按 DB 导出/统计又变回旧值。
+        if (!library.updateMeta(st.account, id, strOf(metadata, "name"), metadata, null)) {
+            restoreSnapshot(st, id, old);
+            try {
+                st.persist();
+            } catch (RuntimeException ex) {
+                log.error("[Face] 账号 '{}' 更新失败后回滚快照也失败，档案可能已不一致: id={} -> {}",
+                        st.account, id, ex.getMessage());
+            }
+            return false;
+        }
         // 防御索引与快照分叉：用同一特征重推一次（档案本身不随索引回传，见上）
         FacePipeline pipeline = st.pipeline();
         if (pipeline != null && old.feature() != null && old.feature().length > 0) {
@@ -810,7 +986,7 @@ public class FaceStores {
         private final String account;
         /** 本账号目录 */
         private final Path dir;
-        /** 快照：id -> 条目，**唯一权威源** */
+        /** 快照：id -> 条目。向量重建的来源与运行时缓存（档案权威在 DB） */
         private final Map<String, Entry> snapshot = new LinkedHashMap<>();
         /** 向量存储 */
         private volatile VectorStorage storage;
@@ -836,7 +1012,7 @@ public class FaceStores {
          * <p>「先清空」是必须的：jvector 有自己的侧录文件（{@code <indexPath>.vectors}），
          * 里面留着历史 id。若不清空，删除过的条目会以「幽灵向量」形式继续参与检索 ——
          * 快照里已经没有它，{@code identify} 却还能命中。以图搜图侧早就定了这条口径
-         * （快照是唯一权威源，索引完全可由它重建）。</p>
+         * （向量只存在快照里，索引完全可由它重建；档案权威在 DB）。</p>
          */
         synchronized void reload() {
             // 重建必须绑定「该账号自己」的配置上下文。
@@ -859,6 +1035,11 @@ public class FaceStores {
                 log.warn("[Face] 账号 '{}' 目录创建失败: {} -> {}", account, dir, ex.getMessage());
             }
             loadSnapshot();
+            // 存量补建放在这里、且在「模型未配置」早返回**之前**：
+            // DB 化之前登记的人脸只有 index.json 里的一行记录。若把这一步放到
+            // pipeline 就绪之后，恰好没配人脸模型的账号将永远补不上 DB 行 ——
+            // 而这类账号恰恰最可能是「历史登记过、后来不用了」，最需要档案留底。
+            backfillToDb();
             storage = models.buildStorageFor(dir.resolve(INDEX_NAME));
             pipeline = models.buildPipelineWith(storage);
             if (pipeline == null) {
@@ -888,6 +1069,36 @@ public class FaceStores {
         }
 
         /**
+         * 把快照里存在、DB 里没有的条目补建入库（DB 化前的存量迁移）。
+         *
+         * <p>幂等：只补 DB 缺的那部分，已有行<b>不覆盖</b>。这不是偷懒 ——
+         * DB 里可能有用户在界面上改过的新档案（姓名、备注），拿 index.json 里的
+         * 旧副本盖回去等于把用户刚填的资料抹掉。补建的只是「从没进过 DB 的」那批。</p>
+         *
+         * <p>不调 {@code persist}：本方法不改变快照，只读。</p>
+         */
+        private void backfillToDb() {
+            if (snapshot.isEmpty()) {
+                return;
+            }
+            java.util.Set<String> existing = library.listExistingVectorIds(account);
+            int created = 0;
+            for (Map.Entry<String, Entry> e : snapshot.entrySet()) {
+                if (existing.contains(e.getKey())) {
+                    continue;
+                }
+                if (library.insert(account, e.getKey(), strOf(e.getValue().metadata(), "name"),
+                        e.getValue().metadata(), null, null, null)) {
+                    created++;
+                }
+            }
+            if (created > 0) {
+                log.info("[Face] 账号 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
+                        account, created, snapshot.size());
+            }
+        }
+
+        /**
          * 记录一条到快照（不落盘，调用方随后 persist）。
          *
          * @param id       标识
@@ -900,7 +1111,16 @@ public class FaceStores {
         }
 
         /**
-         * 把快照写入磁盘（权威数据，失败必须告警而不是静默）。
+         * 把快照写入磁盘。
+         *
+         * <p><b>失败必须抛出，不能只告警。</b>此前这里是 {@code catch + log.warn}，
+         * 于是 {@code enroll/remove/updateMetadata} 在磁盘写失败时照样返回成功：
+         * 用户看到「登记成功」，{@code index.json} 里却没有这条，重启后人脸凭空消失，
+         * 而 jvector 里的向量还在 —— 底库与索引从此对不上，且没有任何报错指出来源。
+         * 删除路径同理：快照没删掉，图和向量却已经删了，重启后人脸回来但认不出。
+         * 写盘失败属于「操作没有真正生效」，必须让调用方感知并回滚。</p>
+         *
+         * @throws IllegalStateException 写盘失败
          */
         synchronized void persist() {
             Path file = dir.resolve(SNAPSHOT_NAME);
@@ -919,8 +1139,8 @@ public class FaceStores {
                 Files.write(tmp, raw);
                 Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception ex) {
-                log.warn("[Face] 账号 '{}' 人脸快照写入失败（重启后会丢这批数据）: {} -> {}",
-                        account, file, ex.getMessage());
+                log.error("[Face] 账号 '{}' 人脸快照写入失败: {} -> {}", account, file, ex.getMessage(), ex);
+                throw new IllegalStateException("人脸快照写入失败: " + file, ex);
             }
         }
 

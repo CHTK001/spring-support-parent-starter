@@ -90,7 +90,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         entity.setSysAiUsageCompletionTokens(usage.getOutputTokens());
         entity.setSysAiUsageTotalTokens(usage.getTotalTokens());
         entity.setSysAiUsageRequestId(requestId);
-        entity.setSysAiUsageUserId(userId);
+        entity.setSysAiUsageUserId(SysAiUsageService.resolveOwner(userId));
         entity.setSysAiUsageCallTime(LocalDateTime.now());
         entity.setSysAiUsageFirstTokenLatency(usage.getFirstTokenLatencyMillis());
         entity.setSysAiUsageTotalLatency(usage.getDurationMillis());
@@ -212,7 +212,14 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
             wrapper.eq(SysAiUsage::getSysAiUsageGroupName, groupName);
         }
         if (userId != null && !userId.isBlank()) {
-            wrapper.eq(SysAiUsage::getSysAiUsageUserId, userId);
+            // 与聚合查询同口径：管理员额外可见无主数据（定时同步的外部工具用量），
+            // 普通账号仍是严格 eq —— eq 在 SQL 里本就匹配不到 NULL，无需额外处理。
+            if (includeOrphan()) {
+                wrapper.and(w -> w.eq(SysAiUsage::getSysAiUsageUserId, userId)
+                        .or().isNull(SysAiUsage::getSysAiUsageUserId));
+            } else {
+                wrapper.eq(SysAiUsage::getSysAiUsageUserId, userId);
+            }
         }
         if (provider != null) {
             wrapper.eq(SysAiUsage::getSysAiUsageProvider, provider);
@@ -283,12 +290,33 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         return stats;
     }
 
+    /**
+     * 当前请求是否应把**无主数据**（{@code sys_ai_usage_user_id IS NULL}）计入结果。
+     *
+     * <p>这是<b>兜底网而非主路径</b>：写入侧已统一走
+     * {@link SysAiUsageService#resolveOwner(String)}，取不到归属时兜底成 {@code admin}，
+     * 历史 NULL 也已回填，正常情况下这里恒为「无数据可加」。保留它是为了万一将来某个
+     * 新写入路径漏了兜底，管理员仍能看到这批数据，而不是像以前那样静默消失。</p>
+     *
+     * <p>与 {@link com.chua.starter.ai.support.util.AiUserContext#canAccessOthersData()} 是两件事：
+     * 后者管的是「能否读他人的具名数据」（恒为 false，管理员也不跨账号），
+     * 这里管的是「能否读<b>没有主人</b>的数据」。管理员依然看不到 alice / bob 的具名记录。</p>
+     *
+     * <p>定时任务线程里没有登录态，{@code isAdmin()} 天然为 false，因此回填类调用
+     * （如 {@link #getDailyTrend} 被聚合任务复用）不会误放行。</p>
+     *
+     * @return 管理员账号为 true，其余为 false
+     */
+    private boolean includeOrphan() {
+        return com.chua.starter.ai.support.util.AiUserContext.isAdmin();
+    }
+
     @Override
     public List<SysAiUsageDaily> getDailyTrend(String provider, String model,
                                                LocalDateTime startTime, LocalDateTime endTime, String userId) {
         if (userId != null && !userId.isBlank()) {
             List<SysAiUsageMapper.DailyAggregateRow> rows =
-                    usageMapper.selectDailyAggregate(startTime, endTime, userId);
+                    usageMapper.selectDailyAggregate(startTime, endTime, userId, includeOrphan());
             List<SysAiUsageDaily> trend = new ArrayList<>(rows.size());
             for (SysAiUsageMapper.DailyAggregateRow row : rows) {
                 SysAiUsageDaily daily = new SysAiUsageDaily();
@@ -296,6 +324,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                 daily.setGroupName(row.groupName());
                 daily.setProvider(row.provider());
                 daily.setModel(row.model());
+                daily.setUserId(SysAiUsageService.resolveOwner(row.userId()));
                 daily.setTotalCalls(row.totalCalls());
                 daily.setTotalPromptTokens(row.totalPromptTokens());
                 daily.setTotalCompletionTokens(row.totalCompletionTokens());
@@ -329,7 +358,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     public List<com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO> getHourlyTrend(
             LocalDateTime startTime, LocalDateTime endTime, String userId) {
         List<SysAiUsageMapper.HourlyAggregateRow> rows =
-                usageMapper.selectHourlyAggregate(startTime, endTime, userId);
+                usageMapper.selectHourlyAggregate(startTime, endTime, userId, includeOrphan());
         List<com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO> result = new ArrayList<>(rows.size());
         for (SysAiUsageMapper.HourlyAggregateRow r : rows) {
             result.add(new com.chua.starter.ai.support.model.vo.AiUsageTrendPointVO(
@@ -348,7 +377,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     public List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> getDailyModelTrend(
             LocalDateTime startTime, LocalDateTime endTime, String userId) {
         List<SysAiUsageMapper.DailyModelRow> rows =
-                usageMapper.selectDailyModelAggregate(startTime, endTime, userId);
+                usageMapper.selectDailyModelAggregate(startTime, endTime, userId, includeOrphan());
         List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> result =
                 new ArrayList<>(rows.size());
         for (SysAiUsageMapper.DailyModelRow r : rows) {
@@ -378,7 +407,8 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     private UsageStatistics statisticsFromDetail(String groupName, String provider, String model,
                                                  LocalDateTime startTime, LocalDateTime endTime, String userId) {
         SysAiUsageMapper.UsageStatsRow row =
-                usageMapper.selectStatistics(groupName, provider, model, startTime, endTime, userId);
+                usageMapper.selectStatistics(groupName, provider, model, startTime, endTime,
+                        userId, includeOrphan());
         UsageStatistics stats = new UsageStatistics();
         if (row == null) {
             return stats;

@@ -59,7 +59,8 @@ public class EduAiAutoConfiguration {
             registry.registerEndpoint("教育AI", "知识库管理", "/v2/edu/knowledge-doc/**", "文档上传、语义检索与删除");
             registry.registerEndpoint("教育AI", "错题库管理", "/v2/edu/wrongbook/**", "错题查询、复习卷与掌握度更新");
             registry.registerEndpoint("教育AI", "考试管理", "/v2/edu/exam/**", "考试创建、更新与删除");
-            registry.registerEndpoint("教育AI", "题库采集", "/v2/edu/collect/**", "采集任务 CRUD（Groovy 脚本 + sys_job 调度）、手动触发与执行日志");
+            // 原先这里注册过「题库采集 /v2/edu/collect/**」。该控制器已随采集管理一起移除，
+            // 采集能力改由采集平台的 /v2/collect/** 提供，归属 collect 模块，不该由 eduai 代报。
             registry.registerEndpoint("教育AI", "维度管理", "/v2/edu/dimension/**", "学科/年级/班级/学生/教师维度字典");
             registry.registerEndpoint("教育AI", "调试", "/v2/edu/debug/**", "AI 健康检查、队列连通性");
             registry.registerFlag("eduai", "教育AI", true, "教育AI辅助教学模块 (AI 组卷/阅卷/语义检索/维度管理)");
