@@ -1,6 +1,5 @@
 package com.chua.starter.datasourcehub.support.controller;
 
-import com.chua.common.support.lang.document.ColumnData;
 import com.chua.common.support.lang.document.DocumentConfig;
 import com.chua.common.support.lang.document.DocumentData;
 import com.chua.common.support.lang.document.DocumentExportConfig;
@@ -339,9 +338,4 @@ public class DbDocumentController {
                 .contentType(MediaType.parseMediaType("text/plain;charset=UTF-8"))
                 .body(msg.getBytes(StandardCharsets.UTF_8));
     }
-
-    /**
-     * 保留引用的类型（列数据在渲染模板里用到，避免 IDE 误判为未使用）。
-     */
-    private static final Class<?> COLUMN_TYPE = ColumnData.class;
 }

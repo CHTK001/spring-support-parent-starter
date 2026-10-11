@@ -9,15 +9,23 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 数据源监控指标（SSE 推送 + 趋势）。
+ *
+ * <p><strong>数据源不存在时直接 404，不建流</strong>：SSE 一旦返回 200，
+ * 浏览器就认为链路通了，此后既收不到数据也不会有报错，只会看到一条永远静止
+ * 的图 —— 那比直接 404 难排查得多。抛 {@link ResponseStatusException} 而不是
+ * 裸 {@code IllegalStateException}，是为了让状态码与原因对得上（404 = 不存在，
+ * 而不是笼统的 500「服务器内部错误」）。</p>
  *
  * @author CH
  * @since 4.0.0.43
@@ -98,7 +106,7 @@ public class DatasourceMetricController {
         }
         ReturnResult<?> found = service.get(datasourceId);
         if (!found.isOk() || found.getData() == null) {
-            throw new IllegalStateException("数据源不存在: " + datasourceId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "数据源不存在: " + datasourceId);
         }
     }
 }
