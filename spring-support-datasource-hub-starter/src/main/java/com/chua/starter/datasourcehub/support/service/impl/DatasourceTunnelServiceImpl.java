@@ -72,9 +72,24 @@ public class DatasourceTunnelServiceImpl implements DatasourceTunnelService {
     /**
      * 真正建立隧道连接。
      *
+     * <p><b>失败必须抛，不能返回 null。</b></p>
+     *
+     * <p>{@link #openIfEnabled(Long)} 的 null 只表示「没配隧道或隧道停用」，
+     * 是个正常状态；而这里返回 null 会和上面那个 null 混成同一个值，
+     * 调用方无从区分「本来就没配隧道」和「配了但打不开」，
+     * 于是 {@code DatasourceServiceImpl#applyTunnel} 拿着未改写的 URL 直连，
+     * 最终报出「连接测试成功」。实测就是这个组合：
+     * {@code tunneled=false} 却 {@code success=true}，
+     * 真正的失败原因只留在 {@code log.warn} 里。</p>
+     *
+     * <p>更糟的是它把用户引向错误方向：配隧道的前提就是目标库不可直连，
+     * 静默降级后直连多半被防火墙挡掉，用户会以为是网络/白名单问题，
+     * 而真正的原因（SSH 口令错、hostkey 不匹配）永远看不到。</p>
+     *
      * @param datasourceId 数据源 ID
      * @param config       隧道配置
-     * @return 隧道本地端点；失败返回 null
+     * @return 隧道本地端点
+     * @throws IllegalStateException 隧道建立失败；已关闭半开的资源
      */
     private TunnelEndpoint doOpen(Long datasourceId, MsDatasourceTunnel config) {
         Path tempKey = null;
@@ -108,9 +123,12 @@ public class DatasourceTunnelServiceImpl implements DatasourceTunnelService {
                     config.getRemoteHost(), config.getRemotePort());
             return new TunnelEndpoint(bindAddress, actualPort);
         } catch (Exception e) {
+            // 抛出前先关掉半开的资源，但不吞异常：
+            // 吞掉会让「隧道没起来」退化成「没配隧道」，调用方据此直连，
+            // 最终报成功—— 详见本方法注释。
             log.warn("数据源 {} SSH 隧道打开失败: {}", datasourceId, e.getMessage());
             closeQuietly(datasourceId);
-            return null;
+            throw new IllegalStateException("SSH 隧道打开失败: " + e.getMessage(), e);
         } finally {
             // 私钥以内容形式配置时需落临时文件供 MINA SSHD 读取，连接建立后即可删除
             deleteQuietly(tempKey);
