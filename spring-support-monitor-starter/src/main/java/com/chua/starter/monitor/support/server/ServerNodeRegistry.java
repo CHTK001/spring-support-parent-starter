@@ -58,9 +58,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ServerNodeRegistry {
 
     /**
-     * HTTP 引擎白名单
+     * HTTP 服务器族实现（@Spi 注册的「引擎」名），用于在报错文案里提示可选值。
+     *
+     * <p><b>不作为白名单使用</b>：引擎本来就是 SPI 命名（{@code JdkHttpServer} 注册
+     * {@code jdk/jdk-http}、{@code NioHttpServer} 注册 {@code nio/nio-http}、
+     * {@code AioHttpServer} 注册 {@code aio/aio-http/iocp}），真实可选项由
+     * {@link ServiceProvider} 的注册表决定。此集合仅用于错误提示，避免新增实现
+     * 时还要回来改这里（原先白名单只放 jdk/nio/aio，会把 SPI 已注册的
+     * {@code jdk-http} 等变体一并拒掉）。</p>
      */
-    private static final Set<String> HTTP_ENGINES = Set.of("jdk", "nio", "aio");
+    private static final Set<String> HTTP_ENGINE_HINT = Set.of("jdk", "nio", "aio");
 
     /**
      * 文件存储网关过滤器类型别名（与 {@code ServerFilterFactory} 预设一致）
@@ -461,8 +468,11 @@ public class ServerNodeRegistry {
                                    List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
         String engine = node.getEngine() == null || node.getEngine().isBlank()
                 ? ServerNodeProtocol.HTTP.getDefaultEngine() : node.getEngine().trim().toLowerCase();
-        if (!HTTP_ENGINES.contains(engine)) {
-            throw new IllegalArgumentException("HTTP 服务器引擎仅支持 jdk/nio/aio: " + engine);
+        // 引擎即 SPI 名称：是否可用由注册表说了算，不再用硬编码白名单裁剪
+        // （ServerBuilder.type() 内部同样是 getNewExtension(type)）。
+        if (!isEngineRegistered(engine)) {
+            throw new IllegalArgumentException(
+                    "HTTP 服务器引擎未注册到 Server SPI: " + engine + "（可参考 " + HTTP_ENGINE_HINT + "）");
         }
         Server server = ServerBuilder.create()
                 .type(engine)
@@ -696,6 +706,26 @@ public class ServerNodeRegistry {
             sb.append(text);
         }
         return sb.toString();
+    }
+
+    /**
+     * 判断某引擎名是否已注册到 {@code Server} SPI。
+     *
+     * <p>引擎与协议共用同一个 SPI 命名空间（{@code JdkHttpServer} 同时注册
+     * {@code jdk} 与 {@code jdk-http}），因此「是否可用」只能问注册表，不能靠
+     * 源码里的常量集合。新增一个 HTTP 实现只要带上 {@code @Spi} 就能被建节点选中，
+     * 无需再改本类。</p>
+     *
+     * @param engine 引擎名（已小写归一）
+     * @return 注册表中存在该名称返回 true
+     */
+    private boolean isEngineRegistered(String engine) {
+        try {
+            return ServiceProvider.of(Server.class).isSupport(engine);
+        } catch (Exception e) {
+            log.debug("[ServerNodeRegistry] 查询引擎 SPI 注册表失败: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**

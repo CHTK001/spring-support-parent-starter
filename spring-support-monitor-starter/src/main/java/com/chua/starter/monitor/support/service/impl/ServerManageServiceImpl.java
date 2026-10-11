@@ -415,19 +415,60 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-     * HTTP 引擎变体（SPI 注册但不应出现在协议下拉中）
-    */
+     * HTTP 引擎变体（SPI 注册但不应出现在协议下拉中）。
+     *
+     * <p>它们是「引擎名」不是「协议名」：{@code jdk/nio/aio} 只是
+     * {@code jdk-http/nio-http/aio-http} 的短名，故从协议列表剔除，
+     * 改由 {@link #httpEngines()} 作为 HTTP 协议的可选引擎下发。</p>
+     */
     private static final Set<String> HTTP_ENGINE_ALIASES =
             Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http");
+
+    /**
+     * HTTP 协议的可选引擎（来源：Server SPI 实际注册名）。
+     *
+     * <p>原先引擎候选在前端硬编码为 jdk/nio/aio，新增 HTTP 实现时必须同步改前端；
+     * 现在改为问 SPI 注册表 —— 谁注册了 {@code *-http} 家族名，谁就是候选引擎。</p>
+     *
+     * @return 引擎名清单（去重、已排序）；无匹配时返回仅默认引擎的兜底列表
+     */
+    private List<String> httpEngines() {
+        String fallback = ServerNodeProtocol.HTTP.getDefaultEngine();
+        List<String> found = new ArrayList<>();
+        ServiceProvider.of(Server.class).forDefinitionEach(definition -> {
+            String name = definition.getName();
+            if (name == null || name.isBlank()) {
+                return;
+            }
+            String alias = name.toLowerCase();
+            // 引擎家族：短名（jdk/nio/aio）与显式 -http 变体（jdk-http/nio-http/aio-http），
+            // 外挂的 iocp 别名也属 AioHttpServer，一并纳入。
+            boolean isHttpFamily = HTTP_ENGINE_ALIASES.contains(alias) || "iocp".equals(alias);
+            if (isHttpFamily && !found.contains(alias)) {
+                found.add(alias);
+            }
+        });
+        if (found.isEmpty()) {
+            return List.of(fallback);
+        }
+        // 默认引擎排首位，其余按字典序，保证下拉顺序稳定
+        found.remove(fallback);
+        found.sort(String::compareTo);
+        found.add(0, fallback);
+        return found;
+    }
 
     @Override
     public ReturnResult<List<ServerProtocolMetaVO>> protocols() {
         List<ServerProtocolMetaVO> result = new ArrayList<>();
         Set<String> covered = new HashSet<>();
+        List<String> engines = httpEngines();
         // 1. 内置四类基础协议（含默认端口/引擎等富元数据）
         for (ServerNodeProtocol protocol : ServerNodeProtocol.values()) {
             result.add(new ServerProtocolMetaVO(protocol.getCode(), protocol.getAlias(), protocol.getDesc(),
-                    protocol.getDefaultPort(), protocol.getDefaultEngine(), protocol.isRequiresBackend(), false, null));
+                    protocol.getDefaultPort(), protocol.getDefaultEngine(), protocol.isRequiresBackend(), false, null,
+                    // HTTP 的引擎候选来自 SPI 注册表；其余协议引擎唯一，无需列表
+                    protocol == ServerNodeProtocol.HTTP ? engines : List.of(protocol.getDefaultEngine())));
             covered.add(protocol.getAlias().toLowerCase());
         }
         // 2. SPI 动态发现的其它 Server 实现（去重、剔除 HTTP 引擎变体）
@@ -441,7 +482,9 @@ public class ServerManageServiceImpl implements ServerManageService {
                 return;
             }
             result.add(new ServerProtocolMetaVO(name, alias, describeOf(definition, alias), null, alias,
-                    alias.contains("proxy") && !alias.contains("socks"), true, paramsOf(definition)));
+                    alias.contains("proxy") && !alias.contains("socks"), true, paramsOf(definition),
+                    // SPI 协议自身即单一实现，引擎就是它自己的注册名
+                    List.of(alias)));
             covered.add(alias);
         });
         return ReturnResult.ok(result);
