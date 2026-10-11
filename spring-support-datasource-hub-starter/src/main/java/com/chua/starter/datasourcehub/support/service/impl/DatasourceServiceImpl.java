@@ -317,7 +317,7 @@ public class DatasourceServiceImpl implements DatasourceService {
                         testedAt);
             }
             return ReturnResult.ok(new DataSourceTestVO(false, reason, ds.type(),
-                    null, null, true, testedAt));
+                    null, null, true, testedAt, null));
         }
         String targetHost = endpoint == null ? ds.host() : endpoint.host();
         // 【坑】这里必须保持装箱：三元表达式 `cond ? Integer : int` 会被推断成 int，
@@ -344,7 +344,8 @@ public class DatasourceServiceImpl implements DatasourceService {
             persistProbeResult(id, outcome, testedAt);
         }
         return ReturnResult.ok(new DataSourceTestVO(outcome.success(), outcome.message(), ds.type(),
-                outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt));
+                outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt,
+                outcome.connectionCount()));
     }
 
     /**
@@ -365,7 +366,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         int port = targetPort != null ? targetPort
                 : DatasourceHubConstants.DS_DEFAULT_PORTS.getOrDefault(trim(ds.type()), 0);
         if (isBlank(targetHost) || port <= 0) {
-            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "缺少主机地址，且该类型无默认端口");
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "缺少主机地址，且该类型无默认端口", null);
         }
         return DatasourceProbeSupport.probeSocket(ds.type(), targetHost.trim(), port, timeoutMs);
     }
@@ -383,7 +384,7 @@ public class DatasourceServiceImpl implements DatasourceService {
     private DatasourceProbeSupport.ProbeOutcome probeJdbc(DataSourceVO ds, int timeoutMs) {
         MsDatasource row = datasourceMapper.selectById(ds.id());
         if (row == null) {
-            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "数据源不存在");
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "数据源不存在", null);
         }
         String url;
         try {
@@ -391,7 +392,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         } catch (IllegalStateException e) {
             // 文件库路径越界等台账配置错误：收成一次「测试失败」而不是抛给 advice 变 409 ——
             // 用户点「测试连接」期待的是结果面板里的红字，不是一个 HTTP 状态码。
-            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, e.getMessage());
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, e.getMessage(), null);
         }
         // 探活也必须尊重上传的驱动 jar 与隧道：不走的话，用户点「测试连接」会拿到
         // ClassNotFoundException 或连不上，而同一个数据源真正使用时是通的 ——
@@ -402,7 +403,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         } catch (java.io.IOException e) {
             // 定位不到 jar 文件时给可读原因，而不是让整个探活抛栈
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
-                    "驱动 jar 定位失败: " + e.getMessage());
+                    "驱动 jar 定位失败: " + e.getMessage(), null);
         }
         url = applyTunnel(row, url);
         Properties props = buildJdbcProps(row, url);
@@ -412,16 +413,69 @@ public class DatasourceServiceImpl implements DatasourceService {
                 : JdbcDriverSupport.connect(driverJar, requireDriverClassName(row.getId()), url, props)) {
             long connectMs = (System.nanoTime() - start) / 1_000_000L;
             if (!conn.isValid(Math.max(1, timeoutMs / 1000))) {
-                return new DatasourceProbeSupport.ProbeOutcome(false, connectMs, null, "连接已建立但校验未通过");
+                return new DatasourceProbeSupport.ProbeOutcome(false, connectMs, null, "连接已建立但校验未通过", null);
             }
             long sessionStart = System.nanoTime();
             try (var statement = conn.createStatement()) {
                 statement.execute("SELECT 1");
             }
             long sessionMs = (System.nanoTime() - sessionStart) / 1_000_000L;
-            return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs, "连接测试成功");
+            // 连接数是顺手采的瞬时值：同一条探测连接上多跑一条只读查询，代价可忽略；
+            // 方言不认识就留 null，图上缺一格，比编个 0 好。
+            Long connectionCount = queryJdbcConnectionCount(conn, url);
+            return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs,
+                    "连接测试成功", connectionCount);
         } catch (Exception e) {
-            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "连接测试失败: " + e.getMessage());
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
+                    "连接测试失败: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * 在探测连接上查询目标库当前的客户端连接数（按方言尽力而为）。
+     *
+     * <p>覆盖面与理由：MySQL/MariaDB 的 {@code Threads_connected} 是服务器级累计连接，
+     * PostgreSQL 的 {@code pg_stat_activity} 是活动会话清单 —— 两者是各自生态里
+     * 「现在有多少客户端连着」的标准答案。其余方言（Oracle/SQLServer/DB2/文件库）
+     * 要么查询语法特殊、要么根本没有这个概念，统一返回 null。</p>
+     *
+     * <p>查询失败不抛：连接数缺一格只影响曲线，不该把一次成功的连通性探测判成失败。</p>
+     *
+     * @param conn 探测连接（用完即关的那条）
+     * @param url  实际使用的 JDBC URL，用于判断方言
+     * @return 客户端连接数；方言不支持或查询失败返回 null
+     */
+    private Long queryJdbcConnectionCount(Connection conn, String url) {
+        String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+        String sql;
+        if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+            sql = "SHOW STATUS LIKE 'Threads_connected'";
+        } else if (lower.startsWith("jdbc:postgresql:")) {
+            sql = "SELECT COUNT(*) FROM pg_stat_activity";
+        } else {
+            return null;
+        }
+        try (var statement = conn.createStatement(); var rs = statement.executeQuery(sql)) {
+            if (rs.next()) {
+                // MySQL 的 SHOW STATUS 是两列（Variable_name/Value），PG 是一列计数：
+                // 按「第二列优先、否则第一列」读可以同时兼容两种形态。
+                String value = null;
+                try {
+                    value = rs.getString(2);
+                } catch (SQLException ignored) {
+                    // 单列结果集：落到第一列
+                }
+                if (value == null) {
+                    value = rs.getString(1);
+                }
+                return value == null ? null : Long.parseLong(value.trim());
+            }
+            return null;
+        } catch (Exception e) {
+            // 方言前缀（如 jdbc:mysql）只用于日志定位，截前 16 个字符足够，不做复杂解析
+            log.debug("[datasource-hub] 连接数查询失败 url-prefix={} reason={}",
+                    lower.substring(0, Math.min(16, lower.length())), e.getMessage());
+            return null;
         }
     }
 

@@ -70,14 +70,15 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
         if (!probed.isOk() || probed.getData() == null) {
             // 探测本身失败（例如该类型没有 probe 实现）也留一条「未判定」的点：
             // 完全不记会让曲线在「探测不了」和「没采过」之间无法区分。
-            persist(datasourceId, row.getDatasourceType(), null, null, null, null,
+            persist(datasourceId, row.getDatasourceType(), null, null, null, null, null,
                     probed.getMsg() == null ? "探测未执行" : probed.getMsg());
             return probed;
         }
         DataSourceTestVO vo = probed.getData();
         persist(datasourceId, row.getDatasourceType(),
                 Boolean.valueOf(vo.success()), vo.connectLatencyMs(), vo.sessionLatencyMs(),
-                Boolean.valueOf(vo.tunneled()), vo.success() ? null : vo.message());
+                Boolean.valueOf(vo.tunneled()), vo.connectionCount(),
+                vo.success() ? null : vo.message());
         return probed;
     }
 
@@ -98,6 +99,7 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                 vo.connectLatencyMs(),
                 vo.sessionLatencyMs(),
                 vo.tunneled(),
+                vo.connectionCount(),
                 recent.isOk() ? recent.getData() : null));
     }
 
@@ -139,7 +141,8 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                         r.getConnectLatency(),
                         r.getSessionLatency(),
                         r.getTunneled() == null ? null : r.getTunneled() == 1,
-                        r.getErrorMessage()))
+                        r.getErrorMessage(),
+                        r.getConnectionCount()))
                 .toList();
         return ReturnResult.success(
                 new DatasourceMetricTrendVO(datasourceId, from, to, usedInterval, points, null));
@@ -175,10 +178,11 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
      * @param connectLatency 建连耗时
      * @param sessionLatency 会话耗时
      * @param tunneled      是否经隧道
+     * @param connectionCount 采样时刻客户端连接数（可空）
      * @param error         失败原因
      */
     private void persist(Long datasourceId, String type, Boolean success, Long connectLatency,
-                         Long sessionLatency, Boolean tunneled, String error) {
+                         Long sessionLatency, Boolean tunneled, Long connectionCount, String error) {
         try {
             MsDatasourceMetric row = new MsDatasourceMetric();
             row.setDatasourceId(datasourceId);
@@ -186,6 +190,7 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
             row.setSuccess(success == null ? null : (success ? 1 : 0));
             row.setConnectLatency(connectLatency);
             row.setSessionLatency(sessionLatency);
+            row.setConnectionCount(connectionCount);
             row.setTunneled(tunneled == null ? null : (tunneled ? 1 : 0));
             if (error != null) {
                 row.setErrorMessage(error.length() > 500 ? error.substring(0, 500) : error);

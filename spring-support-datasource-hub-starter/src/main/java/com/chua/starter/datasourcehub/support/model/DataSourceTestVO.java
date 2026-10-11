@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
  * @param sessionLatencyMs   会话延迟（毫秒），未测出时为 null
  * @param tunneled           本次测试是否经由 SSH 隧道中转
  * @param testedAt           测试时间
+ * @param connectionCount    采样时刻目标服务上的客户端连接数；类型不支持时为 null
  * @author CH
  * @since 4.0.0.42
  */
@@ -26,6 +27,7 @@ public record DataSourceTestVO(
         Long connectLatencyMs,
         Long sessionLatencyMs,
         boolean tunneled,
-        LocalDateTime testedAt
+        LocalDateTime testedAt,
+        Long connectionCount
 ) {
 }
