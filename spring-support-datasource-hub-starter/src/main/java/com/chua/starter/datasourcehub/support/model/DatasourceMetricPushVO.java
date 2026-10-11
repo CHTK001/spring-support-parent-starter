@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param connectLatencyMs 建连耗时（毫秒）
  * @param sessionLatencyMs 会话耗时（毫秒）
  * @param tunneled     本次是否经隧道
+ * @param connectionCount 本次采样时刻客户端连接数，取不到为 null
  * @param points       最近窗口内的采样点
  * @author CH
  * @since 4.0.0.43
@@ -28,6 +29,7 @@ public record DatasourceMetricPushVO(
         @Schema(description = "建连耗时（毫秒）") Long connectLatencyMs,
         @Schema(description = "会话耗时（毫秒）") Long sessionLatencyMs,
         @Schema(description = "本次是否经隧道") Boolean tunneled,
+        @Schema(description = "本次采样时刻客户端连接数") Long connectionCount,
         @Schema(description = "最近窗口内的采样点") DatasourceMetricTrendVO points
 ) {
 }

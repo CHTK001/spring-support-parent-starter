@@ -92,7 +92,7 @@ export SPRING_APPLICATION_JSON='{"spring":{"datasource":{"url":"jdbc:mysql://127
 nohup java -XX:+UseCompactObjectHeaders -Xmx1500m -Dfile.encoding=UTF-8 -jar "$REMOTE_JAR" \
   --server.port=$PORT --plugin.oauth.enable=true --plugin.oauth.protocol=static \
   --plugin.api.cors.allowed-origins=http://localhost:8848,http://127.0.0.1:8848,http://192.168.50.101:8848,http://192.168.50.198 \
-  --plugin.oauth.temp.user=admin:admin@123!456 \
+  --plugin.oauth.temp.user=admin:admin123 \
   > "$LOG" 2>&1 &
 NEW_PID=$!
 echo "  新进程 pid=$NEW_PID 日志=$LOG"

@@ -56,12 +56,15 @@ public final class DatasourceProbeSupport {
      * @param connectLatencyMs   连接延迟（毫秒）
      * @param sessionLatencyMs   会话延迟（毫秒）
      * @param message            结果说明
+     * @param connectionCount    采样时刻目标服务上的客户端连接数；取不到为 null
+     *                           （不是所有类型都暴露该指标，null 在图上是缺格）
      */
     public record ProbeOutcome(
             boolean success,
             Long connectLatencyMs,
             Long sessionLatencyMs,
-            String message
+            String message,
+            Long connectionCount
     ) {
         /**
          * 构造一个「没走到探测那一步」的失败结果。
@@ -74,7 +77,7 @@ public final class DatasourceProbeSupport {
          * @return 失败结果
          */
         public static ProbeOutcome failed(String message) {
-            return new ProbeOutcome(false, null, null, message);
+            return new ProbeOutcome(false, null, null, message, null);
         }
     }
 
@@ -110,36 +113,51 @@ public final class DatasourceProbeSupport {
         try {
             connectMs = connectAndMeasure(host, port, timeoutMs);
         } catch (Exception e) {
-            return new ProbeOutcome(false, null, null, "连接失败: " + e.getMessage());
+            return new ProbeOutcome(false, null, null, "连接失败: " + e.getMessage(), null);
         }
 
         String normalized = type == null ? "" : type.trim().toLowerCase();
         try {
-            long sessionMs = switch (normalized) {
-                case "redis" -> redisPing(host, port, timeoutMs);
-                case "nginx", "nacos", "influxdb", "prometheus" -> httpRoundTrip(host, port, timeoutMs);
+            Long connectionCount = null;
+            long sessionMs;
+            switch (normalized) {
+                case "redis" -> {
+                    // 顺路取客户端连接数：PING 与 INFO 在同一次会话里完成，
+                    // 多一次往返也不浪费 —— 反正这条 socket 用完即关。
+                    long[] session = new long[1];
+                    connectionCount = redisProbe(host, port, timeoutMs, session);
+                    sessionMs = session[0];
+                }
+                case "nginx", "nacos", "influxdb", "prometheus" -> sessionMs = httpRoundTrip(host, port, timeoutMs);
                 // neo4j(Bolt) / zookeeper(ZooKeeper) 为二进制协议，本模块无对应客户端，
                 // 退化为第二次建链作为会话延迟近似值。
-                default -> connectAndMeasure(host, port, timeoutMs);
-            };
-            return new ProbeOutcome(true, connectMs, sessionMs, "连接测试成功");
+                default -> sessionMs = connectAndMeasure(host, port, timeoutMs);
+            }
+            return new ProbeOutcome(true, connectMs, sessionMs, "连接测试成功", connectionCount);
         } catch (Exception e) {
             // 建链已成功，会话探测失败不推翻连通性结论，但会话延迟无值
             log.debug("数据源 {} 会话探测失败: {}", type, e.getMessage());
-            return new ProbeOutcome(true, connectMs, null, "连接测试成功(会话探测失败: " + e.getMessage() + ")");
+            return new ProbeOutcome(true, connectMs, null,
+                    "连接测试成功(会话探测失败: " + e.getMessage() + ")", null);
         }
     }
 
     /**
-     * Redis 会话延迟：发送 RESP {@code PING} 并读到响应。
+     * Redis 会话探测：发送 RESP {@code PING} 并读到响应，随后尝试 {@code INFO clients}
+     * 解析 {@code connected_clients}。
+     *
+     * <p>连接数是「尽力而为」：未设密码的实例能拿到；设了密码时 INFO 返回 NOAUTH，
+     * 这里返回 null 而不是报错 —— 连通性结论已经由 PING 得出，连接数缺一格
+     * 比为了它把整次探测判成失败合理得多。</p>
      *
      * @param host      目标主机
      * @param port      目标端口
      * @param timeoutMs 超时（毫秒）
-     * @return 往返耗时（毫秒）
-     * @throws Exception 探测失败
+     * @param sessionMs 长度为 1 的出参，带回 PING 往返耗时（毫秒）
+     * @return 客户端连接数；解析不到返回 null
+     * @throws Exception PING 探测失败
      */
-    private static long redisPing(String host, int port, int timeoutMs) throws Exception {
+    private static Long redisProbe(String host, int port, int timeoutMs, long[] sessionMs) throws Exception {
         long start = System.nanoTime();
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(host, port), timeoutMs);
@@ -152,8 +170,64 @@ public final class DatasourceProbeSupport {
             if (in.read() < 0) {
                 throw new IllegalStateException("Redis 未返回 PING 响应");
             }
+            sessionMs[0] = (System.nanoTime() - start) / 1_000_000L;
+
+            // INFO clients：RESP 内联命令 *2\r\n$4\r\nINFO\r\n$7\r\nclients\r\n
+            out.write("*2\r\n$4\r\nINFO\r\n$7\r\nclients\r\n".getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            String body = respBulkRead(in);
+            if (body != null) {
+                for (String line : body.split("\r\n")) {
+                    if (line.startsWith("connected_clients:")) {
+                        String value = line.substring("connected_clients:".length()).trim();
+                        try {
+                            return Long.parseLong(value);
+                        } catch (NumberFormatException ignored) {
+                            return null;
+                        }
+                    }
+                }
+            }
+            return null;
         }
-        return (System.nanoTime() - start) / 1_000_000L;
+    }
+
+    /**
+     * 读取一个 RESP bulk string 响应体（行内协议，只够 INFO 用）。
+     *
+     * @param in socket 输入流
+     * @return 响应体；非 bulk 响应（如错误行）返回 null
+     * @throws java.io.IOException 读取失败
+     */
+    private static String respBulkRead(InputStream in) throws java.io.IOException {
+        StringBuilder header = new StringBuilder();
+        int b;
+        while ((b = in.read()) >= 0) {
+            if (b == '\n') {
+                break;
+            }
+            if (b != '\r') {
+                header.append((char) b);
+            }
+        }
+        // bulk string 以 '$' 开头，后跟字节数；错误行以 '-' 开头，直接放弃
+        if (!header.toString().startsWith("$")) {
+            return null;
+        }
+        int length;
+        try {
+            length = Integer.parseInt(header.substring(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (length <= 0) {
+            return null;
+        }
+        byte[] body = in.readNBytes(length);
+        if (body.length < length) {
+            return null;
+        }
+        return new String(body, StandardCharsets.UTF_8);
     }
 
     /**

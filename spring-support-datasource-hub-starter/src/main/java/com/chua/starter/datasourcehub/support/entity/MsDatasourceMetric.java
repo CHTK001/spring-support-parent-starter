@@ -71,6 +71,16 @@ public class MsDatasourceMetric implements Serializable {
     private Long sessionLatency;
 
     /**
+     * 采样时刻客户端连接数（瞬时值）。
+     *
+     * <p>目前仅 jdbc(MySQL/MariaDB/PostgreSQL) 与 redis 能取到，其余类型为 null ——
+     * null 在图上是缺格，比编一个 0 诚实。</p>
+     */
+    @TableField("connection_count")
+    @Schema(description = "采样时刻客户端连接数，取不到为 null", example = "12")
+    private Long connectionCount;
+
+    /**
      * 1 经 SSH 隧道 / 0 直连 / null 未判定
      */
     @TableField("tunneled")
