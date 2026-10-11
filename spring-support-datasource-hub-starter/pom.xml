@@ -60,6 +60,23 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 数据库文档导出（/ms/monitor/db/document/export）：
+             结构采集用 utils-support-datasource-starter 里的 DocumentParser("database")，
+             markdown / html 渲染器在 utils-support-common-starter 里（已由上面两个依赖带入）。
+             word / pdf 渲染器分属独立模块，且 pdf 还要求服务端装 wkhtmltopdf，
+             故与 ai-starter 同口径声明为 optional：宿主不引就没有这两个导出格式，
+             端点会如实 501、前端据 /document/formats 隐藏入口，而不是给一个点了就报错的按钮。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-word-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-pdf-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- SSH 隧道（高级配置）：复用 utils 层已有的 MINA SSHD 客户端，
              其 SshTunnel 已支持 LOCAL/REMOTE(-R 反向)/DYNAMIC(SOCKS5)，
              故本模块不再单独引入任何 SSH 第三方依赖 -->

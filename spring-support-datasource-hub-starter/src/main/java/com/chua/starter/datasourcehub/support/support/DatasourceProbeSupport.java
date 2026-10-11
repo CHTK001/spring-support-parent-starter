@@ -63,6 +63,19 @@ public final class DatasourceProbeSupport {
             Long sessionLatencyMs,
             String message
     ) {
+        /**
+         * 构造一个「没走到探测那一步」的失败结果。
+         *
+         * <p>用于探测的前置环节失败（隧道打不开、数据源配置缺失等）：
+         * 此时没有任何延迟数据可报，填 0 会被画成「延迟 0 毫秒」的漂亮曲线，
+         * 与事实完全相反，所以延迟一律留 null。</p>
+         *
+         * @param message 失败原因
+         * @return 失败结果
+         */
+        public static ProbeOutcome failed(String message) {
+            return new ProbeOutcome(false, null, null, message);
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.chua.starter.datasourcehub.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.datasourcehub.support.model.DataSourceTunnelVO;
 import com.chua.starter.datasourcehub.support.model.dto.DataSourceTunnelDTO;
 import com.chua.starter.datasourcehub.support.service.DatasourceTunnelService;
@@ -55,6 +56,7 @@ public class DatasourceTunnelController {
      * @param data         隧道配置
      * @return 保存后的配置
      */
+    @SysLog(name = "保存数据源隧道配置")
     @Operation(summary = "保存数据源隧道配置")
     @PutMapping("/{datasourceId}")
     public ReturnResult<DataSourceTunnelVO> save(@PathVariable Long datasourceId, @RequestBody DataSourceTunnelDTO data) {
@@ -67,6 +69,7 @@ public class DatasourceTunnelController {
      * @param datasourceId 数据源 ID
      * @return 是否删除成功
      */
+    @SysLog(name = "删除数据源隧道配置")
     @Operation(summary = "删除数据源隧道配置")
     @DeleteMapping("/{datasourceId}")
     public ReturnResult<Boolean> delete(@PathVariable Long datasourceId) {

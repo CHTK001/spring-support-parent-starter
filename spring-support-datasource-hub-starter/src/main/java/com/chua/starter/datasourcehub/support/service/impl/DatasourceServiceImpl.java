@@ -12,9 +12,11 @@ import com.chua.starter.datasourcehub.support.model.DataSourceTestVO;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datasourcehub.support.model.dto.DataSourceDTO;
+import com.chua.starter.datasourcehub.support.service.DatasourceMetricService;
+import com.chua.starter.datasourcehub.support.service.DatasourceOperLogService;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
-import com.chua.starter.datasourcehub.support.service.JdbcDriverJarService;
 import com.chua.starter.datasourcehub.support.service.DatasourceTunnelService;
+import com.chua.starter.datasourcehub.support.service.JdbcDriverJarService;
 import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
 import com.chua.starter.datasourcehub.support.support.DatasourceSecrets;
 import com.chua.starter.datasourcehub.support.support.FileJdbcPathGuard;
@@ -71,6 +73,21 @@ public class DatasourceServiceImpl implements DatasourceService {
      * SSH 隧道服务：目标库内网不可直连时，先经隧道中转再测
      */
     private final DatasourceTunnelService tunnelService;
+
+    /**
+     * 指标服务（可选）：删除数据源时清理其历史指标。
+     *
+     * <p><b>必须走 {@link ObjectProvider}</b>：{@code DatasourceMetricServiceImpl}
+     * 探测时要回调本服务的 {@link #probeOnly(Long)}，直接注入会形成
+     * 构造期循环依赖（Spring 只能靠三级缓存硬解，Boot 3+ 默认禁止）。
+     * 可选装配还顺带保证：指标模块没引入时删除流程照常工作。</p>
+     */
+    private final ObjectProvider<DatasourceMetricService> metricServiceProvider;
+
+    /**
+     * 操作日志服务（可选）：删除数据源时清理其历史日志。
+     */
+    private final ObjectProvider<DatasourceOperLogService> operLogServiceProvider;
 
     /**
      * 驱动 jar 库（数据源引用上传的驱动时用它建连）
@@ -219,11 +236,64 @@ public class DatasourceServiceImpl implements DatasourceService {
         }
         datasourceMapper.deleteById(id);
         evictJdbcConnection(id);
+        // 从属数据一起清。三张表都只以 datasource_id 关联、没有外键级联，
+        // 不清就会留下一批指向「已不存在的数据源」的孤儿行 —— 而按 id 查指标/日志时
+        // 仍会把它们查出来，界面上表现为「删了数据源，监控指标还在跳」。
+        // 刻意不走事务：主删除已经成功，从属清理失败不该回滚用户的删除动作。
+        purgeDependents(id);
         return ReturnResult.ok(true);
+    }
+
+    /**
+     * 清理某数据源的从属数据：隧道配置、指标历史、操作日志。
+     *
+     * <p>隧道还要先关掉：只删配置不断开，已经建好的转发会继续挂在目标库上，
+     * 变成一个没人认领、也关不掉的 SSH 进程。</p>
+     *
+     * @param id 数据源 ID
+     */
+    private void purgeDependents(Long id) {
+        try {
+            tunnelService.delete(id);
+        } catch (RuntimeException e) {
+            log.warn("[datasource-hub] 删除数据源时关闭隧道失败 id={} reason={}", id, e.getMessage());
+        }
+        DatasourceMetricService metricService = metricServiceProvider.getIfAvailable();
+        if (metricService != null) {
+            try {
+                metricService.purge(id);
+            } catch (RuntimeException e) {
+                log.warn("[datasource-hub] 删除数据源时清理指标失败 id={} reason={}", id, e.getMessage());
+            }
+        }
+        DatasourceOperLogService operLogService = operLogServiceProvider.getIfAvailable();
+        if (operLogService != null) {
+            try {
+                operLogService.purge(id);
+            } catch (RuntimeException e) {
+                log.warn("[datasource-hub] 删除数据源时清理操作日志失败 id={} reason={}", id, e.getMessage());
+            }
+        }
     }
 
     @Override
     public ReturnResult<DataSourceTestVO> test(Long id) {
+        return doTest(id, true);
+    }
+
+    @Override
+    public ReturnResult<DataSourceTestVO> probeOnly(Long id) {
+        return doTest(id, false);
+    }
+
+    /**
+     * 探测连通性。
+     *
+     * @param id      数据源 ID
+     * @param persist 是否把结果回写台账（{@code lastTestOk / lastTestTime / 延迟}）
+     * @return 测试结果
+     */
+    private ReturnResult<DataSourceTestVO> doTest(Long id, boolean persist) {
         ReturnResult<DataSourceVO> found = get(id);
         if (!found.isOk() || found.getData() == null) {
             return ReturnResult.error(found.getMsg() == null ? "数据源不存在" : found.getMsg());
@@ -231,8 +301,24 @@ public class DatasourceServiceImpl implements DatasourceService {
         DataSourceVO ds = found.getData();
         LocalDateTime testedAt = LocalDateTime.now();
 
-        // 目标库内网不可直连时，先按隧道配置开隧道，把目标改写成隧道本地端口
-        DatasourceTunnelService.TunnelEndpoint endpoint = tunnelService.openIfEnabled(id);
+        // 目标库内网不可直连时，先按隧道配置开隧道，把目标改写成隧道本地端口。
+        // 打不开就按失败返回，不静默降级成直连：配了隧道却直连，
+        // 用户看到的是「测试通过」而实际请求的是另一条链路（多半根本连不上），
+        // 与建连路径（openTunnel 打不开直接抛）的策略也就此对齐。
+        DatasourceTunnelService.TunnelEndpoint endpoint;
+        try {
+            endpoint = tunnelService.openIfEnabled(id);
+        } catch (RuntimeException e) {
+            String reason = "SSH 隧道打开失败: " + e.getMessage();
+            log.warn("[datasource-hub] 数据源 {} {}", id, reason);
+            if (persist) {
+                persistProbeResult(id,
+                        DatasourceProbeSupport.ProbeOutcome.failed(reason),
+                        testedAt);
+            }
+            return ReturnResult.ok(new DataSourceTestVO(false, reason, ds.type(),
+                    null, null, true, testedAt));
+        }
         String targetHost = endpoint == null ? ds.host() : endpoint.host();
         // 【坑】这里必须保持装箱：三元表达式 `cond ? Integer : int` 会被推断成 int，
         // 于是 Integer 那一支被自动拆箱，端口为 null 时当场 NPE。
@@ -254,7 +340,9 @@ public class DatasourceServiceImpl implements DatasourceService {
 
         DatasourceProbeSupport.ProbeOutcome outcome =
                 probe(ds, targetHost, targetPort);
-        persistProbeResult(id, outcome, testedAt);
+        if (persist) {
+            persistProbeResult(id, outcome, testedAt);
+        }
         return ReturnResult.ok(new DataSourceTestVO(outcome.success(), outcome.message(), ds.type(),
                 outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt));
     }

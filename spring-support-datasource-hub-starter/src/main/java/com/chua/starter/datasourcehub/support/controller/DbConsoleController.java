@@ -6,6 +6,8 @@ import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolv
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
+// 控制台的写操作留痕：@SysLog 事件由 DatasourceOperLogListener 消费落 ms_datasource_oper_log
+import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.datasourcehub.support.dbconsole.DbAiStatusVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnDef;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnVO;
@@ -276,6 +278,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "修改表属性")
+    @SysLog(name = "修改表显示设置")
     @PutMapping("table/{tableName}/options")
     public ReturnResult<Boolean> updateTableOptions(
             @PathVariable String tableName,
@@ -338,6 +341,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "设置主键")
+    @SysLog(name = "设置表主键")
     @PutMapping("table/{tableName}/primary-key")
     public ReturnResult<Boolean> setTablePrimaryKey(
             @PathVariable String tableName,
@@ -438,6 +442,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "新建或替换数据库对象")
+    @SysLog(name = "新建/修改数据库对象")
     @PostMapping("objects/{category}")
     public ReturnResult<Boolean> upsertDbObject(
             @PathVariable String category,
@@ -481,6 +486,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "删除数据库对象")
+    @SysLog(name = "删除数据库对象")
     @DeleteMapping("objects/{category}/{name}")
     public ReturnResult<Boolean> dropDbObject(
             @PathVariable String category,
@@ -561,6 +567,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "新增外键")
+    @SysLog(name = "新增外键")
     @PostMapping("table/{tableName}/foreign-key")
     public ReturnResult<Boolean> addForeignKey(
             @PathVariable String tableName,
@@ -601,6 +608,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "删除外键")
+    @SysLog(name = "删除外键")
     @DeleteMapping("table/{tableName}/foreign-key/{fkName}")
     public ReturnResult<Boolean> dropForeignKey(
             @PathVariable String tableName,
@@ -1448,6 +1456,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "提交显式事务")
+    @SysLog(name = "提交数据库事务")
     @PostMapping("tx/commit")
     public ReturnResult<Boolean> commitDbTx(@RequestBody DbTxActionRequest request) {
         return callDb("提交事务", () -> {
@@ -1672,6 +1681,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     @Operation(summary = "执行 SQL")
+    @SysLog(name = "执行 SQL")
     @PostMapping("execute")
     public ReturnResult<DbSqlResultVO> executeDbSql(@RequestBody DbSqlExecuteDTO request) {
         String sql = request.sql();
@@ -1836,6 +1846,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 批量执行结果
      */
     @Operation(summary = "批量执行 SQL 脚本")
+    @SysLog(name = "批量执行 SQL")
     @PostMapping("execute-batch")
     public ReturnResult<DbSqlBatchVO> executeDbSqlBatch(@RequestBody DbSqlExecuteDTO request) {
         String sql = request.sql();
@@ -1980,6 +1991,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>安全豁免：表名经标识符白名单与 JDBC 元数据校验后才进入 MySQL 底层方言 DDL。</p>
      */
     @Operation(summary = "删除表")
+    @SysLog(name = "删除表")
     @DeleteMapping("table/{tableName}")
     public ReturnResult<Boolean> dropTable(
             @PathVariable String tableName,
@@ -2017,6 +2029,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "新建表")
+    @SysLog(name = "新建表")
     @PostMapping("table")
     public ReturnResult<Boolean> createTable(@RequestBody com.chua.starter.datasourcehub.support.dbconsole.DbCreateTableDTO request) {
         String table = safeIdent(request.table(), "表名");
@@ -2054,6 +2067,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "重命名表")
+    @SysLog(name = "重命名表")
     @PutMapping("table/{tableName}/name")
     public ReturnResult<Boolean> renameTable(
             @PathVariable String tableName,
@@ -2081,6 +2095,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return Return结果 对象
      */
     @Operation(summary = "新建数据库")
+    @SysLog(name = "新建数据库")
     @PostMapping("database")
     public ReturnResult<Boolean> createDatabase(@RequestBody com.chua.starter.datasourcehub.support.dbconsole.DbDatabaseDTO request) {
         String name = request.name() == null ? "" : request.name().trim();
@@ -2105,6 +2120,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return Return结果 对象
      */
     @Operation(summary = "删除数据库")
+    @SysLog(name = "删除数据库")
     @DeleteMapping("database")
     public ReturnResult<Boolean> dropDatabase(
             @RequestParam(required = false) Long datasourceId,
@@ -2257,6 +2273,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>安全豁免：表名、目标列和主键列均经标识符白名单与 JDBC 元数据双重校验。</p>
      */
     @Operation(summary = "更新单元格")
+    @SysLog(name = "编辑单元格")
     @PutMapping("table/{tableName}/cell")
     public ReturnResult<Integer> updateCell(@PathVariable String tableName,
                                          @RequestBody Map<String, Object> body,
@@ -2431,6 +2448,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>安全豁免：索引名、表名和索引列经标识符白名单及 JDBC 元数据校验后进入 MySQL 底层方言 DDL。</p>
      */
     @Operation(summary = "新建索引")
+    @SysLog(name = "新建索引")
     @PostMapping("table/{tableName}/index")
     public ReturnResult<Boolean> createIndex(@PathVariable String tableName,
                                             @RequestBody Map<String, Object> body,
@@ -2488,6 +2506,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>安全豁免：索引名和表名经标识符白名单及 JDBC 元数据校验。</p>
      */
     @Operation(summary = "删除索引")
+    @SysLog(name = "删除索引")
     @DeleteMapping("table/{tableName}/index/{indexName}")
     public ReturnResult<Boolean> dropIndex(
             @PathVariable String tableName,
@@ -2565,6 +2584,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 导入统计
      */
     @Operation(summary = "执行数据导入")
+    @SysLog(name = "导入数据")
     @PostMapping("import")
     public ReturnResult<com.chua.starter.datasourcehub.support.dbconsole.DbImporter.ImportResult> importDataFile(
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
@@ -2667,6 +2687,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 导出内容（字符串，前端侧落盘为文件）
      */
     @Operation(summary = "导出数据")
+    @SysLog(name = "导出数据")
     @PostMapping("export")
     public ReturnResult<Map<String, Object>> exportData(@RequestBody Map<String, Object> request) {
         String table = safeIdent(String.valueOf(request.get("tableName")), "表名");
@@ -2798,6 +2819,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>安全豁免：表名经标识符白名单和 JDBC 元数据校验后才进入数据库方言 DDL。</p>
      */
     @Operation(summary = "清空表")
+    @SysLog(name = "清空表")
     @PostMapping("table/{tableName}/truncate")
     public ReturnResult<Boolean> truncateTable(
             @PathVariable String tableName,
@@ -2933,6 +2955,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "新增列")
+    @SysLog(name = "新增列")
     @PostMapping("table/{tableName}/column")
     public ReturnResult<Boolean> addColumn(@PathVariable String tableName,
                                            @RequestBody Map<String, Object> body,
@@ -2961,6 +2984,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 是否成功
      */
     @Operation(summary = "修改列")
+    @SysLog(name = "修改列")
     @PutMapping("table/{tableName}/column/{columnName}")
     public ReturnResult<Boolean> modifyColumn(
             @PathVariable String tableName,
@@ -2991,6 +3015,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>安全豁免：表名和列名经标识符白名单及 JDBC 元数据校验。</p>
      */
     @Operation(summary = "删除列")
+    @SysLog(name = "删除列")
     @DeleteMapping("table/{tableName}/column/{columnName}")
     public ReturnResult<Boolean> dropColumn(
             @PathVariable String tableName,
