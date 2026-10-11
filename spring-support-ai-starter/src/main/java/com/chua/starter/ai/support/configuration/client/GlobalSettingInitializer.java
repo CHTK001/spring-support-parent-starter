@@ -9,8 +9,10 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 全局设置初始化器——启动时通过 SPI 发现 {@link GlobalSettingProvider}，
@@ -57,9 +59,25 @@ public class GlobalSettingInitializer implements ApplicationRunner {
             return;
         }
 
+        /**
+         * 本次运行已处理过的分组。
+         *
+         * <p>框架的 SPI 注册表当前会把同一个实现注册成两个实例（实测 global / image /
+         * image_search / input 四组各返回两份）。不去重的话同一分组会被处理两次：
+         * 空分组走全量注册时 {@code replace()} 白跑一遍（第二次读到的已是自己刚写的
+         * 数据，走增量分支），日志也重复一条，排查时容易误判成「注册了两个来源」。</p>
+         *
+         * <p>根因在公共层，属框架问题，不在业务侧改；这里只保证每个分组处理一次。</p>
+         */
+        Set<String> handledGroups = new LinkedHashSet<>();
+
         for (GlobalSettingProvider gsp : providers) {
             try {
                 String group = gsp.group();
+                if (!handledGroups.add(group)) {
+                    log.debug("[GlobalSettingInitializer] 分组 '{}' 在 SPI 注册表中重复出现，跳过", group);
+                    continue;
+                }
                 List<Map<String, Object>> existing = globalSettingService.list(group);
                 List<GlobalSettingProvider.SettingItem> items = gsp.getItems();
                 if (items.isEmpty()) {

@@ -1,0 +1,1 @@
+import{t as e}from"./pick-CkfWGf6t.js";import{z as t}from"./install-BresTzAU.js";var n=t({ariaLabel:String,ariaOrientation:{type:String,values:[`horizontal`,`vertical`,`undefined`]},ariaControls:String}),r=t=>e(n,t);export{r as t};

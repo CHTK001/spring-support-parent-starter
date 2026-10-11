@@ -1,0 +1,1 @@
+import{i as e}from"./use-size-Ck8M8oYd.js";var t=t=>[``,...e].includes(t);export{t};

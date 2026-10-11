@@ -17,8 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -62,12 +64,30 @@ public class UsageConfigController {
         Map<String, Object> valueMap = current.stream()
                 .collect(Collectors.toMap(m -> String.valueOf(m.get("field")), m -> m, (a, b) -> a));
 
+        /**
+         * 同一 field 只保留首次出现的定义。
+         *
+         * <p>框架的 SPI 注册表当前会把同一个实现注册成两个实例（本组被注册了两次，
+         * image / image_search / input 三组同样如此），于是不加去重的话本接口会
+         * 对 11 个配置项返回 22 条记录。前端目前按固定 schema 反查匹配，重复项被幂等
+         * 覆盖看不出来，但接口契约已经坏了 —— 任何改成 v-for 直接渲染、或按field
+         * 建Map 的消费方都会踩到。</p>
+         *
+         * <p>去重是既定意图而非补丁：{@code GlobalSettingDefinitions} 的注释写明
+         * 「按 group 去重、组内按 field 去重」，那层已经这么做了，只是这里漏了 field。
+         * 根因在公共层 SPI 注册表，属框架问题，不在业务侧改；此处只保证出口干净。</p>
+         */
+        Set<String> seen = new LinkedHashSet<>();
+
         List<GlobalSettingProvider> providers = ServiceProvider.of(GlobalSettingProvider.class).collect();
         for (GlobalSettingProvider provider : providers) {
             if (!GROUP.equals(provider.group())) {
                 continue;
             }
             for (GlobalSettingProvider.SettingItem item : provider.getItems()) {
+                if (!seen.add(item.field())) {
+                    continue;
+                }
                 Map<String, Object> field = new LinkedHashMap<>();
                 field.put("field", item.field());
                 field.put("valueType", item.valueType());
