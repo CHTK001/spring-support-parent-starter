@@ -7,6 +7,7 @@ com.chua.starter.ai.support.configuration.ocr.OcrGlobalSettingProvider
 com.chua.starter.ai.support.configuration.rag.RagGlobalSettingProvider
 com.chua.starter.ai.support.configuration.input.InputOptimizeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.runtime.RuntimeGlobalSettingProvider
+com.chua.starter.ai.support.configuration.runtime.ProtocolServerGlobalSettingProvider
 com.chua.starter.ai.support.configuration.generate.GenerateGlobalSettingProvider
 com.chua.starter.ai.support.configuration.usage.UsageGlobalSettingProvider
 com.chua.starter.ai.support.configuration.memory.MemoryGlobalSettingProvider
