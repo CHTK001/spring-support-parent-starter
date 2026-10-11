@@ -72,6 +72,11 @@ public class ImageSearchStores {
     private final GlobalSettingReader settingReader;
 
     /**
+     * 底库元数据与向量的联动层，传给各账号的 {@link ImageSearchStore}。
+     */
+    private final ImageLibraryLinkService library;
+
+    /**
      * 启动时加载磁盘上已有的全部账号底库。
      *
      * <p>只读目录、不建目录：某个账号从没上传过图就不该因为一次启动而凭空多出
@@ -309,7 +314,7 @@ public class ImageSearchStores {
      * @return 底库实例
      */
     private ImageSearchStore create(String account, Path dir, boolean existing) {
-        ImageSearchStore store = new ImageSearchStore(account, dir, settingReader);
+        ImageSearchStore store = new ImageSearchStore(account, dir, settingReader, library);
         if (existing) {
             store.load();
         }

@@ -39,7 +39,10 @@ public class AiUsageServiceImpl implements AiUsageService {
     @Override
     public List<AiUsageDTO> query(String model, LocalDateTime startTime, LocalDateTime endTime, String userId) {
         List<SysAiUsageMapper.UsageSummaryRow> rows =
-                usageMapper.selectUsageSummary(model, startTime, endTime, userId);
+                usageMapper.selectUsageSummary(model, startTime, endTime, userId,
+                        // 无主数据（定时同步的外部工具用量）只对管理员可见，
+                        // 口径与 SysAiUsageServiceImpl.includeOrphan() 一致。
+                        com.chua.starter.ai.support.util.AiUserContext.isAdmin());
         List<AiUsageDTO> result = new ArrayList<>(rows.size());
         for (SysAiUsageMapper.UsageSummaryRow row : rows) {
             AiUsageDTO dto = new AiUsageDTO();

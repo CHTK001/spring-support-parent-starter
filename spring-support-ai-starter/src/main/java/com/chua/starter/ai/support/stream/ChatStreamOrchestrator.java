@@ -13,6 +13,7 @@ import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiRolePromptResolver;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
@@ -63,6 +64,7 @@ public class ChatStreamOrchestrator {
      */
     private final com.chua.starter.ai.support.service.SysAiSessionCompressionService sessionCompressionService;
     private final SysAiRoleMapper sysAiRoleMapper;
+    private final com.chua.starter.ai.support.service.SysAiRolePromptResolver sysAiRolePromptResolver;
     private final SysAiSessionMapper sysAiSessionMapper;
     private final WebSearchService webSearchService;
     private final ModelAliasService modelAliasService;
@@ -300,11 +302,17 @@ public class ChatStreamOrchestrator {
         request.setMessages(msgList);
         mergeSessionMcp(roleSettings, sessionMcpIds);
         request.setRoleSettings(roleSettings);
+        // 形态 key 透传（形态可自定义），只做合法性归一，不在这里枚举形态。
+        // 原来这里写死 "plan".equals(...) ? plan : build，会把任何自定义形态都悄悄
+        // 压成 build，解析器永远拿不到真实形态——形态自定义就无从生效。
         Object modeObj = body.get("mode");
-        if (modeObj != null) {
-            String runMode = String.valueOf(modeObj).trim().toLowerCase();
-            request.setMode("plan".equals(runMode) ? "plan" : "build");
-        }
+        final String formKey = SysAiRolePromptResolver.normalize(
+                modeObj == null ? null : String.valueOf(modeObj));
+        // request.mode 是 **agent 能力**开关（AiChatFacadeServiceImpl 据此决定是否注册
+        // 规划能力），与「提示词形态」是两件事：只有内置 plan 形态开启规划能力，
+        // 其余形态（含自定义的）都按构建处理。这是安全默认值——未知形态不会意外
+        // 拿到规划那套审批流。
+        request.setMode(FORM_KEY_PLAN.equals(formKey) ? AGENT_MODE_PLAN : AGENT_MODE_BUILD);
         request.setSessionId(sessionId);
         try {
             SysAiProviderModel modelInfo = sysAiProviderModelMapper.selectById(modelToUse);
@@ -325,17 +333,15 @@ public class ChatStreamOrchestrator {
         } catch (Exception e) {
             log.warn("[ChatStream] 读取模型参数失败 model={}: {}", modelToUse, e.getMessage());
         }
-        if (boundRole != null) {
-            if (boundRole.getSystemPrompt() != null && !boundRole.getSystemPrompt().isBlank()) {
-                request.setSystemPrompt(boundRole.getSystemPrompt());
-            } else {
-                applyDefaultSystemPrompt(request);
-            }
-            if (boundRole.getTemperature() != null) {
-                request.setTemperature(boundRole.getTemperature());
-            }
+        // 提示词：分形态表 → 历史单条列（仅 build）→ 全局默认
+        String rolePrompt = sysAiRolePromptResolver.resolve(boundRole, formKey);
+        if (rolePrompt != null && !rolePrompt.isBlank()) {
+            request.setSystemPrompt(rolePrompt);
         } else {
             applyDefaultSystemPrompt(request);
+        }
+        if (boundRole != null && boundRole.getTemperature() != null) {
+            request.setTemperature(boundRole.getTemperature());
         }
         final Map<?, ?> roleCapabilities = asMap(roleSettings.get("capabilities"));
         Object thinkObj = body.get("think");
@@ -727,9 +733,14 @@ public class ChatStreamOrchestrator {
         // 设为 plan 仅用于注册能力；drive 恢复轮(initialRun=false)不会重新 enterPlanMode，
         // 批准/拒绝后由 plan_exit 工具自身决定进入 BUILD 或留在 PLAN。
         request.setMode("plan");
-        if (boundRole != null && boundRole.getSystemPrompt() != null
-                && !boundRole.getSystemPrompt().isBlank()) {
-            request.setSystemPrompt(boundRole.getSystemPrompt());
+        // 提示词走 build 形态。注意：上面的 setMode("plan") 只是注册 Plan 能力，
+        // 不代表这一轮在「规划」——规划轮早已产出结果，本轮是批准后的执行续跑
+        // （见 727-728 注释：批准/拒绝由 plan_exit 自行决定进入 BUILD 或留在 PLAN）。
+        // 若此处按 plan 取提示词，批准后真正执行时会被套上规划阶段的约束。
+        String resumePrompt = sysAiRolePromptResolver.resolve(boundRole,
+                SysAiRolePromptResolver.MODE_BUILD);
+        if (resumePrompt != null && !resumePrompt.isBlank()) {
+            request.setSystemPrompt(resumePrompt);
         } else {
             applyDefaultSystemPrompt(request);
         }
@@ -1083,6 +1094,21 @@ public class ChatStreamOrchestrator {
      * 全局设置分组（与 ChatClientSettingsResolver.GROUP 保持一致）。
      */
     private static final String SETTINGS_GROUP_RUNTIME = "runtime";
+
+    /**
+     * 内置「规划」形态标识。只有这个形态会开启 agent 的规划能力。
+     */
+    private static final String FORM_KEY_PLAN = "plan";
+
+    /**
+     * agent 构建能力模式
+     */
+    private static final String AGENT_MODE_BUILD = "build";
+
+    /**
+     * agent 规划能力模式
+     */
+    private static final String AGENT_MODE_PLAN = "plan";
 
     /**
      * 全局默认系统提示词字段名（与 ChatClientSettingsResolver 读取的键一致）。

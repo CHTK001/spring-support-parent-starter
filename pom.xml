@@ -781,6 +781,15 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <!-- 采集平台模块（/v2/collect/**）。
+                 与上面同属跨 reactor 声明：artifact 由 spring-support-api-starter 构建产出，
+                 版本号与本 reactor 同步为 4.0.0.42，故可用 ${project.version}。
+                 引入方需先把该 artifact install 到本地仓库（它不在本 reactor 模块树内）。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-api-support-collect-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
             <dependency>

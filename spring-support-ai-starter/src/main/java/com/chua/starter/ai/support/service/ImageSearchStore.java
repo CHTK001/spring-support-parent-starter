@@ -84,16 +84,27 @@ public class ImageSearchStore {
     private final AtomicLong sequence = new AtomicLong();
 
     /**
+     * 底库元数据与向量的联动层（DB 权威）。
+     *
+     * <p>index.json 保留，但角色降级为<b>向量重建的来源</b>与运行时缓存；
+     * 档案的权威由 DB 承担。</p>
+     */
+    private final ImageLibraryLinkService library;
+
+    /**
      * 构造一个账号的底库实例。
      *
-     * @param account      账号标识（即 userId）
-     * @param dir          该账号的底库目录，已由调用方解析并确保位于 base 之下
+     * @param account       账号标识（即 userId）
+     * @param dir           该账号的底库目录，已由调用方解析并确保位于 base 之下
      * @param settingReader 全局设置读取器（特征模型 / 向量引擎等为全局配置）
+     * @param library       底库元数据与向量的联动层
      */
-    ImageSearchStore(String account, Path dir, GlobalSettingReader settingReader) {
+    ImageSearchStore(String account, Path dir, GlobalSettingReader settingReader,
+                     ImageLibraryLinkService library) {
         this.account = account;
         this.dir = dir;
         this.settingReader = settingReader;
+        this.library = library;
     }
 
     /**
@@ -210,10 +221,46 @@ public class ImageSearchStore {
                 sequence.set(maxId);
             }
             log.info("[ImageSearch] 底库快照加载完成: {} 条 ({})", images.size(), file.toAbsolutePath());
+            // 存量补建入库（DB 化之前入库的图片只有 index.json 里的一行记录）。
+            // 放在 catch 之外：加载失败按空库启动是本地文件的错，
+            // 不该连带跳过 DB 那一步的幂等补建。
         } catch (Exception ex) {
             log.warn("[ImageSearch] 底库加载失败，按空库启动: {} -> {}", file.toAbsolutePath(), ex.getMessage());
         }
         loadIdWatermark();
+        backfillToDb();
+    }
+
+    /**
+     * 把快照里存在、DB 里没有的图片补建入库（DB 化前的存量迁移）。
+     *
+     * <p>幂等且<b>不覆盖已有行</b>：DB 里可能有用户在界面上改过的展示名或标签，
+     * 拿 index.json 的旧副本盖回去等于把用户刚改的资料抹掉。</p>
+     */
+    private void backfillToDb() {
+        List<StoredImage> all;
+        synchronized (images) {
+            if (images.isEmpty()) {
+                return;
+            }
+            all = new ArrayList<>(images.values());
+        }
+        java.util.Set<String> existing = library.listExistingVectorIds(account);
+        int created = 0;
+        for (StoredImage item : all) {
+            String vid = vectorId(item.getId());
+            if (existing.contains(vid)) {
+                continue;
+            }
+            if (library.insert(account, vid, item.getName(), item.getThumb(), item.getImageFile(),
+                    joinTags(item.getTags()), item.getWidth(), item.getHeight(), metaOf(item))) {
+                created++;
+            }
+        }
+        if (created > 0) {
+            log.info("[ImageSearch] 账号 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
+                    account, created, all.size());
+        }
     }
 
     /**
@@ -474,7 +521,7 @@ public class ImageSearchStore {
                 // 时这条通知会丢失，于是已删记录的 id 永久残留在侧录里。直接往这种
                 // 存储里灌快照会与残留 id 撞键，add 返回 false，而旧的代码无视返回值
                 // 仍然累加计数，日志谎报「已灌入 N 条」，把故障伪装成正常。
-                // index.json 才是唯一权威源，向量索引完全可由它重建，因此先清空。
+                // index.json 存着向量本身（DB 不存特征），索引完全可由它重建，因此先清空。
                 created.clear();
                 int restored = 0;
                 int skipped = 0;
@@ -571,8 +618,83 @@ public class ImageSearchStore {
         synchronized (images) {
             images.put(id, item);
         }
-        persist();
+        try {
+            persist();
+        } catch (RuntimeException ex) {
+            // 快照没落盘 = 这次上传等于没发生。三处一起撤：内存条目、原图文件、向量。
+            // 只撤内存的话，向量会留在索引里继续被 search 命中，
+            // 而列表里查不到这张图 —— 用户会以为「以图搜图搜到了幽灵」。
+            synchronized (images) {
+                images.remove(id);
+            }
+            deleteOriginal(item);
+            try {
+                store.remove(vectorId(id));
+            } catch (Exception ignored) {
+                // 回滚失败只能记录：主异常更有价值
+                log.warn("[ImageSearch] 上传回滚时删除向量失败（可能残留幽灵向量）: id={}", id);
+            }
+            throw ex;
+        }
+        // DB 权威：元数据入库。原图只存**相对文件名** —— 底库目录随 face.store.dir
+        // 配置变化，存绝对路径等于把一次配置变更变成一次全量数据损坏。
+        // 特征模型名 / 原图字节数进 meta 列，够排查「为什么认不出」即可。
+        if (!library.insert(account, vectorId(id), item.getName(), item.getThumb(),
+                item.getImageFile(), joinTags(item.getTags()), item.getWidth(), item.getHeight(),
+                metaOf(item))) {
+            // DB 是权威，写不进去就等于这次上传没成立：内存、原图、向量一并撤销，
+            // 否则三处就此分叉，界面与库里的量对不上。
+            synchronized (images) {
+                images.remove(id);
+            }
+            deleteOriginal(item);
+            try {
+                store.remove(vectorId(id));
+            } catch (Exception ignored) {
+                log.warn("[ImageSearch] DB 写失败回滚时删除向量失败（可能残留幽灵向量）: id={}", id);
+            }
+            try {
+                persist();
+            } catch (RuntimeException ex) {
+                log.error("[ImageSearch] 回滚快照失败，id={} 可能仍出现在列表里: {}", id, ex.getMessage());
+            }
+            return null;
+        }
         return item;
+    }
+
+    /**
+     * 标签列表拼成逗号分隔串（tags 列）。
+     *
+     * @param tags 标签；可为空
+     * @return 逗号串；无标签返回 {@code null}
+     */
+    private static String joinTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return null;
+        }
+        return String.join(",", tags);
+    }
+
+    /**
+     * 记录里进 meta 列的其余信息。
+     *
+     * @param item 记录
+     * @return meta 键值
+     */
+    private static Map<String, Object> metaOf(StoredImage item) {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        if (item.getFeatureModel() != null) {
+            // 换特征模型后旧向量必然认不出，没有这个字段就只能靠猜
+            meta.put("featureModel", item.getFeatureModel());
+        }
+        if (item.getSizeBytes() != null) {
+            meta.put("sizeBytes", item.getSizeBytes());
+        }
+        if (item.getCreatedAt() > 0) {
+            meta.put("createdAt", item.getCreatedAt());
+        }
+        return meta;
     }
 
     /**
@@ -785,17 +907,40 @@ public class ImageSearchStore {
      * @return true 表示确实删掉了一条
      */
     public boolean remove(long id) {
-        boolean removed;
         StoredImage removedItem;
         synchronized (images) {
             removedItem = images.remove(id);
-            removed = removedItem != null;
         }
-        if (!removed) {
+        if (removedItem == null) {
+            return false;
+        }
+        try {
+            // 先落盘：快照删成功才轮到删原图与向量。反过来的话，
+            // 写盘失败会留下「快照里没有、原图和向量还在」的半截状态，
+            // 而向量还在 = 幽灵条目会继续被 search 命中。
+            persist();
+        } catch (RuntimeException ex) {
+            synchronized (images) {
+                images.put(id, removedItem);
+            }
+            throw ex;
+        }
+        // DB 行：DB 化之前入库的图片没有 DB 行，那也算删除成功。
+        // 真的 DB 出错则把快照还原 —— 否则列表已看不到这张图，DB 里那行还在，
+        // 日后按 DB 统计又把它算回来。
+        if (!library.deleteMeta(account, vectorId(id))) {
+            synchronized (images) {
+                images.put(id, removedItem);
+            }
+            try {
+                persist();
+            } catch (RuntimeException ex) {
+                log.error("[ImageSearch] 删除失败后回滚快照也失败，id={} 可能已从列表消失: {}",
+                        id, ex.getMessage());
+            }
             return false;
         }
         // 原图一并删掉，否则 images/ 会随删除次数无限堆积。
-        // 必须在上面把记录移出 images 之前拿到引用 —— 移出后就查不到文件名了。
         deleteOriginal(removedItem);
         // 向量必须一并删掉，否则索引里留下没有记录指向的孤立向量。
         // 早期实现只在 storage != null 时才删，于是「进程刚启动、还没做过任何增删查」
@@ -821,10 +966,9 @@ public class ImageSearchStore {
                     log.debug("[ImageSearch] 向量索引中无此条目（可安全忽略）: id={}", id);
                 }
             } catch (Exception ex) {
-                log.warn("[ImageSearch] 向量存储删除失败（快照仍会移除）: id={} -> {}", id, ex.getMessage());
+                log.warn("[ImageSearch] 向量存储删除失败: id={} -> {}", id, ex.getMessage());
             }
         }
-        persist();
         return true;
     }
 
@@ -964,6 +1108,13 @@ public class ImageSearchStore {
      * 把元数据与向量写盘：先写临时文件，再原子替换快照。
      *
      * <p>该快照是向量索引的重建来源（启动时按它灌入向量存储），因此必须包含原始向量。</p>
+     *
+     * <p><b>失败必须抛出，不能只告警。</b>此前这里是 {@code catch + log.warn}，
+     * {@code add/remove} 在写盘失败时照样返回成功：用户看到「上传成功」，
+     * 快照里却没有这条，重启后图片消失而向量还在；删除同理，重启后条目复活。
+     * 写盘失败属于「操作没有真正生效」，必须让调用方感知并回滚。</p>
+     *
+     * @throws IllegalStateException 写盘失败
      */
     private void persist() {
         Path file = storeFile();
@@ -978,7 +1129,8 @@ public class ImageSearchStore {
             Files.write(tmp, raw);
             Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception ex) {
-            log.warn("[ImageSearch] 底库写盘失败（内存库仍可用）: {} -> {}", file, ex.getMessage());
+            log.error("[ImageSearch] 底库写盘失败: {} -> {}", file, ex.getMessage(), ex);
+            throw new IllegalStateException("图像底库写盘失败: " + file, ex);
         }
     }
 

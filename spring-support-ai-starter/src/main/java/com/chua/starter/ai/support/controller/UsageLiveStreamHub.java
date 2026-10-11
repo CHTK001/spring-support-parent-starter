@@ -2,9 +2,9 @@ package com.chua.starter.ai.support.controller;
 
 import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
 import com.chua.starter.ai.support.service.SysAiUsageService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class UsageLiveStreamHub {
 
     /**
@@ -60,8 +59,28 @@ public class UsageLiveStreamHub {
 
     /**
      * 用量服务：重算快照用。
+     *
+     * <p><b>必须是 {@code @Lazy} 的。</b>{@code SysAiUsageServiceImpl.record()} 在事务
+     * 提交后会回调本类的 {@link #markDirty()}，而本类又要反过来注入该 service 去算快照 ——
+     * 两者构造期互等，Spring 直接抛
+     * {@code Requested bean is currently in creation: Is there an unresolvable circular reference}，
+     * <b>整个应用起不来</b>。编译与单测都发现不了，只有启动时才炸。</p>
+     *
+     * <p>{@code @Lazy} 是安全的：{@link #snapshot(Subscriber)} 只在订阅与推送时调用，
+     * 那时容器早已就绪，拿到的是代理，首次调用才解析真实 bean。</p>
      */
     private final SysAiUsageService usageService;
+
+    /**
+     * 构造器（不用 Lombok：字段上的 {@code @Lazy} 不会被 {@code @RequiredArgsConstructor}
+     * 复制到构造参数上，项目里也没有 {@code lombok.config} 配 {@code copyableAnnotations}，
+     * 那样写出来的注解是沉默失效的 —— 编译通过、运行期照旧循环依赖）。
+     *
+     * @param usageService 用量服务（延迟解析，见字段说明）
+     */
+    public UsageLiveStreamHub(@Lazy SysAiUsageService usageService) {
+        this.usageService = usageService;
+    }
 
     /**
      * 已连接的订阅者。
