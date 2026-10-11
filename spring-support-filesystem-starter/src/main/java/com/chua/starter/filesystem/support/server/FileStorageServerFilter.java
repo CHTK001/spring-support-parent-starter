@@ -27,8 +27,6 @@ import com.chua.common.support.storage.result.ListObjectResult;
 import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.filestorage.support.preview.ClientPreviewSupport;
-import com.chua.filestorage.support.preview.FileStoragePreviewProvider;
-import com.chua.filestorage.support.preview.PreviewResult;
 import com.chua.filestorage.support.preview.provider.ArchivePreviewProvider;
 import com.chua.common.support.file.converter.ImageOperation;
 import com.chua.common.support.spi.ServiceProvider;
@@ -226,14 +224,20 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private volatile java.util.function.Consumer<FileStorageSetting> configListener;
 
     /**
-     * SPI 预览提供者缓存（懒加载，类路径 存在 utils-support-filestorage-starter 时可用）
+     * 统一预览入口壳缓存（classpath static/preview/index.html，懒加载）。
+     *
+     * <p>预览 HTML 不再由后端拼装：所有原本输出服务端预览页（Markdown / SPI /
+     * JSONHero）的位置统一返回这份前端入口，由 file-viewer（274 格式）在
+     * 浏览器内完成渲染。入口通过注入的 {@code window.__FILE_PREVIEW_BOOT__}
+     * 引导参数取得短时效预览令牌直链，自行拉取原始字节。</p>
      */
-    private volatile List<FileStoragePreviewProvider> previewProviderCache;
+    private volatile String previewShellCache;
 
     /**
-     * 并发去重：键 → 正在进行的 SPI 预览 期货，避免同一文件重复转换
+     * 预览令牌有效期上限（毫秒）：入口壳注入的字节直链是「短时效预览令牌」，
+     * 即便一次性链接全局 TTL 配得很长，预览令牌也不超过这个窗口。
      */
-    private final ConcurrentHashMap<String, CompletableFuture<byte[]>> inflightMap = new ConcurrentHashMap<>();
+    private static final long PREVIEW_TOKEN_TTL_MILLIS = 5 * 60 * 1000L;
 
     /**
      * 一次性访问链接：令牌 → 条目（阅后即焚）
@@ -567,7 +571,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 // 放在 key 判定之前——调用方无需真实对象键，形如 GET /{bucket}/?url=...&preview=true
                 String thirdUrl = params == null ? null : params.get("url");
                 if (method == HttpMethod.GET && thirdUrl != null && !thirdUrl.isEmpty()) {
-                    return handleThirdUrlPreview(request, response, thirdUrl);
+                    return handleThirdUrlPreview(request, response, bucket, thirdUrl);
                 }
                 if (key.isEmpty()) {
                     if (method == HttpMethod.HEAD) {
@@ -724,16 +728,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         sb.append("</table>");
 
-        // 3. SPI 预览提供者
-        sb.append("<h2>\u9884\u89C8\u63D0\u4F9B\u8005 (FileStoragePreviewProvider)</h2><table>");
-        List<FileStoragePreviewProvider> providers = previewProviders();
-        if (providers.isEmpty()) {
-            appendConfigRow(sb, "无", "classpath 未包含 utils-support-filestorage-starter");
-        } else {
-            for (FileStoragePreviewProvider p : providers) {
-                appendConfigRow(sb, p.getClass().getSimpleName(), p.getClass().getName());
-            }
-        }
+        // 3. 预览通道说明（原 SPI HTML 提供者已下线：预览页统一由前端入口接管）
+        sb.append("<h2>\u9884\u89C8\u901A\u9053</h2><table>");
+        appendConfigRow(sb, "预览页", "前端统一入口（static/preview/index.html，file-viewer 274 格式）");
+        appendConfigRow(sb, "字节直链", "/ot/{token}?preview=true&raw=true（短时效预览令牌，强制 inline）");
         sb.append("</table>");
 
         // 4. 运行时环境
@@ -1608,136 +1606,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 判断是否为 Markdown 文档（.md / .markdown）。
-     *
-     * @param fileName 文件名
-     * @return true 表示按 Markdown 预览处理
-     */
-    private static boolean isMarkdownFile(String fileName) {
-        if (fileName == null) {
-            return false;
-        }
-        String lower = fileName.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".md") || lower.endsWith(".markdown");
-    }
-
-    /**
-     * 是否通过开关关闭 X-Markdown 渲染（关闭后 md 退回普通文本预览）。
-     *
-     * <p>开关优先级：系统属性 {@code filesystem.markdown.x-markdown} &gt;
-     * 环境变量 {@code FILESYSTEM_MARKDOWN_XMARKDOWN}；取值为 {@code false} 或 {@code 0} 视为关闭。</p>
-     *
-     * @return true 表示已关闭
-     */
-    private boolean isMarkdownRendererDisabled() {
-        String v = System.getProperty("filesystem.markdown.x-markdown");
-        if (v == null) {
-            v = System.getenv("FILESYSTEM_MARKDOWN_XMARKDOWN");
-        }
-        return "false".equalsIgnoreCase(v) || "0".equals(v);
-    }
-
-    /**
-     * 生成 Markdown 预览页（React + X-Markdown 同源渲染）。
-     *
-     * <p>正文以 Base64 内联后再用 {@code TextDecoder} 还原：直接拼进 JS 字符串时，
-     * 正文里的 {@code </script>} 会把 inline script 截断（实测白屏）。</p>
-     *
-     * <p>渲染器任一资源失败时降级为纯文本并说明原因，不显示空白。</p>
-     *
-     * @param fileName 文件名（用于标题）
-     * @param data     原始字节
-     * @return 预览页 HTML 字节
-     */
-    private byte[] buildMarkdownPreviewPage(String fileName, byte[] data) {
-        String md = decodeText(data);
-        String b64 = Base64.getEncoder().encodeToString(md.getBytes(StandardCharsets.UTF_8));
-        String title = escapeHtml(fileName);
-        StringBuilder h = new StringBuilder(md.length() + 4096);
-        h.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
-                .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
-                .append("<title>")
-                .append(title)
-                .append("</title>")
-                .append("<link rel=\"stylesheet\" href=\"/preview-vendor/xmarkdown/x-markdown.min.css\">")
-                .append("<style>")
-                .append(":root{--bg:#fff;--fg:#303133;--muted:#909399;--bd:#ebeef5;--code-bg:#f6f8fa;--link:#409eff}")
-                .append("@media (prefers-color-scheme:dark){:root{--bg:#1e1e1e;--fg:#e5eaf3;--muted:#8d9095;--bd:#3a3a3a;--code-bg:#2b2b2b;--link:#79bbff}}")
-                .append("html,body{margin:0;height:100%}")
-                .append("body{background:var(--bg);color:var(--fg);")
-                .append("font-family:system-ui,-apple-system,'Segoe UI','Microsoft YaHei',sans-serif}")
-                .append("#root{padding:20px 26px;box-sizing:border-box}")
-                .append("img{max-width:100%;height:auto}")
-                .append("a{color:var(--link)}")
-                .append("pre{background:var(--code-bg);border:1px solid var(--bd);border-radius:8px;")
-                .append("padding:12px 14px;overflow:auto}")
-                .append("code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px}")
-                .append("table{border-collapse:collapse;display:block;overflow:auto}")
-                .append("th,td{border:1px solid var(--bd);padding:6px 12px}")
-                .append("blockquote{margin:0;padding-left:12px;border-left:3px solid var(--bd);color:var(--muted)}")
-                .append("#fb{display:none;padding:16px 20px}")
-                .append("#fb .tip{color:#e6a23c;font-size:13px;margin:0 0 10px}")
-                .append("#fb pre{white-space:pre-wrap;word-break:break-word}")
-                .append("</style></head><body>")
-                .append("<div id=\"root\"></div>")
-                .append("<div id=\"fb\"><p class=\"tip\" id=\"fbtip\"></p><pre id=\"fbsrc\"></pre></div>")
-                .append("<script src=\"/preview-vendor/xmarkdown/react.production.min.js\"></script>")
-                .append("<script src=\"/preview-vendor/xmarkdown/react-dom.production.min.js\"></script>")
-                .append("<script src=\"/preview-vendor/xmarkdown/x-markdown.min.js\"></script>")
-                .append("<script>(function(){")
-                .append("var b64=\"")
-                .append(b64)
-                .append("\";")
-                .append("var md;")
-                .append("try{")
-                .append("var bin=atob(b64),arr=new Uint8Array(bin.length);")
-                .append("for(var i=0;i<bin.length;i++){arr[i]=bin.charCodeAt(i);}")
-                .append("md=new TextDecoder('utf-8').decode(arr);")
-                .append("}catch(e){md=atob(b64);}")
-                .append("function fail(msg){")
-                .append("var fb=document.getElementById('fb');")
-                .append("document.getElementById('root').style.display='none';")
-                .append("fb.style.display='block';")
-                .append("document.getElementById('fbtip').textContent=")
-                .append("'Markdown 渲染器不可用，已回退为纯文本：'+msg;")
-                .append("document.getElementById('fbsrc').textContent=md;")
-                .append("}")
-                .append("try{")
-                .append("if(!window.React||!window.ReactDOM){throw new Error('React 未加载');}")
-                .append("if(!window.XMarkdown){throw new Error('X-Markdown 未加载');}")
-                .append("var X=window.XMarkdown.XMarkdown||window.XMarkdown.default||window.XMarkdown;")
-                .append("if(!X||(typeof X!=='function'&&!X.$$typeof)){")
-                .append("throw new Error('X-Markdown 导出异常: '+typeof X);}")
-                .append("ReactDOM.createRoot(document.getElementById('root'))")
-                .append(".render(React.createElement(X,{content:md}));")
-                .append("}catch(e){fail(e&&e.message?e.message:String(e));}")
-                .append("})();</script>")
-                .append("</body></html>");
-        return h.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    /**
-     * 按 UTF-8 解码文本，兼容 BOM 与 GBK 回退。
-     *
-     * @param data 原始字节
-     * @return 解码后的文本；空数据返回空串
-     */
-    private static String decodeText(byte[] data) {
-        if (data == null || data.length == 0) {
-            return "";
-        }
-        int off = data.length >= 3 && (data[0] & 0xFF) == 239 && (data[1] & 0xFF) == 187 && (data[2] & 0xFF) == 191 ? 3 : 0;
-        try {
-            return new String(data, off, data.length - off, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            try {
-                return new String(data, off, data.length - off, "GBK");
-            } catch (Exception ignored) {
-                return new String(data, off, data.length - off, StandardCharsets.ISO_8859_1);
-            }
-        }
-    }
-
+     * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
     /**
      * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
      *
@@ -3730,28 +3599,49 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return error(response, 500, "Read Object Failed");
         }
 
-        return serveObjectContent(request, response, data, key);
+        // raw=true（预览域字节直吐）只允许经由一次性/限时令牌（/ot/{token}）发起：
+        // 入口壳注入给前端的字节直链就是这种短时效令牌，直连对象 URL 不放行 raw，
+        // 避免「预览临时下载链路」变成任何人可用的常驻字节通道。
+        boolean tokenConsumed = request.getPath() != null && request.getPath().startsWith("/ot/");
+        return serveObjectContent(request, response, data, key, bucket, tokenConsumed ? "token" : null);
     }
 
     /**
-     * 输出对象内容：按访问开关与 {@code ?preview/?download/?format=} 参数分发预览/下载。
+     * 输出对象内容：按访问开关与 {@code ?preview/?download/?raw/?format=} 参数分发预览/下载。
      *
      * <p>从 {@link #handleGet} 抽出的尾段——本地对象与三方 URL 预览
      * （{@link #handleThirdUrlPreview}）必须走**同一套**分发：转换通道
      * （format=pdf/docx/xlsx）、压缩包/CAD 结构查询、图片处理、客户端直渲染
-     * 回吐、Markdown/SPI/JSON Hero 页面、Range、内联兜底与 unsupported 提示页。</p>
+     * 回吐、raw 字节直链、统一入口壳、Range、内联兜底与 unsupported 提示页。</p>
      *
-     * @param request  请求
-     * @param response 响应
-     * @param data     对象内容字节
-     * @param key      对象键（仅用于取文件名）
+     * <p>预览 HTML 不再由后端拼装（原 Markdown / SPI / JSONHero 通道已删除）：
+     * 浏览器不能内联、前端组件也没接管的格式，统一返回前端预览入口壳
+     * （classpath {@code static/preview/index.html}），由 file-viewer 在浏览器内
+     * 渲染 274 种格式。壳内通过注入的短时效预览令牌直链（{@code /ot/{token}?raw=true}）
+     * 拉取原始字节——即便 {@code openDownload} 关闭也能完成预览，且不会产生
+     * 常驻的字节下载通道。</p>
+     *
+     * @param request    请求
+     * @param response   响应
+     * @param data       对象内容字节
+     * @param key        对象键（仅用于取文件名）
+     * @param bucket     存储桶名（入口壳签发预览令牌用）
+     * @param rawChannel raw 字节直吐的放行来源：null=不允许；
+     *                   "token"=经 {@code /ot/{token}} 消费；
+     *                   "third"=三方 URL 预览会话
      * @return 异步阶段
      */
-    private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data, String key) {
+    private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data,
+                                                     String key, String bucket, String rawChannel) {
         // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
         // 参数支持标志式写法（?preview 等价 ?preview=true）
         boolean wantPreview = boolParam(request, "preview");
         boolean wantDownload = boolParam(request, "download");
+        // raw=true：预览域的原始字节直吐（inline）。入口壳内嵌态经短时效令牌
+        // 拉字节渲染用；不属于附件下载语义，因此不要求 openDownload 开启。
+        // rawChannel：null=不允许 raw；"token"=经 /ot/{token} 消费；
+        // "third"=三方 URL 预览会话（内容不在本存储，字节直链按会话重放）。
+        boolean wantRaw = boolParam(request, "raw") && rawChannel != null;
         boolean download;
         if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
             // 严格模式：预览与下载均关闭 → 拒绝所有请求
@@ -3766,8 +3656,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (wantDownload && !setting.isOpenDownload()) {
             return error(response, 403, "Access Denied: download disabled");
         }
-        if (wantPreview) {
-            // 显式 ?preview=true 且 openPreview 已启用 → 内联预览
+        if (wantPreview || wantRaw) {
+            // 显式 ?preview=true / ?raw=true 且 openPreview 已启用 → 内联
             download = false;
         } else if (wantDownload) {
             // 显式 ?download=true → 附件下载
@@ -3870,17 +3760,62 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 response.setHeader(HEADER_IMAGE_OP, "skipped")
                         .setHeader(HEADER_IMAGE_OP_REASON, imageProcessed.reason());
             }
-            // 压缩包下钻：?preview&inner=包内路径 时提取条目并按条目类型预览
+            // 压缩包下钻：?preview&inner=包内路径 时提取条目。
+            // raw 会话直吐条目原始字节（入口壳内嵌态渲染条目用）；其余统一交
+            // 入口壳接管（壳内经 bytesUrl 携带 inner 再次取条目字节做客户端渲染）。
             String innerPath = request.getParams().get("inner");
             if (innerPath != null && !innerPath.isEmpty()) {
-                CompletionStage<Void> innerStage = writeInnerEntryPreview(data, fileName, innerPath, response);
-                if (innerStage != null) {
-                    return innerStage;
+                byte[] entryBytes = extractArchiveEntry(data, fileName, innerPath);
+                if (entryBytes == null) {
+                    String html = buildInnerMessagePage("压缩包内条目不存在或不支持预览：" + innerPath);
+                    response.setStatus(404)
+                            .setHeader("X-FileStorage-Preview", "inner-miss")
+                            .setContentType("text/html;charset=UTF-8")
+                            .setBody(html.getBytes(StandardCharsets.UTF_8))
+                            .end();
+                    return CompletableFuture.completedFuture(null);
                 }
+                String entryName = innerPath.substring(innerPath.lastIndexOf('/') + 1);
+                if (wantRaw) {
+                    response.setStatus(200)
+                            .setHeader(ClientPreviewSupport.HEADER_PREVIEW, ClientPreviewSupport.CHANNEL_SERVER)
+                            .setHeader("X-FileStorage-Preview", "inner-raw")
+                            .setHeader("Cache-Control", "no-store")
+                            .setHeader("Content-Disposition", buildDisposition(false, entryName))
+                            .setContentType(resolveContentType(entryName))
+                            .setBody(entryBytes)
+                            .end();
+                    return CompletableFuture.completedFuture(null);
+                }
+                CompletionStage<Void> entryShell = servePreviewShell(
+                        buildShellBytesUrl(rawChannel, bucket, key, innerPath, request),
+                        entryName, entryBytes.length, innerPath, bucket, key, response);
+                if (entryShell != null) {
+                    return entryShell;
+                }
+                // 壳缺失兜底：条目按内容类型内联（保留给未部署前端入口的部署形态）
+                response.setStatus(200)
+                        .setHeader("X-FileStorage-Preview", "inner-raw")
+                        .setHeader("Content-Disposition", buildDisposition(false, entryName))
+                        .setContentType(resolveContentType(entryName))
+                        .setBody(entryBytes)
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
+            // raw 字节直吐（预览域）：短时效令牌会话取原始字节，供统一入口壳
+            // 在浏览器内渲染。任何格式都直吐本体，不做任何服务端转换。
+            if (wantRaw) {
+                response.setStatus(200)
+                        .setHeader(ClientPreviewSupport.HEADER_PREVIEW, ClientPreviewSupport.CHANNEL_SERVER)
+                        .setHeader("X-FileStorage-Preview", "raw")
+                        .setHeader("Cache-Control", "no-store")
+                        .setContentType(resolveContentType(fileName))
+                        .setBody(data)
+                        .end();
+                return CompletableFuture.completedFuture(null);
             }
             // 客户端直渲染：docx / xlsx / xls / pdf / pptx 直接回吐原始字节，
             // 由前端组件在浏览器内解析，避免服务端 LibreOffice / Aspose 转换开销。
-            // 必须早于 trySpiPreview，否则 Univer / 旧版 Office 提供者会抢先在服务端渲染
             String clientRenderer = resolveClientRenderer(request, fileName, data);
             if (clientRenderer != null) {
                 response.setStatus(200)
@@ -3891,45 +3826,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
-            // Markdown：用 Ant Design X 的 X-Markdown 出独立预览页（同源 vendor，不依赖 CDN）
-            if (isMarkdownFile(fileName) && !isMarkdownRendererDisabled()) {
-                response.setStatus(200)
-                        .setHeader("X-FileStorage-Preview", "xmarkdown")
-                        .setContentType("text/html;charset=UTF-8")
-                        .setBody(buildMarkdownPreviewPage(fileName, data))
-                        .end();
-                return CompletableFuture.completedFuture(null);
+            // 统一入口壳接管：后端不再拼装任何预览 HTML（原 Markdown / SPI /
+            // JSONHero 通道已删除）。壳内嵌态经注入的短时效令牌拉原始字节，
+            // 由 file-viewer（274 格式）在浏览器内完成渲染——即便 openDownload
+            // 关闭也能预览，且不会产生常驻的字节下载通道。
+            CompletionStage<Void> shellStage = servePreviewShell(
+                    buildShellBytesUrl(rawChannel, bucket, key, null, request),
+                    fileName, data.length, null, bucket, key, response);
+            if (shellStage != null) {
+                return shellStage;
             }
-            // 服务端渲染：SPI 提供者（Univer / 打开文档 / Visio 等）
-            byte[] previewPage = trySpiPreview(data, fileName);
-            if (previewPage != null) {
-                response.setStatus(200)
-                        .setHeader("X-FileStorage-Preview", "spi")
-                        .setContentType("text/html;charset=UTF-8")
-                        .setBody(previewPage)
-                        .end();
-                return CompletableFuture.completedFuture(null);
-            }
-            // JSON Hero 内联预览：.json 文件通过 iframe 嵌入 jsonhero.io 渲染
-            if (fileName.toLowerCase().endsWith(".json")) {
-                String json = new String(data, StandardCharsets.UTF_8);
-                String encoded = java.util.Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-                String heroUrl = "https://jsonhero.io/new?j=" + encoded;
-                String html = "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
-                        + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                        + "<title>JSON Hero - " + escapeJson(fileName) + "</title>"
-                        + "<style>html,body{margin:0;padding:0;height:100%;overflow:hidden}"
-                        + "iframe{width:100%;height:100%;border:none}</style>"
-                        + "</head><body>"
-                        + "<iframe src=\"" + escapeAttr(heroUrl) + "\" allowfullscreen></iframe>"
-                        + "</body></html>";
-                response.setStatus(200)
-                        .setHeader("X-FileStorage-Preview", "jsonhero")
-                        .setContentType("text/html;charset=UTF-8")
-                        .setBody(html.getBytes(StandardCharsets.UTF_8))
-                        .end();
-                return CompletableFuture.completedFuture(null);
-            }
+            // 壳缺失（前端入口未部署）：落回下方 inline / unsupported 兜底，保证不白屏
         }
 
  // 范围 分段下载
@@ -3960,6 +3867,210 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .setBody(data)
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+    /* ==================== 统一预览入口壳（前端 file-viewer 接管） ==================== */
+
+    /**
+     * 组装入口壳引导参数里的字节直链（{@code bytesUrl}）。
+     *
+     * <p>两条来源：</p>
+     * <ul>
+     *   <li>{@code rawChannel="token"} —— 现场签发一枚<b>短时效预览令牌</b>
+     *       （expiry 模式可多次读，TTL 取一次性链接配置与 5 分钟的较小值），
+     *       直链形如 {@code /ot/{token}?preview=true&raw=true}。即便
+     *       {@code openDownload} 关闭，预览也能拿到原始字节，且令牌过期后
+     *       直链即失效，不会留下常驻下载通道；</li>
+     *   <li>{@code rawChannel="third"} —— 三方 URL 预览会话：内容不在本存储，
+     *       无法令牌化，直链按当前会话原样重放（服务端重新拉取远端）。</li>
+     * </ul>
+     *
+     * @param rawChannel raw 放行来源（null / "token" / "third"）
+     * @param bucket     存储桶名
+     * @param key        对象键
+     * @param innerPath  压缩包内条目路径（无则 null）
+     * @param request    请求
+     * @return 字节直链（相对路径，与入口壳同源）
+     */
+    private String buildShellBytesUrl(String rawChannel, String bucket, String key,
+                                      String innerPath, ServerRequest request) {
+        String suffix = innerPath == null ? "" : "&inner=" + urlEncodeUtf8(innerPath);
+        if ("third".equals(rawChannel)) {
+            // 三方会话重放：当前路径 + 预览/raw 参数（去掉本次请求里的 render 等，
+            // 只保留预览语义，保证拿到的是字节而非壳）
+            return request.getPath() + "?preview=true&raw=true" + suffix;
+        }
+        return "/ot/" + mintPreviewToken(bucket, key) + "?preview=true&raw=true" + suffix;
+    }
+
+    /**
+     * 签发一枚短时效预览令牌（expiry 模式，可多次读）。
+     *
+     * <p>TTL 取「一次性链接全局配置」与 {@link #PREVIEW_TOKEN_TTL_MILLIS}（5 分钟）
+     * 的较小值：预览令牌的生命窗口必须短于分享语义的一次性链接，防止入口壳
+     * 里的字节直链被长期转发。</p>
+     *
+     * @param bucket 存储桶名
+     * @param key    对象键
+     * @return 令牌字符串
+     */
+    private String mintPreviewToken(String bucket, String key) {
+        String token = generateOneTimeToken();
+        long ttl = Math.min(oneTimeTtlMillis(), PREVIEW_TOKEN_TTL_MILLIS);
+        oneTimeMap.put(token, new OneTimeEntry(bucket, key, System.currentTimeMillis(), ttl, false));
+        maybeCleanOneTime();
+        return token;
+    }
+
+    /**
+     * 输出统一预览入口壳（前端 file-viewer 接管全部预览渲染）。
+     *
+     * <p>壳为 classpath {@code static/preview/index.html}（pages/filesystem
+     * 前端独立入口 preview.html 的构建产物）。响应时在 {@code </head>} 前注入
+     * 引导脚本：</p>
+     * <pre>{@code
+     * window.__FILE_PREVIEW_BOOT__ = {
+     *   bytesUrl: "/ot/{token}?preview=true&raw=true[&inner=...]",
+     *   fileName: "report.docx",
+     *   size: 10240,
+     *   inner: "包内路径或空",
+     *   bucket: "local",
+     *   key: "docs/report.docx"
+     * };
+     * }</pre>
+     *
+     * <p>入口检测到 {@code __FILE_PREVIEW_BOOT__} 即进入「内嵌态」：直接取
+     * {@code bytesUrl} 拉原始字节并用 file-viewer 渲染，**不再解析地址栏参数、
+     * 不再 iframe 嵌套**——这同时打破了「壳里再嵌壳」的循环。</p>
+     *
+     * @param bytesUrl  字节直链（{@link #buildShellBytesUrl} 组装）
+     * @param fileName  文件名（渲染器按扩展名选择）
+     * @param size      文件大小（字节，仅展示用）
+     * @param innerPath 压缩包内条目路径（无则 null）
+     * @param bucket    存储桶名（专用面板经票据取数用）
+     * @param key       对象键（同上；三方 URL 预览场景为文件名，票据不可用时入口自行降级）
+     * @param response  响应
+     * @return 已提交响应返回阶段；壳缺失返回 {@code null}（调用方落回旧兜底）
+     */
+    private CompletionStage<Void> servePreviewShell(String bytesUrl, String fileName, long size,
+                                                    String innerPath, String bucket, String key,
+                                                    ServerResponse response) {
+        String shell = readPreviewShell();
+        if (shell == null) {
+            return null;
+        }
+        String boot = "<script>window.__FILE_PREVIEW_BOOT__={"
+                + "bytesUrl:" + jsonString(bytesUrl) + ","
+                + "fileName:" + jsonString(fileName) + ","
+                + "size:" + size + ","
+                + "inner:" + jsonString(innerPath == null ? "" : innerPath) + ","
+                + "bucket:" + jsonString(bucket == null ? "" : bucket) + ","
+                + "key:" + jsonString(key == null ? "" : key)
+                + "};</script>";
+        String html = injectBootScript(shell, boot);
+        response.setStatus(200)
+                .setHeader(ClientPreviewSupport.HEADER_PREVIEW, ClientPreviewSupport.CHANNEL_SERVER)
+                .setHeader("X-FileStorage-Preview", "shell")
+                .setHeader("Cache-Control", "no-store")
+                .setContentType("text/html;charset=UTF-8")
+                .setBody(html.getBytes(StandardCharsets.UTF_8))
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 读取统一预览入口壳（classpath static/preview/index.html），带懒缓存。
+     *
+     * @return 壳 HTML；未部署（前端入口未构建/未拷贝）返回 {@code null}
+     */
+    private String readPreviewShell() {
+        String cached = previewShellCache;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (previewShellCache == null) {
+                try (InputStream in = FileStorageServerFilter.class.getResourceAsStream("/static/preview/index.html")) {
+                    if (in == null) {
+                        return null;
+                    }
+                    previewShellCache = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+            return previewShellCache;
+        }
+    }
+
+    /**
+     * 把引导脚本注入壳 HTML：优先插到 {@code </head>} 前，其次 {@code <body>} 后，
+     * 都找不到（极简壳）时整体前置——引导脚本必须先于入口 bundle 执行。
+     *
+     * @param shell 壳 HTML
+     * @param boot  引导 {@code <script>} 片段
+     * @return 注入后的 HTML
+     */
+    private static String injectBootScript(String shell, String boot) {
+        String lower = shell.toLowerCase(Locale.ROOT);
+        int idx = lower.indexOf("</head>");
+        if (idx >= 0) {
+            return shell.substring(0, idx) + boot + shell.substring(idx);
+        }
+        idx = lower.indexOf("<body");
+        if (idx >= 0) {
+            int gt = lower.indexOf('>', idx);
+            if (gt >= 0) {
+                return shell.substring(0, gt + 1) + boot + shell.substring(gt + 1);
+            }
+        }
+        return boot + shell;
+    }
+
+    /**
+     * 输出 JS 字符串字面量（带引号，转义反斜杠/引号/控制字符）。
+     *
+     * @param value 原始值
+     * @return 可安全内联进 {@code <script>} 的字符串字面量
+     */
+    private static String jsonString(String value) {
+        StringBuilder sb = new StringBuilder(value.length() + 2);
+        sb.append('"');
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '"' -> sb.append("\\\"");
+                case '<' -> sb.append("\\u003c");
+                case '>' -> sb.append("\\u003e");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format(Locale.ENGLISH, "\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        sb.append('"');
+        return sb.toString();
+    }
+
+    /**
+     * UTF-8 URL 编码（查询参数值用）。
+     *
+     * @param value 原始值
+     * @return 编码后的值；编码不支持时返回原值
+     */
+    private static String urlEncodeUtf8(String value) {
+        try {
+            return URLEncoder.encode(value, StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return value;
+        }
     }
 
     /**
@@ -4227,10 +4338,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      *
      * @param request    请求
      * @param response   响应
+     * @param bucket     发起请求的存储桶名（入口壳签发预览令牌用）
      * @param encodedUrl base64 编码后的远端地址
      * @return 异步阶段
      */
-    private CompletionStage<Void> handleThirdUrlPreview(ServerRequest request, ServerResponse response, String encodedUrl) {
+    private CompletionStage<Void> handleThirdUrlPreview(ServerRequest request, ServerResponse response,
+                                                        String bucket, String encodedUrl) {
         FileStorageUrlPreviewProvider provider = resolveThirdUrlPreviewProvider();
         if (provider == null || !provider.supportsUrlPreview()) {
             return error(response, 403, "Access Denied: third-party preview disabled");
@@ -4271,7 +4384,9 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             fileName = "index";
         }
         applyWatermarkHeader(response);
-        return serveObjectContent(request, response, data, fileName);
+        // 三方 URL 预览会话内允许 raw=true：入口壳签发的字节直链按当前会话
+        // 原样重放（服务端重新拉取远端），与令牌消费同权，仍受 openPreview 约束。
+        return serveObjectContent(request, response, data, fileName, bucket, "third");
     }
 
     /**
@@ -5711,56 +5826,6 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     }
 
     /**
-     * 压缩包条目下钻预览。
-     * <p>从压缩包字节中提取 {@code inner} 指定的条目，能走 SPI（代码/Markdown/CSV/Office 等）
-     * 的输出 HTML 预览页；其余条目按原始内容类型内联返回。条目不存在或路径非法时返回提示页。</p>
-     *
-     * @param archiveData 压缩包字节
-     * @param fileName    压缩包文件名
-     * @param innerPath   包内条目路径（已 URL 解码）
-     * @param response    响应对象
-     * @return 已完成的异步阶段（始终提交响应）
-     */
-    private CompletionStage<Void> writeInnerEntryPreview(byte[] archiveData, String fileName,
-                                                         String innerPath, ServerResponse response) {
-        byte[] entryBytes = extractArchiveEntry(archiveData, fileName, innerPath);
-
-        if (entryBytes == null) {
-            String html = buildInnerMessagePage("压缩包内条目不存在或不支持预览：" + innerPath);
-            response.setStatus(404)
-                    .setHeader("X-FileStorage-Preview", "inner-miss")
-                    .setContentType("text/html;charset=UTF-8")
-                    .setBody(html.getBytes(StandardCharsets.UTF_8))
-                    .end();
-            return CompletableFuture.completedFuture(null);
-        }
-
-        String entryName = innerPath;
-        int slash = entryName.lastIndexOf('/');
-        if (slash >= 0) {
-            entryName = entryName.substring(slash + 1);
-        }
-
-        byte[] previewPage = trySpiPreview(entryBytes, entryName);
-        if (previewPage != null) {
-            response.setStatus(200)
-                    .setHeader("X-FileStorage-Preview", "spi-inner")
-                    .setContentType("text/html;charset=UTF-8")
-                    .setBody(previewPage)
-                    .end();
-            return CompletableFuture.completedFuture(null);
-        }
-
-        response.setStatus(200)
-                .setHeader("X-FileStorage-Preview", "inner-raw")
-                .setHeader("Content-Disposition", buildDisposition(false, entryName))
-                .setContentType(resolveContentType(entryName))
-                .setBody(entryBytes)
-                .end();
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
      * 从压缩包字节中取出指定条目。
      *
      * <p>{@code ?preview&inner=}（通用下钻）与 {@code ?format=cad&inner=}（CAD 下钻）
@@ -5830,77 +5895,6 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
     }
 
     /**
-     * 尝试通过 SPI 预览提供者转换文件为 HTML 预览页（带并发去重）。
-     *
-     * <p>classpath 中存在 utils-support-filestorage-starter 时，可预览
-     * xlsx/xls/docx/doc/pptx/ppt（Univer）、odt/ods/odp（打开文档）、vsd（Visio）等；
-     * 无可用提供者或转换失败时返回 空，回退为原始字节响应。</p>
-     *
-     * <p>并发去重：同一文件的并发请求会共享同一个转换 Future，
-     * 避免重复调用 SPI 提供者浪费 CPU/IO。</p>
-     *
-     * @param content  文件内容
-     * @param fileName 文件名（用于推断扩展名）
-     * @return HTML 页面字节，无法预览返回 空
-     */
-    private byte[] trySpiPreview(byte[] content, String fileName) {
-        List<FileStoragePreviewProvider> providers = previewProviders();
-        if (providers.isEmpty()) {
-            return null;
-        }
-        String ext = simpleExtOf(fileName);
-
-        // 扩展名候选：复合后缀（如 tar.gz）优先于单段后缀（如 gz）
-        List<String> extCandidates = buildExtCandidates(fileName, ext);
-
- // 构建去重 键：内容首 1KB + 长度 + 扩展名（兼顾性能与唯一性）
-        String dedupKey = buildDedupKey(content, extCandidates.isEmpty() ? "" : extCandidates.getFirst());
-
-        CompletableFuture<byte[]> future = inflightMap.computeIfAbsent(dedupKey, k -> {
-            return CompletableFuture.supplyAsync(() -> {
-                try {
-                    for (FileStoragePreviewProvider provider : providers) {
-                        PreviewResult result = null;
-                        String matchedExt = null;
-                        for (String candidate : extCandidates) {
-                            if (!provider.supports(candidate, "")) {
-                                continue;
-                            }
-                            matchedExt = candidate;
-                            break;
-                        }
-                        if (matchedExt == null) {
-                            continue;
-                        }
-                        try {
-                            result = provider.preview(content, matchedExt, "");
-                            if (result == null) {
-                                continue;
-                            }
-                            return wrapPreviewPage(result).getBytes(StandardCharsets.UTF_8);
-                        } catch (Exception e) {
-                            log.warn("SPI 预览提供者 {} 转换失败: {}",
-                                    provider.getClass().getSimpleName(), e.getMessage());
-                        }
-                    }
-                    return null;
-                } finally {
-                    inflightMap.remove(k);
-                }
-            });
-        });
-
-        try {
-            return future.get(5, java.util.concurrent.TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.warn("等待 SPI 预览转换完成超时或失败: fileName={}, error={}", fileName, e.getMessage());
-            future.cancel(true);
-            inflightMap.remove(dedupKey);
-            return null;
-        }
-    }
-
-    /**
      * 构建扩展名候选列表。
      * <p>双段复合后缀（如 {@code tar.gz}、{@code tar.bz2}）排在前面，
      * 末段单扩展名（如 {@code gz}）作为兜底，保证复合格式优先命中专属 Provider。</p>
@@ -5924,136 +5918,6 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
         candidates.add(simpleExt);
         return candidates;
-    }
-
-    /**
-     * 获取 SPI 预览提供者列表（懒加载并缓存）。
-     *
-     * @return 提供者列表（可能为空）
-     */
-    private List<FileStoragePreviewProvider> previewProviders() {
-        List<FileStoragePreviewProvider> cached = previewProviderCache;
-        if (cached != null) {
-            return cached;
-        }
-        synchronized (this) {
-            if (previewProviderCache == null) {
-                List<FileStoragePreviewProvider> loaded = new java.util.ArrayList<>();
-                try {
-                    loaded.addAll(com.chua.common.support.spi.ServiceProvider
-                            .of(FileStoragePreviewProvider.class).getNewExtensions(null));
-                } catch (Throwable t) {
-                    log.warn("SPI 预览提供者加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}", t.getMessage());
-                }
-                previewProviderCache = loaded;
-            }
-            return previewProviderCache;
-        }
-    }
-
-    /**
-     * 将预览结果组装为完整 HTML 页面。
-     *
-     * @param result 预览结果
-     * @return 完整 HTML 字符串
-     */
-    private String wrapPreviewPage(PreviewResult result) {
-        String htmlContent = result.getHtmlContent();
-        // 提供方已返回完整 HTML 文档（含 <!DOCTYPE html> 或 <html>）时，
-        // 不再套一层 <html>，而是把资源注入其 head/body，避免双层页面嵌套
-        if (htmlContent != null && isCompleteDocument(htmlContent)) {
-            return injectResourcesIntoDocument(htmlContent, result);
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
-                .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
-        if (result.getEmbeddedCss() != null) {
-            sb.append("<style>").append(result.getEmbeddedCss()).append("</style>");
-        }
-        if (result.getCssUrls() != null) {
-            for (String url : result.getCssUrls()) {
-                sb.append("<link rel=\"stylesheet\" href=\"").append(escapeAttr(url)).append("\">");
-            }
-        }
-        sb.append("</head><body>");
-        if (result.getHtmlContent() != null) {
-            sb.append(result.getHtmlContent());
-        }
-        if (result.getEmbeddedJs() != null) {
-            sb.append("<script>").append(result.getEmbeddedJs()).append("</script>");
-        }
-        if (result.getJsUrls() != null) {
-            for (String url : result.getJsUrls()) {
-                sb.append("<script src=\"").append(escapeAttr(url)).append("\"></script>");
-            }
-        }
-        sb.append("</body></html>");
-        return sb.toString();
-    }
-
-    /**
-     * 判断字符串是否为完整 HTML 文档（以 {@code <!doctype html} 或 {@code <html} 开头）。
-     *
-     * @param html HTML 内容
-     * @return true 表示已是完整文档
-     */
-    private boolean isCompleteDocument(String html) {
-        String trimmed = html.trim();
-        String lower = trimmed.toLowerCase(Locale.ROOT);
-        return lower.startsWith("<!doctype html") || lower.startsWith("<html");
-    }
-
-    /**
-     * 将预览资源（CSS/JS）注入到已有的完整 HTML 文档中。
-     *
-     * <p>CSS 注入到 {@code </head>} 前，JS 注入到 {@code </body>} 前；
-     * 找不到对应标记时追加到文档末尾。</p>
-     *
-     * @param html   完整 HTML 文档
-     * @param result 预览结果（含资源）
-     * @return 注入后的 HTML
-     */
-    private String injectResourcesIntoDocument(String html, PreviewResult result) {
-        StringBuilder head = new StringBuilder();
-        if (result.getEmbeddedCss() != null) {
-            head.append("<style>").append(result.getEmbeddedCss()).append("</style>");
-        }
-        if (result.getCssUrls() != null) {
-            for (String url : result.getCssUrls()) {
-                head.append("<link rel=\"stylesheet\" href=\"").append(escapeAttr(url)).append("\">");
-            }
-        }
-        StringBuilder body = new StringBuilder();
-        if (result.getEmbeddedJs() != null) {
-            body.append("<script>").append(result.getEmbeddedJs()).append("</script>");
-        }
-        if (result.getJsUrls() != null) {
-            for (String url : result.getJsUrls()) {
-                body.append("<script src=\"").append(escapeAttr(url)).append("\"></script>");
-            }
-        }
-        String out = html;
-        String headStr = head.toString();
-        if (!headStr.isEmpty()) {
-            String headEnd = "</head>";
-            int idx = out.toLowerCase(Locale.ROOT).indexOf(headEnd);
-            if (idx >= 0) {
-                out = out.substring(0, idx) + headStr + out.substring(idx);
-            } else {
-                out = headStr + out;
-            }
-        }
-        String bodyStr = body.toString();
-        if (!bodyStr.isEmpty()) {
-            String bodyEnd = "</body>";
-            int idx = out.toLowerCase(Locale.ROOT).lastIndexOf(bodyEnd);
-            if (idx >= 0) {
-                out = out.substring(0, idx) + bodyStr + out.substring(idx);
-            } else {
-                out = out + bodyStr;
-            }
-        }
-        return out;
     }
 
     /**
@@ -6315,25 +6179,5 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
         }
         return sb.toString();
-    }
-
-    /**
-     * 构建 SPI 预览去重键。
-     *
-     * <p>取内容首 1KB + 总长度 + 扩展名的组合作为键，
-     * 兼顾性能（避免全量哈希）与唯一性（不同内容大概率不同键）。</p>
-     *
-     * @param content 文件内容
-     * @param ext     文件扩展名
-     * @return 去重键
-     */
-    private static String buildDedupKey(byte[] content, String ext) {
-        int sampleLen = Math.min(content.length, 1024);
-        long hash = 0xcbf29ce484222325L; // FNV-1a 初始值
-        for (int i = 0; i < sampleLen; i++) {
-            hash ^= content[i];
-            hash *= 0x100000001b3L;
-        }
-        return Long.toHexString(hash) + ":" + content.length + ":" + ext;
     }
 }

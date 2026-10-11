@@ -163,10 +163,14 @@ public class OnnxExternalDirectoryService {
         }
         String tpl = template.isEmpty() ? null : template;
         String key = ModelRegistry.registerExternalDirectory(dir, tpl);
-        // 单根语义：选择器选中的目录即模型根。不更新的话，
-        // AiModelCatalogServiceImpl 只会拿默认根拼相对路径，选中的目录形同虚设
-        ModelRegistry.setModelRootDir(dir);
-        writeModelRoot(dir);
+        // 单根语义：模型根取「选中目录」或其父目录。若选中的是某模型的专属
+        // 目录（每模型一目录布局 <根>/<modelId>/model.onnx），把该目录设为根
+        // 会让其余模型全部按「<该目录>/<modelId>.onnx」解析而找不到文件
+        // （实测 2026-10-11 cn-clip-rn50-image 等全库模型因此报「DJL 图像转换失败」），
+        // 命中该形态时上溯一级取父目录。外部目录仍登记用户选中的目录本身。
+        String modelRoot = resolveModelRoot(dir);
+        ModelRegistry.setModelRootDir(modelRoot);
+        writeModelRoot(modelRoot);
         publishDirsChanged();
 
         List<Map<String, String>> entries = readEntries();
@@ -182,6 +186,33 @@ public class OnnxExternalDirectoryService {
         result.put("dir", dir);
         result.put("template", tpl);
         return result;
+    }
+
+    /**
+     * 推算选中目录对应的模型根。
+     *
+     * <p>「每模型一目录」布局下，用户在目录选择器里点中的往往是某个具体模型的
+     * 专属目录（如 {@code .../onnx/arc-face}，内含 {@code model.onnx}）。该目录
+     * 本身不是模型根——把它设为根会让其余模型全部按
+     * {@code <该目录>/<modelId>.onnx} 解析而找不到文件。命中该形态时上溯一级取
+     * 父目录作为模型根；否则模型根就是选中目录本身。</p>
+     *
+     * @param dir 选中的目录（已归一化绝对路径）
+     * @return 模型根目录
+     */
+    private String resolveModelRoot(String dir) {
+        Path p = Paths.get(dir).toAbsolutePath().normalize();
+        String name = p.getFileName().toString();
+        if (!name.isBlank() && ModelRegistry.isRegistered(name)
+                && Files.exists(p.resolve("model.onnx"))) {
+            Path parent = p.getParent();
+            if (parent != null) {
+                log.info("[ONNX] 选中目录是模型 '{}' 的专属目录，模型根上溯为父目录: {}",
+                        name, parent);
+                return parent.toString();
+            }
+        }
+        return p.toString();
     }
 
     /**

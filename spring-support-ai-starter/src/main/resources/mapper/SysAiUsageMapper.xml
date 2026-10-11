@@ -34,9 +34,29 @@
             <if test="endTime != null">
                 AND sys_ai_usage_call_time &lt;= #{endTime}
             </if>
-            <if test="userId != null and userId != ''">
-                AND sys_ai_usage_user_id = #{userId}
-            </if>
+            <!--
+                归属过滤。
+
+                正常情况下这里恒走 user_id = #{userId} 一支：所有写入路径都经过
+                SysAiUsageService.resolveOwner()，取不到归属时兜底成 admin，不会再写出 NULL。
+
+                IS NULL 那一支是<b>兜底网</b>，不是主路径：历史上同步任务直接写 NULL，
+                导致全量约三分之一的 Token 对所有账号不可见（user_id = 'x' 匹配不到 NULL），
+                账单凭空消失。根因已修（写入侧兜底 + 历史数据回填），但保留这一支，
+                是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
+                而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
+
+                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+            -->
+            <choose>
+                <when test="userId != null and userId != '' and includeOrphan">
+                    AND (sys_ai_usage_user_id = #{userId} OR sys_ai_usage_user_id IS NULL)
+                </when>
+                <when test="userId != null and userId != ''">
+                    AND sys_ai_usage_user_id = #{userId}
+                </when>
+            </choose>
         </where>
     </select>
 
@@ -50,6 +70,7 @@
             sys_ai_usage_group_name AS groupName,
             sys_ai_usage_provider AS provider,
             sys_ai_usage_model AS model,
+            sys_ai_usage_user_id AS userId,
             COUNT(*) AS totalCalls,
             COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS totalPromptTokens,
             COALESCE(SUM(sys_ai_usage_completion_tokens), 0) AS totalCompletionTokens,
@@ -66,11 +87,35 @@
             <if test="endTime != null">
                 AND sys_ai_usage_call_time &lt; #{endTime}
             </if>
-            <if test="userId != null and userId != ''">
-                AND sys_ai_usage_user_id = #{userId}
-            </if>
+            <!--
+                归属过滤。
+
+                正常情况下这里恒走 user_id = #{userId} 一支：所有写入路径都经过
+                SysAiUsageService.resolveOwner()，取不到归属时兜底成 admin，不会再写出 NULL。
+
+                IS NULL 那一支是<b>兜底网</b>，不是主路径：历史上同步任务直接写 NULL，
+                导致全量约三分之一的 Token 对所有账号不可见（user_id = 'x' 匹配不到 NULL），
+                账单凭空消失。根因已修（写入侧兜底 + 历史数据回填），但保留这一支，
+                是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
+                而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
+
+                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+            -->
+            <choose>
+                <when test="userId != null and userId != '' and includeOrphan">
+                    AND (sys_ai_usage_user_id = #{userId} OR sys_ai_usage_user_id IS NULL)
+                </when>
+                <when test="userId != null and userId != ''">
+                    AND sys_ai_usage_user_id = #{userId}
+                </when>
+            </choose>
         </where>
-        GROUP BY DATE(sys_ai_usage_call_time), sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model
+        <!--
+            GROUP BY 必须含 user_id：日汇总表是按账号存的，不分组会把不同账号的用量
+            合并成一行，日后按账号读取时必然把别人的量算进来。
+        -->
+        GROUP BY DATE(sys_ai_usage_call_time), sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model, sys_ai_usage_user_id
         ORDER BY statDate
     </select>
 
@@ -92,9 +137,29 @@
             <if test="endTime != null">
                 AND sys_ai_usage_call_time &lt; #{endTime}
             </if>
-            <if test="userId != null and userId != ''">
-                AND sys_ai_usage_user_id = #{userId}
-            </if>
+            <!--
+                归属过滤。
+
+                正常情况下这里恒走 user_id = #{userId} 一支：所有写入路径都经过
+                SysAiUsageService.resolveOwner()，取不到归属时兜底成 admin，不会再写出 NULL。
+
+                IS NULL 那一支是<b>兜底网</b>，不是主路径：历史上同步任务直接写 NULL，
+                导致全量约三分之一的 Token 对所有账号不可见（user_id = 'x' 匹配不到 NULL），
+                账单凭空消失。根因已修（写入侧兜底 + 历史数据回填），但保留这一支，
+                是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
+                而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
+
+                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+            -->
+            <choose>
+                <when test="userId != null and userId != '' and includeOrphan">
+                    AND (sys_ai_usage_user_id = #{userId} OR sys_ai_usage_user_id IS NULL)
+                </when>
+                <when test="userId != null and userId != ''">
+                    AND sys_ai_usage_user_id = #{userId}
+                </when>
+            </choose>
         </where>
         GROUP BY statHour
         ORDER BY statHour
@@ -124,9 +189,29 @@
             <if test="endTime != null">
                 AND sys_ai_usage_call_time &lt;= #{endTime}
             </if>
-            <if test="userId != null and userId != ''">
-                AND sys_ai_usage_user_id = #{userId}
-            </if>
+            <!--
+                归属过滤。
+
+                正常情况下这里恒走 user_id = #{userId} 一支：所有写入路径都经过
+                SysAiUsageService.resolveOwner()，取不到归属时兜底成 admin，不会再写出 NULL。
+
+                IS NULL 那一支是<b>兜底网</b>，不是主路径：历史上同步任务直接写 NULL，
+                导致全量约三分之一的 Token 对所有账号不可见（user_id = 'x' 匹配不到 NULL），
+                账单凭空消失。根因已修（写入侧兜底 + 历史数据回填），但保留这一支，
+                是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
+                而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
+
+                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+            -->
+            <choose>
+                <when test="userId != null and userId != '' and includeOrphan">
+                    AND (sys_ai_usage_user_id = #{userId} OR sys_ai_usage_user_id IS NULL)
+                </when>
+                <when test="userId != null and userId != ''">
+                    AND sys_ai_usage_user_id = #{userId}
+                </when>
+            </choose>
         </where>
         GROUP BY sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model
         ORDER BY totalTokens DESC
@@ -151,9 +236,29 @@
             <if test="endTime != null">
                 AND sys_ai_usage_call_time &lt; #{endTime}
             </if>
-            <if test="userId != null and userId != ''">
-                AND sys_ai_usage_user_id = #{userId}
-            </if>
+            <!--
+                归属过滤。
+
+                正常情况下这里恒走 user_id = #{userId} 一支：所有写入路径都经过
+                SysAiUsageService.resolveOwner()，取不到归属时兜底成 admin，不会再写出 NULL。
+
+                IS NULL 那一支是<b>兜底网</b>，不是主路径：历史上同步任务直接写 NULL，
+                导致全量约三分之一的 Token 对所有账号不可见（user_id = 'x' 匹配不到 NULL），
+                账单凭空消失。根因已修（写入侧兜底 + 历史数据回填），但保留这一支，
+                是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
+                而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
+
+                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+            -->
+            <choose>
+                <when test="userId != null and userId != '' and includeOrphan">
+                    AND (sys_ai_usage_user_id = #{userId} OR sys_ai_usage_user_id IS NULL)
+                </when>
+                <when test="userId != null and userId != ''">
+                    AND sys_ai_usage_user_id = #{userId}
+                </when>
+            </choose>
         </where>
         GROUP BY DATE(sys_ai_usage_call_time), sys_ai_usage_provider, sys_ai_usage_model
         ORDER BY statDate, totalTokens DESC

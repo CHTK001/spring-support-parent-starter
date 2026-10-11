@@ -17,6 +17,37 @@ import java.util.List;
 public interface SysAiUsageService {
 
     /**
+     * 无主用量的兜底归属账号。
+     *
+     * <p>外部工具用量（opencode / claude-code / cline 等）由定时任务同步进来，
+     * 同步跑在调度线程上、拿不到登录态。历史上这里直接写 {@code null}，导致
+     * 全量约三分之一的 Token 对**所有**账号不可见（{@code user_id = 'x'} 匹配不到 NULL），
+     * 等于这部分账单凭空消失。</p>
+     *
+     * <p>这类数据本质是机器级而非账号级的，所以统一挂到 {@code admin} 名下，
+     * 由管理员账号查看 —— 既不凭空丢失，也不破坏账号隔离（普通账号依旧只看自己）。</p>
+     */
+    String ORPHAN_OWNER = "admin";
+
+    /**
+     * 解析一条用量记录的有效归属账号。
+     *
+     * <p><b>所有写入路径都必须过这里</b>，否则 NULL 又会从某个漏网的调用点冒出来。
+     * 历史上就是因为同步任务直接调 {@code AiUserContext.currentUserId()}，
+     * 调度线程上取到 null，绕过了归属校验。</p>
+     *
+     * @param userId 原始归属（可为空）
+     * @return 归属账号；为空时返回 {@link #ORPHAN_OWNER}
+     */
+    static String resolveOwner(String userId) {
+        if (userId == null) {
+            return ORPHAN_OWNER;
+        }
+        String trimmed = userId.trim();
+        return trimmed.isEmpty() ? ORPHAN_OWNER : trimmed;
+    }
+
+    /**
      * 记录一次调用用量
      *
      * @param groupName 分组

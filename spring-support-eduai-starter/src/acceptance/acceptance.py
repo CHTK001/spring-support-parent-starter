@@ -178,9 +178,9 @@ def main() -> int:
         ("B10 古诗列表", "GET", "/v2/edu/poem/list?pageNum=1&pageSize=5"),
         ("B11 考试分页", "GET", "/v2/edu/exam/page?pageNum=1&pageSize=5"),
         ("B12 错题分页", "GET", "/v2/edu/wrongbook/page?pageNum=1&pageSize=5"),
-        ("B13 采集任务", "GET", "/v2/edu/collect/task/page?pageNum=1&pageSize=5"),
-        ("B14 采集元数据", "GET", "/v2/edu/collect/meta"),
-        ("B15 学生档案", "GET", "/v2/edu/dimension/students"),
+        # 原 B13 采集任务 / B14 采集元数据打的是已删除的 /v2/edu/collect/**，
+        # 采集能力已迁到采集平台的 /v2/collect/**，不再属于 eduai 的端点冒烟范围。
+        ("B13 学生档案", "GET", "/v2/edu/dimension/students"),
     ]
     for name, m, p in admin_eps:
         c, _ = http(m, p, token=admin)

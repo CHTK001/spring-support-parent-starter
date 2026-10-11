@@ -124,6 +124,14 @@ public class ImageSearchController {
                 shown = file.getOriginalFilename();
             }
             ImageSearchStore.StoredImage saved = imageSearchStores.add(shown, data, vector);
+            if (saved == null) {
+                // 入库过程中某一步失败且已回滚完（内存 / 原图 / 向量 / DB 行都撤了）。
+                // 不显式判空的话，下面 saved.getId() 会抛 NPE，被外层 catch 包装成
+                // 「入库失败: java.lang.NullPointerException」—— 真实原因（DB 写失败）
+                // 被吞掉，日后只能靠猜。
+                log.error("[ImageSearch] 入库失败：已回滚，原因见上方联动层日志，name={}", shown);
+                return ReturnResult.error("入库失败：底库元数据写入失败，本次上传已回滚");
+            }
             Map<String, Object> out = new LinkedHashMap<>(4);
             out.put("id", saved.getId());
             out.put("name", saved.getName());

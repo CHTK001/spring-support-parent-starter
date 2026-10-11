@@ -712,7 +712,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
             changeStage(taskId, EduMarkingTask.STATUS_FAILED, "失败", null, null,
                     e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(), true);
-            log.error("[EduAi] 阅卷任务失败: taskId={}", taskId, e);
+            log.warn("[EduAi] 阅卷任务失败(异常): taskId={}, msg={}", taskId, e.toString());
+        } catch (Throwable t) {
+            // Error（如 UnsatisfiedLinkError/OOM）不是 Exception，上面两个 catch 兜不住；
+            // 不处理会让任务永久停在 PROCESSING（runWithTimeout 的 ExecutionException 只记日志）。
+            if (isInterruptedByShutdown(t)) {
+                keepResumable(taskId, t);
+                return;
+            }
+            changeStage(taskId, EduMarkingTask.STATUS_FAILED, "失败", null, null,
+                    t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage(), true);
+            log.warn("[EduAi] 阅卷任务失败(未捕获): taskId={}, msg={}", taskId, t.toString());
         }
     }
 
@@ -1654,6 +1664,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             item.put("score", row.getMarkingResultAiScore());
             item.put("teacherScore", row.getMarkingResultTeacherScore());
             item.put("comment", row.getMarkingResultAiComment());
+            // 老师评语单独返回：编辑框初值用它（为空时前端回落 AI 评语展示），
+            // 保存时显式传 comment 才会覆盖（见 confirmMarking 的非空判断）
+            item.put("teacherComment", row.getMarkingResultTeacherComment());
             Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
             item.put("no", detail.get("recognizedNo"));
             item.put("stem", detail.get("stem"));

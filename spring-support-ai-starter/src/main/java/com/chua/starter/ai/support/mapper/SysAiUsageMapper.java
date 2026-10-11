@@ -52,6 +52,9 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param startTime 开始时间（可为空，不传则不限起始时间）
      * @param endTime   结束时间（可为空，不传则不限截止时间）
      * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @param includeOrphan 是否把无主数据（{@code user_id IS NULL}，定时同步的外部工具用量）
+     *                       计入结果。仅管理员为 {@code true}；普通账号必须为 {@code false}，
+     *                       否则会看到不属于自己机器的外部工具用量。
      * @return 聚合统计行，所有字段可能为 空（无数据时）
      */
     UsageStatsRow selectStatistics(
@@ -60,7 +63,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             @Param("model") String model,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
-            @Param("userId") String userId
+            @Param("userId") String userId,
+            @Param("includeOrphan") boolean includeOrphan
     );
 
     /**
@@ -78,12 +82,15 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param totalCachedTokens 缓存读取 令牌
      * @param totalLatency 总耗时（ms）
      * @param totalFirstTokenLatency 总首字延迟（ms）
+     * @param userId    归属账号。<b>日汇总表必须带这一维度</b>：不分组的话不同账号的用量
+     *                   会被合并成一行，日后任何按账号过滤的读取都会把别人的量算进来
      */
     record DailyAggregateRow(
             LocalDate statDate,
             String groupName,
             String provider,
             String model,
+            String userId,
             Long totalCalls,
             Long totalPromptTokens,
             Long totalCompletionTokens,
@@ -105,7 +112,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     List<DailyAggregateRow> selectDailyAggregate(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
-            @Param("userId") String userId
+            @Param("userId") String userId,
+            @Param("includeOrphan") boolean includeOrphan
     );
 
     /**
@@ -140,7 +148,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     List<HourlyAggregateRow> selectHourlyAggregate(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
-            @Param("userId") String userId
+            @Param("userId") String userId,
+            @Param("includeOrphan") boolean includeOrphan
     );
 
     /**
@@ -179,7 +188,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             @Param("model") String model,
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
-            @Param("userId") String userId
+            @Param("userId") String userId,
+            @Param("includeOrphan") boolean includeOrphan
     );
 
     /**
@@ -216,6 +226,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     List<DailyModelRow> selectDailyModelAggregate(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
-            @Param("userId") String userId
+            @Param("userId") String userId,
+            @Param("includeOrphan") boolean includeOrphan
     );
 }

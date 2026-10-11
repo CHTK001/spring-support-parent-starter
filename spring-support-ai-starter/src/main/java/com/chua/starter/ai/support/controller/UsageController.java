@@ -99,7 +99,9 @@ public class UsageController {
      * @param size 每页条数
      * @return AI 用量分页结果
      */
-    @Operation(summary = "用量列表", description = "分页查询用量明细；普通用户仅列本人明细，管理员列全量")
+    @Operation(summary = "用量列表",
+            description = "分页查询用量明细。口径：所有账号都只查本人具名明细（管理员不跨账号）；"
+                    + "管理员额外可见无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
     @GetMapping("/list")
     public ReturnResult<AiUsagePageVO<SysAiUsage>> list(
             @RequestParam(required = false) String groupName,
@@ -124,7 +126,9 @@ public class UsageController {
      * @param endTime 统计结束时间，为空时不限定
      * @return AI 用量统计结果
      */
-    @Operation(summary = "用量统计", description = "汇总统计；普通用户仅统计本人明细，管理员统计全量")
+    @Operation(summary = "用量统计",
+            description = "汇总统计。口径：所有账号都只统计本人具名明细（管理员不跨账号）；"
+                    + "管理员额外计入无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
     @GetMapping("/statistics")
     public ReturnResult<AiUsageStatisticsVO> statistics(
             @RequestParam(required = false) String groupName,
@@ -566,6 +570,12 @@ public class UsageController {
 
     /**
      * 当前请求的用量统计口径：仅跨账号放行时返回 {@code null}（看全量），否则返回本人 ID。
+     *
+     * <p><b>注意与「无主数据」是两回事</b>：这里决定的是「能否读他人的具名数据」，
+     * 恒为本人 ID（{@code canAccessOthersData()} 恒 false，管理员也不跨账号）。
+     * 至于 {@code user_id IS NULL} 的无主明细（定时同步的外部工具用量，约占全量 Token 三分之一），
+     * 由各查询的 {@code includeOrphan} 开关单独决定，仅管理员为 true。
+     * 两者叠加的结果是：管理员看到「自己的 + 无主的」，但看不到 alice / bob 的具名数据。</p>
      *
      * @return 归属用户标识；跨账号放行时为 null
      */

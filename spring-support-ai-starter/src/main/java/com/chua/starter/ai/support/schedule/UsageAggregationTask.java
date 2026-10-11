@@ -13,6 +13,7 @@ import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.service.SysAiPricingService;
+import com.chua.starter.ai.support.service.SysAiUsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -31,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -141,6 +143,34 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private final SysAiUsageSyncLogMapper syncLogMapper;
 
     /**
+     * 日汇总表历史自愈是否已在本进程内检查过（置位后不再重复触发全量回填）。
+     */
+    private final java.util.concurrent.atomic.AtomicBoolean dailyHistoryChecked =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * 待重试的入库失败记录，按数据源分组。
+     *
+     * <p><b>为什么需要它。</b>有 requestId 的记录下一轮一定会被重新扫到（去重是幂等的），
+     * 但没有 requestId 的（opencode 约 40.8 万条、claude-code 约 4.4 万条）走的是
+     * 「时间水位」去重：水位取自本组<b>已入库</b>的最大调用时间。一旦某条插入失败，
+     * 同批次里更晚的成功记录就会把水位推过它，此后每一轮都在水位判定里被跳过 ——
+     * <b>永久丢失，且不报错</b>。队列把这类记录留在内存里跨轮重试。</p>
+     *
+     * <p>只在内存里，进程重启即失效：这是刻意的取舍 —— 把失败明细落库需要新增表，
+     * 而绝大多数失败（缺价）靠重试并不会自愈，重启后大概率还是失败。
+     * 真正的兜底是上面那条 ERROR 日志，它让人知道「缺了多少」。</p>
+     */
+    private final Map<String, Deque<AiUsage>> retryQueue = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 单个数据源的重试队列上限，防止持续失败时把内存吃光。
+     *
+     * <p>达到上限后丢弃最旧的记录：宁可少救几条，也不能让同步任务本身 OOM。</p>
+     */
+    private static final int RETRY_QUEUE_LIMIT = 2000;
+
+    /**
      * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
      */
     @org.springframework.beans.factory.annotation.Autowired
@@ -217,6 +247,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
             self.syncExternalUsage();
             self.aggregateCurrentHour();
+            ensureDailyHistoryBackfilled();
         } catch (Throwable e) {
             log.error("[UsageAggregation] 定时任务执行异常（已捕获，不影响JVM）: {}", e.getMessage(), e);
             recordLog(LOG_LEVEL_WARN, "定时任务异常: " + e.getMessage());
@@ -468,8 +499,20 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 Set<String> existingIds = existingRequestIds(entry.getKey(), batch);
                 Set<String> seenIds = new HashSet<>();
                 LocalDateTime since = maxCallTimeOfGroup(entry.getKey());
+                // 本轮需要重试的记录（上次插入失败的）。取出后先于水位判断执行 ——
+                // 它们大多没有 requestId，按水位必然被跳过，不特判就等于永远重试不到。
+                // 用**恒等**比较（IdentityHashMap）而非 equals：不同调用可能产出内容相同
+                // 但时间不同的记录，用 equals 会把「本次真正的新记录」误当成重试项放过水位。
+                List<AiUsage> retryBatch = pollRetry(entry.getKey());
+                Set<AiUsage> retrySet = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+                retrySet.addAll(retryBatch);
+                if (!retryBatch.isEmpty()) {
+                    batch = new ArrayList<>(batch);
+                    batch.addAll(0, retryBatch);
+                }
                 int inserted = 0;
                 int skipped = 0;
+                int failed = 0;
                 for (AiUsage usage : batch) {
                     String requestId = usage.getRequestId();
                     if (requestId != null && !requestId.isBlank()) {
@@ -478,8 +521,10 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                             skipped++;
                             continue;
                         }
-                    } else {
-                        // 无请求号：退回时间水位，避免全量重复插入
+                    } else if (!retrySet.contains(usage)) {
+                        // 无请求号：退回时间水位，避免全量重复插入。
+                        // 重试记录豁免此判断 —— 它们上一轮就是被水位挡下来的，
+                        // 再走同一道判断等于原地踏步。
                         LocalDateTime callTime = usage.getStartTime() != null
                                 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
                                 : null;
@@ -490,17 +535,25 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                     }
                     try {
                         SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
-                        if (record != null) {
-                            usageMapper.insert(record);
-                            inserted++;
-                            total++;
-                            if (requestId != null && !requestId.isBlank()) {
-                                existingIds.add(requestId);
-                            }
+                        if (record == null) {
+                            // 缺价 / 字段异常，构造不出记录。这条**必须留痕**：
+                            // 无 requestId 的记录没有第二次机会（见下方 failed 处理）。
+                            failed++;
+                            offerRetry(entry.getKey(), usage);
+                            continue;
+                        }
+                        usageMapper.insert(record);
+                        inserted++;
+                        total++;
+                        if (requestId != null && !requestId.isBlank()) {
+                            existingIds.add(requestId);
                         }
                     } catch (Throwable ex) {
                         // 单条失败（缺价/字段异常等）不应拖垮整批
-                        log.warn("[UsageAggregation] [{}] 单条用量入库失败: {}", entry.getKey(), ex.getMessage());
+                        failed++;
+                        offerRetry(entry.getKey(), usage);
+                        log.warn("[UsageAggregation] [{}] 单条用量入库失败: {} -> {}",
+                                entry.getKey(), usage.getRequestId(), ex.getMessage());
                     }
                 }
                 /**
@@ -509,6 +562,17 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                  * @param entry.getKey( entry.获取键(
                  */
                 recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量（新增 %d）", entry.getKey(), batch.size(), inserted));
+                if (failed > 0) {
+                    // 失败数必须进日志、且提到 ERROR 级别。此前这里只有一条 WARN，
+                    // 且「同步 N 条（新增 M）」看不出 N-M 去哪了：
+                    // 对无 requestId 的数据源，这些记录会被后续成功记录推高的水位
+                    // 永久跳过 —— 也就是说失败一次，这段用量就从账单上消失了，
+                    // 界面上却毫无异常。重试队列能救回内存期内的那部分，
+                    // 进程重启后仍未救回的，这里就是唯一的线索。
+                    recordLog(LOG_LEVEL_ERROR, String.format(
+                            "[%s] 有 %d 条用量入库失败（已入重试队列，重启后仍未入库的即为永久缺失）",
+                            entry.getKey(), failed));
+                }
             } catch (Throwable e) {
  // 用 抛出 而非 异常：单个 Parser 的 错误（如缺依赖 no类deffound错误）
                 // 也会捕获，避免中断后续 parser 的同步
@@ -664,7 +728,10 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         record.setSysAiUsageBillingMode("默认");
         record.setSysAiUsageRequestId(usage.getRequestId());
         // 三方导入记录归属执行同步的当前登录账号（服务端写）
-        record.setSysAiUsageUserId(com.chua.starter.ai.support.util.AiUserContext.currentUserId());
+        // 同步跑在调度线程上，没有登录态，currentUserId() 必为 null —— 直接写 null
+        // 会让这批数据对所有账号不可见（user_id = 'x' 匹配不到 NULL）。统一兜底到 admin。
+        record.setSysAiUsageUserId(com.chua.starter.ai.support.service.SysAiUsageService.resolveOwner(
+                com.chua.starter.ai.support.util.AiUserContext.currentUserId()));
         // 标记是否为估算 token
         if (usage.isEstimated()) {
             record.setSysAiUsageEstimatedTokens(1);
@@ -713,12 +780,106 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
+     * 把一条入库失败的记录放进重试队列。
+     *
+     * @param groupName 数据源
+     * @param usage     失败记录
+     */
+    private void offerRetry(String groupName, AiUsage usage) {
+        if (usage == null) {
+            return;
+        }
+        try {
+            Deque<AiUsage> q = retryQueue.computeIfAbsent(groupName,
+                    k -> new java.util.concurrent.ConcurrentLinkedDeque<>());
+            if (q.size() >= RETRY_QUEUE_LIMIT) {
+                // 丢最旧的一条并记账：超限本身就说明这个数据源在持续失败，
+                // 静默截断会让人以为「只是重试队列满了」
+                AiUsage dropped = q.pollFirst();
+                if (dropped != null && dropped != usage) {
+                    log.warn("[UsageAggregation] [{}] 重试队列已满（{}），丢弃最早的一条失败记录，重启后永久缺失",
+                            groupName, RETRY_QUEUE_LIMIT);
+                }
+            }
+            q.addLast(usage);
+        } catch (Throwable ex) {
+            // 重试队列本身出问题绝不能影响同步主流程
+            log.debug("[UsageAggregation] 重试入队失败: {}", ex.getMessage());
+        }
+    }
+
+    /**
+     * 取出并清空某数据源待重试的记录。
+     *
+     * <p>取走即清空：本轮若仍失败，会由 {@link #offerRetry} 重新入队，
+     * 无需在这里保留副本。</p>
+     *
+     * @param groupName 数据源
+     * @return 待重试记录；没有则返回空列表
+     */
+    private List<AiUsage> pollRetry(String groupName) {
+        Deque<AiUsage> q = retryQueue.get(groupName);
+        if (q == null || q.isEmpty()) {
+            return List.of();
+        }
+        List<AiUsage> out = new ArrayList<>(q);
+        q.clear();
+        if (!out.isEmpty()) {
+            log.info("[UsageAggregation] [{}] 重试 {} 条上次入库失败的用量", groupName, out.size());
+        }
+        return out;
+    }
+
+    /**
      * 聚合执行入口（默认当前小时）。
      * <p>定时任务与「仅聚合」接口共用：只聚合当前小时 usage 明细到日汇总表，
      * 触发一次汇总一次，扫描量小、压力小。</p>
      */
     public void aggregate() {
         self.aggregateCurrentHour();
+    }
+
+    /**
+     * 一次性自愈：日汇总表缺历史数据时触发一次全量回填。
+     *
+     * <p><b>为什么需要。</b>{@link #run()} 每次只聚合当前小时，历史区间从不回补。
+     * 日汇总表是<b>全量重建过</b>的（口径修正：原先按日期删、且实体缺 userId 字段，
+     * 导致存的是一份不分账号的全局汇总，与明细口径不一致，必须重建）。
+     * 若只靠人工点「全量同步」，任何忘了点的环境都会留下一张<b>只有当天数据</b>的表 ——
+     * 而这张表当前没有读取方，所以不会报错、不会告警，等哪天有人打开全局读取，
+     * 读到的就是一个静默残缺的历史。</p>
+     *
+     * <p><b>判据很轻</b>：只查「明细最早那天」在日汇总里有没有行，一条 count 而已；
+     * 有则直接返回，后续每个调度周期都只花这一次 count。
+     * 用「有没有最早那天」而不是「行数对不对」，是因为行数比对需要跑一遍全量
+     * GROUP BY 才知道，本身就比回填还贵。</p>
+     *
+     * <p><b>每进程只跑一次</b>（{@code dailyHistoryChecked} 置位）。回填本身是一次
+     * 全量 GROUP BY，百万级明细下要跑若干秒，放在调度线程里可接受（不在请求路径上），
+     * 但绝不该每个周期都跑。</p>
+     */
+    private void ensureDailyHistoryBackfilled() {
+        if (!dailyHistoryChecked.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            LocalDateTime earliest = findEarliestUsageTime();
+            if (earliest == null) {
+                return;
+            }
+            LocalDate earliestDay = earliest.toLocalDate();
+            Long covered = dailyMapper.selectCount(new LambdaQueryWrapper<SysAiUsageDaily>()
+                    .eq(SysAiUsageDaily::getStatDate, earliestDay));
+            if (covered != null && covered > 0) {
+                return;
+            }
+            log.info("[UsageAggregation] 日汇总表缺少历史数据（最早 {} 无汇总行），触发一次全量回填",
+                    earliestDay);
+            recordLog(LOG_LEVEL_INFO, "日汇总表缺少历史数据，自动触发全量回填");
+            aggregateAll();
+        } catch (Throwable e) {
+            log.warn("[UsageAggregation] 日汇总表历史自愈检查失败（不影响本轮聚合）: {}", e.getMessage());
+        }
     }
 
     /**
@@ -804,20 +965,27 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 ? end : end.toLocalDate().plusDays(1).atStartOfDay();
 
  // 数据库端 群体 BY 聚合，一次返回全部日汇总数据，避免全量装载到 JVM
-        List<SysAiUsageMapper.DailyAggregateRow> rows = usageMapper.selectDailyAggregate(dayStart, dayEnd, null);
+        List<SysAiUsageMapper.DailyAggregateRow> rows =
+                usageMapper.selectDailyAggregate(dayStart, dayEnd, null, false);
         if (rows.isEmpty()) {
             log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", dayStart, dayEnd);
             return 0;
         }
 
-        // 先删后插：删除本窗口涉及的日期在日汇总表中的旧数据
-        Set<LocalDate> dates = new TreeSet<>();
+        // 先删后插：删除本窗口涉及的「日期 + 账号」在日汇总表中的旧数据。
+        // 维度必须是 (date, userId) 而不是只按 date —— 只按日期删会把其它账号当天的
+        // 汇总一起删掉，等于每跑一次就清空别人那一天的数据。
+        Set<String> dateUserKeys = new TreeSet<>();
         for (SysAiUsageMapper.DailyAggregateRow row : rows) {
-            dates.add(row.statDate());
+            dateUserKeys.add(row.statDate() + GROUP_KEY_SEPARATOR + row.userId());
         }
-        for (LocalDate d : dates) {
+        for (String key : dateUserKeys) {
+            int sep = key.lastIndexOf(GROUP_KEY_SEPARATOR);
+            LocalDate d = LocalDate.parse(key.substring(0, sep));
+            String uid = key.substring(sep + GROUP_KEY_SEPARATOR.length());
             dailyMapper.delete(new LambdaQueryWrapper<SysAiUsageDaily>()
-                    .eq(SysAiUsageDaily::getStatDate, d));
+                    .eq(SysAiUsageDaily::getStatDate, d)
+                    .eq(SysAiUsageDaily::getUserId, uid));
         }
 
  // 提供者|模型 -> 定价 缓存，避免对每个分组重复查询（N+1）
@@ -846,6 +1014,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             daily.setGroupName(row.groupName());
             daily.setProvider(row.provider());
             daily.setModel(row.model());
+            daily.setUserId(SysAiUsageService.resolveOwner(row.userId()));
             daily.setTotalCalls(row.totalCalls() != null ? row.totalCalls() : 0L);
             daily.setTotalPromptTokens(promptTokens);
             daily.setTotalCompletionTokens(completionTokens);
