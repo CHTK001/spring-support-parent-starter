@@ -75,6 +75,24 @@ public interface DatasourceService {
     ReturnResult<DataSourceTestVO> test(Long id);
 
     /**
+     * 只探测、不回写台账。
+     *
+     * <p>与 {@link #test(Long)} 的唯一区别是不写 {@code lastTestOk / lastTestTime /
+     * 延迟} 这几个台账字段。</p>
+     *
+     * <p><strong>为什么要分出这一条路</strong>：监控指标的采集是定时发生的，
+     * 如果它复用 {@code test}，那么「有人打开了监控指标页签」这件事就会把台账上的
+     * 健康状态刷成新值 —— 左栏的「正常 / 异常」徽标会随之跳变。用户只是看了一眼图表，
+     * 却改变了数据源的状态判定，这是采集行为不该有的副作用。</p>
+     *
+     * @param id 数据源 ID
+     * @return 测试结果
+     * @author CH
+     * @since 4.0.0.43
+     */
+    ReturnResult<DataSourceTestVO> probeOnly(Long id);
+
+    /**
      * 构建 JDBC 连接（空闲 TTL 缓存 + 屏蔽 close 的代理）。
      *
      * @param datasourceId 数据源 ID，null/0 表示应用默认主数据源
