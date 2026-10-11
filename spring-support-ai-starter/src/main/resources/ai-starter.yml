@@ -135,6 +135,36 @@ spring:
     usage:
       enabled: true
 
+# ===========================================
+# Actuator 暴露面（安全收紧）
+# ===========================================
+# 背景：框架的 DatabaseSettingEnvironmentPostProcessor 会把
+# management.endpoints.web.exposure.include 作为「启动期默认设置」种进 sys_setting，
+# 默认值是 "*" —— 即 env / beans / configprops / loggers / threaddump / mappings
+# 全部对外暴露。其中 /actuator/loggers 允许 POST 修改运行期日志级别，
+# 可被用来刷 DEBUG 打满磁盘或关闭安全日志，属真实攻击面。
+#
+# 与白名单的关系：白名单放行在前（不放行则需鉴权），暴露面收窄在后（不暴露则 404）。
+# 两者都做才是完整修复：只收窄暴露面，则一旦有人把 DB 里的设置调回 '*'，
+# 漏洞立刻复现；只改白名单，则任何被放行的端点都无需鉴权。
+#
+# 与 sys_setting 里那个 '*' 的优先级关系（改这段前先确认没被反超）：
+# DatabaseSettingEnvironmentPostProcessor 找不到 ops- 前缀的属性源时走 addLast，
+# 而本 jar 未打包 ops-default/application-actuator.yml，所以 sys_setting 的 '*'
+# 优先级低于本文件，这里能盖住它。
+# 一旦有人把 ops-default/application-actuator.yml 放进部署目录，DB 就会插到
+# 前面反超这里 —— 届时必须同步把 sys_setting_group='startup-actuator' 里
+# management.endpoints.web.exposure.include 的值改成 health,info。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      # 不对外暴露组件明细（DB / 磁盘等），避免信息泄露
+      show-details: never
+
 # 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
 # OAuth 客户端鉴权（管理端 @Permission("admin") 接口鉴权，对接外部 oauth 服务端）
 ---
@@ -166,10 +196,14 @@ plugin:
       # OpenAI/Claude/Gemini 兼容协议：Bearer 是业务 AppKey，不是登录令牌
       - /v2/v1/**
       - /v2/v1beta/**
-      # 桌面端 Bot 绑定与探活、WebSocket 握手、健康检查
+      # 桌面端 Bot 绑定与探活、WebSocket 握手
       - /v2/ai/bot-binding/**
       - /ws
-      - /actuator/**
+      # 只放行健康检查供探活；其余 actuator 端点必须带登录令牌。
+      # 曾整段放行 /actuator/**，等于把 env / beans / configprops / threaddump /
+      # mappings / loggers 全部无鉴权公开——与 spring-support-eduai-starter 的
+      # ApplicationConfigSecurityTest 要求的策略一致：只放行 /actuator/health。
+      - /actuator/health
       # 角色头像通过 <img> 加载（不携带 Authorization 头），头像非敏感放行读取
       - /v2/characters/*/avatar
   filesystem:
