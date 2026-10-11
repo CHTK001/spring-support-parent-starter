@@ -129,8 +129,11 @@ public class DatasourceOperLogListener {
             Pattern.compile("^/ms/monitor/db/table/([^/]+)"),
             // /ms/monitor/db/objects/{category}/{name}
             Pattern.compile("^/ms/monitor/db/objects/[^/]+/([^/]+)"),
-            // 建/删库的对象是库名，但库名在请求体或 ?name= 里，路径上没有
-            Pattern.compile("^/ms/monitor/db/database$"));
+            // 建/删库的对象是库名，但库名在请求体或 ?name= 里，路径上没有。
+            // 不能用 `$` 收尾：pathOf 保留查询串，真正的路径到这里是
+            // `/ms/monitor/db/database?datasourceId=20&name=xxx`，$ 永远不匹配，
+            // 库级操作的对象列会静默留空。
+            Pattern.compile("^/ms/monitor/db/database(?:[/?]|$)"));
 
     private final DatasourceOperLogService operLogService;
 
