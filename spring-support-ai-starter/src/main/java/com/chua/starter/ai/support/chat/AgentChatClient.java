@@ -153,6 +153,10 @@ public class AgentChatClient implements ChatClient {
                                 // 执行轨迹（thinking/输出/轮次/工具/用量/边缘）透传给上层，
                                 // 由 facade 作为独立 SSE 事件推到前端，不计入正文
                                 if (event.getTrace() != null) {
+                                    log.debug("[TraceDiag] 收到 TRACE kind={} spanId={} spanEnd={}",
+                                            event.getTrace().getKind(),
+                                            event.getTrace().getSpanId(),
+                                            event.getTrace().isSpanEnd());
                                     consumer.accept(ChatResponse.builder()
                                             .state(ChatResponse.State.STREAMING)
                                             .trace(event.getTrace())

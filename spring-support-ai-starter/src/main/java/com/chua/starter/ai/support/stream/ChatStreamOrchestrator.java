@@ -72,6 +72,11 @@ public class ChatStreamOrchestrator {
     private final ChatStreamRegistry registry;
 
     /**
+     * 会话执行轨迹服务：把 Agent 执行轨迹异步落库，供会话顶部「轨迹」页签回放
+     */
+    private final com.chua.starter.ai.support.service.SysAiSessionTraceService sessionTraceService;
+
+    /**
      * 把前端带来的消息 id 解析为数据库自增主键。
      *
      * <p>前端在重答时只传既有用户消息的 id，形如 "13"（后端用 String.valueOf(msg.getId()) 产出）。
@@ -659,6 +664,9 @@ public class ChatStreamOrchestrator {
                         // 工具类 trace 额外收一份，随助手消息落库（供刷新后渲染工具行）；
                         // 其余 trace 仍原样转发给前端。
                         if (trace != null) {
+                            // 全量轨迹另存一份到轨迹表：助手消息里的 confirmation 只保留工具类，
+                            // 承载不了模型调用/思考这类时序信息，而「轨迹」页签要靠它画甘特图。
+                            sessionTraceService.append(sid, p.getChatRequestId(), trace);
                             if (trace.getToolName() != null && !trace.getToolName().isBlank()) {
                                 Map<String, Object> t = new LinkedHashMap<>();
                                 t.put("kind", trace.getKind());
