@@ -121,16 +121,51 @@ if [ "$READY" = "0" ]; then
 fi
 echo "  端口就绪耗时=$((READY * 2))s"
 
-# 【关键校验，勿删】监听 ${PORT} 的必须**就是我刚起的这个进程**。
-#   只验「端口有人在听」会被并发会话骗过去：我自己的进程没绑上端口、
-#   验收脚本却打到了别人的实例上，数字全绿但测的不是我的代码。
+# 【关键校验，勿删】监听 ${PORT} 的进程，跑的必须**就是刚部署上去的这个 jar**。
+#
+#   为什么判据是「jar 的 md5」而不是「监听者 pid == 我起的 pid」：
+#   后者在两种常见情况下会误报 —— (1) 启动脚本派生 java 子进程，监听者是孙进程；
+#   (2) 并发会话同时部署，同一个 jar 被起了两个实例，晚绑上端口的反而是别人的 pid。
+#   实测 2026-10-11 踩中 (2)：我起的 425648 抢不到端口退出，425685（同 jar、
+#   并发会话起的）持有 8081，脚本判 exit=4，而线上跑的确实就是新包。
+#   真正要防的是「验收打到了别人的实例上、数字全绿但测的不是新代码」，
+#   它的充分条件是「监听者跑的 jar 不是这个 md5」，不是 pid 相等。
 LISTENER=$(ss -lntpH 2>/dev/null | awk -v pat=":${PORT}\$" '$4 ~ pat {print}' \
   | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)
-if [ "$LISTENER" != "$NEW_PID" ]; then
-  echo "  !! ${PORT} 的监听者是 pid=$LISTENER，而我起的是 pid=$NEW_PID —— 端口被并发会话的进程占了"
+if [ -z "$LISTENER" ]; then
+  echo "  !! 找不到 ${PORT} 的监听者"
   exit 4
 fi
-echo "  LISTENER_IS_OURS_OK (pid=$NEW_PID)"
+# 该进程**实际打开**的 jar 文件，不是磁盘上现在那个。
+# cp 覆盖是「就地改写」，mv 替换是「新 inode」；若 jar 是被替换的，
+# 旧进程仍持有旧 inode，此时 /proc/PID/fd 里的路径会带 " (deleted)"。
+LISTENER_JAR=$(ls -l /proc/"$LISTENER"/fd/ 2>/dev/null | grep -oE '/[^ ]*app\.jar( \(deleted\))?' | head -1)
+if [ -z "$LISTENER_JAR" ]; then
+  echo "  !! 监听者 pid=$LISTENER 没打开任何 app.jar —— 它不是本应用在服务"
+  exit 4
+fi
+case "$LISTENER_JAR" in
+  *" (deleted)")
+    echo "  !! 监听者 pid=$LISTENER 持有的是已被替换掉的旧 jar inode（$LISTENER_JAR）"
+    echo "     端口上跑的是旧代码，必须杀掉它再重新部署"
+    exit 4
+    ;;
+esac
+LISTENER_MD5=$(md5sum "$LISTENER_JAR" | cut -d' ' -f1)
+if [ "$LISTENER_MD5" != "$EXPECT" ]; then
+  echo "  !! ${PORT} 的监听者 pid=$LISTENER 跑的 jar md5=$LISTENER_MD5"
+  echo "     期望=$EXPECT —— 端口上跑的不是本次部署的包，验收会打到别人的代码"
+  exit 4
+fi
+if [ "$LISTENER" = "$NEW_PID" ]; then
+  echo "  LISTENER_RUNS_DEPLOYED_JAR_OK (pid=$LISTENER 即本进程)"
+else
+  # 同一个 jar 的重复实例：不是部署失败，但必须报出来 ——
+  # 多一个 JVM 就是多一份 1.5G 堆和一份 CPU，且来源不明。
+  echo "  LISTENER_RUNS_DEPLOYED_JAR_OK (pid=$LISTENER，非本进程 pid=$NEW_PID；"
+  echo "     两者跑同一个 md5，属并发会话起的重复实例)"
+  echo "  !! 注意：本进程 pid=$NEW_PID 的存活状态请自行确认，重复实例会白占一份内存"
+fi
 
 # --- 增补：文件存储网关 18082 必须由本进程持有（monitor 新配置随应用启动） ---
 FS_PORT=18082
