@@ -6,6 +6,7 @@ import com.chua.common.support.utils.AnnotationUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,6 +44,7 @@ import static com.chua.common.support.constant.NameConstant.*;
  * @since 2024-01-01
  */
 @Lazy
+@Slf4j
 public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
 
     /**
@@ -327,11 +329,13 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
      */
     private String resolveTokenUser(String getter) {
         if (!OAUTH_CLIENT_PRESENT) {
+            log.debug("[操作日志] classpath 无 oauth-client，操作人无法从令牌还原（{}）", getter);
             return null;
         }
         try {
             HttpServletRequest current = RequestUtils.getRequest();
             if (null == current) {
+                log.debug("[操作日志] 无当前请求（异步线程？），操作人无法还原（{}）", getter);
                 return null;
             }
             String token = current.getHeader("x-oauth-token");
@@ -342,17 +346,49 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
                 }
             }
             if (StringUtils.isEmpty(token)) {
+                log.debug("[操作日志] 请求未带 x-oauth-token / Authorization，操作人无法还原（{}）", getter);
+                return null;
+            }
+            // 这两个方法句柄可能为 null（类在但方法签名变了）—— 原来直接 invoke 会 NPE，
+            // 被下面那个「什么都吞」的 catch 吃掉，表现为「操作人恒为空」而无任何线索。
+            if (null == OAUTH_GET_INSTANCE || null == OAUTH_GET_USER_RESULT) {
+                log.debug("[操作日志] AuthClientExecute 方法句柄缺失（instance={} userResult={}）",
+                        null != OAUTH_GET_INSTANCE, null != OAUTH_GET_USER_RESULT);
                 return null;
             }
             Object execute = OAUTH_GET_INSTANCE.invoke(null);
+            if (null == execute) {
+                log.debug("[操作日志] AuthClientExecute.getInstance() 返回 null");
+                return null;
+            }
             Object userResult = OAUTH_GET_USER_RESULT.invoke(execute, token);
             if (null == userResult) {
+                log.debug("[操作日志] getUserResult(token) 返回 null，令牌可能已失效");
                 return null;
             }
             Method accessor = userResult.getClass().getMethod(getter);
-            return (String) accessor.invoke(userResult);
+            Object value = accessor.invoke(userResult);
+            // 取到了 null/空串时继续往下退：用户名取不到时用 userId 顶上，
+            // 审计日志里「是谁」有一个可追溯的 id 也比整列为空强。
+            if (value instanceof String text && !text.isBlank()) {
+                return text;
+            }
+            String other = "getUsername".equals(getter) ? "getUserId" : "getUsername";
+            try {
+                Method alt = userResult.getClass().getMethod(other);
+                Object altValue = alt.invoke(userResult);
+                if (altValue instanceof String altText && !altText.isBlank()) {
+                    return altText;
+                }
+            } catch (NoSuchMethodException ignored) {
+                // 结果对象上只有一种身份取值方式，属正常情况
+            }
+            log.debug("[操作日志] getUserResult 返回对象上取不到非空身份（{} / {}）", getter, other);
+            return null;
         } catch (Exception e) {
-            // 令牌解析失败（过期/无 oauth-client/内部异常）只影响操作人字段，静默降级
+            // 令牌解析失败（过期/无 oauth-client/内部异常）只影响操作人字段，不拖垮主流程 ——
+            // 但必须留下痕迹：完全静默时「操作人恒为空」这个真因永远查不出来。
+            log.debug("[操作日志] 令牌解析用户失败（{}）：{}", getter, e.toString());
             return null;
         }
     }

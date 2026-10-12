@@ -213,13 +213,37 @@ public class DatasourceOperLogListener {
         row.setDetail(buildDetail(path, info));
         row.setSuccess(info.getLogStatus());
         row.setCostMs(info.getLogCost());
-        row.setOperator(info.getCreateName() == null ? info.getCreateBy() : info.getCreateName());
+        row.setOperator(resolveOperator(info));
         row.setClientIp(info.getClientIp());
         row.setRequestUrl(info.getLogMapping());
         row.setCreateTime(info.getCreateTime() == null
                 ? LocalDateTime.now()
                 : LocalDateTime.ofInstant(info.getCreateTime().toInstant(), ZoneId.systemDefault()));
         return row;
+    }
+
+    /**
+     * 取操作人。
+     *
+     * <p><strong>为什么不能写成 {@code createName == null ? createBy : createName}</strong>：
+     * 空串不是 null。上游 {@code @SysLog} 切面在拿不到用户名时会给出
+     * {@code createName = ""}，于是这条记录明明有 {@code createBy} 也会被空串挡掉，
+     * 操作日志的「谁做的」整列长期为空 —— 而审计日志没有操作人基本等于没用。
+     * 实测 2026-10-12：连续多条 TEST 日志的 operator 均为空串。</p>
+     *
+     * @param info 事件
+     * @return 操作人；两边都取不到时返回 null（留空比写「未知」诚实）
+     */
+    private String resolveOperator(SysLoggerInfo info) {
+        String name = info.getCreateName();
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        String by = info.getCreateBy();
+        if (by != null && !by.isBlank()) {
+            return by;
+        }
+        return null;
     }
 
     /**
