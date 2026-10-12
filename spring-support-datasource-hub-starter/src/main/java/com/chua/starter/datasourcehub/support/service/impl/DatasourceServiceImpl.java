@@ -309,15 +309,20 @@ public class DatasourceServiceImpl implements DatasourceService {
         try {
             endpoint = tunnelService.openIfEnabled(id);
         } catch (RuntimeException e) {
-            String reason = "SSH 隧道打开失败: " + e.getMessage();
+            // 不在这里再拼一次「SSH 隧道打开失败: 」，异常 message 自带该前缀
+            // （DatasourceTunnelServiceImpl#doOpen 拼过），再拼一次用户看到的是
+            // 「SSH 隧道打开失败: SSH 隧道打开失败: ...」这种叠头。
+            String reason = isBlank(e.getMessage()) ? "SSH 隧道打开失败" : e.getMessage();
             log.warn("[datasource-hub] 数据源 {} {}", id, reason);
             if (persist) {
                 persistProbeResult(id,
                         DatasourceProbeSupport.ProbeOutcome.failed(reason),
                         testedAt);
             }
+            // tunneled 传 null 而不是 true：隧道没打开，这次探测压根没经过隧道，
+            // 说成「经隧道」会让指标面板显示一条根本没走隧道的假指标。
             return ReturnResult.ok(new DataSourceTestVO(false, reason, ds.type(),
-                    null, null, true, testedAt, null));
+                    null, null, null, testedAt, null));
         }
         String targetHost = endpoint == null ? ds.host() : endpoint.host();
         // 【坑】这里必须保持装箱：三元表达式 `cond ? Integer : int` 会被推断成 int，
@@ -333,7 +338,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (targetPort == null) {
             log.debug("[datasource-hub] 数据源 {} 无端口（文件库或整串 JDBC URL），不做 TCP 目标推断", id);
         }
-        boolean tunneled = endpoint != null;
+        Boolean tunneled = endpoint != null;
         if (tunneled) {
             log.info("数据源 {} 经 SSH 隧道中转: {}:{}", id, targetHost, targetPort);
         }
