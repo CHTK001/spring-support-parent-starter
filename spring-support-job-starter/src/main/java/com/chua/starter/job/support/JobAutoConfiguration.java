@@ -124,13 +124,19 @@ public class JobAutoConfiguration {
 
     /**
      * @Scheduled 注解扫描器。
+     *
+     * <p>注入 {@link Environment} 供其解析 {@code @Scheduled} 里的 {@code ${...}} 占位符，
+     * 否则 cron 表达式会按字面量注册导致启动失败。</p>
+     *
      * @param jobTaskScheduler 作业任务调度器
+     * @param environment      应用环境，用于解析占位符
      * @return 作业调度注解scanner的结果
      */
     @Bean
     @ConditionalOnMissingBean
-    public ScheduledAnnotationScanner jobScheduledAnnotationScanner(TaskScheduler jobTaskScheduler) {
-        return new ScheduledAnnotationScanner(jobTaskScheduler);
+    public ScheduledAnnotationScanner jobScheduledAnnotationScanner(TaskScheduler jobTaskScheduler,
+                                                                   Environment environment) {
+        return new ScheduledAnnotationScanner(jobTaskScheduler, environment);
     }
 
     /**
