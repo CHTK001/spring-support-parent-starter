@@ -2012,6 +2012,39 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
+     * 删除视图。
+     *
+     * <p>视图原先<b>没有任何删除入口</b>：{@link #dropTable} 对视图会一路落到
+     * {@code DROP TABLE}，被 MySQL 内核拒绝成 {@code 'x' is a view}；而界面左侧树的
+     * 视图节点与表节点共用同一个右键菜单，于是「删除表」点在视图上必然失败
+     * （实测 2026-10-12：{@code 删除表失败: 'jdbc_acc.erab097_view' is a view}）。</p>
+     *
+     * <p>这里补 {@code DROP VIEW}，让视图与表一样可删。安全豁免与
+     * {@code dropTable} 同口径：对象名经标识符白名单与元数据存在性校验后才进底层方言。</p>
+     */
+    @Operation(summary = "删除视图")
+    @SysLog(name = "删除视图")
+    @DeleteMapping("view/{viewName}")
+    public ReturnResult<Boolean> dropView(
+            @PathVariable String viewName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        String view = safeIdent(viewName, "视图名");
+        return callDb("删除视图", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId);
+                 SchemaScope scope = useSchema(conn, database)) {
+                // 沿用 requireTable 的存在性校验：它查的是元数据，表与视图都能命中
+                requireTable(conn, view);
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP VIEW " + SqlName.quoteMysql(view, "视图名"))) {
+                    applyQueryTimeout(stmt);
+                    stmt.executeUpdate();
+                }
+                return Boolean.TRUE;
+            }
+        });
+    }
+
+    /**
      * 新建表（跨方言）。
      *
      * <p>此前前端自己拼 {@code CREATE TABLE `x` (...) COMMENT='..'} 发给通用 SQL 执行端点，
