@@ -77,7 +77,7 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
         DataSourceTestVO vo = probed.getData();
         persist(datasourceId, row.getDatasourceType(),
                 Boolean.valueOf(vo.success()), vo.connectLatencyMs(), vo.sessionLatencyMs(),
-                Boolean.valueOf(vo.tunneled()), vo.connectionCount(),
+                vo.tunneled(), vo.connectionCount(),
                 vo.success() ? null : vo.message());
         return probed;
     }

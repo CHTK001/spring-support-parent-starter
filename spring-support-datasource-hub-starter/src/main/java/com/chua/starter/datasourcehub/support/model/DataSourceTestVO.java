@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  * @param type               被测试的数据源类型
  * @param connectLatencyMs   连接延迟（毫秒），未测出时为 null
  * @param sessionLatencyMs   会话延迟（毫秒），未测出时为 null
- * @param tunneled           本次测试是否经由 SSH 隧道中转
+ * @param tunneled           本次测试是否经由 SSH 隧道中转；<b>隧道打不开时为 null</b>（未判定）
  * @param testedAt           测试时间
  * @param connectionCount    采样时刻目标服务上的客户端连接数；类型不支持时为 null
  * @author CH
@@ -26,7 +26,7 @@ public record DataSourceTestVO(
         String type,
         Long connectLatencyMs,
         Long sessionLatencyMs,
-        boolean tunneled,
+        Boolean tunneled,
         LocalDateTime testedAt,
         Long connectionCount
 ) {
