@@ -99,6 +99,13 @@ plugin:
       # 提交进版本库。现改为由部署方通过启动参数显式传入：
       #   --plugin.oauth.temp.user='<用户名>:<口令>'
       user: ""
+    # 本地管理员兜底：本应用用 SysLoginServiceImpl 走本地登录，accessToken 由本进程自签；
+    # 而 AuthFilter 默认会把这个令牌送去独立部署的 OAuth 服务校验。198 上那套 oauth
+    # （/home/kali/oauth）从未注册过本应用——oauth 库 sys_app_key 为 0 行、
+    # sys_oauth_trace_log 也没有本应用的任何记录——于是所有业务接口
+    # （/v2/collect/flow/list 等）一律 403「用户信息不存在/请重新登录」，
+    # 页面表现为登录成功后列表全空。开启本项后本地登录令牌不再依赖 oauth 侧校验。
+    local-admin-fallback: true
     # 不继承框架默认白名单（混有其它应用历史路径），按本应用显式放行
     use-default-whitelist: false
     whitelist:
@@ -122,6 +129,11 @@ plugin:
       # 学生头像直链预览：同上 —— <img> 带不了 Authorization，必须放行；
       # 上传端点(/student-avatar/upload)仍在白名单之外，且带 @Permission("admin")。
       - /v2/edu/student-avatar/file
+      # 登录页挂载时、以及登录成功后登录态落地前都会拉这份默认配置（loginByUsername 里的
+      # refreshDefaultSetting）。它不带有效令牌，不放行就返回 403「用户信息不存在/请重新登录」，
+      # 前端据此误判登录失效 → clearAllAuthData 清登录态 → 路由从 /home 弹回 /login，
+      # 表现为「刚登录就又回登录页」。实测：补上后该接口 403 → 200，登录恢复正常。
+      - /v2/setting/default
   # OSGi 源码扩展点：学生凭据校验等 SPI 实现改由源码声明，改完即生效，
   # 不必为调整一条登录规则重新构建 600MB+ 的 fat jar。
   # 源码目录刻意放在 jar 之外（WorkingDirectory 相对路径），fat jar 内的资源不可热改。
