@@ -15,17 +15,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * InfluxDB 2.x HTTP API 客户端。
+ * InfluxDB HTTP API 客户端（2.x / 3.x 双版本）。
  *
- * <p>凭据落在数据源行的两个字段上：{@code password} 存 API Token（请求头
- * {@code Authorization: Token xxx}），{@code username} 存 org 名。org 留空时向
- * {@code /api/v2/orgs} 取第一个组织并缓存——Token 本身就是按 org 授权的，
- * 单实例通常只有一个可选组织。</p>
+ * <p>凭据落在数据源行的两个字段上：{@code password} 存 API Token——
+ * v2 请求头为 {@code Authorization: Token xxx}，v3 为
+ * {@code Authorization: Bearer xxx}；{@code username} 存 org 名
+ * （仅 v2 使用，v3 已移除组织）。org 留空时向 {@code /api/v2/orgs}
+ * 取第一个组织并缓存——Token 本身就是按 org 授权的，单实例通常只有一个可选组织。</p>
+ *
+ * <p>v2 与 v3 是两套完全不同的实现：v2 为 Go 单体 + TSM 引擎，走
+ * {@code /api/v2/*}、Flux、组织/桶模型；v3 为 Rust 重写
+ * （Arrow/DataFusion/Parquet），走 {@code /api/v3/*}、SQL + InfluxQL、
+ * 数据库模型，已移除 Flux 与组织。大版本在解析目标时探测一次并缓存：
+ * v3 专属路由在 v2 上恒 404，命中即 v3。</p>
  *
  * <p>{@code database} 字段沿用 Nacos 的口径：填完整 URL 时按 URL 走（反向代理挂子路径），
  * 填 {@code https} 时用 TLS，其余情况不影响本类型的地址拼接。</p>
  *
- * <p>本类只负责「带上凭据、发请求、把响应读成 JSON」，Flux 语句与结构解析在
+ * <p>本类只负责「带上凭据、发请求、把响应读成 JSON」，查询语句与结构解析在
  * {@code InfluxdbManageServiceImpl} 里完成。</p>
  *
  * @author CH
@@ -35,6 +42,23 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class InfluxdbClient {
+
+    /**
+     * InfluxDB 大版本。
+     *
+     * <p>v2 与 v3 的后台实现完全不同：v2 走 {@code /api/v2/*} + Flux +
+     * 组织/桶；v3 走 {@code /api/v3/*} + SQL/InfluxQL + 数据库，
+     * 客户端库也不通用（{@code influxdb-client-java} 只支持 v2）。</p>
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    public enum Version {
+        /** InfluxDB 2.x */
+        V2,
+        /** InfluxDB 3.x */
+        V3
+    }
 
     /**
      * 数据源类型标识
@@ -61,12 +85,18 @@ public class InfluxdbClient {
     private final Map<String, String> orgCache = new ConcurrentHashMap<>();
 
     /**
-     * 一次 InfluxDB 调用所需的「地址 + 凭据 + org」。
+     * 端点地址 → 已探测的大版本，避免每次解析目标都多打一次探测请求
+     */
+    private final Map<String, Version> versionCache = new ConcurrentHashMap<>();
+
+    /**
+     * 一次 InfluxDB 调用所需的「地址 + 凭据 + org + 大版本」。
      *
      * @param endpoint 地址与凭据
-     * @param org      组织名，未登记且探测不到时为空串
+     * @param org      组织名，未登记且探测不到时为空串（v3 恒为空）
+     * @param version  服务端大版本
      */
-    public record Target(MiddlewareEndpoint endpoint, String org) {
+    public record Target(MiddlewareEndpoint endpoint, String org, Version version) {
 
         /**
          * 带上 org 的查询参数。
@@ -83,6 +113,15 @@ public class InfluxdbClient {
             }
             System.arraycopy(pairs, 0, all, i, pairs.length);
             return MiddlewareNamespace.query(all);
+        }
+
+        /**
+         * 是否 InfluxDB 3.x。
+         *
+         * @return v3 为 true
+         */
+        public boolean isV3() {
+            return version == Version.V3;
         }
     }
 
@@ -105,7 +144,7 @@ public class InfluxdbClient {
      */
     public Target target(DataSourceVO ds) {
         MiddlewareEndpoint endpoint = endpoint(ds);
-        return new Target(endpoint, org(endpoint));
+        return new Target(endpoint, org(endpoint), detectVersion(endpoint));
     }
 
     /**
@@ -435,6 +474,206 @@ public class InfluxdbClient {
     }
 
     /**
+     * 列出 v3 实例的全部数据库。
+     *
+     * <p>v3 用数据库取代 v2 的组织+桶，列表接口为
+     * {@code GET /api/v3/configure/database?format=json}，
+     * 响应是裸 JSON 数组：{@code [{"iox::database":"name"}]}</p>
+     *
+     * @param target 访问目标
+     * @return 数据库原始条目
+     * @throws IllegalStateException 请求失败
+     */
+    public JsonArray v3Databases(Target target) {
+        try {
+            String text = MiddlewareHttp.get(target.endpoint().url("/api/v3/configure/database"),
+                    Map.of("format", "json"), authHeaders(target));
+            return Json.getJsonArray(text);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/configure/database", e);
+        }
+    }
+
+    /**
+     * 新建 v3 数据库。
+     *
+     * <p>创建接口是 {@code POST /api/v3/configure/database}，
+     * 保留期用 humantime 格式（如 {@code 168h}），省略表示永久保留。
+     * v3 没有描述字段，{@code description} 被忽略。</p>
+     *
+     * @param target         访问目标
+     * @param name           数据库名
+     * @param retentionHours 保留时长（小时），空或非正表示永久
+     * @throws IllegalStateException 请求失败
+     */
+    public void v3CreateDatabase(Target target, String name, Long retentionHours) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("db", name);
+        String retention = humantime(retentionHours);
+        if (retention != null) {
+            body.put("retention_period", retention);
+        }
+        try {
+            MiddlewareHttp.postJson(target.endpoint().url("/api/v3/configure/database"),
+                    Map.of(), Json.toJson(body), authHeaders(target));
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/configure/database", e);
+        }
+    }
+
+    /**
+     * 更新 v3 数据库配置（保留期）。
+     *
+     * <p>更新接口是 {@code PUT /api/v3/configure/database}，
+     * {@code retentionHours} 空或非正时省略保留期字段，表示清除保留期（永久保留）。</p>
+     *
+     * @param target         访问目标
+     * @param name           数据库名
+     * @param retentionHours 新的保留时长（小时），空或非正表示永久
+     * @throws IllegalStateException 请求失败
+     */
+    public void v3UpdateRetention(Target target, String name, Long retentionHours) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("db", name);
+        String retention = humantime(retentionHours);
+        if (retention != null) {
+            body.put("retention_period", retention);
+        }
+        Map<String, String> heads = new LinkedHashMap<>(authHeaders(target));
+        heads.put("Accept", "application/json");
+        try {
+            MiddlewareHttp.putJson(target.endpoint().url("/api/v3/configure/database"),
+                    Map.of(), Json.toJson(body), heads);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/configure/database", e);
+        }
+    }
+
+    /**
+     * 删除 v3 数据库（软删除）。
+     *
+     * <p>删除接口是 {@code DELETE /api/v3/configure/database?db=..}，
+     * 以数据库名为标识（v3 无 UUID）。</p>
+     *
+     * @param target 访问目标
+     * @param name   数据库名
+     * @throws IllegalStateException 请求失败
+     */
+    public void v3DeleteDatabase(Target target, String name) {
+        try {
+            MiddlewareHttp.delete(target.endpoint().url("/api/v3/configure/database"),
+                    Map.of("db", name), authHeaders(target));
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/configure/database", e);
+        }
+    }
+
+    /**
+     * 向 v3 数据库写入 line protocol 数据点。
+     *
+     * <p>v3 写入接口是 {@code POST /api/v3/write_lp?db=..&precision=..}</p>
+     *
+     * @param target    访问目标
+     * @param database  目标数据库
+     * @param precision 时间精度（ns/us/ms/s），空按 ns
+     * @param lines     line protocol 文本（一行一个点，换行分隔）
+     * @throws IllegalStateException 请求失败
+     */
+    public void v3Write(Target target, String database, String precision, String lines) {
+        Map<String, String> heads = new LinkedHashMap<>(authHeaders(target));
+        heads.put("Accept", "application/json");
+        try {
+            MiddlewareHttp.postText(target.endpoint().url("/api/v3/write_lp"),
+                    target.query("db", database, "precision", (precision == null || precision.isBlank()) ? "ns" : precision),
+                    lines, "text/plain; charset=utf-8", heads);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/write_lp", e);
+        }
+    }
+
+    /**
+     * 执行 v3 SQL 查询并把逐行 JSON 响应还原成行数据。
+     *
+     * <p>v3 的 SQL 接口是 {@code POST /api/v3/query_sql}，目标数据库与
+     * SQL 语句都放在 JSON 体里：{@code {"db":"..","q":".."}}，
+     * 响应为裸 JSON 数组，每行一个对象、列为键。</p>
+     *
+     * @param target   访问目标
+     * @param database 目标数据库
+     * @param sql      SQL 语句
+     * @return 行数据，保持服务端给出的列顺序
+     * @throws IllegalStateException 请求失败
+     */
+    public List<JsonObject> v3QuerySql(Target target, String database, String sql) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("db", database);
+        body.put("q", sql);
+        Map<String, String> heads = new LinkedHashMap<>(authHeaders(target));
+        heads.put("Accept", "application/json");
+        try {
+            String text = MiddlewareHttp.postJson(target.endpoint().url("/api/v3/query_sql"),
+                    Map.of(), Json.toJson(body), heads);
+            return parseV3Rows(text);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/query_sql", e);
+        }
+    }
+
+    /**
+     * 执行 v3 InfluxQL 查询。
+     *
+     * <p>v3 的 InfluxQL 接口是 {@code GET /api/v3/query_influxql?db=..&q=..}，
+     * 用于 SHOW MEASUREMENTS 等 SQL 未覆盖的元数据语句。</p>
+     *
+     * @param target    访问目标
+     * @param database  目标数据库
+     * @param influxql  InfluxQL 语句
+     * @return 行数据
+     * @throws IllegalStateException 请求失败
+     */
+    public List<JsonObject> v3QueryInfluxql(Target target, String database, String influxql) {
+        Map<String, String> heads = new LinkedHashMap<>(authHeaders(target));
+        heads.put("Accept", "application/json");
+        try {
+            String text = MiddlewareHttp.get(target.endpoint().url("/api/v3/query_influxql"),
+                    target.query("db", database, "q", influxql), heads);
+            return parseV3Rows(text);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/api/v3/query_influxql", e);
+        }
+    }
+
+    /**
+     * 解析 v3 查询响应：裸 JSON 数组，每行一个对象。
+     *
+     * @param text 响应体文本
+     * @return 行数据
+     */
+    private static List<JsonObject> parseV3Rows(String text) {
+        JsonArray array = text == null || text.trim().isEmpty()
+                ? new JsonArray()
+                : Json.getJsonArray(text);
+        List<JsonObject> rows = new ArrayList<>(array.size());
+        for (int i = 0; i < array.size(); i++) {
+            rows.add(array.getJsonObject(i));
+        }
+        return rows;
+    }
+
+    /**
+     * 小时数转 humantime 时长文本（v3 保留期接口的格式）。
+     *
+     * @param retentionHours 保留时长（小时）
+     * @return 如 {@code 168h}；空或非正表示永久（省略该字段），返回 null
+     */
+    private static String humantime(Long retentionHours) {
+        if (retentionHours == null || retentionHours <= 0L) {
+            return null;
+        }
+        return retentionHours + "h";
+    }
+
+    /**
      * GET 并解析成 JSON 对象。
      *
      * @param target 访问目标
@@ -445,7 +684,7 @@ public class InfluxdbClient {
      */
     public JsonObject getObject(Target target, String path, Map<String, String> query) {
         try {
-            return Json.getJsonObject(MiddlewareHttp.get(target.endpoint().url(path), query, headers(target.endpoint())));
+            return Json.getJsonObject(MiddlewareHttp.get(target.endpoint().url(path), query, authHeaders(target)));
         } catch (Exception e) {
             throw failure(target.endpoint(), path, e);
         }
@@ -463,13 +702,29 @@ public class InfluxdbClient {
      */
     public String postJson(Target target, String path, Map<String, String> query, String body) {
         MiddlewareEndpoint endpoint = target.endpoint();
-        Map<String, String> heads = new LinkedHashMap<>(headers(endpoint));
+        Map<String, String> heads = new LinkedHashMap<>(authHeaders(target));
         heads.put("Accept", "application/json");
         try {
             return MiddlewareHttp.postJson(endpoint.url(path), query, body, heads);
         } catch (Exception e) {
             throw failure(endpoint, path, e);
         }
+    }
+
+    /**
+     * 组装请求头：有 Token 才带 Authorization（v2 为 Token 语义，v3 为 Bearer 语义）。
+     *
+     * @param target 访问目标
+     * @return 请求头
+     */
+    private Map<String, String> authHeaders(Target target) {
+        MiddlewareEndpoint endpoint = target.endpoint();
+        if (endpoint.password().isEmpty()) {
+            return Map.of();
+        }
+        return target.isV3()
+                ? Map.of("Authorization", "Bearer " + endpoint.password())
+                : Map.of("Authorization", "Token " + endpoint.password());
     }
 
     /**
@@ -485,6 +740,48 @@ public class InfluxdbClient {
     }
 
     /**
+     * 探测服务端大版本并按端点缓存。
+     *
+     * @param endpoint 端点
+     * @return 大版本
+     */
+    private Version detectVersion(MiddlewareEndpoint endpoint) {
+        String key = endpoint.base() + endpoint.context();
+        Version cached = versionCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        Version version = probeVersion(endpoint);
+        versionCache.put(key, version);
+        return version;
+    }
+
+    /**
+     * 探测大版本：v3 专属路由（数据库配置接口）在 v2 上恒 404。
+     *
+     * <p>探测不携带凭据——只看路由是否存在：v3 上无论鉴权开关，
+     * 该接口都返回 200/401/403，只要不是 404 即 v3；
+     * 连接失败等异常按 v2 处理（连通性由调用方的测试接口负责报错）。</p>
+     *
+     * @param endpoint 端点
+     * @return 大版本
+     */
+    private Version probeVersion(MiddlewareEndpoint endpoint) {
+        try {
+            MiddlewareHttp.Response response = MiddlewareHttp.getResponse(
+                    endpoint.url("/api/v3/configure/database"),
+                    Map.of("format", "json"),
+                    Map.of());
+            if (response.status() != 404) {
+                return Version.V3;
+            }
+        } catch (java.io.IOException e) {
+            log.debug("[influxdb] v3 路由探测失败，按 v2 处理: {}", e.getMessage());
+        }
+        return Version.V2;
+    }
+
+    /**
      * 取请求要带的 org：优先数据源登记值，缺省回查一次 /api/v2/orgs。
      *
      * @param endpoint 端点
@@ -493,6 +790,10 @@ public class InfluxdbClient {
     private String org(MiddlewareEndpoint endpoint) {
         if (!endpoint.username().isEmpty()) {
             return endpoint.username();
+        }
+        // v3 已移除组织概念，不回查 /api/v2/orgs（v3 上恒 404）
+        if (detectVersion(endpoint) == Version.V3) {
+            return "";
         }
         String key = endpoint.base() + endpoint.context();
         String cached = orgCache.get(key);
