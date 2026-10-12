@@ -7,6 +7,7 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.support.CronTrigger;
@@ -15,6 +16,7 @@ import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,6 +38,14 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
     private final TaskScheduler taskScheduler;
 
     /**
+     * 应用环境，用于解析 {@code @Scheduled} 里的 {@code ${...}} 占位符。
+     *
+     * <p>不可为 null：拿不到环境就退化成按字面量注册，会重演
+     * {@code ${...} 被 CronExpression 直接解析而启动失败}的老问题。</p>
+     */
+    private final Environment environment;
+
+    /**
      * 已注册任务计数
      */
     private final AtomicInteger registeredCount = new AtomicInteger(0);
@@ -44,9 +54,11 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
      * 构造扫描器。
      *
      * @param taskScheduler Spring 任务调度器
+     * @param environment   应用环境，用于解析占位符；为 null 时降级为字面量注册
      */
-    public ScheduledAnnotationScanner(TaskScheduler taskScheduler) {
+    public ScheduledAnnotationScanner(TaskScheduler taskScheduler, Environment environment) {
         this.taskScheduler = taskScheduler;
+        this.environment = environment;
     }
 
     @Override
@@ -112,22 +124,78 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         };
 
         String name = beanName + "#" + methodName;
-        if (StringUtilsHasText(ann.cron())) {
-            taskScheduler.schedule(task, new CronTrigger(ann.cron()));
-        } else if (ann.fixedRate() > 0) {
-            taskScheduler.schedule(task, new PeriodicTrigger(Duration.ofMillis(ann.fixedRate())));
-        } else if (ann.fixedDelay() > 0) {
-            long delayMs = ann.fixedDelay();
-            long initialMs = Math.max(0L, ann.initialDelay());
-            PeriodicTrigger trigger = new PeriodicTrigger(delayMs, TimeUnit.MILLISECONDS);
-            trigger.setInitialDelay(initialMs);
-            taskScheduler.schedule(task, trigger);
-        } else {
-            log.warn("[job] @Scheduled 缺少有效配置, 跳过 name={}", name);
+        try {
+            // @Scheduled 的值允许写 ${...}（各 starter 普遍把 cron 做成可配置项）。
+            // Spring 原生 ScheduledAnnotationBeanPostProcessor 会先解析占位符，
+            // 但本扫描器拿到的是注解字面量，不解析就会把 "${xxx.cron:...}" 原样丢给
+            // CronExpression，抛 IllegalArgumentException 并连带整个容器启动失败。
+            String cron = resolve(ann.cron());
+            if (StringUtilsHasText(cron)) {
+                String zone = resolve(ann.zone());
+                CronTrigger cronTrigger = StringUtilsHasText(zone)
+                        ? new CronTrigger(cron, TimeZone.getTimeZone(zone)) : new CronTrigger(cron);
+                taskScheduler.schedule(task, cronTrigger);
+            } else {
+                long periodMs = resolvePeriod(ann.fixedRateString(), ann.fixedRate());
+                if (periodMs > 0) {
+                    taskScheduler.schedule(task, new PeriodicTrigger(Duration.ofMillis(periodMs)));
+                } else {
+                    periodMs = resolvePeriod(ann.fixedDelayString(), ann.fixedDelay());
+                    if (periodMs <= 0) {
+                        log.warn("[job] @Scheduled 缺少有效配置, 跳过 name={}", name);
+                        return;
+                    }
+                    PeriodicTrigger trigger = new PeriodicTrigger(periodMs, TimeUnit.MILLISECONDS);
+                    long initialMs = resolvePeriod(ann.initialDelayString(), ann.initialDelay());
+                    if (initialMs > 0) {
+                        trigger.setInitialDelay(initialMs);
+                    }
+                    taskScheduler.schedule(task, trigger);
+                }
+            }
+        } catch (RuntimeException ex) {
+            // 单个 @Scheduled 配错不该拖垮整个应用：跳过该任务并留下可检索的日志。
+            log.error("[job] @Scheduled 配置非法, 已跳过 name={}, 原因={}", name, ex.getMessage(), ex);
             return;
         }
         registeredCount.incrementAndGet();
         log.info("[job] 注册 @Scheduled name={}", name);
+    }
+
+    /**
+     * 解析 {@code ${...}} 占位符，非严格模式（解析不了就保留原样，与 Spring 默认一致）。
+     *
+     * @param value 原始值，可为 null
+     * @return 解析后的值；入参为空或无环境时原样返回
+     */
+    private String resolve(String value) {
+        if (value == null || value.isBlank() || environment == null) {
+            return value;
+        }
+        return environment.resolvePlaceholders(value);
+    }
+
+    /**
+     * 解析周期值：优先取字符串形态（可带占位符），否则用长整型。
+     *
+     * @param stringValue 字符串形态，可能为空或带占位符
+     * @param longValue   长整型形态，字符串形态为空时的兜底
+     * @return 解析后的毫秒数；无法解析时返回 -1
+     */
+    private long resolvePeriod(String stringValue, long longValue) {
+        if (StringUtilsHasText(stringValue)) {
+            String resolved = resolve(stringValue).trim();
+            if (resolved.startsWith("P") || resolved.startsWith("p") || resolved.startsWith("-P")
+                    || resolved.startsWith("-p") || resolved.startsWith("PT") || resolved.startsWith("pt")) {
+                return Duration.parse(resolved).toMillis();
+            }
+            try {
+                return Long.parseLong(resolved);
+            } catch (NumberFormatException ignored) {
+                return -1L;
+            }
+        }
+        return longValue;
     }
 
     /**
