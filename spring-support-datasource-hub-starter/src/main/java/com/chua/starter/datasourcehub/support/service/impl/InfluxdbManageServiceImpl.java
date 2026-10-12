@@ -19,18 +19,27 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * InfluxDB 管理实现：Bucket 走 {@code /api/v2/buckets}，度量与查询走 Flux。
+ * InfluxDB 管理实现：按服务端大版本分发。
  *
- * <p>度量列表按「一次测量名 + 三次聚合」取数，聚合失败只把对应列留空，不让整个列表失败；
- * 最后写入时间只回看 {@value #LAST_WRITE_WINDOW}，窗口内无数据的度量留空而不是谎报。</p>
+ * <p>v2（{@code /api/v2/*} + Flux + 组织/桶）与 v3（{@code /api/v3/*} +
+ * SQL/InfluxQL + 数据库）是两套后台实现，由 {@code InfluxdbClient.Target#isV3()}
+ * 判别：v2 的 Bucket 走 {@code /api/v2/buckets}、度量与查询走 Flux；
+ * v3 的数据库走 {@code /api/v3/configure/database}、查询走 SQL，
+ * 度量名与元数据走 InfluxQL。</p>
+ *
+ * <p>度量列表按「一次测量名 + 聚合统计」取数，统计失败只把对应列留空，
+ * 不让整个列表失败；v2 的最后写入时间只回看 {@value #LAST_WRITE_WINDOW}，
+ * 窗口内无数据的度量留空而不是谎报（v3 取每张表最新一行的时间）。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -64,8 +73,13 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
     public MiddlewareTestVO test(MiddlewareTestDTO request) {
         InfluxdbClient.Target target = testTarget(request);
         try {
-            // /health 不校验 Token，只探它会把「地址通、凭据错」判成连接成功，因此以必带凭据的 orgs 接口为准
-            client.getObject(target, "/api/v2/orgs", Map.of());
+            if (target.isV3()) {
+                // v3：数据库配置接口在鉴权开启时必带凭据，连通即成功
+                client.v3Databases(target);
+            } else {
+                // /health 不校验 Token，只探它会把「地址通、凭据错」判成连接成功，因此以必带凭据的 orgs 接口为准
+                client.getObject(target, "/api/v2/orgs", Map.of());
+            }
         } catch (IllegalStateException e) {
             return new MiddlewareTestVO(false, null, e.getMessage());
         }
@@ -80,6 +94,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      */
     private String version(InfluxdbClient.Target target) {
         try {
+            if (target.isV3()) {
+                // v3 的 /ping 回 JSON：{"product_name":..,"version":"3.x",..}
+                return emptyToNull(str(client.getObject(target, "/ping", Map.of()).get("version")));
+            }
             return emptyToNull(str(client.health(target).get("version")));
         } catch (IllegalStateException e) {
             log.debug("[influxdb] 健康接口不可用: {}", e.getMessage());
@@ -90,6 +108,9 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
     @Override
     public List<InfluxdbBucketVO> buckets(Long datasourceId) {
         InfluxdbClient.Target target = client.target(datasourceId);
+        if (target.isV3()) {
+            return v3Buckets(target);
+        }
         JsonArray items = client.buckets(target);
         List<InfluxdbBucketVO> result = new ArrayList<>(items.size());
         for (int i = 0; i < items.size(); i++) {
@@ -101,12 +122,36 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         return result;
     }
 
+    /**
+     * 列出 v3 实例的数据库。
+     *
+     * <p>v3 的列表接口只回数据库名，保留期与创建时间需逐库查询，先留白；
+     * {@code _internal} 是系统库，不展示。</p>
+     *
+     * @param target 访问目标
+     * @return 数据库列表，id 与 name 同为数据库名
+     */
+    private List<InfluxdbBucketVO> v3Buckets(InfluxdbClient.Target target) {
+        JsonArray items = client.v3Databases(target);
+        List<InfluxdbBucketVO> result = new ArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            String name = str(items.getJsonObject(i).get("iox::database"));
+            if (!name.isEmpty() && !"_internal".equals(name)) {
+                result.add(new InfluxdbBucketVO(name, name, null, null));
+            }
+        }
+        return result;
+    }
+
     @Override
     public List<InfluxdbMeasurementVO> measurements(Long datasourceId, String bucket) {
         InfluxdbClient.Target target = client.target(datasourceId);
         String name = trim(bucket);
         if (name.isEmpty()) {
             name = firstBucket(target);
+        }
+        if (target.isV3()) {
+            return v3Measurements(target, name);
         }
         List<String> names = measurements(name, target);
         if (names.isEmpty()) {
@@ -123,24 +168,152 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         return result;
     }
 
+    /**
+     * 列出 v3 数据库的度量及统计。
+     *
+     * @param target    访问目标
+     * @param database  目标数据库
+     * @return 度量列表
+     */
+    private List<InfluxdbMeasurementVO> v3Measurements(InfluxdbClient.Target target, String database) {
+        List<String> names = v3MeasurementNames(target, database);
+        if (names.isEmpty()) {
+            return List.of();
+        }
+        Map<String, Integer> tagCounts = v3CountBy(target, database, names, true);
+        Map<String, Integer> fieldCounts = v3CountBy(target, database, names, false);
+        Map<String, String> lastWrites = v3LastWrites(target, database, names);
+        List<InfluxdbMeasurementVO> result = new ArrayList<>(names.size());
+        for (String measurement : names) {
+            result.add(new InfluxdbMeasurementVO(measurement, fieldCounts.get(measurement),
+                    tagCounts.get(measurement), lastWrites.get(measurement)));
+        }
+        return result;
+    }
+
+    /**
+     * 读取 v3 数据库的度量名（InfluxQL {@code SHOW MEASUREMENTS}）。
+     *
+     * @param target   访问目标
+     * @param database 目标数据库
+     * @return 度量名列表，保持服务端顺序
+     */
+    private List<String> v3MeasurementNames(InfluxdbClient.Target target, String database) {
+        List<JsonObject> rows = client.v3QueryInfluxql(target, database, "SHOW MEASUREMENTS");
+        List<String> names = new ArrayList<>(Math.min(rows.size(), MEASUREMENT_LIMIT));
+        for (JsonObject row : rows) {
+            String name = firstNonBlank(str(row.get("name")), str(row.get("_value")));
+            if (!name.isEmpty() && !names.contains(name) && names.size() < MEASUREMENT_LIMIT) {
+                names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /**
+     * 统计每个度量的标签数或字段数（v3 走 {@code information_schema.columns}，
+     * 一次拉全部列定义按度量分组，避免逐个度量发请求）。
+     *
+     * <p>v3 把标签存为字典编码列（{@code Dictionary(.., Utf8)}），
+     * 字段存为数值/布尔列；{@code time} 列是时间戳，不计入任何一侧。</p>
+     *
+     * @param target   访问目标
+     * @param database 目标数据库
+     * @param names    度量名列表
+     * @param tags     true 统计标签数，false 统计字段数
+     * @return 度量名 → 数量
+     */
+    private Map<String, Integer> v3CountBy(InfluxdbClient.Target target, String database,
+                                           List<String> names, boolean tags) {
+        try {
+            Set<String> wanted = new HashSet<>(names);
+            String sql = "SELECT table_name, column_name, data_type FROM information_schema.columns";
+            Map<String, Integer> counts = new LinkedHashMap<>();
+            for (JsonObject column : client.v3QuerySql(target, database, sql)) {
+                String table = str(column.get("table_name"));
+                if (!wanted.contains(table)) {
+                    continue;
+                }
+                String type = str(column.get("data_type"));
+                boolean dictionary = type.startsWith("Dictionary(");
+                boolean timestamp = type.startsWith("Timestamp(");
+                if (tags ? dictionary : (!dictionary && !timestamp)) {
+                    counts.merge(table, 1, Integer::sum);
+                }
+            }
+            return counts;
+        } catch (IllegalStateException e) {
+            log.debug("[influxdb] 统计 {} 失败: {}", tags ? "标签数" : "字段数", e.getMessage());
+            return Map.of();
+        }
+    }
+
+    /**
+     * 统计每个度量最新一行的时间（v3 取每张表 {@code time} 列最大值）。
+     *
+     * @param target   访问目标
+     * @param database 目标数据库
+     * @param names    度量名列表
+     * @return 度量名 → 可读时间
+     */
+    private Map<String, String> v3LastWrites(InfluxdbClient.Target target, String database,
+                                             List<String> names) {
+        Map<String, String> times = new LinkedHashMap<>();
+        try {
+            for (String measurement : names) {
+                String sql = "SELECT time FROM " + sqlIdentifier(measurement)
+                        + " ORDER BY time DESC LIMIT 1";
+                List<JsonObject> rows = client.v3QuerySql(target, database, sql);
+                if (!rows.isEmpty()) {
+                    String time = str(rows.get(0).get("time"));
+                    if (!time.isEmpty()) {
+                        times.put(measurement, readableTime(time));
+                    }
+                }
+            }
+        } catch (IllegalStateException e) {
+            log.debug("[influxdb] 统计最后写入时间失败: {}", e.getMessage());
+        }
+        return times;
+    }
+
     @Override
     public InfluxdbQueryResultVO query(InfluxdbQueryDTO request) {
-        String flux = requireText(request == null ? null : request.flux(), "Flux 查询语句不能为空");
-        InfluxdbClient.Target target = client.target(request.datasourceId());
+        InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
+        String statement = requireText(request == null ? null : request.flux(),
+                target.isV3() ? "SQL 查询语句不能为空" : "Flux 查询语句不能为空");
         long start = System.nanoTime();
-        List<JsonObject> raw = client.query(target, flux);
+        List<JsonObject> raw = target.isV3()
+                ? client.v3QuerySql(target, database(request, target), statement)
+                : client.query(target, statement);
         long elapsed = Math.max(0L, (System.nanoTime() - start) / 1_000_000L);
         boolean truncated = raw.size() > QUERY_ROW_LIMIT;
         List<Map<String, Object>> rows = new ArrayList<>(Math.min(raw.size(), QUERY_ROW_LIMIT));
         for (int i = 0; i < raw.size() && i < QUERY_ROW_LIMIT; i++) {
             rows.add(raw.get(i));
         }
-        return new InfluxdbQueryResultVO(flux, elapsed, rows, rows.size(), raw.size(), truncated);
+        return new InfluxdbQueryResultVO(statement, elapsed, rows, rows.size(), raw.size(), truncated);
+    }
+
+    /**
+     * v3 查询的目标数据库：优先请求里携带的，缺省取实例第一个数据库。
+     *
+     * @param request 查询请求
+     * @param target  访问目标
+     * @return 数据库名
+     */
+    private String database(InfluxdbQueryDTO request, InfluxdbClient.Target target) {
+        String database = trim(request == null ? null : request.database());
+        return database.isEmpty() ? firstBucket(target) : database;
     }
 
     @Override
     public InfluxdbOrgVO org(Long datasourceId) {
         InfluxdbClient.Target target = client.target(datasourceId);
+        if (target.isV3()) {
+            // v3 已移除组织概念，返回空占位，前端据此隐藏 Org 面板
+            return new InfluxdbOrgVO("", "");
+        }
         JsonArray orgs = client.orgs(target).getJsonArray("orgs");
         if (orgs == null || orgs.size() == 0) {
             throw new IllegalStateException("当前 Token 未关联任何组织(org)");
@@ -151,8 +324,14 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
 
     @Override
     public InfluxdbBucketVO createBucket(InfluxdbBucketDTO request) {
-        String name = requireText(request == null ? null : request.name(), "Bucket 名称不能为空");
         InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
+        String name = requireText(request == null ? null : request.name(),
+                target.isV3() ? "数据库名称不能为空" : "Bucket 名称不能为空");
+        if (target.isV3()) {
+            // v3 的创建接口不回 body，名称即数据库名
+            client.v3CreateDatabase(target, name, request.retentionHours());
+            return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
+        }
         JsonObject created = client.createBucket(target, name,
                 request.retentionHours(), request.description());
         return new InfluxdbBucketVO(str(created.get("id")), str(created.get("name")),
@@ -164,6 +343,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
     public void deleteBucket(Long datasourceId, String bucketId) {
         requireText(bucketId, "Bucket ID 不能为空");
         InfluxdbClient.Target target = client.target(datasourceId);
+        if (target.isV3()) {
+            // v3 以数据库名为标识
+            client.v3DeleteDatabase(target, bucketId);
+            return;
+        }
         client.deleteBucket(target, bucketId);
     }
 
@@ -171,6 +355,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
     public void updateBucketRetention(Long datasourceId, String bucketId, Long retentionHours) {
         requireText(bucketId, "Bucket ID 不能为空");
         InfluxdbClient.Target target = client.target(datasourceId);
+        if (target.isV3()) {
+            client.v3UpdateRetention(target, bucketId, retentionHours);
+            return;
+        }
         client.updateBucketRetention(target, bucketId, retentionHours);
     }
 
@@ -179,6 +367,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         String bucket = requireText(request == null ? null : request.bucket(), "目标 Bucket 不能为空");
         String lines = requireText(request == null ? null : request.lines(), "写入内容(lines)不能为空");
         InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
+        if (target.isV3()) {
+            client.v3Write(target, bucket, request.precision(), lines);
+            return;
+        }
         client.write(target, bucket, request.precision(), lines);
     }
 
@@ -288,6 +480,16 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      * @throws IllegalStateException org 下没有任何 Bucket
      */
     private String firstBucket(InfluxdbClient.Target target) {
+        if (target.isV3()) {
+            JsonArray items = client.v3Databases(target);
+            for (int i = 0; i < items.size(); i++) {
+                String name = str(items.getJsonObject(i).get("iox::database"));
+                if (!name.isEmpty() && !"_internal".equals(name)) {
+                    return name;
+                }
+            }
+            throw new IllegalStateException("未指定数据库且当前实例没有可用数据库");
+        }
         JsonArray items = client.buckets(target);
         for (int i = 0; i < items.size(); i++) {
             String name = str(items.getJsonObject(i).get("name"));
@@ -327,6 +529,16 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      */
     private static String quote(String value) {
         return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
+
+    /**
+     * SQL 标识符加双引号并转义，避免度量名里的引号改写语句。
+     *
+     * @param name 原值
+     * @return 可直接拼进 SQL 的标识符
+     */
+    private static String sqlIdentifier(String name) {
+        return "\"" + name.replace("\"", "\"\"") + "\"";
     }
 
     /**

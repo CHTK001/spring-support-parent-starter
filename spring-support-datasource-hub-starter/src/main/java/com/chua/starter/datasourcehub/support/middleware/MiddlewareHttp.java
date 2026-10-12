@@ -280,6 +280,25 @@ public final class MiddlewareHttp {
     }
 
     /**
+     * JSON 方式 PUT（InfluxDB 3 更新数据库配置走 PUT + JSON）。
+     *
+     * @param url     地址
+     * @param query   查询参数，可为空
+     * @param json    JSON 请求体
+     * @param headers 请求头，可为空
+     * @return 响应体文本
+     * @throws IOException 连接失败或响应非 2xx
+     */
+    public static String putJson(String url, Map<String, String> query, String json,
+                                   Map<String, String> headers) throws IOException {
+        HttpRequest request = builder(appendQuery(url, query), headers)
+                .header("Content-Type", "application/json;charset=UTF-8")
+                .method("PUT", HttpRequest.BodyPublishers.ofString(json == null ? "" : json, StandardCharsets.UTF_8))
+                .build();
+        return send(request);
+    }
+
+    /**
      * 以纯文本方式 POST（InfluxDB line protocol 写入接口只吃 text/plain）。
      *
      * @param url         地址
