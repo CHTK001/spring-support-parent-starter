@@ -958,11 +958,39 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "解析题目", null, null, null, false);
 
-        List<EduPaperScanner.ScannedQuestion> scanned = anyMode
-                ? paperScanner.extractAnyQuestions(mergedBlocks, text)
-                : paperScanner.extractSelfQuestions(mergedBlocks, text);
+        List<EduPaperScanner.ScannedQuestion> scanned;
+        EduPaperScanner.AnyScan anyScan = null;
+        if (anyMode) {
+            anyScan = paperScanner.extractAnyScan(mergedBlocks, text);
+            scanned = anyScan.questions();
+        } else {
+            scanned = paperScanner.extractSelfQuestions(mergedBlocks, text);
+        }
         if (scanned.isEmpty()) {
             throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
+        }
+
+        // 匿名任务的学生回填：上传时没指定学生（anonymous）时，
+        // ANY 卷用模型抽取的卷面学生、SELF 卷用正则从卷头「姓名/学号」栏抽取，
+        // 学号优先、姓名兜底，回填任务学生标识 —— 老师在记录列表里能看到「这份卷是谁的」；
+        // 识别到学号且与学生账号学号一致时，学生端也能按学号精确匹配到这份卷。
+        String studentName = null;
+        String studentNo = null;
+        if (anyMode) {
+            studentName = anyScan.studentName();
+            studentNo = anyScan.studentNo();
+        } else {
+            // 自有卷：抽题不调模型（分值取数据库），学生信息用正则从卷头抽
+            String[] byLines = paperScanner.extractStudentByLines(text);
+            studentName = byLines[0];
+            studentNo = byLines[1];
+        }
+        if ("anonymous".equals(task.getMarkingTaskStudentId())
+                && (studentNo != null || studentName != null)) {
+            String recognized = studentNo != null ? studentNo : studentName;
+            task.setMarkingTaskStudentId(recognized);
+            taskMapper.updateById(task);
+            log.info("[EduScan] 匿名任务回填卷面学生: taskId={}, student={}", taskId, recognized);
         }
 
         // 自有卷：题号 → 试卷题项索引；分值与题目标识一律取自数据库（「准确」的来源）
@@ -1007,6 +1035,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         content.put("pageCount", images.size());
         content.put("pages", pages);
         content.put("questionAnchors", questionAnchors);
+        // 卷面识别到的学生（ANY=模型抽取 / SELF=卷头正则）：前端在详情头部展示
+        // 「卷面识别：姓名 学号」，与任务学生标识（可能被回填为学号）互补。
+        if (studentName != null || studentNo != null) {
+            var recognized = new java.util.LinkedHashMap<String, Object>();
+            recognized.put("name", studentName);
+            recognized.put("no", studentNo);
+            content.put("recognizedStudent", recognized);
+        }
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setOwnerUserId(task.getOwnerUserId());
         sheet.setAnswerSheetExamId(task.getMarkingTaskExamId());
@@ -1607,6 +1643,29 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                                                                  String studentAnswer,
                                                                  int maxScore) {
         if (isObjectiveType(question.getQuestionType())) {
+            // 判断/选择先做符号与选项归一化（√→对、(C)→C）：学生作答里常混着题干
+            // （OCR 把「（√）」连题干一起识别），LCS 对符号不敏感，直接比对会误判。
+            String type = question.getQuestionType().trim().toUpperCase();
+            String extracted = EduAiService.extractObjectiveAnswer(type, studentAnswer);
+            if ("JUDGE".equals(type) && extracted != null) {
+                boolean right = extracted.equals(EduAiService.normalizeJudgeAnswer(question.getQuestionAnswer()));
+                var outcome = new EduAiService.MarkingOutcome();
+                outcome.setSource("AI");
+                outcome.setScore(right ? maxScore : 0);
+                outcome.setComment(right ? "判断正确" : String.format("判断错误，正确答案：%s",
+                        EduAiService.normalizeJudgeAnswer(question.getQuestionAnswer())));
+                return outcome;
+            }
+            if ("SINGLE_CHOICE".equals(type) && extracted != null) {
+                boolean right = extracted.equalsIgnoreCase(question.getQuestionAnswer() == null
+                        ? "" : question.getQuestionAnswer().trim());
+                var outcome = new EduAiService.MarkingOutcome();
+                outcome.setSource("AI");
+                outcome.setScore(right ? maxScore : 0);
+                outcome.setComment(right ? "选择正确" : String.format("选择错误，正确答案：%s",
+                        question.getQuestionAnswer()));
+                return outcome;
+            }
             double sim = similarity(question.getQuestionAnswer(), studentAnswer);
             if (sim >= AnswerSimilarity.SIMILARITY_THRESHOLD) {
                 var outcome = new EduAiService.MarkingOutcome();
@@ -1655,6 +1714,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         out.put("pageCount", content.getOrDefault("pageCount", 0));
         out.put("pages", content.getOrDefault("pages", List.of()));
         out.put("questionAnchors", content.getOrDefault("questionAnchors", List.of()));
+        // 卷面识别到的学生（ANY 链路扫描时模型/正则抽取）：详情头部展示用
+        out.put("recognizedStudent", content.get("recognizedStudent"));
 
         var questions = new ArrayList<Map<String, Object>>();
         for (EduMarkingResult row : rows) {
@@ -1678,6 +1739,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 if (question != null) {
                     item.put("knowledgePointIds", question.getQuestionKnowledgePointIds());
                     item.put("knowledgePoints", resolveKnowledgePoints(question.getQuestionKnowledgePointIds()));
+                    // 题干回落题库：SELF 链路抽题不调模型（stem 留空），展示与「入题库」预填都靠题库补
+                    if (!StringUtils.hasText((String) item.get("stem"))) {
+                        item.put("stem", question.getQuestionStem());
+                    }
                 }
             }
             questions.add(item);

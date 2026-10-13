@@ -31,6 +31,7 @@ import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
 import com.chua.starter.ai.support.model.BotConversation;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
+import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.websocket.SysAiWebSocketHandler;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.AiBotCaller;
@@ -115,6 +116,7 @@ public class AiBotChatService {
      * MCP 运行时服务（Bot 勾选 MCP 时实时连接）。
      */
     private final AgentMcpRuntimeService agentMcpRuntimeService;
+    private final AgentProviderFactory agentProviderFactory;
 
     /**
      * 运行中的 机器人：机器人标识 -> 平台客户端（wechat=ILink，feishu/qq 等为对应 SPI 实现）。
@@ -1496,7 +1498,7 @@ public class AiBotChatService {
                     ? effectiveSystemPrompt : "You are a helpful assistant.";
             AgentDefinition definition = AgentDefinition.builder()
                     .id(agentId).name("Assistant").instruction(instruction).build();
-            Agent agent = Agent.create("agentscope")
+            Agent agent = agentProviderFactory.createAgent()
                     .chatClient(chatClient)
                     .definition(definition)
                     .mode(AgentMode.SINGLE)

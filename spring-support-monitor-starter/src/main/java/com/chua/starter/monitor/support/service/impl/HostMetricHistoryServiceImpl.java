@@ -50,12 +50,17 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
     private static final int MAX_LOOKBACK_HOURS = 24 * 7;
 
     /**
-     * 五个逻辑 target 与输出行下标顺序：CPU / 内存 / 磁盘 / 磁盘读 / 磁盘写
+     * 五个数值列后缀与输出行下标顺序：CPU / 内存 / 磁盘 / 磁盘读 / 磁盘写
      *
-     * <p>此处必须与 {@link #record} 写入的 key 完全一致（读按 key 取曲线）。
-     * 原先引用 {@code DataSourceSeriesEngine.HOST_TARGET_*}，但 utils 侧
-     * {@code DataSourceSeriesEngine} 并未提供这些常量（其实现为「按指标分表 +
-     * 指标名」的方案），导致本模块无法编译，故改为与写入侧同源的字面量。</p>
+     * <p>这些是**指标名（数值列后缀）**，不是引擎的 target。引擎把 target 当表名，
+     * 拼成 {@code SELECT {target}_{metricName} FROM {target}}，所以读曲线必须传
+     * {@code series(HOST_TABLE, hostId, 后缀, hours, window)} —— 与 {@link #record}
+     * 写入的是同一张宽表 {@link #HOST_TABLE}。</p>
+     *
+     * <p>⚠ 曾把后缀直接当 target 传进 4 参重载（其 metricName 恒为 null），
+     * 于是每次查询都变成 {@code SELECT ... FROM cpu_usage}（库中并无此表）：
+     * 异常被逐指标 {@code catch} 吞掉，接口永远返回空数组且 code=00000，
+     * 而库里其实一直在正常写入（实测 18 万行 / 4 台主机 / 秒级在写）。</p>
      */
     private static final List<String> CURVE_TARGETS = List.of(
             "cpu_usage",
@@ -117,7 +122,10 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
         for (int i = 0; i < CURVE_TARGETS.size(); i++) {
             List<List<Object>> curve;
             try {
-                curve = seriesEngine.series(CURVE_TARGETS.get(i), hostId, hours, window);
+                // target 必须是宽表物理名，指标名单独走 metricName：写侧用的是
+                // writeBatch(HOST_TABLE, ...)，读侧必须问同一张表，否则查的是
+                // 「按指标分表」世界里不存在的 cpu_usage / mem_usage …
+                curve = seriesEngine.series(HOST_TABLE, hostId, CURVE_TARGETS.get(i), hours, window);
             } catch (RuntimeException e) {
                 log.debug("[HostHistory] 查询曲线失败 host={} target={}: {}",
                         hostId, CURVE_TARGETS.get(i), e.getMessage());

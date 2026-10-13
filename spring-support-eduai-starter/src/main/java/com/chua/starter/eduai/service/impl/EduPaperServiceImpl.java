@@ -7,6 +7,7 @@ import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.ai.EduAiService;
 import com.chua.starter.eduai.configuration.EduAiProperties;
+import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.mapper.EduPaperHistoryMapper;
 import com.chua.starter.eduai.mapper.EduPaperMapper;
 import com.chua.starter.eduai.mapper.EduPaperQuestionMapper;
@@ -42,6 +43,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -141,6 +143,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     /**
      * EDUAI服务
     */
+    private final com.chua.starter.eduai.dimension.mapper.EduTeacherMapper teacherMapper;
     private final EduAiService eduAiService;
     /**
      * 属性
@@ -161,7 +164,11 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
                 PageBounds.pageSize(query.getPageSize()));
         IPage<EduPaper> result = baseMapper.pageSelect(page, query, scope);
 
-        List<PaperVO> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
+        // 创建人解析依赖教师档案，列表一次预取后按归属用户建索引，避免逐行查库
+        Map<String, EduTeacher> teacherCache = loadTeacherCache(result.getRecords());
+        List<PaperVO> voList = result.getRecords().stream()
+                .map(paper -> toVO(paper, teacherCache))
+                .collect(Collectors.toList());
         return PageResult.<PaperVO>builder()
                 .pageNo((int) result.getCurrent())
                 .pageSize((int) result.getSize())
@@ -263,7 +270,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         paper.setPaperSubjectLocked(0);
         paper.setOwnerUserId(EduUserContext.requireUserId());
         paper.setCreateTime(LocalDateTime.now());
-        paper.setUpdateTime(LocalDateTime.now());;
+        paper.setUpdateTime(LocalDateTime.now());
+        // 与手动组卷同口径：显式写入创建人姓名，供试卷列表「创建人」列展示
+        paper.setCreateName(EduUserContext.currentUsername());
         baseMapper.insert(paper);
 
         int count = dto.getQuestionCount() != null ? dto.getQuestionCount() : properties.getPaper().getDefaultQuestionCount();
@@ -485,6 +494,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         paper.setOwnerUserId(EduUserContext.requireUserId());
         paper.setCreateTime(LocalDateTime.now());
         paper.setUpdateTime(LocalDateTime.now());
+        // 创建人姓名：本模块没有 SysBase 的通用审计填充器，create_name 不会被自动写入，
+        // 试卷列表的「创建人」列依赖它，必须在此显式落库。
+        paper.setCreateName(EduUserContext.currentUsername());
         baseMapper.insert(paper);
         writeHistory(paper, List.of(), "CREATE");
         log.info("[EduAi] 新建空白试卷成功: paperId={}, paperNo={}", paper.getPaperId(), paper.getPaperNo());
@@ -1238,6 +1250,17 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 转为vo的结果
      */
     private PaperVO toVO(EduPaper paper) {
+        return toVO(paper, null);
+    }
+
+    /**
+     * 转为vo
+     *
+     * @param paper        试卷实体
+     * @param teacherCache 教师账号索引（列表批量预取；单条查询传 null 走实时查）
+     * @return 转为vo的结果
+     */
+    private PaperVO toVO(EduPaper paper, Map<String, EduTeacher> teacherCache) {
         PaperVO vo = new PaperVO();
         vo.setPaperId(paper.getPaperId());
         vo.setPaperName(paper.getPaperName());
@@ -1261,6 +1284,103 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         vo.setPaperTemplateId(paper.getPaperTemplateId());
         vo.setPaperTitleStyle(paper.getPaperTitleStyle());
         vo.setCreateTime(paper.getCreateTime());
+        fillCreator(vo, paper, teacherCache);
         return vo;
+    }
+
+    /**
+     * 创建人类型：教师创建
+     */
+    private static final String CREATOR_TYPE_TEACHER = "TEACHER";
+
+    /**
+     * 创建人类型：管理员（及无教师档案的其他账号）创建
+     */
+    private static final String CREATOR_TYPE_ADMIN = "ADMIN";
+
+    /**
+     * 创建人类型：AI 组卷产生的试卷
+     */
+    private static final String CREATOR_TYPE_AI = "AI";
+
+    /**
+     * 无归属（系统预置 / 历史数据）时的兜底展示名
+     */
+    private static final String CREATOR_NAME_SYSTEM = "系统";
+
+    /**
+     * 回填创建人姓名与类型。
+     *
+     * <p>数据来源优先级：{@code create_name}（建卷时由登录态写入）→ 归属用户查教师档案
+     * （命中即教师创建）→ 兜底展示归属用户ID；完全无归属按系统预置处理。</p>
+     *
+     * <p>教师档案的匹配口径与教师端一致：{@code edu_teacher.teacher_account} 存的是登录态
+     * userId，与 {@code edu_paper.paper_owner_user_id} 同源，因此可直接等值比较。</p>
+     *
+     * @param vo           待回填的试卷VO
+     * @param paper        试卷实体
+     * @param teacherCache 教师账号索引，传 null 时按当前行归属用户实时查一次
+     */
+    private void fillCreator(PaperVO vo, EduPaper paper, Map<String, EduTeacher> teacherCache) {
+        String owner = paper.getOwnerUserId();
+        EduTeacher teacher = null;
+        if (StringUtils.hasText(owner)) {
+            if (teacherCache != null) {
+                teacher = teacherCache.get(owner);
+            } else {
+                teacher = teacherMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<EduTeacher>()
+                        .eq("teacher_account", owner)
+                        .last("LIMIT 1"));
+            }
+        }
+        if (teacher != null) {
+            vo.setPaperCreatorName(StringUtils.hasText(teacher.getTeacherName())
+                    ? teacher.getTeacherName() : owner);
+            vo.setPaperCreatorType(CREATOR_TYPE_TEACHER);
+            return;
+        }
+        if (StringUtils.hasText(paper.getCreateName())) {
+            vo.setPaperCreatorName(paper.getCreateName());
+            vo.setPaperCreatorType("AI".equalsIgnoreCase(paper.getPaperSource())
+                    ? CREATOR_TYPE_AI : CREATOR_TYPE_ADMIN);
+            return;
+        }
+        if (!StringUtils.hasText(owner)) {
+            vo.setPaperCreatorName(CREATOR_NAME_SYSTEM);
+            vo.setPaperCreatorType(CREATOR_TYPE_ADMIN);
+            return;
+        }
+        vo.setPaperCreatorName(owner);
+        vo.setPaperCreatorType("AI".equalsIgnoreCase(paper.getPaperSource())
+                ? CREATOR_TYPE_AI : CREATOR_TYPE_ADMIN);
+    }
+
+    /**
+     * 批量预取教师档案，按登录账号建索引。
+     *
+     * <p>试卷分页一屏十几行，逐行查教师表会产生等量 SQL；列表与详情共用本索引，
+     * 把 N 次查询收敛为 1 次。</p>
+     *
+     * @param papers 当前页试卷实体
+     * @return 教师账号 → 教师档案 的索引
+     */
+    private Map<String, EduTeacher> loadTeacherCache(List<EduPaper> papers) {
+        Set<String> owners = papers.stream()
+                .map(EduPaper::getOwnerUserId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        if (owners.isEmpty()) {
+            return Map.of();
+        }
+        List<EduTeacher> teachers = teacherMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<EduTeacher>()
+                        .in("teacher_account", owners));
+        Map<String, EduTeacher> cache = new HashMap<>();
+        for (EduTeacher teacher : teachers) {
+            if (StringUtils.hasText(teacher.getTeacherAccount())) {
+                cache.putIfAbsent(teacher.getTeacherAccount(), teacher);
+            }
+        }
+        return cache;
     }
 }

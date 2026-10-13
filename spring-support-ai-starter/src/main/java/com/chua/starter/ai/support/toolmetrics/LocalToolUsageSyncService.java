@@ -107,6 +107,9 @@ public class LocalToolUsageSyncService {
         row.setSysAiUsageCachedTokens(u.getCacheTokens());
         row.setSysAiUsageTotalLatency(u.getDurationMillis());
         row.setSysAiUsageFirstTokenLatency(u.getFirstTokenLatencyMillis());
+        // 解码速度 / 端到端吞吐
+        row.setSysAiUsageTokensPerSecond(u.tokensPerSecond());
+        row.setSysAiUsageTotalTokensPerSecond(u.totalTokensPerSecond());
         Double inCost = u.getInputCost() == null ? null : u.getInputCost().doubleValue();
         Double outCost = u.getOutputCost() == null ? null : u.getOutputCost().doubleValue();
         Double totCost = u.getTotalCost() == null ? null : u.getTotalCost().doubleValue();

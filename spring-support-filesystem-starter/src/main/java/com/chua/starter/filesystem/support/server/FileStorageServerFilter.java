@@ -513,13 +513,23 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if ("ot".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             return handleOneTime(request, response, segments);
         }
-
         // 系统配置端点：GET /config?token=xxx（未注册存储名时才接管）
         if ("config".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             if (request.getMethod() != HttpMethod.GET) {
                 return error(response, 405, "Method Not Allowed");
             }
             return handleConfig(request, response);
+        }
+
+        // 前端壳静态资源（宿主无关）：Spring Boot 部署时 Spring 也会 serve classpath
+        // static/**（同路径双服务无害）；裸 ServerBuilder 部署靠这里，否则预览入口页
+        // /preview/ 与构建产物 /assets/** 会 404。受 openWebjars 开关管辖（同类语义：
+        // 前端资源服务总开关）。
+        if (setting.isOpenWebjars()) {
+            String assetPath = resolveStaticAssetPath(path);
+            if (assetPath != null) {
+                return writeStaticAsset(assetPath, request, response);
+            }
         }
 
         // 预览页同源静态资源：各 preview provider 生成的 HTML 引用 /preview-vendor/**
@@ -3830,13 +3840,25 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             // JSONHero 通道已删除）。壳内嵌态经注入的短时效令牌拉原始字节，
             // 由 file-viewer（274 格式）在浏览器内完成渲染——即便 openDownload
             // 关闭也能预览，且不会产生常驻的字节下载通道。
-            CompletionStage<Void> shellStage = servePreviewShell(
-                    buildShellBytesUrl(rawChannel, bucket, key, null, request),
-                    fileName, data.length, null, bucket, key, response);
-            if (shellStage != null) {
-                return shellStage;
+            //
+            // 分流边界：图片 / 音视频**不得**进壳——缩略图 <img src=?preview=true>
+            // 与 <video>/<audio> 标签需要直吐字节；它们仅在显式 render=server
+            // （管理页 forceServer 兜底、入口 render=server）时走壳。
+            boolean forceServer = ClientPreviewSupport.CHANNEL_SERVER
+                    .equalsIgnoreCase(request.getParam(ClientPreviewSupport.PARAM_RENDER));
+            String previewType = resolveContentType(fileName);
+            boolean mediaInline = previewType.startsWith("image/")
+                    || previewType.startsWith("audio/") || previewType.startsWith("video/");
+            if (forceServer || !mediaInline) {
+                CompletionStage<Void> shellStage = servePreviewShell(
+                        buildShellBytesUrl(rawChannel, bucket, key, null, request),
+                        fileName, data.length, null, bucket, key, response);
+                if (shellStage != null) {
+                    return shellStage;
+                }
             }
-            // 壳缺失（前端入口未部署）：落回下方 inline / unsupported 兜底，保证不白屏
+            // 壳缺失（前端入口未部署）或媒体内联类型：落回下方 inline / unsupported
+            // 兜底，保证不白屏、缩略图/媒体标签不坏
         }
 
  // 范围 分段下载
@@ -3978,13 +4000,109 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
+    /* ==================== 前端壳静态资源（宿主无关） ==================== */
+
+    /** 静态资源 MIME 映射（覆盖前端构建产物与渲染器资源） */
+    private static final Map<String, String> STATIC_MIME_TYPES = Map.ofEntries(
+            Map.entry("js", "application/javascript"),
+            Map.entry("mjs", "application/javascript"),
+            Map.entry("css", "text/css"),
+            Map.entry("html", "text/html"),
+            Map.entry("json", "application/json"),
+            Map.entry("wasm", "application/wasm"),
+            Map.entry("svg", "image/svg+xml"),
+            Map.entry("png", "image/png"),
+            Map.entry("jpg", "image/jpeg"),
+            Map.entry("jpeg", "image/jpeg"),
+            Map.entry("gif", "image/gif"),
+            Map.entry("webp", "image/webp"),
+            Map.entry("ico", "image/x-icon"),
+            Map.entry("woff", "font/woff"),
+            Map.entry("woff2", "font/woff2"),
+            Map.entry("ttf", "font/ttf"),
+            Map.entry("otf", "font/otf"),
+            Map.entry("map", "application/json"),
+            Map.entry("txt", "text/plain"));
+
+    /** 长缓存（immutable）类型：带 hash 的构建产物与 WASM/字体 */
+    private static final java.util.Set<String> STATIC_IMMUTABLE_EXTS = java.util.Set.of(
+            "js", "mjs", "css", "wasm", "woff", "woff2", "ttf", "otf");
+
+    /**
+     * 请求路径 → classpath 静态资源映射（白名单前缀，未命中返回 null 交给后续分发）。
+     *
+     * <p>覆盖统一预览入口页（{@code /preview/} → static/preview/index.html）、
+     * Vite 构建产物（{@code /assets/**}）、file-viewer 渲染器资源
+     * （{@code /vendor/**}、{@code /wasm/**}）与渲染器资产清单。</p>
+     *
+     * @param path 请求路径
+     * @return classpath 资源路径；不在白名单内返回 {@code null}
+     */
+    private static String resolveStaticAssetPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return null;
+        }
+        if ("/preview".equals(path) || "/preview/".equals(path)) {
+            return "/static/preview/index.html";
+        }
+        if (path.startsWith("/assets/") || path.startsWith("/vendor/") || path.startsWith("/wasm/")
+                || path.startsWith("/file-viewer/")) {
+            return "/static" + path;
+        }
+        if ("/flyfish-viewer-assets.json".equals(path)) {
+            return "/static/flyfish-viewer-assets.json";
+        }
+        return null;
+    }
+
+    /**
+     * 输出 classpath 静态资源（仅 GET/HEAD）。
+     *
+     * <p>缓存策略：带 hash 的构建产物（js/css/wasm/字体）immutable 一年；
+     * 其余 no-cache（如资产清单）。资源缺失回 404，交由调用方兜底。</p>
+     *
+     * @param classpath classpath 资源路径（{@link #resolveStaticAssetPath} 映射结果）
+     * @param request   请求
+     * @param response  响应
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> writeStaticAsset(String classpath, ServerRequest request, ServerResponse response) {
+        if (request.getMethod() != HttpMethod.GET && request.getMethod() != HttpMethod.HEAD) {
+            return error(response, 405, "Method Not Allowed");
+        }
+        try (InputStream in = FileStorageServerFilter.class.getResourceAsStream(classpath)) {
+            if (in == null) {
+                return error(response, 404, "Asset Not Found: " + classpath);
+            }
+            byte[] body = in.readAllBytes();
+            String lower = classpath.toLowerCase(Locale.ROOT);
+            String ext = lower.contains(".")
+                    ? lower.substring(lower.lastIndexOf('.') + 1) : "";
+            response.setStatus(200)
+                    .setHeader("X-FileStorage-Static", "1")
+                    .setContentType(STATIC_MIME_TYPES.getOrDefault(ext, "application/octet-stream"));
+            if (STATIC_IMMUTABLE_EXTS.contains(ext)) {
+                response.setHeader("Cache-Control", "public, immutable, max-age=31536000");
+            } else {
+                response.setHeader("Cache-Control", "no-cache");
+            }
+            if (request.getMethod() == HttpMethod.HEAD) {
+                response.setHeader("Content-Length", String.valueOf(body.length)).end();
+                return CompletableFuture.completedFuture(null);
+            }
+            response.setBody(body).end();
+            return CompletableFuture.completedFuture(null);
+        } catch (IOException e) {
+            return error(response, 500, "Read Asset Failed: " + e.getMessage());
+        }
+    }
+
     /**
      * 读取统一预览入口壳（classpath static/preview/index.html），带懒缓存。
      *
      * @return 壳 HTML；未部署（前端入口未构建/未拷贝）返回 {@code null}
      */
-    private String readPreviewShell() {
-        String cached = previewShellCache;
+    private String readPreviewShell() {        String cached = previewShellCache;
         if (cached != null) {
             return cached;
         }

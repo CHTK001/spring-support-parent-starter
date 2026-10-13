@@ -66,10 +66,18 @@ public class SysAiFaceLibrary {
     private String thumbnail;
 
     /**
-     * 所属分组
+     * 所属分组。
+     *
+     * <p><b>属性名不能叫 {@code group}</b>：{@code group} 是 SQL 保留字，
+     * MyBatis-Plus 在属性名与列名下划线转驼峰不一致时会生成
+     * {@code ... AS <属性名>} 的别名，写成 {@code AS group} 就是语法错误 ——
+     * 整条 {@code SELECT} 在 MariaDB 上直接报
+     * {@code SQLSyntaxErrorException ... near 'group,...'}，
+     * 于是「查一行人脸」必然抛异常，改档案/登记全部连带失败。
+     * 列名保持 {@code sys_ai_face_library_group} 不变，只换属性名。</p>
      */
     @TableField("sys_ai_face_library_group")
-    private String group;
+    private String groupName;
 
     /**
      * 其余元数据（JSON 字符串）。

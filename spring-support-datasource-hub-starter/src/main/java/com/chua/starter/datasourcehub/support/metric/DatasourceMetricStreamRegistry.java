@@ -187,8 +187,7 @@ public class DatasourceMetricStreamRegistry {
      * <p>nginx、内置容器与各类网关对空闲长连接都有 30~60s 超时，静默的 SSE 流
      * 会被中间层悄悄掐断，前端表现为「连上后过一会儿就不更新了」且不报错。</p>
      */
-    @Scheduled(fixedRateString = "${monitor.datasource.sse-heartbeat-ms:20000}",
-            initialDelayString = "${monitor.datasource.sse-heartbeat-ms:20000}")
+    @Scheduled(fixedRate = 20_000L, initialDelay = 20_000L)
     public void heartbeat() {
         if (subscribers.isEmpty()) {
             return;

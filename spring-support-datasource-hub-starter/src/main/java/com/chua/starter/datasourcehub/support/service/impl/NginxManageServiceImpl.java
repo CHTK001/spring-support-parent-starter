@@ -65,7 +65,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.stereotype.Service;
 
 /**
@@ -129,9 +129,11 @@ public class NginxManageServiceImpl implements NginxManageService {
      * 非 root 的 SSH 用户执行 {@code mkdir -p} 会直接失败——真实部署（Kali）上就是这样：
      * {@code mkdir: cannot create directory '/var/log/nginx-console-backup': Permission denied}。
      * 因此实际使用时先探测该目录是否可写，不可写则退回到登录用户家目录下的
-     * {@code ~/.nginx-console-backup}。可用 {@code monitor.nginx.backup-dir} 显式覆盖。</p>
+     * {@code ~/.nginx-console-backup}。</p>
+     *
+     * <p>路径固定不用 {@code @Value} 占位符，原因同调度注解：宿主早期创建链上
+     * resolver 未就绪时，原样占位符会直接污染运行时配置。</p>
      */
-    @Value("${monitor.nginx.backup-dir:/var/log/nginx-console-backup}")
     private String backupDir = "/var/log/nginx-console-backup";
 
     /**

@@ -109,9 +109,8 @@ public class DatasourceServiceImpl implements DatasourceService {
      * <p>为什么需要：{@link ExpireValue} 的过期是<b>惰性</b>的 —— 只有下一次取连接时
      * 才会触发过期回调；数据源一旦闲置（页面关了、当天不再查询），期间没有任何取连接
      * 动作，物理连接就会一直挂到进程重启或数据源被删除，表现为后端 socket 泄漏。
-     * 这里按 {@code datasource.hub.connection-sweep-interval-ms}（默认 60s，0 关闭）
-     * 的节拍主动核对，到期的持锁走一次 {@code getValue()} 触发同一套过期回调
-     * （{@code onExpireNotify → closeQuietly}）关闭连接。</p>
+     * 这里按 60s 的固定节拍主动核对，到期的持锁走一次 {@code getValue()} 触发同一套
+     * 过期回调（{@code onExpireNotify → closeQuietly}）关闭连接。</p>
      *
      * <p>与复用路径的互斥：{@link #cachedJdbcConnection} 在 {@code synchronized (holder)}
      * 里复用并 {@code refresh()}，清扫同样持锁后再触发回调 —— 要么清扫先关
@@ -119,7 +118,7 @@ public class DatasourceServiceImpl implements DatasourceService {
      * 不会出现「用到一半被关」。空壳 holder 不从 map 移除：下次取连接会复用它重建，
      * 避免 remove 与 {@code computeIfAbsent} 的竞争。</p>
      */
-    @Scheduled(fixedDelayString = "${datasource.hub.connection-sweep-interval-ms:60000}")
+    @Scheduled(fixedDelay = 60_000L)
     public void sweepExpiredJdbcConnections() {
         if (jdbcConnectionCache.isEmpty()) {
             return;

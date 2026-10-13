@@ -47,8 +47,7 @@ public class NginxMetricScheduler {
      *
      * <p>首次延迟 20s：避开应用刚启动时数据源尚未就绪的窗口，否则头几轮必然全失败并刷警告。</p>
      */
-    @Scheduled(fixedRateString = "${monitor.nginx.collect-interval-ms:30000}",
-            initialDelayString = "${monitor.nginx.collect-initial-delay-ms:20000}")
+    @Scheduled(fixedRate = 30_000L, initialDelay = 20_000L)
     public void collect() {
         NginxManageService service = nginxServiceProvider.getIfAvailable();
         if (service == null) {

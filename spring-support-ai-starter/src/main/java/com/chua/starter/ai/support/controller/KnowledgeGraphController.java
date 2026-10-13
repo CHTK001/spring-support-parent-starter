@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.model.KnowledgeGraphExtractionDTO;
+import com.chua.starter.ai.support.model.vo.KnowledgeGraphNodeDetailVO;
 import com.chua.starter.ai.support.model.vo.KnowledgeGraphViewVO;
 import com.chua.starter.ai.support.service.KnowledgeGraphService;
 import com.chua.starter.ai.support.service.impl.KnowledgeGraphExtractionService;
@@ -86,6 +87,87 @@ public class KnowledgeGraphController {
         result.put("knowledge_base_id", knowledgeBaseId);
         result.put("entity_count", counts[0]);
         result.put("relation_count", counts[1]);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 扩线：查询目标实体的直接邻居与关系，前端合并进当前已加载的子图。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param uid             目标实体 uid
+     * @return 含该实体、邻居、邻居边的图谱视图
+     */
+    @Operation(summary = "扩线查询邻居", description = "返回某实体的直接邻居与关系，供右键扩线合并")
+    @GetMapping("/neighbors")
+    public ApiResult<KnowledgeGraphViewVO> neighbors(
+            @RequestParam("knowledge_base_id") String knowledgeBaseId,
+            @RequestParam("uid") String uid) {
+        if (!StringUtils.hasText(uid)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "实体uid不能为空");
+        }
+        return ApiResult.ok(knowledgeGraphService.getNeighborGraph(knowledgeBaseId, uid));
+    }
+
+    /**
+     * 实体详情（右侧详情面板按需懒加载，避免大图一次拉起全部属性）。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param uid             实体 uid
+     * @return 实体详情；实体不存在时返回 null
+     */
+    @Operation(summary = "实体详情", description = "返回实体属性 JSON 与关系数，用于详情面板懒加载")
+    @GetMapping("/entity/detail")
+    public ApiResult<KnowledgeGraphNodeDetailVO> entityDetail(
+            @RequestParam("knowledge_base_id") String knowledgeBaseId,
+            @RequestParam("uid") String uid) {
+        if (!StringUtils.hasText(uid)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "实体uid不能为空");
+        }
+        KnowledgeGraphNodeDetailVO detail = knowledgeGraphService.getEntityDetail(knowledgeBaseId, uid);
+        if (detail == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "实体不存在: " + uid);
+        }
+        return ApiResult.ok(detail);
+    }
+
+    /**
+     * 读取图谱视图偏好（布局名、布局参数、显示开关）。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @return 偏好 JSON 文本（settings + knowledge_base_id）
+     */
+    @Operation(summary = "读取图谱布局设置", description = "按知识库读取布局名、布局参数、显示开关等 JSON")
+    @GetMapping("/settings")
+    public ApiResult<Map<String, Object>> getSettings(
+            @RequestParam("knowledge_base_id") String knowledgeBaseId) {
+        if (!StringUtils.hasText(knowledgeBaseId)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "知识库ID不能为空");
+        }
+        Map<String, Object> result = new LinkedHashMap<>(2);
+        result.put("knowledge_base_id", knowledgeBaseId);
+        result.put("settings", knowledgeGraphService.getLayoutSettings(knowledgeBaseId));
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 保存图谱视图偏好（布局名、布局参数、显示开关），按知识库持久化。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param settings        偏好 JSON 文本
+     * @return 保存结果
+     */
+    @Operation(summary = "保存图谱布局设置", description = "按知识库持久化布局名、布局参数、显示开关等 JSON")
+    @PostMapping("/settings")
+    public ApiResult<Map<String, Object>> saveSettings(
+            @RequestParam("knowledge_base_id") String knowledgeBaseId,
+            @RequestParam("settings") String settings) {
+        if (!StringUtils.hasText(knowledgeBaseId)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "知识库ID不能为空");
+        }
+        knowledgeGraphService.saveLayoutSettings(knowledgeBaseId, settings);
+        Map<String, Object> result = new LinkedHashMap<>(2);
+        result.put("knowledge_base_id", knowledgeBaseId);
+        result.put("saved", true);
         return ApiResult.ok(result);
     }
 

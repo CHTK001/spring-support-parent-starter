@@ -219,8 +219,7 @@ public class NginxMetricStreamRegistry {
      * <p>帧体是 {@code :keep-alive} 这种注释行而非 {@code data:} 事件，
      * 前端共享 SSE 客户端已显式丢弃无 data 的空事件，不会误清状态。</p>
      */
-    @Scheduled(fixedRateString = "${monitor.nginx.sse-heartbeat-ms:20000}",
-            initialDelayString = "${monitor.nginx.sse-heartbeat-ms:20000}")
+    @Scheduled(fixedRate = 20_000L, initialDelay = 20_000L)
     public void heartbeat() {
         if (subscribers.isEmpty()) {
             return;

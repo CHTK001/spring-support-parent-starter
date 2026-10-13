@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.support.service;
 
+import com.chua.starter.monitor.support.model.RedisCommandResultVO;
 import com.chua.starter.monitor.support.model.RedisKeyDetailVO;
 import com.chua.starter.monitor.support.model.RedisManageCreateKeyDTO;
 import com.chua.starter.monitor.support.model.RedisManageDatabaseVO;
@@ -222,4 +223,18 @@ public interface RedisManageService {
      * @return 新消息 ID
      */
     String xadd(Long datasourceId, int db, String key, List<com.chua.starter.monitor.support.model.RedisHashFieldVO> fields);
+
+    /**
+     * 执行任意 Redis 命令（命令控制台通用通道）。
+     *
+     * <p>命令整行按 shell 风格分词后经 Jedis 原生通道下发，
+     * 回复归一化为 JSON 安全结构返回。危险命令（清库/关机/
+     * 模块加载/拓扑变更/Lua 执行等）在服务端直接拒绝。</p>
+     *
+     * @param datasourceId 数据源 ID
+     * @param db           逻辑库序号
+     * @param command      命令整行（如 {@code JSON.GET "my key"}）
+     * @return 命令与归一化回复
+     */
+    RedisCommandResultVO executeCommand(Long datasourceId, int db, String command);
 }

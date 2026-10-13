@@ -721,6 +721,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         record.setSysAiUsageCachedTokens(usage.getCacheTokens());
         record.setSysAiUsageTotalLatency(usage.getDurationMillis());
         record.setSysAiUsageFirstTokenLatency(usage.getFirstTokenLatencyMillis());
+        // 解码速度 / 端到端吞吐
+        record.setSysAiUsageTokensPerSecond(usage.tokensPerSecond());
+        record.setSysAiUsageTotalTokensPerSecond(usage.totalTokensPerSecond());
         record.setSysAiUsageInferenceStrength("默认");
         record.setSysAiUsageEndpoint("/v1/chat/completions");
         record.setSysAiUsageIp("127.0.0.1");

@@ -60,8 +60,9 @@ public class RemoteTokenController {
         }
         MsServerHost host = hostResult.getData();
 
-        // 凭据（后端解密，不外泄）
-        ReturnResult<SshCredential> credential = serverHostService.resolveCredential(hostId, identityId);
+        // 凭据（后端解密，不外泄）。必须把请求的协议透传下去：
+        // 不传则按 SSH 解析，VNC 主机签发 SSH 令牌时会取到 VNC 口令而非登录身份
+        ReturnResult<SshCredential> credential = serverHostService.resolveCredential(hostId, identityId, protocol);
         if (!credential.isOk()) {
             return ReturnResult.error(credential.getMsg());
         }

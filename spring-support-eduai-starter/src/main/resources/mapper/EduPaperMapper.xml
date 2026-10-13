@@ -2,9 +2,12 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.eduai.mapper.EduPaperMapper">
 
-    <!-- 分页查询试卷：多条件筛选 + 归属隔离 + 创建时间倒序 -->
+    <!-- 分页查询试卷：多条件筛选 + 归属隔离 + 创建时间倒序。
+         ownerUserId 字段的列名是 paper_owner_user_id，自定义 SQL 的自动映射会把它驼峰成
+         paperOwnerUserId（无此属性）而留空；这里显式起别名 owner_user_id（驼峰即 ownerUserId），
+         保证创建人回填能拿到归属用户（与详情接口的 MyBatis-Plus 内置映射保持一致）。 -->
     <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduPaper">
-        SELECT p.* FROM edu_paper p
+        SELECT p.*, p.paper_owner_user_id AS owner_user_id FROM edu_paper p
         <where>
             <if test="query.subject != null and query.subject != ''">
                 AND p.paper_subject = #{query.subject}

@@ -65,6 +65,8 @@ public class SystemUsageParser implements UsageParser {
                         ? u.getSysAiUsageCallTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : null)
                 .firstTokenLatencyMillis(u.getSysAiUsageFirstTokenLatency())
                 .durationMillis(u.getSysAiUsageTotalLatency())
+                .tokensPerSecond(u.getSysAiUsageTokensPerSecond())
+                .totalTokensPerSecond(u.getSysAiUsageTotalTokensPerSecond())
                 .currency("USD");
         if (u.getSysAiUsageTotalCost() != null) {
             builder.totalCost(java.math.BigDecimal.valueOf(u.getSysAiUsageTotalCost()));
