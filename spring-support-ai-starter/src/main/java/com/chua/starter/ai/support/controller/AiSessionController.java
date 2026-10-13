@@ -14,9 +14,11 @@ import java.util.UUID;
 import java.time.LocalDateTime;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
 import com.chua.starter.ai.support.mapper.SysAiMessageMapper;
+import com.chua.starter.ai.support.mapper.SysAiSessionTraceMapper;
 import com.chua.starter.ai.support.entity.SysAiSession;
 import com.chua.starter.ai.support.entity.SysAiMessage;
 import com.chua.starter.ai.support.entity.SysAiSessionGroup;
+import com.chua.starter.ai.support.entity.SysAiSessionTrace;
 import com.chua.starter.ai.support.service.SessionNextTaskService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -72,6 +74,7 @@ public class AiSessionController {
      * 工作目录文件变化事件流（工作区侧栏实时刷新用）
      */
     private final com.chua.starter.ai.support.service.AiWorkspaceEventStreamService workspaceEventStream;
+    private final SysAiSessionTraceMapper sessionTraceMapper;
 
     /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
@@ -1344,7 +1347,12 @@ public class AiSessionController {
         LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();
         messageWrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
         messageMapper.delete(messageWrapper);
-        
+
+        // 删除会话的执行轨迹（轨迹表不随会话外键级联，须显式清理，否则留孤儿行）
+        LambdaQueryWrapper<SysAiSessionTrace> traceWrapper = new LambdaQueryWrapper<>();
+        traceWrapper.eq(SysAiSessionTrace::getSessionId, sessionId);
+        sessionTraceMapper.delete(traceWrapper);
+
         // 删除会话
         sessionMapper.deleteById(sessionId);
         
@@ -1386,7 +1394,12 @@ public class AiSessionController {
             LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();
             messageWrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
             messageMapper.delete(messageWrapper);
-            
+
+            // 删除会话的执行轨迹（同上，显式清理避免孤儿行）
+            LambdaQueryWrapper<SysAiSessionTrace> traceWrapper = new LambdaQueryWrapper<>();
+            traceWrapper.eq(SysAiSessionTrace::getSessionId, sessionId);
+            sessionTraceMapper.delete(traceWrapper);
+
             // 删除会话
             sessionMapper.deleteById(sessionId);
             deletedCount++;
