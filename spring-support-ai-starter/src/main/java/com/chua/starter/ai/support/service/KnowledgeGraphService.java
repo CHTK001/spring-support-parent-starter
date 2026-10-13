@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.starter.ai.support.model.KnowledgeGraphExtractionDTO;
+import com.chua.starter.ai.support.model.vo.KnowledgeGraphNodeDetailVO;
 import com.chua.starter.ai.support.model.vo.KnowledgeGraphViewVO;
 
 /**
@@ -98,6 +99,43 @@ public interface KnowledgeGraphService {
      * @return 图谱视图（节点 + 连线）
      */
     KnowledgeGraphViewVO getKnowledgePointGraph(String knowledgeBaseId, String docPath);
+
+    /**
+     * 按目标实体扩线：返回该实体在知识库内的直接邻居及其关系。
+     *
+     * <p>语义与 Neo4j 的「点击节点展开下级」一致，前端拿到结果后合并进当前子图，
+     * 而不是替换整图。扩线时只返回与该 uid 直接相连的实体和边，不递归查询更深层。</p>
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param uid             目标实体 uid
+     * @return 含该实体、邻居、邻居边的图谱视图
+     */
+    KnowledgeGraphViewVO getNeighborGraph(String knowledgeBaseId, String uid);
+
+    /**
+     * 查询实体详情（含扩展属性），供图谱右侧详情面板按需加载。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param uid             实体 uid
+     * @return 实体详情；实体不存在时返回 null
+     */
+    KnowledgeGraphNodeDetailVO getEntityDetail(String knowledgeBaseId, String uid);
+
+    /**
+     * 读取图谱视图偏好（布局名、布局参数、显示开关等 JSON）。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @return 偏好 JSON 文本；未保存时返回空串
+     */
+    String getLayoutSettings(String knowledgeBaseId);
+
+    /**
+     * 保存图谱视图偏好（布局名、布局参数、显示开关等 JSON），按知识库持久化。
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param settings        偏好 JSON 文本，允许为空（清空）
+     */
+    void saveLayoutSettings(String knowledgeBaseId, String settings);
 
     /**
      * 统计某知识库的实体与关系数量。

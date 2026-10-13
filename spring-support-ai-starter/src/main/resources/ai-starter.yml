@@ -173,6 +173,18 @@ spring:
     activate:
       on-profile: "local"
 plugin:
+  api:
+    cors:
+      # 本地开发时前端由 vite dev server 提供，与后端 8787 不同源，
+      # 浏览器会带上 Origin 并被 ApiCorsFilter 判为跨域而 403「Invalid CORS request」。
+      # 不配置时过滤器只放行与后端同源的 Origin，因此开发态必须显式列出 vite 端口。
+      # 该段仅在 local profile 生效，生产同源部署不受影响。
+      allowed-origins:
+        - http://localhost:15689
+        - http://127.0.0.1:15689
+        # 验收扫描专用实例，避免与并发的验收进程争抢 15689
+        - http://localhost:15700
+        - http://127.0.0.1:15700
   oauth:
     enable: true
     protocol: static

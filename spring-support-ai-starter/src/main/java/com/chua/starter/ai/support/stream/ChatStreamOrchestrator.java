@@ -16,6 +16,8 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiRolePromptResolver;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,6 +60,9 @@ public class ChatStreamOrchestrator {
     private final ObjectMapper objectMapper;
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
+
+    /** 供应商查询：用于把供应商标识补成可读的供应商名/平台/baseUrl，供路由日志与前端提示使用 */
+    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper sysAiProviderMapper;
 
     /**
      * 会话压缩记录服务：把摘要覆盖的历史替换成一条摘要
@@ -171,12 +176,21 @@ public class ChatStreamOrchestrator {
             }
         }
 
+        // 选定供应商 id：前端模型下拉的 model.id 形态是 <providerId>:<model>，
+        // 拆开后必须把 providerId 一侧单独带下去。只留裸模型名的话，下游只能按名字反查
+        // 供应商，而不同供应商允许同名模型（两家都叫 dpv4），命中哪一家由数据库决定 ——
+        // 于是「选了商汤，实际发到别家接口」，别家的配额报错（周卡/套餐过期）就冒到了这次会话。
+        String selectedProviderId = null;
         if (selectedModel != null && !selectedModel.isBlank()) {
             try {
                 if (selectedModel.contains(":")) {
-                    String modelName = selectedModel.substring(selectedModel.indexOf(":") + 1);
-                    log.info("[ChatStream] 模型ID {} 解析为模型名称: {}", selectedModel, modelName);
+                    String rawProviderId = selectedModel.substring(0, selectedModel.indexOf(":")).trim();
+                    String modelName = selectedModel.substring(selectedModel.indexOf(":") + 1).trim();
+                    log.info("[ChatStream] 模型ID {} 解析为供应商={} 模型名称: {}", selectedModel, rawProviderId, modelName);
                     selectedModel = modelName;
+                    if (!rawProviderId.isEmpty()) {
+                        selectedProviderId = rawProviderId;
+                    }
                 } else if (selectedModel.matches("\\d+")) {
                     com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel> wrapper =
                             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
@@ -187,6 +201,7 @@ public class ChatStreamOrchestrator {
                     SysAiProviderModel pm = sysAiProviderModelMapper.selectOne(wrapper);
                     if (pm != null && pm.getModel() != null) {
                         log.info("[ChatStream] providerId {} 映射到模型名称: {}", selectedModel, pm.getModel());
+                        selectedProviderId = selectedModel;
                         selectedModel = pm.getModel();
                     } else {
                         log.warn("[ChatStream] providerId {} 下未找到启用的模型", selectedModel);
@@ -281,13 +296,30 @@ public class ChatStreamOrchestrator {
         String modelToUse;
         if (selectedModel != null && !selectedModel.isBlank()) {
             modelToUse = selectedModel;
-            log.info("[ChatStream] 使用用户选择的模型: {}", modelToUse);
+            log.info("[ChatStream] 使用用户选择的模型: {} (供应商={})", modelToUse, selectedProviderId);
         } else {
             modelToUse = getDefaultModel();
             log.info("[ChatStream] 使用默认模型: {}", modelToUse);
         }
+        // 默认模型配置同样是 <providerId>:<model> 形态（见 getDefaultModel），
+        // 在这里统一补齐供应商一侧，避免默认对话也走「按名反查」而落到别家供应商。
+        if ((selectedProviderId == null || selectedProviderId.isBlank()) && modelToUse != null) {
+            int sep = modelToUse.indexOf(':');
+            if (sep > 0) {
+                String prefix = modelToUse.substring(0, sep).trim();
+                String bare = modelToUse.substring(sep + 1).trim();
+                if (!prefix.isEmpty() && !bare.isEmpty()) {
+                    selectedProviderId = prefix;
+                    modelToUse = bare;
+                    log.info("[ChatStream] 默认模型限定名拆分 -> 供应商={} 模型={}", prefix, bare);
+                }
+            }
+        }
+        // 本轮路由信息：既进 create 事件（前端实时提示），也随助手消息落库（刷新后仍在）
+        final Map<String, Object> routeInfo = describeRoute(selectedProviderId, modelToUse);
         AiChatRequest request = new AiChatRequest();
         request.setModel(modelToUse);
+        request.setProviderId(selectedProviderId);
         request.setStream(true);
         final List<String> pickedSkillNames = parseSkillNames(body.get("skillNames"));
         final List<String> roleDefaultSkills = parseSkillNames(roleSettings.get("defaultSkillNames"));
@@ -320,7 +352,16 @@ public class ChatStreamOrchestrator {
         request.setMode(FORM_KEY_PLAN.equals(formKey) ? AGENT_MODE_PLAN : AGENT_MODE_BUILD);
         request.setSessionId(sessionId);
         try {
-            SysAiProviderModel modelInfo = sysAiProviderModelMapper.selectById(modelToUse);
+            // 按 (供应商, 模型) 精确取参数。SysAiProviderModel 的 @TableId 是 model，
+            // 单用 selectById(modelToUse) 等于 WHERE model=? 无供应商约束，同名模型时
+            // 会捞到别家的 temperature/maxTokens/top_p 覆盖本次请求。
+            SysAiProviderModel modelInfo = selectedProviderId == null || selectedProviderId.isBlank()
+                    ? sysAiProviderModelMapper.selectById(modelToUse)
+                    : sysAiProviderModelMapper.selectOne(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel>()
+                                    .eq(SysAiProviderModel::getProviderId, selectedProviderId)
+                                    .eq(SysAiProviderModel::getModel, modelToUse)
+                                    .last("LIMIT 1"));
             if (modelInfo != null) {
                 if (modelInfo.getTemperature() != null) {
                     request.setTemperature(modelInfo.getTemperature());
@@ -405,6 +446,7 @@ public class ChatStreamOrchestrator {
         p.setSessionId(sessionId);
         p.setContent(content);
         p.setModelToUse(modelToUse);
+        p.setRouteInfo(routeInfo);
         p.setDialogId(dialogId);
         Long parentUserMessageId = userChatMsg != null ? userChatMsg.getId() : null;
         if (parentUserMessageId == null && userMessage != null) {
@@ -474,6 +516,8 @@ public class ChatStreamOrchestrator {
                 createEvent.put("turnsId", p.getTurnsId());
                 createEvent.put("contentId", contentId);
                 createEvent.put("modelName", modelToUse);
+                // 实际应答的供应商信息：前端据此在回复下方显示提示（排查路由问题用）
+                createEvent.put("route", p.getRouteInfo());
                 createEvent.put("parentId", userMessageId != null
                         ? String.valueOf(userMessageId) : p.getUserMsgId());
                 sink.sendEvent(createEvent);
@@ -601,6 +645,8 @@ public class ChatStreamOrchestrator {
                                 log.info("[ChatStream] 工具轨迹已随助手消息落库 sessionId={}, calls={}, traces={}",
                                         sid, collectedToolCalls.size(), collectedToolTraces.size());
                             }
+                            assistantMsg.setConfirmation(attachRouteInfo(
+                                    assistantMsg.getConfirmation(), effectiveRoute(p)));
                             aiDialogRecordService.addMessage(dialogId, assistantMsg);
                             log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageId, totalTokens);
                             chatMemorySupport.remember(memoryUser, sid, finalContent, finalText, modelToUse);
@@ -635,7 +681,8 @@ public class ChatStreamOrchestrator {
                         // 内容优先用已经流出来的片段（有内容才能看出失败在第几步），
                         // 为空才退回错误文案，保证「每条用户消息都有一条对应的助手消息」。
                         persistErroredAssistantMessage(sid, dialogId, userMessageId, modelToUse,
-                                fullReply.toString(), msg, collectedToolCalls, collectedToolTraces);
+                                fullReply.toString(), msg, collectedToolCalls, collectedToolTraces,
+                                effectiveRoute(p));
                         Map<String, Object> finishEvent = new LinkedHashMap<>();
                         finishEvent.put("type", "finish");
                         finishEvent.put("finishReason", "error");
@@ -721,19 +768,36 @@ public class ChatStreamOrchestrator {
         if (selectedModel == null || selectedModel.isBlank()) {
             selectedModel = str(body.get("model"));
         }
+        // 同 prepare：拆出供应商一侧，否则恢复轮也会在同名模型下走错供应商
+        String selectedProviderId = null;
         if (selectedModel != null && selectedModel.contains(":")) {
-            selectedModel = selectedModel.substring(selectedModel.indexOf(":") + 1);
+            String rawProviderId = selectedModel.substring(0, selectedModel.indexOf(":")).trim();
+            selectedModel = selectedModel.substring(selectedModel.indexOf(":") + 1).trim();
+            if (!rawProviderId.isEmpty()) {
+                selectedProviderId = rawProviderId;
+            }
         }
         if (selectedModel == null || selectedModel.isBlank()) {
             selectedModel = getDefaultModel();
+        }
+        if ((selectedProviderId == null || selectedProviderId.isBlank()) && selectedModel.contains(":")) {
+            int sep = selectedModel.indexOf(':');
+            String prefix = selectedModel.substring(0, sep).trim();
+            String bare = selectedModel.substring(sep + 1).trim();
+            if (!prefix.isEmpty() && !bare.isEmpty()) {
+                selectedProviderId = prefix;
+                selectedModel = bare;
+            }
         }
         String aliasResolved = modelAliasService.resolveInbound(selectedModel);
         if (aliasResolved != null && !aliasResolved.isBlank()) {
             selectedModel = aliasResolved;
         }
+        final Map<String, Object> resumeRoute = describeRoute(selectedProviderId, selectedModel);
 
         AiChatRequest request = new AiChatRequest();
         request.setModel(selectedModel);
+        request.setProviderId(selectedProviderId);
         request.setStream(true);
         request.setRoleSettings(roleSettings);
         request.setSessionId(sessionId);
@@ -787,6 +851,7 @@ public class ChatStreamOrchestrator {
         PreparedChat p = new PreparedChat();
         p.setSessionId(sessionId);
         p.setModelToUse(selectedModel);
+        p.setRouteInfo(resumeRoute);
         p.setDialogId(dialogId);
         p.setMessageId(messageId);
         p.setTurnsId(turnsId);
@@ -986,6 +1051,67 @@ public class ChatStreamOrchestrator {
     // ==================== 内部方法 ====================
 
     /**
+     * 取本轮最终生效的路由信息，落库前用它校正 prepare 阶段的那份。
+     *
+     * <p>prepare 只能看到请求里是否带了供应商限定；请求没带时（裸模型名）它记
+     * {@code providerResolved=false}。而实际下游 {@code resolveChatClient} 会按模型名
+     * 反查出一个供应商来用 —— 不校正的话，落库的「未解析」与实际应答方对不上，
+     * 排查时等于白记一条。</p>
+     *
+     * <p>下游命中 DB 供应商时会把供应商回填到 {@code request.provider}，据此重算即可。</p>
+     *
+     * @param p 准备结果
+     * @return 校正后的路由信息
+     */
+    private Map<String, Object> effectiveRoute(PreparedChat p) {
+        Map<String, Object> route = p.getRouteInfo();
+        boolean resolved = route != null && Boolean.TRUE.equals(route.get("providerResolved"));
+        if (resolved || p.getRequest() == null) {
+            return route;
+        }
+        String actualProviderId = p.getRequest().getProvider();
+        if (actualProviderId == null || actualProviderId.isBlank()
+                || actualProviderId.equals(route.get("providerId"))) {
+            return route;
+        }
+        String model = route.get("model") instanceof String s ? s : p.getModelToUse();
+        log.info("[ChatStream] 路由校正：请求未限定供应商，下游实际解析为 {} model={}", actualProviderId, model);
+        return describeRoute(actualProviderId, model);
+    }
+
+    /**
+     * 把路由信息并入已有的 confirmation JSON。
+     *
+     * <p>{@code confirmation} 是助手消息唯一的结构化长文本列，工具轨迹、待确认请求、
+     * 失败轮错误态都塞在这里。路由信息走同一个键而不是新开一列，是为了不引入 schema 变更；
+     * 合并而非覆盖，是为了让「有工具轨迹的那一轮」也能带上路由信息 —— 恰恰是这类长轮次
+     * 最容易走错供应商。解析失败时原样返回，宁可少一条提示信息也不能弄丢工具轨迹。</p>
+     *
+     * @param json      原有 confirmation JSON（可为空）
+     * @param routeInfo 路由信息（可为空）
+     * @return 合并后的 JSON；无路由信息时原样返回
+     */
+    private String attachRouteInfo(String json, Map<String, Object> routeInfo) {
+        if (routeInfo == null || routeInfo.isEmpty()) {
+            return json;
+        }
+        try {
+            Map<String, Object> merged = new LinkedHashMap<>();
+            if (json != null && !json.isBlank()) {
+                Object parsed = objectMapper.readValue(json, Map.class);
+                if (parsed instanceof Map<?, ?> src) {
+                    src.forEach((k, v) -> merged.put(String.valueOf(k), v));
+                }
+            }
+            merged.put("route", routeInfo);
+            return objectMapper.writeValueAsString(merged);
+        } catch (Exception e) {
+            log.warn("[ChatStream] 附加路由信息失败，保留原 confirmation: {}", e.getMessage());
+            return json;
+        }
+    }
+
+    /**
      * 落库一条「失败」的助手消息。
      *
      * <p>为什么必须有：成功分支会 {@code addMessage}，失败分支原先只发 SSE 事件，
@@ -1008,11 +1134,13 @@ public class ChatStreamOrchestrator {
      * @param errorMessage   错误文案
      * @param toolCalls      已收集的工具调用（可为空）
      * @param toolTraces     已收集的工具轨迹（可为空）
+     * @param routeInfo      本轮路由信息（供应商/模型/基址，可为空）
      */
     private void persistErroredAssistantMessage(String sid, Long dialogId, Long userMessageId,
                                                 String modelToUse, String streamedText, String errorMessage,
                                                 List<Object> toolCalls,
-                                                List<Map<String, Object>> toolTraces) {
+                                                List<Map<String, Object>> toolTraces,
+                                                Map<String, Object> routeInfo) {
         try {
             String partial = streamedText == null ? "" : streamedText.trim();
             String content = !partial.isEmpty() ? partial : ("[error] " + errorMessage);
@@ -1035,6 +1163,11 @@ public class ChatStreamOrchestrator {
             if (toolTraces != null && !toolTraces.isEmpty()) {
                 errorMeta.put("toolTraces", toolTraces);
             }
+            // 失败轮更要记下路由信息：报错往往正是发到了预期之外的供应商，
+            // 刷新后仍能对照「当时到底是哪家供应商应答的」来定位
+            if (routeInfo != null && !routeInfo.isEmpty()) {
+                errorMeta.put("route", routeInfo);
+            }
             assistantMsg.setConfirmation(objectMapper.writeValueAsString(errorMeta));
 
             aiDialogRecordService.addMessage(dialogId, assistantMsg);
@@ -1043,6 +1176,45 @@ public class ChatStreamOrchestrator {
         } catch (Exception e) {
             log.warn("[ChatStream] 落库失败助手消息失败 sessionId={}: {}", sid, e.getMessage());
         }
+    }
+
+    /**
+     * 描述本轮实际命中的供应商，供日志与前端提示共用同一份数据。
+     *
+     * <p>刻意只查一次就同时用于日志与 SSE：若前端提示和后端日志各查一次，
+     * 两者可能因并发改动而说法不一致，排查时反而多一个疑点。</p>
+     *
+     * @param providerId 供应商标识（可空）
+     * @param model      裸模型名
+     * @return 至少含 {@code model}；查不到供应商时只有 {@code model} 与 {@code providerResolved=false}
+     */
+    private Map<String, Object> describeRoute(String providerId, String model) {
+        Map<String, Object> route = new LinkedHashMap<>(8);
+        route.put("model", model);
+        route.put("providerId", providerId);
+        SysAiProvider provider = null;
+        if (providerId != null && !providerId.isBlank()) {
+            try {
+                provider = sysAiProviderMapper.selectById(providerId);
+            } catch (Exception e) {
+                log.debug("[ChatStream] 查询供应商 {} 失败: {}", providerId, e.getMessage());
+            }
+        }
+        if (provider != null) {
+            route.put("providerName", provider.getName());
+            route.put("platform", provider.getPlatform());
+            route.put("baseUrl", provider.getBaseUrl());
+            route.put("providerResolved", true);
+        } else {
+            route.put("providerResolved", false);
+        }
+        // 路由唯一一处权威日志：选型、供应商、实际 baseUrl 一次说清
+        log.info("[ChatStream] 路由选定 model={} providerId={} 供应商={} platform={} baseUrl={}",
+                model, providerId,
+                provider != null ? provider.getName() : "<未解析>",
+                provider != null ? provider.getPlatform() : "<未解析>",
+                provider != null ? provider.getBaseUrl() : "<未解析>");
+        return route;
     }
 
     private String getDefaultModel() {
@@ -1059,8 +1231,10 @@ public class ChatStreamOrchestrator {
                     .filter(value -> !value.isEmpty())
                     .orElse(null);
             if (configured != null) {
-                int idx = configured.indexOf(':');
-                return idx >= 0 ? configured.substring(idx + 1) : configured;
+                // 原样返回（可能带 <providerId>: 前缀），由 prepare 统一拆出供应商一侧。
+                // 以前在这里就把前缀切掉，等于让默认模型也退化成「按名反查」，
+                // 同名模型时默认对话同样可能落到别家供应商上。
+                return configured;
             }
         }
         // 不写死兜底模型名：三级配置都不可用时直接报明确错误，让用户知道该去配哪里，

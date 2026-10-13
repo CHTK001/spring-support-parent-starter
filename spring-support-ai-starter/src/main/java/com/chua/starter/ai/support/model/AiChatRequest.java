@@ -97,6 +97,20 @@ public class AiChatRequest {
     private String provider;
 
     /**
+     * 供应商标识（{@code sys_ai_provider_model.sys_ai_provider_model_provider_id}）。
+     *
+     * <p>与 {@link #model} 配套使用：前端模型下拉的 {@code model.id} 形态是
+     * {@code <providerId>:<model>}，进入流式编排后会被拆开，此处保留 providerId 一侧。
+     * 不带它的话下游只能拿裸模型名反查供应商，而不同供应商允许存在同名模型
+     * （如两家都叫 {@code dpv4}），反查命中哪一行由数据库决定 —— 表现为
+     * 「选了 A 家的模型，实际请求发到了 B 家的接口」，B 家的配额/订阅报错
+     * （如周卡、套餐过期）就原样冒到了 A 家的会话里。</p>
+     *
+     * <p>为 {@code null} 时下游退回按模型名反查的旧行为。</p>
+     */
+    private String providerId;
+
+    /**
      * 思考模式开关（透传 对话客户端，支持深度思考类模型）
      */
     private Boolean think;

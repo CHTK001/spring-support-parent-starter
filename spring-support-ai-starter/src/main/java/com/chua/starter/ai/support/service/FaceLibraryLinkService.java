@@ -77,7 +77,7 @@ public class FaceLibraryLinkService {
         row.setName(name);
         row.setThumbnail(thumbnail);
         row.setMeta(writeMeta(metadata));
-        row.setGroup(strOf(metadata, "group"));
+        row.setGroupName(strOf(metadata, "group"));
         row.setStatus(1);
         try {
             SysAiFaceLibrary exist = find(userId, vectorId);
@@ -139,7 +139,7 @@ public class FaceLibraryLinkService {
             row.setName(name);
         }
         row.setMeta(writeMeta(metadata));
-        row.setGroup(strOf(metadata, "group"));
+        row.setGroupName(strOf(metadata, "group"));
         if (thumbnail != null && !thumbnail.isBlank()) {
             row.setThumbnail(thumbnail);
         }

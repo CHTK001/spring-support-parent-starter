@@ -757,16 +757,46 @@ public class InfluxdbClient {
     }
 
     /**
-     * 探测大版本：v3 专属路由（数据库配置接口）在 v2 上恒 404。
+     * 探测大版本：以 {@code /ping} 的 {@code X-Influxdb-Version} 响应头为准。
      *
-     * <p>探测不携带凭据——只看路由是否存在：v3 上无论鉴权开关，
-     * 该接口都返回 200/401/403，只要不是 404 即 v3；
-     * 连接失败等异常按 v2 处理（连通性由调用方的测试接口负责报错）。</p>
+     * <p>旧实现只探测 v3 专属路由 {@code /api/v3/configure/database} 是否 404（非 404 即 v3），
+     * 但 <b>InfluxDB 2.7.11 实测对该路由返回 200</b>（v2 提供了兼容桩），会把 v2 误判成 v3，
+     * 导致所有调用走 v3 分支（数据库/测量恒空、Flux 查询被当 SQL 管理），
+     * 且该误判按端点缓存、后端不重启不消失 —— 表现为「同样的数据源换一次后端进程可能就坏」。
+     * v2（{@code v2.7.11}）与 v3（{@code 3.11.4}）都在 {@code /ping} 上暴露
+     * {@code X-Influxdb-Version} 头，以 {@code 3.} 开头即 v3，是可靠判据。</p>
+     *
+     * <p>无响应（连接失败）或响应无版本头时退回旧判据，语义与原来一致
+     * （连通性问题由调用方的测试接口负责报错）。</p>
      *
      * @param endpoint 端点
      * @return 大版本
      */
     private Version probeVersion(MiddlewareEndpoint endpoint) {
+        try {
+            MiddlewareHttp.Response ping = MiddlewareHttp.getResponse(
+                    endpoint.url("/ping"), Map.of(), Map.of());
+            String version = ping.header("X-Influxdb-Version");
+            if (version != null && version.startsWith("3.")) {
+                return Version.V3;
+            }
+            if (version != null && !version.isBlank()) {
+                return Version.V2;
+            }
+            log.debug("[influxdb] /ping 未带版本头（{}），退回 v3 路由判据", version == null ? "null" : version);
+        } catch (java.io.IOException e) {
+            log.debug("[influxdb] /ping 探测失败，退回 v3 路由判据: {}", e.getMessage());
+        }
+        return probeVersionViaV3Route(endpoint);
+    }
+
+    /**
+     * 旧判据：v3 专属路由（数据库配置接口）在 v2 上应 404；非 404 即 v3。
+     *
+     * @param endpoint 端点
+     * @return 大版本
+     */
+    private Version probeVersionViaV3Route(MiddlewareEndpoint endpoint) {
         try {
             MiddlewareHttp.Response response = MiddlewareHttp.getResponse(
                     endpoint.url("/api/v3/configure/database"),

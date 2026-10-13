@@ -15,9 +15,11 @@ import com.chua.starter.ai.support.model.KnowledgeGraphEntityDTO;
 import com.chua.starter.ai.support.model.KnowledgeGraphExtractionDTO;
 import com.chua.starter.ai.support.model.KnowledgeGraphRelationDTO;
 import com.chua.starter.ai.support.model.vo.KnowledgeGraphEdgeVO;
+import com.chua.starter.ai.support.model.vo.KnowledgeGraphNodeDetailVO;
 import com.chua.starter.ai.support.model.vo.KnowledgeGraphNodeVO;
 import com.chua.starter.ai.support.model.vo.KnowledgeGraphViewVO;
 import com.chua.starter.ai.support.service.KnowledgeGraphService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -383,6 +385,108 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
     }
 
     @Override
+    public KnowledgeGraphViewVO getNeighborGraph(String knowledgeBaseId, String uid) {
+        if (!StringUtils.hasText(knowledgeBaseId) || !StringUtils.hasText(uid)) {
+            return KnowledgeGraphViewVO.empty();
+        }
+        Integer libraryId = findLibraryId(knowledgeBaseId);
+        if (libraryId == null) {
+            return KnowledgeGraphViewVO.empty();
+        }
+        SysAiKnowledgeGraphEntity center = graphEntityMapper.selectOne(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
+                        .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)
+                        .eq(SysAiKnowledgeGraphEntity::getUid, uid)
+                        .last("limit 1"));
+        if (center == null) {
+            return KnowledgeGraphViewVO.empty();
+        }
+        List<SysAiKnowledgeGraphRelation> relations = graphRelationMapper.selectList(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
+                        .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId)
+                        .and(w -> w.eq(SysAiKnowledgeGraphRelation::getSourceEntityUid, uid)
+                                .or()
+                                .eq(SysAiKnowledgeGraphRelation::getTargetEntityUid, uid)));
+        Set<String> entityUids = new LinkedHashSet<>();
+        Set<String> relationUids = new LinkedHashSet<>();
+        entityUids.add(uid);
+        if (relations != null) {
+            for (SysAiKnowledgeGraphRelation relation : relations) {
+                entityUids.add(relation.getSourceEntityUid());
+                entityUids.add(relation.getTargetEntityUid());
+                relationUids.add(relation.getUid());
+            }
+        }
+        return buildView(libraryId, entityUids, relationUids);
+    }
+
+    @Override
+    public KnowledgeGraphNodeDetailVO getEntityDetail(String knowledgeBaseId, String uid) {
+        if (!StringUtils.hasText(knowledgeBaseId) || !StringUtils.hasText(uid)) {
+            return null;
+        }
+        Integer libraryId = findLibraryId(knowledgeBaseId);
+        if (libraryId == null) {
+            return null;
+        }
+        SysAiKnowledgeGraphEntity entity = graphEntityMapper.selectOne(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
+                        .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)
+                        .eq(SysAiKnowledgeGraphEntity::getUid, uid)
+                        .last("limit 1"));
+        if (entity == null) {
+            return null;
+        }
+        Map<String, Object> properties = parseEntityProperties(entity.getProperties());
+        String description = null;
+        Object rawDescription = properties.get("description");
+        if (rawDescription != null) {
+            description = String.valueOf(rawDescription);
+        }
+        long relationCount = graphRelationMapper.selectCount(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
+                        .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId)
+                        .and(w -> w.eq(SysAiKnowledgeGraphRelation::getSourceEntityUid, uid)
+                                .or()
+                                .eq(SysAiKnowledgeGraphRelation::getTargetEntityUid, uid)));
+        return new KnowledgeGraphNodeDetailVO(entity.getUid(), entity.getName(), entity.getType(),
+                TYPE_COLORS.getOrDefault(entity.getType(), TYPE_COLORS.get("other")),
+                entity.getWeight(), entity.getSource(), entity.getLogo(),
+                description, properties, (int) relationCount);
+    }
+
+    @Override
+    public String getLayoutSettings(String knowledgeBaseId) {
+        if (!StringUtils.hasText(knowledgeBaseId)) {
+            return "";
+        }
+        SysAiKnowledgeLibrary library = findLibrary(knowledgeBaseId);
+        return library == null || library.getSummary() == null ? "" : library.getSummary();
+    }
+
+    @Override
+    public void saveLayoutSettings(String knowledgeBaseId, String settings) {
+        if (!StringUtils.hasText(knowledgeBaseId)) {
+            return;
+        }
+        String normalized = settings == null ? null : settings.trim();
+        SysAiKnowledgeLibrary library = findLibrary(knowledgeBaseId);
+        if (library == null) {
+            // 允许在没有任何图谱数据时先保存偏好：
+            // ensureLibrary 会按知识库懒建图谱库，再次查询时即可读到。
+            ensureLibrary(knowledgeBaseId, knowledgeBaseId);
+            library = findLibrary(knowledgeBaseId);
+            if (library == null) {
+                return;
+            }
+        }
+        SysAiKnowledgeLibrary update = new SysAiKnowledgeLibrary();
+        update.setId(library.getId());
+        update.setSummary(StringUtils.hasText(normalized) ? normalized : null);
+        knowledgeLibraryMapper.updateById(update);
+    }
+
+    @Override
     public int[] countKnowledgeBaseGraph(String knowledgeBaseId) {
         if (!StringUtils.hasText(knowledgeBaseId)) {
             return new int[]{0, 0};
@@ -435,11 +539,43 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
      * @return 图谱库ID；未创建时返回 null
      */
     private Integer findLibraryId(String knowledgeBaseId) {
-        SysAiKnowledgeLibrary library = knowledgeLibraryMapper.selectOne(
+        SysAiKnowledgeLibrary library = findLibrary(knowledgeBaseId);
+        return library == null ? null : library.getId();
+    }
+
+    /**
+     * 按知识库ID查找图谱库。
+     *
+     * @param knowledgeBaseId RAG 知识库ID
+     * @return 图谱库；未创建时返回 null
+     */
+    private SysAiKnowledgeLibrary findLibrary(String knowledgeBaseId) {
+        if (!StringUtils.hasText(knowledgeBaseId)) {
+            return null;
+        }
+        return knowledgeLibraryMapper.selectOne(
                 new LambdaQueryWrapper<SysAiKnowledgeLibrary>()
                         .eq(SysAiKnowledgeLibrary::getName, LIBRARY_NAME_PREFIX + knowledgeBaseId)
                         .last("limit 1"));
-        return library == null ? null : library.getId();
+    }
+
+    /**
+     * 解析实体扩展属性 JSON；解析失败按空属性处理，避免详情面板因单条脏数据崩溃。
+     *
+     * @param raw 数据库中的 JSON 文本，可为 null
+     * @return 属性 Map；无数据时返回空 Map
+     */
+    private Map<String, Object> parseEntityProperties(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return new HashMap<>();
+        }
+        try {
+            return objectMapper.readValue(raw, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            log.warn("[KnowledgeGraph] 实体属性解析失败，已按空属性返回: {}", e.getMessage());
+            return new HashMap<>();
+        }
     }
 
     /**

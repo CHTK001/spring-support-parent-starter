@@ -158,6 +158,14 @@ public class SysAiUsage extends SysBase {
      * 总耗时(ms)
     */
     private Long sysAiUsageTotalLatency;
+    /**
+     * 解码速度(Token/秒)：输出 Token ÷ 解码窗口（总耗时 - 首字耗时）
+     */
+    private Double sysAiUsageTokensPerSecond;
+    /**
+     * 端到端吞吐(Token/秒)：总 Token ÷ 总耗时
+     */
+    private Double sysAiUsageTotalTokensPerSecond;
 
     /**
      * 用量来源: service(对外服务)/third_party(三方)/self(自身)

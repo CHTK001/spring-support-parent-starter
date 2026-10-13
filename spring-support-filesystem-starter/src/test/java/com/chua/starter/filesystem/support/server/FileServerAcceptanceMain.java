@@ -34,10 +34,33 @@ public class FileServerAcceptanceMain {
                 .build();
 
         FileStorageServerFilter filter = new FileStorageServerFilter(setting);
-        filter.addFileStorage("local", FileStorage.createStorage("local", BucketSetting.builder()
+        // SPI "local" = 本模块 LocalFileStorage：根目录 = extraProperties.basePath/bucket
+        // （"filesystem" 实现在 utils-support-filesystem-starter，本验收 classpath 未包含）
+        FileStorage local = FileStorage.createStorage("local", BucketSetting.builder()
                 .bucket("local")
-                .endpoint(root.resolve("local").toString())
-                .build()));
+                .extraProperties(java.util.Map.of("basePath", root.toString()))
+                .build());
+        filter.addFileStorage("local", local);
+        // 全量预览验收桶：D:\fs-preview-test（275 个后缀各一个测试文件，见用户要求）
+        Path bulkRoot = Path.of("D:/fs-preview-test");
+        Files.createDirectories(bulkRoot);
+        FileStorage all = FileStorage.createStorage("local", BucketSetting.builder()
+                .bucket("all")
+                .extraProperties(java.util.Map.of("basePath", bulkRoot.toString()))
+                .build());
+        filter.addFileStorage("all", all);
+
+        // 自诊断：直调 SPI 验证根目录/读写/列举是否正常
+        var pr = local.putObject(com.chua.common.support.storage.request.PutObjectRequest.builder()
+                .fileName("selftest.txt").content("self test".getBytes()).build());
+        var gr = local.getObject(com.chua.common.support.storage.request.GetObjectRequest.builder()
+                .fileName("hello.md").build());
+        var lr = local.listObject(com.chua.common.support.storage.request.ListObjectRequest.builder().build());
+        System.out.println("[DIAG] put=" + pr.getResultCode() + " putUrl=" + pr.getUrl()
+                + " getHello=" + gr.getResultCode() + ":" + gr.getMessage()
+                + " list=" + lr.getResultCode() + ":" + (lr.getMetadata() == null ? -1 : lr.getMetadata().size())
+                + " first=" + (lr.getMetadata() == null || lr.getMetadata().isEmpty() ? "-"
+                        : lr.getMetadata().get(0).getName() + " @ " + lr.getMetadata().get(0).getPath()));
 
         Server built = ServerBuilder.create()
                 .type("jdk")

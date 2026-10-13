@@ -653,9 +653,13 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
-        // 生效协议：调用方实际请求优先（SSH 直连传 SSH、VNC 直连传 VNC），否则回退主机当前远控协议
-        String effectiveProtocol = !isBlank(protocol) ? protocol.trim()
-                : (isBlank(host.getServerHostRemoteProtocol()) ? "" : host.getServerHostRemoteProtocol().trim());
+        // 生效协议：调用方实际请求优先（SSH 直连传 SSH、VNC 直连传 VNC）。
+        // 未显式指定时一律按 SSH 解析，**不再回落主机的远控协议**：
+        // 主机远控协议为 VNC 时，回落会把「VNC 口令」当成 SSH 凭据返回（VNC 口令非 AES 密文，
+        // 解密失败即得空口令），导致批量执行、Agent 部署、发布投放等 SSH 操作全部
+        // 报「No more authentication methods available」。VNC 调用方始终显式传协议，
+        // 因此 blank 一律是 SSH 语义。
+        String effectiveProtocol = !isBlank(protocol) ? protocol.trim() : ProtocolType.SSH.name();
         boolean isVnc = ProtocolType.VNC.name().equalsIgnoreCase(effectiveProtocol);
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()

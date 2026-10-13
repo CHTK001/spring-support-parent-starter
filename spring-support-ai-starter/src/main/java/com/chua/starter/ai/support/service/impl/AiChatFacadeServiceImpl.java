@@ -16,6 +16,7 @@ import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.starter.ai.support.chat.ChatSkillSupport;
+import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiGroupModel;
@@ -99,6 +100,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ChatSkillSupport chatSkillSupport; // 已安装技能注入
     private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
     private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
+    private final AgentProviderFactory agentProviderFactory;
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -677,13 +679,34 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             log.info("[AiChat] 模型别名映射: {} -> {}", request.getModel(), model);
             request.setModel(model);
         }
+        // 安全网：请求里若还带着 <providerId>:<model> 限定名（系统默认模型就是这种存法，
+        // 也有调用方直接透传前端 model.id），在此拆开。拆不出供应商时保持原样，
+        // 交给后面的按名反查 + 告警处理，不要静默丢前缀。
+        String modelProviderId = request.getProviderId();
+        if (model != null && model.contains(":")) {
+            int colon = model.indexOf(':');
+            String prefix = model.substring(0, colon).trim();
+            String bare = model.substring(colon + 1).trim();
+            if (!prefix.isEmpty() && !bare.isEmpty()) {
+                if (modelProviderId == null || modelProviderId.isBlank()) {
+                    modelProviderId = prefix;
+                }
+                request.setProviderId(modelProviderId);
+                log.info("[AiChat] 限定名拆分 {} -> 供应商={} 模型={}", model, modelProviderId, bare);
+                model = bare;
+                request.setModel(bare);
+            }
+        }
         String provider = request.getProvider();
 
         if (model != null && !model.isBlank()) {
-            SysAiProvider dbProvider = resolveDbProviderByModel(model);
+            SysAiProvider dbProvider = resolveDbProviderByModel(model, modelProviderId);
             if (dbProvider != null) {
                 ChatClient dbClient = getCachedDbClient(dbProvider, model);
                 if (dbClient != null) {
+                    if (request.getProvider() == null || request.getProvider().isBlank()) {
+                        request.setProvider(dbProvider.getProviderId());
+                    }
                     return dbClient;
                 }
             }
@@ -833,24 +856,53 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     /**
      * 解析Db提供者By模型。
      *
-     * @param model 模型，不允许为 null
+     * <p>{@code providerIdHint} 来自请求里已限定的供应商（前端模型下拉的
+     * {@code <providerId>:<model>} 拆分而来）。有它就只认这一家；没有它才按模型名反查。
+     * 不同供应商允许同名模型，反查命中哪一行由数据库决定，所以命中多行时必须显式告警 ——
+     * 否则用户选了 A 家却发到 B 家接口，B 家的配额/订阅报错会原样冒进 A 家的会话。</p>
+     *
+     * @param model          模型，不允许为 null
+     * @param providerIdHint 供应商标识（可空）
      * @return SysAi提供者 对象
      */
-    private SysAiProvider resolveDbProviderByModel(String model) {
+    private SysAiProvider resolveDbProviderByModel(String model, String providerIdHint) {
         if (model == null || model.isBlank()) {
             return null;
         }
         try {
-            SysAiProviderModel pm = sysAiProviderModelMapper.selectOne(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getModel, model)
-                            .eq(SysAiProviderModel::getEnabled, true)
-                            .last("LIMIT 1"));
-            if (pm == null) {
-                return null;
+            List<SysAiProviderModel> candidates;
+            if (providerIdHint != null && !providerIdHint.isBlank()) {
+                candidates = sysAiProviderModelMapper.selectList(
+                        new LambdaQueryWrapper<SysAiProviderModel>()
+                                .eq(SysAiProviderModel::getProviderId, providerIdHint)
+                                .eq(SysAiProviderModel::getModel, model)
+                                .eq(SysAiProviderModel::getEnabled, true)
+                                .last("LIMIT 1"));
+                if (candidates.isEmpty()) {
+                    log.warn("[AiChat] 供应商 {} 下未找到启用的模型 {}，回退按模型名反查", providerIdHint, model);
+                }
+            } else {
+                candidates = sysAiProviderModelMapper.selectList(
+                        new LambdaQueryWrapper<SysAiProviderModel>()
+                                .eq(SysAiProviderModel::getModel, model)
+                                .eq(SysAiProviderModel::getEnabled, true)
+                                .orderByAsc(SysAiProviderModel::getProviderId));
+                if (candidates.size() > 1) {
+                    log.warn("[AiChat] 模型 {} 在 {} 个供应商下同名（{}），请求未指定供应商，取第一家；"
+                                    + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
+                            model, candidates.size(),
+                            candidates.stream().map(SysAiProviderModel::getProviderId).toList());
+                }
             }
-            SysAiProvider provider = sysAiProviderMapper.selectById(pm.getProviderId());
-            return provider != null && Boolean.TRUE.equals(provider.getEnabled()) ? provider : null;
+            for (SysAiProviderModel pm : candidates) {
+                SysAiProvider provider = sysAiProviderMapper.selectById(pm.getProviderId());
+                if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
+                    log.info("[AiChat] 路由 model={} -> 供应商={}({}) baseUrl={}",
+                            model, provider.getProviderId(), provider.getPlatform(), provider.getBaseUrl());
+                    return provider;
+                }
+            }
+            return null;
         } catch (Exception e) {
             log.warn("[AiChat] 解析 DB provider 失败 model={}: {}", model, e.getMessage());
             return null;
@@ -1191,7 +1243,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .instruction(instruction)
                 .leader(subAgentOn)
                 .build();
-        Agent agent = Agent.create("agentscope")
+        Agent agent = agentProviderFactory.createAgent()
                 .chatClient(configured)
                 .definition(definition)
                 // 子代理编排存在时 AUTO 路由，否则 SINGLE（主 Agent 直接调用工具）

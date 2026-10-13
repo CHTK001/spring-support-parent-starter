@@ -72,6 +72,9 @@ public class TavernChatController {
     private final SysAiGlobalSettingService globalSettingService;
     private final ObjectMapper objectMapper;
 
+    /** 供应商查询：把成员模型覆盖里的 providerId 补成可读的供应商名/平台/baseUrl */
+    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper providerMapper;
+
     /**
      * 群聊 SSE。
      * @param body 请求体 groupId/content/atRoleId
@@ -127,7 +130,7 @@ public class TavernChatController {
 
             // 5. 主回复（主回复者用自己的上下文条数）
             Streamed main = streamOne(out, groupId, group, speaker, content);
-            saveAiMessage(groupId, speaker, main.model(), main.text());
+            saveAiMessage(groupId, speaker, main);
 
             // 6. 随机发言：其他开启了随机发言的成员，按各自概率依次接话（参考连接器）
             for (SysAiTavernMember m : members) {
@@ -146,7 +149,7 @@ public class TavernChatController {
                 }
                 Streamed otherStream = streamOne(out, groupId, group, m,
                         "（群成员刚说完，用你自己的人设简短接一句，一两句话即可）");
-                saveAiMessage(groupId, m, otherStream.model(), otherStream.text());
+                saveAiMessage(groupId, m, otherStream);
             }
 
             sendRaw(out, Map.of("type", "turn_end", "finishReason", "stop"));
@@ -167,19 +170,28 @@ public class TavernChatController {
      * （见 {@link #saveAiMessage(Long, SysAiTavernMember, String, String)}），
      * 因此它不参与任何对外响应体。</p>
      *
-     * @param model 本轮实际使用的模型标识（不含 {@code provider:} 前缀），
+     * @param model 本轮实际使用的模型标识（不含 {@code providerId:} 前缀），
      *              由 {@link #resolveModel(SysAiTavernMember, SysAiRole)} 决定：
      *              优先该成员的「模型覆盖」配置，其次角色的模型配置，
      *              最后取全局默认模型（依次读 {@code runtime.default_model}、
      *              {@code models.defaultChatModelId}、{@code runtime.default_chat_model}，
-     *              均未配置时回落 {@code agnes-2.5-flash}）。
+     *              均未配置时由 {@code EffectiveChatModelResolver} 报错）。
      *              不允许为 {@code null}——它在流式回调触发前就已确定
+     * @param providerId 本轮实际应答的供应商标识（可空）。
+     *              <b>为什么必须带</b>：成员的模型覆盖在库里是
+     *              {@code <providerId>:<model>} 限定写法，若拆掉前缀只留裸模型名，
+     *              下游按名反查供应商时，同名模型（多家供应商都叫 dpv4）
+     *              命中哪一家由数据库决定 —— 表现为「群里选的是 A 家模型，
+     *              回复却来自 B 家接口」，B 家的配额/订阅报错（周卡、套餐过期）
+     *              就冒进了酒馆会话。解析不出供应商时为 {@code null}，
+     *              下游退回按名反查并打同名告警
+     *              （见 {@code AiChatFacadeServiceImpl#resolveDbProviderByModel}）
      * @param text  本轮回复的完整正文，即 SSE 逐块下发的增量 chunk 按到达顺序拼接的结果。
      *              <b>不含</b>「{@code [角色名] }」前缀（该前缀只加在写回聊天历史的副本上），
      *              也不含「{@code [群成员刚说完…]}」这类拼接用的提示语。
      *              中途报错而中断时为已收到的部分，可能是空串，不允许为 {@code null}
      */
-    private record Streamed(String model, String text) {}
+    private record Streamed(String model, String providerId, String text) {}
 
     /**
      * 流式回复一位成员。
@@ -190,10 +202,15 @@ public class TavernChatController {
         List<Map<String, Object>> history = buildHistory(groupId, ctxLimit);
         SysAiRole role = roleMapper.selectById(member.getRoleId());
         String roleName = role != null && role.getName() != null ? role.getName() : "AI";
-        String model = resolveModel(member, role);
+        // 拆出供应商一侧。EffectiveChatModelResolver 只回裸模型名，
+        // 这里从原始限定写法里把 providerId 单独提出来带下去（见 Streamed 注释）
+        String[] resolved = resolveModelQualified(member, role);
+        String model = resolved[0];
+        String providerId = resolved[1];
 
         AiChatRequest request = new AiChatRequest();
         request.setModel(model);
+        request.setProviderId(providerId);
         request.setStream(true);
         request.setUseSkill(false); // 纯 ChatClient，不挂 MCP/工具/技能
         request.setPrompt(prompt);
@@ -211,7 +228,12 @@ public class TavernChatController {
         createEv.put("speakerId", String.valueOf(member.getRoleId()));
         createEv.put("speakerName", roleName);
         createEv.put("modelName", model);
+        // 本轮实际应答的供应商：前端据此在酒馆消息旁显示提示，
+        // 与主对话链路的 route 提示同口径
+        createEv.put("route", buildRoute(providerId, model));
         sendRaw(out, createEv);
+        log.info("[TavernChat] 路由选定 memberId={} model={} providerId={}",
+                member.getId(), model, providerId);
 
         StringBuilder full = new StringBuilder();
         // streamWithUsage 为异步触发：回调在后台线程 fire。请求线程必须阻塞在此 latch 上，
@@ -249,7 +271,7 @@ public class TavernChatController {
         }
         sendRaw(out, Map.of("type", "finish", "finishReason", "stop",
                 "speakerId", String.valueOf(member.getRoleId()), "speakerName", roleName));
-        return new Streamed(model, full.toString());
+        return new Streamed(model, providerId, full.toString());
     }
 
     /** 解析回复成员：@ > 默认 > 首位；自动路由开启时由路由模型挑选 */
@@ -294,7 +316,11 @@ public class TavernChatController {
             String prompt = "群成员列表：\n" + roster + "\n用户说：" + content
                     + "\n请只回复最应该接话的成员编号（0~" + (members.size() - 1) + "），只输出一个数字，不要解释。";
             AiChatRequest req = new AiChatRequest();
-            req.setModel(getDefaultModel());
+            // 自动路由也要带供应商限定：默认模型同样可能是
+            // <providerId>:<model>，裸名在同名模型下会走错家
+            String[] autoModel = resolveDefaultQualified();
+            req.setModel(autoModel[0]);
+            req.setProviderId(autoModel[1]);
             req.setStream(false);
             req.setUseSkill(false);
             req.setPrompt(prompt);
@@ -336,18 +362,36 @@ public class TavernChatController {
         return history;
     }
 
-    private void saveAiMessage(Long groupId, SysAiTavernMember member, String model, String content) {
+    private void saveAiMessage(Long groupId, SysAiTavernMember member, Streamed streamed) {
         SysAiRole role = roleMapper.selectById(member.getRoleId());
         SysAiTavernMessage m = new SysAiTavernMessage();
         m.setGroupId(groupId);
         m.setSpeakerType("ai");
         m.setSpeakerId(String.valueOf(member.getRoleId()));
         m.setSpeakerName(role != null ? role.getName() : "AI");
-        m.setModelName(model);
-        m.setContent(content);
+        // 落库存限定名 <providerId>:<model>：sys_ai_tavern_message
+        // 只有 model_name 一个文本列、没有 metadata 列，这是把「本轮由哪家供应商
+        // 应答」带进历史的唯一办法（前端 displayModel 会剥掉前缀显示）。
+        // 这样刷新后仍能对上一轮到底是不是走对了家。
+        m.setModelName(qualify(streamed.providerId(), streamed.model()));
+        m.setContent(streamed.text());
         m.setUserId(AiUserContext.currentUserId());
         m.setCreateTime(LocalDateTime.now());
         messageMapper.insert(m);
+    }
+
+    /**
+     * 拼回限定名。providerId 为空时退回裸模型名，保持与旧数据一致。
+     *
+     * @param providerId 供应商标识（可空）
+     * @param model      裸模型名
+     * @return {@code <providerId>:<model>} 或裸模型名
+     */
+    private static String qualify(String providerId, String model) {
+        if (providerId == null || providerId.isBlank() || model == null) {
+            return model;
+        }
+        return providerId + ":" + model;
     }
 
     private SysAiTavernMember pickRandomOther(List<SysAiTavernMember> members, SysAiTavernMember exclude) {
@@ -363,38 +407,153 @@ public class TavernChatController {
         return others.get((int) (Math.random() * others.size()));
     }
 
-    private String resolveModel(SysAiTavernMember member, SysAiRole role) {
-        // 成员模型 / 角色模型在库里可能是「providerId:模型名」或「provider名:模型名」的限定写法
-        // （前端模型选择器落库的就是限定写法）。这里必须与 getDefaultModel() 同口径，
-        // 交给 EffectiveChatModelResolver 归一化：命中已启用模型就用其裸模型名，
-        // 否则逐级回落默认模型。直接返回限定串会让「模型管理里根本没有这个名字」，
-        // 全部成员的回复都以「No available ChatClient」失败（用户报障：AI 全报错）。
+    /**
+     * 解析成员应答模型，返回「裸模型名 + 供应商标识」。
+     *
+     * <p>成员的模型覆盖在库里是 {@code <providerId>:<model>} 限定写法。
+     * 这里把两侧拆开：裸模型名交给 {@code EffectiveChatModelResolver}
+     * 归一（命中已启用模型就用它，否则逐级回落默认模型），
+     * 供应商标识原样保留并带进 {@code AiChatRequest.providerId}。</p>
+     *
+     * <p>为什么不能像旧实现那样只回裸模型名：多家供应商允许同名模型，
+     * 下游按名反查供应商时命中哪一家由数据库决定 ——「群里选的是 A 家
+     * 模型，回复却来自 B 家接口」，B 家的配额/订阅报错（周卡、套餐过期）
+     * 就冒进了酒馆会话。</p>
+     *
+     * @param member 成员
+     * @param role   成员角色（可空）
+     * @return {@code [裸模型名, 供应商标识]}；解析不出供应商时后者为 {@code null}
+     */
+    private String[] resolveModelQualified(SysAiTavernMember member, SysAiRole role) {
+        String providerId = null;
+        String raw = null;
         if (member.getModelOverride() != null && !member.getModelOverride().isBlank()) {
-            String resolved = effectiveChatModelResolver.resolve(member.getModelOverride());
-            if (resolved != null && !resolved.isBlank()) {
-                return resolved;
+            raw = member.getModelOverride();
+        } else if (role != null && role.getModel() != null && !role.getModel().isBlank()) {
+            raw = role.getModel();
+        }
+        if (raw != null) {
+            providerId = extractProviderId(raw);
+            String model = effectiveChatModelResolver.resolve(raw);
+            if (model != null && !model.isBlank()) {
+                return new String[]{model, providerId};
             }
         }
-        if (role != null && role.getModel() != null && !role.getModel().isBlank()) {
-            String resolved = effectiveChatModelResolver.resolve(role.getModel());
-            if (resolved != null && !resolved.isBlank()) {
-                return resolved;
-            }
-        }
-        return getDefaultModel();
+        // 成员/角色没配（或配了但解析不出已启用模型）：
+        // 回落全局默认模型。默认模型同样可能是「providerId:模型名」
+        // 限定写法（实测 runtime/default_model 就是），必须保留
+        // 供应商一侧，否则裸名在同名模型下会走错家
+        return resolveDefaultQualified();
     }
 
-    private String getDefaultModel() {
-        String[][] keys = {{"runtime", "default_model"}, {"models", "defaultChatModelId"}, {"runtime", "default_chat_model"}};
-        for (String[] k : keys) {
-            String v = globalSettingService.getValue(k[0], k[1]).map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
-            if (v != null) {
-                int idx = v.indexOf(':');
-                return idx >= 0 ? v.substring(idx + 1) : v;
+    /**
+     * 从限定写法里提取供应商标识。
+     *
+     * <p>冒号前是纯数字（雪花 id）或 {@code onnx} 这类平台标识时，
+     * 才是真实的供应商主键；前缀是供应商名（如
+     * {@code agnes:agnes-3.0-flash}）时按名称查出该供应商、
+     * 改用它的主键 id。三种写法都认不出时才返回 {@code null}，
+     * 让下游退回按名反查并打同名告警。</p>
+     *
+     * @param raw 原始取值，可空
+     * @return 供应商标识；非限定写法或前缀认不出时返回 {@code null}
+     */
+    private String extractProviderId(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        int sep = raw.indexOf(':');
+        if (sep <= 0) {
+            return null;
+        }
+        String prefix = raw.substring(0, sep).trim();
+        if (prefix.isEmpty()) {
+            return null;
+        }
+        try {
+            boolean numeric = prefix.chars().allMatch(Character::isDigit);
+            if (numeric) {
+                return prefix;
+            }
+            // onnx 等平台标识：能查到启用的供应商才认
+            com.chua.starter.ai.support.manage.store.SysAiProvider p =
+                    providerMapper.selectById(prefix);
+            if (p != null && Boolean.TRUE.equals(p.getEnabled())) {
+                return prefix;
+            }
+            // 供应商名前缀（如「agnes:agnes-3.0-flash」）：
+            // 按名称查出启用的供应商后，改用它的主键 id，
+            // 这样角色模型配的是供应商名也能精确路由。
+            // 名称匹配忽略大小写（库里是「Agnes」，配置常写「agnes」）；
+            // 供应商表只有几家，全量加载在应用层匹配即可
+            for (com.chua.starter.ai.support.manage.store.SysAiProvider cand
+                    : providerMapper.selectList(null)) {
+                if (cand.getName() != null && cand.getName().equalsIgnoreCase(prefix)
+                        && Boolean.TRUE.equals(cand.getEnabled())
+                        && cand.getProviderId() != null && !cand.getProviderId().isBlank()) {
+                    return cand.getProviderId();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[TavernChat] 提取供应商标识失败 raw={}: {}", raw, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 组装酒馆 create 事件携带的路由信息。
+     *
+     * @param providerId 供应商标识（可空）
+     * @param model      裸模型名
+     * @return 路由信息 Map
+     */
+    private Map<String, Object> buildRoute(String providerId, String model) {
+        Map<String, Object> route = new LinkedHashMap<>(8);
+        route.put("model", model);
+        route.put("providerId", providerId);
+        route.put("providerResolved", providerId != null && !providerId.isBlank());
+        if (providerId != null && !providerId.isBlank()) {
+            try {
+                com.chua.starter.ai.support.manage.store.SysAiProvider p =
+                        providerMapper.selectById(providerId);
+                if (p != null) {
+                    route.put("providerName", p.getName());
+                    route.put("platform", p.getPlatform());
+                    route.put("baseUrl", p.getBaseUrl());
+                }
+            } catch (Exception e) {
+                log.debug("[TavernChat] 查询供应商 {} 失败: {}", providerId, e.getMessage());
             }
         }
-        // 不写死兜底模型名：解析不到时返回 空，由调用方报明确错误
-        return effectiveChatModelResolver.resolve(null);
+        return route;
+    }
+
+    private String resolveModel(SysAiTavernMember member, SysAiRole role) {
+        return resolveModelQualified(member, role)[0];
+    }
+
+    /**
+     * 解析全局默认模型，返回「裸模型名 + 供应商标识」。
+     *
+     * @return {@code [裸模型名, 供应商标识]}；解析不出供应商时后者为 {@code null}
+     */
+    private String[] resolveDefaultQualified() {
+        String[][] keys = {{"runtime", "default_model"}, {"models", "defaultChatModelId"}, {"runtime", "default_chat_model"}};
+        for (String[] k : keys) {
+            String v = globalSettingService.getValue(k[0], k[1])
+                    .map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
+            if (v != null) {
+                String providerId = extractProviderId(v);
+                // getDefaultModel 会把前缀剥掉；这里自己剥，同时留下供应商一侧
+                int idx = v.indexOf(':');
+                String bare = idx >= 0 ? v.substring(idx + 1).trim() : v;
+                if (!bare.isEmpty()) {
+                    return new String[]{bare, providerId};
+                }
+            }
+        }
+        String resolved = effectiveChatModelResolver.resolve(null);
+        return new String[]{resolved, null};
     }
 
     private SysAiTavernGroup requireOwned(Long id) {
