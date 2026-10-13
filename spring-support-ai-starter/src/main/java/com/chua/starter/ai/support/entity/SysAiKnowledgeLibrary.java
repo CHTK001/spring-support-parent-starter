@@ -41,6 +41,16 @@ public class SysAiKnowledgeLibrary {
     private String description; // description
 
     /**
+     * 摘要 / 扩展配置（JSON 文本）。
+     *
+     * <p>本列在 init SQL 里就有（{@code sys_ai_knowledge_library_summary TEXT}），
+     * 但实体类此前没映射它。知识图谱侧把它当作「图谱视图偏好」的落点，
+     * 存布局名、布局参数、显示开关等 JSON，按 RAG 知识库（图谱库）维度持久化。</p>
+     */
+    @TableField("sys_ai_knowledge_library_summary")
+    private String summary;
+
+    /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_knowledge_library_status")

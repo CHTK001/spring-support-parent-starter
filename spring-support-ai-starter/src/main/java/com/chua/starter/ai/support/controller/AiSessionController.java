@@ -167,6 +167,69 @@ public class AiSessionController {
     }
 
     /**
+     * 解析失败轮的错误态。
+     *
+     * <p>失败助手消息把 {@code finishReason}/{@code errorDetail} 落在 confirmation 里
+     * （见 {@code ChatStreamOrchestrator.persistErroredAssistantMessage}）。SSE 期间前端直接
+     * 吃 turn_end 事件所以能显示红色错误块；刷新后改走本方法还原历史，必须把这两个字段
+     * 一并透出，否则错误提示在重载后整块消失。</p>
+     *
+     * <p>只认非空的 {@code finishReason}，且 {@code errorDetail} 单独判空后回落到 finishReason，
+     * 避免上游只给状态码不给文案时渲染成空白错误框。</p>
+     *
+     * @return 含 finishReason（及 errorDetail）的 Map；非失败轮或解析失败返回 null
+     */
+    private Map<String, Object> parseErrorState(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            Object finishReason = data.get("finishReason");
+            if (finishReason == null || String.valueOf(finishReason).isBlank()) {
+                return null;
+            }
+            Map<String, Object> state = new HashMap<>();
+            state.put("finishReason", String.valueOf(finishReason));
+            Object errorDetail = data.get("errorDetail");
+            state.put("errorDetail", errorDetail == null ? String.valueOf(finishReason) : String.valueOf(errorDetail));
+            return state;
+        } catch (Exception e) {
+            log.warn("[Session] 解析错误态失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 解析本轮实际应答的供应商信息。
+     *
+     * <p>写入方在 {@code ChatStreamOrchestrator}：路由一旦出问题（选了 A 家却发到 B 家接口、
+     * B 家返回配额报错），最需要的就是「当时到底是哪家供应商、哪个 baseUrl 应答的」这条信息。
+     * SSE 期间前端从 create 事件拿；刷新后改走本方法还原，必须也从 confirmation 透出，
+     * 否则提示只在流式的那几秒存在，刷新即丢。</p>
+     *
+     * @return 路由信息 Map；无路由信息或解析失败返回 {@code null}
+     */
+    private Map<String, Object> parseRoute(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            Object route = data.get("route");
+            if (route instanceof Map<?, ?> map && !map.isEmpty()) {
+                Map<String, Object> result = new HashMap<>(map.size());
+                map.forEach((k, v) -> result.put(String.valueOf(k), v));
+                return result;
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("[Session] 解析路由信息失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * 获取会话列表
      */
     @GetMapping
@@ -468,6 +531,19 @@ public class AiSessionController {
                 if (pendingConfirm != null) {
                     contentMetadata.put("confirmationRequest", pendingConfirm);
                 }
+                // 失败轮的错误态：ChatStreamOrchestrator.persistErroredAssistantMessage 把
+                // finishReason/errorDetail 写进 confirmation，而上面的解析只取了工具调用与待确认，
+                // 于是刷新后 TurnItem 拿不到 finishReason，红色错误块整块消失——
+                // 表现为「会话里报错是红的，一刷新就恢复成普通消息」。这里补齐透出。
+                Map<String, Object> errorState = parseErrorState(msg.getConfirmation());
+                if (errorState != null) {
+                    contentMetadata.putAll(errorState);
+                }
+                // 本轮实际应答的供应商信息（写入方见 ChatStreamOrchestrator#describeRoute）
+                Map<String, Object> route = parseRoute(msg.getConfirmation());
+                if (route != null) {
+                    contentMetadata.put("route", route);
+                }
             }
             content.put("metadata", contentMetadata);
             contents.add(content);
@@ -491,6 +567,14 @@ public class AiSessionController {
             // 会话生效的思考强度档位（low/medium/high/max）；未设置则不返回该键
             if ("assistant".equals(msg.getRole()) && sessionEffort != null) {
                 metadata.put("thinkingEffort", sessionEffort);
+            }
+            // 失败轮错误态同时提到消息级：TurnItem.assistantMetadata 以 messageMeta 覆盖
+            // contentMeta，只在 content 级补的话会被消息级空对象覆盖掉，错误块仍不显示。
+            if ("assistant".equals(msg.getRole())) {
+                Map<String, Object> errorState = parseErrorState(msg.getConfirmation());
+                if (errorState != null) {
+                    metadata.putAll(errorState);
+                }
             }
             item.put("metadata", metadata);
             items.add(item);
@@ -1355,7 +1439,7 @@ public class AiSessionController {
 
         // 删除会话
         sessionMapper.deleteById(sessionId);
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         return ReturnResult.ok(result);

@@ -302,8 +302,20 @@ public class EduAiService {
         }
         // 兜底也走相似度而非严格相等：OCR 错字与「答对但啰嗦」不该被判 0，
         // 并与客观题容忍比对（EduMarkingServiceImpl）保持同一阈值口径。
-        boolean matched = standardAnswer != null
-                && AnswerSimilarity.similarity(standardAnswer, studentAnswer) >= AnswerSimilarity.SIMILARITY_THRESHOLD;
+        // 客观题先做归一化提取（√/× → 对/错、选项字母提取）：学生作答里常混着
+        // 题干文字（OCR 把「（√）」连题干一起识别），相似度对符号与字母不敏感，会误判。
+        String normalizedStudent = extractObjectiveAnswer(questionType, studentAnswer);
+        String normalizedStandard = normalizeJudgeAnswer(standardAnswer);
+        boolean matched;
+        if ("JUDGE".equals(questionType) && normalizedStudent != null) {
+            matched = normalizedStudent.equals(normalizedStandard);
+        } else if ("SINGLE_CHOICE".equals(questionType) && normalizedStudent != null) {
+            matched = normalizedStudent.equalsIgnoreCase(
+                    standardAnswer == null ? "" : standardAnswer.trim());
+        } else {
+            matched = standardAnswer != null
+                    && AnswerSimilarity.similarity(standardAnswer, studentAnswer) >= AnswerSimilarity.SIMILARITY_THRESHOLD;
+        }
         if (matched) {
             fallback.setScore(maxScore);
             fallback.setComment("与标准答案一致");
@@ -313,6 +325,67 @@ public class EduAiService {
         }
         fallback.setFallbackReason("相似度匹配结果");
         return fallback;
+    }
+
+    /**
+     * 客观题作答归一化提取。
+     *
+     * <p>JUDGE：从作答里找 √/✓/×/✗/对/错/正确/错误（常与题干混在 OCR 文本里），
+     * 归一化为「对」/「错」；SINGLE_CHOICE：提取选项字母（(C)、C.、选C 等）。
+     * 提取不到返回 null，由调用方回落相似度比对。</p>
+     *
+     * @param questionType  题目类型
+     * @param studentAnswer 学生作答（可能混有题干）
+     * @return 归一化作答；非客观题或提取不到为 null
+     */
+    public static String extractObjectiveAnswer(String questionType, String studentAnswer) {
+        if (studentAnswer == null) {
+            return null;
+        }
+        if ("JUDGE".equals(questionType)) {
+            if (studentAnswer.contains("√") || studentAnswer.contains("✓")
+                    || studentAnswer.contains("对") || studentAnswer.contains("正确")
+                    || studentAnswer.matches("(?i).*[\\(（]?\\s*T(?:RUE)?\\s*[)）]?.*")) {
+                return "对";
+            }
+            if (studentAnswer.contains("×") || studentAnswer.contains("✗") || studentAnswer.contains("X")
+                    || studentAnswer.contains("错") || studentAnswer.matches("(?i).*[\\(（]?\\s*F(?:ALSE)?\\s*[)）]?.*")) {
+                return "错";
+            }
+            return null;
+        }
+        if ("SINGLE_CHOICE".equals(questionType)) {
+            var m = java.util.regex.Pattern
+                    .compile("[\\(（]\\s*([A-Da-d])\\s*[)）]|选\\s*([A-Da-d])|([A-Da-d])\\s*[.。、：:]")
+                    .matcher(studentAnswer);
+            if (m.find()) {
+                return m.group(1) != null ? m.group(1).toUpperCase()
+                        : m.group(2) != null ? m.group(2).toUpperCase()
+                        : m.group(3) != null ? m.group(3).toUpperCase() : null;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * 判断题标准答案归一化：对/正确/T/true/√ → 「对」；错/错误/F/false/× → 「错」。
+     *
+     * @param standardAnswer 标准答案（库里可能是「对」「T」「正确」等多种写法）
+     * @return 归一化结果；入参为空返回空串
+     */
+    public static String normalizeJudgeAnswer(String standardAnswer) {
+        if (standardAnswer == null) {
+            return "";
+        }
+        String s = standardAnswer.trim();
+        if (s.matches("(?i)(对|正确|T|TRUE|√|Y|YES)")) {
+            return "对";
+        }
+        if (s.matches("(?i)(错|错误|F|FALSE|×|X|N|NO)")) {
+            return "错";
+        }
+        return s;
     }
 
     /**

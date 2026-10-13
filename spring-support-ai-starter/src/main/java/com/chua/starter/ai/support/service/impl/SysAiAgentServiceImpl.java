@@ -9,6 +9,7 @@ import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.lang.json.Json;
+import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.mapper.SysAiAgentMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.store.SysAiAgent;
@@ -51,6 +52,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final AgentRegistry agentRegistry; // Agentregistry
     private final ChatClientRegistry chatClientRegistry; // 对话客户端registry
     private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService; // 全局设置（持久化编排图）
+    private final AgentProviderFactory agentProviderFactory;
 
     private static final String STRATEGY_KEY_MODE = "mode"; // strategyKeymode
     private static final String STRATEGY_KEY_PLANNING = "planning"; // strategyKeyplanning
@@ -619,10 +621,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             }
 
             AgentDefinition definition = masterBuilder.build();
-            Agent agentInstance = Agent.create("agentscope");
+            Agent agentInstance = agentProviderFactory.createAgent();
             if (agentInstance == null) {
-                log.warn("[Agent] AgentScope 运行时不可用（缺少 agentscope SPI 实现），跳过运行时注册 name={}",
-                        agentName);
+                log.warn("[Agent] {} 运行时不可用（缺少对应 SPI 实现），跳过运行时注册 name={}",
+                        agentProviderFactory.resolveProvider(), agentName);
                 return;
             }
             agentInstance.definition(definition);

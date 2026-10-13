@@ -8,6 +8,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.ai.skill.SkillManager;
 import com.chua.common.support.ai.mcp.McpManager;
+import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -89,6 +90,15 @@ public class AgentRegistry {
     private final List<Agent> allAgents = new CopyOnWriteArrayList<>();
 
     /**
+     * Agent 引擎工厂
+     */
+    private final AgentProviderFactory agentProviderFactory;
+
+    public AgentRegistry(AgentProviderFactory agentProviderFactory) {
+        this.agentProviderFactory = agentProviderFactory;
+    }
+
+    /**
      * 全局 skill管理器（可选）
      */
     private volatile SkillManager skillManager;
@@ -118,7 +128,7 @@ public class AgentRegistry {
             return null;
         }
 
-        Agent agent = Agent.create("agentscope")
+        Agent agent = agentProviderFactory.createAgent()
                 .chatClient(chatClient)
                 .definition(definition != null ? definition : AgentDefinition.builder()
                         .id(name)

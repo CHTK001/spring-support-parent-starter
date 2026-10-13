@@ -8,7 +8,6 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -56,7 +55,13 @@ public class DatasourceMetricScheduler {
      * 保留期短于查询窗口的话，用户拉到最远的那段永远是空的 ——
      * 界面上看不出区别，只会觉得「这个监控图没有历史」。</p>
      */
-    @Value("${monitor.datasource.metric-retention-days:7}")
+    /**
+     * 保留天数固定 7 天：与趋势查询允许的最大回溯窗口（24×7h）对齐，
+     * 保留期短于查询窗口的话，用户拉到最远的那段永远是空的。
+     *
+     * <p>不用 {@code @Value} 占位符注入，原因同调度注解：宿主早期创建链上
+     * resolver 未就绪时，原样字符串转 int 会直接炸掉 bean 创建。</p>
+     */
     private int metricRetentionDays = 7;
 
     /**
@@ -64,9 +69,13 @@ public class DatasourceMetricScheduler {
      *
      * <p>首次延迟与轮询同长：应用刚启动时没人订阅，等一个周期再开始，
      * 免得多跑一轮空转。</p>
+     *
+     * <p>频率用常量不用占位符：eduai 宿主经 collect-starter 传递依赖引入本模块后，
+     * 本 bean 被卷入早期创建链，embedded value resolver 尚未就绪，
+     * {@code ${...:默认值}} 会原样进入 cron/时间解析器直接炸掉启动（实测 2026-10-11）。
+     * 轮询周期没有按宿主定制的诉求，60s 是各宿主一致的安全值。</p>
      */
-    @Scheduled(fixedRateString = "${monitor.datasource.collect-interval-ms:60000}",
-            initialDelayString = "${monitor.datasource.collect-interval-ms:60000}")
+    @Scheduled(fixedRate = 60_000L, initialDelay = 60_000L)
     public void collect() {
         DatasourceMetricService service = metricServiceProvider.getIfAvailable();
         if (service == null) {
@@ -105,8 +114,11 @@ public class DatasourceMetricScheduler {
      *
      * <p>失败不外抛：清理失败最坏是表涨得快一点，不该把调度线程带崩，
      * 连带影响同一线程上的采集任务。</p>
+     *
+     * <p>cron 用常量不用占位符，原因同 {@link #collect()}：宿主早期创建链上
+     * embedded value resolver 未就绪，占位符会原样进入 cron 解析器炸掉启动。</p>
      */
-    @Scheduled(cron = "${monitor.datasource.metric-purge-cron:0 20 4 * * ?}")
+    @Scheduled(cron = "0 20 4 * * ?")
     public void purgeExpired() {
         DatasourceMetricService service = metricServiceProvider.getIfAvailable();
         if (service == null) {

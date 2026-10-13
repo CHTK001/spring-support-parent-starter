@@ -9,6 +9,7 @@ import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.chat.AiChatClientFactory;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
+import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
@@ -133,13 +134,13 @@ public class AiConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public AgentRegistry agentRegistry() {
+    public AgentRegistry agentRegistry(AgentProviderFactory agentProviderFactory) {
         log.info("[AiConfiguration] 创建 AgentRegistry");
         /**
          * Agentregistry。
          * @return Agentregistry的结果
          */
-        return new AgentRegistry();
+        return new AgentRegistry(agentProviderFactory);
     }
 
     /**
@@ -235,6 +236,7 @@ public class AiConfiguration {
         ApplicationContext context = event.getApplicationContext();
         ChatClientRegistry chatClientRegistry = context.getBean(ChatClientRegistry.class);
         AgentRegistry agentRegistry = context.getBean(AgentRegistry.class);
+        AgentProviderFactory agentProviderFactory = context.getBean(AgentProviderFactory.class);
 
         // 开了 chua.ai.chat.enabled 却没配密钥时，bean 会被下面的条件挡掉（不创建调用必失败的客户端），
         // 这里补一条可操作的告警 —— 否则现象只是「AI 不可用」，看不出是漏配了密钥。
@@ -285,7 +287,7 @@ public class AiConfiguration {
         ChatClient defaultClient = chatClientRegistry.getDefault();
         if (defaultClient != null) {
             try {
-                Agent masterAgent = Agent.create("agentscope")
+                Agent masterAgent = agentProviderFactory.createAgent()
                         .chatClient(defaultClient)
                         .mode(AgentMode.AUTO);
                 agentRegistry.setMaster(masterAgent);

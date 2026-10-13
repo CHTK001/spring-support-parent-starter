@@ -94,6 +94,9 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         entity.setSysAiUsageCallTime(LocalDateTime.now());
         entity.setSysAiUsageFirstTokenLatency(usage.getFirstTokenLatencyMillis());
         entity.setSysAiUsageTotalLatency(usage.getDurationMillis());
+        // 解码速度 / 端到端吞吐：AiUsage 派生方法实时计算，未填充时按字段兜底
+        entity.setSysAiUsageTokensPerSecond(usage.tokensPerSecond());
+        entity.setSysAiUsageTotalTokensPerSecond(usage.totalTokensPerSecond());
         entity.setSysAiUsageCachedTokens(usage.getCacheTokens());
         entity.setSysAiUsageInferenceStrength("默认");
         entity.setSysAiUsageEndpoint("/v1/chat/completions");

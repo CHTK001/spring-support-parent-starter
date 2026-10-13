@@ -700,6 +700,10 @@ public class FaceStores {
             matched.add(row);
         }
         sortRows(matched, sortField, sortOrder);
+        // 命中总数必须在切片前取：下面分页会把 matched 重赋值为本页子列表，
+        // 若切片后再取 matched.size()，total 恒等于本页条数（size），
+        // 前端「total > pageSize」永远为 false，翻页条不渲染、翻页不可达。
+        int totalMatched = matched.size();
         List<Map<String, Object>> items = matched;
         if (page > 0 && size > 0) {
             long fromL = (long) (page - 1) * size;
@@ -714,7 +718,7 @@ public class FaceStores {
         stats.put("withIdCard", statWithIdCard);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("items", items);
-        out.put("total", matched.size());
+        out.put("total", totalMatched);
         out.put("stats", stats);
         return out;
     }
@@ -854,7 +858,19 @@ public class FaceStores {
         }
         // DB 权威：同步元数据行。DB 失败要把快照一并还原 ——
         // 只改一半的话，界面读到的是新档案、DB 里是旧档案，日后按 DB 导出/统计又变回旧值。
-        if (!library.updateMeta(st.account, id, strOf(metadata, "name"), metadata, null)) {
+        //
+        // 注意这里必须连异常一起兜住：updateMeta 内部的 find() 走 MyBatis-Plus，
+        // 底层 SQL 一旦出错（如保留字被当成列别名）抛的是 RuntimeException 而不是返回 false，
+        // 只判返回值会让快照保留新档案、DB 保留旧档案 —— 界面与库从此分叉且无人回滚。
+        boolean dbOk;
+        try {
+            dbOk = library.updateMeta(st.account, id, strOf(metadata, "name"), metadata, null);
+        } catch (RuntimeException ex) {
+            log.error("[Face] 账号 '{}' 元数据写入 DB 抛异常，回滚快照: id={} -> {}",
+                    st.account, id, ex.getMessage());
+            dbOk = false;
+        }
+        if (!dbOk) {
             restoreSnapshot(st, id, old);
             try {
                 st.persist();

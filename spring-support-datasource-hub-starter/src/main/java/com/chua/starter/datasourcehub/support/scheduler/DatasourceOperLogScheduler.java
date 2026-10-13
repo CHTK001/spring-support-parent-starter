@@ -4,7 +4,6 @@ import com.chua.starter.datasourcehub.support.service.DatasourceOperLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -31,9 +30,11 @@ import org.springframework.stereotype.Component;
 public class DatasourceOperLogScheduler {
 
     /**
-     * 日志保留天数。
+     * 日志保留天数固定 90 天。
+     *
+     * <p>不用 {@code @Value} 占位符注入，原因同调度注解：宿主早期创建链上
+     * resolver 未就绪时，原样字符串转 int 会直接炸掉 bean 创建。</p>
      */
-    @Value("${monitor.datasource.oper-log-retention-days:90}")
     private int retentionDays = 90;
 
     private final ObjectProvider<DatasourceOperLogService> operLogServiceProvider;
@@ -42,8 +43,11 @@ public class DatasourceOperLogScheduler {
      * 滚动清理超期日志。
      *
      * <p>失败不外抛：清理失败只是表涨得快一点，不该影响业务请求。</p>
+     *
+     * <p>cron 用常量不用占位符：宿主早期创建链上 embedded value resolver 未就绪时，
+     * 占位符会原样进入 cron 解析器炸掉启动。</p>
      */
-    @Scheduled(cron = "${monitor.datasource.oper-log-purge-cron:0 40 4 * * ?}")
+    @Scheduled(cron = "0 40 4 * * ?")
     public void purgeExpired() {
         DatasourceOperLogService service = operLogServiceProvider.getIfAvailable();
         if (service == null || retentionDays <= 0) {

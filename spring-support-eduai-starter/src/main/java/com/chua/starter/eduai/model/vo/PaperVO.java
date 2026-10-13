@@ -99,6 +99,16 @@ public class PaperVO {
      */
     private String paperTitleStyle;
     /**
+     * 创建人姓名（落库时取自登录态；历史数据可能为空）
+     */
+    private String paperCreatorName;
+    /**
+     * 创建人类型：TEACHER-教师创建 / ADMIN-管理员创建 / SYSTEM-系统创建 / AI-AI 组卷
+     *
+     * <p>前端据此标注「xx老师」等标签：TEACHER 展示为「姓名+老师」，其余按类型名展示。</p>
+     */
+    private String paperCreatorType;
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

@@ -702,56 +702,108 @@ public class EduPaperScanner {
         return extractAnyQuestions(null, text);
     }
 
+    /** 任意卷抽取结果：题目列表 + 卷面识别到的学生（姓名/学号，可为空）。 */
+    public record AnyScan(List<ScannedQuestion> questions, String studentName, String studentNo) {
+        /**
+         * 规范化构造：空串统一为 null，集合防御性拷贝。
+         *
+         * @param questions   抽出的题目
+         * @param studentName 卷面姓名（识别不到为 null）
+         * @param studentNo   卷面学号（识别不到为 null）
+         */
+        public AnyScan {
+            questions = questions == null ? List.of() : List.copyOf(questions);
+            studentName = StringUtils.isBlank(studentName) ? null : studentName.trim();
+            studentNo = StringUtils.isBlank(studentNo) ? null : studentNo.trim();
+        }
+    }
+
     /**
-     * 任意卷抽取（版面优先 + 失败回退行规则）。
+     * 任意卷抽取（带卷面学生识别）。
      *
-     * <p>顺序：版面块归属（题号+作答，不调 LLM）→ 模型抽取（题干+作答+分值）
-     * → 行规则回退（题号+作答，题干留空）。模型不听话（非 JSON/空数组）时
-     * 不再整卷失败，至少按行规则出题走常识判分。</p>
+     * <p>与 {@link #extractAnyQuestions(List, String)} 同一套切题链路，
+     * 额外识别卷头的「姓名 / 学号」栏：模型抽取路径由大模型顺带给出，
+     * 版面/行规则路径用正则从卷头文字抽。识别结果供匿名任务回填学生标识。</p>
      *
      * @param blocks 版面文字块（含坐标）；为空时跳过版面归属
      * @param text   版面全文
-     * @return 抽出的题目列表；都抽不出时为空
+     * @return 题目 + 卷面学生
      */
-    public List<ScannedQuestion> extractAnyQuestions(List<ScanBlock> blocks, String text) {
+    public AnyScan extractAnyScan(List<ScanBlock> blocks, String text) {
         if (StringUtils.isBlank(text)) {
-            return List.of();
+            return new AnyScan(List.of(), null, null);
         }
         if (blocks != null && !blocks.isEmpty()) {
             List<ScannedQuestion> byLayout = extractByLayout(blocks);
             if (!byLayout.isEmpty()) {
-                // 版面只给了题号+作答：题干用模型补（只补题干，不重新切题）
                 List<ScannedQuestion> withStem = fillStemsByModel(byLayout, text);
-                if (!withStem.isEmpty()) {
-                    return withStem;
-                }
-                log.info("[EduScan] 模型补题干失败，保留版面题号+作答");
-                return byLayout;
+                List<ScannedQuestion> questions = !withStem.isEmpty() ? withStem : byLayout;
+                // 版面路径不专门调模型抽学生，用正则从卷头行抽（便宜且够用）
+                var byLines = extractStudentByLines(text);
+                return new AnyScan(questions, byLines[0], byLines[1]);
             }
         }
-        List<ScannedQuestion> byModel = extractAnyByModel(text);
-        if (!byModel.isEmpty()) {
-            return byModel;
+        try {
+            AnyScan byModel = extractAnyScanByModel(text);
+            if (!byModel.questions().isEmpty()) {
+                return byModel;
+            }
+        } catch (Exception e) {
+            log.warn("[EduScan] 模型抽取失败，回退行规则（题干留空）: {}", e.getMessage());
         }
-        // 模型抽取失败：回退行规则（题号+作答），题干留空走常识判分
-        log.warn("[EduScan] 模型抽取失败，回退行规则（题干留空）");
         List<ScannedQuestion> byRule = parseSelfByLines(text);
-        return byRule.stream().map(q -> new ScannedQuestion(q.no(), "", q.answer(), q.score())).toList();
+        List<ScannedQuestion> questions = byRule.stream()
+                .map(q -> new ScannedQuestion(q.no(), "", q.answer(), q.score())).toList();
+        var byLines = extractStudentByLines(text);
+        return new AnyScan(questions, byLines[0], byLines[1]);
     }
 
     /**
-     * 任意卷：让模型同时抽出「题干 + 学生作答 + 分值」。
+     * 卷头学生信息正则抽取：「姓名＿＿张三」「学号:20260001」这类栏位。
+     *
+     * <p>模型路径失败的兜底，也是自有卷（SELF）链路的学生识别通道——
+     * 自有卷抽题不调模型（题号回数据库取准确分值），学生信息只能正则抽。
+     * OCR 可能把下划线识别成一串下划线字符或冒号全角，分隔符从宽匹配。
+     * 返回 [姓名, 学号]，识别不到为 null。</p>
+     *
+     * @param text 版面全文
+     * @return [studentName, studentNo]
+     */
+    public String[] extractStudentByLines(String text) {
+        String name = null;
+        String no = null;
+        var head = text.length() > 600 ? text.substring(0, 600) : text;
+        var nameM = java.util.regex.Pattern
+                .compile("姓\\s*名\\s*[:：_\\-—]*\\s*([\\u4e00-\\u9fa5]{2,4})").matcher(head);
+        if (nameM.find()) {
+            name = nameM.group(1);
+        }
+        var noM = java.util.regex.Pattern
+                .compile("学\\s*号\\s*[:：_\\-—]*\\s*([0-9A-Za-z]{3,20})").matcher(head);
+        if (noM.find()) {
+            no = noM.group(1);
+        }
+        return new String[]{name, no};
+    }
+
+    public List<ScannedQuestion> extractAnyQuestions(List<ScanBlock> blocks, String text) {
+        return extractAnyScan(blocks, text).questions();
+    }
+
+    /**
+     * 任意卷：让模型同时抽出「题干 + 学生作答 + 分值」与卷面学生（姓名/学号）。
      *
      * <p>题库里没有这份卷子，题干与作答都只能来自识别文本，因此对模型的要求更高。
      * 模型失败时抛异常，由调用方回退行规则（不再整卷挂掉）。</p>
      *
      * @param text 版面全文
-     * @return 抽出的题目列表
+     * @return 抽出的题目列表 + 卷面学生
      */
-    private List<ScannedQuestion> extractAnyByModel(String text) {
+    private AnyScan extractAnyScanByModel(String text) {
         String systemPrompt = "你是试卷结构解析器。只输出 JSON，禁止解释。";
         String userPrompt = """
-                下面是一份外来试卷/答题卡的图片识别文本。请抽取每一道题，给出序号、题干与学生作答。
+                下面是一份外来试卷/答题卡的图片识别文本。请抽取每一道题，给出序号、题干与学生作答；
+                同时从卷头（姓名/班级/学号栏）识别出考生姓名与学号。
                 识别可能有错字，按上下文合理还原；无法确定的字段留空字符串。
 
                 抽取规则（务必遵守）：
@@ -762,9 +814,12 @@ public class EduPaperScanner {
                 3. 选项文字（A. …/B. …）属于题干内容，不得写进 answer。
                 4. score 取卷面标注的本题分值（如「每题3分」「共25分」就近归属）；无明确标注时取 null，
                    禁止编造分值。
+                5. studentName/studentNo 只取卷头「姓名＿＿＿」「学号＿＿＿」栏里手写或印刷的内容；
+                   姓名为 2~4 个汉字，学号为字母数字串；栏位为空或识别不到时留空字符串，
+                   禁止把标题/考场信息当成姓名学号。
 
                 JSON Schema:
-                {"questions":[{"no":"1","stem":"题干","answer":"学生作答","score":3}]}
+                {"studentName":"张三","studentNo":"20260001","questions":[{"no":"1","stem":"题干","answer":"学生作答","score":3}]}
 
                 识别文本：
                 %s
@@ -773,11 +828,18 @@ public class EduPaperScanner {
         // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，
         // 直接喂给 JSON 解析只会得到「解析失败」，把真因（如 429 限流）埋掉。
         requireModelOutput(raw);
-        List<ScannedQuestion> list = parseQuestions(raw, true);
+        JsonNode root;
+        try {
+            root = MAPPER.readTree(extractJson(raw));
+        } catch (Exception e) {
+            // JSON 解析失败转非受检异常，由 extractAnyScan 统一回退行规则
+            throw new IllegalStateException("模型输出 JSON 解析失败: " + e.getMessage(), e);
+        }
+        List<ScannedQuestion> list = parseQuestions(root, true);
         if (list.isEmpty()) {
             throw new IllegalStateException("模型未抽出题目");
         }
-        return list;
+        return new AnyScan(list, root.path("studentName").asText(""), root.path("studentNo").asText(""));
     }
 
     /**
@@ -912,31 +974,49 @@ public class EduPaperScanner {
             return list;
         }
         try {
-            JsonNode root = MAPPER.readTree(extractJson(raw));
-            JsonNode arr = root.path("questions");
-            if (!arr.isArray()) {
-                log.warn("[EduScan] 模型输出缺少 questions 数组");
-                return list;
-            }
-            for (JsonNode node : arr) {
-                String no = node.path("no").asText("");
-                String answer = node.path("answer").asText("");
-                String stem = needStem ? node.path("stem").asText("") : null;
-                Integer score = null;
-                JsonNode scoreNode = node.path("score");
-                if (scoreNode.isInt() && scoreNode.asInt() > 0) {
-                    score = scoreNode.asInt();
-                }
-                if (StringUtils.isBlank(no) && StringUtils.isBlank(stem)) {
-                    continue;
-                }
-                list.add(new ScannedQuestion(no, stem, stripAnswerNoise(answer), score));
-            }
-            log.info("[EduScan] 抽取题目 {} 道", list.size());
+            return parseQuestions(MAPPER.readTree(extractJson(raw)), needStem);
         } catch (Exception e) {
             log.warn("[EduScan] 题目 JSON 解析失败: {}，原文前 200 字: {}",
                     e.getMessage(), StringUtils.substring(raw, 0, 200));
+            return list;
         }
+    }
+
+    /**
+     * 解析模型输出的题目 JSON（已解析的根节点）。
+     *
+     * <p>与 String 版分离：任意卷抽取需要在同一个根节点上同时取
+     * questions 与顶层 studentName/studentNo，不重复解析。</p>
+     *
+     * @param root     模型输出 JSON 根节点
+     * @param needStem 是否需要题干（任意卷为 true）
+     * @return 题目列表；结构不符返回空列表
+     */
+    private List<ScannedQuestion> parseQuestions(JsonNode root, boolean needStem) {
+        List<ScannedQuestion> list = new ArrayList<>();
+        if (root == null) {
+            return list;
+        }
+        JsonNode arr = root.path("questions");
+        if (!arr.isArray()) {
+            log.warn("[EduScan] 模型输出缺少 questions 数组");
+            return list;
+        }
+        for (JsonNode node : arr) {
+            String no = node.path("no").asText("");
+            String answer = node.path("answer").asText("");
+            String stem = needStem ? node.path("stem").asText("") : null;
+            Integer score = null;
+            JsonNode scoreNode = node.path("score");
+            if (scoreNode.isInt() && scoreNode.asInt() > 0) {
+                score = scoreNode.asInt();
+            }
+            if (StringUtils.isBlank(no) && StringUtils.isBlank(stem)) {
+                continue;
+            }
+            list.add(new ScannedQuestion(no, stem, stripAnswerNoise(answer), score));
+        }
+        log.info("[EduScan] 抽取题目 {} 道", list.size());
         return list;
     }
 

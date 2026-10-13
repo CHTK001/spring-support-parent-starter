@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>本解析器统一完成：
  * <ol>
- *   <li>归一化：剥离「数字 providerId:」前缀，得到裸模型名与可选 providerId；</li>
+ *   <li>归一化：剥离「{@code providerId:}」前缀，得到裸模型名与可选 providerId；</li>
  *   <li>供应商解析：显式 providerId 直查，否则按启用的 provider_model 行反查；</li>
  *   <li>客户端构建：收集供应商级 + 连接级全部密钥，单密钥直连、多密钥 failover 聚合；</li>
  *   <li>按 {@code provider::model} 缓存（TTL {@value #CACHE_TTL_MILLIS} ms）。</li>
@@ -87,6 +87,9 @@ public class ModelClientResolver {
             log.debug("[ModelClientResolver] 未找到启用的供应商: {}", qualifiedModel);
             return null;
         }
+        log.info("[ModelClientResolver] 路由 {} -> 供应商={}({}) baseUrl={} model={}",
+                qualifiedModel, provider.getProviderId(), provider.getPlatform(),
+                provider.getBaseUrl(), parsed.model());
         String cacheKey = provider.getProviderId() + "::" + parsed.model();
         long now = System.currentTimeMillis();
         CachedClient cached = cache.get(cacheKey);
@@ -114,6 +117,10 @@ public class ModelClientResolver {
     /**
      * 解析供应商：显式 providerId 直查（并校验启用），否则按启用的模型行反查。
      *
+     * <p>反查按模型名查时可能命中多行（不同供应商允许同名模型）。此时不再静默取
+     * {@code LIMIT 1} 的第一行 —— 那等于让数据库的返回顺序决定实际调谁，用户选了哪家
+     * 就完全不起作用。改为打一条列出全部候选的 WARN，让路由问题在日志里直接可见。</p>
+     *
      * @param parsed 归一化后的模型
      * @return 启用的供应商；未找到返回 {@code null}
      */
@@ -121,18 +128,34 @@ public class ModelClientResolver {
         try {
             if (parsed.providerId() != null) {
                 SysAiProvider provider = providerMapper.selectById(parsed.providerId());
-                return provider != null && Boolean.TRUE.equals(provider.getEnabled()) ? provider : null;
+                if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
+                    return provider;
+                }
+                log.warn("[ModelClientResolver] 指定的供应商 {} 不可用（不存在或已停用），回退按模型名反查: {}",
+                        parsed.providerId(), parsed.model());
             }
-            SysAiProviderModel pm = providerModelMapper.selectOne(
+            // 反查：不带 providerId 时按模型名找启用行
+            List<SysAiProviderModel> candidates = providerModelMapper.selectList(
                     Wrappers.<SysAiProviderModel>lambdaQuery()
                             .eq(SysAiProviderModel::getModel, parsed.model())
                             .eq(SysAiProviderModel::getEnabled, true)
-                            .last("LIMIT 1"));
-            if (pm == null) {
+                            .orderByAsc(SysAiProviderModel::getProviderId));
+            if (candidates.isEmpty()) {
                 return null;
             }
-            SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
-            return provider != null && Boolean.TRUE.equals(provider.getEnabled()) ? provider : null;
+            if (candidates.size() > 1) {
+                log.warn("[ModelClientResolver] 模型 {} 在 {} 个供应商下同名（{}），未指定供应商时取第一家；"
+                                + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
+                        parsed.model(), candidates.size(),
+                        candidates.stream().map(SysAiProviderModel::getProviderId).toList());
+            }
+            for (SysAiProviderModel pm : candidates) {
+                SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+                if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
+                    return provider;
+                }
+            }
+            return null;
         } catch (Exception e) {
             log.warn("[ModelClientResolver] 解析供应商失败 {}: {}", parsed.model(), e.getMessage());
             return null;
@@ -271,7 +294,11 @@ public class ModelClientResolver {
     }
 
     /**
-     * 解析 {@code <providerId>:<model>} 形态：冒号前为纯数字时拆分，否则整体视为裸模型名。
+     * 解析 {@code <providerId>:<model>} 形态：冒号前的非空片段一律当作供应商标识。
+     *
+     * <p>刻意不要求前缀是纯数字：供应商 id 除了雪花 id 还可能是 {@code onnx} 这类平台标识
+     * （见 {@code sys_ai_provider.sys_ai_provider_provider_id}）。前缀不存在时
+     * {@link #resolveProvider(ParsedModel)} 会打 WARN 并回退按模型名反查，不会静默错配。</p>
      *
      * @param raw 原始模型名
      * @return 归一化结果；空白输入返回 {@code null}
@@ -286,11 +313,10 @@ public class ModelClientResolver {
         }
         int colon = value.indexOf(':');
         if (colon > 0) {
-            String prefix = value.substring(0, colon);
-            boolean numeric = !prefix.isEmpty() && prefix.chars().allMatch(Character::isDigit);
-            if (numeric) {
-                String model = value.substring(colon + 1).trim();
-                return model.isEmpty() ? null : new ParsedModel(model, prefix);
+            String prefix = value.substring(0, colon).trim();
+            String model = value.substring(colon + 1).trim();
+            if (!prefix.isEmpty() && !model.isEmpty()) {
+                return new ParsedModel(model, prefix);
             }
         }
         return new ParsedModel(value, null);

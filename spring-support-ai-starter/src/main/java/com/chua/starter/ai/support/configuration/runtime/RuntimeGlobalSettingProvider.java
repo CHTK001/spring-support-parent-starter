@@ -25,7 +25,17 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     /**
      * 配置分组标识
      */
-    private static final String GROUP = "runtime";
+    public static final String GROUP = "runtime";
+
+    /**
+     * Agent 引擎实现字段标识
+     */
+    public static final String FIELD_AGENT_IMPL = "agent_impl";
+
+    /**
+     * Agent 引擎默认实现
+     */
+    public static final String DEFAULT_AGENT_IMPL = "agentscope";
 
     /**
      * 分组显示名称
@@ -93,7 +103,9 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 // 可以走 /v2/settings/{group} 写自己的覆盖层把权限给自己打开）。
                 new SettingItem("user_tool_access", "false", "BOOLEAN",
                         "是否允许普通账号调用工具（关闭时普通账号的 agent 不启用任何工具；管理员不受影响）",
-                        22, true)
+                        22, true),
+                new SettingItem(FIELD_AGENT_IMPL, DEFAULT_AGENT_IMPL, "STRING",
+                        "Agent 引擎实现（agentscope / opencode / langchain4j）", 23, true)
         );
     }
 }

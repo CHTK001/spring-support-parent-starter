@@ -206,7 +206,15 @@ public class DatasourceSchemaServiceImpl implements DatasourceSchemaService {
                     }
                 }
             }
-            if (Boolean.TRUE.equals(request.autoIdPrimaryKey()) && primaryKey.isEmpty()) {
+            // 自增 id 只在「这张表由本次 DDL 新建」时注入。
+            //
+            // 目标表已存在时绝不能注入：采集平台的 output 节点每轮都会走 APPEND 补列，
+            // 而业务表的主键列名通常是 <实体>_id（idiom_id / poem_id / hanzi_id…）而不是 id。
+            // 这时补出来的 ALTER TABLE ... ADD COLUMN id BIGINT AUTO_INCREMENT 里的 id 既不是
+            // 已声明的 key，又构成第二个自增列，MySQL 直接拒绝：
+            // "there can be only one auto column and it must be defined as a key"，
+            // 于是所有主键列不叫 id 的业务表都写不进去（collect_record 长期 0 行）。
+            if (!exists && Boolean.TRUE.equals(request.autoIdPrimaryKey()) && primaryKey.isEmpty()) {
                 definitions.add(0, idColumn(connection));
                 primaryKey.add(ID_COLUMN);
                 warnings.add("已自动加自增主键列 " + ID_COLUMN);
