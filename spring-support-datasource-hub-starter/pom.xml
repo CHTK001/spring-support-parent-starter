@@ -120,6 +120,28 @@
             <version>3.9.6</version>
         </dependency>
 
+        <!-- MongoDB 管理页：官方同步驱动（MongoClient），与其它中间件一致按数据源行
+             host/port/database/用户名/密码 建连，不引入 Spring Data MongoDB。
+             版本口径：sync 自身声明 core/bson 同版本（5.13.0），但父链（Spring Boot 4.1
+             的 mongodb-bom）把 org.mongodb:bson / mongodb-driver-core 钉在 5.8.1 ——
+             混版会在运行期炸 NoClassDefFoundError（sync 5.13.0 要调 core 5.13 才有的
+             AsyncClientExecutor），故三件套就近显式钉齐（写法参照上方 zookeeper 覆盖）。 -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>5.13.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-core</artifactId>
+            <version>5.13.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>bson</artifactId>
+            <version>5.13.0</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
