@@ -22,7 +22,7 @@ public final class DatasourceHubConstants {
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
-            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx", "etcd", "prometheus");
+            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx", "etcd", "prometheus", "mongodb");
 
     /**
      * nginx 类型标识。
@@ -31,6 +31,28 @@ public final class DatasourceHubConstants {
      * nginx 有意义，写入前用它做类型闸门，避免别的类型也带上这两个字段。</p>
      */
     public static final String DS_TYPE_NGINX = "nginx";
+
+    /**
+     * mongodb 类型标识。
+     *
+     * <p>字段约定与其它类型略有不同，接线时按此理解：</p>
+     * <ul>
+     *   <li>{@code host}/{@code port}：MongoDB 服务地址与端口（默认 {@value #MONGODB_DEFAULT_PORT}）；</li>
+     *   <li>{@code database}：默认逻辑库名，留空按 {@value #MONGODB_DEFAULT_DATABASE}（admin）；</li>
+     *   <li>{@code username}/{@code password}：凭据，认证库与 {@code database} 一致。</li>
+     * </ul>
+     */
+    public static final String DS_TYPE_MONGODB = "mongodb";
+
+    /**
+     * MongoDB 默认端口
+     */
+    public static final int MONGODB_DEFAULT_PORT = 27017;
+
+    /**
+     * MongoDB 未登记库名时使用的默认逻辑库（兼作认证库）
+     */
+    public static final String MONGODB_DEFAULT_DATABASE = "admin";
 
     /**
      * prometheus 类型标识。
@@ -63,7 +85,8 @@ public final class DatasourceHubConstants {
     public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.of(
             "jdbc", 3306, "redis", 6379, "influxdb", 8086,
             "neo4j", 7474, "nacos", 8848, "zookeeper", 2181, "nginx", 80, "etcd", 2379,
-            "prometheus", PROMETHEUS_DEFAULT_HTTP_PORT);
+            "prometheus", PROMETHEUS_DEFAULT_HTTP_PORT,
+            DS_TYPE_MONGODB, MONGODB_DEFAULT_PORT);
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接
