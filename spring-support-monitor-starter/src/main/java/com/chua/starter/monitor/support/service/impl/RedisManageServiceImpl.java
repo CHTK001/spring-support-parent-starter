@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
+import com.chua.starter.monitor.support.model.RedisCommandResultVO;
 import com.chua.starter.monitor.support.model.RedisHashFieldVO;
 import com.chua.starter.monitor.support.model.RedisKeyDetailVO;
 import com.chua.starter.monitor.support.model.RedisManageCreateKeyDTO;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.commands.ProtocolCommand;
+import redis.clients.jedis.exceptions.JedisDataException;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
 import redis.clients.jedis.resps.StreamEntry;
@@ -25,8 +28,11 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 /**
  * 数据源级 Redis 管理实现：每次操作临时建立 Jedis 连接，用完即关。
@@ -48,6 +54,32 @@ public class RedisManageServiceImpl implements RedisManageService {
      * 连接超时（毫秒）
      */
     private static final int TIMEOUT_MS = 5000;
+
+    /**
+     * 危险命令黑名单（单命令，全大写）：
+     * 清库（FLUSHALL/FLUSHDB）、关机（SHUTDOWN）、调试（DEBUG）、
+     * 持久化触发（SAVE/BGSAVE/BGREWRITEAOF）、拓扑变更
+     * （REPLICAOF/SLAVEOF/CLUSTER/SWAPDB/MIGRATE）、
+     * 流式/挂起命令（MONITOR/SUBSCRIBE/PSUBSCRIBE/SSUBSCRIBE/WAIT）、
+     * Lua 执行（EVAL/EVALSHA）
+     */
+    private static final Set<String> DENIED_COMMANDS = Set.of(
+            "FLUSHALL", "FLUSHDB", "SHUTDOWN", "DEBUG", "SAVE", "BGSAVE", "BGREWRITEAOF",
+            "REPLICAOF", "SLAVEOF", "CLUSTER", "SWAPDB", "MIGRATE", "MONITOR",
+            "SUBSCRIBE", "PSUBSCRIBE", "SSUBSCRIBE", "WAIT", "EVAL", "EVALSHA"
+    );
+
+    /**
+     * 危险复合命令黑名单（命令 + 子命令，全大写空格连接）：
+     * 模块装载/卸载（原生代码）、函数管理（Lua 代码）、
+     * 脚本缓存、服务器配置变更、客户端踢下线/暂停
+     */
+    private static final Set<String> DENIED_COMPOUND_COMMANDS = Set.of(
+            "MODULE LOAD", "MODULE UNLOAD",
+            "FUNCTION LOAD", "FUNCTION DELETE", "FUNCTION FLUSH",
+            "SCRIPT LOAD", "SCRIPT FLUSH",
+            "CONFIG SET", "CLIENT KILL", "CLIENT PAUSE"
+    );
 
     /**
      * 数据源服务
@@ -431,6 +463,42 @@ public class RedisManageServiceImpl implements RedisManageService {
         }
     }
 
+    @Override
+    public RedisCommandResultVO executeCommand(Long datasourceId, int db, String command) {
+        if (isBlank(command)) {
+            throw new IllegalArgumentException("命令不能为空");
+        }
+        List<String> tokens = tokenize(command);
+        if (tokens.isEmpty()) {
+            throw new IllegalArgumentException("命令不能为空");
+        }
+        String head = tokens.get(0).toUpperCase(Locale.ROOT);
+        if (DENIED_COMMANDS.contains(head)) {
+            throw new IllegalStateException("命令被禁止执行（危险命令）: " + head);
+        }
+        if (tokens.size() > 1) {
+            String compound = head + " " + tokens.get(1).toUpperCase(Locale.ROOT);
+            if (DENIED_COMPOUND_COMMANDS.contains(compound)) {
+                throw new IllegalStateException("命令被禁止执行（危险命令）: " + compound);
+            }
+        }
+        // Jedis 原生命令通道：命令名经 ProtocolCommand 裸传，
+        // 回复为原始 RESP 结构（byte[]/Long/List/nil），错误回复抛 JedisDataException
+        ProtocolCommand cmd = () -> head.getBytes(StandardCharsets.UTF_8);
+        String[] args = tokens.subList(1, tokens.size()).toArray(new String[0]);
+        try (Jedis jedis = open(datasourceId, db)) {
+            Object reply;
+            try {
+                reply = jedis.sendCommand(cmd, args);
+            } catch (JedisDataException e) {
+                // 服务端错误回复（语法错误/类型错误/未知命令等）：
+                // 转业务异常按消息返回前端，不当服务端故障记日志
+                throw new IllegalStateException("Redis 拒绝执行: " + e.getMessage());
+            }
+            return new RedisCommandResultVO(String.join(" ", tokens), normalize(reply));
+        }
+    }
+
     // ==================== 内部辅助 ====================
 
     /**
@@ -602,5 +670,83 @@ public class RedisManageServiceImpl implements RedisManageService {
      */
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    /**
+     * 命令行分词（shell 风格）。
+     *
+     * <p>支持双引号/单引号包裹含空格的参数（与 redis-cli 输入习惯一致），
+     * 双引号内可用反斜杠转义；引号外按空白分隔。</p>
+     *
+     * @param commandLine 命令整行
+     * @return 分词结果（空命令返回空列表）
+     */
+    private static List<String> tokenize(String commandLine) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        boolean inToken = false;
+        Character quote = null;
+        for (int i = 0; i < commandLine.length(); i++) {
+            char c = commandLine.charAt(i);
+            if (quote != null) {
+                if (c == quote) {
+                    quote = null;
+                } else if (c == '\\' && quote == '"' && i + 1 < commandLine.length()) {
+                    cur.append(commandLine.charAt(++i));
+                } else {
+                    cur.append(c);
+                }
+            } else if (c == '"' || c == '\'') {
+                quote = c;
+                inToken = true;
+            } else if (Character.isWhitespace(c)) {
+                if (inToken) {
+                    tokens.add(cur.toString());
+                    cur.setLength(0);
+                    inToken = false;
+                }
+            } else {
+                cur.append(c);
+                inToken = true;
+            }
+        }
+        if (inToken) {
+            tokens.add(cur.toString());
+        }
+        return tokens;
+    }
+
+    /**
+     * RESP 回复归一化为 JSON 安全结构。
+     *
+     * <p>状态/批量字符串转 String，整数转 Long，数组递归转 List，
+     * Map（RESP3）转 LinkedHashMap，nil 保持 null，其余类型转文本。</p>
+     *
+     * @param reply 原始回复
+     * @return 归一化结构
+     */
+    private static Object normalize(Object reply) {
+        if (reply == null) {
+            return null;
+        }
+        if (reply instanceof byte[] bytes) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+        if (reply instanceof String || reply instanceof Long
+                || reply instanceof Integer || reply instanceof Double
+                || reply instanceof Boolean) {
+            return reply;
+        }
+        if (reply instanceof List<?> list) {
+            return list.stream().map(RedisManageServiceImpl::normalize).collect(Collectors.toList());
+        }
+        if (reply instanceof Map<?, ?> map) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                out.put(String.valueOf(e.getKey()), normalize(e.getValue()));
+            }
+            return out;
+        }
+        return String.valueOf(reply);
     }
 }

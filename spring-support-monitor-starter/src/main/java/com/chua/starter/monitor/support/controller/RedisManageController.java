@@ -1,6 +1,8 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.model.RedisCommandDTO;
+import com.chua.starter.monitor.support.model.RedisCommandResultVO;
 import com.chua.starter.monitor.support.model.RedisHashFieldVO;
 import com.chua.starter.monitor.support.model.RedisKeyDetailVO;
 import com.chua.starter.monitor.support.model.RedisListElementVO;
@@ -374,6 +376,24 @@ public class RedisManageController {
                                    @RequestParam String key,
                                    @RequestBody RedisStreamEntryVO entry) {
         return call("追加流消息", () -> redisManageService.xadd(datasourceId, db, key, entry.fields()));
+    }
+
+    /**
+     * 执行任意 Redis 命令（命令控制台通用通道）。
+     *
+     * <p>命令整行按 shell 风格分词后经原生通道下发，
+     * 回复归一化后按形态返回前端渲染；危险命令在服务端拒绝。</p>
+     *
+     * @param dto 命令请求
+     * @return 命令与归一化回复
+     */
+    @Operation(summary = "执行任意 Redis 命令")
+    @PostMapping("/command")
+    public ReturnResult<RedisCommandResultVO> command(@RequestBody RedisCommandDTO dto) {
+        return call("执行命令", () -> redisManageService.executeCommand(
+                dto.datasourceId(),
+                dto.db() == null ? -1 : dto.db(),
+                dto.command()));
     }
 
     /**
