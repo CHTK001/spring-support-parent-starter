@@ -13,7 +13,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
@@ -33,7 +32,8 @@ import java.time.Duration;
  * 自动装配，导致所有 {@code @Cacheable} 被静默忽略。本配置统一启用声明式缓存：</p>
  * <ul>
  *   <li>未显式指定 cacheManager 的缓存（如全量指标 aiModelMetrics、定价 aiPricing）
- *       走 {@link Primary} 的本地 Caffeine，只读参考数据、快速稳定；</li>
+ *       走框架给出的主缓存管理器（{@code defaultCacheManager} / h2 档的
+ *       {@code primaryCacheManager}）；本地 Caffeine 按名 {@code aiCacheManager} 引用；</li>
  *   <li>代码中按 TTL 命名引用的 Redis 缓存管理器 {@code redis-cache--1}（永久）与
  *       {@code redis-cache-600}（10 分钟）连本地 Redis 提供。</li>
  * </ul>
@@ -50,10 +50,20 @@ public class AiCacheAutoConfiguration {
     /**
      * 默认缓存管理器：本地 Caffeine（未显式指定 cacheManager 的 @Cacheable 使用）。
      *
+     * <p>刻意**不标 {@code @Primary}**：主缓存管理器由框架统一给出 ——
+     * 非 h2 档是 {@code DefaultCacheManagerConfiguration.defaultCacheManager}
+     * （复用一小时过期的 Redis 缓存），h2 档是同类的 {@code primaryCacheManager}
+     * （无 Redis 时兜空实现）。本类再声明一个 {@code @Primary}，两处直接撞车，
+     * 按类型注入 {@code CacheManager} 的地方（如 {@code SysAnnouncementScheduleTask}）
+     * 会抛 {@code NoUniqueBeanDefinitionException: more than one 'primary' bean found}，
+     * 上下文 refresh 失败、端口起不来（实测 2026-10-14，采集平台 h2 档被它卡住）。
+     *
+     * <p>要指名用本地 Caffeine 时按 bean 名 {@code aiCacheManager} 引用即可，
+     * 本类里 {@code redis-cache-*} 三个管理器本来也都是这么用的。</p>
+     *
      * @return Caffeine 缓存管理器
      */
     @Bean
-    @Primary
     public CacheManager aiCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setCaffeine(Caffeine.newBuilder()
