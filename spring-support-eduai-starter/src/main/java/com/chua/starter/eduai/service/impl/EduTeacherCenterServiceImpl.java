@@ -13,21 +13,28 @@ import com.chua.starter.eduai.dimension.mapper.EduStudentMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
+import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
+import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 教师中心服务实现
@@ -60,6 +67,11 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
      */
     private static final int MAX_TASK_LIMIT = 100;
 
+    /**
+     * 答题卡 content / 判分明细的 JSON 解析（只读字段，无状态可共享）
+     */
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
     private final EduTeacherMapper teacherMapper;
 
     private final EduClassMapper classMapper;
@@ -76,6 +88,12 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
      * 阅卷任务：教师端「阅卷」页要列出自己发起过的任务
      */
     private final EduMarkingTaskMapper markingTaskMapper;
+
+    /**
+     * 答题卡：阅卷列表的学生姓名取自答题卡 content 里卷面识别的姓名
+     * （任意卷扫描时从卷头「姓名」栏抽取，任务表只存学号）
+     */
+    private final EduAnswerSheetMapper answerSheetMapper;
 
     /**
      * 教师班级配置：老师端数据范围（V1.14 起，班级由管理员配置，
@@ -266,10 +284,12 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         String me = EduUserContext.requireUserId();
         int size = limit <= 0 ? DEFAULT_TASK_LIMIT : Math.min(limit, MAX_TASK_LIMIT);
         // size 是经上限裁剪的 int，非用户可控字符串，不存在注入面（AGENTS.md 禁的是拼接 SQL 片段）
-        return markingTaskMapper.selectList(new QueryWrapper<EduMarkingTask>()
+        List<EduMarkingTask> tasks = markingTaskMapper.selectList(new QueryWrapper<EduMarkingTask>()
                 .eq("marking_task_owner_user_id", me)
                 .orderByDesc("marking_task_id")
                 .last("LIMIT " + size));
+        fillStudentNames(tasks);
+        return tasks;
     }
 
     @Override
@@ -279,6 +299,7 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         IPage<EduMarkingTask> result = markingTaskMapper.selectPage(page, new QueryWrapper<EduMarkingTask>()
                 .eq("marking_task_owner_user_id", me)
                 .orderByDesc("marking_task_id"));
+        fillStudentNames(result.getRecords());
         return PageResult.<EduMarkingTask>builder()
                 .pageNo((int) result.getCurrent())
                 .pageSize((int) result.getSize())
@@ -286,6 +307,70 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
                 .total(result.getTotal())
                 .data(result.getRecords())
                 .build();
+    }
+
+    /**
+     * 补阅卷任务的学生姓名（列表展示「学号 + 姓名」）。
+     *
+     * <p>姓名不在 {@code edu_marking_task} 上，来源两级：
+     * ① 答题卡 content 的 {@code recognizedStudent.name}——任意卷扫描时
+     * 模型/正则从卷头「姓名」栏抽取，任务上只存了学号（或匿名标记）；
+     * ② 按学号查 {@code edu_student.student_name}（题库/后台建档的学生）。
+     * 任意卷的学号常是卷面手写串，② 查不到属正常，此时只显示学号。</p>
+     *
+     * <p>同页任务按学号合并查一次学生表，避免 N+1；答题卡按 id 逐个取
+     * （一页 10~20 条，且只有有答题卡的任务才查）。</p>
+     */
+    private void fillStudentNames(List<EduMarkingTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return;
+        }
+        Set<String> pendingNos = new LinkedHashSet<>();
+        for (EduMarkingTask task : tasks) {
+            String no = trimToNull(task.getMarkingTaskStudentId());
+            if (no != null) {
+                pendingNos.add(no);
+            }
+        }
+        Map<String, String> byNo = new HashMap<>();
+        if (!pendingNos.isEmpty()) {
+            List<EduStudent> students = studentMapper.selectList(new QueryWrapper<EduStudent>()
+                    .in("student_no", pendingNos));
+            for (EduStudent student : students) {
+                String name = trimToNull(student.getStudentName());
+                String no = trimToNull(student.getStudentNo());
+                if (no != null && name != null) {
+                    byNo.put(no, name);
+                }
+            }
+        }
+        for (EduMarkingTask task : tasks) {
+            String no = trimToNull(task.getMarkingTaskStudentId());
+            String name = no == null ? null : byNo.get(no);
+            if (name == null && task.getMarkingTaskAnswerSheetId() != null) {
+                name = recognizedName(task.getMarkingTaskAnswerSheetId());
+            }
+            task.setMarkingTaskStudentName(name);
+        }
+    }
+
+    /**
+     * 读答题卡 content 里卷面识别的姓名（{@code recognizedStudent.name}）。
+     *
+     * <p>与阅卷详情接口同源（{@code getMarkingStructure} 的
+     * {@code recognizedStudent}），此处只取姓名做列表展示。</p>
+     */
+    private String recognizedName(Long answerSheetId) {
+        EduAnswerSheet sheet = answerSheetMapper.selectById(answerSheetId);
+        if (sheet == null || !StringUtils.hasText(sheet.getAnswerSheetContent())) {
+            return null;
+        }
+        Map<String, Object> content = parseJsonMap(sheet.getAnswerSheetContent());
+        Object recognized = content.get("recognizedStudent");
+        if (!(recognized instanceof Map)) {
+            return null;
+        }
+        return trimToNull(String.valueOf(((Map<?, ?>) recognized).get("name")));
     }
 
     // ==================== 内部工具 ====================
@@ -386,5 +471,23 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         }
         String t = s.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    /**
+     * 把 JSON 文本解析为 Map。
+     *
+     * @param json JSON 文本
+     * @return 键值映射；为空或解析失败时返回空 Map
+     */
+    private static Map<String, Object> parseJsonMap(String json) {
+        if (!StringUtils.hasText(json)) {
+            return Map.of();
+        }
+        try {
+            return JSON_MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 }
