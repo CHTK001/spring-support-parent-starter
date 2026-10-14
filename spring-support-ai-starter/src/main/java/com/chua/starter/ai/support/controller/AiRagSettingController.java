@@ -142,7 +142,12 @@ public class AiRagSettingController {
                         || id.contains("table-struct") || id.contains("pp-structure")
                         || id.contains("docling")
                         // 文本矫正（非必填能力）：macbert4csc / csc / corrector 系模型归入 OCR 管线候选
-                        || id.contains("macbert") || id.contains("csc") || id.contains("corrector")) {
+                        || id.contains("macbert") || id.contains("csc") || id.contains("corrector")
+                        // 方向矫正（非必填能力）：doc-orientation 是整页方向分类器（PP-LCNet_x1_0_doc_ori，
+                        // 4 类 0/90/180/270），它既不叫 ocr 也不含 corrector 系词根，
+                        // 仅靠上面的子串一个都匹配不到——设置页的「方向矫正模型」因此恒选不到。
+                        // 老的 pp-word-rotate（0/180 两类）未随 jar 分发已停用，不再列入。
+                        || id.contains("orientation") || id.contains("direction")) {
                     names.add(entry.modelId());
                 }
             }
