@@ -130,4 +130,15 @@ public class EduMarkingTask extends SysBase {
      */
     @TableField("marking_task_owner_user_id")
     private String ownerUserId;
+
+    /**
+     * 学生姓名（非库字段：列表展示「学号 + 姓名」用）。
+     *
+     * <p>来源顺序：答题卡 content 里卷面识别的姓名（ANY 链路扫描时模型/正则
+     * 从卷头「姓名/学号」栏抽取）优先；没有则按 {@link #markingTaskStudentId}
+     * 查 {@code edu_student.student_name}。两者都没有时留空，
+     * 前端只显示学号。</p>
+     */
+    @TableField(exist = false)
+    private String markingTaskStudentName;
 }

@@ -430,13 +430,25 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         SocketConfig socketConfig = new SocketConfig();
         socketConfig.setReuseAddress(true);
         socketConfig.setTcpNoDelay(true);
-        socketConfig.setSoLinger(0);
+        // SO_LINGER=0 会在关闭连接时发 RST（异常重置），导致 socket.io 轮询会话被重置：
+        // PollingTransport 报 "is not registered. Closing connection"，客户端 ECONNRESET/502，
+        // 实时广播（host-delay/online/metrics）根本发不到订阅方。改为 -1 关闭 SO_LINGER，
+        // 走正常 FIN 关闭，保持轮询会话生命周期稳定。
+        socketConfig.setSoLinger(-1);
         configuration.setSocketConfig(socketConfig);
 
         configuration.setHostname(host);
         configuration.setPort(port);
         configuration.setContext(contextPath);
         configuration.setTransports(Transport.POLLING, Transport.WEBSOCKET);
+
+        // 每次握手都签发全新会话 id，忽略请求里的 io 会话 cookie。
+        // netty-socketio 默认（randomSession=false）会用 io cookie 里的 UUID 作为
+        // 新会话 id：浏览器断线重连/页面刷新/前端重建连接时带着陈旧 cookie，
+        // 会命中已被 disconnect 的僵尸会话（releasePollingChannel 只解绑通道、
+        // 不删 ClientHead），新连接复用僵尸会话后 CONNECT_ACK 永远投递不到，
+        // 表现为客户端 connect 事件永不触发、实时广播全部收不到。
+        configuration.setRandomSession(true);
 
         configuration.setBossThreads(properties.getBossCount());
         configuration.setWorkerThreads(properties.getWorkCount());

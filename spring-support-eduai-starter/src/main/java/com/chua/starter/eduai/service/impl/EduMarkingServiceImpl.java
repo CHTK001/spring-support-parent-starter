@@ -5,8 +5,8 @@ import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.ai.EduAiService;
-import com.chua.starter.eduai.ai.EduImagePreprocessor;
 import com.chua.starter.eduai.ai.EduPaperScanner;
+import com.chua.starter.eduai.ai.PaperScanPipeline;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -161,6 +161,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 试卷扫描器（版面还原 + 文字提取 + 结构化，内部复用 ai-starter 全局 Bean）
      */
     private final EduPaperScanner paperScanner;
+
+    /**
+     * Paper 图片扫描管线（可选布局矫正 -> 原预处理 -> 扫描）
+     */
+    private final PaperScanPipeline paperScanPipeline;
     /**
      * 阅卷任务映射器（异步任务的状态载体，支撑重启续跑）
      */
@@ -911,10 +916,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         int pageNo = 0;
         for (byte[] imageData : images) {
             pageNo++;
-            // 预处理：照度校正去阴影 + 灰度归一化（可配置关闭）。拍照卷的暗部最易被识别错。
-            byte[] prepared = properties.getMarking().isPreprocess()
-                    ? EduImagePreprocessor.preprocess(imageData) : imageData;
-            EduPaperScanner.ScanResult pageScan = paperScanner.scan(prepared);
+            // 图片级扫描管线：可选 ONNX 布局矫正 -> 原预处理 -> 版面+OCR。
+            // 矫正默认关闭；开启时未检出或失败也回退原图，不改变原有阅卷路径。
+            PaperScanPipeline.ScanOutcome pageOutcome = paperScanPipeline.scan(imageData);
+            EduPaperScanner.ScanResult pageScan = pageOutcome.scan();
             if (pageScan == null) {
                 continue;
             }

@@ -1502,6 +1502,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
+    /** 传统二进制同族扩展名归一到主扩展名（Aspose 转换器只登记主扩展名，如 ppt/pptx）。 */
+    private static final Map<String, String> LEGACY_EXT_ALIAS = Map.of(
+            "pot", "ppt",
+            "pps", "ppt",
+            "ppa", "ppt"
+    );
+
     /**
      * 把可转换的文档转成 PDF。
      *
@@ -1545,6 +1552,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return null;
         }
         src = src.toLowerCase(Locale.ROOT);
+        // 传统二进制的「模板 / 放映」扩展名与正文同族（同一 OLE2 容器、同一 Aspose 加载器），
+        // 但转换器按扩展名匹配：aspose-ppt 只登记 ppt/pptx，pot/pps 会被判成「无匹配实现」
+        // 而走 unavailable —— 前端拿到 convert=unavailable 只能显示空白面板（实测 .pot 空白）。
+        // 故先归一为族内主扩展名再转换（.pot/.pps 与 .ppt 字节同构，加载器一致）。
+        src = LEGACY_EXT_ALIAS.getOrDefault(src, src);
         if (target.equalsIgnoreCase(src)) {
             return data;
         }

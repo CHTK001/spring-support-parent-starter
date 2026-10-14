@@ -114,6 +114,14 @@ public class EduAiProperties {
          * 题号与作答被切成不同文字块。属于输入质量问题，调模型解决不了。</p>
          */
         private boolean preprocess = true;
+
+        /**
+         * 是否启用 ONNX 卡片/布局矫正（card-correction-detector）。
+         *
+         * <p>开启时先在 paper 扫描管线里检测卡片四边形并透视拉平，再走原有预处理、
+         * 版面与 OCR；未检出或模型不可用时自动回退原图，不阻断阅卷。</p>
+         */
+        private boolean layoutCorrection = false;
     }
 
     @Data
