@@ -179,15 +179,18 @@ public class MiddlewareManageController {
             }
             return toRequest(ds);
         }
-        // 没有 datasourceId 时退化为该类型的第一个数据源
+        // 没有 datasourceId 时退化为「该类型」的第一个数据源。
+        // 注意：不能回退到其它类型的第一个数据源 —— 那会让 Kafka 拿 nginx 的连接参数
+        // 去探测，属于静默串号（验收实测过）。
         List<DataSourceVO> all = datasourceService.list().getData();
-        if (all == null || all.isEmpty()) {
-            throw new IllegalArgumentException("尚未登记 " + type + " 类型的数据源");
-        }
-        return toRequest(all.stream()
+        DataSourceVO ds = all == null ? null : all.stream()
                 .filter(d -> type.equalsIgnoreCase(String.valueOf(d.type())))
                 .findFirst()
-                .orElse(all.get(0)));
+                .orElse(null);
+        if (ds == null) {
+            throw new IllegalArgumentException("尚未登记 " + type + " 类型的数据源");
+        }
+        return toRequest(ds);
     }
 
     /**
