@@ -1313,6 +1313,15 @@
                 <version>${utils.version}</version>
             </dependency>
 
+            <!-- Kafka 管理能力（中间件 SPI 实现，内部引 kafka-clients）。
+                 集中托管而不是各模块就近声明，是为了让「主应用是否带 Kafka」
+                 成为一个可集中审阅的开关；改为 OSGi bundle 后装时删掉此行即可。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-kafka-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
             <!-- InfluxDB 2.x 客户端 -->
             <dependency>
                 <groupId>com.influxdb</groupId>

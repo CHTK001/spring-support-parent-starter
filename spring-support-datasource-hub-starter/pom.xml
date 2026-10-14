@@ -34,6 +34,29 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
+        <!-- 中间件 SPI 契约：MiddlewareClientProvider / Capability / VO。
+             宿主只认契约，不认任何具体中间件客户端 —— Kafka / InfluxDB / ZooKeeper
+             等实现放在各自 utils-support-*-starter 里，按需引入或 OSGi 后装。
+             （该模块编译期依赖干净：R2DBC/JDBC 驱动均为 test scope，jsqlparser 为 provided） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasource-starter</artifactId>
+        </dependency>
+        <!-- Kafka 管理能力（SPI 实现）：宿主只认契约，这一行决定「Kafka 功能是否开放」。
+             去掉它（或改为 OSGi bundle 后装），Kafka 功能即变为「未开放」，
+             而主依赖树里不会留下任何 kafka-clients 痕迹 —— 这正是拆分的意义。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-kafka-starter</artifactId>
+        </dependency>
+        <!-- 以下两个中间件管理能力同为 SPI 实现：装配方式与 Kafka 完全一致
+             （引进来即开放功能，删掉即变为「功能未开放」），
+             差别只在「默认带」还是「按需带」。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-influxdb-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>

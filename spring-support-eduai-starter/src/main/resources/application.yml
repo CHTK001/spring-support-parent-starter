@@ -173,6 +173,8 @@ plugin:
   eduai:
     marking:
       async: true
+      # ONNX 卡片/布局矫正（card-correction-detector）：默认关闭，开启后先检测四边形并透视拉平，再走原有预处理/版面/OCR
+      layout-correction: false
 
 # AI 对话客户端：由 YAML 声明用哪个厂商/网关/模型（spring-support-ai-starter 读取）。
 # 密钥不入仓库：app-key 走环境变量 AI_CHAT_APP_KEY 注入（systemd / 容器里设置），

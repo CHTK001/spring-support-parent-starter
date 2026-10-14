@@ -6,6 +6,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageSyncLog;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.model.AiUsageDTO;
 import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
@@ -75,6 +77,13 @@ public class UsageController {
      * 用量/定价对账服务
      */
     private final UsagePricingReconService reconService;
+
+    /**
+     * 服务商 Mapper：/usage/providers 返回 id→name 映射，
+     * 供用量明细「服务商」列把雪花 id（如 1791352877398）翻译成中文名。
+     * 直接注入 Mapper（与 AiChatFacadeServiceImpl 同一用法），不另起 Service。
+     */
+    private final SysAiProviderMapper sysAiProviderMapper;
 
     /**
      * 用量实时推送中枢（合并推送，不在业务线程上直接发网络包）。
@@ -284,6 +293,42 @@ public class UsageController {
             } catch (Throwable ex) {
                 log.warn("[Usage] 读取解析器条目失败，已跳过: {} ({})", e.getKey(), ex.toString());
             }
+        }
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 服务商 id→名称映射。
+     *
+     * <p>背景：用量明细的 provider 字段混装两种值 —— 模型服务商名（agnes/openai…）
+     * 与服务商实例雪花 id（如 1791352877398）。后者前端无法翻译，只能裸显数字。
+     * 本接口返回 sys_ai_provider 全表 id/name/platform，供前端回填映射，未命中
+     * 或查询失败时前端兜底显示原始值，不弹错。</p>
+     *
+     * @return 服务商映射列表，每项含 id / name / platform
+     */
+    @Operation(summary = "服务商映射", description = "返回服务商 id→名称映射，供用量明细翻译 provider")
+    @GetMapping("/providers")
+    public ReturnResult<List<Map<String, Object>>> usageProviders() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        try {
+            List<SysAiProvider> providers = sysAiProviderMapper.selectList(null);
+            if (providers != null) {
+                for (SysAiProvider p : providers) {
+                    if (p == null || p.getProviderId() == null) {
+                        continue;
+                    }
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", p.getProviderId());
+                    item.put("name", p.getName());
+                    item.put("platform", p.getPlatform());
+                    result.add(item);
+                }
+            }
+        } catch (Throwable e) {
+            // 映射是"尽力而为"的辅助数据：失败返回空列表，前端兜底显示原始 provider，
+            // 绝不能让用量页因为一个映射接口 500。
+            log.warn("[Usage] 服务商映射查询失败，返回空列表: {}", e.toString());
         }
         return ReturnResult.ok(result);
     }

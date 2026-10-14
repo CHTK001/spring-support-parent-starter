@@ -38,6 +38,12 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     private static final int DELETE_NOT_DELETED = 0;
 
     /**
+     * 通用助手主键：sys_ai_role.id=1（code=general-assistant），系统内置，
+     * 不允许删除、不允许改 code（前端同样约束，接口层兜底）。
+     */
+    public static final Integer GENERAL_ASSISTANT_ID = 1;
+
+    /**
      * 角色 映射器
      */
     private final SysAiRoleMapper sysAiRoleMapper;
@@ -186,12 +192,20 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     /**
      * 逻辑删除当前用户的角色。
      *
+     * <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」）
+     * 是系统内置角色，不允许删除（前端同样隐藏删除按钮，但接口必须自己兜底，
+     * 防止绕过前端直接调 DELETE）。返回 false，前端按删除失败提示。</p>
+     *
      * @param id 角色主键
      * @return 是否成功
      */
     @Override
     public boolean deleteById(Integer id) {
         if (id == null) {
+            return false;
+        }
+        if (GENERAL_ASSISTANT_ID.equals(id)) {
+            log.warn("[Role] 拒绝删除通用助手（id=1，系统内置）");
             return false;
         }
         SysAiRole existing = sysAiRoleMapper.selectById(id);

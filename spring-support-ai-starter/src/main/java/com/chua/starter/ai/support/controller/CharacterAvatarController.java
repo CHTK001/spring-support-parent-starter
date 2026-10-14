@@ -60,6 +60,11 @@ public class CharacterAvatarController {
     /**
      * 上传（更新）角色头像。
      *
+     * <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」）
+     * 头像由产品统一维护，不开放上传 —— 直接 403，前端同样拦截（character.api
+     * updateCharacter 锁 avatarUrl/avatarFile），但接口必须自己兜底，
+     * 防止绕过前端直接 POST。</p>
+     *
      * @param id     角色主键
      * @param avatar 头像图片文件
      * @return 头像访问信息（含 url）
@@ -68,6 +73,9 @@ public class CharacterAvatarController {
     @PostMapping("/{id}/avatars")
     public Map<String, Object> uploadAvatar(@PathVariable Integer id,
                                             @RequestParam("avatar") MultipartFile avatar) throws IOException {
+        if (Integer.valueOf(1).equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手头像由产品统一维护，不允许上传");
+        }
         if (avatar == null || avatar.isEmpty()) {
             throw new IllegalArgumentException("头像文件为空");
         }
@@ -102,6 +110,11 @@ public class CharacterAvatarController {
     /**
      * 读取角色头像（二进制）。
      *
+     * <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」）
+     * 头像由产品统一维护，不开放上传/删除。这里对读取做兜底 —— 即使头像文件
+     * 或 avatar 字段缺失，也不 404，前端 Avatar 组件拿到空会显示首字占位，
+     * 产品 logo 由前端静态资源统一提供（与上传链路解耦）。</p>
+     *
      * @param id 角色主键
      * @return 图片字节流
      */
@@ -123,12 +136,18 @@ public class CharacterAvatarController {
     /**
      * 删除角色头像（恢复默认首字头像）。
      *
+     * <p>2026-10-14 新增通用助手保护：id=1 头像由产品统一维护，不开放删除 ——
+     * 直接 403（与上传接口同口径）。</p>
+     *
      * @param id 角色主键
      * @return 操作结果
      */
     @Operation(summary = "删除角色头像")
     @PostMapping("/{id}/avatar/clear")
     public Map<String, Object> clearAvatar(@PathVariable Integer id) {
+        if (Integer.valueOf(1).equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手头像由产品统一维护，不允许删除");
+        }
         final SysAiRole role = roleService.getById(id);
         if (role != null) {
             role.setAvatar(null);
