@@ -209,12 +209,13 @@ public class ConnectorController {
         String type = request.get("type") == null ? "" : String.valueOf(request.get("type")).trim();
         String appId = request.get("appId") == null ? "" : String.valueOf(request.get("appId")).trim();
         String appSecret = request.get("appSecret") == null ? "" : String.valueOf(request.get("appSecret")).trim();
+        String model = request.get("model") == null ? null : String.valueOf(request.get("model")).trim();
         AiBotCaller caller = AiBotCaller.fromLogin();
 
         Long id;
         switch (type) {
-            case "feishu" -> id = botBindingService.bindFeishu(appId, appSecret, caller.ownerKey());
-            case "qq" -> id = botBindingService.bindQq(appId, appSecret, caller.ownerKey());
+            case "feishu" -> id = botBindingService.bindFeishu(appId, appSecret, model, caller.ownerKey());
+            case "qq" -> id = botBindingService.bindQq(appId, appSecret, model, caller.ownerKey());
             default -> {
                 return ReturnResult.error("暂不支持该连接器类型的绑定：" + type);
             }

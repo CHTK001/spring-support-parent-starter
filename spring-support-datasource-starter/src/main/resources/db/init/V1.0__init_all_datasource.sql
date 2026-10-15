@@ -4,7 +4,10 @@
 --   device->device-starter, job->job-starter, message->message-starter,
 --   payment->payment-starter, project->project-starter, monitor->monitor-starter,
 --   server->server-starter, ai->ai-starter, filesystem->filesystem-starter
--- 通道: INIT 同步建表；种子数据见 V1.0__initdata_all_datasource.sql
+-- 通道: INIT 同步建表；初始化数据与结构同文件（原先拆分的
+--   V1.0__initdata_all_datasource.sql 是空壳，现已并入本文件并删除）
+--   本模块当前无种子数据：edu_question 种子已按实际表归属归入
+--   spring-support-eduai-starter，避免重复
 -- =====================================================================
 -- 并发工具配置表：供 CircuitBreakerConfigRepository / RateLimiterConfigRepository /
 -- DistributedLockConfigRepository 以 JdbcTemplate 直接读写（原 db/init/sqlite/
@@ -45,5 +48,13 @@ CREATE TABLE IF NOT EXISTS concurrent_distributed_lock (
     updated_at    DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (name)
 );
+
+-- ---------------------------------------------------------------------
+-- 初始化数据（与结构同文件执行）
+-- ---------------------------------------------------------------------
+-- 当前本模块无种子数据：edu_question 种子已按实际表归属归入
+-- spring-support-eduai-starter，避免重复。
+-- 后续新增种子数据直接追加在本节下方即可（紧跟结构、同步执行，
+-- 因此表与列必然已存在，不会出现「种子先于建表」的顺序问题）。
 
 

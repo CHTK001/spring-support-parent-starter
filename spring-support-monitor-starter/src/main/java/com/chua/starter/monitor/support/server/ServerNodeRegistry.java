@@ -765,15 +765,31 @@ public class ServerNodeRegistry {
      *
      * @return 过滤器实例，不可用时返回 空
      */
+    /**
+     * 初始化反射创建的 OAuth 过滤器。
+     *
+     * <p>{@code init(null)} 是 OAuthServerFilter 读取环境配置
+     * {@code plugin.oauth.file-storage.private-buckets} 的唯一入口；节点 config
+     * 未显式声明私有桶时也必须执行，否则自动挂载的鉴权过滤器会按公共桶运行。</p>
+     *
+     * @param filter 过滤器实例
+     * @throws Exception 初始化失败时抛出
+     */
+    static void initOAuthFilter(ServerFilter filter) throws Exception {
+        filter.init(null);
+    }
+
     private ServerFilter createOAuthFilter() {
         try {
             Class<?> filterClass = ReflectUtils.forName(OAUTH_FILTER_CLASS);
             if (filterClass == null) {
                 return null;
             }
-            return (ServerFilter) ReflectUtils.instantiate(filterClass);
+            ServerFilter filter = (ServerFilter) ReflectUtils.instantiate(filterClass);
+            initOAuthFilter(filter);
+            return filter;
         } catch (Exception e) {
-            log.warn("[ServerNodeRegistry] OAuth 鉴权过滤器实例化失败: {}", e.getMessage());
+            log.warn("[ServerNodeRegistry] OAuth 鉴权过滤器实例化/初始化失败: {}", e.getMessage());
             return null;
         }
     }

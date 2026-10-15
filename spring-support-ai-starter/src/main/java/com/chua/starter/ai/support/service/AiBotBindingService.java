@@ -634,18 +634,23 @@ public class AiBotBindingService {
      * @return 数据库 标识
      */
     public Long bindFeishu(String appId, String appSecret) {
-        return bindFeishu(appId, appSecret, null);
+        return bindFeishu(appId, appSecret, null, null);
+    }
+
+    public Long bindFeishu(String appId, String appSecret, String ownerKey) {
+        return bindFeishu(appId, appSecret, null, ownerKey);
     }
 
     /**
-     * 绑定飞书 机器人（凭据配置型，带归属标识）。
+     * 绑定飞书 机器人（凭据配置型，带归属标识与初始模型）。
      *
      * @param appId     飞书开放平台应用 标识
      * @param appSecret 飞书开放平台应用密钥
+     * @param model     初始对话模型（可空，空=跟随默认）
      * @param ownerKey  归属标识（可空，空=公共/未归属）
      * @return 数据库 标识
      */
-    public Long bindFeishu(String appId, String appSecret, String ownerKey) {
+    public Long bindFeishu(String appId, String appSecret, String model, String ownerKey) {
         if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
             throw new IllegalArgumentException("飞书 appId 与 appSecret 必填");
         }
@@ -681,6 +686,9 @@ public class AiBotBindingService {
         }
         binding.setCreateTime(LocalDateTime.now());
         binding.setUpdateTime(LocalDateTime.now());
+        if (model != null && !model.isBlank()) {
+            binding.setModel(model.trim());
+        }
         return saveOrUpdate(binding);
     }
 
@@ -698,18 +706,23 @@ public class AiBotBindingService {
      * @return 数据库标识
      */
     public Long bindQq(String appId, String appSecret) {
-        return bindQq(appId, appSecret, null);
+        return bindQq(appId, appSecret, null, null);
+    }
+
+    public Long bindQq(String appId, String appSecret, String ownerKey) {
+        return bindQq(appId, appSecret, null, ownerKey);
     }
 
     /**
-     * 绑定 QQ 机器人（凭据配置型，带归属标识）。
+     * 绑定 QQ 机器人（凭据配置型，带归属标识与初始模型）。
      *
      * @param appId     QQ 机器人 App ID
      * @param appSecret QQ 机器人 App Secret
+     * @param model     初始对话模型（可空，空=跟随默认）
      * @param ownerKey  归属标识（可空，空=公共/未归属）
      * @return 数据库标识
      */
-    public Long bindQq(String appId, String appSecret, String ownerKey) {
+    public Long bindQq(String appId, String appSecret, String model, String ownerKey) {
         if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
             throw new IllegalArgumentException("QQ App ID 与 App Secret 必填");
         }
@@ -726,6 +739,9 @@ public class AiBotBindingService {
         }
         binding.setCreateTime(LocalDateTime.now());
         binding.setUpdateTime(LocalDateTime.now());
+        if (model != null && !model.isBlank()) {
+            binding.setModel(model.trim());
+        }
         // 凭据型不在此触发 startBot（saveOrUpdate 仅自动启动 wechat），由 /bind 统一托管
         return saveOrUpdate(binding);
     }

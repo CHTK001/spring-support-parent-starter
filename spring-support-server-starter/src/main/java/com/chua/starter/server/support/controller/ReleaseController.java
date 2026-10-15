@@ -120,6 +120,36 @@ public class ReleaseController {
     }
 
     /**
+     * 生成内置四段脚本（前端一键生成/预览的唯一权威来源，与执行期一致）。
+     *
+     * @param hostId      目标主机标识
+     * @param projectType 项目类型
+     * @param mainEntry   主入口
+     * @param projectPath 项目地址
+     * @param logPath     日志地址
+     * @param appName     应用名
+     * @param envVars     环境变量 JSON
+     * @param jvmArgs     JVM 参数 JSON
+     * @param cmdArgs     命令参数 JSON
+     * @return 四段脚本
+     */
+    @Operation(summary = "生成内置脚本（启动/停止/重启/状态，与执行期一致）")
+    @GetMapping("/script/template")
+    public ReturnResult<java.util.Map<String, String>> scriptTemplate(
+            @RequestParam Long hostId,
+            @RequestParam String projectType,
+            @RequestParam(required = false) String mainEntry,
+            @RequestParam(required = false) String projectPath,
+            @RequestParam(required = false) String logPath,
+            @RequestParam(required = false) String appName,
+            @RequestParam(required = false) String envVars,
+            @RequestParam(required = false) String jvmArgs,
+            @RequestParam(required = false) String cmdArgs) {
+        return releaseService.generateScripts(hostId, projectType, mainEntry, projectPath,
+                logPath, appName, envVars, jvmArgs, cmdArgs);
+    }
+
+    /**
      * 删除项目。
      *
      * @param id 项目标识

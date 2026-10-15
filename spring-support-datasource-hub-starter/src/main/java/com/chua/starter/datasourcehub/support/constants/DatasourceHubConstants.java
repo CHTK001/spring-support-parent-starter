@@ -22,7 +22,8 @@ public final class DatasourceHubConstants {
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
-            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "kafka", "nginx", "etcd", "prometheus", "mongodb");
+            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "kafka", "nginx", "etcd", "prometheus", "mongodb",
+            "elasticsearch");
 
     /**
      * nginx 类型标识。
@@ -76,6 +77,20 @@ public final class DatasourceHubConstants {
     public static final String MONGODB_DEFAULT_DATABASE = "admin";
 
     /**
+     * Elasticsearch 类型标识。
+     *
+     * <p>字段约定与其它中间件一致：{@code host}/{@code port} 为 HTTP 接口地址，
+     * 端口默认 {@value #ELASTICSEARCH_DEFAULT_PORT}；{@code username}/{@code password}
+     * 为 Basic 认证凭据（留空表示匿名读，ES 允许）。</p>
+     */
+    public static final String DS_TYPE_ELASTICSEARCH = "elasticsearch";
+
+    /**
+     * Elasticsearch 默认 HTTP 端口
+     */
+    public static final int ELASTICSEARCH_DEFAULT_PORT = 9200;
+
+    /**
      * prometheus 类型标识。
      *
      * <p>字段约定与其它类型略有不同，接线时按此理解：</p>
@@ -114,7 +129,8 @@ public final class DatasourceHubConstants {
             Map.entry("etcd", 2379),
             Map.entry("prometheus", PROMETHEUS_DEFAULT_HTTP_PORT),
             Map.entry(DS_TYPE_MONGODB, MONGODB_DEFAULT_PORT),
-            Map.entry(DS_TYPE_KAFKA, KAFKA_DEFAULT_PORT));
+            Map.entry(DS_TYPE_KAFKA, KAFKA_DEFAULT_PORT),
+            Map.entry(DS_TYPE_ELASTICSEARCH, ELASTICSEARCH_DEFAULT_PORT));
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接

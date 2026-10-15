@@ -18,6 +18,7 @@
 | `verify-model-fallback-tier2.sh` | 「默认模型」三处**兜底分支**的运行时取证：②以图搜图、③人脸识别、⑤知识库rag。**只造 ops 自己的夹具行、只动 `sys_ai_user_setting`，绝不整表删、不碰他人数据**（`7fd39be6` 上 37/0 `T2_FALLBACK_OK`） |
 | `cleanup-final-state.sh` | 测试残留清理 + 线上最终状态核对 |
 | `验收报告-20261004.md` | 验收报告，**当前绑定 md5 `7fd39be6`**（此前依次绑过 `97804124` / `c09c01d1` / `95fabe52` / `48de2d40`） |
+| `ACCEPTANCE-REPORT-20261015-face-db-authority.md` | 人脸/图像底库「档案以数据库为权威」+ 登记表单/顶部模型条/分页，**绑定 md5 `57612d80`**；含一次发布事故的根因（本地仓库依赖漂移导致 3 个 `CacheManager` 起不来）与「外科式补丁」处置 |
 | `KB-DELIVERY.md` / `kb-accept-backend.sh` | 知识库交付与验收（另一条线） |
 | `jar-watch*.sh` / `test-jar-watch-evidence-keep.sh` | jar-watch 证据保留相关 |
 

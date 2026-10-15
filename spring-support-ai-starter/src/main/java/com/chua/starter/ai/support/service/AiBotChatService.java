@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.ai.bot.BotClient;
 import com.chua.common.support.ai.bot.BotInboundMessage;
@@ -651,7 +652,8 @@ public class AiBotChatService {
         return botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .eq(SysAiBotMessage::getBotId, binding.getBotId())
-                        .eq(SysAiBotMessage::getChatId, chatId)
+                        .and(w -> w.eq(SysAiBotMessage::getChatId, chatId)
+                                .or().eq(SysAiBotMessage::getFromUser, chatId))
                         .orderByAsc(SysAiBotMessage::getCreateTime));
     }
 
@@ -672,7 +674,8 @@ public class AiBotChatService {
         int deleted = botMessageMapper.delete(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
                         .eq(SysAiBotMessage::getBotId, binding.getBotId())
-                        .eq(SysAiBotMessage::getChatId, chatId));
+                        .and(w -> w.eq(SysAiBotMessage::getChatId, chatId)
+                                .or().eq(SysAiBotMessage::getFromUser, chatId)));
         log.info("[Connector] 清除会话 id={} chat={} deleted={}", bindingId, chatId, deleted);
         return deleted;
     }
@@ -1447,11 +1450,25 @@ public class AiBotChatService {
      */
     private String attemptReply(SysAiBotBinding bot, String modelName, String userMsg,
                                 long timeoutMs, List<ChatMessage> history) {
-        // 1. 按模型名查 提供者_模型，确定所属 提供者
-        SysAiProviderModel pm = providerModelMapper.selectOne(
-                Wrappers.<SysAiProviderModel>lambdaQuery()
-                        .eq(SysAiProviderModel::getModel, modelName)
-                        .eq(SysAiProviderModel::getEnabled, true));
+        // 1. 按模型名查 提供者_模型，确定所属 提供者；支持 providerId:model 消除同名模型歧义
+        String providerId = null;
+        String plainModel = modelName;
+        int colon = modelName == null ? -1 : modelName.indexOf(':');
+        if (colon > 0) {
+            String before = modelName.substring(0, colon).trim();
+            String after = modelName.substring(colon + 1).trim();
+            if (!before.isBlank() && !after.isBlank()) {
+                providerId = before;
+                plainModel = after;
+            }
+        }
+        LambdaQueryWrapper<SysAiProviderModel> modelQuery = Wrappers.<SysAiProviderModel>lambdaQuery()
+                .eq(SysAiProviderModel::getModel, plainModel)
+                .eq(SysAiProviderModel::getEnabled, true);
+        if (providerId != null) {
+            modelQuery.eq(SysAiProviderModel::getProviderId, providerId);
+        }
+        SysAiProviderModel pm = providerModelMapper.selectOne(modelQuery);
         if (pm == null) {
             throw new IllegalStateException("模型 " + modelName + " 未在模型管理中配置");
         }
@@ -1464,7 +1481,7 @@ public class AiBotChatService {
         Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
         // 3. 构建 对话客户端（带请求超时）并回复
         ChatClient chatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs))
-                .model(modelName);
+                .model(plainModel);
         // 系统提示词：优先 Bot 自定义，未配置则回退全局默认（bot.system_prompt）
         String effectiveSystemPrompt = resolveSystemPrompt(bot);
         if (effectiveSystemPrompt != null && !effectiveSystemPrompt.isBlank()) {
@@ -1523,7 +1540,7 @@ public class AiBotChatService {
                 usageRecorderInterceptor.record(
                         "bot",
                         provider.getPlatform(),
-                        modelName,
+                        plainModel,
                         "bot",
                         response.getUsage(),
                         UUID.randomUUID().toString(),
