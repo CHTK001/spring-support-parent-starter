@@ -329,7 +329,7 @@ public class NacosManageServiceImpl implements NacosManageService {
         }
         DataSourceVO adhoc = new DataSourceVO(null, "ad-hoc", "nacos", request.host().trim(), request.port(),
                 request.contextPath(), request.username(), request.password(), null, 1, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         return client.endpoint(adhoc, "/nacos");
     }
 

@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  *                       仅 nginx 类型使用，其余类型忽略
  * @param controlTarget  控制方式为 {@code systemd} 时的托管单元名，如 {@code nginx.service}。
  *                       为空时仍由自动探测决定；{@code local} 方式不使用本字段
+ * @param version        服务端大版本（当前 influxdb 使用：2/3）
  * @author CH
  * @since 4.0.0.42
  */
@@ -36,6 +37,7 @@ public record DataSourceDTO(
         String driverClassName,
         Long driverJarId,
         String controlMode,
-        String controlTarget
+        String controlTarget,
+        String version
 ) {
 }

@@ -50,6 +50,13 @@ public class MsDatasource implements Serializable {
     private String datasourceType;
 
     /**
+     * 服务端大版本（当前仅 influxdb 使用：2=Flux/Bucket，3=SQL/InfluxQL/Database）。
+     */
+    @TableField("datasource_version")
+    @Schema(description = "服务端大版本（influxdb: 2/3）", example = "3")
+    private String datasourceVersion;
+
+    /**
      * 主机地址
      */
     @TableField("datasource_host")
