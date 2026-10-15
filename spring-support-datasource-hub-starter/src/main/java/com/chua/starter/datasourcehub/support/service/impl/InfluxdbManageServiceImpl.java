@@ -425,6 +425,36 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         }
     }
 
+    /**
+     * 确保 v1 数据库上存在名为 {@code default} 的保留策略并设置其保留期。
+     *
+     * <p>v1 的保留期不是库属性而是**保留策略**属性。刚建的库只有隐式 autogen
+     * （{@code SHOW RETENTION POLICIES} 里查不到名为 default 的策略），此时 ALTER 会
+     * 报 {@code retention policy not found}，必须先 CREATE；策略已存在则只能 ALTER
+     * （重复 CREATE 会冲突）。所以先查一次再决定走哪条，而不是盲试。</p>
+     *
+     * <p>完整语法（缺 POLICY/ON/REPLICATION 任一段解析器都会拒绝，实测 1.11.8）：
+     * {@code CREATE|ALTER RETENTION POLICY "default" ON "<db>" DURATION <n>h REPLICATION 1}。</p>
+     *
+     * @param target   访问目标
+     * @param database 目标数据库
+     * @param hours    保留小时数，0 表示永久
+     * @throws IllegalStateException 语句执行失败
+     */
+    private void ensureRetentionPolicy(InfluxdbClient.Target target, String database, long hours) {
+        String db = sqlIdentifier(database);
+        boolean exists = false;
+        for (JsonObject row : influxql(target, database, "SHOW RETENTION POLICIES ON " + db)) {
+            if ("default".equalsIgnoreCase(str(row.get("name")))) {
+                exists = true;
+                break;
+            }
+        }
+        String head = exists ? "ALTER RETENTION POLICY " : "CREATE RETENTION POLICY ";
+        client.v1Execute(target, "", head + sqlIdentifier("default") + " ON " + db
+                + " DURATION " + hours + "h REPLICATION 1");
+    }
+
     @Override
     public InfluxdbQueryResultVO query(InfluxdbQueryDTO request) {
         InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
@@ -495,12 +525,12 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
         }
         if (target.isV1()) {
-            // v1 用 InfluxQL DDL 建库；保留期是库级属性，建完单独 ALTER RETENTION
-            // 设置（语法是 ALTER RETENTION，不是 ALTER DURATION）
+            // v1 用 InfluxQL DDL 建库；保留期挂在**保留策略**上（不是库属性）：
+            // 语法是 CREATE/ALTER RETENTION POLICY <policy> ON <db> DURATION <n>h REPLICATION 1，
+            // 缺 POLICY/ON/REPLICATION 任一段都会被解析器拒绝。策略名固定 default。
             client.v1Execute(target, "", "CREATE DATABASE " + sqlIdentifier(name));
             if (request.retentionHours() != null && request.retentionHours() > 0) {
-                client.v1Execute(target, "", "ALTER RETENTION " + sqlIdentifier(name)
-                        + " DURATION " + request.retentionHours() + "h");
+                ensureRetentionPolicy(target, name, request.retentionHours());
             }
             return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
         }
@@ -537,11 +567,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             return;
         }
         if (target.isV1()) {
-            // v1 的保留期是库级属性，语法是 ALTER RETENTION <db> DURATION <n>h
-            // （传 null 表示取消保留期，写 0h）
+            // v1 保留期挂在保留策略上，语法见 ensureRetentionPolicy；
+            // 传 null 表示取消保留期（DURATION 0h = 永久）
             long hours = retentionHours == null ? 0L : retentionHours;
-            client.v1Execute(target, "", "ALTER RETENTION " + sqlIdentifier(bucketId)
-                    + " DURATION " + hours + "h");
+            ensureRetentionPolicy(target, bucketId, hours);
             return;
         }
         client.updateBucketRetention(target, bucketId, retentionHours);
