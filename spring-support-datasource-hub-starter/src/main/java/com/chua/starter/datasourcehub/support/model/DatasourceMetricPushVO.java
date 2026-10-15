@@ -1,5 +1,6 @@
 package com.chua.starter.datasourcehub.support.model;
 
+import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param sessionLatencyMs 会话耗时（毫秒）
  * @param tunneled     本次是否经隧道
  * @param connectionCount 本次采样时刻客户端连接数，取不到为 null
+ * @param serverStats  本次采样时刻服务器运行指标，取不到为 null
  * @param points       最近窗口内的采样点
  * @author CH
  * @since 4.0.0.43
@@ -30,6 +32,7 @@ public record DatasourceMetricPushVO(
         @Schema(description = "会话耗时（毫秒）") Long sessionLatencyMs,
         @Schema(description = "本次是否经隧道") Boolean tunneled,
         @Schema(description = "本次采样时刻客户端连接数") Long connectionCount,
+        @Schema(description = "本次采样时刻服务器运行指标") DatasourceProbeSupport.ServerStats serverStats,
         @Schema(description = "最近窗口内的采样点") DatasourceMetricTrendVO points
 ) {
 }

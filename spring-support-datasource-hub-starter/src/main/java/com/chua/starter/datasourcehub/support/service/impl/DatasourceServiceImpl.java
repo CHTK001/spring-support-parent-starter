@@ -38,6 +38,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -349,7 +350,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         }
         return ReturnResult.ok(new DataSourceTestVO(outcome.success(), outcome.message(), ds.type(),
                 outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt,
-                outcome.connectionCount()));
+                outcome.connectionCount(), outcome.serverStats()));
     }
 
     /**
@@ -427,8 +428,9 @@ public class DatasourceServiceImpl implements DatasourceService {
             // 连接数是顺手采的瞬时值：同一条探测连接上多跑一条只读查询，代价可忽略；
             // 方言不认识就留 null，图上缺一格，比编个 0 好。
             Long connectionCount = queryJdbcConnectionCount(conn, url);
+            DatasourceProbeSupport.ServerStats serverStats = queryJdbcServerStats(conn, url);
             return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs,
-                    "连接测试成功", connectionCount);
+                    "连接测试成功", connectionCount, serverStats);
         } catch (Exception e) {
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
                     "连接测试失败: " + e.getMessage(), null);
@@ -478,6 +480,60 @@ public class DatasourceServiceImpl implements DatasourceService {
         } catch (Exception e) {
             // 方言前缀（如 jdbc:mysql）只用于日志定位，截前 16 个字符足够，不做复杂解析
             log.debug("[datasource-hub] 连接数查询失败 url-prefix={} reason={}",
+                    lower.substring(0, Math.min(16, lower.length())), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 在探测连接上查询目标服务器的一组运行指标（按方言尽力而为）。
+     *
+     * <p>覆盖范围：目前只有 MySQL/MariaDB 的 {@code SHOW GLOBAL STATUS} 能稳定取到
+     * 服务器侧指标；PostgreSQL 的 {@code pg_stat_database} 可做但不含慢查询的通用口径，
+     * 其余方言/协议统一返回 null —— 前端面板对 null 显示「暂未采集」，不编造数值。</p>
+     *
+     * <p><strong>关于 CPU</strong>：MySQL 协议本身不暴露宿主机 CPU 使用率，
+     * 因此这里不硬造一个「CPU %」；{@code Threads_running}（正在执行的线程数）
+     * 是 SQL 侧负载最接近的公开口径，前端会如实标注。指标均为服务器启动以来的
+     * {@code SHOW GLOBAL STATUS} 累计/瞬时值，采样间隔是探测间隔（约 60s）。</p>
+     *
+     * <p>查询失败不抛：服务器指标缺失只影响面板展示，不该把一次成功的连通性探测
+     * 判成失败。</p>
+     *
+     * @param conn 探测连接（用完即关的那条）
+     * @param url  实际使用的 JDBC URL，用于判断方言
+     * @return 服务器运行指标；方言不支持或查询失败返回 null
+     */
+    private DatasourceProbeSupport.ServerStats queryJdbcServerStats(Connection conn, String url) {
+        String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+        if (!lower.startsWith("jdbc:mysql:") && !lower.startsWith("jdbc:mariadb:")) {
+            return null;
+        }
+        try (var statement = conn.createStatement();
+             var rs = statement.executeQuery("SHOW GLOBAL STATUS WHERE Variable_name IN ("
+                     + "'Slow_queries', 'Threads_running', 'Questions', 'Uptime', 'Max_used_connections')")) {
+            Map<String, Long> values = new HashMap<>();
+            while (rs.next()) {
+                String name = rs.getString(1);
+                String raw = rs.getString(2);
+                if (name != null && raw != null) {
+                    try {
+                        values.put(name.trim().toLowerCase(java.util.Locale.ROOT),
+                                Long.valueOf(raw.trim()));
+                    } catch (NumberFormatException ignored) {
+                        // 个别版本对某变量返回空串/非数字时跳过该行，其余指标照常
+                    }
+                }
+            }
+            return new DatasourceProbeSupport.ServerStats(
+                    values.get("slow_queries"),
+                    values.get("threads_running"),
+                    values.get("questions"),
+                    values.get("uptime"),
+                    values.get("max_used_connections")
+            );
+        } catch (Exception e) {
+            log.debug("[datasource-hub] 服务器状态查询失败 url-prefix={} reason={}",
                     lower.substring(0, Math.min(16, lower.length())), e.getMessage());
             return null;
         }

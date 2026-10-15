@@ -79,7 +79,16 @@ public class ImageSearchGlobalSettingProvider implements GlobalSettingProvider {
                 // 原先由前端写死 30、后端 defaultValue 再写死一次，属于「不来自默认模型」
                 // 的参数。归入本分组后，用户改设置即刻生效，不必改代码重新打包。
                 new GlobalSettingProvider.SettingItem("search_top_k", "30", "NUMBER",
-                        "单次检索返回的相似图片条数上限（1~200）", 4)
+                        "单次检索返回的相似图片条数上限（1~200）", 4),
+                // 关键词提取与 OCR 互斥：keyword_extractor 只允许 none / ocr / model 之一。
+                // model 走模型管理中的 vLLM / OpenAI 兼容多模态模型（keyword_model），
+                // 与本地图像描述的 image.captioning_model 是两套能力，不在此混用。
+                new GlobalSettingProvider.SettingItem("keyword_extractor", "none", "STRING",
+                        "图片关键词来源（none 关闭 / ocr 使用 OCR / model 使用多模态模型提取，与 OCR 互斥）", 5),
+                new GlobalSettingProvider.SettingItem("keyword_model", "", "STRING",
+                        "图片信息提取模型（vLLM / OpenAI 兼容多模态；keyword_extractor=model 时使用）", 6),
+                new GlobalSettingProvider.SettingItem("keyword_prompt", "", "STRING",
+                        "图片关键词提取提示词（留空使用默认提示词）", 7)
         );
     }
 }

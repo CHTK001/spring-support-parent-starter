@@ -84,6 +84,9 @@ public class FileStorageServerLauncher implements AutoCloseable {
                     .host(properties.getHost())
                     .port(properties.getPort())
                     .build();
+            // 文件服务器默认只放 10MiB 请求体，与 Spring 上传限制不一致；预览补测需要
+            // 原样上传 >10MiB 样本，这里显式放大到与上传配置一致的 64MiB。
+            built.getSetting().setMaxRequestSize(64L * 1024 * 1024);
             // 跨域（CORS）：文件服务器是独立端口网关，前端基本都是跨源访问，故默认开启。
             // 配置来源 plugin.filesystem.storage-server.cors.*（见 FileStorageServerProperties.Cors），
             // 默认开启且允许携带凭据——预览页以 credentials:'include' 发起跨域 fetch，

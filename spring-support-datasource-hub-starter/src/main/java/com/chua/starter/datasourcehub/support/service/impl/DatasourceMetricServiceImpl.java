@@ -9,6 +9,7 @@ import com.chua.starter.datasourcehub.support.mapper.MsDatasourceMetricMapper;
 import com.chua.starter.datasourcehub.support.model.DataSourceTestVO;
 import com.chua.starter.datasourcehub.support.model.DatasourceMetricPushVO;
 import com.chua.starter.datasourcehub.support.model.DatasourceMetricTrendVO;
+import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
 import com.chua.starter.datasourcehub.support.service.DatasourceMetricService;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import lombok.RequiredArgsConstructor;
@@ -71,14 +72,14 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
             // 探测本身失败（例如该类型没有 probe 实现）也留一条「未判定」的点：
             // 完全不记会让曲线在「探测不了」和「没采过」之间无法区分。
             persist(datasourceId, row.getDatasourceType(), null, null, null, null, null,
-                    probed.getMsg() == null ? "探测未执行" : probed.getMsg());
+                    probed.getMsg() == null ? "探测未执行" : probed.getMsg(), null);
             return probed;
         }
         DataSourceTestVO vo = probed.getData();
         persist(datasourceId, row.getDatasourceType(),
                 Boolean.valueOf(vo.success()), vo.connectLatencyMs(), vo.sessionLatencyMs(),
                 vo.tunneled(), vo.connectionCount(),
-                vo.success() ? null : vo.message());
+                vo.success() ? null : vo.message(), vo.serverStats());
         return probed;
     }
 
@@ -100,6 +101,7 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                 vo.sessionLatencyMs(),
                 vo.tunneled(),
                 vo.connectionCount(),
+                vo.serverStats(),
                 recent.isOk() ? recent.getData() : null));
     }
 
@@ -142,7 +144,14 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                         r.getSessionLatency(),
                         r.getTunneled() == null ? null : r.getTunneled() == 1,
                         r.getErrorMessage(),
-                        r.getConnectionCount()))
+                        r.getConnectionCount(),
+                        new DatasourceProbeSupport.ServerStats(
+                                r.getSlowQueries(),
+                                r.getThreadsRunning(),
+                                r.getQuestions(),
+                                r.getUptime(),
+                                r.getMaxUsedConnections()
+                        )))
                 .toList();
         return ReturnResult.success(
                 new DatasourceMetricTrendVO(datasourceId, from, to, usedInterval, points, null));
@@ -173,16 +182,18 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
      * 落一个采样点。
      *
      * @param datasourceId   数据源 ID
-     * @param type          数据类型
-     * @param success       连通与否
+     * @param type           数据类型
+     * @param success        连通与否
      * @param connectLatency 建连耗时
      * @param sessionLatency 会话耗时
-     * @param tunneled      是否经隧道
+     * @param tunneled       是否经隧道
      * @param connectionCount 采样时刻客户端连接数（可空）
-     * @param error         失败原因
+     * @param error          失败原因
+     * @param serverStats    采样时刻服务器运行指标（可空）
      */
     private void persist(Long datasourceId, String type, Boolean success, Long connectLatency,
-                         Long sessionLatency, Boolean tunneled, Long connectionCount, String error) {
+                         Long sessionLatency, Boolean tunneled, Long connectionCount, String error,
+                         DatasourceProbeSupport.ServerStats serverStats) {
         try {
             MsDatasourceMetric row = new MsDatasourceMetric();
             row.setDatasourceId(datasourceId);
@@ -192,6 +203,13 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
             row.setSessionLatency(sessionLatency);
             row.setConnectionCount(connectionCount);
             row.setTunneled(tunneled == null ? null : (tunneled ? 1 : 0));
+            if (serverStats != null) {
+                row.setSlowQueries(serverStats.slowQueries());
+                row.setThreadsRunning(serverStats.threadsRunning());
+                row.setQuestions(serverStats.questions());
+                row.setUptime(serverStats.uptimeSeconds());
+                row.setMaxUsedConnections(serverStats.maxUsedConnections());
+            }
             if (error != null) {
                 row.setErrorMessage(error.length() > 500 ? error.substring(0, 500) : error);
             }

@@ -77,6 +77,11 @@ public class ImageSearchStores {
     private final ImageLibraryLinkService library;
 
     /**
+     * 图片关键词提取器（OCR / 多模态模型，按 image_search 配置互斥选择）。
+     */
+    private final ImageKeywordExtractor keywordExtractor;
+
+    /**
      * 启动时加载磁盘上已有的全部账号底库。
      *
      * <p>只读目录、不建目录：某个账号从没上传过图就不该因为一次启动而凭空多出
@@ -256,8 +261,9 @@ public class ImageSearchStores {
     /**
      * 以图搜图相关分组配置变更：使受影响账号的底库实例失效，下次访问按新配置重建。
      *
-     * <p>特征模型（{@code default_image_feature_model}）在底库实例内被缓存（{@code extractor}），
-     * 不失效就永远是旧模型；这里直接移除实例，由 {@code storeOf} 懒建时按最新配置重取。</p>
+     * <p>图像相关配置（如特征模型）在底库实例内被缓存（{@code extractor}），
+     * 不失效就永远是旧配置；这里直接移除实例，由 {@code storeOf} 懒建时按最新配置重取，
+     * 并回读磁盘上已持久化的底库快照，避免设置变更让列表误以为数据丢失。</p>
      *
      * <p>用户级写入只失效**触发者自己的**账号：在某一用户身份下重建全部账号会把该用户的
      * 覆盖串到其他账号。</p>
@@ -274,14 +280,33 @@ public class ImageSearchStores {
             if (userId == null || userId.isBlank()) {
                 return;
             }
-            if (accounts.remove(userId) != null) {
-                log.info("[ImageSearch] 图像特征模型变更（用户级），已失效账号 '{}' 的底库实例", userId);
+            ImageSearchStore removed = accounts.remove(userId);
+            if (removed != null) {
+                shutdownStore(removed, "图像设置变更（用户级）");
+                log.info("[ImageSearch] 图像设置变更（用户级），已失效账号 '{}' 的底库实例", userId);
             }
             return;
         }
         if (!accounts.isEmpty()) {
-            log.info("[ImageSearch] 图像特征模型变更（全局），失效全部账号底库实例（账号数 {}）", accounts.size());
+            log.info("[ImageSearch] 图像设置变更（全局），失效全部账号底库实例（账号数 {}）", accounts.size());
+            for (ImageSearchStore store : accounts.values()) {
+                shutdownStore(store, "图像设置变更（全局）");
+            }
             accounts.clear();
+        }
+    }
+
+    /**
+     * 安全关闭一个已失效的账号底库实例。
+     *
+     * @param store  待关闭实例
+     * @param reason 触发原因（仅用于日志）
+     */
+    private static void shutdownStore(ImageSearchStore store, String reason) {
+        try {
+            store.shutdown();
+        } catch (Exception ex) {
+            log.debug("[ImageSearch] {} 关闭旧底库实例失败: {}", reason, ex.getMessage());
         }
     }
 
@@ -302,7 +327,8 @@ public class ImageSearchStores {
      * @return 底库实例
      */
     private ImageSearchStore storeOf(String account) {
-        return accounts.computeIfAbsent(account, a -> create(a, accountDir(a).resolve(STORE_LEAF), false));
+        Path dir = accountDir(account).resolve(STORE_LEAF);
+        return accounts.computeIfAbsent(account, a -> create(a, dir, Files.isDirectory(dir)));
     }
 
     /**
@@ -314,7 +340,7 @@ public class ImageSearchStores {
      * @return 底库实例
      */
     private ImageSearchStore create(String account, Path dir, boolean existing) {
-        ImageSearchStore store = new ImageSearchStore(account, dir, settingReader, library);
+        ImageSearchStore store = new ImageSearchStore(account, dir, settingReader, library, keywordExtractor);
         if (existing) {
             store.load();
         }

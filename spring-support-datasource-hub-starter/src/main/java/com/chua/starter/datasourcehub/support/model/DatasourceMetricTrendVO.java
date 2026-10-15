@@ -1,5 +1,7 @@
 package com.chua.starter.datasourcehub.support.model;
 
+import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -56,6 +58,7 @@ public record DatasourceMetricTrendVO(
      * @param tunneled         是否经隧道
      * @param errorMessage     失败原因
      * @param connectionCount  采样时刻客户端连接数；类型不支持时为 null（图上缺格）
+     * @param serverStats      采样时刻服务器运行指标；类型不支持时为 null
      */
     public record Point(
             LocalDateTime time,
@@ -64,7 +67,8 @@ public record DatasourceMetricTrendVO(
             Long sessionLatencyMs,
             Boolean tunneled,
             String errorMessage,
-            Long connectionCount
+            Long connectionCount,
+            DatasourceProbeSupport.ServerStats serverStats
     ) {
     }
 
