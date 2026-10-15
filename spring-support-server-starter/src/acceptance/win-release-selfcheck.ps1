@@ -34,21 +34,36 @@ function Check([string]$name, [bool]$ok, [string]$detail) {
     else { $script:fail++; Write-Output ("[selfcheck] FAIL " + $name + "  <<< " + $detail) }
 }
 
-# 按平台的派发方式执行一段 PowerShell：EncodedCommand（UTF-16LE base64）
-# 经 cmd 重定向到文件再读：直接用 `& powershell ...` 捕获输出时，
-# 在「标准输出已被上层重定向」的调用上下文里会报
-# "StandardOutputEncoding is only supported when standard output is redirected"，
-# 导致脚本根本没执行（实测踩到，表现为 T2/T3 全挂）。
+# 按平台优先的派发方式执行一段 PowerShell：先 `pwsh`，失败再回退 `powershell`。
+# 这里直接用 .NET 进程捕获输出，避免经 cmd 时被本机安全产品按 `cmd -> powershell`
+# 拦截（实测 Windows PowerShell 5.1 canonical 路径被拒、PowerShell 7 正常）。
 function InvokeEncoded([string]$script) {
     $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
-    $out = Join-Path $env:TEMP ('enc-' + [guid]::NewGuid().ToString('N') + '.out')
-    cmd /c "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $b64 > `"$out`" 2>&1"
-    $t = ''
-    if (Test-Path $out) {
-        $t = (Get-Content $out -Raw -ErrorAction SilentlyContinue)
-        Remove-Item $out -Force -ErrorAction SilentlyContinue
+    $shells = @(
+      'C:\Program Files\PowerShell\7\pwsh.exe',
+      'powershell'
+    )
+    $lastError = ''
+    foreach ($shell in $shells) {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $shell
+        $psi.Arguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + $b64
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        try {
+            $proc = [System.Diagnostics.Process]::Start($psi)
+            $t = $proc.StandardOutput.ReadToEnd()
+            $e = $proc.StandardError.ReadToEnd()
+            $proc.WaitForExit()
+            if (-not [string]::IsNullOrEmpty($e)) { $t += "`n" + $e }
+            if ($proc.ExitCode -ne 0 -and $e -match 'Access is denied.|拒绝访问') { $lastError = $e; continue }
+            return $t
+        } catch {
+            $lastError = $_.Exception.Message
+        }
     }
-    return $t
+    return $lastError
 }
 
 function CountByPattern([string]$pat) {
@@ -85,6 +100,8 @@ New-Item -ItemType Directory -Force -Path $proj | Out-Null
 # 唯一入口名：孤儿回收按命令行匹配进程，固定名可能误伤其它会话中命令行恰含同名字符串的进程
 $entry = 'relcheck-' + $PID + '.exe'
 $log = Join-Path $proj 'app.log'
+$modernShell = 'C:\Program Files\PowerShell\7\pwsh.exe'
+if (-not (Test-Path $modernShell)) { $modernShell = 'powershell' }
 
 # ---------- 取出平台同款脚本 ----------
 Write-Output "=== 1) 生成平台同款脚本（ReleaseScriptPrinter）==="
@@ -153,7 +170,7 @@ if (-not ($lportScript -match 'function listening_port')) {
 } else {
     # 起一个监听器；它的命令行不含入口名，但进程号会被写进 app.pid
     $listenCmd = ('$l = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Any, ' + $Port + '); $l.Start(); Start-Sleep -Seconds 120')
-    $lp = Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile', '-Command', $listenCmd -PassThru -WindowStyle Hidden
+    $lp = Start-Process -FilePath $modernShell -ArgumentList '-NoProfile', '-Command', $listenCmd -PassThru -WindowStyle Hidden
     Start-Sleep -Seconds 4
     $listening = [bool](& netstat -ano | Select-String -Pattern (':' + $Port + '\s') | Select-String -Pattern 'LISTENING')
     Write-Output ("  监听器 pid=" + $lp.Id + "  端口已监听=" + $listening)

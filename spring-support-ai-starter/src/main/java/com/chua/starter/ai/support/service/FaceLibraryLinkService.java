@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -208,6 +209,42 @@ public class FaceLibraryLinkService {
             log.error("[Face] 读取底库已有条目失败（存量补建将退化为逐条判断）: user={} -> {}", userId, ex.getMessage());
             return java.util.Set.of();
         }
+    }
+
+    /**
+     * 当前账号的人脸底库行（DB 权威）。
+     *
+     * <p>列表、关键词、统计、表格排序都从这里取，而不是从 {@code index.json} 取：
+     * 数据库 `sys_ai_face_library` 才是档案的权威，索引快照只负责保存向量。
+     * 返回的每项只带「向量标识 + 反序列化后的档案」，图片/向量状态由调用方补齐。</p>
+     *
+     * @param userId 归属账号
+     * @return 数据库人脸行；读取失败时返回空集合
+     */
+    public List<Map<String, Object>> listMine(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return List.of();
+        }
+        List<SysAiFaceLibrary> rows;
+        try {
+            rows = mapper.selectList(new LambdaQueryWrapper<SysAiFaceLibrary>()
+                    .eq(SysAiFaceLibrary::getUserId, userId)
+                    .orderByAsc(SysAiFaceLibrary::getId));
+        } catch (Exception ex) {
+            log.error("[Face] 读取底库档案失败（列表将按空库处理）: user={} -> {}", userId, ex.getMessage());
+            return List.of();
+        }
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (SysAiFaceLibrary row : rows) {
+            if (row.getVectorId() == null || row.getVectorId().isBlank()) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>(2);
+            item.put("id", row.getVectorId());
+            item.put("metadata", readMeta(row.getMeta()));
+            out.add(item);
+        }
+        return out;
     }
 
     /**

@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 项目任务编排服务
@@ -90,6 +92,11 @@ public class ProjectTaskService {
      * 单步骤执行超时（秒，语义上限；WinRM 单次 receive 超时另算）
      */
     private static final int DEFAULT_STEP_TIMEOUT_SECONDS = 600;
+
+    /**
+     * 启动脚本成功时打印的运行 PID 行
+     */
+    private static final Pattern RUNNING_PID = Pattern.compile("running pid=(\\d+)");
 
     private final MsServerHostMapper hostMapper;
     private final MsServerProjectMapper projectMapper;
@@ -423,6 +430,15 @@ public class ProjectTaskService {
             } catch (Throwable ignore) {
                 /* 错误阶段推送失败不再向上抛，保证线程能正常结束 */
             }
+            // 失败也可能留下「真实运行态」：升级健康检查失败后自动回滚成功时，
+            // 远端实际在跑回滚后的旧版本（任务仍以 exit 1 判失败，避免谎报成功）。
+            // 若不在此回写，库里会留着回滚前的旧 PID / 旧 runningSince，
+            // 列表页显示的 PID 与端口属主不一致，运维据此判断会得到错误结论。
+            try {
+                reconcileProjectAfterFailure(state);
+            } catch (Throwable ignoreReconcile) {
+                log.warn("[task] {} 失败后状态回写异常", state.taskId, ignoreReconcile);
+            }
         } finally {
             if (handle != null) {
                 connectionManager.release(hostId);
@@ -684,6 +700,91 @@ public class ProjectTaskService {
         }
         project.setUpdateTime(LocalDateTime.now());
         projectMapper.updateById(project);
+    }
+
+    /**
+     * 失败任务结束后的项目运行态对账。
+     *
+     * <p>升级健康检查失败时，中转会按 {@code autoRollback} 自动回滚并以非 0 退出——
+     * 这是「操作失败但服务正常」的典型场景：远端实际在跑回滚后的旧版本，库里却可能
+     * 仍留着升级前的旧 PID / runningSince（甚至过期 PID），列表页展示与端口属主对不上。
+     * 本方法只处理日志能给出确定结论的两类失败，其余保持原状（宁可不动，也不写错）：</p>
+     * <ul>
+     *   <li>回滚成功（{@code rollback ok} + {@code rolled back to previous version}）：
+     *       回写 running 与日志中最后一个 {@code running pid=}；</li>
+     *   <li>回滚本身失败（{@code rollback failed}）：新旧版本都没起来，回写 stopped 并清空 PID。</li>
+     * </ul>
+     *
+     * @param state 任务运行状态（含日志缓冲）
+     */
+    private void reconcileProjectAfterFailure(TaskState state) {
+        if (state.projectId == null || state.logs.isEmpty()) {
+            return;
+        }
+        List<String> logs;
+        synchronized (state.logs) {
+            logs = new ArrayList<>(state.logs);
+        }
+        boolean rolledBack = false;
+        boolean rollbackFailed = false;
+        for (String line : logs) {
+            String t = line == null ? "" : line;
+            if (t.contains("rolled back to previous version")) {
+                rolledBack = true;
+            } else if (t.contains("rollback failed")) {
+                rollbackFailed = true;
+            }
+        }
+        if (!rolledBack && !rollbackFailed) {
+            return;
+        }
+        MsServerProject project = projectMapper.selectById(state.projectId);
+        if (project == null) {
+            return;
+        }
+        if (rollbackFailed) {
+            project.setStatus("stopped");
+            project.setPid(null);
+            project.setRunningSince(null);
+        } else {
+            project.setStatus("running");
+            project.setPid(extractLastRunningPid(logs));
+            project.setRunningSince(LocalDateTime.now());
+        }
+        project.setUpdateTime(LocalDateTime.now());
+        projectMapper.updateById(project);
+        log.info("[task] {} 失败后回写项目运行态: status={} pid={}", state.taskId,
+                project.getStatus(), project.getPid());
+    }
+
+    /**
+     * 从任务日志里取最后一个真实运行 PID。
+     *
+     * <p>启动脚本成功时打印 {@code running pid=1234}。失败实例的进程解析输出里也可能
+     * 出现裸数字，但回滚发生在最后，因此只认日志中最后出现的 {@code running pid=}，
+     * 它必然属于回滚后重启的旧版本进程；日志里没有该行时才回退到最后一个纯数字行。</p>
+     *
+     * @param logs 任务日志
+     * @return PID 字符串；无法确定时返回 null
+     */
+    private String extractLastRunningPid(List<String> logs) {
+        String pid = null;
+        for (String line : logs) {
+            Matcher m = RUNNING_PID.matcher(line == null ? "" : line);
+            if (m.find()) {
+                pid = m.group(1);
+            }
+        }
+        if (pid != null) {
+            return pid;
+        }
+        for (int i = logs.size() - 1; i >= 0; i--) {
+            String t = (logs.get(i) == null ? "" : logs.get(i)).trim();
+            if (t.matches("\\d+")) {
+                return t;
+            }
+        }
+        return null;
     }
 
     /**

@@ -27,6 +27,27 @@
         ORDER BY p.create_time DESC
     </select>
 
+    <!--
+      教师端「我的试卷」分页：精确匹配 paper_owner_user_id = 当前账号。
+      与 pageSelect 区别在不放行管理员全量、也不包含 owner 为空的系统预置卷。
+    -->
+    <select id="pageMySelect" resultType="com.chua.starter.eduai.model.EduPaper">
+        SELECT p.*, p.paper_owner_user_id AS owner_user_id FROM edu_paper p
+        <where>
+            <if test="query.subject != null and query.subject != ''">
+                AND p.paper_subject = #{query.subject}
+            </if>
+            <if test="query.gradeLevel != null and query.gradeLevel != ''">
+                AND p.paper_grade_level = #{query.gradeLevel}
+            </if>
+            <if test="query.status != null">
+                AND p.paper_status = #{query.status}
+            </if>
+            AND p.paper_owner_user_id = #{ownerUserId}
+        </where>
+        ORDER BY p.create_time DESC
+    </select>
+
     <!-- 按试卷唯一编号取试卷（编号查重用） -->
     <select id="selectByPaperNo" resultType="com.chua.starter.eduai.model.EduPaper">
         SELECT p.* FROM edu_paper p

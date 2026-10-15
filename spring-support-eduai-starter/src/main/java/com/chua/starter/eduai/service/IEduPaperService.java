@@ -30,6 +30,17 @@ public interface IEduPaperService extends IService<EduPaper> {
     PageResult<PaperVO> pageQuery(PaperQueryDTO query);
 
     /**
+     * 分页查询当前账号本人创建的试卷（教师端专用，强制 owner 精确过滤）
+     *
+     * <p>与 {@link #pageQuery} 的区别：通用分页对管理员会放行全量；教师端即便
+     * 当前账号带 admin 角色，也只能看本人创建的试卷，不含系统预置卷。</p>
+     *
+     * @param query 查询条件
+     * @return 本人试卷分页
+     */
+    PageResult<PaperVO> pageMyPapers(PaperQueryDTO query);
+
+    /**
      * 获取试卷详情（含题目列表）
      *
      * @param paperId 试卷标识

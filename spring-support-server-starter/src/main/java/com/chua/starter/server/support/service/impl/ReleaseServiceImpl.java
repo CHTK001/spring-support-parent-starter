@@ -240,6 +240,54 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(exists);
     }
 
+    /**
+     * 生成内置四段脚本：与执行期（prepare→expandProjectScripts）走完全相同的模板与展开路径，
+     * 保证前端预览 / 一键生成与真正下发的脚本逐字一致。
+     *
+     * @param hostId      目标主机标识
+     * @param projectType 项目类型
+     * @param mainEntry   主入口
+     * @param projectPath 项目地址
+     * @param logPath     日志地址
+     * @param appName     应用名
+     * @param envVars     环境变量 JSON
+     * @param jvmArgs     JVM 参数 JSON
+     * @param cmdArgs     命令参数 JSON
+     * @return startScript/stopScript/restartScript/statusScript
+     */
+    @Override
+    public ReturnResult<Map<String, String>> generateScripts(Long hostId, String projectType, String mainEntry,
+            String projectPath, String logPath, String appName,
+            String envVars, String jvmArgs, String cmdArgs) {
+        MsServerHost host = hostId == null ? null : hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        String osType = HostPlatforms.normalize(host.getServerHostOsType());
+        boolean windows = HostPlatforms.WINDOWS.equals(osType);
+        ProjectScripts.Scripts def = ProjectScripts.builtin(windows, projectType, mainEntry);
+        // 用一个只承载上下文的临时项目走 materializeVars，使 envVars/jvmArgs/cmdArgs 的
+        // VARS 块与参数展开与执行期一致（前端拿到的即可直接执行，无需二次加工）。
+        MsServerProject stub = new MsServerProject();
+        stub.setProjectType(projectType);
+        stub.setMainEntry(mainEntry);
+        stub.setProjectPath(projectPath);
+        stub.setLogPath(logPath);
+        stub.setProjectName(appName);
+        stub.setEnvVars(envVars);
+        stub.setJvmArgs(jvmArgs);
+        stub.setCmdArgs(cmdArgs);
+        ProjectPlatformProvider pf = projectPlatformRouter.resolveOrPosix(osType);
+        String start = materializeVars(def.start(), stub, pf);
+        String restart = materializeVars(def.restart(), stub, pf);
+        Map<String, String> out = new LinkedHashMap<>();
+        out.put("startScript", ProjectScripts.apply(start, mainEntry, projectPath, logPath, appName));
+        out.put("stopScript", ProjectScripts.apply(def.stop(), mainEntry, projectPath, logPath, appName));
+        out.put("restartScript", ProjectScripts.apply(restart, mainEntry, projectPath, logPath, appName));
+        out.put("statusScript", ProjectScripts.apply(def.status(), mainEntry, projectPath, logPath, appName));
+        return ReturnResult.ok(out);
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Void> deleteProject(Long id) {

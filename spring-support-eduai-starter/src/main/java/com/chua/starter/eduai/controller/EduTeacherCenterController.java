@@ -7,9 +7,12 @@ import com.chua.starter.eduai.dimension.entity.EduStudent;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.EduResetPasswordDTO;
+import com.chua.starter.eduai.model.dto.PaperQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
+import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
+import com.chua.starter.eduai.service.IEduPaperService;
 import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,8 +37,10 @@ import java.util.Map;
  * {@code /v2/edu/dimension/teachers}。归属取自登录态。</p>
  *
  * <p>本控制器同时承载教师端三大能力：<b>管理我自己的班级学生 / 组卷 / 阅卷</b>。
- * 其中组卷与阅卷直接复用 {@code /v2/edu/paper/**}、{@code /v2/edu/marking/**}
- * 这两组已按归属隔离的接口，教师中心只额外提供「我发起的阅卷任务列表」与
+ * 其中阅卷直接复用 {@code /v2/edu/marking/**}，组卷列表走教师中心 {@code /papers}
+ * （强制本人 owner，管理员当教师时也只看自己的卷），
+ * 手动编辑仍复用 {@code /v2/edu/paper/**}。
+ * 教师中心只额外提供「我发起的阅卷任务列表」与
  * 「教师端字典下拉」（管理端下拉是管理员专属，教师令牌会 403）。</p>
  *
  * @since 4.0.0.42
@@ -53,6 +58,11 @@ public class EduTeacherCenterController {
      * 题目服务：老师上传题目（待审核，管理员可配自动通过）
      */
     private final IEduQuestionService questionService;
+
+    /**
+     * 试卷服务：教师端「我的试卷」分页强制本人 owner
+     */
+    private final IEduPaperService paperService;
 
     /**
      * 当前账号的教师绑定状态
@@ -189,6 +199,24 @@ public class EduTeacherCenterController {
     @GetMapping("/dropdown")
     public ReturnResult<EduDimensionService.DimensionDropdown> dropdown() {
         return ReturnResult.ok(teacherCenterService.dropdown());
+    }
+
+    // ==================== 我的试卷 ====================
+
+    /**
+     * 我的试卷（分页，只返回当前账号本人创建的试卷）
+     *
+     * <p>教师端组卷列表不能走通用 {@code /v2/edu/paper/page}：通用接口对管理员
+     * 会放行全量数据，而老师端在老新账户拆分前也常以 admin 身份绑定教师档案。
+     * 该端点强制按当前账号精确过滤 owner，保证「新增 / 查看都只能是自己的卷」。</p>
+     *
+     * @param query 查询条件
+     * @return 我的试卷分页
+     */
+    @Operation(summary = "我的试卷（本人分页）")
+    @GetMapping("/papers")
+    public ReturnResult<PageResult<PaperVO>> papers(PaperQueryDTO query) {
+        return ReturnResult.ok(paperService.pageMyPapers(query));
     }
 
     /**

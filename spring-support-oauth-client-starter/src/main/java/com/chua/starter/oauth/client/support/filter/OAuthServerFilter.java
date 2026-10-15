@@ -130,13 +130,18 @@ public class OAuthServerFilter implements ServerFilter {
     private volatile boolean enabled = true;
 
     /**
-     * 获取过滤器执行顺序：须早于文件存储网关（order=100）完成鉴权。
+     * 获取过滤器执行顺序：必须早于所有服务管理插件。
      *
-     * @return 50
+     * <p>文件存储网关自身 order=100，但服务管理描述会用
+     * {@code DelegatingServerFilter} 把执行顺序覆盖为节点里的 filter order
+     * （默认 0），因此固定 50 会在反应式链中排到文件存储之后，私有桶请求
+     * 尚未鉴权就被网关 200 处理。鉴权属于安全门，取接近最小值的最高优先级。</p>
+     *
+     * @return 最高优先级
      */
     @Override
     public int getOrder() {
-        return 50;
+        return Integer.MIN_VALUE + 1;
     }
 
     /**

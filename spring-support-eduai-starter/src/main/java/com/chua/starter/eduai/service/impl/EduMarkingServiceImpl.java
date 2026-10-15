@@ -801,36 +801,136 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (wantNo.isEmpty() && stemProbe.isEmpty()) {
             return null;
         }
-        for (Map<String, Object> pageNode : pages) {
-            if (!(pageNode.get("blocks") instanceof List<?> list)) {
-                continue;
-            }
-            for (Object item : list) {
-                if (!(item instanceof Map<?, ?> block)) {
+        // 两轮定位：**先题号、后题干**。
+        // 单轮把两种信号混在一起会被「同名句」骗到别的页：26 题「晴川历历汉阳树，……」的题干特征，
+        // 和第 8 题 B 选项「晴川历历汉阳树，芳草萋萋鹦鹉洲」在同一个块里对得上，
+        // 一旦先命中选项行，这道题就被定位到第 2 页，右栏「第 6~10 题」里就冒出第 26 题。
+        // 题号是强特征（题号段必然在题首），先穷尽它，再用题干特征兜底 OCR 没读出题号的题。
+        for (int round = 0; round < 2; round++) {
+            boolean byNo = round == 0;
+            for (Map<String, Object> pageNode : pages) {
+                if (!(pageNode.get("blocks") instanceof List<?> list)) {
                     continue;
                 }
-                Object text = block.get("text");
-                if (text == null) {
-                    continue;
-                }
-                String rawText = String.valueOf(text);
-                String blockNo = leadingQuestionNo(rawText);
-                boolean noHit = !wantNo.isEmpty() && !blockNo.isEmpty()
-                        && fixOcrDigits(blockNo).equals(fixOcrDigits(wantNo));
-                boolean stemHit = !stemProbe.isEmpty() && normalizeText(rawText).contains(stemProbe);
-                if (noHit || stemHit) {
-                    var anchor = new LinkedHashMap<String, Object>();
-                    anchor.put("no", no);
-                    anchor.put("page", pageNode.get("page"));
-                    anchor.put("x", block.get("x"));
-                    anchor.put("y", block.get("y"));
-                    anchor.put("width", block.get("width"));
-                    anchor.put("height", block.get("height"));
-                    return anchor;
+                for (int blockIndex = 0; blockIndex < list.size(); blockIndex++) {
+                    Object item = list.get(blockIndex);
+                    if (!(item instanceof Map<?, ?> block)) {
+                        continue;
+                    }
+                    Object text = block.get("text");
+                    if (text == null) {
+                        continue;
+                    }
+                    String rawText = String.valueOf(text);
+                    boolean hit;
+                    if (byNo) {
+                        String blockNo = leadingQuestionNo(rawText);
+                        hit = !wantNo.isEmpty() && !blockNo.isEmpty()
+                                && fixOcrDigits(blockNo).equals(fixOcrDigits(wantNo));
+                    } else {
+                        // 题干轮只认题目行：选项行常整句复述题干，命中它等于定位到隔壁题。
+                        hit = !stemProbe.isEmpty() && !isOptionLine(rawText)
+                                && normalizeText(rawText).contains(stemProbe);
+                    }
+                    if (hit) {
+                        var anchor = new LinkedHashMap<String, Object>();
+                        anchor.put("no", no);
+                        anchor.put("page", pageNode.get("page"));
+                        anchor.put("x", block.get("x"));
+                        anchor.put("y", block.get("y"));
+                        anchor.put("width", block.get("width"));
+                        anchor.put("height", block.get("height"));
+                        // 命中块原文 + 其后 2 块：题干常被 OCR 拆成多块（「16.树树皆秋色，」
+                        // 与「。（王绩《野望》）（2分）」两块），分值标注落在续块上，
+                        // 只看命中块会漏掉分值而回落到整卷兜底分。调用方用完会移除本键。
+                        anchor.put("_blockText", joinBlockText(list, blockIndex, 2));
+                        return anchor;
+                    }
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * 把命中块与其后 {@code lookAhead} 个块拼成一段文本（供解析「（N分）」标注）。
+     *
+     * @param list       当前页的文字块列表（存储顺序即识别顺序）
+     * @param from       命中块下标
+     * @param lookAhead  向后多看几块
+     * @return 拼接文本；块缺失时跳过
+     */
+    private static String joinBlockText(List<?> list, int from, int lookAhead) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = from; i <= Math.min(from + lookAhead, list.size() - 1); i++) {
+            Object node = list.get(i);
+            if (node instanceof Map<?, ?> block && block.get("text") != null) {
+                if (sb.length() > 0) {
+                    sb.append(' ');
+                }
+                sb.append(block.get("text"));
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 是否选项行（{@code A.}/{@code B、} 这类）。
+     *
+     * <p>题干特征定位要跳过它们：选择题的选项经常把题干原句抄一遍，
+     * 命中选项行会让锚点落到别的题上。</p>
+     *
+     * @param rawText 文字块文本
+     * @return true 表示该块是选项行
+     */
+    private static boolean isOptionLine(String rawText) {
+        if (rawText == null) {
+            return false;
+        }
+        String text = rawText.trim().toLowerCase();
+        if (text.length() < 3) {
+            return false;
+        }
+        char head = text.charAt(0);
+        if (head < 'a' || head > 'd') {
+            return false;
+        }
+        char sep = text.charAt(1);
+        return sep == '.' || sep == '、' || sep == '．' || sep == ' ';
+    }
+
+    /**
+     * 卷面每题的「（N分）」分值标注。
+     *
+     * <p>分值写在卷面上是确定性信息，不该指望模型每次都能抽出来：
+     * ANY 抽取的 prompt 只让模型认「每题X分/共X分」这类就近归属标注，
+     * 一整卷每题尾标「（2分）」时常被返回 {@code null}，
+     * 于是每题都掉到整卷兜底分（配置默认 100），出现「卷面明明 2 分，AI 分与老师分却都是 100」。
+     * 这里按命中题块原文兜底解析，解析不到才用兜底分。</p>
+     */
+    private static final java.util.regex.Pattern SCORE_MARKER =
+            java.util.regex.Pattern.compile("[（(]\\s*(\\d{1,3})\\s*分\\s*[）)]");
+
+    /**
+     * 从题块原文里解析「（N分）」分值。
+     *
+     * @param rawText 题块原文
+     * @return 分值；无标注或超出合理范围返回 null
+     */
+    private static Integer parseQuestionScore(String rawText) {
+        if (rawText == null) {
+            return null;
+        }
+        var matcher = SCORE_MARKER.matcher(rawText);
+        if (!matcher.find()) {
+            return null;
+        }
+        try {
+            int value = Integer.parseInt(matcher.group(1));
+            return value > 0 && value <= 100 ? value : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**
@@ -1033,10 +1133,15 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 题号锚点：抽取出的题目来自合并文本，这里回到逐页文字块按题号前缀定位，
         // 前端据此把分数标记贴到原图的对应位置。
         var questionAnchors = new ArrayList<Map<String, Object>>();
+        // 与 scanned 同序的「卷面（N分）标注」提示：模型没给出 score 时的兜底分值来源
+        var scanScoreHints = new ArrayList<Integer>();
         for (EduPaperScanner.ScannedQuestion q : scanned) {
             Map<String, Object> anchor = locateAnchor(q.no(), q.stem(), pages);
             if (anchor != null) {
+                scanScoreHints.add(parseQuestionScore(String.valueOf(anchor.remove("_blockText"))));
                 questionAnchors.add(anchor);
+            } else {
+                scanScoreHints.add(null);
             }
         }
 
@@ -1076,7 +1181,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 同一道题只允许产出一行：真实卷里「两位数题号被 OCR 读成个位」很常见（11.→1.），
         // 会把另一处的作答再次配到第 1 题，导致同一题多行互相覆盖、总题数虚高（实测 13 题产出 15 行）。
         Set<Long> usedQuestionIds = new HashSet<>();
-        for (EduPaperScanner.ScannedQuestion item : scanned) {
+        for (int scannedIndex = 0; scannedIndex < scanned.size(); scannedIndex++) {
+            EduPaperScanner.ScannedQuestion item = scanned.get(scannedIndex);
+            Integer paperScoreHint = scannedIndex < scanScoreHints.size()
+                    ? scanScoreHints.get(scannedIndex) : null;
             EduPaperQuestion relation = anyMode ? null : matchRelation(item.no(), byNo, byOrder);
             if (!anyMode && relation != null && usedQuestionIds.contains(relation.getPaperQuestionQuestionId())) {
                 EduPaperQuestion reassigned = findNextUnusedByPrefix(item.no(), relations, usedQuestionIds);
@@ -1105,6 +1213,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             } else if (item.score() != null && item.score() > 0) {
                 maxScore = item.score();
                 log.info("[EduAi] 题号 {} 采用卷面抽取分值 {}", item.no(), maxScore);
+            } else if (paperScoreHint != null) {
+                // 模型没给 score 时，用题块原文里的「（N分）」标注兜底，
+                // 不再一律回落到整卷默认分（否则卷面 2 分会显示成 100）
+                maxScore = paperScoreHint;
+                log.info("[EduAi] 题号 {} 采用卷面「（N分）」标注分值 {}", item.no(), maxScore);
             } else {
                 maxScore = fallbackScore;
             }
@@ -1791,7 +1904,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             questions.add(item);
         }
         List<Map<String, Object>> displayQuestions = questions;
-        if (questions.size() == 1 && !pages.isEmpty()) {
+        if (shouldSplitLegacyAggregate(questions, pages)) {
             List<Map<String, Object>> repaired = splitLegacyAggregated(questions.getFirst(), pages);
             if (repaired.size() > 1) {
                 displayQuestions = repaired;
@@ -1803,6 +1916,33 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         out.put("questions", displayQuestions);
         out.put("overallComment", resolveOverallComment(questions, content));
         return out;
+    }
+
+    /**
+     * 是否需要对「整页一题」结果做只读版面拆分展示。
+     *
+     * <p>拆分是给**旧的无成绩聚合行**兜底展示用的：早期版本把一整页识别成一题，
+     * 拆分后按版面文字块还原出多道虚拟子题，只为让老师看清卷面结构。
+     * 虚拟行 {@code resultId} 为负、前端禁用编辑且保存时被过滤，本身不可判分。</p>
+     *
+     * <p><b>为什么必须排除已判分的行</b>：拆分会把每行的 {@code score} 与
+     * {@code teacherScore} 置空。若这一行其实是**真实成绩**（典型场景：整张卷只有
+     * 一道大题/作文，AI 已判分或老师已给分），拆分后汇总仍读原始行，
+     * 于是出现「AI 总分 50 · 老师总分 50，但逐题 AI 分整列空白、老师也无法逐题打分」
+     * 的自相矛盾界面。已判分的单题直接按原始行展示，老师可继续逐题修正。</p>
+     *
+     * @param questions 结果行装配出的题目（当前仅 1 行时才可能拆分）
+     * @param pages     答卷版面页数据
+     * @return true 表示这是无成绩的旧聚合行，可按版面拆分展示
+     */
+    static boolean shouldSplitLegacyAggregate(List<Map<String, Object>> questions,
+                                              List<Map<String, Object>> pages) {
+        if (questions == null || questions.size() != 1 || pages == null || pages.isEmpty()) {
+            return false;
+        }
+        Map<String, Object> only = questions.getFirst();
+        // 有任一成绩（AI 分或老师分）即为真实判分结果，保留原始行，不做会清空分数的只读拆分
+        return only.get("score") == null && only.get("teacherScore") == null;
     }
 
     /**
