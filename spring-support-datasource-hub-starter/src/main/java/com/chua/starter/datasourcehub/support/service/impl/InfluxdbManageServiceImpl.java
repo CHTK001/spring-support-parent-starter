@@ -495,10 +495,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
         }
         if (target.isV1()) {
-            // v1 用 InfluxQL DDL 建库；无 retention 时建完再单独 ALTER，避免 0 保留期被当成 0 秒
+            // v1 用 InfluxQL DDL 建库；保留期是库级属性，建完单独 ALTER RETENTION
+            // 设置（语法是 ALTER RETENTION，不是 ALTER DURATION）
             client.v1Execute(target, "", "CREATE DATABASE " + sqlIdentifier(name));
             if (request.retentionHours() != null && request.retentionHours() > 0) {
-                client.v1Execute(target, "", "ALTER DURATION " + sqlIdentifier(name)
+                client.v1Execute(target, "", "ALTER RETENTION " + sqlIdentifier(name)
                         + " DURATION " + request.retentionHours() + "h");
             }
             return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
@@ -536,9 +537,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             return;
         }
         if (target.isV1()) {
-            // v1 的保留期是库级属性；传 null 表示取消保留期（InfluxQL 写 0h）
+            // v1 的保留期是库级属性，语法是 ALTER RETENTION <db> DURATION <n>h
+            // （传 null 表示取消保留期，写 0h）
             long hours = retentionHours == null ? 0L : retentionHours;
-            client.v1Execute(target, "", "ALTER DURATION " + sqlIdentifier(bucketId)
+            client.v1Execute(target, "", "ALTER RETENTION " + sqlIdentifier(bucketId)
                     + " DURATION " + hours + "h");
             return;
         }
