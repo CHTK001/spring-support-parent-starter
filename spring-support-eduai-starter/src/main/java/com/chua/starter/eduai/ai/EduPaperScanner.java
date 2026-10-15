@@ -262,8 +262,13 @@ public class EduPaperScanner {
         var ordered = new ArrayList<>(blocks);
         ordered.sort((a, b) -> {
             int dy = Float.compare(a.y(), b.y());
-            // 同一行（y 差小于块高一半）按 x 排，否则按 y 排
-            float tolerance = Math.max(a.height(), b.height()) * 0.5f + 4f;
+            // 同一行（y 差小于块高一半）按 x 排，否则按 y 排。
+            // 修复：结构回放给 splitLegacyAggregated 的 blocks 是归一化坐标，
+            // 不能再用像素坐标的 +4px 容差（会把整页块误判成同一行，仅切出 2/3/1）。
+            boolean normalized = a.width() <= 1f && b.width() <= 1f && a.height() <= 1f && b.height() <= 1f;
+            float tolerance = normalized
+                    ? Math.max(a.height(), b.height()) * 0.5f + 0.005f
+                    : Math.max(a.height(), b.height()) * 0.5f + 4f;
             if (Math.abs(a.y() - b.y()) <= tolerance) {
                 return Float.compare(a.x(), b.x());
             }
@@ -317,6 +322,12 @@ public class EduPaperScanner {
                 no = matcher.group().trim();
                 lastNum = parseNoNum(no);
                 answer = new StringBuilder(line.substring(matcher.end()).trim());
+            } else if (isBareItemBlock(block, lastNum)) {
+                // OCR 把题号标点漏掉时（实测 "2" 单独成块），按左侧页边的裸数字补切。
+                appendQuestion(list, no, answer);
+                no = line.trim();
+                lastNum = parseNoNum(no);
+                answer = new StringBuilder();
             } else if (no != null) {
                 if (answer.length() > 0) {
                     answer.append(' ');
@@ -367,6 +378,31 @@ public class EduPaperScanner {
             return true;
         }
         return n == 1 || n == lastNum + 1;
+    }
+
+    /**
+     * 左侧页边、单独成块的裸题号判断。
+     *
+     * @param block   OCR 文字块（含归一化坐标）
+     * @param lastNum 上一题号数字
+     * @return 是否应作为新题起点
+     */
+    private static boolean isBareItemBlock(EduPaperScanner.ScanBlock block, int lastNum) {
+        if (block == null) {
+            return false;
+        }
+        String line = block.text() == null ? "" : block.text().trim();
+        if (!BARE_ITEM_NO.matcher(line).matches()) {
+            return false;
+        }
+        // 归一化坐标（结构回放/页面展示）直接按页边比例判断；像素坐标（实时扫描）
+        // 按「左侧页边 + 小宽高」兜底，避免把解答里居中/靠右的纯数字判定为题号。
+        boolean normalized = block.width() <= 1f && block.height() <= 1f;
+        boolean leftMargin = normalized ? block.x() < 0.18f : block.x() < block.width() * 6f;
+        boolean smallBlock = normalized
+                ? block.width() < 0.12f && block.height() < 0.08f
+                : block.width() < 200f && block.height() < 120f;
+        return leftMargin && smallBlock && fitsProgression(parseNoNum(line), lastNum);
     }
 
     /**
@@ -580,6 +616,15 @@ public class EduPaperScanner {
             java.util.regex.Pattern.compile(
                     "^\\s*[\\[【「『{]?\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*"
                             + "|^\\s*[\\[【「『{]?\\s*第\\s*[0-9lLI]{1,3}\\s*题\\s*[.。、,，：:；;]?\\s*");
+
+    /**
+     * 独立成块的裸题号：{@code 2} 这类 OCR 把标点漏掉、只剩一个数字的题号块。
+     *
+     * <p>只在版面路径使用且要求左侧页边（x 归一化小于 0.18），避免把学生答卷里
+     * 居中/右边作为答案的数字（如计算题结果）误切成新题。</p>
+     */
+    private static final java.util.regex.Pattern BARE_ITEM_NO =
+            java.util.regex.Pattern.compile("^\\s*[0-9lLI]{1,3}\\s*$");
 
     /**
      * 子项前缀：{@code 1）} / {@code 1)} / {@code （1）} 这类「括号编号」。

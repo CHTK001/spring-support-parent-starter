@@ -23,6 +23,16 @@ public class MarkingConfirmDTO {
      */
     private List<ScoreAdjustment> adjustments;
 
+    /**
+     * 手动纠正卷面识别学生（管理员/老师都可提交；空串表示清空该字段）
+     */
+    private String studentName;
+
+    /**
+     * 手动纠正卷面识别学号（管理员/老师都可提交；空串表示清空该字段）
+     */
+    private String studentNo;
+
     @Data
     /**
      * scoreadjustment类。

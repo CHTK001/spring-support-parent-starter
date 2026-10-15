@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -307,16 +309,25 @@ public class AiRoleController {
     /**
      * 删除角色（逻辑删除）。
      *
+     * <p>通用助手（id=1 / code=general-assistant）为系统内置助手，禁止删除。
+     * 前端已隐藏/拦截删除按钮，这里仍由后端兜底，直接 403，防止绕过页面调用
+     * {@code DELETE /v2/roles/1} 删掉内置角色。后续若数据库主键迁移，
+     * code=general-assistant 仍命中同一保护。</p>
+     *
      * @param id 角色主键
      * @return 是否成功
-     * @param "角色主键" "角色主键"
-     * @param "角色主键" "角色主键"
-     * @param "角色主键" "角色主键"
      */
     @Permission("admin")
     @Operation(summary = "删除角色")
     @DeleteMapping("/{id}")
     public boolean delete(@Parameter(description = "角色主键") @PathVariable Integer id) {
+        if (Integer.valueOf(1).equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手为系统内置，不允许删除");
+        }
+        SysAiRole existing = roleService.getById(id);
+        if (existing != null && "general-assistant".equals(existing.getCode())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手为系统内置，不允许删除");
+        }
         return roleService.deleteById(id);
     }
 }

@@ -92,19 +92,26 @@ public class ImageSearchStore {
     private final ImageLibraryLinkService library;
 
     /**
+     * 图片关键词提取器（OCR / 多模态模型）。
+     */
+    private final ImageKeywordExtractor keywordExtractor;
+
+    /**
      * 构造一个账号的底库实例。
      *
      * @param account       账号标识（即 userId）
      * @param dir           该账号的底库目录，已由调用方解析并确保位于 base 之下
      * @param settingReader 全局设置读取器（特征模型 / 向量引擎等为全局配置）
      * @param library       底库元数据与向量的联动层
+     * @param keywordExtractor 图片关键词提取器
      */
     ImageSearchStore(String account, Path dir, GlobalSettingReader settingReader,
-                     ImageLibraryLinkService library) {
+                     ImageLibraryLinkService library, ImageKeywordExtractor keywordExtractor) {
         this.account = account;
         this.dir = dir;
         this.settingReader = settingReader;
         this.library = library;
+        this.keywordExtractor = keywordExtractor;
     }
 
     /**
@@ -587,7 +594,7 @@ public class ImageSearchStore {
         StoredImage item = new StoredImage();
         item.setId(id);
         item.setName(name == null || name.isBlank() ? ("未命名-" + id) : name.trim());
-        item.setTags(List.of());
+        item.setTags(extractKeywords(imageData, name));
         item.setVector(vector);
         item.setFeatureModel(currentModel());
         item.setCreatedAt(System.currentTimeMillis());
@@ -661,6 +668,25 @@ public class ImageSearchStore {
             return null;
         }
         return item;
+    }
+
+    /**
+     * 提取入库图片的关键词。
+     *
+     * <p>关键词是检索增强，不参与投票/向量回滚：提取失败只告警并保留空 tags，
+     * 不能让一次 OCR/模型抖动把整张图片入库拖死。</p>
+     *
+     * @param imageData 原图字节
+     * @param name      展示名
+     * @return 关键词列表；失败返回空列表
+     */
+    private List<String> extractKeywords(byte[] imageData, String name) {
+        try {
+            return keywordExtractor.extract(imageData, name);
+        } catch (Exception ex) {
+            log.warn("[ImageSearch] 图片关键词提取失败，继续入库: name={} -> {}", name, ex.getMessage());
+            return List.of();
+        }
     }
 
     /**
@@ -887,7 +913,7 @@ public class ImageSearchStore {
         snapshot.sort(Comparator.comparingLong(StoredImage::getId).reversed());
         List<StoredImage> filtered = new ArrayList<>();
         for (StoredImage item : snapshot) {
-            if (!kw.isEmpty() && !item.getName().toLowerCase(Locale.ROOT).contains(kw)) {
+            if (!kw.isEmpty() && !keywordHit(kw, item)) {
                 continue;
             }
             filtered.add(item);
@@ -898,6 +924,33 @@ public class ImageSearchStore {
         out.put("items", new ArrayList<>(filtered.subList(from, to)));
         out.put("total", filtered.size());
         return out;
+    }
+
+    /**
+     * 判断条目是否命中了检索关键词。
+     *
+     * <p>关键词检索范围：展示名 + tags（DB 的
+     * {@code sys_ai_image_library_tags} 与快照中的 {@link StoredImage#getTags()} 同源）。
+     * 不判断 meta：meta 里的 featureModel / sizeBytes 等不是用户可检索的内容。</p>
+     *
+     * @param kw   已小写化的关键词
+     * @param item 底库记录
+     * @return true 表示命中
+     */
+    private static boolean keywordHit(String kw, StoredImage item) {
+        String name = item.getName();
+        if (name != null && name.toLowerCase(Locale.ROOT).contains(kw)) {
+            return true;
+        }
+        List<String> tags = item.getTags();
+        if (tags != null) {
+            for (String tag : tags) {
+                if (tag != null && tag.toLowerCase(Locale.ROOT).contains(kw)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

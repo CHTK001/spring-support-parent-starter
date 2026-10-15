@@ -822,6 +822,19 @@ public class ApiProviderController {
                     Map<String, Object> cap = new LinkedHashMap<>(4);
                     cap.put("task", s);
                     cap.put("traits", traits);
+                    // 上游条目如果有细分类型（capabilities[].subtype），批量录入时原样保留
+                    String subType = str(m, "subtype");
+                    if (subType == null && m.get("capabilities") instanceof List<?> rawCaps) {
+                        for (Object rc : rawCaps) {
+                            if (rc instanceof Map<?, ?> rm && rm.get("subtype") instanceof String sub && !sub.isBlank()) {
+                                subType = sub;
+                                break;
+                            }
+                        }
+                    }
+                    if (subType != null) {
+                        cap.put("subtype", subType);
+                    }
                     caps.add(cap);
                 }
             }
@@ -981,6 +994,64 @@ public class ApiProviderController {
     }
 
     /**
+     * 测试指定提供者模型的连通性延迟。
+     *
+     * <p>模型管理卡片的模型来自 {@code /api/providers} 的
+     * {@code provider_id + model} 复合主键，不是旧 {@code sys_ai_model}
+     * 的数字主键，因此不能复用 {@code /v2/models/{id}/test-latency}。
+     * 这里用第一个可用 Key 请求上游模型目录并测量耗时，供云端模型卡片展示。
+     * 成功结果写入该模型 metrics 的 {@code probe_latency_ms} 和 {@code latency_ms}，
+     * 列表接口会优先回读模型自身指标，刷新后仍能显示最近一次实测延迟。</p>
+     *
+     * @param providerId 提供者标识
+     * @param modelName 模型名
+     * @return 延迟测试结果
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/models/{model_name}/test-latency")
+    public ApiResult<Map<String, Object>> testProviderModelLatency(
+            @PathVariable("provider_id") String providerId,
+            @PathVariable("model_name") String modelName) {
+        SysAiProvider provider = requireProvider(providerId);
+        SysAiProviderModel model = modelMapper.selectOne(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId)
+                        .eq(SysAiProviderModel::getModel, modelName));
+        if (model == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在: " + modelName);
+        }
+        List<String> keys = extractAllKeys(provider.getCredentials());
+        if (keys.isEmpty()) {
+            Map<String, Object> noKey = new LinkedHashMap<>(3);
+            noKey.put("success", false);
+            noKey.put("message", "提供者未配置 API Key");
+            noKey.put("latency", null);
+            return ApiResult.ok(noKey);
+        }
+        Map<String, Object> result = testSingleKey(provider.getPlatform(), provider.getBaseUrl(),
+                keys.get(0), UpstreamAuth.of(provider.getAuthScheme(), provider.getExtra()),
+                provider.getProxy(), 0);
+        Object latency = result.get("latency_ms");
+        if (Boolean.TRUE.equals(result.get("ok"))) {
+            Map<String, Object> metrics = model.getMetrics() != null
+                    ? new LinkedHashMap<>(model.getMetrics())
+                    : new LinkedHashMap<>(4);
+            metrics.put("probe_latency_ms", latency);
+            metrics.put("latency_ms", latency);
+            model.setMetrics(metrics);
+            model.setUpdatedAt(System.currentTimeMillis());
+            modelMapper.updateById(model);
+        }
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        out.put("provider_id", providerId);
+        out.put("model", modelName);
+        out.put("success", result.get("ok"));
+        out.put("message", result.getOrDefault("error", result.getOrDefault("message", "测试完成")));
+        out.put("latency", latency);
+        return ApiResult.ok(out);
+    }
+
+    /**
      * 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。
     */
     private Map<String, Object> testSingleKey(String platform, String baseUrl, String apiKey,
@@ -988,16 +1059,19 @@ public class ApiProviderController {
         Map<String, Object> r = new LinkedHashMap<>(6);
         r.put("index", index);
         r.put("key_mask", maskKey(apiKey));
+        long latencyStart = System.currentTimeMillis();
         try {
             if (baseUrl == null || baseUrl.isBlank()) {
                 r.put("ok", false);
                 r.put("error", "base_url 未配置");
+                r.put("latency_ms", System.currentTimeMillis() - latencyStart);
                 return r;
             }
             Map<String, Object> fakeCreds = new LinkedHashMap<>(2);
             fakeCreds.put("api_key", apiKey);
             List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey,
                     (platform != null && platform.toLowerCase().contains("gemini")), proxy, auth);
+            r.put("latency_ms", System.currentTimeMillis() - latencyStart);
             if (models == null) {
                 r.put("ok", false);
                 r.put("error", "无法从上游拉取模型（401/404/网络），key 可能无效");
@@ -1006,6 +1080,7 @@ public class ApiProviderController {
                 r.put("model_count", models.size());
             }
         } catch (Exception e) {
+            r.put("latency_ms", System.currentTimeMillis() - latencyStart);
             r.put("ok", false);
             r.put("error", e.getMessage() != null ? e.getMessage() : e.toString());
         }
@@ -1537,6 +1612,11 @@ public class ApiProviderController {
         map.put("traits", cap.get("traits") != null ? cap.get("traits") : List.of());
         map.put("protocol", cap.get("protocol"));
         map.put("connection_role", cap.get("connection_role"));
+        // OCR/人脸组合模型细分类型：与 generate 同理，必须显式透传，
+        // 否则数据库虽已保存，前端刷新后只能看到粗类型。
+        if (cap.get("subtype") != null) {
+            map.put("subtype", cap.get("subtype"));
+        }
         // 生成参数节点：白名单式构造会丢字段，这里显式透传，供模型弹框回显与编辑
         if (cap.get("generate") != null) {
             map.put("generate", cap.get("generate"));
