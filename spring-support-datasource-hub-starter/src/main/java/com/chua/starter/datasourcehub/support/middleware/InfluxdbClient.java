@@ -5,6 +5,8 @@ import com.chua.common.support.lang.json.JsonArray;
 import com.chua.common.support.lang.json.JsonObject;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -320,29 +322,6 @@ public class InfluxdbClient {
     }
 
     /**
-     * 在 v2 实例上执行 SQL / InfluxQL 查询。
-     *
-     * <p>InfluxDB 2.x 即使 {@code flux-enabled=false} 也始终提供 InfluxQL：
-     * 同一个 {@code /api/v2/query} 接口，把 body 的 {@code type} 由 {@code flux}
-     * 换成 {@code sql} 即可，此时<b>必须</b>在查询参数里带 {@code bucket}
-     * （InfluxQL 语句里没有 {@code from(bucket:...)} 来兜底）。这正是「2.x + SQL」
-     * 组合的服务端入口，也是服务端关闭 Flux 后唯一可用的查询通道。</p>
-     *
-     * @param target 访问目标
-     * @param bucket 目标桶名
-     * @param sql    SQL / InfluxQL 语句
-     * @return 行数据，保持服务端给出的列顺序
-     * @throws IllegalStateException 请求失败或服务端回报查询错误
-     */
-    public List<JsonObject> querySqlV2(Target target, String bucket, String sql) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("query", sql);
-        body.put("type", "sql");
-        String text = postJson(target, QUERY_PATH, target.query("bucket", bucket), Json.toJson(body));
-        return parseQueryResponse(text);
-    }
-
-    /**
      * 还原 {@code /api/v2/query} 的行数据（Flux 与 InfluxQL 共用此解析）。
      *
      * <p>实测（2.7.11）：{@code /api/v2/query} 返回的是<b>注解 CSV</b>，不是 JSON-lines。
@@ -365,27 +344,36 @@ public class InfluxdbClient {
     }
 
     /**
-     * 在 v1 实例上执行 InfluxQL 查询。
+     * 执行 InfluxQL 查询（v1 与 v2 通用）。
      *
-     * <p>1.x 的查询入口是 v1 兼容接口 {@code POST /query}（<b>不是</b> {@code /api/v2/query}）：
-     * 表单带 {@code db} 与 {@code q}，响应是 {@code {"results":[{"series":[{"columns":..,"values":..}]}]}}。
-     * 这里把 series 摊平成「一行一个对象、列为键」，与 v2/v3 的行结构对齐，
-     * 上层表格与列推导不必分叉。</p>
+     * <p>入口是 <b>v1 兼容的 {@code POST /query}</b>：表单带 {@code db} 与 {@code q}，
+     * 响应是 {@code {"results":[{"series":[{"columns":..,"values":..}]}]}}。
+     * 1.x 与 2.x 都提供这个入口——<b>2.x 的 {@code /api/v2/query} 只吃 Flux</b>
+     * （实测 2.7.11：{@code type=sql} / {@code type=influxql} 一律 400），
+     * 所以 InfluxQL 必须走这里，不能走 v2 的查询接口。</p>
+     *
+     * <p>这里把 series 摊平成「一行一个对象、列为键」，与 v3 的行结构对齐，
+     * 上层表格与列推导不必分叉。语句错误不走 HTTP 状态码，而是以
+     * {@code results[].error} 回一个 200，故必须显式判错。</p>
+     *
+     * <p>用表单体而非查询串承载语句：{@code q} 里的换行/引号/中文在查询串里
+     * 需要多次转义，放体里只需一次 URL 编码，且 2.x 要求带 Token 才认。</p>
      *
      * @param target   访问目标
-     * @param database 目标数据库（v1 的 database）
+     * @param database 目标数据库/桶名（v2 的 {@code db} 即桶名）
      * @param sql      InfluxQL 语句
      * @return 行数据，保持服务端给出的列顺序
      * @throws IllegalStateException 请求失败或服务端回报语句错误
      */
     public List<JsonObject> v1Query(Target target, String database, String sql) {
-        Map<String, String> form = new LinkedHashMap<>();
-        form.put("q", sql);
+        Map<String, String> params = new LinkedHashMap<>();
         if (!database.isEmpty()) {
-            form.put("db", database);
+            params.put("db", database);
         }
+        String body = "q=" + URLEncoder.encode(sql, StandardCharsets.UTF_8);
         try {
-            String text = MiddlewareHttp.postForm(target.endpoint().url("/query"), Map.of(), form);
+            String text = MiddlewareHttp.postText(target.endpoint().url("/query"), params, body,
+                    "application/x-www-form-urlencoded; charset=utf-8", authHeaders(target));
             return parseV1Rows(text);
         } catch (Exception e) {
             throw failure(target.endpoint(), "/query", e);
