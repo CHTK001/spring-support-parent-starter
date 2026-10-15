@@ -474,13 +474,14 @@ public class InfluxdbClient {
      * @throws IllegalStateException 请求失败
      */
     public void v1Write(Target target, String database, String precision, String lines) {
-        Map<String, String> form = new LinkedHashMap<>();
-        form.put("q", lines);
         try {
-            MiddlewareHttp.postForm(target.endpoint().url("/write"),
+            // line protocol 必须作为**请求体**原样发，不能塞进 q= 表单字段：
+            // v1 的 /write 读的是 body，用 postForm(q=...) 时服务端会把字面量
+            // "q=acctest,host=h1 value=..." 当成一条数据解析，报 missing fields。
+            MiddlewareHttp.postText(target.endpoint().url("/write"),
                     MiddlewareNamespace.query("db", database,
                             "precision", (precision == null || precision.isBlank()) ? "ns" : precision),
-                    form);
+                    lines, "text/plain; charset=utf-8", authHeaders(target));
         } catch (Exception e) {
             throw failure(target.endpoint(), "/write", e);
         }
