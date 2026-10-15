@@ -59,6 +59,9 @@ class InfluxdbClientProtocolTest {
     private volatile String queryResponse = "";
     private volatile int queryStatus = 200;
     private volatile String pingVersion = "2.7.11";
+    /** 最近一次请求带的 Authorization 头（2.x 的 /query 认 Token，用来断言确实带上了） */
+    private final java.util.concurrent.atomic.AtomicReference<String> authHeader =
+            new java.util.concurrent.atomic.AtomicReference<>();
 
     @BeforeEach
     void startStub() throws IOException {
@@ -116,6 +119,7 @@ class InfluxdbClientProtocolTest {
             }
         }
         captured.add(new Captured(exchange.getRequestURI().getPath(), query, bodyText));
+        authHeader.set(exchange.getRequestHeaders().getFirst("Authorization"));
 
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "text/csv; charset=utf-8");
@@ -209,28 +213,50 @@ class InfluxdbClientProtocolTest {
     }
 
     @Test
-    @DisplayName("v2 实例 + 登记 v3（服务端关掉 Flux）：InfluxQL 发 type=sql 且必须带 bucket")
-    void v2InfluxQlSendsSqlWithBucket() {
+    @DisplayName("v2 实例 + 登记 v3：InfluxQL 必须走 v1 兼容 /query（带 db 与 Token），不走 /api/v2/query")
+    void v2InfluxQlUsesV1CompatQuery() {
         pingVersion = "2.7.11";
-        queryResponse = """
-                name
-                cq
-                """;
+        queryResponse = "{\"results\":[{\"statement_id\":0,\"series\":[{\"name\":\"measurements\","
+                + "\"columns\":[\"name\"],\"values\":[[\"cq\"]]}]}]}";
 
         InfluxdbClient client = new InfluxdbClient(null);
         InfluxdbClient.Target target = client.target(datasource("3"));
         assertEquals(InfluxdbClient.Version.V2, target.version(), "服务端仍是 2.x");
-        assertFalse(target.usesFlux(), "登记 v3 时 2.x 实例必须走 SQL/InfluxQL（这正是关掉 Flux 的实例唯一可用通道）");
+        assertFalse(target.usesFlux(), "登记 v3 时 2.x 实例应走 InfluxQL 方言");
 
-        List<JsonObject> rows = client.querySqlV2(target, "e2e_acc", "SHOW MEASUREMENTS");
+        List<JsonObject> rows = client.v1Query(target, "e2e_acc", "SHOW MEASUREMENTS");
 
-        Captured request = lastRequest("/api/v2/query");
-        JsonObject body = Json.getJsonObject(request.body());
-        assertEquals("sql", str(body, "type"), "InfluxQL 必须发 type=sql");
-        assertEquals("e2e_acc", request.query().get("bucket"),
-                "InfluxQL 没有 from(bucket:) 兜底，必须用 bucket 参数指定目标桶");
-        assertEquals(1, rows.size());
+        // 关键：不能打到 /api/v2/query（真实 2.x 上只吃 Flux，InfluxQL 一律 400）
+        Captured request = lastRequest("/query");
+        assertTrue(request.query().get("db").contains("e2e_acc"),
+                "v1 兼容 /query 用 db 参数指定目标桶，实际=" + request.query());
+        assertEquals("q=SHOW+MEASUREMENTS", request.body().replace("%20", "+"),
+                "语句以表单体 q= 提交");
+        assertEquals(1, rows.size(), "results[].series[] 要摊平成行");
         assertEquals("cq", str(rows.get(0), "name"));
+        assertTrue(captured.stream().noneMatch(c -> c.path().equals("/api/v2/query") && c.body().contains("sql")),
+                "不得把 InfluxQL 发到 /api/v2/query（真实 2.x 返回 400）");
+    }
+
+    @Test
+    @DisplayName("v2 带 Token 的 InfluxQL /query 必须带 Authorization（2.x 认 Token）")
+    void v2InfluxQlCarriesToken() {
+        pingVersion = "2.7.11";
+        queryResponse = "{\"results\":[{\"statement_id\":0,\"series\":[{\"name\":\"m\","
+                + "\"columns\":[\"name\"],\"values\":[[\"x\"]]}]}]}";
+
+        InfluxdbClient client = new InfluxdbClient(null);
+        // 带 token 的数据源（password 即 Token）
+        DataSourceVO withToken = new DataSourceVO(
+                null, "stub-influxdb", "influxdb", "127.0.0.1", port,
+                null, "accorg", "my-token", null, 1, null, null, null, null,
+                null, null, null, null, null, null, "3");
+        InfluxdbClient.Target target = client.target(withToken);
+
+        List<JsonObject> rows = client.v1Query(target, "accbucket", "SHOW MEASUREMENTS");
+        assertEquals(1, rows.size());
+        assertNotNull(authHeader.get(), "2.x 的 /query 不带 Token 会 401");
+        assertTrue(authHeader.get().startsWith("Token "), "v2 用 Token 语义，实际=" + authHeader.get());
     }
 
     @Test
