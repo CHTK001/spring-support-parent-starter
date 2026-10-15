@@ -1008,6 +1008,10 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (data.port() != null && (data.port() < 1 || data.port() > 65535)) {
             return "端口非法，需为 1~65535";
         }
+        if ("influxdb".equalsIgnoreCase(trim(data.type())) && !isBlank(data.version())
+                && !"2".equals(trim(data.version())) && !"3".equals(trim(data.version()))) {
+            return "InfluxDB 版本仅支持 2 或 3";
+        }
         boolean jdbcUrlForm = "jdbc".equalsIgnoreCase(trim(data.type()))
                 && nullToEmpty(data.database()).trim().startsWith(DatasourceHubConstants.JDBC_URL_PREFIX);
         if (isBlank(data.host()) && !jdbcUrlForm) {
@@ -1077,6 +1081,10 @@ public class DatasourceServiceImpl implements DatasourceService {
         entity.setDatasourceControlTarget(
                 DatasourceHubConstants.CONTROL_SYSTEMD.equals(entity.getDatasourceControlMode())
                         ? nullToEmpty(data.controlTarget()).trim() : "");
+        // 服务端大版本只对 influxdb 有意义：非 influxdb 一律清空，避免脏字段误用
+        boolean influxdb = DatasourceHubConstants.DS_TYPE_INFLUXDB.equalsIgnoreCase(trim(data.type()).toLowerCase());
+        String version = trim(data.version());
+        entity.setDatasourceVersion(influxdb && ("2".equals(version) || "3".equals(version)) ? version : "");
     }
 
     /**
@@ -1098,7 +1106,7 @@ public class DatasourceServiceImpl implements DatasourceService {
                 row.getDatasourceConnectLatencyMs(), row.getDatasourceSessionLatencyMs(),
                 row.getDatasourceLastTestTime() == null ? null : row.getDatasourceLastTestTime().toString(),
                 row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
-                nullToEmpty(row.getDatasourceControlTarget()));
+                nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()));
     }
 
     /**

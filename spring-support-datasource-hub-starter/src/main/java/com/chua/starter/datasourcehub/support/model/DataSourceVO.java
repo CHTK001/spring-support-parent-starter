@@ -5,7 +5,7 @@ package com.chua.starter.datasourcehub.support.model;
  *
  * @param id         数据源 ID
  * @param name       数据源名称
- * @param type       数据源类型（jdbc/redis/influxdb/neo4j/nacos/zookeeper/nginx）
+ * @param type       数据源类型（jdbc/redis/influxdb/neo4j/nacos/zookeeper/kafka/nginx/etcd/prometheus/mongodb）
  * @param host       主机地址
  * @param port       端口
  * @param database   库名
@@ -22,6 +22,7 @@ package com.chua.starter.datasourcehub.support.model;
  * @param lastTestOk 最近一次测试是否连通，null 表示从未测试
  * @param controlMode 进程控制方式：{@code systemd} / {@code local}；null 表示自动探测
  * @param controlTarget systemd 方式的托管单元名；null 或空表示自动探测
+ * @param version 服务端大版本（当前 influxdb 使用：2/3）
  * @author CH
  * @since 4.0.0.42
  */
@@ -45,6 +46,7 @@ public record DataSourceVO(
         String lastTestTime,
         Integer lastTestOk,
         String controlMode,
-        String controlTarget
+        String controlTarget,
+        String version
 ) {
 }

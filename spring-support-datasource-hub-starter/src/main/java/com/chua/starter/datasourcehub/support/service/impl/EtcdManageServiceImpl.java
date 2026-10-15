@@ -249,7 +249,7 @@ public class EtcdManageServiceImpl implements EtcdManageService {
         }
         DataSourceVO adhoc = new DataSourceVO(null, "ad-hoc", EtcdClient.DS_TYPE, request.host().trim(),
                 request.port(), request.contextPath(), request.username(), request.password(), null, 1, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         return client.target(adhoc);
     }
 
