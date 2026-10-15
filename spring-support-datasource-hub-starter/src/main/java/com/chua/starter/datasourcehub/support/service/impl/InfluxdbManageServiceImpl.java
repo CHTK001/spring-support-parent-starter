@@ -411,7 +411,7 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      */
     private String sqlLastWrite(InfluxdbClient.Target target, String bucket, String measurement) {
         try {
-            String sql = "SELECT * FROM " + qualified(bucket, measurement)
+            String sql = "SELECT * FROM " + sqlIdentifier(measurement)
                     + " ORDER BY time DESC LIMIT 1";
             List<JsonObject> rows = influxql(target, bucket, sql);
             if (rows.isEmpty()) {
@@ -423,17 +423,6 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             log.debug("[influxdb] 统计最后写入时间失败: measurement={}", measurement, e);
             return null;
         }
-    }
-
-    /**
-     * 拼 InfluxQL 的「桶.度量」限定名。
-     *
-     * @param bucket     桶名
-     * @param measurement 度量名
-     * @return 形如 {@code "bucket"."measurement"} 的限定标识符
-     */
-    private static String qualified(String bucket, String measurement) {
-        return sqlIdentifier(bucket) + "." + sqlIdentifier(measurement);
     }
 
     @Override
