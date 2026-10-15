@@ -158,3 +158,6 @@ monitor-agent/
 dist/
 
 cp.txt
+
+# 本机一次性 monitor 部署脚本（含 D:/ 绝对路径 classpath）
+deploy-monitor-8112.sh

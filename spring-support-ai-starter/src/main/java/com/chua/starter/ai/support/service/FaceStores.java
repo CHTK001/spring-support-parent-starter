@@ -624,30 +624,59 @@ public class FaceStores {
     /**
      * 当前账号已登记的人脸条目（含元数据，不含向量）。
      *
+     * <p>档案数据来自数据库 `sys_ai_face_library`；只有账号目录里还没有 DB 行
+     * 时才回落到快照（迁移兜底），避免老数据在补建前从列表消失。</p>
+     *
      * @return 条目列表
      */
     public List<Map<String, Object>> list() {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (Map.Entry<String, Entry> e : st().snapshot.entrySet()) {
+        List<Map<String, Object>> rows = library.listMine(st().account);
+        if (rows.isEmpty() && !st().snapshot.isEmpty()) {
+            rows = snapshotRows(st());
+        }
+        for (Map<String, Object> row : rows) {
+            String id = String.valueOf(row.get("id"));
+            row.put("hasImage", Files.exists(faceImagePath(id, FaceImageKind.CROP)));
+            // 原图是否存在：特征点对话框画在原图上，老数据没有原图时要回退到裁剪图，
+            // 前端据此决定提示「已按裁剪脸显示」还是直接画原图
+            row.put("hasOriginalImage", Files.exists(faceImagePath(id, FaceImageKind.ORIGINAL)));
+        }
+        return rows;
+    }
+
+    /**
+     * 快照行转列表行（仅在数据库还没有当前账号档案时的迁移兜底）。
+     *
+     * @param st 账号库
+     * @return 条目列表
+     */
+    private static List<Map<String, Object>> snapshotRows(AccountFace st) {
+        List<Map<String, Object>> out = new ArrayList<>(st.snapshot.size());
+        for (Map.Entry<String, Entry> e : st.snapshot.entrySet()) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", e.getKey());
             row.put("metadata", e.getValue().metadata() == null ? Map.of() : e.getValue().metadata());
-            // 顺带回一个「服务端有没有登记图」的布尔：底库要区分
-            // 「图在服务端」和「只有登记它的那台浏览器本地有图」，否则统计卡与筛选都是假数。
-            row.put("hasImage", Files.exists(faceImagePath(e.getKey(), FaceImageKind.CROP)));
-            // 原图是否存在：特征点对话框画在原图上，老数据没有原图时要回退到裁剪图，
-            // 前端据此决定提示「已按裁剪脸显示」还是直接画原图
-            row.put("hasOriginalImage", Files.exists(faceImagePath(e.getKey(), FaceImageKind.ORIGINAL)));
             out.add(row);
         }
         return out;
     }
 
     /**
+     * 把 {@code ? extends Map} 收敛成 {@code String -> Object}，供列表读取 DB 反序列化的档案。
+     *
+     * @param raw 原始 map
+     * @return 字符串键 map
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMeta(Map<?, ?> raw) {
+        return (Map<String, Object>) raw;
+    }
+
+    /**
      * 分页 + 关键词 + 状态筛选的条目列表（万级底库与表格视图的数据源）。
      *
-     * <p><b>为什么在内存里做而不引数据库：</b>快照（{@code index.json}）本就全量驻留内存，
-     * 过滤与切片是微秒级；1:N 检索必须走 jvector（DB 做 ANN 不现实），档案引库只是多一套双写。
+     * <p><b>档案以数据库为准</b>：先取 {@code sys_ai_face_library} 当前账号行，
+     * 再按档案元数据过滤/排序；`index.json` 只承担向量重建，不再参与列表口径。
      * 真正的开销在 {@link Files#exists} —— 本方法**单遍**顺带把全库统计也算了
      * （旧 {@code FaceController.list()} 把 {@code list()} 调了两遍，等于两遍 stat + 两遍遍历）。</p>
      *
@@ -668,15 +697,17 @@ public class FaceStores {
         String kw = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         boolean onlyThumb = "thumb".equals(status);
         boolean onlyNoThumb = "noThumb".equals(status);
-        List<Map<String, Object>> matched = new ArrayList<>();
-        int statTotal = 0;
+        List<Map<String, Object>> rows = list();
+        List<Map<String, Object>> matched = new ArrayList<>(rows.size());
+        int statTotal = rows.size();
         int statWithImage = 0;
         int statWithIdCard = 0;
-        for (Map.Entry<String, Entry> e : st().snapshot.entrySet()) {
-            boolean hasImage = Files.exists(faceImagePath(e.getKey(), FaceImageKind.CROP));
-            boolean hasOriginal = Files.exists(faceImagePath(e.getKey(), FaceImageKind.ORIGINAL));
-            Map<String, Object> metadata = e.getValue().metadata() == null ? Map.of() : e.getValue().metadata();
-            statTotal++;
+        for (Map<String, Object> row : rows) {
+            String id = String.valueOf(row.get("id"));
+            boolean hasImage = Boolean.TRUE.equals(row.get("hasImage"));
+            boolean hasOriginal = Boolean.TRUE.equals(row.get("hasOriginalImage"));
+            Map<String, Object> metadata = row.get("metadata") instanceof Map<?, ?> m
+                    ? castMeta(m) : Map.of();
             if (hasImage) {
                 statWithImage++;
             }
@@ -689,14 +720,9 @@ public class FaceStores {
             if (onlyNoThumb && hasImage) {
                 continue;
             }
-            if (!kw.isEmpty() && !matchesKeyword(e.getKey(), metadata, kw)) {
+            if (!kw.isEmpty() && !matchesKeyword(id, metadata, kw)) {
                 continue;
             }
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("id", e.getKey());
-            row.put("metadata", metadata);
-            row.put("hasImage", hasImage);
-            row.put("hasOriginalImage", hasOriginal);
             matched.add(row);
         }
         sortRows(matched, sortField, sortOrder);

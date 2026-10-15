@@ -258,7 +258,7 @@ public class WindowsSshShell {
     }
 
     /**
-     * 后台执行长命令：计划任务拉起 + 短命令轮询结果文件。
+     * 后台执行长命令：WMI 拉起（计划任务兜底）+ 短命令轮询结果文件。
      *
      * <p>用于绕开 {@link #SSH_EXEC_CEILING_SECONDS} 那道实测硬上限 —— 上限在 ssh 客户端
      * 库内部，改不了，于是改执行模型：让命令在目标机上脱离会话跑完，把退出码与输出落到
@@ -266,9 +266,10 @@ public class WindowsSshShell {
      *
      * <p>要点：</p>
      * <ul>
-     *   <li>用计划任务而非 {@code Start-Process} 拉起：实测 {@code Start-Process} 的子进程
-     *       属于调用方会话的作业对象，会话关闭即被回收，命令会被腰斩；计划任务的进程由
-     *       Task Scheduler 服务拉起，实测跨会话存活。</li>
+     *   <li>落地启动优先 WMI {@code Win32_Process.Create}：其父进程是 WmiPrvSE，不属于 SSH
+     *       会话的作业对象，会话关闭后仍存活；{@code Start-Process} 的子进程属调用方会话作业，
+     *       实测会话一断即被腰斩。计划任务同样能脱离会话，但 Task Scheduler 在部分加固主机上
+     *       被安全策略禁用，故降级为兜底。</li>
      *   <li>轮询命令自带最多 {@link #POLL_WINDOW_SECONDS} 秒的等待，所以一条 90 秒的命令
      *       只需要 2 次轮询，而不是每几秒开一次连接。</li>
      *   <li>退出码由启动器里的 {@code > done (echo %ERRORLEVEL%)} 落盘，批处理按行解析，
@@ -305,12 +306,23 @@ public class WindowsSshShell {
                 + "  '> \"" + doneFile + "\" (echo %ERRORLEVEL%)')\n"
                 + "[IO.File]::WriteAllLines('" + launcher + "', $lc, (New-Object Text.UTF8Encoding($false)))\n"
                 + "Remove-Item -LiteralPath '" + doneFile + "' -Force -ErrorAction SilentlyContinue\n"
-                + "& schtasks.exe /delete /tn '" + task + "' /f 2>&1 | Out-Null\n"
-                + "$c = & schtasks.exe /create /tn '" + task + "' /tr '" + launcher + "' /sc once /st '23:59' /f 2>&1\n"
-                + "if ($LASTEXITCODE -ne 0) { throw ('后台任务创建失败: ' + ($c -join ' ')) }\n"
-                + "& schtasks.exe /run /tn '" + task + "' 2>&1 | Out-Null\n"
-                + "if ($LASTEXITCODE -ne 0) { throw ('后台任务触发失败: ' + '" + task + "') }\n"
-                + "'LAUNCHED'";
+                // 落地启动原语优先 WMI：Win32_Process.Create 拉起的进程父进程是 WmiPrvSE，
+                // 不挂在 SSH 会话的作业对象上，会话关闭后仍存活；而 Start-Process 的子进程
+                // 属调用方会话作业，SSH 一断即被回收（实测拉起的 pwsh/cmd 都没跑完就被腰斩）。
+                // 计划任务同样能脱离会话，但 Task Scheduler 服务在部分加固主机上被安全策略禁用
+                // （实测 Schedule=Stopped，schtasks 报 "The network address is invalid"），
+                // 因此降级为兜底而非唯一手段。
+                + "$wmiCmd = 'cmd /c ' + '" + launcher + "'\n"
+                + "$wmi = Invoke-CimMethod -ClassName Win32_Process -MethodName Create "
+                + "-Arguments @{ CommandLine = $wmiCmd; CurrentDirectory = '" + REMOTE_TMP_DIR + "' }\n"
+                + "if ($wmi.ReturnValue -eq 0) { 'LAUNCHED-WMI' } else {\n"
+                + "  & schtasks.exe /delete /tn '" + task + "' /f 2>&1 | Out-Null\n"
+                + "  $c = & schtasks.exe /create /tn '" + task + "' /tr '" + launcher + "' /sc once /st '23:59' /f 2>&1\n"
+                + "  if ($LASTEXITCODE -ne 0) { throw ('后台任务创建失败: ' + ($c -join ' ')) }\n"
+                + "  & schtasks.exe /run /tn '" + task + "' 2>&1 | Out-Null\n"
+                + "  if ($LASTEXITCODE -ne 0) { throw ('后台任务触发失败: ' + '" + task + "') }\n"
+                + "  'LAUNCHED-SCHTAS'\n"
+                + "}";
         try {
             writeRemoteScript(host, cred, shell, psCommand, script);
             Result launched = runRaw(host, cred, PowerShellCommand.encoded(shell, launchPs));

@@ -30,6 +30,17 @@ public interface EduPaperMapper extends BaseMapper<EduPaper> {
                                 @Param("scope") EduUserContext.OwnerScope scope);
 
     /**
+     * 分页查询当前账号本人创建的试卷（教师端专用，精确匹配 owner，不含系统预置卷）。
+     *
+     * @param page       分页参数
+     * @param query      查询条件
+     * @param ownerUserId 当前登录账号
+     * @return 本人试卷分页
+     */
+    IPage<EduPaper> pageMySelect(Page<EduPaper> page, @Param("query") PaperQueryDTO query,
+                                 @Param("ownerUserId") String ownerUserId);
+
+    /**
      * 按试卷唯一编号取试卷（XML 语句 selectByPaperNo，生成编号时查重）。
      *
      * @param paperNo 试卷唯一编号

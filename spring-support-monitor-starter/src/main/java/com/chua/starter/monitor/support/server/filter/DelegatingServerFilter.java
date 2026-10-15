@@ -83,8 +83,20 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
         if (delegate instanceof ReactiveServerFilter reactive) {
             return reactive.doFilter(request, response, chain);
         }
-        // 底层仅实现同步链：直接放行交由后续链路处理(同步过滤器在同步引擎路径上生效)
-        return chain.doFilter(request, response);
+        // 底层仅实现同步链时也必须执行，不能直接放行；否则反应式引擎上显式声明的
+        // OAuth 等同步过滤器会被静默跳过，私有桶鉴权形同虚设。
+        CompletionStage<Void>[] next = new CompletionStage[]{CompletableFuture.completedFuture(null)};
+        try {
+            delegate.doFilter(request, response, new ServerFilterChain() {
+                @Override
+                public void doFilter(ServerRequest nextRequest, ServerResponse nextResponse) throws Exception {
+                    next[0] = chain.doFilter(nextRequest, nextResponse);
+                }
+            });
+            return next[0];
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     @Override

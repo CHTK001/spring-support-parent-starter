@@ -173,6 +173,15 @@
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- Elasticsearch 管理页：中间件 SPI=elasticsearch，走低频只读的 _cat/_search 读接口。
+             该模块同时注册 Engine/Dialect（JDBC 式接入），一并带来 co.elastic.clients 客户端，
+             属重型依赖——若某宿主不想承担，去掉这条即可，SPI 契约下页面自动退回「功能未开放」。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-elasticsearch-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- 数据同步：复用本仓 datasync 引擎的**数据面**（JDBC 源 + 字段映射转换 + Sink 契约）。
              刻意不引 spring-support-datasync-starter：它带 ssh/osgi/datalake 重依赖，且在 spring 层
              只做「映射加载」不提供接口；引擎的 Scheduler/Executor 走 Chronicle 且有「同 topic 只订阅

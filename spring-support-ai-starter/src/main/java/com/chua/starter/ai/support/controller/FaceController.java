@@ -48,9 +48,9 @@ import java.util.Map;
  * <p><b>匿名访问仍被拒</b>：所有出口最终都会走到 {@code AiUserContext.requireUserId()}
  * （经底库门面解析账号），未登录时抛 401。</p>
  *
- * <p><b>人脸库现在会持久化</b>：改造前完全依赖 jvector 自身落盘，实测「登记后重启，
- * 1:N 命中从 1 条变 0 条」；现在每个账号另有 {@code index.json} 快照（含向量），
- * 启动据此重建索引，与「以图搜图」同一套做法。</p>
+ * <p><b>档案与向量分层持久化</b>：档案字段保存在 DB（{@code sys_ai_face_library}），
+ * 向量保存在 jvector（{@code VectorStorage}）；账号目录里的 {@code index.json} 只作
+ * 启动重建索引的快照，不再承载列表档案。启动时按快照重建向量索引，与「以图搜图」同一套做法。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -369,7 +369,7 @@ public class FaceController {
      *
      * <p>改造前后端没有这个出口，前端只能把「登记簿」存在浏览器本地（见
      * {@code useFaceRegistry.ts}）—— 于是同一份服务端人脸的档案在不同浏览器/账号下
-     * 看到的并不一致。快照里本来就存了登记时传入的元数据，这里把它读回来。</p>
+     * 看到的并不一致。这里从 DB 档案读回来（而不是从 {@code index.json} 快照）。</p>
      *
      * <p><b>分页：</b>带 {@code page}（&ge;1）与 {@code size}（&ge;1）时服务端分页 ——
      * 万级底库不再整包拉回浏览器；不带时返回全量（兼容既有调用方，如以图搜图登记簿）。
@@ -379,7 +379,7 @@ public class FaceController {
      * @param size      每页条数；不传或 &le;0 返回全部命中（上限 500，防一次拉太大）
      * @param keyword   关键词（匹配 id 与元数据字符串字段，大小写不敏感）
      * @param status    状态筛选：{@code thumb}=有图、{@code noThumb}=无图
-     * @param sortField 排序字段：{@code id} / {@code hasImage} / 或元数据键（name/age/idCard…）
+     * @param sortField 排序字段：{@code id} / {@code hasImage} / 或元数据键（name/residence/phone/idCard…）
      * @param sortOrder 排序方向：{@code asc} / {@code desc}
      * @return 已登记条目 {@code items}（id + 元数据，不含向量）+ {@code total}（命中总数）
      *         + {@code stats}（全库统计 total/withImage/withIdCard，不受筛选影响）

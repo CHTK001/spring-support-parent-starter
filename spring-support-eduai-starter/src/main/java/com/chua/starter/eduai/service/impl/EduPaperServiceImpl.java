@@ -150,20 +150,78 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     */
     private final EduAiProperties properties;
 
-    @Override
     /**
-     * Page查询
-    */
+     * 分页查询试卷：管理端/通用口径，按当前账号归属 scope 隔离。
+     *
+     * @param query 查询条件
+     * @return 试卷分页
+     */
+    @Override
     public PageResult<PaperVO> pageQuery(PaperQueryDTO query) {
-        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        // 列表下拉提交的是学段码值（PRIMARY/JUNIOR/…），而库里 paper_grade_level 存的是中文名。
-        // mapper 是原值等值比较，不归一化就会「选了学段查不到任何卷」。normalize 对中文名幂等，两种入参都安全。
-        query.setGradeLevel(GradeLevels.normalize(query.getGradeLevel()));
+        return pageByScope(query, EduUserContext.ownerScope());
+    }
+
+    /**
+     * 分页查询「我的试卷」：强制精确匹配当前账号 owner。
+     *
+     * <p>教师端组卷列表专用。与 {@link #pageQuery(PaperQueryDTO)} 的 scope 口径不同，
+     * 这里不接受「owner 为空」的系统预置卷，也不因当前账号是管理员而放行全量。</p>
+     *
+     * @param query 查询条件
+     * @return 我的试卷分页
+     */
+    @Override
+    public PageResult<PaperVO> pageMyPapers(PaperQueryDTO query) {
+        return pageByExactOwner(query, EduUserContext.requireUserId());
+    }
+
+    /**
+     * 按归属 scope 分页查询（通用试卷列表）。
+     *
+     * @param query 查询条件
+     * @param scope 归属隔离参数
+     * @return 分页结果
+     */
+    private PageResult<PaperVO> pageByScope(PaperQueryDTO query, EduUserContext.OwnerScope scope) {
+        preparePaperQuery(query);
         // 分页参数来自请求，必须收敛边界（页码<1 归 1；pageSize 封顶，否则 pageSize=1000000 会拉全表）
         Page<EduPaper> page = new Page<>(PageBounds.pageNum(query.getPageNum()),
                 PageBounds.pageSize(query.getPageSize()));
-        IPage<EduPaper> result = baseMapper.pageSelect(page, query, scope);
+        return toPaperPage(baseMapper.pageSelect(page, query, scope));
+    }
 
+    /**
+     * 按当前账号精确 owner 分页（教师端「我的试卷」）。
+     *
+     * @param query       查询条件
+     * @param ownerUserId 当前账号
+     * @return 分页结果
+     */
+    private PageResult<PaperVO> pageByExactOwner(PaperQueryDTO query, String ownerUserId) {
+        preparePaperQuery(query);
+        Page<EduPaper> page = new Page<>(PageBounds.pageNum(query.getPageNum()),
+                PageBounds.pageSize(query.getPageSize()));
+        return toPaperPage(baseMapper.pageMySelect(page, query, ownerUserId));
+    }
+
+    /**
+     * 统一试卷分页的入参归一化。
+     *
+     * @param query 查询条件（会原地修正）
+     */
+    private void preparePaperQuery(PaperQueryDTO query) {
+        // 列表下拉提交的是学段码值（PRIMARY/JUNIOR/…），而库里 paper_grade_level 存的是中文名。
+        // mapper 是原值等值比较，不归一化就会「选了学段查不到任何卷」。normalize 对中文名幂等，两种入参都安全。
+        query.setGradeLevel(GradeLevels.normalize(query.getGradeLevel()));
+    }
+
+    /**
+     * 把 mapper 的分页结果统一转成前端 VO 分页。
+     *
+     * @param result 原始分页结果
+     * @return VO 分页
+     */
+    private PageResult<PaperVO> toPaperPage(IPage<EduPaper> result) {
         // 创建人解析依赖教师档案，列表一次预取后按归属用户建索引，避免逐行查库
         Map<String, EduTeacher> teacherCache = loadTeacherCache(result.getRecords());
         List<PaperVO> voList = result.getRecords().stream()

@@ -51,6 +51,28 @@ public interface ReleaseService {
     ReturnResult<MsServerProject> updateProject(Long id, MsServerProject project);
 
     /**
+     * 生成内置四段脚本（启动/停止/重启/状态）。
+     *
+     * <p>这是前端「一键生成脚本」与服务端默认模板的<strong>唯一权威来源</strong>：
+     * 前端不再自带一份会漂移的模板副本（历史上前端副本缺少 Windows 孤儿回收、
+     * 计划任务回退、进程树解析等修复），改为调用本接口取回与执行期完全一致的脚本。</p>
+     *
+     * @param hostId      目标主机标识（决定 Windows/Linux 模板）
+     * @param projectType 项目类型
+     * @param mainEntry   主入口
+     * @param projectPath 项目地址
+     * @param logPath     日志地址
+     * @param appName     应用名
+     * @param envVars     环境变量 JSON（可为空）
+     * @param jvmArgs     JVM 参数 JSON（可为空）
+     * @param cmdArgs     命令参数 JSON（可为空）
+     * @return startScript/stopScript/restartScript/statusScript 四段脚本
+     */
+    ReturnResult<Map<String, String>> generateScripts(Long hostId, String projectType, String mainEntry,
+            String projectPath, String logPath, String appName,
+            String envVars, String jvmArgs, String cmdArgs);
+
+    /**
      * 删除项目
      */
     ReturnResult<Void> deleteProject(Long id);
