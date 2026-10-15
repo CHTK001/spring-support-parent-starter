@@ -328,9 +328,9 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      * @return 行数据
      */
     private List<JsonObject> influxql(InfluxdbClient.Target target, String database, String sql) {
-        return target.isV1()
-                ? client.v1Query(target, database, sql)
-                : client.querySqlV2(target, database, sql);
+        // 1.x 与 2.x 的 InfluxQL 都走 v1 兼容 /query：2.x 的 /api/v2/query 只吃 Flux
+        // （实测 2.7.11：type=sql/type=influxql 一律 400），走那里必失败。
+        return client.v1Query(target, database, sql);
     }
 
     /**
@@ -472,7 +472,8 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         } else if (flux) {
             raw = client.query(target, statement);
         } else {
-            raw = client.querySqlV2(target, database(request, target), statement);
+            // v2 的 InfluxQL 走 v1 兼容 /query（/api/v2/query 只支持 Flux）
+            raw = client.v1Query(target, database(request, target), statement);
         }
         long elapsed = Math.max(0L, (System.nanoTime() - start) / 1_000_000L);
         boolean truncated = raw.size() > QUERY_ROW_LIMIT;
