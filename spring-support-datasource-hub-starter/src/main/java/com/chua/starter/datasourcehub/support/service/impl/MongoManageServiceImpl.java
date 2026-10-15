@@ -148,7 +148,7 @@ public class MongoManageServiceImpl implements MongoManageService {
         // 即席探测：contextPath 借道承载默认逻辑库名（与 Neo4j 口径一致）
         DataSourceVO adhoc = new DataSourceVO(null, "ad-hoc", MongoManageClient.DS_TYPE, request.host().trim(),
                 request.port(), request.contextPath(), request.username(), request.password(), null, 1, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         return client.target(adhoc);
     }
 

@@ -147,7 +147,7 @@ public class Neo4jManageServiceImpl implements Neo4jManageService {
         }
         DataSourceVO adhoc = new DataSourceVO(null, "ad-hoc", Neo4jClient.DS_TYPE, request.host().trim(),
                 request.port(), request.contextPath(), request.username(), request.password(), null, 1, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         return client.target(adhoc);
     }
 

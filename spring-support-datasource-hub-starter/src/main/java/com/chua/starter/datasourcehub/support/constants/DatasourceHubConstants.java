@@ -22,7 +22,7 @@ public final class DatasourceHubConstants {
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
-            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "nginx", "etcd", "prometheus", "mongodb");
+            "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "kafka", "nginx", "etcd", "prometheus", "mongodb");
 
     /**
      * nginx 类型标识。
@@ -31,6 +31,14 @@ public final class DatasourceHubConstants {
      * nginx 有意义，写入前用它做类型闸门，避免别的类型也带上这两个字段。</p>
      */
     public static final String DS_TYPE_NGINX = "nginx";
+
+    /**
+     * influxdb 类型标识。
+     *
+     * <p>服务端大版本（{@code datasource_version}）只对 InfluxDB 有意义：
+     * {@code 2}=Flux/Bucket，{@code 3}=SQL/InfluxQL/Database。</p>
+     */
+    public static final String DS_TYPE_INFLUXDB = "influxdb";
 
     /**
      * mongodb 类型标识。
@@ -43,6 +51,19 @@ public final class DatasourceHubConstants {
      * </ul>
      */
     public static final String DS_TYPE_MONGODB = "mongodb";
+
+    /**
+     * Kafka 类型标识。
+     *
+     * <p>字段约定与其它中间件一致：{@code host}/{@code port} 为 Bootstrap 地址，
+     * 端口默认 {@value #KAFKA_DEFAULT_PORT}；用户名/密码用于 SASL 凭据（可选）。</p>
+     */
+    public static final String DS_TYPE_KAFKA = "kafka";
+
+    /**
+     * Kafka 默认端口
+     */
+    public static final int KAFKA_DEFAULT_PORT = 9092;
 
     /**
      * MongoDB 默认端口
@@ -82,11 +103,18 @@ public final class DatasourceHubConstants {
     /**
      * 各类型的默认端口（未填端口时使用）
      */
-    public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.of(
-            "jdbc", 3306, "redis", 6379, "influxdb", 8086,
-            "neo4j", 7474, "nacos", 8848, "zookeeper", 2181, "nginx", 80, "etcd", 2379,
-            "prometheus", PROMETHEUS_DEFAULT_HTTP_PORT,
-            DS_TYPE_MONGODB, MONGODB_DEFAULT_PORT);
+    public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.ofEntries(
+            Map.entry("jdbc", 3306),
+            Map.entry("redis", 6379),
+            Map.entry("influxdb", 8086),
+            Map.entry("neo4j", 7474),
+            Map.entry("nacos", 8848),
+            Map.entry("zookeeper", 2181),
+            Map.entry("nginx", 80),
+            Map.entry("etcd", 2379),
+            Map.entry("prometheus", PROMETHEUS_DEFAULT_HTTP_PORT),
+            Map.entry(DS_TYPE_MONGODB, MONGODB_DEFAULT_PORT),
+            Map.entry(DS_TYPE_KAFKA, KAFKA_DEFAULT_PORT));
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接

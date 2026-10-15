@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS `ms_datasource`
 (
     `id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `datasource_name`        VARCHAR(128) NOT NULL COMMENT '数据源名称',
-    `datasource_type`        VARCHAR(32)  NOT NULL COMMENT '数据源类型(jdbc/redis/influxdb/neo4j/nacos/zookeeper/nginx)',
+    `datasource_type`        VARCHAR(32)  NOT NULL COMMENT '数据源类型(jdbc/redis/influxdb/neo4j/nacos/zookeeper/kafka/nginx/etcd/prometheus/mongodb)',
+    `datasource_version`     VARCHAR(16)  NULL DEFAULT '' COMMENT '服务端大版本（influxdb: 2/3）',
     `datasource_host`        VARCHAR(255) NULL DEFAULT '' COMMENT '主机地址',
     `datasource_port`        INT          NULL COMMENT '端口，空则按类型默认',
     `datasource_database`    VARCHAR(512) NULL DEFAULT '' COMMENT '库名/命名空间；jdbc 可存完整 JDBC URL',
@@ -80,6 +81,13 @@ ALTER TABLE `ms_datasource`
 ALTER TABLE `ms_datasource`
     ADD COLUMN `datasource_control_mode` VARCHAR(16) NULL DEFAULT '' COMMENT '进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测' AFTER `datasource_last_test_ok`,
     ADD COLUMN `datasource_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测' AFTER `datasource_control_mode`;
+
+-- ------------------------------------------------------------
+-- InfluxDB 服务端大版本（只对 influxdb 有意义）
+-- 2=Flux/Bucket，3=SQL/InfluxQL/Database；老数据源保持为空，由管理页探测后展示
+-- ------------------------------------------------------------
+ALTER TABLE `ms_datasource`
+    ADD COLUMN `datasource_version` VARCHAR(16) NULL DEFAULT '' COMMENT '服务端大版本（influxdb: 2/3）' AFTER `datasource_type`;
 
 
 
