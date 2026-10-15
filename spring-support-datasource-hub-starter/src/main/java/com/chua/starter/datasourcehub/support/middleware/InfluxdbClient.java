@@ -54,10 +54,35 @@ public class InfluxdbClient {
      * @since 4.0.0.42
      */
     public enum Version {
+        /** InfluxDB 1.x（只有 InfluxQL，无 Flux、无组织、无桶） */
+        V1,
         /** InfluxDB 2.x */
         V2,
         /** InfluxDB 3.x */
         V3
+    }
+
+    /**
+     * 查询方言。
+     *
+     * <p><b>与 {@link Version} 正交，不可互相替代</b>：大版本决定服务端长什么样
+     * （v2 = 组织/桶，v3 = 数据库），方言决定语句怎么写。两者必须分开，原因是
+     * <b>InfluxDB 2.x 的 Flux 是可选组件</b>：官方镜像默认 {@code flux-enabled=false}，
+     * 此时 {@code /api/v2/query} 只认 InfluxQL（{@code type=sql}），发 Flux 会得到
+     * 403 {@code Flux query service disabled}。也就是说「2.x + SQL」是一个真实存在的
+     * 组合，把它硬塞进 Version 里就会出现「明明是 v2 却只能按 v3 处理」的矛盾。</p>
+     *
+     * <p>方言取数据源登记的 {@code datasource_version}（用户显式选择）；
+     * 登记为空（存量记录）时才回落到按大版本推断，保持升级前的行为不变。</p>
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    public enum Dialect {
+        /** Flux（{@code from(bucket:...)}） */
+        FLUX,
+        /** SQL / InfluxQL */
+        SQL
     }
 
     /**
@@ -77,6 +102,16 @@ public class InfluxdbClient {
 
     private static final String QUERY_PATH = "/api/v2/query";
 
+    /**
+     * 数据源登记的版本值：SQL / InfluxQL 方言（前端「v3」选项写入）。
+     */
+    private static final String DS_VERSION_SQL = "3";
+
+    /**
+     * 数据源登记的版本值：Flux 方言（前端「v2」选项写入）。
+     */
+    private static final String DS_VERSION_FLUX = "2";
+
     private final DatasourceService datasourceService;
 
     /**
@@ -90,13 +125,14 @@ public class InfluxdbClient {
     private final Map<String, Version> versionCache = new ConcurrentHashMap<>();
 
     /**
-     * 一次 InfluxDB 调用所需的「地址 + 凭据 + org + 大版本」。
+     * 一次 InfluxDB 调用所需的「地址 + 凭据 + org + 大版本 + 方言」。
      *
      * @param endpoint 地址与凭据
      * @param org      组织名，未登记且探测不到时为空串（v3 恒为空）
      * @param version  服务端大版本
+     * @param dialect  查询方言，来自数据源登记的版本；登记为空时按 version 推断
      */
-    public record Target(MiddlewareEndpoint endpoint, String org, Version version) {
+    public record Target(MiddlewareEndpoint endpoint, String org, Version version, Dialect dialect) {
 
         /**
          * 带上 org 的查询参数。
@@ -123,6 +159,30 @@ public class InfluxdbClient {
         public boolean isV3() {
             return version == Version.V3;
         }
+
+        /**
+         * 是否按 Flux 发查询。
+         *
+         * <p>v3 一律不发 Flux（服务端已移除），因此这里只反映登记的方言。
+         * v2 且方言为 Flux 时才走 {@code /api/v2/query} 的 {@code type=flux}。</p>
+         *
+         * @return 用 Flux 为 true
+         */
+        public boolean usesFlux() {
+            return version == Version.V2 && dialect == Dialect.FLUX;
+        }
+
+        /**
+         * 是否 InfluxDB 1.x。
+         *
+         * <p>1.x 既没有 Flux 也没有组织与桶：查询只有 InfluxQL，容器是「数据库」
+         * （v1 的 database，对应 v2 的 bucket、v3 的 database）。</p>
+         *
+         * @return v1 为 true
+         */
+        public boolean isV1() {
+            return version == Version.V1;
+        }
     }
 
     /**
@@ -144,7 +204,57 @@ public class InfluxdbClient {
      */
     public Target target(DataSourceVO ds) {
         MiddlewareEndpoint endpoint = endpoint(ds);
-        return new Target(endpoint, org(endpoint), detectVersion(endpoint));
+        Version version = detectVersion(endpoint);
+        return new Target(endpoint, org(endpoint), version, dialect(ds, version));
+    }
+
+    /**
+     * 取查询方言：登记的 {@code datasource_version} 为准，登记为空才按大版本推断。
+     *
+     * <p>登记优先是刻意的：这个字段就是用户在数据源上做的选择，而「2.x」并不蕴含
+     * 「有 Flux」。反之若一律按大版本推断，用户在界面上把版本改成 3 也不会有任何效果，
+     * 选择的语义就丢了（这正是原先 version 只是个 UI 提示、查不通的原因）。</p>
+     *
+     * @param ds      数据源配置
+     * @param version 已探测的服务端大版本
+     * @return 查询方言
+     */
+    private Dialect dialect(DataSourceVO ds, Version version) {
+        // 1.x 只有 InfluxQL：登记什么都不选，直接钉死 SQL。
+        // 不做这一步的话，选了「v2/Flux」的 1.x 实例会一路发 Flux 到不存在的
+        // /api/v2/query，表现为查询恒 403（Flux query service disabled）。
+        if (version == Version.V1) {
+            return Dialect.SQL;
+        }
+        String registered = ds == null ? null : trim(ds.version());
+        if (DS_VERSION_SQL.equals(registered)) {
+            return Dialect.SQL;
+        }
+        if (DS_VERSION_FLUX.equals(registered)) {
+            return Dialect.FLUX;
+        }
+        return version == Version.V3 ? Dialect.SQL : Dialect.FLUX;
+    }
+
+    /**
+ * 读 {@code /ping} 的 {@code X-Influxdb-Version} 头，作为版本号回显。
+ *
+ * <p>三个大版本都带这个头，v1 更是<b>只能</b>从这里拿（没有 {@code /health}）。
+ * 读不到返回 null，由调用方决定降级。</p>
+ *
+ * @param target 访问目标
+ * @return 版本号原值（如 {@code v1.11.8} / {@code 2.7.11} / {@code 3.11.4}），读不到为 null
+ */
+    public String serverVersion(Target target) {
+        try {
+            MiddlewareHttp.Response ping = MiddlewareHttp.getResponse(
+                    target.endpoint().url("/ping"), Map.of(), authHeaders(target));
+            String version = ping.header("X-Influxdb-Version");
+            return version == null || version.isBlank() ? null : version.trim();
+        } catch (Exception e) {
+            log.debug("[influxdb] 读取 /ping 版本头失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -206,10 +316,44 @@ public class InfluxdbClient {
         body.put("type", "flux");
         body.put("dialect", dialect);
         String text = postJson(target, QUERY_PATH, target.query(), Json.toJson(body));
-        // 实测（2.7.11）：/api/v2/query 返回的是**注解 CSV**，不是 JSON-lines。
-        // 早先按"每行一个 JSON"解析，结果**每一行都解析成空对象**且不报错——
-        // 表现是「/query 有行数但表格全空、/measurements 恒空、字段/标签统计恒空」，
-        // 整块读数能力静默失效。这里先探测首行：以 '{' 开头才走 JSON 分支（兼容早期实现）。
+        return parseQueryResponse(text);
+    }
+
+    /**
+     * 在 v2 实例上执行 SQL / InfluxQL 查询。
+     *
+     * <p>InfluxDB 2.x 即使 {@code flux-enabled=false} 也始终提供 InfluxQL：
+     * 同一个 {@code /api/v2/query} 接口，把 body 的 {@code type} 由 {@code flux}
+     * 换成 {@code sql} 即可，此时<b>必须</b>在查询参数里带 {@code bucket}
+     * （InfluxQL 语句里没有 {@code from(bucket:...)} 来兜底）。这正是「2.x + SQL」
+     * 组合的服务端入口，也是服务端关闭 Flux 后唯一可用的查询通道。</p>
+     *
+     * @param target 访问目标
+     * @param bucket 目标桶名
+     * @param sql    SQL / InfluxQL 语句
+     * @return 行数据，保持服务端给出的列顺序
+     * @throws IllegalStateException 请求失败或服务端回报查询错误
+     */
+    public List<JsonObject> querySqlV2(Target target, String bucket, String sql) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("query", sql);
+        body.put("type", "sql");
+        String text = postJson(target, QUERY_PATH, target.query("bucket", bucket), Json.toJson(body));
+        return parseQueryResponse(text);
+    }
+
+    /**
+     * 还原 {@code /api/v2/query} 的行数据（Flux 与 InfluxQL 共用此解析）。
+     *
+     * <p>实测（2.7.11）：{@code /api/v2/query} 返回的是<b>注解 CSV</b>，不是 JSON-lines。
+     * 早先按「每行一个 JSON」解析，结果<b>每一行都解析成空对象</b>且不报错——
+     * 表现是「/query 有行数但表格全空、/measurements 恒空、字段/标签统计恒空」，
+     * 整块读数能力静默失效。这里先探测首行：以 '{' 开头才走 JSON 分支（兼容早期实现）。</p>
+     *
+     * @param text 响应体
+     * @return 行数据
+     */
+    private List<JsonObject> parseQueryResponse(String text) {
         for (String line : text.split("\r?\n")) {
             String trimmed = line.trim();
             if (trimmed.isEmpty() || trimmed.startsWith("#")) {
@@ -218,6 +362,140 @@ public class InfluxdbClient {
             return trimmed.startsWith("{") ? parseJsonLines(text) : parseCsv(text);
         }
         return List.of();
+    }
+
+    /**
+     * 在 v1 实例上执行 InfluxQL 查询。
+     *
+     * <p>1.x 的查询入口是 v1 兼容接口 {@code POST /query}（<b>不是</b> {@code /api/v2/query}）：
+     * 表单带 {@code db} 与 {@code q}，响应是 {@code {"results":[{"series":[{"columns":..,"values":..}]}]}}。
+     * 这里把 series 摊平成「一行一个对象、列为键」，与 v2/v3 的行结构对齐，
+     * 上层表格与列推导不必分叉。</p>
+     *
+     * @param target   访问目标
+     * @param database 目标数据库（v1 的 database）
+     * @param sql      InfluxQL 语句
+     * @return 行数据，保持服务端给出的列顺序
+     * @throws IllegalStateException 请求失败或服务端回报语句错误
+     */
+    public List<JsonObject> v1Query(Target target, String database, String sql) {
+        Map<String, String> form = new LinkedHashMap<>();
+        form.put("q", sql);
+        if (!database.isEmpty()) {
+            form.put("db", database);
+        }
+        try {
+            String text = MiddlewareHttp.postForm(target.endpoint().url("/query"), Map.of(), form);
+            return parseV1Rows(text);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/query", e);
+        }
+    }
+
+    /**
+     * 还原 v1 {@code /query} 响应为行数据。
+     *
+     * <p>结构：{@code results[].series[]}，每个 series 带 {@code name} 与
+     * {@code columns}/{@code values}（values 与 columns 按位对应）。
+     * 语句错误不会体现在 HTTP 状态码上，而是以 {@code results[].error} 回一个 200，
+     * 所以这里必须显式判错，否则「语法错」会被当成「零行」静默吞掉。</p>
+     *
+     * @param text 响应体
+     * @return 行数据
+     * @throws IllegalStateException 语句错误
+     */
+    private List<JsonObject> parseV1Rows(String text) {
+        JsonArray results = Json.getJsonObject(text).getJsonArray("results");
+        List<JsonObject> rows = new ArrayList<>();
+        if (results == null) {
+            return rows;
+        }
+        for (int i = 0; i < results.size(); i++) {
+            JsonObject result = results.getJsonObject(i);
+            String error = text(result.get("error"));
+            if (!error.isEmpty()) {
+                throw new IllegalStateException("InfluxQL 执行失败: " + error);
+            }
+            JsonArray series = result.getJsonArray("series");
+            if (series == null) {
+                continue;
+            }
+            for (int s = 0; s < series.size(); s++) {
+                JsonObject one = series.getJsonObject(s);
+                JsonArray columns = one.getJsonArray("columns");
+                JsonArray values = one.getJsonArray("values");
+                if (columns == null || values == null) {
+                    continue;
+                }
+                for (int r = 0; r < values.size(); r++) {
+                    JsonArray cells = values.getJsonArray(r);
+                    if (cells == null) {
+                        continue;
+                    }
+                    JsonObject row = new JsonObject();
+                    for (int c = 0; c < columns.size(); c++) {
+                        row.put(text(columns.get(c)), c < cells.size() ? cells.get(c) : null);
+                    }
+                    rows.add(row);
+                }
+            }
+        }
+        return rows;
+    }
+
+    /**
+     * 列出 v1 实例的全部数据库。
+     *
+     * @param target 访问目标
+     * @return 数据库名列表
+     * @throws IllegalStateException 请求失败或服务端回报语句错误
+     */
+    public List<String> v1Databases(Target target) {
+        List<String> names = new ArrayList<>();
+        for (JsonObject row : v1Query(target, "", "SHOW DATABASES")) {
+            String name = text(row.get("name"));
+            if (!name.isEmpty()) {
+                names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /**
+     * 向 v1 数据库写入 line protocol 数据点。
+     *
+     * <p>v1 的写入入口是 {@code POST /write?db=..&precision=..}（v2 起才换成
+     * {@code /api/v2/write}）。</p>
+     *
+     * @param target    访问目标
+     * @param database  目标数据库
+     * @param precision 时间精度（ns/us/ms/s），空按 ns
+     * @param lines     line protocol 文本
+     * @throws IllegalStateException 请求失败
+     */
+    public void v1Write(Target target, String database, String precision, String lines) {
+        Map<String, String> form = new LinkedHashMap<>();
+        form.put("q", lines);
+        try {
+            MiddlewareHttp.postForm(target.endpoint().url("/write"),
+                    MiddlewareNamespace.query("db", database,
+                            "precision", (precision == null || precision.isBlank()) ? "ns" : precision),
+                    form);
+        } catch (Exception e) {
+            throw failure(target.endpoint(), "/write", e);
+        }
+    }
+
+    /**
+     * 执行 v1 InfluxQL 维护语句（CREATE / DROP DATABASE、ALTER DURATION 等）。
+     *
+     * @param target   访问目标
+     * @param database 目标数据库（DDL 可为空）
+     * @param sql      InfluxQL 语句
+     * @throws IllegalStateException 请求失败或服务端回报语句错误
+     */
+    public void v1Execute(Target target, String database, String sql) {
+        v1Query(target, database, sql);
     }
 
     /**
@@ -777,17 +1055,45 @@ public class InfluxdbClient {
             MiddlewareHttp.Response ping = MiddlewareHttp.getResponse(
                     endpoint.url("/ping"), Map.of(), Map.of());
             String version = ping.header("X-Influxdb-Version");
-            if (version != null && version.startsWith("3.")) {
-                return Version.V3;
-            }
-            if (version != null && !version.isBlank()) {
-                return Version.V2;
+            Version parsed = parseVersion(version);
+            if (parsed != null) {
+                return parsed;
             }
             log.debug("[influxdb] /ping 未带版本头（{}），退回 v3 路由判据", version == null ? "null" : version);
         } catch (java.io.IOException e) {
             log.debug("[influxdb] /ping 探测失败，退回 v3 路由判据: {}", e.getMessage());
         }
         return probeVersionViaV3Route(endpoint);
+    }
+
+    /**
+     * 解析 {@code X-Influxdb-Version} 头，认不出返回 null。
+     *
+     * <p>三种形态都要认：1.x 给 {@code v1.11.8}（<b>带 v 前缀</b>，不认它就会被
+     * 当成 v2 而发 Flux，1.x 没有 Flux 也没有 {@code /api/v2/*}，于是查询恒 403）；
+     * 2.x 给 {@code 2.7.11}；3.x 给 {@code 3.11.4}。</p>
+     *
+     * @param header 版本头原值
+     * @return 大版本，认不出为 null
+     */
+    private static Version parseVersion(String header) {
+        if (header == null || header.isBlank()) {
+            return null;
+        }
+        String normalized = header.trim();
+        if (normalized.startsWith("v") || normalized.startsWith("V")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.startsWith("1.") || "1".equals(normalized)) {
+            return Version.V1;
+        }
+        if (normalized.startsWith("3.")) {
+            return Version.V3;
+        }
+        if (normalized.startsWith("2.")) {
+            return Version.V2;
+        }
+        return null;
     }
 
     /**
@@ -821,8 +1127,8 @@ public class InfluxdbClient {
         if (!endpoint.username().isEmpty()) {
             return endpoint.username();
         }
-        // v3 已移除组织概念，不回查 /api/v2/orgs（v3 上恒 404）
-        if (detectVersion(endpoint) == Version.V3) {
+        // v3 已移除组织概念，v1 压根没有组织，都不回查 /api/v2/orgs（两者上恒 404）
+        if (detectVersion(endpoint) != Version.V2) {
             return "";
         }
         String key = endpoint.base() + endpoint.context();

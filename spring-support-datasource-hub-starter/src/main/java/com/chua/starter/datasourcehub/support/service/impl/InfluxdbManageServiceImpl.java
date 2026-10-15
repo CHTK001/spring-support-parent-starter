@@ -76,6 +76,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             if (target.isV3()) {
                 // v3：数据库配置接口在鉴权开启时必带凭据，连通即成功
                 client.v3Databases(target);
+            } else if (target.isV1()) {
+                // v1：没有组织与桶，用必带凭据的 SHOW DATABASES 探活
+                // （v1 上 /api/v2/orgs 恒 404，拿它当连通判据会把好端端的实例判成连不上）
+                client.v1Databases(target);
             } else {
                 // /health 不校验 Token，只探它会把「地址通、凭据错」判成连接成功，因此以必带凭据的 orgs 接口为准
                 client.getObject(target, "/api/v2/orgs", Map.of());
@@ -94,6 +98,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      */
     private String version(InfluxdbClient.Target target) {
         try {
+            if (target.isV1()) {
+                // v1 没有 /health（恒 404），版本只能从 /ping 的响应头拿；
+                // 拿不到版本号前端就分不出 v1，会按 v2 去调根本不存在的 /api/v2/*
+                return emptyToNull(client.serverVersion(target));
+            }
             if (target.isV3()) {
                 // v3 的 /ping 回 JSON：{"product_name":..,"version":"3.x",..}
                 return emptyToNull(str(client.getObject(target, "/ping", Map.of()).get("version")));
@@ -110,6 +119,9 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         InfluxdbClient.Target target = client.target(datasourceId);
         if (target.isV3()) {
             return v3Buckets(target);
+        }
+        if (target.isV1()) {
+            return v1Buckets(target);
         }
         JsonArray items = client.buckets(target);
         List<InfluxdbBucketVO> result = new ArrayList<>(items.size());
@@ -143,6 +155,27 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         return result;
     }
 
+    /**
+     * 列出 v1 实例的数据库。
+ *
+ * <p>v1 的容器就是 database（对应 v2 的 bucket、v3 的 database），
+ * {@code SHOW DATABASES} 只回名字，保留期与创建时间留白；{@code _internal}
+ * 是系统库，不展示。</p>
+ *
+ * @param target 访问目标
+ * @return 数据库列表，id 与 name 同为数据库名
+ */
+    private List<InfluxdbBucketVO> v1Buckets(InfluxdbClient.Target target) {
+        List<String> names = client.v1Databases(target);
+        List<InfluxdbBucketVO> result = new ArrayList<>(names.size());
+        for (String name : names) {
+            if (!name.isEmpty() && !"_internal".equals(name)) {
+                result.add(new InfluxdbBucketVO(name, name, null, null));
+            }
+        }
+        return result;
+    }
+
     @Override
     public List<InfluxdbMeasurementVO> measurements(Long datasourceId, String bucket) {
         InfluxdbClient.Target target = client.target(datasourceId);
@@ -152,6 +185,9 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         }
         if (target.isV3()) {
             return v3Measurements(target, name);
+        }
+        if (!target.usesFlux()) {
+            return influxqlMeasurements(target, name);
         }
         List<String> names = measurements(name, target);
         if (names.isEmpty()) {
@@ -277,15 +313,143 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         return times;
     }
 
+    /**
+     * 发一条 InfluxQL，按服务端大版本走对应入口。
+     *
+     * <p>v1 与 v2 都能跑 InfluxQL，但入口完全不同：v1 是 {@code POST /query}，
+     * v2 是 {@code /api/v2/query} 且必须带 {@code type=sql}（v2 关掉 flux-enabled
+     * 时这是唯一可用通道）。因此凡是用 InfluxQL 的地方都从这里走，不要各处直连。</p>
+     *
+     * @param target   访问目标
+     * @param database 目标数据库/桶名
+     * @param sql      InfluxQL 语句
+     * @return 行数据
+     */
+    private List<JsonObject> influxql(InfluxdbClient.Target target, String database, String sql) {
+        return target.isV1()
+                ? client.v1Query(target, database, sql)
+                : client.querySqlV2(target, database, sql);
+    }
+
+    /**
+     * 列出度量及统计（方言为 InfluxQL 时，覆盖 v1 与 v2）。
+     *
+     * <p>Flux 那条路是一条聚合查询拉回全部统计；InfluxQL 没有 {@code schema.*}，
+     * 只能逐个度量发 {@code SHOW TAG KEYS / SHOW FIELD KEYS} 与
+     * {@code ORDER BY time DESC LIMIT 1}，故这里的请求数随度量数线性增长。
+     * 单项失败只留空该列，不影响其余度量（与 Flux 路一致）。</p>
+     *
+     * @param target 访问目标
+     * @param bucket 目标桶/库名
+     * @return 度量列表
+     */
+    private List<InfluxdbMeasurementVO> influxqlMeasurements(InfluxdbClient.Target target, String bucket) {
+        List<String> names = sqlMeasurementNames(target, bucket);
+        if (names.isEmpty()) {
+            return List.of();
+        }
+        List<InfluxdbMeasurementVO> result = new ArrayList<>(names.size());
+        for (String measurement : names) {
+            result.add(new InfluxdbMeasurementVO(measurement,
+                    sqlKeyCount(target, bucket, measurement, false),
+                    sqlKeyCount(target, bucket, measurement, true),
+                    sqlLastWrite(target, bucket, measurement)));
+        }
+        return result;
+    }
+
+    /**
+     * 用 InfluxQL {@code SHOW MEASUREMENTS} 列出桶内的度量名。
+     *
+     * @param target 访问目标
+     * @param bucket 目标桶名
+     * @return 度量名列表，保持服务端顺序
+     */
+    private List<String> sqlMeasurementNames(InfluxdbClient.Target target, String bucket) {
+        List<String> names = new ArrayList<>(Math.min(MEASUREMENT_LIMIT, 64));
+        for (JsonObject row : influxql(target, bucket, "SHOW MEASUREMENTS")) {
+            String name = firstNonBlank(str(row.get("name")), str(row.get("_value")));
+            if (!name.isEmpty() && !names.contains(name) && names.size() < MEASUREMENT_LIMIT) {
+                names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /**
+     * 统计单个度量的标签键或字段键数量（InfluxQL {@code SHOW TAG KEYS / SHOW FIELD KEYS}）。
+     *
+     * @param target     访问目标
+     * @param bucket     目标桶名
+     * @param measurement 度量名
+     * @param tags       true 统计标签键，false 统计字段键
+     * @return 键数量，失败返回 null（留空）
+     */
+    private Integer sqlKeyCount(InfluxdbClient.Target target, String bucket, String measurement, boolean tags) {
+        try {
+            String sql = "SHOW " + (tags ? "TAG KEYS" : "FIELD KEYS")
+                    + " FROM " + qualified(bucket, measurement);
+            return influxql(target, bucket, sql).size();
+        } catch (IllegalStateException e) {
+            log.debug("[influxdb] 统计 {} 失败: measurement={}", tags ? "标签数" : "字段数", measurement, e);
+            return null;
+        }
+    }
+
+    /**
+     * 读取单个度量最近一行的写入时间（InfluxQL）。
+     *
+     * @param target     访问目标
+     * @param bucket     目标桶名
+     * @param measurement 度量名
+     * @return 可读时间，无数据或失败返回 null（留空）
+     */
+    private String sqlLastWrite(InfluxdbClient.Target target, String bucket, String measurement) {
+        try {
+            String sql = "SELECT * FROM " + qualified(bucket, measurement)
+                    + " ORDER BY time DESC LIMIT 1";
+            List<JsonObject> rows = influxql(target, bucket, sql);
+            if (rows.isEmpty()) {
+                return null;
+            }
+            String time = firstNonBlank(str(rows.get(0).get("time")), str(rows.get(0).get("_time")));
+            return time.isEmpty() ? null : readableTime(time);
+        } catch (IllegalStateException e) {
+            log.debug("[influxdb] 统计最后写入时间失败: measurement={}", measurement, e);
+            return null;
+        }
+    }
+
+    /**
+     * 拼 InfluxQL 的「桶.度量」限定名。
+     *
+     * @param bucket     桶名
+     * @param measurement 度量名
+     * @return 形如 {@code "bucket"."measurement"} 的限定标识符
+     */
+    private static String qualified(String bucket, String measurement) {
+        return sqlIdentifier(bucket) + "." + sqlIdentifier(measurement);
+    }
+
     @Override
     public InfluxdbQueryResultVO query(InfluxdbQueryDTO request) {
         InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
+        boolean flux = target.usesFlux();
         String statement = requireText(request == null ? null : request.flux(),
-                target.isV3() ? "SQL 查询语句不能为空" : "Flux 查询语句不能为空");
+                flux ? "Flux 查询语句不能为空" : "SQL 查询语句不能为空");
         long start = System.nanoTime();
-        List<JsonObject> raw = target.isV3()
-                ? client.v3QuerySql(target, database(request, target), statement)
-                : client.query(target, statement);
+        // 三条路而不是两条：v3 只有 SQL；v2 按登记方言在 Flux 与 InfluxQL 间切换
+        // （v2 关掉 flux-enabled 时只剩 InfluxQL 可用）。
+        List<JsonObject> raw;
+        if (target.isV3()) {
+            raw = client.v3QuerySql(target, database(request, target), statement);
+        } else if (target.isV1()) {
+            raw = client.v1Query(target, database(request, target), statement);
+        } else if (flux) {
+            raw = client.query(target, statement);
+        } else {
+            raw = client.querySqlV2(target, database(request, target), statement);
+        }
         long elapsed = Math.max(0L, (System.nanoTime() - start) / 1_000_000L);
         boolean truncated = raw.size() > QUERY_ROW_LIMIT;
         List<Map<String, Object>> rows = new ArrayList<>(Math.min(raw.size(), QUERY_ROW_LIMIT));
@@ -314,6 +478,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             // v3 已移除组织概念，返回空占位，前端据此隐藏 Org 面板
             return new InfluxdbOrgVO("", "");
         }
+        if (target.isV1()) {
+            // v1 也没有组织（database 直挂实例），返回空占位而不是去打 /api/v2/orgs（恒 404）
+            return new InfluxdbOrgVO("", "");
+        }
         JsonArray orgs = client.orgs(target).getJsonArray("orgs");
         if (orgs == null || orgs.size() == 0) {
             throw new IllegalStateException("当前 Token 未关联任何组织(org)");
@@ -332,6 +500,15 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             client.v3CreateDatabase(target, name, request.retentionHours());
             return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
         }
+        if (target.isV1()) {
+            // v1 用 InfluxQL DDL 建库；无 retention 时建完再单独 ALTER，避免 0 保留期被当成 0 秒
+            client.v1Execute(target, "", "CREATE DATABASE " + sqlIdentifier(name));
+            if (request.retentionHours() != null && request.retentionHours() > 0) {
+                client.v1Execute(target, "", "ALTER DURATION " + sqlIdentifier(name)
+                        + " DURATION " + request.retentionHours() + "h");
+            }
+            return new InfluxdbBucketVO(name, name, request.retentionHours(), null);
+        }
         JsonObject created = client.createBucket(target, name,
                 request.retentionHours(), request.description());
         return new InfluxdbBucketVO(str(created.get("id")), str(created.get("name")),
@@ -348,6 +525,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             client.v3DeleteDatabase(target, bucketId);
             return;
         }
+        if (target.isV1()) {
+            // v1 以数据库名为标识，走 InfluxQL DDL
+            client.v1Execute(target, "", "DROP DATABASE " + sqlIdentifier(bucketId));
+            return;
+        }
         client.deleteBucket(target, bucketId);
     }
 
@@ -357,6 +539,13 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         InfluxdbClient.Target target = client.target(datasourceId);
         if (target.isV3()) {
             client.v3UpdateRetention(target, bucketId, retentionHours);
+            return;
+        }
+        if (target.isV1()) {
+            // v1 的保留期是库级属性；传 null 表示取消保留期（InfluxQL 写 0h）
+            long hours = retentionHours == null ? 0L : retentionHours;
+            client.v1Execute(target, "", "ALTER DURATION " + sqlIdentifier(bucketId)
+                    + " DURATION " + hours + "h");
             return;
         }
         client.updateBucketRetention(target, bucketId, retentionHours);
@@ -369,6 +558,10 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
         if (target.isV3()) {
             client.v3Write(target, bucket, request.precision(), lines);
+            return;
+        }
+        if (target.isV1()) {
+            client.v1Write(target, bucket, request.precision(), lines);
             return;
         }
         client.write(target, bucket, request.precision(), lines);
@@ -485,6 +678,14 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             for (int i = 0; i < items.size(); i++) {
                 String name = str(items.getJsonObject(i).get("iox::database"));
                 if (!name.isEmpty() && !"_internal".equals(name)) {
+                    return name;
+                }
+            }
+            throw new IllegalStateException("未指定数据库且当前实例没有可用数据库");
+        }
+        if (target.isV1()) {
+            for (String name : client.v1Databases(target)) {
+                if (!"_internal".equals(name)) {
                     return name;
                 }
             }
