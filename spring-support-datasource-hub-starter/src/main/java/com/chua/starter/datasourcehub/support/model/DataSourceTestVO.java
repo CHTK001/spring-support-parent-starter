@@ -1,5 +1,7 @@
 package com.chua.starter.datasourcehub.support.model;
 
+import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
+
 import java.time.LocalDateTime;
 
 /**
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
  * @param tunneled           本次测试是否经由 SSH 隧道中转；<b>隧道打不开时为 null</b>（未判定）
  * @param testedAt           测试时间
  * @param connectionCount    采样时刻目标服务上的客户端连接数；类型不支持时为 null
+ * @param serverStats        采样时刻服务器运行指标；类型不支持时为 null
  * @author CH
  * @since 4.0.0.42
  */
@@ -28,6 +31,24 @@ public record DataSourceTestVO(
         Long sessionLatencyMs,
         Boolean tunneled,
         LocalDateTime testedAt,
-        Long connectionCount
+        Long connectionCount,
+        DatasourceProbeSupport.ServerStats serverStats
 ) {
+
+    /**
+     * 无服务器指标的五参之后的兼容构造：不采集服务器指标的类型照旧填前八项。
+     */
+    public DataSourceTestVO(
+            boolean success,
+            String message,
+            String type,
+            Long connectLatencyMs,
+            Long sessionLatencyMs,
+            Boolean tunneled,
+            LocalDateTime testedAt,
+            Long connectionCount
+    ) {
+        this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled,
+                testedAt, connectionCount, null);
+    }
 }

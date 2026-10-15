@@ -113,6 +113,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     private static final java.util.regex.Pattern FIRST_DIGITS = java.util.regex.Pattern.compile("\\d+");
 
     /**
+     * 文字块最前面的题号 token。必须紧随块文本起始，且紧跟分隔符，
+     * 否则「10题·满分」这类页眉不会误取成题号 1。
+     */
+    private static final java.util.regex.Pattern QUESTION_NO_HEAD = java.util.regex.Pattern.compile(
+            "^[\\[【（(]?\\s*(?:第\\s*)?([0-9lI]+)(?:\\s*[-–—]\\s*[0-9]+)?(\\s*[.。、,，．：:；;]\\s*)?",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /**
      * Answersheetmapper
     */
     private final EduAnswerSheetMapper answerSheetMapper;
@@ -806,9 +814,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     continue;
                 }
                 String rawText = String.valueOf(text);
-                boolean hit = (!wantNo.isEmpty() && normalizeNo(rawText).startsWith(wantNo))
-                        || (!stemProbe.isEmpty() && normalizeText(rawText).contains(stemProbe));
-                if (hit) {
+                String blockNo = leadingQuestionNo(rawText);
+                boolean noHit = !wantNo.isEmpty() && !blockNo.isEmpty()
+                        && fixOcrDigits(blockNo).equals(fixOcrDigits(wantNo));
+                boolean stemHit = !stemProbe.isEmpty() && normalizeText(rawText).contains(stemProbe);
+                if (noHit || stemHit) {
                     var anchor = new LinkedHashMap<String, Object>();
                     anchor.put("no", no);
                     anchor.put("page", pageNode.get("page"));
@@ -1512,6 +1522,33 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 取文字块最前面的题号 token（例如 {@code 1.} → {@code 1}、{@code 4.赤道…} → {@code 4}）。
+     *
+     * <p>不用 {@link #normalizeNo(String)} 的 startsWith：整块文本归一化后可能把后面的
+     * 分值或页码也拼进同串（如 {@code 10题·满分57分} → {@code 1057}），会让题号 1 误命中 10 题页眉。</p>
+     *
+     * @param raw 文字块文本
+     * @return 首题号；不是题号开头的块返回空串
+     */
+    private static String leadingQuestionNo(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        String text = raw.trim().toLowerCase();
+        var matcher = QUESTION_NO_HEAD.matcher(text);
+        if (!matcher.find()) {
+            return "";
+        }
+        String separator = matcher.group(2);
+        boolean hasSeparator = separator != null && !separator.isBlank();
+        // 裸题号「2」允许，但「10题·满分…」这类「数字后直接跟汉字」不是题号。
+        if (!hasSeparator && matcher.end() < text.length()) {
+            return "";
+        }
+        return matcher.group(1);
+    }
+
+    /**
      * 文本归一化：保留中英文与数字，去掉空白与中英标点。
      *
      * <p>用于「按题干特征定位文字块」。不能复用 {@link #normalizeNo}：它只保留 {@code [0-9a-z]}，
@@ -1716,9 +1753,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 content = parseJsonMap(sheet.getAnswerSheetContent());
             }
         }
+        List<Map<String, Object>> pages = toMapList(content.get("pages"));
         out.put("pageCount", content.getOrDefault("pageCount", 0));
-        out.put("pages", content.getOrDefault("pages", List.of()));
-        out.put("questionAnchors", content.getOrDefault("questionAnchors", List.of()));
+        out.put("pages", pages);
+        List<Map<String, Object>> displayAnchors = toMapList(content.get("questionAnchors"));
         // 卷面识别到的学生（ANY 链路扫描时模型/正则抽取）：详情头部展示用
         out.put("recognizedStudent", content.get("recognizedStudent"));
 
@@ -1752,8 +1790,128 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
             questions.add(item);
         }
-        out.put("questions", questions);
+        List<Map<String, Object>> displayQuestions = questions;
+        if (questions.size() == 1 && !pages.isEmpty()) {
+            List<Map<String, Object>> repaired = splitLegacyAggregated(questions.getFirst(), pages);
+            if (repaired.size() > 1) {
+                displayQuestions = repaired;
+                displayAnchors = locateSplitAnchors(repaired, pages);
+                log.info("[EduMarking] 旧任务整页一题改为版面展示拆分: taskId={}, rows={}", taskId, repaired.size());
+            }
+        }
+        out.put("questionAnchors", displayAnchors);
+        out.put("questions", displayQuestions);
+        out.put("overallComment", resolveOverallComment(questions, content));
         return out;
+    }
+
+    /**
+     * 对历史任务里「整页被收成一题」的结果做只读展示拆分。
+     *
+     * <p>旧任务已落库，不能直接改判分行；复用仍保存的版面文字块按题号重新切题，
+     * 只给前端右侧提供逐题展示与锚点，判分明细仍以原结果行为准。</p>
+     *
+     * @param original 原单行结果
+     * @param pages    页面文字块
+     * @return 拆分后的虚拟题目；拆不出多题时返回原单行
+     */
+    private List<Map<String, Object>> splitLegacyAggregated(Map<String, Object> original,
+                                                             List<Map<String, Object>> pages) {
+        List<EduPaperScanner.ScanBlock> blocks = new ArrayList<>();
+        for (Map<String, Object> page : pages) {
+            for (Map<String, Object> item : toMapList(page.get("blocks"))) {
+                Object text = item.get("text");
+                if (text == null) {
+                    continue;
+                }
+                blocks.add(new EduPaperScanner.ScanBlock(
+                        String.valueOf(text),
+                        item.get("confidence") == null ? 0f : Float.parseFloat(String.valueOf(item.get("confidence"))),
+                        floatValue(item.get("x")),
+                        floatValue(item.get("y")),
+                        floatValue(item.get("width")),
+                        floatValue(item.get("height"))));
+            }
+        }
+        List<EduPaperScanner.ScannedQuestion> split = paperScanner.extractByLayout(blocks);
+        if (split.size() <= 1) {
+            return List.of(original);
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (int i = 0; i < split.size(); i++) {
+            EduPaperScanner.ScannedQuestion q = split.get(i);
+            Map<String, Object> row = new LinkedHashMap<>(original);
+            row.put("resultId", -1000L - i);
+            row.put("questionId", 0);
+            row.put("no", q.no());
+            row.put("stem", q.stem() == null ? "" : q.stem());
+            row.put("studentAnswer", q.answer() == null ? "" : q.answer());
+            row.put("maxScore", null);
+            row.put("score", null);
+            row.put("teacherScore", null);
+            row.put("comment", null);
+            row.put("teacherComment", null);
+            row.put("virtual", true);
+            out.add(row);
+        }
+        return out;
+    }
+
+    /**
+     * 为只读拆分的虚拟题目重新定位锚点。
+     */
+    private List<Map<String, Object>> locateSplitAnchors(List<Map<String, Object>> rows,
+                                                         List<Map<String, Object>> pages) {
+        var anchors = new ArrayList<Map<String, Object>>();
+        for (Map<String, Object> row : rows) {
+            Object no = row.get("no");
+            Object stem = row.get("stem");
+            Map<String, Object> anchor = locateAnchor(
+                    no == null ? "" : String.valueOf(no),
+                    stem == null ? "" : String.valueOf(stem),
+                    pages);
+            if (anchor != null) {
+                anchors.add(anchor);
+            }
+        }
+        return anchors;
+    }
+
+    /**
+     * 顶部 AI 总体评语：优先取已保存字段，否则由各题 AI 评语汇总。
+     *
+     * @param questions 题目列表
+     * @param content   答题卡结构内容
+     * @return 总体评语；没有可展示内容时返回 null
+     */
+    private String resolveOverallComment(List<Map<String, Object>> questions, Map<String, Object> content) {
+        Object saved = content.get("overallComment");
+        if (saved instanceof CharSequence s && StringUtils.isNotBlank(s.toString())) {
+            return s.toString().trim();
+        }
+        if (questions.isEmpty()) {
+            return null;
+        }
+        if (questions.size() == 1) {
+            Object singleComment = questions.getFirst().get("comment");
+            if (singleComment instanceof CharSequence c && StringUtils.isNotBlank(c.toString())) {
+                return c.toString().trim();
+            }
+            return null;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (Map<String, Object> q : questions) {
+            Object comment = q.get("comment");
+            if (!(comment instanceof CharSequence c) || StringUtils.isBlank(c.toString())) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append('；');
+            }
+            String no = q.get("no") == null ? "" : String.valueOf(q.get("no")).trim();
+            builder.append("第").append(no).append("题：").append(c.toString().trim());
+        }
+        return builder.length() == 0 ? null : builder.toString();
     }
 
     /**
@@ -1841,6 +1999,42 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         } catch (Exception e) {
             return Map.of();
         }
+    }
+
+    /**
+     * 把 JSON 里的对象数组安全转成字符串键 Map 列表。
+     *
+     * @param value 原始节点
+     * @return Map 列表；无值/类型不符时返回空列表
+     */
+    private static List<Map<String, Object>> toMapList(Object value) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    var node = new LinkedHashMap<String, Object>();
+                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                        node.put(String.valueOf(entry.getKey()), entry.getValue());
+                    }
+                    out.add(node);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static float floatValue(Object value) {
+        if (value instanceof Number n) {
+            return n.floatValue();
+        }
+        if (value != null) {
+            try {
+                return Float.parseFloat(String.valueOf(value));
+            } catch (NumberFormatException ignored) {
+                // 坐标异常时按 0 处理，不影响文本拆分
+            }
+        }
+        return 0f;
     }
 
     @Override
@@ -1981,6 +2175,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return confirmMarking的结果
      */
     public boolean confirmMarking(MarkingConfirmDTO dto) {
+        if (dto == null) {
+            return true;
+        }
+        persistStudentCorrection(dto.getTaskId(), dto.getStudentName(), dto.getStudentNo());
         if (dto.getAdjustments() == null || dto.getAdjustments().isEmpty()) {
             return true;
         }
@@ -2016,6 +2214,81 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         log.info("[EduAi] 教师确认阅卷: taskId={}, items={}", dto.getTaskId(), dto.getAdjustments().size());
         return true;
+    }
+
+    /**
+     * 保存管理员/老师手动纠正的卷面学生。
+     *
+     * <p>只提供学生姓名/学号时也允许（调整列表可能为空）；学号非空时同步任务学生标识，
+     * 保证记录列表、学生端匹配与答卷都按最终人工确认值走。</p>
+     *
+     * @param taskId 任务标识
+     * @param name   人工姓名字符串；null 表示不修改，空串表示清空
+     * @param no     人工学号字符串；null 表示不修改，空串表示清空
+     */
+    private void persistStudentCorrection(String taskId, String name, String no) {
+        if (StringUtils.isBlank(taskId) || (name == null && no == null)) {
+            return;
+        }
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        EduAnswerSheet sheet = task == null ? findSheet(taskId) : null;
+        String owner = task != null ? task.getOwnerUserId()
+                : (sheet == null ? null : sheet.getOwnerUserId());
+        if (owner != null) {
+            EduUserContext.checkWritable(owner);
+        } else {
+            EduUserContext.requireUserId();
+        }
+        if (task == null && sheet == null) {
+            throw new BusinessException("任务不存在，无法修改学生信息");
+        }
+        EduAnswerSheet answerSheet = null;
+        Map<String, Object> content = new LinkedHashMap<>();
+        if (task != null && task.getMarkingTaskAnswerSheetId() != null) {
+            answerSheet = answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+            if (answerSheet != null) {
+                Map<String, Object> existedContent = parseJsonMap(answerSheet.getAnswerSheetContent());
+                content.putAll(existedContent);
+            }
+        } else if (sheet != null) {
+            answerSheet = sheet;
+            content = parseJsonMap(sheet.getAnswerSheetContent());
+            if (content.isEmpty()) {
+                content = new LinkedHashMap<>();
+            }
+        }
+        Map<String, Object> recognized = new LinkedHashMap<>();
+        Object existed = content.get("recognizedStudent");
+        if (existed instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                recognized.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
+        if (name != null) {
+            recognized.put("name", StringUtils.isBlank(name) ? null : name.trim());
+        }
+        if (no != null) {
+            recognized.put("no", StringUtils.isBlank(no) ? null : no.trim());
+        }
+        if (StringUtils.isBlank((String) recognized.get("name")) && StringUtils.isBlank((String) recognized.get("no"))) {
+            content.remove("recognizedStudent");
+        } else {
+            content.put("recognizedStudent", recognized);
+        }
+        if (answerSheet != null) {
+            answerSheet.setAnswerSheetContent(Json.toJson(content));
+            if (no != null && StringUtils.isNotBlank(no.trim())) {
+                answerSheet.setAnswerSheetStudentId(no.trim());
+            }
+            answerSheet.setUpdateTime(LocalDateTime.now());
+            answerSheetMapper.updateById(answerSheet);
+        }
+        if (task != null && no != null && StringUtils.isNotBlank(no.trim())) {
+            task.setMarkingTaskStudentId(no.trim());
+            task.setUpdateTime(LocalDateTime.now());
+            taskMapper.updateById(task);
+        }
+        log.info("[EduAi] 人工纠正卷面学生: taskId={}, name={}, no={}", taskId, name, no);
     }
 
     /**

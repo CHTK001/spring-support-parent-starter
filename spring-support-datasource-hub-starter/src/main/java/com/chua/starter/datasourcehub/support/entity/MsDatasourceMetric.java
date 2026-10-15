@@ -81,6 +81,41 @@ public class MsDatasourceMetric implements Serializable {
     private Long connectionCount;
 
     /**
+     * 累计慢查询数（MySQL/MariaDB 服务器状态，取不到为 null）。
+     */
+    @TableField("slow_queries")
+    @Schema(description = "累计慢查询数", example = "13")
+    private Long slowQueries;
+
+    /**
+     * 正在执行的线程数（MySQL/MariaDB 负载近似指标，取不到为 null）。
+     */
+    @TableField("threads_running")
+    @Schema(description = "正在执行的线程数", example = "4")
+    private Long threadsRunning;
+
+    /**
+     * 累计提问次数（MySQL/MariaDB 自身计数，取不到为 null）。
+     */
+    @TableField("questions")
+    @Schema(description = "累计提问次数", example = "88123")
+    private Long questions;
+
+    /**
+     * 服务器已运行秒数（MySQL/MariaDB，取不到为 null）。
+     */
+    @TableField("uptime")
+    @Schema(description = "服务器已运行秒数", example = "86400")
+    private Long uptime;
+
+    /**
+     * 历史峰值客户端连接数（MySQL/MariaDB，取不到为 null）。
+     */
+    @TableField("max_used_connections")
+    @Schema(description = "历史峰值客户端连接数", example = "30")
+    private Long maxUsedConnections;
+
+    /**
      * 1 经 SSH 隧道 / 0 直连 / null 未判定
      */
     @TableField("tunneled")

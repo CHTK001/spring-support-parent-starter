@@ -50,6 +50,29 @@ public final class DatasourceProbeSupport {
     private static final int READ_TIMEOUT_MS = 2000;
 
     /**
+     * 服务器运行指标（随探活顺路采集，取不到为 null）。
+     *
+     * <p>目前只有 MySQL/MariaDB 的 JDBC 探活查询 {@code SHOW GLOBAL STATUS}，
+     * 其余方言/协议不支持时为 null —— 前端面板如实显示「暂未采集」，
+     * 不编造数值。</p>
+     *
+     * @param slowQueries         累计慢查询数（MySQL 协议不暴露宿主 CPU，慢查询
+     *                            数是「SQL 侧负载」最接近的公开口径）
+     * @param threadsRunning      正在执行的线程数（负载的近似指标）
+     * @param questions           累计提问次数（MySQL 自身计数）
+     * @param uptimeSeconds       服务器已运行秒数
+     * @param maxUsedConnections  历史峰值客户端连接数
+     */
+    public record ServerStats(
+            Long slowQueries,
+            Long threadsRunning,
+            Long questions,
+            Long uptimeSeconds,
+            Long maxUsedConnections
+    ) {
+    }
+
+    /**
      * 探活结果。
      *
      * @param success            是否连通
@@ -58,14 +81,31 @@ public final class DatasourceProbeSupport {
      * @param message            结果说明
      * @param connectionCount    采样时刻目标服务上的客户端连接数；取不到为 null
      *                           （不是所有类型都暴露该指标，null 在图上是缺格）
+     * @param serverStats        采样时刻服务器运行指标；不支持的类型为 null
      */
     public record ProbeOutcome(
             boolean success,
             Long connectLatencyMs,
             Long sessionLatencyMs,
             String message,
-            Long connectionCount
+            Long connectionCount,
+            ServerStats serverStats
     ) {
+        /**
+         * 无服务器指标的五参构造：让不支持服务器指标的类型照旧只填前五项，
+         * 不需要每个调用点都补 {@code null}。
+         *
+         * @param success            是否连通
+         * @param connectLatencyMs   连接延迟（毫秒）
+         * @param sessionLatencyMs   会话延迟（毫秒）
+         * @param message            结果说明
+         * @param connectionCount    采样时刻目标服务上的客户端连接数
+         */
+        public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
+                            String message, Long connectionCount) {
+            this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, null);
+        }
+
         /**
          * 构造一个「没走到探测那一步」的失败结果。
          *
