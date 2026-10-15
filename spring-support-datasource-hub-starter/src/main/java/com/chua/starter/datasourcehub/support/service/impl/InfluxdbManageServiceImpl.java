@@ -169,7 +169,9 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         List<String> names = client.v1Databases(target);
         List<InfluxdbBucketVO> result = new ArrayList<>(names.size());
         for (String name : names) {
-            if (!name.isEmpty() && !"_internal".equals(name)) {
+            // v1 的 _internal 是实时监控库，可正常查询；只藏它会让「只有系统库」的实例
+            // 在界面上看起来一个库都没有，控制台直接没法用，故这里不过滤。
+            if (!name.isEmpty()) {
                 result.add(new InfluxdbBucketVO(name, name, null, null));
             }
         }
@@ -387,8 +389,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      */
     private Integer sqlKeyCount(InfluxdbClient.Target target, String bucket, String measurement, boolean tags) {
         try {
+            // 只写度量名，不写「桶.度量」：InfluxQL 的 SHOW FIELD/TAG KEYS 的 FROM
+            // 子句只接受度量名，写成 "db"."measurement" 会被当成保留策略，
+            // 报 retention policy not found（实测 1.11.8）。库由请求参数 db/bucket 指定。
             String sql = "SHOW " + (tags ? "TAG KEYS" : "FIELD KEYS")
-                    + " FROM " + qualified(bucket, measurement);
+                    + " FROM " + sqlIdentifier(measurement);
             return influxql(target, bucket, sql).size();
         } catch (IllegalStateException e) {
             log.debug("[influxdb] 统计 {} 失败: measurement={}", tags ? "标签数" : "字段数", measurement, e);
@@ -684,10 +689,9 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             throw new IllegalStateException("未指定数据库且当前实例没有可用数据库");
         }
         if (target.isV1()) {
-            for (String name : client.v1Databases(target)) {
-                if (!"_internal".equals(name)) {
-                    return name;
-                }
+            List<String> databases = client.v1Databases(target);
+            if (!databases.isEmpty()) {
+                return databases.get(0);
             }
             throw new IllegalStateException("未指定数据库且当前实例没有可用数据库");
         }
