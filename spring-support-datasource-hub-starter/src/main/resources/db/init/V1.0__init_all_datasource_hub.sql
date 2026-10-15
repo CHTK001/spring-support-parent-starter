@@ -83,15 +83,6 @@ ALTER TABLE `ms_datasource`
     ADD COLUMN `datasource_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测' AFTER `datasource_control_mode`;
 
 -- ------------------------------------------------------------
--- InfluxDB 服务端大版本（只对 influxdb 有意义）
--- 2=Flux/Bucket，3=SQL/InfluxQL/Database；老数据源保持为空，由管理页探测后展示
--- ------------------------------------------------------------
-ALTER TABLE `ms_datasource`
-    ADD COLUMN `datasource_version` VARCHAR(16) NULL DEFAULT '' COMMENT '服务端大版本（influxdb: 2/3）' AFTER `datasource_type`;
-
-
-
--- ------------------------------------------------------------
 -- SSH 隧道配置（高级配置）
 -- 一个数据源至多一条配置；tunnel_type 对应 LOCAL(-L)/REMOTE(-R 反向)/DYNAMIC(SOCKS5)
 -- 目标库在内网无法直连时，用反向隧道把远端可达的端口映射回本机再连
