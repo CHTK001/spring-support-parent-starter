@@ -122,15 +122,31 @@ public final class MiddlewareHttp {
     }
 
     /**
-     * 构造带超时与自定义头的请求构建器。
+     * 构造带默认超时与自定义头的请求构建器。
      *
      * @param url     完整地址（含查询串）
      * @param headers 请求头，null 值跳过
      * @return 构建器
      */
     private static HttpRequest.Builder builder(String url, Map<String, String> headers) {
+        return builder(url, headers, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * 构造带指定超时与自定义头的请求构建器。
+     *
+     * <p>集群状态变更类操作（如 Elasticsearch 建/删索引）在冷态、单节点、小内存实例上
+     * 实测可远超 {@link #REQUEST_TIMEOUT}（建索引 curl 实测 20.6s），需要按操作放宽；
+     * 连接建立的超时仍由共享 {@link HttpClient} 的 5s 约束，不随此处放大。</p>
+     *
+     * @param url     完整地址（含查询串）
+     * @param headers 请求头，null 值跳过
+     * @param timeout 请求超时
+     * @return 构建器
+     */
+    private static HttpRequest.Builder builder(String url, Map<String, String> headers, Duration timeout) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
-                .timeout(REQUEST_TIMEOUT);
+                .timeout(timeout);
         if (headers != null) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {
                 if (entry.getKey() == null || entry.getValue() == null) {
@@ -169,6 +185,27 @@ public final class MiddlewareHttp {
     public static String delete(String url, Map<String, String> query,
                                Map<String, String> headers) throws IOException {
         HttpRequest request = builder(appendQuery(url, query), headers)
+                .DELETE()
+                .build();
+        return send(request);
+    }
+
+    /**
+     * DELETE 请求，可带自定义请求头，并指定请求超时。
+     *
+     * <p>用于删索引等可能触发集群状态变更的慢操作，见
+     * {@link #builder(String, Map, Duration)}。</p>
+     *
+     * @param url     不含查询串的地址
+     * @param query   查询参数，可为空
+     * @param headers 请求头，可为空
+     * @param timeout 请求超时
+     * @return 响应体文本
+     * @throws IOException 连接失败或响应非 2xx
+     */
+    public static String delete(String url, Map<String, String> query,
+                               Map<String, String> headers, Duration timeout) throws IOException {
+        HttpRequest request = builder(appendQuery(url, query), headers, timeout)
                 .DELETE()
                 .build();
         return send(request);
@@ -292,6 +329,29 @@ public final class MiddlewareHttp {
     public static String putJson(String url, Map<String, String> query, String json,
                                    Map<String, String> headers) throws IOException {
         HttpRequest request = builder(appendQuery(url, query), headers)
+                .header("Content-Type", "application/json;charset=UTF-8")
+                .method("PUT", HttpRequest.BodyPublishers.ofString(json == null ? "" : json, StandardCharsets.UTF_8))
+                .build();
+        return send(request);
+    }
+
+    /**
+     * JSON 方式 PUT，并指定请求超时。
+     *
+     * <p>用于建索引等可能触发集群状态变更的慢操作，见
+     * {@link #builder(String, Map, Duration)}。</p>
+     *
+     * @param url     地址
+     * @param query   查询参数，可为空
+     * @param json    JSON 请求体
+     * @param headers 请求头，可为空
+     * @param timeout 请求超时
+     * @return 响应体文本
+     * @throws IOException 连接失败或响应非 2xx
+     */
+    public static String putJson(String url, Map<String, String> query, String json,
+                                   Map<String, String> headers, Duration timeout) throws IOException {
+        HttpRequest request = builder(appendQuery(url, query), headers, timeout)
                 .header("Content-Type", "application/json;charset=UTF-8")
                 .method("PUT", HttpRequest.BodyPublishers.ofString(json == null ? "" : json, StandardCharsets.UTF_8))
                 .build();
