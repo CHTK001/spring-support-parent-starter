@@ -11,6 +11,9 @@
  *   2) 顶部「切换工号」→ 断言出现绑定表单（.tp-bind / 工号输入）→ 重新加载页面还原
  *
  * 用法：node ui-teacher-publish-roundtrip-e2e.cjs http://<host>:19093
+ *
+ * 注意：本脚本会真实写库（发布一张草稿卷再下架还原）。若中途中断，
+ * 可能有一张卷停留在「已发布」。运行后请核对草稿/已发布条数是否回到运行前。
  */
 let pw;
 try { pw = require('playwright'); }
@@ -37,6 +40,36 @@ async function gotoComposeTab(p) {
   await p.waitForTimeout(3500);
   await p.locator('.el-tabs__item', { hasText: '\u7EC4\u5377' }).first().click();
   await p.waitForTimeout(4000);
+}
+
+/** 翻到第 n 页（ReTable 自定义 pager：.rm-pager__btn 里的页码按钮） */
+async function gotoPage(p, n) {
+  const ok = await p.evaluate((num) => {
+    const btns = Array.from(document.querySelectorAll('.rm-pager__btn'));
+    const t = btns.find((b) => (b.innerText || '').trim() === String(num));
+    if (!t) return false;
+    t.scrollIntoView({ block: 'center' });
+    return true;
+  }, n);
+  if (!ok) return false;
+  await p.waitForTimeout(400);
+  await p.evaluate((num) => {
+    const btns = Array.from(document.querySelectorAll('.rm-pager__btn'));
+    const t = btns.find((b) => (b.innerText || '').trim() === String(num));
+    if (t) t.click();
+  }, n);
+  await p.waitForTimeout(2500);
+  return true;
+}
+
+/** 在组卷表里翻页找带某按钮的行（最多翻到 maxPage） */
+async function findRowWithButtonPaged(p, label, maxPage) {
+  for (let pg = 1; pg <= maxPage; pg++) {
+    const hit = await findRowWithButton(p, label);
+    if (hit) return hit;
+    if (pg < maxPage) { const ok = await gotoPage(p, pg + 1); if (!ok) break; }
+  }
+  return null;
 }
 
 /**
@@ -71,7 +104,55 @@ async function findRowWithButton(p, label) {
   return box ? { ...info, ...box } : null;
 }
 
-/** 查某张试卷行当前的状态文本（按试卷名定位行） */
+/** 在「包含某试卷名」的行里点指定按钮；翻页查找，绝不点错行 */
+async function clickInNamedRow(p, name, label, maxPage) {
+  for (let pg = 1; pg <= maxPage; pg++) {
+    const box = await p.evaluate(({ nm, lab }) => {
+      const rows = Array.from(document.querySelectorAll('.el-table__row, tbody tr')).filter((r) => r.offsetParent !== null);
+      const r = rows.find((x) => (x.innerText || '').includes(nm));
+      if (!r) return null;
+      const btn = Array.from(r.querySelectorAll('button, .el-button')).find((b) => (b.innerText || '').replace(/\s+/g, ' ').trim() === lab);
+      if (!btn) return null;
+      btn.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const rr = btn.getBoundingClientRect();
+      return { x: Math.round(rr.x + rr.width / 2), y: Math.round(rr.y + rr.height / 2) };
+    }, { nm: name, lab: label });
+    if (box) {
+      await p.waitForTimeout(400);
+      const box2 = await p.evaluate(({ nm, lab }) => {
+        const rows = Array.from(document.querySelectorAll('.el-table__row, tbody tr')).filter((r) => r.offsetParent !== null);
+        const r = rows.find((x) => (x.innerText || '').includes(nm));
+        if (!r) return null;
+        const btn = Array.from(r.querySelectorAll('button, .el-button')).find((b) => (b.innerText || '').replace(/\s+/g, ' ').trim() === lab);
+        if (!btn) return null;
+        const rr = btn.getBoundingClientRect();
+        return { x: Math.round(rr.x + rr.width / 2), y: Math.round(rr.y + rr.height / 2) };
+      }, { nm: name, lab: label });
+      if (!box2) return false;
+      await p.mouse.move(box2.x, box2.y);
+      await p.waitForTimeout(150);
+      await p.mouse.click(box2.x, box2.y);
+      return true;
+    }
+    if (pg < maxPage) { const ok = await gotoPage(p, pg + 1); if (!ok) break; }
+  }
+  return false;
+}
+
+/** 该试卷名所在行是否存在指定按钮（翻页查找） */
+async function namedRowHasButton(p, name, label, maxPage) {
+  for (let pg = 1; pg <= maxPage; pg++) {
+    const has = await p.evaluate(({ nm, lab }) => {
+      const rows = Array.from(document.querySelectorAll('.el-table__row, tbody tr')).filter((r) => r.offsetParent !== null);
+      const r = rows.find((x) => (x.innerText || '').includes(nm));
+      if (!r) return false;
+      return Array.from(r.querySelectorAll('button, .el-button')).some((b) => (b.innerText || '').replace(/\s+/g, ' ').trim() === lab);
+    }, { nm: name, lab: label });
+    if (has) return true;
+    if (pg < maxPage) { const ok = await gotoPage(p, pg + 1); if (!ok) break; }
+  }
+  return false;
+}
 async function rowStatusByName(p, name) {
   return p.evaluate((nm) => {
     const rows = Array.from(document.querySelectorAll('.el-table__row, tbody tr')).filter((r) => r.offsetParent !== null);
@@ -93,36 +174,49 @@ const msgs = (p) => p.evaluate(() => Array.from(document.querySelectorAll('.el-m
   const badResp = [];
   p.on('pageerror', (e) => errs.push('PAGEERROR: ' + String(e.message).slice(0, 140)));
   p.on('console', (m) => { if (m.type() === 'error') errs.push('CONSOLE: ' + String(m.text()).slice(0, 140)); });
-  p.on('response', (r) => { if (r.status() >= 400) badResp.push(r.status() + ' ' + r.request().method() + ' ' + r.url().replace(/^https?:\/\/[^/]+/, '')); });
+  p.on('response', async (r) => {
+    if (r.status() >= 400) {
+      let body = '';
+      try { body = (await r.text()).slice(0, 400); } catch (e) { body = 'n/a'; }
+      badResp.push({
+        s: r.status(), m: r.request().method(),
+        u: r.url().replace(/^https?:\/\/[^/]+/, ''),
+        auth: (r.request().headers()['authorization'] || '(none)').slice(0, 20),
+        body,
+      });
+    }
+  });
 
   log('login ->', await loginAsTeacher(p));
   await gotoComposeTab(p);
 
   // ---- 1) 发布 -> 下架 往返 ----
   log('--- 发布 / 下架 往返 ---');
-  const draft = await findRowWithButton(p, '\u53D1\u5E03');
+  const draft = await findRowWithButtonPaged(p, '\u53D1\u5E03', 4);
   if (!draft) {
     log('  未找到带「发布」按钮的草稿行（可能当前页无草稿）');
   } else {
-    log('  选中草稿卷: ' + JSON.stringify(draft.name));
-    log('  发布前行状态: ' + JSON.stringify(await rowStatusByName(p, draft.name)));
-    await p.mouse.move(draft.x, draft.y); await p.waitForTimeout(200);
-    await p.mouse.click(draft.x, draft.y);
+    const name = draft.name;
+    log('  选中草稿卷: ' + JSON.stringify(name));
+    log('  发布前行状态: ' + JSON.stringify(await rowStatusByName(p, name)));
+
+    // 点「发布」——严格在该试卷名所在行内点，避免翻页后点错行
+    const okPub = await clickInNamedRow(p, name, '\u53D1\u5E03', 4);
+    log('  已在目标行点「发布」: ' + okPub);
     await p.waitForTimeout(2500);
     log('  点「发布」后提示: ' + JSON.stringify(await msgs(p)));
-    log('  发布后行状态: ' + JSON.stringify(await rowStatusByName(p, draft.name)));
+    log('  发布后行状态: ' + JSON.stringify(await rowStatusByName(p, name)));
 
-    // 再点同一行的「下架」还原
-    const un = await findRowWithButton(p, '\u4E0B\u67B6');
-    if (un) {
-      await p.mouse.move(un.x, un.y); await p.waitForTimeout(200);
-      await p.mouse.click(un.x, un.y);
-      await p.waitForTimeout(2500);
-      log('  点「下架」后提示: ' + JSON.stringify(await msgs(p)));
-      log('  下架后行状态: ' + JSON.stringify(await rowStatusByName(p, draft.name)));
-    } else {
-      log('  未找到「下架」按钮，无法还原！');
-    }
+    // 往返还原：同一行点「下架」
+    const okUn = await clickInNamedRow(p, name, '\u4E0B\u67B6', 4);
+    log('  已在目标行点「下架」: ' + okUn);
+    await p.waitForTimeout(2500);
+    log('  点「下架」后提示: ' + JSON.stringify(await msgs(p)));
+    log('  下架后行状态: ' + JSON.stringify(await rowStatusByName(p, name)));
+
+    // 还原校验
+    const restored = await namedRowHasButton(p, name, '\u53D1\u5E03', 4);
+    log('  ★ 还原为草稿（该行重新出现「发布」按钮）: ' + restored);
   }
 
   // ---- 2) 切换工号 -> 绑定表单 -> 重载还原 ----
