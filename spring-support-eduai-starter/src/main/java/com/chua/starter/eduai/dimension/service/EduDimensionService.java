@@ -795,6 +795,37 @@ public class EduDimensionService {
     }
 
     /**
+     * 处理教师登录口令：把表单里的明文转成摘要加盐写回实体。
+     *
+     * <p>与学生同一形态与理由（见 {@link #applyPassword(EduStudent, EduStudent)}）：
+     * 更新场景下表单没提交新口令时，必须把库中既有的摘要与盐原样带回，
+     * 否则管理员改个姓名就会把教师的登录口令清空，教师立刻登不进来且没有任何提示。</p>
+     *
+     * @param entity     本次提交的实体
+     * @param exists     库中既有档案；新增时为 {@code null}
+     * @param defaultRaw 新增且未填口令时使用的默认明文（工号）；为 null 表示不设口令
+     */
+    private void applyTeacherPassword(EduTeacher entity, EduTeacher exists, String defaultRaw) {
+        String raw = entity.getTeacherPwdInput();
+        if (!StringUtils.hasText(raw)) {
+            if (exists != null) {
+                entity.setTeacherPassword(exists.getTeacherPassword());
+                entity.setTeacherPwdSalt(exists.getTeacherPwdSalt());
+                return;
+            }
+            if (!StringUtils.hasText(defaultRaw)) {
+                return;
+            }
+            raw = defaultRaw;
+        }
+        StudentPasswordSupport.validate(raw);
+        String salt = StudentPasswordSupport.newSalt();
+        entity.setTeacherPwdSalt(salt);
+        entity.setTeacherPassword(StudentPasswordSupport.hash(raw, salt));
+        entity.setTeacherPwdInput(null);
+    }
+
+    /**
      * 归一化并校验家长手机号。
      *
      * <p>去掉分隔符（空格/短横线）后要求是 11 位、以 1 开头。空值（含全空格）
@@ -868,6 +899,11 @@ public class EduDimensionService {
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
             entity.setOwnerUserId(exists.getOwnerUserId());
+            // 工号是登录身份，编辑时锁定：前端把整行数据回传，
+            // 不锁定就会让「改个姓名」把工号也改了，教师立刻登不进来。
+            entity.setTeacherNo(exists.getTeacherNo());
+            entity.setTeacherAccount(exists.getTeacherAccount());
+            applyTeacherPassword(entity, exists, null);
             teacherMapper.updateById(entity);
             return entity.getTeacherId();
         }
@@ -875,9 +911,41 @@ public class EduDimensionService {
             entity.setTeacherStatus(1);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
+        // 新增未填口令时默认口令 = 工号：建档时通常没人想到填口令，留空会让教师
+        // 永远登不进来（登录返回「口令错误」且查不出原因）。工号由管理员指定且唯一。
+        applyTeacherPassword(entity, null, entity.getTeacherNo());
         teacherMapper.insert(entity);
         log.info("[EduAi] 新增教师: {} ({})", entity.getTeacherName(), entity.getTeacherNo());
         return entity.getTeacherId();
+    }
+
+    /**
+     * 重置教师登录口令（管理端）。
+     *
+     * <p>与 {@link #resetStudentPassword(Long, String)} 同形：管理员在「学生管理 → 教师」
+     * 为教师设置一个可用口令，教师之后可自行登录老师端。</p>
+     *
+     * @param teacherId   教师标识
+     * @param newPassword 新口令明文
+     * @return 是否成功
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean resetTeacherPassword(Long teacherId, String newPassword) {
+        if (teacherId == null) {
+            throw new BusinessException("教师标识不能为空");
+        }
+        EduTeacher exists = teacherMapper.selectById(teacherId);
+        if (exists == null) {
+            throw new BusinessException("教师不存在");
+        }
+        EduUserContext.checkWritable(exists.getOwnerUserId());
+        StudentPasswordSupport.validate(newPassword);
+        var salt = StudentPasswordSupport.newSalt();
+        var target = new EduTeacher();
+        target.setTeacherId(teacherId);
+        target.setTeacherPwdSalt(salt);
+        target.setTeacherPassword(StudentPasswordSupport.hash(newPassword, salt));
+        return teacherMapper.updateById(target) > 0;
     }
 
     /**

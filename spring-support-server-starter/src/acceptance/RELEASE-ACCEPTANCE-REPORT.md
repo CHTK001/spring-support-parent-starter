@@ -1,8 +1,8 @@
 # 发布管理 生产级验收报告
 
-- 日期：2026-10-02（Windows 端到端与 C6 收尾：2026-10-04）
+- 日期：2026-10-02（Windows 端到端与 C6 收尾：2026-10-04；**本机 Windows 全链路复验：2026-10-16**，见 §9）
 - 范围：发布管理（发布 Java 程序）—— 平台命令 SPI、系统服务 SPI、发布编排、脚本模板、执行通道
-- 环境：后台 `192.168.50.198:8112`；验收目标 `kali198`(LINUX) 与 `win101`(WINDOWS)
+- 环境：后台 `192.168.50.198:8112`；验收目标 `kali198`(LINUX) 与 **本机 `DESKTOP-N2BE5N0`(WINDOWS，即 `192.168.50.101`)**
 
 ---
 
@@ -76,6 +76,10 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 | **启动 / 重启任务** | **PASS（任务成功）** | `task success=True`；`[1/2] 启动项目` + `[2/2] 记录PID`；WMI 被拒后**回退 Start-Process** 生效 |
 | 启动后「进程存活 / 端口监听」的独立复核 | ❌ | 主机安全产品**动态拦截**读取类命令（同批 `dir` 成功、`type` 被拒），无法复核 |
 | Windows 发布逻辑真机自检（端口归属探活 / 孤儿回收） | **PASS** | `win-release-selfcheck.ps1`：**10/10**，含敏感性对照 |
+
+> **2026-10-16 更新**：上表第 77 行的「无法复核」已在**本机 Windows**（同一台 `192.168.50.101`，
+> 通过 198 平台 8112 驱动）完成全链路复验，**27/27 全绿**（启停重启、备份、好包升级 md5 变更、
+> 坏包自动回滚 + 回滚后 PID 落库、停后 PID 清空）。详见 §9；该轮同时修掉 5 个真实产品缺陷。
 
 > Windows 侧共修掉 **3 个真实产品缺陷**（见 §6 第 1/2/3 项），把「完全不可用」推进到
 > 「任务可执行、投放与回滚 md5 可核对」；剩余不可验收的部分**全部来自主机安全产品**
@@ -414,3 +418,77 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 | `5c505933b` | **判据③根因修复**（包装壳判据）+ 语法回归修复 + 探针 I 段 |
 
 前端仓库：`2002144b6` / `82ceeb02…`（`projectTemplates.ts` 同步兜底与转义）
+
+---
+
+## 9. 本机 Windows 全链路复验 + 5 个产品缺陷修复（2026-10-16）
+
+### 9.1 产物绑定（本轮，可交付正典产物）
+
+| 项 | 值 |
+|---|---|
+| 构建方式 | **全量源码 reactor 构建（21 模块）**：`mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false` |
+| 线上 exec jar 外 md5 | `e3b344c73041c4fa70698185bc8d2806` |
+| 内层 server-starter md5 | `530185addd9f28d479e4a372dd6445de` |
+| 服务 | `ms-monitor-platform` `active`，`NRestarts=0`，62s 起 8112 监听，登录成功 |
+
+> **构建卫生（必读）**：只重编被改模块、其余依赖走本地仓库的“增量构建”，会让产物与源码**不同源**——
+> 实测增量构建的 jar 启动即 `NoUniqueBeanDefinitionException: CacheManager … found 5`
+> （本地仓库里的 jar 与当前源码不一致，注释引用的 `DefaultCacheManagerConfiguration` 在源码树中已不存在）。
+> 同一份代码用**全量源码构建**则正常启动。因此**可交付产物必须由全量源码构建**，
+> 不得使用增量构建产物；源码树本身无此缺陷（§7 复验命令须按全量构建执行）。
+
+
+### 9.2 本轮修掉的真实产品缺陷
+
+| # | 缺陷 | 根因 | 修复位置 |
+|---|---|---|---|
+| 1 | 加固主机上所有 Windows 步骤失败：`后台任务创建失败: The network address is invalid` | `WindowsSshShell.execDetached` 用 `schtasks` 拉起落地脚本；本机 Task Scheduler 服务被安全策略置为 `Stopped`，`schtasks` 全线不可用 | 落地启动改为 **WMI `Win32_Process.Create` 优先、schtasks 兜底**（WMI 进程父为 WmiPrvSE，跨会话存活；`Start-Process` 会话一断即被杀，故排除） |
+| 2 | 新生成的 Windows 项目启动即 `ClassNotFoundException: $JvmArgs` | 模板 `$inner = 'java __JVMARGS__ -jar … __ARGS__'` 为单引号字面量，展开期替换成 `$JvmArgs`/`$AppArgs` 后不插值，cmd 收到字面量 `$JvmArgs` 当主类 | `ProjectScripts.winStart`：token 拼成 `' + (@($JvmArgs) -join ' ') + '`，参数为空时安全退化为空串 |
+| 3 | 停止项目后库里 `pid`/`runningSince` 永不清空（列表长期显示已死 PID） | MyBatis-Plus `updateById` 默认跳过 null 字段，`setPid(null)` 根本不落库 | `ProjectTaskService.updateProjectPid` 改 `LambdaUpdateWrapper.set(pid,null)` |
+| 4 | 升级健康检查失败→自动回滚成功后，库里 PID 仍是旧的（Linux 侧为空） | 失败分支不回写运行态；且 Linux 启动脚本不打印 `running pid=`，对账取不到 PID | `ProjectTaskService.reconcileProjectAfterFailure`（`rollback ok` → running + 真实 PID；`rollback failed` → stopped）；`ProjectScripts` Linux 启动补 `running pid=$(cat app.pid)`（与 Windows 对齐） |
+| 5 | 用户打开 SSH 后，采集每 10~60s 又把它改回 0，发布被「未开启 SSH」周期性拦住 | `HostProfileServiceImpl`/`ServerHostServiceImpl` 用**采集/探测开始时加载的陈旧快照**整行 `updateById`，把 `ssh_enabled` 等用户开关按旧值写回 | 采集/探测回写前把非自己负责的开关列显式置 null（借助同上跳过策略保留库中现值）；`markError` 改只写 `agent_error` 一列 |
+| 6 | 同一版本、不同建单方式，Windows 停止/启动行为不一致（前端模板缺孤儿回收/计划任务回退等） | 前后端各存一份模板，后端修复不回流前端 | 新增后端 `GET /ms/server/release/script/template`（与执行期同源）；前端「保存前补齐 + 一键生成」优先调它，离线才回落本地模板 |
+
+### 9.3 复验结论（全部通过）
+
+- **Windows 真机端到端（27/27 全绿，正典产物 `e3b344c7…`）**：`win-e2e-full.mjs`，经 198:8112 驱动本机 `192.168.50.101`
+  - C1 启动：`db pid == app.pid == 端口属主`
+  - C2 重启：新 PID、端口属主同步、库已更新
+  - C3 备份：任务成功、`backups` 列表 `count=10`
+  - C4 好包升级：任务成功、`smoke.jar` md5 `9DCD2A39… → 4D32702C…`、端口属主为新 PID
+  - C5 坏包升级：任务**失败**（预期），日志 `health failed` / `rolled back to previous version` / `rollback ok`，md5 回到 C4 版本，**库 PID == 端口属主（回滚后真实 PID）= `19400`**、`status=running`
+  - C6 停止：端口释放、`app.pid` 删除、库 `pid` 清空、`status=stopped`
+- **Linux 回归（13/13）**：项目 40 启停 + 坏包自动回滚；回滚后 `db pid == app.pid == 1118984`、`status=running`；停后 `pid` 清空
+- **前端权威脚本接口（13/13）**：`/ms/server/release/script/template` 对 Windows/Linux 返回的脚本均含本轮修复，且占位符已展开、四段互异
+- **Windows 本机自检**：`win-release-selfcheck.ps1` **10/10**（含敏感性对照）
+- **回归探针**：`ReleaseScriptProbe` **9/9**（必须 `-DskipTests=false`，父 POM 默认 `skipTests=true` 属「假绿」陷阱；本轮新增 H1d/H1e/A1b 三条断言钉住缺陷 1/2/4）
+- **前端**：`ProjectsView.vue` 类型检查无新增错误（既有报错均在未触碰的 `ReRelationGraph`）
+
+### 9.4 复核命令
+
+```bash
+# 0) 全量源码构建可交付产物（务必全量；增量构建会混入本地仓库旧 jar 导致启动失败）
+mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false
+# 期望产物 spring-support-monitor-starter-4.0.0.42-exec.jar，md5 = e3b344c73041c4fa70698185bc8d2806
+
+# 1) 内外层 md5 核对（证明产物内容与源码一致）
+unzip -p spring-support-monitor-starter-4.0.0.42-exec.jar \
+  'BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar' | md5sum   # 期望 530185addd9f28d479e4a372dd6445de
+
+# 2) 探针（真跑，勿漏 -DskipTests=false）
+mvn -o -pl spring-support-server-starter test -DskipTests=false -Dtest=ReleaseScriptProbe
+
+# 3) 本机自检
+pwsh -File spring-support-server-starter/src/acceptance/win-release-selfcheck.ps1 -Port 18095   # 期望 10/0
+```
+
+### 9.5 本轮环境事实（非产品缺陷，验收须知）
+
+- 本机 Task Scheduler 服务 `Stopped` 且**非提权 SSH 会话无法启动**（`拒绝访问`）→ 依赖计划任务的
+  「挂载为开机自启服务」在本机不可用；发布主链路已改用 WMI 落地启动，不受影响。
+- **构建必须全量**：增量构建（只重编被改模块、其余走本地仓库）会产出与源码不同源的 jar 并启动失败；
+  全量源码构建正常。可交付产物一律用全量构建。
+- 本机存在**并行会话在同一 198 上反复替换同名 jar**（曾出现 `rollback-pre-other-session-*.jar`）；
+  复验时须先核对内外层 md5，不一致则以正典产物为准重新部署。
+- Win101 的 `ssh_enabled` 会被在线采集按旧快照回写（缺陷 5）——已修复；修复前必须「置 1 后立刻执行」。

@@ -46,6 +46,14 @@ public class AuthConstant {
     public static final String STUDENT = "STUDENT";
 
     /**
+     * 教师角色名：教师用工号登录后写入令牌的角色。
+     *
+     * <p>只给 {@code TEACHER}，不含 ADMIN/SUPER_ADMIN：教师端接口按登录态归属取数据，
+     * 而管理端接口按 ADMIN 判定，给教师附加管理角色等于把管理端也一并放开。</p>
+     */
+    public static final String TEACHER = "TEACHER";
+
+    /**
      * 验证码会话 Key
      *
      * <p>必须与写入方 {@code CaptchaProvider} 保持一致，直接引用

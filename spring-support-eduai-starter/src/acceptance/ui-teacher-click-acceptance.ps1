@@ -98,12 +98,15 @@ function WaitJs {
 }
 
 function OpenPage {
-    param([string]$Url, [int]$Tries = 4)
+    param([string]$Url, [int]$Tries = 5)
     for ($i = 1; $i -le $Tries; $i++) {
         Ab @('open', $Url) 60000 | Out-Null
-        if (WaitJs '(document.readyState === "complete") && (location.href.indexOf("chrome-error") < 0) && (location.href.indexOf("blank") < 0)' 25) { return $true }
+        # readyState alone is not enough: a wedged daemon answers "complete" for about:blank,
+        # and the previous run then read path="blank" on all four attempts while OpenPage
+        # happily reported success. Require the app origin itself to be loaded.
+        if (WaitJs '(document.readyState === "complete") && (location.href.indexOf("chrome-error") < 0) && (location.href.indexOf("about:blank") < 0) && (location.href.indexOf("19093") >= 0)' 25) { return $true }
         Ab @('close') 30000 | Out-Null
-        Start-Sleep -Seconds 2
+        Start-Sleep -Seconds 3
     }
     return $false
 }
@@ -176,6 +179,7 @@ if ($Target -eq 'teacher') { Start-Sleep -Seconds 3 }
 $drive = @"
 (function(){
   var scopeSel = '$Scope';
+  var READY_SEL = '$ReadySel';
   window.__ca = { done:false, items:[], errs:[], total:0, startPath: location.pathname };
   // Mirror the record into localStorage after every click: one of the controls can navigate
   // (a link, a logout, a menu entry), which destroys any purely in-page collector -- the whole
@@ -220,13 +224,60 @@ $drive = @"
     kept.push(e);
   });
   nodes = kept;
+  // ALWAYS skipped: clicking these destroys the page state (切换工号 flips the portal to the
+  // "bind a teacher number" view, purely in client state) or mutates data irreversibly.
+  var SKIP_ALWAYS = ['切换工号', '撤回', '发布', '下架', '归档', '清空', '批量删除', '退出登录', '注销'];
+  // Data-mutating BUT safe to exercise once: 删除 opens a confirmation dialog and mutates
+  // nothing until that dialog is confirmed -- and the sweep never confirms (it dismisses with
+  // Escape / the header close glyph). Repeating it for all 23 rows adds no information, so
+  // only the first occurrence is clicked.
+  var SKIP_EXCEPT_FIRST = ['删除'];
+  function skippable(txt, seen){
+    for (var i = 0; i < SKIP_ALWAYS.length; i++) { if (txt === SKIP_ALWAYS[i]) return SKIP_ALWAYS[i]; }
+    for (var j = 0; j < SKIP_EXCEPT_FIRST.length; j++) {
+      if (txt === SKIP_EXCEPT_FIRST[j]) {
+        if (seen[txt]) return SKIP_EXCEPT_FIRST[j] + '(duplicate)';
+        seen[txt] = true;
+        return null;
+      }
+    }
+    return null;
+  }
+  var seenOnce = {};
   nodes.forEach(function(e, i){
+    // Re-locate key: clicking a row button opens a dialog and re-renders the table, which
+    // replaces the previously tagged nodes -- a fixed data-ca tag then reports "gone" for
+    // controls that were never actually clicked (35 of 75 on the first run). Instead record
+    // tag + text + the ordinal among same tag+text, and re-find the live element per click.
+    var tag = e.tagName.toLowerCase();
+    var txt = (e.innerText || e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+    var ord = 0;
+    for (var k = 0; k < i; k++) {
+      if (window.__ca.items[k] && window.__ca.items[k].tag.toLowerCase() === tag && window.__ca.items[k].txt === txt) ord++;
+    }
     e.setAttribute('data-ca', String(i));
-    window.__ca.items.push({ i:i, tag:e.tagName, txt:(e.innerText||e.textContent||'').trim().replace(/\s+/g,' ').slice(0,24),
+    window.__ca.items.push({ i:i, tag:e.tagName, txt:txt, ord:ord, skip:skippable(txt, seenOnce),
                              cls:String(e.className||'').slice(0,60), res:'pending', errs:[] });
   });
   window.__ca.total = nodes.length;
   persist();
+
+  // find the live element matching a record (tag + text + ordinal), inside the same scope
+  function locate(rec){
+    var roots = Array.prototype.slice.call(document.querySelectorAll(scopeSel));
+    if (!roots.length) roots = [document.body];
+    var pool = [];
+    roots.forEach(function(root){
+      Array.prototype.slice.call(root.querySelectorAll(SEL)).forEach(function(e){ if (pool.indexOf(e) < 0) pool.push(e); });
+    });
+    var cand = pool.filter(function(e){
+      if (e.tagName.toLowerCase() !== rec.tag.toLowerCase()) return false;
+      if (String(e.className||'').indexOf('el-overlay') >= 0) return false;
+      var t = (e.innerText || e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+      return t === rec.txt && visible(e);
+    });
+    return cand[rec.ord] || cand[0] || null;
+  }
 
   var i = 0;
   function step(){
@@ -237,11 +288,22 @@ $drive = @"
     }
     var rec = window.__ca.items[i];
     var n0 = window.__ca.errs.length;
-    var el = document.querySelector('[data-ca="' + i + '"]');
-    if (!el) { rec.res = 'gone'; }
-    else { try { el.click(); rec.res = 'ok'; } catch(e){ rec.res = 'err'; } }
+    if (rec.skip) { rec.res = 'skipped'; }
+    else {
+      var el = document.querySelector('[data-ca="' + i + '"]');
+      if (!el) { el = locate(rec); }
+      if (!el) { rec.res = 'gone'; }
+      else { try { el.click(); rec.res = 'ok'; } catch(e){ rec.res = 'err'; } }
+    }
     setTimeout(function(){
       rec.errs = window.__ca.errs.slice(n0);
+      // health marker: if a click tore the page's own ready marker away, say which control
+      // did it instead of reporting every later control as an unexplained "gone"
+      try {
+        if (!rec.skip && !document.querySelector(READY_SEL) && !window.__ca.destroyedBy) {
+          window.__ca.destroyedBy = { i: rec.i, tag: rec.tag, txt: rec.txt };
+        }
+      } catch(e){}
       // dismiss overlays by Escape / the close glyph -- never by matching a label, so no
       // destructive confirmation can be triggered
       try { document.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true })); } catch(e){}
@@ -272,8 +334,14 @@ $items = @($res.items)
 $withErr = @($items | Where-Object { @($_.errs).Count -gt 0 })
 $gone = @($items | Where-Object { $_.res -eq 'gone' })
 $pend = @($items | Where-Object { $_.res -eq 'pending' })
-Write-Host ("  clicks={0}  done={1}  withError={2}  gone={3}  pending={4}" -f $items.Count, $res.done, $withErr.Count, $gone.Count, $pend.Count)
+$skip = @($items | Where-Object { $_.res -eq 'skipped' })
+Write-Host ("  clicks={0}  done={1}  withError={2}  gone={3}  pending={4}  skipped-destructive={5}" -f $items.Count, $res.done, $withErr.Count, $gone.Count, $pend.Count, $skip.Count)
 if ($res.navigatedTo) { Write-Host ("  NOTE: a control navigated away to {0}; the sweep stopped there and the record was read from localStorage" -f $res.navigatedTo) }
+if ($res.destroyedBy) { Write-Host ("  NOTE: [{0}] {1} '{2}' removed the page ready marker and reset the view; later controls inherit that" -f $res.destroyedBy.i, $res.destroyedBy.tag, $res.destroyedBy.txt) }
+if ($skip.Count) {
+    Write-Host '  --- skipped as destructive / state-resetting (NOT clicked) ---'
+    foreach ($it in $skip) { Write-Host ("    [{0}] {1} '{2}'" -f $it.i, $it.tag, $it.txt) }
+}
 if ($withErr.Count) {
     Write-Host '  --- produced an error ---'
     foreach ($it in $withErr) { Write-Host ("    [{0}] {1} '{2}' -> {3}" -f $it.i, $it.tag, $it.txt, (@($it.errs) -join ' | ')) }
@@ -284,7 +352,8 @@ if ($gone.Count) {
 }
 
 Ck '页面存在可点击控件（清单非空）' ($items.Count -gt 0) ("total=" + $items.Count)
-Ck '全部元素都完成了点击（无 pending）' ($pend.Count -eq 0) ("pending=" + $pend.Count)
+Ck '全部元素都完成了点击或被显式跳过（无 pending）' ($pend.Count -eq 0) ("pending=" + $pend.Count)
+Ck '无元素因重渲染/状态重置而未点到（gone=0）' ($gone.Count -eq 0) ("gone=" + $gone.Count)
 Ck '点击过程中无 页面错误/console 错误/HTTP 5xx' ($withErr.Count -eq 0) ("bad=" + $withErr.Count)
 
 Write-Host ''

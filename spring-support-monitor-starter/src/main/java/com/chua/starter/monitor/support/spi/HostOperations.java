@@ -261,6 +261,39 @@ public abstract class HostOperations {
     public abstract List<ProcessThreadRowVO> processThreads(int pid);
 
     /**
+     * 主机句柄数：Windows 为系统句柄总数（各进程 HandleCount 汇总），
+     * POSIX 为已分配的打开文件句柄数。
+     *
+     * <p>命令文本按平台差异放在本层：Windows 走 PowerShell，POSIX 读 {@code /proc/sys/fs/file-nr}
+     * （macOS 回退 {@code sysctl kern.num_files}）。取不到时返回 -1，不抛异常——
+     * 句柄数只是画像的一项指标，拿不到不应让整页采集失败。</p>
+     *
+     * @return 句柄数，取不到返回 -1
+     */
+    public abstract long handleCount();
+
+    /**
+     * 从命令输出里取第一个整数。
+     *
+     * @param text 命令输出
+     * @return 首个整数，取不到返回 -1
+     */
+    protected static long firstInt(String text) {
+        if (text == null) {
+            return -1L;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("-?\\d+").matcher(text);
+        if (!matcher.find()) {
+            return -1L;
+        }
+        try {
+            return Long.parseLong(matcher.group());
+        } catch (NumberFormatException e) {
+            return -1L;
+        }
+    }
+
+    /**
      * 磁盘分区列表。
      *
      * @return 分区列表

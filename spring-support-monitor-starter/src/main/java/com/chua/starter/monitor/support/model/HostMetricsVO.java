@@ -69,6 +69,14 @@ public class HostMetricsVO {
     private int threadCount;
 
     /**
+     * 句柄数：Windows 为系统句柄总数，Linux/macOS 为打开文件描述符数。
+     *
+     * <p>取不到（通道不支持、权限不足）时保持 -1，前端据此显示「—」，
+     * 不能以 0 冒充「没有句柄」。</p>
+     */
+    private long handleCount = -1L;
+
+    /**
      * 开机时长，单位秒
      */
     private long uptimeSec;

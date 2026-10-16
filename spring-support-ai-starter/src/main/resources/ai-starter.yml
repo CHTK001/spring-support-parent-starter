@@ -308,8 +308,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-    username: root
-    password: ${AI_DB_PASSWORD:}
+    username: ai
+    password: ${AI_DB_PASSWORD:ai}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5

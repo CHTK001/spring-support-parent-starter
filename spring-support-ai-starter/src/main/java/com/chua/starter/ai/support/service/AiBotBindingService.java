@@ -5,6 +5,7 @@ import com.chua.common.support.ai.bot.BotClient;
 import com.chua.common.support.ai.bot.QrcodeListener;
 import com.chua.feishu.support.bot.FeishuBotClient;
 import com.chua.ilink.support.bot.ILinkBotClient;
+import com.chua.whatsapp.support.bot.WhatsAppBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.manage.store.BotUserSummary;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
@@ -743,6 +744,59 @@ public class AiBotBindingService {
             binding.setModel(model.trim());
         }
         // 凭据型不在此触发 startBot（saveOrUpdate 仅自动启动 wechat），由 /bind 统一托管
+        return saveOrUpdate(binding);
+    }
+
+    // ==================== WhatsApp（Cloud API 凭据配置型） ====================
+
+    /**
+     * 绑定 WhatsApp Cloud API 机器人（凭据配置型）。
+     *
+     * @param phoneNumberId WhatsApp Business phone_number_id
+     * @param accessToken   Meta Graph access_token
+     * @param appSecret     Meta App Secret（签名校验，可空）
+     * @param verifyToken   Webhook 校验令牌（可空）
+     * @param model         初始对话模型（可空，空=跟随默认）
+     * @param ownerKey      归属标识（可空）
+     * @return 数据库标识
+     */
+    public Long bindWhatsApp(String phoneNumberId, String accessToken, String appSecret,
+                             String verifyToken, String model, String ownerKey) {
+        if (phoneNumberId == null || phoneNumberId.isBlank()) {
+            throw new IllegalArgumentException("WhatsApp phone_number_id 必填");
+        }
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new IllegalArgumentException("WhatsApp access_token 必填");
+        }
+
+        // 轻量校验：只调用 GET /{phone_number_id}，不建立任何长连接
+        try {
+            WhatsAppBotClient client = new WhatsAppBotClient();
+            client.configure(phoneNumberId, accessToken, appSecret, verifyToken);
+            client.validate();
+            log.info("[Bot] WhatsApp 凭据校验成功 phoneNumberId={}", phoneNumberId);
+        } catch (Exception e) {
+            log.error("[Bot] WhatsApp 绑定失败 phoneNumberId={}", phoneNumberId, e);
+            throw new IllegalArgumentException("WhatsApp 凭据校验失败: " + e.getMessage());
+        }
+
+        var binding = new SysAiBotBinding();
+        binding.setBotId(phoneNumberId);
+        binding.setBotToken(accessToken);
+        binding.setAppSecret(appSecret);
+        binding.setVerifyToken(verifyToken);
+        binding.setPlatform("whatsapp");
+        binding.setNickname("WhatsApp Bot");
+        binding.setStatus("online");
+        binding.setBindSource("manual_import");
+        if (ownerKey != null && !ownerKey.isBlank()) {
+            binding.setOwnerKey(ownerKey);
+        }
+        binding.setCreateTime(LocalDateTime.now());
+        binding.setUpdateTime(LocalDateTime.now());
+        if (model != null && !model.isBlank()) {
+            binding.setModel(model.trim());
+        }
         return saveOrUpdate(binding);
     }
 

@@ -13,6 +13,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
@@ -64,6 +65,7 @@ public class AiCacheAutoConfiguration {
      * @return Caffeine 缓存管理器
      */
     @Bean
+    @Primary
     public CacheManager aiCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setCaffeine(Caffeine.newBuilder()

@@ -15,6 +15,7 @@ import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.mapper.EduMarkingResultMapper;
+import com.chua.starter.eduai.mapper.EduMarkingSheetParseMapper;
 import com.chua.starter.eduai.mapper.EduPaperMapper;
 import com.chua.starter.eduai.mapper.EduPaperQuestionMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
@@ -23,6 +24,7 @@ import com.chua.starter.eduai.model.EduKnowledgePoint;
 import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.model.EduMarkingResult;
+import com.chua.starter.eduai.model.EduMarkingSheetParse;
 import com.chua.starter.eduai.model.EduPaper;
 import com.chua.starter.eduai.model.EduPaperQuestion;
 import com.chua.starter.eduai.model.EduQuestion;
@@ -183,6 +185,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 阅卷进度 SSE 推送注册表（判分过程中把阶段推给正在看这单的老师）
      */
     private final EduMarkingProgressHub progressHub;
+
+    /**
+     * 试卷解析结果映射器（姓名/学号/总分/逐题的结构化解析结果落库）
+     */
+    private final EduMarkingSheetParseMapper sheetParseMapper;
 
     /**
      * JSON 解析器（还原识别详情，供判分与续跑使用）
@@ -1022,6 +1029,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         var mergedLayoutRegions = new HashMap<String, Integer>();
         var pages = new ArrayList<Map<String, Object>>();
         var mergedBlocks = new ArrayList<EduPaperScanner.ScanBlock>();
+        // 版面区域同样跨页合并并加页偏移：region 策略要按区域归属文字块（坐标必须与 blocks 同空间）
+        var mergedLayoutBoxes = new ArrayList<EduPaperScanner.LayoutBox>();
         int blockCount = 0;
         int pageNo = 0;
         for (byte[] imageData : images) {
@@ -1052,6 +1061,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                             b.x(), b.y() + (float) (pageNo - 1) * pageH, b.width(), b.height()));
                 }
             }
+            if (pageScan.layoutBoxes() != null) {
+                for (EduPaperScanner.LayoutBox box : pageScan.layoutBoxes()) {
+                    mergedLayoutBoxes.add(new EduPaperScanner.LayoutBox(box.label(), box.x(),
+                            box.y() + (float) (pageNo - 1) * pageH, box.width(), box.height()));
+                }
+            }
             // 结构化页面：坐标原样落库，供前端按原图等比叠放。
             // 只存数量的话前端无法还原版式，这正是「同版式展示」缺的那一段数据。
             // 坐标在扫描器里是「预处理图」的像素空间，而展示用的是原图（可能被缩放），
@@ -1076,7 +1091,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         List<EduPaperScanner.ScannedQuestion> scanned;
         EduPaperScanner.AnyScan anyScan = null;
         if (anyMode) {
-            anyScan = paperScanner.extractAnyScan(mergedBlocks, text);
+            anyScan = paperScanner.extractAnyScan(mergedBlocks, mergedLayoutBoxes, text);
             scanned = anyScan.questions();
         } else {
             scanned = paperScanner.extractSelfQuestions(mergedBlocks, text);
@@ -1295,7 +1310,193 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             changeStage(taskId, EduMarkingTask.STATUS_PROCESSING,
                     "判分中 " + done + "/" + total, total, done, null, false);
         }
+        // 判分完成后再落解析结果：这样姓名/学号/总分/逐题得分一次写全（扫描阶段只有满分、无得分）
+        persistParseResults(taskId);
         return done;
+    }
+
+    /**
+     * 把试卷解析结果结构化落库（姓名/学号/总分/逐题）。
+     *
+     * <p>原本这些结果只散在 {@code edu_answer_sheet.answer_sheet_content} 与
+     * {@code edu_marking_result.marking_result_detail} 两个 JSON 列里，无法按字段检索；
+     * 这里按解析项（STUDENT / TOTAL / QUESTION）逐行落到 {@code edu_marking_sheet_parse}。</p>
+     *
+     * <p>解析失败绝不能影响阅卷结果：整段 try/catch，只记 warn。</p>
+     *
+     * @param taskId 任务标识
+     */
+    private void persistParseResults(String taskId) {
+        try {
+            EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+            if (task == null) {
+                return;
+            }
+            List<EduMarkingResult> rows = markingResultMapper.selectByTaskId(taskId);
+            Map<String, Object> content = Map.of();
+            if (task.getMarkingTaskAnswerSheetId() != null) {
+                EduAnswerSheet sheet = answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+                if (sheet != null) {
+                    content = parseJsonMap(sheet.getAnswerSheetContent());
+                }
+            }
+            Map<String, Object> recognized = content.get("recognizedStudent") instanceof Map<?, ?> m
+                    ? (Map<String, Object>) m : Map.of();
+
+            sheetParseMapper.deleteByTaskId(taskId);
+
+            // 1) 姓名 / 学号
+            var student = newParseRow(task, EduMarkingSheetParse.KIND_STUDENT, "");
+            student.setParseStudentName(trimOrNull(recognized.get("name")));
+            student.setParseStudentNo(trimOrNull(recognized.get("no")));
+            sheetParseMapper.insert(student);
+
+            // 2) 卷面总分：优先卷面标注（「满分：100分」），否则用逐题满分合计
+            Integer paperTotal = parsePaperTotalScore(String.valueOf(content.getOrDefault("text", "")));
+            int fullSum = 0;
+            for (EduMarkingResult row : rows) {
+                fullSum += parseDetailMaxScore(row.getMarkingResultDetail());
+            }
+            var totalRow = newParseRow(task, EduMarkingSheetParse.KIND_TOTAL, "");
+            totalRow.setParseTotalScore(paperTotal != null ? paperTotal : (fullSum > 0 ? fullSum : null));
+            totalRow.setParseSource(paperTotal != null ? "RULE" : "CALC");
+            sheetParseMapper.insert(totalRow);
+
+            // 3) 逐题：题号 / 题干 / 学生作答 / 满分 / 得分 / 对错
+            Map<String, Map<String, Object>> anchors = anchorIndexByNo(content);
+            int order = 0;
+            for (EduMarkingResult row : rows) {
+                var detail = parseJsonMap(row.getMarkingResultDetail());
+                String no = String.valueOf(detail.getOrDefault("recognizedNo", ""));
+                var question = newParseRow(task, EduMarkingSheetParse.KIND_QUESTION, no);
+                String stem = truncate(detail.get("stem"), 4000);
+                String answer = truncate(detail.get("studentAnswer"), 4000);
+                if (stem == null || stem.isBlank()) {
+                    // 模型「补题干」这一步会因模型不可用而静默失败（实测 43 题 stem 全为 null，
+                    // 题干文本全落在 studentAnswer 里）。这里按作答文本确定性地剥出题干，
+                    // 保证解析结果表的「题目」列永远有内容。
+                    stem = deriveStem(answer);
+                }
+                question.setParseQuestionStem(stem);
+                question.setParseStudentAnswer(answer);
+                question.setParseFullScore(parseDetailMaxScore(row.getMarkingResultDetail()));
+                int full = question.getParseFullScore() == null ? 0 : question.getParseFullScore();
+                int earned = row.getMarkingResultScore() == null ? 0 : row.getMarkingResultScore();
+                question.setParseEarnedScore(earned);
+                question.setParseCorrect(full > 0 ? (earned >= full ? 1 : 0) : null);
+                question.setParseSource(String.valueOf(detail.getOrDefault("source", "")));
+                Map<String, Object> anchor = anchors.get(normalizeNo(no));
+                if (anchor != null) {
+                    question.setParsePage(asInt(anchor.get("page")));
+                    question.setParseRegionX(asDouble(anchor.get("x")));
+                    question.setParseRegionY(asDouble(anchor.get("y")));
+                    question.setParseRegionW(asDouble(anchor.get("width")));
+                    question.setParseRegionH(asDouble(anchor.get("height")));
+                }
+                order++;
+                sheetParseMapper.insert(question);
+            }
+            log.info("[EduAi] 试卷解析结果已落库: taskId={}, 行数={}", taskId, rows.size() + 2);
+        } catch (Exception e) {
+            log.warn("[EduAi] 试卷解析结果落库失败（不影响阅卷结果）: taskId={}, err={}", taskId, e.getMessage());
+        }
+    }
+
+    /** 构造一行解析结果（归属任务/答题卡，非逐题行题号用空串以命中唯一键）。 */
+    private EduMarkingSheetParse newParseRow(EduMarkingTask task, String kind, String questionNo) {
+        var row = new EduMarkingSheetParse();
+        row.setParseOwnerUserId(task.getOwnerUserId());
+        row.setParseTaskId(task.getMarkingTaskTaskId());
+        row.setParseAnswerSheetId(task.getMarkingTaskAnswerSheetId());
+        row.setParseKind(kind);
+        row.setParseQuestionNo(questionNo == null ? "" : questionNo.trim());
+        return row;
+    }
+
+    /** 题号归一化 → 锚点，供解析结果记录来源区域。 */
+    private Map<String, Map<String, Object>> anchorIndexByNo(Map<String, Object> content) {
+        var index = new java.util.HashMap<String, Map<String, Object>>();
+        for (Map<String, Object> anchor : toMapList(content.get("questionAnchors"))) {
+            index.putIfAbsent(normalizeNo(String.valueOf(anchor.get("no"))), anchor);
+        }
+        return index;
+    }
+
+    /** 截断长文本，避免 TEXT 列被单题超长内容撑爆。 */
+    private static String truncate(Object value, int max) {
+        String text = String.valueOf(value == null ? "" : value).trim();
+        return text.length() > max ? text.substring(0, max) : text;
+    }
+
+    /**
+     * 从「学生作答」文本里确定性地剥出题干。
+     *
+     * <p>规则切题路径只切出「题号 + 作答」，题干靠模型补；模型不可用时那道补题干的调用
+     * 会静默失败，题干文本就只剩在 studentAnswer 里。这里去掉题号前缀与「（N分）」分值标注。</p>
+     *
+     * <p><b>不再在第一个选项行处截断</b>：选择题的 A./B./C./D. 是题干的组成部分，
+     * 早先在此截断导致题干只剩问句。判分时模型既看不到选项、又（任意卷）没有标准答案，
+     * 只能回「无法判断」并给 0 分 —— 实测 5 题里 4 题被这样误判为 0。
+     * 唯一「带上选项」的那题判对了，反证选项必须留在题干里。</p>
+     *
+     * @param studentAnswer 识别到的作答文本（含题干 + 选项）
+     * @return 题干（含选项）；无法得出返回 null
+     */
+    private static String deriveStem(String studentAnswer) {
+        if (studentAnswer == null || studentAnswer.isBlank()) {
+            return null;
+        }
+        String text = studentAnswer.trim()
+                .replaceFirst("^\\s*\\d+\\s*[.、．]\\s*", "")
+                .replaceAll("[（(]\\s*\\d{1,3}\\s*分\\s*[）)]", "")
+                .trim();
+        return text.isEmpty() ? null : truncate(text, 4000);
+    }
+
+    private static String trimOrNull(Object value) {
+        String text = String.valueOf(value == null ? "" : value).trim();
+        return text.isEmpty() || "null".equals(text) ? null : text;
+    }
+
+    private static Integer asInt(Object value) {
+        try {
+            return value == null ? null : Integer.valueOf(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static Double asDouble(Object value) {
+        try {
+            return value == null ? null : Double.valueOf(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析卷面标注的总分（「满分：100分」「总分 100」这类）。
+     *
+     * <p>任意卷的满分此前只能由上传表单手填，卷面自己印的「满分：100分」没被识别；
+     * 这里从版面全文里抽，作为结构化解析结果的「总分」字段。</p>
+     *
+     * @param text 版面全文
+     * @return 抽到的总分；没有标注返回 null
+     */
+    private static Integer parsePaperTotalScore(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        var matcher = java.util.regex.Pattern
+                .compile("(满分|总分|总得分|得分)\\s*[:：]?\\s*(\\d{1,4})\\s*分?")
+                .matcher(text);
+        while (matcher.find()) {
+            Integer value = asInt(matcher.group(2));
+            if (value != null && value > 0 && value <= 1000) {
+                return value;
+            }
+        }
+        return null;
     }
 
     /**

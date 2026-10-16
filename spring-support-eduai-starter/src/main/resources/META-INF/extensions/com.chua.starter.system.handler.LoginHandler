@@ -1,0 +1,9 @@
+# 「按账号来源登录」的处理器索引（格式：别名=实现类全限定名，见 CustomServiceResolver）。
+# 登录口 POST /v2/user/login 把 LoginHandler 的扩展名组合成 loginType-accountType（null 段跳过），
+# 因此 accountType=teacher/student 分别查到 teacher/student；这里注册成大写，靠 SPI 的大小写归一命中。
+#
+# 为什么放在这里而不只用 ServiceProvider.register：SPI 的 provider 缓存是 SOFT 引用，
+# 内存吃紧被回收重建后 register 的注册会丢；本文件由解析器在 provider **构造期**读取，
+# 每次重建都会重新发现，注册不丢。
+TEACHER=com.chua.starter.eduai.support.credential.TeacherLoginHandler
+STUDENT=com.chua.starter.eduai.support.credential.StudentLoginHandler

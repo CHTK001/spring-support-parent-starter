@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -59,6 +60,37 @@ public class EduTeacher {
      * 状态：0 离职 / 1 在职
      */
     private Integer teacherStatus;
+
+    /**
+     * 登录口令摘要 {@code hmacSha256(明文, 盐)}，非明文。
+     *
+     * <p>用于「工号即登录名」的教师登录（{@code TeacherCredentialProvider}），
+     * 与 {@link EduStudent#getStudentPassword()} 同一套算法与语义：
+     * 未设置口令的教师不能用工号登录，须由管理员在「学生管理 → 教师」重置口令。</p>
+     *
+     * <p>{@code @JsonIgnore} 是必须的：本实体由列表接口
+     * （{@code GET /v2/edu/dimension/teachers}）直接返回，
+     * 不加这个注解会把口令摘要与盐一起吐给前端。</p>
+     */
+    @JsonIgnore
+    private String teacherPassword;
+
+    /**
+     * 口令盐（随机十六进制，与 {@link #teacherPassword} 一一对应）
+     *
+     * <p>同样 {@code @JsonIgnore}，理由见 {@link #teacherPassword}。</p>
+     */
+    @JsonIgnore
+    private String teacherPwdSalt;
+
+    /**
+     * 表单提交的登录口令明文（仅入参，不落库）。
+     *
+     * <p>与 {@code EduStudent.studentPwdInput} 同形：管理端表单里填的明文在这一层
+     * 转成摘要加盐写回 {@link #teacherPassword}，实体本身不持有明文列。</p>
+     */
+    @TableField(exist = false)
+    private String teacherPwdInput;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
     /**

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
@@ -55,6 +56,27 @@ public class EduPaperScanner {
      * AI 服务（用于文本结构化与判分）
      */
     private final EduAiService eduAiService;
+
+    /**
+     * 任意卷识别策略（SPI）：按 {@code plugin.eduai.marking.extract-strategy} 选择，默认 whole。
+     *
+     * <p>识别逻辑不再写死在本类里，而是由策略实现；本类只负责提供文字块/版面/模型回调。</p>
+     */
+    private final List<com.chua.starter.eduai.ai.strategy.AnyExtractStrategy> anyExtractStrategies;
+
+    /**
+     * 教育 AI 配置（读取识别策略 key）
+     */
+    private final com.chua.starter.eduai.configuration.EduAiProperties eduAiProperties;
+
+    /**
+     * 阅卷运行时设置（识别策略）。
+     *
+     * <p>可选项：读到系统配置弹窗保存的运行时覆盖值；bean 缺失时完全退回
+     * {@code plugin.eduai.marking.extract-strategy} 的 YAML 默认值。</p>
+     */
+    @Autowired(required = false)
+    private com.chua.starter.eduai.service.MarkingSettingService markingSettingService;
 
     /**
      * JSON 解析器
@@ -775,32 +797,122 @@ public class EduPaperScanner {
      * @return 题目 + 卷面学生
      */
     public AnyScan extractAnyScan(List<ScanBlock> blocks, String text) {
-        if (StringUtils.isBlank(text)) {
-            return new AnyScan(List.of(), null, null);
+        return extractAnyScan(blocks, null, text);
+    }
+
+    /**
+     * 任意卷抽取（带版面区域，供 region 策略按区域分块识别）。
+     *
+     * <p>策略由系统配置 {@code plugin.eduai.marking.extract-strategy} 选择（默认 {@code whole}），
+     * 通过 {@link com.chua.starter.eduai.ai.strategy.AnyExtractStrategy} SPI 扩展；
+     * 配置值找不到对应实现时回落 {@code whole}，保证行为可预期。</p>
+     *
+     * <p>取值优先「系统配置弹窗」的运行时覆盖（{@code edu_app_config} 的
+     * {@code marking-extract-strategy} 键），其次 YAML 默认；改完无需重启。</p>
+     *
+     * @param blocks      版面文字块（含坐标）；为空时跳过版面归属
+     * @param layoutBoxes 版面区域（含坐标）；region 策略用
+     * @param text        版面全文
+     * @return 题目 + 卷面学生
+     */
+    public AnyScan extractAnyScan(List<ScanBlock> blocks, List<LayoutBox> layoutBoxes, String text) {
+        String key = eduAiProperties != null && eduAiProperties.getMarking() != null
+                ? eduAiProperties.getMarking().getExtractStrategy() : null;
+        if (markingSettingService != null) {
+            key = markingSettingService.resolved().getExtractStrategy();
         }
-        if (blocks != null && !blocks.isEmpty()) {
-            List<ScannedQuestion> byLayout = extractByLayout(blocks);
-            if (!byLayout.isEmpty()) {
-                List<ScannedQuestion> withStem = fillStemsByModel(byLayout, text);
-                List<ScannedQuestion> questions = !withStem.isEmpty() ? withStem : byLayout;
-                // 版面路径不专门调模型抽学生，用正则从卷头行抽（便宜且够用）
-                var byLines = extractStudentByLines(text);
-                return new AnyScan(questions, byLines[0], byLines[1]);
+        com.chua.starter.eduai.ai.strategy.AnyExtractStrategy strategy = resolveStrategy(key);
+        log.info("[EduScan] 任意卷识别策略: {}", strategy.key());
+        return strategy.extract(new ExtractContext(blocks, layoutBoxes, text));
+    }
+
+    /**
+     * 按 key 取策略；缺失/未知名回落 whole（默认），再不行取任意一个。
+     *
+     * @param key 配置的策略 key
+     * @return 策略实现
+     */
+    private com.chua.starter.eduai.ai.strategy.AnyExtractStrategy resolveStrategy(String key) {
+        String want = org.springframework.util.StringUtils.hasText(key) ? key.trim() : "whole";
+        if (anyExtractStrategies != null) {
+            for (com.chua.starter.eduai.ai.strategy.AnyExtractStrategy s : anyExtractStrategies) {
+                if (want.equalsIgnoreCase(s.key())) {
+                    return s;
+                }
+            }
+            for (com.chua.starter.eduai.ai.strategy.AnyExtractStrategy s : anyExtractStrategies) {
+                if ("whole".equalsIgnoreCase(s.key())) {
+                    log.warn("[EduScan] 未找到识别策略 '{}'，回落 whole", want);
+                    return s;
+                }
+            }
+            if (!anyExtractStrategies.isEmpty()) {
+                return anyExtractStrategies.get(0);
             }
         }
-        try {
-            AnyScan byModel = extractAnyScanByModel(text);
-            if (!byModel.questions().isEmpty()) {
-                return byModel;
-            }
-        } catch (Exception e) {
-            log.warn("[EduScan] 模型抽取失败，回退行规则（题干留空）: {}", e.getMessage());
+        throw new IllegalStateException("没有任何 AnyExtractStrategy 实现可用");
+    }
+
+    /**
+     * 识别上下文实现：把本类已有的能力以回调形式交给策略，策略不依赖本类，避免循环依赖。
+     */
+    private final class ExtractContext implements com.chua.starter.eduai.ai.strategy.AnyExtractStrategy.Context {
+
+        private final List<ScanBlock> blocks;
+        private final List<LayoutBox> layoutBoxes;
+        private final String text;
+
+        private ExtractContext(List<ScanBlock> blocks, List<LayoutBox> layoutBoxes, String text) {
+            this.blocks = blocks;
+            this.layoutBoxes = layoutBoxes;
+            this.text = text;
         }
-        List<ScannedQuestion> byRule = parseSelfByLines(text);
-        List<ScannedQuestion> questions = byRule.stream()
-                .map(q -> new ScannedQuestion(q.no(), "", q.answer(), q.score())).toList();
-        var byLines = extractStudentByLines(text);
-        return new AnyScan(questions, byLines[0], byLines[1]);
+
+        @Override
+        public List<ScanBlock> blocks() {
+            return blocks;
+        }
+
+        @Override
+        public String text() {
+            return text;
+        }
+
+        @Override
+        public List<LayoutBox> layoutBoxes() {
+            return layoutBoxes;
+        }
+
+        @Override
+        public List<ScannedQuestion> layoutQuestions() {
+            return extractByLayout(blocks);
+        }
+
+        @Override
+        public List<ScannedQuestion> fillStems(List<ScannedQuestion> base) {
+            return fillStemsByModel(base, text);
+        }
+
+        @Override
+        public AnyScan modelExtract() {
+            return extractAnyScanByModel(text);
+        }
+
+        @Override
+        public List<ScannedQuestion> ruleQuestions() {
+            return parseSelfByLines(text).stream()
+                    .map(q -> new ScannedQuestion(q.no(), "", q.answer(), q.score())).toList();
+        }
+
+        @Override
+        public String[] studentByLines() {
+            return extractStudentByLines(text);
+        }
+
+        @Override
+        public AnyScan modelExtract(String regionText) {
+            return extractAnyScanByModel(regionText);
+        }
     }
 
     /**
@@ -856,7 +968,9 @@ public class EduPaperScanner {
                 2. 若文本里看不到明确的作答标记（选项字母、答题横线上的内容等），answer 必须留空字符串，
                    禁止用某个选项的文字充当作答 —— 把选项当成作答会让判分对象错位（实测把正确选项
                    「鲸鱼」当成学生作答，学生实际选的错项 A 反而被判满分）。
-                3. 选项文字（A. …/B. …）属于题干内容，不得写进 answer。
+                3. 选项文字（A. …/B. …/C. …/D. …）属于题干：stem 必须完整保留题目正文与【全部选项】，
+                   不得只给问句就丢开 A/B/C/D —— 只给问句会让判分环节看不到选项、无法核对作答，
+                   实测因此把本应正确的作答判成 0 分。answer 只取学生所选的选项字母，不得把选项文字写进 answer。
                 4. score 取卷面标注的本题分值（如「每题3分」「共25分」就近归属）；无明确标注时取 null，
                    禁止编造分值。
                 5. studentName/studentNo 只取卷头「姓名＿＿＿」「学号＿＿＿」栏里手写或印刷的内容；
@@ -910,7 +1024,10 @@ public class EduPaperScanner {
                 1. 作答可能写成「答：X」，或夹带题面文字/栏目字样（如「（每题5分）」），只取学生的实质作答判定；
                 2. 比较类填空（在 ○ / ☐ 里填 >、< 或 =）：先分别算出两边数值，再核对所填符号；
                 3. 判断题（对/错、√/×）：先核算题干陈述本身是否正确，再与学生所写比对；
-                4. 无法辨认或明显残缺的作答按错误处理，并在评语里注明原因。
+                4. 选择题：题干里带 A./B./C./D. 选项时，先依据题干与选项自行判断出正确选项，
+                   再与学生所填字母比对后给分。选项齐全却回「无法判断」而不给结论是不可接受的 ——
+                   只有题干与选项都确实辨认不出时才在评语里说明，并给 0 分；
+                5. 无法辨认或明显残缺的作答按错误处理，并在评语里注明原因。
 
                 题干: %s
                 学生作答: %s
@@ -976,6 +1093,9 @@ public class EduPaperScanner {
                     %s
                     请依据识别文本，为每道题给出题干（识别有错字按上下文还原；找不到留空字符串），
                     不要合并拆分、不要编造分值。
+                    题干必须完整：选择题要把该题的选项文字（A. …/B. …/C. …/D. …）一并写进题干 ——
+                    只给问句（如「下列…的一项是」）会让判分环节看不到选项、无从核对作答，
+                    实测因此把正确作答判成 0 分。
 
                     必须严格按上面题目的先后顺序，返回同样数量的题干数组（第 i 个元素对应第 i 道题）：
                     JSON Schema:

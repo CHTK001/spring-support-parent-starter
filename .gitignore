@@ -161,3 +161,6 @@ cp.txt
 
 # 本机一次性 monitor 部署脚本（含 D:/ 绝对路径 classpath）
 deploy-monitor-8112.sh
+
+# AI starter 运行时数据目录（人脸底库索引等，非源码）
+spring-support-ai-starter/admin/

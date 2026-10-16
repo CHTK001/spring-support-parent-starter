@@ -126,6 +126,15 @@ public class PosixHostOperations extends HostOperations {
         return parseThreadRows(output("ps -L -p " + pid + " -o tid,pcpu,pmem,stat,comm,time"));
     }
 
+    /**
+     * 打开文件句柄数：Linux 读 {@code /proc/sys/fs/file-nr} 首列（已分配文件句柄数），
+     * macOS 回退 {@code sysctl kern.num_files}。
+     */
+    @Override
+    public long handleCount() {
+        return firstInt(output("cat /proc/sys/fs/file-nr 2>/dev/null || sysctl -n kern.num_files 2>/dev/null"));
+    }
+
     @Override
     public List<DiskPartitionRowVO> diskPartitions() {
         return parsePartitions(output("df -hT"));
