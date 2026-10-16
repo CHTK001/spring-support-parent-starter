@@ -855,6 +855,20 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (isBlank(probed.getServerHostCode())) {
             probed.setServerHostCode(generateHostCode());
         }
+        // 探测只负责硬件/系统信息，用户与配置的开关列不属于探测产物：
+        // 整行 updateById 会把 probed 快照里可能过期的 SSH 开关、采集开关、启停状态按旧值写回，
+        // 覆盖用户刚改过的设置（实测表现为「打开 SSH 后又被改回 0，发布被闸门拦住」）。
+        // 置 null 让 updateById 的 null 跳过策略保留库中现值。
+        probed.setServerHostSshEnabled(null);
+        probed.setServerHostOnlineEnabled(null);
+        probed.setServerHostCollectEnabled(null);
+        probed.setServerHostCollectMode(null);
+        probed.setServerHostCollectInterval(null);
+        probed.setServerHostDelayEnabled(null);
+        probed.setServerHostDelayInterval(null);
+        probed.setServerHostRemoteEnabled(null);
+        probed.setServerHostAgentEnabled(null);
+        probed.setServerHostStatus(null);
         hostMapper.updateById(probed);
         markOnline(hostId, true);
         return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");

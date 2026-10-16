@@ -273,6 +273,19 @@ public final class ProjectScripts {
         return "cd '" + PH_PATH + "' 2>/dev/null || true;\n";
     }
 
+    /**
+     * Linux 启动脚本写 pid 文件后回显运行 PID。
+     *
+     * <p>与 Windows 侧的 {@code running pid=} 输出对齐。失败自动回滚时，编排层只能靠日志里
+     * 的这一行判断「回滚后真正在跑的是哪个 PID」并回写库：只有 Windows 侧有这行时，
+     * Linux 升级回滚虽然服务已恢复正常，库里的 PID 仍为空或陈旧（实测 status=running 但
+     * pid=undefined），运维据此判断端口归属会得到错误结论。</p>
+     */
+    private static final String LINUX_PID_ECHO =
+            "echo $! > app.pid\n"
+                    + "sleep 1\n"
+                    + "echo \"running pid=$(cat app.pid)\"";
+
     private static Scripts builtinLinux(String projectType, String mainEntry) {
         String type = projectType == null ? "" : projectType.trim().toLowerCase();
         // 停止 = 按 app.pid 停止 + 回收本项目残留进程（app.pid 陈旧时唯一兜底）
@@ -283,13 +296,13 @@ public final class ProjectScripts {
             case "springboot" -> {
                 start = linuxEnter()
                         + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ --spring.profiles.active=prod > " + PH_LOG + " 2>&1 &\n"
-                        + "echo $! > app.pid";
+                        + LINUX_PID_ECHO;
                 restart = stop + "\nsleep 2\n" + start;
             }
             case "fatjar" -> {
                 start = linuxEnter()
                         + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
-                        + "echo $! > app.pid";
+                        + LINUX_PID_ECHO;
                 restart = stop + "\nsleep 2\n" + start;
             }
             case "static", "nginx" -> {
@@ -362,7 +375,7 @@ public final class ProjectScripts {
                 start = linuxEnter()
                         + "chmod +x " + PH_ENTRY + ";\n"
                         + "nohup ./" + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
-                        + "echo $! > app.pid";
+                        + LINUX_PID_ECHO;
                 restart = stop + "\nsleep 2\n" + start;
             }
             default -> {
@@ -405,7 +418,24 @@ public final class ProjectScripts {
         String startLine = "start \"\" /b \"" + exe + "\"" + tail + " > \"" + PH_LOG + "\" 2>&1";
         String launcherPs = startLine.replace("'", "''");
         String cdPs = cdLine.replace("'", "''");
-        return "$inner = '" + inner + "'\n"
+        // Get-Process 兜底解析用的可执行名（去扩展名，如 java.exe -> java）
+        String exeBase = exe;
+        int dot = exeBase.lastIndexOf('.');
+        if (dot > 0) {
+            exeBase = exeBase.substring(0, dot);
+        }
+        exeBase = exeBase.replace("'", "''");
+        // 单引号字面量不会展开 PowerShell 变量：__JVMARGS__/__ARGS__ 在展开期会被替换成
+        // $JvmArgs/$AppArgs，若仍留在单引号里，cmd 收到的是字面量 "$JvmArgs"，
+        // java 便以 "$JvmArgs" 为主类启动并抛 ClassNotFoundException（实测 app.log 实证）。
+        // 这里改为把 token 拼成 ' + (@($var) -join ' ') + '：VARS 块存在时正确展开数组，
+        // 未配置参数（变量未定义）时 (@($null) -join ' ') 安全退化为空串。
+        String innerExpr = inner
+                .replace("__JVMARGS__", "' + (@($JvmArgs) -join ' ') + '")
+                .replace("__ARGS__", "' + (@($AppArgs) -join ' ') + '");
+        return "$__scriptStart = Get-Date\n"
+                + "$ErrorActionPreference = 'SilentlyContinue'\n"
+                + "$inner = '" + innerExpr + "'\n"
                 + "$cmd = 'cmd /c ' + $inner + ' > \"" + PH_LOG + "\" 2>&1'\n"
                 + "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = '"
                 + PH_PATH + "' }\n"
@@ -480,6 +510,24 @@ public final class ProjectScripts {
                 + "  'picked=' + $procId)\n"
                 + "Write-Output ($__r -join ' ')\n"
                 + "if ($task) { & schtasks.exe /delete /tn $task /f 2>&1 | Out-Null }\n"
+                // CIM/WMI 进程枚举在加固主机上会被安全产品间歇拦截（实测 hit 为空、picked=0）：
+                // 此时若直接退回 WMI 创建返回的包装壳 pid，app.pid 会指向 cmd /c 包装壳，
+                // 而端口属主是它稍后拉起的真实程序进程 —— 健康检查按「端口属主==app.pid」判定必然失败，
+                // 表现为「升级总是健康检查失败并回滚」。这里用不依赖 WMI 的 .NET Get-Process 兜底：
+                // 取启动时间不早于本次脚本启动的同名进程中最新者（仍由端口属主健康检查二次把关）。
+                + "if ($procId -le 0) {\n"
+                + "  $deadline = (Get-Date).AddSeconds(20)\n"
+                + "  while ((Get-Date) -lt $deadline -and $procId -le 0) {\n"
+                + "    $cand = @(Get-Process -Name '" + exeBase + "' -ErrorAction SilentlyContinue |\n"
+                + "      Where-Object { $_.Id -ne $PID -and $_.StartTime -ge $__scriptStart.AddSeconds(-2) })\n"
+                + "    if ($cand.Count -gt 0) {\n"
+                + "      $procId = [int](($cand | Sort-Object StartTime -Descending | Select-Object -First 1).Id)\n"
+                + "      break\n"
+                + "    }\n"
+                + "    Start-Sleep -Milliseconds 500\n"
+                + "  }\n"
+                + "  if ($procId -gt 0) { Write-Output ('resolve-fallback(Get-Process): picked=' + $procId) }\n"
+                + "}\n"
                 + "if ($procId -le 0 -and $wmiOk) { $procId = [int]$r.ProcessId }\n"
                 + "if ($procId -le 0) {\n"
                 + "  throw ('启动失败：未能确定程序进程 (WMI code=' + $r.ReturnValue + ', want=' + $want + ')')\n"

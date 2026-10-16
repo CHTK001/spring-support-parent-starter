@@ -121,6 +121,17 @@ public class WindowsHostOperations extends HostOperations {
         return WindowsProfileRows.threads(powershell(WindowsProfileScripts.threads(pid)));
     }
 
+    /**
+     * 系统句柄总数：与任务管理器「句柄数」同口径，取各进程 HandleCount 之和。
+     *
+     * <p>显式转 {@code [long]}：{@code Measure-Object -Sum} 回的是 double，大数会被 PowerShell
+     * 用科学计数法打印（如 {@code 1.23456E+05}），直接取首个整数会只读到 {@code 1}。</p>
+     */
+    @Override
+    public long handleCount() {
+        return firstInt(output(ps("[long]((Get-Process | Measure-Object -Property HandleCount -Sum).Sum)")));
+    }
+
     @Override
     public List<DiskPartitionRowVO> diskPartitions() {
         return WindowsProfileRows.partitions(powershell(WindowsProfileScripts.VOLUMES));

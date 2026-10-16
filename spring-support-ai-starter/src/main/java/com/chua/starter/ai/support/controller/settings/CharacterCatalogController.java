@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller.settings;
 
 import com.chua.starter.ai.support.entity.SysAiRole;
+import com.chua.starter.ai.support.chat.BuiltinRolePromptSeeder;
 import com.chua.starter.ai.support.service.SysAiRoleService;
 import com.chua.starter.ai.support.service.SkillCatalogService;
 import com.chua.starter.ai.support.util.ClasspathDirSupport;
@@ -44,6 +45,7 @@ public class CharacterCatalogController {
 
     private final SysAiRoleService roleService;
     private final SkillCatalogService skillCatalogService;
+    private final BuiltinRolePromptSeeder builtinRolePromptSeeder;
 
     @Value("${nomifun.skills-root:./skills}")
     private String skillsRoot;
@@ -130,14 +132,15 @@ public class CharacterCatalogController {
             List<SysAiRole> existing = roleService.list();
             boolean alreadyExists = existing.stream().anyMatch(r -> id.equals(r.getCode()));
             if (alreadyExists) {
-                result.put("success", true);
-                result.put("message", "已在助手中");
-                result.put("alreadyAdded", true);
                 SysAiRole found = existing.stream()
                         .filter(r -> id.equals(r.getCode())).findFirst().orElse(null);
                 if (found != null) {
+                    builtinRolePromptSeeder.seedForRole(found);
                     result.put("roleId", found.getId());
                 }
+                result.put("success", true);
+                result.put("message", "已在助手中");
+                result.put("alreadyAdded", true);
                 return result;
             }
 
@@ -169,6 +172,7 @@ public class CharacterCatalogController {
                     role.setStatus(1);
                     role.setDeleted(0);
                     roleService.save(role);
+                    builtinRolePromptSeeder.seedForRole(role);
 
                     result.put("success", true);
                     result.put("message", "添加成功");

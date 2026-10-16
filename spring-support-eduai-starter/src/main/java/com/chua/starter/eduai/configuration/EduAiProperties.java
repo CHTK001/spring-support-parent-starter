@@ -122,6 +122,18 @@ public class EduAiProperties {
          * 版面与 OCR；未检出或模型不可用时自动回退原图，不阻断阅卷。</p>
          */
         private boolean layoutCorrection = false;
+
+        /**
+         * 任意卷识别策略（SPI key）。
+         *
+         * <p>走 {@code AnyExtractStrategy} 扩展点，内置两个实现：
+         * {@code whole}（默认）= 整卷一次识别（版面规则切题 → 模型补题干 → 整卷模型 → 行规则兜底）；
+         * {@code region} = 按版面区域分块识别（区域切不出来时自动回退整卷）。</p>
+         *
+         * <p>默认 {@code whole}：与既有行为一致，调用量最小；区域内逐块识别更细但调用量成倍上升，
+         * 配额充足、版式复杂（多栏/答题框）时再切到 {@code region}。</p>
+         */
+        private String extractStrategy = "whole";
     }
 
     @Data
@@ -189,6 +201,61 @@ public class EduAiProperties {
          * 温度参数
          */
         private Double temperature = 0.3;
+
+        /**
+         * AI 调用重试配置（限流 429 与瞬时故障）。
+         */
+        private Retry retry = new Retry();
+    }
+
+    @Data
+    /**
+     * AI 调用重试配置。
+     *
+     * <p>模型侧限流（429）与瞬时故障（超时/502/503/连接重置）不该一次失败就降级：
+     * 判分会掉成 0 分（「AI 判分暂不可用，请人工复核」），抽取会整卷失败。
+     * 这里把重试做成系统配置，运维可按压测/配额调次数与退避，不必改代码。</p>
+     *
+     * <pre>{@code
+     * plugin:
+     *   eduai:
+     *     ai:
+     *       retry:
+     *         times: 3                 # 最大重试次数（0 = 不重试）
+     *         backoff-millis: 1000     # 初始退避
+     *         backoff-multiplier: 2.0  # 每次退避倍数
+     *         max-backoff-millis: 15000
+     *         retry-on-transient: true # 除限流外，是否也重试瞬时故障
+     * }</pre>
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    public static class Retry {
+        /**
+         * 最大重试次数（0 = 不重试）
+         */
+        private int times = 3;
+
+        /**
+         * 初始退避毫秒
+         */
+        private long backoffMillis = 1000L;
+
+        /**
+         * 退避倍数（<=1 时按 2 处理）
+         */
+        private double backoffMultiplier = 2.0D;
+
+        /**
+         * 退避上限毫秒（<=0 时按 15000 处理）
+         */
+        private long maxBackoffMillis = 15000L;
+
+        /**
+         * 除限流外，是否也重试瞬时故障（超时 / 502 / 503 / 连接异常）
+         */
+        private boolean retryOnTransient = true;
     }
 
     @Data

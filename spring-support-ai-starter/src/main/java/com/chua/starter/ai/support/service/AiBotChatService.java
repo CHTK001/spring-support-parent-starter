@@ -17,8 +17,15 @@ import com.chua.common.support.probability.ProbabilityCollision;
 import com.chua.common.support.probability.SimpleProbabilityCollision;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.ilink.support.bot.ILinkBotClient;
+import com.chua.whatsapp.support.bot.WhatsAppBotClient;
+import com.chua.common.support.lang.json.Json;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.entity.SysAiBotMessage;
+import com.chua.starter.ai.support.entity.SysAiRole;
+import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
+import com.chua.starter.ai.support.model.BotConversation;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
@@ -29,9 +36,6 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
 import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
-import com.chua.starter.ai.support.model.BotConversation;
-import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.websocket.SysAiWebSocketHandler;
 import com.chua.starter.ai.support.util.ProviderCredentials;
@@ -50,8 +54,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -109,6 +115,16 @@ public class AiBotChatService {
     private final EffectiveChatModelResolver effectiveChatModelResolver;
 
     /**
+     * 角色表映射器（连接器绑定角色或兜底通用角色）
+     */
+    private final SysAiRoleMapper sysAiRoleMapper;
+
+    /**
+     * 角色提示词解析器（分形态提示词 → 角色历史提示词）
+     */
+    private final SysAiRolePromptResolver sysAiRolePromptResolver;
+
+    /**
      * 用量记录拦截器（记录每次 机器人 AI 调用的 令牌/费用）
     */
     private final UsageRecorderInterceptor usageRecorderInterceptor;
@@ -123,6 +139,11 @@ public class AiBotChatService {
      * 运行中的 机器人：机器人标识 -> 平台客户端（wechat=ILink，feishu/qq 等为对应 SPI 实现）。
     */
     private final Map<String, BotClient> runningBots = new ConcurrentHashMap<>();
+
+    /**
+     * 通用助手角色主键（id=1，系统内置）。
+     */
+    private static final Integer GENERAL_ASSISTANT_ID = 1;
 
     /**
      * 应用上下文刷新后加载所有已绑定的微信 机器人 并启动消息轮询。
@@ -172,6 +193,15 @@ public class AiBotChatService {
             ilink.accountId(bot.getBotId());
             ilink.contextTokenLoader((bid, user) -> loadLatestContextToken(bid, user));
             client = ilink;
+        } else if ("whatsapp".equals(platform)) {
+            // WhatsApp Cloud API：SPI 取客户端，Webhook 入站由 AiBotChatService 转发
+            BotClient auto = BotClient.auto(platform);
+            if (!(auto instanceof WhatsAppBotClient whatsapp)) {
+                throw new IllegalStateException("whatsapp SPI 未返回 WhatsAppBotClient");
+            }
+            whatsapp.configure(bot.getBotId(), bot.getBotToken(),
+                    bot.getAppSecret(), bot.getVerifyToken());
+            client = whatsapp;
         } else {
             // 凭据型：botId=appId，botToken=appSecret
             client = BotClient.auto(platform);
@@ -241,6 +271,100 @@ public class AiBotChatService {
     }
 
     /**
+     * 校验 WhatsApp Webhook GET 握手（hub.mode / hub.verify_token / hub.challenge）。
+     *
+     * @param mode      hub.mode，须为 subscribe
+     * @param token     hub.verify_token
+     * @param challenge hub.challenge
+     * @return 校验通过返回 challenge，否则返回 null
+     */
+    public String verifyWhatsAppWebhook(String mode, String token, String challenge) {
+        if (!"subscribe".equalsIgnoreCase(mode) || token == null || token.isBlank()
+                || challenge == null || challenge.isBlank()) {
+            return null;
+        }
+        try {
+            List<SysAiBotBinding> bindings = botBindingMapper.selectList(
+                    Wrappers.<SysAiBotBinding>lambdaQuery()
+                            .eq(SysAiBotBinding::getPlatform, "whatsapp")
+                            .eq(SysAiBotBinding::getStatus, "online")
+                            .eq(SysAiBotBinding::getVerifyToken, token)
+                            .last("LIMIT 1"));
+            return bindings == null || bindings.isEmpty() ? null : challenge;
+        } catch (Exception e) {
+            log.warn("[BotChat] WhatsApp Webhook 校验失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 处理 WhatsApp Webhook POST 回调，按 phone_number_id 转发给对应运行中的客户端。
+     *
+     * @param body    原始请求体
+     * @param headers 请求头
+     * @return 回调结果
+     */
+    public WhatsAppBotClient.WhatsAppCallbackResult handleWhatsAppWebhook(
+            String body, Map<String, String> headers) {
+        Set<String> phoneNumberIds = extractWhatsAppPhoneNumberIds(body);
+        WhatsAppBotClient.WhatsAppCallbackResult last = null;
+        for (String phoneNumberId : phoneNumberIds) {
+            BotClient client = runningBots.get(phoneNumberId);
+            if (client instanceof WhatsAppBotClient whatsapp) {
+                last = whatsapp.handleCallback(body, headers);
+            }
+        }
+        if (last == null) {
+            return new WhatsAppBotClient.WhatsAppCallbackResult(404,
+                    "{\"msg\":\"no running whatsapp bot for callback\"}");
+        }
+        return last;
+    }
+
+    /**
+     * 从 Meta Webhook 回调体中提取所有 phone_number_id。
+     */
+    @SuppressWarnings("unchecked")
+    private Set<String> extractWhatsAppPhoneNumberIds(String body) {
+        Set<String> ids = new LinkedHashSet<>();
+        try {
+            Map<String, Object> root = Json.fromJson(body);
+            Object entryObj = root.get("entry");
+            if (!(entryObj instanceof List<?> entries)) {
+                return ids;
+            }
+            for (Object entry : entries) {
+                if (!(entry instanceof Map<?, ?> entryMap)) {
+                    continue;
+                }
+                Object changesObj = entryMap.get("changes");
+                if (!(changesObj instanceof List<?> changes)) {
+                    continue;
+                }
+                for (Object change : changes) {
+                    if (!(change instanceof Map<?, ?> changeMap)) {
+                        continue;
+                    }
+                    Object valueObj = changeMap.get("value");
+                    if (!(valueObj instanceof Map<?, ?> value)) {
+                        continue;
+                    }
+                    Object metadataObj = value.get("metadata");
+                    if (metadataObj instanceof Map<?, ?> metadata) {
+                        Object id = metadata.get("phone_number_id");
+                        if (id != null && !String.valueOf(id).isBlank()) {
+                            ids.add(String.valueOf(id));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[BotChat] 解析 WhatsApp 回调 phone_number_id 失败: {}", e.getMessage());
+        }
+        return ids;
+    }
+
+    /**
      * 按平台与会话类型选择正确的回复目标并发送。
      *
      * <p>wechat（iLink）沿用 {@code sendText(发送者, ...)}；其余平台（qq/feishu）：
@@ -275,6 +399,14 @@ public class AiBotChatService {
         String fromUser = message.getFromUser();
         if (content == null || content.isBlank() || fromUser == null) {
             return "SKIP_EMPTY";
+        }
+        // 每次入站重新读库：startBot 闭包里捕获的 bot 是启动时快照，
+        // 管理员在连接器页改模型后不重启轮询，微信侧仍会一直用旧模型。
+        SysAiBotBinding fresh = findBinding(bot.getBotId());
+        if (fresh != null) {
+            bot = fresh;
+            log.info("[BotChat] Bot {} 入站重读绑定 model={} roleId={}",
+                    bot.getBotId(), bot.getModel(), bot.getRoleId());
         }
         // 会话键：群聊用群 chatId，私聊用用户 openid，保证上下文按会话隔离
         boolean fromGroup = message.isFromGroup();
@@ -995,18 +1127,54 @@ public class AiBotChatService {
     }
 
     /**
-     * 解析 机器人 使用的系统提示词：优先 机器人 单独配置的自定义提示词，
-     * 未配置则回退全局默认提示词（bot.system_prompt），都没有则返回 空。
+     * 解析 机器人 使用的系统提示词：绑定角色提示词 > 通用助手角色提示词 > 全局默认提示词。
+     *
+     * <p>连接器原来的 {@code systemPrompt} 不再作为提示词来源，避免写死模型名或人设。
      *
      * @param bot 机器人 绑定记录（可为 空）
      * @return 生效的系统提示词，无则返回 {@code null}
      */
     private String resolveSystemPrompt(SysAiBotBinding bot) {
-        if (bot != null && bot.getSystemPrompt() != null && !bot.getSystemPrompt().isBlank()) {
-            return bot.getSystemPrompt().trim();
+        Integer selectedRoleId = bot != null && bot.getRoleId() != null
+                ? bot.getRoleId() : GENERAL_ASSISTANT_ID;
+        String rolePrompt = resolveRolePrompt(selectedRoleId);
+        if (rolePrompt != null && !rolePrompt.isBlank()) {
+            return rolePrompt;
+        }
+        if (!GENERAL_ASSISTANT_ID.equals(selectedRoleId)) {
+            String defaultPrompt = resolveRolePrompt(GENERAL_ASSISTANT_ID);
+            if (defaultPrompt != null && !defaultPrompt.isBlank()) {
+                return defaultPrompt;
+            }
         }
         String global = globalSettingReader.getStr("bot", "system_prompt");
         return (global == null || global.isBlank()) ? null : global.trim();
+    }
+
+    /**
+     * 按角色主键解析 build 形态提示词。
+     *
+     * @param roleId 角色主键
+     * @return 角色提示词正文；角色不存在或未配置时返回 {@code null}
+     */
+    private String resolveRolePrompt(Integer roleId) {
+        if (roleId == null) {
+            return null;
+        }
+        try {
+            SysAiRole role = sysAiRoleMapper.selectById(roleId);
+            if (role == null) {
+                log.warn("[BotChat] 提示词角色不存在 roleId={}", roleId);
+                return null;
+            }
+            String prompt = sysAiRolePromptResolver.resolve(role, SysAiRolePromptResolver.MODE_BUILD);
+            log.info("[BotChat] 解析角色提示词 roleId={} role={} found={}",
+                    roleId, role.getName(), !(prompt == null || prompt.isBlank()));
+            return prompt;
+        } catch (Exception e) {
+            log.warn("[BotChat] 解析角色提示词失败 roleId={}: {}", roleId, e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -1386,6 +1554,8 @@ public class AiBotChatService {
         // （历史问题：种子默认值被硬编码成 gpt-4o，报错就永远指名那个用户从未配过的模型，
         //   真正的失败原因被完全盖住，用户根本无法判断到底该配哪个。）
         List<String> candidates = effectiveChatModelResolver.candidates(bot.getModel());
+        log.info("[BotChat] Bot {} 候选模型解析 botModel={} candidates={}",
+                bot.getBotId(), bot.getModel(), candidates);
         if (candidates.isEmpty()) {
             log.warn("[BotChat] Bot {} 没有可用的对话模型：连接器未单独配，Bot 默认与配置中心默认也不可用",
                     bot.getBotId());
@@ -1472,6 +1642,8 @@ public class AiBotChatService {
         if (pm == null) {
             throw new IllegalStateException("模型 " + modelName + " 未在模型管理中配置");
         }
+        log.info("[BotChat] Bot {} 命中模型 providerId={} model={} plainModel={} 原始模型名={}",
+                bot.getBotId(), pm.getProviderId(), pm.getModel(), plainModel, modelName);
         // 2. 查 提供者，取 platform / baseurl / 凭证
         SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
         if (provider == null || provider.getBaseUrl() == null) {
@@ -1482,6 +1654,8 @@ public class AiBotChatService {
         // 3. 构建 对话客户端（带请求超时）并回复
         ChatClient chatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs))
                 .model(plainModel);
+        log.info("[BotChat] Bot {} 实际调用 providerId={} platform={} baseUrl={} model={}",
+                bot.getBotId(), provider.getProviderId(), provider.getPlatform(), provider.getBaseUrl(), plainModel);
         // 系统提示词：优先 Bot 自定义，未配置则回退全局默认（bot.system_prompt）
         String effectiveSystemPrompt = resolveSystemPrompt(bot);
         if (effectiveSystemPrompt != null && !effectiveSystemPrompt.isBlank()) {
@@ -1528,6 +1702,10 @@ public class AiBotChatService {
         long start = System.currentTimeMillis();
         ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
         long end = System.currentTimeMillis();
+        String replyText = response != null && response.getText() != null ? response.getText() : "";
+        log.info("[BotChat] Bot {} 调用完成 providerId={} model={} reply={}",
+                bot.getBotId(), provider.getProviderId(), plainModel,
+                replyText.length() > 160 ? replyText.substring(0, 160) : replyText);
         boolean recordUsage = !Boolean.FALSE.equals(bot.getRecordUsage());
         if (recordUsage && response != null && response.getUsage() != null) {
             long duration = Math.max(0L, end - start);

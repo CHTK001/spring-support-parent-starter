@@ -9,6 +9,7 @@ import com.chua.deeplearning.support.image.ImagePipeline;
 import com.chua.deeplearning.support.image.ImageSearchHit;
 import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.client.ModelIds;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -391,11 +392,13 @@ public class ImageSearchStore {
         try {
             String v = settingReader.getStr(GROUP, "default_image_feature_model");
             if (v != null && !v.isBlank()) {
-                return v.trim();
+                // 设置页保存的是 providerId:model（如 onnx:clip-image-feature）；
+                // ModelRegistry 只认裸名，带前缀会静默查空，这里统一收敛。
+                return ModelIds.bare(v.trim());
             }
             // 兜底：默认模型设置里的图像特征模型默认项（同为 ONNX 模型命名空间）
             String fallback = settingReader.getStr("runtime", "default_image_feature_model");
-            return fallback == null ? "" : fallback.trim();
+            return fallback == null ? "" : ModelIds.bare(fallback.trim());
         } catch (Exception ex) {
             log.warn("[ImageSearch] 读取特征模型配置失败: {}", ex.getMessage());
             return "";

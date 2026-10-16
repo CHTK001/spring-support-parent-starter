@@ -75,6 +75,15 @@ public class ConnectorController {
         qq.put("bindType", "form");
         types.add(qq);
 
+        // WhatsApp Cloud API
+        Map<String, Object> whatsapp = new HashMap<>();
+        whatsapp.put("type", "whatsapp");
+        whatsapp.put("name", "WhatsApp");
+        whatsapp.put("description", "通过 Meta Cloud API 接入 WhatsApp 商务号（Webhook 收发）");
+        whatsapp.put("icon", "📱");
+        whatsapp.put("bindType", "form");
+        types.add(whatsapp);
+
         return ReturnResult.success(types);
     }
 
@@ -98,7 +107,7 @@ public class ConnectorController {
             item.put("name", binding.getNickname());
             item.put("status", binding.getStatus());
             item.put("modelName", binding.getModel());
-            item.put("systemPrompt", binding.getSystemPrompt());
+            item.put("roleId", binding.getRoleId());
             item.put("mentionOnly", Boolean.TRUE.equals(binding.getMentionOnly()));
             item.put("randomReplyEnabled", Boolean.TRUE.equals(binding.getRandomReplyEnabled()));
             item.put("randomContextCount", binding.getRandomContextCount());
@@ -127,6 +136,7 @@ public class ConnectorController {
         result.put("name", binding.getNickname());
         result.put("status", binding.getStatus());
         result.put("modelName", binding.getModel());
+        result.put("roleId", binding.getRoleId());
         result.put("createTime", binding.getCreateTime());
         result.put("lastActiveTime", binding.getLastActiveTime());
         result.put("mcpServerIds", binding.getMcpServerIds());
@@ -209,6 +219,9 @@ public class ConnectorController {
         String type = request.get("type") == null ? "" : String.valueOf(request.get("type")).trim();
         String appId = request.get("appId") == null ? "" : String.valueOf(request.get("appId")).trim();
         String appSecret = request.get("appSecret") == null ? "" : String.valueOf(request.get("appSecret")).trim();
+        String phoneNumberId = request.get("phoneNumberId") == null ? "" : String.valueOf(request.get("phoneNumberId")).trim();
+        String accessToken = request.get("accessToken") == null ? "" : String.valueOf(request.get("accessToken")).trim();
+        String verifyToken = request.get("verifyToken") == null ? "" : String.valueOf(request.get("verifyToken")).trim();
         String model = request.get("model") == null ? null : String.valueOf(request.get("model")).trim();
         AiBotCaller caller = AiBotCaller.fromLogin();
 
@@ -216,6 +229,8 @@ public class ConnectorController {
         switch (type) {
             case "feishu" -> id = botBindingService.bindFeishu(appId, appSecret, model, caller.ownerKey());
             case "qq" -> id = botBindingService.bindQq(appId, appSecret, model, caller.ownerKey());
+            case "whatsapp" -> id = botBindingService.bindWhatsApp(phoneNumberId, accessToken,
+                    appSecret, verifyToken, model, caller.ownerKey());
             default -> {
                 return ReturnResult.error("暂不支持该连接器类型的绑定：" + type);
             }
@@ -297,9 +312,11 @@ public class ConnectorController {
         if (request.containsKey("model")) {
             binding.setModel(request.get("model") == null ? "" : String.valueOf(request.get("model")).trim());
         }
-        if (request.containsKey("systemPrompt")) {
-            binding.setSystemPrompt(request.get("systemPrompt") == null
-                    ? "" : String.valueOf(request.get("systemPrompt")).trim());
+        if (request.containsKey("roleId")) {
+            Object roleIdValue = request.get("roleId");
+            binding.setRoleId(roleIdValue == null || String.valueOf(roleIdValue).trim().isEmpty()
+                    ? null
+                    : Integer.parseInt(String.valueOf(roleIdValue).trim()));
         }
         if (request.containsKey("mentionOnly")) {
             binding.setMentionOnly(Boolean.TRUE.equals(request.get("mentionOnly")));
@@ -320,6 +337,13 @@ public class ConnectorController {
                     ? "" : String.valueOf(request.get("mcpServerIds")).trim());
         }
         botBindingService.updateBinding(binding);
+        // 重新加载并重启运行中的 Bot：AiBotChatService.startBot 把传入的 binding 对象捕获进
+        // 消息监听器闭包，只 updateBinding 不会刷新微信被动回复使用的模型。
+        // 这里先从库重读一次，再 restart，否则消息线程仍会用旧的 connector.modelName。
+        SysAiBotBinding refreshed = botBindingService.getById(id);
+        if (refreshed != null) {
+            aiBotChatService.startBot(refreshed);
+        }
         log.info("编辑连接器: id={} model={} mentionOnly={} random={} prob={}", id,
                 binding.getModel(), binding.getMentionOnly(), binding.getRandomReplyEnabled(),
                 binding.getRandomProbability());

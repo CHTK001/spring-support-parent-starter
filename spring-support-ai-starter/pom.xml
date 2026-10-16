@@ -91,6 +91,12 @@
       <artifactId>utils-support-qq-starter</artifactId>
       <version>4.0.0.42</version>
     </dependency>
+    <!-- WhatsApp Cloud API Bot（凭据配置型：phone_number_id/access_token/app_secret/verify_token，Webhook 收发） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-whatsapp-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
     <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现）。
          注意：这里只引「实现」，不引「权重」——具体模型构件（utils-support-models-onnx-*）
          由各应用按需声明，否则每个下游可执行 jar 都会被捆绑上百兆权重 -->

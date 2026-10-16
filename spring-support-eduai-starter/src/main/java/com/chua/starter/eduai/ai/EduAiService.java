@@ -8,6 +8,8 @@ import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.model.vo.EduAiCapabilityVO;
+import com.chua.starter.eduai.model.vo.MarkingSettingVO;
+import com.chua.starter.eduai.service.MarkingSettingService;
 import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -69,24 +71,19 @@ public class EduAiService {
      * 属性
     */
     private final EduAiProperties properties;
+
+    /**
+     * 阅卷运行时设置（重试次数 / 退避曲线）。
+     *
+     * <p>可选项：读到系统配置弹窗保存的运行时覆盖值；bean 缺失（如精简上下文）时
+     * 完全退回 {@link EduAiProperties} 的 YAML 默认值，不影响原行为。</p>
+     */
+    @Autowired(required = false)
+    private MarkingSettingService markingSettingService;
     /**
      * Objectmapper
     */
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    /**
-     * 模型限流（429）时的最大重试次数。
-     *
-     * <p>限流往往是短时窗口内的：一次失败就降级（判分）或整卷失败（抽取），代价都不小。
-     * 这里做 3 次指数退避重试（1s/2s/4s）；仍失败才降级/报错，
-     * 保证链路不被外部配额的一次抖动打断。判分与抽取两条路径共用该重试。</p>
-     */
-    private static final int RATE_LIMIT_RETRY = 3;
-
-    /**
-     * 限流重试的基础退避毫秒（后续按倍数递增）。
-     */
-    private static final long RATE_LIMIT_BACKOFF_MILLIS = 1000L;
 
     /**
      * 构造方法，创建 EduAi服务 实例。
@@ -552,28 +549,48 @@ public class EduAiService {
     }
 
     /**
-     * 调用模型，遇限流（429）做有限次指数退避重试。
+     * 模型调用失败时的重试（限流 429 + 瞬时故障）。
      *
-     * <p>只对限流重试：网络抖动、鉴权失败、模型不存在等错误重试没有意义，直接抛出交给
-     * 上层降级。限流之外一律不重试，避免把一次判分的耗时成倍放大。</p>
+     * <p>次数与退避曲线来自系统配置 {@code plugin.eduai.ai.retry.*}：
+     * 一次失败就降级（判分掉 0 分）或整卷失败，代价都不小；
+     * 但重试次数配得过大又会把单题耗时成倍放大，所以做成可配，由运维按配额决定。</p>
+     *
+     * <p>取值再经「系统配置弹窗」的运行时覆盖一次（{@code edu_app_config} 的
+     * {@code marking-retry-*} 键，见 {@link MarkingSettingService}）：弹窗改了立刻生效，
+     * 无需重启。</p>
      *
      * @param systemPrompt 系统提示词
      * @param userPrompt   用户提示词
      * @return 模型响应
      */
     private ChatResponse callWithRateLimitRetry(String systemPrompt, String userPrompt) {
-        long backoff = RATE_LIMIT_BACKOFF_MILLIS;
+        EduAiProperties.Retry retry = properties.getAi().getRetry();
+        int maxRetry = Math.max(0, retry.getTimes());
+        double multiplier = retry.getBackoffMultiplier() > 1 ? retry.getBackoffMultiplier() : 2.0D;
+        long cap = retry.getMaxBackoffMillis() > 0 ? retry.getMaxBackoffMillis() : 15000L;
+        long backoff = Math.max(1L, retry.getBackoffMillis());
+        boolean retryOnTransient = retry.isRetryOnTransient();
+        if (markingSettingService != null) {
+            MarkingSettingVO setting = markingSettingService.resolved();
+            maxRetry = Math.max(0, setting.getRetryTimes());
+            multiplier = setting.getRetryBackoffMultiplier() > 1 ? setting.getRetryBackoffMultiplier() : 2.0D;
+            cap = setting.getRetryMaxBackoffMillis() > 0 ? setting.getRetryMaxBackoffMillis() : 15000L;
+            backoff = Math.max(1L, setting.getRetryBackoffMillis());
+            retryOnTransient = setting.isRetryOnTransient();
+        }
         for (int attempt = 0; ; attempt++) {
             try {
                 return call(systemPrompt, userPrompt);
             } catch (Exception e) {
-                if (!isRateLimited(e) || attempt >= RATE_LIMIT_RETRY) {
+                boolean retryable = isRateLimited(e)
+                        || (retryOnTransient && isTransientFailure(e));
+                if (!retryable || attempt >= maxRetry) {
                     if (e instanceof RuntimeException runtime) {
                         throw runtime;
                     }
                     throw new IllegalStateException(e.getMessage(), e);
                 }
-                log.warn("[EduAi] 模型限流，第 {} 次重试（退避 {}ms，原因: {}）",
+                log.warn("[EduAi] 模型调用失败，第 {} 次重试（退避 {}ms，原因: {}）",
                         attempt + 1, backoff, e.getMessage());
                 try {
                     Thread.sleep(backoff);
@@ -581,9 +598,37 @@ public class EduAiService {
                     Thread.currentThread().interrupt();
                     throw e instanceof RuntimeException runtime ? runtime : new IllegalStateException(e);
                 }
-                backoff *= 2;
+                backoff = Math.min(cap, (long) (backoff * multiplier));
             }
         }
+    }
+
+    /**
+     * 判断异常链是否为「瞬时故障」：超时 / 502 / 503 / 连接重置等。
+     *
+     * <p>与限流区分开：鉴权失败、模型不存在、参数非法这类重试没有意义，不在其列。</p>
+     *
+     * @param error 异常
+     * @return true 表示值得重试
+     */
+    private static boolean isTransientFailure(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            String name = t.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+            if (name.contains("timeout") || name.contains("connect")) {
+                return true;
+            }
+            String message = t.getMessage();
+            if (message == null) {
+                continue;
+            }
+            String lower = message.toLowerCase(Locale.ROOT);
+            if (lower.contains("timeout") || lower.contains("timed out")
+                    || lower.contains(" 502") || lower.contains(" 503") || lower.contains(" 504")
+                    || lower.contains("connection reset") || lower.contains("temporarily")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

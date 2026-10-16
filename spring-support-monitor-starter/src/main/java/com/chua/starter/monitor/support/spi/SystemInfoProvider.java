@@ -503,6 +503,24 @@ public interface SystemInfoProvider {
     }
 
     /**
+     * 主机句柄数（Windows 系统句柄总数 / POSIX 打开文件描述符数）。
+     *
+     * <p>平台差异（PowerShell 汇总 vs {@code /proc} 计数）由 {@link HostOperations} 的平台子类给出，
+     * 通道只负责把命令送进目标机，因此本机 / Agent / SSH / WinRM 四条通道共用同一份实现。
+     * 取不到时返回 -1，绝不抛异常——句柄数只是画像的一项指标，拿不到不应让整页采集失败。</p>
+     *
+     * @param host 目标主机
+     * @return 句柄数，取不到返回 -1
+     */
+    default long handleCount(MsServerHost host) {
+        try {
+            return HostOperations.of(this, host).handleCount();
+        } catch (Exception e) {
+            return -1L;
+        }
+    }
+
+    /**
      * 磁盘分区列表。
      *
      * @param host 目标主机

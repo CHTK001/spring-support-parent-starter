@@ -445,7 +445,45 @@ public class HostProfileServiceImpl implements HostProfileService {
                 metrics.setThreadCount((int) summary.threadCount());
             }
         }
+        // 句柄数：Windows 汇总各进程 HandleCount，POSIX 计打开文件句柄数；取不到留 -1
+        metrics.setHandleCount(handleCount(provider, host));
         return metrics;
+    }
+
+    /**
+     * 句柄数短期缓存：hostId → [采集时刻(ms), 值]。
+     *
+     * <p>{@link #refresh} 会被「画像手动刷新」与「AGENT 采集循环」
+     * （{@code HostRealtimePushConfiguration} → pullSnapshot）两条路径调用；句柄数变化很慢，
+     * 加一层短 TTL 免去采集循环每轮都多跑一条 PowerShell / {@code /proc} 命令。</p>
+     */
+    private final java.util.Map<Long, long[]> handleCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 句柄数缓存有效期（毫秒）
+     */
+    private static final long HANDLE_CACHE_TTL_MS = 15_000L;
+
+    /**
+     * 取主机句柄数（带短 TTL 缓存）；取不到返回 -1，绝不抛异常打断画像采集。
+     *
+     * @param provider 采集通道
+     * @param host     目标主机
+     * @return 句柄数
+     */
+    private long handleCount(SystemInfoProvider provider, MsServerHost host) {
+        Long id = host.getId();
+        if (id == null) {
+            return provider.handleCount(host);
+        }
+        long now = System.currentTimeMillis();
+        long[] hit = handleCache.get(id);
+        if (hit != null && now - hit[0] < HANDLE_CACHE_TTL_MS) {
+            return hit[1];
+        }
+        long value = provider.handleCount(host);
+        handleCache.put(id, new long[]{now, value});
+        return value;
     }
 
     /**
@@ -531,6 +569,22 @@ public class HostProfileServiceImpl implements HostProfileService {
                 host.setServerHostAgentVersion(info.getAgentVersion());
             }
         }
+        // 关键：不能把采集开始时加载的陈旧快照整行写回。该快照里的「用户/配置开关」
+        // （SSH 开关、在线检测开关、采集开关/方式/间隔、延迟开关、远控开关、Agent 开关、启停状态）
+        // 可能已被并发路径（用户保存、探测回写 sshEnabled 等）改过；整行写回会用旧值覆盖，
+        // 实测表现为「用户把 win101 的 SSH 打开后，采集每 10~60s 又把它改回 0」，
+        // 于是所有发布操作被「未开启 SSH」闸门周期性拦住。
+        // 这里把这些不属于采集产物的列显式置 null，借助 updateById 的 null 跳过策略保留库中现值。
+        host.setServerHostSshEnabled(null);
+        host.setServerHostOnlineEnabled(null);
+        host.setServerHostCollectEnabled(null);
+        host.setServerHostCollectMode(null);
+        host.setServerHostCollectInterval(null);
+        host.setServerHostDelayEnabled(null);
+        host.setServerHostDelayInterval(null);
+        host.setServerHostRemoteEnabled(null);
+        host.setServerHostAgentEnabled(null);
+        host.setServerHostStatus(null);
         hostMapper.updateById(host);
         // 采集成功即清掉历史失败原因（updateById 会跳过 null 字段，必须走显式置空）
         clearError(host.getId());
@@ -646,7 +700,11 @@ public class HostProfileServiceImpl implements HostProfileService {
         host.setServerHostAgentError(cut(reason));
         // 不在此把 agent_installed 置 0：installed 是部署生命周期状态（仅由部署=1/卸载=0 改变），
         // 一次瞬时采集超时/分区失败只记录原因，否则健康 Agent 会因偶发抖动被整体判不可用。
-        hostMapper.updateById(host);
+        // 只写自己负责的一列：整行 updateById 会把这份快照里的 SSH 开关/采集开关等
+        // 用户配置按旧值写回（用户刚改过就被覆盖），进而周期性阻断发布等操作。
+        hostMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<MsServerHost>()
+                .eq(MsServerHost::getId, hostId)
+                .set(MsServerHost::getServerHostAgentError, host.getServerHostAgentError()));
     }
 
     /**

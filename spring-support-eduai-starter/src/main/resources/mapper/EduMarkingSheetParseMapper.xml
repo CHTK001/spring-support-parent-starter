@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.mapper.EduMarkingSheetParseMapper">
+
+    <resultMap id="ParseMap" type="com.chua.starter.eduai.model.EduMarkingSheetParse">
+        <id column="parse_id" property="parseId"/>
+        <result column="parse_owner_user_id" property="parseOwnerUserId"/>
+        <result column="parse_task_id" property="parseTaskId"/>
+        <result column="parse_answer_sheet_id" property="parseAnswerSheetId"/>
+        <result column="parse_kind" property="parseKind"/>
+        <result column="parse_student_name" property="parseStudentName"/>
+        <result column="parse_student_no" property="parseStudentNo"/>
+        <result column="parse_total_score" property="parseTotalScore"/>
+        <result column="parse_question_no" property="parseQuestionNo"/>
+        <result column="parse_question_stem" property="parseQuestionStem"/>
+        <result column="parse_student_answer" property="parseStudentAnswer"/>
+        <result column="parse_full_score" property="parseFullScore"/>
+        <result column="parse_earned_score" property="parseEarnedScore"/>
+        <result column="parse_correct" property="parseCorrect"/>
+        <result column="parse_source" property="parseSource"/>
+        <result column="parse_page" property="parsePage"/>
+        <result column="parse_region_label" property="parseRegionLabel"/>
+        <result column="parse_region_x" property="parseRegionX"/>
+        <result column="parse_region_y" property="parseRegionY"/>
+        <result column="parse_region_w" property="parseRegionW"/>
+        <result column="parse_region_h" property="parseRegionH"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        parse_id, parse_owner_user_id, parse_task_id, parse_answer_sheet_id, parse_kind,
+        parse_student_name, parse_student_no, parse_total_score, parse_question_no,
+        parse_question_stem, parse_student_answer, parse_full_score, parse_earned_score,
+        parse_correct, parse_source, parse_page, parse_region_label,
+        parse_region_x, parse_region_y, parse_region_w, parse_region_h
+    </sql>
+
+    <!-- 按任务取解析项：STUDENT → TOTAL → QUESTION(按题号)，与界面回显顺序一致 -->
+    <select id="selectByTaskId" resultMap="ParseMap">
+        SELECT <include refid="BaseColumns"/>
+        FROM edu_marking_sheet_parse
+        WHERE parse_task_id = #{taskId}
+        ORDER BY FIELD(parse_kind, 'STUDENT', 'TOTAL', 'QUESTION'),
+                 CAST(parse_question_no AS UNSIGNED), parse_id
+    </select>
+
+    <!-- 重跑前清理：唯一键 (task_id, kind, question_no) 会挡住重复写入 -->
+    <delete id="deleteByTaskId">
+        DELETE FROM edu_marking_sheet_parse WHERE parse_task_id = #{taskId}
+    </delete>
+</mapper>
