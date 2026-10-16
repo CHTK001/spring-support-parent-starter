@@ -5,11 +5,17 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
+import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +24,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -57,11 +66,14 @@ public class TsharkCaptureController {
     /**
      * 列出可用网卡
      *
-     * @return 可用网卡名列表
+     * <p>带友好名与本机 IPv4，并把承载默认出口的那张排在最前 —— Windows 上 tshark 只给
+     * {@code \Device\NPF_{GUID}}，不加工的话页面上是一串读不懂的 GUID。</p>
+     *
+     * @return 网卡列表（设备名 + 友好名 + IPv4 + 是否本机出口）
      */
     @Operation(summary = "列出可用网卡")
     @GetMapping("/interfaces")
-    public ReturnResult<List<String>> interfaces() {
+    public ReturnResult<List<TsharkInterfaceVO>> interfaces() {
         return this.tsharkCaptureService.listInterfaces();
     }
 
@@ -122,14 +134,79 @@ public class TsharkCaptureController {
      * @param id 会话 ID
      * @param page 页码
      * @param size 每页大小
+     * @param keyword 关键字（可空），在协议/IP/端口/摘要里模糊匹配
      * @return 分页结果
      */
     @Operation(summary = "数据包分页列表")
     @GetMapping("/sessions/{id}/packets")
     public ReturnResult<IPage<MsTsharkPacket>> packets(@PathVariable Long id,
                                                         @RequestParam(defaultValue = "1") int page,
-                                                        @RequestParam(defaultValue = "20") int size) {
-        return this.tsharkCaptureService.pagePackets(id, page, size);
+                                                        @RequestParam(defaultValue = "20") int size,
+                                                        @RequestParam(required = false) String keyword) {
+        return this.tsharkCaptureService.pagePackets(id, page, size, keyword);
+    }
+
+    /**
+     * 还原某个包所属 TCP 流的握手 / 关闭生命周期
+     *
+     * <p>抓包页在包上右键 → 「查看握手生命周期」就调这里，返回该包的整条流按时序排好的
+     * 报文序列与握手判定（三次 / 四次 / 未完成），前端据此画时序图。</p>
+     *
+     * @param packetId 数据包 ID
+     * @return 生命周期；包不存在或非 TCP 时 404
+     */
+    @Operation(summary = "查看 TCP 握手生命周期")
+    @GetMapping("/packets/{packetId}/handshake")
+    public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long packetId) {
+        TsharkHandshakeVO vo = this.tsharkCaptureService.handshakeOf(packetId);
+        return vo == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(vo);
+    }
+
+    /**
+     * 订阅数据包的实时推送（SSE）
+     *
+     * <p>建连即回 {@code ready}，之后：每入库一个包推一个 {@code packet}，
+     * pcap 解析收尾推一个 {@code session}（前端据此重拉协议分布与 Top 流）。
+     * 另有 20s 一次的注释帧保活，前端不会把它当事件。</p>
+     *
+     * <p><strong>首屏历史不在这里给</strong>：SSE 只做增量，历史走
+     * {@code /sessions/{id}/packets}。否则建连那一刻就要推上百个包。</p>
+     *
+     * @param id 会话 ID
+     * @return SSE 连接；会话不存在时 404
+     */
+    @Operation(summary = "数据包实时推送（SSE）", description = "按抓包会话分组推送，逐包增量")
+    @GetMapping("/sessions/{id}/packets/stream")
+    public ResponseEntity<SseEmitter> packetStream(@PathVariable Long id) {
+        if (this.tsharkCaptureService.getSession(id) == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(this.tsharkCaptureService.subscribePacketStream(id));
+    }
+
+    /**
+     * 下载会话的原始 pcap 文件
+     *
+     * <p>页面上的协议摘要只是 tshark 解析后的结果，要做更深的分析（重组、专家信息、
+     * 自定义过滤）得把原始 pcap 拿去 Wireshark 打开，所以提供原件下载。</p>
+     *
+     * @param id 会话 ID
+     * @return pcap 文件流；会话不存在或文件已清理时返回 404
+     */
+    @Operation(summary = "下载原始 pcap")
+    @GetMapping("/sessions/{id}/pcap")
+    public ResponseEntity<Resource> pcap(@PathVariable Long id) {
+        Resource resource = this.tsharkCaptureService.pcapResource(id);
+        if (resource == null) {
+            return ResponseEntity.notFound().build();
+        }
+        String name = this.tsharkCaptureService.pcapFileName(id);
+        return ResponseEntity.ok()
+                // 文件名含中文，ASCII 段兜底一个 pcap.pcap，避免老客户端拿到乱码名
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"capture.pcap\"; filename*=UTF-8''" + URLEncoder.encode(name, StandardCharsets.UTF_8))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     /**

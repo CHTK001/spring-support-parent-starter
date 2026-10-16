@@ -104,6 +104,39 @@ CREATE TABLE IF NOT EXISTS device_door (
 -- 设备表增加地图位置字段
 -- 位置索引（在补列之后创建）
 
+-- ============================================
+-- 提供商凭据表（厂商自定义的 AK/SK 等接入参数）
+--
+-- 为什么需要：DeviceConnectInfo 携带 appKey/appSecret/platformType，但 device_info
+-- 无对应列，API 边界接收后即丢弃——云平台凭据无处落库，后续会话/事件/云台/视频
+-- 都无法重新认证。此表补上该缺口。
+--
+-- 粒度：同一 (厂商, 平台类型) 可登记**多套**凭据（如多个海康账号分属不同区域），
+-- 每套用自己的 device_credential_name 区分；每厂商可标记一套为默认
+-- （device_credential_is_default），厂商级离线阈值取默认套的阈值。
+--
+-- 离线阈值一并入库：原先只有 DeviceProviderConfigServiceImpl 里的静态 Map，
+-- 重启即丢；此表落库后由该服务读取。
+-- ============================================
+CREATE TABLE IF NOT EXISTS device_provider_credential (
+
+    device_credential_id VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_credential_vendor VARCHAR(20) NOT NULL COMMENT '厂商标识：hikvision / dahua',
+    device_credential_platform_type VARCHAR(40) COMMENT '平台类型：cloud-yao / cloud-eye / secure-platform / dahua-cloud / lechange；SDK 直连可空',
+    device_credential_name VARCHAR(100) NOT NULL COMMENT '凭据名称，如「华东区账号」；同厂商同平台下唯一',
+    device_credential_app_key VARCHAR(128) COMMENT 'AppKey（AK）；SDK 直连模式可空',
+    device_credential_app_secret VARCHAR(256) COMMENT 'AppSecret（SK）；SDK 直连模式可空',
+    device_credential_base_url VARCHAR(255) COMMENT '平台 endpoint 覆盖（留空用各 Session 内置默认）',
+    device_credential_offline_threshold INT DEFAULT 60 COMMENT '该套凭据覆盖设备的离线检测阈值（秒）',
+    device_credential_is_default TINYINT DEFAULT 0 COMMENT '是否为该厂商的默认套：0 否、1 是',
+    device_credential_enabled TINYINT DEFAULT 1 COMMENT '是否启用：0 否、1 是',
+    device_credential_remark VARCHAR(255) COMMENT '备注',
+    device_credential_created_at DATETIME COMMENT '创建时间',
+    device_credential_updated_at DATETIME COMMENT '更新时间',
+    KEY `idx_dpc_vendor_platform` (`device_credential_vendor`, `device_credential_platform_type`)
+) COMMENT '提供商接入凭据（AK/SK 等）';
+-- ============================================
+
 -- 通道表增加状态与排序字段
 -- ============================================
 -- 后台定时任务配置表

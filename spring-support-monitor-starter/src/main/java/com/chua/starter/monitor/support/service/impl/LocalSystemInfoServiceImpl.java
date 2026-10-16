@@ -209,6 +209,49 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
     }
 
     /**
+     * 采集显卡型号名称（多卡用逗号连接）。
+     *
+     * <p>用 {@link oshi.hardware.GraphicsCard} 而不是自己拼 shell：OSHI 把
+     * Windows 的 WMI、Linux 的 sysfs、macOS 的 system_profiler 都封在同一个 API 后面，
+     * 新增平台不用再改命令。</p>
+     *
+     * <p>逐卡 try-catch：部分环境（容器、精简内核、远程桌面会话）枚举显卡会抛异常，
+     * 一块坏卡不该让整份主机画像降级。拿不到名称时退而用 vendor 名，至少能看出是 Intel / NVIDIA / AMD。</p>
+     *
+     * @param hal 硬件层
+     * @return 显卡名称；无显卡或全部采集失败时返回 {@code "unknown"}
+     */
+    private String graphicsAdapterNames(HardwareAbstractionLayer hal) {
+        List<String> names = new ArrayList<>();
+        try {
+            for (oshi.hardware.GraphicsCard gpu : hal.getGraphicsCards()) {
+                String name = null;
+                try {
+                    name = gpu.getName();
+                } catch (Throwable t) {
+                    log.debug("显卡名称读取失败: {}", t.getMessage());
+                }
+                if (name == null || name.isBlank()) {
+                    try {
+                        name = gpu.getVendor();
+                    } catch (Throwable ignore) {
+                        // vendor 也拿不到就跳过这块卡
+                    }
+                }
+                if (name != null && !name.isBlank()) {
+                    names.add(name.trim());
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("显卡枚举失败: {}", t.getMessage());
+        }
+        if (names.isEmpty()) {
+            return "unknown";
+        }
+        return String.join(", ", names);
+    }
+
+    /**
      * 组装静态/低频主机信息（含慢 WMI、网卡枚举、主机编码、版本信息等），结果缓存复用。
      *
      * @param hal 硬件层
@@ -220,6 +263,12 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
         CentralProcessor cpu = hal.getProcessor();
         info.setCpuCores(cpu.getLogicalProcessorCount());
         info.setCpuName(cpu.getProcessorIdentifier().getName());
+
+        // 显卡：走 OSHI 的 GraphicsAdapter，Windows/Linux/macOS 同一份代码。
+        // 原来这块是三套平台各一条 shell 命令（Windows 走 WMI、Linux 走 lspci、
+        // macOS 走 system_profiler），Linux 那条 `lspci | grep -i vga` 还漏掉
+        // NVIDIA 的「3D controller」与 AMD 的「Display controller」，带独显的机器反而取不到名字。
+        info.setGpu(graphicsAdapterNames(hal));
 
         GlobalMemory mem = hal.getMemory();
         long totalMem = mem.getTotal();
