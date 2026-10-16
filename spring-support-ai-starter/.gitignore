@@ -4,6 +4,10 @@ rag-uploads/
 
 # OAuth 白名单外部运行时文件（运行时生成，动态增删白名单规则）
 config/
+# 例外：src/main/java 下的 config 是 Java 包名，不是上面的运行时配置目录。
+# 没有这条时 manage/config/LocalMailMockConfig.java 会被 config/ 一并吃掉 ——
+# gitignore 按路径段匹配，不区分「模块根的目录」与「源码树里的包目录」。
+!src/main/java/**/config/
 
 # ONNX 模型缓存（运行时下载/放置，不入库）
 models/
