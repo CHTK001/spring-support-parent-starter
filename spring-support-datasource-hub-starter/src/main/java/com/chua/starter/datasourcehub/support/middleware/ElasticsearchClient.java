@@ -51,6 +51,16 @@ public class ElasticsearchClient {
     private static final Duration MUTATION_TIMEOUT = Duration.ofSeconds(30);
 
     /**
+     * 读取集群「有效设置」的超时。
+     *
+     * <p>{@code _cluster/settings?include_defaults=true} 会返回上千项设置（单节点 ES 8.17 实测
+     * 781 项），正常约 0.2~1.1s，但实例繁忙/GC 时偶发冲高，超过共享通道的 10s 默认超时——
+     * 实测日志在 10-16、10-17 共出现 6 次 {@code /_cluster/settings: request timed out}，
+     * 每次都会让整页「集群信息」失败。故这条重读单独放宽到 30s。</p>
+     */
+    private static final Duration CLUSTER_SETTINGS_TIMEOUT = Duration.ofSeconds(30);
+
+    /**
      * 数据源服务
      */
     private final DatasourceService datasourceService;
@@ -134,6 +144,19 @@ public class ElasticsearchClient {
     }
 
     /**
+     * GET 并读成 JSON 对象，可指定请求超时（用于大响应/慢读取）
+     *
+     * @param target  访问目标
+     * @param path    API 路径
+     * @param query   查询参数
+     * @param timeout 请求超时
+     * @return JSON 对象
+     */
+    public JsonObject get(Target target, String path, Map<String, String> query, Duration timeout) {
+        return read(target, path, query, () -> MiddlewareHttp.get(target.url(path), query, headers(target), timeout));
+    }
+
+    /**
      * GET 并读成 JSON 数组（{@code _cat} 系列返回的就是裸数组）
      *
      * @param target 访问目标
@@ -207,11 +230,14 @@ public class ElasticsearchClient {
     /**
      * 读取集群设置（含默认值，便于页面展示「改了什么」）
      *
+     * <p>返回上千项、偶发冲高，走 {@link #CLUSTER_SETTINGS_TIMEOUT} 而非默认 10s。</p>
+     *
      * @param target 访问目标
      * @return 集群设置
      */
     public JsonObject clusterSettings(Target target) {
-        return get(target, "/_cluster/settings", Map.of("flat_settings", "true", "include_defaults", "true"));
+        return get(target, "/_cluster/settings",
+                Map.of("flat_settings", "true", "include_defaults", "true"), CLUSTER_SETTINGS_TIMEOUT);
     }
 
     /**

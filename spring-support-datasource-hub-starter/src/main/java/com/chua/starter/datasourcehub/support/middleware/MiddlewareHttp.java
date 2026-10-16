@@ -72,6 +72,27 @@ public final class MiddlewareHttp {
     }
 
     /**
+     * GET 请求，可带自定义请求头，并指定请求超时。
+     *
+     * <p>用于 {@code Elasticsearch _cluster/settings?include_defaults=true} 这类返回上千项、
+     * 耗时会偶发冲高的大响应读取，见 {@link #builder(String, Map, Duration)}。</p>
+     *
+     * @param url     不含查询串的地址
+     * @param query   查询参数，可为空
+     * @param headers 请求头，可为空
+     * @param timeout 请求超时
+     * @return 响应体文本
+     * @throws IOException 连接失败或响应非 2xx
+     */
+    public static String get(String url, Map<String, String> query, Map<String, String> headers, Duration timeout)
+            throws IOException {
+        HttpRequest request = builder(appendQuery(url, query), headers, timeout)
+                .GET()
+                .build();
+        return send(request);
+    }
+
+    /**
      * JSON 方式 POST（InfluxDB 查询接口只吃 application/json）。
      *
      * @param url     地址
