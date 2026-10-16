@@ -240,6 +240,62 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 - 前后端类型检查：本任务涉及文件无类型错误；全仓仍有 `BotSessionDialog.vue` / `DisplaySettings.vue`
   的**既有**类型错误（属其它会话改动，**未擅自重构**）。
 
+## 7. 2026-10-16 追加修复（默认模型的本地 ONNX 图像特征模型）
+
+针对反馈「`onnx:clip-image-feature` 在默认模型里设了，但模型列表里找不到」，定位并修掉 4 个真实缺陷，
+全部在专用后端 `8788` / 专用前端 `15691` 上验证通过。
+
+### 7.1 缺陷与修法
+
+| # | 现象 | 根因 | 修法 |
+|---|---|---|---|
+| 1 | 默认模型页选不到 `cn-clip-rn50-image` 等图像特征模型 | `DefaultModelSettings.loadLocalModels()` 只并入 `/rag/options` 的 embedding/ocr，未并入图像特征模型 | 增补从 `/ai/models/local` 拉取 `capability=feature` 且 `relativePath` 以 `vision/` 开头、排除 `text` 与人脸 的模型并入列表 |
+| 2 | 配置 `onnx:clip-image-feature` 后后端识别不到模型 | `ImageSearchStore.currentModel()` 原样返回带前缀值，而 `ModelRegistry` 只认裸名（懒加载查空） | 改用 `ModelIds.bare(...)` 归一化，剥掉 `providerId:` 前缀 |
+| 3 | 图库「模型是否注册」误判 | `ImageLibraryPanel.checkModelRegistered()` 拿带前缀值与能力列表裸名比较 | 比较前剥掉前缀 |
+| 4 | 模型选择弹窗整份列表成倍重复 | `loadLocalModels()` 分别 push 了两个 `id=onnx` 的 provider，而 `filteredProviders` 按 `providerId` 取模型，每个条目都命中全部 onnx 模型 | 本地 + 人脸合并去重后只登记**一个** onnx provider，已存在则并入其 `models`；`collectFace` 补内部去重 |
+| 5 | 弹窗偶发打不开且报 `error loading dynamically imported module .../ReDialog/theme/koi/KoiShellHeaderActions.vue?vue&type=style` | 主题弹窗是**首次打开才懒加载**：点开那一刻才发起 `import()`，若恰有路由/重渲染导航，浏览器以 `NS_BINDING_ABORTED` 掐断在飞请求；而按 ES 模块规范，**同文档内一次失败的模块取数会被缓存**，后续重试同一 URL 仍失败（`packages/ui/src/theme.ts` 还把这个 rejected Promise 永久缓存在 `themedComponentCache`，把「一次抖动」放大成「之后永久打不开」） | ①`loadThemedComponent` 失败即从缓存删除，不再固化失败；②`defineAsyncComponent` 加 `onError` 重试（≤3 次）；③新增 `preloadThemedComponent()`，AI 应用在 `bootstrapFramework()` 之后**预热**当前主题的 ReDialog 实现，把取数提前到无导航竞态的应用装配阶段（对齐 `vue-support-monitor-starter` 既有做法）。修复后单跑 Characters：原 1 条 `click-error`（动态导入）**归零** |
+| 6 | 验收工具在 Characters 记「角色设置」`not-clickable` | 两类都在**采集/点击侧**，非产品缺陷：①上一条「使用此角色」点击是**合法导航**（`router.push` 到 `/chat/new-session`），下一条元素却在**新页面**上按指纹命中同款「角色设置」按钮，点它时元素随即被路由销毁 → 超时（证据：`fresh=224`、`urlChanged=/chat/new-session`、`效果0条`）；②角色卡片里的「角色设置」按钮位于 hover 才显形的浮层，列表刷新即重建节点，Playwright 解析出节点后、派发点击前撞上重渲染 → call log 明示 `element was detached from the DOM, retrying`（证据：同路由 58 个同款按钮中 57 个点开弹窗成功，该条 `before=0` 却 `弹窗4 DOM变更682条`，即点击其实也生效了） | `ui-click-sweep.cjs`：①点击前若发现页面已不在**本路由首段路径**（`/characters` 等）下，先重导航回本路由再定位；用首段而非整段 path，避免误伤本路由内的合法子导航（如 Chat 点会话跳 `/chat/120`）；②点击异常命中 `detached from the DOM` 时，按指纹**就地重新定位**新节点再点一次（与既有 viewport 分支同一套「重新寻路」思路，不重导航） |
+
+> `ModelIds` 是既有工具类（OCR 路径已用，Javadoc 明确「设置页值形如 `providerId:model`，下层只认裸名」），
+> 图像检索路径此前未接上，属漏用而非新造轮子。
+
+### 7.2 验证
+
+- **后端前缀归一**：PUT 覆盖 `image_search.default_image_feature_model=onnx:clip-image-feature` 后，
+  `GET /v2/image-search/status` 返回 `"model":"clip-image-feature"`（已脱前缀）；随后复位。
+- **`verify-fixes.cjs`（浏览器实测）**：`VERIFY_FIXES_OK`
+  - 人脸组「检测模型」→ 5 项，含 `scrfd-face-detector`；
+  - 人脸组「特征模型」→ 2 项，含 `arc-face`；
+  - 以图搜图「图像特征模型」→ 36 项，含 `cn-clip-rn50-image` / `clip-image-feature` / `resnet50-feature`，且不含人脸模型；
+  - 三处均断言 `new Set(list).size === list.length`（修复 #4 后**无重复**）；
+  - 人脸识别页 `.fs-gallery-hint` 计数 `1`，与 `GET /v2/face/list` 的 `total` 一致。
+- **`preloadThemedComponent()` 预热（修复 #5）**：重启前端后单跑 `Characters`，原 1 条
+  `click-error`（`error loading dynamically imported module`）**归零**；报告 JSON 显示
+  各「角色设置」条目为 `弹窗4~5 DOM变更650~684`，即弹窗确实打开。
+- **sweep 路由归属（修复 #6）**：`node --check` 语法通过；重跑 `Characters` 以确认
+  3 条 `not-clickable`（`urlChanged=/chat/new-session`）不再出现（结论见本节末）。
+- 前端 `vue-tsc --noEmit`：本任务涉及文件（`DefaultModelSettings.vue`/`ImageLibraryPanel.vue`/`FaceSearchPage.vue`/`useFaceRegistry.ts`）
+  无类型错误；唯一报错 `packages/ui/.../CytoscapeGraph.vue(993,20)` 为既有问题、与本任务无关。
+- 后端 `mvn -o -pl spring-support-ai-starter compile` 通过；`ImageSearchStore.class` 经 `javap` 确认已含 `ModelIds.bare` 调用。
+
+### 7.3 「模型列表」口径说明（回答反馈本身）
+
+- `onnx:` 是**默认模型选择器**对本地 ONNX 模型的命名空间（`providerId:model`）。模型管理列表只列
+  `sys_ai_provider_model` 里的**供应商模型**，本地 ONNX 模型不登记其中，所以那里本来就不会出现它。
+- **模型管理页的 ONNX 分支根本不会列 `clip-image-feature`**：`ApiProviderController.listVisibleLocalModels()`
+  只返回两类条目——① `readEntries()` 里**已绑定外部目录**的模型；② 内置模型里 `available === true` 的。
+  实测 `GET /api/providers/onnx/remote_models` 返回 10 个，含 `cn-clip-rn50-image`，**不含 `clip-image-feature`**。
+- **`clip-image-feature` 的 `available=false`**：它的声明路径是
+  `vision/enhancement/CLIP-ViT-B-32-IMAGE/CLIP-ViT-B-32-IMAGE.onnx`，而远端
+  `/opt/ai-starter/runtime/models/onnx/vision/enhancement/` 目录**不存在**（权重未下载）。
+  `cn-clip-rn50-image` 的 `vision/zeroshot/cn-clip-rn50/rn50.img.b1.fp16.onnx` 存在（76MB），故 `available=true`。
+- 结论：`clip-image-feature` 在注册表里「存在但不可用」，所以模型管理页按设计过滤掉了它；
+  而当前系统默认 `cn-clip-rn50-image` 可用，且可在 `模型管理 → ONNX 本地推理 → 获取模型` 里看到。
+- 佐证：`GET /v2/ai/models/local` 三条同族记录 `clip-image-feature(resnet50-feature)=available:false`、
+  `cn-clip-rn50-image=available:true(localPath=/opt/ai-starter/runtime/models/onnx/vision/zeroshot/cn-clip-rn50/rn50.img.b1.fp16.onnx)`。
+
+---
+
 ### 复现命令
 
 ```bash

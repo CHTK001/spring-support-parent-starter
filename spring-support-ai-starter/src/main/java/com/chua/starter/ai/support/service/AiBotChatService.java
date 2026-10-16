@@ -159,7 +159,13 @@ public class AiBotChatService {
                         .eq(SysAiBotBinding::getStatus, "online")
                         .isNotNull(SysAiBotBinding::getBotToken));
         for (SysAiBotBinding bot : bots) {
-            startBot(bot);
+            // 逐条隔离：单个 Bot 配置异常不得影响其它平台启动
+            try {
+                startBot(bot);
+            } catch (Exception e) {
+                log.error("[BotChat] 启动 Bot 失败 platform={} botId={}，跳过该 Bot",
+                        bot.getPlatform(), bot.getBotId(), e);
+            }
         }
         log.info("[BotChat] 聊天引擎加载完成，共启动 {} 个 Bot", runningBots.size());
     }
@@ -315,8 +321,10 @@ public class AiBotChatService {
             }
         }
         if (last == null) {
-            return new WhatsAppBotClient.WhatsAppCallbackResult(404,
-                    "{\"msg\":\"no running whatsapp bot for callback\"}");
+            // 无匹配的运行中 Bot：仍需回 200，否则 Meta 会持续重试并在多次失败后停用回调
+            log.warn("[BotChat] WhatsApp 回调未匹配到运行中的 Bot，phoneNumberIds={}", phoneNumberIds);
+            return new WhatsAppBotClient.WhatsAppCallbackResult(200,
+                    "{\"status\":\"ignored\",\"msg\":\"no running whatsapp bot\"}");
         }
         return last;
     }
