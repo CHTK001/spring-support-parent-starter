@@ -65,7 +65,6 @@ public class AiCacheAutoConfiguration {
      * @return Caffeine 缓存管理器
      */
     @Bean
-    @Primary
     public CacheManager aiCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setCaffeine(Caffeine.newBuilder()
