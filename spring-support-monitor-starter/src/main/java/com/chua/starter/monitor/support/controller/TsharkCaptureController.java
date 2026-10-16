@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
@@ -65,11 +66,14 @@ public class TsharkCaptureController {
     /**
      * 列出可用网卡
      *
-     * @return 可用网卡名列表
+     * <p>带友好名与本机 IPv4，并把承载默认出口的那张排在最前 —— Windows 上 tshark 只给
+     * {@code \Device\NPF_{GUID}}，不加工的话页面上是一串读不懂的 GUID。</p>
+     *
+     * @return 网卡列表（设备名 + 友好名 + IPv4 + 是否本机出口）
      */
     @Operation(summary = "列出可用网卡")
     @GetMapping("/interfaces")
-    public ReturnResult<List<String>> interfaces() {
+    public ReturnResult<List<TsharkInterfaceVO>> interfaces() {
         return this.tsharkCaptureService.listInterfaces();
     }
 
