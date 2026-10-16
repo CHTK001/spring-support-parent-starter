@@ -50,6 +50,11 @@ public class DeviceServiceImpl implements DeviceService {
      */
     private final List<DeviceProvider> providers;
 
+    /**
+     * 提供商接入凭据服务（补齐 AK/SK 等云平台参数）
+     */
+    private final com.chua.starter.device.support.service.DeviceProviderCredentialService credentialService;
+
     @Override
     /**
      * 添加Device
@@ -219,10 +224,11 @@ public class DeviceServiceImpl implements DeviceService {
                 null,
                 null
         );
+        final DeviceConnectInfo connectInfo = enrichWithCredential(info);
         DeviceSession session = providers.stream()
-                .filter(p -> p.support(info))
+                .filter(p -> p.support(connectInfo))
                 .findFirst()
-                .map(p -> p.connect(info))
+                .map(p -> p.connect(connectInfo))
                 .orElse(null);
         if (session == null) {
             /**
@@ -265,6 +271,75 @@ public class DeviceServiceImpl implements DeviceService {
         log.debug("设备状态刷新: id={}, online={}", id, online);
     }
 
+    /**
+     * 用已登记的提供商凭据补齐连接信息中缺失的云平台参数。
+     *
+     * <p>调用方（如 reconnect）按设备台账构造 {@link DeviceConnectInfo}，其中
+     * platformType/appKey/appSecret 一律为 null——云平台会话据此必然认证失败。
+     * 这里按 (vendor, platformType) 从 {@code device_provider_credential} 取该厂商默认套
+     * 补齐；调用方已显式给出的值优先，不覆盖。</p>
+     *
+     * @param info 原始连接信息
+     * @return 补齐后的连接信息
+     */
+    private DeviceConnectInfo enrichWithCredential(DeviceConnectInfo info) {
+        if (info == null) {
+            return null;
+        }
+        String vendor = info.vendor();
+        if (vendor == null || vendor.isBlank()) {
+            return info;
+        }
+        // authType 缺省时按平台模式处理：SDK 直连不需要 AK/SK，凭据缺失不应阻断
+        if (info.authType() == null && info.appKey() != null && !info.appKey().isBlank()) {
+            return info;
+        }
+        com.chua.starter.device.support.entity.DeviceProviderCredential credential =
+                credentialService.resolveFor(vendor, info.platformType());
+        if (credential == null) {
+            log.debug("未登记 {} 的提供商凭据，按现有连接信息建连", vendor);
+            return info;
+        }
+        String appKey = firstNonBlank(info.appKey(), credential.getDeviceCredentialAppKey());
+        String appSecret = firstNonBlank(info.appSecret(), credential.getDeviceCredentialAppSecret());
+        String platformType = firstNonBlank(info.platformType(), credential.getDeviceCredentialPlatformType());
+        // 有 AK/SK 却没有 authType 时补 PLATFORM，否则 Provider 会走 SDK 直连分支
+        String authType = info.authType();
+        if (authType == null && appKey != null && !appKey.isBlank()) {
+            authType = "PLATFORM";
+        }
+        log.info("建连补齐提供商凭据: vendor={}, platform={}, credential={}",
+                vendor, platformType, credential.getDeviceCredentialName());
+        return new DeviceConnectInfo(
+                vendor,
+                authType,
+                info.ip(),
+                info.port(),
+                info.username(),
+                info.password(),
+                platformType,
+                appKey,
+                appSecret,
+                info.deviceSerial(),
+                info.extra()
+        );
+    }
+
+    /**
+     * 取第一个非空白值
+     *
+     * @param values 候选值
+     * @return 第一个非空白值；全为空白时返回 {@code null}
+     */
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) {
+                return v;
+            }
+        }
+        return null;
+    }
+
     @Override
     /**
      * 测试connection
@@ -275,7 +350,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .findFirst()
                 .map(p -> {
                     try {
-                        return p.connect(info);
+                        return p.connect(enrichWithCredential(info));
                     } catch (Exception e) {
                         log.warn("设备连接失败: {}", e.getMessage());
                         return null;
