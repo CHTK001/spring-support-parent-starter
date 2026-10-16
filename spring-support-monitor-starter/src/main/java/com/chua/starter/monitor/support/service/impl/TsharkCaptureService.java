@@ -9,10 +9,14 @@ import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -28,6 +32,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -96,12 +101,30 @@ public class TsharkCaptureService {
     */
     private final MonitorPushService pushService;
 
+    /**
+     * 数据包实时推送（SSE，按会话分组）。
+     *
+     * <p>用 {@link ObjectProvider} 而不是直接注入：注册表是本包内新建的组件，
+     * 与本服务无依赖环，但抓包并非所有部署都需要推送，直接注入会让
+     * 「禁用抓包」的部署也强拉起SSE 相关 bean。</p>
+     */
+    private final ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider;
+
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
                                 MsTsharkPacketMapper packetMapper,
-                                MonitorPushService pushService) {
+                                MonitorPushService pushService,
+                                ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
         this.pushService = pushService;
+        this.streamRegistryProvider = streamRegistryProvider;
+    }
+
+    /**
+     * 取 SSE 注册表；未装配时返回 null（推送静默跳过）。
+     */
+    private TsharkPacketStreamRegistry streamRegistry() {
+        return this.streamRegistryProvider.getIfAvailable();
     }
 
     /**
@@ -399,6 +422,12 @@ public class TsharkCaptureService {
                 if (session != null) {
                     session.setPacketCount(batch);
                     this.sessionMapper.updateById(session);
+                    // 解析收尾：前端据此重拉协议分布 / Top 流（逐包增量只够更新明细表）
+                    TsharkPacketStreamRegistry registry = streamRegistry();
+                    if (registry != null) {
+                        registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_SESSION,
+                                Map.of("sessionId", sessionId, "phase", "parsed", "packetCount", batch));
+                    }
                 }
             } else {
                 // 0 条必须出声：否则页面只显示「抓完了但一个包都没有」，
@@ -409,6 +438,311 @@ public class TsharkCaptureService {
         } catch (Exception e) {
             log.error("parse pcap failed, session={}", sessionId, e);
         }
+    }
+
+    /**
+     * 协议别名表：只放泛化规则覆盖不到的那些。键一律大写（查询前会 toUpperCase）。
+     */
+    private static final Map<String, String> PROTOCOL_ALIAS = Map.ofEntries(
+            Map.entry("HTTP2", "HTTP"),
+            Map.entry("HTTP/2", "HTTP"),
+            Map.entry("HTTP2 SERVER PUSH", "HTTP"),
+            Map.entry("MDNS", "DNS"),
+            Map.entry("LLMNR", "DNS"),
+            Map.entry("SSL", "TLS"),
+            Map.entry("SSL3", "TLS"),
+            Map.entry("TLSV1", "TLS"),
+            Map.entry("TLSV1.1", "TLS"),
+            Map.entry("TLSV1.2", "TLS"),
+            Map.entry("TLSV1.3", "TLS"),
+            Map.entry("MQTTV3.1", "MQTT"),
+            Map.entry("MQTTV3.1.1", "MQTT"),
+            Map.entry("MQTTV5", "MQTT"),
+            Map.entry("BOOTP", "DHCP"),
+            Map.entry("NETBIOS", "SMB"),
+            Map.entry("SMB2", "SMB"),
+            Map.entry("ICMPV6", "ICMP"),
+            Map.entry("TCP (SYN,ACK)", "TCP"),
+            Map.entry("TCP (RST,ACK)", "TCP"),
+            Map.entry("TCP (ACK)", "TCP")
+    );
+
+    /**
+     * 协议名归一化：把 tshark 的原始协议名收敛成少数几个规范名。
+     *
+     * <p><strong>为什么要归一</strong>：{@code _ws.col.Protocol} 给的是最内层协议，
+     * 且带版本后缀 —— TLS 握手是 {@code TLSv1.2}、MQTT 是 {@code MQTTv3.1.1}、
+     * HTTP/2 是 {@code HTTP2}。直接入库的话「协议分布」饼图会把 TLSv1.2 / TLSv1.3 /
+     * MQTTv3.1.1 各切成一瓣，一个 TLS 会话在图上碎成好几块，既不好看也不便于
+     * 判断谁占大头。</p>
+     *
+     * <p>归一放在<b>入库时</b>而不是展示层：协议统计是按库里的 protocol 聚合的，
+     * 只在前端换显示的话图表仍然是碎的。</p>
+     */
+    private static String simplifyProtocol(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "OTHER";
+        }
+        String p = raw.trim();
+        String alias = PROTOCOL_ALIAS.get(p.toUpperCase(Locale.ROOT));
+        if (alias != null) {
+            return alias;
+        }
+        // 剥版本后缀：先去掉 v1.2 / V3.1.1 这种带 v 的版本段，再去掉裸数字尾巴（HTTP2）
+        String base = p.replaceAll("[vV]\\d+(\\.\\d+)*$", "").replaceAll("\\d+$", "").trim();
+        // 剥空说明原名里没有字母（如 802.1Q 这类），保留原样大写即可
+        if (base.isEmpty() || base.chars().noneMatch(Character::isLetter)) {
+            return p.toUpperCase(Locale.ROOT);
+        }
+        return base.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * 还原某个包所属 TCP 流的握手 / 关闭生命周期。
+     *
+     * <p><strong>为什么不加 tcp_flags 列</strong>：tshark 的 Info 列（{@code packet_info}）里已经带了
+     * 标志位 —— {@code [SYN]}、{@code [SYN, ACK]}、{@code [PSH, ACK]}、{@code [RST, ACK]}、
+     * {@code [FIN, ACK]}。从方括号里解析就够画握手时序用了。为此新增一列要动 schema 迁移，
+     * 收益不抵成本；等真要做「按标志位过滤」时再落库。</p>
+     *
+     * @param packetId 数据包 id
+     * @return 生命周期；包不存在 / 非 TCP 时返回 null
+     */
+    public TsharkHandshakeVO handshakeOf(Long packetId) {
+        MsTsharkPacket anchor = this.packetMapper.selectById(packetId);
+        if (anchor == null || anchor.getSessionId() == null
+                || !"TCP".equalsIgnoreCase(String.valueOf(anchor.getProtocol()))) {
+            // 非 TCP 谈不上握手；UDP/ICMP 直接不返回，前端据此不显示该菜单项
+            return null;
+        }
+        List<MsTsharkPacket> all = this.packetMapper.selectList(
+                new LambdaQueryWrapper<MsTsharkPacket>()
+                        .eq(MsTsharkPacket::getSessionId, anchor.getSessionId())
+                        .eq(MsTsharkPacket::getProtocol, anchor.getProtocol())
+                        .orderByAsc(MsTsharkPacket::getPacketTime)
+                        .orderByAsc(MsTsharkPacket::getId));
+
+        boolean anchorIsClientSide = sameEndpoint(anchor.getSourceIp(), anchor.getSourcePort(),
+                anchor.getDestIp(), anchor.getDestPort());
+        String clientIp = anchorIsClientSide ? anchor.getSourceIp() : anchor.getDestIp();
+        Integer clientPort = anchorIsClientSide ? anchor.getSourcePort() : anchor.getDestPort();
+        String serverIp = anchorIsClientSide ? anchor.getDestIp() : anchor.getSourceIp();
+        Integer serverPort = anchorIsClientSide ? anchor.getDestPort() : anchor.getSourcePort();
+
+        List<MsTsharkPacket> flow = all.stream()
+                .filter(p -> isSameFlow(p, clientIp, clientPort, serverIp, serverPort))
+                .toList();
+        if (flow.isEmpty()) {
+            return null;
+        }
+        return buildHandshake(anchor.getSessionId(), clientIp, clientPort, serverIp, serverPort, flow);
+    }
+
+    /** 两端（ip + port）完全相同才算同一条流。 */
+    private static boolean sameEndpoint(String aIp, Integer aPort, String bIp, Integer bPort) {
+        return eq(aIp, bIp) && eq(aPort, bPort);
+    }
+
+    /** 报文属于该流：正向或反向均可。 */
+    private static boolean isSameFlow(MsTsharkPacket p, String cIp, Integer cPort,
+                                      String sIp, Integer sPort) {
+        return (eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort)
+                && eq(p.getDestIp(), sIp) && eq(p.getDestPort(), sPort))
+                || (eq(p.getSourceIp(), sIp) && eq(p.getSourcePort(), sPort)
+                && eq(p.getDestIp(), cIp) && eq(p.getDestPort(), cPort));
+    }
+
+    private static boolean eq(Object a, Object b) {
+        return a == null ? b == null : a.equals(b);
+    }
+
+    /**
+     * 把一条流按时间排好、解析标志位、判定握手次数与关闭状态。
+     */
+    private TsharkHandshakeVO buildHandshake(Long sessionId, String cIp, Integer cPort,
+                                            String sIp, Integer sPort, List<MsTsharkPacket> flow) {
+        java.time.format.DateTimeFormatter hhmm = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+        List<TsharkHandshakeVO.Step> steps = new ArrayList<>();
+        LocalDateTime t0 = flow.get(0).getPacketTime();
+        for (MsTsharkPacket p : flow) {
+            long relMs = 0L;
+            if (t0 != null && p.getPacketTime() != null) {
+                relMs = java.time.Duration.between(t0, p.getPacketTime()).toMillis();
+            }
+            String info = p.getPacketInfo() == null ? "" : p.getPacketInfo();
+            steps.add(new TsharkHandshakeVO.Step(p.getId(),
+                    p.getPacketTime() == null ? null : p.getPacketTime().format(hhmm),
+                    eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort),
+                    extractFlags(info), extractAfter(info, "Seq="), extractAfter(info, "Ack="),
+                    p.getPacketLength(), info, relMs));
+        }
+
+        // 握手判定：第一个 SYN（不带 ACK）定客户端方向，其后 SYN+ACK 与裸 ACK
+        int synIdx = -1;
+        boolean completed = false;
+        boolean fourWay = false;
+        String fourWayReason = null;
+        for (int i = 0; i < steps.size(); i++) {
+            TsharkHandshakeVO.Step f = steps.get(i);
+            String flags = f.flags() == null ? "" : f.flags();
+            boolean syn = flags.contains("SYN");
+            boolean ack = flags.contains("ACK");
+            if (synIdx < 0) {
+                if (syn && !ack && f.fromClient()) {
+                    synIdx = i;
+                    // SYN 里已经带数据 = TCP Fast Open：报文数仍是 3，但握手与首批数据合并
+                    String info = f.info() == null ? "" : f.info();
+                    if (info.contains("Len=") && !info.contains("Len=0")) {
+                        fourWay = true;
+                        fourWayReason = "SYN 携带数据（TCP Fast Open），握手与首批数据合并";
+                    }
+                }
+                continue;
+            }
+            if (syn && ack) {
+                // 服务端回应 —— 继续等客户端的裸 ACK
+            } else if (syn && !ack) {
+                fourWay = true;
+                fourWayReason = "出现第二个不带 ACK 的 SYN（SYN 重传或重发）";
+            } else if (!syn && ack && !completed) {
+                completed = true;
+                break;
+            }
+        }
+        // SYN / SYN-ACK / 裸 ACK 都要在，才算三次握手走完
+        boolean synAckSeen = false;
+        if (synIdx >= 0) {
+            for (int i = synIdx + 1; i < steps.size(); i++) {
+                String fl = steps.get(i).flags() == null ? "" : steps.get(i).flags();
+                if (fl.contains("SYN") && fl.contains("ACK")) {
+                    synAckSeen = true;
+                }
+                if (synAckSeen && !fl.contains("SYN")) {
+                    completed = true;
+                    break;
+                }
+            }
+        }
+
+        boolean clientFin = false;
+        boolean serverFin = false;
+        for (TsharkHandshakeVO.Step f : steps) {
+            if (f.flags() != null && f.flags().contains("FIN")) {
+                if (f.fromClient()) {
+                    clientFin = true;
+                } else {
+                    serverFin = true;
+                }
+            }
+        }
+        boolean closed = clientFin && serverFin;
+
+        String kind;
+        String label;
+        String detail;
+        if (!completed) {
+            kind = "NONE";
+            label = "未完成握手";
+            detail = synIdx < 0 ? "本流内没有抓到 SYN，连接可能建立于抓包开始之前"
+                    : "只抓到部分握手包，可能已停止抓包或中途丢包";
+        } else if (fourWay) {
+            kind = "FOUR_WAY";
+            label = "四次握手";
+            detail = fourWayReason;
+        } else {
+            kind = "THREE_WAY";
+            label = "三次握手";
+            detail = null;
+        }
+        return new TsharkHandshakeVO(sessionId, cIp, cPort, sIp, sPort,
+                new TsharkHandshakeVO.Handshake(kind, label, detail, completed, closed), steps);
+    }
+
+    /**
+     * 从 tshark Info 列取方括号中的标志位，如 {@code [SYN, ACK]} → {@code SYN,ACK}。
+     *
+     * <p>去掉空格：画时序图与做 contains 判断都不需要，且前后端口径一致。</p>
+     *
+     * @param info Info 列文本
+     * @return 标志位；解析不出返回空串
+     */
+    private static String extractFlags(String info) {
+        int l = info == null ? -1 : info.indexOf('[');
+        if (l < 0) {
+            return "";
+        }
+        int r = info.indexOf(']', l);
+        return r < 0 ? "" : info.substring(l + 1, r).replace(" ", "");
+    }
+
+    /**
+     * 取 {@code key=} 之后到下一个空格为止的值（用于 Seq / Ack）。
+     *
+     * @param info Info 列文本
+     * @param key  形如 {@code "Seq="}
+     * @return 值的文本；没有则返回空串
+     */
+    private static String extractAfter(String info, String key) {
+        if (info == null) {
+            return "";
+        }
+        int i = info.indexOf(key);
+        if (i < 0) {
+            return "";
+        }
+        int from = i + key.length();
+        int end = info.indexOf(' ', from);
+        return end < 0 ? info.substring(from) : info.substring(from, end);
+    }
+
+    /**
+     * 取会话；不存在返回 null（控制器用它决定 404）。
+     *
+     * @param sessionId 会话 id
+     * @return 会话或 null
+     */
+    public MsTsharkSession getSession(Long sessionId) {
+        return this.sessionMapper.selectById(sessionId);
+    }
+
+    /**
+     * 建立数据包的 SSE 订阅。
+     *
+     * @param sessionId 会话 id
+     * @return 待返回给前端的 SseEmitter
+     */
+    public SseEmitter subscribePacketStream(Long sessionId) {
+        TsharkPacketStreamRegistry registry = streamRegistry();
+        if (registry == null) {
+            // 注册表没装配属于异常配置，抛出让前端明确看到「推送不可用」，而不是静默无数据
+            throw new IllegalStateException("抓包 SSE 注册表未装配");
+        }
+        return registry.subscribe(sessionId);
+    }
+
+    /**
+     * 推给前端的数据包精简载荷。
+     *
+     * <p>刻意<b>不带</b> {@code rawData}：那是 tshark 的完整 JSON，单包能到几 KB，
+     * 抓包高峰每秒几十上百包，全量推会把连接和浏览器都拖垮 ——
+     * 页面需要原始数据时按 id 走详情接口单取即可。</p>
+     *
+     * @param packet 已入库的数据包
+     * @return 精简载荷
+     */
+    private Map<String, Object> toStreamPayload(MsTsharkPacket packet) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", packet.getId());
+        m.put("sessionId", packet.getSessionId());
+        m.put("packetTime", packet.getPacketTime());
+        m.put("protocol", packet.getProtocol());
+        m.put("sourceIp", packet.getSourceIp());
+        m.put("sourcePort", packet.getSourcePort());
+        m.put("destIp", packet.getDestIp());
+        m.put("destPort", packet.getDestPort());
+        m.put("packetLength", packet.getPacketLength());
+        m.put("packetInfo", packet.getPacketInfo());
+        return m;
     }
 
     /**
@@ -426,7 +760,7 @@ public class TsharkCaptureService {
             MsTsharkPacket packet = new MsTsharkPacket();
             packet.setSessionId(sessionId);
             packet.setPacketTime(epochToDateTime(cols[0]));
-            packet.setProtocol(blankToNull(cols[1]));
+            packet.setProtocol(simplifyProtocol(blankToNull(cols[1])));
             // IPv4 / IPv6 各取第一个非空；端口同理（TCP 优先，其次 UDP）
             packet.setSourceIp(firstNonBlank(cols[2], cols[3]));
             packet.setSourcePort(parseIntOrNull(firstNonBlank(cols[4], cols[5])));
@@ -437,6 +771,13 @@ public class TsharkCaptureService {
             this.packetMapper.insert(packet);
             // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
             this.pushService.pushTsharkPacket(packet, sessionId);
+            // SSE 推送：按会话分组，只推给正在看这个会话的连接。
+            // 载荷走精简字段（rawData 是整块 tshark JSON，逐包推会把带宽吃光），
+            // 完整原始数据仍走详情接口按需取。
+            TsharkPacketStreamRegistry registry = streamRegistry();
+            if (registry != null) {
+                registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_PACKET, toStreamPayload(packet));
+            }
             return true;
         } catch (Exception e) {
             log.debug("skip packet save error: {}", e.getMessage());
