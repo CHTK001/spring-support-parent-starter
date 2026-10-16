@@ -10,6 +10,7 @@ import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
+import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -131,7 +132,7 @@ public class TsharkCaptureService {
      * 列表接口。
      * @return 列表接口的结果
      */
-    public ReturnResult<List<String>> listInterfaces() {
+    public ReturnResult<List<TsharkInterfaceVO>> listInterfaces() {
         Path errFile = null;
         try {
             // stderr 重定向到临时文件而不是合并进 stdout：
@@ -141,18 +142,21 @@ public class TsharkCaptureService {
             ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-D");
             pb.redirectError(errFile.toFile());
             Process p = pb.start();
-            List<String> ifaces = new ArrayList<>();
+            List<TsharkInterfaceVO> ifaces = new ArrayList<>();
+            // tshark -D 的行格式：序号. 设备名 (友好名)
+            // Windows 上设备名是 \Device\NPF_{GUID} 这种不可读的 GUID，友好名在括号里。
+            java.util.regex.Pattern line = java.util.regex.Pattern
+                    .compile("^\\s*\\d+\\.\\s+(\\S+?)\\s*(?:\\((.*)\\))?\\s*$");
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = r.readLine()) != null) {
-                    if (line.isBlank()) {
+                String s;
+                while ((s = r.readLine()) != null) {
+                    if (s.isBlank()) {
                         continue;
                     }
-                    // tshark -D 的输出格式固定为「序号. 网卡名 [描述]」，只认这个格式。
-                    java.util.regex.Matcher m =
-                            java.util.regex.Pattern.compile("^\\s*\\d+\\.\\s+(\\S+)").matcher(line);
+                    java.util.regex.Matcher m = line.matcher(s);
                     if (m.find()) {
-                        ifaces.add(m.group(1));
+                        ifaces.add(new TsharkInterfaceVO(m.group(1), blankToEmpty(m.group(2)),
+                                List.of(), false));
                     }
                 }
             }
@@ -179,7 +183,7 @@ public class TsharkCaptureService {
             if (ifaces.isEmpty()) {
                 return ReturnResult.error("tshark -D 未返回任何网卡");
             }
-            return ReturnResult.ok(ifaces);
+            return ReturnResult.ok(annotateLocalAddresses(ifaces));
         } catch (Exception e) {
             log.error("tshark list interfaces failed", e);
             return ReturnResult.error("无法列出网卡: " + execHint(e));
@@ -192,6 +196,84 @@ public class TsharkCaptureService {
                 }
             }
         }
+    }
+
+    /**
+     * 给网卡补上本机 IPv4，并标出哪张承载默认出口。
+     *
+     * <p><strong>用 JDK 的 {@link java.net.NetworkInterface} 而不是再敲一条命令</strong>：
+     * 之前采集硬件信息就吃过「每个平台写一条 shell」的亏 —— 新增平台就得改命令。
+     * 这里走 JDK 原生 API，Windows / Linux / macOS 一份代码。</p>
+     *
+     * <p>匹配靠友好名：Windows 上 tshark 的括号名（「以太网 3」）与
+     * {@code NetworkInterface#getDisplayName()} 同源，能对上；对不上就只显示友好名，
+     * 不猜 IP —— 猜错比不猜更误导。</p>
+     *
+     * @param ifaces 已解析出设备名与友好名的网卡
+     * @return 补齐 IP 与本机标记后的列表
+     */
+    private List<TsharkInterfaceVO> annotateLocalAddresses(List<TsharkInterfaceVO> ifaces) {
+        String exitIp = defaultRouteAddress();
+        List<TsharkInterfaceVO> out = new ArrayList<>(ifaces.size());
+        for (TsharkInterfaceVO i : ifaces) {
+            List<String> ips = List.of();
+            String desc = i.description() == null ? "" : i.description();
+            if (!desc.isBlank()) {
+                try {
+                    java.util.Enumeration<java.net.NetworkInterface> nics =
+                            java.net.NetworkInterface.getNetworkInterfaces();
+                    while (nics != null && nics.hasMoreElements()) {
+                        java.net.NetworkInterface ni = nics.nextElement();
+                        String dn = ni.getDisplayName() == null ? ni.getName() : ni.getDisplayName();
+                        if (dn == null || !dn.equals(desc)) {
+                            continue;
+                        }
+                        List<String> found = new ArrayList<>();
+                        var addrs = ni.getInetAddresses();
+                        while (addrs.hasMoreElements()) {
+                            var a = addrs.nextElement();
+                            if (a instanceof java.net.Inet4Address v4 && !v4.isLoopbackAddress()) {
+                                found.add(v4.getHostAddress());
+                            }
+                        }
+                        if (!found.isEmpty()) {
+                            ips = found;
+                        }
+                        break;
+                    }
+                } catch (Exception e) {
+                    log.debug("网卡 IP 反查失败 desc={} reason={}", desc, e.getMessage());
+                }
+            }
+            boolean local = exitIp != null && ips.contains(exitIp);
+            out.add(new TsharkInterfaceVO(i.name(), desc, ips, local));
+        }
+        // 本机出口那张排最前 —— 用户十有八九就是要抓它
+        out.sort((a, b) -> Boolean.compare(b.local(), a.local()));
+        return out;
+    }
+
+    /**
+     * 取本机默认出口 IPv4：UDP 连一个不会真发包的地址，内核会选出走哪张网卡，
+     * {@code getLocalAddress()} 就是该网卡绑定的 IP。全程无 IO。
+     *
+     * @return 出口 IP；取不到返回 null
+     */
+    private static String defaultRouteAddress() {
+        try (java.net.DatagramSocket s = new java.net.DatagramSocket()) {
+            // 203.0.113.0/24 是 RFC 5737 保留的文档用网段，不会真的发包
+            s.connect(java.net.InetAddress.getByName("203.0.113.1"), 9);
+            java.net.InetAddress la = s.getLocalAddress();
+            return la instanceof java.net.Inet4Address ? la.getHostAddress() : null;
+        } catch (Exception e) {
+            log.debug("取默认出口地址失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** null → 空串（别处习惯用空串表示「没有」）。 */
+    private static String blankToEmpty(String s) {
+        return s == null ? "" : s.trim();
     }
 
     /**
