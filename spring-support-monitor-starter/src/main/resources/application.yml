@@ -33,6 +33,14 @@ spring:
         - classpath:db/init/V1.0__init_all_monitor.sql
         - classpath:db/init/V1.0__init_all_server.sql
         - classpath:db/init/V1.0__init_all_ai.sql
+        # 存量库补列（ai-starter 的版本化脚本，MySQL 专用）：
+        # V1.0__init_all_ai.sql 里 sys_ai_bot_binding 的「三列」只覆盖全新库，
+        # 存量库因 CREATE TABLE IF NOT EXISTS 空操作而缺列，AiBotChatService.init
+        # 按实体全列 SELECT 会在启动期抛 Unknown column 并中断 refresh（2026-10-16 实测）。
+        # 本机 plugin.datasource.script.enable=false（FlywayLike 关闭），版本化脚本
+        # 不会自动执行，故必须显式登记。脚本内部用 information_schema 判存 + 动态 DDL，
+        # 可反复执行（MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS，详脚本头注释）。
+        - classpath:db/init/V4.0.0.57__add_whatsapp_bot_binding_columns.sql
         # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
         - classpath:db/init/V1.0__init_all_datasource_hub.sql
         # 设备台账（spring-support-device-starter 自有脚本）：device_* 七张表。
