@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -138,6 +140,44 @@ public class TsharkCaptureController {
                                                         @RequestParam(defaultValue = "20") int size,
                                                         @RequestParam(required = false) String keyword) {
         return this.tsharkCaptureService.pagePackets(id, page, size, keyword);
+    }
+
+    /**
+     * 还原某个包所属 TCP 流的握手 / 关闭生命周期
+     *
+     * <p>抓包页在包上右键 → 「查看握手生命周期」就调这里，返回该包的整条流按时序排好的
+     * 报文序列与握手判定（三次 / 四次 / 未完成），前端据此画时序图。</p>
+     *
+     * @param packetId 数据包 ID
+     * @return 生命周期；包不存在或非 TCP 时 404
+     */
+    @Operation(summary = "查看 TCP 握手生命周期")
+    @GetMapping("/packets/{packetId}/handshake")
+    public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long packetId) {
+        TsharkHandshakeVO vo = this.tsharkCaptureService.handshakeOf(packetId);
+        return vo == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(vo);
+    }
+
+    /**
+     * 订阅数据包的实时推送（SSE）
+     *
+     * <p>建连即回 {@code ready}，之后：每入库一个包推一个 {@code packet}，
+     * pcap 解析收尾推一个 {@code session}（前端据此重拉协议分布与 Top 流）。
+     * 另有 20s 一次的注释帧保活，前端不会把它当事件。</p>
+     *
+     * <p><strong>首屏历史不在这里给</strong>：SSE 只做增量，历史走
+     * {@code /sessions/{id}/packets}。否则建连那一刻就要推上百个包。</p>
+     *
+     * @param id 会话 ID
+     * @return SSE 连接；会话不存在时 404
+     */
+    @Operation(summary = "数据包实时推送（SSE）", description = "按抓包会话分组推送，逐包增量")
+    @GetMapping("/sessions/{id}/packets/stream")
+    public ResponseEntity<SseEmitter> packetStream(@PathVariable Long id) {
+        if (this.tsharkCaptureService.getSession(id) == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(this.tsharkCaptureService.subscribePacketStream(id));
     }
 
     /**

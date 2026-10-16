@@ -136,7 +136,14 @@ public class PosixSshDelegate implements SystemInfoProvider {
                         + " && echo brew || echo unknown)))", 10000));
         info.setGpu(sshCache().exec(host, mac
                 ? "system_profiler SPDisplaysDataType 2>/dev/null | grep 'Chipset Model' | cut -d: -f2 | xargs"
-                : "lspci 2>/dev/null | grep -i vga | cut -d: -f3 | xargs || echo 'unknown'", 10000));
+                // Linux 侧必须同时匹配三种 PCI 显示类枚举名。原来只 grep -i vga，
+                // 而 vga 字面量只出现在 Intel 核显的「VGA compatible controller」上：
+                // NVIDIA 独显枚举为「3D controller」，AMD 独显是「Display controller」，
+                // 两者都匹配不上 → 结果为空 →回落成 unknown。也就是说带独显的机器
+                // 反而拿不到型号名，只剩 Intel 核显能显示。
+                : "{ lspci 2>/dev/null | grep -Ei 'VGA compatible controller|3D controller|Display controller' | cut -d: -f3 | xargs; } || true; "
+                + "[ -z \"$(lspci 2>/dev/null | grep -Ei 'VGA compatible controller|3D controller|Display controller')\" ] && echo 'unknown'",
+                10000));
         info.setMemoryMb(parseMemoryMb(sshCache().exec(host, memCmd, 10000), mac));
         // 公网 IP 仅作展示，目标无外网时 curl 失败不应中断整个画像，best-effort 容错
         try {
