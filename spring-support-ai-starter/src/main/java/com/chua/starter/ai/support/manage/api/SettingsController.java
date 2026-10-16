@@ -5,6 +5,8 @@ import com.chua.starter.ai.support.configuration.client.GlobalSettingDefinitions
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
+import com.chua.starter.ai.support.configuration.runtime.RuntimeGlobalSettingProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
@@ -443,6 +445,19 @@ public class SettingsController {
             }
         }
         result.put("__meta", origins);
+        // runtime 分组额外回带「界面选择」与「实际生效运行时」：被收敛的兼容引擎自本版本起
+        // 是全功能平替，实例化时复用完整工具链运行时，管理端与验收需要能直接看到这层映射，
+        // 而不是只凭界面文案。与 __meta 一样用双下划线前缀，不混进 field->value。
+        if (RuntimeGlobalSettingProvider.GROUP.equals(group)) {
+            Object selectedRaw = result.get(RuntimeGlobalSettingProvider.FIELD_AGENT_IMPL);
+            String selected = selectedRaw == null ? null : String.valueOf(selectedRaw);
+            Map<String, Object> runtime = new LinkedHashMap<>(2);
+            runtime.put("selected", selected);
+            runtime.put("effective", selected == null || selected.isBlank()
+                    ? RuntimeGlobalSettingProvider.DEFAULT_AGENT_IMPL
+                    : AgentProviderFactory.runtimeProvider(selected.trim().toLowerCase()));
+            result.put("__runtime", runtime);
+        }
         return result;
     }
 
