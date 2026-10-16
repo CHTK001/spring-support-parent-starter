@@ -7,6 +7,7 @@ import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,6 +38,17 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class ElasticsearchClient {
+
+    /**
+     * 集群状态变更类操作的超时（建索引、删索引）。
+     *
+     * <p>共享通道 {@link MiddlewareHttp} 的默认超时为 10s，适用于查询类请求；但建/删索引会
+     * 触发集群状态更新，在冷态、单节点、小内存实例上实测可达 20s 以上（896MB、单节点 ES
+     * 8.17 冷态建索引 curl 实测 20.6s），10s 会误判为失败——而请求其实已在 ES 侧生效。
+     * 故此处单独放宽到 30s；建索引另有「超时后复核」兜底，见
+     * {@code ElasticsearchManageServiceImpl#createIndex}。</p>
+     */
+    private static final Duration MUTATION_TIMEOUT = Duration.ofSeconds(30);
 
     /**
      * 数据源服务
@@ -269,24 +281,34 @@ public class ElasticsearchClient {
     /**
      * 新建索引
      *
+     * <p>用 {@link #MUTATION_TIMEOUT} 而非默认 10s：建索引在冷态小实例上可能超过 10s。
+     * 即便如此仍可能超时（请求已生效但响应未回），故调用方需按
+     * {@code _cat/indices} 复核，见 {@code ElasticsearchManageServiceImpl#createIndex}。</p>
+     *
      * @param target 访问目标
      * @param index  索引名
      * @param body   请求体（settings + mappings）
      * @return 新建结果
      */
     public JsonObject createIndex(Target target, String index, String body) {
-        return put(target, "/" + encode(index), body);
+        return read(target, "/" + encode(index), Map.of(),
+                () -> MiddlewareHttp.putJson(target.url("/" + encode(index)), Map.of(), body, headers(target),
+                        MUTATION_TIMEOUT));
     }
 
     /**
      * 删除索引
+     *
+     * <p>用 {@link #MUTATION_TIMEOUT} 而非默认 10s，理由同
+     * {@link #createIndex(Target, String, String)}。</p>
      *
      * @param target 访问目标
      * @param index  索引名
      * @return 删除结果
      */
     public JsonObject deleteIndex(Target target, String index) {
-        return delete(target, "/" + encode(index));
+        return read(target, "/" + encode(index), Map.of(),
+                () -> MiddlewareHttp.delete(target.url("/" + encode(index)), Map.of(), headers(target), MUTATION_TIMEOUT));
     }
 
     /**

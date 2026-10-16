@@ -137,7 +137,17 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         if (!properties.isEmpty()) {
             body.put("mappings", Map.of("properties", properties));
         }
-        client.createIndex(target, name, Json.toJson(body));
+        try {
+            client.createIndex(target, name, Json.toJson(body));
+        } catch (IllegalStateException e) {
+            // 建索引在冷态小实例上可能超过客户端超时（实测 20.6s），但请求往往已在 ES 侧生效；
+            // 直接报错会让用户以为没建成，进而在关系图/索引列表里看到一个「凭空出现」的索引。
+            // 故超时后按 _cat/indices 复核：索引已存在即视为成功，否则原样抛出。
+            if (!exists(target, name)) {
+                throw e;
+            }
+            log.warn("[ES] 建索引 {} 请求超时但索引已存在，按成功处理", name);
+        }
         return index(name, request.datasourceId());
     }
 
@@ -350,6 +360,22 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
             return row;
         }
         return null;
+    }
+
+    /**
+     * 索引是否已存在（建索引超时后复核用）
+     *
+     * @param target 访问目标
+     * @param name   索引名
+     * @return true 表示 {@code _cat/indices} 里已能看到该索引
+     */
+    private boolean exists(ElasticsearchClient.Target target, String name) {
+        try {
+            return findRow(target, name) != null;
+        } catch (IllegalStateException e) {
+            // 复核请求本身失败：无法证明索引已建，交回调用方按失败处理
+            return false;
+        }
     }
 
     /**
