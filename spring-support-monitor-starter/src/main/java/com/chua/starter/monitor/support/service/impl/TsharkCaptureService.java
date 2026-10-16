@@ -9,8 +9,17 @@ import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
+import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
+import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import lombok.extern.slf4j.Slf4j;
+import oshi.SystemInfo;
+import oshi.hardware.HardwareAbstractionLayer;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -26,6 +35,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -64,15 +74,21 @@ public class TsharkCaptureService {
     /**
      * {@code tshark -T fields} 的取字段列表，<strong>顺序即输出列顺序</strong>。
      *
-     * <p>逐列含义：0 时间戳(秒) · 1 协议 · 2 IPv4源 · 3 IPv6源 · 4 TCP源端口 ·
-     * 5 UDP源端口 · 6 IPv4目的 · 7 IPv6目的 · 8 TCP目的端口 · 9 UDP目的端口 ·
-     * 10 帧长 · 11 人可读摘要。IPv4/IPv6 与 TCP/UDP 成对给出，某层不存在时该列为空串，
+     * <p>逐列含义：0 帧号 · 1 时间戳(秒) · 2 协议 · 3 IPv4源 · 4 IPv6源 · 5 TCP源端口 ·
+     * 6 UDP源端口 · 7 IPv4目的 · 8 IPv6目的 · 9 TCP目的端口 · 10 UDP目的端口 ·
+     * 11 帧长 · 12 人可读摘要。IPv4/IPv6 与 TCP/UDP 成对给出，某层不存在时该列为空串，
      * 由 {@code firstNonBlank} 取非空的那个。</p>
+     *
+     * <p><strong>第 0 列 {@code frame.number} 是增量解析的游标，不入库</strong>：
+     * 抓包期间要一边写 pcap 一边把新包读出来推给前端，尾随循环靠
+     * {@code -Y "frame.number > N"} 只取新增的帧。没有单调帧号就没法判断「哪些是新的」，
+     * 只能整份重读，那样既慢又会重复入库。</p>
      *
      * <p>用 {@code _ws.col.Info} 而非 {@code -x} 的十六进制展开：前者就是 tshark
      * 「Info」列（如 {@code GET /ms/... HTTP/1.1}），正是实体里「人可读摘要」要的东西。</p>
      */
     private static final String[] TSHARK_FIELDS = {
+            "frame.number",
             "frame.time_epoch",
             "_ws.col.Protocol",
             "ip.src", "ipv6.src",
@@ -94,49 +110,236 @@ public class TsharkCaptureService {
     */
     private final MonitorPushService pushService;
 
+    /**
+     * 数据包实时推送（SSE，按会话分组）。
+     *
+     * <p>用 {@link ObjectProvider} 而不是直接注入：注册表是本包内新建的组件，
+     * 与本服务无依赖环，但抓包并非所有部署都需要推送，直接注入会让
+     * 「禁用抓包」的部署也强拉起SSE 相关 bean。</p>
+     */
+    private final ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider;
+
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
                                 MsTsharkPacketMapper packetMapper,
-                                MonitorPushService pushService) {
+                                MonitorPushService pushService,
+                                ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
         this.pushService = pushService;
+        this.streamRegistryProvider = streamRegistryProvider;
+    }
+
+    /**
+     * 取 SSE 注册表；未装配时返回 null（推送静默跳过）。
+     */
+    private TsharkPacketStreamRegistry streamRegistry() {
+        return this.streamRegistryProvider.getIfAvailable();
     }
 
     /**
      * 列表接口。
      * @return 列表接口的结果
      */
-    public ReturnResult<List<String>> listInterfaces() {
+    public ReturnResult<List<TsharkInterfaceVO>> listInterfaces() {
+        Path errFile = null;
         try {
+            // stderr 重定向到临时文件而不是合并进 stdout：
+            // 合并后 tshark 的报错文案会和网卡行混在一起，分不出哪些是网卡；
+            // 单独落文件既能读到报错，又不会因为两个流互相堵塞而死锁。
+            errFile = Files.createTempFile("tshark-iface-err", ".txt");
             ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-D");
-            pb.redirectErrorStream(true);
+            pb.redirectError(errFile.toFile());
             Process p = pb.start();
-            List<String> ifaces = new ArrayList<>();
-            /**
-             * 尝试。
-             * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
-             */
+            List<TsharkInterfaceVO> ifaces = new ArrayList<>();
+            // tshark -D 的行格式：序号. 设备名 (友好名)
+            // Windows 上设备名是 \Device\NPF_{GUID} 这种不可读的 GUID，友好名在括号里。
+            java.util.regex.Pattern line = java.util.regex.Pattern
+                    .compile("^\\s*\\d+\\.\\s+(\\S+?)\\s*(?:\\((.*)\\))?\\s*$");
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = r.readLine()) != null) {
-                    if (line.isBlank()) {
+                String s;
+                while ((s = r.readLine()) != null) {
+                    if (s.isBlank()) {
                         continue;
                     }
-                    String[] parts = line.split("\\.");
-                    if (parts.length >= 2) {
-                        String name = parts[1].trim().split("\\s+")[0];
-                        ifaces.add(name);
-                    } else {
-                        ifaces.add(line.trim());
+                    java.util.regex.Matcher m = line.matcher(s);
+                    if (m.find()) {
+                        ifaces.add(new TsharkInterfaceVO(m.group(1), blankToEmpty(m.group(2)),
+                                List.of(), "", false, false, false));
                     }
                 }
             }
-            p.waitFor(10L, TimeUnit.SECONDS);
-            return ReturnResult.ok(ifaces);
+            boolean exited = p.waitFor(10L, TimeUnit.SECONDS);
+            if (!exited) {
+                p.destroyForcibly();
+            }
+            int code = exited ? p.exitValue() : -1;
+            String err = errFile == null ? "" : Files.readString(errFile, StandardCharsets.UTF_8);
+
+            // 退出码非 0 或 stderr 提到 Npcap，一律判失败。
+            // 实测缺 Npcap 时 tshark -D 退出码 13，stderr 是
+            //   Unable to load Npcap (wpcap.dll); you will not be able to capture packets.
+            // 但 stdout 末尾仍会打印一行「1. etwdump (...)」——那是个抓不了包的 ETW 读取器。
+            // 只看「解析到几条」会被这一行骗过去、把不可用的网卡当成可用，所以必须看退出码。
+            if (code != 0 || err.contains("Npcap") || err.contains("wpcap")) {
+                String detail = err.trim().isEmpty() ? ("tshark -D 退出码 " + code) : firstLine(err.trim());
+                String msg = "无法列出网卡：" + detail;
+                if (err.contains("Npcap") || err.contains("wpcap")) {
+                    msg += "（未安装 Npcap 抓包驱动，请安装后重启服务；tshark 本身已就位）";
+                }
+                return ReturnResult.error(msg);
+            }
+            if (ifaces.isEmpty()) {
+                return ReturnResult.error("tshark -D 未返回任何网卡");
+            }
+            return ReturnResult.ok(annotateLocalAddresses(ifaces));
         } catch (Exception e) {
             log.error("tshark list interfaces failed", e);
             return ReturnResult.error("无法列出网卡: " + execHint(e));
+        } finally {
+            if (errFile != null) {
+                try {
+                    Files.deleteIfExists(errFile);
+                } catch (Exception ignore) {
+                    // 临时文件删不掉不影响主流程
+                }
+            }
         }
+    }
+
+    /**
+     * 给网卡补上本机 IPv4 / MAC，并标出虚拟网卡与本机出口。
+     *
+     * <p><strong>为什么用 OSHI 而不是 JDK 的 {@code NetworkInterface}</strong>：
+     * 实测 Windows 上 JDK 的 {@code getDisplayName()} 返回的是<b>驱动名</b>
+     * （{@code Realtek PCIe GbE Family Controller-WFP Native MAC Layer LightWeight Filter-0000}），
+     * 而 tshark 给的是<b>连接名</b>（{@code 以太网 3}），两边根本对不上，按名字 join 恒为空。
+     * OSHI 走原生调用，{@code getIfAlias()} 返回的正是「连接名 + "-" + 驱动后缀」
+     * （{@code 以太网 3-WFP Native MAC Layer LightWeight Filter-0000}），
+     * 取前缀就能和 tshark 的括号名对上。这是实测出来的唯一可用键。</p>
+     *
+     * <p>顺带解决「选不��哪个是本地网络」：同一张物理网卡在 OSHI 里会重复出现多行
+     * （WFP / 802.3 / Npcap / QoS 各一个 filter），按 MAC 归并成一条；
+     * 虚拟网卡（VPN / 蒲公英 / Hyper-V）的 displayName 含 Virtual / Tunnel 字样，据此标记出来 ——
+     * 用户挑到这类网卡必然抓不到流量（本机实测「以太网 2」就是 OrayBoxVpnEnt 虚拟网卡，0 包）。</p>
+     *
+     * @param ifaces 已解析出设备名与友好名的网卡
+     * @return 补齐后的列表
+     */
+    private List<TsharkInterfaceVO> annotateLocalAddresses(List<TsharkInterfaceVO> ifaces) {
+        String exitIp = defaultRouteAddress();
+        // 连接名（tshark 括号名）→ 该卡的 IP / MAC / 是否虚拟
+        Map<String, List<String>> ipByName = new LinkedHashMap<>();
+        Map<String, String> macByName = new LinkedHashMap<>();
+        Map<String, Boolean> virtualByName = new LinkedHashMap<>();
+        try {
+            HardwareAbstractionLayer hal = new SystemInfo().getHardware();
+            for (oshi.hardware.NetworkIF n : hal.getNetworkIFs()) {
+                String alias = n.getIfAlias() == null ? "" : n.getIfAlias().trim();
+                String display = n.getDisplayName() == null ? "" : n.getDisplayName();
+                if (alias.isEmpty()) {
+                    continue;
+                }
+                // 同一张卡的多个 filter 行以相同 MAC 归并，只处理一次
+                String mac = n.getMacaddr() == null ? "" : n.getMacaddr().toLowerCase(Locale.ROOT);
+                boolean isVirtual = isVirtualAdapter(display, alias);
+                for (TsharkInterfaceVO i : ifaces) {
+                    String desc = i.description() == null ? "" : i.description();
+                    if (desc.isEmpty() || !alias.startsWith(desc)) {
+                        continue;
+                    }
+                    // 别名必须正好在连接名后结束或接 '-'，否则「以太网 2」会误匹配「以太网 20」
+                    if (alias.length() > desc.length() && alias.charAt(desc.length()) != '-') {
+                        continue;
+                    }
+                    List<String> ips = ipByName.computeIfAbsent(desc, k -> new ArrayList<>());
+                    if (n.getIPv4addr() != null) {
+                        for (String s : n.getIPv4addr()) {
+                            if (s != null && !s.isBlank() && !s.contains(":")) {
+                                String v = s.replaceFirst("^.*/", "");
+                                if (!"127.0.0.1".equals(v) && !ips.contains(v)) {
+                                    ips.add(v);
+                                }
+                            }
+                        }
+                    }
+                    if (!mac.isBlank()) {
+                        macByName.putIfAbsent(desc, mac);
+                    }
+                    virtualByName.putIfAbsent(desc, isVirtual);
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("网卡信息补全失败，只显示友好名: {}", t.getMessage());
+        }
+
+        List<TsharkInterfaceVO> out = new ArrayList<>(ifaces.size());
+        for (TsharkInterfaceVO i : ifaces) {
+            String desc = i.description() == null ? "" : i.description();
+            List<String> ips = ipByName.getOrDefault(desc, List.of());
+            boolean isVirtual = Boolean.TRUE.equals(virtualByName.get(desc));
+            boolean loopback = desc.toLowerCase(Locale.ROOT).contains("loopback");
+            boolean local = exitIp != null && ips.contains(exitIp);
+            out.add(new TsharkInterfaceVO(i.name(), desc, ips, macByName.get(desc), local, isVirtual, loopback));
+        }
+        // 排序：能连上外网的物理网卡最前，然后普通物理网卡，再虚拟网卡，环回垫底
+        out.sort((a, b) -> {
+            int ra = rankOf(a);
+            int rb = rankOf(b);
+            return ra != rb ? Integer.compare(ra, rb)
+                    : String.valueOf(a.description()).compareToIgnoreCase(String.valueOf(b.description()));
+        });
+        return out;
+    }
+
+    /** 下拉排序权重：越小越靠前。 */
+    private static int rankOf(TsharkInterfaceVO i) {
+        if (i.loopback()) {
+            return 3;
+        }
+        if (i.virtualCard()) {
+            return 2;
+        }
+        return i.local() ? 0 : 1;
+    }
+
+    /**
+     * 判断是否为虚拟网卡。
+     *
+     * <p>依据是驱动名里的特征词：VPN / 虚拟网卡 / 隧道 / 环回。用户挑到这类网卡
+     * 基本抓不到真实流量，必须在选择器里标出来而不是让人自己踩。</p>
+     *
+     * @param display OSHI 的驱动显示名
+     * @param alias   OSHI 的连接别名
+     * @return true 表示虚拟/隧道类网卡
+     */
+    private static boolean isVirtualAdapter(String display, String alias) {
+        String s = (display + " " + alias).toLowerCase(Locale.ROOT);
+        return s.contains("virtual") || s.contains("vpn") || s.contains("tunnel")
+                || s.contains("loopback") || s.contains("tap-") || s.contains("pseudo");
+    }
+
+    /**
+     * 取本机默认出口 IPv4：UDP 连一个不会真发包的地址，内核会选出走哪张网卡，
+     * {@code getLocalAddress()} 就是该网卡绑定的 IP。全程无 IO。
+     *
+     * @return 出口 IP；取不到返回 null
+     */
+    private static String defaultRouteAddress() {
+        try (java.net.DatagramSocket s = new java.net.DatagramSocket()) {
+            // 203.0.113.0/24 是 RFC 5737 保留的文档用网段，不会真的发包
+            s.connect(java.net.InetAddress.getByName("203.0.113.1"), 9);
+            java.net.InetAddress la = s.getLocalAddress();
+            return la instanceof java.net.Inet4Address ? la.getHostAddress() : null;
+        } catch (Exception e) {
+            log.debug("取默认出口地址失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** null → 空串（别处习惯用空串表示「没有」）。 */
+    private static String blankToEmpty(String s) {
+        return s == null ? "" : s.trim();
     }
 
     /**
@@ -262,11 +465,20 @@ public class TsharkCaptureService {
      */
     public void asyncFinalize(Long sessionId, Process proc, Path filePath) {
         try {
+            // 尾随循环：抓包进程还活着的时候，每 1 秒把**已经写进 pcap 的新帧**读出来入库并推送。
+            // 没有它的话，抓包过程中数据库与 SSE 永远是空的 —— 页面只能等抓包结束才见数据，
+            // 用户看到的就是「一直在抓但 0 包」。
+            Thread tail = new Thread(() -> tailParseLoop(sessionId, proc, filePath), "tshark-tail-" + sessionId);
+            tail.setDaemon(true);
+            tail.start();
+
             boolean finished = proc.waitFor(60L, TimeUnit.MINUTES);
             if (!finished) {
                 proc.destroy();
                 proc.waitFor(5L, TimeUnit.SECONDS);
             }
+            // 抓包已退出，尾随循环的存活标志自然消失；等它最后一轮收尾后做一次全量兜底
+            tail.join(3_000L);
             this.parsePcapToDb(sessionId, filePath);
             MsTsharkSession session = this.sessionMapper.selectById(sessionId);
             if (session != null) {
@@ -274,11 +486,134 @@ public class TsharkCaptureService {
                 session.setEndTime(LocalDateTime.now());
                 this.sessionMapper.updateById(session);
                 this.pushService.pushTsharkSession(session, sessionId);
+                TsharkPacketStreamRegistry reg = streamRegistry();
+                if (reg != null) {
+                    reg.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_SESSION,
+                            Map.of("sessionId", sessionId, "phase", "finished",
+                                    "packetCount", session.getPacketCount() == null ? 0 : session.getPacketCount()));
+                }
             }
         } catch (Exception e) {
             log.error("finalize capture failed, session={}", sessionId, e);
         } finally {
             this.running.remove(sessionId);
+        }
+    }
+
+    /**
+     * 尾随解析循环：抓包进程存活期间，增量读取 pcap 中新增的帧并入库 + 推 SSE。
+     *
+     * <p><strong>为什么必须这么做</strong>：抓包用的是 {@code tshark -w 文件}，
+     * 而 {@code -w} 与 {@code -T fields} 的 stdout 输出<b>互斥</b>（实测加 -w 后
+     * stdout 只有横幅与「N packets captured」，逐包字段一行都没有）。
+     * 也就是说实时看到包只有两条路：改成 stdout 流式（就没有 pcap 可下载了），
+     * 或者像现在这样保持 -w 再回头增量读文件。这里选后者，保住 pcap 下载能力。</p>
+     *
+     * <p>增量靠 {@code frame.number}：每轮用 {@code -Y "frame.number > 已入库最大帧号"}
+     * 只取新增帧，既不会重复入库，也不必整份重读。</p>
+     *
+     * <p>tshark 读一个正在被写的 pcap 是安全的：文件头已落盘且长度单调增长，
+     * 读到的最后一帧可能不完整，但 {@code -Y frame.number > N} 配合下一轮补读能收敛。</p>
+     *
+     * @param sessionId 会话 id
+     * @param proc      抓包进程，用于判断是否还活着
+     * @param filePath  pcap 路径
+     */
+    private void tailParseLoop(Long sessionId, Process proc, Path filePath) {
+        long lastFrame = 0L;
+        long lastSize = -1L;
+        try {
+            while (proc.isAlive()) {
+                Thread.sleep(1000L);
+                if (!Files.exists(filePath)) {
+                    continue;
+                }
+                long size = Files.size(filePath);
+                // 文件没长就别白跑一趟 tshark
+                if (size <= 0L || size == lastSize) {
+                    continue;
+                }
+                lastSize = size;
+                lastFrame += parsePcapIncrementally(sessionId, filePath, lastFrame);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.warn("尾随解析中断 session={} reason={}", sessionId, e.getMessage());
+        }
+    }
+
+    /**
+     * 增量解析：只取帧号大于 {@code afterFrame} 的帧，入库并推送，返回本次新增的条数。
+     *
+     * @param sessionId  会话 id
+     * @param filePath   pcap 路径
+     * @param afterFrame 已入库的最大帧号（0 表示从头）
+     * @return 本次新增条数
+     */
+    private long parsePcapIncrementally(Long sessionId, Path filePath, long afterFrame) {
+        List<String> cmd = new ArrayList<>(List.of(TSHARK_BIN, "-r", filePath.toString(),
+                "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=f"));
+        for (String field : TSHARK_FIELDS) {
+            cmd.add("-e");
+            cmd.add(field);
+        }
+        if (afterFrame > 0) {
+            cmd.add("-Y");
+            cmd.add("frame.number > " + afterFrame);
+        }
+        long maxSeen = afterFrame;
+        long added = 0L;
+        try {
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8), 0x100000)) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    if (line.isBlank()) {
+                        continue;
+                    }
+                    String[] cols = line.split("\t", -1);
+                    if (cols.length > 0) {
+                        try {
+                            maxSeen = Math.max(maxSeen, Long.parseLong(cols[0].trim()));
+                        } catch (NumberFormatException ignore) {
+                            // 帧号非数字（不该发生），保持游标不变避免死循环
+                        }
+                    }
+                    if (this.savePacket(sessionId, cols)) {
+                        added++;
+                    }
+                }
+            }
+            p.waitFor(20L, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.debug("增量解析失败 session={} reason={}", sessionId, e.getMessage());
+        }
+        if (added > 0) {
+            bumpPacketCount(sessionId, added);
+        }
+        return Math.max(maxSeen, afterFrame + added);
+    }
+
+    /**
+     * 累加会话的包数（尾随解析会分多轮到达，包数必须实时跟上，不能等结束才写）。
+     *
+     * @param sessionId 会话 id
+     * @param delta     本轮新增
+     */
+    private void bumpPacketCount(Long sessionId, long delta) {
+        try {
+            MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+            if (session != null) {
+                session.setPacketCount((session.getPacketCount() == null ? 0 : session.getPacketCount())
+                        + (int) delta);
+                this.sessionMapper.updateById(session);
+                this.pushService.pushTsharkSession(session, sessionId);
+            }
+        } catch (Exception e) {
+            log.debug("更新包数失败 session={} reason={}", sessionId, e.getMessage());
         }
     }
 
@@ -347,6 +682,15 @@ public class TsharkCaptureService {
                 cmd.add("-e");
                 cmd.add(field);
             }
+            // 尾随循环期间已经增量入库了一部分，这里必须跳过，否则同一批包会被插两次。
+            // 用已入库条数当帧号游标：尾随解析严格按 frame.number 递增插入，
+            // 所以「条数」就等于「最大帧号」。
+            long already = this.packetMapper.selectCount(
+                    new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId));
+            if (already > 0) {
+                cmd.add("-Y");
+                cmd.add("frame.number > " + already);
+            }
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             Process p = pb.start();
@@ -363,20 +707,331 @@ public class TsharkCaptureService {
                 }
             }
             if (batch > 0) {
-                MsTsharkSession session = this.sessionMapper.selectById(sessionId);
-                if (session != null) {
-                    session.setPacketCount(batch);
-                    this.sessionMapper.updateById(session);
+                bumpPacketCount(sessionId, batch);
+                // 解析收尾：前端据此重拉协议分布 / Top 流（逐包增量只够更新明细表）
+                TsharkPacketStreamRegistry registry = streamRegistry();
+                if (registry != null) {
+                    registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_SESSION,
+                            Map.of("sessionId", sessionId, "phase", "parsed"));
                 }
             } else {
                 // 0 条必须出声：否则页面只显示「抓完了但一个包都没有」，
                 // 用户无从判断是没流量还是解析坏了
-                log.warn("capture parsed 0 packet, session={}, file={}", sessionId, filePath);
+                long total = this.packetMapper.selectCount(
+                        new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId));
+                if (total == 0) {
+                    log.warn("capture parsed 0 packet, session={}, file={}", sessionId, filePath);
+                }
             }
             p.waitFor(60L, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("parse pcap failed, session={}", sessionId, e);
         }
+    }
+
+    /**
+     * 协议别名表：只放泛化规则覆盖不到的那些。键一律大写（查询前会 toUpperCase）。
+     */
+    private static final Map<String, String> PROTOCOL_ALIAS = Map.ofEntries(
+            Map.entry("HTTP2", "HTTP"),
+            Map.entry("HTTP/2", "HTTP"),
+            Map.entry("HTTP2 SERVER PUSH", "HTTP"),
+            Map.entry("MDNS", "DNS"),
+            Map.entry("LLMNR", "DNS"),
+            Map.entry("SSL", "TLS"),
+            Map.entry("SSL3", "TLS"),
+            Map.entry("TLSV1", "TLS"),
+            Map.entry("TLSV1.1", "TLS"),
+            Map.entry("TLSV1.2", "TLS"),
+            Map.entry("TLSV1.3", "TLS"),
+            Map.entry("MQTTV3.1", "MQTT"),
+            Map.entry("MQTTV3.1.1", "MQTT"),
+            Map.entry("MQTTV5", "MQTT"),
+            Map.entry("BOOTP", "DHCP"),
+            Map.entry("NETBIOS", "SMB"),
+            Map.entry("SMB2", "SMB"),
+            Map.entry("ICMPV6", "ICMP"),
+            Map.entry("TCP (SYN,ACK)", "TCP"),
+            Map.entry("TCP (RST,ACK)", "TCP"),
+            Map.entry("TCP (ACK)", "TCP")
+    );
+
+    /**
+     * 协议名归一化：把 tshark 的原始协议名收敛成少数几个规范名。
+     *
+     * <p><strong>为什么要归一</strong>：{@code _ws.col.Protocol} 给的是最内层协议，
+     * 且带版本后缀 —— TLS 握手是 {@code TLSv1.2}、MQTT 是 {@code MQTTv3.1.1}、
+     * HTTP/2 是 {@code HTTP2}。直接入库的话「协议分布」饼图会把 TLSv1.2 / TLSv1.3 /
+     * MQTTv3.1.1 各切成一瓣，一个 TLS 会话在图上碎成好几块，既不好看也不便于
+     * 判断谁占大头。</p>
+     *
+     * <p>归一放在<b>入库时</b>而不是展示层：协议统计是按库里的 protocol 聚合的，
+     * 只在前端换显示的话图表仍然是碎的。</p>
+     */
+    private static String simplifyProtocol(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "OTHER";
+        }
+        String p = raw.trim();
+        String alias = PROTOCOL_ALIAS.get(p.toUpperCase(Locale.ROOT));
+        if (alias != null) {
+            return alias;
+        }
+        // 剥版本后缀：先去掉 v1.2 / V3.1.1 这种带 v 的版本段，再去掉裸数字尾巴（HTTP2）
+        String base = p.replaceAll("[vV]\\d+(\\.\\d+)*$", "").replaceAll("\\d+$", "").trim();
+        // 剥空说明原名里没有字母（如 802.1Q 这类），保留原样大写即可
+        if (base.isEmpty() || base.chars().noneMatch(Character::isLetter)) {
+            return p.toUpperCase(Locale.ROOT);
+        }
+        return base.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * 还原某个包所属 TCP 流的握手 / 关闭生命周期。
+     *
+     * <p><strong>为什么不加 tcp_flags 列</strong>：tshark 的 Info 列（{@code packet_info}）里已经带了
+     * 标志位 —— {@code [SYN]}、{@code [SYN, ACK]}、{@code [PSH, ACK]}、{@code [RST, ACK]}、
+     * {@code [FIN, ACK]}。从方括号里解析就够画握手时序用了。为此新增一列要动 schema 迁移，
+     * 收益不抵成本；等真要做「按标志位过滤」时再落库。</p>
+     *
+     * @param packetId 数据包 id
+     * @return 生命周期；包不存在 / 非 TCP 时返回 null
+     */
+    public TsharkHandshakeVO handshakeOf(Long packetId) {
+        MsTsharkPacket anchor = this.packetMapper.selectById(packetId);
+        if (anchor == null || anchor.getSessionId() == null
+                || !"TCP".equalsIgnoreCase(String.valueOf(anchor.getProtocol()))) {
+            // 非 TCP 谈不上握手；UDP/ICMP 直接不返回，前端据此不显示该菜单项
+            return null;
+        }
+        List<MsTsharkPacket> all = this.packetMapper.selectList(
+                new LambdaQueryWrapper<MsTsharkPacket>()
+                        .eq(MsTsharkPacket::getSessionId, anchor.getSessionId())
+                        .eq(MsTsharkPacket::getProtocol, anchor.getProtocol())
+                        .orderByAsc(MsTsharkPacket::getPacketTime)
+                        .orderByAsc(MsTsharkPacket::getId));
+
+        boolean anchorIsClientSide = sameEndpoint(anchor.getSourceIp(), anchor.getSourcePort(),
+                anchor.getDestIp(), anchor.getDestPort());
+        String clientIp = anchorIsClientSide ? anchor.getSourceIp() : anchor.getDestIp();
+        Integer clientPort = anchorIsClientSide ? anchor.getSourcePort() : anchor.getDestPort();
+        String serverIp = anchorIsClientSide ? anchor.getDestIp() : anchor.getSourceIp();
+        Integer serverPort = anchorIsClientSide ? anchor.getDestPort() : anchor.getSourcePort();
+
+        List<MsTsharkPacket> flow = all.stream()
+                .filter(p -> isSameFlow(p, clientIp, clientPort, serverIp, serverPort))
+                .toList();
+        if (flow.isEmpty()) {
+            return null;
+        }
+        return buildHandshake(anchor.getSessionId(), clientIp, clientPort, serverIp, serverPort, flow);
+    }
+
+    /** 两端（ip + port）完全相同才算同一条流。 */
+    private static boolean sameEndpoint(String aIp, Integer aPort, String bIp, Integer bPort) {
+        return eq(aIp, bIp) && eq(aPort, bPort);
+    }
+
+    /** 报文属于该流：正向或反向均可。 */
+    private static boolean isSameFlow(MsTsharkPacket p, String cIp, Integer cPort,
+                                      String sIp, Integer sPort) {
+        return (eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort)
+                && eq(p.getDestIp(), sIp) && eq(p.getDestPort(), sPort))
+                || (eq(p.getSourceIp(), sIp) && eq(p.getSourcePort(), sPort)
+                && eq(p.getDestIp(), cIp) && eq(p.getDestPort(), cPort));
+    }
+
+    private static boolean eq(Object a, Object b) {
+        return a == null ? b == null : a.equals(b);
+    }
+
+    /**
+     * 把一条流按时间排好、解析标志位、判定握手次数与关闭状态。
+     */
+    private TsharkHandshakeVO buildHandshake(Long sessionId, String cIp, Integer cPort,
+                                            String sIp, Integer sPort, List<MsTsharkPacket> flow) {
+        java.time.format.DateTimeFormatter hhmm = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+        List<TsharkHandshakeVO.Step> steps = new ArrayList<>();
+        LocalDateTime t0 = flow.get(0).getPacketTime();
+        for (MsTsharkPacket p : flow) {
+            long relMs = 0L;
+            if (t0 != null && p.getPacketTime() != null) {
+                relMs = java.time.Duration.between(t0, p.getPacketTime()).toMillis();
+            }
+            String info = p.getPacketInfo() == null ? "" : p.getPacketInfo();
+            steps.add(new TsharkHandshakeVO.Step(p.getId(),
+                    p.getPacketTime() == null ? null : p.getPacketTime().format(hhmm),
+                    eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort),
+                    extractFlags(info), extractAfter(info, "Seq="), extractAfter(info, "Ack="),
+                    p.getPacketLength(), info, relMs));
+        }
+
+        // 握手判定：第一个 SYN（不带 ACK）定客户端方向，其后 SYN+ACK 与裸 ACK
+        int synIdx = -1;
+        boolean completed = false;
+        boolean fourWay = false;
+        String fourWayReason = null;
+        for (int i = 0; i < steps.size(); i++) {
+            TsharkHandshakeVO.Step f = steps.get(i);
+            String flags = f.flags() == null ? "" : f.flags();
+            boolean syn = flags.contains("SYN");
+            boolean ack = flags.contains("ACK");
+            if (synIdx < 0) {
+                if (syn && !ack && f.fromClient()) {
+                    synIdx = i;
+                    // SYN 里已经带数据 = TCP Fast Open：报文数仍是 3，但握手与首批数据合并
+                    String info = f.info() == null ? "" : f.info();
+                    if (info.contains("Len=") && !info.contains("Len=0")) {
+                        fourWay = true;
+                        fourWayReason = "SYN 携带数据（TCP Fast Open），握手与首批数据合并";
+                    }
+                }
+                continue;
+            }
+            if (syn && ack) {
+                // 服务端回应 —— 继续等客户端的裸 ACK
+            } else if (syn && !ack) {
+                fourWay = true;
+                fourWayReason = "出现第二个不带 ACK 的 SYN（SYN 重传或重发）";
+            } else if (!syn && ack && !completed) {
+                completed = true;
+                break;
+            }
+        }
+        // SYN / SYN-ACK / 裸 ACK 都要在，才算三次握手走完
+        boolean synAckSeen = false;
+        if (synIdx >= 0) {
+            for (int i = synIdx + 1; i < steps.size(); i++) {
+                String fl = steps.get(i).flags() == null ? "" : steps.get(i).flags();
+                if (fl.contains("SYN") && fl.contains("ACK")) {
+                    synAckSeen = true;
+                }
+                if (synAckSeen && !fl.contains("SYN")) {
+                    completed = true;
+                    break;
+                }
+            }
+        }
+
+        boolean clientFin = false;
+        boolean serverFin = false;
+        for (TsharkHandshakeVO.Step f : steps) {
+            if (f.flags() != null && f.flags().contains("FIN")) {
+                if (f.fromClient()) {
+                    clientFin = true;
+                } else {
+                    serverFin = true;
+                }
+            }
+        }
+        boolean closed = clientFin && serverFin;
+
+        String kind;
+        String label;
+        String detail;
+        if (!completed) {
+            kind = "NONE";
+            label = "未完成握手";
+            detail = synIdx < 0 ? "本流内没有抓到 SYN，连接可能建立于抓包开始之前"
+                    : "只抓到部分握手包，可能已停止抓包或中途丢包";
+        } else if (fourWay) {
+            kind = "FOUR_WAY";
+            label = "四次握手";
+            detail = fourWayReason;
+        } else {
+            kind = "THREE_WAY";
+            label = "三次握手";
+            detail = null;
+        }
+        return new TsharkHandshakeVO(sessionId, cIp, cPort, sIp, sPort,
+                new TsharkHandshakeVO.Handshake(kind, label, detail, completed, closed), steps);
+    }
+
+    /**
+     * 从 tshark Info 列取方括号中的标志位，如 {@code [SYN, ACK]} → {@code SYN,ACK}。
+     *
+     * <p>去掉空格：画时序图与做 contains 判断都不需要，且前后端口径一致。</p>
+     *
+     * @param info Info 列文本
+     * @return 标志位；解析不出返回空串
+     */
+    private static String extractFlags(String info) {
+        int l = info == null ? -1 : info.indexOf('[');
+        if (l < 0) {
+            return "";
+        }
+        int r = info.indexOf(']', l);
+        return r < 0 ? "" : info.substring(l + 1, r).replace(" ", "");
+    }
+
+    /**
+     * 取 {@code key=} 之后到下一个空格为止的值（用于 Seq / Ack）。
+     *
+     * @param info Info 列文本
+     * @param key  形如 {@code "Seq="}
+     * @return 值的文本；没有则返回空串
+     */
+    private static String extractAfter(String info, String key) {
+        if (info == null) {
+            return "";
+        }
+        int i = info.indexOf(key);
+        if (i < 0) {
+            return "";
+        }
+        int from = i + key.length();
+        int end = info.indexOf(' ', from);
+        return end < 0 ? info.substring(from) : info.substring(from, end);
+    }
+
+    /**
+     * 取会话；不存在返回 null（控制器用它决定 404）。
+     *
+     * @param sessionId 会话 id
+     * @return 会话或 null
+     */
+    public MsTsharkSession getSession(Long sessionId) {
+        return this.sessionMapper.selectById(sessionId);
+    }
+
+    /**
+     * 建立数据包的 SSE 订阅。
+     *
+     * @param sessionId 会话 id
+     * @return 待返回给前端的 SseEmitter
+     */
+    public SseEmitter subscribePacketStream(Long sessionId) {
+        TsharkPacketStreamRegistry registry = streamRegistry();
+        if (registry == null) {
+            // 注册表没装配属于异常配置，抛出让前端明确看到「推送不可用」，而不是静默无数据
+            throw new IllegalStateException("抓包 SSE 注册表未装配");
+        }
+        return registry.subscribe(sessionId);
+    }
+
+    /**
+     * 推给前端的数据包精简载荷。
+     *
+     * <p>刻意<b>不带</b> {@code rawData}：那是 tshark 的完整 JSON，单包能到几 KB，
+     * 抓包高峰每秒几十上百包，全量推会把连接和浏览器都拖垮 ——
+     * 页面需要原始数据时按 id 走详情接口单取即可。</p>
+     *
+     * @param packet 已入库的数据包
+     * @return 精简载荷
+     */
+    private Map<String, Object> toStreamPayload(MsTsharkPacket packet) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", packet.getId());
+        m.put("sessionId", packet.getSessionId());
+        m.put("packetTime", packet.getPacketTime());
+        m.put("protocol", packet.getProtocol());
+        m.put("sourceIp", packet.getSourceIp());
+        m.put("sourcePort", packet.getSourcePort());
+        m.put("destIp", packet.getDestIp());
+        m.put("destPort", packet.getDestPort());
+        m.put("packetLength", packet.getPacketLength());
+        m.put("packetInfo", packet.getPacketInfo());
+        return m;
     }
 
     /**
@@ -393,18 +1048,26 @@ public class TsharkCaptureService {
             }
             MsTsharkPacket packet = new MsTsharkPacket();
             packet.setSessionId(sessionId);
-            packet.setPacketTime(epochToDateTime(cols[0]));
-            packet.setProtocol(blankToNull(cols[1]));
+            // cols[0] 是 frame.number，只作增量游标不入库；其余整体右移一位
+            packet.setPacketTime(epochToDateTime(cols[1]));
+            packet.setProtocol(simplifyProtocol(blankToNull(cols[2])));
             // IPv4 / IPv6 各取第一个非空；端口同理（TCP 优先，其次 UDP）
-            packet.setSourceIp(firstNonBlank(cols[2], cols[3]));
-            packet.setSourcePort(parseIntOrNull(firstNonBlank(cols[4], cols[5])));
-            packet.setDestIp(firstNonBlank(cols[6], cols[7]));
-            packet.setDestPort(parseIntOrNull(firstNonBlank(cols[8], cols[9])));
-            packet.setPacketLength(parseIntOrNull(cols[10]));
-            packet.setPacketInfo(blankToNull(cols[11]));
+            packet.setSourceIp(firstNonBlank(cols[3], cols[4]));
+            packet.setSourcePort(parseIntOrNull(firstNonBlank(cols[5], cols[6])));
+            packet.setDestIp(firstNonBlank(cols[7], cols[8]));
+            packet.setDestPort(parseIntOrNull(firstNonBlank(cols[9], cols[10])));
+            packet.setPacketLength(parseIntOrNull(cols[11]));
+            packet.setPacketInfo(blankToNull(cols[12]));
             this.packetMapper.insert(packet);
             // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
             this.pushService.pushTsharkPacket(packet, sessionId);
+            // SSE 推送：按会话分组，只推给正在看这个会话的连接。
+            // 载荷走精简字段（rawData 是整块 tshark JSON，逐包推会把带宽吃光），
+            // 完整原始数据仍走详情接口按需取。
+            TsharkPacketStreamRegistry registry = streamRegistry();
+            if (registry != null) {
+                registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_PACKET, toStreamPayload(packet));
+            }
             return true;
         } catch (Exception e) {
             log.debug("skip packet save error: {}", e.getMessage());
@@ -494,13 +1157,78 @@ public class TsharkCaptureService {
      * @param sessionId 会话标识
      * @param page page
      * @param size 大小
+     * @param keyword 关键字（可空）。在协议 / 源目的 IP / 源目的端口 / 摘要里做模糊匹配。
+     *                端口是整型列，无法直接 like，只能先按文本匹配其余列，
+     *                再对「端口字符串」单独补一次 eq —— 纯数字关键字才当端口用。
      * @return page数据包的结果
      */
-    public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size) {
-        IPage<MsTsharkPacket> p = this.packetMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId)
-                        .orderByDesc(MsTsharkPacket::getId));
+    public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size, String keyword) {
+        String kw = keyword == null ? "" : keyword.trim();
+        LambdaQueryWrapper<MsTsharkPacket> w =
+                new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId);
+        if (!kw.isEmpty()) {
+            w.and(q -> q.like(MsTsharkPacket::getProtocol, kw)
+                    .or().like(MsTsharkPacket::getSourceIp, kw)
+                    .or().like(MsTsharkPacket::getDestIp, kw)
+                    .or().like(MsTsharkPacket::getPacketInfo, kw));
+            // 端口是整型列，上面 like 不到；纯数字关键字再补一次端口等值匹配
+            if (kw.chars().allMatch(Character::isDigit)) {
+                int port = Integer.parseInt(kw);
+                w.or(q2 -> q2.eq(MsTsharkPacket::getSourcePort, port)
+                        .or().eq(MsTsharkPacket::getDestPort, port));
+            }
+        }
+        w.orderByDesc(MsTsharkPacket::getId);
+        IPage<MsTsharkPacket> p = this.packetMapper.selectPage(new Page<>(page, size), w);
         return ReturnResult.ok(p);
+    }
+
+    /**
+     * 取首行（tshark 的报错文案常带换行，全塞进一条消息会很难读）。
+     */
+    private static String firstLine(String s) {
+        int i = s.indexOf('\n');
+        return i < 0 ? s : s.substring(0, i);
+    }
+
+    /**
+     * 取会话对应的 pcap 文件。
+     *
+     * <p>前端要的是「把原始 pcap 拿走去 Wireshark 里打开」，所以这里不返回文件内容，
+     * 只把可读的文件句柄交出去由 Controller 流式输出。</p>
+     *
+     * @param sessionId 会话标识
+     * @return pcap 文件；会话不存在 / 未落盘 / 文件已被清理时返回 null
+     */
+    public Resource pcapResource(Long sessionId) {
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        if (session == null || session.getFilePath() == null || session.getFilePath().isBlank()) {
+            return null;
+        }
+        Path p = Path.of(session.getFilePath());
+        // 只认库里已登记、且仍在磁盘上的路径；文件不在了（被清理/磁盘拔了）按缺失处理
+        if (!Files.isReadable(p)) {
+            return null;
+        }
+        return new FileSystemResource(p);
+    }
+
+    /**
+     * 会话 pcap 的下载文件名：优先用会话名，非法字符替换掉；没有名字就用网卡 + id。
+     *
+     * @param sessionId 会话标识
+     * @return 安全的文件名（不含路径分隔符）
+     */
+    public String pcapFileName(Long sessionId) {
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        String base = session == null ? null : session.getSessionName();
+        if (base == null || base.isBlank()) {
+            base = (session == null || session.getCaptureInterface() == null
+                    ? "capture" : session.getCaptureInterface()) + "-" + sessionId;
+        }
+        // 去掉路径分隔符与控制字符，避免拼进 Content-Disposition 后出问题
+        String safe = base.replaceAll("[\\\\/:*?\"<>|\\x00-\\x1F]", "_").trim();
+        return (safe.isEmpty() ? "capture-" + sessionId : safe) + ".pcap";
     }
 
     /**
