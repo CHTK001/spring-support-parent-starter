@@ -11,6 +11,8 @@ import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -107,35 +109,65 @@ public class TsharkCaptureService {
      * @return 列表接口的结果
      */
     public ReturnResult<List<String>> listInterfaces() {
+        Path errFile = null;
         try {
+            // stderr 重定向到临时文件而不是合并进 stdout：
+            // 合并后 tshark 的报错文案会和网卡行混在一起，分不出哪些是网卡；
+            // 单独落文件既能读到报错，又不会因为两个流互相堵塞而死锁。
+            errFile = Files.createTempFile("tshark-iface-err", ".txt");
             ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-D");
-            pb.redirectErrorStream(true);
+            pb.redirectError(errFile.toFile());
             Process p = pb.start();
             List<String> ifaces = new ArrayList<>();
-            /**
-             * 尝试。
-             * @param InputStreamReader(p.getInputStream( 输入流读取(p.获取输入流(
-             */
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = r.readLine()) != null) {
                     if (line.isBlank()) {
                         continue;
                     }
-                    String[] parts = line.split("\\.");
-                    if (parts.length >= 2) {
-                        String name = parts[1].trim().split("\\s+")[0];
-                        ifaces.add(name);
-                    } else {
-                        ifaces.add(line.trim());
+                    // tshark -D 的输出格式固定为「序号. 网卡名 [描述]」，只认这个格式。
+                    java.util.regex.Matcher m =
+                            java.util.regex.Pattern.compile("^\\s*\\d+\\.\\s+(\\S+)").matcher(line);
+                    if (m.find()) {
+                        ifaces.add(m.group(1));
                     }
                 }
             }
-            p.waitFor(10L, TimeUnit.SECONDS);
+            boolean exited = p.waitFor(10L, TimeUnit.SECONDS);
+            if (!exited) {
+                p.destroyForcibly();
+            }
+            int code = exited ? p.exitValue() : -1;
+            String err = errFile == null ? "" : Files.readString(errFile, StandardCharsets.UTF_8);
+
+            // 退出码非 0 或 stderr 提到 Npcap，一律判失败。
+            // 实测缺 Npcap 时 tshark -D 退出码 13，stderr 是
+            //   Unable to load Npcap (wpcap.dll); you will not be able to capture packets.
+            // 但 stdout 末尾仍会打印一行「1. etwdump (...)」——那是个抓不了包的 ETW 读取器。
+            // 只看「解析到几条」会被这一行骗过去、把不可用的网卡当成可用，所以必须看退出码。
+            if (code != 0 || err.contains("Npcap") || err.contains("wpcap")) {
+                String detail = err.trim().isEmpty() ? ("tshark -D 退出码 " + code) : firstLine(err.trim());
+                String msg = "无法列出网卡：" + detail;
+                if (err.contains("Npcap") || err.contains("wpcap")) {
+                    msg += "（未安装 Npcap 抓包驱动，请安装后重启服务；tshark 本身已就位）";
+                }
+                return ReturnResult.error(msg);
+            }
+            if (ifaces.isEmpty()) {
+                return ReturnResult.error("tshark -D 未返回任何网卡");
+            }
             return ReturnResult.ok(ifaces);
         } catch (Exception e) {
             log.error("tshark list interfaces failed", e);
             return ReturnResult.error("无法列出网卡: " + execHint(e));
+        } finally {
+            if (errFile != null) {
+                try {
+                    Files.deleteIfExists(errFile);
+                } catch (Exception ignore) {
+                    // 临时文件删不掉不影响主流程
+                }
+            }
         }
     }
 
@@ -494,13 +526,78 @@ public class TsharkCaptureService {
      * @param sessionId 会话标识
      * @param page page
      * @param size 大小
+     * @param keyword 关键字（可空）。在协议 / 源目的 IP / 源目的端口 / 摘要里做模糊匹配。
+     *                端口是整型列，无法直接 like，只能先按文本匹配其余列，
+     *                再对「端口字符串」单独补一次 eq —— 纯数字关键字才当端口用。
      * @return page数据包的结果
      */
-    public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size) {
-        IPage<MsTsharkPacket> p = this.packetMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId)
-                        .orderByDesc(MsTsharkPacket::getId));
+    public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size, String keyword) {
+        String kw = keyword == null ? "" : keyword.trim();
+        LambdaQueryWrapper<MsTsharkPacket> w =
+                new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId);
+        if (!kw.isEmpty()) {
+            w.and(q -> q.like(MsTsharkPacket::getProtocol, kw)
+                    .or().like(MsTsharkPacket::getSourceIp, kw)
+                    .or().like(MsTsharkPacket::getDestIp, kw)
+                    .or().like(MsTsharkPacket::getPacketInfo, kw));
+            // 端口是整型列，上面 like 不到；纯数字关键字再补一次端口等值匹配
+            if (kw.chars().allMatch(Character::isDigit)) {
+                int port = Integer.parseInt(kw);
+                w.or(q2 -> q2.eq(MsTsharkPacket::getSourcePort, port)
+                        .or().eq(MsTsharkPacket::getDestPort, port));
+            }
+        }
+        w.orderByDesc(MsTsharkPacket::getId);
+        IPage<MsTsharkPacket> p = this.packetMapper.selectPage(new Page<>(page, size), w);
         return ReturnResult.ok(p);
+    }
+
+    /**
+     * 取首行（tshark 的报错文案常带换行，全塞进一条消息会很难读）。
+     */
+    private static String firstLine(String s) {
+        int i = s.indexOf('\n');
+        return i < 0 ? s : s.substring(0, i);
+    }
+
+    /**
+     * 取会话对应的 pcap 文件。
+     *
+     * <p>前端要的是「把原始 pcap 拿走去 Wireshark 里打开」，所以这里不返回文件内容，
+     * 只把可读的文件句柄交出去由 Controller 流式输出。</p>
+     *
+     * @param sessionId 会话标识
+     * @return pcap 文件；会话不存在 / 未落盘 / 文件已被清理时返回 null
+     */
+    public Resource pcapResource(Long sessionId) {
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        if (session == null || session.getFilePath() == null || session.getFilePath().isBlank()) {
+            return null;
+        }
+        Path p = Path.of(session.getFilePath());
+        // 只认库里已登记、且仍在磁盘上的路径；文件不在了（被清理/磁盘拔了）按缺失处理
+        if (!Files.isReadable(p)) {
+            return null;
+        }
+        return new FileSystemResource(p);
+    }
+
+    /**
+     * 会话 pcap 的下载文件名：优先用会话名，非法字符替换掉；没有名字就用网卡 + id。
+     *
+     * @param sessionId 会话标识
+     * @return 安全的文件名（不含路径分隔符）
+     */
+    public String pcapFileName(Long sessionId) {
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        String base = session == null ? null : session.getSessionName();
+        if (base == null || base.isBlank()) {
+            base = (session == null || session.getCaptureInterface() == null
+                    ? "capture" : session.getCaptureInterface()) + "-" + sessionId;
+        }
+        // 去掉路径分隔符与控制字符，避免拼进 Content-Disposition 后出问题
+        String safe = base.replaceAll("[\\\\/:*?\"<>|\\x00-\\x1F]", "_").trim();
+        return (safe.isEmpty() ? "capture-" + sessionId : safe) + ".pcap";
     }
 
     /**

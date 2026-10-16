@@ -10,6 +10,10 @@ import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -122,14 +128,41 @@ public class TsharkCaptureController {
      * @param id 会话 ID
      * @param page 页码
      * @param size 每页大小
+     * @param keyword 关键字（可空），在协议/IP/端口/摘要里模糊匹配
      * @return 分页结果
      */
     @Operation(summary = "数据包分页列表")
     @GetMapping("/sessions/{id}/packets")
     public ReturnResult<IPage<MsTsharkPacket>> packets(@PathVariable Long id,
                                                         @RequestParam(defaultValue = "1") int page,
-                                                        @RequestParam(defaultValue = "20") int size) {
-        return this.tsharkCaptureService.pagePackets(id, page, size);
+                                                        @RequestParam(defaultValue = "20") int size,
+                                                        @RequestParam(required = false) String keyword) {
+        return this.tsharkCaptureService.pagePackets(id, page, size, keyword);
+    }
+
+    /**
+     * 下载会话的原始 pcap 文件
+     *
+     * <p>页面上的协议摘要只是 tshark 解析后的结果，要做更深的分析（重组、专家信息、
+     * 自定义过滤）得把原始 pcap 拿去 Wireshark 打开，所以提供原件下载。</p>
+     *
+     * @param id 会话 ID
+     * @return pcap 文件流；会话不存在或文件已清理时返回 404
+     */
+    @Operation(summary = "下载原始 pcap")
+    @GetMapping("/sessions/{id}/pcap")
+    public ResponseEntity<Resource> pcap(@PathVariable Long id) {
+        Resource resource = this.tsharkCaptureService.pcapResource(id);
+        if (resource == null) {
+            return ResponseEntity.notFound().build();
+        }
+        String name = this.tsharkCaptureService.pcapFileName(id);
+        return ResponseEntity.ok()
+                // 文件名含中文，ASCII 段兜底一个 pcap.pcap，避免老客户端拿到乱码名
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"capture.pcap\"; filename*=UTF-8''" + URLEncoder.encode(name, StandardCharsets.UTF_8))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     /**
