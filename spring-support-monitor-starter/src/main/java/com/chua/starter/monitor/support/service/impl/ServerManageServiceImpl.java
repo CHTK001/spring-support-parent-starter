@@ -253,8 +253,19 @@ public class ServerManageServiceImpl implements ServerManageService {
 
             ServerHotUpdateResult result = new ServerHotUpdateResult();
             if (!wasRunning) {
-                // 未运行：仅持久化定义，等待下次启动
+                // 未运行：先把定义落库
                 nodeMapper.updateById(node);
+                // 修复：此前未运行的节点一律「只保存、不启动」，于是对报错(ERROR)节点
+                // 点「保存并热更新」等于什么都没做 —— 用户把端口从被占改成空闲后节点依旧
+                // ERROR，必须再点一次「启动」，而验收（service-lifecycle-ui.spec E1）明确
+                // 要求改端口后自愈为 RUNNING。这里与 create/update 的 startIfEnabled 对齐：
+                // 节点处于启用态且（监听参数变更 或 上次启动失败）时按新配置拉起；
+                // 纯备注/过滤器改动且节点本就未运行时仍只保存，避免把用户主动停止的节点
+                // （enabled 未变、仍为 1）意外唤醒。
+                boolean errored = current != null && current.getError() != null;
+                if (isEnabledNode(node) && (listeningChanged || errored)) {
+                    return bringUpAfterHotUpdate(id, node, result, listeningChanged);
+                }
                 result.setHotApplied(false);
                 result.setRestarted(false);
                 result.addAppliedItem("定义已保存(节点未运行, 下次启动生效)");
@@ -803,6 +814,78 @@ public class ServerManageServiceImpl implements ServerManageService {
             }
         }
         return ReturnResult.ok(toView(node));
+    }
+
+    /**
+     * 节点是否为启用态（{@code enabled=1}）。
+     *
+     * @param node 节点定义
+     * @return true 表示启用
+     */
+    private boolean isEnabledNode(MsServerNode node) {
+        return node.getEnabled() != null && node.getEnabled() == 1;
+    }
+
+    /**
+     * 热更新时把「已落库但未运行」的启用节点按新配置拉起。
+     *
+     * <p>与 {@link #startIfEnabled(MsServerNode)} 同口径：拉起成功返回 {@code ok}
+     * 并把 {@code restarted=true}；失败时定义仍在库里，故用
+     * {@link #hotUpdateFailure(Long, String, java.util.function.Function)} 把节点视图
+     * 一并回传给调用方（否则响应 {@code data=null}，调用方按 id 回滚/重试会漏掉这条记录）。</p>
+     *
+     * @param id               节点 id
+     * @param node             已应用新配置的节点定义
+     * @param result           预置的结果对象（复用其文案字段）
+     * @param listeningChanged 本次是否为监听参数变更
+     * @return 热更新结果
+     */
+    private ReturnResult<ServerHotUpdateResult> bringUpAfterHotUpdate(Long id, MsServerNode node,
+                                                                      ServerHotUpdateResult result,
+                                                                      boolean listeningChanged) {
+        try {
+            nodeRegistry.start(node);
+            // start 未抛异常不等于真的起来了：SPI 可能把实例化异常吞成 null，
+            // 或服务器在 doStart 阶段静默失败，这里再核一次运行态。
+            RuntimeServer started = nodeRegistry.get(id);
+            if (started != null && "RUNNING".equals(started.status())) {
+                result.setHotApplied(false);
+                result.setRestarted(true);
+                result.addAppliedItem(listeningChanged
+                        ? "监听参数变更且节点未运行, 已按新配置启动"
+                        : "节点处于错误态, 已按新配置重新启动");
+                result.addAppliedItem("过滤器链已按新配置重建");
+                result.setMessage("节点未运行, 已按新配置启动");
+                result.setNode(toView(node));
+                return ReturnResult.ok(result);
+            }
+            String reason = started != null && started.getError() != null
+                    ? started.getError() : "运行态未进入 RUNNING 状态";
+            log.warn("[ServerManage] 节点 [{}] 热更新自拉起未成功: {}", node.getName(), reason);
+            return hotUpdateFailure(id, "节点已保存但启动失败: " + reason,
+                    partialHotUpdatePayload("配置已保存但启动失败"));
+        } catch (Exception e) {
+            log.error("[ServerManage] 节点 [{}] 热更新自拉起失败: {}", node.getName(), e.getMessage(), e);
+            return hotUpdateFailure(id, "节点已保存但启动失败: " + e.getMessage(),
+                    partialHotUpdatePayload("配置已保存但启动失败"));
+        }
+    }
+
+    /**
+     * 构造「已保存但热生效失败」的热更新载荷。
+     *
+     * @param message 提示文案
+     * @return 载荷构造器
+     */
+    private static java.util.function.Function<ServerNodeView, ServerHotUpdateResult> partialHotUpdatePayload(String message) {
+        return view -> {
+            ServerHotUpdateResult payload = new ServerHotUpdateResult();
+            payload.setHotApplied(false);
+            payload.setRestarted(false);
+            payload.setMessage(message);
+            payload.setNode(view);
+            return payload;
+        };
     }
 
     /**

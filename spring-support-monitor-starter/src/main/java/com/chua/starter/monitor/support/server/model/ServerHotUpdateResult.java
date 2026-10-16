@@ -16,6 +16,9 @@ import java.util.List;
  *   <li>二者皆 假：节点未运行，定义已保存，等待下次启动生效</li>
  * </ul>
  *
+ * <p>补充：节点未运行但 {@code enabled=1} 且本次监听参数变更（或节点处于错误态）
+ * 时，会按新配置拉起，此时 {@code restarted = true}。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */

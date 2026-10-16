@@ -84,7 +84,9 @@ public interface ServerManageService {
      * <ul>
      *   <li>监听地址/端口/引擎未变 → 不重启，仅按新 filters 重建过滤器链</li>
      *   <li>监听地址/端口/引擎变更 → 先停后起，按新配置重启</li>
-     *   <li>节点未运行 → 仅持久化定义，等待下次启动生效</li>
+     *   <li>节点未运行且 {@code enabled=1} 时，若监听参数变更或节点处于错误态 →
+     *       按新配置拉起（与 create/update 对齐，报错节点改正后可自愈）</li>
+     *   <li>节点未运行且无需拉起 → 仅持久化定义，等待下次启动生效</li>
      * </ul>
      *
      * @param id      节点 标识
