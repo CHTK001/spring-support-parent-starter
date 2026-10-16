@@ -1952,6 +1952,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
+        // 存识别原文：题干兜底（deriveStem）与人工复核都需要它。
+        // 「学生作答」展示与判分分别由结构化接口与 markAnyQuestion 归一化出实质作答，
+        // 不在此处改写，避免把兜底题干也截成单个字母。
         detail.put("studentAnswer", item.answer());
         detail.put("maxScore", maxScore);
         return Json.toJson(detail);
@@ -2088,7 +2091,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
             item.put("no", detail.get("recognizedNo"));
             item.put("stem", detail.get("stem"));
-            item.put("studentAnswer", detail.get("studentAnswer"));
+            item.put("studentAnswer", EduPaperScanner.extractInlineMark(
+                    detail.get("studentAnswer") == null ? null : String.valueOf(detail.get("studentAnswer"))));
             item.put("maxScore", detail.get("maxScore"));
             item.put("source", detail.get("source"));
             if (row.getMarkingResultQuestionId() != null) {

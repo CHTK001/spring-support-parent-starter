@@ -1002,6 +1002,57 @@ public class EduPaperScanner {
     }
 
     /**
+     * 从「作答文本」里取学生的实质作答（选择题字母 / 判断题符号）。
+     *
+     * <p>版面块归属路径把题号之后的整段文字（题干 + 选项 + 写在括号里的答案）都当成作答，
+     * 直接交给判分模型时，模型看到的是「学生作答 = 整段题干」，只能回「作答照抄题干」并给 0 分
+     * （实测 5 题里 3 题如此）。试卷的作答惯例是写进括号「（C）」或打「√/×」，
+     * 这里按惯例确定性地取出来，避免把识别格式问题算成学生答错。</p>
+     *
+     * @param text 作答文本（可能夹带题干与选项）
+     * @return 实质作答；取不到时原样返回
+     */
+    public static String extractInlineMark(String text) {
+        if (StringUtils.isBlank(text)) {
+            return text;
+        }
+        // 1) 括号里的选项字母：（C）/(c)/（ Ｄ ）
+        var paren = java.util.regex.Pattern.compile("[（(]\\s*([A-Da-dＡ-Ｄａ-ｄ])\\s*[）)]").matcher(text);
+        if (paren.find()) {
+            return toHalfWidthUpper(paren.group(1));
+        }
+        // 2) 「选C」「答案 C」「选 C」这类写法
+        var pick = java.util.regex.Pattern.compile("(?:选|答|答案)\\s*[:：]?\\s*([A-Da-dＡ-Ｄａ-ｄ])").matcher(text);
+        if (pick.find()) {
+            return toHalfWidthUpper(pick.group(1));
+        }
+        // 3) 判断题符号（题干里通常不会自带 √/×）
+        if (text.indexOf('√') >= 0 || text.indexOf('✓') >= 0) {
+            return "对";
+        }
+        if (text.indexOf('×') >= 0 || text.indexOf('✗') >= 0) {
+            return "错";
+        }
+        return text;
+    }
+
+    /**
+     * 全角字母转半角大写
+     *
+     * @param ch 单字符
+     * @return 半角大写字母
+     */
+    private static String toHalfWidthUpper(String ch) {
+        char c = ch.charAt(0);
+        if (c >= 'Ａ' && c <= 'Ｄ') {
+            c = (char) ('A' + (c - 'Ａ'));
+        } else if (c >= 'ａ' && c <= 'ｄ') {
+            c = (char) ('A' + (c - 'ａ'));
+        }
+        return String.valueOf(c).toUpperCase(java.util.Locale.ROOT);
+    }
+
+    /**
      * 任意卷判分：题库无对应记录，只能让模型依据题干与作答自行判定。
      *
      * @param question 题目（题干 + 作答）
@@ -1016,6 +1067,7 @@ public class EduPaperScanner {
             fallback.setComment("未作答");
             return fallback;
         }
+        String mark = extractInlineMark(question.answer());
         String systemPrompt = "你是资深阅卷老师。只输出 JSON，禁止解释。";
         String userPrompt = """
                 外来试卷没有标准答案，请依据学科常识判断作答是否正确，并给出简短评语（不超过 50 字）。
@@ -1037,7 +1089,7 @@ public class EduPaperScanner {
                 {"score": 3, "comment": "评语"}
                 注意：评分为 0~%d 之间的整数，无论对错都必须给出具体评语，只返回 JSON。
                 """.formatted(question.stem() == null ? "" : question.stem(),
-                question.answer() == null ? "" : question.answer(), maxScore, maxScore);
+                mark == null ? "" : mark, maxScore, maxScore);
         try {
             String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
         // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，

@@ -775,9 +775,15 @@ public class AiBotBindingService {
             client.configure(phoneNumberId, accessToken, appSecret, verifyToken);
             client.validate();
             log.info("[Bot] WhatsApp 凭据校验成功 phoneNumberId={}", phoneNumberId);
-        } catch (Exception e) {
-            log.error("[Bot] WhatsApp 绑定失败 phoneNumberId={}", phoneNumberId, e);
-            throw new IllegalArgumentException("WhatsApp 凭据校验失败: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            if (e.getCause() == null) {
+                // HTTP 层已返回响应（如 401/403），说明凭据确实无效，拒绝绑定
+                log.error("[Bot] WhatsApp 绑定失败 phoneNumberId={}", phoneNumberId, e);
+                throw new IllegalArgumentException("WhatsApp 凭据校验失败: " + e.getMessage());
+            }
+            // 网络不可达（跨GFW/无出口代理等）：保存绑定，交由 Meta Webhook 握手做最终校验
+            log.warn("[Bot] WhatsApp 凭据校验因网络不可达跳过 phoneNumberId={}：{}",
+                    phoneNumberId, e.getMessage());
         }
 
         var binding = new SysAiBotBinding();
