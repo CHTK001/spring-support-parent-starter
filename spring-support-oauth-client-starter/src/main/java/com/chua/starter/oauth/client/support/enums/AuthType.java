@@ -100,6 +100,18 @@ public enum AuthType {
     STUDENT("student", "学生登录"),
 
     /**
+     * 教师登录
+     * <p>面向教育域教师账号：登录标识为工号，凭据由业务模块注册的
+     * {@code TeacherCredentialProvider}（注册名 {@code teacher}）校验。
+     * 与 STUDENT 同形——教师也不是 sys_user，而是 edu_teacher。</p>
+     *
+     * @param "teacher" "教师"
+     * @param "教师登录" "教师登录"
+     * @return 教师的结果
+     */
+    TEACHER("teacher", "教师登录"),
+
+    /**
      * 无认证类型
      * <p>用于默认值或未指定认证类型的场景</p>
      * @param "none" "无"

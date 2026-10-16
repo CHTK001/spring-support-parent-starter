@@ -1,0 +1,58 @@
+package com.chua.starter.eduai.ai.strategy;
+
+import com.chua.starter.eduai.ai.EduPaperScanner;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+
+/**
+ * 整卷一次识别策略（默认）。
+ *
+ * <p>与历史行为完全一致，调用量最小：</p>
+ * <ol>
+ *   <li>版面规则切题（不调模型）→ 命中则用模型补一次题干；</li>
+ *   <li>版面切不出时整卷调一次模型；</li>
+ *   <li>模型也不可用才回退行规则（题干留空）。</li>
+ * </ol>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Slf4j
+@Component
+public class WholeTextAnyExtractStrategy implements AnyExtractStrategy {
+
+    @Override
+    public String key() {
+        return "whole";
+    }
+
+    @Override
+    public EduPaperScanner.AnyScan extract(Context context) {
+        if (!StringUtils.hasText(context.text())) {
+            return new EduPaperScanner.AnyScan(List.of(), null, null);
+        }
+        List<EduPaperScanner.ScanBlock> blocks = context.blocks();
+        if (blocks != null && !blocks.isEmpty()) {
+            List<EduPaperScanner.ScannedQuestion> byLayout = context.layoutQuestions();
+            if (!byLayout.isEmpty()) {
+                List<EduPaperScanner.ScannedQuestion> withStem = context.fillStems(byLayout);
+                List<EduPaperScanner.ScannedQuestion> questions = !withStem.isEmpty() ? withStem : byLayout;
+                String[] student = context.studentByLines();
+                return new EduPaperScanner.AnyScan(questions, student[0], student[1]);
+            }
+        }
+        try {
+            EduPaperScanner.AnyScan byModel = context.modelExtract();
+            if (!byModel.questions().isEmpty()) {
+                return byModel;
+            }
+        } catch (Exception e) {
+            log.warn("[EduScan] 模型抽取失败，回退行规则（题干留空）: {}", e.getMessage());
+        }
+        String[] student = context.studentByLines();
+        return new EduPaperScanner.AnyScan(context.ruleQuestions(), student[0], student[1]);
+    }
+}

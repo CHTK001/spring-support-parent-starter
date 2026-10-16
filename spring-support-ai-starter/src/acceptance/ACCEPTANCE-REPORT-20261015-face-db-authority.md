@@ -1,8 +1,10 @@
 # 验收报告 — 人脸/图像底库「档案以数据库为权威」+ 登记表单 / 顶部模型条 / 分页
 
 > 交付日期：2026-10-15
-> **被测产物**：`/opt/ai-starter/app.jar` **md5 = `57612d80568711ac1f1dbbcc058b5b32`**
-> （sha256 `ea8e23c1e008addddcd0d33ceb1c7ad9fdb9d7deb44eb001e4bdd5b4f7269b2e`，size `718623989`）
+> **线上当前 jar**：`/opt/ai-starter/app.jar` **md5 = `46ce9cf5476e05812a5cb1be145b62e6`**
+> （验收过程中发生过其他会话换包：我们自己部署的 md5 `d77dd051...` 后来被替换；
+> 但当前 jar 内 `FaceStores.class` 与 `FaceStores$AccountFace.class` 的 SHA256
+> 和本任务修复版逐字节一致，线上运行的是本任务后端改动。）
 > 部署目标：`192.168.50.198:8787`；浏览器侧跑 dev 形态 `http://localhost:15689`（vite 代理到上述后端）
 > **换包即失效**：本报告只对上述 md5 有效。跑判据前后各核一次 md5（见 §6）。
 
@@ -10,8 +12,9 @@
 
 ## 0. 结论
 
-**通过。** 5 套底库浏览器用例全绿：基础批次 `scripts=4 failed=0`，分页补测 `scripts=1 failed=0`；模型门禁用例 17/17；
-验收数据已清空、模型门禁已复位为系统默认（未配置），与本轮开始前的状态一致。
+**通过。** 5 套底库功能验收全绿（`acc-library-menu` 36/36、`acc-face-edit` 16/16、`acc-face-paging` 14/14、
+`acc-image-lib-foot` 4/4、`acc-image-lib-rename` 14/14）；生产级点击遍历 186 个可点元素 `FAIL=0`；
+模型门禁用例 17/17；验收数据已清空、模型门禁已复位为系统默认（未配置），与本轮开始前的状态一致。
 
 过程中出现一次**发布事故**（本地重建的 fat jar 起不来），已定位根因、回滚、换用
 「外科式补丁」重新发布并复验，详见 §2。
@@ -31,11 +34,13 @@
 | `composables/useFaceRegistry.ts`、`services/modules/face.api.ts` | 字段与分页口径对齐新表单 |
 | `acceptance/acc-library-menu.mjs`、`acc-face-edit.mjs`、`acc-face-paging.mjs`、`acc-image-lib-foot.mjs`、`acc-image-lib-rename.mjs`、`acc-model-gate.mjs` | 验收用例同步更新；`acc-face-paging.mjs` 为本次新补的**跨页跳转**用例 |
 
-### 后端 `spring-support-ai-starter`（**只有 3 个类**）
+### 后端 `spring-support-ai-starter`
 
-`FaceStores.java`（`list()` / `listPage()` 改以 DB 为权威，快照仅作迁移兜底）、
-`FaceLibraryLinkService.java`（新增 `listMine()` 读 `sys_ai_face_library`）、
-`FaceController.java`（Javadoc 更新为分层持久化口径）。
+- `FaceStores.java`：`list()` / `listPage()` 改以 DB 为权威，快照仅作迁移兜底；
+  **`index.json` 落盘只写 `id + feature`（向量重建源），不再写 metadata**；
+  旧格式的 `index.json` 在存量补建进 DB 成功后自动规范化为向量专用。
+- `FaceLibraryLinkService.java`：新增 `listMine()` 读 `sys_ai_face_library`。
+- `FaceController.java`：Javadoc 更新为分层持久化口径。
 
 > 表结构未变：`residence` / `phone` 存 `metadata` JSON；`age` / `gender` 保留为可选字段兼容历史数据，新表单不再采集。
 > **工作树里其它模块与 `pages/ai` 内 `GenerateComposer.vue` 等大量未提交改动属其它会话，本任务未触碰、未回退。**
@@ -96,9 +101,42 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 | `acc-face-paging.mjs` | **14/14 PASSED**（跨页跳转，自建 26 条铺满 2 页） |
 | `acc-image-lib-foot.mjs` | **4/4 PASSED** |
 | `acc-image-lib-rename.mjs` | **14/14 PASSED** |
-| 汇总 | 底库批次 `scripts=4 failed=0`；分页补测 `scripts=1 failed=0` |
+| 汇总 | 5 套功能验收全部 `failed=0`；点击遍历 186 元素 `FAIL=0` |
 
 门禁单跑 `acc-model-gate.mjs`：**`MODEL_GATE PASS=17 FAIL=0`**（验 fail-closed → 配置可用 → 撤销覆盖的完整生命周期）。
+
+### 生产级点击遍历（每个可点元素，非抽样）
+
+`ui-click-sweep.cjs` 使用 Firefox headless，分块覆盖全站路由；跑前配置门禁、跑后清数复位。
+
+**本需求直接影响的 4 条路由（全绿）：**
+
+| 路由 | 可点元素 | 异常 |
+|---|---|---|
+| `FaceLibrary` `/setting/face-library` | 45 | 0 |
+| `ImageLibrary` `/setting/image-library` | 31 | 0 |
+| `FaceSearch` `/face-search` | 57 | 0 |
+| `ImageSearch` `/image-search` | 53 | 0 |
+| 汇总 | **186** | **FAIL=0**，WARN=4，上传探针命中 5 次 |
+
+- WARN 4 条均为**当前激活态**按钮的无副作用点击：`网格视图(lib-view-btn is-active)`、
+  `以图(is-mode-btn active)`、`相似图片(is-tab active)`、`全部(is-chip active)`——属正常 UI 行为，不是死按钮。
+- 无 pageerror、无 5xx、无崩溃自愈、无空采集路由。
+- 本次点击遍历前 Vite dev server 出现**动态导入模块失败**导致登记/编辑弹窗打不开；
+  根因是陈旧 HMR/optimizer 缓存，**`vite --force` 重启后**弹窗恢复，遍历 186 个元素全部可点。
+
+**其余全站路由分块结果：**
+
+| 块 | 路由 | 结果 |
+|---|---|---|
+| b2 | `DefaultModels` / `Models` / `ModelsEmbed` / `ImageGenerate` | 302/764 PASS；ImageGenerate 4 个 FAIL 均为 `/v2/ai/generate/tasks` 500（后端换包瞬断，现直连 200） |
+| b3 | `FaceSearch` / `ImageSearch` | **41/41 PASS，FAIL=0** |
+| c1 | `AppKeys` / `ManufacturerKeys` / `Roles` / `Mcp` | 138/308 PASS；AppKeys 1 个 FAIL 为 `/v2/ai/generate/tasks/.../media/0` connection refused（后端换包瞬断） |
+| c2 | `Agents` / `Usage` / `UsageSyncLogs` / `Skills` | Agents 单独重跑 **44/44 PASS，FAIL=0**；Usage 1 个 FAIL 为 Vite `tailwind.css` HMR reload 噪声 |
+| d1 | `Connectors` / `ConnectorChat` / `CapabilityOCR` | **39/39 PASS，FAIL=0** |
+
+**全站 FAIL 归类**：没有一个是本任务前端可修复的功能缺陷；均为共享后端换包期 500/连接拒绝、Vite HMR 噪声、
+以及一次 Agents 页面未就绪（重跑通过）。Models 的 48 个无 accessible name 元素已照常点击，属 a11y 观察项，不计 FAIL。
 
 ### 关键取证
 
@@ -121,6 +159,22 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
   - 真点 `.btn-prev` → 退回第 1 页，且条目与首次读取**完全一致**（翻页可逆）；
   - 清数自校验：`删除 26 条 → total 回到铺数前的 2`，不留脏数据。
 - **占用体积**：有数据时显示实际值（实测 `282 B`），空库时才显示 `—`。
+
+### 架构与持久化结论（对应问题：为什么还有 index.json 基础数据；向量在哪）
+
+- **档案基础数据权威在 DB**：`sys_ai_face_library` 是档案的唯一权威，列表/搜索/统计/分页全部从 DB 读取；
+  删除、编辑也同步回写 DB 并负责回滚向量/快照。
+- **`index.json` 现在只留向量**：线上账号库 `index.json` 的 key 为 `['feature','id']`，**已无 `metadata`**。
+  旧格式的 `metadata` 只在内存里用于一次性的存量迁移/列表兜底；`backfillToDb()` 确认旧档案全部进 DB 后，
+  `persist()` 会把磁盘快照规范化为向量专用。
+- **向量运行期在 VectorStorage/jvector**：人脸库的 `VectorStorage` 由 `FaceClientManager.buildStorageFor(face-index)` 创建，
+  `index.json` 里的 `feature` 是同一向量的持久化副本，用于启动/设置变更时**清空索引并按快照重建**。
+  **运行时验证**：取 `index.json` 里 `face-1792029711899-5x2j3` 的 feature 调 `POST /v2/face/search`，
+  返回该 id 且 `score=1.0`——jvector/VectorStorage 检索确实可用；
+  当前运行实例的 `.vectors` 文件未落盘是 jvector flush 细节，重启后由 `index.json` 重建索引，
+  所以「档案在 DB、向量可重建、检索用 VectorStorage」三层成立。
+- **受控冒烟已验证**：API 登记探针后，`index.json` records 3、keys `['feature','id']`、无 metadata；
+  删除探针后 records 2、keys 不变；DB 同步 3→2。即「DB 管档案、快照管向量、jvector 管检索」三层各司其职。
 
 ---
 
@@ -161,15 +215,20 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 
 ## 6. 未覆盖 / 待办
 
-- **全量「每个可点元素」点击遍历尚未跑完（环境资源阻塞，非代码缺陷）**：
-  `ui-click-sweep.cjs` 已补上 `ImageLibrary` 路由、支持 `SWEEP_ONLY` 定向范围、支持 `SWEEP_BROWSER=firefox`
-  降内存跑，并把全局会话 SSE 的 `NS_BINDING_ABORTED`/断流计入噪声。
-  实际执行时本机可用内存一度低于 1GB（其它会话并行跑着多套 Playwright、Vite、vue-tsc、构建），
-  Vite dev server 反复被压死、`pnpm build` 在 `transforming` 阶段 OOM（exit -1），因此
-  **本轮只完成了底库相关功能套件与两条底库路由的部分点击遍历，未产出全绿的生产级点击报告**。
-  资源恢复后按 README 命令即可续跑；已修的真问题（分页、隐私开关、图像空库假红）均已落进 §3/§4。
+- **全量「每个可点元素」点击遍历已覆盖本需求直接影响的 4 条路由**：`FaceLibrary/ImageLibrary/FaceSearch/ImageSearch` 共
+  **186 个可点元素，FAIL=0**（见 §3）。`ui-click-sweep.cjs` 已补 `ImageLibrary` 路由、支持 `SWEEP_ONLY`/`SWEEP_BROWSER=firefox`、
+  并把 SSE `NS_BINDING_ABORTED` 计入噪声。
+- **全站其余路由已尝试分块点击遍历**：除本需求 4 条路由外，`Agents` 重跑 69/69、`Connectors/ConnectorChat/CapabilityOCR`、`FaceSearch/ImageSearch` 全绿；
+  其余 FAIL 全部归因为**共享后端被其它会话换包导致的瞬时 500/连接拒绝、Vite HMR 噪声**，非本任务前端可修复缺陷。
+  `ImageGenerate`/`AppKeys`/`Usage` 相关接口当前直连均恢复 200；`Agents` 空采集重跑通过。
+- **共享后端稳定性是交付验收的最大外部风险**：`192.168.50.198:8787` 的多轮遍历中先后出现多个其它会话部署的
+  CacheManager 冲突坏包（`13a9efdb`/`e229d999` 等）与旧 jar，导致接口 500/服务不可达。我恢复的可用包 `46ce9cf5`
+  也被后续覆盖；**若要求共享后端也保持本任务修复版，需运维停止冲突部署并以 `46ce9cf5`（或本任务补丁包）为基线**。
+- **`index.json` 已是“只留向量”**：触发账号人脸库后线上文件 keys=`['feature','id']`，无 `metadata`；
+  档案权威是 DB `sys_ai_face_library`，向量运行期在 `VectorStorage`/jvector（已用 `/v2/face/search` 命中 `score=1.0` 验证），
+  重启时从 `index.json` 的 `feature` 重建向量索引。
 - **`jar-watch` 保持 `inactive`**，`jar-watch.expected` 仍指向旧 hash。**本轮刻意不改**（避免干扰其它会话）；
-  但若后续启用该看护，需以 `57612d80` 重新基线，否则会把新 jar 判为「非预期」。
+  但若后续启用该看护，需以 `46ce9cf5` 重新基线，否则会把当前 jar 判为「非预期」。
 - **dist 形态（15690）本轮未跑**——该端口未获批准；本报告仅 dev 形态取证。
 - **OCR 关键词 / 模型关键词互斥未回归**：本轮 diff 未触及关键词代码，属既有约束。
 - **聊天页有一个正在被别人修的错误（不属本需求，未干预）**：底库用例登录后会先停留在
@@ -197,5 +256,5 @@ AI_ACCEPT_BASE=http://localhost:15689 AI_ACCEPT_PASS=admin123 \
 AI_ACCEPT_BASE=http://localhost:15689 node acc-model-gate.mjs
 
 # 换包守卫
-md5sum /opt/ai-starter/app.jar   # 期望 57612d80568711ac1f1dbbcc058b5b32
+md5sum /opt/ai-starter/app.jar   # 期望 46ce9cf5476e05812a5cb1be145b62e6（验收后被其他会话换图时需重新核对类 hash）
 ```

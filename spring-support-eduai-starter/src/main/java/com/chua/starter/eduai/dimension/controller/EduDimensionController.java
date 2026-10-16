@@ -7,6 +7,7 @@ import com.chua.starter.eduai.dimension.entity.*;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.dto.EduImpersonateDTO;
 import com.chua.starter.eduai.model.dto.EduResetPasswordDTO;
+import com.chua.starter.eduai.model.dto.EduTeacherResetPasswordDTO;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -334,6 +335,21 @@ public class EduDimensionController {
      */
     public ReturnResult<Boolean> deleteTeacher(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteTeacher(id));
+    }
+
+    @Operation(summary = "重置教师登录口令（管理员）")
+    @PostMapping("/teachers/reset-password")
+    /**
+     * 管理员重置教师登录口令。
+     *
+     * <p>无需旧口令——管理员本就掌握档案；服务层仍校验归属，避免越权重置他人教师口令。
+     * 重置后教师可用「工号 + 该口令」直接登录老师端，不必先有系统账号。</p>
+     *
+     * @param dto 教师标识与新口令
+     * @return 是否重置成功
+     */
+    public ReturnResult<Boolean> resetTeacherPassword(@RequestBody EduTeacherResetPasswordDTO dto) {
+        return ReturnResult.ok(dimensionService.resetTeacherPassword(dto.teacherId(), dto.newPassword()));
     }
 
     // ===== 教师班级配置（老师端数据范围） =====

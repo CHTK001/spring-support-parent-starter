@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.push;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WindowsSshShell;
@@ -677,14 +678,19 @@ public class ProjectTaskService {
      * @param lastStepOut 最后一步的标准输出行
      */
     private void updateProjectPid(Long projectId, String finishStatus, List<String> lastStepOut) {
-        MsServerProject project = projectMapper.selectById(projectId);
-        if (project == null) {
+        if (!"stopped".equals(finishStatus) && !"running".equals(finishStatus)) {
             return;
         }
+        // 必须走 LambdaUpdateWrapper 显式 set：MyBatis-Plus 的 updateById 会跳过 null 字段，
+        // 停止时的 setPid(null)/setRunningSince(null) 根本落不到库 —— 表现为「项目已停止，
+        // 列表页仍显示旧 PID 与运行时长」，且该 PID 早已不存在于目标机，误导排障。
+        LambdaUpdateWrapper<MsServerProject> update = new LambdaUpdateWrapper<MsServerProject>()
+                .eq(MsServerProject::getId, projectId)
+                .set(MsServerProject::getUpdateTime, LocalDateTime.now());
         if ("stopped".equals(finishStatus)) {
-            project.setPid(null);
-            project.setRunningSince(null);
-        } else if ("running".equals(finishStatus)) {
+            update.set(MsServerProject::getPid, null)
+                    .set(MsServerProject::getRunningSince, null);
+        } else {
             String pid = null;
             for (String line : lastStepOut) {
                 String t = line == null ? "" : line.trim();
@@ -693,13 +699,10 @@ public class ProjectTaskService {
                     break;
                 }
             }
-            project.setPid(pid);
-            project.setRunningSince(LocalDateTime.now());
-        } else {
-            return;
+            update.set(MsServerProject::getPid, pid)
+                    .set(MsServerProject::getRunningSince, LocalDateTime.now());
         }
-        project.setUpdateTime(LocalDateTime.now());
-        projectMapper.updateById(project);
+        projectMapper.update(null, update);
     }
 
     /**
@@ -738,23 +741,26 @@ public class ProjectTaskService {
         if (!rolledBack && !rollbackFailed) {
             return;
         }
-        MsServerProject project = projectMapper.selectById(state.projectId);
-        if (project == null) {
-            return;
-        }
+        // 同样走显式 set：rollbackFailed 分支要把 pid/runningSince 置空，
+        // updateById 会跳过 null 字段而清不掉。
+        LambdaUpdateWrapper<MsServerProject> update = new LambdaUpdateWrapper<MsServerProject>()
+                .eq(MsServerProject::getId, state.projectId)
+                .set(MsServerProject::getUpdateTime, LocalDateTime.now());
+        String pid;
         if (rollbackFailed) {
-            project.setStatus("stopped");
-            project.setPid(null);
-            project.setRunningSince(null);
+            pid = null;
+            update.set(MsServerProject::getStatus, "stopped")
+                    .set(MsServerProject::getPid, null)
+                    .set(MsServerProject::getRunningSince, null);
         } else {
-            project.setStatus("running");
-            project.setPid(extractLastRunningPid(logs));
-            project.setRunningSince(LocalDateTime.now());
+            pid = extractLastRunningPid(logs);
+            update.set(MsServerProject::getStatus, "running")
+                    .set(MsServerProject::getPid, pid)
+                    .set(MsServerProject::getRunningSince, LocalDateTime.now());
         }
-        project.setUpdateTime(LocalDateTime.now());
-        projectMapper.updateById(project);
+        projectMapper.update(null, update);
         log.info("[task] {} 失败后回写项目运行态: status={} pid={}", state.taskId,
-                project.getStatus(), project.getPid());
+                rollbackFailed ? "stopped" : "running", pid);
     }
 
     /**

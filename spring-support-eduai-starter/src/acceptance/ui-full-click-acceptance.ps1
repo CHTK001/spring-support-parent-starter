@@ -510,6 +510,10 @@ $routes = @(
     @{ path = '/edu/teacher'; name = 'teacher-portal' },
     @{ path = '/edu/student'; name = 'student' },
     @{ path = '/edu/student-login'; name = 'student-login' },
+    # 2026-10-16 补：r47 新增的 AI 提供商页（router/index.ts:67）此前不在清单里，
+    # 菜单入口与深链都指向它；/edu/market 同样存在于路由（index.ts:111）却一直没被爬。
+    @{ path = '/edu/ai-provider'; name = 'ai-provider' },
+    @{ path = '/edu/market'; name = 'market' },
     # Route-coverage audit against pages/eduai/src/router/index.ts found these three
     # missing: two overlay pages that only appear when a game pops them (remind=true,
     # showLink=false, so they never show up in a menu-driven crawl) and one redirect.
@@ -765,7 +769,21 @@ $jsSeedDashboard = @"
 (async () => {
   const WANT = ['$lblWidgets'];
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const count = () => { try { return (JSON.parse(localStorage.getItem('system:2:layout') || '{}').widgets || []).length; } catch (e) { return 0; } };
+  // The layout cache key is "${prefix}:${userId}:layout" and the userId comes from the
+  // server's user info. Hardcoding it as 'system:2:layout' assumed a userId the backend
+  // here never returns (/v2/user/me answers {}), so count() always read 0: the seed
+  // "succeeded" while the dashboard stayed empty and the phase reported widgets=0.
+  // Resolve the key by shape instead of by literal.
+  const layoutKey = () => {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && /:layout$/.test(k)) return k;
+      }
+    } catch (e) { }
+    return '';
+  };
+  const count = () => { try { const k = layoutKey(); return k ? (JSON.parse(localStorage.getItem(k) || '{}').widgets || []).length : 0; } catch (e) { return 0; } };
   if (count() > 0) return String(count());
   const btn = (t) => Array.from(document.querySelectorAll('main.el-main button')).find((b) => (b.innerText || '').trim() === t);
   btn('$lblLayout') && btn('$lblLayout').click();
@@ -1069,6 +1087,69 @@ $jsReadEv = @'
 # Log back in after the token expires mid-run. Without this the crawl kept going on the
 # login page: a 20-minute run hits the access-token TTL, the guard bounces to /login, and
 # every later route records "0 controls" -- which reads exactly like a clean pass.
+
+# ---- login form submit ---------------------------------------------------------------
+# The login page grew a slider captcha (theme ReSliderVerify). The original submit was
+# 'press Enter' only, which no longer authenticates: every run died with
+# 'admin logged in = False' / 'session restored ... = False' and then reported each route
+# as 'bounced to the login page'. Submit the way a user does: finish the slider, then
+# click the 登录 button (Enter stays as a fallback).
+#
+# The slider reads thumbX at pointerup but updates it inside requestAnimationFrame, so the
+# drag must be split across two evals with a real frame in between -- doing it in one eval
+# (or waiting on a Promise) leaves thumbX at 0 and never reaches success. pointerdown goes
+# to the track; pointermove/pointerup go to window, where the component binds them, and all
+# share one pointerId.
+$jsSliderDown = @'
+(() => {
+  const track = document.querySelector('.slider-verify-track');
+  if (!track) return 'no-track';
+  const thumb = track.querySelector('.slider-verify-thumb');
+  if (!thumb) return 'no-thumb';
+  const tr = track.getBoundingClientRect();
+  const tb = thumb.getBoundingClientRect();
+  const x0 = tb.x + tb.width / 2;
+  const y = tr.y + tr.height / 2;
+  const endX = tr.x + tr.width - tb.width / 2;
+  window.__abSlider = { x0: x0, y: y, endX: endX, pid: 91 };
+  const mk = (t, x, b) => new PointerEvent(t, { bubbles: true, cancelable: true, composed: true, pointerId: 91, pointerType: 'mouse', clientX: x, clientY: y, buttons: b, button: 0, isPrimary: true });
+  track.dispatchEvent(mk('pointerdown', x0, 1));
+  for (let i = 1; i <= 12; i++) {
+    window.dispatchEvent(mk('pointermove', x0 + (endX - x0) * (i / 12), 1));
+  }
+  return 'down+move';
+})()
+'@
+$jsSliderUp = @'
+(() => {
+  const d = window.__abSlider;
+  if (!d) return 'no-state';
+  const mk = (t, x, b) => new PointerEvent(t, { bubbles: true, cancelable: true, composed: true, pointerId: d.pid, pointerType: 'mouse', clientX: x, clientY: d.y, buttons: b, button: 0, isPrimary: true });
+  window.dispatchEvent(mk('pointerup', d.endX, 0));
+  return 'up';
+})()
+'@
+
+function Submit-LoginForm {
+    param([string]$User, [string]$Pwd)
+    $q1 = -join @([char]0x8BF7, [char]0x8F93, [char]0x5165, [char]0x7528, [char]0x6237, [char]0x540D)
+    $q2 = -join @([char]0x8BF7, [char]0x8F93, [char]0x5165, [char]0x5BC6, [char]0x7801)
+    $btn = -join @([char]0x767B, [char]0x5F55)
+    AbRaw @('find', 'placeholder', $q1, 'fill', $User) 60000 | Out-Null
+    AbRaw @('find', 'placeholder', $q2, 'fill', $Pwd) 60000 | Out-Null
+    Js $jsSliderDown | Out-Null
+    Start-Sleep -Milliseconds 900
+    Js $jsSliderUp | Out-Null
+    Start-Sleep -Milliseconds 500
+    $clickJs = "(() => { const b = Array.from(document.querySelectorAll('button')).find(x => (x.innerText || '').trim() === '$btn'); if (!b) return 'no-btn'; if (b.disabled) return 'disabled'; b.click(); return 'clicked'; })()"
+    $res = ''
+    try { $res = [string](Js $clickJs 30000) } catch { $res = '' }
+    if ($res -ne 'clicked') {
+        AbRaw @('scrollintoview', 'button') 30000 | Out-Null
+        AbRaw @('press', 'Enter') 60000 | Out-Null
+    }
+}
+
 function Invoke-Login {
     param([switch]$Quiet)
     $ok = $false
@@ -1087,13 +1168,15 @@ function Invoke-Login {
         $q2 = -join @([char]0x8BF7, [char]0x8F93, [char]0x5165, [char]0x5BC6, [char]0x7801)
         AbRaw @('open', "$Base/login") 60000 | Out-Null
         Start-Sleep -Seconds 3
-        Js '(() => { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && !/layout/i.test(k)) localStorage.removeItem(k); } sessionStorage.clear(); return 1; })()' | Out-Null
+        # 保留 layout 与框架自身的 system:* 键（x-req-fingerprint / anonymous user-config / user-roles）。
+        # 2026-10-16 实测对照：把 system:* 一起清掉后，紧接着的登录**无法完成**（点「登录」后停在
+        # /login、localStorage 不出现任何令牌键）；不清或只清会话键时同一套操作会正常跳到 /home。
+        # 指纹键被清会让后续请求失去指纹上下文，于是「清会话」这步反而把自己踢出了可登录状态。
+        Js '(() => { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && (/layout/i.test(k) || /^system:/.test(k))) continue; if (k) localStorage.removeItem(k); } sessionStorage.clear(); return 1; })()' | Out-Null
         AbRaw @('open', "$Base/login") 60000 | Out-Null
         Start-Sleep -Seconds 4
         AbRaw @('snapshot') 60000 | Out-Null
-        AbRaw @('find', 'placeholder', $q1, 'fill', $AdminUser) 60000 | Out-Null
-        AbRaw @('find', 'placeholder', $q2, 'fill', $AdminPwd) 60000 | Out-Null
-        AbRaw @('press', 'Enter') 60000 | Out-Null
+        Submit-LoginForm -User $AdminUser -Pwd $AdminPwd
         $ok = [bool](WaitJs 'location.pathname.indexOf("/login")!==0' 25)
     }
     if (-not $Quiet) { Write-Host ('    [re-login] {0}: {1}' -f $Role, $ok) }
@@ -1298,7 +1381,7 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
     # anonymous and cleared the previous account's layout cache -- every run therefore
     # crawled an EMPTY dashboard (1 control instead of 10) and left it empty. Removing the
     # non-layout keys one by one keeps the layout and the run stays reproducible.
-    Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /layout/i.test(k)) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
+    Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && (/layout/i.test(k) || /^system:/.test(k))) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
     # ---- Phase 0b: walk the login page's own controls ----
     # Until now /login was only ever exercised by typing credentials and pressing
     # Enter: the password-visibility toggle, the empty-form validation and any
@@ -1341,7 +1424,7 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
         if (-not $lgBack) {
             # A walk click ended up authenticated (or anywhere but /login): drop the
             # session keys again (layout cache stays) so the real login below still runs.
-            Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /layout/i.test(k)) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
+            Js '(() => { let kept = 0; for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && (/layout/i.test(k) || /^system:/.test(k))) { kept++; continue; } if (k) localStorage.removeItem(k); } sessionStorage.clear(); return kept; })()' | Out-Null
             AbRaw @('open', "$Base/login") 60000 | Out-Null
             Start-Sleep -Seconds 4
         }
@@ -1423,9 +1506,7 @@ $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { 
         AbRaw @('open', "$Base/login") 60000 | Out-Null
         Start-Sleep -Seconds 4
         AbRaw @('snapshot') 60000 | Out-Null
-        AbRaw @('find', 'placeholder', $phUser, 'fill', $AdminUser) 60000 | Out-Null
-        AbRaw @('find', 'placeholder', $phPwd, 'fill', $AdminPwd) 60000 | Out-Null
-        AbRaw @('press', 'Enter') 60000 | Out-Null
+        Submit-LoginForm -User $AdminUser -Pwd $AdminPwd
         if (WaitJs 'location.pathname.indexOf("/login")!==0' 25) { $logged = $true; break }
     }
     Seed-Dashboard 'admin'
@@ -1442,8 +1523,19 @@ if (-not $SkipContent) {
         Write-Host ''
         Write-Host ('########## [content] {0}  {1} ##########' -f $path, $rname)
         Open-Route $path
-        $p0 = (Js $jsProbe) | ConvertFrom-Json
-        Ck "$rname page loads" ($p0.bodyLen -gt 30) ("path=$($p0.path) bodyLen=$($p0.bodyLen)")
+        # A cold route on a loaded dev server can still be blank here: readyState is
+        # 'complete' for the HTML shell long before Vite has transformed the route's
+        # modules and the SPA has rendered, so a single probe reported
+        # "page loads bodyLen=0" for pages that DID work -- /edu/paper, /edu/exam and
+        # /edu/marking were all marked failed and then yielded clickable controls two
+        # lines later. Give the render a bounded wait instead of judging on one sample.
+        $p0 = $null
+        for ($w = 1; $w -le 8; $w++) {
+            $p0 = (Js $jsProbe) | ConvertFrom-Json
+            if ($p0.bodyLen -gt 30) { break }
+            Start-Sleep -Seconds 2
+        }
+        Ck "$rname page loads" ($p0.bodyLen -gt 30) ("path=$($p0.path) bodyLen=$($p0.bodyLen) waits=$w")
         Clear-Evidence
         $ev0 = Read-Evidence
         Ck "$rname clean load (no page/console error, no 5xx)" (($ev0.pageErr -eq 0) -and ($ev0.consoleErr -eq 0) -and ($ev0.http5xx -eq 0)) `
@@ -1462,6 +1554,7 @@ if (-not $SkipContent) {
         }
 
         $i = 0; $restarts = 0; $clicked = 0; $prevCount = 0; $modeRestarts = 0; $emptyTries = 0
+        $scopeRestarts = 0
         $transportRetried = $false
         while ($true) {
             # The daemon occasionally drops mid-run ("EOF while parsing", os error 10060) and
@@ -1482,6 +1575,25 @@ if (-not $SkipContent) {
             }
             if ($scopeKind -eq 'body') {
                 Write-Host '    [WARN] inventory scope degraded to body (main.el-main not rendered yet)'
+                # A click on a LAYOUT page can leave the shell entirely (a full-document
+                # navigation to /edu/student-login, the student / teacher portals, ...).
+                # The inventory then falls back to <body>, which is now a DIFFERENT
+                # document, and its controls got re-attributed to this route: /edu/fun/config
+                # was charged with clicking the student login page's 登录 button and failed
+                # "page stays alive". Detect the departure by path and reopen this route
+                # instead of clicking another page's controls (bounded, so a route that
+                # always redirects away cannot loop).
+                $nowPath = ''
+                try { $nowPath = [string](Js 'location.pathname' 20000) } catch { $nowPath = '' }
+                if ($nowPath -and ($nowPath.TrimEnd('/') -ne $path.TrimEnd('/')) -and ($scopeRestarts -lt 2)) {
+                    $scopeRestarts++
+                    Write-Host ('    [left page] at {0} while walking {1}: reopening the route' -f $nowPath, $path)
+                    Open-Route $path
+                    Js $jsResetEv | Out-Null
+                    $i = 0
+                    $prevCount = 0
+                    continue
+                }
             }
             if (-not $inv) {
                 # A dead transport is an environment fault, not an unreadable page: restart

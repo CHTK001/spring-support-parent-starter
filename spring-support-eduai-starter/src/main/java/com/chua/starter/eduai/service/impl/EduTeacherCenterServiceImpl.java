@@ -431,17 +431,28 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
     }
 
     /**
-     * 取当前账号绑定的教师档案
+     * 取当前账号绑定的教师档案。
      *
-     * @return 教师档案，未绑定时为 null
+     * <p>先按 {@code teacher_account = 登录态 userId} 找，找不到再按
+     * {@code teacher_no = 登录态 userId} 找：教师现在可以「工号 + 口令」直接登录
+     * （{@code TeacherCredentialProvider}），令牌里的 userId 可能是工号本身，
+     * 而管理员也可能把绑定账号改成别的值。只按绑定列查会让这些教师登不进老师端，
+     * 且现象是「明明工号能登录、进去却提示未绑定」，很难自查。</p>
+     *
+     * @return 教师档案；未登录或未绑定时为 {@code null}
      */
     private EduTeacher findMyTeacher() {
         String account = EduUserContext.currentUserId();
         if (account == null || account.isBlank()) {
             return null;
         }
-        return teacherMapper.selectOne(new QueryWrapper<EduTeacher>()
+        var byAccount = teacherMapper.selectOne(new QueryWrapper<EduTeacher>()
                 .eq("teacher_account", account).last("LIMIT 1"));
+        if (byAccount != null) {
+            return byAccount;
+        }
+        return teacherMapper.selectOne(new QueryWrapper<EduTeacher>()
+                .eq("teacher_no", account).last("LIMIT 1"));
     }
 
     /**

@@ -59,6 +59,18 @@ public class SysAiBotBinding extends SysBase {
     private String botToken; // 机器人令牌
 
     /**
+     * 平台应用密钥（WhatsApp：Meta App Secret，用于 Webhook 签名校验）
+     */
+    @TableField("sys_ai_bot_binding_app_secret")
+    private String appSecret; // 应用密钥
+
+    /**
+     * Webhook 校验令牌（WhatsApp：Meta Webhook Verify Token）
+     */
+    @TableField("sys_ai_bot_binding_verify_token")
+    private String verifyToken; // 校验令牌
+
+    /**
      * 平台类型（wechat / wecom）
      */
     @TableField("sys_ai_bot_binding_platform")
@@ -113,10 +125,16 @@ public class SysAiBotBinding extends SysBase {
     private String thinkingEffort; // thinkingeffort
 
     /**
-     * 系统提示词（AI 回复时注入的 系统 提示符）
+     * 系统提示词（AI 回复时注入的 系统 提示符，旧字段，已不再作为提示词来源）
      */
     @TableField("sys_ai_bot_binding_system_prompt")
     private String systemPrompt; // 系统提示符
+
+    /**
+     * 绑定的 AI 角色（sys_ai_role.sys_ai_role_id），为空时使用通用助手角色
+     */
+    @TableField("sys_ai_bot_binding_role_id")
+    private Integer roleId; // 角色ID
 
     /**
      * 是否记录 AI 用量（令牌/费用），机器人 专属开关，默认开启。

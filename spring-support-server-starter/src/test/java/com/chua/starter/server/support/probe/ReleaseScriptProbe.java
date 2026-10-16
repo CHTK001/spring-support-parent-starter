@@ -1,14 +1,19 @@
 package com.chua.starter.server.support.probe;
 
 import com.chua.starter.server.support.connection.PowerShellCommand;
+import com.chua.starter.server.support.provider.project.MacosProjectPlatformProvider;
 import com.chua.starter.server.support.provider.project.PosixProjectPlatformProvider;
 import com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider;
+import com.chua.starter.server.support.provider.service.LaunchdSystemServiceProvider;
+import com.chua.starter.server.support.provider.service.WindowsSystemServiceProvider;
+import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.util.ProjectScripts;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
@@ -27,7 +32,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>命名用 {@code Probe} 而非 {@code Test}：本仓约定非 example 模块不新增
  * {@code *Test} 类。但「命名不带 Test」并不妨碍它进入常规构建——JUnit 5 按
- * {@code @Test} 注解发现测试类，不看类名。因此本探针按段拆成 9 个 {@code @Test} 方法，
+ * {@code @Test} 注解发现测试类，不看类名。因此本探针按段拆成 11 个 {@code @Test} 方法，
  * 由 {@code mvn -pl spring-support-server-starter test -DskipTests=false} 直接执行，
  * 改动 {@code ProjectScripts} 或平台 Provider 时不再依赖「记得手工跑一下运行器」。</p>
  *
@@ -87,6 +92,8 @@ public final class ReleaseScriptProbe {
         probe.sectionGMiscCommands();
         probe.sectionHInlineLengthLimit();
         probe.sectionIPowerShellSyntax();
+        probe.sectionJMacosPlatform();
+        probe.sectionKWindowsServiceFallback();
         System.out.println("[probe] ---- 汇总：passed=" + probe.passed + " failed=" + probe.failures.size() + " ----");
         probe.failures.forEach(f -> System.out.println("[probe] FAIL " + f));
         if (!probe.failures.isEmpty()) {
@@ -115,6 +122,11 @@ public final class ReleaseScriptProbe {
                 sb.stop());
         check("A1 springboot 启动含 nohup 与 pid 落盘",
                 sb.start().contains("nohup java") && sb.start().contains("echo $! > app.pid"),
+                sb.start());
+        // 与 Windows 侧 running pid= 对齐：失败回滚后编排层只能靠日志这一行确定真实 PID，
+        // 缺它会导致 Linux 回滚后库里 PID 为空（实测 status=running 但 pid=undefined）。
+        check("A1b Linux 启动段回显 running pid=（供回滚后回写真实 PID）",
+                sb.start().contains("running pid=$(cat app.pid)"),
                 sb.start());
         // 自安全模式：首字符必须写成 [s]，否则 pgrep -f 会匹配到执行脚本的 shell 自身
         check("A2 停止段用自安全模式 [s]moke\\.jar",
@@ -371,6 +383,22 @@ public final class ReleaseScriptProbe {
         check("H1c WMI 成功时才允许回退到 $r.ProcessId",
                 wbFull.start().contains("if ($procId -le 0 -and $wmiOk) { $procId = [int]$r.ProcessId }"),
                 "缺少 wmiOk 约束的兜底");
+        // CIM/WMI 进程枚举在加固主机上会被安全产品间歇拦截（实测 hit 为空、picked=0）；
+        // 此时必须有不依赖 WMI 的 Get-Process 兜底，且它要早于「退回包装壳 pid」，
+        // 否则 app.pid 会指向 cmd 包装壳，端口属主健康检查必然失败、升级被回滚。
+        int fallbackAt = wbFull.start().indexOf("Get-Process -Name");
+        int wrapperFallbackAt = wbFull.start().indexOf("if ($procId -le 0 -and $wmiOk)");
+        check("H1d CIM 被拦截时有 Get-Process 兜底解析，且早于包装壳回退",
+                fallbackAt >= 0 && wrapperFallbackAt > fallbackAt
+                        && wbFull.start().contains("resolve-fallback(Get-Process)"),
+                "fallbackAt=" + fallbackAt + " wrapperFallbackAt=" + wrapperFallbackAt);
+        // Windows 启动把 JVM/应用参数经单引号 $inner 传给 cmd，若不拼接变量就会把字面量
+        // "$JvmArgs" 当作主类（实测 ClassNotFoundException: $JvmArgs）。
+        check("H1e Windows 启动把 Jvm/App 参数拼接进 $inner（不再留在单引号字面量里）",
+                wbFull.start().contains("(@($JvmArgs) -join ' ')")
+                        && wbFull.start().contains("(@($AppArgs) -join ' ')")
+                        && !wbFull.start().contains("$inner = 'java $JvmArgs"),
+                "inner 拼接缺失");
         // 启动段本身可能已超过内联上限（加入叶子判定后 base64 约 8K）。
         // 这不是问题：**超限即走落盘 + -File**，正是本段要守的安全网。
         // 真正要保证的是「不存在某条路径把超限脚本仍内联下发」——
@@ -454,6 +482,166 @@ public final class ReleaseScriptProbe {
                         && !wbFull.stop().equals(wbFull.status()),
                 "start=" + wbFull.start().length() + " stop=" + wbFull.stop().length()
                         + " restart=" + wbFull.restart().length() + " status=" + wbFull.status().length());
+    }
+
+    // ==================== J. macOS 平台（POSIX 复用 + launchd 挂载） ====================
+
+    /**
+     * J 段：macOS 平台命令与系统服务挂载。
+     */
+    @Test
+    void jMacosPlatform() {
+        sectionJMacosPlatform();
+        assertSectionDone("J");
+    }
+
+    private void sectionJMacosPlatform() {
+        PosixProjectPlatformProvider posix = new PosixProjectPlatformProvider();
+        MacosProjectPlatformProvider macos = new MacosProjectPlatformProvider();
+
+        // 平台范围写的是 LINUX/WINDOWS/MACOS，而 macOS 复用 POSIX 实现 —— 正因如此，
+        // 「显式登记为 MACOS」与「命令确实等于 POSIX」两件事必须被钉住：前者防止 macOS
+        // 被静默当成 Linux，后者防止复用关系被无意破坏（Windows 分支的断言发现不了）。
+        check("J1 macOS 平台显式登记（osType=MACOS，不是静默当 Linux）",
+                "MACOS".equals(macos.osType()) && !"LINUX".equals(macos.osType()), macos.osType());
+        // backup 命令内含时间戳（两次调用必然不同），比对前先把时间戳归一
+        check("J2 macOS 备份命令与 POSIX 完全一致（复用关系未被破坏）",
+                normTs(macos.backup(LINUX, 10)).equals(normTs(posix.backup(LINUX, 10))),
+                normTs(macos.backup(LINUX, 10)));
+        check("J3 macOS 回滚命令与 POSIX 完全一致",
+                macos.rollback(LINUX, null).equals(posix.rollback(LINUX, null)), macos.rollback(LINUX, null));
+        String gm = macos.guardedRestart(LINUX, "RESTART_SENTINEL", "STOP_SENTINEL", "START_SENTINEL",
+                "STATUS_SENTINEL", true, 18091);
+        check("J4 macOS 健康检查与 POSIX 完全一致",
+                gm.equals(posix.guardedRestart(LINUX, "RESTART_SENTINEL", "STOP_SENTINEL",
+                        "START_SENTINEL", "STATUS_SENTINEL", true, 18091)), gm);
+        check("J5 macOS 健康检查同样不含 [[:space:]]（zsh 是 macOS 默认 shell，必守）",
+                !gm.contains("[[:space:]]"), gm);
+        check("J6 macOS 引号转义沿用 POSIX 单引号",
+                macos.quote("a'b").equals("a'\\''b"), macos.quote("a'b"));
+
+        // launchd 挂载无真机可跑，但产物是纯字符串 → 可在非 macOS 机器上实判。
+        // 断言：免提权（不得出现 sudo）、幂等注册（先 bootout 再 bootstrap）、
+        // 原生自启/守护（RunAtLoad/KeepAlive）、终态校验（install 后 print，卸载后反查作业与 plist）。
+        LaunchdSystemServiceProvider launchd = new LaunchdSystemServiceProvider();
+        SystemServiceContext ctx = new SystemServiceContext(
+                "Demo App", 7L, "springboot", "smoke.jar", LINUX, LINUX + "/app.log",
+                "echo START", "echo STOP", "echo running", Map.of("APP_ENV", "prod"),
+                List.of("-Xmx512m"), List.of("--server.port=18091"), "deploy", true, true);
+        String svc = launchd.defaultServiceName(ctx);
+        String install = launchd.install(ctx, svc);
+        String uninstall = launchd.uninstall(ctx, svc);
+        String launcher = launchd.launcher(ctx);
+
+        check("J7 默认服务名规范化（去空格/大写，带项目号）",
+                "ms-demo-app-7".equals(svc), svc);
+        check("J8 挂载免提权（全程不得出现 sudo）",
+                !install.contains("sudo") && !uninstall.contains("sudo"), install);
+        check("J9 幂等注册：先 bootout 再 bootstrap 到当前用户 GUI 域",
+                install.contains("launchctl bootout")
+                        && install.indexOf("bootout") < install.indexOf("bootstrap 'gui/$(id -u)'")
+                        && install.contains("launchctl bootstrap 'gui/$(id -u)'"), install);
+        check("J10 原生自启/守护：plist 含 RunAtLoad 与 KeepAlive",
+                install.contains("<key>RunAtLoad</key>") && install.contains("<key>KeepAlive</key>")
+                        && install.contains("<true/>"), install);
+        check("J11 日志重定向进 plist（StandardOutPath/StandardErrorPath）",
+                install.contains("<key>StandardOutPath</key>")
+                        && install.contains("<key>StandardErrorPath</key>"), install);
+        check("J12 挂载终态校验：launchctl print 判定作业是否真装载",
+                install.contains("launchctl print 'gui/$(id -u)/com.chua.ms." + svc + "'"), install);
+        check("J13 卸载终态校验：反查作业与 plist 是否真删除",
+                uninstall.contains("launchctl print") && uninstall.contains("plist 仍存在")
+                        && uninstall.contains("作业仍在 launchd 中"), uninstall);
+        check("J14 启动器以 exec 常驻（launchd 以进程存活判守护）",
+                launcher.startsWith("#!/bin/bash")
+                        && launcher.contains("exec java $JVM_ARGS -jar 'smoke.jar' $APP_ARGS"), launcher);
+        check("J15 启动器导出环境变量并单引号转义",
+                launcher.contains("export APP_ENV='prod'") && launcher.contains("JVM_ARGS='-Xmx512m'"),
+                launcher);
+
+        // plist XML 转义：值里含 & < > 必须转义，否则 plist 解析失败、作业根本装不进来
+        SystemServiceContext xmlCtx = new SystemServiceContext(
+                "A&B", 8L, "springboot", "a.jar", "/opt/A<B>&C", "/opt/x/out>err.log",
+                "S", "T", "U", Map.of(), List.of(), List.of(), null, true, false);
+        String xmlInstall = launchd.install(xmlCtx, "svc");
+        check("J16 plist 值做 XML 转义（& < > 均转义，不再原样落盘）",
+                xmlInstall.contains("&amp;") && xmlInstall.contains("&lt;") && xmlInstall.contains("&gt;")
+                        && !xmlInstall.contains("<string>/opt/x/out>err.log</string>"), xmlInstall);
+
+        // 敏感性对照：注入「用 sudo + launchctl load」的旧写法，证明 J8/J9 能识别它（非恒真）
+        String badImpl = "sudo cp x.plist ~/Library/LaunchAgents/ && launchctl load -w x.plist\n";
+        check("J17 敏感性对照：sudo/launchctl load 旧写法确实会被 J8/J9 判负",
+                badImpl.contains("sudo") && !badImpl.contains("bootstrap"), badImpl);
+    }
+
+    // ==================== K. Windows 免计划任务回退挂载 ====================
+
+    /**
+     * K 段：Windows 系统服务挂载在「计划任务不可用」时的回退。
+     *
+     * <p>加固主机上 Task Scheduler 服务被停用且非提权无法启动，{@code schtasks} 全线不可用，
+     * 旧实现直接抛「挂载失败」——功能在整台主机上不可用。本段钉住回退路径的存在与形状，
+     * 以及两条路径都有的终态校验。</p>
+     */
+    @Test
+    void kWindowsServiceFallback() {
+        sectionKWindowsServiceFallback();
+        assertSectionDone("K");
+    }
+
+    private void sectionKWindowsServiceFallback() {
+        WindowsSystemServiceProvider win = new WindowsSystemServiceProvider();
+        SystemServiceContext ctx = new SystemServiceContext(
+                "Win Demo", 38L, "springboot", "smoke.jar", "C:\\ms-acc\\acc-sb", "C:\\ms-acc\\acc-sb\\app.log",
+                "echo START", "echo STOP", "echo running", Map.of(), List.of(), List.of(),
+                "Administrator", true, true);
+        String svc = win.defaultServiceName(ctx);
+        String install = win.install(ctx, svc);
+        String uninstall = win.uninstall(ctx, svc);
+
+        check("K1 默认服务名合法（仅 [A-Za-z0-9_.-]）且带项目号",
+                svc.matches("[A-Za-z0-9_.-]+") && svc.contains("38"), svc);
+        check("K2 先探测计划任务服务再分支（不无条件用 schtasks）",
+                install.contains("Get-Service Schedule") && install.contains("if ($__sched) {"), install);
+        check("K3 主路径仍是 schtasks（可用时原生丢给 SYSTEM/ONSTART）",
+                install.contains("/SC ONSTART /RU SYSTEM") && install.contains("/SC MINUTE /MO 1 /RU SYSTEM"),
+                install);
+        check("K4 回退用免提权的 Startup 启动项",
+                install.contains("[Environment]::GetFolderPath('Startup')") && install.contains(".cmd'"), install);
+        check("K5 回退登记 HKCU Run 启动项",
+                install.contains("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"), install);
+        check("K6 回退守护用常驻看门狗（WMI 拉起 + pid 文件核验 + 60s 循环）",
+                install.contains("Invoke-CimMethod -ClassName Win32_Process") && install.contains(".watchdog.pid")
+                        && install.contains("Start-Sleep -Seconds 60"), install);
+        check("K7 回退也有终态校验（启动项/注册表/守护均须落地）",
+                install.contains("启动项文件未创建") && install.contains("注册表启动项未写入")
+                        && install.contains("守护进程未拉起"), install);
+        check("K8 卸载清理回退产物（启动项/注册表/看门狗 pid）",
+                uninstall.contains("Remove-Item -Force $__cmd") && uninstall.contains("Remove-ItemProperty")
+                        && uninstall.contains("Stop-Process -Id"), uninstall);
+        check("K9 卸载用退出码判定计划任务（避免本地化错误文本被误判为仍存在）",
+                uninstall.contains("$LASTEXITCODE -eq 0"), uninstall);
+        check("K10 卸载终态校验（启动项/注册表仍存在即失败）",
+                uninstall.contains("启动项文件仍存在") && uninstall.contains("注册表启动项仍存在"), uninstall);
+        // 敏感性对照：旧实现只有 schtasks、无回退 → K2/K4 必须判负
+        String oldImpl = "schtasks /Create /TN 'x-autostart' /SC ONSTART /RU SYSTEM "
+                + "/TR \"powershell -File 'a.ps1'\" /F\n";
+        check("K11 敏感性对照：旧实现（仅 schtasks、无回退）会被 K2/K4 判负",
+                !oldImpl.contains("Get-Service Schedule") && !oldImpl.contains("GetFolderPath('Startup')"), oldImpl);
+        // 两个开关都不开时直接判失败（避免「挂载成功但什么都没发生」）
+        SystemServiceContext none = new SystemServiceContext(
+                "N", 1L, "springboot", "a.jar", "C:\\x", "C:\\x\\a.log",
+                "S", "T", "U", Map.of(), List.of(), List.of(), null, false, false);
+        check("K12 自启与守护都不开时直接判失败（不假报成功）",
+                win.install(none, "ms-n-1").contains("throw '挂载失败"), win.install(none, "ms-n-1"));
+
+        // 语法实判：生成的挂载/卸载脚本是一大段 PowerShell（含 here-string 与多层引号），
+        // 极易出现结构性语法错误。真机一轮部署成本远高于本地解析一次，故部署前先实判。
+        String exe = resolveShellExe();
+        if (exe != null) {
+            check("K13 挂载脚本无 PowerShell 语法错误", countPowerShellErrors(exe, install) == 0, install);
+            check("K14 卸载脚本无 PowerShell 语法错误", countPowerShellErrors(exe, uninstall) == 0, uninstall);
+        }
     }
 
     /**
@@ -591,6 +779,17 @@ public final class ReleaseScriptProbe {
             i = haystack.indexOf(needle, i + needle.length());
         }
         return n;
+    }
+
+    /**
+     * 归一命令里的时间戳（备份名 {@code backup_<millis>}），
+     * 使「两次生成同一命令」的比对不受毫秒差影响。
+     *
+     * @param text 命令文本
+     * @return 时间戳归一后的文本
+     */
+    private static String normTs(String text) {
+        return text == null ? null : text.replaceAll("backup_\\d+", "backup_TS");
     }
 
     /**

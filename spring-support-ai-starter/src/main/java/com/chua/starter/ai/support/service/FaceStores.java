@@ -49,10 +49,10 @@ import java.util.concurrent.TimeUnit;
  * {@code <根>/<账号>/face/} 下有两个文件 ——</p>
  * <ul>
  *   <li>{@code face-index.vectors}：jvector 的向量索引（可重建，不是权威）</li>
- *   <li>{@code index.json}：存 id + 向量 + 元数据，启动据此重建索引。
- *       <b>档案的权威已是 DB</b>（{@code sys_ai_face_library}），
- *       此处保留它是因为<b>向量只存在于这里</b>——DB 不存特征，
- *       索引重建只能靠它。档案与向量靠 {@code vector_id} 关联。</li>
+ *   <li>{@code index.json}：<b>只存 id + 向量</b>，启动据此重建索引；
+ *       <b>档案的权威是 DB</b>（{@code sys_ai_face_library}），
+ *       metadata 只保留在内存快照里做存量迁移/列表兜底，不重复落盘 ——
+ *       DB 不存特征，向量重建只能靠 index.json。</li>
  * </ul>
  *
  * <p><b>模型不重复加载</b>：检测/特征/活体等 ONNX 模型由 {@link FaceClientManager}
@@ -1081,7 +1081,16 @@ public class FaceStores {
             // DB 化之前登记的人脸只有 index.json 里的一行记录。若把这一步放到
             // pipeline 就绪之后，恰好没配人脸模型的账号将永远补不上 DB 行 ——
             // 而这类账号恰恰最可能是「历史登记过、后来不用了」，最需要档案留底。
-            backfillToDb();
+            // 补建全部成功后才把磁盘快照规范为「只留向量」；任一补建失败则保留
+            // 旧 metadata，避免把还没进 DB 的基础数据提前抹掉。
+            if (backfillToDb()) {
+                try {
+                    persist();
+                } catch (RuntimeException ex) {
+                    log.warn("[Face] 账号 '{}' 快照规范化为向量专用后写盘失败: {} -> {}",
+                            account, dir.resolve(SNAPSHOT_NAME), ex.getMessage());
+                }
+            }
             storage = models.buildStorageFor(dir.resolve(INDEX_NAME));
             pipeline = models.buildPipelineWith(storage);
             if (pipeline == null) {
@@ -1118,13 +1127,16 @@ public class FaceStores {
          * 旧副本盖回去等于把用户刚填的资料抹掉。补建的只是「从没进过 DB 的」那批。</p>
          *
          * <p>不调 {@code persist}：本方法不改变快照，只读。</p>
+         *
+         * @return 是否所有待补条目都已成功入库；任一失败返回 false
          */
-        private void backfillToDb() {
+        private boolean backfillToDb() {
             if (snapshot.isEmpty()) {
-                return;
+                return true;
             }
             java.util.Set<String> existing = library.listExistingVectorIds(account);
             int created = 0;
+            boolean allOk = true;
             for (Map.Entry<String, Entry> e : snapshot.entrySet()) {
                 if (existing.contains(e.getKey())) {
                     continue;
@@ -1132,12 +1144,17 @@ public class FaceStores {
                 if (library.insert(account, e.getKey(), strOf(e.getValue().metadata(), "name"),
                         e.getValue().metadata(), null, null, null)) {
                     created++;
+                } else {
+                    allOk = false;
+                    log.warn("[Face] 账号 '{}' 存量档案补建失败: id={}",
+                            account, e.getKey());
                 }
             }
             if (created > 0) {
                 log.info("[Face] 账号 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
                         account, created, snapshot.size());
             }
+            return allOk;
         }
 
         /**
@@ -1162,6 +1179,11 @@ public class FaceStores {
          * 删除路径同理：快照没删掉，图和向量却已经删了，重启后人脸回来但认不出。
          * 写盘失败属于「操作没有真正生效」，必须让调用方感知并回滚。</p>
          *
+         * <p><b>磁盘快照只写 {@code id + feature}（向量重建来源），不写 metadata。</b>
+         * 档案的权威在 DB（{@code sys_ai_face_library}），快照里的 metadata 只保留在
+         * 内存中，用于旧格式文件的一次性存量迁移/列表兜底；落盘不重复保存，
+         * 避免「怎么 DB 是权威、index.json 里还有基础数据」的二次来源。</p>
+         *
          * @throws IllegalStateException 写盘失败
          */
         synchronized void persist() {
@@ -1172,7 +1194,6 @@ public class FaceStores {
                 for (Map.Entry<String, Entry> e : snapshot.entrySet()) {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("id", e.getKey());
-                    row.put("metadata", e.getValue().metadata());
                     row.put("feature", e.getValue().feature());
                     rows.add(row);
                 }
