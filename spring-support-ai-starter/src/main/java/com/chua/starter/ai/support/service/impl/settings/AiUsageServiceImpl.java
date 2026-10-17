@@ -45,16 +45,16 @@ public class AiUsageServiceImpl implements AiUsageService {
                         com.chua.starter.ai.support.util.AiUserContext.isAdmin());
         List<AiUsageDTO> result = new ArrayList<>(rows.size());
         for (SysAiUsageMapper.UsageSummaryRow row : rows) {
-            AiUsageDTO dto = new AiUsageDTO();
-            dto.setGroup(row.groupName());
-            dto.setProvider(row.provider());
-            dto.setModel(row.model());
-            dto.setCost(row.totalCost());
-            dto.setRequests(row.totalCalls());
-            dto.setPromptTokens(row.totalPromptTokens());
-            dto.setCompletionTokens(row.totalCompletionTokens());
-            dto.setTotalTokens(row.totalTokens());
-            result.add(dto);
+            result.add(new AiUsageDTO(
+                    row.groupName(),
+                    row.provider(),
+                    row.model(),
+                    row.totalCost(),
+                    row.totalCalls(),
+                    row.totalPromptTokens(),
+                    row.totalCompletionTokens(),
+                    row.totalTokens(),
+                    null));
         }
         return result;
     }

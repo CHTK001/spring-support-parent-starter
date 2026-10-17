@@ -49,15 +49,10 @@ public abstract class AbstractPackageManagerProvider implements PackageManagerPr
         if (name == null || name.isBlank()) {
             return;
         }
-        SoftwarePackage pkg = new SoftwarePackage();
-        pkg.setName(name.trim());
-        if (version != null && !version.isBlank()) {
-            pkg.setVersion(version.trim());
-        }
-        if (summary != null && !summary.isBlank()) {
-            pkg.setSummary(summary.trim());
-        }
-        list.add(pkg);
+        list.add(new SoftwarePackage(
+                name.trim(),
+                summary != null && !summary.isBlank() ? summary.trim() : null,
+                version != null && !version.isBlank() ? version.trim() : null));
     }
 
     /**

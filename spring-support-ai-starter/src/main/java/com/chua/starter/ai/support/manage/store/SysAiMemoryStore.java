@@ -458,11 +458,10 @@ public class SysAiMemoryStore {
             if (score < tuning.getMinScore() && !Boolean.TRUE.equals(memory.getPinned())) {
                 continue;
             }
-            AiMemoryDTO dto = toDTO(memory);
-            dto.setScore(round4(score));
+            AiMemoryDTO dto = toDTO(memory).withScore(round4(score));
             scored.add(dto);
         }
-        scored.sort(Comparator.comparingDouble((AiMemoryDTO d) -> d.getScore() == null ? 0D : d.getScore()).reversed());
+        scored.sort(Comparator.comparingDouble((AiMemoryDTO d) -> d.score() == null ? 0D : d.score()).reversed());
         int limit = Math.max(1, tuning.getRecallLimit());
         List<AiMemoryDTO> chosen = scored.size() > limit ? new ArrayList<>(scored.subList(0, limit)) : scored;
         if (reinforceHeld) {
@@ -602,7 +601,7 @@ public class SysAiMemoryStore {
         long now = System.currentTimeMillis();
         for (AiMemoryDTO dto : chosen) {
             try {
-                SysAiMemory memory = memoryMapper.selectById(dto.getMemoryId());
+                SysAiMemory memory = memoryMapper.selectById(dto.memoryId());
                 if (memory == null) {
                     continue;
                 }
@@ -614,7 +613,7 @@ public class SysAiMemoryStore {
                 memoryMapper.updateById(memory);
             } catch (Exception e) {
                 // 强化失败只影响统计，不影响本轮注入
-                log.warn("[Memory] 召回强化失败 memoryId={}: {}", dto.getMemoryId(), e.getMessage());
+                log.warn("[Memory] 召回强化失败 memoryId={}: {}", dto.memoryId(), e.getMessage());
             }
         }
     }
@@ -627,15 +626,14 @@ public class SysAiMemoryStore {
      * @return 各动作条数
      */
     public AiMemoryMaintenanceDTO maintain(String userId, MemoryTuningDTO tuning) {
-        AiMemoryMaintenanceDTO report = new AiMemoryMaintenanceDTO();
-        report.setExecutedAt(System.currentTimeMillis());
+        long executedAt = System.currentTimeMillis();
         if (userId == null || userId.isBlank()) {
-            return report;
+            return new AiMemoryMaintenanceDTO(null, null, null, null, null, null, executedAt);
         }
-        long now = System.currentTimeMillis();
+        long now = executedAt;
         List<SysAiMemory> all = memoryMapper.selectList(new LambdaQueryWrapper<SysAiMemory>()
                 .eq(SysAiMemory::getUserId, userId));
-        report.setScanned(all.size());
+        int scanned = all.size();
         int expired = 0;
         int decayed = 0;
         int archived = 0;
@@ -672,12 +670,14 @@ public class SysAiMemoryStore {
                 archived++;
             }
         }
-        report.setExpired(expired);
-        report.setDecayed(decayed);
-        report.setArchived(archived);
-        report.setMerged(tuning.isDedup() ? mergeDuplicates(userId) : 0);
-        report.setTrimmed(trimToCapacity(userId, tuning.getMaxPerUser()));
-        return report;
+        return new AiMemoryMaintenanceDTO(
+                scanned,
+                tuning.isDedup() ? mergeDuplicates(userId) : 0,
+                decayed,
+                expired,
+                archived,
+                trimToCapacity(userId, tuning.getMaxPerUser()),
+                executedAt);
     }
 
     /**
@@ -769,26 +769,26 @@ public class SysAiMemoryStore {
      * @return 记忆 记忆体条目
      */
     public AiMemoryDTO toDTO(SysAiMemory memory) {
-        AiMemoryDTO dto = new AiMemoryDTO();
-        dto.setMemoryId(memory.getMemoryId());
-        dto.setUserId(memory.getUserId());
-        dto.setScope(memory.getScope());
-        dto.setConversationId(memory.getConversationId());
-        dto.setKind(memory.getKind());
-        dto.setTitle(memory.getTitle());
-        dto.setContent(memory.getContent());
-        dto.setKeywords(splitKeywords(memory.getKeywords()));
-        dto.setImportance(memory.getImportance());
-        dto.setStrength(memory.getStrength());
-        dto.setHitCount(memory.getHitCount());
-        dto.setPinned(memory.getPinned());
-        dto.setStatus(memory.getStatus());
-        dto.setSource(memory.getSource());
-        dto.setCreatedAt(memory.getCreatedAt());
-        dto.setUpdatedAt(memory.getUpdatedAt());
-        dto.setLastUsedAt(memory.getLastUsedAt());
-        dto.setExpiresAt(memory.getExpiresAt());
-        return dto;
+        return new AiMemoryDTO(
+                memory.getMemoryId(),
+                memory.getUserId(),
+                memory.getScope(),
+                memory.getConversationId(),
+                memory.getKind(),
+                memory.getTitle(),
+                memory.getContent(),
+                splitKeywords(memory.getKeywords()),
+                memory.getImportance(),
+                memory.getStrength(),
+                null,
+                memory.getHitCount(),
+                memory.getPinned(),
+                memory.getStatus(),
+                memory.getSource(),
+                memory.getCreatedAt(),
+                memory.getUpdatedAt(),
+                memory.getLastUsedAt(),
+                memory.getExpiresAt());
     }
 
     /**

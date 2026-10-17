@@ -1,31 +1,12 @@
 package com.chua.starter.ai.support.search;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 /**
  * 联网搜索单条结果。
  *
+ * @param title   标题
+ * @param url     链接
+ * @param snippet 摘要
  * @author CH
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class WebResult {
-
-    /**
-     * 标题
-     */
-    private String title;
-
-    /**
-     * 链接
-     */
-    private String url;
-
-    /**
-     * 摘要
-     */
-    private String snippet;
+public record WebResult(String title, String url, String snippet) {
 }

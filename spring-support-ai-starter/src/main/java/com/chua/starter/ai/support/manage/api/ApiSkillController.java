@@ -776,16 +776,15 @@ public class ApiSkillController {
     public ApiResult<List<AiInstalledSkillDTO>> installed() {
         List<AiInstalledSkillDTO> result = new ArrayList<>();
         for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
-            AiInstalledSkillDTO dto = new AiInstalledSkillDTO();
-            dto.setId(skill.id());
-            dto.setName(skill.name());
-            dto.setDescription(skill.description());
-            dto.setIcon(skill.icon());
-            dto.setLocation(skill.location());
-            dto.setSource(skill.custom() ? "custom" : "builtin");
-            dto.setEnabled(skill.enabled());
-            dto.setContentLength(skill.content().length());
-            result.add(dto);
+            result.add(new AiInstalledSkillDTO(
+                    skill.name(),
+                    skill.id(),
+                    skill.description(),
+                    skill.icon(),
+                    skill.location(),
+                    skill.custom() ? "custom" : "builtin",
+                    skill.enabled(),
+                    skill.content().length()));
         }
         return ApiResult.ok(result);
     }
@@ -1538,50 +1537,46 @@ public class ApiSkillController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(defaultValue = "stars") String sortBy,
             @RequestParam(required = false) String source) {
-        AiSkillMarketSearchDTO result = new AiSkillMarketSearchDTO();
-        result.setFetchedAt(System.currentTimeMillis());
+        long fetchedAt = System.currentTimeMillis();
         String term = search == null || search.isBlank() ? (keyword == null ? "" : keyword.trim()) : search.trim();
-        result.setKeyword(term);
 
         boolean enabled = sysAiGlobalSettingService.getBoolean(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, true);
-        result.setEnabled(enabled);
         if (!enabled) {
             log.info("[skills] 市场总开关关闭，跳过在线搜索");
-            return ApiResult.ok(result);
+            return ApiResult.ok(new AiSkillMarketSearchDTO(false, term, new ArrayList<>(), new ArrayList<>(), fetchedAt));
         }
 
         int size = Math.max(1, Math.min(limit, MAX_MARKET_PAGE_SIZE));
         int current = Math.max(1, page);
         Set<String> installed = installedSkillNames();
+        List<AiSkillMarketItemDTO> items = new ArrayList<>();
+        List<AiSkillMarketSourceDTO> sources = new ArrayList<>();
         for (SkillOnlineProvider provider : skillOnlineProviders()) {
             String src = provider.name();
-            AiSkillMarketSourceDTO status = new AiSkillMarketSourceDTO();
-            status.setSource(src);
-            status.setCount(0);
             boolean wanted = source == null || source.isBlank() || source.equalsIgnoreCase(src);
             boolean sourceEnabled = sysAiGlobalSettingService.getBoolean(
                     MARKET_SETTING_GROUP,
                     MARKET_SOURCE_FIELD_PREFIX + src + MARKET_SOURCE_FIELD_SUFFIX,
                     true);
             if (!wanted || !sourceEnabled) {
-                status.setQueried(false);
-                result.getSources().add(status);
+                sources.add(new AiSkillMarketSourceDTO(src, false, 0, null));
                 continue;
             }
-            status.setQueried(true);
+            int count = 0;
+            String error = null;
             try {
                 List<SkillMarketListing> listings = provider.searchMarket(term, current, size, sortBy);
                 for (SkillMarketListing listing : listings) {
-                    result.getItems().add(toMarketItem(listing, installed));
+                    items.add(toMarketItem(listing, installed));
                 }
-                status.setCount(listings.size());
+                count = listings.size();
             } catch (Exception e) {
                 log.warn("[skills] 市场源搜索失败: source={}, keyword={}", src, term, e);
-                status.setError("搜索失败: " + e.getMessage());
+                error = "搜索失败: " + e.getMessage();
             }
-            result.getSources().add(status);
+            sources.add(new AiSkillMarketSourceDTO(src, true, count, error));
         }
-        return ApiResult.ok(result);
+        return ApiResult.ok(new AiSkillMarketSearchDTO(true, term, items, sources, fetchedAt));
     }
 
     /**
@@ -1652,21 +1647,20 @@ public class ApiSkillController {
      * @return 市场条目 DTO
      */
     private AiSkillMarketItemDTO toMarketItem(SkillMarketListing listing, Set<String> installed) {
-        AiSkillMarketItemDTO item = new AiSkillMarketItemDTO();
-        item.setId(listing.getId());
-        item.setSource(listing.getSource());
-        item.setRank(listing.getRank());
-        item.setName(listing.getName());
-        item.setDescription(listing.getDescription());
-        item.setAuthor(listing.getAuthor());
-        item.setUrl(listing.getUrl());
-        item.setPath(listing.getPath());
-        item.setStars(listing.getStars());
-        item.setForks(listing.getForks());
-        item.setInstalls(listing.getInstalls());
-        item.setContentLanguage(listing.getContentLanguage());
-        item.setInstalled(listing.getName() != null && installed.contains(listing.getName()));
-        return item;
+        return new AiSkillMarketItemDTO(
+                listing.getId(),
+                listing.getSource(),
+                listing.getRank(),
+                listing.getName(),
+                listing.getDescription(),
+                listing.getAuthor(),
+                listing.getUrl(),
+                listing.getPath(),
+                listing.getStars(),
+                listing.getForks(),
+                listing.getInstalls(),
+                listing.getContentLanguage(),
+                listing.getName() != null && installed.contains(listing.getName()));
     }
 
     /**

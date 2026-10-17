@@ -85,7 +85,7 @@ public class RuleMemoryExtractor implements MemoryExtractor {
      */
     public List<MemoryCandidateDTO> extract(MemoryExtractionContext context) {
         List<MemoryCandidateDTO> candidates = new ArrayList<>();
-        String text = context == null ? null : context.getUserMessage();
+        String text = context == null ? null : context.userMessage();
         if (text == null || text.isBlank()) {
             return candidates;
         }
@@ -103,16 +103,18 @@ public class RuleMemoryExtractor implements MemoryExtractor {
                 if (!seen.add(rule.kind() + "#" + content)) {
                     continue;
                 }
-                MemoryCandidateDTO candidate = new MemoryCandidateDTO();
-                candidate.setKind(rule.kind());
-                candidate.setContent(content);
-                candidate.setImportance(rule.importance());
-                candidate.setKeywords(keywordsOf(content));
-                candidates.add(candidate);
+                candidates.add(new MemoryCandidateDTO(
+                        rule.kind(),
+                        null,
+                        content,
+                        keywordsOf(content),
+                        rule.importance(),
+                        null,
+                        null));
             }
         }
         if (!candidates.isEmpty()) {
-            log.debug("[Memory] 规则抽取命中 {} 条 (conversationId={})", candidates.size(), context.getConversationId());
+            log.debug("[Memory] 规则抽取命中 {} 条 (conversationId={})", candidates.size(), context.conversationId());
         }
         return candidates;
     }

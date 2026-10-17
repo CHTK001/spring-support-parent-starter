@@ -228,15 +228,15 @@ public final class SoftwareCatalog {
      */
     public static SoftwareInstanceVO instance(String type, int pid, double cpu, double memMb,
                                               long uptimeSec, String cmd) {
-        SoftwareInstanceVO vo = new SoftwareInstanceVO();
-        vo.setType(type);
-        vo.setDisplayName(displayName(type));
-        vo.setPid(pid);
-        vo.setCpu(round1(cpu));
-        vo.setMemMb(round1(memMb));
-        vo.setUptimeSec(Math.max(0, uptimeSec));
-        vo.setCmd(cmd == null ? "" : cmd);
-        return vo;
+        return new SoftwareInstanceVO(
+                type,
+                displayName(type),
+                pid,
+                round1(cpu),
+                round1(memMb),
+                Math.max(0, uptimeSec),
+                cmd == null ? "" : cmd,
+                0);
     }
 
     /**

@@ -116,15 +116,13 @@ public class HostProfileServiceImpl implements HostProfileService {
             return ReturnResult.error("指标采集失败: " + reason);
         }
 
-        HostProfileVO vo = new HostProfileVO();
-        vo.setInfo(info);
-        vo.setMetrics(metrics);
-        vo.setHost(host);
-        if (isAgentProvider(provider)) {
-            vo.setPort(agentClient.portOf(host));
-        }
-        vo.setOsMismatch(osMismatch(host, info));
-        vo.setCollectedAt(LocalDateTime.now().toString());
+        HostProfileVO vo = new HostProfileVO(
+                info,
+                metrics,
+                host,
+                isAgentProvider(provider) ? agentClient.portOf(host) : 0,
+                osMismatch(host, info),
+                LocalDateTime.now().toString());
         if (persist) {
             persistSnapshot(host, info, metrics, provider);
         } else {
@@ -195,13 +193,14 @@ public class HostProfileServiceImpl implements HostProfileService {
         metrics.setCollectTime(h.getServerHostLastCollectTime() == null ? null
                 : h.getServerHostLastCollectTime().toString());
 
-        HostProfileVO vo = new HostProfileVO();
-        vo.setInfo(info);
-        vo.setMetrics(metrics);
-        vo.setHost(h);
-        vo.setPort(h.getServerHostAgentPort());
-        vo.setCollectedAt(h.getServerHostLastCollectTime() == null ? null
-                : h.getServerHostLastCollectTime().toString());
+        HostProfileVO vo = new HostProfileVO(
+                info,
+                metrics,
+                h,
+                h.getServerHostAgentPort(),
+                null,
+                h.getServerHostLastCollectTime() == null ? null
+                        : h.getServerHostLastCollectTime().toString());
         return vo;
     }
 
@@ -254,9 +253,9 @@ public class HostProfileServiceImpl implements HostProfileService {
         return collect(hostId, (provider, host) -> {
             List<FirewallRuleRowVO> filtered = provider.firewallRules(host).stream()
                     .filter(row -> needle.isEmpty() || matches(needle,
-                            row.getName(), row.getChain(), row.getDirection(), row.getAction(),
-                            row.getProfile(), row.getProtocol(), String.valueOf(row.getLocalPort()),
-                            row.getTarget(), row.getSource(), row.getDestination()))
+                            row.name(), row.chain(), row.direction(), row.action(),
+                            row.profile(), row.protocol(), String.valueOf(row.localPort()),
+                            row.target(), row.source(), row.destination()))
                     .toList();
             return slice(filtered, no, limit);
         });
@@ -271,8 +270,8 @@ public class HostProfileServiceImpl implements HostProfileService {
             return collect(hostId, (provider, host) -> provider.processes(host, no, limit));
         }
         return collect(hostId, (provider, host) -> slice(provider.processes(host, 1, KEYWORD_SCAN_LIMIT).stream()
-                .filter(row -> matches(needle, String.valueOf(row.getPid()), row.getName(), row.getUser(),
-                        row.getCommand(), row.getPath()))
+                .filter(row -> matches(needle, String.valueOf(row.pid()), row.name(), row.user(),
+                        row.command(), row.path()))
                 .toList(), no, limit));
     }
 
@@ -285,8 +284,8 @@ public class HostProfileServiceImpl implements HostProfileService {
             return collect(hostId, (provider, host) -> provider.services(host, no, limit));
         }
         return collect(hostId, (provider, host) -> slice(provider.services(host, 1, KEYWORD_SCAN_LIMIT).stream()
-                .filter(row -> matches(needle, row.getName(), row.getDisplayName(), row.getState(),
-                        row.getStartType(), String.valueOf(row.getPid())))
+                .filter(row -> matches(needle, row.name(), row.displayName(), row.state(),
+                        row.startType(), String.valueOf(row.pid())))
                 .toList(), no, limit));
     }
 
@@ -425,8 +424,8 @@ public class HostProfileServiceImpl implements HostProfileService {
             List<DiskRowVO> disks = provider.disks(host);
             if (disks != null) {
                 for (DiskRowVO disk : disks) {
-                    diskTotal += disk.getTotalGb();
-                    diskUsed += disk.getUsedGb();
+                    diskTotal += disk.totalGb();
+                    diskUsed += disk.usedGb();
                 }
             }
         }
@@ -606,16 +605,16 @@ public class HostProfileServiceImpl implements HostProfileService {
             List<com.chua.starter.server.support.software.SoftwareInstanceVO> list =
                     new java.util.ArrayList<>();
             for (ProcessRowVO p : procs) {
-                String cmd = p.getCommand() != null && !p.getCommand().isBlank()
-                        ? p.getCommand() : p.getPath();
+                String cmd = p.command() != null && !p.command().isBlank()
+                        ? p.command() : p.path();
                 String type = com.chua.starter.server.support.software.SoftwareCatalog
-                        .match(p.getName(), cmd);
+                        .match(p.name(), cmd);
                 if (type == null) {
                     continue;
                 }
                 list.add(com.chua.starter.server.support.software.SoftwareCatalog.instance(type,
-                        (int) p.getPid(), p.getCpu(), p.getMemory(),
-                        uptimeFromStart(p.getStartTime()), cmd == null ? p.getName() : cmd));
+                        (int) p.pid(), p.cpu(), p.memory(),
+                        uptimeFromStart(p.startTime()), cmd == null ? p.name() : cmd));
             }
             return list.isEmpty() ? null : objectMapper.writeValueAsString(list);
         } catch (Exception e) {

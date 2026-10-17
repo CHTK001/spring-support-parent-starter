@@ -103,13 +103,12 @@ public class SocketMessageCodec {
             String encryptedData = codecKeyPair.encode(payload, publicKeyHex);
             String transportKey = codecKeyPair.getPrivateKeyHex();
             String keyLength = String.valueOf(transportKey.length());
-            return SocketMessageEnvelope.builder()
-                    .encrypted(true)
-                    .data(ENCRYPTED_PREFIX + transportKey + STATUS_SEGMENT + encryptedData + SUFFIX)
-                    .timestamp(keyLength)
-                    .uuid(transportKey)
-                    .dataId(resolveDataId(payload))
-                    .build();
+            return new SocketMessageEnvelope(
+                    ENCRYPTED_PREFIX + transportKey + STATUS_SEGMENT + encryptedData + SUFFIX,
+                    true,
+                    keyLength,
+                    transportKey,
+                    resolveDataId(payload));
         } catch (Exception e) {
             log.warn("[Socket] 消息加密失败，已回退为明文发送", e);
             return payload;

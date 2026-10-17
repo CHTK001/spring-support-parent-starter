@@ -1,9 +1,6 @@
 package com.chua.starter.eduai.queue;
 
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 import java.util.List;
 
@@ -13,26 +10,14 @@ import java.util.List;
  * <p>由 {@code EduMarkingServiceImpl} 投递到 {@code edu.marking} 队列，
  * 由 {@link MarkingMessageListener} 异步消费。</p>
  *
+ * @param taskId        阅卷任务标识（与 {@code edu_marking_result.marking_result_task_id} 对应）
+ * @param answerSheetId 答题卡标识
+ * @param items         学生答案列表
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class MarkingJob {
-
-    /**
-     * 阅卷任务 标识（与 {@code edu_marking_result.marking_result_task_id} 对应）。
-     */
-    private String taskId;
-
-    /**
-     * 答题卡 标识。
-     */
-    private Long answerSheetId;
-
-    /**
-     * 学生答案列表。
-     */
-    private List<MarkingSubmitDTO.AnswerItem> items;
+public record MarkingJob(
+        String taskId,
+        Long answerSheetId,
+        List<MarkingSubmitDTO.AnswerItem> items) {
 }

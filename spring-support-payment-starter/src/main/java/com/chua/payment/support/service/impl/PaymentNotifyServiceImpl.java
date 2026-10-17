@@ -264,8 +264,8 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
          * @param orderNo 路径中的订单号
          * @param payload.getOrderNo() 报文中的订单号
          */
-        validateNotifyOrderNo(orderNo, payload.getOrderNo());
-        PaymentOrder order = requireOrder(firstNonBlank(orderNo, payload.getOrderNo()));
+        validateNotifyOrderNo(orderNo, payload.orderNo());
+        PaymentOrder order = requireOrder(firstNonBlank(orderNo, payload.orderNo()));
         /**
          * 校验订单所属渠道
          * @param order 订单
@@ -277,20 +277,20 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
          * @param channel 渠道
          * @param payload.getAppId() 报文中的应用 ID
          */
-        validateAlipayIdentity(channel, payload.getAppId(), payload.getSellerId());
+        validateAlipayIdentity(channel, payload.appId(), payload.sellerId());
         /**
          * 校验金额一致
          * @param order.getOrderAmount() 订单应付金额
          */
-        validateAmount(order.getOrderAmount(), payload.getTotalAmount(), "支付宝支付通知金额不匹配");
+        validateAmount(order.getOrderAmount(), payload.totalAmount(), "支付宝支付通知金额不匹配");
 
-        String tradeStatus = payload.getTradeStatus();
+        String tradeStatus = payload.tradeStatus();
         if (!StringUtils.hasText(tradeStatus)) {
             throw new PaymentException("支付宝支付通知缺少 trade_status");
         }
 
         switch (tradeStatus) {
-            case "TRADE_SUCCESS", "TRADE_FINISHED" -> paymentOrderService.paySuccess(order.getId(), payload.getTotalAmount(), payload.getTradeNo(), "alipay-notify");
+            case "TRADE_SUCCESS", "TRADE_FINISHED" -> paymentOrderService.paySuccess(order.getId(), payload.totalAmount(), payload.tradeNo(), "alipay-notify");
             case "TRADE_CLOSED" -> {
                 if (canCancel(order.getStatus())) {
                     paymentOrderService.cancelOrder(order.getId(), "alipay-notify", "支付宝交易已关闭");

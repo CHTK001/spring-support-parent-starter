@@ -100,13 +100,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     ? String.valueOf(body.get("chatRequestId")) : null;
             try {
                 PreparedChat p = orchestrator.prepare(body);
-                WsChatFrameSink sink = new WsChatFrameSink(session, p.getChatRequestId(), objectMapper);
-                registry.register(p.getSessionId(), p.getMemoryUser(), sink);
+                WsChatFrameSink sink = new WsChatFrameSink(session, p.chatRequestId(), objectMapper);
+                registry.register(p.sessionId(), p.memoryUser(), sink);
                 wsToChats.computeIfAbsent(session.getId(), k -> ConcurrentHashMap.newKeySet())
-                        .add(p.getSessionId());
+                        .add(p.sessionId());
                 orchestrator.execute(p, sink);
                 log.info("[chat-ws] chat.start 已受理 sessionId={} chatRequestId={}",
-                        p.getSessionId(), p.getChatRequestId());
+                        p.sessionId(), p.chatRequestId());
             } catch (Exception e) {
                 log.warn("[chat-ws] 准备失败: {}", e.getMessage());
                 Map<String, Object> err = new LinkedHashMap<>();

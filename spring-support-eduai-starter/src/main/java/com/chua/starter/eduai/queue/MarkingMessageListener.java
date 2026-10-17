@@ -38,14 +38,14 @@ public class MarkingMessageListener {
      */
     @QueueListener(EduMarkingServiceImpl.QUEUE_NAME)
     public void onMessage(MarkingJob job, Message message) {
-        if (job == null || job.getTaskId() == null) {
+        if (job == null || job.taskId() == null) {
             log.warn("[EduAi] 阅卷队列收到空消息: id={}", message == null ? null : message.getId());
             return;
         }
         log.info("[EduAi] 阅卷队列消费: taskId={}, items={}",
-                job.getTaskId(),
-                job.getItems() == null ? 0 : job.getItems().size());
+                job.taskId(),
+                job.items() == null ? 0 : job.items().size());
  // edumarking服务impl.mark同步 是 公共，供队列消费调用
-        ((EduMarkingServiceImpl) markingService).markSync(job.getTaskId(), job.getItems());
+        ((EduMarkingServiceImpl) markingService).markSync(job.taskId(), job.items());
     }
 }

@@ -91,7 +91,7 @@ public class LocalHostCollectProvider implements HostCollectProvider {
             List<DiskRowVO> disks = localService.getDisks();
             long t3 = System.nanoTime();
             if (disks != null && !disks.isEmpty()) {
-                host.setServerHostDiskUsage(NumberUtils.round(disks.get(0).getUsage(), 1).doubleValue());
+                host.setServerHostDiskUsage(NumberUtils.round(disks.get(0).usage(), 1).doubleValue());
                 write.set(MsServerHost::getServerHostDiskUsage, host.getServerHostDiskUsage());
             }
             // 磁盘 IO（KB/s，保留 1 位小数）

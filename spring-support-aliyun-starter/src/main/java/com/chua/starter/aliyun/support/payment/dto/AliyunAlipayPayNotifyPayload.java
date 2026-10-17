@@ -1,41 +1,27 @@
 package com.chua.starter.aliyun.support.payment.dto;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.Map;
 
 /**
  * 支付宝支付通知解析结果
+ *
+ * @param orderNo      商户订单号
+ * @param tradeNo      支付宝交易号
+ * @param appId        支付宝应用 ID
+ * @param sellerId     收款方 PID
+ * @param totalAmount  订单金额
+ * @param tradeStatus  交易状态
+ * @param rawParams    通知原始参数
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class AliyunAlipayPayNotifyPayload {
-    /**
-     * 排序NO
-    */
-    private String orderNo;
-    /**
-     * 贸易no
-    */
-    private String tradeNo;
-    /**
-     * APPID
-    */
-    private String appId;
-    /**
-     * sellerid
-    */
-    private String sellerId;
-    /**
-     * 总数amount
-    */
-    private BigDecimal totalAmount;
-    /**
-     * 贸易状态
-    */
-    private String tradeStatus;
-    private Map<String, String> rawParams; // raw参数
+public record AliyunAlipayPayNotifyPayload(
+        String orderNo,
+        String tradeNo,
+        String appId,
+        String sellerId,
+        BigDecimal totalAmount,
+        String tradeStatus,
+        Map<String, String> rawParams) {
 }
-

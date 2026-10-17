@@ -152,9 +152,9 @@ public class ChatStreamController {
         // 2.5 帧槽套上「会话超时」看门狗后再注册：
         // registry 存的是带看门狗的槽，「停止生成」与超时收口才会作用在同一层，
         // 否则取消会绕过看门狗、直接关掉真实传输，留下一个还在跑的看门狗。
-        ChatFrameSink guarded = withIdleTimeout(sink, p.getSessionId(), p.getMemoryUser());
-        registry.register(p.getSessionId(), p.getMemoryUser(), guarded);
-        registerCleanup(emitter, p.getSessionId());
+        ChatFrameSink guarded = withIdleTimeout(sink, p.sessionId(), p.memoryUser());
+        registry.register(p.sessionId(), p.memoryUser(), guarded);
+        registerCleanup(emitter, p.sessionId());
 
         // 3. 异步产出帧
         orchestrator.execute(p, guarded);
@@ -192,12 +192,12 @@ public class ChatStreamController {
             } catch (Exception ignored) {
             }
         });
-        registry.register(p.getSessionId(), p.getMemoryUser(), sink);
-        registerCleanup(emitter, p.getSessionId());
+        registry.register(p.sessionId(), p.memoryUser(), sink);
+        registerCleanup(emitter, p.sessionId());
 
         // 恢复轮次同样套会话超时看门狗（注册的是带看门狗的槽，取消/停止才会作用在真实传输上）
-        ChatFrameSink guardedResume = withIdleTimeout(sink, p.getSessionId(), p.getMemoryUser());
-        registry.register(p.getSessionId(), p.getMemoryUser(), guardedResume);
+        ChatFrameSink guardedResume = withIdleTimeout(sink, p.sessionId(), p.memoryUser());
+        registry.register(p.sessionId(), p.memoryUser(), guardedResume);
         orchestrator.executeResume(p, guardedResume);
         return emitter;
     }

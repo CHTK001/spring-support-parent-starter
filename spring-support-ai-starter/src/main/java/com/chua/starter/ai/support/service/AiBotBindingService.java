@@ -144,24 +144,23 @@ public class AiBotBindingService {
      * @return 用户摘要
      */
     private BotUserSummary summarize(Long userId, List<SysAiBotBinding> bots) {
-        BotUserSummary summary = new BotUserSummary();
-        summary.setOwner(userId != null ? String.valueOf(userId) : "unassigned");
         long online = bots.stream().filter(b -> "online".equals(b.getStatus())).count();
-        summary.setBotCount(bots.size());
-        summary.setOnlineCount(online);
-        summary.setOfflineCount(bots.size() - online);
-        summary.setNickname(bots.stream()
-                .map(SysAiBotBinding::getNickname)
-                .filter(n -> n != null && !n.isBlank())
-                .findFirst()
-                .orElse(userId != null ? String.valueOf(userId) : "未分配"));
-        summary.setLastActiveTime(bots.stream()
-                .map(SysAiBotBinding::getLastActiveTime)
-                .filter(Objects::nonNull)
-                .map(t -> t.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
-                .max(Long::compareTo)
-                .orElse(null));
-        return summary;
+        return new BotUserSummary(
+                userId != null ? String.valueOf(userId) : "unassigned",
+                bots.stream()
+                        .map(SysAiBotBinding::getNickname)
+                        .filter(n -> n != null && !n.isBlank())
+                        .findFirst()
+                        .orElse(userId != null ? String.valueOf(userId) : "未分配"),
+                bots.size(),
+                online,
+                bots.size() - online,
+                bots.stream()
+                        .map(SysAiBotBinding::getLastActiveTime)
+                        .filter(Objects::nonNull)
+                        .map(t -> t.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                        .max(Long::compareTo)
+                        .orElse(null));
     }
 
     /**

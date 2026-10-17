@@ -492,10 +492,10 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 - **主缓存管理器解析探针**：`CacheManagerResolverProbe` **6/6**，覆盖单管理器 / 有 `@Primary` / **5 个管理器且无 `@Primary`**（复刻线上真实装配）三种场景，并断言 `CacheResilienceConfiguration` 在 5 管理器下 `cacheManager()` 与 `cacheResolver()` 均非空
 - **macOS**：**无真机**（见 §5.2）。本轮把验证从「字符串形状」推进到 **plist 可被 XML 解析器实解析 + 转义敏感性对照**；`launchctl` 真机行为仍未验收，报告中不作通过结论
 - **前端**：`ProjectsView.vue` 类型检查无新增错误（既有报错均在未触碰的 `ReRelationGraph`）
-- **前端界面层复核（复用现成 8848，未启动/替换）**：8848 `serve-dist.mjs` 代理目标即 `http://192.168.50.198:8112`，
-  以 `/#/projects?releaseId=5` 打开 `win-springboot` 编辑弹窗 → 「系统管理」页实测渲染：标签 **未挂载**、
-  服务名输入框为空（占位 `自动生成，如 ms-win-springboot`）、操作按钮为 **挂载系统服务**（而非「卸载系统服务」）；
-  取消退出后库仍为 `service_name=NULL`，证明缺陷 10 的清空在**界面层**同样可见（界面以 `serviceName` 判定「已挂载」）
+- **浏览器实际操作（验收判据）**：验收以 8848 页面上的实际点击为准，接口/脚本仅用于排查。
+  8848 `serve-dist.mjs` 代理目标即 `http://192.168.50.198:8112`；
+  在 `/#/projects?releaseId=5` 的 `win-springboot` 编辑弹窗 →「系统管理」页观察到标签 **未挂载**、
+  服务名输入框为空、按钮为 **挂载系统服务**；取消退出后库仍为 `service_name=NULL`
 
 ### 9.4 复核命令
 
