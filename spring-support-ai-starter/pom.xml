@@ -314,6 +314,15 @@
                凡是构建 OcrPipeline 等任务管线的用例都会抛 UnsupportedClassVersionError。
                与 utils-support 父 POM 的 enable.preview.jvm.args 语义保持一致。 -->
           <argLine>-Xms256m -Xmx2g --enable-preview</argLine>
+          <!-- 本仓约定非 example 模块的回归探针以 *Probe 承载（如 CacheManagerResolverProbe）。
+               声明 includes 会整体替换 surefire 默认模式，故四种默认模式必须一并保留。 -->
+          <includes>
+            <include>**/Test*.java</include>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+            <include>**/*TestCase.java</include>
+            <include>**/*Probe.java</include>
+          </includes>
         </configuration>
       </plugin>
       <plugin>

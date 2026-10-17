@@ -26,7 +26,7 @@ public class AgentProviderFactory {
     /**
      * 已注册的 Agent 实现白名单。
      */
-    private static final Set<String> SUPPORTED_PROVIDERS = Set.of("agentscope", "opencode", "langchain4j");
+    private static final Set<String> SUPPORTED_PROVIDERS = Set.of("agentscope", "opencode");
 
     /**
      * 以「兼容引擎」身份复用完整工具链运行时（{@value #DEFAULT_PROVIDER}）的实现。
@@ -35,14 +35,8 @@ public class AgentProviderFactory {
      * 规划，并对普通账号的 shell 工具走安全拒绝。管理员选择它时若真落到该实现，等于静默丢能力。
      * 自本版本起将 opencode 收敛为「全功能平替」：实际实例化复用完整工具链运行时，
      * 因此 MCP、技能、记忆、规划、子 Agent 编排与 shell 闸门全部与默认引擎一致。</p>
-     *
-     * <p>langchain4j 同理收敛：其 starter（{@code utils-support-deeplearning-langchain4j-starter}）
-     * 是独立 module，未随本部署包一起打包，包内既无该类也无其 SPI 索引。界面仍保留该选项，
-     * 若不收敛，则管理员选中后设置接口能存、{@code __runtime.effective} 还回带
-     * {@code langchain4j}，可实际实例化会得到空实现 —— 又是一次静默丢能力。将其与 opencode
-     * 一并归入平替集合，界面选项与真实运行时才重新对齐。</p>
      */
-    private static final Set<String> FULL_TOOLCHAIN_COMPAT_PROVIDERS = Set.of("opencode", "langchain4j");
+    private static final Set<String> FULL_TOOLCHAIN_COMPAT_PROVIDERS = Set.of("opencode");
 
     /**
      * 全局设置服务
@@ -62,7 +56,7 @@ public class AgentProviderFactory {
      * @return Agent 实例
      */
     public Agent createAgent() {
-        return Agent.create(runtimeProvider(resolveProvider()));
+        return Agent.create(resolveProvider());
     }
 
     /**
@@ -79,17 +73,33 @@ public class AgentProviderFactory {
     }
 
     /**
-     * 解析当前启用的 Agent 引擎实现。
+     * 计算某个「界面/接口选择值」真正生效的运行时 SPI。
      *
-     * @return Agent SPI 名称
+     * <p>这是唯一的归一化入口：先按白名单校验（空值或未注册值回退默认），再做兼容引擎收敛。
+     * {@link #createAgent()} 与设置接口回带的 {@code __runtime.effective} 都走这里，
+     * 保证「所报的生效运行时」与「真正实例化的运行时」永不漂移——即使有人绕过界面、
+     * 直接往 {@code agent_impl} 写入未注册的引擎名，两者也始终一致。</p>
+     *
+     * @param selectedProvider 界面或接口给出的引擎选择值
+     * @return 实际运行时 SPI 名称
+     */
+    public static String effectiveRuntime(String selectedProvider) {
+        if (selectedProvider == null || selectedProvider.isBlank()
+                || !SUPPORTED_PROVIDERS.contains(selectedProvider.trim().toLowerCase())) {
+            return DEFAULT_PROVIDER;
+        }
+        return runtimeProvider(selectedProvider.trim().toLowerCase());
+    }
+
+    /**
+     * 解析当前实际生效的 Agent 运行时 SPI。
+     *
+     * @return 实际运行时 SPI 名称（兼容引擎已收敛）
      */
     public String resolveProvider() {
         String provider = globalSettingService
                 .getValue(RuntimeGlobalSettingProvider.GROUP, RuntimeGlobalSettingProvider.FIELD_AGENT_IMPL)
                 .orElse(DEFAULT_PROVIDER);
-        if (provider == null || provider.isBlank() || !SUPPORTED_PROVIDERS.contains(provider.trim().toLowerCase())) {
-            return DEFAULT_PROVIDER;
-        }
-        return provider.trim().toLowerCase();
+        return effectiveRuntime(provider);
     }
 }

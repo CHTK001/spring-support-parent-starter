@@ -242,7 +242,8 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 
 ## 7. 2026-10-16 追加修复（默认模型的本地 ONNX 图像特征模型）
 
-针对反馈「`onnx:clip-image-feature` 在默认模型里设了，但模型列表里找不到」，定位并修掉 4 个真实缺陷，
+针对反馈「`onnx:clip-image-feature` 在默认模型里设了，但模型列表里找不到」，定位并修掉 4 个**真实产品缺陷**（下表 #1~#4），
+另修掉 3 项**验收判据 / dev-server 噪声**缺陷（#5~#7，均在验收工具或懒加载容错侧，非产品回归）。
 全部在专用后端 `8788` / 专用前端 `15691` 上验证通过。
 
 ### 7.1 缺陷与修法
@@ -255,6 +256,7 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 | 4 | 模型选择弹窗整份列表成倍重复 | `loadLocalModels()` 分别 push 了两个 `id=onnx` 的 provider，而 `filteredProviders` 按 `providerId` 取模型，每个条目都命中全部 onnx 模型 | 本地 + 人脸合并去重后只登记**一个** onnx provider，已存在则并入其 `models`；`collectFace` 补内部去重 |
 | 5 | 弹窗偶发打不开且报 `error loading dynamically imported module .../ReDialog/theme/koi/KoiShellHeaderActions.vue?vue&type=style` | 主题弹窗是**首次打开才懒加载**：点开那一刻才发起 `import()`，若恰有路由/重渲染导航，浏览器以 `NS_BINDING_ABORTED` 掐断在飞请求；而按 ES 模块规范，**同文档内一次失败的模块取数会被缓存**，后续重试同一 URL 仍失败（`packages/ui/src/theme.ts` 还把这个 rejected Promise 永久缓存在 `themedComponentCache`，把「一次抖动」放大成「之后永久打不开」） | ①`loadThemedComponent` 失败即从缓存删除，不再固化失败；②`defineAsyncComponent` 加 `onError` 重试（≤3 次）；③新增 `preloadThemedComponent()`，AI 应用在 `bootstrapFramework()` 之后**预热**当前主题的 ReDialog 实现，把取数提前到无导航竞态的应用装配阶段（对齐 `vue-support-monitor-starter` 既有做法）。修复后单跑 Characters：原 1 条 `click-error`（动态导入）**归零** |
 | 6 | 验收工具在 Characters 记「角色设置」`not-clickable` | 两类都在**采集/点击侧**，非产品缺陷：①上一条「使用此角色」点击是**合法导航**（`router.push` 到 `/chat/new-session`），下一条元素却在**新页面**上按指纹命中同款「角色设置」按钮，点它时元素随即被路由销毁 → 超时（证据：`fresh=224`、`urlChanged=/chat/new-session`、`效果0条`）；②角色卡片里的「角色设置」按钮位于 hover 才显形的浮层，列表刷新即重建节点，Playwright 解析出节点后、派发点击前撞上重渲染 → call log 明示 `element was detached from the DOM, retrying`（证据：同路由 58 个同款按钮中 57 个点开弹窗成功，该条 `before=0` 却 `弹窗4 DOM变更682条`，即点击其实也生效了） | `ui-click-sweep.cjs`：①点击前若发现页面已不在**本路由首段路径**（`/characters` 等）下，先重导航回本路由再定位；用首段而非整段 path，避免误伤本路由内的合法子导航（如 Chat 点会话跳 `/chat/120`）；②点击异常命中 `detached from the DOM` 时，按指纹**就地重新定位**新节点再点一次（与既有 viewport 分支同一套「重新寻路」思路，不重导航） |
+| 7 | 修复 #6 后，Characters「角色设置」改记 `click-error`（`error loading dynamically imported module: .../element-plus@2.14.3.../...`） | 仍是**判据缺陷**，非产品缺陷：#6 引入的漂移守卫/重导航（及崩溃自愈、回本路由）三处 `page.goto` 都发生在「点前清桶」（第 927 行）**之后**；dev-server 下 `page.goto` 销毁 document，会掐断**上一元素**点击遗留的在途 `import()`（`element-plus` 懒加载块），中断以 `NS_BINDING_ABORTED`/`error loading dynamically imported module` 的 pageerror 落进**当前**元素的桶 → 假 `click-error`。证据：该条 `effect=弹窗4 DOM变更658条`（弹窗都开了，点击本身成功）、`renavigated=true` | `ui-click-sweep.cjs`：在最后一次 `goto` 之后、装观察器与点击**之前**再清一次桶，只保留**本次点击自身**产生的错误。修复后单跑 Characters：`FAIL=0`（`ok=147 hidden=68 dup-chrome=13 needs-force=1 vanished=7`），退出码 0 |
 
 > `ModelIds` 是既有工具类（OCR 路径已用，Javadoc 明确「设置页值形如 `providerId:model`，下层只认裸名」），
 > 图像检索路径此前未接上，属漏用而非新造轮子。
@@ -272,8 +274,11 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 - **`preloadThemedComponent()` 预热（修复 #5）**：重启前端后单跑 `Characters`，原 1 条
   `click-error`（`error loading dynamically imported module`）**归零**；报告 JSON 显示
   各「角色设置」条目为 `弹窗4~5 DOM变更650~684`，即弹窗确实打开。
-- **sweep 路由归属（修复 #6）**：`node --check` 语法通过；重跑 `Characters` 以确认
-  3 条 `not-clickable`（`urlChanged=/chat/new-session`）不再出现（结论见本节末）。
+- **sweep 路由归属（修复 #6）**：`node --check` 语法通过；重跑 `Characters` 后 3 条
+  `not-clickable`（`urlChanged=/chat/new-session`）不再出现，改为 `vanished`（WARN，不计 FAIL）。
+- **sweep 归因（修复 #7）**：`node --check` 通过；重启前端后单跑 `Characters`
+  `final15691-char-fix5`：`FAIL=0`、退出码 0，`ok=147 hidden=68 dup-chrome=13 needs-force=1 vanished=7`
+  （`needs-force`/`vanished` 均为 WARN，不阻断；`click-error` 归零）。
 - 前端 `vue-tsc --noEmit`：本任务涉及文件（`DefaultModelSettings.vue`/`ImageLibraryPanel.vue`/`FaceSearchPage.vue`/`useFaceRegistry.ts`）
   无类型错误；唯一报错 `packages/ui/.../CytoscapeGraph.vue(993,20)` 为既有问题、与本任务无关。
 - 后端 `mvn -o -pl spring-support-ai-starter compile` 通过；`ImageSearchStore.class` 经 `javap` 确认已含 `ModelIds.bare` 调用。
