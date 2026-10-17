@@ -76,12 +76,12 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
      * Install
     */
     public ReturnResult<InstallDetailResponse> install(InstallRequest request) {
-        SoftSoftware software = softwareService.getById(request.getSoftwareId());
+        SoftSoftware software = softwareService.getById(request.softwareId());
         if (software == null) {
             return ReturnResult.illegal("软件不存在");
         }
         // 检查是否已安装
-        SoftInstallRecord exist = getInstalledRecord(request.getSoftwareId(), request.getUserId(), request.getDeviceId());
+        SoftInstallRecord exist = getInstalledRecord(request.softwareId(), request.userId(), request.deviceId());
         if (exist != null && InstallStatus.INSTALLED.getValue() == exist.getInstallRecordStatus()) {
             return ReturnResult.illegal("软件已安装");
         }
@@ -99,16 +99,16 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             // 创建安装记录
             SoftInstallRecord record = new SoftInstallRecord();
             record.setInstallRecordId(IdUtils.fastUuid());
-            record.setInstallRecordSoftwareId(request.getSoftwareId());
-            record.setInstallRecordUserId(request.getUserId());
-            record.setInstallRecordDeviceId(request.getDeviceId());
+            record.setInstallRecordSoftwareId(request.softwareId());
+            record.setInstallRecordUserId(request.userId());
+            record.setInstallRecordDeviceId(request.deviceId());
             record.setInstallRecordSourceId(software.getSoftwareSourceId());
             record.setInstallRecordVersion(software.getSoftwareVersion());
             record.setInstallRecordOperation("install");
             record.setInstallRecordStatus(InstallStatus.INSTALLING.getValue());
             record.setInstallRecordProgress(0);
             record.setInstallRecordStartTime(LocalDateTime.now());
-            record.setInstallRecordInstallPath(request.getInstallPath());
+            record.setInstallRecordInstallPath(request.installPath());
             installRecordMapper.insert(record);
 
             try {
@@ -118,7 +118,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
                  * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 updateProgress(record.getInstallRecordId(), 30, "准备安装");
-                SoftwareSourceResult result = installSource.install(source, software, request.getInstallPath());
+                SoftwareSourceResult result = installSource.install(source, software, request.installPath());
                 /**
                  * 更新进步。
                  * @param record.getInstallRecordId( record.获取installrecordid(
