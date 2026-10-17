@@ -459,20 +459,20 @@ public class ReleaseServiceImpl implements ReleaseService {
                     }
                     // name|epochSeconds|size|kind
                     String[] parts = line.split("\\|", -1);
-                    ProjectBackupVO vo = new ProjectBackupVO();
-                    vo.setName(parts[0]);
-                    vo.setTime(parseEpochSeconds(parts.length > 1 ? parts[1] : null));
-                    vo.setSize(parseLongOrNull(parts.length > 2 ? parts[1 + 1] : null));
-                    vo.setKind(parts.length > 3 && !parts[3].isBlank() ? parts[3]
-                            : (parts[0].endsWith(".tar.gz") ? "file" : "dir"));
+                    ProjectBackupVO vo = new ProjectBackupVO(
+                            parts[0],
+                            parseEpochSeconds(parts.length > 1 ? parts[1] : null),
+                            parseLongOrNull(parts.length > 2 ? parts[1 + 1] : null),
+                            parts.length > 3 && !parts[3].isBlank() ? parts[3]
+                                    : (parts[0].endsWith(".tar.gz") ? "file" : "dir"));
                     rows.add(vo);
                 }
             }
         }
         // 最新备份在前
         rows.sort((x, y) -> Long.compare(
-                y.getTime() == null ? 0L : y.getTime(),
-                x.getTime() == null ? 0L : x.getTime()));
+                y.time() == null ? 0L : y.time(),
+                x.time() == null ? 0L : x.time()));
         return ReturnResult.ok(rows);
     }
 

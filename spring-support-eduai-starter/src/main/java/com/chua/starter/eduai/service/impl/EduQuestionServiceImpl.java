@@ -112,15 +112,15 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         // 审核状态/理由只经专用审核接口流转：save 接口一律不采信客户端传值，
         // 否则任何作者都能把自己的题标成已通过（此前 line 106 原样采信 dto.getQuestionAuditStatus）。
         boolean admin = EduUserContext.isAdmin();
-        boolean auditOnSave = Boolean.TRUE.equals(dto.getAuditOnSave());
+        boolean auditOnSave = Boolean.TRUE.equals(dto.auditOnSave());
         if (auditOnSave && !admin) {
             throw new BusinessException("只有管理员可以使用保存并审核");
         }
         EduQuestion entity = toEntity(dto);
 
-        if (dto.getQuestionId() != null && dto.getQuestionId() > 0) {
+        if (dto.questionId() != null && dto.questionId() > 0) {
             // 更新：归属校验后锁定为原归属，客户端传值无效
-            EduQuestion exists = baseMapper.selectById(dto.getQuestionId());
+            EduQuestion exists = baseMapper.selectById(dto.questionId());
             if (exists == null) {
                 throw new BusinessException("题目不存在");
             }
@@ -142,11 +142,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             }
             entity.setQuestionAuditCount(exists.getQuestionAuditCount());
             entity.setOwnerUserId(exists.getOwnerUserId());
-            entity.setQuestionId(dto.getQuestionId());
+            entity.setQuestionId(dto.questionId());
             entity.setUpdateTime(LocalDateTime.now());
             baseMapper.updateById(entity);
-            log.info("更新题目成功，ID: {}{}", dto.getQuestionId(), dirty ? "（内容变更，已打回待审）" : "");
-            return dto.getQuestionId();
+            log.info("更新题目成功，ID: {}{}", dto.questionId(), dirty ? "（内容变更，已打回待审）" : "");
+            return dto.questionId();
         } else {
             return insertNew(dto, entity, auditOnSave);
         }
@@ -161,22 +161,22 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      */
     private EduQuestion toEntity(QuestionSaveDTO dto) {
         EduQuestion entity = new EduQuestion();
-        entity.setQuestionType(dto.getQuestionType());
-        entity.setQuestionSubject(dto.getQuestionSubject());
-        entity.setQuestionGradeLevel(GradeLevels.normalize(dto.getQuestionGradeLevel()));
-        entity.setQuestionGrade(dto.getQuestionGrade());
-        entity.setQuestionYear(dto.getQuestionYear());
-        entity.setQuestionDifficulty(dto.getQuestionDifficulty());
-        entity.setQuestionScore(dto.getQuestionScore() != null && dto.getQuestionScore() > 0 ? dto.getQuestionScore() : 5);
-        entity.setQuestionKnowledgePointIds(dto.getQuestionKnowledgePointIds());
-        entity.setQuestionStem(dto.getQuestionStem());
-        entity.setQuestionStemImages(dto.getQuestionStemImages());
-        entity.setQuestionOptions(unwrapJsonText(dto.getQuestionOptions()));
-        entity.setQuestionAnswer(dto.getQuestionAnswer());
-        entity.setQuestionAnalysis(dto.getQuestionAnalysis());
-        entity.setQuestionSource(dto.getQuestionSource());
-        entity.setQuestionSourceType(dto.getQuestionSourceType());
-        entity.setQuestionStatus(dto.getQuestionStatus() != null ? dto.getQuestionStatus() : 1);
+        entity.setQuestionType(dto.questionType());
+        entity.setQuestionSubject(dto.questionSubject());
+        entity.setQuestionGradeLevel(GradeLevels.normalize(dto.questionGradeLevel()));
+        entity.setQuestionGrade(dto.questionGrade());
+        entity.setQuestionYear(dto.questionYear());
+        entity.setQuestionDifficulty(dto.questionDifficulty());
+        entity.setQuestionScore(dto.questionScore() != null && dto.questionScore() > 0 ? dto.questionScore() : 5);
+        entity.setQuestionKnowledgePointIds(dto.questionKnowledgePointIds());
+        entity.setQuestionStem(dto.questionStem());
+        entity.setQuestionStemImages(dto.questionStemImages());
+        entity.setQuestionOptions(unwrapJsonText(dto.questionOptions()));
+        entity.setQuestionAnswer(dto.questionAnswer());
+        entity.setQuestionAnalysis(dto.questionAnalysis());
+        entity.setQuestionSource(dto.questionSource());
+        entity.setQuestionSourceType(dto.questionSourceType());
+        entity.setQuestionStatus(dto.questionStatus() != null ? dto.questionStatus() : 1);
         return entity;
     }
 
@@ -194,7 +194,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         // 新增：请求线程以登录态为准；异步链路（采集）继承任务归属，二者皆无则拒绝
         String owner = EduUserContext.currentUserId();
         if (!StringUtils.hasText(owner)) {
-            owner = StringUtils.hasText(dto.getOwnerUserId()) ? dto.getOwnerUserId() : EduUserContext.requireUserId();
+            owner = StringUtils.hasText(dto.ownerUserId()) ? dto.ownerUserId() : EduUserContext.requireUserId();
         }
         entity.setOwnerUserId(owner);
         entity.setQuestionUseCount(0);
@@ -252,10 +252,15 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             }
             try {
                 // 服务端落库口径：来源标为老师上传，审核态由自动通过配置决定。
-                dto.setQuestionSourceType(SOURCE_TYPE_TEACHER);
-                dto.setQuestionSource(DEFAULT_TEACHER_SOURCE_NAME);
-                dto.setAuditOnSave(false);
-                insertNew(dto, toEntity(dto), autoApprove);
+                QuestionSaveDTO effective = new QuestionSaveDTO(
+                        dto.questionId(), dto.questionType(), dto.questionSubject(), dto.questionGradeLevel(),
+                        dto.questionGrade(), dto.questionYear(), dto.questionDifficulty(), dto.questionScore(),
+                        dto.questionKnowledgePointIds(), dto.questionStem(), dto.questionStemImages(),
+                        dto.questionOptions(), dto.questionAnswer(), dto.questionAnalysis(),
+                        SOURCE_TYPE_TEACHER, DEFAULT_TEACHER_SOURCE_NAME,
+                        dto.questionAuditStatus(), dto.questionAuditRemark(), false,
+                        dto.questionStatus(), dto.ownerUserId());
+                insertNew(effective, toEntity(effective), autoApprove);
                 count++;
             } catch (Exception e) {
                 log.warn("老师上传第 {} 条题目失败: {}", i + 1, e.getMessage());
@@ -469,22 +474,22 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             return "数据为空";
         }
         List<String> missing = new ArrayList<>();
-        if (!StringUtils.hasText(dto.getQuestionType())) {
+        if (!StringUtils.hasText(dto.questionType())) {
             missing.add("题型");
         }
-        if (!StringUtils.hasText(dto.getQuestionSubject())) {
+        if (!StringUtils.hasText(dto.questionSubject())) {
             missing.add("学科");
         }
-        if (!StringUtils.hasText(dto.getQuestionGradeLevel())) {
+        if (!StringUtils.hasText(dto.questionGradeLevel())) {
             missing.add("学段");
         }
-        if (!StringUtils.hasText(dto.getQuestionGrade())) {
+        if (!StringUtils.hasText(dto.questionGrade())) {
             missing.add("年级");
         }
-        if (!StringUtils.hasText(dto.getQuestionStem())) {
+        if (!StringUtils.hasText(dto.questionStem())) {
             missing.add("题干");
         }
-        if (!StringUtils.hasText(dto.getQuestionAnswer())) {
+        if (!StringUtils.hasText(dto.questionAnswer())) {
             missing.add("答案");
         }
         return missing.isEmpty() ? null : "缺少必填字段：" + String.join("、", missing);

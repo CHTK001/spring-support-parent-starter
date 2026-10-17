@@ -1,7 +1,5 @@
 package com.chua.starter.eduai.model.dto;
 
-import lombok.Data;
-
 import java.util.List;
 
 /**
@@ -14,117 +12,68 @@ import java.util.List;
  * <p>校验约定：lesson 与 quiz 允许为空（新物种可以先只建物种信息，讲解后补）；
  * quiz 的 answer 必须是 options 的合法下标，非法时按 0 处理并保留原选项。</p>
  *
+ * @param insectCode 物种英文标识（slug），关联 edu_insect.insect_code
+ * @param lesson     分步讲解；每一步可带 anchor，用于驱动 3D 镜头对位
+ * @param motion     动态演示
+ * @param quiz       单选题
+ * @param habitat    栖境（它在哪里）
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class InsectGuideSaveDTO {
-
-    /**
-     * 物种英文标识（slug），关联 edu_insect.insect_code
-     */
-    private String insectCode;
-
-    /**
-     * 分步讲解；每一步可带 anchor，用于驱动 3D 镜头对位
-     */
-    private List<LessonStep> lesson;
-
-    /**
-     * 动态演示
-     */
-    private Motion motion;
-
-    /**
-     * 单选题
-     */
-    private List<QuizItem> quiz;
-
-    /**
-     * 栖境（它在哪里）
-     */
-    private Habitat habitat;
+public record InsectGuideSaveDTO(
+        String insectCode,
+        List<LessonStep> lesson,
+        Motion motion,
+        List<QuizItem> quiz,
+        Habitat habitat) {
 
     /**
      * 分步讲解的一步
+     *
+     * @param title  步骤标题
+     * @param body   步骤正文
+     * @param anchor 对应 3D 模型的部位锚点；为空表示本步不联动镜头
      */
-    @Data
-    public static class LessonStep {
-
-        /**
-         * 步骤标题
-         */
-        private String title;
-
-        /**
-         * 步骤正文
-         */
-        private String body;
-
-        /**
-         * 对应 3D 模型的部位锚点；为空表示本步不联动镜头
-         */
-        private String anchor;
+    public record LessonStep(
+            String title,
+            String body,
+            String anchor) {
     }
 
     /**
      * 动态演示内容
+     *
+     * @param title 标题
+     * @param body  正文
      */
-    @Data
-    public static class Motion {
-
-        /**
-         * 标题
-         */
-        private String title;
-
-        /**
-         * 正文
-         */
-        private String body;
+    public record Motion(
+            String title,
+            String body) {
     }
 
     /**
      * 一道单选题
+     *
+     * @param question 题干
+     * @param options  选项（通常 3 个）
+     * @param answer   正确选项下标
+     * @param explain  作答后的解释
      */
-    @Data
-    public static class QuizItem {
-
-        /**
-         * 题干
-         */
-        private String question;
-
-        /**
-         * 选项（通常 3 个）
-         */
-        private List<String> options;
-
-        /**
-         * 正确选项下标
-         */
-        private Integer answer;
-
-        /**
-         * 作答后的解释
-         */
-        private String explain;
+    public record QuizItem(
+            String question,
+            List<String> options,
+            Integer answer,
+            String explain) {
     }
 
     /**
      * 栖境内容
+     *
+     * @param title 标题
+     * @param body  正文
      */
-    @Data
-    public static class Habitat {
-
-        /**
-         * 标题
-         */
-        private String title;
-
-        /**
-         * 正文
-         */
-        private String body;
+    public record Habitat(
+            String title,
+            String body) {
     }
 }

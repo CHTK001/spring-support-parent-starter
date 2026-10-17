@@ -1,91 +1,49 @@
 package com.chua.starter.eduai.model.dto;
 
-import lombok.Data;
-
 import java.util.List;
 
 /**
  * AI组卷请求DTO
  *
+ * @param name                   试卷名称
+ * @param subject                学科
+ * @param gradeLevel             学段
+ * @param grade                  年级
+ * @param knowledgePointIds      知识点标识列表
+ * @param typeConfigs            题型及数量配置
+ * @param difficultyDistribution 难度分布
+ * @param totalScore             总分
+ * @param duration               考试时长（分钟）
+ * @param questionCount          题目总数
+ * @param scorePerQuestion       每题分值
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class PaperGenerateDTO {
-
-    /**
-     * 试卷名称
-     */
-    private String name;
-
-    /**
-     * 学科
-     */
-    private String subject;
-
-    /**
-     * 学段
-     */
-    private String gradeLevel;
-
-    /**
-     * 年级
-     */
-    private String grade;
-
-    /**
-     * 知识点标识列表
-     */
-    private List<Long> knowledgePointIds;
-
-    /**
-     * 题型及数量配置
-     */
-    private List<QuestionTypeConfig> typeConfigs;
-
-    /**
-     * 难度分布
-     */
-    private List<Integer> difficultyDistribution;
-
-    /**
-     * 总分
-     */
-    private Integer totalScore;
-
-    /**
-     * 考试时长（分钟）
-     */
-    private Integer duration;
-
-    /**
-     * 题目总数
-     */
-    private Integer questionCount;
-
-    /**
-     * 每题分值
-     */
-    private Integer scorePerQuestion;
+public record PaperGenerateDTO(
+        String name,
+        String subject,
+        String gradeLevel,
+        String grade,
+        List<Long> knowledgePointIds,
+        List<QuestionTypeConfig> typeConfigs,
+        List<Integer> difficultyDistribution,
+        Integer totalScore,
+        Integer duration,
+        Integer questionCount,
+        Integer scorePerQuestion) {
 
     /**
      * 题型配置
+     *
+     * @param type             题型
+     * @param count            数量
+     * @param scorePerQuestion 每题分值
      * @author CH
      * @since 4.0.0
      */
-    @Data
-    public static class QuestionTypeConfig {
-        /**
-         * 类型
-        */
-        private String type;
-        /**
-         * 数量
-        */
-        private Integer count;
-        /**
-         * 分数perquestion
-        */
-        private Integer scorePerQuestion;
+    public record QuestionTypeConfig(
+            String type,
+            Integer count,
+            Integer scorePerQuestion) {
     }
 }
