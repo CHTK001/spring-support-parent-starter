@@ -164,7 +164,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     */
     public ReturnResult<Object> installLocalSoftware(InstallRequest request) {
         // 从本地软件列表安装，本质上是检查软件是否存在于本地源，然后创建安装记录
-        SoftSoftware software = softSoftwareService.getById(request.getSoftwareId());
+        SoftSoftware software = softSoftwareService.getById(request.softwareId());
         if (software == null) {
             return ReturnResult.illegal("软件不存在");
         }
@@ -177,7 +177,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
 
         // 直接创建安装记录（状态为已安装）
         log.info("管理员手动安装本地软件: softwareId={}, userId={}, installPath={}",
-                request.getSoftwareId(), request.getUserId(), request.getInstallPath());
+                request.softwareId(), request.userId(), request.installPath());
         try {
             ReturnResult<InstallDetailResponse> result = installRecordService.install(request);
             if (result.isOk()) {
@@ -185,7 +185,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
             }
             return ReturnResult.illegal(result.getMsg());
         } catch (Exception e) {
-            log.error("[本地软件安装] 安装失败: softwareId={}", request.getSoftwareId(), e);
+            log.error("[本地软件安装] 安装失败: softwareId={}", request.softwareId(), e);
             return ReturnResult.error("安装失败: " + e.getMessage());
         }
     }

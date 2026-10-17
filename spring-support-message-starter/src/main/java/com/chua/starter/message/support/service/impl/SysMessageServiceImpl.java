@@ -315,13 +315,13 @@ public class SysMessageServiceImpl implements SysMessageService {
      * @param request 请求
      */
     public ReturnResult<List<MessageResponse>> send(MessageSendRequest request) {
-        if (request.getSysMessageTemplateId() == null) {
+        if (request.sysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
         }
-        if (ArrayUtils.isEmpty(request.getTarget())) {
+        if (ArrayUtils.isEmpty(request.target())) {
             return ReturnResult.illegal("接收人不能为空");
         }
-        SysMessageTemplate template = sysMessageTemplateMapper.selectById(request.getSysMessageTemplateId());
+        SysMessageTemplate template = sysMessageTemplateMapper.selectById(request.sysMessageTemplateId());
         if (template == null) {
             return ReturnResult.error("模板不存在");
         }
@@ -347,8 +347,8 @@ public class SysMessageServiceImpl implements SysMessageService {
         // 生成批次号，同一次请求的所有接收人共享
         String batchId = UUID.randomUUID().toString().replace("-", "");
 
-        List<MessageResponse> result = new ArrayList<>(request.getTarget().length);
-        for (String target : request.getTarget()) {
+        List<MessageResponse> result = new ArrayList<>(request.target().length);
+        for (String target : request.target()) {
             String trackToken = trackable ? UUID.randomUUID().toString().replace("-", "") : null;
             // 防抖：间隔内同一接收人相同模板已发送成功则跳过
             if (isDebounced(provider, target, template.getSysMessageTemplateId(), null)) {
@@ -359,13 +359,13 @@ public class SysMessageServiceImpl implements SysMessageService {
                         .build();
                 result.add(debounced);
                 saveLogAsync(channel, target, template, provider, request, debounced, trackToken, batchId,
-                        request.getSubject());
+                        request.subject());
                 continue;
             }
             try {
                 MessageRequest messageRequest = MessageRequest.builder()
                         .to(target)
-                        .subject(request.getSubject())
+                        .subject(request.subject())
                         .content(buildContentWithTrack(trackToken, template.getSysMessageTemplateContent()))
                         .contentType(template.getSysMessageTemplateType())
                         .templateId(template.getSysMessageTemplateCode())
@@ -374,7 +374,7 @@ public class SysMessageServiceImpl implements SysMessageService {
                 MessageResponse response = messagePush.send(messageRequest);
                 result.add(response);
                 saveLogAsync(channel, target, template, provider, request, response, trackToken, batchId,
-                        request.getSubject());
+                        request.subject());
             } catch (Exception e) {
                 log.error("发送消息失败, 接收人: {}", target, e);
                 result.add(MessageResponse.failure(e.getMessage()));
@@ -388,7 +388,7 @@ public class SysMessageServiceImpl implements SysMessageService {
                  * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
                  */
                 saveLogAsync(channel, target, template, provider, request, MessageResponse.failure(e.getMessage()),
-                        trackToken, batchId, request.getSubject());
+                        trackToken, batchId, request.subject());
             }
         }
         return ReturnResult.of(result);
@@ -400,16 +400,16 @@ public class SysMessageServiceImpl implements SysMessageService {
      * @param request 请求
      */
     public ReturnResult<List<MessageResponse>> sendContent(MessageContentSendRequest request) {
-        if (request.getSysMessageProviderId() == null) {
+        if (request.sysMessageProviderId() == null) {
             return ReturnResult.illegal("提供商ID不能为空");
         }
-        if (ArrayUtils.isEmpty(request.getTarget())) {
+        if (ArrayUtils.isEmpty(request.target())) {
             return ReturnResult.illegal("接收人不能为空");
         }
-        if (StringUtils.isBlank(request.getContent())) {
+        if (StringUtils.isBlank(request.content())) {
             return ReturnResult.illegal("消息内容不能为空");
         }
-        SysMessageProvider provider = sysMessageProviderMapper.selectById(request.getSysMessageProviderId());
+        SysMessageProvider provider = sysMessageProviderMapper.selectById(request.sysMessageProviderId());
         if (provider == null) {
             return ReturnResult.error("消息提供商未配置");
         }
@@ -428,11 +428,11 @@ public class SysMessageServiceImpl implements SysMessageService {
         // 生成批次号，同一次请求的所有接收人共享
         String batchId = UUID.randomUUID().toString().replace("-", "");
 
-        List<MessageResponse> result = new ArrayList<>(request.getTarget().length);
-        for (String target : request.getTarget()) {
+        List<MessageResponse> result = new ArrayList<>(request.target().length);
+        for (String target : request.target()) {
             String trackToken = trackable ? UUID.randomUUID().toString().replace("-", "") : null;
             // 防抖：间隔内同一接收人相同内容已发送成功则跳过
-            if (isDebounced(provider, target, null, request.getContent())) {
+            if (isDebounced(provider, target, null, request.content())) {
                 MessageResponse debounced = MessageResponse.builder()
                         .success(true)
                         .errorMessage("间隔内已发送，防抖跳过")
@@ -440,21 +440,21 @@ public class SysMessageServiceImpl implements SysMessageService {
                         .build();
                 result.add(debounced);
                 saveContentLogAsync(channel, target, provider, request, debounced, trackToken, batchId,
-                        request.getSubject());
+                        request.subject());
                 continue;
             }
             try {
                 MessageRequest messageRequest = MessageRequest.builder()
                         .to(target)
-                        .subject(request.getSubject())
-                        .content(buildContentWithTrack(trackToken, request.getContent()))
+                        .subject(request.subject())
+                        .content(buildContentWithTrack(trackToken, request.content()))
                         .contentType(provider.getSysMessageProviderType())
-                        .templateParams(toParamMap(request.getParams()))
+                        .templateParams(toParamMap(request.params()))
                         .build();
                 MessageResponse response = messagePush.send(messageRequest);
                 result.add(response);
                 saveContentLogAsync(channel, target, provider, request, response, trackToken, batchId,
-                        request.getSubject());
+                        request.subject());
             } catch (Exception e) {
                 log.error("按内容发送消息失败, 接收人: {}", target, e);
                 result.add(MessageResponse.failure(e.getMessage()));
@@ -467,7 +467,7 @@ public class SysMessageServiceImpl implements SysMessageService {
                  * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
                  */
                 saveContentLogAsync(channel, target, provider, request, MessageResponse.failure(e.getMessage()),
-                        trackToken, batchId, request.getSubject());
+                        trackToken, batchId, request.subject());
             }
         }
         return ReturnResult.of(result);
@@ -553,8 +553,8 @@ public class SysMessageServiceImpl implements SysMessageService {
             messageLog.setSysMessageLogTarget(target);
             messageLog.setSysMessageProviderId(provider.getSysMessageProviderId());
             messageLog.setSysMessageLogChannel(channel);
-            messageLog.setSysMessageLogContent(request.getContent());
-            messageLog.setSysMessageLogParam(Json.toPrettyJson(request.getParams()));
+            messageLog.setSysMessageLogContent(request.content());
+            messageLog.setSysMessageLogParam(Json.toPrettyJson(request.params()));
             messageLog.setSysMessageCost(BigDecimal.valueOf(response.getDurationMillis()));
             messageLog.setSysMessageCode(response.isSuccess() ? "SUCCESS" : "FAILURE");
             messageLog.setSysMessageMessage(response.getErrorMessage());
@@ -597,7 +597,7 @@ public class SysMessageServiceImpl implements SysMessageService {
             messageLog.setSysMessageProviderId(provider.getSysMessageProviderId());
             messageLog.setSysMessageLogChannel(channel);
             messageLog.setSysMessageLogContent(template.getSysMessageTemplateContent());
-            messageLog.setSysMessageLogParam(Json.toPrettyJson(request.getParams()));
+            messageLog.setSysMessageLogParam(Json.toPrettyJson(request.params()));
             messageLog.setSysMessageCost(BigDecimal.valueOf(response.getDurationMillis()));
             messageLog.setSysMessageCode(response.isSuccess() ? "SUCCESS" : "FAILURE");
             messageLog.setSysMessageMessage(response.getErrorMessage());
@@ -647,10 +647,10 @@ public class SysMessageServiceImpl implements SysMessageService {
      * @param request 请求
      */
     public ReturnResult<TemplatePreviewResponse> previewTemplate(TemplatePreviewRequest request) {
-        if (request == null || request.getSysMessageTemplateId() == null) {
+        if (request == null || request.sysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
         }
-        SysMessageTemplate template = sysMessageTemplateMapper.selectById(request.getSysMessageTemplateId());
+        SysMessageTemplate template = sysMessageTemplateMapper.selectById(request.sysMessageTemplateId());
         if (template == null) {
             return ReturnResult.error("模板不存在");
         }
@@ -662,7 +662,7 @@ public class SysMessageServiceImpl implements SysMessageService {
                     .complete(true)
                     .build());
         }
-        Map<String, String> params = toParamMap(request.getParams());
+        Map<String, String> params = toParamMap(request.params());
         List<String> unresolved = new ArrayList<>();
         // 支持 ${var} 与 {{var}} 两种占位符
         Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}|\\{\\{(.+?)\\}\\}");
@@ -797,13 +797,12 @@ public class SysMessageServiceImpl implements SysMessageService {
      * @return 站内消息项
      */
     private static SysMessageStationItem toStationItem(SysMessageLog log) {
-        SysMessageStationItem item = new SysMessageStationItem();
-        item.setId(log.getSysMessageLogId());
-        item.setSubject(log.getSysMessageLogSubject());
-        item.setContent(log.getSysMessageLogContent());
-        item.setSendTime(log.getCreateTime());
-        item.setReadStatus(log.getSysMessageReadStatus() == null ? 0 : log.getSysMessageReadStatus());
-        return item;
+        return new SysMessageStationItem(
+                log.getSysMessageLogId(),
+                log.getSysMessageLogSubject(),
+                log.getSysMessageLogContent(),
+                log.getCreateTime(),
+                log.getSysMessageReadStatus() == null ? 0 : log.getSysMessageReadStatus());
     }
 
     /**
@@ -925,11 +924,11 @@ public class SysMessageServiceImpl implements SysMessageService {
      * @return 模板参数映射
      */
     private Map<String, String> toParamMap(MessageSendRequest request) {
-        if (request.getParams() == null || request.getParams().isEmpty()) {
+        if (request.params() == null || request.params().isEmpty()) {
             return Collections.emptyMap();
         }
-        Map<String, String> params = new HashMap<>(request.getParams().size());
-        request.getParams().forEach((key, value) -> params.put(key, value == null ? "" : String.valueOf(value)));
+        Map<String, String> params = new HashMap<>(request.params().size());
+        request.params().forEach((key, value) -> params.put(key, value == null ? "" : String.valueOf(value)));
         return params;
     }
 
