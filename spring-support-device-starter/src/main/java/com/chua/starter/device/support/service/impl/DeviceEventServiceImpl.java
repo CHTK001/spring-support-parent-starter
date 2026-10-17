@@ -46,11 +46,11 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     public void saveEvent(DeviceEvent event) {
         DeviceEventRecord record = new DeviceEventRecord();
         record.setDeviceEventRecordId(UUID.randomUUID().toString());
-        record.setDeviceEventRecordDeviceId(event.getDeviceId());
-        record.setDeviceEventRecordChannelNo(event.getChannel());
-        record.setDeviceEventRecordEventType(event.getType().name());
-        record.setDeviceEventRecordDetail(event.getDetail());
-        record.setDeviceEventRecordOccurredAt(event.getOccurredAt());
+        record.setDeviceEventRecordDeviceId(event.deviceId());
+        record.setDeviceEventRecordChannelNo(event.channel());
+        record.setDeviceEventRecordEventType(event.type().name());
+        record.setDeviceEventRecordDetail(event.detail());
+        record.setDeviceEventRecordOccurredAt(event.occurredAt());
         eventRecordMapper.insert(record);
     }
 

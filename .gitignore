@@ -164,3 +164,6 @@ deploy-monitor-8112.sh
 
 # AI starter 杩愯鏃舵暟鎹洰褰曪紙浜鸿劯搴曞簱绱㈠紩绛夛紝闈炴簮鐮侊級
 spring-support-ai-starter/admin/
+
+# 会话重定向产生的 maven 构建日志（构建产物，非源码）
+build-out.txt

@@ -146,11 +146,11 @@ public class DeviceServiceImpl implements DeviceService {
                 }
                 for (com.chua.starter.device.spi.model.OrganizationNode node : nodes) {
                     DeviceOrganization org = new DeviceOrganization();
-                    org.setDeviceOrganizationId(provider.getVendor() + ":" + node.getOrgId());
-                    org.setDeviceOrganizationName(node.getOrgName());
+                    org.setDeviceOrganizationId(provider.getVendor() + ":" + node.orgId());
+                    org.setDeviceOrganizationName(node.orgName());
                     org.setDeviceOrganizationVendor(provider.getVendor());
                     org.setDeviceOrganizationParentId(
-                            node.getParentId() == null ? null : provider.getVendor() + ":" + node.getParentId());
+                            node.parentId() == null ? null : provider.getVendor() + ":" + node.parentId());
                     deviceOrganizationMapper.insert(org);
                 }
                 log.info("组织同步: vendor={}, count={}", provider.getVendor(), nodes.size());

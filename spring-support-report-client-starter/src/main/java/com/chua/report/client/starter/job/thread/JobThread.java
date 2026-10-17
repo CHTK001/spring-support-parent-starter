@@ -109,14 +109,14 @@ public class JobThread extends Thread {
      */
     public ReturnResult<String> pushTriggerQueue(TriggerParam triggerParam) {
         // 防止重复触发
-        if (triggerLogIdSet.contains(triggerParam.getLogId())) {
-            log.warn("重复触发任务, 已忽略, 日志ID: {}", triggerParam.getLogId());
-            return ReturnResult.illegal("重复触发任务, 日志ID: " + triggerParam.getLogId());
+        if (triggerLogIdSet.contains(triggerParam.logId())) {
+            log.warn("重复触发任务, 已忽略, 日志ID: {}", triggerParam.logId());
+            return ReturnResult.illegal("重复触发任务, 日志ID: " + triggerParam.logId());
         }
 
-        triggerLogIdSet.add(triggerParam.getLogId());
+        triggerLogIdSet.add(triggerParam.logId());
         triggerQueue.add(triggerParam);
-        log.debug("任务已加入触发队列, 任务ID: {}, 日志ID: {}", jobId, triggerParam.getLogId());
+        log.debug("任务已加入触发队列, 任务ID: {}, 日志ID: {}", jobId, triggerParam.logId());
         return ReturnResult.success();
     }
 
@@ -169,16 +169,16 @@ public class JobThread extends Thread {
                 if (triggerParam!=null) {
                     running = true;
                     idleTimes = 0;
-                    triggerLogIdSet.remove(triggerParam.getLogId());
+                    triggerLogIdSet.remove(triggerParam.logId());
 
  // 日志 文件名, like "日志路径/yyyy-MM-dd/9999.日志"
-                    String logFileName = JobFileAppender.makeLogFileName(new Date(triggerParam.getLogDateTime()), triggerParam.getLogId());
+                    String logFileName = JobFileAppender.makeLogFileName(new Date(triggerParam.logDateTime()), triggerParam.logId());
                     JobContext xxlJobContext = new JobContext(
-                            triggerParam.getJobId(),
-                            triggerParam.getExecutorParams(),
+                            triggerParam.jobId(),
+                            triggerParam.executorParams(),
                             logFileName,
-                            triggerParam.getBroadcastIndex(),
-                            triggerParam.getBroadcastTotal());
+                            triggerParam.broadcastIndex(),
+                            triggerParam.broadcastTotal());
 
  // 初始化 作业 上下文
                     JobContext.setJobContext(xxlJobContext);
@@ -186,7 +186,7 @@ public class JobThread extends Thread {
  // 执行
                     DefaultJobLog.log("<br>----------- job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
 
-                    if (triggerParam.getExecutorTimeout() > 0) {
+                    if (triggerParam.executorTimeout() > 0) {
  // 限制 超时
                         Thread futureThread = null;
                         try {
@@ -207,7 +207,7 @@ public class JobThread extends Thread {
                             futureThread = new Thread(futureTask);
                             futureThread.start();
 
-                            Boolean tempResult = futureTask.get(triggerParam.getExecutorTimeout(), TimeUnit.SECONDS);
+                            Boolean tempResult = futureTask.get(triggerParam.executorTimeout(), TimeUnit.SECONDS);
                             /**
                              * report作业。
                              * @param triggerParam trigger参数
@@ -308,6 +308,6 @@ public class JobThread extends Thread {
      * @param message 消息
      */
     private void reportJob(TriggerParam triggerParam, String status, String message) {
-        JobReporter.getInstance().report(triggerParam.getJobId(), triggerParam.getLogId(), status, message);
+        JobReporter.getInstance().report(triggerParam.jobId(), triggerParam.logId(), status, message);
     }
 }

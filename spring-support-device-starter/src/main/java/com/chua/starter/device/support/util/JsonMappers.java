@@ -71,13 +71,12 @@ public final class JsonMappers {
         }
         List<RecordFile> list = new ArrayList<>();
         for (JsonNode n : arr) {
-            RecordFile rf = new RecordFile();
-            rf.setFileId(n.path("fileId").asText(n.path("recordId").asText(n.path("id").asText(""))));
-            rf.setChannelId(n.path("channelId").asText(n.path("channel").asText("")));
-            rf.setStartTime(parseDate(n.path("startTime").asText()));
-            rf.setEndTime(parseDate(n.path("endTime").asText()));
-            rf.setSize(n.path("size").asLong());
-            list.add(rf);
+            list.add(new RecordFile(
+                    n.path("fileId").asText(n.path("recordId").asText(n.path("id").asText(""))),
+                    n.path("channelId").asText(n.path("channel").asText("")),
+                    parseDate(n.path("startTime").asText()),
+                    parseDate(n.path("endTime").asText()),
+                    n.path("size").asLong()));
         }
         return list;
     }
@@ -98,13 +97,12 @@ public final class JsonMappers {
         }
         List<AccessRecord> list = new ArrayList<>();
         for (JsonNode n : arr) {
-            AccessRecord ar = new AccessRecord();
-            ar.setDoorId(n.path("doorId").asText(""));
-            ar.setCardNo(n.path("cardNo").asText(""));
-            ar.setUserName(n.path("userName").asText(n.path("personName").asText(n.path("name").asText(""))));
-            ar.setEventType(n.path("eventType").asText(""));
-            ar.setTime(parseDate(n.path("time").asText(n.path("occurredAt").asText(""))));
-            list.add(ar);
+            list.add(new AccessRecord(
+                    n.path("doorId").asText(""),
+                    n.path("cardNo").asText(""),
+                    n.path("userName").asText(n.path("personName").asText(n.path("name").asText(""))),
+                    parseDate(n.path("time").asText(n.path("occurredAt").asText(""))),
+                    n.path("eventType").asText("")));
         }
         return list;
     }

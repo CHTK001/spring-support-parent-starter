@@ -203,8 +203,8 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceId", info.deviceSerial());
         params.put("channelId", channel);
-        params.put("beginTime", range.getStart().toString());
-        params.put("endTime", range.getEnd().toString());
+        params.put("beginTime", range.start().toString());
+        params.put("endTime", range.end().toString());
         params.put("streamId", 0);
         JsonNode data = assertOk(post("/playback", params));
         JsonNode result = data.path("result");
