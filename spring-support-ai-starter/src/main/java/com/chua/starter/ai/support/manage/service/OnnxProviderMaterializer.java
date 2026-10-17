@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.service.AiModelCatalogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -19,9 +20,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * ONNX 虚拟供应商物化服务。
@@ -122,6 +125,11 @@ public class OnnxProviderMaterializer {
      * ONNX 外部目录服务：提供 ReFileSystem 选中的模型根，并负责把根推回模型注册表
      */
     private final OnnxExternalDirectoryService onnxExternalDirectoryService;
+
+    /**
+     * 本地模型目录门面：用于取「已注册且文件就绪」的内置 ONNX 模型清单。
+     */
+    private final AiModelCatalogService aiModelCatalogService;
 
     /**
      * 应用启动完成后物化 ONNX 供应商及其模型。
@@ -284,10 +292,8 @@ public class OnnxProviderMaterializer {
         // 它的模型自然等于清单里的目录。
         onnxExternalDirectoryService.applyModelRoot();
         List<Map<String, String>> entries = onnxExternalDirectoryService.readEntries();
-        if (entries.isEmpty()) {
-            log.info("[OnnxProvider] 模型同步完成：外部目录清单为空，ONNX 提供商暂无模型");
-            return 0;
-        }
+        // 注意：外部目录为空也要继续——内置本地模型同样要入表（见下方 built-in 同步）。
+        // 旧实现在这里直接 return 0，于是「模型管理 → ONNX」永远只剩外部目录那几条。
         // 清理历史遗留：旧版本把绝对路径写进了 model，而 (provider_id, model) 是复合主键，
         // 改主键字段靠 updateById 不会生效，只能删除后按新模型名重新插入
         int purged = 0;
@@ -324,8 +330,7 @@ public class OnnxProviderMaterializer {
             String modelName = template == null || template.isBlank()
                     ? dirName(dir)
                     : template.trim();
-            String task = taskOf(modelName, dir);
-            List<java.util.Map<String, Object>> capabilities = List.of(capability(task));
+            List<java.util.Map<String, Object>> capabilities = List.of(OnnxModelTaxonomy.capability(modelName));
             String description = "外部目录 · " + dir;
             SysAiProviderModel hit = null;
             for (SysAiProviderModel row : existing) {
@@ -353,6 +358,43 @@ public class OnnxProviderMaterializer {
                 providerModelMapper.insert(row);
                 created++;
             }
+        }
+        // 内置本地模型（注册表内、文件就绪）也像其它提供商一样入表。
+        // 之前只镜像外部目录，导致「模型管理 → ONNX」看不到 cn-clip-rn50-image 等
+        // 正在被系统设置引用、运行时也能跑的模型，默认模型选择器只能靠前端旁路注入。
+        Set<String> existingNames = new HashSet<>();
+        for (SysAiProviderModel row : providerModelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, ONNX_PROVIDER_ID))) {
+            existingNames.add(row.getModel());
+        }
+        List<Map<String, Object>> details;
+        try {
+            details = aiModelCatalogService.listLocalModelDetails();
+        } catch (Exception e) {
+            details = List.of();
+            log.warn("[OnnxProvider] 读取本地模型目录失败，跳过内置模型同步: {}", e.getMessage());
+        }
+        for (Map<String, Object> d : details) {
+            Object mid = d.get("modelId");
+            String modelId = mid == null ? null : String.valueOf(mid);
+            if (modelId == null || modelId.isBlank() || !Boolean.TRUE.equals(d.get("available"))) {
+                continue;
+            }
+            if (isExternal(modelId) || !existingNames.add(modelId)) {
+                continue;
+            }
+            SysAiProviderModel row = new SysAiProviderModel();
+            row.setProviderId(ONNX_PROVIDER_ID);
+            row.setModel(modelId);
+            row.setEnabled(Boolean.TRUE);
+            row.setSortOrder(0);
+            row.setDescription("ONNX 本地模型 · " + OnnxModelTaxonomy.task(modelId));
+            row.setCapabilities(List.of(OnnxModelTaxonomy.capability(modelId)));
+            row.setCreatedAt(now);
+            row.setUpdatedAt(now);
+            providerModelMapper.insert(row);
+            created++;
         }
         log.info("[OnnxProvider] 模型同步完成 清单={} 新增={} 跳过={} 清理={} 模型根={}",
                 entries.size(), created, skipped, purged, currentModelDir());
@@ -479,20 +521,7 @@ public class OnnxProviderMaterializer {
      */
     private static String taskOf(String modelName, String dir) {
         String source = modelName == null || modelName.isBlank() ? dir : modelName;
-        var entry = ModelRegistry.get(source);
-        String label = com.chua.deeplearning.support.capability.ModelCapabilities
-                .labelOf(entry == null ? null : entry.capabilityInterface());
-        if (label != null && !label.isBlank()) {
-            return label;
-        }
-        String lower = source.toLowerCase();
-        if (lower.contains("ocr") || lower.contains("paddle") || lower.contains("rec")) {
-            return "ocr";
-        }
-        if (lower.contains("embed") || lower.contains("bge")) {
-            return "text_embedding";
-        }
-        return "image_cv";
+        return OnnxModelTaxonomy.task(source);
     }
 
     /**

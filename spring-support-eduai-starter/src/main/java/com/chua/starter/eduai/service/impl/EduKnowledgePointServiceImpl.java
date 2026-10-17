@@ -319,17 +319,16 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
      * @return VO
      */
     private KnowledgeFileVO toFileVO(EduKnowledgeFile entity) {
-        KnowledgeFileVO vo = new KnowledgeFileVO();
-        vo.setKnowledgeFileId(entity.getKnowledgeFileId());
-        vo.setKnowledgePointId(entity.getKnowledgePointId());
-        vo.setKnowledgeFileName(entity.getKnowledgeFileName());
-        vo.setKnowledgeFilePath(entity.getKnowledgeFilePath());
-        vo.setKnowledgeFileType(entity.getKnowledgeFileType());
-        vo.setKnowledgeFileSize(entity.getKnowledgeFileSize());
-        vo.setKnowledgeFileSortOrder(entity.getKnowledgeFileSortOrder());
-        vo.setKnowledgeFileStatus(entity.getKnowledgeFileStatus());
-        vo.setCreateTime(entity.getCreateTime());
-        return vo;
+        return new KnowledgeFileVO(
+                entity.getKnowledgeFileId(),
+                entity.getKnowledgePointId(),
+                entity.getKnowledgeFileName(),
+                entity.getKnowledgeFilePath(),
+                entity.getKnowledgeFileType(),
+                entity.getKnowledgeFileSize(),
+                entity.getKnowledgeFileSortOrder(),
+                entity.getKnowledgeFileStatus(),
+                entity.getCreateTime());
     }
 }
 

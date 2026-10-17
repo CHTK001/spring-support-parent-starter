@@ -32,6 +32,7 @@ import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
 import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
@@ -2459,6 +2460,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             pendingVo.setTotalScore(0);
             pendingVo.setResults(new ArrayList<>());
             pendingVo.setFinished(taskFailed);
+            pendingVo.setTeacherFinished(isTeacherFinished(task));
             return pendingVo;
         }
 
@@ -2471,6 +2473,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             vo.setStage(task.getMarkingTaskStage());
             vo.setError(task.getMarkingTaskError());
         }
+        vo.setTeacherFinished(isTeacherFinished(task));
 
         int fallbackScore = properties.getMarking().getMaxScore();
         Map<Long, Integer> fullScores = resolveFullScores(
@@ -2559,6 +2562,136 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         log.info("[EduAi] 教师确认阅卷: taskId={}, items={}", dto.getTaskId(), dto.getAdjustments().size());
         return true;
+    }
+
+    /**
+     * 阅卷完成：把该卷错题按最终分归入对应学生的错题库。
+     *
+     * <p>「最终分」= 老师分优先、未改则用 AI 分；判为错的题（最终分 &lt;= 0）登记，
+     * 并带上试卷标识，让错题能回答「来自哪张卷」。学生取任务 / 答题卡上
+     * 卷面识别或人工纠正后的学号；缺学生时拒绝完成，
+     * 保证错题一定落到「对应学生」而不是变成无主记录。</p>
+     *
+     * <p>幂等：任务已置「老师已完成」时直接返回，不重复累加错题次数
+     * （错题表按 (学生, 题目) 唯一，重复登记会虚增错误次数）。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 完成结果（学生 / 试卷 / 本次登记的错题数 / 是否此前已完成）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public MarkingFinishResultVO finishMarking(String taskId) {
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        EduUserContext.checkWritable(task.getOwnerUserId());
+        EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
+                ? findSheet(taskId)
+                : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+
+        MarkingFinishResultVO vo = new MarkingFinishResultVO();
+        vo.setTaskId(taskId);
+
+        // 学生：任务上的学号优先（卷面识别与人工纠正都会写它），其次答题卡
+        String studentId = firstNonBlank(task.getMarkingTaskStudentId(),
+                sheet == null ? null : sheet.getAnswerSheetStudentId());
+        vo.setStudentId(studentId);
+        if (StringUtils.isBlank(studentId)) {
+            throw new BusinessException("该卷还没有识别到学生，请先用上方「修改学生」设置学号后再点完成");
+        }
+
+        Long paperId = resolvePaperId(task, sheet);
+        vo.setPaperId(paperId);
+
+        // 幂等：已完成过就不再重复登记错题
+        if (Integer.valueOf(1).equals(task.getMarkingTaskTeacherFinished())) {
+            vo.setAlreadyFinished(true);
+            vo.setWrongCount(0);
+            return vo;
+        }
+
+        Long examId = task.getMarkingTaskExamId() != null ? task.getMarkingTaskExamId()
+                : (sheet == null ? null : sheet.getAnswerSheetExamId());
+        String ownerUserId = sheet != null && StringUtils.isNotBlank(sheet.getOwnerUserId())
+                ? sheet.getOwnerUserId() : task.getOwnerUserId();
+
+        int recorded = 0;
+        for (EduMarkingResult result : listByTask(taskId)) {
+            Long questionId = result.getMarkingResultQuestionId();
+            // 任意卷没有题库记录（题目标识记 0），错题本只登记真实题目标识
+            if (questionId == null || questionId <= 0) {
+                continue;
+            }
+            int finalScore = result.getMarkingResultTeacherScore() != null
+                    ? result.getMarkingResultTeacherScore()
+                    : (result.getMarkingResultAiScore() == null ? 0 : result.getMarkingResultAiScore());
+            if (finalScore > 0) {
+                continue;
+            }
+            try {
+                wrongQuestionService.recordWrongQuestion(studentId, questionId, examId, ownerUserId, paperId);
+                recorded++;
+            } catch (Exception e) {
+                // 错题登记是完成动作的附加步骤：单条失败不能让整个「完成」回滚
+                log.warn("[EduAi] 完成时错题登记失败(忽略): taskId={}, questionId={}, err={}",
+                        taskId, questionId, e.getMessage());
+            }
+        }
+
+        task.setMarkingTaskTeacherFinished(1);
+        task.setMarkingTaskTeacherFinishTime(LocalDateTime.now());
+        task.setUpdateTime(LocalDateTime.now());
+        taskMapper.updateById(task);
+
+        vo.setWrongCount(recorded);
+        vo.setAlreadyFinished(false);
+        log.info("[EduAi] 阅卷完成: taskId={}, student={}, paperId={}, 本轮错题={}",
+                taskId, studentId, paperId, recorded);
+        return vo;
+    }
+
+    /**
+     * 取错题所属试卷：任务上的试卷优先，其次由答题卡的考试反查。
+     *
+     * @param task  任务实体
+     * @param sheet 答题卡，可为 null
+     * @return 试卷标识；链路不全时返回 null
+     */
+    private Long resolvePaperId(EduMarkingTask task, EduAnswerSheet sheet) {
+        if (task != null && task.getMarkingTaskPaperId() != null) {
+            return task.getMarkingTaskPaperId();
+        }
+        if (sheet == null || sheet.getAnswerSheetExamId() == null) {
+            return null;
+        }
+        EduExam exam = examMapper.selectById(sheet.getAnswerSheetExamId());
+        return exam == null ? null : exam.getExamPaperId();
+    }
+
+    /**
+     * 任务是否已由老师点过「完成」。
+     *
+     * @param task 任务实体，可为 null
+     * @return 已完成返回 true
+     */
+    private static Boolean isTeacherFinished(EduMarkingTask task) {
+        return task != null && Integer.valueOf(1).equals(task.getMarkingTaskTeacherFinished());
+    }
+
+    /**
+     * 取第一个非空白字符串（去首尾空格）。
+     *
+     * @param values 候选值
+     * @return 第一个非空白值；都为空白时返回 null
+     */
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.isNotBlank(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     /**

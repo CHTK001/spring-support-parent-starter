@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
+import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
@@ -2905,7 +2906,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 continue;
             }
             String task = classifyOnnxTask(id);
-            Map<String, Object> item = new LinkedHashMap<>(9);
+            Map<String, Object> item = new LinkedHashMap<>(12);
             item.put("id", id);
             item.put("name", id);
             item.put("modelName", id);
@@ -2914,6 +2915,13 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             item.put("external", false);
             item.put("available", true);
             item.put("task", task);
+            // 批量录入（import-all）读的是 tasks/subtype：不带上这两个字段，
+            // ONNX 模型入库后会没有 capabilities，前端只能按名字兜底成「文本」。
+            item.put("tasks", List.of(task));
+            String subType = OnnxModelTaxonomy.subtype(id, task);
+            if (!subType.isBlank()) {
+                item.put("subtype", subType);
+            }
             item.put("description", "ONNX 本地模型 · " + onnxTaskLabel(task));
             models.add(item);
         }
@@ -2973,54 +2981,9 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * 顺序敏感：布局 → OCR → 人脸 → 语音 → 嵌入 → 重排序 → 生成类 → 其余归图片识别。
      */
     private static String classifyOnnxTask(String modelId) {
-        String id = String.valueOf(modelId).toLowerCase();
-        if (id.isEmpty()) {
-            return "image_cv";
-        }
-        // 布局 / 文档结构
-        if (idContains(id, "layout", "docling", "structure", "table-struct", "pp-doc")) {
-            return "layout";
-        }
-        // OCR / 文本检测识别 / 票据印章
-        if (idContains(id, "ocr", "pp-word", "svtr", "duguang", "seal", "card-correction", "text-detect")) {
-            return "ocr";
-        }
-        // 人脸 / 活体 / 属性 / 关键点 / 换脸 / 人脸超分
-        if (idContains(id, "face", "insightface", "scrfd", "adaface", "spoof", "age", "gender",
-                "emotion", "landmark", "deepfake", "gfpgan", "codeformer")) {
-            return "face_recognition";
-        }
-        // 语音识别 / 声纹 / 说话人
-        if (idContains(id, "whisper", "sensevoice", "voiceprint", "fingerprint", "asr", "speech-rec",
-                "dfsmn", "campplus", "wespeaker", "icefall", "kws")) {
-            return "speech_recognition";
-        }
-        // 语音合成
-        if (idContains(id, "tts", "speech-synthesis")) {
-            return "speech_synthesis";
-        }
-        // 嵌入 / 特征向量（人脸特征已在上面被 face 分支截获）
-        if (idContains(id, "embedding", "embed", "bge", "dino", "feature", "clip")) {
-            return "embedding";
-        }
-        // 重排序
-        if (idContains(id, "rerank")) {
-            return "rerank";
-        }
-        // 文生图：扩散模型 + 通义万相系（wanx / wan / qwen-image / imageedit 等）。
-        // 通义万相走 DashScope，云端模型名不像 stable-diffusion 这类本地命名，
-        // 若不在此显式登记会被下面的兜底分支误判为 image_cv（图片识别）。
-        if (idContains(id, "stable-diffusion", "sd-turbo", "lcm-lora", "anime-gan", "text-to-image",
-                "wanx", "wan2", "wan-2", "qwen-image", "qwen-vl-image", "imageedit",
-                "image-edit", "text2image", "t2i", "dall-e", "cogview", "ernie-irag")) {
-            return "image_generation";
-        }
-        // 文生视频 / 动作识别
-        if (idContains(id, "text-to-video", "video-generation", "t2v", "wan2.1-vace", "c3d", "action-rec")) {
-            return "video_generation";
-        }
-        // 其余（分类 / 检测 / 分割 / 姿态 / 深度 / 抠图 / 超分 / 描述 / 上色等）归图片识别
-        return "image_cv";
+        // 统一走 OnnxModelTaxonomy：修复了旧实现里 "age" 命中 "image" 把图像编码器
+        // 误判成人脸的问题，并与物化器 / 前端使用同一套词表。
+        return OnnxModelTaxonomy.task(modelId);
     }
 
     /** 依据 task 返回输入/输出能力 traits（用于模型卡片图标展示）。 */

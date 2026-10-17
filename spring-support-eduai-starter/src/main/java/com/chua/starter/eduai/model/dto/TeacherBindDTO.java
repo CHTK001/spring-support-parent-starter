@@ -1,28 +1,16 @@
 package com.chua.starter.eduai.model.dto;
 
-import lombok.Data;
-
 /**
  * 教师绑定 DTO
  *
+ * @param teacherNo   工号（绑定键）
+ * @param teacherName 姓名
+ * @param subjectCode 任教学科编码（可选）
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class TeacherBindDTO {
-
-    /**
-     * 工号（绑定键）
-     */
-    private String teacherNo;
-
-    /**
-     * 姓名
-     */
-    private String teacherName;
-
-    /**
-     * 任教学科编码（可选）
-     */
-    private String subjectCode;
+public record TeacherBindDTO(
+        String teacherNo,
+        String teacherName,
+        String subjectCode) {
 }

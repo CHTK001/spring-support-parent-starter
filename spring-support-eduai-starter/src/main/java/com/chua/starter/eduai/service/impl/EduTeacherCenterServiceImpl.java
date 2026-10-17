@@ -120,7 +120,7 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
             throw new BusinessException("绑定信息不能为空");
         }
         String account = EduUserContext.requireUserId();
-        String no = trimToNull(dto.getTeacherNo());
+        String no = trimToNull(dto.teacherNo());
         if (no == null) {
             throw new BusinessException("请填写工号");
         }
@@ -134,11 +134,11 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
             throw new BusinessException("该工号已被其它账号绑定，请联系管理员处理");
         }
         teacher.setTeacherAccount(account);
-        if (trimToNull(dto.getTeacherName()) != null) {
-            teacher.setTeacherName(dto.getTeacherName().trim());
+        if (trimToNull(dto.teacherName()) != null) {
+            teacher.setTeacherName(dto.teacherName().trim());
         }
-        if (trimToNull(dto.getSubjectCode()) != null) {
-            teacher.setTeacherSubjectCode(dto.getSubjectCode().trim());
+        if (trimToNull(dto.subjectCode()) != null) {
+            teacher.setTeacherSubjectCode(dto.subjectCode().trim());
         }
         teacher.setTeacherStatus(1);
         if (teacher.getTeacherId() == null) {

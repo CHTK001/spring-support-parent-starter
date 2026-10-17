@@ -126,6 +126,19 @@ public class EduMarkingTask extends SysBase {
     private LocalDateTime markingTaskFinishTime;
 
     /**
+     * 老师是否已点「阅卷完成」：0-未完成 1-已完成。
+     *
+     * <p>与 {@link #markingTaskStatus} 的「处理完成（后台判分结束）」不是一回事：
+     * 本字段表示老师已复核收口，错题已按最终分归位；「完成」动作据此保证幂等。</p>
+     */
+    private Integer markingTaskTeacherFinished;
+
+    /**
+     * 老师点「阅卷完成」的时间
+     */
+    private LocalDateTime markingTaskTeacherFinishTime;
+
+    /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）
      */
     @TableField("marking_task_owner_user_id")

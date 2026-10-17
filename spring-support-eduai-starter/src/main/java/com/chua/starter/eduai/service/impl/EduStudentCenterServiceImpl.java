@@ -179,8 +179,8 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
             throw new BusinessException("绑定信息不能为空");
         }
         String account = EduUserContext.requireUserId();
-        String no = trimToNull(dto.getStudentNo());
-        String name = trimToNull(dto.getStudentName());
+        String no = trimToNull(dto.studentNo());
+        String name = trimToNull(dto.studentName());
         if (no == null && name == null) {
             throw new BusinessException("请填写学号或姓名");
         }
@@ -199,12 +199,12 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         if (name != null) {
             student.setStudentName(name);
         }
-        String level = normalizeLevel(dto.getGradeLevel());
+        String level = normalizeLevel(dto.gradeLevel());
         if (level != null) {
             student.setStudentGradeLevel(level);
         }
-        if (trimToNull(dto.getGrade()) != null) {
-            student.setStudentGrade(dto.getGrade().trim());
+        if (trimToNull(dto.grade()) != null) {
+            student.setStudentGrade(dto.grade().trim());
         }
         student.setStudentStatus(1);
         Long classId = resolveClass(dto, level, account);
@@ -307,10 +307,10 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         }
         // 每上报一次就算一次学习
         daily.setStudyCount(daily.getStudyCount() + 1);
-        daily.setStudyMinutes(daily.getStudyMinutes() + nz(dto.getStudyMinutes()));
-        daily.setQuestionCount(daily.getQuestionCount() + nz(dto.getQuestionCount()));
-        daily.setCorrectCount(daily.getCorrectCount() + nz(dto.getCorrectCount()));
-        daily.setStars(daily.getStars() + nz(dto.getStars()));
+        daily.setStudyMinutes(daily.getStudyMinutes() + nz(dto.studyMinutes()));
+        daily.setQuestionCount(daily.getQuestionCount() + nz(dto.questionCount()));
+        daily.setCorrectCount(daily.getCorrectCount() + nz(dto.correctCount()));
+        daily.setStars(daily.getStars() + nz(dto.stars()));
         daily.setPoints(daily.getPoints() + pointsOf(dto));
         if (daily.getDailyId() == null) {
             dailyMapper.insert(daily);
@@ -319,7 +319,7 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         }
 
         // ② 模块进度：同样有则累加
-        String moduleCode = trimToNull(dto.getModuleCode());
+        String moduleCode = trimToNull(dto.moduleCode());
         if (moduleCode != null) {
             EduStudentProgress progress = progressMapper.selectOne(new QueryWrapper<EduStudentProgress>()
                     .eq("student_id", sid).eq("module_code", moduleCode).last("LIMIT 1"));
@@ -334,11 +334,11 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
                 progress.setCorrectCount(0);
             }
             // 进度封顶 100：前端进度条与「已攻克」判定都按 100 算
-            int next = (progress.getProgress() == null ? 0 : progress.getProgress()) + nz(dto.getProgressDelta());
+            int next = (progress.getProgress() == null ? 0 : progress.getProgress()) + nz(dto.progressDelta());
             progress.setProgress(Math.min(100, next));
-            progress.setStudyMinutes(progress.getStudyMinutes() + nz(dto.getStudyMinutes()));
-            progress.setQuestionCount(progress.getQuestionCount() + nz(dto.getQuestionCount()));
-            progress.setCorrectCount(progress.getCorrectCount() + nz(dto.getCorrectCount()));
+            progress.setStudyMinutes(progress.getStudyMinutes() + nz(dto.studyMinutes()));
+            progress.setQuestionCount(progress.getQuestionCount() + nz(dto.questionCount()));
+            progress.setCorrectCount(progress.getCorrectCount() + nz(dto.correctCount()));
             progress.setLastStudyTime(now);
             if (progress.getProgressId() == null) {
                 progressMapper.insert(progress);
@@ -438,7 +438,7 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
      * @return 班级 ID；未提供班级名时为 null
      */
     private Long resolveClass(StudentBindDTO dto, String level, String userId) {
-        String name = trimToNull(dto.getClassName());
+        String name = trimToNull(dto.className());
         if (name == null) {
             return null;
         }
@@ -453,7 +453,7 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         clazz.setClassName(name);
         clazz.setClassCode("CLS-" + System.currentTimeMillis());
         clazz.setClassGradeLevel(level);
-        clazz.setClassGrade(trimToNull(dto.getGrade()));
+        clazz.setClassGrade(trimToNull(dto.grade()));
         clazz.setClassStatus(1);
         clazz.setOwnerUserId(userId);
         classMapper.insert(clazz);
@@ -614,11 +614,11 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
      * @return 积分
      */
     private int pointsOf(StudyReportDTO dto) {
-        int explicit = nz(dto.getPoints());
+        int explicit = nz(dto.points());
         if (explicit > 0) {
             return explicit;
         }
-        return nz(dto.getCorrectCount()) * 2 + nz(dto.getStudyMinutes());
+        return nz(dto.correctCount()) * 2 + nz(dto.studyMinutes());
     }
 
     /**

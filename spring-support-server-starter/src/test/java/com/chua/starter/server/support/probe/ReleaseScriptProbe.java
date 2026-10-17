@@ -694,6 +694,14 @@ public final class ReleaseScriptProbe {
             check("K13 挂载脚本无 PowerShell 语法错误", countPowerShellErrors(exe, install) == 0, install);
             check("K14 卸载脚本无 PowerShell 语法错误", countPowerShellErrors(exe, uninstall) == 0, uninstall);
         }
+        // 真机缺陷回归：旧实现只等 10s（20×500ms），WmiPrvSE+PowerShell 冷启动在负载高
+        // 的机器上会超时（本机实测 pid 落地 31s）→ 任务判「挂载失败」，但 pid 文件随后才出现。
+        check("K15 看门狗等待窗口足够（360×500ms=180s，不再是 20×500ms=10s）",
+                install.contains("$i -lt 360") && !install.contains("$i -lt 20;"), install);
+        check("K16 看门狗成功判据含「pid 对应存活进程」（防陈旧 pid 文件误判成功）",
+                install.contains("Get-Process -Id ([int]$__wp)"), install);
+        check("K17 WMI 返回码非 0 直接判失败（不再静默等 60s）",
+                install.contains("WMI 拉起守护进程失败 code="), install);
     }
 
     /**

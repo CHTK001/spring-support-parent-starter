@@ -4,6 +4,7 @@ import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
 
 import java.util.List;
 import java.util.Map;
@@ -92,6 +93,18 @@ public interface IEduMarkingService {
      * @return 是否成功
      */
     boolean confirmMarking(MarkingConfirmDTO dto);
+
+    /**
+     * 阅卷完成：按最终分把该卷错题归入对应学生的错题库。
+     *
+     * <p>老师复核收口的动作。学生取答卷识别 / 人工纠正后的学号，
+     * 缺学生时拒绝完成（错题必须落到「对应学生」）。
+     * 幂等：同一任务重复调用不会重复累加错题次数。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 完成结果（学生 / 试卷 / 本次登记的错题数 / 是否此前已完成）
+     */
+    MarkingFinishResultVO finishMarking(String taskId);
 
     /**
      * 取任务当前进度快照（SSE 建连时先推一帧，避免前端空等）。

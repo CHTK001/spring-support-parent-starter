@@ -46,6 +46,11 @@ public class EduWrongQuestion extends SysBase {
     private Long wrongQuestionExamId;
 
     /**
+     * 试卷标识（错题来自哪张卷；任意卷可能为空）
+     */
+    private Long wrongQuestionPaperId;
+
+    /**
      * 错误次数
      */
     private Integer wrongQuestionWrongCount;

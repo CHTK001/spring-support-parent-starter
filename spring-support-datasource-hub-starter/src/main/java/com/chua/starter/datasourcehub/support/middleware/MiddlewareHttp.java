@@ -108,6 +108,24 @@ public final class MiddlewareHttp {
     }
 
     /**
+     * JSON 方式 POST，并指定请求超时。
+     *
+     * <p>用于 {@code _reindex} 这类数据搬运的慢操作，见 {@link #builder(String, Map, Duration)}。</p>
+     *
+     * @param url     地址
+     * @param query   查询参数，可为空
+     * @param json    JSON 请求体
+     * @param headers 请求头，可为空
+     * @param timeout 请求超时
+     * @return 响应体文本
+     * @throws IOException 连接失败或响应非 2xx
+     */
+    public static String postJson(String url, Map<String, String> query, String json,
+                                  Map<String, String> headers, Duration timeout) throws IOException {
+        return send(jsonRequest(url, query, json, headers, timeout));
+    }
+
+    /**
      * JSON 方式 POST 并保留状态码与响应体，非 2xx 不抛错。
      *
      * <p>Neo4j 的 Cypher 报错放在 {@code errors} 数组里随 400 返回，正文比状态码更有信息量，
@@ -136,7 +154,22 @@ public final class MiddlewareHttp {
      */
     private static HttpRequest jsonRequest(String url, Map<String, String> query, String json,
                                            Map<String, String> headers) {
-        return builder(appendQuery(url, query), headers)
+        return jsonRequest(url, query, json, headers, REQUEST_TIMEOUT);
+    }
+
+    /**
+     * 构造 JSON POST 请求，并指定请求超时。
+     *
+     * @param url     地址
+     * @param query   查询参数
+     * @param json    请求体
+     * @param headers 请求头
+     * @param timeout 请求超时
+     * @return 请求
+     */
+    private static HttpRequest jsonRequest(String url, Map<String, String> query, String json,
+                                           Map<String, String> headers, Duration timeout) {
+        return builder(appendQuery(url, query), headers, timeout)
                 .header("Content-Type", "application/json;charset=UTF-8")
                 .POST(HttpRequest.BodyPublishers.ofString(json == null ? "" : json, StandardCharsets.UTF_8))
                 .build();

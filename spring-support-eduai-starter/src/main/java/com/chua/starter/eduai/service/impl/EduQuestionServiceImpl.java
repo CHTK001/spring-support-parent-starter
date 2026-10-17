@@ -553,14 +553,14 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      * AI 选题
      */
     public List<EduQuestion> aiSelect(QuestionAiSelectDTO dto) {
-        int count = dto.getCount() == null || dto.getCount() <= 0 ? 10 : Math.min(dto.getCount(), 100);
+        int count = dto.count() == null || dto.count() <= 0 ? 10 : Math.min(dto.count(), 100);
         // 前端可能传码值（PRIMARY），而库里存中文名，不归一化会选不出题
-        String gradeLevel = GradeLevels.normalize(dto.getGradeLevel());
+        String gradeLevel = GradeLevels.normalize(dto.gradeLevel());
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
 
         // 规则选题作为兜底：AI 不可用或解析失败时由 EduAiService 直接返回这份候选
         List<EduQuestion> candidates =
-                baseMapper.selectCandidates(dto.getSubject(), gradeLevel, scope, Math.max(count * 3, count));
+                baseMapper.selectCandidates(dto.subject(), gradeLevel, scope, Math.max(count * 3, count));
         List<Long> fallbackIds = candidates.stream()
                 .map(EduQuestion::getQuestionId)
                 .collect(Collectors.toList());
@@ -569,8 +569,8 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         }
 
         List<Long> ids = eduAiService.generatePaperOutline(
-                dto.getSubject(), gradeLevel, dto.getGrade(),
-                dto.getTypes(), dto.getKnowledgePointIds(), count, fallbackIds);
+                dto.subject(), gradeLevel, dto.grade(),
+                dto.types(), dto.knowledgePointIds(), count, fallbackIds);
         if (ids.size() > count) {
             ids = new ArrayList<>(ids.subList(0, count));
         }
@@ -592,7 +592,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             }
         }
         log.info("[EduAi] AI 选题: subject={}, gradeLevel={}, 期望={}, 候选={}, 实得={}",
-                dto.getSubject(), gradeLevel, count, fallbackIds.size(), ordered.size());
+                dto.subject(), gradeLevel, count, fallbackIds.size(), ordered.size());
         return ordered;
     }
 }

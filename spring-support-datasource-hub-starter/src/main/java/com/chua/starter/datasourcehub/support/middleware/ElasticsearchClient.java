@@ -61,6 +61,11 @@ public class ElasticsearchClient {
     private static final Duration CLUSTER_SETTINGS_TIMEOUT = Duration.ofSeconds(30);
 
     /**
+     * {@code _reindex} 的超时：重建索引要搬运整索引数据，耗时可能远超常规请求。
+     */
+    private static final Duration REINDEX_TIMEOUT = Duration.ofMinutes(5);
+
+    /**
      * 数据源服务
      */
     private final DatasourceService datasourceService;
@@ -368,6 +373,38 @@ public class ElasticsearchClient {
      */
     public JsonObject count(Target target, String index) {
         return get(target, "/" + encode(index) + "/_count", Map.of());
+    }
+
+    /**
+     * 重建索引的数据搬运（{@code _reindex}）
+     *
+     * <p>ES 无法删除字段、也无法改已存在字段的类型；要真删/真修复只能建一个带新 mapping
+     * 的索引再把数据搬过去。走 {@link #REINDEX_TIMEOUT}：搬运而非查询，耗时可能很长。</p>
+     *
+     * @param target 访问目标
+     * @param source 源索引
+     * @param dest   目标索引
+     * @return 搬运结果（含 created / total / failures）
+     */
+    public JsonObject reindex(Target target, String source, String dest) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("source", Map.of("index", source));
+        body.put("dest", Map.of("index", dest));
+        return post(target, "/_reindex", Json.toJson(body), REINDEX_TIMEOUT);
+    }
+
+    /**
+     * POST JSON，可指定请求超时
+     *
+     * @param target  访问目标
+     * @param path    API 路径
+     * @param body    请求体
+     * @param timeout 请求超时
+     * @return JSON 对象
+     */
+    private JsonObject post(Target target, String path, String body, Duration timeout) {
+        return read(target, path, Map.of(),
+                () -> MiddlewareHttp.postJson(target.url(path), Map.of(), body, headers(target), timeout));
     }
 
     /**

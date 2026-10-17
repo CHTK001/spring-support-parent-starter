@@ -1,7 +1,5 @@
 package com.chua.starter.eduai.model.dto;
 
-import lombok.Data;
-
 import java.util.List;
 
 /**
@@ -14,39 +12,20 @@ import java.util.List;
  * AI 不可用时服务端会回退到规则选题（按学科/学段取候选题），
  * 不会因此报错，但结果不代表模型判断。</p>
  *
+ * @param subject          学科
+ * @param gradeLevel       学段；码值（PRIMARY/JUNIOR/…）与中文名（小学/初中/…）都接受，服务端统一归一化为中文名
+ * @param grade            年级
+ * @param types            限定题型；为空表示不限题型
+ * @param knowledgePointIds 知识点标识列表；为空表示不限知识点
+ * @param count            期望题目数
  * @author CH
  * @since 4.0.0.42
  */
-@Data
-public class QuestionAiSelectDTO {
-
-    /**
-     * 学科
-     */
-    private String subject;
-
-    /**
-     * 学段；码值（PRIMARY/JUNIOR/…）与中文名（小学/初中/…）都接受，服务端统一归一化为中文名
-     */
-    private String gradeLevel;
-
-    /**
-     * 年级
-     */
-    private String grade;
-
-    /**
-     * 限定题型；为空表示不限题型
-     */
-    private List<String> types;
-
-    /**
-     * 知识点标识列表；为空表示不限知识点
-     */
-    private List<Long> knowledgePointIds;
-
-    /**
-     * 期望题目数
-     */
-    private Integer count;
+public record QuestionAiSelectDTO(
+        String subject,
+        String gradeLevel,
+        String grade,
+        List<String> types,
+        List<Long> knowledgePointIds,
+        Integer count) {
 }

@@ -81,7 +81,7 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 > 通过 198 平台 8112 驱动）完成全链路复验，**25/25 全绿**（启停重启、备份、好包升级 md5 变更、
 > 坏包自动回滚 + 回滚后 PID 落库、停后 PID 清空）。详见 §9；该轮同时修掉 5 个真实产品缺陷。
 > **2026-10-17 复验**：同一套件在新产物 `07cd6f52…` 上复跑 **25/25**，另加服务挂载/卸载套件
-> `win-service-e2e.mjs` **19/19**；本轮再修 2 个缺陷（服务卸载残留、CacheManager 启动不确定性）。
+> `win-service-e2e.mjs` **23/23**；本轮再修 2 个缺陷（服务卸载残留、CacheManager 启动不确定性）。
 
 > Windows 侧共修掉 **3 个真实产品缺陷**（见 §6 第 1/2/3 项），把「完全不可用」推进到
 > 「任务可执行、投放与回滚 md5 可核对」；剩余不可验收的部分**全部来自主机安全产品**
@@ -423,22 +423,29 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 
 ---
 
-## 9. 本机 Windows 全链路复验 + 5 个产品缺陷修复（2026-10-16）
+## 9. 本机 Windows 全链路复验 + 8 个产品缺陷修复（2026-10-16 ~ 2026-10-17）
 
 ### 9.1 产物绑定（本轮，可交付正典产物）
 
 | 项 | 值 |
 |---|---|
 | 构建方式 | **全量源码 reactor 构建（21 模块）**：`mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false` |
-| 线上 exec jar 外 md5 | `e3b344c73041c4fa70698185bc8d2806` |
-| 内层 server-starter md5 | `530185addd9f28d479e4a372dd6445de` |
-| 服务 | `ms-monitor-platform` `active`，`NRestarts=0`，62s 起 8112 监听，登录成功 |
+| 线上 exec jar 外 md5 | `07cd6f521be0ffdb6d0ea9a3968fdf83`（818,302,098 字节） |
+| 内层 server-starter md5 | `2e7fd3cb19d446c1505e0f13622402b4` |
+| 内层 cache-starter md5 | `7548d7a4268e07fbd661bd53a551cf3d` |
+| 内层 ai-starter md5 | `4339136a6a927efc7c580e59353d1af1` |
+| 包内修复实证（字节级） | `自启脚本仍存在` / `.autostart.ps1`（卸载残留）、`Win32_Process`（WMI 落地启动）、`-join`（`$inner` 拼接）、`reconcileProjectAfterFailure`（回滚 PID 对账）均在 exec jar 内的 class 中 |
+| 服务 | `ms-monitor-platform` `active`，`MainPID=995151`，`NRestarts=0`，8112 监听，登录 `code=00000` |
+| 启动健康（本次 boot） | `expected single matching CacheManager` 计数 **0**；` ERROR ` 行 **0** |
+| 回滚点 | `rollback-before-fix2-20261016-214817.jar`（= 上一轮已验证可启动的 `555c0909…`）；`good-current-stable.jar` 已同步刷新 |
 
-> **构建卫生（必读）**：只重编被改模块、其余依赖走本地仓库的“增量构建”，会让产物与源码**不同源**——
-> 实测增量构建的 jar 启动即 `NoUniqueBeanDefinitionException: CacheManager … found 5`
-> （本地仓库里的 jar 与当前源码不一致，注释引用的 `DefaultCacheManagerConfiguration` 在源码树中已不存在）。
-> 同一份代码用**全量源码构建**则正常启动。因此**可交付产物必须由全量源码构建**，
-> 不得使用增量构建产物；源码树本身无此缺陷（§7 复验命令须按全量构建执行）。
+> **构建卫生（必读）**：可交付产物**必须**由全量源码构建。
+> 反例实测：只重编被改模块、其余依赖走本地仓库的「增量构建」产物，启动即
+> `NoUniqueBeanDefinitionException: no CacheResolver specified and expected single matching
+> CacheManager but found 5`。
+> 根因不是「构建方式」本身，而是**产物与源码不同源**（本地仓库里是旧版 cache-starter），
+> 加上源码侧确实存在「启动依赖 `@Primary` 可解析」的脆弱假设（缺陷 7）。
+> 两者本轮都已处理：产物一律全量构建；启动不再依赖 `@Primary`（见 §9.2 #7）。
 
 
 ### 9.2 本轮修掉的真实产品缺陷
@@ -451,20 +458,34 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 | 4 | 升级健康检查失败→自动回滚成功后，库里 PID 仍是旧的（Linux 侧为空） | 失败分支不回写运行态；且 Linux 启动脚本不打印 `running pid=`，对账取不到 PID | `ProjectTaskService.reconcileProjectAfterFailure`（`rollback ok` → running + 真实 PID；`rollback failed` → stopped）；`ProjectScripts` Linux 启动补 `running pid=$(cat app.pid)`（与 Windows 对齐） |
 | 5 | 用户打开 SSH 后，采集每 10~60s 又把它改回 0，发布被「未开启 SSH」周期性拦住 | `HostProfileServiceImpl`/`ServerHostServiceImpl` 用**采集/探测开始时加载的陈旧快照**整行 `updateById`，把 `ssh_enabled` 等用户开关按旧值写回 | 采集/探测回写前把非自己负责的开关列显式置 null（借助同上跳过策略保留库中现值）；`markError` 改只写 `agent_error` 一列 |
 | 6 | 同一版本、不同建单方式，Windows 停止/启动行为不一致（前端模板缺孤儿回收/计划任务回退等） | 前后端各存一份模板，后端修复不回流前端 | 新增后端 `GET /ms/server/release/script/template`（与执行期同源）；前端「保存前补齐 + 一键生成」优先调它，离线才回落本地模板 |
+| 7 | **应用可能启动失败、8112 起不来**：`no CacheResolver specified and expected single matching CacheManager but found 5` | 应用唯一的 `CachingConfigurer`（`CacheResilienceConfiguration`）对 `cacheManager()/cacheResolver()` 返回 **null**，`CacheAspectSupport.afterSingletonsInstantiated()` 只能走 `beanFactory.getBean(CacheManager.class)` 唯一性兜底；上下文里有 **5 个** CacheManager（`multiLevelCacheManager` / `caffeineCacheManager` / `aiCacheManager` / `redis-cache--1` / `redis-cache-600`）时，只要没有**可解析的** `@Primary` 就抛异常并令整个 refresh 失败 | 新增 `CacheManagerResolver`：先 `getBean`（能唯一解析时与 Spring 原生语义完全一致），冲突时按 `多级 → Caffeine → 通用名` 确定选择，仍冲突则按 Bean 名排序（可复现）；由既有**唯一** `CachingConfigurer` 显式提供 `cacheManager()/cacheResolver()`，启动不再依赖 `@Primary` 可解析性。**刻意不新增第二个 `CachingConfigurer`**（Spring 只容许一个，重复会直接硬崩） |
+| 8 | Windows 卸载服务后 `.ms` 目录残留 `<svc>.autostart.ps1`（安装期产物未清） | `WindowsSystemServiceProvider.uninstall` 只清了 watchdog/resident/pid + Startup 启动项 + HKCU Run，漏了自启脚本本体；终态校验也没覆盖它 | 卸载显式删除 `<svc>.autostart.ps1`，并把「自启脚本仍存在」纳入终态校验；`ReleaseScriptProbe` K8/K10 与 `win-service-e2e.mjs` 两处钉住 |
+| 9 | **挂载任务判「失败」，机器上其实已挂载**（`挂载失败: 守护进程未拉起`，但 pid 文件随后出现、看门狗存活） | 回退路径用 WMI 拉起常驻看门狗后只等 **10s**（20×500ms）就看 `watchdog.pid`；本机实测 pid 文件落地耗时 **31s**（WmiPrvSE + PowerShell 冷启动 + 高负载），窗口过窄必然误判 | 等待上限提到 **180s**（360×500ms），成功判据改为「pid 文件存在**且该 pid 是存活进程**」，并校验 WMI `ReturnValue=0`（非 0 立刻给出明确错误码）。`ReleaseScriptProbe` K15/K16/K17 钉住 |
+| 10 | **挂载状态可以撒谎**：安装失败后库中仍有 `serviceName`；卸载成功后库中 `serviceName` 清不掉 | ① `installService/uninstallService` 在**提交任务时**就 `updateById` 写库，与任务真实结果无关；② MyBatis-Plus `updateById` **跳过 null 字段**，`setServiceName(null)` 根本不落库 | 新增 `ProjectTaskService.ServiceNameWrite`：服务名改为**任务成功后**回写（成功且 `null` 即清空），统一走 `LambdaUpdateWrapper` 显式 `set`。`win-service-e2e.mjs` S3 断言「失败挂载不得回写」+ S2 断言「卸载后清空」 |
 
 ### 9.3 复验结论（全部通过）
 
-- **Windows 真机端到端（27/27 全绿，正典产物 `e3b344c7…`）**：`win-e2e-full.mjs`，经 198:8112 驱动本机 `192.168.50.101`
+- **Windows 真机端到端（25/25 全绿，正典产物 `07cd6f52…`）**：`win-e2e.mjs`，经 198:8112 驱动本机 `192.168.50.101`
   - C1 启动：`db pid == app.pid == 端口属主`
   - C2 重启：新 PID、端口属主同步、库已更新
-  - C3 备份：任务成功、`backups` 列表 `count=10`
-  - C4 好包升级：任务成功、`smoke.jar` md5 `9DCD2A39… → 4D32702C…`、端口属主为新 PID
-  - C5 坏包升级：任务**失败**（预期），日志 `health failed` / `rolled back to previous version` / `rollback ok`，md5 回到 C4 版本，**库 PID == 端口属主（回滚后真实 PID）= `19400`**、`status=running`
+  - C3 备份：任务成功、`backups` 列表可见
+  - C4 好包升级：任务成功、`smoke.jar` md5 `4D32702C… → 9DCD2A39…`、端口属主为新 PID
+  - C5 坏包升级：任务**失败**（预期），日志 `health failed` / `rolled back to previous version` / `rollback ok`，主包已恢复，**库 PID == 端口属主（回滚后真实 PID）= `21596`**、`status=running`
   - C6 停止：端口释放、`app.pid` 删除、库 `pid` 清空、`status=stopped`
-- **Linux 回归（13/13）**：项目 40 启停 + 坏包自动回滚；回滚后 `db pid == app.pid == 1118984`、`status=running`；停后 `pid` 清空
-- **前端权威脚本接口（13/13）**：`/ms/server/release/script/template` 对 Windows/Linux 返回的脚本均含本轮修复，且占位符已展开、四段互异
+- **Windows 服务挂载/卸载真机（23/23 全绿）**：`win-service-e2e.mjs`，目标机 `Get-Service Schedule = Stopped` → 走**免计划任务回退**
+  - 挂载：控制台明示回退路径、`Startup\<svc>.cmd` 创建、`HKCU\…\Run` 写入、`<svc>.watchdog.pid` 落地、看门狗进程存活、库 `serviceName` 回写
+  - 卸载：启动项 / HKCU Run / pid 文件全部删除、看门狗进程结束、**`.autostart.ps1` / `.watchdog.ps1` / `.resident.ps1` 无残留**（缺陷 8 的回归判据）、库 `serviceName` 清空（缺陷 10 的回归判据）
+  - 失败挂载：关掉 autostart/guardian 后安装任务**如实失败**，且库中 `serviceName` 仍为空（状态诚实性，钉住缺陷 10）；跑完自动恢复开关
+- **Linux 回归（13/13）**：项目 40 启停 + 坏包自动回滚；回滚后 `db pid == app.pid == 端口属主`、`status=running`；停后 `pid` 清空
+- **前端权威脚本接口（13/13）**：`/ms/server/release/script/template` 的 Windows/Linux 脚本均含本轮修复，占位符已展开、四段互异
 - **Windows 本机自检**：`win-release-selfcheck.ps1` **10/10**（含敏感性对照）
-- **回归探针**：`ReleaseScriptProbe` **9/9**（必须 `-DskipTests=false`，父 POM 默认 `skipTests=true` 属「假绿」陷阱；本轮新增 H1d/H1e/A1b 三条断言钉住缺陷 1/2/4）
+- **回归探针**：`ReleaseScriptProbe` **11/11**，`Skipped=0`（必须 `-DskipTests=false`，父 POM 默认 `skipTests=true` 属「假绿」陷阱）。J 段 19 条 + K 段 17 条断言中本轮新增：
+  - **J18 plist 良构**：把生成的 plist 交给 XML 解析器实解析（launchd 只接受良构 plist）
+  - **J19 敏感性对照**：人为去掉 XML 转义后必须解析失败（防 J18 恒真）
+  - **K8/K10**：卸载必须清理 `<svc>.autostart.ps1`，并把其残留列为卸载失败
+  - **K15/K16/K17**：看门狗等待窗口 180s、成功判据含「pid 是存活进程」、WMI 返回码非 0 立即失败（缺陷 9 的回归判据）
+- **主缓存管理器解析探针**：`CacheManagerResolverProbe` **6/6**，覆盖单管理器 / 有 `@Primary` / **5 个管理器且无 `@Primary`**（复刻线上真实装配）三种场景，并断言 `CacheResilienceConfiguration` 在 5 管理器下 `cacheManager()` 与 `cacheResolver()` 均非空
+- **macOS**：**无真机**（见 §5.2）。本轮把验证从「字符串形状」推进到 **plist 可被 XML 解析器实解析 + 转义敏感性对照**；`launchctl` 真机行为仍未验收，报告中不作通过结论
 - **前端**：`ProjectsView.vue` 类型检查无新增错误（既有报错均在未触碰的 `ReRelationGraph`）
 
 ### 9.4 复核命令
@@ -472,23 +493,32 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 ```bash
 # 0) 全量源码构建可交付产物（务必全量；增量构建会混入本地仓库旧 jar 导致启动失败）
 mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false
-# 期望产物 spring-support-monitor-starter-4.0.0.42-exec.jar，md5 = e3b344c73041c4fa70698185bc8d2806
+# 期望产物 spring-support-monitor-starter-4.0.0.42-exec.jar，md5 = 07cd6f521be0ffdb6d0ea9a3968fdf83
 
 # 1) 内外层 md5 核对（证明产物内容与源码一致）
 unzip -p spring-support-monitor-starter-4.0.0.42-exec.jar \
-  'BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar' | md5sum   # 期望 530185addd9f28d479e4a372dd6445de
+  'BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar' | md5sum   # 期望 2e7fd3cb19d446c1505e0f13622402b4
+unzip -p spring-support-monitor-starter-4.0.0.42-exec.jar \
+  'BOOT-INF/lib/spring-support-cache-starter-4.0.0.42.jar' | md5sum    # 期望 7548d7a4268e07fbd661bd53a551cf3d
 
 # 2) 探针（真跑，勿漏 -DskipTests=false）
 mvn -o -pl spring-support-server-starter test -DskipTests=false -Dtest=ReleaseScriptProbe
+mvn -o -pl spring-support-ai-starter test -DskipTests=false -Dtest=CacheManagerResolverProbe
 
-# 3) 本机自检
+# 3) 本机自检 + 两个真机套件（Windows 目标 192.168.50.101）
 pwsh -File spring-support-server-starter/src/acceptance/win-release-selfcheck.ps1 -Port 18095   # 期望 10/0
+node spring-support-server-starter/src/acceptance/win-e2e.mjs                                   # 期望 pass=25 fail=0
+node spring-support-server-starter/src/acceptance/win-service-e2e.mjs                           # 期望 pass=19 fail=0
 ```
 
 ### 9.5 本轮环境事实（非产品缺陷，验收须知）
 
 - 本机 Task Scheduler 服务 `Stopped` 且**非提权 SSH 会话无法启动**（`拒绝访问`）→ 依赖计划任务的
   「挂载为开机自启服务」在本机不可用；发布主链路已改用 WMI 落地启动，不受影响。
+- **本机「守护进程拉起」实测耗时 31 秒**（`--dry`/预检脚本实测：WMI 建进程 ≤1s，但 PowerShell 冷启动 +
+  高负载下 pid 文件落地用了 31s）。旧实现只等 10s，因此在本机稳定复现
+  「任务判失败、pid 文件随后才出现（机器上实际已挂载）」；现放宽到 180s 并核验进程存活。
+  这是**判定窗口不足**的产品缺陷，不是环境噪声。
 - **构建必须全量**：增量构建（只重编被改模块、其余走本地仓库）会产出与源码不同源的 jar 并启动失败；
   全量源码构建正常。可交付产物一律用全量构建。
 - 本机存在**并行会话在同一 198 上反复替换同名 jar**（曾出现 `rollback-pre-other-session-*.jar`）；
