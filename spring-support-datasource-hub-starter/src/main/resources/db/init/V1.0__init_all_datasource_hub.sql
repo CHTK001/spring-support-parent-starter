@@ -133,3 +133,98 @@ CREATE TABLE IF NOT EXISTS `ms_jdbc_driver_jar`
 -- 重复执行会报 1060，已被本脚本 continueOnError 吞掉（见文件头说明）
 ALTER TABLE `ms_datasource`
     ADD COLUMN `datasource_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(ms_jdbc_driver_jar.id)，空=用内置驱动';
+
+-- ============================================================
+-- 以下四表原属 db/migration（V1.2–V1.7），现并入 init：
+--   单一初始化目录，新库一次建全，不再依赖「升级补丁只对存量库生效」的差别。
+--   列定义直接取各补丁的最终形态（V1.6/V1.7 加在 ms_datasource_metric 上的
+--   connection_count 与五个服务器状态列已折进建表语句，不再单独 ALTER）。
+-- ============================================================
+
+-- Prometheus 自定义看板：一行 = 一个 Prometheus 数据源的自定义布局看板
+--   - 布局形状由前端定义（卡片 + 位置 + 卡片配置），后端只存 JSON 文本，不解析；
+--   - embed_token 供「生成给别的系统嵌入」的公开只读链接使用，一个看板一个令牌；
+--   - datasource_id 唯一：当前模型是一个数据源一份看板。
+CREATE TABLE IF NOT EXISTS `ms_prometheus_dashboard`
+(
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_id`    BIGINT       NOT NULL COMMENT '数据源 id（ms_datasource.id，prometheus 类型）',
+    `dashboard_name`   VARCHAR(128) NULL DEFAULT '' COMMENT '看板名称',
+    `dashboard_config` LONGTEXT     NULL COMMENT '看板布局配置（JSON 文本：widgets/grid/卡片配置）',
+    `embed_token`      VARCHAR(64)  NULL DEFAULT '' COMMENT '嵌入令牌（公开只读链接用，随机十六进制）',
+    `create_time`      DATETIME     NULL COMMENT '创建时间',
+    `update_time`      DATETIME     NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_ms_prometheus_dashboard_ds` (`datasource_id`),
+    KEY `idx_ms_prometheus_dashboard_token` (`embed_token`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT = 'Prometheus 自定义看板（布局 JSON + 嵌入令牌）';
+
+-- Nginx 自定义看板：结构与 Prometheus 看板一致
+CREATE TABLE IF NOT EXISTS `ms_nginx_dashboard`
+(
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_id`    BIGINT       NOT NULL COMMENT '数据源 id（ms_datasource.id，nginx 类型）',
+    `dashboard_name`   VARCHAR(128) NULL DEFAULT '' COMMENT '看板名称',
+    `dashboard_config` LONGTEXT     NULL COMMENT '看板布局配置（JSON 文本：widgets/grid/卡片配置）',
+    `embed_token`      VARCHAR(64)  NULL DEFAULT '' COMMENT '嵌入令牌（公开只读链接用，随机十六进制）',
+    `create_time`      DATETIME     NULL COMMENT '创建时间',
+    `update_time`      DATETIME     NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_ms_nginx_dashboard_ds` (`datasource_id`),
+    KEY `idx_ms_nginx_dashboard_token` (`embed_token`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT = 'Nginx 自定义看板（布局 JSON + 嵌入令牌）';
+
+-- 数据源操作日志：一行 = 一次操作
+--   - datasource_id 非空：只有能定位到具体数据源的操作才入账；
+--   - datasource_name 冗余存一份：数据源被删掉之后日志仍能读出当时动的是哪个；
+--   - 保留窗口由调度器滚动清理，不在本表里做。
+CREATE TABLE IF NOT EXISTS `ms_datasource_oper_log`
+(
+    `id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_id`  BIGINT       NOT NULL COMMENT '数据源 id（ms_datasource.id）',
+    `datasource_name` VARCHAR(128) NULL DEFAULT '' COMMENT '数据源名称（冗余，数据源删除后仍可读）',
+    `action`         VARCHAR(64)  NOT NULL COMMENT '操作码：CREATE/UPDATE/DELETE/TEST/TUNNEL_* /CONSOLE_* 等',
+    `action_name`    VARCHAR(128) NULL DEFAULT '' COMMENT '操作中文名',
+    `target`         VARCHAR(255) NULL DEFAULT '' COMMENT '操作对象（库名/表名/隧道名），可空',
+    `detail`         TEXT         NULL COMMENT '补充说明',
+    `success`        TINYINT      NULL COMMENT '1 成功 / 0 失败 / NULL 未判定',
+    `cost_ms`        BIGINT       NULL COMMENT '耗时（毫秒）',
+    `operator`       VARCHAR(64)  NULL DEFAULT '' COMMENT '操作人',
+    `client_ip`      VARCHAR(64)  NULL DEFAULT '' COMMENT '客户端 IP',
+    `request_url`    VARCHAR(512) NULL DEFAULT '' COMMENT '请求路径（用于回溯与排查）',
+    `create_time`    DATETIME     NOT NULL COMMENT '操作时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_datasource_oper_log_ds_time` (`datasource_id`, `create_time`),
+    KEY `idx_ms_datasource_oper_log_action` (`datasource_id`, `action`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='数据源中心操作日志';
+
+-- 数据源连通性指标采样：一行 = 一次探测
+--   - 采集是「有人看才采」：只有存在 SSE 订阅者的数据源才会被探测；
+--   - success 允许为 NULL：探测被跳过时记「未判定」，不伪造一次成功；
+--   - 延迟与连接数存 BIGINT：观测值本身是整数，浮点只会引入不存在的精度；
+--   - 服务器状态列仅 MySQL/MariaDB 取得到，其余类型保持 NULL（界面显示「暂未采集」）。
+CREATE TABLE IF NOT EXISTS `ms_datasource_metric`
+(
+    `id`               BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_id`    BIGINT      NOT NULL COMMENT '数据源 id（ms_datasource.id）',
+    `datasource_type`  VARCHAR(32) NULL DEFAULT '' COMMENT '数据类型（冗余，便于按类型聚合）',
+    `success`          TINYINT     NULL COMMENT '1 连通 / 0 不通 / NULL 未判定',
+    `connect_latency`  BIGINT      NULL COMMENT '建连耗时（毫秒）',
+    `session_latency`  BIGINT      NULL COMMENT '取会话耗时（毫秒）',
+    `connection_count` BIGINT      NULL COMMENT '采样时刻客户端连接数（取不到为 NULL）',
+    `slow_queries`     BIGINT      NULL COMMENT '累计慢查询数（取不到为 NULL）',
+    `threads_running`  BIGINT      NULL COMMENT '正在执行的线程数（取不到为 NULL）',
+    `questions`        BIGINT      NULL COMMENT '累计提问次数（取不到为 NULL）',
+    `uptime`           BIGINT      NULL COMMENT '服务器已运行秒数（取不到为 NULL）',
+    `max_used_connections` BIGINT  NULL COMMENT '历史峰值客户端连接数（取不到为 NULL）',
+    `tunneled`         TINYINT     NULL COMMENT '1 经 SSH 隧道 / 0 直连 / NULL 未判定',
+    `error_message`    VARCHAR(512) NULL DEFAULT '' COMMENT '失败原因（成功时为空）',
+    `create_time`      DATETIME    NOT NULL COMMENT '采样时刻',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_datasource_metric_ds_time` (`datasource_id`, `create_time`),
+    KEY `idx_ms_datasource_metric_time` (`create_time`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='数据源连通性指标采样';

@@ -177,6 +177,20 @@ public class ProjectTaskService {
     }
 
     /**
+     * 任务成功后的系统服务名回写指令。
+     *
+     * <p>挂载/卸载的系统服务名必须与「任务是否真的成功」绑定：
+     * 旧实现在提交任务时就写库，安装失败（例如守护进程未拉起）会留下
+     * 「库里有服务名、机器上没有服务」的假状态；卸载时 {@code setServiceName(null)}
+     * 又会被 MyBatis-Plus 的 {@code updateById} 跳过 null 字段而落不到库。
+     * 因此改为成功回调显式写/清。</p>
+     *
+     * @param value 成功后的服务名；{@code null} 表示清空
+     */
+    public record ServiceNameWrite(String value) {
+    }
+
+    /**
      * 任务运行状态
      */
     public static class TaskState {
@@ -184,6 +198,7 @@ public class ProjectTaskService {
         private final Long projectId;
         private final String operation;
         private final long startTime;
+        private final ServiceNameWrite serviceNameWrite;
         volatile String phase = PHASE_START;
         volatile String currentStep = "";
         volatile int progress;
@@ -193,10 +208,11 @@ public class ProjectTaskService {
         volatile long endTime;
         final List<String> logs = Collections.synchronizedList(new ArrayList<>());
 
-        TaskState(String taskId, Long projectId, String operation) {
+        TaskState(String taskId, Long projectId, String operation, ServiceNameWrite serviceNameWrite) {
             this.taskId = taskId;
             this.projectId = projectId;
             this.operation = operation;
+            this.serviceNameWrite = serviceNameWrite;
             this.startTime = System.currentTimeMillis();
         }
     }
@@ -236,13 +252,30 @@ public class ProjectTaskService {
      */
     public String startTask(Long hostId, Long projectId, String operation,
                             List<ProjectStep> steps, String finishStatus) {
+        return startTask(hostId, projectId, operation, steps, finishStatus, null);
+    }
+
+    /**
+     * 提交任务（成功后额外回写/清空系统服务名）
+     *
+     * @param hostId           目标主机标识
+     * @param projectId        项目标识（软件安装等无项目场景可为空）
+     * @param operation        操作类型（start/stop/.../install）
+     * @param steps            步骤列表
+     * @param finishStatus     成功后写入项目的状态（running/stopped，null 表示不改状态）
+     * @param serviceNameWrite 成功后对 serviceName 的写入指令（null 表示不改）
+     * @return taskId；项目已有操作在跑时返回 空（调用方据此提示「有操作进行中」）
+     */
+    public String startTask(Long hostId, Long projectId, String operation,
+                            List<ProjectStep> steps, String finishStatus,
+                            ServiceNameWrite serviceNameWrite) {
         // 项目级串行化：同一项目同一时刻只允许一个操作
         if (projectId != null && !busyProjects.add(projectId)) {
             return null;
         }
         String taskId = operation.toLowerCase() + "-" + (projectId == null ? "host" : projectId)
                 + "-" + System.currentTimeMillis() + "-" + seq.incrementAndGet();
-        TaskState state = new TaskState(taskId, projectId, operation);
+        TaskState state = new TaskState(taskId, projectId, operation, serviceNameWrite);
         tasks.put(taskId, state);
         try {
             taskPool.execute(() -> run(hostId, steps, finishStatus, state));
@@ -398,6 +431,9 @@ public class ProjectTaskService {
             if (finishStatus != null && state.projectId != null) {
                 updateProjectStatus(state.projectId, finishStatus);
                 updateProjectPid(state.projectId, finishStatus, stepOut);
+            }
+            if (state.serviceNameWrite != null && state.projectId != null) {
+                updateProjectServiceName(state.projectId, state.serviceNameWrite.value());
             }
             String pidInfo = "";
             if ("running".equals(finishStatus)) {
@@ -703,6 +739,24 @@ public class ProjectTaskService {
                     .set(MsServerProject::getRunningSince, LocalDateTime.now());
         }
         projectMapper.update(null, update);
+    }
+
+    /**
+     * 回写（或清空）项目挂载的系统服务名。
+     *
+     * <p>必须走 {@code LambdaUpdateWrapper} 显式 set：MyBatis-Plus 的 {@code updateById}
+     * 会跳过 null 字段，卸载时 {@code setServiceName(null)} 落不到库——表现为
+     * 「服务已卸载，列表与库中仍显示服务名」，UI 的挂载状态因此一直为真。</p>
+     *
+     * @param projectId   项目标识
+     * @param serviceName 服务名；null 表示清空
+     */
+    private void updateProjectServiceName(Long projectId, String serviceName) {
+        projectMapper.update(null, new LambdaUpdateWrapper<MsServerProject>()
+                .eq(MsServerProject::getId, projectId)
+                .set(MsServerProject::getUpdateTime, LocalDateTime.now())
+                .set(MsServerProject::getServiceName, serviceName));
+        log.info("[task] 项目 {} 服务名回写: {}", projectId, serviceName);
     }
 
     /**

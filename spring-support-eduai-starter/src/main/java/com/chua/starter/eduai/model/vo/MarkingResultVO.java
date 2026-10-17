@@ -63,6 +63,11 @@ public class MarkingResultVO {
      */
     private String error;
 
+    /**
+     * 老师是否已点「阅卷完成」（错题已按最终分归位）
+     */
+    private Boolean teacherFinished;
+
     @Data
     /**
      * question结果类。

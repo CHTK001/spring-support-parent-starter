@@ -36,6 +36,47 @@
     <!-- 网页正文提取（知识库按网址采集：去脚本/样式/导航，还原 HTML 实体） -->
     <jsoup.version>1.23.2</jsoup.version>
   </properties>
+  <!-- 依赖版本钉死：钉钉 SDK 的部分传递依赖使用版本区间（如 com.aliyun:tea:[1.1.14,2.0.0)），
+       离线构建无法解析区间；这里固定为本地仓库已有版本，避免联网拉取 maven-metadata。 -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>tea</artifactId>
+        <version>1.4.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>tea-openapi</artifactId>
+        <version>0.3.17</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>tea-util</artifactId>
+        <version>0.2.28</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>tea-xml</artifactId>
+        <version>0.1.7</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>openapiutil</artifactId>
+        <version>0.2.5</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>endpoint-util</artifactId>
+        <version>0.0.8</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aliyun</groupId>
+        <artifactId>alibabacloud-gateway-spi</artifactId>
+        <version>0.0.3</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <!-- 依赖配置 -->
   <dependencies>
     <!-- Lombok -->
@@ -89,6 +130,12 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-qq-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- 钉钉 Bot（凭据配置型：AppKey/AppSecret，Stream 长连接，无需公网回调） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-dingding-starter</artifactId>
       <version>4.0.0.42</version>
     </dependency>
     <!-- WhatsApp Cloud API Bot（凭据配置型：phone_number_id/access_token/app_secret/verify_token，Webhook 收发） -->

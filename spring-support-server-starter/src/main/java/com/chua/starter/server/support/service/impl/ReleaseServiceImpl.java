@@ -648,10 +648,10 @@ public class ReleaseServiceImpl implements ReleaseService {
                 : project.getServiceName();
         String command = provider.get().install(serviceContext, svc);
         List<ProjectStep> steps = List.of(new ProjectStep("挂载系统服务", command, 1));
+        // 服务名只在任务真正成功后才回写：旧实现在提交任务时就写库，
+        // 安装失败（如守护进程未拉起）会留下「库里有服务名、机器上没有服务」的假状态。
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
-                "install-service", steps, null);
-        project.setServiceName(svc);
-        projectMapper.updateById(project);
+                "install-service", steps, null, new ProjectTaskService.ServiceNameWrite(svc));
         return task(taskId);
     }
 
@@ -673,10 +673,9 @@ public class ReleaseServiceImpl implements ReleaseService {
                 : project.getServiceName();
         String command = provider.get().uninstall(serviceContext, svc);
         List<ProjectStep> steps = List.of(new ProjectStep("卸载系统服务", command, 1));
+        // 卸载失败（例如「自启脚本仍存在」）时不能清空库中服务名：那会让 UI 谎报未挂载。
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
-                "uninstall-service", steps, null);
-        project.setServiceName(null);
-        projectMapper.updateById(project);
+                "uninstall-service", steps, null, new ProjectTaskService.ServiceNameWrite(null));
         return task(taskId);
     }
 

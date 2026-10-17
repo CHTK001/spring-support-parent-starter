@@ -1,26 +1,16 @@
 package com.chua.starter.eduai.model.dto;
 
-import lombok.Data;
-
 /**
  * 复习卷生成DTO
  *
+ * @param studentId 学生标识
+ * @param count     数量
+ * @param subject   学科
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class ReviewPaperDTO {
-
-    /**
-     * studentid
-    */
-    private String studentId;
-    /**
-     * 数量
-    */
-    private Integer count;
-    /**
-     * 主题
-    */
-    private String subject;
+public record ReviewPaperDTO(
+        String studentId,
+        Integer count,
+        String subject) {
 }

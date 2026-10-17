@@ -6,6 +6,7 @@ import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
 import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import io.swagger.v3.oas.annotations.Operation;
@@ -164,6 +165,18 @@ public class EduMarkingController {
     @PutMapping("/confirm")
     public ReturnResult<Boolean> confirm(@RequestBody MarkingConfirmDTO dto) {
         return ReturnResult.ok(markingService.confirmMarking(dto));
+    }
+
+    /**
+     * 阅卷完成：把该卷错题按最终分归入对应学生的错题库
+     *
+     * @param taskId 任务业务标识
+     * @return 完成结果（学生 / 试卷 / 本次登记的错题数）
+     */
+    @Operation(summary = "阅卷完成（错题归到对应学生）")
+    @PostMapping("/{taskId}/finish")
+    public ReturnResult<MarkingFinishResultVO> finish(@PathVariable String taskId) {
+        return ReturnResult.ok(markingService.finishMarking(taskId));
     }
 
     /**

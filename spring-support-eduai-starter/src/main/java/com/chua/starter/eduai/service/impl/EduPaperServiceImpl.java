@@ -279,20 +279,20 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
                 if (q == null) {
                     continue;
                 }
-                QuestionVO qv = new QuestionVO();
-                qv.setId(q.getQuestionId());
-                qv.setType(q.getQuestionType());
-                qv.setStem(q.getQuestionStem());
-                qv.setOptions(q.getQuestionOptions());
-                qv.setAnswer(q.getQuestionAnswer());
-                qv.setAnalysis(q.getQuestionAnalysis());
-                qv.setScore(relation.getPaperQuestionScore());
-                qv.setQuestionNo(relation.getPaperQuestionNo());
-                qv.setOrder(relation.getPaperQuestionOrder());
-                qv.setSection(relation.getPaperQuestionSection());
+                QuestionVO qv = new QuestionVO(
+                        q.getQuestionId(),
+                        q.getQuestionType(),
+                        q.getQuestionStem(),
+                        q.getQuestionOptions(),
+                        q.getQuestionAnswer(),
+                        q.getQuestionAnalysis(),
+                        relation.getPaperQuestionScore(),
+                        relation.getPaperQuestionNo(),
+                        relation.getPaperQuestionOrder(),
+                        relation.getPaperQuestionSection());
                 questionVOs.add(qv);
             }
-            vo.setQuestions(questionVOs);
+            vo = vo.withQuestions(questionVOs);
         }
         return vo;
     }
@@ -1319,31 +1319,33 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 转为vo的结果
      */
     private PaperVO toVO(EduPaper paper, Map<String, EduTeacher> teacherCache) {
-        PaperVO vo = new PaperVO();
-        vo.setPaperId(paper.getPaperId());
-        vo.setPaperName(paper.getPaperName());
-        vo.setPaperSubject(paper.getPaperSubject());
-        vo.setPaperGradeLevel(paper.getPaperGradeLevel());
-        vo.setPaperGrade(paper.getPaperGrade());
-        vo.setPaperTotalScore(paper.getPaperTotalScore());
-        vo.setPaperDuration(paper.getPaperDuration());
-        vo.setPaperQuestionCount(paper.getPaperQuestionCount());
-        vo.setPaperStatus(paper.getPaperStatus());
-        vo.setPaperSource(paper.getPaperSource());
-        vo.setPaperNo(paper.getPaperNo());
-        vo.setPaperPageSize(paper.getPaperPageSize());
-        vo.setPaperPageOrientation(paper.getPaperPageOrientation());
-        vo.setPaperTemplate(paper.getPaperTemplate());
-        vo.setPaperHeader(paper.getPaperHeader());
-        vo.setPaperFooter(paper.getPaperFooter());
-        vo.setPaperVersion(paper.getPaperVersion());
-        vo.setPaperSubjectLocked(paper.getPaperSubjectLocked());
-        vo.setPaperDifficulty(paper.getPaperDifficulty());
-        vo.setPaperTemplateId(paper.getPaperTemplateId());
-        vo.setPaperTitleStyle(paper.getPaperTitleStyle());
-        vo.setCreateTime(paper.getCreateTime());
-        fillCreator(vo, paper, teacherCache);
-        return vo;
+        PaperVO vo = new PaperVO(
+                paper.getPaperId(),
+                paper.getPaperName(),
+                paper.getPaperSubject(),
+                paper.getPaperGradeLevel(),
+                paper.getPaperGrade(),
+                paper.getPaperTotalScore(),
+                paper.getPaperDuration(),
+                paper.getPaperQuestionCount(),
+                paper.getPaperStatus(),
+                paper.getPaperSource(),
+                paper.getPaperNo(),
+                paper.getPaperPageSize(),
+                paper.getPaperPageOrientation(),
+                paper.getPaperTemplate(),
+                paper.getPaperHeader(),
+                paper.getPaperFooter(),
+                paper.getPaperVersion(),
+                paper.getPaperSubjectLocked(),
+                paper.getPaperDifficulty(),
+                paper.getPaperTemplateId(),
+                paper.getPaperTitleStyle(),
+                null,
+                null,
+                paper.getCreateTime(),
+                null);
+        return fillCreator(vo, paper, teacherCache);
     }
 
     /**
@@ -1378,8 +1380,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @param vo           待回填的试卷VO
      * @param paper        试卷实体
      * @param teacherCache 教师账号索引，传 null 时按当前行归属用户实时查一次
+     * @return 携带创建人信息的新 VO
      */
-    private void fillCreator(PaperVO vo, EduPaper paper, Map<String, EduTeacher> teacherCache) {
+    private PaperVO fillCreator(PaperVO vo, EduPaper paper, Map<String, EduTeacher> teacherCache) {
         String owner = paper.getOwnerUserId();
         EduTeacher teacher = null;
         if (StringUtils.hasText(owner)) {
@@ -1392,24 +1395,17 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             }
         }
         if (teacher != null) {
-            vo.setPaperCreatorName(StringUtils.hasText(teacher.getTeacherName())
-                    ? teacher.getTeacherName() : owner);
-            vo.setPaperCreatorType(CREATOR_TYPE_TEACHER);
-            return;
+            return vo.withCreator(StringUtils.hasText(teacher.getTeacherName())
+                    ? teacher.getTeacherName() : owner, CREATOR_TYPE_TEACHER);
         }
         if (StringUtils.hasText(paper.getCreateName())) {
-            vo.setPaperCreatorName(paper.getCreateName());
-            vo.setPaperCreatorType("AI".equalsIgnoreCase(paper.getPaperSource())
+            return vo.withCreator(paper.getCreateName(), "AI".equalsIgnoreCase(paper.getPaperSource())
                     ? CREATOR_TYPE_AI : CREATOR_TYPE_ADMIN);
-            return;
         }
         if (!StringUtils.hasText(owner)) {
-            vo.setPaperCreatorName(CREATOR_NAME_SYSTEM);
-            vo.setPaperCreatorType(CREATOR_TYPE_ADMIN);
-            return;
+            return vo.withCreator(CREATOR_NAME_SYSTEM, CREATOR_TYPE_ADMIN);
         }
-        vo.setPaperCreatorName(owner);
-        vo.setPaperCreatorType("AI".equalsIgnoreCase(paper.getPaperSource())
+        return vo.withCreator(owner, "AI".equalsIgnoreCase(paper.getPaperSource())
                 ? CREATOR_TYPE_AI : CREATOR_TYPE_ADMIN);
     }
 

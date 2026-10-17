@@ -71,6 +71,17 @@ public interface ElasticsearchManageService {
     ElasticsearchIndexDetailVO addMapping(ElasticsearchMappingDTO request);
 
     /**
+     * 重建索引：按新的字段集合重做 mapping 并搬运数据（删除 / 修复字段的唯一途径）
+     *
+     * <p>ES 不支持删除字段、也不支持改已存在字段的类型，只能「建新索引 → 搬运 → 换回同名」。
+     * 因此本操作会短暂删除原索引，只在临时索引里保有数据副本。</p>
+     *
+     * @param request 重建请求（{@code name} 为要重建的索引，{@code fields} 为目标字段全集）
+     * @return 重建后的索引详情
+     */
+    ElasticsearchIndexDetailVO rebuildIndex(ElasticsearchIndexDTO request);
+
+    /**
      * 集群信息（健康度 + 节点 + 设置）
      *
      * @param datasourceId 数据源 ID，可为空

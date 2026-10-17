@@ -7,7 +7,6 @@ import com.chua.common.support.ai.mcp.McpToolCall;
 import com.chua.common.support.ai.mcp.McpToolDescriptor;
 import com.chua.common.support.ai.mcp.McpToolResult;
 import com.chua.starter.ai.support.manage.store.McpServerStore;
-import com.chua.starter.ai.support.service.AiPluginCatalogService;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.RequiredArgsConstructor;
@@ -49,11 +48,6 @@ public class AgentMcpRuntimeService {
     private static final Duration CALL_TIMEOUT = Duration.ofSeconds(90);
 
     /**
-     * 本地 stdio 工具首次启动（npx 下载依赖）的初始化超时，比远程连接更宽松
-     */
-    private static final Duration LOCAL_INIT_TIMEOUT = Duration.ofSeconds(60);
-
-    /**
      * MCP 服务器档案存储
      */
     private final McpServerStore mcpServerStore;
@@ -61,10 +55,6 @@ public class AgentMcpRuntimeService {
      * 复用其传输构建逻辑
      */
     private final McpConnectionService mcpConnectionService;
-    /**
-     * 本地插件清单：用于发现已启用的 .mcp.json 本地工具
-     */
-    private final AiPluginCatalogService pluginCatalogService;
 
     /**
      * 构建并初始化一次 Agent 运行使用的 MCP 运行时（仅连接启用的服务器）。
@@ -83,6 +73,19 @@ public class AgentMcpRuntimeService {
      * @return MCP 运行时句柄；无可用服务器时返回空管理器（不返回 null）
      */
     public McpRuntime build(java.util.Collection<String> onlyIds) {
+        return build(onlyIds, null);
+    }
+
+    /**
+     * 构建并初始化一次 Agent 运行使用的 MCP 运行时。
+     *
+     * @param onlyIds null=连接全部启用服务器；非空（含空集合）=仅连接所选ID，
+     *                选择即本次启用、忽略全局 enabled
+     * @param excludeIds 需要排除的服务器ID；仅在 {@code onlyIds} 为 null 的
+     *                   「连接全部启用服务器」模式下生效，用于角色的禁用名单
+     * @return MCP 运行时句柄；无可用服务器时返回空管理器（不返回 null）
+     */
+    public McpRuntime build(java.util.Collection<String> onlyIds, java.util.Collection<String> excludeIds) {
         DefaultMcpManager manager = new DefaultMcpManager();
         List<McpSyncClient> liveClients = new ArrayList<>();
 
@@ -116,6 +119,10 @@ public class AgentMcpRuntimeService {
             if (wanted == null) {
                 Object enabled = server.get("enabled");
                 if (enabled != null && !Boolean.parseBoolean(String.valueOf(enabled))) {
+                    continue;
+                }
+                if (excludeIds != null && serverId != null && excludeIds.contains(serverId)) {
+                    log.info("[AgentMcp] 本次会话按角色配置排除 MCP 服务器: id={}", serverId);
                     continue;
                 }
             } else if (serverId == null || !wanted.contains(serverId)) {
@@ -158,11 +165,8 @@ public class AgentMcpRuntimeService {
             }
         }
 
-        // 追加已启用的本地 .mcp.json 工具（与目录服务器叠加，独立于会话选择）
-        int localConnected = registerLocalTools(manager, liveClients);
-
-        log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个（其中本地工具 {} 个），工具 {} 个",
-                liveClients.size(), localConnected, manager.listAllTools().size());
+        log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个，工具 {} 个",
+                liveClients.size(), manager.listAllTools().size());
         return new McpRuntime(manager, () -> {
             for (McpSyncClient c : liveClients) {
                 try {
@@ -174,205 +178,6 @@ public class AgentMcpRuntimeService {
         });
     }
 
-    /**
-     * 发现并连接已启用的本地 MCP 插件（{@code .mcp.json}），结果并入管理器。
-     *
-     * <p>仅处理清单路径为 {@code .mcp.json} 的条目（如 trae-cn 扫描出的本地 MCP）；
-     * 普通编辑器扩展（package.json，如 Cline）不是 MCP，直接跳过。含未解析占位符
-     * （如 {@code ${connector.gitee.ACCESS_TOKEN}}）的条目缺少凭据，跳过。</p>
-     *
-     * @param manager     MCP 管理器
-     * @param liveClients 已连接客户端集合（用于统一关闭）
-     * @return 成功连接的本地工具数
-     */
-    private int registerLocalTools(DefaultMcpManager manager, List<McpSyncClient> liveClients) {
-        int connected = 0;
-        List<Map<String, Object>> plugins;
-        try {
-            plugins = pluginCatalogService.listLocalPlugins();
-        } catch (Exception e) {
-            log.warn("[AgentMcp] 读取本地插件清单失败: {}", e.getMessage());
-            return 0;
-        }
-        java.util.Set<String> registeredNames = new java.util.HashSet<>();
-        for (Map<String, Object> plugin : plugins) {
-            Object enabledObj = plugin.get("enabled");
-            if (enabledObj == null || !Boolean.parseBoolean(String.valueOf(enabledObj))) {
-                continue;
-            }
-            String mcpJsonPath = pickMcpJsonPath(plugin);
-            if (mcpJsonPath == null) {
-                continue;
-            }
-            Map<String, Object> servers;
-            try {
-                servers = readMcpServers(mcpJsonPath);
-            } catch (Exception e) {
-                log.warn("[AgentMcp] 解析本地 .mcp.json 失败 path={}, err={}", mcpJsonPath, e.getMessage());
-                continue;
-            }
-            for (Map.Entry<String, Object> entry : servers.entrySet()) {
-                Object value = entry.getValue();
-                if (!(value instanceof Map<?, ?> raw)) {
-                    continue;
-                }
-                @SuppressWarnings("unchecked")
-                Map<String, Object> server = (Map<String, Object>) raw;
-                Map<String, Object> transport = toTransport(server);
-                if (transport == null) {
-                    log.info("[AgentMcp] 本地工具 {} 含未解析占位符或缺少启动配置，跳过", entry.getKey());
-                    continue;
-                }
-                // stdio：解析命令绝对路径（npx -> npx.cmd）；命令缺失快速跳过，不死等初始化超时
-                if (isStdio(transport)) {
-                    Map<String, Object> ready = prepareStdioTransport(transport);
-                    if (ready == null) {
-                        log.warn("[AgentMcp] 本地工具 {} 命令未找到，快速跳过 command={}",
-                                entry.getKey(), transport.get("command"));
-                        continue;
-                    }
-                    transport = ready;
-                }
-                try {
-                    var clientTransport = mcpConnectionService.buildTransport(transport);
-                    if (clientTransport == null) {
-                        log.warn("[AgentMcp] 本地工具 {} 传输类型不支持，跳过", entry.getKey());
-                        continue;
-                    }
-                    McpSyncClient client = io.modelcontextprotocol.client.McpClient.sync(clientTransport)
-                            .requestTimeout(TIMEOUT)
-                            .initializationTimeout(LOCAL_INIT_TIMEOUT)
-                            .build();
-                    client.initialize();
-                    String name = uniqueName(entry.getKey(), registeredNames);
-                    manager.register(name, new SdkMcpClient(client, name));
-                    liveClients.add(client);
-                    connected++;
-                    log.info("[AgentMcp] 本地工具已连接: name={} from={}", name, mcpJsonPath);
-                } catch (Exception e) {
-                    log.warn("[AgentMcp] 连接本地工具失败 name={}, err={}", entry.getKey(), e.getMessage());
-                }
-            }
-        }
-        return connected;
-    }
-
-    /**
-     * 选取插件的 .mcp.json 清单路径。
-     *
-     * @param plugin 插件条目
-     * @return .mcp.json 绝对路径；不存在时返回 null
-     */
-    private static String pickMcpJsonPath(Map<String, Object> plugin) {
-        for (String key : new String[]{"manifestPath", "location"}) {
-            Object value = plugin.get(key);
-            if (value != null) {
-                String path = String.valueOf(value);
-                if (path.toLowerCase().endsWith(".mcp.json")) {
-                    return path;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 读取并解析 .mcp.json 的 mcpServers 节点。
-     *
-     * @param path .mcp.json 路径
-     * @return 服务器名 → 配置 Map；无 mcpServers 时返回空 Map
-     * @throws Exception 读取或解析失败
-     */
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> readMcpServers(String path) throws Exception {
-        File file = new File(path);
-        try (java.io.InputStream in = java.nio.file.Files.newInputStream(file.toPath())) {
-            Object parsed = tools.jackson.databind.json.JsonMapper.shared().readValue(in, Object.class);
-            if (parsed instanceof Map<?, ?> root && root.get("mcpServers") instanceof Map<?, ?> servers) {
-                return (Map<String, Object>) servers;
-            }
-        }
-        return Map.of();
-    }
-
-    /**
-     * 将 .mcp.json 单服务器条目归一化为 {@code buildTransport} 所需传输 Map。
-     *
-     * @param server 服务器原始配置
-     * @return 传输 Map；含未解析占位符或缺少 command/url 时返回 null
-     */
-    private static Map<String, Object> toTransport(Map<String, Object> server) {
-        if (containsUnresolved(server)) {
-            return null;
-        }
-        if (server.get("command") != null) {
-            Map<String, Object> transport = new LinkedHashMap<>();
-            transport.put("type", "stdio");
-            transport.put("command", String.valueOf(server.get("command")));
-            if (server.get("args") != null) {
-                transport.put("args", server.get("args"));
-            }
-            if (server.get("env") != null) {
-                transport.put("env", server.get("env"));
-            }
-            return transport;
-        }
-        if (server.get("url") != null) {
-            Map<String, Object> transport = new LinkedHashMap<>();
-            Object type = server.get("type");
-            transport.put("type", type != null ? String.valueOf(type) : "http");
-            transport.put("url", String.valueOf(server.get("url")));
-            if (server.get("headers") != null) {
-                transport.put("headers", server.get("headers"));
-            }
-            return transport;
-        }
-        return null;
-    }
-
-    /**
-     * 递归判断节点是否含未解析的 {@code ${...}} 占位符。
-     *
-     * @param node 任意节点
-     * @return 含未解析占位符返回 true
-     */
-    private static boolean containsUnresolved(Object node) {
-        if (node instanceof String s) {
-            return s.contains("${");
-        }
-        if (node instanceof Map<?, ?> map) {
-            for (Object value : map.values()) {
-                if (containsUnresolved(value)) {
-                    return true;
-                }
-            }
-        } else if (node instanceof Iterable<?> iterable) {
-            for (Object value : iterable) {
-                if (containsUnresolved(value)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 生成不冲突的注册名（重名时追加序号）。
-     *
-     * @param base 原始名称
-     * @param used 已用名称集合
-     * @return 唯一名称
-     */
-    private static String uniqueName(String base, java.util.Set<String> used) {
-        if (used.add(base)) {
-            return base;
-        }
-        int suffix = 2;
-        while (!used.add(base + "-" + suffix)) {
-            suffix++;
-        }
-        return base + "-" + suffix;
-    }
 
     /**
      * null 安全转字符串。

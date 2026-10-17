@@ -301,6 +301,28 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 
 ---
 
+## 8. 2026-10-17 追加需求：上传图片的「清除」按钮
+
+针对反馈「添加清除按钮清除上传的图片」，在两个人脸/图像入口页补齐「退回空态」的清除入口。
+两页此前的上传按钮都只有**替换**语义（选新图直接覆盖旧图），没有入口能把当前图清掉。
+
+### 8.1 改动
+
+| 页面 | 位置 | 行为 |
+|---|---|---|
+| `components/management/FaceSearchPage.vue`（人脸识别） | 操作条新增「清除」（`更换图片 / 清除 / 裁剪脸部 / 识别`），仅在有预览图时出现 | 撤销预览 `objectURL`，复位 `natural / hits / matches / landmarks106 / landmark106Error / identifyDone / galleryKey / pickedId`，并清空 `fileInput.value`（否则再选同一张图不触发 `change`） |
+| `components/search/ImageSearchPage.vue`（以图搜图） | 操作卡新增「清除」（`上传图片 / 粘贴图片 / 清除 / 加入图像底库`），无查询图时禁用 | 撤销预览 `objectURL`，复位 `previewFile / queryMeta / results / searched / elapsedMs / minScore`，并清空 `fileInput.value`；另在 `useImage()` 换图时释放上一张 blob 地址（修掉每次替换泄漏一个 object URL） |
+
+`clearImage()` 内部沿用两页既有的「忙时不出入口」口径（`busy` / `searching` 时直接返回），
+并在 `previewUrl` 置空后由既有 `watch(previewUrl)` 销毁 viewerjs 查看器回到空态，不额外造一套状态。
+
+### 8.2 验证
+
+- `vue-tsc --noEmit`（pages/ai）：见本轮结论。
+- 点击遍历：两页属全站第 d 块（`FaceLibrary,ImageLibrary,FaceSearch,ImageSearch`），随该块一并做生产级点击验收。
+
+---
+
 ### 复现命令
 
 ```bash

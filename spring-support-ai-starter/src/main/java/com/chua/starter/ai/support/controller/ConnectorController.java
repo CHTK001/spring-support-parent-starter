@@ -57,14 +57,14 @@ public class ConnectorController {
         feishu.put("bindType", "form");
         types.add(feishu);
 
-        // 企业微信
-        Map<String, Object> wecom = new HashMap<>();
-        wecom.put("type", "wecom");
-        wecom.put("name", "企业微信");
-        wecom.put("description", "通过 CorpID/Secret 接入企业微信");
-        wecom.put("icon", "💼");
-        wecom.put("bindType", "form");
-        types.add(wecom);
+        // 钉钉（开放平台机器人：AppKey/AppSecret，Stream 长连接，无需公网回调地址）
+        Map<String, Object> dingtalk = new HashMap<>();
+        dingtalk.put("type", "dingtalk");
+        dingtalk.put("name", "钉钉");
+        dingtalk.put("description", "通过 AppKey/AppSecret 接入钉钉机器人（Stream 长连接）");
+        dingtalk.put("icon", "🔔");
+        dingtalk.put("bindType", "form");
+        types.add(dingtalk);
 
         // QQ
         Map<String, Object> qq = new HashMap<>();
@@ -229,6 +229,7 @@ public class ConnectorController {
         switch (type) {
             case "feishu" -> id = botBindingService.bindFeishu(appId, appSecret, model, caller.ownerKey());
             case "qq" -> id = botBindingService.bindQq(appId, appSecret, model, caller.ownerKey());
+            case "dingtalk" -> id = botBindingService.bindDingTalk(appId, appSecret, model, caller.ownerKey());
             case "whatsapp" -> id = botBindingService.bindWhatsApp(phoneNumberId, accessToken,
                     appSecret, verifyToken, model, caller.ownerKey());
             default -> {

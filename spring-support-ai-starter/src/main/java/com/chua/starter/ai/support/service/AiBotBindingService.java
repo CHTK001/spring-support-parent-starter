@@ -747,6 +747,44 @@ public class AiBotBindingService {
         return saveOrUpdate(binding);
     }
 
+    // ==================== 钉钉（凭据配置型） ====================
+
+    /**
+     * 绑定钉钉机器人（凭据配置型）。
+     *
+     * <p>只需 AppKey/AppSecret（即 {@code clientId}/{@code clientSecret}）。接收侧走
+     * Stream 长连接，<b>无需公网回调地址或域名白名单</b>；真实网关连接由
+     * {@code AiBotChatService.startBot} 统一创建。</p>
+     *
+     * @param appKey    钉钉应用 AppKey（clientId）
+     * @param appSecret 钉钉应用 AppSecret（clientSecret）
+     * @param model     初始对话模型（可空，空=跟随默认）
+     * @param ownerKey  归属标识（可空）
+     * @return 数据库标识
+     */
+    public Long bindDingTalk(String appKey, String appSecret, String model, String ownerKey) {
+        if (appKey == null || appKey.isBlank() || appSecret == null || appSecret.isBlank()) {
+            throw new IllegalArgumentException("钉钉 AppKey 与 AppSecret 必填");
+        }
+
+        var binding = new SysAiBotBinding();
+        binding.setBotId(appKey);
+        binding.setBotToken(appSecret);
+        binding.setPlatform("dingtalk");
+        binding.setNickname("钉钉 Bot");
+        binding.setStatus("online");
+        binding.setBindSource("manual_import");
+        if (ownerKey != null && !ownerKey.isBlank()) {
+            binding.setOwnerKey(ownerKey);
+        }
+        binding.setCreateTime(LocalDateTime.now());
+        binding.setUpdateTime(LocalDateTime.now());
+        if (model != null && !model.isBlank()) {
+            binding.setModel(model.trim());
+        }
+        return saveOrUpdate(binding);
+    }
+
     // ==================== WhatsApp（Cloud API 凭据配置型） ====================
 
     /**
