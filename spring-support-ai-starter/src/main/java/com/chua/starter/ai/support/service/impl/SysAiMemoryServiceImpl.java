@@ -171,20 +171,16 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
      */
     public AiMemoryRecallDTO recall(String userId, String conversationId, String query, boolean inject) {
         MemoryTuningDTO tuning = tuning();
-        AiMemoryRecallDTO result = new AiMemoryRecallDTO();
-        result.setLimit(tuning.getRecallLimit());
-        result.setInjected(Boolean.FALSE);
         if (!tuning.isInjection()) {
-            result.setPromptBlock("");
-            result.setItems(List.of());
-            return result;
+            return new AiMemoryRecallDTO("", List.of(), tuning.getRecallLimit(), null, Boolean.FALSE);
         }
         List<AiMemoryDTO> items = memoryStore.recall(userId, conversationId, query, tuning, inject);
-        result.setItems(items);
-        result.setCandidateCount(memoryStore.countRecallable(userId, conversationId));
-        result.setPromptBlock(renderPromptBlock(items));
-        result.setInjected(!items.isEmpty());
-        return result;
+        return new AiMemoryRecallDTO(
+                renderPromptBlock(items),
+                items,
+                tuning.getRecallLimit(),
+                memoryStore.countRecallable(userId, conversationId),
+                !items.isEmpty());
     }
 
     @Override
@@ -204,12 +200,8 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
         if (!tuning.isAutoExtract() || userId == null || userId.isBlank()) {
             return 0;
         }
-        MemoryExtractionContext context = new MemoryExtractionContext();
-        context.setUserId(userId);
-        context.setConversationId(conversationId);
-        context.setUserMessage(userMessage);
-        context.setAssistantReply(assistantReply);
-        context.setModel(model);
+        MemoryExtractionContext context = new MemoryExtractionContext(
+                userId, conversationId, userMessage, assistantReply, model);
         int recorded = 0;
         for (MemoryExtractor extractor : extractors) {
             List<MemoryCandidateDTO> candidates;
@@ -226,7 +218,7 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
                 continue;
             }
             for (MemoryCandidateDTO candidate : candidates) {
-                if (candidate == null || candidate.getContent() == null || candidate.getContent().isBlank()) {
+                if (candidate == null || candidate.content() == null || candidate.content().isBlank()) {
                     continue;
                 }
                 try {
@@ -261,8 +253,7 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
      * @return 各动作条数合计
      */
     public AiMemoryMaintenanceDTO maintainAll() {
-        AiMemoryMaintenanceDTO total = new AiMemoryMaintenanceDTO();
-        total.setExecutedAt(System.currentTimeMillis());
+        long executedAt = System.currentTimeMillis();
         int scanned = 0;
         int merged = 0;
         int decayed = 0;
@@ -272,25 +263,19 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
         for (String owner : memoryStore.listOwners()) {
             try {
                 AiMemoryMaintenanceDTO one = memoryStore.maintain(owner, tuning());
-                scanned += intOf(one.getScanned());
-                merged += intOf(one.getMerged());
-                decayed += intOf(one.getDecayed());
-                expired += intOf(one.getExpired());
-                archived += intOf(one.getArchived());
-                trimmed += intOf(one.getTrimmed());
+                scanned += intOf(one.scanned());
+                merged += intOf(one.merged());
+                decayed += intOf(one.decayed());
+                expired += intOf(one.expired());
+                archived += intOf(one.archived());
+                trimmed += intOf(one.trimmed());
             } catch (Exception e) {
                 log.warn("[Memory] 用户 {} 维护失败（跳过）: {}", owner, e.getMessage());
             }
         }
-        total.setScanned(scanned);
-        total.setMerged(merged);
-        total.setDecayed(decayed);
-        total.setExpired(expired);
-        total.setArchived(archived);
-        total.setTrimmed(trimmed);
         log.info("[Memory] 维护完成: 扫描={} 合并={} 衰减={} 过期={} 归档={} 淘汰={}",
                 scanned, merged, decayed, expired, archived, trimmed);
-        return total;
+        return new AiMemoryMaintenanceDTO(scanned, merged, decayed, expired, archived, trimmed, executedAt);
     }
 
     /**
@@ -327,15 +312,15 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
         long now = System.currentTimeMillis();
         SysAiMemory memory = new SysAiMemory();
         memory.setUserId(userId);
-        memory.setScope(normalizeScope(candidate.getScope()));
+        memory.setScope(normalizeScope(candidate.scope()));
         memory.setConversationId(resolveConversationId(memory.getScope(), conversationId));
-        memory.setKind(blankToNull(candidate.getKind()));
-        memory.setTitle(blankToNull(candidate.getTitle()));
-        memory.setContent(candidate.getContent());
-        memory.setKeywords(SysAiMemoryStore.joinKeywords(candidate.getKeywords()));
-        memory.setImportance(candidate.getImportance());
+        memory.setKind(blankToNull(candidate.kind()));
+        memory.setTitle(blankToNull(candidate.title()));
+        memory.setContent(candidate.content());
+        memory.setKeywords(SysAiMemoryStore.joinKeywords(candidate.keywords()));
+        memory.setImportance(candidate.importance());
         memory.setSource(SysAiMemory.SOURCE_AUTO_EXTRACT);
-        memory.setExpiresAt(ttlToExpiresAt(candidate.getTtlDays(), now));
+        memory.setExpiresAt(ttlToExpiresAt(candidate.ttlDays(), now));
         return memory;
     }
 
@@ -353,12 +338,12 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
         sb.append("以下是系统为当前用户维护的长期记忆，属于历史沉淀而非本轮输入：\n");
         for (AiMemoryDTO item : items) {
             sb.append("- ");
-            if (item.getKind() != null && !item.getKind().isBlank()) {
-                sb.append('[').append(item.getKind()).append("] ");
+            if (item.kind() != null && !item.kind().isBlank()) {
+                sb.append('[').append(item.kind()).append("] ");
             }
-            sb.append(item.getContent());
-            if (item.getScore() != null) {
-                sb.append("（相关度 ").append(String.format(java.util.Locale.ROOT, "%.2f", item.getScore())).append('）');
+            sb.append(item.content());
+            if (item.score() != null) {
+                sb.append("（相关度 ").append(String.format(java.util.Locale.ROOT, "%.2f", item.score())).append('）');
             }
             sb.append('\n');
         }

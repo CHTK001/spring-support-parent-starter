@@ -312,15 +312,14 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
             throw new IllegalStateException("支付宝通知验签失败", e);
         }
 
-        AliyunAlipayPayNotifyPayload payload = new AliyunAlipayPayNotifyPayload();
-        payload.setOrderNo(params.get("out_trade_no"));
-        payload.setTradeNo(params.get("trade_no"));
-        payload.setAppId(params.get("app_id"));
-        payload.setSellerId(params.get("seller_id"));
-        payload.setTradeStatus(params.get("trade_status"));
-        payload.setTotalAmount(StringUtils.hasText(params.get("total_amount")) ? new BigDecimal(params.get("total_amount")) : null);
-        payload.setRawParams(params);
-        return payload;
+        return new AliyunAlipayPayNotifyPayload(
+                params.get("out_trade_no"),
+                params.get("trade_no"),
+                params.get("app_id"),
+                params.get("seller_id"),
+                StringUtils.hasText(params.get("total_amount")) ? new BigDecimal(params.get("total_amount")) : null,
+                params.get("trade_status"),
+                params);
     }
 
     @Override
@@ -331,31 +330,31 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         try {
             AlipayFundTransUniTransferRequest transferRequest = new AlipayFundTransUniTransferRequest();
             Map<String, Object> bizContent = new LinkedHashMap<>();
-            bizContent.put("out_biz_no", request.getOutBizNo());
-            bizContent.put("trans_amount", request.getAmount().setScale(2, RoundingMode.HALF_UP).toPlainString());
+            bizContent.put("out_biz_no", request.outBizNo());
+            bizContent.put("trans_amount", request.amount().setScale(2, RoundingMode.HALF_UP).toPlainString());
             bizContent.put("product_code", "TRANS_ACCOUNT_NO_PWD");
             bizContent.put("biz_scene", "DIRECT_TRANSFER");
-            bizContent.put("order_title", request.getRemark());
+            bizContent.put("order_title", request.remark());
             Map<String, Object> payeeInfo = new LinkedHashMap<>();
-            payeeInfo.put("identity", request.getPayeeAccount());
+            payeeInfo.put("identity", request.payeeAccount());
             payeeInfo.put("identity_type", "ALIPAY_LOGON_ID");
-            payeeInfo.put("name", request.getPayeeName());
+            payeeInfo.put("name", request.payeeName());
             bizContent.put("payee_info", payeeInfo);
-            if (StringUtils.hasText(request.getRemark())) {
-                bizContent.put("remark", request.getRemark());
+            if (StringUtils.hasText(request.remark())) {
+                bizContent.put("remark", request.remark());
             }
             transferRequest.setBizContent(toJson(bizContent));
             AlipayFundTransUniTransferResponse response = client(properties).execute(transferRequest);
 
-            AliyunAlipayTransferResponse result = new AliyunAlipayTransferResponse();
-            result.setSuccess(response.isSuccess());
-            result.setTransferNo(response.getOrderId());
-            result.setOutBizNo(response.getOutBizNo());
-            result.setStatus(response.isSuccess() ? "SUCCESS" : "FAIL");
-            result.setPayDate(response.getTransDate());
-            result.setMessage(firstNonBlank(response.getSubMsg(), response.getMsg()));
-            result.setRawResponse(response.getBody());
-            return result;
+            return new AliyunAlipayTransferResponse(
+                    response.isSuccess(),
+                    response.getOrderId(),
+                    response.getOutBizNo(),
+                    null,
+                    response.isSuccess() ? "SUCCESS" : "FAIL",
+                    response.getTransDate(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody());
         } catch (AlipayApiException e) {
             /**
              * illegal状态异常。

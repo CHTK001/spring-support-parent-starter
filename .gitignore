@@ -167,3 +167,5 @@ spring-support-ai-starter/admin/
 
 # 会话重定向产生的 maven 构建日志（构建产物，非源码）
 build-out.txt
+build-out2.txt
+build-out*.txt

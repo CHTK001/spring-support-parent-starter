@@ -366,10 +366,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param answers answers
      */
     private void dispatchAsync(String taskId, Long answerSheetId, List<MarkingSubmitDTO.AnswerItem> answers) {
-        MarkingJob job = new MarkingJob();
-        job.setTaskId(taskId);
-        job.setAnswerSheetId(answerSheetId);
-        job.setItems(answers);
+        MarkingJob job = new MarkingJob(taskId, answerSheetId, answers);
         try {
             Map<String, Object> headers = new HashMap<>();
             headers.put("submittedAt", System.currentTimeMillis());

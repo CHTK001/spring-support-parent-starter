@@ -264,7 +264,7 @@ public class SystemManageController {
             if (filtered) {
                 String kw = keyword.toLowerCase(Locale.ROOT);
                 processes = processes.stream()
-                        .filter(p -> containsKw(p.getName(), kw) || containsKw(p.getCommand(), kw))
+                        .filter(p -> containsKw(p.name(), kw) || containsKw(p.command(), kw))
                         .collect(Collectors.toCollection(ArrayList::new));
             }
             processes.sort(comparatorOf(sortBy, sortOrder));
@@ -311,10 +311,10 @@ public class SystemManageController {
      */
     private static Comparator<ProcessRowVO> comparatorOf(String sortBy, String sortOrder) {
         Comparator<ProcessRowVO> comparator = switch (sortBy) {
-            case "memory" -> Comparator.comparingDouble(ProcessRowVO::getMemory);
-            case "pid" -> Comparator.comparingLong(ProcessRowVO::getPid);
-            case "name" -> Comparator.comparing(p -> p.getName() == null ? "" : p.getName());
-            default -> Comparator.comparingDouble(ProcessRowVO::getCpu);
+            case "memory" -> Comparator.comparingDouble(ProcessRowVO::memory);
+            case "pid" -> Comparator.comparingLong(ProcessRowVO::pid);
+            case "name" -> Comparator.comparing(p -> p.name() == null ? "" : p.name());
+            default -> Comparator.comparingDouble(ProcessRowVO::cpu);
         };
         return "desc".equalsIgnoreCase(sortOrder) ? comparator.reversed() : comparator;
     }
@@ -351,7 +351,7 @@ public class SystemManageController {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
             List<ProcessRowVO> children = ch.provider().processes(ch.host(), 1, KEYWORD_SCAN).stream()
-                    .filter(p -> p.getPpid() == pid)
+                    .filter(p -> p.ppid() == pid)
                     .collect(Collectors.toList());
             return ReturnResult.ok(children);
         }).subscribeOn(Schedulers.boundedElastic())
@@ -420,7 +420,7 @@ public class SystemManageController {
             if (filtered) {
                 String kw = keyword.toLowerCase(Locale.ROOT);
                 services = services.stream()
-                        .filter(s -> containsKw(s.getName(), kw) || containsKw(s.getDisplayName(), kw))
+                        .filter(s -> containsKw(s.name(), kw) || containsKw(s.displayName(), kw))
                         .collect(Collectors.toCollection(ArrayList::new));
             }
             int total = services.size();

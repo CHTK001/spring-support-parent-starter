@@ -212,11 +212,10 @@ public class ApiMemoryController {
      */
     public ApiResult<AiMemoryStatsDTO> stats() {
         String userId = AiUserContext.requireUserId();
-        AiMemoryStatsDTO stats = new AiMemoryStatsDTO();
-        stats.setUserId(userId);
-        stats.setActive(memoryStore.countActive(userId));
-        stats.setCapacity(memoryService.tuning().getMaxPerUser());
-        stats.setRecallable(memoryStore.countRecallable(userId, null));
-        return ApiResult.ok(stats);
+        return ApiResult.ok(new AiMemoryStatsDTO(
+                userId,
+                memoryStore.countActive(userId),
+                memoryService.tuning().getMaxPerUser(),
+                memoryStore.countRecallable(userId, null)));
     }
 }

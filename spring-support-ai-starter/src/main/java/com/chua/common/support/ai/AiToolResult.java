@@ -1,62 +1,22 @@
 package com.chua.common.support.ai;
 
-import lombok.Data;
-
 /**
  * AI 工具调用结果，含调用 标识、工具名、结果对象、成功标志与失败时的错误信息。
  *
+ * @param callId       关联的工具调用 标识
+ * @param name         工具名称
+ * @param result       工具返回结果（任意类型）
+ * @param success      是否调用成功
+ * @param errorMessage 失败时的错误描述
  * @since 4.0.0
  * @author CH
  */
-@Data
-public class AiToolResult {
-
-    /**
-     * 关联的工具调用 标识
-     */
-    private String callId;
-
-    /**
-     * 工具名称
-     */
-    private String name;
-
-    /**
-     * 工具返回结果（任意类型）
-     */
-    private Object result;
-
-    /**
-     * 是否调用成功
-     */
-    private boolean success;
-
-    /**
-     * 失败时的错误描述
-     */
-    private String errorMessage;
-
-    /**
-     * 全参构造。
-     * @param callId callid
-     * @param name 名称
-     * @param result 结果
-     * @param success 成功
-     * @param errorMessage 错误消息
-     */
-    public AiToolResult(String callId, String name, Object result, boolean success, String errorMessage) {
-        this.callId = callId;
-        this.name = name;
-        this.result = result;
-        this.success = success;
-        this.errorMessage = errorMessage;
-    }
-
-    /**
-     * 默认构造。
-     */
-    public AiToolResult() {
-    }
+public record AiToolResult(
+        String callId,
+        String name,
+        Object result,
+        boolean success,
+        String errorMessage) {
 
     /**
      * @return 建造器实例
@@ -107,6 +67,7 @@ public class AiToolResult {
             this.callId = callId;
             return this;
         }
+
         /**
          * 名称
          *
@@ -117,6 +78,7 @@ public class AiToolResult {
             this.name = name;
             return this;
         }
+
         /**
          * 结果
          *
@@ -127,6 +89,7 @@ public class AiToolResult {
             this.result = result;
             return this;
         }
+
         /**
          * 成功
          *
@@ -137,6 +100,7 @@ public class AiToolResult {
             this.success = success;
             return this;
         }
+
         /**
          * 记录错误消息
          *

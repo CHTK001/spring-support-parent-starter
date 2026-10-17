@@ -117,7 +117,7 @@ public interface SystemInfoProvider {
         if (rows != null) {
             for (ProcessRowVO row : rows) {
                 count++;
-                threads += row.getThreads();
+                threads += row.threads();
             }
         }
         return new ProcessSummaryVO(count, threads);
@@ -273,14 +273,14 @@ public interface SystemInfoProvider {
             if (i < DISK_USAGE_TOP_FILES) {
                 DiskUsageNodeVO fileLeaf = new DiskUsageNodeVO();
                 fileLeaf.setDirectory(false);
-                fileLeaf.setName(e.getName());
-                fileLeaf.setPath(joinUsage(path, e.getName(), sep));
-                fileLeaf.setSize(e.getSize());
-                fileLeaf.setModified(e.getModified());
+                fileLeaf.setName(e.name());
+                fileLeaf.setPath(joinUsage(path, e.name(), sep));
+                fileLeaf.setSize(e.size());
+                fileLeaf.setModified(e.modified());
                 fileLeaf.setFileCount(1L);
                 node.addChild(fileLeaf);
             } else {
-                restSize += e.getSize();
+                restSize += e.size();
                 restCount++;
             }
         }

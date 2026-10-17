@@ -138,7 +138,7 @@ public class HostFileController {
             if (drive != null) {
                 // Windows：盘符（C:）匹配 mount 或 name
                 for (com.chua.starter.monitor.support.model.DiskRowVO d : disks) {
-                    if (drive.equals(windowsDrive(d.getMount())) || drive.equals(windowsDrive(d.getName()))) {
+                    if (drive.equals(windowsDrive(d.mount())) || drive.equals(windowsDrive(d.name()))) {
                         best = d;
                         break;
                     }
@@ -147,17 +147,17 @@ public class HostFileController {
                 // Linux/Mac：挂载点为目标路径前缀，取最长
                 int bestLen = -1;
                 for (com.chua.starter.monitor.support.model.DiskRowVO d : disks) {
-                    String m = d.getMount() == null ? "" : d.getMount().trim();
+                    String m = d.mount() == null ? "" : d.mount().trim();
                     if (!m.isEmpty() && target.startsWith(m) && m.length() > bestLen) {
                         best = d;
                         bestLen = m.length();
                     }
                 }
             }
-            if (best != null && best.getTotalGb() > 0) {
+            if (best != null && best.totalGb() > 0) {
                 long gb = 1024L * 1024L * 1024L;
-                root.setTotalSpace((long) (best.getTotalGb() * gb));
-                root.setFreeSpace((long) (Math.max(0, best.getAvailGb()) * gb));
+                root.setTotalSpace((long) (best.totalGb() * gb));
+                root.setFreeSpace((long) (Math.max(0, best.availGb()) * gb));
             }
         } catch (Exception ignore) {
             // 容量补充失败不影响占用树本身
@@ -336,9 +336,9 @@ public class HostFileController {
             return;
         }
         for (FileEntryVO e : entries) {
-            String rel = relPrefix.isEmpty() ? e.getName() : relPrefix + "/" + e.getName();
-            String childAbs = joinPath(dirAbs, e.getName(), host);
-            if (e.isDirectory()) {
+            String rel = relPrefix.isEmpty() ? e.name() : relPrefix + "/" + e.name();
+            String childAbs = joinPath(dirAbs, e.name(), host);
+            if (e.directory()) {
                 zos.putNextEntry(new ZipEntry(rel + "/"));
                 zos.closeEntry();
                 writeZipEntries(provider, host, childAbs, rel, zos);
@@ -391,8 +391,8 @@ public class HostFileController {
             return false;
         }
         for (FileEntryVO e : entries) {
-            if (name.equals(e.getName())) {
-                return e.isDirectory();
+            if (name.equals(e.name())) {
+                return e.directory();
             }
         }
         return false;

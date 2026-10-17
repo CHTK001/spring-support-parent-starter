@@ -1,27 +1,15 @@
 package com.chua.starter.server.support.entity;
 
-import lombok.Data;
-
 /**
  * 软件包信息
  *
+ * @param name    软件包名称
+ * @param summary 软件包描述
+ * @param version 版本
  * @author CH
  */
-@Data
-public class SoftwarePackage {
-
-    /**
-     * 软件包名称
-     */
-    private String name;
-
-    /**
-     * 软件包描述
-     */
-    private String summary;
-
-    /**
-     * 版本
-     */
-    private String version;
+public record SoftwarePackage(
+        String name,
+        String summary,
+        String version) {
 }

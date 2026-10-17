@@ -89,14 +89,14 @@ public class ModelMemoryExtractor implements MemoryExtractor {
      * @return true 表示执行抽取
      */
     public boolean supports(MemoryExtractionContext context) {
-        if (context == null || context.getUserMessage() == null || context.getUserMessage().isBlank()) {
+        if (context == null || context.userMessage() == null || context.userMessage().isBlank()) {
             return false;
         }
         if (resolveModel(context) == null) {
             return false;
         }
         // 过短的输入没有总结价值，省掉一次模型调用
-        return context.getUserMessage().trim().length() >= 8;
+        return context.userMessage().trim().length() >= 8;
     }
 
     @Override
@@ -145,7 +145,7 @@ public class ModelMemoryExtractor implements MemoryExtractor {
         if (configured != null && !configured.isBlank()) {
             return configured.trim();
         }
-        String turnModel = context.getModel();
+        String turnModel = context.model();
         return turnModel != null && !turnModel.isBlank() ? turnModel.trim() : null;
     }
 
@@ -156,9 +156,9 @@ public class ModelMemoryExtractor implements MemoryExtractor {
      * @return 提示词正文
      */
     private String renderTurn(MemoryExtractionContext context) {
-        String reply = context.getAssistantReply();
+        String reply = context.assistantReply();
         StringBuilder sb = new StringBuilder();
-        sb.append("用户：").append(context.getUserMessage().trim()).append('\n');
+        sb.append("用户：").append(context.userMessage().trim()).append('\n');
         if (reply != null && !reply.isBlank()) {
             String clipped = reply.length() > 1500 ? reply.substring(0, 1500) : reply;
             sb.append("助手：").append(clipped.trim()).append('\n');
@@ -190,13 +190,14 @@ public class ModelMemoryExtractor implements MemoryExtractor {
                 if (content == null || content.isBlank()) {
                     continue;
                 }
-                MemoryCandidateDTO candidate = new MemoryCandidateDTO();
-                candidate.setKind(asText(map.getOrDefault("kind", "fact")));
-                candidate.setTitle(asText(map.get("title")));
-                candidate.setContent(content);
-                candidate.setKeywords(asKeywords(map.get("keywords")));
-                candidate.setImportance(asDouble(map.get("importance")));
-                candidates.add(candidate);
+                candidates.add(new MemoryCandidateDTO(
+                        asText(map.getOrDefault("kind", "fact")),
+                        asText(map.get("title")),
+                        content,
+                        asKeywords(map.get("keywords")),
+                        asDouble(map.get("importance")),
+                        null,
+                        null));
             }
         } catch (Exception e) {
             log.debug("[Memory] 模型抽取输出无法解析: {}", e.getMessage());

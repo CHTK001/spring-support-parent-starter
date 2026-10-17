@@ -442,12 +442,6 @@ public class ChatStreamOrchestrator {
         String userMsgId = userMessage != null && str(userMessage.get("id")) != null
                 ? str(userMessage.get("id")) : UUID.randomUUID().toString();
 
-        PreparedChat p = new PreparedChat();
-        p.setSessionId(sessionId);
-        p.setContent(content);
-        p.setModelToUse(modelToUse);
-        p.setRouteInfo(routeInfo);
-        p.setDialogId(dialogId);
         Long parentUserMessageId = userChatMsg != null ? userChatMsg.getId() : null;
         if (parentUserMessageId == null && userMessage != null) {
             // 重答场景：复用前端带来的既有用户消息 id 作为新回复的父消息，
@@ -463,15 +457,9 @@ public class ChatStreamOrchestrator {
                 log.info("[ChatStream] 重答未取到数字父消息 id，回落为该会话最后一条用户消息 id={}", parentUserMessageId);
             }
         }
-        p.setUserMessageId(parentUserMessageId);
-        p.setMessageId(messageId);
-        p.setTurnsId(turnsId);
-        p.setContentId(contentId);
-        p.setUserMsgId(userMsgId);
-        p.setChatRequestId(chatRequestId);
-        p.setRequest(request);
-        p.setMemoryUser(memoryUser);
-        return p;
+        return new PreparedChat(sessionId, content, modelToUse, routeInfo, dialogId,
+                parentUserMessageId, messageId, turnsId, contentId, userMsgId, chatRequestId,
+                request, memoryUser, null, null, null);
     }
 
     /**
@@ -481,15 +469,15 @@ public class ChatStreamOrchestrator {
      * @param sink 帧槽
      */
     public void execute(PreparedChat p, ChatFrameSink sink) {
-        final String sid = p.getSessionId();
-        final String finalContent = p.getContent();
-        final AiChatRequest request = p.getRequest();
-        final Long dialogId = p.getDialogId();
-        final String modelToUse = p.getModelToUse();
-        final String memoryUser = p.getMemoryUser();
-        final String messageId = p.getMessageId();
-        final String contentId = p.getContentId();
-        final Long userMessageId = p.getUserMessageId();
+        final String sid = p.sessionId();
+        final String finalContent = p.content();
+        final AiChatRequest request = p.request();
+        final Long dialogId = p.dialogId();
+        final String modelToUse = p.modelToUse();
+        final String memoryUser = p.memoryUser();
+        final String messageId = p.messageId();
+        final String contentId = p.contentId();
+        final Long userMessageId = p.userMessageId();
 
         CompletableFuture.runAsync(AiUserContext.capturing(() -> {
             try {
@@ -501,7 +489,7 @@ public class ChatStreamOrchestrator {
                 // 重答回放用户消息时必须沿用既有用户消息的真实 id（数字主键）：
                 // 若按 userMsgId 照发，前端按 id 去重后，补推的副本就是既有轮次本身，
                 // 不会多出一轮；id 对不上则是重复的根因（点一次重新生成多出一对消息）。
-                userMsg.put("id", userMessageId != null ? String.valueOf(userMessageId) : p.getUserMsgId());
+                userMsg.put("id", userMessageId != null ? String.valueOf(userMessageId) : p.userMsgId());
                 userMsg.put("role", "user");
                 userMsg.put("contents", List.of(userContent));
                 userMsg.put("state", Map.of("isStreaming", false));
@@ -513,13 +501,13 @@ public class ChatStreamOrchestrator {
                 Map<String, Object> createEvent = new LinkedHashMap<>();
                 createEvent.put("type", "create");
                 createEvent.put("messageId", messageId);
-                createEvent.put("turnsId", p.getTurnsId());
+                createEvent.put("turnsId", p.turnsId());
                 createEvent.put("contentId", contentId);
                 createEvent.put("modelName", modelToUse);
                 // 实际应答的供应商信息：前端据此在回复下方显示提示（排查路由问题用）
-                createEvent.put("route", p.getRouteInfo());
+                createEvent.put("route", p.routeInfo());
                 createEvent.put("parentId", userMessageId != null
-                        ? String.valueOf(userMessageId) : p.getUserMsgId());
+                        ? String.valueOf(userMessageId) : p.userMsgId());
                 sink.sendEvent(createEvent);
                 log.info("[ChatStream] 已发送 create sessionId={}", sid);
             } catch (Exception e) {
@@ -539,8 +527,8 @@ public class ChatStreamOrchestrator {
                     List<Map<String, Object>> sourceList = new ArrayList<>();
                     for (WebResult r : results) {
                         Map<String, Object> src = new LinkedHashMap<>();
-                        src.put("title", safe(r.getTitle()));
-                        src.put("url", safe(r.getUrl()));
+                        src.put("title", safe(r.title()));
+                        src.put("url", safe(r.url()));
                         sourceList.add(src);
                     }
                     if (!results.isEmpty()) {
@@ -549,11 +537,11 @@ public class ChatStreamOrchestrator {
                                 .append(java.time.LocalDate.now()).append("）：\n");
                         for (int i = 0; i < results.size(); i++) {
                             WebResult r = results.get(i);
-                            reference.append('[').append(i + 1).append(" 标题：").append(safe(r.getTitle())).append('\n');
-                            if (r.getSnippet() != null && !r.getSnippet().isBlank()) {
-                                reference.append("    摘要：").append(safe(r.getSnippet())).append('\n');
+                            reference.append('[').append(i + 1).append(" 标题：").append(safe(r.title())).append('\n');
+                            if (r.snippet() != null && !r.snippet().isBlank()) {
+                                reference.append("    摘要：").append(safe(r.snippet())).append('\n');
                             }
-                            reference.append("    来源链接：").append(safe(r.getUrl())).append('\n');
+                            reference.append("    来源链接：").append(safe(r.url())).append('\n');
                         }
                         reference.append("\n请严格依据上述资料回答用户问题：在关键事实后用 [n] 标注来源编号，")
                                 .append("并在回答末尾以“参考来源”列出编号与对应链接；若资料不足以回答，请明确说明，不要编造。");
@@ -713,7 +701,7 @@ public class ChatStreamOrchestrator {
                         if (trace != null) {
                             // 全量轨迹另存一份到轨迹表：助手消息里的 confirmation 只保留工具类，
                             // 承载不了模型调用/思考这类时序信息，而「轨迹」页签要靠它画甘特图。
-                            sessionTraceService.append(sid, p.getChatRequestId(), trace);
+                            sessionTraceService.append(sid, p.chatRequestId(), trace);
                             if (trace.getToolName() != null && !trace.getToolName().isBlank()) {
                                 Map<String, Object> t = new LinkedHashMap<>();
                                 t.put("kind", trace.getKind());
@@ -848,24 +836,11 @@ public class ChatStreamOrchestrator {
             resumeParentDbId = Long.parseLong(resumeParentId);
         }
 
-        PreparedChat p = new PreparedChat();
-        p.setSessionId(sessionId);
-        p.setModelToUse(selectedModel);
-        p.setRouteInfo(resumeRoute);
-        p.setDialogId(dialogId);
-        p.setMessageId(messageId);
-        p.setTurnsId(turnsId);
-        p.setContentId(contentId);
-        p.setRequest(request);
-        p.setMemoryUser(AiUserContext.currentUserId());
-        p.setReplyId(resumeReplyId);
-        p.setUserMessageId(resumeParentDbId);
         // create 帧携带 DB 父消息作为兜底；前端会按当前渲染的用户消息 id 覆盖
-        p.setUserMsgId(resumeParentId);
-        p.setDecisions(decisions);
         // 用户修改意见（规划模式「需要修改」）：随恢复注入 Agent 上下文
-        p.setFeedback(str(body.get("feedback")));
-        return p;
+        return new PreparedChat(sessionId, null, selectedModel, resumeRoute, dialogId, resumeParentDbId,
+                messageId, turnsId, contentId, resumeParentId, null, request,
+                AiUserContext.currentUserId(), resumeReplyId, decisions, str(body.get("feedback")));
     }
 
     /**
@@ -875,13 +850,13 @@ public class ChatStreamOrchestrator {
      * @param sink 帧槽
      */
     public void executeResume(PreparedChat p, ChatFrameSink sink) {
-        final String sid = p.getSessionId();
-        final AiChatRequest request = p.getRequest();
-        final Long dialogId = p.getDialogId();
-        final String modelToUse = p.getModelToUse();
-        final String memoryUser = p.getMemoryUser();
-        final String messageId = p.getMessageId();
-        final String contentId = p.getContentId();
+        final String sid = p.sessionId();
+        final AiChatRequest request = p.request();
+        final Long dialogId = p.dialogId();
+        final String modelToUse = p.modelToUse();
+        final String memoryUser = p.memoryUser();
+        final String messageId = p.messageId();
+        final String contentId = p.contentId();
 
         CompletableFuture.runAsync(AiUserContext.capturing(() -> {
             com.chua.starter.ai.support.chat.AgentChatClient wrapper = null;
@@ -895,12 +870,12 @@ public class ChatStreamOrchestrator {
 
                 // 人工确认恢复的 create 也必须挂到真实用户消息 id 上：
                 // 否则新回复归不回原来那一轮，界面会多出一轮。
-                final String resumeParentId = p.getUserMessageId() != null
-                        ? String.valueOf(p.getUserMessageId()) : p.getUserMsgId();
+                final String resumeParentId = p.userMessageId() != null
+                        ? String.valueOf(p.userMessageId()) : p.userMsgId();
                 Map<String, Object> createEvent = new LinkedHashMap<>();
                 createEvent.put("type", "create");
                 createEvent.put("messageId", messageId);
-                createEvent.put("turnsId", p.getTurnsId());
+                createEvent.put("turnsId", p.turnsId());
                 createEvent.put("contentId", contentId);
                 createEvent.put("modelName", modelToUse);
                 createEvent.put("parentId", resumeParentId);
@@ -911,16 +886,16 @@ public class ChatStreamOrchestrator {
                         new com.chua.common.support.ai.AiUsage[1];
 
                 // 把旧助手消息上的 pending 确认标记为终态（approved/rejected）
-                String confirmDecision = p.getDecisions() != null
-                        && p.getDecisions().stream()
+                String confirmDecision = p.decisions() != null
+                        && p.decisions().stream()
                                 .anyMatch(com.chua.common.support.ai.agent.ConfirmationDecision::isConfirmed)
                         ? "approved" : "rejected";
-                aiDialogRecordService.resolveConfirmation(dialogId, p.getReplyId(), confirmDecision);
+                aiDialogRecordService.resolveConfirmation(dialogId, p.replyId(), confirmDecision);
 
                 // 恢复轮可能再次产生确认（如拒绝后继续修订），持有并随新助手消息落库
                 final com.chua.common.support.ai.agent.ConfirmationRequest[] resumeConfirmation = {null};
 
-                wrapper.resume(p.getReplyId(), p.getDecisions(), p.getFeedback(),
+                wrapper.resume(p.replyId(), p.decisions(), p.feedback(),
                         response -> {
                             if (sink.isCancelled()) {
                                 return;
@@ -974,7 +949,7 @@ public class ChatStreamOrchestrator {
                             int totalTokens = promptTokens + completionTokens;
                             try {
                                 ChatMessage assistantMsg = new ChatMessage("assistant", finalText);
-                                assistantMsg.setParentId(p.getUserMessageId());
+                                assistantMsg.setParentId(p.userMessageId());
                                 assistantMsg.setModelName(modelToUse);
                                 assistantMsg.setPromptTokens(promptTokens);
                                 assistantMsg.setCompletionTokens(completionTokens);
@@ -984,7 +959,7 @@ public class ChatStreamOrchestrator {
                                 }
                                 aiDialogRecordService.addMessage(dialogId, assistantMsg);
                                 log.info("[ChatStream] 恢复助手消息已保存 sessionId={}, parentId={}, len={}",
-                                        sid, p.getUserMessageId(), finalText.length());
+                                        sid, p.userMessageId(), finalText.length());
                             } catch (Exception e) {
                                 log.warn("[ChatStream] 保存恢复助手消息失败 sessionId={}: {}",
                                         sid, e.getMessage());
@@ -1064,17 +1039,17 @@ public class ChatStreamOrchestrator {
      * @return 校正后的路由信息
      */
     private Map<String, Object> effectiveRoute(PreparedChat p) {
-        Map<String, Object> route = p.getRouteInfo();
+        Map<String, Object> route = p.routeInfo();
         boolean resolved = route != null && Boolean.TRUE.equals(route.get("providerResolved"));
-        if (resolved || p.getRequest() == null) {
+        if (resolved || p.request() == null) {
             return route;
         }
-        String actualProviderId = p.getRequest().getProvider();
+        String actualProviderId = p.request().getProvider();
         if (actualProviderId == null || actualProviderId.isBlank()
                 || actualProviderId.equals(route.get("providerId"))) {
             return route;
         }
-        String model = route.get("model") instanceof String s ? s : p.getModelToUse();
+        String model = route.get("model") instanceof String s ? s : p.modelToUse();
         log.info("[ChatStream] 路由校正：请求未限定供应商，下游实际解析为 {} model={}", actualProviderId, model);
         return describeRoute(actualProviderId, model);
     }

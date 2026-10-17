@@ -45,6 +45,15 @@ public class WindowsSshShell {
     private static final int CHUNK_BASE64 = 2400;
 
     /**
+     * 远端脚本落盘的最大尝试次数。
+     *
+     * <p>分块写入的每一块都是一次独立 SSH exec，连接可能被中间设备掐断（实测 sshd 日志出现
+     * {@code Connection aborted}）。任何一块失败都会让文件短于预期，因此整份重写而不是续写，
+     * 避免半块重复。</p>
+     */
+    private static final int WRITE_ATTEMPTS = 3;
+
+    /**
      * 单次 SSH exec 的实测时长上限（秒）。
      *
      * <p><b>实测硬上限，不是配置项。</b>远端跑一个 90 秒的命令，文件方式与内联方式
@@ -228,16 +237,77 @@ public class WindowsSshShell {
         withBom[2] = (byte) 0xBF;
         System.arraycopy(raw, 0, withBom, 3, raw.length);
         String b64 = Base64.getEncoder().encodeToString(withBom);
-        runRaw(host, cred, PowerShellCommand.encoded(shell,
-                "$d = '" + REMOTE_TMP_DIR + "'\n"
-                        + "if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }\n"
-                        + "[IO.File]::WriteAllText('" + path + "', '')"));
-        for (int off = 0; off < b64.length(); off += CHUNK_BASE64) {
-            String chunk = b64.substring(off, Math.min(b64.length(), off + CHUNK_BASE64));
-            runRaw(host, cred, PowerShellCommand.encoded(shell,
-                    "[IO.File]::AppendAllText('" + path + "',"
-                            + " [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + chunk + "')))"));
+        String lastError = null;
+        for (int attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
+            String fail = writeRemoteScriptOnce(host, cred, shell, path, b64, withBom.length);
+            if (fail == null) {
+                return;
+            }
+            lastError = fail;
         }
+        // 绝不把截断的脚本交给 PowerShell：截断后最典型的报错是尾部语句块
+        // 「Missing closing '}'」，位置随机（实测落在 else 分支），排查成本极高，
+        // 还会让本该自动回滚的升级停在半途（新版本已投放、旧进程已停）。
+        throw new WindowsSshExecException("远端脚本落盘不完整（" + path + "，期望 "
+                + withBom.length + " 字节）：" + lastError + "；已中止执行，避免不完整脚本被解析运行。", null);
+    }
+
+    /**
+     * 一次性把整份脚本写完整（先清空再按字节追加），并校验远端长度。
+     *
+     * <p>按<b>字节</b>追加而不是先解码成字符串：分块边界可能切在多字节 UTF-8 字符中间，
+     * 解码再编码会把该字符变成替换符，既破坏脚本文本也改变字节数。</p>
+     *
+     * @return {@code null} 表示写入完整；否则返回失败原因，交由调用方整份重写
+     */
+    private String writeRemoteScriptOnce(MsServerHost host, SshCredential cred, String shell,
+                                         String path, String b64, int expectedBytes) {
+        try {
+            Result init = runRaw(host, cred, PowerShellCommand.encoded(shell,
+                    "$d = '" + REMOTE_TMP_DIR + "'\n"
+                            + "if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }\n"
+                            + "[IO.File]::WriteAllBytes('" + path + "', [byte[]]@())"));
+            if (init.exitCode() != 0) {
+                return "初始化失败 exit=" + init.exitCode() + " " + brief(init.stderr());
+            }
+            for (int off = 0; off < b64.length(); off += CHUNK_BASE64) {
+                String chunk = b64.substring(off, Math.min(b64.length(), off + CHUNK_BASE64));
+                Result r = runRaw(host, cred, PowerShellCommand.encoded(shell,
+                        "$b = [Convert]::FromBase64String('" + chunk + "')\n"
+                                + "$fs = [IO.File]::Open('" + path + "', 'Append', 'Write')\n"
+                                + "try { $fs.Write($b, 0, $b.Length) } finally { $fs.Close() }"));
+                if (r.exitCode() != 0) {
+                    return "分块写入失败 offset=" + off + " exit=" + r.exitCode() + " " + brief(r.stderr());
+                }
+            }
+            Result size = runRaw(host, cred, PowerShellCommand.encoded(shell,
+                    "(Get-Item -LiteralPath '" + path + "').Length"));
+            if (size.exitCode() != 0) {
+                return "长度校验失败 exit=" + size.exitCode() + " " + brief(size.stderr());
+            }
+            String got = size.stdout() == null ? "" : size.stdout().trim();
+            String want = String.valueOf(expectedBytes);
+            if (!want.equals(got)) {
+                return "长度不符 期望=" + want + " 实际=" + got;
+            }
+            return null;
+        } catch (RuntimeException e) {
+            return "写入异常: " + rootMessage(e);
+        }
+    }
+
+    /**
+     * 取诊断信息末尾一小段，避免把整段 stderr 塞进上层异常。
+     *
+     * @param text 原始输出
+     * @return 压缩成单行的尾部片段
+     */
+    private static String brief(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        String one = text.replace('\r', ' ').replace('\n', ' ').trim();
+        return one.length() <= 200 ? one : "…" + one.substring(one.length() - 200);
     }
 
     /**

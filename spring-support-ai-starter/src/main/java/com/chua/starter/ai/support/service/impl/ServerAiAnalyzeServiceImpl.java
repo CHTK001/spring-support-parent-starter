@@ -74,12 +74,11 @@ public class ServerAiAnalyzeServiceImpl implements ServerAiAnalyzeService {
      */
     private ServerAiStructuredAdvice unavailable(Object request) {
         Objects.requireNonNull(request, "分析请求不能为空");
-        return ServerAiStructuredAdvice.builder()
-                .summary("服务器 AI 分析服务尚未配置可用模型")
-                .riskLevel("UNKNOWN")
-                .suggestion("请配置 AI 模型提供商后重试")
-                .provider("UNAVAILABLE")
-                .model("UNCONFIGURED")
-                .build();
+        return new ServerAiStructuredAdvice(
+                "服务器 AI 分析服务尚未配置可用模型",
+                "UNKNOWN",
+                "请配置 AI 模型提供商后重试",
+                "UNAVAILABLE",
+                "UNCONFIGURED");
     }
 }
