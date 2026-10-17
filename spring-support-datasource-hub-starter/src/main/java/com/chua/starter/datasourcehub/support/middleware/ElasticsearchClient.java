@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -387,10 +388,54 @@ public class ElasticsearchClient {
      * @return 搬运结果（含 created / total / failures）
      */
     public JsonObject reindex(Target target, String source, String dest) {
+        return reindex(target, source, dest, List.of());
+    }
+
+    /**
+     * 重建索引的数据搬运（{@code _reindex}），可顺带剔除若干字段的 {@code _source} 数据
+     *
+     * <p><b>为什么必须带 excludes</b>：只把字段从新 mapping 里去掉是不够的 —— {@code _reindex}
+     * 搬的是 {@code _source}，目标索引收到未映射字段会按自己的动态映射规则把它<b>加回来</b>
+     * （真机实测：删掉的 keyword 字段重建后又出现在 mapping 里，类型变成了 text）。
+     * 用户看到的就是「删了字段、刷新后又回来了」。把被删字段作为 {@code _source.excludes}
+     * 传进去，数据从源头就不进目标索引，字段才真的消失。
+     * 点路径有效，nested 数组里的子字段也能精确剔除（真机验证）。</p>
+     *
+     * @param target         访问目标
+     * @param source         源索引
+     * @param dest           目标索引
+     * @param sourceExcludes 要连同数据一起剔除的字段（扁平点路径），可为空
+     * @return 搬运结果（含 created / total / failures）
+     */
+    public JsonObject reindex(Target target, String source, String dest, List<String> sourceExcludes) {
+        Map<String, Object> sourceSpec = new LinkedHashMap<>();
+        sourceSpec.put("index", source);
+        if (sourceExcludes != null && !sourceExcludes.isEmpty()) {
+            sourceSpec.put("_source", Map.of("excludes", sourceExcludes));
+        }
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("source", Map.of("index", source));
+        body.put("source", sourceSpec);
         body.put("dest", Map.of("index", dest));
         return post(target, "/_reindex", Json.toJson(body), REINDEX_TIMEOUT);
+    }
+
+    /**
+     * 刷新索引（{@code _refresh}）
+     *
+     * <p><b>为什么搬完必须显式刷一次</b>：{@code _reindex} 不会刷新目标索引，而未刷新的文档
+     * 对 {@code _count} 不可见。于是「搬完立刻数文档做一致性校验」会稳定数成 0，
+     * 把一次正常的重建误判成「文档数不一致」而中止（真机实测：源索引 1、临时索引 0）。
+     * 该分支只在失败时打印，表现为「点重建后什么都没发生、只弹一句失败」，
+     * 而根因藏在「校验太早」这件事上。</p>
+     *
+     * @param target 访问目标
+     * @param index  索引名
+     * @return 刷新结果
+     */
+    public JsonObject refresh(Target target, String index) {
+        // 用 GET 而不是 POST：ES 的 _refresh 不接受请求体，POST 一个空 JSON 对象会直接 400
+        // 「does not support having a body」。GET 与 POST 等价，且天然不带体。
+        return get(target, "/" + encode(index) + "/_refresh", Map.of());
     }
 
     /**
