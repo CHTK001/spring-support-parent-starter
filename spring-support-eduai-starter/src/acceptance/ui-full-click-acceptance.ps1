@@ -876,6 +876,11 @@ $dlgKill = @(
     (-join @([char]0x91CD, [char]0x7F6E))    # reset
     (-join @([char]0x6279, [char]0x91CF))    # batch
     (-join @([char]0x4F5C, [char]0x5E9F))    # void
+    # 2026-10-17 补：阅卷详情页的「完成」是**会改库**的动作（把判错的题归入学生
+    # 错题库并落完成标记）。只登记弹窗标题「阅卷完成」而不是裸的「完成」二字：
+    # 标题命中即整个弹窗的「取消/确定」都记为 skipped-destructive，既不误伤别处
+    # 叫「完成」的普通按钮，又能保证自动爬取永远不会替老师按下这个确认。
+    (-join @([char]0x9605, [char]0x5377, [char]0x5B8C, [char]0x6210))    # marking finish
 ) -join '|'
 $jsDialogInventory = @"
 (() => {
