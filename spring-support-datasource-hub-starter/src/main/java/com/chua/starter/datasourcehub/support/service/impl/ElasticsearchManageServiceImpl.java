@@ -18,9 +18,12 @@ import com.chua.starter.datasourcehub.support.model.dto.ElasticsearchMappingDTO;
 import com.chua.starter.datasourcehub.support.model.dto.MiddlewareTestDTO;
 import com.chua.starter.datasourcehub.support.service.ElasticsearchManageService;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -168,7 +171,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         if (!exists(target, name)) {
             throw new IllegalStateException("索引不存在: " + name);
         }
-        Map<String, Object> properties = properties(request.fields());
+        // 以索引现有 mapping 为底做增量补丁，而不是按扁平的入参重新推导整份 mapping，
+        // 否则「只删一个字段」也会把 nested 类型与 text 的 keyword 子字段静默改掉。
+        Map<String, Object> properties = rebuiltProperties(target, name, request.fields());
         if (properties.isEmpty()) {
             throw new IllegalStateException("重建索引至少要保留一个字段；要整个删掉请用删除索引");
         }
@@ -361,6 +366,218 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
             body.put("mappings", Map.of("properties", properties));
         }
         return body;
+    }
+
+    /**
+     * 重建索引用的字段映射：以索引现有 mapping 为底，只对本次「新增 / 明改 / 删除」的字段动手。
+     *
+     * <p><b>为什么不直接用 {@link #properties(List)} 从入参重新推导整份 mapping</b>：索引详情里的
+     * 字段是 {@link #flatten} 展开出来的扁平叶子，看不见 {@code nested} 类型，也看不见
+     * {@code text} 的 {@code fields}（最常见的 keyword 子字段）。若照扁平入参重建，用户「只删一个
+     * 字段」也会把没碰过的字段静默改掉：keyword 子字段丢失、nested 退化成普通 object。</p>
+     *
+     * <p>故这里逐字段比对：没动的<b>逐字保留</b>原定义；新增或明改的写入新定义；
+     * 删掉的字段连同因此变空的中间对象层一起清掉。</p>
+     *
+     * @param target 访问目标
+     * @param name   索引名
+     * @param fields 用户提交的完整字段列表（含未改动字段）
+     * @return 新 mapping 的 properties
+     */
+    private Map<String, Object> rebuiltProperties(ElasticsearchClient.Target target, String name,
+                                                  List<ElasticsearchFieldDTO> fields) {
+        JsonObject raw = currentProperties(target, name);
+        Map<String, Object> next = toMap(raw);
+
+        List<ElasticsearchFieldVO> flat = new ArrayList<>();
+        flatten(raw, "", flat);
+        Map<String, ElasticsearchFieldVO> current = new LinkedHashMap<>();
+        for (ElasticsearchFieldVO field : flat) {
+            current.put(field.name(), field);
+        }
+
+        Set<String> keep = new LinkedHashSet<>();
+        for (ElasticsearchFieldDTO field : fields == null ? List.<ElasticsearchFieldDTO>of() : fields) {
+            if (field == null || field.name() == null || field.name().isBlank()) {
+                continue;
+            }
+            String path = field.name().trim();
+            keep.add(path);
+            ElasticsearchFieldVO original = current.get(path);
+            if (original != null && sameExposed(original, field)) {
+                // 用户没动这个字段：原样保留（fields 子字段、nested 类型等一并保留）
+                continue;
+            }
+            Map<String, Object> def = definitionOf(field);
+            if (def != null) {
+                putProperty(next, path, def);
+            }
+        }
+        for (String path : current.keySet()) {
+            if (!keep.contains(path)) {
+                removeProperty(next, path);
+            }
+        }
+        return next;
+    }
+
+    /**
+     * 单个字段的 mapping 定义：沿用 {@link #properties(List)} 的口径，
+     * 保证「重建时新增/改动字段」与「建索引」走同一套默认规则
+     *
+     * @param field 字段
+     * @return 字段定义；字段名为空时返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> definitionOf(ElasticsearchFieldDTO field) {
+        Object def = properties(List.of(field)).get(field.name().trim());
+        return def instanceof Map ? (Map<String, Object>) def : null;
+    }
+
+    /**
+     * 取索引当前的 {@code mappings.properties}
+     */
+    private JsonObject currentProperties(ElasticsearchClient.Target target, String name) {
+        JsonObject all = client.index(target, name);
+        JsonObject one = all.getJsonObject(name);
+        if (one == null) {
+            for (Object value : all.values()) {
+                one = asObject(value);
+                break;
+            }
+        }
+        JsonObject mapping = one == null ? null : one.getJsonObject("mappings");
+        return mapping == null ? null : mapping.getJsonObject("properties");
+    }
+
+    /**
+     * JSON 对象转成可变 Map（重建时要在这上面增删字段）
+     */
+    private Map<String, Object> toMap(JsonObject object) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (object == null) {
+            return result;
+        }
+        for (Map.Entry<String, Object> entry : object.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof JsonObject child) {
+                result.put(entry.getKey(), toMap(child));
+            } else if (value instanceof Map<?, ?> map) {
+                result.put(entry.getKey(), toMap(asObject(map)));
+            } else {
+                result.put(entry.getKey(), value);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 用户提交的字段与索引现有字段，在「界面上可改的四项」（类型 / 分词器 / 日期格式 / 是否建索引）上是否一致
+     */
+    private boolean sameExposed(ElasticsearchFieldVO original, ElasticsearchFieldDTO desired) {
+        String type = desired.type() == null || desired.type().isBlank() ? "keyword" : desired.type().trim();
+        String analyzer = "text".equals(type) && desired.analyzer() != null ? desired.analyzer().trim() : "";
+        String format = "date".equals(type) && desired.format() != null ? desired.format().trim() : "";
+        boolean indexed = !Boolean.FALSE.equals(desired.index());
+        return type.equals(defaultKeyword(original.type()))
+                && analyzer.equals(nullToEmpty(original.analyzer()))
+                && format.equals(nullToEmpty(original.format()))
+                && indexed == !Boolean.FALSE.equals(original.index());
+    }
+
+    /**
+     * 把字段定义写到 dotted path 对应的位置，缺失的中间对象层按需创建
+     */
+    private void putProperty(Map<String, Object> root, String path, Map<String, Object> def) {
+        String[] parts = path.split("\\.");
+        Map<String, Object> parent = root;
+        for (int i = 0; i < parts.length - 1; i++) {
+            parent = childProperties(parent, parts[i], true);
+        }
+        parent.put(parts[parts.length - 1], def);
+    }
+
+    /**
+     * 删除 dotted path 对应的字段定义，并清掉因此变空的中间对象层
+     */
+    private void removeProperty(Map<String, Object> root, String path) {
+        String[] parts = path.split("\\.");
+        Map<String, Object> parent = root;
+        for (int i = 0; i < parts.length - 1 && parent != null; i++) {
+            parent = childProperties(parent, parts[i], false);
+        }
+        if (parent != null) {
+            parent.remove(parts[parts.length - 1]);
+        }
+        pruneEmpty(root);
+    }
+
+    /**
+     * 取（{@code create=true} 时按需创建）某个对象字段的 {@code properties} 容器
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> childProperties(Map<String, Object> parent, String key, boolean create) {
+        Object node = parent.get(key);
+        Map<String, Object> holder;
+        if (node instanceof Map<?, ?> map) {
+            holder = (Map<String, Object>) map;
+        } else if (create) {
+            holder = new LinkedHashMap<>();
+            parent.put(key, holder);
+        } else {
+            return null;
+        }
+        Object sub = holder.get("properties");
+        if (sub instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+        if (!create) {
+            return null;
+        }
+        Map<String, Object> created = new LinkedHashMap<>();
+        holder.put("properties", created);
+        return created;
+    }
+
+    /**
+     * 清掉没有子字段的空对象层：ES 不接受空的 {@code properties}
+     */
+    @SuppressWarnings("unchecked")
+    private void pruneEmpty(Map<String, Object> properties) {
+        for (Iterator<Map.Entry<String, Object>> it = properties.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, Object> entry = it.next();
+            if (!(entry.getValue() instanceof Map<?, ?> node)) {
+                continue;
+            }
+            Map<String, Object> holder = (Map<String, Object>) node;
+            Object sub = holder.get("properties");
+            if (sub instanceof Map<?, ?> subMap) {
+                Map<String, Object> children = (Map<String, Object>) subMap;
+                pruneEmpty(children);
+                if (children.isEmpty()) {
+                    holder.remove("properties");
+                }
+            }
+            Object type = holder.get("type");
+            boolean container = "object".equals(type) || "nested".equals(type);
+            if (!holder.containsKey("properties") && (container || holder.isEmpty())) {
+                it.remove();
+            }
+        }
+    }
+
+    /**
+     * 空值安全的默认类型（无显式类型的字段按 ES 的 keyword 处理）
+     */
+    private static String defaultKeyword(String value) {
+        return value == null || value.isBlank() ? "keyword" : value;
+    }
+
+    /**
+     * 空值安全的空串
+     */
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     /**
