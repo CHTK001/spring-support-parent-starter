@@ -80,8 +80,13 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 > **2026-10-16 更新**：上表第 77 行的「无法复核」已在**本机 Windows**（同一台 `192.168.50.101`，
 > 通过 198 平台 8112 驱动）完成全链路复验，**25/25 全绿**（启停重启、备份、好包升级 md5 变更、
 > 坏包自动回滚 + 回滚后 PID 落库、停后 PID 清空）。详见 §9；该轮同时修掉 5 个真实产品缺陷。
-> **2026-10-17 复验**：同一套件在新产物 `07cd6f52…` 上复跑 **25/25**，另加服务挂载/卸载套件
-> `win-service-e2e.mjs` **23/23**；本轮再修 2 个缺陷（服务卸载残留、CacheManager 启动不确定性）。
+> **2026-10-17 复验（第二轮）**：在产物 `07cd6f52…` 上复跑 **25/25**，另加服务挂载/卸载套件
+> `win-service-e2e.mjs` **19/19**；该轮修掉 2 个缺陷（服务卸载残留、CacheManager 启动不确定性）。
+> **2026-10-17 复验（第三轮，最终）**：在产物 `d93092d5…` 上全部套件复跑通过——
+> `win-e2e.mjs` **25/25**、`win-service-e2e.mjs` **23/23**、`linux-regression.mjs` **13/13**、
+> `template-endpoint-check.mjs` **13/13**、`win-release-selfcheck.ps1` **10/10**、
+> `ReleaseScriptProbe` **11/11**、`CacheManagerResolverProbe` **6/6**。
+> 该轮再修 2 个真实缺陷（挂载判定窗口 10s→180s、`serviceName` 回写时机与 null 清空）。
 
 > Windows 侧共修掉 **3 个真实产品缺陷**（见 §6 第 1/2/3 项），把「完全不可用」推进到
 > 「任务可执行、投放与回滚 md5 可核对」；剩余不可验收的部分**全部来自主机安全产品**
@@ -423,7 +428,7 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 
 ---
 
-## 9. 本机 Windows 全链路复验 + 8 个产品缺陷修复（2026-10-16 ~ 2026-10-17）
+## 9. 本机 Windows 全链路复验 + 10 个产品缺陷修复（2026-10-16 ~ 2026-10-17）
 
 ### 9.1 产物绑定（本轮，可交付正典产物）
 
@@ -435,7 +440,7 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 | 内层 cache-starter md5 | `7548d7a4268e07fbd661bd53a551cf3d` |
 | 内层 ai-starter md5 | `1a54e6ee706dae5dd9b2f051df468479` |
 | 包内修复实证（字节级） | `自启脚本仍存在` / `.autostart.ps1`（卸载残留）、`Win32_Process` / `WMI 拉起守护进程失败` / `$i -lt 360`（缺陷 9）、`ServiceNameWrite` / `updateProjectServiceName`（缺陷 10）、`-join`（`$inner` 拼接）、`reconcileProjectAfterFailure`（回滚 PID 对账）均在 exec jar 内的 class 中（已用脚本逐项核对） |
-| 服务 | `ms-monitor-platform` `active`，`MainPID=995151`，`NRestarts=0`，8112 监听，登录 `code=00000` |
+| 服务 | `ms-monitor-platform` `active`，`MainPID=1112151`，`NRestarts=0`，8112 监听，登录 `code=00000` |
 | 启动健康（本次 boot） | `expected single matching CacheManager` 计数 **0**；` ERROR ` 行 **0** |
 | 回滚点 | `rollback-before-fix3-20261016-230240.jar`（= 上一轮已验证可启动的 `07cd6f52…`）；`good-current-stable.jar` 已同步刷新 |
 
@@ -465,12 +470,12 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 
 ### 9.3 复验结论（全部通过）
 
-- **Windows 真机端到端（25/25 全绿，正典产物 `07cd6f52…`）**：`win-e2e.mjs`，经 198:8112 驱动本机 `192.168.50.101`
+- **Windows 真机端到端（25/25 全绿，正典产物 `d93092d5…`）**：`win-e2e.mjs`，经 198:8112 驱动本机 `192.168.50.101`
   - C1 启动：`db pid == app.pid == 端口属主`
   - C2 重启：新 PID、端口属主同步、库已更新
   - C3 备份：任务成功、`backups` 列表可见
-  - C4 好包升级：任务成功、`smoke.jar` md5 `4D32702C… → 9DCD2A39…`、端口属主为新 PID
-  - C5 坏包升级：任务**失败**（预期），日志 `health failed` / `rolled back to previous version` / `rollback ok`，主包已恢复，**库 PID == 端口属主（回滚后真实 PID）= `21596`**、`status=running`
+  - C4 好包升级：任务成功、`smoke.jar` md5 `9DCD2A39… → 4D32702C…`、端口属主为新 PID
+  - C5 坏包升级：任务**失败**（预期），日志 `health failed` / `rolled back to previous version` / `rollback ok`，主包已恢复，**库 PID == 端口属主（回滚后真实 PID）= `22652`**、`status=running`
   - C6 停止：端口释放、`app.pid` 删除、库 `pid` 清空、`status=stopped`
 - **Windows 服务挂载/卸载真机（23/23 全绿）**：`win-service-e2e.mjs`，目标机 `Get-Service Schedule = Stopped` → 走**免计划任务回退**
   - 挂载：控制台明示回退路径、`Startup\<svc>.cmd` 创建、`HKCU\…\Run` 写入、`<svc>.watchdog.pid` 落地、看门狗进程存活、库 `serviceName` 回写
@@ -487,6 +492,10 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 - **主缓存管理器解析探针**：`CacheManagerResolverProbe` **6/6**，覆盖单管理器 / 有 `@Primary` / **5 个管理器且无 `@Primary`**（复刻线上真实装配）三种场景，并断言 `CacheResilienceConfiguration` 在 5 管理器下 `cacheManager()` 与 `cacheResolver()` 均非空
 - **macOS**：**无真机**（见 §5.2）。本轮把验证从「字符串形状」推进到 **plist 可被 XML 解析器实解析 + 转义敏感性对照**；`launchctl` 真机行为仍未验收，报告中不作通过结论
 - **前端**：`ProjectsView.vue` 类型检查无新增错误（既有报错均在未触碰的 `ReRelationGraph`）
+- **前端界面层复核（复用现成 8848，未启动/替换）**：8848 `serve-dist.mjs` 代理目标即 `http://192.168.50.198:8112`，
+  以 `/#/projects?releaseId=5` 打开 `win-springboot` 编辑弹窗 → 「系统管理」页实测渲染：标签 **未挂载**、
+  服务名输入框为空（占位 `自动生成，如 ms-win-springboot`）、操作按钮为 **挂载系统服务**（而非「卸载系统服务」）；
+  取消退出后库仍为 `service_name=NULL`，证明缺陷 10 的清空在**界面层**同样可见（界面以 `serviceName` 判定「已挂载」）
 
 ### 9.4 复核命令
 
@@ -508,7 +517,9 @@ mvn -o -pl spring-support-ai-starter test -DskipTests=false -Dtest=CacheManagerR
 # 3) 本机自检 + 两个真机套件（Windows 目标 192.168.50.101）
 pwsh -File spring-support-server-starter/src/acceptance/win-release-selfcheck.ps1 -Port 18095   # 期望 10/0
 node spring-support-server-starter/src/acceptance/win-e2e.mjs                                   # 期望 pass=25 fail=0
-node spring-support-server-starter/src/acceptance/win-service-e2e.mjs                           # 期望 pass=19 fail=0
+node spring-support-server-starter/src/acceptance/win-service-e2e.mjs                           # 期望 pass=23 fail=0
+node spring-support-server-starter/src/acceptance/linux-regression.mjs                          # 期望 pass=13 fail=0
+node spring-support-server-starter/src/acceptance/template-endpoint-check.mjs                   # 期望 pass=13 fail=0
 ```
 
 ### 9.5 本轮环境事实（非产品缺陷，验收须知）
@@ -523,4 +534,8 @@ node spring-support-server-starter/src/acceptance/win-service-e2e.mjs           
   全量源码构建正常。可交付产物一律用全量构建。
 - 本机存在**并行会话在同一 198 上反复替换同名 jar**（曾出现 `rollback-pre-other-session-*.jar`）；
   复验时须先核对内外层 md5，不一致则以正典产物为准重新部署。
+- 验收期间本机 **MySQL84 服务两次自行停止**（无 shutdown 日志、无服务崩溃事件，`Connection refused`），
+  导致平台启动失败与套件中断；`Start-Service MySQL84` 即可恢复。这属验收环境事实，
+  但**说明「数据库不可用」时平台是「如实起不来」而非假活**——重启后 `NRestarts=0`、8112 监听、
+  本次 boot `ERROR` 行 0，可据此排除产品侧问题。
 - Win101 的 `ssh_enabled` 会被在线采集按旧快照回写（缺陷 5）——已修复；修复前必须「置 1 后立刻执行」。

@@ -554,16 +554,15 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     */
     public TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Map<String, Object> notification = createNotificationParser(properties).parse(toRequestParam(request), Map.class);
-        TencentWechatPayScoreNotifyPayload payload = new TencentWechatPayScoreNotifyPayload();
-        payload.setOutOrderNo(firstText(notification, "out_order_no", "outOrderNo"));
-        payload.setServiceOrderNo(firstText(notification, "service_order_no", "serviceOrderNo"));
-        payload.setAppId(firstText(notification, "appid", "appId"));
-        payload.setServiceId(firstText(notification, "service_id", "serviceId"));
-        payload.setOpenId(firstText(notification, "openid", "openId"));
-        payload.setState(firstText(notification, "state", "service_state", "serviceState", "order_status", "orderStatus"));
-        payload.setFinishReason(firstText(notification, "finish_reason", "finishReason"));
-        payload.setRawData(notification);
-        return payload;
+        return new TencentWechatPayScoreNotifyPayload(
+                firstText(notification, "out_order_no", "outOrderNo"),
+                firstText(notification, "service_order_no", "serviceOrderNo"),
+                firstText(notification, "appid", "appId"),
+                firstText(notification, "service_id", "serviceId"),
+                firstText(notification, "openid", "openId"),
+                firstText(notification, "state", "service_state", "serviceState", "order_status", "orderStatus"),
+                firstText(notification, "finish_reason", "finishReason"),
+                notification);
     }
 
     @Override
@@ -607,18 +606,21 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     */
     public TencentWechatPayNotifyPayload parsePayNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Transaction transaction = createNotificationParser(properties).parse(toRequestParam(request), Transaction.class);
-        TencentWechatPayNotifyPayload payload = new TencentWechatPayNotifyPayload();
-        payload.setOrderNo(transaction.getOutTradeNo());
-        payload.setTransactionId(transaction.getTransactionId());
-        payload.setAppId(transaction.getAppid());
-        payload.setMerchantId(transaction.getMchid());
-        payload.setTradeState(transaction.getTradeState() != null ? transaction.getTradeState().name() : null);
-        payload.setTradeStateDesc(transaction.getTradeStateDesc());
+        Long totalAmountFen = null;
+        Long payerTotalAmountFen = null;
         if (transaction.getAmount() != null) {
-            payload.setTotalAmountFen(longValue(transaction.getAmount().getTotal()));
-            payload.setPayerTotalAmountFen(longValue(transaction.getAmount().getPayerTotal()));
+            totalAmountFen = longValue(transaction.getAmount().getTotal());
+            payerTotalAmountFen = longValue(transaction.getAmount().getPayerTotal());
         }
-        return payload;
+        return new TencentWechatPayNotifyPayload(
+                transaction.getOutTradeNo(),
+                transaction.getTransactionId(),
+                transaction.getAppid(),
+                transaction.getMchid(),
+                totalAmountFen,
+                payerTotalAmountFen,
+                transaction.getTradeState() != null ? transaction.getTradeState().name() : null,
+                transaction.getTradeStateDesc());
     }
 
     @Override
@@ -627,16 +629,19 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     */
     public TencentWechatRefundNotifyPayload parseRefundNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         RefundNotification notification = createNotificationParser(properties).parse(toRequestParam(request), RefundNotification.class);
-        TencentWechatRefundNotifyPayload payload = new TencentWechatRefundNotifyPayload();
-        payload.setOrderNo(notification.getOutTradeNo());
-        payload.setRefundNo(notification.getOutRefundNo());
-        payload.setRefundId(notification.getRefundId());
-        payload.setRefundStatus(notification.getRefundStatus() != null ? notification.getRefundStatus().name() : null);
+        Long totalAmountFen = null;
+        Long refundAmountFen = null;
         if (notification.getAmount() != null) {
-            payload.setTotalAmountFen(longValue(notification.getAmount().getTotal()));
-            payload.setRefundAmountFen(longValue(notification.getAmount().getRefund()));
+            totalAmountFen = longValue(notification.getAmount().getTotal());
+            refundAmountFen = longValue(notification.getAmount().getRefund());
         }
-        return payload;
+        return new TencentWechatRefundNotifyPayload(
+                notification.getOutTradeNo(),
+                notification.getOutRefundNo(),
+                notification.getRefundId(),
+                totalAmountFen,
+                refundAmountFen,
+                notification.getRefundStatus() != null ? notification.getRefundStatus().name() : null);
     }
 
     /**

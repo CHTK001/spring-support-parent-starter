@@ -340,20 +340,20 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         if (payload == null) {
             throw new PaymentException("微信支付分回调内容不能为空");
         }
-        if (StringUtils.hasText(outOrderNo) && StringUtils.hasText(payload.getOutOrderNo()) && !outOrderNo.equals(payload.getOutOrderNo())) {
+        if (StringUtils.hasText(outOrderNo) && StringUtils.hasText(payload.outOrderNo()) && !outOrderNo.equals(payload.outOrderNo())) {
             throw new PaymentException("微信支付分回调路径出订单号和报文出订单号不一致");
         }
-        WechatPayScoreOrder order = requireOrder(firstNonBlank(payload.getOutOrderNo(), outOrderNo));
+        WechatPayScoreOrder order = requireOrder(firstNonBlank(payload.outOrderNo(), outOrderNo));
         if (channelId != null && order.getChannelId() != null && !channelId.equals(order.getChannelId())) {
             throw new PaymentException("微信支付分回调渠道与订单渠道不一致");
         }
-        order.setServiceOrderNo(firstNonBlank(payload.getServiceOrderNo(), order.getServiceOrderNo()));
-        order.setAppId(firstNonBlank(payload.getAppId(), order.getAppId()));
-        order.setServiceId(firstNonBlank(payload.getServiceId(), order.getServiceId()));
-        order.setOpenId(firstNonBlank(payload.getOpenId(), order.getOpenId()));
-        order.setState(firstNonBlank(payload.getState(), order.getState()));
-        order.setFinishReason(firstNonBlank(payload.getFinishReason(), order.getFinishReason()));
-        order.setResponsePayload(firstNonBlank(responsePayload, toJson(payload.getRawData()), order.getResponsePayload()));
+        order.setServiceOrderNo(firstNonBlank(payload.serviceOrderNo(), order.getServiceOrderNo()));
+        order.setAppId(firstNonBlank(payload.appId(), order.getAppId()));
+        order.setServiceId(firstNonBlank(payload.serviceId(), order.getServiceId()));
+        order.setOpenId(firstNonBlank(payload.openId(), order.getOpenId()));
+        order.setState(firstNonBlank(payload.state(), order.getState()));
+        order.setFinishReason(firstNonBlank(payload.finishReason(), order.getFinishReason()));
+        order.setResponsePayload(firstNonBlank(responsePayload, toJson(payload.rawData()), order.getResponsePayload()));
         /**
          * 更新终态时间戳
          * @param order 支付分订单

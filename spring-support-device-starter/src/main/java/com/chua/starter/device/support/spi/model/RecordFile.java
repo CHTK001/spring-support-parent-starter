@@ -1,40 +1,22 @@
 package com.chua.starter.device.spi.model;
 
-import lombok.Data;
-
 import java.time.LocalDateTime;
 
 /**
  * 录像文件信息
  *
+ * @param fileId    录像文件唯一标识
+ * @param channelId 所属通道标识
+ * @param startTime 录像起始时间
+ * @param endTime   录像结束时间
+ * @param size      文件大小（字节）
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class RecordFile {
-
-    /**
-     * 录像文件唯一 标识
-     */
-    private String fileId;
-
-    /**
-     * 所属通道 标识
-     */
-    private String channelId;
-
-    /**
-     * 录像起始时间
-     */
-    private LocalDateTime startTime;
-
-    /**
-     * 录像结束时间
-     */
-    private LocalDateTime endTime;
-
-    /**
-     * 文件大小（字节）
-     */
-    private long size;
+public record RecordFile(
+        String fileId,
+        String channelId,
+        LocalDateTime startTime,
+        LocalDateTime endTime,
+        long size) {
 }

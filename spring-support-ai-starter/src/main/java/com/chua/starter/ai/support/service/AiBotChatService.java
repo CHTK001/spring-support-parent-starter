@@ -59,7 +59,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -447,7 +450,13 @@ public class AiBotChatService {
                 // 取本会话最近 N 条历史（排除当前这条刚落库的 IN），组装成 user/assistant 多轮。
                 int memoryCount = bot.getRandomContextCount() == null ? 10 : bot.getRandomContextCount();
                 List<ChatMessage> priorTurns = loadRecentTurns(bot.getBotId(), chatId, dedupKey, memoryCount);
-                String reply = aiReply(bot, content, priorTurns);
+                AiReplyAttribution attribution = new AiReplyAttribution();
+                String reply = aiReply(bot, content, priorTurns, attribution);
+                if (attribution.isFallback()) {
+                    log.warn("[BotChat] Bot {} 回复已回退（指定 {} → 实际 {}）：{}",
+                            bot.getBotId(), attribution.getRequestedModel(),
+                            attribution.getUsedModel(), attribution.getFallbackReason());
+                }
                 if (reply != null && !reply.isBlank()) {
                     BotSendResult result = sendReply(bot, client, message, reply);
                     if (result.isSuccess()) {
@@ -868,9 +877,19 @@ public class AiBotChatService {
                 : (binding.getRandomContextCount() != null ? binding.getRandomContextCount() : 10);
         // 当前问题用操作者输入的 prompt；最近上下文以多轮 role 消息注入（count=0 表示不带历史）
         List<ChatMessage> history = loadHistoryTurns(binding.getBotId(), chatId, count);
-        String reply = aiReply(binding, prompt, history);
+        AiReplyAttribution attribution = new AiReplyAttribution();
+        String reply = aiReply(binding, prompt, history, attribution);
         Map<String, Object> data = new LinkedHashMap<>(8);
         data.put("reply", reply);
+        // 把"实际用哪个模型"带出去：目标模型失败会回退默认，若不显式说明，
+        // 前端只会显示一条正常回复，造成"切了模型却没生效"的错觉。
+        data.put("model", attribution.getUsedModel());
+        data.put("requestedModel", attribution.getRequestedModel());
+        String modelNotice = attribution.notice();
+        if (modelNotice != null) {
+            data.put("modelNotice", modelNotice);
+            log.warn("[BotChat] Bot {} 回复已回退：{}", binding.getBotId(), modelNotice);
+        }
 
         boolean usable = reply != null && !reply.isBlank()
                 && !reply.startsWith("AI 回复失败") && !reply.contains("未配置") && !reply.contains("未在模型管理");
@@ -1555,6 +1574,20 @@ public class AiBotChatService {
      * @return AI 回复
      */
     private String aiReply(SysAiBotBinding bot, String userMsg, List<ChatMessage> history) {
+        return aiReply(bot, userMsg, history, null);
+    }
+
+    /**
+     * 用 机器人 配置的模型生成 AI 回复，并（可选）回填模型归属。
+     *
+     * @param bot         机器人绑定
+     * @param userMsg     当前用户消息
+     * @param history     多轮历史（可空）
+     * @param attribution 模型归属回填对象（可空）；非空时记录请求模型、实际模型与回退原因
+     * @return AI 回复
+     */
+    private String aiReply(SysAiBotBinding bot, String userMsg, List<ChatMessage> history,
+                           AiReplyAttribution attribution) {
         // 候选模型（按优先级、去重、仅保留「模型管理」里存在且启用的）：
         // ① 机器人/Bot 绑定自己配的 → ② Bot 全局默认 → ③ 配置中心「对话路由」默认对话模型。
         // 口径统一收在 EffectiveChatModelResolver；三级都不可用时返回空，
@@ -1564,6 +1597,9 @@ public class AiBotChatService {
         List<String> candidates = effectiveChatModelResolver.candidates(bot.getModel());
         log.info("[BotChat] Bot {} 候选模型解析 botModel={} candidates={}",
                 bot.getBotId(), bot.getModel(), candidates);
+        if (attribution != null) {
+            attribution.requestedModel = candidates.isEmpty() ? bot.getModel() : candidates.get(0);
+        }
         if (candidates.isEmpty()) {
             log.warn("[BotChat] Bot {} 没有可用的对话模型：连接器未单独配，Bot 默认与配置中心默认也不可用",
                     bot.getBotId());
@@ -1577,15 +1613,25 @@ public class AiBotChatService {
             try {
                 String reply = attemptReply(bot, candidate, userMsg, timeoutMs, history);
                 if (reply != null && !reply.isBlank()) {
+                    if (attribution != null) {
+                        attribution.usedModel = candidate;
+                    }
                     return reply;
                 }
                 log.warn("[BotChat] 候选模型 {} 无有效回复，尝试下一个", candidate);
+                if (attribution != null && attribution.fallbackReason == null) {
+                    attribution.fallbackReason = "模型 " + candidate + " 未返回有效内容";
+                }
             } catch (Exception e) {
                 if (firstError == null) {
                     firstError = e;
                 }
                 lastError = e;
                 log.warn("[BotChat] 候选模型 {} 调用失败（{}），尝试下一个", candidate, e.getMessage());
+                if (attribution != null && attribution.fallbackReason == null) {
+                    attribution.fallbackReason = "模型 " + candidate + " 调用失败："
+                            + describeAiError(e, e.getMessage());
+                }
             }
         }
         // 报第一个候选的失败原因：它是用户真正指定（或最优先）的那个模型；
@@ -1707,8 +1753,26 @@ public class AiBotChatService {
         }
         // 4. 调用模型并记录用量（令牌/费用入库，供 usage 页统计）。
         // 受 机器人 绑定上的「记录用量」专属开关控制：关闭时不记录。
+        // 采样温度：模型管理里给该模型配了 temperature 时按其要求发送（如 kimi 系只接受 1）。
+        if (pm.getTemperature() != null) {
+            chatClient.temperature(pm.getTemperature());
+        }
         long start = System.currentTimeMillis();
-        ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
+        ChatSyncResponse response;
+        try {
+            response = chatClient.chatSyncWithResponse(userMsg);
+        } catch (RuntimeException first) {
+            Double required = requiredTemperature(first);
+            if (required == null) {
+                throw first;
+            }
+            // 模型只接受固定采样温度（如 kimi：只有 1 合法）时，按其要求改参数重试一次，
+            // 避免因一个本可自适应的参数把模型判死、静默回退到默认模型。
+            log.warn("[BotChat] Bot {} 模型 {} 采样温度不被接受，改用 temperature={} 重试：{}",
+                    bot.getBotId(), plainModel, required, first.getMessage());
+            chatClient.temperature(required);
+            response = chatClient.chatSyncWithResponse(userMsg);
+        }
         long end = System.currentTimeMillis();
         String replyText = response != null && response.getText() != null ? response.getText() : "";
         log.info("[BotChat] Bot {} 调用完成 providerId={} model={} reply={}",
@@ -1737,6 +1801,37 @@ public class AiBotChatService {
             }
         }
         return response != null && response.getText() != null ? response.getText() : "";
+    }
+
+    /**
+     * 从异常信息解析模型要求的采样温度。
+     *
+     * <p>部分模型只接受固定 temperature，否则返回
+     * {@code 400: field Temperature invalid, only 1 is allowed for this model}。
+     * 命中该形态时返回要求值（默认 {@code 1}），其余情况返回 {@code null}（不重试）。</p>
+     *
+     * @param e 调用异常
+     * @return 模型要求的采样温度；非温度类错误返回 null
+     */
+    private static Double requiredTemperature(Throwable e) {
+        String msg = (e == null || e.getMessage() == null) ? "" : e.getMessage();
+        String lower = msg.toLowerCase(Locale.ROOT);
+        if (!lower.contains("temperature")) {
+            return null;
+        }
+        if (!(lower.contains("invalid") || lower.contains("only")
+                || lower.contains("not support") || lower.contains("unsupported"))) {
+            return null;
+        }
+        Matcher matcher = Pattern.compile("only\\s+([0-9]+(?:\\.[0-9]+)?)").matcher(lower);
+        if (matcher.find()) {
+            try {
+                return Double.parseDouble(matcher.group(1));
+            } catch (NumberFormatException ignored) {
+                // 解析失败时退回默认值
+            }
+        }
+        return 1.0d;
     }
 
     /**
@@ -1848,5 +1943,63 @@ public class AiBotChatService {
         }
         Object value = extra.get(key);
         return value == null ? null : value.toString();
+    }
+
+    /**
+     * 一次回复的模型归属：向调用方表明"实际用哪个模型出的回复、是否发生过回退"。
+     *
+     * <p>此前回退是静默的：目标模型报错后会改用默认模型并照常回复，前端只看得到回复内容，
+     * "切换了模型却没生效"的错觉由此而来。把归属显式带出来即可消除该歧义。</p>
+     */
+    public static final class AiReplyAttribution {
+
+        /**
+         * 最优先（通常即用户指定）的模型
+         */
+        private String requestedModel;
+
+        /**
+         * 实际产出回复的模型
+         */
+        private String usedModel;
+
+        /**
+         * 回退原因；为空表示未发生回退
+         */
+        private String fallbackReason;
+
+        public String getRequestedModel() {
+            return requestedModel;
+        }
+
+        public String getUsedModel() {
+            return usedModel;
+        }
+
+        public String getFallbackReason() {
+            return fallbackReason;
+        }
+
+        /**
+         * 是否发生了回退（请求的模型未产出回复，改用了其它模型）。
+         *
+         * @return true 表示发生了回退
+         */
+        public boolean isFallback() {
+            return fallbackReason != null && !fallbackReason.isBlank();
+        }
+
+        /**
+         * 面向用户的一句话说明；未回退时返回 null。
+         *
+         * @return 提示文案或 null
+         */
+        public String notice() {
+            if (!isFallback()) {
+                return null;
+            }
+            return "所选模型 " + requestedModel + " 未产出回复，本条实际由 " + usedModel
+                    + " 生成（原因：" + fallbackReason + "）";
+        }
     }
 }

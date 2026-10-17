@@ -78,7 +78,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         MerchantChannel channel = requireEnabledWechatChannel(dto.channelId());
         TencentWechatPayScoreNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
                 .parsePayScoreNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto.nonce(), dto.signature(), dto.signType(), dto.body()));
-        if (StringUtils.hasText(dto.outOrderNo()) && StringUtils.hasText(payload.getOutOrderNo()) && !dto.outOrderNo().equals(payload.getOutOrderNo())) {
+        if (StringUtils.hasText(dto.outOrderNo()) && StringUtils.hasText(payload.outOrderNo()) && !dto.outOrderNo().equals(payload.outOrderNo())) {
             throw new PaymentException("微信支付分回调路径出订单号和报文出订单号不一致");
         }
         wechatPayScoreOrderService.handleNotify(dto.channelId(), dto.outOrderNo(), payload, dto.body());

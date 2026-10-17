@@ -202,11 +202,13 @@ public class HikvisionRealSession implements DeviceSession {
      * @return 是否成功
      */
     private boolean onAlarmMessage(int command, NET_DVR_ALARMER alarmer, Pointer alarmInfo, int bufLen, Pointer user) {
-        DeviceEvent event = new DeviceEvent();
-        event.setDeviceId(info.ip());
-        event.setType(EventType.OTHER);
-        event.setDetail("海康报警事件，命令: " + command);
-        event.setOccurredAt(java.time.LocalDateTime.now());
+        DeviceEvent event = new DeviceEvent(
+                info.ip(),
+                null,
+                EventType.OTHER,
+                "海康报警事件，命令: " + command,
+                java.time.LocalDateTime.now(),
+                null);
         eventQueue.add(event);
         List<EventListener> list = listeners.get(EventType.OTHER);
         if (list != null) {
@@ -331,19 +333,19 @@ public class HikvisionRealSession implements DeviceSession {
         cond.bByTime = 1;
         cond.byStreamType = HCNetSDK.NET_DVR_MAIN_STREAM;
         cond.startTime = new NET_DVR_TIME();
-        cond.startTime.byYear = (byte) (range.getStart().getYear() - 2000);
-        cond.startTime.byMonth = (byte) range.getStart().getMonthValue();
-        cond.startTime.byDay = (byte) range.getStart().getDayOfMonth();
-        cond.startTime.byHour = (byte) range.getStart().getHour();
-        cond.startTime.byMinute = (byte) range.getStart().getMinute();
-        cond.startTime.bySecond = (byte) range.getStart().getSecond();
+        cond.startTime.byYear = (byte) (range.start().getYear() - 2000);
+        cond.startTime.byMonth = (byte) range.start().getMonthValue();
+        cond.startTime.byDay = (byte) range.start().getDayOfMonth();
+        cond.startTime.byHour = (byte) range.start().getHour();
+        cond.startTime.byMinute = (byte) range.start().getMinute();
+        cond.startTime.bySecond = (byte) range.start().getSecond();
         cond.stopTime = new NET_DVR_TIME();
-        cond.stopTime.byYear = (byte) (range.getEnd().getYear() - 2000);
-        cond.stopTime.byMonth = (byte) range.getEnd().getMonthValue();
-        cond.stopTime.byDay = (byte) range.getEnd().getDayOfMonth();
-        cond.stopTime.byHour = (byte) range.getEnd().getHour();
-        cond.stopTime.byMinute = (byte) range.getEnd().getMinute();
-        cond.stopTime.bySecond = (byte) range.getEnd().getSecond();
+        cond.stopTime.byYear = (byte) (range.end().getYear() - 2000);
+        cond.stopTime.byMonth = (byte) range.end().getMonthValue();
+        cond.stopTime.byDay = (byte) range.end().getDayOfMonth();
+        cond.stopTime.byHour = (byte) range.end().getHour();
+        cond.stopTime.byMinute = (byte) range.end().getMinute();
+        cond.stopTime.bySecond = (byte) range.end().getSecond();
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         HCNetSDK.PlayBackDataCallBack callback = (handle, dataType, pBuffer, bufSize, pUser) -> {

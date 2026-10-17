@@ -77,12 +77,12 @@ public class JobDispatchHandler implements SyncMessageHandler {
             ServletResponse response = jobExecute.run(new ServletRequest(), param);
             
             if (response.isSuccess()) {
-                log.info("[JobHandler] 任务接收成功: jobId={}", param.getJobId());
-                return Map.of("code", 200, "message", "SUCCESS", "jobId", param.getJobId());
+                log.info("[JobHandler] 任务接收成功: jobId={}", param.jobId());
+                return Map.of("code", 200, "message", "SUCCESS", "jobId", param.jobId());
             } else {
                 String errorMsg = response.getMessage();
-                log.warn("[JobHandler] 任务接收失败: jobId={}, msg={}", param.getJobId(), errorMsg);
-                return Map.of("code", 500, "message", errorMsg != null ? errorMsg : "任务执行失败", "jobId", param.getJobId());
+                log.warn("[JobHandler] 任务接收失败: jobId={}, msg={}", param.jobId(), errorMsg);
+                return Map.of("code", 500, "message", errorMsg != null ? errorMsg : "任务执行失败", "jobId", param.jobId());
             }
         } catch (Exception e) {
             log.error("[JobHandler] 处理任务下发异常", e);
@@ -111,21 +111,21 @@ public class JobDispatchHandler implements SyncMessageHandler {
      * @return 构建trigger参数的结果
      */
     private TriggerParam buildTriggerParam(Map<String, Object> data) {
-        TriggerParam param = new TriggerParam();
-        param.setJobId(getInt(data, "jobId"));
-        param.setProfile(getString(data, "profile"));
-        param.setExecutorHandler(getString(data, "executorHandler"));
-        param.setExecutorParams(getString(data, "executorParams"));
-        param.setExecutorBlockStrategy(getString(data, "executorBlockStrategy"));
-        param.setExecutorTimeout(getInt(data, "executorTimeout"));
-        param.setLogId(getLong(data, "logId"));
-        param.setLogDateTime(getLong(data, "logDateTime"));
-        param.setGlueType(getString(data, "glueType"));
-        param.setGlueSource(getString(data, "glueSource"));
-        param.setGlueUpdatetime(getLong(data, "glueUpdatetime"));
-        param.setBroadcastIndex(getInt(data, "broadcastIndex"));
-        param.setBroadcastTotal(getInt(data, "broadcastTotal"));
-        return param;
+        return new TriggerParam(
+                getInt(data, "jobId"),
+                getString(data, "profile"),
+                getString(data, "executorHandler"),
+                getString(data, "executorParams"),
+                getString(data, "executorBlockStrategy"),
+                getString(data, "executorRouter"),
+                getInt(data, "executorTimeout"),
+                getLong(data, "logId"),
+                getLong(data, "logDateTime"),
+                getString(data, "glueType"),
+                getString(data, "glueSource"),
+                getLong(data, "glueUpdatetime"),
+                getInt(data, "broadcastIndex"),
+                getInt(data, "broadcastTotal"));
     }
 
     /**
