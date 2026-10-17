@@ -1,46 +1,28 @@
 package com.chua.payment.support.channel;
 
-import lombok.Data;
 import java.math.BigDecimal;
 
 /**
  * 退款请求
  *
+ * @param orderNo      订单号
+ * @param userId       用户标识
+ * @param tradeNo      交易单号
+ * @param refundNo     退款单号
+ * @param refundAmount 退款金额
+ * @param totalAmount  订单总金额
+ * @param reason       退款原因
+ * @param notifyUrl    通知回调 URL
  * @since 2026-03-18
  * @author CH
  */
-@Data
-public class RefundRequest {
-    /**
-     * 订单号
-     */
-    private String orderNo;
-    /**
-     * 用户标识
-     */
-    private Long userId;
-    /**
-     * 交易单号
-     */
-    private String tradeNo;
-    /**
-     * 退款单号
-     */
-    private String refundNo;
-    /**
-     * 退款金额
-     */
-    private BigDecimal refundAmount;
-    /**
-     * 订单总金额
-     */
-    private BigDecimal totalAmount;
-    /**
-     * 退款原因
-     */
-    private String reason;
-    /**
-     * 通知回调 URL
-     */
-    private String notifyUrl;
+public record RefundRequest(
+        String orderNo,
+        Long userId,
+        String tradeNo,
+        String refundNo,
+        BigDecimal refundAmount,
+        BigDecimal totalAmount,
+        String reason,
+        String notifyUrl) {
 }

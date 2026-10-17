@@ -1,72 +1,41 @@
 package com.chua.payment.support.channel;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * 支付请求
  *
+ * @param orderNo     订单号
+ * @param userId      用户标识
+ * @param amount      支付金额
+ * @param subject     支付主题
+ * @param body        请求体
+ * @param notifyUrl   通知回调 URL
+ * @param returnUrl   支付完成后返回 URL
+ * @param currency    币种
+ * @param expireTime  过期时间
+ * @param payerOpenId 付款人 openId
+ * @param clientIp    客户端 IP
+ * @param deviceId    设备标识
+ * @param userAgent   用户 Agent
+ * @param attach      附加数据
  * @since 2026-03-18
  * @author CH
  */
-@Data
-public class PaymentRequest {
-    /**
-     * 订单号
-     */
-    private String orderNo;
-    /**
-     * 用户标识
-     */
-    private Long userId;
-    /**
-     * 支付金额
-     */
-    private BigDecimal amount;
-    /**
-     * 支付主题
-     */
-    private String subject;
-    /**
-     * 请求体
-     */
-    private String body;
-    /**
-     * 通知回调 URL
-     */
-    private String notifyUrl;
-    /**
-     * 支付完成后返回 URL
-     */
-    private String returnUrl;
-    /**
-     * 币种
-     */
-    private String currency;
-    /**
-     * 过期时间
-     */
-    private LocalDateTime expireTime;
-    /**
-     * 付款人 openId
-     */
-    private String payerOpenId;
-    /**
-     * 客户端 IP
-     */
-    private String clientIp;
-    /**
-     * 设备标识
-     */
-    private String deviceId;
-    /**
-     * 用户 Agent
-     */
-    private String userAgent;
-    /**
-     * 附加数据
-     */
-    private String attach;
+public record PaymentRequest(
+        String orderNo,
+        Long userId,
+        BigDecimal amount,
+        String subject,
+        String body,
+        String notifyUrl,
+        String returnUrl,
+        String currency,
+        LocalDateTime expireTime,
+        String payerOpenId,
+        String clientIp,
+        String deviceId,
+        String userAgent,
+        String attach) {
 }

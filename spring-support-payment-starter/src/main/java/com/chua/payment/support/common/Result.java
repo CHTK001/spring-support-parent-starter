@@ -1,78 +1,41 @@
 package com.chua.payment.support.common;
 
-import lombok.Data;
-
 import java.io.Serializable;
 
 /**
  * 统一返回结果类。
  *
+ * @param code      状态码
+ * @param message   消息
+ * @param data      数据
+ * @param timestamp 时间戳
+ * @param <T>       数据类型
  * @since 2026-03-18
  * @author CH
  */
-@Data
-public class Result<T> implements Serializable {
+public record Result<T>(Integer code, String message, T data, Long timestamp) implements Serializable {
 
     private static final long serialVersionUID = 1L; // 序列化版本 uid
 
     /**
-     * 状态码。
-     */
-    private Integer code;
-
-    /**
-     * 消息。
-     */
-    private String message;
-
-    /**
-     * 数据。
-     */
-    private T data;
-
-    /**
-     * 时间戳。
-     */
-    private Long timestamp;
-
-    /**
-     * 使用当前时间戳构造结果对象。
-     */
-    public Result() {
-        this.timestamp = System.currentTimeMillis();
-    }
-
-    /**
-     * 构造指定状态码、消息与数据的结果对象。
-     *
-     * @param code    状态码
-     * @param message 消息
-     * @param data    数据
-     */
-    public Result(Integer code, String message, T data) {
-        this.code = code;
-        this.message = message;
-        this.data = data;
-        this.timestamp = System.currentTimeMillis();
-    }
-
-    /**
      * 成功返回。
      *
+     * @param <T> 数据类型
      * @return 成功的结果
      */
     public static <T> Result<T> success() {
-        return new Result<>(200, "操作成功", null);
+        return new Result<>(200, "操作成功", null, System.currentTimeMillis());
     }
 
     /**
      * 成功返回（携带数据）。
      *
      * @param data 数据
+     * @param <T>  数据类型
      * @return 成功的结果
      */
     public static <T> Result<T> success(T data) {
-        return new Result<>(200, "操作成功", data);
+        return new Result<>(200, "操作成功", data, System.currentTimeMillis());
     }
 
     /**
@@ -80,20 +43,22 @@ public class Result<T> implements Serializable {
      *
      * @param message 消息
      * @param data    数据
+     * @param <T>     数据类型
      * @return 成功的结果
      */
     public static <T> Result<T> success(String message, T data) {
-        return new Result<>(200, message, data);
+        return new Result<>(200, message, data, System.currentTimeMillis());
     }
 
     /**
      * 失败返回。
      *
      * @param message 消息
+     * @param <T>     数据类型
      * @return 错误的结果
      */
     public static <T> Result<T> error(String message) {
-        return new Result<>(500, message, null);
+        return new Result<>(500, message, null, System.currentTimeMillis());
     }
 
     /**
@@ -101,10 +66,11 @@ public class Result<T> implements Serializable {
      *
      * @param code    状态码
      * @param message 消息
+     * @param <T>     数据类型
      * @return 错误的结果
      */
     public static <T> Result<T> error(Integer code, String message) {
-        return new Result<>(code, message, null);
+        return new Result<>(code, message, null, System.currentTimeMillis());
     }
 
     /**
@@ -113,9 +79,10 @@ public class Result<T> implements Serializable {
      * @param code    状态码
      * @param message 消息
      * @param data    数据
+     * @param <T>     数据类型
      * @return 构建的结果
      */
     public static <T> Result<T> build(Integer code, String message, T data) {
-        return new Result<>(code, message, data);
+        return new Result<>(code, message, data, System.currentTimeMillis());
     }
 }

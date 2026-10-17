@@ -95,15 +95,15 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         if (dto == null) {
             throw new PaymentException("充值参数不能为空");
         }
-        walletLimitService.validateRechargeLimit(dto.getMerchantId(), dto.getUserId(), dto.getAmount());
-        WalletAccount current = findAccount(dto.getMerchantId(), dto.getUserId());
+        walletLimitService.validateRechargeLimit(dto.merchantId(), dto.userId(), dto.amount());
+        WalletAccount current = findAccount(dto.merchantId(), dto.userId());
         walletLimitService.validateBalanceLimit(
-                dto.getMerchantId(),
-                dto.getUserId(),
+                dto.merchantId(),
+                dto.userId(),
                 current != null ? scale(current.getAvailableBalance()) : zeroAmount(),
-                scale(dto.getAmount()));
-        String bizNo = StringUtils.hasText(dto.getRechargeNo()) ? dto.getRechargeNo() : generateBizNo("RCH");
-        WalletAccount account = applyChange("RECHARGE", bizNo, dto.getMerchantId(), dto.getUserId(), dto.getAmount(), true, true, dto.getOperator(), dto.getRemark());
+                scale(dto.amount()));
+        String bizNo = StringUtils.hasText(dto.rechargeNo()) ? dto.rechargeNo() : generateBizNo("RCH");
+        WalletAccount account = applyChange("RECHARGE", bizNo, dto.merchantId(), dto.userId(), dto.amount(), true, true, dto.operator(), dto.remark());
         return toVO(account);
     }
 
@@ -222,30 +222,30 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         if (dto == null) {
             throw new PaymentException("提现参数不能为空");
         }
-        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new PaymentException("提现金额必须大于零");
         }
 
-        String bizNo = StringUtils.hasText(dto.getWithdrawNo()) ? dto.getWithdrawNo() : generateBizNo("WDW");
+        String bizNo = StringUtils.hasText(dto.withdrawNo()) ? dto.withdrawNo() : generateBizNo("WDW");
         String remark = String.format("提现冻结:%s(%s)%s",
-                StringUtils.hasText(dto.getBankName()) ? dto.getBankName() : "银行",
-                StringUtils.hasText(dto.getBankAccount()) ? dto.getBankAccount() : "",
-                StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : "");
+                StringUtils.hasText(dto.bankName()) ? dto.bankName() : "银行",
+                StringUtils.hasText(dto.bankAccount()) ? dto.bankAccount() : "",
+                StringUtils.hasText(dto.remark()) ? ": " + dto.remark() : "");
 
         /**
          * 校验商户已启用钱包
-         * @param dto.getMerchantId() 商户标识
+         * @param dto.merchantId() 商户标识
          */
-        requireWalletEnabledMerchant(dto.getMerchantId());
+        requireWalletEnabledMerchant(dto.merchantId());
 
-        String idempotentKey = "payment:idempotent:wallet:WITHDRAW_FREEZE:" + dto.getMerchantId() + ":" + dto.getUserId() + ":" + bizNo;
+        String idempotentKey = "payment:idempotent:wallet:WITHDRAW_FREEZE:" + dto.merchantId() + ":" + dto.userId() + ":" + bizNo;
         if (!idempotentTemplate.tryAcquire(idempotentKey, 10, TimeUnit.MINUTES)) {
             throw new PaymentException("请求正在处理中，请勿重复提交");
         }
 
         try {
             for (int i = 0; i < 5; i++) {
-                WalletAccount account = requireAccount(dto.getMerchantId(), dto.getUserId(), false);
+                WalletAccount account = requireAccount(dto.merchantId(), dto.userId(), false);
                 /**
                  * 校验账户已启用
                  * @param account 账户
@@ -254,7 +254,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
                 BigDecimal availBefore = scale(account.getAvailableBalance());
                 BigDecimal frozenBefore = scale(account.getFrozenBalance());
-                BigDecimal delta = scale(dto.getAmount());
+                BigDecimal delta = scale(dto.amount());
 
                 if (availBefore.compareTo(delta) < 0) {
                     throw new PaymentException("钱包余额不足");
@@ -274,15 +274,15 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 }
 
                 WalletAccountLog log = new WalletAccountLog();
-                log.setMerchantId(dto.getMerchantId());
-                log.setUserId(dto.getUserId());
+                log.setMerchantId(dto.merchantId());
+                log.setUserId(dto.userId());
                 log.setBizType("WITHDRAW");
                 log.setBizNo(bizNo);
                 log.setChangeType("OUT");
                 log.setChangeAmount(delta);
                 log.setBalanceBefore(availBefore);
                 log.setBalanceAfter(availAfter);
-                log.setOperator(StringUtils.hasText(dto.getOperator()) ? dto.getOperator() : "system");
+                log.setOperator(StringUtils.hasText(dto.operator()) ? dto.operator() : "system");
                 log.setRemark(remark);
                 walletAccountLogMapper.insert(log);
 
@@ -459,18 +459,18 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         if (dto == null) {
             throw new PaymentException("转账参数不能为空");
         }
-        if (dto.getFromUserId().equals(dto.getToUserId())) {
+        if (dto.fromUserId().equals(dto.toUserId())) {
             throw new PaymentException("不能转账给自己");
         }
-        String bizNo = StringUtils.hasText(dto.getTransferNo()) ? dto.getTransferNo() : generateBizNo("TRF");
+        String bizNo = StringUtils.hasText(dto.transferNo()) ? dto.transferNo() : generateBizNo("TRF");
 
         /**
          * 转出扣减可用余额
          * @param bizNo 业务单号
-         * @param dto.getMerchantId() 商户标识
+         * @param dto.merchantId() 商户标识
          */
-        applyChange("TRANSFER_OUT", bizNo, dto.getMerchantId(), dto.getFromUserId(), dto.getAmount(), false, false, dto.getOperator(), "转账给用户" + dto.getToUserId() + (StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : ""));
-        WalletAccount toAccount = applyChange("TRANSFER_IN", bizNo, dto.getMerchantId(), dto.getToUserId(), dto.getAmount(), true, true, dto.getOperator(), "来自用户" + dto.getFromUserId() + "的转账" + (StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : ""));
+        applyChange("TRANSFER_OUT", bizNo, dto.merchantId(), dto.fromUserId(), dto.amount(), false, false, dto.operator(), "转账给用户" + dto.toUserId() + (StringUtils.hasText(dto.remark()) ? ": " + dto.remark() : ""));
+        WalletAccount toAccount = applyChange("TRANSFER_IN", bizNo, dto.merchantId(), dto.toUserId(), dto.amount(), true, true, dto.operator(), "来自用户" + dto.fromUserId() + "的转账" + (StringUtils.hasText(dto.remark()) ? ": " + dto.remark() : ""));
 
         return toVO(toAccount);
     }
@@ -487,16 +487,16 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         if (dto == null) {
             throw new PaymentException("提现参数不能为空");
         }
-        if (!StringUtils.hasText(dto.getBankAccount())) {
+        if (!StringUtils.hasText(dto.bankAccount())) {
             throw new PaymentException("银行账号不能为空");
         }
-        String bizNo = StringUtils.hasText(dto.getWithdrawNo()) ? dto.getWithdrawNo() : generateBizNo("WDW");
+        String bizNo = StringUtils.hasText(dto.withdrawNo()) ? dto.withdrawNo() : generateBizNo("WDW");
         String remark = String.format("提现:%s(%s)%s",
-                StringUtils.hasText(dto.getBankName()) ? dto.getBankName() : "银行",
-                dto.getBankAccount(),
-                StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : "");
+                StringUtils.hasText(dto.bankName()) ? dto.bankName() : "银行",
+                dto.bankAccount(),
+                StringUtils.hasText(dto.remark()) ? ": " + dto.remark() : "");
 
-        WalletAccount account = applyChange("WITHDRAW", bizNo, dto.getMerchantId(), dto.getUserId(), dto.getAmount(), false, false, dto.getOperator(), remark);
+        WalletAccount account = applyChange("WITHDRAW", bizNo, dto.merchantId(), dto.userId(), dto.amount(), false, false, dto.operator(), remark);
         return toVO(account);
     }
 
@@ -833,8 +833,14 @@ public class WalletAccountServiceImpl implements WalletAccountService {
      * @return 转换后的账户视图对象
      */
     private WalletAccountVO toVO(WalletAccount account) {
-        WalletAccountVO vo = new WalletAccountVO();
-        BeanUtils.copyProperties(account, vo);
-        return vo;
+        return new WalletAccountVO(
+                account.getId(),
+                account.getMerchantId(),
+                account.getUserId(),
+                account.getAvailableBalance(),
+                account.getFrozenBalance(),
+                account.getStatus(),
+                account.getCreatedAt(),
+                account.getUpdatedAt());
     }
 }

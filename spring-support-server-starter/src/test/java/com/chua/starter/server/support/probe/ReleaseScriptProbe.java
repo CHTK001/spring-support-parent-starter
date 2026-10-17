@@ -572,6 +572,56 @@ public final class ReleaseScriptProbe {
         String badImpl = "sudo cp x.plist ~/Library/LaunchAgents/ && launchctl load -w x.plist\n";
         check("J17 敏感性对照：sudo/launchctl load 旧写法确实会被 J8/J9 判负",
                 badImpl.contains("sudo") && !badImpl.contains("bootstrap"), badImpl);
+        // launchd 只接受格式良好的 plist：字符串里手拼 XML 一旦漏转义/结构错位，
+        // 作业根本装不进 launchd（真机上只会看到「挂载失败」，且无真机时无法预先发现）。
+        // 这里把生成结果里的 XML 片段真解析一遍，锁定「产物是可被 launchd 解析的 plist」。
+        check("J18 挂载脚本内嵌 plist 是良构 XML（可被 launchd 解析）",
+                countXmlErrors(extractPlist(install)) == 0 && countXmlErrors(extractPlist(xmlInstall)) == 0,
+                extractPlist(install));
+        check("J19 敏感性对照：漏转义的 plist 会被 J18 判负",
+                countXmlErrors(extractPlist(xmlInstall).replace("&amp;", "&").replace("&lt;", "<")
+                        .replace("&gt;", ">")) > 0, "unescaped");
+    }
+
+    /**
+     * 从生成的挂载脚本里截取 plist 的 XML 正文（here-string 内的内容）。
+     *
+     * @param script 生成的挂载脚本
+     * @return plist XML 文本；找不到时返回空串
+     */
+    private static String extractPlist(String script) {
+        int start = script.indexOf("<?xml");
+        int end = script.indexOf("</plist>");
+        if (start < 0 || end < 0) {
+            return "";
+        }
+        return script.substring(start, end + "</plist>".length());
+    }
+
+    /**
+     * 统计 XML 解析错误数（0 表示良构）。
+     *
+     * @param xml XML 文本
+     * @return 错误数；空文本按 1 个错误计
+     */
+    private static int countXmlErrors(String xml) {
+        if (xml == null || xml.isBlank()) {
+            return 1;
+        }
+        try {
+            var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            // plist 带 DOCTYPE，必须允许；但不解析外部 DTD（无网络依赖，也不引入 XXE 风险）
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setExpandEntityReferences(false);
+            factory.setXIncludeAware(false);
+            factory.newDocumentBuilder().parse(
+                    new org.xml.sax.InputSource(new java.io.StringReader(xml)));
+            return 0;
+        } catch (Exception e) {
+            return 1;
+        }
     }
 
     // ==================== K. Windows 免计划任务回退挂载 ====================
@@ -616,13 +666,15 @@ public final class ReleaseScriptProbe {
         check("K7 回退也有终态校验（启动项/注册表/守护均须落地）",
                 install.contains("启动项文件未创建") && install.contains("注册表启动项未写入")
                         && install.contains("守护进程未拉起"), install);
-        check("K8 卸载清理回退产物（启动项/注册表/看门狗 pid）",
+        check("K8 卸载清理回退产物（启动项/注册表/看门狗 pid/自启脚本）",
                 uninstall.contains("Remove-Item -Force $__cmd") && uninstall.contains("Remove-ItemProperty")
-                        && uninstall.contains("Stop-Process -Id"), uninstall);
+                        && uninstall.contains("Stop-Process -Id")
+                        && uninstall.contains(svc + ".autostart.ps1"), uninstall);
         check("K9 卸载用退出码判定计划任务（避免本地化错误文本被误判为仍存在）",
                 uninstall.contains("$LASTEXITCODE -eq 0"), uninstall);
-        check("K10 卸载终态校验（启动项/注册表仍存在即失败）",
-                uninstall.contains("启动项文件仍存在") && uninstall.contains("注册表启动项仍存在"), uninstall);
+        check("K10 卸载终态校验（启动项/注册表/自启脚本仍存在即失败）",
+                uninstall.contains("启动项文件仍存在") && uninstall.contains("注册表启动项仍存在")
+                        && uninstall.contains("自启脚本仍存在"), uninstall);
         // 敏感性对照：旧实现只有 schtasks、无回退 → K2/K4 必须判负
         String oldImpl = "schtasks /Create /TN 'x-autostart' /SC ONSTART /RU SYSTEM "
                 + "/TR \"powershell -File 'a.ps1'\" /F\n";

@@ -1,23 +1,18 @@
 package com.chua.payment.support.dto;
 
-import lombok.Data;
-
 import java.util.Map;
 
 /**
  * 微信支付分取消申请
+ *
+ * @param reason      取消原因
+ * @param extraParams extra参数
+ * @param remark      备注
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class WechatPayScoreCancelDTO {
-    /**
-     * 取消原因
-     */
-    private String reason;
-    private Map<String, Object> extraParams; // extra参数
-    /**
-     * 备注
-     */
-    private String remark;
+public record WechatPayScoreCancelDTO(
+        String reason,
+        Map<String, Object> extraParams,
+        String remark) {
 }

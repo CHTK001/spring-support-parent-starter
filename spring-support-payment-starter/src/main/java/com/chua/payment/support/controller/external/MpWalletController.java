@@ -127,33 +127,34 @@ public class MpWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账户");
         }
-        if (dto.getMerchantId() == null) {
+        if (dto.merchantId() == null) {
             return Result.error("商户ID不能为空");
         }
-        if (dto.getAmount() == null || dto.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+        if (dto.amount() == null || dto.amount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return Result.error("提现金额必须大于0");
         }
-        if (!StringUtils.hasText(dto.getBankAccount())) {
+        if (!StringUtils.hasText(dto.bankAccount())) {
             return Result.error("银行账号不能为空");
         }
 
-        // 强校验：用户标识与操作者强制等于当前用户
-        dto.setUserId(userId);
-        dto.setOperator(String.valueOf(userId));
+        // 强校验：用户标识与操作者强制等于当前用户（record 不可变，重建实例覆盖）
+        WalletWithdrawDTO effectiveDto = new WalletWithdrawDTO(
+                dto.merchantId(), userId, dto.withdrawNo(), dto.notifyUrl(), dto.amount(),
+                dto.bankAccount(), dto.bankName(), dto.accountName(), String.valueOf(userId), dto.remark());
 
-        walletAccountService.freezeForWithdraw(dto);
+        walletAccountService.freezeForWithdraw(effectiveDto);
 
-        WithdrawRequest withdrawRequest = new WithdrawRequest();
-        withdrawRequest.setWithdrawNo(dto.getWithdrawNo());
-        withdrawRequest.setMerchantId(dto.getMerchantId());
-        withdrawRequest.setUserId(userId);
-        withdrawRequest.setAmount(dto.getAmount());
-        withdrawRequest.setBankAccount(dto.getBankAccount());
-        withdrawRequest.setBankName(dto.getBankName());
-        withdrawRequest.setAccountName(dto.getAccountName());
-        withdrawRequest.setNotifyUrl(dto.getNotifyUrl());
-        withdrawRequest.setOperator(String.valueOf(userId));
-        withdrawRequest.setRemark(dto.getRemark());
+        WithdrawRequest withdrawRequest = new WithdrawRequest(
+                dto.withdrawNo(),
+                dto.notifyUrl(),
+                dto.merchantId(),
+                userId,
+                dto.amount(),
+                dto.bankAccount(),
+                dto.bankName(),
+                dto.accountName(),
+                String.valueOf(userId),
+                dto.remark());
 
         WalletOrder order = walletOrderService.createWithdrawOrder(withdrawRequest);
         walletOrderService.markProcessing(order.getOrderNo(), null, null);
@@ -172,24 +173,24 @@ public class MpWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账户");
         }
-        if (dto.getMerchantId() == null) {
+        if (dto.merchantId() == null) {
             return Result.error("商户ID不能为空");
         }
-        if (dto.getToUserId() == null) {
+        if (dto.toUserId() == null) {
             return Result.error("转入用户不能为空");
         }
-        if (dto.getAmount() == null || dto.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+        if (dto.amount() == null || dto.amount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return Result.error("转账金额必须大于0");
         }
-        if (userId.equals(dto.getToUserId())) {
+        if (userId.equals(dto.toUserId())) {
             return Result.error("不能转账给自己");
         }
 
         String transferNo = "TRF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         walletAccountService.transfer(new WalletTransferOpDTO(
-                dto.getMerchantId(), userId, dto.getToUserId(),
-                dto.getAmount(), transferNo, String.valueOf(userId), dto.getRemark()));
+                dto.merchantId(), userId, dto.toUserId(),
+                dto.amount(), transferNo, String.valueOf(userId), dto.remark()));
         return Result.success();
     }
 }

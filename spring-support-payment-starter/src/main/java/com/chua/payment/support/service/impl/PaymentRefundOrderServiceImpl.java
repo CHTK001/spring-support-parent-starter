@@ -339,14 +339,30 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
      * @return 转换后的退款单视图对象
      */
     private RefundOrderVO convertToVO(PaymentRefundOrder entity) {
-        RefundOrderVO vo = new RefundOrderVO();
-        BeanUtils.copyProperties(entity, vo);
         Merchant merchant = entity.getMerchantId() == null ? null : merchantMapper.selectById(entity.getMerchantId());
         MerchantChannel channel = entity.getChannelId() == null ? null : merchantChannelMapper.selectById(entity.getChannelId());
-        vo.setMerchantName(merchant != null ? merchant.getMerchantName() : null);
-        vo.setChannelName(channel != null ? channel.getChannelName() : null);
-        vo.setStatusDesc(RefundOrderStatus.descriptionOf(entity.getStatus()));
-        vo.setSourceOrderStatusDesc(OrderState.descriptionOf(entity.getSourceOrderStatus()));
-        return vo;
+        return new RefundOrderVO(
+                entity.getId(),
+                entity.getRefundNo(),
+                entity.getOrderId(),
+                entity.getOrderNo(),
+                entity.getMerchantId(),
+                merchant != null ? merchant.getMerchantName() : null,
+                entity.getChannelId(),
+                channel != null ? channel.getChannelName() : null,
+                entity.getSourceOrderStatus(),
+                OrderState.descriptionOf(entity.getSourceOrderStatus()),
+                entity.getThirdPartyRefundNo(),
+                entity.getRefundAmount(),
+                entity.getStatus(),
+                RefundOrderStatus.descriptionOf(entity.getStatus()),
+                entity.getReason(),
+                entity.getNotifyStatus(),
+                entity.getRequestPayload(),
+                entity.getResponsePayload(),
+                entity.getOperator(),
+                entity.getRemark(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 }

@@ -404,18 +404,18 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         if (node == null || node.isMissingNode() || node.isNull()) {
             throw new PaymentException("调度平台返回空任务数据");
         }
-        PaymentSchedulerTaskVO vo = new PaymentSchedulerTaskVO();
-        vo.setTaskKey(node.path("taskKey").asText());
-        vo.setTaskName(node.path("taskName").asText());
-        vo.setCronExpression(node.path("cronExpression").asText());
-        vo.setEnabled(node.path("enabled").asBoolean());
-        vo.setDescription(node.path("description").asText());
-        vo.setScheduled(node.path("scheduled").asBoolean());
-        vo.setNextExecutionTime(parseTime(node.path("nextExecutionTime").asText(null)));
-        vo.setLastStartedAt(parseTime(node.path("lastStartedAt").asText(null)));
-        vo.setLastFinishedAt(parseTime(node.path("lastFinishedAt").asText(null)));
-        vo.setLastRunStatus(node.path("lastRunStatus").asText(null));
-        vo.setLastRunMessage(node.path("lastRunMessage").asText(null));
+        PaymentSchedulerTaskVO vo = new PaymentSchedulerTaskVO(
+                node.path("taskKey").asText(),
+                node.path("taskName").asText(),
+                node.path("cronExpression").asText(),
+                node.path("enabled").asBoolean(),
+                node.path("description").asText(),
+                node.path("scheduled").asBoolean(),
+                parseTime(node.path("nextExecutionTime").asText(null)),
+                parseTime(node.path("lastStartedAt").asText(null)),
+                parseTime(node.path("lastFinishedAt").asText(null)),
+                node.path("lastRunStatus").asText(null),
+                node.path("lastRunMessage").asText(null));
         return vo;
     }
 

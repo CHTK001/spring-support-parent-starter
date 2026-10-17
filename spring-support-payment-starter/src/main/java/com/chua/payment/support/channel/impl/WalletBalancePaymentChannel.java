@@ -53,24 +53,19 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
      * 发起支付
      */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
-        if (request.getUserId() == null) {
+        if (request.userId() == null) {
             throw new PaymentException("钱包支付必须提供 userId");
         }
         walletAccountService.pay(new WalletPayRequest(
                 channel.getMerchantId(),
-                request.getUserId(),
-                request.getAmount(),
-                request.getOrderNo(),
+                request.userId(),
+                request.amount(),
+                request.orderNo(),
                 "wallet-pay",
-                firstNonBlank(request.getSubject(), request.getBody(), request.getOrderNo())));
+                firstNonBlank(request.subject(), request.body(), request.orderNo())));
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(true);
-        result.setTradeNo("WALLET_PAY_" + request.getOrderNo());
-        result.setPaidAmount(request.getAmount());
-        result.setStatus("PAID");
-        result.setMessage("钱包余额支付成功");
-        result.setRawResponse("wallet-balance-pay");
+        PaymentResult result = new PaymentResult(true, "WALLET_PAY_" + request.orderNo(), "钱包余额支付成功", null,
+                null, null, null, null, request.amount(), "PAID", "wallet-balance-pay");
         return result;
     }
 
@@ -80,13 +75,13 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
      */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         WalletAccountLog log = walletAccountService.getLog("PAY", channel.getMerchantId(), null, orderNo);
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(log != null);
-        result.setTradeNo(log != null ? "WALLET_PAY_" + orderNo : null);
-        result.setPaidAmount(log != null ? log.getChangeAmount() : null);
-        result.setStatus(log != null ? "PAID" : "FAILED");
-        result.setMessage(log != null ? "钱包余额支付成功" : "未找到钱包支付记录");
-        result.setRawResponse(log != null ? toJson(log) : null);
+        PaymentResult result = new PaymentResult(log != null,
+                log != null ? "WALLET_PAY_" + orderNo : null,
+                log != null ? "钱包余额支付成功" : "未找到钱包支付记录",
+                null, null, null, null, null,
+                log != null ? log.getChangeAmount() : null,
+                log != null ? "PAID" : "FAILED",
+                log != null ? toJson(log) : null);
         return result;
     }
 
@@ -95,25 +90,19 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
      * 申请退款
      */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
-        if (request.getUserId() == null) {
+        if (request.userId() == null) {
             throw new PaymentException("钱包退款缺少用户上下文");
         }
         walletAccountService.refund(new WalletRefundRequest(
                 channel.getMerchantId(),
-                request.getUserId(),
-                request.getRefundAmount(),
-                request.getRefundNo(),
+                request.userId(),
+                request.refundAmount(),
+                request.refundNo(),
                 "wallet-refund",
-                request.getReason()));
+                request.reason()));
 
-        RefundResult result = new RefundResult();
-        result.setSuccess(true);
-        result.setRefundNo(request.getRefundNo());
-        result.setTradeNo("WALLET_REFUND_" + request.getRefundNo());
-        result.setRefundAmount(request.getRefundAmount());
-        result.setStatus("REFUNDED");
-        result.setMessage("钱包退款成功");
-        result.setRawResponse("wallet-balance-refund");
+        RefundResult result = new RefundResult(true, request.refundNo(), "WALLET_REFUND_" + request.refundNo(),
+                "钱包退款成功", request.refundAmount(), "REFUNDED", "wallet-balance-refund");
         return result;
     }
 
@@ -122,15 +111,13 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
      * 查询退款结果
      */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
-        WalletAccountLog log = walletAccountService.getLog("REFUND", channel.getMerchantId(), null, request.getRefundNo());
-        RefundResult result = new RefundResult();
-        result.setSuccess(log != null);
-        result.setRefundNo(request.getRefundNo());
-        result.setTradeNo(log != null ? "WALLET_REFUND_" + request.getRefundNo() : null);
-        result.setRefundAmount(log != null ? log.getChangeAmount() : request.getRefundAmount());
-        result.setStatus(log != null ? "REFUNDED" : "FAILED");
-        result.setMessage(log != null ? "钱包退款成功" : "未找到钱包退款记录");
-        result.setRawResponse(log != null ? toJson(log) : null);
+        WalletAccountLog log = walletAccountService.getLog("REFUND", channel.getMerchantId(), null, request.refundNo());
+        RefundResult result = new RefundResult(log != null, request.refundNo(),
+                log != null ? "WALLET_REFUND_" + request.refundNo() : null,
+                log != null ? "钱包退款成功" : "未找到钱包退款记录",
+                log != null ? log.getChangeAmount() : request.refundAmount(),
+                log != null ? "REFUNDED" : "FAILED",
+                log != null ? toJson(log) : null);
         return result;
     }
 

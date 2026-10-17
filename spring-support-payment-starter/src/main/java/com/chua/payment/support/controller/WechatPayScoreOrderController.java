@@ -124,8 +124,33 @@ public class WechatPayScoreOrderController {
      * @return 转换的结果
      */
     private WechatPayScoreOrderVO convert(WechatPayScoreOrder order) {
-        WechatPayScoreOrderVO vo = new WechatPayScoreOrderVO();
-        BeanUtils.copyProperties(order, vo);
-        return vo;
+        return new WechatPayScoreOrderVO(
+                order.getId(),
+                order.getMerchantId(),
+                order.getChannelId(),
+                order.getUserId(),
+                order.getOutOrderNo(),
+                order.getServiceOrderNo(),
+                order.getAppId(),
+                order.getServiceId(),
+                order.getOpenId(),
+                order.getState(),
+                order.getTotalAmount(),
+                order.getNotifyUrl(),
+                order.getServiceIntroduction(),
+                order.getStartTime(),
+                order.getEndTime(),
+                order.getFinishType(),
+                order.getReason(),
+                order.getFinishReason(),
+                order.getPackageInfo(),
+                order.getAttach(),
+                order.getRequestPayload(),
+                order.getResponsePayload(),
+                order.getRemark(),
+                order.getCompletedAt(),
+                order.getCancelledAt(),
+                order.getCreateTime(),
+                order.getUpdateTime());
     }
 }

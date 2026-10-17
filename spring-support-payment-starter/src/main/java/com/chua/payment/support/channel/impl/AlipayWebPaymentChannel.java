@@ -60,14 +60,8 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).pagePay(buildClientProperties(channel),
                 buildPayRequest(request, "FAST_INSTANT_TRADE_PAY"));
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setLaunchType("HTML_FORM");
-        result.setFormHtml(response.body());
-        result.setTradeNo(response.tradeNo());
-        result.setStatus("PAYING");
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), response.tradeNo(), response.message(), null,
+                "HTML_FORM", response.body(), null, null, null, "PAYING", response.rawResponse());
         return result;
     }
 
@@ -78,13 +72,8 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         AliyunAlipayTradeQueryResponse response = gateway(providerSpi(channel, null)).queryOrder(buildClientProperties(channel), orderNo);
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setTradeNo(response.tradeNo());
-        result.setPaidAmount(response.totalAmount());
-        result.setStatus(normalizeTradeStatus(response.tradeStatus()));
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), response.tradeNo(), response.message(), null,
+                null, null, null, null, response.totalAmount(), normalizeTradeStatus(response.tradeStatus()), response.rawResponse());
         return result;
     }
 
@@ -103,14 +92,8 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         AliyunAlipayRefundResponse response = gateway(providerSpi(channel, null)).refund(buildClientProperties(channel), buildRefundRequest(request));
 
-        RefundResult result = new RefundResult();
-        result.setSuccess(response.success());
-        result.setRefundNo(response.refundNo());
-        result.setTradeNo(response.tradeNo());
-        result.setRefundAmount(response.refundAmount());
-        result.setStatus(normalizeRefundStatus(response.refundStatus()));
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        RefundResult result = new RefundResult(response.success(), response.refundNo(), response.tradeNo(),
+                response.message(), response.refundAmount(), normalizeRefundStatus(response.refundStatus()), response.rawResponse());
         return result;
     }
 
@@ -121,14 +104,8 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         AliyunAlipayRefundResponse response = gateway(providerSpi(channel, null)).queryRefund(buildClientProperties(channel), buildRefundRequest(request));
 
-        RefundResult result = new RefundResult();
-        result.setSuccess(response.success());
-        result.setRefundNo(response.refundNo());
-        result.setTradeNo(response.tradeNo());
-        result.setRefundAmount(response.refundAmount());
-        result.setStatus(normalizeRefundStatus(response.refundStatus()));
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        RefundResult result = new RefundResult(response.success(), response.refundNo(), response.tradeNo(),
+                response.message(), response.refundAmount(), normalizeRefundStatus(response.refundStatus()), response.rawResponse());
         return result;
     }
 
@@ -179,12 +156,12 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
      */
     protected AliyunAlipayPayRequest buildPayRequest(PaymentRequest request, String productCode) {
         AliyunAlipayPayRequest payRequest = new AliyunAlipayPayRequest(
-                request.getOrderNo(),
-                request.getAmount(),
-                firstNonBlank(request.getSubject(), request.getOrderNo()),
-                request.getBody(),
-                request.getNotifyUrl(),
-                request.getReturnUrl(),
+                request.orderNo(),
+                request.amount(),
+                firstNonBlank(request.subject(), request.orderNo()),
+                request.body(),
+                request.notifyUrl(),
+                request.returnUrl(),
                 productCode,
                 null
         );
@@ -199,10 +176,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
      */
     protected AliyunAlipayRefundRequest buildRefundRequest(RefundRequest request) {
         AliyunAlipayRefundRequest refundRequest = new AliyunAlipayRefundRequest(
-                request.getOrderNo(),
-                request.getRefundNo(),
-                request.getRefundAmount(),
-                request.getReason()
+                request.orderNo(),
+                request.refundNo(),
+                request.refundAmount(),
+                request.reason()
         );
         return refundRequest;
     }

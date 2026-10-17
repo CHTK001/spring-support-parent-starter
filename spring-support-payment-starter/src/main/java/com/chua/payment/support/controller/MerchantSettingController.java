@@ -113,12 +113,15 @@ public class MerchantSettingController {
      * @return 转换为商户配置vo的结果
      */
     private MerchantPaymentConfigVO toPaymentConfigVO(Long merchantId, MerchantPaymentConfig config) {
-        MerchantPaymentConfigVO vo = new MerchantPaymentConfigVO();
-        if (config != null) {
-            BeanUtils.copyProperties(config, vo);
+        if (config == null) {
+            return new MerchantPaymentConfigVO(merchantId, null, null, null, null);
         }
-        vo.setMerchantId(merchantId);
-        return vo;
+        return new MerchantPaymentConfigVO(
+                merchantId,
+                config.getOrderReusable(),
+                config.getOrderTimeoutMinutes(),
+                config.getPendingOrderLimit(),
+                config.getAutoCancelTimeoutOrder());
     }
 
     /**
@@ -129,11 +132,17 @@ public class MerchantSettingController {
      * @return 转换为钱包限额vo的结果
      */
     private MerchantWalletLimitVO toWalletLimitVO(Long merchantId, MerchantWalletLimit limit) {
-        MerchantWalletLimitVO vo = new MerchantWalletLimitVO();
-        if (limit != null) {
-            BeanUtils.copyProperties(limit, vo);
+        if (limit == null) {
+            return new MerchantWalletLimitVO(merchantId, null, null, null, null, null, null, null);
         }
-        vo.setMerchantId(merchantId);
-        return vo;
+        return new MerchantWalletLimitVO(
+                merchantId,
+                limit.getSingleRechargeLimit(),
+                limit.getDailyRechargeLimit(),
+                limit.getSingleWithdrawLimit(),
+                limit.getDailyWithdrawLimit(),
+                limit.getSingleTransferLimit(),
+                limit.getDailyTransferLimit(),
+                limit.getBalanceLimit());
     }
 }

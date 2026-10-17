@@ -122,10 +122,10 @@ public class PaymentNotifyController {
             var notifyLog = paymentNotifyProcessService.logNotify(
                     new LogNotifyDTO(
                             "WECHAT_PAY",
-                            channel.getMerchantId(),
+                            channel.merchantId(),
                             channelId,
-                            channel.getChannelType(),
-                            channel.getChannelSubType(),
+                            channel.channelType(),
+                            channel.channelSubType(),
                             orderNo,
                             null,
                             request,
@@ -229,10 +229,10 @@ public class PaymentNotifyController {
             var notifyLog = paymentNotifyProcessService.logNotify(
                     new LogNotifyDTO(
                             "WECHAT_REFUND",
-                            channel.getMerchantId(),
+                            channel.merchantId(),
                             channelId,
-                            channel.getChannelType(),
-                            channel.getChannelSubType(),
+                            channel.channelType(),
+                            channel.channelSubType(),
                             null,
                             refundNo,
                             request,
@@ -307,10 +307,10 @@ public class PaymentNotifyController {
             var notifyLog = paymentNotifyProcessService.logNotify(
                     new LogNotifyDTO(
                             "WECHAT_PAYSCORE",
-                            channel.getMerchantId(),
+                            channel.merchantId(),
                             channelId,
-                            channel.getChannelType(),
-                            channel.getChannelSubType(),
+                            channel.channelType(),
+                            channel.channelSubType(),
                             outOrderNo,
                             null,
                             request,
@@ -357,10 +357,10 @@ public class PaymentNotifyController {
             var channel = merchantChannelService.getChannel(channelId);
             var notifyLog = paymentNotifyProcessService.logNotify(new LogNotifyDTO(
                     "ALIPAY_PAY",
-                    channel.getMerchantId(),
+                    channel.merchantId(),
                     channelId,
-                    channel.getChannelType(),
-                    channel.getChannelSubType(),
+                    channel.channelType(),
+                    channel.channelSubType(),
                     orderNo,
                     null,
                     request,

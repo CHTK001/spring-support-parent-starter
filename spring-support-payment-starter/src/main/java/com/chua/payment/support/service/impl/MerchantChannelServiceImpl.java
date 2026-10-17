@@ -76,16 +76,16 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
      * @return 创建渠道的结果
      */
     public MerchantChannelVO createChannel(ChannelConfigDTO dto) {
-        Merchant merchant = requireMerchant(dto.getMerchantId());
+        Merchant merchant = requireMerchant(dto.merchantId());
         MerchantChannel channel = new MerchantChannel();
         BeanUtils.copyProperties(dto, channel);
-        channel.setExtConfig(normalizeExtConfig(dto.getExtConfig()));
-        channel.setChannelName(StringUtils.hasText(dto.getChannelName()) ? dto.getChannelName() : buildDefaultChannelName(dto.getChannelType(), dto.getChannelSubType()));
-        channel.setApiKey(encryptIfPresent(dto.getApiKey()));
-        channel.setPrivateKey(encryptIfPresent(dto.getPrivateKey()));
-        channel.setStatus(dto.getStatus() != null ? dto.getStatus() : ChannelStatus.DISABLED.getCode());
-        channel.setSandboxMode(dto.getSandboxMode() != null ? dto.getSandboxMode() : 0);
-        PaymentMethodGuideVO guide = findGuide(dto.getChannelType(), dto.getChannelSubType());
+        channel.setExtConfig(normalizeExtConfig(dto.extConfig()));
+        channel.setChannelName(StringUtils.hasText(dto.channelName()) ? dto.channelName() : buildDefaultChannelName(dto.channelType(), dto.channelSubType()));
+        channel.setApiKey(encryptIfPresent(dto.apiKey()));
+        channel.setPrivateKey(encryptIfPresent(dto.privateKey()));
+        channel.setStatus(dto.status() != null ? dto.status() : ChannelStatus.DISABLED.getCode());
+        channel.setSandboxMode(dto.sandboxMode() != null ? dto.sandboxMode() : 0);
+        PaymentMethodGuideVO guide = findGuide(dto.channelType(), dto.channelSubType());
         /**
          * 校验已启用渠道是否受当前版本支持
          * @param channel 渠道
@@ -110,16 +110,16 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         BeanUtils.copyProperties(dto, channel, "apiKey", "privateKey");
         channel.setExtConfig(normalizeExtConfig(channel.getExtConfig()));
         channel.setChannelName(StringUtils.hasText(channel.getChannelName()) ? channel.getChannelName() : buildDefaultChannelName(channel.getChannelType(), channel.getChannelSubType()));
-        if (StringUtils.hasText(dto.getApiKey())) {
-            channel.setApiKey(encryptApiKey(dto.getApiKey()));
+        if (StringUtils.hasText(dto.apiKey())) {
+            channel.setApiKey(encryptApiKey(dto.apiKey()));
         }
-        if (StringUtils.hasText(dto.getPrivateKey())) {
-            channel.setPrivateKey(encryptApiKey(dto.getPrivateKey()));
+        if (StringUtils.hasText(dto.privateKey())) {
+            channel.setPrivateKey(encryptApiKey(dto.privateKey()));
         }
-        if (dto.getStatus() == null && channel.getStatus() == null) {
+        if (dto.status() == null && channel.getStatus() == null) {
             channel.setStatus(ChannelStatus.DISABLED.getCode());
         }
-        if (dto.getSandboxMode() == null && channel.getSandboxMode() == null) {
+        if (dto.sandboxMode() == null && channel.getSandboxMode() == null) {
             channel.setSandboxMode(0);
         }
         PaymentMethodGuideVO guide = findGuide(channel.getChannelType(), channel.getChannelSubType());
@@ -507,10 +507,10 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         if (guide == null) {
             return null;
         }
-        if (StringUtils.hasText(guide.getApplyUrl())) {
-            return guide.getApplyUrl();
+        if (StringUtils.hasText(guide.applyUrl())) {
+            return guide.applyUrl();
         }
-        return guide.getOfficialUrl();
+        return guide.officialUrl();
     }
 
     /**
@@ -521,11 +521,11 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
      */
     private PaymentMethodGuideVO findGuide(String channelType, String channelSubType) {
         return listCatalog().stream()
-                .filter(item -> item.getChannelType().equalsIgnoreCase(channelType))
-                .filter(item -> channelSubType == null || item.getChannelSubType().equalsIgnoreCase(channelSubType))
+                .filter(item -> item.channelType().equalsIgnoreCase(channelType))
+                .filter(item -> channelSubType == null || item.channelSubType().equalsIgnoreCase(channelSubType))
                 .findFirst()
                 .orElseGet(() -> listCatalog().stream()
-                        .filter(item -> item.getChannelType().equalsIgnoreCase(channelType))
+                        .filter(item -> item.channelType().equalsIgnoreCase(channelType))
                         .findFirst()
                         .orElse(null));
     }
@@ -555,18 +555,18 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
                                        List<String> requiredMaterials,
                                        List<String> steps,
                                        List<String> tips) {
-        PaymentMethodGuideVO vo = new PaymentMethodGuideVO();
-        vo.setChannelType(channelType);
-        vo.setChannelSubType(channelSubType);
-        vo.setTitle(title);
-        vo.setOfficialName(officialName);
-        vo.setOfficialUrl(officialUrl);
-        vo.setApplyUrl(applyUrl);
-        vo.setSandboxUrl(sandboxUrl);
-        vo.setSummary(summary);
-        vo.setRequiredMaterials(requiredMaterials);
-        vo.setSteps(steps);
-        vo.setTips(tips);
+        PaymentMethodGuideVO vo = new PaymentMethodGuideVO(
+                channelType,
+                channelSubType,
+                title,
+                officialName,
+                officialUrl,
+                applyUrl,
+                sandboxUrl,
+                summary,
+                requiredMaterials,
+                steps,
+                tips);
         return vo;
     }
 
@@ -579,22 +579,32 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
      * @return 转换后的渠道视图对象
      */
     private MerchantChannelVO convertToVO(MerchantChannel channel, Merchant merchant, PaymentMethodGuideVO guide) {
-        MerchantChannelVO vo = new MerchantChannelVO();
-        BeanUtils.copyProperties(channel, vo);
-        vo.setMerchantName(merchant != null ? merchant.getMerchantName() : null);
-        vo.setApiKeyConfigured(StringUtils.hasText(channel.getApiKey()));
-        vo.setPrivateKeyConfigured(StringUtils.hasText(channel.getPrivateKey()));
-        vo.setPublicKeyConfigured(StringUtils.hasText(channel.getPublicKey()));
-        vo.setCertConfigured(StringUtils.hasText(channel.getCertPath()));
-        vo.setStatusDesc(ChannelStatus.descriptionOf(channel.getStatus()));
-        vo.setChannelTypeDesc(PaymentChannelType.descriptionOf(channel.getChannelType()));
-        vo.setEffectiveNotifyUrl(firstText(channel.getNotifyUrl(), merchant != null ? merchant.getDefaultNotifyUrl() : null));
-        vo.setEffectiveReturnUrl(firstText(channel.getReturnUrl(), merchant != null ? merchant.getDefaultReturnUrl() : null));
-        if (guide != null) {
-            vo.setGuideTitle(guide.getTitle());
-            vo.setGuideUrl(defaultGuideUrl(guide));
-        }
-        return vo;
+        return new MerchantChannelVO(
+                channel.getId(),
+                channel.getMerchantId(),
+                merchant != null ? merchant.getMerchantName() : null,
+                channel.getChannelType(),
+                channel.getChannelSubType(),
+                channel.getChannelName(),
+                channel.getAppId(),
+                channel.getMerchantNo(),
+                StringUtils.hasText(channel.getApiKey()),
+                StringUtils.hasText(channel.getPrivateKey()),
+                StringUtils.hasText(channel.getPublicKey()),
+                StringUtils.hasText(channel.getCertPath()),
+                channel.getSandboxMode(),
+                channel.getNotifyUrl(),
+                channel.getReturnUrl(),
+                channel.getStatus(),
+                ChannelStatus.descriptionOf(channel.getStatus()),
+                channel.getExtConfig(),
+                guide != null ? guide.title() : null,
+                guide != null ? defaultGuideUrl(guide) : null,
+                PaymentChannelType.descriptionOf(channel.getChannelType()),
+                firstText(channel.getNotifyUrl(), merchant != null ? merchant.getDefaultNotifyUrl() : null),
+                firstText(channel.getReturnUrl(), merchant != null ? merchant.getDefaultReturnUrl() : null),
+                channel.getCreatedAt(),
+                channel.getUpdatedAt());
     }
 
     /**

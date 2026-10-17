@@ -76,14 +76,14 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
             entity = new PaymentGlobalConfig();
             entity.setConfigKey(DEFAULT_KEY);
         }
-        entity.setPaymentNotifyBaseUrl(dto.getPaymentNotifyBaseUrl());
-        entity.setPaymentReturnUrl(dto.getPaymentReturnUrl());
-        entity.setPaymentCallbackPathTemplate(StringUtils.hasText(dto.getPaymentCallbackPathTemplate())
-                ? dto.getPaymentCallbackPathTemplate()
+        entity.setPaymentNotifyBaseUrl(dto.paymentNotifyBaseUrl());
+        entity.setPaymentReturnUrl(dto.paymentReturnUrl());
+        entity.setPaymentCallbackPathTemplate(StringUtils.hasText(dto.paymentCallbackPathTemplate())
+                ? dto.paymentCallbackPathTemplate()
                 : "/{orderNo}/{merchantId}");
-        entity.setPaymentAutoRefreshSeconds(dto.getPaymentAutoRefreshSeconds() != null ? dto.getPaymentAutoRefreshSeconds() : 60);
-        entity.setCouponDeductWithdrawable(dto.getCouponDeductWithdrawable());
-        entity.setRemark(dto.getRemark());
+        entity.setPaymentAutoRefreshSeconds(dto.paymentAutoRefreshSeconds() != null ? dto.paymentAutoRefreshSeconds() : 60);
+        entity.setCouponDeductWithdrawable(dto.couponDeductWithdrawable());
+        entity.setRemark(dto.remark());
         if (entity.getId() == null) {
             paymentGlobalConfigMapper.insert(entity);
         } else {
@@ -99,12 +99,18 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
      * @return 转换后的配置视图对象
      */
     private PaymentGlobalConfigVO toVO(PaymentGlobalConfig entity) {
-        PaymentGlobalConfigVO vo = new PaymentGlobalConfigVO();
-        BeanUtils.copyProperties(entity, vo);
         String baseUrl = normalize(entity.getPaymentNotifyBaseUrl());
-        vo.setPaymentSamplePayNotifyUrl(baseUrl == null ? null : baseUrl + "/api/notify/wechat/pay/DEMO_ORDER/10001");
-        vo.setPaymentSampleRefundNotifyUrl(baseUrl == null ? null : baseUrl + "/api/notify/wechat/refund/DEMO_REFUND/10001");
-        return vo;
+        return new PaymentGlobalConfigVO(
+                entity.getConfigKey(),
+                entity.getPaymentNotifyBaseUrl(),
+                entity.getPaymentReturnUrl(),
+                entity.getPaymentCallbackPathTemplate(),
+                entity.getPaymentAutoRefreshSeconds(),
+                entity.getRemark(),
+                baseUrl == null ? null : baseUrl + "/api/notify/wechat/pay/DEMO_ORDER/10001",
+                baseUrl == null ? null : baseUrl + "/api/notify/wechat/refund/DEMO_REFUND/10001",
+                entity.getCouponDeductWithdrawable(),
+                entity.getUpdatedAt());
     }
 
     /**
