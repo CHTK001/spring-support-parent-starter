@@ -1211,16 +1211,20 @@ function Invoke-Login {
         # The captcha drag is a pointer-event simulation; under host load it occasionally
         # does not take, leaving the click on /login. Retry the whole form a few times
         # rather than declaring the session lost -- a flaky drag is not a product defect.
+        # The first attempt logs in as-is (proven reliable by diag_login.ps1: all three
+        # paths land on /home); only later attempts wipe the session keys first.
         for ($attempt = 1; $attempt -le 3 -and -not $ok; $attempt++) {
             AbRaw @('open', "$Base/login") 60000 | Out-Null
             Start-Sleep -Seconds 3
-            # 保留 layout 与框架自身的 system:* 键（x-req-fingerprint / anonymous user-config / user-roles）。
-            # 2026-10-16 实测对照：把 system:* 一起清掉后，紧接着的登录**无法完成**（点「登录」后停在
-            # /login、localStorage 不出现任何令牌键）；不清或只清会话键时同一套操作会正常跳到 /home。
-            # 指纹键被清会让后续请求失去指纹上下文，于是「清会话」这步反而把自己踢出了可登录状态。
-            Js '(() => { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && (/layout/i.test(k) || /^system:/.test(k))) continue; if (k) localStorage.removeItem(k); } sessionStorage.clear(); return 1; })()' | Out-Null
-            AbRaw @('open', "$Base/login") 60000 | Out-Null
-            Start-Sleep -Seconds 4
+            if ($attempt -gt 1) {
+                # 保留 layout 与框架自身的 system:* 键（x-req-fingerprint / anonymous user-config / user-roles）。
+                # 2026-10-16 实测对照：把 system:* 一起清掉后，紧接着的登录**无法完成**（点「登录」后停在
+                # /login、localStorage 不出现任何令牌键）；不清或只清会话键时同一套操作会正常跳到 /home。
+                # 指纹键被清会让后续请求失去指纹上下文，于是「清会话」这步反而把自己踢出了可登录状态。
+                Js '(() => { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && (/layout/i.test(k) || /^system:/.test(k))) continue; if (k) localStorage.removeItem(k); } sessionStorage.clear(); return 1; })()' | Out-Null
+                AbRaw @('open', "$Base/login") 60000 | Out-Null
+                Start-Sleep -Seconds 4
+            }
             AbRaw @('snapshot') 60000 | Out-Null
             Submit-LoginForm -User $AdminUser -Pwd $AdminPwd
             $ok = [bool](WaitJs 'location.pathname.indexOf("/login")!==0' 25)

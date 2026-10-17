@@ -101,11 +101,11 @@ public class RefundOrderController {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
         return Result.success(paymentOrderService.refundSuccess(new RefundSuccessDTO(
                 refundOrder.getRefundNo(),
-                dto != null ? dto.getRefundAmount() : null,
-                dto != null ? dto.getThirdPartyRefundNo() : null,
-                dto != null ? dto.getOperator() : null,
+                dto != null ? dto.refundAmount() : null,
+                dto != null ? dto.thirdPartyRefundNo() : null,
+                dto != null ? dto.operator() : null,
                 null,
-                dto != null ? dto.getRemark() : null)));
+                dto != null ? dto.remark() : null)));
     }
 
     @Operation(summary = "标记退款失败")
@@ -122,7 +122,7 @@ public class RefundOrderController {
         return Result.success(paymentOrderService.refundFail(
                 refundOrder.getRefundNo(),
                 null,
-                dto != null ? dto.getOperator() : null,
-                dto != null ? dto.getRemark() : null));
+                dto != null ? dto.operator() : null,
+                dto != null ? dto.remark() : null));
     }
 }

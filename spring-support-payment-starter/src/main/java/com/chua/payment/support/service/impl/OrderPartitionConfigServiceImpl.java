@@ -102,24 +102,24 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     public OrderPartitionConfigVO updateConfig(String businessType, OrderPartitionConfigDTO dto) {
         OrderPartitionConfig config = requireConfig(businessType);
         if (dto != null) {
-            config.setPartitionPrefix(validateTableName(fallback(dto.getPartitionPrefix(), config.getPartitionPrefix()), "分表前缀"));
-            config.setPartitionGranularity(resolveGranularity(dto.getPartitionGranularity()));
-            config.setRetentionDays(resolvePositive(dto.getRetentionDays(), config.getRetentionDays(), "保留天数"));
-            config.setCreateAheadDays(resolveNonNegative(dto.getCreateAheadDays(), config.getCreateAheadDays(), "提前建表天数"));
-            config.setMigrateBeforeDays(resolvePositive(dto.getMigrateBeforeDays(), config.getMigrateBeforeDays(), "迁移阈值天数"));
-            config.setAutoCreateEnabled(Boolean.TRUE.equals(dto.getAutoCreateEnabled()));
-            config.setAutoMigrateEnabled(Boolean.TRUE.equals(dto.getAutoMigrateEnabled()));
-            config.setKeepSourceData(Boolean.TRUE.equals(dto.getKeepSourceData()));
-            if (dto.getMigrationDryRun() != null) {
-                config.setMigrationDryRun(Boolean.TRUE.equals(dto.getMigrationDryRun()));
+            config.setPartitionPrefix(validateTableName(fallback(dto.partitionPrefix(), config.getPartitionPrefix()), "分表前缀"));
+            config.setPartitionGranularity(resolveGranularity(dto.partitionGranularity()));
+            config.setRetentionDays(resolvePositive(dto.retentionDays(), config.getRetentionDays(), "保留天数"));
+            config.setCreateAheadDays(resolveNonNegative(dto.createAheadDays(), config.getCreateAheadDays(), "提前建表天数"));
+            config.setMigrateBeforeDays(resolvePositive(dto.migrateBeforeDays(), config.getMigrateBeforeDays(), "迁移阈值天数"));
+            config.setAutoCreateEnabled(Boolean.TRUE.equals(dto.autoCreateEnabled()));
+            config.setAutoMigrateEnabled(Boolean.TRUE.equals(dto.autoMigrateEnabled()));
+            config.setKeepSourceData(Boolean.TRUE.equals(dto.keepSourceData()));
+            if (dto.migrationDryRun() != null) {
+                config.setMigrationDryRun(Boolean.TRUE.equals(dto.migrationDryRun()));
             }
-            if (StringUtils.hasText(dto.getTableTimeColumn())) {
-                config.setTableTimeColumn(dto.getTableTimeColumn().trim());
+            if (StringUtils.hasText(dto.tableTimeColumn())) {
+                config.setTableTimeColumn(dto.tableTimeColumn().trim());
             }
-            if (StringUtils.hasText(dto.getTableIdColumn())) {
-                config.setTableIdColumn(dto.getTableIdColumn().trim());
+            if (StringUtils.hasText(dto.tableIdColumn())) {
+                config.setTableIdColumn(dto.tableIdColumn().trim());
             }
-            config.setRemark(dto.getRemark());
+            config.setRemark(dto.remark());
         }
         orderPartitionConfigMapper.updateById(config);
         return toVO(requireConfig(businessType));
@@ -132,15 +132,14 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     public OrderPartitionPreviewVO preview(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         LocalDateTime migrateBeforeTime = LocalDateTime.now().minusDays(config.getMigrateBeforeDays());
-        OrderPartitionPreviewVO vo = new OrderPartitionPreviewVO();
-        vo.setBusinessType(config.getBusinessType());
-        vo.setSourceTable(config.getSourceTable());
-        vo.setNextPartitionTable(resolvePartitionTable(config, LocalDate.now().plusDays(config.getCreateAheadDays())));
-        vo.setMigrateTargetTable(resolvePartitionTable(config, migrateBeforeTime.toLocalDate()));
-        vo.setMigrateBeforeTime(migrateBeforeTime);
-        vo.setCreateTaskKey(config.getCreateTaskKey());
-        vo.setMigrateTaskKey(config.getMigrateTaskKey());
-        return vo;
+        return new OrderPartitionPreviewVO(
+                config.getBusinessType(),
+                config.getSourceTable(),
+                resolvePartitionTable(config, LocalDate.now().plusDays(config.getCreateAheadDays())),
+                resolvePartitionTable(config, migrateBeforeTime.toLocalDate()),
+                migrateBeforeTime,
+                config.getCreateTaskKey(),
+                config.getMigrateTaskKey());
     }
 
     @Override
@@ -458,9 +457,26 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
      * @return 分表配置视图对象
      */
     private OrderPartitionConfigVO toVO(OrderPartitionConfig config) {
-        OrderPartitionConfigVO vo = new OrderPartitionConfigVO();
-        BeanUtils.copyProperties(config, vo);
-        return vo;
+        return new OrderPartitionConfigVO(
+                config.getBusinessType(),
+                config.getSourceTable(),
+                config.getPartitionPrefix(),
+                config.getPartitionGranularity(),
+                config.getRetentionDays(),
+                config.getCreateAheadDays(),
+                config.getMigrateBeforeDays(),
+                config.getAutoCreateEnabled(),
+                config.getAutoMigrateEnabled(),
+                config.getKeepSourceData(),
+                config.getMigrationDryRun(),
+                config.getTableTimeColumn(),
+                config.getTableIdColumn(),
+                config.getCreateTaskKey(),
+                config.getMigrateTaskKey(),
+                config.getLastPartitionTable(),
+                config.getLastPartitionAt(),
+                config.getLastMigrateAt(),
+                config.getRemark());
     }
 
     /**

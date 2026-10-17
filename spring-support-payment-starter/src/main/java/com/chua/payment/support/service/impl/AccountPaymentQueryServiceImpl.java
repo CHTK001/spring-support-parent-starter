@@ -158,14 +158,39 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
      * @return 转换后的订单视图对象
      */
     private OrderVO toOrderVO(PaymentOrder order) {
-        OrderVO vo = new OrderVO();
-        BeanUtils.copyProperties(order, vo);
         Merchant merchant = merchantMapper.selectById(order.getMerchantId());
         MerchantChannel channel = order.getChannelId() != null ? merchantChannelMapper.selectById(order.getChannelId()) : null;
-        vo.setMerchantName(merchant != null ? merchant.getMerchantName() : null);
-        vo.setChannelName(channel != null ? channel.getChannelName() : null);
-        vo.setStatusDesc(OrderState.descriptionOf(order.getStatus()));
-        return vo;
+        return new OrderVO(
+                order.getId(),
+                order.getOrderNo(),
+                order.getBusinessOrderNo(),
+                order.getMerchantId(),
+                merchant != null ? merchant.getMerchantName() : null,
+                order.getChannelId(),
+                channel != null ? channel.getChannelName() : null,
+                order.getUserId(),
+                order.getChannelType(),
+                order.getChannelSubType(),
+                order.getOrderAmount(),
+                order.getPaidAmount(),
+                order.getRefundAmount(),
+                order.getDiscountAmount(),
+                order.getCurrency(),
+                order.getStatus(),
+                OrderState.descriptionOf(order.getStatus()),
+                order.getSubject(),
+                order.getBody(),
+                order.getNotifyUrl(),
+                order.getReturnUrl(),
+                order.getExpireTime(),
+                order.getPayTime(),
+                order.getCompleteTime(),
+                order.getRefundTime(),
+                order.getThirdPartyOrderNo(),
+                order.getRemark(),
+                order.getDeleted(),
+                order.getCreatedAt(),
+                order.getUpdatedAt());
     }
 
     /**
@@ -175,8 +200,14 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
      * @return 转换后的状态日志视图对象
      */
     private OrderStateLogVO toLogVO(OrderStateLog log) {
-        OrderStateLogVO vo = new OrderStateLogVO();
-        BeanUtils.copyProperties(log, vo);
-        return vo;
+        return new OrderStateLogVO(
+                log.getId(),
+                log.getOrderId(),
+                log.getFromState(),
+                log.getToState(),
+                log.getEvent(),
+                log.getOperator(),
+                log.getRemark(),
+                log.getCreatedAt());
     }
 }

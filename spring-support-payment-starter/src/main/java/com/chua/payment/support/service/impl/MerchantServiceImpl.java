@@ -56,12 +56,12 @@ public class MerchantServiceImpl implements MerchantService {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);
         merchant.setMerchantNo(generateMerchantNo());
-        merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.getPaymentWalletEnabled()));
-        merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.getPaymentAutoCloseEnabled()));
-        merchant.setPaymentAutoCloseMinutes(dto.getPaymentAutoCloseMinutes() != null && dto.getPaymentAutoCloseMinutes() > 0 ? dto.getPaymentAutoCloseMinutes() : 30);
-        merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.getPaymentSplitTableEnabled()));
-        merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.getPaymentProfitSharingEnabled()));
-        merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.getPaymentCouponEnabled()));
+        merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.paymentWalletEnabled()));
+        merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.paymentAutoCloseEnabled()));
+        merchant.setPaymentAutoCloseMinutes(dto.paymentAutoCloseMinutes() != null && dto.paymentAutoCloseMinutes() > 0 ? dto.paymentAutoCloseMinutes() : 30);
+        merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.paymentSplitTableEnabled()));
+        merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.paymentProfitSharingEnabled()));
+        merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.paymentCouponEnabled()));
         merchant.setStatus(MerchantStatus.PENDING.getCode());
         merchantMapper.insert(merchant);
         return convertToVO(merchant);
@@ -79,12 +79,12 @@ public class MerchantServiceImpl implements MerchantService {
     public MerchantVO updateMerchant(Long id, MerchantDTO dto) {
         Merchant merchant = requireMerchant(id);
         BeanUtils.copyProperties(dto, merchant);
-        merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.getPaymentWalletEnabled()));
-        merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.getPaymentAutoCloseEnabled()));
-        merchant.setPaymentAutoCloseMinutes(dto.getPaymentAutoCloseMinutes() != null && dto.getPaymentAutoCloseMinutes() > 0 ? dto.getPaymentAutoCloseMinutes() : merchant.getPaymentAutoCloseMinutes());
-        merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.getPaymentSplitTableEnabled()));
-        merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.getPaymentProfitSharingEnabled()));
-        merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.getPaymentCouponEnabled()));
+        merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.paymentWalletEnabled()));
+        merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.paymentAutoCloseEnabled()));
+        merchant.setPaymentAutoCloseMinutes(dto.paymentAutoCloseMinutes() != null && dto.paymentAutoCloseMinutes() > 0 ? dto.paymentAutoCloseMinutes() : merchant.getPaymentAutoCloseMinutes());
+        merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.paymentSplitTableEnabled()));
+        merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.paymentProfitSharingEnabled()));
+        merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.paymentCouponEnabled()));
         merchantMapper.updateById(merchant);
         return convertToVO(merchant);
     }
@@ -195,12 +195,30 @@ public class MerchantServiceImpl implements MerchantService {
      * @return 转换后的商户视图对象
      */
     private MerchantVO convertToVO(Merchant merchant) {
-        MerchantVO vo = new MerchantVO();
-        BeanUtils.copyProperties(merchant, vo);
-        vo.setStatusDesc(MerchantStatus.descriptionOf(merchant.getStatus()));
-        vo.setChannelCount(Math.toIntExact(merchantChannelMapper.selectCount(
-                new LambdaQueryWrapper<MerchantChannel>().eq(MerchantChannel::getMerchantId, merchant.getId())
-        )));
-        return vo;
+        return new MerchantVO(
+                merchant.getId(),
+                merchant.getMerchantNo(),
+                merchant.getMerchantName(),
+                merchant.getContactName(),
+                merchant.getContactPhone(),
+                merchant.getContactEmail(),
+                merchant.getBusinessLicense(),
+                merchant.getLegalPerson(),
+                merchant.getDefaultNotifyUrl(),
+                merchant.getDefaultReturnUrl(),
+                merchant.getPaymentWalletEnabled(),
+                merchant.getPaymentAutoCloseEnabled(),
+                merchant.getPaymentAutoCloseMinutes(),
+                merchant.getPaymentSplitTableEnabled(),
+                merchant.getPaymentProfitSharingEnabled(),
+                merchant.getPaymentCouponEnabled(),
+                merchant.getRemark(),
+                merchant.getStatus(),
+                MerchantStatus.descriptionOf(merchant.getStatus()),
+                Math.toIntExact(merchantChannelMapper.selectCount(
+                        new LambdaQueryWrapper<MerchantChannel>().eq(MerchantChannel::getMerchantId, merchant.getId())
+                )),
+                merchant.getCreatedAt(),
+                merchant.getUpdatedAt());
     }
 }

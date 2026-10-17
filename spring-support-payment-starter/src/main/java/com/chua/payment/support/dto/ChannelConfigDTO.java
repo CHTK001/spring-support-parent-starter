@@ -1,73 +1,40 @@
 package com.chua.payment.support.dto;
 
-import lombok.Data;
-
 /**
  * 渠道配置DTO
  *
+ * @param merchantId     商户ID
+ * @param channelType    渠道类型
+ * @param channelSubType 渠道SUB类型
+ * @param channelName    渠道名称
+ * @param appId          APPID
+ * @param merchantNo     商户号
+ * @param apiKey         API密钥
+ * @param privateKey     私钥字符串
+ * @param publicKey      公钥字符串
+ * @param certPath       证书路径
+ * @param sandboxMode    Sandbox模式
+ * @param notifyUrl      通知URL
+ * @param returnUrl      返回值URL
+ * @param status         状态
+ * @param extConfig      EXT配置
  * @since 2026-03-18
  * @author CH
  */
-@Data
-public class ChannelConfigDTO {
-    /**
-     * 商户ID
-     */
-    private Long merchantId;
-    /**
-     * 渠道类型
-     */
-    private String channelType;
-    /**
-     * 渠道SUB类型
-     */
-    private String channelSubType;
-    /**
-     * 渠道名称
-     */
-    private String channelName;
-    /**
-     * APPID
-     */
-    private String appId;
-    /**
-     * 商户号
-     */
-    private String merchantNo;
-    /**
-     * API密钥
-     */
-    private String apiKey;
-    /**
-     * 私钥字符串
-     */
-    private String privateKey;
-    /**
-     * 公钥字符串
-     */
-    private String publicKey;
-    /**
-     * 证书路径
-     */
-    private String certPath;
-    /**
-     * Sandbox模式
-     */
-    private Integer sandboxMode;
-    /**
-     * 通知URL
-     */
-    private String notifyUrl;
-    /**
-     * 返回值URL
-     */
-    private String returnUrl;
-    /**
-     * 状态
-     */
-    private Integer status;
-    /**
-     * EXT配置
-     */
-    private String extConfig;
+public record ChannelConfigDTO(
+        Long merchantId,
+        String channelType,
+        String channelSubType,
+        String channelName,
+        String appId,
+        String merchantNo,
+        String apiKey,
+        String privateKey,
+        String publicKey,
+        String certPath,
+        Integer sandboxMode,
+        String notifyUrl,
+        String returnUrl,
+        Integer status,
+        String extConfig) {
 }

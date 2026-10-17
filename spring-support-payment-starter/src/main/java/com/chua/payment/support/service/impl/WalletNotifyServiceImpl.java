@@ -102,13 +102,14 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         String remark = firstNonBlank(reason, walletOrder.getRemark(), walletOrder.getOrderNo());
         String normalizedOrderType = normalizeOrderType(walletOrder.getOrderType());
         if ("RECHARGE".equals(normalizedOrderType)) {
-            com.chua.payment.support.dto.WalletRechargeDTO dto = new com.chua.payment.support.dto.WalletRechargeDTO();
-            dto.setMerchantId(walletOrder.getMerchantId());
-            dto.setUserId(walletOrder.getUserId());
-            dto.setRechargeNo(walletOrder.getOrderNo());
-            dto.setAmount(walletOrder.getAmount());
-            dto.setOperator(operator);
-            dto.setRemark(remark);
+            com.chua.payment.support.dto.WalletRechargeDTO dto = new com.chua.payment.support.dto.WalletRechargeDTO(
+                    walletOrder.getMerchantId(),
+                    walletOrder.getUserId(),
+                    walletOrder.getOrderNo(),
+                    null,
+                    walletOrder.getAmount(),
+                    operator,
+                    remark);
             walletAccountService.recharge(dto);
             return;
         }

@@ -1,54 +1,32 @@
 package com.chua.payment.support.channel;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 
 /**
  * 提现请求
+ *
+ * @param withdrawNo   提现单号
+ * @param notifyUrl    通知回调 URL
+ * @param merchantId   商户 ID
+ * @param userId       用户标识
+ * @param amount       提现金额
+ * @param bankAccount  收款银行账号
+ * @param bankName     收款银行名称
+ * @param accountName  账户名称
+ * @param operator     操作人
+ * @param remark       备注
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class WithdrawRequest {
-    /**
-     * 提现单号
-     */
-    private String withdrawNo;
-    /**
-     * 通知回调 URL
-     */
-    private String notifyUrl;
-    /**
-     * 商户 ID
-     */
-    private Long merchantId;
-    /**
-     * 用户标识
-     */
-    private Long userId;
-    /**
-     * 提现金额
-     */
-    private BigDecimal amount;
-    /**
-     * 收款银行账号
-     */
-    private String bankAccount;
-    /**
-     * 收款银行名称
-     */
-    private String bankName;
-    /**
-     * 账户名称
-     */
-    private String accountName;
-    /**
-     * 操作人
-     */
-    private String operator;
-    /**
-     * 备注
-     */
-    private String remark;
+public record WithdrawRequest(
+        String withdrawNo,
+        String notifyUrl,
+        Long merchantId,
+        Long userId,
+        BigDecimal amount,
+        String bankAccount,
+        String bankName,
+        String accountName,
+        String operator,
+        String remark) {
 }

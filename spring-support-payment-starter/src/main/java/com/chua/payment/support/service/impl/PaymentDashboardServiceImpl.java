@@ -115,128 +115,46 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         LocalDateTime startTime = normalizedStartDate.atStartOfDay();
         LocalDateTime endTime = normalizedEndDate.atTime(LocalTime.MAX);
 
-        PaymentDashboardSummaryVO summary = new PaymentDashboardSummaryVO();
-        summary.setStartTime(startTime);
-        summary.setEndTime(endTime);
-
-        /**
-         * 填充商户维度指标
-         * @param summary 汇总对象
-         */
-        fillMerchantMetrics(summary);
-        /**
-         * 填充订单维度指标
-         * @param summary 汇总对象
-         * @param startTime 起始时间
-         * @param endTime 结束时间
-         */
-        fillOrderMetrics(summary, startTime, endTime);
-        /**
-         * 填充退款维度指标
-         * @param summary 汇总对象
-         * @param startTime 起始时间
-         * @param endTime 结束时间
-         */
-        fillRefundMetrics(summary, startTime, endTime);
-        /**
-         * 填充流水维度指标
-         * @param summary 汇总对象
-         * @param startTime 起始时间
-         * @param endTime 结束时间
-         */
-        fillTransactionMetrics(summary, startTime, endTime);
-        /**
-         * 填充回调通知维度指标
-         * @param summary 汇总对象
-         * @param startTime 起始时间
-         * @param endTime 结束时间
-         */
-        fillNotifyMetrics(summary, startTime, endTime);
-        return summary;
-    }
-
-    /**
-     * 填充商户维度指标
-     *
-     * @param summary 汇总对象
-     */
-    private void fillMerchantMetrics(PaymentDashboardSummaryVO summary) {
-        summary.setMerchantTotal(merchantMapper.selectCount(new LambdaQueryWrapper<>()));
-        summary.setActiveMerchantCount(merchantMapper.selectCount(new LambdaQueryWrapper<Merchant>()
-                .eq(Merchant::getStatus, ACTIVE_MERCHANT_STATUS)));
-
+        // 商户维度指标
+        Long merchantTotal = merchantMapper.selectCount(new LambdaQueryWrapper<>());
+        Long activeMerchantCount = merchantMapper.selectCount(new LambdaQueryWrapper<Merchant>()
+                .eq(Merchant::getStatus, ACTIVE_MERCHANT_STATUS));
         List<Object> configuredMerchantIds = merchantChannelMapper.selectObjs(new QueryWrapper<MerchantChannel>()
                 .select("distinct pay_merchant_id")
                 .isNotNull("pay_merchant_id"));
-        summary.setConfiguredMerchantCount((long) configuredMerchantIds.size());
-    }
+        Long configuredMerchantCount = (long) configuredMerchantIds.size();
 
-    /**
-     * 填充订单维度指标
-     *
-     * @param summary 汇总对象
-     * @param startTime 起始时间
-     * @param endTime 结束时间
-     */
-    private void fillOrderMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
+        // 订单维度指标
         List<PaymentOrder> orders = paymentOrderMapper.selectList(new LambdaQueryWrapper<PaymentOrder>()
                 .in(PaymentOrder::getStatus, PAID_ORDER_STATUSES)
                 .ge(PaymentOrder::getPayTime, startTime)
                 .le(PaymentOrder::getPayTime, endTime));
-
-        summary.setPaymentOrderCount((long) orders.size());
-        summary.setTotalConsumeAmount(orders.stream()
+        Long paymentOrderCount = (long) orders.size();
+        BigDecimal totalConsumeAmount = orders.stream()
                 .map(item -> firstNonNull(item.getPaidAmount(), item.getOrderAmount()))
                 .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-    }
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    /**
-     * 填充退款维度指标
-     *
-     * @param summary 汇总对象
-     * @param startTime 起始时间
-     * @param endTime 结束时间
-     */
-    private void fillRefundMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
+        // 退款维度指标
         List<PaymentRefundOrder> refunds = paymentRefundOrderMapper.selectList(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getStatus, REFUNDED_STATUS)
                 .ge(PaymentRefundOrder::getUpdatedAt, startTime)
                 .le(PaymentRefundOrder::getUpdatedAt, endTime));
-
-        summary.setRefundCount((long) refunds.size());
-        summary.setTotalRefundAmount(refunds.stream()
+        Long refundCount = (long) refunds.size();
+        BigDecimal totalRefundAmount = refunds.stream()
                 .map(PaymentRefundOrder::getRefundAmount)
                 .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-    }
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    /**
-     * 填充流水维度指标
-     *
-     * @param summary 汇总对象
-     * @param startTime 起始时间
-     * @param endTime 结束时间
-     */
-    private void fillTransactionMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
+        // 流水维度指标
         Long transactionCount = transactionRecordMapper.selectCount(new LambdaQueryWrapper<TransactionRecord>()
                 .ge(TransactionRecord::getCreatedAt, startTime)
                 .le(TransactionRecord::getCreatedAt, endTime));
-        summary.setTransactionCount(transactionCount);
-    }
 
-    /**
-     * 填充回调通知维度指标
-     *
-     * @param summary 汇总对象
-     * @param startTime 起始时间
-     * @param endTime 结束时间
-     */
-    private void fillNotifyMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
+        // 回调通知维度指标
         List<PaymentNotifyLog> logs = paymentNotifyLogMapper.selectList(new LambdaQueryWrapper<PaymentNotifyLog>()
                 .ge(PaymentNotifyLog::getReceivedTime, startTime)
                 .le(PaymentNotifyLog::getReceivedTime, endTime));
-
         long successCount = logs.stream()
                 .filter(item -> SUCCESS_STATUS.equalsIgnoreCase(item.getProcessStatus()))
                 .count();
@@ -248,10 +166,21 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
                 .average()
                 .orElse(0));
 
-        summary.setCallbackRequestCount(totalCount);
-        summary.setSuccessNotifyCount(successCount);
-        summary.setFailedNotifyCount(Math.max(totalCount - successCount, 0));
-        summary.setAverageProcessDurationMs(averageDurationMs);
+        return new PaymentDashboardSummaryVO(
+                startTime,
+                endTime,
+                merchantTotal,
+                activeMerchantCount,
+                configuredMerchantCount,
+                paymentOrderCount,
+                refundCount,
+                transactionCount,
+                totalCount,
+                successCount,
+                Math.max(totalCount - successCount, 0),
+                averageDurationMs,
+                totalConsumeAmount,
+                totalRefundAmount);
     }
 
     /**

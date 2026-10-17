@@ -105,10 +105,7 @@ public class PaymentOpsController {
      *
      */
     public PaymentOpsOverviewVO overview() {
-        PaymentOpsOverviewVO overview = new PaymentOpsOverviewVO();
-        overview.setCallbackAudits(callbackAudits());
-        overview.setOrderNumberStrategies(orderNumberStrategies());
-        return overview;
+        return new PaymentOpsOverviewVO(callbackAudits(), orderNumberStrategies());
     }
 
     @GetMapping("/scheduler/tasks")
@@ -315,14 +312,14 @@ public class PaymentOpsController {
                                                 boolean strictScoped,
                                                 String effectivePriority,
                                                 String notes) {
-        PaymentCallbackAuditVO vo = new PaymentCallbackAuditVO();
-        vo.setCallbackType(callbackType);
-        vo.setCallbackName(callbackName);
-        vo.setRecommendedPattern(recommendedPattern);
-        vo.setScopedIdentifier(scopedIdentifier);
-        vo.setStrictScoped(strictScoped);
-        vo.setEffectivePriority(effectivePriority);
-        vo.setNotes(notes);
+        PaymentCallbackAuditVO vo = new PaymentCallbackAuditVO(
+                callbackType,
+                callbackName,
+                recommendedPattern,
+                scopedIdentifier,
+                strictScoped,
+                effectivePriority,
+                notes);
         return vo;
     }
 
@@ -341,13 +338,13 @@ public class PaymentOpsController {
                                                              String callerOverrideField,
                                                              String idempotentRule,
                                                              String notes) {
-        PaymentOrderNumberStrategyVO vo = new PaymentOrderNumberStrategyVO();
-        vo.setBusinessType(businessType);
-        vo.setFieldName(fieldName);
-        vo.setGenerationRule(generationRule);
-        vo.setCallerOverrideField(callerOverrideField);
-        vo.setIdempotentRule(idempotentRule);
-        vo.setNotes(notes);
+        PaymentOrderNumberStrategyVO vo = new PaymentOrderNumberStrategyVO(
+                businessType,
+                fieldName,
+                generationRule,
+                callerOverrideField,
+                idempotentRule,
+                notes);
         return vo;
     }
 }

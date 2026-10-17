@@ -2,7 +2,7 @@
  * Windows 发布真机端到端验收（经线上平台 8112 驱动目标 Windows 主机）。
  *
  * 覆盖：启动 / 重启 / 备份 / 好包升级（md5 变更）/ 坏包升级自动回滚（含库 PID 落库）/ 停止清 PID。
- * 期望 27/27 全绿（见 RELEASE-ACCEPTANCE-REPORT.md §9）。
+ * 期望 25/25 全绿（见 RELEASE-ACCEPTANCE-REPORT.md §9）。
  *
  * 依赖（操作机需有 PuTTY plink/pscp 与 OpenSSH ssh）：
  *   - 能 SSH 登录平台主机（默认 kali@192.168.50.198）以执行 set-ssh 与驱逐检查

@@ -44,14 +44,8 @@ public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements 
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).wapPay(buildClientProperties(channel),
                 buildPayRequest(request, "QUICK_WAP_WAY"));
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setLaunchType("HTML_FORM");
-        result.setFormHtml(response.body());
-        result.setTradeNo(response.tradeNo());
-        result.setStatus("PAYING");
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), response.tradeNo(), response.message(), null,
+                "HTML_FORM", response.body(), null, null, null, "PAYING", response.rawResponse());
         return result;
     }
 }

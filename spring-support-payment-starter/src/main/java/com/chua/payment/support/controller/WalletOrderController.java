@@ -15,7 +15,6 @@ import com.chua.payment.support.service.PaymentCallbackUrlResolver;
 import com.chua.payment.support.service.WalletOrderService;
 import com.chua.payment.support.vo.WalletOrderVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,8 +50,14 @@ public class WalletOrderController {
      * @return 创建充值的结果
      */
     public Result<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
-        RechargeRequest request = new RechargeRequest();
-        BeanUtils.copyProperties(dto, request);
+        RechargeRequest request = new RechargeRequest(
+                dto.rechargeNo(),
+                dto.notifyUrl(),
+                dto.merchantId(),
+                dto.userId(),
+                dto.amount(),
+                dto.operator(),
+                dto.remark());
         return Result.success(convert(walletOrderService.createRechargeOrder(request)));
     }
 
@@ -64,8 +69,15 @@ public class WalletOrderController {
      * @return 创建转账的结果
      */
     public Result<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
-        TransferRequest request = new TransferRequest();
-        BeanUtils.copyProperties(dto, request);
+        TransferRequest request = new TransferRequest(
+                dto.transferNo(),
+                dto.notifyUrl(),
+                dto.merchantId(),
+                dto.fromUserId(),
+                dto.toUserId(),
+                dto.amount(),
+                dto.operator(),
+                dto.remark());
         return Result.success(convert(walletOrderService.createTransferOrder(request)));
     }
 
@@ -77,8 +89,17 @@ public class WalletOrderController {
      * @return 创建提现的结果
      */
     public Result<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
-        WithdrawRequest request = new WithdrawRequest();
-        BeanUtils.copyProperties(dto, request);
+        WithdrawRequest request = new WithdrawRequest(
+                dto.withdrawNo(),
+                dto.notifyUrl(),
+                dto.merchantId(),
+                dto.userId(),
+                dto.amount(),
+                dto.bankAccount(),
+                dto.bankName(),
+                dto.accountName(),
+                dto.operator(),
+                dto.remark());
         return Result.success(convert(walletOrderService.createWithdrawOrder(request)));
     }
 
@@ -118,9 +139,26 @@ public class WalletOrderController {
      * @return 转换的结果
      */
     private WalletOrderVO convert(WalletOrder order) {
-        WalletOrderVO vo = new WalletOrderVO();
-        BeanUtils.copyProperties(order, vo);
-        vo.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl(order.getOrderType(), order.getOrderNo()));
-        return vo;
+        return new WalletOrderVO(
+                order.getId(),
+                order.getOrderNo(),
+                order.getOrderType(),
+                order.getMerchantId(),
+                order.getUserId(),
+                order.getRelatedUserId(),
+                order.getAmount(),
+                order.getStatus(),
+                order.getThirdPartyOrderNo(),
+                order.getBankAccount(),
+                order.getBankName(),
+                order.getAccountName(),
+                order.getRequestPayload(),
+                order.getResponsePayload(),
+                order.getOperator(),
+                order.getRemark(),
+                paymentCallbackUrlResolver.defaultWalletNotifyUrl(order.getOrderType(), order.getOrderNo()),
+                order.getCompletedAt(),
+                order.getCreateTime(),
+                order.getUpdateTime());
     }
 }

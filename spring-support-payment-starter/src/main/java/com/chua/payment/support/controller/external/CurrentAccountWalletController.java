@@ -152,19 +152,17 @@ public class CurrentAccountWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账户");
         }
-        if (dto.getMerchantId() == null) {
+        if (dto.merchantId() == null) {
             return Result.error("商户ID不能为空");
         }
-        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
             return Result.error("提现金额必须大于0");
         }
-        if (!StringUtils.hasText(dto.getBankAccount())) {
+        if (!StringUtils.hasText(dto.bankAccount())) {
             return Result.error("银行账号不能为空");
         }
 
-        // 强校验：用户标识与操作者强制等于当前用户
-        dto.setUserId(userId);
-        dto.setOperator(String.valueOf(userId));
+        // 强校验：用户标识与操作者强制等于当前用户（record 不可变，下方重建实例覆盖）
 
         // 优惠券抵扣提现校验
         PaymentGlobalConfig globalConfig = paymentGlobalConfigMapper.selectOne(
@@ -174,36 +172,38 @@ public class CurrentAccountWalletController {
         if (globalConfig != null && Boolean.FALSE.equals(globalConfig.getCouponDeductWithdrawable())) {
             List<PaymentOrder> orders = paymentOrderMapper.selectList(
                     new LambdaQueryWrapper<PaymentOrder>()
-                            .eq(PaymentOrder::getMerchantId, dto.getMerchantId())
+                            .eq(PaymentOrder::getMerchantId, dto.merchantId())
                             .eq(PaymentOrder::getUserId, userId)
                             .isNotNull(PaymentOrder::getDiscountAmount));
             BigDecimal totalCouponDiscount = orders.stream()
                     .map(o -> o.getDiscountAmount() != null ? o.getDiscountAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            WalletAccountVO account = walletAccountService.getAccount(dto.getMerchantId(), userId);
-            BigDecimal maxWithdrawable = account.getAvailableBalance().subtract(totalCouponDiscount);
+            WalletAccountVO account = walletAccountService.getAccount(dto.merchantId(), userId);
+            BigDecimal maxWithdrawable = account.availableBalance().subtract(totalCouponDiscount);
             if (maxWithdrawable.compareTo(BigDecimal.ZERO) < 0) {
                 maxWithdrawable = BigDecimal.ZERO;
             }
-            if (dto.getAmount().compareTo(maxWithdrawable) > 0) {
+            if (dto.amount().compareTo(maxWithdrawable) > 0) {
                 return Result.error("优惠券抵扣部分不可提现，可提现金额为：" + maxWithdrawable.setScale(2, RoundingMode.HALF_UP));
             }
         }
 
         // 生成提现流水号
         String withdrawNo = "WDW" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-        dto.setWithdrawNo(withdrawNo);
+        WalletWithdrawDTO effectiveDto = new WalletWithdrawDTO(
+                dto.merchantId(), userId, withdrawNo, dto.notifyUrl(), dto.amount(),
+                dto.bankAccount(), dto.bankName(), dto.accountName(), String.valueOf(userId), dto.remark());
 
         // 冻结余额（frozen 可用）
-        walletAccountService.freezeForWithdraw(dto);
+        walletAccountService.freezeForWithdraw(effectiveDto);
 
         // 创建提现审批记录（PENDING），不再直接创建订单
         WalletWithdrawApproval approval = walletWithdrawApprovalService.createApproval(
                 new CreateApprovalDTO(
-                        dto.getMerchantId(), userId, dto.getAmount(),
-                        dto.getBankAccount(), dto.getBankName(), dto.getAccountName(),
-                        withdrawNo, dto.getRemark()));
+                        dto.merchantId(), userId, dto.amount(),
+                        dto.bankAccount(), dto.bankName(), dto.accountName(),
+                        withdrawNo, dto.remark()));
 
         return Result.success(approval);
     }
@@ -256,16 +256,16 @@ public class CurrentAccountWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账户");
         }
-        if (dto.getMerchantId() == null) {
+        if (dto.merchantId() == null) {
             return Result.error("商户ID不能为空");
         }
-        if (dto.getToUserId() == null) {
+        if (dto.toUserId() == null) {
             return Result.error("转入用户不能为空");
         }
-        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
             return Result.error("转账金额必须大于0");
         }
-        if (userId.equals(dto.getToUserId())) {
+        if (userId.equals(dto.toUserId())) {
             return Result.error("不能转账给自己");
         }
 
@@ -273,8 +273,8 @@ public class CurrentAccountWalletController {
         String transferNo = "TRF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         walletAccountService.transfer(new WalletTransferOpDTO(
-                dto.getMerchantId(), userId, dto.getToUserId(),
-                dto.getAmount(), transferNo, String.valueOf(userId), dto.getRemark()));
+                dto.merchantId(), userId, dto.toUserId(),
+                dto.amount(), transferNo, String.valueOf(userId), dto.remark()));
         return Result.success();
     }
 }

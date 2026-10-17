@@ -25,10 +25,7 @@ public interface PaymentChannel {
      * @return 创建订单的结果
      */
     default OrderCreateResult createOrder(MerchantChannel channel, OrderCreateRequest request) {
-        OrderCreateResult result = new OrderCreateResult();
-        result.setSuccess(true);
-        result.setOrderNo(request.getOrderNo());
-        return result;
+        return new OrderCreateResult(true, request.orderNo(), null, null);
     }
 
     /**

@@ -1,33 +1,20 @@
 package com.chua.payment.support.dto;
 
-import lombok.Data;
-
 /**
  * 微信支付配置DTO
  *
+ * @param appId     APPID
+ * @param mchId     MCHID
+ * @param apiKey    API密钥
+ * @param certPath  证书路径
+ * @param notifyUrl 通知URL
  * @since 2026-03-18
  * @author CH
  */
-@Data
-public class WechatConfigDTO {
-    /**
-     * APPID
-     */
-    private String appId;
-    /**
-     * MCHID
-     */
-    private String mchId;
-    /**
-     * API密钥
-     */
-    private String apiKey;
-    /**
-     * 证书路径
-     */
-    private String certPath;
-    /**
-     * 通知URL
-     */
-    private String notifyUrl;
+public record WechatConfigDTO(
+        String appId,
+        String mchId,
+        String apiKey,
+        String certPath,
+        String notifyUrl) {
 }

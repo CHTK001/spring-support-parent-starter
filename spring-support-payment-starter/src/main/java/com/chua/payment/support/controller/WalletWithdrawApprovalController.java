@@ -91,16 +91,17 @@ public class WalletWithdrawApprovalController {
                 approval.getWithdrawNo(), approval.getAmount());
 
         // 创建提现订单并标记处理中
-        WithdrawRequest withdrawRequest = new WithdrawRequest();
-        withdrawRequest.setWithdrawNo(approval.getWithdrawNo());
-        withdrawRequest.setMerchantId(approval.getMerchantId());
-        withdrawRequest.setUserId(approval.getUserId());
-        withdrawRequest.setAmount(approval.getAmount());
-        withdrawRequest.setBankAccount(approval.getBankAccount());
-        withdrawRequest.setBankName(approval.getBankName());
-        withdrawRequest.setAccountName(approval.getAccountName());
-        withdrawRequest.setOperator(operator);
-        withdrawRequest.setRemark(approval.getRemark());
+        WithdrawRequest withdrawRequest = new WithdrawRequest(
+                approval.getWithdrawNo(),
+                null,
+                approval.getMerchantId(),
+                approval.getUserId(),
+                approval.getAmount(),
+                approval.getBankAccount(),
+                approval.getBankName(),
+                approval.getAccountName(),
+                operator,
+                approval.getRemark());
 
         WalletOrder order = walletOrderService.createWithdrawOrder(withdrawRequest);
         walletOrderService.markProcessing(order.getOrderNo(), null, null);
