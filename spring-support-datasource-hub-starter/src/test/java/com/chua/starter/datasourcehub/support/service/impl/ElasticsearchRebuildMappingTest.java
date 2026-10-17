@@ -66,9 +66,14 @@ class ElasticsearchRebuildMappingTest {
         private final List<String> bodies = new ArrayList<>();
 
         /**
-         * 调用次序：{@code create:索引} / {@code reindex:源->目标} / {@code delete:索引}
+         * 调用次序：{@code create:索引} / {@code reindex:源->目标} / {@code delete:索引} / {@code count:索引} / {@code refresh:索引}
          */
         private final List<String> flow = new ArrayList<>();
+
+        /**
+         * 每次 {@code _reindex} 携带的 {@code _source.excludes}（被剔数据的字段）
+         */
+        private final List<List<String>> reindexExcludes = new ArrayList<>();
 
         private StubClient() {
             super(null);
@@ -92,7 +97,18 @@ class ElasticsearchRebuildMappingTest {
 
         @Override
         public JsonObject count(Target target, String index) {
+            flow.add("count:" + index);
             return Json.getJsonObject("{\"count\":3}");
+        }
+
+        /**
+         * 刷新桩。真机上 {@code _reindex} 不刷新目标索引，未刷新文档对 {@code _count} 不可见；
+         * 这里把它记进调用次序，好断言「刷新发生在数文档之前」。
+         */
+        @Override
+        public JsonObject refresh(Target target, String index) {
+            flow.add("refresh:" + index);
+            return Json.getJsonObject("{\"_shards\":{\"successful\":1}}");
         }
 
         @Override
@@ -110,7 +126,13 @@ class ElasticsearchRebuildMappingTest {
 
         @Override
         public JsonObject reindex(Target target, String source, String dest) {
+            return reindex(target, source, dest, List.of());
+        }
+
+        @Override
+        public JsonObject reindex(Target target, String source, String dest, List<String> sourceExcludes) {
             flow.add("reindex:" + source + "->" + dest);
+            reindexExcludes.add(new ArrayList<>(sourceExcludes == null ? List.of() : sourceExcludes));
             return Json.getJsonObject("{\"created\":3,\"total\":3,\"failures\":[]}");
         }
 
@@ -165,20 +187,73 @@ class ElasticsearchRebuildMappingTest {
     }
 
     @Test
-    @DisplayName("重建两次搬运的次序固定：建临时 -> 搬入 -> 删原 -> 建回同名 -> 搬回 -> 删临时")
+    @DisplayName("搬运次序固定：建临时 -> 搬入 -> 刷新 -> 数文档 -> 删原 -> 建回同名 -> 搬回 -> 刷新 -> 删临时")
     void rebuildKeepsTwoPassOrder() {
         StubClient client = new StubClient();
 
         new ElasticsearchManageServiceImpl(client).rebuildIndex(request(currentFields()));
 
-        assertEquals(6, client.flow.size(), "重建应恰好是 6 步：实际 " + client.flow);
-        String tmp = client.flow.get(0).substring("create:".length());
-        assertTrue(tmp.startsWith(INDEX + "__rebuild__"), "临时索引要带可识别的前缀，便于失败后人工恢复");
-        assertEquals("reindex:" + INDEX + "->" + tmp, client.flow.get(1));
-        assertEquals("delete:" + INDEX, client.flow.get(2));
-        assertEquals("create:" + INDEX, client.flow.get(3));
-        assertEquals("reindex:" + tmp + "->" + INDEX, client.flow.get(4));
-        assertEquals("delete:" + tmp, client.flow.get(5));
+        List<String> flow = client.flow;
+        String tmp = flow.stream().filter(s -> s.startsWith("create:acc-es-idx__rebuild__"))
+                .map(s -> s.substring("create:".length())).findFirst().orElse("");
+        assertTrue(tmp.startsWith(INDEX + "__rebuild__"), "临时索引要带可识别前缀，便于失败后人工恢复：" + flow);
+        assertEquals(List.of(
+                "count:" + INDEX,
+                "create:" + tmp,
+                "reindex:" + INDEX + "->" + tmp,
+                "refresh:" + tmp,
+                "count:" + tmp,
+                "delete:" + INDEX,
+                "create:" + INDEX,
+                "reindex:" + tmp + "->" + INDEX,
+                "refresh:" + INDEX,
+                "delete:" + tmp), flow);
+    }
+
+    @Test
+    @DisplayName("删掉的字段连 _source 数据一起剔：只剔被删的，且只在搬入临时索引时剔")
+    void droppedFieldDataIsExcludedFromReindex() {
+        StubClient client = new StubClient();
+        List<ElasticsearchFieldDTO> fields = currentFields();
+        fields.removeIf(f -> "legacy".equals(f.name()));
+
+        new ElasticsearchManageServiceImpl(client).rebuildIndex(request(fields));
+
+        assertEquals(2, client.reindexExcludes.size(), "两次搬运都要记录");
+        assertEquals(List.of("legacy"), client.reindexExcludes.get(0),
+                "搬入临时索引时必须把被删字段作为 _source.excludes 传下去，"
+                        + "否则目标索引的动态映射会把字段又加回来（用户看到「删了又回来」）");
+        assertEquals(List.of(), client.reindexExcludes.get(1),
+                "搬回时临时索引里已经没有该字段的数据，无需再剔");
+    }
+
+    @Test
+    @DisplayName("没有删字段时不给 _reindex 传 excludes（不做无谓的 _source 过滤）")
+    void noExcludesWhenNothingDropped() {
+        StubClient client = new StubClient();
+
+        new ElasticsearchManageServiceImpl(client).rebuildIndex(request(currentFields()));
+
+        assertEquals(List.of(), client.reindexExcludes.get(0));
+        assertEquals(List.of(), client.reindexExcludes.get(1));
+    }
+
+    @Test
+    @DisplayName("刷新必须在「数文档」之前：_reindex 不刷新目标，漏了会把正常重建误判成文档数不一致")
+    void refreshHappensBeforeCounting() {
+        StubClient client = new StubClient();
+
+        new ElasticsearchManageServiceImpl(client).rebuildIndex(request(currentFields()));
+
+        List<String> flow = client.flow;
+        String tmp = flow.stream().filter(s -> s.startsWith("create:acc-es-idx__rebuild__"))
+                .map(s -> s.substring("create:".length())).findFirst().orElse("");
+        int refreshed = flow.indexOf("refresh:" + tmp);
+        int counted = flow.indexOf("count:" + tmp);
+        assertTrue(refreshed >= 0, "临时索引搬完必须显式刷新：" + flow);
+        assertTrue(counted >= 0, "搬完要数文档做一致性校验：" + flow);
+        assertTrue(refreshed < counted,
+                "刷新必须在数文档之前，否则未刷新的文档数会被读成 0 而中止重建：" + flow);
     }
 
     @Test
