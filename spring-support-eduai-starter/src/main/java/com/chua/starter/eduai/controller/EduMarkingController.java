@@ -196,7 +196,7 @@ public class EduMarkingController {
         try {
             MarkingProgressVO snapshot = markingService.getProgress(taskId);
             progressHub.sendTo(emitter, "progress", snapshot);
-            if (Boolean.TRUE.equals(snapshot.getFinished())) {
+            if (Boolean.TRUE.equals(snapshot.finished())) {
                 progressHub.complete(taskId, "done", snapshot);
             }
         } catch (BusinessException e) {
@@ -216,10 +216,8 @@ public class EduMarkingController {
      * @param message 错误信息
      */
     private void sendStreamError(String taskId, String message) {
-        MarkingProgressVO error = new MarkingProgressVO();
-        error.setTaskId(taskId);
-        error.setError(message);
-        error.setFinished(true);
+        MarkingProgressVO error = new MarkingProgressVO(
+                taskId, null, null, null, null, null, message, true, null, null, null);
         progressHub.complete(taskId, "done", error);
     }
 }

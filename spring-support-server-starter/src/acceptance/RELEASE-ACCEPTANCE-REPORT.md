@@ -10,7 +10,7 @@
 
 | 项 | 值 |
 |---|---|
-| 线上 jar md5 | **`07cd6f521be0ffdb6d0ea9a3968fdf83`**（§9.1；历史基线 `65b506dc03193b3bb35abd8543d779d2`） |
+| 线上 jar md5 | **`d93092d56198ea3a81f57e9c93c0d1ae`**（§9.1；历史基线 `07cd6f52…`、`65b506dc…`） |
 | **落库 startScript 指纹** | `FFD0674FB5EABB4284C8C507FF4012FE`（4616 字节） |
 | 对应提交 | `5c505933b` |
 | 本地/远端一致性 | 上传前后 md5 双向核对一致（远端 `md5sum` 与本地 `Get-FileHash` 相同） |
@@ -362,7 +362,7 @@ win101 的 `sshd_config` 也没有任何超时项；因此这个 60 秒上限在
 ```powershell
 # 1) 产物绑定：先核对线上 jar md5，再核对落库脚本指纹（两者都要，只报 jar md5 不够）
 plink … 'md5sum /home/kali/ms-accept/jars/spring-support-monitor-starter-4.0.0.42-exec.jar'
-#   期望 07cd6f521be0ffdb6d0ea9a3968fdf83
+#   期望 d93092d56198ea3a81f57e9c93c0d1ae
 plink … 'bash /home/kali/ms-accept/scripts/svc-action.sh status'   # 期望 active、单实例
 
 # 1b) 落库脚本指纹（发布任务真正执行的那份，不是 jar 里的模板）
@@ -430,14 +430,14 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 | 项 | 值 |
 |---|---|
 | 构建方式 | **全量源码 reactor 构建（21 模块）**：`mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false` |
-| 线上 exec jar 外 md5 | `07cd6f521be0ffdb6d0ea9a3968fdf83`（818,302,098 字节） |
-| 内层 server-starter md5 | `2e7fd3cb19d446c1505e0f13622402b4` |
+| 线上 exec jar 外 md5 | `d93092d56198ea3a81f57e9c93c0d1ae`（840,665,424 字节） |
+| 内层 server-starter md5 | `c3e179e6e91174240cbc6dadfca938c3` |
 | 内层 cache-starter md5 | `7548d7a4268e07fbd661bd53a551cf3d` |
-| 内层 ai-starter md5 | `4339136a6a927efc7c580e59353d1af1` |
-| 包内修复实证（字节级） | `自启脚本仍存在` / `.autostart.ps1`（卸载残留）、`Win32_Process`（WMI 落地启动）、`-join`（`$inner` 拼接）、`reconcileProjectAfterFailure`（回滚 PID 对账）均在 exec jar 内的 class 中 |
+| 内层 ai-starter md5 | `1a54e6ee706dae5dd9b2f051df468479` |
+| 包内修复实证（字节级） | `自启脚本仍存在` / `.autostart.ps1`（卸载残留）、`Win32_Process` / `WMI 拉起守护进程失败` / `$i -lt 360`（缺陷 9）、`ServiceNameWrite` / `updateProjectServiceName`（缺陷 10）、`-join`（`$inner` 拼接）、`reconcileProjectAfterFailure`（回滚 PID 对账）均在 exec jar 内的 class 中（已用脚本逐项核对） |
 | 服务 | `ms-monitor-platform` `active`，`MainPID=995151`，`NRestarts=0`，8112 监听，登录 `code=00000` |
 | 启动健康（本次 boot） | `expected single matching CacheManager` 计数 **0**；` ERROR ` 行 **0** |
-| 回滚点 | `rollback-before-fix2-20261016-214817.jar`（= 上一轮已验证可启动的 `555c0909…`）；`good-current-stable.jar` 已同步刷新 |
+| 回滚点 | `rollback-before-fix3-20261016-230240.jar`（= 上一轮已验证可启动的 `07cd6f52…`）；`good-current-stable.jar` 已同步刷新 |
 
 > **构建卫生（必读）**：可交付产物**必须**由全量源码构建。
 > 反例实测：只重编被改模块、其余依赖走本地仓库的「增量构建」产物，启动即
@@ -493,11 +493,11 @@ plink … 'bash /home/kali/ms-accept/scripts/final-check.sh'   # 期望缺口全
 ```bash
 # 0) 全量源码构建可交付产物（务必全量；增量构建会混入本地仓库旧 jar 导致启动失败）
 mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false
-# 期望产物 spring-support-monitor-starter-4.0.0.42-exec.jar，md5 = 07cd6f521be0ffdb6d0ea9a3968fdf83
+# 期望产物 spring-support-monitor-starter-4.0.0.42-exec.jar，md5 = d93092d56198ea3a81f57e9c93c0d1ae
 
 # 1) 内外层 md5 核对（证明产物内容与源码一致）
 unzip -p spring-support-monitor-starter-4.0.0.42-exec.jar \
-  'BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar' | md5sum   # 期望 2e7fd3cb19d446c1505e0f13622402b4
+  'BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar' | md5sum   # 期望 c3e179e6e91174240cbc6dadfca938c3
 unzip -p spring-support-monitor-starter-4.0.0.42-exec.jar \
   'BOOT-INF/lib/spring-support-cache-starter-4.0.0.42.jar' | md5sum    # 期望 7548d7a4268e07fbd661bd53a551cf3d
 

@@ -208,17 +208,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
         // 0. 入参体检：答题内容列带 json_valid 检查约束、(考试, 学生) 上有唯一键，
         //    直接 insert 会以 500 + 数据库原文（含复合主键值）暴露给用户，这里先转成业务提示
-        validateSubmitContent(dto.getContent());
-        rejectDuplicateSheet(dto.getExamId(), dto.getStudentId());
+        validateSubmitContent(dto.content());
+        rejectDuplicateSheet(dto.examId(), dto.studentId());
         // 0.5 试卷校验：考试必须存在、关联的试卷必须存在且已发布，答案题号必须落在试卷题项上
-        validateExamPaper(dto.getExamId(), dto.getAnswers());
+        validateExamPaper(dto.examId(), dto.answers());
 
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setOwnerUserId(EduUserContext.requireUserId());
-        sheet.setAnswerSheetExamId(dto.getExamId());
-        sheet.setAnswerSheetStudentId(dto.getStudentId());
-        sheet.setAnswerSheetContent(dto.getContent());
+        sheet.setAnswerSheetExamId(dto.examId());
+        sheet.setAnswerSheetStudentId(dto.studentId());
+        sheet.setAnswerSheetContent(dto.content());
         sheet.setAnswerSheetSubmitTime(LocalDateTime.now());
         sheet.setAnswerSheetStatus(1); // 已提交
         sheet.setCreateTime(LocalDateTime.now());
@@ -227,11 +227,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
  // 2. 生成 任务标识 并预占 marking_结果
         String taskId = UUID.randomUUID().toString().replace("-", "");
-        for (MarkingSubmitDTO.AnswerItem item : dto.getAnswers()) {
+        for (MarkingSubmitDTO.AnswerItem item : dto.answers()) {
             EduMarkingResult result = new EduMarkingResult();
             result.setOwnerUserId(sheet.getOwnerUserId());
             result.setMarkingResultAnswerSheetId(sheet.getAnswerSheetId());
-            result.setMarkingResultQuestionId(item.getQuestionId());
+            result.setMarkingResultQuestionId(item.questionId());
             result.setMarkingResultTaskId(taskId);
             result.setMarkingResultStatus(STATUS_PENDING);
             result.setCreateTime(LocalDateTime.now());
@@ -245,18 +245,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
              * @param taskId 任务标识
              * @param sheet.getAnswerSheetId( sheet.获取answersheetid(
              */
-            dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.getAnswers());
+            dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.answers());
         } else {
             /**
              * mark同步。
              * @param taskId 任务标识
              * @param dto.getAnswers( dto.获取answers(
              */
-            markSync(taskId, dto.getAnswers());
+            markSync(taskId, dto.answers());
         }
 
         log.info("[EduAi] 答题卡已提交: taskId={}, student={}, async={}",
-                taskId, dto.getStudentId(), properties.getMarking().isAsync());
+                taskId, dto.studentId(), properties.getMarking().isAsync());
         return taskId;
     }
 
@@ -289,8 +289,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         if (answers != null) {
             for (MarkingSubmitDTO.AnswerItem item : answers) {
-                if (item != null && item.getQuestionId() != null && !onPaper.contains(item.getQuestionId())) {
-                    throw new BusinessException("题目 " + item.getQuestionId() + " 不在试卷上，无法阅卷");
+                if (item != null && item.questionId() != null && !onPaper.contains(item.questionId())) {
+                    throw new BusinessException("题目 " + item.questionId() + " 不在试卷上，无法阅卷");
                 }
             }
         }
@@ -400,21 +400,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         Map<Long, Integer> fullScores = resolveFullScores(sheet);
         int fallbackScore = properties.getMarking().getMaxScore();
         for (MarkingSubmitDTO.AnswerItem item : answers) {
-            EduQuestion question = questionMapper.selectById(item.getQuestionId());
+            EduQuestion question = questionMapper.selectById(item.questionId());
             if (question == null) {
                 continue;
             }
-            int maxScore = fullScores.getOrDefault(item.getQuestionId(), fallbackScore);
+            int maxScore = fullScores.getOrDefault(item.questionId(), fallbackScore);
             EduAiService.MarkingOutcome outcome = eduAiService.markQuestionWithAi(
                     question.getQuestionType(),
                     question.getQuestionStem(),
                     question.getQuestionAnswer(),
-                    item.getAnswer(),
+                    item.answer(),
                     maxScore
             );
             applyOutcome(taskId, question, outcome);
         }
-        recordWrongQuestions(taskId, sheet);
     }
 
     /**
@@ -459,45 +458,6 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private List<EduMarkingResult> listByTask(String taskId) {
         return markingResultMapper.selectByTaskId(taskId);
-    }
-
-    /**
-     * 把该阅卷任务下未得分的题目登记到错题本。
-     *
-     * <p>队列消费线程没有请求上下文，归属用户从答题卡行继承，与
-     * {@link EduUserContext} 对异步路径的约定一致。</p>
-     *
-     * @param taskId 阅卷任务标识
-     * @param sheet  答题卡
-     */
-    private void recordWrongQuestions(String taskId, EduAnswerSheet sheet) {
-        List<EduMarkingResult> results = listByTask(taskId);
-        if (results.isEmpty() || sheet == null) {
-            log.warn("[EduAi] 阅卷结果无对应答题卡，跳过错题登记: taskId={}", taskId);
-            return;
-        }
-        int recorded = 0;
-        for (EduMarkingResult result : results) {
-            Integer score = result.getMarkingResultAiScore();
-            if (score != null && score > 0) {
-                continue;
-            }
-            // 任意卷没有题库记录（题目标识记 0），错题本只登记真实题目标识
-            if (result.getMarkingResultQuestionId() == null || result.getMarkingResultQuestionId() <= 0) {
-                continue;
-            }
-            try {
-                wrongQuestionService.recordWrongQuestion(sheet.getAnswerSheetStudentId(),
-                        result.getMarkingResultQuestionId(), sheet.getAnswerSheetExamId(), sheet.getOwnerUserId());
-                recorded++;
-            } catch (Exception e) {
-                // 错题登记是「判分之后的附加动作」，单条失败不能让整个阅卷任务判为失败
-                // （实测曾因唯一键冲突把已判分完成的任务标成 FAILED）
-                log.warn("[EduAi] 错题登记失败(忽略): taskId={}, questionId={}, err={}",
-                        taskId, result.getMarkingResultQuestionId(), e.getMessage());
-            }
-        }
-        log.info("[EduAi] 错题登记完成: taskId={}, 未得分题数={}", taskId, recorded);
     }
 
     /**
@@ -712,10 +672,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             EduMarkingTask latest = taskMapper.selectByTaskId(taskId);
             changeStage(taskId, EduMarkingTask.STATUS_DONE, "已完成",
                     latest == null ? null : latest.getMarkingTaskTotal(), graded, null, true);
-            // 错题登记放在判分完成后（未得分题目），归属用户从答题卡继承
-            if (latest != null && latest.getMarkingTaskAnswerSheetId() != null) {
-                recordWrongQuestions(taskId, answerSheetMapper.selectById(latest.getMarkingTaskAnswerSheetId()));
-            }
+            // 错题登记已收敛到老师点「完成」时（按最终分 + 学生 + 试卷归因），
+            // 判分阶段不再登记，避免同一题被「判分」与「完成」登记两次而虚增错误次数。
             log.info("[EduAi] 阅卷任务完成: taskId={}, 已判分={}", taskId, graded);
         } catch (BusinessException be) {
             if (isInterruptedByShutdown(be)) {
@@ -1571,17 +1529,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private MarkingProgressVO buildProgressVo(String taskId, int status, String stage,
                                               Integer total, Integer done, String error) {
-        MarkingProgressVO vo = new MarkingProgressVO();
-        vo.setTaskId(taskId);
-        vo.setTaskStatus(status);
-        vo.setStage(stage);
-        vo.setTotal(total);
-        vo.setDoneCount(done);
-        vo.setError(error);
-        vo.setFinished(false);
-        vo.setPercent(percentOf(total, done));
-        vo.setUpdateTime(LocalDateTime.now());
-        return vo;
+        return new MarkingProgressVO(
+                taskId,
+                status,
+                stage,
+                total,
+                done,
+                percentOf(total, done),
+                error,
+                false,
+                null,
+                null,
+                LocalDateTime.now());
     }
 
     /**
@@ -1594,21 +1553,21 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         Integer status = task.getMarkingTaskStatus();
         boolean terminal = Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(status)
                 || Integer.valueOf(EduMarkingTask.STATUS_FAILED).equals(status);
-        MarkingProgressVO vo = new MarkingProgressVO();
-        vo.setTaskId(task.getMarkingTaskTaskId());
-        vo.setTaskStatus(status);
-        vo.setStage(task.getMarkingTaskStage());
-        vo.setTotal(task.getMarkingTaskTotal());
-        vo.setDoneCount(task.getMarkingTaskDoneCount());
-        vo.setError(task.getMarkingTaskError());
-        vo.setMode(task.getMarkingTaskMode());
-        vo.setStudentId(task.getMarkingTaskStudentId());
-        vo.setFinished(terminal);
         Integer percent = percentOf(task.getMarkingTaskTotal(), task.getMarkingTaskDoneCount());
         // 注意：三元分支含 int 字面量时会自动拆箱 percent，percent 为 null 且非终态会 NPE —— 全部保持 Integer 装箱
-        vo.setPercent(percent != null ? percent : (terminal ? Integer.valueOf(100) : null));
-        vo.setUpdateTime(LocalDateTime.now());
-        return vo;
+        Integer resolvedPercent = percent != null ? percent : (terminal ? Integer.valueOf(100) : null);
+        return new MarkingProgressVO(
+                task.getMarkingTaskTaskId(),
+                status,
+                task.getMarkingTaskStage(),
+                task.getMarkingTaskTotal(),
+                task.getMarkingTaskDoneCount(),
+                resolvedPercent,
+                task.getMarkingTaskError(),
+                terminal,
+                task.getMarkingTaskMode(),
+                task.getMarkingTaskStudentId(),
+                LocalDateTime.now());
     }
 
     /**
@@ -2450,30 +2409,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 throw new BusinessException("任务不存在");
             }
             // 任务已创建但尚无结果行：回报任务状态与阶段，让前端继续轮询 / 展示失败原因
-            MarkingResultVO pendingVo = new MarkingResultVO();
-            pendingVo.setTaskId(taskId);
-            pendingVo.setStatus(task.getMarkingTaskStatus());
-            pendingVo.setTaskStatus(task.getMarkingTaskStatus());
-            pendingVo.setStage(task.getMarkingTaskStage());
-            pendingVo.setError(task.getMarkingTaskError());
-            pendingVo.setTotal(0);
-            pendingVo.setTotalScore(0);
-            pendingVo.setResults(new ArrayList<>());
-            pendingVo.setFinished(taskFailed);
-            pendingVo.setTeacherFinished(isTeacherFinished(task));
-            return pendingVo;
+            return new MarkingResultVO(
+                    taskId,
+                    task.getMarkingTaskStatus(),
+                    0,
+                    0,
+                    taskFailed,
+                    new ArrayList<>(),
+                    task.getMarkingTaskStatus(),
+                    task.getMarkingTaskStage(),
+                    task.getMarkingTaskError(),
+                    isTeacherFinished(task));
         }
-
-        MarkingResultVO vo = new MarkingResultVO();
-        vo.setTaskId(taskId);
-        vo.setStatus(results.getFirst().getMarkingResultStatus());
-        vo.setTotal(results.size());
-        if (task != null) {
-            vo.setTaskStatus(task.getMarkingTaskStatus());
-            vo.setStage(task.getMarkingTaskStage());
-            vo.setError(task.getMarkingTaskError());
-        }
-        vo.setTeacherFinished(isTeacherFinished(task));
 
         int fallbackScore = properties.getMarking().getMaxScore();
         Map<Long, Integer> fullScores = resolveFullScores(
@@ -2483,35 +2430,42 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         int totalScore = 0;
         boolean allDone = true;
         for (EduMarkingResult r : results) {
-            MarkingResultVO.QuestionResult qr = new MarkingResultVO.QuestionResult();
-            qr.setResultId(r.getMarkingResultId());
-            qr.setQuestionId(r.getMarkingResultQuestionId());
             // 任意卷无题库题号（questionId=0），教师要靠卷面题号 + 学生作答对位修正
             Map<String, Object> detail = parseJsonMap(r.getMarkingResultDetail());
             Object no = detail.get("recognizedNo");
-            qr.setNo(no == null ? null : String.valueOf(no));
             Object answer = detail.get("studentAnswer");
-            qr.setStudentAnswer(answer == null ? null : String.valueOf(answer));
             // 扫描链路 detail 里存的是判分实际采用的卷面满分，优先用它，
             // 避免「得分 10 / 满分 5」这类满分口径错位（教师修正上限同源）
             Integer detailMax = parseDetailMaxScoreOrNull(r.getMarkingResultDetail());
-            qr.setMaxScore(detailMax != null ? detailMax
-                    : fullScores.getOrDefault(r.getMarkingResultQuestionId(), fallbackScore));
-            qr.setScore(r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
-            qr.setTeacherScore(r.getMarkingResultTeacherScore());
-            qr.setComment(r.getMarkingResultAiComment());
-            qr.setTeacherComment(r.getMarkingResultTeacherComment());
+            MarkingResultVO.QuestionResult qr = new MarkingResultVO.QuestionResult(
+                    r.getMarkingResultId(),
+                    r.getMarkingResultQuestionId(),
+                    no == null ? null : String.valueOf(no),
+                    answer == null ? null : String.valueOf(answer),
+                    detailMax != null ? detailMax
+                            : fullScores.getOrDefault(r.getMarkingResultQuestionId(), fallbackScore),
+                    r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore(),
+                    r.getMarkingResultAiComment(),
+                    r.getMarkingResultTeacherScore(),
+                    r.getMarkingResultTeacherComment());
             list.add(qr);
-            totalScore += qr.getTeacherScore() != null ? qr.getTeacherScore() : qr.getScore();
+            totalScore += qr.teacherScore() != null ? qr.teacherScore() : qr.score();
             if (r.getMarkingResultStatus() == null || r.getMarkingResultStatus() < STATUS_AI_DONE) {
                 allDone = false;
             }
         }
-        vo.setResults(list);
-        vo.setTotalScore(totalScore);
         // 完成判定：任务已完结，或所有结果行都已批改（兼容手工提交链路）
-        vo.setFinished(taskDone || allDone);
-        return vo;
+        return new MarkingResultVO(
+                taskId,
+                results.getFirst().getMarkingResultStatus(),
+                totalScore,
+                results.size(),
+                taskDone || allDone,
+                list,
+                task == null ? null : task.getMarkingTaskStatus(),
+                task == null ? null : task.getMarkingTaskStage(),
+                task == null ? null : task.getMarkingTaskError(),
+                isTeacherFinished(task));
     }
 
     @Override
@@ -2526,14 +2480,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (dto == null) {
             return true;
         }
-        persistStudentCorrection(dto.getTaskId(), dto.getStudentName(), dto.getStudentNo());
-        if (dto.getAdjustments() == null || dto.getAdjustments().isEmpty()) {
+        persistStudentCorrection(dto.taskId(), dto.studentName(), dto.studentNo());
+        if (dto.adjustments() == null || dto.adjustments().isEmpty()) {
             return true;
         }
-        Map<Long, Integer> fullScores = resolveFullScores(findSheet(dto.getTaskId()));
+        Map<Long, Integer> fullScores = resolveFullScores(findSheet(dto.taskId()));
         int fallbackScore = properties.getMarking().getMaxScore();
-        for (MarkingConfirmDTO.ScoreAdjustment adj : dto.getAdjustments()) {
-            EduMarkingResult result = markingResultMapper.selectById(adj.getResultId());
+        for (MarkingConfirmDTO.ScoreAdjustment adj : dto.adjustments()) {
+            EduMarkingResult result = markingResultMapper.selectById(adj.resultId());
             if (result == null) {
                 continue;
             }
@@ -2543,24 +2497,24 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             Integer detailMax = parseDetailMaxScoreOrNull(result.getMarkingResultDetail());
             Integer maxScore = detailMax != null ? detailMax
                     : fullScores.getOrDefault(result.getMarkingResultQuestionId(), fallbackScore);
-            Integer score = clampScore(adj.getScore(), maxScore);
-            if (score != null && !score.equals(adj.getScore())) {
+            Integer score = clampScore(adj.score(), maxScore);
+            if (score != null && !score.equals(adj.score())) {
                 log.warn("[EduAi] 教师修正分数超出卷面满分，已收敛: resultId={}, questionId={}, 提交={}, 满分={}, 采用={}",
-                        adj.getResultId(), result.getMarkingResultQuestionId(), adj.getScore(), maxScore, score);
+                        adj.resultId(), result.getMarkingResultQuestionId(), adj.score(), maxScore, score);
             }
             result.setMarkingResultTeacherScore(score);
             result.setMarkingResultScore(score);
             // 评语只在调用方显式给出时才覆盖：同版式解析只改对错（不传评语），
             // 若无条件写入会把教师已写好的评语冲成 AI 评语或清空
-            if (adj.getComment() != null) {
-                result.setMarkingResultTeacherComment(adj.getComment());
-                result.setMarkingResultComment(adj.getComment());
+            if (adj.comment() != null) {
+                result.setMarkingResultTeacherComment(adj.comment());
+                result.setMarkingResultComment(adj.comment());
             }
             result.setMarkingResultStatus(STATUS_TEACHER_DONE);
             result.setUpdateTime(LocalDateTime.now());
             markingResultMapper.updateById(result);
         }
-        log.info("[EduAi] 教师确认阅卷: taskId={}, items={}", dto.getTaskId(), dto.getAdjustments().size());
+        log.info("[EduAi] 教师确认阅卷: taskId={}, items={}", dto.taskId(), dto.adjustments().size());
         return true;
     }
 
@@ -2590,25 +2544,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 ? findSheet(taskId)
                 : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
 
-        MarkingFinishResultVO vo = new MarkingFinishResultVO();
-        vo.setTaskId(taskId);
-
         // 学生：任务上的学号优先（卷面识别与人工纠正都会写它），其次答题卡
         String studentId = firstNonBlank(task.getMarkingTaskStudentId(),
                 sheet == null ? null : sheet.getAnswerSheetStudentId());
-        vo.setStudentId(studentId);
         if (StringUtils.isBlank(studentId)) {
             throw new BusinessException("该卷还没有识别到学生，请先用上方「修改学生」设置学号后再点完成");
         }
 
         Long paperId = resolvePaperId(task, sheet);
-        vo.setPaperId(paperId);
 
         // 幂等：已完成过就不再重复登记错题
         if (Integer.valueOf(1).equals(task.getMarkingTaskTeacherFinished())) {
-            vo.setAlreadyFinished(true);
-            vo.setWrongCount(0);
-            return vo;
+            return new MarkingFinishResultVO(taskId, studentId, paperId, 0, true);
         }
 
         Long examId = task.getMarkingTaskExamId() != null ? task.getMarkingTaskExamId()
@@ -2644,11 +2591,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         task.setUpdateTime(LocalDateTime.now());
         taskMapper.updateById(task);
 
-        vo.setWrongCount(recorded);
-        vo.setAlreadyFinished(false);
         log.info("[EduAi] 阅卷完成: taskId={}, student={}, paperId={}, 本轮错题={}",
                 taskId, studentId, paperId, recorded);
-        return vo;
+        return new MarkingFinishResultVO(taskId, studentId, paperId, recorded, false);
     }
 
     /**

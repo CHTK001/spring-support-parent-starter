@@ -87,7 +87,7 @@ public class EduInsectController {
     @Operation(summary = "保存物种深度讲解与测验")
     @PostMapping("/guide/save")
     public ReturnResult<Boolean> saveGuide(@RequestBody InsectGuideSaveDTO dto) {
-        if (dto == null || dto.getInsectCode() == null || dto.getInsectCode().isBlank()) {
+        if (dto == null || dto.insectCode() == null || dto.insectCode().isBlank()) {
             throw new BusinessException("insectCode 不能为空");
         }
         return ReturnResult.ok(guideService.saveGuide(dto));

@@ -129,6 +129,18 @@ public class ElasticsearchManageController {
     }
 
     /**
+     * 重建索引（删除 / 修复字段的唯一途径）
+     *
+     * @param request 重建请求
+     * @return 重建后的索引详情
+     */
+    @Operation(summary = "重建 Elasticsearch 索引")
+    @PostMapping("/index/rebuild")
+    public ReturnResult<ElasticsearchIndexDetailVO> rebuildIndex(@RequestBody ElasticsearchIndexDTO request) {
+        return call("重建 Elasticsearch 索引", () -> elasticsearchManageService.rebuildIndex(request));
+    }
+
+    /**
      * 集群信息
      *
      * @param datasourceId 数据源 ID，可为空
