@@ -149,8 +149,8 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("cameraIndexCode", info.deviceSerial());
-        params.put("beginTime", range.getStart().toString());
-        params.put("endTime", range.getEnd().toString());
+        params.put("beginTime", range.start().toString());
+        params.put("endTime", range.end().toString());
         params.put("protocol", "hls");
         JsonNode data = assertOk(post("/api/video/v1/cameras/playbackURLs", params));
         return data.path("url").asText(data.path("hls").asText(""));

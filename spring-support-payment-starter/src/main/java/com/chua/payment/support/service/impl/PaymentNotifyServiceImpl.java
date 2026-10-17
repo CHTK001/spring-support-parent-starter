@@ -113,8 +113,8 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
          * 校验回调路径订单号与报文订单号一致
          * @param dto.orderNo() 路径中的订单号
          */
-        validateNotifyOrderNo(dto.orderNo(), payload.getOrderNo());
-        PaymentOrder order = requireOrder(firstNonBlank(dto.orderNo(), payload.getOrderNo()));
+        validateNotifyOrderNo(dto.orderNo(), payload.orderNo());
+        PaymentOrder order = requireOrder(firstNonBlank(dto.orderNo(), payload.orderNo()));
         /**
          * 校验订单所属渠道
          * @param order 订单
@@ -126,18 +126,18 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
          * @param channel 渠道
          * @param payload.getAppId() 报文中的 AppID
          */
-        validateWechatIdentity(channel, payload.getAppId(), payload.getMerchantId());
+        validateWechatIdentity(channel, payload.appId(), payload.merchantId());
         /**
          * 校验金额一致
          * @param order.getOrderAmount() 订单应付金额
          */
-        validateAmount(order.getOrderAmount(), fenToYuan(payload.getTotalAmountFen()), "微信支付通知金额不匹配");
+        validateAmount(order.getOrderAmount(), fenToYuan(payload.totalAmountFen()), "微信支付通知金额不匹配");
 
-        if (!StringUtils.hasText(payload.getTradeState())) {
+        if (!StringUtils.hasText(payload.tradeState())) {
             throw new PaymentException("微信支付通知缺少交易状态");
         }
 
-        switch (payload.getTradeState()) {
+        switch (payload.tradeState()) {
             case "SUCCESS", "REFUND" -> paymentOrderService.paySuccess(
                     order.getId(),
                     /**
@@ -145,18 +145,18 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
                      * @param payload 通知报文
                      */
                     resolveWechatPaidAmount(payload),
-                    payload.getTransactionId(),
+                    payload.transactionId(),
                     "wechat-notify");
             case "CLOSED", "REVOKED" -> {
                 if (canCancel(order.getStatus())) {
-                    paymentOrderService.cancelOrder(order.getId(), "wechat-notify", firstNonBlank(payload.getTradeStateDesc(), "微信订单已关闭"));
+                    paymentOrderService.cancelOrder(order.getId(), "wechat-notify", firstNonBlank(payload.tradeStateDesc(), "微信订单已关闭"));
                 } else {
                     log.info("微信支付关闭通知已忽略 orderNo={}, status={}", order.getOrderNo(), order.getStatus());
                 }
             }
-            case "PAYERROR" -> paymentOrderService.payFail(order.getId(), firstNonBlank(payload.getTradeStateDesc(), "微信支付失败"), "wechat-notify");
-            case "NOTPAY", "USERPAYING", "ACCEPT" -> log.info("微信支付通知保持处理中 orderNo={}, tradeState={}", order.getOrderNo(), payload.getTradeState());
-            default -> log.info("微信支付通知未触发状态更新 orderNo={}, tradeState={}", order.getOrderNo(), payload.getTradeState());
+            case "PAYERROR" -> paymentOrderService.payFail(order.getId(), firstNonBlank(payload.tradeStateDesc(), "微信支付失败"), "wechat-notify");
+            case "NOTPAY", "USERPAYING", "ACCEPT" -> log.info("微信支付通知保持处理中 orderNo={}, tradeState={}", order.getOrderNo(), payload.tradeState());
+            default -> log.info("微信支付通知未触发状态更新 orderNo={}, tradeState={}", order.getOrderNo(), payload.tradeState());
         }
     }
 
@@ -183,8 +183,8 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
          * 校验回调路径退款单号与报文退款单号一致
          * @param dto.refundNo() 路径中的退款单号
          */
-        validateNotifyRefundNo(dto.refundNo(), payload.getRefundNo());
-        PaymentRefundOrder refundOrder = resolveRefundOrder(firstNonBlank(dto.refundNo(), payload.getRefundNo()), payload.getRefundId(), payload.getOrderNo());
+        validateNotifyRefundNo(dto.refundNo(), payload.refundNo());
+        PaymentRefundOrder refundOrder = resolveRefundOrder(firstNonBlank(dto.refundNo(), payload.refundNo()), payload.refundId(), payload.orderNo());
         PaymentOrder order = requireOrder(refundOrder.getOrderNo());
         /**
          * 校验退款单所属渠道
@@ -203,19 +203,19 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
          * @param refundOrder 退款订单
          * @param payload.getOrderNo() 报文中的订单号
          */
-        validateRefundOrderMapping(refundOrder, payload.getOrderNo());
+        validateRefundOrderMapping(refundOrder, payload.orderNo());
         /**
          * 校验原订单金额一致
          * @param order.getOrderAmount() 订单应付金额
          */
-        validateAmount(order.getOrderAmount(), fenToYuan(payload.getTotalAmountFen()), "微信退款通知原订单金额不匹配");
+        validateAmount(order.getOrderAmount(), fenToYuan(payload.totalAmountFen()), "微信退款通知原订单金额不匹配");
 
-        BigDecimal refundAmount = fenToYuan(payload.getRefundAmountFen());
-        if (!StringUtils.hasText(payload.getRefundStatus())) {
+        BigDecimal refundAmount = fenToYuan(payload.refundAmountFen());
+        if (!StringUtils.hasText(payload.refundStatus())) {
             throw new PaymentException("微信退款通知缺少退款状态");
         }
 
-        switch (payload.getRefundStatus()) {
+        switch (payload.refundStatus()) {
             case "SUCCESS" -> paymentOrderService.refundSuccess(new RefundSuccessDTO(
                     refundOrder.getRefundNo(),
                     refundAmount,
@@ -223,7 +223,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
                      * 依次取报文退款号与本地第三方退款号
                      * @param payload.getRefundId() 报文中的退款号
                      */
-                    firstNonBlank(payload.getRefundId(), refundOrder.getThirdPartyRefundNo()),
+                    firstNonBlank(payload.refundId(), refundOrder.getThirdPartyRefundNo()),
                     "wechat-refund-notify",
                     /**
                      * 序列化为 JSON 文本
@@ -239,9 +239,9 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
                      */
                     toJson(payload),
                     "wechat-refund-notify",
-                    "微信退款失败:" + payload.getRefundStatus());
-            case "PROCESSING" -> log.info("微信退款通知保持处理中 orderNo={}, refundNo={}, outRefundNo={}", order.getOrderNo(), refundOrder.getRefundNo(), payload.getRefundNo());
-            default -> log.info("微信退款通知未触发状态更新 orderNo={}, refundNo={}, refundStatus={}", order.getOrderNo(), refundOrder.getRefundNo(), payload.getRefundStatus());
+                    "微信退款失败:" + payload.refundStatus());
+            case "PROCESSING" -> log.info("微信退款通知保持处理中 orderNo={}, refundNo={}, outRefundNo={}", order.getOrderNo(), refundOrder.getRefundNo(), payload.refundNo());
+            default -> log.info("微信退款通知未触发状态更新 orderNo={}, refundNo={}, refundStatus={}", order.getOrderNo(), refundOrder.getRefundNo(), payload.refundStatus());
         }
     }
 
@@ -489,7 +489,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         if (payload == null) {
             return null;
         }
-        Long paidAmountFen = payload.getPayerTotalAmountFen() != null ? payload.getPayerTotalAmountFen() : payload.getTotalAmountFen();
+        Long paidAmountFen = payload.payerTotalAmountFen() != null ? payload.payerTotalAmountFen() : payload.totalAmountFen();
         return paidAmountFen == null ? null : fenToYuan(paidAmountFen);
     }
 

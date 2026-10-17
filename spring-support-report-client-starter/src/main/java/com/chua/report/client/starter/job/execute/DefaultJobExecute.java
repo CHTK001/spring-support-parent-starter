@@ -33,31 +33,31 @@ public class DefaultJobExecute implements JobExecute {
      * 运行
     */
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
-        log.debug("开始执行任务, 任务ID: {}, 处理器: {}", triggerParam.getJobId(), triggerParam.getExecutorHandler());
+        log.debug("开始执行任务, 任务ID: {}, 处理器: {}", triggerParam.jobId(), triggerParam.executorHandler());
 
  // 解析胶水类型
-        GlueTypeEnum glueTypeEnum = GlueTypeEnum.match(triggerParam.getGlueType());
+        GlueTypeEnum glueTypeEnum = GlueTypeEnum.match(triggerParam.glueType());
 
         // 获取或创建任务处理器
         HandlerResult handler = getJobHandler(triggerParam, glueTypeEnum);
         if (handler == null || handler.getJobHandler() == null) {
-            log.error("任务处理器未找到, 任务ID: {}, 处理器: {}", triggerParam.getJobId(), triggerParam.getExecutorHandler());
-            return ServletResponse.error("任务处理器未找到: " + triggerParam.getExecutorHandler());
+            log.error("任务处理器未找到, 任务ID: {}, 处理器: {}", triggerParam.jobId(), triggerParam.executorHandler());
+            return ServletResponse.error("任务处理器未找到: " + triggerParam.executorHandler());
         }
 
         // 获取或创建任务线程
         JobThread jobThread = handler.getJobThread();
         if (jobThread == null) {
-            jobThread = JobThreadFactory.registJobThread(triggerParam.getJobId(), handler.getJobHandler(), handler.getRemoveOldReason());
+            jobThread = JobThreadFactory.registJobThread(triggerParam.jobId(), handler.getJobHandler(), handler.getRemoveOldReason());
         }
 
         // 将触发参数推送到队列
         ReturnResult<String> pushResult = jobThread.pushTriggerQueue(triggerParam);
         if (pushResult.isOk()) {
-            log.debug("任务触发成功, 任务ID: {}", triggerParam.getJobId());
+            log.debug("任务触发成功, 任务ID: {}", triggerParam.jobId());
             return ServletResponse.ok();
         } else {
-            log.warn("任务触发失败, 任务ID: {}, 原因: {}", triggerParam.getJobId(), pushResult.getMsg());
+            log.warn("任务触发失败, 任务ID: {}, 原因: {}", triggerParam.jobId(), pushResult.getMsg());
             return ServletResponse.error(pushResult.getMsg());
         }
     }
@@ -71,14 +71,14 @@ public class DefaultJobExecute implements JobExecute {
      */
     private HandlerResult getJobHandler(TriggerParam triggerParam, GlueTypeEnum glueTypeEnum) {
         // 加载已存在的任务线程
-        JobThread jobThread = JobThreadFactory.loadJobThread(triggerParam.getJobId());
+        JobThread jobThread = JobThreadFactory.loadJobThread(triggerParam.jobId());
         JobHandler jobHandler = jobThread != null ? jobThread.getHandler() : null;
         String removeOldReason = null;
         HandlerResult result = new HandlerResult(jobHandler, jobThread, removeOldReason);
 
         // 处理Bean类型任务
         if (GlueTypeEnum.BEAN == glueTypeEnum) {
-            JobHandler newJobHandler = JobHandlerFactory.getInstance().get(triggerParam.getExecutorHandler());
+            JobHandler newJobHandler = JobHandlerFactory.getInstance().get(triggerParam.executorHandler());
 
             // 检查是否需要替换处理器
             if (jobThread != null && jobHandler != newJobHandler) {
@@ -100,7 +100,7 @@ public class DefaultJobExecute implements JobExecute {
             // 检查版本是否更新
             if (jobThread != null &&
                     !(jobThread.getHandler() instanceof GlueJobHandler
-                            && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.getGlueUpdatetime())) {
+                            && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.glueUpdatetime())) {
                 removeOldReason = "GLUE代码已更新，终止旧线程";
                 jobThread = null;
                 jobHandler = null;
@@ -108,12 +108,12 @@ public class DefaultJobExecute implements JobExecute {
 
             if (jobHandler == null) {
                 try {
-                    JobHandler originJobHandler = GlueFactory.getInstance().loadNewInstance(triggerParam.getGlueSource());
-                    GlueJobHandler glueJobHandler = new GlueJobHandler(originJobHandler, triggerParam.getGlueUpdatetime());
+                    JobHandler originJobHandler = GlueFactory.getInstance().loadNewInstance(triggerParam.glueSource());
+                    GlueJobHandler glueJobHandler = new GlueJobHandler(originJobHandler, triggerParam.glueUpdatetime());
                     result.setJobHandler(glueJobHandler);
                     return result;
                 } catch (Exception e) {
-                    log.error("GLUE任务加载失败, 任务ID: {}", triggerParam.getJobId(), e);
+                    log.error("GLUE任务加载失败, 任务ID: {}", triggerParam.jobId(), e);
                     return null;
                 }
             }
@@ -125,7 +125,7 @@ public class DefaultJobExecute implements JobExecute {
             // 检查版本是否更新
             if (jobThread != null &&
                     !(jobThread.getHandler() instanceof ScriptJobHandler
-                            && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.getGlueUpdatetime())) {
+                            && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.glueUpdatetime())) {
                 removeOldReason = "脚本代码已更新，终止旧线程";
                 jobThread = null;
                 jobHandler = null;
@@ -133,9 +133,9 @@ public class DefaultJobExecute implements JobExecute {
 
             if (jobHandler == null) {
                 ScriptJobHandler scriptJobHandler = new ScriptJobHandler(
-                        triggerParam.getJobId(),
-                        triggerParam.getGlueUpdatetime(),
-                        triggerParam.getGlueSource(),
+                        triggerParam.jobId(),
+                        triggerParam.glueUpdatetime(),
+                        triggerParam.glueSource(),
                         glueTypeEnum
                 );
                 result.setJobHandler(scriptJobHandler);

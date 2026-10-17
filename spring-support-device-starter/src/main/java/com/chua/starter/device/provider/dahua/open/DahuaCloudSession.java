@@ -196,8 +196,8 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
-        params.put("startTime", range.getStart().toString());
-        params.put("endTime", range.getEnd().toString());
+        params.put("startTime", range.start().toString());
+        params.put("endTime", range.end().toString());
         JsonNode data = assertOk(post("/openapi/video/playback/url", params));
         return data.path("url").asText(data.path("hls").asText(""));
     }
@@ -220,8 +220,8 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
             com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.deviceSerial());
-        params.put("startTime", range.getStart().toString());
-        params.put("endTime", range.getEnd().toString());
+        params.put("startTime", range.start().toString());
+        params.put("endTime", range.end().toString());
         JsonNode data = assertOk(post("/openapi/access/records", params));
         return JsonMappers.parseAccessRecords(data);
     }

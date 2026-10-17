@@ -192,8 +192,8 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
-        params.put("startTime", range.getStart().toString());
-        params.put("endTime", range.getEnd().toString());
+        params.put("startTime", range.start().toString());
+        params.put("endTime", range.end().toString());
         JsonNode data = assertOk(post("/api/v1/video/playback", params));
         return data.path("url").asText(data.path("hls").asText(""));
     }
