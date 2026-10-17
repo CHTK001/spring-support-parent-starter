@@ -232,28 +232,28 @@ public interface SystemInfoProvider {
         String latestModified = null;
         if (entries != null) {
             for (FileEntryVO e : entries) {
-                if (e.getModified() != null && !e.getModified().isBlank()
-                        && (latestModified == null || e.getModified().compareTo(latestModified) > 0)) {
-                    latestModified = e.getModified();
+                if (e.modified() != null && !e.modified().isBlank()
+                        && (latestModified == null || e.modified().compareTo(latestModified) > 0)) {
+                    latestModified = e.modified();
                 }
-                total += e.getSize();
-                if (e.isDirectory()) {
+                total += e.size();
+                if (e.directory()) {
                     dirCount++;
                     if (remain > 1 && scanned[0] < DISK_USAGE_MAX_DIRS) {
-                        DiskUsageNodeVO child = walkUsage(host, joinUsage(path, e.getName(), sep),
+                        DiskUsageNodeVO child = walkUsage(host, joinUsage(path, e.name(), sep),
                                 remain - 1, sep, scanned);
                         node.addChild(child);
                         // 子目录累计值可能比单条目录 size 更准确（目录自身 size 常为 0）
-                        total += Math.max(0L, child.getSize() - e.getSize());
+                        total += Math.max(0L, child.getSize() - e.size());
                         fileCount += child.getFileCount();
                         dirCount += child.getDirCount();
                     } else {
                         DiskUsageNodeVO leaf = new DiskUsageNodeVO();
                         leaf.setDirectory(true);
-                        leaf.setName(e.getName());
-                        leaf.setPath(joinUsage(path, e.getName(), sep));
-                        leaf.setSize(e.getSize());
-                        leaf.setModified(e.getModified());
+                        leaf.setName(e.name());
+                        leaf.setPath(joinUsage(path, e.name(), sep));
+                        leaf.setSize(e.size());
+                        leaf.setModified(e.modified());
                         leaf.setDirCount(1L);
                         node.addChild(leaf);
                     }
@@ -265,7 +265,7 @@ public interface SystemInfoProvider {
         }
         // 散文件按大小降序：Top N 拆成独立文件块，其余小文件合并成一个“其它文件”块，
         // 既保留大文件的文件级粒度，又不被海量小文件切碎
-        looseFiles.sort(java.util.Comparator.comparingLong(FileEntryVO::getSize).reversed());
+        looseFiles.sort(java.util.Comparator.comparingLong(FileEntryVO::size).reversed());
         long restSize = 0L;
         long restCount = 0L;
         for (int i = 0; i < looseFiles.size(); i++) {

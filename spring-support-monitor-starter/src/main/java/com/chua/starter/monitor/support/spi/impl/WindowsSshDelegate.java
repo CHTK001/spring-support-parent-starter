@@ -346,30 +346,32 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
                 continue;
             }
             String pid = p.get(0).trim();
-            ProcessRowVO vo = new ProcessRowVO();
-            vo.setPid(toLong(pid));
-            vo.setPpid(toLong(p.get(1)));
-            vo.setName(p.get(5).trim());
-            vo.setCommand(p.get(6).trim());
-            vo.setThreads(toLong(p.get(7)));
-            vo.setPath(p.get(8).trim());
-            vo.setStartTime(p.get(9).trim());
-            vo.setUser(owners.getOrDefault(pid, ""));
+            long memory;
             try {
-                vo.setMemory(Long.parseLong(p.get(2).trim()) / MB);
+                memory = Long.parseLong(p.get(2).trim()) / MB;
             } catch (NumberFormatException e) {
-                vo.setMemory(0);
+                memory = 0;
             }
+            list.add(new ProcessRowVO(
+                    toLong(pid),
+                    toLong(p.get(1)),
+                    p.get(5).trim(),
+                    owners.getOrDefault(pid, ""),
+                    0,
+                    memory,
+                    toLong(p.get(7)),
+                    p.get(9).trim(),
+                    p.get(6).trim(),
+                    p.get(8).trim()));
             cpuTimes.add(time(p.get(3)) + time(p.get(4)));
-            list.add(vo);
         }
         double sum = cpuTimes.stream().mapToDouble(Double::doubleValue).sum();
         if (sum > 0) {
             for (int i = 0; i < list.size(); i++) {
-                list.get(i).setCpu(Math.round(cpuTimes.get(i) / sum * 1000) / 10.0);
+                list.set(i, list.get(i).withCpu(Math.round(cpuTimes.get(i) / sum * 1000) / 10.0));
             }
         }
-        list.sort((a, b) -> Double.compare(b.getCpu(), a.getCpu()));
+        list.sort((a, b) -> Double.compare(b.cpu(), a.cpu()));
         return paginate(list, page, sz);
     }
 
@@ -407,12 +409,12 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
             if (p.size() < 5) {
                 continue;
             }
-            ServiceRowVO vo = new ServiceRowVO();
-            vo.setName(p.get(0).trim());
-            vo.setDisplayName(p.get(1).trim());
-            vo.setState(p.get(2).trim().toUpperCase(Locale.ROOT));
-            vo.setStartType(p.get(3).trim());
-            vo.setPid(toLong(p.get(4)));
+            ServiceRowVO vo = new ServiceRowVO(
+                    p.get(0).trim(),
+                    p.get(1).trim(),
+                    p.get(2).trim().toUpperCase(Locale.ROOT),
+                    p.get(3).trim(),
+                    toLong(p.get(4)));
             list.add(vo);
         }
         return paginate(list, page, sz);
@@ -434,14 +436,14 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
             long size = toLong(p.get(1));
             long free = toLong(p.get(2));
             String volume = p.get(3).trim();
-            DiskRowVO vo = new DiskRowVO();
-            vo.setMount(p.get(0).trim());
-            vo.setName(volume.isEmpty() ? p.get(0).trim() + "\\" : volume + " (" + p.get(0).trim() + ")");
-            vo.setFsType("NTFS");
-            vo.setTotalGb(round1(size / GB));
-            vo.setUsedGb(round1((size - free) / GB));
-            vo.setAvailGb(round1(free / GB));
-            vo.setUsage(size > 0 ? round1((size - free) * 100.0 / size) : 0);
+            DiskRowVO vo = new DiskRowVO(
+                    volume.isEmpty() ? p.get(0).trim() + "\\" : volume + " (" + p.get(0).trim() + ")",
+                    p.get(0).trim(),
+                    "NTFS",
+                    round1(size / GB),
+                    round1((size - free) / GB),
+                    round1(free / GB),
+                    size > 0 ? round1((size - free) * 100.0 / size) : 0);
             list.add(vo);
         }
         return list;
@@ -508,18 +510,20 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
             if (p.size() < 4) {
                 continue;
             }
-            FileEntryVO vo = new FileEntryVO();
-            vo.setName(p.get(0).trim());
-            vo.setSize(toLong(p.get(1)));
-            vo.setModified(p.get(2).trim());
-            vo.setDirectory(p.get(3).contains("d"));
-            list.add(vo);
+            list.add(new FileEntryVO(
+                    p.get(0).trim(),
+                    p.get(3).contains("d"),
+                    toLong(p.get(1)),
+                    p.get(2).trim(),
+                    "",
+                    "",
+                    ""));
         }
         list.sort((a, b) -> {
-            if (a.isDirectory() != b.isDirectory()) {
-                return a.isDirectory() ? -1 : 1;
+            if (a.directory() != b.directory()) {
+                return a.directory() ? -1 : 1;
             }
-            return a.getName().compareToIgnoreCase(b.getName());
+            return a.name().compareToIgnoreCase(b.name());
         });
         return list;
     }

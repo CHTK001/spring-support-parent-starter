@@ -95,7 +95,7 @@ public class MybatisEndpoint {
             List<FileInfo> files = reload.listFiles();
             result.put("files", files);
             result.put("fileCount", files.size());
-            result.put("watchableCount", files.stream().mapToLong(f -> f.isWatchable() ? 1 : 0).sum());
+            result.put("watchableCount", files.stream().mapToLong(f -> f.watchable() ? 1 : 0).sum());
         } else {
             result.put("files", List.of());
             result.put("fileCount", 0);

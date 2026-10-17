@@ -308,15 +308,21 @@ public class PosixHostOperations extends HostOperations {
                 continue;
             }
             String[] parts = line.trim().split("\\s+", 7);
-            FirewallRuleRowVO vo = new FirewallRuleRowVO();
-            vo.setChain(chain);
-            vo.setNum((int) parseLong(parts[0]));
-            vo.setTarget(part(parts, 1));
-            vo.setProtocol(part(parts, 2));
-            vo.setSource(part(parts, 4));
-            vo.setDestination(part(parts, 5));
-            vo.setInfo(part(parts, 6));
-            rules.add(vo);
+            rules.add(new FirewallRuleRowVO(
+                    null,
+                    chain,
+                    null,
+                    null,
+                    null,
+                    null,
+                    (int) parseLong(parts[0]),
+                    part(parts, 2),
+                    null,
+                    null,
+                    part(parts, 1),
+                    part(parts, 4),
+                    part(parts, 5),
+                    part(parts, 6)));
         }
         return rules;
     }
@@ -335,12 +341,17 @@ public class PosixHostOperations extends HostOperations {
             if (parts.length < 3) {
                 continue;
             }
-            DriverRowVO vo = new DriverRowVO();
-            vo.setName(parts[0]);
-            vo.setSize(parseLong(parts[1]));
-            vo.setUsedBy((int) parseLong(parts[2]));
-            vo.setDependsOn(part(parts, 3));
-            drivers.add(vo);
+            drivers.add(new DriverRowVO(
+                    parts[0],
+                    null,
+                    parseLong(parts[1]),
+                    (int) parseLong(parts[2]),
+                    part(parts, 3),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null));
         }
         return drivers;
     }
@@ -359,14 +370,15 @@ public class PosixHostOperations extends HostOperations {
             if (parts.length < 5) {
                 continue;
             }
-            ProcessThreadRowVO vo = new ProcessThreadRowVO();
-            vo.setTid(parseLong(parts[0]));
-            vo.setCpu(parseDouble(parts[1]));
-            vo.setMemory(parseDouble(parts[2]));
-            vo.setState(parts[3]);
-            vo.setName(parts.length > 4 ? parts[4] : "");
-            vo.setCpuTime(parts.length > 5 ? parts[5] : "");
-            threads.add(vo);
+            threads.add(new ProcessThreadRowVO(
+                    parseLong(parts[0]),
+                    parseDouble(parts[1]),
+                    parseDouble(parts[2]),
+                    parts[3],
+                    parts.length > 4 ? parts[4] : "",
+                    "",
+                    "",
+                    parts.length > 5 ? parts[5] : ""));
         }
         return threads;
     }
@@ -385,15 +397,14 @@ public class PosixHostOperations extends HostOperations {
             if (parts.length < 7) {
                 continue;
             }
-            DiskPartitionRowVO vo = new DiskPartitionRowVO();
-            vo.setFilesystem(parts[0]);
-            vo.setType(parts[1]);
-            vo.setSize(parts[2]);
-            vo.setUsed(parts[3]);
-            vo.setAvailable(parts[4]);
-            vo.setUsePercent(parts[5]);
-            vo.setMountPoint(parts[6]);
-            partitions.add(vo);
+            partitions.add(new DiskPartitionRowVO(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parts[3],
+                    parts[4],
+                    parts[5],
+                    parts[6]));
         }
         return partitions;
     }

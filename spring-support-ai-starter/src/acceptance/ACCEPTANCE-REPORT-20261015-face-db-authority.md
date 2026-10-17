@@ -318,8 +318,18 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 
 ### 8.2 验证
 
-- `vue-tsc --noEmit`（pages/ai）：见本轮结论。
-- 点击遍历：两页属全站第 d 块（`FaceLibrary,ImageLibrary,FaceSearch,ImageSearch`），随该块一并做生产级点击验收。
+- **`vue-tsc --noEmit`（pages/ai）**：本次改动的 `FaceSearchPage.vue` / `ImageSearchPage.vue` **零类型错误**。
+  （同次检查另有 5 个文件报错，全部与本改动无关且本轮未触碰：`FaceEnrollDialog.vue` 的半成品
+  「现居住地/手机号」字段、`ModelsPage.vue`、`Skills.vue`、`DisplaySettings.vue`、
+  `ModelMetricsSettings.vue` —— 均非本次交付文件。）
+- **专项浏览器验收** `accept-face-image-search-clear.cjs`（新增，经 `_run-production-acceptance.mjs`
+  写模型覆盖后运行、结束清数并复位）：真实 Firefox 下 **18/18 PASS，输出 `FACE_IMAGE_CLEAR_OK`**。
+  两页各验「空态 → 上传出预览（并检索收尾）→ 出现「清除」→ 点击 → 回到空态且预览/操作条消失」。
+  > 为什么要单写一支：全站遍历的元素在**进入路由时**采集，而这两页的「清除」只在**上传出预览之后**
+  > 才渲染（`FaceSearchPage` 的 `.fs-actions` / `ImageSearchPage` 的 `.is-actcard` 都带 `v-if`），
+  > 遍历器采不到它 —— 新入口必须单独验，否则「加了按钮」是空的。
+- 元素级生产点击遍历：两页属全站第 d 块（`FaceLibrary,ImageLibrary,FaceSearch,ImageSearch`），
+  另单跑 `SWEEP_ONLY=FaceSearch,ImageSearch` 复核（结论随该次运行给出）。
 
 ---
 

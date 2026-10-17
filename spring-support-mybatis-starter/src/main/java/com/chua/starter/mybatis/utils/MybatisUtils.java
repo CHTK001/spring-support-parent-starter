@@ -56,9 +56,9 @@ public class MybatisUtils {
         Page<T> page = new Page<>(pageParam.getPage(), pageParam.getPageSize());
         if (!CollectionUtils.isEmpty(sortingFields)) {
             List<OrderItem> orderItems = sortingFields.stream()
-                    .map(sortingField -> Sorting.ORDER_ASC.equals(sortingField.getOrder())
-                            ? OrderItem.asc(sortingField.getField())
-                            : OrderItem.desc(sortingField.getField()))
+                    .map(sortingField -> Sorting.ORDER_ASC.equals(sortingField.order())
+                            ? OrderItem.asc(sortingField.field())
+                            : OrderItem.desc(sortingField.field()))
                     .collect(Collectors.toList());
             page.addOrder(orderItems);
         }

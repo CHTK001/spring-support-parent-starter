@@ -1,7 +1,5 @@
 package com.chua.starter.monitor.support.model;
 
-import lombok.Data;
-
 import java.util.Locale;
 
 /**
@@ -10,71 +8,34 @@ import java.util.Locale;
  * <p>本机 OSHI、Agent HTTP、SSH {@code ss}/{@code lsof}、WinRM 四类通道共用同一套字段，
  * 前端不区分来源即可渲染。</p>
  *
+ * @param protocol   协议（小写），如 tcp / tcp4 / udp
+ * @param type       协议别名，与 protocol 同值，兼容旧前端取值
+ * @param local      本地地址展示文本（addr:port）
+ * @param localAddr  本地 IP
+ * @param localPort  本地端口
+ * @param remote     远端地址展示文本（addr:port）
+ * @param remoteAddr 远端 IP
+ * @param remotePort 远端端口
+ * @param port       端口别名，与 localPort 同值
+ * @param state      连接状态（大写），如 LISTEN / ESTABLISHED / UNCONN
+ * @param pid        占用进程号，未知为 0
+ * @param process    占用进程名，未知为空串
  * @author CH
  * @since 4.0.0.42
  */
-@Data
-public class NetProcessRowVO {
-
-    /**
-     * 协议（小写），如 tcp / tcp4 / udp
-     */
-    private String protocol;
-
-    /**
-     * 协议别名，与 protocol 同值，兼容旧前端取值
-     */
-    private String type;
-
-    /**
-     * 本地地址展示文本（addr:port）
-     */
-    private String local;
-
-    /**
-     * 本地 IP
-     */
-    private String localAddr;
-
-    /**
-     * 本地端口
-     */
-    private int localPort;
-
-    /**
-     * 远端地址展示文本（addr:port）
-     */
-    private String remote;
-
-    /**
-     * 远端 IP
-     */
-    private String remoteAddr;
-
-    /**
-     * 远端端口
-     */
-    private int remotePort;
-
-    /**
-     * 端口别名，与 localPort 同值
-     */
-    private int port;
-
-    /**
-     * 连接状态（大写），如 LISTEN / ESTABLISHED / UNCONN
-     */
-    private String state;
-
-    /**
-     * 占用进程号，未知为 0
-     */
-    private int pid;
-
-    /**
-     * 占用进程名，未知为空串
-     */
-    private String process;
+public record NetProcessRowVO(
+        String protocol,
+        String type,
+        String local,
+        String localAddr,
+        int localPort,
+        String remote,
+        String remoteAddr,
+        int remotePort,
+        int port,
+        String state,
+        int pid,
+        String process) {
 
     /**
      * 按本地/远端地址四元组构造一行监听记录。
@@ -90,22 +51,21 @@ public class NetProcessRowVO {
      * @return 填充完毕的视图对象
      */
     public static NetProcessRowVO of(String protocol, String localAddr, int localPort, String remoteAddr,
-                                    int remotePort, String state, int pid, String process) {
+                                     int remotePort, String state, int pid, String process) {
         String proto = protocol == null ? "" : protocol.trim().toLowerCase(Locale.ROOT);
-        NetProcessRowVO row = new NetProcessRowVO();
-        row.setProtocol(proto);
-        row.setType(proto);
-        row.setLocal(localAddr + ":" + localPort);
-        row.setLocalAddr(localAddr);
-        row.setLocalPort(localPort);
-        row.setRemote(remoteAddr + ":" + remotePort);
-        row.setRemoteAddr(remoteAddr);
-        row.setRemotePort(remotePort);
-        row.setPort(localPort);
-        row.setState(normalizeState(proto, state));
-        row.setPid(pid);
-        row.setProcess(pid <= 0 ? "" : (process == null ? "" : process));
-        return row;
+        return new NetProcessRowVO(
+                proto,
+                proto,
+                localAddr + ":" + localPort,
+                localAddr,
+                localPort,
+                remoteAddr + ":" + remotePort,
+                remoteAddr,
+                remotePort,
+                localPort,
+                normalizeState(proto, state),
+                pid,
+                pid <= 0 ? "" : (process == null ? "" : process));
     }
 
     /**

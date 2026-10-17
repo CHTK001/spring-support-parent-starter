@@ -49,14 +49,22 @@ final class WindowsProfileRows {
      */
     static List<FirewallRuleRowVO> firewallRules(String json) {
         return rows(json, node -> {
-            FirewallRuleRowVO vo = new FirewallRuleRowVO();
-            vo.setName(text(node, "DisplayName"));
-            vo.setChain(vo.getName());
-            vo.setDirection(text(node, "Direction"));
-            vo.setAction(text(node, "Action"));
-            vo.setEnabled(text(node, "Enabled"));
-            vo.setProfile(text(node, "Profile"));
-            return vo;
+            String ruleName = text(node, "DisplayName");
+            return new FirewallRuleRowVO(
+                    ruleName,
+                    ruleName,
+                    text(node, "Direction"),
+                    text(node, "Action"),
+                    text(node, "Enabled"),
+                    text(node, "Profile"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
         });
     }
 
@@ -68,15 +76,17 @@ final class WindowsProfileRows {
      */
     static List<DriverRowVO> drivers(String json) {
         return rows(json, node -> {
-            DriverRowVO vo = new DriverRowVO();
-            vo.setName(text(node, "Driver"));
-            vo.setFileName(text(node, "OriginalFileName"));
-            vo.setProvider(text(node, "ProviderName"));
-            vo.setVersion(text(node, "Version"));
-            vo.setDate(text(node, "Date"));
-            vo.setClassName(text(node, "ClassName"));
-            vo.setBootCritical("true".equalsIgnoreCase(text(node, "BootCritical")));
-            return vo;
+            return new DriverRowVO(
+                    text(node, "Driver"),
+                    text(node, "OriginalFileName"),
+                    null,
+                    null,
+                    null,
+                    text(node, "ProviderName"),
+                    text(node, "Version"),
+                    text(node, "Date"),
+                    text(node, "ClassName"),
+                    "true".equalsIgnoreCase(text(node, "BootCritical")));
         });
     }
 
@@ -91,14 +101,15 @@ final class WindowsProfileRows {
      */
     static List<ProcessThreadRowVO> threads(String json) {
         return rows(json, node -> {
-            ProcessThreadRowVO vo = new ProcessThreadRowVO();
-            vo.setTid(number(node, "Id"));
-            vo.setState(text(node, "ThreadState"));
-            vo.setWaitReason(text(node, "WaitReason"));
-            vo.setPriority(text(node, "Priority"));
-            vo.setCpu(decimal(node, "Cpu"));
-            vo.setCpuTime(clockText(number(node, "CpuMs")));
-            return vo;
+            return new ProcessThreadRowVO(
+                    number(node, "Id"),
+                    decimal(node, "Cpu"),
+                    0,
+                    text(node, "ThreadState"),
+                    "",
+                    text(node, "Priority"),
+                    text(node, "WaitReason"),
+                    clockText(number(node, "CpuMs")));
         });
     }
 
@@ -114,15 +125,14 @@ final class WindowsProfileRows {
             long remaining = number(node, "SizeRemaining");
             String letter = text(node, "DriveLetter");
             String label = text(node, "FileSystemLabel");
-            DiskPartitionRowVO vo = new DiskPartitionRowVO();
-            vo.setFilesystem(letter.isEmpty() ? label : letter + ":\\");
-            vo.setType(text(node, "FileSystem"));
-            vo.setSize(gibText(size));
-            vo.setUsed(gibText(size - remaining));
-            vo.setAvailable(gibText(remaining));
-            vo.setUsePercent(size <= 0 ? "" : Math.round((size - remaining) * 100.0 / size) + "%");
-            vo.setMountPoint(label);
-            return vo;
+            return new DiskPartitionRowVO(
+                    letter.isEmpty() ? label : letter + ":\\",
+                    text(node, "FileSystem"),
+                    gibText(size),
+                    gibText(size - remaining),
+                    gibText(remaining),
+                    size <= 0 ? "" : Math.round((size - remaining) * 100.0 / size) + "%",
+                    label);
         });
     }
 

@@ -81,7 +81,7 @@ public class MapperXmlEndpoint {
         }
         List<FileInfo> files = reload.listFiles();
         FileInfo target = files.stream()
-                .filter(f -> f.getName().equals(name))
+                .filter(f -> f.name().equals(name))
                 .findFirst()
                 .orElse(null);
         if (target == null) {
@@ -91,9 +91,9 @@ public class MapperXmlEndpoint {
             String content = readFileContent(name);
             return ResponseEntity.ok(Map.of(
                     "name", name,
-                    "path", target.getPath(),
-                    "type", target.getType(),
-                    "watchable", target.isWatchable(),
+                    "path", target.path(),
+                    "type", target.type(),
+                    "watchable", target.watchable(),
                     "content", content
             ));
         } catch (IOException e) {
@@ -122,21 +122,21 @@ public class MapperXmlEndpoint {
 
         List<FileInfo> files = reload.listFiles();
         FileInfo target = files.stream()
-                .filter(f -> f.getName().equals(name))
+                .filter(f -> f.name().equals(name))
                 .findFirst()
                 .orElse(null);
         if (target == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!"FILE".equals(target.getType())) {
+        if (!"FILE".equals(target.type())) {
             return ResponseEntity.badRequest().body(Map.of(
                     "ok", false,
-                    "message", "该文件不可写（非本地文件系统资源）：" + target.getPath()
+                    "message", "该文件不可写（非本地文件系统资源）：" + target.path()
             ));
         }
 
         try {
-            Path path = Path.of(target.getPath());
+            Path path = Path.of(target.path());
             Files.writeString(path, content, StandardCharsets.UTF_8);
             String result = reload.reload(name);
             boolean ok = result.contains("成功");
