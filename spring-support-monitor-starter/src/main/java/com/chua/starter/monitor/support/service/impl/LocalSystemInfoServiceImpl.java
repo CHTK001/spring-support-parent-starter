@@ -387,15 +387,14 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 long total = store.getTotalSpace();
                 long usable = store.getUsableSpace();
                 long used = total - usable;
-                DiskRowVO vo = new DiskRowVO();
-                vo.setName(firstText(store.getName(), store.getLabel()));
-                vo.setMount(store.getMount());
-                vo.setFsType(store.getType());
-                vo.setTotalGb(round(total / BYTES_PER_GB_DOUBLE));
-                vo.setUsedGb(round(used / BYTES_PER_GB_DOUBLE));
-                vo.setAvailGb(round(usable / BYTES_PER_GB_DOUBLE));
-                vo.setUsage(total > 0 ? round((double) used / total * 100) : 0);
-                disks.add(vo);
+                disks.add(new DiskRowVO(
+                        firstText(store.getName(), store.getLabel()),
+                        store.getMount(),
+                        store.getType(),
+                        round(total / BYTES_PER_GB_DOUBLE),
+                        round(used / BYTES_PER_GB_DOUBLE),
+                        round(usable / BYTES_PER_GB_DOUBLE),
+                        total > 0 ? round((double) used / total * 100) : 0));
             }
         } catch (Throwable t) {
             log.warn("OSHI 磁盘采集失败: {}", t.getMessage());
@@ -427,11 +426,6 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 if (kw != null && !matchesKeyword(p, kw)) {
                     continue;
                 }
-                ProcessRowVO vo = new ProcessRowVO();
-                vo.setPid(p.getProcessID());
-                vo.setPpid(p.getParentProcessID());
-                vo.setName(p.getName());
-                vo.setUser(p.getUser());
                 // 瞬时 CPU：有上一帧用 between-ticks，首帧/缓存未命中回退 lifetime 累计；统一夹到 0..100
                 OSProcess prev = priorByPid.get(p.getProcessID());
                 double load = prev != null
@@ -443,13 +437,17 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 if (load > 1) {
                     load = 1;
                 }
-                vo.setCpu(round(load * 100));
-                vo.setMemory(p.getResidentSetSize() / MEMORY_UNIT_BYTES);
-                vo.setThreads(p.getThreadCount());
-                vo.setStartTime(formatEpoch(p.getStartTime()));
-                vo.setCommand(p.getCommandLine());
-                vo.setPath(p.getPath());
-                result.add(vo);
+                result.add(new ProcessRowVO(
+                        p.getProcessID(),
+                        p.getParentProcessID(),
+                        p.getName(),
+                        p.getUser(),
+                        round(load * 100),
+                        p.getResidentSetSize() / MEMORY_UNIT_BYTES,
+                        p.getThreadCount(),
+                        formatEpoch(p.getStartTime()),
+                        p.getCommandLine(),
+                        p.getPath()));
             }
             // 缓存本次快照供下一周期 between-ticks
             lastProcesses.set(procs);
@@ -494,13 +492,12 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 return result;
             }
             for (OSService s : sys.getOperatingSystem().getServices()) {
-                ServiceRowVO vo = new ServiceRowVO();
-                vo.setName(s.getName());
-                vo.setDisplayName(firstText(s.getName(), ""));
-                vo.setState(s.getState().name().toUpperCase(Locale.ROOT));
-                vo.setStartType("");
-                vo.setPid(s.getProcessID());
-                result.add(vo);
+                result.add(new ServiceRowVO(
+                        s.getName(),
+                        firstText(s.getName(), ""),
+                        s.getState().name().toUpperCase(Locale.ROOT),
+                        "",
+                        s.getProcessID()));
             }
         } catch (Throwable t) {
             log.warn("OSHI 服务采集失败: {}", t.getMessage());
@@ -733,17 +730,18 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 if (p.length < 5 || p[0].trim().isEmpty()) {
                     continue;
                 }
-                ServiceRowVO vo = new ServiceRowVO();
-                vo.setName(p[0].trim());
-                vo.setDisplayName(p[1].trim());
-                vo.setState(p[2].trim().toUpperCase(Locale.ROOT));
-                vo.setStartType(p[3].trim());
+                long pid;
                 try {
-                    vo.setPid(Long.parseLong(p[4].trim()));
+                    pid = Long.parseLong(p[4].trim());
                 } catch (NumberFormatException e) {
-                    vo.setPid(0L);
+                    pid = 0L;
                 }
-                rows.add(vo);
+                rows.add(new ServiceRowVO(
+                        p[0].trim(),
+                        p[1].trim(),
+                        p[2].trim().toUpperCase(Locale.ROOT),
+                        p[3].trim(),
+                        pid));
             }
             return rows.isEmpty() ? null : rows;
         } catch (Throwable t) {

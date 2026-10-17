@@ -234,12 +234,12 @@ public class HostProfileServiceImpl implements HostProfileService {
         return collect(hostId, (provider, host) -> {
             List<NetProcessRowVO> filtered = provider.netProcesses(host).stream()
                     .filter(row -> {
-                        String state = String.valueOf(row.getState()).toUpperCase(Locale.ROOT);
+                        String state = String.valueOf(row.state()).toUpperCase(Locale.ROOT);
                         return "LISTEN".equals(state) || "UNCONN".equals(state);
                     })
                     .filter(row -> needle.isEmpty() || matches(needle,
-                            String.valueOf(row.getLocalPort()), row.getLocal(), row.getProcess(),
-                            row.getProtocol(), row.getState()))
+                            String.valueOf(row.localPort()), row.local(), row.process(),
+                            row.protocol(), row.state()))
                     .toList();
             return slice(filtered, no, limit);
         });

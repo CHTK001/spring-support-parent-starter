@@ -529,7 +529,7 @@ public class SystemManageController {
             }
             String s = state.toUpperCase(Locale.ROOT);
             return ReturnResult.ok(connections.stream()
-                    .filter(c -> c.getState() != null && c.getState().toUpperCase(Locale.ROOT).contains(s))
+                    .filter(c -> c.state() != null && c.state().toUpperCase(Locale.ROOT).contains(s))
                     .collect(Collectors.toList()));
         }).subscribeOn(Schedulers.boundedElastic())
           .onErrorResume(e -> Mono.just(ReturnResult.<List<NetProcessRowVO>>error("获取网络连接失败: " + e.getMessage())));

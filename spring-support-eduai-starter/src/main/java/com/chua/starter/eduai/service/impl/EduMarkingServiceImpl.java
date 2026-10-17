@@ -2547,7 +2547,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 学生：任务上的学号优先（卷面识别与人工纠正都会写它），其次答题卡
         String studentId = firstNonBlank(task.getMarkingTaskStudentId(),
                 sheet == null ? null : sheet.getAnswerSheetStudentId());
-        if (StringUtils.isBlank(studentId)) {
+        // 未识别学生 = 空 或 占位 anonymous（上传未指定学生且卷面识别不到时服务端写入的值）。
+        // 此时拒绝完成：错题必须落到「对应学生」，否则会生成无主错题。
+        if (isUnidentifiedStudent(studentId)) {
             throw new BusinessException("该卷还没有识别到学生，请先用上方「修改学生」设置学号后再点完成");
         }
 
@@ -2637,6 +2639,25 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
         }
         return null;
+    }
+
+    /**
+     * 未识别学生的占位标识。
+     *
+     * <p>上传时未指定学生、且卷面也识别不到学号/姓名时，服务端把任务学生写成
+     * {@code anonymous}（见 {@code createTask}）。它不是一个真实学生，
+     * 「阅卷完成」必须把它当「没识别到学生」对待，否则错题会变成无主记录。</p>
+     */
+    private static final String ANONYMOUS_STUDENT = "anonymous";
+
+    /**
+     * 学生标识是否表示「未识别到学生」。
+     *
+     * @param studentId 学生标识，可为 null
+     * @return 空、或等于占位 {@code anonymous} 时返回 true
+     */
+    private static boolean isUnidentifiedStudent(String studentId) {
+        return StringUtils.isBlank(studentId) || ANONYMOUS_STUDENT.equalsIgnoreCase(studentId.trim());
     }
 
     /**

@@ -298,14 +298,17 @@ public class PosixSshDelegate implements SystemInfoProvider {
             if (p.length < 6) {
                 continue;
             }
-            ProcessRowVO vo = new ProcessRowVO();
-            vo.setPid(toLong(p[0]));
-            vo.setPpid(toLong(p[1]));
-            vo.setCpu(toDouble(p[2]));
-            vo.setMemory(toLong(p[3]) / KB);
-            vo.setName(p[4]);
-            vo.setCommand(p[5]);
-            all.add(vo);
+            all.add(new ProcessRowVO(
+                    toLong(p[0]),
+                    toLong(p[1]),
+                    p[4],
+                    "",
+                    toDouble(p[2]),
+                    toLong(p[3]) / KB,
+                    0,
+                    "",
+                    p[5],
+                    ""));
         }
         return pageOf(all, page, pageSize);
     }
@@ -325,23 +328,23 @@ public class PosixSshDelegate implements SystemInfoProvider {
             if (p.length < 3) {
                 continue;
             }
-            ServiceRowVO vo = new ServiceRowVO();
+            String name;
+            long pid;
+            String state;
             if (mac) {
                 boolean running = !"-".equals(p[0]);
-                vo.setName(p[2]);
-                vo.setPid(running ? toLong(p[0]) : 0L);
-                vo.setState(running ? "RUNNING" : "STOPPED");
+                name = p[2];
+                pid = running ? toLong(p[0]) : 0L;
+                state = running ? "RUNNING" : "STOPPED";
             } else {
                 if (!p[0].endsWith(".service") && !p[0].contains(".")) {
                     continue;
                 }
-                vo.setName(p[0]);
-                vo.setState("active".equalsIgnoreCase(p[2]) ? "RUNNING" : "STOPPED");
-                vo.setPid(0L);
+                name = p[0];
+                state = "active".equalsIgnoreCase(p[2]) ? "RUNNING" : "STOPPED";
+                pid = 0L;
             }
-            vo.setDisplayName(vo.getName());
-            vo.setStartType("");
-            all.add(vo);
+            all.add(new ServiceRowVO(name, name, state, "", pid));
         }
         return pageOf(all, page, pageSize);
     }
@@ -364,14 +367,14 @@ public class PosixSshDelegate implements SystemInfoProvider {
             double total = toLong(p[1]) * KB / GB;
             double used = toLong(p[2]) * KB / GB;
             double avail = toLong(p[3]) * KB / GB;
-            DiskRowVO vo = new DiskRowVO();
-            vo.setName(p[0]);
-            vo.setMount(p[5]);
-            vo.setFsType(fstypeOf(p[0]));
-            vo.setTotalGb(round1(total));
-            vo.setUsedGb(round1(used));
-            vo.setAvailGb(round1(avail));
-            vo.setUsage(total > 0 ? round1((double) toLong(p[2]) / toLong(p[1]) * 100) : 0);
+            DiskRowVO vo = new DiskRowVO(
+                    p[0],
+                    p[5],
+                    fstypeOf(p[0]),
+                    round1(total),
+                    round1(used),
+                    round1(avail),
+                    total > 0 ? round1((double) toLong(p[2]) / toLong(p[1]) * 100) : 0);
             list.add(vo);
         }
         return list;
@@ -649,15 +652,14 @@ public class PosixSshDelegate implements SystemInfoProvider {
             if (p.length < 9) {
                 continue;
             }
-            FileEntryVO vo = new FileEntryVO();
-            vo.setName(p[8].split(" -> ")[0]);
-            vo.setDirectory(p[0].startsWith("d"));
-            vo.setPerms(p[0]);
-            vo.setSize(toLong(p[4]));
-            vo.setModified(p[5] + " " + p[6]);
-            vo.setOwner(p[2]);
-            vo.setGroup(p[3]);
-            list.add(vo);
+            list.add(new FileEntryVO(
+                    p[8].split(" -> ")[0],
+                    p[0].startsWith("d"),
+                    toLong(p[4]),
+                    p[5] + " " + p[6],
+                    p[2],
+                    p[0],
+                    p[3]));
         }
         return list;
     }
