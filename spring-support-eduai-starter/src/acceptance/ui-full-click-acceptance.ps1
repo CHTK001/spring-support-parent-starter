@@ -36,6 +36,7 @@ param(
     [string]$StudentPwd = 'Uiacc@12345',
     [int]$SettleMs = 700,
     [int]$NavTimeoutSec = 25,
+    [int]$ContentBudgetSec = 300,
     [string[]]$Only = @(),
     [switch]$SkipContent,
     [switch]$SkipChrome,
@@ -1607,7 +1608,20 @@ if (-not $SkipContent) {
         $i = 0; $restarts = 0; $clicked = 0; $prevCount = 0; $modeRestarts = 0; $emptyTries = 0
         $scopeRestarts = 0
         $transportRetried = $false
+        # A route must always reach the end so the matrix is written: one control that blocks
+        # (a dialog that never closes, a spinner that never resolves, a nested route that
+        # re-renders forever) used to hang the whole route past every external timeout and
+        # produce no matrix at all -- /edu/paper did exactly that, so its three rows' 查看/编辑
+        # dialogs (all successful) were never recorded. Stop clicking when the budget is spent
+        # and report what was actually exercised.
+        $contentDeadline = (Get-Date).AddSeconds($ContentBudgetSec)
+        $budgetHit = $false
         while ($true) {
+            if ((Get-Date) -gt $contentDeadline) {
+                $budgetHit = $true
+                Write-Host ('    [budget] content phase exceeded {0}s: stopping the walk and writing the matrix' -f $ContentBudgetSec)
+                break
+            }
             # The daemon occasionally drops mid-run ("EOF while parsing", os error 10060) and
             # the CLI's retries surface the transport error text INSTEAD of the inventory --
             # one hiccup failed /edu/student-login outright and silently killed the whole

@@ -74,12 +74,11 @@ public final class RowNormalizer {
         if (name.isEmpty()) {
             return null;
         }
-        ServiceRowVO vo = new ServiceRowVO();
-        vo.setName(name);
-        vo.setDisplayName(first(text(row, "displayName", "DisplayName", "description", "Description"), name));
-        vo.setState(serviceState(row));
-        vo.setStartType(serviceStartType(row));
-        vo.setPid(number(row, "pid", "PID", "processId", "ProcessId"));
+        ServiceRowVO vo = new ServiceRowVO(name,
+                first(text(row, "displayName", "DisplayName", "description", "Description"), name),
+                serviceState(row),
+                serviceStartType(row),
+                number(row, "pid", "PID", "processId", "ProcessId"));
         return vo;
     }
 
@@ -98,19 +97,18 @@ public final class RowNormalizer {
             if (row == null) {
                 continue;
             }
-            ProcessRowVO vo = new ProcessRowVO();
-            vo.setPid(number(row, "pid", "PID", "ProcessId"));
-            vo.setPpid(number(row, "ppid", "PPID", "parentPid", "ParentProcessId"));
-            vo.setName(text(row, "name", "Name", "imageName", "processName"));
-            vo.setUser(text(row, "user", "User", "username", "UserName"));
-            vo.setCpu(decimal(row, "cpu", "CPU", "cpuUsage"));
-            vo.setMemory(memoryMb(row));
-            vo.setThreads(number(row, "threads", "Threads", "threadCount"));
-            vo.setStartTime(first(text(row, "startTime", "StartTime", "started"), ""));
-            vo.setCommand(first(text(row, "command", "Command", "args", "cmdline", "CommandLine"),
-                    text(row, "path", "Path", "executablePath")));
-            vo.setPath(text(row, "path", "Path", "executablePath", "ExecutablePath"));
-            out.add(vo);
+            out.add(new ProcessRowVO(
+                    number(row, "pid", "PID", "ProcessId"),
+                    number(row, "ppid", "PPID", "parentPid", "ParentProcessId"),
+                    text(row, "name", "Name", "imageName", "processName"),
+                    text(row, "user", "User", "username", "UserName"),
+                    decimal(row, "cpu", "CPU", "cpuUsage"),
+                    memoryMb(row),
+                    number(row, "threads", "Threads", "threadCount"),
+                    first(text(row, "startTime", "StartTime", "started"), ""),
+                    first(text(row, "command", "Command", "args", "cmdline", "CommandLine"),
+                            text(row, "path", "Path", "executablePath")),
+                    text(row, "path", "Path", "executablePath", "ExecutablePath")));
         }
         return out;
     }
@@ -146,16 +144,15 @@ public final class RowNormalizer {
             if (usage <= 0 && total > 0) {
                 usage = (total - avail) * 100.0 / total;
             }
-            DiskRowVO vo = new DiskRowVO();
-            vo.setName(first(text(row, "name", "Name", "FriendlyName", "label", "filesystem"),
-                    text(row, "mount", "Mounted on", "mountpoint")));
-            vo.setMount(text(row, "mount", "Mounted on", "mountpoint"));
-            vo.setFsType(text(row, "fsType", "type", "FileSystem", "filesystem"));
-            vo.setTotalGb(round1(total));
-            vo.setUsedGb(round1(used));
-            vo.setAvailGb(round1(avail));
-            vo.setUsage(round1(usage));
-            out.add(vo);
+            out.add(new DiskRowVO(
+                    first(text(row, "name", "Name", "FriendlyName", "label", "filesystem"),
+                            text(row, "mount", "Mounted on", "mountpoint")),
+                    text(row, "mount", "Mounted on", "mountpoint"),
+                    text(row, "fsType", "type", "FileSystem", "filesystem"),
+                    round1(total),
+                    round1(used),
+                    round1(avail),
+                    round1(usage)));
         }
         return out;
     }
@@ -414,21 +411,20 @@ public final class RowNormalizer {
             if (row == null) {
                 continue;
             }
-            FileEntryVO vo = new FileEntryVO();
-            vo.setName(text(row, "name", "Name", "FileName"));
-            vo.setDirectory(bool(row, "isDir", "IsDir", "directory", "PSIsContainer"));
-            vo.setSize(number(row, "size", "Size", "Length"));
-            vo.setModified(text(row, "modified", "Modified", "LastModified", "CreationTime"));
-            vo.setOwner(text(row, "owner", "Owner", "User"));
-            vo.setPerms(text(row, "perms", "Perms", "Permission", "mode"));
-            vo.setGroup(text(row, "group", "Group"));
-            out.add(vo);
+            out.add(new FileEntryVO(
+                    text(row, "name", "Name", "FileName"),
+                    bool(row, "isDir", "IsDir", "directory", "PSIsContainer"),
+                    number(row, "size", "Size", "Length"),
+                    text(row, "modified", "Modified", "LastModified", "CreationTime"),
+                    text(row, "owner", "Owner", "User"),
+                    text(row, "perms", "Perms", "Permission", "mode"),
+                    text(row, "group", "Group")));
         }
         out.sort((a, b) -> {
-            if (a.isDirectory() != b.isDirectory()) {
-                return a.isDirectory() ? -1 : 1;
+            if (a.directory() != b.directory()) {
+                return a.directory() ? -1 : 1;
             }
-            return a.getName().compareToIgnoreCase(b.getName());
+            return a.name().compareToIgnoreCase(b.name());
         });
         return out;
     }

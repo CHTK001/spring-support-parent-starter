@@ -97,8 +97,8 @@ public class TableGraphReader {
 
             // 3) 统计出入度
             for (GraphEdge e : edges) {
-                TableNodeInfo from = tableMap.get(e.getFrom());
-                TableNodeInfo to = tableMap.get(e.getTo());
+                TableNodeInfo from = tableMap.get(e.from());
+                TableNodeInfo to = tableMap.get(e.to());
                 if (from != null) {
                     from.setOutRefCount(from.getOutRefCount() + 1);
                     from.setHasForeignKey(true);
@@ -186,15 +186,14 @@ public class TableGraphReader {
  // 目标表不在本批（视图或不同 模式），跳过
                     continue;
                 }
-                GraphEdge edge = new GraphEdge();
-                edge.setFrom(t.getName());
-                edge.setTo(pkTable);
-                edge.setText(fkCol + " → " + pkCol);
-                edge.setFkName(fkName);
-                edge.setUpdateRule(resolveRule(rs.getShort("UPDATE_RULE")));
-                edge.setDeleteRule(resolveRule(rs.getShort("DELETE_RULE")));
-                edge.setId(t.getName() + "->" + pkTable + "[" + fkCol + "=" + pkCol + "]");
-                edges.add(edge);
+                edges.add(new GraphEdge(
+                        t.getName() + "->" + pkTable + "[" + fkCol + "=" + pkCol + "]",
+                        t.getName(),
+                        pkTable,
+                        fkCol + " → " + pkCol,
+                        fkName,
+                        resolveRule(rs.getShort("UPDATE_RULE")),
+                        resolveRule(rs.getShort("DELETE_RULE"))));
             }
         }
     }

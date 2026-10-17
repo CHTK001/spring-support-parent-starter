@@ -185,7 +185,7 @@ public class DatabaseGraphService {
         // 4) 过滤 FK 边：两端都必须存在
         List<GraphEdge> edges = new ArrayList<>();
         for (GraphEdge e : tableResult.edges) {
-            if (tableMap.containsKey(e.getFrom()) && tableMap.containsKey(e.getTo())) {
+            if (tableMap.containsKey(e.from()) && tableMap.containsKey(e.to())) {
                 edges.add(e);
             }
         }
@@ -249,13 +249,13 @@ public class DatabaseGraphService {
         List<Map<String, Object>> lines = new ArrayList<>();
         for (GraphEdge e : edges) {
             Map<String, Object> line = new LinkedHashMap<>();
-            line.put("from", e.getFrom());
-            line.put("to", e.getTo());
-            line.put("text", e.getText());
+            line.put("from", e.from());
+            line.put("to", e.to());
+            line.put("text", e.text());
             line.put("data", Map.of(
-                    "fkName", e.getFkName() == null ? "" : e.getFkName(),
-                    "updateRule", e.getUpdateRule() == null ? "" : e.getUpdateRule(),
-                    "deleteRule", e.getDeleteRule() == null ? "" : e.getDeleteRule()));
+                    "fkName", e.fkName() == null ? "" : e.fkName(),
+                    "updateRule", e.updateRule() == null ? "" : e.updateRule(),
+                    "deleteRule", e.deleteRule() == null ? "" : e.deleteRule()));
             lines.add(line);
         }
 

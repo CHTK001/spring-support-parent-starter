@@ -327,7 +327,7 @@ public class WindowsSshShell {
             writeRemoteScript(host, cred, shell, psCommand, script);
             Result launched = runRaw(host, cred, PowerShellCommand.encoded(shell, launchPs));
             if (launched.exitCode() != 0) {
-                cleanupDetached(host, cred, shell, task, script, launcher, outFile, errFile, doneFile);
+                cleanupDetached(host, cred, shell, true, task, script, launcher, outFile, errFile, doneFile);
                 return new Result(launched.exitCode() == 0 ? 1 : launched.exitCode(),
                         launched.stdout(), "后台任务启动失败: " + launched.stderr());
             }
@@ -352,7 +352,7 @@ public class WindowsSshShell {
                 }
             }
             Result fetched = runRaw(host, cred, PowerShellCommand.encoded(shell, fetchPs(doneFile, outFile, errFile)));
-            cleanupDetached(host, cred, shell, task, script, launcher, outFile, errFile, doneFile);
+            cleanupDetached(host, cred, shell, done, task, script, launcher, outFile, errFile, doneFile);
             String exitTxt = extractExit(fetched.stdout());
             if (!done) {
                 return new Result(-1, fetched.stdout(),
@@ -412,16 +412,59 @@ public class WindowsSshShell {
      * @param host     主机
      * @param cred     凭据
      * @param shell    外壳
+     * @param finished 命令是否已结束（结束才敢删脚本与输出文件）
      * @param task     计划任务名
      * @param paths    临时文件路径
      */
     private void cleanupDetached(MsServerHost host, SshCredential cred, String shell,
-                                 String task, String... paths) {
-        StringBuilder sb = new StringBuilder("& schtasks.exe /delete /tn '").append(task).append("' /f 2>&1 | Out-Null\n");
-        for (String p : paths) {
-            sb.append("Remove-Item -LiteralPath '").append(p).append("' -Force -ErrorAction SilentlyContinue\n");
+                                 boolean finished, String task, String... paths) {
+        StringBuilder sb = new StringBuilder();
+        if (finished) {
+            // 重试删除：启动器 cmd 要等子进程结束才关掉 .out/.err 句柄，
+            // 紧跟在「done 文件出现」之后删会被占用而失败，单次尝试等于不清理。
+            sb.append("$__p = @(");
+            for (int i = 0; i < paths.length; i++) {
+                sb.append(i == 0 ? "" : ", ").append("'").append(paths[i]).append("'");
+            }
+            sb.append(")\n");
+            sb.append("for ($__i = 0; $__i -lt 20; $__i++) {\n");
+            sb.append("  $__left = 0\n");
+            sb.append("  foreach ($__x in $__p) {\n");
+            sb.append("    if (Test-Path -LiteralPath $__x) {\n");
+            sb.append("      Remove-Item -LiteralPath $__x -Force -ErrorAction SilentlyContinue\n");
+            sb.append("      if (Test-Path -LiteralPath $__x) { $__left++ }\n");
+            sb.append("    }\n");
+            sb.append("  }\n");
+            sb.append("  if ($__left -eq 0) { break }\n");
+            sb.append("  Start-Sleep -Milliseconds 300\n");
+            sb.append("}\n");
         }
-        cleanupQuietly(host, cred, shell, sb.toString());
+        // 未完成的命令可能仍在跑：此时删脚本与输出文件会破坏它，只回收计划任务
+        sb.append("& schtasks.exe /delete /tn '").append(task).append("' /f 2>&1 | Out-Null\n");
+        runQuietly(host, cred, shell, sb.toString());
+    }
+
+    /**
+     * 尽力执行一段远端清理命令，失败不影响本次结果。
+     *
+     * <p>与 {@link #cleanupQuietly} 的区别：这里接收的是<b>完整命令</b>而不是单个路径。
+     * 早先 cleanupDetached 把多行脚本传给只接受单路径的 cleanupQuietly，后者又用
+     * {@code Remove-Item -LiteralPath '...'} 整段包住，引号嵌套把命令写坏，
+     * PowerShell 直接报 {@code PositionalParameterNotFound} 且退出码 1，
+     * 而异常/非零退出都被静默吞掉 —— 表现为每个后台任务都在 C:\Windows\Temp
+     * 留下 .ps1/.cmd/.out/.err/.done 五个文件（实测 55 个任务 100% 复现）。</p>
+     *
+     * @param host    主机
+     * @param cred    凭据
+     * @param shell   外壳可执行名
+     * @param command 完整命令
+     */
+    private void runQuietly(MsServerHost host, SshCredential cred, String shell, String command) {
+        try {
+            runRaw(host, cred, PowerShellCommand.encoded(shell, command));
+        } catch (Exception ignored) {
+            // 清理失败不影响本次执行结果
+        }
     }
 
     /**

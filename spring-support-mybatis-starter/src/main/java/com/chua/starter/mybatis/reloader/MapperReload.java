@@ -509,40 +509,40 @@ public class MapperReload implements Reload, DisposableBean {
         for (Map.Entry<String, Resource> entry : fileResources.entrySet()) {
             String filename = entry.getKey();
             Resource resource = entry.getValue();
-            
-            FileInfo fileInfo = new FileInfo();
-            
+
+            String path;
+            String type;
+            boolean watchable;
+
             try {
                 URI uri = resource.getURI();
-                fileInfo.name = filename;
-                fileInfo.path = uri.toString();
-                
+                path = uri.toString();
+
                 // 判断资源类型和是否可监听
                 String scheme = uri.getScheme();
                 if ("file".equals(scheme)) {
-                    fileInfo.type = "FILE";
-                    fileInfo.watchable = true;
+                    type = "FILE";
+                    watchable = true;
                 } else if ("jar".equals(scheme) || "war".equals(scheme)) {
-                    fileInfo.type = "JAR";
-                    fileInfo.watchable = false;
+                    type = "JAR";
+                    watchable = false;
                 } else {
-                    fileInfo.type = "CLASSPATH";
- // 类路径资源如果在文件系统中，可以监听
+                    type = "CLASSPATH";
+                    // 类路径资源如果在文件系统中，可以监听
                     try {
                         File file = resource.getFile();
-                        fileInfo.watchable = file.exists();
+                        watchable = file.exists();
                     } catch (IOException e) {
-                        fileInfo.watchable = false;
+                        watchable = false;
                     }
                 }
             } catch (IOException e) {
-                fileInfo.name = filename;
-                fileInfo.path = "未知路径";
-                fileInfo.type = "UNKNOWN";
-                fileInfo.watchable = false;
+                path = "未知路径";
+                type = "UNKNOWN";
+                watchable = false;
             }
-            
-            fileInfoList.add(fileInfo);
+
+            fileInfoList.add(new FileInfo(filename, path, type, watchable));
         }
         
         return fileInfoList;

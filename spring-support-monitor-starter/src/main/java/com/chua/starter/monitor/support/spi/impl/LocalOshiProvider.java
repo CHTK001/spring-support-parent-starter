@@ -169,19 +169,20 @@ public class LocalOshiProvider implements SystemInfoProvider {
             throw new IllegalStateException((dir.isDirectory() ? "目录不可读: " : "目录不存在: ") + path);
         }
         for (File f : children) {
-            FileEntryVO vo = new FileEntryVO();
-            vo.setName(f.getName());
-            vo.setDirectory(f.isDirectory());
-            vo.setSize(f.length());
-            vo.setModified(new Date(f.lastModified()).toString());
-            vo.setOwner(System.getProperty("user.name"));
-            list.add(vo);
+            list.add(new FileEntryVO(
+                    f.getName(),
+                    f.isDirectory(),
+                    f.length(),
+                    new Date(f.lastModified()).toString(),
+                    System.getProperty("user.name"),
+                    "",
+                    ""));
         }
         list.sort((a, b) -> {
-            if (a.isDirectory() != b.isDirectory()) {
-                return a.isDirectory() ? -1 : 1;
+            if (a.directory() != b.directory()) {
+                return a.directory() ? -1 : 1;
             }
-            return a.getName().compareToIgnoreCase(b.getName());
+            return a.name().compareToIgnoreCase(b.name());
         });
         return list;
     }
