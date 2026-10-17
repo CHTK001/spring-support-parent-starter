@@ -1,7 +1,6 @@
 package com.chua.starter.message.support.pojo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -13,59 +12,23 @@ import java.time.LocalDateTime;
  * 避免将推送日志内部字段（提供商/模板/成本等）暴露给普通用户。
  * </p>
  *
+ * @param id         消息ID（已读游标）
+ * @param subject    消息主题
+ * @param content    消息内容
+ * @param sendTime   发送时间
+ * @param readStatus 已读状态：0-未读 / 1-已读
  * @since 2026/08/03
  * @author CH
  */
-@Data
-public class SysMessageStationItem implements Serializable {
+public record SysMessageStationItem(
+        @Schema(description = "消息ID（已读游标）") Integer id,
+        @Schema(description = "消息主题") String subject,
+        @Schema(description = "消息内容") String content,
+        @Schema(description = "发送时间") LocalDateTime sendTime,
+        @Schema(description = "已读状态：0-未读 / 1-已读") Integer readStatus) implements Serializable {
 
     /**
      * 串行版本UID
-    */
+     */
     private static final long serialVersionUID = 1L;
-
-    /**
-     * 消息标识（推送日志标识，作为已读游标使用）
-     */
-    @Schema(description = "消息ID（已读游标）")
-    /**
-     * 标识
-    */
-    private Integer id;
-
-    /**
-     * 消息主题
-     */
-    @Schema(description = "消息主题")
-    /**
-     * 主题
-    */
-    private String subject;
-
-    /**
-     * 消息内容
-     */
-    @Schema(description = "消息内容")
-    /**
-     * 内容
-    */
-    private String content;
-
-    /**
-     * 发送时间
-     */
-    @Schema(description = "发送时间")
-    /**
-     * 发送时间
-    */
-    private LocalDateTime sendTime;
-
-    /**
-     * 已读状态：0-未读 / 1-已读
-     */
-    @Schema(description = "已读状态：0-未读 / 1-已读")
-    /**
-     * 读取状态
-    */
-    private Integer readStatus;
 }

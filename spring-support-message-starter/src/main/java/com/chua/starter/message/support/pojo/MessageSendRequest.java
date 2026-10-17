@@ -1,48 +1,23 @@
 package com.chua.starter.message.support.pojo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
+
+import java.util.Map;
 
 /**
  * 消息发送请求
  *
+ * @param target                接收人
+ * @param sysMessageTemplateId  模板ID
+ * @param subject               消息标题
+ * @param params                消息参数
  * @since 2026/08/03
  * @author CH
  */
-@Data
 @Schema(description = "消息发送请求")
-public class MessageSendRequest {
-
-    /**
-     * 接收人
-     */
-    @Schema(description = "接收人")
-    /**
-     * 目标
-    */
-    private String[] target;
-
-    /**
-     * 模板标识
-     */
-    @Schema(description = "模板ID")
-    /**
-     * SYS消息模板标识
-    */
-    private Integer sysMessageTemplateId;
-
-    /**
-     * 消息标题
-     */
-    @Schema(description = "消息标题")
-    /**
-     * 主题
-    */
-    private String subject;
-
-    /**
-     * 消息参数
-     */
-    @Schema(description = "消息参数")
-    private java.util.Map<String, Object> params; // 参数
+public record MessageSendRequest(
+        @Schema(description = "接收人") String[] target,
+        @Schema(description = "模板ID") Integer sysMessageTemplateId,
+        @Schema(description = "消息标题") String subject,
+        @Schema(description = "消息参数") Map<String, Object> params) {
 }

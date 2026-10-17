@@ -96,11 +96,8 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
             if (detail == null) {
                 continue;
             }
-            TyphoonDetailVO vo = toDetail(detail, provider.name());
-            if (vo.getId() == null || vo.getId().isBlank()) {
-                vo.setId(tfid);
-            }
-            if (!vo.getPath().isEmpty() || !vo.getForecast().isEmpty()) {
+            TyphoonDetailVO vo = toDetail(detail, tfid, provider.name());
+            if (!vo.path().isEmpty() || !vo.forecast().isEmpty()) {
                 return vo;
             }
         }
@@ -121,23 +118,22 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
         if (activity == null || activity.getTfid() == null || activity.getTfid().isBlank()) {
             return null;
         }
-        TyphoonItemVO vo = new TyphoonItemVO();
-        vo.setId(activity.getTfid());
-        vo.setName(activity.getName());
-        vo.setEnname(activity.getEnname());
-        vo.setStrong(activity.getStrong());
-        vo.setLat(num(activity.getLat()));
-        vo.setLng(num(activity.getLng()));
-        vo.setTime(canonTime(activity.getTime()));
-        vo.setTimeformate(activity.getTimeformate());
-        vo.setSpeed(num(activity.getSpeed()));
-        vo.setPressure(num(activity.getPressure()));
-        vo.setPower(num(activity.getPower()));
-        vo.setWarnlevel(activity.getWarnlevel());
-        vo.setMovedirection(activity.getMovedirection());
-        vo.setMovespeed(num(activity.getMovespeed()));
-        vo.setSource(source);
-        return vo;
+        return new TyphoonItemVO(
+                activity.getTfid(),
+                activity.getName(),
+                activity.getEnname(),
+                activity.getStrong(),
+                num(activity.getLat()),
+                num(activity.getLng()),
+                canonTime(activity.getTime()),
+                activity.getTimeformate(),
+                num(activity.getSpeed()),
+                num(activity.getPressure()),
+                num(activity.getPower()),
+                activity.getWarnlevel(),
+                activity.getMovedirection(),
+                num(activity.getMovespeed()),
+                source);
     }
 
     /**
@@ -147,25 +143,24 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
      * @param source 数据源名
      * @return 契约出参
      */
-    private TyphoonDetailVO toDetail(TyphoonDetail detail, String source) {
-        TyphoonDetailVO vo = new TyphoonDetailVO();
-        vo.setId(detail.getTfid());
-        vo.setName(detail.getName());
-        vo.setWarnlevel(detail.getWarnlevel());
+    private TyphoonDetailVO toDetail(TyphoonDetail detail, String fallbackId, String source) {
         List<TyphoonPoint> points = detail.getPoints() == null ? List.of() : detail.getPoints();
-        if (!points.isEmpty()) {
-            vo.setStrong(points.getFirst().getStrong());
-        }
+        String strong = points.isEmpty() ? null : points.getFirst().getStrong();
         List<TyphoonDetailVO.Track> path = new ArrayList<>(points.size());
         for (TyphoonPoint point : points) {
             path.add(toTrack(point.getTime(), point.getLng(), point.getLat(), point.getStrong(),
                     point.getSpeed(), point.getPressure(), point.getRadius7(), point.getRadius10(),
                     point.getRadius12()));
         }
-        vo.setPath(path);
-        vo.setForecast(toForecast(points));
-        vo.setSource(source);
-        return vo;
+        String tfid = detail.getTfid() == null || detail.getTfid().isBlank() ? fallbackId : detail.getTfid();
+        return new TyphoonDetailVO(
+                tfid,
+                detail.getName(),
+                strong,
+                detail.getWarnlevel(),
+                path,
+                toForecast(points),
+                source);
     }
 
     /**
@@ -194,15 +189,12 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
         if (forecastPoints == null || forecastPoints.isEmpty()) {
             return result;
         }
-        TyphoonDetailVO.Forecast forecast = new TyphoonDetailVO.Forecast();
-        forecast.setName(preferred.getTm());
         List<TyphoonDetailVO.Track> track = new ArrayList<>(forecastPoints.size());
         for (TyphoonForecastPoint point : forecastPoints) {
             track.add(toTrack(point.getTime(), point.getLng(), point.getLat(), point.getStrong(),
                     point.getSpeed(), point.getPressure(), null, null, null));
         }
-        forecast.setPoints(track);
-        result.add(forecast);
+        result.add(new TyphoonDetailVO.Forecast(preferred.getTm(), track));
         return result;
     }
 
@@ -223,17 +215,16 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
     private TyphoonDetailVO.Track toTrack(String time, String lng, String lat, String strong,
                                           String speed, String pressure, String radius7, String radius10,
                                           String radius12) {
-        TyphoonDetailVO.Track track = new TyphoonDetailVO.Track();
-        track.setTime(canonTime(time));
-        track.setLng(num(lng));
-        track.setLat(num(lat));
-        track.setStrong(strong);
-        track.setSpeed(num(speed));
-        track.setPressure(num(pressure));
-        track.setR7(toRadii(radius7));
-        track.setR10(toRadii(radius10));
-        track.setR12(toRadii(radius12));
-        return track;
+        return new TyphoonDetailVO.Track(
+                canonTime(time),
+                num(lng),
+                num(lat),
+                strong,
+                num(speed),
+                num(pressure),
+                toRadii(radius7),
+                toRadii(radius10),
+                toRadii(radius12));
     }
 
     /**
