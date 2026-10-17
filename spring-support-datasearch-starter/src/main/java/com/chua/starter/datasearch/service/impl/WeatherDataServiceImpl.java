@@ -128,23 +128,22 @@ public class WeatherDataServiceImpl implements WeatherDataService {
      * @return 天气总览
      */
     private WeatherOverviewVO toOverview(WeatherInfo info, WeatherQuery query) {
-        WeatherOverviewVO vo = new WeatherOverviewVO();
-        vo.setLocation(displayLocation(info));
-        vo.setLatitude(d(info.latitude()));
-        vo.setLongitude(d(info.longitude()));
-        vo.setWeatherCode(i(info.weatherCode()));
-        vo.setTemperature(d(info.tempC()));
-        vo.setFeelsLike(d(info.feelsLikeC()));
-        vo.setHumidity(i(info.humidity()));
-        vo.setWindSpeed(d(info.windSpeedKmph()));
-        vo.setWindDirection(d(info.windDirection()));
-        vo.setPressure(i(info.pressure()));
-        vo.setObservedAt(info.observationTime());
-        vo.setSource(info.source());
-        vo.setHourly(toHours(info.hourly(), hourPrefix(info.observationTime()),
-                limit(query.getHours(), DEFAULT_HOURS, MAX_HOURS)));
-        vo.setDaily(toDays(info.forecast(), limit(query.getDays(), DEFAULT_DAYS, MAX_DAYS)));
-        return vo;
+        return new WeatherOverviewVO(
+                displayLocation(info),
+                d(info.latitude()),
+                d(info.longitude()),
+                i(info.weatherCode()),
+                d(info.tempC()),
+                d(info.feelsLikeC()),
+                i(info.humidity()),
+                d(info.windSpeedKmph()),
+                d(info.windDirection()),
+                i(info.pressure()),
+                info.observationTime(),
+                toHours(info.hourly(), hourPrefix(info.observationTime()),
+                        limit(query.getHours(), DEFAULT_HOURS, MAX_HOURS)),
+                toDays(info.forecast(), limit(query.getDays(), DEFAULT_DAYS, MAX_DAYS)),
+                info.source());
     }
 
     /**
@@ -200,17 +199,16 @@ public class WeatherDataServiceImpl implements WeatherDataService {
         }
         for (int i = from; i < hourly.size() && result.size() < max; i++) {
             HourlyWeather item = hourly.get(i);
-            WeatherOverviewVO.Hour hour = new WeatherOverviewVO.Hour();
-            hour.setTime(item.getTime());
-            hour.setWeatherCode(i(item.getWeatherCode()));
-            hour.setTemperature(d(item.getTempC()));
-            hour.setFeelsLike(d(item.getFeelsLikeC()));
-            hour.setHumidity(i(item.getHumidity()));
-            hour.setWindSpeed(d(item.getWindSpeedKmph()));
-            hour.setWindDirection(d(item.getWindDirection()));
-            hour.setPrecipitation(d(item.getPrecipitation()));
-            hour.setPrecipitationProbability(i(item.getPrecipitationProbability()));
-            result.add(hour);
+            result.add(new WeatherOverviewVO.Hour(
+                    item.getTime(),
+                    i(item.getWeatherCode()),
+                    d(item.getTempC()),
+                    d(item.getFeelsLikeC()),
+                    i(item.getHumidity()),
+                    d(item.getWindSpeedKmph()),
+                    d(item.getWindDirection()),
+                    d(item.getPrecipitation()),
+                    i(item.getPrecipitationProbability())));
         }
         return result;
     }
@@ -231,21 +229,20 @@ public class WeatherDataServiceImpl implements WeatherDataService {
             if (result.size() >= max) {
                 break;
             }
-            WeatherOverviewVO.Day day = new WeatherOverviewVO.Day();
-            day.setDate(item.getDate());
-            day.setWeatherCode(i(item.getWeatherCode()));
-            day.setTempMax(d(item.getMaxTempC()));
-            day.setTempMin(d(item.getMinTempC()));
-            day.setFeelsMax(d(item.getFeelsLikeMaxC()));
-            day.setFeelsMin(d(item.getFeelsLikeMinC()));
-            day.setPrecipitation(d(item.getPrecipitation()));
-            day.setPrecipitationProbability(i(item.getPrecipitationProbability()));
-            day.setWindSpeed(d(item.getWindSpeedKmph()));
-            day.setWindDirection(d(item.getWindDirection()));
-            day.setUvIndex(d(item.getUvIndex()));
-            day.setSunrise(hhmm(item.getSunrise()));
-            day.setSunset(hhmm(item.getSunset()));
-            result.add(day);
+            result.add(new WeatherOverviewVO.Day(
+                    item.getDate(),
+                    i(item.getWeatherCode()),
+                    d(item.getMaxTempC()),
+                    d(item.getMinTempC()),
+                    d(item.getFeelsLikeMaxC()),
+                    d(item.getFeelsLikeMinC()),
+                    d(item.getPrecipitation()),
+                    i(item.getPrecipitationProbability()),
+                    d(item.getWindSpeedKmph()),
+                    d(item.getWindDirection()),
+                    d(item.getUvIndex()),
+                    hhmm(item.getSunrise()),
+                    hhmm(item.getSunset())));
         }
         return result;
     }
@@ -261,12 +258,11 @@ public class WeatherDataServiceImpl implements WeatherDataService {
         if (info == null || info.latitude() == null || info.longitude() == null) {
             return null;
         }
-        LocationVO vo = new LocationVO();
-        vo.setLatitude(info.latitude());
-        vo.setLongitude(info.longitude());
-        vo.setCity(firstText(info.city(), info.region(), info.country()));
-        vo.setSource(source);
-        return vo;
+        return new LocationVO(
+                info.latitude(),
+                info.longitude(),
+                firstText(info.city(), info.region(), info.country()),
+                source);
     }
 
     /**
