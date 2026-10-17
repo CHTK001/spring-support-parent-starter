@@ -453,9 +453,7 @@ public class SettingsController {
             String selected = selectedRaw == null ? null : String.valueOf(selectedRaw);
             Map<String, Object> runtime = new LinkedHashMap<>(2);
             runtime.put("selected", selected);
-            runtime.put("effective", selected == null || selected.isBlank()
-                    ? RuntimeGlobalSettingProvider.DEFAULT_AGENT_IMPL
-                    : AgentProviderFactory.runtimeProvider(selected.trim().toLowerCase()));
+            runtime.put("effective", AgentProviderFactory.effectiveRuntime(selected));
             result.put("__runtime", runtime);
         }
         return result;
