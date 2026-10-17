@@ -80,7 +80,8 @@ else
   cmp -s /tmp/wq_before3.txt /tmp/wq_after3.txt && ok "被拒绝时未写入任何错题" || bad "被拒绝却写入了错题"
   F3=$(sql "SELECT IFNULL(marking_task_teacher_finished,0) FROM eduai.edu_marking_task WHERE marking_task_task_id='$T2';")
   [ "$F3" = "$F3_BEFORE" ] && ok "被拒绝时完成标记未变（$F3_BEFORE）" || bad "被拒绝却改了完成标记（$F3_BEFORE -> $F3）"
-  sql "UPDATE eduai.edu_marking_task SET marking_task_teacher_finished=0, marking_task_teacher_finish_time=NULL WHERE marking_task_task_id='$T2';"
+  sql "UPDATE eduai.edu_marking_task SET marking_task_teacher_finished=$F3_BEFORE, marking_task_teacher_finish_time=NULL WHERE marking_task_task_id='$T2';"
+fi
 
 echo "###### 4) 回滚本次写入 ######"
 if [ "$NEW_N" -gt 0 ]; then
