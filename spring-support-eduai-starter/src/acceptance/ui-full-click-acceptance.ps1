@@ -521,6 +521,9 @@ $routes = @(
     @{ path = '/edu/fun/config'; name = 'fun-config' },
     @{ path = '/edu/students'; name = 'students' },
     @{ path = '/edu/data-config'; name = 'data-config' },
+    @{ path = '/models/embed'; name = 'ai-models-embed' },
+    @{ path = '/edu/collect/record'; name = 'collect-record' },
+    @{ path = '/edu/collect/run'; name = 'collect-run' },
     @{ path = '/eduai/paper-compose'; name = 'paper-compose' },
     @{ path = '/edu/fun'; name = 'fun' },
     @{ path = '/edu/fun/insect'; name = 'fun-insect' },
@@ -534,7 +537,8 @@ $routes = @(
     @{ path = '/edu/student-login'; name = 'student-login' },
     # 2026-10-16 补：r47 新增的 AI 提供商页（router/index.ts:67）此前不在清单里，
     # 菜单入口与深链都指向它；/edu/market 同样存在于路由（index.ts:111）却一直没被爬。
-    @{ path = '/edu/ai-provider'; name = 'ai-provider' },
+    # 2026-10-17 更正：AI 提供商页的真实路由是 /models/embed（router/index.ts:63），
+    # 旧清单里的 /edu/ai-provider 并不存在（实测跳 /404），那条已在下方改为正确路径。
     @{ path = '/edu/market'; name = 'market' },
     # Route-coverage audit against pages/eduai/src/router/index.ts found these three
     # missing: two overlay pages that only appear when a game pops them (remind=true,

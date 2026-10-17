@@ -122,11 +122,11 @@ class OcrDeliveryContractTest {
         ReturnResult<PipelineDetailDTO> result = controller.pipelineDetail("ocr");
 
         assertTrue(result.isSuccess(), "ocr 管线详情必须可读");
-        String description = String.valueOf(result.getData().getDescription());
+        String description = String.valueOf(result.getData().description());
         assertTrue(description.contains("文本矫正"), "描述必须点名文本矫正；实际=" + description);
         assertTrue(description.contains("非必填"), "描述必须声明非必填；实际=" + description);
         assertTrue(description.contains("留空关闭"), "描述必须声明留空关闭语义；实际=" + description);
-        assertEquals("/capabilities/ocr", result.getData().getRoute(),
+        assertEquals("/capabilities/ocr", result.getData().route(),
                 "能力页路由必须指向 /capabilities/ocr（前端跳转依赖）");
     }
 

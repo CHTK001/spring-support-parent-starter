@@ -328,8 +328,11 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
   > 为什么要单写一支：全站遍历的元素在**进入路由时**采集，而这两页的「清除」只在**上传出预览之后**
   > 才渲染（`FaceSearchPage` 的 `.fs-actions` / `ImageSearchPage` 的 `.is-actcard` 都带 `v-if`），
   > 遍历器采不到它 —— 新入口必须单独验，否则「加了按钮」是空的。
-- 元素级生产点击遍历：两页属全站第 d 块（`FaceLibrary,ImageLibrary,FaceSearch,ImageSearch`），
-  另单跑 `SWEEP_ONLY=FaceSearch,ImageSearch` 复核（结论随该次运行给出）。
+- 元素级生产点击遍历（真实 Firefox，`localhost:15689` → `192.168.50.198:8787`，`SWEEP_EXACT=1`）：
+  - `/face-search`：`可点 57 {hidden:9, ok:36, dup-chrome:12}` → **PASS=36 FAIL=0 WARN=0**，退出码 0。
+  - `/image-search`：`可点 53 {hidden:8, ok:29, dup-chrome:12, no-effect:3, vanished:1}` → **PASS=29 FAIL=0 WARN=4**，退出码 0。
+    - 4 条 WARN 均为**非按钮语义**：3 条是「点的是当前已激活项」（`以图搜图` 当前导航项、`相似图片` 已激活 tab、`全部` 已激活 chip → 点击无副作用属正常），1 条是仅在特定视图出现的会话条目（`vanished`）。
+    - 首跑曾出现 1 条 `图像生成`（**侧栏导航**，点了会离开本路由）`click-error`：`GET /v2/ai/generate/tasks/.../media/0 [NS_ERROR_CONNECTION_REFUSED]` —— 是共享前端 `15689` 被其守护进程**重启瞬间的连接拒绝**，重跑即消失（`FAIL=0`），非产品缺陷。
 
 ---
 

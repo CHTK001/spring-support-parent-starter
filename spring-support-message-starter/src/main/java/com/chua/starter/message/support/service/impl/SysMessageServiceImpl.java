@@ -656,11 +656,10 @@ public class SysMessageServiceImpl implements SysMessageService {
         }
         String content = template.getSysMessageTemplateContent();
         if (StringUtils.isBlank(content)) {
-            return ReturnResult.of(TemplatePreviewResponse.builder()
-                    .content("")
-                    .unresolvedParams(Collections.emptyList())
-                    .complete(true)
-                    .build());
+            return ReturnResult.of(new TemplatePreviewResponse(
+                    "",
+                    Collections.emptyList(),
+                    true));
         }
         Map<String, String> params = toParamMap(request.params());
         List<String> unresolved = new ArrayList<>();
@@ -679,11 +678,10 @@ public class SysMessageServiceImpl implements SysMessageService {
             }
         }
         matcher.appendTail(sb);
-        return ReturnResult.of(TemplatePreviewResponse.builder()
-                .content(sb.toString())
-                .unresolvedParams(unresolved)
-                .complete(unresolved.isEmpty())
-                .build());
+        return ReturnResult.of(new TemplatePreviewResponse(
+                sb.toString(),
+                unresolved,
+                unresolved.isEmpty()));
     }
 
     @Override

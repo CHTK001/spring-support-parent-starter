@@ -962,15 +962,15 @@ public class ApiChatController {
         }
         try {
             AiMemoryRecallDTO recall = memoryService.recall(owner, conversation.getConversationId(), userInput, true);
-            if (recall == null || recall.getPromptBlock() == null || recall.getPromptBlock().isBlank()) {
+            if (recall == null || recall.promptBlock() == null || recall.promptBlock().isBlank()) {
                 return;
             }
             Map<String, Object> memory = new LinkedHashMap<>();
             memory.put("role", "system");
-            memory.put("content", recall.getPromptBlock());
+            memory.put("content", recall.promptBlock());
             msgList.add(memory);
             log.info("[Chat] 记忆注入 conversation={} user={} 条数={}",
-                    conversation.getConversationId(), owner, recall.getItems().size());
+                    conversation.getConversationId(), owner, recall.items().size());
         } catch (Exception e) {
             log.warn("[Chat] 记忆召回失败（本轮不注入）: {}", e.getMessage());
         }

@@ -8,6 +8,7 @@ import java.util.List;
 /**
  * 设备厂商 提供者 SPI
  * <p>各厂商实现由 {@code META-INF/services/com.chua.starter.device.spi.DeviceProvider} 注册。</p>
+ * @apiNote 实际经 Spring ComponentScan + List 注入（见 DeviceAutoConfiguration#deviceProviders），并非 Java ServiceLoader 发现。
  *
  * @since 4.0.0.42
  * @author CH

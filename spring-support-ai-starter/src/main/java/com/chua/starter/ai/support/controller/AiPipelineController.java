@@ -96,14 +96,13 @@ public class AiPipelineController {
             if (!required && !optional) {
                 continue;
             }
-            PipelineModelDTO item = new PipelineModelDTO();
-            item.setModelId(model.getId());
-            item.setName(model.getName());
-            item.setProvider(model.getProviderName());
-            item.setCapability(matchCapability(model.getCapabilities(), definition));
-            item.setEnabled(model.getEnabled());
-            item.setRequired(required);
-            result.add(item);
+            result.add(new PipelineModelDTO(
+                    model.getId(),
+                    model.getName(),
+                    model.getProviderName(),
+                    matchCapability(model.getCapabilities(), definition),
+                    model.getEnabled(),
+                    required));
         }
         return ReturnResult.ok(result);
     }
@@ -171,20 +170,21 @@ public class AiPipelineController {
      */
     @SuppressWarnings("unchecked")
     private static PipelineDetailDTO toDetail(Map<String, Object> definition) {
-        PipelineDetailDTO detail = new PipelineDetailDTO();
-        detail.setCode((String) definition.get("code"));
-        detail.setName((String) definition.get("name"));
-        detail.setGroup((String) definition.get("group"));
-        detail.setTag((String) definition.get("tag"));
-        detail.setRequired((List<String>) definition.get("required"));
-        detail.setOptional((List<String>) definition.get("optional"));
-        detail.setRequiredCapabilities(detail.getRequired());
-        detail.setOptionalCapabilities(detail.getOptional());
-        detail.setDescription((String) definition.get("description"));
-        detail.setRoute((String) definition.get("route"));
-        detail.setConfigGroup((String) definition.get("configGroup"));
-        detail.setKind((String) definition.get("kind"));
-        return detail;
+        List<String> required = (List<String>) definition.get("required");
+        List<String> optional = (List<String>) definition.get("optional");
+        return new PipelineDetailDTO(
+                (String) definition.get("code"),
+                (String) definition.get("name"),
+                (String) definition.get("group"),
+                (String) definition.get("tag"),
+                required,
+                optional,
+                required,
+                optional,
+                (String) definition.get("description"),
+                (String) definition.get("route"),
+                (String) definition.get("configGroup"),
+                (String) definition.get("kind"));
     }
 
     /**

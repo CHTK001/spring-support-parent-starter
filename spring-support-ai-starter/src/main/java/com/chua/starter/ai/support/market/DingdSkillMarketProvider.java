@@ -75,8 +75,8 @@ public class DingdSkillMarketProvider implements SkillMarketProvider {
         }
         List<SkillMarketEntry> matched = new ArrayList<>();
         for (SkillMarketEntry e : all) {
-            String name = e.getName() == null ? "" : e.getName().toLowerCase(Locale.ROOT);
-            String desc = e.getDescription() == null ? "" : e.getDescription().toLowerCase(Locale.ROOT);
+            String name = e.name() == null ? "" : e.name().toLowerCase(Locale.ROOT);
+            String desc = e.description() == null ? "" : e.description().toLowerCase(Locale.ROOT);
             if (name.contains(kw) || desc.contains(kw)) {
                 matched.add(e);
             }
@@ -166,17 +166,16 @@ public class DingdSkillMarketProvider implements SkillMarketProvider {
             zipUrl = String.format(ZIP_FALLBACK, id, id);
         }
 
-        return SkillMarketEntry.builder()
-                .id(id)
-                .name(node.path("name").asText(id))
-                .description(node.path("description").asText(null))
-                .icon(node.has("icon") && !node.path("icon").isNull() ? node.path("icon").asText(null) : null)
-                .labels(labels)
-                .zipUrl(zipUrl)
-                .gitUrl(gitUrl)
-                .detailUrl(node.path("detailUrl").asText(null))
-                .version(node.path("version").asText(null))
-                .recommended(node.path("recommended").asBoolean(false))
-                .build();
+        return new SkillMarketEntry(
+                id,
+                node.path("name").asText(id),
+                node.path("description").asText(null),
+                node.has("icon") && !node.path("icon").isNull() ? node.path("icon").asText(null) : null,
+                labels,
+                zipUrl,
+                gitUrl,
+                node.path("detailUrl").asText(null),
+                node.path("version").asText(null),
+                node.path("recommended").asBoolean(false));
     }
 }

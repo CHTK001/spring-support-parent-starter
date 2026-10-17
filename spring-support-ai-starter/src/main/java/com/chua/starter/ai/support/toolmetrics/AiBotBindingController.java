@@ -803,29 +803,28 @@ public class AiBotBindingController {
      * @return 响应 DTO
      */
     private BotBindingListResponse toResponse(SysAiBotBinding entity) {
-        BotBindingListResponse resp = new BotBindingListResponse();
-        resp.setId(entity.getId());
-        resp.setUserId(entity.getUserId());
-        resp.setUserName(entity.getNickname());
-        resp.setBotId(entity.getBotId());
-        resp.setPlatform(entity.getPlatform());
-        resp.setNickname(entity.getNickname());
-        resp.setAvatarUrl(entity.getAvatarUrl());
-        resp.setGatewayPort(entity.getGatewayPort());
-        resp.setStatus(entity.getStatus());
-        resp.setBindSource(entity.getBindSource());
-        resp.setModel(entity.getModel());
-        resp.setThinking(entity.getThinking());
-        resp.setThinkingEffort(entity.getThinkingEffort());
-        resp.setSystemPrompt(entity.getSystemPrompt());
-        resp.setRecordUsage(entity.getRecordUsage());
-        resp.setMentionOnly(entity.getMentionOnly());
-        resp.setRandomReplyEnabled(entity.getRandomReplyEnabled());
-        resp.setRandomContextCount(entity.getRandomContextCount());
-        resp.setRandomProbability(entity.getRandomProbability());
-        resp.setCreateTime(entity.getCreateTime());
-        resp.setLastActiveTime(entity.getLastActiveTime());
-        return resp;
+        return new BotBindingListResponse(
+                entity.getId(),
+                entity.getUserId(),
+                entity.getNickname(),
+                entity.getBotId(),
+                entity.getPlatform(),
+                entity.getNickname(),
+                entity.getAvatarUrl(),
+                entity.getGatewayPort(),
+                entity.getStatus(),
+                entity.getBindSource(),
+                entity.getModel(),
+                entity.getThinking(),
+                entity.getThinkingEffort(),
+                entity.getSystemPrompt(),
+                entity.getRecordUsage(),
+                entity.getMentionOnly(),
+                entity.getRandomReplyEnabled(),
+                entity.getRandomContextCount(),
+                entity.getRandomProbability(),
+                entity.getCreateTime(),
+                entity.getLastActiveTime());
     }
 
  // ==================== i链接 扫码绑定 ====================

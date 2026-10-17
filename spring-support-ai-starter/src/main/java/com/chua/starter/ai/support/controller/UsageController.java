@@ -583,14 +583,14 @@ public class UsageController {
         writer.write("group,provider,model,calls,promptTokens,completionTokens,totalTokens,cost\n");
         for (AiUsageDTO row : rows) {
             line.setLength(0);
-            line.append(csvCell(row.getGroup())).append(',')
-                    .append(csvCell(row.getProvider())).append(',')
-                    .append(csvCell(row.getModel())).append(',')
-                    .append(row.getRequests()).append(',')
-                    .append(row.getPromptTokens()).append(',')
-                    .append(row.getCompletionTokens()).append(',')
-                    .append(row.getTotalTokens()).append(',')
-                    .append(row.getCost()).append('\n');
+            line.append(csvCell(row.group())).append(',')
+                    .append(csvCell(row.provider())).append(',')
+                    .append(csvCell(row.model())).append(',')
+                    .append(row.requests()).append(',')
+                    .append(row.promptTokens()).append(',')
+                    .append(row.completionTokens()).append(',')
+                    .append(row.totalTokens()).append(',')
+                    .append(row.cost()).append('\n');
             writer.write(line.toString());
         }
         writer.flush();

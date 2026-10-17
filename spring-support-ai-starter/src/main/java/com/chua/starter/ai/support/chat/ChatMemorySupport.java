@@ -53,17 +53,17 @@ public class ChatMemorySupport {
         }
         try {
             AiMemoryRecallDTO recall = memoryService.recall(userId, conversationId, userInput, true);
-            if (recall == null || recall.getPromptBlock() == null || recall.getPromptBlock().isBlank()) {
+            if (recall == null || recall.promptBlock() == null || recall.promptBlock().isBlank()) {
                 return;
             }
             // 历史消息里会带上上一轮注入的片段，重复堆叠会挤占上下文
             msgList.removeIf(msg -> isMemoryBlock(msg.get("content")));
             Map<String, Object> memory = new LinkedHashMap<>();
             memory.put("role", "system");
-            memory.put("content", recall.getPromptBlock());
+            memory.put("content", recall.promptBlock());
             msgList.add(indexOfCurrentTurnUser(msgList), memory);
             log.info("[ChatMemory] 记忆注入 conversation={} user={} 条数={}",
-                    conversationId, userId, recall.getItems() == null ? 0 : recall.getItems().size());
+                    conversationId, userId, recall.items() == null ? 0 : recall.items().size());
         } catch (Exception e) {
             log.warn("[ChatMemory] 记忆召回失败（本轮不注入）conversation={}: {}", conversationId, e.getMessage());
         }
