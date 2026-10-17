@@ -173,7 +173,8 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         }
         // 以索引现有 mapping 为底做增量补丁，而不是按扁平的入参重新推导整份 mapping，
         // 否则「只删一个字段」也会把 nested 类型与 text 的 keyword 子字段静默改掉。
-        Map<String, Object> properties = rebuiltProperties(target, name, request.fields());
+        RebuildPlan plan = planRebuild(target, name, request.fields());
+        Map<String, Object> properties = plan.properties();
         if (properties.isEmpty()) {
             throw new IllegalStateException("重建索引至少要保留一个字段；要整个删掉请用删除索引");
         }
@@ -187,7 +188,11 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         long sourceCount = docCount(target, name);
         try {
             client.createIndex(target, tmp, body);
-            client.reindex(target, name, tmp);
+            // 被删字段连同 _source 数据一起剔除，否则目标索引的动态映射会把字段又加回来
+            client.reindex(target, name, tmp, plan.dropped());
+            // 必须显式刷新：_reindex 不刷新目标，未刷新的文档对 _count 不可见，
+            // 少了这一步下面的文档数校验会稳定读成 0，把正常重建误判成不一致而中止。
+            client.refresh(target, tmp);
             long copied = docCount(target, tmp);
             if (sourceCount >= 0 && copied >= 0 && copied != sourceCount) {
                 throw new IllegalStateException(
@@ -195,7 +200,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
             }
             client.deleteIndex(target, name);
             client.createIndex(target, name, body);
+            // 搬回时临时索引里已经没有那些字段的数据，无需再剔
             client.reindex(target, tmp, name);
+            client.refresh(target, name);
             client.deleteIndex(target, tmp);
             return index(name, request.datasourceId());
         } catch (RuntimeException e) {
@@ -369,7 +376,16 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
     }
 
     /**
-     * 重建索引用的字段映射：以索引现有 mapping 为底，只对本次「新增 / 明改 / 删除」的字段动手。
+     * 重建索引的字段决策结果
+     *
+     * @param properties 新 mapping 的 properties
+     * @param dropped    被删除、需要连同 {@code _source} 数据一起剔除的字段（扁平点路径）
+     */
+    private record RebuildPlan(Map<String, Object> properties, List<String> dropped) {
+    }
+
+    /**
+     * 重建索引的字段规划：以索引现有 mapping 为底，只对本次「新增 / 明改 / 删除」的字段动手。
      *
      * <p><b>为什么不直接用 {@link #properties(List)} 从入参重新推导整份 mapping</b>：索引详情里的
      * 字段是 {@link #flatten} 展开出来的扁平叶子，看不见 {@code nested} 类型，也看不见
@@ -377,15 +393,17 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
      * 字段」也会把没碰过的字段静默改掉：keyword 子字段丢失、nested 退化成普通 object。</p>
      *
      * <p>故这里逐字段比对：没动的<b>逐字保留</b>原定义；新增或明改的写入新定义；
-     * 删掉的字段连同因此变空的中间对象层一起清掉。</p>
+     * 删掉的字段连同因此变空的中间对象层一起清掉，并记进 {@link RebuildPlan#dropped()}
+     * —— 后者要交给 {@code _reindex} 做 {@code _source} 剔除，否则搬过去的数据会被
+     * 动态映射把字段又加回来。</p>
      *
      * @param target 访问目标
      * @param name   索引名
      * @param fields 用户提交的完整字段列表（含未改动字段）
-     * @return 新 mapping 的 properties
+     * @return 新 mapping 与要剔除数据的字段
      */
-    private Map<String, Object> rebuiltProperties(ElasticsearchClient.Target target, String name,
-                                                  List<ElasticsearchFieldDTO> fields) {
+    private RebuildPlan planRebuild(ElasticsearchClient.Target target, String name,
+                                    List<ElasticsearchFieldDTO> fields) {
         JsonObject raw = currentProperties(target, name);
         Map<String, Object> next = toMap(raw);
 
@@ -413,12 +431,14 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
                 putProperty(next, path, def);
             }
         }
+        List<String> dropped = new ArrayList<>();
         for (String path : current.keySet()) {
             if (!keep.contains(path)) {
                 removeProperty(next, path);
+                dropped.add(path);
             }
         }
-        return next;
+        return new RebuildPlan(next, dropped);
     }
 
     /**
