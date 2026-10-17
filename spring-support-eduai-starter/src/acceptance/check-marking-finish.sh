@@ -70,6 +70,7 @@ if [ -z "$T2" ]; then
   bad "找不到 student=anonymous 且有结果的已完成任务"
 else
   echo "  匿名任务=$T2"
+  F3_BEFORE=$(sql "SELECT IFNULL(marking_task_teacher_finished,0) FROM eduai.edu_marking_task WHERE marking_task_task_id='$T2';")
   sql "SELECT wrong_question_id FROM eduai.edu_wrong_question;" | sort > /tmp/wq_before3.txt
   R3=$(curl -s -X POST "$BASE/v2/edu/marking/$T2/finish")
   echo "  resp=$(printf '%s' "$R3" | tr -d '\n' | head -c 240)"
@@ -78,8 +79,8 @@ else
   sql "SELECT wrong_question_id FROM eduai.edu_wrong_question;" | sort > /tmp/wq_after3.txt
   cmp -s /tmp/wq_before3.txt /tmp/wq_after3.txt && ok "被拒绝时未写入任何错题" || bad "被拒绝却写入了错题"
   F3=$(sql "SELECT IFNULL(marking_task_teacher_finished,0) FROM eduai.edu_marking_task WHERE marking_task_task_id='$T2';")
-  [ "$F3" = "0" ] && ok "被拒绝时未置完成标记" || bad "被拒绝却置了完成标记"
-fi
+  [ "$F3" = "$F3_BEFORE" ] && ok "被拒绝时完成标记未变（$F3_BEFORE）" || bad "被拒绝却改了完成标记（$F3_BEFORE -> $F3）"
+  sql "UPDATE eduai.edu_marking_task SET marking_task_teacher_finished=0, marking_task_teacher_finish_time=NULL WHERE marking_task_task_id='$T2';"
 
 echo "###### 4) 回滚本次写入 ######"
 if [ "$NEW_N" -gt 0 ]; then
