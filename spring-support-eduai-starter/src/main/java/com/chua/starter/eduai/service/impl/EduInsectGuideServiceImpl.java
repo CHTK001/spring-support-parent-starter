@@ -65,19 +65,19 @@ public class EduInsectGuideServiceImpl extends ServiceImpl<EduInsectGuideMapper,
 
     @Override
     public boolean saveGuide(InsectGuideSaveDTO dto) {
-        if (dto == null || dto.getInsectCode() == null || dto.getInsectCode().isBlank()) {
+        if (dto == null || dto.insectCode() == null || dto.insectCode().isBlank()) {
             return false;
         }
-        String code = dto.getInsectCode().trim();
+        String code = dto.insectCode().trim();
         EduInsectGuide existing = baseMapper.selectByCode(code);
         EduInsectGuide row = existing == null ? new EduInsectGuide() : existing;
         row.setInsectCode(code);
-        row.setGuideLesson(writeJson(dto.getLesson()));
-        row.setGuideQuiz(writeJson(dto.getQuiz()));
-        row.setGuideMotionTitle(dto.getMotion() == null ? null : dto.getMotion().getTitle());
-        row.setGuideMotionBody(dto.getMotion() == null ? null : dto.getMotion().getBody());
-        row.setGuideHabitatTitle(dto.getHabitat() == null ? null : dto.getHabitat().getTitle());
-        row.setGuideHabitatBody(dto.getHabitat() == null ? null : dto.getHabitat().getBody());
+        row.setGuideLesson(writeJson(dto.lesson()));
+        row.setGuideQuiz(writeJson(dto.quiz()));
+        row.setGuideMotionTitle(dto.motion() == null ? null : dto.motion().title());
+        row.setGuideMotionBody(dto.motion() == null ? null : dto.motion().body());
+        row.setGuideHabitatTitle(dto.habitat() == null ? null : dto.habitat().title());
+        row.setGuideHabitatBody(dto.habitat() == null ? null : dto.habitat().body());
 
         if (existing == null) {
             row.setOwnerUserId(EduUserContext.requireUserId());

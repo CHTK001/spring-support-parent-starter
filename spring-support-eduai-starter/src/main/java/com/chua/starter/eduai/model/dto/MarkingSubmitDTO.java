@@ -1,53 +1,33 @@
 package com.chua.starter.eduai.model.dto;
 
-import lombok.Data;
-
 import java.util.List;
 
 /**
  * 提交答题卡DTO
  *
+ * @param examId    考试标识
+ * @param studentId 学生标识
+ * @param content   答题内容JSON
+ * @param answers   答题列表
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class MarkingSubmitDTO {
+public record MarkingSubmitDTO(
+        Long examId,
+        String studentId,
+        String content,
+        List<AnswerItem> answers) {
 
     /**
-     * 考试标识
-     */
-    private Long examId;
-
-    /**
-     * 学生标识
-     */
-    private String studentId;
-
-    /**
-     * 答题内容JSON
-     */
-    private String content;
-
-    /**
-     * 答题列表
-     */
-    private List<AnswerItem> answers;
-
-    @Data
-    /**
-     * answeritem类。
+     * 单题作答
      *
+     * @param questionId 题目标识
+     * @param answer     作答内容
      * @author CH
      * @since 4.0.0
      */
-    public static class AnswerItem {
-        /**
-         * questionid
-        */
-        private Long questionId;
-        /**
-         * Answer
-        */
-        private String answer;
+    public record AnswerItem(
+            Long questionId,
+            String answer) {
     }
 }

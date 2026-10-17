@@ -1735,12 +1735,18 @@ if (-not $SkipContent) {
             }
             $script:DiagSyn = ''; $script:DiagPtr = ''; $ev2 = $null
             Clear-Evidence
-            $clickRes = Js (Get-ClickJs $it.id)
-            if ($clickRes -eq 'gone') {
+            $vkey = "$rname/$($it.kind)/$($it.label)"
+            $clickRes = [string](Js (Get-ClickJs $it.id))
+            # The JSON round-trip occasionally hands back the value with a stray quote or CR
+            # ("gone\"" / "gone`r"), and a one-character mismatch slipped past the vanish check
+            # and landed in the dead report -- a control that had merely been re-rendered was
+            # reported as a broken button. Normalize before matching.
+            $clickRes = ([string]$clickRes).Trim().Trim('"').Trim()
+            if ($clickRes -like 'gone*') {
                 # The control disappeared between inventory and click (a dialog that closed
-                # on its own, a list that re-rendered). It is not a dead button -- there was
-                # nothing left to press. Re-inventory once; if it keeps vanishing, move on.
-                $vkey = "$rname/$($it.kind)/$($it.label)"
+                # on its own, a list that re-rendered, a navigation to another route and back).
+                # It is not a dead button -- there was nothing left to press. Re-inventory; if
+                # it keeps vanishing, move on.
                 if (-not $script:Vanish.ContainsKey($vkey)) { $script:Vanish[$vkey] = 0 }
                 $script:Vanish[$vkey]++
                 if ($script:Vanish[$vkey] -le 2) {
@@ -1756,7 +1762,7 @@ if (-not $SkipContent) {
             # Transport failures get retried and then recorded as harness errors.
             $isTransport = ($clickRes -match 'os error|Failed to read|Connection|closed|timeout|timed out|1006|10054')
             if ($isTransport) {
-                $tkey = "$rname/$($it.kind)/$($it.label)"
+                $tkey = $vkey
                 if (-not $script:Vanish.ContainsKey($tkey)) { $script:Vanish[$tkey] = 0 }
                 $script:Vanish[$tkey]++
                 if ($script:Vanish[$tkey] -le 3) {
@@ -1773,6 +1779,10 @@ if (-not $SkipContent) {
                 continue
             }
             $script:Clicks++; $clicked++
+            # A control that clicks fine resets its vanish budget: a periodic disappear/reappear
+            # (the /edu/marking detail round-trip does this every cycle) must not accumulate into
+            # a false "vanished" verdict.
+            if ($script:Vanish.ContainsKey($vkey)) { $script:Vanish[$vkey] = 0 }
             Start-Sleep -Milliseconds $SettleMs
             $after = (Js $jsProbe) | ConvertFrom-Json
 

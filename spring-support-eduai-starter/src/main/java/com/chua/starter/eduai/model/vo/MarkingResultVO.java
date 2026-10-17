@@ -1,7 +1,5 @@
 package com.chua.starter.eduai.model.vo;
 
-import lombok.Data;
-
 import java.util.List;
 
 /**
@@ -17,100 +15,55 @@ import java.util.List;
  *   <li>{@code results} — 每题结果（含教师修正）</li>
  * </ul>
  *
+ * @param taskId          任务标识
+ * @param status          状态
+ * @param totalScore      总分
+ * @param total           总数
+ * @param finished        是否批改完成
+ * @param results         每题结果
+ * @param taskStatus      任务状态：0-待处理 1-处理中 2-已完成 3-失败（异步任务的对外状态）
+ * @param stage           当前阶段描述（如「识别中」「判分中 2/3」），供前端展示进度
+ * @param error           失败原因（taskStatus=3 时）
+ * @param teacherFinished 老师是否已点「阅卷完成」（错题已按最终分归位）
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class MarkingResultVO {
+public record MarkingResultVO(
+        String taskId,
+        Integer status,
+        Integer totalScore,
+        Integer total,
+        Boolean finished,
+        List<QuestionResult> results,
+        Integer taskStatus,
+        String stage,
+        String error,
+        Boolean teacherFinished) {
 
     /**
-     * 任务标识
-    */
-    private String taskId;
-    /**
-     * 状态
-    */
-    private Integer status;
-    /**
-     * 总数分数
-    */
-    private Integer totalScore;
-    /**
-     * 总数
-    */
-    private Integer total;
-    /**
-     * 饰面
-    */
-    private Boolean finished;
-    /**
-     * 结果
-    */
-    private List<QuestionResult> results;
-
-    /**
-     * 任务状态：0-待处理 1-处理中 2-已完成 3-失败（异步任务的对外状态）
-     */
-    private Integer taskStatus;
-
-    /**
-     * 当前阶段描述（如「识别中」「判分中 2/3」），供前端展示进度
-     */
-    private String stage;
-
-    /**
-     * 失败原因（taskStatus=3 时）
-     */
-    private String error;
-
-    /**
-     * 老师是否已点「阅卷完成」（错题已按最终分归位）
-     */
-    private Boolean teacherFinished;
-
-    @Data
-    /**
-     * question结果类。
+     * 单题阅卷结果
      *
+     * @param resultId       结果标识（对应 edu_marking_result 主键，教师确认时回传）
+     * @param questionId     题目标识
+     * @param no             卷面识别题号（任意卷无题库题号，靠它对位；如 "1." "2."）
+     * @param studentAnswer  学生作答原文（从识别明细透出，教师对照作答做修正）
+     * @param maxScore       该题在试卷上的满分（取自 edu_paper_question 的每题分值），教师修正不得超过此值
+     * @param score          分数
+     * @param comment        评论
+     * @param teacherScore   教师分数
+     * @param teacherComment 教师评语
      * @author CH
      * @since 4.0.0
      */
-    public static class QuestionResult {
-        /**
-         * 结果标识（对应 edu_marking_result 主键，教师确认时回传）
-        */
-        private Long resultId;
-        /**
-         * questionid
-        */
-        private Long questionId;
-        /**
-         * 卷面识别题号（任意卷无题库题号，靠它对位；如 "1." "2."）
-         */
-        private String no;
-        /**
-         * 学生作答原文（从识别明细透出，教师对照作答做修正）
-         */
-        private String studentAnswer;
-        /**
-         * 该题在试卷上的满分（取自 edu_paper_question 的每题分值），教师修正不得超过此值
-        */
-        private Integer maxScore;
-        /**
-         * 分数
-        */
-        private Integer score;
-        /**
-         * 评论
-        */
-        private String comment;
-        /**
-         * Teacher分数
-        */
-        private Integer teacherScore;
-        /**
-         * Teachercomment
-        */
-        private String teacherComment;
+    public record QuestionResult(
+            Long resultId,
+            Long questionId,
+            String no,
+            String studentAnswer,
+            Integer maxScore,
+            Integer score,
+            String comment,
+            Integer teacherScore,
+            String teacherComment) {
     }
 }

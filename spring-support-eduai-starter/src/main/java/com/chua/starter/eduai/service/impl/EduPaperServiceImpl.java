@@ -306,18 +306,18 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return generatePaper的结果
      */
     public Long generatePaper(PaperGenerateDTO dto) {
-        log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.getSubject(), dto.getKnowledgePointIds());
+        log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.subject(), dto.knowledgePointIds());
 
         // 1) 创建试卷草稿
         EduPaper paper = new EduPaper();
-        paper.setPaperName(dto.getName());
-        paper.setPaperSubject(dto.getSubject());
+        paper.setPaperName(dto.name());
+        paper.setPaperSubject(dto.subject());
         // 学段与手动组卷保持同一口径：库里存中文名（PRIMARY -> 小学）。
         // 此前 AI 路径直接存前端传来的码值，会让「学段」筛选查不到 AI 组的卷。
-        paper.setPaperGradeLevel(GradeLevels.normalize(dto.getGradeLevel()));
-        paper.setPaperGrade(dto.getGrade());
-        paper.setPaperTotalScore(dto.getTotalScore() != null ? dto.getTotalScore() : properties.getPaper().getMaxTotalScore());
-        paper.setPaperDuration(dto.getDuration());
+        paper.setPaperGradeLevel(GradeLevels.normalize(dto.gradeLevel()));
+        paper.setPaperGrade(dto.grade());
+        paper.setPaperTotalScore(dto.totalScore() != null ? dto.totalScore() : properties.getPaper().getMaxTotalScore());
+        paper.setPaperDuration(dto.duration());
         paper.setPaperStatus(0); // 草稿
         paper.setPaperSource("AI");
         paper.setPaperNo(generatePaperNo());
@@ -333,30 +333,30 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         paper.setCreateName(EduUserContext.currentUsername());
         baseMapper.insert(paper);
 
-        int count = dto.getQuestionCount() != null ? dto.getQuestionCount() : properties.getPaper().getDefaultQuestionCount();
-        int perScore = dto.getScorePerQuestion() != null ? dto.getScorePerQuestion() : properties.getPaper().getDefaultScorePerQuestion();
+        int count = dto.questionCount() != null ? dto.questionCount() : properties.getPaper().getDefaultQuestionCount();
+        int perScore = dto.scorePerQuestion() != null ? dto.scorePerQuestion() : properties.getPaper().getDefaultScorePerQuestion();
 
         // 2) 候选题目（兜底数据，仅本人题库）：先按学段收敛，学段无题时降级到同学科全集
-        List<EduQuestion> candidates = loadCandidates(dto.getSubject(), dto.getGradeLevel(), count);
-        if (candidates.isEmpty() && StringUtils.hasText(dto.getGradeLevel())) {
-            log.warn("[EduAi] 题库没有 {} 学段的 {} 题目，降级为同学科全部题目组卷", dto.getGradeLevel(), dto.getSubject());
-            candidates = loadCandidates(dto.getSubject(), null, count);
+        List<EduQuestion> candidates = loadCandidates(dto.subject(), dto.gradeLevel(), count);
+        if (candidates.isEmpty() && StringUtils.hasText(dto.gradeLevel())) {
+            log.warn("[EduAi] 题库没有 {} 学段的 {} 题目，降级为同学科全部题目组卷", dto.gradeLevel(), dto.subject());
+            candidates = loadCandidates(dto.subject(), null, count);
         }
         if (candidates.isEmpty()) {
-            log.warn("[EduAi] 题库为空，无法组卷: subject={}", dto.getSubject());
+            log.warn("[EduAi] 题库为空，无法组卷: subject={}", dto.subject());
             writeHistory(paper, List.of(), "CREATE");
             return paper.getPaperId();
         }
 
         // 3) 知识点评分过滤（如果指定）
         List<Long> candidateIds = new ArrayList<>();
-        if (dto.getKnowledgePointIds() != null && !dto.getKnowledgePointIds().isEmpty()) {
+        if (dto.knowledgePointIds() != null && !dto.knowledgePointIds().isEmpty()) {
             for (EduQuestion q : candidates) {
                 String kpIds = q.getQuestionKnowledgePointIds();
                 if (!StringUtils.hasText(kpIds)) {
                     continue;
                 }
-                for (Long kp : dto.getKnowledgePointIds()) {
+                for (Long kp : dto.knowledgePointIds()) {
                     if (kpIds.contains(String.valueOf(kp))) {
                         candidateIds.add(q.getQuestionId());
                         break;
@@ -372,14 +372,14 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
 
         // 4) AI 挑选
         List<String> types = null;
-        if (dto.getTypeConfigs() != null && !dto.getTypeConfigs().isEmpty()) {
-            types = dto.getTypeConfigs().stream()
-                    .map(PaperGenerateDTO.QuestionTypeConfig::getType)
+        if (dto.typeConfigs() != null && !dto.typeConfigs().isEmpty()) {
+            types = dto.typeConfigs().stream()
+                    .map(PaperGenerateDTO.QuestionTypeConfig::type)
                     .collect(Collectors.toList());
         }
-        List<Long> knowledgeIds = dto.getKnowledgePointIds();
+        List<Long> knowledgeIds = dto.knowledgePointIds();
         List<Long> aiIds = eduAiService.generatePaperOutline(
-                dto.getSubject(), dto.getGradeLevel(), dto.getGrade(),
+                dto.subject(), dto.gradeLevel(), dto.grade(),
                 types, knowledgeIds, count, candidateIds);
         // 防御性收口：落库前再次确认题号来自本次候选集（AI 侧已过滤，这里兜住任何漏网之鱼），
         // 避免悬空引用/跨学科题混入试卷；全部无效时回退候选集，保证「能组出卷」。
