@@ -113,16 +113,16 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         if (dto == null) {
             throw new PaymentException("任务更新内容不能为空");
         }
-        if (StringUtils.hasText(dto.getCronExpression())) {
+        if (StringUtils.hasText(dto.cronExpression())) {
             /**
              * 校验 cron 表达式
-             * @param dto.getCronExpression() 获取 cron 表达式
+             * @param dto.cronExpression() 获取 cron 表达式
              */
-            validateCron(dto.getCronExpression());
-            config.setCronExpression(dto.getCronExpression().trim());
+            validateCron(dto.cronExpression());
+            config.setCronExpression(dto.cronExpression().trim());
         }
-        if (dto.getEnabled() != null) {
-            config.setEnabled(dto.getEnabled());
+        if (dto.enabled() != null) {
+            config.setEnabled(dto.enabled());
         }
         paymentSchedulerConfigMapper.updateById(config);
         /**
@@ -277,21 +277,20 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
      * @return 任务视图对象
      */
     private PaymentSchedulerTaskVO toTaskVO(PaymentManagedTask task, PaymentSchedulerConfig config) {
-        PaymentSchedulerTaskVO vo = new PaymentSchedulerTaskVO();
-        vo.setTaskKey(task.taskKey());
-        vo.setTaskName(config != null && StringUtils.hasText(config.getTaskName()) ? config.getTaskName() : task.taskName());
-        vo.setCronExpression(config != null ? config.getCronExpression() : task.defaultCron());
-        vo.setEnabled(config != null ? Boolean.TRUE.equals(config.getEnabled()) : Boolean.TRUE);
-        vo.setDescription(config != null && StringUtils.hasText(config.getDescription()) ? config.getDescription() : task.description());
-        vo.setScheduled(isScheduled(task.taskKey()));
-        vo.setNextExecutionTime(resolveNextExecutionTime(vo.getCronExpression(), vo.getEnabled()));
-        if (config != null) {
-            vo.setLastStartedAt(config.getLastStartedAt());
-            vo.setLastFinishedAt(config.getLastFinishedAt());
-            vo.setLastRunStatus(config.getLastRunStatus());
-            vo.setLastRunMessage(config.getLastRunMessage());
-        }
-        return vo;
+        String cronExpression = config != null ? config.getCronExpression() : task.defaultCron();
+        Boolean enabled = config != null ? Boolean.TRUE.equals(config.getEnabled()) : Boolean.TRUE;
+        return new PaymentSchedulerTaskVO(
+                task.taskKey(),
+                config != null && StringUtils.hasText(config.getTaskName()) ? config.getTaskName() : task.taskName(),
+                cronExpression,
+                enabled,
+                config != null && StringUtils.hasText(config.getDescription()) ? config.getDescription() : task.description(),
+                isScheduled(task.taskKey()),
+                resolveNextExecutionTime(cronExpression, enabled),
+                config != null ? config.getLastStartedAt() : null,
+                config != null ? config.getLastFinishedAt() : null,
+                config != null ? config.getLastRunStatus() : null,
+                config != null ? config.getLastRunMessage() : null);
     }
 
     /**

@@ -10,7 +10,7 @@
 
 | 项 | 值 |
 |---|---|
-| 线上 jar md5 | `65b506dc03193b3bb35abd8543d779d2` |
+| 线上 jar md5 | **`07cd6f521be0ffdb6d0ea9a3968fdf83`**（§9.1；历史基线 `65b506dc03193b3bb35abd8543d779d2`） |
 | **落库 startScript 指纹** | `FFD0674FB5EABB4284C8C507FF4012FE`（4616 字节） |
 | 对应提交 | `5c505933b` |
 | 本地/远端一致性 | 上传前后 md5 双向核对一致（远端 `md5sum` 与本地 `Get-FileHash` 相同） |
@@ -78,8 +78,10 @@ FREEBSD / AIX / SOLARIS 已移出范围（其 provider 已删除）。
 | Windows 发布逻辑真机自检（端口归属探活 / 孤儿回收） | **PASS** | `win-release-selfcheck.ps1`：**10/10**，含敏感性对照 |
 
 > **2026-10-16 更新**：上表第 77 行的「无法复核」已在**本机 Windows**（同一台 `192.168.50.101`，
-> 通过 198 平台 8112 驱动）完成全链路复验，**27/27 全绿**（启停重启、备份、好包升级 md5 变更、
+> 通过 198 平台 8112 驱动）完成全链路复验，**25/25 全绿**（启停重启、备份、好包升级 md5 变更、
 > 坏包自动回滚 + 回滚后 PID 落库、停后 PID 清空）。详见 §9；该轮同时修掉 5 个真实产品缺陷。
+> **2026-10-17 复验**：同一套件在新产物 `07cd6f52…` 上复跑 **25/25**，另加服务挂载/卸载套件
+> `win-service-e2e.mjs` **19/19**；本轮再修 2 个缺陷（服务卸载残留、CacheManager 启动不确定性）。
 
 > Windows 侧共修掉 **3 个真实产品缺陷**（见 §6 第 1/2/3 项），把「完全不可用」推进到
 > 「任务可执行、投放与回滚 md5 可核对」；剩余不可验收的部分**全部来自主机安全产品**
@@ -360,7 +362,7 @@ win101 的 `sshd_config` 也没有任何超时项；因此这个 60 秒上限在
 ```powershell
 # 1) 产物绑定：先核对线上 jar md5，再核对落库脚本指纹（两者都要，只报 jar md5 不够）
 plink … 'md5sum /home/kali/ms-accept/jars/spring-support-monitor-starter-4.0.0.42-exec.jar'
-#   期望 65b506dc03193b3bb35abd8543d779d2
+#   期望 07cd6f521be0ffdb6d0ea9a3968fdf83
 plink … 'bash /home/kali/ms-accept/scripts/svc-action.sh status'   # 期望 active、单实例
 
 # 1b) 落库脚本指纹（发布任务真正执行的那份，不是 jar 里的模板）
@@ -371,9 +373,9 @@ plink … 'bash /home/kali/ms-accept/scripts/svc-action.sh status'   # 期望 ac
 
 # 2) 回归探针（现在同时在常规测试生命周期里，两处都应绿）
 pwsh -File spring-support-server-starter/src/acceptance/run-release-probe.ps1
-#   期望 probe exit=0 且 Tests run: 9, Failures: 0（9 个 @Test 覆盖 58 条断言）
+#   期望 probe exit=0 且 Tests run: 11, Failures: 0（11 个 @Test 覆盖 J/K 两段共 33 条断言）
 mvn -o -pl spring-support-server-starter -DskipTests=false test
-#   期望 Tests run: 9, Failures: 0, **Skipped: 0** —— Skipped 必须为 0：
+#   期望 Tests run: 11, Failures: 0, **Skipped: 0** —— Skipped 必须为 0：
 #   I 段在没有 PowerShell 宿主时会整段 skip，而 skip 与「通过」在汇总里都不算失败，
 #   只看 BUILD SUCCESS 无法区分「跑过且通过」与「根本没跑」。
 #   这一条同时能证明探针真的进了常规构建；

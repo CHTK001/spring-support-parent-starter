@@ -160,6 +160,7 @@ public class WindowsSystemServiceProvider implements SystemServiceProvider {
     @Override
     public String uninstall(SystemServiceContext ctx, String serviceName) {
         var dir = ctx.projectPath() + "\\.ms";
+        var autoPath = dir + "\\" + serviceName + ".autostart.ps1";
         var watchPath = dir + "\\" + serviceName + ".watchdog.ps1";
         var residentPath = dir + "\\" + serviceName + ".resident.ps1";
         var pidPath = dir + "\\" + serviceName + ".watchdog.pid";
@@ -184,7 +185,9 @@ public class WindowsSystemServiceProvider implements SystemServiceProvider {
         ps.append("}\n");
         ps.append("Remove-Item -Force '").append(watchPath).append("' -ErrorAction SilentlyContinue\n");
         ps.append("Remove-Item -Force '").append(residentPath).append("' -ErrorAction SilentlyContinue\n");
-        // ---- 终态校验：计划任务、启动项文件、注册表值都必须已不存在 ----
+        // 自启脚本自身也是安装期产物，必须一并清掉（否则卸载后 .ms 目录残留 <svc>.autostart.ps1）
+        ps.append("Remove-Item -Force '").append(autoPath).append("' -ErrorAction SilentlyContinue\n");
+        // ---- 终态校验：计划任务、启动项文件、注册表值、脚本产物都必须已不存在 ----
         ps.append("schtasks /Query /TN '").append(serviceName).append("-autostart' 2>$null | Out-Null\n");
         ps.append("if ($LASTEXITCODE -eq 0) { throw '卸载失败: 自启动任务仍存在' }\n");
         ps.append("schtasks /Query /TN '").append(serviceName).append("-guard' 2>$null | Out-Null\n");
@@ -192,6 +195,7 @@ public class WindowsSystemServiceProvider implements SystemServiceProvider {
         ps.append("if (Test-Path $__cmd) { throw '卸载失败: 启动项文件仍存在' }\n");
         ps.append("if ($null -ne (Get-ItemProperty -Path $__runKey -Name '").append(serviceName)
                 .append("' -ErrorAction SilentlyContinue)) { throw '卸载失败: 注册表启动项仍存在' }\n");
+        ps.append("if (Test-Path '").append(autoPath).append("') { throw '卸载失败: 自启脚本仍存在' }\n");
         ps.append("Write-Output '卸载完成: ").append(serviceName).append("'\n");
         return ps.toString();
     }

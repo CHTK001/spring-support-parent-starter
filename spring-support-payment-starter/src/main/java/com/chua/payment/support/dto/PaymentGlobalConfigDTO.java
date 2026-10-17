@@ -1,42 +1,22 @@
 package com.chua.payment.support.dto;
 
-import lombok.Data;
-
 /**
  * 支付全局配置 DTO
+ *
+ * @param paymentNotifyBaseUrl         支付通知基础URL
+ * @param paymentReturnUrl             支付返回值URL
+ * @param paymentCallbackPathTemplate  支付回调路径模板
+ * @param paymentAutoRefreshSeconds    支付自动刷新秒数
+ * @param couponDeductWithdrawable     优惠券抵扣是否可提现
+ * @param remark                       备注
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class PaymentGlobalConfigDTO {
-
-    /**
-     * 支付通知基础URL
-     */
-    private String paymentNotifyBaseUrl;
-
-    /**
-     * 支付返回值URL
-     */
-    private String paymentReturnUrl;
-
-    /**
-     * 支付回调路径模板
-     */
-    private String paymentCallbackPathTemplate;
-
-    /**
-     * 支付自动刷新秒数
-     */
-    private Integer paymentAutoRefreshSeconds;
-
-    /**
-     * 优惠券抵扣是否可提现
-     */
-    private Boolean couponDeductWithdrawable;
-
-    /**
-     * 备注
-     */
-    private String remark;
+public record PaymentGlobalConfigDTO(
+        String paymentNotifyBaseUrl,
+        String paymentReturnUrl,
+        String paymentCallbackPathTemplate,
+        Integer paymentAutoRefreshSeconds,
+        Boolean couponDeductWithdrawable,
+        String remark) {
 }

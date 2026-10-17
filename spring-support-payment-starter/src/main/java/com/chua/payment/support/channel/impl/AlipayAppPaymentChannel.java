@@ -51,15 +51,8 @@ public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements 
                 buildClientProperties(channel),
                 buildPayRequest(request, "QUICK_MSECURITY_PAY"));
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setLaunchType("APP");
-        result.setBody(response.body());
-        result.setSdkParams(Map.of("orderString", response.body()));
-        result.setTradeNo(response.tradeNo());
-        result.setStatus("PAYING");
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), response.tradeNo(), response.message(), null,
+                "APP", null, response.body(), Map.of("orderString", response.body()), null, "PAYING", response.rawResponse());
         return result;
     }
 }

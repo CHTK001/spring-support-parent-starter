@@ -52,11 +52,12 @@ public class WalletOrderServiceImpl implements WalletOrderService {
      * @return 创建出的充值订单
      */
     public WalletOrder createRechargeOrder(RechargeRequest request) {
-        String orderNo = StringUtils.hasText(request.getRechargeNo()) ? request.getRechargeNo() : generateOrderNo("RCH");
-        request.setRechargeNo(orderNo);
-        if (!StringUtils.hasText(request.getNotifyUrl())) {
-            request.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl("recharge", orderNo));
-        }
+        String orderNo = StringUtils.hasText(request.rechargeNo()) ? request.rechargeNo() : generateOrderNo("RCH");
+        String notifyUrl = StringUtils.hasText(request.notifyUrl())
+                ? request.notifyUrl()
+                : paymentCallbackUrlResolver.defaultWalletNotifyUrl("recharge", orderNo);
+        RechargeRequest effectiveRequest = new RechargeRequest(orderNo, notifyUrl, request.merchantId(),
+                request.userId(), request.amount(), request.operator(), request.remark());
 
         WalletOrder existing = getByOrderNo(orderNo);
         if (existing != null) {
@@ -66,13 +67,13 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         WalletOrder order = new WalletOrder();
         order.setOrderNo(orderNo);
         order.setOrderType("RECHARGE");
-        order.setMerchantId(request.getMerchantId());
-        order.setUserId(request.getUserId());
-        order.setAmount(request.getAmount());
+        order.setMerchantId(effectiveRequest.merchantId());
+        order.setUserId(effectiveRequest.userId());
+        order.setAmount(effectiveRequest.amount());
         order.setStatus("PENDING");
-        order.setOperator(request.getOperator());
-        order.setRemark(request.getRemark());
-        order.setRequestPayload(safeJson(request));
+        order.setOperator(effectiveRequest.operator());
+        order.setRemark(effectiveRequest.remark());
+        order.setRequestPayload(safeJson(effectiveRequest));
         walletOrderMapper.insert(order);
         return order;
     }
@@ -86,11 +87,12 @@ public class WalletOrderServiceImpl implements WalletOrderService {
      * @return 创建出的转账订单
      */
     public WalletOrder createTransferOrder(TransferRequest request) {
-        String orderNo = StringUtils.hasText(request.getTransferNo()) ? request.getTransferNo() : generateOrderNo("TRF");
-        request.setTransferNo(orderNo);
-        if (!StringUtils.hasText(request.getNotifyUrl())) {
-            request.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl("transfer", orderNo));
-        }
+        String orderNo = StringUtils.hasText(request.transferNo()) ? request.transferNo() : generateOrderNo("TRF");
+        String notifyUrl = StringUtils.hasText(request.notifyUrl())
+                ? request.notifyUrl()
+                : paymentCallbackUrlResolver.defaultWalletNotifyUrl("transfer", orderNo);
+        TransferRequest effectiveRequest = new TransferRequest(orderNo, notifyUrl, request.merchantId(),
+                request.fromUserId(), request.toUserId(), request.amount(), request.operator(), request.remark());
 
         WalletOrder existing = getByOrderNo(orderNo);
         if (existing != null) {
@@ -100,14 +102,14 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         WalletOrder order = new WalletOrder();
         order.setOrderNo(orderNo);
         order.setOrderType("TRANSFER");
-        order.setMerchantId(request.getMerchantId());
-        order.setUserId(request.getFromUserId());
-        order.setRelatedUserId(request.getToUserId());
-        order.setAmount(request.getAmount());
+        order.setMerchantId(effectiveRequest.merchantId());
+        order.setUserId(effectiveRequest.fromUserId());
+        order.setRelatedUserId(effectiveRequest.toUserId());
+        order.setAmount(effectiveRequest.amount());
         order.setStatus("PENDING");
-        order.setOperator(request.getOperator());
-        order.setRemark(request.getRemark());
-        order.setRequestPayload(safeJson(request));
+        order.setOperator(effectiveRequest.operator());
+        order.setRemark(effectiveRequest.remark());
+        order.setRequestPayload(safeJson(effectiveRequest));
         walletOrderMapper.insert(order);
         return order;
     }
@@ -121,11 +123,13 @@ public class WalletOrderServiceImpl implements WalletOrderService {
      * @return 创建出的提现订单
      */
     public WalletOrder createWithdrawOrder(WithdrawRequest request) {
-        String orderNo = StringUtils.hasText(request.getWithdrawNo()) ? request.getWithdrawNo() : generateOrderNo("WDW");
-        request.setWithdrawNo(orderNo);
-        if (!StringUtils.hasText(request.getNotifyUrl())) {
-            request.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl("withdraw", orderNo));
-        }
+        String orderNo = StringUtils.hasText(request.withdrawNo()) ? request.withdrawNo() : generateOrderNo("WDW");
+        String notifyUrl = StringUtils.hasText(request.notifyUrl())
+                ? request.notifyUrl()
+                : paymentCallbackUrlResolver.defaultWalletNotifyUrl("withdraw", orderNo);
+        WithdrawRequest effectiveRequest = new WithdrawRequest(orderNo, notifyUrl, request.merchantId(),
+                request.userId(), request.amount(), request.bankAccount(), request.bankName(),
+                request.accountName(), request.operator(), request.remark());
 
         WalletOrder existing = getByOrderNo(orderNo);
         if (existing != null) {
@@ -135,16 +139,16 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         WalletOrder order = new WalletOrder();
         order.setOrderNo(orderNo);
         order.setOrderType("WITHDRAW");
-        order.setMerchantId(request.getMerchantId());
-        order.setUserId(request.getUserId());
-        order.setAmount(request.getAmount());
-        order.setBankAccount(request.getBankAccount());
-        order.setBankName(request.getBankName());
-        order.setAccountName(request.getAccountName());
+        order.setMerchantId(effectiveRequest.merchantId());
+        order.setUserId(effectiveRequest.userId());
+        order.setAmount(effectiveRequest.amount());
+        order.setBankAccount(effectiveRequest.bankAccount());
+        order.setBankName(effectiveRequest.bankName());
+        order.setAccountName(effectiveRequest.accountName());
         order.setStatus("PENDING");
-        order.setOperator(request.getOperator());
-        order.setRemark(request.getRemark());
-        order.setRequestPayload(safeJson(request));
+        order.setOperator(effectiveRequest.operator());
+        order.setRemark(effectiveRequest.remark());
+        order.setRequestPayload(safeJson(effectiveRequest));
         walletOrderMapper.insert(order);
         return order;
     }

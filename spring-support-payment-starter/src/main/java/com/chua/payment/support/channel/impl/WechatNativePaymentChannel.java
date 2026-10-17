@@ -47,13 +47,8 @@ public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implem
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         TencentWechatPayResponse response = gateway(providerSpi(channel, null)).nativePay(buildProperties(channel), payRequest);
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setLaunchType("NATIVE");
-        result.setPayUrl(response.payUrl());
-        result.setStatus("PAYING");
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), null, response.message(), response.payUrl(),
+                "NATIVE", null, null, null, null, "PAYING", response.rawResponse());
         return result;
     }
 
@@ -64,13 +59,9 @@ public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implem
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryNativeOrder(buildProperties(channel), orderNo);
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setTradeNo(response.transactionId());
-        result.setPaidAmount(resolvePaidAmount(response.payerTotalAmountFen(), response.totalAmountFen()));
-        result.setStatus(normalizeTradeState(response.tradeState()));
-        result.setMessage(response.tradeStateDesc());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), response.transactionId(), response.tradeStateDesc(), null,
+                null, null, null, null, resolvePaidAmount(response.payerTotalAmountFen(), response.totalAmountFen()),
+                normalizeTradeState(response.tradeState()), response.rawResponse());
         return result;
     }
 

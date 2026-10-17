@@ -91,11 +91,11 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         if (request == null) {
             throw new PaymentException("微信支付分下单请求不能为空");
         }
-        MerchantChannel channel = requireEnabledWechatChannel(request.getChannelId());
-        if (request.getMerchantId() != null && !request.getMerchantId().equals(channel.getMerchantId())) {
+        MerchantChannel channel = requireEnabledWechatChannel(request.channelId());
+        if (request.merchantId() != null && !request.merchantId().equals(channel.getMerchantId())) {
             throw new PaymentException("微信支付分商户和渠道归属不一致");
         }
-        String outOrderNo = StringUtils.hasText(request.getOutOrderNo()) ? request.getOutOrderNo() : generateOutOrderNo();
+        String outOrderNo = StringUtils.hasText(request.outOrderNo()) ? request.outOrderNo() : generateOutOrderNo();
         WechatPayScoreOrder existing = getByOutOrderNo(outOrderNo);
         if (existing != null) {
             return existing;
@@ -103,41 +103,41 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
 
         TencentWechatPayScoreRequest gatewayRequest = new TencentWechatPayScoreRequest(
                 channel.getAppId(),
-                resolveServiceId(channel, request.getServiceId()),
+                resolveServiceId(channel, request.serviceId()),
                 outOrderNo,
-                requiredText(request.getOpenId(), "微信支付分 openId 不能为空"),
+                requiredText(request.openId(), "微信支付分 openId 不能为空"),
                 requiredText(firstNonBlank(
-                        request.getNotifyUrl(),
+                        request.notifyUrl(),
                         extText(channel, "payScoreNotifyUrl"),
                         extText(channel, "paymentPointNotifyUrl"),
                         paymentCallbackUrlResolver.defaultWechatPayScoreNotifyUrl(channel.getId(), outOrderNo)),
                         "微信支付分回调地址不能为空"),
-                firstNonBlank(request.getServiceIntroduction(), extText(channel, "payScoreServiceName"), "微信支付分服务"),
-                request.getStartTime(),
-                request.getEndTime(),
-                amountToFen(request.getTotalAmount()),
-                request.getReason(),
-                request.getFinishType(),
-                request.getNeedUserConfirm(),
-                request.getAttach(),
-                request.getPostPayments(),
-                request.getPostDiscounts(),
-                request.getExtraParams());
+                firstNonBlank(request.serviceIntroduction(), extText(channel, "payScoreServiceName"), "微信支付分服务"),
+                request.startTime(),
+                request.endTime(),
+                amountToFen(request.totalAmount()),
+                request.reason(),
+                request.finishType(),
+                request.needUserConfirm(),
+                request.attach(),
+                request.postPayments(),
+                request.postDiscounts(),
+                request.extraParams());
 
         TencentWechatPayScoreResponse response = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
                 .createPayScoreOrder(buildWechatProperties(channel), gatewayRequest);
 
         WechatPayScoreOrder order = new WechatPayScoreOrder();
-        order.setMerchantId(request.getMerchantId() != null ? request.getMerchantId() : channel.getMerchantId());
+        order.setMerchantId(request.merchantId() != null ? request.merchantId() : channel.getMerchantId());
         order.setChannelId(channel.getId());
-        order.setUserId(request.getUserId());
+        order.setUserId(request.userId());
         order.setOutOrderNo(outOrderNo);
         order.setServiceOrderNo(response.serviceOrderNo());
         order.setAppId(firstNonBlank(channel.getAppId(), gatewayRequest.appId()));
         order.setServiceId(gatewayRequest.serviceId());
         order.setOpenId(gatewayRequest.openId());
         order.setState(firstNonBlank(response.state(), "CREATED"));
-        order.setTotalAmount(request.getTotalAmount());
+        order.setTotalAmount(request.totalAmount());
         order.setNotifyUrl(gatewayRequest.notifyUrl());
         order.setServiceIntroduction(gatewayRequest.serviceIntroduction());
         order.setStartTime(gatewayRequest.startTime());
@@ -148,7 +148,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         order.setAttach(gatewayRequest.attach());
         order.setRequestPayload(toJson(request));
         order.setResponsePayload(firstNonBlank(response.rawResponse(), toJson(response.rawData())));
-        order.setRemark(request.getRemark());
+        order.setRemark(request.remark());
         /**
          * 更新终态时间戳
          * @param order 支付分订单
@@ -229,13 +229,14 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     public WechatPayScoreOrder completeOrder(String outOrderNo, WechatPayScoreCompleteDTO request) {
         WechatPayScoreOrder order = requireOrder(outOrderNo);
         MerchantChannel channel = requireEnabledWechatChannel(order.getChannelId());
-        WechatPayScoreCompleteDTO actualRequest = request == null ? new WechatPayScoreCompleteDTO() : request;
+        WechatPayScoreCompleteDTO actualRequest = request == null
+                ? new WechatPayScoreCompleteDTO(null, null, null, null, null, null, null, null) : request;
         TencentWechatPayScoreRequest base = baseRequest(order);
-        String finishType = firstNonBlank(actualRequest.getFinishType(), order.getFinishType(), "FINISH");
-        String reason = firstNonBlank(actualRequest.getReason(), order.getReason(), "服务已完成");
-        String endTime = firstNonBlank(actualRequest.getEndTime(), order.getEndTime());
-        Integer totalAmountFen = amountToFen(actualRequest.getTotalAmount() != null
-                ? actualRequest.getTotalAmount() : order.getTotalAmount());
+        String finishType = firstNonBlank(actualRequest.finishType(), order.getFinishType(), "FINISH");
+        String reason = firstNonBlank(actualRequest.reason(), order.getReason(), "服务已完成");
+        String endTime = firstNonBlank(actualRequest.endTime(), order.getEndTime());
+        Integer totalAmountFen = amountToFen(actualRequest.totalAmount() != null
+                ? actualRequest.totalAmount() : order.getTotalAmount());
         TencentWechatPayScoreRequest gatewayRequest = new TencentWechatPayScoreRequest(
                 base.appId(),
                 base.serviceId(),
@@ -250,20 +251,20 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
                 finishType,
                 base.needUserConfirm(),
                 base.attach(),
-                actualRequest.getPostPayments(),
-                actualRequest.getPostDiscounts(),
-                actualRequest.getExtraParams());
+                actualRequest.postPayments(),
+                actualRequest.postDiscounts(),
+                actualRequest.extraParams());
 
         TencentWechatPayScoreResponse response = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
                 .completePayScoreOrder(buildWechatProperties(channel), gatewayRequest);
-        if (actualRequest.getTotalAmount() != null) {
-            order.setTotalAmount(actualRequest.getTotalAmount());
+        if (actualRequest.totalAmount() != null) {
+            order.setTotalAmount(actualRequest.totalAmount());
         }
         order.setFinishType(gatewayRequest.finishType());
         order.setReason(gatewayRequest.reason());
         order.setEndTime(gatewayRequest.endTime());
-        if (StringUtils.hasText(actualRequest.getRemark())) {
-            order.setRemark(actualRequest.getRemark());
+        if (StringUtils.hasText(actualRequest.remark())) {
+            order.setRemark(actualRequest.remark());
         }
         /**
          * 合并渠道响应
@@ -287,9 +288,10 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     public WechatPayScoreOrder cancelOrder(String outOrderNo, WechatPayScoreCancelDTO request) {
         WechatPayScoreOrder order = requireOrder(outOrderNo);
         MerchantChannel channel = requireEnabledWechatChannel(order.getChannelId());
-        WechatPayScoreCancelDTO actualRequest = request == null ? new WechatPayScoreCancelDTO() : request;
+        WechatPayScoreCancelDTO actualRequest = request == null
+                ? new WechatPayScoreCancelDTO(null, null, null) : request;
         TencentWechatPayScoreRequest base = baseRequest(order);
-        String reason = firstNonBlank(actualRequest.getReason(), order.getReason(), "商户取消");
+        String reason = firstNonBlank(actualRequest.reason(), order.getReason(), "商户取消");
         TencentWechatPayScoreRequest gatewayRequest = new TencentWechatPayScoreRequest(
                 base.appId(),
                 base.serviceId(),
@@ -306,13 +308,13 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
                 base.attach(),
                 base.postPayments(),
                 base.postDiscounts(),
-                actualRequest.getExtraParams());
+                actualRequest.extraParams());
 
         TencentWechatPayScoreResponse response = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
                 .cancelPayScoreOrder(buildWechatProperties(channel), gatewayRequest);
         order.setReason(gatewayRequest.reason());
-        if (StringUtils.hasText(actualRequest.getRemark())) {
-            order.setRemark(actualRequest.getRemark());
+        if (StringUtils.hasText(actualRequest.remark())) {
+            order.setRemark(actualRequest.remark());
         }
         /**
          * 合并渠道响应

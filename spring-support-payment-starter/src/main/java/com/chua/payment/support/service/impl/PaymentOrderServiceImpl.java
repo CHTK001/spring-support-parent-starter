@@ -134,20 +134,20 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @return 创建支付订单的结果
      */
     public OrderVO createOrder(OrderCreateDTO dto) {
-        if (dto.getMerchantId() == null) {
+        if (dto.merchantId() == null) {
             throw new PaymentException("商户ID不能为空");
         }
-        if (dto.getOrderAmount() == null || dto.getOrderAmount().compareTo(BigDecimal.ZERO) < 0) {
+        if (dto.orderAmount() == null || dto.orderAmount().compareTo(BigDecimal.ZERO) < 0) {
             throw new PaymentException("订单金额不能为负数");
         }
 
-        merchantPaymentConfigService.checkCanCreateOrder(dto.getMerchantId(), dto.getUserId());
+        merchantPaymentConfigService.checkCanCreateOrder(dto.merchantId(), dto.userId());
 
-        Merchant merchant = requireActiveMerchant(dto.getMerchantId());
+        Merchant merchant = requireActiveMerchant(dto.merchantId());
         MerchantChannel channel = resolveChannel(dto);
         String orderNo = generateOrderNo();
-        String businessOrderNo = StringUtils.hasText(dto.getBusinessOrderNo()) ? dto.getBusinessOrderNo() : orderNo;
-        PaymentOrder existing = findActiveOrderByBusinessOrderNo(dto.getMerchantId(), businessOrderNo);
+        String businessOrderNo = StringUtils.hasText(dto.businessOrderNo()) ? dto.businessOrderNo() : orderNo;
+        PaymentOrder existing = findActiveOrderByBusinessOrderNo(dto.merchantId(), businessOrderNo);
         if (existing != null) {
             /**
              * 校验为同一笔业务订单
@@ -168,35 +168,35 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         order.setChannelSubType(channel.getChannelSubType());
         order.setPaidAmount(BigDecimal.ZERO);
         order.setRefundAmount(BigDecimal.ZERO);
-        order.setDiscountAmount(nullToZero(dto.getDiscountAmount()));
-        order.setCurrency(StringUtils.hasText(dto.getCurrency()) ? dto.getCurrency() : "CNY");
+        order.setDiscountAmount(nullToZero(dto.discountAmount()));
+        order.setCurrency(StringUtils.hasText(dto.currency()) ? dto.currency() : "CNY");
         order.setStatus(OrderState.PENDING.name());
-        order.setSubject(StringUtils.hasText(dto.getSubject()) ? dto.getSubject() : "支付订单");
-        order.setBody(dto.getBody());
-        order.setNotifyUrl(paymentCallbackUrlResolver.resolvePayNotifyUrl(dto.getNotifyUrl(), channel, merchant, orderNo));
-        order.setReturnUrl(firstNonBlank(dto.getReturnUrl(), channel.getReturnUrl(), merchant.getDefaultReturnUrl()));
+        order.setSubject(StringUtils.hasText(dto.subject()) ? dto.subject() : "支付订单");
+        order.setBody(dto.body());
+        order.setNotifyUrl(paymentCallbackUrlResolver.resolvePayNotifyUrl(dto.notifyUrl(), channel, merchant, orderNo));
+        order.setReturnUrl(firstNonBlank(dto.returnUrl(), channel.getReturnUrl(), merchant.getDefaultReturnUrl()));
         order.setExpireTime(LocalDateTime.now().plusMinutes(resolveExpireMinutes(dto, merchant)));
         order.setDeleted(0);
 
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
-        com.chua.payment.support.channel.OrderCreateRequest createRequest = new com.chua.payment.support.channel.OrderCreateRequest();
-        createRequest.setOrderNo(orderNo);
-        createRequest.setUserId(dto.getUserId());
-        createRequest.setAmount(dto.getOrderAmount());
-        createRequest.setSubject(order.getSubject());
-        createRequest.setBody(order.getBody());
-        createRequest.setCurrency(order.getCurrency());
-        createRequest.setAttach(businessOrderNo);
+        com.chua.payment.support.channel.OrderCreateRequest createRequest = new com.chua.payment.support.channel.OrderCreateRequest(
+                orderNo,
+                dto.userId(),
+                dto.orderAmount(),
+                order.getSubject(),
+                order.getBody(),
+                order.getCurrency(),
+                businessOrderNo);
 
         com.chua.payment.support.channel.OrderCreateResult createResult = paymentChannel.createOrder(channel, createRequest);
-        if (!createResult.isSuccess()) {
-            throw new PaymentException("订单创建失败: " + createResult.getMessage());
+        if (!createResult.success()) {
+            throw new PaymentException("订单创建失败: " + createResult.message());
         }
 
         try {
             orderMapper.insert(order);
         } catch (DuplicateKeyException e) {
-            PaymentOrder duplicated = findActiveOrderByBusinessOrderNo(dto.getMerchantId(), businessOrderNo);
+            PaymentOrder duplicated = findActiveOrderByBusinessOrderNo(dto.merchantId(), businessOrderNo);
             if (duplicated != null) {
                 /**
                  * 校验为同一笔业务订单
@@ -292,7 +292,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         PaymentOrder order = requireOrder(id);
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
-        String operator = defaultOperator(dto != null ? dto.getOperator() : null);
+        String operator = defaultOperator(dto != null ? dto.operator() : null);
         /**
          * 确保订单进入支付中状态
          * @param order 订单
@@ -309,63 +309,61 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
              * @param order.getOrderNo() 订单号
              */
             paySuccess(id, BigDecimal.ZERO, "ZERO_AMOUNT_" + order.getOrderNo(), operator);
-            PaymentResult result = new PaymentResult();
-            result.setSuccess(true);
-            result.setStatus("PAID");
-            result.setMessage("零金额订单已自动支付成功");
+            PaymentResult result = new PaymentResult(true, null, "零金额订单已自动支付成功", null,
+                    null, null, null, null, null, "PAID", null);
             return result;
         }
 
-        PaymentRequest request = new PaymentRequest();
-        request.setOrderNo(order.getOrderNo());
-        request.setUserId(order.getUserId());
-        request.setAmount(order.getOrderAmount());
-        request.setSubject(order.getSubject());
-        request.setBody(order.getBody());
-        request.setNotifyUrl(order.getNotifyUrl());
-        request.setReturnUrl(order.getReturnUrl());
-        request.setCurrency(order.getCurrency());
-        request.setExpireTime(order.getExpireTime());
-        String payerOpenId = dto != null ? dto.getPayerOpenId() : null;
+        String payerOpenId = dto != null ? dto.payerOpenId() : null;
         if (!StringUtils.hasText(payerOpenId)) {
             payerOpenId = userOpenIdResolver.resolveOpenId(order.getMerchantId(), order.getUserId(), order.getChannelType());
         }
-        request.setPayerOpenId(payerOpenId);
-        request.setClientIp(dto != null ? dto.getClientIp() : null);
-        request.setDeviceId(dto != null ? dto.getDeviceId() : null);
-        request.setUserAgent(dto != null ? dto.getUserAgent() : null);
-        request.setAttach(order.getBusinessOrderNo());
+        PaymentRequest request = new PaymentRequest(
+                order.getOrderNo(),
+                order.getUserId(),
+                order.getOrderAmount(),
+                order.getSubject(),
+                order.getBody(),
+                order.getNotifyUrl(),
+                order.getReturnUrl(),
+                order.getCurrency(),
+                order.getExpireTime(),
+                payerOpenId,
+                dto != null ? dto.clientIp() : null,
+                dto != null ? dto.deviceId() : null,
+                dto != null ? dto.userAgent() : null,
+                order.getBusinessOrderNo());
 
         PaymentResult result = paymentChannel.pay(channel, request);
         PaymentOrder latest = requireOrder(id);
-        if (StringUtils.hasText(result.getTradeNo())) {
-            latest.setThirdPartyOrderNo(result.getTradeNo());
+        if (StringUtils.hasText(result.tradeNo())) {
+            latest.setThirdPartyOrderNo(result.tradeNo());
             orderMapper.updateById(latest);
         }
-        if ("PAID".equals(result.getStatus())) {
+        if ("PAID".equals(result.status())) {
             paySuccess(id,
-                    result.getPaidAmount() != null ? result.getPaidAmount() : latest.getOrderAmount(),
-                    result.getTradeNo(),
+                    result.paidAmount() != null ? result.paidAmount() : latest.getOrderAmount(),
+                    result.tradeNo(),
                     operator);
             return result;
         }
-        if ("FAILED".equals(result.getStatus())) {
+        if ("FAILED".equals(result.status())) {
             /**
              * 标记支付失败
              * @param id 标识
-             * @param firstNonBlank(result.getMessage() 渠道返回的失败原因
+             * @param firstNonBlank(result.message() 渠道返回的失败原因
              */
-            payFail(id, firstNonBlank(result.getMessage(), "支付失败"), operator);
+            payFail(id, firstNonBlank(result.message(), "支付失败"), operator);
             return result;
         }
-        if ("CANCELLED".equals(result.getStatus())) {
+        if ("CANCELLED".equals(result.status())) {
             /**
              * 取消订单
              * @param id 标识
              * @param operator 操作人
-             * @param firstNonBlank(result.getMessage() 渠道返回的关闭原因
+             * @param firstNonBlank(result.message() 渠道返回的关闭原因
              */
-            cancelOrder(id, operator, firstNonBlank(result.getMessage(), "订单已关闭"));
+            cancelOrder(id, operator, firstNonBlank(result.message(), "订单已关闭"));
             return result;
         }
         recordTransaction(latest,
@@ -376,7 +374,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                  * @param result 支付结果
                  */
                 transactionStatusOfPaymentResult(result),
-                result.getTradeNo(),
+                result.tradeNo(),
                 /**
                  * 安全序列化
                  * @param request 请求
@@ -404,27 +402,27 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
         PaymentResult result = paymentChannel.query(channel, order.getOrderNo());
-        if ("PAID".equals(result.getStatus())) {
+        if ("PAID".equals(result.status())) {
             /**
              * 标记支付成功
              * @param id 标识
-             * @param result.getPaidAmount() 渠道返回的实付金额
+             * @param result.paidAmount() 渠道返回的实付金额
              */
-            paySuccess(id, result.getPaidAmount(), result.getTradeNo(), "channel-sync");
-        } else if ("FAILED".equals(result.getStatus())) {
+            paySuccess(id, result.paidAmount(), result.tradeNo(), "channel-sync");
+        } else if ("FAILED".equals(result.status())) {
             /**
              * 标记支付失败
              * @param id 标识
-             * @param firstNonBlank(result.getMessage() 渠道返回的失败原因
+             * @param firstNonBlank(result.message() 渠道返回的失败原因
              */
-            payFail(id, firstNonBlank(result.getMessage(), "渠道返回支付失败"), "channel-sync");
-        } else if ("CANCELLED".equals(result.getStatus()) && canCancelByState(requireOrder(id).getStatus())) {
+            payFail(id, firstNonBlank(result.message(), "渠道返回支付失败"), "channel-sync");
+        } else if ("CANCELLED".equals(result.status()) && canCancelByState(requireOrder(id).getStatus())) {
             /**
              * 取消订单
              * @param id 标识
-             * @param firstNonBlank(result.getMessage() 渠道返回的关闭原因
+             * @param firstNonBlank(result.message() 渠道返回的关闭原因
              */
-            cancelOrder(id, "channel-sync", firstNonBlank(result.getMessage(), "渠道返回订单关闭"));
+            cancelOrder(id, "channel-sync", firstNonBlank(result.message(), "渠道返回订单关闭"));
         }
         return convertToVO(requireOrder(id));
     }
@@ -695,15 +693,15 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
 
         String refundNo = generateRefundNo();
-        RefundRequest request = new RefundRequest();
-        request.setOrderNo(order.getOrderNo());
-        request.setUserId(order.getUserId());
-        request.setTradeNo(order.getThirdPartyOrderNo());
-        request.setRefundNo(refundNo);
-        request.setRefundAmount(refundAmount);
-        request.setTotalAmount(resolvedPaidAmount(order));
-        request.setReason(StringUtils.hasText(reason) ? "取消退款:" + reason : "取消退款");
-        request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, order.getMerchantId(), refundNo, order.getNotifyUrl()));
+        RefundRequest request = new RefundRequest(
+                order.getOrderNo(),
+                order.getUserId(),
+                order.getThirdPartyOrderNo(),
+                refundNo,
+                refundAmount,
+                resolvedPaidAmount(order),
+                StringUtils.hasText(reason) ? "取消退款:" + reason : "取消退款",
+                paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, order.getMerchantId(), refundNo, order.getNotifyUrl()));
         String requestPayload = safeJson(request);
 
         paymentRefundOrderService.createRefundOrder(new CreateRefundOrderDTO(order, refundNo, refundAmount,
@@ -712,11 +710,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
         RefundResult result = paymentChannel.refund(channel, request);
         String responsePayload = safeJson(result);
-        String thirdPartyRefundNo = firstNonBlank(result.getTradeNo(), result.getRefundNo());
+        String thirdPartyRefundNo = firstNonBlank(result.tradeNo(), result.refundNo());
 
-        if ("REFUNDED".equals(result.getStatus())) {
+        if ("REFUNDED".equals(result.status())) {
             // 退款成功：标记退款成功，再补 CANCELLED
-            BigDecimal actualAmount = result.getRefundAmount() != null ? result.getRefundAmount() : refundAmount;
+            BigDecimal actualAmount = result.refundAmount() != null ? result.refundAmount() : refundAmount;
             paymentRefundOrderService.markRefunded(new MarkRefundedDTO(refundNo, actualAmount, thirdPartyRefundNo,
                     responsePayload, operatorVal, "取消退款成功"));
             PaymentOrder latestOrder = requireOrder(id);
@@ -741,9 +739,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             return true;
         }
 
-        if ("FAILED".equals(result.getStatus())) {
+        if ("FAILED".equals(result.status())) {
             paymentRefundOrderService.markFailed(refundNo, responsePayload, operatorVal,
-                    firstNonBlank(result.getMessage(), "取消退款失败"));
+                    firstNonBlank(result.message(), "取消退款失败"));
             // 退款失败：回退为 PAID
             /**
              * 强制设置订单状态
@@ -753,13 +751,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             forceOrderStatus(id, OrderState.PAID.name());
             orderStateLogService.log(new OrderStateLogRequest(id, OrderState.REFUNDING.name(), OrderState.PAID.name(),
                     "REFUND_FAIL", operatorVal,
-                    firstNonBlank(result.getMessage(), "取消退款失败")));
-            throw new PaymentException("取消退款失败: " + result.getMessage());
+                    firstNonBlank(result.message(), "取消退款失败")));
+            throw new PaymentException("取消退款失败: " + result.message());
         }
 
         // 异步退款处理中：标记退款处理中
         paymentRefundOrderService.markProcessing(refundNo, thirdPartyRefundNo, responsePayload,
-                firstNonBlank(result.getMessage(), "取消退款发起"));
+                firstNonBlank(result.message(), "取消退款发起"));
         recordTransaction(order, "REFUND", refundAmount, 2, thirdPartyRefundNo,
                 requestPayload, responsePayload, "取消退款发起");
         return true;
@@ -823,7 +821,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (paymentRefundOrderService.hasProcessingRefund(order.getId())) {
             throw new PaymentException("存在处理中退款单，请稍后再试");
         }
-        if (dto == null || !StringUtils.hasText(dto.getRefundReason())) {
+        if (dto == null || !StringUtils.hasText(dto.refundReason())) {
             throw new PaymentException("退款原因不能为空");
         }
 
@@ -835,7 +833,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
          */
         syncRefundAggregate(order, currentRefunded);
         order = requireOrder(id);
-        BigDecimal refundAmount = dto != null && dto.getRefundAmount() != null ? dto.getRefundAmount() : refundableAmount(order, currentRefunded);
+        BigDecimal refundAmount = dto != null && dto.refundAmount() != null ? dto.refundAmount() : refundableAmount(order, currentRefunded);
         if (refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new PaymentException("退款金额必须大于零");
         }
@@ -845,7 +843,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
-        String operator = defaultOperator(dto != null ? dto.getOperator() : null);
+        String operator = defaultOperator(dto != null ? dto.operator() : null);
         if (!OrderState.REFUNDING.name().equals(order.getStatus())) {
             OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.REFUND, operator);
             if (transitionResult == OrderTransitionResult.DUPLICATED && OrderState.REFUNDED.name().equals(requireOrder(id).getStatus())) {
@@ -857,47 +855,48 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         /**
          * 幂等回填备注
          * @param latest 最新订单
-         * @param dto.getRefundReason() 退款原因
+         * @param dto.refundReason() 退款原因
          */
-        backfillRemark(latest, dto != null ? dto.getRefundReason() : null);
+        backfillRemark(latest, dto != null ? dto.refundReason() : null);
 
-        RefundRequest request = new RefundRequest();
-        request.setOrderNo(latest.getOrderNo());
-        request.setUserId(latest.getUserId());
-        request.setTradeNo(latest.getThirdPartyOrderNo());
-        request.setRefundNo(generateRefundNo());
-        request.setRefundAmount(refundAmount);
-        request.setTotalAmount(resolvedPaidAmount(latest));
-        request.setReason(dto != null ? dto.getRefundReason() : null);
-        request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, latest.getMerchantId(), request.getRefundNo(), latest.getNotifyUrl()));
+        String refundNo = generateRefundNo();
+        RefundRequest request = new RefundRequest(
+                latest.getOrderNo(),
+                latest.getUserId(),
+                latest.getThirdPartyOrderNo(),
+                refundNo,
+                refundAmount,
+                resolvedPaidAmount(latest),
+                dto != null ? dto.refundReason() : null,
+                paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, latest.getMerchantId(), refundNo, latest.getNotifyUrl()));
         String requestPayload = safeJson(request);
 
         paymentRefundOrderService.createRefundOrder(new CreateRefundOrderDTO(latest,
-                request.getRefundNo(),
+                refundNo,
                 refundAmount,
-                dto != null ? dto.getRefundReason() : null,
+                dto != null ? dto.refundReason() : null,
                 operator,
                 requestPayload));
 
         RefundResult result = paymentChannel.refund(channel, request);
         String responsePayload = safeJson(result);
-        String thirdPartyRefundNo = firstNonBlank(result.getTradeNo(), result.getRefundNo());
-        if ("REFUNDED".equals(result.getStatus())) {
+        String thirdPartyRefundNo = firstNonBlank(result.tradeNo(), result.refundNo());
+        if ("REFUNDED".equals(result.status())) {
             return refundSuccess(new RefundSuccessDTO(
-                    request.getRefundNo(),
-                    result.getRefundAmount() != null ? result.getRefundAmount() : refundAmount,
+                    refundNo,
+                    result.refundAmount() != null ? result.refundAmount() : refundAmount,
                     thirdPartyRefundNo,
                     operator,
                     responsePayload,
-                    firstNonBlank(result.getMessage(), dto != null ? dto.getRefundReason() : null)));
+                    firstNonBlank(result.message(), dto != null ? dto.refundReason() : null)));
         }
-        if ("FAILED".equals(result.getStatus())) {
-            return refundFail(request.getRefundNo(),
+        if ("FAILED".equals(result.status())) {
+            return refundFail(refundNo,
                     responsePayload,
                     operator,
-                    firstNonBlank(result.getMessage(), "渠道退款失败"));
+                    firstNonBlank(result.message(), "渠道退款失败"));
         }
-        paymentRefundOrderService.markProcessing(request.getRefundNo(), thirdPartyRefundNo, responsePayload, firstNonBlank(result.getMessage(), "真实退款发起"));
+        paymentRefundOrderService.markProcessing(refundNo, thirdPartyRefundNo, responsePayload, firstNonBlank(result.message(), "真实退款发起"));
         recordTransaction(latest,
                 "REFUND",
                 refundAmount,
@@ -910,7 +909,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 requestPayload,
                 responsePayload,
                 "真实退款发起");
-        return result.isSuccess();
+        return result.success();
     }
 
     @Override
@@ -1230,35 +1229,35 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      */
     private MerchantChannel resolveChannel(OrderCreateDTO dto) {
         MerchantChannel channel;
-        if (dto.getChannelId() != null) {
-            channel = merchantChannelMapper.selectById(dto.getChannelId());
+        if (dto.channelId() != null) {
+            channel = merchantChannelMapper.selectById(dto.channelId());
             if (channel == null) {
                 throw new PaymentException("支付方式不存在");
             }
         } else {
-            if (!StringUtils.hasText(dto.getChannelType())) {
+            if (!StringUtils.hasText(dto.channelType())) {
                 throw new PaymentException("支付方式不能为空");
             }
             LambdaQueryWrapper<MerchantChannel> wrapper = new LambdaQueryWrapper<MerchantChannel>()
-                    .eq(MerchantChannel::getMerchantId, dto.getMerchantId())
-                    .eq(MerchantChannel::getChannelType, dto.getChannelType())
+                    .eq(MerchantChannel::getMerchantId, dto.merchantId())
+                    .eq(MerchantChannel::getChannelType, dto.channelType())
                     .eq(MerchantChannel::getStatus, ChannelStatus.ENABLED.getCode())
                     .last("limit 1");
-            if (StringUtils.hasText(dto.getChannelSubType())) {
-                wrapper.eq(MerchantChannel::getChannelSubType, dto.getChannelSubType());
+            if (StringUtils.hasText(dto.channelSubType())) {
+                wrapper.eq(MerchantChannel::getChannelSubType, dto.channelSubType());
             }
             channel = merchantChannelMapper.selectOne(wrapper);
             if (channel == null) {
                 throw new PaymentException("未找到可用的支付方式配置");
             }
         }
-        if (!dto.getMerchantId().equals(channel.getMerchantId())) {
+        if (!dto.merchantId().equals(channel.getMerchantId())) {
             throw new PaymentException("订单商户和支付方式不匹配");
         }
         if (!ChannelStatus.ENABLED.getCode().equals(channel.getStatus())) {
             throw new PaymentException("支付方式未启用");
         }
-        return resolveEffectiveChannel(channel, dto.getMerchantId());
+        return resolveEffectiveChannel(channel, dto.merchantId());
     }
 
     /**
@@ -1373,17 +1372,17 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @param channel 渠道
      */
     private void assertSameBusinessOrder(PaymentOrder existing, OrderCreateDTO dto, MerchantChannel channel) {
-        if (!existing.getMerchantId().equals(dto.getMerchantId())) {
+        if (!existing.getMerchantId().equals(dto.merchantId())) {
             throw new PaymentException("业务订单号已存在但商户不一致");
         }
         if (channel.getId() != null && !channel.getId().equals(existing.getChannelId())) {
             throw new PaymentException("业务订单号已存在且支付方式不一致");
         }
-        if (existing.getOrderAmount() != null && dto.getOrderAmount() != null
-                && existing.getOrderAmount().compareTo(dto.getOrderAmount()) != 0) {
+        if (existing.getOrderAmount() != null && dto.orderAmount() != null
+                && existing.getOrderAmount().compareTo(dto.orderAmount()) != 0) {
             throw new PaymentException("业务订单号已存在且订单金额不一致");
         }
-        String currency = StringUtils.hasText(dto.getCurrency()) ? dto.getCurrency() : "CNY";
+        String currency = StringUtils.hasText(dto.currency()) ? dto.currency() : "CNY";
         if (StringUtils.hasText(existing.getCurrency()) && !existing.getCurrency().equalsIgnoreCase(currency)) {
             throw new PaymentException("业务订单号已存在且币种不一致");
         }
@@ -1428,8 +1427,8 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @param merchant 商户
      */
     private int resolveExpireMinutes(OrderCreateDTO dto, Merchant merchant) {
-        if (dto.getExpireMinutes() != null && dto.getExpireMinutes() > 0) {
-            return dto.getExpireMinutes();
+        if (dto.expireMinutes() != null && dto.expireMinutes() > 0) {
+            return dto.expireMinutes();
         }
         if (Boolean.TRUE.equals(merchant.getPaymentAutoCloseEnabled())
                 && merchant.getPaymentAutoCloseMinutes() != null
@@ -1878,10 +1877,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @return 支付结果对应的流水状态
      */
     private Integer transactionStatusOfPaymentResult(PaymentResult result) {
-        if ("PAID".equals(result.getStatus())) {
+        if ("PAID".equals(result.status())) {
             return 1;
         }
-        if ("FAILED".equals(result.getStatus()) || "CANCELLED".equals(result.getStatus())) {
+        if ("FAILED".equals(result.status()) || "CANCELLED".equals(result.status())) {
             return 0;
         }
         return 2;
@@ -1894,10 +1893,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @return 退款结果对应的流水状态
      */
     private Integer transactionStatusOfRefundResult(RefundResult result) {
-        if ("REFUNDED".equals(result.getStatus())) {
+        if ("REFUNDED".equals(result.status())) {
             return 1;
         }
-        if ("FAILED".equals(result.getStatus())) {
+        if ("FAILED".equals(result.status())) {
             return 0;
         }
         return 2;
@@ -1923,14 +1922,39 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @return 转换后的订单视图对象
      */
     private OrderVO convertToVO(PaymentOrder order) {
-        OrderVO vo = new OrderVO();
-        BeanUtils.copyProperties(order, vo);
         Merchant merchant = merchantMapper.selectById(order.getMerchantId());
         MerchantChannel channel = order.getChannelId() != null ? merchantChannelMapper.selectById(order.getChannelId()) : null;
-        vo.setMerchantName(merchant != null ? merchant.getMerchantName() : null);
-        vo.setChannelName(channel != null ? channel.getChannelName() : null);
-        vo.setStatusDesc(OrderState.descriptionOf(order.getStatus()));
-        return vo;
+        return new OrderVO(
+                order.getId(),
+                order.getOrderNo(),
+                order.getBusinessOrderNo(),
+                order.getMerchantId(),
+                merchant != null ? merchant.getMerchantName() : null,
+                order.getChannelId(),
+                channel != null ? channel.getChannelName() : null,
+                order.getUserId(),
+                order.getChannelType(),
+                order.getChannelSubType(),
+                order.getOrderAmount(),
+                order.getPaidAmount(),
+                order.getRefundAmount(),
+                order.getDiscountAmount(),
+                order.getCurrency(),
+                order.getStatus(),
+                OrderState.descriptionOf(order.getStatus()),
+                order.getSubject(),
+                order.getBody(),
+                order.getNotifyUrl(),
+                order.getReturnUrl(),
+                order.getExpireTime(),
+                order.getPayTime(),
+                order.getCompleteTime(),
+                order.getRefundTime(),
+                order.getThirdPartyOrderNo(),
+                order.getRemark(),
+                order.getDeleted(),
+                order.getCreatedAt(),
+                order.getUpdatedAt());
     }
 
     /**
@@ -1940,8 +1964,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @return 转换后的日志视图对象
      */
     private OrderStateLogVO convertLogToVO(OrderStateLog log) {
-        OrderStateLogVO vo = new OrderStateLogVO();
-        BeanUtils.copyProperties(log, vo);
-        return vo;
+        return new OrderStateLogVO(
+                log.getId(),
+                log.getOrderId(),
+                log.getFromState(),
+                log.getToState(),
+                log.getEvent(),
+                log.getOperator(),
+                log.getRemark(),
+                log.getCreatedAt());
     }
 }

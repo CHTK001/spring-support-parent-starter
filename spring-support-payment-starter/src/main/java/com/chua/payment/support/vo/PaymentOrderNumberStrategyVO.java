@@ -1,36 +1,22 @@
 package com.chua.payment.support.vo;
 
-import lombok.Data;
-
 /**
  * 订单号策略视图
+ *
+ * @param businessType        业务类型
+ * @param fieldName           字段名称
+ * @param generationRule      生成规则
+ * @param callerOverrideField 调用方覆盖字段
+ * @param idempotentRule      幂等规则
+ * @param notes               备注
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class PaymentOrderNumberStrategyVO {
-    /**
-     * 业务类型
-     */
-    private String businessType;
-    /**
-     * 字段名称
-     */
-    private String fieldName;
-    /**
-     * 生成规则
-     */
-    private String generationRule;
-    /**
-     * 调用方覆盖字段
-     */
-    private String callerOverrideField;
-    /**
-     * 幂等规则
-     */
-    private String idempotentRule;
-    /**
-     * 备注
-     */
-    private String notes;
+public record PaymentOrderNumberStrategyVO(
+        String businessType,
+        String fieldName,
+        String generationRule,
+        String callerOverrideField,
+        String idempotentRule,
+        String notes) {
 }

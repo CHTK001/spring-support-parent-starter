@@ -48,13 +48,8 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         TencentWechatPayResponse response = gateway(providerSpi(channel, null)).miniProgramPay(buildProperties(channel), payRequest);
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setLaunchType("MINI_PROGRAM");
-        result.setSdkParams(response.sdkParams());
-        result.setStatus("PAYING");
-        result.setMessage(response.message());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), null, response.message(), null,
+                "MINI_PROGRAM", null, null, response.sdkParams(), null, "PAYING", response.rawResponse());
         return result;
     }
 
@@ -65,13 +60,9 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryMiniProgramOrder(buildProperties(channel), orderNo);
 
-        PaymentResult result = new PaymentResult();
-        result.setSuccess(response.success());
-        result.setTradeNo(response.transactionId());
-        result.setPaidAmount(resolvePaidAmount(response.payerTotalAmountFen(), response.totalAmountFen()));
-        result.setStatus(normalizeTradeState(response.tradeState()));
-        result.setMessage(response.tradeStateDesc());
-        result.setRawResponse(response.rawResponse());
+        PaymentResult result = new PaymentResult(response.success(), response.transactionId(), response.tradeStateDesc(), null,
+                null, null, null, null, resolvePaidAmount(response.payerTotalAmountFen(), response.totalAmountFen()),
+                normalizeTradeState(response.tradeState()), response.rawResponse());
         return result;
     }
 

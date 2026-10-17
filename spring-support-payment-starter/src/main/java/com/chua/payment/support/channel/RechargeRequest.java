@@ -1,42 +1,26 @@
 package com.chua.payment.support.channel;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 
 /**
  * 充值请求
+ *
+ * @param rechargeNo 充值单号
+ * @param notifyUrl  通知回调 URL
+ * @param merchantId 商户 ID
+ * @param userId     用户标识
+ * @param amount     充值金额
+ * @param operator   操作人
+ * @param remark     备注
  * @author CH
  * @since 4.0.0
  */
-@Data
-public class RechargeRequest {
-    /**
-     * 充值单号
-     */
-    private String rechargeNo;
-    /**
-     * 通知回调 URL
-     */
-    private String notifyUrl;
-    /**
-     * 商户 ID
-     */
-    private Long merchantId;
-    /**
-     * 用户标识
-     */
-    private Long userId;
-    /**
-     * 充值金额
-     */
-    private BigDecimal amount;
-    /**
-     * 操作人
-     */
-    private String operator;
-    /**
-     * 备注
-     */
-    private String remark;
+public record RechargeRequest(
+        String rechargeNo,
+        String notifyUrl,
+        Long merchantId,
+        Long userId,
+        BigDecimal amount,
+        String operator,
+        String remark) {
 }

@@ -143,7 +143,7 @@ public class OrderController {
      */
     public Result<Boolean> startPay(@PathVariable Long id,
                                     @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.startPay(id, dto != null ? dto.getOperator() : null));
+        return Result.success(orderService.startPay(id, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "标记支付成功")
@@ -157,9 +157,9 @@ public class OrderController {
                                       @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.paySuccess(
                 id,
-                dto != null ? dto.getPaidAmount() : null,
-                dto != null ? dto.getThirdPartyOrderNo() : null,
-                dto != null ? dto.getOperator() : null));
+                dto != null ? dto.paidAmount() : null,
+                dto != null ? dto.thirdPartyOrderNo() : null,
+                dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "标记支付失败")
@@ -171,7 +171,7 @@ public class OrderController {
      */
     public Result<Boolean> payFail(@PathVariable Long id,
                                    @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.payFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
+        return Result.success(orderService.payFail(id, dto != null ? dto.remark() : null, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "取消订单", description = "refund=true: 已支付订单发起退款并取消；refund=false: 不退款仅取消(PENDING/PAYING)")
@@ -186,8 +186,8 @@ public class OrderController {
                                        @RequestParam(defaultValue = "false") boolean refund,
                                        @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.cancelOrder(id,
-                dto != null ? dto.getOperator() : null,
-                dto != null ? dto.getRemark() : null,
+                dto != null ? dto.operator() : null,
+                dto != null ? dto.remark() : null,
                 refund));
     }
 
@@ -200,7 +200,7 @@ public class OrderController {
      */
     public Result<Boolean> completeOrder(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.completeOrder(id, dto != null ? dto.getOperator() : null));
+        return Result.success(orderService.completeOrder(id, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "申请退款")
@@ -224,7 +224,7 @@ public class OrderController {
      */
     public Result<Boolean> refundSuccess(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.refundSuccess(id, dto != null ? dto.getRefundAmount() : null, dto != null ? dto.getOperator() : null));
+        return Result.success(orderService.refundSuccess(id, dto != null ? dto.refundAmount() : null, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "标记退款失败")
@@ -236,7 +236,7 @@ public class OrderController {
      */
     public Result<Boolean> refundFail(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.refundFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
+        return Result.success(orderService.refundFail(id, dto != null ? dto.remark() : null, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "删除订单")
