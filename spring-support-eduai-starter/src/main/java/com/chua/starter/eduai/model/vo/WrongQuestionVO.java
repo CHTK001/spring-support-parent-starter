@@ -1,48 +1,30 @@
 package com.chua.starter.eduai.model.vo;
 
-import lombok.Data;
-
 import java.time.LocalDateTime;
 
 /**
  * 错题VO
  *
+ * @param wrongQuestionId              错题标识
+ * @param wrongQuestionStudentId       学生标识
+ * @param wrongQuestionQuestionId      题目标识
+ * @param wrongQuestionWrongCount      错误次数
+ * @param wrongQuestionMasteryLevel    掌握度
+ * @param wrongQuestionLastWrongTime   最近错误时间
+ * @param wrongQuestionLastReviewTime  最近复习时间
+ * @param wrongQuestionReviewCount     复习次数
+ * @param wrongQuestionPaperId         试卷标识（错题来自哪张卷，可空）
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class WrongQuestionVO {
-
-    /**
-     * 错题标识
-    */
-    private Long wrongQuestionId;
-    /**
-     * 学生标识
-    */
-    private String wrongQuestionStudentId;
-    /**
-     * 题目标识
-    */
-    private Long wrongQuestionQuestionId;
-    /**
-     * 错误次数
-    */
-    private Integer wrongQuestionWrongCount;
-    /**
-     * 掌握度
-    */
-    private Integer wrongQuestionMasteryLevel;
-    /**
-     * 最近错误时间
-    */
-    private LocalDateTime wrongQuestionLastWrongTime;
-    /**
-     * 最近复习时间
-    */
-    private LocalDateTime wrongQuestionLastReviewTime;
-    /**
-     * 复习次数
-    */
-    private Integer wrongQuestionReviewCount;
+public record WrongQuestionVO(
+        Long wrongQuestionId,
+        String wrongQuestionStudentId,
+        Long wrongQuestionQuestionId,
+        Integer wrongQuestionWrongCount,
+        Integer wrongQuestionMasteryLevel,
+        LocalDateTime wrongQuestionLastWrongTime,
+        LocalDateTime wrongQuestionLastReviewTime,
+        Integer wrongQuestionReviewCount,
+        Long wrongQuestionPaperId) {
 }

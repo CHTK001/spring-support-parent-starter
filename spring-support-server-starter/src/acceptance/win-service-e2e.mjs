@@ -6,7 +6,8 @@
  * 断言：
  *   挂载 —— Startup 启动项、HKCU Run 值、看门狗 pid 文件、看门狗进程、库 serviceName 全部落地；
  *   卸载 —— 上述产物全部清理，且 .ms 目录不残留 <svc>.autostart.ps1 / .watchdog.ps1 / .resident.ps1，
- *           看门狗进程已结束，库 serviceName 清空。
+ *           看门狗进程已结束，库 serviceName 清空；
+ *   失败挂载 —— 任务如实失败，且库中 serviceName 仍为空（状态诚实性，防「提交即写库」的假挂载）。
  *
  * 依赖（操作机需有 PuTTY plink 与 OpenSSH ssh）：
  *   - 能 SSH 登录平台主机（默认 kali@192.168.50.198）以执行 set-ssh 与库核对
@@ -164,6 +165,26 @@ rec('S2 无残留 .autostart.ps1', s.autostart === 'False', `autostart=${s.autos
 rec('S2 无残留 .watchdog.ps1', s.watchdog === 'False', `watchdog=${s.watchdog}`);
 rec('S2 无残留 .resident.ps1', s.resident === 'False', `resident=${s.resident}`);
 rec('S2 库中 serviceName 已清空', (await projectSvc()) == null, String(await projectSvc()));
+
+// S3：状态诚实性 —— 安装失败时不得回写 serviceName。
+// 关掉两个开关后，挂载脚本会立刻判失败（不产生任何系统服务），任务应为 false；
+// 旧实现在「提交任务」时就写库，会留下「库里有服务名、机器上没有服务」的假挂载状态。
+console.log('--- S3 失败挂载不得回写 serviceName ---');
+const proj = () => api(`${REL}/${PID_REL}/projects`).then((r) => (r?.data || []).find((x) => x.id === PID_PROJ));
+try {
+  const u = await api(`${REL}/project/${PID_PROJ}`, 'PUT', { autostart: false, guardian: false });
+  rec('S3 已置 autostart=0/guardian=0', u?.data != null || u?.code === '00000', String(u?.msg || u?.code || ''));
+  t = await api(`${REL}/project/${PID_PROJ}/service/install`, 'POST');
+  d = await poll(t?.data, 'install-expect-fail', 120000);
+  rec('S3 安装任务如实失败（不假报成功）', d?.success === false, String(d?.message || '').slice(0, 120));
+  rec('S3 失败后库中 serviceName 仍为空', (await projectSvc()) == null, String(await projectSvc()));
+} finally {
+  await api(`${REL}/project/${PID_PROJ}`, 'PUT', { autostart: true, guardian: true });
+  const back = await proj();
+  rec('S3 已恢复 autostart=1/guardian=1',
+    back?.autostart === true && back?.guardian === true,
+    `autostart=${back?.autostart} guardian=${back?.guardian}`);
+}
 
 const fails = results.filter((x) => !x.p);
 console.log(`\n=== WINDOWS SERVICE-MOUNT E2E SUMMARY pass=${results.length - fails.length} fail=${fails.length} ===`);

@@ -121,24 +121,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         }
         String name = requireIndex(request.name());
         ElasticsearchClient.Target target = client.target(request.datasourceId());
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        Map<String, Object> settings = new LinkedHashMap<>();
-        if (request.shards() != null) {
-            settings.put("number_of_shards", request.shards());
-        }
-        if (request.replicas() != null) {
-            settings.put("number_of_replicas", request.replicas());
-        }
-        if (!settings.isEmpty()) {
-            body.put("settings", settings);
-        }
-        Map<String, Object> properties = properties(request.fields());
-        if (!properties.isEmpty()) {
-            body.put("mappings", Map.of("properties", properties));
-        }
+        String body = Json.toJson(indexBody(request.shards(), request.replicas(), properties(request.fields())));
         try {
-            client.createIndex(target, name, Json.toJson(body));
+            client.createIndex(target, name, body);
         } catch (IllegalStateException e) {
             // 建索引在冷态小实例上可能超过客户端超时（实测 20.6s），但请求往往已在 ES 侧生效；
             // 直接报错会让用户以为没建成，进而在关系图/索引列表里看到一个「凭空出现」的索引。
@@ -171,6 +156,50 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         client.putMapping(client.target(request.datasourceId()), name,
                 Json.toJson(Map.of("properties", properties)));
         return index(name, request.datasourceId());
+    }
+
+    @Override
+    public ElasticsearchIndexDetailVO rebuildIndex(ElasticsearchIndexDTO request) {
+        if (request == null) {
+            throw new IllegalStateException("重建索引请求不能为空");
+        }
+        String name = requireIndex(request.name());
+        ElasticsearchClient.Target target = client.target(request.datasourceId());
+        if (!exists(target, name)) {
+            throw new IllegalStateException("索引不存在: " + name);
+        }
+        Map<String, Object> properties = properties(request.fields());
+        if (properties.isEmpty()) {
+            throw new IllegalStateException("重建索引至少要保留一个字段；要整个删掉请用删除索引");
+        }
+        String body = Json.toJson(indexBody(request.shards(), request.replicas(), properties));
+
+        // ES 不能删字段 / 不能改已存在字段的类型，也没有「改索引名」。所以「重建同名索引」只能是：
+        //   建临时索引(新 mapping) → 原索引数据搬进临时索引 → 删原索引 → 用新 mapping 建回同名索引 →
+        //   临时索引数据搬回同名索引 → 删临时索引。
+        // 第 3 步之后原索引短暂不存在；若后续失败，数据仍在临时索引里（日志会打出名字，可人工恢复）。
+        String tmp = name + "__rebuild__" + System.currentTimeMillis();
+        long sourceCount = docCount(target, name);
+        try {
+            client.createIndex(target, tmp, body);
+            client.reindex(target, name, tmp);
+            long copied = docCount(target, tmp);
+            if (sourceCount >= 0 && copied >= 0 && copied != sourceCount) {
+                throw new IllegalStateException(
+                        "重建中止：临时索引文档数 " + copied + " 与源索引 " + sourceCount + " 不一致");
+            }
+            client.deleteIndex(target, name);
+            client.createIndex(target, name, body);
+            client.reindex(target, tmp, name);
+            client.deleteIndex(target, tmp);
+            return index(name, request.datasourceId());
+        } catch (RuntimeException e) {
+            if (exists(target, tmp)) {
+                log.error("[ES] 重建索引 {} 失败：数据仍保留在临时索引 {}，请按需人工恢复。原因: {}",
+                        name, tmp, e.getMessage());
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -309,6 +338,32 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
     }
 
     /**
+     * 拼建索引请求体（settings + mappings），建索引与重建索引共用
+     *
+     * @param shards     主分片数，可为空
+     * @param replicas   副本数，可为空
+     * @param properties 字段映射，可为空
+     * @return 请求体
+     */
+    private Map<String, Object> indexBody(Integer shards, Integer replicas, Map<String, Object> properties) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        Map<String, Object> settings = new LinkedHashMap<>();
+        if (shards != null) {
+            settings.put("number_of_shards", shards);
+        }
+        if (replicas != null) {
+            settings.put("number_of_replicas", replicas);
+        }
+        if (!settings.isEmpty()) {
+            body.put("settings", settings);
+        }
+        if (properties != null && !properties.isEmpty()) {
+            body.put("mappings", Map.of("properties", properties));
+        }
+        return body;
+    }
+
+    /**
      * 递归展开 mapping.properties：对象/嵌套字段继续下钻，叶子字段落成一行
      */
     private void flatten(JsonObject properties, String prefix, List<ElasticsearchFieldVO> out) {
@@ -375,6 +430,22 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         } catch (IllegalStateException e) {
             // 复核请求本身失败：无法证明索引已建，交回调用方按失败处理
             return false;
+        }
+    }
+
+    /**
+     * 文档数（重建索引前后做一致性校验用）
+     *
+     * @param target 访问目标
+     * @param index  索引名
+     * @return 文档数，取不到返回 -1
+     */
+    private long docCount(ElasticsearchClient.Target target, String index) {
+        try {
+            Object value = client.count(target, index).get("count");
+            return value == null ? -1L : Long.parseLong(String.valueOf(value));
+        } catch (RuntimeException e) {
+            return -1L;
         }
     }
 

@@ -72,11 +72,7 @@ public class TrainController {
             String savedPath = dataService.saveUploadedFile(file.getBytes(), fileName);
             String dataPath = dataService.unzip(savedPath);
             TrainTask task = trainService.createTask(fileName, dataPath);
-            return ReturnResult.ok(TrainUploadView.builder()
-                    .taskId(task.getId())
-                    .fileName(fileName)
-                    .dataPath(dataPath)
-                    .build());
+            return ReturnResult.ok(new TrainUploadView(task.getId(), fileName, dataPath));
         } catch (Exception e) {
             log.error("[Train] 上传失败", e);
             return ReturnResult.error("上传失败: " + e.getMessage());
@@ -100,13 +96,13 @@ public class TrainController {
         try {
             // 续训练模式下，将续训配置合并到任务超参数（领域行为封装在请求对象内）
             if (request.isResumeMode()) {
-                trainService.updateArgument(request.getTaskId(), request.toArgument());
+                trainService.updateArgument(request.taskId(), request.toArgument());
             }
  // 类型 随启动请求传入（缺省 resnet50，由任务领域对象锁定）
-            trainService.startTraining(request.getTaskId(), request.getType());
+            trainService.startTraining(request.taskId(), request.type());
             return ReturnResult.ok();
         } catch (Exception e) {
-            log.error("[Train] 启动训练失败: taskId={}", request.getTaskId(), e);
+            log.error("[Train] 启动训练失败: taskId={}", request.taskId(), e);
             return ReturnResult.error("启动训练失败: " + e.getMessage());
         }
     }
@@ -155,10 +151,10 @@ public class TrainController {
     @PostMapping("/argument")
     public ReturnResult<Void> updateArgument(@RequestBody @Valid TrainArgumentRequest request) {
         try {
-            trainService.updateArgument(request.getTaskId(), request.toArgument());
+            trainService.updateArgument(request.taskId(), request.toArgument());
             return ReturnResult.ok();
         } catch (Exception e) {
-            log.error("[Train] 更新超参数失败: taskId={}", request.getTaskId(), e);
+            log.error("[Train] 更新超参数失败: taskId={}", request.taskId(), e);
             return ReturnResult.error("更新超参数失败: " + e.getMessage());
         }
     }

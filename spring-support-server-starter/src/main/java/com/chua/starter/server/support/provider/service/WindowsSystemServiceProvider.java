@@ -143,14 +143,27 @@ public class WindowsSystemServiceProvider implements SystemServiceProvider {
         ps.append("  if ($null -eq (Get-ItemProperty -Path $__runKey -Name '").append(serviceName)
                 .append("' -ErrorAction SilentlyContinue)) { throw '挂载失败: 注册表启动项未写入' }\n");
         if (createsGuard) {
-            // 用 WMI 拉起常驻看门狗（父进程为 WmiPrvSE，跨会话存活），并等 pid 文件落地
-            ps.append("  Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = ")
+            // 用 WMI 拉起常驻看门狗（父进程为 WmiPrvSE，跨会话存活），并等 pid 文件落地。
+            // 旧实现只等 10s（20×500ms）：WmiPrvSE + PowerShell 冷启动在负载高的机器上会超时，
+            // 实测本机 pid 文件落地耗时 31s，表现为「挂载失败: 守护进程未拉起」但机器上实际已挂载
+            //（任务判失败、状态谎报）。现改为：WMI 返回码必须为 0；最多等 180s；且必须核验
+            // pid 对应一个存活进程（防陈旧 pid 文件把「没起来」误判成「起来了」）。
+            ps.append("  $__r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = ")
                     .append("'powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy BYPASS -File \"")
-                    .append(residentPath).append("\"' } | Out-Null\n");
+                    .append(residentPath).append("\"' }\n");
+            ps.append("  if ($null -eq $__r -or $__r.ReturnValue -ne 0) { throw ('挂载失败: WMI 拉起守护进程失败 code=' ")
+                    .append("+ $(if ($null -eq $__r) { 'null' } else { $__r.ReturnValue })) }\n");
             ps.append("  $__ok = $false\n");
-            ps.append("  for ($i = 0; $i -lt 20; $i++) { if (Test-Path '").append(pidPath)
-                    .append("') { $__ok = $true; break }; Start-Sleep -Milliseconds 500 }\n");
-            ps.append("  if (-not $__ok) { throw '挂载失败: 守护进程未拉起' }\n");
+            ps.append("  for ($i = 0; $i -lt 360; $i++) {\n");
+            ps.append("    if (Test-Path '").append(pidPath).append("') {\n");
+            ps.append("      $__wp = (Get-Content '").append(pidPath)
+                    .append("' -ErrorAction SilentlyContinue | Select-Object -First 1)\n");
+            ps.append("      if ($__wp -match '^\\d+$' -and $null -ne (Get-Process -Id ([int]$__wp) ")
+                    .append("-ErrorAction SilentlyContinue)) { $__ok = $true; break }\n");
+            ps.append("    }\n");
+            ps.append("    Start-Sleep -Milliseconds 500\n");
+            ps.append("  }\n");
+            ps.append("  if (-not $__ok) { throw '挂载失败: 守护进程未拉起（60s 内未出现存活看门狗）' }\n");
         }
         ps.append("}\n");
         ps.append("Write-Output '挂载完成: ").append(serviceName).append("'\n");

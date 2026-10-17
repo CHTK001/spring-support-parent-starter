@@ -5,6 +5,7 @@ import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
+import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ChatMessage;
@@ -1182,20 +1183,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
         boolean mcpOn = false;
         boolean subAgentOn = false;
-        boolean localOn = false;
         if (plugins != null) {
             mcpOn = isEnabledNode(plugins.get("mcp"));
             subAgentOn = isEnabledNode(plugins.get("sub_agent"));
-            for (Map.Entry<?, ?> e : plugins.entrySet()) {
-                String key = String.valueOf(e.getKey());
-                // 保留键：策略标记 + 三个已知能力节点；其余启用节点视为本地工具
-                if (key.startsWith("__") || "mcp".equals(key) || "skill".equals(key) || "sub_agent".equals(key)) {
-                    continue;
-                }
-                if (isEnabledNode(e.getValue())) {
-                    localOn = true;
-                }
-            }
         }
 
         // Plan 只读模式（Build 为默认）；仅管理员经 Agent 生效
@@ -1208,23 +1198,22 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         String agentWorkspace = resolveSessionWorkspace(request.getSessionId());
         boolean hasWorkspace = agentWorkspace != null && !agentWorkspace.isBlank();
 
-        // MCP / 本地工具 / 子代理 / Plan 均未开启：
+        // MCP / 子代理 / Plan 均未开启：
         //  - 管理员且**本会话没有工作间**时保持原行为（直连，等价普通直答），避免给纯聊天凭空加一层 Agent 开销；
         //  - 普通账号、以及任何有工作间的会话仍然构建 Agent —— 他们要的正是「有自己的工作间」+ 文件工具。
-        if (!mcpOn && !localOn && !subAgentOn && !planOn && admin && !hasWorkspace) {
+        if (!mcpOn && !subAgentOn && !planOn && admin && !hasWorkspace) {
             log.debug("[AiChat] 管理员会话未启用任何 Agent 能力且无工作间，保持标准非 Agent 客户端 model={}",
                     request.getModel());
             return configured;
         }
 
-        // MCP/本地工具启用时实时连接，构建私有运行时：
-        //  - MCP 开：catalogIds 为会话所选（null=全部启用目录服务器）；
-        //  - MCP 关、仅本地工具：连接零目录服务器，仅追加已启用的 .mcp.json 本地工具
-        java.util.Collection<String> mcpIds = plugins != null ? extractMcpIds(plugins.get("mcp")) : null;
-        boolean needRuntime = mcpOn || localOn;
-        java.util.Collection<String> catalogIds = mcpOn ? mcpIds : java.util.List.of();
-        AgentMcpRuntimeService.McpRuntime runtime = needRuntime
-                ? agentMcpRuntimeService.build(catalogIds) : null;
+        // MCP 启用时实时连接，构建私有运行时：
+        //  - 会话级 serverIds 优先；否则按角色的 allow/deny 名单收敛（null=连接全部启用服务器）
+        McpSelection mcpSelection = plugins != null ? extractMcpSelection(plugins.get("mcp")) : McpSelection.none();
+        java.util.Collection<String> catalogIds = mcpOn ? mcpSelection.only() : java.util.List.of();
+        java.util.Collection<String> excludeIds = mcpOn ? mcpSelection.exclude() : null;
+        AgentMcpRuntimeService.McpRuntime runtime = mcpOn
+                ? agentMcpRuntimeService.build(catalogIds, excludeIds) : null;
 
         // Agent 标识按会话稳定：初始轮与人工确认恢复轮（可能跨重启）必须落到同一
         // agent 目录 / 状态键，否则恢复时读不到待确认请求。String.hashCode 跨 JVM 稳定。
@@ -1248,7 +1237,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .definition(definition)
                 // 子代理编排存在时 AUTO 路由，否则 SINGLE（主 Agent 直接调用工具）
                 .mode(subAgentOn ? AgentMode.AUTO : AgentMode.SINGLE)
-                .mcp(mcpOn || localOn);
+                .mcp(mcpOn);
         // 业务会话标识作为 defaultSessionId：进入 Plan / 读取 AgentState 必需，缺失会抛 NPE
         if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
             agent.sessionId(request.getSessionId());
@@ -1268,6 +1257,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (runtime != null) {
             agent.mcpManager(runtime.getManager());
         }
+        // 角色技能必须注册成 Agent 的技能工具：Agent 运行时以 definition 的 system prompt
+        // 为准，不会继承底层 ChatClient 的 skillPrompt，只靠提示词注入等于没生效。
+        applySessionSkills(agent, request);
         if (planOn) {
             // 注册 Plan 能力并在首轮即进入只读，不产生文件写入/命令执行等副作用
             agent.plan(true).startInPlanMode(true);
@@ -1280,9 +1272,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .withCloseHook(runtime != null ? runtime::close : null);
         // 日志文案不能写死「管理员会话」：统一之后普通账号也走这条路径，
         // 写死会在排查时把人引到「这一定是管理员在操作」的错误结论上。
-        log.info("[AiChat] 会话切换到 Agent 运行时 userId={}, admin={}, agentId={}, mode={}, mcp={}, subAgent={}, local={}, plan={}",
+        log.info("[AiChat] 会话切换到 Agent 运行时 userId={}, admin={}, agentId={}, mode={}, mcp={}, subAgent={}, plan={}",
                 AiUserContext.currentUserId(), admin, agentId, subAgentOn ? "AUTO" : "SINGLE",
-                mcpOn, subAgentOn, localOn, planOn);
+                mcpOn, subAgentOn, planOn);
         return wrapper;
     }
 
@@ -1382,28 +1374,122 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 从 MCP 节点提取会话显式选择的服务器ID集合。
-     * @param node MCP 插件节点
-     * @return null 表示未显式选择（连接全部启用）；空集合表示显式不连；非空表示只连所选
+     * 角色 MCP 选择结果。
+     *
+     * <p>{@code only} 非 null 表示白名单（只连这些服务器）；{@code exclude} 非 null 表示
+     * 黑名单（在「全部启用」基础上排除这些服务器）。二者互斥，最多一个非 null。</p>
+     *
+     * @param only    白名单服务器ID；null 表示不限定
+     * @param exclude 黑名单服务器ID；null 表示不排除
      */
-    private static java.util.Collection<String> extractMcpIds(Object node) {
-        if (!(node instanceof Map<?, ?> m)) {
-            return null;
+    private record McpSelection(java.util.Collection<String> only, java.util.Collection<String> exclude) {
+        static McpSelection none() {
+            return new McpSelection(null, null);
         }
-        Object serverIds = m.get("serverIds");
-        if (!(serverIds instanceof List<?> list)) {
+    }
+
+    /**
+     * 解析角色 MCP 节点的服务器选择。
+     *
+     * <p>口径与角色配置面板一致：会话级 {@code serverIds} 优先；否则读角色写入的
+     * {@code toolkits_filter=allow|deny} + {@code toolkits_allow|toolkits_deny}
+     * （ID 带 {@code mcp_} 前缀，读取时剥掉）。都不满足时返回「不限定」，即连接全部启用服务器。</p>
+     *
+     * @param node MCP 插件节点
+     * @return MCP 选择
+     */
+    private static McpSelection extractMcpSelection(Object node) {
+        if (!(node instanceof Map<?, ?> m)) {
+            return McpSelection.none();
+        }
+        // 会话级显式选择优先于角色默认
+        java.util.Collection<String> sessionIds = toIdSet(m.get("serverIds"), null);
+        if (sessionIds != null && !sessionIds.isEmpty()) {
+            return new McpSelection(sessionIds, null);
+        }
+        String filter = m.get("toolkits_filter") != null
+                ? String.valueOf(m.get("toolkits_filter")).trim().toLowerCase() : "";
+        if ("allow".equals(filter)) {
+            java.util.Collection<String> allow = toIdSet(m.get("toolkits_allow"), "mcp_");
+            // 白名单模式：列表为空即「一个都不连」，绝不能退回「连全部」
+            return new McpSelection(allow != null ? allow : java.util.List.of(), null);
+        }
+        if ("deny".equals(filter)) {
+            java.util.Collection<String> deny = toIdSet(m.get("toolkits_deny"), "mcp_");
+            if (deny != null && !deny.isEmpty()) {
+                return new McpSelection(null, deny);
+            }
+        }
+        return McpSelection.none();
+    }
+
+    /**
+     * 把 JSON 数组节点转成字符串ID集合。
+     *
+     * @param node        JSON 节点
+     * @param stripPrefix 需要剥离的前缀（可为 null）
+     * @return ID 集合；节点不是数组时返回 null
+     */
+    private static java.util.Collection<String> toIdSet(Object node, String stripPrefix) {
+        if (!(node instanceof List<?> list)) {
             return null;
         }
         java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
         for (Object o : list) {
-            if (o != null) {
-                String v = String.valueOf(o).trim();
-                if (!v.isEmpty()) {
-                    ids.add(v);
-                }
+            if (o == null) {
+                continue;
+            }
+            String v = String.valueOf(o).trim();
+            if (stripPrefix != null && !stripPrefix.isEmpty() && v.startsWith(stripPrefix)) {
+                v = v.substring(stripPrefix.length());
+            }
+            if (!v.isEmpty()) {
+                ids.add(v);
             }
         }
         return ids;
+    }
+
+    /**
+     * 把角色启用/会话选中的技能注册到 Agent 上，成为可被大模型调用的技能工具。
+     *
+     * <p>技能正文来自 {@link ChatSkillSupport#skills()}（磁盘 builtin/user 目录，受全局
+     * 禁用名单约束）。{@code request.getSkillNames()} 已由编排器合并了即时选择与角色默认技能。</p>
+     *
+     * @param agent   目标 Agent 实例
+     * @param request 对话请求（携带 skillNames）
+     */
+    private void applySessionSkills(Agent agent, AiChatRequest request) {
+        List<String> names = request.getSkillNames();
+        if (names == null || names.isEmpty()) {
+            return;
+        }
+        java.util.Set<String> wanted = new java.util.LinkedHashSet<>();
+        for (String n : names) {
+            if (n != null && !n.isBlank()) {
+                wanted.add(n.trim());
+            }
+        }
+        if (wanted.isEmpty()) {
+            return;
+        }
+        java.util.Map<String, SkillDefinition> defs = new java.util.LinkedHashMap<>();
+        for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
+            if (!skill.enabled() || !wanted.contains(skill.name()) || defs.containsKey(skill.name())) {
+                continue;
+            }
+            defs.put(skill.name(), SkillDefinition.text(skill.name(), skill.description(), skill.content()));
+        }
+        for (SkillDefinition def : defs.values()) {
+            agent.skill(def.getName(), def.getDescription(), def.getHandler());
+        }
+        if (!defs.isEmpty()) {
+            log.info("[AiChat] 会话已注册角色技能 {} 个（选择 {} 个）: {}",
+                    defs.size(), wanted.size(), defs.keySet());
+        } else {
+            log.warn("[AiChat] 角色选择了 {} 个技能，但本机未找到可用技能正文（可能未安装或已被全局禁用）: {}",
+                    wanted.size(), wanted);
+        }
     }
 
     /**

@@ -30,6 +30,20 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId);
 
     /**
+     * 记录错题（带试卷归因）。
+     *
+     * <p>与四参重载的区别：额外落 {@code wrong_question_paper_id}，
+     * 让错题能回答「来自哪张试卷」。老师点「阅卷完成」时走本重载。</p>
+     *
+     * @param studentId   学生标识
+     * @param questionId  题目标识
+     * @param examId      考试标识
+     * @param ownerUserId 归属用户标识
+     * @param paperId     试卷标识（可空：任意卷没有对应试卷）
+     */
+    void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId, Long paperId);
+
+    /**
      * 分页查询错题
      *
      * @param query 查询条件

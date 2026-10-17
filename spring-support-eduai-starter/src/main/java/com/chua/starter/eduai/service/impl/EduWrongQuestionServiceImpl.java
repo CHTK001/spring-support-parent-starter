@@ -32,16 +32,25 @@ import java.util.stream.Collectors;
 public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMapper, EduWrongQuestion> implements IEduWrongQuestionService {
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    /**
-     * recordwrongquestion
-     *
-     * @param studentId studentid
-     * @param questionId questionid
-     * @param examId examid
-     * @param ownerUserId 归属用户标识
-     */
     public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId) {
+        recordWrongQuestion(studentId, questionId, examId, ownerUserId, null);
+    }
+
+    /**
+     * 记录错题（带试卷归因）。
+     *
+     * <p>同一 (学生, 题目) 只保留一行并累加错误次数（唯一键口径），
+     * 因此调用方需保证同一份卷只登记一次（见阅卷「完成」的幂等标记）。</p>
+     *
+     * @param studentId   学生标识
+     * @param questionId  题目标识
+     * @param examId      考试标识
+     * @param ownerUserId 归属用户标识
+     * @param paperId     试卷标识（可空：任意卷没有对应试卷）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId, Long paperId) {
         EduWrongQuestion existing = baseMapper.selectOneByStudentQuestionOwner(studentId, questionId, ownerUserId);
 
         if (existing == null) {
@@ -57,6 +66,10 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             existing.setWrongQuestionWrongCount(existing.getWrongQuestionWrongCount() + 1);
             existing.setWrongQuestionLastWrongTime(LocalDateTime.now());
             existing.setWrongQuestionMasteryLevel(0); // 重置为未掌握
+            // 历史行可能没有试卷归因：本次带了就补上（已有值不覆盖）
+            if (existing.getWrongQuestionPaperId() == null && paperId != null) {
+                existing.setWrongQuestionPaperId(paperId);
+            }
             existing.setUpdateTime(LocalDateTime.now());
             baseMapper.updateById(existing);
         } else {
@@ -65,6 +78,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             entity.setWrongQuestionStudentId(studentId);
             entity.setWrongQuestionQuestionId(questionId);
             entity.setWrongQuestionExamId(examId);
+            entity.setWrongQuestionPaperId(paperId);
             entity.setWrongQuestionWrongCount(1);
             entity.setWrongQuestionMasteryLevel(0);
             entity.setWrongQuestionLastWrongTime(LocalDateTime.now());
@@ -102,9 +116,9 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      * generate评审paper
     */
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
-        int count = dto.getCount() != null ? dto.getCount() : 10;
+        int count = dto.count() != null ? dto.count() : 10;
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
-        List<EduWrongQuestion> list = baseMapper.selectReviewQuestions(dto.getStudentId(), count, scope);
+        List<EduWrongQuestion> list = baseMapper.selectReviewQuestions(dto.studentId(), count, scope);
         return list.stream()
                 .map(EduWrongQuestion::getWrongQuestionQuestionId)
                 .collect(Collectors.toList());
@@ -141,15 +155,15 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      * @return 转为vo的结果
      */
     private WrongQuestionVO toVO(EduWrongQuestion entity) {
-        WrongQuestionVO vo = new WrongQuestionVO();
-        vo.setWrongQuestionId(entity.getWrongQuestionId());
-        vo.setWrongQuestionStudentId(entity.getWrongQuestionStudentId());
-        vo.setWrongQuestionQuestionId(entity.getWrongQuestionQuestionId());
-        vo.setWrongQuestionWrongCount(entity.getWrongQuestionWrongCount());
-        vo.setWrongQuestionMasteryLevel(entity.getWrongQuestionMasteryLevel());
-        vo.setWrongQuestionLastWrongTime(entity.getWrongQuestionLastWrongTime());
-        vo.setWrongQuestionLastReviewTime(entity.getWrongQuestionLastReviewTime());
-        vo.setWrongQuestionReviewCount(entity.getWrongQuestionReviewCount());
-        return vo;
+        return new WrongQuestionVO(
+                entity.getWrongQuestionId(),
+                entity.getWrongQuestionStudentId(),
+                entity.getWrongQuestionQuestionId(),
+                entity.getWrongQuestionWrongCount(),
+                entity.getWrongQuestionMasteryLevel(),
+                entity.getWrongQuestionLastWrongTime(),
+                entity.getWrongQuestionLastReviewTime(),
+                entity.getWrongQuestionReviewCount(),
+                entity.getWrongQuestionPaperId());
     }
 }
