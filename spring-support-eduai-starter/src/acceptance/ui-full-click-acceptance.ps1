@@ -1401,18 +1401,33 @@ $studentId = if ($stu -and $stu.json) { $stu.json.data } else { $null }
 if ($list -and $list.json -and $list.json.data) { foreach ($s in @($list.json.data)) { if ($s.studentId -eq $studentId) { $studentNo = $s.studentNo } } }
     Ck 'student number resolved' ([bool]$studentNo) "studentNo=$studentNo"
     if (-not $studentNo) { Write-Host 'fixture incomplete'; exit 2 }
-    $slogin = Api POST '/v2/user/login' @{ username = $studentNo; password = $StudentPwd; authType = 'STUDENT' } ''
+    # 后端 AccountTypeLoginHandler 按 **accountType** 选凭据实现（LoginHandler 扩展名拼成
+    # loginType-accountType；为空则回退默认凭据链，学生号自然找不到 -> 「账号或密码不正确」）。
+    # 前端 studentLogin 也是同时发 authType + accountType（eduaiApi.ts:770），这里必须补 accountType，
+    # 否则夹具下的 API 登录必失败、强制改密那一步被跳过。
+    $slogin = Api POST '/v2/user/login' @{ username = $studentNo; password = $StudentPwd; authType = 'STUDENT'; accountType = 'student' } ''
 $stok = if ($slogin -and $slogin.json) { $slogin.json.data.accessToken } else { '' }
     Ck 'student api login' ([bool]$stok) ''
-    if ($stok) {
+    # 只在「后端确实要求改密」且「接口返回成功 code=00000」时才切换口令。
+    # 2026-10-18 实测：/v2/edu/student/me 在「登录账号未关联到学生档案」时只返回
+    # {bound:false,teacherBound:...}（没有 mustChangePassword），此时调用
+    # /v2/edu/student/change-password 会被后端拒绝（HTTP 400「学生档案不存在」）。
+    # 旧写法只看响应对象是否为 $null（Api 用 SkipHttpErrorCheck，400 也返回对象），
+    # 于是把 StudentPwdEff 换成那个**从未生效**的新口令，随后的浏览器登录必然失败，
+    # 整条学生路由退化成「反复弹回 /login、只点到 2 个控件」的假结果——看起来像产品缺陷。
+    $me = Api GET '/v2/edu/student/me' $null $stok
+    $mustChange = [bool]($me -and $me.json -and $me.json.data -and $me.json.data.mustChangePassword)
+    Ck 'student /me read for must-change flag' ($null -ne $me) "mustChangePassword=$mustChange"
+    if ($mustChange) {
         $final = 'Uiacc@' + (Get-Random -Minimum 10000 -Maximum 99999)
         $ch = Api POST '/v2/edu/student/change-password' @{ oldPassword = $StudentPwd; newPassword = $final } $stok
         # A DIFFERENT value on purpose: re-using the same password leaves MUST_CHANGE set, and the
         # portal then sits behind a non-dismissible 'first login: change the initial password'
         # dialog (no close button, ESC does nothing) -- that blocked two controls in every
         # student run until the fixture was fixed.
-        Ck 'initial password changed to a NEW value (clears the forced dialog)' ($null -ne $ch) ''
-        if ($null -ne $ch) { $script:StudentPwdEff = $final }
+        $chOk = [bool]($ch -and $ch.json -and $ch.json.code -eq '00000')
+        Ck 'forced password change applied (clears the first-login dialog)' $chOk ''
+        if ($chOk) { $script:StudentPwdEff = $final }
     }
     $logged = $false
     for ($t = 1; $t -le 3; $t++) {

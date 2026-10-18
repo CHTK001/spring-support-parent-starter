@@ -12,6 +12,10 @@ import com.chua.starter.eduai.model.vo.MarkingSettingVO;
 import com.chua.starter.eduai.service.MarkingSettingService;
 import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
+import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.MemoryChatClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,10 +50,11 @@ import java.util.stream.Collectors;
 public class EduAiService {
 
     /**
-     * AI 对话客户端。
+     * AI 对话客户端（兜底）。
      *
-     * <p>直接使用 spring-support-ai-starter 提供的 ChatClient bean（其 AiConfiguration
-     * 会把类路径上全部 ChatClient 实现聚合为一个），业务侧不关心底层是哪个厂商、哪种形态。</p>
+     * <p>spring-support-ai-starter 的 {@code AiConfiguration} 会把类路径上全部 ChatClient
+     * 实现聚合为一个 bean。它只在 {@link #resolveClient()} 前三级都取不到客户端时使用
+     * （即 AI 控制台完全没配过模型的情况）。</p>
      */
     @Autowired(required = false)
     private ChatClient chatClient;
@@ -63,7 +68,34 @@ public class EduAiService {
     @Autowired(required = false)
     private AiChatProperties aiChatProperties;
     /**
-     * 对话客户端注册表；仅在显式指定 eduai.ai.provider 时用于取对应厂商的客户端
+     * 生效对话模型解析器（AI 控制台 UI 配置的唯一解析入口）。
+     *
+     * <p>用于「能力探测」回显 UI 里真正生效的厂商/模型；缺该 bean 时回退 YAML 口径。</p>
+     */
+    @Autowired(required = false)
+    private EffectiveChatModelResolver effectiveChatModelResolver;
+    /**
+     * 全局设置读取器（AI 控制台 UI 配置落库后的统一读取入口）。
+     *
+     * <p>用于读取 {@code runtime} 分组（LLM 主链路：provider/api_key/base_url/model），
+     * 与 {@code RagClientManager} 保持同一口径。</p>
+     */
+    @Autowired(required = false)
+    private GlobalSettingReader globalSettingReader;
+    /**
+     * runtime 主链路配置签名（provider|baseUrl|model|apiKey），用于配置变更后重建客户端。
+     */
+    private volatile String runtimeClientSignature;
+    /**
+     * 按 runtime 主链路配置构建的对话客户端缓存。
+     */
+    private volatile ChatClient runtimeClientCache;
+    /**
+     * 对话客户端注册表。
+     *
+     * <p>两处用途：① 显式指定 {@code eduai.ai.provider} 时按 provider 取客户端；
+     * ② 取注册中心默认客户端 —— AI 控制台「默认模型」保存时由 {@code ChatClientHotUpdater}
+     * 热更新登记的那个。</p>
      */
     @Autowired(required = false)
     private ChatClientRegistry chatClientRegistry;
@@ -109,24 +141,48 @@ public class EduAiService {
     /**
      * 探测 AI 能力，给出「可用与否 + 不可用的具体原因」。
      *
-     * <p>判定只看一件事：有没有可用的 {@link ChatClient} bean。该 bean 由
-     * spring-support-ai-starter 提供，因此这一条同时覆盖了「没依赖该 starter」
-     * 与「依赖了但一个实现都没有」两种情况。业务侧不区分底层是本地模型还是远端大模型、
-     * 是哪个厂商 —— 那是 spring-support-ai-starter 的事。</p>
+     * <p>判定只看一件事：{@link #resolveClient()} 能不能解析出客户端 —— 它会依次尝试
+     * {@code eduai.ai.provider}、AI 控制台 runtime 主链路、注册中心默认客户端、注入的
+     * {@link ChatClient} bean。该链路同时覆盖了「没依赖 spring-support-ai-starter」与
+     * 「依赖了但一个实现都没有、UI 也没配」两种情况。业务侧不区分底层是本地模型还是
+     * 远端大模型、是哪个厂商 —— 那是 spring-support-ai-starter 的事。</p>
      *
-     * <p>另外单独检查 YAML 配置（{@code chua.ai.chat}）是否「开了却没配密钥」：
-     * 那种情形下 ai-starter 按条件不创建客户端，这里给出**可操作**的原因，
-     * 而不是笼统的「未提供客户端」。</p>
+     * <p>回显的厂商/模型取「实际生效」值：AI 控制台「系统设置」runtime 分组 &gt; UI 默认模型
+     * &gt; 旧 YAML（{@code chua.ai.chat}，已不再推荐）&gt; 本模块自身配置。</p>
+     *
+     * <p>另外仍兼容检查旧 YAML 配置（{@code chua.ai.chat}）是否「开了却没配密钥」：
+     * 那种情形下 ai-starter 按条件不创建客户端，这里给出**可操作**的原因。</p>
      *
      * @return AI 能力探测结果
      */
     public EduAiCapabilityVO capability() {
-        // 回显「实际生效」的厂商与模型：YAML 配置优先，回落到 eduai 自身配置。
+        // 回显「实际生效」的厂商与模型：以 AI 控制台 UI 配置（DB）为准 ——
+        // EffectiveChatModelResolver 是「该用哪个模型对话」的全项目唯一解析入口
+        // （runtime/default_model > 兼容旧键 models.defaultChatModelId）。
+        // 缺 UI 解析器、或 UI 未配置时，回落到 YAML（chua.ai.chat）与 eduai 自身配置。
         // 前端只用 available/reason，这两个字段是给人看的，取生效值才不会误导。
+        String effective = null;
+        if (effectiveChatModelResolver != null) {
+            try {
+                effective = effectiveChatModelResolver.resolve(null);
+            } catch (Exception e) {
+                log.debug("[EduAi] 解析 UI 默认对话模型失败: {}", e.getMessage());
+            }
+        }
+        // runtime 主链路只有 provider + api_key 都配了才会被 resolveClient() 采用，
+        // 回显必须与之同判据，否则会出现「显示 openai/gpt-4o、实际用的是别的」的误导。
+        String runtimeProvider = runtimeSetting("provider");
+        String runtimeModel = runtimeSetting("default_model");
+        boolean runtimeUsable = StringUtils.hasText(runtimeProvider)
+                && StringUtils.hasText(runtimeSetting("provider_api_key"));
         String provider = firstNonBlank(
+                runtimeUsable ? runtimeProvider : null,
+                headOf(effective),
                 aiChatProperties == null ? null : aiChatProperties.provider(),
                 properties.getAi().getProvider());
         String model = firstNonBlank(
+                runtimeUsable ? runtimeModel : null,
+                tailOf(effective),
                 aiChatProperties == null ? null : aiChatProperties.model(),
                 properties.getAi().getModel());
 
@@ -155,11 +211,65 @@ public class EduAiService {
      * @param second 回落值，可为 null
      * @return 首个非空白值；都为空白时返回 null
      */
-    private static String firstNonBlank(String first, String second) {
-        if (StringUtils.hasText(first)) {
-            return first.trim();
+    private static String firstNonBlank(String... values) {
+        if (values != null) {
+            for (String value : values) {
+                if (StringUtils.hasText(value)) {
+                    return value.trim();
+                }
+            }
         }
-        return StringUtils.hasText(second) ? second.trim() : null;
+        return null;
+    }
+
+    /**
+     * 读取 AI 控制台「系统设置」{@code runtime} 分组的字段值。
+     *
+     * @param field 字段名，如 {@code provider} / {@code default_model}
+     * @return 字段值；未注入读取器、未配置或读取异常时返回 null
+     */
+    private String runtimeSetting(String field) {
+        if (globalSettingReader == null) {
+            return null;
+        }
+        try {
+            return globalSettingReader.getStr("runtime", field);
+        } catch (Exception e) {
+            log.debug("[EduAi] 读取 runtime.{} 失败: {}", field, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 取「provider:model」复合取值的 provider 前缀。
+     *
+     * <p>UI 的取值两种写法都可能出现：{@code agnes:agnes-3.0-flash}（provider 名前缀）
+     * 与 {@code 1789547286889:agnes-3.0-flash}（数字 providerId 前缀）。</p>
+     *
+     * @param composite 复合取值，可为 null
+     * @return 前缀；无前缀时返回 null
+     */
+    private static String headOf(String composite) {
+        if (composite == null) {
+            return null;
+        }
+        int idx = composite.indexOf(':');
+        return idx > 0 ? composite.substring(0, idx).trim() : null;
+    }
+
+    /**
+     * 取「provider:model」复合取值的模型名；无前缀时原样返回。
+     *
+     * @param composite 复合取值，可为 null
+     * @return 模型名；空值时返回 null
+     */
+    private static String tailOf(String composite) {
+        if (composite == null) {
+            return null;
+        }
+        int idx = composite.indexOf(':');
+        String v = idx > 0 ? composite.substring(idx + 1) : composite;
+        return v.isBlank() ? null : v.trim();
     }
 
     /**
@@ -654,15 +764,24 @@ public class EduAiService {
     }
 
     /**
-     * 解析 对话客户端。
+     * 解析对话客户端。
      *
-     * <p>默认直接用注入的聚合 {@link ChatClient} bean —— 业务不关心背后是哪个厂商或形态。
-     * 仅当显式配置了 {@code eduai.ai.provider} 时，才优先取该 provider 对应的客户端，
-     * 取不到就仍回落到聚合 bean。</p>
+     * <p>解析顺序（第一个可用者胜出）：</p>
+     * <ol>
+     *   <li>显式配置了 {@code eduai.ai.provider} 时，取该 provider 对应的客户端；</li>
+     *   <li>AI 控制台「系统设置」的 {@code runtime} 分组（LLM 主链路：provider / api_key /
+     *       base_url / model），配置齐全时直接按它构建；</li>
+     *   <li>{@link ChatClientRegistry} 的默认客户端 —— AI 控制台「默认模型」保存时由
+     *       {@code ChatClientHotUpdater} 按「厂商表 + Key」热更新登记；</li>
+     *   <li>兜底：容器注入的 {@link ChatClient} bean（UI 未配置时的聚合客户端）。</li>
+     * </ol>
+     *
+     * <p>由此保证「AI 控制台配置页改完即生效」，且不再依赖 {@code chua.ai.chat} YAML。</p>
      *
      * @return 可用的对话客户端；都没有时返回 null
      */
     private ChatClient resolveClient() {
+        // ① 显式指定 eduai.ai.provider 时，优先取该 provider 对应的客户端
         String provider = properties.getAi().getProvider();
         if (chatClientRegistry != null && StringUtils.isNotBlank(provider)) {
             ChatClient byProvider = chatClientRegistry.getByProvider(provider);
@@ -670,7 +789,83 @@ public class EduAiService {
                 return byProvider;
             }
         }
+        // ② AI 控制台「系统设置」的 runtime 分组 = LLM 主链路配置。
+        //    与 RagClientManager#buildRuntimeChatClient 同口径：provider/apiKey/baseUrl/model
+        //    齐备时直接按它构建真实客户端 —— 不依赖厂商表，也不会被「聚合客户端」抢先。
+        ChatClient runtimeClient = buildRuntimeChatClient();
+        if (runtimeClient != null) {
+            return runtimeClient;
+        }
+        // ③ 注册中心默认客户端：AI 控制台「默认模型」保存时由 ChatClientHotUpdater 热更新登记
+        //    （models.defaultChatModelId -> 厂商表 + Key -> ChatClient -> setDefault）。
+        if (chatClientRegistry != null) {
+            ChatClient registryDefault = chatClientRegistry.getDefault();
+            if (registryDefault != null && !(registryDefault instanceof MemoryChatClient)) {
+                return registryDefault;
+            }
+        }
+        // ④ 兜底：容器里注入的 ChatClient（UI 未配置时的聚合客户端）
         return chatClient;
+    }
+
+    /**
+     * 按 AI 控制台「系统设置」的 runtime 分组构建真实对话客户端。
+     *
+     * <p>与 {@code RagClientManager#buildRuntimeChatClient} 保持同一口径：读取
+     * {@code provider}/{@code provider_api_key}/{@code provider_base_url}/{@code default_model}
+     * 及可选的自定义认证方案。配置不完整（缺 provider 或 api_key）时返回 {@code null}，
+     * 由 {@link #resolveClient()} 继续回落。</p>
+     *
+     * <p>客户端按配置签名缓存：UI 改了 provider/模型/密钥任一字段，签名变化即自动重建，
+     * 无需重启后端。</p>
+     *
+     * @return 可用的对话客户端；未配置或构建失败时返回 null
+     */
+    private ChatClient buildRuntimeChatClient() {
+        if (globalSettingReader == null) {
+            return null;
+        }
+        String provider;
+        String apiKey;
+        String baseUrl;
+        String model;
+        try {
+            provider = globalSettingReader.getStr("runtime", "provider");
+            apiKey = globalSettingReader.getStr("runtime", "provider_api_key");
+            baseUrl = globalSettingReader.getStr("runtime", "provider_base_url");
+            model = globalSettingReader.getStr("runtime", "default_model");
+        } catch (Exception e) {
+            log.debug("[EduAi] 读取 runtime 主链路配置失败: {}", e.getMessage());
+            return null;
+        }
+        if (!StringUtils.hasText(provider) || !StringUtils.hasText(apiKey)) {
+            return null;
+        }
+        String signature = provider + "|" + baseUrl + "|" + model + "|" + apiKey;
+        if (signature.equals(runtimeClientSignature) && runtimeClientCache != null) {
+            return runtimeClientCache;
+        }
+        try {
+            ChatClientSetting setting = ChatClientSetting.builder()
+                    .provider(provider.trim())
+                    .appKey(apiKey.trim())
+                    .baseUrl(StringUtils.hasText(baseUrl) ? baseUrl.trim() : null)
+                    .model(StringUtils.hasText(model) ? model.trim() : null)
+                    .authScheme(globalSettingReader.getStr("runtime", "provider_auth_scheme"))
+                    .authHeader(globalSettingReader.getStr("runtime", "provider_auth_header"))
+                    .authPrefix(globalSettingReader.getStr("runtime", "provider_auth_prefix"))
+                    .build();
+            ChatClient client = ChatClient.create(setting);
+            if (client != null) {
+                runtimeClientSignature = signature;
+                runtimeClientCache = client;
+                log.info("[EduAi] 已按 AI 控制台 runtime 配置创建对话客户端: provider={}, model={}", provider, model);
+            }
+            return client;
+        } catch (Exception e) {
+            log.warn("[EduAi] 按 runtime 配置创建对话客户端失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

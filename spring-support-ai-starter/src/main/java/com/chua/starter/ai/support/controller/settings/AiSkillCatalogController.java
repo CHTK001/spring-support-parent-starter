@@ -39,7 +39,7 @@ public class AiSkillCatalogController {
     @Operation(summary = "查询技能名目录")
     @GetMapping("/catalog")
     public List<String> catalog() {
-        List<Map<String, Object>> skills = apiSkillController.list().getData();
+        List<Map<String, Object>> skills = apiSkillController.list().data();
         if (skills == null) {
             return List.of();
         }

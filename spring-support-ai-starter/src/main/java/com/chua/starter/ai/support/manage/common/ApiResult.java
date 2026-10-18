@@ -1,7 +1,6 @@
 package com.chua.starter.ai.support.manage.common;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Data;
 
 import java.io.Serializable;
 
@@ -17,42 +16,23 @@ import java.io.Serializable;
  *     （非 JSON 响应会被前端判为契约违规）</li>
  * </ul>
  *
- * @param <T> 业务数据类型
+ * @param success 是否成功
+ * @param data    业务数据（成功时返回，始终输出即使为 空）
+ * @param code    机器可读错误码（如 CONVERSATION_ARCHIVED / FORBIDDEN）
+ * @param error   人类可读错误信息
+ * @param msg     附加提示信息
+ * @param <T>     业务数据类型
  * @since 4.0.0.42
  * @author CH
  */
-@Data
-public class ApiResult<T> implements Serializable {
-    private static final long serialVersionUID = 1L; // 串行版本uid
+public record ApiResult<T>(
+        boolean success,
+        @JsonInclude(JsonInclude.Include.ALWAYS) T data,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String code,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String error,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String msg) implements Serializable {
 
-    /**
-     * 是否成功
-     */
-    private boolean success;
-
-    /**
-     * 业务数据（成功时返回，始终输出即使为 空）
-     */
-    @JsonInclude(JsonInclude.Include.ALWAYS)
-    private T data; // 数据
-
-    /**
-     * 机器可读错误码（如 CONVERSATION_ARCHIVED / FORBIDDEN）
-     */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String code; // 编码
-
-    /**
-     * 人类可读错误信息
-     */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String error; // 错误
-
-    /**
-     * 附加提示信息
-     */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String msg; // msg
+    private static final long serialVersionUID = 1L;
 
     /**
      * 构造成功响应。
@@ -62,10 +42,7 @@ public class ApiResult<T> implements Serializable {
      * @return 响应信封
      */
     public static <T> ApiResult<T> ok(T data) {
-        ApiResult<T> result = new ApiResult<>();
-        result.setSuccess(true);
-        result.setData(data);
-        return result;
+        return new ApiResult<>(true, data, null, null, null);
     }
 
     /**
@@ -85,11 +62,7 @@ public class ApiResult<T> implements Serializable {
      * @return 响应信封
      */
     public static ApiResult<Void> error(String code, String error) {
-        ApiResult<Void> result = new ApiResult<>();
-        result.setSuccess(false);
-        result.setCode(code);
-        result.setError(error);
-        return result;
+        return new ApiResult<>(false, null, code, error, null);
     }
 
     /**
@@ -101,11 +74,6 @@ public class ApiResult<T> implements Serializable {
      * @return 响应信封
      */
     public static ApiResult<Void> error(String code, String error, String msg) {
-        ApiResult<Void> result = new ApiResult<>();
-        result.setSuccess(false);
-        result.setCode(code);
-        result.setError(error);
-        result.setMsg(msg);
-        return result;
+        return new ApiResult<>(false, null, code, error, msg);
     }
 }

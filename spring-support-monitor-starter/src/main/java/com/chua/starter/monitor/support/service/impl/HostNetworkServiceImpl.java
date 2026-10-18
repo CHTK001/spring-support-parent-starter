@@ -368,7 +368,14 @@ public class HostNetworkServiceImpl implements HostNetworkService {
     private String runPs(SystemInfoProvider provider, MsServerHost host, String psBody) {
         String encoded = Base64.getEncoder().encodeToString(psBody.getBytes(StandardCharsets.UTF_16LE));
         String cli = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + encoded;
-        String out = provider.exec(host, cli);
+        String out;
+        try {
+            out = provider.exec(host, cli);
+        } catch (RuntimeException e) {
+            // 通道执行失败（主机下线/SSH 拒绝/凭据错误）一律走 ERR: 业务错误口径，
+            // 与其余调用点保持一致，避免 IllegalStateException 冒泡成 HTTP 409。
+            return "ERR: " + trim(e.getMessage());
+        }
         return out == null ? "" : out.trim();
     }
 

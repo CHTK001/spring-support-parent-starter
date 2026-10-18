@@ -72,13 +72,18 @@ plugin:
         - "http://192.168.50.*:*"
   async:
     enable: false
-  # tcp 鉴权：登录请求发往独立部署的 OAuth 服务端（长度帧协议，帧格式 topic:body）。
-  # 注意：TcpProtocol 只发送 x-oauth-username / x-oauth-password，
-  # **不会**转发 accountType —— 本进程内注册的凭据扩展点（student）
-  # 在 tcp 链路上不参与解析，账号来源由 OAuth 服务端侧决定。
+  # 鉴权协议（2026-10-18 修正为 static）：
+  # 本应用的登录**恒为本地签发**——DefaultLoginHandler 校验本进程 sys_user 口令后
+  # 直接 issueLocalToken()（TokenCipher/SM4）；学生侧 StudentCredentialProvider 同样
+  # 用 CredentialIssuer -> TokenCipher.encrypt 本地签发。因此令牌只能由本进程校验：
+  # protocol 必须是 static（StaticProtocol 用 TokenCipher.decryptToUser 本地解密校验）。
+  # 若配成 tcp，AuthFilter 会把本地令牌送去独立部署的 oauth 服务端，而该服务端
+  # 从未签发过它（Redis 查无此 token）-> 403「用户信息不存在/请重新登录」，页面表现为
+  # 登录成功后列表全空。曾用 local-admin-fallback=true 掩盖该 403，实测后果是
+  # 任何无令牌 / 伪造令牌的请求都被提升为内置 admin，可读写全部数据，故一并关闭。
   oauth:
     enable: true
-    protocol: tcp
+    protocol: static
     # isFailure() 要求 loginAddress/auth-address 非空，留空会直接判鉴权失败
     address: tcp://192.168.50.198:19180
     auth-address: tcp://192.168.50.198:19180
@@ -99,13 +104,12 @@ plugin:
       # 提交进版本库。现改为由部署方通过启动参数显式传入：
       #   --plugin.oauth.temp.user='<用户名>:<口令>'
       user: ""
-    # 本地管理员兜底：本应用用 SysLoginServiceImpl 走本地登录，accessToken 由本进程自签；
-    # 而 AuthFilter 默认会把这个令牌送去独立部署的 OAuth 服务校验。198 上那套 oauth
-    # （/home/kali/oauth）从未注册过本应用——oauth 库 sys_app_key 为 0 行、
-    # sys_oauth_trace_log 也没有本应用的任何记录——于是所有业务接口
-    # （/v2/collect/flow/list 等）一律 403「用户信息不存在/请重新登录」，
-    # 页面表现为登录成功后列表全空。开启本项后本地登录令牌不再依赖 oauth 侧校验。
-    local-admin-fallback: true
+    # 本地管理员兜底必须保持 false：该兜底等价于「鉴权失败即内置 admin」。
+    # 实测（2026-10-18）：开启后垃圾令牌 THIS-IS-NOT-A-TOKEN 与**完全无令牌**的请求
+    # 都能读到全部学生/班级，并能 POST classes/save 成功（越权写），因为内置 admin
+    # userId="1" 恰好命中了 teacher_account='1' 的教师。令牌已能由 static 协议
+    # 本地校验，无需兜底。
+    local-admin-fallback: false
     # 不继承框架默认白名单（混有其它应用历史路径），按本应用显式放行
     use-default-whitelist: false
     whitelist:
@@ -176,21 +180,14 @@ plugin:
       # ONNX 卡片/布局矫正（card-correction-detector）：默认关闭，开启后先检测四边形并透视拉平，再走原有预处理/版面/OCR
       layout-correction: false
 
-# AI 对话客户端：由 YAML 声明用哪个厂商/网关/模型（spring-support-ai-starter 读取）。
-# 密钥不入仓库：app-key 走环境变量 AI_CHAT_APP_KEY 注入（systemd / 容器里设置），
-# 本地未设该变量时 app-key 为空，AI 相关功能按不可用处理。
-chua:
-  ai:
-    chat:
-      enabled: true
-      # Agnes AI 走 OpenAI 兼容协议（/v1/chat/completions），因此落到 OpenAiChatClient；
-      # 别名只在 @Spi 里用于 SPI 注册，这里可以不等于 openai/siliconflow 那几个，
-      # 实际端点由下面的 base-url 决定。
-      provider: agnes
-      base-url: https://apihub.agnes-ai.com/v1
-      app-key: ${AI_CHAT_APP_KEY:}
-      model: agnes-3.0-flash
-      timeout-millis: 60000
+# AI 对话客户端不再由 YAML 声明：改由 AI 控制台 UI（落库 sys_ai_global_setting /
+# sys_ai_manufacturer）统一配置，与本模块集成 ai-starter 的「配置页 + 生效 bean」口径一致。
+# 依据：ai-starter 的 AiConfiguration.yamlChatClient 一旦存在（chua.ai.chat.enabled=true 且
+# app-key 非空）就会顶掉聚合客户端（defaultChatClient 带 @ConditionalOnMissingBean），
+# 使 UI 配置（厂商/模型、`models.defaultChatModelId` 热更新）对 eduai 完全不可见。
+# 现在客户端由 AiConfiguration 的聚合 bean + ChatClientRegistry 提供；eduai 侧
+# EduAiService.resolveClient() 的取值顺序：runtime 主链路（provider/api_key/base_url/model）
+# → registry 默认（UI「默认模型」热更新登记的客户端）→ 注入的聚合 bean。
 
 logging:
   level:
