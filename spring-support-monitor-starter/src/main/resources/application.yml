@@ -19,6 +19,14 @@ spring:
     generate:
       enabled: false
 
+  # 上传上限：PCAP 分析要整份导入抓包文件，Spring 默认上限 1MB —— 连一个几百包的 pcap 都装不下，
+  # 会在进入 Controller 之前就抛 MaxUploadSizeExceededException（前端只看到 500，看不出原因）。
+  # 这里放开到 2GB；前端导入前也会做一次大小校验，两处阈值要保持一致。
+  servlet:
+    multipart:
+      max-file-size: 2048MB
+      max-request-size: 2048MB
+
   # 建表脚本（独立联调）：本模块的 FlywayLike 已禁用（脚本语法错会阻断启动），
   #  由 spring.sql.init 逐个加载各模块本体的全量建表脚本（脚本归口各自 starter jar 的 db/init/）：
   #  - monitor 自身：V1.0__init_all_monitor.sql、V1.5__init_tshark.sql

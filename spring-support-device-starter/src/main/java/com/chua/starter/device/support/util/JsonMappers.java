@@ -102,9 +102,52 @@ public final class JsonMappers {
                     n.path("cardNo").asText(""),
                     n.path("userName").asText(n.path("personName").asText(n.path("name").asText(""))),
                     parseDate(n.path("time").asText(n.path("occurredAt").asText(""))),
-                    n.path("eventType").asText("")));
+                    n.path("eventType").asText(""),
+                    parseDirection(n),
+                    parsePhotoUrl(n)));
         }
         return list;
+    }
+
+    /**
+     * 进出方向：各厂商字段名不一，逐个兜底。
+     *
+     * <p>海康 ISAPI 走 {@code doorDirection} / {@code direction}，大华开放平台走
+     * {@code direction}；值可能是 in/out、进门/出门 或数字代号，这里原样返回，
+     * 由前端映射成「进 / 出」。都没有就返回空串。</p>
+     *
+     * @param n 记录节点
+     * @return 方向原始值，缺失时为 ""
+     */
+    private static String parseDirection(JsonNode n) {
+        String[] keys = {"direction", "doorDirection", "inOut", "enterOrExit", "passDirection"};
+        for (String key : keys) {
+            String value = n.path(key).asText("");
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 抓拍照片地址：各厂商字段名不一，逐个兜底。
+     *
+     * <p>海康 ISAPI 走 {@code pictureURL}，大华开放平台走 {@code pictureUrl}，
+     * 其余按 {@code photoUrl} / {@code imageUrl} 取；都没有就返回空串。</p>
+     *
+     * @param n 记录节点
+     * @return 照片地址，缺失时为 ""
+     */
+    private static String parsePhotoUrl(JsonNode n) {
+        String[] keys = {"photoUrl", "pictureURL", "pictureUrl", "imageUrl", "picUrl"};
+        for (String key : keys) {
+            String value = n.path(key).asText("");
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     /**

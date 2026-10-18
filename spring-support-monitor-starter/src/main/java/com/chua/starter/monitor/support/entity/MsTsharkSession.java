@@ -40,6 +40,16 @@ public class MsTsharkSession extends SysBase {
     @Schema(description = "抓包过滤表达式(BPF)", example = "tcp port 8080")
     private String captureFilter; // capture过滤器
 
+    /**
+     * 会话来源：{@code live} 网卡实时抓包 / {@code import} 导入的 pcap。
+     *
+     * <p>两类会话共用同一张表与同一套解析、统计、下载接口，靠本字段区分入口：
+     * 「抓包分析」页只列 live，「PCAP 分析」页只列 import，否则两个页面会互相看到对方的数据。</p>
+     */
+    @TableField("ms_tshark_session_source")
+    @Schema(description = "来源: live 实时抓包 / import 导入 pcap", example = "live")
+    private String source; // 来源
+
     @TableField("ms_tshark_session_status")
     @Schema(description = "状态: 0已停止 1抓包中", example = "1")
     private Integer captureStatus; // capture状态

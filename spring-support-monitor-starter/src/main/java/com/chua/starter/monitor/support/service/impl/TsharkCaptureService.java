@@ -20,6 +20,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -101,6 +102,11 @@ public class TsharkCaptureService {
 
     /** {@link #TSHARK_FIELDS} 的列数；列数不足说明输出异常，该行丢弃 */
     private static final int TSHARK_FIELD_COUNT = TSHARK_FIELDS.length;
+
+    /** 会话来源：网卡实时抓包（{@code tshark -i} 抓出来的） */
+    private static final String SOURCE_LIVE = "live";
+    /** 会话来源：导入的 pcap 文件（{@code PCAP 分析} 页面上传的） */
+    private static final String SOURCE_IMPORT = "import";
 
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
@@ -428,6 +434,9 @@ public class TsharkCaptureService {
             session.setSessionName(name == null || name.isBlank() ? iface + " 抓包" : name);
             session.setCaptureInterface(iface);
             session.setCaptureFilter(filter);
+            // 来源显式落库，不靠 DDL 默认值：MyBatis-Plus 的字段策略一旦被改成
+            // 插入 NULL，默认值就失效，届时「抓包分析」页按 source=live 过滤会看不到自己的会话
+            session.setSource(SOURCE_LIVE);
             session.setCaptureStatus(1);
             session.setPacketCount(0);
             session.setFilePath(filePath.toString());
@@ -479,7 +488,8 @@ public class TsharkCaptureService {
             }
             // 抓包已退出，尾随循环的存活标志自然消失；等它最后一轮收尾后做一次全量兜底
             tail.join(3_000L);
-            this.parsePcapToDb(sessionId, filePath);
+            // 收尾兜底走推送：尾随循环可能漏掉最后一两包，这些包页面正等着看
+            this.parsePcapToDb(sessionId, filePath, true);
             MsTsharkSession session = this.sessionMapper.selectById(sessionId);
             if (session != null) {
                 session.setCaptureStatus(0);
@@ -497,6 +507,136 @@ public class TsharkCaptureService {
             log.error("finalize capture failed, session={}", sessionId, e);
         } finally {
             this.running.remove(sessionId);
+        }
+    }
+
+    /**
+     * 导入 pcap 文件：落盘 → 建会话 → 异步解析入库。
+     *
+     * <p><b>为什么导入复用「会话 + 报文」这两张表</b>：pcap 文件与它解析出的报文本来就是
+     * 「一份文件、一批报文」的关系 —— 现成的 {@code ms_tshark_session}（记文件路径、包数、
+     * 起止时间）和 {@code ms_tshark_packet}（用 {@code session_id} 关联）正好就是这套关系。
+     * 复用之后，报文分页、详情、协议分布、Top 流、握手生命周期以及<b>原件下载</b>
+     * （{@code /sessions/{id}/pcap}）一个都不用另写，页面上只是换个入口。
+     * 用 {@link #SOURCE_IMPORT} 与实时抓包区分，免得两类数据在同一张列表里混着显示。</p>
+     *
+     * <p><b>为什么磁盘文件名不用原名</b>：原始名可能重复（互相覆盖）、可能带 {@code ../}
+     * （借路径穿越写出目录之外）、也可能是中文。所以磁盘上落 UUID，原名只作为会话名落库，
+     * 下载时由 {@link #pcapFileName} 用它还给用户。</p>
+     *
+     * <p><b>为什么是异步</b>：几百 MB 的 pcap 解析要几十秒，同步等在这里会把 HTTP 请求
+     * 拖到超时，前端只能干转圈。落库并置状态 1（解析中）后立即返回，包数在后台边解析边累加、
+     * 走既有的会话推送 —— 页面列表里能直接看到包数在涨。</p>
+     *
+     * @param originalName 会话名（可空，空则用上传的原始文件名）
+     * @param file         pcap 文件（multipart）
+     * @return 新建的会话（状态 1 = 解析中）
+     */
+    public ReturnResult<MsTsharkSession> importPcap(String originalName, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ReturnResult.error("请选择要导入的 pcap 文件");
+        }
+        String name = blankToNull(originalName);
+        if (name == null) {
+            name = blankToNull(file.getOriginalFilename());
+        }
+        try {
+            Files.createDirectories(Paths.get(CAPTURE_DIR));
+            Path filePath = Paths.get(CAPTURE_DIR, UUID.randomUUID().toString().replace("-", "") + ".pcap");
+            // transferTo 而不是读进 byte[]：几百 MB 的文件读进内存再写盘，堆会被打穿
+            file.transferTo(filePath.toFile());
+            MsTsharkSession session = new MsTsharkSession();
+            session.setSessionName(name == null ? filePath.getFileName().toString() : name);
+            session.setSource(SOURCE_IMPORT);
+            session.setCaptureStatus(1);
+            session.setPacketCount(0);
+            session.setFilePath(filePath.toString());
+            session.setStartTime(LocalDateTime.now());
+            this.sessionMapper.insert(session);
+            this.pushService.pushTsharkSession(session, session.getId());
+            // 自调用不走代理，@Async 在这里不生效，必须显式切线程（同 startCapture 的注释）
+            CompletableFuture.runAsync(() -> this.asyncParseImported(session.getId(), filePath));
+            return ReturnResult.ok(session);
+        } catch (Exception e) {
+            log.error("import pcap failed", e);
+            return ReturnResult.error("导入 pcap 失败: " + execHint(e));
+        }
+    }
+
+    /**
+     * 异步解析导入的 pcap：整份解析入库 → 回填包数与起止时间 → 状态置为已停止。
+     *
+     * <p>解析直接复用实时抓包收尾用的 {@link #parsePcapToDb} —— 同一套字段列定义、
+     * 同一个 {@code savePacket} 落库，保证导入与实时两条路产出的数据形态完全一致
+     * （只是导入不逐包推送，见 {@code push} 参数）。</p>
+     *
+     * @param sessionId 会话标识
+     * @param filePath  文件路径
+     */
+    private void asyncParseImported(Long sessionId, Path filePath) {
+        try {
+            this.parsePcapToDb(sessionId, filePath, false);
+        } catch (Exception e) {
+            log.error("parse imported pcap failed, session={}", sessionId, e);
+        }
+        // 无论解析成败都要落状态：失败时若一直停在「解析中」，页面上会永远转圈
+        MsTsharkSession session = null;
+        try {
+            fillTimeRange(sessionId);
+            session = this.sessionMapper.selectById(sessionId);
+            if (session != null) {
+                session.setCaptureStatus(0);
+                session.setEndTime(LocalDateTime.now());
+                this.sessionMapper.updateById(session);
+                this.pushService.pushTsharkSession(session, sessionId);
+            }
+            TsharkPacketStreamRegistry reg = streamRegistry();
+            if (reg != null) {
+                reg.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_SESSION,
+                        Map.of("sessionId", sessionId, "phase", "finished",
+                                "packetCount", session == null || session.getPacketCount() == null ? 0 : session.getPacketCount()));
+            }
+        } catch (Exception e) {
+            log.error("finalize imported pcap failed, session={}", sessionId, e);
+        }
+    }
+
+    /**
+     * 用报文的首末时间回填会话的起止时间与时长。
+     *
+     * <p>取「按主键排序的第一条 / 最后一条」而不是按时间列排序：解析严格按帧序插入，
+     * 主键顺序就是时间顺序；按主键取一条走的是主键索引，不必对整批报文做排序。</p>
+     *
+     * @param sessionId 会话标识
+     */
+    private void fillTimeRange(Long sessionId) {
+        try {
+            List<MsTsharkPacket> firsts = this.packetMapper.selectList(new LambdaQueryWrapper<MsTsharkPacket>()
+                    .select(MsTsharkPacket::getPacketTime)
+                    .eq(MsTsharkPacket::getSessionId, sessionId)
+                    .orderByAsc(MsTsharkPacket::getId)
+                    .last("LIMIT 1"));
+            if (firsts.isEmpty() || firsts.get(0).getPacketTime() == null) {
+                // 解析出 0 条（空文件 / 非 pcap）时不动时间，避免把会话写成没有时间范围
+                return;
+            }
+            LocalDateTime first = firsts.get(0).getPacketTime();
+            List<MsTsharkPacket> lasts = this.packetMapper.selectList(new LambdaQueryWrapper<MsTsharkPacket>()
+                    .select(MsTsharkPacket::getPacketTime)
+                    .eq(MsTsharkPacket::getSessionId, sessionId)
+                    .orderByDesc(MsTsharkPacket::getId)
+                    .last("LIMIT 1"));
+            LocalDateTime last = lasts.isEmpty() || lasts.get(0).getPacketTime() == null ? first : lasts.get(0).getPacketTime();
+            MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+            if (session == null) {
+                return;
+            }
+            session.setStartTime(first);
+            session.setEndTime(last);
+            session.setCaptureDuration((int) Math.max(0, java.time.Duration.between(first, last).getSeconds()));
+            this.sessionMapper.updateById(session);
+        } catch (Exception e) {
+            log.debug("fill time range failed, session={} reason={}", sessionId, e.getMessage());
         }
     }
 
@@ -582,7 +722,7 @@ public class TsharkCaptureService {
                             // 帧号非数字（不该发生），保持游标不变避免死循环
                         }
                     }
-                    if (this.savePacket(sessionId, cols)) {
+                    if (this.savePacket(sessionId, cols, true)) {
                         added++;
                     }
                 }
@@ -668,8 +808,10 @@ public class TsharkCaptureService {
      *
      * @param sessionId 会话标识
      * @param filePath 文件路径
+     * @param push     是否逐包推送。实时抓包要推（页面正在看这条流）；
+     *                 导入 pcap 不推 —— 几十万包逐个推会把 socket 通道冲垮，前端也不需要
      */
-    private void parsePcapToDb(Long sessionId, Path filePath) {
+    private void parsePcapToDb(Long sessionId, Path filePath, boolean push) {
         try {
             if (!Files.exists(filePath) || Files.size(filePath) == 0L) {
                 log.warn("capture file empty, session={}", sessionId);
@@ -695,19 +837,28 @@ public class TsharkCaptureService {
             pb.redirectErrorStream(true);
             Process p = pb.start();
             int batch = 0;
+            int flushed = 0;
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8), 0x100000)) {
                 String line;
                 while ((line = r.readLine()) != null) {
                     if (line.isBlank()) {
                         continue;
                     }
-                    if (this.savePacket(sessionId, line.split("\t", -1))) {
+                    if (this.savePacket(sessionId, line.split("\t", -1), push)) {
                         batch++;
+                        // 每 2000 条落一次包数：导入几十万包的 pcap 要好几十秒，
+                        // 若等整份解析完才写包数，前端整段时间都停在 0，看着像卡死
+                        if (batch - flushed >= 2000) {
+                            bumpPacketCount(sessionId, batch - flushed);
+                            flushed = batch;
+                        }
                     }
                 }
             }
+            if (batch > flushed) {
+                bumpPacketCount(sessionId, batch - flushed);
+            }
             if (batch > 0) {
-                bumpPacketCount(sessionId, batch);
                 // 解析收尾：前端据此重拉协议分布 / Top 流（逐包增量只够更新明细表）
                 TsharkPacketStreamRegistry registry = streamRegistry();
                 if (registry != null) {
@@ -1039,9 +1190,10 @@ public class TsharkCaptureService {
      *
      * @param sessionId 会话标识
      * @param cols      按 {@link #TSHARK_FIELDS} 顺序切出的列（制表符分隔）
+     * @param push      是否逐包推送（导入 pcap 时为 false，避免几十万条推送把通道冲垮）
      * @return 是否成功入库
      */
-    private boolean savePacket(Long sessionId, String[] cols) {
+    private boolean savePacket(Long sessionId, String[] cols, boolean push) {
         try {
             if (cols.length < TSHARK_FIELD_COUNT) {
                 return false;
@@ -1059,14 +1211,16 @@ public class TsharkCaptureService {
             packet.setPacketLength(parseIntOrNull(cols[11]));
             packet.setPacketInfo(blankToNull(cols[12]));
             this.packetMapper.insert(packet);
-            // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
-            this.pushService.pushTsharkPacket(packet, sessionId);
-            // SSE 推送：按会话分组，只推给正在看这个会话的连接。
-            // 载荷走精简字段（rawData 是整块 tshark JSON，逐包推会把带宽吃光），
-            // 完整原始数据仍走详情接口按需取。
-            TsharkPacketStreamRegistry registry = streamRegistry();
-            if (registry != null) {
-                registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_PACKET, toStreamPayload(packet));
+            if (push) {
+                // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
+                this.pushService.pushTsharkPacket(packet, sessionId);
+                // SSE 推送：按会话分组，只推给正在看这个会话的连接。
+                // 载荷走精简字段（rawData 是整块 tshark JSON，逐包推会把带宽吃光），
+                // 完整原始数据仍走详情接口按需取。
+                TsharkPacketStreamRegistry registry = streamRegistry();
+                if (registry != null) {
+                    registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_PACKET, toStreamPayload(packet));
+                }
             }
             return true;
         } catch (Exception e) {
@@ -1142,13 +1296,22 @@ public class TsharkCaptureService {
 
     /**
      * page会话。
-     * @param page page
-     * @param size 大小
+     *
+     * <p>按来源过滤：{@code live} 给「抓包分析」页、{@code import} 给「PCAP 分析」页。
+     * 不传则全部返回（老前端与外部调用者的兼容路径）。</p>
+     *
+     * @param page   page
+     * @param size   大小
+     * @param source 会话来源（live / import，可空）
      * @return page会话的结果
      */
-    public ReturnResult<IPage<MsTsharkSession>> pageSessions(int page, int size) {
-        IPage<MsTsharkSession> p = this.sessionMapper.selectPage(new Page<>(page, size),
-                new LambdaQueryWrapper<MsTsharkSession>().orderByDesc(MsTsharkSession::getId));
+    public ReturnResult<IPage<MsTsharkSession>> pageSessions(int page, int size, String source) {
+        LambdaQueryWrapper<MsTsharkSession> w = new LambdaQueryWrapper<>();
+        if (source != null && !source.isBlank()) {
+            w.eq(MsTsharkSession::getSource, source.trim().toLowerCase(Locale.ROOT));
+        }
+        w.orderByDesc(MsTsharkSession::getId);
+        IPage<MsTsharkSession> p = this.sessionMapper.selectPage(new Page<>(page, size), w);
         return ReturnResult.ok(p);
     }
 
