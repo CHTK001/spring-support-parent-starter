@@ -1,40 +1,20 @@
 package com.chua.starter.common.support.lang;
 
 import com.chua.common.support.lang.code.PageResult;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * 分页返回结果封装类
  *
  * <p>统一 API 响应格式，包含返回码、消息以及分页数据。</p>
  *
- * @param <T> 数据类型
+ * @param code 返回状态码，0 表示成功
+ * @param msg  返回消息描述
+ * @param data 分页数据对象
+ * @param <T>  数据类型
  * @author CH
  * @since 4.0.0
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class ReturnPageResult<T> {
-
-    /**
-     * 返回状态码，0 表示成功
-     */
-    private int code;
-
-    /**
-     * 返回消息描述
-     */
-    private String msg;
-
-    /**
-     * 分页数据对象
-     */
-    private PageResult<T> data;
+public record ReturnPageResult<T>(int code, String msg, PageResult<T> data) {
 
     /**
      * 构造一个空的成功分页结果
@@ -43,11 +23,7 @@ public class ReturnPageResult<T> {
      * @return 空结果对象
      */
     public static <T> ReturnPageResult<T> empty() {
-        return ReturnPageResult.<T>builder()
-                .code(0)
-                .msg("success")
-                .data(PageResult.empty())
-                .build();
+        return new ReturnPageResult<>(0, "success", PageResult.empty());
     }
 
     /**
@@ -58,15 +34,11 @@ public class ReturnPageResult<T> {
      * @return 返回对象
      */
     public static <T> ReturnPageResult<T> of(PageResult<T> result) {
-        return ReturnPageResult.<T>builder()
-                .code(0)
-                .msg("success")
-                .data(result)
-                .build();
+        return new ReturnPageResult<>(0, "success", result);
     }
 
     /**
-     * 快捷方式：构造成功返回（等价于 的 方法）
+     * 快捷方式：构造成功返回
      *
      * @param result 分页结果
      * @param <T>    数据类型
@@ -84,11 +56,7 @@ public class ReturnPageResult<T> {
      * @return 失败返回对象
      */
     public static <T> ReturnPageResult<T> error(String message) {
-        return ReturnPageResult.<T>builder()
-                .code(-1)
-                .msg(message)
-                .data(PageResult.empty())
-                .build();
+        return new ReturnPageResult<>(-1, message, PageResult.empty());
     }
 
     /**
@@ -100,10 +68,6 @@ public class ReturnPageResult<T> {
      * @return 失败返回对象
      */
     public static <T> ReturnPageResult<T> error(PageResult<T> data, String message) {
-        return ReturnPageResult.<T>builder()
-                .code(-1)
-                .msg(message)
-                .data(data)
-                .build();
+        return new ReturnPageResult<>(-1, message, data);
     }
 }

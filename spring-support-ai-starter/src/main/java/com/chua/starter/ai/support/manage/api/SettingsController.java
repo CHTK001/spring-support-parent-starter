@@ -193,7 +193,7 @@ public class SettingsController {
 
         log.info("更新分组设置: group={}, fields={}", group, settings.keySet());
 
-        return ApiResult.ok(getGroupSettings(group).getData());
+        return ApiResult.ok(getGroupSettings(group).data());
     }
 
     /**

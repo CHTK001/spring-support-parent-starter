@@ -60,11 +60,7 @@ public class PageResultUtils {
      * @return 错误的结果
      */
     public static <T> ReturnPageResult<T> error(String message) {
-        return ReturnPageResult.<T>builder()
-                .code(-1)
-                .msg(message)
-                .data(PageResult.empty())
-                .build();
+        return new ReturnPageResult<>(-1, message, PageResult.empty());
     }
 }
 
