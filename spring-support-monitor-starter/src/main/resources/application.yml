@@ -115,6 +115,11 @@ plugin:
     # enable=false 或留空时文件服务器按公共桶运行；/ot 一次性链接本身即凭证，始终放行
     file-storage:
       private-buckets: localFileStorage
+  # 服务器目录浏览（filesystem-starter 的 FileDirController）：数据同步的「选择文件 / 文件夹」
+  # 和 AI 的目录选择器都走 /v2/file/dir/list。接口本身是 @Permission(admin/superadmin)，
+  # 生产由 OAuth 把关；这里只负责把控制器注册出来（FileSystemAutoConfiguration 已被排除）。
+  filesystem:
+    dir-list: true
   # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
   # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
   # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。
