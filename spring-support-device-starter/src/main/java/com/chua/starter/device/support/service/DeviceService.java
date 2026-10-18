@@ -55,6 +55,20 @@ public interface DeviceService {
     List<DeviceInfo> listDevices(String orgId);
 
     /**
+     * 分页查询设备。
+     *
+     * @param pageNo   页码，从 1 开始
+     * @param pageSize 每页条数
+     * @param orgId    组织 ID，可空
+     * @param keyword  名称 / IP / 序列号关键字，可空
+     * @param category 设备大类，可空
+     * @param online   在线状态，可空
+     * @return 设备分页结果
+     */
+    PageResult<DeviceInfo> pageDevices(long pageNo, long pageSize, String orgId,
+                                       String keyword, String category, Boolean online);
+
+    /**
      * 按大类查询设备列表
      *
      * @param category 大类，例如 摄像头、accesscontrol

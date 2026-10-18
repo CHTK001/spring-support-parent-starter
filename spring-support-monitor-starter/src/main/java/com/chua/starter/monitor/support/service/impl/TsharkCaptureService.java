@@ -964,9 +964,17 @@ public class TsharkCaptureService {
         // 不按协议过滤：同一条 TCP 流里 SYN / FIN 会被 simplifyProtocol 归一成 TCP，
         // 而数据帧可能是 HTTP / TLS / SSH。按 anchor 的协议过滤会把握手与挥手全丢掉，
         // 页面上就只剩中间几个数据帧 —— 看起来正是「一采到数据生命周期就结束了」。
+        // SQL 里先按「两端 IP 的两种方向」收窄，端口与方向仍由 isSameFlow 精确过滤，
+        // 避免一次抓了几十万包的会话把整张报文表读进内存。
         List<MsTsharkPacket> all = this.packetMapper.selectList(
                 new LambdaQueryWrapper<MsTsharkPacket>()
                         .eq(MsTsharkPacket::getSessionId, anchor.getSessionId())
+                        .and(q -> q
+                                .nested(a -> a.eq(MsTsharkPacket::getSourceIp, anchor.getSourceIp())
+                                        .eq(MsTsharkPacket::getDestIp, anchor.getDestIp()))
+                                .or()
+                                .nested(b -> b.eq(MsTsharkPacket::getSourceIp, anchor.getDestIp())
+                                        .eq(MsTsharkPacket::getDestIp, anchor.getSourceIp())))
                         .orderByAsc(MsTsharkPacket::getPacketTime)
                         .orderByAsc(MsTsharkPacket::getId));
 
@@ -984,8 +992,21 @@ public class TsharkCaptureService {
         // 于是 client/server 永远按固定方向取，命中响应包时两条泳道会整个反过来。
         MsTsharkPacket syn = findFirst(flow, true);
         MsTsharkPacket synAck = findFirst(flow, false);
-        MsTsharkPacket origin = syn != null ? syn : (synAck != null ? synAck : anchor);
-        boolean originIsServer = syn == null && synAck != null;
+        MsTsharkPacket origin;
+        boolean originIsServer;
+        if (syn != null) {
+            origin = syn;
+            originIsServer = false;
+        } else if (synAck != null) {
+            origin = synAck;
+            originIsServer = true;
+        } else {
+            // 连 SYN+ACK 都没抓到（抓包开始前就建好连）：按「低端口一般是服务端」猜一次，
+            // 端口缺失时再退回 anchor 源端。比原来恒把目的端当客户端要少错很多。
+            origin = anchor;
+            originIsServer = anchor.getSourcePort() != null && anchor.getDestPort() != null
+                    && anchor.getSourcePort() < anchor.getDestPort();
+        }
         String clientIp = originIsServer ? origin.getDestIp() : origin.getSourceIp();
         Integer clientPort = originIsServer ? origin.getDestPort() : origin.getSourcePort();
         String serverIp = originIsServer ? origin.getSourceIp() : origin.getDestIp();
