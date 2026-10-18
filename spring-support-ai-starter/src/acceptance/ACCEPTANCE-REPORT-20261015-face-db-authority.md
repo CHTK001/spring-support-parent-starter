@@ -336,7 +336,41 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 
 ---
 
-### 复现命令
+## 9. 2026-10-17 追加验收：默认模型「换上模型」+ 模型管理「删除模型」
+
+按确认的**跨页端到端**场景验收：新建探针模型 → 默认模型页换上它 → 模型管理页删除它 → 复查。
+环境：真实浏览器 → `localhost:15689` → `192.168.50.198:8787`。
+
+### 9.1 关键实现（验收前查证）
+
+- 默认模型页 `/setting/default-models`：模型字段点开「选择模型」弹窗（`.md-list .md-row`），
+  `selectModel()` 选中后经 `updateFieldValue()` **即时自动保存**（`saveGroupSettings`），无需另点保存；
+  「清空（使用默认）」写入空值。
+- 模型管理页 `/models`：供应商侧栏 `.mw-item`，模型卡片 `.mc`，卡片上的 `.mc-btn.danger` → `el-message-box` 确认后调 `apiService.deleteModel` → `DELETE /api/provider-models?provider_id=&model=`。
+- 目标设置键：`runtime.default_model`（「对话路由 → 默认模型」），验收前原值 `agnes-3.0-flash`、`origin=SYSTEM_DEFAULT`。
+
+### 9.2 结果
+
+**单次连贯跑通全链：8/8 PASS → `MODEL_SWAP_DELETE_OK`**（脚本 `accept-probe-model-swap-delete.cjs`，真实 chromium → 15689 → 8787）：
+
+| # | 断言 | 证据 |
+|---|---|---|
+| 1 | UI「添加模型」新建探针 chat 模型后卡片出现 | `acc-probe-model-<ts>` |
+| 2 | 「选择模型」弹窗列出探针模型 | 选择前行显示 `请选择模型` |
+| 3 | 点选探针模型即**换上** | 该行变为 `agnes:acc-probe-model-<ts>` |
+| 4 | 刷新后仍显示（**已落库**） | 重载 `/setting/default-models` 后同值 |
+| 5 | 模型卡片删除前存在 | — |
+| 6 | 卡片 `.mc-btn.danger` → 确认后**卡片消失** | 删除模型 |
+| 7 | 删除后「选择模型」弹窗**不再列出**探针模型 | `count=0` |
+| 8 | 全程无业务 pageerror | — |
+
+跑完自动**复原** `runtime.default_model → agnes-3.0-flash`（`origin=SYSTEM_DEFAULT`）并清掉探针模型，无残留。
+
+> 环境注记：此前两次尝试在「换上前/后」阶段被中断，原因是共享机内存被其它会话压到 ~2.3GB，
+> 浏览器被 OOM 杀掉（`Target page, context or browser has been closed`），**非产品缺陷**；
+> 脚本 `finally` 每次都完成了复原与清理。内存缓解后一次跑通全链。
+
+---
 
 ```bash
 # 前端 dev server（15689）

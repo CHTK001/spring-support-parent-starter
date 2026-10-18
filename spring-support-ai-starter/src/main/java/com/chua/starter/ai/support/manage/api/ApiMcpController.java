@@ -127,7 +127,7 @@ public class ApiMcpController {
         if (raw instanceof List) {
             for (Object item : (List<?>) raw) {
                 if (item instanceof Map) {
-                    Map<String, Object> result = createServer((Map<String, Object>) item).getData();
+                    Map<String, Object> result = createServer((Map<String, Object>) item).data();
                     created.add(result);
                 }
             }

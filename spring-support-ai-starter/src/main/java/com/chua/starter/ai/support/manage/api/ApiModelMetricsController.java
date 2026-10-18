@@ -276,11 +276,7 @@ public class ApiModelMetricsController {
      * 构造失败响应。
      */
     private static ApiResult<Map<String, Object>> manualError(String code, String msg) {
-        ApiResult<Map<String, Object>> r = new ApiResult<>();
-        r.setSuccess(false);
-        r.setCode(code);
-        r.setError(msg);
-        return r;
+        return new ApiResult<>(false, null, code, msg, null);
     }
 
     /**

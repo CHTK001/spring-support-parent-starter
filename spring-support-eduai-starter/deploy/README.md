@@ -40,8 +40,10 @@
    `spring.datasource.*`，只在 `/proc/<pid>/environ` 里（仅属主/root 可读）。
    两者都不入仓库。
 
-   可选：AI 对话密钥放 `/etc/eduai/ai-chat.env`（`AI_CHAT_APP_KEY=...`），该文件缺失时
-   AI 功能不可用，不影响启动。
+   可选：AI 对话模型**不再通过 YAML/环境变量配置**。改由 AI 控制台 UI 统一配置并落库
+   （「系统设置」runtime 分组：provider / provider_api_key / provider_base_url /
+   default_model；或「默认模型」+ 厂商管理），改完即时生效。`/etc/eduai/ai-chat.env`
+   与 `AI_CHAT_APP_KEY` 已不再生效，可删除。
 
 ## 首次部署
 
@@ -103,5 +105,6 @@ sudo systemctl daemon-reload && sudo systemctl start eduai-backend.service
 - 启动约 70~90s（含 OSGi 与模型加载），`deploy.sh` 的自检窗口按 30×10s 给足。
 - 本机内存紧张（多个 java 服务共存），eduai 曾因 OOM 被杀；unit 里的堆上限**不能随手调大**。
 - 启动约 70~90s（含 OSGi 与模型加载），自检窗口按 30×10s 给足。
-- 依赖的外部账号（如 `AI_CHAT_APP_KEY`）不在本脚本管理范围内。
+- AI 对话模型的配置在 AI 控制台 UI（落库 `sys_ai_global_setting` / `sys_ai_manufacturer`），
+  不在本脚本与环境变量管理范围内；需保证运行时可访问对应厂商网关。
 - 数据源的 `driver-class-name` 由 jar 内 `application.yml` 提供，故 EnvironmentFile 里不需要。
