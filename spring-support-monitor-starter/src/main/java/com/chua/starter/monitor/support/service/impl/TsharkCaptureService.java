@@ -392,15 +392,91 @@ public class TsharkCaptureService {
     }
 
     /**
+     * 过滤器是否按显示过滤（-Y）执行。
+     *
+     * <p>{@code filterType} 显式给了就照办；{@code auto} 时按文本猜：带比较符、
+     * 字段点号（{@code http.request.method}）或协议名（{@code http}/{@code dns}/
+     * {@code tls} 等 BPF 不认识的词）都当显示过滤。{@code tcp port 8080}、
+     * {@code host 10.0.0.1} 这类仍走捕获过滤。</p>
+     *
+     * @param filter     过滤文本
+     * @param filterType auto / bpf / display
+     * @return true 表示用 -Y
+     */
+    private static boolean useDisplayFilter(String filter, String filterType) {
+        if (filter == null || filter.isBlank()) {
+            return false;
+        }
+        String type = filterType == null ? "auto" : filterType.trim().toLowerCase(Locale.ROOT);
+        if ("display".equals(type) || "y".equals(type)) {
+            return true;
+        }
+        if ("bpf".equals(type) || "f".equals(type)) {
+            return false;
+        }
+        String f = filter.trim().toLowerCase(Locale.ROOT);
+        if (f.contains("==") || f.contains("!=") || f.contains("&&") || f.contains("||")
+                || f.contains(" contains ") || f.contains(" matches ")) {
+            return true;
+        }
+        // 字段名一定带点（http.request.uri / ip.addr / tcp.flags.syn）；BPF 里的点只出现在
+        // 网络掩码（net 10.0.0.0/8）与主机名里，不会形成 a.b 这种字段形态
+        if (f.matches(".*\\b[a-z_][a-z0-9_]*\\.[a-z_][a-z0-9_.]*\\b.*")) {
+            return true;
+        }
+        String first = f.split("[\\s()]")[0];
+        return switch (first) {
+            case "http", "http2", "https", "tls", "ssl", "dns", "ssh", "ftp", "smtp",
+                 "imap", "pop", "telnet", "mqtt", "smb", "quic", "dhcp", "ntp" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 进程启动失败时，从 tshark 日志里提炼一句人话。
+     *
+     * @param filePath  新建的 pcap 路径（日志是同名 .log）
+     * @param filter    用户填的过滤器
+     * @param exitCode  进程退出码
+     * @return 面向使用者的原因
+     */
+    private static String startupFailure(Path filePath, String filter, int exitCode) {
+        String logText = "";
+        try {
+            Path logPath = Paths.get(filePath + ".log");
+            if (Files.exists(logPath)) {
+                logText = Files.readString(logPath, StandardCharsets.UTF_8);
+            }
+        } catch (Exception ignore) {
+            // 日志读不到不影响把退出码报出去
+        }
+        String lower = logText.toLowerCase(Locale.ROOT);
+        if (lower.contains("invalid capture filter") || lower.contains("valid display filter")) {
+            return "过滤器「" + filter + "」不是捕获过滤语法。它看起来是显示过滤（如 http / http.request.method == \"GET\"），"
+                    + "请把「过滤语法」切到「显示过滤」，或改成捕获过滤如 tcp port 80。";
+        }
+        if (lower.contains("invalid display filter") || lower.contains("isn't a valid display filter")) {
+            return "显示过滤器「" + filter + "」语法有误，请检查字段名与运算符。";
+        }
+        String text = logText.trim();
+        if (!text.isEmpty()) {
+            return firstLine(text);
+        }
+        return "tshark 启动后立即退出（退出码 " + exitCode + "）";
+    }
+
+    /**
      * 启动capture。
      * @param name 名称
      * @param iface iface
      * @param filter 过滤器
+     * @param filterType 过滤语法：auto / bpf / display
      * @param count 数量
      * @param timeout 超时
      * @return 启动capture的结果
      */
-    public ReturnResult<MsTsharkSession> startCapture(String name, String iface, String filter, Integer count, Integer timeout) {
+    public ReturnResult<MsTsharkSession> startCapture(String name, String iface, String filter,
+                                                      String filterType, Integer count, Integer timeout) {
         try {
             if (iface == null || iface.isBlank()) {
                 return ReturnResult.error("请指定网卡");
@@ -413,7 +489,15 @@ public class TsharkCaptureService {
             cmd.add("-i");
             cmd.add(iface);
             if (filter != null && !filter.isBlank()) {
-                cmd.add("-f");
+                // BPF（-f）与显示过滤（-Y）不是同一套语法：用户最常见的 `http` 只能当
+                // 显示过滤用，硬塞给 -f 会让 tshark 立刻以「Invalid capture filter」退出，
+                // 页面看到的就是「新建会话后马上停止」。这里按 filterType 分流；
+                // auto 时按文本猜（带 ==、字段点号或 http/dns/tls 这类协议名 → 显示过滤）。
+                if (useDisplayFilter(filter, filterType)) {
+                    cmd.add("-Y");
+                } else {
+                    cmd.add("-f");
+                }
                 cmd.add(filter);
             }
             if (count != null && count > 0) {
@@ -430,6 +514,15 @@ public class TsharkCaptureService {
             pb.redirectErrorStream(true);
             pb.redirectOutput(new File(filePath + ".log"));
             Process proc = pb.start();
+            // tshark 对过滤器/网卡的抱怨发生在启动后的几百毫秒内。这里等一小会儿：
+            // 非 0 退出直接回错误并清掉临时文件，不再落一条「刚建就停」的会话。
+            // 退出码 0 是 -c 1 这类迅速抓完的正常情况，继续走建会话 + 收尾解析。
+            if (proc.waitFor(600L, TimeUnit.MILLISECONDS) && proc.exitValue() != 0) {
+                String detail = startupFailure(filePath, filter, proc.exitValue());
+                Files.deleteIfExists(filePath);
+                Files.deleteIfExists(Paths.get(filePath + ".log"));
+                return ReturnResult.error("抓包启动失败: " + detail);
+            }
             MsTsharkSession session = new MsTsharkSession();
             session.setSessionName(name == null || name.isBlank() ? iface + " 抓包" : name);
             session.setCaptureInterface(iface);

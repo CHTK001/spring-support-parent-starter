@@ -81,14 +81,14 @@ public class TsharkCaptureController {
     /**
      * 启动抓包会话
      *
-     * @param body 抓包请求（name/captureInterface/captureFilter/count/timeout）
+     * @param body 抓包请求（name/captureInterface/captureFilter/filterType/count/timeout）
      * @return 新建的抓包会话
      */
     @Operation(summary = "启动抓包会话")
     @PostMapping("/capture")
     public ReturnResult<MsTsharkSession> start(@RequestBody TsharkCaptureStartDTO body) {
         return this.tsharkCaptureService.startCapture(body.name(), body.captureInterface(),
-                body.captureFilter(), body.count(), body.timeout());
+                body.captureFilter(), body.filterType(), body.count(), body.timeout());
     }
 
     /**
