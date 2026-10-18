@@ -586,7 +586,13 @@ public class TsharkCaptureService {
             session = this.sessionMapper.selectById(sessionId);
             if (session != null) {
                 session.setCaptureStatus(0);
-                session.setEndTime(LocalDateTime.now());
+                // 结束时间必须保留「报文时间」，不能用当前时刻覆盖：
+                // 导入会话的 endTime 语义是「最后一个报文的时间」（fillTimeRange 已按报文回填），
+                // 覆盖成 now 会让页面上的「报文时间范围」跨度变成十几个小时（实测 10:00 的包显示到 21:54）。
+                // 只有一条报文都没解析出来时（空文件 / 不是 pcap）才用 now 收尾。
+                if (session.getEndTime() == null) {
+                    session.setEndTime(LocalDateTime.now());
+                }
                 this.sessionMapper.updateById(session);
                 this.pushService.pushTsharkSession(session, sessionId);
             }
