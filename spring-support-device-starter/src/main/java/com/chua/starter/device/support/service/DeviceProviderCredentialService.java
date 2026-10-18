@@ -51,6 +51,15 @@ public interface DeviceProviderCredentialService {
     DeviceProviderCredential update(String id, DeviceProviderCredential credential);
 
     /**
+     * 只切换启用/停用，不触碰 AK/SK、名称等其它字段。
+     *
+     * @param id      凭据 ID
+     * @param enabled 是否启用
+     * @return 落库后的凭据
+     */
+    DeviceProviderCredential updateEnabled(String id, boolean enabled);
+
+    /**
      * 删除凭据
      *
      * @param id 凭据 ID

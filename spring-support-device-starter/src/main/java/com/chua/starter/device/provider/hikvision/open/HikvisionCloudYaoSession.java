@@ -56,6 +56,16 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      *
      * @param info 设备连接信息
      */
+    /**
+     * 云曜产品编码（ProductCode）：平台侧按产品维度隔离设备
+     */
+    private final String productCode;
+
+    /**
+     * 云曜项目 ID（ProjectID）：平台侧按项目维度隔离设备
+     */
+    private final String projectId;
+
     public HikvisionCloudYaoSession(DeviceConnectInfo info) {
         /**
          * 父。
@@ -63,10 +73,27 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
          * @param DEFAULT_BASE_URL 默认baseurl
          */
         super(info, DEFAULT_BASE_URL);
+        this.productCode = extraString(info, "productCode");
+        this.projectId = extraString(info, "projectId");
         /**
          * login。
          */
         login();
+    }
+
+    /**
+     * 从连接信息扩展参数里取字符串
+     */
+    private static String extraString(DeviceConnectInfo info, String key) {
+        if (info == null || info.extra() == null) {
+            return null;
+        }
+        Object value = info.extra().get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? null : text;
     }
 
     /**
@@ -157,6 +184,13 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
             realParams.put("accessToken", accessToken);
         }
         if (!PATH_TOKEN.equals(path)) {
+            // 云曜按产品 + 项目维度隔离设备，取流 / 云台 / 门禁都要带
+            if (productCode != null) {
+                realParams.put("productCode", productCode);
+            }
+            if (projectId != null) {
+                realParams.put("projectId", projectId);
+            }
             String sign = sign(realParams);
             realParams.put("sign", sign);
             if (debugEnabled()) {

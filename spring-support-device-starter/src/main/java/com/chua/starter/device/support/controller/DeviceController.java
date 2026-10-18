@@ -6,6 +6,7 @@ import com.chua.starter.device.support.service.DeviceProviderConfigService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.chua.starter.device.support.util.ExcelExportUtil;
+import com.chua.starter.mybatis.entity.PageResult;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -95,6 +96,27 @@ public class DeviceController {
     @GetMapping("/list")
     public List<DeviceInfo> listDevices(@RequestParam(required = false) String orgId) {
         return deviceService.listDevices(orgId);
+    }
+
+    /**
+     * 分页查询设备。
+     *
+     * @param pageNo   页码，从 1 开始
+     * @param pageSize 每页条数
+     * @param orgId    组织 ID，可选
+     * @param keyword  名称 / IP / 序列号关键字，可选
+     * @param category 设备大类，可选
+     * @param online   在线状态，可选
+     * @return 设备分页结果
+     */
+    @GetMapping("/page")
+    public PageResult<DeviceInfo> pageDevices(@RequestParam(defaultValue = "1") long pageNo,
+                                              @RequestParam(defaultValue = "12") long pageSize,
+                                              @RequestParam(required = false) String orgId,
+                                              @RequestParam(required = false) String keyword,
+                                              @RequestParam(required = false) String category,
+                                              @RequestParam(required = false) Boolean online) {
+        return deviceService.pageDevices(pageNo, pageSize, orgId, keyword, category, online);
     }
 
     /**

@@ -50,6 +50,14 @@ public class DeviceProviderCredential {
     @TableField("device_credential_app_secret")
     private String deviceCredentialAppSecret;
 
+    /** 云曜产品编码（ProductCode），云曜平台必填 */
+    @TableField("device_credential_product_code")
+    private String deviceCredentialProductCode;
+
+    /** 云曜项目 ID（ProjectID），云曜平台必填 */
+    @TableField("device_credential_project_id")
+    private String deviceCredentialProjectId;
+
     /** 平台 endpoint 覆盖（留空用各 Session 内置默认） */
     @TableField("device_credential_base_url")
     private String deviceCredentialBaseUrl;

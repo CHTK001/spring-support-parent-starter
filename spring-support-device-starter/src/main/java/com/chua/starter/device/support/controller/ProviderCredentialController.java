@@ -47,6 +47,20 @@ public class ProviderCredentialController {
                                           @RequestBody DeviceProviderCredential credential) {
         return credentialService.update(id, credential);
     }
+
+    /**
+     * 只切换启用/停用，避免整对象更新把 AK/SK、默认套等字段一并覆盖。
+     *
+     * @param id      凭据 ID
+     * @param enabled 是否启用
+     * @return 更新后的凭据
+     */
+    @PutMapping("/{id}/enabled")
+    public DeviceProviderCredential updateEnabled(@PathVariable String id,
+                                                 @RequestParam boolean enabled) {
+        return credentialService.updateEnabled(id, enabled);
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {
         credentialService.delete(id);

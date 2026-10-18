@@ -39,6 +39,12 @@
             <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
         </dependency>
 
+        <!-- Spring Support MyBatis(PageResult / 分页拦截器) -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
         <!-- Spring Support Common -->
         <dependency>
             <groupId>com.chua</groupId>
