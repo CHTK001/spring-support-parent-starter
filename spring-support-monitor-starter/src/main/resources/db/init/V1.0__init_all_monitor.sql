@@ -393,6 +393,11 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_session` (
     `id`                            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `ms_tshark_session_name`        VARCHAR(128) DEFAULT NULL            COMMENT '会话名称',
     `ms_tshark_session_interface`   VARCHAR(128) DEFAULT NULL            COMMENT '抓包网卡',
+    -- 来源：live=网卡实时抓包 / import=导入的 pcap。两类会话同表，必须能分开查，
+    -- 否则「PCAP 分析」页会把实时抓包的历史也列进来。
+    -- 注：存量 MySQL 库因本脚本是 CREATE TABLE IF NOT EXISTS 不会补列，需手工执行
+    --     ALTER TABLE ms_tshark_session ADD COLUMN ms_tshark_session_source VARCHAR(16) DEFAULT 'live';
+    `ms_tshark_session_source`      VARCHAR(16) DEFAULT 'live'            COMMENT '来源: live 实时抓包 / import 导入 pcap',
     `ms_tshark_session_filter`      VARCHAR(512) DEFAULT NULL            COMMENT 'BPF 过滤器',
     `ms_tshark_session_status`      TINYINT      DEFAULT 0               COMMENT '状态: 0停止 1运行中',
     `ms_tshark_session_packet_count` INT         DEFAULT 0               COMMENT '已入库数据包数',
