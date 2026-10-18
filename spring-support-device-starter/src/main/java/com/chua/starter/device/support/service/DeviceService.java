@@ -3,6 +3,7 @@ package com.chua.starter.device.support.service;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.mybatis.entity.PageResult;
 
 import java.util.List;
 
