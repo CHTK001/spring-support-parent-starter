@@ -5,6 +5,7 @@ import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.ServerBuilder;
 import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.filter.ServerFilter;
+import com.chua.common.support.network.server.proxy.AioTcpProxyServer;
 import com.chua.common.support.network.sip.SipConfig;
 import com.chua.common.support.network.sip.SipServer;
 import com.chua.common.support.reflection.ReflectUtils;
@@ -547,7 +548,29 @@ public class ServerNodeRegistry {
      */
     private Server buildSpiServer(MsServerNode node, ServerSetting setting,
                                   List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
-        Server server = ServiceProvider.of(Server.class).getNewExtension(node.getProtocol(), setting);
+        // 需要后端的 SPI 代理协议必须把后端地址注入实例：这些实现的 SPI 无参形态
+        // （只给 ServerSetting）会把解析器初始化成「恒返回 null = 拒绝所有连接」，
+        // 于是节点能启动、端口能监听，但每个连接都被立刻关闭/挂死
+        // （实测 aio-tcp-proxy 超时、vertx-tcp-proxy RST、vertx-http-proxy 502）。
+        // 有后端配置时优先走 (Setting, InetSocketAddress) 构造器。
+        InetSocketAddress backend = resolveBackendIfPresent(node, parseConfig(node));
+        Server server = null;
+        if (backend != null) {
+            // 关键：不能只依赖 getNewExtension(name, setting, backend) —— 该 API 在
+            // 构造器签名不匹配时会**静默回落到 @SpiDefault 默认实现**（而不是返回 null），
+            // 于是拿到的其实是「单参构造 + 解析器恒 null」的实例，节点能起、状态 RUNNING，
+            // 但每个连接都被拒绝（实测 vertx-*/aio-* 三个 SPI 代理）。
+            // 因此先按 (ServerSetting, InetSocketAddress) 显式构造；失败再走 SPI 回退。
+            server = reflectProxyServer(node.getProtocol(), setting, backend);
+        }
+        if (server == null) {
+            server = ServiceProvider.of(Server.class).getNewExtension(node.getProtocol(), setting);
+        }
+        // 少数 SPI 代理没有 (Setting, InetSocketAddress) 构造器，只暴露 setTarget(host, port)
+        // （如 aio-tcp-proxy）；此时反射构造会失败并回退 SPI，需再补一次注入。
+        if (backend != null && server instanceof AioTcpProxyServer aio) {
+            aio.setTarget(backend.getHostString(), backend.getPort());
+        }
         if (server == null) {
             // 区分「SPI 名字没登记」与「登记了但实例化失败」：后者是构造器签名不匹配或构造过程
             // 抛异常（SPI 内部会把异常吞掉、只返回 null）。原先一律报「未注册」，把构造异常
@@ -903,6 +926,94 @@ public class ServerNodeRegistry {
          * @return inetSocket地址的结果
          */
         return new InetSocketAddress(String.valueOf(backendHost), Integer.parseInt(String.valueOf(backendPort).trim()));
+    }
+
+    /**
+     * 解析可选的后端地址（SPI 协议的代理类）。
+     *
+     * <p>SPI 协议里既有代理类也有非代理类（ftp/tcp/udp/rsocket…）。这里只在
+     * 「SPI 元数据声明 requiresBackend」或「config 里确实给了 backendHost+backendPort」
+     * 时返回后端地址；其余情况返回 空，仍走原来的单参构造。</p>
+     *
+     * <p>后者是必要的：列表里的 SPI 代理（aio-tcp-proxy / vertx-tcp-proxy /
+     * vertx-http-proxy）元数据没有 requiresBackend 标记，但用户确实填了后端，
+     * 若仍走单参构造就会被实例化成「拒绝所有连接」。</p>
+     *
+     * @param node   节点定义
+     * @param config 协议配置
+     * @return 后端地址；不需要/未配置时返回 空
+     */
+    private InetSocketAddress resolveBackendIfPresent(MsServerNode node, Map<String, Object> config) {
+        Object backendHost = config.get("backendHost");
+        Object backendPort = config.get("backendPort");
+        boolean configured = backendHost != null && !String.valueOf(backendHost).isBlank()
+                && backendPort != null && !String.valueOf(backendPort).isBlank();
+        if (!configured) {
+            // 代理类协议却没给后端：尽早给出可读错误，避免"能启动但全拒连"的静默故障
+            if (isProxyProtocol(node.getProtocol())) {
+                throw new IllegalArgumentException(
+                        "代理服务器必须在 config 中提供 backendHost 与 backendPort: " + node.getProtocol());
+            }
+            return null;
+        }
+        return resolveBackend(config);
+    }
+
+    /**
+     * 是否为代理类协议（需要后端地址）。
+     *
+     * <p>覆盖内置（http-proxy、tcp-proxy）与 SPI 代理（aio-、vertx-、socks5-proxy）；
+     * 名字不带 proxy 的协议一律排除。</p>
+     *
+     * @param protocol 协议别名
+     * @return true 表示代理类
+     */
+    private boolean isProxyProtocol(String protocol) {
+        if (protocol == null) {
+            return false;
+        }
+        String p = protocol.trim().toLowerCase();
+        // socks5-proxy 是从 SOCKS5 握手报文里**逐请求**取目标的协议级代理，
+        // 天然没有固定后端；用「名字含 proxy 就必须配后端」会把它误判成配置缺失
+        // （实测矩阵里只有它因此变成 ERROR）。
+        if (p.contains("socks")) {
+            return false;
+        }
+        return p.contains("proxy");
+    }
+
+    /**
+     * 按 {@code (ServerSetting, InetSocketAddress)} 构造 SPI 代理实例。
+     *
+     * <p>绕开 {@code ServiceProvider.getNewExtension} 的「构造失败静默回落默认实现」：
+     * 那种回退会返回一个能启动却不转发任何流量的实例，属于最难发现的静默故障。
+     * 这里只认精确的双参构造器，没有就返回 空 交给调用方回退。</p>
+     *
+     * @param protocol 协议别名（SPI 名）
+     * @param setting  服务器配置
+     * @param backend  后端地址
+     * @return 实例；无匹配构造器时返回 空
+     */
+    private Server reflectProxyServer(String protocol, ServerSetting setting, InetSocketAddress backend) {
+        try {
+            ServiceDefinition definition = ServiceProvider.of(Server.class).getDefinition(protocol);
+            if (definition == null) {
+                return null;
+            }
+            Class<?> impl = definition.getImplClass();
+            if (impl == null) {
+                return null;
+            }
+            java.lang.reflect.Constructor<?> constructor = impl.getConstructor(ServerSetting.class, InetSocketAddress.class);
+            Object instance = constructor.newInstance(setting, backend);
+            return instance instanceof Server server ? server : null;
+        } catch (NoSuchMethodException e) {
+            // 该类只提供单参构造/setTarget：交给调用方回退 + 补注入
+            return null;
+        } catch (Exception e) {
+            log.warn("[ServerNodeRegistry] SPI 代理按双参构造失败: {} - {}", protocol, e.getMessage());
+            return null;
+        }
     }
 
     /**
