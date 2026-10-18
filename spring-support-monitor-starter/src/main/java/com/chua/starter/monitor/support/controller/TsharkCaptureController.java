@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -103,6 +104,27 @@ public class TsharkCaptureController {
     }
 
     /**
+     * 导入 pcap 文件（PCAP 分析）
+     *
+     * <p>上传的 pcap 落到抓包目录、以 {@code source=import} 建一条会话，随后在后台用
+     * {@code tshark -r} 整份解析入库。解析出的报文因此复用同一套接口（分页 / 详情 /
+     * 协议分布 / Top 流），原始文件用 {@link #pcap(Long)} 下回去。</p>
+     *
+     * <p>返回时解析通常还没结束（会话状态 1 = 解析中），包数在后台累加并通过会话推送
+     * 抵达前端，页面据此显示进度。</p>
+     *
+     * @param file pcap 文件（multipart 字段名 {@code file}）
+     * @param name 会话名（可空，默认取上传的原始文件名）
+     * @return 新建的会话
+     */
+    @Operation(summary = "导入 pcap 文件")
+    @PostMapping("/pcap/import")
+    public ReturnResult<MsTsharkSession> importPcap(@RequestParam("file") MultipartFile file,
+                                                    @RequestParam(required = false) String name) {
+        return this.tsharkCaptureService.importPcap(name, file);
+    }
+
+    /**
      * 删除抓包会话（含数据包）
      *
      * @param id 会话 ID
@@ -119,13 +141,15 @@ public class TsharkCaptureController {
      *
      * @param page 页码
      * @param size 每页大小
+     * @param source 来源过滤（live 实时抓包 / import 导入 pcap，可空表示不过滤）
      * @return 分页结果
      */
     @Operation(summary = "抓包会话分页列表")
     @GetMapping("/sessions")
     public ReturnResult<IPage<MsTsharkSession>> sessions(@RequestParam(defaultValue = "1") int page,
-                                                          @RequestParam(defaultValue = "10") int size) {
-        return this.tsharkCaptureService.pageSessions(page, size);
+                                                          @RequestParam(defaultValue = "10") int size,
+                                                          @RequestParam(required = false) String source) {
+        return this.tsharkCaptureService.pageSessions(page, size, source);
     }
 
     /**
