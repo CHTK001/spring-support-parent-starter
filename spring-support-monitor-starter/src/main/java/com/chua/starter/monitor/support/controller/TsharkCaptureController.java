@@ -173,11 +173,14 @@ public class TsharkCaptureController {
     /**
      * 还原某个包所属 TCP 流的握手 / 关闭生命周期
      *
-     * <p>抓包页在包上右键 → 「查看握手生命周期」就调这里，返回该包的整条流按时序排好的
+     * <p>抓包页在包上右键 → 「查看生命周期」就调这里，返回该包的整条流按时序排好的
      * 报文序列与握手判定（三次 / 四次 / 未完成），前端据此画时序图。</p>
      *
+     * <p>HTTP / TLS / SSH 等跑在 TCP 上的协议同样支持：数据帧的协议与握手帧的协议
+     * 不同，匹配只按四元组，不按协议列过滤。</p>
+     *
      * @param packetId 数据包 ID
-     * @return 生命周期；包不存在或非 TCP 时 404
+     * @return 生命周期；包不存在或协议不跑在 TCP 上时 404
      */
     @Operation(summary = "查看 TCP 握手生命周期")
     @GetMapping("/packets/{packetId}/handshake")
