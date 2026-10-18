@@ -956,37 +956,75 @@ public class TsharkCaptureService {
      */
     public TsharkHandshakeVO handshakeOf(Long packetId) {
         MsTsharkPacket anchor = this.packetMapper.selectById(packetId);
-        if (anchor == null || anchor.getSessionId() == null
-                || !"TCP".equalsIgnoreCase(String.valueOf(anchor.getProtocol()))) {
-            // 非 TCP 谈不上握手；UDP/ICMP 直接不返回，前端据此不显示该菜单项
+        if (anchor == null || anchor.getSessionId() == null || !isTcpBased(anchor)) {
+            // 非 TCP 系协议谈不上握手；UDP/ICMP/ARP 直接不返回，前端据此提示不支持
             return null;
         }
+
+        // 不按协议过滤：同一条 TCP 流里 SYN / FIN 会被 simplifyProtocol 归一成 TCP，
+        // 而数据帧可能是 HTTP / TLS / SSH。按 anchor 的协议过滤会把握手与挥手全丢掉，
+        // 页面上就只剩中间几个数据帧 —— 看起来正是「一采到数据生命周期就结束了」。
         List<MsTsharkPacket> all = this.packetMapper.selectList(
                 new LambdaQueryWrapper<MsTsharkPacket>()
                         .eq(MsTsharkPacket::getSessionId, anchor.getSessionId())
-                        .eq(MsTsharkPacket::getProtocol, anchor.getProtocol())
                         .orderByAsc(MsTsharkPacket::getPacketTime)
                         .orderByAsc(MsTsharkPacket::getId));
 
-        boolean anchorIsClientSide = sameEndpoint(anchor.getSourceIp(), anchor.getSourcePort(),
-                anchor.getDestIp(), anchor.getDestPort());
-        String clientIp = anchorIsClientSide ? anchor.getSourceIp() : anchor.getDestIp();
-        Integer clientPort = anchorIsClientSide ? anchor.getSourcePort() : anchor.getDestPort();
-        String serverIp = anchorIsClientSide ? anchor.getDestIp() : anchor.getSourceIp();
-        Integer serverPort = anchorIsClientSide ? anchor.getDestPort() : anchor.getSourcePort();
-
         List<MsTsharkPacket> flow = all.stream()
-                .filter(p -> isSameFlow(p, clientIp, clientPort, serverIp, serverPort))
+                .filter(p -> isSameFlow(p, anchor.getSourceIp(), anchor.getSourcePort(),
+                        anchor.getDestIp(), anchor.getDestPort()))
                 .toList();
         if (flow.isEmpty()) {
             return null;
         }
+
+        // 方向以第一个裸 SYN 为准：发出它的一侧是客户端（服务端回 SYN+ACK）。
+        // 抓包开始前连接就建好了时没有 SYN，退而用 SYN+ACK 的发送方反推，最后才用
+        // anchor 的源端兜底。原实现比较的是 anchor 的源与目的（恒为 false），
+        // 于是 client/server 永远按固定方向取，命中响应包时两条泳道会整个反过来。
+        MsTsharkPacket syn = findFirst(flow, true);
+        MsTsharkPacket synAck = findFirst(flow, false);
+        MsTsharkPacket origin = syn != null ? syn : (synAck != null ? synAck : anchor);
+        boolean originIsServer = syn == null && synAck != null;
+        String clientIp = originIsServer ? origin.getDestIp() : origin.getSourceIp();
+        Integer clientPort = originIsServer ? origin.getDestPort() : origin.getSourcePort();
+        String serverIp = originIsServer ? origin.getSourceIp() : origin.getDestIp();
+        Integer serverPort = originIsServer ? origin.getSourcePort() : origin.getDestPort();
+
         return buildHandshake(anchor.getSessionId(), clientIp, clientPort, serverIp, serverPort, flow);
     }
 
-    /** 两端（ip + port）完全相同才算同一条流。 */
-    private static boolean sameEndpoint(String aIp, Integer aPort, String bIp, Integer bPort) {
-        return eq(aIp, bIp) && eq(aPort, bPort);
+    /**
+     * 该报文是否跑在 TCP 之上（能还原握手 / 挥手）。
+     *
+     * @param packet 报文
+     * @return true 表示支持生命周期
+     */
+    private static boolean isTcpBased(MsTsharkPacket packet) {
+        String proto = packet.getProtocol() == null ? "" : packet.getProtocol().trim().toUpperCase(Locale.ROOT);
+        return switch (proto) {
+            case "TCP", "HTTP", "HTTPS", "TLS", "SSH", "FTP", "SMTP", "SMB", "MQTT", "TELNET" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 找出第一条握手包。
+     *
+     * @param flow     按时间排好的整条流
+     * @param bareSyn  true = 裸 SYN（客户端发起）；false = SYN+ACK（服务端回应）
+     * @return 命中的报文；没有返回 null
+     */
+    private static MsTsharkPacket findFirst(List<MsTsharkPacket> flow, boolean bareSyn) {
+        for (MsTsharkPacket p : flow) {
+            String flags = extractFlags(p.getPacketInfo() == null ? "" : p.getPacketInfo());
+            boolean syn = flags.contains("SYN");
+            boolean ack = flags.contains("ACK");
+            if (bareSyn ? (syn && !ack) : (syn && ack)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /** 报文属于该流：正向或反向均可。 */
