@@ -1,8 +1,10 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
+import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.mapper.DeviceOrganizationMapper;
 import com.chua.starter.device.support.service.DeviceService;
@@ -10,13 +12,17 @@ import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -60,26 +66,41 @@ public class DeviceServiceImpl implements DeviceService {
      * 添加Device
     */
     public DeviceInfo addDevice(DeviceConnectInfo info) {
+        // 平台接入只传提供商凭据 ID，AK/SK 在服务端补齐，前端不再散落密钥
+        DeviceConnectInfo connectInfo = enrichWithCredential(info);
         DeviceProvider provider = providers.stream()
-                .filter(p -> p.support(info))
+                .filter(p -> p.support(connectInfo))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("不支持的设备厂商"));
 
-        DeviceSession session = provider.connect(info);
+        DeviceSession session = provider.connect(connectInfo);
 
+        Map<String, Object> extra = connectInfo.extra() == null ? Map.of() : connectInfo.extra();
+        LocalDateTime now = LocalDateTime.now();
         DeviceInfo device = new DeviceInfo();
         device.setDeviceInfoId(UUID.randomUUID().toString());
-        device.setDeviceInfoVendor(info.vendor());
-        device.setDeviceInfoIp(info.ip());
-        device.setDeviceInfoPort(info.port());
-        device.setDeviceInfoUsername(info.username());
-        device.setDeviceInfoPassword(info.password());
+        device.setDeviceInfoName(firstNonBlank(str(extra.get("deviceInfoName")),
+                connectInfo.deviceSerial(), connectInfo.ip()));
+        device.setDeviceInfoVendor(connectInfo.vendor());
+        device.setDeviceInfoCategory(str(extra.get("deviceInfoCategory")));
+        device.setDeviceInfoSubCategory(str(extra.get("deviceInfoSubCategory")));
+        device.setDeviceInfoIp(connectInfo.ip());
+        device.setDeviceInfoPort(connectInfo.port());
+        device.setDeviceInfoUsername(connectInfo.username());
+        device.setDeviceInfoPassword(connectInfo.password());
+        device.setDeviceInfoSerial(firstNonBlank(connectInfo.deviceSerial(), str(extra.get("deviceInfoSerial"))));
+        device.setDeviceInfoLatitude(decimal(extra.get("deviceInfoLatitude")));
+        device.setDeviceInfoLongitude(decimal(extra.get("deviceInfoLongitude")));
+        device.setDeviceInfoAddress(str(extra.get("deviceInfoAddress")));
+        device.setDeviceInfoChannelCount(0);
         device.setDeviceInfoOnline(Boolean.TRUE);
-        device.setDeviceInfoCreatedAt(LocalDateTime.now());
+        device.setDeviceInfoCreatedAt(now);
+        device.setDeviceInfoUpdatedAt(now);
         deviceInfoMapper.insert(device);
 
         sessionManager.register(device.getDeviceInfoId(), session);
-        log.info("设备添加成功: vendor={}, ip={}", info.vendor(), info.ip());
+        log.info("设备添加成功: vendor={}, ip={}, name={}",
+                connectInfo.vendor(), connectInfo.ip(), device.getDeviceInfoName());
         return device;
     }
 
@@ -120,6 +141,36 @@ public class DeviceServiceImpl implements DeviceService {
         }
         wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
         return deviceInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    /**
+     * 分页查询设备
+    */
+    public PageResult<DeviceInfo> pageDevices(long pageNo, long pageSize, String orgId,
+                                              String keyword, String category, Boolean online) {
+        Page<DeviceInfo> page = new Page<>(Math.max(1, pageNo), Math.max(1, pageSize));
+        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(orgId)) {
+            wrapper.eq(DeviceInfo::getDeviceInfoOrgId, orgId);
+        }
+        if (StringUtils.hasText(category)) {
+            wrapper.eq(DeviceInfo::getDeviceInfoCategory, category);
+        }
+        if (online != null) {
+            wrapper.eq(DeviceInfo::getDeviceInfoOnline, online);
+        }
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w.like(DeviceInfo::getDeviceInfoName, kw)
+                    .or().like(DeviceInfo::getDeviceInfoIp, kw)
+                    .or().like(DeviceInfo::getDeviceInfoSerial, kw));
+        }
+        wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
+        deviceInfoMapper.selectPage(page, wrapper);
+        PageResult<DeviceInfo> result = PageResult.copy(page);
+        result.setPageSize(page.getSize());
+        return result;
     }
 
     @Override
@@ -286,19 +337,36 @@ public class DeviceServiceImpl implements DeviceService {
         if (info == null) {
             return null;
         }
+        // SDK 直连走设备自身 IP + 账号密码，不使用平台凭据
+        if ("SDK".equalsIgnoreCase(info.authType())) {
+            return info;
+        }
         String vendor = info.vendor();
         if (vendor == null || vendor.isBlank()) {
             return info;
         }
-        // authType 缺省时按平台模式处理：SDK 直连不需要 AK/SK，凭据缺失不应阻断
+        // authType 缺省且已显式给出 AK/SK 时保持调用方参数，不再覆盖
         if (info.authType() == null && info.appKey() != null && !info.appKey().isBlank()) {
             return info;
         }
-        com.chua.starter.device.support.entity.DeviceProviderCredential credential =
-                credentialService.resolveFor(vendor, info.platformType());
+        Map<String, Object> extra = info.extra() == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(info.extra());
+        // 前端设备表单只传所选凭据 ID，这里优先按 ID 精确取；读不到再按厂商 + 平台回退
+        DeviceProviderCredential credential = null;
+        Object credentialId = extra.get("credentialId");
+        if (credentialId != null && StringUtils.hasText(String.valueOf(credentialId))) {
+            credential = credentialService.get(String.valueOf(credentialId));
+        }
+        if (credential == null) {
+            credential = credentialService.resolveFor(vendor, info.platformType());
+        }
         if (credential == null) {
             log.debug("未登记 {} 的提供商凭据，按现有连接信息建连", vendor);
             return info;
+        }
+        if (Boolean.FALSE.equals(credential.getDeviceCredentialEnabled())) {
+            throw new IllegalStateException("提供商凭据已停用: " + credential.getDeviceCredentialName());
         }
         String appKey = firstNonBlank(info.appKey(), credential.getDeviceCredentialAppKey());
         String appSecret = firstNonBlank(info.appSecret(), credential.getDeviceCredentialAppSecret());
@@ -308,6 +376,16 @@ public class DeviceServiceImpl implements DeviceService {
         if (authType == null && appKey != null && !appKey.isBlank()) {
             authType = "PLATFORM";
         }
+        if (StringUtils.hasText(credential.getDeviceCredentialBaseUrl())) {
+            extra.put("baseUrl", credential.getDeviceCredentialBaseUrl());
+        }
+        if (StringUtils.hasText(credential.getDeviceCredentialProductCode())) {
+            extra.put("productCode", credential.getDeviceCredentialProductCode());
+        }
+        if (StringUtils.hasText(credential.getDeviceCredentialProjectId())) {
+            extra.put("projectId", credential.getDeviceCredentialProjectId());
+        }
+        extra.put("credentialId", credential.getDeviceCredentialId());
         log.info("建连补齐提供商凭据: vendor={}, platform={}, credential={}",
                 vendor, platformType, credential.getDeviceCredentialName());
         return new DeviceConnectInfo(
@@ -321,7 +399,7 @@ public class DeviceServiceImpl implements DeviceService {
                 appKey,
                 appSecret,
                 info.deviceSerial(),
-                info.extra()
+                extra
         );
     }
 
@@ -338,6 +416,32 @@ public class DeviceServiceImpl implements DeviceService {
             }
         }
         return null;
+    }
+
+    /**
+     * 任意对象转字符串；空白按 {@code null} 处理
+     */
+    private static String str(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    /**
+     * 任意对象转经纬度；非法值返回 {@code null}
+     */
+    private static BigDecimal decimal(Object value) {
+        String text = str(value);
+        if (text == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(text);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override

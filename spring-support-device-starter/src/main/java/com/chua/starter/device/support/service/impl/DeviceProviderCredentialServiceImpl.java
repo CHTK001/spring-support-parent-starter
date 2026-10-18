@@ -85,18 +85,73 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         if (existing == null) {
             throw new IllegalArgumentException("凭据不存在: " + id);
         }
-        normalize(credential);
-        assertNameFree(credential, id);
-        if (Boolean.TRUE.equals(credential.getDeviceCredentialIsDefault())) {
-            clearVendorDefault(credential.getDeviceCredentialVendor(), id);
+        if (credential == null) {
+            throw new IllegalArgumentException("待更新内容不能为空");
         }
-        credential.setDeviceCredentialId(id);
-        // 创建时间不可改，避免覆盖历史
-        credential.setDeviceCredentialCreatedAt(null);
-        credential.setDeviceCredentialUpdatedAt(LocalDateTime.now());
-        credentialMapper.updateById(credential);
-        log.info("更新提供商凭据: id={}, vendor={}, name={}",
-                id, credential.getDeviceCredentialVendor(), credential.getDeviceCredentialName());
+        // 合并而不是整对象覆盖：编辑表单不带默认套标记时，不能把原有默认态抹掉
+        DeviceProviderCredential update = new DeviceProviderCredential();
+        update.setDeviceCredentialId(id);
+        update.setDeviceCredentialVendor(firstText(credential.getDeviceCredentialVendor(),
+                existing.getDeviceCredentialVendor()));
+        update.setDeviceCredentialPlatformType(credential.getDeviceCredentialPlatformType() != null
+                ? credential.getDeviceCredentialPlatformType()
+                : existing.getDeviceCredentialPlatformType());
+        update.setDeviceCredentialName(firstText(credential.getDeviceCredentialName(),
+                existing.getDeviceCredentialName()));
+        update.setDeviceCredentialAppKey(credential.getDeviceCredentialAppKey() != null
+                ? credential.getDeviceCredentialAppKey()
+                : existing.getDeviceCredentialAppKey());
+        // 留空表示不改 SK，避免编辑其它字段时把密钥洗掉
+        update.setDeviceCredentialAppSecret(firstText(credential.getDeviceCredentialAppSecret(),
+                existing.getDeviceCredentialAppSecret()));
+        update.setDeviceCredentialProductCode(credential.getDeviceCredentialProductCode() != null
+                ? credential.getDeviceCredentialProductCode()
+                : existing.getDeviceCredentialProductCode());
+        update.setDeviceCredentialProjectId(credential.getDeviceCredentialProjectId() != null
+                ? credential.getDeviceCredentialProjectId()
+                : existing.getDeviceCredentialProjectId());
+        update.setDeviceCredentialBaseUrl(credential.getDeviceCredentialBaseUrl() != null
+                ? credential.getDeviceCredentialBaseUrl()
+                : existing.getDeviceCredentialBaseUrl());
+        update.setDeviceCredentialOfflineThreshold(credential.getDeviceCredentialOfflineThreshold() != null
+                ? credential.getDeviceCredentialOfflineThreshold()
+                : existing.getDeviceCredentialOfflineThreshold());
+        update.setDeviceCredentialIsDefault(credential.getDeviceCredentialIsDefault() != null
+                ? credential.getDeviceCredentialIsDefault()
+                : existing.getDeviceCredentialIsDefault());
+        update.setDeviceCredentialEnabled(credential.getDeviceCredentialEnabled() != null
+                ? credential.getDeviceCredentialEnabled()
+                : existing.getDeviceCredentialEnabled());
+        update.setDeviceCredentialRemark(credential.getDeviceCredentialRemark() != null
+                ? credential.getDeviceCredentialRemark()
+                : existing.getDeviceCredentialRemark());
+
+        normalize(update);
+        assertNameFree(update, id);
+        if (Boolean.TRUE.equals(update.getDeviceCredentialIsDefault())) {
+            clearVendorDefault(update.getDeviceCredentialVendor(), id);
+        }
+        update.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+        credentialMapper.updateById(update);
+        log.info("更新提供商凭据: id={}, vendor={}, name={}, enabled={}",
+                id, update.getDeviceCredentialVendor(), update.getDeviceCredentialName(),
+                update.getDeviceCredentialEnabled());
+        return credentialMapper.selectById(id);
+    }
+
+    @Override
+    @Transactional
+    public DeviceProviderCredential updateEnabled(String id, boolean enabled) {
+        DeviceProviderCredential existing = credentialMapper.selectById(id);
+        if (existing == null) {
+            throw new IllegalArgumentException("凭据不存在: " + id);
+        }
+        DeviceProviderCredential update = new DeviceProviderCredential();
+        update.setDeviceCredentialId(id);
+        update.setDeviceCredentialEnabled(enabled);
+        update.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+        credentialMapper.updateById(update);
+        log.info("切换提供商凭据启停: id={}, enabled={}", id, enabled);
         return credentialMapper.selectById(id);
     }
 
@@ -149,6 +204,13 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
             }
         }
         return thresholds;
+    }
+
+    /**
+     * 取第一个非空白文本；候选为空时回退到原值
+     */
+    private static String firstText(String candidate, String fallback) {
+        return StringUtils.hasText(candidate) ? candidate : fallback;
     }
 
     /** 补齐默认值并做基本校验 */
