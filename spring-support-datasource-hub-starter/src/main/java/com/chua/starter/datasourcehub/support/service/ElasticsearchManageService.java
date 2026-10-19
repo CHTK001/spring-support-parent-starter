@@ -112,4 +112,18 @@ public interface ElasticsearchManageService {
      * @return 关系图
      */
     ElasticsearchGraphVO graph(Long datasourceId);
+
+    /**
+     * Dev Tools 原始查询：透传任意 ES REST 调用
+     *
+     * <p>ES 的 Dev Tools（如 Kibana Console）需要能发任意 REST 请求，
+     * 本接口透传 method + path + body 到 ES，对 ES 原样返回结果。</p>
+     *
+     * @param method       HTTP 方法（GET / POST / PUT / DELETE）
+     * @param path         ES 端点（如 _search、_settings、_mapping，等，不含 /{index} 前缀）
+     * @param body         请求体（ES DSL JSON，GET/PUT/DELETE 可为空）
+     * @param datasourceId 数据源 ID，可为空
+     * @return ES 返回的原始 JSON
+     */
+    String raw(String method, String path, String body, Long datasourceId);
 }
