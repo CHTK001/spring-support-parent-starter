@@ -69,7 +69,7 @@ public class CompositeJobAlarmNotifier implements JobAlarmNotifier {
 
     @Override
     public void notify(JobAlarmMessage message) throws Exception {
-        String alarmType = JobAlarmMessage.normalizeType(message == null ? null : message.getAlarmType());
+        String alarmType = JobAlarmMessage.normalizeType(message == null ? null : message.alarmType());
         JobAlarmNotifier target = byType.get(alarmType);
         if (target == null) {
             throw new IllegalStateException("未接入 " + alarmType + " 类型告警通道（已注册: " + byType.keySet() + "）");

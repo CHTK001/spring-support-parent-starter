@@ -174,7 +174,7 @@ public class ServerTaskScheduler {
          * rescheduleconnection。
          */
         rescheduleConnection();
-        log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.getKeys());
+        log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.keys());
     }
 
     /**

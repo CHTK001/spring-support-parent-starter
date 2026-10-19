@@ -272,11 +272,11 @@ public class ImageSearchStores {
      */
     @org.springframework.context.event.EventListener
     public void onSettingsChanged(com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent event) {
-        if (event == null || !"image_search".equals(event.getGroup())) {
+        if (event == null || !"image_search".equals(event.group())) {
             return;
         }
-        if (event.isUserScoped()) {
-            String userId = event.getUserId();
+        if (event.userScoped()) {
+            String userId = event.userId();
             if (userId == null || userId.isBlank()) {
                 return;
             }

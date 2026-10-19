@@ -445,10 +445,10 @@ public class FaceClientManager {
         if (event == null) {
             return;
         }
-        if (!GROUP.equals(event.getGroup())) {
+        if (!GROUP.equals(event.group())) {
             return;
         }
-        if (event.isUserScoped()) {
+        if (event.userScoped()) {
             // 共享实例（检测器 / 分类器 / 活体 / 质量）只承载**全局**配置。
             // 按触发者的身份重建会把他的模型烘进共享实例、串掉其他用户 —— 而这些字段
             // 本就不是按用户的（按用户的是 FaceStores 里按账号构建的管线，它自己响应）。

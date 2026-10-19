@@ -74,7 +74,7 @@ public class ApiFeatureManager {
                 .build();
 
         featureInfoMap.put(featureId, info);
-        log.debug("注册功能开关: {} -> {} (默认: {})", featureId, info.getPatterns(), apiFeature.defaultEnabled());
+        log.debug("注册功能开关: {} -> {} (默认: {})", featureId, info.patterns(), apiFeature.defaultEnabled());
     }
 
     /**
@@ -145,7 +145,7 @@ public class ApiFeatureManager {
      */
     public List<ApiFeatureInfo> getFeaturesByGroup(String group) {
         return featureInfoMap.values().stream()
-                .filter(info -> group.equals(info.getGroup()))
+                .filter(info -> group.equals(info.group()))
                 .toList();
     }
 
@@ -156,7 +156,7 @@ public class ApiFeatureManager {
      */
     public Set<String> getAllGroups() {
         var groups = new TreeSet<String>();
-        featureInfoMap.values().forEach(info -> groups.add(info.getGroup()));
+        featureInfoMap.values().forEach(info -> groups.add(info.group()));
         return groups;
     }
 
@@ -173,7 +173,7 @@ public class ApiFeatureManager {
              * @param featureId 特征标识
              * @param info.isDefaultEnabled( 信息.是否默认已启用(
              */
-            setEnabled(featureId, info.isDefaultEnabled());
+            setEnabled(featureId, info.defaultEnabled());
         }
     }
 

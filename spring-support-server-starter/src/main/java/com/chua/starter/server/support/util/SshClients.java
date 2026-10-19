@@ -27,9 +27,42 @@ public final class SshClients {
     private static final int DEFAULT_PORT = 22;
 
     /**
+     * 进程级默认：TCP 连接/握手超时（秒）
+     */
+    private static volatile int defaultConnectSeconds = 15;
+
+    /**
+     * 进程级默认：认证/会话建立超时（秒）
+     */
+    private static volatile int defaultSessionSeconds = 30;
+
+    /**
+     * 进程级默认：命令执行/输出读取超时（秒）
+     */
+    private static volatile long defaultReadSeconds = 60L;
+
+    /**
      * 工具类禁止实例化
      */
     private SshClients() {
+    }
+
+    /**
+     * 设置进程级默认超时
+     * <p>
+     * 由 {@code SshTimeouts} 在启动与系统配置变更时调用。所有使用
+     * {@link #open(String, Integer, SshCredential)} 的调用点（Windows 远程执行、
+     * 主机探测、终端隧道等）都会立即使用新值。
+     * </p>
+     *
+     * @param connectSeconds 连接/握手超时（秒）
+     * @param sessionSeconds 认证/会话建立超时（秒）
+     * @param readSeconds    命令执行/输出读取超时（秒）
+     */
+    public static void setDefaults(int connectSeconds, int sessionSeconds, long readSeconds) {
+        defaultConnectSeconds = connectSeconds;
+        defaultSessionSeconds = sessionSeconds;
+        defaultReadSeconds = readSeconds;
     }
 
     /**
@@ -53,8 +86,9 @@ public final class SshClients {
      * @throws IOException 私钥临时文件写入失败时抛出
      */
     public static Handle open(String address, Integer port, SshCredential credential) throws IOException {
-        // 默认超时（秒）：连接/会话 15s，命令执行 60s
-        return open(address, port, credential, 15, 15, 60L);
+        // 使用进程级默认超时，可由系统配置 ssh.connect.timeout / ssh.session.timeout / ssh.read.timeout 热更新
+        return open(address, port, credential,
+                defaultConnectSeconds, defaultSessionSeconds, defaultReadSeconds);
     }
 
     /**

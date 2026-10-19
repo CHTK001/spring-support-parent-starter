@@ -106,6 +106,24 @@ plugin:
   api:
     request-decode:
       enable: false
+  # 上报客户端（report-client）注册服务端：
+  # 应用侧引入 spring-support-report-client-starter 后，经 SyncClient 连接本服务端并发送
+  #   - sync/client/register  （客户端注册：ip/port/应用名）
+  #   - monitor/app/report    （定时应用信息：serviceUrl/JVM/OS/启动时间等）
+  # 「节点管理 → 在线节点」与 /ms/monitor/node/discovery 依据这些注册信息展示在线节点。
+  # 端口通过 MONITOR_SYNC_PORT 覆盖（默认 19380，与 report-client 默认服务端端口一致）。
+  # 协议用 tcp：report 客户端的 HttpSyncClient.send 把 topic 当成表单键（服务端按 topic= 解析），
+  # http 模式下注册消息会被服务端拒绝；tcp 是两端已对齐且经真实验收的链路。
+  sync:
+    type: server
+    # 本服务只接收注册/心跳，不使用数据同步交换能力
+    data-sync:
+      enabled: false
+    server:
+      enable: true
+      host: 0.0.0.0
+      port: ${MONITOR_SYNC_PORT:19380}
+      protocol: tcp
   # 本地联调免鉴权：monitor 全部 /ms/** 接口加入 OAuth 白名单（无远程鉴权服务时直接放行）
   oauth:
     enable: false

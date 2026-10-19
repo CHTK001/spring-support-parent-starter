@@ -38,21 +38,21 @@ public class HostPortScanEventListener {
      */
     @EventListener
     public void onPortScan(HostPortScanEvent event) {
-        if (event == null || event.getHostId() == null) {
+        if (event == null || event.hostId() == null) {
             return;
         }
         try {
             Map<String, Object> payload = new LinkedHashMap<>(10);
-            payload.put("hostId", event.getHostId());
-            payload.put("address", event.getAddress());
-            payload.put("success", event.isSuccess());
-            payload.put("openCount", event.getOpenCount());
-            payload.put("totalPorts", event.getTotalPorts());
-            payload.put("elapsedSeconds", event.getElapsedSeconds());
-            payload.put("portsJson", event.getPortsJson());
-            payload.put("scanTime", event.getScanTime() == null ? null : event.getScanTime().toString());
-            payload.put("error", event.getError());
-            monitorPushService.broadcast("host-portscan", payload, String.valueOf(event.getHostId()));
+            payload.put("hostId", event.hostId());
+            payload.put("address", event.address());
+            payload.put("success", event.success());
+            payload.put("openCount", event.openCount());
+            payload.put("totalPorts", event.totalPorts());
+            payload.put("elapsedSeconds", event.elapsedSeconds());
+            payload.put("portsJson", event.portsJson());
+            payload.put("scanTime", event.scanTime() == null ? null : event.scanTime().toString());
+            payload.put("error", event.error());
+            monitorPushService.broadcast("host-portscan", payload, String.valueOf(event.hostId()));
         } catch (Exception e) {
             log.debug("[event] 端口扫描推送跳过: {}", e.getMessage());
         }

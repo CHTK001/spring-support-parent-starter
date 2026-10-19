@@ -49,6 +49,10 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         // 连接缓存
         DEFAULTS.put("connection.sweep.interval", "60");
         DEFAULTS.put("connection.idle.timeout", "300");
+        // SSH 超时（系统配置页可动态修改，保存后热生效）
+        DEFAULTS.put("ssh.connect.timeout", "15");
+        DEFAULTS.put("ssh.session.timeout", "30");
+        DEFAULTS.put("ssh.read.timeout", "60");
     }
 
     /**
@@ -217,6 +221,9 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         desc.put("guacd.client.host", "guacd-client 网关地址（浏览器侧 WS 隧道 host:port，空串=同域）");
         desc.put("connection.sweep.interval", "连接健康检查间隔(秒)");
         desc.put("connection.idle.timeout", "连接空闲超时(秒)");
+        desc.put("ssh.connect.timeout", "SSH 连接/握手超时(秒)");
+        desc.put("ssh.session.timeout", "SSH 认证/会话建立超时(秒)");
+        desc.put("ssh.read.timeout", "SSH 命令执行/输出读取超时(秒)");
         return desc.getOrDefault(key, "系统配置");
     }
 }

@@ -3,7 +3,7 @@ package com.chua.starter.job.support.notify;
 /**
  * 任务失败告警通道（SPI，按类型注册）。
  *
- * <p>任务最终失败且台账配置了告警目标时，执行器按 {@link JobAlarmMessage#getAlarmType()}
+ * <p>任务最终失败且台账配置了告警目标时，执行器按 {@link JobAlarmMessage#alarmType()}
  * 选择同类型的实现投递。job-starter 不绑定具体通道：宿主提供实现 Bean 即接通，
  * 一个宿主可以同时注册多个类型（如邮件 + Webhook）。</p>
  *

@@ -1608,15 +1608,15 @@ public class RagClientManager {
      */
     @EventListener
     public void onRagSettingsChanged(RagSettingsChangedEvent event) {
-        if (event == null || !GROUP.equals(event.getGroup())) {
+        if (event == null || !GROUP.equals(event.group())) {
             return;
         }
-        if (event.isUserScoped()) {
+        if (event.userScoped()) {
             // 客户端已按账号隔离：定向重建触发者自己那一个即可。
             // 仍重建全部账号的话，会把触发者的 embedding / 切片 / 上传目录
             // 烘进其他账号的客户端，正是这次要消除的串号。
             log.info("[RagClientManager] 收到用户级 rag 配置写入，定向重建该账号的 RAG 客户端");
-            reloadUser(event.getUserId());
+            reloadUser(event.userId());
             return;
         }
         log.info("[RagClientManager] 收到 rag 设置变更事件，重建 RAG 客户端");
