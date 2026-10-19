@@ -114,6 +114,19 @@ class FileStorageServerFilterUpdateConfigTest {
     }
 
     @Test
+    @DisplayName("fileSettingKey 必须命中 FileStorageFileSetting SPI，内置 jdk 恒可用")
+    void fileSettingKeyIsValidated() {
+        assertEquals("jdk", setting.getFileSettingKey(), "URL 参数能力默认使用内置 JDK 实现");
+
+        filter.updateConfig(Map.of("fileSettingKey", "JDK"));
+        assertEquals("jdk", setting.getFileSettingKey(), "实现名大小写不敏感，落位为 SPI 注册名");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> filter.updateConfig(Map.of("fileSettingKey", "NO_SUCH_SETTING")));
+        assertEquals("jdk", setting.getFileSettingKey(), "校验失败时不得改动 setting");
+    }
+
+    @Test
     @DisplayName("未知键只忽略不抛错，避免历史遗留参数让整次热更新失败")
     void unknownKeyIsIgnoredNotRejected() {
         Map<String, Object> config = new LinkedHashMap<>();

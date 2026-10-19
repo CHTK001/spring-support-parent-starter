@@ -40,7 +40,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.Locale;
-import com.chua.filestorage.support.spi.FileStorageFileSetting;
 import com.chua.starter.filesystem.support.spi.FileStorageImageFilterProvider;
 import com.chua.starter.filesystem.support.spi.FileStorageUrlPreviewProvider;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
@@ -335,7 +334,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
      */
     private static final Set<String> STRING_PARAM_KEYS =
-            Set.of("watermark", "layoutType", "imageFilter", "filterChain", "thirdUrlPreview");
+            Set.of("watermark", "layoutType", "imageFilter", "filterChain", "thirdUrlPreview", "fileSettingKey");
 
     /**
      * 路径穿透防护需要筛查的文件动作参数名（取值与对象路径同源，是穿越的另一入口）。
@@ -720,6 +719,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         appendConfigRow(sb, "showSize", String.valueOf(setting.isShowSize()));
         appendConfigRow(sb, "showTime", String.valueOf(setting.isShowTime()));
         appendConfigRow(sb, "imageFilter", setting.getImageFilter());
+        appendConfigRow(sb, "fileSettingKey", setting.getFileSettingKey());
         appendConfigRow(sb, "openPathGuard", String.valueOf(setting.isOpenPathGuard()));
         appendConfigRow(sb, "imageFilterEnabled", String.valueOf(setting.isImageFilterEnabled()));
         appendConfigRow(sb, "filterChain", setting.getFilterChain());
@@ -1789,7 +1789,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
     private FileOperationSetting parseFileOps(ServerRequest request) {
         try {
-            return ServiceProvider.of(FileStorageFileSetting.class).getNewExtension("jdk").parse(request);
+            ServiceProvider<FileStorageFileSetting> provider = ServiceProvider.of(FileStorageFileSetting.class);
+            // 配置的实现优先；缺失/未知时回退内置 jdk，避免一次配置失误让 URL 参数整体失效
+            String key = setting.getFileSettingKey();
+            FileStorageFileSetting fileSetting = key == null || key.isBlank()
+                    ? provider.getNewExtension("jdk")
+                    : provider.getNewExtension(key);
+            if (fileSetting == null) {
+                fileSetting = provider.getNewExtension("jdk");
+            }
+            return fileSetting == null ? null : fileSetting.parse(request);
         } catch (Exception e) {
             log.warn("[FileStorage] 解析文件操作参数失败: {}", e.getMessage());
             return null;
@@ -1921,6 +1930,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 + ",\"showSize\":" + setting.isShowSize()
                 + ",\"showTime\":" + setting.isShowTime()
                 + ",\"imageFilter\":\"" + escapeJson(setting.getImageFilter() == null ? "NONE" : setting.getImageFilter()) + "\""
+                + ",\"fileSettingKey\":\"" + escapeJson(setting.getFileSettingKey() == null ? "jdk" : setting.getFileSettingKey()) + "\""
                 + ",\"openPathGuard\":" + setting.isOpenPathGuard()
                 + ",\"imageFilterEnabled\":" + setting.isImageFilterEnabled()
                 + ",\"filterChain\":" + (setting.getFilterChain() == null ? "null" : "\"" + escapeJson(setting.getFilterChain()) + "\"")
@@ -1963,7 +1973,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * <p>用法：{@code GET /{bucket}?format=capabilities}，返回结构：</p>
      * <pre>{@code
      * {
-     *   "fileSettingCapabilities": [{"spi":"JDK","capabilities":["size","format"]}],
+     *   "fileSettingCapabilities": [{"spi":"jdk","label":"JDK 内置","description":"…","capabilities":["size","format"]}],
      *   "filterSettingCapabilities": [{"spi":"JDK","capabilities":["grayscale"]}],
      *   "imageFilters": [{"name":"GRAYSCALE","label":"灰度","css":"grayscale(1)",
      *                    "path":"grayscale=1","server":true}],
@@ -2023,17 +2033,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             Set<String> names = provider.getExtensions();
             boolean firstGroup = true;
             for (String name : names) {
-                FileStorageFileSetting instance = provider.getExtension(name);
-                if (instance == null) {
+                String group = buildFileSettingGroup(provider, name);
+                if (group == null) {
                     continue;
                 }
                 if (!firstGroup) {
                     sb.append(",");
                 }
                 firstGroup = false;
-                sb.append("{\"spi\":\"").append(escapeJson(name)).append("\",\"capabilities\":[");
-                appendStringArray(sb, instance.capabilities());
-                sb.append("]}");
+                sb.append(group);
             }
         } catch (Throwable t) {
             log.warn("FileStorageFileSetting SPI 能力加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}",
@@ -2042,31 +2050,103 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
+     * 构造单个文件级能力分组。
+     *
+     * <p>先在独立构造器里拼完整段 JSON，成功后才交给外层——某个 SPI 实现的
+     * {@link FileStorageFileSetting#capabilities()} 抛错（例如本地原生库加载失败）时
+     * 只跳过该分组，不能把已经写出的 {@code "capabilities":[} 留在响应里。</p>
+     *
+     * @param provider SPI 提供者
+     * @param name     SPI 实现名（注册表内部通常为大写）
+     * @return 分组 JSON；实现不可用时返回 {@code null}
+     */
+    private String buildFileSettingGroup(ServiceProvider<FileStorageFileSetting> provider, String name) {
+        try {
+            FileStorageFileSetting instance = provider.getExtension(name);
+            if (instance == null) {
+                return null;
+            }
+            // 展示名/说明由 SPI 自己提供，前端下拉直接用；缺失时回退到 SPI 名
+            String label = instance.getLabel() == null || instance.getLabel().isBlank()
+                    ? name : instance.getLabel();
+            String description = instance.getDescription() == null ? "" : instance.getDescription();
+            List<String> capabilities = instance.capabilities();
+            // SPI 注册表内部以大写为键，对外统一用小写 SPI 名（与默认配置 fileSettingKey=jdk 一致）
+            StringBuilder group = new StringBuilder(160);
+            group.append("{\"spi\":\"").append(escapeJson(name.toLowerCase(Locale.ROOT))).append("\"")
+                    .append(",\"label\":\"").append(escapeJson(label)).append("\"")
+                    .append(",\"description\":\"").append(escapeJson(description)).append("\"")
+                    .append(",\"capabilities\":[");
+            appendStringArray(group, capabilities);
+            group.append("]}");
+            return group.toString();
+        } catch (Throwable t) {
+            log.warn("[FileStorage] FileStorageFileSetting SPI 分组不可用，已跳过: {} - {}", name, t.toString());
+            return null;
+        }
+    }
+
+    /**
+     * 收集全部 URL 参数能力实现名（{@code FileStorageFileSetting} SPI，用于配置写入校验）。
+     *
+     * @return 实现名集合（保持 SPI 发现顺序；SPI 缺失时至少包含内置 {@code jdk}）
+     */
+    private Set<String> resolveFileSettingNames() {
+        Set<String> names = new LinkedHashSet<>();
+        try {
+            ServiceProvider<FileStorageFileSetting> provider = ServiceProvider.of(FileStorageFileSetting.class);
+            for (String ext : provider.getExtensions()) {
+                if (ext != null && !ext.isBlank()) {
+                    names.add(ext.toLowerCase(Locale.ROOT));
+                }
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageFileSetting SPI 加载失败（实现名单缺失）: {}", t.getMessage());
+        }
+        if (names.isEmpty()) {
+            names.add("jdk");
+        }
+        return names;
+    }
+
+    /**
      * 追加全局滤镜能力分组（一个 SPI 实现对应一个分组）。
      *
      * @param sb JSON 构造器
      */
     private void appendFilterSettingGroups(StringBuilder sb) {
+        ServiceProvider<FileStorageFilterSetting> provider;
+        Set<String> names;
         try {
-            ServiceProvider<FileStorageFilterSetting> provider = ServiceProvider.of(FileStorageFilterSetting.class);
-            Set<String> names = provider.getExtensions();
-            boolean firstGroup = true;
-            for (String name : names) {
+            provider = ServiceProvider.of(FileStorageFilterSetting.class);
+            names = provider.getExtensions();
+        } catch (Throwable t) {
+            log.warn("FileStorageFilterSetting SPI 能力加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}",
+                    t.getMessage());
+            return;
+        }
+        boolean firstGroup = true;
+        for (String name : names) {
+            String group;
+            try {
                 FileStorageFilterSetting instance = provider.getExtension(name);
                 if (instance == null) {
                     continue;
                 }
-                if (!firstGroup) {
-                    sb.append(",");
-                }
-                firstGroup = false;
-                sb.append("{\"spi\":\"").append(escapeJson(name)).append("\",\"capabilities\":[");
-                appendStringArray(sb, instance.capabilities());
-                sb.append("]}");
+                StringBuilder current = new StringBuilder(128);
+                current.append("{\"spi\":\"").append(escapeJson(name)).append("\",\"capabilities\":[");
+                appendStringArray(current, instance.capabilities());
+                current.append("]}");
+                group = current.toString();
+            } catch (Throwable t) {
+                log.warn("[FileStorage] FileStorageFilterSetting SPI 分组不可用，已跳过: {} - {}", name, t.toString());
+                continue;
             }
-        } catch (Throwable t) {
-            log.warn("FileStorageFilterSetting SPI 能力加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}",
-                    t.getMessage());
+            if (!firstGroup) {
+                sb.append(",");
+            }
+            firstGroup = false;
+            sb.append(group);
         }
     }
 
@@ -4760,6 +4840,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         applyStringSetting("watermark", extractString(body, "watermark"));
         applyStringSetting("layoutType", extractString(body, "layoutType"));
         applyStringSetting("imageFilter", extractString(body, "imageFilter"));
+        applyStringSetting("fileSettingKey", extractString(body, "fileSettingKey"));
         applyStringSetting("filterChain", extractString(body, "filterChain"));
         applyStringSetting("thirdUrlPreview", extractString(body, "thirdUrlPreview"));
         // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
@@ -4898,7 +4979,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
      * （{@code ServerNodeRegistry#hotUpdateFilterParams}）会把它作为热更新失败上报，
      * 从而在落库之前中止，不会把非法值写进节点定义。</p>
      *
-     * @param key   参数名（watermark / layoutType / imageFilter / filterChain / thirdUrlPreview）
+     * @param key   参数名（watermark / layoutType / imageFilter / fileSettingKey / filterChain / thirdUrlPreview）
      * @param value 参数值，可为 {@code null}
      */
     private void applyStringSetting(String key, String value) {
@@ -4923,6 +5004,19 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                             + "，可用值: NONE/" + String.join("/", resolveImageFilterNames()));
                 }
                 setting.setImageFilter(upper);
+            }
+            case "fileSettingKey" -> {
+                String wanted = value.trim();
+                if (wanted.isEmpty()) {
+                    throw new IllegalArgumentException("fileSettingKey 不能为空，可用值: "
+                            + String.join("/", resolveFileSettingNames()));
+                }
+                String matched = resolveFileSettingNames().stream()
+                        .filter(n -> n.equalsIgnoreCase(wanted))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("fileSettingKey 不支持的实现: " + value
+                                + "，可用值: " + String.join("/", resolveFileSettingNames())));
+                setting.setFileSettingKey(matched);
             }
             case "filterChain" -> setting.setFilterChain(normalizeFilterChain(value));
             case "thirdUrlPreview" -> {
