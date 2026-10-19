@@ -19,16 +19,32 @@
         LIMIT 1
     </select>
 
-    <!-- 分页查询错题：多条件筛选（学科走题目子查询）+ 归属隔离 + 最近错误时间倒序 -->
+    <!-- 分页查询错题：多条件筛选（学科走题目子查询）+ 归属隔离 + 最近错误时间倒序。
+         join edu_student 补姓名/账号，join edu_question 补题干/学科。 -->
     <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
-        SELECT w.* FROM edu_wrong_question w
+        SELECT
+            w.wrong_question_id,
+            w.wrong_question_student_id,
+            w.wrong_question_question_id,
+            w.wrong_question_wrong_count,
+            w.wrong_question_mastery_level,
+            w.wrong_question_last_wrong_time,
+            w.wrong_question_last_review_time,
+            w.wrong_question_review_count,
+            w.wrong_question_paper_id,
+            s.student_name AS wrong_question_student_name,
+            s.student_account AS wrong_question_student_account,
+            q.question_stem AS wrong_question_stem,
+            q.question_subject AS wrong_question_subject
+        FROM edu_wrong_question w
+        LEFT JOIN edu_student s ON s.student_no = w.wrong_question_student_id
+        LEFT JOIN edu_question q ON q.question_id = w.wrong_question_question_id
         <where>
             <if test="query.studentId != null and query.studentId != ''">
                 AND w.wrong_question_student_id = #{query.studentId}
             </if>
             <if test="query.subject != null and query.subject != ''">
-                AND w.wrong_question_question_id IN
-                (SELECT q.question_id FROM edu_question q WHERE q.question_subject = #{query.subject})
+                AND q.question_subject = #{query.subject}
             </if>
             <if test="query.masteryLevel != null">
                 AND w.wrong_question_mastery_level = #{query.masteryLevel}

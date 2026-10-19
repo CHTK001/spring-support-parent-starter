@@ -33,6 +33,7 @@ import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
+import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
 import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
@@ -2538,16 +2539,19 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     /**
      * 阅卷完成：把该卷错题按最终分归入对应学生的错题库。
      *
-     * <p>「最终分」= 老师分优先、未改则用 AI 分；判为错的题（最终分 &lt;= 0）登记，
-     * 并带上试卷标识，让错题能回答「来自哪张卷」。学生取任务 / 答题卡上
-     * 卷面识别或人工纠正后的学号；缺学生时拒绝完成，
-     * 保证错题一定落到「对应学生」而不是变成无主记录。</p>
+     * <p>「最终分」= 老师分优先、未改则用 AI 分。判错口径由
+     * {@code plugin.eduai.marking.wrong-score-rate} 决定：
+     * 得分率低于该比例即记为错（默认 0.6 = 不及格；配 0 退回「只有 0 分才算错」）。
+     * 这样满分 10 分的主观题拿 3 分也会进错题本，不再被「分数 &gt; 0 就跳过」漏掉。</p>
+     *
+     * <p>登记时带上试卷标识与来源任务，让错题能回答「来自哪张卷」，
+     * 并让「撤销完成」能精确回退本次登记。</p>
      *
      * <p>幂等：任务已置「老师已完成」时直接返回，不重复累加错题次数
      * （错题表按 (学生, 题目) 唯一，重复登记会虚增错误次数）。</p>
      *
      * @param taskId 任务业务标识
-     * @return 完成结果（学生 / 试卷 / 本次登记的错题数 / 是否此前已完成）
+     * @return 完成结果（学生 / 试卷 / 本次登记的错题数 / 登记失败数 / 是否此前已完成）
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -2574,7 +2578,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
         // 幂等：已完成过就不再重复登记错题
         if (Integer.valueOf(1).equals(task.getMarkingTaskTeacherFinished())) {
-            return new MarkingFinishResultVO(taskId, studentId, paperId, 0, true);
+            return new MarkingFinishResultVO(taskId, studentId, paperId, 0, 0, true);
         }
 
         Long examId = task.getMarkingTaskExamId() != null ? task.getMarkingTaskExamId()
@@ -2582,7 +2586,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         String ownerUserId = sheet != null && StringUtils.isNotBlank(sheet.getOwnerUserId())
                 ? sheet.getOwnerUserId() : task.getOwnerUserId();
 
+        // 判错要按每题满分算得分率，满分口径与结果面板一致：结果 detail 里记的优先，
+        // 其次按试卷题目分值，最后退到配置的兜底单题分。
+        Map<Long, Integer> fullScores = resolveFullScores(sheet);
+        double wrongRate = properties.getMarking().getWrongScoreRate();
+
         int recorded = 0;
+        int failed = 0;
         for (EduMarkingResult result : listByTask(taskId)) {
             Long questionId = result.getMarkingResultQuestionId();
             // 任意卷没有题库记录（题目标识记 0），错题本只登记真实题目标识
@@ -2592,15 +2602,21 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             int finalScore = result.getMarkingResultTeacherScore() != null
                     ? result.getMarkingResultTeacherScore()
                     : (result.getMarkingResultAiScore() == null ? 0 : result.getMarkingResultAiScore());
-            if (finalScore > 0) {
+            Integer maxScore = parseDetailMaxScoreOrNull(result.getMarkingResultDetail());
+            if (maxScore == null || maxScore <= 0) {
+                maxScore = fullScores.getOrDefault(questionId, properties.getMarking().getMaxScore());
+            }
+            if (!isWrongByFinalScore(finalScore, maxScore, wrongRate)) {
                 continue;
             }
             try {
-                wrongQuestionService.recordWrongQuestion(studentId, questionId, examId, ownerUserId, paperId);
+                wrongQuestionService.recordWrongQuestion(studentId, questionId, examId, ownerUserId, paperId, taskId);
                 recorded++;
             } catch (Exception e) {
-                // 错题登记是完成动作的附加步骤：单条失败不能让整个「完成」回滚
-                log.warn("[EduAi] 完成时错题登记失败(忽略): taskId={}, questionId={}, err={}",
+                // 错题登记是完成动作的附加步骤：单条失败不能让整个「完成」回滚，
+                // 但必须如实计数回报给老师，不能静默吞成「全部成功」。
+                failed++;
+                log.warn("[EduAi] 完成时错题登记失败(已计入失败数): taskId={}, questionId={}, err={}",
                         taskId, questionId, e.getMessage());
             }
         }
@@ -2610,9 +2626,71 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         task.setUpdateTime(LocalDateTime.now());
         taskMapper.updateById(task);
 
-        log.info("[EduAi] 阅卷完成: taskId={}, student={}, paperId={}, 本轮错题={}",
-                taskId, studentId, paperId, recorded);
-        return new MarkingFinishResultVO(taskId, studentId, paperId, recorded, false);
+        log.info("[EduAi] 阅卷完成: taskId={}, student={}, paperId={}, 本轮错题={}, 失败={}, 阈值={}",
+                taskId, studentId, paperId, recorded, failed, wrongRate);
+        return new MarkingFinishResultVO(taskId, studentId, paperId, recorded, failed, false);
+    }
+
+    /**
+     * 撤销「完成」：删掉本次登记的错题并复位完成标记。
+     *
+     * <p>用途：老师误点完成，或事后改了老师分想按新分数重新归位。
+     * 只删 {@code wrong_question_source_task_id = taskId} 的行 —— 同一道题若
+     * 也被别的任务登记过，那次记录保留，避免一处撤销连带丢历史。</p>
+     *
+     * <p>未完成的任务调用它返回 {@code wasFinished=false} 且不删任何东西（幂等）。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 撤销结果（删除了多少条错题 / 之前是否处于已完成状态）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public MarkingUndoResultVO unfinishMarking(String taskId) {
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        EduUserContext.checkWritable(task.getOwnerUserId());
+        EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
+                ? findSheet(taskId)
+                : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+        String studentId = firstNonBlank(task.getMarkingTaskStudentId(),
+                sheet == null ? null : sheet.getAnswerSheetStudentId());
+
+        boolean wasFinished = Integer.valueOf(1).equals(task.getMarkingTaskTeacherFinished());
+        int removed = 0;
+        if (wasFinished) {
+            removed = wrongQuestionService.removeBySourceTask(taskId);
+            task.setMarkingTaskTeacherFinished(0);
+            task.setMarkingTaskTeacherFinishTime(null);
+            task.setUpdateTime(LocalDateTime.now());
+            taskMapper.updateById(task);
+        }
+        log.info("[EduAi] 撤销阅卷完成: taskId={}, student={}, 删除错题={}, 之前已完成={}",
+                taskId, studentId, removed, wasFinished);
+        return new MarkingUndoResultVO(taskId, studentId, removed, wasFinished);
+    }
+
+    /**
+     * 按最终分与满分判定是否算错题。
+     *
+     * <p>口径：0 分一定算错；{@code wrongRate <= 0} 时只有 0 分算错（旧行为）；
+     * 否则得分率严格低于阈值才算错 —— 正好等于阈值（如 6/10 对 0.6）不算错，
+     * 避免边界上把「刚好及格」的题塞进错题本。</p>
+     *
+     * @param finalScore 最终分（老师分优先）
+     * @param maxScore   该题满分
+     * @param wrongRate  判错得分率阈值（0 表示关闭阈值）
+     * @return 是否记为错题
+     */
+    private static boolean isWrongByFinalScore(int finalScore, Integer maxScore, double wrongRate) {
+        if (finalScore <= 0) {
+            return true;
+        }
+        if (wrongRate <= 0 || maxScore == null || maxScore <= 0) {
+            return false;
+        }
+        return finalScore < maxScore * wrongRate;
     }
 
     /**

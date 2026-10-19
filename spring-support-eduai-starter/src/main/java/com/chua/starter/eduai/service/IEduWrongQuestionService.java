@@ -44,6 +44,33 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId, Long paperId);
 
     /**
+     * 记录错题（带试卷归因与来源任务）。
+     *
+     * <p>来源任务落 {@code wrong_question_source_task_id}，「撤销完成」据此
+     * 只删除本次登记的错题行，不误伤历史。</p>
+     *
+     * @param studentId    学生标识
+     * @param questionId   题目标识
+     * @param examId       考试标识
+     * @param ownerUserId  归属用户标识
+     * @param paperId      试卷标识（可空）
+     * @param sourceTaskId 来源阅卷任务（可空）
+     */
+    void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId,
+                             Long paperId, String sourceTaskId);
+
+    /**
+     * 删除某个阅卷任务登记过的错题（「撤销完成」用）。
+     *
+     * <p>只删 {@code wrong_question_source_task_id = taskId} 的行：
+     * 同一道题若也被别的任务登记过，那一次的记录保留。</p>
+     *
+     * @param sourceTaskId 来源阅卷任务标识
+     * @return 实际删除的行数
+     */
+    int removeBySourceTask(String sourceTaskId);
+
+    /**
      * 分页查询错题
      *
      * @param query 查询条件
