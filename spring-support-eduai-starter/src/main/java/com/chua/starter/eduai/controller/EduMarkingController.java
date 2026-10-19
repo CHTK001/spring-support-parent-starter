@@ -7,6 +7,7 @@ import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
+import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
 import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import io.swagger.v3.oas.annotations.Operation;
@@ -181,6 +182,21 @@ public class EduMarkingController {
     @PostMapping("/{taskId}/finish")
     public ReturnResult<MarkingFinishResultVO> finish(@PathVariable String taskId) {
         return ReturnResult.ok(markingService.finishMarking(taskId));
+    }
+
+    /**
+     * 撤销「完成」：删除本次登记的错题并复位完成标记。
+     *
+     * <p>用于误点完成，或老师改分后想按新分数重新归位。只删除
+     * 「本次完成登记的」错题行（按来源任务），不误伤历史与别的任务。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 撤销结果（删除条数 / 之前是否已完成）
+     */
+    @Operation(summary = "撤销阅卷完成（回退错题归位）")
+    @PostMapping("/{taskId}/unfinish")
+    public ReturnResult<MarkingUndoResultVO> unfinish(@PathVariable String taskId) {
+        return ReturnResult.ok(markingService.unfinishMarking(taskId));
     }
 
     /**

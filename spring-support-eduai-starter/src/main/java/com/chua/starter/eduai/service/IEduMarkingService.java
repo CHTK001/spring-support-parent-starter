@@ -5,6 +5,7 @@ import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
+import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
 
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,14 @@ public interface IEduMarkingService {
      * @return 完成结果（学生 / 试卷 / 本次登记的错题数 / 是否此前已完成）
      */
     MarkingFinishResultVO finishMarking(String taskId);
+
+    /**
+     * 撤销「完成」：删除本次登记的错题并复位完成标记。
+     *
+     * @param taskId 任务业务标识
+     * @return 撤销结果（删除条数 / 之前是否已完成）
+     */
+    MarkingUndoResultVO unfinishMarking(String taskId);
 
     /**
      * 取任务当前进度快照（SSE 建连时先推一帧，避免前端空等）。
