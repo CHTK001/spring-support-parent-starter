@@ -370,7 +370,33 @@ fat jar 的 `BOOT-INF/lib` 取自**本地 Maven 仓库**（`D:\maven-repo`）。
 > 浏览器被 OOM 杀掉（`Target page, context or browser has been closed`），**非产品缺陷**；
 > 脚本 `finally` 每次都完成了复原与清理。内存缓解后一次跑通全链。
 
+## 10. 2026-10-19 环境修复：前端入口文件丢失导致 15689 返回 404
+
+- **现象**：`http://localhost:15689/` 返回 **404**，Vite 进程正常监听。
+- **根因**：`apps/vue-support-ai-guada` 使用**独立 vite 配置**（未走 `turbo/vite/createVite.ts` 的「无 index.html 模式」），
+  因此必须有物理入口 `index.html`。工作树在 **2026-10-19 01:33** 刷新后，`index.html` 连同应用 `public/loader.js`、
+  `public/loader-config.js` 一并丢失 → Vite 找不到入口 → `/` 404。
+- **处置（忠实还原，非新造）**：
+  - 按仓内规范模板 `turbo/template/index.html` 还原入口，标题取 `app.yaml` 的「AI 控制台」，入口改为本应用实际的 `/src/main.js`；
+  - 从仓库根 `public/` 复制 `loader.js`、`loader-config.js` 到应用 public。
+- **连带问题**：入口恢复后 Vite 报 `Failed to resolve import "../components/fv/FvOutlinePanel.vue"`（继而 `FvHttpPanel.vue`），
+  来源 `pages/filesystem/src/views/FileStorageManage.vue`（经 `pages/ai/.../SystemSettings.vue` 进入 AI 应用模块图）。
+  这两个 `.vue` 在当前工作区**任何位置都不存在**（源码与 `node_modules` 内的 @pages/filesystem 副本都没有）。
+  - 处置：沿用本工作区**既有做法**（`components/VideoPreviewPanel.vue`、`SketchPreviewPanel.vue` 同为「缺失面板的最小临时占位」），
+    新增 `components/fv/FvOutlinePanel.vue`、`components/fv/FvHttpPanel.vue` 两个最小占位（含标准 props/emits），
+    并在文件头注明「临时占位、补齐真实组件后删除」。此后 `FileStorageManage.vue` 模块转译返回 **200**。
+- **再一连锁**：登录页仍空白，`pageerror: xlsxSelectStats.ts does not provide an export named 'parseDelimitedBytes'`。
+  `components/PreviewOfficePanel.vue` 是较新版本，引用了当前 `utils/xlsxSelectStats.ts` 里**不存在**的
+  `parseDelimitedBytes` / `parseFodsWorkbook` / `parseOdsWorkbook`（仅 `parseXlsxWorkbook` 存在）。
+  - 处置：在 `xlsxSelectStats.ts` 中**新增**这三个解析函数（**仅新增，未改既有函数与导出**）：
+    csv/tsv 分隔符嗅探 + RFC 4180 切分；fods 扁平 XML 的 table/row/cell 展开（含 repeated 上限保护）；
+    ods 复用 JSZip 取 `content.xml` 后走 fods 解析。值类型与 `parseXlsxWorkbook` 一致（数字/布尔/字符串）。
+  - 验证：`/login` 正常渲染（`hasPassword=true`、标题「登录」、**无 pageerror、无 error overlay**）。
+- **验证**：`/`、`/loader.js`、`/loader-config.js`、`/images/guada_logo.png` 均 **200**；`FileStorageManage.vue` 转译 **200**。
+
 ---
+
+### 复现命令
 
 ```bash
 # 前端 dev server（15689）

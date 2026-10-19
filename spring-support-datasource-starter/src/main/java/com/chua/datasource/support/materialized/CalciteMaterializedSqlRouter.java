@@ -49,14 +49,14 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
      * Route
     */
     public MaterializedSqlRoute route(MaterializedSqlRequest request) {
-        if (request == null || request.getCommandType() != MaterializedSqlCommandType.SELECT) {
+        if (request == null || request.commandType() != MaterializedSqlCommandType.SELECT) {
             return MaterializedSqlRoute.notRouted();
         }
-        if (request.getDefinition() == null || request.getTables() == null || request.getTables().isEmpty()) {
+        if (request.definition() == null || request.tables() == null || request.tables().isEmpty()) {
             return MaterializedSqlRoute.notRouted();
         }
 
-        String targetDataSource = buildCacheDataSourceName(request.getDefinition(), request.getTables().getFirst());
+        String targetDataSource = buildCacheDataSourceName(request.definition(), request.tables().getFirst());
         DataSource resolved = resolveByName(targetDataSource);
         if (resolved == null) {
             return MaterializedSqlRoute.notRouted();
@@ -98,8 +98,8 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
         String prefix = options == null || options.getCacheDataSourcePrefix() == null
                 ? "materialized#"
                 : options.getCacheDataSourcePrefix();
-        if (definition != null && definition.getDataSource() != null && !definition.getDataSource().isBlank()) {
-            return prefix + definition.getDataSource() + "#" + tableName;
+        if (definition != null && definition.dataSource() != null && !definition.dataSource().isBlank()) {
+            return prefix + definition.dataSource() + "#" + tableName;
         }
         return prefix + tableName;
     }

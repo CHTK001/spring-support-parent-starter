@@ -540,14 +540,14 @@ public class JobExecutor {
             return;
         }
         com.chua.starter.job.support.notify.JobAlarmMessage message =
-                new com.chua.starter.job.support.notify.JobAlarmMessage();
-        message.setJobName(jobName);
-        message.setAlarmType(type);
-        message.setTarget(target);
-        message.setCostMs(costMs);
-        message.setException(error == null ? null : error.getMessage());
-        message.setNodeId(nodeId);
-        message.setOccurredAtMs(System.currentTimeMillis());
+                new com.chua.starter.job.support.notify.JobAlarmMessage(
+                        jobName,
+                        type,
+                        target,
+                        costMs,
+                        error == null ? null : error.getMessage(),
+                        nodeId,
+                        System.currentTimeMillis());
         try {
             runBounded("alarm", () -> alarmNotifier.notify(message), collected, sideEffectLimitMs(timeoutSec));
             collected.append("[alarm] 已通知(").append(type).append("): ").append(target).append('\n');

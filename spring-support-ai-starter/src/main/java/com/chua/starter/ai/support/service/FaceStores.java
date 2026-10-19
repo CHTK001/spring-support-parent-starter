@@ -147,14 +147,14 @@ public class FaceStores {
         // 必须按分组过滤：该事件对**所有**分组都会发布，不过滤就会「改任何配置都重建人脸库」，
         // 既浪费（每个账号都要重灌向量）也可能打断正在进行的识别。
         // 与 FaceClientManager#onFaceSettingsChanged 保持同一判据。
-        if (event == null || !GROUP.equals(event.getGroup())) {
+        if (event == null || !GROUP.equals(event.group())) {
             return;
         }
         // 用户级写入只重建**触发者自己的**账号库：账号库按账号隔离，在某一用户的身份下
         // 重建全部账号会把该用户的覆盖串到其他账号，故定向重建；
         // 未建过库的账号无需处理，下次按需构建即用最新配置。
-        if (event.isUserScoped()) {
-            reloadAccount(event.getUserId(), "人脸设置变更（用户级）");
+        if (event.userScoped()) {
+            reloadAccount(event.userId(), "人脸设置变更（用户级）");
             return;
         }
         reloadAll("人脸设置变更");

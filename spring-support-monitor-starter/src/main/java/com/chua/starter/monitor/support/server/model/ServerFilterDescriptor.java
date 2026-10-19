@@ -1,9 +1,9 @@
 package com.chua.starter.monitor.support.server.model;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -21,42 +21,21 @@ import java.util.Map;
  *       注入 {@code params}</li>
  * </ul>
  *
+ * @param name    过滤器唯一名（同一服务器内不重复）
+ * @param type   过滤器类型: 预设别名 文件-storage 或 服务端过滤器 全限定类名；缺省取 名称
+ * @param order  执行顺序，数值越小越先执行（缺省 100）
+ * @param enabled 是否启用（缺省 true）
+ * @param params 过滤器初始化参数
  * @author CH
  * @since 4.0.0.42
  */
-@Data
 @Schema(description = "ServerFilter 插件配置描述")
-public class ServerFilterDescriptor {
-
-    /**
-     * 过滤器唯一名（同一服务器内不重复）
-     */
-    @Schema(description = "过滤器唯一名（同一服务器内不重复）", example = "file-storage")
-    private String name; // 名称
-
-    /**
-     * 过滤器类型: 预设别名 文件-storage 或 服务端过滤器 全限定类名；缺省取 名称
-     */
-    @Schema(description = "过滤器类型: 预设别名 file-storage 或 ServerFilter 全限定类名；缺省取 name")
-    private String type; // 类型
-
-    /**
-     * 执行顺序，数值越小越先执行（缺省 100）
-     */
-    @Schema(description = "执行顺序，数值越小越先执行（缺省 100）", example = "10")
-    private Integer order; // 订单
-
-    /**
-     * 是否启用（缺省 true）
-     */
-    @Schema(description = "是否启用（缺省 true）", example = "true")
-    private Boolean enabled; // 启用
-
-    /**
-     * 过滤器初始化参数（初始化 注入或映射到 文件storagesetting）
-     */
-    @Schema(description = "过滤器初始化参数")
-    private Map<String, String> params = new LinkedHashMap<>(); // 参数
+public record ServerFilterDescriptor(
+        @Schema(description = "过滤器唯一名（同一服务器内不重复）", example = "file-storage") String name,
+        @Schema(description = "过滤器类型: 预设别名 file-storage 或 ServerFilter 全限定类名；缺省取 name") String type,
+        @Schema(description = "执行顺序，数值越小越先执行（缺省 100）", example = "10") Integer order,
+        @Schema(description = "是否启用（缺省 true）", example = "true") Boolean enabled,
+        @Schema(description = "过滤器初始化参数") Map<String, String> params) {
 
     /**
      * 解析生效的类型：类型 缺省时取 名称。

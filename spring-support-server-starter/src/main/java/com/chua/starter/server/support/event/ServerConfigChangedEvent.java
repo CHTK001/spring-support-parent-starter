@@ -1,6 +1,6 @@
 package com.chua.starter.server.support.event;
 
-import lombok.Getter;
+import java.util.Set;
 
 /**
  * 服务器系统配置变更事件
@@ -9,24 +9,19 @@ import lombok.Getter;
  * （如连接缓存健康检查间隔变化即时生效；在离线/采集为主机级配置，不在此列）。
  * </p>
  *
+ * @param keys 变更的配置键集合
  * @author CH
  * @since 4.0.0.42
  */
-@Getter
-public class ServerConfigChangedEvent {
+public record ServerConfigChangedEvent(Set<String> keys) {
 
     /**
-     * 变更的配置键集合
-    */
-    private final java.util.Set<String> keys;
-
-    /**
-     * 构造
+     * 兼容既有调用方（调度器仍按 JavaBean 风格读取）
      *
-     * @param keys 变更的配置键
+     * @return 变更的配置键集合
      */
-    public ServerConfigChangedEvent(java.util.Set<String> keys) {
-        this.keys = keys == null ? java.util.Collections.emptySet() : keys;
+    public Set<String> getKeys() {
+        return keys;
     }
 
     /**
@@ -36,7 +31,7 @@ public class ServerConfigChangedEvent {
      * @return 是否命中
      */
     public boolean containsPrefix(String prefix) {
-        if (prefix == null) {
+        if (prefix == null || keys == null) {
             return false;
         }
         for (String key : keys) {

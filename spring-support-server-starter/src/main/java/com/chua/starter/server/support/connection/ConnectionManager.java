@@ -3,8 +3,8 @@ package com.chua.starter.server.support.connection;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.util.SshClients;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ConnectionManager {
 
     /**
@@ -39,22 +40,9 @@ public class ConnectionManager {
     private static final String HEALTH_PROBE_CMD = "echo ok";
 
     /**
-     * SSH TCP 连接/握手超时（秒），yaml: monitor.ssh.connect-timeout
-    */
-    @Value("${monitor.ssh.connect-timeout:15}")
-    private int connectTimeout;
-
-    /**
-     * SSH 认证/会话建立超时（秒），yaml: monitor.ssh.session-timeout
-    */
-    @Value("${monitor.ssh.session-timeout:15}")
-    private int sessionTimeout;
-
-    /**
-     * 单条命令执行/读取超时（秒），yaml: monitor.ssh.exec-timeout
-    */
-    @Value("${monitor.ssh.exec-timeout:60}")
-    private long execTimeout;
+     * SSH 三级超时（连接/认证/读取），数据库系统配置优先，保存后热生效
+     */
+    private final SshTimeouts timeouts;
 
     /**
      * 缓存项：已连接句柄 + 最后活动时间 + 引用计数
@@ -209,7 +197,7 @@ public class ConnectionManager {
         try {
             var handle = SshClients.open(host.getServerHostAddress(),
                     host.getServerHostPort(), credential,
-                    connectTimeout, sessionTimeout, execTimeout);
+                    timeouts.connectSeconds(), timeouts.sessionSeconds(), timeouts.readSeconds());
             handle.client().connect();
             Entry entry = new Entry(handle, fp, now);
             cache.put(hostId, entry);

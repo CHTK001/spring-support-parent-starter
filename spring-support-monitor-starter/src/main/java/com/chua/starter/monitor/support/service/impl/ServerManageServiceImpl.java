@@ -333,7 +333,9 @@ public class ServerManageServiceImpl implements ServerManageService {
                 return ReturnResult.error("过滤器下标越界: " + index);
             }
             boolean target = enabled == null || enabled;
-            descriptors.get(index).setEnabled(target);
+            ServerFilterDescriptor old = descriptors.get(index);
+            descriptors.set(index, new ServerFilterDescriptor(
+                    old.name(), old.type(), old.order(), target, old.params()));
             node.setFilters(objectMapper.writeValueAsString(descriptors));
             nodeMapper.updateById(node);
             RuntimeServer runtime = nodeRegistry.get(id);
@@ -364,13 +366,14 @@ public class ServerManageServiceImpl implements ServerManageService {
             }
             ServerFilterDescriptor descriptor = descriptors.get(index);
             Map<String, String> merged = new LinkedHashMap<>();
-            if (descriptor.getParams() != null) {
-                merged.putAll(descriptor.getParams());
+            if (descriptor.params() != null) {
+                merged.putAll(descriptor.params());
             }
             if (params != null) {
                 params.forEach((k, v) -> merged.put(k, v == null ? null : String.valueOf(v)));
             }
-            descriptor.setParams(merged);
+            descriptors.set(index, new ServerFilterDescriptor(
+                    descriptor.name(), descriptor.type(), descriptor.order(), descriptor.enabled(), merged));
             node.setFilters(objectMapper.writeValueAsString(descriptors));
             nodeMapper.updateById(node);
             RuntimeServer runtime = nodeRegistry.get(id);
@@ -960,37 +963,42 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @return 视图
      */
     private ServerNodeView toView(MsServerNode node) {
-        ServerNodeView view = new ServerNodeView();
-        view.setId(node.getId());
-        view.setName(node.getName());
-        view.setProtocol(node.getProtocol());
+        String protocolDesc;
         ServerNodeProtocol protocol = ServerNodeProtocol.of(node.getProtocol());
         if (protocol != null) {
-            view.setProtocolDesc(protocol.getDesc());
+            protocolDesc = protocol.getDesc();
         } else {
             // SPI 动态协议：取 @SpiDescribe 或类简单名
             ServiceDefinition def = ServiceProvider.of(Server.class).getDefinition(node.getProtocol());
-            view.setProtocolDesc(def != null && def.getDescribe() != null
-                    ? def.getDescribe() : node.getProtocol());
+            protocolDesc = def != null && def.getDescribe() != null
+                    ? def.getDescribe() : node.getProtocol();
         }
-        view.setEngine(node.getEngine());
-        view.setHost(node.getHost());
-        view.setPort(node.getPort());
-        view.setEnabled(node.getEnabled());
-        view.setRemark(node.getRemark());
         RuntimeServer runtime = nodeRegistry.get(node.getId());
-        view.setStatus(runtime == null ? "STOPPED" : runtime.status());
-        view.setError(runtime == null ? null : runtime.getError());
-        view.setServerUrl(runtime == null ? null : runtime.getServerUrl());
+        Map<String, Object> config;
+        List<ServerFilterDescriptor> filters;
         try {
-            view.setConfig(nodeRegistry.parseConfig(node));
-            view.setFilters(nodeRegistry.parseFilters(node));
+            config = nodeRegistry.parseConfig(node);
+            filters = nodeRegistry.parseFilters(node);
         } catch (Exception e) {
             log.warn("[ServerManage] 节点 [{}] 配置解析失败: {}", node.getName(), e.getMessage());
-            view.setConfig(Map.of());
-            view.setFilters(List.of());
+            config = Map.of();
+            filters = List.of();
         }
-        return view;
+        return new ServerNodeView(
+                node.getId(),
+                node.getName(),
+                node.getProtocol(),
+                protocolDesc,
+                node.getEngine(),
+                node.getHost(),
+                node.getPort(),
+                node.getEnabled(),
+                node.getRemark(),
+                config,
+                filters,
+                runtime == null ? "STOPPED" : runtime.status(),
+                runtime == null ? null : runtime.getError(),
+                runtime == null ? null : runtime.getServerUrl());
     }
 
     /**

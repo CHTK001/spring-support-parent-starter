@@ -175,7 +175,9 @@ const rec = (n, p, d) => { results.push({ n, p }); console.log(`  ${p ? 'PASS' :
   console.log('--- C7 temp cleanup ---');
   // 缺陷 11 回归：后台任务落地脚本（ms-bg-*.ps1/.cmd/.out/.err/.done）必须被清掉。
   // 走 cmd（win() 的远端默认 shell），不用 PowerShell 语法。
-  const leftovers = win('dir /b "C:\\Windows\\Temp\\ms-bg-*" 2>nul | find /c /v ""').trim();
+  // 不能再用 `dir | find /c /v ""`：无匹配时 find 退出码为 1，execFileSync 会直接抛错，
+  // 于是「清理得最干净」的情形反而把套件打断。改用 PowerShell 计数，永远返回 0。
+  const leftovers = win('powershell -NoProfile -Command "(Get-ChildItem C:\\Windows\\Temp\\ms-bg-* -File -ErrorAction SilentlyContinue | Measure-Object).Count"').trim();
   rec('C7 no ms-bg temp leftovers [BUGFIX]', leftovers === '0', `left=${leftovers}`);
 
   const fails = results.filter((r) => !r.p);
