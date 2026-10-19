@@ -191,6 +191,26 @@ public class ElasticsearchManageController {
     }
 
     /**
+     * Dev Tools 原始查询：透传任意 ES REST 调用
+     *
+     * @param method       HTTP 方法（GET / POST / PUT / DELETE / PATCH）
+     * @param path         ES 端点（如 _search、_settings，等，不含 ES 主机地址前缀）
+     * @param body         请求体（可为空字符串）
+     * @param datasourceId 数据源 ID，可为空
+     * @return ES 返回的原始正文
+     */
+    @Operation(summary = "Elasticsearch Dev Tools 原始查询")
+    @PostMapping("/raw")
+    public ReturnResult<String> raw(
+            @RequestParam String method,
+            @RequestParam String path,
+            @RequestBody(required = false) String body,
+            @RequestParam(required = false) Long datasourceId) {
+        return call("ES Dev Tools [" + method + " " + path + "]", () ->
+                elasticsearchManageService.raw(method, path, body, datasourceId));
+    }
+
+    /**
      * 统一包装：把业务异常转成失败响应
      *
      * @param action   动作名，用于日志与错误提示

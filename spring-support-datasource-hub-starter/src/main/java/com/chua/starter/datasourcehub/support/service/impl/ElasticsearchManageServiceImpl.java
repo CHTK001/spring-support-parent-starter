@@ -17,6 +17,7 @@ import com.chua.starter.datasourcehub.support.model.dto.ElasticsearchIndexDTO;
 import com.chua.starter.datasourcehub.support.model.dto.ElasticsearchMappingDTO;
 import com.chua.starter.datasourcehub.support.model.dto.MiddlewareTestDTO;
 import com.chua.starter.datasourcehub.support.service.ElasticsearchManageService;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -186,6 +187,7 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         // 第 3 步之后原索引短暂不存在；若后续失败，数据仍在临时索引里（日志会打出名字，可人工恢复）。
         String tmp = name + "__rebuild__" + System.currentTimeMillis();
         long sourceCount = docCount(target, name);
+        boolean originalDeleted = false;
         try {
             client.createIndex(target, tmp, body);
             // 被删字段连同 _source 数据一起剔除，否则目标索引的动态映射会把字段又加回来
@@ -199,6 +201,7 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
                         "重建中止：临时索引文档数 " + copied + " 与源索引 " + sourceCount + " 不一致");
             }
             client.deleteIndex(target, name);
+            originalDeleted = true;
             client.createIndex(target, name, body);
             // 搬回时临时索引里已经没有那些字段的数据，无需再剔
             client.reindex(target, tmp, name);
@@ -206,7 +209,18 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
             client.deleteIndex(target, tmp);
             return index(name, request.datasourceId());
         } catch (RuntimeException e) {
-            if (exists(target, tmp)) {
+            // 关键保护：如果原索引已在第 3 步被删，但后续失败，用临时索引数据原地恢复原索引
+            if (originalDeleted && !exists(target, name) && exists(target, tmp)) {
+                log.warn("[ES] 重建索引 {} 在第 3 步（原索引已删）后失败，尝试从临时索引 {} 恢复原索引 ...", name, tmp);
+                try {
+                    client.reindex(target, tmp, name);
+                    client.refresh(target, name);
+                    log.info("[ES] 已从临时索引 {} 恢复原索引 {}（mapping 保持原样）", tmp, name);
+                } catch (RuntimeException ex) {
+                    log.error("[ES] 自动恢复失败，请人工处理：临时索引 {} 完整保留，可手动执行 reindex API 恢复。原因: {}",
+                            tmp, ex.getMessage());
+                }
+            } else if (exists(target, tmp)) {
                 log.error("[ES] 重建索引 {} 失败：数据仍保留在临时索引 {}，请按需人工恢复。原因: {}",
                         name, tmp, e.getMessage());
             }
@@ -773,6 +787,23 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
             return (int) Double.parseDouble(String.valueOf(value));
         } catch (NumberFormatException e) {
             return null;
+        }
+    }
+
+    /**
+     * Dev Tools 原始查询：透传任意 ES REST 调用
+     *
+     * <p>Dev Tools（如 Kibana Console）需要能发任意 REST 请求，本方法将 method + path + body 透传到 ES，
+     * 原样返回 ES 的响应正文（不做 JSON 解析，直接返回原始字符串）。</p>
+     */
+    @Override
+    public String raw(String method, String path, String body, Long datasourceId) {
+        ElasticsearchClient.Target target = client.target(datasourceId);
+        try {
+            return client.raw(target, method, path, body);
+        } catch (IOException e) {
+            throw new RuntimeException(
+                    "ES Dev Tools 请求失败 [" + method + " " + path + "]: " + e.getMessage(), e);
         }
     }
 
