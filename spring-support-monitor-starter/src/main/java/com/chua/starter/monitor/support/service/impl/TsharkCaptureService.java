@@ -2103,9 +2103,10 @@ public class TsharkCaptureService {
                 List<Map<String, Object>> rows = this.packetMapper.selectProtocolStatsBySessionId(sessionId);
                 List<TsharkProtocolStatVO> result = new ArrayList<>(rows.size());
                 for (Map<String, Object> row : rows) {
-                    String proto = row.get("protocol") == null ? "OTHER" : String.valueOf(row.get("protocol"));
-                    int count = ((Number) row.get("count")).intValue();
-                    long bytes = ((Number) row.get("bytes")).longValue();
+                    Object protoCell = cell(row, "protocol");
+                    String proto = protoCell == null ? "OTHER" : String.valueOf(protoCell);
+                    int count = (int) number(cell(row, "count"));
+                    long bytes = (long) number(cell(row, "bytes"));
                     result.add(new TsharkProtocolStatVO(proto, count, bytes));
                 }
                 return ReturnResult.ok(result);
@@ -2151,14 +2152,17 @@ public class TsharkCaptureService {
                 // SQL 层聚合，不再全量加载报文到内存；SQL 已带 LIMIT 20
                 List<Map<String, Object>> rows = this.packetMapper.selectTopFlowsBySessionId(sessionId);
                 for (Map<String, Object> row : rows) {
+                    Object flowCell = cell(row, "flow");
+                    Object sourceIpCell = cell(row, "sourceIp");
+                    Object destIpCell = cell(row, "destIp");
                     result.add(new TsharkFlowVO(
-                            row.get("flow") == null ? "" : String.valueOf(row.get("flow")),
-                            ((Number) row.get("count")).intValue(),
-                            ((Number) row.get("bytes")).longValue(),
-                            row.get("sourceIp") == null ? null : String.valueOf(row.get("sourceIp")),
-                            toInteger(row.get("sourcePort")),
-                            row.get("destIp") == null ? null : String.valueOf(row.get("destIp")),
-                            toInteger(row.get("destPort"))));
+                            flowCell == null ? "" : String.valueOf(flowCell),
+                            (int) number(cell(row, "count")),
+                            (long) number(cell(row, "bytes")),
+                            sourceIpCell == null ? null : String.valueOf(sourceIpCell),
+                            toInteger(cell(row, "sourcePort")),
+                            destIpCell == null ? null : String.valueOf(destIpCell),
+                            toInteger(cell(row, "destPort"))));
                 }
             } else {
                 List<MsTsharkPacket> packets = filteredPackets(sessionId, filter);
@@ -2254,9 +2258,21 @@ public class TsharkCaptureService {
         }
         if (filter.args().isEmpty()) {
             wrapper.apply(filter.sql());
-        } else {
-            wrapper.apply(filter.sql(), filter.args().toArray());
+            return;
         }
+        // MyBatis-Plus 的 apply(sql, args) 用的是 {0} / {1} 这种索引占位符，不是 JDBC 的 ?。
+        // 解析器按 JDBC 习惯生成 ?，这里按顺序改成 {n}，避免「sql not contains {0}」。
+        StringBuilder sb = new StringBuilder(filter.sql().length() + 16);
+        int index = 0;
+        for (int i = 0; i < filter.sql().length(); i++) {
+            char c = filter.sql().charAt(i);
+            if (c == '?') {
+                sb.append('{').append(index++).append('}');
+            } else {
+                sb.append(c);
+            }
+        }
+        wrapper.apply(sb.toString(), filter.args().toArray());
     }
 
     /**
@@ -2303,6 +2319,52 @@ public class TsharkCaptureService {
             return Integer.valueOf(String.valueOf(value));
         } catch (NumberFormatException e) {
             return null;
+        }
+    }
+
+    /**
+     * 取聚合行里的列值，忽略大小写。
+     *
+     * <p>SQL 里写的别名是 {@code count} / {@code bytes} 这种小写，但 MySQL 会原样返回，
+     * H2 把未加引号的标识符折成大写 —— 同一个查询在两种库上 {@code row.get("count")}
+     * 只有一种能命中。这里统一按「原样 → 大写 → 小写 → 忽略大小写遍历」查找，
+     * 免得统计接口换个库就 500。</p>
+     */
+    private static Object cell(Map<String, Object> row, String key) {
+        if (row == null || row.isEmpty()) {
+            return null;
+        }
+        if (row.containsKey(key)) {
+            return row.get(key);
+        }
+        String upper = key.toUpperCase(Locale.ROOT);
+        if (row.containsKey(upper)) {
+            return row.get(upper);
+        }
+        String lower = key.toLowerCase(Locale.ROOT);
+        if (row.containsKey(lower)) {
+            return row.get(lower);
+        }
+        for (Map.Entry<String, Object> e : row.entrySet()) {
+            if (e.getKey() != null && e.getKey().equalsIgnoreCase(key)) {
+                return e.getValue();
+            }
+        }
+        return null;
+    }
+
+    /** 把聚合行的计数 / 字节列转成数值，缺失按 0（统计接口不该因为一列为空就 500）。 */
+    private static long number(Object value) {
+        if (value instanceof Number n) {
+            return n.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return 0L;
         }
     }
 
