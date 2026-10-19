@@ -483,6 +483,29 @@ public class ElasticsearchClient {
     }
 
     /**
+     * Dev Tools 原始查询：透传任意 ES REST 调用
+     *
+     * @param target 访问目标
+     * @param method HTTP 方法
+     * @param path   ES API 路径（如 _search、_settings，等）
+     * @param body   请求体（可为空）
+     * @return ES 返回的原始正文
+     * @throws IOException 请求失败
+     */
+    public String raw(Target target, String method, String path, String body) throws IOException {
+        String url = target.url(path);
+        Map<String, String> h = headers(target);
+        return switch (method.toUpperCase()) {
+            case "GET" -> MiddlewareHttp.get(url, Map.of(), h);
+            case "POST" -> MiddlewareHttp.postJson(url, Map.of(), body, h);
+            case "PUT" -> MiddlewareHttp.putJson(url, Map.of(), body, h);
+            case "DELETE" -> MiddlewareHttp.delete(url, Map.of(), h);
+            case "PATCH" -> MiddlewareHttp.patchJson(url, Map.of(), body, h);
+            default -> throw new IllegalArgumentException("不支持的 HTTP 方法: " + method);
+        };
+    }
+
+    /**
      * 路径片段编码：索引名允许中文与逗号，通配符不能被编码掉
      */
     private String encode(String index) {
