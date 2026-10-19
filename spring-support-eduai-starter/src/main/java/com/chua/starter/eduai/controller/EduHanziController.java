@@ -2,6 +2,7 @@ package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduHanzi;
 import com.chua.starter.eduai.service.IEduHanziService;
 import com.chua.starter.eduai.support.util.EduUserContext;
@@ -50,7 +51,9 @@ public class EduHanziController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
-        return ReturnResult.ok(hanziService.pageQuery(keyword, gradeLevel, pageNum, pageSize));
+        int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
+        return ReturnResult.ok(hanziService.pageQuery(keyword, gradeLevel, pNum, pSize));
     }
 
     /**
@@ -62,9 +65,15 @@ public class EduHanziController {
     @Operation(summary = "汉字详情")
     @GetMapping("/{id}")
     public ReturnResult<EduHanzi> detail(@PathVariable Long id) {
+        if (id == null) {
+            throw new BusinessException("id 不能为空");
+        }
         EduHanzi hanzi = hanziService.getById(id);
         if (hanzi != null) {
             EduUserContext.checkReadable(hanzi.getOwnerUserId());
+        }
+        if (hanzi == null) {
+            throw new BusinessException("汉字不存在");
         }
         return ReturnResult.ok(hanzi);
     }
@@ -105,6 +114,8 @@ public class EduHanziController {
     public ReturnResult<List<Map<String, Object>>> practice(
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(defaultValue = "8") int count) {
-        return ReturnResult.ok(hanziService.generatePractice(gradeLevel, count));
+        // 限制 1~20，防止过大值
+        int safeCount = count <= 0 ? 8 : Math.min(count, 20);
+        return ReturnResult.ok(hanziService.generatePractice(gradeLevel, safeCount));
     }
 }

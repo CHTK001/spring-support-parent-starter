@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 网络抓包接口
@@ -272,5 +273,22 @@ public class TsharkCaptureController {
     public ReturnResult<List<TsharkFlowVO>> topFlows(@PathVariable Long id,
                                                      @RequestParam(defaultValue = "10") int limit) {
         return this.tsharkCaptureService.topFlows(id, limit);
+    }
+
+    /**
+     * 时间轴统计：按时间桶聚合报文的数量与总字节数。
+     *
+     * <p>用于前端绘制「报文量随时间变化」的折线图。</p>
+     *
+     * @param id            会话 ID
+     * @param bucketSeconds 桶大小（秒），默认 10
+     * @return 时间轴数据，格式：[{"t": "2026-10-19 10:00:00", "packets": 123, "bytes": 45678}, ...]
+     */
+    @Operation(summary = "时间轴统计")
+    @GetMapping("/sessions/{id}/stats/timeline")
+    public ReturnResult<List<Map<String, Object>>> timeline(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "10") Integer bucketSeconds) {
+        return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds));
     }
 }

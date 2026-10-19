@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -167,18 +168,25 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         List<EduClass> classes = myClasses();
         List<Map<String, Object>> classRows = new ArrayList<>();
         int totalStudents = 0;
-        for (EduClass clazz : classes) {
-            List<EduStudent> students = studentMapper.selectList(new QueryWrapper<EduStudent>()
-                    .eq("student_class_id", clazz.getClassId()));
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("classId", clazz.getClassId());
-            row.put("className", clazz.getClassName());
-            row.put("gradeLevel", clazz.getClassGradeLevel());
-            row.put("grade", clazz.getClassGrade());
-            row.put("studentCount", students.size());
-            row.put("boundCount", students.stream().filter(s -> s.getStudentAccount() != null).count());
-            classRows.add(row);
-            totalStudents += students.size();
+        // 批量查所有班级的学生，消除 N+1（1 次查询替代 N 次）
+        if (!classes.isEmpty()) {
+            List<Long> classIds = classes.stream().map(EduClass::getClassId).toList();
+            List<EduStudent> allStudents = studentMapper.selectList(new QueryWrapper<EduStudent>()
+                    .in("student_class_id", classIds));
+            Map<Long, List<EduStudent>> byClass = allStudents.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(EduStudent::getStudentClassId));
+            for (EduClass clazz : classes) {
+                List<EduStudent> students = byClass.getOrDefault(clazz.getClassId(), Collections.emptyList());
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("classId", clazz.getClassId());
+                row.put("className", clazz.getClassName());
+                row.put("gradeLevel", clazz.getClassGradeLevel());
+                row.put("grade", clazz.getClassGrade());
+                row.put("studentCount", students.size());
+                row.put("boundCount", students.stream().filter(s -> s.getStudentAccount() != null).count());
+                classRows.add(row);
+                totalStudents += students.size();
+            }
         }
         result.put("classes", classRows);
         result.put("classCount", classRows.size());

@@ -20,9 +20,10 @@ import java.time.LocalDateTime;
  * @param percent    进度百分比 0-100；无法计算（题目数未知）时为 null，前端用不确定态进度条展示
  * @param error      失败原因（taskStatus=3 时）
  * @param finished   是否终态（已完成或失败）——前端据此收流并拉取最终结果
- * @param mode       试卷类型：SELF 自有卷 / ANY 任意卷
- * @param studentId  学生标识
- * @param updateTime 本次进度事件时间
+ * @param mode           试卷类型：SELF 自有卷 / ANY 任意卷
+ * @param studentId     学生标识
+ * @param paperTotalScore 卷面总分（SELF 卷有效；ANY 卷为 null）
+ * @param updateTime     本次进度事件时间
  * @since 4.0.0.42
  * @author CH
  */
@@ -37,5 +38,6 @@ public record MarkingProgressVO(
         Boolean finished,
         String mode,
         String studentId,
+        Integer paperTotalScore,
         LocalDateTime updateTime) {
 }

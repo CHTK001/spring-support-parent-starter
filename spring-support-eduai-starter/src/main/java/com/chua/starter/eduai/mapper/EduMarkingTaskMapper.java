@@ -81,4 +81,16 @@ public interface EduMarkingTaskMapper extends BaseMapper<EduMarkingTask> {
                         @Param("answerSheetId") Long answerSheetId,
                         @Param("imagePath") String imagePath,
                         @Param("now") LocalDateTime now);
+
+    /**
+     * 更新教师确认时的满意度评价（1-5）。
+     *
+     * @param taskId       任务业务标识
+     * @param satisfaction 满意度（1-5）；null 表示不更新
+     * @param now          当前时间
+     * @return 更新行数
+     */
+    int updateSatisfaction(@Param("taskId") String taskId,
+                           @Param("satisfaction") Integer satisfaction,
+                           @Param("now") LocalDateTime now);
 }

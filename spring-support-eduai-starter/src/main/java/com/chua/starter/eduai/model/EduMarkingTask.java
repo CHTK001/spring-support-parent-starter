@@ -139,6 +139,13 @@ public class EduMarkingTask extends SysBase {
     private LocalDateTime markingTaskTeacherFinishTime;
 
     /**
+     * AI 评语满意度（1=差 2=一般 3=良好 4=优秀 5=极好；null 表示未评价）。
+     *
+     * <p>教师确认阅卷时可提交，累积数据用于 Prompt 优化。</p>
+     */
+    private Integer markingTaskSatisfaction;
+
+    /**
      * 归属用户 ID（服务端按登录态写入，客户端不可指定）
      */
     @TableField("marking_task_owner_user_id")

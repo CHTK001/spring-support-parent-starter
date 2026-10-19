@@ -48,7 +48,8 @@ public class EduPoemController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "20") int count) {
-        return ReturnResult.ok(poemService.listByGradeLevel(gradeLevel, grade, count));
+        int safeCount = count <= 0 ? 20 : Math.min(count, 200);
+        return ReturnResult.ok(poemService.listByGradeLevel(gradeLevel, grade, safeCount));
     }
 
     @Operation(summary = "分页查询古诗")
@@ -59,7 +60,9 @@ public class EduPoemController {
             @RequestParam(required = false) String grade,
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
-        return ReturnResult.ok(poemService.pageQuery(keyword, gradeLevel, grade, pageNum, pageSize));
+        int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
+        return ReturnResult.ok(poemService.pageQuery(keyword, gradeLevel, grade, pNum, pSize));
     }
 
     @Operation(summary = "生成古诗游戏数据（补全下句）")
@@ -68,7 +71,8 @@ public class EduPoemController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "10") int count) {
-        return ReturnResult.ok(poemService.generatePoemGame(gradeLevel, grade, count));
+        int safeCount = count <= 0 ? 10 : Math.min(count, 50);
+        return ReturnResult.ok(poemService.generatePoemGame(gradeLevel, grade, safeCount));
     }
 
     /**
@@ -80,10 +84,16 @@ public class EduPoemController {
     @Operation(summary = "获取古诗详情")
     @GetMapping("/detail/{poemId}")
     public ReturnResult<EduPoem> detail(@PathVariable Long poemId) {
+        if (poemId == null) {
+            throw new BusinessException("poemId 不能为空");
+        }
         EduPoem poem = poemService.getById(poemId);
         if (poem != null) {
             EduUserContext.checkReadable(poem.getOwnerUserId());
             fillPoemGrades(poem);
+        }
+        if (poem == null) {
+            throw new BusinessException("古诗不存在");
         }
         return ReturnResult.ok(poem);
     }
@@ -97,6 +107,9 @@ public class EduPoemController {
     @Operation(summary = "添加/编辑古诗")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduPoem poem) {
+        if (poem == null) {
+            throw new BusinessException("古诗内容不能为空");
+        }
         if (poem.getPoemId() == null) {
             poem.setOwnerUserId(EduUserContext.requireUserId());
         } else {

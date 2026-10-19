@@ -2,6 +2,7 @@ package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
@@ -78,9 +79,15 @@ public class EduQuestionController {
     @Operation(summary = "获取题目详情")
     @GetMapping("/{id}")
     public ReturnResult<EduQuestion> detail(@PathVariable Long id) {
+        if (id == null) {
+            throw new BusinessException("id 不能为空");
+        }
         EduQuestion question = questionService.getById(id);
         if (question != null) {
             EduUserContext.checkReadable(question.getOwnerUserId());
+        }
+        if (question == null) {
+            throw new BusinessException("题目不存在");
         }
         return ReturnResult.ok(question);
     }
@@ -94,6 +101,9 @@ public class EduQuestionController {
     @Operation(summary = "新增或更新题目")
     @PostMapping("/save")
     public ReturnResult<Long> save(@RequestBody QuestionSaveDTO dto) {
+        if (dto == null) {
+            throw new BusinessException("题目内容不能为空");
+        }
         Long id = questionService.saveQuestion(dto);
         return ReturnResult.ok(id);
     }
@@ -168,6 +178,10 @@ public class EduQuestionController {
     public ReturnResult<Integer> auditBatch(@RequestBody List<Long> ids,
                                             @RequestParam boolean passed,
                                             @RequestParam(required = false) String remark) {
+        // 单次批量上限，防止内存溢出与超时
+        if (ids != null && ids.size() > 100) {
+            throw new BusinessException("单次批量审核不超过 100 条");
+        }
         return ReturnResult.ok(questionService.auditQuestions(ids, passed, remark));
     }
 }

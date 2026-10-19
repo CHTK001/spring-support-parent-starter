@@ -143,26 +143,23 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     /**
-     * 读取文件字节（支持本地路径与 http(s) URL）。
+     * 读取文件字节（仅支持本地绝对路径，防止 SSRF 攻击）。
      *
-     * @param path 文件路径或 URL
-     * @return 文件字节，读取失败返回 空
+     * @param path 文件绝对路径
+     * @return 文件字节，读取失败返回 null
      */
     private byte[] readFile(String path) {
         if (!StringUtils.hasText(path)) {
             return null;
         }
+        String lower = path.toLowerCase().trim();
+        // 禁止网络 URL，防止 SSRF
+        if (lower.startsWith("http://") || lower.startsWith("https://")
+                || lower.startsWith("ftp://") || lower.startsWith("file://")) {
+            log.warn("[EduKnowledgeDoc] 拒绝非本地路径: {}", path);
+            return null;
+        }
         try {
-            String lower = path.toLowerCase();
-            if (lower.startsWith("http://") || lower.startsWith("https://")) {
-                /**
-                 * 尝试。
-                 * @param URI.create(path URI.创建(路径
-                 */
-                try (InputStream in = URI.create(path).toURL().openStream()) {
-                    return in.readAllBytes();
-                }
-            }
             return Files.readAllBytes(Paths.get(path));
         } catch (IOException e) {
             log.warn("[EduKnowledgeDoc] 读取文件失败: {} -> {}", path, e.getMessage());

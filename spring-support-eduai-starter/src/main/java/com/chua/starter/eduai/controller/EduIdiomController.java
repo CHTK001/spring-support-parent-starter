@@ -46,7 +46,9 @@ public class EduIdiomController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "20") int count) {
-        return ReturnResult.ok(idiomService.listByGradeLevel(gradeLevel, grade, count));
+        // 列表上限，防止扫全表
+        int safeCount = count <= 0 ? 20 : Math.min(count, 200);
+        return ReturnResult.ok(idiomService.listByGradeLevel(gradeLevel, grade, safeCount));
     }
 
     @Operation(summary = "分页查询成语")
@@ -57,7 +59,10 @@ public class EduIdiomController {
             @RequestParam(required = false) String grade,
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
-        return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, pageNum, pageSize));
+        // 分页参数兜底，防止 service 层 NPE
+        int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
+        return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, pNum, pSize));
     }
 
     @Operation(summary = "生成成语消消乐游戏数据")
@@ -66,7 +71,8 @@ public class EduIdiomController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "10") int count) {
-        return ReturnResult.ok(idiomService.generateIdiomGame(gradeLevel, grade, count));
+        int safeCount = count <= 0 ? 10 : Math.min(count, 50);
+        return ReturnResult.ok(idiomService.generateIdiomGame(gradeLevel, grade, safeCount));
     }
 
     /**
@@ -95,6 +101,9 @@ public class EduIdiomController {
     @Operation(summary = "成语接龙-校验一步")
     @PostMapping("/chain/validate")
     public ReturnResult<Map<String, Object>> chainValidate(@RequestBody Map<String, Object> params) {
+        if (params == null) {
+            throw new BusinessException("请求体不能为空");
+        }
         String current = params.get("current") == null ? null : params.get("current").toString();
         String answer = params.get("answer") == null ? null : params.get("answer").toString();
         return ReturnResult.ok(idiomService.validateChain(current, answer));
@@ -121,6 +130,9 @@ public class EduIdiomController {
     @Operation(summary = "验证成语配对")
     @PostMapping("/game/validate")
     public ReturnResult<Boolean> validatePair(@RequestBody Map<String, Object> params) {
+        if (params == null || params.get("idiomId") == null) {
+            throw new BusinessException("idiomId 不能为空");
+        }
         Long idiomId = Long.valueOf(params.get("idiomId").toString());
         String pinyin = (String) params.get("pinyin");
         String meaning = (String) params.get("meaning");
@@ -136,10 +148,16 @@ public class EduIdiomController {
     @Operation(summary = "获取成语详情")
     @GetMapping("/detail/{idiomId}")
     public ReturnResult<EduIdiom> detail(@PathVariable Long idiomId) {
+        if (idiomId == null) {
+            throw new BusinessException("idiomId 不能为空");
+        }
         EduIdiom idiom = idiomService.getById(idiomId);
         if (idiom != null) {
             EduUserContext.checkReadable(idiom.getOwnerUserId());
             fillIdiomGrades(idiom);
+        }
+        if (idiom == null) {
+            throw new BusinessException("成语不存在");
         }
         return ReturnResult.ok(idiom);
     }
