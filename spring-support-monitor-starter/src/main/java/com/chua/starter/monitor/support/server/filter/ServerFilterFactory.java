@@ -93,7 +93,7 @@ public class ServerFilterFactory {
      * <p>与 {@link #SETTING_BOOLEAN_KEYS} 同源约束，须与 schema 声明保持一致。</p>
      */
     private static final List<String> SETTING_STRING_KEYS =
-            List.of("watermark", "layoutType", "imageFilter", "thirdUrlPreview");
+            List.of("watermark", "layoutType", "imageFilter", "thirdUrlPreview", "fileSettingKey");
 
     /**
      * 枚举型字符串参数的枚举类简单名（定义在 {@code FileStorageSetting} 的嵌套枚举里）。

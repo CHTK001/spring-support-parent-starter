@@ -123,6 +123,14 @@ public class FileStorageServerProperties {
     private String imageFilter = "NONE";
 
     /**
+     * URL 参数能力 SPI 实现名（{@code FileStorageFileSetting}，默认 {@code jdk}）。
+     *
+     * <p>决定 {@code ?size=100x100&format=webp} 这类文件级参数由哪个实现解析；
+     * 管理界面从后台能力接口枚举可选项。</p>
+     */
+    private String fileSettingKey = "jdk";
+
+    /**
      * 是否启用路径穿越防护（默认开启：拦截 ..、反斜杠、NUL 等穿越请求，并筛查文件动作参数）
      */
     private boolean openPathGuard = true;

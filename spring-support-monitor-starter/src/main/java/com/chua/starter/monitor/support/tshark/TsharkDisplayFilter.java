@@ -247,8 +247,18 @@ public final class TsharkDisplayFilter {
                             .append("LOWER(ms_tshark_packet_info) LIKE 'http/2%')");
                     case "icmpv6" -> out.sql.append("LOWER(ms_tshark_packet_protocol) = 'icmp'");
                     default -> {
-                        out.sql.append("LOWER(ms_tshark_packet_protocol) = ?");
+                        // 协议名要做「包含」匹配：tshark 只把最外层协议写进 protocol 列，
+                        // 例如明文 HTTP 常落在 TCP 上，只比对 protocol 会让「http」查出 0 条，
+                        // 用户会以为过滤坏了。因此再补一层 info 摘要模糊匹配；http 另加常用端口兜底。
+                        out.sql.append("(LOWER(ms_tshark_packet_protocol) = ? OR ")
+                                .append("LOWER(ms_tshark_packet_info) LIKE ?");
                         out.args.add(protocol);
+                        out.args.add("%" + protocol + "%");
+                        if ("http".equals(protocol)) {
+                            out.sql.append(" OR ms_tshark_packet_source_port IN (80,8000,8080)")
+                                    .append(" OR ms_tshark_packet_dest_port IN (80,8000,8080)");
+                        }
+                        out.sql.append(')');
                     }
                 }
             };

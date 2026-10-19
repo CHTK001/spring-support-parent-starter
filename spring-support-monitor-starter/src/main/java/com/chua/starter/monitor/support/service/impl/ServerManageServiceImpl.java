@@ -607,6 +607,7 @@ public class ServerManageServiceImpl implements ServerManageService {
                 Arrays.asList("SIMPLE", "SYSTEM")));
         params.add(paramEnum("imageFilter", "NONE", "图片处理滤镜", "enum",
                 Arrays.asList("NONE", "BLUR", "GRAYSCALE", "INVERT", "SATURATE", "SEPIA")));
+        params.add(param("fileSettingKey", "jdk", "URL 参数能力（FileStorageFileSetting SPI 实现名）", "string"));
         return params;
     }
 
