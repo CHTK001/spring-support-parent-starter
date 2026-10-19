@@ -4883,12 +4883,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
         log.info("管理员动态更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
                         + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
-                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}, privateBuckets={}",
+                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}, fileSettingKey={}, privateBuckets={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
                 setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.getThirdUrlPreview(),
                 setting.isLayout(), setting.getLayoutType(),
                 setting.isShowFormat(), setting.isShowSize(), setting.isShowTime(), setting.getImageFilter(),
-                String.join(",", setting.getPrivateBuckets()));
+                setting.getFileSettingKey(), String.join(",", setting.getPrivateBuckets()));
         notifyConfigChanged();
         return writeActionSuccess(response, "\"configUpdated\":true");
     }
