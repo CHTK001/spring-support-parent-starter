@@ -433,6 +433,92 @@ public class TsharkCaptureService {
     }
 
     /**
+     * 把常见的显示过滤翻译成等价的捕获过滤（BPF）。
+     *
+     * <p>tshark 在抓包并写文件时不能用 -Y，而用户习惯直接写 {@code http}。
+     * 这里覆盖最常用的协议名与几种字段表达式；翻译不了返回 null，由调用方
+     * 明确提示改用 BPF，而不是建一条立刻退出的会话。</p>
+     *
+     * @param display 显示过滤文本
+     * @return 等价 BPF；无法翻译返回 null
+     */
+    private static String displayToBpf(String display) {
+        String f = display.trim();
+        String lower = f.toLowerCase(Locale.ROOT);
+        // 纯协议名 / 逻辑组合
+        switch (lower) {
+            case "http", "http2":
+                // 没有 BPF 的 http 关键字，只能按常用端口近似；80 之外再带几个开发端口
+                return "(tcp port 80 or tcp port 8080 or tcp port 8000 or tcp port 8888)";
+            case "https", "tls", "ssl":
+                return "tcp port 443";
+            case "dns":
+                return "port 53";
+            case "ssh":
+                return "tcp port 22";
+            case "ftp":
+                return "tcp port 21";
+            case "smtp":
+                return "tcp port 25 or tcp port 465 or tcp port 587";
+            case "telnet":
+                return "tcp port 23";
+            case "mqtt":
+                return "tcp port 1883 or tcp port 8883";
+            case "smb":
+                return "tcp port 445";
+            case "ntp":
+                return "udp port 123";
+            case "dhcp":
+                return "udp port 67 or udp port 68";
+            case "icmp":
+                return "icmp";
+            case "arp":
+                return "arp";
+            case "tcp", "udp", "ip":
+                return lower;
+            default:
+                break;
+        }
+
+        // http.request.method == "GET" → 匹配 TCP 负载前 4 个字节（GET␠ / POST / HEAD…）
+        java.util.regex.Matcher method = java.util.regex.Pattern
+                .compile("^http\\.request\\.method\\s*==\\s*[\"']?([a-z]+)[\"']?$",
+                        java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(f);
+        if (method.matches()) {
+            String m = method.group(1).toUpperCase(Locale.ROOT);
+            String probe = (m + "    ").substring(0, 4);
+            String hex = String.format("%02x%02x%02x%02x",
+                    (int) probe.charAt(0), (int) probe.charAt(1), (int) probe.charAt(2), (int) probe.charAt(3));
+            return "tcp[((tcp[12] & 0xf0) >> 2):4] = 0x" + hex;
+        }
+
+        // ip.addr == 1.2.3.4 / ip.src == / ip.dst ==
+        java.util.regex.Matcher ip = java.util.regex.Pattern
+                .compile("^ip\\.(addr|src|dst)\\s*==\\s*([0-9a-fA-F:.]+)$")
+                .matcher(f);
+        if (ip.matches()) {
+            String prefix = switch (ip.group(1).toLowerCase(Locale.ROOT)) {
+                case "src" -> "src host ";
+                case "dst" -> "dst host ";
+                default -> "host ";
+            };
+            return prefix + ip.group(2);
+        }
+
+        // tcp.port == 8080 / udp.port == 53 / port == 53
+        java.util.regex.Matcher port = java.util.regex.Pattern
+                .compile("^(?:(tcp|udp)\\.)?port\\s*==\\s*(\\d{1,5})$",
+                        java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(f);
+        if (port.matches()) {
+            String proto = port.group(1) == null ? "" : port.group(1).toLowerCase(Locale.ROOT) + " ";
+            return proto + "port " + port.group(2);
+        }
+        return null;
+    }
+
+    /**
      * 进程启动失败时，从 tshark 日志里提炼一句人话。
      *
      * @param filePath  新建的 pcap 路径（日志是同名 .log）
@@ -452,11 +538,11 @@ public class TsharkCaptureService {
         }
         String lower = logText.toLowerCase(Locale.ROOT);
         if (lower.contains("invalid capture filter") || lower.contains("valid display filter")) {
-            return "过滤器「" + filter + "」不是捕获过滤语法。它看起来是显示过滤（如 http / http.request.method == \"GET\"），"
-                    + "请把「过滤语法」切到「显示过滤」，或改成捕获过滤如 tcp port 80。";
+            return "过滤器「" + filter + "」不是捕获过滤语法，且无法自动转换成等价 BPF。"
+                    + "请改用 tcp port 80、host 10.0.0.1 这类捕获过滤写法。";
         }
-        if (lower.contains("invalid display filter") || lower.contains("isn't a valid display filter")) {
-            return "显示过滤器「" + filter + "」语法有误，请检查字段名与运算符。";
+        if (lower.contains("display filters aren't supported")) {
+            return "实时抓包不能直接使用显示过滤（tshark 在抓包写文件时不支持 -Y），请改用捕获过滤如 tcp port 80。";
         }
         String text = logText.trim();
         if (!text.isEmpty()) {
@@ -489,16 +575,21 @@ public class TsharkCaptureService {
             cmd.add("-i");
             cmd.add(iface);
             if (filter != null && !filter.isBlank()) {
-                // BPF（-f）与显示过滤（-Y）不是同一套语法：用户最常见的 `http` 只能当
-                // 显示过滤用，硬塞给 -f 会让 tshark 立刻以「Invalid capture filter」退出，
-                // 页面看到的就是「新建会话后马上停止」。这里按 filterType 分流；
-                // auto 时按文本猜（带 ==、字段点号或 http/dns/tls 这类协议名 → 显示过滤）。
+                // BPF（-f）与显示过滤（-Y）不是同一套语法；而且 tshark 在「抓包 + -w」
+                // 模式下明确不支持 -Y（会直接退出：Display filters aren't supported when
+                // capturing and saving the captured packets）。所以实时抓包只能走捕获过滤：
+                // 用户写 http 这类显示过滤时，先翻译成等价的 BPF，翻不了就明确拒绝，
+                // 绝不带着一条注定失败的 -Y 去建会话。
+                String bpf = filter.trim();
                 if (useDisplayFilter(filter, filterType)) {
-                    cmd.add("-Y");
-                } else {
-                    cmd.add("-f");
+                    bpf = displayToBpf(filter.trim());
+                    if (bpf == null) {
+                        return ReturnResult.error("实时抓包只支持捕获过滤（BPF）。显示过滤「" + filter
+                                + "」无法自动转换，请改用 tcp port 80、host 10.0.0.1 这类写法。");
+                    }
                 }
-                cmd.add(filter);
+                cmd.add("-f");
+                cmd.add(bpf);
             }
             if (count != null && count > 0) {
                 cmd.add("-c");

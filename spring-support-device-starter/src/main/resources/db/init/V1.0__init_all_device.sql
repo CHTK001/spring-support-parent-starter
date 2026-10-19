@@ -126,8 +126,6 @@ CREATE TABLE IF NOT EXISTS device_provider_credential (
     device_credential_name VARCHAR(100) NOT NULL COMMENT '凭据名称，如「华东区账号」；同厂商同平台下唯一',
     device_credential_app_key VARCHAR(128) COMMENT 'AppKey（AK）；SDK 直连模式可空',
     device_credential_app_secret VARCHAR(256) COMMENT 'AppSecret（SK）；SDK 直连模式可空',
-    device_credential_product_code VARCHAR(64) COMMENT '云曜产品编码 ProductCode（云曜平台必填）',
-    device_credential_project_id VARCHAR(64) COMMENT '云曜项目 ID ProjectID（云曜平台必填）',
     device_credential_base_url VARCHAR(255) COMMENT '平台 endpoint 覆盖（留空用各 Session 内置默认）',
     device_credential_offline_threshold INT DEFAULT 60 COMMENT '该套凭据覆盖设备的离线检测阈值（秒）',
     device_credential_is_default TINYINT DEFAULT 0 COMMENT '是否为该厂商的默认套：0 否、1 是',
