@@ -91,6 +91,16 @@ public class FileStorageSetting {
     private String imageFilter = "NONE";
 
     /**
+     * URL 参数能力实现（{@code FileStorageFileSetting} SPI 扩展名，默认 {@code jdk}）。
+     *
+     * <p>决定 {@code ?size=100x100&format=webp} 这类文件级参数由哪个 SPI 实现解析。
+     * 可选值来自后台 {@code ?format=capabilities} 的 {@code fileSettingCapabilities}，
+     * 管理界面按该清单渲染下拉；写入时再次校验，未知实现直接拒绝。</p>
+     */
+    @Builder.Default
+    private String fileSettingKey = "jdk";
+
+    /**
      * 是否启用路径穿透防护（默认开启）。
      *
      * <p>开启后对每个请求做统一穿越筛查：路径含 {@code ..} 段、反斜杠（Windows 下的穿越通道）、

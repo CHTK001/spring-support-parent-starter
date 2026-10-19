@@ -2214,7 +2214,17 @@ public class TsharkCaptureService {
             return List.of();
         }
         if (filter.isEmpty()) {
-            return this.packetMapper.selectTimelineBySessionId(sessionId, bucket);
+            List<Map<String, Object>> rows = this.packetMapper.selectTimelineBySessionId(sessionId, bucket);
+            // 同协议统计：H2 会把别名折成大写，这里统一回小写键，前端拿到的字段两边一致
+            List<Map<String, Object>> normalized = new ArrayList<>(rows.size());
+            for (Map<String, Object> row : rows) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("t", cell(row, "t"));
+                item.put("packets", number(cell(row, "packets")));
+                item.put("bytes", number(cell(row, "bytes")));
+                normalized.add(item);
+            }
+            return normalized;
         }
         try {
             List<MsTsharkPacket> packets = filteredPackets(sessionId, filter);
@@ -2245,6 +2255,134 @@ public class TsharkCaptureService {
             return List.of();
         }
     }
+
+    /**
+     * 异常诊断：按常见故障特征统计报文条数。
+     *
+     * <p>页面上的「诊断」页用它做一张体检表：连接重置、ICMP 不可达、重传、乱序、
+     * 零窗口、DNS 解析失败、HTTP 4xx/5xx、TLS 告警。每项都带上一条等价的显示过滤
+     * 表达式，点一下就能筛到报文表 —— 只看计数、却不知道是哪几条包，对排查没有帮助。</p>
+     *
+     * <p>SQL 全部是常量片段（不含用户输入），显示过滤作为额外条件由
+     * {@link #applyFilter} 参数化追加，因此不存在拼接注入面。</p>
+     *
+     * @param sessionId     会话标识
+     * @param displayFilter 显示过滤（可空）：统计的是「当前过滤命中的报文里」的异常
+     * @return 异常项列表，字段 key / label / severity / count / filter；没有命中的项不返回
+     */
+    public List<Map<String, Object>> anomalies(Long sessionId, String displayFilter) {
+        TsharkDisplayFilter.SqlFilter filter;
+        try {
+            filter = TsharkDisplayFilter.parse(displayFilter);
+        } catch (IllegalArgumentException e) {
+            // 与时间轴一致：接口返回 List，空列表 + 前端过滤条上的错误提示比 500 更友好
+            log.debug("anomalies filter rejected: {}", e.getMessage());
+            return List.of();
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (AnomalyRule rule : ANOMALY_RULES) {
+            LambdaQueryWrapper<MsTsharkPacket> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(MsTsharkPacket::getSessionId, sessionId);
+            wrapper.apply(rule.sql());
+            applyFilter(wrapper, filter);
+            Long count = this.packetMapper.selectCount(wrapper);
+            if (count == null || count <= 0) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("key", rule.key());
+            item.put("label", rule.label());
+            item.put("severity", rule.severity());
+            item.put("count", count);
+            item.put("filter", rule.filter());
+            result.add(item);
+        }
+        // 危险项优先，同级别按数量降序：体检表第一眼就该是最该处理的那几行
+        result.sort((a, b) -> {
+            int bySeverity = Integer.compare(
+                    severityRank(String.valueOf(a.get("severity"))),
+                    severityRank(String.valueOf(b.get("severity"))));
+            if (bySeverity != 0) {
+                return bySeverity;
+            }
+            return Long.compare(((Number) b.get("count")).longValue(), ((Number) a.get("count")).longValue());
+        });
+        return result;
+    }
+
+    /**
+     * 异常严重度排序权重：越小越靠前。
+     *
+     * @param severity danger / warning / info
+     * @return 权重
+     */
+    private static int severityRank(String severity) {
+        return switch (severity) {
+            case "danger" -> 0;
+            case "warning" -> 1;
+            default -> 2;
+        };
+    }
+
+    /**
+     * 一条诊断规则：入库报文里的判定条件 + 可回填到显示过滤的等价表达式。
+     *
+     * @param key      稳定标识（前端可用作锚点）
+     * @param label    展示名
+     * @param severity danger / warning / info
+     * @param sql      统计用 SQL 条件（常量片段，不含用户输入）
+     * @param filter   等价的显示过滤表达式，空串表示不可回填
+     */
+    private record AnomalyRule(String key, String label, String severity, String sql, String filter) {
+    }
+
+    /**
+     * 诊断规则表。
+     *
+     * <p>判定尽量落在 info 摘要上：这些列是 tshark `_ws.col.Info` 的原样落库，
+     * 比协议列更细（重传 / 乱序 / 零窗口本身都是 TCP，只看协议分不出来）。
+     * MySQL 与 H2 都在 LOWER() 后比较，避免大小写口径不一致。</p>
+     */
+    private static final List<AnomalyRule> ANOMALY_RULES = List.of(
+            new AnomalyRule("reset", "连接重置（RST）", "danger",
+                    "(LOWER(ms_tshark_packet_info) LIKE '%[rst%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE '%reset%')",
+                    "tcp.flags.reset == 1"),
+            new AnomalyRule("unreachable", "ICMP 不可达 / 超时", "danger",
+                    "LOWER(ms_tshark_packet_protocol) = 'icmp'"
+                            + " AND (LOWER(ms_tshark_packet_info) LIKE '%unreachable%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE '%time exceeded%')",
+                    "icmp and (\"Unreachable\" or \"Time Exceeded\")"),
+            new AnomalyRule("retransmission", "TCP 重传", "warning",
+                    "LOWER(ms_tshark_packet_info) LIKE '%retransmission%'",
+                    "\"Retransmission\""),
+            new AnomalyRule("dup-ack", "重复 ACK", "warning",
+                    "LOWER(ms_tshark_packet_info) LIKE '%dup ack%'",
+                    "\"Dup ACK\""),
+            new AnomalyRule("out-of-order", "乱序 / 失序", "warning",
+                    "LOWER(ms_tshark_packet_info) LIKE '%out-of-order%'",
+                    "\"Out-Of-Order\""),
+            new AnomalyRule("zero-window", "零窗口", "warning",
+                    "(LOWER(ms_tshark_packet_info) LIKE '%zerowindow%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE '%zero window%')",
+                    "\"ZeroWindow\""),
+            new AnomalyRule("dns-error", "DNS 解析失败", "warning",
+                    "LOWER(ms_tshark_packet_protocol) = 'dns'"
+                            + " AND (LOWER(ms_tshark_packet_info) LIKE '%no such name%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE '%servfail%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE '%nxdomain%')",
+                    "dns and (\"No such name\" or \"ServFail\" or \"NXDomain\")"),
+            new AnomalyRule("http-error", "HTTP 4xx / 5xx", "warning",
+                    "(LOWER(ms_tshark_packet_info) LIKE 'http/1.1 4%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE 'http/1.1 5%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE 'http/2 4%'"
+                            + " OR LOWER(ms_tshark_packet_info) LIKE 'http/2 5%')",
+                    "(\"HTTP/1.1 4\" or \"HTTP/1.1 5\" or \"HTTP/2 4\" or \"HTTP/2 5\")"),
+            new AnomalyRule("tls-alert", "TLS 告警", "info",
+                    "LOWER(ms_tshark_packet_protocol) IN ('tls','ssl')"
+                            + " AND LOWER(ms_tshark_packet_info) LIKE '%alert%'",
+                    "tls and \"Alert\"")
+    );
 
     /**
      * 在 wrapper 上追加显示过滤条件。

@@ -304,4 +304,23 @@ public class TsharkCaptureController {
             @RequestParam(required = false) String displayFilter) {
         return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds, displayFilter));
     }
+
+    /**
+     * 异常诊断：按常见故障特征统计条数（连接重置、ICMP 不可达、重传、乱序、
+     * 零窗口、DNS 解析失败、HTTP 4xx/5xx、TLS 告警）。
+     *
+     * <p>每项都带一条等价的显示过滤表达式，前端点击后可回填到过滤条，
+     * 直接筛出对应报文 —— 只给计数、不给报文，排查时还得自己手写过滤。</p>
+     *
+     * @param id            会话 ID
+     * @param displayFilter 显示过滤（可空）：只统计当前过滤命中的报文
+     * @return 命中的异常项列表，字段 key / label / severity / count / filter
+     */
+    @Operation(summary = "异常诊断统计")
+    @GetMapping("/sessions/{id}/stats/anomalies")
+    public ReturnResult<List<Map<String, Object>>> anomalies(
+            @PathVariable Long id,
+            @RequestParam(required = false) String displayFilter) {
+        return ReturnResult.success(this.tsharkCaptureService.anomalies(id, displayFilter));
+    }
 }
