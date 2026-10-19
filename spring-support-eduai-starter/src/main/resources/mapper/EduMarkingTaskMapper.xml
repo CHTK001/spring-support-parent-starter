@@ -55,4 +55,14 @@
         WHERE marking_task_task_id = #{taskId}
     </update>
 
+    <!-- 更新教师满意度 -->
+    <update id="updateSatisfaction">
+        UPDATE edu_marking_task
+        <set>
+            <if test="satisfaction != null">marking_task_satisfaction = #{satisfaction},</if>
+            update_time = #{now}
+        </set>
+        WHERE marking_task_task_id = #{taskId}
+    </update>
+
 </mapper>

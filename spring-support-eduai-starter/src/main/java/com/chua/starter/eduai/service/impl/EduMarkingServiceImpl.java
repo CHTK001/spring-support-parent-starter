@@ -334,7 +334,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         try {
             MAPPER.readTree(content);
         } catch (Exception e) {
-            log.warn("[EduAi] 答题内容不是合法 JSON，已拒绝: {}", content);
+            log.warn("[EduAi] 答题内容不是合法 JSON，已拒绝（内容已脱敏）");
             throw new BusinessException("答题内容须为合法 JSON");
         }
     }
@@ -1053,7 +1053,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             scanned = paperScanner.extractSelfQuestions(mergedBlocks, text);
         }
         if (scanned.isEmpty()) {
-            throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
+            // any卷识别全失败时，用 OCR 文字块兜底（防止完全无法阅卷）
+            if (anyScan != null && !text.isEmpty()) {
+                EduPaperScanner.ScannedQuestion fallback = new EduPaperScanner.ScannedQuestion(
+                        "未知题目",
+                        null,
+                        null,
+                        null
+                );
+                scanned = List.of(fallback);
+                log.warn("[EduAi] any卷识别失败，降级为 OCR 文字块兜底: taskId={}", taskId);
+            }
+            if (scanned.isEmpty()) {
+                throw new BusinessException("未能从图片中解析出题目，请检查图片质量或改用另一种模式");
+            }
         }
 
         // 匿名任务的学生回填：上传时没指定学生（anonymous）时，
@@ -1537,6 +1550,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 false,
                 null,
                 null,
+                null,  // paperTotalScore：需关联 exam 补全
                 LocalDateTime.now());
     }
 
@@ -1564,6 +1578,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 terminal,
                 task.getMarkingTaskMode(),
                 task.getMarkingTaskStudentId(),
+                null,  // paperTotalScore：需关联 exam 补全
                 LocalDateTime.now());
     }
 
@@ -2512,6 +2527,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             markingResultMapper.updateById(result);
         }
         log.info("[EduAi] 教师确认阅卷: taskId={}, items={}", dto.taskId(), dto.adjustments().size());
+        // 持久化满意度（1-5）
+        if (dto.satisfaction() != null) {
+            taskMapper.updateSatisfaction(dto.taskId(), dto.satisfaction(), LocalDateTime.now());
+            log.info("[EduAi] 教师满意度已记录: taskId={}, satisfaction={}", dto.taskId(), dto.satisfaction());
+        }
         return true;
     }
 
