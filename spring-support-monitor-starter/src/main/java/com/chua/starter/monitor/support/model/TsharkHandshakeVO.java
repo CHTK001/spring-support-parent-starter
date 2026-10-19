@@ -14,6 +14,10 @@ import java.util.List;
  * @param serverPort 被动方端口
  * @param handshake  握手判定结果
  * @param steps      按时间排序的报文序列（已解析出标志位与相对耗时）
+ * @param totalSteps 完整步骤数（截断前）
+ * @param truncated  是否因为步骤过多被截断（只保留首尾与锚点包）
+ * @param rttMs      TCP 建连 RTT（SYN → SYN-ACK）毫秒；抓不到返回 null
+ * @param ttfbMs     首字节时间（首个 HTTP 请求 → 首个 HTTP 响应）毫秒；无 HTTP 返回 null
  * @author CH
  * @since 4.0.0.42
  */
@@ -24,7 +28,11 @@ public record TsharkHandshakeVO(
         String serverIp,
         Integer serverPort,
         Handshake handshake,
-        List<Step> steps) {
+        List<Step> steps,
+        int totalSteps,
+        boolean truncated,
+        Long rttMs,
+        Long ttfbMs) {
 
     /**
      * 一条报文。
@@ -38,9 +46,13 @@ public record TsharkHandshakeVO(
      * @param length    报文长度
      * @param info      tshark 人可读摘要
      * @param relativeMs 相对本流第一个包的耗时（毫秒）
+     * @param phase     所处阶段：TCP / TLS / HTTP / DATA / CLOSE
+     * @param retransmission 是否为重传 / 乱序 / 重复 ACK
+     * @param reset     是否带 RST（连接被重置）
      */
     public record Step(Long packetId, String time, boolean fromClient, String flags,
-                       String seq, String ack, Integer length, String info, long relativeMs) {
+                       String seq, String ack, Integer length, String info, long relativeMs,
+                       String phase, boolean retransmission, boolean reset) {
     }
 
     /**

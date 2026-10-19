@@ -36,6 +36,16 @@ public class MsTsharkPacket extends SysBase {
     @Schema(description = "数据包时间戳", example = "2026-08-30T10:00:01.123")
     private LocalDateTime packetTime; // 数据包时间
 
+    /**
+     * tshark 帧号（{@code frame.number}）。
+     *
+     * <p>帧号是 pcap 内的自然序，用于增量解析游标，也让「显示过滤」里的
+     * {@code frame.number} 能直接映射到一条 SQL 条件。</p>
+     */
+    @TableField("ms_tshark_packet_frame_no")
+    @Schema(description = "tshark 帧号", example = "12")
+    private Long frameNo; // 帧号
+
     @TableField("ms_tshark_packet_source_ip")
     @Schema(description = "源IP", example = "10.0.0.3")
     private String sourceIp; // 源ip

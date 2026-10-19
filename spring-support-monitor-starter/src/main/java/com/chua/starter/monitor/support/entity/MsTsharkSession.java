@@ -51,8 +51,37 @@ public class MsTsharkSession extends SysBase {
     private String source; // 来源
 
     @TableField("ms_tshark_session_status")
-    @Schema(description = "状态: 0已停止 1抓包中", example = "1")
+    @Schema(description = "状态: 0已停止 1抓包中 2异常", example = "1")
     private Integer captureStatus; // capture状态
+
+    /**
+     * 异常原因 / 收尾说明。
+     *
+     * <p>进程异常退出、服务重启导致中断、达到大小上限自动停止等都落在这里，页面在
+     * 状态标签上以提示形式展示。正常结束为空。</p>
+     */
+    @TableField("ms_tshark_session_last_error")
+    @Schema(description = "异常原因或停止说明")
+    private String lastError; // 最后错误
+
+    /**
+     * pcap 文件大小（字节）。
+     *
+     * <p>用于会话列表展示与「磁盘保护」的可观测性：实时抓包在收尾与增量解析时回填，
+     * 导入会话在导入完成时落盘。</p>
+     */
+    @TableField("ms_tshark_session_file_size")
+    @Schema(description = "pcap 文件大小(字节)", example = "1048576")
+    private Long fileSize; // 文件大小
+
+    /**
+     * 会话大小上限（MB），0 或空表示不限。
+     *
+     * <p>实时抓包会翻译成 tshark 的 {@code -a filesize:<KB>} 自动停止条件。</p>
+     */
+    @TableField("ms_tshark_session_max_size")
+    @Schema(description = "会话大小上限(MB)，0=不限", example = "512")
+    private Integer maxSizeMb; // 大小上限
 
     @TableField("ms_tshark_session_packet_count")
     @Schema(description = "抓取数据包总数", example = "1024")

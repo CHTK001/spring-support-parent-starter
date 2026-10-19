@@ -399,7 +399,12 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_session` (
     --     ALTER TABLE ms_tshark_session ADD COLUMN ms_tshark_session_source VARCHAR(16) DEFAULT 'live';
     `ms_tshark_session_source`      VARCHAR(16) DEFAULT 'live'            COMMENT '来源: live 实时抓包 / import 导入 pcap',
     `ms_tshark_session_filter`      VARCHAR(512) DEFAULT NULL            COMMENT 'BPF 过滤器',
-    `ms_tshark_session_status`      TINYINT      DEFAULT 0               COMMENT '状态: 0停止 1运行中',
+    `ms_tshark_session_status`      TINYINT      DEFAULT 0               COMMENT '状态: 0停止 1运行中 2异常',
+    -- 异常原因 / 停止说明、文件大小与大小上限：抓包异常状态与磁盘保护的落点。
+    -- 存量库由 TsharkSchemaGuard 在启动时按列缺失补 DDL，这里只保证全新库一次建全。
+    `ms_tshark_session_last_error`  VARCHAR(2000) DEFAULT NULL           COMMENT '异常原因/停止说明',
+    `ms_tshark_session_file_size`   BIGINT       DEFAULT 0               COMMENT 'pcap 文件大小(字节)',
+    `ms_tshark_session_max_size`    INT          DEFAULT 0               COMMENT '会话大小上限(MB)，0=不限',
     `ms_tshark_session_packet_count` INT         DEFAULT 0               COMMENT '已入库数据包数',
     `ms_tshark_session_file_path`   VARCHAR(512) DEFAULT NULL            COMMENT 'pcap 文件路径',
     `ms_tshark_session_duration`    INT          DEFAULT NULL            COMMENT '抓包时长(秒)',
@@ -421,6 +426,7 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_session` (
 CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
     `id`                         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `ms_tshark_packet_session_id` BIGINT      NOT NULL                COMMENT '所属会话 ID',
+    `ms_tshark_packet_frame_no`  BIGINT       DEFAULT NULL            COMMENT 'tshark 帧号(frame.number)',
     `ms_tshark_packet_time`      DATETIME(3)  DEFAULT NULL            COMMENT '报文时间(毫秒精度)',
     `ms_tshark_packet_source_ip` VARCHAR(64)  DEFAULT NULL            COMMENT '源 IP',
     `ms_tshark_packet_dest_ip`   VARCHAR(64)  DEFAULT NULL            COMMENT '目的 IP',
