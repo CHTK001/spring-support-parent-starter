@@ -14,10 +14,14 @@ import com.chua.starter.eduai.dimension.mapper.EduTeacherClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
+import com.chua.starter.eduai.mapper.EduMarkingResultMapper;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.chua.starter.eduai.model.EduAnswerSheet;
+import com.chua.starter.eduai.model.EduMarkingResult;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
+import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
+import com.chua.starter.eduai.model.vo.MarkingStatsVO;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
@@ -89,6 +93,8 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
      * 阅卷任务：教师端「阅卷」页要列出自己发起过的任务
      */
     private final EduMarkingTaskMapper markingTaskMapper;
+
+    private final EduMarkingResultMapper markingResultMapper;
 
     /**
      * 答题卡：阅卷列表的学生姓名取自答题卡 content 里卷面识别的姓名
@@ -301,12 +307,21 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
     }
 
     @Override
-    public PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize) {
+    public PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize, Integer teacherFinished) {
         String me = EduUserContext.requireUserId();
         Page<EduMarkingTask> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
-        IPage<EduMarkingTask> result = markingTaskMapper.selectPage(page, new QueryWrapper<EduMarkingTask>()
-                .eq("marking_task_owner_user_id", me)
-                .orderByDesc("marking_task_id"));
+        QueryWrapper<EduMarkingTask> query = new QueryWrapper<EduMarkingTask>()
+                .eq("marking_task_owner_user_id", me);
+        // 完成状态筛选：历史行该列为 NULL（功能上线前完成的任务），
+        // 「未完成」必须把它们一起算进来，否则老师永远筛不出这些待办。
+        if (Integer.valueOf(1).equals(teacherFinished)) {
+            query.eq("marking_task_teacher_finished", 1);
+        } else if (Integer.valueOf(0).equals(teacherFinished)) {
+            query.and(w -> w.eq("marking_task_teacher_finished", 0)
+                    .or().isNull("marking_task_teacher_finished"));
+        }
+        query.orderByDesc("marking_task_id");
+        IPage<EduMarkingTask> result = markingTaskMapper.selectPage(page, query);
         fillStudentNames(result.getRecords());
         return PageResult.<EduMarkingTask>builder()
                 .pageNo((int) result.getCurrent())
@@ -314,6 +329,123 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
                 .totalPages((int) result.getPages())
                 .total(result.getTotal())
                 .data(result.getRecords())
+                .build();
+    }
+
+    @Override
+    public MarkingStatsVO markingStats(String taskId) {
+        requireTeacher();
+        EduMarkingTask task = markingTaskMapper.selectById(taskId);
+        if (task == null) {
+            throw new BusinessException("阅卷任务不存在");
+        }
+        // 归属校验：任务必须是我的
+        if (!EduUserContext.currentUserId().equals(task.getOwnerUserId())) {
+            throw new BusinessException("无权查看该任务");
+        }
+        // 取所有结果行计算统计
+        List<EduMarkingResult> results = markingResultMapper.selectList(
+                new QueryWrapper<EduMarkingResult>()
+                        .eq("marking_result_task_id", taskId));
+        if (results.isEmpty()) {
+            return MarkingStatsVO.builder()
+                    .taskId(taskId)
+                    .totalCount(0)
+                    .scoredCount(0)
+                    .avgScore(0.0)
+                    .maxScore(null)
+                    .minScore(null)
+                    .distribution(java.util.Collections.emptyList())
+                    .build();
+        }
+        // 按答题卡去重（一份卷只有一个最终分，取 teacherScore 优先、否则 AI 分）
+        Map<Long, Integer> sheetBestScore = new java.util.LinkedHashMap<>();
+        for (EduMarkingResult r : results) {
+            Long sheetId = r.getMarkingResultAnswerSheetId();
+            if (sheetId == null) continue;
+            int candidate = r.getMarkingResultTeacherScore() != null
+                    ? r.getMarkingResultTeacherScore()
+                    : r.getMarkingResultScore() != null ? r.getMarkingResultScore() : 0;
+            Integer existing = sheetBestScore.get(sheetId);
+            if (existing == null || candidate > existing) {
+                sheetBestScore.put(sheetId, candidate);
+            }
+        }
+        List<Integer> scores = new java.util.ArrayList<>(sheetBestScore.values());
+        int totalCount = scores.size();
+        double avg = scores.stream().mapToInt(Integer::intValue).summaryStatistics().getAverage();
+        int max = scores.stream().mapToInt(Integer::intValue).max().orElse(0);
+        int min = scores.stream().mapToInt(Integer::intValue).min().orElse(0);
+        // 分段统计：0-60, 60-80, 80-100
+        Map<String, Integer> rangeCount = new java.util.LinkedHashMap<>();
+        rangeCount.put("0-60", 0);
+        rangeCount.put("60-80", 0);
+        rangeCount.put("80-100", 0);
+        for (int s : scores) {
+            if (s < 60) {
+                rangeCount.computeIfPresent("0-60", (k, v) -> v + 1);
+            } else if (s < 80) {
+                rangeCount.computeIfPresent("60-80", (k, v) -> v + 1);
+            } else {
+                rangeCount.computeIfPresent("80-100", (k, v) -> v + 1);
+            }
+        }
+        List<MarkingStatsVO.ScoreRange> distribution = rangeCount.entrySet().stream()
+                .map(e -> MarkingStatsVO.ScoreRange.builder().range(e.getKey()).count(e.getValue()).build())
+                .toList();
+        return MarkingStatsVO.builder()
+                .taskId(taskId)
+                .totalCount(totalCount)
+                .scoredCount(totalCount)
+                .avgScore(Math.round(avg * 100.0) / 100.0)
+                .maxScore(max)
+                .minScore(min)
+                .distribution(distribution)
+                .build();
+    }
+
+    @Override
+    public HomeworkCompletionVO homeworkCompletion(Long paperId, Long examId) {
+        requireTeacher();
+        // 查该试卷关联的阅卷任务（按 examId 或 paperId）
+        QueryWrapper<EduMarkingTask> taskQuery = new QueryWrapper<>();
+        taskQuery.eq("marking_task_owner_user_id", EduUserContext.currentUserId());
+        if (examId != null) {
+            taskQuery.eq("marking_task_exam_id", examId);
+        }
+        if (paperId != null) {
+            taskQuery.eq("marking_task_paper_id", paperId);
+        }
+        List<EduMarkingTask> tasks = markingTaskMapper.selectList(taskQuery);
+        if (tasks.isEmpty()) {
+            return HomeworkCompletionVO.builder()
+                    .paperId(paperId)
+                    .totalStudents(0)
+                    .submittedCount(0)
+                    .markedCount(0)
+                    .completionRate(0.0)
+                    .classStats(java.util.Collections.emptyList())
+                    .build();
+        }
+        // 统计已提交/已完成人数（按 studentId 去重）
+        Set<String> submitted = new java.util.LinkedHashSet<>();
+        Set<String> marked = new java.util.LinkedHashSet<>();
+        for (EduMarkingTask t : tasks) {
+            String sid = trimToNull(t.getMarkingTaskStudentId());
+            if (sid != null && !"anonymous".equals(sid)) {
+                submitted.add(sid);
+                if (Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(t.getMarkingTaskStatus())) {
+                    marked.add(sid);
+                }
+            }
+        }
+        return HomeworkCompletionVO.builder()
+                .paperId(paperId)
+                .totalStudents(submitted.size())
+                .submittedCount(submitted.size())
+                .markedCount(marked.size())
+                .completionRate(submitted.isEmpty() ? 0.0 : Math.round((double) marked.size() / submitted.size() * 10000.0) / 10000.0)
+                .classStats(java.util.Collections.emptyList())
                 .build();
     }
 

@@ -14,6 +14,7 @@ import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +34,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
 
     @Override
     public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId) {
-        recordWrongQuestion(studentId, questionId, examId, ownerUserId, null);
+        recordWrongQuestion(studentId, questionId, examId, ownerUserId, null, null);
     }
 
     /**
@@ -51,6 +52,30 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId, Long paperId) {
+        recordWrongQuestion(studentId, questionId, examId, ownerUserId, paperId, null);
+    }
+
+    /**
+     * 记录错题（带试卷归因与来源任务）。
+     *
+     * <p>{@code sourceTaskId} 是「撤销完成」的依据：撤销时只删
+     * {@code source_task_id = 该任务} 的行，不会误伤历史或别的任务登记的同一道题。</p>
+     *
+     * <p>已存在的行不覆盖 {@code source_task_id}（首次登记者仍是该行的来源），
+     * 这样撤销较早的一次完成也不会把后来那次的记录一起删掉 —— 代价是同一题在
+     * 两次完成里都错时只记一次来源，属可接受的取舍。</p>
+     *
+     * @param studentId    学生标识
+     * @param questionId   题目标识
+     * @param examId       考试标识
+     * @param ownerUserId  归属用户标识
+     * @param paperId      试卷标识（可空）
+     * @param sourceTaskId 来源阅卷任务（可空）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recordWrongQuestion(String studentId, Long questionId, Long examId, String ownerUserId,
+                                    Long paperId, String sourceTaskId) {
         EduWrongQuestion existing = baseMapper.selectOneByStudentQuestionOwner(studentId, questionId, ownerUserId);
 
         if (existing == null) {
@@ -70,6 +95,10 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             if (existing.getWrongQuestionPaperId() == null && paperId != null) {
                 existing.setWrongQuestionPaperId(paperId);
             }
+            // 同理：来源任务只在为空时补，保证「撤销」删除的是首次登记的那次
+            if (StringUtils.isBlank(existing.getWrongQuestionSourceTaskId()) && StringUtils.isNotBlank(sourceTaskId)) {
+                existing.setWrongQuestionSourceTaskId(sourceTaskId);
+            }
             existing.setUpdateTime(LocalDateTime.now());
             baseMapper.updateById(existing);
         } else {
@@ -79,6 +108,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             entity.setWrongQuestionQuestionId(questionId);
             entity.setWrongQuestionExamId(examId);
             entity.setWrongQuestionPaperId(paperId);
+            entity.setWrongQuestionSourceTaskId(sourceTaskId);
             entity.setWrongQuestionWrongCount(1);
             entity.setWrongQuestionMasteryLevel(0);
             entity.setWrongQuestionLastWrongTime(LocalDateTime.now());
@@ -88,6 +118,23 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
             baseMapper.insert(entity);
         }
         log.info("记录错题: student={}, question={}", studentId, questionId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int removeBySourceTask(String sourceTaskId) {
+        if (StringUtils.isBlank(sourceTaskId)) {
+            return 0;
+        }
+        List<EduWrongQuestion> rows = baseMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<EduWrongQuestion>()
+                .eq("wrong_question_source_task_id", sourceTaskId));
+        if (rows.isEmpty()) {
+            return 0;
+        }
+        List<Long> ids = rows.stream().map(EduWrongQuestion::getWrongQuestionId).collect(Collectors.toList());
+        baseMapper.deleteBatchIds(ids);
+        log.info("撤销完成：删除错题 {} 条（sourceTask={}）", ids.size(), sourceTaskId);
+        return ids.size();
     }
 
     @Override
@@ -149,7 +196,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     }
 
     /**
-     * 转为vo
+     * 转为vo（JOIN 的字段透传到 VO）
      *
      * @param entity 实体
      * @return 转为vo的结果
@@ -164,6 +211,10 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
                 entity.getWrongQuestionLastWrongTime(),
                 entity.getWrongQuestionLastReviewTime(),
                 entity.getWrongQuestionReviewCount(),
-                entity.getWrongQuestionPaperId());
+                entity.getWrongQuestionPaperId(),
+                entity.getWrongQuestionStudentName(),
+                entity.getWrongQuestionStudentAccount(),
+                entity.getWrongQuestionStem(),
+                entity.getWrongQuestionSubject());
     }
 }

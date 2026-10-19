@@ -10,6 +10,8 @@ import com.chua.starter.eduai.model.dto.EduResetPasswordDTO;
 import com.chua.starter.eduai.model.dto.PaperQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
+import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
+import com.chua.starter.eduai.model.vo.MarkingStatsVO;
 import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
 import com.chua.starter.eduai.service.IEduPaperService;
@@ -242,8 +244,9 @@ public class EduTeacherCenterController {
     @GetMapping("/marking/tasks/page")
     public ReturnResult<PageResult<EduMarkingTask>> pageMarkingTasks(
             @RequestParam(required = false) Integer pageNum,
-            @RequestParam(required = false) Integer pageSize) {
-        return ReturnResult.ok(teacherCenterService.pageMyMarkingTasks(pageNum, pageSize));
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) Integer teacherFinished) {
+        return ReturnResult.ok(teacherCenterService.pageMyMarkingTasks(pageNum, pageSize, teacherFinished));
     }
 
     // ==================== 老师上传题目 ====================
@@ -262,5 +265,32 @@ public class EduTeacherCenterController {
     @PostMapping("/questions")
     public ReturnResult<TeacherQuestionUploadVO> uploadQuestions(@RequestBody List<QuestionSaveDTO> list) {
         return ReturnResult.ok(questionService.teacherImportQuestions(list));
+    }
+
+    /**
+     * 成绩分布统计：某阅卷任务的分数段分布、平均分、最高/最低分。
+     *
+     * @param taskId 阅卷任务业务标识
+     * @return 成绩分布统计
+     */
+    @Operation(summary = "成绩分布统计")
+    @GetMapping("/marking/stats/{taskId}")
+    public ReturnResult<MarkingStatsVO> markingStats(@PathVariable String taskId) {
+        return ReturnResult.ok(teacherCenterService.markingStats(taskId));
+    }
+
+    /**
+     * 作业完成率看板：按班级维度统计某试卷/考试的提交与完成情况。
+     *
+     * @param paperId 试卷ID（可选，与 examId 二选一）
+     * @param examId  考试ID（可选）
+     * @return 完成率看板
+     */
+    @Operation(summary = "作业完成率看板")
+    @GetMapping("/dashboard/completion")
+    public ReturnResult<HomeworkCompletionVO> homeworkCompletion(
+            @RequestParam(required = false) Long paperId,
+            @RequestParam(required = false) Long examId) {
+        return ReturnResult.ok(teacherCenterService.homeworkCompletion(paperId, examId));
     }
 }

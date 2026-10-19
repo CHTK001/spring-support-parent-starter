@@ -6,6 +6,8 @@ import com.chua.starter.eduai.dimension.entity.EduStudent;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
+import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
+import com.chua.starter.eduai.model.vo.MarkingStatsVO;
 
 import java.util.List;
 import java.util.Map;
@@ -137,9 +139,27 @@ public interface IEduTeacherCenterService {
     /**
      * 我发起的阅卷任务（分页，按创建时间倒序）
      *
-     * @param pageNum  页码，从 1 开始；null 按第 1 页
-     * @param pageSize 每页条数；null 按默认档
+     * @param pageNum         页码，从 1 开始；null 按第 1 页
+     * @param pageSize        每页条数；null 按默认档
+     * @param teacherFinished 完成状态筛选：1 只看已完成；0 只看未完成（含历史 NULL）；null 不筛选
      * @return 阅卷任务分页结果
      */
-    PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize);
+    PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize, Integer teacherFinished);
+
+    /**
+     * 成绩分布统计：某阅卷任务的分数段分布、平均分、最高/最低分。
+     *
+     * @param taskId 阅卷任务业务标识
+     * @return 成绩分布统计
+     */
+    MarkingStatsVO markingStats(String taskId);
+
+    /**
+     * 作业完成率看板：按班级维度统计某试卷/考试的提交与完成情况。
+     *
+     * @param paperId 试卷ID（可选，与 examId 二选一）
+     * @param examId  考试ID（可选）
+     * @return 完成率看板
+     */
+    HomeworkCompletionVO homeworkCompletion(Long paperId, Long examId);
 }
