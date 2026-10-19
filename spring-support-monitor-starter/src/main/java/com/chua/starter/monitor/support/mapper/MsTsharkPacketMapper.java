@@ -37,7 +37,9 @@ public interface MsTsharkPacketMapper extends BaseMapper<MsTsharkPacket> {
      */
     @Select("SELECT CONCAT(COALESCE(ms_tshark_packet_source_ip, ''), ':', COALESCE(ms_tshark_packet_source_port, ''), " +
             "' -> ', COALESCE(ms_tshark_packet_dest_ip, ''), ':', COALESCE(ms_tshark_packet_dest_port, '')) AS flow, " +
-            "COUNT(*) AS count, COALESCE(SUM(ms_tshark_packet_length), 0) AS bytes " +
+            "COUNT(*) AS count, COALESCE(SUM(ms_tshark_packet_length), 0) AS bytes, " +
+            "ms_tshark_packet_source_ip AS sourceIp, ms_tshark_packet_source_port AS sourcePort, " +
+            "ms_tshark_packet_dest_ip AS destIp, ms_tshark_packet_dest_port AS destPort " +
             "FROM ms_tshark_packet WHERE ms_tshark_packet_session_id = #{sessionId} " +
             "GROUP BY ms_tshark_packet_source_ip, ms_tshark_packet_source_port, " +
             "ms_tshark_packet_dest_ip, ms_tshark_packet_dest_port ORDER BY count DESC LIMIT 20")

@@ -89,7 +89,7 @@ public class TsharkCaptureController {
     @PostMapping("/capture")
     public ReturnResult<MsTsharkSession> start(@RequestBody TsharkCaptureStartDTO body) {
         return this.tsharkCaptureService.startCapture(body.name(), body.captureInterface(),
-                body.captureFilter(), body.filterType(), body.count(), body.timeout());
+                body.captureFilter(), body.filterType(), body.count(), body.timeout(), body.maxSizeMb());
     }
 
     /**
@@ -159,7 +159,10 @@ public class TsharkCaptureController {
      * @param id 会话 ID
      * @param page 页码
      * @param size 每页大小
-     * @param keyword 关键字（可空），在协议/IP/端口/摘要里模糊匹配
+     * @param displayFilter 显示过滤表达式（可空），如 {@code http}、{@code ip.addr == 1.2.3.4}、
+     *                      {@code tcp.port == 80 and http.request.method == "GET"}；
+     *                      不认识的裸词退化为关键字匹配
+     * @param keyword 旧版关键字参数，displayFilter 为空时兼容使用（可空）
      * @return 分页结果
      */
     @Operation(summary = "数据包分页列表")
@@ -167,8 +170,10 @@ public class TsharkCaptureController {
     public ReturnResult<IPage<MsTsharkPacket>> packets(@PathVariable Long id,
                                                         @RequestParam(defaultValue = "1") int page,
                                                         @RequestParam(defaultValue = "20") int size,
+                                                        @RequestParam(required = false) String displayFilter,
                                                         @RequestParam(required = false) String keyword) {
-        return this.tsharkCaptureService.pagePackets(id, page, size, keyword);
+        String filter = displayFilter != null && !displayFilter.isBlank() ? displayFilter : keyword;
+        return this.tsharkCaptureService.pagePackets(id, page, size, filter);
     }
 
     /**
@@ -181,12 +186,14 @@ public class TsharkCaptureController {
      * 不同，匹配只按四元组，不按协议列过滤。</p>
      *
      * @param packetId 数据包 ID
+     * @param limit    返回的最大步骤数（默认 600，超出只保留首尾与锚点包）
      * @return 生命周期；包不存在或协议不跑在 TCP 上时 404
      */
     @Operation(summary = "查看 TCP 握手生命周期")
     @GetMapping("/packets/{packetId}/handshake")
-    public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long packetId) {
-        TsharkHandshakeVO vo = this.tsharkCaptureService.handshakeOf(packetId);
+    public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long packetId,
+                                                       @RequestParam(required = false) Integer limit) {
+        TsharkHandshakeVO vo = this.tsharkCaptureService.handshakeOf(packetId, limit);
         return vo == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(vo);
     }
 
@@ -253,12 +260,14 @@ public class TsharkCaptureController {
      * 协议分布统计
      *
      * @param id 会话 ID
+     * @param displayFilter 显示过滤（可空）
      * @return 协议分布列表
      */
     @Operation(summary = "协议分布统计")
     @GetMapping("/sessions/{id}/stats/protocol")
-    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(@PathVariable Long id) {
-        return this.tsharkCaptureService.protocolStats(id);
+    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(@PathVariable Long id,
+                                                                  @RequestParam(required = false) String displayFilter) {
+        return this.tsharkCaptureService.protocolStats(id, displayFilter);
     }
 
     /**
@@ -266,13 +275,15 @@ public class TsharkCaptureController {
      *
      * @param id 会话 ID
      * @param limit 返回条数
+     * @param displayFilter 显示过滤（可空）
      * @return Top 流列表
      */
     @Operation(summary = "会话 Top 流统计")
     @GetMapping("/sessions/{id}/stats/top")
     public ReturnResult<List<TsharkFlowVO>> topFlows(@PathVariable Long id,
-                                                     @RequestParam(defaultValue = "10") int limit) {
-        return this.tsharkCaptureService.topFlows(id, limit);
+                                                     @RequestParam(defaultValue = "10") int limit,
+                                                     @RequestParam(required = false) String displayFilter) {
+        return this.tsharkCaptureService.topFlows(id, limit, displayFilter);
     }
 
     /**
@@ -282,13 +293,15 @@ public class TsharkCaptureController {
      *
      * @param id            会话 ID
      * @param bucketSeconds 桶大小（秒），默认 10
+     * @param displayFilter 显示过滤（可空）
      * @return 时间轴数据，格式：[{"t": "2026-10-19 10:00:00", "packets": 123, "bytes": 45678}, ...]
      */
     @Operation(summary = "时间轴统计")
     @GetMapping("/sessions/{id}/stats/timeline")
     public ReturnResult<List<Map<String, Object>>> timeline(
             @PathVariable Long id,
-            @RequestParam(defaultValue = "10") Integer bucketSeconds) {
-        return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds));
+            @RequestParam(defaultValue = "10") Integer bucketSeconds,
+            @RequestParam(required = false) String displayFilter) {
+        return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds, displayFilter));
     }
 }
