@@ -1659,18 +1659,14 @@ public class TsharkCaptureService {
      * @return 协议stats的结果
      */
     public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(Long sessionId) {
-        List<MsTsharkPacket> packets = this.packetMapper.selectList(
-                new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId));
-        Map<String, long[]> counter = new LinkedHashMap<>();
-        for (MsTsharkPacket p : packets) {
-            String proto = (p.getProtocol() == null || p.getProtocol().isBlank()) ? "OTHER" : p.getProtocol();
-            long[] c = counter.computeIfAbsent(proto, k -> new long[2]);
-            c[0]++;
-            c[1] += p.getPacketLength() != null ? p.getPacketLength() : 0;
-        }
-        List<TsharkProtocolStatVO> result = new ArrayList<>(counter.size());
-        for (Map.Entry<String, long[]> e : counter.entrySet()) {
-            result.add(new TsharkProtocolStatVO(e.getKey(), (int) e.getValue()[0], e.getValue()[1]));
+        // SQL 层聚合，不再全量加载报文到内存
+        List<Map<String, Object>> rows = this.packetMapper.selectProtocolStatsBySessionId(sessionId);
+        List<TsharkProtocolStatVO> result = new ArrayList<>(rows.size());
+        for (Map<String, Object> row : rows) {
+            String proto = row.get("protocol") == null ? "OTHER" : String.valueOf(row.get("protocol"));
+            int count = ((Number) row.get("count")).intValue();
+            long bytes = ((Number) row.get("bytes")).longValue();
+            result.add(new TsharkProtocolStatVO(proto, count, bytes));
         }
         return ReturnResult.ok(result);
     }
@@ -1682,23 +1678,28 @@ public class TsharkCaptureService {
      * @return top流的结果
      */
     public ReturnResult<List<TsharkFlowVO>> topFlows(Long sessionId, int limit) {
-        List<MsTsharkPacket> packets = this.packetMapper.selectList(
-                new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId));
-        Map<String, long[]> counter = new LinkedHashMap<>();
-        for (MsTsharkPacket p : packets) {
-            String src = p.getSourceIp() != null ? p.getSourceIp() : "?";
-            String dst = p.getDestIp() != null ? p.getDestIp() : "?";
-            String flow = src + ":" + p.getSourcePort() + " -> " + dst + ":" + p.getDestPort();
-            long[] c = counter.computeIfAbsent(flow, k -> new long[2]);
-            c[0]++;
-            c[1] += p.getPacketLength() != null ? p.getPacketLength() : 0;
+        // SQL 层聚合，不再全量加载报文到内存；SQL 已带 LIMIT 20
+        List<Map<String, Object>> rows = this.packetMapper.selectTopFlowsBySessionId(sessionId);
+        List<TsharkFlowVO> result = new ArrayList<>(rows.size());
+        for (Map<String, Object> row : rows) {
+            String flow = row.get("flow") == null ? "" : String.valueOf(row.get("flow"));
+            int count = ((Number) row.get("count")).intValue();
+            long bytes = ((Number) row.get("bytes")).longValue();
+            result.add(new TsharkFlowVO(flow, count, bytes));
         }
-        List<TsharkFlowVO> result = new ArrayList<>(counter.size());
-        for (Map.Entry<String, long[]> e : counter.entrySet()) {
-            result.add(new TsharkFlowVO(e.getKey(), (int) e.getValue()[0], e.getValue()[1]));
-        }
-        result.sort((a, b) -> Integer.compare(b.count(), a.count()));
         return ReturnResult.ok(result.subList(0, Math.min(Math.max(0, limit), result.size())));
+    }
+
+    /**
+     * 时间轴统计：按时间桶聚合报文的数量与总字节数。
+     *
+     * @param sessionId     会话标识
+     * @param bucketSeconds 桶大小（秒），默认 10
+     * @return 时间轴数据列表，格式：[{"t": "2026-10-19 10:00:00", "packets": 123, "bytes": 45678}, ...]
+     */
+    public List<Map<String, Object>> timeline(Long sessionId, Integer bucketSeconds) {
+        int bucket = bucketSeconds == null || bucketSeconds <= 0 ? 10 : bucketSeconds;
+        return this.packetMapper.selectTimelineBySessionId(sessionId, bucket);
     }
 
     /**

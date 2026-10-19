@@ -3,10 +3,12 @@ package com.chua.starter.eduai.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.eduai.ai.EduAiService;
 import com.chua.starter.eduai.model.vo.EduAiCapabilityVO;
+import com.chua.starter.eduai.model.vo.EduAiProbeVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -49,5 +51,20 @@ public class EduAiCapabilityController {
     @Operation(summary = "查询 AI 组卷能力")
     public ReturnResult<EduAiCapabilityVO> capability() {
         return ReturnResult.ok(eduAiService.capability());
+    }
+
+    /**
+     * 测试 AI 连通性（真实发一条最小对话请求）。
+     *
+     * <p>与 {@code /capability} 的区别：后者无副作用、只判断能否解析出客户端；
+     * 本接口会真的调用一次模型，用于在配置页确认「密钥 / 网关 / 模型名」是否可用。
+     * 只在用户主动点击「测试连通」时调用，不要放进页面初始化。</p>
+     *
+     * @return 连通性测试结果（含耗时与模型返回片段）
+     */
+    @PostMapping("/probe")
+    @Operation(summary = "测试 AI 连通性")
+    public ReturnResult<EduAiProbeVO> probe() {
+        return ReturnResult.ok(eduAiService.probe());
     }
 }

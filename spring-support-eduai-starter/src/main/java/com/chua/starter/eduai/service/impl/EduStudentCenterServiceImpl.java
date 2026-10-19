@@ -37,8 +37,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 学生中心服务实现
@@ -108,10 +111,22 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
                 .eq("wrong_question_status", WRONG_STATUS_VALID)
                 .eq(masteryLevel != null, "wrong_question_mastery_level", masteryLevel)
                 .orderByDesc("wrong_question_last_wrong_time"));
+        if (rows.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // 批量查题目，消除 N+1
+        List<Long> questionIds = rows.stream()
+                .map(EduWrongQuestion::getWrongQuestionQuestionId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, EduQuestion> questionMap = questionIds.isEmpty()
+                ? Collections.emptyMap()
+                : questionMapper.selectBatchIds(questionIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(EduQuestion::getQuestionId, q -> q, (a, b) -> a));
         List<StudentWrongQuestionVO> out = new ArrayList<>();
         for (EduWrongQuestion wrong : rows) {
-            EduQuestion question = wrong.getWrongQuestionQuestionId() == null
-                    ? null : questionMapper.selectById(wrong.getWrongQuestionQuestionId());
+            EduQuestion question = questionMap.get(wrong.getWrongQuestionQuestionId());
             if (subject != null && !subject.isBlank()
                     && (question == null || !subject.equals(question.getQuestionSubject()))) {
                 continue;
@@ -467,7 +482,8 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
      * @return 学号
      */
     private String generateStudentNo(String account) {
-        return "AUTO-" + account + "-" + System.currentTimeMillis();
+        // 使用 UUID 替代时间戳，避免高并发下学号重复
+        return "AUTO-" + account + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     /**

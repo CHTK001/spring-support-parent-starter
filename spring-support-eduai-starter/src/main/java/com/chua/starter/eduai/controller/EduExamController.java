@@ -2,6 +2,7 @@ package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.service.IEduExamService;
 import com.chua.starter.eduai.support.util.EduUserContext;
@@ -50,7 +51,10 @@ public class EduExamController {
     public ReturnResult<PageResult<EduExam>> page(EduExam exam,
                                                   @RequestParam(value = "page", defaultValue = "1") long page,
                                                   @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {
-        return ReturnResult.ok(examService.pageQuery(exam, page, pageSize));
+        // 兜底负数/零值，防止 service 层扫全表
+        long safePage = page < 1 ? 1 : page;
+        long safeSize = pageSize < 1 ? 10 : Math.min(pageSize, 100);
+        return ReturnResult.ok(examService.pageQuery(exam, safePage, safeSize));
     }
 
     /**
@@ -62,9 +66,15 @@ public class EduExamController {
     @Operation(summary = "获取考试详情")
     @GetMapping("/{id}")
     public ReturnResult<EduExam> detail(@PathVariable Long id) {
+        if (id == null) {
+            throw new BusinessException("id 不能为空");
+        }
         EduExam exam = examService.getById(id);
         if (exam != null) {
             EduUserContext.checkReadable(exam.getOwnerUserId());
+        }
+        if (exam == null) {
+            throw new BusinessException("考试不存在");
         }
         return ReturnResult.ok(exam);
     }

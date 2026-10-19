@@ -108,7 +108,7 @@ public class EduMarkingController {
             return ReturnResult.error(e.getMessage());
         } catch (Exception e) {
             log.error("[EduAi] 扫描阅卷失败: mode={}, paperId={}", mode, paperId, e);
-            return ReturnResult.error("扫描阅卷失败: " + e.getMessage());
+            return ReturnResult.error("扫描阅卷失败，请稍后重试");
         }
     }
 
@@ -150,9 +150,13 @@ public class EduMarkingController {
     @GetMapping("/image/{taskId}")
     public ResponseEntity<byte[]> image(@PathVariable String taskId,
                                         @RequestParam(value = "page", defaultValue = "1") int page) {
+        byte[] image = markingService.getSheetImage(taskId, page);
+        if (image == null) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
-                .body(markingService.getSheetImage(taskId, page));
+                .body(image);
     }
 
     /**
@@ -217,7 +221,7 @@ public class EduMarkingController {
      */
     private void sendStreamError(String taskId, String message) {
         MarkingProgressVO error = new MarkingProgressVO(
-                taskId, null, null, null, null, null, message, true, null, null, null);
+                taskId, null, null, null, null, null, message, true, null, null, null, null);
         progressHub.complete(taskId, "done", error);
     }
 }

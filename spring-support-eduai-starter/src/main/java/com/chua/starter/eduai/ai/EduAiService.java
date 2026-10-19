@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.chat.ChatResponse;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.model.vo.EduAiCapabilityVO;
+import com.chua.starter.eduai.model.vo.EduAiProbeVO;
 import com.chua.starter.eduai.model.vo.MarkingSettingVO;
 import com.chua.starter.eduai.service.MarkingSettingService;
 import com.chua.starter.eduai.support.util.AnswerSimilarity;
@@ -20,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -112,6 +114,14 @@ public class EduAiService {
      */
     @Autowired(required = false)
     private MarkingSettingService markingSettingService;
+
+    /**
+     * HTTP 客户端（用于发送告警 Webhook）。
+     *
+     * <p>Spring Boot 自动配置，bean 不存在时跳过告警（静默降级）。</p>
+     */
+    @Autowired(required = false)
+    private RestTemplate restTemplate;
     /**
      * Objectmapper
     */
@@ -202,6 +212,48 @@ public class EduAiService {
                     provider, model);
         }
         return new EduAiCapabilityVO(true, "AI 组卷可用", provider, model);
+    }
+
+    /**
+     * 测试 AI 连通性：用当前生效的客户端真实发一条最小请求。
+     *
+     * <p>为什么需要它：{@link #capability()} 只判断「解析得出客户端」，不产生外部调用。
+     * 密钥过期、网关不可达、模型名写错、厂商限流这几种情况能力探测都会显示「可用」，
+     * 用户只有等到真正组卷/阅卷失败时才知道配置有问题，且报错发生在业务链路里、难以归因。
+     * 这里把同一条解析链（{@link #resolveClient()}）跑一遍并立刻调用，让问题在配置页暴露。</p>
+     *
+     * <p>超时沿用阅卷的超时配置，避免探测请求长时间挂起把前端按钮卡住。</p>
+     *
+     * @return 连通性测试结果
+     */
+    public EduAiProbeVO probe() {
+        if (!properties.getAi().isEnabled()) {
+            return new EduAiProbeVO(false, "AI 总开关已关闭（eduai.ai.enabled=false）", null, null, 0L, null);
+        }
+        ChatClient client = resolveClient();
+        if (client == null) {
+            return new EduAiProbeVO(false,
+                    "没有可用的 AI 对话客户端，请先在「AI 配置」里填写提供方、密钥与默认模型",
+                    null, null, 0L, null);
+        }
+        EduAiCapabilityVO effective = capability();
+        long started = System.currentTimeMillis();
+        try {
+            long timeout = Math.max(5000L, properties.getMarking().getTimeout() * 1000L);
+            String reply = client.chatSync("只回复两个字：可用", timeout);
+            long cost = System.currentTimeMillis() - started;
+            String sample = reply == null ? "" : reply.trim();
+            if (sample.length() > 120) {
+                sample = sample.substring(0, 120);
+            }
+            return new EduAiProbeVO(true, "连通正常", effective.provider(), effective.model(), cost, sample);
+        } catch (Exception e) {
+            long cost = System.currentTimeMillis() - started;
+            String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            log.warn("[EduAi] AI 连通性测试失败: {}", reason);
+            return new EduAiProbeVO(false, "调用失败：" + reason,
+                    effective.provider(), effective.model(), cost, null);
+        }
     }
 
     /**
@@ -628,7 +680,7 @@ public class EduAiService {
             return response.content();
         } catch (Exception e) {
             log.warn("[EduAi] AI 问答异常: {}", e.getMessage());
-            return "AI 响应失败: " + e.getMessage();
+            return "AI 响应失败，请稍后重试";
         }
     }
 
@@ -656,6 +708,46 @@ public class EduAiService {
          * @return 对话响应的结果
          */
         return new ChatResponse(text);
+    }
+
+    /**
+     * 发送重试耗尽告警。
+     *
+     * <p>重试次数耗尽后，若配置了 {@code plugin.eduai.ai.alert.webhookUrl}，
+     * 则发送 JSON 卡片到该地址。失败时只记 WARN 日志，不阻断业务流程。</p>
+     *
+     * @param e           导致耗尽的异常
+     * @param attempts     总尝试次数（含首次）
+     * @param systemHint  系统提示词摘要（可为 null）
+     */
+    private void fireAlertOnRetryExhausted(Exception e, int attempts, String systemHint) {
+        EduAiProperties.Alert alert = properties.getAlert();
+        if (!alert.isEnabled() || StringUtils.isBlank(alert.getWebhookUrl())) {
+            return;
+        }
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("msgtype", "text");
+        Map<String, Object> textContent = new LinkedHashMap<>();
+        StringBuilder sb = new StringBuilder("【EduAi 告警】模型调用重试耗尽\n");
+        sb.append("尝试次数: ").append(attempts).append("\n");
+        sb.append("错误类型: ").append(e.getClass().getSimpleName()).append("\n");
+        sb.append("错误信息: ").append(e.getMessage()).append("\n");
+        if (StringUtils.isNotBlank(systemHint)) {
+            sb.append("提示词摘要: ").append(systemHint, 0, Math.min(200, systemHint.length())).append("\n");
+        }
+        sb.append("时间: ").append(java.time.LocalDateTime.now()).append("\n");
+        textContent.put("content", sb.toString());
+        card.put("text", textContent);
+        int timeout = alert.getTimeoutMillis() > 0 ? alert.getTimeoutMillis() : 5000;
+        try {
+            if (restTemplate != null) {
+                restTemplate.postForEntity(alert.getWebhookUrl(), card, String.class);
+                log.info("[EduAi] 告警发送成功: webhook={}, attempts={}", alert.getWebhookUrl(), attempts);
+            }
+        } catch (Exception ex) {
+            log.warn("[EduAi] 告警发送失败: webhook={}, attempts={}, reason={}",
+                    alert.getWebhookUrl(), attempts, ex.getMessage());
+        }
     }
 
     /**
@@ -695,6 +787,8 @@ public class EduAiService {
                 boolean retryable = isRateLimited(e)
                         || (retryOnTransient && isTransientFailure(e));
                 if (!retryable || attempt >= maxRetry) {
+                    // 耗尽前发送告警（异步，不阻断抛出）
+                    fireAlertOnRetryExhausted(e, attempt + 1, systemPrompt);
                     if (e instanceof RuntimeException runtime) {
                         throw runtime;
                     }

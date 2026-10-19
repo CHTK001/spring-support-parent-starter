@@ -61,6 +61,11 @@ public class EduAiProperties {
      */
     private Collect collect = new Collect();
 
+    /**
+     * AI 调用失败告警配置
+     */
+    private Alert alert = new Alert();
+
     @Data
     /**
      * Marking类。
@@ -208,9 +213,8 @@ public class EduAiProperties {
         private Retry retry = new Retry();
     }
 
-    @Data
     /**
-     * AI 调用重试配置。
+     * AI 调用重试配置（限流 429 与瞬时故障）。
      *
      * <p>模型侧限流（429）与瞬时故障（超时/502/503/连接重置）不该一次失败就降级：
      * 判分会掉成 0 分（「AI 判分暂不可用，请人工复核」），抽取会整卷失败。
@@ -231,6 +235,7 @@ public class EduAiProperties {
      * @author CH
      * @since 4.0.0.42
      */
+    @Data
     public static class Retry {
         /**
          * 最大重试次数（0 = 不重试）
@@ -270,5 +275,40 @@ public class EduAiProperties {
          * 采集任务未配置 Cron 时的默认调度周期（Spring 6 Cron）
          */
         private String defaultCron = "0 */30 * * * ?";
+    }
+
+    /**
+     * AI 调用重试耗尽时的告警配置。
+     *
+     * <p>重试全部失败后触发 HTTP POST 到指定地址，供接入钉钉/企微/飞书 Webhook 等通知渠道。
+     * 默认不开启；配置 webhookUrl 后立即生效，无需重启。</p>
+     *
+     * <pre>{@code
+     * plugin:
+     *   eduai:
+     *     ai:
+     *       alert:
+     *         enabled: true
+     *         webhook-url: https://oapi.dingtalk.com/robot/send?access_token=xxx
+     *         timeout-millis: 5000
+     * }</pre>
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class Alert {
+        /**
+         * 是否启用告警
+         */
+        private boolean enabled = false;
+        /**
+         * Webhook 地址（支持钉钉/企微/飞书等标准卡片格式）
+         */
+        private String webhookUrl;
+        /**
+         * HTTP 请求超时毫秒（<=0 时默认 5000）
+         */
+        private int timeoutMillis = 5000;
     }
 }
