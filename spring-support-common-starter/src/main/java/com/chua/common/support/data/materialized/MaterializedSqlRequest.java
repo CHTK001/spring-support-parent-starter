@@ -6,102 +6,24 @@ import java.util.List;
 /**
  * 物化视图 SQL 请求类
  *
+ * @param statementId      对账单标识
+ * @param sourceDataSource 来源数据来源
+ * @param sql              SQL
+ * @param commandType      命令类型
+ * @param definition       路由定义
+ * @param tables           表名列表
+ * @param parameters       参数列表
  * @author CH
  * @since 4.0.0
  */
-public class MaterializedSqlRequest {
-
-    /**
-     * 对账单标识
-    */
-    private String statementId;
-    /**
-     * 来源数据来源
-    */
-    private String sourceDataSource;
-    /**
-     * SQL
-    */
-    private String sql;
-    /**
-     * 命令类型
-    */
-    private MaterializedSqlCommandType commandType;
-    /**
-     * Definition
-    */
-    private MaterializedRouteDefinition definition;
-    /**
-     * Tables
-    */
-    private List<String> tables = new ArrayList<>();
-    /**
-     * 参数
-    */
-    private List<Object> parameters = new ArrayList<>();
-
-    /**
-     * 获取 SQL 语句
-     *
-     * @return SQL 语句
-     */
-    public String getSql() {
-        return sql;
-    }
-
-    /**
-     * 获取 SQL 语句 标识
-     *
-     * @return 语句 标识
-     */
-    public String getStatementId() {
-        return statementId;
-    }
-
-    /**
-     * 获取源数据源
-     *
-     * @return 源数据源
-     */
-    public String getSourceDataSource() {
-        return sourceDataSource;
-    }
-
-    /**
-     * 获取命令类型
-     *
-     * @return 命令类型
-     */
-    public MaterializedSqlCommandType getCommandType() {
-        return commandType;
-    }
-
-    /**
-     * 获取表列表
-     *
-     * @return 表列表
-     */
-    public List<String> getTables() {
-        return tables;
-    }
-
-    /**
-     * 获取参数列表
-     *
-     * @return 参数列表
-     */
-    public List<Object> getParameters() {
-        return parameters;
-    }
-
-    /**
-     * 获取路由定义。
-     *
-     * @return 路由定义
-     */
-    public MaterializedRouteDefinition getDefinition() {
-        return definition;
-    }
+public record MaterializedSqlRequest(
+        String statementId,
+        String sourceDataSource,
+        String sql,
+        MaterializedSqlCommandType commandType,
+        MaterializedRouteDefinition definition,
+        List<String> tables,
+        List<Object> parameters) {
 
     /**
      * 创建构建器
@@ -114,14 +36,39 @@ public class MaterializedSqlRequest {
 
     /**
      * 物化SQL请求 构建器
+     *
      * @author CH
      * @since 4.0.0
      */
     public static class MaterializedSqlRequestBuilder {
         /**
-         * 请求
-        */
-        private final MaterializedSqlRequest request = new MaterializedSqlRequest();
+         * 对账单标识
+         */
+        private String statementId;
+        /**
+         * 来源数据来源
+         */
+        private String sourceDataSource;
+        /**
+         * SQL
+         */
+        private String sql;
+        /**
+         * 命令类型
+         */
+        private MaterializedSqlCommandType commandType;
+        /**
+         * 路由定义
+         */
+        private MaterializedRouteDefinition definition;
+        /**
+         * 表名列表
+         */
+        private final List<String> tables = new ArrayList<>();
+        /**
+         * 参数列表
+         */
+        private final List<Object> parameters = new ArrayList<>();
 
         /**
          * 设置语句 标识
@@ -130,7 +77,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder statementId(String statementId) {
-            request.statementId = statementId;
+            this.statementId = statementId;
             return this;
         }
 
@@ -141,7 +88,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder sourceDataSource(String sourceDataSource) {
-            request.sourceDataSource = sourceDataSource;
+            this.sourceDataSource = sourceDataSource;
             return this;
         }
 
@@ -152,7 +99,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder sql(String sql) {
-            request.sql = sql;
+            this.sql = sql;
             return this;
         }
 
@@ -163,7 +110,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder commandType(MaterializedSqlCommandType commandType) {
-            request.commandType = commandType;
+            this.commandType = commandType;
             return this;
         }
 
@@ -174,7 +121,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder definition(MaterializedRouteDefinition definition) {
-            request.definition = definition;
+            this.definition = definition;
             return this;
         }
 
@@ -185,7 +132,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder table(String table) {
-            request.tables.add(table);
+            this.tables.add(table);
             return this;
         }
 
@@ -196,7 +143,7 @@ public class MaterializedSqlRequest {
          * @return 当前构建器
          */
         public MaterializedSqlRequestBuilder parameter(Object parameter) {
-            request.parameters.add(parameter);
+            this.parameters.add(parameter);
             return this;
         }
 
@@ -206,7 +153,8 @@ public class MaterializedSqlRequest {
          * @return 请求实例
          */
         public MaterializedSqlRequest build() {
-            return request;
+            return new MaterializedSqlRequest(statementId, sourceDataSource, sql, commandType,
+                    definition, tables, parameters);
         }
     }
 }

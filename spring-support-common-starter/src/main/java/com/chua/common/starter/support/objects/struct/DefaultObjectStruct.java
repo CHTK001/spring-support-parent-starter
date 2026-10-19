@@ -73,23 +73,27 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
      * 转为barchart数据
     */
     public BarChartData toBarChartData(List<TreeNode<T>> tree) {
-        BarChartData data = new BarChartData();
         if (tree == null) {
-            return data;
+            return new BarChartData(List.of(), List.of());
         }
 
-        // 节点总数取决于树深度，容量不可预估，按需扩容
-        List<TreeNode<T>> allNodes = new ArrayList<>();
-        collectNodes(tree, allNodes);
+        List<String> categories = new ArrayList<>();
+        List<Number> values = new ArrayList<>();
+        collectNodes(tree, categories, values);
 
-        for (TreeNode<T> node : allNodes) {
+        return new BarChartData(categories, values);
+    }
+
+    private void collectNodes(List<TreeNode<T>> tree, List<String> categories, List<Number> values) {
+        for (TreeNode<T> node : tree) {
+            if (node.getChildren() != null) {
+                collectNodes(node.getChildren(), categories, values);
+            }
             String name = config.getNameExtractor().apply(node.getData());
             Number value = config.getValueExtractor().apply(node.getData());
-            data.getCategories().add(name);
-            data.getValues().add(value);
+            categories.add(name);
+            values.add(value);
         }
-
-        return data;
     }
 
     @Override
@@ -97,22 +101,15 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
      * 转为radarchart数据
     */
     public RadarChartData toRadarChartData(List<TreeNode<T>> tree) {
-        RadarChartData data = new RadarChartData();
         if (tree == null) {
-            return data;
+            return new RadarChartData(List.of(), List.of());
         }
 
-        List<TreeNode<T>> allNodes = new ArrayList<>();
-        collectNodes(tree, allNodes);
+        List<String> indicators = new ArrayList<>();
+        List<Number> values = new ArrayList<>();
+        collectNodes(tree, indicators, values);
 
-        for (TreeNode<T> node : allNodes) {
-            String name = config.getNameExtractor().apply(node.getData());
-            Number value = config.getValueExtractor().apply(node.getData());
-            data.getIndicators().add(name);
-            data.getValues().add(value);
-        }
-
-        return data;
+        return new RadarChartData(indicators, values);
     }
 
     @Override
@@ -120,21 +117,30 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
      * 转为relation数据
     */
     public RelationData toRelationData(List<TreeNode<T>> tree) {
-        RelationData data = new RelationData();
         if (tree == null) {
-            return data;
+            return new RelationData(List.of(), List.of());
         }
 
-        List<TreeNode<T>> allNodes = new ArrayList<>();
-        collectNodes(tree, allNodes);
+        List<RelationData.Node> nodes = new ArrayList<>();
+        List<RelationData.Link> links = new ArrayList<>();
+        buildRelation(tree, nodes, links);
 
-        for (TreeNode<T> node : allNodes) {
+        return new RelationData(nodes, links);
+    }
+
+    private void buildRelation(List<TreeNode<T>> tree, List<RelationData.Node> nodes, List<RelationData.Link> links) {
+        for (TreeNode<T> node : tree) {
+            if (node.getChildren() != null) {
+                buildRelation(node.getChildren(), nodes, links);
+            }
             String name = config.getNameExtractor().apply(node.getData());
-            data.getNodes().add(new RelationData.Node(String.valueOf(node.getId()), name));
+            nodes.add(new RelationData.Node(String.valueOf(node.getId()), name));
+            if (node.getChildren() != null) {
+                for (TreeNode<T> child : node.getChildren()) {
+                    links.add(new RelationData.Link(String.valueOf(node.getId()), String.valueOf(child.getId())));
+                }
+            }
         }
-
-        addLinks(tree, data);
-        return data;
     }
 
     @Override
@@ -142,25 +148,26 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
      * 转为treemap数据
     */
     public TreemapData toTreemapData(List<TreeNode<T>> tree) {
-        TreemapData data = new TreemapData();
         if (tree == null) {
-            return data;
+            return new TreemapData(List.of());
         }
 
-        List<TreeNode<T>> allNodes = new ArrayList<>();
-        collectNodes(tree, allNodes);
+        List<TreemapData.Block> blocks = new ArrayList<>();
+        buildTreemap(tree, blocks);
 
-        for (TreeNode<T> node : allNodes) {
+        return new TreemapData(blocks);
+    }
+
+    private void buildTreemap(List<TreeNode<T>> tree, List<TreemapData.Block> blocks) {
+        for (TreeNode<T> node : tree) {
+            if (node.getChildren() != null) {
+                buildTreemap(node.getChildren(), blocks);
+            }
             String name = config.getNameExtractor().apply(node.getData());
             Number value = config.getValueExtractor().apply(node.getData());
-            
-            // 构建路径（从根到当前节点的名称路径）
             String path = buildPath(node, name);
-            
-            data.getBlocks().add(new TreemapData.Block(name, value, path));
+            blocks.add(new TreemapData.Block(name, value, path));
         }
-
-        return data;
     }
 
     /**
@@ -179,38 +186,4 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return currentName;
     }
 
-    /**
-     * collect节点
-     *
-     * @param nodes 节点
-     * @param result 结果
-     */
-    private void collectNodes(List<TreeNode<T>> nodes, List<TreeNode<T>> result) {
-        for (TreeNode<T> node : nodes) {
-            result.add(node);
-            if (node.getChildren() != null) {
-                collectNodes(node.getChildren(), result);
-            }
-        }
-    }
-
-    /**
-     * 添加链接
-     *
-     * @param nodes 节点
-     * @param data 数据
-     */
-    private void addLinks(List<TreeNode<T>> nodes, RelationData data) {
-        for (TreeNode<T> node : nodes) {
-            if (node.getChildren() != null) {
-                for (TreeNode<T> child : node.getChildren()) {
-                    data.getLinks().add(new RelationData.Link(
-                            String.valueOf(node.getId()),
-                            String.valueOf(child.getId())
-                    ));
-                }
-                addLinks(node.getChildren(), data);
-            }
-        }
-    }
 }

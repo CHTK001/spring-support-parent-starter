@@ -137,14 +137,13 @@ public class FileObjectController {
             }
             String storedKey = put.getKey() == null ? key : put.getKey();
             String accessUrl = accessUrl(request, provider, storedKey);
-            return ReturnResult.ok(FileUploadResponse.builder()
-                    .url(accessUrl)
-                    .key(storedKey)
-                    .bucket(bucket)
-                    .storageType(provider)
-                    .fileName(fileName)
-                    .fileSize(file.getSize())
-                    .build());
+            return ReturnResult.ok(new FileUploadResponse(
+                    accessUrl,
+                    storedKey,
+                    bucket,
+                    provider,
+                    fileName,
+                    file.getSize()));
         } catch (IOException e) {
             MODULE_LOG.error("文件上传失败: provider={} key={}", provider, key, e);
             return ReturnResult.error("文件保存失败");

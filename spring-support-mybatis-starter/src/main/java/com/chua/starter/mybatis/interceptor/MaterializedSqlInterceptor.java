@@ -111,16 +111,16 @@ public class MaterializedSqlInterceptor implements Interceptor {
         Object parameter = args.length > 1 ? args[1] : null;
         BoundSql boundSql = resolveBoundSql(mappedStatement, args, parameter);
         MaterializedSqlRequest request = buildRequest(mappedStatement, boundSql, parameter, definition != null ? definition : refreshDefinition);
-        if (request == null || CollectionUtils.isEmpty(request.getTables())) {
+        if (request == null || CollectionUtils.isEmpty(request.tables())) {
             return invocation.proceed();
         }
 
-        if (definition != null && request.getCommandType() == MaterializedSqlCommandType.SELECT) {
+        if (definition != null && request.commandType() == MaterializedSqlCommandType.SELECT) {
             return interceptQuery(invocation, request);
         }
 
         Object result = invocation.proceed();
-        if (definition != null && request.getCommandType() != MaterializedSqlCommandType.SELECT) {
+        if (definition != null && request.commandType() != MaterializedSqlCommandType.SELECT) {
             materializedSqlRouter.onWriteSuccess(request);
         }
         if (refreshDefinition != null) {
@@ -235,15 +235,15 @@ public class MaterializedSqlInterceptor implements Interceptor {
                                                   MaterializedRouteDefinition definition,
                                                   MaterializedSqlCommandType commandType) {
         MaterializedSqlRequest.MaterializedSqlRequestBuilder builder = MaterializedSqlRequest.builder()
-                .statementId(request.getStatementId())
-                .sourceDataSource(request.getSourceDataSource())
-                .sql(request.getSql())
+                .statementId(request.statementId())
+                .sourceDataSource(request.sourceDataSource())
+                .sql(request.sql())
                 .commandType(commandType)
                 .definition(definition);
-        for (String table : request.getTables()) {
+        for (String table : request.tables()) {
             builder.table(table);
         }
-        for (Object parameter : request.getParameters()) {
+        for (Object parameter : request.parameters()) {
             builder.parameter(parameter);
         }
         return builder.build();

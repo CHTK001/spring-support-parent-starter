@@ -99,6 +99,15 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 上报客户端（report-client）注册服务端：接收 sync/client/register 与 monitor/app/report，
+             为「节点管理 → 在线节点」与 /ms/monitor/discovery 提供在线节点数据。
+             不设为 optional：部署端需要该服务端实际接收注册，否则节点列表恒为空 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-sync-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- 缓存 -->
         <dependency>
             <groupId>com.chua</groupId>

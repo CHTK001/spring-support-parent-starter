@@ -134,20 +134,20 @@ public class ServerFilterFactory {
             return filters;
         }
         for (ServerFilterDescriptor descriptor : descriptors) {
-            if (descriptor == null || Boolean.FALSE.equals(descriptor.getEnabled())) {
+            if (descriptor == null || Boolean.FALSE.equals(descriptor.enabled())) {
                 continue;
             }
             ServerFilter delegate = instantiate(descriptor, setting);
             DelegatingServerFilter filter = new DelegatingServerFilter(
                     delegate,
-                    descriptor.getName() != null ? descriptor.getName() : delegate.getFilterId(),
-                    descriptor.getOrder(),
-                    !Boolean.FALSE.equals(descriptor.getEnabled()));
+                    descriptor.name() != null ? descriptor.name() : delegate.getFilterId(),
+                    descriptor.order(),
+                    !Boolean.FALSE.equals(descriptor.enabled()));
             try {
                 filter.init(new DefaultServerFilterConfig(
-                        descriptor.getName(), descriptor.getParams(), setting));
+                        descriptor.name(), descriptor.params(), setting));
             } catch (Exception e) {
-                throw new IllegalArgumentException("过滤器 [" + descriptor.getName() + "] 初始化失败: " + e.getMessage(), e);
+                throw new IllegalArgumentException("过滤器 [" + descriptor.name() + "] 初始化失败: " + e.getMessage(), e);
             }
             filters.add(filter);
         }
@@ -202,7 +202,7 @@ public class ServerFilterFactory {
         if (filter == null) {
             return null;
         }
-        log.info("[ServerFilterFactory] SPI 过滤器已创建: name={}, type={}", descriptor.getName(), type);
+        log.info("[ServerFilterFactory] SPI 过滤器已创建: name={}, type={}", descriptor.name(), type);
         return filter;
     }
 
@@ -243,7 +243,7 @@ public class ServerFilterFactory {
              * @param storageSetting storagesetting
              * @param descriptor.getParams( descriptor.获取参数(
              */
-            applySettingParams(storageSetting, descriptor.getParams());
+            applySettingParams(storageSetting, descriptor.params());
             Object filter = ReflectUtils.instantiate(filterClass, storageSetting);
             /**
              * wirestorages。
@@ -252,7 +252,7 @@ public class ServerFilterFactory {
              */
             wireStorages(filterClass, filter);
             log.info("[ServerFilterFactory] file-storage 插件已创建: name={}, params={}",
-                    descriptor.getName(), descriptor.getParams());
+                    descriptor.name(), descriptor.params());
             return (ServerFilter) filter;
         } catch (IllegalArgumentException e) {
             throw e;
@@ -273,7 +273,7 @@ public class ServerFilterFactory {
      * @return 过滤器实例
      */
     private ServerFilter createServiceDiscoveryFilter(ServerFilterDescriptor descriptor) {
-        Map<String, String> params = descriptor.getParams() == null ? Map.of() : descriptor.getParams();
+        Map<String, String> params = descriptor.params() == null ? Map.of() : descriptor.params();
         String discoveryName = discoveryNameOf(params);
         ServiceDiscoveryServerFilter filter = new ServiceDiscoveryServerFilter(discoveryName);
         int routes = 0;
@@ -293,7 +293,7 @@ public class ServerFilterFactory {
             }
         }
         log.info("[ServerFilterFactory] service-discovery 插件已创建: name={}, discoveryName={}, routes={}",
-                descriptor.getName(), discoveryName, routes);
+                descriptor.name(), discoveryName, routes);
         return filter;
     }
 
@@ -478,7 +478,7 @@ public class ServerFilterFactory {
         Class<?> clazz = ReflectUtils.forName(type);
         if (clazz == null) {
             throw new IllegalArgumentException(
-                    "ServerFilter 插件 [" + descriptor.getName() + "] 类型不可用: " + type
+                    "ServerFilter 插件 [" + descriptor.name() + "] 类型不可用: " + type
                             + " (支持预设别名 file-storage 或全限定类名)");
         }
         try {
@@ -491,7 +491,7 @@ public class ServerFilterFactory {
             throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException(
-                    "ServerFilter 插件 [" + descriptor.getName() + "] 实例化失败: " + type + " - " + e.getMessage(), e);
+                    "ServerFilter 插件 [" + descriptor.name() + "] 实例化失败: " + type + " - " + e.getMessage(), e);
         }
     }
 

@@ -123,7 +123,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
                  * 更新进步。
                  * @param record.getInstallRecordId( record.获取installrecordid(
                  */
-                updateProgress(record.getInstallRecordId(), 100, result.getMessage());
+                updateProgress(record.getInstallRecordId(), 100, result.message());
                 /**
                  * 完成install。
                  * @param record.getInstallRecordId( record.获取installrecordid(

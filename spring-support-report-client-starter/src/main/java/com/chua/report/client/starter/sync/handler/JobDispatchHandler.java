@@ -76,11 +76,11 @@ public class JobDispatchHandler implements SyncMessageHandler {
             // 调用作业执行逻辑
             ServletResponse response = jobExecute.run(new ServletRequest(), param);
             
-            if (response.isSuccess()) {
+            if (response.success()) {
                 log.info("[JobHandler] 任务接收成功: jobId={}", param.jobId());
                 return Map.of("code", 200, "message", "SUCCESS", "jobId", param.jobId());
             } else {
-                String errorMsg = response.getMessage();
+                String errorMsg = response.message();
                 log.warn("[JobHandler] 任务接收失败: jobId={}, msg={}", param.jobId(), errorMsg);
                 return Map.of("code", 500, "message", errorMsg != null ? errorMsg : "任务执行失败", "jobId", param.jobId());
             }

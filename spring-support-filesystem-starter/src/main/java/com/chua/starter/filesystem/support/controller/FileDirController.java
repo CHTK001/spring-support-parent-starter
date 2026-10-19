@@ -134,11 +134,12 @@ public class FileDirController {
         List<FileDirItemResponse> result = new ArrayList<>();
         Path parent = dir.getParent();
         if (parent != null) {
-            result.add(FileDirItemResponse.builder()
-                    .name(PARENT_ENTRY)
-                    .path(parent.toAbsolutePath().normalize().toString())
-                    .isDir(true)
-                    .build());
+            result.add(new FileDirItemResponse(
+                    PARENT_ENTRY,
+                    parent.toAbsolutePath().normalize().toString(),
+                    true,
+                    null,
+                    null));
         }
 
         try (Stream<Path> stream = Files.list(dir)) {
@@ -174,13 +175,12 @@ public class FileDirController {
         } catch (Exception e) {
             log.debug("[FileDir] 读取文件属性失败: {}", path, e);
         }
-        return FileDirItemResponse.builder()
-                .name(nameOf(path))
-                .path(path.toAbsolutePath().normalize().toString())
-                .isDir(isDir)
-                .size(size)
-                .updatedAt(updatedAt)
-                .build();
+        return new FileDirItemResponse(
+                nameOf(path),
+                path.toAbsolutePath().normalize().toString(),
+                isDir,
+                size,
+                updatedAt);
     }
 
     /**

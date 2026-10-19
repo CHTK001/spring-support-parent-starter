@@ -539,3 +539,143 @@ node spring-support-server-starter/src/acceptance/template-endpoint-check.mjs   
   但**说明「数据库不可用」时平台是「如实起不来」而非假活**——重启后 `NRestarts=0`、8112 监听、
   本次 boot `ERROR` 行 0，可据此排除产品侧问题。
 - Win101 的 `ssh_enabled` 会被在线采集按旧快照回写（缺陷 5）——已修复；修复前必须「置 1 后立刻执行」。
+
+---
+
+## 10. 第五轮（缺陷 12 / 13）接口层验收（2026-10-17 ~ 2026-10-18）
+
+### 10.1 产物
+
+| 项 | 值 |
+| --- | --- |
+| 全量源码构建 | `mvn -o -pl spring-support-monitor-starter -am package -DskipTests -Dspring-boot.repackage.skip=false` |
+| 本地产物 | `spring-support-monitor-starter-4.0.0.42-exec.jar`，840,603,118 字节，md5 `80f8e89c08677c8a8a8ae55e355be19f`（2026-10-17 23:57:57） |
+| 线上产物 | md5 `852627ff5e30e0c60541ce410f921f07`（= 上述构建 + 并行会话对 `ServerNodeRegistry`、`utils-support-network-starter` 的热补丁） |
+| 内容一致性 | 包内 `BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar` md5 = `a4d885e266962114b0dccc6353434669`，与本地构建**完全一致** → 缺陷 12 的字节未被任何补丁覆盖 |
+| 服务状态 | `ms-monitor-platform.service` active、`NRestarts=0`、`ExecMainStatus=0`、8112 监听、本次 boot ` ERROR ` 0、`POST /v2/user/login` 返回 `code=00000` |
+
+前端产物 `apps/vue-support-monitor-starter/dist` 由主工作区全量源码 `vite build` 生成：index `assets/index-nriwqym9.js`，2258 文件，index 引用的 106 个资源全部存在；缺陷 13 的两处改动均在包内（`processTasks-*.js` 内 `p=8e3` 对账间隔与 `h()` 定时对账函数）。
+
+### 10.2 新增缺陷与修复
+
+**缺陷 12：远端脚本分块写入被静默截断后仍被执行**
+
+- 现象：Windows 目标机执行挂载脚本报 `ParserError ... line 164 | else {`；同一份 326 行脚本完整写入可正常解析，截断到 164 行时逐字复现同一报错。
+- 根因：`writeRemoteScript` 分块追加时不校验每块退出码与远端最终长度，SSH 通道中途断开后仍继续以 `-File` 执行被截断的脚本。
+- 修复（`WindowsSshShell`）：字节级截断 + 追加写入；逐块校验退出码；末尾校验远端文件长度；不一致则整份重写（最多 3 次）；仍失败抛 `WindowsSshExecException` 中止执行，绝不把不完整脚本交给 PowerShell。
+
+**缺陷 13：任务终帧丢失导致前端进度/卡片永久停滞**
+
+- 现象：任务已结束但浮层停在 25%、项目卡片 PID 为旧值且运行时长继续累加，直到手动刷新。
+- 修复：`processTasks.ts` 增加 `ensureReconcile()`（8s 周期对未完成任务拉取快照，全部完成后自动停表）；`ProjectsView.vue` 增加 `taskSignature` 计算属性与 `watch`，任务签名（taskId/finished/success）变化即触发 `loadList()`。
+
+**验收脚本缺陷（C7）**
+
+- `win-e2e.mjs` 的 C7 用 `dir | find /c /v ""` 计数临时文件；无匹配时 `find` 退出码为 1，`execFileSync` 直接抛错——即「清理得最干净」时反而中断套件。
+- 已改为 PowerShell 计数（`(Get-ChildItem ... | Measure-Object).Count`），永远返回 0。
+
+### 10.3 接口层验收结果（同一产物 md5 `852627ff`，跑前跑后 md5 未变）
+
+| 套件 | 结果 |
+| --- | --- |
+| `win-e2e.mjs`（C1–C7） | **26 / 26**（C7 `left=0`） |
+| `win-service-e2e.mjs` | **23 / 23** |
+| `linux-regression.mjs` | **13 / 13** |
+| `template-endpoint-check.mjs` | **13 / 13** |
+| `ReleaseScriptProbe`（`-DskipTests=false`） | **11 / 11**，Skipped 0 |
+| `CacheManagerResolverProbe`（`-DskipTests=false`） | **6 / 6**，Skipped 0 |
+| `win-release-selfcheck.ps1 -Port 18091` | **10 / 10** |
+
+`win-e2e` 关键项：C1 启动后 `db pid == app.pid == 端口占用 pid`；C2 重启换 PID 并回写库；C3 备份可列出；C4 升级换 jar 且端口归属正确；C5 坏包升级如实失败、健康检查失败、自动回滚、回滚后 PID 与库一致；C6 停止后端口释放、`app.pid` 删除、库 PID 清空；C7 无 `ms-bg-*` 残留。
+
+### 10.4 未通过 / 未验收与已知风险
+
+- **macOS**：无真机，`launchctl` 挂载链路未做真机验收，不作通过结论。
+- **SSH 读超时敏感性（环境相关）**：整机高负载时，卸载脚本静默超过 `monitor.ssh.session-timeout`（默认 15s）会触发 `Timed out after 15000 msec`，曾导致一轮 `win-service-e2e` 出现 3 项级联失败（清理产物实际已完成，仅库中 `serviceName` 未清空）；空载重跑 23/23。建议后续调大该值，或对长静默脚本改用后台模式。
+- **并行会话干扰**：验收期间另一会话在同一台 `192.168.50.198` 上反复热补丁并重启服务（`patchC/D/E.sh`，间隔 5–10 分钟），`win-e2e` 曾三次在 C1/C4 阶段因平台重启而中断（`fetch failed`）。最终结果取 jar md5 连续 10 分钟稳定后的运行，且跑前跑后 md5 一致。
+- **验收环境事故（操作侧，已在当轮恢复）**：清理前端临时构建目录时误用未排除 junction 的 `robocopy /MIR`，导致主工作区 `node_modules` 与部分被跟踪文件被删；已用 `git checkout` 逐批恢复 3,760 个被跟踪文件、`pnpm install` 重建依赖、重新 `vite build` 重建 dist。**残留 1 个文件未恢复**：`apps/vue-support-ai-guada/docs/DARK_MODE_TEST_CHECKLIST.md`（其父目录 `docs` 当前对所有进程返回 `Access denied`，`takeown`/`icacls`/`rmdir` 均被拒，疑为安全软件或文件系统过滤驱动锁定；不影响 `apps/vue-support-monitor-starter` 构建与本次验收）。
+
+### 10.5 复核命令
+
+```bash
+# 1) 产物内外层一致性
+md5sum spring-support-monitor-starter-4.0.0.42-exec.jar                     # 852627ff5e30e0c60541ce410f921f07（线上）
+unzip -p spring-support-monitor-starter-4.0.0.42-exec.jar \
+  'BOOT-INF/lib/spring-support-server-starter-4.0.0.42.jar' | md5sum        # a4d885e266962114b0dccc6353434669
+
+# 2) 探针
+mvn -o -pl spring-support-server-starter test -DskipTests=false -Dtest=ReleaseScriptProbe
+mvn -o -pl spring-support-ai-starter test -DskipTests=false -Dtest=CacheManagerResolverProbe
+
+# 3) 套件（Windows 目标 192.168.50.101）
+pwsh -File spring-support-server-starter/src/acceptance/win-release-selfcheck.ps1 -Port 18091   # 10/0
+node spring-support-server-starter/src/acceptance/win-e2e.mjs                                   # 26/0
+node spring-support-server-starter/src/acceptance/win-service-e2e.mjs                           # 23/0
+node spring-support-server-starter/src/acceptance/linux-regression.mjs                          # 13/0
+node spring-support-server-starter/src/acceptance/template-endpoint-check.mjs                   # 13/0
+
+# 4) 前端产物
+cd apps/vue-support-monitor-starter && pnpm exec vite build   # 期望 index 引用资源全部存在
+```
+
+---
+
+## 11. SSH 读取超时配置（前后端适配，2026-10-19）
+
+### 11.1 背景
+
+第 10 轮验收中，Windows 卸载脚本在目标机高负载时静默超过 15 秒，SSH 通道抛出
+`OpenSSH 执行失败: Timed out after 15000 msec`。定位到根因：`SshClients.open(...)` 的
+默认超时被写死为 `connect=15s / session=15s / exec=60s`，而 `session` 超时作用于
+SSH 认证/会话建立（Apache MINA SSHD `session.auth().verify(15, SECONDS)`），
+目标机繁忙时认证本身就会超过 15 秒；同时 `ConnectionManager` 的三个 `@Value`
+只能改 yaml，`WindowsSshShell` 等调用点完全不读配置。
+
+### 11.2 设计
+
+**三级优先级**：数据库系统配置 → yaml / 环境变量 → 内置默认值。
+
+| 配置键（系统配置） | yaml 键 | 默认 | 作用 |
+| --- | --- | --- | --- |
+| `ssh.connect.timeout` | `monitor.ssh.connect-timeout` | 15s | TCP 连接与握手 |
+| `ssh.session.timeout` | `monitor.ssh.session-timeout` | **30s**（原 15s） | 认证/会话建立 |
+| `ssh.read.timeout` | `monitor.ssh.read-timeout`（缺省回退 `monitor.ssh.exec-timeout`） | 60s | 单条命令执行与输出读取 |
+
+**实现要点**
+
+- 新增 `SshTimeouts`（`server-starter/.../connection`）：启动时 `@PostConstruct` 解析一次；
+  监听既有 `ServerConfigChangedEvent`，保存系统配置后立即重算，无需重启。
+  数据库不可用或取值非法时保留 yaml / 内置默认值。
+- `SshClients` 增加进程级默认超时（`setDefaults`），三参 `open(...)` 改用它：
+  `WindowsSshShell`、`WindowsHostRemoteProvider`、`WindowsHostDetectProvider`、
+  `SshDirectWebSocketHandler` 等**全部调用点**自动生效，无需逐处改造。
+- `ConnectionManager` 改为注入 `SshTimeouts`，缓存连接重建时使用同一组值。
+- 取值范围钳制：连接/会话 1–600s，读取 1–86400s。
+
+**前端**：`系统配置` 页新增「SSH 超时」卡片，三个数字输入（连接/会话/读取），
+带说明与消费方提示；走既有 `GET /ms/server/config/map` + `POST /ms/server/config`，
+保存后热生效。默认值同步写入 `ServerConfigServiceImpl.DEFAULTS`，接口在未保存时也返回默认值。
+
+### 11.3 验证（产物 md5 `5a6e7aea1ba73b44bd3ff19887f6067c`，840,638,871 字节）
+
+| 项 | 结果 |
+| --- | --- |
+| 后端编译（`-pl spring-support-server-starter -am compile`） | BUILD SUCCESS |
+| `ReleaseScriptProbe` | 11/11，Skipped 0 |
+| 前端 `vite build` | 成功，2271 文件，index 资源全部存在 |
+| 服务启动 | active、`NRestarts=0`、`ExecMainStatus=0`、8112 监听、本次 boot ` ERROR ` 0 |
+| 启动日志 | `[ssh] 超时生效 connect=15s session=30s read=60s` |
+| 配置读取 | `GET /ms/server/config/map` 返回 15 / 30 / 60 |
+| 热生效 | `POST` 保存 `ssh.read.timeout=90` → 日志立即变为 `read=90s`；恢复 60 → 立即回 60s |
+| `win-service-e2e.mjs` | **23 / 23** |
+| `win-e2e.mjs` | **26 / 26** |
+
+### 11.4 部署说明与环境事实
+
+- 本次为全量源码构建产物；线上原有的 `ServerNodeRegistry` 热补丁（`patchC/D`）不在本仓库源码中，
+  因此该 class 与本轮构建不同，如有需要须由对应会话重新打补丁。
+- 验收前发现夹具主机 `ms_server_host.id=2`（win101 / 192.168.50.101）及其身份记录被删除
+  （密钥 `ms_server_key.id=1` 仍在），导致 `win-service-e2e` 报「目标主机不存在: 2」；
+  已按库结构重建主机、`PUBLIC_KEY` 身份与 `ms_server_host_identity` 关联，套件恢复 23/23。
+  这是验收环境数据问题，不是产品缺陷。
+- 本机 `sshd` 会自行停止（外部因素），跑 Windows 真机套件前需确认 `Get-Service sshd` 为 Running。

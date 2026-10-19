@@ -5,6 +5,9 @@ import com.chua.starter.monitor.support.server.model.ServerNodeView;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -41,7 +44,7 @@ class ServerManagePartialFailurePayloadTest {
         assertFalse(result.isSuccess(),
                 "带载荷不能让 success 变 true —— 否则只看 success 的调用方会把失败当成功");
         assertNotNull(result.getData(), "失败时必须回传已落库的节点，调用方才能按 id 回滚");
-        assertEquals(7001L, result.getData().getId(), "载荷里的 id 必须可用于回滚");
+        assertEquals(7001L, result.getData().id(), "载荷里的 id 必须可用于回滚");
         assertTrue(String.valueOf(result.getMsg()).contains("节点已保存但启动失败"),
                 "失败原因不能因为带了载荷就丢掉，实际=" + result.getMsg());
     }
@@ -79,9 +82,6 @@ class ServerManagePartialFailurePayloadTest {
      * @return 节点视图
      */
     private static ServerNodeView view(Long id) {
-        ServerNodeView view = new ServerNodeView();
-        view.setId(id);
-        view.setName("acc-partial-" + id);
-        return view;
+        return new ServerNodeView(id, "acc-partial-" + id, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 }

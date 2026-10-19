@@ -65,7 +65,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     */
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
         ModelView modelView = (ModelView) returnValue;
-        Object data = modelView.getData();
+        Object data = modelView.data();
 
         String accept = getAccept(modelView, webRequest);
         if (!accept.contains(MediaType.TEXT_HTML_VALUE)) {
@@ -106,7 +106,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
      * @return 获取accept的结果
      */
     private String getAccept(ModelView modelView, NativeWebRequest webRequest) {
-        MediaType mediaType = modelView.getMediaType();
+        MediaType mediaType = modelView.mediaType();
         if (null != mediaType) {
             return mediaType.toString();
         }
