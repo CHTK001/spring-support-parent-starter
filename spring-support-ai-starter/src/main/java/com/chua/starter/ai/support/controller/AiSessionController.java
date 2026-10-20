@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -916,7 +917,7 @@ public class AiSessionController {
      * 「已用 / 有效窗口」后回写，刷新页面时靠它恢复占用率。</p>
      *
      * @param id 会话标识
-     * @return usedTokens / effectiveContextWindow / promptTokens / completionTokens / totalTokens
+     * @return usedTokens / effectiveContextWindow / promptTokens / completionTokens / totalTokens / breakdown
      */
     @GetMapping("/{id}/token-stats")
     public ReturnResult<Map<String, Object>> tokenStats(@PathVariable("id") String id) {
@@ -929,10 +930,14 @@ public class AiSessionController {
 
         long usedTokens = 0L;
         long effectiveContextWindow = 0L;
+        Map<String, Object> breakdown = new LinkedHashMap<>();
         Object contextStats = readSettings(session == null ? null : session.getSettings()).get("contextStats");
         if (contextStats instanceof Map<?, ?> stats) {
             usedTokens = longOf(stats.get("usedTokens"));
             effectiveContextWindow = longOf(stats.get("effectiveContextWindow"));
+            // token 构成与已用/窗口同源（都由流式 turn_end 落库），缺了它
+            // 「上下文已用」卡片刷新后就只剩占用条，明细整块消失。
+            breakdown = mapOf(stats.get("breakdown"));
         }
 
         LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
@@ -950,6 +955,7 @@ public class AiSessionController {
         result.put("promptTokens", promptTokens);
         result.put("completionTokens", completionTokens);
         result.put("totalTokens", Math.max(usedTokens, promptTokens + completionTokens));
+        result.put("breakdown", breakdown);
         return ReturnResult.ok(result);
     }
 
@@ -960,7 +966,7 @@ public class AiSessionController {
      * {@link #tokenStats} 读回，避免占用率归零；不建新表。</p>
      *
      * @param id   会话标识
-     * @param body 含 usedTokens / effectiveContextWindow
+     * @param body 含 usedTokens / effectiveContextWindow / breakdown
      * @return 是否写入成功
      */
     @PutMapping("/{id}/token-stats")
@@ -977,6 +983,13 @@ public class AiSessionController {
         Map<String, Object> contextStats = new HashMap<>();
         contextStats.put("usedTokens", longOf(body.get("usedTokens")));
         contextStats.put("effectiveContextWindow", longOf(body.get("effectiveContextWindow")));
+        // token 构成（系统提示词/摘要/用户输入/历史消息/工具定义）一并落库：
+        // 它由流式 turn_end 的 contextStats 带下来，不存的话刷新后「上下文已用」卡片
+        // 只剩一根占用条，明细整块消失。原样透传，键名与前端一致。
+        Map<String, Object> breakdown = mapOf(body.get("breakdown"));
+        if (!breakdown.isEmpty()) {
+            contextStats.put("breakdown", breakdown);
+        }
         settings.put("contextStats", contextStats);
         session.setSettings(writeSettings(settings));
         session.setUpdateTime(LocalDateTime.now());
@@ -985,6 +998,27 @@ public class AiSessionController {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 取一个可能是 Map 的字段；不是 Map（或为空）时返回空 Map。
+     *
+     * <p>请求体来自前端 JSON，{@code breakdown} 可能是 null / 非对象，
+     * 直接强转会在运行时抛 ClassCastException，故统一在这里兜住。</p>
+     *
+     * @param value 原始值
+     * @return 键值均为字符串化后的 Map；无有效内容时为空 Map
+     */
+    private Map<String, Object> mapOf(Object value) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (value instanceof Map<?, ?> src) {
+            src.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    out.put(String.valueOf(k), longOf(v));
+                }
+            });
+        }
+        return out;
     }
 
     /**
