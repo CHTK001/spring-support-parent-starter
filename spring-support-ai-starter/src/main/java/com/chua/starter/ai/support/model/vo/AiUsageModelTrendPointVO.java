@@ -14,6 +14,8 @@ package com.chua.starter.ai.support.model.vo;
  * @param totalCalls       当日该模型调用次数
  * @param totalTokens      当日该模型令牌合计
  * @param totalCost        当日该模型费用
+ * @param avgFirstTokenLatency 当日该模型平均首字延迟（毫秒；无实测样本时为 null）
+ * @param avgTotalLatency  当日该模型平均总耗时（毫秒；无实测样本时为 null）
  * @author CH
  * @since 4.0.0.44
  */
@@ -23,6 +25,8 @@ public record AiUsageModelTrendPointVO(
         String provider,
         Long totalCalls,
         Long totalTokens,
-        Double totalCost
+        Double totalCost,
+        Double avgFirstTokenLatency,
+        Double avgTotalLatency
 ) {
 }

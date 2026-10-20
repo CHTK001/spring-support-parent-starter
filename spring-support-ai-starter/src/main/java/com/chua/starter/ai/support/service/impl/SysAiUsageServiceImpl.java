@@ -390,7 +390,10 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                     r.provider(),
                     r.totalCalls() == null ? 0L : r.totalCalls(),
                     r.totalTokens() == null ? 0L : r.totalTokens(),
-                    r.totalCost() == null ? 0D : r.totalCost()
+                    r.totalCost() == null ? 0D : r.totalCost(),
+                    // 延迟原样透传 null：0 会被前端画成「延迟极低」，而 null 能表达「当天没测到」
+                    r.avgFirstTokenLatency(),
+                    r.avgTotalLatency()
             ));
         }
         return result;
