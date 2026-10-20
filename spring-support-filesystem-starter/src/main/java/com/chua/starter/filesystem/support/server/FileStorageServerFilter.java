@@ -441,6 +441,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
+     * 当前行为配置（两种装配形态共享同一份 setting，便于 OAuth 私有桶等联动）。
+     *
+     * @return 文件存储配置
+     */
+    public FileStorageSetting getSetting() {
+        return setting;
+    }
+
+    /**
      * 移除存储实例
      *
      * @param name 存储名称
