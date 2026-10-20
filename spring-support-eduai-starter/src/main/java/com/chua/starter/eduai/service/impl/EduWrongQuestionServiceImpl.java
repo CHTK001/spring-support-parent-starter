@@ -247,7 +247,8 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
         if (entity == null) {
             throw new BusinessException("错题记录不存在");
         }
-        EduUserContext.checkWritable(entity.getOwnerUserId());
+        // 溯源是只读操作，预置/系统数据对普通用户也应可读
+        EduUserContext.checkReadable(entity.getOwnerUserId());
         if (entity.getWrongQuestionStudentId() == null || entity.getWrongQuestionQuestionId() == null) {
             return List.of();
         }

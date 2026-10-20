@@ -3,15 +3,76 @@
 <mapper namespace="com.chua.starter.eduai.mapper.EduMarkingTaskMapper">
 
     <!-- 按业务标识取任务 -->
+    <!--
+      列清单注意事项：实体的 ownerUserId 是 MyBatis Plus 自定义列名
+      @TableField("marking_task_owner_user_id")，XML 的 t.* 自动驼峰只认识
+      marking_task_owner_user_id -> markingTaskOwnerUserId，不会回填 ownerUserId，
+      导致 checkWritable(ownerUserId) 拿到 null 误判「系统预置数据不允许修改」。
+      故这里显式给该列 AS owner_user_id，让 XML 也走回 ownerUserId。
+    -->
     <select id="selectByTaskId" resultType="com.chua.starter.eduai.model.EduMarkingTask">
-        SELECT t.* FROM edu_marking_task t
+        SELECT
+            t.marking_task_id,
+            t.marking_task_task_id,
+            t.marking_task_status,
+            t.marking_task_mode,
+            t.marking_task_paper_id,
+            t.marking_task_exam_id,
+            t.marking_task_student_id,
+            t.marking_task_max_score,
+            t.marking_task_image_path,
+            t.marking_task_answer_sheet_id,
+            t.marking_task_stage,
+            t.marking_task_total,
+            t.marking_task_done_count,
+            t.marking_task_error,
+            t.marking_task_start_time,
+            t.marking_task_finish_time,
+            t.marking_task_teacher_finished,
+            t.marking_task_teacher_finish_time,
+            t.marking_task_satisfaction,
+            t.marking_task_owner_user_id AS owner_user_id,
+            t.create_name,
+            t.create_by,
+            t.create_time,
+            t.update_name,
+            t.update_by,
+            t.update_time
+        FROM edu_marking_task t
         WHERE t.marking_task_task_id = #{taskId}
         LIMIT 1
     </select>
 
     <!-- 取待处理/处理中的任务（重启续跑）：先提交先处理 -->
     <select id="selectResumable" resultType="com.chua.starter.eduai.model.EduMarkingTask">
-        SELECT t.* FROM edu_marking_task t
+        SELECT
+            t.marking_task_id,
+            t.marking_task_task_id,
+            t.marking_task_status,
+            t.marking_task_mode,
+            t.marking_task_paper_id,
+            t.marking_task_exam_id,
+            t.marking_task_student_id,
+            t.marking_task_max_score,
+            t.marking_task_image_path,
+            t.marking_task_answer_sheet_id,
+            t.marking_task_stage,
+            t.marking_task_total,
+            t.marking_task_done_count,
+            t.marking_task_error,
+            t.marking_task_start_time,
+            t.marking_task_finish_time,
+            t.marking_task_teacher_finished,
+            t.marking_task_teacher_finish_time,
+            t.marking_task_satisfaction,
+            t.marking_task_owner_user_id AS owner_user_id,
+            t.create_name,
+            t.create_by,
+            t.create_time,
+            t.update_name,
+            t.update_by,
+            t.update_time
+        FROM edu_marking_task t
         WHERE t.marking_task_status IN (0, 1)
         ORDER BY t.marking_task_id ASC
         LIMIT #{limit}
