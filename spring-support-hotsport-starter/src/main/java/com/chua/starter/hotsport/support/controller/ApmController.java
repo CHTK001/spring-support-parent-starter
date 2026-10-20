@@ -201,6 +201,18 @@ public class ApmController {
     }
 
     /**
+     * 根因路径自动定位（沿最慢子 Span 链定位瓶颈）。
+     *
+     * @param traceId 链路 ID
+     * @return 根因路径
+     */
+    @GetMapping("/trace/{traceId}/root-cause")
+    public ReturnResult<Map<String, Object>> traceRootCause(
+            @PathVariable String traceId) {
+        return ReturnResult.ok(apmQueryService.rootCausePath(traceId));
+    }
+
+    /**
      * SkyWalking 兼容 Segment 导出。
      *
      * @return Segment 列表
@@ -567,8 +579,9 @@ public class ApmController {
      */
     @PostMapping("/alerts/{id}/mute")
     public ReturnResult<Boolean> muteAlert(
-            @PathVariable long id) {
-        return ReturnResult.ok(alertMonitorService.acknowledgeEvent(id, "MUTED"));
+            @PathVariable long id,
+            @RequestParam(defaultValue = "300000") long durationMs) {
+        return ReturnResult.ok(alertMonitorService.silenceEvent(id, durationMs));
     }
 
     /**
@@ -862,6 +875,34 @@ public class ApmController {
             emitter.complete();
         });
         return emitter;
+    }
+
+    /**
+     * 一键导出诊断包 — 聚合线程/内存/慢调用/错误/句柄/链路等当前状态。
+     *
+     * @return JSON 诊断包
+     */
+    @GetMapping("/diagnostics/bundle")
+    public ReturnResult<Map<String, Object>> diagnosticBundle() {
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportedAt", System.currentTimeMillis());
+        bundle.put("agent", agentAttachService.getStatus());
+        bundle.put("stats", apmQueryService.stats());
+        try { bundle.put("health", apmQueryService.health()); } catch (Exception e) { bundle.put("health", Map.of("error", e.getMessage())); }
+        try { bundle.put("jvm", jvmMetricsService.snapshot()); } catch (Exception e) { bundle.put("jvm", Map.of("error", e.getMessage())); }
+        try { bundle.put("threadDump", jvmMetricsService.threadDump()); } catch (Exception e) { bundle.put("threadDump", List.of()); }
+        try { bundle.put("memoryPools", jvmMemoryService.memoryPools()); } catch (Exception e) { bundle.put("memoryPools", Map.of("error", e.getMessage())); }
+        try { bundle.put("classLoading", jvmMemoryService.classLoading()); } catch (Exception e) { bundle.put("classLoading", Map.of("error", e.getMessage())); }
+        try { bundle.put("slowCalls", apmQueryService.slowCalls(20)); } catch (Exception e) { bundle.put("slowCalls", List.of()); }
+        try { bundle.put("slowSql", apmQueryService.slowSql(20, 200)); } catch (Exception e) { bundle.put("slowSql", List.of()); }
+        try { bundle.put("errorRanking", apmQueryService.errorRanking(20)); } catch (Exception e) { bundle.put("errorRanking", List.of()); }
+        try { bundle.put("handles", apmQueryService.handleInventory(100)); } catch (Exception e) { bundle.put("handles", Map.of("error", e.getMessage())); }
+        try { bundle.put("systemOut", apmQueryService.systemOut(100)); } catch (Exception e) { bundle.put("systemOut", List.of()); }
+        try { bundle.put("traceHotspots", apmQueryService.traceHotspots(20)); } catch (Exception e) { bundle.put("traceHotspots", List.of()); }
+        try { bundle.put("tracePhases", apmQueryService.tracePhases()); } catch (Exception e) { bundle.put("tracePhases", List.of()); }
+        try { bundle.put("skywalking", apmQueryService.skywalkingExport()); } catch (Exception e) { bundle.put("skywalking", List.of()); }
+        try { bundle.put("alerts", alertMonitorService.recentAlerts()); } catch (Exception e) { bundle.put("alerts", List.of()); }
+        return ReturnResult.ok(bundle);
     }
 
     /**

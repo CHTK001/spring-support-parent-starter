@@ -74,7 +74,7 @@ public class AlertMonitorService {
     }
 
     /**
-     * 告警事件（带状态机）。
+     * 告警事件（带状态机 + 降噪指纹）。
      */
     public static class AlertEvent {
 
@@ -87,6 +87,18 @@ public class AlertMonitorService {
         public String message;
         public String status;      // OPEN / ACKNOWLEDGED / MUTED / IGNORED
         public long statusTs;
+        /**
+         * 降噪指纹：metric + severity，用于同指标连续告警抑制。
+         */
+        public String fingerprint;
+        /**
+         * 静默截点（epoch ms）；未静默为 0。
+         */
+        public long silencedUntil;
+        /**
+         * 同指纹累计触发次数（降噪后仍保留统计）。
+         */
+        public long repeatCount;
     }
 
     /**
@@ -183,6 +195,10 @@ public class AlertMonitorService {
     /**
      * 阈值命中且过去规则 {@code debounceMs} 内未触发 → 记事件（状态 OPEN）。
      *
+     * <p>降噪规则：同 {@code metric+severity} 指纹在静默窗口内不重复入队，
+     * 而是累加最近事件的 {@code repeatCount}；这样高频抖动不会刷爆事件列表，
+     * 但页面仍能看出该指标反复触发。</p>
+     *
      * @param rule    命中的规则（threshold/debounceMs 取规则配置）
      * @param current 当前值
      */
@@ -196,6 +212,17 @@ public class AlertMonitorService {
             return;
         }
         lastFired.put(rule.metric, now);
+
+        String fingerprint = rule.metric + "|" + rule.severity;
+        // 静默窗口：已有同一指纹 OPEN 事件且静默未到期 → 只累加计数，不新增
+        AlertEvent recent = events.peekLast();
+        if (recent != null && fingerprint.equals(recent.fingerprint) && now < recent.silencedUntil) {
+            recent.repeatCount++;
+            recent.current = current;
+            recent.ts = now;
+            log.debug("[Hotsport] 告警静默期内重复触发，累计 {} 次: {}", recent.repeatCount, rule.metric);
+            return;
+        }
         AlertEvent event = new AlertEvent();
         event.id = eventIdGen.getAndIncrement();
         event.ts = now;
@@ -206,6 +233,9 @@ public class AlertMonitorService {
         event.message = buildMessage(rule.metric, current, rule.threshold);
         event.status = "OPEN";
         event.statusTs = now;
+        event.fingerprint = fingerprint;
+        event.silencedUntil = now + rule.debounceMs * 3;
+        event.repeatCount = 1;
         events.addLast(event);
         while (events.size() > EVENT_CAPACITY) {
             events.pollFirst();
@@ -278,6 +308,26 @@ public class AlertMonitorService {
     }
 
     /**
+     * 手动静默事件（同指纹继续触发时仅累加计数，不新增事件）。
+     *
+     * @param eventId    事件 ID
+     * @param durationMs 静默时长（毫秒）
+     * @return 是否找到并更新
+     */
+    public boolean silenceEvent(long eventId, long durationMs) {
+        long until = System.currentTimeMillis() + Math.max(1000, durationMs);
+        for (AlertEvent e : events) {
+            if (e.id == eventId) {
+                e.silencedUntil = until;
+                e.status = "MUTED";
+                e.statusTs = System.currentTimeMillis();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * 最近告警事件（新事件在前，转 Map 保持后端 API 兼容）。
      *
      * @param limit 返回上限
@@ -301,6 +351,9 @@ public class AlertMonitorService {
             m.put("message", e.message);
             m.put("status", e.status);
             m.put("statusTs", e.statusTs);
+            m.put("fingerprint", e.fingerprint);
+            m.put("repeatCount", e.repeatCount);
+            m.put("silencedUntil", e.silencedUntil);
             out.add(m);
         }
         return out;

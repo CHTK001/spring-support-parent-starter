@@ -685,6 +685,95 @@ public class ApmQueryService {
     }
 
     /**
+     * 根因路径自动定位 — 从链路树的最慢子 Span 逐层向下，找出耗时瓶颈路径。
+     *
+     * @param traceId 链路 ID
+     * @return 根因路径（含 traceId / rootSpan / path / bottleneck）
+     */
+    public Map<String, Object> rootCausePath(String traceId) {
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("traceId", traceId);
+        result.put("found", false);
+        if (handler == null || traceId == null || traceId.isBlank()) {
+            return result;
+        }
+
+        // 收集该 trace 的 Span，并按 spanId 建索引
+        List<com.chua.runtime.apm.handler.TraceHandler.Span> spans = new ArrayList<>();
+        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+            if (span == null || !traceId.equals(span.getTraceId())) {
+                continue;
+            }
+            spans.add(span);
+        }
+        if (spans.isEmpty()) {
+            return result;
+        }
+
+        Map<String, com.chua.runtime.apm.handler.TraceHandler.Span> spanById = new LinkedHashMap<>();
+        for (com.chua.runtime.apm.handler.TraceHandler.Span s : spans) {
+            spanById.put(s.getSpanId(), s);
+        }
+
+        // 找根 Span：parentSpanId 不在本 trace（null 或外部）
+        com.chua.runtime.apm.handler.TraceHandler.Span root = null;
+        for (com.chua.runtime.apm.handler.TraceHandler.Span s : spans) {
+            String parent = s.getParentSpanId();
+            if (parent == null || !spanById.containsKey(parent)) {
+                root = s;
+                break;
+            }
+        }
+        if (root == null && !spans.isEmpty()) {
+            // 退化为最早开始的 Span
+            root = spans.stream()
+                    .min(Comparator.comparingLong(com.chua.runtime.apm.handler.TraceHandler.Span::getStartTime))
+                    .orElse(spans.get(0));
+        }
+
+        // 沿最慢子 Span 向下
+        List<Map<String, Object>> path = new ArrayList<>();
+        com.chua.runtime.apm.handler.TraceHandler.Span cursor = root;
+        while (cursor != null) {
+            Map<String, Object> node = new LinkedHashMap<>();
+            node.put("spanId", cursor.getSpanId());
+            node.put("operation", (cursor.getClassName() == null ? "" : cursor.getClassName())
+                    + "." + (cursor.getMethodName() == null ? "" : cursor.getMethodName()));
+            node.put("phase", cursor.getPhase());
+            node.put("durationMs", cursor.getDuration());
+            node.put("selfTimeMs", cursor.getSelfTime());
+            node.put("status", cursor.getStatus());
+            node.put("startTime", cursor.getStartTime());
+            path.add(node);
+
+            // 选最慢的直接子 Span
+            com.chua.runtime.apm.handler.TraceHandler.Span slowestChild = null;
+            for (com.chua.runtime.apm.handler.TraceHandler.Span s : spans) {
+                if (cursor.getSpanId() != null && cursor.getSpanId().equals(s.getParentSpanId())) {
+                    if (slowestChild == null || s.getDuration() > slowestChild.getDuration()) {
+                        slowestChild = s;
+                    }
+                }
+            }
+            cursor = slowestChild;
+        }
+
+        result.put("found", true);
+        result.put("spanCount", spans.size());
+        result.put("rootSpan", root == null ? null : root.getSpanId());
+        result.put("path", path);
+        if (!path.isEmpty()) {
+            Map<String, Object> bottleneck = path.get(path.size() - 1);
+            result.put("bottleneck", bottleneck);
+            result.put("totalDurationMs", path.get(0).get("durationMs"));
+        }
+        return result;
+    }
+
+    /**
      * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
      *
      * @param traceId 链路 ID
