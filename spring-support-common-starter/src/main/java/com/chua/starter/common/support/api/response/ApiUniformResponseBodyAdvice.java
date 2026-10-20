@@ -89,7 +89,8 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
             return o;
         }
 
-        if (o instanceof ReturnPageResult) {
+        if (o instanceof ReturnPageResult
+                || o instanceof com.chua.starter.common.support.lang.ReturnPageResult) {
             return o;
         }
 

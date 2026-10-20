@@ -172,10 +172,22 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
      * @return 获取liveurl的结果
      */
     public JsonNode getLiveUrl(int channel) {
+        return getLiveUrlData(channel, "main");
+    }
+
+    /**
+     * 获取视频地址（指定码流）
+     *
+     * @param channel    通道
+     * @param streamType 码流：main / sub
+     * @return 视频地址数据
+     */
+    public JsonNode getLiveUrlData(int channel, String streamType) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
-        params.put("stream", 0);
+        // 大华：0 主码流、1 子码流
+        params.put("stream", "sub".equalsIgnoreCase(streamType) ? 1 : 0);
         return assertOk(post(PATH_LIVE_URL, params));
     }
 
@@ -185,6 +197,20 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
+        return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
+    }
+
+    @Override
+    /**
+     * 获取指定码流的liveurl
+     *
+     * @param channel    通道
+     * @param protocol   协议
+     * @param streamType 码流
+     * @return 拉流地址
+     */
+    public String getLiveUrl(int channel, String protocol, String streamType) {
+        JsonNode data = getLiveUrlData(channel, streamType);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
     }
 
