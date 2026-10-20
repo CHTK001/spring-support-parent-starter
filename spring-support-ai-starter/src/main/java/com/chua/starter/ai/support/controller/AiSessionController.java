@@ -555,17 +555,63 @@ public class AiSessionController {
                         contentMetadata.put("toolCalls", tcRaw);
                         contentMetadata.put("toolCallsResponse", toolTrace.get("toolCallsResponse"));
                     } else {
-                        // 智能体路径只有 trace 形态：把每条工具 trace 合成为一条工具行数据
+                        // 智能体路径只有 trace 形态：聚合出「每次工具调用一行」。
+                        //
+                        // AgentScope 的 trace 是**分阶段**的，同一次调用会产生多条：
+                        //   tool_call    调用工具: write_file
+                        //   tool_args    {"path": "...", ...}
+                        //   tool_result  Error: Parameter validation failed ...
+                        //
+                        // 早先实现逐条 trace 各建一行，并且把 outcome 硬编码成 "success"，
+                        // 于是有两个后果：同一次 write_file 渲染成三行同名工具；
+                        // **工具报错却显示为成功** —— 参数校验失败在界面上完全看不出来，
+                        // 用户只知道「模型没干活」，查不到真实原因。
+                        //
+                        // 现在按出现顺序聚合：tool_call 开新行，后续 tool_args / tool_result
+                        // 归到该行；outcome 由 tool_result 的真实内容判定。
                         List<Map<String, Object>> synth = new ArrayList<>();
                         Object traces = toolTrace.get("toolTraces");
                         if (traces instanceof List<?> list) {
+                            Map<String, Object> current = null;
+                            String currentName = null;
                             for (Object o : list) {
-                                if (o instanceof Map<?, ?> mm) {
-                                    Map<String, Object> it = new HashMap<>();
-                                    it.put("name", mm.get("toolName"));
-                                    it.put("arguments", mm.get("text"));
-                                    it.put("outcome", "success");
-                                    synth.add(it);
+                                if (!(o instanceof Map<?, ?> mm)) {
+                                    continue;
+                                }
+                                String toolName = mm.get("toolName") == null
+                                        ? "" : String.valueOf(mm.get("toolName"));
+                                // 没有工具名的 trace（agent_end / turn / usage 之类）不属于工具行
+                                if (toolName.isBlank() || "null".equals(toolName)) {
+                                    continue;
+                                }
+                                String kind = mm.get("kind") == null ? "" : String.valueOf(mm.get("kind"));
+                                String text = mm.get("text") == null ? "" : String.valueOf(mm.get("text"));
+
+                                boolean startNew = current == null
+                                        || "tool_call".equals(kind)
+                                        || !toolName.equals(currentName);
+                                if (startNew) {
+                                    current = new LinkedHashMap<>();
+                                    current.put("name", toolName);
+                                    current.put("arguments", "tool_call".equals(kind) ? "" : text);
+                                    current.put("outcome", "success");
+                                    synth.add(current);
+                                    currentName = toolName;
+                                    if ("tool_call".equals(kind)) {
+                                        continue;
+                                    }
+                                }
+                                if ("tool_args".equals(kind)) {
+                                    current.put("arguments", text);
+                                } else if ("tool_result".equals(kind)) {
+                                    current.put("result", text);
+                                    // 失败判定看工具返回的真实内容：以 Error 开头即失败。
+                                    // 绝不硬编码 success —— 参数校验失败被显示成成功，
+                                    // 正是「工具出错但界面无迹可寻」的直接原因。
+                                    boolean failed = text.startsWith("Error")
+                                            || text.startsWith("error")
+                                            || text.contains("validation failed");
+                                    current.put("outcome", failed ? "failed" : "success");
                                 }
                             }
                         }
