@@ -1001,6 +1001,139 @@ public class AiSessionController {
     }
 
     /**
+     * AI 生成会话标题（前端「AI 重命名」）。
+     *
+     * <p><b>为什么补这个接口。</b>前端 {@code handleAIRenameSession} 一直在 POST
+     * {@code /sessions/{id}/generate-title}，代码注释还写着「后端已有该接口」——
+     * 但后端从来没有实现过它。请求落到 Spring 的静态资源兜底，日志里是
+     * {@code 资源不存在（未映射路径）: No static resource v2/sessions/135/generate-title}，
+     * 前端只能弹「AI 重命名失败」。属于「注释描述了一个不存在的实现」。</p>
+     *
+     * <p>模型走 {@link com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver}
+     * 的既有回退链（会话模型 → bot 默认 → 用户默认 → 全局默认），与「AI 联想下一步任务」
+     * 同一口径，不在此处写死模型名。</p>
+     *
+     * <p>不可生成时返回 {@code skipped=true} 与原因，而不是抛错：会话还没消息、
+     * 没解析到模型都属于正常状态，前端据此显示「已跳过」而非「失败」。</p>
+     *
+     * @param id 会话标识
+     * @return title 新标题；skipped=true 时附 reason
+     */
+    @PostMapping("/{id}/generate-title")
+    public ReturnResult<Map<String, Object>> generateTitle(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+        SysAiSession session = sessionMapper.selectById(sessionId);
+        if (session == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        // 取最近若干条：标题只需要「这段对话在聊什么」，全量喂进去既慢又没必要
+        LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId)
+                .orderByDesc(SysAiMessage::getId)
+                .last("LIMIT 12");
+        List<SysAiMessage> recent = messageMapper.selectList(wrapper);
+        if (recent == null || recent.isEmpty()) {
+            result.put("skipped", true);
+            result.put("reason", "会话还没有消息，无法生成标题");
+            return ReturnResult.ok(result);
+        }
+        // 上面按 id 倒序取最近 N 条，这里翻回时间顺序，否则模型看到的对话是倒着的
+        List<SysAiMessage> ordered = new ArrayList<>(recent);
+        java.util.Collections.reverse(ordered);
+
+        String model = effectiveChatModelResolver.resolve(session.getModelId());
+        if (model == null || model.isBlank()) {
+            result.put("skipped", true);
+            result.put("reason", "未解析到可用模型，请先在设置里指定默认对话模型");
+            return ReturnResult.ok(result);
+        }
+
+        StringBuilder transcript = new StringBuilder();
+        for (SysAiMessage m : ordered) {
+            String content = m.getContent();
+            if (content == null || content.isBlank()) {
+                continue;
+            }
+            // 单条截断：一条超长回复（比如整段代码）会把标题生成的上下文挤爆，
+            // 而对判断「在聊什么」没有任何额外帮助
+            String trimmed = content.length() > 600 ? content.substring(0, 600) + "…" : content;
+            transcript.append("user".equals(m.getRole()) ? "用户：" : "助手：")
+                    .append(trimmed.replace('\n', ' ')).append('\n');
+        }
+        if (transcript.length() == 0) {
+            result.put("skipped", true);
+            result.put("reason", "会话内容为空，无法生成标题");
+            return ReturnResult.ok(result);
+        }
+
+        String title;
+        try {
+            com.chua.starter.ai.support.model.AiChatRequest request =
+                    new com.chua.starter.ai.support.model.AiChatRequest();
+            request.setModel(model);
+            request.setStream(false);
+            request.setSystemPrompt("你是会话命名助手。根据用户提供的对话内容，生成一个能概括主题的中文标题。"
+                    + "要求：不超过 16 个字；不要标点符号、不要引号、不要「关于」「讨论」这类空词；"
+                    + "不要解释，不要输出任何多余内容。只输出标题本身。");
+            request.setMessages(List.of(Map.of("role", "user", "content",
+                    "以下是本次会话的最近对话：\n\n" + transcript + "\n\n请给出标题。")));
+            Map<String, Object> response = aiChatFacadeService.call(request);
+            Object text = response == null ? null : response.get("text");
+            title = text == null ? "" : String.valueOf(text).trim();
+        } catch (Exception e) {
+            log.warn("[SessionTitle] 生成标题失败 sessionId={} model={}: {}", sessionId, model, e.getMessage());
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "生成标题失败: " + e.getMessage(), e);
+        }
+
+        title = sanitizeTitle(title);
+        if (title.isEmpty()) {
+            result.put("skipped", true);
+            result.put("reason", "模型没有给出可用标题，可重试");
+            return ReturnResult.ok(result);
+        }
+
+        result.put("title", title);
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 清洗模型返回的标题：去掉引号、换行、markdown 强调符与常见前缀。
+     *
+     * <p>模型即使被要求「只输出标题」，也常带上「标题：」「《》」「**」这类包装。
+     * 直接落库会让侧边栏出现 {@code **项目重构**} 这种脏数据，所以在服务端统一收口，
+     * 而不是指望前端每处调用都记得清一遍。</p>
+     *
+     * @param raw 模型原始输出
+     * @return 规整后的标题；不可用时为空串
+     */
+    private static String sanitizeTitle(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String t = raw.trim();
+        // 只取第一行：多行输出说明模型没守约束，第一行通常才是标题
+        int nl = t.indexOf('\n');
+        if (nl > 0) {
+            t = t.substring(0, nl);
+        }
+        t = t.replaceAll("^[#>*\\-\\s]+", "")
+                .replaceAll("^(标题|会话标题|title)\\s*[:：]\\s*", "")
+                .replaceAll("[*`\"'《》【】\\[\\]]", "")
+                .trim();
+        // 兜底截断：约束是 16 字，留一点余量，避免超级长标题撑坏侧边栏
+        if (t.length() > 24) {
+            t = t.substring(0, 24);
+        }
+        return t;
+    }
+
+    /**
      * 取一个可能是 Map 的字段；不是 Map（或为空）时返回空 Map。
      *
      * <p>请求体来自前端 JSON，{@code breakdown} 可能是 null / 非对象，
