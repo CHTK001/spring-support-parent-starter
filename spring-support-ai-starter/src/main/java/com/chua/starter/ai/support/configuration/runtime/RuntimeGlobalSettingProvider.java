@@ -86,7 +86,12 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("compression_model", "", "STRING", "上下文压缩模型（空=使用默认模型）", 9),
                 new SettingItem("system_prompt", "", "STRING", "默认系统提示词", 10),
                 new SettingItem("temperature", "0.7", "NUMBER", "默认生成温度", 11),
-                new SettingItem("max_tokens", "4096", "NUMBER", "默认最大输出 tokens", 12),
+                // 默认输出上限。原值 4096 对「agent 调工具」这类场景太小：模型写一整页
+                // HTML/JS 时，tool_call 的 arguments 本身就超过 4096 token，会被硬截断成
+                // 半截 JSON（实测断在 {"path": "..."，content 整块消失），随后工具报
+                // "required property 'content' not found"，模型放弃，整轮白跑 —— 而且
+                // 截断是静默的，日志里只看到输出=4096。16384 给足单文件代码的余量。
+                new SettingItem("max_tokens", "16384", "NUMBER", "默认最大输出 tokens（agent 写大文件需要足够余量，过小会截断工具参数）", 12),
                 new SettingItem("timeout_millis", "30000", "NUMBER", "请求超时时间（毫秒）", 13),
                 new SettingItem("input_optimization_enabled", "false", "BOOLEAN", "是否启用对话输入自动优化", 14),
                 new SettingItem("context_compression_enabled", "false", "BOOLEAN", "是否启用上下文压缩", 15),
