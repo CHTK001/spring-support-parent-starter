@@ -635,6 +635,12 @@ public class ChatStreamOrchestrator {
                             }
                             assistantMsg.setConfirmation(attachRouteInfo(
                                     assistantMsg.getConfirmation(), effectiveRoute(p)));
+                            // 缓存命中量 / 首字耗时同样并入 confirmation：
+                            // sys_ai_message 没有对应列，加列要动存量表；这两个值只服务
+                            // 「会话底部统计条」，走已有的 JSON 载体最省事，且与 route 的
+                            // 合并顺序无关（attachUsageExtra 只补键、不覆盖）。
+                            assistantMsg.setConfirmation(attachUsageExtra(
+                                    assistantMsg.getConfirmation(), usageStatsOf(usage)));
                             aiDialogRecordService.addMessage(dialogId, assistantMsg);
                             log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageId, totalTokens);
                             chatMemorySupport.remember(memoryUser, sid, finalContent, finalText, modelToUse);
@@ -648,6 +654,9 @@ public class ChatStreamOrchestrator {
                         usageMap.put("promptTokens", promptTokens);
                         usageMap.put("completionTokens", completionTokens);
                         usageMap.put("totalTokens", totalTokens);
+                        // 缓存命中 / 首字耗时：会话底部统计条要用，随 usage 一并下发，
+                        // 避免前端再为这两个数多发一次请求。
+                        usageMap.putAll(usageStatsOf(usage));
                         finishEvent.put("usage", usageMap);
                         sink.sendEvent(finishEvent);
                         Map<String, Object> turnEndEvent = new LinkedHashMap<>();
@@ -957,6 +966,9 @@ public class ChatStreamOrchestrator {
                                 if (resumeConfirmation[0] != null) {
                                     assistantMsg.setConfirmation(buildConfirmationJson(resumeConfirmation[0]));
                                 }
+                                // 缓存命中 / 首字耗时随消息落库（同主流程口径）
+                                assistantMsg.setConfirmation(attachUsageExtra(
+                                        assistantMsg.getConfirmation(), usageStatsOf(usageHolder[0])));
                                 aiDialogRecordService.addMessage(dialogId, assistantMsg);
                                 log.info("[ChatStream] 恢复助手消息已保存 sessionId={}, parentId={}, len={}",
                                         sid, p.userMessageId(), finalText.length());
@@ -971,6 +983,7 @@ public class ChatStreamOrchestrator {
                             usageMap.put("promptTokens", promptTokens);
                             usageMap.put("completionTokens", completionTokens);
                             usageMap.put("totalTokens", totalTokens);
+                            usageMap.putAll(usageStatsOf(usageHolder[0]));
                             finishEvent.put("usage", usageMap);
                             sink.sendEvent(finishEvent);
                             Map<String, Object> turnEndEvent = new LinkedHashMap<>();
@@ -1082,6 +1095,66 @@ public class ChatStreamOrchestrator {
             return objectMapper.writeValueAsString(merged);
         } catch (Exception e) {
             log.warn("[ChatStream] 附加路由信息失败，保留原 confirmation: {}", e.getMessage());
+            return json;
+        }
+    }
+
+    /**
+     * 把缓存命中量与首字耗时整理成可下发的字段。
+     *
+     * <p>这两个数在 {@link com.chua.common.support.ai.AiUsage} 上已有，但历史上只落到
+     * {@code sys_ai_usage} 计量表，会话消息里拿不到 —— 于是「会话底部统计条」只能算
+     * 出速度，算不出缓存命中率与 TTFT。这里统一口径：
+     * {@code cachedTokens} 为命中量（子集，不超过输入量），{@code firstTokenLatencyMs}
+     * 为首字耗时；缺值时不放键，前端据此显示「—」而不是 0。</p>
+     *
+     * @param usage 模型回传用量（可为 空）
+     * @return 至少为空 Map；无有效值时不带任何键
+     */
+    private Map<String, Object> usageStatsOf(com.chua.common.support.ai.AiUsage usage) {
+        Map<String, Object> stats = new LinkedHashMap<>(4);
+        if (usage == null) {
+            return stats;
+        }
+        Integer cached = usage.getCacheTokens();
+        if (cached != null && cached > 0) {
+            stats.put("cachedTokens", cached);
+        }
+        Long firstToken = usage.getFirstTokenLatencyMillis();
+        if (firstToken != null && firstToken > 0) {
+            stats.put("firstTokenLatencyMs", firstToken);
+        }
+        return stats;
+    }
+
+    /**
+     * 把用量补充字段并入已有的 confirmation JSON。
+     *
+     * <p>与 {@link #attachRouteInfo} 同样的理由：{@code confirmation} 已是工具轨迹、待确认、
+     * 错误态、路由信息的公共载体，再加一列会动存量表。合并而非覆盖 —— 有工具轨迹的那一轮
+     * 也必须保住轨迹；解析失败时原样返回，宁可少两个统计字段也不能弄丢工具轨迹。</p>
+     *
+     * @param json  原有 confirmation JSON（可为空）
+     * @param extra 待补字段（可为空）
+     * @return 合并后的 JSON；extra 为空时原样返回
+     */
+    private String attachUsageExtra(String json, Map<String, Object> extra) {
+        if (extra == null || extra.isEmpty()) {
+            return json;
+        }
+        try {
+            Map<String, Object> merged = new LinkedHashMap<>();
+            if (json != null && !json.isBlank()) {
+                Object parsed = objectMapper.readValue(json, Map.class);
+                if (parsed instanceof Map<?, ?> src) {
+                    src.forEach((k, v) -> merged.put(String.valueOf(k), v));
+                }
+            }
+            // 只补缺：路由/错误态已有同名键时不覆盖
+            extra.forEach(merged::putIfAbsent);
+            return objectMapper.writeValueAsString(merged);
+        } catch (Exception e) {
+            log.warn("[ChatStream] 附加用量字段失败，保留原 confirmation: {}", e.getMessage());
             return json;
         }
     }
