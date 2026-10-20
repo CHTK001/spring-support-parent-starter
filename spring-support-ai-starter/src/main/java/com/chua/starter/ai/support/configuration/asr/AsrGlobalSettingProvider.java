@@ -62,7 +62,13 @@ public class AsrGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("provider_base_url", "", "STRING", "API 基础地址（云端 ASR 使用，本地留空）", 3),
                 new SettingItem("default_model", "", "STRING", "ASR 默认模型（留空/auto=由所选引擎自动使用推荐档位，"
                         + "如本地 whisper 的 whisper-tiny）", 4),
-                new SettingItem("language", "zh", "STRING", "默认音频语言（ISO 639-1，如 zh / en，留空自动检测）", 5)
+                new SettingItem("language", "zh", "STRING", "默认音频语言（ISO 639-1，如 zh / en，留空自动检测）", 5),
+                // 音频管线的「文字模型」：转写结果交给通用大模型做一次矫正。
+                // 与 OCR 的 corrector_model 同构（那边是本地 macbert4csc，这边是通用大模型），
+                // 三条约定也一致：留空关闭、失败保留原文、非必填。
+                new SettingItem("corrector_model", "", "STRING",
+                        "文本矫正模型（留空关闭，如 gpt-4o / deepseek-chat；用大模型修正转写结果里的"
+                                + "同音字、术语与标点。非必填，矫正失败保留原文）", 6)
         );
     }
 }
