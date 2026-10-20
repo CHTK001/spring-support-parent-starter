@@ -1260,11 +1260,29 @@ public class TsharkCaptureService {
                 relMs = java.time.Duration.between(t0, p.getPacketTime()).toMillis();
             }
             String info = p.getPacketInfo() == null ? "" : p.getPacketInfo();
+            String flags = extractFlags(info);
+            String phase;
+            if (flags.contains("FIN")) {
+                phase = "CLOSE";
+            } else if (info.contains("TLS") || info.contains("Application Data")) {
+                phase = "TLS";
+            } else if (info.contains("HTTP")) {
+                phase = "HTTP";
+            } else if (flags.contains("SYN") || "ACK".equals(flags)) {
+                phase = "TCP";
+            } else {
+                phase = "DATA";
+            }
+            boolean retransmission = info.contains("Retransmission")
+                    || info.contains("DUP ACK")
+                    || info.contains("Out-Of-Order")
+                    || info.contains("Spurious");
+            boolean reset = flags.contains("RST") || info.contains("[RST]");
             steps.add(new TsharkHandshakeVO.Step(p.getId(),
                     p.getPacketTime() == null ? null : p.getPacketTime().format(hhmm),
                     eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort),
-                    extractFlags(info), extractAfter(info, "Seq="), extractAfter(info, "Ack="),
-                    p.getPacketLength(), info, relMs));
+                    flags, extractAfter(info, "Seq="), extractAfter(info, "Ack="),
+                    p.getPacketLength(), info, relMs, phase, retransmission, reset));
         }
 
         // 握手判定：第一个 SYN（不带 ACK）定客户端方向，其后 SYN+ACK 与裸 ACK
@@ -1327,6 +1345,40 @@ public class TsharkCaptureService {
         }
         boolean closed = clientFin && serverFin;
 
+        // RTT：首个客户端 SYN 到服务端 SYN+ACK 的时间差（毫秒）
+        Long rttMs = null;
+        if (synIdx >= 0) {
+            for (int i = synIdx + 1; i < flow.size(); i++) {
+                String fl = steps.get(i).flags() == null ? "" : steps.get(i).flags();
+                if (fl.contains("SYN") && fl.contains("ACK")) {
+                    rttMs = msBetween(flow.get(synIdx).getPacketTime(), flow.get(i).getPacketTime());
+                    break;
+                }
+            }
+        }
+
+        // TTFB：首个客户端 HTTP 请求到服务端首个 HTTP 响应的时间差（毫秒）
+        Long ttfbMs = null;
+        LocalDateTime firstRequestAt = null;
+        for (int i = 0; i < flow.size(); i++) {
+            String info = flow.get(i).getPacketInfo() == null ? "" : flow.get(i).getPacketInfo();
+            boolean fromClient = eq(flow.get(i).getSourceIp(), cIp) && eq(flow.get(i).getSourcePort(), cPort);
+            if (fromClient && isHttpRequestLine(info)) {
+                firstRequestAt = flow.get(i).getPacketTime();
+                for (int j = i + 1; j < flow.size(); j++) {
+                    String rinfo = flow.get(j).getPacketInfo() == null ? "" : flow.get(j).getPacketInfo();
+                    boolean serverResponse = !eq(flow.get(j).getSourceIp(), cIp)
+                            && (rinfo.startsWith("HTTP/") || rinfo.startsWith("HTTP/1."));
+                    if (serverResponse && flow.get(j).getPacketTime() != null
+                            && firstRequestAt != null) {
+                        ttfbMs = msBetween(firstRequestAt, flow.get(j).getPacketTime());
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
         String kind;
         String label;
         String detail;
@@ -1344,8 +1396,28 @@ public class TsharkCaptureService {
             label = "三次握手";
             detail = null;
         }
+        // 当前实现完整返回流内所有报文，不截断；totalSteps 供未来截断时告知真实长度
         return new TsharkHandshakeVO(sessionId, cIp, cPort, sIp, sPort,
-                new TsharkHandshakeVO.Handshake(kind, label, detail, completed, closed), steps);
+                new TsharkHandshakeVO.Handshake(kind, label, detail, completed, closed), steps,
+                steps.size(), false, rttMs, ttfbMs);
+    }
+
+    private static boolean isHttpRequestLine(String info) {
+        if (info == null) return false;
+        String up = info.toUpperCase();
+        return up.startsWith("GET ")
+                || up.startsWith("POST ")
+                || up.startsWith("PUT ")
+                || up.startsWith("DELETE ")
+                || up.startsWith("HEAD ")
+                || up.startsWith("OPTIONS ")
+                || up.startsWith("PATCH ");
+    }
+
+    private static Long msBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) return null;
+        long ms = java.time.Duration.between(from, to).toMillis();
+        return ms < 0 ? 0L : ms;
     }
 
     /**
@@ -1694,7 +1766,11 @@ public class TsharkCaptureService {
             String flow = row.get("flow") == null ? "" : String.valueOf(row.get("flow"));
             int count = ((Number) row.get("count")).intValue();
             long bytes = ((Number) row.get("bytes")).longValue();
-            result.add(new TsharkFlowVO(flow, count, bytes));
+            String sourceIp = row.get("sourceIp") == null ? "" : String.valueOf(row.get("sourceIp"));
+            Integer sourcePort = row.get("sourcePort") == null ? null : ((Number) row.get("sourcePort")).intValue();
+            String destIp = row.get("destIp") == null ? "" : String.valueOf(row.get("destIp"));
+            Integer destPort = row.get("destPort") == null ? null : ((Number) row.get("destPort")).intValue();
+            result.add(new TsharkFlowVO(flow, count, bytes, sourceIp, sourcePort, destIp, destPort));
         }
         return ReturnResult.ok(result.subList(0, Math.min(Math.max(0, limit), result.size())));
     }

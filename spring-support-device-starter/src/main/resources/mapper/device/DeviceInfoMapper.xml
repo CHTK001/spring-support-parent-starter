@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.device.support.mapper.DeviceInfoMapper">
+
+    <!-- 统计结果：DeviceStats 是 record，用 constructor 映射，避免依赖
+         argNameBasedConstructorAutoMapping（该开关默认关闭） -->
+    <resultMap id="DeviceStatsMap" type="com.chua.starter.device.support.model.DeviceStats">
+        <constructor>
+            <arg column="total" javaType="java.lang.Long"/>
+            <arg column="online" javaType="java.lang.Long"/>
+            <arg column="offline" javaType="java.lang.Long"/>
+            <arg column="no_location" javaType="java.lang.Long"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 分页查询：条件较多，放 XML 便于审核；分页/计数由 MyBatis-Plus 拦截器处理 -->
+    <select id="selectDevicePage" resultType="com.chua.starter.device.support.entity.DeviceInfo">
+        SELECT *
+        FROM device_info
+        <where>
+            <if test="q.keyword != null and q.keyword != ''">
+                AND (
+                    device_info_name LIKE CONCAT('%', #{q.keyword}, '%')
+                    OR device_info_code LIKE CONCAT('%', #{q.keyword}, '%')
+                    OR device_info_ip LIKE CONCAT('%', #{q.keyword}, '%')
+                    OR device_info_serial LIKE CONCAT('%', #{q.keyword}, '%')
+                    OR device_info_owner_name LIKE CONCAT('%', #{q.keyword}, '%')
+                )
+            </if>
+            <if test="q.orgId != null and q.orgId != ''">
+                AND device_info_org_id = #{q.orgId}
+            </if>
+            <if test="q.vendor != null and q.vendor != ''">
+                AND device_info_vendor = #{q.vendor}
+            </if>
+            <if test="q.category != null and q.category != ''">
+                AND device_info_category = #{q.category}
+            </if>
+            <if test="q.subCategory != null and q.subCategory != ''">
+                AND device_info_sub_category = #{q.subCategory}
+            </if>
+            <if test="q.online != null">
+                AND device_info_online = #{q.online}
+            </if>
+            <if test="q.status != null and q.status != ''">
+                AND device_info_status = #{q.status}
+            </if>
+            <if test="q.ownerId != null and q.ownerId != ''">
+                AND device_info_owner_id = #{q.ownerId}
+            </if>
+            <if test="q.tag != null and q.tag != ''">
+                AND device_info_tags LIKE CONCAT('%', #{q.tag}, '%')
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="q.sortBy == 'name'">device_info_name</when>
+            <when test="q.sortBy == 'createdAt'">device_info_created_at</when>
+            <when test="q.sortBy == 'lastOnlineAt'">device_info_last_online_at</when>
+            <otherwise>device_info_updated_at</otherwise>
+        </choose>
+        <choose>
+            <when test="q.sortOrder == 'asc'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
+    </select>
+
+    <!-- 一次查询算出 4 个卡片数字；COUNT(CASE...) 返回 BIGINT，避免 SUM 的 DECIMAL 转换 -->
+    <select id="selectDeviceStats" resultMap="DeviceStatsMap">
+        SELECT
+            COUNT(*) AS total,
+            COUNT(CASE WHEN device_info_online = 1 THEN 1 END) AS online,
+            COUNT(CASE WHEN device_info_online = 0 OR device_info_online IS NULL THEN 1 END) AS offline,
+            COUNT(CASE WHEN device_info_latitude IS NULL
+                            OR device_info_longitude IS NULL
+                            OR device_info_latitude = 0
+                            OR device_info_longitude = 0 THEN 1 END) AS no_location
+        FROM device_info
+        <where>
+            <if test="orgId != null and orgId != ''">
+                AND device_info_org_id = #{orgId}
+            </if>
+            <if test="vendor != null and vendor != ''">
+                AND device_info_vendor = #{vendor}
+            </if>
+        </where>
+    </select>
+
+    <!-- 在线检测候选集：必须包含离线设备，否则掉线后无法恢复；停用/报废不检测 -->
+    <select id="selectCheckableDevices" resultType="com.chua.starter.device.support.entity.DeviceInfo">
+        SELECT *
+        FROM device_info
+        WHERE (
+                (device_info_ip IS NOT NULL AND device_info_ip != '')
+                OR (device_info_serial IS NOT NULL AND device_info_serial != '')
+            )
+          AND (
+                device_info_status IS NULL
+                OR device_info_status NOT IN ('disabled', 'scrapped')
+            )
+    </select>
+
+    <!-- 厂商目录同步：厂商 + 序列号/编码 幂等定位 -->
+    <select id="selectByVendorAndSerial" resultType="com.chua.starter.device.support.entity.DeviceInfo">
+        SELECT *
+        FROM device_info
+        WHERE device_info_vendor = #{vendor}
+          AND (device_info_serial = #{serial} OR device_info_code = #{serial})
+        LIMIT 1
+    </select>
+
+</mapper>

@@ -165,14 +165,12 @@ plugin:
   queue:
     enable: true
     type: local
-
-# 时序存储引擎：datasource / redis / influxdb / questdb / none（默认 datasource）
-# datasource：JDBC 数据库明细表（用 Engine + SqlExecutor）
-# redis：Redis ZSET 简化时序（默认取 spring.data.redis；plugin.monitor.timeseries.url 配成 redis:// 地址时覆盖）
-# influxdb：需 InfluxDB 服务（plugin.monitor.timeseries.url 指向其 HTTP 端点）
-# questdb：需 QuestDB 服务（plugin.monitor.timeseries.url 指向其 HTTP 9000 端点）
-# none：跳过时序，仅 MySQL 明细
-plugin:
+  # 时序存储引擎：datasource / redis / influxdb / questdb / none（默认 datasource）
+  # datasource：JDBC 数据库明细表（用 Engine + SqlExecutor）
+  # redis：Redis ZSET 简化时序（默认取 spring.data.redis；plugin.monitor.timeseries.url 配成 redis:// 地址时覆盖）
+  # influxdb：需 InfluxDB 服务（plugin.monitor.timeseries.url 指向其 HTTP 端点）
+  # questdb：需 QuestDB 服务（plugin.monitor.timeseries.url 指向其 HTTP 9000 端点）
+  # none：跳过时序，仅 MySQL 明细
   monitor:
     timeseries:
       # 主机历史与监控项双写统一走 SeriesEngine；datasource=JDBC 实现，可切 redis/influxdb
