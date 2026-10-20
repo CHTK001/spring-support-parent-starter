@@ -74,7 +74,12 @@ public class TtsGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("tts_voice", "", "STRING", "默认发音人（多说话人模型有效，如 SSB0005 / alloy）", 5),
                 new SettingItem("tts_speed", "1.0", "NUMBER", "语速倍率（1.0 为原速，0.5 半速，2.0 倍速）", 6),
                 new SettingItem("tts_format", "mp3", "STRING", "输出音频格式（wav / mp3 / ogg / flac / pcm）", 7),
-                new SettingItem("language", "", "STRING", "合成语言（ISO 639-1，如 zh / en，留空由模型推断）", 8)
+                new SettingItem("language", "", "STRING", "合成语言（ISO 639-1，如 zh / en，留空由模型推断）", 8),
+                // 音频管线的「文字模型」：合成前把文本规范化（数字/符号/缩写改写成适合朗读的表述）。
+                // 与 ASR 的 corrector_model 一对称：同样留空关闭、失败保留原文、非必填。
+                new SettingItem("text_normalize_model", "", "STRING",
+                        "文本规范化模型（留空关闭，如 gpt-4o / deepseek-chat；合成前用大模型把数字、"
+                                + "符号、缩写改写成适合朗读的表述。非必填，失败保留原文）", 9)
         );
     }
 }

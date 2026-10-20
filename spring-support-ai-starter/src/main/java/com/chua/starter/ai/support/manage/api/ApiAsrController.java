@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.common.support.ai.audio.AudioClientSetting;
 import com.chua.common.support.ai.audio.VirtualClient;
+import com.chua.starter.ai.support.configuration.audio.AudioTextRefineService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
@@ -56,6 +57,22 @@ public class ApiAsrController {
     private final SysAiUserSettingService userSettingService;
 
     /**
+     * 音频管线的文字模型后处理（转写结果矫正）。留空关闭、失败保留原文。
+     */
+    private final AudioTextRefineService audioTextRefineService;
+
+    /**
+     * 转写结果矫正的系统指令。
+     *
+     * <p>刻意写得很窄：只改「看错了」的地方，不许改写、不许增删信息。
+     * 音频转写是事实性产物，模型一旦"顺手润色"，用户拿到的就不再是原话了。</p>
+     */
+    private static final String CORRECT_SYSTEM_PROMPT =
+            "你是语音识别结果矫正助手。只修正识别错误：同音字/近音字、专有名词与术语、标点与断句。"
+                    + "不要改写语气，不要增删信息，不要解释，不要输出多余内容。"
+                    + "无法确定的地方保持原样。只输出矫正后的文本。";
+
+    /**
      * 上传音频并转写为文本。
      *
      * @param file 音频文件（wav / mp3 / m4a / flac 等，后端按模型要求解码）
@@ -108,7 +125,11 @@ public class ApiAsrController {
             if (text == null || text.isBlank()) {
                 throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "ASR 返回空结果，请检查模型是否可用");
             }
-            return ApiResult.ok(buildResult(text, selectedLanguage, provider, selectedModel));
+            // 管线后处理：配了文字模型（asr.corrector_model）才走，留空即关闭。
+            // 放在 transcribe 成功之后：主产物已拿到，后处理失败也不会让它丢。
+            String refined = audioTextRefineService.refine(
+                    text, text(merged.get("corrector_model")), CORRECT_SYSTEM_PROMPT);
+            return ApiResult.ok(buildResult(refined, selectedLanguage, provider, selectedModel));
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {

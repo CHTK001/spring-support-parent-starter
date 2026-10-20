@@ -223,8 +223,23 @@ public class AiPipelineController {
                 "文档入库+检索问答管线，入库 = 抽取→分块→向量化→入库，问答 = 检索→过滤→生成", "/capabilities/rag", "rag"));
         result.add(globalBean("input", "输入优化", "input",
                 "全局对话输入自动优化（压缩/改写）", "/settings/global-beans", "input"));
-        result.add(globalBean("asr", "语音识别", "asr",
-                "全局语音识别 ASR 客户端配置", "/settings/global-beans", "asr"));
+
+        // 音频两条管线。
+        //
+        // 原先它们是 globalBean（只有客户端配置、没有模型槽），能力页打开后
+        // 既没有标题、也看不到「这个管线需要哪些模型」。改造成 pipeline 后：
+        //   语音识别 = ASR 模型（必填）+ 文本矫正模型（可选，参照 OCR 的 corrector_model）
+        //   语音合成 = TTS 模型（必填）+ 文本规范化模型（可选，与矫正侧对称）
+        // 两个可选模型都是「留空关闭、失败保留原文」，非必填。
+        result.add(pipeline("asr", "语音识别", "asr", "asr",
+                List.of("asr"), List.of("corrector"),
+                "语音转文字管线：ASR 模型必填；文本矫正模型可选（非必填，留空关闭）——"
+                        + "用大模型修正转写里的同音字、术语与标点", "/capabilities/asr", "asr"));
+        result.add(pipeline("tts", "语音合成", "tts", "tts",
+                List.of("tts"), List.of("text-normalize"),
+                "文字转语音管线：TTS 模型必填；文本规范化模型可选（非必填，留空关闭）——"
+                        + "合成前用大模型把数字、符号、缩写改写成适合朗读的表述", "/capabilities/tts", "tts"));
+
         result.add(globalBean("bot", "Bot 全局设置", "bot",
                 "Bot 绑定默认行为与回复策略", "/settings/global-beans", "bot"));
 

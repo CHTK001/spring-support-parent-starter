@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.common.support.ai.audio.TextToAudioClient;
 import com.chua.common.support.ai.audio.TextToAudioClientSetting;
+import com.chua.starter.ai.support.configuration.audio.AudioTextRefineService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.SysAiUserSettingService;
@@ -50,6 +51,22 @@ public class ApiTtsController {
      */
     private final SysAiUserSettingService userSettingService;
 
+    /**
+     * 音频管线的文字模型后处理（合成前文本规范化）。留空关闭、失败保留原文。
+     */
+    private final AudioTextRefineService audioTextRefineService;
+
+    /**
+     * 文本规范化的系统指令。
+     *
+     * <p>只做「读起来顺」这件事：数字、符号、缩写改写成可朗读的表述。
+     * 不许改语义、不许总结、不许加解释 —— 用户要听到的是他自己写的那句话。</p>
+     */
+    private static final String NORMALIZE_SYSTEM_PROMPT =
+            "你是语音合成前的文本规范化助手。把数字、单位、符号、缩写、网址等改写成适合直接朗读的中文表述，"
+                    + "例如 2024 年、百分之三十、三点一四。不要改动语义，不要总结，不要增删信息，不要解释。"
+                    + "只输出规范化后的文本。";
+
     @Value("${ai.tts.provider:}")
     private String provider;
 
@@ -77,6 +94,10 @@ public class ApiTtsController {
         }
 
         Map<String, Object> merged = mergedTtsSettings();
+        // 管线前置处理：配了文字模型（tts.text_normalize_model）才走，留空即关闭。
+        // 放在合成之前 —— 规范化本来就是为了让朗读更自然，必须在送进 TTS 之前完成。
+        text = audioTextRefineService.refine(
+                text, text(merged.get("text_normalize_model")), NORMALIZE_SYSTEM_PROMPT);
         String selectedProvider = firstNonBlank(text(merged.get("provider")), provider);
         if (selectedProvider == null) {
             throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED,
