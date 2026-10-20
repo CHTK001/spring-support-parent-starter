@@ -72,7 +72,13 @@ public class OcrController {
                     "results", results,
                     "elapsedMs", System.currentTimeMillis() - start
             ));
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // 这里必须是 Throwable，不能是 Exception：模型文件缺失时底层抛的是
+            // UnsatisfiedLinkError（Error 的子类），catch (Exception) 接不住，它会一路
+            // 逃到全局异常处理器，被整成一句「系统繁忙，请稍后重试」，把
+            // 「未在 classpath 找到匹配 *.onnx 的文件: ocr/PP-OCRv6/tiny/det_infer/」
+            // 这条唯一能定位问题的信息吞得一干二净（实测：前端只显示系统繁忙，
+            // 必须翻服务器日志才知道是模型没放）。
             log.error("[Ocr] 文字识别失败", e);
             return ReturnResult.error("文字识别失败: " + e.getMessage());
         }
@@ -99,7 +105,8 @@ public class OcrController {
             return ResponseEntity.ok()
                     .contentType(MediaType.IMAGE_JPEG)
                     .body(result);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // 同上：Error 也要接住，否则真正的失败原因进不了日志与响应
             log.error("[Ocr] 检测标注失败: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
@@ -116,8 +123,8 @@ public class OcrController {
     public ReturnResult<?> models() {
         try {
             return ReturnResult.ok(ocrClientManager.listModels());
-        } catch (Exception e) {
-            log.error("[Ocr] 模型清单枚举失败: {}", e.getMessage());
+        } catch (Throwable e) {
+            log.error("[Ocr] 模型清单枚举失败: {}", e.getMessage(), e);
             return ReturnResult.error("模型清单枚举失败: " + e.getMessage());
         }
     }
