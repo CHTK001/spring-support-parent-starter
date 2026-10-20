@@ -62,6 +62,21 @@ public interface DeviceSession {
     String getLiveUrl(int channel, String protocol);
 
     /**
+     * 获取指定码流的播放地址
+     *
+     * <p>默认忽略码流类型，保持与两参数版本一致；支持主/子码流的平台
+     * （海康云眸、大华云睿等）覆盖本方法。</p>
+     *
+     * @param channel    通道
+     * @param protocol   协议
+     * @param streamType 码流：main 主码流 / sub 子码流
+     * @return 拉流地址
+     */
+    default String getLiveUrl(int channel, String protocol, String streamType) {
+        return getLiveUrl(channel, protocol);
+    }
+
+    /**
      * 获取录像回放 URL（HLS）
      *
      * @return 回放 URL，平台不支持时返回 空

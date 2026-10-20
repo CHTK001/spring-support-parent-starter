@@ -1,10 +1,13 @@
 package com.chua.starter.device.support.configuration;
 
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.device.spi.DeviceProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -26,6 +29,8 @@ import java.util.List;
         "com.chua.starter.device.support.service",
         "com.chua.starter.device.support.scheduler",
         "com.chua.starter.device.support.util",
+        "com.chua.starter.device.support.security",
+        "com.chua.starter.device.support.realtime",
         "com.chua.starter.device.provider"
 })
 @MapperScan("com.chua.starter.device.support.mapper")
@@ -48,6 +53,25 @@ public class DeviceAutoConfiguration {
     public List<DeviceProvider> deviceProviders(List<DeviceProvider> providers) {
         providers.forEach(p -> log.info("[Device] 注册 Provider: vendor={}", p.getVendor()));
         return providers;
+    }
+
+    /**
+     * 分页插件兜底。
+     *
+     * <p>设备模块的 XML 分页 SQL 依赖 MyBatis-Plus 的 {@link PaginationInnerInterceptor}；
+     * 宿主若已通过 spring-support-mybatis-starter 注册同名 Bean，本方法自动退避，
+     * 不改变既有装配。模块独立运行（仅引入 device-starter）时也能正确返回 total。</p>
+     *
+     * @return MyBatis-Plus 拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean(MybatisPlusInterceptor.class)
+    public MybatisPlusInterceptor deviceMybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 不指定 DbType，由连接自动识别，兼容 MySQL / H2(MySQL 模式)
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
+        log.info("[Device] 未发现宿主分页插件，已注册设备模块分页兜底");
+        return interceptor;
     }
 
     /**

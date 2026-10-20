@@ -2,6 +2,10 @@ package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
+import com.chua.starter.device.support.model.DevicePageQuery;
+import com.chua.starter.device.support.model.DeviceSaveRequest;
+import com.chua.starter.device.support.model.DeviceStats;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 
 import java.util.List;
@@ -23,12 +27,46 @@ public interface DeviceService {
     DeviceInfo addDevice(DeviceConnectInfo info);
 
     /**
+     * 添加设备（含资产字段）并连接
+     *
+     * @param request 设备连接信息 + 资产字段
+     * @return 设备信息实体
+     */
+    DeviceInfo addDevice(DeviceSaveRequest request);
+
+    /**
      * 更新设备信息
      *
      * @param id   设备 标识
      * @param info 设备信息
      */
     void updateDevice(String id, DeviceInfo info);
+
+    /**
+     * 更新设备（含资产字段）
+     * <p>密码为空或为掩码时表示不修改。</p>
+     *
+     * @param id      设备 标识
+     * @param request 设备连接信息 + 资产字段
+     */
+    void updateDevice(String id, DeviceSaveRequest request);
+
+    /**
+     * 分页查询设备
+     *
+     * @param query 查询条件
+     * @return 分页结果
+     */
+    PageResult<DeviceInfo> pageDevices(DevicePageQuery query);
+
+    /**
+     * 设备台账统计
+     *
+     * @param orgId  组织 ID，可选
+     * @param vendor 厂商，可选
+     * @return 统计结果
+     */
+    DeviceStats stats(String orgId, String vendor);
 
     /**
      * 删除设备并断开连接
