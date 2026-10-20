@@ -2649,7 +2649,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (task == null) {
             throw new BusinessException("任务不存在");
         }
-        EduUserContext.checkWritable(task.getOwnerUserId());
+        // 预览是只读操作：不能复用 checkWritable（预置数据会误报「不允许修改」）
+        EduUserContext.checkReadable(task.getOwnerUserId());
         EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
                 ? findSheet(taskId)
                 : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
