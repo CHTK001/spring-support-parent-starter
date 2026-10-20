@@ -19,8 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * 数据库映射加载器，启动时从数据库表加载 数据同步 映射配置。
  * <p>
- * 表结构由 {@code spring-support-datasource-starter} 自动执行
- * {@code db/init/V1.0.0__init_datasync_mapping.sql} 初始化，此类仅负责查询映射数据。
+ * 表结构与种子由本模块自己的 {@code db/init/V2.0__init_all_datasync.sql} /
+ * {@code db/init/V2.0__initdata_datasync.sql} 建好（模块自己持有 init sql 与 initdata sql），
+ * 此类仅负责查询映射数据。
  * </p>
  *
  * @since 4.0.0.42
