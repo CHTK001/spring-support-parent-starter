@@ -167,4 +167,19 @@ public class EduStudentCenterController {
                                                     @RequestParam Integer masteryLevel) {
         return ReturnResult.ok(studentCenterService.updateMyWrongMastery(wrongId, masteryLevel));
     }
+
+    /**
+     * 一键订正我的错题。
+     *
+     * <p>订正是学生在错题卡上重新作答后的客观标记（与掌握度主观自评独立）。
+     * 标记后 {@code wrong_question_corrected=1} 并记录订正时间，供老师端统计订正率。</p>
+     *
+     * @param wrongId 错题记录标识
+     * @return 是否成功
+     */
+    @Operation(summary = "订正我的错题")
+    @PutMapping("/wrongbook/correct/{wrongId}")
+    public ReturnResult<Boolean> markCorrected(@PathVariable Long wrongId) {
+        return ReturnResult.ok(studentCenterService.markMyWrongCorrected(wrongId));
+    }
 }

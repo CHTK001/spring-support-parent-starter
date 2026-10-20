@@ -145,7 +145,8 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
                     wrong.getWrongQuestionWrongCount(),
                     wrong.getWrongQuestionMasteryLevel(),
                     wrong.getWrongQuestionReviewCount(),
-                    wrong.getWrongQuestionLastWrongTime()));
+                    wrong.getWrongQuestionLastWrongTime(),
+                    wrong.getWrongQuestionCorrected()));
         }
         return out;
     }
@@ -169,6 +170,24 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         wrong.setWrongQuestionLastReviewTime(LocalDateTime.now());
         wrong.setWrongQuestionReviewCount(
                 (wrong.getWrongQuestionReviewCount() == null ? 0 : wrong.getWrongQuestionReviewCount()) + 1);
+        wrongQuestionMapper.updateById(wrong);
+        return true;
+    }
+
+    @Override
+    public boolean markMyWrongCorrected(Long wrongId) {
+        if (wrongId == null) {
+            throw new BusinessException("错题记录不能为空");
+        }
+        EduWrongQuestion wrong = wrongQuestionMapper.selectById(wrongId);
+        if (wrong == null) {
+            throw new BusinessException("错题记录不存在");
+        }
+        if (!EduUserContext.requireUserId().equals(wrong.getWrongQuestionStudentId())) {
+            throw new BusinessException("无权操作该错题");
+        }
+        wrong.setWrongQuestionCorrected(1);
+        wrong.setWrongQuestionCorrectTime(LocalDateTime.now());
         wrongQuestionMapper.updateById(wrong);
         return true;
     }

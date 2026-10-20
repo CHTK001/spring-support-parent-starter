@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.PageResult;
+import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduWrongQuestionMapper;
 import com.chua.starter.eduai.model.EduWrongQuestion;
 import com.chua.starter.eduai.model.dto.ReviewPaperDTO;
 import com.chua.starter.eduai.model.dto.WrongQueryDTO;
 import com.chua.starter.eduai.model.vo.WrongQuestionVO;
+import com.chua.starter.eduai.model.vo.WrongSourceVO;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
@@ -212,9 +214,43 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
                 entity.getWrongQuestionLastReviewTime(),
                 entity.getWrongQuestionReviewCount(),
                 entity.getWrongQuestionPaperId(),
+                entity.getWrongQuestionSourceTaskId(),
+                entity.getWrongQuestionSourceTaskTime(),
+                entity.getWrongQuestionCorrected(),
+                entity.getWrongQuestionCorrectTime(),
                 entity.getWrongQuestionStudentName(),
                 entity.getWrongQuestionStudentAccount(),
                 entity.getWrongQuestionStem(),
                 entity.getWrongQuestionSubject());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean markCorrected(Long wrongId) {
+        EduWrongQuestion entity = baseMapper.selectById(wrongId);
+        if (entity == null) {
+            throw new BusinessException("错题记录不存在");
+        }
+        EduUserContext.checkWritable(entity.getOwnerUserId());
+        entity.setWrongQuestionCorrected(1);
+        entity.setWrongQuestionCorrectTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
+        baseMapper.updateById(entity);
+        log.info("标记错题订正: wrongId={}, student={}, question={}",
+                wrongId, entity.getWrongQuestionStudentId(), entity.getWrongQuestionQuestionId());
+        return true;
+    }
+
+    @Override
+    public List<WrongSourceVO> listSourceTasks(Long wrongId) {
+        EduWrongQuestion entity = baseMapper.selectById(wrongId);
+        if (entity == null) {
+            throw new BusinessException("错题记录不存在");
+        }
+        EduUserContext.checkWritable(entity.getOwnerUserId());
+        if (entity.getWrongQuestionStudentId() == null || entity.getWrongQuestionQuestionId() == null) {
+            return List.of();
+        }
+        return baseMapper.listSourceTasks(entity.getWrongQuestionStudentId(), entity.getWrongQuestionQuestionId());
     }
 }

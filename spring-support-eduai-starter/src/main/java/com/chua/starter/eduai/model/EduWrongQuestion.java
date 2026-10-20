@@ -59,6 +59,20 @@ public class EduWrongQuestion extends SysBase {
     private String wrongQuestionSourceTaskId;
 
     /**
+     * 订正状态：0 未订正 / 1 已订正。
+     *
+     * <p>与掌握度（{@code wrong_question_mastery_level}）语义不同：掌握度是
+     * 学生复习后的主观自评，订正是老师讲解后要求学生在错题卡上重新作答的
+     * 客观动作。订正状态用于学生端一键标记、老师端统计订正率。</p>
+     */
+    private Integer wrongQuestionCorrected;
+
+    /**
+     * 最近订正时间
+     */
+    private LocalDateTime wrongQuestionCorrectTime;
+
+    /**
      * 错误次数
      */
     private Integer wrongQuestionWrongCount;
@@ -97,6 +111,10 @@ public class EduWrongQuestion extends SysBase {
     /** JOIN 补字段：学生姓名 */
     @TableField(exist = false)
     private String wrongQuestionStudentName;
+
+    /** JOIN 补字段：来源阅卷任务的完成时间（溯源展示用） */
+    @TableField(exist = false)
+    private LocalDateTime wrongQuestionSourceTaskTime;
 
     /** JOIN 补字段：学生绑定账号 */
     @TableField(exist = false)

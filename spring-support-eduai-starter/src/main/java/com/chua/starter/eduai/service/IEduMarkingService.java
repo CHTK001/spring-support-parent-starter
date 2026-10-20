@@ -2,10 +2,13 @@ package com.chua.starter.eduai.service;
 
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
+import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
+import com.chua.starter.eduai.model.vo.MarkingFinishPreviewVO;
 import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
+import com.chua.starter.eduai.model.vo.BatchMarkingResultVO;
 
 import java.util.List;
 import java.util.Map;
@@ -106,6 +109,51 @@ public interface IEduMarkingService {
      * @return 完成结果（学生 / 试卷 / 本次登记的错题数 / 是否此前已完成）
      */
     MarkingFinishResultVO finishMarking(String taskId);
+
+    /**
+     * 阅卷完成（支持剔除题目）。
+     *
+     * <p>完成前老师可能用预览弹窗勾选剔除部分题目（如得分率刚好压线、
+     * 主观题存疑等）。剔除列表里的题目即使按阈值判定为「错」，本次也不登记；
+     * 已登记的错题行不受影响（剔除只影响本次新增）。</p>
+     *
+     * @param taskId            任务业务标识
+     * @param excludeQuestionIds 本次不登记进错题本的题目列表（可空）
+     * @return 完成结果
+     */
+    MarkingFinishResultVO finishMarking(String taskId, List<Long> excludeQuestionIds);
+
+    /**
+     * 阅卷完成预览：按当前判错阈值算出将登记的题目清单。
+     *
+     * <p>老师点「完成」前先看清单，确认后再调用 {@link #finishMarking(String, List)}。
+     * 预览不改任何数据。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 预览结果（学生 / 将登记题数 / 题目清单）
+     */
+    MarkingFinishPreviewVO previewFinishMarking(String taskId);
+
+    /**
+     * 批量阅卷完成。
+     *
+     * <p>逐任务执行，单个任务失败只记录失败原因，不整体回滚。
+     * 每个任务可按 {@code excludeQuestionIdsByTask} 剔除部分题目。</p>
+     *
+     * @param request 批量请求（任务列表 + 可选剔除映射）
+     * @return 逐任务完成结果
+     */
+    List<BatchMarkingResultVO> batchFinishMarking(BatchMarkingRequest request);
+
+    /**
+     * 批量撤销「完成」。
+     *
+     * <p>逐任务执行，单个任务失败只记录失败原因，不整体回滚。</p>
+     *
+     * @param request 批量请求（任务列表）
+     * @return 逐任务撤销结果
+     */
+    List<BatchMarkingResultVO> batchUnfinishMarking(BatchMarkingRequest request);
 
     /**
      * 撤销「完成」：删除本次登记的错题并复位完成标记。

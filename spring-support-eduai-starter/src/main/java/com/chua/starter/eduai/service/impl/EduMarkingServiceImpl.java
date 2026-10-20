@@ -30,10 +30,14 @@ import com.chua.starter.eduai.model.EduPaperQuestion;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
+import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
+import com.chua.starter.eduai.model.vo.MarkingFinishPreviewVO;
+import com.chua.starter.eduai.model.vo.MarkingPreviewQuestionVO;
 import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
+import com.chua.starter.eduai.model.vo.BatchMarkingResultVO;
 import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
@@ -2556,6 +2560,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public MarkingFinishResultVO finishMarking(String taskId) {
+        return finishMarking(taskId, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public MarkingFinishResultVO finishMarking(String taskId, List<Long> excludeQuestionIds) {
         EduMarkingTask task = taskMapper.selectByTaskId(taskId);
         if (task == null) {
             throw new BusinessException("任务不存在");
@@ -2590,13 +2600,15 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 其次按试卷题目分值，最后退到配置的兜底单题分。
         Map<Long, Integer> fullScores = resolveFullScores(sheet);
         double wrongRate = properties.getMarking().getWrongScoreRate();
+        Set<Long> excluded = excludeQuestionIds == null || excludeQuestionIds.isEmpty()
+                ? Set.of() : new HashSet<>(excludeQuestionIds);
 
         int recorded = 0;
         int failed = 0;
         for (EduMarkingResult result : listByTask(taskId)) {
             Long questionId = result.getMarkingResultQuestionId();
             // 任意卷没有题库记录（题目标识记 0），错题本只登记真实题目标识
-            if (questionId == null || questionId <= 0) {
+            if (questionId == null || questionId <= 0 || excluded.contains(questionId)) {
                 continue;
             }
             int finalScore = result.getMarkingResultTeacherScore() != null
@@ -2626,9 +2638,103 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         task.setUpdateTime(LocalDateTime.now());
         taskMapper.updateById(task);
 
-        log.info("[EduAi] 阅卷完成: taskId={}, student={}, paperId={}, 本轮错题={}, 失败={}, 阈值={}",
-                taskId, studentId, paperId, recorded, failed, wrongRate);
+        log.info("[EduAi] 阅卷完成: taskId={}, student={}, paperId={}, 本轮错题={}, 失败={}, 阈值={}, 剔除={}",
+                taskId, studentId, paperId, recorded, failed, wrongRate, excluded.size());
         return new MarkingFinishResultVO(taskId, studentId, paperId, recorded, failed, false);
+    }
+
+    @Override
+    public MarkingFinishPreviewVO previewFinishMarking(String taskId) {
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        EduUserContext.checkWritable(task.getOwnerUserId());
+        EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
+                ? findSheet(taskId)
+                : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+        String studentId = firstNonBlank(task.getMarkingTaskStudentId(),
+                sheet == null ? null : sheet.getAnswerSheetStudentId());
+        if (isUnidentifiedStudent(studentId)) {
+            throw new BusinessException("该卷还没有识别到学生，请先用上方「修改学生」设置学号后再点完成");
+        }
+        Map<Long, Integer> fullScores = resolveFullScores(sheet);
+        double wrongRate = properties.getMarking().getWrongScoreRate();
+        List<MarkingPreviewQuestionVO> questions = new ArrayList<>();
+        int wrongCount = 0;
+        for (EduMarkingResult result : listByTask(taskId)) {
+            Long questionId = result.getMarkingResultQuestionId();
+            if (questionId == null || questionId <= 0) {
+                continue;
+            }
+            int finalScore = result.getMarkingResultTeacherScore() != null
+                    ? result.getMarkingResultTeacherScore()
+                    : (result.getMarkingResultAiScore() == null ? 0 : result.getMarkingResultAiScore());
+            Integer maxScore = parseDetailMaxScoreOrNull(result.getMarkingResultDetail());
+            if (maxScore == null || maxScore <= 0) {
+                maxScore = fullScores.getOrDefault(questionId, properties.getMarking().getMaxScore());
+            }
+            int safeMax = maxScore == null || maxScore <= 0 ? properties.getMarking().getMaxScore() : maxScore;
+            boolean wrong = isWrongByFinalScore(finalScore, safeMax, wrongRate);
+            String stem = null;
+            EduQuestion question = questionMapper.selectById(questionId);
+            if (question != null) {
+                stem = question.getQuestionStem();
+            }
+            java.math.BigDecimal rate = safeMax <= 0 ? java.math.BigDecimal.ZERO
+                    : java.math.BigDecimal.valueOf(Math.min(1.0, (double) finalScore / safeMax))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            questions.add(new MarkingPreviewQuestionVO(questionId, stem, finalScore, safeMax, rate, wrong));
+            if (wrong) {
+                wrongCount++;
+            }
+        }
+        return new MarkingFinishPreviewVO(taskId, studentId, wrongCount, questions);
+    }
+
+    @Override
+    public List<BatchMarkingResultVO> batchFinishMarking(BatchMarkingRequest request) {
+        if (request == null || request.taskIds() == null || request.taskIds().isEmpty()) {
+            throw new BusinessException("请选择至少一个任务");
+        }
+        if (request.taskIds().size() > 50) {
+            throw new BusinessException("单次批量操作最多 50 个任务");
+        }
+        Map<String, List<Long>> excludes = request.excludeQuestionIdsByTask() == null
+                ? Map.of() : request.excludeQuestionIdsByTask();
+        List<BatchMarkingResultVO> out = new ArrayList<>();
+        for (String taskId : request.taskIds()) {
+            try {
+                MarkingFinishResultVO r = finishMarking(taskId, excludes.get(taskId));
+                out.add(new BatchMarkingResultVO(taskId, true, "完成成功",
+                        r.wrongCount() == null ? 0 : r.wrongCount(), 0));
+            } catch (Exception e) {
+                log.warn("[EduAi] 批量完成单任务失败: taskId={}, err={}", taskId, e.getMessage());
+                out.add(new BatchMarkingResultVO(taskId, false, e.getMessage(), 0, 0));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public List<BatchMarkingResultVO> batchUnfinishMarking(BatchMarkingRequest request) {
+        if (request == null || request.taskIds() == null || request.taskIds().isEmpty()) {
+            throw new BusinessException("请选择至少一个任务");
+        }
+        if (request.taskIds().size() > 50) {
+            throw new BusinessException("单次批量操作最多 50 个任务");
+        }
+        List<BatchMarkingResultVO> out = new ArrayList<>();
+        for (String taskId : request.taskIds()) {
+            try {
+                MarkingUndoResultVO r = unfinishMarking(taskId);
+                out.add(new BatchMarkingResultVO(taskId, true, "撤销成功", 0, r.removed()));
+            } catch (Exception e) {
+                log.warn("[EduAi] 批量撤销单任务失败: taskId={}, err={}", taskId, e.getMessage());
+                out.add(new BatchMarkingResultVO(taskId, false, e.getMessage(), 0, 0));
+            }
+        }
+        return out;
     }
 
     /**

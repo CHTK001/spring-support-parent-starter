@@ -20,7 +20,8 @@
     </select>
 
     <!-- 分页查询错题：多条件筛选（学科走题目子查询）+ 归属隔离 + 最近错误时间倒序。
-         join edu_student 补姓名/账号，join edu_question 补题干/学科。 -->
+         join edu_student 补姓名/账号，join edu_question 补题干/学科，
+         join edu_marking_task 补来源任务的完成时间（错题溯源展示用）。 -->
     <select id="pageSelect" resultType="com.chua.starter.eduai.model.EduWrongQuestion">
         SELECT
             w.wrong_question_id,
@@ -32,6 +33,10 @@
             w.wrong_question_last_review_time,
             w.wrong_question_review_count,
             w.wrong_question_paper_id,
+            w.wrong_question_source_task_id,
+            w.wrong_question_corrected,
+            w.wrong_question_correct_time,
+            t.marking_task_teacher_finish_time AS wrong_question_source_task_time,
             s.student_name AS wrong_question_student_name,
             s.student_account AS wrong_question_student_account,
             q.question_stem AS wrong_question_stem,
@@ -39,6 +44,7 @@
         FROM edu_wrong_question w
         LEFT JOIN edu_student s ON s.student_no = w.wrong_question_student_id
         LEFT JOIN edu_question q ON q.question_id = w.wrong_question_question_id
+        LEFT JOIN edu_marking_task t ON t.marking_task_task_id = w.wrong_question_source_task_id
         <where>
             <if test="query.studentId != null and query.studentId != ''">
                 AND w.wrong_question_student_id = #{query.studentId}
@@ -72,6 +78,26 @@
         </where>
         ORDER BY w.wrong_question_mastery_level ASC, w.wrong_question_last_wrong_time DESC
         LIMIT #{count}
+    </select>
+
+    <!-- 错题来源任务溯源：同一 (student, question) 可能被多张卷、多次「完成」登记，
+         这里反查该题所有来源任务及其完成时间，供前端展示溯源时间线。 -->
+    <select id="listSourceTasks" resultType="com.chua.starter.eduai.model.vo.WrongSourceVO">
+        SELECT
+            t.marking_task_task_id AS sourceTaskId,
+            t.marking_task_teacher_finish_time AS sourceTaskTime,
+            t.marking_task_paper_id AS paperId,
+            p.paper_name AS paperName,
+            t.marking_task_student_id AS studentId
+        FROM edu_wrong_question w
+        JOIN edu_marking_task t ON t.marking_task_task_id = w.wrong_question_source_task_id
+        LEFT JOIN edu_paper p ON p.paper_id = t.marking_task_paper_id
+        WHERE w.wrong_question_student_id = #{studentId}
+          AND w.wrong_question_question_id = #{questionId}
+          AND w.wrong_question_source_task_id IS NOT NULL
+          AND w.wrong_question_source_task_id != ''
+        GROUP BY t.marking_task_task_id, t.marking_task_teacher_finish_time, t.marking_task_paper_id, p.paper_name, t.marking_task_student_id
+        ORDER BY t.marking_task_teacher_finish_time DESC
     </select>
 
 </mapper>
