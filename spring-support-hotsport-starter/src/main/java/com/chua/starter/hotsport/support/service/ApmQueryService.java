@@ -543,6 +543,148 @@ public class ApmQueryService {
     }
 
     /**
+     * 方法热点排行 — 按类.方法聚合 Span 的耗时/错误/阶段。
+     *
+     * @param limit 返回上限
+     * @return 热点方法列表（按总耗时降序）
+     */
+    public List<Map<String, Object>> traceHotspots(int limit) {
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        if (handler == null) {
+            return new ArrayList<>();
+        }
+        Map<String, Map<String, Object>> agg = new LinkedHashMap<>();
+        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+            if (span == null || span.getDuration() < 0) {
+                continue;
+            }
+            String key = (span.getClassName() == null ? "" : span.getClassName())
+                    + "." + (span.getMethodName() == null ? "" : span.getMethodName())
+                    + "|" + (span.getPhase() == null ? "method" : span.getPhase());
+            Map<String, Object> row = agg.computeIfAbsent(key, k -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("className", span.getClassName());
+                m.put("methodName", span.getMethodName());
+                m.put("phase", span.getPhase());
+                m.put("count", 0L);
+                m.put("totalMs", 0L);
+                m.put("maxMs", 0L);
+                m.put("errorCount", 0L);
+                m.put("selfTimeMs", 0L);
+                return m;
+            });
+            row.put("count", ((Number) row.get("count")).longValue() + 1);
+            row.put("totalMs", ((Number) row.get("totalMs")).longValue() + span.getDuration());
+            row.put("maxMs", Math.max(((Number) row.get("maxMs")).longValue(), span.getDuration()));
+            row.put("errorCount", "ERROR".equals(span.getStatus())
+                    ? ((Number) row.get("errorCount")).longValue() + 1
+                    : row.get("errorCount"));
+            row.put("selfTimeMs", ((Number) row.get("selfTimeMs")).longValue() + span.getSelfTime());
+        }
+        List<Map<String, Object>> list = new ArrayList<>(agg.values());
+        for (Map<String, Object> row : list) {
+            long count = ((Number) row.get("count")).longValue();
+            long total = ((Number) row.get("totalMs")).longValue();
+            row.put("avgMs", count > 0 ? Math.round(total * 10.0 / count) / 10.0 : 0);
+        }
+        list.sort((a, b) -> Long.compare(((Number) b.get("totalMs")).longValue(),
+                ((Number) a.get("totalMs")).longValue()));
+        if (limit > 0 && list.size() > limit) {
+            return new ArrayList<>(list.subList(0, limit));
+        }
+        return list;
+    }
+
+    /**
+     * 链路阶段耗时汇总 — 按 phase 聚合（http/network/db/cache/mq/rpc/method）。
+     *
+     * @return 阶段汇总列表
+     */
+    public List<Map<String, Object>> tracePhases() {
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        if (handler == null) {
+            return new ArrayList<>();
+        }
+        Map<String, Map<String, Object>> agg = new LinkedHashMap<>();
+        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+            if (span == null || span.getDuration() < 0) {
+                continue;
+            }
+            String phase = span.getPhase() == null ? "method" : span.getPhase();
+            Map<String, Object> row = agg.computeIfAbsent(phase, k -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("phase", phase);
+                m.put("count", 0L);
+                m.put("totalMs", 0L);
+                m.put("maxMs", 0L);
+                m.put("selfTimeMs", 0L);
+                return m;
+            });
+            row.put("count", ((Number) row.get("count")).longValue() + 1);
+            row.put("totalMs", ((Number) row.get("totalMs")).longValue() + span.getDuration());
+            row.put("maxMs", Math.max(((Number) row.get("maxMs")).longValue(), span.getDuration()));
+            row.put("selfTimeMs", ((Number) row.get("selfTimeMs")).longValue() + span.getSelfTime());
+        }
+        List<Map<String, Object>> list = new ArrayList<>(agg.values());
+        for (Map<String, Object> row : list) {
+            long count = ((Number) row.get("count")).longValue();
+            long total = ((Number) row.get("totalMs")).longValue();
+            row.put("avgMs", count > 0 ? Math.round(total * 10.0 / count) / 10.0 : 0);
+        }
+        list.sort((a, b) -> Long.compare(((Number) b.get("totalMs")).longValue(),
+                ((Number) a.get("totalMs")).longValue()));
+        return list;
+    }
+
+    /**
+     * SkyWalking 兼容导出 — 把 TraceHandler Span 转为 segment/span 结构。
+     *
+     * @return SkyWalking 兼容 Segment 列表
+     */
+    public List<Map<String, Object>> skywalkingExport() {
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        if (handler == null) {
+            return new ArrayList<>();
+        }
+        Map<String, List<Map<String, Object>>> segments = new LinkedHashMap<>();
+        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+            if (span == null) {
+                continue;
+            }
+            String traceId = span.getTraceId() == null ? "" : span.getTraceId();
+            List<Map<String, Object>> spans = segments.computeIfAbsent(traceId, k -> new ArrayList<>());
+            Map<String, Object> sw = new LinkedHashMap<>();
+            sw.put("spanId", span.getSpanId());
+            sw.put("parentSpanId", span.getParentSpanId());
+            sw.put("operationName", (span.getClassName() == null ? "" : span.getClassName())
+                    + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
+            sw.put("spanType", span.getParentSpanId() == null ? "Entry" : "Local");
+            sw.put("spanLayer", span.getPhase() == null ? "Unknown" : span.getPhase());
+            sw.put("startTime", span.getStartTime());
+            sw.put("endTime", span.getEndTime());
+            sw.put("isError", "ERROR".equals(span.getStatus()));
+            sw.put("logs", "ERROR".equals(span.getStatus()) ? span.getException() : null);
+            sw.put("peer", span.getClientIp());
+            spans.add(sw);
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<Map<String, Object>>> e : segments.entrySet()) {
+            Map<String, Object> segment = new LinkedHashMap<>();
+            segment.put("traceId", e.getKey());
+            segment.put("spanCount", e.getValue().size());
+            segment.put("spans", e.getValue());
+            result.add(segment);
+        }
+        return result;
+    }
+
+    /**
      * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
      *
      * @param traceId 链路 ID

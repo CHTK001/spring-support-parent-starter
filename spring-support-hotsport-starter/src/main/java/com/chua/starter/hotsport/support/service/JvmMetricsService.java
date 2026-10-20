@@ -14,6 +14,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
+import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.management.OperatingSystemMXBean;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>基于 JDK PlatformMXBean 采集堆内存 / GC / 线程 / CPU 指标：
  * {@link #snapshot()} 实时读取；{@link #recordSample()} 由
- * {@code @Scheduled}（{@code hotsport.jvm.sample-interval-ms}，默认 5s）驱动写入
+ * {@code @Scheduled}（{@code plugin.hotsport.jvm.sample-interval-ms}，默认 5s）驱动写入
  * {@link #RING_CAPACITY} 点环形缓冲，供 {@link #metrics(int)} 返回最近 N 分钟时序。</p>
  *
  * <p>每次采样后经 {@link #onSample} 钩子通知告警监控（由
@@ -84,9 +85,9 @@ public class JvmMetricsService {
     }
 
     /**
-     * 定时采样（间隔由 {@code hotsport.jvm.sample-interval-ms} 控制，默认 5000ms）。
+     * 定时采样（间隔由 {@code plugin.hotsport.jvm.sample-interval-ms} 控制，默认 5000ms）。
     */
-    @Scheduled(fixedDelayString = "${hotsport.jvm.sample-interval-ms:5000}")
+    @Scheduled(fixedDelayString = "${plugin.hotsport.jvm.sample-interval-ms:5000}")
     public void recordSample() {
         Map<String, Object> snapshot = snapshot();
         ring.get().addLast(snapshot);
@@ -198,6 +199,48 @@ public class JvmMetricsService {
      */
     public Map<String, Object> lastSample() {
         return lastSample.get();
+    }
+
+    /**
+     * 全量线程 Dump 快照（线程名 / 状态 / 栈帧前 N 层 / 锁信息）。
+     *
+     * @return 线程 Dump 列表
+     */
+    public List<Map<String, Object>> threadDump() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        ThreadMXBean tmx = ManagementFactory.getThreadMXBean();
+        long[] ids = tmx.getAllThreadIds();
+        for (long id : ids) {
+            ThreadInfo info = tmx.getThreadInfo(id, 24);
+            if (info == null) {
+                continue;
+            }
+            Map<String, Object> t = new LinkedHashMap<>();
+            t.put("threadId", info.getThreadId());
+            t.put("name", info.getThreadName());
+            t.put("state", info.getThreadState().name());
+            t.put("blockedTime", info.getBlockedTime());
+            t.put("blockedCount", info.getBlockedCount());
+            t.put("waitedTime", info.getWaitedTime());
+            t.put("waitedCount", info.getWaitedCount());
+            t.put("lockName", info.getLockName());
+            t.put("lockOwnerName", info.getLockOwnerName());
+            t.put("isDaemon", info.isDaemon());
+            t.put("isInNative", info.isInNative());
+            t.put("suspended", info.isSuspended());
+            StackTraceElement[] stack = info.getStackTrace();
+            List<String> frames = new ArrayList<>();
+            if (stack != null) {
+                for (StackTraceElement f : stack) {
+                    frames.add(f.toString());
+                }
+            }
+            t.put("stackTrace", frames);
+            result.add(t);
+        }
+        // 按名称稳定排序，便于 diff
+        result.sort((a, b) -> String.valueOf(a.get("name")).compareTo(String.valueOf(b.get("name"))));
+        return result;
     }
 
     /**

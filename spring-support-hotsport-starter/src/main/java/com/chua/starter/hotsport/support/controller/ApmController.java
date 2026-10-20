@@ -7,6 +7,7 @@ import com.chua.starter.hotsport.support.model.TransmissionQuery;
 import com.chua.starter.hotsport.support.service.ApmQueryService;
 import com.chua.starter.hotsport.support.service.ApmInjectService;
 import com.chua.starter.hotsport.support.service.JvmMetricsService;
+import com.chua.starter.hotsport.support.service.JvmMemoryService;
 import com.chua.starter.hotsport.support.service.AlertMonitorService;
 import com.chua.starter.agent.support.service.AgentAttachService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -65,6 +66,11 @@ public class ApmController {
      * JVM 指标服务（快照 + 时序 + 采样调度）。
     */
     private final JvmMetricsService jvmMetricsService;
+
+    /**
+     * JVM 内存诊断服务（对象内存 + 手动 GC + 类加载）。
+     */
+    private final JvmMemoryService jvmMemoryService;
 
     /**
      * 告警监控服务（阈值巡检事件流）。
@@ -170,6 +176,38 @@ public class ApmController {
     public ReturnResult<List<Map<String, Object>>> agentSystemOut(
             @RequestParam(defaultValue = "200") int limit) {
         return ReturnResult.ok(apmQueryService.systemOut(limit));
+    }
+
+    /**
+     * 方法热点排行（按 Span 聚合耗时/错误）。
+     *
+     * @param limit 返回上限
+     * @return 热点方法列表
+     */
+    @GetMapping("/agent/trace-hotspots")
+    public ReturnResult<List<Map<String, Object>>> agentTraceHotspots(
+            @RequestParam(defaultValue = "20") int limit) {
+        return ReturnResult.ok(apmQueryService.traceHotspots(limit));
+    }
+
+    /**
+     * 链路阶段耗时汇总（http/network/db/cache/mq/rpc/method）。
+     *
+     * @return 阶段汇总
+     */
+    @GetMapping("/agent/trace-phases")
+    public ReturnResult<List<Map<String, Object>>> agentTracePhases() {
+        return ReturnResult.ok(apmQueryService.tracePhases());
+    }
+
+    /**
+     * SkyWalking 兼容 Segment 导出。
+     *
+     * @return Segment 列表
+     */
+    @GetMapping("/agent/skywalking/export")
+    public ReturnResult<List<Map<String, Object>>> agentSkywalkingExport() {
+        return ReturnResult.ok(apmQueryService.skywalkingExport());
     }
 
     /**
@@ -360,6 +398,46 @@ public class ApmController {
     public ReturnResult<List<Map<String, Object>>> jvmMetrics(
             @RequestParam(defaultValue = "30") int minutes) {
         return ReturnResult.ok(jvmMetricsService.metrics(minutes));
+    }
+
+    /**
+     * JVM 内存池对象明细（对象内存查看）。
+     *
+     * @return 各内存池 used/committed/max + 对象估算
+     */
+    @GetMapping("/jvm/memory/pools")
+    public ReturnResult<Map<String, Object>> jvmMemoryPools() {
+        return ReturnResult.ok(jvmMemoryService.memoryPools());
+    }
+
+    /**
+     * 手动触发 GC 并返回释放量。
+     *
+     * @return GC 前后堆用量与差值
+     */
+    @PostMapping("/jvm/gc")
+    public ReturnResult<Map<String, Object>> jvmGc() {
+        return ReturnResult.ok(jvmMemoryService.gc());
+    }
+
+    /**
+     * 类加载统计。
+     *
+     * @return 已加载/卸载类数量
+     */
+    @GetMapping("/jvm/class-loading")
+    public ReturnResult<Map<String, Object>> jvmClassLoading() {
+        return ReturnResult.ok(jvmMemoryService.classLoading());
+    }
+
+    /**
+     * 全量线程 Dump 快照。
+     *
+     * @return 线程列表（含栈帧/锁信息）
+     */
+    @GetMapping("/jvm/thread-dump")
+    public ReturnResult<List<Map<String, Object>>> jvmThreadDump() {
+        return ReturnResult.ok(jvmMetricsService.threadDump());
     }
 
     /**
