@@ -61,6 +61,7 @@ echo ""
 
 nohup java $JAVA_OPTS \
   -Dspring-boot.run.profiles.active="${SPRING_PROFILES_ACTIVE:-default}" \
+  -Dplugin.filesystem.storage-server.mode=standalone \
   -Dplugin.filesystem.storage-server.port="${FILESTORAGE_PORT}" \
   -Dspring.datasource.url="${SPRING_DATASOURCE_URL}" \
   -Dspring.datasource.password="${MONITOR_DB_PASSWORD}" \

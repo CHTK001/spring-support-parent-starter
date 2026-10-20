@@ -2,25 +2,21 @@ package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.ServerBuilder;
-import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.filter.ServerFilter;
-import com.chua.common.support.reflection.ReflectUtils;
-import com.chua.common.support.storage.FileStorage;
 import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 
-import java.util.Map;
-import java.util.Set;
-
 /**
- * 文件存储服务器启动器。
+ * 文件存储服务器启动器（{@link FileStorageServerProperties.Mode#STANDALONE} 形态）。
  *
  * <p>使用 common-starter 的 {@link ServerBuilder} 启动一个独立 HTTP 服务，
  * 挂载 {@link FileStorageServerFilter}，并把 {@link FileStorageTemplate} 中全部
- * 提供者（provider）注册为存储桶，路径规则 {@code /{provider}/{objectKey}}。
- * 默认随应用启动（{@code plugin.filesystem.storage-server.enable=true}，端口 18080），
- * 供"文件服务器"页面直连；端口被占用时仅告警，不影响应用启动。</p>
+ * 提供者（provider）注册为存储桶，路径规则 {@code /{provider}/{objectKey}}。</p>
+ *
+ * <p>装配细节（行为开关 / 存储桶 / OAuth / CORS / 安全头）统一由
+ * {@link FileStorageServerAssembler} 提供，与内置形态（{@code FileStorageEmbeddedFilter}）
+ * 共用同一份逻辑。端口被占用时仅告警，不影响应用启动。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -31,11 +27,6 @@ public class FileStorageServerLauncher implements AutoCloseable {
      * 日志记录器
      */
     private static final ModuleLog MODULE_LOG = ModuleLog.of("FileSystem", FileStorageServerLauncher.class);
-
-    /**
-     * OAuth 鉴权过滤器全限定类名（oauth-client-starter 可选依赖，反射装载：类缺失时按公共桶运行）。
-     */
-    private static final String OAUTH_FILTER_CLASS = "com.chua.starter.oauth.client.support.filter.OAuthServerFilter";
 
     /**
      * 文件服务器配置
@@ -71,14 +62,8 @@ public class FileStorageServerLauncher implements AutoCloseable {
             return;
         }
         try {
-            FileStorageSetting setting = buildSetting();
-            seedPrivateBuckets(setting, properties.getPrivateBuckets());
-            FileStorageServerFilter filter = new FileStorageServerFilter(setting);
-            int buckets = 0;
-            for (Map.Entry<String, FileStorage> entry : template.storageMap.entrySet()) {
-                filter.addFileStorage(entry.getKey(), entry.getValue());
-                buckets++;
-            }
+            FileStorageServerFilter filter = FileStorageServerAssembler.createFilter(properties, template);
+            int buckets = template.storageMap.size();
             Server built = ServerBuilder.create()
                     .type(properties.getType())
                     .host(properties.getHost())
@@ -87,31 +72,19 @@ public class FileStorageServerLauncher implements AutoCloseable {
             // 文件服务器默认只放 10MiB 请求体，与 Spring 上传限制不一致；预览补测需要
             // 原样上传 >10MiB 样本，这里显式放大到与上传配置一致的 64MiB。
             built.getSetting().setMaxRequestSize(64L * 1024 * 1024);
-            // 跨域（CORS）：文件服务器是独立端口网关，前端基本都是跨源访问，故默认开启。
-            // 配置来源 plugin.filesystem.storage-server.cors.*（见 FileStorageServerProperties.Cors），
-            // 默认开启且允许携带凭据——预览页以 credentials:'include' 发起跨域 fetch，
-            // 缺 Access-Control-Allow-Credentials 会让浏览器拦掉整个响应。
-            // 映射经 Cors#applyTo 单点维护，与服务管理节点（ServerNodeRegistry）共用。
-            FileStorageServerProperties.Cors corsProperties = properties.getCors();
-            corsProperties.applyTo(built.getSetting().getCors());
-            // 预览统一走 iframe：显式开启安全头过滤器，但关闭 X-Frame-Options
-            // 并用 CSP frame-ancestors 限定可嵌入来源（SecurityHeadersConfig 默认
-            // enabled=false，此处按文件服务器需要显式开启）
-            ServerSetting.SecurityHeadersConfig security = built.getSetting().getSecurityHeaders();
-            security.setEnabled(true);
-            security.setFrameOptions("");
-            security.setFrameAncestors(properties.getFrameAncestors());
+            // 跨域与安全头：与内置形态共用同一套配置映射，避免两种形态语义漂移。
+            FileStorageServerAssembler.applyCors(properties, built.getSetting());
+            FileStorageServerAssembler.applySecurityHeaders(properties, built.getSetting());
             // OAuth 鉴权过滤器（oauth 模块，反射装配）：私有桶请求校验访问令牌，公共桶放行
-            ServerFilter oauthFilter = createOAuthFilter(setting);
+            ServerFilter oauthFilter = FileStorageServerAssembler.createOAuthFilter(properties, filter.getSetting());
             if (oauthFilter != null) {
                 built.addFilter(oauthFilter);
-                // 私有桶热更新：管理员 setConfig 后同步给 OAuth 鉴权过滤器
-                filter.setConfigListener(changed -> syncPrivateBuckets(oauthFilter, changed));
+                FileStorageServerAssembler.linkPrivateBucketSync(filter, oauthFilter);
             }
             built.addFilter(filter);
             built.start();
             this.server = built;
-            MODULE_LOG.info("文件服务器已启动: {}:{} 存储桶 {} 个", properties.getHost(), properties.getPort(), buckets);
+            MODULE_LOG.info("文件服务器已启动（独立形态）: {}:{} 存储桶 {} 个", properties.getHost(), properties.getPort(), buckets);
         } catch (Exception e) {
             MODULE_LOG.warn("文件服务器启动失败（端口 {} 可能被占用）: {}", properties.getPort(), e.getMessage());
         }
@@ -136,96 +109,6 @@ public class FileStorageServerLauncher implements AutoCloseable {
         String host = properties.getHost() == null || properties.getHost().isBlank()
                 || "0.0.0.0".equals(properties.getHost()) ? "127.0.0.1" : properties.getHost();
         return "http://" + host + ":" + properties.getPort() + "/";
-    }
-
-    /**
-     * 反射创建 OAuth 鉴权过滤器。
-     *
-     * <p>oauth-client-starter 为可选依赖：类缺失或装配失败时返回 空，文件服务器按公共桶运行，
-     * 不影响启动（与 {@code ServerNodeRegistry} 的插件语义一致）。</p>
-     *
-     * @param setting 文件存储配置（私有桶来源）
-     * @return 过滤器实例；不可用时返回 空
-     */
-    private ServerFilter createOAuthFilter(FileStorageSetting setting) {
-        try {
-            Class<?> filterClass = ReflectUtils.forName(OAUTH_FILTER_CLASS);
-            if (filterClass == null) {
-                MODULE_LOG.info("未检测到 OAuth 鉴权过滤器（oauth-client-starter 未装配），文件服务器按公共桶运行");
-                return null;
-            }
-            ServerFilter oauth = (ServerFilter) ReflectUtils.instantiate(filterClass);
-            // init(null)：无初始化参数时过滤器自行回退环境配置 plugin.oauth.file-storage.private-buckets
-            oauth.init(null);
-            syncPrivateBuckets(oauth, setting);
-            MODULE_LOG.info("已挂载 OAuth 鉴权过滤器: order={} 私有桶={}",
-                    oauth.getOrder(),
-                    setting.getPrivateBuckets() == null || setting.getPrivateBuckets().isEmpty()
-                            ? "无" : String.join(",", setting.getPrivateBuckets()));
-            return oauth;
-        } catch (Exception e) {
-            MODULE_LOG.warn("OAuth 鉴权过滤器装配失败（文件服务器按公共桶运行）: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * 私有桶初始值写入设置（配置项优先；留空时由 OAuth 过滤器回退环境配置）。
-     *
-     * @param setting 文件存储配置
-     * @param csv     私有桶（逗号分隔）
-     */
-    private void seedPrivateBuckets(FileStorageSetting setting, String csv) {
-        if (csv == null || csv.isBlank()) {
-            return;
-        }
-        Set<String> buckets = setting.getPrivateBuckets();
-        for (String item : csv.split(",")) {
-            String trimmed = item.trim();
-            if (!trimmed.isEmpty()) {
-                buckets.add(trimmed);
-            }
-        }
-    }
-
-    /**
-     * 同步私有桶到 OAuth 鉴权过滤器（热更新入口）。
-     *
-     * @param oauth   鉴权过滤器
-     * @param setting 最新文件存储配置
-     */
-    private void syncPrivateBuckets(ServerFilter oauth, FileStorageSetting setting) {
-        if (oauth == null) {
-            return;
-        }
-        Set<String> buckets = setting.getPrivateBuckets();
-        String csv = buckets == null || buckets.isEmpty() ? "" : String.join(",", buckets);
-        oauth.updateConfig(Map.of("privateBuckets", csv));
-    }
-
-    /**
-     * 构建文件存储行为配置
-     *
-     * @return FileStorageSetting
-     */
-    private FileStorageSetting buildSetting() {
-        return FileStorageSetting.builder()
-                .openPreview(properties.isOpenPreview())
-                .openDownload(properties.isOpenDownload())
-                .openRange(properties.isOpenRange())
-                .openWatermark(properties.isOpenWatermark())
-                .openWebjars(properties.isOpenWebjars())
-                .openRemoteFile(properties.isOpenRemoteFile())
-                .thirdUrlPreview(properties.getThirdUrlPreview())
-                .watermark(properties.getWatermark())
-                .layout(properties.isLayout())
-                .layoutType(properties.getLayoutType())
-                .imageFilter(properties.getImageFilter())
-                .fileSettingKey(properties.getFileSettingKey())
-                .openPathGuard(properties.isOpenPathGuard())
-                .imageFilterEnabled(properties.isImageFilterEnabled())
-                .filterChain(properties.getFilterChain())
-                .build();
     }
 
     @Override

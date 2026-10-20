@@ -49,6 +49,7 @@ nohup java \
     -Dspring.datasource.url="jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true" \
     -Dspring.datasource.username="root" \
     -Dspring.datasource.password="${MONITOR_DB_PASSWORD}" \
+    -Dplugin.filesystem.storage-server.mode=standalone \
     -Dplugin.filesystem.storage-server.port=18082 \
     -Dserver.port=8082 \
     -jar "$JAR" \
