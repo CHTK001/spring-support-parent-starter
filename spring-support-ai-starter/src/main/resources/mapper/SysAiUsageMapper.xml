@@ -227,7 +227,15 @@
             sys_ai_usage_model AS model,
             COUNT(*) AS totalCalls,
             COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS totalTokens,
-            COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost
+            COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost,
+            <!--
+                平均延迟：AVG 会自动跳过 NULL，也就是只对「真的测到了延迟」的调用取均值。
+                直接 AVG 全列而不做 COALESCE，是为了让「当天没有任何实测样本」时返回
+                NULL 而不是 0 —— 0ms 会被前端画成「延迟极低」的假象，NULL 才能表达「没数据」。
+                早期只落了汇总计量的调用没有这两个字段，混进均值会把延迟拉低。
+            -->
+            AVG(sys_ai_usage_first_token_latency) AS avgFirstTokenLatency,
+            AVG(sys_ai_usage_total_latency) AS avgTotalLatency
         FROM sys_ai_usage
         <where>
             <if test="startTime != null">
