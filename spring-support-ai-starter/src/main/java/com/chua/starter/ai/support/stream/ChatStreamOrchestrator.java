@@ -569,6 +569,15 @@ public class ChatStreamOrchestrator {
 
             StringBuilder fullReply = new StringBuilder();
             final boolean[] firstChunkLogged = {false};
+            // 首字耗时兜底。
+            //
+            // 为什么要自己记：TTFT 目前只在 lastUsage 非空时才有值，而 lastUsage 仅在
+            // provider 发来带用量的 STOP 帧、且 response.getUsage() 非空时才会被赋值。
+            // 供应商不回传用量时（OpenAI 兼容网关常见），整项 TTFT 缺失，界面上
+            // 「首 token 平均（TTFT）」永远显示「—」——但首个 chunk 的到达时刻我们
+            // 自己就能观测到，没有任何理由让它缺。
+            final long streamStartAt = System.currentTimeMillis();
+            final long[] firstChunkAt = {0L};
             // 人工确认请求（plan_exit）：agent 暂停时持有，随助手消息一并落库
             final com.chua.common.support.ai.agent.ConfirmationRequest[] pendingConfirmation = {null};
             // 工具调用轨迹：随助手消息落库 —— 否则「工具行」只在流式过程中有数据，
@@ -583,6 +592,9 @@ public class ChatStreamOrchestrator {
                             return;
                         }
                         if (chunk != null && !chunk.isEmpty()) {
+                            if (firstChunkAt[0] == 0L) {
+                                firstChunkAt[0] = System.currentTimeMillis();
+                            }
                             if (!firstChunkLogged[0]) {
                                 firstChunkLogged[0] = true;
                                 log.info("[ChatStream] 收到首个 chunk sessionId={}, len={}", sid, chunk.length());
@@ -600,6 +612,9 @@ public class ChatStreamOrchestrator {
                     (reply, usage) -> {
                         String finalText = reply != null ? reply : fullReply.toString();
                         log.info("[ChatStream] 流式完成 sessionId={}, 回复长度={}", sid, finalText.length());
+                        // 首字耗时兜底值：provider 没回传用量时也能给出 TTFT
+                        final Long localTtft = firstChunkAt[0] > 0
+                                ? Math.max(0L, firstChunkAt[0] - streamStartAt) : null;
                         int promptTokens;
                         int completionTokens;
                         Integer reportedPrompt = usage == null ? null : usage.getInputTokens();
@@ -644,7 +659,7 @@ public class ChatStreamOrchestrator {
                             // 「会话底部统计条」，走已有的 JSON 载体最省事，且与 route 的
                             // 合并顺序无关（attachUsageExtra 只补键、不覆盖）。
                             assistantMsg.setConfirmation(attachUsageExtra(
-                                    assistantMsg.getConfirmation(), usageStatsOf(usage)));
+                                    assistantMsg.getConfirmation(), usageStatsOf(usage, localTtft)));
                             aiDialogRecordService.addMessage(dialogId, assistantMsg);
                             log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageId, totalTokens);
                             chatMemorySupport.remember(memoryUser, sid, finalContent, finalText, modelToUse);
@@ -660,7 +675,7 @@ public class ChatStreamOrchestrator {
                         usageMap.put("totalTokens", totalTokens);
                         // 缓存命中 / 首字耗时：会话底部统计条要用，随 usage 一并下发，
                         // 避免前端再为这两个数多发一次请求。
-                        usageMap.putAll(usageStatsOf(usage));
+                        usageMap.putAll(usageStatsOf(usage, localTtft));
                         finishEvent.put("usage", usageMap);
                         sink.sendEvent(finishEvent);
                         Map<String, Object> turnEndEvent = new LinkedHashMap<>();
@@ -905,6 +920,9 @@ public class ChatStreamOrchestrator {
                 final StringBuilder fullReply = new StringBuilder();
                 final com.chua.common.support.ai.AiUsage[] usageHolder =
                         new com.chua.common.support.ai.AiUsage[1];
+                // 与主流程同一套首字耗时兜底：恢复轮同样可能拿不到 provider 用量
+                final long resumeStartAt = System.currentTimeMillis();
+                final long[] resumeFirstChunkAt = {0L};
 
                 // 把旧助手消息上的 pending 确认标记为终态（approved/rejected）
                 String confirmDecision = p.decisions() != null
@@ -949,6 +967,9 @@ public class ChatStreamOrchestrator {
                             if (chunk == null || chunk.isEmpty()) {
                                 return;
                             }
+                            if (resumeFirstChunkAt[0] == 0L) {
+                                resumeFirstChunkAt[0] = System.currentTimeMillis();
+                            }
                             fullReply.append(chunk);
                             Map<String, Object> textEvent = new LinkedHashMap<>();
                             textEvent.put("type", "text");
@@ -957,6 +978,8 @@ public class ChatStreamOrchestrator {
                         },
                         () -> {
                             String finalText = fullReply.toString();
+                            final Long resumeTtft = resumeFirstChunkAt[0] > 0
+                                    ? Math.max(0L, resumeFirstChunkAt[0] - resumeStartAt) : null;
                             int promptTokens = 0;
                             int completionTokens;
                             if (usageHolder[0] != null && usageHolder[0].getOutputTokens() != null) {
@@ -980,7 +1003,7 @@ public class ChatStreamOrchestrator {
                                 }
                                 // 缓存命中 / 首字耗时随消息落库（同主流程口径）
                                 assistantMsg.setConfirmation(attachUsageExtra(
-                                        assistantMsg.getConfirmation(), usageStatsOf(usageHolder[0])));
+                                        assistantMsg.getConfirmation(), usageStatsOf(usageHolder[0], resumeTtft)));
                                 aiDialogRecordService.addMessage(dialogId, assistantMsg);
                                 log.info("[ChatStream] 恢复助手消息已保存 sessionId={}, parentId={}, len={}",
                                         sid, p.userMessageId(), finalText.length());
@@ -995,7 +1018,7 @@ public class ChatStreamOrchestrator {
                             usageMap.put("promptTokens", promptTokens);
                             usageMap.put("completionTokens", completionTokens);
                             usageMap.put("totalTokens", totalTokens);
-                            usageMap.putAll(usageStatsOf(usageHolder[0]));
+                            usageMap.putAll(usageStatsOf(usageHolder[0], resumeTtft));
                             finishEvent.put("usage", usageMap);
                             sink.sendEvent(finishEvent);
                             Map<String, Object> turnEndEvent = new LinkedHashMap<>();
@@ -1264,19 +1287,29 @@ public class ChatStreamOrchestrator {
      * {@code cachedTokens} 为命中量（子集，不超过输入量），{@code firstTokenLatencyMs}
      * 为首字耗时；缺值时不放键，前端据此显示「—」而不是 0。</p>
      *
-     * @param usage 模型回传用量（可为 空）
+     * <p><b>首字耗时为什么要兜底。</b>{@code usage} 上的首字耗时只在 provider 回传了
+     * 带用量的 STOP 帧时才有值。供应商不回传用量（OpenAI 兼容网关很常见）时 usage
+     * 整个为 null，TTFT 就没了 —— 但首个 chunk 的到达时刻调用方自己看得到，
+     * 传进来即可用，没有任何理由让这一项空着。provider 给了值就以其为准
+     * （它更接近真实的首字时刻），只在缺失或非正数时才用兜底值。</p>
+     *
+     * @param usage                    模型回传用量（可为 空）
+     * @param fallbackFirstTokenMillis 首字耗时兜底值（毫秒，可为 空）
      * @return 至少为空 Map；无有效值时不带任何键
      */
-    private Map<String, Object> usageStatsOf(com.chua.common.support.ai.AiUsage usage) {
+    private Map<String, Object> usageStatsOf(com.chua.common.support.ai.AiUsage usage,
+                                             Long fallbackFirstTokenMillis) {
         Map<String, Object> stats = new LinkedHashMap<>(4);
-        if (usage == null) {
-            return stats;
+        if (usage != null) {
+            Integer cached = usage.getCacheTokens();
+            if (cached != null && cached > 0) {
+                stats.put("cachedTokens", cached);
+            }
         }
-        Integer cached = usage.getCacheTokens();
-        if (cached != null && cached > 0) {
-            stats.put("cachedTokens", cached);
+        Long firstToken = usage == null ? null : usage.getFirstTokenLatencyMillis();
+        if (firstToken == null || firstToken <= 0) {
+            firstToken = fallbackFirstTokenMillis;
         }
-        Long firstToken = usage.getFirstTokenLatencyMillis();
         if (firstToken != null && firstToken > 0) {
             stats.put("firstTokenLatencyMs", firstToken);
         }
