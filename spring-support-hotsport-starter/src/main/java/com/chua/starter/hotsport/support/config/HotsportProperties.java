@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Hotsport 配置属性 — 绑定 {@code hotsport.*}。
+ * Hotsport 配置属性 — 绑定 {@code plugin.hotsport.*}。
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Component
-@ConfigurationProperties(prefix = "hotsport")
+@ConfigurationProperties(prefix = "plugin.hotsport")
 public class HotsportProperties {
 
     /**

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * SSH 超时配置（运行时可改）
  * <p>
  * 三级超时统一在这里解析，优先级：数据库系统配置（{@code /ms/server/config}）
- * → yaml / 环境变量（{@code monitor.ssh.*-timeout}）→ 内置默认值。
+ * → yaml / 环境变量（{@code plugin.monitor.ssh.*-timeout}）→ 内置默认值。
  * 保存系统配置后由 {@link ServerConfigChangedEvent} 触发热刷新，
  * 并同步给 {@link SshClients} 的进程级默认值，因此所有未显式传超时的
  * SSH 调用点（Windows 远程执行、主机探测、终端隧道等）都会立即使用新值，
@@ -60,21 +60,21 @@ public class SshTimeouts {
     private static final int MAX_READ_SECONDS = 86_400;
 
     /**
-     * yaml：monitor.ssh.connect-timeout
+     * yaml：plugin.monitor.ssh.connect-timeout
      */
-    @Value("${monitor.ssh.connect-timeout:15}")
+    @Value("${plugin.monitor.ssh.connect-timeout:15}")
     private int yamlConnectTimeout;
 
     /**
-     * yaml：monitor.ssh.session-timeout（默认 30，避免高负载时 15s 认证超时）
+     * yaml：plugin.monitor.ssh.session-timeout（默认 30，避免高负载时 15s 认证超时）
      */
-    @Value("${monitor.ssh.session-timeout:30}")
+    @Value("${plugin.monitor.ssh.session-timeout:30}")
     private int yamlSessionTimeout;
 
     /**
-     * yaml：monitor.ssh.read-timeout；未配置时沿用旧的 monitor.ssh.exec-timeout
+     * yaml：plugin.monitor.ssh.read-timeout；未配置时沿用旧的 plugin.monitor.ssh.exec-timeout
      */
-    @Value("${monitor.ssh.read-timeout:${monitor.ssh.exec-timeout:60}}")
+    @Value("${plugin.monitor.ssh.read-timeout:${plugin.monitor.ssh.exec-timeout:60}}")
     private int yamlReadTimeout;
 
     /**

@@ -14,11 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * YAML 全局设置覆盖层（{@code chua.ai.settings.*}）测试。
+ * YAML 全局设置覆盖层（{@code plugin.ai.settings.*}）测试。
  *
  * <p>锁三件事：</p>
  * <ol>
- *   <li><b>扫描</b>：{@code chua.ai.settings.<group>.<field>} 形态的原始属性名
+ *   <li><b>扫描</b>：{@code plugin.ai.settings.<group>.<field>} 形态的原始属性名
  *       （yaml / properties 落盘形态）必须被扫进覆盖表 —— 扫不进来覆盖层就是
  *       <b>静默失效</b>：运维改完 yaml 以为换成了管线、实际还在跑旧值，
  *       这比启动报错更危险；</li>
@@ -43,9 +43,9 @@ class AiSettingsYamlPropertiesTest {
     @DisplayName("扫描原始属性名建表，kebab/snake 键等价命中")
     void scansRawPropertyNamesIntoTable() {
         AiSettingsYamlProperties props = withProperties(
-                "chua.ai.settings.layout.layout_threshold", "0.42",
-                "chua.ai.settings.layout.layout-model", "onnx:pp-doc-layout",
-                "chua.ai.settings.ocr.recognizer_model", "onnx:paddleocrv6-rec");
+                "plugin.ai.settings.layout.layout_threshold", "0.42",
+                "plugin.ai.settings.layout.layout-model", "onnx:pp-doc-layout",
+                "plugin.ai.settings.ocr.recognizer_model", "onnx:paddleocrv6-rec");
         // snake 键（与 sys_ai_global_setting.field 同名）
         assertEquals("0.42", props.get("layout", "layout_threshold"));
         // yaml 里写的 kebab 键，按 snake 字段查也必须命中
@@ -61,7 +61,7 @@ class AiSettingsYamlPropertiesTest {
      * 完全未配置：返回空、isEmpty=true —— 生产零覆盖时行为与引入覆盖层之前完全一致。
      */
     @Test
-    @DisplayName("未配置 chua.ai.settings 时为默认空实例")
+    @DisplayName("未配置 plugin.ai.settings 时为默认空实例")
     void unconfiguredIsEmpty() {
         AiSettingsYamlProperties props = withProperties();
         assertTrue(props.isEmpty());
@@ -77,8 +77,8 @@ class AiSettingsYamlPropertiesTest {
     void valueSemantics() {
         // 显式空串与空挂（null 值）混在同一组里
         Map<String, Object> source = new LinkedHashMap<>();
-        source.put("chua.ai.settings.layout.layout_model", "");
-        source.put("chua.ai.settings.layout.device", null);
+        source.put("plugin.ai.settings.layout.layout_model", "");
+        source.put("plugin.ai.settings.layout.device", null);
         AiSettingsYamlProperties props = withProperties(source);
 
         // 组名归一化：大小写等价
@@ -104,9 +104,9 @@ class AiSettingsYamlPropertiesTest {
     @DisplayName("summary 列出覆盖清单")
     void summaryListsOverriddenKeys() {
         AiSettingsYamlProperties props = withProperties(
-                "chua.ai.settings.ocr.recognizer_model", "onnx:rec",
-                "chua.ai.settings.ocr.device", "cpu",
-                "chua.ai.settings.layout.layout_threshold", "0.42");
+                "plugin.ai.settings.ocr.recognizer_model", "onnx:rec",
+                "plugin.ai.settings.ocr.device", "cpu",
+                "plugin.ai.settings.layout.layout_threshold", "0.42");
         String summary = props.summary();
         assertTrue(summary.contains("layout=[layout_threshold]"), summary);
         assertTrue(summary.contains("ocr=[recognizer_model, device]"), summary);
@@ -121,7 +121,7 @@ class AiSettingsYamlPropertiesTest {
     void excludesEnvStyleAndSingleSegmentNames() {
         AiSettingsYamlProperties props = withProperties(
                 "CHUA_AI_SETTINGS_LAYOUT_LAYOUT_THRESHOLD", "0.42",
-                "chua.ai.settings.layout", "orphan");
+                "plugin.ai.settings.layout", "orphan");
         assertTrue(props.isEmpty(), props.summary());
         assertNull(props.get("layout", "layout_threshold"));
     }

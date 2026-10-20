@@ -46,13 +46,14 @@ java -jar spring-support-hotsport-starter/target/spring-support-hotsport-starter
 ```yaml
 server:
   port: 8086
-hotsport:
-  agent:
-    enabled: true      # 关闭则不注入 Agent
-    shell-port: 4567   # telnet shell 端口
-  apm:
-    storage:
-      type: inmemory   # inmemory / sqlite / noop
+plugin:
+  hotsport:
+    agent:
+      enabled: true      # 关闭则不注入 Agent
+      shell-port: 4567   # telnet shell 端口
+    apm:
+      storage:
+        type: inmemory   # inmemory / sqlite / noop
 ```
 
 H2 内存 DataSource 仅作 `common-starter` 异常处理器的兜底，业务不写库。

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 演示数据种子 — 通过 {@code hotsport.demo.seed=true} 开启。
+ * 演示数据种子 — 通过 {@code plugin.hotsport.demo.seed=true} 开启。
  *
  * <p>用途：验收/演示环境下向 {@link ApmStorage} 写入一批真实结构的
  * 传输/依赖/泄漏/日志记录，走的是产品真实的存储与查询链路（仅数据来源
@@ -37,7 +37,7 @@ public class DemoSeedRunner implements ApplicationRunner {
     /**
      * 是否启用演示数据种子。
     */
-    @Value("${hotsport.demo.seed:false}")
+    @Value("${plugin.hotsport.demo.seed:false}")
     private boolean enabled;
 
     /**

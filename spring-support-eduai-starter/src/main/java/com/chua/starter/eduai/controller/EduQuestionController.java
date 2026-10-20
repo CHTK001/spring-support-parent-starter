@@ -13,6 +13,7 @@ import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -183,5 +186,36 @@ public class EduQuestionController {
             throw new BusinessException("单次批量审核不超过 100 条");
         }
         return ReturnResult.ok(questionService.auditQuestions(ids, passed, remark));
+    }
+
+    /**
+     * 题目导出为 CSV 文件。
+     *
+     * <p>按当前筛选条件导出题目，UTF-8 编码。最大导出 10000 条，防止大结果集。</p>
+     *
+     * @param keyword      关键字过滤（题干）
+     * @param subject     学科过滤
+     * @param gradeLevel  学段过滤
+     * @param questionType 题型过滤
+     * @param auditStatus 审核状态（null=全部）
+     * @param limit       最大条数（默认 5000，上限 10000）
+     * @param response    HTTP 响应
+     */
+    @Operation(summary = "导出题目（CSV）")
+    @GetMapping("/export")
+    public void exportQuestions(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String subject,
+            @RequestParam(required = false) String gradeLevel,
+            @RequestParam(required = false) String questionType,
+            @RequestParam(required = false) Integer auditStatus,
+            @RequestParam(defaultValue = "5000") int limit,
+            HttpServletResponse response) throws Exception {
+        String csv = questionService.exportQuestions(keyword, subject, gradeLevel, questionType, auditStatus, limit);
+        String filename = "questions_" + System.currentTimeMillis() + ".csv";
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition",
+                "attachment;filename=" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+        response.getWriter().write(csv);
     }
 }

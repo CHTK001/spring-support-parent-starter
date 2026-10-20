@@ -10,25 +10,25 @@ import java.util.Map;
 /**
  * 需求数据源提供方配置属性。
  *
- * <p>通过 {@code spring.ai.datasource.requirement.*} 前缀配置全局默认值。
+ * <p>通过 {@code plugin.ai.datasource.requirement.*} 前缀配置全局默认值。
  * 数据源级别的覆盖配置存储在 {@code sys_ai_data_source} 表的 配置 JSON 中。</p>
  *
  * <h4>示例配置：</h4>
  * <pre>
- * spring:
- * AI:
- * datasource:
- * requirement:
- * 默认-标签: lark
- * 同步-已启用: true
- * 同步-cron: "0 0 2 * * ?"    # 每天凌晨2点同步
- * 提供者:
- * lark:
- * 已启用: true
- * 超时-seconds: 30
- * generic:
- * 已启用: true
- * 超时-seconds: 60
+ * plugin:
+ *   ai:
+ *     datasource:
+ *       requirement:
+ *         默认-标签: lark
+ *         同步-已启用: true
+ *         同步-cron: "0 0 2 * * ?"    # 每天凌晨2点同步
+ *         提供者:
+ *           lark:
+ *             已启用: true
+ *             超时-seconds: 30
+ *           generic:
+ *             已启用: true
+ *             超时-seconds: 60
  * </pre>
  *
  * @since 4.0.0.42
@@ -36,7 +36,7 @@ import java.util.Map;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "spring.ai.datasource.requirement")
+@ConfigurationProperties(prefix = "plugin.ai.datasource.requirement")
 public class RequirementDataSourceProperties {
 
     /**

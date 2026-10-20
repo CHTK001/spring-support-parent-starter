@@ -9,7 +9,7 @@ services:
 
   # -------------------------------------------------------------------
   # guacd: Apache Guacamole 协议守护进程(server-starter 远控网关依赖)
-  # 端口仅绑定本机回环, 后端经 server.support.guacd.host/port 访问
+  # 端口仅绑定本机回环, 后端经 plugin.server.support.guacd.host/port 访问
   # -------------------------------------------------------------------
   guacd:
     image: guacamole/guacd:1.5.5
@@ -20,7 +20,7 @@ services:
 
   # -------------------------------------------------------------------
   # InfluxDB 1.8: 监控指标明细时序库
-  # 后端配置: monitor.influx.enabled=true / url=http://127.0.0.1:8086 /
+  # 后端配置: plugin.monitor.influx.enabled=true / url=http://127.0.0.1:8086 /
   #           database=monitor (启动后自动建库)
   # -------------------------------------------------------------------
   influxdb:

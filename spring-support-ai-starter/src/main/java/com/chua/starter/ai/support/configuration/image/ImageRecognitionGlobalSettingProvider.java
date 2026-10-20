@@ -64,7 +64,9 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
                 new GlobalSettingProvider.SettingItem("quality_enabled", "false", "BOOLEAN", "是否启用图像质量评估", 9),
                 new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "图像超分模型（留空关闭）", 10),
                 new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 11),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 12)
+                new GlobalSettingProvider.SettingItem("colorize_model", "", "STRING", "图像上色模型（留空关闭）", 12),
+                new GlobalSettingProvider.SettingItem("colorize_device", "cpu", "STRING", "图像上色推理设备（cpu / cuda）", 13),
+                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 14)
         );
     }
 }

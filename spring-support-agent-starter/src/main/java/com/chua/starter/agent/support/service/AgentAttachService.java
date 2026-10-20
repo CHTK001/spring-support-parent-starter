@@ -88,7 +88,7 @@ public class AgentAttachService implements SmartInitializingSingleton {
     @Override
     public void afterSingletonsInstantiated() {
         if (!properties.isEnabled()) {
-            log.info("[AgentAttach] 自注入被配置禁用 (runtime.agent.enabled=false)");
+            log.info("[AgentAttach] 自注入被配置禁用 (plugin.agent.enabled=false)");
             return;
         }
         if (properties.isAsync()) {

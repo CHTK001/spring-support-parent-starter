@@ -16,7 +16,7 @@ import java.util.List;
  * <p>
  * 采集主链路只有一次写入：把 {@link CollectResult} 的指标点摊平成
  * {@code (target, monitorId, metricName, value, timestamp)} 五元组，交给容器里唯一的
- * {@link SeriesEngine}（由 {@code monitor.timeseries.engine} 选定 JDBC / InfluxDB / Redis）。
+ * {@link SeriesEngine}（由 {@code plugin.monitor.timeseries.engine} 选定 JDBC / InfluxDB / Redis）。
  * 引擎不可用时静默跳过，MySQL 明细表与告警主链路不受影响。
  * </p>
  *

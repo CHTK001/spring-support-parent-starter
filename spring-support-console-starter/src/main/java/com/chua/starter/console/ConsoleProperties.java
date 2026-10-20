@@ -16,7 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = ConsoleProperties.PRE)
 public class ConsoleProperties {
 
-    public static final String PRE = "console"; // PRE
+    public static final String PRE = "plugin.console"; // PRE
 
     /**
      * 是否启用控制台（默认启用——模块按需引入）

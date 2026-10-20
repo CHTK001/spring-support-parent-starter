@@ -28,7 +28,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "ai.default-model")
+@ConfigurationProperties(prefix = "plugin.ai.default-model")
 public class DefaultModelProperties {
 
     /**

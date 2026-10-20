@@ -18,14 +18,14 @@ import org.springframework.context.annotation.Bean;
  * AI 训练平台自动配置。
  *
  * <p>注册 {@link DataService}、{@link TrainService} 和 {@link TrainController} 到 Spring 容器，
- * 属性前缀 {@code ai.training.*}，默认开启，可通过 {@code ai.training.enabled=false} 整体关闭。</p>
+ * 属性前缀 {@code plugin.ai.training.*}，默认开启，可通过 {@code plugin.ai.training.enabled=false} 整体关闭。</p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
 @AutoConfiguration
-@ConditionalOnProperty(prefix = "ai.training", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.ai.training", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(TrainProperties.class)
 public class TrainAutoConfiguration {
 

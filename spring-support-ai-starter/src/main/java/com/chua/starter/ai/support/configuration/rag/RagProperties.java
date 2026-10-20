@@ -4,7 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * RAG 配置属性，前缀 {@code spring.ai.rag}。
+ * RAG 配置属性，前缀 {@code plugin.ai.rag}。
  *
  * @since 4.0.0.42
  * @author CH
@@ -16,7 +16,7 @@ public class RagProperties {
     /**
      * 配置前缀
      */
-    public static final String PRE = "spring.ai.rag";
+    public static final String PRE = "plugin.ai.rag";
 
     /**
      * 是否启用 RAG

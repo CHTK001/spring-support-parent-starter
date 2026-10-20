@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "monitor.agent")
+@ConfigurationProperties(prefix = "plugin.monitor.agent")
 public class AgentDeployProperties {
 
     /**

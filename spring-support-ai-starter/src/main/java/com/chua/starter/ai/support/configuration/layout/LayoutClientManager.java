@@ -5,6 +5,7 @@ import com.chua.deeplearning.support.layout.LayoutDetector;
 import com.chua.deeplearning.support.model.PredictRectangle;
 import com.chua.deeplearning.support.ocr.OcrResult;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.client.ModelIds;
 import com.chua.starter.ai.support.configuration.ocr.OcrClientManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -228,7 +229,10 @@ public class LayoutClientManager {
         if (StringUtils.isBlank(model)) {
             return null;
         }
-        LayoutDetector detector = LayoutDetector.create(model);
+        // 设置页可能存「provider:model」（如 onnx:pp-doc-layout、python:indra-layout），
+        // ModelRegistry 只认裸模型名，统一剥掉提供商前缀后再构建。
+        String bareModel = ModelIds.bare(model);
+        LayoutDetector detector = LayoutDetector.create(bareModel);
         var threshold = settingReader.getDecimalOrNull(GROUP, "layout_threshold");
         if (threshold != null) {
             detector.threshold(threshold.floatValue());

@@ -28,7 +28,7 @@ target/classes;../spring-support-datasource-hub-starter/target/classes;D:/maven-
 com.chua.starter.monitor.support.MonitorApplication
 --spring.profiles.active=prod
 --server.port=8091
---monitor.agent.tcp-port=19391
+--plugin.monitor.agent.tcp-port=19391
 --plugin.socket.room[0].port=29191
 --plugin.filesystem.storage-server.port=18092
 --spring.datasource.url=jdbc:mysql://127.0.0.1:3306/monitordb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai

@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
  * 凭据加解密器
  * <p>
  * 基于 AES-CBC 对密钥私钥、登录密码进行加密落库与解密还原，
- * 密钥来源于 {@code server.support.credential-key} 配置。
+ * 密钥来源于 {@code plugin.server.support.credential-key} 配置。
  * </p>
  *
  * @author CH
@@ -66,7 +66,7 @@ public class CredentialCipher {
              * @param e e
              * @return illegal状态异常的结果
              */
-            throw new IllegalStateException("凭据解密失败，请检查 server.support.credential-key 配置是否与加密时一致", e);
+            throw new IllegalStateException("凭据解密失败，请检查 plugin.server.support.credential-key 配置是否与加密时一致", e);
         }
     }
 }

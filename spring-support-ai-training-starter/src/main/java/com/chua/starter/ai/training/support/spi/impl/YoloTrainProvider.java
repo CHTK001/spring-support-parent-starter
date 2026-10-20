@@ -46,8 +46,8 @@ import java.util.stream.Stream;
  * </ul>
  *
  * <p>python 可执行默认 {@code python}（win）/ {@code python3}，可经系统属性
- * {@code ai.training.yolo.python} 覆盖；脚本默认取自 classpath，可经
- * {@code ai.training.yolo.script} 指定外部路径。</p>
+ * {@code plugin.ai.training.yolo.python} 覆盖；脚本默认取自 classpath，可经
+ * {@code plugin.ai.training.yolo.script} 指定外部路径。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -216,7 +216,7 @@ public class YoloTrainProvider implements TrainProvider {
      * @return resolvePython的结果
      */
     private String resolvePython() {
-        String cfg = System.getProperty("ai.training.yolo.python");
+        String cfg = System.getProperty("plugin.ai.training.yolo.python");
         if (cfg != null && !cfg.isBlank()) {
             return cfg;
         }
@@ -229,7 +229,7 @@ public class YoloTrainProvider implements TrainProvider {
      * @return resolveScript的结果
      */
     private Path resolveScript() throws IOException {
-        String external = System.getProperty("ai.training.yolo.script");
+        String external = System.getProperty("plugin.ai.training.yolo.script");
         if (external != null && !external.isBlank() && Files.isRegularFile(Path.of(external))) {
             return Path.of(external);
         }

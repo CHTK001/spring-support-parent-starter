@@ -3,12 +3,12 @@ package com.chua.starter.agent.support.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Agent 自注入配置项（前缀 {@code runtime.agent}）。
+ * Agent 自注入配置项（前缀 {@code plugin.agent}）。
  *
  * @author CH
  * @since 4.0.0.42
  */
-@ConfigurationProperties(prefix = "runtime.agent")
+@ConfigurationProperties(prefix = "plugin.agent")
 public class AgentAttachProperties {
 
     /**

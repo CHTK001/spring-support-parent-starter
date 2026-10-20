@@ -38,7 +38,7 @@ import java.util.List;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(TaskDistributionProperties.class)
-@ConditionalOnProperty(prefix = "taskdistribution", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.taskdistribution", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class TaskDistributionAutoConfiguration {
 
     /**
