@@ -68,4 +68,17 @@ public interface EduWrongQuestionMapper extends BaseMapper<EduWrongQuestion> {
     List<EduWrongQuestion> selectReviewQuestions(@Param("studentId") String studentId,
                                                  @Param("count") int count,
                                                  @Param("scope") EduUserContext.OwnerScope scope);
+
+    /**
+     * 错题来源任务列表（XML 语句 listSourceTasks）。
+     *
+     * <p>错题按 (学生, 题目) 唯一聚合，同一题可能被多张卷、多次「完成」登记。
+     * 本方法返回该题关联到的来源任务及其完成时间，供前端展示溯源时间线。</p>
+     *
+     * @param studentId 学生标识
+     * @param questionId 题目标识
+     * @return 来源任务溯源列表（按完成时间倒序）
+     */
+    List<com.chua.starter.eduai.model.vo.WrongSourceVO> listSourceTasks(@Param("studentId") String studentId,
+                                                                        @Param("questionId") Long questionId);
 }

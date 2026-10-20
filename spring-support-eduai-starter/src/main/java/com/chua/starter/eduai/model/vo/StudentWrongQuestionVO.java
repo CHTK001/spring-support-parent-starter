@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
  * @param masteryLevel    掌握度：0 未掌握 / 1 复习中 / 2 已掌握
  * @param reviewCount     复习次数
  * @param lastWrongTime   最近做错时间
+ * @param corrected       订正状态：0 未订正 / 1 已订正
  *
  * @author CH
  * @since 4.0.0.43
@@ -42,5 +43,6 @@ public record StudentWrongQuestionVO(
         Integer wrongCount,
         Integer masteryLevel,
         Integer reviewCount,
-        LocalDateTime lastWrongTime) {
+        LocalDateTime lastWrongTime,
+        Integer corrected) {
 }
