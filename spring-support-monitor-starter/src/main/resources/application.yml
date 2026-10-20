@@ -40,7 +40,7 @@ spring:
       schema-locations:
         - classpath:db/init/V2.0__init_all_monitor.sql
         - classpath:db/init/V2.0__init_all_server.sql
-        - classpath:db/init/V2.0__init_all_ai.sql
+        - classpath:db/init/V5.0__init_all_ai.sql
         # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
         # 含 ms_monitor_nginx_metric：该表实体 MsMonitorNginxMetric 属 hub 模块，
         # 建表语句已随实体归位到本文件（原先在 monitor 的 init 里）。
