@@ -1,12 +1,19 @@
--- ============================================================
--- 监控模块初始化 SQL（合并版）
+-- =====================================================================
+-- V2.0__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
 -- 模块: spring-support-monitor-starter
--- 来源: 原 V1.0__init_monitor + V1.1__alarm_and_agent + V1.2__server_node + V1.3__monitor_host_link
+-- 通道: INIT 同步建表（表结构先于种子数据就位）
+-- 说明: 本文件是该模块唯一的建表入口。此前分散的
+--   V1.0__init_all_monitor.sql 与 V1.5__init_tshark.sql
+--   已在本次收敛中并入本文件并删除。
+--
+-- 表归位: ms_monitor_nginx_metric 的实体 MsMonitorNginxMetric 属于
+--   spring-support-datasource-hub-starter，本次收敛已把它的建表语句
+--   搬到该模块的 V2.0__init_all_datasource_hub.sql（表定义逐字未改）。
+--
 -- 命名规范: 列名使用完整表名作为前缀，如 ms_monitor_name
 -- 数据库: MySQL 8.x / H2 (MySQL 模式) / 达梦 / Oracle 通过方言转换
 -- 幂等: 建表 IF NOT EXISTS，补列 IF NOT EXISTS，重复执行安全
--- ============================================================
-
+-- =====================================================================
 -- (H2-incompatible) SET NAMES utf8mb4;
 -- (H2-incompatible) SET FOREIGN_KEY_CHECKS = 0;
 
@@ -461,26 +468,6 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
 -- 原先写成「DROP + CREATE」后，一旦 plugin.datasource.script.enable 打开
 -- （或本脚本在 sys_database_version 里被记为 FAILED 而每次启动重跑），
 -- nginx 指标历史会被整体清空——属于静默数据丢失，因此必须改成幂等形态。
--- ============================================================
-CREATE TABLE IF NOT EXISTS `ms_monitor_nginx_metric`
-(
-    `id`                             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `ms_monitor_nginx_metric_datasource_id` BIGINT NOT NULL COMMENT 'ms_datasource.id',
-    `ms_monitor_nginx_metric_name`   VARCHAR(64)  NOT NULL COMMENT '指标名: active/accepts/handled/requests/reading/writing/waiting',
-    `ms_monitor_nginx_metric_value`  DOUBLE       NULL COMMENT '指标值（累计类为原始计数）',
-    `ms_monitor_nginx_metric_collect_time` DATETIME NOT NULL COMMENT '采集时刻',
-    PRIMARY KEY (`id`),
-    -- 幂等写入：同一数据源同一指标同一时刻只留一行
-    UNIQUE KEY `ms_monitor_nginx_metric_uk_point` (`ms_monitor_nginx_metric_datasource_id`,
-                                                 `ms_monitor_nginx_metric_name`,
-                                                 `ms_monitor_nginx_metric_collect_time`),
-    -- 趋势查询主路径：按数据源 + 时间范围扫
-    KEY `idx_ms_monitor_nginx_metric_ds_time` (`ms_monitor_nginx_metric_datasource_id`,
-                                              `ms_monitor_nginx_metric_collect_time`)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT 'Nginx 时序指标';
-
 -- ============================================================
 -- 20. 主机内置指标历史（宽表）
 -- 写入方：HostMetricHistoryServiceImpl → SeriesEngine.writeBatch(target, hostId, metrics, ts)

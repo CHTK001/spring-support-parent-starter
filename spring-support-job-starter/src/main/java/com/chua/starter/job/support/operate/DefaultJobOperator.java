@@ -34,7 +34,7 @@ public class DefaultJobOperator implements JobOperator {
     /**
      * 片段正文长度上限（字符）。
      *
-     * <p>与 {@code V1.0__init_all_job.sql} 的 {@code sys_job_glue_source VARCHAR(4000)} 对齐。
+     * <p>与 {@code V2.0__init_all_job.sql} 的 {@code sys_job_glue_source VARCHAR(4000)} 对齐。
      * 该 DDL 第 12 行把「大文本统一 VARCHAR(4000)」列为跨库兼容约束（Oracle VARCHAR2 上限），
      * 属刻意设计而非疏漏：早先这里放行到 64000，存库时才被 MySQL 判成 Data too long 抛 500。
      * 存量行不可能超过列宽（列本身就是 4000），所以收紧校验不会拒绝任何已落库的历史正文。</p>

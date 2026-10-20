@@ -13,7 +13,7 @@ import com.chua.starter.mybatis.pojo.SysBase;
  * 昆虫图鉴实体
  *
  * <p>数据来源为开源项目 insect-world 的中文数据包（63 个物种 / 14 个目），
- * 已随 V1.0__initdata_all_eduai.sql 落库。结构化字段拆列存放，
+ * 已随 V2.0__initdata_all_eduai.sql 落库。结构化字段拆列存放，
  * {@code insectFacts}、{@code insectHotspots}、{@code insectLifecycle}、
  * {@code insectRelatives} 四项以 JSON 文本保存，由服务层解析后下发给前端。</p>
  *
