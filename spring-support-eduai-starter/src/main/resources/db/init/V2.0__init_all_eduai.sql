@@ -1,8 +1,20 @@
--- ============================================
--- Spring Support EduAI Starter 建表脚本
--- 版本: V1.0
--- 说明: 教育AI模块数据库表
--- ============================================
+-- =====================================================================
+-- V2.0__init_all_eduai.sql - spring-support-eduai-starter 全量表结构
+-- 通道: INIT 同步建表（表结构先于种子数据就位）
+-- 说明: 本文件是该模块唯一的建表入口。此前分散的
+--   V1.2 / V1.3 / V1.4 / V1.5 / V1.6 / V1.9 / V1.13 的 init_all
+--   与 V1.14 ~ V1.22 的增量脚本
+--   已在本次收敛中并入本文件（结构）与 V2.0__initdata_all_eduai.sql（种子）并删除。
+--
+-- 合并方式:
+--   1. 原来靠 ALTER 补的列，一律折进建表语句 —— 新库一次建全；
+--   2. 存量库补列的 ALTER 仍保留在文件末尾（information_schema 判存 + 动态 DDL），
+--      否则老库缺列；新建库上这些语句会因列已存在而跳过。
+--
+-- 约束: 含 MySQL 专属语法（SET @var + PREPARE 动态 DDL、COMMENT 内联注释）。
+--   MariaDB 11.8 实测不接受 ADD COLUMN IF NOT EXISTS（语句报错、列不会建成），
+--   MySQL 虽支持但会告警，故补列一律用「查列 → 不存在才 ALTER」两步走。
+-- =====================================================================
 
 -- ----------------------------
 -- 知识点表
@@ -93,6 +105,8 @@ CREATE TABLE IF NOT EXISTS edu_question (
       -- 题库：被加入试卷的次数,
       -- 说明：与「使用次数」区分 —— 使用次数是答题/引用统计，,
       --      本列只统计「被新加入某张试卷」的次数，改分不重复计。,
+    question_audit_remark VARCHAR(500) COMMENT '驳回理由（驳回必填，通过时清空）',
+    question_audit_count INT DEFAULT 0 COMMENT '累计审核次数（每次通过/驳回+1）',
     question_add_count INT DEFAULT 0 COMMENT '被加入试卷的次数'
 );
 
@@ -324,6 +338,10 @@ CREATE TABLE IF NOT EXISTS edu_wrong_question (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT NULL,
     update_name VARCHAR(255) DEFAULT NULL,
+    wrong_question_paper_id BIGINT COMMENT '试卷ID（错题来自哪张卷）',
+    wrong_question_source_task_id VARCHAR(64) NULL COMMENT '来源阅卷任务标识（哪次完成登记的，用于撤销）',
+    wrong_question_corrected TINYINT NOT NULL DEFAULT 0 COMMENT '订正状态：0 未订正 / 1 已订正',
+    wrong_question_correct_time DATETIME NULL COMMENT '最近订正时间',
     update_by INT DEFAULT NULL
 );
 
@@ -487,6 +505,8 @@ CREATE TABLE IF NOT EXISTS edu_teacher (
     teacher_status TINYINT DEFAULT 1 COMMENT '状态: 0-离职 1-在职',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    teacher_password VARCHAR(64) COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
+    teacher_pwd_salt VARCHAR(32) COMMENT '口令盐（随机十六进制，与 teacher_password 一一对应）',
     UNIQUE KEY edu_teacher_teacher_no (teacher_no),
     UNIQUE KEY uk_edu_teacher_account (teacher_account),
     KEY edu_teacher_user (teacher_user_id),
@@ -941,5 +961,383 @@ CREATE TABLE IF NOT EXISTS edu_paper_assign (
 ALTER TABLE edu_paper_assign
     ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
 
+-- ---------------------------------------------------------------------
+-- 原 V1.5__init_all_eduai.sql （已并入本文件）
+-- ---------------------------------------------------------------------
+-- ===========================================
+-- 教育 AI 模块增量结构变更（V1.5）
+-- ===========================================
+-- 变更内容：新增「阅卷任务表」edu_marking_task。
+--
+-- 为什么需要（对应「阅卷是异步任务：创建任务 → 有状态 → 后台慢慢处理 → 重启继续处理」）：
+--   原实现把扫描阅卷放在请求线程里做（同步逐题调大模型），有两个真实问题：
+--     1) 请求耗时数十秒，超过前端 HTTP 客户端 10 秒超时 → 前端 abort，
+--        表现为「点了没反应」（实测：+10s 提示 timeout of 10000ms exceeded）；
+--     2) 线程内执行，进程重启即丢，任务永久停在中间态。
+--   因此任务必须先落库（状态 + 输入留痕），接口立即返回 taskId，由后台处理并可续跑。
+--
+-- 状态语义：
+--   0=PENDING（待处理）  1=PROCESSING（处理中）  2=DONE（已完成）  3=FAILED（失败）
+--   重启后把 0/1 一并重新入队，因此 1 是「可能被中断」的状态，必须可重入。
+--
+-- 为什么把图片落盘而不是存库：
+--   图片是任务输入，续跑时必须还能拿到；base64 存 JSON 列会让行体积膨胀数十倍，
+--   且 MySQL JSON 列对超大值不友好。故存文件路径，文件放在可配置目录下。
+--
+-- 为什么独立版本：V1.2 已执行过（checksum 固化），改它不会对既有库生效。
+-- 幂等：CREATE TABLE IF NOT EXISTS；SysBase 审计列按 V1.2 的既有约定一并建出。
+-- ===========================================
 
+CREATE TABLE IF NOT EXISTS edu_marking_task (
+    marking_task_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_marking_task_owner (marking_task_owner_user_id),
+    marking_task_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '任务自增ID',
+    marking_task_task_id VARCHAR(64) NOT NULL COMMENT '任务业务标识（对外返回，结果按它查询）',
+    marking_task_status TINYINT DEFAULT 0 COMMENT '状态: 0-待处理 1-处理中 2-已完成 3-失败',
+    marking_task_mode VARCHAR(16) COMMENT '试卷类型: SELF 自有卷 / ANY 任意卷',
+    marking_task_paper_id BIGINT COMMENT '自负卷对应的试卷ID',
+    marking_task_exam_id BIGINT COMMENT '考试ID（用于取卷面分值）',
+    marking_task_student_id VARCHAR(64) COMMENT '学生ID（留空时由服务端兜底）',
+    marking_task_max_score INT COMMENT '任意卷每题满分',
+    marking_task_image_path VARCHAR(512) COMMENT '上传图片的落盘路径（续跑时读取）',
+    marking_task_answer_sheet_id BIGINT COMMENT '生成的答题卡ID',
+    marking_task_stage VARCHAR(64) COMMENT '当前阶段（识别中 / 判分中 2/3 等，供前端展示进度）',
+    marking_task_total INT DEFAULT 0 COMMENT '识别出的题目数',
+    marking_task_done_count INT DEFAULT 0 COMMENT '已判分题目数',
+    marking_task_error VARCHAR(1000) COMMENT '失败原因',
+    marking_task_start_time DATETIME COMMENT '开始处理时间',
+    marking_task_finish_time DATETIME COMMENT '处理完成时间',
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+    marking_task_teacher_finished TINYINT DEFAULT 0 COMMENT '老师是否已点「阅卷完成」: 0-未完成 1-已完成',
+    marking_task_teacher_finish_time DATETIME COMMENT '老师点「阅卷完成」的时间',
+    UNIQUE KEY uk_edu_marking_task_task_id (marking_task_task_id),
+    KEY edu_marking_task_status (marking_task_status)
+) COMMENT '阅卷任务（异步：创建任务→后台处理→可重启续跑）';
 
+-- ---------------------------------------------------------------------
+-- 原 V1.9__init_all_eduai.sql （已并入本文件）
+-- ---------------------------------------------------------------------
+-- ===========================================
+-- 汉字基础数据表（字 / 读音 / 笔画数 / 部首 / 结构 / 笔顺 / 释义 / 字画 / 适用学段）
+--
+-- 用于「基础数据维护」：老师维护每个汉字的读音（拼音）、笔顺（顺序）、字画（图片或字形图）
+-- 与释义，供识字/写字类模块消费。
+-- ===========================================
+
+CREATE TABLE IF NOT EXISTS edu_hanzi (
+    hanzi_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    KEY edu_hanzi_owner (hanzi_owner_user_id),
+    hanzi_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '汉字ID',
+    hanzi_char VARCHAR(8) NOT NULL COMMENT '汉字（单个字）',
+    hanzi_pinyin VARCHAR(64) COMMENT '读音（拼音，可带声调）',
+    hanzi_strokes INT COMMENT '笔画数',
+    hanzi_radical VARCHAR(8) COMMENT '部首',
+    hanzi_structure VARCHAR(16) COMMENT '结构：独体/上下/左右/半包围/全包围',
+    hanzi_stroke_order VARCHAR(255) COMMENT '笔顺（按书写顺序排列的笔画名，如 一丨丿丶）',
+    hanzi_meaning VARCHAR(500) COMMENT '释义 / 常用组词',
+    hanzi_image VARCHAR(255) COMMENT '字画（图片路径或字形图，可空）',
+    hanzi_grade_level VARCHAR(20) COMMENT '适用学段（中文名）：小学/初中/高中；NULL 表示不限',
+    hanzi_status TINYINT DEFAULT 1 COMMENT '状态：0 停用 / 1 启用',
+    create_name VARCHAR(255) DEFAULT NULL COMMENT '创建人姓名',
+    create_by INT DEFAULT NULL COMMENT '创建人ID',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT NULL COMMENT '更新时间',
+    update_name VARCHAR(255) DEFAULT NULL COMMENT '更新人姓名',
+    update_by INT DEFAULT NULL COMMENT '更新人ID',
+    UNIQUE KEY uk_edu_hanzi_char (hanzi_char),
+    KEY edu_hanzi_level (hanzi_grade_level)
+);
+
+-- ---------------------------------------------------------------------
+-- 原 V1.14__eduai_teacher_class_and_config.sql （已并入本文件）
+-- ---------------------------------------------------------------------
+-- V1.14 老师端数据范围收敛：教师班级配置 + 应用配置表
+--
+-- 背景：老师端定位为「布置等」教学功能端，数据范围 = 后台配置的班级；
+--       老师上传题目需管理员审批（管理员可配「自动通过」）。
+-- 此前老师自建班级（edu_class.class_owner_user_id = 教师账号），
+-- 本版起班级由管理员统一维护，老师的班级列表完全来自 edu_teacher_class。
+
+CREATE TABLE IF NOT EXISTS edu_teacher_class (
+    teacher_class_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '关联ID',
+    teacher_class_teacher_id BIGINT NOT NULL COMMENT '教师ID（edu_teacher.teacher_id）',
+    teacher_class_class_id BIGINT NOT NULL COMMENT '班级ID（edu_class.class_id）',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '配置时间',
+    UNIQUE KEY uk_edu_teacher_class (teacher_class_teacher_id, teacher_class_class_id),
+    KEY idx_edu_teacher_class_class (teacher_class_class_id)
+) COMMENT='教师班级配置（老师端数据范围）';
+
+-- 迁移：教师自建班级自动转为配置关系，保证现有老师端数据不丢；
+-- 管理员后续可在「学生管理 → 教师 → 配置班级」增删。
+INSERT IGNORE INTO edu_teacher_class (teacher_class_teacher_id, teacher_class_class_id)
+SELECT t.teacher_id, c.class_id
+FROM edu_class c
+JOIN edu_teacher t ON t.teacher_account = c.class_owner_user_id
+WHERE c.class_owner_user_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS edu_app_config (
+    config_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '配置ID',
+    config_key VARCHAR(100) NOT NULL COMMENT '配置键（如 teacher-question-auto-approve）',
+    config_value VARCHAR(500) COMMENT '配置值',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_edu_app_config_key (config_key)
+) COMMENT='应用配置（老师上传自动通过等）';
+
+-- ---------------------------------------------------------------------
+-- 原 V1.16__eduai_marking_sheet_parse.sql （已并入本文件）
+-- ---------------------------------------------------------------------
+-- V1.16__eduai_marking_sheet_parse.sql
+-- 试卷解析结果表（结构化落库）
+--
+-- 背景：原先阅卷的「解析结果」是散的——
+--   * 整卷版面/文字/锚点塞在 edu_answer_sheet.answer_sheet_content 的一个大 JSON；
+--   * 逐题识别字段（题号/题干/学生作答/满分）塞在 edu_marking_result.marking_result_detail 的 JSON 里；
+--   * 姓名/学号只在 content.recognizedStudent 里，任务级再冗余一份到 edu_marking_task。
+-- 没法直接按字段查、没法做「某生某题识别成什么」的统计与回溯。
+--
+-- 本表把解析口径结构化落库：一张试卷一份，每行一个解析项（STUDENT / TOTAL / QUESTION）。
+--   STUDENT  行：姓名 + 学号
+--   TOTAL    行：卷面总分（满分口径）
+--   QUESTION 行：题号 + 题干 + 学生作答 + 该题满分 + AI 得分 + 对错
+-- 唯一键 (task_id, kind, question_no) 保证重跑幂等；非逐题行用空串占位，
+-- 这样「一卷一条 STUDENT/TOTAL」也能被唯一键真正约束住。
+CREATE TABLE IF NOT EXISTS edu_marking_sheet_parse (
+    parse_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '解析结果ID',
+    parse_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
+    parse_task_id VARCHAR(64) NOT NULL COMMENT '阅卷任务业务标识',
+    parse_answer_sheet_id BIGINT COMMENT '答题卡ID',
+    parse_kind VARCHAR(16) NOT NULL COMMENT '解析项类型: STUDENT 姓名学号 / TOTAL 满分 / QUESTION 逐题',
+    parse_student_name VARCHAR(64) COMMENT '卷面识别姓名',
+    parse_student_no VARCHAR(64) COMMENT '卷面识别学号',
+    parse_total_score INT COMMENT '卷面总分（满分口径）',
+    parse_question_no VARCHAR(16) NOT NULL DEFAULT '' COMMENT '题号（非逐题行为空串）',
+    parse_question_stem TEXT COMMENT '题干',
+    parse_student_answer TEXT COMMENT '学生作答',
+    parse_full_score INT COMMENT '该题满分',
+    parse_earned_score INT COMMENT '该题得分（AI/老师分）',
+    parse_correct TINYINT COMMENT '对错: 1 对 0 错 NULL 未判定',
+    parse_source VARCHAR(16) COMMENT '识别来源: MODEL 模型 / LAYOUT 版面 / RULE 规则',
+    parse_page INT COMMENT '所在页码',
+    parse_region_label VARCHAR(32) COMMENT '来源版面区域标签',
+    parse_region_x DOUBLE COMMENT '区域归一化坐标 x(0~1)',
+    parse_region_y DOUBLE COMMENT '区域归一化坐标 y(0~1)',
+    parse_region_w DOUBLE COMMENT '区域归一化宽度(0~1)',
+    parse_region_h DOUBLE COMMENT '区域归一化高度(0~1)',
+    parse_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    parse_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    create_name VARCHAR(255) DEFAULT NULL,
+    create_by INT DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT NULL,
+    update_name VARCHAR(255) DEFAULT NULL,
+    update_by INT DEFAULT NULL,
+    UNIQUE KEY uk_parse_task_kind_qno (parse_task_id, parse_kind, parse_question_no),
+    KEY idx_parse_task (parse_task_id),
+    KEY idx_parse_student_no (parse_student_no)
+) COMMENT '试卷解析结果（结构化：姓名/学号/总分/逐题）';
+-- =====================================================================
+-- 存量库补列（老库已有旧表形时补列；新库上列已存在，下面的语句会跳过）
+--
+-- 为何不用 ADD COLUMN IF NOT EXISTS：MariaDB 11.8 实测不接受该语法（语句报错、
+-- 列不会建成），MySQL 虽支持但会告警。用「查列 → 不存在才 ALTER」两步走，
+-- 在 MariaDB 与 MySQL 上都成立。
+--
+-- 原来这些补列分散在 V1.3 / V1.4 / V1.6 / V1.13 / V1.17 / V1.18 / V1.21 / V1.22
+-- 八个脚本里，本次收敛全部并入本文件末尾。
+-- =====================================================================
+
+-- ---------- edu_student：登录口令三件套 + 头像 + 身份证 ----------
+SET @has_stu_pwd := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_password'
+);
+SET @sql_stu_pwd := IF(@has_stu_pwd > 0, 'SELECT 1',
+    'ALTER TABLE edu_student ADD COLUMN student_password VARCHAR(64) DEFAULT NULL COMMENT ''登录口令摘要 hmacSha256(明文,盐)，非明文''');
+PREPARE stmt_stu_pwd FROM @sql_stu_pwd;
+EXECUTE stmt_stu_pwd;
+DEALLOCATE PREPARE stmt_stu_pwd;
+
+SET @has_stu_salt := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_pwd_salt'
+);
+SET @sql_stu_salt := IF(@has_stu_salt > 0, 'SELECT 1',
+    'ALTER TABLE edu_student ADD COLUMN student_pwd_salt VARCHAR(32) DEFAULT NULL COMMENT ''口令盐（随机十六进制，与 student_password 一一对应）''');
+PREPARE stmt_stu_salt FROM @sql_stu_salt;
+EXECUTE stmt_stu_salt;
+DEALLOCATE PREPARE stmt_stu_salt;
+
+SET @has_stu_must := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_pwd_must_change'
+);
+SET @sql_stu_must := IF(@has_stu_must > 0, 'SELECT 1',
+    'ALTER TABLE edu_student ADD COLUMN student_pwd_must_change TINYINT DEFAULT 0 COMMENT ''是否需引导改密: 0-否 1-是''');
+PREPARE stmt_stu_must FROM @sql_stu_must;
+EXECUTE stmt_stu_must;
+DEALLOCATE PREPARE stmt_stu_must;
+
+SET @has_stu_avatar := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_avatar'
+);
+SET @sql_stu_avatar := IF(@has_stu_avatar > 0, 'SELECT 1',
+    'ALTER TABLE edu_student ADD COLUMN student_avatar VARCHAR(500) COMMENT ''学生头像（URL 或 Base64，与系统用户头像同口径）'' AFTER student_parent_phone');
+PREPARE stmt_stu_avatar FROM @sql_stu_avatar;
+EXECUTE stmt_stu_avatar;
+DEALLOCATE PREPARE stmt_stu_avatar;
+
+SET @has_stu_idcard := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_id_card'
+);
+SET @sql_stu_idcard := IF(@has_stu_idcard > 0, 'SELECT 1',
+    'ALTER TABLE edu_student ADD COLUMN student_id_card VARCHAR(32) COMMENT ''身份证号（仅管理端维护，学生端不可见）'' AFTER student_avatar');
+PREPARE stmt_stu_idcard FROM @sql_stu_idcard;
+EXECUTE stmt_stu_idcard;
+DEALLOCATE PREPARE stmt_stu_idcard;
+
+-- ---------- edu_teacher：登录口令两件套 ----------
+SET @has_tea_pwd := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_teacher' AND COLUMN_NAME = 'teacher_password'
+);
+SET @sql_tea_pwd := IF(@has_tea_pwd > 0, 'SELECT 1',
+    'ALTER TABLE edu_teacher ADD COLUMN teacher_password VARCHAR(64) COMMENT ''登录口令摘要 hmacSha256(明文,盐)，非明文''');
+PREPARE stmt_tea_pwd FROM @sql_tea_pwd;
+EXECUTE stmt_tea_pwd;
+DEALLOCATE PREPARE stmt_tea_pwd;
+
+SET @has_tea_salt := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_teacher' AND COLUMN_NAME = 'teacher_pwd_salt'
+);
+SET @sql_tea_salt := IF(@has_tea_salt > 0, 'SELECT 1',
+    'ALTER TABLE edu_teacher ADD COLUMN teacher_pwd_salt VARCHAR(32) COMMENT ''口令盐（随机十六进制，与 teacher_password 一一对应）''');
+PREPARE stmt_tea_salt FROM @sql_tea_salt;
+EXECUTE stmt_tea_salt;
+DEALLOCATE PREPARE stmt_tea_salt;
+
+-- ---------- edu_answer_sheet：考试ID 改可空（扫描阅卷未绑定考试时为空） ----------
+SET @has_sheet_exam := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_answer_sheet' AND COLUMN_NAME = 'answer_sheet_exam_id'
+      AND IS_NULLABLE = 'NO'
+);
+SET @sql_sheet_exam := IF(@has_sheet_exam > 0,
+    'ALTER TABLE edu_answer_sheet MODIFY COLUMN answer_sheet_exam_id BIGINT NULL COMMENT ''考试ID（扫描阅卷未绑定考试时为空）''',
+    'SELECT 1');
+PREPARE stmt_sheet_exam FROM @sql_sheet_exam;
+EXECUTE stmt_sheet_exam;
+DEALLOCATE PREPARE stmt_sheet_exam;
+
+-- ---------- edu_marking_task：图片路径加长 + 老师阅卷完成标记 ----------
+SET @has_mark_img := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_image_path'
+      AND CHARACTER_MAXIMUM_LENGTH < 2000
+);
+SET @sql_mark_img := IF(@has_mark_img > 0,
+    'ALTER TABLE edu_marking_task MODIFY COLUMN marking_task_image_path VARCHAR(2000) COMMENT ''上传图片的落盘路径（多页以逗号按页序连接，续跑时读取）''',
+    'SELECT 1');
+PREPARE stmt_mark_img FROM @sql_mark_img;
+EXECUTE stmt_mark_img;
+DEALLOCATE PREPARE stmt_mark_img;
+
+SET @has_mark_fin := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_teacher_finished'
+);
+SET @sql_mark_fin := IF(@has_mark_fin > 0, 'SELECT 1',
+    'ALTER TABLE edu_marking_task ADD COLUMN marking_task_teacher_finished TINYINT DEFAULT 0 COMMENT ''老师是否已点「阅卷完成」: 0-未完成 1-已完成''');
+PREPARE stmt_mark_fin FROM @sql_mark_fin;
+EXECUTE stmt_mark_fin;
+DEALLOCATE PREPARE stmt_mark_fin;
+
+SET @has_mark_fin_time := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_teacher_finish_time'
+);
+SET @sql_mark_fin_time := IF(@has_mark_fin_time > 0, 'SELECT 1',
+    'ALTER TABLE edu_marking_task ADD COLUMN marking_task_teacher_finish_time DATETIME COMMENT ''老师点「阅卷完成」的时间''');
+PREPARE stmt_mark_fin_time FROM @sql_mark_fin_time;
+EXECUTE stmt_mark_fin_time;
+DEALLOCATE PREPARE stmt_mark_fin_time;
+
+-- ---------- edu_wrong_question：试卷ID / 来源任务 / 订正状态 ----------
+SET @has_wq_paper := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_paper_id'
+);
+SET @sql_wq_paper := IF(@has_wq_paper > 0, 'SELECT 1',
+    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_paper_id BIGINT COMMENT ''试卷ID（错题来自哪张卷）''');
+PREPARE stmt_wq_paper FROM @sql_wq_paper;
+EXECUTE stmt_wq_paper;
+DEALLOCATE PREPARE stmt_wq_paper;
+
+SET @has_wq_task := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_source_task_id'
+);
+SET @sql_wq_task := IF(@has_wq_task > 0, 'SELECT 1',
+    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_source_task_id VARCHAR(64) NULL COMMENT ''来源阅卷任务标识（哪次完成登记的，用于撤销）'' AFTER wrong_question_paper_id');
+PREPARE stmt_wq_task FROM @sql_wq_task;
+EXECUTE stmt_wq_task;
+DEALLOCATE PREPARE stmt_wq_task;
+
+SET @has_wq_corr := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_corrected'
+);
+SET @sql_wq_corr := IF(@has_wq_corr > 0, 'SELECT 1',
+    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_corrected TINYINT NOT NULL DEFAULT 0 COMMENT ''订正状态：0 未订正 / 1 已订正'' AFTER wrong_question_source_task_id');
+PREPARE stmt_wq_corr FROM @sql_wq_corr;
+EXECUTE stmt_wq_corr;
+DEALLOCATE PREPARE stmt_wq_corr;
+
+SET @has_wq_corr_time := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_correct_time'
+);
+SET @sql_wq_corr_time := IF(@has_wq_corr_time > 0, 'SELECT 1',
+    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_correct_time DATETIME NULL COMMENT ''最近订正时间'' AFTER wrong_question_corrected');
+PREPARE stmt_wq_corr_time FROM @sql_wq_corr_time;
+EXECUTE stmt_wq_corr_time;
+DEALLOCATE PREPARE stmt_wq_corr_time;
+
+-- ---------- edu_question：审核驳回理由与累计次数 ----------
+SET @has_q_audit_remark := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_question' AND COLUMN_NAME = 'question_audit_remark'
+);
+SET @sql_q_audit_remark := IF(@has_q_audit_remark > 0, 'SELECT 1',
+    'ALTER TABLE edu_question ADD COLUMN question_audit_remark VARCHAR(500) COMMENT ''驳回理由（驳回必填，通过时清空）'' AFTER question_audit_status');
+PREPARE stmt_q_audit_remark FROM @sql_q_audit_remark;
+EXECUTE stmt_q_audit_remark;
+DEALLOCATE PREPARE stmt_q_audit_remark;
+
+SET @has_q_audit_count := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_question' AND COLUMN_NAME = 'question_audit_count'
+);
+SET @sql_q_audit_count := IF(@has_q_audit_count > 0, 'SELECT 1',
+    'ALTER TABLE edu_question ADD COLUMN question_audit_count INT DEFAULT 0 COMMENT ''累计审核次数（每次通过/驳回+1）'' AFTER question_audit_remark');
+PREPARE stmt_q_audit_count FROM @sql_q_audit_count;
+EXECUTE stmt_q_audit_count;
+DEALLOCATE PREPARE stmt_q_audit_count;
+
+-- ---------- edu_paper_assign：创建时间 ----------
+SET @has_pa_create := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_paper_assign' AND COLUMN_NAME = 'create_time'
+);
+SET @sql_pa_create := IF(@has_pa_create > 0, 'SELECT 1',
+    'ALTER TABLE edu_paper_assign ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT ''创建时间''');
+PREPARE stmt_pa_create FROM @sql_pa_create;
+EXECUTE stmt_pa_create;
+DEALLOCATE PREPARE stmt_pa_create;
