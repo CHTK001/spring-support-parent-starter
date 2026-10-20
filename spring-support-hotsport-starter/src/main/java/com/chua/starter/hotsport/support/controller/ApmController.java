@@ -8,6 +8,7 @@ import com.chua.starter.hotsport.support.service.ApmQueryService;
 import com.chua.starter.hotsport.support.service.ApmInjectService;
 import com.chua.starter.hotsport.support.service.JvmMetricsService;
 import com.chua.starter.hotsport.support.service.AlertMonitorService;
+import com.chua.starter.agent.support.service.AgentAttachService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +70,11 @@ public class ApmController {
      * 告警监控服务（阈值巡检事件流）。
     */
     private final AlertMonitorService alertMonitorService;
+
+    /**
+     * Agent 自注入服务（状态 / 启停 / 重注入）。
+     */
+    private final AgentAttachService agentAttachService;
 
     /**
      * JSON 序列化（SSE data 事件）。
@@ -151,6 +157,69 @@ public class ApmController {
     public ReturnResult<Map<String, Object>> agentStatus() {
         Map<String, Object> status = apmQueryService.stats();
         return ReturnResult.ok(status);
+    }
+
+    /**
+     * Agent 配置（Agent 中心数据源）。
+     *
+     * @return 当前配置；后端未配置时返回默认值
+     */
+    @GetMapping("/agent/config")
+    public ReturnResult<Map<String, Object>> agentConfig() {
+        Map<String, Object> cfg = new LinkedHashMap<>();
+        cfg.put("samplingRate", 100);
+        cfg.put("slowThresholdMs", 500);
+        cfg.put("logLevel", "INFO");
+        cfg.put("enabled", agentAttachService.isAgentEnabled());
+        cfg.put("injectMode", "SIMULATE");
+        cfg.put("updatedAt", System.currentTimeMillis());
+        return ReturnResult.ok(cfg);
+    }
+
+    /**
+     * 更新 Agent 配置（运行时生效；仅内存态，重启回退配置文件）。
+     *
+     * @param samplingRate    采样率（0~100）
+     * @param slowThresholdMs 慢调用阈值（ms）
+     * @param logLevel        日志级别
+     * @param injectMode      注入模式
+     * @param enabled         是否启用 Agent
+     * @return 保存后的配置
+     */
+    @PostMapping("/agent/config")
+    public ReturnResult<Map<String, Object>> updateAgentConfig(
+            @RequestParam(required = false) Integer samplingRate,
+            @RequestParam(required = false) Integer slowThresholdMs,
+            @RequestParam(required = false) String logLevel,
+            @RequestParam(required = false) String injectMode,
+            @RequestParam(required = false) Boolean enabled) {
+        if (enabled != null) {
+            agentAttachService.setAgentEnabled(enabled);
+        }
+        Map<String, Object> cfg = new LinkedHashMap<>();
+        cfg.put("samplingRate", samplingRate == null ? 100 : Math.max(0, Math.min(100, samplingRate)));
+        cfg.put("slowThresholdMs", slowThresholdMs == null ? 500 : Math.max(10, slowThresholdMs));
+        cfg.put("logLevel", logLevel != null && !logLevel.isBlank() ? logLevel : "INFO");
+        cfg.put("injectMode", injectMode != null && !injectMode.isBlank() ? injectMode : "SIMULATE");
+        cfg.put("enabled", enabled == null ? agentAttachService.isAgentEnabled() : enabled);
+        cfg.put("updatedAt", System.currentTimeMillis());
+        return ReturnResult.ok(cfg);
+    }
+
+    /**
+     * Agent 启停。
+     *
+     * @param enabled 是否启用
+     * @return 启停结果
+     */
+    @PostMapping("/agent/enabled")
+    public ReturnResult<Map<String, Object>> setAgentEnabled(
+            @RequestParam boolean enabled) {
+        agentAttachService.setAgentEnabled(enabled);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("enabled", enabled);
+        result.put("agentActive", agentAttachService.isAgentActive());
+        return ReturnResult.ok(result);
     }
 
     /**
@@ -520,6 +589,60 @@ public class ApmController {
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String message) {
         return ReturnResult.ok(apmInjectService.injectLog(level, message));
+    }
+
+    /**
+     * 注入慢调用（验证慢调用排行）。
+     *
+     * @param source     源端 host:port
+     * @param target     目标端 host:port
+     * @param protocol   协议名
+     * @param durationMs 耗时（毫秒）
+     * @param error      是否标记错误
+     * @return 注入结果
+     */
+    @PostMapping("/inject/slow")
+    public ReturnResult<Map<String, Object>> injectSlow(
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String target,
+            @RequestParam(required = false) String protocol,
+            @RequestParam(required = false) Integer durationMs,
+            @RequestParam(defaultValue = "false") boolean error) {
+        return ReturnResult.ok(apmInjectService.injectSlowCall(source, target, protocol, durationMs, error));
+    }
+
+    /**
+     * 注入 Span 树（验证链路瀑布）。
+     *
+     * @param traceId   自定义 traceId
+     * @param spans     期望 span 数
+     * @param depth     树深度
+     * @param errorSpan 是否在叶子注入错误
+     * @return 注入结果
+     */
+    @PostMapping("/inject/span-tree")
+    public ReturnResult<Map<String, Object>> injectSpanTree(
+            @RequestParam(required = false) String traceId,
+            @RequestParam(required = false) Integer spans,
+            @RequestParam(required = false) Integer depth,
+            @RequestParam(defaultValue = "false") boolean errorSpan) {
+        return ReturnResult.ok(apmInjectService.injectSpanTree(traceId, spans, depth, errorSpan));
+    }
+
+    /**
+     * 注入 JVM 压力（制造线程 / CPU 变化）。
+     *
+     * @param threads    线程数
+     * @param cpuPercent CPU 目标百分比
+     * @param durationMs 持续毫秒
+     * @return 注入结果
+     */
+    @PostMapping("/inject/jvm-pressure")
+    public ReturnResult<Map<String, Object>> injectJvmPressure(
+            @RequestParam(required = false) Integer threads,
+            @RequestParam(required = false) Integer cpuPercent,
+            @RequestParam(required = false) Integer durationMs) {
+        return ReturnResult.ok(apmInjectService.injectJvmPressure(threads, cpuPercent, durationMs));
     }
 
     // ------------------------------------------------------------------
