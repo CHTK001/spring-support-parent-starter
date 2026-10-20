@@ -31,7 +31,7 @@ public class AgentController {
      * 下载 agent 安装包（部署时由目标机自取）
      * <p>
      * Windows 走 WinRM 通道，单条命令行只有约 8KB，平台无法把 6MB 级的包推进去，
-     * 只能让目标机按 monitor.agent.jar-url 反向拉取这个端点。
+     * 只能让目标机按 plugin.monitor.agent.jar-url 反向拉取这个端点。
      * </p>
      * <p>
      * 响应直接写入 {@code HttpServletResponse}（本方法返回 void）：包体以

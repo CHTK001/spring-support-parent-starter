@@ -591,7 +591,7 @@ node spring-support-server-starter/src/acceptance/template-endpoint-check.mjs   
 ### 10.4 未通过 / 未验收与已知风险
 
 - **macOS**：无真机，`launchctl` 挂载链路未做真机验收，不作通过结论。
-- **SSH 读超时敏感性（环境相关）**：整机高负载时，卸载脚本静默超过 `monitor.ssh.session-timeout`（默认 15s）会触发 `Timed out after 15000 msec`，曾导致一轮 `win-service-e2e` 出现 3 项级联失败（清理产物实际已完成，仅库中 `serviceName` 未清空）；空载重跑 23/23。建议后续调大该值，或对长静默脚本改用后台模式。
+- **SSH 读超时敏感性（环境相关）**：整机高负载时，卸载脚本静默超过 `plugin.monitor.ssh.session-timeout`（默认 15s）会触发 `Timed out after 15000 msec`，曾导致一轮 `win-service-e2e` 出现 3 项级联失败（清理产物实际已完成，仅库中 `serviceName` 未清空）；空载重跑 23/23。建议后续调大该值，或对长静默脚本改用后台模式。
 - **并行会话干扰**：验收期间另一会话在同一台 `192.168.50.198` 上反复热补丁并重启服务（`patchC/D/E.sh`，间隔 5–10 分钟），`win-e2e` 曾三次在 C1/C4 阶段因平台重启而中断（`fetch failed`）。最终结果取 jar md5 连续 10 分钟稳定后的运行，且跑前跑后 md5 一致。
 - **验收环境事故（操作侧，已在当轮恢复）**：清理前端临时构建目录时误用未排除 junction 的 `robocopy /MIR`，导致主工作区 `node_modules` 与部分被跟踪文件被删；已用 `git checkout` 逐批恢复 3,760 个被跟踪文件、`pnpm install` 重建依赖、重新 `vite build` 重建 dist。**残留 1 个文件未恢复**：`apps/vue-support-ai-guada/docs/DARK_MODE_TEST_CHECKLIST.md`（其父目录 `docs` 当前对所有进程返回 `Access denied`，`takeown`/`icacls`/`rmdir` 均被拒，疑为安全软件或文件系统过滤驱动锁定；不影响 `apps/vue-support-monitor-starter` 构建与本次验收）。
 
@@ -637,9 +637,9 @@ SSH 认证/会话建立（Apache MINA SSHD `session.auth().verify(15, SECONDS)`�
 
 | 配置键（系统配置） | yaml 键 | 默认 | 作用 |
 | --- | --- | --- | --- |
-| `ssh.connect.timeout` | `monitor.ssh.connect-timeout` | 15s | TCP 连接与握手 |
-| `ssh.session.timeout` | `monitor.ssh.session-timeout` | **30s**（原 15s） | 认证/会话建立 |
-| `ssh.read.timeout` | `monitor.ssh.read-timeout`（缺省回退 `monitor.ssh.exec-timeout`） | 60s | 单条命令执行与输出读取 |
+| `ssh.connect.timeout` | `plugin.monitor.ssh.connect-timeout` | 15s | TCP 连接与握手 |
+| `ssh.session.timeout` | `plugin.monitor.ssh.session-timeout` | **30s**（原 15s） | 认证/会话建立 |
+| `ssh.read.timeout` | `plugin.monitor.ssh.read-timeout`（缺省回退 `plugin.monitor.ssh.exec-timeout`） | 60s | 单条命令执行与输出读取 |
 
 **实现要点**
 

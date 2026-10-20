@@ -25,11 +25,12 @@
 `application.yml`：
 
 ```yaml
-taskdistribution:
-  enabled: true
-  consumer-threads: 2
-  batch-size: 1
-  # store-type 默认 memory，无需配置
+plugin:
+  taskdistribution:
+    enabled: true
+    consumer-threads: 2
+    batch-size: 1
+    # store-type 默认 memory，无需配置
 ```
 
 零配置即可跑通——内存存储、单消费线程。

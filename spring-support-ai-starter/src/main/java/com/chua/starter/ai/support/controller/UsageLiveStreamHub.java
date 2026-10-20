@@ -96,7 +96,7 @@ public class UsageLiveStreamHub {
     /**
      * 定时任务是否已启用。单元测试/精简部署下关闭定时器，由写入方直接触发。
      */
-    @Value("${spring.ai.usage.live-stream.enabled:true}")
+    @Value("${plugin.ai.usage.live-stream.enabled:true}")
     private boolean scheduledEnabled = true;
 
     /**

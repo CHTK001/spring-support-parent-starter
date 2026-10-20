@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 路由查询——判定 7 类候选修复实验后的 "Table 或 view '订单' 执行 not exist" 是 H2 特定问题
  * 还是 分库分表sphere 5.5.2 核心问题（真库不可达时以明确原因跳过）。
  *
- * <p>接线：覆写 yaml 的 {@code spring.datasource.sharding.databases} 至真库两分片库
+ * <p>接线：覆写 yaml 的 {@code plugin.datasource.sharding.databases} 至真库两分片库
  * （shard0/shard1——同实例两库，库级 MOD(标识,2) 分布），其余装配与 {@link ShardingRealTest}
  * 一致（分库分表v5转换 autodiscover 需物理表在上下文启动前存在——种子放静态块）。</p>
  *
@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @SpringBootTest
 @TestPropertySource(properties = {
-        "spring.datasource.sharding.databases[0]=jdbc:mysql://root:root@172.16.0.40:3307/shard0",
-        "spring.datasource.sharding.databases[1]=jdbc:mysql://root:root@172.16.0.40:3307/shard1"
+        "plugin.datasource.sharding.databases[0]=jdbc:mysql://root:root@172.16.0.40:3307/shard0",
+        "plugin.datasource.sharding.databases[1]=jdbc:mysql://root:root@172.16.0.40:3307/shard1"
 })
 /**
  * 分库分表mysqlreal测试类。

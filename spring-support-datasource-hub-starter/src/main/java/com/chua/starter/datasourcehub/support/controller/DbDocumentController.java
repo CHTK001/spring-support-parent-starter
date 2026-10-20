@@ -189,6 +189,277 @@ public class DbDocumentController {
                 .body(body);
     }
 
+    /**
+     * 在线预览数据库设计文档。
+     *
+     * <p>走与 {@code /export} 相同的解析路径（采集表/列/主键/外键），但不做文件落盘，
+     * 而是将 markdown 文本转成内嵌样式的 HTML 片段，返回 {@code text/html}。
+     * 适合在 iframe 或对话框里直接渲染。</p>
+     *
+     * <p><b>支持预览的格式</b>：</p>
+     * <ul>
+     *   <li>markdown → 转 HTML（marked 库）；</li>
+     *   <li>html → 直接包裹进 HTML 壳；</li>
+     *   <li>word / pdf → 这两种是二进制格式，浏览器无法直接渲染，返回 501 提示下载。</li>
+     * </ul>
+     *
+     * @param datasourceId 数据源 ID
+     * @param database    目标库名；为空则用台账里登记的默认库
+     * @param format      导出格式（默认 markdown）
+     * @param template    模板样式
+     * @param tables      只导出这些表（逗号分隔）
+     * @return HTML 片段或错误提示
+     */
+    @Operation(summary = "在线预览数据库文档", description = "将文档内容转成 HTML 后返回，适合在 iframe 中渲染；word/pdf 格式不支持预览")
+    @GetMapping("/preview")
+    public ResponseEntity<byte[]> preview(
+            @RequestParam Long datasourceId,
+            @RequestParam(required = false) String database,
+            @RequestParam(required = false, defaultValue = "markdown") String format,
+            @RequestParam(required = false, defaultValue = "DEFAULT") String template,
+            @RequestParam(required = false) String tables) throws Exception {
+
+        String fmt = format == null || format.isBlank() ? "markdown" : format.trim().toLowerCase(Locale.ROOT);
+
+        // word/pdf 是二进制，无法在浏览器里渲染，预览时直接拒绝
+        if ("word".equalsIgnoreCase(fmt) || "pdf".equalsIgnoreCase(fmt)) {
+            return text(501, "501 不支持预览 " + fmt + " 格式，请点「导出」下载后查看。");
+        }
+
+        // markdown / html 使用相同的解析路径，只是不写文件
+        String targetFormat = "html".equalsIgnoreCase(fmt) ? "html" : "markdown";
+        DocumentProvider provider = DocumentProvider.create(targetFormat);
+        if (provider == null) {
+            return text(501, "当前实例未装配 " + targetFormat + " 文档渲染器");
+        }
+
+        DatasourceJdbcInfo info = datasourceService.jdbcInfo(datasourceId);
+        String url = withDatabase(info.url(), database);
+
+        DocumentParser parser = DocumentParser.create("database");
+        if (parser == null) {
+            return text(501, "当前实例未装配数据库文档采集器");
+        }
+
+        DocumentData data = parser.parse(DocumentConfig.builder()
+                .type("database")
+                .url(url)
+                .username(info.username())
+                .password(info.password())
+                .options(Map.of())
+                .build());
+
+        List<TableData> picked = filterTables(data.getTables(), tables);
+        if (picked.isEmpty()) {
+            return text(400, "库 " + data.getDatabaseName() + " 下未匹配到任何表");
+        }
+        data.setTables(picked);
+
+        DocumentTemplateType templateType = resolveTemplate(template);
+        File tmp = Files.createTempFile("db-doc-preview-", ".md").toFile();
+        tmp.deleteOnExit();
+        try {
+            provider.export(data, tmp, DocumentExportConfig.builder()
+                    .format(targetFormat)
+                    .templateType(templateType)
+                    .outputFile(tmp)
+                    .build());
+        } catch (Exception e) {
+            log.warn("[db-document-preview] 渲染失败: datasourceId={} format={}", datasourceId, targetFormat, e);
+            return text(500, "文档渲染失败: " + e.getMessage());
+        }
+
+        byte[] raw = Files.readAllBytes(tmp.toPath());
+        Files.deleteIfExists(tmp.toPath());
+
+        String htmlBody;
+        if ("html".equalsIgnoreCase(targetFormat)) {
+            // html 渲染器直接出 HTML 内容，无需再转
+            htmlBody = new String(raw, StandardCharsets.UTF_8);
+        } else {
+            // markdown → HTML（内联 marked 风格，不依赖外部 CDN）
+            String markdown = new String(raw, StandardCharsets.UTF_8);
+            htmlBody = markdownToHtml(markdown);
+        }
+
+        String html = HTML_WRAPPER.formatted(data.getTitle() != null ? data.getTitle() : "数据库设计文档", htmlBody);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                .body(html.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Minimal inline marked-like markdown to HTML converter.
+     *
+     * <p>不引入任何第三方库，直接手写：覆盖本场景所需的子集（标题、表格、代码块、列表、粗斜体、链接）。
+     * 完整 markdown → HTML 转换已有 DocumentProvider("markdown") 负责，这里只做前端预览用的轻量渲染。</p>
+     */
+    private static String markdownToHtml(String md) {
+        if (md == null || md.isBlank()) {
+            return "<p><em>（文档内容为空）</em></p>";
+        }
+        StringBuilder sb = new StringBuilder();
+        String[] lines = md.split("\n", -1);
+        boolean inCode = false;
+        boolean inUl = false;
+        boolean inOl = false;
+        boolean inTable = false;
+
+        for (String raw : lines) {
+            String line = raw;
+
+            // 代码块开始/结束
+            if (line.startsWith("```")) {
+                if (!inCode) {
+                    if (inUl) { sb.append("</ul>\n"); inUl = false; }
+                    if (inOl) { sb.append("</ol>\n"); inOl = false; }
+                    if (inTable) { sb.append("</tbody></table>\n"); inTable = false; }
+                    sb.append("<pre><code>");
+                    inCode = true;
+                } else {
+                    sb.append("</code></pre>\n");
+                    inCode = false;
+                }
+                continue;
+            }
+            if (inCode) {
+                sb.append(escHtml(line)).append("\n");
+                continue;
+            }
+
+            // 关闭未闭合的列表/表格
+            if (inUl && !line.startsWith("- ") && !line.startsWith("* ")) { sb.append("</ul>\n"); inUl = false; }
+            if (inOl && !line.matches("\\d+\\.\\s.*")) { sb.append("</ol>\n"); inOl = false; }
+            if (inTable && !line.startsWith("|")) { sb.append("</tbody></table>\n"); inTable = false; }
+
+            if (line.isBlank()) {
+                sb.append("\n");
+                continue;
+            }
+
+            // 标题
+            if (line.startsWith("# ")) {
+                sb.append("<h1>").append(inline(line.substring(2))).append("</h1>\n");
+                continue;
+            }
+            if (line.startsWith("## ")) {
+                sb.append("<h2>").append(inline(line.substring(3))).append("</h2>\n");
+                continue;
+            }
+            if (line.startsWith("### ")) {
+                sb.append("<h3>").append(inline(line.substring(4))).append("</h3>\n");
+                continue;
+            }
+
+            // 无序列表
+            if (line.startsWith("- ") || line.startsWith("* ")) {
+                if (!inUl) { sb.append("<ul>\n"); inUl = true; }
+                sb.append("<li>").append(inline(line.substring(2))).append("</li>\n");
+                continue;
+            }
+
+            // 有序列表
+            if (line.matches("\\d+\\.\\s.*")) {
+                if (!inOl) { sb.append("<ol>\n"); inOl = true; }
+                sb.append("<li>").append(inline(line.replaceFirst("^\\d+\\.\\s+", ""))).append("</li>\n");
+                continue;
+            }
+
+            // 表格（处理表头分隔行）
+            if (line.startsWith("|")) {
+                if (!inTable) { sb.append("<table class='md-table'>\n<thead><tr>"); inTable = true; }
+                // 跳过分隔行（|---|:---|）
+                if (line.replace("|", "").replace("-", "").replace(":", "").trim().isEmpty()) {
+                    // 分隔行 → 从 thead 切到 tbody
+                    sb.append("</tr></thead><tbody>\n");
+                    continue;
+                }
+                String[] cells = line.split("\\|", -1);
+                StringBuilder row = new StringBuilder("<tr>");
+                for (int i = 1; i < cells.length - 1; i++) {
+                    row.append(line.startsWith("<th>") ? "<th>" : "<td>");
+                    row.append(inline(cells[i].trim()));
+                    row.append(line.startsWith("<th>") ? "</th>" : "</td>");
+                }
+                row.append("</tr>\n");
+                sb.append(row);
+                continue;
+            }
+
+            // hr
+            if (line.matches("-{3,}|\\*{3,}|_{3,}")) {
+                sb.append("<hr>\n");
+                continue;
+            }
+
+            // 普通段落
+            sb.append("<p>").append(inline(line)).append("</p>\n");
+        }
+        // 收尾
+        if (inCode) sb.append("</code></pre>\n");
+        if (inUl) sb.append("</ul>\n");
+        if (inOl) sb.append("</ol>\n");
+        if (inTable) sb.append("</tbody></table>\n");
+        return sb.toString();
+    }
+
+    /** 行内元素：粗体/斜体/行内代码/链接 */
+    private static String inline(String s) {
+        if (s == null) return "";
+        return escHtml(stripMarkdown(s));
+    }
+
+    /** 去掉行内 markdown 标记 */
+    private static String stripMarkdown(String s) {
+        if (s == null) return "";
+        // 循环去掉成对的 ** __ * _ `，最多 20 轮（防止极端情况死循环）
+        for (int i = 0; i < 20; i++) {
+            String t = s.replace("**", "").replace("__", "").replace("*", "").replace("_", "").replace("`", "");
+            if (t.equals(s)) break;
+            s = t;
+        }
+        return s;
+    }
+
+    private static String escHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    /** HTML 壳：含内联样式，确保在任何页面里渲染一致 */
+    private static final String HTML_WRAPPER =
+            """
+            <!DOCTYPE html>
+            <html lang="zh-CN">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>%s</title>
+              <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; background: #fff; padding: 24px 32px; max-width: 900px; margin: 0 auto; }
+                h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; border-bottom: 2px solid #1976d2; padding-bottom: 8px; margin-bottom: 16px; }
+                h2 { font-size: 18px; font-weight: 600; color: #333; margin: 20px 0 10px; }
+                h3 { font-size: 15px; font-weight: 600; color: #555; margin: 16px 0 8px; }
+                p { margin-bottom: 10px; }
+                ul, ol { padding-left: 24px; margin-bottom: 12px; }
+                li { margin-bottom: 4px; }
+                pre { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 16px; overflow-x: auto; margin-bottom: 12px; font-size: 13px; }
+                code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13px; }
+                pre code { background: none; padding: 0; }
+                table { width: 100%%; border-collapse: collapse; margin-bottom: 16px; }
+                th { background: #1976d2; color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; }
+                td { padding: 7px 12px; border: 1px solid #e0e0e0; }
+                tr:nth-child(even) td { background: #f9f9f9; }
+                tr:hover td { background: #e8f4fd; }
+                hr { border: none; border-top: 1px solid #e0e0e0; margin: 20px 0; }
+                a { color: #1976d2; }
+              </style>
+            </head>
+            <body>%s</body>
+            </html>
+            """;
+
     // ==================== 内部方法 ====================
 
     /**

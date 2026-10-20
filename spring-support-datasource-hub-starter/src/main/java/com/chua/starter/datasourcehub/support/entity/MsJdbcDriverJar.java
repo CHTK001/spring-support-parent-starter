@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * 上传的 JDBC 驱动 jar。
  *
  * <p>驱动 jar 落在应用管理的目录里，台账只记元信息与落盘文件名；
- * 真正的字节在文件系统上（{@code datasource.hub.driver-jar-dir}）。</p>
+ * 真正的字节在文件系统上（{@code plugin.datasource.hub.driver-jar-dir}）。</p>
  *
  * @author CH
  * @since 4.0.0.43

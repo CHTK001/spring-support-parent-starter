@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 也便于在容器里用环境变量覆盖：</p>
  *
  * <pre>
- * chua:
+ * plugin:
  *   ai:
  *     chat:
  *       enabled: true
@@ -43,7 +43,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  * @since 4.0.0.42
  */
-@ConfigurationProperties(prefix = "chua.ai.chat")
+@ConfigurationProperties(prefix = "plugin.ai.chat")
 public record AiChatProperties(
         boolean enabled,
         String provider,

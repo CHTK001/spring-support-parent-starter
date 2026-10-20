@@ -9,14 +9,15 @@
 **何时使用**：本地调试、单元测试、Demo。任务量 < 1k，重启可丢任务。
 
 ```yaml
-taskdistribution:
-  enabled: true
-  store-type: memory
-  consumer-threads: 2
-  batch-size: 1
-  task:
-    timeout-ms: 10_000
-    max-retries: 1
+plugin:
+  taskdistribution:
+    enabled: true
+    store-type: memory
+    consumer-threads: 2
+    batch-size: 1
+    task:
+      timeout-ms: 10_000
+      max-retries: 1
 ```
 
 **注意**：
@@ -31,16 +32,17 @@ taskdistribution:
 **何时使用**：单个 JVM 实例 + 关系型数据库（MySQL/PostgreSQL/Oracle）。任务量 1k-100k/天，需要可恢复。
 
 ```yaml
-taskdistribution:
-  enabled: true
-  store-type: db
-  consumer-threads: 4                  # 建议 = CPU 核数 / 2
-  batch-size: 4
-  server:
-    enabled: false                     # 暂不加入集群
-  task:
-    timeout-ms: 30_000
-    max-retries: 3
+plugin:
+  taskdistribution:
+    enabled: true
+    store-type: db
+    consumer-threads: 4                  # 建议 = CPU 核数 / 2
+    batch-size: 4
+    server:
+      enabled: false                     # 暂不加入集群
+    task:
+      timeout-ms: 30_000
+      max-retries: 3
 spring:
   datasource:
     url: jdbc:mysql://mysql-host:3306/app_db?useSSL=false
@@ -77,31 +79,34 @@ CREATE TABLE sys_task_store (
 
 ```yaml
 # 节点 1 application-node1.yml
-taskdistribution:
-  enabled: true
-  node-id: node-01
-  store-type: db
-  consumer-threads: 8
-  batch-size: 8
-  strategy: WEIGHT                    # 按权重选择工作端
-  server:
+plugin:
+  taskdistribution:
     enabled: true
-    host: 0.0.0.0
-    port: 19390
-    protocol: tcp
+    node-id: node-01
+    store-type: db
+    consumer-threads: 8
+    batch-size: 8
+    strategy: WEIGHT                    # 按权重选择工作端
+    server:
+      enabled: true
+      host: 0.0.0.0
+      port: 19390
+      protocol: tcp
 spring:
   datasource:
     url: jdbc:mysql://mysql-host:3306/app_db
 
 ---
 # 节点 2 application-node2.yml（仅差异）
-taskdistribution:
-  node-id: node-02
-  # ...其他同上
+plugin:
+  taskdistribution:
+    node-id: node-02
+    # ...其他同上
 ---
 # 节点 3 application-node3.yml
-taskdistribution:
-  node-id: node-03
+plugin:
+  taskdistribution:
+    node-id: node-03
 ```
 
 **注意**：
@@ -116,20 +121,21 @@ taskdistribution:
 **何时使用**：任务小（< 1KB），延迟敏感（< 10ms），容忍偶发丢包。常见于实时通知、IoT。
 
 ```yaml
-taskdistribution:
-  enabled: true
-  node-id: edge-001
-  store-type: file                   # 边缘节点用文件存储
-  store-path: /var/lib/taskstore/
-  consumer-threads: 2
-  batch-size: 16                     # UDP 适合批量
-  server:
+plugin:
+  taskdistribution:
     enabled: true
-    port: 19390
-    protocol: udp
-  task:
-    timeout-ms: 5_000
-    max-retries: 0                   # UDP 不重试
+    node-id: edge-001
+    store-type: file                   # 边缘节点用文件存储
+    store-path: /var/lib/taskstore/
+    consumer-threads: 2
+    batch-size: 16                     # UDP 适合批量
+    server:
+      enabled: true
+      port: 19390
+      protocol: udp
+    task:
+      timeout-ms: 5_000
+      max-retries: 0                   # UDP 不重试
 ```
 
 **注意**：
@@ -144,14 +150,15 @@ taskdistribution:
 **何时使用**：百万级任务/天，CPU 密集型（如图片处理、报表生成），不要求毫秒级响应。
 
 ```yaml
-taskdistribution:
-  enabled: true
-  store-type: db
-  consumer-threads: 16                # 接近 CPU 核数
-  batch-size: 32                      # 一次拉 32 条减少调度开销
-  task:
-    timeout-ms: 300_000               # 5 分钟超时（长任务）
-    max-retries: 5
+plugin:
+  taskdistribution:
+    enabled: true
+    store-type: db
+    consumer-threads: 16                # 接近 CPU 核数
+    batch-size: 32                      # 一次拉 32 条减少调度开销
+    task:
+      timeout-ms: 300_000               # 5 分钟超时（长任务）
+      max-retries: 5
 spring:
   datasource:
     hikari:

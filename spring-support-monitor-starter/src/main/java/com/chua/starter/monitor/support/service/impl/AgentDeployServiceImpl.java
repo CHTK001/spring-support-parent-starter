@@ -439,7 +439,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             return resolved;
         }
         throw new IllegalStateException("目标主机未找到可用的 java（agent 需要 Java " + MIN_JAVA_MAJOR + "+），"
-                + "可先安装 JDK 或在 monitor.agent.java-command 指定绝对路径后重试");
+                + "可先安装 JDK 或在 plugin.monitor.agent.java-command 指定绝对路径后重试");
     }
 
     /**
@@ -467,7 +467,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
     /**
      * 投递 agent 包到远端路径。
      * <p>
-     * 优先让目标机按 {@code monitor.agent.jar-url} 自行 HTTP 下载：WinRM 单条命令行只有约 8KB 可用，
+     * 优先让目标机按 {@code plugin.monitor.agent.jar-url} 自行 HTTP 下载：WinRM 单条命令行只有约 8KB 可用，
      * Base64 分块搬运 6MB+ 的包需要数千次往返，实测直接报「命令行太长」。
      * 未配置下载地址、下载失败或字节数不符时回退通道上传（Linux 走 SFTP 不受影响）。
      * </p>
@@ -758,7 +758,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             }
         }
         throw new IllegalStateException("未找到 agent.jar，已尝试: " + Arrays.toString(candidates.stream()
-                .map(Path::toString).toArray()) + "；可通过 monitor.agent.jar-path 指定");
+                .map(Path::toString).toArray()) + "；可通过 plugin.monitor.agent.jar-path 指定");
     }
 
     /**

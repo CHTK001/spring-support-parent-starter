@@ -596,6 +596,20 @@ public class ApmController {
     }
 
     /**
+     * 慢 SQL 分析（按 SQL 协议 + 耗时聚合）。
+     *
+     * @param limit     返回上限
+     * @param minDurationMs 最小耗时阈值
+     * @return 慢 SQL 列表
+     */
+    @GetMapping("/slow-sql")
+    public ReturnResult<List<Map<String, Object>>> slowSql(
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "200") long minDurationMs) {
+        return ReturnResult.ok(apmQueryService.slowSql(limit, minDurationMs));
+    }
+
+    /**
      * 错误排行（按错误类型 + 消息聚合）。
      *
      * @param limit 返回上限

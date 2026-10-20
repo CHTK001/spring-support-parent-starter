@@ -1,5 +1,6 @@
 package com.chua.starter.eduai.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
@@ -599,5 +600,64 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         log.info("[EduAi] AI 选题: subject={}, gradeLevel={}, 期望={}, 候选={}, 实得={}",
                 dto.subject(), gradeLevel, count, fallbackIds.size(), ordered.size());
         return ordered;
+    }
+
+    @Override
+    public String exportQuestions(String keyword, String subject, String gradeLevel,
+                                  String questionType, Integer auditStatus, int limit) {
+        if (limit <= 0) {
+            limit = 5000;
+        }
+        limit = Math.min(limit, 10000);
+        QueryWrapper<EduQuestion> q = new QueryWrapper<>();
+        q.orderByDesc("question_id").last("LIMIT " + limit);
+        if (keyword != null && !keyword.isBlank()) {
+            q.like("question_stem", keyword.trim());
+        }
+        if (subject != null && !subject.isBlank()) {
+            q.eq("question_subject", subject);
+        }
+        if (gradeLevel != null && !gradeLevel.isBlank()) {
+            q.eq("question_grade_level", gradeLevel);
+        }
+        if (questionType != null && !questionType.isBlank()) {
+            q.eq("question_type", questionType);
+        }
+        if (auditStatus != null) {
+            q.eq("question_audit_status", auditStatus);
+        }
+        List<EduQuestion> rows = baseMapper.selectList(q);
+        StringBuilder sb = new StringBuilder(8192);
+        // CSV header
+        sb.append("题目ID,题型,学科,学段,年级,难度,题干,选项,答案,解析,来源,状态,创建时间\n");
+        for (EduQuestion q2 : rows) {
+            sb.append(nullSafe(q2.getQuestionId())).append(',');
+            sb.append(escapeCsv(q2.getQuestionType())).append(',');
+            sb.append(escapeCsv(q2.getQuestionSubject())).append(',');
+            sb.append(escapeCsv(q2.getQuestionGradeLevel())).append(',');
+            sb.append(escapeCsv(q2.getQuestionGrade())).append(',');
+            sb.append(escapeCsv(nullSafe(q2.getQuestionDifficulty()))).append(',');
+            sb.append(escapeCsv(q2.getQuestionStem())).append(',');
+            sb.append(escapeCsv(q2.getQuestionOptions())).append(',');
+            sb.append(escapeCsv(q2.getQuestionAnswer())).append(',');
+            sb.append(escapeCsv(q2.getQuestionAnalysis())).append(',');
+            sb.append(escapeCsv(q2.getQuestionSource())).append(',');
+            sb.append(escapeCsv(String.valueOf(q2.getQuestionAuditStatus()))).append(',');
+            sb.append(escapeCsv(q2.getCreateTime() != null ? q2.getCreateTime().toString() : "")).append('\n');
+        }
+        return sb.toString();
+    }
+
+    private static String escapeCsv(String v) {
+        if (v == null) return "";
+        // 双重转义双引号，包裹含逗号/换行/双引号的字段
+        if (v.contains(",") || v.contains("\n") || v.contains("\r") || v.contains("\"")) {
+            return "\"" + v.replace("\"", "\"\"") + "\"";
+        }
+        return v;
+    }
+
+    private static String nullSafe(Object v) {
+        return v == null ? "" : String.valueOf(v);
     }
 }

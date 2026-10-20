@@ -33,11 +33,11 @@ class AgentAutoConfigurationTest {
     }
 
     /**
-     * runtime.agent.enabled=false 时整体不装配。
+     * plugin.agent.enabled=false 时整体不装配。
      */
     @Test
     void shouldBackOffWhenDisabled() {
-        runner.withPropertyValues("runtime.agent.enabled=false")
+        runner.withPropertyValues("plugin.agent.enabled=false")
                 .run(context -> assertThat(context)
                         .doesNotHaveBean(AgentAttachService.class)
                         .doesNotHaveBean(AgentAttachProperties.class));

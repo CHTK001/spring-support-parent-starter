@@ -151,6 +151,13 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
     </dependency>
+    <!-- SafeTensor Python 推理服务桥：Indra OCR 等端到端文档解析模型注册
+         （Java 侧 ModelRegistrar + HTTP 客户端，Python 服务由 utils-support-parent-starter
+          的 safetensors python_service 提供） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-deeplearning-safetensors-starter</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-jvector-starter</artifactId>

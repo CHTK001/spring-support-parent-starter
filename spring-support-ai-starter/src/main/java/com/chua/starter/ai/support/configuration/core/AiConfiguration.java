@@ -89,7 +89,7 @@ public class AiConfiguration {
      * 从而不会出现「聚合客户端」和「YAML 客户端」两个 ChatClient bean 相互干扰。
      * 注册中心在 {@code ApplicationReadyEvent} 时按类型收集 ChatClient，本 bean 会被收进去。</p>
      *
-     * <p>只在 {@code chua.ai.chat.enabled=true} 时创建；没配密钥的环境不会凭空多出一个
+     * <p>只在 {@code plugin.ai.chat.enabled=true} 时创建；没配密钥的环境不会凭空多出一个
      * 必然调用失败的客户端。</p>
      *
      * <p>{@code app-key} 为空时同样不创建 —— 否则能力门会报「可用」而调用必然 401，
@@ -99,8 +99,8 @@ public class AiConfiguration {
      * @return 对话客户端
      */
     @Bean
-    @ConditionalOnProperty(prefix = "chua.ai.chat", name = "enabled", havingValue = "true")
-    @ConditionalOnExpression("'${chua.ai.chat.app-key:}'.trim().length() > 0")
+    @ConditionalOnProperty(prefix = "plugin.ai.chat", name = "enabled", havingValue = "true")
+    @ConditionalOnExpression("'${plugin.ai.chat.app-key:}'.trim().length() > 0")
     public ChatClient yamlChatClient(AiChatProperties properties) {
         return AiChatClientFactory.create(properties);
     }
@@ -238,11 +238,11 @@ public class AiConfiguration {
         AgentRegistry agentRegistry = context.getBean(AgentRegistry.class);
         AgentProviderFactory agentProviderFactory = context.getBean(AgentProviderFactory.class);
 
-        // 开了 chua.ai.chat.enabled 却没配密钥时，bean 会被下面的条件挡掉（不创建调用必失败的客户端），
+        // 开了 plugin.ai.chat.enabled 却没配密钥时，bean 会被下面的条件挡掉（不创建调用必失败的客户端），
         // 这里补一条可操作的告警 —— 否则现象只是「AI 不可用」，看不出是漏配了密钥。
         if (aiChatProperties.enabled() && !StringUtils.hasText(aiChatProperties.appKey())) {
-            log.warn("[AiConfiguration] chua.ai.chat.enabled=true 但未配置密钥，AI 对话客户端不会创建；"
-                    + "请设置 chua.ai.chat.app-key 或环境变量 AI_CHAT_APP_KEY（provider={}）",
+            log.warn("[AiConfiguration] plugin.ai.chat.enabled=true 但未配置密钥，AI 对话客户端不会创建；"
+                    + "请设置 plugin.ai.chat.app-key 或环境变量 AI_CHAT_APP_KEY（provider={}）",
                     aiChatProperties.provider());
         }
 

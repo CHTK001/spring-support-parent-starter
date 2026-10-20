@@ -24,19 +24,18 @@ spring:
       static-locations: classpath:/static/
 
 # APM 数据源与 Agent 自注入开关
-hotsport:
-  # 演示数据种子：自 attach 对已加载类无法补织，开启 DemoSeedRunner 注入
-  # 真实格式数据保证页面有数（生产环境可关）
-  demo:
-    seed: true
-  # 静态存储后端：inmemory / sqlite / noop
-  apm:
-    storage:
-      type: inmemory
-      retention-ms: 604800000
-
-# Agent 自注入（spring-support-agent-starter 自动配置，前缀 runtime.agent）
-runtime:
+plugin:
+  hotsport:
+    # 演示数据种子：自 attach 对已加载类无法补织，开启 DemoSeedRunner 注入
+    # 真实格式数据保证页面有数（生产环境可关）
+    demo:
+      seed: true
+    # 静态存储后端：inmemory / sqlite / noop
+    apm:
+      storage:
+        type: inmemory
+        retention-ms: 604800000
+  # Agent 自注入（spring-support-agent-starter 自动配置，前缀 plugin.agent）
   agent:
     enabled: true
     shell-port: 4567

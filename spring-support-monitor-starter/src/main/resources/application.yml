@@ -77,7 +77,7 @@ spring:
     username: root
     password: ${MONITOR_DB_PASSWORD:}
 
-  # Redis（告警静默期 + 可选时序引擎 monitor.timeseries.engine=redis）
+  # Redis（告警静默期 + 可选时序引擎 plugin.monitor.timeseries.engine=redis）
   data:
     redis:
       host: 172.16.0.40
@@ -168,24 +168,25 @@ plugin:
 
 # 时序存储引擎：datasource / redis / influxdb / questdb / none（默认 datasource）
 # datasource：JDBC 数据库明细表（用 Engine + SqlExecutor）
-# redis：Redis ZSET 简化时序（默认取 spring.data.redis；monitor.timeseries.url 配成 redis:// 地址时覆盖）
-# influxdb：需 InfluxDB 服务（monitor.timeseries.url 指向其 HTTP 端点）
-# questdb：需 QuestDB 服务（monitor.timeseries.url 指向其 HTTP 9000 端点）
+# redis：Redis ZSET 简化时序（默认取 spring.data.redis；plugin.monitor.timeseries.url 配成 redis:// 地址时覆盖）
+# influxdb：需 InfluxDB 服务（plugin.monitor.timeseries.url 指向其 HTTP 端点）
+# questdb：需 QuestDB 服务（plugin.monitor.timeseries.url 指向其 HTTP 9000 端点）
 # none：跳过时序，仅 MySQL 明细
-monitor:
-  timeseries:
-    # 主机历史与监控项双写统一走 SeriesEngine；datasource=JDBC 实现，可切 redis/influxdb
-    engine: datasource
-    url: http://172.16.0.40:8086
-    database: monitor
-  history:
-    # 主机指标历史保留天数
-    retention-days: 7
-  ssh:
-    # OpenSSH 采集通道超时；慢链路/高 RTT 可调大
-    connect-timeout-seconds: 15
-    session-timeout-seconds: 15
-    exec-timeout-seconds: 60
+plugin:
+  monitor:
+    timeseries:
+      # 主机历史与监控项双写统一走 SeriesEngine；datasource=JDBC 实现，可切 redis/influxdb
+      engine: datasource
+      url: http://172.16.0.40:8086
+      database: monitor
+    history:
+      # 主机指标历史保留天数
+      retention-days: 7
+    ssh:
+      # OpenSSH 采集通道超时；慢链路/高 RTT 可调大
+      connect-timeout-seconds: 15
+      session-timeout-seconds: 15
+      exec-timeout-seconds: 60
 
 logging:
   level:

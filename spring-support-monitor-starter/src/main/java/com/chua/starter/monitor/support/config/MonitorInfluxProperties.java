@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @since 4.0.0.42
  */
 @Data
-@ConfigurationProperties(prefix = "monitor.influx")
+@ConfigurationProperties(prefix = "plugin.monitor.influx")
 public class MonitorInfluxProperties {
 
     /**

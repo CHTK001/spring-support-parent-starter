@@ -35,8 +35,8 @@ import java.nio.charset.StandardCharsets;
  */
 @Slf4j
 @RestController
-@RequestMapping("${chua.swagger.export.path:/chua/swagger/export}")
-@ConditionalOnProperty(prefix = "chua.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
+@RequestMapping("${plugin.swagger.export.path:/chua/swagger/export}")
+@ConditionalOnProperty(prefix = "plugin.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerExportController {
 
     /**

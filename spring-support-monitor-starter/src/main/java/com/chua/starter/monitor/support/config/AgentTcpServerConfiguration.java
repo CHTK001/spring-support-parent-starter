@@ -28,7 +28,7 @@ public class AgentTcpServerConfiguration {
     /**
      * 服务端端口（默认 19390）
     */
-    @Value("${monitor.agent.tcp-port:19390}")
+    @Value("${plugin.monitor.agent.tcp-port:19390}")
     private int tcpPort;
 
     /**

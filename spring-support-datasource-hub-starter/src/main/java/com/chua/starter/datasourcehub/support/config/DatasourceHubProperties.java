@@ -13,7 +13,7 @@ import java.util.List;
  * @since 4.0.0.42
  */
 @Data
-@ConfigurationProperties(prefix = "datasource.hub")
+@ConfigurationProperties(prefix = "plugin.datasource.hub")
 public class DatasourceHubProperties {
 
     /**

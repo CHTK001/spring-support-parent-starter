@@ -17,10 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>钉住两条容易踩的边界：</p>
  * <ul>
- *   <li>{@code monitor.timeseries.url} 默认是 InfluxDB 的 {@code http://...}，
+ *   <li>{@code plugin.monitor.timeseries.url} 默认是 InfluxDB 的 {@code http://...}，
  *       不能被当作 Redis 地址塞给 Lettuce，否则连接必失败；</li>
  *   <li>显式配置的 {@code redis://} / {@code rediss://} / {@code host:port} 必须生效，
- *       从而让 redis 也支持 {@code monitor.timeseries.url}。</li>
+ *       从而让 redis 也支持 {@code plugin.monitor.timeseries.url}。</li>
  * </ul>
  *
  * @author CH

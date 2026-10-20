@@ -17,7 +17,7 @@ import javax.sql.DataSource;
  * <p>
  * 扫描所有 提供者、服务、调度器 组件，自动装配。
  * 开启事务管理和定时调度；注册时序存储配置属性
- * （influxdb 写入器按 {@code monitor.influx.enabled} 条件装配）。
+ * （influxdb 写入器按 {@code plugin.monitor.influx.enabled} 条件装配）。
  * </p>
  *
  * @since 2026/8/4

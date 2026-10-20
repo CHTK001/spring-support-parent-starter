@@ -74,5 +74,6 @@ plugin:
 
 # 管理控制台：FTL 页面鉴权（@Permission console:manage）+ 运行时覆盖 SQLite 持久化 +
 # 注解指纹比对启动重置；sqlite-path 指向 target（clean 后清空，测试指纹重置语义确定）
-console:
-  sqlite-path: target/console-test.sqlite
+plugin:
+  console:
+    sqlite-path: target/console-test.sqlite

@@ -7,13 +7,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 任务分发配置属性。
  *
- * <p>对应 application.yml 中的 {@code taskdistribution.*} 配置项。</p>
+ * <p>对应 application.yml 中的 {@code plugin.taskdistribution.*} 配置项。</p>
  *
  * @since 4.0.0.42
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "taskdistribution")
+@ConfigurationProperties(prefix = "plugin.taskdistribution")
 public class TaskDistributionProperties {
 
     /**
