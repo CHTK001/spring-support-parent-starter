@@ -495,6 +495,54 @@ public class ApmQueryService {
     }
 
     /**
+     * 全量句柄快照（含分配堆栈 / FD / 线程）。
+     *
+     * @param limit 每分类上限
+     * @return 句柄清单
+     */
+    public Map<String, Object> handleInventory(int limit) {
+        com.chua.runtime.apm.handler.HandleInventoryHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.HandleInventoryHandler.class);
+        if (handler == null) {
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("ts", System.currentTimeMillis());
+            empty.put("trackedHandles", List.of());
+            empty.put("fileDescriptors", List.of());
+            empty.put("threads", List.of());
+            empty.put("summary", Map.of());
+            return empty;
+        }
+        return handler.snapshot(limit);
+    }
+
+    /**
+     * System.out / System.err 实时捕获日志。
+     *
+     * @param limit 条数上限
+     * @return 系统输出条目
+     */
+    public List<Map<String, Object>> systemOut(int limit) {
+        com.chua.runtime.apm.handler.SystemOutCaptureHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.SystemOutCaptureHandler.class);
+        if (handler == null) {
+            return new ArrayList<>();
+        }
+        int n = limit > 0 ? limit : 200;
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (com.chua.runtime.apm.handler.SystemOutCaptureHandler.SystemOutEntry e : handler.tail(n)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("timestamp", toIso(e.getTimestamp()));
+            m.put("source", e.getSource());
+            m.put("level", e.getLevel());
+            m.put("line", e.getLine());
+            items.add(m);
+        }
+        return items;
+    }
+
+    /**
      * 按 traceId 查询整条链路的全部 span（Trace 详情抽屉数据源）。
      *
      * @param traceId 链路 ID
