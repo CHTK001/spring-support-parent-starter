@@ -11,10 +11,13 @@ import com.chua.starter.hotsport.support.config.HotsportProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 数据注入服务 — 提供运行时"写"能力，让页面操作产生可观测的真实数据。
@@ -152,6 +155,207 @@ public class ApmInjectService {
         storage().appendLog(record);
         log.info("[Inject] 日志: [{}] {}", lv, msg);
         return Map.of("injected", "log", "level", lv, "message", msg);
+    }
+
+    /**
+     * 注入一条慢调用（可指定耗时，用于验证慢调用排行）。
+     *
+     * @param source     源端 host:port
+     * @param target     目标端 host:port
+     * @param protocol   协议名
+     * @param durationMs 期望耗时（毫秒）
+     * @param error      是否标记为错误调用
+     * @return 注入结果
+     */
+    public Map<String, Object> injectSlowCall(String source, String target,
+                                              String protocol, Integer durationMs,
+                                              boolean error) {
+        long now = System.currentTimeMillis();
+        long duration = durationMs == null || durationMs <= 0 ? 1000L : durationMs.longValue();
+        String proto = protocol != null && !protocol.isBlank() ? protocol.toUpperCase() : "HTTP";
+        String src = source != null && !source.isBlank() ? source : "manual-client";
+        String tgt = target != null && !target.isBlank() ? target : "hotsport:8086";
+        String op = "SLOW " + proto + " manual";
+
+        String[] sHost = splitHostPort(src);
+        String[] tHost = splitHostPort(tgt);
+        TransmissionEvent event = TransmissionEvent.builder()
+                .traceId("trace-slow-" + Long.toHexString(now))
+                .spanId("span-" + now)
+                .sourceProtocol(proto)
+                .sourceSoftware(proto)
+                .sourceHost(sHost[0])
+                .sourcePort(Integer.parseInt(sHost[1]))
+                .targetProtocol(proto)
+                .targetSoftware(proto)
+                .targetHost(tHost[0])
+                .targetPort(Integer.parseInt(tHost[1]))
+                .targetPath(op)
+                .protocol(proto)
+                .software(proto)
+                .operation(op)
+                .status(error ? com.chua.runtime.protocol.StatusCode.ERROR
+                        : com.chua.runtime.protocol.StatusCode.OK)
+                .statusCode(error ? 500 : 200)
+                .startTime(now)
+                .endTime(now + duration)
+                .duration(duration)
+                .bytesOut(ThreadLocalRandom.current().nextLong(64, 4096))
+                .bytesIn(ThreadLocalRandom.current().nextLong(128, 65536))
+                .errorType(error ? "ManualSlowError" : null)
+                .errorMessage(error ? "手动注入的慢错误调用" : null)
+                .build();
+        storage().appendTransmission(event);
+
+        Protocol edgeProtocol = safeProtocol(proto);
+        Software edgeSoftware = safeSoftware(proto);
+        if (edgeProtocol != null && edgeSoftware != null) {
+            storage().appendDependency(com.chua.runtime.protocol.DependencyEdge.builder()
+                    .source(com.chua.runtime.protocol.Endpoint.builder()
+                            .protocol(edgeProtocol).software(edgeSoftware)
+                            .host(sHost[0]).port(Integer.parseInt(sHost[1])).build())
+                    .target(com.chua.runtime.protocol.Endpoint.builder()
+                            .protocol(edgeProtocol).software(edgeSoftware)
+                            .host(tHost[0]).port(Integer.parseInt(tHost[1])).path(op).build())
+                    .protocol(edgeProtocol).software(edgeSoftware)
+                    .callCount(1L).totalDuration(duration)
+                    .errorCount(error ? 1L : 0L)
+                    .lastError(error ? "手动注入的慢错误调用" : null)
+                    .lastCallTime(now).build());
+        }
+
+        log.info("[Inject] 慢调用: {}ms {} -> {} [{}]", duration, src, tgt, error ? "ERROR" : "OK");
+        return Map.of("injected", "slow", "traceId", event.getTraceId(),
+                "durationMs", duration, "status", error ? "ERROR" : "OK");
+    }
+
+    /**
+     * 注入一棵多 Span 链路树（验证瀑布图）。
+     *
+     * @param traceId   自定义 traceId（空则自动生成）
+     * @param spans     期望 span 数（2~100，实际为每层扇出近似）
+     * @param depth     树深度（1~10）
+     * @param errorSpan 是否在叶子节点注入错误
+     * @return 注入结果
+     */
+    public Map<String, Object> injectSpanTree(String traceId, Integer spans, Integer depth,
+                                              boolean errorSpan) {
+        long now = System.currentTimeMillis();
+        String tid = traceId != null && !traceId.isBlank()
+                ? traceId : "trace-tree-" + Long.toHexString(now);
+        int targetSpans = spans == null ? 8 : Math.max(2, Math.min(100, spans));
+        int maxDepth = depth == null ? 3 : Math.max(1, Math.min(10, depth));
+        AtomicInteger spanSeq = new AtomicInteger(0);
+        String rootSpanId = "span-" + now + "-0";
+        TransmissionEvent rootSpan = buildSpanEvent(tid, rootSpanId, null, "root",
+                "root", "hotsport:8086", "hotsport:8086", "HTTP", 80L, false);
+        storage().appendTransmission(rootSpan);
+
+        // 简单树：每层生成 ceil(remaining/depth) 个子 span，保证总 span 数接近目标
+        int remaining = targetSpans - 1;
+        List<String> parentStack = new ArrayList<>();
+        parentStack.add(rootSpanId);
+        int depthCursor = 1;
+        while (remaining > 0 && depthCursor <= maxDepth) {
+            int siblings = Math.min(remaining, Math.max(1, (int) Math.ceil((double) remaining / (maxDepth - depthCursor + 1))));
+            for (int i = 0; i < siblings && remaining > 0; i++) {
+                boolean leafError = errorSpan && depthCursor == maxDepth && i == 0;
+                String parent = parentStack.get(ThreadLocalRandom.current().nextInt(parentStack.size()));
+                String spanId = "span-" + now + "-" + spanSeq.incrementAndGet();
+                TransmissionEvent child = buildSpanEvent(tid, spanId, parent, "child-" + depthCursor,
+                        "child-" + depthCursor, "hotsport:8086", "hotsport:8086", "HTTP",
+                        leafError ? 900L : ThreadLocalRandom.current().nextLong(5, 180),
+                        leafError);
+                storage().appendTransmission(child);
+                parentStack.add(spanId);
+                remaining--;
+            }
+            depthCursor++;
+        }
+
+        log.info("[Inject] Span 树: traceId={}, spans~{}, depth={}", tid, targetSpans, maxDepth);
+        return Map.of("injected", "span-tree", "traceId", tid,
+                "spans", targetSpans, "depth", maxDepth);
+    }
+
+    /**
+     * 制造 JVM 压力（短暂线程 + CPU 占用），用于观察 JVM 指标变化。
+     *
+     * @param threads    工作线程数（1~200）
+     * @param cpuPercent 目标 CPU 占用百分比（5~90）
+     * @param durationMs 压力持续时间（毫秒，默认 15000）
+     * @return 注入结果
+     */
+    public Map<String, Object> injectJvmPressure(Integer threads, Integer cpuPercent,
+                                                 Integer durationMs) {
+        int n = threads == null ? 20 : Math.max(1, Math.min(200, threads));
+        int cpu = cpuPercent == null ? 30 : Math.max(5, Math.min(90, cpuPercent));
+        long duration = durationMs == null || durationMs <= 0 ? 15000L : durationMs.longValue();
+        AtomicInteger active = new AtomicInteger(n);
+        for (int i = 0; i < n; i++) {
+            int worker = i;
+            Thread.ofVirtual().name("apm-jvm-pressure-" + worker).start(() -> {
+                long end = System.currentTimeMillis() + duration;
+                while (System.currentTimeMillis() < end && active.get() > 0) {
+                    // CPU 旋转变换，避免被 JIT 完全消除
+                    double acc = Math.sqrt(worker + 1);
+                    for (int j = 0; j < 200; j++) {
+                        acc += Math.sin(acc * 0.01 + j);
+                    }
+                    if (acc != Double.NaN && ThreadLocalRandom.current().nextInt(100) >= cpu) {
+                        try {
+                            Thread.sleep(2);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                }
+                active.decrementAndGet();
+            });
+        }
+        log.info("[Inject] JVM 压力: threads={}, cpu={}%, duration={}ms", n, cpu, duration);
+        return Map.of("injected", "jvm-pressure", "threads", n,
+                "cpuPercent", cpu, "durationMs", duration);
+    }
+
+    /**
+     * 构建一条 TransmissionEvent（Span 树内部使用）。
+     */
+    private static TransmissionEvent buildSpanEvent(String traceId, String spanId,
+                                                    String parentSpanId, String operation,
+                                                    String software, String sourceHost,
+                                                    String targetHost, String protocol,
+                                                    long duration, boolean error) {
+        long now = System.currentTimeMillis();
+        long start = now - ThreadLocalRandom.current().nextLong(0, 5000);
+        return TransmissionEvent.builder()
+                .traceId(traceId)
+                .spanId(spanId)
+                .parentSpanId(parentSpanId)
+                .sourceProtocol(protocol)
+                .sourceSoftware(software)
+                .sourceHost(sourceHost)
+                .sourcePort(8080)
+                .targetProtocol(protocol)
+                .targetSoftware(software)
+                .targetHost(targetHost)
+                .targetPort(8080)
+                .targetPath(operation)
+                .protocol(protocol)
+                .software(software)
+                .operation(operation)
+                .status(error ? com.chua.runtime.protocol.StatusCode.ERROR
+                        : com.chua.runtime.protocol.StatusCode.OK)
+                .statusCode(error ? 500 : 200)
+                .startTime(start)
+                .endTime(start + duration)
+                .duration(duration)
+                .bytesOut(ThreadLocalRandom.current().nextLong(64, 4096))
+                .bytesIn(ThreadLocalRandom.current().nextLong(128, 65536))
+                .errorType(error ? "ManualSpanError" : null)
+                .errorMessage(error ? "Span 树叶子节点错误" : null)
+                .build();
     }
 
     /**
