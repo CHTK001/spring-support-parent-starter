@@ -201,6 +201,56 @@ public class AiSessionController {
     }
 
     /**
+     * 组装一条助手消息的 usage（历史回读口径）。
+     *
+     * <p>三列 {@code prompt/completion/total_tokens} 是既有列，直接取；缓存命中量与
+     * 首字耗时没有独立列，写方把它们并进了 {@code confirmation} JSON
+     * （见 {@code ChatStreamOrchestrator#attachUsageExtra}），这里解析出来补进 usage，
+     * 否则刷新后「会话底部统计条」的缓存命中率与 TTFT 会归零。</p>
+     *
+     * @param msg 助手消息实体
+     * @return usage Map（缺值字段不放键，前端显示「—」）
+     */
+    private Map<String, Object> buildUsage(SysAiMessage msg) {
+        Map<String, Object> usage = new HashMap<>();
+        usage.put("promptTokens", msg.getPromptTokens());
+        usage.put("completionTokens", msg.getCompletionTokens());
+        usage.put("totalTokens", msg.getTotalTokens());
+        Map<String, Object> extra = parseUsageExtra(msg.getConfirmation());
+        if (extra != null) {
+            usage.putAll(extra);
+        }
+        return usage;
+    }
+
+    /**
+     * 从 confirmation JSON 里取用量补充字段（{@code cachedTokens} / {@code firstTokenLatencyMs}）。
+     *
+     * @param json confirmation 原文
+     * @return 含补充字段的 Map；都没有时返回 {@code null}
+     */
+    private Map<String, Object> parseUsageExtra(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            Map<String, Object> extra = new HashMap<>(2);
+            Object cached = data.get("cachedTokens");
+            if (cached instanceof Number && ((Number) cached).longValue() > 0) {
+                extra.put("cachedTokens", ((Number) cached).longValue());
+            }
+            Object firstToken = data.get("firstTokenLatencyMs");
+            if (firstToken instanceof Number && ((Number) firstToken).longValue() > 0) {
+                extra.put("firstTokenLatencyMs", ((Number) firstToken).longValue());
+            }
+            return extra.isEmpty() ? null : extra;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * 解析本轮实际应答的供应商信息。
      *
      * <p>写入方在 {@code ChatStreamOrchestrator}：路由一旦出问题（选了 A 家却发到 B 家接口、
@@ -494,10 +544,7 @@ public class AiSessionController {
             // 在 content 级别也添加 metadata，包含 usage
             Map<String, Object> contentMetadata = new HashMap<>();
             if ("assistant".equals(msg.getRole())) {
-                Map<String, Object> usage = new HashMap<>();
-                usage.put("promptTokens", msg.getPromptTokens());
-                usage.put("completionTokens", msg.getCompletionTokens());
-                usage.put("totalTokens", msg.getTotalTokens());
+                Map<String, Object> usage = buildUsage(msg);
                 contentMetadata.put("usage", usage);
                 // 工具调用轨迹：随助手消息落库，刷新/重载后仍能渲染「逐行工具行」
                 Map<String, Object> toolTrace = parseToolTrace(msg.getConfirmation());
@@ -558,10 +605,7 @@ public class AiSessionController {
                 metadata.put("modelName", msg.getModelName());
             }
             if ("assistant".equals(msg.getRole())) {
-                Map<String, Object> usage = new HashMap<>();
-                usage.put("promptTokens", msg.getPromptTokens());
-                usage.put("completionTokens", msg.getCompletionTokens());
-                usage.put("totalTokens", msg.getTotalTokens());
+                Map<String, Object> usage = buildUsage(msg);
                 metadata.put("usage", usage);
             }
             // 会话生效的思考强度档位（low/medium/high/max）；未设置则不返回该键
