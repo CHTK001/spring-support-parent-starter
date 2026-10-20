@@ -1,5 +1,6 @@
 package com.chua.starter.device.support.controller;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceChannel;
 import com.chua.starter.device.support.service.DeviceChannelService;
 import lombok.RequiredArgsConstructor;
@@ -33,60 +34,72 @@ public class ChannelController {
 
     /**
      * 添加通道
+     *
      * @param channel 通道
-     * @return 添加通道的结果
+     * @return 添加后的通道
      */
     @PostMapping
-    public DeviceChannel addChannel(@RequestBody DeviceChannel channel) {
-        return channelService.addChannel(channel);
+    public ReturnResult<DeviceChannel> addChannel(@RequestBody DeviceChannel channel) {
+        return ReturnResult.ok(channelService.addChannel(channel));
     }
 
     /**
      * 更新通道
-     * @param id 标识
+     *
+     * @param id      标识
      * @param channel 通道
+     * @return 操作结果
      */
     @PutMapping("/{id}")
-    public void updateChannel(@PathVariable String id, @RequestBody DeviceChannel channel) {
+    public ReturnResult<Void> updateChannel(@PathVariable String id, @RequestBody DeviceChannel channel) {
         channelService.updateChannel(id, channel);
+        return ReturnResult.ok();
     }
 
     /**
      * 删除通道
+     *
      * @param id 标识
+     * @return 操作结果
      */
     @DeleteMapping("/{id}")
-    public void deleteChannel(@PathVariable String id) {
+    public ReturnResult<Void> deleteChannel(@PathVariable String id) {
         channelService.deleteChannel(id);
+        return ReturnResult.ok();
     }
 
     /**
      * 获取通道
+     *
      * @param id 标识
-     * @return 获取通道的结果
+     * @return 通道
      */
     @GetMapping("/{id}")
-    public DeviceChannel getChannel(@PathVariable String id) {
-        return channelService.getChannel(id);
+    public ReturnResult<DeviceChannel> getChannel(@PathVariable String id) {
+        return ReturnResult.ok(channelService.getChannel(id));
     }
 
     /**
      * 查询设备的通道列表
-     * @param deviceId deviceid
-     * @return 列表通道的结果
+     *
+     * @param deviceId 设备 ID
+     * @return 通道列表
      */
     @GetMapping("/list")
-    public List<DeviceChannel> listChannels(@RequestParam String deviceId) {
-        return channelService.listChannels(deviceId);
+    public ReturnResult<List<DeviceChannel>> listChannels(@RequestParam String deviceId) {
+        return ReturnResult.ok(channelService.listChannels(deviceId));
     }
 
     /**
      * 启用/禁用通道
-     * @param id 标识
+     *
+     * @param id     标识
      * @param status 状态
+     * @return 操作结果
      */
     @PutMapping("/{id}/status")
-    public void toggleStatus(@PathVariable String id, @RequestParam String status) {
+    public ReturnResult<Void> toggleStatus(@PathVariable String id, @RequestParam String status) {
         channelService.toggleStatus(id, status);
+        return ReturnResult.ok();
     }
 }

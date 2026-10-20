@@ -6,13 +6,21 @@ import com.chua.starter.device.provider.hikvision.open.HikvisionSecurePlatformSe
 import com.chua.starter.device.provider.hikvision.sdk.HikvisionRealSession;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
+import com.chua.starter.device.spi.model.AuthTypeDescriptor;
+import com.chua.starter.device.spi.model.CredentialField;
+import com.chua.starter.device.spi.model.DeviceCapability;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.spi.model.DeviceVendorDescriptor;
 import com.chua.starter.device.spi.model.OrganizationNode;
+import com.chua.starter.device.spi.model.PlatformDescriptor;
+import com.chua.starter.device.spi.model.VendorDevice;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 海康设备 提供者
@@ -195,5 +203,46 @@ public class HikvisionProvider implements DeviceProvider {
     public List<OrganizationNode> fetchOrganizations() {
  // 组织同步需在已连接的 打开api 会话上下文中执行，由业务层调用 会话 后再行实现。
         return List.of();
+    }
+
+    @Override
+    public List<VendorDevice> fetchDevices() {
+        if (!fallbackMock) {
+            // 真实设备目录需各平台开放 API 接入后实现
+            return List.of();
+        }
+        return List.of(
+                new VendorDevice("HK-MOCK-001", "海康模拟球机", "DS-2DE", "camera",
+                        "HK-MOCK-001", null, null, "模拟园区 A 座",
+                        new BigDecimal("30.2001"), new BigDecimal("120.2001"), 4, true),
+                new VendorDevice("HK-MOCK-002", "海康模拟门禁", "DS-K1T", "accessControl",
+                        "HK-MOCK-002", null, null, "模拟园区 B 座",
+                        new BigDecimal("30.2002"), new BigDecimal("120.2002"), 1, true)
+        );
+    }
+
+    @Override
+    public DeviceVendorDescriptor descriptor() {
+        List<CredentialField> platformFields = List.of(
+                new CredentialField("appKey", "AppKey（AK）", false, true, "平台应用的 AppKey"),
+                new CredentialField("appSecret", "AppSecret（SK）", true, true, "平台应用的 AppSecret"));
+        return new DeviceVendorDescriptor(
+                VENDOR,
+                "海康威视",
+                List.of(
+                        new AuthTypeDescriptor("PLATFORM", "平台接入", "通过海康开放平台账号接入，可跨公网"),
+                        new AuthTypeDescriptor("SDK", "SDK 直连", "局域网直连设备，需要厂商 SDK 运行库")),
+                List.of(
+                        new PlatformDescriptor(PLATFORM_CLOUD_YAO, "海康云耀",
+                                "https://api.hik-cloud.com", platformFields),
+                        new PlatformDescriptor(PLATFORM_CLOUD_EYE, "海康云眸",
+                                "https://api.hik-cloud-eye.com", platformFields),
+                        new PlatformDescriptor(PLATFORM_SECURE, "海康综合安防平台",
+                                "https://artemis.hikvision.com", platformFields)),
+                Set.of(DeviceCapability.MEDIA, DeviceCapability.PTZ,
+                        DeviceCapability.EVENT, DeviceCapability.ACCESS, DeviceCapability.CHANNEL),
+                60,
+                null,
+                "支持云耀、云眸、综合安防平台与 SDK 直连；组织同步与设备目录同步待各平台 API 接入后开放。");
     }
 }
