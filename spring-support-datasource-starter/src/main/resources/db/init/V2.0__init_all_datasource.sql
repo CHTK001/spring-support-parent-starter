@@ -1,4 +1,16 @@
 -- =====================================================================
+-- V2.0__init_all_datasource.sql - spring-support-datasource-starter 全量表结构
+-- 通道: INIT 同步建表（表结构先于种子数据就位）
+-- 说明: 本文件是该模块唯一的建表入口。此前分散的
+--   V1.0__init_all_datasource.sql 已在本次收敛中并入本文件并删除。
+--   业务域表已按模块归位: datasync->datasync-starter, spider->spider-starter,
+--   device->device-starter, job->job-starter, message->message-starter,
+--   payment->payment-starter, project->project-starter, monitor->monitor-starter,
+--   server->server-starter, ai->ai-starter, filesystem->filesystem-starter
+-- 通道: 本模块当前无种子数据：edu_question 种子已按实际表归属归入
+--   spring-support-eduai-starter，避免重复
+-- =====================================================================
+-- =====================================================================
 -- V1.0__init_all_datasource.sql - datasource-starter 全量 DDL（仅本模块数据源基础设施表）
 -- 业务域表已按模块归位: datasync->datasync-starter, spider->spider-starter,
 --   device->device-starter, job->job-starter, message->message-starter,

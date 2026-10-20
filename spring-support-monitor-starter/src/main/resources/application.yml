@@ -29,32 +29,26 @@ spring:
 
   # 建表脚本（独立联调）：本模块的 FlywayLike 已禁用（脚本语法错会阻断启动），
   #  由 spring.sql.init 逐个加载各模块本体的全量建表脚本（脚本归口各自 starter jar 的 db/init/）：
-  #  - monitor 自身：V1.0__init_all_monitor.sql、V1.5__init_tshark.sql
-  #  - 依赖 jar 内：V1.0__init_all_server.sql（资产台账）、V1.0__init_all_project.sql、V1.0__init_all_ai.sql
-  # 均为 MySQL/H2 双库可执行子集（IF NOT EXISTS 幂等），存量老库补列脚本（db/upgrade/）不在此加载
+  #  - monitor 自身：V2.0__init_all_monitor.sql
+  #  - 依赖 jar 内：V2.0__init_all_server.sql（资产台账）、V2.0__init_all_ai.sql
+  # 均为 MySQL/H2 双库可执行子集（IF NOT EXISTS 幂等），存量老库补列语句已并入各模块的 init 文件
   sql:
     init:
       mode: always
       encoding: UTF-8
       continue-on-error: true
       schema-locations:
-        - classpath:db/init/V1.0__init_all_monitor.sql
-        - classpath:db/init/V1.0__init_all_server.sql
-        - classpath:db/init/V1.0__init_all_ai.sql
-        # 存量库补列（ai-starter 的版本化脚本，MySQL 专用）：
-        # V1.0__init_all_ai.sql 里 sys_ai_bot_binding 的「三列」只覆盖全新库，
-        # 存量库因 CREATE TABLE IF NOT EXISTS 空操作而缺列，AiBotChatService.init
-        # 按实体全列 SELECT 会在启动期抛 Unknown column 并中断 refresh（2026-10-16 实测）。
-        # 本机 plugin.datasource.script.enable=false（FlywayLike 关闭），版本化脚本
-        # 不会自动执行，故必须显式登记。脚本内部用 information_schema 判存 + 动态 DDL，
-        # 可反复执行（MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS，详脚本头注释）。
-        - classpath:db/init/V4.0.0.57__add_whatsapp_bot_binding_columns.sql
+        - classpath:db/init/V2.0__init_all_monitor.sql
+        - classpath:db/init/V2.0__init_all_server.sql
+        - classpath:db/init/V2.0__init_all_ai.sql
         # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
-        - classpath:db/init/V1.0__init_all_datasource_hub.sql
-        # 设备台账（spring-support-device-starter 自有脚本）：device_* 七张表。
+        # 含 ms_monitor_nginx_metric：该表实体 MsMonitorNginxMetric 属 hub 模块，
+        # 建表语句已随实体归位到本文件（原先在 monitor 的 init 里）。
+        - classpath:db/init/V2.0__init_all_datasource_hub.sql
+        # 设备台账（spring-support-device-starter 自有脚本）：device_* 十五张表。
         # device-starter 为纯库，其 db/init 不在 monitor 的 resources 下，靠 jar 依赖进入 classpath。
         # 表名无 ms_ 前缀且与 ms_monitor_/ms_server_/sys_ai_/ms_datasource_ 无重名冲突。
-        - classpath:db/init/V1.0__init_all_device.sql
+        - classpath:db/init/V2.0__init_all_device.sql
       # 种子数据必须显式列出 data-locations，否则 initdata 从不执行：
       # 早先只配了 schema-locations，导致 ms_monitor_config / ms_monitor_alarm_policy /
       # ms_monitor_alarm_rule 三张表全为空（保留期配置与 4 条项目守护告警规则从未落地）。
@@ -66,10 +60,10 @@ spring:
       # `IllegalArgumentException: 'script' must not be null or empty`，
       # 且该异常发生在脚本级、continue-on-error 拦不住 → 整个应用启动失败。
       data-locations:
-        - classpath:db/init/V1.0__initdata_all_monitor.sql
-        - classpath:db/init/V1.0__initdata_all_server.sql
-        # 注：bot_binding 补列 / tshark / exec_job type / host ssh_enabled 等脚本
-        # 在本次重构中被合并/删除（本地脚本易被还原），故不再单列，避免启动缺文件拦截
+        - classpath:db/init/V2.0__initdata_all_monitor.sql
+        - classpath:db/init/V2.0__initdata_all_server.sql
+        # 注：各模块的增量脚本（补列 / tshark / exec_job type / host ssh_enabled 等）
+        # 在本次收敛中已并入各模块的 V2.0 init_all 文件，故不再单列，避免启动缺文件拦截
 
   datasource:
     url: jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true

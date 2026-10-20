@@ -47,7 +47,7 @@
 | 13 | `ms_monitor_redis_metric` | Redis 时序 |
 | 14 | `ms_monitor_redis_metric_statistics` | Redis 小时聚合 |
 
-自动建表：SQL DDL 位于 `src/main/resources/db/init/V1.0__init_all_monitor.sql`。
+自动建表：SQL DDL 位于 `src/main/resources/db/init/V2.0__init_all_monitor.sql`。
 
 ## 缓存
 

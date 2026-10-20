@@ -1,5 +1,14 @@
+-- =====================================================================
+-- V2.0__init_all_job.sql - spring-support-job-starter 全量表结构
+-- 通道: INIT 同步建表（表结构先于种子数据就位）
+-- 说明: 本文件是该模块唯一的建表入口。此前分散的
+--   V1.0__init_all_job.sql 已在本次收敛中并入本文件并删除。
+-- 约束: 脚本由 spring-support-datasource-starter 的 FlywayLikePopulator
+--   与 SPI DataSourceFlyway 执行（Spring ScriptUtils 原样执行，不区分方言），
+--   故本文件必须保持三库自兼容（MySQL 8 / PostgreSQL 12 / Oracle 12c）。
+-- =====================================================================
 /*
-  V1.0__init_job.sql
+  V2.0__init_all_job.sql
 
   任务调度模块数据库初始化脚本 (单一脚本)
 

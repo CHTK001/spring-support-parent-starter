@@ -1,4 +1,11 @@
 -- =====================================================================
+-- V2.0__init_all_message.sql - spring-support-message-starter 全量表结构
+-- 通道: INIT 同步建表（表结构先于种子数据就位）
+-- 说明: 本文件是该模块唯一的建表入口。此前分散的
+--   V1.0__init_all_message.sql 已在本次收敛中并入本文件并删除。
+--   本模块无种子数据，故不建 initdata 文件。
+-- =====================================================================
+-- =====================================================================
 -- V1.0__init_all_message.sql - spring-support-message-starter full DDL
 -- merged from loose scripts:
 --   V1.0__init_message.sql

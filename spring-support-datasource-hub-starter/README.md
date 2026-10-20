@@ -28,7 +28,7 @@
 |---|---|
 | `ms_datasource` | 数据源台账 |
 
-建表脚本：`src/main/resources/db/init/V1.0__init_all_datasource_hub.sql`（MySQL / H2 双库可执行子集）。
+建表脚本：`src/main/resources/db/init/V2.0__init_all_datasource_hub.sql`（MySQL / H2 双库可执行子集）。
 
 > 宿主需在自己的 `spring.sql.init.schema-locations` 中追加该脚本（或由迁移工具管理）。
 
