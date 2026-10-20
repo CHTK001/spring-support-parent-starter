@@ -1,6 +1,5 @@
 package com.chua.starter.device.support.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.service.DeviceProviderConfigService;
@@ -87,15 +86,7 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
 
     @Override
     public List<DeviceInfo> listCheckableDevices() {
-        // 待检测的是「本应在线」的设备：SDK 直连（IP+端口）或平台接入（有序列号）且未停用。
-        // 早前只查 device_info_online=true 的行，而在线标记本身就是检测的产物——
-        // 设备一旦掉线就不再进入候选集，掉线永远检测不出来。
-        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.and(w -> w
-                .isNotNull(DeviceInfo::getDeviceInfoIp)
-                .or()
-                .isNotNull(DeviceInfo::getDeviceInfoSerial));
-        wrapper.ne(DeviceInfo::getDeviceInfoOnline, Boolean.FALSE);
-        return deviceInfoMapper.selectList(wrapper);
+        // 候选集 SQL 放 XML：包含离线设备（否则掉线后无法恢复），排除停用/报废
+        return deviceInfoMapper.selectCheckableDevices();
     }
 }

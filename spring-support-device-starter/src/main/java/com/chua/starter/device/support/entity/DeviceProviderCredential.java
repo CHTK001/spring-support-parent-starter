@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ public class DeviceProviderCredential {
 
     /** AppSecret（SK）；SDK 直连模式可空 */
     @TableField("device_credential_app_secret")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String deviceCredentialAppSecret;
 
     /** 平台 endpoint 覆盖（留空用各 Session 内置默认） */
@@ -77,4 +79,36 @@ public class DeviceProviderCredential {
     /** 更新 时间 */
     @TableField("device_credential_updated_at")
     private LocalDateTime deviceCredentialUpdatedAt;
+
+    /**
+     * 脱敏后的 AppSecret，仅用于响应展示。
+     * <p>真实的 {@code deviceCredentialAppSecret} 标记为 WRITE_ONLY，永远不会出现在 JSON 中；
+     * 前端需要判断“是否已配置”时读这个字段。</p>
+     *
+     * @return 形如 {@code ab****cd} 的掩码；未配置时返回空串
+     */
+    public String getDeviceCredentialAppSecretMasked() {
+        String secret = deviceCredentialAppSecret;
+        if (secret == null || secret.isBlank()) {
+            return "";
+        }
+        // 密文不暴露任何字符，统一显示为 6 个星号
+        if (secret.startsWith("enc:")) {
+            return "******";
+        }
+        if (secret.length() <= 6) {
+            return "******";
+        }
+        return secret.substring(0, 2) + "****" + secret.substring(secret.length() - 4);
+    }
+
+    /**
+     * 是否已配置 AppSecret
+     * <p>前端只需要知道“有没有配”，不需要拿到值。</p>
+     *
+     * @return true 表示已配置
+     */
+    public boolean isDeviceCredentialAppSecretConfigured() {
+        return deviceCredentialAppSecret != null && !deviceCredentialAppSecret.isBlank();
+    }
 }

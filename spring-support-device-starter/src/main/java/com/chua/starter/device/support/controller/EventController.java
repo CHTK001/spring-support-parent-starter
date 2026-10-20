@@ -1,5 +1,6 @@
 package com.chua.starter.device.support.controller;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceEventRecord;
 import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.spi.model.EventType;
@@ -33,17 +34,17 @@ public class EventController {
      * 查询事件
      *
      * @param deviceId 设备 标识
-     * @param type     事件类型，可选
-     * @param start    开始时间，可选
-     * @param end      结束时间，可选
+     * @param type     事件类型，可空
+     * @param start    开始时间，可空
+     * @param end      结束时间，可空
      * @return 事件列表
      */
     @GetMapping
-    public List<DeviceEventRecord> queryEvents(
+    public ReturnResult<List<DeviceEventRecord>> queryEvents(
             @RequestParam String deviceId,
             @RequestParam(required = false) EventType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return eventService.queryEvents(deviceId, type, start, end);
+        return ReturnResult.ok(eventService.queryEvents(deviceId, type, start, end));
     }
 }

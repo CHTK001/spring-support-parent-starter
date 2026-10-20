@@ -3,6 +3,7 @@ package com.chua.starter.device.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.mapper.DeviceProviderCredentialMapper;
+import com.chua.starter.device.support.security.DeviceSecretCodec;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
     /** 提供商接入凭据 映射器 */
     private final DeviceProviderCredentialMapper credentialMapper;
 
+    /** 密钥编解码器：SK 落库加密、建连时解密 */
+    private final DeviceSecretCodec secretCodec;
+
     @Override
     public List<DeviceProviderCredential> list(String vendor) {
         LambdaQueryWrapper<DeviceProviderCredential> wrapper = new LambdaQueryWrapper<>();
@@ -70,6 +74,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
         credential.setDeviceCredentialCreatedAt(LocalDateTime.now());
         credential.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+        // SK 落库加密；空值保持为空（SDK 直连无 SK）
+        credential.setDeviceCredentialAppSecret(
+                secretCodec.encrypt(credential.getDeviceCredentialAppSecret()));
         credentialMapper.insert(credential);
         log.info("新增提供商凭据: vendor={}, platform={}, name={}",
                 credential.getDeviceCredentialVendor(),
@@ -89,6 +96,13 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         assertNameFree(credential, id);
         if (Boolean.TRUE.equals(credential.getDeviceCredentialIsDefault())) {
             clearVendorDefault(credential.getDeviceCredentialVendor(), id);
+        }
+        // 编辑时前端回传空串或掩码表示“不修改”，保持原 SK
+        String incomingSecret = credential.getDeviceCredentialAppSecret();
+        if (!StringUtils.hasText(incomingSecret) || secretCodec.isMasked(incomingSecret)) {
+            credential.setDeviceCredentialAppSecret(null);
+        } else {
+            credential.setDeviceCredentialAppSecret(secretCodec.encrypt(incomingSecret));
         }
         credential.setDeviceCredentialId(id);
         // 创建时间不可改，避免覆盖历史
@@ -130,7 +144,27 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         // 默认套优先；否则取排序最靠前的一套，保证建连确定性
         wrapper.orderByDesc(DeviceProviderCredential::getDeviceCredentialIsDefault)
                 .orderByAsc(DeviceProviderCredential::getDeviceCredentialCreatedAt);
-        return credentialMapper.selectList(wrapper).stream().findFirst().orElse(null);
+        DeviceProviderCredential credential =
+                credentialMapper.selectList(wrapper).stream().findFirst().orElse(null);
+        if (credential != null) {
+            // 建连需要明文 SK；响应侧由 WRITE_ONLY 保证不会外泄
+            credential.setDeviceCredentialAppSecret(
+                    secretCodec.decrypt(credential.getDeviceCredentialAppSecret()));
+        }
+        return credential;
+    }
+
+    @Override
+    public DeviceProviderCredential resolveById(String id) {
+        if (!StringUtils.hasText(id)) {
+            return null;
+        }
+        DeviceProviderCredential credential = credentialMapper.selectById(id);
+        if (credential != null) {
+            credential.setDeviceCredentialAppSecret(
+                    secretCodec.decrypt(credential.getDeviceCredentialAppSecret()));
+        }
+        return credential;
     }
 
     @Override

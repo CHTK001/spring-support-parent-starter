@@ -168,10 +168,21 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
      * @return 获取视频url的结果
      */
     public JsonNode getVideoUrl(int channel) {
+        return getVideoUrl(channel, "main");
+    }
+
+    /**
+     * 获取视频地址（指定码流）
+     *
+     * @param channel    通道
+     * @param streamType 码流：main / sub
+     * @return 视频地址数据
+     */
+    public JsonNode getVideoUrl(int channel, String streamType) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.deviceSerial());
         params.put("channel", channel);
-        params.put("streamType", "main");
+        params.put("streamType", "sub".equalsIgnoreCase(streamType) ? "sub" : "main");
         return assertOk(post(PATH_VIDEO_URL, params));
     }
 
@@ -181,6 +192,20 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getVideoUrl(channel);
+        return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
+    }
+
+    @Override
+    /**
+     * 获取指定码流的liveurl
+     *
+     * @param channel    通道
+     * @param protocol   协议
+     * @param streamType 码流
+     * @return 拉流地址
+     */
+    public String getLiveUrl(int channel, String protocol, String streamType) {
+        JsonNode data = getVideoUrl(channel, streamType);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
     }
 

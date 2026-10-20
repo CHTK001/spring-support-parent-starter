@@ -39,10 +39,24 @@
             <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
         </dependency>
 
+        <!-- 分页插件：3.5.17 起 PaginationInnerInterceptor 迁移到 jsqlparser 模块 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+        </dependency>
+
         <!-- Spring Support Common -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 可选：宿主启用 socket 时，把设备事件广播到 SSE/WebSocket；
+             未引入时由 DeviceRealtimeConfiguration 的空实现兜底，模块仍可独立运行 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-starter</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Lombok -->
