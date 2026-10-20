@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,7 +77,7 @@ public class ColorizeController {
             byte[] result = colorizeClientManager.colorize(file.getBytes());
             if (result == null || result.length == 0) {
                 log.warn("[Colorize] 图像上色模型未配置");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new byte[0]);
+                return ResponseEntity.badRequest().build();
             }
             log.info("[Colorize] 图像上色完成 model={} elapsed={}ms",
                     colorizeClientManager.model(), System.currentTimeMillis() - start);
