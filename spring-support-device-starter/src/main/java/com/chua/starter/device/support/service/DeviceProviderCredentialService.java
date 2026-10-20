@@ -76,6 +76,15 @@ public interface DeviceProviderCredentialService {
     DeviceProviderCredential resolveFor(String vendor, String platformType);
 
     /**
+     * 按凭据 ID 解析（设备可显式绑定某套 AK/SK）
+     * <p>返回的 AppSecret 为明文，仅供建连使用，不会进入响应。</p>
+     *
+     * @param id 凭据 ID
+     * @return 凭据；不存在返回 {@code null}
+     */
+    DeviceProviderCredential resolveById(String id);
+
+    /**
      * 各厂商的离线检测阈值（秒），取自默认套；无默认套则回退代码内置值
      *
      * @return 厂商标识 -> 阈值（秒）

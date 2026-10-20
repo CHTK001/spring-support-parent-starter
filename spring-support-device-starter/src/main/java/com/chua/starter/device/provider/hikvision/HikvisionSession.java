@@ -158,7 +158,9 @@ public class HikvisionSession implements DeviceSession {
      * 获取liveurl
     */
     public String getLiveUrl(int channel, String protocol) {
-        return "";
+        // 仅 fallback-mock 模式使用的模拟会话：返回公开 HLS 测试流，
+        // 便于无硬件环境下验证前端 hls.js 拉流、主/子码流切换与视频墙。
+        return "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.chua.starter.device.support.controller;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.AccessRecord;
@@ -41,20 +42,17 @@ public class AccessController {
      *
      * @param deviceId 设备 标识
      * @param doorId   门编号
+     * @return 操作结果
      */
     @PostMapping("/unlock")
-    public void unlock(@RequestParam String deviceId,
-                       @RequestParam int doorId) {
+    public ReturnResult<Void> unlock(@RequestParam String deviceId,
+                                     @RequestParam int doorId) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
-            /**
-             * runtime异常。
-             * @param deviceId deviceid
-             * @return runtime异常的结果
-             */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
         session.remoteUnlock(doorId);
+        return ReturnResult.ok();
     }
 
     /**
@@ -66,27 +64,22 @@ public class AccessController {
      * @return 出入记录列表
      */
     @GetMapping("/records")
-    public List<AccessRecord> queryAccessRecords(@RequestParam String deviceId,
-                                                 @RequestParam String start,
-                                                 @RequestParam String end) {
+    public ReturnResult<List<AccessRecord>> queryAccessRecords(@RequestParam String deviceId,
+                                                               @RequestParam String start,
+                                                               @RequestParam String end) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
-            /**
-             * runtime异常。
-             * @param deviceId deviceid
-             * @return runtime异常的结果
-             */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
-        return session.queryAccessRecords(parseRange(start, end));
+        return ReturnResult.ok(session.queryAccessRecords(parseRange(start, end)));
     }
 
     /**
      * 解析范围
      *
      * @param start 启动
-     * @param end 结束
-     * @return 解析范围的结果
+     * @param end   结束
+     * @return 时间范围
      */
     private TimeRange parseRange(String start, String end) {
         LocalDateTime s;
@@ -101,12 +94,6 @@ public class AccessController {
         } catch (Exception ex) {
             e = LocalDateTime.now();
         }
-        /**
-         * 时间范围。
-         * @param s s
-         * @param e e
-         * @return 时间范围的结果
-         */
         return new TimeRange(s, e);
     }
 }
