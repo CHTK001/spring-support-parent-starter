@@ -161,7 +161,7 @@ public class WebSearchService {
                 .map(String::trim).orElse("360");
 
         boolean selectedPaid = switch (provider) {
-            case "bocha", "tavily", "metaso" -> true;
+            case "bocha", "tavily", "metaso", "langsearch", "gubo", "tinyfish" -> true;
             default -> false;
         };
 
@@ -228,6 +228,12 @@ public class WebSearchService {
             return switch (p) {
                 case "tavily" -> tavily(query, count);
                 case "bocha" -> bocha(query, count);
+                case "langsearch" -> standardWebSearch(providerKey("langsearch"), "langsearch_endpoint",
+                        DEFAULT_LANGSEARCH_ENDPOINT, query, count);
+                case "gubo" -> standardWebSearch(providerKey("gubo"), "gubo_endpoint",
+                        DEFAULT_GUBO_ENDPOINT, query, count);
+                case "tinyfish" -> standardWebSearch(providerKey("tinyfish"), "tinyfish_endpoint",
+                        DEFAULT_TINYFISH_ENDPOINT, query, count);
                 // metaso（秘塔）搜索 API 暂未接入，返回空以便竞速快速落到 360
                 case "metaso" -> List.of();
                 default -> List.of();
@@ -236,6 +242,84 @@ public class WebSearchService {
             log.warn("[WebSearch] {} 检索失败: {}", p, e.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * 内置默认接口地址：LangSearch / Gubo / TinyFish 的 web-search 入口。
+     *
+     * <p>三者都按「通用 web-search 契约」调用：POST JSON、
+     * {@code Authorization: Bearer <key>}、请求体 {@code {query, summary, count}}、
+     * 响应取 {@code data.webPages.value[].{name,url,snippet|summary}} —— 这也是博查与
+     * LangSearch 的官方契约，各家高度趋同。</p>
+     *
+     * <p><b>地址可覆盖的原因</b>：Gubo / TinyFish 这两家的公开文档未能核对到，
+     * 若其真实契约或域名与默认值不同，可在设置页填写 {@code *_endpoint} 覆盖，
+     * 无需改代码发版。</p>
+     */
+    private static final String DEFAULT_LANGSEARCH_ENDPOINT = "https://api.langsearch.com/v1/web-search";
+
+    private static final String DEFAULT_GUBO_ENDPOINT = "https://api.gubosearch.com/v1/web-search";
+
+    private static final String DEFAULT_TINYFISH_ENDPOINT = "https://api.tinyfish.ai/v1/web-search";
+
+    /**
+     * 取某个付费源的 API Key（未配置返回 {@code null}）。
+     *
+     * @param field 设置项字段名（如 {@code langsearch}）
+     * @return Key；未配置或提取失败时为 {@code null}
+     */
+    private String providerKey(String field) {
+        return extractApiKey(sysAiGlobalSettingService.getValue("search", field).orElse(null));
+    }
+
+    /**
+     * 按「通用 web-search 契约」调用付费搜索源。
+     *
+     * <p>请求：{@code POST <endpoint>}，头 {@code Authorization: Bearer <key>}，
+     * 体 {@code {"query":..,"summary":true,"count":..}}；
+     * 响应：{@code data.webPages.value[]}，每项取 {@code name/url/snippet}，
+     * {@code snippet} 为空时退回 {@code summary}。</p>
+     *
+     * @param key              API Key；为空直接返回空列表（留空即该源不可用）
+     * @param endpointField    可覆盖接口地址的设置项字段名
+     * @param defaultEndpoint  内置默认地址
+     * @param query            检索词
+     * @param count            期望条数
+     * @return 结果列表；无 Key 或无结果时为空列表
+     */
+    private List<WebResult> standardWebSearch(String key, String endpointField,
+                                              String defaultEndpoint, String query, int count) throws Exception {
+        if (key == null || key.isBlank()) {
+            return List.of();
+        }
+        String endpoint = sysAiGlobalSettingService.getValue("search", endpointField)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .orElse(defaultEndpoint);
+
+        Map<String, Object> body = Map.of("query", query, "summary", true, "count", count);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .header("Authorization", "Bearer " + key)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body), StandardCharsets.UTF_8))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("http " + response.statusCode() + " @" + endpoint);
+        }
+        JsonNode values = objectMapper.readTree(response.body()).path("data").path("webPages").path("value");
+        List<WebResult> out = new ArrayList<>();
+        if (values.isArray()) {
+            for (JsonNode v : values) {
+                String snippet = v.path("snippet").asText("");
+                if (snippet.isBlank()) {
+                    snippet = v.path("summary").asText("");
+                }
+                out.add(new WebResult(v.path("name").asText(""), v.path("url").asText(""), snippet));
+            }
+        }
+        return out;
     }
 
     /**
