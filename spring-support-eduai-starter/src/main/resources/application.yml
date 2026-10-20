@@ -156,13 +156,17 @@ plugin:
       #    存量库升级时新版本脚本根本不会被执行；
       # 2) 脚本文件名带版本号（V2.0__init_all_eduai.sql），升版后文件名变化、
       #    执行记录里查不到，才会真正执行；同一版本成功后 needsExecution() 会拦住，
-      #    因此不是「每次启动都重跑 154 条语句」，而是「每个版本只跑一次」。
+      #    因此不是「每次启动都重跑全部语句」，而是「每个版本只跑一次」。
       # 之前用 ONCE + 固定 V1.0，导致新增的唯一索引在存量库上永不生效，
       # initdata 的 INSERT IGNORE 失去约束、每次重灌数据翻倍
       # （实测 edu_poem_grade 由 967 涨到 2901）。
-      # 前提：init_all 脚本必须全幂等（已审计：154 条语句全部带 IF NOT EXISTS / OR IGNORE）。
+      # 前提：init_all 脚本必须全幂等（已审计：全部语句带 IF NOT EXISTS / OR IGNORE，
+      #      补列走 information_schema 判存 + 动态 DDL）。
       scan-mode: ALWAYS
-      # 初始化数据仍保持 ONCE：种子脚本体积已达 1.1MB，且业务表非空即无需重灌。
+      # 初始化数据仍保持 ONCE：种子脚本体积已达 16MB，且业务表非空即无需重灌。
+      # ⚠ ONCE + 库非空会整体跳过全部 INITDATA 脚本，所以操作 collect_flow
+      #   （采集平台的表）的语句放在 NORMAL 通道的 V2.0__eduai_collect_flows.sql 里，
+      #   不并入 initdata —— 见该文件头的说明。
       data-scan-mode: ONCE
       continue-on-error: true
       verbose: true
