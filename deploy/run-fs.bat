@@ -45,6 +45,7 @@ echo 文件服务器端口: %FILESTORAGE_PORT% (CORS 直接访问)
 echo 数据库: MySQL (non-H2)
 
 java %JAVA_OPTS% ^
+  -Dplugin.filesystem.storage-server.mode=standalone ^
   -Dplugin.filesystem.storage-server.port=%FILESTORAGE_PORT% ^
   -Dspring.datasource.url=%SPRING_DATASOURCE_URL% ^
   -Dspring.datasource.password=%MONITOR_DB_PASSWORD% ^

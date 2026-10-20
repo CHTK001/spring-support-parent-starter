@@ -51,6 +51,7 @@ nohup java \
     -Dspring.datasource.url="jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true" \
     -Dspring.datasource.username="root" \
     -Dspring.datasource.password="${MONITOR_DB_PASSWORD}" \
+    -Dplugin.filesystem.storage-server.mode=standalone \
     -Dplugin.filesystem.storage-server.port=18082 \
     -Dserver.port=8082 \
     -jar spring-support-monitor-starter-4.0.0.42-exec.jar \
@@ -81,6 +82,7 @@ pnpm --filter vue-support-monitor-starter dev
 | `-Xss256k` | 缩小线程栈 (默认 1MB) |
 | `-XX:+UseG1GC` | G1 回收器 (低延迟) |
 | `-XX:+UseStringDeduplication` | 字符串去重 (节省内存) |
+| `-Dplugin.filesystem.storage-server.mode=standalone` | 文件服务器按独立端口启动（默认 embedded 走应用端口+path-prefix） |
 | `-Dplugin.filesystem.storage-server.port=18082` | 文件服务器端口 (与前端 DEFAULT_SERVER 对齐) |
 | `-Dserver.port=8082` | 主 HTTP 服务端口 |
 | `-Dspring.datasource.url=jdbc:mysql://...` | **MySQL** 数据库 (非 H2) |

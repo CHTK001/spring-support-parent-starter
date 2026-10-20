@@ -5,17 +5,25 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 文件存储服务器配置属性（随应用自动启动的独立文件存储网关）。
+ * 文件存储服务器配置属性。
+ *
+ * <p>支持两种部署形态（{@link #mode}）：</p>
+ * <ul>
+ *   <li>{@link Mode#EMBEDDED}（默认）—— 挂进宿主 Spring 应用，走应用端口 + {@link #pathPrefix}；</li>
+ *   <li>{@link Mode#STANDALONE} —— 另起独立 HTTP 服务，监听 {@link #host}:{@link #port}。</li>
+ * </ul>
  *
  * <p>配置示例:
  * <pre>
  * plugin:
  *   filesystem:
  *     storage-server:
- *       enable: true          # 是否随应用启动文件服务器
- *       host: 0.0.0.0         # 监听地址
- *       port: 18082           # 监听端口（与前端"文件服务器"页面 DEFAULT_SERVER 对齐）
- *       type: jdk             # 服务器引擎: jdk/nio/aio
+ *       enable: true          # 是否启用文件服务器
+ *       mode: embedded        # 部署形态: embedded(默认) / standalone
+ *       path-prefix: /fs      # 内置形态的路径前缀 → /fs/{桶}/{键}
+ *       host: 0.0.0.0         # 监听地址（仅 standalone）
+ *       port: 18082           # 监听端口（仅 standalone，与前端 DEFAULT_SERVER 对齐）
+ *       type: jdk             # 服务器引擎: jdk/nio/aio（仅 standalone）
  *       open-preview: true    # 允许 ?preview 内联预览
  *       open-download: true   # 允许 ?download 附件下载
  *       open-range: true      # 允许 Range 分段下载
@@ -52,12 +60,35 @@ public class FileStorageServerProperties {
     private String publicHost;
 
     /**
-     * 监听端口（默认与前端文件服务器页 DEFAULT_SERVER 对齐）
+     * 监听端口（仅 {@link Mode#STANDALONE} 形态使用；默认与前端文件服务器页 DEFAULT_SERVER 对齐）
      *
      * <p>前端 {@code pages/filesystem/src/api/filestorageApi.ts#DEFAULT_SERVER} 缺省
      * http://127.0.0.1:18082，后端 CORS 默认开启，二者同端口同源即可直连。</p>
      */
     private int port = 18082;
+
+    /**
+     * 部署形态（默认 {@link Mode#EMBEDDED}）。
+     *
+     * <p><b>EMBEDDED</b>：把文件存储的完整协议（{@code /{桶}/{键}}、列表、预览、下载、
+     * Range、系统配置等）作为 Servlet 过滤器挂进宿主 Spring 应用，走应用自己的端口，
+     * 对外地址形如 {@code http://host:应用端口}{@link #pathPrefix}/{桶}/{键}。</p>
+     *
+     * <p><b>STANDALONE</b>：由 {@code FileStorageServerLauncher} 另起一个独立 HTTP 服务，
+     * 监听 {@link #host}:{@link #port}，路径不带前缀（{@code /{桶}/{键}}）。</p>
+     */
+    private Mode mode = Mode.EMBEDDED;
+
+    /**
+     * 内置形态的路径前缀（默认 {@code /fs}）。
+     *
+     * <p>用于与应用自身的接口空间隔离：{@code /fs/local/a.txt} 在过滤器内会被还原成
+     * {@code /local/a.txt}，因此前端只把「文件服务器地址」配成
+     * {@code http://host:应用端口/fs} 即可，其余 URL 规则与独立服务完全一致。</p>
+     *
+     * <p>允许 {@code /} 或空串（表示占用根路径，可能与应用路由冲突，需自行评估）。</p>
+     */
+    private String pathPrefix = "/fs";
 
     /**
      * 服务器引擎：jdk / nio / aio
@@ -168,6 +199,57 @@ public class FileStorageServerProperties {
      * 或把 {@code allowedOrigins} 从 {@code *} 收成来源白名单。</p>
      */
     private Cors cors = new Cors();
+
+    /**
+     * 部署形态。
+     */
+    public enum Mode {
+        /**
+         * 内置到宿主 Spring 应用（Servlet 过滤器，走应用端口 + 路径前缀）
+         */
+        EMBEDDED,
+        /**
+         * 独立 HTTP 服务（单独监听 {@code host:port}）
+         */
+        STANDALONE
+    }
+
+    /**
+     * 是否独立服务形态。
+     *
+     * @return true 表示由启动器另起独立 HTTP 服务
+     */
+    public boolean isStandalone() {
+        return mode == Mode.STANDALONE;
+    }
+
+    /**
+     * 是否内置形态（未配置时按内置处理）。
+     *
+     * @return true 表示挂进宿主应用
+     */
+    public boolean isEmbedded() {
+        return mode != Mode.STANDALONE;
+    }
+
+    /**
+     * 规范化后的路径前缀：保证以 {@code /} 开头、不以 {@code /} 结尾；根路径返回空串。
+     *
+     * @return 规范化前缀（如 {@code /fs}），或空串表示根路径
+     */
+    public String normalizedPathPrefix() {
+        String prefix = pathPrefix == null ? "" : pathPrefix.trim();
+        if (prefix.isEmpty() || "/".equals(prefix)) {
+            return "";
+        }
+        if (!prefix.startsWith("/")) {
+            prefix = "/" + prefix;
+        }
+        while (prefix.endsWith("/")) {
+            prefix = prefix.substring(0, prefix.length() - 1);
+        }
+        return prefix;
+    }
 
     /**
      * 跨域（CORS）配置项。
