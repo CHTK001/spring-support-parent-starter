@@ -2,12 +2,15 @@ package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
+import com.chua.starter.eduai.model.vo.MarkingFinishPreviewVO;
 import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
+import com.chua.starter.eduai.model.vo.BatchMarkingResultVO;
 import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -197,6 +201,48 @@ public class EduMarkingController {
     @PostMapping("/{taskId}/unfinish")
     public ReturnResult<MarkingUndoResultVO> unfinish(@PathVariable String taskId) {
         return ReturnResult.ok(markingService.unfinishMarking(taskId));
+    }
+
+    /**
+     * 阅卷完成预览：按当前判错阈值算出将登记的题目清单。
+     *
+     * <p>老师点「完成」前先看清单，确认后再传剔除列表调用 {@code /finish}。
+     * 预览不改任何数据。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 预览结果（学生 / 将登记题数 / 题目清单）
+     */
+    @Operation(summary = "阅卷完成预览")
+    @GetMapping("/finish-preview/{taskId}")
+    public ReturnResult<MarkingFinishPreviewVO> finishPreview(@PathVariable String taskId) {
+        return ReturnResult.ok(markingService.previewFinishMarking(taskId));
+    }
+
+    /**
+     * 批量阅卷完成。
+     *
+     * <p>逐任务执行，单个任务失败只记录失败原因，不整体回滚。
+     * 每个任务可在 {@code excludeQuestionIdsByTask} 指定剔除题目（完成预览时勾选）。</p>
+     *
+     * @param request 批量请求（任务列表 + 可选剔除映射）
+     * @return 逐任务完成结果
+     */
+    @Operation(summary = "批量阅卷完成")
+    @PostMapping("/batch-finish")
+    public ReturnResult<List<BatchMarkingResultVO>> batchFinish(@RequestBody BatchMarkingRequest request) {
+        return ReturnResult.ok(markingService.batchFinishMarking(request));
+    }
+
+    /**
+     * 批量撤销阅卷完成。
+     *
+     * @param request 批量请求（任务列表，剔除映射忽略）
+     * @return 逐任务撤销结果
+     */
+    @Operation(summary = "批量撤销阅卷完成")
+    @PostMapping("/batch-unfinish")
+    public ReturnResult<List<BatchMarkingResultVO>> batchUnfinish(@RequestBody BatchMarkingRequest request) {
+        return ReturnResult.ok(markingService.batchUnfinishMarking(request));
     }
 
     /**

@@ -8,6 +8,7 @@ import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
 import com.chua.starter.eduai.model.vo.MarkingStatsVO;
+import com.chua.starter.eduai.model.vo.MarkingDashboardStatsVO;
 
 import java.util.List;
 import java.util.Map;
@@ -162,4 +163,14 @@ public interface IEduTeacherCenterService {
      * @return 完成率看板
      */
     HomeworkCompletionVO homeworkCompletion(Long paperId, Long examId);
+
+    /**
+     * 阅卷总览统计报表（当前账号归属范围内）。
+     *
+     * <p>返回任务状态分布、老师完成状态、得分率分布、错题 TOP 榜与订正率，
+     * 供老师端「阅卷」页顶部一屏概览。</p>
+     *
+     * @return 阅卷总览统计
+     */
+    MarkingDashboardStatsVO markingDashboardStats();
 }

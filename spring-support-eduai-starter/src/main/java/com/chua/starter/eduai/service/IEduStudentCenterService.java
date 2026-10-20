@@ -84,4 +84,15 @@ public interface IEduStudentCenterService {
      * @return 是否成功
      */
     boolean updateMyWrongMastery(Long wrongId, Integer masteryLevel);
+
+    /**
+     * 一键订正我的错题。
+     *
+     * <p>订正是学生在错题卡上重新作答后的客观标记（与掌握度主观自评独立）。
+     * 标记后 {@code wrong_question_corrected=1} 并记录订正时间。</p>
+     *
+     * @param wrongId 错题记录标识；必须属于本人
+     * @return 是否成功
+     */
+    boolean markMyWrongCorrected(Long wrongId);
 }
