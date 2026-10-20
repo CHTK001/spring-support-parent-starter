@@ -12,13 +12,13 @@ import com.chua.starter.hotsport.support.config.HotsportProperties;
 import com.chua.starter.hotsport.support.model.LeakQuery;
 import com.chua.starter.hotsport.support.model.LogQuery;
 import com.chua.starter.hotsport.support.model.TransmissionQuery;
+import com.chua.starter.agent.support.service.AgentAttachService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import jakarta.annotation.PostConstruct;
-import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -44,35 +44,37 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ApmQueryService {
 
     /**
      * 是否已尝试自注入 Agent。
     */
-    private final AtomicBoolean attachAttempted = new AtomicBoolean(false);
+    private final AgentAttachService agentAttachService;
 
     /**
      * Agent 自注入是否成功。
     */
-    private volatile boolean agentActive = false;
+    
 
-    @Value("${hotsport.agent.enabled:true}")
+
+    /**
     /**
      * agentEnabled
     */
-    private boolean agentEnabled;
+    
 
-    @Value("${hotsport.agent.shell-port:4567}")
+
     /**
      * shell端口
     */
-    private int shellPort;
+    
 
-    @Value("${hotsport.agent.options:}")
+    
     /**
      * agent选项
     */
-    private String agentOptions;
+    
 
     /**
      * 时间格式：epoch 毫秒 → 前端可读字符串。
@@ -90,32 +92,15 @@ public class ApmQueryService {
      */
     @PostConstruct
     public void attachAgent() {
-        if (!agentEnabled) {
-            log.info("[Hotsport] Agent 自注入被配置禁用 (hotsport.agent.enabled=false)");
-            return;
-        }
-        Thread.ofVirtual().name("hotsport-agent-attach").start(this::doAttachAgent);
+        // 字节码注入统一由 AgentAttachService 完成（含幂等、失败降级、运行时重注入）
+        agentAttachService.attach();
+        Thread.ofVirtual().name("hotsport-apm").start(this::startLocalApmEngine);
     }
 
     /**
      * 实际自注入 + 本进程 APM 启动（虚拟线程执行）。
     */
-    private void doAttachAgent() {
-        if (!attachAttempted.compareAndSet(false, true)) {
-            return;
-        }
-        // ① 自 attach（retransform 已加载类）
-        try {
-            Path agentJar = resolveAgentJarFromBootInf();
-            com.chua.runtime.starter.RuntimeBoot.create()
-                    .withAgent(agentJar)
-                    .withAgentOptions(agentOptions.isEmpty() ? "port=" + shellPort : agentOptions)
-                    .attachSelf();
-            agentActive = true;
-            log.info("[Hotsport] Agent 自注入完成，Shell 端口 {}", shellPort);
-        } catch (Throwable t) {
-            log.warn("[Hotsport] Agent 自注入失败（转仅本进程 APM 模式）: {}", t.getMessage());
-        }
+    private void startLocalApmEngine() {
         // ② 本进程 APM 引擎（与 stats() 同 classloader，数据同源）
         try {
             com.chua.runtime.apm.ApmBootstrap apm =
@@ -180,7 +165,7 @@ public class ApmQueryService {
      * @return 是否成功（true 表示成功）
      */
     public boolean isAgentActive() {
-        return agentActive;
+        return agentAttachService.isAgentActive();
     }
 
     // ------------------------------------------------------------------
@@ -194,8 +179,8 @@ public class ApmQueryService {
      */
     public Map<String, Object> stats() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("agentActive", agentActive);
-        result.put("agentEnabled", agentEnabled);
+        result.put("agentActive", agentAttachService.isAgentActive());
+        result.put("agentEnabled", agentAttachService.isAgentEnabled());
         Map<String, Long> raw = new LinkedHashMap<>();
         ApmStorage storage = currentStorage();
         if (storage != null) {
@@ -1471,7 +1456,7 @@ public class ApmQueryService {
         t.put("modules", modules);
         List<Map<String, Object>> ports = new ArrayList<>();
         addPort(ports, "HTTP", "Tomcat/Spring Boot", 8890);
-        addPort(ports, "AGENT", "Hotsport Shell", shellPort);
+        addPort(ports, "AGENT", "Hotsport Shell", agentAttachService.getShellPort());
         t.put("ports", ports);
         List<Map<String, Object>> connections = new ArrayList<>();
         try {
