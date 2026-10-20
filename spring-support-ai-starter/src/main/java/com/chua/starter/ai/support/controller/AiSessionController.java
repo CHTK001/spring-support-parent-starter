@@ -1166,6 +1166,9 @@ public class AiSessionController {
         }
 
         String title;
+        // response 需要在 try 之外可见：调用失败时 text 是空的，真正的原因在
+        // response.error.message 里（例如压根没路由到 ChatClient），收尾阶段要把它带出来。
+        Map<String, Object> response = null;
         try {
             com.chua.starter.ai.support.model.AiChatRequest request =
                     new com.chua.starter.ai.support.model.AiChatRequest();
@@ -1176,7 +1179,7 @@ public class AiSessionController {
                     + "不要解释，不要输出任何多余内容。只输出标题本身。");
             request.setMessages(List.of(Map.of("role", "user", "content",
                     "以下是本次会话的最近对话：\n\n" + transcript + "\n\n请给出标题。")));
-            Map<String, Object> response = aiChatFacadeService.call(request);
+            response = aiChatFacadeService.call(request);
             Object text = response == null ? null : response.get("text");
             title = text == null ? "" : String.valueOf(text).trim();
         } catch (Exception e) {
@@ -1184,8 +1187,22 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "生成标题失败: " + e.getMessage(), e);
         }
 
+        String rawTitle = title;
         title = sanitizeTitle(title);
         if (title.isEmpty()) {
+            // 失败原因必须原样带出来。call() 在「路由不到 ChatClient」或模型调用失败时
+            // text 为空、真实原因落在 error.message 里，而这里原先只回一句
+            // 「模型没有给出可用标题」—— 前端和排查的人都会被这句话误导，分不清是
+            // 模型返回了空，还是请求压根没走到模型。实测该接口 56ms 就返回
+            // （真实模型调用不可能这么快），正是这条把原因吞掉的路径。
+            Object failure = response == null ? null : response.get("error");
+            if (failure != null) {
+                log.warn("[SessionTitle] 模型调用未成功 sessionId={} model={} error={}", sessionId, model, failure);
+                result.put("skipped", true);
+                result.put("reason", "模型调用未成功: " + failure);
+                return ReturnResult.ok(result);
+            }
+            log.warn("[SessionTitle] 模型输出清洗后为空 sessionId={} model={} raw={}", sessionId, model, rawTitle);
             result.put("skipped", true);
             result.put("reason", "模型没有给出可用标题，可重试");
             return ReturnResult.ok(result);
