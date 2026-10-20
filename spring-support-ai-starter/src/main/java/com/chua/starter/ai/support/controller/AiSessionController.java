@@ -1177,8 +1177,15 @@ public class AiSessionController {
             request.setSystemPrompt("你是会话命名助手。根据用户提供的对话内容，生成一个能概括主题的中文标题。"
                     + "要求：不超过 16 个字；不要标点符号、不要引号、不要「关于」「讨论」这类空词；"
                     + "不要解释，不要输出任何多余内容。只输出标题本身。");
-            request.setMessages(List.of(Map.of("role", "user", "content",
-                    "以下是本次会话的最近对话：\n\n" + transcript + "\n\n请给出标题。")));
+            // 关键：非流式 call() 下发给模型的是 promptOf(request)，也就是
+            // request.getPrompt()，**不是** messages。只设 messages 会让模型收到
+            // 空提示词，于是返回空字符串 —— 表现为接口 200、无异常、raw 为空、
+            // 提示「模型没有给出可用标题」，排查时极易误判成模型不配合。
+            String instruction = "以下是本次会话的最近对话：\n\n" + transcript + "\n\n请给出标题。";
+            request.setPrompt(instruction);
+            // messages 一并设置：本方法其他调用方与流式路径按 messages 组装，
+            // 两处口径保持一致，避免以后再踩同一个坑。
+            request.setMessages(List.of(Map.of("role", "user", "content", instruction)));
             response = aiChatFacadeService.call(request);
             Object text = response == null ? null : response.get("text");
             title = text == null ? "" : String.valueOf(text).trim();
