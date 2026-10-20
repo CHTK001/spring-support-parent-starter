@@ -14,3 +14,4 @@ com.chua.starter.ai.support.configuration.memory.MemoryGlobalSettingProvider
 com.chua.starter.ai.support.configuration.image.ImageSearchGlobalSettingProvider
 com.chua.starter.ai.support.configuration.session.SessionGlobalSettingProvider
 com.chua.starter.ai.support.configuration.tts.TtsGlobalSettingProvider
+com.chua.starter.ai.support.configuration.search.SearchGlobalSettingProvider
