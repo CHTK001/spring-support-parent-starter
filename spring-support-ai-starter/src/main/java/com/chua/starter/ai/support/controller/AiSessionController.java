@@ -78,6 +78,11 @@ public class AiSessionController {
     private final SysAiSessionTraceMapper sessionTraceMapper;
 
     /**
+     * 模型注册表（查上下文窗口；窗口只认注册表，不认会话快照，见 {@link #registryContextWindow}）
+     */
+    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper providerModelMapper;
+
+    /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
      */
     private String writeSettings(Object settingsObj) {
@@ -956,11 +961,53 @@ public class AiSessionController {
     }
 
     /**
+     * 按会话上的模型标识查「模型注册表」里的上下文窗口。
+     *
+     * <p><b>为什么读取时不再用会话快照里的窗口。</b>窗口原先由前端在流式结束后回写进
+     * 会话 {@code settings.contextStats}，看似省事，实则把分母交给了客户端：模型未登记
+     * 窗口时前端会拿「用量」兜底（{@code totalTokens}，或首轮还没有消息 token 时的
+     * {@code usedTokens}），实测在 {@code agnes-3.0-flash} 上落成过 307 与 12308 两个值。
+     * 一旦落库就被后续每轮继承，占用率永久钉在 100%，而链路上再没有任何环节能纠正它。</p>
+     *
+     * <p>窗口是模型的静态属性，只认注册表：查到就用，查不到就是未知（0），
+     * 由界面显示「—」，而不是编一个分母出来。</p>
+     *
+     * @param modelId 会话上的模型标识，形如 {@code provider:model}；可为空
+     * @return 上下文窗口（Token）；未登记或非法时为 0
+     */
+    private long registryContextWindow(String modelId) {
+        if (modelId == null || modelId.isBlank()) {
+            return 0L;
+        }
+        int sep = modelId.indexOf(':');
+        String providerId = sep > 0 ? modelId.substring(0, sep) : null;
+        String model = sep > 0 ? modelId.substring(sep + 1) : modelId;
+        if (model.isBlank()) {
+            return 0L;
+        }
+        try {
+            com.chua.starter.ai.support.manage.store.SysAiProviderModel row = providerId == null
+                    ? providerModelMapper.selectById(model)
+                    : providerModelMapper.selectOne(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.chua.starter.ai.support.manage.store.SysAiProviderModel>()
+                                    .eq(com.chua.starter.ai.support.manage.store.SysAiProviderModel::getProviderId, providerId)
+                                    .eq(com.chua.starter.ai.support.manage.store.SysAiProviderModel::getModel, model)
+                                    .last("LIMIT 1"));
+            Integer window = row == null ? null : row.getContextWindow();
+            return window == null || window <= 0 ? 0L : window;
+        } catch (Exception e) {
+            log.warn("[Session] 读取模型上下文窗口失败 modelId={}: {}", modelId, e.getMessage());
+            return 0L;
+        }
+    }
+
+    /**
      * 取会话的 token 统计（上下文占用）。
      *
      * <p>两段来源：① 消息表累计的真实 token（prompt / completion）；
      * ② 会话 settings 的 {@code contextStats} —— 前端在流式 finish 事件里拿到
-     * 「已用 / 有效窗口」后回写，刷新页面时靠它恢复占用率。</p>
+     * 「已用」后回写，刷新页面时靠它恢复已用量（窗口不取快照，见
+     * {@link #registryContextWindow}）。</p>
      *
      * @param id 会话标识
      * @return usedTokens / effectiveContextWindow / promptTokens / completionTokens / totalTokens / breakdown
@@ -975,13 +1022,13 @@ public class AiSessionController {
         SysAiSession session = sessionMapper.selectById(sessionId);
 
         long usedTokens = 0L;
-        long effectiveContextWindow = 0L;
+        // 窗口从注册表现查，忽略快照里回写的窗口值 —— 那是可以被客户端污染的字段。
+        long effectiveContextWindow = registryContextWindow(session == null ? null : session.getModelId());
         Map<String, Object> breakdown = new LinkedHashMap<>();
         Object contextStats = readSettings(session == null ? null : session.getSettings()).get("contextStats");
         if (contextStats instanceof Map<?, ?> stats) {
             usedTokens = longOf(stats.get("usedTokens"));
-            effectiveContextWindow = longOf(stats.get("effectiveContextWindow"));
-            // token 构成与已用/窗口同源（都由流式 turn_end 落库），缺了它
+            // token 构成与已用同源（都由流式 turn_end 落库），缺了它
             // 「上下文已用」卡片刷新后就只剩占用条，明细整块消失。
             breakdown = mapOf(stats.get("breakdown"));
         }
