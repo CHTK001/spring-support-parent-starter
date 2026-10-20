@@ -26,6 +26,9 @@ import java.util.Map;
  * @param chatRequestId 前端生成的请求标识（WS 多路复用路由用）
  * @param request       组装好的模型请求
  * @param memoryUser    本轮归属用户标识（记忆/落库用）
+ * @param contextWindow 本轮模型的上下文窗口上限（Token）；模型未登记时为 {@code null}。
+ *                      会话底部统计条要用它当占用率的分母，准备阶段已经从
+ *                      {@code sys_ai_provider_model.context_window} 取到，带下来可省一次查询。
  * @param replyId       人工确认恢复：待确认请求回复 ID
  * @param decisions     人工确认恢复：各待确认工具的决策
  * @param feedback      人工确认恢复：用户修改意见（规划模式「需要修改」）
@@ -46,6 +49,7 @@ public record PreparedChat(
         String chatRequestId,
         AiChatRequest request,
         String memoryUser,
+        Integer contextWindow,
         String replyId,
         List<ConfirmationDecision> decisions,
         String feedback) {

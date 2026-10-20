@@ -351,6 +351,9 @@ public class ChatStreamOrchestrator {
         // 拿到规划那套审批流。
         request.setMode(FORM_KEY_PLAN.equals(formKey) ? AGENT_MODE_PLAN : AGENT_MODE_BUILD);
         request.setSessionId(sessionId);
+        // 模型登记里的上下文窗口：准备阶段顺带取出，供 turn_end 的 contextStats 当占用率分母。
+        // 模型没登记（或没填 contextWindow）时保持 null，前端据此显示「—」而不是 0%。
+        Integer modelContextWindow = null;
         try {
             // 按 (供应商, 模型) 精确取参数。SysAiProviderModel 的 @TableId 是 model，
             // 单用 selectById(modelToUse) 等于 WHERE model=? 无供应商约束，同名模型时
@@ -363,6 +366,7 @@ public class ChatStreamOrchestrator {
                                     .eq(SysAiProviderModel::getModel, modelToUse)
                                     .last("LIMIT 1"));
             if (modelInfo != null) {
+                modelContextWindow = modelInfo.getContextWindow();
                 if (modelInfo.getTemperature() != null) {
                     request.setTemperature(modelInfo.getTemperature());
                 }
@@ -459,7 +463,7 @@ public class ChatStreamOrchestrator {
         }
         return new PreparedChat(sessionId, content, modelToUse, routeInfo, dialogId,
                 parentUserMessageId, messageId, turnsId, contentId, userMsgId, chatRequestId,
-                request, memoryUser, null, null, null);
+                request, memoryUser, modelContextWindow, null, null, null);
     }
 
     /**
@@ -665,6 +669,10 @@ public class ChatStreamOrchestrator {
                         turnEndEvent.put("content", finalText);
                         turnEndEvent.put("messageId", messageId);
                         turnEndEvent.put("contentId", contentId);
+                        // 上下文占用 + token 构成：底部统计条的「上下文已用」卡片要用。
+                        // 放在 turn_end 是因为前端在 turn_end 处理器里落库（saveSessionTokenStats），
+                        // 刷新后由 GET /token-stats 读回；放 finish 会早于落库、白丢一份。
+                        turnEndEvent.put("contextStats", contextStatsOf(request, usage, p.contextWindow()));
                         sink.sendEvent(turnEndEvent);
                         sink.sendDone();
                         registry.remove(sid);
@@ -847,9 +855,13 @@ public class ChatStreamOrchestrator {
 
         // create 帧携带 DB 父消息作为兜底；前端会按当前渲染的用户消息 id 覆盖
         // 用户修改意见（规划模式「需要修改」）：随恢复注入 Agent 上下文
+        // 恢复轮同样要带上上下文窗口：审批续跑结束后也要下发 contextStats，
+        // 否则「批准」那一轮的占用率会从有值跌回 0。
+        final Integer resumeContextWindow = resolveModelContextWindow(selectedProviderId, selectedModel);
         return new PreparedChat(sessionId, null, selectedModel, resumeRoute, dialogId, resumeParentDbId,
                 messageId, turnsId, contentId, resumeParentId, null, request,
-                AiUserContext.currentUserId(), resumeReplyId, decisions, str(body.get("feedback")));
+                AiUserContext.currentUserId(), resumeContextWindow, resumeReplyId, decisions,
+                str(body.get("feedback")));
     }
 
     /**
@@ -992,6 +1004,9 @@ public class ChatStreamOrchestrator {
                             turnEndEvent.put("content", finalText);
                             turnEndEvent.put("messageId", messageId);
                             turnEndEvent.put("contentId", contentId);
+                            // 恢复轮（审批续跑）同样下发：否则「批准」之后占用率会从有值跌回 0
+                            turnEndEvent.put("contextStats",
+                                    contextStatsOf(request, usageHolder[0], p.contextWindow()));
                             sink.sendEvent(turnEndEvent);
                             sink.sendDone();
                             registry.remove(sid);
@@ -1096,6 +1111,147 @@ public class ChatStreamOrchestrator {
         } catch (Exception e) {
             log.warn("[ChatStream] 附加路由信息失败，保留原 confirmation: {}", e.getMessage());
             return json;
+        }
+    }
+
+    /**
+     * 把「本轮上下文占用 + token 构成」整理成可下发的 contextStats。
+     *
+     * <p>会话底部统计条的「上下文已用」卡片要用它：分母是模型窗口，
+     * 分子是本轮真正送进模型的输入量，明细则是这份上下文由哪几块拼成
+     * （系统提示词 / 摘要 / 用户输入 / 历史消息 / 工具定义）。</p>
+     *
+     * <p><b>为什么分子取 {@code usage.inputTokens}。</b>它不是「这个会话一共烧了多少」，
+     * 而是「这一次请求真正塞了多少进上下文」—— 正是占用率要的口径。
+     * provider 不回传用量时退回字符数估算（与失败分支同一套 {@code length * 1.5} 口径）。</p>
+     *
+     * <p><b>明细为什么是估算。</b>各部分在送到 provider 前还会被 agent 框架加工
+     * （补工具 schema、注入规划约束等），链路上拿不到加工后的最终拼装结果，
+     * 所以按「准备阶段组装出来的 request」逐块估字符数。因此五分量之和
+     * <b>不等于</b> {@code usedTokens}（存在未归类余量），这是刻意保留的诚实口径：
+     * 前端用分量之和当分母算占比，不拿 0 去凑满。</p>
+     *
+     * @param request       本轮组装好的请求（可为空）
+     * @param usage         模型回传用量（可为空）
+     * @param contextWindow 模型上下文窗口上限（可为空）
+     * @return 至少含 usedTokens 的 map；窗口未知时不下发 effectiveContextWindow
+     */
+    private Map<String, Object> contextStatsOf(AiChatRequest request,
+                                               com.chua.common.support.ai.AiUsage usage,
+                                               Integer contextWindow) {
+        Map<String, Object> stats = new LinkedHashMap<>(4);
+
+        Integer reportedInput = usage == null ? null : usage.getInputTokens();
+        int usedTokens = reportedInput != null && reportedInput > 0
+                ? reportedInput
+                : estimateTokens(request == null ? null : request.getPrompt());
+        stats.put("usedTokens", usedTokens);
+        if (contextWindow != null && contextWindow > 0) {
+            stats.put("effectiveContextWindow", contextWindow);
+        }
+
+        Map<String, Object> breakdown = new LinkedHashMap<>(6);
+        breakdown.put("systemPrompt", estimateTokens(request == null ? null : request.getSystemPrompt()));
+        breakdown.put("tools", estimateTokens(serializeQuietly(request == null ? null : request.getTools())));
+
+        // 对话消息按角色归位：最后一条用户消息算「用户输入」，其余算「历史消息」，
+        // 夹在中间的 system 条目（历史压缩产物）单独算「摘要」。
+        int userPrompt = 0;
+        int history = 0;
+        int summary = 0;
+        List<Map<String, Object>> messages = request == null ? null : request.getMessages();
+        if (messages != null && !messages.isEmpty()) {
+            int lastUserIndex = -1;
+            for (int i = messages.size() - 1; i >= 0; i--) {
+                Map<String, Object> m = messages.get(i);
+                if (m != null && "user".equals(String.valueOf(m.get("role")))) {
+                    lastUserIndex = i;
+                    break;
+                }
+            }
+            for (int i = 0; i < messages.size(); i++) {
+                Map<String, Object> m = messages.get(i);
+                if (m == null) {
+                    continue;
+                }
+                int t = estimateTokens(String.valueOf(m.get("content")));
+                if ("system".equals(String.valueOf(m.get("role")))) {
+                    summary += t;
+                } else if (i == lastUserIndex) {
+                    userPrompt += t;
+                } else {
+                    history += t;
+                }
+            }
+        }
+        breakdown.put("summary", summary);
+        breakdown.put("userPrompt", userPrompt);
+        breakdown.put("history", history);
+
+        stats.put("breakdown", breakdown);
+        return stats;
+    }
+
+    /**
+     * 字符数 → Token 估算。
+     *
+     * <p>沿用本类既有的 {@code length * 1.5} 口径（见「模型未回传用量」分支），
+     * 不引入新的分词器依赖：这里只服务一个占比条形图，量级正确即可。</p>
+     *
+     * @param text 文本（可为空）
+     * @return 估算 Token 数
+     */
+    private int estimateTokens(String text) {
+        return text == null || text.isEmpty() ? 0 : (int) (text.length() * 1.5);
+    }
+
+    /**
+     * 把任意对象序列化成 JSON 字符串用于估长；失败时返回空串。
+     *
+     * <p>工具定义是结构化对象（name/description/parameters schema），
+     * 直接取 {@code toString()} 会低估 schema 的体积，故走真实的 JSON 序列化。</p>
+     *
+     * @param value 待序列化对象
+     * @return JSON 字符串；失败或为空时返回 {@code null}
+     */
+    private String serializeQuietly(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            log.debug("[ChatStream] 上下文构成估算序列化失败，按空处理: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 按 (供应商, 模型) 查上下文窗口上限。
+     *
+     * <p>恢复轮（审批续跑）走不到 prepare 里的模型参数查询，故单独补一次；
+     * 查不到或未登记时返回 {@code null}，由前端显示「—」。</p>
+     *
+     * @param providerId 供应商 ID（可为空）
+     * @param model      模型名
+     * @return 上下文窗口（Token）；未知时为 {@code null}
+     */
+    private Integer resolveModelContextWindow(String providerId, String model) {
+        if (model == null || model.isBlank()) {
+            return null;
+        }
+        try {
+            SysAiProviderModel modelInfo = providerId == null || providerId.isBlank()
+                    ? sysAiProviderModelMapper.selectById(model)
+                    : sysAiProviderModelMapper.selectOne(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel>()
+                                    .eq(SysAiProviderModel::getProviderId, providerId)
+                                    .eq(SysAiProviderModel::getModel, model)
+                                    .last("LIMIT 1"));
+            return modelInfo == null ? null : modelInfo.getContextWindow();
+        } catch (Exception e) {
+            log.warn("[ChatStream] 读取模型上下文窗口失败 model={}: {}", model, e.getMessage());
+            return null;
         }
     }
 
