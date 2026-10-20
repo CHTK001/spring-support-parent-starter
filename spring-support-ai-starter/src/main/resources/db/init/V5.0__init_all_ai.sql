@@ -201,6 +201,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
     `sys_ai_usage_original_cost` DOUBLE NULL COMMENT '原始费用(未折扣)',
     `sys_ai_usage_first_token_latency` BIGINT NULL COMMENT '首字延迟(ms)',
     `sys_ai_usage_total_latency` BIGINT NULL COMMENT '总耗时(ms)',
+    `sys_ai_usage_tokens_per_second` DOUBLE NULL COMMENT '解码速度(Token/秒)',
+    `sys_ai_usage_total_tokens_per_second` DOUBLE NULL COMMENT '端到端吞吐(Token/秒)',
   `sys_ai_usage_source` VARCHAR(32) NULL DEFAULT 'third_party' COMMENT '用量来源',
   `sys_ai_usage_estimated_tokens` TINYINT NULL DEFAULT 0 COMMENT 'token是否估算',
 
@@ -1445,3 +1447,365 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
 -- 请把新的存量库兼容 DDL 一律写成独立的版本脚本，不要追加到已发布的 V1.0 末尾。
 -- ------------------------------------------------------------
 
+-- ---------------------------------------------------------------------
+-- AI 记忆表（sys_ai_memory）
+--
+-- 归位说明：本表原先全仓没有迁移脚本，只在 Java 侧由
+-- SysAiMemoryStore.ensureTable() 幂等建表（存储层自证存在）。
+-- 本次收敛把它收进 init_all —— 新库一次建全，不再依赖运行期补建。
+-- 表定义与 SysAiMemoryStore.ensureTable() 里的 DDL 逐字一致，
+-- 两边都是 CREATE TABLE IF NOT EXISTS，先到先建，不冲突。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_memory (
+    sys_ai_memory_id VARCHAR(64) NOT NULL,
+    sys_ai_memory_user_id VARCHAR(64) NULL,
+    sys_ai_memory_scope VARCHAR(16) NOT NULL DEFAULT 'global',
+    sys_ai_memory_conversation_id VARCHAR(64) NULL,
+    sys_ai_memory_kind VARCHAR(32) NULL,
+    sys_ai_memory_title VARCHAR(255) NULL,
+    sys_ai_memory_content TEXT NULL,
+    sys_ai_memory_keywords TEXT NULL,
+    sys_ai_memory_importance DOUBLE NULL,
+    sys_ai_memory_strength DOUBLE NULL,
+    sys_ai_memory_hit_count INT NOT NULL DEFAULT 0,
+    sys_ai_memory_pinned TINYINT NULL,
+    sys_ai_memory_status VARCHAR(16) NOT NULL DEFAULT 'active',
+    sys_ai_memory_source VARCHAR(32) NULL,
+    sys_ai_memory_dedup_key VARCHAR(64) NULL,
+    sys_ai_memory_created_at BIGINT NULL,
+    sys_ai_memory_updated_at BIGINT NULL,
+    sys_ai_memory_last_used_at BIGINT NULL,
+    sys_ai_memory_expires_at BIGINT NULL,
+    PRIMARY KEY (sys_ai_memory_id),
+    KEY idx_ai_memory_user_status (sys_ai_memory_user_id, sys_ai_memory_status),
+    KEY idx_ai_memory_conversation (sys_ai_memory_conversation_id),
+    KEY idx_ai_memory_dedup (sys_ai_memory_user_id, sys_ai_memory_dedup_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT 'AI 记忆';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_tavern_group（原 V4.0.0.48__fix_appkey_provider_and_add_tavern_tables.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_tavern_group` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `name` VARCHAR(255) DEFAULT NULL COMMENT '群名称',
+  `avatar` VARCHAR(512) DEFAULT NULL COMMENT '群头像',
+  `default_member_id` BIGINT DEFAULT NULL COMMENT '默认回复成员ID（sys_ai_tavern_member.id）',
+  `auto_route` INT DEFAULT 0 COMMENT '未@时是否自动路由挑选回复者 0否1是',
+  `user_id` VARCHAR(64) DEFAULT NULL COMMENT '群主/归属用户（登录用户名）',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_tavern_group_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='酒馆群';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_tavern_member（原 V4.0.0.48__fix_appkey_provider_and_add_tavern_tables.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_tavern_member` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` BIGINT DEFAULT NULL COMMENT '群ID',
+  `role_id` INT DEFAULT NULL COMMENT '角色ID（sys_ai_role 主键）',
+  `model_override` VARCHAR(255) DEFAULT NULL COMMENT '成员模型覆盖（选填）',
+  `random_reply_enabled` TINYINT(1) DEFAULT 0 COMMENT '是否启用随机发言',
+  `random_probability` DOUBLE DEFAULT NULL COMMENT '随机发言命中概率百分比 [0,100]，0=从不',
+  `random_context_count` INT DEFAULT NULL COMMENT '喂给该成员的上下文消息条数',
+  `sort` INT DEFAULT 0 COMMENT '排序',
+  `user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_tavern_member_group` (`group_id`),
+  KEY `idx_tavern_member_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='酒馆群成员';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_tavern_message（原 V4.0.0.48__fix_appkey_provider_and_add_tavern_tables.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_tavern_message` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` BIGINT DEFAULT NULL COMMENT '群ID',
+  `speaker_type` VARCHAR(16) DEFAULT NULL COMMENT '发言者类型 user/ai',
+  `speaker_id` VARCHAR(64) DEFAULT NULL COMMENT '发言者ID（user=登录用户名, ai=角色ID）',
+  `speaker_name` VARCHAR(255) DEFAULT NULL COMMENT '发言者显示名',
+  `content` TEXT COMMENT '消息内容',
+  `model_name` VARCHAR(255) DEFAULT NULL COMMENT '本条AI回复使用的模型',
+  `at_role_id` INT DEFAULT NULL COMMENT '本条用户消息@的角色ID',
+  `user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属用户',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_tavern_message_group` (`group_id`),
+  KEY `idx_tavern_message_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='酒馆群消息';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_prompt_form（原 V4.0.0.49__add_role_prompt_by_mode.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_prompt_form` (
+    `sys_ai_prompt_form_id`     INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    `user_id`                   VARCHAR(64)  DEFAULT NULL COMMENT '归属用户（多用户隔离）',
+    `form_key`                  VARCHAR(32)  NOT NULL COMMENT '形态标识，如 build/plan/review；会话 runMode 存的就是它',
+    `form_name`                 VARCHAR(64)  NOT NULL COMMENT '形态中文名，如 构建/规划',
+    `form_icon`                 VARCHAR(64)  DEFAULT NULL COMMENT '图标标识（前端图标注册表 key）',
+    `form_description`          VARCHAR(255) DEFAULT NULL COMMENT '形态说明，展示在切换器里',
+    `sys_ai_prompt_form_builtin` INT         DEFAULT 0 COMMENT '1=内置形态（build 恒存，不可删除）',
+    `form_sort`                 INT          DEFAULT 0 COMMENT '排序，小的在前',
+    `sys_ai_prompt_form_status`  INT          DEFAULT 1 COMMENT '1启用 0禁用',
+    `sys_ai_prompt_form_delete`  INT          DEFAULT 0 COMMENT '逻辑删除 0未删 1已删',
+    `create_name`               VARCHAR(255) DEFAULT NULL COMMENT '创建名称',
+    `create_time`               DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`               DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_prompt_form_key` (`user_id`, `form_key`),
+    KEY `idx_prompt_form_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 提示词形态定义';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_role_prompt（原 V4.0.0.49__add_role_prompt_by_mode.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_role_prompt` (
+    `sys_ai_role_prompt_id`     INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    `user_id`                   VARCHAR(64)  DEFAULT NULL COMMENT '归属用户（多用户隔离），与 sys_ai_role.user_id 一致',
+    `role_id`                   INT          NOT NULL COMMENT '角色ID（sys_ai_role.sys_ai_role_id）',
+    `prompt_mode`               VARCHAR(32)  NOT NULL COMMENT '形态标识，对应 sys_ai_prompt_form.form_key',
+    `sys_ai_role_prompt_content` LONGTEXT    DEFAULT NULL COMMENT '该形态下的系统提示词正文',
+    `sys_ai_role_prompt_status`  INT          DEFAULT 1 COMMENT '1启用 0禁用',
+    `sys_ai_role_prompt_delete`  INT          DEFAULT 0 COMMENT '逻辑删除 0未删 1已删',
+    `create_name`               VARCHAR(255) DEFAULT NULL COMMENT '创建名称',
+    `create_time`               DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`               DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_role_prompt_mode` (`role_id`, `prompt_mode`, `user_id`),
+    KEY `idx_role_prompt_role` (`role_id`),
+    KEY `idx_role_prompt_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 角色分形态提示词';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_session_trace（原 V4.0.0.51__add_ai_session_trace.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_session_trace` (
+    `sys_ai_session_trace_id`   BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `sys_ai_session_trace_uid`  VARCHAR(64)  NOT NULL COMMENT '轨迹记录UID(UUID)',
+    `sys_ai_session_id`         BIGINT       DEFAULT NULL COMMENT '所属会话ID，对应 sys_ai_session 主键',
+    `chat_request_id`           VARCHAR(64)  DEFAULT NULL COMMENT '本次运行的请求ID：把一次运行的所有轨迹归为一组',
+    `kind`                      VARCHAR(32)  NOT NULL COMMENT '类别：agent_start/agent_end/turn/thinking/text/tool_call/tool_args/tool_result/usage/hint/edge',
+    `agent_id`                  VARCHAR(128) DEFAULT NULL COMMENT 'Agent 标识',
+    `span_id`                   VARCHAR(191) DEFAULT NULL COMMENT '所属区间标识；为空表示这是一条独立的点事件',
+    `span_end`                  TINYINT      NOT NULL DEFAULT 0 COMMENT '是否区间结束标记：1 是，0 否',
+    `tool_name`                 VARCHAR(128) DEFAULT NULL COMMENT '工具名称（工具相关轨迹）',
+    `text`                      TEXT         DEFAULT NULL COMMENT '轨迹文本',
+    `event_time`                BIGINT       NOT NULL COMMENT '事件发生时间戳（毫秒）',
+    `span_end_time`             BIGINT       NOT NULL DEFAULT 0 COMMENT '区间结束时间戳（毫秒）；0 表示点事件',
+    `seq`                       INT          NOT NULL DEFAULT 0 COMMENT '同一次运行内的递增序号：保证同一毫秒内的多条事件顺序稳定',
+    `create_name`  VARCHAR(255) DEFAULT NULL COMMENT '创建人',
+    `create_by`    INT          DEFAULT NULL COMMENT '创建人ID',
+    `create_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `update_name`  VARCHAR(255) DEFAULT NULL COMMENT '更新人',
+    `update_by`    INT          DEFAULT NULL COMMENT '更新人ID',
+    PRIMARY KEY (`sys_ai_session_trace_id`),
+    UNIQUE KEY `sys_ai_session_trace_uid` (`sys_ai_session_trace_uid`),
+    -- 按会话回放轨迹的主查询路径
+    KEY `sys_ai_session_trace_session` (`sys_ai_session_id`, `seq`),
+    -- 按一次运行归组
+    KEY `sys_ai_session_trace_request` (`chat_request_id`),
+    -- 按区间配对开始/结束
+    KEY `sys_ai_session_trace_span` (`span_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI会话执行轨迹（点事件 + 可选区间，供甘特图回放）';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_service_token（原 V4.0.0.52__add_ai_service_token_and_access_log.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_service_token` (
+    `token_id`       BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `instance_id`    VARCHAR(64)  DEFAULT NULL COMMENT '所属服务实例标识（sys_ai_service_instance.instance_id）',
+    `token`          VARCHAR(128) DEFAULT NULL COMMENT '访问令牌明文（对外服务请求头 Bearer 携带）',
+    `token_name`     VARCHAR(128) DEFAULT NULL COMMENT '令牌名称',
+    `enabled`        TINYINT      DEFAULT 1 COMMENT '是否启用：1 启用，0 停用',
+    `user_id`        VARCHAR(64)  DEFAULT NULL COMMENT '所属用户ID（创建者）',
+    `create_time`    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `token_type`     VARCHAR(32)  DEFAULT NULL COMMENT '令牌类型：permanent 永久 / temporary 临时',
+    `expires_at`     DATETIME     DEFAULT NULL COMMENT '过期时间（仅临时令牌）；为空表示不过期',
+    `max_requests`   BIGINT       DEFAULT NULL COMMENT '最大请求次数；为空表示不限',
+    `used_requests`  BIGINT       DEFAULT 0 COMMENT '已用请求次数',
+    `max_tokens`     BIGINT       DEFAULT NULL COMMENT '最大可用 Token 数量；为空表示不限',
+    `used_tokens`    BIGINT       DEFAULT 0 COMMENT '已用 Token 数量',
+    PRIMARY KEY (`token_id`),
+    -- 鉴权主路径：instance_id + enabled + token 等值命中
+    KEY `sys_ai_service_token_auth` (`instance_id`, `enabled`, `token`),
+    -- 令牌列表按实例筛选
+    KEY `sys_ai_service_token_instance` (`instance_id`),
+    -- 配额清理等按令牌定位
+    UNIQUE KEY `sys_ai_service_token_token` (`token`),
+    KEY `sys_ai_service_token_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对外服务访问令牌（鉴权/配额）';
+
+-- ---------------------------------------------------------------------
+-- sys_ai_service_access_log（原 V4.0.0.52__add_ai_service_token_and_access_log.sql，已并入本文件）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sys_ai_service_access_log` (
+    `log_id`            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `instance_id`       VARCHAR(64)  DEFAULT NULL COMMENT '所属服务实例标识（sys_ai_service_instance.instance_id）',
+    `endpoint`          VARCHAR(255) DEFAULT NULL COMMENT '请求端点路径',
+    `method`            VARCHAR(16)  DEFAULT NULL COMMENT 'HTTP 方法',
+    `model`             VARCHAR(255) DEFAULT NULL COMMENT '本次调用使用的模型',
+    `protocol`          VARCHAR(32)  DEFAULT NULL COMMENT '协议：openai / claude / gemini / unknown',
+    `status`            INT          DEFAULT NULL COMMENT '响应状态码',
+    `prompt_tokens`     INT          DEFAULT 0 COMMENT '输入 Token 数',
+    `completion_tokens` INT          DEFAULT 0 COMMENT '输出 Token 数',
+    `total_tokens`      INT          DEFAULT 0 COMMENT 'Token 总数（输入+输出）',
+    `latency_ms`        BIGINT       DEFAULT NULL COMMENT '处理耗时（毫秒）',
+    `client_ip`         VARCHAR(64)  DEFAULT NULL COMMENT '客户端 IP',
+    `user_id`           VARCHAR(64)  DEFAULT NULL COMMENT '实例归属用户ID',
+    `create_time`       DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（写入方不赋值，由默认值填充）',
+    PRIMARY KEY (`log_id`),
+    -- 访问日志列表主查询：按实例过滤 + 按时间倒序 LIMIT，避免 filesort
+    KEY `sys_ai_service_access_log_instance` (`instance_id`, `create_time`),
+    KEY `sys_ai_service_access_log_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对外服务访问日志（端点/协议/模型/用量/耗时）';
+
+-- =====================================================================
+-- 存量库补列（原 V4.0.0.46__add_library_owner.sql，已并入本文件）
+--
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
+-- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
+-- =====================================================================
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
+          AND COLUMN_NAME = 'sys_ai_face_library_user_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_face_library` ADD COLUMN `sys_ai_face_library_user_id` VARCHAR(64) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
+          AND COLUMN_NAME = 'sys_ai_image_library_user_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_image_library` ADD COLUMN `sys_ai_image_library_user_id` VARCHAR(64) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+
+-- =====================================================================
+-- 存量库补列（原 V4.0.0.47__add_ai_model_owner_and_task_elapsed.sql，已并入本文件）
+--
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
+-- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
+-- =====================================================================
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_generate_task'
+          AND COLUMN_NAME = 'sys_ai_generate_task_elapsed'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_generate_task` ADD COLUMN `sys_ai_generate_task_elapsed` BIGINT NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
+          AND COLUMN_NAME = 'sys_ai_model_user_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_model` ADD COLUMN `sys_ai_model_user_id` VARCHAR(64) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+
+-- =====================================================================
+-- 存量库补列（原 V4.0.0.53__add_ai_model_latency_test_status.sql，已并入本文件）
+--
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
+-- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
+-- =====================================================================
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
+          AND COLUMN_NAME = 'sys_ai_model_last_status'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_model` ADD COLUMN `sys_ai_model_last_status` VARCHAR(16) NULL COMMENT ''最近一次连通性测试状态(success/failed)，NULL=未知'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
+          AND COLUMN_NAME = 'sys_ai_model_last_error'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_model` ADD COLUMN `sys_ai_model_last_error` VARCHAR(512) NULL COMMENT ''最近一次连通性测试失败原因(错误种类: HTTP状态/超时/连接被拒/Key缺失)'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+
+-- =====================================================================
+-- 存量库补列（原 V4.0.0.57__add_whatsapp_bot_binding_columns.sql，已并入本文件）
+--
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
+-- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
+-- =====================================================================
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
+          AND COLUMN_NAME = 'sys_ai_bot_binding_app_secret'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_app_secret` VARCHAR(512) NULL COMMENT ''平台应用密钥（WhatsApp App Secret，用于验签）'' AFTER `sys_ai_bot_binding_bot_token`'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
+          AND COLUMN_NAME = 'sys_ai_bot_binding_verify_token'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_verify_token` VARCHAR(255) NULL COMMENT ''Webhook 校验令牌（WhatsApp Verify Token）'' AFTER `sys_ai_bot_binding_app_secret`'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
+          AND COLUMN_NAME = 'sys_ai_bot_binding_role_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_role_id` INT NULL COMMENT ''绑定的 AI 角色ID（sys_ai_role.sys_ai_role_id）'' AFTER `sys_ai_bot_binding_model`'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+-- =====================================================================
+-- 存量库补列 / 种子（原 V4.0.0.48 / V4.0.0.49 / V4.0.0.54 / V4.0.0.55 / V4.0.0.56，
+-- 已并入本文件）
+--
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
+-- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
+-- =====================================================================
+
+-- ---------- 存量库补列：sys_ai_app_key.provider_id 由 ID 改编码 ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
+          AND COLUMN_NAME = 'sys_ai_app_key_provider_id'),
+        'SELECT 1',
+        'ALTER TABLE sys_ai_app_key MODIFY COLUMN sys_ai_app_key_provider_id VARCHAR(64) DEFAULT NULL COMMENT ''供应商编码（openai/agnes/onnx 等）'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 存量库补列：sys_ai_usage 的两个吞吐字段 ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_usage'
+          AND COLUMN_NAME = 'sys_ai_usage_tokens_per_second'),
+        'SELECT 1',
+        'ALTER TABLE sys_ai_usage ADD COLUMN sys_ai_usage_tokens_per_second DOUBLE NULL COMMENT ''解码速度(Token/秒)'' AFTER sys_ai_usage_total_latency'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_usage'
+          AND COLUMN_NAME = 'sys_ai_usage_total_tokens_per_second'),
+        'SELECT 1',
+        'ALTER TABLE sys_ai_usage ADD COLUMN sys_ai_usage_total_tokens_per_second DOUBLE NULL COMMENT ''端到端吞吐(Token/秒)'' AFTER sys_ai_usage_tokens_per_second'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 存量库补列：sys_ai_bot_binding 的 WhatsApp 字段 ----------
+-- （V4.0.0.56 的裸 ALTER 改写成判存动态 DDL；与 V4.0.0.57 的三列同口径）
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
+          AND COLUMN_NAME = 'sys_ai_bot_binding_app_secret'),
+        'SELECT 1',
+        'ALTER TABLE sys_ai_bot_binding ADD COLUMN sys_ai_bot_binding_app_secret VARCHAR(512) NULL COMMENT ''平台应用密钥（WhatsApp App Secret）'' AFTER sys_ai_bot_binding_bot_token'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
+          AND COLUMN_NAME = 'sys_ai_bot_binding_verify_token'),
+        'SELECT 1',
+        'ALTER TABLE sys_ai_bot_binding ADD COLUMN sys_ai_bot_binding_verify_token VARCHAR(255) NULL COMMENT ''Webhook 校验令牌（WhatsApp Verify Token）'' AFTER sys_ai_bot_binding_app_secret'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 存量库补列：sys_ai_bot_binding.role_id ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
+          AND COLUMN_NAME = 'sys_ai_bot_binding_role_id'),
+        'SELECT 1',
+        'ALTER TABLE sys_ai_bot_binding ADD COLUMN sys_ai_bot_binding_role_id INT NULL COMMENT ''绑定的 AI 角色ID（sys_ai_role.sys_ai_role_id）'' AFTER sys_ai_bot_binding_model'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
