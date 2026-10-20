@@ -229,7 +229,7 @@ public class MaintenancePlanService {
     }
 
     /**
-     * 建表 SQL；与 db/init/V1.0__init_all_monitor.sql 中的 22 号表保持一致。
+     * 建表 SQL；与 db/init/V2.0__init_all_monitor.sql 中的 22 号表保持一致。
      */
     private static final String CREATE_TABLE_SQL = """
             CREATE TABLE IF NOT EXISTS `ms_maintenance_plan` (

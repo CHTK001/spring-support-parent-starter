@@ -334,8 +334,8 @@ public final class LedgerSemanticsProbe {
                 try (Statement statement = connection.createStatement()) {
                     statement.execute("SELECT 1 FROM " + table + " LIMIT 1");
                 } catch (Exception ex) {
-                    log.info("[probe] 表 {} 不存在（{}），请先对该库执行 V1.0__init_all_job.sql", table, ex.getMessage());
-                    throw new IllegalStateException("缺少表 " + table + "，请先对该库执行 V1.0__init_all_job.sql", ex);
+                    log.info("[probe] 表 {} 不存在（{}），请先对该库执行 V2.0__init_all_job.sql", table, ex.getMessage());
+                    throw new IllegalStateException("缺少表 " + table + "，请先对该库执行 V2.0__init_all_job.sql", ex);
                 }
             }
         }

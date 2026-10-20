@@ -1,3 +1,10 @@
+-- =====================================================================
+-- V2.0__init_all_datasource_hub.sql - spring-support-datasource-hub-starter 全量表结构
+-- 通道: INIT 同步建表（表结构先于种子数据就位）
+-- 说明: 本文件是该模块唯一的建表入口。此前分散的
+--   V1.0__init_all_datasource_hub.sql 已在本次收敛中并入本文件并删除。
+-- 约束: MySQL 专属语法（ENGINE / COMMENT / DATETIME）；本模块不随 H2 执行。
+-- =====================================================================
 -- ============================================================
 -- 数据源中心建表脚本（MySQL / H2 双库可执行子集）
 -- 模块: spring-support-datasource-hub-starter
@@ -66,6 +73,7 @@ CREATE INDEX IF NOT EXISTS `idx_ms_datasource_type` ON `ms_datasource` (`datasou
 --   所以必须靠 information_schema 断言来验证（见 final-check.sh）。
 -- ------------------------------------------------------------
 ALTER TABLE `ms_datasource`
+    ADD COLUMN `datasource_version` VARCHAR(16) NULL DEFAULT '' COMMENT '服务端大版本（influxdb: 2/3）' AFTER `datasource_type`,
     ADD COLUMN `datasource_connect_latency_ms` BIGINT NULL COMMENT '连接延迟(毫秒)，最近一次测试回写' AFTER `datasource_status`,
     ADD COLUMN `datasource_session_latency_ms` BIGINT NULL COMMENT '会话延迟(毫秒)，最近一次测试回写' AFTER `datasource_connect_latency_ms`,
     ADD COLUMN `datasource_last_test_time` DATETIME NULL COMMENT '最近一次连通性测试时间' AFTER `datasource_session_latency_ms`,
@@ -228,3 +236,40 @@ CREATE TABLE IF NOT EXISTS `ms_datasource_metric`
     KEY `idx_ms_datasource_metric_time` (`create_time`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='数据源连通性指标采样';
+
+-- ============================================================
+-- Nginx 时序指标（ms_monitor_nginx_metric）
+--
+-- 归位说明：本表原先建在 spring-support-monitor-starter 的
+-- V1.0__init_all_monitor.sql 里，但它的实体 MsMonitorNginxMetric
+-- 属于 spring-support-datasource-hub-starter —— 表随实体归位，
+-- 本次收敛时把建表语句搬到本模块（表定义逐字未改）。
+--
+-- 写入方：Nginx 采集（按数据源 + 指标名 + 采集时刻幂等写入）
+-- 读取方：监控台「Nginx 趋势」图
+--
+-- 指标值列刻意不叫 value：MyBatis-Plus 的 selectList 会把列名按属性名起别名，
+--   生成 ms_monitor_nginx_metric_value AS value，而 value 是 H2 保留字，
+--   H2 直接报语法错（101.200.205.64 走查时复现：「读趋势」500，趋势图永远空白，
+--   而采集其实一直在写数据）。属性名改成 metricValue 后别名变成 metricValue，
+--   两个库都安全，表结构与接口 JSON 字段都不变。
+-- ============================================================
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `ms_monitor_nginx_metric`
+(
+    `id`                             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_monitor_nginx_metric_datasource_id` BIGINT NOT NULL COMMENT 'ms_datasource.id',
+    `ms_monitor_nginx_metric_name`   VARCHAR(64)  NOT NULL COMMENT '指标名: active/accepts/handled/requests/reading/writing/waiting',
+    `ms_monitor_nginx_metric_value`  DOUBLE       NULL COMMENT '指标值（累计类为原始计数）',
+    `ms_monitor_nginx_metric_collect_time` DATETIME NOT NULL COMMENT '采集时刻',
+    PRIMARY KEY (`id`),
+    -- 幂等写入：同一数据源同一指标同一时刻只留一行
+    UNIQUE KEY `ms_monitor_nginx_metric_uk_point` (`ms_monitor_nginx_metric_datasource_id`,
+                                                 `ms_monitor_nginx_metric_name`,
+                                                 `ms_monitor_nginx_metric_collect_time`),
+    -- 趋势查询主路径：按数据源 + 时间范围扫
+    KEY `idx_ms_monitor_nginx_metric_ds_time` (`ms_monitor_nginx_metric_datasource_id`,
+                                              `ms_monitor_nginx_metric_collect_time`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT 'Nginx 时序指标';
