@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <h2>配置项</h2>
  * <pre>
- * chua.swagger.export:
+ * plugin.swagger.export:
  *   enabled: true                    # 是否启用导出
  *   output: ./swagger-export.html    # 输出文件路径
  *   title: 应用 OpenAPI 接口文档      # 顶部标题
@@ -24,7 +24,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "chua.swagger.export")
+@ConfigurationProperties(prefix = "plugin.swagger.export")
 public class SwaggerExportProperties {
 
     /**

@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * 分库分表sphere 分库分表自动配置。
  * <p>
- * 当 {@code spring.datasource.sharding.enabled=true} 时，
+ * 当 {@code plugin.datasource.sharding.enabled=true} 时，
  * 自动基于配置创建 分库分表sphere 分片数据源。
  * </p>
  *
@@ -37,7 +37,7 @@ import java.util.Map;
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(ShardingV5Conversion.class)
-@ConditionalOnProperty(prefix = "spring.datasource.sharding", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "plugin.datasource.sharding", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(ShardingDataSourceProperties.class)
 public class ShardingAutoConfiguration {
 

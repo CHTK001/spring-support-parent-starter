@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "spring.ai.generate")
+@ConfigurationProperties(prefix = "plugin.ai.generate")
 public class AiProperties {
 
     /**
@@ -22,11 +22,6 @@ public class AiProperties {
      * 视频生成默认配置
      */
     private Video video = new Video();
-
-    /**
-     * 图片上色默认配置
-     */
-    private Colorize colorize = new Colorize();
 
     /**
      * 图片生成配置。
@@ -101,35 +96,5 @@ public class AiProperties {
          * 默认时长（秒）
          */
         private Integer duration = 5;
-    }
-
-    /**
-     * 图片上色配置。
-     *
-     * @since 4.0.0.42
-     * @author CH
-     */
-    @Data
-    public static class Colorize {
-
-        /**
-         * 生成提供者（如 openai、zhipu）
-         */
-        private String provider = "openai";
-
-        /**
-         * API Key
-         */
-        private String apiKey;
-
-        /**
-         * 自定义 基础 URL（可选）
-         */
-        private String baseUrl;
-
-        /**
-         * 默认模型（如 dall-e-3）
-         */
-        private String model = "dall-e-3";
     }
 }

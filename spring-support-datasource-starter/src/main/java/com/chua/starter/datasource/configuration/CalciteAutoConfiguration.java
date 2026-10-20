@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * Calcite 聚合数据源自动配置。
  * <p>
- * 当 {@code spring.datasource.calcite.enabled=true} 时，
+ * 当 {@code plugin.datasource.calcite.enabled=true} 时，
  * 自动将所有已注册的动态数据源聚合为统一的 Calcite 数据源，
  * 支持跨库联邦查询。
  * </p>
@@ -37,7 +37,7 @@ import java.util.Map;
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(CalciteDataSourceConversion.class)
-@ConditionalOnProperty(prefix = "spring.datasource.calcite", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "plugin.datasource.calcite", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(CalciteDataSourceProperties.class)
 public class CalciteAutoConfiguration {
 

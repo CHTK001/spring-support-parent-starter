@@ -11,19 +11,19 @@ import java.util.Locale;
  * AI 训练平台配置属性。
  *
  * <p>对应 AIAS 2_training_platform 的 {@code file.*} 配置段，
- * 通过 {@code ai.training.*} 前缀注入，支持 Mac/Linux/窗口 多环境配置。</p>
+ * 通过 {@code plugin.ai.training.*} 前缀注入，支持 Mac/Linux/窗口 多环境配置。</p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Data
-@ConfigurationProperties(prefix = "ai.training")
+@ConfigurationProperties(prefix = "plugin.ai.training")
 public class TrainProperties {
 
     /**
      * 是否启用 AI 训练模块，默认 true。
      *
-     * <p>对应自动配置上的 {@code ai.training.enabled} 门控（默认开启，置 false 可整体关闭）。</p>
+     * <p>对应自动配置上的 {@code plugin.ai.training.enabled} 门控（默认开启，置 false 可整体关闭）。</p>
      */
     private boolean enabled = true;
 

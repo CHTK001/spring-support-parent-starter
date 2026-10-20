@@ -8,6 +8,7 @@ import com.chua.starter.monitor.support.model.HostProfileVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.SectionPage;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 
 import java.util.List;
@@ -78,48 +79,48 @@ public interface HostProfileService {
     ReturnResult<HostProfileVO> snapshot(Long hostId);
 
     /**
-     * 监听端口分区（后端分页）。
+     * 监听端口分区（后端分页，返回真实条数）。
      *
      * @param hostId  主机标识
      * @param page    页码，可为 null
      * @param size    每页条数，可为 null
      * @param keyword 关键字，匹配端口/地址/状态/进程名，可为 null
-     * @return 当前页端口占用行
+     * @return 当前页端口占用行，含 total / truncated 标记
      */
-    ReturnResult<List<NetProcessRowVO>> ports(Long hostId, Integer page, Integer size, String keyword);
+    ReturnResult<SectionPage<NetProcessRowVO>> ports(Long hostId, Integer page, Integer size, String keyword);
 
     /**
-     * 防火墙分区（后端分页）。
+     * 防火墙分区（后端分页，返回真实条数）。
      *
      * @param hostId  主机标识
      * @param page    页码，可为 null
      * @param size    每页条数，可为 null
      * @param keyword 关键字，匹配规则名/链/动作/协议/端口，可为 null
-     * @return 当前页防火墙规则行
+     * @return 当前页防火墙规则行，含 total / truncated 标记
      */
-    ReturnResult<List<FirewallRuleRowVO>> firewall(Long hostId, Integer page, Integer size, String keyword);
+    ReturnResult<SectionPage<FirewallRuleRowVO>> firewall(Long hostId, Integer page, Integer size, String keyword);
 
     /**
-     * 进程分区。
+     * 进程分区（后端分页，返回真实条数）。
      *
      * @param hostId  主机标识
      * @param page    页码，可为 null
      * @param size    每页条数，可为 null
      * @param keyword 关键字，匹配 PID/进程名/用户/命令行，可为 null
-     * @return 进程视图列表
+     * @return 进程视图列表，含 total / truncated 标记
      */
-    ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size, String keyword);
+    ReturnResult<SectionPage<ProcessRowVO>> processes(Long hostId, Integer page, Integer size, String keyword);
 
     /**
-     * 服务分区。
+     * 服务分区（后端分页，返回真实条数）。
      *
      * @param hostId  主机标识
      * @param page    页码，可为 null
      * @param size    每页条数，可为 null
      * @param keyword 关键字，匹配服务名/显示名/状态/启动类型，可为 null
-     * @return 服务视图列表
+     * @return 服务视图列表，含 total / truncated 标记
      */
-    ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size, String keyword);
+    ReturnResult<SectionPage<ServiceRowVO>> services(Long hostId, Integer page, Integer size, String keyword);
 
     /**
      * 磁盘分区。

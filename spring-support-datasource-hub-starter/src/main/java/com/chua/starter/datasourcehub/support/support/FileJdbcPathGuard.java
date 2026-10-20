@@ -77,7 +77,7 @@ public final class FileJdbcPathGuard {
             }
         }
         return "文件库路径越界: " + canonical + "，仅允许位于 " + String.join("、", roots)
-                + "（可用 datasource.hub.file-jdbc-allowed-dirs 放行更多目录）";
+                + "（可用 plugin.datasource.hub.file-jdbc-allowed-dirs 放行更多目录）";
     }
 
     /**

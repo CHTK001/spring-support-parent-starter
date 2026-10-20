@@ -10,7 +10,7 @@ import java.util.Map;
  * <p>
  * 配置示例:
  * <pre>
- * spring:
+ * plugin:
  *   datasource:
  *     calcite:
  *       enabled: true
@@ -24,7 +24,7 @@ import java.util.Map;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "spring.datasource.calcite")
+@ConfigurationProperties(prefix = "plugin.datasource.calcite")
 public class CalciteDataSourceProperties {
 
     /**

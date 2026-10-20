@@ -54,27 +54,28 @@ flowchart TB
 ## 配置
 
 ```yaml
-taskdistribution:
-  enabled: true                        # 是否启用（默认 true）
-  node-id: ${HOSTNAME:node-001}        # 节点 ID（不填自动生成）
-  strategy: ROUND                      # 派发策略：ROUND / RANDOM / WEIGHT
-  store-type: memory                   # memory / file / db
-  store-path: ./data/taskstore/        # storeType=file 时生效
-  batch-size: 1                        # 每次批量派发任务数
-  consumer-threads: 4                  # 消费线程池大小
-  server:
-    enabled: true                      # 启用 TCP/UDP 服务端
-    host: 0.0.0.0
-    port: 19390
-    protocol: tcp                      # tcp / udp
-  task:
-    timeout-ms: 30000                  # 默认任务超时
-    max-retries: 3                     # 默认最大重试
+plugin:
+  taskdistribution:
+    enabled: true                        # 是否启用（默认 true）
+    node-id: ${HOSTNAME:node-001}        # 节点 ID（不填自动生成）
+    strategy: ROUND                      # 派发策略：ROUND / RANDOM / WEIGHT
+    store-type: memory                   # memory / file / db
+    store-path: ./data/taskstore/        # storeType=file 时生效
+    batch-size: 1                        # 每次批量派发任务数
+    consumer-threads: 4                  # 消费线程池大小
+    server:
+      enabled: true                      # 启用 TCP/UDP 服务端
+      host: 0.0.0.0
+      port: 19390
+      protocol: tcp                      # tcp / udp
+    task:
+      timeout-ms: 30000                  # 默认任务超时
+      max-retries: 3                     # 默认最大重试
 ```
 
 ## 数据库模式
 
-设置 `taskdistribution.store-type=db` 后，需建表：
+设置 `plugin.taskdistribution.store-type=db` 后，需建表：
 
 ```sql
 CREATE TABLE sys_task_store (

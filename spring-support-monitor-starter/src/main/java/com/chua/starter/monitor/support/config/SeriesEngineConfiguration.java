@@ -20,7 +20,7 @@ import java.util.Properties;
 /**
  * 时序引擎装配。
  *
- * <p>全系统只有一个时序契约 {@link SeriesEngine}，按 {@code monitor.timeseries.engine}
+ * <p>全系统只有一个时序契约 {@link SeriesEngine}，按 {@code plugin.monitor.timeseries.engine}
  * 装配唯一实现。{@link SeriesEngine} 是独立的顶级抽象，<b>不</b>从 Spring 容器注入
  * {@link Engine}（容器可能同时存在 Prometheus 等多个 Engine Bean）；JDBC 实现所需的
  * {@link Engine} 由本配置用 Spring {@link DataSource} 独立构造，作为
@@ -29,8 +29,8 @@ import java.util.Properties;
  *   <li>{@code datasource}：用 Spring DataSource 独立构造 JDBC Engine，再包一层 DataSourceSeriesEngine</li>
  *   <li>{@code influxdb} / {@code redis}：走自研 SPI 发现（各 starter 的
  *       {@code META-INF/extensions/…SeriesEngine}），以 {@link Properties} 传连接参数。
- *       {@code influxdb} 用 {@code monitor.timeseries.url}；{@code redis} 优先用
- *       配置为 Redis 协议的 {@code monitor.timeseries.url}，否则回退 {@code spring.data.redis.*}</li>
+ *       {@code influxdb} 用 {@code plugin.monitor.timeseries.url}；{@code redis} 优先用
+ *       配置为 Redis 协议的 {@code plugin.monitor.timeseries.url}，否则回退 {@code spring.data.redis.*}</li>
  *   <li>{@code none} / 空 / 扩展缺失：空实现，保证消费方注入不为 null</li>
  * </ul>
  *
@@ -120,10 +120,10 @@ public class SeriesEngineConfiguration {
     /**
      * 解析 Lettuce 连接串。
      *
-     * <p>优先级：{@code monitor.timeseries.url} 显式配置为 Redis 地址时直接使用；
+     * <p>优先级：{@code plugin.monitor.timeseries.url} 显式配置为 Redis 地址时直接使用；
      * 否则从 {@code spring.data.redis.*} 拼出，与告警静默期共用同一 Redis。</p>
      *
-     * <p>之所以要区分协议而不是「非空即用」：{@code monitor.timeseries.url} 的
+     * <p>之所以要区分协议而不是「非空即用」：{@code plugin.monitor.timeseries.url} 的
      * 默认值是 InfluxDB 用的 {@code http://127.0.0.1:8086}，直接把它塞给 Lettuce
      * 会因协议不认识而连接失败。因此仅当该值是 Redis 地址（{@code redis://} /
      * {@code rediss://} / {@code redis-socket://} / {@code redis-sentinel://} 前缀，

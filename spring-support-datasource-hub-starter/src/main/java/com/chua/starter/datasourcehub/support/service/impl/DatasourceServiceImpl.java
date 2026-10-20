@@ -772,7 +772,7 @@ public class DatasourceServiceImpl implements DatasourceService {
     /**
      * 获取（或重建）可复用的 JDBC 连接。
      *
-     * <p>空闲 TTL（{@code datasource.hub.connection-ttl-minutes}）内复用同一物理连接；
+     * <p>空闲 TTL（{@code plugin.datasource.hub.connection-ttl-minutes}）内复用同一物理连接；
      * 过期由 {@link ExpireValue} 过期回调关闭；连接被服务端断开时探测失效并自动重建。
      * 返回的连接屏蔽了 close，调用方沿用 try-with-resources 不会误关缓存连接。</p>
      *

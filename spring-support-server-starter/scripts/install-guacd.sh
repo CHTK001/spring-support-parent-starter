@@ -141,7 +141,7 @@ log "健康检查中..."
 for i in $(seq 1 15); do
   if (echo >/dev/tcp/127.0.0.1/"${PORT}") >/dev/null 2>&1; then
     log "guacd 已就绪: 127.0.0.1:${PORT}"
-    log "后端配置参考: server.support.guacd.host=<本机IP> server.support.guacd.port=${PORT}"
+    log "后端配置参考: plugin.server.support.guacd.host=<本机IP> plugin.server.support.guacd.port=${PORT}"
     exit 0
   fi
   sleep 1

@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * 需求数据源提供方自动配置。
  *
- * <p>当 {@code spring.ai.datasource.requirement.enabled=true} 时生效。
+ * <p>当 {@code plugin.ai.datasource.requirement.enabled=true} 时生效。
  * 手动注册 SPI 实现，确保 服务加载 在 fat-jar 内也能发现。</p>
  *
  * @since 4.0.0.42
@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "spring.ai.datasource.requirement", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.ai.datasource.requirement", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RequirementDataSourceAutoConfiguration {
 
     private final RequirementDataSourceRegistry registry; // registry

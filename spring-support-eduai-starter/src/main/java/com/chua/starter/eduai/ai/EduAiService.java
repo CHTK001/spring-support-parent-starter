@@ -62,7 +62,7 @@ public class EduAiService {
     private ChatClient chatClient;
 
     /**
-     * YAML 配置（{@code chua.ai.chat}）。
+     * YAML 配置（{@code plugin.ai.chat}）。
      *
      * <p>只为「能力探测」回显实际生效的厂商/模型、并识别「开了却没配密钥」用；
      * 没有该配置时保持为 null，不影响原有判定。</p>
@@ -158,9 +158,9 @@ public class EduAiService {
      * 远端大模型、是哪个厂商 —— 那是 spring-support-ai-starter 的事。</p>
      *
      * <p>回显的厂商/模型取「实际生效」值：AI 控制台「系统设置」runtime 分组 &gt; UI 默认模型
-     * &gt; 旧 YAML（{@code chua.ai.chat}，已不再推荐）&gt; 本模块自身配置。</p>
+     * &gt; 旧 YAML（{@code plugin.ai.chat}，已不再推荐）&gt; 本模块自身配置。</p>
      *
-     * <p>另外仍兼容检查旧 YAML 配置（{@code chua.ai.chat}）是否「开了却没配密钥」：
+     * <p>另外仍兼容检查旧 YAML 配置（{@code plugin.ai.chat}）是否「开了却没配密钥」：
      * 那种情形下 ai-starter 按条件不创建客户端，这里给出**可操作**的原因。</p>
      *
      * @return AI 能力探测结果
@@ -169,7 +169,7 @@ public class EduAiService {
         // 回显「实际生效」的厂商与模型：以 AI 控制台 UI 配置（DB）为准 ——
         // EffectiveChatModelResolver 是「该用哪个模型对话」的全项目唯一解析入口
         // （runtime/default_model > 兼容旧键 models.defaultChatModelId）。
-        // 缺 UI 解析器、或 UI 未配置时，回落到 YAML（chua.ai.chat）与 eduai 自身配置。
+        // 缺 UI 解析器、或 UI 未配置时，回落到 YAML（plugin.ai.chat）与 eduai 自身配置。
         // 前端只用 available/reason，这两个字段是给人看的，取生效值才不会误导。
         String effective = null;
         if (effectiveChatModelResolver != null) {
@@ -202,8 +202,8 @@ public class EduAiService {
         if (aiChatProperties != null && aiChatProperties.enabled()
                 && !StringUtils.hasText(aiChatProperties.appKey())) {
             return new EduAiCapabilityVO(false,
-                    "YAML 已开启 AI 对话客户端（chua.ai.chat.enabled=true）但未配置密钥，"
-                            + "客户端未创建；请设置 chua.ai.chat.app-key 或环境变量 AI_CHAT_APP_KEY",
+                    "YAML 已开启 AI 对话客户端（plugin.ai.chat.enabled=true）但未配置密钥，"
+                            + "客户端未创建；请设置 plugin.ai.chat.app-key 或环境变量 AI_CHAT_APP_KEY",
                     provider, model);
         }
         if (resolveClient() == null) {
@@ -870,7 +870,7 @@ public class EduAiService {
      *   <li>兜底：容器注入的 {@link ChatClient} bean（UI 未配置时的聚合客户端）。</li>
      * </ol>
      *
-     * <p>由此保证「AI 控制台配置页改完即生效」，且不再依赖 {@code chua.ai.chat} YAML。</p>
+     * <p>由此保证「AI 控制台配置页改完即生效」，且不再依赖 {@code plugin.ai.chat} YAML。</p>
      *
      * @return 可用的对话客户端；都没有时返回 null
      */

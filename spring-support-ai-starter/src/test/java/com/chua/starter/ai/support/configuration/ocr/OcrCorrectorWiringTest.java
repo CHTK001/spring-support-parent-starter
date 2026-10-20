@@ -158,7 +158,7 @@ class OcrCorrectorWiringTest {
         private final Map<String, String> values = new HashMap<>();
 
         private MapSettingReader() {
-            // 第 4 参 = YAML 覆盖层（chua.ai.settings.*）：本测试双轨无 yaml 语义，
+            // 第 4 参 = YAML 覆盖层（plugin.ai.settings.*）：本测试双轨无 yaml 语义，
             // 传 null —— 读取器的 yamlValueOf 对 null 判空即跳过，链路行为与从前一致
             super(null, null, null, null);
         }

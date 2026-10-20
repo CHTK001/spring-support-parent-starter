@@ -12,6 +12,7 @@ import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
+import com.chua.starter.monitor.support.model.SectionPage;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.HostProfileService;
@@ -224,9 +225,7 @@ public class HostProfileServiceImpl implements HostProfileService {
     }
 
     @Override
-    public ReturnResult<List<NetProcessRowVO>> ports(Long hostId, Integer page, Integer size, String keyword) {
-        // 「监听端口」只展示处于监听态的 TCP(LISTEN) 与 UDP(UNCONN) 端点，
-        // 不混入 ESTABLISHED / TIME_WAIT 等活动连接；后端按页切片，前端只渲染当前页。
+    public ReturnResult<SectionPage<NetProcessRowVO>> ports(Long hostId, Integer page, Integer size, String keyword) {
         int no = pageOf(page);
         int limit = sizeOf(size);
         String needle = lower(keyword);
@@ -240,13 +239,12 @@ public class HostProfileServiceImpl implements HostProfileService {
                             String.valueOf(row.localPort()), row.local(), row.process(),
                             row.protocol(), row.state()))
                     .toList();
-            return slice(filtered, no, limit);
+            return slicePage(filtered, no, limit);
         });
     }
 
     @Override
-    public ReturnResult<List<FirewallRuleRowVO>> firewall(Long hostId, Integer page, Integer size, String keyword) {
-        // 防火墙规则后端分页：规则名/链/方向/动作/协议/端口任一命中即保留，再按页切片。
+    public ReturnResult<SectionPage<FirewallRuleRowVO>> firewall(Long hostId, Integer page, Integer size, String keyword) {
         int no = pageOf(page);
         int limit = sizeOf(size);
         String needle = lower(keyword);
@@ -257,36 +255,38 @@ public class HostProfileServiceImpl implements HostProfileService {
                             row.profile(), row.protocol(), String.valueOf(row.localPort()),
                             row.target(), row.source(), row.destination()))
                     .toList();
-            return slice(filtered, no, limit);
+            return slicePage(filtered, no, limit);
         });
     }
 
     @Override
-    public ReturnResult<List<ProcessRowVO>> processes(Long hostId, Integer page, Integer size, String keyword) {
+    public ReturnResult<SectionPage<ProcessRowVO>> processes(Long hostId, Integer page, Integer size, String keyword) {
         int no = pageOf(page);
         int limit = sizeOf(size);
         String needle = lower(keyword);
         if (needle.isEmpty()) {
-            return collect(hostId, (provider, host) -> provider.processes(host, no, limit));
+            return collect(hostId, (provider, host) -> slicePage(provider.processes(host, no, limit), no, limit));
         }
-        return collect(hostId, (provider, host) -> slice(provider.processes(host, 1, KEYWORD_SCAN_LIMIT).stream()
-                .filter(row -> matches(needle, String.valueOf(row.pid()), row.name(), row.user(),
-                        row.command(), row.path()))
-                .toList(), no, limit));
+        return collect(hostId, (provider, host) -> slicePage(
+                provider.processes(host, 1, KEYWORD_SCAN_LIMIT).stream()
+                        .filter(row -> matches(needle, String.valueOf(row.pid()), row.name(), row.user(),
+                                row.command(), row.path()))
+                        .toList(), no, limit));
     }
 
     @Override
-    public ReturnResult<List<ServiceRowVO>> services(Long hostId, Integer page, Integer size, String keyword) {
+    public ReturnResult<SectionPage<ServiceRowVO>> services(Long hostId, Integer page, Integer size, String keyword) {
         int no = pageOf(page);
         int limit = sizeOf(size);
         String needle = lower(keyword);
         if (needle.isEmpty()) {
-            return collect(hostId, (provider, host) -> provider.services(host, no, limit));
+            return collect(hostId, (provider, host) -> slicePage(provider.services(host, no, limit), no, limit));
         }
-        return collect(hostId, (provider, host) -> slice(provider.services(host, 1, KEYWORD_SCAN_LIMIT).stream()
-                .filter(row -> matches(needle, row.name(), row.displayName(), row.state(),
-                        row.startType(), String.valueOf(row.pid())))
-                .toList(), no, limit));
+        return collect(hostId, (provider, host) -> slicePage(
+                provider.services(host, 1, KEYWORD_SCAN_LIMIT).stream()
+                        .filter(row -> matches(needle, row.name(), row.displayName(), row.state(),
+                                row.startType(), String.valueOf(row.pid())))
+                        .toList(), no, limit));
     }
 
     @Override
@@ -375,7 +375,26 @@ public class HostProfileServiceImpl implements HostProfileService {
     }
 
     /**
-     * 对内存候选集按请求页切片。
+     * 对内存候选集按请求页切片，返回带真实 total 的分页结构。
+     *
+     * @param rows 过滤后的全部命中行
+     * @param page 页码，从 1 开始
+     * @param size 每页条数
+     * @param <T>  行类型
+     * @return 含 total / truncated 标记的分页结构
+     */
+    private static <T> SectionPage<T> slicePage(List<T> rows, int page, int size) {
+        int total = rows.size();
+        boolean truncated = total > 0 && total == MAX_SECTION_SIZE;
+        int from = (page - 1) * size;
+        List<T> pageRows = from >= total ? List.of()
+                : rows.subList(from, Math.min(from + size, total));
+        return truncated ? SectionPage.truncated(pageRows, total, page, size)
+                : SectionPage.of(pageRows, total, page, size);
+    }
+
+    /**
+     * 对内存候选集按请求页切片（仅切片，不含 total）。
      *
      * @param rows 过滤后的全部命中行
      * @param page 页码，从 1 开始

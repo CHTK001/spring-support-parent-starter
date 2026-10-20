@@ -35,7 +35,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableScheduling
 @ConditionalOnClass({SysAiUsageMapper.class})
-@ConditionalOnProperty(prefix = "spring.ai.usage", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.ai.usage", name = "enabled", havingValue = "true", matchIfMissing = true)
 @MapperScan("com.chua.starter.ai.support.mapper")
 public class UsageAutoConfiguration {
 

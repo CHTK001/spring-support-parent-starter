@@ -103,4 +103,21 @@ public interface IEduQuestionService extends IService<EduQuestion> {
      * @return 题目列表，保持 AI 给出的顺序
      */
     List<EduQuestion> aiSelect(QuestionAiSelectDTO dto);
+
+    /**
+     * 题目导出为 CSV 格式。
+     *
+     * <p>返回标准 CSV 文本，UTF-8 编码，供前端触发下载。
+     * 字段：题目ID, 题型, 学科, 学段, 年级, 难度, 题干, 选项, 答案, 解析, 来源, 状态</p>
+     *
+     * @param keyword 关键字过滤（题干）
+     * @param subject 学科过滤
+     * @param gradeLevel 学段过滤
+     * @param questionType 题型过滤
+     * @param auditStatus 审核状态过滤（null=全部）
+     * @param limit 最大导出条数（防止大结果集），默认 5000、上限 10000
+     * @return CSV 文本（Content-Type: text/csv）
+     */
+    String exportQuestions(String keyword, String subject, String gradeLevel,
+                           String questionType, Integer auditStatus, int limit);
 }

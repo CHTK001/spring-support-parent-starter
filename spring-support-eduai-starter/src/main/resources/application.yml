@@ -182,7 +182,7 @@ plugin:
 
 # AI 对话客户端不再由 YAML 声明：改由 AI 控制台 UI（落库 sys_ai_global_setting /
 # sys_ai_manufacturer）统一配置，与本模块集成 ai-starter 的「配置页 + 生效 bean」口径一致。
-# 依据：ai-starter 的 AiConfiguration.yamlChatClient 一旦存在（chua.ai.chat.enabled=true 且
+# 依据：ai-starter 的 AiConfiguration.yamlChatClient 一旦存在（plugin.ai.chat.enabled=true 且
 # app-key 非空）就会顶掉聚合客户端（defaultChatClient 带 @ConditionalOnMissingBean），
 # 使 UI 配置（厂商/模型、`models.defaultChatModelId` 热更新）对 eduai 完全不可见。
 # 现在客户端由 AiConfiguration 的聚合 bean + ChatClientRegistry 提供；eduai 侧

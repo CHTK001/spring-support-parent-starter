@@ -10,14 +10,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * YAML 全局设置覆盖层 —— {@code chua.ai.settings.<group>.<field>}。
+ * YAML 全局设置覆盖层 —— {@code plugin.ai.settings.<group>.<field>}。
  *
  * <p><b>解决的问题：</b>{@code sys_ai_global_setting} 的键值（layout / ocr / face … 分组）
  * 只能通过设置页改，运维想「换一条 layout/OCR 管线」必须登页面操作、且散落在各环境的
  * 数据库里不可版本化。本类把同一批键开放到 application yaml：</p>
  *
  * <pre>
- * chua:
+ * plugin:
  *   ai:
  *     settings:
  *       layout:
@@ -29,14 +29,14 @@ import java.util.Map;
  *
  * <p><b>为什么是「扫 Environment 原始属性名」而不是 {@code @ConfigurationProperties}：</b>
  * 嵌套 Map 走绑定器有两处静默陷阱 ——
- * ① record 构造绑定按<b>参数名</b>寻址（{@code chua.ai.settings.groups.…}，多一层且反直觉）；
+ * ① record 构造绑定按<b>参数名</b>寻址（{@code plugin.ai.settings.groups.…}，多一层且反直觉）；
  * ② 属性名会被适配为 {@code ConfigurationPropertyName}，snake 键里的下划线命运取决于
  * 适配规则，一旦被改写成点号就<b>整棵子树绑空且不报错</b> —— 运维改完 yaml 以为换成了
  * 管线、实际还在跑旧值，这比启动报错危险得多。直接扫原始属性名两处都不沾：
  * 键怎么写就怎么读，snake（与 DB field 逐字一致）/kebab 都由本类的归一化兜住。</p>
  *
  * <p><b>生效语义（部署级钦定）：</b>命中（非 null）即<b>优先于</b>用户覆盖与数据库 ——
- * 与既有 {@code ai.default-model}（页面 &gt; yaml 兜底）刻意相反：default-model 是
+ * 与既有 {@code plugin.ai.default-model}（页面 &gt; yaml 兜底）刻意相反：default-model 是
  * 「给无页面模块兜底」，本覆盖层是「部署方显式接管」，改 yaml 重启即换管线；
  * 设置页对同名键的修改在 yaml 键存在期间不生效（未出现在 yaml 的键，链路与从前完全一致）。</p>
  *
@@ -45,7 +45,7 @@ import java.util.Map;
  * 消费方按空值走「未配置」分支 —— 与用户覆盖行的显式清空语义一致。</p>
  *
  * <p><b>范围：</b>构造期一次性扫描（Environment 此后只读），只认
- * yaml / properties 文件与 {@code --chua.ai.settings.*} 命令行参数；
+ * yaml / properties 文件与 {@code --plugin.ai.settings.*} 命令行参数；
  * 环境变量形式（{@code CHUA_AI_SETTINGS_…}，下划线会被映射成分隔符）不承诺语义，别用。</p>
  *
  * @since 4.0.0.42
@@ -57,7 +57,7 @@ public class AiSettingsYamlProperties {
     /**
      * 扫描前缀（带尾点；大小写不敏感匹配，但环境变量式下划线写法不构成点号故天然不命中）
      */
-    private static final String PREFIX = "chua.ai.settings.";
+    private static final String PREFIX = "plugin.ai.settings.";
 
     /**
      * 归一化后的覆盖表：组 → （字段 → 值）；仅含显式配置了值的键（空挂不入表）
@@ -65,7 +65,7 @@ public class AiSettingsYamlProperties {
     private final Map<String, Map<String, String>> groups;
 
     /**
-     * 构造期扫描 Environment 中 {@code chua.ai.settings.*} 的原始属性名。
+     * 构造期扫描 Environment 中 {@code plugin.ai.settings.*} 的原始属性名。
      * 属性源按优先级序（高到低）遍历，同键先到先得，与 Environment 取值优先级一致。
      *
      * @param environment Spring 环境（含 yaml / properties / 命令行属性源）
@@ -84,7 +84,7 @@ public class AiSettingsYamlProperties {
                 String remainder = name.substring(PREFIX.length());
                 int dot = remainder.indexOf('.');
                 if (dot <= 0 || dot == remainder.length() - 1) {
-                    // 没有「组.字段」结构（如 chua.ai.settings.layout 单段）：忽略
+                    // 没有「组.字段」结构（如 plugin.ai.settings.layout 单段）：忽略
                     continue;
                 }
                 Object raw = enumerable.getProperty(name);

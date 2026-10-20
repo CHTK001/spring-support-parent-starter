@@ -1777,7 +1777,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 会出现「一条当查询、一条当更新」的行为差异（表现为同一句 {@code WITH ...}
      * 在批量里被当成更新语句、影响行数为 0）。</p>
      *
-     * <p>执行前统一挂上语句级超时（{@code datasource.hub.query-timeout-seconds}）：
+     * <p>执行前统一挂上语句级超时（{@code plugin.datasource.hub.query-timeout-seconds}）：
      * 单条 / 事务 / 批量三条路径都汇到这里，挂一处即全部生效 —— 失控 SQL 从
      * 「无限期挂死到网关超时」变成有界的 {@code SQLTimeoutException}，接口正常失败。</p>
      *
@@ -1815,7 +1815,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * 给语句挂上统一的执行超时（{@code datasource.hub.query-timeout-seconds}，0 = 不设上限）。
+     * 给语句挂上统一的执行超时（{@code plugin.datasource.hub.query-timeout-seconds}，0 = 不设上限）。
      *
      * <p>覆盖不了 {@link #runOneStatement} 的直连语句点（分页/计数、DDL、清表）
      * 也走这里：大表分页与 {@code TRUNCATE}/{@code DELETE} 在锁等待下同样是

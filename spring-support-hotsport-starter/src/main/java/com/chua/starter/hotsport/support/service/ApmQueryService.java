@@ -1487,6 +1487,43 @@ public class ApmQueryService {
     }
 
     /**
+     * 慢 SQL 分析 — 聚合 SQL 类协议传输记录（MYSQL/POSTGRE/ORACLE/SQLSERVER/H2 等）。
+     *
+     * @param limit         返回上限
+     * @param minDurationMs 最小耗时阈值
+     * @return 慢 SQL 列表（按总耗时降序）
+     */
+    public List<Map<String, Object>> slowSql(int limit, long minDurationMs) {
+        try {
+            Query q = new Query().setLimit(100000);
+            List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+            java.util.Set<String> sqlProtocols = java.util.Set.of(
+                    "MYSQL", "POSTGRE", "POSTGRESQL", "ORACLE", "SQLSERVER", "H2", "DB2", "CLICKHOUSE");
+            List<TransmissionEvent> sql = new ArrayList<>();
+            for (TransmissionEvent e : all) {
+                String protocol = e.getProtocol() != null ? e.getProtocol().toUpperCase() : "";
+                if (sqlProtocols.stream().anyMatch(protocol::contains)
+                        && e.getDuration() >= minDurationMs) {
+                    sql.add(e);
+                }
+            }
+            sql.sort(Comparator.comparingLong(TransmissionEvent::getDuration).reversed());
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (int i = 0; i < Math.min(limit, sql.size()); i++) {
+                TransmissionEvent e = sql.get(i);
+                Map<String, Object> m = transmissionDto(e);
+                m.put("sql", e.getOperation());
+                m.put("db", e.getTargetHost() + ":" + e.getTargetPort());
+                result.add(m);
+            }
+            return result;
+        } catch (Exception e) {
+            log.debug("[Hotsport] slowSql 查询失败: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * 错误排行 — 按 errorType + errorMessage 分组聚合，取前 N 条。
      *
      * @param limit 返回上限

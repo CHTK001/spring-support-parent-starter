@@ -6,7 +6,7 @@
     通过 Spring Boot 自动配置（AutoConfiguration.imports）在单例初始化完成后，
     于虚拟线程中调用 RuntimeBoot.attachSelf()，零启动参数、零代码侵入。
 
-    配置项（前缀 runtime.agent）：
+    配置项（前缀 plugin.agent）：
       enabled     是否启用自注入（默认 true）
       options     agent 参数（如 port=4567）
       async       是否异步注入（默认 true，避免阻塞启动）

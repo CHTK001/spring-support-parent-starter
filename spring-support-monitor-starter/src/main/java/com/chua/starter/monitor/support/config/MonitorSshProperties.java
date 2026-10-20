@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "monitor.ssh")
+@ConfigurationProperties(prefix = "plugin.monitor.ssh")
 public class MonitorSshProperties {
 
     /**

@@ -31,10 +31,10 @@ public class ConsoleKvEnvironmentPostProcessor implements EnvironmentPostProcess
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        if (!Boolean.parseBoolean(environment.getProperty("console.enable", "true"))) {
+        if (!Boolean.parseBoolean(environment.getProperty("plugin.console.enable", "true"))) {
             return;
         }
-        String path = environment.getProperty("console.sqlite-path", "console.sqlite");
+        String path = environment.getProperty("plugin.console.sqlite-path", "console.sqlite");
         Map<String, Object> kv = new LinkedHashMap<>();
         try {
             ReflectUtils.forName("org.sqlite.JDBC");

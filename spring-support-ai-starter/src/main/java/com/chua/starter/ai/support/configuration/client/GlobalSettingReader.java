@@ -19,7 +19,7 @@ import java.math.BigDecimal;
  *
  * <p><b>取值链（自上而下，命中即止）：</b></p>
  * <ol>
- *   <li>YAML 覆盖层 {@code chua.ai.settings.<group>.<field>}（部署级钦定，重启生效）——
+ *   <li>YAML 覆盖层 {@code plugin.ai.settings.<group>.<field>}（部署级钦定，重启生效）——
  *       见 {@link AiSettingsYamlProperties}，运维换 layout/OCR 管线走这里；</li>
  *   <li>用户覆盖 {@code sys_ai_user_setting}（设置页按用户保存）；</li>
  *   <li>全局数据库 {@code sys_ai_global_setting}（设置页保存，热更新）；</li>
@@ -50,7 +50,7 @@ public class GlobalSettingReader {
     private final ExternalModelSupport externalModelSupport;
 
     /**
-     * YAML 覆盖层（{@code chua.ai.settings.*}）：部署级钦定，优先于用户覆盖与数据库
+     * YAML 覆盖层（{@code plugin.ai.settings.*}）：部署级钦定，优先于用户覆盖与数据库
      */
     private final AiSettingsYamlProperties yamlSettings;
 
@@ -61,7 +61,7 @@ public class GlobalSettingReader {
     @PostConstruct
     public void logYamlOverrides() {
         if (yamlSettings == null || yamlSettings.isEmpty()) {
-            log.debug("[GlobalSettingReader] YAML 覆盖层未配置（chua.ai.settings.*），取值链为 用户覆盖 > 数据库 > 代码默认");
+            log.debug("[GlobalSettingReader] YAML 覆盖层未配置（plugin.ai.settings.*），取值链为 用户覆盖 > 数据库 > 代码默认");
             return;
         }
         log.info("[GlobalSettingReader] YAML 覆盖层已加载，命中键优先于用户覆盖与数据库: {}", yamlSettings.summary());
@@ -203,7 +203,7 @@ public class GlobalSettingReader {
      * 进程就一直按旧值解析，报出来的错误与库里配置完全对不上，极难排查。</p>
      *
      * <p>因此「错一次就整条链路失败」的模型解析必须走本方法。
-     * YAML 覆盖层（{@code chua.ai.settings.*}）不受缓存语义影响，仍在此方法链首命中 ——
+     * YAML 覆盖层（{@code plugin.ai.settings.*}）不受缓存语义影响，仍在此方法链首命中 ——
      * 部署钦定的值不存在「读到旧值」的问题。</p>
      *
      * @param group 分组

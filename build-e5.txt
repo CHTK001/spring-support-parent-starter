@@ -1,0 +1,41 @@
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.fusesource.jansi.internal.JansiLoader in an unnamed module (file:/D:/apache-maven-3.9.9-bin/apache-maven-3.9.9/lib/jansi-2.4.1.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/D:/apache-maven-3.9.9-bin/apache-maven-3.9.9/lib/guava-33.2.1-jre.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[ERROR] COMPILATION ERROR : 
+[ERROR] WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe:objectFieldOffset has been called by lombok.permit.Permit
+WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+WARNING: sun.misc.Unsafe:objectFieldOffset will be removed in a future release
+D:\ch\project\spring-support-parent-starter\spring-support-eduai-starter\src\main\java\com\chua\starter\eduai\controller\EduMarkingController.java:[231,24] ????: ?????????
+  ????:   ?? List
+  ¦Ë??: ?? EduMarkingController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-eduai-starter\src\main\java\com\chua\starter\eduai\controller\EduMarkingController.java:[243,24] ????: ?????????
+  ????:   ?? List
+  ¦Ë??: ?? EduMarkingController
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project spring-support-eduai-starter: Compilation failure: Compilation failure: 
+[ERROR] WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+[ERROR] WARNING: sun.misc.Unsafe:objectFieldOffset has been called by lombok.permit.Permit
+[ERROR] WARNING: Please consider reporting this to the maintainers of class lombok.permit.Permit
+[ERROR] WARNING: sun.misc.Unsafe:objectFieldOffset will be removed in a future release
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-eduai-starter\src\main\java\com\chua\starter\eduai\controller\EduMarkingController.java:[231,24] ????: ?????????
+[ERROR]   ????:   ?? List
+[ERROR]   ¦Ë??: ?? EduMarkingController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-eduai-starter\src\main\java\com\chua\starter\eduai\controller\EduMarkingController.java:[243,24] ????: ?????????
+[ERROR]   ????:   ?? List
+[ERROR]   ¦Ë??: ?? EduMarkingController
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :spring-support-eduai-starter

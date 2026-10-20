@@ -10,7 +10,7 @@ import java.util.List;
  * <p>
  * 配置示例:
  * <pre>
- * spring:
+ * plugin:
  *   datasource:
  *     sharding:
  *       enabled: true
@@ -30,7 +30,7 @@ import java.util.List;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "spring.datasource.sharding")
+@ConfigurationProperties(prefix = "plugin.datasource.sharding")
 public class ShardingDataSourceProperties {
 
     /**

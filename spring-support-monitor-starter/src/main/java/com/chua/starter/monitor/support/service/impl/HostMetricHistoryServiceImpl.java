@@ -25,7 +25,7 @@ import java.util.TreeMap;
  *   <li>清理：委托 {@link SeriesEngine#purge}。</li>
  * </ul>
  * 当前 JDBC 实现为 {@link DataSourceSeriesEngine}，后续切换 InfluxDB / Redis 只需改
- * {@code monitor.timeseries.engine}，本类无感知。
+ * {@code plugin.monitor.timeseries.engine}，本类无感知。
  *
  * @author CH
  * @since 4.0.0.42

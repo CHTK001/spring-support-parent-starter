@@ -15,7 +15,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.chua.common.support.ai.image.ImageClient")
-@ConditionalOnProperty(prefix = "spring.ai.generate", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.ai.generate", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(AiProperties.class)
 @ComponentScan("com.chua.starter.ai.support.controller")
 public class AiGenerateAutoConfiguration {
