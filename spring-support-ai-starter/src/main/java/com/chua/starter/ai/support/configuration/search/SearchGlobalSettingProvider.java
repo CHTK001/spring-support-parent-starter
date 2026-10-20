@@ -74,15 +74,36 @@ public class SearchGlobalSettingProvider implements GlobalSettingProvider {
     public List<SettingItem> getItems() {
         return List.of(
                 new SettingItem("provider", "360", "STRING",
-                        "搜索源：360（免费，无需 API Key，默认）/ bocha 博查 / tavily / metaso 秘塔"
-                                + "。付费源需在下方填写对应 API Key，留空或调用失败时后端自动回落到 360", 1),
+                        "搜索源：360（免费，无需 API Key，默认）/ bocha 博查 / tavily / metaso 秘塔 /"
+                                + " langsearch / gubo / tinyfish。付费源需在下方填写对应 API Key，"
+                                + "留空或调用失败时后端自动回落到 360", 1),
                 new SettingItem("bocha", "", "STRING",
                         "博查 API Key（格式 {\"apiKey\":\"sk-xxx\"}；留空则该源不可用，不影响其他源）", 2),
                 new SettingItem("tavily", "", "STRING",
                         "Tavily API Key（格式 {\"apiKey\":\"tvly-xxx\"}；留空则该源不可用，不影响其他源）", 3),
                 new SettingItem("metaso", "", "STRING",
                         "秘塔 API Key（格式 {\"apiKey\":\"xxx\"}；该源的搜索接口尚未接入，"
-                                + "填写后暂无效果，预留字段）", 4)
+                                + "填写后暂无效果，预留字段）", 4),
+                new SettingItem("langsearch", "", "STRING",
+                        "LangSearch API Key（格式 {\"apiKey\":\"sk-xxx\"}；"
+                                + "按 langsearch.com 官方 web-search 契约调用）", 5),
+                new SettingItem("gubo", "", "STRING",
+                        "Gubo Search API Key（格式 {\"apiKey\":\"xxx\"}）", 6),
+                new SettingItem("tinyfish", "", "STRING",
+                        "TinyFish API Key（格式 {\"apiKey\":\"xxx\"}）", 7),
+                // Gubo / TinyFish 的接口地址可覆盖。
+                // 这两家的公开文档我没能核对到（本机联网检索不可用），代码里按「通用
+                // web-search 契约」实现：POST JSON、Authorization: Bearer <key>、
+                // 响应取 data.webPages.value[].{name,url,snippet}。若厂商契约不同，
+                // 在这里改地址即可适配，不必改代码重新发版。
+                new SettingItem("gubo_endpoint", "", "STRING",
+                        "Gubo 接口地址（留空用内置默认 https://api.gubosearch.com/v1/web-search；"
+                                + "契约不同时在此覆盖）", 8),
+                new SettingItem("tinyfish_endpoint", "", "STRING",
+                        "TinyFish 接口地址（留空用内置默认 https://api.tinyfish.ai/v1/web-search；"
+                                + "契约不同时在此覆盖）", 9),
+                new SettingItem("langsearch_endpoint", "", "STRING",
+                        "LangSearch 接口地址（留空用内置默认 https://api.langsearch.com/v1/web-search）", 10)
         );
     }
 }
