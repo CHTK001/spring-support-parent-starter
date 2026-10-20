@@ -149,6 +149,30 @@ public class ApmController {
     }
 
     /**
+     * 全量句柄快照（含分配堆栈 / FD / 线程）。
+     *
+     * @param limit 每分类上限
+     * @return 句柄清单
+     */
+    @GetMapping("/agent/handles")
+    public ReturnResult<Map<String, Object>> agentHandles(
+            @RequestParam(defaultValue = "200") int limit) {
+        return ReturnResult.ok(apmQueryService.handleInventory(limit));
+    }
+
+    /**
+     * System.out / System.err 实时捕获日志。
+     *
+     * @param limit 条数上限
+     * @return 系统输出条目
+     */
+    @GetMapping("/agent/system-out")
+    public ReturnResult<List<Map<String, Object>>> agentSystemOut(
+            @RequestParam(defaultValue = "200") int limit) {
+        return ReturnResult.ok(apmQueryService.systemOut(limit));
+    }
+
+    /**
      * Agent 实时状态。
      *
      * @return agent 是否激活 + Shell 端口等
