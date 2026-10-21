@@ -395,11 +395,28 @@ public final class DbDialectSupport {
      * @throws SQLException 修改失败
      */
     public static void alterColumn(Connection conn, String table, DbColumnDef def) throws SQLException {
+        alterColumn(conn, table, def, null);
+    }
+
+    /**
+     * 修改列定义（跨方言），可选调整列位置。
+     *
+     * <p>列顺序只有 MySQL 系内核原生支持（{@code MODIFY COLUMN ... FIRST/AFTER}），
+     * 非 MySQL 系不拼位置片段，其余列定义照旧走 {@link #alterColumn} 的跨方言映射。</p>
+     *
+     * @param conn        数据库连接
+     * @param table       表名
+     * @param def         完整列定义
+     * @param afterColumn 目标位置：null=保持原位；空串=排到最前；否则排到该列之后
+     * @throws SQLException 修改失败
+     */
+    public static void alterColumn(Connection conn, String table, DbColumnDef def, String afterColumn) throws SQLException {
         String safeTable = SqlName.checkSimple(table, "表名");
         String safeColumn = SqlName.checkSimple(def.name(), "列名");
         if (isMysqlFamilyQuiet(conn)) {
+            String position = positionSql(afterColumn);
             execute(conn, "ALTER TABLE " + SqlName.quoteMysql(safeTable, "表名")
-                    + " MODIFY COLUMN " + SqlName.quoteMysql(safeColumn, "列名") + " " + def.toSqlFragment());
+                    + " MODIFY COLUMN " + SqlName.quoteMysql(safeColumn, "列名") + " " + def.toSqlFragment() + position);
             return;
         }
         String quotedTable = SqlName.quote(safeTable, "表名");
@@ -421,6 +438,24 @@ public final class DbDialectSupport {
                     "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " DROP DEFAULT"));
         }
         applyColumnComment(conn, safeTable, safeColumn, def.comment());
+    }
+
+    /**
+     * 拼 MySQL 列位置片段。
+     *
+     * @param afterColumn 目标位置：null=保持原位；空串=排到最前；否则排到该列之后
+     * @return {@code FIRST} / {@code AFTER `col`} / 空串
+     */
+    private static String positionSql(String afterColumn) {
+        if (afterColumn == null) {
+            return "";
+        }
+        String target = afterColumn.trim();
+        if (target.isEmpty()) {
+            return " FIRST";
+        }
+        SqlName.checkSimple(target, "目标列名");
+        return " AFTER " + SqlName.quoteMysql(target, "目标列名");
     }
 
     /**

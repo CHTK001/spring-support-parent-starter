@@ -2978,6 +2978,21 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
+     * 取字符串，null 返回 null、纯空白返回空串。
+     *
+     * <p>列位置里空串有独立语义（FIRST），不能像普通字段那样吞掉。</p>
+     *
+     * @param value 原始值
+     * @return null / 空串 / 去首尾空白后的字符串
+     */
+    private static String asStringOrBlank(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return String.valueOf(value).trim();
+    }
+
+    /**
      * 新增列（ALTER TABLE ADD COLUMN）。
      *
      * <p>走完整列定义：类型全集 + UNSIGNED/ZEROFILL + 字符集/排序规则 +
@@ -3030,13 +3045,14 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         // 改列时列名不可变：忽略请求体里的 columnName，强制用路径参数
         body.put("columnName", col);
         var def = columnDef(body);
+        String afterColumn = body.containsKey("afterColumn") ? asStringOrBlank(body.get("afterColumn")) : null;
         Long dsId = queryOrBodyDatasourceId(datasourceId, body);
         String db = queryOrBodyDatabase(database, body);
         return callDb("修改列", () -> {
             try (java.sql.Connection conn = datasourceService.connection(dsId);
                  SchemaScope scope = useSchema(conn, db)) {
                 requireColumn(conn, t, col);
-                DbDialectSupport.alterColumn(conn, t, def);
+                DbDialectSupport.alterColumn(conn, t, def, afterColumn);
                 return Boolean.TRUE;
             }
         });
