@@ -913,12 +913,7 @@ CREATE TABLE IF NOT EXISTS edu_paper_template (
 --   2) 刻意不加 NOT NULL：老学生没有口令，列必须允许 NULL，
 --      由「没有口令 → 首次登录要求设置」的业务规则兜底，而不是让迁移失败。
 --   3) student_account 的历史数据回填属于 DML，按仓库规范放在 initdata，不在本文件。
-ALTER TABLE edu_student
-    ADD COLUMN IF NOT EXISTS student_password VARCHAR(64) DEFAULT NULL COMMENT '登录口令摘要 hmacSha256(明文,盐)，非明文',
-    ADD COLUMN IF NOT EXISTS student_pwd_salt VARCHAR(32) DEFAULT NULL COMMENT '口令盐（随机十六进制，与 student_password 一一对应）',
-    -- 首次登录引导改密：管理员设的初始口令置 1，学生自助改密后置 0。
-    -- 老数据默认 0（EOF NULL 由业务按「无口令」处理），不回溯逼改，避免上线即扰民。
-    ADD COLUMN IF NOT EXISTS student_pwd_must_change TINYINT DEFAULT 0 COMMENT '是否需引导改密: 0-否 1-是';
+
 
 -- ----------------------------
 -- 班级试卷布置（老师给班级组卷 -> 班内学生可见）
@@ -958,8 +953,7 @@ CREATE TABLE IF NOT EXISTS edu_paper_assign (
 -- 兼容既有库：首次发布（2026-10-04 06:14）建出的 edu_paper_assign 缺 create_time。
 -- 上面的 CREATE TABLE 只对全新库生效，既有库必须靠这条 ALTER 补齐，
 -- 否则「布置/撤回」会一直 500（这正是本次验收抓到的失败）。
-ALTER TABLE edu_paper_assign
-    ADD COLUMN IF NOT EXISTS create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
 
 -- ---------------------------------------------------------------------
 -- 原 V1.5__init_all_eduai.sql （已并入本文件）
