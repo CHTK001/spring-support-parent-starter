@@ -36,15 +36,13 @@ CREATE TABLE IF NOT EXISTS `ms_datasource`
       -- local  ：直接用 nginx -s 与裸启动，永不 systemctl
       -- 空     ：自动探测（认得出单元且当前用户有免密 systemctl 权限才走 systemd）
       -- 老数据源保持为空即维持原行为，不受本次改动影响
-      -- 这里刻意写裸 ADD COLUMN，不写 ADD COLUMN IF NOT EXISTS：
-      --   幂等写法要靠 MysqlScriptConverter 改写成 information_schema 判定的动态 SQL，
-      --   而该转换器在 utils-support-mysql-starter 里，本应用并未依赖它
-      --   （实测线上 jar 无此 jar、无 META-INF/services 的 ScriptConverter 注册），
-      --   写 IF NOT EXISTS 会原样送进 MySQL，直接语法错误。
-      -- 重复执行报 1060 由 continueOnError（默认 true）逐语句忽略，与本文件上方
-      -- 那四个 *_latency_ms / last_test_* 列的既有处境一致。
-      -- ⚠ 正因为该错误是静默的，列没建成要等到运行期 SELECT 才暴露成 Unknown column。
-      --   所以发布后必须主动查 information_schema 确认这两列真的存在（final-check.sh 已含该断言）。
+      -- 注：本文件末尾的存量补列语句一律用「information_schema 判存 + 动态 DDL」，
+      --   不依赖 MysqlScriptConverter 的方言展开 ——
+      --   动态 DDL 在 MySQL 上原生可执行，脚本因此不依赖运行期装了哪个转换器，
+      --   也不受「转换器在不在 classpath 上」的影响（转换器的注册文件漏发就会退化成原样执行）。
+      -- 历史上这里写的是裸 ADD COLUMN，靠 continueOnError 吞掉 1060：
+      --   代价是脚本被记 FAILED、每次启动重跑，且存量库上若前面某条语句失败，
+      --   补列可能没执行 —— 列没建成要等到运行期 SELECT 才暴露成 Unknown column。
     `datasource_control_mode` VARCHAR(16) NULL DEFAULT '' COMMENT '进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测',
     `datasource_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测',
     `datasource_driver_class_name` VARCHAR(255) NULL DEFAULT '' COMMENT 'JDBC 驱动类名，jdbc 类型非 MySQL 时可显式指定',
@@ -79,15 +77,12 @@ DEALLOCATE PREPARE st;
 -- connect_latency：建立连接耗时（TCP + 协议握手）
 -- session_latency：已建立连接上一次往返耗时（jdbc=SELECT 1 / redis=PING / 其余=TCP 探活）
 --
--- 刻意写裸 ADD COLUMN，不写 ADD COLUMN IF NOT EXISTS：
---   幂等写法要靠 MysqlScriptConverter 改写成 information_schema 判定的动态 SQL，
---   而该转换器在 utils-support-mysql-starter 里，本应用并未依赖它
---   （线上 jar 无此 jar、无 META-INF/services 的 ScriptConverter 注册），
---   写 IF NOT EXISTS 会原样送进 MySQL，直接语法错误。
--- 重复执行报 1060 由 DataSourceFlyway 的 continueOnError（默认 true）逐语句跳过；
--- 代价是该脚本会被记为 FAILED 因而每次启动重跑，本文件其余语句均幂等，可接受。
--- ⚠ 正因为该错误是静默的，列没建成要等到运行期 SELECT 才暴露成 Unknown column，
---   所以必须靠 information_schema 断言来验证（见 final-check.sh）。
+-- 存量库补列的写法见下方「原 V1.0 遗留的裸 ADD COLUMN」段：
+-- 一律用 information_schema 判存 + 动态 DDL，不写裸 ADD COLUMN。
+-- 裸写法在新库上必然报 1060（上方 CREATE TABLE 已建好同样的列），
+-- 那条错误被 continueOnError 静默吞掉，代价是脚本被记 FAILED、每次启动重跑，
+-- 且存量库上若前面某条语句失败、补列可能没执行 ——
+-- 列没建成要等到运行期 SELECT 才暴露成 Unknown column。
 -- ------------------------------------------------------------
 -- 存量库补列（原 V1.0 遗留的裸 ADD COLUMN）
 --
@@ -96,8 +91,9 @@ DEALLOCATE PREPARE st;
 --
 -- 【为什么不用 ADD COLUMN IF NOT EXISTS】
 --   那是 MariaDB 语法，MySQL 8.4 不支持（实测 8.4.9 报 1064），
---   MariaDB 11.8 同样拒绝。本应用不依赖 utils-support-mysql-starter，
---   没有做方言展开的 ScriptConverter，SQL 原样透传给数据库。
+--   MariaDB 11.8 同样拒绝。
+--   用动态 DDL 而不是依赖 MysqlScriptConverter 的方言展开，是为了不把脚本的正确性
+--   绑在「运行期装了哪个转换器」上 —— 转换器的注册文件漏发就会整体退化成原样执行。
 --
 -- 【为什么必须这么改】
 --   裸 ADD COLUMN 在全新库上必然报 1060（Duplicate column）——
