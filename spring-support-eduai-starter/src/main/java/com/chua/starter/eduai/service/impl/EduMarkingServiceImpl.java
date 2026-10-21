@@ -44,6 +44,7 @@ import com.chua.starter.eduai.service.IEduMarkingService;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
 import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.MarkingScanIntentResolver;
 import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import com.chua.starter.queue.MessageTemplate;
 import jakarta.annotation.PostConstruct;
@@ -512,9 +513,6 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                               Long examId, Integer maxScore) {
         // 入参快速校验（不落库）
         boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(mode);
-        if (!anyMode && paperId == null) {
-            throw new BusinessException("自有卷必须指定试卷 ID");
-        }
         List<byte[]> validImages = images == null ? List.of()
                 : images.stream().filter(v -> v != null && v.length > 0).toList();
         if (validImages.isEmpty()) {
@@ -522,6 +520,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         if (validImages.size() > MAX_SCAN_IMAGES) {
             throw new BusinessException("单次扫描最多 " + MAX_SCAN_IMAGES + " 张图片");
+        }
+        // 整卷二维码识别：卷面页脚印有 PAPER:{试卷ID}，解码命中后外来卷自动归回内置卷，
+        // 并按试卷 ID + 题号回数据库取标准答案判分（与手动选「自有卷」等价）。
+        MarkingScanIntentResolver.Resolution intent =
+                MarkingScanIntentResolver.resolve(mode, validImages.get(0), paperId);
+        anyMode = intent.anyMode();
+        paperId = intent.paperId();
+        if (intent.fromQr()) {
+            log.info("[EduAi] 扫码识别到整卷二维码，自动归为内置卷: paperId={}", paperId);
+        }
+        if (!anyMode && paperId == null) {
+            throw new BusinessException("自有卷必须指定试卷 ID");
         }
         // 试卷校验：自有卷必须存在、已发布、卷下有题；任意卷不校验
         if (!anyMode) {
@@ -1251,11 +1261,27 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             EduPaperScanner.ScannedQuestion item = parseScanDetail(row.getMarkingResultDetail());
             int maxScore = parseDetailMaxScore(row.getMarkingResultDetail());
             try {
+                // SELF 卷：题库题干已确定，把行规则误收进作答的题干前缀剥掉
+                // （实测 42/43 简答只截到「翻译句子：…」，题干下一行才是学生翻译，
+                // 不剥会把题干整段当真作答，学生实际写的部分被相似度稀释成 0 分）。
+                EduQuestion question = null;
+                if (!anyMode && row.getMarkingResultQuestionId() != null) {
+                    question = questionMapper.selectById(row.getMarkingResultQuestionId());
+                    if (question != null) {
+                        String cleanedAnswer;
+                        if ("FILL".equalsIgnoreCase(String.valueOf(question.getQuestionType()).trim())) {
+                            cleanedAnswer = EduPaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
+                        } else {
+                            cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                        }
+                        item = new EduPaperScanner.ScannedQuestion(
+                                item.no(), item.stem(), cleanedAnswer, item.score());
+                    }
+                }
                 EduAiService.MarkingOutcome outcome;
                 if (anyMode) {
                     outcome = paperScanner.markAnyQuestion(item, maxScore);
                 } else {
-                    EduQuestion question = questionMapper.selectById(row.getMarkingResultQuestionId());
                     if (question == null) {
                         markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), 0,
                                 "题目不在题库", buildScanFinalDetail(item, null, maxScore),
@@ -1929,10 +1955,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
-        // 存识别原文：题干兜底（deriveStem）与人工复核都需要它。
-        // 「学生作答」展示与判分分别由结构化接口与 markAnyQuestion 归一化出实质作答，
-        // 不在此处改写，避免把兜底题干也截成单个字母。
-        detail.put("studentAnswer", item.answer());
+        // 「学生作答」统一保存清洗 + 提取后的实质作答：客观题从「题干+选项+作答C」
+        // 整块 OCR 文本里提取 C/√/×，简答去掉水印/分值/题号后保留学生文字。
+        // 这既让前端展示不再把整段题干当作答，也让判分直接面对真实作答。
+        detail.put("studentAnswer", EduPaperScanner.extractInlineMark(
+                EduPaperScanner.cleanScannedAnswer(item.answer())));
         detail.put("maxScore", maxScore);
         return Json.toJson(detail);
     }
@@ -1952,7 +1979,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
-        detail.put("studentAnswer", item.answer());
+        detail.put("studentAnswer", EduPaperScanner.extractInlineMark(
+                EduPaperScanner.cleanScannedAnswer(item.answer())));
         detail.put("maxScore", maxScore);
         detail.put("score", outcome == null ? 0 : outcome.getScore());
         detail.put("correct", outcome != null && maxScore > 0 && outcome.getScore() >= maxScore);
@@ -2055,6 +2083,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         out.put("recognizedStudent", content.get("recognizedStudent"));
 
         var questions = new ArrayList<Map<String, Object>>();
+        // no(归一化) → 干净作答：锚点补「作答」文本，前端把「题号·作答」标记贴到卷面对应位置
+        var anchorAnswers = new java.util.HashMap<String, String>();
         for (EduMarkingResult row : rows) {
             var item = new LinkedHashMap<String, Object>();
             item.put("resultId", row.getMarkingResultId());
@@ -2068,8 +2098,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
             item.put("no", detail.get("recognizedNo"));
             item.put("stem", detail.get("stem"));
-            item.put("studentAnswer", EduPaperScanner.extractInlineMark(
-                    detail.get("studentAnswer") == null ? null : String.valueOf(detail.get("studentAnswer"))));
+            String rawAnswer = detail.get("studentAnswer") == null ? null : String.valueOf(detail.get("studentAnswer"));
+            item.put("studentAnswer", EduPaperScanner.extractInlineMark(rawAnswer));
+            if (detail.get("recognizedNo") != null) {
+                String no = normalizeNo(String.valueOf(detail.get("recognizedNo")));
+                String answerText = EduPaperScanner.extractInlineMark(
+                        EduPaperScanner.cleanScannedAnswer(rawAnswer));
+                if (StringUtils.isNotBlank(answerText)) {
+                    anchorAnswers.put(no, answerText);
+                }
+            }
             item.put("maxScore", detail.get("maxScore"));
             item.put("source", detail.get("source"));
             if (row.getMarkingResultQuestionId() != null) {
@@ -2092,6 +2130,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 displayQuestions = repaired;
                 displayAnchors = locateSplitAnchors(repaired, pages);
                 log.info("[EduMarking] 旧任务整页一题改为版面展示拆分: taskId={}, rows={}", taskId, repaired.size());
+            }
+        }
+        // 锚点补「作答」：前端把每题的干净作答贴到卷面对应位置，作答应显示在正确区域
+        for (Map<String, Object> anchor : displayAnchors) {
+            if (anchor.get("no") == null) {
+                continue;
+            }
+            String no = normalizeNo(String.valueOf(anchor.get("no")));
+            String answer = anchorAnswers.get(no);
+            if (StringUtils.isNotBlank(answer)) {
+                anchor.put("answer", answer);
             }
         }
         out.put("questionAnchors", displayAnchors);

@@ -94,6 +94,16 @@ public class FileStorageProperties {
      */
     private String tempPath;
 
+    /**
+     * 上传任务过期分钟数：超时仍无新分片活动的任务标记失败并回收分片（默认 60）
+     */
+    private long taskExpireMinutes = 60;
+
+    /**
+     * 小文件同步直传阈值（MB）：不超过该大小的单文件直传同步写存储立即返回，不建任务（默认 5；0 表示全部走任务）
+     */
+    private long taskSyncMaxMb = 5;
+
     // ==================== 功能开关 ====================
 
     /**

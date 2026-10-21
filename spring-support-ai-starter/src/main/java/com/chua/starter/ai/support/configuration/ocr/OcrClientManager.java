@@ -150,11 +150,78 @@ public class OcrClientManager {
     /**
      * 绘制检测标注图（框 + 识别文字）。
      *
+     * <p>优先交给 {@link OcrPipeline#toDrawer(byte[])}；该实现内部会按区域的
+     * 「单识别模型」语义调用 {@code recognizeDetail}，遇到「检测+识别」这类组合
+     * 管线会抛 {@code IllegalStateException}（实测 paddleocrv6-det + -rec：
+     * 「模型输出类型为 String，不是文字结果列表」）。标注图属于展示辅助，
+     * 不该因此让接口 500，故失败时回退到本类自绘：直接用整图
+     * {@code recognizeDetail} 的检测框与文本画框，输出同样的 JPEG。</p>
+     *
      * @param imageData 图片字节
      * @return 标注后 JPEG 字节
      */
     public byte[] annotate(byte[] imageData) {
-        return current().toDrawer(imageData);
+        try {
+            byte[] drawn = current().toDrawer(imageData);
+            if (drawn != null && drawn.length > 0) {
+                return drawn;
+            }
+            log.warn("[Ocr] 管线标注返回空，回退到自绘标注");
+        } catch (Throwable t) {
+            // 库里对组合管线的已知限制，不是配置错误：降级而不是失败
+            log.warn("[Ocr] 管线标注不可用，回退到自绘标注: {}", t.getMessage());
+        }
+        return drawAnnotate(imageData);
+    }
+
+    /**
+     * 自绘标注图：在识别结果的每个文本框上画框并写文字。
+     *
+     * @param imageData 原图字节
+     * @return 标注后 JPEG 字节
+     */
+    private byte[] drawAnnotate(byte[] imageData) {
+        List<OcrResult> results = current().recognizeDetail(imageData);
+        try (java.io.InputStream in = new java.io.ByteArrayInputStream(imageData)) {
+            java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(in);
+            if (src == null) {
+                throw new IllegalStateException("图片解码失败，无法生成标注图");
+            }
+            java.awt.image.BufferedImage canvas = new java.awt.image.BufferedImage(
+                    src.getWidth(), src.getHeight(), java.awt.image.BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g = canvas.createGraphics();
+            try {
+                g.drawImage(src, 0, 0, null);
+                g.setColor(java.awt.Color.RED);
+                g.setStroke(new java.awt.BasicStroke(2f));
+                int fontSize = Math.max(12, Math.min(28, src.getHeight() / 30));
+                java.awt.Font font = new java.awt.Font(java.awt.Font.SANS_SERIF,
+                        java.awt.Font.PLAIN, fontSize);
+                g.setFont(font);
+                for (OcrResult item : results) {
+                    com.chua.deeplearning.support.model.PredictRectangle box = item.boundingBox();
+                    if (box == null) {
+                        continue;
+                    }
+                    int x = (int) box.x();
+                    int y = (int) box.y();
+                    int w = (int) box.width();
+                    int h = (int) box.height();
+                    g.drawRect(x, y, Math.max(1, w), Math.max(1, h));
+                    String text = item.text();
+                    if (StringUtils.isNotBlank(text)) {
+                        g.drawString(text, x, Math.max(fontSize, y - 4));
+                    }
+                }
+            } finally {
+                g.dispose();
+            }
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(canvas, "jpg", out);
+            return out.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("标注图生成失败: " + e.getMessage(), e);
+        }
     }
 
     /**

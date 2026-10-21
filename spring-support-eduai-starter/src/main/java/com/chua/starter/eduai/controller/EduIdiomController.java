@@ -57,12 +57,13 @@ public class EduIdiomController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
+            @RequestParam(required = false) Integer difficulty,
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
         // 分页参数兜底，防止 service 层 NPE
         int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
         int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
-        return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, pNum, pSize));
+        return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, difficulty, pNum, pSize));
     }
 
     @Operation(summary = "生成成语消消乐游戏数据")

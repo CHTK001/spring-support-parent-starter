@@ -412,6 +412,25 @@ public class OnnxExternalDirectoryService {
     }
 
     /**
+     * 当前生效模型根的绝对路径字符串（管理面回显用）。
+     *
+     * <p>{@link #modelRoot()} 的对外只读视图：未持久化 model_root 时回落
+     * {@code ModelRegistry.getModelRootDir()}（再退 {@code user.home}），
+     * 与目录选择器和相对模型路径解析用的是<b>同一个口径</b>。
+     * 页面显示这个值，「模型往哪放 / 文件在哪」才不会和真实解析位置对不上。</p>
+     *
+     * @return 绝对路径；解析异常返回空串
+     */
+    public String displayModelRoot() {
+        try {
+            return modelRoot().toString();
+        } catch (Exception ex) {
+            log.warn("[ONNX] 解析展示用模型根失败: {}", ex.getMessage());
+            return "";
+        }
+    }
+
+    /**
      * 解析浏览目标：空值取模型根，非空必须落在模型根之内。
      *
      * @param path 请求路径

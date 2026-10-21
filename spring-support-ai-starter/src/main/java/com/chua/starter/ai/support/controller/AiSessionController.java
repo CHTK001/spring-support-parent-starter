@@ -437,11 +437,20 @@ public class AiSessionController {
      */
     private static final int WORKSPACE_MAX_ENTRIES = 200;
 
+    /**
+     * 初始窗口允许的最大用户轮次数。
+     *
+     * <p>与前端下拉「初始化加载最新的记录数量」的上限（50）对齐：这个参数是查询入参，
+     * 不设上限时一个超大 N 会退化成「把整段历史一次查出来」，正是要避免的情形。</p>
+     */
+    private static final int MAX_INITIAL_TURNS = 50;
+
     @GetMapping("/{id}/messages")
     public ReturnResult<Map<String, Object>> messages(
             @PathVariable("id") String id,
             @RequestParam(required = false) Integer limit,
-            @RequestParam(required = false) String beforeMessageId) {
+            @RequestParam(required = false) String beforeMessageId,
+            @RequestParam(required = false) Integer initialTurns) {
 
         log.info("[Messages] Loading messages for sessionId: {}", id);
         Long sessionId;
@@ -491,9 +500,44 @@ public class AiSessionController {
             Long beforeId = Long.parseLong(beforeMessageId);
             wrapper.lt(SysAiMessage::getId, beforeId);
         }
+
+        /*
+         * 初始窗口：按「用户轮次」取最新的 N 轮，供会话页首次打开时使用
+         * （字段见 SessionGlobalSettingProvider.initial_load_turns）。
+         *
+         * 为什么必须落在 user 消息上做下界：前端按 user 消息把消息分组成轮次，
+         * 窗口若从某条 assistant 开始，那条回复找不到所属提问就会被判成「孤儿」而不渲染，
+         * 表现为明明有历史却少一条回复。取第 N 条最新的 user 消息作为下界（含自身），
+         * 窗口内就一定是完整的若干轮。
+         *
+         * 只在没有 beforeMessageId（即首屏，不是向上翻页）时生效；initialTurns 出现时
+         * 优先于 limit —— limit 是「按条数」的旧上限，两者叠加会把 N 轮又截断一次。
+         * 不传 initialTurns 时行为与历史版本完全一致。
+         */
+        boolean turnWindowApplied = false;
+        if (initialTurns != null && initialTurns > 0 && (beforeMessageId == null || beforeMessageId.isBlank())) {
+            LambdaQueryWrapper<SysAiMessage> boundaryWrapper = new LambdaQueryWrapper<>();
+            boundaryWrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
+            boundaryWrapper.eq(SysAiMessage::getRole, "user");
+            // id 兜底排序：同一毫秒内落库的两条消息仅按 createTime 排序结果不确定，
+            // 取错边界会让窗口多一轮或少一轮
+            boundaryWrapper.orderByDesc(SysAiMessage::getCreateTime);
+            boundaryWrapper.orderByDesc(SysAiMessage::getId);
+            boundaryWrapper.last("LIMIT " + Math.min(initialTurns, MAX_INITIAL_TURNS));
+            List<SysAiMessage> boundaryRows = messageMapper.selectList(boundaryWrapper);
+            if (!boundaryRows.isEmpty()) {
+                Long oldestTurnUserId = boundaryRows.get(boundaryRows.size() - 1).getId();
+                wrapper.ge(SysAiMessage::getId, oldestTurnUserId);
+                turnWindowApplied = true;
+            } else {
+                // 一条 user 消息都没有（只剩系统/助手消息的异常会话）：回落到 limit 口径，
+                // 不因为窗口算不出来就把整段历史一次性铺出去
+                log.info("[Messages] 会话 {} 没有 user 消息，initialTurns={} 回落到 limit 口径", sessionId, initialTurns);
+            }
+        }
         
         wrapper.orderByDesc(SysAiMessage::getCreateTime);
-        if (limit != null) {
+        if (limit != null && !turnWindowApplied) {
             wrapper.last("LIMIT " + limit);
         }
 
@@ -679,7 +723,40 @@ public class AiSessionController {
         Map<String, Object> result = new HashMap<>();
         result.put("items", items);
         result.put("total", items.size());
+        /*
+         * 是否还有更早的记录。前端原先只能拿「本次返回条数 >= 请求条数」猜，
+         * 一旦初始窗口改成「按轮次」（条数不再等于请求条数），这个猜测必然失效：
+         * 明明还有历史却提示「没有更多消息」，向上翻页的触发条件也一起失效。
+         * 这里给出确定答案：本次返回的最早一条之前还有没有消息。
+         */
+        result.put("hasMore", hasOlderMessages(sessionId, items));
+        result.put("initialTurnsApplied", turnWindowApplied);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 本次返回的最早一条消息之前，是否还存在更早的消息。
+     *
+     * <p>用一次 COUNT 换取确定的「还有没有更早记录」，比前端按条数猜更可靠；
+     * 返回空列表时直接判定为没有更多。</p>
+     *
+     * @param sessionId 会话主键
+     * @param items     本次返回的消息条目（时间升序，元素含字符串型 id）
+     * @return true 表示还能继续向上加载
+     */
+    private boolean hasOlderMessages(Long sessionId, List<Map<String, Object>> items) {
+        if (items.isEmpty()) {
+            return false;
+        }
+        Object earliest = items.get(0).get("id");
+        if (earliest == null || !String.valueOf(earliest).matches("\\d+")) {
+            return false;
+        }
+        LambdaQueryWrapper<SysAiMessage> olderWrapper = new LambdaQueryWrapper<>();
+        olderWrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
+        olderWrapper.lt(SysAiMessage::getId, Long.parseLong(String.valueOf(earliest)));
+        Long older = messageMapper.selectCount(olderWrapper);
+        return older != null && older > 0;
     }
 
     /**

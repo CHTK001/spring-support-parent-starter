@@ -109,4 +109,12 @@ public class EduTeacher {
      */
     @TableField("teacher_owner_user_id")
     private String ownerUserId;
+
+    /**
+     * 配置班级数（分页接口服务端填充，非表字段）。
+     *
+     * <p>教师列表分页后前端需要「配置班级」列，由服务端按教师-班级关系表聚合填充。</p>
+     */
+    @TableField(exist = false)
+    private Integer classCount;
 }

@@ -1,5 +1,6 @@
 package com.chua.starter.eduai.dimension.controller;
 
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Permission;
@@ -180,6 +181,16 @@ public class EduDimensionController {
         return ReturnResult.ok(dimensionService.listClasses(gradeLevel, teacherId));
     }
 
+    @Operation(summary = "班级分页")
+    @GetMapping("/classes/page")
+    public ReturnResult<PageResult<EduClass>> pageClasses(
+            @RequestParam(required = false) String gradeLevel,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
+        return ReturnResult.ok(dimensionService.pageClasses(gradeLevel, keyword, pageNum, pageSize));
+    }
+
     @Operation(summary = "保存班级")
     @PostMapping("/classes/save")
     /**
@@ -226,6 +237,18 @@ public class EduDimensionController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade) {
         return ReturnResult.ok(dimensionService.listStudents(classId, gradeLevel, grade));
+    }
+
+    @Operation(summary = "学生分页")
+    @GetMapping("/students/page")
+    public ReturnResult<PageResult<EduStudent>> pageStudents(
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) String gradeLevel,
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
+        return ReturnResult.ok(dimensionService.pageStudents(classId, gradeLevel, grade, keyword, pageNum, pageSize));
     }
 
     @Operation(summary = "保存学生")
@@ -311,6 +334,16 @@ public class EduDimensionController {
      */
     public ReturnResult<List<EduTeacher>> listTeachers(@RequestParam(required = false) String subjectCode) {
         return ReturnResult.ok(dimensionService.listTeachers(subjectCode));
+    }
+
+    @Operation(summary = "教师分页")
+    @GetMapping("/teachers/page")
+    public ReturnResult<PageResult<EduTeacher>> pageTeachers(
+            @RequestParam(required = false) String subjectCode,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer pageNum,
+            @RequestParam(required = false) Integer pageSize) {
+        return ReturnResult.ok(dimensionService.pageTeachers(subjectCode, keyword, pageNum, pageSize));
     }
 
     @Operation(summary = "保存教师")

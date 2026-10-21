@@ -514,6 +514,11 @@ public class EduAiService {
             return null;
         }
         if ("SINGLE_CHOICE".equals(questionType)) {
+            var explicit = java.util.regex.Pattern
+                    .compile("(?:作答|答案|答|选|选择|填)\\s*[:：]?\\s*([A-Da-d])").matcher(studentAnswer);
+            if (explicit.find()) {
+                return explicit.group(1).toUpperCase();
+            }
             var m = java.util.regex.Pattern
                     .compile("[\\(（]\\s*([A-Da-d])\\s*[)）]|选\\s*([A-Da-d])|([A-Da-d])\\s*[.。、：:]")
                     .matcher(studentAnswer);

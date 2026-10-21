@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 题目管理控制器
@@ -58,6 +59,17 @@ public class EduQuestionController {
     public ReturnResult<PageResult<EduQuestion>> page(QuestionQueryDTO query) {
         PageResult<EduQuestion> result = questionService.pageQuery(query);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 题库统计：总数 / 待审 / 今日新增 / 学科数（供管理端统计卡）。
+     *
+     * @return 统计 map
+     */
+    @Operation(summary = "题库统计")
+    @GetMapping("/stats")
+    public ReturnResult<Map<String, Object>> stats() {
+        return ReturnResult.ok(questionService.questionStats());
     }
 
     /**

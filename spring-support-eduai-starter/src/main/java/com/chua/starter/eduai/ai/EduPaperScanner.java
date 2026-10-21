@@ -581,7 +581,7 @@ public class EduPaperScanner {
         if (no == null) {
             return;
         }
-        list.add(new ScannedQuestion(no, null, stripAnswerNoise(answer.toString().trim())));
+        list.add(new ScannedQuestion(no, null, cleanScannedAnswer(answer.toString())));
     }
 
     /**
@@ -617,6 +617,59 @@ public class EduPaperScanner {
             return answer.substring(0, cut).trim();
         }
         return answer;
+    }
+
+    /**
+     * 页眉/页脚水印：{@code 第1页-阅卷验收专用} / {@code 第N页/共N页} / {@code 阅卷验收专用}。
+     *
+     * <p>打印版答卷会印「阅卷验收专用」与页码水印，OCR 把它们并进题号后的作答区，
+     * 混入 studentAnswer 后既污染判分（相似度被水印稀释），也让前端作答区显示错误内容
+     * （实测第 1 题「作答 C 判错」的根因就是整段题干+水印被写进 studentAnswer）。</p>
+     */
+    private static final java.util.regex.Pattern WATERMARK =
+            java.util.regex.Pattern.compile(
+                    "(?i)(?:阅卷验收专用|扫描归档专用|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页\\s*[-—]\\s*阅卷验收专用"
+                            + "|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页\\s*[-—/]\\s*(?:第\\s*)?(?:共\\s*)?(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页"
+                            + "|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页|(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*/\\s*(?:第\\s*)?(?:共\\s*)?(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页|共\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页)");
+
+    /**
+     * 分值标注：{@code （每题5分）} / {@code (5分)} / {@code 每题X分} 等。
+     *
+     * <p>行规则把「题号 + 题干 + 分值标注 + 作答」整段并入 answer 时，先剥掉分值标注，
+     * 避免「每题5分」这类字样稀释相似度（实测混入后正确作答被判 0 分）。</p>
+     */
+    private static final java.util.regex.Pattern SCORE_ANNOTATION =
+            java.util.regex.Pattern.compile(
+                    "[（(]\\s*[共每]?\\s*题?\\s*\\d{1,3}\\s*分\\s*[)）]"
+                            + "|\\s*[（(]\\s*每题\\s*\\d{1,3}\\s*分\\s*[)）]"
+                            + "|(?:共|每|本|满|总)题?\\s*\\d{1,3}\\s*分\\s*");
+
+    /**
+     * 清理「学生作答」区域：把扫描混入的题号前缀、分值标注、页眉水印、行尾大节标题
+     * 从作答里剥离，让判分与前端展示都只面对学生真正书写的内容。
+     *
+     * <p><b>只剪确定性污染，绝不裁剪学生实质作答</b>：42/43 简答、翻译题的学生书写
+     * 必须原样保留（该题的答案是学生文字，不是字母/符号），这里只去掉「不是学生写的
+     * 那部分」。顺序：行尾大节标题 → 分值标注 → 页眉水印 → 行首题号前缀。</p>
+     *
+     * @param answer 扫描识别出的原始作答文本
+     * @return 剥离污染后的作答；为空或无法剥离时原样返回
+     */
+    public static String cleanScannedAnswer(String answer) {
+        if (answer == null || answer.isEmpty()) {
+            return answer;
+        }
+        String text = stripAnswerNoise(answer);
+        text = SCORE_ANNOTATION.matcher(text).replaceAll(" ");
+        text = WATERMARK.matcher(text).replaceAll(" ");
+        // 行首题号前缀：1. / L. / 第1题（保留答案本身；只去掉前缀）
+        text = text.replaceFirst("^\\s*[\\[【「『{]?\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*", "");
+        // 折叠多个空白/标点之间的空格，保持可读性
+        text = text.replaceAll("\\s{2,}", " ").trim();
+        if (text.isEmpty()) {
+            return answer.trim();
+        }
+        return text;
     }
 
     /**
@@ -1016,12 +1069,19 @@ public class EduPaperScanner {
         if (StringUtils.isBlank(text)) {
             return text;
         }
+        // 0) 明确的「作答/答案」前缀字母优先：作答C / 答案C / 答案：C / 答：C / 选C
+        //    （OCR 常把整段题干+选项+学生作答合并在一个块里，只有这一句才真正属于学生）
+        var explicit = java.util.regex.Pattern.compile(
+                "(?:作答|答案|答|选|选择|填)\\s*[:：]?\\s*([A-Da-dＡ-Ｄａ-ｄ])").matcher(text);
+        if (explicit.find()) {
+            return toHalfWidthUpper(explicit.group(1));
+        }
         // 1) 括号里的选项字母：（C）/(c)/（ Ｄ ）
         var paren = java.util.regex.Pattern.compile("[（(]\\s*([A-Da-dＡ-Ｄａ-ｄ])\\s*[）)]").matcher(text);
         if (paren.find()) {
             return toHalfWidthUpper(paren.group(1));
         }
-        // 2) 「选C」「答案 C」「选 C」这类写法
+        // 2) 「选C」「答案 C」「选 C」这类写法；这里仅兜底 0/1 没抓到的情况
         var pick = java.util.regex.Pattern.compile("(?:选|答|答案)\\s*[:：]?\\s*([A-Da-dＡ-Ｄａ-ｄ])").matcher(text);
         if (pick.find()) {
             return toHalfWidthUpper(pick.group(1));
@@ -1034,6 +1094,141 @@ public class EduPaperScanner {
             return "错";
         }
         return text;
+    }
+
+    /**
+     * 从扫描作答里剥离题库题干前缀。
+     *
+     * <p>SELF 卷的规则切题把「题号后到下一题前」整段当作作答，简答/填空的题干与
+     * 学生作答常因此并在一起（实测 42/43 只截到「翻译句子：…」，题干的下一行
+     * 才是学生翻译，但行规则把题干也收进了 answer）。判分阶段题库题干已确定，
+     * 数据库里这道题的 {@code questionStem} 可当作「不是学生作答」的部分剥离，
+     * 只留下确实属于学生的作答；剥离后为空则按未作答处理，不再把题干冒充作答。</p>
+     *
+     * @param answer 清洗/提取后的作答文本
+     * @param stem   题库题干（可空）
+     * @return 剥离题干后的作答；无法剥离时原样返回
+     */
+    public static String stripLeadingStem(String answer, String stem) {
+        if (StringUtils.isBlank(answer) || StringUtils.isBlank(stem)) {
+            return answer;
+        }
+        String answerNorm = answer.replaceAll("\\s+", "");
+        String stemNorm = stem.replaceAll("\\s+", "");
+        if (!answerNorm.startsWith(stemNorm)) {
+            return answer;
+        }
+        // 原字符串带空格/换行，不能直接按长度切；在原文上跳过空白逐字符消费题干长度。
+        int pos = 0;
+        int stemPos = 0;
+        while (stemPos < stemNorm.length() && pos < answer.length()) {
+            if (Character.isWhitespace(answer.charAt(pos))) {
+                pos++;
+                continue;
+            }
+            pos++;
+            stemPos++;
+        }
+        return answer.substring(Math.min(pos, answer.length())).trim();
+    }
+
+    /**
+     * 填空题作答剥离题干碎片：只留学生在「______」空位填的内容。
+     *
+     * <p>规则切题把「题号后到下一题前」整段当作作答，填空的题干与作答常并在一起
+     * （实测 17 题作答变成「，志在千里。（曹操《龟虽寿》） 老骥伏杨」）。若把整段
+     * 交给相似度，题干碎片会稀释分母：标准「老骥伏枥」4 字对整段 13 字只有 0.35，
+     * 本来只是 OCR 把「枥」认成「杨」（错 1 字）也应得分的题被判错了。</p>
+     *
+     * <p>做法：以题干中的 {@code ______} / {@code （）} 空位为界，删除空位左侧与
+     * 右侧的题干片段；剩余的连续文字即学生填写内容。空位两侧片段在作答中可能被
+     * OCR 拆开/加空格，做去空白匹配。</p>
+     *
+     * @param answer 扫描作答（可能含题干碎片）
+     * @param stem   题库题干（含下划线空位，如 {@code ______，志在千里。（曹操《龟虽寿》）}）
+     * @return 仅剩学生填空内容的作答；无法拆出空位或没有题干碎片时原样返回
+     */
+    public static String stripFillStem(String answer, String stem) {
+        if (StringUtils.isBlank(answer) || StringUtils.isBlank(stem)) {
+            return answer;
+        }
+        String marker = "______";
+        int markerAt = stem.indexOf(marker);
+        if (markerAt < 0) {
+            markerAt = stem.indexOf("（）");
+        }
+        if (markerAt < 0) {
+            markerAt = stem.indexOf("()");
+        }
+        if (markerAt < 0) {
+            return stripLeadingStem(answer, stem);
+        }
+        String beforeMarker = stem.substring(0, markerAt);
+        String afterMarker = stem.substring(markerAt + marker.length());
+        String result = answer;
+        // 学生作答通常位于空位右侧题干之后；先把右侧题干去掉，剩「学生作答 + 可能的尾注」
+        if (StringUtils.isNotBlank(afterMarker) && containsIgnoringSpace(result, afterMarker)) {
+            result = removeIgnoringSpace(result, afterMarker);
+        }
+        // 再删空位左侧题干（16 题这类题干前半在题号块，作答块只有后半时可能命不中）
+        if (StringUtils.isNotBlank(beforeMarker) && containsIgnoringSpace(result, beforeMarker)) {
+            result = removeIgnoringSpace(result, beforeMarker);
+        }
+        // 去掉 OCR 常见的尾注「（王绩《野望》）」「（2分）」等，保留学生书写内容
+        result = result.replaceAll("\\s*[（(][^（）()]{0,30}[）)]\\s*", " ").trim();
+        return result.trim().isEmpty() ? answer : result.trim();
+    }
+
+    private static boolean containsIgnoringSpace(String text, String fragment) {
+        if (StringUtils.isBlank(fragment)) {
+            return false;
+        }
+        String t = text == null ? "" : text.replaceAll("\\s+", "");
+        String f = fragment.replaceAll("\\s+", "");
+        return !f.isEmpty() && t.contains(f);
+    }
+
+    private static String removeIgnoringSpace(String text, String fragment) {
+        if (StringUtils.isBlank(text) || StringUtils.isBlank(fragment)) {
+            return text;
+        }
+        String t = text.replaceAll("\\s+", "");
+        String f = fragment.replaceAll("\\s+", "");
+        if (!t.contains(f)) {
+            return text;
+        }
+        // 原文可能带空格，逐字符在原字符串上跳过空白消费要删除的片段长度。
+        int start = indexIgnoringSpace(text, f);
+        int pos = start;
+        int fragPos = 0;
+        while (fragPos < f.length() && pos < text.length()) {
+            if (Character.isWhitespace(text.charAt(pos))) {
+                pos++;
+                continue;
+            }
+            pos++;
+            fragPos++;
+        }
+        return (text.substring(0, start) + text.substring(Math.min(pos, text.length()))).trim();
+    }
+
+    private static int indexIgnoringSpace(String text, String fragment) {
+        String t = text.replaceAll("\\s+", "");
+        String f = fragment.replaceAll("\\s+", "");
+        int normalizedIndex = t.indexOf(f);
+        if (normalizedIndex < 0) {
+            return -1;
+        }
+        // 把归一化下标映射回原字符串（跳过原文中的空白）。
+        int originalPos = 0;
+        int count = 0;
+        while (originalPos < text.length() && count < normalizedIndex) {
+            if (!Character.isWhitespace(text.charAt(originalPos))) {
+                count++;
+            }
+            originalPos++;
+        }
+        return originalPos;
     }
 
     /**

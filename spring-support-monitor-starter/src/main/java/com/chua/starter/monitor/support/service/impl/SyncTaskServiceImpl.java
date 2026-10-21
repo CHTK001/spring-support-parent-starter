@@ -930,10 +930,17 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     /**
      * 读取目标表的列定义。
      *
+     * <p><strong>表不存在时的语义</strong>：{@link SyncJdbcSupport#tableColumns} 对不存在的表
+     * 返回空列表（不再抛 MySQL 的 {@code Table ... doesn't exist} 原生异常），这里统一转换成
+     * {@link IllegalStateException}。预览场景由 {@link #preview} 的 catch 兜住并返回
+     * 「目标表不存在或没有可读列」，前端 {@code isTableMissingError} 匹配后自动弹设计表向导；
+     * 执行场景由 {@link #resolveMapping} 继续走「字段映射为空」校验。两种场景都不会把
+     * 数据库的原生 SQL 错误暴露给用户。</p>
+     *
      * @param datasourceId 目标数据源 ID
      * @param table        目标表名
      * @return 列列表
-     * @throws Exception 数据源不可用或表不存在
+     * @throws Exception 数据源不可用；表不存在时抛 {@link IllegalStateException}
      */
     private List<SyncColumnVO> loadTargetColumns(Long datasourceId, String table) throws Exception {
         SyncJdbcSupport.quoteTable(table);
