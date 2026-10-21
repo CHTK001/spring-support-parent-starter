@@ -80,4 +80,36 @@ public class AgentDeployProperties {
      * 平台回写地址（写入 agent.yml 供 agent 主动上报预留使用）
     */
     private String reportUrl = "";
+
+    /**
+     * APM RuntimeAgent jar 的平台下载地址（如 https://.../utils-support-runtime-agent.jar）。
+     * 为空时若未配置 {@link #apmJarPath}，后端将按候选路径探测本地 runtime-agent jar。
+     */
+    private String apmJarUrl = "";
+
+    /**
+     * 本地 APM RuntimeAgent jar 路径。优先于候选路径探测。
+     */
+    private String apmJarPath = "";
+
+    /**
+     * 远端存放 APM RuntimeAgent jar 的文件名。
+     */
+    private String apmRemoteName = "apm-agent.jar";
+
+    /**
+     * 注入到目标 JVM 的 javaagent options（不含 -javaagent:jar= 前缀）。
+     * 例如 port=4567 或 port=4567,enabled=true。
+     */
+    private String apmOptions = "port=4567";
+
+    /**
+     * APM JavaAgent 注入状态远端探针文件（Linux profile.d）。
+     */
+    private String apmLinuxProfile = "/etc/profile.d/apm-javaagent.sh";
+
+    /**
+     * APM JavaAgent 注入状态远端探针文件（Windows 用户环境变量）。
+     */
+    private String apmWindowsEnvName = "JAVA_TOOL_OPTIONS";
 }
