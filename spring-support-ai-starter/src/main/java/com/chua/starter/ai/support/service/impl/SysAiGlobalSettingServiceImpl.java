@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.paper.PaperSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper;
@@ -374,6 +375,9 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
             if ("ocr".equals(group)) {
                 eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
+            }
+            if ("paper".equals(group)) {
+                eventPublisher.publishEvent(new PaperSettingsChangedEvent(group));
             }
             if ("rag".equals(group)) {
                 eventPublisher.publishEvent(new RagSettingsChangedEvent(group));

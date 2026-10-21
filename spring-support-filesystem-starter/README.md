@@ -121,6 +121,32 @@ plugin:
       view-prefix: /system/api/v2/file/view/
 ```
 
+## 上传任务（任务化分片上传）
+
+上传动作只创建任务并立即返回任务号，分片落盘与合并全部后台完成：
+**common-starter 时间轮（`HashedWheelTimer`）调度触发 + 虚拟线程执行分片合并**，
+合并按序拼接分片后一次性写入 `FileStorage` SPI，不整文件驻留堆内存。
+超时仍无分片活动的任务自动失败回收（`plugin.filesystem.task-expire-minutes`，默认 60）。
+
+```yaml
+plugin:
+  filesystem:
+    task-expire-minutes: 60   # 上传任务过期分钟数
+    task-sync-max-mb: 5       # 小文件同步直传阈值（MB）：不超过该大小同步写存储立即返回，不建任务；0 = 全部走任务
+```
+
+| 接口 | 说明 |
+|---|---|
+| `GET /v2/file/upload-task/buckets` | 后台已开启的 bucket（提供者名列表），供前端上传选择 |
+| `POST /v2/file/upload-task/task` | 创建任务：`{fileName, totalSize, chunkSize, provider, bucket}` |
+| `PUT/POST /v2/file/upload-task/task/{id}/chunk?index=n` | 上传分片（body 为原始字节，可并发、幂等） |
+| `POST /v2/file/upload-task/task/{id}/complete` | 分片完毕，触发后台合并 |
+| `PUT/POST /v2/file/upload-task/simple` | 单文件 multipart 直传：小文件（≤ task-sync-max-mb）同步写入立即返回 COMPLETED；大文件任务化，返回任务号供轮询 |
+| `GET /v2/file/upload-task/tasks` / `GET .../task/{id}` | 任务列表 / 详情（状态轮询） |
+| `DELETE /v2/file/upload-task/task/{id}` | 取消任务并清理分片 |
+
+任务状态：`UPLOADING → MERGING → COMPLETED / FAILED`，另含 `CANCELLED`。
+
 ## 接口
 
 | 接口 | 说明 |

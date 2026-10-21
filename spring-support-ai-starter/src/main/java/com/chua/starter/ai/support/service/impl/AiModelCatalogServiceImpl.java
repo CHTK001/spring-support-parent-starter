@@ -237,11 +237,67 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
 
             Path resolved = probeAvailablePath(entry.relativePath());
             boolean available = resolved != null && Files.exists(resolved);
+            String localPath = resolved == null ? null : resolved.toAbsolutePath().normalize().toString();
+            // 磁盘上找不到时再查一次 classpath 资源：权重构件（utils-support-models-onnx-*）
+            // 是以 jar 内资源发布的，推理时由 ModelRegistry 按 classpath 解析，
+            // 只查磁盘会把「运行时明明能跑」的模型报成未就绪 —— 模型选择器据此过滤，
+            // 用户就选不到（实测 OCR 的 paddleocrv6-det/rec 正是这种：能识别，但列表显示未下载）。
+            if (!available) {
+                String cp = classpathResource(entry.relativePath());
+                if (cp != null) {
+                    available = true;
+                    localPath = cp;
+                }
+            }
             item.put("available", available);
-            item.put("localPath", resolved == null ? null : resolved.toAbsolutePath().normalize().toString());
+            item.put("localPath", localPath);
             result.add(item);
         }
         return result;
+    }
+
+    /**
+     * 探测 classpath 上是否存在该模型资源（jar 内权重）。
+     *
+     * <p>权重构件的发布形态就是 jar 内资源（{@code ocr/PP-OCRv6/tiny/det_infer/inference.onnx}），
+     * 推理阶段由 {@code ModelRegistry} 按 classpath 解析，因此可用性判定必须同口径。
+     * 命中时返回 {@code classpath:} 前缀的标识，供管理面展示「权重来自 classpath」。</p>
+     *
+     * @param relativePath 注册条目声明的相对路径
+     * @return 命中返回 {@code classpath:<path>}；未命中返回 {@code null}
+     */
+    private static String classpathResource(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return null;
+        }
+        String cfg = relativePath.trim();
+        if (cfg.startsWith("classpath:")) {
+            cfg = cfg.substring("classpath:".length());
+        }
+        while (cfg.startsWith("/")) {
+            cfg = cfg.substring(1);
+        }
+        if (cfg.isBlank()) {
+            return null;
+        }
+        try {
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            if (cl == null) {
+                cl = AiModelCatalogServiceImpl.class.getClassLoader();
+            }
+            // 模型条目可能声明到目录（.../det_infer）或具体文件（.../inference.onnx），
+            // 两者都按资源名探一次：目录在 jar 里没有资源条目本身，故补一次代表性文件。
+            if (cl.getResource(cfg) != null) {
+                return "classpath:" + cfg;
+            }
+            String probe = cfg.endsWith(".onnx") ? cfg : cfg + "/inference.onnx";
+            if (cl.getResource(probe) != null) {
+                return "classpath:" + probe;
+            }
+        } catch (Exception ignored) {
+            // 探测失败按「不可用」处理，不影响主流程
+        }
+        return null;
     }
 
     /**

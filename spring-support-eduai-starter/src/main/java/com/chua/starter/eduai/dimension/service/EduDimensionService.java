@@ -14,11 +14,15 @@ import com.chua.starter.eduai.mapper.EduStudentProgressMapper;
 import com.chua.starter.eduai.model.EduStudentDaily;
 import com.chua.starter.eduai.model.EduStudentProgress;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.PageBounds;
 import com.chua.starter.eduai.support.util.StudentPasswordSupport;
 
 import java.time.LocalDate;
+import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.utils.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -455,6 +459,130 @@ public class EduDimensionService {
      */
     public List<EduStudent> listStudents(Long classId, String gradeLevel, String grade) {
         return studentMapper.listStudents(classId, gradeLevel, grade, EduUserContext.ownerScope());
+    }
+
+    /**
+     * 分页查询学生档案：与 listStudents 同口径（在读 + 班级/学段/年级筛选 + 归属隔离），
+     * 另支持姓名 / 学号 / 绑定账号关键字。
+     *
+     * @param classId    班级标识，为空时不限定
+     * @param gradeLevel 学段，为空时不限学段
+     * @param grade      年级，为空时不限年级
+     * @param keyword    关键字（姓名 / 学号 / 绑定账号）
+     * @param pageNum    页码
+     * @param pageSize   每页条数
+     * @return 分页结果
+     */
+    public PageResult<EduStudent> pageStudents(Long classId, String gradeLevel, String grade,
+                                               String keyword, Integer pageNum, Integer pageSize) {
+        Page<EduStudent> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
+        QueryWrapper<EduStudent> wrapper = new QueryWrapper<>();
+        wrapper.eq("student_status", 1);
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        if (scope.ownerPredicate() != null) {
+            wrapper.and(w -> w.isNull("student_owner_user_id").or().eq("student_owner_user_id", scope.ownerPredicate()));
+        }
+        if (classId != null) {
+            wrapper.eq("student_class_id", classId);
+        }
+        if (StringUtils.hasText(gradeLevel)) {
+            wrapper.eq("student_grade_level", gradeLevel);
+        }
+        if (StringUtils.hasText(grade)) {
+            wrapper.eq("student_grade", grade);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like("student_name", keyword)
+                    .or().like("student_no", keyword)
+                    .or().like("student_account", keyword));
+        }
+        wrapper.orderByAsc("student_id");
+        IPage<EduStudent> result = studentMapper.selectPage(page, wrapper);
+        return buildPageResult(result);
+    }
+
+    /**
+     * 分页查询班级：启用状态 + 学段筛选 + 归属隔离。
+     *
+     * @param gradeLevel 学段，为空时不限学段
+     * @param keyword    班级名称 / 编码关键字
+     * @param pageNum    页码
+     * @param pageSize   每页条数
+     * @return 分页结果
+     */
+    public PageResult<EduClass> pageClasses(String gradeLevel, String keyword,
+                                            Integer pageNum, Integer pageSize) {
+        Page<EduClass> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
+        QueryWrapper<EduClass> wrapper = new QueryWrapper<>();
+        wrapper.eq("class_status", 1);
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        if (scope.ownerPredicate() != null) {
+            wrapper.and(w -> w.isNull("class_owner_user_id").or().eq("class_owner_user_id", scope.ownerPredicate()));
+        }
+        if (StringUtils.hasText(gradeLevel)) {
+            wrapper.eq("class_grade_level", gradeLevel);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like("class_name", keyword).or().like("class_code", keyword));
+        }
+        wrapper.orderByAsc("class_id");
+        IPage<EduClass> result = classMapper.selectPage(page, wrapper);
+        // 每班学生数：分页行数少，逐班聚合可接受；归属与列表同口径
+        QueryWrapper<EduStudent> stuWrapper = new QueryWrapper<>();
+        stuWrapper.eq("student_status", 1);
+        if (scope.ownerPredicate() != null) {
+            stuWrapper.and(w -> w.isNull("student_owner_user_id").or().eq("student_owner_user_id", scope.ownerPredicate()));
+        }
+        for (EduClass clz : result.getRecords()) {
+            Long count = studentMapper.selectCount(stuWrapper.clone().eq("student_class_id", clz.getClassId()));
+            clz.setStudentCount(count == null ? 0 : count.intValue());
+        }
+        return buildPageResult(result);
+    }
+
+    /**
+     * 分页查询教师：在职状态 + 学科筛选 + 归属隔离。
+     *
+     * @param subjectCode 任教学科编码，为空时不限学科
+     * @param keyword     姓名 / 工号关键字
+     * @param pageNum     页码
+     * @param pageSize    每页条数
+     * @return 分页结果
+     */
+    public PageResult<EduTeacher> pageTeachers(String subjectCode, String keyword,
+                                               Integer pageNum, Integer pageSize) {
+        Page<EduTeacher> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
+        QueryWrapper<EduTeacher> wrapper = new QueryWrapper<>();
+        wrapper.eq("teacher_status", 1);
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        if (scope.ownerPredicate() != null) {
+            wrapper.and(w -> w.isNull("teacher_owner_user_id").or().eq("teacher_owner_user_id", scope.ownerPredicate()));
+        }
+        if (StringUtils.hasText(subjectCode)) {
+            wrapper.eq("teacher_subject_code", subjectCode);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like("teacher_name", keyword).or().like("teacher_no", keyword));
+        }
+        wrapper.orderByAsc("teacher_id");
+        IPage<EduTeacher> result = teacherMapper.selectPage(page, wrapper);
+        // 配置班级数：走教师-班级关系表
+        for (EduTeacher tea : result.getRecords()) {
+            List<Long> ids = teacherClassMapper.selectClassIdsByTeacher(tea.getTeacherId());
+            tea.setClassCount(ids == null ? 0 : ids.size());
+        }
+        return buildPageResult(result);
+    }
+
+    /** 统一 PageResult 构建：维度分页只消费 data/total/pageNo/pageSize */
+    private <T> PageResult<T> buildPageResult(IPage<T> result) {
+        return PageResult.<T>builder()
+                .pageNo((int) result.getCurrent())
+                .pageSize((int) result.getSize())
+                .totalPages((int) result.getPages())
+                .total(result.getTotal())
+                .data(result.getRecords())
+                .build();
     }
 
     /**

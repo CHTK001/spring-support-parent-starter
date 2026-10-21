@@ -78,6 +78,19 @@
             <artifactId>spring-support-job-starter</artifactId>
         </dependency>
 
+        <!-- ZXing：整卷二维码识别（卷面打印 PAPER:{paperId}，阅卷上传时解码归回内置卷）
+             版本 3.5.0 已在本地仓库 com/google/zxing，父 pom 无版本管理，故在此显式指定 -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.0</version>
+        </dependency>
+
         <!-- 采集平台能力（/v2/collect/** 的 14 个 Controller + 流程图执行引擎）。
 
              eduai 的「采集管理」已收敛到采集平台统一实现：前端路由 /edu/collect 指向

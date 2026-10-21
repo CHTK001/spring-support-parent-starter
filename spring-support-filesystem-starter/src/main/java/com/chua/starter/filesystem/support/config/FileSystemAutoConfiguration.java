@@ -10,6 +10,8 @@ import com.chua.starter.filesystem.support.properties.FileStorageUploadPropertie
 import com.chua.starter.filesystem.support.server.FileServerManager;
 import com.chua.starter.filesystem.support.server.FileStorageServerLauncher;
 import com.chua.starter.filesystem.support.server.embedded.FileStorageEmbeddedFilter;
+import com.chua.starter.filesystem.support.controller.UploadTaskController;
+import com.chua.starter.filesystem.support.task.UploadTaskManager;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -135,6 +137,33 @@ public class FileSystemAutoConfiguration {
         }
         String prefix = properties.normalizedPathPrefix();
         return (prefix.isEmpty() ? "" : prefix) + "/{桶}/{键}";
+    }
+
+    /**
+     * 创建上传任务管理器（时间轮调度 + 虚拟线程分片合并）。
+     *
+     * @param template 文件存储模板
+     * @param properties 文件存储配置
+     * @return 上传任务管理器
+     */
+    @Bean(destroyMethod = "shutdown")
+    public UploadTaskManager uploadTaskManager(FileStorageTemplate template,
+                                               FileStorageProperties properties) {
+        return new UploadTaskManager(template, properties.getTaskExpireMinutes());
+    }
+
+    /**
+     * 创建上传任务控制器（任务化分片上传）。
+     *
+     * @param uploadTaskManager 上传任务管理器
+     * @return 上传任务控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public UploadTaskController uploadTaskController(UploadTaskManager uploadTaskManager,
+                                                     FileStorageTemplate template,
+                                                     FileStorageProperties properties) {
+        return new UploadTaskController(uploadTaskManager, template, properties);
     }
 
     /**

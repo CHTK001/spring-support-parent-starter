@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.paper.PaperSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiUserSetting;
 import com.chua.starter.ai.support.mapper.SysAiUserSettingMapper;
@@ -334,6 +335,9 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
             eventPublisher.publishEvent(new FaceSettingsChangedEvent(group, true));
             if ("ocr".equals(group)) {
                 eventPublisher.publishEvent(new OcrSettingsChangedEvent(group, true));
+            }
+            if ("paper".equals(group)) {
+                eventPublisher.publishEvent(new PaperSettingsChangedEvent(group, true));
             }
             if ("rag".equals(group)) {
                 eventPublisher.publishEvent(new RagSettingsChangedEvent(group, true));

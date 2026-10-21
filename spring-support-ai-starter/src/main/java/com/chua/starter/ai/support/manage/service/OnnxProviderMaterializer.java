@@ -107,6 +107,10 @@ public class OnnxProviderMaterializer {
 
     /**
      * ONNX 凭证：本地地址形态的取用凭据，写入 credentials.api_key，与其它提供商同字段。
+     *
+     * <p>语义是「本地模型目录」，不是密钥。配置项 {@code ai.onnx.api-key} 在未选择过
+     * 目录时兜底；该值可以是相对路径（如 {@code models/onnx}），
+     * {@link #currentModelDir()} 会按 {@code user.dir} 绝对化。</p>
      */
     @org.springframework.beans.factory.annotation.Value("${ai.onnx.api-key:local-onnx}")
     private String onnxApiKey;
@@ -270,11 +274,51 @@ public class OnnxProviderMaterializer {
     /**
      * 当前生效的本地模型目录：优先 ReFileSystem 选中的模型根，其次配置项。
      *
-     * @return 本地模型目录
+     * <p><b>必须返回绝对路径</b>：{@code ModelRegistry} 把模型根与模型声明的相对路径
+     * （如 {@code ocr/PP-OCRv6/tiny/det_infer}）直接拼接解析，根是相对路径时解析结果
+     * 仍是相对路径，会落到 JVM 工作目录而不是模型实际所在处，表现为
+     * 「未在 classpath 找到匹配 *.onnx 的文件」而文件其实就在盘上。
+     * 相对配置项一律按 {@code user.dir} 绝对化。</p>
+     *
+     * @return 本地模型目录（绝对路径）
      */
     private String currentModelDir() {
         String selected = onnxExternalDirectoryService.readModelRoot();
-        return selected == null || selected.isBlank() ? onnxApiKey : selected;
+        if (selected != null && !selected.isBlank()) {
+            return toAbsolute(selected);
+        }
+        // 遗留占位串不是路径，原样返回，不然会被绝对化成 user.dir/local-onnx 这样的假路径
+        if (LEGACY_API_KEY.equals(onnxApiKey)) {
+            return onnxApiKey;
+        }
+        // 配置项语义是「默认模型根」而不是密钥：即使没绑定过目录也解析成绝对路径返回，
+        // 管理面才能告诉用户模型该放到哪（yaml 默认 models/onnx → 显示 user.dir/models/onnx）
+        return toAbsolute(onnxApiKey);
+    }
+
+    /**
+     * 把路径绝对化；已是绝对路径 / 空值原样返回。
+     *
+     * @param raw 原始路径
+     * @return 绝对路径；输入为空返回空串
+     */
+    private static String toAbsolute(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        try {
+            Path p = Paths.get(raw.trim());
+            if (p.isAbsolute()) {
+                return p.normalize().toString();
+            }
+            String base = System.getProperty("user.dir");
+            if (base == null || base.isBlank()) {
+                return p.toAbsolutePath().normalize().toString();
+            }
+            return Paths.get(base).resolve(p).normalize().toString();
+        } catch (Exception ex) {
+            return raw.trim();
+        }
     }
 
     /**

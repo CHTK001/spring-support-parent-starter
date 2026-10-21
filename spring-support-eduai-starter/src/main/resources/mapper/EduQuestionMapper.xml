@@ -9,6 +9,10 @@
             <if test="query.subject != null and query.subject != ''">
                 AND q.question_subject = #{query.subject}
             </if>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (q.question_stem LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR q.question_subject LIKE CONCAT('%', #{query.keyword}, '%'))
+            </if>
             <if test="query.gradeLevel != null and query.gradeLevel != ''">
                 AND q.question_grade_level = #{query.gradeLevel}
             </if>

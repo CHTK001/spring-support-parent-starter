@@ -74,4 +74,13 @@ public class EduClass {
      */
     @TableField("class_owner_user_id")
     private String ownerUserId;
+
+    /**
+     * 学生数（分页接口服务端填充，非表字段）。
+     *
+     * <p>班级列表分页后前端需要「每班学生数」列，但学生表按班级聚合在查询层做
+     * 更干净（避免前端为每行再拉一次学生列表）。</p>
+     */
+    @TableField(exist = false)
+    private Integer studentCount;
 }

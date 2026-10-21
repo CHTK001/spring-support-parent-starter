@@ -29,9 +29,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -600,6 +602,31 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         log.info("[EduAi] AI 选题: subject={}, gradeLevel={}, 期望={}, 候选={}, 实得={}",
                 dto.subject(), gradeLevel, count, fallbackIds.size(), ordered.size());
         return ordered;
+    }
+
+    @Override
+    public Map<String, Object> questionStats() {
+        EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
+        QueryWrapper<EduQuestion> base = new QueryWrapper<>();
+        base.ne("question_status", 0);
+        if (scope.ownerPredicate() != null) {
+            base.and(w -> w.isNull("question_owner_user_id").or().eq("question_owner_user_id", scope.ownerPredicate()));
+        }
+        long total = baseMapper.selectCount(base);
+        QueryWrapper<EduQuestion> pendingWrapper = base.clone().eq("question_audit_status", 0);
+        long pending = baseMapper.selectCount(pendingWrapper);
+        QueryWrapper<EduQuestion> todayWrapper = base.clone().ge("create_time", LocalDate.now().atStartOfDay());
+        long today = baseMapper.selectCount(todayWrapper);
+        List<Object> subjects = baseMapper.selectObjs(base.clone()
+                .select("DISTINCT question_subject")
+                .isNotNull("question_subject")
+                .ne("question_subject", ""));
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("total", total);
+        stats.put("pendingAudit", pending);
+        stats.put("todayNew", today);
+        stats.put("subjectCount", subjects == null ? 0 : subjects.stream().filter(java.util.Objects::nonNull).count());
+        return stats;
     }
 
     @Override

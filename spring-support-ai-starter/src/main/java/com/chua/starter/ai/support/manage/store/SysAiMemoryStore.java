@@ -100,11 +100,12 @@ public class SysAiMemoryStore {
     }
 
     /**
-     * 幂等建表（与 {@code db/init/V1.2__add_ai_memory.sql} 同结构）。
+     * 幂等建表（与 {@code db/init/V5.0__init_all_ai.sql} 同结构）。
      *
-     * <p>迁移链在「已建过表的库」上无法再交付新表：SPI Flyway 按 {@code version} 单列主键记录，
-     * 与 {@code V1.0__init_all.sql} 的同版本号冲突；内置迁移器又按带表名前缀的列名读取版本表，
-     * 两者互斥导致补丁脚本整体中止。故本表由存储层自证存在，与 {@link SysAiCompanionStore} 同口径。</p>
+     * <p>本表已收进 init_all 脚本（原先全仓没有迁移脚本，只靠运行期补建），
+     * 这里的兜底建表保留：新库靠迁移脚本建表，存量库/脚本未跑到的环境靠它自证存在。
+     * 两边都是 {@code CREATE TABLE IF NOT EXISTS}，先到先建，不冲突。
+     * 与 {@link SysAiCompanionStore} 同口径。</p>
      *
      * @param dataSource 数据源
      */

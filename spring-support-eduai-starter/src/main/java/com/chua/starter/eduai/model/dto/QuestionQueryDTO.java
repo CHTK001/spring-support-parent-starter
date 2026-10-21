@@ -27,6 +27,11 @@ public class QuestionQueryDTO {
     private String subject;
 
     /**
+     * 关键字（题干 / 学科）
+     */
+    private String keyword;
+
+    /**
      * 年段
      */
     private String gradeLevel;
