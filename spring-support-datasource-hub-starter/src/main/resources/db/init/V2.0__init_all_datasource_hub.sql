@@ -53,8 +53,25 @@ CREATE TABLE IF NOT EXISTS `ms_datasource`
     PRIMARY KEY (`id`)
 ) COMMENT '数据源台账';
 
-CREATE INDEX IF NOT EXISTS `idx_ms_datasource_name` ON `ms_datasource` (`datasource_name`);
-CREATE INDEX IF NOT EXISTS `idx_ms_datasource_type` ON `ms_datasource` (`datasource_type`);
+-- 索引：MySQL 不支持 CREATE INDEX IF NOT EXISTS（实测 8.4 报 1064），
+-- 故同样走 information_schema 判存 + 动态 DDL，可反复执行。
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND INDEX_NAME = 'idx_ms_datasource_name'),
+        'SELECT 1',
+        'CREATE INDEX `idx_ms_datasource_name` ON `ms_datasource` (`datasource_name`)'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND INDEX_NAME = 'idx_ms_datasource_type'),
+        'SELECT 1',
+        'CREATE INDEX `idx_ms_datasource_type` ON `ms_datasource` (`datasource_type`)'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
 
 -- ------------------------------------------------------------
 -- 存量库兼容 ALTER（新建库上方 CREATE TABLE 已含这些列，此处只对老库生效）
@@ -72,12 +89,67 @@ CREATE INDEX IF NOT EXISTS `idx_ms_datasource_type` ON `ms_datasource` (`datasou
 -- ⚠ 正因为该错误是静默的，列没建成要等到运行期 SELECT 才暴露成 Unknown column，
 --   所以必须靠 information_schema 断言来验证（见 final-check.sh）。
 -- ------------------------------------------------------------
-ALTER TABLE `ms_datasource`
-    ADD COLUMN `datasource_version` VARCHAR(16) NULL DEFAULT '' COMMENT '服务端大版本（influxdb: 2/3）' AFTER `datasource_type`,
-    ADD COLUMN `datasource_connect_latency_ms` BIGINT NULL COMMENT '连接延迟(毫秒)，最近一次测试回写' AFTER `datasource_status`,
-    ADD COLUMN `datasource_session_latency_ms` BIGINT NULL COMMENT '会话延迟(毫秒)，最近一次测试回写' AFTER `datasource_connect_latency_ms`,
-    ADD COLUMN `datasource_last_test_time` DATETIME NULL COMMENT '最近一次连通性测试时间' AFTER `datasource_session_latency_ms`,
-    ADD COLUMN `datasource_last_test_ok` INT NULL COMMENT '最近一次测试是否连通 - 0:失败, 1:成功' AFTER `datasource_last_test_time`;
+-- 存量库补列（原 V1.0 遗留的裸 ADD COLUMN）
+--
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- 每一列一条，可反复执行；列已存在时走 'SELECT 1' 分支，不重复建列。
+--
+-- 【为什么不用 ADD COLUMN IF NOT EXISTS】
+--   那是 MariaDB 语法，MySQL 8.4 不支持（实测 8.4.9 报 1064），
+--   MariaDB 11.8 同样拒绝。本应用不依赖 utils-support-mysql-starter，
+--   没有做方言展开的 ScriptConverter，SQL 原样透传给数据库。
+--
+-- 【为什么必须这么改】
+--   裸 ADD COLUMN 在全新库上必然报 1060（Duplicate column）——
+--   上方 CREATE TABLE 已经建好这些列了。这条错误被 continueOnError 静默吞掉，
+--   但代价是本脚本被记为 FAILED、每次启动都重跑一遍（重跑结果还是缺那张表），
+--   且真正需要补列的存量库上若前面某条语句失败，补列也可能没执行 ——
+--   列没建成要等到运行期 SELECT 才暴露成 Unknown column。
+--   改成判存动态 DDL 后：新库走空操作、老库正常补列、两种情况都算执行成功。
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_version'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_version` VARCHAR(16) NULL DEFAULT '''' COMMENT ''服务端大版本（influxdb: 2/3）'' AFTER `datasource_type`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_connect_latency_ms'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_connect_latency_ms` BIGINT NULL COMMENT ''连接延迟(毫秒)，最近一次测试回写'' AFTER `datasource_status`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_session_latency_ms'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_session_latency_ms` BIGINT NULL COMMENT ''会话延迟(毫秒)，最近一次测试回写'' AFTER `datasource_connect_latency_ms`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_last_test_time'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_last_test_time` DATETIME NULL COMMENT ''最近一次连通性测试时间'' AFTER `datasource_session_latency_ms`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_last_test_ok'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_last_test_ok` INT NULL COMMENT ''最近一次测试是否连通 - 0:失败, 1:成功'' AFTER `datasource_last_test_time`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
 
 -- ------------------------------------------------------------
 -- 进程控制方式（仅 nginx 类型使用）
@@ -86,9 +158,23 @@ ALTER TABLE `ms_datasource`
 -- 空     ：自动探测（认得出单元且当前用户有免密 systemctl 权限才走 systemd）
 -- 老数据源保持为空即维持原行为，不受本次改动影响
 -- ------------------------------------------------------------
-ALTER TABLE `ms_datasource`
-    ADD COLUMN `datasource_control_mode` VARCHAR(16) NULL DEFAULT '' COMMENT '进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测' AFTER `datasource_last_test_ok`,
-    ADD COLUMN `datasource_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测' AFTER `datasource_control_mode`;
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_control_mode'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_control_mode` VARCHAR(16) NULL DEFAULT '''' COMMENT ''进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测'' AFTER `datasource_last_test_ok`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_control_target'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_control_target` VARCHAR(255) NULL DEFAULT '''' COMMENT ''托管单元名(control_mode=systemd 时使用)，空则自动探测'' AFTER `datasource_control_mode`'));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
 
 -- ------------------------------------------------------------
 -- SSH 隧道配置（高级配置）
@@ -138,9 +224,16 @@ CREATE TABLE IF NOT EXISTS `ms_jdbc_driver_jar`
     ) COMMENT 'JDBC 驱动 jar 库';
 
 -- 数据源引用哪个驱动 jar；为空则走应用 classpath 上的内置驱动
--- 重复执行会报 1060，已被本脚本 continueOnError 吞掉（见文件头说明）
-ALTER TABLE `ms_datasource`
-    ADD COLUMN `datasource_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(ms_jdbc_driver_jar.id)，空=用内置驱动';
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL
+--（裸 ADD COLUMN 在新库上必然报 1060 Duplicate column，详见上方补列段说明）
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+          AND COLUMN_NAME = 'datasource_driver_jar_id'),
+        'SELECT 1',
+        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_driver_jar_id` BIGINT NULL COMMENT ''引用的驱动 jar(ms_jdbc_driver_jar.id)，空=用内置驱动'''));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
 
 -- ============================================================
 -- 以下四表原属 db/migration（V1.2–V1.7），现并入 init：
