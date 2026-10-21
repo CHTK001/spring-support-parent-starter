@@ -230,8 +230,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
     `sys_ai_usage_total_latency` BIGINT NULL COMMENT '总耗时(ms)',
     `sys_ai_usage_tokens_per_second` DOUBLE NULL COMMENT '解码速度(Token/秒)',
     `sys_ai_usage_total_tokens_per_second` DOUBLE NULL COMMENT '端到端吞吐(Token/秒)',
-    `sys_ai_usage_tokens_per_second` DOUBLE NULL COMMENT '解码速度(Token/秒)',
-    `sys_ai_usage_total_tokens_per_second` DOUBLE NULL COMMENT '端到端吞吐(Token/秒)',
   `sys_ai_usage_source` VARCHAR(32) NULL DEFAULT 'third_party' COMMENT '用量来源',
   `sys_ai_usage_estimated_tokens` TINYINT NULL DEFAULT 0 COMMENT 'token是否估算',
 
@@ -1471,16 +1469,23 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 服务实例（端口/协议开关/用量记录）';
 
 -- ------------------------------------------------------------
--- 存量库兼容 ALTER 已迁至 V1.1__add_ai_model_owner_and_task_elapsed.sql
+-- 存量库兼容 ALTER 已并入本文件末尾的 [三] 段。
 --
--- 原先 sys_ai_generate_task_elapsed 与 sys_ai_model 归属列/唯一键的两组 ALTER
--- 被追加在本文件末尾，对两类库都无效，是纯粹的负债：
---   * 存量库：本文件自 2026-09-30 起已记入 sys_database_version（success=true），
---     DataSourceFlyway 按文件名去重、整份跳过，追加在末尾的语句永远不会执行；
---   * 全新库：两列都已写进各自的 CREATE TABLE，裸 ADD COLUMN 必然报 1060 重复列，
---     整份脚本被标记 success=false 并在每次启动重试。
--- 请把新的存量库兼容 DDL 一律写成独立的版本脚本，不要追加到已发布的 V1.0 末尾。
+-- 新增的存量库兼容 DDL 请继续沿用 information_schema 判存 + 动态 DDL 的写法，
+-- 追加在 [三] 段内；不要在 [一]/[二] 段末尾另起裸 ALTER。
 -- ------------------------------------------------------------
+
+-- =====================================================================
+-- [二] 增量并入的表结构
+-- =====================================================================
+-- 以下九张表原先只由已删除的增量脚本建立，或仅由运行期 Java 侧 DDL 落库，
+-- 全新库上不会自动就位，故在此补齐为正式建表语句。
+--   sys_ai_tavern_group / _member / _message   源自 V4.0.0.48
+--   sys_ai_prompt_form / sys_ai_role_prompt    源自 V4.0.0.49
+--   sys_ai_session_trace                       源自 V4.0.0.51
+--   sys_ai_service_token / _access_log         源自 V4.0.0.52
+--   sys_ai_memory                              运行期由 SysAiMemoryStore 的
+--                                               幂等 DDL 自证存在，这里同结构建表
 
 -- ---------------------------------------------------------------------
 -- sys_ai_tavern_group（原 V4.0.0.48__fix_appkey_provider_and_add_tavern_tables.sql，已并入本文件）
