@@ -36,6 +36,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 酒馆群聊流式控制器（SSE）。
@@ -58,6 +61,18 @@ import java.util.concurrent.CountDownLatch;
 @RequiredArgsConstructor
 @Slf4j
 public class TavernChatController {
+
+    /**
+     * 酒馆群聊回复线程池。
+     *
+     * <p>主回复与触发了随机发言的成员在这条 SSE 里并行流式输出，
+     * 不能让线程池线程阻止 JVM 退出。</p>
+     */
+    private static final ExecutorService TAVERN_CHAT_POOL = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "tavern-chat-reply");
+        t.setDaemon(true);
+        return t;
+    });
 
     /**
      * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
@@ -128,11 +143,11 @@ public class TavernChatController {
             sendRaw(out, Map.of("type", "user_message", "content", content,
                     "atRoleId", atRoleId == null ? "" : atRoleId));
 
-            // 5. 主回复（主回复者用自己的上下文条数）
-            Streamed main = streamOne(out, groupId, group, speaker, content);
-            saveAiMessage(groupId, speaker, main);
-
-            // 6. 随机发言：其他开启了随机发言的成员，按各自概率依次接话（参考连接器）
+            // 4. 组装本轮回复成员：主回复在前，触发了随机发言的成员随后。
+            //    并行发起后，各自独立流式输出到同一条 SSE——不会像老的串行实现
+            //    那样让前面的角色阻塞后面的角色（前端感受就是「一个接一个回复」）。
+            List<SysAiTavernMember> speakers = new ArrayList<>();
+            speakers.add(speaker);
             for (SysAiTavernMember m : members) {
                 if (m.getId().equals(speaker.getId())) {
                     continue;
@@ -147,16 +162,41 @@ public class TavernChatController {
                 if (Math.random() * 100.0 >= p) {
                     continue;
                 }
-                Streamed otherStream = streamOne(out, groupId, group, m,
-                        "（群成员刚说完，用你自己的人设简短接一句，一两句话即可）");
-                saveAiMessage(groupId, m, otherStream);
+                speakers.add(m);
             }
+
+            // content 在方法开头可能被置空，lambda 内引用的必须是 effectively final 变量
+            final String userPrompt = content;
+
+            // 5. 主回复与随机发言并行执行；请求线程只等全部完成再发 turn_end。
+            CountDownLatch replyLatch = new CountDownLatch(speakers.size());
+            for (SysAiTavernMember replyMember : speakers) {
+                boolean isMain = replyMember.getId().equals(speaker.getId());
+                TAVERN_CHAT_POOL.submit(() -> {
+                    try {
+                        String prompt = isMain ? userPrompt
+                                : "（群成员刚说完，用你自己的人设简短接一句，一两句话即可）";
+                        Streamed reply = streamOne(out, groupId, group, replyMember, prompt);
+                        saveAiMessage(groupId, replyMember, reply);
+                    } catch (Exception e) {
+                        log.error("[TavernChat] 并行回复失败 groupId={} memberId={}",
+                                groupId, replyMember.getId(), e);
+                        sendRaw(out, Map.of("type", "finish", "finishReason", "error",
+                                "error", e.getMessage()));
+                    } finally {
+                        replyLatch.countDown();
+                    }
+                });
+            }
+            replyLatch.await(5, TimeUnit.MINUTES);
 
             sendRaw(out, Map.of("type", "turn_end", "finishReason", "stop"));
             out.write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
             out.flush();
         } catch (ApiException e) {
             throw e;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.error("[TavernChat] 流式失败 groupId={}", groupId, e);
         }
@@ -244,7 +284,10 @@ public class TavernChatController {
                     chunk -> {
                         if (chunk != null && !chunk.isEmpty()) {
                             full.append(chunk);
-                            sendRaw(out, Map.of("type", "text", "content", chunk));
+                            sendRaw(out, Map.of(
+                                    "type", "text",
+                                    "speakerId", String.valueOf(member.getRoleId()),
+                                    "content", chunk));
                         }
                     },
                     (reply, usage) -> {
@@ -258,6 +301,8 @@ public class TavernChatController {
                     },
                     err -> {
                         sendRaw(out, Map.of("type", "finish", "finishReason", "error",
+                                "speakerId", String.valueOf(member.getRoleId()),
+                                "speakerName", roleName,
                                 "error", err != null ? err.getMessage() : "生成失败"));
                         latch.countDown();
                     },
@@ -267,7 +312,10 @@ public class TavernChatController {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.warn("[TavernChat] streamOne 失败 memberId={}: {}", member.getId(), e.getMessage());
-            sendRaw(out, Map.of("type", "finish", "finishReason", "error", "error", e.getMessage()));
+            sendRaw(out, Map.of("type", "finish", "finishReason", "error",
+                    "speakerId", String.valueOf(member.getRoleId()),
+                    "speakerName", roleName,
+                    "error", e.getMessage()));
         }
         sendRaw(out, Map.of("type", "finish", "finishReason", "stop",
                 "speakerId", String.valueOf(member.getRoleId()), "speakerName", roleName));
@@ -568,12 +616,16 @@ public class TavernChatController {
     }
 
     private void sendRaw(OutputStream out, Map<String, Object> event) {
-        try {
-            String json = objectMapper.writeValueAsString(event);
-            out.write(("data: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
-            out.flush();
-        } catch (Exception e) {
-            log.debug("[TavernChat] sendRaw 失败: {}", e.getMessage());
+        // 并行回复会从多个线程写同一条 SSE，必须串行写完整帧，否则两个角色
+        // 的 text 事件可能交错，前端 JSON.parse 会失败（表现为流式突然中断）。
+        synchronized (out) {
+            try {
+                String json = objectMapper.writeValueAsString(event);
+                out.write(("data: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
+                out.flush();
+            } catch (Exception e) {
+                log.debug("[TavernChat] sendRaw 失败: {}", e.getMessage());
+            }
         }
     }
 

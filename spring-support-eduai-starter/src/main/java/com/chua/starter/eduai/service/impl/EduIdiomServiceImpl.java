@@ -42,6 +42,7 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
 
     @Override
     public PageResult<EduIdiom> pageQuery(String keyword, String gradeLevel, String grade,
+                                         Integer difficulty,
                                          Integer pageNum, Integer pageSize) {
         Page<EduIdiom> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
         QueryWrapper<EduIdiom> wrapper = new QueryWrapper<>();
@@ -54,6 +55,9 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
             wrapper.and(w -> w.like("idiom_content", kw)
                     .or().like("idiom_pinyin", kw)
                     .or().like("idiom_meaning", kw));
+        }
+        if (difficulty != null) {
+            wrapper.eq("idiom_difficulty", difficulty);
         }
         if (gradeLevel != null && !gradeLevel.isBlank()) {
             QueryWrapper<EduIdiomGrade> gw = new QueryWrapper<EduIdiomGrade>()

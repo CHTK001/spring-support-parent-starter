@@ -1422,6 +1422,16 @@ public class ApiProviderController {
         map.put("platform", provider.getPlatform());
         map.put("name", provider.getName());
         map.put("base_url", provider.getBaseUrl());
+        // ONNX 供应商补 model_root：本地模型的真实落盘位置（绝对路径），供管理面显示与核对。
+        // 用 displayModelRoot() 而非 readModelRoot()：后者未绑定过目录时返回空串，
+        // 页面就不知道「模型该放到哪」；前者回落注册表默认根（models/onnx）并按
+        // user.dir 绝对化，永远给出可直接复制的完整路径。
+        // 只放这一个字段：/providers 是非管理员也可调的接口（写操作才拦），
+        // 而 ONNX 行对非管理员已整体不返回（listProviders / listProviderModels 都过滤），
+        // 因此该路径只可能到达管理员；不放 credentials.api_key（那是凭证语义）。
+        if (isOnnxRow(provider)) {
+            map.put("model_root", onnxExternalDirectoryService.displayModelRoot());
+        }
         map.put("auth_scheme", provider.getAuthScheme());
         boolean hasCreds = provider.getCredentials() != null && !provider.getCredentials().isEmpty();
         map.put("has_credentials", hasCreds);
@@ -1515,6 +1525,20 @@ public class ApiProviderController {
         map.put("temperature", model.getTemperature());
         map.put("top_p", model.getTopP());
         map.put("frequency_penalty", model.getFrequencyPenalty());
+        // ONNX 模型补 external / available：设置页的模型选择器在 onnx 分支里
+        // 按 `m.external === true` 过滤（见 DefaultModelSettings.loadModels），
+        // 而本方法此前从不返回这两个键 —— 于是「图片识别/人脸/OCR」等分组的
+        // 模型弹框里 ONNX 模型一个都不显示，提示「没有匹配类型的模型」，
+        // 用户无从配置，只能靠接口写库绕过去。
+        // external=true 表示该模型由「绑定外部目录」登记（模板模型名 + 独立权重目录），
+        // 这类模型的权重一定在本地；内置模型则用 ModelRegistry 是否已注册判定可用性，
+        // 避免把上百个未下载的候选也列出来。
+        if (isOnnxRow(provider)) {
+            boolean external = isExternalBoundModel(model.getModel());
+            map.put("external", external);
+            map.put("available", external || com.chua.deeplearning.support.engine.ModelRegistry
+                    .isRegistered(model.getModel()));
+        }
         List<Map<String, Object>> caps = model.getCapabilities() != null
                 ? model.getCapabilities().stream().map(this::toCapabilityResponse).collect(Collectors.toList())
                 : new ArrayList<>(1);
@@ -2947,6 +2971,36 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param id 模型标识候选值
      * @return true 表示形如 {@code /xxx}（Unix）或 {@code X:/xxx} / {@code X:\xxx}（Windows）
      */
+    /**
+     * 判断某个 ONNX 模型名是否由「绑定外部目录」登记而来。
+     *
+     * <p>外部目录绑定时会把「模板模型名」写进条目（{@code template} 字段），
+     * 所以拿模型名去比对 template 即可 —— 目录路径本身不是模型名，不参与比对。</p>
+     *
+     * <p>为什么需要：设置页模型选择器在 onnx 分支按 {@code external === true} 过滤，
+     * 而 {@code /api/providers} 原先不返回该键，导致所有 ONNX 模型都选不到。</p>
+     *
+     * @param modelName 模型名（如 {@code image-colorize}）
+     * @return true 表示由外部目录登记
+     */
+    private boolean isExternalBoundModel(String modelName) {
+        if (modelName == null || modelName.isBlank()) {
+            return false;
+        }
+        try {
+            for (Map<String, String> en : onnxExternalDirectoryService.readEntries()) {
+                String tpl = en.get("template");
+                if (tpl != null && !tpl.isBlank() && tpl.trim().equals(modelName.trim())) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            // 外部目录读取失败不能让整个 providers 列表挂掉，按「内置模型」处理
+            log.debug("[ONNX] 读取外部目录失败，按内置处理: {}", e.getMessage());
+        }
+        return false;
+    }
+
     private static boolean isAbsolutePathLike(String id) {
         if (id == null || id.isBlank()) {
             return false;

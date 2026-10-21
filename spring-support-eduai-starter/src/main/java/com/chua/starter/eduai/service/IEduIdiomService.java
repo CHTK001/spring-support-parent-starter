@@ -31,11 +31,13 @@ public interface IEduIdiomService extends IService<EduIdiom> {
      * @param keyword    关键字（成语 / 拼音 / 释义），可为空
      * @param gradeLevel 学段，可为空
      * @param grade      年级，可为空
+     * @param difficulty 难度（1~5），可为空
      * @param pageNum    页码
      * @param pageSize   每页条数
      * @return 分页结果
      */
     PageResult<EduIdiom> pageQuery(String keyword, String gradeLevel, String grade,
+                                  Integer difficulty,
                                   Integer pageNum, Integer pageSize);
 
     /**

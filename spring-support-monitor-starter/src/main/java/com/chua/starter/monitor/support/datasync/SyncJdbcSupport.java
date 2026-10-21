@@ -69,10 +69,15 @@ public final class SyncJdbcSupport {
      * <p>走 {@code DatabaseMetaData.getColumns}：表名允许写成 {@code 库.表}，此时前半段作为
      * catalog 定位，否则用连接的当前 catalog。</p>
      *
+     * <p><strong>表不存在时的行为</strong>：MySQL 驱动对不存在的表直接抛
+     * {@code SQLException("Table ... doesn't exist")}，让调用方无法区分「表不存在」和
+     * 「元数据读取失败」。这里先用 {@code getTables} 预检：<b>表不存在返回空列表</b>，
+     * 由调用方决定语义（预览建表场景允许空目标列，执行场景再单独报错），其余异常照抛。</p>
+     *
      * @param conn  连接
      * @param table 表名，可带一段 {@code 库.表} 限定
-     * @return 列列表（按表定义顺序）
-     * @throws SQLException 元数据读取失败
+     * @return 列列表（按表定义顺序）；表不存在时返回空列表
+     * @throws SQLException 元数据读取失败（非「表不存在」）
      */
     public static List<SyncColumnVO> tableColumns(Connection conn, String table) throws SQLException {
         String catalog = conn.getCatalog();
@@ -81,6 +86,9 @@ public final class SyncJdbcSupport {
         if (dot > 0) {
             catalog = table.substring(0, dot);
             tableName = table.substring(dot + 1);
+        }
+        if (!tableExists(conn, catalog, tableName)) {
+            return new ArrayList<>();
         }
         DatabaseMetaData meta = conn.getMetaData();
         List<SyncColumnVO> columns = new ArrayList<>();
@@ -93,6 +101,25 @@ public final class SyncJdbcSupport {
             }
         }
         return columns;
+    }
+
+    /**
+     * 判断一张表（含 {@code 库.表} 限定）在当前连接里是否存在。
+     *
+     * <p>走 {@code DatabaseMetaData.getTables}，{@code type=["TABLE"]} 过滤视图；
+     * 大小写按驱动默认处理（MySQL 的 information_schema 表名匹配通常大小写不敏感）。</p>
+     *
+     * @param conn      连接
+     * @param catalog   catalog（库名），可为 空 使用连接默认
+     * @param tableName 表名（不含库前缀）
+     * @return 存在返回 true
+     * @throws SQLException 元数据读取失败
+     */
+    public static boolean tableExists(Connection conn, String catalog, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(catalog, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
     }
 
     /**

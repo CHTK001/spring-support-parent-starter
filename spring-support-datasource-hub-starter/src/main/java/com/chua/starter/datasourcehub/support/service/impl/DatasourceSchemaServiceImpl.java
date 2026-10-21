@@ -249,6 +249,12 @@ public class DatasourceSchemaServiceImpl implements DatasourceSchemaService {
                 return new TableDdlVO(table, true, false, List.of(), readColumns(connection, table),
                         List.of(), warnings);
             }
+            // 设计表：把「界面里设计出的列」视为目标结构，与现有结构对齐差异。
+            // 新增列 ADD、类型/可空变化的列 ALTER、设计里删掉的列 DROP、主键变化时重建主键。
+            if ("DESIGN".equals(strategy)) {
+                return designExistingTable(connection, table, definitions, primaryKey, request.comment(),
+                        warnings, execute);
+            }
             Set<String> existingColumns = JdbcDialectSupport.columnNames(connection, table);
             List<String> appended = new ArrayList<>();
             List<String> statements = new ArrayList<>();
@@ -382,6 +388,172 @@ public class DatasourceSchemaServiceImpl implements DatasourceSchemaService {
             throw new IllegalArgumentException("非法表名或列名: " + name);
         }
         return name.trim();
+    }
+
+    /**
+     * 设计已有表：把请求里的列视为目标结构，与现有结构对齐差异。
+     *
+     * <p>新增列走 ADD，类型（基础类型）或可空性变化的列走 ALTER，请求里不再出现的
+     * 现有列走 DROP，主键与现有主键不一致时重建主键。预览只拼 SQL 文本，执行才落库。</p>
+     *
+     * @param connection 数据库连接
+     * @param table      表名
+     * @param definitions 设计列
+     * @param primaryKey 主键列（可能为空）
+     * @param comment    表注释
+     * @param warnings   提示收集
+     * @param execute    true=执行，false=只预览
+     * @return 结果
+     * @throws SQLException 读取/执行失败
+     */
+    private TableDdlVO designExistingTable(Connection connection, String table,
+                                           List<JdbcDialectSupport.ColumnDef> definitions,
+                                           List<String> primaryKey, String comment,
+                                           List<String> warnings, boolean execute) throws SQLException {
+        List<SchemaColumnVO> current = readColumns(connection, table);
+        Map<String, SchemaColumnVO> currentByLower = new HashMap<>();
+        for (SchemaColumnVO column : current) {
+            currentByLower.put(column.name().toLowerCase(Locale.ROOT), column);
+        }
+        Set<String> wanted = new HashSet<>();
+        List<String> statements = new ArrayList<>();
+        List<String> appended = new ArrayList<>();
+        for (JdbcDialectSupport.ColumnDef definition : definitions) {
+            String name = definition.name();
+            wanted.add(name.toLowerCase(Locale.ROOT));
+            SchemaColumnVO existing = currentByLower.get(name.toLowerCase(Locale.ROOT));
+            if (existing == null) {
+                statements.add(JdbcDialectSupport.addColumnSql(connection, table, definition));
+                appended.add(name);
+                warnings.add("新增列 " + name);
+                if (execute) {
+                    JdbcDialectSupport.addColumn(connection, table, definition);
+                }
+            } else if (definitionChanged(existing, definition)) {
+                statements.add(alterColumnSql(connection, table, definition));
+                warnings.add("修改列 " + name + "（" + baseType(existing.typeName()) + " → "
+                        + definition.type() + (definition.nullable() ? " 可空" : " 非空") + "）");
+                if (execute) {
+                    JdbcDialectSupport.alterColumn(connection, table, name,
+                            bareType(definition.type()), mysqlColumnFragment(definition),
+                            definition.nullable(), definition.defaultValue(), definition.comment());
+                }
+            }
+        }
+        List<String> dropped = new ArrayList<>();
+        for (SchemaColumnVO column : current) {
+            if (!wanted.contains(column.name().toLowerCase(Locale.ROOT))) {
+                dropped.add(column.name());
+                statements.add(JdbcDialectSupport.dropColumnSql(connection, table, column.name()));
+                warnings.add("删除列 " + column.name());
+                if (execute) {
+                    JdbcDialectSupport.dropColumn(connection, table, column.name());
+                }
+            }
+        }
+        List<String> currentKeys = JdbcDialectSupport.primaryKeys(connection, table);
+        List<String> wantedKeys = new ArrayList<>();
+        for (String key : primaryKey) {
+            wantedKeys.add(key);
+        }
+        if (!keysEqual(currentKeys, wantedKeys)) {
+            statements.add(JdbcDialectSupport.setPrimaryKeySql(connection, table, wantedKeys));
+            warnings.add("主键更新为 " + (wantedKeys.isEmpty() ? "无" : String.join(", ", wantedKeys)));
+            if (execute) {
+                JdbcDialectSupport.setPrimaryKey(connection, table, wantedKeys);
+            }
+        }
+        return new TableDdlVO(table, true, false, appended,
+                execute ? readColumns(connection, table) : current, statements, warnings);
+    }
+
+    /**
+     * 请求列与现有列是否定义不同。
+     *
+     * @param existing   现有列元数据
+     * @param definition 请求列定义
+     * @return true=需要 ALTER
+     */
+    private boolean definitionChanged(SchemaColumnVO existing, JdbcDialectSupport.ColumnDef definition) {
+        boolean typeChanged = !baseType(definition.type()).equals(baseType(existing.typeName()));
+        boolean nullableChanged = existing.nullable() != definition.nullable();
+        return typeChanged || nullableChanged;
+    }
+
+    /**
+     * 取类型的基础名（去掉长度/括号/修饰符），仅用于判断「类型是否变了」。
+     *
+     * @param type 原始类型文本
+     * @return 基础类型名大写，如 VARCHAR
+     */
+    private String baseType(String type) {
+        if (!StringUtils.hasText(type)) {
+            return "";
+        }
+        String text = type.trim();
+        int paren = text.indexOf('(');
+        if (paren > 0) {
+            text = text.substring(0, paren);
+        }
+        return text.toUpperCase(Locale.ROOT).trim();
+    }
+
+    /**
+     * 取仅类型（去修饰符），供非 MySQL 方言的 alterColumn 使用。
+     *
+     * @param type 原始类型文本
+     * @return 类型文本
+     */
+    private String bareType(String type) {
+        return StringUtils.hasText(type) ? type.trim() : "VARCHAR(255)";
+    }
+
+    /**
+     * MySQL 系的完整列定义片段（类型 + 非空 + 默认值 + 注释）。
+     *
+     * @param definition 列定义
+     * @return MODIFY COLUMN 后拼接的片段
+     */
+    private String mysqlColumnFragment(JdbcDialectSupport.ColumnDef definition) {
+        StringBuilder fragment = new StringBuilder(definition.type());
+        if (!definition.nullable()) {
+            fragment.append(" NOT NULL");
+        }
+        if (definition.defaultValue() != null && !definition.defaultValue().isBlank()) {
+            fragment.append(" DEFAULT '").append(definition.defaultValue().replace("'", "''")).append('\'');
+        }
+        if (definition.comment() != null && !definition.comment().isEmpty()) {
+            fragment.append(" COMMENT '").append(definition.comment().replace("'", "''")).append('\'');
+        }
+        return fragment.toString();
+    }
+
+    /**
+     * 生成修改列的 DDL 文本（MySQL 形态，仅预览）。
+     *
+     * @param connection 数据库连接
+     * @param table      表名
+     * @param definition 列定义
+     * @return ALTER TABLE ... MODIFY COLUMN 语句
+     */
+    private String alterColumnSql(Connection connection, String table,
+                                  JdbcDialectSupport.ColumnDef definition) {
+        return "ALTER TABLE " + JdbcDialectSupport.quote(connection, table)
+                + " MODIFY COLUMN " + JdbcDialectSupport.quote(connection, definition.name())
+                + " " + mysqlColumnFragment(definition);
+    }
+
+    /**
+     * 主键列表是否一致（大小写不敏感）。
+     *
+     * @param left  现有主键
+     * @param right 请求主键
+     * @return true=一致
+     */
+    private boolean keysEqual(List<String> left, List<String> right) {
+        List<String> a = left.stream().map(String::toLowerCase).sorted().toList();
+        List<String> b = right.stream().map(String::toLowerCase).sorted().toList();
+        return a.equals(b);
     }
 
     /**

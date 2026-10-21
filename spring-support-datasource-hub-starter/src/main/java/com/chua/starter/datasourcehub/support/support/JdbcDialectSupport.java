@@ -267,6 +267,116 @@ public final class JdbcDialectSupport {
     }
 
     /**
+     * 删除一列（跨方言）。
+     *
+     * @param conn   数据库连接
+     * @param table  表名
+     * @param column 列名
+     * @throws SQLException 执行失败
+     */
+    public static void dropColumn(Connection conn, String table, String column) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE " + quote(conn, table) + " DROP COLUMN " + quote(conn, column));
+        }
+    }
+
+    /**
+     * 生成删除列的 DDL 文本（不执行）。
+     *
+     * @param conn   数据库连接
+     * @param table  表名
+     * @param column 列名
+     * @return DROP COLUMN 语句
+     */
+    public static String dropColumnSql(Connection conn, String table, String column) {
+        return "ALTER TABLE " + quote(conn, table) + " DROP COLUMN " + quote(conn, column);
+    }
+
+    /**
+     * 读取表主键列（跨方言）。
+     *
+     * @param conn  数据库连接
+     * @param table 表名
+     * @return 主键列名列表，无主键时为空
+     * @throws SQLException 读取失败
+     */
+    public static List<String> primaryKeys(Connection conn, String table) throws SQLException {
+        List<String> keys = new ArrayList<>();
+        try (ResultSet rs = conn.getMetaData().getPrimaryKeys(conn.getCatalog(), conn.getSchema(), table)) {
+            while (rs.next()) {
+                keys.add(rs.getString("COLUMN_NAME"));
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * 设置主键（跨方言）：与现有主键一致时不动，否则先清空再建。
+     *
+     * @param conn    数据库连接
+     * @param table   表名
+     * @param columns 主键列名，空列表表示清空主键
+     * @throws SQLException 执行失败
+     */
+    public static void setPrimaryKey(Connection conn, String table, List<String> columns) throws SQLException {
+        List<String> current = primaryKeys(conn, table);
+        List<String> wanted = new ArrayList<>();
+        if (columns != null) {
+            for (String column : columns) {
+                if (column != null && !column.isBlank()) {
+                    wanted.add(column.trim());
+                }
+            }
+        }
+        if (current.size() == wanted.size() && current.stream().map(String::toLowerCase).toList()
+                .equals(wanted.stream().map(String::toLowerCase).toList())) {
+            return;
+        }
+        if (!current.isEmpty()) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE " + quote(conn, table) + " DROP PRIMARY KEY");
+            }
+        }
+        if (!wanted.isEmpty()) {
+            List<String> quoted = new ArrayList<>(wanted.size());
+            for (String column : wanted) {
+                quoted.add(quote(conn, column));
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("ALTER TABLE " + quote(conn, table)
+                        + " ADD PRIMARY KEY (" + String.join(", ", quoted) + ")");
+            }
+        }
+    }
+
+    /**
+     * 生成设置主键的 DDL 文本（不执行）。
+     *
+     * @param conn    数据库连接
+     * @param table   表名
+     * @param columns 主键列名
+     * @return 主键变更语句，无需变更时为空字符串
+     */
+    public static String setPrimaryKeySql(Connection conn, String table, List<String> columns) {
+        List<String> wanted = new ArrayList<>();
+        if (columns != null) {
+            for (String column : columns) {
+                if (column != null && !column.isBlank()) {
+                    wanted.add(column.trim());
+                }
+            }
+        }
+        if (wanted.isEmpty()) {
+            return "ALTER TABLE " + quote(conn, table) + " DROP PRIMARY KEY";
+        }
+        List<String> quoted = new ArrayList<>(wanted.size());
+        for (String column : wanted) {
+            quoted.add(quote(conn, column));
+        }
+        return "ALTER TABLE " + quote(conn, table) + " ADD PRIMARY KEY (" + String.join(", ", quoted) + ")";
+    }
+
+    /**
      * 应用/清除列注释（跨方言）。
      *
      * <p>MySQL 系内联在列定义中，本方法无操作；H2/PostgreSQL/Oracle 需 {@code COMMENT ON COLUMN}。
