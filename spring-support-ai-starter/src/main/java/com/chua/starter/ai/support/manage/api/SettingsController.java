@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.ai.support.util.PrivateAddressGuard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingDefinitions;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
@@ -230,6 +231,33 @@ public class SettingsController {
             throw new ApiException(ApiErrorCode.FORBIDDEN,
                     "以下配置项仅管理员可修改：" + String.join("、", hit));
         }
+
+        // ③ 字段名层面再加一条**否决**规则。
+        //    「含 model 就放行」是按名字猜语义：将来出现 model_base_url / model_host
+        //    这类字段会被直接放行，而它是地址。人工审计会随字段增删悄悄失效，
+        //    所以补一条「名字里带地址/凭据/路径语义就不放行」，把这类字段挡在门外。
+        if (modelGroup) {
+            List<String> addressLike = settings.keySet().stream()
+                    .filter(SettingsController::isAddressLikeField)
+                    .toList();
+            if (!addressLike.isEmpty()) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN,
+                        "以下配置项仅管理员可修改：" + String.join("、", addressLike));
+            }
+        }
+
+        // ④ 值层面：不论字段叫什么，只要取值指向本机 / 内网就拒绝。
+        //    前两道都是「按字段名」判定，而模型 id 本身就能被写成带地址的形式
+        //    （http://127.0.0.1:11434/v1），字段名完全看不出来。这一道看值。
+        List<String> localTargets = settings.entrySet().stream()
+                .filter(e -> PrivateAddressGuard.looksLikePrivateTarget(
+                        e.getValue() == null ? null : e.getValue().toString()))
+                .map(Map.Entry::getKey)
+                .toList();
+        if (!localTargets.isEmpty()) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN,
+                    "以下配置项不允许指向本机或内网地址：" + String.join("、", localTargets));
+        }
     }
 
     /**
@@ -262,6 +290,39 @@ public class SettingsController {
         }
         String lower = field.toLowerCase(Locale.ROOT);
         return lower.contains("model") || USER_WRITABLE_FIELDS.contains(lower);
+    }
+
+    /**
+     * 字段名里带地址 / 凭据 / 路径语义的关键字。
+     *
+     * <p>这是一条**否决**规则：即便字段落在放行分组内、名字里也确实含 {@code model}
+     * （例如 {@code model_base_url}），只要命中这里就仍按管理员专属处理。
+     * 判据故意放宽到「名字里出现即否决」，因为误杀只是让管理员去改一次，
+     * 漏放则是把地址与凭据交给普通账号。</p>
+     */
+    private static final String[] ADDRESS_LIKE_KEYWORDS = {
+            "url", "uri", "host", "endpoint", "addr", "port", "proxy", "socket",
+            "path", "dir", "folder", "file",
+            "key", "secret", "token", "password", "credential", "auth",
+    };
+
+    /**
+     * 判断字段名是否带地址 / 凭据 / 路径语义。
+     *
+     * @param field 字段名
+     * @return true 表示普通账号不得写入
+     */
+    private static boolean isAddressLikeField(String field) {
+        if (field == null) {
+            return false;
+        }
+        String lower = field.toLowerCase(Locale.ROOT);
+        for (String keyword : ADDRESS_LIKE_KEYWORDS) {
+            if (lower.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
