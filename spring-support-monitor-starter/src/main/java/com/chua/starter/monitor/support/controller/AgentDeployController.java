@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
+
 
 /**
  * Agent 自动部署控制器
@@ -171,5 +174,41 @@ public class AgentDeployController {
      */
     private ReturnResult<String> submit(Long id, AgentDeployService.Action action) {
         return deployService.submit(id, action);
+    }
+
+    /**
+     * 向目标主机注入 APM Java Agent（运行时字节码注入型 RuntimeAgent）。
+     *
+     * @param id 主机标识
+     * @return 受理结果
+     */
+    @Operation(summary = "注入 APM JavaAgent", description = "投递 runtime-agent.jar 并写入 JAVA_TOOL_OPTIONS，目标 JVM 启动时自动加载字节码注入 Agent")
+    @PostMapping("/{id}/inject-apm")
+    public ReturnResult<String> injectApm(@PathVariable Long id) {
+        return deployService.injectApmAgent(id);
+    }
+
+    /**
+     * 移除目标主机已注入的 APM Java Agent。
+     *
+     * @param id 主机标识
+     * @return 受理结果
+     */
+    @Operation(summary = "移除 APM JavaAgent", description = "清理远端 JAVA_TOOL_OPTIONS 注入条目与 apm-agent.jar")
+    @PostMapping("/{id}/uninject-apm")
+    public ReturnResult<String> uninjectApm(@PathVariable Long id) {
+        return deployService.uninjectApmAgent(id);
+    }
+
+    /**
+     * 查询目标主机 APM Java Agent 注入状态。
+     *
+     * @param id 主机标识
+     * @return 注入状态
+     */
+    @Operation(summary = "APM JavaAgent 状态", description = "查询远端 APM JavaAgent 注入配置与 jar 路径")
+    @GetMapping("/{id}/apm-status")
+    public ReturnResult<Map<String, Object>> apmStatus(@PathVariable Long id) {
+        return deployService.apmStatus(id);
     }
 }

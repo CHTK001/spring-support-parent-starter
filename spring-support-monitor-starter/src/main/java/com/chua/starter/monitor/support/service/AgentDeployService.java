@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 /**
  * Agent 部署生命周期服务
@@ -84,4 +85,28 @@ public interface AgentDeployService {
      * @return 可读的 jar 路径
      */
     Path packageFile();
+
+    /**
+     * 向目标主机注入 APM Java Agent（运行时字节码注入型 RuntimeAgent）。
+     *
+     * @param hostId 主机标识
+     * @return 受理结果
+     */
+    ReturnResult<String> injectApmAgent(Long hostId);
+
+    /**
+     * 移除目标主机已注入的 APM Java Agent 配置。
+     *
+     * @param hostId 主机标识
+     * @return 受理结果
+     */
+    ReturnResult<String> uninjectApmAgent(Long hostId);
+
+    /**
+     * 查询目标主机 APM Java Agent 注入状态。
+     *
+     * @param hostId 主机标识
+     * @return 状态结果
+     */
+    ReturnResult<Map<String, Object>> apmStatus(Long hostId);
 }

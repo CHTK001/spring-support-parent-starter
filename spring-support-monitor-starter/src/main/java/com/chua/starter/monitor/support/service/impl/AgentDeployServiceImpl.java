@@ -28,7 +28,9 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -164,6 +166,310 @@ public class AgentDeployServiceImpl implements AgentDeployService {
     @Override
     public Path packageFile() {
         return resolveArtifact();
+    }
+
+    @Override
+    public ReturnResult<String> injectApmAgent(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (!running.add(hostId)) {
+            return ReturnResult.error("该主机已有 Agent 操作在执行中，请等待完成后再试");
+        }
+        try {
+            executor.submit(() -> {
+                try {
+                    doInjectApm(hostId);
+                } finally {
+                    running.remove(hostId);
+                }
+            });
+        } catch (RuntimeException e) {
+            running.remove(hostId);
+            return ReturnResult.error("任务提交失败: " + e.getMessage());
+        }
+        return ReturnResult.ok("submitted", "APM JavaAgent 注入任务已提交");
+    }
+
+    @Override
+    public ReturnResult<String> uninjectApmAgent(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (!running.add(hostId)) {
+            return ReturnResult.error("该主机已有 Agent 操作在执行中，请等待完成后再试");
+        }
+        try {
+            executor.submit(() -> {
+                try {
+                    doUninjectApm(hostId);
+                } finally {
+                    running.remove(hostId);
+                }
+            });
+        } catch (RuntimeException e) {
+            running.remove(hostId);
+            return ReturnResult.error("任务提交失败: " + e.getMessage());
+        }
+        return ReturnResult.ok("submitted", "APM JavaAgent 移除任务已提交");
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> apmStatus(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        try {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("hostId", hostId);
+            result.put("busy", running.contains(hostId));
+            result.put("apmJarUrl", properties.getApmJarUrl() != null && !properties.getApmJarUrl().isBlank());
+            result.put("apmJarPath", properties.getApmJarPath() != null && !properties.getApmJarPath().isBlank());
+            result.put("options", properties.getApmOptions());
+            String remoteJar = remoteApmJarPath(null);
+            result.put("remoteJarName", properties.getApmRemoteName());
+            result.put("remoteJarPath", remoteJar);
+            result.put("javaToolOptions", properties.getApmWindowsEnvName());
+            return ReturnResult.ok(result);
+        } catch (Exception e) {
+            return ReturnResult.error("查询 APM 注入状态失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 异步执行 APM JavaAgent 注入。
+     *
+     * @param hostId 主机标识
+     */
+    private void doInjectApm(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            push(hostId, 0, "主机不存在: " + hostId, "error");
+            return;
+        }
+        String remoteJar = remoteApmJarPath(host);
+        try {
+            push(hostId, 5, "建立远端通道...", "info");
+            Session session = open(host);
+            // profile 里的 -javaagent 必须是 JVM 可解析的绝对路径
+            remoteJar = session.join(session.dir, remoteJar);
+            push(hostId, 18, "投递 APM RuntimeAgent jar...", "info");
+            Path local = resolveApmArtifact();
+            deliver(session, local, remoteJar);
+
+            push(hostId, 45, "写入 JAVA_TOOL_OPTIONS 环境注入配置...", "info");
+            if (session.windows) {
+                injectWindows(session, remoteJar);
+            } else {
+                injectLinux(session, remoteJar);
+            }
+            push(hostId, 88, "校验远端配置...", "info");
+            if (!verifyApmInjected(session, remoteJar)) {
+                markFailure(hostId, "APM 注入配置未生效，请检查远端权限");
+                push(hostId, 0, "APM 注入配置未生效", "error");
+                return;
+            }
+            host.setServerHostAgentEnabled(1);
+            hostMapper.updateById(host);
+            push(hostId, 100, "APM JavaAgent 注入完成（jar=" + remoteJar + "）", "success");
+            log.info("[agent-deploy] hostId={} APM JavaAgent 注入成功", hostId);
+        } catch (Exception e) {
+            log.warn("[agent-deploy] hostId={} APM 注入失败: {}", hostId, e.getMessage());
+            markFailure(hostId, "APM 注入失败: " + e.getMessage());
+            push(hostId, 0, "APM 注入失败: " + e.getMessage(), "error");
+        }
+    }
+
+    /**
+     * 异步执行 APM JavaAgent 移除。
+     *
+     * @param hostId 主机标识
+     */
+    private void doUninjectApm(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            push(hostId, 0, "主机不存在: " + hostId, "error");
+            return;
+        }
+        String remoteJar = remoteApmJarPath(host);
+        try {
+            push(hostId, 5, "建立远端通道...", "info");
+            Session session = open(host);
+            // 与注入保持一致：用会话目录下的绝对路径定位远端 jar
+            remoteJar = session.join(session.dir, remoteJar);
+            push(hostId, 30, "移除 JAVA_TOOL_OPTIONS 注入条目...", "info");
+            if (session.windows) {
+                uninjectWindows(session, remoteJar);
+            } else {
+                uninjectLinux(session, remoteJar);
+            }
+            push(hostId, 70, "清理远端 APM jar...", "info");
+            if (session.windows) {
+                session.tryExec("Remove-Item -Force '" + remoteJar + "' -ErrorAction SilentlyContinue", PROBE_TIMEOUT_SECONDS);
+            } else {
+                session.tryExec(sudo(session) + "rm -f '" + remoteJar + "'", PROBE_TIMEOUT_SECONDS);
+            }
+            push(hostId, 100, "APM JavaAgent 已移除", "success");
+            log.info("[agent-deploy] hostId={} APM JavaAgent 移除成功", hostId);
+        } catch (Exception e) {
+            log.warn("[agent-deploy] hostId={} APM 移除失败: {}", hostId, e.getMessage());
+            markFailure(hostId, "APM 移除失败: " + e.getMessage());
+            push(hostId, 0, "APM 移除失败: " + e.getMessage(), "error");
+        }
+    }
+
+    /**
+     * Linux 注入：写入 /etc/profile.d/apm-javaagent.sh，export JAVA_TOOL_OPTIONS。
+     *
+     * @param session 会话
+     * @param remoteJar 远端 jar 路径
+     */
+    private void injectLinux(Session session, String remoteJar) throws IOException {
+        String options = properties.getApmOptions() == null ? "" : properties.getApmOptions().trim();
+        String suffix = options.isEmpty() ? "" : "," + options;
+        String content = "export JAVA_TOOL_OPTIONS=\"${JAVA_TOOL_OPTIONS} -javaagent:" + remoteJar + suffix + "\"\n";
+        Path tmp = Files.createTempFile("apm-javaagent", ".sh");
+        try {
+            Files.writeString(tmp, content, StandardCharsets.UTF_8);
+            // /etc/profile.d 对普通用户不可写：先落到会话可写目录，再 sudo 搬入
+            String staging = session.join(session.dir, "apm-javaagent.sh");
+            session.put(tmp, staging);
+            session.exec(sudo(session) + "cp -f " + staging + " " + properties.getApmLinuxProfile(), PROBE_TIMEOUT_SECONDS);
+            session.exec(sudo(session) + "chmod +x " + properties.getApmLinuxProfile(), PROBE_TIMEOUT_SECONDS);
+            session.tryExec(sudo(session) + "rm -f " + staging, PROBE_TIMEOUT_SECONDS);
+        } finally {
+            Files.deleteIfExists(tmp);
+        }
+    }
+
+    /**
+     * Linux 移除：删除 profile.d 文件并清理 JAVA_TOOL_OPTIONS 条目。
+     *
+     * @param session 会话
+     * @param remoteJar 远端 jar 路径
+     */
+    private void uninjectLinux(Session session, String remoteJar) {
+        session.tryExec(sudo(session) + "rm -f " + properties.getApmLinuxProfile(), PROBE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * Windows 注入：设置用户级 JAVA_TOOL_OPTIONS 环境变量。
+     *
+     * @param session 会话
+     * @param remoteJar 远端 jar 路径
+     */
+    private void injectWindows(Session session, String remoteJar) {
+        String options = properties.getApmOptions() == null ? "" : properties.getApmOptions().trim();
+        String suffix = options.isEmpty() ? "" : "," + options;
+        String javaAgent = "-javaagent:" + remoteJar.replace("'", "''") + suffix;
+        String script = "$o=[Environment]::GetEnvironmentVariable('" + properties.getApmWindowsEnvName()
+                + "','User');"
+                + "$n='" + javaAgent + "';"
+                + "if ($o) { "
+                + "  if ($o -notlike '*" + javaAgent.replace("'", "''") + "*') { $n=$o+' '+$n } else { $n=$o } "
+                + "};"
+                + "[Environment]::SetEnvironmentVariable('" + properties.getApmWindowsEnvName() + "',$n,'User')";
+        session.exec(script, PROBE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * Windows 移除：从用户级 JAVA_TOOL_OPTIONS 移除 javaagent 条目。
+     *
+     * @param session 会话
+     * @param remoteJar 远端 jar 路径
+     */
+    private void uninjectWindows(Session session, String remoteJar) {
+        String needle = "-javaagent:" + remoteJar.replace("'", "''");
+        String script = "$o=[Environment]::GetEnvironmentVariable('" + properties.getApmWindowsEnvName()
+                + "','User');"
+                + "if ($o) { "
+                + "  $parts=@($o -split '\\s+' | Where-Object { $_ -and $_ -notlike '*" + needle + "*' });"
+                + "  $n=$parts -join ' ';"
+                + "  [Environment]::SetEnvironmentVariable('" + properties.getApmWindowsEnvName() + "',$n,'User') "
+                + "}";
+        session.exec(script, PROBE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * 校验远端 APM 注入是否生效。
+     *
+     * @param session 会话
+     * @param remoteJar 远端 jar 路径
+     * @return 是否生效
+     */
+    private boolean verifyApmInjected(Session session, String remoteJar) {
+        if (session.windows) {
+            String out = trimOut(session.tryExec("$o=[Environment]::GetEnvironmentVariable('"
+                    + properties.getApmWindowsEnvName() + "','User'); $o", PROBE_TIMEOUT_SECONDS));
+            return out != null && out.contains("-javaagent:" + remoteJar);
+        }
+        String out = trimOut(session.tryExec("cat " + properties.getApmLinuxProfile() + " 2>/dev/null", PROBE_TIMEOUT_SECONDS));
+        return out != null && out.contains(remoteJar);
+    }
+
+    /**
+     * 定位本地 APM RuntimeAgent jar。
+     *
+     * @return jar 路径
+     */
+    private Path resolveApmArtifact() {
+        String configured = properties.getApmJarPath();
+        if (configured != null && !configured.isBlank()) {
+            Path p = Paths.get(configured.trim());
+            if (Files.isReadable(p)) {
+                return p;
+            }
+            throw new IllegalStateException("配置的 APM jar 不存在: " + configured);
+        }
+        String base = System.getProperty("user.dir");
+        List<Path> candidates = new ArrayList<>();
+        candidates.add(Paths.get(base, "utils-support-runtime-agent", "target",
+                "utils-support-runtime-agent-" + readAgentVersion() + ".jar"));
+        candidates.add(Paths.get(base, "utils-support-parent-starter",
+                "utils-support-runtime-parent", "utils-support-runtime-agent", "target",
+                "utils-support-runtime-agent-4.0.0.42.jar"));
+        for (Path candidate : candidates) {
+            if (Files.isReadable(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("未找到本地 APM jar；请配置 plugin.monitor.agent.apm-jar-path 或 apm-jar-url 后重试");
+    }
+
+    /**
+     * 读取本地 APM jar 版本（用于候选路径探测）。
+     *
+     * @return 版本号
+     */
+    private String readAgentVersion() {
+        return "4.0.0.42";
+    }
+
+    /**
+     * 远端 APM jar 路径。
+     *
+     * @param host 主机（可为 null）
+     * @return 路径
+     */
+    private String remoteApmJarPath(MsServerHost host) {
+        String name = properties.getApmRemoteName() == null || properties.getApmRemoteName().isBlank()
+                ? "apm-agent.jar" : properties.getApmRemoteName();
+        String dir = properties.getRemoteDirName() == null || properties.getRemoteDirName().isBlank()
+                ? "monitor-agent" : properties.getRemoteDirName();
+        // 远端路径由 provider 决定，这里返回相对名，实际由 Session.join 拼路径
+        return name;
     }
 
     /**
