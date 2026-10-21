@@ -3,6 +3,7 @@ package com.chua.starter.filesystem.support.config;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.filesystem.support.controller.FileDirController;
 import com.chua.starter.filesystem.support.controller.FileObjectController;
+import com.chua.starter.filesystem.support.controller.FileServerConfigController;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import com.chua.starter.filesystem.support.properties.FileStorageUploadProperties;
@@ -82,6 +83,23 @@ public class FileSystemAutoConfiguration {
     @ConditionalOnMissingBean
     public FileDirController fileDirController(FileStorageProperties properties) {
         return new FileDirController(properties);
+    }
+
+    /**
+     * 创建文件服务器运行期配置控制器（前端进入文件管理页前拉取当前形态与地址）。
+     *
+     * @param serverProperties 文件服务器配置
+     * @param storageProperties 文件存储配置
+     * @param contextPath      应用上下文路径（如 {@code /system/api}）
+     * @return 文件服务器配置控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FileServerConfigController fileServerConfigController(
+            FileStorageServerProperties serverProperties,
+            FileStorageProperties storageProperties,
+            @org.springframework.beans.factory.annotation.Value("${server.servlet.context-path:}") String contextPath) {
+        return new FileServerConfigController(serverProperties, storageProperties, contextPath);
     }
 
     /**
