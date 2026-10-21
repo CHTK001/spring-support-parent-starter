@@ -5,7 +5,6 @@ import com.chua.starter.filesystem.support.pojo.FileServerConfigResponse;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -115,13 +114,11 @@ class FileServerConfigControllerTest {
     }
 
     /**
-     * 手动装配 controller，并注入 context-path（@Value 字段不参与构造器）。
+     * 手动装配 controller。
      */
     private static FileServerConfigController controller(FileStorageServerProperties server,
                                                          FileStorageProperties storage,
                                                          String contextPath) {
-        FileServerConfigController controller = new FileServerConfigController(server, storage);
-        ReflectionTestUtils.setField(controller, "contextPath", contextPath);
-        return controller;
+        return new FileServerConfigController(server, storage, contextPath);
     }
 }

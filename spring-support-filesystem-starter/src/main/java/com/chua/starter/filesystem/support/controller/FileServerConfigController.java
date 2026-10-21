@@ -6,7 +6,6 @@ import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 4.0.0.42
  */
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/v2/file")
 @Tag(name = "文件服务器配置接口")
 public class FileServerConfigController {
@@ -45,8 +43,23 @@ public class FileServerConfigController {
     /**
      * 应用上下文路径（如 {@code /system/api}），embedded 拼路径用
      */
-    @Value("${server.servlet.context-path:}")
-    private String contextPath;
+    private final String contextPath;
+
+    /**
+     * 构造器。
+     *
+     * @param serverProperties 文件服务器配置
+     * @param storageProperties 文件存储配置
+     * @param contextPath      应用上下文路径（如 {@code /system/api}）
+     */
+    public FileServerConfigController(
+            FileStorageServerProperties serverProperties,
+            FileStorageProperties storageProperties,
+            @Value("${server.servlet.context-path:}") String contextPath) {
+        this.serverProperties = serverProperties;
+        this.storageProperties = storageProperties;
+        this.contextPath = contextPath == null ? "" : contextPath;
+    }
 
     /**
      * 读取文件服务器当前运行期配置。
