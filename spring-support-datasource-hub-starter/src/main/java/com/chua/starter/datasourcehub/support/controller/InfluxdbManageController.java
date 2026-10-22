@@ -7,6 +7,7 @@ import com.chua.starter.datasourcehub.support.model.InfluxdbOrgVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbQueryResultVO;
 import com.chua.starter.datasourcehub.support.model.MiddlewareTestVO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbBucketDTO;
+import com.chua.starter.datasourcehub.support.model.dto.InfluxdbMeasurementDeleteDTO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbQueryDTO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbWriteDTO;
 import com.chua.starter.datasourcehub.support.model.dto.MiddlewareTestDTO;
@@ -170,6 +171,24 @@ public class InfluxdbManageController {
     public ReturnResult<Boolean> write(@RequestBody InfluxdbWriteDTO request) {
         return call("写入 InfluxDB 数据点", () -> {
             influxdbManageService.write(request);
+            return Boolean.TRUE;
+        });
+    }
+
+    /**
+     * 删除测量（InfluxDB 的「表」）。
+     *
+     * <p>v1/v2 用 InfluxQL {@code DROP MEASUREMENT}，v3 用 SQL
+     * {@code DROP TABLE}。删除前需二次确认（页面端负责）。</p>
+     *
+     * @param request 删除请求
+     * @return 是否删除成功
+     */
+    @Operation(summary = "删除 InfluxDB 测量")
+    @PostMapping("/measurement/drop")
+    public ReturnResult<Boolean> dropMeasurement(@RequestBody InfluxdbMeasurementDeleteDTO request) {
+        return call("删除 InfluxDB 测量", () -> {
+            influxdbManageService.dropMeasurement(request);
             return Boolean.TRUE;
         });
     }
