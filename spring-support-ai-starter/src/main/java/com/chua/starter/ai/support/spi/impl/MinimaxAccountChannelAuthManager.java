@@ -111,6 +111,13 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         handle.put("handle", deviceCode);
         handle.put("code_verifier", verifier);
         handle.put("verifyUrl", verificationUri);
+        // ⚠️ user_code 必须单独回给前端：授权页虽是「打开即用」，
+        // 但用户常需要在页面上手动复核这段码，前端弹窗也据此展示。
+        // 上游把它只拼进 verification_uri_complete 的 query，这里显式取出来。
+        String userCode = readString(payload, "user_code");
+        if (!isBlank(userCode)) {
+            handle.put("user_code", userCode);
+        }
         handle.put("expires_in", payload.get("expires_in"));
         handle.put("startedAt", System.currentTimeMillis());
         return handle;

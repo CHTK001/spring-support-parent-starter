@@ -41,14 +41,6 @@ import java.util.UUID;
 @Spi("qoder")
 public class QoderAccountChannelAuthManager implements AccountChannelAuthManager {
 
-    /** 国内版配置差异（同协议，不同 host / clientId）。 */
-    static final class CnConfig {
-        static final String CHANNEL = "qoder-cn";
-        static final String AUTH_BASE = "https://qoder.cn";
-        static final String OPEN_API_BASE = "https://openapi.qoder.com.cn";
-        static final String CLIENT_ID = "732aef47-9cf2-46a2-95fe-4cebb5d0d1fa";
-    }
-
     static final String CHANNEL = "qoder";
     static final String AUTH_BASE = "https://qoder.com";
     static final String OPEN_API_BASE = "https://openapi.qoder.sh";
@@ -108,8 +100,8 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
                 + "&challenge_method=S256"
                 + "&nonce=" + encode(nonce)
                 + "&machine_id=" + encode(machineId)
-                + "&client_id=" + encode(CLIENT_ID);
-        String verifyUrl = AUTH_BASE + DEVICE_SELECT_PATH + "?" + query;
+                + "&client_id=" + encode(clientId());
+        String verifyUrl = authBase() + DEVICE_SELECT_PATH + "?" + query;
 
         Map<String, Object> handle = new LinkedHashMap<>(session);
         handle.put("handle", nonce);
@@ -139,7 +131,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         String query = "nonce=" + encode(readString(handle, H_NONCE))
                 + "&verifier=" + encode(readString(handle, H_VERIFIER))
                 + "&challenge_method=S256";
-        String url = OPEN_API_BASE + POLL_PATH + "?" + query;
+        String url = openApiBase() + POLL_PATH + "?" + query;
         String response = getTolerant404(url, Map.of("Accept", "application/json"));
 
         Map<String, Object> payload = parseJson(response);
@@ -169,7 +161,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("refresh_token", refreshToken);
         body.put("machine_id", machineId);
-        String response = ChannelHttp.postJson(OPEN_API_BASE + REFRESH_PATH, Json.toJSONString(body),
+        String response = ChannelHttp.postJson(openApiBase() + REFRESH_PATH, Json.toJSONString(body),
                 Map.of("Content-Type", "application/json", "Accept", "application/json"));
         Map<String, Object> payload = parseJson(response);
         String accessToken = firstString(payload, "token", "device_token", "access_token");
@@ -201,7 +193,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
             return status("expired", "访问令牌已到期");
         }
         try {
-            String response = ChannelHttp.getJson(OPEN_API_BASE + USERINFO_PATH,
+            String response = ChannelHttp.getJson(openApiBase() + USERINFO_PATH,
                     authHeaders(accessToken));
             Map<String, Object> payload = parseJson(response);
             Map<String, Object> result = status("valid", "探活成功");
@@ -238,7 +230,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         int replayed = 0;
         int amount = 0;
         try {
-            String campaignsBody = ChannelHttp.getJson(OPEN_API_BASE + CAMPAIGNS_PATH, sashHeaders());
+            String campaignsBody = ChannelHttp.getJson(openApiBase() + CAMPAIGNS_PATH, sashHeaders());
             Map<String, Object> campaigns = parseJson(campaignsBody);
             Object rawList = campaigns.get("campaigns");
             if (rawList instanceof List<?> list) {
@@ -260,7 +252,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
                         continue;
                     }
                     String claimBody = ChannelHttp.postJson(
-                            OPEN_API_BASE + CAMPAIGNS_PATH + "/" + encode(campaignId) + "/claim",
+                            openApiBase() + CAMPAIGNS_PATH + "/" + encode(campaignId) + "/claim",
                             "{}", sashHeaders());
                     Map<String, Object> claimResult = parseJson(claimBody);
                     Object status = claimResult.get("status");
@@ -319,189 +311,30 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
             model("performance", "Performance", 1_000_000, true));
 
     /**
-     * {@code qoder-cn} 变体：与国内版同一套协议实现，仅 host/clientId 不同。
-     * 由扩展文件单独注册。
+     * 授权页所在站点。
+     *
+     * @return 形如 {@code https://qoder.com}（国内变体覆写）
      */
-    @Spi("qoder-cn")
-    static final class Cn extends QoderAccountChannelAuthManager {
+    protected String authBase() {
+        return AUTH_BASE;
+    }
 
-        @Override
-        public String channel() {
-            return CnConfig.CHANNEL;
-        }
+    /**
+     * OpenAPI 站点（轮询取 token / 续期 / 用户信息 / 签到都挂这里）。
+     *
+     * @return 形如 {@code https://openapi.qoder.sh}（国内变体覆写）
+     */
+    protected String openApiBase() {
+        return OPEN_API_BASE;
+    }
 
-        @Override
-        public String displayName() {
-            return "Qoder（国内）";
-        }
-
-        @Override
-        public Map<String, Object> startLogin() {
-            Map<String, Object> session = newSession();
-            String query = "challenge=" + encode((String) session.get("challenge"))
-                    + "&challenge_method=S256"
-                    + "&nonce=" + encode((String) session.get("nonce"))
-                    + "&machine_id=" + encode((String) session.get("machine_id"))
-                    + "&client_id=" + encode(CnConfig.CLIENT_ID);
-            Map<String, Object> handle = new LinkedHashMap<>(session);
-            handle.put("handle", session.get("nonce"));
-            handle.put("verifyUrl", CnConfig.AUTH_BASE + DEVICE_SELECT_PATH + "?" + query);
-            handle.put(H_LAST_POLL_AT, 0L);
-            return handle;
-        }
-
-        @Override
-        public Map<String, Object> pollLogin(Map<String, Object> handle) {
-            if (handle == null || isBlank(readString(handle, H_VERIFIER)) || isBlank(readString(handle, H_NONCE))) {
-                throw new ApiException(ApiErrorCode.INVALID_PARAM, "Qoder 登录句柄缺失 verifier / nonce");
-            }
-            long now = System.currentTimeMillis();
-            Long lastPollAt = toLong(handle.get(H_LAST_POLL_AT));
-            if (lastPollAt != null && now - lastPollAt < POLL_INTERVAL_MS) {
-                return null;
-            }
-            handle.put(H_LAST_POLL_AT, now);
-            String url = CnConfig.OPEN_API_BASE + POLL_PATH + "?"
-                    + "nonce=" + encode(readString(handle, H_NONCE))
-                    + "&verifier=" + encode(readString(handle, H_VERIFIER))
-                    + "&challenge_method=S256";
-            String response = getTolerant404(url, Map.of("Accept", "application/json"));
-            Map<String, Object> payload = parseJson(response);
-            String accessToken = firstString(payload, "token", "device_token", "access_token");
-            if (isBlank(accessToken)) {
-                return null;
-            }
-            return buildCredential(payload, handle);
-        }
-
-        @Override
-        public Map<String, Object> refresh(Map<String, Object> credentials) {
-            String refreshToken = readString(credentials, "refresh_token");
-            String machineId = readString(credentials, "machine_id");
-            if (isBlank(refreshToken) || isBlank(machineId)) {
-                throw new ApiException(ApiErrorCode.UNAUTHORIZED,
-                        "Qoder 凭据缺少 refresh_token 或 machine_id，无法续期");
-            }
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("refresh_token", refreshToken);
-            body.put("machine_id", machineId);
-            String response = ChannelHttp.postJson(CnConfig.OPEN_API_BASE + REFRESH_PATH, Json.toJSONString(body),
-                    Map.of("Content-Type", "application/json", "Accept", "application/json"));
-            Map<String, Object> payload = parseJson(response);
-            String accessToken = firstString(payload, "token", "device_token", "access_token");
-            if (isBlank(accessToken)) {
-                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
-                        "Qoder 续期响应缺少 token: " + ChannelHttp.truncate(response));
-            }
-            Map<String, Object> refreshed = buildCredential(payload, null);
-            refreshed.put("machine_id", machineId);
-            copyIfPresent(credentials, refreshed, "uid");
-            copyIfPresent(credentials, refreshed, "nickname");
-            return refreshed;
-        }
-
-        @Override
-        public Map<String, Object> status(Map<String, Object> credentials) {
-            String accessToken = readString(credentials, "access_token");
-            if (isBlank(accessToken)) {
-                return QoderAccountChannelAuthManager.status("invalid", "凭据缺少 access_token");
-            }
-            Long expireTime = toLong(credentials.get("expire_time"));
-            if (expireTime != null && expireTime <= System.currentTimeMillis()) {
-                return QoderAccountChannelAuthManager.status("expired", "访问令牌已到期");
-            }
-            try {
-                String response = ChannelHttp.getJson(CnConfig.OPEN_API_BASE + USERINFO_PATH, authHeaders(accessToken));
-                Map<String, Object> payload = parseJson(response);
-                Map<String, Object> result = QoderAccountChannelAuthManager.status("valid", "探活成功");
-                String name = readString(payload, "name");
-                if (name != null) {
-                    result.put("nickname", name);
-                }
-                return result;
-            } catch (ApiException e) {
-                String message = e.getMessage() == null ? "" : e.getMessage();
-                if (message.contains("401") || message.contains("403")) {
-                    return QoderAccountChannelAuthManager.status("invalid", "探活 401/403: " + message);
-                }
-                return QoderAccountChannelAuthManager.status("valid", "探活失败（网络），按本地有效期视为可用: " + message);
-            }
-        }
-
-        @Override
-        public Map<String, Object> checkin(Map<String, Object> credentials) {
-            Map<String, Object> result = new LinkedHashMap<>(credentials);
-            String accessToken = readString(credentials, "access_token");
-            if (isBlank(accessToken)) {
-                result.put("claimResult", "凭据缺少 access_token，无法签到");
-                return result;
-            }
-            int claimed = 0;
-            int replayed = 0;
-            int amount = 0;
-            try {
-                String campaignsBody = ChannelHttp.getJson(CnConfig.OPEN_API_BASE + CAMPAIGNS_PATH, sashHeaders());
-                Map<String, Object> campaigns = parseJson(campaignsBody);
-                Object rawList = campaigns.get("campaigns");
-                if (rawList instanceof List<?> list) {
-                    for (Object item : list) {
-                        if (!(item instanceof Map<?, ?> entry)) {
-                            continue;
-                        }
-                        String actionType = String.valueOf(entry.get("actionType"));
-                        String claimStatus = String.valueOf(entry.get("claimStatus"));
-                        String campaignId = entry.get("campaignId") == null ? "" : String.valueOf(entry.get("campaignId"));
-                        if (!"CLAIM_BENEFIT".equals(actionType) || campaignId.isBlank()) {
-                            continue;
-                        }
-                        if ("CLAIMED".equals(claimStatus)) {
-                            replayed++;
-                            continue;
-                        }
-                        if (!"CLAIMABLE".equals(claimStatus)) {
-                            continue;
-                        }
-                        String claimBody = ChannelHttp.postJson(
-                                CnConfig.OPEN_API_BASE + CAMPAIGNS_PATH + "/" + encode(campaignId) + "/claim",
-                                "{}", sashHeaders());
-                        Map<String, Object> claimResult = parseJson(claimBody);
-                        Object status = claimResult.get("status");
-                        if (Boolean.TRUE.equals(claimResult.get("replayed"))) {
-                            replayed++;
-                        } else if (status != null && !"CLAIMED".equals(String.valueOf(status))) {
-                            result.put("claimResult", "签到失败: " + ChannelHttp.truncate(claimBody));
-                            return result;
-                        } else {
-                            claimed++;
-                            Object a = claimResult.get("amount");
-                            if (a instanceof Number n) {
-                                amount += n.intValue();
-                            }
-                        }
-                    }
-                }
-            } catch (ApiException e) {
-                result.put("claimResult", "签到请求失败: " + e.getMessage());
-                return result;
-            }
-            if (claimed > 0) {
-                result.put("claimResult", "已领取 " + claimed + " 项活动，积分 " + amount);
-                result.put("claimedCredits", amount);
-            } else if (replayed > 0) {
-                result.put("claimResult", "今日已领取过（" + replayed + " 项）");
-            } else {
-                result.put("claimResult", "当前无活动可领取（活动每日 10:00 UTC+8 刷新）");
-            }
-            return result;
-        }
-
-        @Override
-        public List<Map<String, Object>> listModels(Map<String, Object> credentials) {
-            return List.of(
-                    model("dfmodel", "DeepSeek-Flash", 1_000_000, true),
-                    model("gm51model", "GLM-5.2", 1_000_000, true),
-                    model("kmodel_latest", "Kimi-K3", 200_000, true));
-        }
+    /**
+     * 授权页使用的 client_id。
+     *
+     * @return 国际版 client_id（国内变体覆写）
+     */
+    protected String clientId() {
+        return CLIENT_ID;
     }
 
     // ── 私有辅助 ──
@@ -593,7 +426,16 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return result;
     }
 
-    private static Map<String, Object> model(String id, String name, int contextWindow, boolean supportsImage) {
+    /**
+     * 构造一条模型描述（子类 {@link QoderCnAccountChannelAuthManager} 也用）。
+     *
+     * @param id 模型 id
+     * @param name 展示名
+     * @param contextWindow 上下文窗口
+     * @param supportsImage 是否支持图片
+     * @return 模型描述
+     */
+    static Map<String, Object> model(String id, String name, int contextWindow, boolean supportsImage) {
         Map<String, Object> model = new LinkedHashMap<>();
         model.put("id", id);
         model.put("name", name);
