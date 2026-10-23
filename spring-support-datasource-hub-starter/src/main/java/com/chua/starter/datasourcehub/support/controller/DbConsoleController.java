@@ -15,6 +15,8 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport;
 import com.chua.starter.datasourcehub.support.dbconsole.DbErDiagram;
 import com.chua.starter.datasourcehub.support.dbconsole.DbFilter;
 import com.chua.starter.datasourcehub.support.dbconsole.DbObjectDialect;
+import com.chua.starter.datasourcehub.support.dbconsole.DbProcessKillRequest;
+import com.chua.starter.datasourcehub.support.dbconsole.DbProcessVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlBatchVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlExecuteDTO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlResultVO;
@@ -2169,6 +2171,217 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         } catch (Exception e) {
             return ReturnResult.error("删除数据库失败: " + e.getMessage());
         }
+    }
+
+    // ==================== 数据库进程管理（显示进程 / 关闭 / 批量关闭） ====================
+
+    /**
+     * 查询目标库当前进程（会话）列表。
+     *
+     * <p><b>能力与方言</b>：进程列表是内核特有能力，不是所有 JDBC 数据源都有 ——
+     * MySQL 系走 {@code SHOW PROCESSLIST}，PostgreSQL 走 {@code pg_stat_activity}，
+     * 其余方言（Oracle / SQLServer / 文件库）返回 {@code supported=false}，前端据此
+     * 不显示「显示进程」右键入口（能力声明与类型判断都在这一层做）。</p>
+     *
+     * <p><b>为什么不用游标分页</b>：进程列表通常只有几百行，一次拉回即可；
+     * 内核返回什么列就透传什么，前端按本端点的统一行结构渲染。</p>
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @return 进程列表（supported=false 表示该内核不支持）
+     */
+    @Operation(summary = "数据库进程列表")
+    @GetMapping("processes")
+    public ReturnResult<java.util.Map<String, Object>> processes(
+            @RequestParam(required = false) Long datasourceId) {
+        return callDb("查询数据库进程", () -> {
+            String url = "";
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                java.util.List<DbProcessVO> rows;
+                if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+                    rows = listMySqlProcesses(conn);
+                } else if (lower.startsWith("jdbc:postgresql:")) {
+                    rows = listPostgresProcesses(conn);
+                } else {
+                    java.util.Map<String, Object> unsupported = new java.util.LinkedHashMap<>();
+                    unsupported.put("supported", false);
+                    unsupported.put("processes", java.util.List.of());
+                    unsupported.put("message", "该数据库内核不支持进程列表（仅 MySQL/MariaDB/PostgreSQL 支持）");
+                    return unsupported;
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("processes", rows);
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 关闭单个数据库进程（会话）。
+     *
+     * @param request 请求：datasourceId + pid
+     * @return 是否成功
+     */
+    @Operation(summary = "关闭数据库进程")
+    @SysLog(name = "关闭数据库进程")
+    @PostMapping("process/kill")
+    public ReturnResult<Boolean> killProcess(@RequestBody DbProcessKillRequest request) {
+        if (request == null || isBlank(request.pid())) {
+            return ReturnResult.error("进程 ID 不能为空");
+        }
+        return killProcessesInternal(request.datasourceId(), java.util.List.of(request.pid()));
+    }
+
+    /**
+     * 批量关闭数据库进程（会话）。
+     *
+     * @param request 请求：datasourceId + pids
+     * @return 关闭结果（成功数 / 失败数）
+     */
+    @Operation(summary = "批量关闭数据库进程")
+    @SysLog(name = "批量关闭数据库进程")
+    @PostMapping("processes/kill")
+    public ReturnResult<java.util.Map<String, Object>> killProcesses(@RequestBody DbProcessKillRequest request) {
+        if (request == null || request.pids() == null || request.pids().isEmpty()) {
+            return ReturnResult.error("进程 ID 列表不能为空");
+        }
+        return killProcessesInternal(request.datasourceId(), request.pids());
+    }
+
+    /**
+     * 关闭进程的公共实现：MySQL 系 {@code KILL <id>}，PostgreSQL {@code pg_terminate_backend(<id>)}。
+     *
+     * @param datasourceId 数据源 ID
+     * @param pids         进程 ID 列表
+     * @param <T>          返回类型
+     * @param <T>          返回类型
+     * @return 关闭结果
+     */
+    private <T> ReturnResult<T> killProcessesInternal(Long datasourceId, java.util.List<String> pids) {
+        return callDb("关闭数据库进程", () -> {
+            java.util.Set<String> safePids = new java.util.LinkedHashSet<>();
+            for (String pid : pids) {
+                String trimmed = isBlank(pid) ? "" : pid.trim();
+                if (trimmed.matches("\\d{1,15}")) {
+                    safePids.add(trimmed);
+                }
+            }
+            if (safePids.isEmpty()) {
+                return (T) new java.util.LinkedHashMap<String, Object>() {{
+                    put("successCount", 0);
+                    put("failCount", pids.size());
+                    put("message", "没有有效的进程 ID");
+                }};
+            }
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                String url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                String killSql;
+                if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+                    killSql = "KILL ";
+                } else if (lower.startsWith("jdbc:postgresql:")) {
+                    killSql = "SELECT pg_terminate_backend(?)";
+                } else {
+                    throw new IllegalStateException("该数据库内核不支持进程关闭");
+                }
+                int success = 0;
+                java.util.List<String> failures = new java.util.ArrayList<>();
+                for (String pid : safePids) {
+                    try {
+                        if (killSql.endsWith("?")) {
+                            try (java.sql.PreparedStatement stmt = conn.prepareStatement(killSql)) {
+                                stmt.setLong(1, Long.parseLong(pid));
+                                stmt.execute();
+                            }
+                        } else {
+                            try (java.sql.Statement stmt = conn.createStatement()) {
+                                stmt.execute(killSql + pid);
+                            }
+                        }
+                        success++;
+                    } catch (Exception e) {
+                        failures.add(pid);
+                    }
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("successCount", success);
+                result.put("failCount", failures.size());
+                result.put("message", failures.isEmpty()
+                        ? "已关闭 " + success + " 个进程"
+                        : "成功 " + success + " 个，失败 " + failures.size() + " 个（失败 PID: " + failures + "）");
+                return (T) result;
+            }
+        });
+    }
+
+    /**
+     * MySQL/MariaDB：{@code SHOW PROCESSLIST}。
+     */
+    private java.util.List<DbProcessVO> listMySqlProcesses(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbProcessVO> out = new java.util.ArrayList<>();
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery("SHOW PROCESSLIST")) {
+            java.sql.ResultSetMetaData meta = rs.getMetaData();
+            while (rs.next()) {
+                out.add(new DbProcessVO(
+                        rs.getString("Id"),
+                        rs.getString("User"),
+                        rs.getString("Host"),
+                        rs.getString("db"),
+                        rs.getString("Command"),
+                        longOrNull(rs, "Time"),
+                        rs.getString("Info"),
+                        null));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * PostgreSQL：{@code pg_stat_activity}。
+     */
+    private java.util.List<DbProcessVO> listPostgresProcesses(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbProcessVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT pid, usename, coalesce(application_name,''), "
+                + "coalesce(client_addr::text,''), state, extract(epoch from now()-query_start)::bigint, query "
+                + "FROM pg_stat_activity";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                out.add(new DbProcessVO(
+                        rs.getString(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4),
+                        rs.getString(5),
+                        rs.getLong(6),
+                        rs.getString(7),
+                        null));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 读取数据源 JDBC URL（用于内核判断）。
+     */
+    private String jdbcUrlOf(Long datasourceId) {
+        return datasourceService.jdbcInfo(datasourceId).url();
+    }
+
+    private static Long longOrNull(java.sql.ResultSet rs, String column) {
+        try {
+            long v = rs.getLong(column);
+            return rs.wasNull() ? null : v;
+        } catch (java.sql.SQLException e) {
+            return null;
+        }
+    }
+
+    private static boolean isBlank(String text) {
+        return text == null || text.isBlank();
     }
 
 
