@@ -128,16 +128,17 @@ public class ApiChannelAuthController {
     public ApiResult<List<Map<String, Object>>> listChannels() {
         Map<String, AccountChannelAuthManager> managers = managers();
         List<Map<String, Object>> items = new ArrayList<>(managers.size());
-        // ⚠️ 按 channel 去重：SPI 注册表若因类加载器/资源合并导致同一实现出现两次，
-        // 前端会渲染出重复卡片（历史问题：「Qoder（国内）」出现两条）。
-        // 这里以 channel 为唯一键做防御性去重，保持首次出现顺序。
         java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        // ⚠️ 去重的键必须取实现自己的 channel()，不能用注册表的键：
+        // SPI 框架会给每个实现额外登记一条「类简名」definition
+        // （QoderCnAccountChannelAuthManager → QODERCN），与 @Spi 别名（QODER-CN）
+        // 指向同一个实例，用注册表键去重会让国内变体出现两张卡片。
         for (Map.Entry<String, AccountChannelAuthManager> entry : managers.entrySet()) {
-            String channel = entry.getKey();
             AccountChannelAuthManager impl = entry.getValue();
-            if (channel == null || impl == null || !seen.add(channel)) {
+            if (impl == null || impl.channel() == null || !seen.add(impl.channel())) {
                 continue;
             }
+            String channel = impl.channel();
             SysAiProvider provider = requireChannelProvider(channel);
             items.add(buildChannelSummary(channel, impl, provider));
         }
@@ -220,7 +221,7 @@ public class ApiChannelAuthController {
         if (existing != null) {
             return existing;
         }
-        AccountChannelAuthManager impl = managers().get(channel);
+        AccountChannelAuthManager impl = resolveManager(managers(), channel);
         if (impl == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "未注册的渠道: " + channel);
         }
@@ -247,13 +248,14 @@ public class ApiChannelAuthController {
      * 返回前端轮询句柄（含 {@code handle} / {@code verifyUrl}）。
      * 不直接落库 —— 落库在 {@link #pollChannel} 成功之后完成。</p>
      *
-     * @param channel 渠道标识
+     * @param channel 渠道标识（大小写不敏感；响应一律回传实现的规范标识）
      * @return 登录句柄
      */
     @Permission("admin")
     @PostMapping("/{channel}/start-login")
     public ApiResult<Map<String, Object>> startLogin(@PathVariable("channel") String channel) {
         AccountChannelAuthManager impl = requireManager(channel);
+        channel = impl.channel();
         Map<String, Object> handle;
         try {
             handle = impl.startLogin();
@@ -897,11 +899,40 @@ public class ApiChannelAuthController {
      * @return 实现
      */
     private AccountChannelAuthManager requireManager(String channel) {
-        AccountChannelAuthManager impl = managers().get(channel);
+        AccountChannelAuthManager impl = resolveManager(managers(), channel);
         if (impl == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "未注册的渠道: " + channel);
         }
         return impl;
+    }
+
+    /**
+     * 按渠道标识解析实现（不区分大小写）。
+     *
+     * <p>SPI 框架为每个实现登记两条 definition：一条键为 {@code @Spi} 别名，
+     * 另一条键为类简名（如 {@code QoderCnAccountChannelAuthManager} → {@code QODERCN}）。
+     * 后者不是渠道标识，但会进 {@code list()} 的键集合；按大小写不敏感匹配可让
+     * {@code qoder-cn} / {@code QODER-CN} / {@code QODERCN} 都落到同一个实现。</p>
+     *
+     * @param managers 已注册的实现映射
+     * @param channel 前端传入的渠道标识
+     * @return 实现，未注册返回 {@code null}
+     */
+    private static AccountChannelAuthManager resolveManager(
+            Map<String, AccountChannelAuthManager> managers, String channel) {
+        if (channel == null) {
+            return null;
+        }
+        AccountChannelAuthManager exact = managers.get(channel);
+        if (exact != null) {
+            return exact;
+        }
+        for (Map.Entry<String, AccountChannelAuthManager> entry : managers.entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(channel)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     /**
