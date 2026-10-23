@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
+import com.chua.starter.ai.support.manage.store.SysAiProviderMetric;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
@@ -47,9 +49,14 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     private final AiModelMetricsEnrichmentService metricsEnrichment;
 
     /**
-     * 全量指标库服务（计费取价最终回退，预估值）
+     * 全量指标库服务（计费取价回退，预估值）
      */
     private final SysAiModelMetricsService modelMetricsService;
+
+    /**
+     * 厂商指标系数服务（计费取价最终回退，一厂商一系数）
+     */
+    private final SysAiProviderMetricService providerMetricService;
 
     /**
      * 查询指定 提供者 + 模型 的最新官方定价记录。
@@ -107,6 +114,25 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             estimated.setCurrency("USD");
             estimated.setEffectiveDate(LocalDateTime.now());
             estimated.setSource("metrics_estimate");
+            return estimated;
+        }
+
+        // 4. 最终回退厂商指标系数（一厂商一系数，价格为该厂商全部模型的中位数预估值）
+        SysAiProviderMetric providerMetric = providerMetricService.findForEstimate(provider);
+        if (providerMetric != null && providerMetric.getPriceInputPerMusd() != null
+                && providerMetric.getPriceOutputPerMusd() != null) {
+            SysAiPricing estimated = new SysAiPricing();
+            estimated.setProvider(provider);
+            estimated.setModel(model);
+            BigDecimal inputPer1k = providerMetric.getPriceInputPerMusd()
+                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
+            BigDecimal outputPer1k = providerMetric.getPriceOutputPerMusd()
+                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
+            estimated.setInputPricePer1k(inputPer1k.doubleValue());
+            estimated.setOutputPricePer1k(outputPer1k.doubleValue());
+            estimated.setCurrency("USD");
+            estimated.setEffectiveDate(LocalDateTime.now());
+            estimated.setSource("provider_estimate");
             return estimated;
         }
         return null;
