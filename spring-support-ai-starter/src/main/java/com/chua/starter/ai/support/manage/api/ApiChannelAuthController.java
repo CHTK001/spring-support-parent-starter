@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -71,6 +72,13 @@ public class ApiChannelAuthController {
     private final SysAiProviderMapper providerMapper;
     private final SysAiProviderConnectionMapper connectionMapper;
     private final SysAiProviderModelMapper modelMapper;
+
+    /**
+     * 编程式事务：SSE 流程跑在独立线程池里，{@code @Transactional} 不生效，
+     * 而 {@link #persistCredentials} 要连写 connection + provider 两行，
+     * 中途失败会留下「有账号但渠道未启用」的半成品状态。
+     */
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 全部已注册的渠道鉴权实现（按 {@code @Spi} 别名为 key）。
@@ -139,7 +147,12 @@ public class ApiChannelAuthController {
                 continue;
             }
             String channel = impl.channel();
-            SysAiProvider provider = requireChannelProvider(channel);
+            // 列表接口只按规范 id 查：路由本身大小写不敏感，不需要为别名
+            //（QODERCN / QODER-CN）额外物化 provider 行。
+            SysAiProvider provider = providerMapper.selectById(providerIdOf(impl));
+            if (provider == null) {
+                provider = requireChannelProvider(channel);
+            }
             items.add(buildChannelSummary(channel, impl, provider));
         }
         return ApiResult.ok(items);
@@ -206,29 +219,53 @@ public class ApiChannelAuthController {
     }
 
     /**
-     * 渠道级 provider 行：渠道管理统一以 {@code channel} 自身作 providerId，
+     * 渠道在 {@code sys_ai_provider} 中的行主键。
+     *
+     * <p>取实现的 {@code channel()} 再转大写：与历史上由 SPI 注册表 key
+     * （{@code @Spi} 别名的大写形式）建出来的既有行保持一致，
+     * 也避免 {@code QODERCN} 这类「只差连字符」的重复行。</p>
+     *
+     * @param impl 渠道实现
+     * @return 规范 providerId
+     */
+    private static String providerIdOf(AccountChannelAuthManager impl) {
+        String id = impl.channel();
+        return id == null ? null : id.toUpperCase(java.util.Locale.ROOT);
+    }
+
+    /**
+     * 渠道级 provider 行：渠道管理统一以「渠道标识的<u>大写形式</u>」作 providerId，
      * 即一个渠道在 {@code sys_ai_provider} 中至多一行，账号全部以 connection 挂在其下。
      *
-     * <p>缺失时惰性物化一行（platform=channel、auth_scheme=oauth、base_url 空占位），
+     * <p><b>为什么是大写：</b>SPI 注册表会给每个实现额外登记一条「类简名」definition
+     * （{@code QoderCnAccountChannelAuthManager} → {@code QODERCN}），而
+     * {@code /api/channels} 列表里的 <b>key</b> 正是这些 definition 键，首个命中即
+     * {@code @Spi} 别名的大写形式。历史上这类行就是按注册表 key 建的
+     * （{@code MINIMAX} / {@code QODER-CN} / {@code GEMINI} …），模型行也挂在同一个键下。
+     * 这里必须沿用同一口径，否则查模型、查账号都会落空；
+     * 而 {@code QODERCN} 这种「只差连字符」的重复行不应再产生。</p>
+     *
+     * <p>缺失时惰性物化一行（platform=大写标识、auth_scheme=oauth、base_url 空占位），
      * 避免读接口因未绑定而 404，让「未绑定账号」与「无此渠道」两个状态可区分。</p>
      *
-     * @param channel 渠道标识
+     * @param channel 渠道标识（大小写不敏感）
      * @return provider 行（必然存在）
      */
     @Transactional
     private SysAiProvider requireChannelProvider(String channel) {
-        SysAiProvider existing = providerMapper.selectById(channel);
-        if (existing != null) {
-            return existing;
-        }
         AccountChannelAuthManager impl = resolveManager(managers(), channel);
         if (impl == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "未注册的渠道: " + channel);
         }
+        String providerId = providerIdOf(impl);
+        SysAiProvider existing = providerMapper.selectById(providerId);
+        if (existing != null) {
+            return existing;
+        }
         long now = System.currentTimeMillis();
         SysAiProvider p = new SysAiProvider();
-        p.setProviderId(channel);
-        p.setPlatform(channel);
+        p.setProviderId(providerId);
+        p.setPlatform(providerId);
         p.setName(impl.displayName());
         p.setBaseUrl(""); // 渠道类 provider 的 base_url 由鉴权流程自行处理，落空占位
         p.setAuthScheme(OAUTH_SCHEME);
@@ -237,7 +274,7 @@ public class ApiChannelAuthController {
         p.setCreatedAt(now);
         p.setUpdatedAt(now);
         providerMapper.insert(p);
-        log.info("[ChannelAuth] 惰性物化渠道 provider 行: {}", channel);
+        log.info("[ChannelAuth] 惰性物化渠道 provider 行: {}", providerId);
         return p;
     }
 
@@ -345,6 +382,22 @@ public class ApiChannelAuthController {
      * @return { ok:true, connectionId, channel, label }
      */
     private Map<String, Object> persistCredentials(String channel,
+            Map<String, Object> credentials, String label) {
+        // 包进编程式事务：本方法既会被 pollChannel（已有 @Transactional）调用，
+        // 也会被 SSE 线程调用（无事务）。@Transactional 自调用不生效，
+        // 用 TransactionTemplate 才能保证两条写操作原子。
+        return transactionTemplate.execute(status -> doPersistCredentials(channel, credentials, label));
+    }
+
+    /**
+     * {@link #persistCredentials} 的实际写入体，必须在事务内调用。
+     *
+     * @param channel     渠道标识
+     * @param credentials SPI 返回的可持久化凭据
+     * @param label       账号标签
+     * @return { ok:true, connectionId, channel, label }
+     */
+    private Map<String, Object> doPersistCredentials(String channel,
             Map<String, Object> credentials, String label) {
         SysAiProvider provider = requireChannelProvider(channel);
         SysAiProviderConnection conn = findOrCreateConnection(provider.getProviderId(), label);
@@ -622,13 +675,16 @@ public class ApiChannelAuthController {
         AccountChannelAuthManager impl = requireManager(channel);
         String label = body == null ? null : asString(body.get("label"));
         SysAiProviderConnection conn = findConnection(channel, label);
-        Map<String, Object> credentials;
+        // ⚠️ 找不到账号时必须报 NOT_FOUND，不能拿空凭据继续往下走：
+        // 否则上游按「无 token」返回空列表，接口回 ok=true + models=[]，
+        // 前端提示「拉取到 0 个模型」—— 用户会以为渠道本身没有模型，
+        // 而真实原因是账号不存在（未绑定 / label 传错）。
         if (conn == null) {
-            credentials = new LinkedHashMap<>();
-        } else {
-            credentials = conn.getCredentials() == null
-                    ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到渠道账号，请先绑定: " + channel + " / " + label);
         }
+        Map<String, Object> credentials = conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
         List<Map<String, Object>> models;
         try {
             models = impl.listModels(credentials);
@@ -677,13 +733,13 @@ public class ApiChannelAuthController {
         SysAiProvider provider = requireChannelProvider(channel);
         String label = body == null ? null : asString(body.get("label"));
         SysAiProviderConnection conn = findConnection(channel, label);
-        Map<String, Object> credentials;
+        // 同 list-models：账号不存在直接报错，避免把「没绑定」当成「0 个模型」落库成功。
         if (conn == null) {
-            credentials = new LinkedHashMap<>();
-        } else {
-            credentials = conn.getCredentials() == null
-                    ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到渠道账号，请先绑定: " + channel + " / " + label);
         }
+        Map<String, Object> credentials = conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
         List<Map<String, Object>> rawModels;
         try {
             rawModels = impl.listModels(credentials);
@@ -777,23 +833,27 @@ public class ApiChannelAuthController {
             @PathVariable("channel") String channel,
             @PathVariable("model") String model,
             @RequestBody Map<String, Object> body) {
-        requireManager(channel);
+        AccountChannelAuthManager impl = requireManager(channel);
         boolean enabled = body != null
                 && Boolean.TRUE.equals(body.get("enabled"));
+        // ⚠️ 模型行的 provider_id 是渠道 provider 行的主键（「@Spi 别名的大写形式」，
+        // 如 QODER-CN / MINIMAX），不是路由上的小写 channel。用 providerIdOf()
+        // 统一口径，QODER-CN / QODERCN / qoder-cn 三个路由才会落到同一行模型。
+        String providerId = providerIdOf(impl);
         SysAiProviderModel m = modelMapper.selectOne(
                 new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, channel)
+                        .eq(SysAiProviderModel::getProviderId, providerId)
                         .eq(SysAiProviderModel::getModel, model));
         if (m == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND,
-                    "渠道下模型不存在: " + channel + " / " + model);
+                    "渠道下模型不存在: " + impl.channel() + " / " + model);
         }
         m.setEnabled(enabled);
         m.setUpdatedAt(System.currentTimeMillis());
         modelMapper.updateById(m);
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("ok", true);
-        out.put("channel", channel);
+        out.put("channel", impl.channel());
         out.put("model", model);
         out.put("enabled", enabled);
         return ApiResult.ok(out);

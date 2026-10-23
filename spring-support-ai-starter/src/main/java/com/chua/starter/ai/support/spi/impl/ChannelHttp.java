@@ -37,6 +37,23 @@ final class ChannelHttp {
     /** 登录轮询单次请求超时（秒）；轮询间隔短，超时也应短。 */
     static final Duration POLL_TIMEOUT = Duration.ofSeconds(30);
 
+    /** HTTP 429 Too Many Requests。 */
+    private static final int HTTP_TOO_MANY_REQUESTS = 429;
+
+    /** 限流退避默认时长（服务端未给 Retry-After 时）。 */
+    private static final long DEFAULT_RETRY_AFTER_MS = 2_000L;
+
+    /** 限流退避重试次数（连同首次请求，最多打上游 1 + N 次）。 */
+    private static final int RATE_LIMIT_RETRIES = 2;
+
+    /**
+     * 限流错误信息前缀：{@link #isRateLimited(Throwable)} 据此识别。
+     *
+     * <p>用前缀而不是自定义异常类型，是因为 {@link ApiException} 的契约被整个
+     * 渠道模块复用（前端按 {@code ApiErrorCode} 分支），加子类会牵动面过大。</p>
+     */
+    static final String RATE_LIMITED_MARKER = "渠道上游限流";
+
     /**
      * 执行一次 POST JSON 请求，返回响应体字符串。
      *
@@ -127,11 +144,73 @@ final class ChannelHttp {
             Thread.currentThread().interrupt();
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "渠道 HTTP 请求被中断: " + label, e);
         }
+        if (response.statusCode() == HTTP_TOO_MANY_REQUESTS) {
+            // ⚠️ 429 是「你请求太快了」，不是业务失败：渠道登录轮询通常 2s 一次，
+            // 上游限流时直接抛错会让整个绑定流程中断（实测 ZCode：
+            // GET /oauth/cli/poll/{flow} -> 429，弹窗直接显示「失败」）。
+            // 按 Retry-After 退避后重试；仍被限流则抛 ROLE_LIMITED 语义的错误，
+            // 由调用方（pollLogin）决定继续等而不是失败。
+            for (int attempt = 1; attempt <= RATE_LIMIT_RETRIES; attempt++) {
+                sleepQuietly(retryAfterMillis(response));
+                try {
+                    response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+                } catch (java.io.IOException e) {
+                    throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "渠道 HTTP 请求失败: " + label + " (" + e.getMessage() + ")", e);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "渠道 HTTP 请求被中断: " + label, e);
+                }
+                if (response.statusCode() != HTTP_TOO_MANY_REQUESTS) {
+                    break;
+                }
+            }
+            if (response.statusCode() == HTTP_TOO_MANY_REQUESTS) {
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                        RATE_LIMITED_MARKER + ": " + label + " -> 429 " + truncate(response.body()));
+            }
+        }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
                     "渠道上游返回非 2xx: " + label + " -> " + response.statusCode() + " " + truncate(response.body()));
         }
         return response.body();
+    }
+
+    /**
+     * 判断异常是否为「上游限流」。
+     *
+     * <p>登录轮询遇到限流不应判失败：用户还在授权页操作，等下一轮即可。</p>
+     *
+     * @param e 异常
+     * @return 是否为限流
+     */
+    static boolean isRateLimited(Throwable e) {
+        return e instanceof ApiException && e.getMessage() != null
+                && e.getMessage().startsWith(RATE_LIMITED_MARKER);
+    }
+
+    /** 读 Retry-After（秒），缺省 2s，上限 10s（轮询上下文不能睡太久）。 */
+    private static long retryAfterMillis(HttpResponse<String> response) {
+        String raw = response.headers().firstValue("Retry-After").orElse(null);
+        if (raw != null) {
+            try {
+                long sec = Long.parseLong(raw.trim());
+                return Math.min(Math.max(sec, 1L), 10L) * 1000L;
+            } catch (NumberFormatException ignored) {
+                // Retry-After 也可能是 HTTP-date，按默认值处理。
+            }
+        }
+        return DEFAULT_RETRY_AFTER_MS;
+    }
+
+    /** 退避等待；被中断时恢复中断标记并让调用方走中断分支。 */
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "渠道 HTTP 请求被中断: 限流退避", ie);
+        }
     }
 
     /** 摘要化响应体（最多 300 字符），避免异常信息带出超大 body。 */
