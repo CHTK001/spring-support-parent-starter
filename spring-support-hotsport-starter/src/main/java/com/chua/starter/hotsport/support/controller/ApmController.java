@@ -271,6 +271,57 @@ public class ApmController {
     }
 
     /**
+     * 系统资源聚合快照 — 一屏看懂「这台机器的资源往哪消耗」。
+     *
+     * <p>把散在各处的资源信息拼成一份，专供调试和研究：</p>
+     * <ul>
+     *   <li>{@code os} — 物理内存 / 交换 / 系统与进程 CPU 占用</li>
+     *   <li>{@code disks} — 逐盘总容量 / 可用 / 使用率，一眼看出哪个盘快满</li>
+     *   <li>{@code jvm} — JVM 堆 / GC / 线程（实时快照）</li>
+     *   <li>{@code storage} — APM 存储状态（含 db 所在盘的磁盘余量与接近耗尽标记）</li>
+     *   <li>{@code ownThreads} — APM 自身内部线程画像（观测组件自己别泄漏）</li>
+     *   <li>{@code trend} — 最近 N 分钟资源时序（堆百分比 / GC / 线程 / 系统 CPU / 物理内存可用）</li>
+     * </ul>
+     *
+     * @param minutes 时序窗口（分钟，默认 10）
+     * @return 资源聚合快照
+     */
+    @GetMapping("/resources")
+    public ReturnResult<Map<String, Object>> systemResources(
+            @RequestParam(defaultValue = "10") int minutes) {
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("ts", System.currentTimeMillis());
+        try {
+            r.put("os", jvmMetricsService.systemResources().get("os"));
+            r.put("disks", jvmMetricsService.systemResources().get("disks"));
+        } catch (Exception e) {
+            r.put("os", Map.of("error", e.getMessage()));
+            r.put("disks", List.of());
+        }
+        try {
+            r.put("jvm", jvmMetricsService.snapshot());
+        } catch (Exception e) {
+            r.put("jvm", Map.of("error", e.getMessage()));
+        }
+        try {
+            r.put("storage", apmQueryService.storageStatus());
+        } catch (Exception e) {
+            r.put("storage", Map.of("error", e.getMessage()));
+        }
+        try {
+            r.put("ownThreads", apmQueryService.ownThreads());
+        } catch (Exception e) {
+            r.put("ownThreads", Map.of("error", e.getMessage()));
+        }
+        try {
+            r.put("trend", jvmMetricsService.metrics(minutes));
+        } catch (Exception e) {
+            r.put("trend", List.of());
+        }
+        return ReturnResult.ok(r);
+    }
+
+    /**
      * 修改存储配置并立即生效（无需重启）。
      *
      * <p>只传需要修改的项，未传的保持原值。语义：</p>

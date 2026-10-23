@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -17,6 +18,7 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.management.OperatingSystemMXBean;
+import java.nio.file.FileStore;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -144,6 +146,21 @@ public class JvmMetricsService {
         cpu.put("loadPerCore", Math.round(os.getSystemLoadAverage() / Math.max(1, os.getAvailableProcessors()) * 100) / 100.0);
         cpu.put("processCpuLoad", Math.round(((com.sun.management.OperatingSystemMXBean) os).getProcessCpuLoad() * 10000) / 100.0);
         m.put("cpu", cpu);
+
+        Map<String, Object> osSection = new LinkedHashMap<>();
+        com.sun.management.OperatingSystemMXBean sun = (com.sun.management.OperatingSystemMXBean) os;
+        long physTotal = sun.getTotalPhysicalMemorySize();
+        long physFree = sun.getFreePhysicalMemorySize();
+        osSection.put("hostname", safeHostname());
+        osSection.put("systemCpuLoad", Math.round(sun.getSystemCpuLoad() * 10000) / 100.0);
+        osSection.put("physicalTotal", physTotal);
+        osSection.put("physicalFree", physFree);
+        osSection.put("physicalUsed", physTotal - physFree);
+        osSection.put("physicalUsedPercent", physTotal > 0 ? Math.round(100.0 * (physTotal - physFree) / physTotal) : 0);
+        osSection.put("swapTotal", sun.getTotalSwapSpaceSize());
+        osSection.put("swapFree", sun.getFreeSwapSpaceSize());
+        osSection.put("committedVirtual", sun.getCommittedVirtualMemorySize());
+        m.put("os", osSection);
 
         ThreadMXBean th = ManagementFactory.getThreadMXBean();
         Map<String, Object> threads = new LinkedHashMap<>();
@@ -275,6 +292,78 @@ public class JvmMetricsService {
         } catch (Exception e) {
             log.debug("[Hotsport] 活跃泄漏统计失败: {}", e.getMessage());
             return 0;
+        }
+    }
+
+    /**
+     * 系统资源快照 — OS 级（物理内存 / 交换 / 磁盘）+ 本 JVM 进程占用。
+     *
+     * <p>这是 {@code /api/apm/resources} 的底层数据源，回答「这台机器资源往哪消耗」
+     * 这类调试问题；磁盘条目逐盘列出总量 / 可用 / 使用率，方便一眼看出哪个盘快满。</p>
+     *
+     * @return 资源快照 Map（os / disks / jvm）
+     */
+    public Map<String, Object> systemResources() {
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("ts", System.currentTimeMillis());
+        com.sun.management.OperatingSystemMXBean sun =
+                (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        long physTotal = sun.getTotalPhysicalMemorySize();
+        long physFree = sun.getFreePhysicalMemorySize();
+        Map<String, Object> os = new LinkedHashMap<>();
+        os.put("hostname", safeHostname());
+        os.put("osName", System.getProperty("os.name"));
+        os.put("osArch", System.getProperty("os.arch"));
+        os.put("cpuCores", sun.getAvailableProcessors());
+        os.put("systemCpuLoad", Math.round(sun.getSystemCpuLoad() * 10000) / 100.0);
+        os.put("processCpuLoad", Math.round(sun.getProcessCpuLoad() * 10000) / 100.0);
+        os.put("physicalTotal", physTotal);
+        os.put("physicalFree", physFree);
+        os.put("physicalUsed", physTotal - physFree);
+        os.put("physicalUsedPercent", physTotal > 0 ? Math.round(100.0 * (physTotal - physFree) / physTotal) : 0);
+        os.put("swapTotal", sun.getTotalSwapSpaceSize());
+        os.put("swapFree", sun.getFreeSwapSpaceSize());
+        os.put("commitLimit", sun.getCommittedVirtualMemorySize());
+        r.put("os", os);
+
+        List<Map<String, Object>> disks = new ArrayList<>();
+        for (File root : File.listRoots()) {
+            try {
+                long total = root.getTotalSpace();
+                long usable = root.getUsableSpace();
+                Map<String, Object> d = new LinkedHashMap<>();
+                d.put("root", root.getPath());
+                d.put("total", total);
+                d.put("usable", usable);
+                d.put("usedPercent", total > 0 ? Math.round(100.0 * (total - usable) / total) : 0);
+                FileStore store = java.nio.file.Files.getFileStore(root.toPath());
+                d.put("type", store.type());
+                disks.add(d);
+            } catch (Exception e) {
+                // 某个盘不可访问不影响其他盘
+            }
+        }
+        r.put("disks", disks);
+
+        Map<String, Object> jvm = new LinkedHashMap<>();
+        jvm.put("pid", ManagementFactory.getRuntimeMXBean().getPid());
+        jvm.put("uptimeMs", ManagementFactory.getRuntimeMXBean().getUptime());
+        jvm.put("javaVersion", System.getProperty("java.version"));
+        jvm.put("javaHome", System.getProperty("java.home"));
+        r.put("jvm", jvm);
+        return r;
+    }
+
+    /**
+     * 主机名，容错返回 unknown。
+     *
+     * @return 主机名
+     */
+    private static String safeHostname() {
+        try {
+            return java.net.InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            return "unknown";
         }
     }
 }

@@ -231,6 +231,44 @@ public class ApmQueryService {
     }
 
     /**
+     * APM 自身线程画像 — 调试用。
+     *
+     * <p>APM 是观测组件，自己最不该泄漏。这里把几个关键内部线程按名前缀统计
+     * 当前存活数，正常情况都应是 0 或 1；数量随时间上涨就说明反复热更新 /
+     * 反复注入在累积线程，需要立刻处理。</p>
+     *
+     * @return 线程画像（前缀 → 存活数）
+     */
+    public Map<String, Object> ownThreads() {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        int maintenance = 0;
+        int attach = 0;
+        int engine = 0;
+        int total = 0;
+        for (Thread t : Thread.getAllStackTraces().keySet()) {
+            String name = t.getName();
+            total++;
+            if (name.startsWith("apm-sqlite-maintenance")) {
+                maintenance++;
+            }
+            if (name.startsWith("apm-memory-maintenance")) {
+                maintenance++;
+            }
+            if (name.startsWith("agent-attach")) {
+                attach++;
+            }
+            if (name.startsWith("hotsport-apm")) {
+                engine++;
+            }
+        }
+        result.put("maintenance", maintenance);
+        result.put("agentAttach", attach);
+        result.put("engine", engine);
+        result.put("jvmTotalThreads", total);
+        return result;
+    }
+
+    /**
      * 从 Spring Boot fat jar 的 BOOT-INF/lib/ 中定位 agent jar 并解压到临时目录。
      *
      * @return agent jar 物理路径；找不到返回 null
