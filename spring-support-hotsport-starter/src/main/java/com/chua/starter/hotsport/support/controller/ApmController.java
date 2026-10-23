@@ -88,6 +88,11 @@ public class ApmController {
     private final ObjectMapper objectMapper;
 
     /**
+     * Hotsport 配置（agent 中心回显实际生效的存储参数）。
+    */
+    private final com.chua.starter.hotsport.support.config.HotsportProperties hotsportProperties;
+
+    /**
      * SSE 推送线程池（单线程足够，间隔 3s）。
     */
     private final ScheduledExecutorService sseExecutor =
@@ -246,6 +251,8 @@ public class ApmController {
         cfg.put("logLevel", "INFO");
         cfg.put("enabled", agentAttachService.isAgentEnabled());
         cfg.put("injectMode", "SIMULATE");
+        cfg.put("storage", hotsportProperties.getApm().toStorageConfig());
+        cfg.put("storageName", com.chua.runtime.apm.storage.StorageManager.get().name());
         cfg.put("updatedAt", System.currentTimeMillis());
         return ReturnResult.ok(cfg);
     }

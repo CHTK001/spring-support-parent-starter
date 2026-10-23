@@ -53,6 +53,11 @@ public class ApmQueryService {
     private final AgentAttachService agentAttachService;
 
     /**
+     * Hotsport 配置（读取 plugin.hotsport.apm.storage.* 交给本地 APM 引擎）。
+     */
+    private final com.chua.starter.hotsport.support.config.HotsportProperties hotsportProperties;
+
+    /**
      * Agent 自注入是否成功。
     */
     
@@ -105,6 +110,10 @@ public class ApmQueryService {
         try {
             com.chua.runtime.apm.ApmBootstrap apm =
                     new com.chua.runtime.apm.ApmBootstrap(java.nio.file.Paths.get(System.getProperty("java.io.tmpdir")));
+            // 把 plugin.hotsport.apm.storage.* 交给存储层：类型/保留期/容量/落盘目录
+            if (hotsportProperties != null && hotsportProperties.getApm() != null) {
+                apm.storageConfig(hotsportProperties.getApm().toStorageConfig());
+            }
             apm.addHandler(new com.chua.runtime.apm.handler.LogHandler());
             apm.addHandler(new com.chua.runtime.apm.handler.NetHandler());
             apm.addHandler(new com.chua.runtime.apm.handler.TransmissionHandler());
