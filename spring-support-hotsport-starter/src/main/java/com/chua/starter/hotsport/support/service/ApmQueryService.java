@@ -58,6 +58,13 @@ public class ApmQueryService {
     private final com.chua.starter.hotsport.support.config.HotsportProperties hotsportProperties;
 
     /**
+     * 本进程 APM 引擎（启动后保留引用，供运行时热更新存储配置使用）。
+     *
+     * <p>只有「本进程启动的引擎」才会被这里持有；agent 在别的 JVM 里跑的副本身份不归本进程管。</p>
+     */
+    private volatile com.chua.runtime.apm.ApmBootstrap localApm;
+
+    /**
      * Agent 自注入是否成功。
     */
     
@@ -94,12 +101,25 @@ public class ApmQueryService {
      * ① attachSelf —— agentmain 对已加载类做 retransform（拦截 JDK/Tomcat 等启动早期类）；
      * ② 本进程直接 new ApmBootstrap().start() —— 与 host 同 classloader，
      *    handler 写入的 StorageManager 与 stats() 读取的同源（绕开跨加载器静态隔离）。</p>
+     *
+     * <p><b>为什么必须异步</b>：自注入需要扫描 classpath 定位 agent jar，
+     * 依赖越多越慢（实测上百个 jar 时可耗数十秒）。若在 {@code @PostConstruct}
+     * 同步执行，会把整个 Web 容器的启动一起拖住 —— 端口迟迟不开放，
+     * 看起来就是「应用起不来」。观测组件不该有这种能力，故一律放到虚拟线程。</p>
      */
     @PostConstruct
     public void attachAgent() {
-        // 字节码注入统一由 AgentAttachService 完成（含幂等、失败降级、运行时重注入）
-        agentAttachService.attach();
-        Thread.ofVirtual().name("hotsport-apm").start(this::startLocalApmEngine);
+        Thread.ofVirtual()
+                .name("hotsport-apm")
+                .start(() -> {
+                    try {
+                        // 字节码注入统一由 AgentAttachService 完成（含幂等、失败降级、运行时重注入）
+                        agentAttachService.attach();
+                    } catch (Throwable t) {
+                        log.warn("[Hotsport] Agent 自注入失败（不影响业务进程）: {}", t.getMessage());
+                    }
+                    startLocalApmEngine();
+                });
     }
 
     /**
@@ -110,7 +130,10 @@ public class ApmQueryService {
         try {
             com.chua.runtime.apm.ApmBootstrap apm =
                     new com.chua.runtime.apm.ApmBootstrap(java.nio.file.Paths.get(System.getProperty("java.io.tmpdir")));
-            // 把 plugin.hotsport.apm.storage.* 交给存储层：类型/保留期/容量/落盘目录
+            // 把 plugin.hotsport.apm.storage.* 交给存储层：类型/保留期/容量/落盘目录/写入模式。
+            // 注册的是「活来源」而不是快照：以后配置对象被修改并触发热更新时能读到最新值。
+            apm.storageConfigProvider(this::currentStorageConfig);
+            // 另存一份启动时快照，作为 provider 不可用时的兜底
             if (hotsportProperties != null && hotsportProperties.getApm() != null) {
                 apm.storageConfig(hotsportProperties.getApm().toStorageConfig());
             }
@@ -123,10 +146,88 @@ public class ApmQueryService {
             apm.addHandler(new com.chua.runtime.apm.handler.HttpClientHandler());
             apm.addHandler(new com.chua.runtime.apm.handler.JdkHttpServerHandler());
             apm.start();
-            log.info("[Hotsport] 本进程 APM 引擎已启动（inmemory 存储，与查询同源）");
+            this.localApm = apm;
+            log.info("[Hotsport] 本进程 APM 引擎已启动（存储: {}，与查询同源）",
+                    com.chua.runtime.apm.storage.StorageManager.get().name());
         } catch (Throwable t) {
             log.warn("[Hotsport] 本进程 APM 启动失败: {}", t.getMessage());
         }
+    }
+
+    /**
+     * 当前应生效的存储配置（活来源，热更新时重新读取）。
+     *
+     * <p>用 {@code includeDefaults=true}：运行中把某项改回默认（如清空落盘路径）时，
+     * 必须让下游看到「键存在但值为空」，否则会被判定为配置未变化而不生效。</p>
+     *
+     * @return 存储配置键值对
+     */
+    private Map<String, String> currentStorageConfig() {
+        if (hotsportProperties == null || hotsportProperties.getApm() == null) {
+            return java.util.Collections.emptyMap();
+        }
+        return hotsportProperties.getApm().toStorageConfig(true);
+    }
+
+    /**
+     * 运行时热更新存储配置（{@code plugin.hotsport.apm.storage.*}）。
+     *
+     * <p>典型场景：内存存储跑久了想改成落盘；或落盘文件挪位置。改完配置后调本方法，
+     * 无需重启进程。新存储先完整启动成功才会替换旧存储，失败则旧存储继续工作。</p>
+     *
+     * @return 结果：成功/无需变更 {@code success=true}；失败时 {@code success=false} 并带原因
+     */
+    public Map<String, Object> reloadStorage() {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        com.chua.runtime.apm.ApmBootstrap apm = this.localApm;
+        if (apm == null) {
+            // 本进程引擎未起来（启动失败或仍在初始化），直接改存储层也能生效，但不保证同源
+            result.put("success", false);
+            result.put("message", "本进程 APM 引擎尚未启动，无法热更新");
+            result.put("before", com.chua.runtime.apm.storage.StorageManager.describe());
+            return result;
+        }
+        Map<String, Object> before = new java.util.LinkedHashMap<>(apm.storageStatus());
+        boolean ok;
+        try {
+            ok = apm.reloadStorageConfig();
+        } catch (Throwable e) {
+            log.warn("[Hotsport] 存储热更新异常: {}", e.getMessage(), e);
+            ok = false;
+            result.put("error", e.getMessage());
+        }
+        Map<String, Object> after = new java.util.LinkedHashMap<>(apm.storageStatus());
+        result.put("success", ok);
+        result.put("message", ok ? "存储配置已生效" : "新配置不可用，已保留原存储");
+        result.put("before", before);
+        result.put("after", after);
+        result.put("config", currentStorageConfig());
+        result.put("updatedAt", System.currentTimeMillis());
+        log.info("[Hotsport] 存储热更新: success={}, {} -> {}",
+                ok, before.get("type"), after.get("type"));
+        return result;
+    }
+
+    /**
+     * 当前存储的运行时状态（运维自检：确认配置写了什么、实际生效什么）。
+     *
+     * @return 状态映射
+     */
+    public Map<String, Object> storageStatus() {
+        Map<String, Object> status;
+        com.chua.runtime.apm.ApmBootstrap apm = this.localApm;
+        if (apm != null) {
+            try {
+                status = new java.util.LinkedHashMap<>(apm.storageStatus());
+            } catch (Throwable e) {
+                status = new java.util.LinkedHashMap<>(com.chua.runtime.apm.storage.StorageManager.describe());
+            }
+        } else {
+            status = new java.util.LinkedHashMap<>(com.chua.runtime.apm.storage.StorageManager.describe());
+        }
+        status.put("configured", currentStorageConfig());
+        status.put("engineActive", apm != null);
+        return status;
     }
 
     /**
