@@ -171,6 +171,34 @@ public class HotsportProperties {
         public void setStorage(Storage storage) {
             this.storage = storage;
         }
+
+        /**
+         * 把本配置展开成 APM 存储层可识别的键值对。
+         *
+         * <p>键名与 agent options / 系统属性一致（{@code apm.storage.*}），
+         * 由 {@code ApmBootstrap} 统一消费；未显式配置的项不写入，交由默认值兜底。</p>
+         *
+         * @return 存储配置键值对
+         */
+        public Map<String, String> toStorageConfig() {
+            Map<String, String> config = new java.util.LinkedHashMap<>();
+            if (storage == null) {
+                return config;
+            }
+            if (storage.getType() != null && !storage.getType().isBlank()) {
+                config.put("apm.storage.type", storage.getType().trim());
+            }
+            if (storage.getRetentionMs() > 0) {
+                config.put("apm.storage.retention.ms", String.valueOf(storage.getRetentionMs()));
+            }
+            if (storage.getCapacity() > 0) {
+                config.put("apm.storage.capacity", String.valueOf(storage.getCapacity()));
+            }
+            if (storage.getPath() != null && !storage.getPath().isBlank()) {
+                config.put("apm.storage.path", storage.getPath().trim());
+            }
+            return config;
+        }
     }
 
     /**
@@ -187,6 +215,16 @@ public class HotsportProperties {
          * 数据保留毫秒。
         */
         private long retentionMs = 7L * 24 * 60 * 60 * 1000;
+
+        /**
+         * 单表容量上限（超出按最旧淘汰）。
+        */
+        private int capacity = 100000;
+
+        /**
+         * 存储落盘目录（sqlite 等非内存实现使用；为空时用临时目录）。
+        */
+        private String path = "";
 
         /**
          * 获取存储类型。
@@ -222,6 +260,42 @@ public class HotsportProperties {
          */
         public void setRetentionMs(long retentionMs) {
             this.retentionMs = retentionMs;
+        }
+
+        /**
+         * 获取单表容量上限。
+         *
+         * @return 容量上限
+         */
+        public int getCapacity() {
+            return capacity;
+        }
+
+        /**
+         * 设置单表容量上限。
+         *
+         * @param capacity 容量上限
+         */
+        public void setCapacity(int capacity) {
+            this.capacity = capacity;
+        }
+
+        /**
+         * 获取存储落盘目录。
+         *
+         * @return 落盘目录
+         */
+        public String getPath() {
+            return path;
+        }
+
+        /**
+         * 设置存储落盘目录。
+         *
+         * @param path 落盘目录
+         */
+        public void setPath(String path) {
+            this.path = path;
         }
     }
 
