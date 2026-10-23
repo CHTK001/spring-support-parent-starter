@@ -114,8 +114,20 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         if (isBlank(deviceMid)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ZCode 登录句柄缺少 device_mid");
         }
-        String response = ChannelHttp.getJson(
-                AUTH_HOST + OAUTH_PATH_PREFIX + "/poll/" + flowId, authHeaders(deviceMid));
+        String response;
+        try {
+            response = ChannelHttp.getJson(
+                    AUTH_HOST + OAUTH_PATH_PREFIX + "/poll/" + flowId, authHeaders(deviceMid));
+        } catch (ApiException e) {
+            // ⚠️ 上游限流（429）不是授权失败：用户可能还在授权页操作，
+            // 2s 一次的轮询很容易触发限流，直接向上抛会让弹窗显示「失败」并中断绑定。
+            // 记下本轮时间戳，等下一轮继续轮询。
+            if (ChannelHttp.isRateLimited(e)) {
+                handle.put(HANDLE_LAST_POLL_AT, now);
+                return null;
+            }
+            throw e;
+        }
         Map<String, Object> payload = unwrapData(response);
         String status = readString(payload, "status");
         if (isBlank(status) || "pending".equalsIgnoreCase(status) || "waiting".equalsIgnoreCase(status)) {

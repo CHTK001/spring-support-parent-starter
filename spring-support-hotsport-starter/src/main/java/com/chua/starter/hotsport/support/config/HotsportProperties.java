@@ -219,6 +219,13 @@ public class HotsportProperties {
                 config.put("apm.storage.async", storage.getAsync() == null
                         ? "true" : String.valueOf(storage.getAsync()));
             }
+            if (storage.getMaintenanceIntervalMs() > 0 || includeDefaults) {
+                config.put("apm.storage.maintenance.interval.ms",
+                        String.valueOf(storage.getMaintenanceIntervalMs()));
+            }
+            if (storage.getFlushTimeoutMs() > 0 || includeDefaults) {
+                config.put("apm.storage.flush.timeout.ms", String.valueOf(storage.getFlushTimeoutMs()));
+            }
             return config;
         }
     }
@@ -256,6 +263,20 @@ public class HotsportProperties {
         private Boolean async;
 
         /**
+         * 自维护周期（毫秒）：按保留期清理过期数据、按容量淘汰最旧数据的检查间隔。
+         *
+         * <p>0 表示沿用 APM 侧默认（60 秒）。下限 5 秒。</p>
+         */
+        private long maintenanceIntervalMs;
+
+        /**
+         * 关闭时等待异步队列落盘的最长时间（毫秒）。
+         *
+         * <p>0 表示沿用 APM 侧默认。设太短会在关闭瞬间丢数据，设太长会拖慢停机。</p>
+         */
+        private long flushTimeoutMs;
+
+        /**
          * 获取写入模式。
          *
          * @return 写入模式；未配置返回 null
@@ -271,6 +292,42 @@ public class HotsportProperties {
          */
         public void setAsync(Boolean async) {
             this.async = async;
+        }
+
+        /**
+         * 获取自维护周期（毫秒）。
+         *
+         * @return 自维护周期；0 表示沿用 APM 侧默认（60 秒）
+         */
+        public long getMaintenanceIntervalMs() {
+            return maintenanceIntervalMs;
+        }
+
+        /**
+         * 设置自维护周期（毫秒）。
+         *
+         * @param maintenanceIntervalMs 自维护周期
+         */
+        public void setMaintenanceIntervalMs(long maintenanceIntervalMs) {
+            this.maintenanceIntervalMs = maintenanceIntervalMs;
+        }
+
+        /**
+         * 获取关闭时等待落盘的最长时间（毫秒）。
+         *
+         * @return 等待时长；0 表示沿用 APM 侧默认
+         */
+        public long getFlushTimeoutMs() {
+            return flushTimeoutMs;
+        }
+
+        /**
+         * 设置关闭时等待落盘的最长时间（毫秒）。
+         *
+         * @param flushTimeoutMs 等待时长
+         */
+        public void setFlushTimeoutMs(long flushTimeoutMs) {
+            this.flushTimeoutMs = flushTimeoutMs;
         }
 
         /**

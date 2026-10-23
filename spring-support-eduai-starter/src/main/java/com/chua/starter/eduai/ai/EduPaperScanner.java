@@ -177,6 +177,10 @@ public class EduPaperScanner {
     public ScanResult scan(byte[] imageData) {
         PaperClient paper = paperProvider.getIfAvailable();
         if (paper == null || !paper.available()) {
+            log.warn("[EduScan] 试卷识别管线不可用诊断: paperBean={}, available={}, providerType={}",
+                    paper == null ? "null" : "present",
+                    paper == null ? "n/a" : paper.available(),
+                    paper == null ? "n/a" : paper.getClass().getName());
             throw new IllegalStateException("试卷识别管线不可用：请检查 sys_ai_global_setting 的 ocr/paper 分组与模型资产是否就位");
         }
 

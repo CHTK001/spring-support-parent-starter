@@ -403,6 +403,11 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
             if (message.contains("404")) {
                 return null;
             }
+            // 限流同样按「尚未授权」返回 null：轮询本就在等用户操作，
+            // 上游 429 只是让我们慢一点，不该把整个绑定判失败。
+            if (ChannelHttp.isRateLimited(e)) {
+                return null;
+            }
             throw e;
         }
     }

@@ -2101,7 +2101,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             String type = question.getQuestionType().trim().toUpperCase();
             String extracted = EduAiService.extractObjectiveAnswer(type, studentAnswer);
             // 判断题作答为空（stripLeadingStem 剥离题干后学生没有写判定符号）→ 未作答
-            if ("JUDGE".equals(type) && StringUtils.isBlank(studentAnswer)) {
+            // 判断作答提取不到判定符号（"·二次验收专用 1" 之类页脚残留）同样按未作答：判断题
+            // 的实质作答只有 对/错/√/× 符号，OCR 残留的题干尾段/页脚不构成作答。
+            if ("JUDGE".equals(type) && (StringUtils.isBlank(studentAnswer) || extracted == null)) {
                 var outcome = new EduAiService.MarkingOutcome();
                 outcome.setSource("AI");
                 outcome.setScore(0);
