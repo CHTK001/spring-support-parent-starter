@@ -27,43 +27,16 @@ spring:
       max-file-size: 2048MB
       max-request-size: 2048MB
 
-  # 建表脚本（独立联调）：本模块的 FlywayLike 已禁用（脚本语法错会阻断启动），
-  #  由 spring.sql.init 逐个加载各模块本体的全量建表脚本（脚本归口各自 starter jar 的 db/init/）：
-  #  - monitor 自身：V2.0__init_all_monitor.sql
-  #  - 依赖 jar 内：V2.0__init_all_server.sql（资产台账）、V2.0__init_all_ai.sql
-  # 均为 MySQL/H2 双库可执行子集（IF NOT EXISTS 幂等），存量老库补列语句已并入各模块的 init 文件
+  # 建表脚本：统一由 datasource-starter 的 FlywayLike 机制执行（plugin.datasource.script）。
+  # 之前走 spring.sql.init，需要逐个列举 schema-locations / data-locations：
+  #   - 漏列就静默不执行（曾导致 ms_monitor_config / ms_monitor_alarm_policy 空表）
+  #   - 依赖 jar 里的脚本（如 device-starter 的 db/init）路径难写
+  #   - 版本化 / 幂等 / 补列全靠手写约定
+  # FlywayLike 直接扫 classpath*:db/init/*.sql，各模块 jar 里的脚本自动纳入，
+  # 且按「脚本名+版本」在 sys_database_version 记账，天然只跑一次。
   sql:
     init:
-      mode: always
-      encoding: UTF-8
-      continue-on-error: true
-      schema-locations:
-        - classpath:db/init/V2.0__init_all_monitor.sql
-        - classpath:db/init/V2.0__init_all_server.sql
-        - classpath:db/init/V5.0__init_all_ai.sql
-        # 数据源中心台账（spring-support-datasource-hub-starter 自有脚本）
-        # 含 ms_monitor_nginx_metric：该表实体 MsMonitorNginxMetric 属 hub 模块，
-        # 建表语句已随实体归位到本文件（原先在 monitor 的 init 里）。
-        - classpath:db/init/V2.0__init_all_datasource_hub.sql
-        # 设备台账（spring-support-device-starter 自有脚本）：device_* 十五张表。
-        # device-starter 为纯库，其 db/init 不在 monitor 的 resources 下，靠 jar 依赖进入 classpath。
-        # 表名无 ms_ 前缀且与 ms_monitor_/ms_server_/sys_ai_/ms_datasource_ 无重名冲突。
-        - classpath:db/init/V2.0__init_all_device.sql
-      # 种子数据必须显式列出 data-locations，否则 initdata 从不执行：
-      # 早先只配了 schema-locations，导致 ms_monitor_config / ms_monitor_alarm_policy /
-      # ms_monitor_alarm_rule 三张表全为空（保留期配置与 4 条项目守护告警规则从未落地）。
-      # 这几份 initdata 都是幂等的（monitor 每条 INSERT 带 WHERE/AND NOT EXISTS，
-      # server 用 INSERT IGNORE / ON DUPLICATE KEY），因此 mode=always 下反复执行不会产生重复行。
-      #
-      # ⚠ 只能列「有实际语句」的文件：ai 与 datasource_hub 的 initdata 是纯注释占位，
-      # 而 Spring 的 ScriptUtils.splitSqlScript 对空脚本会直接抛
-      # `IllegalArgumentException: 'script' must not be null or empty`，
-      # 且该异常发生在脚本级、continue-on-error 拦不住 → 整个应用启动失败。
-      data-locations:
-        - classpath:db/init/V2.0__initdata_all_monitor.sql
-        - classpath:db/init/V2.0__initdata_all_server.sql
-        # 注：各模块的增量脚本（补列 / tshark / exec_job type / host ssh_enabled 等）
-        # 在本次收敛中已并入各模块的 V2.0 init_all 文件，故不再单列，避免启动缺文件拦截
+      mode: never
 
   datasource:
     url: jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
@@ -138,13 +111,22 @@ plugin:
   # 关闭自建配置，由 Spring Boot 默认 executor 接管 @Async。
   async:
     enable: false
-  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：monitor 独立联调时禁用。
-  # classpath 上 filesystem/project 模块的 db/init 脚本含 MySQL-only 语法（SET @x=IF(...)），
-  # H2 下语法错误即使 continue-on-error 也可能阻断启动；必要 DDL 由 spring.sql.init.schema-locations
-  # 单独加载（纯 H2 兼容），生产 MySQL 环境可改回 enable: true。
+  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：建表与种子数据统一走这里。
+  # 之前 enable: false（理由是「H2 下 MySQL-only 语法会阻断启动」），改用 spring.sql.init
+  # 逐个列举 schema-locations —— 代价是漏列就静默不执行、依赖 jar 里的脚本路径难写。
+  # 现在统一走 SPI Flyway（DataSourceFlyway）：语句级容错（continueOnError）+ 「目标表不存在
+  # 则跳过」，H2 下的方言差异语句会被跳过并记账，不会阻断启动。
   datasource:
     script:
-      enable: false
+      enable: true
+      # ALWAYS：表结构脚本每次启动都扫，是否真执行由 sys_database_version 的
+      # 「脚本名+版本」执行记录决定（已成功过的不会重跑）；补列语句靠版本号递进
+      # 让记录失效，从而在存量库上补齐缺失的列。
+      scan-mode: ALWAYS
+      # 种子数据仍保持 ONCE：种子脚本体积大，且业务表非空即无需重灌。
+      data-scan-mode: ONCE
+      continue-on-error: true
+      verbose: true
   # 实时推送通道：socketio(29181)
   # tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
   socket:

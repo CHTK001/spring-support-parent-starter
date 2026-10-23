@@ -187,8 +187,10 @@ public class GuacdConnectionFactory {
         // 分辨率
         tunnel.size(RDP_WIDTH, RDP_HEIGHT);
         tunnel.dpi(RDP_DPI);
-        // 安全与认证：强制 NLA，Windows 默认要求
-        tunnel.setParameter(GuacdConst.SECURITY, "nla");
+        // 安全与认证：默认强制 NLA（Windows 默认要求），可用系统配置 guacd.rdp.security 覆盖
+        // （取值 any/rdp/tls/nla/nla-ext/vmconnect，部分 RDP 服务/网关需非 NLA 模式）
+        String rdpSecurity = configService.getString("guacd.rdp.security", "nla");
+        tunnel.setParameter(GuacdConst.SECURITY, rdpSecurity);
         tunnel.setParameter(GuacdConst.IGNORE_CERT, true);
         tunnel.setParameter(GuacdConst.DISABLE_AUTH, false);
         // 剪贴板/时区/布局

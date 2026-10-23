@@ -85,6 +85,7 @@ public class MarkingSettingService {
         appConfigService.set(EduAppConfigService.KEY_MARKING_RETRY_ON_TRANSIENT,
                 setting.isRetryOnTransient() ? "1" : "0");
         appConfigService.set(EduAppConfigService.KEY_MARKING_EXTRACT_STRATEGY, normalizeStrategy(setting.getExtractStrategy()));
+        appConfigService.set(EduAppConfigService.KEY_MARKING_PROMPT, setting.getMarkingPrompt());
         this.cached = null;
     }
 
@@ -116,6 +117,7 @@ public class MarkingSettingService {
 
         String strategy = appConfigService.getText(EduAppConfigService.KEY_MARKING_EXTRACT_STRATEGY);
         setting.setExtractStrategy(strategy != null ? normalizeStrategy(strategy) : defaultStrategy());
+        setting.setMarkingPrompt(appConfigService.getText(EduAppConfigService.KEY_MARKING_PROMPT));
         return setting;
     }
 

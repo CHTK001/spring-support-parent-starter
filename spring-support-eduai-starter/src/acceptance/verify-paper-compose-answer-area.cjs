@@ -70,6 +70,9 @@ const record = (n, ok, d) => { checks.push({ name: n, ok: !!ok, detail: String(d
     const collapseBtn = cart?.querySelector('button');
     const footers = Array.from(document.querySelectorAll('.pp-page'));
     const pageTexts = footers.map((f) => (f.innerText || '').slice(0, 500));
+    const typeStats = Array.from(document.querySelectorAll('.compose-type-stats__item')).map((x) => (x.innerText || '').trim());
+    const presetRows = Array.from(document.querySelectorAll('.compose-row')).filter((r) => !!r.querySelector('.compose-row__preset'));
+    const presetButtons = presetRows.map((r) => Array.from(r.querySelectorAll('.compose-row__preset button')).map((b) => (b.innerText || '').trim()).join(','));
     return {
       readonly,
       rowCount: rows.length,
@@ -86,9 +89,16 @@ const record = (n, ok, d) => { checks.push({ name: n, ok: !!ok, detail: String(d
       qrAlt: document.querySelector('.pp-footer__qr')?.getAttribute('alt') || null,
       literalPageTemplate: pageTexts.join('\n').includes('{page}'),
       footerPagesOk: footers.length > 0 && footers.every((f, i) => (f.innerText || '').includes(`第 ${i + 1} 页 / 共 ${footers.length} 页`)),
+      typeStats,
+      presetCount: presetRows.length,
+      presetButtons,
     };
   });
   record('compose page loaded with questions', state.rowCount > 0, `rows=${state.rowCount}`);
+  record('type/share summary is visible with percentages', state.typeStats.length > 0 && state.typeStats.some((t) => t.includes('分') && t.includes('题') && t.includes('%')),
+    JSON.stringify(state.typeStats.slice(0, 6)));
+  record('subjective rows provide 少/中/多 preset', state.presetCount > 0 && state.presetButtons.every((s) => s.includes('少') && s.includes('中') && s.includes('多')),
+    `rows=${state.presetCount} labels=${JSON.stringify(state.presetButtons.slice(0, 3))}`);
   record('subjective rows show line control', state.subjCount > 0 && state.lineControls.every((x) => x.hasControl),
     JSON.stringify(state.lineControls.slice(0, 4)));
   record('subjective rows have default lines', state.subjCount > 0 && state.lineControls.some((x) => Number(x.lines) >= 3),
@@ -139,6 +149,24 @@ const record = (n, ok, d) => { checks.push({ name: n, ok: !!ok, detail: String(d
   record('adjusting answer lines changes blank height', state.readonly || heightChanged,
     JSON.stringify({ readonly: state.readonly, beforeH, afterH, heightChanged }));
 
+  // 主观题留白三档预设：点击「多」应联动答题行数到 10
+  let presetClickWorks = false;
+  let presetInputValue = null;
+  if (!state.readonly && state.presetCount > 0) {
+    const presetRow = p.locator('.compose-row').filter({ has: p.locator('.compose-row__preset') }).first();
+    if (await presetRow.count()) {
+      const moreBtn = presetRow.locator('.compose-row__preset button').filter({ hasText: '多' }).first();
+      if (await moreBtn.count()) {
+        await moreBtn.click();
+        await p.waitForTimeout(500);
+        const lineInput = presetRow.locator('.compose-row__answer-lines input');
+        presetInputValue = (await lineInput.inputValue()).trim();
+        presetClickWorks = presetInputValue === '10';
+      }
+    }
+  }
+  record('preset 多 sets answer lines to 10', state.readonly || presetClickWorks, String(presetInputValue));
+
   // 导出弹框：点击导出按钮
   const exportBtn = p.locator('.paper-panel, .panel-head').filter({ hasText: '导出 A4 图片' }).first();
   let exportVisible = false;
@@ -164,12 +192,21 @@ const record = (n, ok, d) => { checks.push({ name: n, ok: !!ok, detail: String(d
     'utf8'
   );
   const fnStart = source.indexOf('function buildExportAnswers');
-  const fnEnd = source.indexOf('const SUBJECTIVE_MOCK_TEXT', fnStart > 0 ? fnStart : 0);
+  const fnEnd = source.indexOf('async function runExport', fnStart > 0 ? fnStart : 0);
   const answerFnBody = fnStart >= 0 && fnEnd > fnStart ? source.slice(fnStart, fnEnd) : '';
-  const answeredUsesMock = answerFnBody.includes('SUBJECTIVE_MOCK_TEXT') && answerFnBody.includes('answers[key] = SUBJECTIVE_MOCK_TEXT');
-  const answeredDoesNotReadAnswer = answerFnBody.includes('SUBJECTIVE_MOCK_TEXT') && !answerFnBody.includes('q.answer');
+  const answeredUsesMock = answerFnBody.includes('buildSubjectiveMock') && answerFnBody.includes('answers[key] = buildSubjectiveMock(key)');
+  const answeredDoesNotReadAnswer = answerFnBody.includes('buildSubjectiveMock') && !answerFnBody.includes('q.answer');
+  const handwritingSource = fs.readFileSync(
+    path.join(__dirname, '../../../../vue-support-parent-starter/pages/eduai/src/components/paper/PaperPreview.vue'),
+    'utf8'
+  );
+  const hasHandwrittenTransform = handwritingSource.includes('class="hw-char"')
+    && handwritingSource.includes('--hw-rot')
+    && handwritingSource.includes('handwrittenText(item.writtenAnswer)');
   record('answered export uses mock answers, not standard answer', !!(answeredUsesMock && answeredDoesNotReadAnswer),
     `mock=${answeredUsesMock} noStandardAnswer=${answeredDoesNotReadAnswer} bodyLen=${answerFnBody.length}`);
+  record('answered subjective answers render handwriting style', hasHandwrittenTransform,
+    `paperPreviewHandwriting=${hasHandwrittenTransform}`);
 
   const unexpectedErr = errs.filter((x) => !/Failed to load resource|ResizeObserver|vite|favicon/i.test(x));
   record('no unexpected JS errors', unexpectedErr.length === 0, JSON.stringify(unexpectedErr.slice(0, 4)));

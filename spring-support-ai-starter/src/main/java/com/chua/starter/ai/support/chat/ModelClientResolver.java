@@ -220,6 +220,7 @@ public class ModelClientResolver {
                 .authScheme(provider.getAuthScheme())
                 .authHeader(extraString(provider.getExtra(), "auth_header"))
                 .authPrefix(extraString(provider.getExtra(), "auth_prefix"))
+                .metricsUrl(extraString(provider.getExtra(), "metrics_url"))
                 .proxy(provider.getProxy())
                 .build();
     }

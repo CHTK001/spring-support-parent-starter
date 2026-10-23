@@ -44,6 +44,7 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         // guacd（远程控制网关——系统配置页可动态修改）
         DEFAULTS.put("guacd.host", "127.0.0.1");
         DEFAULTS.put("guacd.port", "4822");
+        DEFAULTS.put("guacd.rdp.security", "nla");
  // guacd-客户端（浏览器侧 guacamole 客户端回连后端 WS 隧道的 主机:端口，空串=同域 位置.主机）
         DEFAULTS.put("guacd.client.host", "127.0.0.1:8082");
         // 连接缓存
@@ -218,6 +219,7 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         Map<String, String> desc = new HashMap<>();
         desc.put("guacd.host", "guacd 网关地址（远控隧道）");
         desc.put("guacd.port", "guacd 网关端口（远控隧道）");
+        desc.put("guacd.rdp.security", "RDP 安全模式（any/rdp/tls/nla/nla-ext/vmconnect）");
         desc.put("guacd.client.host", "guacd-client 网关地址（浏览器侧 WS 隧道 host:port，空串=同域）");
         desc.put("connection.sweep.interval", "连接健康检查间隔(秒)");
         desc.put("connection.idle.timeout", "连接空闲超时(秒)");

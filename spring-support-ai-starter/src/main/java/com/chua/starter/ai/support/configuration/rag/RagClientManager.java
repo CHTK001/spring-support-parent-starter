@@ -15,6 +15,7 @@ import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.common.support.ai.embedding.EmbeddingClientSetting;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;
 import com.chua.common.support.ai.rag.RagClient;
+import com.chua.common.support.ai.rag.RagClientProvider;
 import com.chua.common.support.ai.rag.RagClientSetting;
 import com.chua.common.support.ai.rag.RagPipeline;
 import com.chua.starter.ai.support.configuration.rag.RagSettingsChangedEvent;
@@ -81,7 +82,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RagClientManager {
+public class RagClientManager implements RagClientProvider {
 
     /**
      * 与默认 内存嵌入客户端 输出维度一致。
@@ -332,6 +333,7 @@ public class RagClientManager {
      *
      * @return RAG 客户端（配置缺失时可能为空）
      */
+    @Override
     public RagClient current() {
         String userId = AiUserContext.currentUserId();
         if (!StringUtils.hasText(userId)) {

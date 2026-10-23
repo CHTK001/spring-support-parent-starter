@@ -101,7 +101,6 @@ spring:
   autoconfigure:
     exclude:
       - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
-      - com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
       - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
@@ -224,6 +223,19 @@ plugin:
     dir-list: true
   datasource:
     script:
+      # 建表与种子数据统一由 datasource-starter 的 FlywayLike 机制执行，
+      # 走 classpath*:db/init/*.sql 扫描（本模块的 V5.1__init_all_ai.sql /
+      # V5.1__initdata_all_ai.sql 及其他模块 jar 里的脚本一并纳入）。
+      enable: true
+      # ALWAYS：表结构脚本每次启动都扫，是否真执行由 sys_database_version 的
+      # 「脚本名+版本」执行记录决定（已成功过的不会重跑）；补列语句靠版本号递进
+      # 让记录失效，从而在存量库上补齐缺失的列。
+      scan-mode: ALWAYS
+      # 种子数据仍保持 ONCE：业务表非空即无需重灌。
+      data-scan-mode: ONCE
+      continue-on-error: true
+      verbose: true
+      # 脚本内容会随版本迭代调整（补列语句并入 init），不校验历史 checksum。
       validate-checksum: false
 
 ---
