@@ -1322,8 +1322,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     question = questionMapper.selectById(row.getMarkingResultQuestionId());
                     if (question != null) {
                         String cleanedAnswer;
-                        if ("FILL".equalsIgnoreCase(String.valueOf(question.getQuestionType()).trim())) {
+                        String qType = String.valueOf(question.getQuestionType()).trim();
+                        if ("FILL".equalsIgnoreCase(qType)) {
                             cleanedAnswer = EduPaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
+                        } else if ("JUDGE".equalsIgnoreCase(qType)) {
+                            // 判断题：题目整段（含尾部页脚污染）一旦被规则切题收进作答，
+                            // stripLeadingStem 的 startsWith 会因尾注不匹配而剥离失败，导致
+                            // 整段题干冒充作答 → 「与标准答案不一致」。判断题的实质作答只有
+                            // 对/错/√/× 符号：剥不掉题干又没有判定符号时，按「未作答」处理。
+                            cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                            if (StringUtils.isNotBlank(cleanedAnswer)
+                                    && EduAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null
+                                    && judgeAnswerIsStemLike(cleanedAnswer, question.getQuestionStem())) {
+                                cleanedAnswer = "";
+                            }
                         } else {
                             cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
                         }
@@ -1935,6 +1947,30 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 判断题作答是否「只剩题干」（即学生没有作答）。
+     *
+     * <p>判断题的题干整段（含「判断正误：…（　　）」与可能的页脚尾注）被规则切题收进
+     * 作答时，两端都去掉空白与标点后比较：作答净文本与题干净文本重合（互为子串）即
+     * 视为「作答=题干」，学生实际没有写判定符号。</p>
+     *
+     * @param answer 已剥过题干前缀的作答文本（可能仍残留题干尾段/页脚）
+     * @param stem   题库题干
+     * @return true 表示作答只剩题干，应按未作答处理
+     */
+    private static boolean judgeAnswerIsStemLike(String answer, String stem) {
+        if (StringUtils.isBlank(answer) || StringUtils.isBlank(stem)) {
+            return false;
+        }
+        String a = normalizeText(answer);
+        String s = normalizeText(stem);
+        if (a.isEmpty() || s.isEmpty()) {
+            return false;
+        }
+        // 作答净文本与题干净文本重合（互含或相等）→ 作答就是题干
+        return a.equals(s) || a.contains(s) || s.contains(a);
+    }
+
+    /**
      * 修正 OCR 常见「字母↔数字」混淆，用于题号兜底匹配。
      *
      * <p>实测：题号 {@code 1.} 会被识别成 {@code L.}（数字 1 与字母 l/L/I 字形相近），
@@ -2064,6 +2100,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // （OCR 把「（√）」连题干一起识别），LCS 对符号不敏感，直接比对会误判。
             String type = question.getQuestionType().trim().toUpperCase();
             String extracted = EduAiService.extractObjectiveAnswer(type, studentAnswer);
+            // 判断题作答为空（stripLeadingStem 剥离题干后学生没有写判定符号）→ 未作答
+            if ("JUDGE".equals(type) && StringUtils.isBlank(studentAnswer)) {
+                var outcome = new EduAiService.MarkingOutcome();
+                outcome.setSource("AI");
+                outcome.setScore(0);
+                outcome.setComment("未作答");
+                return outcome;
+            }
             if ("JUDGE".equals(type) && extracted != null) {
                 boolean right = extracted.equals(EduAiService.normalizeJudgeAnswer(question.getQuestionAnswer()));
                 var outcome = new EduAiService.MarkingOutcome();

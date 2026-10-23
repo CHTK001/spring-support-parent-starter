@@ -10,6 +10,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -87,14 +88,19 @@ public class DataSourceScriptConfiguration {
      * {@code @Bean} 方法会促使容器提前实例化本配置类，而此时其他 BeanPostProcessor
      * 尚未注册完成，Spring 会打出「BeanPostProcessorChecker」告警。</p>
      *
-     * @param dataSourceScriptProperties 数据源脚本配置属性
+     * <p>参数用 {@link ObjectProvider} 延迟解析（而非直接注入
+     * {@link DataSourceScriptProperties}）：BPP 在容器极早期创建，直接注入
+     * {@code @ConfigurationProperties} bean 会迫使它提前实例化，连带刷出一串
+     * 「Bean ... is not eligible for getting processed by all BeanPostProcessors」。</p>
+     *
+     * @param propertiesProvider 数据源脚本配置属性提供者
      * @return 数据源脚本处理器
      */
     @Bean
     @ConditionalOnMissingBean
     public static DataSourceScriptBeanPostProcessor dataSourceScriptBeanPostProcessor(
-            DataSourceScriptProperties dataSourceScriptProperties) {
-        return new DataSourceScriptBeanPostProcessor(dataSourceScriptProperties);
+            ObjectProvider<DataSourceScriptProperties> propertiesProvider) {
+        return new DataSourceScriptBeanPostProcessor(propertiesProvider);
     }
 
     /**

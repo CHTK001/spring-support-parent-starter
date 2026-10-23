@@ -1,6 +1,6 @@
 com.chua.starter.ai.support.spi.impl.ClineAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.QoderAccountChannelAuthManager
-com.chua.starter.ai.support.spi.impl.QoderAccountChannelAuthManager$Cn
+com.chua.starter.ai.support.spi.impl.QoderCnAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.TraeAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.GeminiAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.MinimaxAccountChannelAuthManager
