@@ -5,10 +5,15 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.ai.chat.ChatClientIndicator;
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
+import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiModelMetricsMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService.MetricsRecord;
@@ -73,6 +78,11 @@ public class SysAiModelMetricsService {
      * 提供者模型 映射器（同步价格后回写模型卡片的指标 JSON）
      */
     private final SysAiProviderModelMapper providerModelMapper;
+
+    /**
+     * 服务商 映射器（按已配置服务商枚举 indicator 消费）
+     */
+    private final SysAiProviderMapper providerMapper;
 
     /**
      * 指标富集服务（全量数据源）
@@ -320,6 +330,123 @@ public class SysAiModelMetricsService {
         log.info("[ModelMetrics] indicator={} 同步完成：更新 {}，插入 {}，回写模型行 {}",
                 indicator.source(), updated, inserted, providerModels);
         return new SyncResult(updated, inserted, providerModels);
+    }
+
+    /**
+     * 遍历已配置服务商，逐个同步其 {@link ChatClientIndicator} 指标到指标库。
+     *
+     * <p>这是 {@code ModelMetricsPushTask} 的<b>指标通道入口</b>：把人工「自动获取」
+     * 才触发的 {@link #syncFromIndicator(ChatClientIndicator, String)} 引入定时链路，
+     * 让已配置服务商的价格/能力/思考档位随调度自动落库，前端模型卡片在同步后
+     * 立即显示新数据。来源解析与手动接口同一套
+     * {@link ChatClientIndicators} 映射，避免两处登记不一致。</p>
+     *
+     * <p>容错语义：单个服务商解析或同步失败只记录日志，不影响其它服务商；
+     * 无指标端点的服务商（如 Ollama / ONNX）直接跳过，不视为失败。</p>
+     *
+     * @return 成功同步的服务商数（有数据落库）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public int syncFromConfiguredProviders() {
+        List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
+        if (providers.isEmpty()) {
+            return 0;
+        }
+        int ok = 0;
+        int skipped = 0;
+        for (SysAiProvider provider : providers) {
+            ChatClientIndicator indicator;
+            try {
+                indicator = resolveIndicator(provider);
+            } catch (Exception e) {
+                log.warn("[ModelMetrics] provider={} indicator 解析失败: {}", provider.getProviderId(), e.getMessage());
+                skipped++;
+                continue;
+            }
+            if (indicator == null) {
+                skipped++;
+                continue;
+            }
+            try {
+                SyncResult result = syncFromIndicator(indicator, provider.getProviderId());
+                if (result.getUpdated() + result.getInserted() > 0) {
+                    ok++;
+                }
+            } catch (Exception e) {
+                log.warn("[ModelMetrics] provider={} indicator 同步失败: {}", provider.getProviderId(), e.getMessage());
+            }
+        }
+        log.info("[ModelMetrics] 已配置服务商 indicator 同步完成：成功 {} 家，跳过 {} 家，共 {} 家",
+                ok, skipped, providers.size());
+        return ok;
+    }
+
+    /**
+     * 按服务商平台解析对应的 {@link ChatClientIndicator}，与前端「自动获取」
+     * 走同一套 {@link ChatClientIndicators} 映射；配置了
+     * {@code extra.metrics_url} 且无内置实现时用 {@link HttpChatClientIndicator} 兜底。
+     *
+     * @param entity 服务商行
+     * @return indicator 实现或空（无可用指标端点）
+     */
+    private ChatClientIndicator resolveIndicator(SysAiProvider entity) {
+        ChatClientSetting setting = buildSettingForIndicator(entity);
+        ChatClientIndicator indicator = ChatClientIndicators.of(setting);
+        if (indicator != null) {
+            return indicator;
+        }
+        String metricsUrl = extraString(entity.getExtra(), "metrics_url");
+        if (com.chua.common.support.utils.StringUtils.isNotBlank(metricsUrl)) {
+            return new HttpChatClientIndicator(setting);
+        }
+        return null;
+    }
+
+    /**
+     * 组装供 indicator 使用的最小 {@link ChatClientSetting}。
+     */
+    private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
+        return ChatClientSetting.builder()
+                .provider(entity.getPlatform() == null || entity.getPlatform().isBlank()
+                        ? entity.getProviderId() : entity.getPlatform())
+                .appKey(firstApiKey(entity))
+                .baseUrl(entity.getBaseUrl())
+                .metricsUrl(extraString(entity.getExtra(), "metrics_url"))
+                .proxy(entity.getProxy())
+                .build();
+    }
+
+    /**
+     * 取服务商自身凭证中的第一个 API Key（无则返回 {@code null}）。
+     */
+    private String firstApiKey(SysAiProvider entity) {
+        if (entity.getCredentials() == null || entity.getCredentials().isEmpty()) {
+            return null;
+        }
+        Object single = entity.getCredentials().get("api_key");
+        if (single instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        Object multi = entity.getCredentials().get("api_keys");
+        if (multi instanceof List<?> list && !list.isEmpty()) {
+            Object first = list.getFirst();
+            if (first instanceof String s && !s.isBlank()) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从 extra 中读取字符串值（extra 为 {@code null} 或键不存在时返回 {@code null}）。
+     */
+    private static String extraString(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return null;
+        }
+        Object value = extra.get(key);
+        return value == null ? null : value.toString();
     }
 
     /**

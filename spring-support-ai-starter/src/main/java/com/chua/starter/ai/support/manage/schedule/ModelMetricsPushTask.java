@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
  *       从 datasearch-starter 加载全量官方定价 → 清空旧数据 → 全量插入 sys_ai_pricing 表，
  *       供用量统计在无金额时回退使用官方金额</li>
  * </ol>
- *
  * @since 4.0.0.42
  * @author CH
  */
@@ -128,6 +127,14 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             log.info("[ModelMetrics] 全量指标库同步完成，共 {} 条", synced);
         } catch (Exception e) {
             log.warn("[ModelMetrics] 全量指标库同步失败: {}", e.getMessage());
+        }
+        try {
+            // 1.5 已配置服务商 indicator 通道（Models.dev / OpenRouter / 自定义 metrics_url）
+            //     与手动「自动获取」同源，随调度自动落库，失败不阻断后续步骤
+            int indicatorCount = metricsService.syncFromConfiguredProviders();
+            log.info("[ModelMetrics] 已配置服务商 indicator 同步完成，共 {} 家", indicatorCount);
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 已配置服务商 indicator 同步失败: {}", e.getMessage());
         }
         try {
             // 2. 指标快照推送 Redis（兼容）
