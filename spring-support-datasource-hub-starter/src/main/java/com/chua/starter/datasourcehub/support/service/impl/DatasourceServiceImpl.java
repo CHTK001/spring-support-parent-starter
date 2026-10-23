@@ -148,8 +148,11 @@ public class DatasourceServiceImpl implements DatasourceService {
     @Override
     public ReturnResult<List<DataSourceVO>> list() {
         try {
+            // 置顶在前、其余按 ID 升序：置顶是用户偏好，不随连通性变化，排序口径保持稳定
             List<MsDatasource> rows = datasourceMapper.selectList(
-                    new LambdaQueryWrapper<MsDatasource>().orderByAsc(MsDatasource::getId));
+                    new LambdaQueryWrapper<MsDatasource>()
+                            .orderByDesc(MsDatasource::getDatasourceTopFlag)
+                            .orderByAsc(MsDatasource::getId));
             List<DataSourceVO> result = new ArrayList<>(rows.size());
             for (MsDatasource row : rows) {
                 result.add(toVO(row));
@@ -242,6 +245,23 @@ public class DatasourceServiceImpl implements DatasourceService {
         // 刻意不走事务：主删除已经成功，从属清理失败不该回滚用户的删除动作。
         purgeDependents(id);
         return ReturnResult.ok(true);
+    }
+
+    @Override
+    public ReturnResult<DataSourceVO> toggleTop(Long id, boolean top) {
+        if (id == null) {
+            return ReturnResult.error("数据源 ID 不能为空");
+        }
+        MsDatasource row = datasourceMapper.selectById(id);
+        if (row == null) {
+            return ReturnResult.error("数据源不存在");
+        }
+        MsDatasource update = new MsDatasource();
+        update.setId(id);
+        update.setDatasourceTopFlag(top ? 1 : 0);
+        datasourceMapper.updateById(update);
+        row.setDatasourceTopFlag(top ? 1 : 0);
+        return ReturnResult.ok(toVO(row));
     }
 
     /**
@@ -350,7 +370,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         }
         return ReturnResult.ok(new DataSourceTestVO(outcome.success(), outcome.message(), ds.type(),
                 outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt,
-                outcome.connectionCount(), outcome.serverStats()));
+                outcome.connectionCount(), outcome.serverStats(), outcome.version()));
     }
 
     /**
@@ -429,8 +449,9 @@ public class DatasourceServiceImpl implements DatasourceService {
             // 方言不认识就留 null，图上缺一格，比编个 0 好。
             Long connectionCount = queryJdbcConnectionCount(conn, url);
             DatasourceProbeSupport.ServerStats serverStats = queryJdbcServerStats(conn, url);
+            String version = queryJdbcServerVersion(conn, url);
             return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs,
-                    "连接测试成功", connectionCount, serverStats);
+                    "连接测试成功", connectionCount, serverStats, version);
         } catch (Exception e) {
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
                     "连接测试失败: " + e.getMessage(), null);
@@ -534,6 +555,42 @@ public class DatasourceServiceImpl implements DatasourceService {
             );
         } catch (Exception e) {
             log.debug("[datasource-hub] 服务器状态查询失败 url-prefix={} reason={}",
+                    lower.substring(0, Math.min(16, lower.length())), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 在探测连接上查询数据库服务端版本（按方言尽力而为）。
+     *
+     * <p>实现口径：MySQL/MariaDB 取 {@code SELECT VERSION()}，PostgreSQL 取
+     * {@code SHOW server_version}，其余方言尝试 {@code SELECT version()}；
+     * 都是通行的「客户端问服务器版本」标准做法。查询失败不抛 —— 版本取不到
+     * 只影响弹窗内「立即检测」自动补全的版本字段，不该把一次成功的连通性探测
+     * 判成失败（与连接数/服务器指标的容错口径一致）。</p>
+     *
+     * @param conn 探测连接（用完即关的那条）
+     * @param url  实际使用的 JDBC URL，用于判断方言
+     * @return 版本号文本；方言不支持或查询失败返回 null
+     */
+    private String queryJdbcServerVersion(Connection conn, String url) {
+        String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+        String sql;
+        if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+            sql = "SELECT VERSION()";
+        } else if (lower.startsWith("jdbc:postgresql:")) {
+            sql = "SHOW server_version";
+        } else {
+            sql = "SELECT version()";
+        }
+        try (var statement = conn.createStatement(); var rs = statement.executeQuery(sql)) {
+            if (rs.next()) {
+                String value = rs.getString(1);
+                return value == null ? null : value.trim();
+            }
+            return null;
+        } catch (Exception e) {
+            log.debug("[datasource-hub] 服务端版本查询失败 url-prefix={} reason={}",
                     lower.substring(0, Math.min(16, lower.length())), e.getMessage());
             return null;
         }
@@ -1085,6 +1142,8 @@ public class DatasourceServiceImpl implements DatasourceService {
         boolean influxdb = DatasourceHubConstants.DS_TYPE_INFLUXDB.equalsIgnoreCase(trim(data.type()).toLowerCase());
         String version = trim(data.version());
         entity.setDatasourceVersion(influxdb && ("2".equals(version) || "3".equals(version)) ? version : "");
+        // 置顶标记：null 按不置顶处理；其余值归一为 0/1（避免库里灌进 7 这类哨兵值）
+        entity.setDatasourceTopFlag(data.topFlag() == null ? 0 : (data.topFlag() == 1 ? 1 : 0));
     }
 
     /**
@@ -1106,7 +1165,8 @@ public class DatasourceServiceImpl implements DatasourceService {
                 row.getDatasourceConnectLatencyMs(), row.getDatasourceSessionLatencyMs(),
                 row.getDatasourceLastTestTime() == null ? null : row.getDatasourceLastTestTime().toString(),
                 row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
-                nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()));
+                nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()),
+                row.getDatasourceTopFlag() == null ? 0 : row.getDatasourceTopFlag());
     }
 
     /**

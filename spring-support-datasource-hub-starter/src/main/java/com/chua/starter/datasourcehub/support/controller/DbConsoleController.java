@@ -17,6 +17,7 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbFilter;
 import com.chua.starter.datasourcehub.support.dbconsole.DbObjectDialect;
 import com.chua.starter.datasourcehub.support.dbconsole.DbProcessKillRequest;
 import com.chua.starter.datasourcehub.support.dbconsole.DbProcessVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbSlowQueryVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlBatchVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlExecuteDTO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlResultVO;
@@ -2314,6 +2315,110 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 return (T) result;
             }
         });
+    }
+
+    // ==================== 慢查询（需求 1.7：SPI 能力判断 + 各内核查询） ====================
+
+    /**
+     * 慢查询列表（按平均耗时降序）。
+     *
+     * <p><b>能力与方言</b>：慢查询同样是内核特有能力 —— MySQL / MariaDB 读
+     * {@code performance_schema.events_statements_summary_by_digest}，
+     * PostgreSQL 读 {@code pg_stat_statements}（需先 {@code CREATE EXTENSION
+     * pg_stat_statements} 并加到 shared_preload_libraries）。两处都读不到时
+     * （未开启采样 / 权限不足 / 表不存在），返回 {@code supported=false}，
+     * 前端据此不显示「慢查询」右键入口，或在弹窗内给出原因。</p>
+     *
+     * <p><b>阈值口径</b>：不依赖各库的 {@code long_query_time} 配置，
+     * 直接取平均耗时最高的前 50 条 —— 对「谁在拖慢库」的定位语义一致，
+     * 且不读用户变量（老账号常没有 SHOW VARIABLES 权限）。</p>
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @return 慢查询列表（supported=false 表示该内核/实例不支持）
+     */
+    @Operation(summary = "数据库慢查询列表")
+    @GetMapping("slow-queries")
+    public ReturnResult<java.util.Map<String, Object>> slowQueries(
+            @RequestParam(required = false) Long datasourceId) {
+        return callDb("查询数据库慢查询", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                String url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                java.util.List<DbSlowQueryVO> rows;
+                if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+                    rows = listMySqlSlowQueries(conn);
+                } else if (lower.startsWith("jdbc:postgresql:")) {
+                    rows = listPostgresSlowQueries(conn);
+                } else {
+                    java.util.Map<String, Object> unsupported = new java.util.LinkedHashMap<>();
+                    unsupported.put("supported", false);
+                    unsupported.put("rows", java.util.List.of());
+                    unsupported.put("message", "该数据库内核不支持慢查询（仅 MySQL/MariaDB/PostgreSQL 支持）");
+                    return unsupported;
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("rows", rows);
+                return result;
+            }
+        });
+    }
+
+    /**
+     * MySQL/MariaDB：{@code performance_schema.events_statements_summary_by_digest}。
+     *
+     * <p>取平均耗时前 50 条；performance_schema 表在绝大多数发行版默认开启且对所有
+     * 会话可读。读不到（5.5 及以下、被显式关闭、权限收紧）抛 SQL 异常，
+     * 由 callDb 转成可读错误。</p>
+     */
+    private java.util.List<DbSlowQueryVO> listMySqlSlowQueries(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbSlowQueryVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT digest_text, "
+                + "ROUND(avg_timer_wait / 1000000000) AS avg_ms, "
+                + "ROUND(max_timer_wait / 1000000000) AS max_ms, "
+                + "count_star AS calls, last_seen "
+                + "FROM performance_schema.events_statements_summary_by_digest "
+                + "WHERE digest_text IS NOT NULL AND avg_timer_wait > 0 "
+                + "ORDER BY avg_timer_wait DESC LIMIT 50";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String lastSeen = rs.getTimestamp("last_seen") == null
+                        ? null : rs.getTimestamp("last_seen").toLocalDateTime().toString();
+                out.add(new DbSlowQueryVO(
+                        rs.getString("digest_text"),
+                        longOrNull(rs, "avg_ms"),
+                        longOrNull(rs, "max_ms"),
+                        rs.getLong("calls"),
+                        lastSeen));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * PostgreSQL：{@code pg_stat_statements}。
+     *
+     * <p>依赖扩展已加载；未加载（或用不了 read 权限）抛异常由 callDb 转错。</p>
+     */
+    private java.util.List<DbSlowQueryVO> listPostgresSlowQueries(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbSlowQueryVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT query, ROUND(mean_exec_time)::bigint AS avg_ms, "
+                + "ROUND(max_exec_time)::bigint AS max_ms, calls, last_planning_time AS last_seen "
+                + "FROM pg_stat_statements "
+                + "WHERE mean_exec_time > 0 ORDER BY mean_exec_time DESC LIMIT 50";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                out.add(new DbSlowQueryVO(
+                        rs.getString("query"),
+                        rs.getLong("avg_ms"),
+                        rs.getLong("max_ms"),
+                        rs.getLong("calls"),
+                        null));
+            }
+        }
+        return out;
     }
 
     /**

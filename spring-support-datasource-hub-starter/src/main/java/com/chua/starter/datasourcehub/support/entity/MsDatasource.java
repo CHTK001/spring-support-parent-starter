@@ -181,6 +181,16 @@ public class MsDatasource implements Serializable {
     private String datasourceControlTarget;
 
     /**
+     * 置顶标记：1 置顶、0 普通。列表按「置顶在前、ID 升序」排序。
+     *
+     * <p>置顶是台账上的用户偏好，不参与连通性判定，也不随测试回写；
+     * 新增数据源默认不置顶（{@code 0}）。</p>
+     */
+    @TableField("datasource_top_flag")
+    @Schema(description = "置顶标记 1置顶 0普通", example = "1")
+    private Integer datasourceTopFlag;
+
+    /**
      * 创建时间
      */
     @TableField("datasource_create_time")
