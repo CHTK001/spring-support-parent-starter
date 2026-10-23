@@ -421,7 +421,7 @@ def main():
     parser = argparse.ArgumentParser(description="生成汉字库初始化数据")
     parser.add_argument("--out", default="V1.12__initdata_all_eduai.sql")
     parser.add_argument("--meaning-chars", type=int, default=90,
-                        help="释义正文保留长度（hanzi_meaning 是 VARCHAR(500)，不会写超）")
+                        help="释义正文保留长度（hanzi_meaning 已是 TEXT，不写超；该参数控制种子释义简洁度）")
     parser.add_argument("--batch", type=int, default=200)
     args = parser.parse_args()
 
@@ -473,7 +473,7 @@ def main():
         "--     也不会覆盖已有数据（如 V1.10 里带笔顺的 12 个字）。\n"
         "--   * 拼音已把源数据里的 U+0261（ɡ）修正为 g，否则会得到「dīnɡ」。\n"
         "--   * 释义取本义段（%d 字内，在「同本义/又如/古籍」处断句）+「又如」组词，\n"
-        "--     避开大段古籍引文（hanzi_meaning 是 VARCHAR(500)，不会写超）。\n"
+        "--     避开大段古籍引文（hanzi_meaning 已是 TEXT，不写超）。\n"
         "--   * 笔顺（hanzi_stroke_order）留空：公开数据集只给 SVG 笔顺轨迹、没有笔画名，\n"
         "--     由老师按教材口径在「基础数据维护」页补。\n"
         "--   * 结构只取可靠映射：含「？」或首字符为 ⿸/⿻ 的分解一律留空\n"
