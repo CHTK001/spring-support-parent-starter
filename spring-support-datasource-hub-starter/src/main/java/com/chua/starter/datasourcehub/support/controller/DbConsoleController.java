@@ -19,6 +19,9 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbProcessKillRequest;
 import com.chua.starter.datasourcehub.support.dbconsole.DbProcessVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSlowQueryVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlBatchVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbUserDeleteDTO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbUserSaveDTO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbUserVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlExecuteDTO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlResultVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbStructureDiff;
@@ -2362,6 +2365,258 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 return result;
             }
         });
+    }
+
+    // ==================== 用户管理（需求 1：SPI 能力判断 + 各内核查询） ====================
+
+    /**
+     * 数据库用户列表（按用户名 + 主机排序）。
+     *
+     * <p><b>能力与方言</b>：用户管理是 MySQL/MariaDB 内核特有能力 —— 用户定义落在
+     * {@code mysql.user} 表，可直接读取并执行 {@code CREATE / ALTER / DROP USER}。
+     * 其余内核（含 PostgreSQL 的 {@code pg_roles}，结构差异大、没有 SSL/资源限额列）
+     * 返回 {@code supported=false}，前端据此不显示「用户管理」右键入口。</p>
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @return 用户列表（supported=false 表示该内核不支持用户管理）
+     */
+    @Operation(summary = "数据库用户列表")
+    @GetMapping("users")
+    public ReturnResult<java.util.Map<String, Object>> users(
+            @RequestParam(required = false) Long datasourceId) {
+        return callDb("查询数据库用户", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                String url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                if (!lower.startsWith("jdbc:mysql:") && !lower.startsWith("jdbc:mariadb:")) {
+                    java.util.Map<String, Object> unsupported = new java.util.LinkedHashMap<>();
+                    unsupported.put("supported", false);
+                    unsupported.put("users", java.util.List.of());
+                    unsupported.put("message", "该数据库内核不支持用户管理（仅 MySQL/MariaDB 支持）");
+                    return unsupported;
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("users", listMySqlUsers(conn));
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 新建数据库用户：{@code CREATE USER} + 可选 {@code GRANT}。
+     *
+     * @param request 请求：datasourceId + username + host + password + grants
+     * @return 是否成功
+     */
+    @Operation(summary = "新建数据库用户")
+    @SysLog(name = "新建数据库用户")
+    @PostMapping("users")
+    public ReturnResult<Boolean> createUser(@RequestBody DbUserSaveDTO request) {
+        return saveUserInternal(request, false);
+    }
+
+    /**
+     * 修改数据库用户：{@code ALTER USER}（改密码 / 资源限额 / 超级权限）+ 增量 GRANT/REVOKE。
+     *
+     * @param request 请求：datasourceId + username + host + password + grants + superUser
+     * @return 是否成功
+     */
+    @Operation(summary = "修改数据库用户")
+    @SysLog(name = "修改数据库用户")
+    @PutMapping("users")
+    public ReturnResult<Boolean> updateUser(@RequestBody DbUserSaveDTO request) {
+        return saveUserInternal(request, true);
+    }
+
+    /**
+     * 删除数据库用户：{@code DROP USER 'x'@'h'}。
+     *
+     * @param request 请求：datasourceId + username + host
+     * @return 是否成功
+     */
+    @Operation(summary = "删除数据库用户")
+    @SysLog(name = "删除数据库用户")
+    @DeleteMapping("users")
+    public ReturnResult<Boolean> deleteUser(@RequestBody DbUserDeleteDTO request) {
+        if (request == null) {
+            return ReturnResult.error("请求不能为空");
+        }
+        String user = safeUserIdent(request.username(), "用户名");
+        String host = safeUserHost(request.host());
+        if (user.isEmpty()) {
+            return ReturnResult.error("用户名不能为空");
+        }
+        String sql = "DROP USER '" + user + "'@'" + host + "'";
+        return callDb("删除数据库用户", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 java.sql.Statement stmt = conn.createStatement()) {
+                stmt.execute(sql);
+                return true;
+            }
+        });
+    }
+
+    /**
+     * 查询用户权限：{@code SHOW GRANTS FOR 'x'@'h'}。
+     *
+     * @param request 请求：datasourceId + username + host
+     * @return 权限语句清单（supported=false 表示该内核不支持）
+     */
+    @Operation(summary = "查询数据库用户权限")
+    @PostMapping("users/grants")
+    public ReturnResult<java.util.Map<String, Object>> userGrants(@RequestBody DbUserDeleteDTO request) {
+        if (request == null) {
+            return ReturnResult.error("请求不能为空");
+        }
+        String user = safeUserIdent(request.username(), "用户名");
+        String host = safeUserHost(request.host());
+        if (user.isEmpty()) {
+            return ReturnResult.error("用户名不能为空");
+        }
+        String sql = "SHOW GRANTS FOR '" + user + "'@'" + host + "'";
+        return callDb("查询数据库用户权限", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 java.sql.Statement stmt = conn.createStatement();
+                 java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+                java.util.List<String> grants = new java.util.ArrayList<>();
+                while (rs.next()) {
+                    String line = rs.getString(1);
+                    if (line != null) {
+                        grants.add(line.trim());
+                    }
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("grants", grants);
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 新建/修改用户的公共实现：MySQL 系 {@code CREATE/ALTER USER} + GRANT/REVOKE。
+     *
+     * <p>用户名经单引号转义、主机经白名单校验后才拼进 SQL（防注入）；
+     * 密码只在非空时写 {@code IDENTIFIED BY}（空=不设/不改）。</p>
+     *
+     * @param request 请求
+     * @param update  true 修改、false 新建
+     * @return 是否成功
+     */
+    private ReturnResult<Boolean> saveUserInternal(DbUserSaveDTO request, boolean update) {
+        if (request == null) {
+            return ReturnResult.error("请求不能为空");
+        }
+        String user = safeUserIdent(request.username(), "用户名");
+        String host = safeUserHost(request.host());
+        if (user.isEmpty()) {
+            return ReturnResult.error("用户名不能为空");
+        }
+        String pass = request.password() == null ? "" : request.password();
+        return callDb("保存数据库用户", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 java.sql.Statement stmt = conn.createStatement()) {
+                java.util.List<String> statements = new java.util.ArrayList<>();
+                String quoted = "'" + user + "'@'" + host + "'";
+                if (update) {
+                    // 修改：只重建要发的语句。密码非空才 ALTER 密码，避免空密码覆盖原有认证
+                    StringBuilder alter = new StringBuilder("ALTER USER " + quoted);
+                    if (!pass.isEmpty()) {
+                        alter.append(" IDENTIFIED BY '").append(escapeSingle(pass)).append("'");
+                    }
+                    statements.add(alter.toString());
+                } else {
+                    StringBuilder create = new StringBuilder("CREATE USER " + quoted);
+                    if (!pass.isEmpty()) {
+                        create.append(" IDENTIFIED BY '").append(escapeSingle(pass)).append("'");
+                    }
+                    statements.add(create.toString());
+                }
+                // 权限：全量走 GRANT（GRANT 幂等 —— 重复授予同一权限不报错）。
+                java.util.List<String> grants = request.grants() == null
+                        ? java.util.List.of() : request.grants();
+                if (!grants.isEmpty()) {
+                    statements.add("GRANT " + String.join(", ", grants) + " ON *.* TO " + quoted);
+                }
+                // 超级权限是独立维度：MySQL 里 GRANT SUPER ON *.* 单独一条
+                if (Boolean.TRUE.equals(request.superUser())) {
+                    statements.add("GRANT SUPER ON *.* TO " + quoted);
+                }
+                for (String statement : statements) {
+                    try (java.sql.Statement s = conn.createStatement()) {
+                        s.execute(statement);
+                    }
+                }
+                return true;
+            }
+        });
+    }
+
+    /**
+     * MySQL/MariaDB：{@code mysql.user} 用户清单。
+     */
+    private java.util.List<DbUserVO> listMySqlUsers(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbUserVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT User, Host, ssl_type, "
+                + "max_questions, max_updates, max_connections, max_user_connections, "
+                + "Super_priv FROM mysql.user ORDER BY User, Host";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String name = rs.getString("User");
+                String host = rs.getString("Host");
+                if (name == null) {
+                    continue;
+                }
+                String superv = rs.getString("Super_priv");
+                out.add(new DbUserVO(
+                        name.trim(),
+                        host == null ? "" : host.trim(),
+                        rs.getString("ssl_type"),
+                        longOrNull(rs, "max_questions"),
+                        longOrNull(rs, "max_updates"),
+                        longOrNull(rs, "max_connections"),
+                        longOrNull(rs, "max_user_connections"),
+                        superv != null && "Y".equalsIgnoreCase(superv.trim())));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 用户名白名单校验：字母/数字/下划线/$/点，最长 64 字符。
+     */
+    private static String safeUserIdent(String name, String label) {
+        if (name == null) {
+            return "";
+        }
+        String trimmed = name.trim();
+        if (!trimmed.matches("[A-Za-z0-9_$.]{1,64}")) {
+            throw new IllegalArgumentException(label + "只能由字母、数字、下划线、$ 和点组成，且最长 64 字符");
+        }
+        return trimmed;
+    }
+
+    /**
+     * 主机白名单校验：字母/数字/点/冒号/下划线/百分号/横杠，最长 255 字符。
+     */
+    private static String safeUserHost(String host) {
+        if (host == null || host.isBlank()) {
+            return "%";
+        }
+        String trimmed = host.trim();
+        if (!trimmed.matches("[A-Za-z0-9.:_%-]{1,255}")) {
+            throw new IllegalArgumentException("主机名不合法");
+        }
+        return trimmed;
+    }
+
+    /**
+     * SQL 单引号转义（MySQL 用两个单引号表示一个）。
+     */
+    private static String escapeSingle(String text) {
+        return text.replace("'", "''");
     }
 
     /**
