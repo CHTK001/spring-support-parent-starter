@@ -148,26 +148,36 @@ PaperClient.available() == false
 
 ## 六、前端
 
-`pages/ai` 是 `vue-support-parent-starter` 的 **turbo workspace 独立模块**：
+前端源码在 `vue-support-parent-starter` 仓库，**与后端 jar 完全分离**。涉及三层结构：
 
-```yaml
-# pnpm-workspace.yaml
-packages:
-  - "packages/*"
-  - "pages/*"
+| 层 | 位置 | 说明 |
+|---|---|---|
+| 业务组件包 | `pages/ai` | 「AI 控制台」共享业务包，**没有自己的 index.html，不是可构建应用**，只导出组件 |
+| 应用宿主 | `apps/vue-support-eduai-starter` | 真正可构建的 SPA（有 index.html + vite.config.ts），通过 `import` 消费 `pages/ai` 的组件 |
+| 独立控制台 | `apps/vue-support-ai-starter` | 另一个可构建的应用，自带 index.html |
+
+```ts
+// apps/vue-support-eduai-starter 与 pages/eduai 如何消费 pages/ai
+import PaperConfigPanel from "@pages/ai/components/setting/PaperConfigPanel.vue";
+const loadModelsPage = () => import("@pages/ai/components/models/ModelsPage.vue");
 ```
 
-```json
-// turbo.json
-"build": { "dependsOn": ["^build"], "outputs": ["dist/**"] }
-```
+两个仓库都在 `pnpm-workspace.yaml` 的 workspace 内（`packages/*`、`pages/*`、`apps/*`），由 turbo 编排。
 
 要点：
 
 1. **后端 jar 不携带前端产物** —— `spring-support-ai-starter` 无 `static` 资源、无 npm/vite 构建插件
-2. 前端按 turbo 任务独立构建：`pnpm build --filter=pages/ai`
-3. 构建产物由前端服务器（nginx 等）托管，与后端 jar 的发布相互独立
-4. 前端通过后端 `com.chua.starter.ai.support.controller` 包暴露的 `/ai/**` 等接口通信
+2. **构建目标是 `apps/*`，不是 `pages/ai`**：`pages/ai` 的 package.json 没有 build 脚本，
+   在 `pages/ai` 下直接跑 `vite build` 会报 `Could not resolve entry module "index.html"`
+3. 构建命令（宿主应用）：
+   ```bash
+   # 仅用 vite，绕过 vue-tsc（仓库内 vue-tsc 存在类型问题）
+   cd apps/vue-support-eduai-starter && npx vite build
+   # 或走 package.json 的完整脚本（含 vue-tsc --noEmit）
+   pnpm --filter vue-support-eduai-starter build
+   ```
+4. 构建产物在 `apps/vue-support-eduai-starter/dist`，由前端服务器（nginx 等）托管，与后端 jar 发布相互独立
+5. 前端通过后端 `com.chua.starter.ai.support.controller` 包暴露的 `/ai/**` 等接口通信
 
 ---
 
@@ -182,7 +192,7 @@ packages:
 | 3 | 配置已就位（YAML 或页面） | 启动日志看 YAML 掩盖层；或查表 | 能力探测 `available=false` |
 | 4 | provider 凭据已配 | 页面保存后有 `[AiConfiguration] 已按...重建默认对话客户端` 日志 | 「启用了却没密钥」告警 |
 | 5 | 模型资产已就位 | `models/onnx/<modelId>/model.onnx` 存在 | 识别报「管线不可用」 |
-| 6 | 前端已独立部署 | `pages/ai` 构建产物已托管 | 无界面可操作 |
+| 6 | 前端已独立部署 | `apps/vue-support-eduai-starter/dist` 已托管 | 无界面可操作 |
 
 ---
 
@@ -196,6 +206,7 @@ packages:
 | 「改了库要重启才生效」 | `runtime` 分组走 `getStrDirect` 直读库，改库即生效 |
 | 「业务代码得 import ai-starter」 | 不需要；注入点类型全部来自 utils-xx |
 | 「配置里填了模型名就算可用」 | `available()` 以管线能否真正装配为准；模型文件缺失时为 false |
+| 「在 `pages/ai` 目录里 build」 | `pages/ai` 无 index.html、无 build 脚本，是组件库；应用在 `apps/*` |
 
 ---
 
