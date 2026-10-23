@@ -24,8 +24,9 @@ import java.util.Map;
  *       {@code client_id=mcode-public & scope=agent.default & audience=agent-backend & code_challenge=S256 摘要}）
  *       → {@code {device_code, verification_uri, verification_uri_complete, expires_in}}</li>
  *   <li>轮询 {@code POST {accountHost}/oauth2/token}（表单
- *       {@code grant_type=device_code & device_code & code_verifier}）→ {@code {access_token(JWT), refresh_token, expires_at}}；
- *       <b>pending 是 HTTP 200 + {@code status=pending}</b>（也容忍标准 400 + {@code authorization_pending} 形态）。</li>
+ *       {@code grant_type=urn:ietf:params:oauth:grant-type:device_code & device_code & code_verifier}）→ {@code {access_token(JWT), refresh_token, expires_at}}；
+ *       <b>pending 是 HTTP 200 + {@code status=pending}</b>（同时容忍 400 + {@code authorization_pending} /
+ *       {@code slow_down} / {@code expired_token}，这三种都要继续等而非报错）。</li>
  * </ol>
  *
  * <p>⚠️ 易踩点（源码注释原样保留）：{@code expires_at} <b>不是</b> JWT，是 ISO 字符串，
@@ -51,6 +52,17 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
     static final String DEVICE_CODE_PATH = "/oauth2/device/code";
     /** 设备码 token 轮询路径（挂 accountHost）。 */
     static final String DEVICE_TOKEN_PATH = "/oauth2/token";
+
+    /**
+     * 设备码换令牌的 grant_type（RFC 8628 规定的完整 URN）。
+     *
+     * <p>⚠️ 不能简写成 {@code device_code}：实测 account.minimax.cn 会回
+     * 400 {@code invalid_request}（"missing a required parameter ... is otherwise malformed"），
+     * 而不是预期的 {@code authorization_pending} / {@code expired_token}，
+     * 导致绑定弹窗直接显示失败、根本等不到用户授权。与 dsh-our-free-model
+     * 的 minimax-oauth.ts 保持同一取值。</p>
+     */
+    static final String GRANT_TYPE_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
     /** 余额查询路径（挂 apiHost）。 */
     static final String BALANCE_PATH = "/v1/user/balance";
     /** 模型目录路径（挂 apiHost，query 带 region=cn&buildEnv=prod）。 */
@@ -148,7 +160,7 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "MiniMax 登录句柄缺少 device_code 或 code_verifier");
         }
         String body = "client_id=" + CLIENT_ID
-                + "&grant_type=" + formEncode("device_code")
+                + "&grant_type=" + formEncode(GRANT_TYPE_DEVICE_CODE)
                 + "&device_code=" + formEncode(deviceCode)
                 + "&code_verifier=" + formEncode(verifier);
 
@@ -157,8 +169,15 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
             String response = ChannelHttp.postForm(ACCOUNT_HOST + DEVICE_TOKEN_PATH, body, formHeaders());
             payload = parseJson(response);
         } catch (ApiException e) {
-            // 标准形态：400 + error=authorization_pending 视为继续等。
-            if (e.getMessage() != null && e.getMessage().contains("authorization_pending")) {
+            // 400 里要区分「继续等」和「真失败」，不能一律当失败：
+            //   authorization_pending → 用户还没授权，继续等；
+            //   slow_down             → 上游要求降频，继续等（下一轮受 POLL_INTERVAL 约束）；
+            //   expired_token         → 这一轮的设备码已过期。用户在授权页停留较久、
+            //                           或自己点了「重新发起」都会发生，必须继续等新码，
+            //                           否则一个正常的绑定流程会被判成失败。
+            String message = e.getMessage() == null ? "" : e.getMessage();
+            if (message.contains("authorization_pending") || message.contains("slow_down")
+                    || message.contains("expired_token")) {
                 handle.put(HANDLE_LAST_POLL_AT, now);
                 return null;
             }
