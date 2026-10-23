@@ -2,7 +2,7 @@ package com.chua.starter.mybatis.interceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.chua.starter.datasource.util.ClassUtils;
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.mybatis.annotations.DataScope;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;

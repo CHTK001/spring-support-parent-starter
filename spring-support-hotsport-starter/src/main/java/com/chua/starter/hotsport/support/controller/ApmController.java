@@ -279,16 +279,20 @@ public class ApmController {
      *   <li>{@code path} — 落盘文件路径；传空串表示回到默认临时目录</li>
      *   <li>{@code retentionMs} / {@code capacity} — 保留期与单表容量</li>
      *   <li>{@code async} — 异步批量写开关</li>
+     *   <li>{@code maintenanceIntervalMs} — 自维护周期（保留期清理 + 容量淘汰），下限 5000</li>
+     *   <li>{@code flushTimeoutMs} — 关闭时等待落盘的最长时间</li>
      * </ul>
      *
      * <p>新存储先完整启动成功才替换旧存储；启动失败时旧存储继续工作，
      * 返回 {@code success=false} 并在 {@code message} 说明原因。</p>
      *
-     * @param type        存储类型
-     * @param path        落盘路径（空串表示默认目录）
-     * @param retentionMs 数据保留毫秒
-     * @param capacity    单表容量上限
-     * @param async       是否异步批量写
+     * @param type                  存储类型
+     * @param path                  落盘路径（空串表示默认目录）
+     * @param retentionMs           数据保留毫秒
+     * @param capacity              单表容量上限
+     * @param async                 是否异步批量写
+     * @param maintenanceIntervalMs 自维护周期（毫秒）
+     * @param flushTimeoutMs        关闭时等待落盘的最长时间（毫秒）
      * @return 更新结果（含变更前后状态）
      */
     @PostMapping("/storage/config")
@@ -297,7 +301,9 @@ public class ApmController {
             @RequestParam(required = false) String path,
             @RequestParam(required = false) Long retentionMs,
             @RequestParam(required = false) Integer capacity,
-            @RequestParam(required = false) Boolean async) {
+            @RequestParam(required = false) Boolean async,
+            @RequestParam(required = false) Long maintenanceIntervalMs,
+            @RequestParam(required = false) Long flushTimeoutMs) {
         com.chua.starter.hotsport.support.config.HotsportProperties.Storage storage =
                 hotsportProperties.getApm().getStorage();
         if (type != null && !type.isBlank()) {
@@ -325,6 +331,18 @@ public class ApmController {
         }
         if (async != null) {
             storage.setAsync(async);
+        }
+        if (maintenanceIntervalMs != null) {
+            if (maintenanceIntervalMs < 5_000L) {
+                return storageResult(false, "maintenanceIntervalMs 不能小于 5000（再快只会白烧 CPU）");
+            }
+            storage.setMaintenanceIntervalMs(maintenanceIntervalMs);
+        }
+        if (flushTimeoutMs != null) {
+            if (flushTimeoutMs <= 0) {
+                return storageResult(false, "flushTimeoutMs 必须大于 0");
+            }
+            storage.setFlushTimeoutMs(flushTimeoutMs);
         }
         Map<String, Object> result = apmQueryService.reloadStorage();
         return storageResult(Boolean.TRUE.equals(result.get("success")), String.valueOf(result.get("message")), result);

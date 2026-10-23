@@ -165,6 +165,11 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
                 handle.put(HANDLE_LAST_POLL_AT, now);
                 return null;
             }
+            // 上游限流同样是「继续等」，不是失败。
+            if (ChannelHttp.isRateLimited(e)) {
+                handle.put(HANDLE_LAST_POLL_AT, now);
+                return null;
+            }
             throw e;
         }
 

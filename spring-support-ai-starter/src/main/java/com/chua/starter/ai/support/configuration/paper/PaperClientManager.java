@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.configuration.properties.DefaultModelResolver
 import com.chua.starter.ai.support.configuration.client.ModelIds;
 import com.chua.starter.ai.support.configuration.layout.LayoutClientManager;
 import com.chua.starter.ai.support.configuration.ocr.OcrClientManager;
+import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -577,14 +578,21 @@ public class PaperClientManager implements PaperClient {
     /**
      * 配置指纹（engine + 各模型 + 阈值），用于轻量判断是否需要重建。
      *
+     * <p><b>必须与实际装配取值一致</b>：管线装配 OCR 部件时用的是
+     * {@link #ocrDetectorModel()} / {@link #ocrRecognizerModel()}，语义是
+     * 「先读 {@code paper.ocr_*}，为空再回退 {@code ocr.*}」。若指纹直接读
+     * {@code paper.ocr_*}，用户只改了 {@code ocr.detector_model} 时指纹不变，
+     * 管线就不会重建 —— 表现为「配置改了、status 仍显示旧值且无任何日志」。
+     * 版面模型同理（{@code paper.layout_model} 为空时回退 {@code layout.layout_model}）。</p>
+     *
      * @return 指纹字符串
      */
     private String readFingerprint() {
         return String.join("|",
                 engine(),
-                StringUtils.defaultString(settingReader.getStr(GROUP, "layout_model"), ""),
-                StringUtils.defaultString(settingReader.getStr(GROUP, "ocr_detector_model"), ""),
-                StringUtils.defaultString(settingReader.getStr(GROUP, "ocr_recognizer_model"), ""),
+                layoutModel(),
+                ocrDetectorModel(),
+                ocrRecognizerModel(),
                 String.valueOf(settingReader.getDecimalOrNull(GROUP, "ocr_threshold")),
                 StringUtils.defaultString(settingReader.getStr(GROUP, "llm_provider"), ""),
                 StringUtils.defaultString(settingReader.getStr(GROUP, "llm_model"), ""),
@@ -622,6 +630,25 @@ public class PaperClientManager implements PaperClient {
             return;
         }
         log.info("[PaperClientManager] 收到 paper 分组配置变更，准备重建");
+        refreshIfChanged();
+    }
+
+    /**
+     * {@code ocr} 分组变更时的重建判断。
+     *
+     * <p>试卷管线的 OCR 部件复用 {@code ocr} 分组的共享管线：{@code paper.ocr_detector_model}
+     * 为空时会回退 {@code ocr.detector_model}。只监听 {@code paper} 分组会漏掉最主要的配置入口 ——
+     * 用户在 OCR 设置页改模型，试卷管线不会重建。这里补上 {@code ocr} 分组的监听，
+     * 是否真的重装仍由 {@link #refreshIfChanged()} 按指纹决定。</p>
+     *
+     * @param event OCR 分组配置变更事件
+     */
+    @EventListener
+    public void onOcrSettingsChanged(OcrSettingsChangedEvent event) {
+        if (event == null || event.userScoped()) {
+            return;
+        }
+        log.info("[PaperClientManager] 收到 ocr 分组配置变更，检查试卷管线指纹");
         refreshIfChanged();
     }
 

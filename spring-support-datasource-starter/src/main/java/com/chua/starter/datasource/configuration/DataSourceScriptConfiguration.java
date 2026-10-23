@@ -94,6 +94,15 @@ public class DataSourceScriptConfiguration {
      * {@code @ConfigurationProperties} bean 会迫使它提前实例化，连带刷出一串
      * 「Bean ... is not eligible for getting processed by all BeanPostProcessors」。</p>
      *
+     * <p><b>关于启动日志里的 BeanPostProcessorChecker 告警</b>：容器 refresh 时
+     * 先解析配置类（MybatisPlusConfiguration、MethodPointcutAdvisor 等 bean 在此期间实例化），
+     * 之后才 {@code registerBeanPostProcessors} 注册本处理器。于是那些 bean 创建时
+     * BPP 列表还不完整，Spring 会各刷一条「is not eligible」告警（实测 12 条）。
+     * 这是 Spring 对「BPP 注册晚于配置类实例化」的固有提示，不影响功能
+     * （已实测启动成功、脚本执行正确）。要彻底消除需让 BPP 在配置类解析之前
+     * 就注册（{@code BeanDefinitionRegistryPostProcessor} + {@code spring.factories}），
+     * 代价是多一层注册机制，收益只是日志干净 —— 故不在此收敛。</p>
+     *
      * @param propertiesProvider 数据源脚本配置属性提供者
      * @return 数据源脚本处理器
      */

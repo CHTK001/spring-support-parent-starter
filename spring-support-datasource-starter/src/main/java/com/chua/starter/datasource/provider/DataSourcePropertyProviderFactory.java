@@ -1,7 +1,7 @@
 package com.chua.starter.datasource.provider;
 
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.datasource.util.ClassUtils;
+import com.chua.common.support.utils.ClassUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;

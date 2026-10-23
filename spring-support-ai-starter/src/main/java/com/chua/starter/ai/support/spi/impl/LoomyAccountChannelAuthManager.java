@@ -171,6 +171,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
             // userid 可能以数字形态下发（18 位数字串），用宽松读取。
             userid = readLooseString(data, "userid");
         } catch (ApiException e) {
+            // 上游限流：用户手里仍握着这条验证码，不能清掉 msgid 逼他重新发码。
+            // ChannelHttp 已按 Retry-After 退避过，这里直接返回继续等。
+            if (ChannelHttp.isRateLimited(e)) {
+                return null;
+            }
             // 验证码错误/过期：清除发码标记，让用户重新发码。
             handle.remove(HANDLE_SMS_SENT);
             handle.remove(HANDLE_MSGID);

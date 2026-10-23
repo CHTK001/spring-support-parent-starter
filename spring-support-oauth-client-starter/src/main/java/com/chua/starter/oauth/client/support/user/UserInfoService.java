@@ -58,4 +58,17 @@ public interface UserInfoService {
      * @return 升级后的用户认证结果
      */
     UserResume upgrade(UserResult userResult);
+
+    /**
+     * 获取认证版本
+     * <p>用于判断用户侧会话/令牌是否仍是最新一版；版本不一致时调用方会要求重新登录。</p>
+     * <p>默认返回 {@code null}，表示该实现不参与版本校验，调用方按「无版本信息」处理，
+     * 从而不改变既有实现的行为。</p>
+     *
+     * @param userResult 基础用户信息
+     * @return 认证版本标识；无版本概念时返回 null
+     */
+    default String authVersion(UserResult userResult) {
+        return null;
+    }
 }
