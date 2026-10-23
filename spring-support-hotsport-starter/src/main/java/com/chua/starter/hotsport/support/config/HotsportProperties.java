@@ -181,21 +181,43 @@ public class HotsportProperties {
          * @return 存储配置键值对
          */
         public Map<String, String> toStorageConfig() {
+            return toStorageConfig(false);
+        }
+
+        /**
+         * 把本配置展开成 APM 存储层可识别的键值对。
+         *
+         * <p><b>为什么需要 {@code includeDefaults}</b>：运行中热更新时，用户可能把某项
+         * 改回默认（例如清空落盘路径）。若只输出「非空项」，热更新看到的配置与旧配置
+         * 完全相同，会被判定为无变化而直接跳过，清空动作就永远不生效。
+         * 因此热更新路径传 {@code true}，把当前值完整输出，空值也如实输出
+         * （下游按「空 = 使用默认」处理）。</p>
+         *
+         * @param includeDefaults 是否输出全部键（含空值/默认值）
+         * @return 存储配置键值对
+         */
+        public Map<String, String> toStorageConfig(boolean includeDefaults) {
             Map<String, String> config = new java.util.LinkedHashMap<>();
             if (storage == null) {
                 return config;
             }
-            if (storage.getType() != null && !storage.getType().isBlank()) {
-                config.put("apm.storage.type", storage.getType().trim());
+            String type = storage.getType() == null ? "" : storage.getType().trim();
+            if (!type.isEmpty() || includeDefaults) {
+                config.put("apm.storage.type", type);
             }
-            if (storage.getRetentionMs() > 0) {
+            if (storage.getRetentionMs() > 0 || includeDefaults) {
                 config.put("apm.storage.retention.ms", String.valueOf(storage.getRetentionMs()));
             }
-            if (storage.getCapacity() > 0) {
+            if (storage.getCapacity() > 0 || includeDefaults) {
                 config.put("apm.storage.capacity", String.valueOf(storage.getCapacity()));
             }
-            if (storage.getPath() != null && !storage.getPath().isBlank()) {
-                config.put("apm.storage.path", storage.getPath().trim());
+            String path = storage.getPath() == null ? "" : storage.getPath().trim();
+            if (!path.isEmpty() || includeDefaults) {
+                config.put("apm.storage.path", path);
+            }
+            if (storage.getAsync() != null || includeDefaults) {
+                config.put("apm.storage.async", storage.getAsync() == null
+                        ? "true" : String.valueOf(storage.getAsync()));
             }
             return config;
         }
@@ -225,6 +247,31 @@ public class HotsportProperties {
          * 存储落盘目录（sqlite 等非内存实现使用；为空时用临时目录）。
         */
         private String path = "";
+
+        /**
+         * 写入模式：true 异步批量写（默认，业务线程不阻塞），false 逐条同步写。
+         *
+         * <p>null 表示「未显式配置」，沿用 APM 侧默认（异步）。</p>
+         */
+        private Boolean async;
+
+        /**
+         * 获取写入模式。
+         *
+         * @return 写入模式；未配置返回 null
+         */
+        public Boolean getAsync() {
+            return async;
+        }
+
+        /**
+         * 设置写入模式。
+         *
+         * @param async 写入模式
+         */
+        public void setAsync(Boolean async) {
+            this.async = async;
+        }
 
         /**
          * 获取存储类型。

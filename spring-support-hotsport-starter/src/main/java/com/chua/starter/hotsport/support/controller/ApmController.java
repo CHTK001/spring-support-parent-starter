@@ -258,6 +258,126 @@ public class ApmController {
     }
 
     /**
+     * 存储运行时状态（运维自检）。
+     *
+     * <p>回答两个问题：配置里写了什么（{@code configured}）、实际生效的是什么
+     * （{@code path/async/flushed/dropped/...}）。两者不一致通常就是「配置没生效」。</p>
+     *
+     * @return 状态映射
+     */
+    @GetMapping("/storage/status")
+    public ReturnResult<Map<String, Object>> storageStatus() {
+        return ReturnResult.ok(apmQueryService.storageStatus());
+    }
+
+    /**
+     * 修改存储配置并立即生效（无需重启）。
+     *
+     * <p>只传需要修改的项，未传的保持原值。语义：</p>
+     * <ul>
+     *   <li>{@code type} — inmemory / sqlite / noop</li>
+     *   <li>{@code path} — 落盘文件路径；传空串表示回到默认临时目录</li>
+     *   <li>{@code retentionMs} / {@code capacity} — 保留期与单表容量</li>
+     *   <li>{@code async} — 异步批量写开关</li>
+     * </ul>
+     *
+     * <p>新存储先完整启动成功才替换旧存储；启动失败时旧存储继续工作，
+     * 返回 {@code success=false} 并在 {@code message} 说明原因。</p>
+     *
+     * @param type        存储类型
+     * @param path        落盘路径（空串表示默认目录）
+     * @param retentionMs 数据保留毫秒
+     * @param capacity    单表容量上限
+     * @param async       是否异步批量写
+     * @return 更新结果（含变更前后状态）
+     */
+    @PostMapping("/storage/config")
+    public ReturnResult<Map<String, Object>> updateStorageConfig(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String path,
+            @RequestParam(required = false) Long retentionMs,
+            @RequestParam(required = false) Integer capacity,
+            @RequestParam(required = false) Boolean async) {
+        com.chua.starter.hotsport.support.config.HotsportProperties.Storage storage =
+                hotsportProperties.getApm().getStorage();
+        if (type != null && !type.isBlank()) {
+            String normalized = type.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!java.util.Set.of("inmemory", "sqlite", "noop").contains(normalized)) {
+                return storageResult(false, "不支持的存储类型: " + type + "（可选 inmemory / sqlite / noop）");
+            }
+            storage.setType(normalized);
+        }
+        if (path != null) {
+            // 空串是有意义的值：表示「回到默认目录」，不能当成「未传」忽略
+            storage.setPath(path.trim());
+        }
+        if (retentionMs != null) {
+            if (retentionMs <= 0) {
+                return storageResult(false, "retentionMs 必须大于 0");
+            }
+            storage.setRetentionMs(retentionMs);
+        }
+        if (capacity != null) {
+            if (capacity <= 0) {
+                return storageResult(false, "capacity 必须大于 0");
+            }
+            storage.setCapacity(capacity);
+        }
+        if (async != null) {
+            storage.setAsync(async);
+        }
+        Map<String, Object> result = apmQueryService.reloadStorage();
+        return storageResult(Boolean.TRUE.equals(result.get("success")), String.valueOf(result.get("message")), result);
+    }
+
+    /**
+     * 重新加载存储配置（配置来自外部修改，如配置中心推送后调用）。
+     *
+     * <p>与 {@code POST /storage/config} 的区别：本接口不修改任何参数，
+     * 只让当前配置重新生效一次，适合配置对象被其他组件直接改写的场景。</p>
+     *
+     * @return 更新结果
+     */
+    @PostMapping("/storage/reload")
+    public ReturnResult<Map<String, Object>> reloadStorageConfig() {
+        Map<String, Object> result = apmQueryService.reloadStorage();
+        return storageResult(Boolean.TRUE.equals(result.get("success")), String.valueOf(result.get("message")), result);
+    }
+
+    /**
+     * 统一构造存储操作响应：成功走 {@code ok}，失败走业务错误码。
+     *
+     * <p>失败若也用 {@code ok} 返回，前端会当作成功处理（业务码为 0），
+     * 用户看不到「配置没生效」，因此必须走 {@link ReturnResult#error}。</p>
+     *
+     * @param success 是否成功
+     * @param message 提示信息
+     * @return 响应
+     */
+    private ReturnResult<Map<String, Object>> storageResult(boolean success, String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", success);
+        body.put("message", message);
+        return success ? ReturnResult.ok(body) : ReturnResult.error("APM_STORAGE", message, body);
+    }
+
+    /**
+     * 统一构造存储操作响应（带完整结果体）。
+     *
+     * @param success 是否成功
+     * @param message 提示信息
+     * @param body    结果体
+     * @return 响应
+     */
+    private ReturnResult<Map<String, Object>> storageResult(boolean success, String message,
+                                                           Map<String, Object> body) {
+        Map<String, Object> payload = body == null ? new LinkedHashMap<>() : body;
+        payload.put("success", success);
+        payload.put("message", message);
+        return success ? ReturnResult.ok(payload) : ReturnResult.error("APM_STORAGE", message, payload);
+    }
+
+    /**
      * 更新 Agent 配置（运行时生效；仅内存态，重启回退配置文件）。
      *
      * @param samplingRate    采样率（0~100）
