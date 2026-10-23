@@ -4,6 +4,7 @@ import com.chua.common.support.datasearch.pricing.PricingSyncer;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +97,11 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     private final SysAiPricingService pricingService;
 
     /**
+     * 厂商指标系数同步服务（一厂商一系数）
+     */
+    private final SysAiProviderMetricService providerMetricService;
+
+    /**
      * 注册动态调度任务，每次执行后按配置间隔计算下次执行时间。
      *
      * @param taskRegistrar 调度任务注册器
@@ -136,6 +142,13 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             log.info("[ModelMetrics] 官方定价同步完成（datasearch-starter）");
         } catch (Exception e) {
             log.warn("[ModelMetrics] 官方定价同步失败: {}", e.getMessage());
+        }
+        try {
+            // 4. 厂商指标系数同步（一厂商一系数，取价链最末一层兜底）
+            int providerCount = providerMetricService.syncProviderMetrics();
+            log.info("[ModelMetrics] 厂商指标系数同步完成，共 {} 家", providerCount);
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 厂商指标系数同步失败: {}", e.getMessage());
         }
     }
 

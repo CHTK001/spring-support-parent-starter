@@ -65,6 +65,16 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_model` (
     `sys_ai_provider_model_temperature`    DOUBLE       NULL COMMENT '温度',
     `sys_ai_provider_model_top_p`          DOUBLE       NULL COMMENT 'Top-P 采样',
     `sys_ai_provider_model_frequency_penalty` DOUBLE    NULL COMMENT '频率惩罚',
+    `sys_ai_provider_model_family`         VARCHAR(255) NULL COMMENT '模型系列（family）',
+    `sys_ai_provider_model_knowledge`      VARCHAR(255) NULL COMMENT '知识截止日期（knowledge）',
+    `sys_ai_provider_model_release_date`   VARCHAR(64)  NULL COMMENT '发布日期（release_date）',
+    `sys_ai_provider_model_last_updated`   VARCHAR(64)  NULL COMMENT '最后更新时间（last_updated）',
+    `sys_ai_provider_model_modalities`     TEXT         NULL COMMENT '输入/输出模态JSON',
+    `sys_ai_provider_model_open_weights`   TINYINT      NULL COMMENT '是否开源权重',
+    `sys_ai_provider_model_attachment`     TINYINT      NULL COMMENT '是否支持附件',
+    `sys_ai_provider_model_reasoning`      TINYINT      NULL COMMENT '是否支持深度思考',
+    `sys_ai_provider_model_tool_call`      TINYINT      NULL COMMENT '是否支持工具调用',
+    `sys_ai_provider_model_temperature_supported` TINYINT NULL COMMENT '是否支持温度调节',
     `sys_ai_provider_model_create_time`    BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
     `sys_ai_provider_model_update_time`    BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
   `sys_ai_provider_model_alias` VARCHAR(128) NULL COMMENT '模型别名',
@@ -1944,3 +1954,108 @@ PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 注：sys_ai_bot_binding 的 app_secret / verify_token / role_id 三列已在
 -- 上面「存量库补列（原 V4.0.0.57）」一节处理，此处不再重复输出。
+
+-- =====================================================================
+-- 存量库补列：sys_ai_provider_model 的指标回填字段
+--
+-- family / knowledge / release_date / last_updated / modalities /
+-- open_weights / attachment / reasoning / tool_call / temperature_supported
+-- 由价格同步（syncFromIndicator）自动回填，实体列 + metrics JSON 双存。
+-- 存量库已建表时补列；可反复执行（判存走 SELECT 1 分支）。
+-- =====================================================================
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_family'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_family` VARCHAR(255) NULL COMMENT ''模型系列（family）'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_knowledge'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_knowledge` VARCHAR(255) NULL COMMENT ''知识截止日期（knowledge）'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_release_date'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_release_date` VARCHAR(64) NULL COMMENT ''发布日期（release_date）'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_last_updated'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_last_updated` VARCHAR(64) NULL COMMENT ''最后更新时间（last_updated）'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_modalities'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_modalities` TEXT NULL COMMENT ''输入/输出模态JSON'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_open_weights'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_open_weights` TINYINT NULL COMMENT ''是否开源权重'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_attachment'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_attachment` TINYINT NULL COMMENT ''是否支持附件'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_reasoning'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_reasoning` TINYINT NULL COMMENT ''是否支持深度思考'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_tool_call'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_tool_call` TINYINT NULL COMMENT ''是否支持工具调用'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
+          AND COLUMN_NAME = 'sys_ai_provider_model_temperature_supported'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_temperature_supported` TINYINT NULL COMMENT ''是否支持温度调节'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- =====================================================================
+-- 厂商指标系数表（sys_ai_provider_metric，新增）
+--
+-- 计费取价链最末一层兜底：AA 缓存 → sys_ai_pricing → sys_ai_model_metrics
+-- → sys_ai_provider_metric（按厂商键取中位数价格做预估，一厂商一系数）。
+-- 数据由 ModelMetricsPushTask.syncProviderMetrics() 定时从 Models.dev 目录
+-- 聚合，或由 V5.0__initdata_all_ai.sql 种子导入；可反复执行。
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS `sys_ai_provider_metric` (
+    `sys_ai_provider_metric_id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' 主键',
+    `sys_ai_provider_metric_provider`       VARCHAR(128) NOT NULL COMMENT ' 厂商键（如 openai、deepseek）',
+    `sys_ai_provider_metric_provider_name`  VARCHAR(255) NULL COMMENT ' 厂商名称',
+    `sys_ai_provider_metric_price_input`    DOUBLE       NULL COMMENT ' 输入单价中位数（USD/百万 token）',
+    `sys_ai_provider_metric_price_output`   DOUBLE       NULL COMMENT ' 输出单价中位数（USD/百万 token）',
+    `sys_ai_provider_metric_context_window` BIGINT       NULL COMMENT ' 上下文窗口中位数（token）',
+    `sys_ai_provider_metric_model_count`    INT          NULL COMMENT ' 数据源收录的模型数',
+    `sys_ai_provider_metric_source`         VARCHAR(32)  NULL COMMENT ' 数据源（models.dev）',
+    `create_name`                           VARCHAR(64)  NULL COMMENT '',
+    `create_by`                             INT          NULL COMMENT '',
+    `create_time`                           DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                           VARCHAR(64)  NULL COMMENT '',
+    `update_by`                             INT          NULL COMMENT '',
+    `update_time`                           DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_provider_metric_id`),
+    UNIQUE KEY `uk_sys_ai_provider_metric_provider` (`sys_ai_provider_metric_provider`)
+) COMMENT='AI 厂商指标系数表';
