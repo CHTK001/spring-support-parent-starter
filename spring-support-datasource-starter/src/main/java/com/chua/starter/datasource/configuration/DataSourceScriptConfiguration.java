@@ -6,6 +6,7 @@ import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
 import com.chua.common.support.lang.datasource.dialect.SqlName;
 import com.chua.common.support.lang.datasource.flyway.Flyway;
+import com.chua.common.support.lang.datasource.flyway.FlywayScripts;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
@@ -948,22 +949,122 @@ public class DataSourceScriptConfiguration {
             // 脚本级、continue-on-error 拦不住，会让整个脚本被标成失败并刷错误日志。
             // 「无种子数据」的模块仍会保留一个纯注释的 initdata 文件（与全仓 init+initdata
             // 两文件制对齐），因此这里必须能容下空脚本。
-            if (isBlankScript(resource)) {
+            String content = readScriptContent(resource);
+            if (content == null) {
+                // 读不出来就回退到 Spring 的整体执行，行为与改造前一致
+                ScriptUtils.executeSqlScript(
+                        connection,
+                        resource,
+                        false,
+                        dataSourceScriptProperties.isIgnoreFailedDrops(),
+                        ScriptUtils.DEFAULT_COMMENT_PREFIXES,
+                        dataSourceScriptProperties.getSeparator(),
+                        ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER,
+                        ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER
+                );
+                return;
+            }
+            if (isBlankScript(content)) {
                 if (dataSourceScriptProperties.isVerbose()) {
                     log.info("脚本 {} 无有效语句，跳过执行", fileName);
                 }
                 return;
             }
-            ScriptUtils.executeSqlScript(
-                    connection,
-                    resource,
-                    false,
-                    dataSourceScriptProperties.isIgnoreFailedDrops(),
-                    ScriptUtils.DEFAULT_COMMENT_PREFIXES,
-                    dataSourceScriptProperties.getSeparator(),
-                    ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER,
-                    ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER
-            );
+
+            // 逐条执行，语义与 SPI Flyway（DataSourceFlyway#executeScript）对齐：
+            //   ① 目标表不存在 → 跳过（跨系统表，本库无其建表脚本），不记失败、不刷错误日志；
+            //   ② 单条失败 → continue-on-error=true 时记录并继续，false 时中断。
+            // 之前直接用 ScriptUtils.executeSqlScript 整体执行，continue-on-error 配置
+            // 根本不被读取 —— 各模块 yml 里写了 true 也没用，一条方言差异语句就能让
+            // 整个脚本中断（H2 下 MySQL 专属的 SET/PREPARE 段即典型场景）。
+            List<String> statements = FlywayScripts.splitStatements(content);
+            int executed = 0;
+            int failed = 0;
+            int skippedExternal = 0;
+            List<String> failureReasons = new ArrayList<>();
+            try (java.sql.Statement statement = connection.createStatement()) {
+                for (String sql : statements) {
+                    if (sql == null || sql.isBlank()) {
+                        continue;
+                    }
+                    String target = FlywayScripts.extractTargetTable(sql);
+                    if (target != null && !tableExists(connection, target)) {
+                        skippedExternal++;
+                        if (dataSourceScriptProperties.isVerbose()) {
+                            log.info("脚本 {} 的语句因目标表 {} 不存在而跳过（跨系统表）", fileName, target);
+                        }
+                        continue;
+                    }
+                    try {
+                        statement.execute(sql);
+                        executed++;
+                    } catch (SQLException e) {
+                        failed++;
+                        failureReasons.add(FlywayScripts.truncate(sql, 120) + " ==> " + e.getMessage());
+                        if (!dataSourceScriptProperties.isContinueOnError()) {
+                            throw e;
+                        }
+                    }
+                }
+            }
+            if (failed > 0) {
+                log.warn("脚本 {} 有 {} 条语句执行失败（continue-on-error=true，已跳过）：{}",
+                        fileName, failed, failureReasons);
+            }
+            if (dataSourceScriptProperties.isVerbose() && (skippedExternal > 0 || executed > 0)) {
+                log.info("脚本 {} 执行完成：成功 {} 条、跳过(跨系统表) {} 条、失败 {} 条",
+                        fileName, executed, skippedExternal, failed);
+            }
+        }
+
+        /**
+         * 读取脚本内容。
+         *
+         * @param resource 脚本资源
+         * @return 脚本文本；读取失败返回 null（调用方回退到 Spring 的整体执行）
+         */
+        private String readScriptContent(EncodedResource resource) {
+            try (java.io.InputStream in = resource.getInputStream()) {
+                return new String(in.readAllBytes(),
+                        java.nio.charset.Charset.forName(dataSourceScriptProperties.getSqlScriptEncoding()));
+            } catch (java.io.IOException e) {
+                return null;
+            }
+        }
+
+        /**
+         * 判断目标表是否存在于当前库。
+         *
+         * <p>用 JDBC 元数据而不是各库的 information_schema —— 后者的表名大小写规则逐库不同
+         * （H2 折成大写、PG 折成小写、SQLite 走 sqlite_master）。元数据查不到时按「存在」处理：
+         * 宁可让语句真去执行、报真实的错，也不要把正常表误判为不存在而静默跳过。</p>
+         *
+         * @param connection 数据库连接
+         * @param table      表名
+         * @return true 表示表存在（或无法判断）
+         */
+        private boolean tableExists(Connection connection, String table) {
+            String simple = table;
+            int dot = simple.lastIndexOf('.');
+            if (dot >= 0) {
+                simple = simple.substring(dot + 1);
+            }
+            simple = simple.replace("`", "").replace("\"", "").trim();
+            if (simple.isEmpty()) {
+                return true;
+            }
+            try (var tables = connection.getMetaData().getTables(
+                    connection.getCatalog(), null, "%", new String[]{"TABLE"})) {
+                while (tables.next()) {
+                    String name = tables.getString("TABLE_NAME");
+                    if (name != null && name.equalsIgnoreCase(simple)) {
+                        return true;
+                    }
+                }
+                return false;
+            } catch (SQLException e) {
+                return true;
+            }
         }
 
         /**
@@ -971,27 +1072,20 @@ public class DataSourceScriptConfiguration {
          *
          * <p>先整体剔除块注释与行注释，再看是否还有残留内容。</p>
          *
-         * @param resource 脚本资源
+         * @param content 脚本文本
          * @return true 表示无有效语句
          */
-        private boolean isBlankScript(EncodedResource resource) {
-            try (java.io.InputStream in = resource.getInputStream()) {
-                String content = new String(in.readAllBytes(),
-                        java.nio.charset.Charset.forName(dataSourceScriptProperties.getSqlScriptEncoding()));
-                // 剔除块注释
-                String stripped = content.replaceAll("(?s)/\\*.*?\\*/", "");
-                for (String line : stripped.split("\\R")) {
-                    String trimmed = line.trim();
-                    if (trimmed.isEmpty() || trimmed.startsWith("--") || trimmed.startsWith("#")) {
-                        continue;
-                    }
-                    return false;
+        private boolean isBlankScript(String content) {
+            // 剔除块注释
+            String stripped = content.replaceAll("(?s)/\\*.*?\\*/", "");
+            for (String line : stripped.split("\\R")) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("--") || trimmed.startsWith("#")) {
+                    continue;
                 }
-                return true;
-            } catch (java.io.IOException e) {
-                // 读不出来就交给 ScriptUtils 处理，行为与改造前一致
                 return false;
             }
+            return true;
         }
 
         /**
