@@ -207,4 +207,17 @@ public interface ServerHostService {
      * @return 校验结果（成功时回显端点地址与指标行数）
      */
     ReturnResult<String> testPrometheus(Long id);
+
+    /**
+     * 安装 nginx（仅支持 SSH 开启的 Linux/macOS 主机）。
+     * <p>
+     * 通过 SSH 登录目标主机，按发行版包管理器安装 nginx 并做版本自检。
+     * 目前仅支持 nginx；其它软件暂不开放。Windows 主机（无 OpenSSH）与
+     * SSH 关闭的主机直接拒绝，避免误报「已安装」。
+     * </p>
+     *
+     * @param id 主机主键
+     * @return 安装结果（成功时回显 nginx -v 输出）
+     */
+    ReturnResult<String> installNginx(Long id);
 }

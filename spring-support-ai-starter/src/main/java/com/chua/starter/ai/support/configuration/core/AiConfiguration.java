@@ -10,6 +10,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.chat.AiChatClientFactory;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
+import com.chua.starter.ai.support.manage.updater.ChatClientHotUpdater;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
@@ -298,6 +299,36 @@ public class AiConfiguration {
         }
 
         log.info("[AiConfiguration] AI 注册体系初始化完成");
+    }
+
+    /**
+     * 容器就绪后，按 AI 控制台「默认模型」配置重建默认对话客户端。
+     *
+     * <p><b>为什么需要这一步。</b>{@code ChatClientHotUpdater} 只在「默认模型」设置变更
+     * 事件（{@code SettingChangedEvent(group=models)}）里重建客户端并
+     * {@code ChatClientRegistry.setDefault(...)}；启动链路里若不补做，UI 里配好的默认模型
+     * 只在「保存那一刻」有效，后端一重启就退回 {@link #onApplicationReady} 登记的聚合客户端
+     * —— 表现为「配置没丢、但就是不生效」，且没有任何报错可查。</p>
+     *
+     * <p>排序为 {@link Ordered#LOWEST_PRECEDENCE}，确保晚于 {@link #onApplicationReady}
+     * 的注册中心初始化。未配置任何默认模型时，刷新内部只打印 WARN 并跳过，不影响启动。</p>
+     *
+     * @param event 应用就绪事件
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Order(Ordered.LOWEST_PRECEDENCE)
+    public void refreshConfiguredChatClients(ApplicationReadyEvent event) {
+        ChatClientHotUpdater updater = event.getApplicationContext()
+                .getBeanProvider(ChatClientHotUpdater.class).getIfAvailable();
+        if (updater == null) {
+            return;
+        }
+        try {
+            updater.refreshAllDefaultChatClients();
+            log.info("[AiConfiguration] 已按 AI 控制台「默认模型」配置重建默认对话客户端");
+        } catch (Exception e) {
+            log.warn("[AiConfiguration] 按 AI 控制台「默认模型」配置重建默认对话客户端失败: {}", e.getMessage());
+        }
     }
 
     @Bean

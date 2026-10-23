@@ -151,22 +151,19 @@ plugin:
   datasource:
     script:
       enable: true
-      # 表结构脚本必须用 ALWAYS，原因有二（缺一不可）：
-      # 1) filterSchemaScripts 在「ONCE + 库非空」时会把结构脚本全部跳过，
-      #    存量库升级时新版本脚本根本不会被执行；
-      # 2) 脚本文件名带版本号（V2.0__init_all_eduai.sql），升版后文件名变化、
-      #    执行记录里查不到，才会真正执行；同一版本成功后 needsExecution() 会拦住，
-      #    因此不是「每次启动都重跑全部语句」，而是「每个版本只跑一次」。
-      # 之前用 ONCE + 固定 V1.0，导致新增的唯一索引在存量库上永不生效，
-      # initdata 的 INSERT IGNORE 失去约束、每次重灌数据翻倍
-      # （实测 edu_poem_grade 由 967 涨到 2901）。
-      # 前提：init_all 脚本必须全幂等（已审计：全部语句带 IF NOT EXISTS / OR IGNORE，
-      #      补列走 information_schema 判存 + 动态 DDL）。
+      # 表结构脚本用 ALWAYS。每次启动都扫，是否真执行由 sys_database_version 的
+      # 「脚本名+版本」执行记录决定：同一版本成功过就不会重跑，版本号递进
+      # （V2.0→V2.1）让记录失效，脚本才会在存量库上执行一次，把缺的列补上。
+      # 因此不是「每次启动都重跑全部语句」，而是「每个版本只跑一次」。
+      #
+      # 前提：init_all 脚本必须全幂等（已审计：20896 条 INSERT 全部带
+      #      IF NOT EXISTS / OR IGNORE，补列走 information_schema 判存 + 动态 DDL）。
       scan-mode: ALWAYS
-      # 初始化数据仍保持 ONCE：种子脚本体积已达 16MB，且业务表非空即无需重灌。
-      # ⚠ ONCE + 库非空会整体跳过全部 INITDATA 脚本，所以操作 collect_flow
-      #   （采集平台的表）的语句放在 NORMAL 通道的 V2.0__eduai_collect_flows.sql 里，
-      #   不并入 initdata —— 见该文件头的说明。
+      # 初始化数据保持 ONCE：种子脚本体积已达 16MB，且业务表非空即无需重灌。
+      # ⚠ 操作 collect_flow（采集平台的表）的语句已并入 initdata 末尾：
+      #   那批语句操作的是**另一个库**的表，本库没有其建表脚本，FlywayLike 遇到
+      #   「目标表不存在」会跳过该语句（不记失败）—— 详见 V2.1__initdata_all_eduai.sql
+      #   文件头的说明。流程定义实际送达采集平台靠 D:\ch\_collect-deploy\collect-flow-seed.sql。
       data-scan-mode: ONCE
       continue-on-error: true
       verbose: true

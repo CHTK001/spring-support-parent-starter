@@ -58,6 +58,11 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
     }
 
     @Override
+    public DeviceProviderCredential resolveById(String id) {
+        return get(id);
+    }
+
+    @Override
     @Transactional
     public DeviceProviderCredential create(DeviceProviderCredential credential) {
         normalize(credential);

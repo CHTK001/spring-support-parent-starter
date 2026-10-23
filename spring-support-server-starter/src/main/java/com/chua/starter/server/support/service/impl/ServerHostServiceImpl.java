@@ -1486,6 +1486,109 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("连接失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 安装 nginx（仅支持 SSH 开启的 Linux/macOS 主机）
+     * <p>
+     * 经 SSH 登录目标主机，按发行版包管理器安装 nginx 并做版本自检。
+     * 安装命令需要 root/可 sudo 的账户执行；失败时返回远端 stderr。
+     * </p>
+     *
+     * @param id 主机主键
+     * @return 安装结果（成功回显 nginx -v 输出）
+     */
+    @Override
+    public ReturnResult<String> installNginx(Long id) {
+        MsServerHost host = hostMapper.selectById(id);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + id);
+        }
+        // 仅支持 SSH 开启的主机（Windows 无 OpenSSH 无法走 SSH 安装）
+        if (host.getServerHostSshEnabled() == null || host.getServerHostSshEnabled() != 1) {
+            return ReturnResult.error("该主机未开启 SSH，无法安装；请先在主机表单开启 SSH 后重试");
+        }
+        String osType = host.getServerHostOsType() == null ? "" : host.getServerHostOsType().toUpperCase(java.util.Locale.ROOT);
+        if (HostPlatforms.WINDOWS.equals(osType)) {
+            return ReturnResult.error("暂不支持 Windows 主机安装 nginx，请选择 Linux/macOS 主机");
+        }
+        // 跨发行版安装命令：已装则只回显版本；未装按包管理器装载后回显版本
+        String command = ""
+                + "if command -v nginx >/dev/null 2>&1; then nginx -v; else\n"
+                + "  if command -v apt-get >/dev/null 2>&1; then export DEBIAN_FRONTEND=noninteractive; apt-get update -y && apt-get install -y nginx; fi;\n"
+                + "  if command -v dnf >/dev/null 2>&1; then dnf install -y nginx; fi;\n"
+                + "  if command -v yum >/dev/null 2>&1; then yum install -y nginx; fi;\n"
+                + "  if command -v zypper >/dev/null 2>&1; then zypper install -y nginx; fi;\n"
+                + "  if command -v apk >/dev/null 2>&1; then apk add --no-cache nginx; fi;\n"
+                + "  command -v nginx >/dev/null 2>&1 && nginx -v || exit 1;\n"
+                + "fi";
+        return execInstallCommand(id, host, command);
+    }
+
+    /**
+     * 经 SSH 执行安装命令并回显输出
+     *
+     * @param id      主机主键
+     * @param host    主机
+     * @param command 安装命令
+     * @return 执行结果
+     */
+    private ReturnResult<String> execInstallCommand(Long id, MsServerHost host, String command) {
+        ReturnResult<SshCredential> resolved = resolveCredential(id, null);
+        if (!resolved.isOk()) {
+            return ReturnResult.error("无法解析主机登录凭据: " + resolved.getMsg());
+        }
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, resolved.getData());
+            var result = handle.client().exec().command(command).execute();
+            String output = result.stdout() == null ? "" : result.stdout().trim();
+            String err = result.stderr() == null ? "" : result.stderr().trim();
+            if (result.exitCode() != 0) {
+                String reason = isNotBlank(err) ? err : output;
+                return ReturnResult.error("安装失败（退出码 " + result.exitCode() + "）: "
+                        + truncateText(reason, 600));
+            }
+            // nginx -v 把版本打印到 stderr，故版本提取需合并 stdout 与 stderr
+            String version = extractNginxVersion((output + "\n" + err).trim());
+            return ReturnResult.ok(version, "nginx 安装完成");
+        } catch (Exception e) {
+            log.warn("[server] nginx 安装失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage());
+            return ReturnResult.error("安装失败: " + e.getMessage());
+        } finally {
+            if (handle != null) {
+                connectionManager.release(id);
+            }
+        }
+    }
+
+    /**
+     * 从安装输出中提取 nginx 版本行（nginx version: nginx/1.24.0 (Ubuntu)）
+     *
+     * @param output 命令输出
+     * @return 版本摘要；找不到时返回首行
+     */
+    private String extractNginxVersion(String output) {
+        if (isBlank(output)) {
+            return "nginx 已安装";
+        }
+        for (String line : output.split("\\r?\\n")) {
+            if (line.contains("nginx version:")) {
+                return line.trim();
+            }
+        }
+        return output.split("\\r?\\n")[0].trim();
+    }
+
+    /**
+     * 截断安装错误信息（保留到 600 字符）
+     *
+     * @param text 原文
+     * @param max  上限长度
+     * @return 截断后的文案
+     */
+    private String truncateText(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max) + " …（已截断）";
+    }
     /**
      * 校验远控通道与协议的搭配
      * <p>
@@ -1724,5 +1827,15 @@ public class ServerHostServiceImpl implements ServerHostService {
      */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    /**
+     * 判断字符串是否非空
+     *
+     * @param value 字符串
+     * @return 是否非空
+     */
+    private boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }

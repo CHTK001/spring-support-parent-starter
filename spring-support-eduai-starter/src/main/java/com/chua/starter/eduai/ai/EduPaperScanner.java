@@ -2,8 +2,7 @@ package com.chua.starter.eduai.ai;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.ocr.OcrResult;
-import com.chua.starter.ai.support.configuration.layout.LayoutClientManager;
-import com.chua.starter.ai.support.configuration.ocr.OcrClientManager;
+import com.chua.deeplearning.support.paper.PaperClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +21,8 @@ import java.util.List;
  *
  * <p>复用 ai-starter 的全局 Bean，不自行实现推理：</p>
  * <ul>
- * <li>{@link LayoutClientManager#detect(byte[])} —— 版面区域（标题/正文/编号等语义标签 + 坐标）</li>
- * <li>{@link OcrClientManager#recognizeDetail(byte[])} —— 文字块（文本 + 置信度 + 坐标）</li>
+ * <li>{@link PaperClient} —— 试卷识别契约（utils-xx 接口，实现由 ai-starter 装配）：
+ *     文字块识别、版面分组框、结构化结果</li>
  * <li>{@link EduAiService} —— 调用大模型把文本结构化（自有卷提题号、任意卷提题干与作答）</li>
  * </ul>
  *
@@ -43,14 +42,10 @@ import java.util.List;
 public class EduPaperScanner {
 
     /**
-     * 版面分析管理器（ai-starter 全局 Bean；未引入模型资产时为 null）
+     * 试卷识别客户端（utils-xx 接口）：实现类由 ai-starter 装配为 Bean，
+     * 本模块在编译期只认接口，不依赖任何具体实现类。
      */
-    private final ObjectProvider<LayoutClientManager> layoutProvider;
-
-    /**
-     * OCR 管理器（ai-starter 全局 Bean；未配置 ocr 分组模型时为 null）
-     */
-    private final ObjectProvider<OcrClientManager> ocrProvider;
+    private final ObjectProvider<PaperClient> paperProvider;
 
     /**
      * AI 服务（用于文本结构化与判分）
@@ -180,42 +175,39 @@ public class EduPaperScanner {
      * @return 扫描结果
      */
     public ScanResult scan(byte[] imageData) {
+        PaperClient paper = paperProvider.getIfAvailable();
+        if (paper == null || !paper.available()) {
+            throw new IllegalStateException("试卷识别管线不可用：请检查 sys_ai_global_setting 的 ocr/paper 分组与模型资产是否就位");
+        }
+
         var layoutRegions = new java.util.LinkedHashMap<String, Integer>();
         var layoutBoxes = new ArrayList<LayoutBox>();
-        LayoutClientManager layout = layoutProvider.getIfAvailable();
-        if (layout != null) {
-            try {
-                var regions = layout.detect(imageData);
-                if (regions != null) {
-                    regions.forEach((label, list) -> {
-                        layoutRegions.put(label, list == null ? 0 : list.size());
-                        if (list != null) {
-                            for (var rect : list) {
-                                if (rect != null) {
-                                    layoutBoxes.add(new LayoutBox(label, rect.x(), rect.y(),
-                                            rect.width(), rect.height()));
-                                }
+        try {
+            var regions = paper.layoutRegions(imageData);
+            if (regions != null && !regions.isEmpty()) {
+                regions.forEach((label, list) -> {
+                    layoutRegions.put(label, list == null ? 0 : list.size());
+                    if (list != null) {
+                        for (var rect : list) {
+                            if (rect != null) {
+                                layoutBoxes.add(new LayoutBox(label, rect.x(), rect.y(),
+                                        rect.width(), rect.height()));
                             }
                         }
-                    });
-                }
+                    }
+                });
                 log.info("[EduScan] 版面区域: {}（保留坐标 {} 个）", layoutRegions, layoutBoxes.size());
-            } catch (Exception e) {
-                // 版面是增强能力：失败不阻断，OCR 文本链路仍可阅卷
-                log.warn("[EduScan] 版面分析失败，降级为纯 OCR: {}", e.getMessage());
+            } else {
+                log.info("[EduScan] 版面无可用区域，按整图 OCR 识别");
             }
-        } else {
-            log.warn("[EduScan] LayoutClientManager 不可用，跳过版面分析");
+        } catch (Exception e) {
+            // 版面是增强能力：失败不阻断，OCR 文本链路仍可阅卷
+            log.warn("[EduScan] 版面分析失败，降级为纯 OCR: {}", e.getMessage());
         }
 
         int[] size = imageSize(imageData);
 
-        OcrClientManager ocr = ocrProvider.getIfAvailable();
-        if (ocr == null) {
-            throw new IllegalStateException("OCR 未配置：请检查 sys_ai_global_setting 的 ocr 分组与模型资产是否就位");
-        }
-
-        List<OcrResult> results = ocr.recognizeDetail(imageData);
+        List<OcrResult> results = paper.recognizeDetail(imageData);
         var blocks = new ArrayList<ScanBlock>();
         var text = new StringBuilder();
         if (results != null) {
@@ -983,9 +975,11 @@ public class EduPaperScanner {
         String name = null;
         String no = null;
         var head = text.length() > 600 ? text.substring(0, 600) : text;
+        // 卷头栏位标签词：姓名栏为空白时，正则容易把下一栏的「班级」「学号」等栏位名捕获成姓名。
+        // 捕获结果若命中这些栏位词（或属于「栏位名 + 紧跟内容」形态）即视为未识别。
         var nameM = java.util.regex.Pattern
                 .compile("姓\\s*名\\s*[:：_\\-—]*\\s*([\\u4e00-\\u9fa5]{2,4})").matcher(head);
-        if (nameM.find()) {
+        if (nameM.find() && !isHeaderLabelWord(nameM.group(1))) {
             name = nameM.group(1);
         }
         var noM = java.util.regex.Pattern
@@ -994,6 +988,28 @@ public class EduPaperScanner {
             no = noM.group(1);
         }
         return new String[]{name, no};
+    }
+
+    /**
+     * 判断捕获的姓名是否实为卷头栏位标签词（班级 / 学号 / 姓名 / 性别 / 学校 / 年级等）。
+     *
+     * <p>姓名栏空白、下划线未被 OCR 识别时，正则捕获组会抓到下一栏的栏位名
+     * （实测卷头「姓名：＿＿ 班级：＿＿ 学号：＿＿」识别出 name="班级"）。
+     * 命中标签词则视为未识别，避免把栏位名当学生姓名展示。</p>
+     *
+     * @param raw 正则捕获的候选姓名
+     * @return true 表示是栏位标签词（应判未识别）
+     */
+    private static boolean isHeaderLabelWord(String raw) {
+        if (raw == null) {
+            return true;
+        }
+        String s = raw.trim();
+        return s.isEmpty()
+                || s.equals("姓名") || s.equals("班级") || s.equals("学号")
+                || s.equals("性别") || s.equals("学校") || s.equals("年级")
+                || s.equals("考试") || s.equals("科目") || s.equals("考场")
+                || s.equals("座位") || s.equals("准考证") || s.equals("学校名");
     }
 
     public List<ScannedQuestion> extractAnyQuestions(List<ScanBlock> blocks, String text) {
@@ -1176,7 +1192,13 @@ public class EduPaperScanner {
         }
         // 去掉 OCR 常见的尾注「（王绩《野望》）」「（2分）」等，保留学生书写内容
         result = result.replaceAll("\\s*[（(][^（）()]{0,30}[）)]\\s*", " ").trim();
-        return result.trim().isEmpty() ? answer : result.trim();
+        // 剥离后为空（或只剰标点/虚词）说明学生没有在空位填写内容，按「未作答」处理，
+        // 不能把题干冒充作答返回（实测 16 题：学生空着，OCR 把整行题干当成作答）。
+        String cleaned = result.replaceAll("[，。、；：？！,.;:?!\\s]+", "").trim();
+        if (cleaned.isEmpty()) {
+            return "";
+        }
+        return result.trim();
     }
 
     private static boolean containsIgnoringSpace(String text, String fragment) {

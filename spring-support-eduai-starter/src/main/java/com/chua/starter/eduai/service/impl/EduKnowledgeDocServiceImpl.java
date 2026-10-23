@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.ai.rag.RagClient;
+import com.chua.common.support.ai.rag.RagClientProvider;
 import com.chua.common.support.ai.rag.RagDocument;
 import com.chua.common.support.lang.code.PageResult;
-import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduKnowledgeDocMapper;
 import com.chua.starter.eduai.model.EduKnowledgeDoc;
@@ -41,15 +41,15 @@ import java.util.stream.Collectors;
 public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMapper, EduKnowledgeDoc> implements IEduKnowledgeDocService {
 
     /**
-     * RAG 客户端管理器（可选注入，未引入 AI 模块时自动降级为直接入库）
+     * RAG 客户端提供者（utils-xx 接口，可选注入；未引入 AI 模块时自动降级为直接入库）
      */
-    private final ObjectProvider<RagClientManager> ragClientManagerProvider;
+    private final ObjectProvider<RagClientProvider> ragClientManagerProvider;
 
     /**
      * 创建 edu知识doc服务impl 实例
-     * @param ragClientManagerProvider rag客户端管理器提供者
+     * @param ragClientManagerProvider RAG 客户端提供者
      */
-    public EduKnowledgeDocServiceImpl(ObjectProvider<RagClientManager> ragClientManagerProvider) {
+    public EduKnowledgeDocServiceImpl(ObjectProvider<RagClientProvider> ragClientManagerProvider) {
         this.ragClientManagerProvider = ragClientManagerProvider;
     }
 
@@ -115,7 +115,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      * @return 向量存储ID，未接入 RAG 或向量化失败时返回 空
      */
     private String vectorize(KnowledgeDocUploadDTO dto) {
-        RagClientManager manager = ragClientManagerProvider.getIfAvailable();
+        RagClientProvider manager = ragClientManagerProvider.getIfAvailable();
         if (manager == null) {
             log.info("[EduKnowledgeDoc] 未引入 AI/RAG 模块，跳过向量化");
             return null;
