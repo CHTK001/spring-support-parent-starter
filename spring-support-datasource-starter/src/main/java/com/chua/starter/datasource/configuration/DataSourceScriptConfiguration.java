@@ -10,8 +10,9 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.EncodedResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -46,31 +47,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * 数据源脚本配置类
- * <p>
- * 实现 Beanpost处理器 接口，在 数据源 初始化完成后立即执行数据库脚本，
- * 确保脚本在其他依赖数据库的 Bean（如 实体管理器工厂、SQL会话工厂）之前执行。
- * </p>
+ * 数据源脚本配置类。
  *
- * @since 2025/9/3 9:07
+ * <p>装配 {@link DataSourceScriptBeanPostProcessor}：在数据源初始化完成后执行数据库脚本，
+ * 确保脚本先于依赖数据库的 Bean（实体管理器工厂、SqlSessionFactory 等）就绪。</p>
+ *
+ * <p><b>为什么必须有 {@code @AutoConfiguration}</b>：本类列在
+ * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}
+ * 里，但此前<b>没有</b>该注解。Spring Boot 4 的自动配置导入要求类带 {@code @AutoConfiguration}，
+ * 缺失时整个自动配置被静默忽略 —— 表现为 {@code plugin.datasource.script.enable=true}
+ * 配了也没反应、{@code sys_database_version} 里查不到任何 init 脚本的记录，
+ * 也就是「数据库脚本从未走过 FlywayLike」。各模块退而用 {@code spring.sql.init}
+ * 手工列举 schema-locations，正是为了绕开这个坑。</p>
+ *
  * @author CH
  */
 @Slf4j
-public class DataSourceScriptConfiguration implements BeanPostProcessor {
+@AutoConfiguration
+public class DataSourceScriptConfiguration {
 
     /**
      * 数据来源script属性
     */
     private final DataSourceScriptProperties dataSourceScriptProperties;
 
-    /**
-     * 已处理的 数据源 Bean 名称集合，避免重复执行
-     */
-    private final Set<String> processedDataSources = Collections.synchronizedSet(new HashSet<>());
-    /**
-     * 已提示过禁用状态的 数据源 Bean 名称集合，避免重复打印日志
-     */
-    private final Set<String> skippedDataSources = Collections.synchronizedSet(new HashSet<>());
 
     /**
      * 创建 数据源script配置 实例
@@ -80,49 +80,21 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         this.dataSourceScriptProperties = dataSourceScriptProperties;
     }
 
-    @Override
     /**
-     * Post处理之后initialization
-    */
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        if (bean instanceof DataSource) {
-            if (!dataSourceScriptProperties.isEnable()) {
-                if (skippedDataSources.add(beanName)) {
-                    log.info("检测到 DataSource [{}] 初始化完成，但 [{}]=false，已跳过数据库脚本执行",
-                            beanName, DataSourceScriptProperties.PRE + ".enable");
-                }
-                return bean;
-            }
-
-            DataSource ds = (DataSource) bean;
- // 避免重复处理同一个 数据源
-            if (processedDataSources.add(beanName)) {
-                try {
-                    log.info("检测到 DataSource [{}] 初始化完成，开始执行数据库脚本...", beanName);
- // 优先通过 SPI 获取 Flyway 高优先级实现（utils-support-flyway-starter 的 数据源Flyway）；
- // 获取成功则委托其迁移，否则回退到内置 flywaylikepopulator。
-                    if (tryMigrateWithSpiFlyway(ds, beanName)) {
-                        log.info("DataSource [{}] 数据库脚本执行完成（SPI Flyway）", beanName);
-                    } else {
-                        FlywayLikePopulator populator = new FlywayLikePopulator(ds, dataSourceScriptProperties);
-                        populator.populate();
-                        log.info("DataSource [{}] 数据库脚本执行完成", beanName);
-                    }
-                } catch (Exception e) {
-                    log.warn("执行数据库脚本失败: {}", beanName, e);
-                    if (!dataSourceScriptProperties.isContinueOnError()) {
-                        /**
-                         * illegal状态异常。
-                         * @param beanName Bean 名称
-                         * @param e 异常
-                         * @return illegal状态异常的结果
-                         */
-                        throw new IllegalStateException("执行数据库脚本失败: " + beanName, e);
-                    }
-                }
-            }
-        }
-        return bean;
+     * 暴露数据源脚本处理器。
+     *
+     * <p>BeanPostProcessor 必须用 {@code static} 工厂方法暴露：非 static 的
+     * {@code @Bean} 方法会促使容器提前实例化本配置类，而此时其他 BeanPostProcessor
+     * 尚未注册完成，Spring 会打出「BeanPostProcessorChecker」告警。</p>
+     *
+     * @param dataSourceScriptProperties 数据源脚本配置属性
+     * @return 数据源脚本处理器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public static DataSourceScriptBeanPostProcessor dataSourceScriptBeanPostProcessor(
+            DataSourceScriptProperties dataSourceScriptProperties) {
+        return new DataSourceScriptBeanPostProcessor(dataSourceScriptProperties);
     }
 
     /**
@@ -134,7 +106,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      * @param beanName Bean 名称
      * @return true 表示已由 SPI Flyway 完成迁移
      */
-    private boolean tryMigrateWithSpiFlyway(DataSource ds, String beanName) {
+    boolean tryMigrateWithSpiFlyway(DataSource ds, String beanName) {
         try {
             List<Flyway> extensions = ServiceProvider.of(Flyway.class)
                     .getNewExtensions(Flyway.SPI_NAME, ds);
@@ -965,6 +937,17 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 Connection connection,
                 EncodedResource resource,
                 String fileName) throws SQLException {
+            // 空脚本（只有注释/空白）直接跳过：ScriptUtils.splitSqlScript 对空脚本会抛
+            // IllegalArgumentException('script' must not be null or empty)，而该异常发生在
+            // 脚本级、continue-on-error 拦不住，会让整个脚本被标成失败并刷错误日志。
+            // 「无种子数据」的模块仍会保留一个纯注释的 initdata 文件（与全仓 init+initdata
+            // 两文件制对齐），因此这里必须能容下空脚本。
+            if (isBlankScript(resource)) {
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("脚本 {} 无有效语句，跳过执行", fileName);
+                }
+                return;
+            }
             ScriptUtils.executeSqlScript(
                     connection,
                     resource,
@@ -975,6 +958,34 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER,
                     ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER
             );
+        }
+
+        /**
+         * 判断脚本是否没有可执行语句（仅含注释与空白）。
+         *
+         * <p>先整体剔除块注释与行注释，再看是否还有残留内容。</p>
+         *
+         * @param resource 脚本资源
+         * @return true 表示无有效语句
+         */
+        private boolean isBlankScript(EncodedResource resource) {
+            try (java.io.InputStream in = resource.getInputStream()) {
+                String content = new String(in.readAllBytes(),
+                        java.nio.charset.Charset.forName(dataSourceScriptProperties.getSqlScriptEncoding()));
+                // 剔除块注释
+                String stripped = content.replaceAll("(?s)/\\*.*?\\*/", "");
+                for (String line : stripped.split("\\R")) {
+                    String trimmed = line.trim();
+                    if (trimmed.isEmpty() || trimmed.startsWith("--") || trimmed.startsWith("#")) {
+                        continue;
+                    }
+                    return false;
+                }
+                return true;
+            } catch (java.io.IOException e) {
+                // 读不出来就交给 ScriptUtils 处理，行为与改造前一致
+                return false;
+            }
         }
 
         /**
@@ -1149,9 +1160,16 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         /**
          * 按扫描模式过滤表结构脚本。
          *
-         * <p>关键点：{@code ONCE} 且判定为「库非空」时会跳过<b>全部</b>结构脚本。
-         * 这意味着存量库升级时，新版本的结构脚本不会被执行——结构脚本要能在升级时生效，
-         * 必须使用 {@code ALWAYS}（并配合脚本文件名版本号递增，使执行记录查不到）。</p>
+         * <p>关键点：{@code ONCE} 且判定为「库非空」时，<b>已执行过</b>的结构脚本会被跳过。
+         * 但「版本表里查不到执行记录」的脚本仍要放行——这是存量库补列的唯一入口：
+         * 合并后的 init 脚本里带着幂等的 ALTER TABLE 语句，文件名（或版本号）一改，
+         * 版本表就查不到旧记录，脚本得以在存量库上重跑一次，把缺的列补上。
+         * 若沿用「库非空即整体跳过」，存量库永远补不上列（2026-10-23 实测：
+         * {@code sys_ai_provider_model_family} 缺失即由此而来）。</p>
+         *
+         * <p>重跑安全性由脚本自身保证：init 脚本内的建表语句用
+         * {@code CREATE TABLE IF NOT EXISTS}，补列语句用
+         * {@code information_schema} 判存，两者都可反复执行。</p>
          *
          * @param scripts       候选脚本
          * @param scanMode      扫描模式（NONE/ONCE/ALWAYS）
@@ -1170,10 +1188,27 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             }
 
             if (scanMode == DataSourceScriptProperties.ScanMode.ONCE && Boolean.FALSE.equals(emptyDatabase)) {
-                if (dataSourceScriptProperties.isVerbose()) {
-                    log.info("表结构脚本扫描模式为 ONCE，检测到当前库已有表，跳过 {} 个表结构脚本", scripts.size());
+                // 库非空：只放行「版本表里没有成功执行记录」的脚本，让它有机会补列。
+                String tableName = versionTable();
+                String tablePrefix = versionColumnPrefix(tableName);
+                List<Resource> pending = new ArrayList<>();
+                int skipped = 0;
+                for (Resource res : scripts) {
+                    String fileName = Objects.requireNonNull(res.getFilename());
+                    String version = versionOf(fileName);
+                    ScriptExecutionRecord record =
+                            findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
+                    if (needsExecution(record)) {
+                        pending.add(res);
+                    } else {
+                        skipped++;
+                    }
                 }
-                return List.of();
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("表结构脚本扫描模式为 ONCE，检测到当前库已有表：跳过 {} 个已执行的结构脚本，保留 {} 个待执行脚本",
+                            skipped, pending.size());
+                }
+                return pending;
             }
 
             return new ArrayList<>(scripts);
@@ -1204,8 +1239,13 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         /**
          * 按扫描模式过滤初始化数据脚本。
          *
-         * <p>初始化数据脚本只在空库执行一次：库中已有业务数据时跳过，
-         * 避免每次启动都重灌种子数据。</p>
+         * <p>初始化数据脚本按「脚本文件名 + 版本号」在版本表里记账
+         * （见 {@link #hasSuccessfulExecution}），已有成功记录的不会重跑，
+         * 所以库中已有业务数据时，无需再整批跳过——只需放行
+         * 「版本表里查不到记录」的脚本，那才是本次需要灌种子的部分。</p>
+         *
+         * <p>与 {@link #filterSchemaScripts} 同一口径：粗粒度的「库非空即跳过」
+         * 会让版本表里没有记录的新种子数据永远灌不进去。</p>
          *
          * @param scripts         候选脚本
          * @param scanMode        扫描模式（NONE/ONCE/ALWAYS）
@@ -1224,10 +1264,27 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             }
 
             if (scanMode == DataSourceScriptProperties.ScanMode.ONCE && Boolean.TRUE.equals(hasBusinessData)) {
-                if (dataSourceScriptProperties.isVerbose()) {
-                    log.info("初始化数据脚本扫描模式为 ONCE，检测到当前库已有业务数据，跳过 {} 个数据脚本", scripts.size());
+                // 库已有数据：只放行「版本表里没有成功执行记录」的脚本。
+                String tableName = versionTable();
+                String tablePrefix = versionColumnPrefix(tableName);
+                List<Resource> pending = new ArrayList<>();
+                int skipped = 0;
+                for (Resource res : scripts) {
+                    String fileName = Objects.requireNonNull(res.getFilename());
+                    String version = versionOf(fileName);
+                    ScriptExecutionRecord record =
+                            findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
+                    if (needsExecution(record)) {
+                        pending.add(res);
+                    } else {
+                        skipped++;
+                    }
                 }
-                return List.of();
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("初始化数据脚本扫描模式为 ONCE，检测到当前库已有业务数据：跳过 {} 个已执行的数据脚本，保留 {} 个待执行脚本",
+                            skipped, pending.size());
+                }
+                return pending;
             }
 
             return new ArrayList<>(scripts);
@@ -1371,6 +1428,62 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             this.resolvedColumnPrefix = legacy ? "" : checkedColumnPrefix(bareTableName + "_");
             if (dataSourceScriptProperties.isVerbose()) {
                 log.info("版本表[{}]列结构: {}", tableName, legacy ? "旧版裸列" : "新版带前缀");
+            }
+            if (legacy) {
+                migrateLegacyVersionPrimaryKey(tableName);
+            }
+        }
+
+        /**
+         * 迁移旧版版本表的主键：{@code PRIMARY KEY (version)} → {@code UNIQUE (script_name, version)}。
+         *
+         * <p><b>为什么必须迁移</b>：旧版把「版本号」当单列主键，而版本号在不同模块间会重复
+         * （各模块都用自己的 V1.0 / V2.0）。于是第二个模块的脚本记账必然撞
+         * {@code Duplicate entry '2.0' for key 'PRIMARY'}，脚本明明执行成功却记不上账，
+         * 下次启动还会重跑。新版建表语句用的是 {@code UNIQUE (script_name, version)}，
+         * 与「按脚本名+版本记账」的语义一致。</p>
+         *
+         * <p>做法：删掉旧主键 → 加复合唯一键 → 给历史数据补一个不冲突的 script_name。
+         * 补名规则是「同名记录保留原名、冲突者加版本后缀」，保证历史记录仍能被
+         * {@code findScriptExecutionRecord} 按（脚本名+版本）查到。</p>
+         *
+         * <p>安全豁免：表名与列名均来自部署配置并经 {@link SqlName} 校验，不含用户可控值。</p>
+         */
+        private void migrateLegacyVersionPrimaryKey(String tableName) {
+            try {
+                // 先看是否真的存在「version 单列主键」：存在 PRIMARY 约束且列只有 version
+                boolean versionIsPrimaryKey = false;
+                try (java.sql.Connection connection = ds.getConnection()) {
+                    java.sql.ResultSet keys =
+                            connection.getMetaData().getPrimaryKeys(connection.getCatalog(), null, tableName);
+                    try {
+                        while (keys.next()) {
+                            if ("version".equalsIgnoreCase(keys.getString("COLUMN_NAME"))) {
+                                versionIsPrimaryKey = true;
+                            }
+                        }
+                    } finally {
+                        keys.close();
+                    }
+                }
+                if (!versionIsPrimaryKey) {
+                    return;
+                }
+
+                String safeTableName = SqlName.check(tableName, "脚本版本表名");
+                // 历史记录里 script_name 为空或重复的，先改成唯一值
+                jdbc.update(String.format(
+                        "UPDATE %s SET script_name = CONCAT(COALESCE(script_name, 'legacy_'), '_', version) "
+                                + "WHERE script_name IS NULL OR script_name = '' "
+                                + "OR script_name IN (SELECT script_name FROM (SELECT script_name FROM %s GROUP BY script_name HAVING COUNT(*) > 1) t)",
+                        safeTableName, safeTableName));
+                // 丢掉旧主键，换成 (script_name, version) 唯一键
+                jdbc.execute(String.format("ALTER TABLE %s DROP PRIMARY KEY", safeTableName));
+                jdbc.execute(String.format(
+                        "ALTER TABLE %s ADD UNIQUE KEY uk_script_name_version (script_name, version)", safeTableName));
+                log.info("版本表[{}]主键已迁移: PRIMARY KEY(version) -> UNIQUE(script_name, version)", tableName);
+            } catch (DataAccessException | java.sql.SQLException e) {
+                log.warn("迁移版本表主键失败（将继续使用现有结构记账）: {}", e.getMessage());
             }
         }
 

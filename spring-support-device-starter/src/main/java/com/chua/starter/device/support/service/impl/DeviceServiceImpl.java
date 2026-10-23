@@ -7,11 +7,14 @@ import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.mapper.DeviceOrganizationMapper;
+import com.chua.starter.device.support.model.DevicePageQuery;
+import com.chua.starter.device.support.model.DeviceSaveRequest;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.support.model.DeviceStats;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,11 +109,91 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     /**
+     * 添加设备（含资产字段）并连接：请求对象直存资产字段
+    */
+    public DeviceInfo addDevice(DeviceSaveRequest request) {
+        DeviceConnectInfo connectInfo = new DeviceConnectInfo(
+                request.getDeviceInfoVendor(), "SDK",
+                request.getDeviceInfoIp(), request.getDeviceInfoPort(),
+                request.getDeviceInfoUsername(), request.getDeviceInfoPassword(),
+                null, null, null, request.getDeviceInfoSerial(),
+                Map.of());
+        DeviceInfo device = addDevice(connectInfo);
+        applySaveRequest(device, request);
+        deviceInfoMapper.updateById(device);
+        return device;
+    }
+
+    /**
+     * 把请求对象的非空资产字段覆盖到设备实体。
+     */
+    private void applySaveRequest(DeviceInfo device, DeviceSaveRequest request) {
+        if (StringUtils.hasText(request.getDeviceInfoName())) {
+            device.setDeviceInfoName(request.getDeviceInfoName());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoCode())) {
+            device.setDeviceInfoCode(request.getDeviceInfoCode());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoOrgId())) {
+            device.setDeviceInfoOrgId(request.getDeviceInfoOrgId());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoModel())) {
+            device.setDeviceInfoModel(request.getDeviceInfoModel());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoCategory())) {
+            device.setDeviceInfoCategory(request.getDeviceInfoCategory());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoSubCategory())) {
+            device.setDeviceInfoSubCategory(request.getDeviceInfoSubCategory());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoAddress())) {
+            device.setDeviceInfoAddress(request.getDeviceInfoAddress());
+        }
+        if (request.getDeviceInfoLatitude() != null) {
+            device.setDeviceInfoLatitude(request.getDeviceInfoLatitude());
+        }
+        if (request.getDeviceInfoLongitude() != null) {
+            device.setDeviceInfoLongitude(request.getDeviceInfoLongitude());
+        }
+        if (request.getDeviceInfoChannelCount() != null) {
+            device.setDeviceInfoChannelCount(request.getDeviceInfoChannelCount());
+        }
+        if (request.getDeviceInfoOfflineThreshold() != null) {
+            device.setDeviceInfoOfflineThreshold(request.getDeviceInfoOfflineThreshold());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoCredentialId())) {
+            device.setDeviceInfoCredentialId(request.getDeviceInfoCredentialId());
+        }
+        if (StringUtils.hasText(request.getDeviceInfoOwnerId())) {
+            device.setDeviceInfoOwnerId(request.getDeviceInfoOwnerId());
+        }
+        device.setDeviceInfoUpdatedAt(LocalDateTime.now());
+    }
+
+    @Override
+    /**
      * 更新Device
     */
     public void updateDevice(String id, DeviceInfo info) {
         info.setDeviceInfoId(id);
         deviceInfoMapper.updateById(info);
+    }
+
+    @Override
+    /**
+     * 更新设备（含资产字段）：密码为空或为掩码时不修改
+    */
+    public void updateDevice(String id, DeviceSaveRequest request) {
+        DeviceInfo existing = deviceInfoMapper.selectById(id);
+        if (existing == null) {
+            throw new RuntimeException("设备不存在: " + id);
+        }
+        applySaveRequest(existing, request);
+        if (StringUtils.hasText(request.getDeviceInfoPassword())
+                && !request.getDeviceInfoPassword().contains("*")) {
+            existing.setDeviceInfoPassword(request.getDeviceInfoPassword());
+        }
+        deviceInfoMapper.updateById(existing);
     }
 
     @Override
@@ -141,6 +224,39 @@ public class DeviceServiceImpl implements DeviceService {
         }
         wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
         return deviceInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    /**
+     * 设备台账统计
+     *
+     * <p>统计范围与列表的组织/厂商过滤一致，不受关键字与在线过滤影响（见 DeviceStats 说明）。</p>
+    */
+    public DeviceStats stats(String orgId, String vendor) {
+        LambdaQueryWrapper<DeviceInfo> base = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(orgId)) {
+            base.eq(DeviceInfo::getDeviceInfoOrgId, orgId);
+        }
+        if (StringUtils.hasText(vendor)) {
+            base.eq(DeviceInfo::getDeviceInfoVendor, vendor);
+        }
+        long total = deviceInfoMapper.selectCount(base);
+        long online = deviceInfoMapper.selectCount(
+                base.clone().eq(DeviceInfo::getDeviceInfoOnline, true));
+        long noLocation = deviceInfoMapper.selectCount(
+                base.clone().and(w -> w.isNull(DeviceInfo::getDeviceInfoLatitude)
+                        .or().isNull(DeviceInfo::getDeviceInfoLongitude)));
+        return new DeviceStats(total, online, total - online, noLocation);
+    }
+
+    @Override
+    /**
+     * 分页查询设备（查询对象入参，委托长参数版本）
+    */
+    public PageResult<DeviceInfo> pageDevices(
+            com.chua.starter.device.support.model.DevicePageQuery query) {
+        return pageDevices(query.getPageNo(), query.getPageSize(), query.getOrgId(),
+                query.getKeyword(), query.getCategory(), query.getOnline());
     }
 
     @Override

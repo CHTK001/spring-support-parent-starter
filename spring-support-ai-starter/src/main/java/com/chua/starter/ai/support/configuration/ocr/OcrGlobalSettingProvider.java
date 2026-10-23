@@ -63,7 +63,20 @@ public class OcrGlobalSettingProvider implements GlobalSettingProvider {
                 new GlobalSettingProvider.SettingItem("direction_model", "", "STRING", "方向矫正模型（留空关闭）", 5),
                 new GlobalSettingProvider.SettingItem("restorer_model", "", "STRING", "文字超分修复模型（留空关闭）", 6),
                 new GlobalSettingProvider.SettingItem("corrector_model", "", "STRING", "文本矫正模型（留空关闭，如 macbert4csc；非必填，矫正失败保留原文）", 7),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 8)
+                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 8),
+                // ── 可选增强（全部非必填：留空/关闭时原图直通，不影响识别）──
+                new GlobalSettingProvider.SettingItem("ocr_max_image_size", "2048", "NUMBER",
+                        "长边上限（像素，超过则等比缩小；0=不缩放）", 9),
+                new GlobalSettingProvider.SettingItem("enhance_deskew", "true", "BOOLEAN",
+                        "自动纠偏（±8° 内估角并旋转；角度过小不动图）", 10),
+                new GlobalSettingProvider.SettingItem("enhance_contrast", "false", "BOOLEAN",
+                        "对比度拉伸（适合偏灰照片；干净扫描件建议关）", 11),
+                new GlobalSettingProvider.SettingItem("enhance_denoise", "false", "BOOLEAN",
+                        "中值去噪（适合噪点照片；干净扫描件建议关）", 12),
+                new GlobalSettingProvider.SettingItem("enhance_binarize", "false", "BOOLEAN",
+                        "Otsu 二值化（默认关：对浅色/彩色卷面有害）", 13),
+                new GlobalSettingProvider.SettingItem("ocr_confidence_threshold", "0", "NUMBER",
+                        "结果置信度过滤阈值（0~1，0=不过滤）", 14)
         );
     }
 }

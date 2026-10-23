@@ -5,7 +5,6 @@ import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.support.model.DevicePageQuery;
 import com.chua.starter.device.support.model.DeviceSaveRequest;
 import com.chua.starter.device.support.model.DeviceStats;
-import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.chua.starter.mybatis.entity.PageResult;
 

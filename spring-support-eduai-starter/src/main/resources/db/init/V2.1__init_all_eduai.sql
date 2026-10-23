@@ -1033,7 +1033,7 @@ CREATE TABLE IF NOT EXISTS edu_hanzi (
     hanzi_radical VARCHAR(8) COMMENT '部首',
     hanzi_structure VARCHAR(16) COMMENT '结构：独体/上下/左右/半包围/全包围',
     hanzi_stroke_order VARCHAR(255) COMMENT '笔顺（按书写顺序排列的笔画名，如 一丨丿丶）',
-    hanzi_meaning VARCHAR(500) COMMENT '释义 / 常用组词',
+    hanzi_meaning TEXT COMMENT '释义 / 常用组词',
     hanzi_image VARCHAR(255) COMMENT '字画（图片路径或字形图，可空）',
     hanzi_grade_level VARCHAR(20) COMMENT '适用学段（中文名）：小学/初中/高中；NULL 表示不限',
     hanzi_status TINYINT DEFAULT 1 COMMENT '状态：0 停用 / 1 启用',
@@ -1335,3 +1335,19 @@ SET @sql_pa_create := IF(@has_pa_create > 0, 'SELECT 1',
 PREPARE stmt_pa_create FROM @sql_pa_create;
 EXECUTE stmt_pa_create;
 DEALLOCATE PREPARE stmt_pa_create;
+
+-- ---------- edu_hanzi：释义加宽为 TEXT ----------
+-- 报错：写入 edu_hanzi（跳过已存在）失败 → Data too long for column 'hanzi_meaning'。
+-- 原因：hanzi_meaning 原为 VARCHAR(500)，采集/录入的释义 + 组词可能超过 500 字符，
+-- MySQL 严格模式直接拒绝写入；把列加宽为 TEXT 后不再受 500 字符上限约束。
+SET @has_hanzi_meaning_text := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_hanzi' AND COLUMN_NAME = 'hanzi_meaning'
+      AND LOWER(DATA_TYPE) <> 'text'
+);
+SET @sql_hanzi_meaning_text := IF(@has_hanzi_meaning_text > 0,
+    'ALTER TABLE edu_hanzi MODIFY COLUMN hanzi_meaning TEXT NULL COMMENT ''释义 / 常用组词''',
+    'SELECT 1');
+PREPARE stmt_hanzi_meaning_text FROM @sql_hanzi_meaning_text;
+EXECUTE stmt_hanzi_meaning_text;
+DEALLOCATE PREPARE stmt_hanzi_meaning_text;

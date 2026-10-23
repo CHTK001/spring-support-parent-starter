@@ -104,6 +104,10 @@ public class VncWebsockifyWebSocketHandler extends AbstractWebSocketHandler {
         }
         Long identityId = WebSocketSessions.parseLong(params.get("identityId"));
         String operator = params.get("user");
+        // 显式目标端口：允许前端按当前协议（VNC）指定，覆盖台账 remotePort。
+        // 与 /ws/ms/server/terminal 的 resolveTargetPort 同口径：显式请求优先，
+        // 其次主机远控端口，最后 VNC 默认端口。
+        Integer requestedPort = WebSocketSessions.parseInteger(params.get("targetPort"));
 
         ReturnResult<MsServerHost> hostResult = serverHostService.get(hostId);
         if (!hostResult.isOk() || hostResult.getData() == null) {
@@ -115,8 +119,10 @@ public class VncWebsockifyWebSocketHandler extends AbstractWebSocketHandler {
         boolean isLocal = host.getServerHostCollectMode() != null
                 && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim());
         String address = isLocal ? NetUtils.getPreferredLocalIp() : host.getServerHostAddress();
-        int port = host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
-                ? host.getServerHostRemotePort() : ServerConstants.DEFAULT_VNC_PORT;
+        int port = requestedPort != null && requestedPort > 0
+                ? requestedPort
+                : (host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
+                        ? host.getServerHostRemotePort() : ServerConstants.DEFAULT_VNC_PORT);
 
         Socket tcp = new Socket();
         try {

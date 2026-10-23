@@ -192,12 +192,64 @@ public class AuthClientExecute {
      * @return 登录认证结果
      */
     public LoginAuthResult logout(String uid, String loginType, LogoutType logoutType) {
+        return resolveProtocolExecutor().logout(uid, logoutType, getUserResult());
+    }
+
+    /**
+     * 解析当前配置对应的协议执行器。
+     *
+     * @return 协议执行器，未配置时回退到 default
+     */
+    private ProtocolExecutor resolveProtocolExecutor() {
         String protocol = getAuthClientProperties().getProtocol();
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
         if (protocolExecutor == null) {
             protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension("default");
         }
-        return protocolExecutor.logout(uid, logoutType, getUserResult());
+        return protocolExecutor;
+    }
+
+    /**
+     * 禁用账号：在 OAuth 服务端写入用户级黑名单并吊销其全部会话。
+     *
+     * <p>失败不抛异常，由调用方决定是否只记日志——账号禁用本身已经落库，
+     * 不能因为认证服务暂时不可用而回滚业务操作。</p>
+     *
+     * @param userId 用户标识（sys_user 主键）
+     * @return 处理结果
+     */
+    public LoginAuthResult disableUser(String userId) {
+        return resolveProtocolExecutor().logout(userId, LogoutType.DISABLE, null);
+    }
+
+    /**
+     * 启用账号：在 OAuth 服务端移除用户级黑名单。
+     *
+     * @param userId 用户标识（sys_user 主键）
+     * @return 处理结果
+     */
+    public LoginAuthResult enableUser(String userId) {
+        return resolveProtocolExecutor().logout(userId, LogoutType.ENABLE, null);
+    }
+
+    /**
+     * 吊销指定用户的全部会话（管理员重置密码、删除账号等场景）。
+     *
+     * @param userId 用户标识（sys_user 主键）
+     * @return 处理结果
+     */
+    public LoginAuthResult kickUserSessions(String userId) {
+        return resolveProtocolExecutor().logout(userId, LogoutType.KICK, null);
+    }
+
+    /**
+     * 踢掉当前用户除本令牌外的其它会话（用户自助改密场景）。
+     *
+     * @param currentToken 需要保留的当前 access 令牌
+     * @return 处理结果
+     */
+    public LoginAuthResult kickOtherSessions(String currentToken) {
+        return resolveProtocolExecutor().logout(currentToken, LogoutType.KICK_OTHERS, getUserResult());
     }
 
     // ==================== 登出便捷方法 ====================

@@ -63,6 +63,11 @@ public class EduAppConfigService {
      */
     public static final String KEY_MARKING_EXTRACT_STRATEGY = "marking-extract-strategy";
 
+    /**
+     * 阅卷判分 Prompt 键名（主观题 LLM 判分 System Prompt，空 = 内置默认）
+     */
+    public static final String KEY_MARKING_PROMPT = "marking-prompt";
+
     private final EduAppConfigMapper appConfigMapper;
 
     /**

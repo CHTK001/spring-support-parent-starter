@@ -44,6 +44,39 @@ public class AiWorkspaceFileController {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
+     * 在会话工作区内解析路径。
+     *
+     * <p><b>为什么要试两层</b>：agent 报出来的相对路径，是相对**它自己的工作目录**
+     * {@code <base>/<账号>/agent/<会话id>} 的（工具 CWD 就在那里，例如它写的是
+     * {@code output/pelican_bike.svg}，实际落在 {@code .../agent/85/output/pelican_bike.svg}）。
+     * 而本接口的工作区根取的是 {@code <base>/<账号>/agent}，少了一层会话 id ——
+     * 直接拼就必然 404：文件明明在，点开却"加载失败"。</p>
+     *
+     * <p>所以先按原样解析，不存在再补一层会话 id 试一次。两条路径**都过同一道围栏**
+     * （解析后必须仍在工作区内，否则一律拒绝），不会因为多试一次而放开越权。</p>
+     *
+     * @param root  会话工作区根
+     * @param id    会话标识
+     * @param path  请求里的路径（相对或绝对）
+     * @return 解析后的目标路径；越界时返回 null（由调用方决定 403 还是 404）
+     */
+    private Path resolveInWorkspace(Path root, String id, String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        Path direct = root.resolve(path).normalize();
+        if (direct.startsWith(root) && Files.exists(direct)) {
+            return direct;
+        }
+        Path perSession = root.resolve(id).resolve(path).normalize();
+        if (perSession.startsWith(root) && Files.exists(perSession)) {
+            return perSession;
+        }
+        // 都不存在：把"越界"和"不存在"区分开，交给调用方给出准确状态码
+        return direct.startsWith(root) ? direct : null;
+    }
+
+    /**
      * 读取工作目录内的文本文件（前端文本预览）。
      *
      * @param id   会话标识（仅用于路由，工作目录按账号解析，与 tree 同口径）
@@ -57,12 +90,13 @@ public class AiWorkspaceFileController {
         if (root == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "工作目录未配置");
         }
-        Path target = root.resolve(path == null ? "" : path).normalize();
-        if (!target.startsWith(root)) {
+        Path target = resolveInWorkspace(root, id, path);
+        if (target == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "路径越界");
         }
         if (!Files.isRegularFile(target)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "文件不存在");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "文件不存在（已按工作区根与会话子目录两种口径查找）");
         }
         try {
             long size = Files.size(target);
@@ -97,8 +131,8 @@ public class AiWorkspaceFileController {
         if (root == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
-        Path target = root.resolve(path == null ? "" : path).normalize();
-        if (!target.startsWith(root) || !Files.isRegularFile(target)) {
+        Path target = resolveInWorkspace(root, id, path);
+        if (target == null || !Files.isRegularFile(target)) {
             return ResponseEntity.notFound().build();
         }
         try {

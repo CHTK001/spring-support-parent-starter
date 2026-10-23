@@ -112,9 +112,17 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
      * @param field 配置字段名
      */
     private void doEvict(String group, String field) {
-        Cache cache = alwaysCacheManager.getCache(REDIS_CACHE_ALWAYS);
-        if (cache != null) {
-            cache.evict(cacheKey(group, field));
+        try {
+            Cache cache = alwaysCacheManager.getCache(REDIS_CACHE_ALWAYS);
+            if (cache != null) {
+                cache.evict(cacheKey(group, field));
+            }
+        } catch (Exception ex) {
+            // 缓存失效是「尽力而为」：配置已经提交入库，Redis 不可达时清键失败
+            // 不应把一次成功的写入变成 500（实测：本地无 Redis 时 PUT /v2/settings/paper
+            // 报 "Unable to connect to Redis"，而数据其实已落库）。
+            // 与 CacheResilienceConfiguration 对读写失败的处理同口径：降级并继续。
+            log.warn("[GlobalSetting] 清缓存失败已忽略 group={} field={}: {}", group, field, ex.getMessage());
         }
     }
 
