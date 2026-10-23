@@ -1305,7 +1305,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 账号标识必须净化成单个目录名，否则一个形如 ../../etc 的账号标识就能把
             // 工作间指到基路径之外——隔离在这里就要挡住，不能指望下游的路径拼接。
             Path accountRoot = basePath.resolve(safeSegment(AiUserContext.currentUserId()));
-            Path workspace = accountRoot.resolve("agent").normalize();
+            /*
+             * 会话段必须有：**否则同一账号的所有会话共用同一个工作目录** ——
+             * agent 的 shell 执行目录（LocalFilesystemSpec.project）与文件类工具的产物
+             * 都会跨会话互相可见（实测：会话 147 的 `pwd` 返回 `<root>/admin/agent`，
+             * 而库里另一个会话的产物在 `<root>/85/output/...`，两者并不同层）。
+             *
+             * 既有产物本身就是落在 `<root>/<会话id>/` 下的（85/output/…、134/…），
+             * 所以补上会话段是**对齐既有布局**，不是新增路径；
+             * 会话 id 同样要净化成单个目录名，防止带分隔符或 `..` 逃逸。
+             */
+            Path workspace = (sessionId == null || sessionId.isBlank())
+                    ? accountRoot.resolve("agent").normalize()
+                    : accountRoot.resolve("agent").resolve(safeSegment(sessionId)).normalize();
             // 二次确认：即便净化逻辑今后被改动，也不允许解析结果越出基路径
             if (!workspace.startsWith(basePath)) {
                 log.warn("[AiChat] 工作间解析越界，已拒绝 userId={} 解析结果={}", AiUserContext.currentUserId(), workspace);
