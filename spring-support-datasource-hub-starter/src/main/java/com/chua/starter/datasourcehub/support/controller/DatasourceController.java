@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -98,6 +99,23 @@ public class DatasourceController {
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable Long id) {
         return datasourceService.delete(id);
+    }
+
+    /**
+     * 置顶 / 取消置顶数据源。
+     *
+     * <p>置顶是台账上的用户偏好：置顶项在左栏列表与全量接口里排在前面，
+     * 不影响连通性判定与监控指标。幂等操作，重复置顶同一数据源不报错。</p>
+     *
+     * @param id  数据源 ID
+     * @param top true 置顶、false 取消置顶
+     * @return 更新后的数据源
+     */
+    @SysLog(name = "置顶/取消置顶数据源")
+    @Operation(summary = "置顶/取消置顶数据源")
+    @PostMapping("/{id}/top")
+    public ReturnResult<DataSourceVO> toggleTop(@PathVariable Long id, @RequestParam(defaultValue = "true") boolean top) {
+        return datasourceService.toggleTop(id, top);
     }
 
     /**
