@@ -165,10 +165,12 @@ public class PaperClientManager implements PaperClient {
      */
     public PaperPipeline pipeline() {
         PaperPipeline current = pipeline;
-        if (current == null) {
+        // pipelineFingerprint 非空表示「这一版配置已经尝试装配过」，无论成功与否。
+        // 用它区分「尚未装配」与「装配失败」：后者不再每次重试，避免模型加载反复失败刷日志。
+        if (current == null && pipelineFingerprint == null) {
             synchronized (this) {
                 current = pipeline;
-                if (current == null) {
+                if (current == null && pipelineFingerprint == null) {
                     current = buildPipeline();
                     pipeline = current;
                     pipelineFingerprint = fingerprint;
@@ -181,13 +183,13 @@ public class PaperClientManager implements PaperClient {
         if (pipelineFingerprint != null && !pipelineFingerprint.equals(fingerprint)) {
             synchronized (this) {
                 if (pipelineFingerprint != null && !pipelineFingerprint.equals(fingerprint)) {
+                    current = buildPipeline();
+                    pipeline = current;
                     pipelineFingerprint = fingerprint;
-                    pipeline = buildPipeline();
-                    current = pipeline;
                 }
             }
         }
-        return current;
+        return pipeline;
     }
 
     /**
@@ -244,13 +246,19 @@ public class PaperClientManager implements PaperClient {
     }
 
     /**
-     * 试卷识别是否已配置可用（OCR 可用即可）。
+     * 试卷识别管线是否真的可用。
      *
-     * @return true 表示可用
+     * <p><b>不能用 {@link OcrClientManager#available()} 代替</b>：后者只判断配置里是否填了
+     * 模型名，而管线装配还要能真正加载到模型文件。模型资产缺失时
+     * {@code available()} 会返回 true、{@code pipeline()} 却返回 null，
+     * 调用方据此放行后会在识别阶段撞上异常。这里以「管线能否装配」为准。</p>
+     *
+     * @return true 表示可以执行识别
      */
     @Override
     public boolean available() {
-        return ocrClientManager.available();
+        PaperPipeline pp = pipeline();
+        return pp != null && pp.available();
     }
 
     /**
