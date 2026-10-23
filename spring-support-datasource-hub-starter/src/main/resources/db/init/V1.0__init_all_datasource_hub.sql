@@ -134,6 +134,14 @@ CREATE TABLE IF NOT EXISTS `ms_jdbc_driver_jar`
 ALTER TABLE `ms_datasource`
     ADD COLUMN `datasource_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(ms_jdbc_driver_jar.id)，空=用内置驱动';
 
+-- ------------------------------------------------------------
+-- 置顶标记（数据源中心「置顶」需求）
+-- 1=置顶，0=普通；列表按置顶在前、ID 升序排序
+-- 置顶是用户偏好，不参与连通性判定，也不随测试回写
+-- ------------------------------------------------------------
+ALTER TABLE `ms_datasource`
+    ADD COLUMN `datasource_top_flag` INT NULL DEFAULT 0 COMMENT '置顶标记 - 1:置顶, 0:普通' AFTER `datasource_control_target`;
+
 -- ============================================================
 -- 以下四表原属 db/migration（V1.2–V1.7），现并入 init：
 --   单一初始化目录，新库一次建全，不再依赖「升级补丁只对存量库生效」的差别。

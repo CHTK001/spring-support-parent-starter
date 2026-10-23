@@ -89,7 +89,8 @@ public final class DatasourceProbeSupport {
             Long sessionLatencyMs,
             String message,
             Long connectionCount,
-            ServerStats serverStats
+            ServerStats serverStats,
+            String version
     ) {
         /**
          * 无服务器指标的五参构造：让不支持服务器指标的类型照旧只填前五项，
@@ -103,7 +104,15 @@ public final class DatasourceProbeSupport {
          */
         public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
                             String message, Long connectionCount) {
-            this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, null);
+            this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, null, null);
+        }
+
+        /**
+         * 无版本号但带服务器指标：复用于表达「指标有、版本未知」。
+         */
+        public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
+                            String message, Long connectionCount, ServerStats serverStats) {
+            this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, serverStats, null);
         }
 
         /**
