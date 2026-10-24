@@ -387,7 +387,7 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
      */
     private static String buildWechatAuthUrl(String state) {
         return "https://open.weixin.qq.com/connect/qrconnect"
-                + "?appid=" + URLEncoder.encode(WECHAT_APP_ID, StandardCharsets.UTF_8)
+                + "?appid=" + URLEncoder.encode(loomCfg("wechat_app_id", WECHAT_APP_ID), StandardCharsets.UTF_8)
                 + "&redirect_uri=" + URLEncoder.encode(WECHAT_REDIRECT_URI, StandardCharsets.UTF_8)
                 + "&response_type=code&scope=snsapi_login"
                 + "&state=" + URLEncoder.encode(state, StandardCharsets.UTF_8)
@@ -588,13 +588,34 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
     /** 账号请求体 base 段（appid/modelid/version/devid/ua/traceid，traceid 每次新生成）。 */
     private Map<String, Object> accountBase() {
         Map<String, Object> base = new LinkedHashMap<>();
-        base.put("appid", APP_ID);
+        base.put("appid", loomCfg("app_id", APP_ID));
         base.put("modelid", "Web");
         base.put("version", "1.0.0");
         base.put("devid", "web");
         base.put("ua", USER_AGENT);
         base.put("traceid", UUID.randomUUID().toString().replace("-", ""));
         return base;
+    }
+
+    /**
+     * 读取可覆盖配置：优先系统属性 {@code chua.loomy.<key>}，其次环境变量
+     * {@code CHUA_LOOMY_<KEY_UPPER>}，最后回落到内置默认值。
+     *
+     * <p>{@code ACCESS_KEY_ID} / {@code ACCESS_KEY_SECRET} / {@code APP_ID} /
+     * {@code WECHAT_APP_ID} 是 Loomy 官方客户端的签名与开放平台凭据（随官方客户端分发，
+     * 半公开值，不涉用户数据，可按源码写死）；保留系统属性/环境变量覆盖，是为了
+     * 讯飞侧轮换凭据时不用改代码重启。</p>
+     *
+     * @param key      配置键（如 {@code access_key_id}）
+     * @param fallback 内置默认值
+     * @return 生效配置
+     */
+    private static String loomCfg(String key, String fallback) {
+        String value = System.getProperty("chua.loomy." + key);
+        if (value == null || value.isBlank()) {
+            value = System.getenv("CHUA_LOOMY_" + key.toUpperCase(java.util.Locale.ROOT));
+        }
+        return (value == null || value.isBlank()) ? fallback : value;
     }
 
     /**
@@ -619,9 +640,9 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
                 nonce,
                 "",               // signed headers（不发 x-* 头）
                 "");              // canonicalized headers
-        String signature = hmacSha1Base64(stringToSign, ACCESS_KEY_SECRET);
+        String signature = hmacSha1Base64(stringToSign, loomCfg("access_key_secret", ACCESS_KEY_SECRET));
         Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("Authorization", "account " + ACCESS_KEY_ID + ":" + signature);
+        headers.put("Authorization", "account " + loomCfg("access_key_id", ACCESS_KEY_ID) + ":" + signature);
         headers.put("Date", date);
         headers.put("Nonce", nonce);
         headers.put("Content-Type", "application/json");
