@@ -169,10 +169,16 @@ public class SettingsController {
             @PathVariable String group,
             @RequestBody Map<String, Object> settings) {
 
-        // 用户隔离分组（默认模型相关）：无论管理员还是普通账号，都写入「自己」的覆盖层，
-        // 不再让管理员的一次修改全局影响所有人（每个用户管理自己的默认）。
-        boolean userScoped = isUserScopedGroup(group);
-        if (!AiUserContext.isAdmin() || userScoped) {
+        // 写到哪一层，按「分组的语义」而不是「是否用户隔离」判定：
+        //   · 纯个人偏好组（appearance / browser / session）：与角色无关，永远写本人覆盖层；
+        //   · 系统级分组（runtime / ocr / rag / paper …）：管理员写「全局默认层」。
+        //     运行时消费端（如 eduai 的 EduAiService、ChatClientSettingsResolver）读的是
+        //     GlobalSettingReader#getStrDirect —— 只读全局层、不读用户覆盖。若管理员保存
+        //     runtime 的 provider/密钥时落到覆盖层，就会「界面保存成功、运行时却读不到」，
+        //     这正是此前「配置中心显示未配置/改了不生效」的根因。
+        //   · 普通账号：一律写自己的覆盖层（并走白名单守卫）。
+        boolean personalOnly = USER_WRITABLE_GROUPS.contains(group);
+        if (!AiUserContext.isAdmin() || personalOnly) {
             if (!AiUserContext.isAdmin()) {
                 // 普通账号：先校验分组白名单与管理员专属字段。
                 // 两处 PUT（/{group} 与 /{group}/overrides）必须走同一道守卫。
