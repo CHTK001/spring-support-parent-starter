@@ -11,7 +11,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
-import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.text.json.Json;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -131,9 +131,10 @@ public class ApiChannelAuthController {
      * @return 渠道列表，每项 { channel, displayName, loginMethod, supportsCheckin,
      *         providerId（当前绑定的 provider 行 ID，未绑定为 null）、connections }
      */
-    @Permission("admin")
     @GetMapping("")
     public ApiResult<List<Map<String, Object>>> listChannels() {
+        // 账号数据按 userId 隔离：所有登录用户可见自己的渠道与绑定账号
+        String owner = ownerId();
         Map<String, AccountChannelAuthManager> managers = managers();
         List<Map<String, Object>> items = new ArrayList<>(managers.size());
         java.util.Set<String> seen = new java.util.LinkedHashSet<>();
@@ -153,7 +154,7 @@ public class ApiChannelAuthController {
             if (provider == null) {
                 provider = requireChannelProvider(channel);
             }
-            items.add(buildChannelSummary(channel, impl, provider));
+            items.add(buildChannelSummary(channel, impl, provider, owner));
         }
         return ApiResult.ok(items);
     }
@@ -167,7 +168,7 @@ public class ApiChannelAuthController {
      * @return 摘要
      */
     private Map<String, Object> buildChannelSummary(String channel,
-            AccountChannelAuthManager impl, SysAiProvider provider) {
+            AccountChannelAuthManager impl, SysAiProvider provider, String owner) {
         Map<String, Object> summary = new LinkedHashMap<>(12);
         summary.put("channel", channel);
         summary.put("displayName", impl.displayName());
@@ -176,10 +177,13 @@ public class ApiChannelAuthController {
         summary.put("providerId", provider == null ? null : provider.getProviderId());
         summary.put("enabled", provider == null ? false : Boolean.TRUE.equals(provider.getEnabled()));
 
-        List<SysAiProviderConnection> connections = connectionMapper.selectList(
+        // 仅当前用户自己的连接（管理员额外可见历史 NULL 系统池）
+        LambdaQueryWrapper<SysAiProviderConnection> connectionWrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId,
-                                provider == null ? null : provider.getProviderId()));
+                                provider == null ? null : provider.getProviderId());
+        applyOwnerFilter(connectionWrapper, owner);
+        List<SysAiProviderConnection> connections = connectionMapper.selectList(connectionWrapper);
         List<Map<String, Object>> conns = new ArrayList<>(
                 connections == null ? 0 : connections.size());
         if (connections != null) {
@@ -288,9 +292,9 @@ public class ApiChannelAuthController {
      * @param channel 渠道标识（大小写不敏感；响应一律回传实现的规范标识）
      * @return 登录句柄
      */
-    @Permission("admin")
     @PostMapping("/{channel}/start-login")
     public ApiResult<Map<String, Object>> startLogin(@PathVariable("channel") String channel) {
+        ownerId();
         AccountChannelAuthManager impl = requireManager(channel);
         channel = impl.channel();
         Map<String, Object> handle;
@@ -322,12 +326,12 @@ public class ApiChannelAuthController {
      * @param body 请求体（含 handle）
      * @return { ok: 布尔、credentials 是否已写入 }
      */
-    @Permission("admin")
     @PostMapping("/{channel}/poll")
     @Transactional
     public ApiResult<Map<String, Object>> pollChannel(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body) {
+        String owner = ownerId();
         AccountChannelAuthManager impl = requireManager(channel);
         Object rawHandle = body == null ? null : body.get("handle");
         Map<String, Object> handle = toHandleMap(rawHandle);
@@ -354,7 +358,7 @@ public class ApiChannelAuthController {
             return ApiResult.ok(pendingResult(handle));
         }
 
-        return ApiResult.ok(persistCredentials(channel, credentials, label));
+        return ApiResult.ok(persistCredentials(channel, credentials, label, owner));
     }
 
     /**
@@ -382,11 +386,11 @@ public class ApiChannelAuthController {
      * @return { ok:true, connectionId, channel, label }
      */
     private Map<String, Object> persistCredentials(String channel,
-            Map<String, Object> credentials, String label) {
+            Map<String, Object> credentials, String label, String owner) {
         // 包进编程式事务：本方法既会被 pollChannel（已有 @Transactional）调用，
         // 也会被 SSE 线程调用（无事务）。@Transactional 自调用不生效，
         // 用 TransactionTemplate 才能保证两条写操作原子。
-        return transactionTemplate.execute(status -> doPersistCredentials(channel, credentials, label));
+        return transactionTemplate.execute(status -> doPersistCredentials(channel, credentials, label, owner));
     }
 
     /**
@@ -395,18 +399,20 @@ public class ApiChannelAuthController {
      * @param channel     渠道标识
      * @param credentials SPI 返回的可持久化凭据
      * @param label       账号标签
+     * @param owner       归属用户（账号隔离）
      * @return { ok:true, connectionId, channel, label }
      */
     private Map<String, Object> doPersistCredentials(String channel,
-            Map<String, Object> credentials, String label) {
+            Map<String, Object> credentials, String label, String owner) {
         SysAiProvider provider = requireChannelProvider(channel);
-        SysAiProviderConnection conn = findOrCreateConnection(provider.getProviderId(), label);
+        SysAiProviderConnection conn = findOrCreateConnection(provider.getProviderId(), label, owner);
         Map<String, Object> merged = new LinkedHashMap<>(credentials);
         merged.put("channel", channel);
         conn.setCredentials(merged);
         conn.setRole("default");
         conn.setAuthScheme(OAUTH_SCHEME);
         conn.setLabel(label);
+        conn.setUserId(owner);
         conn.setUpdatedAt(System.currentTimeMillis());
         connectionMapper.updateById(conn);
 
@@ -444,13 +450,15 @@ public class ApiChannelAuthController {
      * @param timeoutSec 流存活上限（秒）
      * @return SSE 流（text/event-stream）
      */
-    @Permission("admin")
     @PostMapping(value = "/{channel}/sse-login", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sseLogin(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body,
             @RequestParam(value = "timeoutSec", defaultValue = "180") long timeoutSec) {
         AccountChannelAuthManager impl = requireManager(channel);
+        // 身份必须在请求线程内解析：SSE 工作线程没有请求上下文，
+        // 提前捕获归属用户，供落库时做账号隔离。
+        String owner = ownerId();
         Object rawHandle = body == null ? null : body.get("handle");
         // 逐轮轮询会在 SPI 内变异句柄（Loomy 的 msgid/smsSent、Zcode 的 __lastPollAt），
         // 故用可变副本贯穿整个流，并把副本回显给前端。
@@ -471,6 +479,7 @@ public class ApiChannelAuthController {
         SseEmitter emitter = new SseEmitter(timeoutMs + 15_000L);
         String finalLabel = label;
         long finalIntervalMs = intervalMs;
+        final String finalOwner = owner;
 
         // ⚠️ 不能用 @Transactional 或共用线程池：单次轮询可能阻塞在 HTTP 上，
         // 用独立单线程执行器并守护化，结束即关闭，避免线程泄漏。
@@ -489,7 +498,7 @@ public class ApiChannelAuthController {
                         }
                         continue;
                     }
-                    Map<String, Object> persisted = persistCredentials(channel, credentials, finalLabel);
+                    Map<String, Object> persisted = persistCredentials(channel, credentials, finalLabel, finalOwner);
                     sendEvent(emitter, "done", persisted);
                     emitter.complete();
                     return;
@@ -544,7 +553,6 @@ public class ApiChannelAuthController {
      * @param body 请求体：{ label }（匹配 connection label）
      * @return { ok: 布尔、refreshed: 布尔 }
      */
-    @Permission("admin")
     @PostMapping("/{channel}/refresh")
     @Transactional
     public ApiResult<Map<String, Object>> refreshChannel(
@@ -592,7 +600,6 @@ public class ApiChannelAuthController {
      * @param body 请求体：{ label }
      * @return 签到结果（含 credits/message 等键，由实现决定）
      */
-    @Permission("admin")
     @PostMapping("/{channel}/checkin")
     @Transactional
     public ApiResult<Map<String, Object>> checkinChannel(
@@ -667,7 +674,6 @@ public class ApiChannelAuthController {
      * @param body 请求体：{ label }
      * @return { ok, models: [{id, name, contextWindow?}] }
      */
-    @Permission("admin")
     @PostMapping("/{channel}/list-models")
     public ApiResult<Map<String, Object>> listModelsChannel(
             @PathVariable("channel") String channel,
@@ -723,7 +729,6 @@ public class ApiChannelAuthController {
      * @param body 请求体：{ label }
      * @return { ok, channel, created, updated, total }
      */
-    @Permission("admin")
     @PostMapping("/{channel}/import-models")
     @Transactional
     public ApiResult<Map<String, Object>> importModelsChannel(
@@ -826,13 +831,13 @@ public class ApiChannelAuthController {
      * @param body { enabled: 布尔 }
      * @return { ok, channel, model, enabled }
      */
-    @Permission("admin")
     @PutMapping("/{channel}/models/{model}/enabled")
     @Transactional
     public ApiResult<Map<String, Object>> setModelEnabled(
             @PathVariable("channel") String channel,
             @PathVariable("model") String model,
             @RequestBody Map<String, Object> body) {
+        ownerId();
         AccountChannelAuthManager impl = requireManager(channel);
         boolean enabled = body != null
                 && Boolean.TRUE.equals(body.get("enabled"));
@@ -869,7 +874,6 @@ public class ApiChannelAuthController {
      * @param body { label }
      * @return 成功
      */
-    @Permission("admin")
     @PostMapping("/{channel}/delete-connection")
     @Transactional
     public ApiResult<Void> deleteConnection(
@@ -893,12 +897,12 @@ public class ApiChannelAuthController {
      * @param body { enabled: 布尔 }
      * @return { ok, enabled }
      */
-    @Permission("admin")
     @PutMapping("/{channel}/enabled")
     @Transactional
     public ApiResult<Map<String, Object>> setChannelEnabled(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body) {
+        ownerId();
         SysAiProvider provider = requireChannelProvider(channel);
         boolean enabled = body != null && Boolean.TRUE.equals(body.get("enabled"));
         provider.setEnabled(enabled);
@@ -918,7 +922,6 @@ public class ApiChannelAuthController {
      * @param label 可选 label，缺省取默认
      * @return { ok, status: "valid"|"expired"|"invalid", label }
      */
-    @Permission("admin")
     @GetMapping("/{channel}/status")
     public ApiResult<Map<String, Object>> statusChannel(
             @PathVariable("channel") String channel,
@@ -996,6 +999,32 @@ public class ApiChannelAuthController {
     }
 
     /**
+     * 当前账号归属用户（未登录抛 401）。
+     *
+     * @return 用户标识
+     */
+    private static String ownerId() {
+        return AiUserContext.requireUserId();
+    }
+
+    /**
+     * 给连接查询施加账号隔离条件：
+     * 普通用户只能看到自己的连接；管理员额外可见历史 {@code user_id IS NULL} 的系统池行
+     * （渠道管理改造前的绑定即此类）。
+     *
+     * @param wrapper 连接查询包装器
+     * @param owner   当前用户标识
+     */
+    private void applyOwnerFilter(LambdaQueryWrapper<SysAiProviderConnection> wrapper, String owner) {
+        wrapper.and(w -> {
+            w.eq(SysAiProviderConnection::getUserId, owner);
+            if (AiUserContext.isAdmin()) {
+                w.or().isNull(SysAiProviderConnection::getUserId);
+            }
+        });
+    }
+
+    /**
      * 按 channel + label 定位 connection：
      * label 非空时按 label 精确匹配；为空时取该渠道下第一个 connection。
      *
@@ -1008,6 +1037,8 @@ public class ApiChannelAuthController {
         LambdaQueryWrapper<SysAiProviderConnection> wrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
+        // 账号隔离：只能定位当前用户自己的连接
+        applyOwnerFilter(wrapper, ownerId());
         if (label != null && !label.isBlank()) {
             wrapper.eq(SysAiProviderConnection::getLabel, label.trim());
         } else {
@@ -1026,23 +1057,27 @@ public class ApiChannelAuthController {
      * @param label 账号标签（可空）
      * @return 必然存在的 connection
      */
-    private SysAiProviderConnection findOrCreateConnection(String providerId, String label) {
-        SysAiProviderConnection existing;
+    private SysAiProviderConnection findOrCreateConnection(String providerId, String label, String owner) {
         if (label != null && !label.isBlank()) {
-            existing = connectionMapper.selectOne(
+            SysAiProviderConnection byLabel = connectionMapper.selectOne(
                     new LambdaQueryWrapper<SysAiProviderConnection>()
                             .eq(SysAiProviderConnection::getProviderId, providerId)
                             .eq(SysAiProviderConnection::getLabel, label.trim())
+                            .eq(SysAiProviderConnection::getUserId, owner)
                             .last("LIMIT 1"));
+            if (byLabel != null) {
+                return byLabel;
+            }
         } else {
-            existing = connectionMapper.selectOne(
+            SysAiProviderConnection byRole = connectionMapper.selectOne(
                     new LambdaQueryWrapper<SysAiProviderConnection>()
                             .eq(SysAiProviderConnection::getProviderId, providerId)
                             .eq(SysAiProviderConnection::getRole, "default")
+                            .eq(SysAiProviderConnection::getUserId, owner)
                             .last("LIMIT 1"));
-        }
-        if (existing != null) {
-            return existing;
+            if (byRole != null) {
+                return byRole;
+            }
         }
         long now = System.currentTimeMillis();
         SysAiProviderConnection created = new SysAiProviderConnection();
@@ -1050,6 +1085,7 @@ public class ApiChannelAuthController {
         created.setProviderId(providerId);
         created.setRole("default");
         created.setLabel(label);
+        created.setUserId(owner);
         created.setAuthScheme(OAUTH_SCHEME);
         created.setCreatedAt(now);
         created.setUpdatedAt(now);

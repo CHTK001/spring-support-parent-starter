@@ -5,29 +5,41 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.common.support.text.json.Json;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Loomy（讯飞办公助手）账号渠道鉴权管理器实现。
  *
- * <p>协议（对齐 {@code dsh-our-free-model} 的 {@code loomy-oauth.ts} / {@code loomy-sign.ts} /
- * {@code loomy.ts}，<b>短信验证码登录</b>——全部 10 个渠道里唯一不走浏览器 URL 的）：</p>
+ * <p>协议对齐 {@code dsh-our-free-model} 的 {@code loomy-wechat-login.ts} /
+ * {@code loomy-wechat.ts} / {@code loomy-oauth.ts} / {@code loomy-sign.ts}，
+ * <b>微信扫码登录</b>——与其它浏览器授权渠道保持一致，不再在页面里收集手机号：</p>
  * <ol>
- *   <li>{@code startLogin} 无参：返回含 {@code loginMethod=sms} 的句柄，前端据此渲染
- *       「手机号 + 验证码」表单；</li>
- *   <li>{@code pollLogin} 按 {@code handle.smsSent}/{@code handle.smsPhone} 判断当前阶段：
- *       未发码时收 {@code phone} → {@code POST {accountBase}/login/phone/sendMsgCode}
- *       （取 {@code msgid}）；已发码时收 {@code smsCode} →
- *       {@code POST {accountBase}/login/phone/checkCode} → {@code {session, userid}}。</li>
+ *   <li>{@code startLogin} 拉取微信开放平台授权页，从 HTML 内嵌内容提取二维码
+ *       {@code uuid}，返回 {@code verifyUrl}（官方授权页，前端自动打开）+
+ *       {@code qrImage}（二维码图片 data URL，前端可直接渲染）+ {@code uuid}；</li>
+ *   <li>{@code pollLogin} 长轮询 {@code long.open.weixin.qq.com/connect/l/qrconnect}，
+ *       微信确认（errcode=405）拿到一次性 {@code code} 后调
+ *       {@code /login/thirdAccount/bind/auth}；该微信已绑手机号（bind=1）走
+ *       {@code bind/skip} 直接换 {@code session}；未绑（bind=0）则明确报错，
+ *       引导用户先在官网完成手机号绑定后再回来扫码。</li>
  * </ol>
  *
  * <p>⚠️ 三个易踩点（源码注释原样保留）：</p>
@@ -41,23 +53,27 @@ import java.util.UUID;
  *       （成功 {@code 000000}），只看状态码会把「登录已失效」误判成成功。</li>
  * </ul>
  *
+ * <p>微信长轮询状态以授权页内嵌官方 JS 为准：408 待扫码 / 404 已扫码待确认（继续轮询）/
+ * 405 已确认（本帧带 {@code wx_code}）/ 403 取消 / 402 二维码失效。</p>
+ *
  * <p>⚠️ 无 refresh 端点：{@code session} 是登录时声明 14 天有效期的，凭据里没有
- * refresh_token，到期只能重新短信登录（{@link #refresh} 抛 {@code NOT_IMPLEMENTED}）。
+ * refresh_token，到期只能重新扫码登录（{@link #refresh} 抛 {@code NOT_IMPLEMENTED}）。
  * 每日额度由服务端在 {@code first-login} 发放、onboarding 任务一次性领取，
  * 均非「签到」动作，故 {@code supportsCheckin=false}。</p>
  *
- * <p>凭据落库：{@code access_token}(session) + {@code userid} + {@code phone} +
+ * <p>凭据落库：{@code access_token}(session) + {@code userid} + {@code phone}（微信路径为空）+
  * {@code expires_at}（登录时刻 + 14 天本地推算，服务端响应不带到期时间）。</p>
  *
  * @since 4.0.0.43
  * @author CH
  */
+@Slf4j
 @Spi("loomy")
 public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager {
 
     /** 业务端点基址（推理 / 模型 / 积分 / onboarding）。 */
     static final String API_BASE = "https://loomyad.xunfei.cn";
-    /** 讯飞账号（CAccount）基址（短信登录端点全挂它下面）。 */
+    /** 讯飞账号（CAccount）基址（微信绑定/跳步端点全挂它下面）。 */
     static final String ACCOUNT_BASE = "https://account.xfinfr.com";
     /** 业务成功码。 */
     static final String OK_CODE = "000000";
@@ -70,21 +86,40 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
     /** 客户端 UA（照抄官方：Windows 上也是 macOS，不要改）。 */
     static final String USER_AGENT = "Loomy|Desktop|Electron|macOS";
 
-    /** 短信验证码有效期（秒）。 */
-    static final long SMS_CODE_TTL_SECONDS = 300;
     /** 登录会话有效期（秒）= 14 天（服务端只接受声明，响应不带到期时间）。 */
     static final long SESSION_TTL_SECONDS = 1_209_600L;
 
-    /** 句柄：手机号（发码/校验两阶段都要带回）。 */
-    static final String HANDLE_PHONE = "phone";
-    /** 句柄：验证码 msgid（sendMsgCode 返回，checkCode 必须原样带回）。 */
-    static final String HANDLE_MSGID = "msgid";
-    /** 句柄：已发码标记。 */
-    static final String HANDLE_SMS_SENT = "smsSent";
-    /** pollLogin 入参：手机号。 */
-    static final String POLL_KEY_PHONE = "phone";
-    /** pollLogin 入参：用户输入的短信验证码。 */
-    static final String POLL_KEY_SMS_CODE = "smsCode";
+    /** 微信开放平台「网站应用」AppID（取自 Loomy 客户端 .env.prod）。 */
+    static final String WECHAT_APP_ID = "wx18d60be432287cf8";
+    /** 微信授权回调地址：必须是官方地址（域名白名单校验），实际返回 404，仅作占位。 */
+    static final String WECHAT_REDIRECT_URI = "https://loomy.xunfei.cn/oauth/wechat/callback";
+    /** 微信长轮询单次 HTTP 超时（毫秒）：不做 25s 慢速挂起，交给 SSE 循环驱动反复轮询。 */
+    static final long WECHAT_POLL_HTTP_TIMEOUT_MS = 15_000L;
+    /** 微信浏览器 UA：微信对空 UA / 爬虫 UA 可能拒绝。 */
+    static final String WECHAT_UA =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+    /** 句柄：微信二维码 uuid。 */
+    static final String HANDLE_UUID = "uuid";
+    /** 句柄：微信长轮询最近一次 errcode（作 next 的 last 参数）。 */
+    static final String HANDLE_LAST_ERRCODE = "lastErrcode";
+
+    /** 微信授权页二维码 uuid 提取正则（img src 主路径）。 */
+    static final Pattern WECHAT_UUID_IMG_PATTERN =
+            Pattern.compile("/connect/qrcode/([A-Za-z0-9_\\-=+/]+)");
+    /** 微信授权页二维码 uuid 提取正则（长轮询 URL 兜底路径）。 */
+    static final Pattern WECHAT_UUID_POLL_PATTERN =
+            Pattern.compile("l/qrconnect\\?uuid=([A-Za-z0-9_\\-=+/]+)");
+    /** 微信长轮询 errcode 读取正则。 */
+    static final Pattern WECHAT_POLL_ERRCODE_PATTERN =
+            Pattern.compile("wx_errcode\\s*=\\s*(\\d+)");
+    /** 微信长轮询 wx_code（一次性授权码）读取正则。 */
+    static final Pattern WECHAT_POLL_CODE_PATTERN =
+            Pattern.compile("wx_code\\s*=\\s*'([^']*)'");
+    /** 微信二维码 uuid 字符集下限（微信未承诺长度，收紧只会静默失效）。 */
+    static final Pattern WECHAT_UUID_VALID =
+            Pattern.compile("^[A-Za-z0-9_\\-=+/]{6,64}$");
 
     @Override
     public String channel() {
@@ -98,100 +133,138 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
 
     @Override
     public String loginMethod() {
-        return "sms";
+        return "qr-code";
     }
 
     /**
      * {@inheritDoc}
      *
-     * <p>短信登录没有可打开的 URL，{@code startLogin} 直接返回带
-     * {@code loginMethod=sms} 标记的句柄，前端渲染手机号输入框；
-     * 发码与校验都在 {@link #pollLogin} 按阶段完成。</p>
+     * <p>拉取微信开放平台授权页，从 HTML {@code <img class="js_qrcode_img">} 内嵌的
+     * {@code uuid} 提取二维码标识，返回：</p>
+     * <ul>
+     *   <li>{@code verifyUrl}：官方微信授权页（前端自动打开，用户手机扫码）；</li>
+     *   <li>{@code qrImage}：二维码图片 data URL（前端弹窗内联渲染，扫码渠道一致的观感）；</li>
+     *   <li>{@code uuid} + {@code lastErrcode}：长轮询上下文，回传给 {@link #pollLogin}。</li>
+     * </ul>
      */
     @Override
     public Map<String, Object> startLogin() {
+        String state = UUID.randomUUID().toString().replace("-", "");
+        String authUrl = buildWechatAuthUrl(state);
+        String html;
+        try {
+            Map<String, String> headers = new LinkedHashMap<>();
+            headers.put("User-Agent", WECHAT_UA);
+            headers.put("Referer", "https://open.weixin.qq.com/");
+            html = ChannelHttp.getJson(authUrl, headers);
+        } catch (ApiException e) {
+            if (ChannelHttp.isRateLimited(e)) {
+                throw e;
+            }
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "微信授权页拉取失败: " + e.getMessage());
+        }
+        String uuid = extractWechatUuid(html);
+        if (isBlank(uuid)) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "微信授权页未包含二维码 uuid（页面结构可能已变化）");
+        }
         Map<String, Object> handle = new LinkedHashMap<>();
-        handle.put("handle", "loomy-sms");
-        handle.put("loginMethod", "sms");
+        handle.put("handle", "loomy-wechat");
+        handle.put("loginMethod", loginMethod());
+        handle.put(HANDLE_UUID, uuid);
+        handle.put(HANDLE_LAST_ERRCODE, "");
         handle.put("startedAt", System.currentTimeMillis());
+        handle.put("verifyUrl", authUrl);
+        handle.put("qrImageUrl", buildWechatQrImageUrl(uuid));
+        try {
+            handle.put("qrImage", wechatQrDataUrl(uuid));
+        } catch (ApiException e) {
+            log.warn("[Loomy] 微信二维码图片拉取失败，弹窗仍可打开官方授权页: {}", e.getMessage());
+        }
         return handle;
     }
 
     /**
      * {@inheritDoc}
      *
-     * <p>按入参自包含判定阶段（句柄不跨请求保持，阶段由前端驱动）：</p>
+     * <p>微信扫码状态机（按授权页内嵌官方 JS，{@code switch(window.wx_errcode)}）：</p>
      * <ol>
-     *   <li>入参有 {@code smsCode}：校验阶段——{@code phone} 与 {@code msgid} 须已在句柄里
-     *       （发码成功后由调用方写回），调 {@code checkCode}，成功返回可持久化凭据 Map；
-     *       验证码错误/过期透传服务端 {@code desc} 并<b>清除</b>句柄的 {@code msgid}，
-     *       让用户重新走发码；</li>
-     *   <li>否则有 {@code phone}：发码阶段——调 {@code sendMsgCode} 拿 {@code msgid}
-     *       写回句柄（调用方下轮 poll 须带上），返回 null（等待用户输码）；</li>
-     *   <li>都没有：继续等待（返回 null）。</li>
+     *   <li>408 待扫码 / 404 已扫码待确认 → 返回 {@code null} 继续等待；</li>
+     *   <li><b>405</b> 已确认且本帧携带 {@code wx_code} → 用 code 调
+     *       {@code bind/auth} 换 rcode；该微信<b>已绑手机号</b>（bind=1）直接
+     *       {@code bind/skip} 换 {@code session} 返回凭据；<b>未绑</b>（bind=0）
+     *       抛错引导先在官网绑定手机号（页面不收集手机号）；</li>
+     *   <li>403 用户取消 / 402 二维码失效 → 抛 {@link ApiException} 终止流。</li>
      * </ol>
+     *
+     * <p>805（网络异常）与未知 errcode 一律按「继续等待」处理，不误判失败。</p>
      */
     @Override
     public Map<String, Object> pollLogin(Map<String, Object> handle) {
-        if (handle == null || isBlank(readString(handle, "handle"))) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "Loomy 登录句柄缺失 handle");
-        }
-        String smsCode = readString(handle, POLL_KEY_SMS_CODE);
-        String phone = readString(handle, POLL_KEY_PHONE);
-        if (isBlank(smsCode)) {
-            if (isBlank(phone)) {
-                // 前端尚未提交手机号 → 继续等待。
-                return null;
-            }
-            phone = phone.trim();
-            String msgid = sendSmsCode(phone);
-            handle.put(HANDLE_PHONE, phone);
-            handle.put(HANDLE_MSGID, msgid);
-            handle.put(HANDLE_SMS_SENT, true);
-            handle.put("smsCodeExpiresAt",
-                    System.currentTimeMillis() + SMS_CODE_TTL_SECONDS * 1000);
-            return null;
-        }
-
-        // 校验阶段：phone / msgid 必须已由发码阶段写回句柄。
-        if (isBlank(phone)) {
-            phone = readString(handle, HANDLE_PHONE);
-        }
-        String msgid = readString(handle, HANDLE_MSGID);
-        if (isBlank(phone) || isBlank(msgid)) {
+        if (handle == null || isBlank(readString(handle, HANDLE_UUID))) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM,
-                    "Loomy 登录句柄缺少手机号或 msgid，请先获取验证码再提交");
+                    "Loomy 登录句柄缺失 uuid，请重新发起绑定");
         }
-        smsCode = smsCode.trim();
-        String session;
-        String userid;
-        try {
-            Map<String, Object> data = checkCode(phone, smsCode, msgid);
-            session = readString(data, "session");
-            // userid 可能以数字形态下发（18 位数字串），用宽松读取。
-            userid = readLooseString(data, "userid");
-        } catch (ApiException e) {
-            // 上游限流：用户手里仍握着这条验证码，不能清掉 msgid 逼他重新发码。
-            // ChannelHttp 已按 Retry-After 退避过，这里直接返回继续等。
-            if (ChannelHttp.isRateLimited(e)) {
-                return null;
+        String uuid = readString(handle, HANDLE_UUID);
+        String last = readString(handle, HANDLE_LAST_ERRCODE);
+        WechatPollResult polled = wechatPollOnce(uuid, last == null ? "" : last);
+        String errcode = polled.errcode;
+        handle.put(HANDLE_LAST_ERRCODE, isBlank(errcode) ? "" : errcode);
+
+        switch (errcode) {
+            case "405": {
+                // 已确认：本帧必须有 wx_code，否则继续等（绝不拿空 code 换 session）。
+                if (isBlank(polled.code)) {
+                    return null;
+                }
+                return completeWechatLogin(polled.code);
             }
-            // 验证码错误/过期：清除发码标记，让用户重新发码。
-            handle.remove(HANDLE_SMS_SENT);
-            handle.remove(HANDLE_MSGID);
-            throw e;
+            case "403":
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "你已取消微信授权，请重新发起绑定");
+            case "402":
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                        "二维码已失效，请点「重新发起」获取新二维码");
+            case "404":
+                // 已扫码待确认：继续轮询。
+                return null;
+            default:
+                // 408 / 网络异常 / 未知：继续等待（长轮询偶发失败不代表流程失败）。
+                return null;
         }
-        if (isBlank(session)) {
-            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "Loomy 登录响应缺少 session");
+    }
+
+    /**
+     * 用微信一次性 code 完成登录：bindAuth → bind=1 时 bindSkip 换 session。
+     *
+     * @param code 微信一次性授权码
+     * @return 可持久化凭据
+     */
+    private Map<String, Object> completeWechatLogin(String code) {
+        Map<String, Object> auth = bindAuth(code);
+        String rcode = readString(auth, "rcode");
+        if (isBlank(rcode)) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "Loomy 微信授权响应缺少 rcode");
+        }
+        // bind 缺失归 0（走防错：未绑手机号必须明确引导，避免拿到无手机号的账号）
+        boolean bound = "1".equals(String.valueOf(auth.get("bind")));
+        if (!bound) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "该微信账号尚未绑定讯飞手机号：请先用手机号在 Loomy 客户端/官网完成绑定，"
+                            + "再回来扫码登录");
+        }
+        Map<String, Object> data = bindSkip(rcode);
+        String session = readString(data, "session");
+        String userid = readLooseString(data, "userid");
+        if (isBlank(session) || isBlank(userid)) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "Loomy bindSkip 响应缺少 session / userid");
         }
         Map<String, Object> credential = new LinkedHashMap<>();
         credential.put("access_token", session);
-        if (isBlank(userid)) {
-            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "Loomy 登录响应缺少 userid");
-        }
         credential.put("userid", userid);
-        credential.put("phone", phone);
-        // 服务端响应不带到期时间，本地按登录时刻 + 14 天推算。
+        credential.put("phone", "");
+        credential.put("wechat", true);
         credential.put("expires_at", System.currentTimeMillis() + SESSION_TTL_SECONDS * 1000);
         return credential;
     }
@@ -200,7 +273,7 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
      * {@inheritDoc}
      *
      * <p>⚠️ Loomy 没有任何 refresh 端点（session 是登录时声明 14 天得到的，
-     * 凭据里没有 refresh_token），到期只能重新短信登录。</p>
+     * 凭据里没有 refresh_token），到期只能重新微信扫码登录。</p>
      */
     @Override
     public Map<String, Object> refresh(Map<String, Object> credentials) {
@@ -281,30 +354,184 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
 
     // ── 私有辅助 ──
 
-    /** 发码端点：{@code POST /login/phone/sendMsgCode}，返回 msgid。 */
-    private String sendSmsCode(String phone) {
-        Map<String, Object> param = new LinkedHashMap<>();
-        param.put("ccode", "86");
-        param.put("phone", phone);
-        param.put("expire", SMS_CODE_TTL_SECONDS);
-        Map<String, Object> data = postAccount("/login/phone/sendMsgCode", param);
-        String msgid = readLooseString(data, "msgid");
-        if (isBlank(msgid)) {
-            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
-                    "Loomy 发码响应缺少 msgid: " + ChannelHttp.truncate(Json.toJSONString(data)));
-        }
-        return msgid;
+    /** 微信长轮询单次结果。 */
+    private record WechatPollResult(String status, String code, String errcode) {
     }
 
-    /** 校验端点：{@code POST /login/phone/checkCode}，返回 {@code {session, userid}}。 */
-    private Map<String, Object> checkCode(String phone, String smsCode, String msgid) {
+    /**
+     * 微信第 1 步：用微信 code 换 rcode，并得知是否已绑手机号。
+     *
+     * @param code 微信一次性授权码
+     * @return { bind, rcode, … }；bind=1 已绑手机号（可直接 bindSkip），0 未绑
+     */
+    private Map<String, Object> bindAuth(String code) {
         Map<String, Object> param = new LinkedHashMap<>();
-        param.put("ccode", "86");
-        param.put("phone", phone);
-        param.put("mcode", smsCode);
-        param.put("msgid", msgid);
+        param.put("tcode", Map.of("code", code));
+        param.put("type", "wx");
+        return postAccount("/login/thirdAccount/bind/auth", param);
+    }
+
+    /** 微信第 4 步（bind=1 时走）：跳过绑定，直接换 session。 */
+    private Map<String, Object> bindSkip(String rcode) {
+        Map<String, Object> param = new LinkedHashMap<>();
+        param.put("rcode", rcode);
         param.put("expire", SESSION_TTL_SECONDS);
-        return postAccount("/login/phone/checkCode", param);
+        return postAccount("/login/thirdAccount/bind/skip", param);
+    }
+
+    /**
+     * 拼微信授权页 URL（redirect_uri 必须是官方地址，微信校验域名白名单）。
+     *
+     * @param state 32 位随机串（微信原样回传，本实现不依赖）
+     * @return 官方授权页地址
+     */
+    private static String buildWechatAuthUrl(String state) {
+        return "https://open.weixin.qq.com/connect/qrconnect"
+                + "?appid=" + URLEncoder.encode(WECHAT_APP_ID, StandardCharsets.UTF_8)
+                + "&redirect_uri=" + URLEncoder.encode(WECHAT_REDIRECT_URI, StandardCharsets.UTF_8)
+                + "&response_type=code&scope=snsapi_login"
+                + "&state=" + URLEncoder.encode(state, StandardCharsets.UTF_8)
+                + "#wechat_redirect";
+    }
+
+    /** 拼微信二维码图片地址。 */
+    private static String buildWechatQrImageUrl(String uuid) {
+        return "https://open.weixin.qq.com/connect/qrcode/" + URLEncoder.encode(uuid, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 从授权页 HTML 提取二维码 uuid（页面直接内嵌，无需执行 JS）。
+     *
+     * @param html 授权页 HTML
+     * @return uuid；提取不到返回空串
+     */
+    private static String extractWechatUuid(String html) {
+        if (isBlank(html)) {
+            return "";
+        }
+        // 主路径：img src 里的 /connect/qrcode/<uuid>
+        Matcher img = WECHAT_UUID_IMG_PATTERN.matcher(html);
+        if (img.find()) {
+            String candidate = img.group(1);
+            if (candidate != null && WECHAT_UUID_VALID.matcher(candidate).matches()) {
+                return candidate;
+            }
+        }
+        // 兜底：长轮询 URL 里的 ?uuid=<uuid>
+        Matcher poll = WECHAT_UUID_POLL_PATTERN.matcher(html);
+        if (poll.find()) {
+            String candidate = poll.group(1);
+            if (candidate != null && WECHAT_UUID_VALID.matcher(candidate).matches()) {
+                return candidate;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 下载微信二维码图片并转 data URL（实测 JPEG；PNG / GIF 三种魔数都认）。
+     *
+     * @param uuid 二维码 uuid
+     * @return data URL；内容不是已知图片格式时抛错
+     */
+    private static String wechatQrDataUrl(String uuid) {
+        String url = buildWechatQrImageUrl(uuid);
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(30))
+                    .header("User-Agent", WECHAT_UA)
+                    .header("Referer", "https://open.weixin.qq.com/")
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> resp = ChannelHttp.CLIENT.send(
+                    request, HttpResponse.BodyHandlers.ofByteArray());
+            if (resp.statusCode() != 200) {
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                        "微信二维码返回 HTTP " + resp.statusCode());
+            }
+            byte[] bytes = resp.body();
+            String mime = detectImageMime(bytes);
+            if (mime == null || bytes.length < 200) {
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                        "微信二维码响应不是图片（可能是错误页）");
+            }
+            return "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "微信二维码下载失败: " + e.getMessage());
+        }
+    }
+
+    /** 按魔数识别图片格式；未知返回 null。 */
+    private static String detectImageMime(byte[] bytes) {
+        if (bytes.length >= 3 && (bytes[0] & 0xff) == 0xff && (bytes[1] & 0xff) == 0xd8
+                && (bytes[2] & 0xff) == 0xff) {
+            return "image/jpeg";
+        }
+        if (bytes.length >= 4 && (bytes[0] & 0xff) == 0x89 && (bytes[1] & 0xff) == 0x50
+                && (bytes[2] & 0xff) == 0x4e && (bytes[3] & 0xff) == 0x47) {
+            return "image/png";
+        }
+        if (bytes.length >= 3 && (bytes[0] & 0xff) == 0x47 && (bytes[1] & 0xff) == 0x49
+                && (bytes[2] & 0xff) == 0x46) {
+            return "image/gif";
+        }
+        return null;
+    }
+
+    /**
+     * 执行一次微信长轮询。
+     *
+     * <p>网络异常返回 {@code error} 状态而不抛错（长轮询偶发失败不该终止流程）。</p>
+     *
+     * @param uuid  二维码 uuid
+     * @param last  上一次 errcode（无则空串）
+     * @return 轮询结果
+     */
+    private static WechatPollResult wechatPollOnce(String uuid, String last) {
+        String query = "uuid=" + URLEncoder.encode(uuid, StandardCharsets.UTF_8)
+                + (isBlank(last) ? "" : "&last=" + URLEncoder.encode(last, StandardCharsets.UTF_8))
+                + "&_=" + System.currentTimeMillis();
+        String url = "https://long.open.weixin.qq.com/connect/l/qrconnect?" + query;
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofMillis(WECHAT_POLL_HTTP_TIMEOUT_MS))
+                    .header("User-Agent", WECHAT_UA)
+                    .header("Referer", buildWechatAuthUrl(""))
+                    .GET()
+                    .build();
+            HttpResponse<String> resp = ChannelHttp.CLIENT.send(
+                    request, HttpResponse.BodyHandlers.ofString());
+            String body = resp.body() == null ? "" : resp.body();
+            Matcher codeMatcher = WECHAT_POLL_ERRCODE_PATTERN.matcher(body);
+            String errcode = codeMatcher.find() ? codeMatcher.group(1) : "";
+            Matcher codeValue = WECHAT_POLL_CODE_PATTERN.matcher(body);
+            String code = codeValue.find() ? codeValue.group(1) : "";
+            if ("405".equals(errcode)) {
+                // 405 = 已确认，wx_code 就在这一帧；405 却没带 code 归 scanned 继续等。
+                return isBlank(code)
+                        ? new WechatPollResult("scanned", "", errcode)
+                        : new WechatPollResult("confirmed", code, errcode);
+            }
+            if ("404".equals(errcode)) {
+                // 已扫码待确认：继续轮询。
+                return new WechatPollResult("scanned", "", errcode);
+            }
+            if ("403".equals(errcode)) {
+                return new WechatPollResult("cancelled", "", errcode);
+            }
+            if ("402".equals(errcode)) {
+                return new WechatPollResult("expired", "", errcode);
+            }
+            // 408 与未知值一律归 waiting（保守：绝不误判成功）。
+            return new WechatPollResult("waiting", "", errcode);
+        } catch (Exception e) {
+            return new WechatPollResult("error", "", "network");
+        }
     }
 
     /** 发一次讯飞账号端点请求并拆信封。
