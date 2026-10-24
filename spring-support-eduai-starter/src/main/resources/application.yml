@@ -72,6 +72,26 @@ plugin:
         - "http://192.168.50.*:*"
   async:
     enable: false
+  # 平台系统模块（spring-api-support-common-system-starter）的**第二数据源**。
+  #
+  # 那个 starter 里的 EduAuthDataSourceConfiguration 用
+  # @ConfigurationProperties("plugin.edu-auth.datasource") 无条件建一个名为
+  # eduAuthDataSource / eduAuthJdbcTemplate 的 Hikari 数据源。不配这段时
+  # properties 里没有 url，Hikari 初始化直接报：
+  #   ERROR HikariPool-2 - dataSource or dataSourceClassName or jdbcUrl is required
+  # 并连带让 DataSourceScriptBeanPostProcessor 无法给它跑建表脚本（V1.0__init_all_api_common_system.sql）。
+  # 每次启动 6 条 ERROR + 一串 WARN，日志被噪声淹没，真正的错误反而看不见。
+  #
+  # 本应用是**单库部署**（系统表 sys_user / sys_error_log 与业务表同在 eduai 库），
+  # 所以这里用占位符直接跟随主数据源——部署方只要覆盖 spring.datasource.*，
+  # 这里自动跟随，不需要再记第二套账号密码。该 starter 的 init 脚本按项目约定
+  # 全幂等（CREATE TABLE IF NOT EXISTS + information_schema 判存补列）。
+  edu-auth:
+    datasource:
+      url: ${spring.datasource.url}
+      username: ${spring.datasource.username}
+      password: ${spring.datasource.password}
+      driver-class-name: ${spring.datasource.driver-class-name}
   # 鉴权协议（2026-10-18 修正为 static）：
   # 本应用的登录**恒为本地签发**——DefaultLoginHandler 校验本进程 sys_user 口令后
   # 直接 issueLocalToken()（TokenCipher/SM4）；学生侧 StudentCredentialProvider 同样
