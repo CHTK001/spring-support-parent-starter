@@ -172,6 +172,20 @@ public class ApmController {
     }
 
     /**
+     * 句柄增长趋势 — 判断是否在泄漏。
+     *
+     * <p>{@code opened} 累计打开、{@code closed} 累计关闭、{@code alive} 当前存活、
+     * {@code leakDelta} 打开-关闭-存活（同类型同时存活计数饱满时只能反映部分口径，
+     * 重点看 opened 持续上涨而 closed 不涨）。</p>
+     *
+     * @return 增长统计 { windowMs, perKind: { kind: { opened, closed, alive, leakDelta } } }
+     */
+    @GetMapping("/handles/growth")
+    public ReturnResult<Map<String, Object>> handlesGrowth() {
+        return ReturnResult.ok(apmQueryService.handleGrowth());
+    }
+
+    /**
      * System.out / System.err 实时捕获日志。
      *
      * @param limit 条数上限
@@ -498,10 +512,32 @@ public class ApmController {
      * @param limit 返回上限，默认 200
      * @return 传输记录 DTO 列表（含 traceId/spanId/className/methodName）
      */
+    /**
+     * Agent 实时 Trace Span 列表（Traces 页数据源，新事件在前）。
+     *
+     * @param limit     返回上限，默认 200
+     * @param errorOnly 为 true 时只返回错误状态的 span
+     * @return span DTO 列表（含 isError / shortError）
+     */
     @GetMapping("/agent/traces")
     public ReturnResult<List<Map<String, Object>>> agentTraces(
-            @RequestParam(defaultValue = "200") int limit) {
-        return ReturnResult.ok(apmQueryService.agentTraces(limit));
+            @RequestParam(defaultValue = "200") int limit,
+            @RequestParam(defaultValue = "false") boolean errorOnly) {
+        return ReturnResult.ok(apmQueryService.agentTraces(limit, errorOnly));
+    }
+
+    /**
+     * 链路概览 — 按 traceId 聚合的扁平列表，每 trace 一行。
+     *
+     * @param limit     返回上限，默认 100
+     * @param errorOnly 为 true 时只保留含错误 span 的链路
+     * @return 链路概览列表
+     */
+    @GetMapping("/traces/summary")
+    public ReturnResult<List<Map<String, Object>>> traceSummaries(
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(defaultValue = "false") boolean errorOnly) {
+        return ReturnResult.ok(apmQueryService.traceSummaries(limit, errorOnly));
     }
 
     /**
@@ -1065,6 +1101,45 @@ public class ApmController {
                 emitter.complete();
             }
         }, 0, effective, TimeUnit.MILLISECONDS);
+        emitter.onCompletion(() -> task.cancel(true));
+        emitter.onTimeout(() -> {
+            task.cancel(false);
+            emitter.complete();
+        });
+        return emitter;
+    }
+
+    /**
+     * 实时日志流（SSE）— 按序号游标增量推送系统输出日志。
+     *
+     * <p>与 {@code /stream}（推 stats）不同，这里专门推日志行。客户端传 {@code after}
+     * 作为起始游标（0 = 从最新开始），每次推送增量条目与该时刻的最大序号
+     * （{@code lastSeq}），下个请求把它传回来即可无重复续读。</p>
+     *
+     * @param after 起始序号游标，默认 0（只推新产生的日志）
+     * @return SSE 事件流（name = log）
+     */
+    @GetMapping(value = "/stream/logs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamLogs(@RequestParam(defaultValue = "0") long after) {
+        SseEmitter emitter = new SseEmitter(5L * 60 * 1000);
+        // 游标由服务端推进：下次推送用本次 lastSeq，天然无重复
+        final long[] cursor = {Math.max(0L, after)};
+        ScheduledFuture<?> task = sseExecutor.scheduleAtFixedRate(() -> {
+            try {
+                Map<String, Object> delta = apmQueryService.systemOutAfter(cursor[0]);
+                List<?> items = (List<?>) delta.get("items");
+                long lastSeq = ((Number) delta.get("lastSeq")).longValue();
+                cursor[0] = lastSeq;
+                Map<String, Object> payload = Map.of(
+                        "ts", System.currentTimeMillis(),
+                        "items", items,
+                        "lastSeq", lastSeq);
+                String json = objectMapper.writeValueAsString(payload);
+                emitter.send(SseEmitter.event().name("log").data(json));
+            } catch (IOException e) {
+                emitter.complete();
+            }
+        }, 0, 1000, TimeUnit.MILLISECONDS);
         emitter.onCompletion(() -> task.cancel(true));
         emitter.onTimeout(() -> {
             task.cancel(false);
