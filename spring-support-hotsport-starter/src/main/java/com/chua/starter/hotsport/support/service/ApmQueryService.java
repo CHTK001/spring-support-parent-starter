@@ -935,7 +935,10 @@ public class ApmQueryService {
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
         List<Map<String, Object>> items = new ArrayList<>();
         for (TransmissionEvent e : all) {
-            items.add(transmissionDto(e));
+            Map<String, Object> m = transmissionDto(e);
+            m.put("isError", e.getStatus() == StatusCode.ERROR);
+            m.put("shortError", shortError(e));
+            items.add(m);
         }
         items.sort((a, b) -> String.valueOf(a.get("startTime")).compareTo(String.valueOf(b.get("startTime"))));
         return items;
@@ -951,11 +954,28 @@ public class ApmQueryService {
      * @return span DTO 列表
      */
     public List<Map<String, Object>> agentTraces(int limit) {
-        Query q = new Query().setLimit(Math.max(1, limit));
+        return agentTraces(limit, false);
+    }
+
+    /**
+     * Agent 实时 Trace Span 列表，可选只返回错误链路。
+     *
+     * <p>每个 span 增加 {@code isError}/{@code shortError} 字段（前端可直接高亮），
+     * 不再依赖前端去猜状态字段。</p>
+     *
+     * @param limit     返回上限
+     * @param errorOnly true 时只保留错误状态的 span
+     * @return span DTO 列表
+     */
+    public List<Map<String, Object>> agentTraces(int limit, boolean errorOnly) {
+        Query q = new Query().setLimit(Math.max(1, limit * 20));
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
         List<Map<String, Object>> items = new ArrayList<>();
         for (int i = all.size() - 1; i >= 0 && items.size() < limit; i--) {
             TransmissionEvent e = all.get(i);
+            if (errorOnly && e.getStatus() != StatusCode.ERROR) {
+                continue;
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", e.getId());
             m.put("traceId", e.getTraceId());
@@ -966,10 +986,33 @@ public class ApmQueryService {
             m.put("operation", op);
             m.put("durationMs", e.getDuration());
             m.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+            m.put("isError", e.getStatus() == StatusCode.ERROR);
+            m.put("shortError", shortError(e));
             m.put("startTime", toIso(e.getStartTime()));
             items.add(m);
         }
         return items;
+    }
+
+    /**
+     * 截断的错误信息（前端列表高亮用，避免整条堆栈撑爆表格）。
+     *
+     * @param e 事件
+     * @return 前 160 字符的错误描述；无错误返回空串
+     */
+    private static String shortError(TransmissionEvent e) {
+        if (e.getStatus() != StatusCode.ERROR) {
+            return "";
+        }
+        String msg = attr(e, "error.message", "");
+        if (msg.isEmpty() && e.getErrorMessage() != null) {
+            msg = e.getErrorMessage();
+        }
+        if (msg == null || msg.isEmpty()) {
+            return "ERROR";
+        }
+        String oneLine = msg.replace('\n', ' ').replace('\r', ' ');
+        return oneLine.length() > 160 ? oneLine.substring(0, 160) : oneLine;
     }
 
     /**
@@ -1385,6 +1428,7 @@ public class ApmQueryService {
         Query q = new Query().setLimit(100000);
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
         Map<String, Map<String, Object>> svc = new LinkedHashMap<>();
+        Map<String, List<Long>> durations = new LinkedHashMap<>();
         for (TransmissionEvent e : all) {
             String serviceName = serviceLabel(e.getTargetSoftware(), e.getTargetHost());
             if (serviceName == null) {
@@ -1396,15 +1440,30 @@ public class ApmQueryService {
                 x.put("endpointCount", 0L);
                 x.put("callCount", 0L);
                 x.put("errorCount", 0L);
+                x.put("totalMs", 0L);
                 return x;
             });
             m.put("callCount", (Long) m.get("callCount") + 1L);
             m.put("endpointCount", (Long) m.get("endpointCount") + 1L);
+            long dur = Math.max(0L, e.getDuration());
+            m.put("totalMs", (Long) m.get("totalMs") + dur);
+            durations.computeIfAbsent(serviceName, k -> new ArrayList<>()).add(dur);
             if (e.getStatus() == StatusCode.ERROR) {
                 m.put("errorCount", (Long) m.get("errorCount") + 1L);
             }
         }
         List<Map<String, Object>> out = new ArrayList<>(svc.values());
+        for (Map<String, Object> m : out) {
+            String name = String.valueOf(m.get("service"));
+            long callCount = (Long) m.get("callCount");
+            List<Long> ds = durations.getOrDefault(name, new ArrayList<>());
+            ds.sort(Comparator.naturalOrder());
+            m.put("avgMs", callCount > 0 ? Math.round((Long) m.get("totalMs") * 10.0 / callCount) / 10.0 : 0);
+            m.put("p95Ms", percentile(ds, 0.95));
+            m.put("maxMs", ds.isEmpty() ? 0L : ds.get(ds.size() - 1));
+            m.put("errorRate", callCount > 0
+                    ? Math.round(10000.0 * (Long) m.get("errorCount") / callCount) / 100.0 : 0.0);
+        }
         out.sort(Comparator.comparingLong(x -> -((Long) x.get("callCount"))));
         serviceCache = out;
         endpointCache = new ArrayList<>();
@@ -1695,6 +1754,110 @@ public class ApmQueryService {
             tree.add(node);
         }
         return tree;
+    }
+
+    /**
+     * 链路概览 — 按 traceId 聚合的扁平列表（Trace 列表页数据源）。
+     *
+     * <p>相比 {@link #agentTracesTree(int)} 的树结构，这里是「每 trace 一行」的
+     * 紧凑视图，前端可直接做表格/筛选：每个 trace 一行包含
+     * span 数、总耗时、平均耗时、最大耗时、错误 span 数、是否含错误、最新时间。</p>
+     *
+     * @param limit     返回上限
+     * @param errorOnly true 只保留含错误 span 的链路
+     * @return 链路概览列表（按最新时间降序）
+     */
+    public List<Map<String, Object>> traceSummaries(int limit, boolean errorOnly) {
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        Map<String, Map<String, Object>> byTrace = new LinkedHashMap<>();
+        for (int i = all.size() - 1; i >= 0; i--) {
+            TransmissionEvent e = all.get(i);
+            String traceId = e.getTraceId() != null ? e.getTraceId() : "root";
+            Map<String, Object> m = byTrace.computeIfAbsent(traceId, k -> {
+                Map<String, Object> x = new LinkedHashMap<>();
+                x.put("traceId", k);
+                x.put("spanCount", 0L);
+                x.put("errorSpanCount", 0L);
+                x.put("totalMs", 0L);
+                x.put("startTime", toIso(e.getStartTime()));
+                x.put("operation", e.getOperation() != null ? e.getOperation() : e.getProtocol());
+                return x;
+            });
+            m.put("spanCount", (Long) m.get("spanCount") + 1L);
+            m.put("totalMs", (Long) m.get("totalMs") + Math.max(0L, e.getDuration()));
+            if (e.getStatus() == StatusCode.ERROR) {
+                m.put("errorSpanCount", (Long) m.get("errorSpanCount") + 1L);
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> m : byTrace.values()) {
+            long spanCount = (Long) m.get("spanCount");
+            long errorSpanCount = (Long) m.get("errorSpanCount");
+            m.put("avgMs", spanCount > 0 ? Math.round((Long) m.get("totalMs") * 10.0 / spanCount) / 10.0 : 0);
+            m.put("hasError", errorSpanCount > 0);
+            if (errorOnly && errorSpanCount == 0) {
+                continue;
+            }
+            out.add(m);
+        }
+        out.sort((a, b) -> String.valueOf(b.get("startTime")).compareTo(String.valueOf(a.get("startTime"))));
+        if (out.size() > limit) {
+            return new ArrayList<>(out.subList(0, limit));
+        }
+        return out;
+    }
+
+    /**
+     * 句柄增长趋势（判断泄漏）。
+     *
+     * @return 增长统计 { windowMs, perKind: { kind: { opened, closed, alive, leakDelta } } }
+     */
+    public Map<String, Object> handleGrowth() {
+        com.chua.runtime.apm.handler.HandleInventoryHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.HandleInventoryHandler.class);
+        if (handler == null) {
+            Map<String, Object> empty = new java.util.LinkedHashMap<>();
+            empty.put("windowMs", 0L);
+            empty.put("perKind", Map.of());
+            return empty;
+        }
+        return handler.growth();
+    }
+
+    /**
+     * 实时日志增量拉取（SSE 游标续读）。
+     *
+     * <p>返回序号大于 {@code afterSeq} 的系统输出增量，以及当前最大序号
+     * （供客户端作为下一次续读游标）。句柄与日志两条实时流共用这一套机制。</p>
+     *
+     * @param afterSeq 游标序号
+     * @return { items, lastSeq }
+     */
+    public Map<String, Object> systemOutAfter(long afterSeq) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        com.chua.runtime.apm.handler.SystemOutCaptureHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.SystemOutCaptureHandler.class);
+        if (handler == null) {
+            result.put("items", new ArrayList<>());
+            result.put("lastSeq", 0L);
+            return result;
+        }
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (com.chua.runtime.apm.handler.SystemOutCaptureHandler.SystemOutEntry e : handler.tailAfter(afterSeq)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("seq", e.getSeq());
+            m.put("timestamp", toIso(e.getTimestamp()));
+            m.put("source", e.getSource());
+            m.put("level", e.getLevel());
+            m.put("line", e.getLine());
+            items.add(m);
+        }
+        result.put("items", items);
+        result.put("lastSeq", handler.lastSeq());
+        return result;
     }
 
     // ------------------------------------------------------------------
