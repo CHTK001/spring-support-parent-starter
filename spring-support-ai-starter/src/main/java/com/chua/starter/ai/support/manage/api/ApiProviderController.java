@@ -6,6 +6,7 @@ import com.chua.common.support.ai.chat.ChatClientIndicator;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
 import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
+import com.chua.common.support.ai.chat.route.RouteTarget;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -23,6 +24,7 @@ import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -698,7 +700,7 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                entity.getProxy(), tryFix));
+                entity.getProxy(), tryFix, entity.getExtra()));
     }
 
     /**
@@ -726,7 +728,7 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                entity.getProxy(), tryFix);
+                entity.getProxy(), tryFix, entity.getExtra());
         Object rawModels = upstream.get("models");
         List<Map<String, Object>> upstreamModels = rawModels instanceof List<?> list ? (List<Map<String, Object>>) list
                 : new ArrayList<>(0);
@@ -1085,7 +1087,7 @@ public class ApiProviderController {
             SysAiProvider entity = requireProvider(providerId);
             Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                     entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                    entity.getProxy(), false);
+                    entity.getProxy(), false, entity.getExtra());
 
             // 转换格式：data.models[].name → data.items[].modelName
             @SuppressWarnings("unchecked")
@@ -1129,8 +1131,11 @@ public class ApiProviderController {
         Map<String, Object> credentials = body.get("credentials") instanceof Map
                 ? (Map<String, Object>) body.get("credentials") : null;
         String proxy = str(body, "proxy");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bodyExtra = body.get("extra") instanceof Map
+                ? (Map<String, Object>) body.get("extra") : null;
         return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials,
-                UpstreamAuth.ofBody(body), proxy, false));
+                UpstreamAuth.ofBody(body), proxy, false, bodyExtra));
     }
 
     /**
@@ -2568,7 +2573,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
-                                                        UpstreamAuth auth, String proxy, boolean tryFix) {
+                                                        UpstreamAuth auth, String proxy, boolean tryFix,
+                                                        Map<String, Object> extra) {
         // 平台标识统一小写后再判断协议族（前端可能传大写形式）
         String platformLower = platform == null ? "" : platform.toLowerCase();
         // 本地推理（ONNX）没有远端模型目录可拉，改为分发给本地模型门面（ModelRegistry），
@@ -2577,6 +2583,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         // 不再把凭证当作模型文件路径使用。
         if (platformLower.contains("onnx")) {
             return fetchLocalModelsFromFacade();
+        }
+        // 免费渠道是纯路由聚合：模型清单 = extra.routes 的路由键（不含 default），
+        // **绝不真实请求占位 baseUrl 的 /models**（free.nomifun.com 直连必失败）。
+        // 未配置路由表时返回空清单 + 提示，不报错。
+        if (ProviderRouteTargets.isFreeChannel(platform)) {
+            return fetchFreeChannelRoutes(extra);
         }
         // 基础地址缺失直接判参数错误
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -2610,6 +2622,45 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         out.put("models", models);
         if (fixedBaseUrl != null) {
             out.put("fixed_base_url", fixedBaseUrl);
+        }
+        return out;
+    }
+
+    /**
+     * 免费渠道（free-channel）拉模型：返回路由表 {@code extra.routes} 的模型/前缀键清单。
+     *
+     * <p>免费渠道是纯路由聚合，没有真实上游目录可拉；模型清单即路由键（如
+     * {@code glm-4.7}、{@code kilo}），用户选中哪个键，请求就路由到对应的
+     * baseUrl —— 对应 {@code FreeChannelChatClient.route(model)} 的命中键。</p>
+     *
+     * <p>{@code default} 键是兜底路由，不是可选择的模型，返回时剔除。
+     * 未配置 {@code routes} 时返回空清单 + 提示，不抛错。</p>
+     *
+     * @param extra 供应商扩展配置（{@code extra.routes}）
+     * @return { models: [...], hint?: 字符串 }；形态与其它供应商拉取一致
+     */
+    private Map<String, Object> fetchFreeChannelRoutes(Map<String, Object> extra) {
+        Map<String, RouteTarget> routes = ProviderRouteTargets.fromExtra(extra);
+        List<Map<String, Object>> models = new ArrayList<>(8);
+        if (routes != null) {
+            for (String key : routes.keySet()) {
+                // default 是兜底路由，不作为可选模型暴露
+                if ("default".equalsIgnoreCase(key)) {
+                    continue;
+                }
+                Map<String, Object> m = new LinkedHashMap<>(4);
+                m.put("id", key);
+                m.put("name", key);
+                m.put("tasks", inferTasks(key));
+                m.put("traits", List.of("streaming"));
+                models.add(m);
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("models", models);
+        out.put("route_keys", true);
+        if (models.isEmpty()) {
+            out.put("hint", "未配置模型路由（extra.routes），请在供应商配置中补充后重试");
         }
         return out;
     }
