@@ -2,6 +2,8 @@ package com.chua.starter.device.support.controller;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
+import com.chua.starter.device.support.model.DevicePageQuery;
+import com.chua.starter.device.support.model.DeviceStats;
 import com.chua.starter.device.support.service.DeviceProviderConfigService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
@@ -101,22 +103,28 @@ public class DeviceController {
     /**
      * 分页查询设备。
      *
-     * @param pageNo   页码，从 1 开始
-     * @param pageSize 每页条数
-     * @param orgId    组织 ID，可选
-     * @param keyword  名称 / IP / 序列号关键字，可选
-     * @param category 设备大类，可选
-     * @param online   在线状态，可选
+     * <p>查询条件直接绑定 {@link DevicePageQuery}，支持关键字、厂商、分类、在线状态、
+     * 资产状态、组织、分组（groupId / ungrouped）与排序。</p>
+     *
+     * @param query 分页与筛选条件
      * @return 设备分页结果
      */
     @GetMapping("/page")
-    public PageResult<DeviceInfo> pageDevices(@RequestParam(defaultValue = "1") long pageNo,
-                                              @RequestParam(defaultValue = "12") long pageSize,
-                                              @RequestParam(required = false) String orgId,
-                                              @RequestParam(required = false) String keyword,
-                                              @RequestParam(required = false) String category,
-                                              @RequestParam(required = false) Boolean online) {
-        return deviceService.pageDevices(pageNo, pageSize, orgId, keyword, category, online);
+    public PageResult<DeviceInfo> pageDevices(DevicePageQuery query) {
+        return deviceService.pageDevices(query);
+    }
+
+    /**
+     * 设备统计（总数 / 在线 / 离线 / 未定位）。
+     *
+     * @param orgId  组织 ID，可选
+     * @param vendor 厂商，可选
+     * @return 统计结果
+     */
+    @GetMapping("/stats")
+    public DeviceStats stats(@RequestParam(required = false) String orgId,
+                             @RequestParam(required = false) String vendor) {
+        return deviceService.stats(orgId, vendor);
     }
 
     /**

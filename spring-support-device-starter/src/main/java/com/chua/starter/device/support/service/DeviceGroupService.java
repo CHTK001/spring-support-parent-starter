@@ -1,5 +1,6 @@
 package com.chua.starter.device.support.service;
 
+import com.chua.starter.device.support.entity.DeviceGroupDevice;
 import com.chua.starter.device.support.po.*;
 
 import java.util.List;
@@ -26,4 +27,10 @@ public interface DeviceGroupService {
 
     /** 查询设备所属分组ID列表 */
     List<String> deviceGroupIds(String deviceId);
+
+    /** 所有设备-分组关联（设备列表回显分组用） */
+    List<DeviceGroupDevice> assignments();
+
+    /** 设置某台设备的所属分组（全量替换该设备的关联） */
+    void assignDeviceGroups(String deviceId, List<String> groupIds);
 }

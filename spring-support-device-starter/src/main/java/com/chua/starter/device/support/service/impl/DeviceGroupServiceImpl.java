@@ -1,6 +1,7 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.device.support.entity.*;
 import com.chua.starter.device.support.mapper.*;
 import com.chua.starter.device.support.po.*;
@@ -53,6 +54,11 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
                 nodeMap.get(p).getChildren().add(n);
             }
         }
+        // 按 group_order 排序（根节点与子节点都排）
+        Comparator<DeviceGroupTreeNode> byOrder = Comparator.comparingInt(
+                n -> n.getGroupOrder() == null ? 0 : n.getGroupOrder());
+        nodeMap.values().forEach(n -> n.getChildren().sort(byOrder));
+        roots.sort(byOrder);
         // 根节点加一个「未分组」
         DeviceGroupTreeNode ungrouped = new DeviceGroupTreeNode();
         ungrouped.setGroupId("");
@@ -66,9 +72,12 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
     @Override
     @Transactional
     public void create(DeviceGroupRequest req) {
+        if (req.getGroupName() == null || req.getGroupName().isBlank()) {
+            throw new IllegalArgumentException("分组名称不能为空");
+        }
         DeviceGroup g = new DeviceGroup();
-        g.setGroupName(req.getGroupName());
-        g.setGroupParent(req.getGroupParent());
+        g.setGroupName(req.getGroupName().trim());
+        g.setGroupParent(req.getGroupParent() == null || req.getGroupParent().isBlank() ? null : req.getGroupParent());
         g.setGroupOrder(req.getGroupOrder() != null ? req.getGroupOrder() : 0);
         g.setGroupRemark(req.getGroupRemark());
         groupMapper.insert(g);
@@ -77,31 +86,57 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
     @Override
     @Transactional
     public void update(String groupId, DeviceGroupRequest req) {
-        DeviceGroup g = new DeviceGroup();
-        g.setGroupId(groupId);
-        if (req.getGroupName() != null) g.setGroupName(req.getGroupName());
-        if (req.getGroupOrder() != null) g.setGroupOrder(req.getGroupOrder());
-        if (req.getGroupRemark() != null) g.setGroupRemark(req.getGroupRemark());
-        // 不允许改 parent（防止循环）
-        groupMapper.updateById(g);
+        LambdaUpdateWrapper<DeviceGroup> uw = new LambdaUpdateWrapper<>();
+        uw.eq(DeviceGroup::getGroupId, groupId);
+        if (req.getGroupName() != null) {
+            uw.set(DeviceGroup::getGroupName, req.getGroupName());
+        }
+        if (req.getGroupOrder() != null) {
+            uw.set(DeviceGroup::getGroupOrder, req.getGroupOrder());
+        }
+        if (req.getGroupRemark() != null) {
+            uw.set(DeviceGroup::getGroupRemark, req.getGroupRemark());
+        }
+        if (req.getGroupParent() != null) {
+            String parent = req.getGroupParent().isBlank() ? null : req.getGroupParent();
+            if (parent != null) {
+                if (parent.equals(groupId)) {
+                    throw new IllegalArgumentException("上级分组不能是自身");
+                }
+                // 防环：上级不能是自己的子孙
+                Set<String> descendants = new HashSet<>();
+                collectDescendants(groupId, descendants);
+                if (descendants.contains(parent)) {
+                    throw new IllegalArgumentException("上级分组不能是自己的子分组");
+                }
+            }
+            uw.set(DeviceGroup::getGroupParent, parent);
+        }
+        groupMapper.update(null, uw);
     }
 
     @Override
     @Transactional
     public void delete(String groupId) {
-        // 1. 把该分组下的设备迁到根（group_parent = null 视为根）
-        //    这里直接删关联，设备本身不动
-        gdMapper.deleteByGroupId(groupId);
-        // 2. 删子分组（递归，可选；这里只删一层）
+        // 递归清理：先删所有子孙分组及其设备关联，再删自身
+        Set<String> ids = new HashSet<>();
+        ids.add(groupId);
+        collectDescendants(groupId, ids);
+        for (String id : ids) {
+            gdMapper.deleteByGroupId(id);
+            groupMapper.deleteById(id);
+        }
+    }
+
+    /** 收集某分组的所有子孙分组ID */
+    private void collectDescendants(String groupId, Set<String> out) {
         LambdaQueryWrapper<DeviceGroup> q = new LambdaQueryWrapper<>();
         q.eq(DeviceGroup::getGroupParent, groupId);
-        List<DeviceGroup> children = groupMapper.selectList(q);
-        for (DeviceGroup child : children) {
-            gdMapper.deleteByGroupId(child.getGroupId());
-            groupMapper.deleteById(child.getGroupId());
+        for (DeviceGroup child : groupMapper.selectList(q)) {
+            if (out.add(child.getGroupId())) {
+                collectDescendants(child.getGroupId(), out);
+            }
         }
-        // 3. 删自身
-        groupMapper.deleteById(groupId);
     }
 
     @Override
@@ -129,5 +164,33 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
     @Override
     public List<String> deviceGroupIds(String deviceId) {
         return groupMapper.findGroupIdsByDeviceId(deviceId);
+    }
+
+    @Override
+    public List<DeviceGroupDevice> assignments() {
+        return gdMapper.selectList(null);
+    }
+
+    @Override
+    @Transactional
+    public void assignDeviceGroups(String deviceId, List<String> groupIds) {
+        LambdaQueryWrapper<DeviceGroupDevice> q = new LambdaQueryWrapper<>();
+        q.eq(DeviceGroupDevice::getDeviceId, deviceId);
+        gdMapper.delete(q);
+        if (groupIds == null || groupIds.isEmpty()) {
+            return;
+        }
+        int order = 0;
+        for (String groupId : new LinkedHashSet<>(groupIds)) {
+            if (groupId == null || groupId.isBlank()) {
+                continue;
+            }
+            DeviceGroupDevice gd = new DeviceGroupDevice();
+            gd.setId(UUID.randomUUID().toString());
+            gd.setGroupId(groupId);
+            gd.setDeviceId(deviceId);
+            gd.setDeviceOrder(order++);
+            gdMapper.insert(gd);
+        }
     }
 }
