@@ -9,3 +9,4 @@ com.chua.starter.ai.support.spi.impl.RaccoonAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.LoomyAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.LobsteraiAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.OpencodeAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.WorkBuddyAccountChannelAuthManager
