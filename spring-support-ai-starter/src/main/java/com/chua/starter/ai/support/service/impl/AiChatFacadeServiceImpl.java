@@ -1305,6 +1305,18 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 账号标识必须净化成单个目录名，否则一个形如 ../../etc 的账号标识就能把
             // 工作间指到基路径之外——隔离在这里就要挡住，不能指望下游的路径拼接。
             Path accountRoot = basePath.resolve(safeSegment(AiUserContext.currentUserId()));
+            /*
+             * 这里**不要**拼会话段：会话隔离由 harness 自己负责。
+             * harness 的 WorkspaceManager#getSessionDir(ctx, sessionId) 实际执行的是
+             * `workspace.resolve("<sessionId>/")`，也就是说会话目录 = workspace/<会话id>。
+             * 若这里再补一层会话段，workspace 变成 `<root>/agent/147` 后 harness 又会
+             * 在其下建 `147/`，实测得到 `<root>/agent/147/147/acc-check.txt`（双嵌套）。
+             *
+             * 正确分工：
+             *  - workspace（本方法返回值）= 账号级根 `<root>/<账号>/agent`，交给 agent.workspace()；
+             *  - shell 的执行目录由 AgentScopeAgent 用 `workspace + 会话id` 单独设定
+             *    （LocalFilesystemSpec.project），与 harness 的会话目录**重合**，因此不会双嵌套。
+             */
             Path workspace = accountRoot.resolve("agent").normalize();
             // 二次确认：即便净化逻辑今后被改动，也不允许解析结果越出基路径
             if (!workspace.startsWith(basePath)) {

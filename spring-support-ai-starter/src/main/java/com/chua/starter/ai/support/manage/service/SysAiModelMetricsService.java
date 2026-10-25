@@ -4,8 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.ai.chat.ChatClientIndicator;
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
+import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiModelMetricsMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService.MetricsRecord;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +22,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,12 +75,22 @@ public class SysAiModelMetricsService {
     private final SysAiModelMetricsMapper metricsMapper;
 
     /**
+     * 提供者模型 映射器（同步价格后回写模型卡片的指标 JSON）
+     */
+    private final SysAiProviderModelMapper providerModelMapper;
+
+    /**
+     * 服务商 映射器（按已配置服务商枚举 indicator 消费）
+     */
+    private final SysAiProviderMapper providerMapper;
+
+    /**
      * 指标富集服务（全量数据源）
      */
     private final AiModelMetricsEnrichmentService enrichment;
 
     /**
-     * 全量同步：指标源全量记录 → 插入/更新，行内锁定字段跳过。
+     * 指标源全量同步：指标源全量记录 → 插入/更新，行内锁定字段跳过。
      *
      * @return 处理的记录条数
      */
@@ -214,6 +234,753 @@ public class SysAiModelMetricsService {
         MetricsRecord aaRec = unlocked.isEmpty() ? null : enrichment.getPricingRecord(key);
         applyManualUpdate(cur, values, normLocked, unlocked, aaRec, operator, now);
         return metricsMapper.selectById(cur.getId());
+    }
+
+    /**
+     * 同步时需要回写到 {@code sys_ai_provider_model.sys_ai_provider_model_metrics}
+     * 的指标键（前端模型卡片与模型选择器读取的就是这些键）。
+     */
+    private static final String[] PROVIDER_MODEL_METRIC_KEYS = {
+            "price_input_per_musd", "price_output_per_musd",
+            "price_cache_hit_per_musd", "price_cache_write_per_musd",
+            "context_window_tokens", "max_output_tokens",
+            "reasoning", "web_search", "image_input", "audio_input", "video_input",
+            "pdf_input", "attachment", "temperature", "function_calling",
+            "json_mode", "structured_output", "open_weights", "intelligence_index",
+            "model_name", "model_family", "knowledge_cutoff", "release_date", "last_updated",
+            "reasoning_efforts", "reasoning_option_types"
+    };
+
+    /**
+     * 从 {@link ChatClientIndicator} 同步价格与指标，入库 {@code sys_ai_model_metrics}，
+     * 并把同一份指标回写到该服务商已配置的模型行（{@code sys_ai_provider_model}），
+     * 让前端模型卡片在同步后立即显示新价格 / 上下文 / 能力。
+     *
+     * <p>遍历 {@code indicator.modelMetrics()}（模型键 → 指标键/值 Map），按归一化键
+     * 做 upsert：已存在的行只更新未被 {@code manual_locked} 锁定的字段；不存在的行
+     * 插入新记录。同一快照里可能同时存在 {@code provider/model} 全路径与短 slug
+     * 两种键（OpenRouter / Pollinations 等），按归一化键去重，避免同一模型被写两次。</p>
+     *
+     * <p>缺省语义：指标 Map 中<b>不存在的键不落库</b>，不会把已有的上下文窗口 /
+     * 缓存价格清空；只有显式提供（含显式 0，如免费档）的字段才覆盖。</p>
+     *
+     * @param indicator  当前服务商的指标实现
+     * @param providerId 服务商 ID（写 provider 列）
+     * @return 同步统计（更新数 / 插入数 / 回写的模型行数）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public SyncResult syncFromIndicator(ChatClientIndicator indicator, String providerId) {
+        if (indicator == null) {
+            return new SyncResult(0, 0, 0);
+        }
+        Map<String, Map<String, Object>> modelMetrics = indicator.modelMetrics();
+        if (modelMetrics == null || modelMetrics.isEmpty()) {
+            log.info("[ModelMetrics] indicator={} 无数据，跳过同步", indicator.source());
+            return new SyncResult(0, 0, 0);
+        }
+        String source = truncate(indicator.source(), 40);
+        Long capturedAt = indicator.capturedAt();
+        long now = capturedAt == null ? System.currentTimeMillis() : capturedAt;
+
+        // 一次查全表，避免循环内逐条查
+        Map<String, SysAiModelMetrics> existing = new HashMap<>();
+        for (SysAiModelMetrics m : metricsMapper.selectList(null)) {
+            if (m.getModelKey() != null) {
+                existing.put(m.getModelKey(), m);
+            }
+        }
+
+        // 归一化键去重：同一模型可能以全路径 + slug 两种键出现
+        Set<String> processed = new HashSet<>(modelMetrics.size());
+        int updated = 0;
+        int inserted = 0;
+
+        for (Map.Entry<String, Map<String, Object>> entry : modelMetrics.entrySet()) {
+            String modelId = entry.getKey();
+            Map<String, Object> metrics = entry.getValue();
+            if (modelId == null || metrics == null) {
+                continue;
+            }
+            String key = truncate(enrichment.normalizeKey(modelId), 160);
+            if (key.isEmpty() || !processed.add(key)) {
+                continue;
+            }
+            SysAiModelMetrics cur = existing.get(key);
+
+            if (cur == null) {
+                // 插入新记录
+                SysAiModelMetrics e = toIndicatorEntity(key, modelId, providerId, metrics, source, now);
+                metricsMapper.insert(e);
+                inserted++;
+            } else {
+                // 更新已有记录（锁定字段跳过）
+                Set<String> locked = cur.getManualLocked() == null
+                        ? Set.of() : new HashSet<>(cur.getManualLocked());
+                LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
+                uw.eq(SysAiModelMetrics::getId, cur.getId());
+                buildIndicatorUpdate(metrics, locked, source, now, uw);
+                metricsMapper.update(null, uw);
+                updated++;
+            }
+        }
+
+        int providerModels = applyToProviderModels(providerId, modelMetrics, source,
+                indicator.sourceUrl(), now);
+        log.info("[ModelMetrics] indicator={} 同步完成：更新 {}，插入 {}，回写模型行 {}",
+                indicator.source(), updated, inserted, providerModels);
+        return new SyncResult(updated, inserted, providerModels);
+    }
+
+    /**
+     * 遍历已配置服务商，逐个同步其 {@link ChatClientIndicator} 指标到指标库。
+     *
+     * <p>这是 {@code ModelMetricsPushTask} 的<b>指标通道入口</b>：把人工「自动获取」
+     * 才触发的 {@link #syncFromIndicator(ChatClientIndicator, String)} 引入定时链路，
+     * 让已配置服务商的价格/能力/思考档位随调度自动落库，前端模型卡片在同步后
+     * 立即显示新数据。来源解析与手动接口同一套
+     * {@link ChatClientIndicators} 映射，避免两处登记不一致。</p>
+     *
+     * <p>容错语义：单个服务商解析或同步失败只记录日志，不影响其它服务商；
+     * 无指标端点的服务商（如 Ollama / ONNX）直接跳过，不视为失败。</p>
+     *
+     * @return 成功同步的服务商数（有数据落库）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public int syncFromConfiguredProviders() {
+        List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
+        if (providers.isEmpty()) {
+            return 0;
+        }
+        int ok = 0;
+        int skipped = 0;
+        for (SysAiProvider provider : providers) {
+            ChatClientIndicator indicator;
+            try {
+                indicator = resolveIndicator(provider);
+            } catch (Exception e) {
+                log.warn("[ModelMetrics] provider={} indicator 解析失败: {}", provider.getProviderId(), e.getMessage());
+                skipped++;
+                continue;
+            }
+            if (indicator == null) {
+                skipped++;
+                continue;
+            }
+            try {
+                SyncResult result = syncFromIndicator(indicator, provider.getProviderId());
+                if (result.getUpdated() + result.getInserted() > 0) {
+                    ok++;
+                }
+            } catch (Exception e) {
+                log.warn("[ModelMetrics] provider={} indicator 同步失败: {}", provider.getProviderId(), e.getMessage());
+            }
+        }
+        log.info("[ModelMetrics] 已配置服务商 indicator 同步完成：成功 {} 家，跳过 {} 家，共 {} 家",
+                ok, skipped, providers.size());
+        return ok;
+    }
+
+    /**
+     * 按服务商平台解析对应的 {@link ChatClientIndicator}，与前端「自动获取」
+     * 走同一套 {@link ChatClientIndicators} 映射；配置了
+     * {@code extra.metrics_url} 且无内置实现时用 {@link HttpChatClientIndicator} 兜底。
+     *
+     * @param entity 服务商行
+     * @return indicator 实现或空（无可用指标端点）
+     */
+    private ChatClientIndicator resolveIndicator(SysAiProvider entity) {
+        ChatClientSetting setting = buildSettingForIndicator(entity);
+        ChatClientIndicator indicator = ChatClientIndicators.of(setting);
+        if (indicator != null) {
+            return indicator;
+        }
+        String metricsUrl = extraString(entity.getExtra(), "metrics_url");
+        if (com.chua.common.support.utils.StringUtils.isNotBlank(metricsUrl)) {
+            return new HttpChatClientIndicator(setting);
+        }
+        return null;
+    }
+
+    /**
+     * 组装供 indicator 使用的最小 {@link ChatClientSetting}。
+     */
+    private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
+        return ChatClientSetting.builder()
+                .provider(entity.getPlatform() == null || entity.getPlatform().isBlank()
+                        ? entity.getProviderId() : entity.getPlatform())
+                .appKey(firstApiKey(entity))
+                .baseUrl(entity.getBaseUrl())
+                .metricsUrl(extraString(entity.getExtra(), "metrics_url"))
+                .proxy(entity.getProxy())
+                .build();
+    }
+
+    /**
+     * 取服务商自身凭证中的第一个 API Key（无则返回 {@code null}）。
+     */
+    private String firstApiKey(SysAiProvider entity) {
+        if (entity.getCredentials() == null || entity.getCredentials().isEmpty()) {
+            return null;
+        }
+        Object single = entity.getCredentials().get("api_key");
+        if (single instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        Object multi = entity.getCredentials().get("api_keys");
+        if (multi instanceof List<?> list && !list.isEmpty()) {
+            Object first = list.getFirst();
+            if (first instanceof String s && !s.isBlank()) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从 extra 中读取字符串值（extra 为 {@code null} 或键不存在时返回 {@code null}）。
+     */
+    private static String extraString(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return null;
+        }
+        Object value = extra.get(key);
+        return value == null ? null : value.toString();
+    }
+
+    /**
+     * 把指标快照回写到服务商已配置的模型行。
+     *
+     * <p>模型行按「原始模型名精确匹配 → 归一化键匹配」两级查找；只写白名单键，
+     * 不覆盖用户手动填写的上下文窗口 / 输出上限（这两个字段仅在为空时回填）。</p>
+     *
+     * @param providerId   服务商标识
+     * @param modelMetrics 指标快照
+     * @param source       数据源标识
+     * @param sourceUrl    数据源地址
+     * @param capturedAt   采集时间
+     * @return 实际更新的模型行数
+     */
+    private int applyToProviderModels(String providerId,
+                                      Map<String, Map<String, Object>> modelMetrics,
+                                      String source, String sourceUrl, long capturedAt) {
+        if (providerId == null || providerId.isBlank() || modelMetrics.isEmpty()) {
+            return 0;
+        }
+        List<SysAiProviderModel> rows = providerModelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId));
+        if (rows.isEmpty()) {
+            return 0;
+        }
+        Map<String, Map<String, Object>> byExact = new HashMap<>(modelMetrics.size());
+        Map<String, Map<String, Object>> byNormalized = new HashMap<>(modelMetrics.size());
+        for (Map.Entry<String, Map<String, Object>> entry : modelMetrics.entrySet()) {
+            String id = entry.getKey();
+            if (id == null || entry.getValue() == null) {
+                continue;
+            }
+            byExact.putIfAbsent(id, entry.getValue());
+            String key = truncate(enrichment.normalizeKey(id), 160);
+            if (!key.isEmpty()) {
+                byNormalized.putIfAbsent(key, entry.getValue());
+            }
+        }
+
+        int changed = 0;
+        long now = System.currentTimeMillis();
+        for (SysAiProviderModel row : rows) {
+            if (row.getModel() == null) {
+                continue;
+            }
+            Map<String, Object> metrics = byExact.get(row.getModel());
+            if (metrics == null) {
+                metrics = byNormalized.get(truncate(enrichment.normalizeKey(row.getModel()), 160));
+            }
+            if (metrics == null) {
+                continue;
+            }
+            Map<String, Object> current = row.getMetrics() == null
+                    ? new LinkedHashMap<>(24)
+                    : new LinkedHashMap<>(row.getMetrics());
+            enrichRowFromMetrics(row, current, metrics, source, sourceUrl, capturedAt);
+            row.setUpdatedAt(now);
+            // 复合主键：必须同时按 providerId + model 限定，避免跨服务商误更新
+            providerModelMapper.update(row, new LambdaUpdateWrapper<SysAiProviderModel>()
+                    .eq(SysAiProviderModel::getProviderId, providerId)
+                    .eq(SysAiProviderModel::getModel, row.getModel()));
+            changed++;
+        }
+        return changed;
+    }
+
+    /**
+     * 用单条指标快照回填一个模型行（metrics JSON 白名单合并 + 实体列空值回填）。
+     *
+     * <p>同时用于价格同步（{@link #applyToProviderModels}）与新增/导入模型时的
+     * 指标补齐（{@code ApiProviderController.enrichFromMetrics}）：指标侧统一口径，
+     * 实体列仅在空时回填，不覆盖管理员已填的值。</p>
+     *
+     * @param row        目标模型行（就地修改）
+     * @param current    待写回的 metrics JSON（就地合并白名单键）
+     * @param metrics    指标快照（Models.dev 等 indicator 产出的标准键）
+     * @param source     数据源标识（可空）
+     * @param sourceUrl  数据源地址（可空）
+     * @param capturedAt 采集时间戳
+     */
+    public void enrichRowFromMetrics(SysAiProviderModel row, Map<String, Object> current,
+                                     Map<String, Object> metrics, String source, String sourceUrl,
+                                     long capturedAt) {
+        for (String key : PROVIDER_MODEL_METRIC_KEYS) {
+            Object value = metrics.get(key);
+            if (value != null) {
+                current.put(key, value);
+            }
+        }
+        // 能力键兼容：指标侧叫 reasoning，模型行历史口径叫 reasoning_model
+        if (metrics.get("reasoning") instanceof Boolean reasoning) {
+            current.put("reasoning_model", reasoning);
+        }
+        if (source != null && !source.isBlank()) {
+            current.put("metrics_source", source);
+        }
+        if (sourceUrl != null && !sourceUrl.isBlank()) {
+            current.put("metrics_source_url", sourceUrl);
+        }
+        current.put("metrics_captured_at", capturedAt);
+
+        Object context = metrics.get("context_window_tokens");
+        if (row.getContextWindow() == null && context instanceof Number number && number.longValue() > 0) {
+            row.setContextWindow((int) Math.min(number.longValue(), Integer.MAX_VALUE));
+        }
+        Object maxOutput = metrics.get("max_output_tokens");
+        if (row.getMaxTokens() == null && maxOutput instanceof Number number && number.longValue() > 0) {
+            row.setMaxTokens((int) Math.min(number.longValue(), Integer.MAX_VALUE));
+        }
+        // 指标回填实体列：family / knowledge / release_date / last_updated / modalities /
+        // open_weights / attachment / reasoning / tool_call / temperature ——
+        // 仅在实体列当前为空时回填，不覆盖管理员已填的值
+        fillIfBlank(row::getFamily, value -> row.setFamily(value), str(metrics, "model_family"));
+        fillIfBlank(row::getKnowledge, row::setKnowledge, str(metrics, "knowledge_cutoff"));
+        fillIfBlank(row::getReleaseDate, row::setReleaseDate, str(metrics, "release_date"));
+        // last_updated：优先接口数据的 last_updated，缺失则用采集时间（capturedAt）
+        fillIfBlank(row::getLastUpdated, row::setLastUpdated,
+                firstNonBlank(str(metrics, "last_updated"), isoOf(capturedAt)));
+        if (row.getOpenWeights() == null && bool(metrics, "open_weights") != null) {
+            row.setOpenWeights(bool(metrics, "open_weights"));
+        }
+        if (row.getAttachment() == null && bool(metrics, "attachment") != null) {
+            row.setAttachment(bool(metrics, "attachment"));
+        }
+        if (row.getReasoning() == null && bool(metrics, "reasoning") != null) {
+            row.setReasoning(bool(metrics, "reasoning"));
+        }
+        if (row.getToolCall() == null && bool(metrics, "function_calling") != null) {
+            row.setToolCall(bool(metrics, "function_calling"));
+        }
+        if (row.getTemperatureSupported() == null && bool(metrics, "temperature") != null) {
+            row.setTemperatureSupported(bool(metrics, "temperature"));
+        }
+        // modalities：由 input 模态（image/audio/video/pdf）与 output_modalities 组装
+        if (row.getModalities() == null) {
+            Map<String, Object> modalities = modalitiesOf(metrics);
+            if (!modalities.isEmpty()) {
+                row.setModalities(modalities);
+            }
+        }
+        // 思考档位：指标 reasoning_efforts（Models.dev reasoning_options 解析）→
+        // capabilities[].thinking_efforts，仅在未配置时回填（与 applyThinkingEfforts 同存储口径）
+        List<?> efforts = listOf(metrics.get("reasoning_efforts"));
+        if (!efforts.isEmpty() && !hasThinkingEfforts(row)) {
+            applyThinkingEfforts(row, new ArrayList<>(efforts.stream()
+                    .map(String::valueOf).collect(java.util.stream.Collectors.toList())));
+        }
+        row.setMetrics(current);
+    }
+
+    /**
+     * 模型行是否已配置思考档位（capabilities[].thinking_efforts 非空）。
+     */
+    private static boolean hasThinkingEfforts(SysAiProviderModel row) {
+        List<Map<String, Object>> caps = row.getCapabilities();
+        if (caps == null) {
+            return false;
+        }
+        for (Map<String, Object> cap : caps) {
+            Object efforts = cap.get("thinking_efforts");
+            if (efforts instanceof List<?> list && !list.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 把思考档位写入行内 capabilities[].thinking_efforts（与 ApiProviderController.applyThinkingEfforts 同款）。
+     */
+    @SuppressWarnings("unchecked")
+    private static void applyThinkingEfforts(SysAiProviderModel entity, List<String> efforts) {
+        if (efforts == null) {
+            return;
+        }
+        List<Map<String, Object>> caps = entity.getCapabilities();
+        if (caps == null || caps.isEmpty()) {
+            caps = new ArrayList<>(1);
+            caps.add(new LinkedHashMap<>(4));
+            entity.setCapabilities(caps);
+        }
+        Map<String, Object> node = caps.getFirst();
+        if (node == null) {
+            node = new LinkedHashMap<>(4);
+            caps.set(0, node);
+        }
+        node.put("thinking_efforts", efforts);
+    }
+
+    /**
+     * 宽松转字符串列表：非数组返回空列表。
+     */
+    private static List<Object> listOf(Object value) {
+        if (value instanceof List<?> list) {
+            return new ArrayList<>(list);
+        }
+        return List.of();
+    }
+
+    /**
+     * 实体列为空时回填。
+     *
+     * @param getter    当前值读取
+     * @param setter    回填写入
+     * @param value     候选值（空则不写）
+     */
+    private static void fillIfBlank(java.util.function.Supplier<String> getter,
+                                    java.util.function.Consumer<String> setter,
+                                    String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        String current = getter.get();
+        if (current == null || current.isBlank()) {
+            setter.accept(value);
+        }
+    }
+
+    /**
+     * 取指标字符串（掐头去尾）。
+     */
+    private static String str(Map<String, Object> metrics, String key) {
+        Object value = metrics.get(key);
+        if (!(value instanceof String s) || s.isBlank()) {
+            return null;
+        }
+        return s.trim();
+    }
+
+    /**
+     * 取指标布尔。
+     */
+    private static Boolean bool(Map<String, Object> metrics, String key) {
+        Object value = metrics.get(key);
+        if (value instanceof Boolean b) {
+            return b;
+        }
+        if (value instanceof String s) {
+            return "true".equalsIgnoreCase(s) || "1".equals(s);
+        }
+        return null;
+    }
+
+    /**
+     * 毫秒时间戳 → ISO 时间（最后更新时间兜底口径）。
+     */
+    private static String isoOf(long millis) {
+        try {
+            return java.time.Instant.ofEpochMilli(millis)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate() + (millis > 0 ? " " + java.time.LocalTime.MIDNIGHT : "");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 首非空值。
+     */
+    private static String firstNonBlank(String a, String b) {
+        return (a != null && !a.isBlank()) ? a : b;
+    }
+
+    /**
+     * 由 input 模态与 output_modalities 组装 modalities Map。
+     *
+     * @param metrics 指标 Map
+     * @return 非空时 {input:[...], output:[...]} 结构
+     */
+    private static Map<String, Object> modalitiesOf(Map<String, Object> metrics) {
+        Map<String, Object> modalities = new LinkedHashMap<>(4);
+        List<String> inputs = new ArrayList<>(4);
+        inputs.add("text");
+        Boolean image = bool(metrics, "image_input");
+        if (Boolean.TRUE.equals(image)) {
+            inputs.add("image");
+        }
+        Boolean audio = bool(metrics, "audio_input");
+        if (Boolean.TRUE.equals(audio)) {
+            inputs.add("audio");
+        }
+        Boolean video = bool(metrics, "video_input");
+        if (Boolean.TRUE.equals(video)) {
+            inputs.add("video");
+        }
+        Boolean pdf = bool(metrics, "pdf_input");
+        if (Boolean.TRUE.equals(pdf)) {
+            inputs.add("pdf");
+        }
+        modalities.put("input", inputs);
+        Object outputs = metrics.get("output_modalities");
+        if (outputs instanceof List<?> outputList && !outputList.isEmpty()) {
+            modalities.put("output", new ArrayList<>(outputList));
+        } else {
+            modalities.put("output", List.of("text"));
+        }
+        return modalities;
+    }
+
+    /**
+     * 构建指标来源入参。
+     *
+     * @param key        归一化键
+     * @param modelId    原始模型 ID
+     * @param providerId 服务商 ID
+     * @param metrics    指标键/值 Map
+     * @param source     数据源标识
+     * @param now        采集时间戳
+     * @return 实体
+     */
+    private SysAiModelMetrics toIndicatorEntity(String key, String modelId, String providerId,
+                                                 Map<String, Object> metrics, String source, long now) {
+        SysAiModelMetrics e = new SysAiModelMetrics();
+        e.setModelKey(key);
+        e.setModelName(modelId);
+        e.setProvider(providerId);
+        e.setSource(source);
+        e.setCreateTime(now);
+        e.setUpdateTime(now);
+        applyMetricsToEntity(e, metrics);
+        return e;
+    }
+
+    /**
+     * 把指标键/值 Map 写入实体字段（只做赋值，不做锁定判断，用于新增行）。
+     */
+    private void applyMetricsToEntity(SysAiModelMetrics e, Map<String, Object> m) {
+        e.setPriceInputPerMusd(bd(m, "price_input_per_musd"));
+        e.setPriceOutputPerMusd(bd(m, "price_output_per_musd"));
+        e.setPriceCacheHitPerMusd(bd(m, "price_cache_hit_per_musd"));
+        e.setPriceCacheWritePerMusd(bd(m, "price_cache_write_per_musd"));
+        e.setContextWindowTokens(longOf(m, "context_window_tokens"));
+        e.setReasoning(boolOf(m, "reasoning"));
+        e.setWebSearch(boolOf(m, "web_search"));
+        e.setImageInput(boolOf(m, "image_input"));
+        e.setFunctionCalling(boolOf(m, "function_calling"));
+        e.setJsonMode(boolOf(m, "json_mode"));
+        e.setOpenaiCompatible(boolOf(m, "openai_compatible"));
+        e.setIntelligenceIndex(bd(m, "intelligence_index"));
+        e.setOutputSpeedTps(bd(m, "output_speed_tps"));
+        e.setLatencyFirstTokenSeconds(bd(m, "latency_first_token_seconds"));
+        e.setElo(bd(m, "elo"));
+        e.setCostPerTask(bd(m, "cost_per_task"));
+    }
+
+    /**
+     * 构建指标来源的更新语句（锁定字段跳过）。
+     *
+     * <p>只有指标 Map 中<b>存在</b>的键才写入：缺失表示该来源没有提供这一维度，
+     * 不能把已有价格 / 上下文清空。</p>
+     */
+    private void buildIndicatorUpdate(Map<String, Object> metrics, Set<String> locked,
+                                       String source, long now,
+                                       LambdaUpdateWrapper<SysAiModelMetrics> uw) {
+        if (metrics.containsKey("price_input_per_musd")
+                && !locked.contains("price_input_per_musd")) {
+            uw.set(SysAiModelMetrics::getPriceInputPerMusd, bd(metrics, "price_input_per_musd"));
+        }
+        if (metrics.containsKey("price_output_per_musd")
+                && !locked.contains("price_output_per_musd")) {
+            uw.set(SysAiModelMetrics::getPriceOutputPerMusd, bd(metrics, "price_output_per_musd"));
+        }
+        if (metrics.containsKey("price_cache_hit_per_musd")
+                && !locked.contains("price_cache_hit_per_musd")) {
+            uw.set(SysAiModelMetrics::getPriceCacheHitPerMusd, bd(metrics, "price_cache_hit_per_musd"));
+        }
+        if (metrics.containsKey("price_cache_write_per_musd")
+                && !locked.contains("price_cache_write_per_musd")) {
+            uw.set(SysAiModelMetrics::getPriceCacheWritePerMusd, bd(metrics, "price_cache_write_per_musd"));
+        }
+        if (metrics.containsKey("context_window_tokens")
+                && !locked.contains("context_window_tokens")) {
+            uw.set(SysAiModelMetrics::getContextWindowTokens, longOf(metrics, "context_window_tokens"));
+        }
+        if (metrics.containsKey("intelligence_index")
+                && !locked.contains("intelligence_index")) {
+            uw.set(SysAiModelMetrics::getIntelligenceIndex, bd(metrics, "intelligence_index"));
+        }
+        if (metrics.containsKey("output_speed_tps")
+                && !locked.contains("output_speed_tps")) {
+            uw.set(SysAiModelMetrics::getOutputSpeedTps, bd(metrics, "output_speed_tps"));
+        }
+        if (metrics.containsKey("latency_first_token_seconds")
+                && !locked.contains("latency_first_token_seconds")) {
+            uw.set(SysAiModelMetrics::getLatencyFirstTokenSeconds,
+                    bd(metrics, "latency_first_token_seconds"));
+        }
+        // 能力标志不锁定（始终覆盖）
+        if (metrics.containsKey("reasoning")) {
+            uw.set(SysAiModelMetrics::getReasoning, boolOf(metrics, "reasoning"));
+        }
+        if (metrics.containsKey("web_search")) {
+            uw.set(SysAiModelMetrics::getWebSearch, boolOf(metrics, "web_search"));
+        }
+        if (metrics.containsKey("image_input")) {
+            uw.set(SysAiModelMetrics::getImageInput, boolOf(metrics, "image_input"));
+        }
+        if (metrics.containsKey("function_calling")) {
+            uw.set(SysAiModelMetrics::getFunctionCalling, boolOf(metrics, "function_calling"));
+        }
+        if (metrics.containsKey("json_mode")) {
+            uw.set(SysAiModelMetrics::getJsonMode, boolOf(metrics, "json_mode"));
+        }
+        if (metrics.containsKey("openai_compatible")) {
+            uw.set(SysAiModelMetrics::getOpenaiCompatible, boolOf(metrics, "openai_compatible"));
+        }
+        // 数据源与时间戳（始终更新；source 为空时不覆盖历史来源）
+        if (source != null && !source.isBlank()) {
+            uw.set(SysAiModelMetrics::getSource, source);
+        }
+        uw.set(SysAiModelMetrics::getUpdateTime, now);
+    }
+
+    /**
+     * 截断字符串到指定长度（数据库列宽保护）。
+     *
+     * @param value  原值
+     * @param maxLen 最大长度
+     * @return 截断后的值；入参为空时返回空串
+     */
+    private static String truncate(String value, int maxLen) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= maxLen ? value : value.substring(0, maxLen);
+    }
+
+    /**
+     * 指标同步结果。
+     */
+    public static final class SyncResult {
+
+        /**
+         * 更新的指标行数
+         */
+        private final int updated;
+        /**
+         * 新增的指标行数
+         */
+        private final int inserted;
+        /**
+         * 回写的服务商模型行数
+         */
+        private final int providerModels;
+
+        private SyncResult(int updated, int inserted, int providerModels) {
+            this.updated = updated;
+            this.inserted = inserted;
+            this.providerModels = providerModels;
+        }
+
+        /**
+         * 更新行数。
+         *
+         * @return 行数
+         */
+        public int getUpdated() {
+            return updated;
+        }
+
+        /**
+         * 新增行数。
+         *
+         * @return 行数
+         */
+        public int getInserted() {
+            return inserted;
+        }
+
+        /**
+         * 回写的服务商模型行数。
+         *
+         * @return 行数
+         */
+        public int getProviderModels() {
+            return providerModels;
+        }
+    }
+
+    // ── 指标键/值转换辅助 ────────────────────────────────────────────────────
+
+    /**
+     * 从指标 Map 取 BigDecimal，缺省返回 {@code null}。
+     */
+    private static BigDecimal bd(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof BigDecimal bd) {
+            return bd;
+        }
+        if (v instanceof Number num) {
+            return BigDecimal.valueOf(num.doubleValue());
+        }
+        try {
+            return new BigDecimal(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从指标 Map 取 Long，缺省返回 {@code null}。
+     */
+    private static Long longOf(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number num) {
+            return num.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从指标 Map 取 Boolean，缺省返回 {@code null}。
+     */
+    private static Boolean boolOf(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Boolean b) {
+            return b;
+        }
+        return Boolean.valueOf(String.valueOf(v));
     }
 
     /**

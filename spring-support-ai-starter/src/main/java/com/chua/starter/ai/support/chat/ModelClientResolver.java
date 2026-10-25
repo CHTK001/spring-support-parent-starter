@@ -4,6 +4,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
@@ -11,6 +12,9 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
+import com.chua.starter.ai.support.util.AiUserContext;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -90,17 +94,36 @@ public class ModelClientResolver {
         log.info("[ModelClientResolver] 路由 {} -> 供应商={}({}) baseUrl={} model={}",
                 qualifiedModel, provider.getProviderId(), provider.getPlatform(),
                 provider.getBaseUrl(), parsed.model());
-        String cacheKey = provider.getProviderId() + "::" + parsed.model();
+        // 缓存键必须带账号归属：不同用户绑定的账号不同，聚合出来的客户端不能跨用户复用
+        String ownerScope = ownerScopeOf(provider);
+        String cacheKey = ownerScope + "::" + provider.getProviderId() + "::" + parsed.model();
         long now = System.currentTimeMillis();
         CachedClient cached = cache.get(cacheKey);
         if (cached != null && now - cached.builtAt() < CACHE_TTL_MILLIS) {
             return cached.client();
         }
-        ChatClient built = build(provider, parsed.model());
+        ChatClient built = build(provider, parsed.model(), ownerScope);
         if (built != null) {
             cache.put(cacheKey, new CachedClient(built, now));
         }
         return built;
+    }
+
+    /**
+     * 计算归属作用域，用于缓存键与连接过滤。
+     *
+     * <p>免费渠道固定走「管理员/系统账号池」（{@code _free}，与当前用户无关）；
+     * 其余渠道按当前用户隔离（未登录/后台线程无身份时为 {@code _sys}，只取系统池）。</p>
+     *
+     * @param provider 供应商
+     * @return 归属作用域
+     */
+    private static String ownerScopeOf(SysAiProvider provider) {
+        if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
+            return "_free";
+        }
+        String userId = AiUserContext.currentUserId();
+        return userId == null ? "_sys" : userId;
     }
 
     /**
@@ -163,26 +186,39 @@ public class ModelClientResolver {
     }
 
     /**
-     * 收集供应商级 + 连接级全部密钥，构建单密钥直连或多密钥 failover 聚合客户端。
+     * 收集供应商级 + 连接级全部密钥，构建单密钥直连或多密钥 failover/round-robin 聚合客户端。
      *
-     * @param provider 供应商
-     * @param model    裸模型名
+     * @param provider   供应商
+     * @param model      裸模型名
+     * @param ownerScope 归属作用域（缓存键/连接过滤，见 {@link #ownerScopeOf(SysAiProvider)}）
      * @return 已绑定模型的客户端；无可用密钥或构建失败返回 {@code null}
      */
-    private ChatClient build(SysAiProvider provider, String model) {
+    private ChatClient build(SysAiProvider provider, String model, String ownerScope) {
         try {
-            List<String> keys = collectAllKeys(provider);
+            List<String> keys = collectAllKeys(provider, ownerScope);
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
             if (keys.isEmpty()) {
-                log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
-                return null;
+                if (!ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
+                    log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
+                    return null;
+                }
+                // 免费渠道允许无 key：部分上游免鉴权，缺失时由客户端按路由决定是否发送认证头
+                keys = new ArrayList<>();
+                keys.add(null);
             }
-            if (keys.size() == 1) {
+            // UI 上的「自动限流」开关：关闭时固定用第一个 Key，不组聚合、不横向切换账号
+            boolean autoSwitch = !"false".equalsIgnoreCase(
+                    extraString(provider.getExtra(), "auto_switch_on_rate_limit"));
+            if (keys.size() == 1 || !autoSwitch) {
                 ChatClient raw = ChatClient.create(buildSetting(provider, keys.getFirst(), extraHeaders));
                 return raw == null ? null : raw.model(model);
             }
+            // 多 Key：按 UI 上的 Key 策略（failover / round_robin）组聚合，429 限流自动切下一个
+            String strategy = extraString(provider.getExtra(), "load_strategy");
             AggregateChatClientSetting aggSetting = new AggregateChatClientSetting();
-            aggSetting.setStrategy("failover");
+            aggSetting.setStrategy(StringUtils.isNotBlank(strategy) ? strategy : "failover");
+            aggSetting.setAutoSwitchOnRateLimit(true);
+            aggSetting.setAutoSwitchOnQuotaExhausted(true);
             AggregateChatClient aggregate = new AggregateChatClient(aggSetting);
             for (int i = 0; i < keys.size(); i++) {
                 ChatClient raw = ChatClient.create(buildSetting(provider, keys.get(i), extraHeaders));
@@ -220,7 +256,9 @@ public class ModelClientResolver {
                 .authScheme(provider.getAuthScheme())
                 .authHeader(extraString(provider.getExtra(), "auth_header"))
                 .authPrefix(extraString(provider.getExtra(), "auth_prefix"))
+                .metricsUrl(extraString(provider.getExtra(), "metrics_url"))
                 .proxy(provider.getProxy())
+                .routes(ProviderRouteTargets.fromExtra(provider.getExtra()))
                 .build();
     }
 
@@ -240,17 +278,39 @@ public class ModelClientResolver {
     }
 
     /**
-     * 收集供应商级与其全部连接级凭证中的密钥（去重、保序）。
+     * 收集供应商级与其全部连接级凭证中的密钥（去重、保序），并按归属作用域过滤连接。
      *
-     * @param provider 供应商
+     * <p>归属规则：</p>
+     * <ul>
+     *   <li>免费渠道（{@code _free}）：只用管理员/系统账号池（历史 {@code user_id IS NULL} 行
+     *       = 渠道管理改造前管理员绑定的账号）——「免费的走管理员的渠道管理配置」；</li>
+     *   <li>当前用户（userId）：只用该用户自己的连接；管理员额外可见 NULL 系统池；</li>
+     *   <li>无身份后台任务（{@code _sys}）：只用 NULL 系统池，避免匿名读到他人账号。</li>
+     * </ul>
+     *
+     * @param provider   供应商
+     * @param ownerScope 归属作用域
      * @return 密钥列表
      */
-    private List<String> collectAllKeys(SysAiProvider provider) {
+    private List<String> collectAllKeys(SysAiProvider provider, String ownerScope) {
         LinkedHashSet<String> keys = new LinkedHashSet<>(ProviderCredentials.apiKeys(provider.getCredentials()));
         try {
-            List<SysAiProviderConnection> connections = connectionMapper.selectList(
-                    Wrappers.<SysAiProviderConnection>lambdaQuery()
-                            .eq(SysAiProviderConnection::getProviderId, provider.getProviderId()));
+            LambdaQueryWrapper<SysAiProviderConnection> wrapper =
+                    new LambdaQueryWrapper<SysAiProviderConnection>()
+                            .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
+            if ("_free".equals(ownerScope) || "_sys".equals(ownerScope)) {
+                wrapper.isNull(SysAiProviderConnection::getUserId);
+            } else {
+                boolean admin = AiUserContext.isAdmin();
+                String userId = ownerScope;
+                wrapper.and(w -> {
+                    w.eq(SysAiProviderConnection::getUserId, userId);
+                    if (admin) {
+                        w.or().isNull(SysAiProviderConnection::getUserId);
+                    }
+                });
+            }
+            List<SysAiProviderConnection> connections = connectionMapper.selectList(wrapper);
             for (SysAiProviderConnection conn : connections) {
                 keys.addAll(ProviderCredentials.apiKeys(conn.getCredentials()));
             }

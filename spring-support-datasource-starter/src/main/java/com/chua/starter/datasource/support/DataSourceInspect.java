@@ -7,7 +7,7 @@ import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import com.chua.starter.datasource.properties.MultiHikariDataSourceProperties;
 import com.chua.starter.datasource.provider.DataSourcePropertyProvider;
 import com.chua.starter.datasource.provider.DataSourcePropertyProviderFactory;
-import com.chua.starter.datasource.util.ClassUtils;
+import com.chua.common.support.utils.ClassUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.Ordering;
 import com.zaxxer.hikari.HikariDataSource;

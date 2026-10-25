@@ -21,14 +21,17 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 顶栏台风数据服务实现。
  *
  * <p>数据源经 SPI 装载，列表语义遵循 SPI 契约：{@code null} 表示数据源不可用（继续下一个源，
  * 全部不可用时返回空让前端回落），空列表表示数据源确认当前无活跃台风。
- * 风圈报文 {@code "250|150|250|150"} 在此解析成四方位数组，多机构预报在此收敛成一条通道。</p>
+ * 风圈报文 {@code "250|150|250|150"} 在此解析成四方位数组，多机构预报按机构拆成多条通道下发。</p>
  *
  * <p>出参是前端 {@code TyphoonItem / TyphoonDetail} 的唯一契约，而前端对后台数据
  * 原样透传、不做补齐，因此数据源给出的字段在此全部映射：英文名、报文时间、风力等级、
@@ -164,38 +167,84 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
     }
 
     /**
-     * 取末点预报：优先含「中国」的机构通道，否则取首个，收敛成单条通道。
+     * 收集全部机构预报通道。
+     *
+     * <p>数据源在同一路径点上并列给出 中国 / 中国台湾 / 日本 / 中国香港 / 美国 多家通道，
+     * 前端地图按机构各画一条预测线，因此这里不再收敛成单条：按机构名去重（同名取首个），
+     * 并保证「中国」排第一（前端把 {@code forecast[0]} 当主线接在历史末点上）。
+     * 同一权重（如 日本、美国）保持数据源原有顺序——{@link List#sort} 是稳定排序。</p>
      *
      * @param points 历史路径点
      * @return 预报通道列表；无预报时返回空列表
      */
     private List<TyphoonDetailVO.Forecast> toForecast(List<TyphoonPoint> points) {
-        List<TyphoonDetailVO.Forecast> result = new ArrayList<>();
-        if (points.isEmpty()) {
-            return result;
+        TyphoonPoint host = pickForecastHost(points);
+        if (host == null) {
+            return List.of();
         }
-        List<TyphoonForecast> sources = points.getLast().getForecast();
-        if (sources == null || sources.isEmpty()) {
-            return result;
-        }
-        TyphoonForecast preferred = sources.getFirst();
-        for (TyphoonForecast source : sources) {
-            if (source.getTm() != null && source.getTm().contains(PREFERRED_FORECAST_AGENCY)) {
-                preferred = source;
-                break;
+        Map<String, TyphoonForecast> sources = new LinkedHashMap<>();
+        for (TyphoonForecast source : host.getForecast()) {
+            if (source == null || source.getForecastpoints() == null || source.getForecastpoints().isEmpty()) {
+                continue;
+            }
+            String name = source.getTm() == null ? "" : source.getTm().trim();
+            if (!name.isEmpty()) {
+                sources.putIfAbsent(name, source);
             }
         }
-        List<TyphoonForecastPoint> forecastPoints = preferred.getForecastpoints();
-        if (forecastPoints == null || forecastPoints.isEmpty()) {
-            return result;
+        if (sources.isEmpty()) {
+            return List.of();
         }
-        List<TyphoonDetailVO.Track> track = new ArrayList<>(forecastPoints.size());
-        for (TyphoonForecastPoint point : forecastPoints) {
-            track.add(toTrack(point.getTime(), point.getLng(), point.getLat(), point.getStrong(),
-                    point.getSpeed(), point.getPressure(), null, null, null));
+        List<TyphoonForecast> ordered = new ArrayList<>(sources.values());
+        ordered.sort(Comparator.comparingInt((TyphoonForecast source) -> agencyRank(source.getTm())));
+        List<TyphoonDetailVO.Forecast> result = new ArrayList<>(ordered.size());
+        for (TyphoonForecast source : ordered) {
+            List<TyphoonForecastPoint> forecastPoints = source.getForecastpoints();
+            List<TyphoonDetailVO.Track> track = new ArrayList<>(forecastPoints.size());
+            for (TyphoonForecastPoint point : forecastPoints) {
+                track.add(toTrack(point.getTime(), point.getLng(), point.getLat(), point.getStrong(),
+                        point.getSpeed(), point.getPressure(), null, null, null));
+            }
+            result.add(new TyphoonDetailVO.Forecast(source.getTm(), track));
         }
-        result.add(new TyphoonDetailVO.Forecast(preferred.getTm(), track));
         return result;
+    }
+
+    /**
+     * 取最近一个带可用预报的历史点。
+     *
+     * <p>数据源把当次发布的预报挂在对应历史点上，而最新点可能只有实况还没挂预报，
+     * 因此从末点往前找第一个含非空机构通道的点，与前端兜底链路的取点口径一致。</p>
+     *
+     * @param points 历史路径点
+     * @return 带预报的路径点；全部没有时返回 空
+     */
+    private TyphoonPoint pickForecastHost(List<TyphoonPoint> points) {
+        for (int i = points.size() - 1; i >= 0; i--) {
+            TyphoonPoint point = points.get(i);
+            if (point == null || point.getForecast() == null) {
+                continue;
+            }
+            for (TyphoonForecast source : point.getForecast()) {
+                if (source != null && source.getForecastpoints() != null && !source.getForecastpoints().isEmpty()) {
+                    return point;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 机构排序权重：中国台优先（主线），其次中国台湾，其余保持源顺序。
+     *
+     * @param name 机构名
+     * @return 权重（越小越靠前）
+     */
+    private int agencyRank(String name) {
+        if (PREFERRED_FORECAST_AGENCY.equals(name)) {
+            return 0;
+        }
+        return name != null && name.contains("台湾") ? 1 : 2;
     }
 
     /**

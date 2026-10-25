@@ -71,17 +71,96 @@ public class OcrClientManager {
      * @return 识别文本
      */
     public String recognize(byte[] imageData) {
-        return current().recognize(imageData);
+        OcrImagePreprocessor.Result pre = preprocess(imageData);
+        return current().recognize(pre.data());
     }
 
     /**
      * 详细识别（文本块 + 置信度 + 位置）。
      *
+     * <p>前置增强（缩放/纠偏/对比度/降噪/二值化）都是<b>可选</b>项，未开启时原图直通；
+     * 开启后坐标会从「处理后空间」逆映射回原图，保证调用方拿到的仍是原图坐标。</p>
+     *
      * @param imageData 图片字节
-     * @return 识别结果列表
+     * @return 识别结果列表（坐标已映射回原图，且按 ocr_confidence_threshold 过滤）
      */
     public List<com.chua.deeplearning.support.ocr.OcrResult> recognizeDetail(byte[] imageData) {
-        return current().recognizeDetail(imageData);
+        OcrImagePreprocessor.Result pre = preprocess(imageData);
+        List<OcrResult> raw = current().recognizeDetail(pre.data());
+        return restore(raw, pre);
+    }
+
+    /**
+     * 读取前置增强参数（全部可选，缺省不改变行为）。
+     *
+     * @return 参数
+     */
+    private OcrImagePreprocessor.Options preprocessOptions() {
+        return new OcrImagePreprocessor.Options(
+                settingReader.getInt(GROUP, "ocr_max_image_size", 0),
+                settingReader.getBool(GROUP, "enhance_deskew", false),
+                settingReader.getBool(GROUP, "enhance_contrast", false),
+                settingReader.getBool(GROUP, "enhance_denoise", false),
+                settingReader.getBool(GROUP, "enhance_binarize", false));
+    }
+
+    /**
+     * 需要时执行前置增强。
+     *
+     * @param imageData 原图
+     * @return 增强结果（未开启时原图直通）
+     */
+    private OcrImagePreprocessor.Result preprocess(byte[] imageData) {
+        OcrImagePreprocessor.Options options = preprocessOptions();
+        if (options.noop()) {
+            return OcrImagePreprocessor.passthroughOf(imageData);
+        }
+        return OcrImagePreprocessor.process(imageData, options);
+    }
+
+    /**
+     * 坐标回映射 + 置信度过滤。
+     *
+     * @param results 处理后空间的识别结果
+     * @param pre     预处理结果
+     * @return 原图坐标结果
+     */
+    private List<OcrResult> restore(List<OcrResult> results, OcrImagePreprocessor.Result pre) {
+        if (results == null || results.isEmpty()) {
+            return results == null ? List.of() : results;
+        }
+        double minConfidence = settingReader.getInt(GROUP, "ocr_confidence_threshold", 0);
+        // 语义：0~1 的比例阈值；0（或未配置）表示不过滤。
+        // 兼容历史库里的百分数写法（>1 视为百分数）。
+        if (minConfidence > 1.0d) {
+            minConfidence = minConfidence / 100.0d;
+        }
+        List<OcrResult> out = new java.util.ArrayList<>(results.size());
+        for (OcrResult item : results) {
+            if (item == null) {
+                continue;
+            }
+            // 置信度阈值可选：0（或未配置）表示不过滤；否则丢弃低于阈值的块
+            if (minConfidence > 0 && item.confidence() > 0 && item.confidence() < minConfidence) {
+                continue;
+            }
+            com.chua.deeplearning.support.model.PredictRectangle box = item.boundingBox();
+            if (box == null || !pre.transformed()) {
+                out.add(item);
+                continue;
+            }
+            double[] p1 = pre.mapBack(box.x(), box.y());
+            double[] p2 = pre.mapBack(box.x() + box.width(), box.y() + box.height());
+            double x = Math.min(p1[0], p2[0]);
+            double y = Math.min(p1[1], p2[1]);
+            com.chua.deeplearning.support.model.PredictRectangle moved =
+                    new com.chua.deeplearning.support.model.PredictRectangle(
+                            (float) x, (float) y,
+                            (float) Math.abs(p2[0] - p1[0]), (float) Math.abs(p2[1] - p1[1]),
+                            box.confidence(), box.label(), box.labelName(), box.keypoints());
+            out.add(new OcrResult(item.text(), item.confidence(), moved, item.angle()));
+        }
+        return out;
     }
 
     /**
@@ -108,18 +187,32 @@ public class OcrClientManager {
         if (regions == null || regions.isEmpty()) {
             return List.of();
         }
+        OcrImagePreprocessor.Result pre = preprocess(imageData);
+        byte[] work = pre.data();
         OcrPipeline ocr = current();
         List<OcrResult> results = new java.util.ArrayList<>();
         for (com.chua.deeplearning.support.model.PredictRectangle region : regions) {
-            byte[] crop = com.chua.deeplearning.support.utils.ImageCropUtils.crop(imageData, region);
+            // 区域来自原图（版面分析结果）；若做过缩放/纠偏，先映射到处理后的坐标系再裁剪
+            com.chua.deeplearning.support.model.PredictRectangle target = region;
+            if (pre.transformed()) {
+                double[] p1 = pre.mapForward(region.x(), region.y());
+                double[] p2 = pre.mapForward(region.x() + region.width(), region.y() + region.height());
+                double x = Math.min(p1[0], p2[0]);
+                double y = Math.min(p1[1], p2[1]);
+                target = new com.chua.deeplearning.support.model.PredictRectangle(
+                        (float) x, (float) y,
+                        (float) Math.abs(p2[0] - p1[0]), (float) Math.abs(p2[1] - p1[1]),
+                        region.confidence(), region.label(), region.labelName(), region.keypoints());
+            }
+            byte[] crop = com.chua.deeplearning.support.utils.ImageCropUtils.crop(work, target);
             if (crop == null || crop.length == 0) {
                 continue;
             }
             for (OcrResult item : ocr.recognizeDetail(crop)) {
-                results.add(offset(item, region));
+                results.add(offset(item, target));
             }
         }
-        return results;
+        return restore(results, pre);
     }
 
     /**
@@ -161,8 +254,11 @@ public class OcrClientManager {
      * @return 标注后 JPEG 字节
      */
     public byte[] annotate(byte[] imageData) {
+        // 与识别口径一致：标注也画在「增强后」的图上，否则框会和图错位
+        OcrImagePreprocessor.Result pre = preprocess(imageData);
+        byte[] work = pre.data();
         try {
-            byte[] drawn = current().toDrawer(imageData);
+            byte[] drawn = current().toDrawer(work);
             if (drawn != null && drawn.length > 0) {
                 return drawn;
             }
@@ -171,7 +267,7 @@ public class OcrClientManager {
             // 库里对组合管线的已知限制，不是配置错误：降级而不是失败
             log.warn("[Ocr] 管线标注不可用，回退到自绘标注: {}", t.getMessage());
         }
-        return drawAnnotate(imageData);
+        return drawAnnotate(work);
     }
 
     /**
@@ -320,3 +416,4 @@ public class OcrClientManager {
         return builder.build();
     }
 }
+

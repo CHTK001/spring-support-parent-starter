@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.json.Json;
+import com.chua.starter.monitor.support.alarm.AlarmEventStreamRegistry;
 import com.chua.starter.queue.MessageTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,11 +100,33 @@ public class MonitorPushService {
     private final ObjectProvider<MessageTemplate> messageTemplateProvider;
 
     /**
-     * 广播告警事件
+     * 告警 SSE 订阅表。
+     *
+     * <p>socket 推送依赖队列与 socket 组件，任一未装配就会静默丢消息；告警是需要
+     * 保证送达的事件，因此额外走一条不依赖这两者的 SSE 通道。用
+     * {@link ObjectProvider} 取，避免在未启用告警模块时形成硬依赖。</p>
+     */
+    private final ObjectProvider<AlarmEventStreamRegistry> alarmStreamProvider;
+
+    /**
+     * 广播告警事件。
+     *
+     * <p>先走 SSE：这是不依赖消息队列的可靠通道，告警页优先从它收消息。
+     * 再走 socket.io，供全站其他订阅方（桌面通知、告警角标等）使用。
+     * 两条通道互不影响，任一条失败都不阻断另一条。</p>
      *
      * @param payload 事件数据
      */
     public void pushAlarm(Map<String, Object> payload) {
+        AlarmEventStreamRegistry registry = alarmStreamProvider.getIfAvailable();
+        if (registry != null) {
+            try {
+                registry.broadcast(payload);
+            } catch (Exception e) {
+                // SSE 失败绝不能影响 socket 通道，也不能把异常抛回采集线程
+                log.debug("[push] 告警 SSE 广播跳过: {}", e.getMessage());
+            }
+        }
         broadcast(EVENT_ALARM, payload, null);
     }
 

@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.alarm.AlarmEventStreamRegistry;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmPolicy;
@@ -11,6 +12,8 @@ import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -39,6 +43,11 @@ public class AlarmController {
      * 告警引擎服务
     */
     private final AlarmEngineService alarmEngineService;
+
+    /**
+     * 告警 SSE 订阅表（实时推送通道）
+     */
+    private final AlarmEventStreamRegistry alarmEventStreamRegistry;
 
     /**
      * 新增策略
@@ -263,5 +272,28 @@ public class AlarmController {
     public ReturnResult<List<AlarmTrendPointVO>> statsTrend(
             @RequestParam(defaultValue = "24") int hours) {
         return alarmEngineService.statsTrend(hours);
+    }
+
+    // ==================== 实时推送 ====================
+
+    /**
+     * 告警事件实时推送（SSE）。
+     *
+     * <p>与 socket.io 通道并存：socket 链路依赖队列组件与 socket 组件，任一未装配
+     * 就会静默丢消息；本端点由 Servlet 容器直接持有长连接，不依赖这两者，
+     * 是告警页的首选通道。前端建连失败时会自动回退到 socket / 低频轮询。</p>
+     *
+     * <p>事件：{@code ready} 建连就绪、{@code alarm} 告警新建或处理。
+     * 历史事件仍需通过 {@code GET /event} 拉取，SSE 只推增量。</p>
+     *
+     * @return SSE 连接
+     */
+    @Operation(summary = "告警事件实时推送（SSE）",
+            description = "建连即回 ready，之后推送 alarm 事件；需配合 GET /event 拉取历史")
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<SseEmitter> stream() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(alarmEventStreamRegistry.subscribe());
     }
 }
