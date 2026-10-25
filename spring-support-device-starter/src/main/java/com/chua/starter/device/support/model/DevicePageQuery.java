@@ -38,6 +38,12 @@ public class DevicePageQuery {
     /** 设备状态：normal/disabled/maintenance/scrapped */
     private String status;
 
+    /** 所属分组 ID */
+    private String groupId;
+
+    /** 仅看未分组设备（groupId 为空时生效） */
+    private Boolean ungrouped;
+
     /** 负责人 ID */
     private String ownerId;
 

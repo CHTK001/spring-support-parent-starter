@@ -1,12 +1,16 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.mapper.DeviceOrganizationMapper;
+import com.chua.starter.device.support.model.DevicePageQuery;
+import com.chua.starter.device.support.model.DeviceSaveRequest;
+import com.chua.starter.device.support.model.DeviceStats;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceProvider;
@@ -105,12 +109,56 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
+    public DeviceInfo addDevice(DeviceSaveRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("请求不能为空");
+        }
+        DeviceInfo device = request.toEntity();
+        LocalDateTime now = LocalDateTime.now();
+        device.setDeviceInfoId(UUID.randomUUID().toString());
+        if (!StringUtils.hasText(device.getDeviceInfoName())) {
+            device.setDeviceInfoName(firstNonBlank(request.getDeviceSerial(), device.getDeviceInfoIp()));
+        }
+        if (device.getDeviceInfoChannelCount() == null) {
+            device.setDeviceInfoChannelCount(0);
+        }
+        if (device.getDeviceInfoOnline() == null) {
+            device.setDeviceInfoOnline(Boolean.FALSE);
+        }
+        if (device.getDeviceInfoOfflineThreshold() == null || device.getDeviceInfoOfflineThreshold() <= 0) {
+            device.setDeviceInfoOfflineThreshold(60);
+        }
+        device.setDeviceInfoPassword(request.getDeviceInfoPassword());
+        device.setDeviceInfoCreatedAt(now);
+        device.setDeviceInfoUpdatedAt(now);
+        deviceInfoMapper.insert(device);
+        log.info("设备已保存: vendor={}, ip={}, name={}",
+                device.getDeviceInfoVendor(), device.getDeviceInfoIp(), device.getDeviceInfoName());
+        return device;
+    }
+
+    @Override
     /**
      * 更新Device
     */
     public void updateDevice(String id, DeviceInfo info) {
         info.setDeviceInfoId(id);
         deviceInfoMapper.updateById(info);
+    }
+
+    @Override
+    public void updateDevice(String id, DeviceSaveRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("请求不能为空");
+        }
+        DeviceInfo device = request.toEntity();
+        device.setDeviceInfoId(id);
+        device.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        // 未填写密码时不要覆盖已有密码（toEntity 本身不带密码）
+        if (StringUtils.hasText(request.getDeviceInfoPassword())) {
+            device.setDeviceInfoPassword(request.getDeviceInfoPassword());
+        }
+        deviceInfoMapper.updateById(device);
     }
 
     @Override
@@ -141,6 +189,59 @@ public class DeviceServiceImpl implements DeviceService {
         }
         wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
         return deviceInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public PageResult<DeviceInfo> pageDevices(DevicePageQuery query) {
+        DevicePageQuery q = query == null ? new DevicePageQuery() : query.normalize();
+        Page<DeviceInfo> page = new Page<>(q.getPageNo(), q.getPageSize());
+        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(q.getOrgId())) {
+            wrapper.eq(DeviceInfo::getDeviceInfoOrgId, q.getOrgId());
+        }
+        if (StringUtils.hasText(q.getVendor())) {
+            wrapper.eq(DeviceInfo::getDeviceInfoVendor, q.getVendor());
+        }
+        if (StringUtils.hasText(q.getCategory())) {
+            wrapper.eq(DeviceInfo::getDeviceInfoCategory, q.getCategory());
+        }
+        if (StringUtils.hasText(q.getSubCategory())) {
+            wrapper.eq(DeviceInfo::getDeviceInfoSubCategory, q.getSubCategory());
+        }
+        if (StringUtils.hasText(q.getStatus())) {
+            wrapper.eq(DeviceInfo::getDeviceInfoStatus, q.getStatus());
+        }
+        if (StringUtils.hasText(q.getOwnerId())) {
+            wrapper.eq(DeviceInfo::getDeviceInfoOwnerId, q.getOwnerId());
+        }
+        if (q.getOnline() != null) {
+            wrapper.eq(DeviceInfo::getDeviceInfoOnline, q.getOnline());
+        }
+        if (StringUtils.hasText(q.getKeyword())) {
+            String kw = q.getKeyword().trim();
+            wrapper.and(w -> w.like(DeviceInfo::getDeviceInfoName, kw)
+                    .or().like(DeviceInfo::getDeviceInfoIp, kw)
+                    .or().like(DeviceInfo::getDeviceInfoSerial, kw)
+                    .or().like(DeviceInfo::getDeviceInfoModel, kw)
+                    .or().like(DeviceInfo::getDeviceInfoCode, kw));
+        }
+        // 分组筛选：一台设备可属于多个分组，这里用关联表 EXISTS 过滤
+        if (StringUtils.hasText(q.getGroupId())) {
+            wrapper.apply("EXISTS (SELECT 1 FROM device_group_device gd "
+                    + "WHERE gd.device_id = device_info.device_info_id AND gd.group_id = {0})", q.getGroupId());
+        } else if (Boolean.TRUE.equals(q.getUngrouped())) {
+            wrapper.apply("NOT EXISTS (SELECT 1 FROM device_group_device gd "
+                    + "WHERE gd.device_id = device_info.device_info_id)");
+        }
+        SFunction<DeviceInfo, ?> sort = switch (q.getSortBy() == null ? "" : q.getSortBy()) {
+            case "name" -> DeviceInfo::getDeviceInfoName;
+            case "createdAt" -> DeviceInfo::getDeviceInfoCreatedAt;
+            case "lastOnlineAt" -> DeviceInfo::getDeviceInfoLastOnlineAt;
+            default -> DeviceInfo::getDeviceInfoUpdatedAt;
+        };
+        wrapper.orderBy(true, "asc".equalsIgnoreCase(q.getSortOrder()), sort);
+        deviceInfoMapper.selectPage(page, wrapper);
+        return PageResult.copy(page);
     }
 
     @Override
@@ -469,6 +570,26 @@ public class DeviceServiceImpl implements DeviceService {
         } finally {
             session.close();
         }
+    }
+
+    @Override
+    public DeviceStats stats(String orgId, String vendor) {
+        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(orgId)) {
+            wrapper.eq(DeviceInfo::getDeviceInfoOrgId, orgId);
+        }
+        if (StringUtils.hasText(vendor)) {
+            wrapper.eq(DeviceInfo::getDeviceInfoVendor, vendor);
+        }
+        long total = deviceInfoMapper.selectCount(wrapper);
+        long online = deviceInfoMapper.selectCount(
+                wrapper.clone().eq(DeviceInfo::getDeviceInfoOnline, true));
+        long offline = total - online;
+        long noLocation = deviceInfoMapper.selectCount(wrapper.clone()
+                .and(w -> w.isNull(DeviceInfo::getDeviceInfoLatitude)
+                        .or()
+                        .isNull(DeviceInfo::getDeviceInfoLongitude)));
+        return new DeviceStats(total, online, offline, noLocation);
     }
 }
 

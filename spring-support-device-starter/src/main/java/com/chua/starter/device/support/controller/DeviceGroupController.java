@@ -1,69 +1,90 @@
 package com.chua.starter.device.support.controller;
 
+import com.chua.starter.device.support.entity.DeviceGroupDevice;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
-import com.chua.starter.device.support.po.*;
+import com.chua.starter.device.support.po.DeviceGroupRequest;
+import com.chua.starter.device.support.po.DeviceGroupTreeNode;
 import com.chua.starter.device.support.service.DeviceGroupService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 设备分组接口。
+ *
+ * <p>分组是树形结构（group_parent 指向上级），设备与分组是多对多（device_group_device）；
+ * 一台设备可以同时出现在多个分组里。</p>
+ *
+ * <p>接口前缀与其他设备接口一致：{@code /api/device/group}</p>
+ */
 @RestController
-@RequestMapping("/device/group")
+@RequestMapping("/api/device/group")
 @RequiredArgsConstructor
-@Tag(name = "设备分组")
 public class DeviceGroupController {
 
     private final DeviceGroupService groupService;
     private final DeviceInfoMapper deviceInfoMapper;
 
+    /** 分组树（含每个分组的直属设备数；根节点里额外带一个「未分组」占位） */
     @GetMapping("/tree")
-    @Operation(summary = "分组树（含设备数）")
     public List<DeviceGroupTreeNode> tree() {
         return groupService.tree();
     }
 
+    /** 新建分组 */
     @PostMapping
-    @Operation(summary = "新建分组")
     public void create(@RequestBody DeviceGroupRequest req) {
         groupService.create(req);
     }
 
+    /** 更新分组（名称 / 备注 / 上级分组，带防环校验） */
     @PutMapping("/{groupId}")
-    @Operation(summary = "更新分组")
     public void update(@PathVariable String groupId, @RequestBody DeviceGroupRequest req) {
         groupService.update(groupId, req);
     }
 
+    /** 删除分组（子孙分组一并删除，设备本身不动） */
     @DeleteMapping("/{groupId}")
-    @Operation(summary = "删除分组")
     public void delete(@PathVariable String groupId) {
         groupService.delete(groupId);
     }
 
+    /** 分组下的设备列表 */
     @GetMapping("/{groupId}/devices")
-    @Operation(summary = "分组下设备列表")
     public List<DeviceInfo> groupDevices(@PathVariable String groupId) {
         List<String> ids = groupService.groupDeviceIds(groupId);
-        if (ids.isEmpty()) return List.of();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
         return ids.stream()
                 .map(deviceInfoMapper::selectById)
                 .filter(d -> d != null && d.getDeviceInfoId() != null)
                 .toList();
     }
 
+    /** 分配设备到分组（全量替换） */
     @PutMapping("/{groupId}/devices")
-    @Operation(summary = "分配设备到分组（全量替换）")
     public void assignDevices(@PathVariable String groupId, @RequestBody List<String> deviceIds) {
         groupService.assignDevices(groupId, deviceIds);
     }
 
+    /** 设备所属分组ID列表 */
     @GetMapping("/device/{deviceId}/groups")
-    @Operation(summary = "设备所属分组ID列表")
     public List<String> deviceGroups(@PathVariable String deviceId) {
         return groupService.deviceGroupIds(deviceId);
+    }
+
+    /** 设置设备所属分组（全量替换该设备的关联） */
+    @PutMapping("/device/{deviceId}/groups")
+    public void assignDeviceGroups(@PathVariable String deviceId, @RequestBody List<String> groupIds) {
+        groupService.assignDeviceGroups(deviceId, groupIds);
+    }
+
+    /** 所有设备-分组关联（前端批量回显用） */
+    @GetMapping("/assignments")
+    public List<DeviceGroupDevice> assignments() {
+        return groupService.assignments();
     }
 }
