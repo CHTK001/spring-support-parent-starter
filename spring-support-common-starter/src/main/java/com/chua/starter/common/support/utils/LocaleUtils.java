@@ -17,6 +17,12 @@ import java.util.Locale;
 public class LocaleUtils {
 
     /**
+     * 日志
+     */
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(LocaleUtils.class);
+
+    /**
      * 区域工具。
      */
     private LocaleUtils() {
@@ -60,7 +66,8 @@ public class LocaleUtils {
             Locale locale = null;
             try {
                 locale =Locale.forLanguageTag(language.split(",")[0]);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[locale] 解析语言标签失败，已忽略: {}", e.getMessage());
             }
             if(null != locale) {
                 return locale;
@@ -72,7 +79,8 @@ public class LocaleUtils {
             Locale locale = null;
             try {
                 locale = Locale.forLanguageTag(language);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[locale] 解析语言标签失败，已忽略: {}", e.getMessage());
             }
             if(null != locale) {
                 return locale;
@@ -84,7 +92,8 @@ public class LocaleUtils {
             Locale locale = null;
             try {
                 locale = Locale.forLanguageTag(language);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[locale] 解析语言标签失败，已忽略: {}", e.getMessage());
             }
             if(null != locale) {
                 return locale;

@@ -247,7 +247,7 @@ async function exercise(alias, host, port, nodeCfg = {}) {
     const echo = /HTTP\/1\.1 \d{3}/.test(r.text) || r.text.includes("PWTEST-FRAME-2026");
     const detail = echo
       ? `echo/resp="${r.text.slice(0, 40).replace(/[\r\n]+/g, "\\n")}"`
-      : `silent-drop(无帧处理器，符合实现)，连��仍 OPEN`;
+      : `silent-drop(无帧处理器，符合实现)，连接仍 OPEN`;
     return { ok: echo || alive === "OPEN", detail: alive === "OPEN" ? detail : `dead(${alive})` };
   }
   if (UDP_LIKE.has(alias)) {

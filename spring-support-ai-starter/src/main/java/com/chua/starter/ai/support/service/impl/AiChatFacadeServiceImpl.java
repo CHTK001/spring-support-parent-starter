@@ -42,6 +42,7 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -324,12 +325,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (onError != null) {
                 try {
                     onError.accept(e);
-                } catch (Exception ignored) {
+                } catch (Exception cbEx) {
+                    log.debug("[ai] 错误回调执行失败，已忽略: {}", cbEx.getMessage());
                 }
             }
             try {
                 emitter.completeWithError(e);
-            } catch (Exception ignored) {
+            } catch (Exception cbEx) {
+                log.debug("[ai] 下发错误失败，已忽略: {}", cbEx.getMessage());
             }
             return emitter;
         }
@@ -396,7 +399,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                     && onThinkingChunk != null) {
                                 try {
                                     onThinkingChunk.accept(reasoning);
-                                } catch (Exception ignored) {
+                                } catch (Exception e) {
+                                    log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                                 }
                             }
                             // 工具调用增量分流（函数调用），与正文相互独立
@@ -424,7 +428,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             if (onChunk != null) {
                                 try {
                                     onChunk.accept(chunk);
-                                } catch (Exception ignored) {
+                                } catch (Exception e) {
+                                    log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                                 }
                             }
                         },
@@ -465,7 +470,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             if (onError != null) {
                                 try {
                                     onError.accept(error);
-                                } catch (Exception ignored) {
+                                } catch (Exception e) {
+                                    log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                                 }
                             }
                             // 出错同样释放 Agent 私有连接，避免 stdio 进程泄漏
@@ -567,7 +573,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             if (forwardThinking && reasoning != null && !reasoning.isEmpty()) {
                                 try {
                                     emitter.send(SseEmitter.event().name("thinking").data(reasoning));
-                                } catch (Exception ignored) {
+                                } catch (Exception e) {
+                                    log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                                 }
                             }
                             String chunk = response.getContent() != null ? response.getContent() : "";
@@ -982,7 +989,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (extra != null && extra.get("load_strategy") != null) {
                 s = String.valueOf(extra.get("load_strategy")).trim().toLowerCase();
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
         }
         if (s == null || s.isEmpty()) {
             return "failover";
@@ -1684,6 +1692,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .authHeader(extraString(extra, "auth_header"))
                 .authPrefix(extraString(extra, "auth_prefix"))
                 .proxy(provider.getProxy())
+                .routes(ProviderRouteTargets.fromExtra(extra))
                 .build();
     }
 

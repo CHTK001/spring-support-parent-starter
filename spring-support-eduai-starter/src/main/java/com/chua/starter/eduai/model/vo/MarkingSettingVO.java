@@ -26,7 +26,7 @@ public class MarkingSettingVO {
      * 模型调用最大重试次数（0 = 不重试）
      */
     @Schema(description = "模型调用最大重试次数（0 = 不重试）")
-    private int retryTimes = 3;
+    private int retryTimes = 5;
 
     /**
      * 初始退避毫秒
@@ -44,7 +44,7 @@ public class MarkingSettingVO {
      * 退避上限毫秒（<=0 按 15000 处理）
      */
     @Schema(description = "退避上限毫秒（<=0 按 15000 处理）")
-    private long retryMaxBackoffMillis = 15000L;
+    private long retryMaxBackoffMillis = 20000L;
 
     /**
      * 除限流外，是否也重试瞬时故障（超时 / 502 / 503 / 连接异常）

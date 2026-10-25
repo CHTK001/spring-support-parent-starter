@@ -98,6 +98,24 @@ public class SysAiFaceLibrary {
     private String userId;
 
     /**
+     * 纬度（非必填）。
+     *
+     * <p>记录这条档案的「登记位置」，用于按地理范围筛选与展示。
+     * <b>与特征向量无关</b>：向量仍只存人脸特征（jvector），本表只存标量元数据。</p>
+     *
+     * <p>用 {@link java.math.BigDecimal} 而不是 {@code double}：经纬度要做等值/范围比较，
+     * 浮点的 1e-7 级表示误差会让"相同坐标"查不出来。数据库列为 DECIMAL(10,7)。</p>
+     */
+    @TableField("sys_ai_face_library_lat")
+    private java.math.BigDecimal lat;
+
+    /**
+     * 经度（非必填，语义同 {@link #lat}）。
+     */
+    @TableField("sys_ai_face_library_lng")
+    private java.math.BigDecimal lng;
+
+    /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_face_library_status")

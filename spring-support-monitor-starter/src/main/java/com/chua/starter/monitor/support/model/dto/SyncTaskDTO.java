@@ -1,5 +1,7 @@
 package com.chua.starter.monitor.support.model.dto;
 
+import java.util.List;
+
 /**
  * 数据同步任务的新建/修改入参。
  *
@@ -20,15 +22,18 @@ package com.chua.starter.monitor.support.model.dto;
  * @param sourceSql          源读取 SQL，{@code JDBC} 时必填，必须以 SELECT 开头
  * @param sourcePath         文件/目录路径（服务器本地绝对路径），{@code FILE}/{@code DIR} 时必填
  * @param sourceOptions      文件/目录源选项 JSON：{@code {format,delimiter,sheetIndex,pattern,recursive,afterProcess}}
- * @param targetDatasourceId 目标数据源 ID，必填，且必须是 jdbc 类型
- * @param targetTable        目标表名，必填；只允许字母、数字、下划线，可带一段 {@code 库.表}
- * @param columnMapping      字段映射 JSON 数组，可为 空表示按同名自动匹配
+ * @param targetDatasourceId 目标数据源 ID（多目标改造后**保留**为第一个目标的兼容值）
+ * @param targetTable        目标表名（同上，保留为第一个目标的兼容值）
+ * @param targets            多目标列表：一次采集写入多张表，每项一套独立配置；
+ *                           为空时按旧单目标字段（targetDatasourceId + targetTable）解析
+ * @param columnMapping      字段映射 JSON 数组，可为 空表示按同名自动匹配（多目标时按目标分别配置）
  * @param writeMode          写入模式，可为 空，默认 {@code INSERT}
  * @param batchSize          批量提交条数，可为 空，默认 500；小于 1 时按 500 处理
  * @param cron               定时表达式（Spring 6 段 cron），可为 空表示只手动执行
  * @param enabled            是否启用定时，可为 空，默认 0
  * @param syncMode           同步模式 FULL/INCREMENTAL，可为 空默认 FULL；增量仅 JDBC/HTTP 源可用
- * @param incField           增量字段，{@code INCREMENTAL} 时必填，只允许字母数字下划线
+ * @param incField           增量字段，{@code INCREMENTAL} 时必填；多个字段按顺序用逗号分隔
+ *                           （如 {@code created_at,id}），构成复合水位，只允许字母数字下划线
  * @param incBatchSize       增量每批数量（单次执行最多同步条数），可为 空表示不限
  * @param hookUrl            Hook 通知地址（http/https），可为 空表示不通知
  * @param hookNotify         Hook 通知时机 DONE/ROW，可为 空默认 DONE；全量模式固定按 DONE 处理
@@ -44,6 +49,7 @@ public record SyncTaskDTO(
         String sourceOptions,
         Long targetDatasourceId,
         String targetTable,
+        List<SyncTargetDTO> targets,
         String columnMapping,
         String writeMode,
         Integer batchSize,

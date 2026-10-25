@@ -144,6 +144,48 @@ public class AiSessionController {
     }
 
     /**
+     * 把 trace 行自带的耗时搬到「工具行」上，供历史渲染动态计时。
+     *
+     * <p>为什么需要：AgentScope 的 trace 是分阶段的（tool_call / tool_args / tool_result），
+     * 历史接口会把它们合成「一次调用一行」。合成过程一旦丢掉时序字段，
+     * 刷新后工具行就只剩名字与摘要，看不到「26.1s」这类耗时。</p>
+     *
+     * <p>取值优先级：durationMs（落库时由 endTimestamp - timestamp 算好）&gt;
+     * endTimestamp - timestamp（老数据兜底）。同时写顶层与 metadata 两个位置：
+     * 前端 {@code durationFor()} 读的是 {@code tool.metadata.durationMs}，
+     * 顶层键便于其它消费方直接读。</p>
+     *
+     * @param row    正在合成的工具行
+     * @param trace  该行对应的原始 trace
+     */
+    private static void carryTraceDuration(Map<String, Object> row, Map<?, ?> trace) {
+        if (row == null || trace == null || row.containsKey("durationMs")) {
+            return;
+        }
+        Long duration = null;
+        Object raw = trace.get("durationMs");
+        if (raw instanceof Number number) {
+            duration = number.longValue();
+        } else {
+            Object startObj = trace.get("timestamp");
+            Object endObj = trace.get("endTimestamp");
+            if (startObj instanceof Number start && endObj instanceof Number end) {
+                long diff = end.longValue() - start.longValue();
+                if (diff > 0) {
+                    duration = diff;
+                }
+            }
+        }
+        if (duration == null || duration <= 0) {
+            return;
+        }
+        row.put("durationMs", duration);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("durationMs", duration);
+        row.put("metadata", metadata);
+    }
+
+    /**
      * 解析待确认请求
      *
      * @return 待确认请求 Map；非 pending / 解析失败返回 null
@@ -646,6 +688,9 @@ public class AiSessionController {
                                     current.put("outcome", "success");
                                     synth.add(current);
                                     currentName = toolName;
+                                    // 打开新行时先把该 trace 自带的耗时任进来（有些实现的
+                                    // tool_call 行本身就是完整 span），后面 tool_result 再覆盖。
+                                    carryTraceDuration(current, mm);
                                     if ("tool_call".equals(kind)) {
                                         continue;
                                     }
@@ -661,6 +706,9 @@ public class AiSessionController {
                                             || text.startsWith("error")
                                             || text.contains("validation failed");
                                     current.put("outcome", failed ? "failed" : "success");
+                                    // 工具耗时：合成时必须一并带上，否则刷新后工具行只剩
+                                    // 名字与摘要、没有「26.1s」这类计时（用户 2026-10-24 要求）。
+                                    carryTraceDuration(current, mm);
                                 }
                             }
                         }

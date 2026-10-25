@@ -251,7 +251,7 @@ public class EduAiProperties {
         /**
          * 最大重试次数（0 = 不重试）
          */
-        private int times = 3;
+        private int times = 5;
 
         /**
          * 初始退避毫秒
@@ -266,7 +266,7 @@ public class EduAiProperties {
         /**
          * 退避上限毫秒（<=0 时按 15000 处理）
          */
-        private long maxBackoffMillis = 15000L;
+        private long maxBackoffMillis = 20000L;
 
         /**
          * 除限流外，是否也重试瞬时故障（超时 / 502 / 503 / 连接异常）

@@ -1,7 +1,11 @@
 package com.chua.starter.monitor.support.service.impl;
 
+import com.chua.starter.monitor.support.entity.MsSyncTaskRunLog;
+import com.chua.starter.monitor.support.mapper.MsSyncTaskRunLogMapper;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.PrintWriter;
@@ -18,24 +22,26 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 同步执行调试日志的内存缓冲：执行过程逐步写入，按任务保留最近若干次执行。
+ * 同步执行调试日志：内存缓冲（进行中实时追加）+ 数据库留档（历史可查）。
  *
- * <p><b>为什么只在内存</b>：调试日志是排障用的过程数据（量大、寿命短、后端重启即失效），
- * 落库会把写放大到每次执行几百行；内存环形缓冲——每次执行最多
- * {@value #MAX_LINES_PER_RUN} 行、每任务最多 {@value #MAX_RUNS_PER_TASK} 次、
- * 全局最多 {@value #MAX_TRACKED_TASKS} 个任务——足够覆盖「刚跑完就来看日志」的排障场景。</p>
+ * <p><b>为什么两套存储</b>：进行中的执行每 1.5 秒被界面轮询一次，只能走内存
+ * （反复读库会被日志写入放大）；而内存「每任务 10 次、后端重启即清空」的容量
+ * 决定了它无法回答「昨天那次为什么失败」。因此执行结束时把定格快照写入
+ * {@code ms_sync_task_run_log}，历史查询在「内存未命中」时回落到库。</p>
  *
  * <p><b>并发模型</b>：同一任务由 {@code runningTasks} 保证同一时刻只有一次执行
  * （begin 与 end 严格成对嵌套），不同任务可并行：进行中的日志按 taskId 分槽存放，
  * 已完成历史用 {@link LinkedHashMap}（插入序，超限淘汰最旧任务）并以整体锁保护。</p>
  *
  * <p>无进行中执行时写入一律静默丢弃（如预览路径复用了会打日志的私有方法），
- * 保证本组件不干扰任何业务分支。</p>
+ * 保证本组件不干扰任何业务分支。入库失败只记 WARN，不影响执行结果本身。</p>
  *
  * @author CH
  * @since 4.0.0.43
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class SyncTaskRunLogBuffer {
 
     /**
@@ -54,7 +60,17 @@ public class SyncTaskRunLogBuffer {
     private static final int MAX_TRACKED_TASKS = 300;
 
     /**
-     * 单行内容最大字符数（超出截断；堆栈也受此上限约束）
+     * 单个任务从库里回捞的历史执行条数上限
+     */
+    private static final int MAX_DB_RUNS_PER_TASK = 50;
+
+    /**
+     * 历史日志留档天数：超过的由 {@link #purgeExpired()} 清理
+     */
+    private static final int KEEP_DAYS = 30;
+
+    /**
+     * 一次执行里单行内容的最大字符数（超出截断；堆栈也受此上限约束）
      */
     private static final int MAX_MESSAGE_CHARS = 4000;
 
@@ -67,6 +83,11 @@ public class SyncTaskRunLogBuffer {
      * 执行开始时刻格式（年-月-日 时:分:秒）
      */
     private static final DateTimeFormatter RUN_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * 执行日志映射器（历史留档；入库失败不影响执行本身）
+     */
+    private final MsSyncTaskRunLogMapper runLogMapper;
 
     /**
      * 进行中的执行（任务 ID → 运行日志）
@@ -123,7 +144,8 @@ public class SyncTaskRunLogBuffer {
     }
 
     /**
-     * 结束一次执行：定格状态与耗时，转存到该任务的历史（最多 {@value #MAX_RUNS_PER_TASK} 次）。
+     * 结束一次执行：定格状态与耗时，转存到该任务的历史（内存保留最近
+     * {@value #MAX_RUNS_PER_TASK} 次），同时写库留档（历史可跨重启查询）。
      *
      * @param taskId 任务 ID
      * @param status 结束状态（{@code SUCCESS} / {@code FAILED}；见 {@link SyncTaskRunVO}）
@@ -154,10 +176,104 @@ public class SyncTaskRunLogBuffer {
                 oldest.remove();
             }
         }
+        persist(taskId, vo);
+    }
+
+    /**
+     * 把一次执行的定格快照写库留档。
+     *
+     * <p>任何异常都只记 WARN：日志留档失败不应让已经成功的数据同步被判定为失败。</p>
+     *
+     * @param taskId 任务 ID
+     * @param vo     定格快照
+     */
+    private void persist(Long taskId, SyncTaskRunLogVO vo) {
+        try {
+            MsSyncTaskRunLog entity = new MsSyncTaskRunLog();
+            entity.setRunLogTaskId(taskId);
+            entity.setRunLogTrigger(vo.trigger());
+            entity.setRunLogStatus(vo.status());
+            entity.setRunLogRunTime(LocalDateTime.parse(vo.runTime(), RUN_TIME));
+            entity.setRunLogCostMs(vo.costMs());
+            entity.setRunLogLines(joinLines(vo.lines()));
+            entity.setRunLogLineCount(vo.lines() == null ? 0 : vo.lines().size());
+            entity.setRunLogCreateTime(LocalDateTime.now());
+            runLogMapper.insert(entity);
+        } catch (Exception e) {
+            log.warn("[sync-log] 执行日志留档失败 taskId={}, runTime={}", taskId, vo.runTime(), e);
+        }
+    }
+
+    /**
+     * 把过程行拼成「时间\t级别\t内容」逐行文本。
+     *
+     * <p><b>正文里的 \t 不能替换</b>：Java 堆栈每一帧都以 {@code \tat ...} 开头，
+     * 替换成空格会永久改写堆栈内容（实测重启后 {@code \tat com.chua...} 变成
+     * {@code  at com.chua...}，与重启前不一致）。因此只按「行首第一个 \t 是时间、
+     * 第二个 \t 是级别」切分，正文里的 \t 原样保留。</p>
+     *
+     * @param lines 过程行
+     * @return 正文；无行时为空串
+     */
+    private static String joinLines(List<SyncTaskRunLogVO.Line> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(lines.size() * 96);
+        for (SyncTaskRunLogVO.Line line : lines) {
+            sb.append(line.time()).append('\t')
+                    .append(line.level()).append('\t')
+                    .append(line.message() == null ? "" : line.message())
+                    .append('\n');
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 解析库里的正文，还原成过程行。
+     *
+     * <p>只按每行前两处 \t 切分：正文里的换行（ERROR 堆栈）属于同一行内容。
+     * 行首必须匹配「时间\t级别\t」，因此堆栈里的 {@code \tat} 不会被误判为分隔。</p>
+     *
+     * @param text 正文
+     * @return 过程行；空正文返回空列表
+     */
+    private static List<SyncTaskRunLogVO.Line> splitLines(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
+        List<SyncTaskRunLogVO.Line> lines = new ArrayList<>();
+        // 一条记录以「时间\t级别\t」开头，按此模式切块，正文中的换行不会误切
+        String[] blocks = text.split("\n(?=\\d{2}:\\d{2}:\\d{2}\\.\\d{3}\t)");
+        for (String block : blocks) {
+            if (block.isBlank()) {
+                continue;
+            }
+            // joinLines 在每条记录末尾追加 '\n'；除最后一条外，这个 '\n' 已被
+            // split 的前瞻当作分隔符吃掉，最后一条则残留在块尾，读回会多出一个字符
+            // （实测 4010 → 4011，与原文不再逐字节一致）。这里去掉残留的那一个。
+            if (block.endsWith("\n")) {
+                block = block.substring(0, block.length() - 1);
+            }
+            int first = block.indexOf('\t');
+            int second = first < 0 ? -1 : block.indexOf('\t', first + 1);
+            if (first < 0 || second < 0) {
+                continue;
+            }
+            lines.add(new SyncTaskRunLogVO.Line(
+                    block.substring(0, first),
+                    block.substring(first + 1, second),
+                    block.substring(second + 1)));
+        }
+        return lines;
     }
 
     /**
      * 查询某任务的执行日志：进行中的执行（若在跑）在最前，其后是已完成历史（新在前）。
+     *
+     * <p>内存里只有最近 {@value #MAX_RUNS_PER_TASK} 次，超出部分从库里补：
+     * 按 {@code runTime} 去重（近似的秒级时刻足够区分同任务的不同执行，
+     * 同一秒内重复执行本身已被 {@code runningTasks} 互斥排除）。</p>
      *
      * @param taskId 任务 ID
      * @return 日志列表；无记录时为空列表
@@ -178,7 +294,65 @@ public class SyncTaskRunLogBuffer {
                 result.addAll(history);
             }
         }
+        appendDbHistory(taskId, result);
         return result;
+    }
+
+    /**
+     * 把库里的历史执行追加到结果尾部（内存已有同 {@code runTime} 的跳过）。
+     *
+     * @param taskId 任务 ID
+     * @param sink   结果列表（就地追加）
+     */
+    private void appendDbHistory(Long taskId, List<SyncTaskRunLogVO> sink) {
+        try {
+            List<MsSyncTaskRunLog> rows = runLogMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MsSyncTaskRunLog>()
+                            .eq(MsSyncTaskRunLog::getRunLogTaskId, taskId)
+                            .orderByDesc(MsSyncTaskRunLog::getRunLogRunTime)
+                            .last("LIMIT " + MAX_DB_RUNS_PER_TASK));
+            if (rows == null || rows.isEmpty()) {
+                return;
+            }
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (SyncTaskRunLogVO vo : sink) {
+                seen.add(vo.runTime());
+            }
+            for (MsSyncTaskRunLog row : rows) {
+                String runTime = row.getRunLogRunTime() == null
+                        ? "" : row.getRunLogRunTime().format(RUN_TIME);
+                if (!seen.add(runTime)) {
+                    continue;
+                }
+                sink.add(new SyncTaskRunLogVO(
+                        row.getRunLogTrigger(),
+                        row.getRunLogStatus(),
+                        runTime,
+                        row.getRunLogCostMs(),
+                        splitLines(row.getRunLogLines())));
+            }
+        } catch (Exception e) {
+            log.warn("[sync-log] 读取执行日志历史失败 taskId={}", taskId, e);
+        }
+    }
+
+    /**
+     * 清理超过 {@value #KEEP_DAYS} 天的执行日志。
+     *
+     * <p>由定时任务每天调用；删除失败只记 WARN，不影响其它功能。</p>
+     *
+     * @return 删除行数
+     */
+    public int purgeExpired() {
+        try {
+            LocalDateTime deadline = LocalDateTime.now().minusDays(KEEP_DAYS);
+            return runLogMapper.delete(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MsSyncTaskRunLog>()
+                            .lt(MsSyncTaskRunLog::getRunLogRunTime, deadline));
+        } catch (Exception e) {
+            log.warn("[sync-log] 清理过期执行日志失败", e);
+            return 0;
+        }
     }
 
     /**

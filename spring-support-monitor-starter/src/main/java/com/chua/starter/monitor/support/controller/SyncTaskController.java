@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.datasync.SyncWriteMode;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
+import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
@@ -167,6 +168,21 @@ public class SyncTaskController {
     @PostMapping("/preview")
     public ReturnResult<SyncPreviewVO> preview(@RequestBody SyncPreviewDTO request) {
         return syncTaskService.preview(request);
+    }
+
+    /**
+     * 校验源 SQL / 源文件能否真正读出列。
+     *
+     * <p>向导第①步「下一步」前调用：目标表还没填也能判定源侧是否可用，
+     * 不让用户在源表不存在时一路配到第②步才被一句「预览失败」打回。</p>
+     *
+     * @param request 源侧入参
+     * @return 源列；不可用时返回错误文案
+     */
+    @Operation(summary = "校验源可读性")
+    @PostMapping("/validate-source")
+    public ReturnResult<List<SyncColumnVO>> validateSource(@RequestBody SyncPreviewDTO request) {
+        return syncTaskService.validateSource(request);
     }
 
     /**

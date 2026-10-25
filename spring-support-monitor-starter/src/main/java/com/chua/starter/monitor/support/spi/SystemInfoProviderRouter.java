@@ -50,7 +50,11 @@ public class SystemInfoProviderRouter {
             }
             tried.add(provider.getClass().getSimpleName());
         }
-        throw new IllegalStateException("无可用 Provider for host: " + host + ", 已尝试: " + tried);
+        // 错误只带主机标识（id/名称/地址）与尝试过的通道，不把整段 MsServerHost
+        // toString（含 SSH 端口、Agent key、CPU/内存等配置）抖到前端页面上
+        String hostBrief = (host == null ? "null"
+                : "#" + host.getId() + " " + host.getServerHostName() + " " + host.getServerHostAddress()).trim();
+        throw new IllegalStateException("采集通道不可用（主机 " + hostBrief + "，已尝试: " + tried + "）");
     }
 
     /**

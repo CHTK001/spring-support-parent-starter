@@ -1329,11 +1329,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                             // 判断题：题目整段（含尾部页脚污染）一旦被规则切题收进作答，
                             // stripLeadingStem 的 startsWith 会因尾注不匹配而剥离失败，导致
                             // 整段题干冒充作答 → 「与标准答案不一致」。判断题的实质作答只有
-                            // 对/错/√/× 符号：剥不掉题干又没有判定符号时，按「未作答」处理。
+                            // 对/错/√/× 符号：剥离题干后仍提取不到判定符号（题干尾段、页脚
+                            // 或空），一律按未作答置空——不依赖题干互含判断（OCR 题干与题库
+                            // 标点/空格常有差异，互含判断会漏）。
                             cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
-                            if (StringUtils.isNotBlank(cleanedAnswer)
-                                    && EduAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null
-                                    && judgeAnswerIsStemLike(cleanedAnswer, question.getQuestionStem())) {
+                            if (EduAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null) {
                                 cleanedAnswer = "";
                             }
                         } else {
@@ -2244,6 +2244,51 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 anchor.put("answer", answer);
             }
         }
+        // 识别失败题（有题号锚点、但 OCR 没产出结果行）：补一行「待老师协助」占位，
+        // 让老师在详情页可见、可补录，而不是静默缺行。self(自有卷)与 any(外来卷)
+        // 用不同提示文案，便于老师按卷型处理。
+        boolean anyMode = "ANY".equalsIgnoreCase(out.get("mode") == null ? "" : String.valueOf(out.get("mode")));
+        Set<String> resultNos = new HashSet<>();
+        for (Map<String, Object> q : displayQuestions) {
+            Object qNo = q.get("no");
+            if (qNo != null) {
+                resultNos.add(normalizeNo(String.valueOf(qNo)));
+            }
+        }
+        if (displayAnchors != null) {
+            Set<String> filled = new HashSet<>();
+            var unrecognized = new ArrayList<Map<String, Object>>();
+            for (Map<String, Object> anchor : displayAnchors) {
+                if (anchor.get("no") == null) {
+                    continue;
+                }
+                String no = normalizeNo(String.valueOf(anchor.get("no")));
+                if (no.isEmpty() || resultNos.contains(no) || !filled.add(no)) {
+                    continue;
+                }
+                var placeholder = new LinkedHashMap<String, Object>();
+                placeholder.put("resultId", -1);
+                placeholder.put("questionId", null);
+                placeholder.put("no", anchor.get("no"));
+                placeholder.put("stem", anchor.get("stem") == null ? null : anchor.get("stem"));
+                placeholder.put("studentAnswer", "");
+                placeholder.put("maxScore", anchor.get("score") == null ? null : anchor.get("score"));
+                placeholder.put("source", "UNRECOGNIZED");
+                // 自有卷有题库可核对题号；外来卷需老师人工按卷面补录
+                placeholder.put("comment", anyMode
+                        ? "识别失败，请老师对照卷面人工补录本题"
+                        : "识别失败，请核对题库题号后补录本题");
+                placeholder.put("unrecognized", true);
+                unrecognized.add(placeholder);
+            }
+            if (!unrecognized.isEmpty()) {
+                var merged = new ArrayList<Map<String, Object>>();
+                merged.addAll(displayQuestions);
+                merged.addAll(unrecognized);
+                displayQuestions = merged;
+                log.info("[EduMarking] 识别失败题补占位行: taskId={}, count={}, mode={}", taskId, unrecognized.size(), out.get("mode"));
+            }
+        }
         out.put("questionAnchors", displayAnchors);
         out.put("questions", displayQuestions);
         out.put("overallComment", resolveOverallComment(questions, content));
@@ -2654,6 +2699,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         Map<Long, Integer> fullScores = resolveFullScores(findSheet(dto.taskId()));
         int fallbackScore = properties.getMarking().getMaxScore();
         for (MarkingConfirmDTO.ScoreAdjustment adj : dto.adjustments()) {
+            if (adj.resultId() == null || adj.resultId() <= 0) {
+                // 识别失败补录：resultId 为负/空且带题号 → 为老师补录的新增结果行落库
+                if (StringUtils.isNotBlank(adj.no())) {
+                    upsertUnrecognizedResult(dto.taskId(), adj);
+                }
+                continue;
+            }
             EduMarkingResult result = markingResultMapper.selectById(adj.resultId());
             if (result == null) {
                 continue;
@@ -2688,6 +2740,114 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             log.info("[EduAi] 教师满意度已记录: taskId={}, satisfaction={}", dto.taskId(), dto.satisfaction());
         }
         return true;
+    }
+
+    /**
+     * 识别失败题的教师补录：按题号新建/更新一条结果行，落老师分与评语。
+     *
+     * <p>OCR 对个别题（版面文字缺失等）没产出结果行，结构接口补了
+     * {@code unrecognized=true} 的占位行（{@code resultId=-1}）。老师在该行上
+     * 打分/写评语后保存，这里把它真正落库：SELF 卷尽量回题库取题型/题干/满分，
+     * 拿不到也以老师提交的分与整卷兜底满分落一条「人工补录」结果行。</p>
+     *
+     * @param taskId 任务标识
+     * @param adj    包含题号的补录调整
+     */
+    private void upsertUnrecognizedResult(String taskId, MarkingConfirmDTO.ScoreAdjustment adj) {
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            return;
+        }
+        String no = StringUtils.trimToNull(adj.no());
+        if (no == null) {
+            return;
+        }
+        String norm = normalizeNo(no);
+        // 已有按同题号的结果行（可能先前补录过）：更新而不是重复插入
+        List<EduMarkingResult> existing = markingResultMapper.selectByTaskId(taskId);
+        for (EduMarkingResult row : existing) {
+            Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
+            String rowNo = detail.get("recognizedNo") == null ? "" : String.valueOf(detail.get("recognizedNo"));
+            if (normalizeNo(rowNo).equals(norm)
+                    && row.getMarkingResultQuestionId() != null && row.getMarkingResultQuestionId() > 0) {
+                int maxScore = Math.max(1, safeScore(parseDetailMaxScoreOrNull(row.getMarkingResultDetail())));
+                Integer score = clampScore(adj.score(), maxScore);
+                row.setMarkingResultTeacherScore(score);
+                row.setMarkingResultScore(score);
+                row.setMarkingResultAiScore(0);
+                row.setMarkingResultAiComment("识别失败，由老师人工补录");
+                if (adj.comment() != null) {
+                    row.setMarkingResultTeacherComment(adj.comment());
+                    row.setMarkingResultComment(adj.comment());
+                }
+                row.setMarkingResultStatus(STATUS_TEACHER_DONE);
+                row.setUpdateTime(LocalDateTime.now());
+                markingResultMapper.updateById(row);
+                log.info("[EduAi] 识别失败题更新补录: taskId={}, no={}, score={}", taskId, norm, score);
+                return;
+            }
+        }
+
+        EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
+                ? null : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
+        Long questionId = 0L;
+        int maxScore = 0;
+        String stem = null;
+        var detailMap = new LinkedHashMap<String, Object>();
+        detailMap.put("scan", true);
+        detailMap.put("unrecognized", true);
+        detailMap.put("recognizedNo", no);
+        if (task.getMarkingTaskPaperId() != null && !"ANY".equalsIgnoreCase(task.getMarkingTaskMode())) {
+            List<EduPaperQuestion> relations = paperQuestionMapper.selectByPaperId(task.getMarkingTaskPaperId());
+            for (EduPaperQuestion relation : relations) {
+                if (StringUtils.isNotBlank(relation.getPaperQuestionNo())
+                        && normalizeNo(relation.getPaperQuestionNo()).equals(norm)) {
+                    questionId = relation.getPaperQuestionQuestionId();
+                    maxScore = relation.getPaperQuestionScore() == null ? 0 : relation.getPaperQuestionScore();
+                    EduQuestion question = questionId != null && questionId > 0
+                            ? questionMapper.selectById(questionId) : null;
+                    if (question != null) {
+                        stem = question.getQuestionStem();
+                    }
+                    detailMap.put("maxScore", maxScore);
+                    break;
+                }
+            }
+        }
+        if (maxScore <= 0) {
+            maxScore = Math.max(1, properties.getMarking().getMaxScore());
+        }
+        detailMap.put("maxScore", maxScore);
+        if (StringUtils.isNotBlank(stem)) {
+            detailMap.put("stem", stem);
+        }
+        detailMap.put("studentAnswer", "");
+        detailMap.put("source", "MANUAL");
+        EduMarkingResult row = new EduMarkingResult();
+        row.setOwnerUserId(task.getOwnerUserId());
+        row.setMarkingResultAnswerSheetId(sheet == null ? null : sheet.getAnswerSheetId());
+        row.setMarkingResultQuestionId(questionId);
+        row.setMarkingResultTaskId(taskId);
+        Integer score = clampScore(adj.score(), maxScore);
+        row.setMarkingResultTeacherScore(score);
+        row.setMarkingResultScore(score);
+        row.setMarkingResultAiScore(0);
+        row.setMarkingResultAiComment("识别失败，由老师人工补录");
+        if (adj.comment() != null) {
+            row.setMarkingResultTeacherComment(adj.comment());
+            row.setMarkingResultComment(adj.comment());
+        }
+        row.setMarkingResultStatus(STATUS_TEACHER_DONE);
+        row.setMarkingResultDetail(Json.toJson(detailMap));
+        row.setCreateTime(LocalDateTime.now());
+        row.setUpdateTime(LocalDateTime.now());
+        markingResultMapper.insert(row);
+        log.info("[EduAi] 识别失败题人工补录落库: taskId={}, no={}, score={}", taskId, norm, score);
+    }
+
+    /** 安全取分：null/负值转 0。 */
+    private static int safeScore(Integer s) {
+        return s == null || s < 0 ? 0 : s;
     }
 
     /**

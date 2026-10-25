@@ -635,11 +635,14 @@ CREATE TABLE IF NOT EXISTS `sys_ai_face_library` (
   `update_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `update_by` INT DEFAULT NULL COMMENT 'ID',
   `sys_ai_face_library_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属账号（按账号隔离；NULL=无主历史行）',
+  `sys_ai_face_library_lat` DECIMAL(10,7) DEFAULT NULL COMMENT '纬度（非必填，WGS84，-90~90）',
+  `sys_ai_face_library_lng` DECIMAL(10,7) DEFAULT NULL COMMENT '经度（非必填，WGS84，-180~180）',
   PRIMARY KEY (`sys_ai_face_library_id`),
   UNIQUE KEY `sys_ai_face_library_owner_vector` (`sys_ai_face_library_user_id`, `sys_ai_face_library_vector_id`),
   KEY `sys_ai_face_library_user` (`sys_ai_face_library_user_id`),
   KEY `sys_ai_face_library_face_group` (`sys_ai_face_library_group`),
-  KEY `sys_ai_face_library_face_name` (`sys_ai_face_library_name`)
+  KEY `sys_ai_face_library_face_name` (`sys_ai_face_library_name`),
+  KEY `sys_ai_face_library_geo` (`sys_ai_face_library_lat`, `sys_ai_face_library_lng`)
 ) COMMENT='AI ';
 CREATE TABLE IF NOT EXISTS `sys_ai_face_recognize_record` (
   `sys_ai_face_recognize_record_id` INT NOT NULL AUTO_INCREMENT,
@@ -811,6 +814,11 @@ CREATE TABLE IF NOT EXISTS `sys_ai_reid_library` (
   `sys_ai_reid_library_group` VARCHAR(64) DEFAULT 'default' COMMENT ' face_group',
   `sys_ai_reid_library_meta` VARCHAR(2048) DEFAULT NULL COMMENT '(JSON)',
   `sys_ai_reid_library_status` INT NOT NULL DEFAULT 1 COMMENT '10',
+  `sys_ai_reid_library_user_id` VARCHAR(64) DEFAULT NULL COMMENT '归属账号（按账号隔离；NULL=无主历史行）',
+  `sys_ai_reid_library_track_id` VARCHAR(64) DEFAULT NULL COMMENT '跨帧轨迹ID - 同一条轨迹的多条观测共享它',
+  `sys_ai_reid_library_camera_id` VARCHAR(128) DEFAULT NULL COMMENT '摄像头标识（跨镜判定依据）',
+  `sys_ai_reid_library_lat` DECIMAL(10,7) DEFAULT NULL COMMENT '纬度（非必填，WGS84，-90~90）',
+  `sys_ai_reid_library_lng` DECIMAL(10,7) DEFAULT NULL COMMENT '经度（非必填，WGS84，-180~180）',
   `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `create_by` INT DEFAULT NULL COMMENT 'ID',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
@@ -818,10 +826,12 @@ CREATE TABLE IF NOT EXISTS `sys_ai_reid_library` (
   `update_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `update_by` INT DEFAULT NULL COMMENT 'ID',
   PRIMARY KEY (`sys_ai_reid_library_id`),
-  UNIQUE KEY `sys_ai_reid_library_reid_vector_id` (`sys_ai_reid_library_vector_id`),
+  UNIQUE KEY `sys_ai_reid_library_owner_vector` (`sys_ai_reid_library_user_id`, `sys_ai_reid_library_vector_id`),
+  KEY `sys_ai_reid_library_user` (`sys_ai_reid_library_user_id`),
   KEY `sys_ai_reid_library_reid_group` (`sys_ai_reid_library_group`),
   KEY `sys_ai_reid_library_reid_face_id` (`sys_ai_reid_library_face_id`),
-  KEY `sys_ai_reid_library_reid_name` (`sys_ai_reid_library_name`)
+  KEY `sys_ai_reid_library_reid_name` (`sys_ai_reid_library_name`),
+  KEY `sys_ai_reid_library_geo` (`sys_ai_reid_library_lat`, `sys_ai_reid_library_lng`)
 ) COMMENT='AI ReID';
 CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_entity_attribute` (
   `attr_id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -1746,6 +1756,116 @@ SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
           AND COLUMN_NAME = 'sys_ai_image_library_user_id'),
         'SELECT 1',
         'ALTER TABLE `sys_ai_image_library` ADD COLUMN `sys_ai_image_library_user_id` VARCHAR(64) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- =====================================================================
+-- 底库归属 + 经纬度（原 V4.0.0.47 系列，已并入本文件）
+--
+-- 经纬度语义：**非必填**，记录这条档案「登记位置」，用于按地理位置筛选/展示；
+-- 与特征向量无关 —— 向量仍只存特征（jvector），本表只存标量元数据。
+-- 用 DECIMAL(10,7) 而非 DOUBLE：经纬度需要稳定的小数位比较与索引，
+-- 浮点会带来 1e-7 级的表示误差，两个"相同"坐标等值查询可能不命中。
+-- =====================================================================
+
+-- ---------- 人脸库：经纬度 ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
+          AND COLUMN_NAME = 'sys_ai_face_library_lat'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_face_library` ADD COLUMN `sys_ai_face_library_lat` DECIMAL(10,7) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
+          AND COLUMN_NAME = 'sys_ai_face_library_lng'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_face_library` ADD COLUMN `sys_ai_face_library_lng` DECIMAL(10,7) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 重识别库：归属账号 ----------
+-- 重识别库与其它底库同口径按账号隔离；存量行 user_id 为 NULL 即"无主历史行"，
+-- 不设默认值，避免悄悄落到某个账号名下。
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND COLUMN_NAME = 'sys_ai_reid_library_user_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_user_id` VARCHAR(64) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 重识别库：轨迹与摄像头 ----------
+-- 跨帧轨迹不做单独一张表：轨迹是「同一 track_id 的观测按时间汇聚」的结果，
+-- 另建表就要维护两份一致的状态（观测迁轨迹、轨迹删观测），而汇聚查询本就是一次 GROUP BY。
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND COLUMN_NAME = 'sys_ai_reid_library_track_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_track_id` VARCHAR(64) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND COLUMN_NAME = 'sys_ai_reid_library_camera_id'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_camera_id` VARCHAR(128) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND INDEX_NAME = 'sys_ai_reid_library_track'),
+        'SELECT 1',
+        'CREATE INDEX `sys_ai_reid_library_track` ON `sys_ai_reid_library` (`sys_ai_reid_library_track_id`)'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 重识别库：经纬度 ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND COLUMN_NAME = 'sys_ai_reid_library_lat'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_lat` DECIMAL(10,7) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND COLUMN_NAME = 'sys_ai_reid_library_lng'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_lng` DECIMAL(10,7) NULL'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 重识别库：去掉 vector_id 全局唯一键，改按 (账号, vector_id) 唯一 ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND INDEX_NAME = 'sys_ai_reid_library_reid_vector_id'),
+        'ALTER TABLE `sys_ai_reid_library` DROP INDEX `sys_ai_reid_library_reid_vector_id`',
+        'SELECT 1'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND INDEX_NAME = 'sys_ai_reid_library_owner_vector'),
+        'SELECT 1',
+        'CREATE UNIQUE INDEX `sys_ai_reid_library_owner_vector` ON `sys_ai_reid_library` (`sys_ai_reid_library_user_id`, `sys_ai_reid_library_vector_id`)'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND INDEX_NAME = 'sys_ai_reid_library_user'),
+        'SELECT 1',
+        'CREATE INDEX `sys_ai_reid_library_user` ON `sys_ai_reid_library` (`sys_ai_reid_library_user_id`)'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ---------- 经纬度复合索引（按地理范围筛选） ----------
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
+          AND INDEX_NAME = 'sys_ai_face_library_geo'),
+        'SELECT 1',
+        'CREATE INDEX `sys_ai_face_library_geo` ON `sys_ai_face_library` (`sys_ai_face_library_lat`, `sys_ai_face_library_lng`)'));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
+          AND INDEX_NAME = 'sys_ai_reid_library_geo'),
+        'SELECT 1',
+        'CREATE INDEX `sys_ai_reid_library_geo` ON `sys_ai_reid_library` (`sys_ai_reid_library_lat`, `sys_ai_reid_library_lng`)'));
 PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------- 归属列普通索引（供按账号过滤，全库扫描必须走它） ----------

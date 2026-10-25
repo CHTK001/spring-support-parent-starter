@@ -93,10 +93,14 @@ public class ApmController {
     private final com.chua.starter.hotsport.support.config.HotsportProperties hotsportProperties;
 
     /**
-     * SSE 推送线程池（单线程足够，间隔 3s）。
+     * SSE 推送线程池。
+     *
+     * <p>不能是单线程：{@code /stream} 与 {@code /stream/logs} 的所有订阅者共用这一个
+     * 调度器，某个客户端断开后写入阻塞会把整站 SSE 一起拖死；给小线程池后单个慢客户端
+     * 最多占用一个线程。</p>
     */
     private final ScheduledExecutorService sseExecutor =
-            Executors.newSingleThreadScheduledExecutor(r -> {
+            Executors.newScheduledThreadPool(4, r -> {
                 Thread t = new Thread(r, "hotsport-sse");
                 t.setDaemon(true);
                 return t;
@@ -877,6 +881,76 @@ public class ApmController {
     }
 
     /**
+     * 调用量 / 耗时趋势（按时间桶聚合，Dashboard 折线图）。
+     *
+     * @param minutes       统计窗口（分钟）
+     * @param bucketSeconds 桶宽（秒）
+     * @return 趋势点列表
+     */
+    @GetMapping("/trend")
+    public ReturnResult<List<Map<String, Object>>> trend(
+            @RequestParam(defaultValue = "30") int minutes,
+            @RequestParam(defaultValue = "60") int bucketSeconds) {
+        return ReturnResult.ok(apmQueryService.trend(minutes, bucketSeconds));
+    }
+
+    /**
+     * 日志等级分布。
+     *
+     * @return 等级统计列表
+     */
+    @GetMapping("/log-stats")
+    public ReturnResult<List<Map<String, Object>>> logStats() {
+        return ReturnResult.ok(apmQueryService.logStats());
+    }
+
+    /**
+     * 端点时序统计（按「时间桶 × 端点」聚合）。
+     *
+     * @param service       服务名过滤（空表示全部）
+     * @param minutes       统计窗口（分钟）
+     * @param bucketSeconds 桶宽（秒）
+     * @return 端点点序列
+     */
+    @GetMapping("/endpoint-stats")
+    public ReturnResult<List<Map<String, Object>>> endpointStats(
+            @RequestParam(defaultValue = "") String service,
+            @RequestParam(defaultValue = "60") int minutes,
+            @RequestParam(defaultValue = "60") int bucketSeconds) {
+        return ReturnResult.ok(apmQueryService.endpointStats(service, minutes, bucketSeconds));
+    }
+
+    /**
+     * 协议分布统计。
+     *
+     * @return 协议统计列表
+     */
+    @GetMapping("/protocol-stats")
+    public ReturnResult<List<Map<String, Object>>> protocolStats() {
+        return ReturnResult.ok(apmQueryService.protocolStats());
+    }
+
+    /**
+     * 线程池视图（JVM 实时线程按池分组）。
+     *
+     * @return 线程池列表
+     */
+    @GetMapping("/thread-pools")
+    public ReturnResult<List<Map<String, Object>>> threadPools() {
+        return ReturnResult.ok(apmQueryService.threadPools());
+    }
+
+    /**
+     * 连接池近似视图（按目标地址聚合调用）。
+     *
+     * @return 连接统计列表
+     */
+    @GetMapping("/connection-pools")
+    public ReturnResult<List<Map<String, Object>>> connectionPools() {
+        return ReturnResult.ok(apmQueryService.connectionPools());
+    }
+
+    /**
      * 数据清理（按保留时长删除过期记录）。
      *
      * @param retentionMs 保留时长（毫秒）
@@ -1096,7 +1170,7 @@ public class ApmController {
                 // 并入最近告警（前端 Dashboard 可选消费）
                 stats.put("recentAlerts", alertMonitorService.recentAlerts());
                 String json = objectMapper.writeValueAsString(Map.of("ts", System.currentTimeMillis(), "data", stats));
-                emitter.send(SseEmitter.event().name("stats").data(json));
+                emitter.send(SseEmitter.event().name("stats").data(json, MediaType.TEXT_PLAIN));
             } catch (IOException e) {
                 emitter.complete();
             }
@@ -1135,7 +1209,7 @@ public class ApmController {
                         "items", items,
                         "lastSeq", lastSeq);
                 String json = objectMapper.writeValueAsString(payload);
-                emitter.send(SseEmitter.event().name("log").data(json));
+                emitter.send(SseEmitter.event().name("log").data(json, MediaType.TEXT_PLAIN));
             } catch (IOException e) {
                 emitter.complete();
             }

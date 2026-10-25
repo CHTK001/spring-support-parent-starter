@@ -1248,7 +1248,8 @@ public class ServiceInstanceManager {
                                 writeAccessLog(inst, exchange, effModel, modeToProtocol(mode),
                                         502, null, System.currentTimeMillis() - start);
                                 consumeQuota(token, null);
-                            } catch (Exception ignored) {
+                            } catch (Exception e) {
+                                log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                             }
                         },
                         reasoning -> {
@@ -1458,7 +1459,8 @@ public class ServiceInstanceManager {
                     int idx = configured.indexOf(':');
                     return idx >= 0 ? configured.substring(idx + 1) : configured;
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         }
         // 不写死兜底模型名：上面三级都取不到时交给统一解析器（它会连带 Bot 默认一起看），
@@ -1515,7 +1517,8 @@ public class ServiceInstanceManager {
             Map<String, Object> err = new LinkedHashMap<>();
             err.put("error", Map.of("type", type, "message", message));
             writeJsonResponse(exchange, status, err);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
         }
     }
 
@@ -1585,7 +1588,8 @@ public class ServiceInstanceManager {
                 if (os != null) {
                     os.close();
                 }
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                log.debug("[ai] IO 操作失败，已忽略: {}", e.getMessage());
             }
         }
     }
