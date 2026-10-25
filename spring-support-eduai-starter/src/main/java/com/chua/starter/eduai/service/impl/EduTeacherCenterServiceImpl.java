@@ -377,7 +377,9 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         Map<Long, Integer> sheetBestScore = new java.util.LinkedHashMap<>();
         for (EduMarkingResult r : results) {
             Long sheetId = r.getMarkingResultAnswerSheetId();
-            if (sheetId == null) continue;
+            if (sheetId == null) {
+            continue;
+        }
             int candidate = r.getMarkingResultTeacherScore() != null
                     ? r.getMarkingResultTeacherScore()
                     : r.getMarkingResultScore() != null ? r.getMarkingResultScore() : 0;
@@ -481,7 +483,9 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         long teacherDone = 0;
         for (EduMarkingTask t : tasks) {
             int status = t.getMarkingTaskStatus() == null ? 0 : t.getMarkingTaskStatus();
-            if (status == 0) taskStatus.get(0).setCount(taskStatus.get(0).getCount() + 1);
+            if (status == 0) {
+            taskStatus.get(0).setCount(taskStatus.get(0).getCount() + 1);
+        }
             else if (status == 1) taskStatus.get(1).setCount(taskStatus.get(1).getCount() + 1);
             else if (status == 2) taskStatus.get(2).setCount(taskStatus.get(2).getCount() + 1);
             else taskStatus.get(3).setCount(taskStatus.get(3).getCount() + 1);
@@ -504,14 +508,20 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
                     new QueryWrapper<EduMarkingResult>()
                             .in("marking_result_task_id", taskIds));
             for (EduMarkingResult r : results) {
-                if (r.getMarkingResultQuestionId() == null || r.getMarkingResultQuestionId() <= 0) continue;
+                if (r.getMarkingResultQuestionId() == null || r.getMarkingResultQuestionId() <= 0) {
+            continue;
+        }
                 int finalScore = r.getMarkingResultTeacherScore() != null
                         ? r.getMarkingResultTeacherScore()
                         : (r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
                 int maxScore = parseDetailMaxScore(r.getMarkingResultDetail());
-                if (maxScore <= 0) continue;
+                if (maxScore <= 0) {
+            continue;
+        }
                 double rate = (double) finalScore / maxScore;
-                if (rate < 0.6) rateLow++;
+                if (rate < 0.6) {
+            rateLow++;
+        }
                 else if (rate < 0.8) rateMid++;
                 else rateHigh++;
             }
@@ -532,7 +542,9 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
                 .count();
         Map<Long, Integer> wrongByQuestion = new LinkedHashMap<>();
         for (EduWrongQuestion w : wrongs) {
-            if (w.getWrongQuestionQuestionId() == null || w.getWrongQuestionQuestionId() <= 0) continue;
+            if (w.getWrongQuestionQuestionId() == null || w.getWrongQuestionQuestionId() <= 0) {
+            continue;
+        }
             wrongByQuestion.merge(w.getWrongQuestionQuestionId(),
                     w.getWrongQuestionWrongCount() == null ? 1 : w.getWrongQuestionWrongCount(), Integer::sum);
         }

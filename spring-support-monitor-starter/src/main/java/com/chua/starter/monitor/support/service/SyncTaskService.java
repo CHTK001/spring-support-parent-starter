@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
+import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
@@ -98,4 +99,18 @@ public interface SyncTaskService {
      * @return 预览结果
      */
     ReturnResult<SyncPreviewVO> preview(SyncPreviewDTO request);
+
+    /**
+     * 校验源 SQL 能否真正读出列（不做目标侧检查）。
+     *
+     * <p><b>为什么单独一个方法</b>：向导第①步点「下一步」时目标表还没填，
+     * 但源 SQL 是否可用已经可以判定。早先源表不存在要到第②步点预览才暴露，
+     * 用户会先配完目标表、映射，再被一句「预览失败」打回第①步，白走一整套。
+     * 这里只读源列，与 {@link #preview} 的源侧分支同一实现（{@code loadSourceColumns}），
+     * 因此「下一步放行」与「预览能配」永远不会给出相反结论。</p>
+     *
+     * @param request 源侧入参（只用 sourceType / sourceDatasourceId / sourceSql / sourcePath / sourceOptions）
+     * @return 源列；源不可用时返回错误文案（成功即代表可进入下一步）
+     */
+    ReturnResult<List<SyncColumnVO>> validateSource(SyncPreviewDTO request);
 }

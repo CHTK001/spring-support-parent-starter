@@ -78,11 +78,13 @@ plugin:
     # 静态 token 有效期。24h 偏长：服务管理属于管理面操作，
     # 缩短到 2h 让泄露的 token 更难被利用；配合重新登录成本可接受。
     static-token-expire-seconds: 7200
-    # 不放行任何 /ms 路径。此处为空表示只保留内置默认白名单
-    # （captcha / login / oauth / doc.html 等），服务管理接口全部需要凭据。
-    # 已核对 AuthClientProperties.DEFAULT_WHITELIST：其中不含 /ms，
-    # 所以开 enable=true 后管理接口确实会被保护。
-    whitelist: []
+    # 不放行任何 /ms 路径。此处只放行「登录页/登录态落地前」必须无凭据拉取的默认配置，
+    # 其余服务管理接口全部需要凭据。
+    # 已核对 AuthClientProperties.DEFAULT_WHITELIST：其中不含 /ms，也不含 /v2/setting/default，
+    # 所以开 enable=true 后管理接口确实会被保护；/v2/setting/default 属登录流程必需，
+    # 必须显式放行（同 eduai 先例），否则登录页挂载即 403、前端误判登录失效弹回登录页。
+    whitelist:
+      - /v2/setting/default
   file-storage:
     # 文件服务器私有桶保持开启：enable=false 或留空时按公共桶运行，
     # 目录列表与文件内容将对能连到端口的人可读

@@ -96,21 +96,52 @@ plugin:
     enable: false
     whitelist:
       - /ms/**
+      # 登录页挂载/登录态落地前拉取默认配置，不带有效令牌；不放行会 403 被前端误判登录失效
+      # （同 eduai 先例 spring-support-eduai-starter application.yml）。详见 AuthFilter 白名单机制。
+      - /v2/setting/default
     # 文件服务器私有桶（逗号分隔，* 表示全部）：由服务管理节点自动挂载的 OAuthServerFilter 执行鉴权；
     # enable=false 或留空时文件服务器按公共桶运行；/ot 一次性链接本身即凭证，始终放行
     file-storage:
       private-buckets: localFileStorage
   # 服务器目录浏览（filesystem-starter 的 FileDirController）：数据同步的「选择文件 / 文件夹」
   # 和 AI 的目录选择器都走 /v2/file/dir/list。接口本身是 @Permission(admin/superadmin)，
-  # 生产由 OAuth 把关；这里只负责把控制器注册出来（FileSystemAutoConfiguration 已被排除）。
+  # 生产由 OAuth 把关。控制器由本应用的 MonitorFileStorageGatewayConfig#fileDirController
+  # 注册（FileSystemAutoConfiguration 已被上面 exclude，原注册点不存在）；本开关只控制
+  # 是否真正对外开放：关闭时接口返回业务错误而不是 404。
   filesystem:
     dir-list: true
+    # 默认存储桶：/v2/file/server-config 会把这里的值作为 bucket 下发给前端，
+    # 前端拿它拼 /fs/{bucket}。必须与 MonitorFileStorageGatewayConfig.BUCKET
+    # （= localFileStorage，即网关实际注册的桶名）一致。
+    # 不配时该字段为 null，前端回退到自己的默认值 local —— 落到一个不存在的桶，
+    # 文件管理页直接 404/空列表，且报错信息与「服务没起来」无法区分。
+    default-provider: localFileStorage
   # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
   # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
   # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。
   # 关闭自建配置，由 Spring Boot 默认 executor 接管 @Async。
   async:
     enable: false
+  # 声明式缓存（对应 @Cacheable / @CacheEvict：monitorTask、monitorConfig、monitor、
+  # monitorGateway、monitorMetricConfig、monitor:alarm:*、monitor:metric:latest）。
+  # 必须开启多级缓存管理器（CacheConfiguration#multiLevelCacheManager，带 @Primary）：
+  #   - 它的 getCache(name) 走 computeIfAbsent + buildCache，**按需创建任意缓存名**；
+  #   - 关掉时 CacheManagerResolver 只能选中 ai-starter 的 aiCacheManager
+  #     （CaffeineCacheManager 默认 setDynamic=false），@Cacheable 的缓存名未静态注册，
+  #     每次调用抛 IllegalArgumentException: Cannot find cache named 'monitorTask'，
+  #     实测 MonitorScheduler 的 tick 每 20 秒失败一次（定时任务全部不执行）。
+  # levels 只留 caffeine：monitor 的缓存都是本机调度/配置的短命读缓存，多实例间无需共享；
+  # 且 Redis 档一旦连接抖动，@Cacheable 会跟着失败（缓存不该拖垮主流程）。
+  cache:
+    enabled: true
+    levels:
+      - caffeine
+    caffeine:
+      initial-capacity: 256
+      maximum-size: 20000
+      # 配置/任务列表类缓存，写操作都会 @CacheEvict(allEntries=true)，5 分钟兜底足够
+      expire-after-write: 300
+      record-stats: true
   # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：建表与种子数据统一走这里。
   # 之前 enable: false（理由是「H2 下 MySQL-only 语法会阻断启动」），改用 spring.sql.init
   # 逐个列举 schema-locations —— 代价是漏列就静默不执行、依赖 jar 里的脚本路径难写。

@@ -99,6 +99,34 @@ public class MsSyncTask extends SysBase {
     private String syncTaskTargetTable;
 
     /**
+     * 多目标列表 JSON：一次采集分别写入多张表。
+     *
+     * <p>每一项形如
+     * {@code {"targetDatasourceId":21,"targetTable":"db.tb","writeMode":"UPSERT",
+     * "syncMode":"INCREMENTAL","incFields":["created_at","id"],"columnMapping":[...],
+     * "batchSize":500,"incBatchSize":1000,"lastSeq":"..."}}。</p>
+     *
+     * <p><b>为什么用 JSON 而不是子表</b>：目标只在「随任务整体保存/整体读取」时使用，
+     * 没有独立查询需求；子表会引入额外的关联查询与级联删除，而这里换来的是
+     * 「存一条任务 = 一次 insert」。旧库为空时回落到
+     * {@link #syncTaskTargetDatasourceId} + {@link #syncTaskTargetTable} 单目标语义。</p>
+     */
+    @TableField("ms_sync_task_targets")
+    @Schema(description = "多目标 JSON 数组，空表示按旧单目标字段解析")
+    private String syncTaskTargets;
+
+    /**
+     * 多目标各自的增量水位 JSON：{@code {"数据源ID#库.表": "水位"}}。
+     *
+     * <p>与单目标时代的 {@link #syncTaskLastSeq} 并存：多目标走这里，
+     * 旧单目标仍然走 {@code ms_sync_task_last_seq}。两者都由服务端执行成功后回写，
+     * <b>都不接受入参指定</b>。</p>
+     */
+    @TableField("ms_sync_task_target_seqs")
+    @Schema(description = "多目标水位 JSON，服务端回写，不可由入参指定")
+    private String syncTaskTargetSeqs;
+
+    /**
      * 字段映射 JSON 数组，空表示按同名匹配
      */
     @TableField("ms_sync_task_column_mapping")
@@ -186,10 +214,14 @@ public class MsSyncTask extends SysBase {
 
     /**
      * 增量字段（仅增量模式）：JDBC 源包裹进源 SQL 做水位过滤，HTTP 源作为查询参数携带。
-     * 只允许字母、数字、下划线（服务端校验，防注入）。
+     *
+     * <p><b>支持多字段（复合水位）</b>：按用户选择顺序以逗号分隔保存在同一列里，
+     * 如 {@code created_at,id}。顺序即字典序比较顺序，不能重排。每个字段名都只允许
+     * 字母、数字、下划线（服务端逐个校验，防注入）。单字段任务写入的就是裸字段名，
+     * 与改造前完全兼容。</p>
      */
     @TableField("ms_sync_task_inc_field")
-    @Schema(description = "增量字段（仅增量模式），如 id / updated_at")
+    @Schema(description = "增量字段（仅增量模式），多个按顺序逗号分隔，如 created_at,id")
     private String syncTaskIncField;
 
     /**

@@ -734,12 +734,29 @@ public class ChatStreamOrchestrator {
                             // 全量轨迹另存一份到轨迹表：助手消息里的 confirmation 只保留工具类，
                             // 承载不了模型调用/思考这类时序信息，而「轨迹」页签要靠它画甘特图。
                             sessionTraceService.append(sid, p.chatRequestId(), trace);
-                            if (trace.getToolName() != null && !trace.getToolName().isBlank()) {
+                            // 落库口径（2026-10-24 扩）：工具类 trace 之外，把 thinking 也收进来。
+                            // 原来只收「有 toolName」的，思考段（kind=thinking，无 toolName）
+                            // 整段被丢掉，于是刷新后思考行既没有耗时也没有可展示的时序。
+                            String traceKind = trace.getKind();
+                            boolean keepTrace = (trace.getToolName() != null && !trace.getToolName().isBlank())
+                                    || "thinking".equals(traceKind);
+                            if (keepTrace) {
                                 Map<String, Object> t = new LinkedHashMap<>();
-                                t.put("kind", trace.getKind());
+                                t.put("kind", traceKind);
                                 t.put("toolName", trace.getToolName());
                                 t.put("text", trace.getText());
                                 t.put("timestamp", trace.getTimestamp());
+                                // 时序字段必须一起落库：原来只存 timestamp，endTimestamp / spanId
+                                // 被丢掉，历史行因此永远算不出「26.1s」这类耗时
+                                // （用户 2026-10-24 要求：图标、命令、动态计时、命令摘要都要持久化）。
+                                Long traceStart = trace.getTimestamp();
+                                Long traceEnd = trace.getEndTimestamp();
+                                t.put("endTimestamp", traceEnd);
+                                t.put("spanId", trace.getSpanId());
+                                t.put("spanEnd", trace.isSpanEnd());
+                                if (traceStart != null && traceEnd != null && traceEnd > traceStart) {
+                                    t.put("durationMs", traceEnd - traceStart);
+                                }
                                 collectedToolTraces.add(t);
                             }
                             sink.sendTrace(trace);

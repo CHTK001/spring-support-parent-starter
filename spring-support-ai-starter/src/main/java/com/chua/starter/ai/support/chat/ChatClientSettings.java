@@ -155,6 +155,7 @@ public class ChatClientSettings {
                 .authScheme(baseSetting.getAuthScheme())
                 .authHeader(baseSetting.getAuthHeader())
                 .authPrefix(baseSetting.getAuthPrefix())
+                .routes(baseSetting.getRoutes())
                 .build();
     }
 

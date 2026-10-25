@@ -52,6 +52,12 @@ import java.util.stream.Collectors;
 public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
     /**
+     * 日志
+     */
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(PaymentPlatformSchedulerTaskOpsService.class);
+
+    /**
      * 默认连接超时
      */
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
@@ -432,19 +438,23 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         String candidate = value.trim();
         try {
             return LocalDateTime.parse(candidate);
-        } catch (DateTimeParseException ignored) {
+        } catch (DateTimeParseException e) {
+            log.debug("[payment] 解析时间失败，已忽略: {}", e.getMessage());
         }
         try {
             return LocalDateTime.parse(candidate, STANDARD_DATE_TIME);
-        } catch (DateTimeParseException ignored) {
+        } catch (DateTimeParseException e) {
+            log.debug("[payment] 解析时间失败，已忽略: {}", e.getMessage());
         }
         try {
             return OffsetDateTime.parse(candidate).toLocalDateTime();
-        } catch (DateTimeParseException ignored) {
+        } catch (DateTimeParseException e) {
+            log.debug("[payment] 解析时间失败，已忽略: {}", e.getMessage());
         }
         try {
             return LocalDateTime.ofInstant(Instant.parse(candidate), ZoneId.systemDefault());
-        } catch (DateTimeParseException ignored) {
+        } catch (DateTimeParseException e) {
+            log.debug("[payment] 解析时间失败，已忽略: {}", e.getMessage());
         }
         if (candidate.chars().allMatch(Character::isDigit)) {
             long epochValue = Long.parseLong(candidate);

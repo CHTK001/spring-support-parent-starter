@@ -18,6 +18,7 @@ import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -698,6 +699,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 .authHeader(extra == null || extra.get("auth_header") == null ? null : extra.get("auth_header").toString())
                 .authPrefix(extra == null || extra.get("auth_prefix") == null ? null : extra.get("auth_prefix").toString())
                 .proxy(provider.getProxy())
+                .routes(ProviderRouteTargets.fromExtra(extra))
                 .build();
         return ChatClient.create(setting).model(agent.getModel());
     }

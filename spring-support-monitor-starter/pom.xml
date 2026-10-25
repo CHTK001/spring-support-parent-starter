@@ -33,6 +33,13 @@
             <artifactId>spring-support-server-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 接码 / 临时邮箱 SPI（临时账号功能）：随机虚拟号码 + 临时邮箱的创建与短信/邮件读取。
+             经 server-starter 已传递，此处显式声明保证编译期契约稳定 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasearch-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
         <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -201,6 +208,19 @@
             <artifactId>utils-support-datasync-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
+
+        <!-- MySQL 内核 SPI 实现（UserManager / PermissionManager / ProcessManager / SlowQueryManager）。
+             数据源中心的「用户管理 / 显示进程 / 慢查询」三项能力，判据就是
+             DbSpiCapabilityController.spi(XxxManager.class, "mysql", id) != null —— 走的是
+             META-INF/extensions 里的 SPI 注册，而不是 mysql-connector-j 驱动本身。
+             只引 mysql-connector-j 时三个能力会恒为 false，菜单入口全部消失；
+             这里补上实现模块，让 mysql=... 的注册文件进到 classpath。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-mysql-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- 引擎的源/Sink 以响应式 Flux 为数据面，契约在本模块直接使用 -->
         <dependency>
             <groupId>io.projectreactor</groupId>
@@ -283,6 +303,56 @@
                     <!-- 可执行包另挂 exec 分类符，绝不替换主构件；历史上 repackage 覆盖主构件曾让库坐标变成 1.2GB fat jar -->
                     <classifier>exec</classifier>
                 </configuration>
+            </plugin>
+            <!--
+              repackage 只把 META-INF/services 搬进 BOOT-INF/classes，
+              而 META-INF/spring 与 META-INF/extensions 会被留在 exec jar 的根目录。
+              根 META-INF 不在应用 classpath（Spring-Boot-Classes=BOOT-INF/classes/）上，
+              于是 META-INF/spring/...AutoConfiguration.imports 永远不会被读取，
+              MonitorAutoConfiguration（@EnableConfigurationProperties + 建表初始化器）随之失效。
+              这里在 repackage 之后把它们复制到 BOOT-INF/classes 下，使 java -jar 与 exploded 行为一致。
+              仅作用于 *-exec.jar；薄 jar 保持标准库结构（META-INF 在根）不变。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>relocate-boot-classes-meta-inf</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <!-- 与 repackage 同进同退：默认薄 jar 构建不执行，避免无 exec 产物时误报 -->
+                            <skip>${spring-boot.repackage.skip}</skip>
+                            <target>
+                                <property name="exec.jar" value="${project.build.directory}/${project.build.finalName}-exec.jar"/>
+                                <tempfile property="work.dir" destdir="${java.io.tmpdir}" prefix="repackage-meta-"/>
+                                <unzip src="${exec.jar}" dest="${work.dir}">
+                                    <patternset>
+                                        <include name="META-INF/spring/**"/>
+                                        <include name="META-INF/extensions/**"/>
+                                    </patternset>
+                                </unzip>
+                                <copy todir="${work.dir}/BOOT-INF/classes/META-INF" failonerror="false">
+                                    <fileset dir="${work.dir}/META-INF">
+                                        <include name="spring/**"/>
+                                        <include name="extensions/**"/>
+                                    </fileset>
+                                </copy>
+                                <zip destfile="${exec.jar}" update="true">
+                                    <zipfileset dir="${work.dir}/BOOT-INF/classes/META-INF" prefix="BOOT-INF/classes/META-INF">
+                                        <include name="spring/**"/>
+                                        <include name="extensions/**"/>
+                                    </zipfileset>
+                                </zip>
+                                <delete dir="${work.dir}" quiet="true"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

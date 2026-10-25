@@ -38,6 +38,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -887,6 +888,7 @@ public class RagClientManager implements RagClientProvider {
                         .baseUrl(baseUrl)
                         .model(modelName)
                         .authScheme(authScheme)
+                        .routes(ProviderRouteTargets.fromExtra(provider.getExtra()))
                         .build();
                 ChatClient c = ChatClient.create(setting);
                 if (c != null) {

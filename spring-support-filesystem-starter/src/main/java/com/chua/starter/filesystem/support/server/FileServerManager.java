@@ -271,7 +271,9 @@ public class FileServerManager implements AutoCloseable {
         if (applicationContext != null) {
             try {
                 return applicationContext.getBean(filterName, ServerFilter.class);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                log.warn("Failed to get filter instance: {}", filterName, e);
+            }
         }
         Class<?> clazz = ReflectUtils.forName(filterName);
         ServerFilter filter = clazz == null ? null : (ServerFilter) ReflectUtils.instantiate(clazz);
