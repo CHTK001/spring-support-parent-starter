@@ -29,7 +29,9 @@ import com.chua.starter.monitor.support.model.SyncPreviewVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
+import com.chua.starter.monitor.support.model.dto.SyncTargetDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTaskDTO;
+import com.chua.starter.monitor.support.model.vo.SyncTargetPlan;
 import com.chua.starter.monitor.support.service.SyncTaskService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +49,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
@@ -186,6 +189,23 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         } catch (Exception e) {
             log.warn("[sync-task] 恢复定时任务失败（同步任务表可能尚未建立）: {}", e.getMessage());
         }
+        scheduleLogPurge();
+    }
+
+    /**
+     * 每天清理一次过期的执行日志（保留 30 天）。
+     *
+     * <p>用调度器自身的 cron 而不是再引一个 {@code @Scheduled}：本模块的调度统一
+     * 由这里持有的 {@link ThreadPoolTaskScheduler} 驱动，多一处调度入口反而难排查。</p>
+     */
+    private void scheduleLogPurge() {
+        try {
+            scheduler.schedule(
+                    () -> runLogBuffer.purgeExpired(),
+                    new org.springframework.scheduling.support.CronTrigger("0 30 3 * * ?"));
+        } catch (Exception e) {
+            log.warn("[sync-log] 注册执行日志清理任务失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -222,7 +242,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             "ms_sync_task_sync_mode",
             "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_sync_mode VARCHAR(16) NOT NULL DEFAULT 'FULL' COMMENT '同步模式 FULL 全量/INCREMENTAL 增量'",
             "ms_sync_task_inc_field",
-            "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_inc_field VARCHAR(64) DEFAULT NULL COMMENT '增量字段（仅增量模式）'",
+            "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_inc_field VARCHAR(255) DEFAULT NULL COMMENT '增量字段（仅增量模式），多字段按顺序逗号分隔'",
             "ms_sync_task_inc_batch_size",
             "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_inc_batch_size INT DEFAULT NULL COMMENT '增量每批数量：单次执行最多同步条数，空表示不限'",
             "ms_sync_task_last_seq",
@@ -230,7 +250,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             "ms_sync_task_hook_url",
             "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_hook_url VARCHAR(512) DEFAULT NULL COMMENT 'Hook 通知地址（http/https），空表示不通知'",
             "ms_sync_task_hook_notify",
-            "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_hook_notify VARCHAR(16) DEFAULT NULL COMMENT 'Hook 通知时机 DONE/ROW，全量固定 DONE'");
+            "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_hook_notify VARCHAR(16) DEFAULT NULL COMMENT 'Hook 通知时机 DONE/ROW，全量固定 DONE'",
+            "ms_sync_task_targets",
+            "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_targets MEDIUMTEXT DEFAULT NULL COMMENT '多目标 JSON 数组，空表示按旧单目标字段解析'",
+            "ms_sync_task_target_seqs",
+            "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_target_seqs TEXT DEFAULT NULL COMMENT '多目标水位 JSON，服务端回写'");
 
     /**
      * 把旧库的 {@code ms_sync_task} 结构对齐到建表脚本：补齐缺失列 + 放宽应为可空的列。
@@ -440,12 +464,30 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     @Override
+    public ReturnResult<List<SyncColumnVO>> validateSource(SyncPreviewDTO request) {
+        try {
+            if (request == null) {
+                throw new IllegalArgumentException("校验参数不能为空");
+            }
+            List<SyncColumnVO> columns = resolvePreviewSourceColumns(request, true);
+            return ReturnResult.ok(columns);
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException e) {
+            // 与 preview() 的专用 catch 同口径：不加「预览字段映射失败」前缀，
+            // 前端可直接把这句话显示在源 SQL 输入框下方。
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[sync-task] 源校验失败", e);
+            return ReturnResult.error("源读取失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public ReturnResult<SyncPreviewVO> preview(SyncPreviewDTO request) {
         try {
             if (request == null) {
                 throw new IllegalArgumentException("预览参数不能为空");
             }
-            List<SyncColumnVO> sourceColumns = resolvePreviewSourceColumns(request);
+            List<SyncColumnVO> sourceColumns = resolvePreviewSourceColumns(request, false);
             List<SyncColumnVO> targetColumns = loadTargetColumns(request.targetDatasourceId(), request.targetTable());
             List<SyncFieldMappingVO> mapping = request.mapping();
             boolean configured = mapping != null && !mapping.isEmpty();
@@ -534,14 +576,54 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 } else {
                     runLogBuffer.info(taskId, "源文件 " + task.getSyncTaskSourcePath());
                 }
+                List<SyncTargetPlan> targets = resolveTargets(task);
+                if (targets.isEmpty()) {
+                    throw new IllegalStateException("没有配置任何目标表，请编辑任务补全");
+                }
+                runLogBuffer.info(taskId, "输出目标 " + targets.size() + " 个："
+                        + targets.stream().map(SyncTargetPlan::label).toList());
                 List<SyncColumnVO> sourceColumns = resolveSourceColumns(task);
                 runLogBuffer.info(taskId, "源列（" + sourceColumns.size() + " 列）：" + describeColumns(sourceColumns));
-                List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
-                AtomicLong readCounter = new AtomicLong();
-                Path file = sourceType == SyncSourceType.FILE ? Path.of(task.getSyncTaskSourcePath()) : null;
-                long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
-                readCount = readCounter.get();
-                result = SyncTaskRunVO.success(readCount, writeCount, costMs(startNanos), runTime);
+                long readTotal = 0L;
+                long writeTotal = 0L;
+                List<String> failedTargets = new ArrayList<>();
+                List<String> targetMessages = new ArrayList<>();
+                // 多目标逐个独立执行：每个目标自己重读一次源（流式，不落内存），
+                // 独立事务、独立水位、独立失败。一个目标失败不阻断其余目标，
+                // 全部结果汇总进 message，界面能看清「哪张表失败、为什么」。
+                for (int i = 0; i < targets.size(); i++) {
+                    SyncTargetPlan plan = targets.get(i);
+                    String prefix = "[" + (i + 1) + "/" + targets.size() + "] " + plan.label();
+                    runLogBuffer.info(taskId, prefix + " 开始：" + plan.writeMode()
+                            + " / " + plan.syncMode());
+                    try {
+                        AtomicLong readCounter = new AtomicLong();
+                        Path file = sourceType == SyncSourceType.FILE ? Path.of(task.getSyncTaskSourcePath()) : null;
+                        long writeCount = streamAndWriteTo(task, plan, sourceColumns, readCounter, file);
+                        readTotal += readCounter.get();
+                        writeTotal += writeCount;
+                        targetMessages.add(prefix + " 写入 " + writeCount + " 行");
+                        runLogBuffer.info(taskId, prefix + " 完成：写 " + writeCount + " 行");
+                    } catch (Exception e) {
+                        String reason = rootMessage(e);
+                        failedTargets.add(plan.label());
+                        targetMessages.add(prefix + " 失败：" + reason);
+                        runLogBuffer.error(taskId, prefix + " 失败：" + reason, e);
+                    }
+                }
+                readCount = readTotal;
+                if (failedTargets.isEmpty()) {
+                    result = SyncTaskRunVO.success(readTotal, writeTotal, costMs(startNanos), runTime);
+                } else if (failedTargets.size() == targets.size()) {
+                    result = SyncTaskRunVO.failed(readTotal, costMs(startNanos),
+                            String.join("；", targetMessages), runTime);
+                } else {
+                    // 部分成功：状态按失败算（有目标没写进去），但把成功行数与明细都带上
+                    result = new SyncTaskRunVO(SyncTaskRunVO.STATUS_FAILED, readTotal, writeTotal,
+                            costMs(startNanos),
+                            "部分目标失败（" + failedTargets.size() + "/" + targets.size() + "）："
+                                    + String.join("；", targetMessages), runTime);
+                }
             }
             logStatus = result.status();
         } catch (Exception e) {
@@ -595,25 +677,48 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             runLogBuffer.info(task.getId(), "目录下没有待处理文件，本轮结束");
             return SyncTaskRunVO.success(0L, 0L, costMs(startNanos), runTime);
         }
+        List<SyncTargetPlan> targets = resolveTargets(task);
+        if (targets.isEmpty()) {
+            throw new IllegalStateException("没有配置任何目标表，请编辑任务补全");
+        }
+        runLogBuffer.info(task.getId(), "输出目标 " + targets.size() + " 个："
+                + targets.stream().map(SyncTargetPlan::label).toList());
         for (Path file : files) {
+            List<SyncColumnVO> sourceColumns;
             try {
-                List<SyncColumnVO> sourceColumns = headersOf(file, options);
-                List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
-                AtomicLong readCounter = new AtomicLong();
-                long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
-                readTotal += readCounter.get();
-                writeTotal += writeCount;
-                okCount++;
-                afterProcess(task, file, options);
-                runLogBuffer.info(task.getId(), "文件 " + file.getFileName() + "：读 "
-                        + readCounter.get() + " 行 / 写 " + writeCount + " 行");
+                sourceColumns = headersOf(file, options);
             } catch (Exception e) {
                 failedCount++;
-                if (problems.length() < 300) {
-                    problems.append(file.getFileName()).append(": ").append(rootMessage(e)).append("; ");
+                appendProblem(problems, file.getFileName(), rootMessage(e));
+                runLogBuffer.error(task.getId(), "文件 " + file.getFileName() + " 读表头失败：" + rootMessage(e), e);
+                continue;
+            }
+            boolean fileOk = true;
+            for (SyncTargetPlan plan : targets) {
+                String prefix = "[" + plan.label() + "] ";
+                try {
+                    AtomicLong readCounter = new AtomicLong();
+                    long writeCount = streamAndWriteTo(task, plan, sourceColumns, readCounter, file);
+                    readTotal += readCounter.get();
+                    writeTotal += writeCount;
+                    runLogBuffer.info(task.getId(), prefix + "文件 " + file.getFileName() + "：读 "
+                            + readCounter.get() + " 行 / 写 " + writeCount + " 行");
+                } catch (Exception e) {
+                    fileOk = false;
+                    appendProblem(problems, file.getFileName(), plan.label() + " " + rootMessage(e));
+                    runLogBuffer.error(task.getId(), prefix + "文件 " + file.getFileName()
+                            + " 同步失败：" + rootMessage(e), e);
+                    log.warn("[sync-task] 文件同步失败, task={}, file={}, target={}, message={}",
+                            task.getId(), file, plan.label(), rootMessage(e));
                 }
-                runLogBuffer.error(task.getId(), "文件 " + file.getFileName() + " 同步失败：" + rootMessage(e), e);
-                log.warn("[sync-task] 文件同步失败, task={}, file={}, message={}", task.getId(), file, rootMessage(e));
+            }
+            if (fileOk) {
+                okCount++;
+                // 只有**全部目标**都写成功才应用「处理完」动作：删掉/归档一个只写进一半目标的文件，
+                // 会让失败的那张表永远补不回来
+                afterProcess(task, file, options);
+            } else {
+                failedCount++;
             }
         }
         runLogBuffer.info(task.getId(), "目录执行完成：成功 " + okCount + " / 失败 " + failedCount
@@ -622,7 +727,25 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             return SyncTaskRunVO.success(readTotal, writeTotal, costMs(startNanos), runTime);
         }
         String message = "处理 " + files.size() + " 个文件，成功 " + okCount + " / 失败 " + failedCount + "：" + problems;
+        if (readTotal > 0 || writeTotal > 0) {
+            // 部分文件失败：状态按失败算，但把已写入的量带上，界面能判断要不要重跑
+            return new SyncTaskRunVO(SyncTaskRunVO.STATUS_FAILED, readTotal, writeTotal,
+                    costMs(startNanos), message, runTime);
+        }
         return SyncTaskRunVO.failed(readTotal, costMs(startNanos), message, runTime);
+    }
+
+    /**
+     * 追加一条失败摘要（限制长度，避免几百个文件的错误把消息撑爆）。
+     *
+     * @param problems 摘要缓冲
+     * @param file     文件名
+     * @param reason   原因
+     */
+    private static void appendProblem(StringBuilder problems, Object file, String reason) {
+        if (problems.length() < 300) {
+            problems.append(file).append(": ").append(reason).append("; ");
+        }
     }
 
     /**
@@ -631,14 +754,28 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * <p>与执行路径同源（{@link #resolveSourceColumns} 也是这套分支），避免「预览能配、执行时报错」。
      * 差别只有一点：预览拿不到任务实体，用的是请求里的临时参数。</p>
      *
+     * <p><b>JDBC + {@code verify=false}（预览）</b>：字段直接由 SQL 文本解析
+     * （{@link SyncJdbcSupport#parseColumns}），不连源库。若语句是 {@code SELECT *}
+     * 或含无别名的表达式，文本里看不出字段名，此时才回落到一次带方言分页的探针查询。</p>
+     *
+     * <p><b>JDBC + {@code verify=true}（校验）</b>：真跑一次，但按方言只取 1 条
+     * （见 {@link SyncJdbcSupport#probeColumns}），既能确认表/列存在，又不会因数据量大而拖垮。</p>
+     *
      * @param request 预览入参
+     * @param verify  是否真查一次源（校验为 true，预览为 false）
      * @return 源列
      * @throws Exception 源不可用
      */
-    private List<SyncColumnVO> resolvePreviewSourceColumns(SyncPreviewDTO request) throws Exception {
+    private List<SyncColumnVO> resolvePreviewSourceColumns(SyncPreviewDTO request, boolean verify) throws Exception {
         SyncSourceType type = SyncSourceType.from(request.sourceType());
         if (type == SyncSourceType.JDBC) {
             validateSelectSql(request.sourceSql());
+            if (!verify) {
+                List<SyncColumnVO> parsed = SyncJdbcSupport.parseColumns(request.sourceSql());
+                if (!parsed.isEmpty()) {
+                    return parsed;
+                }
+            }
             return loadSourceColumns(request.sourceDatasourceId(), request.sourceSql());
         }
         String path = request.sourcePath() == null ? "" : request.sourcePath().trim();
@@ -659,21 +796,25 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     /**
-     * 决定本次执行使用的字段映射。
+     * 按目标解析字段映射。
      *
-     * <p>优先用任务里存好的映射；为空时按「同名忽略大小写」自动配对。配对结果再回源列做一次
-     * 存在性校验：映射引用了不存在的源列时若放过去，写入的会是整列 空，属于最难排查的一类错。</p>
+     * <p>每个目标有各自的表结构与映射，因此不能共用一个配对结果。</p>
      *
      * @param task          任务
+     * @param plan          目标计划
      * @param sourceColumns 源结果集列
      * @return 字段映射
      * @throws Exception 读取目标表结构失败
      */
-    private List<SyncFieldMappingVO> resolveMapping(MsSyncTask task, List<SyncColumnVO> sourceColumns) throws Exception {
-        List<SyncFieldMappingVO> mapping = parseMapping(task.getSyncTaskColumnMapping());
+    private List<SyncFieldMappingVO> resolveMappingFor(MsSyncTask task, SyncTargetPlan plan,
+                                                       List<SyncColumnVO> sourceColumns) throws Exception {
+        String mappingJson = plan.columnMapping();
+        Long datasourceId = plan.targetDatasourceId();
+        String targetTable = plan.targetTable();
+        List<SyncFieldMappingVO> mapping = parseMapping(mappingJson);
         boolean explicit = !mapping.isEmpty();
         if (mapping.isEmpty()) {
-            mapping = autoMatch(sourceColumns, loadTargetColumns(task.getSyncTaskTargetDatasourceId(), task.getSyncTaskTargetTable()));
+            mapping = autoMatch(sourceColumns, loadTargetColumns(datasourceId, targetTable));
         }
         runLogBuffer.info(task.getId(), (explicit ? "显式字段映射" : "自动配对字段映射") + "（"
                 + mapping.size() + " 项）：" + describeMapping(mapping));
@@ -704,12 +845,12 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * @return 实际写入行数
      * @throws Exception 建连、读取或写入失败
      */
-    private long streamAndWrite(MsSyncTask task, List<SyncFieldMappingVO> mapping,
-                                List<SyncColumnVO> sourceColumns, AtomicLong readCounter, Path file) throws Exception {
+    private long streamAndWriteTo(MsSyncTask task, SyncTargetPlan plan, List<SyncColumnVO> sourceColumns,
+                                  AtomicLong readCounter, Path file) throws Exception {
         String[] columnNames = sourceColumns.stream().map(SyncColumnVO::name).toArray(String[]::new);
         JdbcDataSyncAgentSource jdbcSource = null;
         SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
-        boolean incremental = SyncMode.from(task.getSyncTaskSyncMode()) == SyncMode.INCREMENTAL;
+        boolean incremental = plan.incremental();
         AtomicReference<String> seqMax = new AtomicReference<>();
         Flux<Map<String, Object>> rows;
         if (type == SyncSourceType.JDBC) {
@@ -718,11 +859,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             runLogBuffer.info(task.getId(), "源连接：" + sourceInfo.url()
                     + "（用户 " + sourceInfo.username() + "），开始流式读取");
             String readSql = task.getSyncTaskSourceSql();
-            final String incField = incremental ? requireIncField(task) : null;
-            if (incField != null) {
+            List<String> incFields = incremental ? plan.incFields() : List.of();
+            if (!incFields.isEmpty()) {
                 // 包裹层只加条件与排序，列集与内层一致；复用内层列核对，不为校验多打一次元数据
-                requireFieldInColumns(incField, sourceColumns);
-                readSql = buildIncrementalSql(task, incField);
+                requireFieldsInColumns(incFields, sourceColumns);
+                readSql = buildIncrementalSql(task, plan, incFields);
                 runLogBuffer.info(task.getId(), "增量读取 SQL：" + readSql);
             }
             jdbcSource = new JdbcDataSyncAgentSource(
@@ -730,9 +871,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                     sourceInfo.url(), sourceInfo.username(), sourceInfo.password(),
                     readSql, columnNames);
             rows = jdbcSource.read(new HashMap<>());
-            if (incField != null) {
+            if (!incFields.isEmpty()) {
                 // 写入前逐行滚动记录本批最大增量值（映射前的源行键名才是源列名）
-                rows = rows.doOnNext(row -> trackSeq(seqMax, row.get(incField)));
+                rows = rows.doOnNext(row -> trackSeqs(seqMax, row, incFields));
             }
         } else if (type.isHttp()) {
             // 网络源由 executeHttp 走「单次请求」路径，这里不该被调到；显式抛错而不是静默走错
@@ -747,9 +888,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             rows = MonitorFileRowsSupport.read(file, optionsOf(task));
         }
         try {
-            long written = writeRows(task, mapping, rows, readCounter);
+            // 每个目标的映射各自解析：多目标时目标表不同，自动配对结果也不同
+            List<SyncFieldMappingVO> mapping = resolveMappingFor(task, plan, sourceColumns);
+            long written = writeRowsTo(task, plan, mapping, rows, readCounter, sourceColumns);
             if (incremental) {
-                advanceWatermark(task, readCounter.get(), seqMax.get());
+                advanceTargetWatermark(task, plan, readCounter.get(), seqMax.get());
             }
             return written;
         } finally {
@@ -773,17 +916,32 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * @throws Exception 请求或写入失败
      */
     private SyncTaskRunVO executeHttp(MsSyncTask task, LocalDateTime runTime, long startNanos) throws Exception {
+        List<SyncTargetPlan> targets = resolveTargets(task);
+        if (targets.isEmpty()) {
+            throw new IllegalStateException("没有配置任何目标表，请编辑任务补全");
+        }
         SyncSourceType type = SyncSourceType.from(task.getSyncTaskSourceType());
-        boolean incremental = SyncMode.from(task.getSyncTaskSyncMode()) == SyncMode.INCREMENTAL;
-        final String incField = incremental ? requireIncField(task) : null;
+        // 一次请求只取一份数据，供全部目标共用：网络源常见一次性 token / 签名时间戳 / 限流，
+        // 给每个目标各打一次请求既慢又容易在第二次就失败。
+        // 水位取「唯一一个增量目标」的：多目标各自水位不同时无法用一次请求同时满足，
+        // 这种组合在保存时就已按目标独立校验，执行时按第一个增量目标取数，
+        // 其余目标的写入不受影响（保存期已禁止把「先清空再插入」配给增量目标）。
+        SyncTargetPlan pullPlan = targets.stream().filter(SyncTargetPlan::incremental).findFirst().orElse(null);
+        final List<String> incFields = pullPlan == null ? List.of() : pullPlan.incFields();
         String url = task.getSyncTaskSourcePath();
-        if (incField != null) {
-            String lastSeq = task.getSyncTaskLastSeq();
-            if (lastSeq == null || lastSeq.isBlank()) {
-                runLogBuffer.info(task.getId(), "增量请求：首跑无水位，不携带 " + incField + " 参数");
+        if (!incFields.isEmpty()) {
+            String lastSeq = pullPlan.lastSeq();
+            List<String> values = parseSeqValues(lastSeq, incFields.size());
+            if (values.isEmpty()) {
+                runLogBuffer.info(task.getId(), "增量请求：首跑无水位，不携带 "
+                        + String.join(",", incFields) + " 参数");
             } else {
-                url = appendQuery(url, incField, lastSeq);
-                runLogBuffer.info(task.getId(), "增量请求：携带 " + incField + "=" + lastSeq);
+                // 复合水位按字段逐个还原成查询参数，服务端按 (a,b) 字典序续读
+                for (int i = 0; i < incFields.size(); i++) {
+                    url = appendQuery(url, incFields.get(i), values.get(i));
+                }
+                runLogBuffer.info(task.getId(), "增量请求：携带 "
+                        + String.join(",", incFields) + "=" + String.join(",", values));
             }
         }
         runLogBuffer.info(task.getId(), "发起 HTTP 请求：" + url);
@@ -795,34 +953,59 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         List<SyncColumnVO> sourceColumns = columnsOfRows(rows);
         runLogBuffer.info(task.getId(), "响应解析：" + rows.size() + " 行 / " + sourceColumns.size()
                 + " 列（" + describeColumns(sourceColumns) + "）");
-        if (incField != null) {
-            requireFieldInColumns(incField, sourceColumns);
-            Integer batch = task.getSyncTaskIncBatchSize();
+        if (!incFields.isEmpty()) {
+            requireFieldsInColumns(incFields, sourceColumns);
+            Integer batch = pullPlan.incBatchSize();
             if (batch != null && batch > 0 && rows.size() > batch) {
                 // 服务端若一次给多于每批上限：升序取最老的 N 条（倒序先取最新会把水位推过未同步数据）
                 int total = rows.size();
                 List<Map<String, Object>> sorted = new ArrayList<>(rows);
                 sorted.sort(Comparator.comparing(
-                        (Map<String, Object> row) -> seqOf(row.get(incField)),
+                        (Map<String, Object> row) -> seqOfIncFields(row, incFields),
                         Comparator.nullsLast(SyncTaskServiceImpl::seqCompare)));
                 rows = new ArrayList<>(sorted.subList(0, batch));
                 runLogBuffer.info(task.getId(), "按每批上限截取最老的 " + batch
                         + " 条（响应共 " + total + " 行，其余数据下轮继续）");
             }
         }
-        List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
-        AtomicLong readCounter = new AtomicLong();
-        long writeCount = writeRows(task, mapping, Flux.fromIterable(rows), readCounter);
-        if (incField != null) {
-            String seqMax = rows.stream()
-                    .map(row -> seqOf(row.get(incField)))
-                    .filter(value -> value != null && !value.isEmpty())
-                    .max(SyncTaskServiceImpl::seqCompare)
-                    .orElse(null);
-            advanceWatermark(task, readCounter.get(), seqMax);
+        long readTotal = 0L;
+        long writeTotal = 0L;
+        List<String> failedTargets = new ArrayList<>();
+        List<String> targetMessages = new ArrayList<>();
+        // 已取到的行复用给每个目标，不再回源
+        for (int i = 0; i < targets.size(); i++) {
+            SyncTargetPlan plan = targets.get(i);
+            String prefix = "[" + (i + 1) + "/" + targets.size() + "] " + plan.label();
+            try {
+                AtomicLong readCounter = new AtomicLong();
+                long writeCount = writeRowsTo(task, plan, resolveMappingFor(task, plan, sourceColumns),
+                        Flux.fromIterable(rows), readCounter, sourceColumns);
+                readTotal += readCounter.get();
+                writeTotal += writeCount;
+                targetMessages.add(prefix + " 写入 " + writeCount + " 行");
+                runLogBuffer.info(task.getId(), prefix + " 完成：写 " + writeCount + " 行");
+                if (plan.incremental()) {
+                    AtomicReference<String> seqMax = new AtomicReference<>();
+                    for (Map<String, Object> row : rows) {
+                        trackSeqs(seqMax, row, incFields);
+                    }
+                    advanceTargetWatermark(task, plan, readCounter.get(), seqMax.get());
+                }
+            } catch (Exception e) {
+                String reason = rootMessage(e);
+                failedTargets.add(plan.label());
+                targetMessages.add(prefix + " 失败：" + reason);
+                runLogBuffer.error(task.getId(), prefix + " 失败：" + reason, e);
+            }
         }
-        runLogBuffer.info(task.getId(), "执行完成：读 " + readCounter.get() + " 行 / 写 " + writeCount + " 行");
-        return SyncTaskRunVO.success(readCounter.get(), writeCount, costMs(startNanos), runTime);
+        runLogBuffer.info(task.getId(), "执行完成：读 " + readTotal + " 行 / 写 " + writeTotal + " 行");
+        if (failedTargets.isEmpty()) {
+            return SyncTaskRunVO.success(readTotal, writeTotal, costMs(startNanos), runTime);
+        }
+        String message = "部分目标失败（" + failedTargets.size() + "/" + targets.size() + "）："
+                + String.join("；", targetMessages);
+        return new SyncTaskRunVO(SyncTaskRunVO.STATUS_FAILED, readTotal, writeTotal,
+                costMs(startNanos), message, runTime);
     }
 
     /**
@@ -850,17 +1033,22 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     /**
-     * 写入：字段映射转换 + 目标 Sink 分批提交。
+     * 按某个目标写入：字段映射转换 + 该目标自己的 Sink。
      *
-     * @param task        任务
-     * @param mapping     字段映射
-     * @param rows        源行流
-     * @param readCounter 出参：累计读取行数
+     * <p>多目标时每个目标各调一次，映射与写入模式都取自该目标，互不干扰。</p>
+     *
+     * @param task          任务
+     * @param plan          目标计划（必有）
+     * @param mapping       字段映射
+     * @param rows          源行流
+     * @param readCounter   出参：累计读取行数
+     * @param sourceColumns 源列（保留给调用方语义，当前不再参与配对）
      * @return 实际写入行数
      * @throws Exception 映射转换或写入失败
      */
-    private long writeRows(MsSyncTask task, List<SyncFieldMappingVO> mapping,
-                           Flux<Map<String, Object>> rows, AtomicLong readCounter) throws Exception {
+    private long writeRowsTo(MsSyncTask task, SyncTargetPlan plan, List<SyncFieldMappingVO> mapping,
+                             Flux<Map<String, Object>> rows, AtomicLong readCounter,
+                             List<SyncColumnVO> sourceColumns) throws Exception {
         List<DataSyncFieldMapping> engineMappings = new ArrayList<>(mapping.size());
         for (SyncFieldMappingVO item : mapping) {
             engineMappings.add(new SimpleFieldMapping(item.source(), item.target(), null));
@@ -869,43 +1057,94 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         // seq 从映射前的源行取（增量字段是源列，映射后键名可能已变成目标列名）
         boolean rowHook = hookNotifier.effectiveNotify(task) == SyncHookNotify.ROW
                 && task.getSyncTaskHookUrl() != null && !task.getSyncTaskHookUrl().isBlank();
-        final String incField = rowHook ? task.getSyncTaskIncField() : null;
+        final List<String> incFields = rowHook ? plan.incFields() : List.of();
         // 引擎的源以 Flux 暴露数据；params 不含 offset 即全量读
         Flux<Map<String, Object>> mapped = rows
                 .doOnNext(row -> readCounter.incrementAndGet())
                 .map(row -> {
                     Map<String, Object> converted = fieldMappingConverter.applyMappings(row, engineMappings);
                     if (rowHook) {
-                        hookNotifier.notifyRow(task, converted,
-                                incField == null ? null : seqOf(row.get(incField)));
+                        hookNotifier.notifyRow(task, converted, seqOfIncFields(row, incFields));
                     }
                     return converted;
                 });
-        long written = buildSink(task, mapping).writeStream(mapped);
+        long written = buildSinkFor(task, plan, mapping).writeStream(mapped);
         runLogBuffer.info(task.getId(), "写入完成：读 " + readCounter.get() + " 行 / 写 " + written + " 行");
         return written;
     }
 
     /**
-     * 按任务配置构造目标 Sink。
+     * 把「逗号分隔的有序增量字段串」拆成列表。
+     *
+     * @param incField 增量字段串，可为空
+     * @return 去空白后的字段列表（保持顺序、去重）
+     */
+    private static List<String> parseIncFields(String incField) {
+        if (incField == null || incField.isBlank()) {
+            return List.of();
+        }
+        List<String> fields = new ArrayList<>(3);
+        for (String part : incField.split(",")) {
+            String field = part.trim();
+            if (!field.isEmpty() && !fields.contains(field)) {
+                fields.add(field);
+            }
+        }
+        return fields;
+    }
+
+    /**
+     * 从源行取出复合增量水位值。
+     *
+     * @param row       源行
+     * @param incFields 增量字段（按顺序）
+     * @return 水位串；取不到返回 null
+     */
+    private static String seqOfIncFields(Map<String, Object> row, List<String> incFields) {
+        if (incFields == null || incFields.isEmpty()) {
+            return null;
+        }
+        if (incFields.size() == 1) {
+            return seqOf(row.get(incFields.get(0)));
+        }
+        List<String> values = new ArrayList<>(incFields.size());
+        for (String field : incFields) {
+            String value = seqOf(row.get(field));
+            if (value == null || value.isEmpty()) {
+                return null;
+            }
+            values.add(value);
+        }
+        return joinSeqValues(values);
+    }
+
+    /**
+     * 按目标配置构造目标 Sink。
      *
      * @param task    任务
+     * @param plan    目标计划
      * @param mapping 字段映射（目标列顺序决定占位符顺序）
      * @return 目标 Sink
      * @throws Exception 目标数据源不可用或目标表名非法
      */
-    private MonitorJdbcSyncSink buildSink(MsSyncTask task, List<SyncFieldMappingVO> mapping) throws Exception {
+    private MonitorJdbcSyncSink buildSinkFor(MsSyncTask task, SyncTargetPlan plan,
+                                             List<SyncFieldMappingVO> mapping) throws Exception {
         List<String> targetColumns = mapping.stream().map(SyncFieldMappingVO::target).toList();
-        DatasourceJdbcInfo targetInfo = datasourceService.jdbcInfo(task.getSyncTaskTargetDatasourceId());
-        String quotedTable = SyncJdbcSupport.quoteTable(task.getSyncTaskTargetTable());
-        SyncWriteMode mode = SyncWriteMode.from(task.getSyncTaskWriteMode());
+        Long targetDatasourceId = plan.targetDatasourceId();
+        String targetTable = plan.targetTable();
+        SyncWriteMode mode = SyncWriteMode.from(plan.writeMode());
+        int batch = batchSizeOf(plan.batchSize());
+        DatasourceJdbcInfo targetInfo = datasourceService.jdbcInfo(targetDatasourceId);
+        String quotedTable = SyncJdbcSupport.quoteTable(targetTable);
         String writeSql = buildWriteSql(mode, quotedTable, targetColumns);
-        runLogBuffer.info(task.getId(), "写入计划：目标数据源 " + task.getSyncTaskTargetDatasourceId()
-                + "，表 " + task.getSyncTaskTargetTable() + "，模式 " + mode + "，批量 " + batchSize(task));
+        runLogBuffer.info(task.getId(), "写入计划：目标数据源 " + targetDatasourceId
+                + "，表 " + targetTable + "，模式 " + mode + "，批量 " + batch);
         runLogBuffer.info(task.getId(), "写入语句：" + writeSql);
         return new MonitorJdbcSyncSink(
-                "sync-sink-" + task.getId(), targetInfo, writeSql, targetColumns,
-                batchSize(task), quotedTable, mode == SyncWriteMode.OVERWRITE);
+                // 多目标时每个目标一个 Sink 实例，ID 必须互不相同，否则日志/排障时分不清是哪张表
+                "sync-sink-" + task.getId() + "-" + Integer.toHexString(quotedTable.hashCode()),
+                targetInfo, writeSql, targetColumns,
+                batch, quotedTable, mode == SyncWriteMode.OVERWRITE);
     }
 
     /**
@@ -924,7 +1163,44 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 throw new IllegalStateException("源 SQL 没有返回任何列，请确认语句是否正确");
             }
             return columns;
+        } catch (SQLException e) {
+            // 源 SQL 里的表/列不存在时，驱动抛的是数据库原生串（MySQL
+            // "Table 'db.tbl' doesn't exist"、PG  relation ... does not exist、
+            // Oracle ORA-00942）。这类异常若落到 preview() 的通用 catch，会被包成
+            // 「预览字段映射失败: ...」，前端既分不清是源侧还是目标侧缺表，
+            // 也匹配不到目标侧的固定文案，于是设计表弹窗永远不弹。
+            // 这里统一转成与目标侧同构的约定文案，异常类型也换成
+            // IllegalStateException（preview() 的专用 catch 原样返回，不加前缀）。
+            throw new IllegalStateException(sourceSqlFailureMessage(sql, e), e);
         }
+    }
+
+    /**
+     * 源 SQL 执行失败的统一文案：固定前缀 + 原始方言信息。
+     *
+     * <p>前缀「源表不存在或无法读取」是前后端契约（前端 {@code isSourceTableMissingError}
+     * 据此判定缺表在源侧）。保留原始信息便于排查（哪张表、什么方言错误），
+     * 但不再让原生串裸奔成「预览字段映射失败」。</p>
+     *
+     * @param sql 源 SQL
+     * @param e   驱动异常
+     * @return 面向用户的错误文案
+     */
+    private String sourceSqlFailureMessage(String sql, SQLException e) {
+        String detail = e.getMessage() == null ? "" : e.getMessage().trim();
+        return "源表不存在或无法读取: " + detail + "（源 SQL: " + abbreviate(sql, 160) + "）";
+    }
+
+    /**
+     * 截断长文本，避免把整段 SQL 写进 toast。
+     *
+     * @param text   原文
+     * @param maxLen 最大长度
+     * @return 截断结果
+     */
+    private String abbreviate(String text, int maxLen) {
+        String value = text == null ? "" : text.trim();
+        return value.length() <= maxLen ? value : value.substring(0, maxLen) + "…";
     }
 
     /**
@@ -1075,8 +1351,15 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (request.name() == null || request.name().isBlank()) {
             throw new IllegalArgumentException("任务名称不能为空");
         }
-        if (request.targetDatasourceId() == null) {
+        // 目标配置：多目标优先（targets），为空时回落旧的单目标三件套。
+        // 两个入口都必须能用——老版本前端只发单目标字段，不能因为加了 targets 就把它判成「没配目标」。
+        List<SyncTargetDTO> targets = normalizeTargets(request);
+        boolean multiTarget = !targets.isEmpty();
+        if (!multiTarget && request.targetDatasourceId() == null) {
             throw new IllegalArgumentException("目标数据源不能为空");
+        }
+        if (!multiTarget && (request.targetTable() == null || request.targetTable().isBlank())) {
+            throw new IllegalArgumentException("目标表名不能为空");
         }
         // 输入源按类型校验：JDBC 用数据源 + SELECT；FILE/DIR 用服务器本地绝对路径；
         // HTTP_JSON/HTTP_HTML 用 http(s) 地址 + 各自选项，并在**保存时**就真打一次请求确认能取到列——
@@ -1116,12 +1399,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             }
             sourceOptions = parseSourceOptions(request.sourceOptions());
         }
-        if (request.targetTable() == null || request.targetTable().isBlank()) {
-            throw new IllegalArgumentException("目标表名不能为空");
+        if (!multiTarget) {
+            // 提前跑一次白名单校验，别等执行时才拒
+            SyncJdbcSupport.quoteTable(request.targetTable());
+            validateDatasource(request.targetDatasourceId(), "目标数据源");
         }
-        // 提前跑一次白名单校验，别等执行时才拒
-        SyncJdbcSupport.quoteTable(request.targetTable());
-        validateDatasource(request.targetDatasourceId(), "目标数据源");
         if (request.enabled() != null && request.enabled() == 1
                 && (request.cron() == null || request.cron().isBlank())) {
             throw new IllegalArgumentException("启用定时前请填写定时表达式（cron）");
@@ -1133,7 +1415,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         }
         validateCron(request.cron());
         parseMapping(request.columnMapping());
-        applyModeAndHook(task, request, sourceType, reachableColumns);
+        if (multiTarget) {
+            applyTargets(task, request, targets, sourceType, reachableColumns);
+        } else {
+            applyModeAndHook(task, request, sourceType, reachableColumns);
+        }
 
         task.setSyncTaskName(request.name().trim());
         task.setSyncTaskSourceType(sourceType.name());
@@ -1142,13 +1428,260 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         task.setSyncTaskSourcePath(sourceType == SyncSourceType.JDBC ? null : sourcePath);
         task.setSyncTaskSourceOptions(sourceType == SyncSourceType.JDBC ? null
                 : (sourceType.isHttp() ? toJson(httpOptions) : toJson(sourceOptions)));
-        task.setSyncTaskTargetDatasourceId(request.targetDatasourceId());
-        task.setSyncTaskTargetTable(request.targetTable().trim());
-        task.setSyncTaskColumnMapping(normalizeMapping(request.columnMapping()));
-        task.setSyncTaskWriteMode(SyncWriteMode.from(request.writeMode()).code());
-        task.setSyncTaskBatchSize(batchSizeOf(request.batchSize()));
+        if (!multiTarget) {
+            task.setSyncTaskTargetDatasourceId(request.targetDatasourceId());
+            task.setSyncTaskTargetTable(request.targetTable().trim());
+            task.setSyncTaskColumnMapping(normalizeMapping(request.columnMapping()));
+            task.setSyncTaskWriteMode(SyncWriteMode.from(request.writeMode()).code());
+            task.setSyncTaskBatchSize(batchSizeOf(request.batchSize()));
+            // 从「多目标」退回「单目标」时，必须清掉上一版的多目标 JSON：
+            // resolveTargets 优先读它，留着会让界面里已删掉的目标继续被写数据。
+            if (task.getSyncTaskTargets() != null) {
+                task.setSyncTaskTargets(null);
+                task.setSyncTaskTargetSeqs(null);
+            }
+        }
         task.setSyncTaskCron(request.cron() == null || request.cron().isBlank() ? null : request.cron().trim());
         task.setSyncTaskEnabled(request.enabled() == null ? 0 : (request.enabled() == 1 ? 1 : 0));
+    }
+
+    /**
+     * 归一化并校验入参里的多目标列表。
+     *
+     * <p>返回空列表表示「入参没走多目标」，调用方继续用旧的单目标三件套；
+     * 返回非空列表时<b>每一项都已通过</b>表名白名单与数据源存在性校验——
+     * 多目标最容易犯的错是「第二个目标的数据源 ID 抄错」，存下来要到执行才炸。</p>
+     *
+     * @param request 入参
+     * @return 校验过的目标列表；未配置多目标返回空列表
+     * @throws IllegalArgumentException 目标缺字段、重复或数据源不可用
+     */
+    private List<SyncTargetDTO> normalizeTargets(SyncTaskDTO request) {
+        List<SyncTargetDTO> raw = request.targets();
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        List<SyncTargetDTO> targets = new ArrayList<>(raw.size());
+        Set<String> keys = new java.util.LinkedHashSet<>();
+        for (int i = 0; i < raw.size(); i++) {
+            SyncTargetDTO item = raw.get(i);
+            String prefix = "第 " + (i + 1) + " 个目标";
+            if (item == null) {
+                throw new IllegalArgumentException(prefix + "配置为空");
+            }
+            if (item.targetDatasourceId() == null) {
+                throw new IllegalArgumentException(prefix + "未选择目标数据源");
+            }
+            if (item.targetTable() == null || item.targetTable().isBlank()) {
+                throw new IllegalArgumentException(prefix + "未填写目标表名");
+            }
+            String table = item.targetTable().trim();
+            SyncJdbcSupport.quoteTable(table);
+            String key = item.targetDatasourceId() + "#" + table;
+            if (!keys.add(key)) {
+                throw new IllegalArgumentException(prefix + "与前面的目标重复（同一数据源的同一张表）：" + table);
+            }
+            // 增量字段就地归一化（去空白、丢空项、去重且保留选择顺序）：
+            // 存进 JSON 的形态必须与界面上看到的一致，否则只是多了个空格就会把水位误判成「字段变了」而清掉
+            List<String> incFields = item.incFields() == null ? List.of()
+                    : item.incFields().stream()
+                    .filter(field -> field != null && !field.isBlank())
+                    .map(String::trim)
+                    .distinct()
+                    .toList();
+            targets.add(new SyncTargetDTO(item.targetDatasourceId(), table, item.writeMode(), item.syncMode(),
+                    incFields.isEmpty() ? null : incFields, item.columnMapping(), item.batchSize(),
+                    item.incBatchSize()));
+        }
+        return targets;
+    }
+
+    /**
+     * 校验并写入多目标配置（每个目标一套独立的同步模式 / 写入模式 / 增量字段 / 映射）。
+     *
+     * <p><b>为什么每个目标都要单独校验增量字段</b>：多目标时一张表走全量、另一张走增量是
+     * 合法组合，用任务级的单一 syncMode 去校验会把这种配置判死。所以这里逐目标校验，
+     * 只在增量目标达到 1 个以上时才回源读一次列（复用同一份结果，不重复打库）。</p>
+     *
+     * <p><b>水位隔离</b>：每个目标的增量水位存在 {@code ms_sync_task_target_seqs} 里，
+     * 键是「数据源ID#表名」。目标改了增量字段就把该键删掉——旧字段的水位对新字段没有意义，
+     * 沿用会漏数据；其它目标的水位一个字都不动。</p>
+     *
+     * <p><b>兼容列</b>：第一个目标镜像回任务原有的单目标列，这样「旧版前端 / 直查库的报表」
+     * 看到的仍是可用值，不因为升级成多目标就变空。</p>
+     *
+     * @param task             目标实体（更新时已带库里存量值）
+     * @param request          入参
+     * @param targets          已归一化的目标列表（非空）
+     * @param sourceType       输入源类型
+     * @param reachableColumns HTTP 源保存期探活取到的列（非 HTTP 源为 null）
+     */
+    private void applyTargets(MsSyncTask task, SyncTaskDTO request, List<SyncTargetDTO> targets,
+                              SyncSourceType sourceType, List<SyncColumnVO> reachableColumns) {
+        boolean anyIncremental = false;
+        // HTTP 源一次请求只能带一套水位参数：多个增量目标若增量字段不同，
+        // 就没法用同一次响应同时满足两边的续读条件（一边按 id、一边按 updated_at），
+        // 这里在保存时直接拦掉，而不是执行时悄悄按第一个目标的字段取数导致另一个目标漏数据。
+        List<String> httpIncFields = null;
+        for (SyncTargetDTO target : targets) {
+            validateDatasource(target.targetDatasourceId(), "目标数据源（" + target.targetTable() + "）");
+            SyncWriteMode writeMode = SyncWriteMode.from(target.writeMode());
+            SyncMode syncMode = SyncMode.from(target.syncMode());
+            if (target.batchSize() != null && target.batchSize() < 1) {
+                throw new IllegalArgumentException(target.targetTable() + "：批量提交条数必须为正整数");
+            }
+            if (syncMode != SyncMode.INCREMENTAL) {
+                continue;
+            }
+            anyIncremental = true;
+            if (sourceType != SyncSourceType.JDBC && !sourceType.isHttp()) {
+                throw new IllegalArgumentException("增量模式仅支持 JDBC / HTTP 输入源，文件/目录源请用全量模式（"
+                        + target.targetTable() + "）");
+            }
+            List<String> incFields = parseIncFields(target.incFields() == null ? null
+                    : String.join(",", target.incFields()));
+            if (incFields.isEmpty()) {
+                throw new IllegalArgumentException(target.targetTable() + "：「" + request.name()
+                        + "」的增量模式必须选择增量字段");
+            }
+            for (String incField : incFields) {
+                if (!INC_FIELD_PATTERN.matcher(incField).matches()) {
+                    throw new IllegalArgumentException(target.targetTable()
+                            + "：增量字段名只允许字母、数字、下划线: " + incField);
+                }
+            }
+            if (writeMode == SyncWriteMode.OVERWRITE) {
+                throw new IllegalArgumentException(target.targetTable()
+                        + "：增量模式不能使用「先清空再插入」——每批执行都会清空目标表");
+            }
+            if (target.incBatchSize() != null && target.incBatchSize() < 1) {
+                throw new IllegalArgumentException(target.targetTable() + "：每批数量必须为正整数（留空表示不限）");
+            }
+            if (sourceType.isHttp()) {
+                if (httpIncFields == null) {
+                    httpIncFields = incFields;
+                } else if (!httpIncFields.equals(incFields)) {
+                    throw new IllegalArgumentException("HTTP 源只发一次请求，多个增量目标必须使用相同的增量字段（当前「"
+                            + String.join(",", httpIncFields) + "」与「" + String.join(",", incFields)
+                            + "」不一致）；请改成相同字段，或让其中一个目标走全量");
+                }
+            }
+            List<SyncColumnVO> columns = sourceColumnsForValidate(request, sourceType, reachableColumns);
+            requireFieldsInColumns(incFields, columns);
+        }
+        String previousJson = task.getSyncTaskTargets();
+        task.setSyncTaskTargets(toJson(targets));
+        // 增量字段变了的目标，其水位作废；没变的保留（全量目标没有水位，自然不受影响）
+        voidChangedTargetSeqs(task, previousJson, targets);
+
+        SyncTargetDTO first = targets.get(0);
+        task.setSyncTaskTargetDatasourceId(first.targetDatasourceId());
+        task.setSyncTaskTargetTable(first.targetTable());
+        task.setSyncTaskColumnMapping(normalizeMapping(first.columnMapping()));
+        task.setSyncTaskWriteMode(SyncWriteMode.from(first.writeMode()).code());
+        task.setSyncTaskBatchSize(batchSizeOf(first.batchSize()));
+        // 任务级同步模式 / 增量字段只是「兼容与列表展示」用：取第一个目标的值；
+        // 只要有一个目标走增量，任务级就标成增量，避免列表把它显示成「全量」而误导。
+        task.setSyncTaskSyncMode(anyIncremental ? SyncMode.INCREMENTAL.code() : SyncMode.FULL.code());
+        task.setSyncTaskIncField(first.incFields() == null || first.incFields().isEmpty()
+                ? null : String.join(",", first.incFields()));
+        task.setSyncTaskIncBatchSize(first.incBatchSize());
+        applyHookConfig(task, request);
+    }
+
+    /**
+     * 校验期取源列：JDBC 真读一次结果集列（带方言分页 1 条），HTTP 复用保存期探活结果。
+     *
+     * @param request          入参
+     * @param sourceType       源类型
+     * @param reachableColumns HTTP 探活列（非 HTTP 源为 null）
+     * @return 源列
+     */
+    private List<SyncColumnVO> sourceColumnsForValidate(SyncTaskDTO request, SyncSourceType sourceType,
+                                                        List<SyncColumnVO> reachableColumns) {
+        if (sourceType != SyncSourceType.JDBC) {
+            return reachableColumns;
+        }
+        try {
+            return loadSourceColumns(request.sourceDatasourceId(), request.sourceSql());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("读取源结果集列失败: " + rootMessage(e));
+        }
+    }
+
+    /**
+     * 增量字段变化的目标作废其水位（其它目标不受影响）。
+     *
+     * @param task         任务（含库里存量的目标配置与水位）
+     * @param previousJson 库里存量的多目标 JSON（本次提交前的值，可为空）
+     * @param targets      本次提交的目标列表
+     */
+    private void voidChangedTargetSeqs(MsSyncTask task, String previousJson, List<SyncTargetDTO> targets) {
+        String seqJson = task.getSyncTaskTargetSeqs();
+        if (seqJson == null || seqJson.isBlank()) {
+            return;
+        }
+        Map<String, String> seqs;
+        try {
+            seqs = objectMapper.readValue(seqJson, new TypeReference<Map<String, String>>() { });
+        } catch (Exception e) {
+            // 存量水位坏了：直接清空，让所有目标按首跑处理，比留着一个读不懂的串更安全
+            log.warn("[sync-task] 多目标水位解析失败，按首跑处理, taskId={}", task.getId(), e);
+            task.setSyncTaskTargetSeqs(null);
+            return;
+        }
+        if (seqs == null || seqs.isEmpty()) {
+            return;
+        }
+        Map<String, List<String>> previous = previousTargetIncFields(previousJson);
+        boolean changed = false;
+        for (SyncTargetDTO target : targets) {
+            String key = seqKey(target.targetDatasourceId(), target.targetTable());
+            if (!seqs.containsKey(key)) {
+                continue;
+            }
+            List<String> before = previous.getOrDefault(key, List.of());
+            List<String> now = target.incFields() == null ? List.of() : target.incFields();
+            if (!before.equals(now)) {
+                seqs.remove(key);
+                changed = true;
+            }
+        }
+        if (changed) {
+            task.setSyncTaskTargetSeqs(seqs.isEmpty() ? null : toJson(seqs));
+        }
+    }
+
+    /**
+     * 从库里存量的多目标 JSON 取「每个目标当时的增量字段」，用于判断字段是否变过。
+     *
+     * @param json 存量多目标 JSON，可为空
+     * @return 水位键 → 增量字段列表
+     */
+    private Map<String, List<String>> previousTargetIncFields(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            List<SyncTargetDTO> parsed = objectMapper.readValue(json, new TypeReference<List<SyncTargetDTO>>() { });
+            if (parsed == null || parsed.isEmpty()) {
+                return Map.of();
+            }
+            Map<String, List<String>> result = new HashMap<>();
+            for (SyncTargetDTO item : parsed) {
+                if (item == null || item.targetDatasourceId() == null || item.targetTable() == null) {
+                    continue;
+                }
+                result.put(seqKey(item.targetDatasourceId(), item.targetTable()),
+                        item.incFields() == null ? List.of() : item.incFields());
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("[sync-task] 存量多目标配置解析失败，水位按变化处理: {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     /**
@@ -1176,12 +1709,15 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             if (sourceType != SyncSourceType.JDBC && !sourceType.isHttp()) {
                 throw new IllegalArgumentException("增量模式仅支持 JDBC / HTTP 输入源，文件/目录源请用全量模式");
             }
-            String incField = request.incField() == null ? "" : request.incField().trim();
-            if (incField.isEmpty()) {
-                throw new IllegalArgumentException("增量模式必须填写增量字段");
+            // 多字段按选择顺序构成复合水位：顺序有意义，不能排序也不能去重后重排
+            List<String> incFields = parseIncFields(request.incField());
+            if (incFields.isEmpty()) {
+                throw new IllegalArgumentException("增量模式必须选择增量字段");
             }
-            if (!INC_FIELD_PATTERN.matcher(incField).matches()) {
-                throw new IllegalArgumentException("增量字段名只允许字母、数字、下划线: " + incField);
+            for (String incField : incFields) {
+                if (!INC_FIELD_PATTERN.matcher(incField).matches()) {
+                    throw new IllegalArgumentException("增量字段名只允许字母、数字、下划线: " + incField);
+                }
             }
             if (SyncWriteMode.from(request.writeMode()) == SyncWriteMode.OVERWRITE) {
                 throw new IllegalArgumentException(
@@ -1203,14 +1739,28 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             } else {
                 columns = reachableColumns;
             }
-            requireFieldInColumns(incField, columns);
+            requireFieldsInColumns(incFields, columns);
+            String joined = String.join(",", incFields);
             String previousField = task.getSyncTaskIncField();
-            task.setSyncTaskIncField(incField);
+            task.setSyncTaskIncField(joined);
             task.setSyncTaskIncBatchSize(batch);
-            if (!Objects.equals(previousField, incField)) {
+            if (!Objects.equals(previousField, joined)) {
                 task.setSyncTaskLastSeq(null);
             }
         }
+        applyHookConfig(task, request);
+    }
+
+    /**
+     * 校验并写入 Hook 通知配置。
+     *
+     * <p>Hook 是<b>任务级</b>的旁路：多目标时一次执行只发一条完成通知（正文里带各目标的明细），
+     * 不给每个目标各发一条——否则一张表失败会连带把通知次数翻倍，接收方还得自己去重。</p>
+     *
+     * @param task    目标实体
+     * @param request 入参
+     */
+    private void applyHookConfig(MsSyncTask task, SyncTaskDTO request) {
         String hookUrl = request.hookUrl() == null ? "" : request.hookUrl().trim();
         if (hookUrl.isEmpty()) {
             task.setSyncTaskHookUrl(null);
@@ -1322,80 +1872,194 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 throw new IllegalArgumentException("未配置 HTTP 请求地址，请编辑任务补全");
             }
         }
-        if (SyncMode.from(task.getSyncTaskSyncMode()) == SyncMode.INCREMENTAL) {
+        List<SyncTargetPlan> targets = resolveTargets(task);
+        if (targets.isEmpty()) {
+            throw new IllegalArgumentException("未配置任何目标表，请编辑任务补全");
+        }
+        boolean anyIncremental = false;
+        for (SyncTargetPlan plan : targets) {
+            if (!plan.incremental()) {
+                continue;
+            }
+            anyIncremental = true;
             if (type != SyncSourceType.JDBC && !type.isHttp()) {
-                throw new IllegalArgumentException("增量模式仅支持 JDBC / HTTP 输入源，请编辑任务改回全量或换源类型");
+                throw new IllegalArgumentException("增量模式仅支持 JDBC / HTTP 输入源，请编辑任务改回全量或换源类型（"
+                        + plan.label() + "）");
             }
-            requireIncField(task);
-            if (SyncWriteMode.from(task.getSyncTaskWriteMode()) == SyncWriteMode.OVERWRITE) {
-                throw new IllegalArgumentException("增量模式不能使用「先清空再插入」写入模式，请编辑任务调整");
+            requireIncFields(plan);
+            if (SyncWriteMode.from(plan.writeMode()) == SyncWriteMode.OVERWRITE) {
+                throw new IllegalArgumentException(plan.label()
+                        + "：增量模式不能使用「先清空再插入」写入模式，请编辑任务调整");
             }
+        }
+        if (!anyIncremental) {
+            // 全量目标没有水位概念，任务级残留的字段不参与执行，不必校验
+            return;
         }
     }
 
     /**
-     * 取出并校验任务的增量字段。
+     * 取出并校验某个目标的增量字段（可多字段，按顺序构成复合水位）。
      *
-     * @param task 任务
-     * @return 合法的增量字段名
+     * @param plan 目标计划
+     * @return 合法的增量字段列表（保持配置顺序）
      * @throws IllegalArgumentException 未配置或含非法字符
      */
-    private String requireIncField(MsSyncTask task) {
-        String field = task.getSyncTaskIncField();
-        if (field == null || field.isBlank()) {
-            throw new IllegalArgumentException("增量模式未配置增量字段，请编辑任务补全");
+    private List<String> requireIncFields(SyncTargetPlan plan) {
+        List<String> fields = plan.incFields() == null ? List.of() : plan.incFields();
+        if (fields.isEmpty()) {
+            throw new IllegalArgumentException(plan.label() + "：增量模式未配置增量字段，请编辑任务补全");
         }
-        field = field.trim();
-        if (!INC_FIELD_PATTERN.matcher(field).matches()) {
-            throw new IllegalArgumentException("增量字段名不合法（只允许字母、数字、下划线）: " + field);
+        for (String field : fields) {
+            if (!INC_FIELD_PATTERN.matcher(field).matches()) {
+                throw new IllegalArgumentException(plan.label() + "：增量字段名不合法（只允许字母、数字、下划线）: " + field);
+            }
         }
-        return field;
+        return fields;
     }
 
     /**
-     * 校验增量字段在结果集列里存在（忽略大小写）。
+     * 校验一组增量字段都在结果集列里存在（忽略大小写）。
      *
-     * @param incField 增量字段
-     * @param columns  结果集列（可为 null）
-     * @throws IllegalArgumentException 不存在
+     * <p>复合水位要求每个字段都能取到值，少任何一个都会让水位链断掉，
+     * 因此逐个核对、一次把缺失项全报出来，避免用户改一个跑一次。</p>
+     *
+     * @param incFields 增量字段（按顺序）
+     * @param columns   结果集列（可为 null）
+     * @throws IllegalArgumentException 有字段不存在
      */
-    private static void requireFieldInColumns(String incField, List<SyncColumnVO> columns) {
-        if (columns == null || !containsIgnoreCase(columns, incField)) {
-            throw new IllegalArgumentException("增量字段「" + incField + "」不在源结果集列中"
+    private static void requireFieldsInColumns(List<String> incFields, List<SyncColumnVO> columns) {
+        if (incFields == null || incFields.isEmpty()) {
+            return;
+        }
+        List<String> missing = new ArrayList<>();
+        for (String field : incFields) {
+            if (columns == null || !containsIgnoreCase(columns, field)) {
+                missing.add(field);
+            }
+        }
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("增量字段「" + String.join("、", missing) + "」不在源结果集列中"
                     + (columns == null ? "" : "：" + columnNamesOf(columns)));
         }
     }
 
     /**
-     * 增量模式的读取 SQL：把用户原 SQL 包一层，加水位条件 + 升序 + 每批上限。
+     * 增量模式的读取 SQL（支持<b>复合水位</b>）。
+     *
+     * <p>多个增量字段按选择顺序构成一个字典序水位：前一个字段相等时才比较后一个。
+     * 例如 {@code (created_at, id)} 的水位是 {@code (2026-10-24 10:00, 812)}，
+     * 条件写成 {@code created_at > ? OR (created_at = ? AND id > ?)}，排序为
+     * {@code ORDER BY created_at ASC, id ASC}。这样同一时间戳内的多条记录不会因为
+     * 时间精度相同而被漏掉（单字段水位在这种情况下会丢掉除第一条以外的所有行）。</p>
      *
      * <p>为什么升序：增量按「水位 &lt; 值」取新数据，若倒序+LIMIT 会先取到最新的 N 条、
      * 把水位推到最大，夹在中间尚未同步的数据永远不会再被取到。升序取最老的 N 条、
      * 水位=本批最大值，积压才能不漏不重地分轮消化。</p>
      *
+     * <p>水位值以 JSON 数组串保存在水位列里（多目标时每目标独立），字段数与水位数组长度
+     * 不一致时按「无法解析」处理——宁可从旧水位重取（至少一次），也不猜一个错的比较边界。</p>
+     *
      * <p>字面量规则：纯数字不加引号（按数值比较），其余单引号包裹并转义（时间戳/字符串）。
      * LIMIT 语法按 MySQL/PG/H2 通用口径（与 REPLACE/UPSERT 写模式的 MySQL 取向一致）。</p>
      *
-     * @param task     任务
-     * @param incField 已校验过的增量字段
+     * @param task      任务
+     * @param plan      目标计划
+     * @param incFields 已校验过的增量字段（按顺序）
      * @return 包裹后的读取 SQL
      */
-    private String buildIncrementalSql(MsSyncTask task, String incField) {
+    private String buildIncrementalSql(MsSyncTask task, SyncTargetPlan plan, List<String> incFields) {
         String inner = task.getSyncTaskSourceSql().trim();
         if (inner.endsWith(";")) {
             inner = inner.substring(0, inner.length() - 1).trim();
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM (").append(inner).append(") __sync_inc");
-        String lastSeq = task.getSyncTaskLastSeq();
-        if (lastSeq != null && !lastSeq.isBlank()) {
-            sql.append(" WHERE ").append(incField).append(" > ").append(seqLiteral(lastSeq.trim()));
+        String lastSeq = plan.lastSeq();
+        List<String> seqValues = parseSeqValues(lastSeq, incFields.size());
+        if (!seqValues.isEmpty()) {
+            sql.append(" WHERE ").append(compositeWhere(incFields, seqValues));
         }
-        sql.append(" ORDER BY ").append(incField).append(" ASC");
-        Integer batch = task.getSyncTaskIncBatchSize();
+        sql.append(" ORDER BY ")
+                .append(incFields.stream().map(f -> f + " ASC").collect(java.util.stream.Collectors.joining(", ")));
+        Integer batch = plan.incBatchSize();
         if (batch != null && batch > 0) {
             sql.append(" LIMIT ").append(batch);
         }
         return sql.toString();
+    }
+
+    /**
+     * 复合水位的 WHERE 条件。
+     *
+     * <p>展开成「前 n 个字段都相等且第 n+1 个更大」的若干分支，避免依赖
+     * {@code (a,b) > (?,?)} 这种行值比较——Oracle 不支持，MySQL 8 才有稳定行为。</p>
+     *
+     * @param incFields 增量字段（按顺序）
+     * @param values    与字段一一对应的水位值
+     * @return WHERE 条件（不含 {@code WHERE} 关键字）
+     */
+    private static String compositeWhere(List<String> incFields, List<String> values) {
+        StringBuilder where = new StringBuilder();
+        for (int i = 0; i < incFields.size(); i++) {
+            if (i > 0) {
+                where.append(" OR ");
+            }
+            where.append("(");
+            for (int j = 0; j < i; j++) {
+                where.append(incFields.get(j)).append(" = ").append(seqLiteral(values.get(j))).append(" AND ");
+            }
+            where.append(incFields.get(i)).append(" > ").append(seqLiteral(values.get(i))).append(")");
+        }
+        return where.toString();
+    }
+
+    /**
+     * 把复合水位串解析成与字段一一对应的值列表。
+     *
+     * <p>兼容两种历史形态：单字段的裸值（旧任务），以及多字段的 JSON 数组串。</p>
+     *
+     * @param lastSeq   水位串
+     * @param fieldCount 增量字段数量
+     * @return 值列表；无法对应时返回空列表（按首跑处理）
+     */
+    private static List<String> parseSeqValues(String lastSeq, int fieldCount) {
+        if (lastSeq == null || lastSeq.isBlank() || fieldCount <= 0) {
+            return List.of();
+        }
+        String value = lastSeq.trim();
+        if (value.startsWith("[")) {
+            try {
+                List<String> parsed = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(value, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
+                if (parsed == null || parsed.size() != fieldCount) {
+                    return List.of();
+                }
+                return parsed;
+            } catch (Exception e) {
+                return List.of();
+            }
+        }
+        return fieldCount == 1 ? List.of(value) : List.of();
+    }
+
+    /**
+     * 把一行的多个增量字段值拼成复合水位串。
+     *
+     * @param values 按增量字段顺序取出的值
+     * @return 水位串；全为空返回 null
+     */
+    private static String joinSeqValues(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        if (values.size() == 1) {
+            return values.get(0);
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(values);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -1409,58 +2073,6 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             return seq;
         }
         return "'" + seq.replace("'", "''") + "'";
-    }
-
-    /**
-     * 执行成功后推进增量水位（内存 + 库里各一份）。
-     *
-     * <p>只在写入正常返回后调用：写失败/中断不推进，下一轮从旧水位重取（至少一次语义，
-     * 配合「存在即更新」或去重键不产生脏数据）。本批读到 0 行时水位原样保留。</p>
-     *
-     * @param task   任务
-     * @param readCount 本批读取行数
-     * @param seqMax    本批最大增量字段值（无有效值为 null）
-     */
-    private void advanceWatermark(MsSyncTask task, long readCount, String seqMax) {
-        if (seqMax == null || seqMax.isBlank()) {
-            if (readCount > 0) {
-                runLogBuffer.warn(task.getId(), "本批 " + readCount + " 行均无增量字段值，水位不推进");
-            } else {
-                runLogBuffer.info(task.getId(), "本批无新增数据，水位保持 "
-                        + (task.getSyncTaskLastSeq() == null || task.getSyncTaskLastSeq().isBlank()
-                        ? "（无）" : task.getSyncTaskLastSeq()));
-            }
-            return;
-        }
-        String previous = task.getSyncTaskLastSeq();
-        if (Objects.equals(previous, seqMax)) {
-            return;
-        }
-        task.setSyncTaskLastSeq(seqMax);
-        var update = new LambdaUpdateWrapper<MsSyncTask>()
-                .eq(MsSyncTask::getId, task.getId())
-                .set(MsSyncTask::getSyncTaskLastSeq, seqMax);
-        taskMapper.update(null, update);
-        runLogBuffer.info(task.getId(), "增量水位推进："
-                + (previous == null || previous.isBlank() ? "（首跑）" : previous) + " → " + seqMax
-                + "（本批 " + readCount + " 行）");
-    }
-
-    /**
-     * 用本批行值滚动更新最大增量值。
-     *
-     * @param max   当前最大值（出参）
-     * @param value 行里的增量字段值
-     */
-    private static void trackSeq(AtomicReference<String> max, Object value) {
-        String seq = seqOf(value);
-        if (seq == null || seq.isEmpty()) {
-            return;
-        }
-        String current = max.get();
-        if (current == null || seqCompare(seq, current) > 0) {
-            max.set(seq);
-        }
     }
 
     /**
@@ -1486,6 +2098,125 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             return new BigDecimal(a).compareTo(new BigDecimal(b));
         }
         return a.compareTo(b);
+    }
+
+    /**
+     * 用本批行值滚动更新**复合**增量水位。
+     *
+     * <p>多个字段按字典序比较：先比第一个字段，相同时再比第二个，以此类推。
+     * 只有行里所有增量字段都有值时才参与比较——缺值时无法确定它在序列中的位置，
+     * 贸然推进水位会跳过中间数据。</p>
+     *
+     * @param max       当前最大水位（出参）
+     * @param row       源行
+     * @param incFields 增量字段（按顺序）
+     */
+    private static void trackSeqs(AtomicReference<String> max, Map<String, Object> row, List<String> incFields) {
+        List<String> values = new ArrayList<>(incFields.size());
+        for (String field : incFields) {
+            String value = seqOf(row.get(field));
+            if (value == null || value.isEmpty()) {
+                return;
+            }
+            values.add(value);
+        }
+        String candidate = joinSeqValues(values);
+        if (candidate == null) {
+            return;
+        }
+        String current = max.get();
+        if (current == null || compareSeqValues(current, candidate, incFields.size()) < 0) {
+            max.set(candidate);
+        }
+    }
+
+    /**
+     * 比较两个复合水位串的大小（字典序）。
+     *
+     * @param left       左水位串
+     * @param right      右水位串
+     * @param fieldCount 字段数量
+     * @return 负数表示 left &lt; right
+     */
+    private static int compareSeqValues(String left, String right, int fieldCount) {
+        List<String> a = parseSeqValues(left, fieldCount);
+        List<String> b = parseSeqValues(right, fieldCount);
+        if (a.isEmpty() || b.isEmpty()) {
+            return String.valueOf(left).compareTo(String.valueOf(right));
+        }
+        for (int i = 0; i < a.size(); i++) {
+            int cmp = seqCompare(a.get(i), b.get(i));
+            if (cmp != 0) {
+                return cmp;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 推进某个目标的独立增量水位（内存 + 多目标水位 JSON 各一份）。
+     *
+     * <p>多目标的水位存在 {@code ms_sync_task_target_seqs} 里，键为「数据源ID#库.表」。
+     * 用 JSON 而不是单列，是因为每个目标各有一套水位：A 表失败不该把 B 表的水位拖住。</p>
+     *
+     * @param task      任务
+     * @param plan      目标计划
+     * @param readCount 本批读取行数
+     * @param seqMax    本批最大水位（无有效值为 null）
+     */
+    private void advanceTargetWatermark(MsSyncTask task, SyncTargetPlan plan, long readCount, String seqMax) {
+        if (seqMax == null || seqMax.isBlank()) {
+            if (readCount > 0) {
+                runLogBuffer.warn(task.getId(), "[" + plan.label() + "] 本批 " + readCount
+                        + " 行均无增量字段值，水位不推进");
+            }
+            return;
+        }
+        String previous = plan.lastSeq();
+        if (Objects.equals(previous, seqMax)) {
+            return;
+        }
+        String key = seqKey(plan.targetDatasourceId(), plan.targetTable());
+        if (task.getSyncTaskTargets() == null || task.getSyncTaskTargets().isBlank()) {
+            // 旧单目标任务：水位仍写回原来的单列，保持与旧版一致（多目标 JSON 为空即回落这条路径）
+            task.setSyncTaskLastSeq(seqMax);
+            taskMapper.update(null, new LambdaUpdateWrapper<MsSyncTask>()
+                    .eq(MsSyncTask::getId, task.getId())
+                    .set(MsSyncTask::getSyncTaskLastSeq, seqMax));
+            runLogBuffer.info(task.getId(), "增量水位推进："
+                    + (previous == null || previous.isBlank() ? "（首跑）" : previous) + " → " + seqMax
+                    + "（本批 " + readCount + " 行）");
+            return;
+        }
+        String json = task.getSyncTaskTargetSeqs();
+        Map<String, String> seqs = new java.util.LinkedHashMap<>();
+        if (json != null && !json.isBlank()) {
+            try {
+                Map<String, String> parsed = objectMapper.readValue(json,
+                        new TypeReference<Map<String, String>>() { });
+                if (parsed != null) {
+                    seqs.putAll(parsed);
+                }
+            } catch (Exception e) {
+                // 旧水位坏了不影响本次推进：以本次结果覆盖该目标键
+                runLogBuffer.warn(task.getId(), "多目标水位解析失败，按本次结果覆盖: " + e.getMessage());
+            }
+        }
+        seqs.put(key, seqMax);
+        String merged;
+        try {
+            merged = objectMapper.writeValueAsString(seqs);
+        } catch (Exception e) {
+            runLogBuffer.warn(task.getId(), "多目标水位序列化失败，本次水位不落库: " + e.getMessage());
+            return;
+        }
+        task.setSyncTaskTargetSeqs(merged);
+        taskMapper.update(null, new LambdaUpdateWrapper<MsSyncTask>()
+                .eq(MsSyncTask::getId, task.getId())
+                .set(MsSyncTask::getSyncTaskTargetSeqs, merged));
+        runLogBuffer.info(task.getId(), "[" + plan.label() + "] 增量水位推进："
+                + (previous == null || previous.isBlank() ? "（首跑）" : previous) + " → " + seqMax
+                + "（本批 " + readCount + " 行）");
     }
 
     /**
@@ -1599,6 +2330,112 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         } catch (Exception e) {
             throw new IllegalArgumentException("字段映射格式不合法: " + e.getMessage());
         }
+    }
+
+    /**
+     * 从任务解析出**生效的目标列表**（多目标，或旧单目标回落）。
+     *
+     * <p>旧库的 {@code ms_sync_task_targets} 为空时，用任务原有的单目标三件套
+     * （数据源 / 表 / 写入模式）构造一个目标，因此**存量任务不需要迁移**就照旧执行。</p>
+     *
+     * <p>多目标 JSON 里每项都自带写入模式、同步模式、增量字段、映射与批量，
+     * 这正是「每个目标都是现在的这些配置」的落地形式；顶层同名字段只在
+     * 旧单目标回落时使用。</p>
+     *
+     * @param task 任务
+     * @return 目标列表（至少 1 项；未配置返回空列表）
+     */
+    private List<SyncTargetPlan> resolveTargets(MsSyncTask task) {
+        String json = task.getSyncTaskTargets();
+        if (json != null && !json.isBlank()) {
+            List<SyncTargetDTO> parsed;
+            try {
+                parsed = objectMapper.readValue(json, new TypeReference<List<SyncTargetDTO>>() { });
+            } catch (Exception e) {
+                throw new IllegalArgumentException("多目标配置格式不合法: " + e.getMessage());
+            }
+            if (parsed != null && !parsed.isEmpty()) {
+                List<SyncTargetPlan> plans = new ArrayList<>(parsed.size());
+                for (SyncTargetDTO item : parsed) {
+                    if (item == null || item.targetDatasourceId() == null
+                            || item.targetTable() == null || item.targetTable().isBlank()) {
+                        throw new IllegalArgumentException("多目标配置里存在缺少数据源或表名的目标");
+                    }
+                    String mode = item.syncMode() == null || item.syncMode().isBlank()
+                            ? SyncMode.FULL.name() : SyncMode.from(item.syncMode()).name();
+                    List<String> incFields = item.incFields() == null ? List.of()
+                            : item.incFields().stream().filter(f -> f != null && !f.isBlank())
+                            .map(String::trim).distinct().toList();
+                    plans.add(new SyncTargetPlan(
+                            item.targetDatasourceId(),
+                            item.targetTable().trim(),
+                            SyncWriteMode.from(item.writeMode()).code(),
+                            mode,
+                            incFields,
+                            item.incBatchSize(),
+                            item.columnMapping(),
+                            item.batchSize(),
+                            findTargetSeq(task, item.targetDatasourceId(), item.targetTable())));
+                }
+                return plans;
+            }
+        }
+        // 旧单目标回落：与多目标改造前的行为完全一致
+        if (task.getSyncTaskTargetDatasourceId() == null
+                || task.getSyncTaskTargetTable() == null || task.getSyncTaskTargetTable().isBlank()) {
+            return List.of();
+        }
+        String mode = SyncMode.from(task.getSyncTaskSyncMode()).name();
+        // 单目标任务的增量字段也是「逗号分隔的有序串」（复合水位），必须拆开而不是当成一个字段名
+        List<String> incFields = parseIncFields(task.getSyncTaskIncField());
+        return List.of(new SyncTargetPlan(
+                task.getSyncTaskTargetDatasourceId(),
+                task.getSyncTaskTargetTable().trim(),
+                SyncWriteMode.from(task.getSyncTaskWriteMode()).code(),
+                mode,
+                incFields,
+                task.getSyncTaskIncBatchSize(),
+                task.getSyncTaskColumnMapping(),
+                task.getSyncTaskBatchSize(),
+                task.getSyncTaskLastSeq()));
+    }
+
+    /**
+     * 取某个目标的独立水位。
+     *
+     * <p>多目标各有各的水位：同一份源数据写进两张表时，一张失败不应把另一张的水位也拖住，
+     * 否则失败的那张永远停在旧水位、成功的会重复消费。水位存在多目标 JSON 的
+     * {@code lastSeq} 字段里（服务端回写，入参不认）。</p>
+     *
+     * @param task               任务
+     * @param targetDatasourceId 目标数据源 ID
+     * @param targetTable        目标表名
+     * @return 该目标的水位；没有返回 null
+     */
+    private String findTargetSeq(MsSyncTask task, Long targetDatasourceId, String targetTable) {
+        String json = task.getSyncTaskTargetSeqs();
+        if (json == null || json.isBlank() || targetTable == null) {
+            return null;
+        }
+        try {
+            Map<String, String> seqs = objectMapper.readValue(json, new TypeReference<Map<String, String>>() { });
+            return seqs == null ? null : seqs.get(seqKey(targetDatasourceId, targetTable));
+        } catch (Exception e) {
+            // 水位只是进度记录，格式坏了不能让整次执行失败；记录后按无水位（首跑）处理
+            log.warn("[sync-task] 多目标水位解析失败，按无水位处理, taskId={}", task.getId(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 水位键：数据源 + 表名。
+     *
+     * @param targetDatasourceId 目标数据源 ID
+     * @param targetTable        目标表名
+     * @return 水位键
+     */
+    private static String seqKey(Long targetDatasourceId, String targetTable) {
+        return targetDatasourceId + "#" + (targetTable == null ? "" : targetTable.trim());
     }
 
     /**
@@ -1790,16 +2627,6 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     /**
-     * 取任务批量大小。
-     *
-     * @param task 任务
-     * @return 批量大小
-     */
-    private int batchSize(MsSyncTask task) {
-        return batchSizeOf(task.getSyncTaskBatchSize());
-    }
-
-    /**
      * 规范化批量大小。
      *
      * @param value 入参
@@ -1935,16 +2762,41 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             SyncSourceOptions options = optionsOf(task);
             List<SyncColumnVO> sourceColumns = headersOf(file, options);
             runLogBuffer.info(taskId, "文件表头（" + sourceColumns.size() + " 列）：" + describeColumns(sourceColumns));
-            List<SyncFieldMappingVO> mapping = resolveMapping(task, sourceColumns);
-            AtomicLong readCounter = new AtomicLong();
-            long writeCount = streamAndWrite(task, mapping, sourceColumns, readCounter, file);
-            result = SyncTaskRunVO.success(readCounter.get(), writeCount, costMs(startNanos), runTime);
-            afterProcess(task, file, options);
+            List<SyncTargetPlan> targets = resolveTargets(task);
+            if (targets.isEmpty()) {
+                throw new IllegalStateException("没有配置任何目标表，请编辑任务补全");
+            }
+            long readTotal = 0L;
+            long writeTotal = 0L;
+            boolean allOk = true;
+            for (SyncTargetPlan plan : targets) {
+                try {
+                    AtomicLong readCounter = new AtomicLong();
+                    long writeCount = streamAndWriteTo(task, plan, sourceColumns, readCounter, file);
+                    readTotal += readCounter.get();
+                    writeTotal += writeCount;
+                    runLogBuffer.info(taskId, "[" + plan.label() + "] 读 " + readCounter.get()
+                            + " 行 / 写 " + writeCount + " 行");
+                } catch (Exception e) {
+                    allOk = false;
+                    runLogBuffer.error(taskId, "[" + plan.label() + "] 实时录入失败：" + rootMessage(e), e);
+                    log.warn("[sync-task] 实时录入目标失败, id={}, file={}, target={}, message={}",
+                            taskId, file.getFileName(), plan.label(), rootMessage(e));
+                }
+            }
+            if (allOk) {
+                result = SyncTaskRunVO.success(readTotal, writeTotal, costMs(startNanos), runTime);
+                // 全部目标写成功才应用「处理完」动作：只写进一半就删/归档文件，失败的表永远补不回来
+                afterProcess(task, file, options);
+            } else {
+                result = new SyncTaskRunVO(SyncTaskRunVO.STATUS_FAILED, readTotal, writeTotal,
+                        costMs(startNanos), "部分目标写入失败（见运行日志）", runTime);
+            }
             logStatus = result.status();
-            runLogBuffer.info(taskId, "实时录入完成：读 " + readCounter.get() + " 行 / 写 " + writeCount
-                    + " 行，处理完动作 " + options.afterProcess());
-            log.info("[sync-task] 实时录入完成, id={}, file={}, read={}, write={}",
-                    taskId, file.getFileName(), readCounter.get(), writeCount);
+            runLogBuffer.info(taskId, "实时录入完成：读 " + readTotal + " 行 / 写 " + writeTotal
+                    + " 行，处理完动作 " + (allOk ? options.afterProcess() : "跳过（有目标失败）"));
+            log.info("[sync-task] 实时录入完成, id={}, file={}, read={}, write={}, allOk={}",
+                    taskId, file.getFileName(), readTotal, writeTotal, allOk);
         } catch (Exception e) {
             result = SyncTaskRunVO.failed(0L, costMs(startNanos), rootMessage(e), runTime);
             runLogBuffer.error(taskId, "实时录入失败：" + rootMessage(e), e);

@@ -39,6 +39,7 @@ import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.websocket.SysAiWebSocketHandler;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiBotCaller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -1927,6 +1928,7 @@ public class AiBotChatService {
                 .authPrefix(extraString(extra, "auth_prefix"))
                 .proxy(provider.getProxy())
                 .timeoutMillis(timeoutMillis)
+                .routes(ProviderRouteTargets.fromExtra(extra))
                 .build();
     }
 

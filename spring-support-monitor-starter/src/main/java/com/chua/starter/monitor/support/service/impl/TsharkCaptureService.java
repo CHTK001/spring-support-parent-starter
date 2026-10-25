@@ -224,7 +224,7 @@ public class TsharkCaptureService {
      * （{@code 以太网 3-WFP Native MAC Layer LightWeight Filter-0000}），
      * 取前缀就能和 tshark 的括号名对上。这是实测出来的唯一可用键。</p>
      *
-     * <p>顺带解决「选不��哪个是本地网络」：同一张物理网卡在 OSHI 里会重复出现多行
+     * <p>顺带解决「选不出哪个是本地网络」：同一张物理网卡在 OSHI 里会重复出现多行
      * （WFP / 802.3 / Npcap / QoS 各一个 filter），按 MAC 归并成一条；
      * 虚拟网卡（VPN / 蒲公英 / Hyper-V）的 displayName 含 Virtual / Tunnel 字样，据此标记出来 ——
      * 用户挑到这类网卡必然抓不到流量（本机实测「以太网 2」就是 OrayBoxVpnEnt 虚拟网卡，0 包）。</p>
@@ -1403,7 +1403,9 @@ public class TsharkCaptureService {
     }
 
     private static boolean isHttpRequestLine(String info) {
-        if (info == null) return false;
+        if (info == null) {
+            return false;
+        }
         String up = info.toUpperCase();
         return up.startsWith("GET ")
                 || up.startsWith("POST ")
@@ -1415,7 +1417,9 @@ public class TsharkCaptureService {
     }
 
     private static Long msBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) return null;
+        if (from == null || to == null) {
+            return null;
+        }
         long ms = java.time.Duration.between(from, to).toMillis();
         return ms < 0 ? 0L : ms;
     }

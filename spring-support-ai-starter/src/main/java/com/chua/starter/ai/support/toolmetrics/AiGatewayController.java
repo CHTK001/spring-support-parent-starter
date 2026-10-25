@@ -107,7 +107,9 @@ public class AiGatewayController {
         if (running) {
             try {
                 port = (int) ReflectUtils.invoke(activeConnector, "getPort", int.class);
-            } catch (Exception ignored) { }
+            } catch (Exception e) {
+                log.warn("[AiGateway] Failed to get port", e);
+            }
         }
         return ReturnResult.ok(Map.of("running", running, "port", port));
     }

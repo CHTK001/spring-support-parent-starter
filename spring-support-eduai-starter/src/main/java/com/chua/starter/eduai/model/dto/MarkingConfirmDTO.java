@@ -38,15 +38,28 @@ public record MarkingConfirmDTO(
     /**
      * 单题评分调整
      *
-     * @param resultId 结果标识
+     * @param resultId 结果标识（识别失败补录行为负值或 null）
      * @param score    分数
      * @param comment  评论
+     * @param no       题号（识别失败补录时用于新建结果行；常规调整可为 null）
      * @author CH
      * @since 4.0.0
      */
     public record ScoreAdjustment(
             Long resultId,
             Integer score,
-            String comment) {
+            String comment,
+            String no) {
+
+        /**
+         * 兼容构造：不传题号（常规按 resultId 修改已存在结果行）。
+         *
+         * @param resultId 结果标识
+         * @param score    分数
+         * @param comment  评论
+         */
+        public ScoreAdjustment(Long resultId, Integer score, String comment) {
+            this(resultId, score, comment, null);
+        }
     }
 }

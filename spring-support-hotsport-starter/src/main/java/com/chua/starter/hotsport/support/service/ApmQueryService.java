@@ -2324,4 +2324,338 @@ public class ApmQueryService {
         }
         return ISO_FMT.format(Instant.ofEpochMilli(epochMillis));
     }
+
+    // ------------------------------------------------------------------
+    // 看板聚合：趋势 / 日志等级 / 端点时序 / 协议 / 线程池 / 连接池
+    // ------------------------------------------------------------------
+
+    /**
+     * 调用量与耗时趋势（按时间桶聚合）。
+     *
+     * <p>前端 {@code getTrend(minutes, bucketSeconds)} 用于 Dashboard 的折线图，
+     * 需要「每个时间桶一行」的连续序列，因此这里按
+     * {@code startTime - startTime % bucketMs} 归桶，只返回有数据的桶
+     * （前端以 bucketStart 为 x 轴，空桶本就画不出来）。</p>
+     *
+     * @param minutes       统计窗口（分钟），最小 1
+     * @param bucketSeconds 桶宽（秒），最小 1
+     * @return 趋势点列表，按桶升序
+     */
+    public List<Map<String, Object>> trend(int minutes, int bucketSeconds) {
+        int window = Math.max(1, minutes);
+        long bucketMs = Math.max(1, bucketSeconds) * 1000L;
+        long from = System.currentTimeMillis() - window * 60_000L;
+
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+
+        Map<Long, long[]> buckets = new java.util.TreeMap<>();
+        for (TransmissionEvent e : all) {
+            long ts = e.getStartTime() > 0 ? e.getStartTime() : e.getEndTime();
+            if (ts <= 0 || ts < from) {
+                continue;
+            }
+            long[] acc = buckets.computeIfAbsent(ts - ts % bucketMs, k -> new long[3]);
+            acc[0]++;
+            acc[2] += Math.max(0L, e.getDuration());
+            if (e.getStatus() == StatusCode.ERROR) {
+                acc[1]++;
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<Long, long[]> en : buckets.entrySet()) {
+            long[] acc = en.getValue();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("bucketStart", en.getKey());
+            m.put("callCount", acc[0]);
+            m.put("errorCount", acc[1]);
+            m.put("errorRatePercent", acc[0] > 0 ? round2(100.0 * acc[1] / acc[0]) : 0.0);
+            m.put("avgMs", acc[0] > 0 ? round2((double) acc[2] / acc[0]) : 0.0);
+            out.add(m);
+        }
+        return out;
+    }
+
+    /**
+     * 日志等级分布。
+     *
+     * @return 每行 {@code {level,count,percent}}，按数量降序
+     */
+    public List<Map<String, Object>> logStats() {
+        Query q = new Query().setLimit(100000);
+        List<LogRecord> all = queryAll(q, storage -> storage.queryLogs(q));
+
+        Map<String, Long> counts = new LinkedHashMap<>();
+        long total = 0L;
+        for (LogRecord r : all) {
+            String level = r.getLevel() == null ? "UNKNOWN" : r.getLevel().toUpperCase();
+            counts.merge(level, 1L, Long::sum);
+            total++;
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, Long> en : counts.entrySet()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("level", en.getKey());
+            m.put("count", en.getValue());
+            m.put("percent", total > 0 ? round2(100.0 * en.getValue() / total) : 0.0);
+            out.add(m);
+        }
+        out.sort(Comparator.comparingLong(x -> -((Long) x.get("count"))));
+        return out;
+    }
+
+    /**
+     * 端点级时序统计（按「时间桶 × 端点」聚合）。
+     *
+     * <p>端点标签与 {@link #endpoints(int, String)} 保持一致
+     * （{@code 协议 操作}），这样端点列表页与趋势图能对上同一批 key。</p>
+     *
+     * @param service       服务名过滤（空表示全部）
+     * @param minutes       统计窗口（分钟）
+     * @param bucketSeconds 桶宽（秒）
+     * @return 每行 {@code {ts,endpoint,callCount,errorCount,avgMs}}
+     */
+    public List<Map<String, Object>> endpointStats(String service, int minutes, int bucketSeconds) {
+        int window = Math.max(1, minutes);
+        long bucketMs = Math.max(1, bucketSeconds) * 1000L;
+        long from = System.currentTimeMillis() - window * 60_000L;
+        String serviceKey = service == null ? "" : service.trim();
+
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+
+        Map<Long, Map<String, long[]>> buckets = new LinkedHashMap<>();
+        for (TransmissionEvent e : all) {
+            long ts = e.getStartTime() > 0 ? e.getStartTime() : e.getEndTime();
+            if (ts <= 0 || ts < from) {
+                continue;
+            }
+            if (!serviceKey.isEmpty()) {
+                String svc = serviceLabel(e.getTargetSoftware(), e.getTargetHost());
+                if (svc == null || !svc.equalsIgnoreCase(serviceKey)) {
+                    continue;
+                }
+            }
+            String op = e.getOperation() != null ? e.getOperation() : "?";
+            String endpoint = (e.getProtocol() != null ? e.getProtocol() : "?") + " " + op;
+            long bucketStart = ts - ts % bucketMs;
+            long[] acc = buckets.computeIfAbsent(bucketStart, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(endpoint, k -> new long[3]);
+            acc[0]++;
+            acc[2] += Math.max(0L, e.getDuration());
+            if (e.getStatus() == StatusCode.ERROR) {
+                acc[1]++;
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<Long, Map<String, long[]>> bucket : buckets.entrySet()) {
+            for (Map.Entry<String, long[]> en : bucket.getValue().entrySet()) {
+                long[] acc = en.getValue();
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("ts", bucket.getKey());
+                m.put("endpoint", en.getKey());
+                m.put("callCount", acc[0]);
+                m.put("errorCount", acc[1]);
+                m.put("avgMs", acc[0] > 0 ? round2((double) acc[2] / acc[0]) : 0.0);
+                out.add(m);
+            }
+        }
+        out.sort(Comparator.comparingLong(x -> (Long) x.get("ts")));
+        return out;
+    }
+
+    /**
+     * 协议分布统计。
+     *
+     * @return 每行 {@code {protocol,callCount,errorCount,errorRatePercent,avgMs}}，按调用量降序
+     */
+    public List<Map<String, Object>> protocolStats() {
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+
+        Map<String, long[]> agg = new LinkedHashMap<>();
+        for (TransmissionEvent e : all) {
+            String protocol = e.getProtocol() == null || e.getProtocol().isBlank()
+                    ? "UNKNOWN" : e.getProtocol().toUpperCase();
+            long[] acc = agg.computeIfAbsent(protocol, k -> new long[3]);
+            acc[0]++;
+            acc[2] += Math.max(0L, e.getDuration());
+            if (e.getStatus() == StatusCode.ERROR) {
+                acc[1]++;
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, long[]> en : agg.entrySet()) {
+            long[] acc = en.getValue();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("protocol", en.getKey());
+            m.put("callCount", acc[0]);
+            m.put("errorCount", acc[1]);
+            m.put("errorRatePercent", acc[0] > 0 ? round2(100.0 * acc[1] / acc[0]) : 0.0);
+            m.put("avgMs", acc[0] > 0 ? round2((double) acc[2] / acc[0]) : 0.0);
+            out.add(m);
+        }
+        out.sort(Comparator.comparingLong(x -> -((Long) x.get("callCount"))));
+        return out;
+    }
+
+    /**
+     * 线程池视图：把 JVM 实时线程按「池名」分组。
+     *
+     * <p>数据来自 {@link java.lang.management.ThreadMXBean#dumpAllThreads}，
+     * 不是历史记录 —— 线程池页面关心的是「此刻谁在忙」。</p>
+     *
+     * @return 每行 {@code {name,count,daemonCount,knownPool,sampleStates[]}}
+     */
+    public List<Map<String, Object>> threadPools() {
+        java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
+        java.lang.management.ThreadInfo[] infos = bean.dumpAllThreads(false, false);
+
+        Map<String, List<java.lang.management.ThreadInfo>> pools = new LinkedHashMap<>();
+        for (java.lang.management.ThreadInfo info : infos) {
+            pools.computeIfAbsent(poolName(info.getThreadName()), k -> new ArrayList<>()).add(info);
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, List<java.lang.management.ThreadInfo>> en : pools.entrySet()) {
+            List<java.lang.management.ThreadInfo> threads = en.getValue();
+            long daemonCount = threads.stream().filter(java.lang.management.ThreadInfo::isDaemon).count();
+            Map<String, Long> states = new LinkedHashMap<>();
+            for (java.lang.management.ThreadInfo info : threads) {
+                String state = info.getThreadState() == null ? "UNKNOWN" : info.getThreadState().name();
+                states.merge(state, 1L, Long::sum);
+            }
+            List<Map<String, Object>> samples = new ArrayList<>();
+            for (Map.Entry<String, Long> state : states.entrySet()) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("state", state.getKey());
+                item.put("count", state.getValue());
+                samples.add(item);
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", en.getKey());
+            m.put("count", (long) threads.size());
+            m.put("daemonCount", daemonCount);
+            m.put("knownPool", isKnownPool(en.getKey()));
+            m.put("sampleStates", samples);
+            out.add(m);
+        }
+        out.sort(Comparator.comparingLong(x -> -((Long) x.get("count"))));
+        return out;
+    }
+
+    /**
+     * 连接池近似视图：按「目标 host:port」聚合调用情况。
+     *
+     * <p>APM 只能看到外部目标，看不到对方进程里的池对象，所以这里用
+     * 「目标地址维度的调用量 / 平均耗时 / 最后调用时间」近似描述连接压力，
+     * 并附带本进程当前打开的 FD 数（Linux 下读 {@code /proc/self/fd}）。</p>
+     *
+     * <p>{@code activeLeakCount} 恒为 {@code null}：句柄泄漏的记录只有「类型名 /
+     * 持有线程 / 创建栈」，没有目标地址——{@code InterceptContext} 不携带方法入参，
+     * 连 {@code Socket.connect} 的 {@code SocketAddress} 都取不到，所以这个数字在当前
+     * 插桩能力下无法按端点归因。这里返回 {@code null}（不输出）而非 {@code 0}：
+     * 0 会被读成「这个端点确实没有活跃泄漏」，是本观测功能不该给出的假数据；
+     * 前端把 null 渲染成空白即表示「无法归因」，进程级活跃泄漏数见 {@code /stats}
+     * 的 {@code leakCount} 与 {@code /leaks}。</p>
+     *
+     * @return 每行 {@code {endpoint,callCount,avgMs,lastCallAt,activeLeakCount,openFileDescriptors}}，
+     *         其中 {@code activeLeakCount} 恒为 {@code null}
+     */
+    public List<Map<String, Object>> connectionPools() {
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+
+        Map<String, long[]> agg = new LinkedHashMap<>();
+        for (TransmissionEvent e : all) {
+            String host = e.getTargetHost();
+            if (host == null || host.isBlank()) {
+                continue;
+            }
+            String endpoint = host + (e.getTargetPort() > 0 ? ":" + e.getTargetPort() : "");
+            long[] acc = agg.computeIfAbsent(endpoint, k -> new long[3]);
+            acc[0]++;
+            acc[1] += Math.max(0L, e.getDuration());
+            acc[2] = Math.max(acc[2], e.getStartTime());
+        }
+        Integer fds = openFileDescriptors();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, long[]> en : agg.entrySet()) {
+            long[] acc = en.getValue();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("endpoint", en.getKey());
+            m.put("callCount", acc[0]);
+            m.put("avgMs", acc[0] > 0 ? round2((double) acc[1] / acc[0]) : 0.0);
+            m.put("lastCallAt", toIso(acc[2]));
+            // 无法按端点归因句柄泄漏（插桩拿不到目标地址），输出 null 而不是假 0：
+            // 前端渲染空白 = 未知；进程级活跃泄漏数见 /stats 的 leakCount。
+            m.put("activeLeakCount", null);
+            m.put("openFileDescriptors", fds);
+            out.add(m);
+        }
+        out.sort(Comparator.comparingLong(x -> -((Long) x.get("callCount"))));
+        return out;
+    }
+
+    /**
+     * 保留两位小数。
+     *
+     * @param value 原始值
+     * @return 四舍五入到两位小数的值
+     */
+    private static double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    /**
+     * 从线程名推断线程池名：去掉末尾的数字序号。
+     *
+     * <p>例：{@code http-nio-18170-exec-3 → http-nio-18170-exec}、
+     * {@code MvcAsync12 → MvcAsync}。</p>
+     *
+     * @param threadName 线程名
+     * @return 池名
+     */
+    private static String poolName(String threadName) {
+        if (threadName == null || threadName.isBlank()) {
+            return "unknown";
+        }
+        String base = threadName.trim().replaceAll("[-_#]?\\d+$", "");
+        return base.isBlank() ? threadName.trim() : base;
+    }
+
+    /**
+     * 是否属于已知的框架线程池（前端用来区分「框架池」与「业务自建池」）。
+     *
+     * @param poolName 池名
+     * @return 命中已知前缀返回 true
+     */
+    private static boolean isKnownPool(String poolName) {
+        if (poolName == null) {
+            return false;
+        }
+        String name = poolName.toLowerCase();
+        String[] known = {"http-nio", "mvcasync", "tomcat", "hikari", "lettuce", "netty",
+                "hotsport", "sse", "spring", "pool", "scheduler", "forkjoin", "common-cleaner",
+                "reference handler", "finalizer", "signal dispatcher", "notification thread"};
+        for (String prefix : known) {
+            if (name.startsWith(prefix) || name.contains(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 读取本进程当前打开的 FD 数（非 Linux 返回 {@code null}）。
+     *
+     * @return FD 数，取不到时返回 {@code null}
+     */
+    private static Integer openFileDescriptors() {
+        try {
+            String[] fds = new java.io.File("/proc/self/fd").list();
+            return fds == null ? null : fds.length;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

@@ -676,7 +676,9 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     }
 
     private static String escapeCsv(String v) {
-        if (v == null) return "";
+        if (v == null) {
+            return "";
+        }
         // 双重转义双引号，包裹含逗号/换行/双引号的字段
         if (v.contains(",") || v.contains("\n") || v.contains("\r") || v.contains("\"")) {
             return "\"" + v.replace("\"", "\"\"") + "\"";

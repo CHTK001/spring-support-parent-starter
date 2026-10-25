@@ -171,6 +171,21 @@ plugin:
     max-connections: 1000
 ```
 
+## 🔌 Socket 协议 SPI 注册
+
+本模块通过 `SocketProvider` 扩展点向 `spring-support-socket-starter` 注册 `sse` 协议，
+注册文件为 `src/main/resources/META-INF/extensions/com.chua.socket.support.spi.SocketProvider`：
+
+```properties
+sse=com.chua.starter.sse.support.socket.SseSocketProvider
+```
+
+> 该文件缺失时协议不会被发现，`SocketConfiguration` 会打日志
+> `[Socket] 未找到协议 [sse] 的 SPI 实现` 并跳过 Socket 初始化，
+> 进而让所有依赖 `SocketSessionTemplate` 的 Bean 创建失败。
+> 新增协议实现时，务必同步补 `META-INF/extensions/<接口全名>`（格式 `别名=实现类全名`）
+> 与 `META-INF/native-image/**` 下的 `resource-config.json` / `reflect-config.json`。
+
 ## 📄 许可证
 
 本项目采用 Apache License 2.0 许可证。

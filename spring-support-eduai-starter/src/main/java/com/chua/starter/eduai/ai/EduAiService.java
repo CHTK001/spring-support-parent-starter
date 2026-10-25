@@ -803,10 +803,13 @@ public class EduAiService {
     }
 
     /**
-     * 判断异常链里是否出现限流（429 / rate limit）。
+     * 判断异常链里是否出现限流（429 / rate limit / tpm-rpm 配额）。
      *
      * <p>不同厂商的异常类型不一致（OpenAI SDK 抛 {@code RateLimitException}，
-     * 其他网关可能只把 429 写在消息里），因此类名与消息都匹配。</p>
+     * 其他网关可能只把 429 写在消息里），因此类名与消息都匹配。除标准的
+     * {@code rate limit} 外，也覆盖国产网关常见的配额口径：{@code tpm/rpm limit}、
+     * {@code rpm exhausted}、{@code too many requests}、{@code quota}、{@code throttle}
+     * 及中文「限流」—— 这些消息若漏判，限流就不会进入重试，判分直接掉 0 分。</p>
      *
      * @param error 异常
      * @return true 表示是限流
@@ -817,7 +820,16 @@ public class EduAiService {
                 return true;
             }
             String message = t.getMessage();
-            if (message != null && message.toLowerCase(Locale.ROOT).contains("rate limit")) {
+            if (message == null) {
+                continue;
+            }
+            String lower = message.toLowerCase(Locale.ROOT);
+            if (lower.contains("rate limit") || lower.contains("rate_limit")
+                    || lower.contains("too many requests") || lower.contains(" 429 ")
+                    || lower.contains("tpm limit") || lower.contains("rpm limit")
+                    || lower.contains("rpm exhausted") || lower.contains("tpm exhausted")
+                    || lower.contains("quota") || lower.contains("throttl")
+                    || lower.contains("限流")) {
                 return true;
             }
         }

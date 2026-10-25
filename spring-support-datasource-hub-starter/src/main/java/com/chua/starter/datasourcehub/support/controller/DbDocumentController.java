@@ -396,33 +396,49 @@ public class DbDocumentController {
             sb.append("<p>").append(inline(line)).append("</p>\n");
         }
         // 收尾
-        if (inCode) sb.append("</code></pre>\n");
-        if (inUl) sb.append("</ul>\n");
-        if (inOl) sb.append("</ol>\n");
-        if (inTable) sb.append("</tbody></table>\n");
+        if (inCode) {
+            sb.append("</code></pre>\n");
+        }
+        if (inUl) {
+            sb.append("</ul>\n");
+        }
+        if (inOl) {
+            sb.append("</ol>\n");
+        }
+        if (inTable) {
+            sb.append("</tbody></table>\n");
+        }
         return sb.toString();
     }
 
     /** 行内元素：粗体/斜体/行内代码/链接 */
     private static String inline(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         return escHtml(stripMarkdown(s));
     }
 
     /** 去掉行内 markdown 标记 */
     private static String stripMarkdown(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         // 循环去掉成对的 ** __ * _ `，最多 20 轮（防止极端情况死循环）
         for (int i = 0; i < 20; i++) {
             String t = s.replace("**", "").replace("__", "").replace("*", "").replace("_", "").replace("`", "");
-            if (t.equals(s)) break;
+            if (t.equals(s)) {
+                break;
+            }
             s = t;
         }
         return s;
     }
 
     private static String escHtml(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 

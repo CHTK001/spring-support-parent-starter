@@ -80,6 +80,16 @@ public class FaceLibraryLinkService {
         row.setMeta(writeMeta(metadata));
         row.setGroupName(strOf(metadata, "group"));
         row.setStatus(1);
+        // 经纬度：非必填，随档案一起落 DB 标量列；**不参与向量**（向量里只有人脸特征）。
+        // 从 metadata 里取而不是加方法参数：登记/更新/回填三条路径都走 metadata，
+        // 加参数要动三处签名，且任何一处漏改就会出现「表单填了、库里没有」。
+        row.setLat(decimalOf(metadata, "lat"));
+        row.setLng(decimalOf(metadata, "lng"));
+        // 显式写时间：无 MetaObjectHandler 时 MyBatis 会把 NULL 写进列，
+        // 覆盖掉 DDL 上的 DEFAULT CURRENT_TIMESTAMP（与 ReidLibraryLinkService 同一坑）
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        row.setCreateTime(now);
+        row.setUpdateTime(now);
         try {
             SysAiFaceLibrary exist = find(userId, vectorId);
             if (exist == null) {
@@ -141,6 +151,14 @@ public class FaceLibraryLinkService {
         }
         row.setMeta(writeMeta(metadata));
         row.setGroupName(strOf(metadata, "group"));
+        // 经纬度允许显式清空：metadata 里给了 null/空串就置 NULL，
+        // 不给（key 不存在）则保持原值 —— 否则「只改姓名」会把已有坐标抹掉。
+        if (metadata != null && metadata.containsKey("lat")) {
+            row.setLat(decimalOf(metadata, "lat"));
+        }
+        if (metadata != null && metadata.containsKey("lng")) {
+            row.setLng(decimalOf(metadata, "lng"));
+        }
         if (thumbnail != null && !thumbnail.isBlank()) {
             row.setThumbnail(thumbnail);
         }
@@ -239,8 +257,12 @@ public class FaceLibraryLinkService {
             if (row.getVectorId() == null || row.getVectorId().isBlank()) {
                 continue;
             }
-            Map<String, Object> item = new LinkedHashMap<>(2);
+            Map<String, Object> item = new LinkedHashMap<>(4);
             item.put("id", row.getVectorId());
+            // 经纬度以**列**为准（不是 meta 里的副本）：列是唯一真相，
+            // meta 里可能残留历史值或被前端整包回写覆盖。
+            item.put("lat", row.getLat());
+            item.put("lng", row.getLng());
             item.put("metadata", readMeta(row.getMeta()));
             out.add(item);
         }
@@ -376,5 +398,46 @@ public class FaceLibraryLinkService {
         }
         Object v = metadata.get(key);
         return v == null ? null : String.valueOf(v);
+    }
+
+    /**
+     * 取档案里的小数字段并转成 {@link java.math.BigDecimal}（经纬度用）。
+     *
+     * <p>为什么要做类型收窄而不是直接 {@code (BigDecimal) metadata.get(key)}：
+     * 前端 JSON 过来的数字会被 Jackson 反序列化成 {@code Integer}/{@code Double}，
+     * 直接强转会 {@code ClassCastException}，而这个异常会冒到「登记失败」——
+     * 用户看到的是"填了经纬度就登记不上"，却看不出原因。</p>
+     *
+     * <p>空串/无法解析一律返回 {@code null}（= 不填），不抛异常：
+     * 经纬度是非必填字段，脏值应当退化成"没填"，而不是让整次登记失败。</p>
+     *
+     * @param metadata 档案（可为空）
+     * @param key      键
+     * @return 小数值；不存在或非法返回 {@code null}
+     */
+    private static java.math.BigDecimal decimalOf(Map<String, Object> metadata, String key) {
+        if (metadata == null) {
+            return null;
+        }
+        Object v = metadata.get(key);
+        if (v == null) {
+            return null;
+        }
+        try {
+            if (v instanceof java.math.BigDecimal decimal) {
+                return decimal;
+            }
+            if (v instanceof Number number) {
+                return new java.math.BigDecimal(number.toString());
+            }
+            String text = String.valueOf(v).trim();
+            if (text.isEmpty()) {
+                return null;
+            }
+            return new java.math.BigDecimal(text);
+        } catch (NumberFormatException ex) {
+            log.debug("[Face] 经纬度无法解析，按未填写处理: {}={}", key, v);
+            return null;
+        }
     }
 }

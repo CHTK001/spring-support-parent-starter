@@ -25,6 +25,13 @@ import java.util.Map;
  */
 @Spi("trae")
 public class TraeAccountChannelAuthManager implements AccountChannelAuthManager {
+
+    /**
+     * 日志
+     */
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(TraeAccountChannelAuthManager.class);
+
     static final String OAUTH_HOST = "https://api.trae.com.cn";
     static final String UG_HOST = "https://api.trae.cn";
     static final String CONSOLE_HOST = "https://www.trae.cn";
@@ -281,7 +288,8 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
             if (remain != null) {
                 result.put("credits", remain);
             }
-        } catch (ApiException ignored) {
+        } catch (ApiException e) {
+            log.debug("[trae] 查询额度失败，已忽略: {}", e.getMessage());
         }
         return result;
     }
@@ -296,7 +304,8 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
             try {
                 List<Map<String, Object>> models = fetchRemoteModels(accessToken);
                 if (!models.isEmpty()) { return models; }
-            } catch (ApiException ignored) {
+            } catch (ApiException e) {
+                log.debug("[trae] 接口调用失败，已忽略: {}", e.getMessage());
             }
         }
         return fallbackModels();
@@ -584,7 +593,8 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
             try {
                 long value = Long.parseLong(s.trim());
                 return value < 10_000_000_000L ? value * 1000 : value;
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[trae] 解析数字失败，已忽略: {}", e.getMessage());
             }
         }
         // 兜底：解析 access_token JWT 的 exp claim。
@@ -597,7 +607,8 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
                     return n.longValue() * 1000;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[trae] 操作失败，已忽略: {}", e.getMessage());
         }
         return null;
     }

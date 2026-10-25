@@ -1,1 +1,2 @@
 com.chua.starter.hotsport.support.config.SlowCallAutoConfiguration
+com.chua.starter.hotsport.support.config.AgentAttachFallbackConfiguration

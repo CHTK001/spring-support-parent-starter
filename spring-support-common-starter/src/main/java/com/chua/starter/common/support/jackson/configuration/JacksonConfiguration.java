@@ -71,9 +71,13 @@ public class JacksonConfiguration {
     */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     /**
-     * 简单_日期_格式化
-    */
-    private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+     * 创建线程安全使用的日期格式化实例
+     *
+     * @return 新的日期格式化实例
+     */
+    private static SimpleDateFormat newSimpleDateFormat() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    }
 
     /**
      * 创建对象映射器
@@ -126,9 +130,10 @@ public class JacksonConfiguration {
             objectMapper.setDefaultTyping(typer);
             log.debug("[Jackson配置]启用全类型序列化 (forEverything=true)");
         }
-        objectMapper.setDateFormat(SIMPLE_DATE_FORMAT);
+        SimpleDateFormat simpleDateFormat = newSimpleDateFormat();
+        objectMapper.setDateFormat(simpleDateFormat);
         if (log.isDebugEnabled()) {
-            log.debug("[Jackson配置]日期格式: {}", SIMPLE_DATE_FORMAT.toPattern());
+            log.debug("[Jackson配置]日期格式: {}", simpleDateFormat.toPattern());
         }
         JavaTimeModule javaTimeModule = new JavaTimeModule();
         javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DATE_TIME_FORMATTER));
@@ -153,7 +158,7 @@ public class JacksonConfiguration {
                     CommonYearDeserializer.class.getName());
         }
 
-        javaTimeModule.addSerializer(Date.class, new DateSerializer(true, SIMPLE_DATE_FORMAT));
+        javaTimeModule.addSerializer(Date.class, new DateSerializer(true, newSimpleDateFormat()));
         if(log.isDebugEnabled()) {
             log.debug("[Jackson配置]注册 Date 序列化器: {}", DateSerializer.class.getName());
         }
