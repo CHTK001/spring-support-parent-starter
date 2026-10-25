@@ -4,6 +4,7 @@ import com.chua.common.support.datasearch.pricing.PricingSyncer;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,6 @@ import java.util.concurrent.TimeUnit;
  *       从 datasearch-starter 加载全量官方定价 → 清空旧数据 → 全量插入 sys_ai_pricing 表，
  *       供用量统计在无金额时回退使用官方金额</li>
  * </ol>
- *
  * @since 4.0.0.42
  * @author CH
  */
@@ -96,6 +96,11 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     private final SysAiPricingService pricingService;
 
     /**
+     * 厂商指标系数同步服务（一厂商一系数）
+     */
+    private final SysAiProviderMetricService providerMetricService;
+
+    /**
      * 注册动态调度任务，每次执行后按配置间隔计算下次执行时间。
      *
      * @param taskRegistrar 调度任务注册器
@@ -124,6 +129,14 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             log.warn("[ModelMetrics] 全量指标库同步失败: {}", e.getMessage());
         }
         try {
+            // 1.5 已配置服务商 indicator 通道（Models.dev / OpenRouter / 自定义 metrics_url）
+            //     与手动「自动获取」同源，随调度自动落库，失败不阻断后续步骤
+            int indicatorCount = metricsService.syncFromConfiguredProviders();
+            log.info("[ModelMetrics] 已配置服务商 indicator 同步完成，共 {} 家", indicatorCount);
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 已配置服务商 indicator 同步失败: {}", e.getMessage());
+        }
+        try {
             // 2. 指标快照推送 Redis（兼容）
             snapshotService.buildAndPushSnapshot();
             log.info("[ModelMetrics] 价格/指标快照已推送完成");
@@ -136,6 +149,13 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             log.info("[ModelMetrics] 官方定价同步完成（datasearch-starter）");
         } catch (Exception e) {
             log.warn("[ModelMetrics] 官方定价同步失败: {}", e.getMessage());
+        }
+        try {
+            // 4. 厂商指标系数同步（一厂商一系数，取价链最末一层兜底）
+            int providerCount = providerMetricService.syncProviderMetrics();
+            log.info("[ModelMetrics] 厂商指标系数同步完成，共 {} 家", providerCount);
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 厂商指标系数同步失败: {}", e.getMessage());
         }
     }
 

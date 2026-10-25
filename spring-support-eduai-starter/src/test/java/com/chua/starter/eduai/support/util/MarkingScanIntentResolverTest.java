@@ -93,6 +93,109 @@ class MarkingScanIntentResolverTest {
         assertFalse(r.fromQr());
     }
 
+    /**
+     * 二维码携带学生/考试时，ANY 无前端入参也能自动绑定身份并归回内置卷。
+     */
+    @Test
+    @DisplayName("ANY + 身份二维码 → 归内置卷并自动绑定学生/考试")
+    void qrWithIdentity_shouldBindStudentAndExam() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001;STUDENT:20260001;EXAM:88"), null, null, null);
+        assertFalse(r.anyMode(), "二维码命中后应归为内置卷 SELF");
+        assertEquals(9001L, r.paperId());
+        assertEquals("20260001", r.studentNo(), "未传学生时应由二维码自动绑定");
+        assertEquals(88L, r.examId(), "未传考试时应由二维码自动绑定");
+        assertFalse(r.identityConflict());
+    }
+
+    /**
+     * 前端传入学生与二维码学生一致时正常绑定，不触发替考告警。
+     */
+    @Test
+    @DisplayName("前端学生与二维码学生一致 → 无替考告警")
+    void matchingStudent_shouldNotConflict() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001;STUDENT:20260001"), null, "20260001", null);
+        assertEquals("20260001", r.studentNo());
+        assertFalse(r.identityConflict(), "学生一致时不应触发替考告警");
+    }
+
+    /**
+     * 前端传入学生与二维码学生不一致 → 触发替考告警。
+     */
+    @Test
+    @DisplayName("前端学生与二维码学生不一致 → 替考告警")
+    void mismatchedStudent_shouldConflict() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001;STUDENT:20260001"), null, "20260002", null);
+        assertTrue(r.identityConflict(), "提交学生与卷面学生不一致应标记替考");
+        assertEquals("20260001", r.studentNo(), "冲突时学生以二维码卷面为准");
+    }
+
+    /**
+     * 前端已传学生、二维码未携带学生 → 沿用前端学生，无冲突。
+     */
+    @Test
+    @DisplayName("前端传学生、二维码无学生 → 沿用前端学生")
+    void qrWithoutStudent_shouldKeepProvidedStudent() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001"), null, "20260009", null);
+        assertEquals("20260009", r.studentNo());
+        assertFalse(r.identityConflict());
+    }
+
+    /**
+     * 学生号大小写不同但内容相同 → 不误报替考（学号不区分大小写）。
+     */
+    @Test
+    @DisplayName("学号大小写不同但内容相同 → 不误报替考")
+    void sameStudentDifferentCase_shouldNotConflict() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001;STUDENT:ABC2026"), null, "abc2026", null);
+        assertFalse(r.identityConflict(), "大小写差异不应触发替考");
+        assertEquals("ABC2026", r.studentNo(), "冲突场景外仍以二维码学号为准");
+    }
+
+    /**
+     * 前端已传考试 ID、二维码也带考试 ID → 以手动传入为准（显式选择覆盖卷面）。
+     */
+    @Test
+    @DisplayName("前端手动考试 ID → 优先于二维码考试 ID")
+    void providedExamShouldOverrideQrExam() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001;EXAM:88"), null, null, 99L);
+        assertEquals(99L, r.examId(), "手动传入考试 ID 应优先于二维码");
+        assertEquals(9001L, r.paperId());
+        assertFalse(r.identityConflict());
+    }
+
+    /**
+     * 二维码只携带身份段（无 PAPER）→ 外来卷仍保持 ANY，但学生/考试可自动绑定。
+     */
+    @Test
+    @DisplayName("仅身份二维码（无 PAPER）→ 保持 ANY 且绑定学生/考试")
+    void identityOnlyQr_shouldStayAnyAndBind() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("STUDENT:20260001;EXAM:88"), null, null, null);
+        assertTrue(r.anyMode(), "无 PAPER 段不应改变任意卷模式");
+        assertNull(r.paperId(), "无 PAPER 段时试卷归属为空");
+        assertEquals("20260001", r.studentNo());
+        assertEquals(88L, r.examId());
+        assertFalse(r.identityConflict());
+    }
+
+    /**
+     * 前端传入学生与二维码学生完全一致（大小写也一致）→ 继续以二维码学生为准，无冲突。
+     */
+    @Test
+    @DisplayName("前端学生与二维码学生完全一致 → 以二维码为准、无冲突")
+    void exactMatchingStudent_shouldUseQrStudent() throws Exception {
+        MarkingScanIntentResolver.Resolution r = MarkingScanIntentResolver.resolve(
+                "ANY", createQrPng("PAPER:9001;STUDENT:20260011"), null, "20260011", null);
+        assertEquals("20260011", r.studentNo());
+        assertFalse(r.identityConflict());
+    }
+
     private byte[] createQrPng(String content) throws Exception {
         QRCodeWriter writer = new QRCodeWriter();
         Map<EncodeHintType, String> hints = Map.of(EncodeHintType.CHARACTER_SET, "UTF-8");

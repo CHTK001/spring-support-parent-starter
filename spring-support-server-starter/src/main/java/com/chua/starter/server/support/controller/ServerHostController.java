@@ -303,6 +303,18 @@ public class ServerHostController {
     }
 
     /**
+     * 安装 nginx（仅支持 SSH 开启的 Linux/macOS 主机）
+     *
+     * @param id 主机主键
+     * @return 安装结果（成功回显 nginx -v 输出）
+     */
+    @Operation(summary = "安装 nginx")
+    @PostMapping("/{id}/install-nginx")
+    public ReturnResult<String> installNginx(@PathVariable Long id) {
+        return serverHostService.installNginx(id);
+    }
+
+    /**
      * 导出主机列表（CSV 下载）
      *
      * @param keyword 关键词，可为空

@@ -57,4 +57,14 @@ public class MarkingSettingVO {
      */
     @Schema(description = "任意卷识别策略：whole（整卷，默认）/ region（按版面区域分块）")
     private String extractStrategy = "whole";
+
+    /**
+     * 阅卷判分 System Prompt（主观题 LLM 判分指令）。
+     *
+     * <p>为空时使用内置默认 prompt（资深阅卷老师角色 + JSON 输出约束）；
+     * 配置后覆盖默认，用于贴合学科/评分粒度调整。User Prompt 的占位拼接
+     * （题型/题干/标准答案/学生作答/满分）保持不变。</p>
+     */
+    @Schema(description = "阅卷判分 System Prompt（空 = 使用内置默认）")
+    private String markingPrompt = "";
 }

@@ -52,6 +52,15 @@ public class SysAiProviderConnection implements Serializable {
     private String label; // 标签
 
     /**
+     * 归属用户（账号隔离：每个用户只能看到/操作自己绑定的连接）
+     *
+     * <p>历史数据（改造前绑定）为 {@code null}，视为「管理员/系统」账号池：
+     * 管理员可见，免费渠道路由取用；普通用户查询时被过滤掉。</p>
+     */
+    @TableField("sys_ai_provider_connection_user_id")
+    private String userId; // 归属用户
+
+    /**
      * 覆盖的基础URL
      */
     @TableField("sys_ai_provider_connection_base_url")

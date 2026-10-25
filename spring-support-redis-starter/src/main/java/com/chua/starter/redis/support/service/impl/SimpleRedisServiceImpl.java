@@ -1,7 +1,7 @@
 package com.chua.starter.redis.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.redis.support.utils.NumberUtils;
+import com.chua.common.support.utils.NumberUtils;
 import com.chua.starter.redis.support.service.SimpleRedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -95,8 +95,10 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
         BigDecimal sum = BigDecimal.ZERO;
         for (Object value : entries.values()) {
-            String stringValue = String.valueOf(value);
-            if (NumberUtils.isNumber(stringValue)) {
+            // 复用 utils-support-common-starter 的统一规范化与数值判断：
+            // 判断与转换使用同一个字面量，避免 "1,234" 这类格式判断通过却转换失败
+            String stringValue = NumberUtils.normalizeNumberLiteral(String.valueOf(value));
+            if (NumberUtils.isDecimalNumber(stringValue)) {
                 sum = sum.add(new BigDecimal(stringValue));
             }
         }

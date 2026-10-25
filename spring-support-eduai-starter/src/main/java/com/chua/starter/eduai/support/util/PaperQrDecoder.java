@@ -16,15 +16,18 @@ import java.util.regex.Pattern;
  * 整卷二维码解码工具。
  *
  * <p>生成的试卷在每页页脚打印 「PAPER:试卷ID」二维码；阅卷上传图片后解码该二维码，
- * 即可把外来卷（ANY）自动归回内置卷（SELF），并按试卷 ID + 题号回数据库判分。</p>
+ * 即可把外来卷（ANY）自动归回内置卷（SELF），并按试卷 ID + 题号回数据库判分。
+ * 当卷面已经绑定学生/考试时，二维码可追加 {@code ;STUDENT:学号} 与 {@code ;EXAM:考试ID}，
+ * 阅卷端据此自动绑定学生并参与重复提交、替考身份校验。</p>
  *
  * @author CH
  * @version 4.0.0.42
  */
 public final class PaperQrDecoder {
 
-    private static final Pattern PAPER_ID_PATTERN = Pattern.compile(
-            "(?i)^PAPER\\s*[:：]\\s*(\\d{1,19})$");
+    private static final Pattern QR_LINE_PATTERN = Pattern.compile(
+            "^(PAPER|STUDENT|EXAM)\\s*[:：]\\s*(.*)$",
+            Pattern.CASE_INSENSITIVE);
 
     private PaperQrDecoder() {
     }
@@ -36,6 +39,17 @@ public final class PaperQrDecoder {
      * @return 二维码里的试卷 ID；未识别出整卷二维码时返回 null
      */
     public static Long decodePaperId(byte[] imageData) {
+        QrInfo info = decodeQrInfo(imageData);
+        return info == null ? null : info.paperId();
+    }
+
+    /**
+     * 解析整卷二维码携带的试卷、学生、考试信息。
+     *
+     * @param imageData 上传的试卷图片
+     * @return 二维码信息；未识别出可用的整卷二维码时返回 null
+     */
+    public static QrInfo decodeQrInfo(byte[] imageData) {
         if (imageData == null || imageData.length == 0) {
             return null;
         }
@@ -45,9 +59,9 @@ public final class PaperQrDecoder {
                 return null;
             }
             try {
-                return parsePaperId(decode(image, false));
+                return parseQrInfo(decode(image, false));
             } catch (NotFoundException ignored) {
-                return parsePaperId(decode(image, true));
+                return parseQrInfo(decode(image, true));
             }
         } catch (Exception e) {
             return null;
@@ -73,18 +87,56 @@ public final class PaperQrDecoder {
         return new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(source))).getText();
     }
 
-    private static Long parsePaperId(String text) {
-        if (text == null) {
+    private static QrInfo parseQrInfo(String text) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
-        Matcher matcher = PAPER_ID_PATTERN.matcher(text.trim());
-        if (!matcher.matches()) {
+        Long paperId = null;
+        Long examId = null;
+        String studentNo = null;
+        String[] segments = text.trim().split("[;；]");
+        for (String segment : segments) {
+            Matcher matcher = QR_LINE_PATTERN.matcher(segment.trim());
+            if (!matcher.matches()) {
+                continue;
+            }
+            String key = matcher.group(1).toUpperCase();
+            String value = matcher.group(2).trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            if ("PAPER".equals(key)) {
+                paperId = parseLong(value);
+            } else if ("EXAM".equals(key)) {
+                examId = parseLong(value);
+            } else if ("STUDENT".equals(key)) {
+                studentNo = value;
+            }
+        }
+        if (paperId == null && examId == null && studentNo == null) {
+            return null;
+        }
+        return new QrInfo(paperId, examId, studentNo);
+    }
+
+    private static Long parseLong(String value) {
+        if (value == null || !value.matches("\\d{1,19}")) {
             return null;
         }
         try {
-            return Long.parseLong(matcher.group(1));
+            return Long.parseLong(value);
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /**
+     * 整卷二维码信息。
+     *
+     * @param paperId   试卷 ID；二维码可只携带试卷归属
+     * @param examId    考试 ID，未携带时为 null
+     * @param studentNo 学生学号，未携带时为 null
+     */
+    public record QrInfo(Long paperId, Long examId, String studentNo) {
     }
 }

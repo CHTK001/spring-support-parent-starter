@@ -366,6 +366,27 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 扫码路径的防重复提交：同一考试同一学生已存在排队/处理中/完成的阅卷任务时，
+     * 拒绝再次创建新任务；失败任务允许重传，避免 OCR 失败后无法补扫。
+     *
+     * @param examId    考试 ID，可为空（未绑定考试时不参与判定）
+     * @param studentId 学生标识
+     */
+    private void rejectDuplicateScanTask(Long examId, String studentId) {
+        if (examId == null || StringUtils.isBlank(studentId)) {
+            return;
+        }
+        Long exists = taskMapper.selectCount(new LambdaQueryWrapper<EduMarkingTask>()
+                .eq(EduMarkingTask::getMarkingTaskExamId, examId)
+                .eq(EduMarkingTask::getMarkingTaskStudentId, studentId)
+                .ne(EduMarkingTask::getMarkingTaskStatus, EduMarkingTask.STATUS_FAILED));
+        if (exists != null && exists > 0) {
+            log.warn("[EduAi] 扫码重复提交阅卷任务已拦截: examId={}, studentId={}", examId, studentId);
+            throw new BusinessException("该考试下该学生已有阅卷任务，请勿重复扫描提交");
+        }
+    }
+
+    /**
      * 把阅卷任务投递到队列，由 {@link MarkingMessageListener} 异步消费。
      * @param taskId 任务标识
      * @param answerSheetId answersheetid
@@ -523,13 +544,23 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         // 整卷二维码识别：卷面页脚印有 PAPER:{试卷ID}，解码命中后外来卷自动归回内置卷，
         // 并按试卷 ID + 题号回数据库取标准答案判分（与手动选「自有卷」等价）。
+        // 二维码还可携带 ;STUDENT:学号 与 ;EXAM:考试ID，用于自动绑定学生与考试。
         MarkingScanIntentResolver.Resolution intent =
-                MarkingScanIntentResolver.resolve(mode, validImages.get(0), paperId);
+                MarkingScanIntentResolver.resolve(mode, validImages.get(0), paperId, studentId, examId);
         anyMode = intent.anyMode();
         paperId = intent.paperId();
+        examId = intent.examId();
         if (intent.fromQr()) {
             log.info("[EduAi] 扫码识别到整卷二维码，自动归为内置卷: paperId={}", paperId);
         }
+        if (intent.identityConflict()) {
+            throw new BusinessException("替考告警：卷面二维码学生与提交学生不一致，请核对后重新上传");
+        }
+        if (StringUtils.isBlank(studentId) && StringUtils.isNotBlank(intent.studentNo())) {
+            studentId = intent.studentNo();
+            log.info("[EduAi] 扫码识别到卷面学生，自动绑定: studentId={}", studentId);
+        }
+        rejectDuplicateScanTask(examId, studentId);
         if (!anyMode && paperId == null) {
             throw new BusinessException("自有卷必须指定试卷 ID");
         }
@@ -1000,6 +1031,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         var mergedLayoutRegions = new HashMap<String, Integer>();
         var pages = new ArrayList<Map<String, Object>>();
         var mergedBlocks = new ArrayList<EduPaperScanner.ScanBlock>();
+        // 按页保留原始 blocks/text：SELF 按页抽取时页面间重新开始题号递进，
+        // 避免「上一页末题号 + 下一页头题号不递进」导致整页文本被吞进上一题作答。
+        var pageBlocksList = new ArrayList<List<EduPaperScanner.ScanBlock>>();
+        var pageTextsList = new ArrayList<String>();
         // 版面区域同样跨页合并并加页偏移：region 策略要按区域归属文字块（坐标必须与 blocks 同空间）
         var mergedLayoutBoxes = new ArrayList<EduPaperScanner.LayoutBox>();
         int blockCount = 0;
@@ -1012,6 +1047,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             EduPaperScanner.ScanResult pageScan = pageOutcome.scan();
             if (pageScan == null) {
                 continue;
+            }
+            // 按页保留原始坐标块与文本：供 SELF 按页抽取（页际重置题号递进）
+            if (pageScan.blocks() != null && !pageScan.blocks().isEmpty()) {
+                pageBlocksList.add(List.copyOf(pageScan.blocks()));
+            }
+            if (StringUtils.isNotBlank(pageScan.text())) {
+                pageTextsList.add(pageScan.text());
             }
             if (StringUtils.isNotBlank(pageScan.text())) {
                 if (mergedText.length() > 0) {
@@ -1065,7 +1107,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             anyScan = paperScanner.extractAnyScan(mergedBlocks, mergedLayoutBoxes, text);
             scanned = anyScan.questions();
         } else {
-            scanned = paperScanner.extractSelfQuestions(mergedBlocks, text);
+            // 按页抽取（页际重置题号递进）：多页合并后统一抽取会把「下一页头题号」
+            // 因不递进而吞进上一题作答（实测第 43 题整页文本灌入），
+            // 改为每页独立 extractSelfQuestions 再拼接，页内仍走版面块归属→行规则→模型。
+            scanned = new ArrayList<>();
+            for (int pi = 0; pi < pageBlocksList.size(); pi++) {
+                List<EduPaperScanner.ScanBlock> pb = pageBlocksList.get(pi);
+                String pt = pi < pageTextsList.size() ? pageTextsList.get(pi) : null;
+                scanned.addAll(paperScanner.extractSelfQuestions(pb, pt));
+            }
+            if (scanned.isEmpty()) {
+                scanned = paperScanner.extractSelfQuestions(mergedBlocks, text);
+            }
         }
         if (scanned.isEmpty()) {
             // any卷识别全失败时，用 OCR 文字块兜底（防止完全无法阅卷）
@@ -1269,8 +1322,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     question = questionMapper.selectById(row.getMarkingResultQuestionId());
                     if (question != null) {
                         String cleanedAnswer;
-                        if ("FILL".equalsIgnoreCase(String.valueOf(question.getQuestionType()).trim())) {
+                        String qType = String.valueOf(question.getQuestionType()).trim();
+                        if ("FILL".equalsIgnoreCase(qType)) {
                             cleanedAnswer = EduPaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
+                        } else if ("JUDGE".equalsIgnoreCase(qType)) {
+                            // 判断题：题目整段（含尾部页脚污染）一旦被规则切题收进作答，
+                            // stripLeadingStem 的 startsWith 会因尾注不匹配而剥离失败，导致
+                            // 整段题干冒充作答 → 「与标准答案不一致」。判断题的实质作答只有
+                            // 对/错/√/× 符号：剥不掉题干又没有判定符号时，按「未作答」处理。
+                            cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                            if (StringUtils.isNotBlank(cleanedAnswer)
+                                    && EduAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null
+                                    && judgeAnswerIsStemLike(cleanedAnswer, question.getQuestionStem())) {
+                                cleanedAnswer = "";
+                            }
                         } else {
                             cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
                         }
@@ -1882,6 +1947,30 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
+     * 判断题作答是否「只剩题干」（即学生没有作答）。
+     *
+     * <p>判断题的题干整段（含「判断正误：…（　　）」与可能的页脚尾注）被规则切题收进
+     * 作答时，两端都去掉空白与标点后比较：作答净文本与题干净文本重合（互为子串）即
+     * 视为「作答=题干」，学生实际没有写判定符号。</p>
+     *
+     * @param answer 已剥过题干前缀的作答文本（可能仍残留题干尾段/页脚）
+     * @param stem   题库题干
+     * @return true 表示作答只剩题干，应按未作答处理
+     */
+    private static boolean judgeAnswerIsStemLike(String answer, String stem) {
+        if (StringUtils.isBlank(answer) || StringUtils.isBlank(stem)) {
+            return false;
+        }
+        String a = normalizeText(answer);
+        String s = normalizeText(stem);
+        if (a.isEmpty() || s.isEmpty()) {
+            return false;
+        }
+        // 作答净文本与题干净文本重合（互含或相等）→ 作答就是题干
+        return a.equals(s) || a.contains(s) || s.contains(a);
+    }
+
+    /**
      * 修正 OCR 常见「字母↔数字」混淆，用于题号兜底匹配。
      *
      * <p>实测：题号 {@code 1.} 会被识别成 {@code L.}（数字 1 与字母 l/L/I 字形相近），
@@ -2011,6 +2100,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // （OCR 把「（√）」连题干一起识别），LCS 对符号不敏感，直接比对会误判。
             String type = question.getQuestionType().trim().toUpperCase();
             String extracted = EduAiService.extractObjectiveAnswer(type, studentAnswer);
+            // 判断题作答为空（stripLeadingStem 剥离题干后学生没有写判定符号）→ 未作答
+            // 判断作答提取不到判定符号（"·二次验收专用 1" 之类页脚残留）同样按未作答：判断题
+            // 的实质作答只有 对/错/√/× 符号，OCR 残留的题干尾段/页脚不构成作答。
+            if ("JUDGE".equals(type) && (StringUtils.isBlank(studentAnswer) || extracted == null)) {
+                var outcome = new EduAiService.MarkingOutcome();
+                outcome.setSource("AI");
+                outcome.setScore(0);
+                outcome.setComment("未作答");
+                return outcome;
+            }
             if ("JUDGE".equals(type) && extracted != null) {
                 boolean right = extracted.equals(EduAiService.normalizeJudgeAnswer(question.getQuestionAnswer()));
                 var outcome = new EduAiService.MarkingOutcome();
@@ -2115,6 +2214,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 if (question != null) {
                     item.put("knowledgePointIds", question.getQuestionKnowledgePointIds());
                     item.put("knowledgePoints", resolveKnowledgePoints(question.getQuestionKnowledgePointIds()));
+                    // 标准答案：SELF 内置卷判分与「参考答案」展示都回题库取值
+                    item.put("standardAnswer", question.getQuestionAnswer());
                     // 题干回落题库：SELF 链路抽题不调模型（stem 留空），展示与「入题库」预填都靠题库补
                     if (!StringUtils.hasText((String) item.get("stem"))) {
                         item.put("stem", question.getQuestionStem());
@@ -2739,7 +2840,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 wrongCount++;
             }
         }
-        return new MarkingFinishPreviewVO(taskId, studentId, wrongCount, questions);
+        return new MarkingFinishPreviewVO(taskId, studentId, wrongCount, wrongRate, questions);
     }
 
     @Override

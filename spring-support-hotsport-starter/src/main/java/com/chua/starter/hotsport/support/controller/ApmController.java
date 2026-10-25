@@ -88,6 +88,11 @@ public class ApmController {
     private final ObjectMapper objectMapper;
 
     /**
+     * Hotsport 配置（agent 中心回显实际生效的存储参数）。
+    */
+    private final com.chua.starter.hotsport.support.config.HotsportProperties hotsportProperties;
+
+    /**
      * SSE 推送线程池（单线程足够，间隔 3s）。
     */
     private final ScheduledExecutorService sseExecutor =
@@ -164,6 +169,20 @@ public class ApmController {
     public ReturnResult<Map<String, Object>> agentHandles(
             @RequestParam(defaultValue = "200") int limit) {
         return ReturnResult.ok(apmQueryService.handleInventory(limit));
+    }
+
+    /**
+     * 句柄增长趋势 — 判断是否在泄漏。
+     *
+     * <p>{@code opened} 累计打开、{@code closed} 累计关闭、{@code alive} 当前存活、
+     * {@code leakDelta} 打开-关闭-存活（同类型同时存活计数饱满时只能反映部分口径，
+     * 重点看 opened 持续上涨而 closed 不涨）。</p>
+     *
+     * @return 增长统计 { windowMs, perKind: { kind: { opened, closed, alive, leakDelta } } }
+     */
+    @GetMapping("/handles/growth")
+    public ReturnResult<Map<String, Object>> handlesGrowth() {
+        return ReturnResult.ok(apmQueryService.handleGrowth());
     }
 
     /**
@@ -246,8 +265,199 @@ public class ApmController {
         cfg.put("logLevel", "INFO");
         cfg.put("enabled", agentAttachService.isAgentEnabled());
         cfg.put("injectMode", "SIMULATE");
+        cfg.put("storage", hotsportProperties.getApm().toStorageConfig());
+        cfg.put("storageName", com.chua.runtime.apm.storage.StorageManager.get().name());
         cfg.put("updatedAt", System.currentTimeMillis());
         return ReturnResult.ok(cfg);
+    }
+
+    /**
+     * 存储运行时状态（运维自检）。
+     *
+     * <p>回答两个问题：配置里写了什么（{@code configured}）、实际生效的是什么
+     * （{@code path/async/flushed/dropped/...}）。两者不一致通常就是「配置没生效」。</p>
+     *
+     * @return 状态映射
+     */
+    @GetMapping("/storage/status")
+    public ReturnResult<Map<String, Object>> storageStatus() {
+        return ReturnResult.ok(apmQueryService.storageStatus());
+    }
+
+    /**
+     * 系统资源聚合快照 — 一屏看懂「这台机器的资源往哪消耗」。
+     *
+     * <p>把散在各处的资源信息拼成一份，专供调试和研究：</p>
+     * <ul>
+     *   <li>{@code os} — 物理内存 / 交换 / 系统与进程 CPU 占用</li>
+     *   <li>{@code disks} — 逐盘总容量 / 可用 / 使用率，一眼看出哪个盘快满</li>
+     *   <li>{@code jvm} — JVM 堆 / GC / 线程（实时快照）</li>
+     *   <li>{@code storage} — APM 存储状态（含 db 所在盘的磁盘余量与接近耗尽标记）</li>
+     *   <li>{@code ownThreads} — APM 自身内部线程画像（观测组件自己别泄漏）</li>
+     *   <li>{@code trend} — 最近 N 分钟资源时序（堆百分比 / GC / 线程 / 系统 CPU / 物理内存可用）</li>
+     * </ul>
+     *
+     * @param minutes 时序窗口（分钟，默认 10）
+     * @return 资源聚合快照
+     */
+    @GetMapping("/resources")
+    public ReturnResult<Map<String, Object>> systemResources(
+            @RequestParam(defaultValue = "10") int minutes) {
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("ts", System.currentTimeMillis());
+        try {
+            r.put("os", jvmMetricsService.systemResources().get("os"));
+            r.put("disks", jvmMetricsService.systemResources().get("disks"));
+        } catch (Exception e) {
+            r.put("os", Map.of("error", e.getMessage()));
+            r.put("disks", List.of());
+        }
+        try {
+            r.put("jvm", jvmMetricsService.snapshot());
+        } catch (Exception e) {
+            r.put("jvm", Map.of("error", e.getMessage()));
+        }
+        try {
+            r.put("storage", apmQueryService.storageStatus());
+        } catch (Exception e) {
+            r.put("storage", Map.of("error", e.getMessage()));
+        }
+        try {
+            r.put("ownThreads", apmQueryService.ownThreads());
+        } catch (Exception e) {
+            r.put("ownThreads", Map.of("error", e.getMessage()));
+        }
+        try {
+            r.put("trend", jvmMetricsService.metrics(minutes));
+        } catch (Exception e) {
+            r.put("trend", List.of());
+        }
+        return ReturnResult.ok(r);
+    }
+
+    /**
+     * 修改存储配置并立即生效（无需重启）。
+     *
+     * <p>只传需要修改的项，未传的保持原值。语义：</p>
+     * <ul>
+     *   <li>{@code type} — inmemory / sqlite / noop</li>
+     *   <li>{@code path} — 落盘文件路径；传空串表示回到默认临时目录</li>
+     *   <li>{@code retentionMs} / {@code capacity} — 保留期与单表容量</li>
+     *   <li>{@code async} — 异步批量写开关</li>
+     *   <li>{@code maintenanceIntervalMs} — 自维护周期（保留期清理 + 容量淘汰），下限 5000</li>
+     *   <li>{@code flushTimeoutMs} — 关闭时等待落盘的最长时间</li>
+     * </ul>
+     *
+     * <p>新存储先完整启动成功才替换旧存储；启动失败时旧存储继续工作，
+     * 返回 {@code success=false} 并在 {@code message} 说明原因。</p>
+     *
+     * @param type                  存储类型
+     * @param path                  落盘路径（空串表示默认目录）
+     * @param retentionMs           数据保留毫秒
+     * @param capacity              单表容量上限
+     * @param async                 是否异步批量写
+     * @param maintenanceIntervalMs 自维护周期（毫秒）
+     * @param flushTimeoutMs        关闭时等待落盘的最长时间（毫秒）
+     * @return 更新结果（含变更前后状态）
+     */
+    @PostMapping("/storage/config")
+    public ReturnResult<Map<String, Object>> updateStorageConfig(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String path,
+            @RequestParam(required = false) Long retentionMs,
+            @RequestParam(required = false) Integer capacity,
+            @RequestParam(required = false) Boolean async,
+            @RequestParam(required = false) Long maintenanceIntervalMs,
+            @RequestParam(required = false) Long flushTimeoutMs) {
+        com.chua.starter.hotsport.support.config.HotsportProperties.Storage storage =
+                hotsportProperties.getApm().getStorage();
+        if (type != null && !type.isBlank()) {
+            String normalized = type.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!java.util.Set.of("inmemory", "sqlite", "noop").contains(normalized)) {
+                return storageResult(false, "不支持的存储类型: " + type + "（可选 inmemory / sqlite / noop）");
+            }
+            storage.setType(normalized);
+        }
+        if (path != null) {
+            // 空串是有意义的值：表示「回到默认目录」，不能当成「未传」忽略
+            storage.setPath(path.trim());
+        }
+        if (retentionMs != null) {
+            if (retentionMs <= 0) {
+                return storageResult(false, "retentionMs 必须大于 0");
+            }
+            storage.setRetentionMs(retentionMs);
+        }
+        if (capacity != null) {
+            if (capacity <= 0) {
+                return storageResult(false, "capacity 必须大于 0");
+            }
+            storage.setCapacity(capacity);
+        }
+        if (async != null) {
+            storage.setAsync(async);
+        }
+        if (maintenanceIntervalMs != null) {
+            if (maintenanceIntervalMs < 5_000L) {
+                return storageResult(false, "maintenanceIntervalMs 不能小于 5000（再快只会白烧 CPU）");
+            }
+            storage.setMaintenanceIntervalMs(maintenanceIntervalMs);
+        }
+        if (flushTimeoutMs != null) {
+            if (flushTimeoutMs <= 0) {
+                return storageResult(false, "flushTimeoutMs 必须大于 0");
+            }
+            storage.setFlushTimeoutMs(flushTimeoutMs);
+        }
+        Map<String, Object> result = apmQueryService.reloadStorage();
+        return storageResult(Boolean.TRUE.equals(result.get("success")), String.valueOf(result.get("message")), result);
+    }
+
+    /**
+     * 重新加载存储配置（配置来自外部修改，如配置中心推送后调用）。
+     *
+     * <p>与 {@code POST /storage/config} 的区别：本接口不修改任何参数，
+     * 只让当前配置重新生效一次，适合配置对象被其他组件直接改写的场景。</p>
+     *
+     * @return 更新结果
+     */
+    @PostMapping("/storage/reload")
+    public ReturnResult<Map<String, Object>> reloadStorageConfig() {
+        Map<String, Object> result = apmQueryService.reloadStorage();
+        return storageResult(Boolean.TRUE.equals(result.get("success")), String.valueOf(result.get("message")), result);
+    }
+
+    /**
+     * 统一构造存储操作响应：成功走 {@code ok}，失败走业务错误码。
+     *
+     * <p>失败若也用 {@code ok} 返回，前端会当作成功处理（业务码为 0），
+     * 用户看不到「配置没生效」，因此必须走 {@link ReturnResult#error}。</p>
+     *
+     * @param success 是否成功
+     * @param message 提示信息
+     * @return 响应
+     */
+    private ReturnResult<Map<String, Object>> storageResult(boolean success, String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", success);
+        body.put("message", message);
+        return success ? ReturnResult.ok(body) : ReturnResult.error("APM_STORAGE", message, body);
+    }
+
+    /**
+     * 统一构造存储操作响应（带完整结果体）。
+     *
+     * @param success 是否成功
+     * @param message 提示信息
+     * @param body    结果体
+     * @return 响应
+     */
+    private ReturnResult<Map<String, Object>> storageResult(boolean success, String message,
+                                                           Map<String, Object> body) {
+        Map<String, Object> payload = body == null ? new LinkedHashMap<>() : body;
+        payload.put("success", success);
+        payload.put("message", message);
+        return success ? ReturnResult.ok(payload) : ReturnResult.error("APM_STORAGE", message, payload);
     }
 
     /**
@@ -302,10 +512,32 @@ public class ApmController {
      * @param limit 返回上限，默认 200
      * @return 传输记录 DTO 列表（含 traceId/spanId/className/methodName）
      */
+    /**
+     * Agent 实时 Trace Span 列表（Traces 页数据源，新事件在前）。
+     *
+     * @param limit     返回上限，默认 200
+     * @param errorOnly 为 true 时只返回错误状态的 span
+     * @return span DTO 列表（含 isError / shortError）
+     */
     @GetMapping("/agent/traces")
     public ReturnResult<List<Map<String, Object>>> agentTraces(
-            @RequestParam(defaultValue = "200") int limit) {
-        return ReturnResult.ok(apmQueryService.agentTraces(limit));
+            @RequestParam(defaultValue = "200") int limit,
+            @RequestParam(defaultValue = "false") boolean errorOnly) {
+        return ReturnResult.ok(apmQueryService.agentTraces(limit, errorOnly));
+    }
+
+    /**
+     * 链路概览 — 按 traceId 聚合的扁平列表，每 trace 一行。
+     *
+     * @param limit     返回上限，默认 100
+     * @param errorOnly 为 true 时只保留含错误 span 的链路
+     * @return 链路概览列表
+     */
+    @GetMapping("/traces/summary")
+    public ReturnResult<List<Map<String, Object>>> traceSummaries(
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(defaultValue = "false") boolean errorOnly) {
+        return ReturnResult.ok(apmQueryService.traceSummaries(limit, errorOnly));
     }
 
     /**
@@ -869,6 +1101,45 @@ public class ApmController {
                 emitter.complete();
             }
         }, 0, effective, TimeUnit.MILLISECONDS);
+        emitter.onCompletion(() -> task.cancel(true));
+        emitter.onTimeout(() -> {
+            task.cancel(false);
+            emitter.complete();
+        });
+        return emitter;
+    }
+
+    /**
+     * 实时日志流（SSE）— 按序号游标增量推送系统输出日志。
+     *
+     * <p>与 {@code /stream}（推 stats）不同，这里专门推日志行。客户端传 {@code after}
+     * 作为起始游标（0 = 从最新开始），每次推送增量条目与该时刻的最大序号
+     * （{@code lastSeq}），下个请求把它传回来即可无重复续读。</p>
+     *
+     * @param after 起始序号游标，默认 0（只推新产生的日志）
+     * @return SSE 事件流（name = log）
+     */
+    @GetMapping(value = "/stream/logs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamLogs(@RequestParam(defaultValue = "0") long after) {
+        SseEmitter emitter = new SseEmitter(5L * 60 * 1000);
+        // 游标由服务端推进：下次推送用本次 lastSeq，天然无重复
+        final long[] cursor = {Math.max(0L, after)};
+        ScheduledFuture<?> task = sseExecutor.scheduleAtFixedRate(() -> {
+            try {
+                Map<String, Object> delta = apmQueryService.systemOutAfter(cursor[0]);
+                List<?> items = (List<?>) delta.get("items");
+                long lastSeq = ((Number) delta.get("lastSeq")).longValue();
+                cursor[0] = lastSeq;
+                Map<String, Object> payload = Map.of(
+                        "ts", System.currentTimeMillis(),
+                        "items", items,
+                        "lastSeq", lastSeq);
+                String json = objectMapper.writeValueAsString(payload);
+                emitter.send(SseEmitter.event().name("log").data(json));
+            } catch (IOException e) {
+                emitter.complete();
+            }
+        }, 0, 1000, TimeUnit.MILLISECONDS);
         emitter.onCompletion(() -> task.cancel(true));
         emitter.onTimeout(() -> {
             task.cancel(false);

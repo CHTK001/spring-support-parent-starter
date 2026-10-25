@@ -36,6 +36,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,6 +46,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -1541,32 +1543,269 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @PostMapping("structure-diff")
     public ReturnResult<List<DbStructureDiff.DiffItem>> structureDiff(
             @RequestBody DbStructureDiffRequest request) {
-        return callDb("比较库结构", () -> {
-            Long srcDs = request.sourceDatasourceId();
-            String srcDb = request.sourceDatabase();
-            Long dstDs = request.targetDatasourceId() == null ? srcDs : request.targetDatasourceId();
-            String dstDb = request.targetDatabase();
-            // 源与目标同库时没有任何差异，直接返回空而不是白开两条连接比一遍
-            if (Objects.equals(srcDs, dstDs) && Objects.equals(srcDb, dstDb)) {
-                return List.of();
+        return callDb("比较库结构", () -> diffItems(request));
+    }
+
+    /**
+     * 两个库的结构对比（源 → 目标，单向）。
+     *
+     * <p>{@code structure-diff}（普通查询）与 {@code structure-sync-run}（SSE 流式执行）
+     * 共用这一份对比逻辑：两边拿到的差异清单 <b>必须完全一致</b>，否则会出现
+     * 「预览脚本 5 条、实际执行 4 条」这类只有在执行时才暴露的口径漂移。</p>
+     *
+     * @param request 源/目标数据源与库
+     * @return 差异清单
+     * @throws SQLException 读元数据/切库失败
+     */
+    private List<DbStructureDiff.DiffItem> diffItems(DbStructureDiffRequest request)
+            throws Exception {
+        Long srcDs = request.sourceDatasourceId();
+        String srcDb = request.sourceDatabase();
+        Long dstDs = request.targetDatasourceId() == null ? srcDs : request.targetDatasourceId();
+        String dstDb = request.targetDatabase();
+        // 源与目标同库时没有任何差异，直接返回空而不是白开两条连接比一遍
+        if (Objects.equals(srcDs, dstDs) && Objects.equals(srcDb, dstDb)) {
+            return List.of();
+        }
+        // 源与目标**同一个数据源**时只能共用一条连接并切 catalog：
+        // datasourceService.connection(id) 返回的是缓存共享的同一条物理连接，
+        // 两次拿到同一个对象，第二次 USE 会覆盖第一次，
+        // 于是变成「拿目标库跟自己比」并恒返回空列表（2026-10-05 实测）。
+        if (Objects.equals(srcDs, dstDs)) {
+            try (java.sql.Connection conn = datasourceService.connection(srcDs)) {
+                return DbStructureDiff.diffSameDatasource(
+                        conn, srcDb, dstDb, request.tables());
             }
-            // 源与目标**同一个数据源**时只能共用一条连接并切 catalog：
-            // datasourceService.connection(id) 返回的是缓存共享的同一条物理连接，
-            // 两次拿到同一个对象，第二次 USE 会覆盖第一次，
-            // 于是变成「拿目标库跟自己比」并恒返回空列表（2026-10-05 实测）。
-            if (Objects.equals(srcDs, dstDs)) {
-                try (java.sql.Connection conn = datasourceService.connection(srcDs)) {
-                    return DbStructureDiff.diffSameDatasource(
-                            conn, srcDb, dstDb, request.tables());
+        }
+        try (java.sql.Connection src = datasourceService.connection(srcDs);
+             SchemaScope srcScope = useSchema(src, srcDb);
+             java.sql.Connection dst = datasourceService.connection(dstDs);
+             SchemaScope dstScope = useSchema(dst, dstDb)) {
+            return DbStructureDiff.diffAcrossDatasources(src, dst, request.tables());
+        }
+    }
+
+    /**
+     * 结构同步（SSE 流式执行）请求：在 diff 请求之上加执行选项。
+     */
+    public record StructureSyncRunRequest(
+            Long sourceDatasourceId,
+            String sourceDatabase,
+            Long targetDatasourceId,
+            String targetDatabase,
+            String tables,
+            /** 遇错即停（默认 true）；false 时失败语句记日志、继续执行后续 */
+            Boolean stopOnError,
+            /** 前端勾选/编辑后的部署脚本；非空时直接执行它，缺省时才在服务端重算 diff */
+            String script
+    ) {
+        boolean stopOnErrorOrDefault() {
+            return stopOnError == null || stopOnError;
+        }
+    }
+
+    /**
+     * 结构同步：比较后把生成的脚本在目标库**逐条执行**，并以 SSE 实时推送每步日志。
+     *
+     * <p>三次握手的第三步（Navicat 的「结构同步 → 执行同步」）。与
+     * {@code structure-diff} 同一条 diff 链路，保证「预览的就是执行的」；
+     * 语句在目标库上逐条执行，每一条立即通过 SSE 推送结果，前端据此渲染
+     * 实时日志而不是整批执行完一次性返回。</p>
+     *
+     * <p>事件协议（data 均为 JSON 字符串，由 ObjectMapper 序列化）：</p>
+     * <ul>
+     *   <li>{@code log}：{ no, sql, ok, affectedRows, error }，一条语句的执行结果</li>
+     *   <li>{@code done}：{ total, ok, fail, elapsedMs }，全部执行结束</li>
+     *   <li>{@code error}：{ message }，链路早期失败（连不上/切库失败/无可执行语句时由 log 表达）</li>
+     * </ul>
+     *
+     * <p>执行路径与 {@code execute-db-batch} 保持一致：同一目标库连接上
+     * {@code USE} + {@code Statement} 逐条跑，不引入独立事务 ——
+     * 中途失败时已执行的语句保持生效，前端日志能标出「错在哪条」。</p>
+     *
+     * @param request 源/目标数据源与库 + 执行选项
+     * @return SSE 流
+     */
+    @Operation(summary = "结构同步（SSE 流式执行）")
+    @PostMapping(value = "structure-sync-run", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody structureSyncRun(
+            @RequestBody StructureSyncRunRequest request,
+            jakarta.servlet.http.HttpServletResponse httpResponse) {
+        // 用 StreamingResponseBody（Spring 专为异步原始流设计）：无 converter 中间层，
+        // 直接把字节写进响应流，SseEmitter 在此 Spring 版本会静默丢弃 data 内容
+        // （Boot 4.1 / Spring 7 实测 2026-10-23 多轮：event 行在、data: 恒空）。
+        //
+        // 必须显式写 Content-Type：StreamingResponseBody 的 ReturnValueHandler 不会
+        // 像 SseEmitter 那样自动把 @PostMapping(produces=...) 落到响应头（实测
+        // 2026-10-23，content-type 恒为空）。前端 sse 客户端的 onopen 校验
+        // 「Content-Type 含 text/event-stream」，缺失即报「SSE 连接失败: 200」并
+        // 无限重连，日志一条都收不到。
+        httpResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+        httpResponse.setCharacterEncoding("UTF-8");
+        return outputStream -> {
+            java.io.PrintWriter out = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(outputStream, java.nio.charset.StandardCharsets.UTF_8));
+            out.flush();
+            runStructureSync(out, request);
+            out.flush();
+        };
+    }
+
+    /** 结构同步日志事件里的单条语句 */
+    public record StructureSyncLogVO(int no, String sql, boolean ok,
+                                     Integer affectedRows, String error) {
+    }
+
+    /** 结构同步结束事件 */
+    public record StructureSyncDoneVO(int total, int ok, int fail, long elapsedMs) {
+    }
+
+    /** 结构同步早期失败事件 */
+    public record StructureSyncErrorVO(String message) {
+    }
+
+    /** 发送一条 SSE 事件帧：手写帧字节（event 行 + data 行 + 空行）写进 PrintWriter。
+     *
+     *  <p>为什么手写帧而不依赖 SseEmitter.data()：本项目在此 Spring 版本
+     *  （Boot 4.1 / Spring 7）下 SseEmitter 的 data 内容会被静默丢弃（event 行
+     *  正常、data: 恒空，2026-10-23 实测多轮，含 SELECT 1 最小用例）；
+     *  record 的 JSON 序列化（Json.toJson / ObjectMapper）同样静默输出空串。
+     *  三个 VO 字段极少，手写帧 + 手工转义即确定性最强。</p>
+     */
+    private void writeSseEvent(java.io.PrintWriter out, String name, Object payload) {
+        try {
+            out.write("event:" + name + "\n");
+            out.write("data:" + structureSyncPayloadJson(payload) + "\n\n");
+            out.flush();
+        } catch (Exception e) {
+            // 客户端断开：写流失败时静默退出线程
+            log.warn("[db] SSE 写入失败: {}", e.getMessage());
+        }
+    }
+
+    /** 手拼结构同步事件 payload 的 JSON（仅三个 VO，字段已知） */
+    private static String structureSyncPayloadJson(Object payload) {
+        if (payload instanceof StructureSyncLogVO v) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"no\":").append(v.no())
+                    .append(",\"sql\":").append(jsonStr(v.sql()))
+                    .append(",\"ok\":").append(v.ok())
+                    .append(",\"affectedRows\":");
+            if (v.affectedRows() == null) {
+                sb.append("null");
+            } else {
+                sb.append(v.affectedRows());
+            }
+            sb.append(",\"error\":").append(jsonStr(v.error())).append('}');
+            return sb.toString();
+        }
+        if (payload instanceof StructureSyncDoneVO v) {
+            return "{\"total\":" + v.total()
+                    + ",\"ok\":" + v.ok()
+                    + ",\"fail\":" + v.fail()
+                    + ",\"elapsedMs\":" + v.elapsedMs() + "}";
+        }
+        if (payload instanceof StructureSyncErrorVO v) {
+            return "{\"message\":" + jsonStr(v.message()) + "}";
+        }
+        return "{}";
+    }
+
+    /** JSON 字符串字面量：转义引号、反斜杠与控制字符（含换行，SQL 里常见） */
+    private static String jsonStr(String s) {
+        if (s == null) {
+            return "null";
+        }
+        StringBuilder sb = new StringBuilder(s.length() + 8);
+        sb.append('"');
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
                 }
             }
-            try (java.sql.Connection src = datasourceService.connection(srcDs);
-                 SchemaScope srcScope = useSchema(src, srcDb);
-                 java.sql.Connection dst = datasourceService.connection(dstDs);
-                 SchemaScope dstScope = useSchema(dst, dstDb)) {
-                return DbStructureDiff.diffAcrossDatasources(src, dst, request.tables());
+        }
+        return sb.append('"').toString();
+    }
+
+    /** 在目标库逐条执行结构同步脚本，逐条推送日志事件，结尾推送 done */
+    private void runStructureSync(java.io.PrintWriter out, StructureSyncRunRequest request) {
+        long start = System.currentTimeMillis();
+        int ok = 0;
+        int fail = 0;
+        boolean stopOnError = request.stopOnErrorOrDefault();
+        // 前端勾选/编辑后的脚本优先；缺省时服务端重算 diff 生成
+        List<String> statements = new ArrayList<>();
+        String givenScript = request.script();
+        if (givenScript != null && !givenScript.isBlank()) {
+            try {
+                statements.addAll(SqlScriptSplitter.split(givenScript));
+            } catch (IllegalArgumentException e) {
+                writeSseEvent(out, "error", new StructureSyncErrorVO("脚本无法切分: " + e.getMessage()));
+                return;
             }
-        });
+        } else {
+            List<DbStructureDiff.DiffItem> items = List.of();
+            try {
+                items = diffItems(new DbStructureDiffRequest(request.sourceDatasourceId(),
+                        request.sourceDatabase(), request.targetDatasourceId(),
+                        request.targetDatabase(), request.tables()));
+            } catch (Exception e) {
+                writeSseEvent(out, "error", new StructureSyncErrorVO("比较失败: " + e.getMessage()));
+                return;
+            }
+            // 只执行有 DDL 的差异（EXTRA_* 只提示，ddl 为空）
+            for (DbStructureDiff.DiffItem it : items) {
+                if (it.ddl() != null && !it.ddl().isBlank()) {
+                    statements.addAll(SqlScriptSplitter.split(it.ddl()));
+                }
+            }
+        }
+        if (statements.isEmpty()) {
+            writeSseEvent(out, "done", new StructureSyncDoneVO(0, 0, 0,
+                    System.currentTimeMillis() - start));
+            return;
+        }
+        Long dstDs = request.targetDatasourceId() == null
+                ? request.sourceDatasourceId() : request.targetDatasourceId();
+        int total = statements.size();
+        try (java.sql.Connection conn = datasourceService.connection(dstDs);
+             SchemaScope scope = useSchema(conn, request.targetDatabase());
+             java.sql.Statement stmt = conn.createStatement()) {
+            for (int i = 0; i < total; i++) {
+                String sql = statements.get(i);
+                try {
+                    boolean hasResult = stmt.execute(sql);
+                    int affected = (hasResult || stmt.getUpdateCount() < 0)
+                            ? 0 : stmt.getUpdateCount();
+                    ok++;
+                    writeSseEvent(out, "log", new StructureSyncLogVO(i + 1, sql, true, affected, null));
+                } catch (java.sql.SQLException e) {
+                    fail++;
+                    writeSseEvent(out, "log", new StructureSyncLogVO(i + 1, sql, false,
+                            null, e.getMessage()));
+                    if (stopOnError) {
+                        break;
+                    }
+                }
+            }
+            writeSseEvent(out, "done", new StructureSyncDoneVO(total, ok, fail,
+                    System.currentTimeMillis() - start));
+        } catch (Exception e) {
+            writeSseEvent(out, "error", new StructureSyncErrorVO("执行失败: " + e.getMessage()));
+        }
     }
 
     @Operation(summary = "AI 文本生成 SQL 可用状态")
