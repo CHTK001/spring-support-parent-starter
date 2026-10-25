@@ -51,6 +51,14 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- 可选：宿主启用 socket 时，把设备事件广播到 SSE/WebSocket；
+             未引入时由 DeviceRealtimeConfiguration 的空实现兜底，模块仍可独立运行 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

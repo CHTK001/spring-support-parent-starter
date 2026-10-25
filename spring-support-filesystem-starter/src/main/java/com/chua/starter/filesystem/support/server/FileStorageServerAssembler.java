@@ -66,6 +66,7 @@ public final class FileStorageServerAssembler {
                 .layout(properties.isLayout())
                 .layoutType(properties.getLayoutType())
                 .imageFilter(properties.getImageFilter())
+                .fileSettingKey(properties.getFileSettingKey())
                 .openPathGuard(properties.isOpenPathGuard())
                 .imageFilterEnabled(properties.isImageFilterEnabled())
                 .filterChain(properties.getFilterChain())
