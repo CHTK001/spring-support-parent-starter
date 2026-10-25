@@ -2,6 +2,11 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.common.support.ai.chat.AuthHeaders;
+import com.chua.common.support.ai.chat.ChatClientIndicator;
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
+import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
+import com.chua.common.support.ai.chat.route.RouteTarget;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -15,9 +20,11 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
+import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -117,6 +124,11 @@ public class ApiProviderController {
      * （仅在对应字段尚未配置时回填，不覆盖用户已填的值）
      */
     private final com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService modelMetricsEnrichmentService;
+
+    /**
+     * 模型指标库服务（sync-pricing 同步入库）
+     */
+    private final com.chua.starter.ai.support.manage.service.SysAiModelMetricsService sysAiModelMetricsService;
 
     /**
      * ONNX 供应商物化服务：ONNX 供应商与模型镜像同步
@@ -688,7 +700,7 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                entity.getProxy(), tryFix));
+                entity.getProxy(), tryFix, entity.getExtra()));
     }
 
     /**
@@ -716,7 +728,7 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                entity.getProxy(), tryFix);
+                entity.getProxy(), tryFix, entity.getExtra());
         Object rawModels = upstream.get("models");
         List<Map<String, Object>> upstreamModels = rawModels instanceof List<?> list ? (List<Map<String, Object>>) list
                 : new ArrayList<>(0);
@@ -750,7 +762,7 @@ public class ApiProviderController {
                 continue;
             }
             SysAiProviderModel row = toModelEntity(providerId, batchModelInput(m, name, sortBase + i), now);
-            enrichFromMetrics(row);
+            enrichFromMetrics(entity, row);
             modelMapper.insert(row);
             imported++;
             importedRows.add(toProviderModelResponse(entity, row));
@@ -762,6 +774,200 @@ public class ApiProviderController {
         out.put("skipped", skipped);
         out.put("models", importedRows);
         return ApiResult.ok(out);
+    }
+
+    /**
+     * 按模型名从服务商指标端点拉取指标快照，供模型新增/编辑页「自动获取」按钮回填表单。
+     *
+     * <p>返回可直接回填的字段集（Models.dev 等 indicator 的标准键，口径与价格同步一致）：</p>
+     * <ul>
+     *   <li>实体列键：family / knowledge / release_date / last_updated / modalities /
+     *       open_weights / attachment / reasoning / tool_call / temperature_supported</li>
+     *   <li>思考档位：reasoning_efforts（Models.dev reasoning_options 解析，如
+     *       claude-opus-5 → [low,medium,high,xhigh,max]）</li>
+     *   <li>常规：context_window_tokens / max_output_tokens / 价格</li>
+     * </ul>
+     *
+     * <p>未收录该模型时 {@code found=false}，前端提示「该模型未被指标源收录」并保持表单不动。</p>
+     *
+     * @param providerId 提供者标识
+     * @param model      模型名（query 参数）
+     * @return 指标快照
+     */
+    @Permission("admin")
+    @GetMapping("/providers/{provider_id}/models/metrics")
+    public ApiResult<Map<String, Object>> recommendModelMetrics(
+            @PathVariable("provider_id") String providerId,
+            @RequestParam(value = "model", required = false) String model) {
+        SysAiProvider entity = requireProvider(providerId);
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        if (model == null || model.isBlank()) {
+            out.put("found", false);
+            out.put("message", "模型名不能为空");
+            return ApiResult.ok(out);
+        }
+        Map<String, Object> hit = findIndicatorMetrics(entity, model.trim());
+        if (hit == null || hit.isEmpty()) {
+            out.put("found", false);
+            out.put("message", "该模型未被指标源收录，可手动填写配置");
+            return ApiResult.ok(out);
+        }
+        out.put("found", true);
+        out.put("model", model.trim());
+        // 只回传前端表单能消费的字段，避免整包指标泄漏
+        for (String key : new String[]{
+                "family", "knowledge", "release_date", "last_updated",
+                "modalities", "open_weights", "attachment", "reasoning",
+                "tool_call", "temperature_supported",
+        }) {
+            String indicatorKey = switch (key) {
+                case "knowledge" -> "knowledge_cutoff";
+                case "family" -> "model_family";
+                case "tool_call" -> "function_calling";
+                case "temperature_supported" -> "temperature";
+                default -> key;
+            };
+            Object value = hit.get(indicatorKey);
+            if (value != null) {
+                out.put(key, value);
+            }
+        }
+        out.put("reasoning_efforts", hit.get("reasoning_efforts"));
+        out.put("context_window_tokens", hit.get("context_window_tokens"));
+        out.put("max_output_tokens", hit.get("max_output_tokens"));
+        out.put("price_input_per_musd", hit.get("price_input_per_musd"));
+        out.put("price_output_per_musd", hit.get("price_output_per_musd"));
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 从服务商官方指标源同步价格 / 能力指标。
+     *
+     * <p>来源解析统一委托给
+     * {@link com.chua.common.support.ai.chat.indicator.ChatClientIndicators}：
+     * 优先使用服务商 {@code extra.metrics_url} 配置的端点；否则按平台路由到
+     * OpenRouter / Pollinations / Vercel AI Gateway 官方目录或 Models.dev 聚合
+     * （见各厂商的 {@code ChatClientIndicator} 实现）。同步结果同时写入
+     * {@code sys_ai_model_metrics}（计费取价）与该服务商的
+     * {@code sys_ai_provider_model.metrics}（前端模型卡片立即刷新）。</p>
+     *
+     * @param providerId 提供者标识
+     * @return 同步统计；无可用来源时 {@code supported=false}
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/models/sync-pricing")
+    @Transactional
+    public ApiResult<Map<String, Object>> syncPricing(@PathVariable("provider_id") String providerId) {
+        SysAiProvider entity = requireProvider(providerId);
+        ChatClientIndicator indicator = resolveIndicator(entity);
+        if (indicator == null) {
+            log.info("[SyncPricing] provider={} 无可用指标端点，跳过", providerId);
+            Map<String, Object> empty = new LinkedHashMap<>(8);
+            empty.put("supported", false);
+            empty.put("updated", 0);
+            empty.put("inserted", 0);
+            empty.put("provider_models", 0);
+            empty.put("source", null);
+            empty.put("source_url", null);
+            empty.put("pricing_url", ChatClientIndicators.officialPricingUrl(entity.getPlatform()));
+            empty.put("models", 0);
+            return ApiResult.ok(empty);
+        }
+        int modelsCount = indicator.modelMetrics() == null ? 0 : indicator.modelMetrics().size();
+        SysAiModelMetricsService.SyncResult result =
+                sysAiModelMetricsService.syncFromIndicator(indicator, providerId);
+        Map<String, Object> out = new LinkedHashMap<>(12);
+        out.put("supported", true);
+        out.put("updated", result.getUpdated());
+        out.put("inserted", result.getInserted());
+        out.put("provider_models", result.getProviderModels());
+        out.put("source", indicator.source());
+        out.put("source_url", indicator.sourceUrl());
+        out.put("pricing_url", ChatClientIndicators.officialPricingUrl(entity.getPlatform()));
+        out.put("models", modelsCount);
+        out.put("captured_at", indicator.capturedAt());
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 按服务商平台解析对应的 {@link ChatClientIndicator}。
+     *
+     * <p>使用统一的
+     * {@link com.chua.common.support.ai.chat.indicator.ChatClientIndicators} 解析，
+     * 与 {@code ChatClient.indicator()} 走同一套映射，避免前后端登记不一致。</p>
+     *
+     * @param entity 供应商行
+     * @return indicator 实现或 空
+     */
+    private ChatClientIndicator resolveIndicator(SysAiProvider entity) {
+        ChatClientSetting setting = buildSettingForIndicator(entity);
+        ChatClientIndicator indicator = ChatClientIndicators.of(setting);
+        if (indicator != null) {
+            return indicator;
+        }
+        String metricsUrl = extraString(entity.getExtra(), "metrics_url");
+        if (com.chua.common.support.utils.StringUtils.isNotBlank(metricsUrl)) {
+            return new HttpChatClientIndicator(setting);
+        }
+        return null;
+    }
+
+    /**
+     * 组装供 indicator 使用的最小 {@link ChatClientSetting}。
+     */
+    private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
+        Map<String, String> extraHeaders = extractExtraHeaders(entity.getExtra());
+        String platform = entity.getPlatform();
+        if (platform == null || platform.isBlank()) {
+            platform = entity.getProviderId();
+        }
+        return ChatClientSetting.builder()
+                .provider(platform)
+                .appKey(firstApiKey(entity))
+                .baseUrl(entity.getBaseUrl())
+                .extraHeaders(extraHeaders)
+                .authScheme(entity.getAuthScheme())
+                .authHeader(extraString(entity.getExtra(), "auth_header"))
+                .authPrefix(extraString(entity.getExtra(), "auth_prefix"))
+                .metricsUrl(extraString(entity.getExtra(), "metrics_url"))
+                .proxy(entity.getProxy())
+                .build();
+    }
+
+    /**
+     * 取服务商自身凭证中的第一个 API Key（无则返回 {@code null}）。
+     *
+     * <p>复用 {@link #extractApiKey(Map)} 的既有逻辑。</p>
+     */
+    private String firstApiKey(SysAiProvider entity) {
+        return extractApiKey(entity.getCredentials());
+    }
+
+    /**
+     * 从 extra 中读取字符串值（extra 为 {@code null} 或键不存在时返回 {@code null}）。
+     */
+    private static String extraString(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return null;
+        }
+        Object value = extra.get(key);
+        return value == null ? null : value.toString();
+    }
+
+    /**
+     * 从 extra 的 {@code custom_headers} 字段提取附加请求头 Map；无则返回 {@code null}。
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
+        if (extra == null) {
+            return null;
+        }
+        Object raw = extra.get("custom_headers");
+        if (raw instanceof Map<?, ?> m) {
+            Map<String, String> result = new LinkedHashMap<>((Map<String, String>) m);
+            return result.isEmpty() ? null : result;
+        }
+        return null;
     }
 
     /**
@@ -881,7 +1087,7 @@ public class ApiProviderController {
             SysAiProvider entity = requireProvider(providerId);
             Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                     entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                    entity.getProxy(), false);
+                    entity.getProxy(), false, entity.getExtra());
 
             // 转换格式：data.models[].name → data.items[].modelName
             @SuppressWarnings("unchecked")
@@ -925,8 +1131,11 @@ public class ApiProviderController {
         Map<String, Object> credentials = body.get("credentials") instanceof Map
                 ? (Map<String, Object>) body.get("credentials") : null;
         String proxy = str(body, "proxy");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> bodyExtra = body.get("extra") instanceof Map
+                ? (Map<String, Object>) body.get("extra") : null;
         return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials,
-                UpstreamAuth.ofBody(body), proxy, false));
+                UpstreamAuth.ofBody(body), proxy, false, bodyExtra));
     }
 
     /**
@@ -1301,7 +1510,7 @@ public class ApiProviderController {
         if (existing == null) {
             SysAiProviderModel newModel = toModelEntity(providerId, modelInput, System.currentTimeMillis());
             // 新增：模型 ID 确定后，用已采集的指标补全上下文长度等参数（仅未配置时）
-            enrichFromMetrics(newModel);
+            enrichFromMetrics(provider, newModel);
             modelMapper.insert(newModel);
             refreshOnnxDevice(provider);
             return ApiResult.ok(toProviderModelResponse(provider, newModel));
@@ -1361,7 +1570,7 @@ public class ApiProviderController {
         existing.setModel(newName);
         existing.setUpdatedAt(System.currentTimeMillis());
         // 改名后：新 ID 可能对应另一份已采集指标，用它补全上下文长度等（仅未配置时）
-        enrichFromMetrics(existing);
+        enrichFromMetrics(provider, existing);
         modelMapper.insert(existing);
         modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
                 .eq(SysAiProviderModel::getProviderId, providerId)
@@ -1525,6 +1734,27 @@ public class ApiProviderController {
         map.put("temperature", model.getTemperature());
         map.put("top_p", model.getTopP());
         map.put("frequency_penalty", model.getFrequencyPenalty());
+        // 指标回填字段：实体列 + metrics JSON 双存（同步价格时自动回填，编辑可改）
+        if (model.getFamily() != null) {
+            map.put("family", model.getFamily());
+        }
+        if (model.getKnowledge() != null) {
+            map.put("knowledge", model.getKnowledge());
+        }
+        if (model.getReleaseDate() != null) {
+            map.put("release_date", model.getReleaseDate());
+        }
+        if (model.getLastUpdated() != null) {
+            map.put("last_updated", model.getLastUpdated());
+        }
+        if (model.getModalities() != null && !model.getModalities().isEmpty()) {
+            map.put("modalities", model.getModalities());
+        }
+        map.put("open_weights", model.getOpenWeights());
+        map.put("attachment", model.getAttachment());
+        map.put("reasoning", model.getReasoning());
+        map.put("tool_call", model.getToolCall());
+        map.put("temperature_supported", model.getTemperatureSupported());
         // ONNX 模型补 external / available：设置页的模型选择器在 onnx 分支里
         // 按 `m.external === true` 过滤（见 DefaultModelSettings.loadModels），
         // 而本方法此前从不返回这两个键 —— 于是「图片识别/人脸/OCR」等分组的
@@ -1747,8 +1977,20 @@ public class ApiProviderController {
         // 生成参数（参考图 / 张数上限 / 分辨率列表 / 时长列表 / 步数区间）：
         // 复用 capabilities[].generate 节点，不新增数据库字段
         applyGenerateConfig(e, input.get("generate"));
-        // 思考强度档位（low/medium/high/max）：同样复用 capabilities[].thinking_efforts
+        // 思考强度档位（none/minimal/low/medium/high/max）：
+        // 同样复用 capabilities[].thinking_efforts
         applyThinkingEfforts(e, input.get("thinking_efforts"));
+        // 指标回填字段（实体列，同步价格回填 + 编辑可改）
+        e.setFamily(str(input, "family"));
+        e.setKnowledge(str(input, "knowledge"));
+        e.setReleaseDate(str(input, "release_date"));
+        e.setLastUpdated(str(input, "last_updated"));
+        e.setModalities(toModalitiesMap(input.get("modalities")));
+        e.setOpenWeights(boolOrNull(input, "open_weights"));
+        e.setAttachment(boolOrNull(input, "attachment"));
+        e.setReasoning(boolOrNull(input, "reasoning"));
+        e.setToolCall(boolOrNull(input, "tool_call"));
+        e.setTemperatureSupported(boolOrNull(input, "temperature_supported"));
         // 指标数据直接保存延迟、智能和输出速度等原始数据
         Object metricsObj = input.get("metrics");
         if (metricsObj instanceof Map<?, ?> metricsMap) {
@@ -1762,18 +2004,23 @@ public class ApiProviderController {
     /**
      * 用采集到的模型指标补全模型参数。
      *
-     * <p>在模型<strong>新增或改名后</strong>调用：以 modelId 为键从
-     * {@link com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService}
-     * 取已采集的指标（上下文长度、输出上限、价格、各类评分等），回填到模型实体。</p>
+     * <p>在模型<strong>新增、批量导入或改名后</strong>调用，两级补齐：</p>
+     * <ol>
+     *   <li>AA 指标（上下文长度、输出上限、价格、各类评分）→ 实体列与 metrics JSON；</li>
+     *   <li>服务商指标端点（Models.dev 等 {@link ChatClientIndicator}）→ 按模型名匹配，
+     *       回填 family / knowledge / release_date / last_updated / modalities / 能力开关
+     *       实体列与 metrics JSON。</li>
+     * </ol>
      *
-     * <p><b>只在未配置时回填</b>：{@code contextWindow} / {@code maxTokens} 为
-     * {@code null}（用户未填）才写入；用户已显式配置的值一律保留，不被采集数据覆盖。
+     * <p><b>只在未配置时回填</b>：{@code contextWindow} / {@code maxTokens} 及新增的
+     * 指标实体列为 {@code null}（用户未填）才写入；用户已显式配置的值一律保留，不被采集数据覆盖。
      * 指标本身以 {@code putIfNotNull} 写入，采集侧无值时不会产生空字段。</p>
      *
-     * @param model 模型实体（就地修改）
+     * @param provider 服务商行（用于解析指标端点）
+     * @param model    模型实体（就地修改）
      * @return 是否有字段被回填
      */
-    private boolean enrichFromMetrics(SysAiProviderModel model) {
+    private boolean enrichFromMetrics(SysAiProvider provider, SysAiProviderModel model) {
         if (model == null || model.getModel() == null || model.getModel().isBlank()) {
             return false;
         }
@@ -1782,10 +2029,7 @@ public class ApiProviderController {
             modelMetricsEnrichmentService.enrich(model.getModel(), row);
         } catch (Exception e) {
             log.debug("[provider-model] 指标补全跳过 model={} 原因={}", model.getModel(), e.getMessage());
-            return false;
-        }
-        if (row.isEmpty()) {
-            return false;
+            row.clear();
         }
         boolean changed = false;
         if (model.getContextWindow() == null) {
@@ -1826,11 +2070,91 @@ public class ApiProviderController {
             model.setMetrics(metrics);
             changed = true;
         }
+        // 服务商指标端点（Models.dev 等）：按模型名匹配快照，回填指标实体列
+        changed |= enrichFromIndicator(provider, model);
         if (changed) {
             log.info("[provider-model] 已用采集指标补全参数 model={} contextWindow={} maxTokens={}",
                     model.getModel(), model.getContextWindow(), model.getMaxTokens());
         }
         return changed;
+    }
+
+    /**
+     * 按模型名从服务商指标端点查指标快照（新增/编辑模型页「自动获取」用）。
+     *
+     * <p>精确匹配 → 归一化键匹配 → 归一化前缀包含匹配三级；未收录返回 null。</p>
+     *
+     * @param provider  服务商行
+     * @param modelName 模型名
+     * @return 指标快照（Models.dev 等 indicator 的标准键），未找到返回 null
+     */
+    private Map<String, Object> findIndicatorMetrics(SysAiProvider provider, String modelName) {
+        try {
+            ChatClientIndicator indicator = resolveIndicator(provider);
+            if (indicator == null) {
+                return null;
+            }
+            Map<String, Map<String, Object>> all = indicator.modelMetrics();
+            if (all == null || all.isEmpty()) {
+                return null;
+            }
+            if (modelName == null || modelName.isBlank()) {
+                return null;
+            }
+            Map<String, Object> hit = all.get(modelName);
+            if (hit == null) {
+                String key = modelMetricsEnrichmentService.normalizeKey(modelName);
+                if (key != null && !key.isBlank()) {
+                    hit = all.get(key);
+                    if (hit == null) {
+                        for (Map.Entry<String, Map<String, Object>> e : all.entrySet()) {
+                            if (key.equals(modelMetricsEnrichmentService.normalizeKey(e.getKey()))) {
+                                hit = e.getValue();
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return hit;
+        } catch (Exception e) {
+            log.debug("[provider-model] 指标快照查询跳过 model={} 原因={}", modelName, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从服务商指标端点（Models.dev 等）按模型名回填指标实体列与 metrics JSON。
+     *
+     * <p>复用 {@link SysAiModelMetricsService#enrichRowFromMetrics}：与价格同步
+     * 走同一套口径（family / knowledge / release_date / last_updated / modalities /
+     * open_weights / attachment / reasoning / tool_call / temperature_supported），
+     * 仅在实体列为空时回填。指标端点不可用或未收录该模型时返回 false。</p>
+     *
+     * @param provider 服务商行
+     * @param model    模型实体（就地修改）
+     * @return 是否回填了指标实体列
+     */
+    private boolean enrichFromIndicator(SysAiProvider provider, SysAiProviderModel model) {
+        try {
+            Map<String, Object> hit = findIndicatorMetrics(provider, model.getModel());
+            if (hit == null || hit.isEmpty()) {
+                return false;
+            }
+            Map<String, Object> current = model.getMetrics() == null
+                    ? new LinkedHashMap<>(32)
+                    : new LinkedHashMap<>(model.getMetrics());
+            ChatClientIndicator indicator = resolveIndicator(provider);
+            Long capturedAt = indicator == null ? null : indicator.capturedAt();
+            sysAiModelMetricsService.enrichRowFromMetrics(model, current, hit,
+                    indicator == null ? null : indicator.source(),
+                    indicator == null ? null : indicator.sourceUrl(),
+                    capturedAt == null ? System.currentTimeMillis() : capturedAt);
+            return true;
+        } catch (Exception e) {
+            log.debug("[provider-model] 指标端点回填跳过 model={} 原因={}", model.getModel(), e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -2249,7 +2573,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
-                                                        UpstreamAuth auth, String proxy, boolean tryFix) {
+                                                        UpstreamAuth auth, String proxy, boolean tryFix,
+                                                        Map<String, Object> extra) {
         // 平台标识统一小写后再判断协议族（前端可能传大写形式）
         String platformLower = platform == null ? "" : platform.toLowerCase();
         // 本地推理（ONNX）没有远端模型目录可拉，改为分发给本地模型门面（ModelRegistry），
@@ -2258,6 +2583,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         // 不再把凭证当作模型文件路径使用。
         if (platformLower.contains("onnx")) {
             return fetchLocalModelsFromFacade();
+        }
+        // 免费渠道是纯路由聚合：模型清单 = extra.routes 的路由键（不含 default），
+        // **绝不真实请求占位 baseUrl 的 /models**（free.nomifun.com 直连必失败）。
+        // 未配置路由表时返回空清单 + 提示，不报错。
+        if (ProviderRouteTargets.isFreeChannel(platform)) {
+            return fetchFreeChannelRoutes(extra);
         }
         // 基础地址缺失直接判参数错误
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -2291,6 +2622,45 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         out.put("models", models);
         if (fixedBaseUrl != null) {
             out.put("fixed_base_url", fixedBaseUrl);
+        }
+        return out;
+    }
+
+    /**
+     * 免费渠道（free-channel）拉模型：返回路由表 {@code extra.routes} 的模型/前缀键清单。
+     *
+     * <p>免费渠道是纯路由聚合，没有真实上游目录可拉；模型清单即路由键（如
+     * {@code glm-4.7}、{@code kilo}），用户选中哪个键，请求就路由到对应的
+     * baseUrl —— 对应 {@code FreeChannelChatClient.route(model)} 的命中键。</p>
+     *
+     * <p>{@code default} 键是兜底路由，不是可选择的模型，返回时剔除。
+     * 未配置 {@code routes} 时返回空清单 + 提示，不抛错。</p>
+     *
+     * @param extra 供应商扩展配置（{@code extra.routes}）
+     * @return { models: [...], hint?: 字符串 }；形态与其它供应商拉取一致
+     */
+    private Map<String, Object> fetchFreeChannelRoutes(Map<String, Object> extra) {
+        Map<String, RouteTarget> routes = ProviderRouteTargets.fromExtra(extra);
+        List<Map<String, Object>> models = new ArrayList<>(8);
+        if (routes != null) {
+            for (String key : routes.keySet()) {
+                // default 是兜底路由，不作为可选模型暴露
+                if ("default".equalsIgnoreCase(key)) {
+                    continue;
+                }
+                Map<String, Object> m = new LinkedHashMap<>(4);
+                m.put("id", key);
+                m.put("name", key);
+                m.put("tasks", inferTasks(key));
+                m.put("traits", List.of("streaming"));
+                models.add(m);
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("models", models);
+        out.put("route_keys", true);
+        if (models.isEmpty()) {
+            out.put("hint", "未配置模型路由（extra.routes），请在供应商配置中补充后重试");
         }
         return out;
     }
@@ -2627,6 +2997,77 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             return b;
         }
         return Boolean.parseBoolean(String.valueOf(v));
+    }
+
+    /**
+     * boolOrNull：可空的布尔（前端未传时保持 null，不覆盖指标回填值）。
+     * @param map 映射
+     * @param key Key
+     * @return Boolean 或 null
+     */
+    private Boolean boolOrNull(Map<String, Object> map, String key) {
+        Object v = map.get(key);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Boolean b) {
+            return b;
+        }
+        String s = String.valueOf(v);
+        if (s.isBlank() || "null".equalsIgnoreCase(s)) {
+            return null;
+        }
+        return Boolean.parseBoolean(s);
+    }
+
+    /**
+     * toModalitiesMap：归一化 inputs。 input / output 模态为字符串列表的 Map。
+     *
+     * <p>接受 {@code {input:[...], output:[...]}} 结构或 null；字符串值视为
+     * 逗号分隔列表。返回值可变，便于后续写入实体。</p>
+     *
+     * @param value 原始值
+     * @return 归一化的 Map；无有效内容时返回空 Map
+     */
+    private Map<String, Object> toModalitiesMap(Object value) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>(2);
+        List<String> reduced = new java.util.ArrayList<>(6);
+        if (value instanceof Map<?, ?> raw) {
+            Object in = raw.get("input");
+            reduced.clear();
+            collectModalityItems(in, reduced);
+            if (!reduced.isEmpty()) {
+                result.put("input", reduced);
+            }
+            Object out = raw.get("output");
+            reduced = new java.util.ArrayList<>(6);
+            collectModalityItems(out, reduced);
+            if (!reduced.isEmpty()) {
+                result.put("output", reduced);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * collectModalityItems：把模态字段值规整成字符串列表（字符串按逗号拆分）。
+     * @param value 原始值
+     * @param target 收集目标
+     */
+    private void collectModalityItems(Object value, List<String> target) {
+        if (value instanceof java.util.Collection<?> coll) {
+            for (Object item : coll) {
+                if (item != null && !String.valueOf(item).isBlank()) {
+                    target.add(String.valueOf(item).trim());
+                }
+            }
+        } else if (value != null && !String.valueOf(value).isBlank()) {
+            for (String part : String.valueOf(value).split(",")) {
+                if (!part.isBlank()) {
+                    target.add(part.trim());
+                }
+            }
+        }
     }
 
     /**

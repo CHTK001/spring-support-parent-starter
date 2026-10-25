@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.net.ServerSocket;
@@ -11,6 +12,9 @@ import java.net.ServerSocket;
 /**
  * SIP 服务生命周期管理 - 跟随后端自动启动/停止
  * 系统配置 sip.enabled=true 时自动在本地启动 SIP 中继服务
+ *
+ * <p>端口默认 17822（避开历史固定 7822 与并行实例冲突），可通过
+ * {@code plugin.sip.port} 覆盖。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -28,6 +32,10 @@ public class SipServerManager {
      * 服务运行标记
     */
     private boolean running = false;
+
+    /** SIP 中继端口：可通过 {@code plugin.sip.port} 覆盖 */
+    @Value("${plugin.sip.port:17822}")
+    private int port = 17822;
 
     /**
      * 应用启动后延迟 10s 尝试自动拉起 SIP 中继服务
@@ -56,7 +64,6 @@ public class SipServerManager {
             return;
         }
         try {
-            int port = 7822;
             String secret = "lvzhou2011";
             // 尝试读取配置
             try {

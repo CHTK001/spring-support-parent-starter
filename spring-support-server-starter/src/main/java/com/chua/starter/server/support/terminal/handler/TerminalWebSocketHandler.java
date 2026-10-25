@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.guacamole.GuacamoleException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.SubProtocolCapable;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -27,6 +28,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,7 +49,20 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TerminalWebSocketHandler extends TextWebSocketHandler {
+public class TerminalWebSocketHandler extends TextWebSocketHandler implements SubProtocolCapable {
+
+    /**
+     * 声明支持的子协议：guacamole-js 的 WebSocketTunnel 在握手时携带
+     * {@code Sec-WebSocket-Protocol: guacamole}，若后端不声明并回显该子协议，
+     * 浏览器会因「请求的子协议未被确认」判定握手失败。Spring 7 通过
+     * {@link SubProtocolCapable} 暴露（注册 API 不再提供 setSubProtocols）。
+     *
+     * @return guacamole 子协议列表
+     */
+    @Override
+    public List<String> getSubProtocols() {
+        return List.of("guacamole");
+    }
 
     /**
      * 单帧文本上限（guacd 指令可能较大，如全屏图像帧）
@@ -268,6 +283,15 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
  // 过滤 guacamole-通用-js 自定义隧道的心跳/内部控制指令，避免透传给 guacd 导致 解析 错误
         if (payload != null && payload.startsWith("internal.")) {
             log.debug("[terminal] 丢弃内部控制指令 tunnelId={} payload={}", session.getTunnelId(), payload);
+            session.setLastActiveTime(LocalDateTime.now());
+            return;
+        }
+ // 过滤浏览器 JS 客户端 connect() 重复握手包：guacd 会话已由后端在握手阶段建立
+ // （GuacdConnectionFactory 已发 select/size/param/connect），浏览器 JS 再发一整套
+ // select,rdp;size...;audio...;param...;connect; 会被 guacd 判为 Instruction parse error
+ // 并停止推流。交互指令（mouse/keyboard/size 等）以各自 opcode 开头，不受影响。
+        if (payload != null && payload.startsWith("select,")) {
+            log.debug("[terminal] 丢弃浏览器重复握手包 tunnelId={} len={}", session.getTunnelId(), payload.length());
             session.setLastActiveTime(LocalDateTime.now());
             return;
         }

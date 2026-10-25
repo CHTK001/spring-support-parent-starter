@@ -437,6 +437,16 @@ public class StaticProtocol extends AbstractProtocol {
      */
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
+        if (logoutType == LogoutType.DISABLE) {
+            // 静态协议没有跨进程黑名单，能做的就是把该用户在线会话全部作废
+            return kick(uid);
+        }
+        if (logoutType == LogoutType.ENABLE) {
+            return new LoginAuthResult(200, "静态协议无用户黑名单，无需恢复");
+        }
+        if (logoutType == LogoutType.KICK_OTHERS) {
+            return kickOthers(uid, userResult);
+        }
         if (logoutType == LogoutType.KICK) {
             return kick(uid);
         }
@@ -447,6 +457,31 @@ public class StaticProtocol extends AbstractProtocol {
         }
         revokeToken(token, null != userResult ? userResult.getExpireTime() : null);
         return new LoginAuthResult(200, "注销成功");
+    }
+
+    /**
+     * 踢掉同一用户的其它会话，保留当前令牌。
+     *
+     * @param keepToken  需要保留的当前令牌
+     * @param userResult 当前用户信息（提供用户标识）
+     * @return 登录认证结果
+     */
+    private LoginAuthResult kickOthers(String keepToken, UserResult userResult) {
+        String userKey = null == userResult ? null : userResult.getUserId();
+        if (StringUtils.isBlank(userKey)) {
+            return new LoginAuthResult(400, "未登录");
+        }
+        String keepHash = StringUtils.isBlank(keepToken) ? null : DigestUtils.sha256(keepToken);
+        int revoked = 0;
+        for (String hash : SESSIONS.tokenHashesOf(userKey)) {
+            if (null != keepHash && keepHash.equals(hash)) {
+                continue;
+            }
+            AbstractProtocol.revokeTokenHash(hash, null);
+            revoked++;
+        }
+        log.info("[StaticProtocol]踢出其它设备 - 用户: {}, 踢出会话数: {}", userKey, revoked);
+        return new LoginAuthResult(200, "已下线其它设备");
     }
 
     /**

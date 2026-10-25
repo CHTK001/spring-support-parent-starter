@@ -1,6 +1,5 @@
 package com.chua.starter.common.support.api.response;
 import com.chua.common.support.annotation.IgnoreReturnType;
-import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.ReturnPreconditioning;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
@@ -89,8 +88,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
             return o;
         }
 
-        if (o instanceof ReturnPageResult
-                || o instanceof com.chua.starter.common.support.lang.ReturnPageResult) {
+        if (o instanceof com.chua.starter.common.support.lang.ReturnPageResult) {
             return o;
         }
 

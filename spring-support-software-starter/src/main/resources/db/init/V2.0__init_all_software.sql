@@ -155,7 +155,13 @@ CREATE TABLE IF NOT EXISTS `soft_source` (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS `soft_source_uk_code` ON `soft_source` (`source_code`);
-CREATE INDEX IF NOT EXISTS `soft_source_url` ON `soft_source` (`source_url`);
+-- source_url 是 VARCHAR(1000)：utf8mb4 下 1000 字符 = 4000 字节，
+-- 超过 InnoDB 单个索引键 3072 字节的上限（实测 MySQL 8.4 报
+-- "Specified key was too long; max key length is 3072 bytes"），
+-- 故用 191 字符的前缀索引（191*4=764 字节，留足余量）。
+-- 前缀索引只索引 URL 的前 191 字符，对「按 URL 精确查找」够用；
+-- 若日后要按完整 URL 唯一约束，得先把列类型收窄。
+CREATE INDEX IF NOT EXISTS `soft_source_url` ON `soft_source` (`source_url`(191));
 CREATE INDEX IF NOT EXISTS `soft_source_priority` ON `soft_source` (`source_priority`);
 CREATE INDEX IF NOT EXISTS `soft_source_type` ON `soft_source` (`source_type`);
 CREATE INDEX IF NOT EXISTS `soft_source_status` ON `soft_source` (`source_status`);

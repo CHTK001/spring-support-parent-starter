@@ -11,6 +11,7 @@ import java.util.List;
  * @param taskId      任务标识
  * @param studentId   错题归属学生
  * @param wrongCount  将登记的题目数
+ * @param wrongRate   当前判错得分率阈值（0~1；0 表示仅 0 分判错）
  * @param questions   预览题目清单
  * @since 4.0.0.42
  * @author CH
@@ -19,5 +20,6 @@ public record MarkingFinishPreviewVO(
         String taskId,
         String studentId,
         int wrongCount,
+        double wrongRate,
         List<MarkingPreviewQuestionVO> questions) {
 }
