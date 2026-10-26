@@ -4,7 +4,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.collab.FileCollabStore;
 import com.chua.starter.filesystem.support.log.FileLogStore;
-import com.chua.starter.oauth.client.support.annotation.UserValue;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,8 +29,9 @@ import java.util.Set;
  * 快照时携带期望版本，版本不匹配拒绝写入（防并发覆盖）；SSE 推送
  * {@code changed} 事件，其他客户端拉最新快照。</p>
  *
- * <p>用户身份经 {@link UserValue} 注入（oauth 上下文），创建者记录
- * {@code userId}；私有文档仅创建者与被授权用户可见可编辑。</p>
+ * <p>用户身份由前端显式传入 {@code userId}（内部登录态功能，前端从用户
+ * store 取当前用户标识）：创建者记录 {@code userId}；私有文档仅创建者与
+ * 被授权用户可见可编辑。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -76,7 +76,7 @@ public class FileCollabController {
     /**
      * 创建协同文档（文件资产右键入口）。
      *
-     * @param userId      当前用户标识（oauth 注入）
+     * @param userId      当前用户标识（前端从用户 store 传入）
      * @param bucket      源文件所在桶
      * @param objectKey   源文件对象键
      * @param fileName    展示文件名（含扩展名，决定表格类型）
@@ -87,7 +87,7 @@ public class FileCollabController {
     @Operation(summary = "创建协同文档")
     @PostMapping("/create")
     public ReturnResult<Map<String, Object>> create(
-            @UserValue("userId") String userId,
+            @RequestParam(value = "userId", required = false, defaultValue = "anonymous") String userId,
             @RequestParam(value = "bucket", required = false, defaultValue = "") String bucket,
             @RequestParam(value = "objectKey", required = false, defaultValue = "") String objectKey,
             @RequestParam(value = "fileName", required = false, defaultValue = "") String fileName,
@@ -112,12 +112,13 @@ public class FileCollabController {
     /**
      * 列出当前用户可见的协同文档（公开全员可见；私有仅创建者与授权用户）。
      *
-     * @param userId 当前用户标识
+     * @param userId 当前用户标识（前端从用户 store 传入）
      * @return 协同文档列表（新→旧）
      */
     @Operation(summary = "列出协同文档")
     @GetMapping("/list")
-    public ReturnResult<List<Map<String, Object>>> list(@UserValue("userId") String userId) {
+    public ReturnResult<List<Map<String, Object>>> list(
+            @RequestParam(value = "userId", required = false, defaultValue = "anonymous") String userId) {
         String uid = userId == null || userId.isBlank() ? "anonymous" : userId;
         return ReturnResult.ok(collabStore.list(uid).stream().map(FileCollabController::toMap).toList());
     }
