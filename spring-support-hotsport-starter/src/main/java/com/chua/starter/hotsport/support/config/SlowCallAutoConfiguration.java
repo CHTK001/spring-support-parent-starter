@@ -10,10 +10,11 @@ import org.springframework.core.Ordered;
 import org.springframework.beans.factory.annotation.Value;
 
 /**
- * 慢调用过滤器自动配置 — 对 Servlet 应用通用生效。
+ * 请求采集过滤器自动配置 — 对 Servlet 应用通用生效。
  *
- * <p>开关：{@code hotsport.slow-call.enabled=true}（默认启用）；阈值：
- * {@code hotsport.slow-call.threshold-ms=1000}。</p>
+ * <p>开关：{@code plugin.hotsport.request-record.enabled=true}（默认启用）；
+ * 阈值：{@code plugin.hotsport.request-record.threshold-ms=0}（默认 0 = 记录全部真实请求，
+ * 设为正值则只记录耗时达到该值的请求）。</p>
  *
  * <p>注册顺序使用 {@code Ordered.LOWEST_PRECEDENCE}，避免干扰业务过滤链。</p>
  *
@@ -23,24 +24,24 @@ import org.springframework.beans.factory.annotation.Value;
 @Slf4j
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(prefix = "hotsport.slow-call", name = "enabled",
+@ConditionalOnProperty(prefix = "plugin.hotsport.request-record", name = "enabled",
         havingValue = "true", matchIfMissing = true)
 public class SlowCallAutoConfiguration {
 
     /**
-     * 注册慢调用过滤器。
+     * 注册请求采集过滤器。
      *
-     * @param thresholdMs 慢调用阈值（ms）
+     * @param thresholdMs 记录阈值（ms），0 表示记录全部
      * @return Filter 注册 Bean
      */
     @Bean
     public FilterRegistrationBean<SlowCallFilter> slowCallFilter(
-            @Value("${plugin.hotsport.slow-call.threshold-ms:1000}") long thresholdMs) {
+            @Value("${plugin.hotsport.request-record.threshold-ms:0}") long thresholdMs) {
         SlowCallFilter filter = new SlowCallFilter(thresholdMs);
         FilterRegistrationBean<SlowCallFilter> bean = new FilterRegistrationBean<>(filter);
         bean.addUrlPatterns("/*");
         bean.setOrder(Ordered.LOWEST_PRECEDENCE);
-        log.info("[Hotsport] SlowCallFilter 已注册，阈值 {}ms", thresholdMs);
+        log.info("[Hotsport] 请求采集过滤器已注册，阈值 {}ms（0=记录全部真实请求）", thresholdMs);
         return bean;
     }
 }
