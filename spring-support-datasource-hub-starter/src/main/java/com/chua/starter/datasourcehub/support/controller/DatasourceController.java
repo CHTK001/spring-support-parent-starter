@@ -46,7 +46,7 @@ public class DatasourceController {
     @Operation(summary = "获取所有数据源")
     @GetMapping({"", "/list"})
     public ReturnResult<List<DataSourceVO>> list() {
-        return datasourceService.list();
+        return maskedList(datasourceService.list());
     }
 
     /**
@@ -58,7 +58,7 @@ public class DatasourceController {
     @Operation(summary = "获取数据源详情")
     @GetMapping("/{id}")
     public ReturnResult<DataSourceVO> get(@PathVariable Long id) {
-        return datasourceService.get(id);
+        return masked(datasourceService.get(id));
     }
 
     /**
@@ -70,7 +70,7 @@ public class DatasourceController {
     @Operation(summary = "新增数据源")
     @PostMapping
     public ReturnResult<DataSourceVO> create(@RequestBody DataSourceDTO data) {
-        return datasourceService.create(data);
+        return masked(datasourceService.create(data));
     }
 
     /**
@@ -84,7 +84,7 @@ public class DatasourceController {
     @Operation(summary = "更新数据源")
     @PutMapping("/{id}")
     public ReturnResult<DataSourceVO> update(@PathVariable Long id, @RequestBody DataSourceDTO data) {
-        return datasourceService.update(id, data);
+        return masked(datasourceService.update(id, data));
     }
 
     /**
@@ -122,5 +122,33 @@ public class DatasourceController {
     @GetMapping("/types")
     public ReturnResult<List<String>> types() {
         return ReturnResult.ok(datasourceService.supportedTypes());
+    }
+
+    /**
+     * 单条出参去掉口令明文。
+     *
+     * <p>口令明文只该在服务端内部流转（中间件客户端要靠它建连），浏览器不需要。
+     * 详情/新建/更新三个接口都会把整条数据源回给页面，统一在这里过一道。</p>
+     *
+     * @param result 服务层结果
+     * @return 口令已清空的结果；失败结果原样返回
+     */
+    private static ReturnResult<DataSourceVO> masked(ReturnResult<DataSourceVO> result) {
+        DataSourceVO data = result == null ? null : result.getData();
+        return data == null ? result : ReturnResult.ok(data.masked());
+    }
+
+    /**
+     * 列表出参去掉口令明文。
+     *
+     * @param result 服务层结果
+     * @return 口令已清空的结果；失败结果原样返回
+     */
+    private static ReturnResult<List<DataSourceVO>> maskedList(ReturnResult<List<DataSourceVO>> result) {
+        List<DataSourceVO> data = result == null ? null : result.getData();
+        if (data == null) {
+            return result;
+        }
+        return ReturnResult.ok(data.stream().map(DataSourceVO::masked).toList());
     }
 }

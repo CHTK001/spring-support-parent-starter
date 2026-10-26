@@ -102,4 +102,29 @@ public class DatasourceHubProperties {
      * 要放行别的目录（如 /data/dbs）在此显式追加。</p>
      */
     private List<String> fileJdbcAllowedDirs = new ArrayList<>();
+
+    /**
+     * 数据源口令的加密密钥（原文，内部经 SHA-256 派生 AES-256 密钥）。
+     *
+     * <p>留空表示<b>不加密</b>，口令按旧行为明文入库 —— 这是刻意选择：
+     * 用一个内置默认密钥「假装加密」比明文更糟，它会让人以为口令已经安全了。</p>
+     *
+     * <p>配置后只影响<b>之后写入</b>的口令；台账里已有的明文与 {@code b64:} 值
+     * 仍能正常读出（按前缀分支解码），下次保存该数据源时自动转成密文。</p>
+     *
+     * <p><strong>配了就不要换。</strong> 更换密钥会让此前写下的密文全部解不开，
+     * 那些数据源的口令只能重新录入。密钥放配置文件或环境变量，不要进代码库。</p>
+     */
+    private String secretKey = "";
+
+    /**
+     * 把密钥原文交给 {@code DatasourceSecrets}。
+     *
+     * <p>口令编解码是静态工具（服务层、连接构建处都要用，且不都走 Spring 注入），
+     * 这里在配置绑定完成后推一次，避免每个调用点都去拿 Environment。</p>
+     */
+    @jakarta.annotation.PostConstruct
+    void applySecretKey() {
+        com.chua.starter.datasourcehub.support.support.DatasourceSecrets.setSecretKey(secretKey);
+    }
 }
