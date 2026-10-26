@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.utils;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -80,6 +81,23 @@ public class RequestUtils {
             return userIdObj.toString();
         }
 
+        // 会话兜底：同 {@link #getUsername()}，取会话里的用户标识。
+        HttpSession session = request.getSession(false);
+        if (null != session) {
+            Object sessionUserId = session.getAttribute("userId");
+            if (null != sessionUserId && !sessionUserId.toString().isEmpty()) {
+                return sessionUserId.toString();
+            }
+            String fromResume = readIdentity(session.getAttribute("userResume"), "getUserId");
+            if (null != fromResume) {
+                return fromResume;
+            }
+            String fromInfo = readIdentity(session.getAttribute("userInfo"), "getUserId");
+            if (null != fromInfo) {
+                return fromInfo;
+            }
+        }
+
         return null;
     }
 
@@ -113,7 +131,56 @@ public class RequestUtils {
             return usernameObj.toString();
         }
 
+        // 会话兜底。
+        //
+        // <p>oauth-client 把身份写进会话有两条路：{@code AuthFilter#render} 写
+        // {@code username}/{@code userId} 字符串，本地管理员兜底与
+        // {@code AbstractProtocol} 则只写 {@code userInfo}（{@code UserResume} 对象）。
+        // 单体部署常常没有网关写的 {@code X-Username} 头，上面两条就是唯一的身份来源。</p>
+        //
+        // <p>用 {@code getSession(false)}：读操作不该给无状态请求新建会话。
+        // 对象形态用反射取，避免 common-starter 反向依赖 oauth-client。</p>
+        HttpSession session = request.getSession(false);
+        if (null != session) {
+            Object sessionUsername = session.getAttribute("username");
+            if (null != sessionUsername && !sessionUsername.toString().isEmpty()) {
+                return sessionUsername.toString();
+            }
+            String fromResume = readIdentity(session.getAttribute("userResume"), "getUsername");
+            if (null != fromResume) {
+                return fromResume;
+            }
+            String fromInfo = readIdentity(session.getAttribute("userInfo"), "getUsername");
+            if (null != fromInfo) {
+                return fromInfo;
+            }
+        }
+
         return null;
+    }
+
+    /**
+     * 反射读取会话里用户对象上的某个身份字段。
+     *
+     * <p>会话里的用户对象类型在 oauth-client（{@code UserResume}），common-starter 不能
+     * 反向依赖它，所以按方法名反射取值；取不到一律返回 {@code null}，不抛异常 ——
+     * 少一个身份字段不该影响主流程。</p>
+     *
+     * @param target 会话属性值，可为 {@code null}
+     * @param getter 取值方法名
+     * @return 非空字符串或 {@code null}
+     */
+    private static String readIdentity(Object target, String getter) {
+        if (null == target) {
+            return null;
+        }
+        try {
+            Object value = target.getClass().getMethod(getter).invoke(target);
+            return null != value && !value.toString().isEmpty() ? value.toString() : null;
+        } catch (Exception ignored) {
+            // 方法不存在 / 不可访问 / 调用失败：按取不到处理
+            return null;
+        }
     }
 
     /**
