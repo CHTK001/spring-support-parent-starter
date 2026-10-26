@@ -1081,7 +1081,8 @@ public class ChatStreamOrchestrator {
                     sink.sendEvent(finishEvent);
                     sink.sendDone();
                     sink.close();
-                } catch (Exception ignored) {
+                } catch (Exception sendEx) {
+                    log.debug("[ai-stream] 下发结束帧失败，已忽略: {}", sendEx.getMessage());
                 }
             } finally {
                 if (wrapper != null) {
