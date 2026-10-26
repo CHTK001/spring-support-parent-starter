@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.configuration.reid;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.face.FacePipeline;
+import com.chua.deeplearning.support.face.FaceDetector;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
 import com.chua.deeplearning.support.reid.DefaultPersonTrack;
 import com.chua.deeplearning.support.reid.FaceReidPipeline;
@@ -205,6 +206,18 @@ public class ReidClientManager {
     private void build() {
         FacePipeline sharedDetector = faceClientManager.currentPipeline();
         if (sharedDetector == null) {
+            // 人脸识别分组没配检测模型时，用 reid 分组自己的 detector_model 兜底。
+            //
+            // <p>不兜底会有一个很别扭的现象：重识别配置页明明提供了「检测模型」下拉，
+            // 用户选了它、保存成功、页面也显示已配置，能力却依然是 available=false ——
+            // 因为检测管线实际取的是 face 分组的单例。实测部署时正是如此：
+            // 只配 reid 分组不生效，必须额外去配人脸识别分组才可用。</p>
+            //
+            // <p>共享 face 的单例仍是首选（那些 ONNX 模型是重的，能复用就不重复加载），
+            // 只有在它为 null 时才自建。</p>
+            sharedDetector = buildOwnDetector();
+        }
+        if (sharedDetector == null) {
             log.info("[Reid] 人脸检测模型未配置，重识别能力未启用");
             return;
         }
@@ -234,6 +247,31 @@ public class ReidClientManager {
                 featureModel, readThreshold(),
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS),
                 settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS));
+    }
+
+    /**
+     * 用 reid 分组自己的 {@code detector_model} 构建检测管线。
+     *
+     * <p>只在 {@link FaceClientManager#currentPipeline()} 为空时调用 —— 共享实例可用时
+     * 优先复用它，避免同一份 ONNX 检测模型被加载两遍。</p>
+     *
+     * @return 检测管线；未配置或构建失败返回 {@code null}
+     */
+    private FacePipeline buildOwnDetector() {
+        String detectorModel = settingReader.getStr(GROUP, "detector_model");
+        if (StringUtils.isBlank(detectorModel)) {
+            return null;
+        }
+        try {
+            FaceDetector ownDetector = FaceDetector.create(detectorModel);
+            FacePipeline ownPipeline = FacePipeline.builder().detector(ownDetector).build();
+            log.info("[Reid] 人脸识别分组未配置检测模型，改用 reid 分组自建: {}", detectorModel);
+            return ownPipeline;
+        } catch (Exception ex) {
+            log.warn("[Reid] 按 reid 分组的 detector_model={} 构建检测管线失败: {}",
+                    detectorModel, ex.getMessage());
+            return null;
+        }
     }
 
     /**
