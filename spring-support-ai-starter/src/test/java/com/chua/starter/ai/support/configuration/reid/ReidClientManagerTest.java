@@ -193,6 +193,42 @@ class ReidClientManagerTest {
     }
 
     /**
+     * 反向兜底：face 分组没配检测模型、但 reid 分组自己配了 → 能力必须可用。
+     *
+     * <p>这是部署实测踩到的坑：重识别配置页提供了「检测模型」下拉，用户选了它、
+     * 保存成功、页面显示已配置，但能力始终 available=false —— 因为检测管线取的是
+     * face 分组的共享单例。用户得额外再去配一遍人脸识别分组才能用，而界面上
+     * 完全看不出这层依赖。</p>
+     */
+    @Test
+    @DisplayName("face 分组未配检测模型：用 reid 分组自己的 detector_model 兜底")
+    void buildsOwnDetectorWhenFaceGroupUnset() {
+        MapSettingReader reader = new MapSettingReader()
+                .putFor("reid", "detector_model", "none")
+                .putFor("reid", "feature_model", "none");
+        // faceManager 复用同一个 reader：face 分组读不到 detector_model，其管线为 null
+        ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
+
+        assertNull(faceManager(reader).currentPipeline(),
+                "前提：face 分组不应构建出检测管线（本用例要验证的是 reid 自建）");
+        assertTrue(manager.available(), "reid 分组自己配了检测模型时应可用");
+        assertNotNull(manager.currentPipeline(), "必须用 reid 分组的 detector_model 构建出管线");
+    }
+
+    /**
+     * 两边都没配 → 依然不可用（不因新增兜底逻辑而误报可用）。
+     */
+    @Test
+    @DisplayName("两个分组都没配检测模型：保持不可用")
+    void staysUnavailableWhenNoDetectorAnywhere() {
+        MapSettingReader reader = new MapSettingReader();
+        ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
+
+        assertFalse(manager.available(), "无任何检测模型配置时应保持不可用");
+        assertNull(manager.currentPipeline());
+    }
+
+    /**
      * 构造只读 face 分组的读取器（reid 分组留空）。
      *
      * @return 设置读取器
@@ -263,6 +299,13 @@ class ReidClientManagerTest {
          */
         private boolean faceOnly;
 
+        /**
+         * 分组 → (字段 → 值)。用于表达「两个分组的键同名但值不同」的场景，
+         * 例如「face 分组没配检测模型、reid 分组配了」——用单一 {@link #values}
+         * 表达不了这种差异。
+         */
+        private final Map<String, Map<String, String>> groupValues = new HashMap<>();
+
         private MapSettingReader() {
             // 第 4 参 = YAML 覆盖层：双轨无 yaml 语义，传 null
             super(null, null, null, null);
@@ -280,8 +323,26 @@ class ReidClientManagerTest {
             return this;
         }
 
+        /**
+         * 登记某分组下的字段值（链式）。
+         *
+         * @param group 分组名
+         * @param field 字段名
+         * @param value 值
+         * @return this
+         */
+        private MapSettingReader putFor(String group, String field, String value) {
+            groupValues.computeIfAbsent(group, k -> new HashMap<>()).put(field, value);
+            return this;
+        }
+
         @Override
         public String getStr(String group, String field) {
+            // 分组专属值优先：它表达的是「该分组确实配了这个键」
+            Map<String, String> own = groupValues.get(group);
+            if (own != null && own.containsKey(field)) {
+                return own.get(field);
+            }
             if (faceOnly) {
                 // 只在 face 分组取值：reid 分组读不到 → 触发后端的回落逻辑
                 return "face".equals(group) ? values.get(field) : null;
