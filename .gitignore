@@ -177,3 +177,4 @@ deploy/
 # ai-starter deploy scripts are source (lifecycle + incremental release), not one-off ops.
 # ASCII-only on purpose: the rest of this file is GB18030, mixing UTF-8 would corrupt it.
 !spring-support-ai-starter/deploy/
+!spring-support-hotsport-starter/deploy/
