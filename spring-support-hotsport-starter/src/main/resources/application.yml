@@ -1,5 +1,8 @@
 # ============================================================
 # Hotsport (APM 热点观测) 启动配置
+#
+# 本后台是纯观测进程：不依赖任何外部数据库（已排除 DataSourceAutoConfiguration），
+# APM 数据全部来自 StorageManager SPI（inmemory / sqlite）+ 真实字节码采集。
 # ============================================================
 server:
   port: 8086
@@ -7,17 +10,6 @@ server:
 spring:
   application:
     name: hotsport
-  # DataSource（common-starter 的 ApiConfiguration 异常处理器依赖 spring-jdbc，
-  # 但 hotsport 业务本身不写库）；已移除 H2，改用 MySQL，启动需可连的 MySQL
-  datasource:
-    url: jdbc:mysql://172.16.0.40:3306/hotsport?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: ${HOTSPORT_DB_PASSWORD:}
-  # 关闭 SQL 初始化（无建表脚本）
-  sql:
-    init:
-      mode: never
   # 单 jar 交付：前端构建产物置于 classpath:/static/，默认托管
   web:
     resources:
@@ -26,10 +18,8 @@ spring:
 # APM 数据源与 Agent 自注入开关
 plugin:
   hotsport:
-    # 演示数据种子：自 attach 对已加载类无法补织，开启 DemoSeedRunner 注入
-    # 真实格式数据保证页面有数（生产环境可关）
-    demo:
-      seed: true
+    # 演示数据种子已彻底移除：页面只显示真实采集数据，无数据即空态。
+    # （历史 demo.seed 会伪造 120 条传输/6 条依赖/5 条泄漏/40 条日志，已删除）
     # 静态存储后端：inmemory / sqlite / noop
     apm:
       storage:

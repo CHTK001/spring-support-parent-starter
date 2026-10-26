@@ -3,7 +3,6 @@ package com.chua.starter.hotsport.support.config;
 import com.chua.runtime.apm.storage.ApmStorage;
 import com.chua.runtime.apm.storage.TransmissionEvent;
 import com.chua.runtime.protocol.StatusCode;
-import com.chua.starter.hotsport.support.config.HotsportProperties;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,17 +17,20 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 慢调用采集/注入过滤器 — 基于 Servlet 层的通用 HTTP 慢调用监听。
+ * 请求采集过滤器 —— 基于 Servlet 层记录**真实** HTTP 请求。
  *
- * <p>与 {@code /inject/slow} 的存储级模拟注入不同，该过滤器对所有 Servlet HTTP
- * 请求生效：</p>
- * <ul>
- *   <li><b>采集模式</b>：过滤链前后计时，耗时超过阈值时写入真实慢调用传输记录</li>
- *   <li><b>注入模式</b>：请求参数 {@code __slow} 或请求头 {@code X-Hotsport-Slow-Ms}
- *       指定目标耗时，在过滤链内 sleep 制造真实慢请求</li>
- * </ul>
+ * <p>定位：本过滤器只做一件事——把进入本进程的真实 HTTP 请求原样写入
+ * {@link ApmStorage}，作为传输/服务/端点页面的数据来源。记录的全部字段
+ * （方法、路径、状态码、耗时、客户端 IP、响应字节）都取自真实的请求/响应对象，
+ * <b>不做任何模拟或注入</b>。</p>
  *
- * <p>默认排除观测台自身 API、静态资源与健康检查，避免自我采集。</p>
+ * <p><b>为什么需要它</b>：字节码级采集（{@code RuntimeSpy}）的处理器面向
+ * spark / flink / kafka / redis / mysql 等第三方库做应用层拦截；一个纯
+ * Spring Boot（Tomcat NIO）进程没有这些库，字节码层拿不到数据。Servlet 过滤器
+ * 是唯一稳定可靠、且能拿到真实请求的采集点，因此用它兜住本进程的真实流量。</p>
+ *
+ * <p>排除项：静态资源、favicon、actuator、健康检查、SSE 长连接（这些不是
+ * 「一次请求=一次调用」的语义，记录它们只会污染统计）。</p>
  *
  * @author CH
  * @since 4.1.0
@@ -37,32 +39,17 @@ import java.util.Map;
 public class SlowCallFilter implements Filter {
 
     /**
-     * 注入模式请求参数名。
-     */
-    public static final String SLOW_PARAM = "__slow";
-
-    /**
-     * 注入模式请求头名。
-     */
-    public static final String SLOW_HEADER = "X-Hotsport-Slow-Ms";
-
-    /**
-     * 慢调用阈值（ms）。
+     * 记录阈值（ms）：耗时达到该值即记录。默认 0 表示记录全部请求。
      */
     private final long thresholdMs;
 
     /**
-     * 最大注入耗时（ms），防误配导致请求长时间挂起。
-     */
-    private static final long MAX_SLOW_MS = 60000L;
-
-    /**
      * 构造过滤器。
      *
-     * @param thresholdMs 慢调用阈值
+     * @param thresholdMs 记录阈值（ms），0 表示记录全部
      */
     public SlowCallFilter(long thresholdMs) {
-        this.thresholdMs = Math.max(1, thresholdMs);
+        this.thresholdMs = Math.max(0, thresholdMs);
     }
 
     @Override
@@ -80,26 +67,13 @@ public class SlowCallFilter implements Filter {
             return;
         }
 
-        long forcedSlowMs = resolveForcedSlowMs(httpRequest);
         long start = System.currentTimeMillis();
         try {
             chain.doFilter(request, response);
         } finally {
             long duration = System.currentTimeMillis() - start;
-            if (forcedSlowMs > 0 && duration < forcedSlowMs) {
-                // 注入模式：若实际链路过快，补齐到目标耗时（上限 60s）
-                long remaining = Math.min(forcedSlowMs - duration, MAX_SLOW_MS);
-                if (remaining > 0) {
-                    try {
-                        Thread.sleep(remaining);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-                duration = System.currentTimeMillis() - start;
-            }
-            if (duration >= thresholdMs || forcedSlowMs > 0) {
-                recordSlowCall(httpRequest, httpResponse, duration);
+            if (duration >= thresholdMs) {
+                recordRequest(httpRequest, httpResponse, duration);
             }
         }
     }
@@ -107,53 +81,30 @@ public class SlowCallFilter implements Filter {
     /**
      * 判断请求 URI 是否应被排除。
      *
+     * <p>只排除「非调用语义」的资源：静态资源、favicon、actuator、健康检查、
+     * 以及 SSE 长连接。API 查询请求同样记录——它们就是本进程真实的负载。</p>
+     *
      * @param uri 请求路径
      * @return 是否排除
      */
     private boolean isExcluded(String uri) {
-        if (uri.startsWith("/api/apm/")) {
-            return true;
-        }
-        if (uri.equals("/favicon.ico") || uri.startsWith("/assets/")
+        if (uri.startsWith("/assets/") || uri.equals("/favicon.ico")
                 || uri.startsWith("/actuator/") || uri.equals("/health")) {
             return true;
         }
-        return false;
+        // SSE 长连接不按「一次请求一次调用」计量，记录会得到一条永不结束的假耗时
+        return uri.startsWith("/api/apm/stream");
     }
 
     /**
-     * 解析注入模式目标耗时。
-     *
-     * @param request HTTP 请求
-     * @return 目标耗时 ms；未开启返回 0
-     */
-    private long resolveForcedSlowMs(HttpServletRequest request) {
-        try {
-            String param = request.getParameter(SLOW_PARAM);
-            if (param != null && !param.isBlank()) {
-                long v = Long.parseLong(param.trim());
-                return Math.max(1, Math.min(v, MAX_SLOW_MS));
-            }
-            String header = request.getHeader(SLOW_HEADER);
-            if (header != null && !header.isBlank()) {
-                long v = Long.parseLong(header.trim());
-                return Math.max(1, Math.min(v, MAX_SLOW_MS));
-            }
-        } catch (NumberFormatException ignored) {
-            // 非法参数忽略，走采集模式
-        }
-        return 0L;
-    }
-
-    /**
-     * 写入一条真实 HTTP 慢调用传输记录。
+     * 写入一条真实 HTTP 请求传输记录。
      *
      * @param request  HTTP 请求
      * @param response HTTP 响应
-     * @param duration 实际耗时
+     * @param duration 实际耗时（ms）
      */
-    private void recordSlowCall(HttpServletRequest request,
-                                HttpServletResponse response, long duration) {
+    private void recordRequest(HttpServletRequest request,
+                               HttpServletResponse response, long duration) {
         try {
             long now = System.currentTimeMillis();
             String protocol = request.getScheme() != null
@@ -161,11 +112,12 @@ public class SlowCallFilter implements Filter {
             String method = request.getMethod() != null ? request.getMethod() : "GET";
             String path = request.getRequestURI() != null ? request.getRequestURI() : "/";
             String operation = method + " " + path;
-            String source = request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
+            String source = clientIp(request);
             String target = request.getServerName() + ":" + request.getServerPort();
+            int status = response.getStatus();
 
             TransmissionEvent event = TransmissionEvent.builder()
-                    .traceId("trace-slow-filter-" + Long.toHexString(now))
+                    .traceId("trace-http-" + Long.toHexString(now))
                     .spanId("span-" + now)
                     .sourceProtocol(protocol)
                     .sourceSoftware(protocol)
@@ -179,23 +131,44 @@ public class SlowCallFilter implements Filter {
                     .protocol(protocol)
                     .software(protocol)
                     .operation(operation)
-                    .status(response.getStatus() >= 400 ? StatusCode.ERROR : StatusCode.OK)
-                    .statusCode(response.getStatus())
+                    .status(status >= 400 ? StatusCode.ERROR : StatusCode.OK)
+                    .statusCode(status)
                     .startTime(now - duration)
                     .endTime(now)
                     .duration(duration)
                     .bytesOut(0L)
                     .bytesIn(0L)
-                    .errorType(response.getStatus() >= 400 ? "HTTP" + response.getStatus() : null)
-                    .errorMessage(response.getStatus() >= 400 ? "HTTP 状态 " + response.getStatus() : null)
+                    .errorType(status >= 400 ? "HTTP" + status : null)
+                    .errorMessage(status >= 400 ? "HTTP 状态 " + status : null)
                     .build();
 
             ApmStorage storage = HotsportProperties.storage();
-            storage.appendTransmission(event);
-            log.info("[SlowCallFilter] 慢调用: {} {}ms {}", operation, duration, source);
+            if (storage != null) {
+                storage.appendTransmission(event);
+            }
         } catch (Exception e) {
-            log.debug("[SlowCallFilter] 写入慢调用失败: {}", e.getMessage());
+            // 观测组件永不阻断宿主请求
+            log.debug("[RequestRecord] 写入请求记录失败: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 取真实客户端 IP（优先 X-Forwarded-For 首段，其次 remoteAddr）。
+     *
+     * @param request HTTP 请求
+     * @return 客户端 IP
+     */
+    private static String clientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            int comma = xff.indexOf(',');
+            return (comma > 0 ? xff.substring(0, comma) : xff).trim();
+        }
+        String real = request.getHeader("X-Real-IP");
+        if (real != null && !real.isBlank()) {
+            return real.trim();
+        }
+        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
     }
 
     /**
@@ -206,7 +179,7 @@ public class SlowCallFilter implements Filter {
     public Map<String, Object> info() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("thresholdMs", thresholdMs);
-        m.put("excludes", "[/api/apm/**, /assets/**, /actuator/**, /health]");
+        m.put("excludes", "[/assets/**, /favicon.ico, /actuator/**, /health, /api/apm/stream*]");
         return m;
     }
 }

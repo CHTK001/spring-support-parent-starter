@@ -5,7 +5,6 @@ import com.chua.starter.hotsport.support.model.LeakQuery;
 import com.chua.starter.hotsport.support.model.LogQuery;
 import com.chua.starter.hotsport.support.model.TransmissionQuery;
 import com.chua.starter.hotsport.support.service.ApmQueryService;
-import com.chua.starter.hotsport.support.service.ApmInjectService;
 import com.chua.starter.hotsport.support.service.JvmMetricsService;
 import com.chua.starter.hotsport.support.service.JvmMemoryService;
 import com.chua.starter.hotsport.support.service.AlertMonitorService;
@@ -56,11 +55,6 @@ public class ApmController {
      * APM 查询服务。
     */
     private final ApmQueryService apmQueryService;
-
-    /**
-     * APM 数据注入服务（页面操作产生数据）。
-    */
-    private final ApmInjectService apmInjectService;
 
     /**
      * JVM 指标服务（快照 + 时序 + 采样调度）。
@@ -268,7 +262,6 @@ public class ApmController {
         cfg.put("slowThresholdMs", 500);
         cfg.put("logLevel", "INFO");
         cfg.put("enabled", agentAttachService.isAgentEnabled());
-        cfg.put("injectMode", "SIMULATE");
         cfg.put("storage", hotsportProperties.getApm().toStorageConfig());
         cfg.put("storageName", com.chua.runtime.apm.storage.StorageManager.get().name());
         cfg.put("updatedAt", System.currentTimeMillis());
@@ -470,7 +463,6 @@ public class ApmController {
      * @param samplingRate    采样率（0~100）
      * @param slowThresholdMs 慢调用阈值（ms）
      * @param logLevel        日志级别
-     * @param injectMode      注入模式
      * @param enabled         是否启用 Agent
      * @return 保存后的配置
      */
@@ -479,7 +471,6 @@ public class ApmController {
             @RequestParam(required = false) Integer samplingRate,
             @RequestParam(required = false) Integer slowThresholdMs,
             @RequestParam(required = false) String logLevel,
-            @RequestParam(required = false) String injectMode,
             @RequestParam(required = false) Boolean enabled) {
         if (enabled != null) {
             agentAttachService.setAgentEnabled(enabled);
@@ -488,7 +479,6 @@ public class ApmController {
         cfg.put("samplingRate", samplingRate == null ? 100 : Math.max(0, Math.min(100, samplingRate)));
         cfg.put("slowThresholdMs", slowThresholdMs == null ? 500 : Math.max(10, slowThresholdMs));
         cfg.put("logLevel", logLevel != null && !logLevel.isBlank() ? logLevel : "INFO");
-        cfg.put("injectMode", injectMode != null && !injectMode.isBlank() ? injectMode : "SIMULATE");
         cfg.put("enabled", enabled == null ? agentAttachService.isAgentEnabled() : enabled);
         cfg.put("updatedAt", System.currentTimeMillis());
         return ReturnResult.ok(cfg);
@@ -960,124 +950,6 @@ public class ApmController {
     public ReturnResult<Map<String, Object>> cleanup(
             @RequestParam(defaultValue = "86400000") long retentionMs) {
         return ReturnResult.ok(apmQueryService.cleanup(retentionMs));
-    }
-
-    // ------------------------------------------------------------------
-    // 数据注入（增强）— 页面操作产生真实数据
-    // ------------------------------------------------------------------
-
-    /**
-     * 注入一条传输记录（自动聚合进依赖拓扑图）。
-     *
-     * @param source    源端（host:port）
-     * @param target    目标端（host:port）
-     * @param protocol  协议（HTTP/REDIS/MYSQL/GRPC/KAFKA…）
-     * @param operation 操作描述
-     * @param error     是否为错误调用
-     * @return 注入结果
-     */
-    @PostMapping("/inject/transmission")
-    public ReturnResult<Map<String, Object>> injectTransmission(
-            @RequestParam(required = false) String source,
-            @RequestParam(required = false) String target,
-            @RequestParam(required = false) String protocol,
-            @RequestParam(required = false) String operation,
-            @RequestParam(defaultValue = "false") boolean error) {
-        return ReturnResult.ok(apmInjectService.injectTransmission(source, target, protocol, operation, error));
-    }
-
-    /**
-     * 批量注入随机调用（多条依赖边 + 传输记录）。
-     *
-     * @param count 条数（1~200）
-     * @return 注入结果
-     */
-    @PostMapping("/inject/batch")
-    public ReturnResult<Map<String, Object>> injectBatch(
-            @RequestParam(defaultValue = "10") int count) {
-        return ReturnResult.ok(apmInjectService.injectBatch(count));
-    }
-
-    /**
-     * 注入一条资源泄漏记录。
-     *
-     * @param resourceType 类型（File/Socket/Connection/Thread）
-     * @param resourceName 资源名
-     * @return 注入结果
-     */
-    @PostMapping("/inject/leak")
-    public ReturnResult<Map<String, Object>> injectLeak(
-            @RequestParam(required = false) String resourceType,
-            @RequestParam(required = false) String resourceName) {
-        return ReturnResult.ok(apmInjectService.injectLeak(resourceType, resourceName));
-    }
-
-    /**
-     * 注入一条日志记录。
-     *
-     * @param level   级别（INFO/WARN/ERROR/DEBUG）
-     * @param message 消息
-     * @return 注入结果
-     */
-    @PostMapping("/inject/log")
-    public ReturnResult<Map<String, Object>> injectLog(
-            @RequestParam(required = false) String level,
-            @RequestParam(required = false) String message) {
-        return ReturnResult.ok(apmInjectService.injectLog(level, message));
-    }
-
-    /**
-     * 注入慢调用（验证慢调用排行）。
-     *
-     * @param source     源端 host:port
-     * @param target     目标端 host:port
-     * @param protocol   协议名
-     * @param durationMs 耗时（毫秒）
-     * @param error      是否标记错误
-     * @return 注入结果
-     */
-    @PostMapping("/inject/slow")
-    public ReturnResult<Map<String, Object>> injectSlow(
-            @RequestParam(required = false) String source,
-            @RequestParam(required = false) String target,
-            @RequestParam(required = false) String protocol,
-            @RequestParam(required = false) Integer durationMs,
-            @RequestParam(defaultValue = "false") boolean error) {
-        return ReturnResult.ok(apmInjectService.injectSlowCall(source, target, protocol, durationMs, error));
-    }
-
-    /**
-     * 注入 Span 树（验证链路瀑布）。
-     *
-     * @param traceId   自定义 traceId
-     * @param spans     期望 span 数
-     * @param depth     树深度
-     * @param errorSpan 是否在叶子注入错误
-     * @return 注入结果
-     */
-    @PostMapping("/inject/span-tree")
-    public ReturnResult<Map<String, Object>> injectSpanTree(
-            @RequestParam(required = false) String traceId,
-            @RequestParam(required = false) Integer spans,
-            @RequestParam(required = false) Integer depth,
-            @RequestParam(defaultValue = "false") boolean errorSpan) {
-        return ReturnResult.ok(apmInjectService.injectSpanTree(traceId, spans, depth, errorSpan));
-    }
-
-    /**
-     * 注入 JVM 压力（制造线程 / CPU 变化）。
-     *
-     * @param threads    线程数
-     * @param cpuPercent CPU 目标百分比
-     * @param durationMs 持续毫秒
-     * @return 注入结果
-     */
-    @PostMapping("/inject/jvm-pressure")
-    public ReturnResult<Map<String, Object>> injectJvmPressure(
-            @RequestParam(required = false) Integer threads,
-            @RequestParam(required = false) Integer cpuPercent,
-            @RequestParam(required = false) Integer durationMs) {
-        return ReturnResult.ok(apmInjectService.injectJvmPressure(threads, cpuPercent, durationMs));
     }
 
     // ------------------------------------------------------------------

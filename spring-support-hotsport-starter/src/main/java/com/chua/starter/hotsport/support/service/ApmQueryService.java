@@ -499,7 +499,77 @@ public class ApmQueryService {
             m.put("edgeId", edge.edgeId());
             items.add(m);
         }
+        // 依赖图存储为空时（字节码依赖采集未覆盖当前应用），从真实传输记录派生边。
+        // 派生的每一条边都来自真实请求的 sourceHost → targetHost，不做任何伪造。
+        if (items.isEmpty()) {
+            items = deriveDependenciesFromTransmissions(size);
+        }
         return items;
+    }
+
+    /**
+     * 从真实传输记录派生依赖边。
+     *
+     * <p>字节码级依赖采集（{@code DependencyGraphHandler}）只对特定第三方库生效；
+     * 一个纯 Spring Boot 应用没有这些库时依赖图会为空。此方法把真实的
+     * {@code sourceHost → targetHost:targetPort} 调用关系聚合为边，保证拓扑图
+     * 展示的始终是真实发生过的调用，而不是空图或模拟数据。</p>
+     *
+     * @param size 返回上限
+     * @return 依赖边列表（按调用量降序）
+     */
+    private List<Map<String, Object>> deriveDependenciesFromTransmissions(int size) {
+        Query q = new Query().setLimit(100000);
+        List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
+        Map<String, Map<String, Object>> merged = new LinkedHashMap<>();
+        Map<String, List<Long>> durations = new LinkedHashMap<>();
+        for (TransmissionEvent e : all) {
+            String source = e.getSourceHost() != null && !e.getSourceHost().isBlank()
+                    ? e.getSourceHost() : "unknown";
+            String targetHost = e.getTargetHost() != null && !e.getTargetHost().isBlank()
+                    ? e.getTargetHost() : "unknown";
+            int targetPort = e.getTargetPort();
+            String target = targetPort > 0 ? targetHost + ":" + targetPort : targetHost;
+            String protocol = e.getProtocol() != null ? e.getProtocol() : e.getSourceProtocol();
+            String key = source + "→" + target + "#" + protocol;
+            Map<String, Object> m = merged.get(key);
+            if (m == null) {
+                m = new LinkedHashMap<>();
+                m.put("source", source);
+                m.put("target", target);
+                m.put("protocol", protocol);
+                m.put("software", null);
+                m.put("callCount", 0L);
+                m.put("errorCount", 0L);
+                m.put("lastError", null);
+                m.put("lastCallAt", null);
+                m.put("edgeId", key);
+                merged.put(key, m);
+                durations.put(key, new ArrayList<>());
+            }
+            m.put("callCount", (Long) m.get("callCount") + 1L);
+            if (e.getStatus() == StatusCode.ERROR) {
+                m.put("errorCount", (Long) m.get("errorCount") + 1L);
+                m.put("lastError", e.getErrorMessage());
+            }
+            m.put("lastCallAt", toIso(e.getEndTime()));
+            durations.get(key).add(e.getDuration());
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Object>> entry : merged.entrySet()) {
+            Map<String, Object> m = entry.getValue();
+            List<Long> ds = durations.get(entry.getKey());
+            ds.sort(Comparator.naturalOrder());
+            long callCount = (Long) m.get("callCount");
+            m.put("avgDurationMs", ds.stream().mapToLong(Long::longValue).sum()
+                    / Math.max(1L, ds.size()));
+            m.put("p95Ms", percentile(ds, 0.95));
+            m.put("errorRate", callCount > 0
+                    ? Math.round(10000.0 * (Long) m.get("errorCount") / callCount) / 100.0 : 0.0);
+            out.add(m);
+        }
+        out.sort(Comparator.comparingLong(x -> -((Number) x.get("callCount")).longValue()));
+        return out.size() > size ? new ArrayList<>(out.subList(0, size)) : out;
     }
 
     // ------------------------------------------------------------------
@@ -1297,7 +1367,12 @@ public class ApmQueryService {
     /**
      * 缓存时间戳。
     */
-    private volatile long aggregateCacheAt;
+    private volatile long serviceCacheAt;
+
+    /**
+     * 端点聚合缓存时间戳。
+     */
+    private volatile long endpointCacheAt;
 
     /**
      * 聚合缓存有效期（毫秒）。
@@ -1422,7 +1497,7 @@ public class ApmQueryService {
      * @return 服务列表 { service, endpointCount, callCount, errorCount }
      */
     public List<Map<String, Object>> services() {
-        if (System.currentTimeMillis() - aggregateCacheAt < AGGREGATE_CACHE_TTL_MS) {
+        if (System.currentTimeMillis() - serviceCacheAt < AGGREGATE_CACHE_TTL_MS) {
             return serviceCache;
         }
         Query q = new Query().setLimit(100000);
@@ -1466,8 +1541,7 @@ public class ApmQueryService {
         }
         out.sort(Comparator.comparingLong(x -> -((Long) x.get("callCount"))));
         serviceCache = out;
-        endpointCache = new ArrayList<>();
-        aggregateCacheAt = System.currentTimeMillis();
+        serviceCacheAt = System.currentTimeMillis();
         return out;
     }
 
@@ -1496,7 +1570,7 @@ public class ApmQueryService {
      */
     public List<Map<String, Object>> endpoints(int limit, String keyword) {
         boolean filtered = keyword != null && !keyword.isBlank();
-        if (!filtered && System.currentTimeMillis() - aggregateCacheAt < AGGREGATE_CACHE_TTL_MS
+        if (!filtered && System.currentTimeMillis() - endpointCacheAt < AGGREGATE_CACHE_TTL_MS
                 && !endpointCache.isEmpty()) {
             return endpointCache;
         }
@@ -1515,6 +1589,8 @@ public class ApmQueryService {
                 x.put("durations", new ArrayList<Long>());
                 x.put("callCount", 0L);
                 x.put("errorCount", 0L);
+                // 客户端归因：同一端点的访问来源（真实 sourceHost）去重计数
+                x.put("clientCallCounts", new LinkedHashMap<String, Long>());
                 return x;
             });
             m.put("callCount", (Long) m.get("callCount") + 1L);
@@ -1522,6 +1598,12 @@ public class ApmQueryService {
                 m.put("errorCount", (Long) m.get("errorCount") + 1L);
             }
             ((List<Long>) m.get("durations")).add(e.getDuration());
+            // 记录真实客户端来源（无 sourceHost 时记 unknown，不伪造）
+            String client = e.getSourceHost() != null && !e.getSourceHost().isBlank()
+                    ? e.getSourceHost() : "unknown";
+            @SuppressWarnings("unchecked")
+            Map<String, Long> clientCounts = (Map<String, Long>) m.get("clientCallCounts");
+            clientCounts.merge(client, 1L, Long::sum);
         }
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> m : ep.values()) {
@@ -1541,6 +1623,13 @@ public class ApmQueryService {
             row.put("p95Ms", percentile(durations, 0.95));
             row.put("p99Ms", percentile(durations, 0.99));
             row.put("maxMs", durations.isEmpty() ? 0L : durations.get(durations.size() - 1));
+            // 客户端信息：来源数 + 按调用量排序的来源列表（供前端展示「访问客户端」列）
+            @SuppressWarnings("unchecked")
+            Map<String, Long> clientCounts = (Map<String, Long>) m.get("clientCallCounts");
+            List<String> sortedClients = new ArrayList<>(clientCounts.keySet());
+            sortedClients.sort((a, b) -> Long.compare(clientCounts.get(b), clientCounts.get(a)));
+            row.put("clientCount", (long) clientCounts.size());
+            row.put("clients", sortedClients);
             out.add(row);
         }
         out.sort(Comparator.comparingLong(x -> -((Number) x.get("callCount")).longValue()));
@@ -1549,10 +1638,7 @@ public class ApmQueryService {
         }
         if (!filtered) {
             endpointCache = out;
-            aggregateCacheAt = System.currentTimeMillis();
-            if (serviceCache.isEmpty()) {
-                serviceCache = services();
-            }
+            endpointCacheAt = System.currentTimeMillis();
         }
         return out;
     }
