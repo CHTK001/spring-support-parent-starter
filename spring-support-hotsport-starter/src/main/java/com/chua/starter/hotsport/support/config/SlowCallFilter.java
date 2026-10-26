@@ -128,6 +128,29 @@ public class SlowCallFilter implements Filter {
             String source = clientIp(request);
             String target = request.getServerName() + ":" + request.getServerPort();
             int status = response.getStatus();
+            long requestStart = now - duration;
+
+            // 本次请求真实命中的控制器方法（由 ApmHandlerTimingInterceptor 实测写入）。
+            // 这是「首层 HTTP → 子层 class.method」里子层节点的唯一真实来源：
+            // 类名/方法名取自真实 HandlerMethod，耗时取自真实时间差。
+            Map<String, String> attributes = new LinkedHashMap<>();
+            Object handlerClass = request.getAttribute(ApmHandlerTimingInterceptor.ATTR_CLASS);
+            Object handlerMethod = request.getAttribute(ApmHandlerTimingInterceptor.ATTR_METHOD);
+            Object handlerStart = request.getAttribute(ApmHandlerTimingInterceptor.ATTR_START);
+            Object handlerDuration = request.getAttribute(ApmHandlerTimingInterceptor.ATTR_DURATION);
+            if (handlerClass != null) {
+                attributes.put("class.name", String.valueOf(handlerClass));
+            }
+            if (handlerMethod != null) {
+                attributes.put("method.name", String.valueOf(handlerMethod));
+            }
+            if (handlerDuration instanceof Long d && d >= 0) {
+                attributes.put("method.duration", String.valueOf(d));
+            }
+            if (handlerStart instanceof Long s && s > 0 && s >= requestStart) {
+                // 控制器相对请求入口的偏移，用于子层节点在时间轴上的真实位置
+                attributes.put("method.startOffset", String.valueOf(s - requestStart));
+            }
 
             TransmissionEvent event = TransmissionEvent.builder()
                     .traceId(traceId)
@@ -153,6 +176,7 @@ public class SlowCallFilter implements Filter {
                     .bytesIn(0L)
                     .errorType(status >= 400 ? "HTTP" + status : null)
                     .errorMessage(status >= 400 ? "HTTP 状态 " + status : null)
+                    .attributes(attributes)
                     .build();
 
             ApmStorage storage = HotsportProperties.storage();

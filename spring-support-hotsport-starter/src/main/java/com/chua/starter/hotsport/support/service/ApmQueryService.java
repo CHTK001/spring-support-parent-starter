@@ -477,11 +477,15 @@ public class ApmQueryService {
         m.put("statusCode", e.getStatusCode());
         m.put("startTime", toIso(e.getStartTime()));
         m.put("endTime", toIso(e.getEndTime()));
+        // 真实毫秒时间戳：ISO 串只有秒精度，时间轴/甘特条必须用这个算偏移
+        m.put("startEpochMs", e.getStartTime());
+        m.put("endEpochMs", e.getEndTime());
         m.put("durationMs", e.getDuration());
         m.put("bytesOut", e.getBytesOut());
         m.put("bytesIn", e.getBytesIn());
         m.put("errorType", e.getErrorType());
         m.put("errorMessage", e.getErrorMessage());
+        m.put("attributes", e.getAttributes() != null ? e.getAttributes() : new LinkedHashMap<String, String>());
         return m;
     }
 
@@ -1517,11 +1521,22 @@ public class ApmQueryService {
             result.put("spans", new ArrayList<>());
             return result;
         }
+        // 把「本次请求真实命中的控制器方法」展开成子 span：
+        // 首层 HTTP → 子层 class.method，瀑布与链路树看到的是同一份真实数据
+        List<Map<String, Object>> expanded = new ArrayList<>();
+        for (Map<String, Object> s : detail) {
+            expanded.add(s);
+            Map<String, Object> handler = handlerSpanOf(s);
+            if (handler != null) {
+                expanded.add(handler);
+            }
+        }
+        detail = expanded;
         long startMin = Long.MAX_VALUE;
         long endMax = Long.MIN_VALUE;
         for (Map<String, Object> s : detail) {
-            long start = parseEpochMillis(s.get("startTime"));
-            long end = parseEpochMillis(s.get("endTime"));
+            long start = epochOf(s, "startEpochMs", "startTime");
+            long end = epochOf(s, "endEpochMs", "endTime");
             if (start > 0 && start < startMin) {
                 startMin = start;
             }
@@ -1540,9 +1555,12 @@ public class ApmQueryService {
         for (Map<String, Object> s : detail) {
             String spanId = String.valueOf(s.get("spanId"));
             int depth = computeDepth(spanId, spanParent, spanDepth, 0);
-            long startEpoch = parseEpochMillis(s.get("startTime"));
-            long endEpoch = parseEpochMillis(s.get("endTime"));
-            long duration = Math.max(0L, endEpoch - startEpoch);
+            long startEpoch = epochOf(s, "startEpochMs", "startTime");
+            long duration = Math.max(0L, asLong(s.get("durationMs")));
+            if (duration == 0L) {
+                long endEpoch = epochOf(s, "endEpochMs", "endTime");
+                duration = Math.max(0L, endEpoch - startEpoch);
+            }
             Map<String, Object> w = new LinkedHashMap<>(s);
             w.put("offsetMs", Math.max(0L, startEpoch - startMin));
             w.put("durationMs", duration);
@@ -1554,9 +1572,89 @@ public class ApmQueryService {
             spans.add(w);
         }
         spans.sort(Comparator.comparingLong(w -> ((Number) w.get("offsetMs")).longValue()));
+        result.put("spanCount", spans.size());
         result.put("totalMs", totalMs);
         result.put("spans", spans);
         return result;
+    }
+
+    /**
+     * 由传输记录 attributes 还原控制器方法 span（真实测量值，缺一不产出）。
+     *
+     * @param s 传输记录 DTO
+     * @return 方法 span；数据不全时返回 {@code null}
+     */
+    private Map<String, Object> handlerSpanOf(Map<String, Object> s) {
+        Object attrsObj = s.get("attributes");
+        if (!(attrsObj instanceof Map<?, ?> attrs)) {
+            return null;
+        }
+        String cls = asText(attrs.get("class.name"));
+        String mtd = asText(attrs.get("method.name"));
+        String durText = asText(attrs.get("method.duration"));
+        if (cls == null || mtd == null || durText == null) {
+            return null;
+        }
+        long duration;
+        try {
+            duration = Long.parseLong(durText.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (duration < 0) {
+            return null;
+        }
+        long offset = 0L;
+        String offText = asText(attrs.get("method.startOffset"));
+        if (offText != null) {
+            try {
+                offset = Math.max(0L, Long.parseLong(offText.trim()));
+            } catch (NumberFormatException ignored) {
+                offset = 0L;
+            }
+        }
+        long base = epochOf(s, "startEpochMs", "startTime");
+        long start = base > 0 ? base + offset : 0L;
+        Map<String, Object> h = new LinkedHashMap<>();
+        String parentSpanId = String.valueOf(s.get("spanId"));
+        h.put("spanId", parentSpanId + "-handler");
+        h.put("parentSpanId", parentSpanId);
+        h.put("traceId", s.get("traceId"));
+        h.put("operation", cls + "." + mtd);
+        h.put("className", cls);
+        h.put("methodName", mtd);
+        h.put("source", s.get("source"));
+        h.put("target", s.get("target"));
+        h.put("protocol", "METHOD");
+        h.put("software", "METHOD");
+        h.put("status", s.get("status"));
+        h.put("statusCode", s.get("statusCode"));
+        h.put("startTime", toIso(start));
+        h.put("endTime", toIso(start + duration));
+        h.put("startEpochMs", start);
+        h.put("endEpochMs", start + duration);
+        h.put("durationMs", duration);
+        h.put("errorType", s.get("errorType"));
+        h.put("errorMessage", s.get("errorMessage"));
+        h.put("bytesOut", 0L);
+        h.put("bytesIn", 0L);
+        return h;
+    }
+
+    /**
+     * 取毫秒时间戳：优先真实 epoch 字段，缺失时回落到 ISO 串解析。
+     *
+     * @param s       记录
+     * @param epochKey epoch 字段名
+     * @param isoKey   ISO 字段名
+     * @return epoch 毫秒（失败 0）
+     */
+    private static long epochOf(Map<String, Object> s, String epochKey, String isoKey) {
+        long epoch = asLong(s.get(epochKey));
+        if (epoch > 0) {
+            return epoch;
+        }
+        return parseEpochMillis(s.get(isoKey));
     }
 
     /**
@@ -1901,64 +1999,421 @@ public class ApmQueryService {
     }
 
     /**
-     * Agent 链路树（trace → span 两级 ReTree 数据源）。
+     * Agent 链路树（Xrebel 风格：首层 HTTP 请求，子层按 {@code parentSpanId} 递归嵌套）。
+     *
+     * <p><b>层级完全由真实数据决定，不做任何构造</b>：</p>
+     * <ul>
+     *   <li>首层节点 = 真实传输记录，{@code label} 就是真实请求行（如 {@code GET /api/apm/stats}），
+     *       {@code kind=http}；</li>
+     *   <li>子层节点 = 真实方法级记录，{@code label} 是真实 {@code class.method}，{@code kind=method}。
+     *       来源有两处，都取实测值：传输记录 attributes 里由
+     *       {@code ApmHandlerTimingInterceptor} 实测写入的 {@code class.name}/{@code method.name}/
+     *       {@code method.duration}，以及 Agent {@code TraceHandler} 采集的方法 Span；</li>
+     *   <li>父子关系 = 记录自带的 {@code spanId}/{@code parentSpanId}。只有当方法级记录的父引用
+     *       缺失或指向 trace 外的 span 时，才把它挂到同 trace 的根请求下——方法确实执行于该请求内，
+     *       traceId 是真实归属，不是编造的层级。</li>
+     * </ul>
+     *
+     * <p>没有方法级数据的链路就只有一个根节点（不补任何假子节点）。</p>
      *
      * @param limit trace 上限
-     * @return trace 节点列表（children = span 节点）
+     * @return 根节点列表（每棵树的根是一个真实 HTTP 请求）
      */
     public List<Map<String, Object>> agentTracesTree(int limit) {
+        int max = Math.max(1, limit);
         Query q = new Query().setLimit(100000);
         List<TransmissionEvent> all = queryAll(q, storage -> storage.queryTransmissions(q));
-        Map<String, List<TransmissionEvent>> byTrace = new LinkedHashMap<>();
+
+        // 1) 传输记录按 traceId 分组（新 → 旧，保持「最近链路在前」）
+        Map<String, List<TransmissionEvent>> txByTrace = new LinkedHashMap<>();
         for (int i = all.size() - 1; i >= 0; i--) {
             TransmissionEvent e = all.get(i);
+            if (e == null) {
+                continue;
+            }
             String traceId = e.getTraceId() != null ? e.getTraceId() : "root";
-            byTrace.computeIfAbsent(traceId, k -> new ArrayList<>()).add(e);
-            if (byTrace.size() >= limit) {
+            txByTrace.computeIfAbsent(traceId, k -> new ArrayList<>()).add(e);
+            if (txByTrace.size() >= max) {
                 break;
             }
         }
-        List<Map<String, Object>> tree = new ArrayList<>();
-        int built = 0;
-        for (Map.Entry<String, List<TransmissionEvent>> entry : byTrace.entrySet()) {
-            if (built >= limit) {
-                break;
+
+        // 2) Agent 方法级 Span 按 traceId 分组（未接入方法采集时为空，不填充任何数据）
+        Map<String, List<Map<String, Object>>> methodByTrace = methodSpanNodes();
+
+        // 3) 每个 trace 组装一棵树
+        List<Map<String, Object>> roots = new ArrayList<>();
+        for (Map.Entry<String, List<TransmissionEvent>> entry : txByTrace.entrySet()) {
+            List<Map<String, Object>> flat = new ArrayList<>();
+            for (TransmissionEvent e : entry.getValue()) {
+                flat.add(transmissionNode(e));
+                Map<String, Object> handler = handlerNodeOf(e, flat);
+                if (handler != null) {
+                    flat.add(handler);
+                }
             }
-            built++;
-            List<TransmissionEvent> spans = entry.getValue();
-            long startMin = spans.stream().mapToLong(TransmissionEvent::getStartTime)
-                    .filter(t -> t > 0).min().orElse(0L);
-            long endMax = spans.stream().mapToLong(TransmissionEvent::getEndTime)
-                    .filter(t -> t > 0).max().orElse(0L);
-            long errors = spans.stream()
-                    .filter(e -> e.getStatus() == StatusCode.ERROR).count();
-            Map<String, Object> node = new LinkedHashMap<>();
-            node.put("id", entry.getKey());
-            node.put("traceId", entry.getKey());
-            node.put("label", "trace-" + entry.getKey().substring(0, Math.min(8, entry.getKey().length())));
-            node.put("spanCount", spans.size());
-            node.put("totalMs", Math.max(0L, endMax - startMin));
-            node.put("startTime", toIso(startMin));
-            node.put("status", errors > 0 ? "ERROR" : "OK");
-            node.put("error", errors > 0);
-            List<Map<String, Object>> children = new ArrayList<>();
-            for (TransmissionEvent e : spans) {
-                Map<String, Object> c = new LinkedHashMap<>();
-                c.put("id", e.getSpanId());
-                c.put("spanId", e.getSpanId());
-                c.put("traceId", e.getTraceId());
-                c.put("label", e.getOperation() != null ? e.getOperation() : e.getProtocol());
-                c.put("operation", e.getOperation());
-                c.put("durationMs", e.getDuration());
-                c.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
-                c.put("startTime", toIso(e.getStartTime()));
-                c.put("error", e.getStatus() == StatusCode.ERROR);
-                children.add(c);
+            List<Map<String, Object>> methods = methodByTrace.get(entry.getKey());
+            if (methods != null) {
+                flat.addAll(methods);
             }
-            node.put("children", children);
-            tree.add(node);
+            roots.addAll(nestTraceNodes(flat));
         }
-        return tree;
+        return roots;
+    }
+
+    /**
+     * 传输记录 → 树节点（首层 HTTP 请求）。
+     *
+     * @param e 真实传输记录
+     * @return 树节点
+     */
+    private Map<String, Object> transmissionNode(TransmissionEvent e) {
+        String op = e.getOperation() != null ? e.getOperation()
+                : (e.getProtocol() != null ? e.getProtocol() : "?");
+        Map<String, Object> n = new LinkedHashMap<>();
+        n.put("id", e.getSpanId() != null ? e.getSpanId() : "tx-" + e.getId());
+        n.put("spanId", e.getSpanId());
+        n.put("parentSpanId", e.getParentSpanId());
+        n.put("traceId", e.getTraceId());
+        n.put("kind", "http");
+        n.put("label", op);
+        n.put("operation", op);
+        n.put("className", attr(e, "class.name", null));
+        n.put("methodName", attr(e, "method.name", null));
+        n.put("protocol", e.getProtocol());
+        n.put("software", e.getSoftware());
+        n.put("source", endpointLabel(e.getSourceProtocol(), e.getSourceSoftware(),
+                e.getSourceHost(), e.getSourcePort(), e.getSourcePath()));
+        n.put("target", endpointLabel(e.getTargetProtocol(), e.getTargetSoftware(),
+                e.getTargetHost(), e.getTargetPort(), e.getTargetPath()));
+        n.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+        n.put("statusCode", e.getStatusCode());
+        n.put("durationMs", e.getDuration());
+        n.put("startMs", e.getStartTime());
+        n.put("endMs", e.getEndTime());
+        n.put("startTime", toIso(e.getStartTime()));
+        n.put("endTime", toIso(e.getEndTime()));
+        n.put("error", e.getStatus() == StatusCode.ERROR);
+        n.put("errorType", e.getErrorType());
+        n.put("errorMessage", e.getErrorMessage());
+        n.put("bytesOut", e.getBytesOut());
+        n.put("bytesIn", e.getBytesIn());
+        return n;
+    }
+
+    /**
+     * 由传输记录 attributes 还原「本次请求真实命中的控制器方法」子节点。
+     *
+     * <p>attributes 由 {@code ApmHandlerTimingInterceptor} 实测写入；三个值缺一不可，
+     * 缺任何一个都不产出节点——宁可没有子层，也不拿估算值凑数。</p>
+     *
+     * @param e    真实传输记录
+     * @param flat 当前 trace 已收集的节点（用于去重）
+     * @return 方法节点；数据不全或已有同名节点时返回 {@code null}
+     */
+    private Map<String, Object> handlerNodeOf(TransmissionEvent e, List<Map<String, Object>> flat) {
+        String cls = attr(e, "class.name", null);
+        String mtd = attr(e, "method.name", null);
+        String durText = attr(e, "method.duration", null);
+        if (cls == null || mtd == null || durText == null) {
+            return null;
+        }
+        long duration;
+        try {
+            duration = Long.parseLong(durText.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+        if (duration < 0) {
+            return null;
+        }
+        String label = cls + "." + mtd;
+        // 同一个 trace 内已由 Agent 方法 Span 覆盖同一 class.method 时不重复插入
+        for (Map<String, Object> n : flat) {
+            if ("method".equals(n.get("kind")) && label.equals(n.get("label"))) {
+                return null;
+            }
+        }
+        long offset = 0L;
+        String offText = attr(e, "method.startOffset", null);
+        if (offText != null) {
+            try {
+                offset = Math.max(0L, Long.parseLong(offText.trim()));
+            } catch (NumberFormatException ignored) {
+                offset = 0L;
+            }
+        }
+        long start = e.getStartTime() > 0 ? e.getStartTime() + offset : 0L;
+        Map<String, Object> n = new LinkedHashMap<>();
+        n.put("id", (e.getSpanId() != null ? e.getSpanId() : "tx-" + e.getId()) + "-handler");
+        n.put("spanId", (e.getSpanId() != null ? e.getSpanId() : "tx-" + e.getId()) + "-handler");
+        n.put("parentSpanId", e.getSpanId());
+        n.put("traceId", e.getTraceId());
+        n.put("kind", "method");
+        n.put("label", label);
+        n.put("operation", label);
+        n.put("className", cls);
+        n.put("methodName", mtd);
+        n.put("protocol", "METHOD");
+        n.put("durationMs", duration);
+        n.put("startMs", start);
+        n.put("endMs", start + duration);
+        n.put("startTime", toIso(start));
+        n.put("endTime", toIso(start + duration));
+        n.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+        n.put("error", e.getStatus() == StatusCode.ERROR);
+        n.put("errorType", e.getErrorType());
+        n.put("errorMessage", e.getErrorMessage());
+        return n;
+    }
+
+    /**
+     * Agent {@code TraceHandler} 采集的真实方法级 Span，按 traceId 分组。
+     *
+     * @return traceId → 方法节点列表（无采集时为空映射）
+     */
+    private Map<String, List<Map<String, Object>>> methodSpanNodes() {
+        Map<String, List<Map<String, Object>>> byTrace = new LinkedHashMap<>();
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        if (handler == null) {
+            return byTrace;
+        }
+        try {
+            for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+                if (span == null || span.getDuration() < 0 || span.getTraceId() == null) {
+                    continue;
+                }
+                String cls = span.getClassName();
+                String mtd = span.getMethodName();
+                String label = (cls == null ? "" : cls) + "." + (mtd == null ? "" : mtd);
+                String spanId = span.getSpanId() != null ? span.getSpanId()
+                        : "ms-" + label + "-" + span.getStartTime();
+                Map<String, Object> n = new LinkedHashMap<>();
+                n.put("id", spanId);
+                n.put("spanId", spanId);
+                n.put("parentSpanId", span.getParentSpanId());
+                n.put("traceId", span.getTraceId());
+                n.put("kind", "method");
+                n.put("label", label);
+                n.put("operation", label);
+                n.put("className", cls);
+                n.put("methodName", mtd);
+                n.put("protocol", span.getPhase() == null ? "METHOD" : span.getPhase());
+                n.put("durationMs", span.getDuration());
+                n.put("selfTimeMs", span.getSelfTime());
+                n.put("startMs", span.getStartTime());
+                n.put("endMs", span.getEndTime());
+                n.put("startTime", toIso(span.getStartTime()));
+                n.put("endTime", toIso(span.getEndTime()));
+                n.put("status", "ERROR".equals(span.getStatus()) ? "ERROR" : "OK");
+                n.put("error", "ERROR".equals(span.getStatus()));
+                n.put("errorMessage", span.getErrorMessage());
+                byTrace.computeIfAbsent(span.getTraceId(), k -> new ArrayList<>()).add(n);
+            }
+        } catch (Exception ex) {
+            log.debug("[Hotsport] 读取 Agent 方法 Span 失败: {}", ex.getMessage());
+        }
+        return byTrace;
+    }
+
+    /**
+     * 把一个 trace 内的扁平节点按 {@code parentSpanId} 递归嵌套成树。
+     *
+     * <p>同时补齐甘特条所需的真实时间轴比例：{@code offsetMs}/{@code offsetPercent}/
+     * {@code percentWidth} 全部相对本 trace 的真实起止时间换算，{@code traceTotalMs}
+     * 是该 trace 的真实总耗时。</p>
+     *
+     * @param flat 同一 trace 的扁平节点
+     * @return 根节点列表（按开始时间升序）
+     */
+    private List<Map<String, Object>> nestTraceNodes(List<Map<String, Object>> flat) {
+        if (flat.isEmpty()) {
+            return new ArrayList<>();
+        }
+        long startMin = Long.MAX_VALUE;
+        long endMax = Long.MIN_VALUE;
+        for (Map<String, Object> n : flat) {
+            long st = asLong(n.get("startMs"));
+            long dur = Math.max(0L, asLong(n.get("durationMs")));
+            if (st > 0) {
+                startMin = Math.min(startMin, st);
+                endMax = Math.max(endMax, st + dur);
+            }
+        }
+        if (startMin == Long.MAX_VALUE) {
+            startMin = 0L;
+            endMax = 0L;
+        }
+        long totalMs = Math.max(0L, endMax - startMin);
+
+        // spanId → 节点（同 trace 内 spanId 唯一，重复时保留先到的）
+        Map<String, Map<String, Object>> byId = new LinkedHashMap<>();
+        for (Map<String, Object> n : flat) {
+            String id = asText(n.get("spanId"));
+            if (id != null && !byId.containsKey(id)) {
+                byId.put(id, n);
+            }
+        }
+
+        // 根请求：本 trace 内最早开始的真实传输记录
+        Map<String, Object> rootReq = null;
+        for (Map<String, Object> n : flat) {
+            if (!"http".equals(n.get("kind"))) {
+                continue;
+            }
+            if (rootReq == null || asLong(n.get("startMs")) < asLong(rootReq.get("startMs"))) {
+                rootReq = n;
+            }
+        }
+        String rootSpanId = rootReq == null ? null : asText(rootReq.get("spanId"));
+
+        // 方法级记录的父引用缺失/越界时，回挂到根请求（真实归属，不是编造层级）
+        if (rootSpanId != null) {
+            for (Map<String, Object> n : flat) {
+                if (!"method".equals(n.get("kind"))) {
+                    continue;
+                }
+                String parent = asText(n.get("parentSpanId"));
+                String self = asText(n.get("spanId"));
+                if (parent == null || !byId.containsKey(parent) || parent.equals(self)) {
+                    n.put("parentSpanId", rootSpanId);
+                }
+            }
+        }
+
+        // 时间轴比例（甘特条直接用百分比定位）
+        for (Map<String, Object> n : flat) {
+            long st = asLong(n.get("startMs"));
+            long dur = Math.max(0L, asLong(n.get("durationMs")));
+            long off = st > 0 && startMin > 0 ? Math.max(0L, st - startMin) : 0L;
+            n.put("offsetMs", off);
+            n.put("traceTotalMs", totalMs);
+            n.put("offsetPercent", totalMs > 0 ? Math.min(100.0, 100.0 * off / totalMs) : 0.0);
+            n.put("percentWidth", totalMs > 0
+                    ? Math.max(0.6, Math.min(100.0, 100.0 * dur / totalMs)) : 100.0);
+            n.remove("startMs");
+            n.remove("endMs");
+        }
+
+        // 递归嵌套
+        List<Map<String, Object>> roots = new ArrayList<>();
+        for (Map<String, Object> n : flat) {
+            String parent = asText(n.get("parentSpanId"));
+            Map<String, Object> p = parent == null ? null : byId.get(parent);
+            if (p == null || p == n || hasParentCycle(n, byId)) {
+                roots.add(n);
+                continue;
+            }
+            Object kids = p.get("children");
+            if (!(kids instanceof List<?>)) {
+                kids = new ArrayList<Map<String, Object>>();
+                p.put("children", kids);
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> childList = (List<Map<String, Object>>) kids;
+            childList.add(n);
+        }
+
+        // 子节点按时间轴顺序排列，与甘特条从上到下的视觉顺序一致
+        for (Map<String, Object> n : flat) {
+            Object kids = n.get("children");
+            if (kids instanceof List<?> && ((List<?>) kids).size() > 1) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> childList = (List<Map<String, Object>>) kids;
+                childList.sort((a, b) -> Long.compare(asLong(a.get("offsetMs")), asLong(b.get("offsetMs"))));
+            }
+        }
+
+        roots.sort((a, b) -> Long.compare(asLong(a.get("offsetMs")), asLong(b.get("offsetMs"))));
+        for (Map<String, Object> r : roots) {
+            r.put("spanCount", countTreeSpans(r));
+        }
+        return roots;
+    }
+
+    /**
+     * 统计一棵树里的节点总数（含自身）。
+     *
+     * @param node 根节点
+     * @return 节点数
+     */
+    private static int countTreeSpans(Map<String, Object> node) {
+        int count = 1;
+        Object kids = node.get("children");
+        if (kids instanceof List<?> childList) {
+            for (Object child : childList) {
+                if (child instanceof Map<?, ?> m) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> c = (Map<String, Object>) m;
+                    count += countTreeSpans(c);
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 判断节点的父引用链是否成环（存储异常时防死循环）。
+     *
+     * @param node 待挂载节点
+     * @param byId spanId → 节点
+     * @return 成环返回 true
+     */
+    private static boolean hasParentCycle(Map<String, Object> node,
+                                          Map<String, Map<String, Object>> byId) {
+        String self = asText(node.get("spanId"));
+        if (self == null) {
+            return false;
+        }
+        String cursor = asText(node.get("parentSpanId"));
+        int guard = 0;
+        while (cursor != null && guard++ < 64) {
+            if (cursor.equals(self)) {
+                return true;
+            }
+            Map<String, Object> p = byId.get(cursor);
+            if (p == null) {
+                return false;
+            }
+            cursor = asText(p.get("parentSpanId"));
+        }
+        return guard >= 64;
+    }
+
+    /**
+     * 取字符串值，空白视为缺失。
+     *
+     * @param value 原始值
+     * @return 非空白字符串或 {@code null}
+     */
+    private static String asText(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value);
+        return text.isBlank() ? null : text;
+    }
+
+    /**
+     * 取 long 值，非法值按 0 处理（观测组件不因脏数据抛错）。
+     *
+     * @param value 原始值
+     * @return long 值
+     */
+    private static long asLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     /**
