@@ -1,0 +1,1 @@
+import{t as e}from"./koi-message-favorite-BuLf4Z2V.js";export{e as default};

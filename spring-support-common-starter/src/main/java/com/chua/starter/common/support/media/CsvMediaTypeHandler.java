@@ -11,6 +11,11 @@ import java.io.ByteArrayOutputStream;
  */
 @Extension("csv")
 public class CsvMediaTypeHandler implements MediaTypeHandler {
+
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(CsvMediaTypeHandler.class.getName());
     @Override
     /**
      * asbytearray
@@ -22,7 +27,8 @@ public class CsvMediaTypeHandler implements MediaTypeHandler {
          */
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             return byteArrayOutputStream.toByteArray();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOG.log(System.Logger.Level.DEBUG, "[media] CSV 序列化失败: " + e.getMessage(), e);
         }
         return new byte[0];
     }

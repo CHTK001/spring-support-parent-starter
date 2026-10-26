@@ -23,6 +23,12 @@ import java.util.Map;
  */
 @Spi({"xml"})
 public class XmlMediaTypeHandler implements MediaTypeHandler {
+
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(XmlMediaTypeHandler.class.getName());
+
     @Override
     /**
      * asbytearray
@@ -40,7 +46,8 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
              */
             export(byteArrayOutputStream, o);
             return byteArrayOutputStream.toByteArray();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOG.log(System.Logger.Level.DEBUG, "[media] XML 序列化失败: " + e.getMessage(), e);
         }
         return new byte[0];
     }
@@ -59,7 +66,8 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         stringBuilder.append("</root>");
         try {
             outputStream.write(stringBuilder.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            LOG.log(System.Logger.Level.DEBUG, "[media] 写出 XML 失败: " + e.getMessage(), e);
         }
     }
 

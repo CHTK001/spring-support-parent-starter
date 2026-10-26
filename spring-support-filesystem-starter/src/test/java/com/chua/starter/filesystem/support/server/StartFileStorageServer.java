@@ -96,7 +96,8 @@ public class StartFileStorageServer {
             java.nio.file.Files.writeString(
                     java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "filestorage-token.txt"),
                     filter.getToken());
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            System.err.println("写入令牌临时文件失败，已忽略: " + e.getMessage());
         }
 
         // 阻塞主线程保持服务运行

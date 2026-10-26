@@ -486,7 +486,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 if (onError != null) {
                     try {
                         onError.accept(e);
-                    } catch (Exception ignored) {
+                    } catch (Exception ex) {
+                        log.debug("[AiChat] 错误回调执行失败，已忽略: {}", ex.getMessage());
                     }
                 }
                 // 兜底：启动/订阅阶段异常也要释放 Agent 私有连接

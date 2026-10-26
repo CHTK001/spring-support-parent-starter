@@ -25,6 +25,11 @@ import java.util.Set;
  */
 public class TypeConverterRegisterConfiguration {
 
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(TypeConverterRegisterConfiguration.class.getName());
+
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(ConfigurableConversionService.class)
@@ -71,6 +76,7 @@ public class TypeConverterRegisterConfiguration {
                     Class targetType = converter.getType();
                     conversionService.addConverter(Object.class, targetType, source -> converter.convert(source));
                 } catch (Exception e) {
+                    LOG.log(System.Logger.Level.DEBUG, "[converter] 注册转换器失败，已忽略: " + e.getMessage(), e);
                 }
                 try {
                     if(converter instanceof EnumTypeConverter) {
@@ -102,6 +108,7 @@ public class TypeConverterRegisterConfiguration {
                         });
                     }
                 } catch (Exception e) {
+                    LOG.log(System.Logger.Level.DEBUG, "[converter] 注册转换器失败，已忽略: " + e.getMessage(), e);
                 }
             }
         }

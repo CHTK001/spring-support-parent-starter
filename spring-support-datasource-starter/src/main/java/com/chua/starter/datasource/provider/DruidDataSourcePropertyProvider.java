@@ -15,6 +15,11 @@ import java.util.Map;
  */
 public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvider<DruidDataSource> {
 
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(DruidDataSourcePropertyProvider.class.getName());
+
     private static final Map<String, String> PROPERTY_MAPPING = Map.of(
             "jdbcUrl", "url",
             "url", "url",
@@ -118,7 +123,8 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
             case "filters" -> {
                 try {
                     dataSource.setFilters(String.valueOf(value));
-                } catch (SQLException ignored) {
+                } catch (SQLException e) {
+                    LOG.log(System.Logger.Level.DEBUG, "[datasource] 设置 Druid 属性失败，已忽略: " + e.getMessage(), e);
                 }
             }
             default -> {
@@ -135,7 +141,8 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
         if (filters != null && !filters.isEmpty()) {
             try {
                 dataSource.setFilters(filters);
-            } catch (SQLException ignored) {
+            } catch (SQLException e) {
+                LOG.log(System.Logger.Level.DEBUG, "[datasource] 设置 Druid 属性失败，已忽略: " + e.getMessage(), e);
             }
         }
     }

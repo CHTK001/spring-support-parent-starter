@@ -1,0 +1,1 @@
+import{t as e}from"./koi-card-CA0FvtxD.js";export{e as default};

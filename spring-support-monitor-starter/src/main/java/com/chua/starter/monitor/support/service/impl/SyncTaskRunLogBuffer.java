@@ -90,6 +90,18 @@ public class SyncTaskRunLogBuffer {
     private final MsSyncTaskRunLogMapper runLogMapper;
 
     /**
+     * 读取行数的日志标记：「读 N 行」（如「执行完成：读 1000 行 / 写 1000 行」）
+     */
+    private static final java.util.regex.Pattern READ_PATTERN =
+            java.util.regex.Pattern.compile("读\\s*(\\d+)\\s*行");
+
+    /**
+     * 写入行数的日志标记：「写 N 行」（如「完成：写 500 行」）
+     */
+    private static final java.util.regex.Pattern WRITE_PATTERN =
+            java.util.regex.Pattern.compile("写\\s*(\\d+)\\s*行");
+
+    /**
      * 进行中的执行（任务 ID → 运行日志）
      */
     private final Map<Long, ActiveRun> active = new ConcurrentHashMap<>();
@@ -198,10 +210,45 @@ public class SyncTaskRunLogBuffer {
             entity.setRunLogLines(joinLines(vo.lines()));
             entity.setRunLogLineCount(vo.lines() == null ? 0 : vo.lines().size());
             entity.setRunLogCreateTime(LocalDateTime.now());
+            long[] rw = extractReadWrite(vo.lines());
+            entity.setRunLogReadCount(rw[0] < 0 ? null : rw[0]);
+            entity.setRunLogWriteCount(rw[1] < 0 ? null : rw[1]);
             runLogMapper.insert(entity);
         } catch (Exception e) {
             log.warn("[sync-log] 执行日志留档失败 taskId={}, runTime={}", taskId, vo.runTime(), e);
         }
+    }
+
+    /**
+     * 从过程日志行解析「读 N 行 / 写 N 行」。
+     *
+     * <p>日志文案约定：执行完成行「执行完成：读 N 行 / 写 N 行」、
+     * 分片完成行「… 完成：写 N 行」等。取**最后一次**出现的读/写计数
+     * （执行完成行在末尾，累计值以它为准）。目录/批量多段执行的累计
+     * 行也走同一规则。</p>
+     *
+     * @param lines 过程日志行
+     * @return [read, write]；未匹配到用 -1 表示
+     */
+    public static long[] extractReadWrite(List<SyncTaskRunLogVO.Line> lines) {
+        long read = -1, write = -1;
+        if (lines == null) {
+            return new long[]{read, write};
+        }
+        for (SyncTaskRunLogVO.Line line : lines) {
+            if (line.message() == null) {
+                continue;
+            }
+            java.util.regex.Matcher rm = READ_PATTERN.matcher(line.message());
+            if (rm.find()) {
+                read = Long.parseLong(rm.group(1));
+            }
+            java.util.regex.Matcher wm = WRITE_PATTERN.matcher(line.message());
+            if (wm.find()) {
+                write = Long.parseLong(wm.group(1));
+            }
+        }
+        return new long[]{read, write};
     }
 
     /**

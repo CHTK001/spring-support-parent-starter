@@ -5,6 +5,8 @@ import com.chua.starter.monitor.support.datasync.SyncWriteMode;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncRunLogStatsVO;
+import com.chua.starter.monitor.support.model.SyncRunLogTrendVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
@@ -145,6 +147,7 @@ public class SyncTaskController {
      * @param taskId  任务 ID 过滤（可选）
      * @param status  执行状态过滤 SUCCESS/FAILED（可选）
      * @param trigger 触发方式过滤 MANUAL/SCHEDULED/REALTIME（可选）
+     * @param keyword 过程日志正文关键词过滤（可选，LIKE 匹配）
      * @return 分页记录（新在前，不带过程行；点开单条取详情）
      */
     @Operation(summary = "分页查询全部同步执行日志记录")
@@ -154,8 +157,9 @@ public class SyncTaskController {
             @RequestParam(defaultValue = "20") long size,
             @RequestParam(required = false) Long taskId,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String trigger) {
-        return syncTaskService.runLogPage(page, size, taskId, status, trigger);
+            @RequestParam(required = false) String trigger,
+            @RequestParam(required = false) String keyword) {
+        return syncTaskService.runLogPage(page, size, taskId, status, trigger, keyword);
     }
 
     /**
@@ -168,6 +172,44 @@ public class SyncTaskController {
     @GetMapping("/logs/{logId}")
     public ReturnResult<SyncTaskRunLogDetailVO> runLogDetail(@PathVariable Long logId) {
         return syncTaskService.runLogDetail(logId);
+    }
+
+    /**
+     * 查询同步执行日志的健康度总览（「同步日志」页顶部统计卡 + 24h 趋势 + 失败归类）。
+     *
+     * @return 统计总览
+     */
+    @Operation(summary = "查询同步执行日志健康度总览")
+    @GetMapping("/logs/stats")
+    public ReturnResult<SyncRunLogStatsVO> runLogStats() {
+        return syncTaskService.runLogStats();
+    }
+
+    /**
+     * 查询单个任务的执行耗时趋势（最近 {@code limit} 次落盘执行，升序）。
+     *
+     * @param taskId 任务 ID
+     * @param limit  最多返回点数（1~100，默认 30）
+     * @return 耗时序列
+     */
+    @Operation(summary = "查询任务执行耗时趋势")
+    @GetMapping("/logs/trend")
+    public ReturnResult<SyncRunLogTrendVO> runLogTrend(
+            @RequestParam Long taskId,
+            @RequestParam(required = false) Integer limit) {
+        return syncTaskService.runLogTrend(taskId, limit);
+    }
+
+    /**
+     * 从某条执行日志重跑对应任务（「失败一键重跑」）。
+     *
+     * @param logId 日志主键
+     * @return 本次执行结果
+     */
+    @Operation(summary = "从执行日志重跑任务")
+    @PostMapping("/logs/{logId}/rerun")
+    public ReturnResult<SyncTaskRunVO> rerunFromLog(@PathVariable Long logId) {
+        return syncTaskService.rerunFromLog(logId);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.terminal;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.guacamole.GuacamoleException;
 import org.apache.guacamole.io.GuacamoleReader;
 import org.apache.guacamole.io.GuacamoleWriter;
@@ -22,6 +23,7 @@ import java.util.Map;
  * @author CH
  * @since 4.0.0.42
  */
+@Slf4j
 public class GuacdTunnel {
 
     /**
@@ -258,7 +260,8 @@ public class GuacdTunnel {
         if (socket != null) {
             try {
                 socket.close();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[guacd] 关闭隧道失败，已忽略: {}", e.getMessage());
             }
         }
     }

@@ -60,11 +60,7 @@ public class RedissonLockProvider implements LockProvider {
         }
         //拿到锁后设置过期时间
         lock.lock(timeout, timeUnit);
-        try {
-            return true;
-        } catch (Throwable ignored) {
-        }
-        return false;
+        return true;
     }
 
     @Override

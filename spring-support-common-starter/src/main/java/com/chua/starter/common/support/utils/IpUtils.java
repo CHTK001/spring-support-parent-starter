@@ -20,8 +20,13 @@ import java.util.regex.Pattern;
 public final class IpUtils {
 
     /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(IpUtils.class.getName());
+
+    /**
      * 创建 ip工具 实例
-    */
+     */
     private IpUtils() {}
 
     /**
@@ -145,7 +150,8 @@ public final class IpUtils {
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOG.log(System.Logger.Level.DEBUG, "[ip] 解析本机地址失败，已忽略: " + e.getMessage(), e);
         }
         return "127.0.0.1";
     }

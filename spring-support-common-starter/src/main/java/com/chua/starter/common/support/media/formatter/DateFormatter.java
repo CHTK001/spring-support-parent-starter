@@ -22,6 +22,12 @@ import java.time.format.DateTimeFormatter;
  */
 @Spi({"date", "localdate", "LocalDateTime", "LocalTime"})
 public class DateFormatter implements Formatter {
+
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(DateFormatter.class.getName());
+
     @Override
     /**
      * 格式化
@@ -40,7 +46,8 @@ public class DateFormatter implements Formatter {
                 } else if (value instanceof java.util.Date) {
                     return new java.text.SimpleDateFormat(pattern).format((java.util.Date) value);
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                LOG.log(System.Logger.Level.DEBUG, "[formatter] 日期格式化失败: " + e.getMessage(), e);
             }
         }
         return value;

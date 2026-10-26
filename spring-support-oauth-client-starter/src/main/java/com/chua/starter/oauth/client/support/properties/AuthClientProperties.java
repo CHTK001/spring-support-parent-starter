@@ -61,7 +61,29 @@ public class AuthClientProperties {
     public static final String PRE = "plugin.oauth";
 
     /**
-     * 内置默认白名单（不会被 yaml 配置覆盖）
+     * 登录链路必须放行的路径（<b>不受任何配置影响</b>）
+     *
+     * <p>登录与鉴权存在循环依赖：不登录拿不到 token，没有 token 就过不了鉴权。
+     * 所以登录链路一旦被收紧成「需要 token」，服务就自锁 —— 现象是登录接口返回
+     * 403，日志为「未匹配任何白名单规则，需要认证」。这不是某个应用的特殊需求，
+     * 而是鉴权组件自身的必备豁免，因此 {@link #useDefaultWhitelist} 与 yaml 清单
+     * 都无权把它关掉（{@code plugin.oauth.whitelist} 只能增加，不能减少）。</p>
+     *
+     * <p>注：Ant 语义下 {@code /**&#47;login} <b>不匹配</b> {@code /login/form}，
+     * 故必须单列深层条目 {@code /**&#47;login/**}，否则自渲染登录表单 POST 会被拦回
+     * 登录页（登录页自锁，现象是点登录无限回到登录页）。</p>
+     */
+    private static final List<String> ALWAYS_WHITELIST = List.of(
+            "/login",
+            "/**/login",
+            "/**/login/**",
+            "/**/doLogin",
+            "/**/captcha",
+            "/**/users/loginCode"
+    );
+
+    /**
+     * 内置默认白名单（可被 {@code use-default-whitelist: false} 关闭）
      *
      * <p><b>修复</b>：原清单里混入了下列「别的应用专用」的路径，而本 starter 是被所有
      * 服务共用的 —— 任何应用只要恰好注册了同名路由，就会被静默地关闭鉴权。这类
@@ -81,15 +103,8 @@ public class AuthClientProperties {
      * 的配置键白名单（见 vue-support-parent-starter 的 config/setting 校验）承担。</p>
      */
     private static final List<String> DEFAULT_WHITELIST = List.of(
-            "/**/captcha",
-            "/**/login",
-            // 自渲染登录表单提交端点：Ant 下 /**/login 不匹配 /login/form，必须单列深层条目，
-            // 否则表单 POST 会被鉴权拦回登录页（登录页自锁，现象是点登录无限回到登录页）。
-            "/**/login/**",
             "/**/oauth",
-            "/**/doLogin",
             "/**/logout",
-            "/login",
             "/logout",
             "/doc.html",
             "/actuator",
@@ -106,7 +121,6 @@ public class AuthClientProperties {
             "/v1/embeddings",
             "/v1/cc/**",
             "/**/*.html",
-            "/**/users/loginCode",
             "/v3/api-docs/**",
             "/**/node/receive_push",
             "/api/system/info",
@@ -122,8 +136,10 @@ public class AuthClientProperties {
     /**
      * 是否启用框架内置默认白名单
      * <p>内置清单混有历史应用专用路径（如 /api/extensions/**、/v2/usage/**），
-     * 新应用需要按自身路由收紧时置 false，此时仅 yaml 与动态白名单生效。
-     * 默认 true，保持既有应用行为不变。</p>
+     * 新应用需要按自身路由收紧时置 false，此时仅 yaml 与动态白名单生效。</p>
+     * <p><b>注意</b>：关闭它<b>不会</b>影响 {@link #ALWAYS_WHITELIST} —— 登录链路
+     * 是鉴权组件自身的必备豁免，关掉会让服务自锁（登录 403）。</p>
+     * 默认 true，保持既有应用行为不变。
      */
     private boolean useDefaultWhitelist = true;
 
@@ -134,12 +150,18 @@ public class AuthClientProperties {
     }
 
     /**
-     * 获取完整白名单（内置默认 + yaml 自定义 + 动态添加）
+     * 获取完整白名单（登录链路必放行 + 内置默认 + yaml 自定义 + 动态添加）
+     *
+     * <p>{@link #ALWAYS_WHITELIST} 永远排在最前且无法通过配置移除：登录接口必须能
+     * 匿名访问，否则「拿 token」这件事本身需要 token，形成死循环。</p>
+     *
      * @return 获取effectivewhitelist的结果
      */
     public List<String> getEffectiveWhitelist() {
-        List<String> effective = new java.util.ArrayList<>(
-                useDefaultWhitelist ? DEFAULT_WHITELIST : List.of());
+        List<String> effective = new java.util.ArrayList<>(ALWAYS_WHITELIST);
+        if (useDefaultWhitelist) {
+            effective.addAll(DEFAULT_WHITELIST);
+        }
         if (whitelist != null) {
             effective.addAll(whitelist);
         }

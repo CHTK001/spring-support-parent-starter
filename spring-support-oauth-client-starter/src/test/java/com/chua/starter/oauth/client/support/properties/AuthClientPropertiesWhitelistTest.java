@@ -54,6 +54,33 @@ class AuthClientPropertiesWhitelistTest {
     }
 
     @Test
+    @DisplayName("登录链路永不被关闭：useDefaultWhitelist=false 也照样放行")
+    void loginPathsSurviveDefaultWhitelistDisabled() {
+        AuthClientProperties properties = new AuthClientProperties();
+        properties.setUseDefaultWhitelist(false);
+        properties.setWhitelist(List.of("/actuator/health"));
+
+        List<String> effective = properties.getEffectiveWhitelist();
+        org.springframework.util.AntPathMatcher matcher = new org.springframework.util.AntPathMatcher();
+        for (String uri : List.of("/login", "/v2/auth/login", "/v2/user/login", "/v2/auth/captcha")) {
+            assertTrue(effective.stream().anyMatch(p -> matcher.match(p, uri)),
+                    uri + " 必须匿名可访问：登录接口要求 token 会形成死循环（登录 403 自锁）");
+        }
+    }
+
+    @Test
+    @DisplayName("登录链路永不被关闭：yaml 清单为空也照样放行")
+    void loginPathsSurviveEmptyYamlWhitelist() {
+        AuthClientProperties properties = new AuthClientProperties();
+        properties.setWhitelist(List.of());
+
+        org.springframework.util.AntPathMatcher matcher = new org.springframework.util.AntPathMatcher();
+        List<String> effective = properties.getEffectiveWhitelist();
+        assertTrue(effective.stream().anyMatch(p -> matcher.match(p, "/v2/auth/login")),
+                "登录接口是鉴权组件自身的必备豁免，任何配置都无权移除");
+    }
+
+    @Test
     @DisplayName("登录链路所需路径仍然放行，避免把功能改坏")
     void loginPathsStillAllowed() {
         List<String> effective = new AuthClientProperties().getEffectiveWhitelist();

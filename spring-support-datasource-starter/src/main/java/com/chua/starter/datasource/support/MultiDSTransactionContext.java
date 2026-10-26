@@ -266,7 +266,8 @@ public class MultiDSTransactionContext {
                 if (conn != null) {
                     try {
                         conn.rollback();
-                    } catch (SQLException ignored) {
+                    } catch (SQLException e) {
+                        log.debug("[datasource] 回滚事务失败，已忽略: {}", e.getMessage());
                     }
                 }
             }

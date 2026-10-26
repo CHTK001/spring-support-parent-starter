@@ -47,6 +47,23 @@ public class WingetPackageManagerProvider extends AbstractPackageManagerProvider
     }
 
     @Override
+    public String installedCommand() {
+        return "winget list --accept-source-agreements";
+    }
+
+    @Override
+    public String uninstallCommand(String name) {
+        return "winget uninstall --id " + name
+                + " -e --accept-source-agreements --silent";
+    }
+
+    @Override
+    public String upgradeCommand(String name) {
+        return "winget upgrade --id " + name
+                + " -e --accept-package-agreements --accept-source-agreements --silent";
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         List<SoftwarePackage> list = new ArrayList<>();
         if (output == null) {
@@ -71,5 +88,11 @@ public class WingetPackageManagerProvider extends AbstractPackageManagerProvider
             add(list, id, version, displayName);
         }
         return list;
+    }
+
+    @Override
+    public List<SoftwarePackage> parseInstalled(String output) {
+        // winget list 同样为列对齐表格（Name / Id / Version / Source）
+        return parseTable(output, 1, 2, 0, "Name", "Id", "Version");
     }
 }

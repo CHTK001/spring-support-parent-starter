@@ -1,0 +1,1 @@
+import{t as e}from"./ReSwitch-BGg3-hjf.js";var t={install(t){t.component(`ReSwitch`,e)}},n=e;export{t as n,n as t};

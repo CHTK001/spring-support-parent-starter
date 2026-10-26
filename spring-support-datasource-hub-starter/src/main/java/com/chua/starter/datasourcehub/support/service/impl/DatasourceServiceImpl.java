@@ -358,7 +358,43 @@ public class DatasourceServiceImpl implements DatasourceService {
         }
         return ReturnResult.ok(new DataSourceTestVO(outcome.success(), outcome.message(), ds.type(),
                 outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt,
-                outcome.connectionCount(), outcome.serverStats()));
+                outcome.connectionCount(), outcome.serverStats(), outcome.serverVersion()));
+    }
+
+    /**
+     * 读目标库的服务端版本（{@code 产品名 版本号}）。
+     *
+     * <p>用 {@link java.sql.DatabaseMetaData} 而不是按方言写 {@code SELECT VERSION()}：
+     * 元数据接口对每个驱动都成立，而 SQL 版本函数各家写法不同
+     * （MySQL/PG 是 {@code version()}、Oracle 要查 {@code v$instance}、
+     * SQL Server 是 {@code @@VERSION}、H2/SQLite 又各是一套），
+     * 为一个「显示一行字」的需求铺一套方言分支不划算。</p>
+     *
+     * <p>版本串里常有换行与驱动附带信息（MySQL 会给
+     * {@code 8.0.36-0ubuntu0.22.04.1}，SQL Server 的 {@code @@VERSION} 更长），
+     * 这里压成单行并去掉多余空白，避免把右侧面板的「版本」行撑成一片。</p>
+     *
+     * @param conn 探测连接
+     * @return 版本串；取不到返回 null（页面显示「—」比显示半截字符串诚实）
+     */
+    private String jdbcServerVersion(Connection conn) {
+        try {
+            java.sql.DatabaseMetaData meta = conn.getMetaData();
+            String product = trim(meta.getDatabaseProductName());
+            String version = meta.getDatabaseProductVersion();
+            version = version == null ? "" : version.replaceAll("\\s+", " ").trim();
+            if (product.isEmpty() && version.isEmpty()) {
+                return null;
+            }
+            if (version.isEmpty()) {
+                return product;
+            }
+            return product.isEmpty() ? version : product + " " + version;
+        } catch (Exception e) {
+            // 版本只是展示项：驱动不实现元数据时不该影响连通性结论
+            log.debug("[datasource-hub] 读取数据库版本失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -437,8 +473,9 @@ public class DatasourceServiceImpl implements DatasourceService {
             // 方言不认识就留 null，图上缺一格，比编个 0 好。
             Long connectionCount = queryJdbcConnectionCount(conn, url);
             DatasourceProbeSupport.ServerStats serverStats = queryJdbcServerStats(conn, url);
+            String serverVersion = jdbcServerVersion(conn);
             return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs,
-                    "连接测试成功", connectionCount, serverStats);
+                    "连接测试成功", connectionCount, serverStats, serverVersion);
         } catch (Exception e) {
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
                     "连接测试失败: " + e.getMessage(), null);

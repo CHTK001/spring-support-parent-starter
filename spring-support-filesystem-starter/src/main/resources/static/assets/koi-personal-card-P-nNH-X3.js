@@ -1,0 +1,1 @@
+import{t as e}from"./koi-personal-card-BAjszVFQ.js";export{e as default};

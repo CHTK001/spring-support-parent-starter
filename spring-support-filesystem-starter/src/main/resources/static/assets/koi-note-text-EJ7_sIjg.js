@@ -1,0 +1,1 @@
+import{t as e}from"./koi-note-text-CpzzWehK.js";export{e as default};

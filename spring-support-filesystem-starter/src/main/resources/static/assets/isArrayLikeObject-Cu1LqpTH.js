@@ -1,0 +1,1 @@
+import{r as e}from"./isObject-BNleAbAq.js";import{n as t,o as n,r}from"./_baseFlatten-DT7i6dAl.js";import{v as i}from"./_Uint8Array-DUEGuVCS.js";function a(e,i){return r(t(e,i,n),e+``)}function o(t){return e(t)&&i(t)}export{a as n,o as t};

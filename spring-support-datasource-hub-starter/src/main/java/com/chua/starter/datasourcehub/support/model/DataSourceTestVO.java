@@ -20,6 +20,9 @@ import java.time.LocalDateTime;
  * @param testedAt           测试时间
  * @param connectionCount    采样时刻目标服务上的客户端连接数；类型不支持时为 null
  * @param serverStats        采样时刻服务器运行指标；类型不支持时为 null
+ * @param version            服务端版本（如 {@code MySQL 8.0.36}、{@code 7.2.4}）；
+ *                           探测不到时为 null —— 页面据此显示右栏「版本」行，
+ *                           不再让这一行永远是「—」
  * @author CH
  * @since 4.0.0.42
  */
@@ -32,11 +35,49 @@ public record DataSourceTestVO(
         Boolean tunneled,
         LocalDateTime testedAt,
         Long connectionCount,
-        DatasourceProbeSupport.ServerStats serverStats
+        DatasourceProbeSupport.ServerStats serverStats,
+        String version
 ) {
 
     /**
+     * 不带服务端版本的构造：无服务器指标的类型照旧填前九项。
+     *
+     * @param success          是否连通
+     * @param message          结果说明
+     * @param type             被测试的数据源类型
+     * @param connectLatencyMs 连接延迟（毫秒）
+     * @param sessionLatencyMs 会话延迟（毫秒）
+     * @param tunneled         本次测试是否经由 SSH 隧道中转
+     * @param testedAt         测试时间
+     * @param connectionCount  采样时刻目标服务上的客户端连接数
+     * @param serverStats      采样时刻服务器运行指标
+     */
+    public DataSourceTestVO(
+            boolean success,
+            String message,
+            String type,
+            Long connectLatencyMs,
+            Long sessionLatencyMs,
+            Boolean tunneled,
+            LocalDateTime testedAt,
+            Long connectionCount,
+            DatasourceProbeSupport.ServerStats serverStats
+    ) {
+        this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled, testedAt,
+                connectionCount, serverStats, null);
+    }
+
+    /**
      * 无服务器指标的五参之后的兼容构造：不采集服务器指标的类型照旧填前八项。
+     *
+     * @param success          是否连通
+     * @param message          结果说明
+     * @param type             被测试的数据源类型
+     * @param connectLatencyMs 连接延迟（毫秒）
+     * @param sessionLatencyMs 会话延迟（毫秒）
+     * @param tunneled         本次测试是否经由 SSH 隧道中转
+     * @param testedAt         测试时间
+     * @param connectionCount  采样时刻目标服务上的客户端连接数
      */
     public DataSourceTestVO(
             boolean success,
@@ -49,6 +90,6 @@ public record DataSourceTestVO(
             Long connectionCount
     ) {
         this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled,
-                testedAt, connectionCount, null);
+                testedAt, connectionCount, null, null);
     }
 }

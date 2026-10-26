@@ -156,6 +156,17 @@ public class ApiCorsConfiguration  {
 
         // 2. 添加映射路径
         UrlBasedCorsConfigurationSource corsConfigurationSource = new UrlBasedCorsConfigurationSource();
+        // WS 升级握手：Origin 校验交由 WebSocket 层（allowedOriginPatterns）负责，
+        // CORS 层全放行。否则同源页面经 dev 代理（保留 Origin）转发到后端时，
+        // 后端把请求误判为跨源，白名单为空即 403 —— VNC/SSH 直连 WS 全部连不上。
+        // 注意：UrlBasedCorsConfigurationSource 取「第一个匹配」的配置，具体路径
+        // 必须先注册，否则 /ws/** 会被后注册的 /** 抢先命中而永不生效。
+        CorsConfiguration wsConfig = new CorsConfiguration();
+        wsConfig.addAllowedOriginPattern("*");
+        wsConfig.setAllowCredentials(false);
+        wsConfig.addAllowedMethod("*");
+        wsConfig.addAllowedHeader("*");
+        corsConfigurationSource.registerCorsConfiguration("/ws/**", wsConfig);
         if (corsProperties.getPattern().isEmpty()) {
             corsConfigurationSource.registerCorsConfiguration("/**", config);
         } else {

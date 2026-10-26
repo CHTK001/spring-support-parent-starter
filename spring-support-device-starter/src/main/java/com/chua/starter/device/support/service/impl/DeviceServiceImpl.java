@@ -109,35 +109,6 @@ public class DeviceServiceImpl implements DeviceService {
     }
 
     @Override
-    public DeviceInfo addDevice(DeviceSaveRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("请求不能为空");
-        }
-        DeviceInfo device = request.toEntity();
-        LocalDateTime now = LocalDateTime.now();
-        device.setDeviceInfoId(UUID.randomUUID().toString());
-        if (!StringUtils.hasText(device.getDeviceInfoName())) {
-            device.setDeviceInfoName(firstNonBlank(request.getDeviceSerial(), device.getDeviceInfoIp()));
-        }
-        if (device.getDeviceInfoChannelCount() == null) {
-            device.setDeviceInfoChannelCount(0);
-        }
-        if (device.getDeviceInfoOnline() == null) {
-            device.setDeviceInfoOnline(Boolean.FALSE);
-        }
-        if (device.getDeviceInfoOfflineThreshold() == null || device.getDeviceInfoOfflineThreshold() <= 0) {
-            device.setDeviceInfoOfflineThreshold(60);
-        }
-        device.setDeviceInfoPassword(request.getDeviceInfoPassword());
-        device.setDeviceInfoCreatedAt(now);
-        device.setDeviceInfoUpdatedAt(now);
-        deviceInfoMapper.insert(device);
-        log.info("设备已保存: vendor={}, ip={}, name={}",
-                device.getDeviceInfoVendor(), device.getDeviceInfoIp(), device.getDeviceInfoName());
-        return device;
-    }
-
-    @Override
     /**
      * 添加设备（含资产字段）并连接：请求对象直存资产字段
     */
@@ -207,21 +178,6 @@ public class DeviceServiceImpl implements DeviceService {
     public void updateDevice(String id, DeviceInfo info) {
         info.setDeviceInfoId(id);
         deviceInfoMapper.updateById(info);
-    }
-
-    @Override
-    public void updateDevice(String id, DeviceSaveRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("请求不能为空");
-        }
-        DeviceInfo device = request.toEntity();
-        device.setDeviceInfoId(id);
-        device.setDeviceInfoUpdatedAt(LocalDateTime.now());
-        // 未填写密码时不要覆盖已有密码（toEntity 本身不带密码）
-        if (StringUtils.hasText(request.getDeviceInfoPassword())) {
-            device.setDeviceInfoPassword(request.getDeviceInfoPassword());
-        }
-        deviceInfoMapper.updateById(device);
     }
 
     @Override
@@ -345,16 +301,6 @@ public class DeviceServiceImpl implements DeviceService {
                 base.clone().and(w -> w.isNull(DeviceInfo::getDeviceInfoLatitude)
                         .or().isNull(DeviceInfo::getDeviceInfoLongitude)));
         return new DeviceStats(total, online, total - online, noLocation);
-    }
-
-    @Override
-    /**
-     * 分页查询设备（查询对象入参，委托长参数版本）
-    */
-    public PageResult<DeviceInfo> pageDevices(
-            com.chua.starter.device.support.model.DevicePageQuery query) {
-        return pageDevices(query.getPageNo(), query.getPageSize(), query.getOrgId(),
-                query.getKeyword(), query.getCategory(), query.getOnline());
     }
 
     @Override
@@ -685,24 +631,5 @@ public class DeviceServiceImpl implements DeviceService {
         }
     }
 
-    @Override
-    public DeviceStats stats(String orgId, String vendor) {
-        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(orgId)) {
-            wrapper.eq(DeviceInfo::getDeviceInfoOrgId, orgId);
-        }
-        if (StringUtils.hasText(vendor)) {
-            wrapper.eq(DeviceInfo::getDeviceInfoVendor, vendor);
-        }
-        long total = deviceInfoMapper.selectCount(wrapper);
-        long online = deviceInfoMapper.selectCount(
-                wrapper.clone().eq(DeviceInfo::getDeviceInfoOnline, true));
-        long offline = total - online;
-        long noLocation = deviceInfoMapper.selectCount(wrapper.clone()
-                .and(w -> w.isNull(DeviceInfo::getDeviceInfoLatitude)
-                        .or()
-                        .isNull(DeviceInfo::getDeviceInfoLongitude)));
-        return new DeviceStats(total, online, offline, noLocation);
-    }
 }
 

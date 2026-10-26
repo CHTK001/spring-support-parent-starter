@@ -48,7 +48,8 @@ public class DefaultSseEventBusConfigurer {
                     if (emitter.getSseEmitter() != null) {
                         emitter.getSseEmitter().complete();
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.debug("[sse] 操作失败，已忽略: {}", e.getMessage());
                 }
             }
             log.debug("[SSE][连接管理] 注销客户端: clientId={}", clientId);
@@ -103,7 +104,8 @@ public class DefaultSseEventBusConfigurer {
                     if (emitter.getSseEmitter() != null) {
                         emitter.getSseEmitter().complete();
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.debug("[sse] 操作失败，已忽略: {}", e.getMessage());
                 }
                 var response = emitter.getResponse();
                 if (response != null) {

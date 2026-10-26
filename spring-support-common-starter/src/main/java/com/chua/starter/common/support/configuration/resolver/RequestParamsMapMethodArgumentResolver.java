@@ -49,6 +49,12 @@ import java.util.Set;
  * @since 4.0.0
  */
 public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMethodArgumentResolver {
+
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG =
+            System.getLogger(RequestParamsMapMethodArgumentResolver.class.getName());
     @Override
     /**
      * 支持参数
@@ -153,7 +159,8 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                     Object val = ReflectUtils.getField(argument, f.getName());
                     beanMap.put(f.getName(), val);
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                LOG.log(System.Logger.Level.DEBUG, "[resolver] 读取字段值失败，已忽略: " + e.getMessage(), e);
             }
         }
         value = beanMap.get(name);

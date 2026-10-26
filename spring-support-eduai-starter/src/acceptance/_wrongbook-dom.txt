@@ -1,0 +1,2 @@
+
+INFO {"path":"/edu/wrongbook","hasTable":true,"rows":20,"firstRowButtons":[{"title":"","aria":"溯源","text":"","cls":"el-button el-button--primary el-button--default re-button--i"},{"title":"","aria":"订正","text":"","cls":"el-button el-button--success el-button--default re-button--i"},{"title":"","aria":"更新掌握度","text":"","cls":"el-button el-button--default re-button--icon-only el-tooltip"}],"firstRowText":"1 anonymous 9003 427 未订正 2026-10-17 02:34:52 15 "}

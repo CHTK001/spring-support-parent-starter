@@ -490,7 +490,8 @@ public class FileHandler implements SyncMessageHandler {
         if (v != null) {
             try {
                 return Integer.parseInt(v.toString());
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[report] 数值转换失败，使用默认值: {}", e.getMessage());
             }
         }
         return defaultValue;
@@ -512,7 +513,8 @@ public class FileHandler implements SyncMessageHandler {
         if (v != null) {
             try {
                 return Long.parseLong(v.toString());
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[report] 数值转换失败，使用默认值: {}", e.getMessage());
             }
         }
         return defaultValue;

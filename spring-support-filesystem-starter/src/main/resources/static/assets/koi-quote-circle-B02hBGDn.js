@@ -1,0 +1,1 @@
+import{t as e}from"./koi-quote-circle-DeJgd9jf.js";export{e as default};

@@ -22,6 +22,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @EqualsAndHashCode(callSuper = true)
 public class InterfaceLoggerInfo extends ApplicationEvent {
 
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(InterfaceLoggerInfo.class.getName());
+
 
     final transient HttpServletRequest request; // 请求
     /**
@@ -67,7 +72,8 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
                 } else {
                     this.body = wrapper.getInputStream().readAllBytes();
                 }
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                LOG.log(System.Logger.Level.DEBUG, "[logger] 读取请求体失败，已忽略: " + e.getMessage(), e);
             }
         } else if (request instanceof ContentCachingRequestWrapper wrapper) {
             String header = wrapper.getHeader("Content-Type");

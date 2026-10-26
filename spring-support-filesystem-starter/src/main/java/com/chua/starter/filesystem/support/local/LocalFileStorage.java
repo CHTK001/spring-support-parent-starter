@@ -44,6 +44,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LocalFileStorage extends AbstractFileStorage {
 
     /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(LocalFileStorage.class.getName());
+
+    /**
      * 临时目录系统属性键
      */
     private static final String TEMP_PATH_KEY = "filesystem.temp.path";
@@ -273,7 +278,9 @@ public class LocalFileStorage extends AbstractFileStorage {
                                         .directory(attrs.isDirectory())
                                         .lastModified(attrs.lastModifiedTime().toInstant().toEpochMilli())
                                         .build());
-                            } catch (IOException ignored) {
+                            } catch (IOException e) {
+                                LOG.log(System.Logger.Level.DEBUG,
+                                        "[storage] 关闭文件通道失败，已忽略: " + e.getMessage(), e);
                             }
                         });
             }
@@ -404,7 +411,9 @@ public class LocalFileStorage extends AbstractFileStorage {
                 parts.values().forEach(p -> {
                     try {
                         Files.deleteIfExists(p);
-                    } catch (IOException ignored) {
+                    } catch (IOException e) {
+                        LOG.log(System.Logger.Level.DEBUG,
+                                "[storage] 删除文件失败，已忽略: " + e.getMessage(), e);
                     }
                 });
             }

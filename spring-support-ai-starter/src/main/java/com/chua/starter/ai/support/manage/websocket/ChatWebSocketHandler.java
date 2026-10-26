@@ -139,7 +139,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             for (String chatSessionId : chats) {
                 try {
                     registry.requestStop(chatSessionId, actor);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.debug("[ai-ws] 请求停止失败，已忽略: {}", e.getMessage());
                 }
             }
         }

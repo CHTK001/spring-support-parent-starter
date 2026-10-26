@@ -1,0 +1,1 @@
+import{t as e}from"./koi-sun-CD_uL2Ie.js";export{e as default};

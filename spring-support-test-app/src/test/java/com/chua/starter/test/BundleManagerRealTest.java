@@ -125,7 +125,9 @@ class BundleManagerRealTest {
     void cleanup() {
         try {
             bundleManager.uninstall(BUNDLE_SYMBOLIC_NAME);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            // 清理阶段失败不影响断言结果，仅记录
+            System.out.println("[BundleManagerRealTest] 卸载测试 bundle 失败: " + e.getMessage());
         }
     }
 

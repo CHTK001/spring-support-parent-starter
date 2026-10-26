@@ -14,6 +14,11 @@ import java.util.Map;
  */
 public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvider<ComboPooledDataSource> {
 
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(C3p0DataSourcePropertyProvider.class.getName());
+
     private static final Map<String, String> PROPERTY_MAPPING = Map.of(
             "url", "jdbcUrl",
             "jdbcUrl", "jdbcUrl",
@@ -116,7 +121,8 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
                     // 忽略未知属性
                 }
             }
-        } catch (PropertyVetoException ignored) {
+        } catch (PropertyVetoException e) {
+            LOG.log(System.Logger.Level.DEBUG, "[datasource] 设置 C3P0 属性失败，已忽略: " + e.getMessage(), e);
         }
     }
 

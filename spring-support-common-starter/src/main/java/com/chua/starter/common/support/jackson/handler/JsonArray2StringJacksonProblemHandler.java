@@ -16,6 +16,11 @@ import java.util.List;
  */
 public class JsonArray2StringJacksonProblemHandler implements JacksonProblemHandler{
 
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(JsonArray2StringJacksonProblemHandler.class.getName());
+
     @Override
     /**
      * 处理
@@ -34,7 +39,8 @@ public class JsonArray2StringJacksonProblemHandler implements JacksonProblemHand
                 }
                 return java.lang.String.join(",", sb);
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            LOG.log(System.Logger.Level.DEBUG, "[jackson] 数组转字符串失败: " + e.getMessage(), e);
         }
         return null;
     }

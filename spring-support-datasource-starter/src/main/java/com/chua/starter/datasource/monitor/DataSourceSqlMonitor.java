@@ -363,7 +363,8 @@ public class DataSourceSqlMonitor {
             if (target instanceof DataSource targetDs) {
                 return isMonitored(targetDs);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[datasource] 操作失败，已忽略: {}", e.getMessage());
         }
         return false;
     }

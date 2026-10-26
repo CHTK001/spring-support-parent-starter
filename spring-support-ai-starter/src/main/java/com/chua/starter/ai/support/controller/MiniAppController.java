@@ -563,9 +563,12 @@ public class MiniAppController {
             s.sorted(Comparator.reverseOrder()).forEach(q -> {
                 try {
                     Files.deleteIfExists(q);
-                } catch (IOException ignored) {
+                } catch (IOException e) {
+                    log.debug("[miniapp] 删除临时文件失败，已忽略: {}", e.getMessage());
                 }
             });
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            log.debug("[miniapp] 遍历临时目录失败，已忽略: {}", e.getMessage());
+        }
     }
 }

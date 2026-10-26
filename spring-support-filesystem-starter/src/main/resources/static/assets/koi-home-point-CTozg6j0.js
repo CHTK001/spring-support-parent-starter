@@ -1,0 +1,1 @@
+import{t as e}from"./koi-home-point-BPAGs-IH.js";export{e as default};

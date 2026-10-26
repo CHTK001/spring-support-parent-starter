@@ -203,7 +203,8 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
             try {
                 sum += Double.parseDouble(m.group(1));
                 found = true;
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[prometheus] 指标数值解析失败，跳过: {}", e.getMessage());
             }
         }
         return found ? sum : -1;
@@ -221,7 +222,8 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         if (m.find()) {
             try {
                 return Double.parseDouble(m.group(1));
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[prometheus] 指标数值解析失败，跳过: {}", e.getMessage());
             }
         }
         return -1;

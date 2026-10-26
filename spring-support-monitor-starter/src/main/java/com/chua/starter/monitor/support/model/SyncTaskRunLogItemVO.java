@@ -11,14 +11,16 @@ package com.chua.starter.monitor.support.model;
  * <p>过程行（{@code lines}）不放在列表结构里：LONGTEXT 正文在列表场景
  * 一次只展示「行数」，点开详情再整体读取，避免每行都拖一大段文本。</p>
  *
- * @param id        日志主键（{@code ms_sync_task_run_log.id}）
- * @param taskId    任务 ID
- * @param taskName  任务名（联 {@code ms_sync_task} 得到）
- * @param trigger   触发方式：{@code MANUAL} 手动 / {@code SCHEDULED} 定时 / {@code REALTIME} 实时录入
- * @param status    执行状态：{@code SUCCESS} 成功 / {@code FAILED} 失败
- * @param runTime   执行开始时刻（{@code yyyy-MM-dd HH:mm:ss}）
- * @param costMs    本次总耗时（毫秒）
- * @param lineCount 过程日志行数（列表展示用，免解析正文）
+ * @param id         日志主键（{@code ms_sync_task_run_log.id}）
+ * @param taskId     任务 ID
+ * @param taskName   任务名（联 {@code ms_sync_task} 得到）
+ * @param trigger    触发方式：{@code MANUAL} 手动 / {@code SCHEDULED} 定时 / {@code REALTIME} 实时录入
+ * @param status     执行状态：{@code SUCCESS} 成功 / {@code FAILED} 失败
+ * @param runTime    执行开始时刻（{@code yyyy-MM-dd HH:mm:ss}）
+ * @param costMs     本次总耗时（毫秒）
+ * @param lineCount  过程日志行数（列表展示用，免解析正文）
+ * @param readCount  本轮读取行数（执行结束时解析入库；存量行为 null）
+ * @param writeCount 本轮写入行数（执行结束时解析入库；存量行为 null）
  * @author CH
  * @since 4.0.0.44
  */
@@ -30,5 +32,7 @@ public record SyncTaskRunLogItemVO(
         String status,
         String runTime,
         Long costMs,
-        Integer lineCount) {
+        Integer lineCount,
+        Long readCount,
+        Long writeCount) {
 }

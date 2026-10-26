@@ -42,6 +42,7 @@ import java.util.Base64;
 import java.util.Locale;
 import com.chua.starter.filesystem.support.spi.FileStorageImageFilterProvider;
 import com.chua.starter.filesystem.support.spi.FileStorageUrlPreviewProvider;
+import com.chua.starter.filesystem.support.log.FileLogStore;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import com.chua.filestorage.support.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -485,9 +486,31 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
     @Override
     /**
-     * 响应式执行过滤
+     * 响应式执行过滤（包装：记录文件操作日志）。
+     *
+     * <p>原处理体拆为
+     * {@link #doFilterInternal(ServerRequest, ServerResponse, ReactiveFilterChain)}，
+     * 本方法只负责计时并在完成时把请求记入 {@link FileLogStore}，
+     * 不改变任何文件操作语义。</p>
     */
     public CompletionStage<Void> doFilter(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
+        long startMillis = System.currentTimeMillis();
+        CompletionStage<Void> stage = doFilterInternal(request, response, chain);
+        if (stage == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return stage.whenComplete((ignored, error) -> recordFileLog(request, response, startMillis, error));
+    }
+
+    /**
+     * 响应式执行过滤（原处理体）。
+     *
+     * @param request  请求
+     * @param response 响应
+     * @param chain    过滤器链
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> doFilterInternal(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
         // CORS 由框架 CorsFilter 统一负责（其 order 最小，最先执行）：开关与白名单来自
         // plugin.filesystem.storage-server.cors.*（默认开启、允许携带凭据），
         // 由 FileStorageServerLauncher 注入。此处不再重复设置，避免两处真相。
@@ -612,6 +635,90 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             log.error("文件存储过滤器处理失败: {} {} - {}", method, path, e.getMessage(), e);
             return error(response, 500, "Internal Error: " + e.getMessage());
         }
+    }
+
+    /**
+     * 记录一条文件操作日志（请求完成后回调）。
+     *
+     * <p>操作类型由「HTTP 方法 + 文件管理动作」推断：有 {@code action}
+     * 参数（mkdir/rename/copy/move/unzip/zip 等）按动作归类；
+     * 否则按方法归类（GET 有对象键=下载、无键=列目录）。</p>
+     *
+     * <p>日志写入失败绝不影响业务：任何异常都被吞掉。</p>
+     *
+     * @param request     请求（记录方法/路径/动作参数）
+     * @param response    响应（取最终状态码）
+     * @param startMillis 请求开始时间（毫秒）
+     * @param error       处理异常（可为 {@code null}）
+     */
+    private void recordFileLog(ServerRequest request, ServerResponse response,
+                               long startMillis, Throwable error) {
+        try {
+            if (request == null) {
+                return;
+            }
+            String method = String.valueOf(request.getMethod());
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                return;
+            }
+            String path = request.getPath();
+            Map<String, String> params = request.getParams();
+            String action = params == null ? null : params.get("action");
+            String operation = classifyFileOperation(method, path, action);
+            int status = response == null ? 0 : response.getStatus();
+            long duration = System.currentTimeMillis() - startMillis;
+            String detail = error == null ? null : String.valueOf(error.getMessage());
+            FileLogStore.getInstance().record(operation, path, status, duration, detail);
+        } catch (Exception e) {
+            // 日志失败不影响业务
+            log.debug("[filesystem] 记录操作日志失败，已忽略: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 由「HTTP 方法 + 文件管理动作」推断日志操作类型。
+     *
+     * @param method HTTP 方法
+     * @param path   请求路径
+     * @param action 文件管理动作参数（可为 {@code null}）
+     * @return 操作类型码（如 UPLOAD / DOWNLOAD / DELETE / MKDIR / RENAME）
+     */
+    private static String classifyFileOperation(String method, String path, String action) {
+        if (action != null && !action.isBlank()) {
+            return switch (action) {
+                case "mkdir" -> "MKDIR";
+                case "mkfile" -> "MKFILE";
+                case "rename" -> "RENAME";
+                case "copy" -> "COPY";
+                case "move" -> "MOVE";
+                case "zip" -> "ZIP";
+                case "unzip" -> "UNZIP";
+                case "setConfig" -> "SET_CONFIG";
+                default -> action.toUpperCase(java.util.Locale.ROOT);
+            };
+        }
+        String up = method == null ? "" : method.toUpperCase(java.util.Locale.ROOT);
+        return switch (up) {
+            case "GET" -> hasObjectKey(path) ? "DOWNLOAD" : "LIST";
+            case "HEAD" -> "HEAD";
+            case "PUT", "POST" -> "UPLOAD";
+            case "DELETE" -> "DELETE";
+            default -> up;
+        };
+    }
+
+    /**
+     * 判断路径是否带对象键（第二段之后有内容即为有键）。
+     *
+     * @param path 请求路径（如 {@code /local/a.txt} 或 {@code /local}）
+     * @return 有对象键返回 true
+     */
+    private static boolean hasObjectKey(String path) {
+        if (path == null) {
+            return false;
+        }
+        String p = path.startsWith("/") ? path.substring(1) : path;
+        return p.indexOf('/') >= 0;
     }
 
     /**
@@ -2454,7 +2561,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (size < 0 && result.getInputStream() != null) {
             try {
                 size = result.getInputStream().available();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[filesystem] 操作失败，已忽略: {}", e.getMessage());
             }
         }
 

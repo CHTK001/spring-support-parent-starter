@@ -170,7 +170,9 @@ public class WebRequest {
                 // 路径有处理器但方法不支持：不是白名单命中，保持 handlerMethod 为空继续按需要认证处理，
                 // 认证通过后由 SpringMVC 返回 405。在此抛运行时异常会让鉴权层把 405 变成 500
                 log.warn("[WebRequest白名单]请求方法不支持 - URI: {}, 方法: {}", uri, request.getMethod());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                // 无处理器匹配（404 场景）：保持 handlerMethod 为空继续按需要认证处理
+                log.debug("[WebRequest白名单]解析处理器失败，按非白名单处理 - URI: {}, 原因: {}", uri, e.getMessage());
             }
             if (null != handlerMethod) {
                 if (PASS.containsKey(handlerMethod)) {
