@@ -5,6 +5,8 @@ import com.chua.starter.monitor.support.datasync.SyncWriteMode;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -132,6 +135,39 @@ public class SyncTaskController {
     @GetMapping("/tasks/{id}/logs")
     public ReturnResult<List<SyncTaskRunLogVO>> runLogs(@PathVariable Long id) {
         return syncTaskService.runLogs(id);
+    }
+
+    /**
+     * 分页查询全部任务的执行日志记录（「同步日志」菜单页的全局列表）。
+     *
+     * @param page    页码（从 1 开始）
+     * @param size    每页条数
+     * @param taskId  任务 ID 过滤（可选）
+     * @param status  执行状态过滤 SUCCESS/FAILED（可选）
+     * @param trigger 触发方式过滤 MANUAL/SCHEDULED/REALTIME（可选）
+     * @return 分页记录（新在前，不带过程行；点开单条取详情）
+     */
+    @Operation(summary = "分页查询全部同步执行日志记录")
+    @GetMapping("/logs")
+    public ReturnResult<com.baomidou.mybatisplus.core.metadata.IPage<SyncTaskRunLogItemVO>> runLogPage(
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "20") long size,
+            @RequestParam(required = false) Long taskId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String trigger) {
+        return syncTaskService.runLogPage(page, size, taskId, status, trigger);
+    }
+
+    /**
+     * 查询单条执行日志的详情（记录 + 完整过程行）。
+     *
+     * @param logId 日志主键
+     * @return 详情
+     */
+    @Operation(summary = "查询单条同步执行日志详情")
+    @GetMapping("/logs/{logId}")
+    public ReturnResult<SyncTaskRunLogDetailVO> runLogDetail(@PathVariable Long logId) {
+        return syncTaskService.runLogDetail(logId);
     }
 
     /**

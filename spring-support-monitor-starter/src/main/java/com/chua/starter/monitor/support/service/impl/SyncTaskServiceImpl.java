@@ -2,6 +2,8 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.datasync.agent.support.source.JdbcDataSyncAgentSource;
 import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
@@ -22,10 +24,14 @@ import com.chua.starter.monitor.support.datasync.SyncSourceType;
 import com.chua.starter.monitor.support.datasync.SyncTaskHookNotifier;
 import com.chua.starter.monitor.support.datasync.SyncWriteMode;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
+import com.chua.starter.monitor.support.entity.MsSyncTaskRunLog;
 import com.chua.starter.monitor.support.mapper.MsSyncTaskMapper;
+import com.chua.starter.monitor.support.mapper.MsSyncTaskRunLogMapper;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncFieldMappingVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
@@ -53,6 +59,7 @@ import java.sql.SQLException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -101,6 +108,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     private static final int DEFAULT_BATCH_SIZE = 500;
 
     /**
+     * 执行开始时刻格式（与 {@code SyncTaskRunLogVO} 的 runTime 一致，供列表/详情展示）
+     */
+    private static final DateTimeFormatter RUN_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
      * 结果说明字段的最大长度（与 ms_sync_task_last_message 的 512 留出余量）
      */
     private static final int MESSAGE_MAX_LENGTH = 500;
@@ -119,6 +131,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
      * 任务映射器
      */
     private final MsSyncTaskMapper taskMapper;
+
+    /**
+     * 执行日志映射器（「同步日志」菜单页的全局分页与详情查询）
+     */
+    private final MsSyncTaskRunLogMapper runLogMapper;
 
     /**
      * 数据源中心服务：取 JDBC 连接三元组与元数据连接
@@ -515,6 +532,86 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             log.error("[sync-task] 查询执行日志失败, id={}", id, e);
             return ReturnResult.error("查询执行日志失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<IPage<SyncTaskRunLogItemVO>> runLogPage(long page, long size, Long taskId, String status, String trigger) {
+        try {
+            long safePage = Math.max(page, 1);
+            long safeSize = Math.min(Math.max(size, 1), 500);
+            LambdaQueryWrapper<MsSyncTaskRunLog> wrapper = new LambdaQueryWrapper<MsSyncTaskRunLog>()
+                    .eq(taskId != null, MsSyncTaskRunLog::getRunLogTaskId, taskId)
+                    .eq(hasText(status), MsSyncTaskRunLog::getRunLogStatus, status)
+                    .eq(hasText(trigger), MsSyncTaskRunLog::getRunLogTrigger, trigger)
+                    .orderByDesc(MsSyncTaskRunLog::getRunLogRunTime, MsSyncTaskRunLog::getId);
+            // 列表不加载 LONGTEXT 正文（行数已单独落库，点开详情再整体读回）
+            wrapper.select(MsSyncTaskRunLog::getId, MsSyncTaskRunLog::getRunLogTaskId,
+                    MsSyncTaskRunLog::getRunLogTrigger, MsSyncTaskRunLog::getRunLogStatus,
+                    MsSyncTaskRunLog::getRunLogRunTime, MsSyncTaskRunLog::getRunLogCostMs,
+                    MsSyncTaskRunLog::getRunLogLineCount);
+            IPage<MsSyncTaskRunLog> rows = runLogMapper.selectPage(new Page<>(safePage, safeSize), wrapper);
+            // 批量取任务名：日志行可能引用已删除的任务，按 ID 存在性取，缺失回退 "（任务已删除）"
+            Map<Long, String> nameById = new HashMap<>();
+            List<Long> taskIds = rows.getRecords().stream()
+                    .map(MsSyncTaskRunLog::getRunLogTaskId)
+                    .filter(Objects::nonNull)
+                    .distinct().toList();
+            if (!taskIds.isEmpty()) {
+                for (MsSyncTask t : taskMapper.selectBatchIds(taskIds)) {
+                    nameById.put(t.getId(), t.getSyncTaskName());
+                }
+            }
+            List<SyncTaskRunLogItemVO> items = rows.getRecords().stream().map(r -> new SyncTaskRunLogItemVO(
+                    r.getId(),
+                    r.getRunLogTaskId(),
+                    nameById.getOrDefault(r.getRunLogTaskId(), "（任务已删除）"),
+                    r.getRunLogTrigger(),
+                    r.getRunLogStatus(),
+                    r.getRunLogRunTime() == null ? "" : r.getRunLogRunTime().format(RUN_TIME_FORMAT),
+                    r.getRunLogCostMs(),
+                    r.getRunLogLineCount())).toList();
+            Page<SyncTaskRunLogItemVO> out = new Page<>(safePage, safeSize, rows.getTotal());
+            out.setRecords(items);
+            return ReturnResult.ok(out);
+        } catch (Exception e) {
+            log.error("[sync-log] 分页查询执行日志失败", e);
+            return ReturnResult.error("查询执行日志失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<SyncTaskRunLogDetailVO> runLogDetail(Long logId) {
+        try {
+            MsSyncTaskRunLog row = runLogMapper.selectById(logId);
+            if (row == null) {
+                return ReturnResult.error("日志不存在（可能已被 30 天保留策略清理）");
+            }
+            String taskName = null;
+            if (row.getRunLogTaskId() != null) {
+                MsSyncTask task = taskMapper.selectById(row.getRunLogTaskId());
+                taskName = task == null ? "（任务已删除）" : task.getSyncTaskName();
+            }
+            return ReturnResult.ok(new SyncTaskRunLogDetailVO(
+                    row.getId(),
+                    row.getRunLogTaskId(),
+                    taskName,
+                    row.getRunLogTrigger(),
+                    row.getRunLogStatus(),
+                    row.getRunLogRunTime() == null ? "" : row.getRunLogRunTime().format(RUN_TIME_FORMAT),
+                    row.getRunLogCostMs(),
+                    row.getRunLogLineCount(),
+                    runLogBuffer.parseLines(row.getRunLogLines())));
+        } catch (Exception e) {
+            log.error("[sync-log] 查询执行日志详情失败, id={}", logId, e);
+            return ReturnResult.error("查询执行日志详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 字符串是否有内容（查询过滤用，null/空白视为未传）。
+     */
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
     }
 
     /**
