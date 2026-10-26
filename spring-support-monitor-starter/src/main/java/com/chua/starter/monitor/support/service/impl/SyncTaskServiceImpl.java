@@ -30,6 +30,8 @@ import com.chua.starter.monitor.support.mapper.MsSyncTaskRunLogMapper;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncFieldMappingVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncRunLogStatsVO;
+import com.chua.starter.monitor.support.model.SyncRunLogTrendVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
@@ -535,7 +537,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     @Override
-    public ReturnResult<IPage<SyncTaskRunLogItemVO>> runLogPage(long page, long size, Long taskId, String status, String trigger) {
+    public ReturnResult<IPage<SyncTaskRunLogItemVO>> runLogPage(long page, long size, Long taskId, String status, String trigger, String keyword) {
         try {
             long safePage = Math.max(page, 1);
             long safeSize = Math.min(Math.max(size, 1), 500);
@@ -543,12 +545,14 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                     .eq(taskId != null, MsSyncTaskRunLog::getRunLogTaskId, taskId)
                     .eq(hasText(status), MsSyncTaskRunLog::getRunLogStatus, status)
                     .eq(hasText(trigger), MsSyncTaskRunLog::getRunLogTrigger, trigger)
+                    .like(hasText(keyword), MsSyncTaskRunLog::getRunLogLines, keyword == null ? "" : keyword.trim())
                     .orderByDesc(MsSyncTaskRunLog::getRunLogRunTime, MsSyncTaskRunLog::getId);
             // 列表不加载 LONGTEXT 正文（行数已单独落库，点开详情再整体读回）
             wrapper.select(MsSyncTaskRunLog::getId, MsSyncTaskRunLog::getRunLogTaskId,
                     MsSyncTaskRunLog::getRunLogTrigger, MsSyncTaskRunLog::getRunLogStatus,
                     MsSyncTaskRunLog::getRunLogRunTime, MsSyncTaskRunLog::getRunLogCostMs,
-                    MsSyncTaskRunLog::getRunLogLineCount);
+                    MsSyncTaskRunLog::getRunLogLineCount,
+                    MsSyncTaskRunLog::getRunLogReadCount, MsSyncTaskRunLog::getRunLogWriteCount);
             IPage<MsSyncTaskRunLog> rows = runLogMapper.selectPage(new Page<>(safePage, safeSize), wrapper);
             // 批量取任务名：日志行可能引用已删除的任务，按 ID 存在性取，缺失回退 "（任务已删除）"
             Map<Long, String> nameById = new HashMap<>();
@@ -569,7 +573,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                     r.getRunLogStatus(),
                     r.getRunLogRunTime() == null ? "" : r.getRunLogRunTime().format(RUN_TIME_FORMAT),
                     r.getRunLogCostMs(),
-                    r.getRunLogLineCount())).toList();
+                    r.getRunLogLineCount(),
+                    r.getRunLogReadCount(),
+                    r.getRunLogWriteCount())).toList();
             Page<SyncTaskRunLogItemVO> out = new Page<>(safePage, safeSize, rows.getTotal());
             out.setRecords(items);
             return ReturnResult.ok(out);
@@ -591,6 +597,15 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 MsSyncTask task = taskMapper.selectById(row.getRunLogTaskId());
                 taskName = task == null ? "（任务已删除）" : task.getSyncTaskName();
             }
+            List<SyncTaskRunLogVO.Line> lines = runLogBuffer.parseLines(row.getRunLogLines());
+            Long readCount = row.getRunLogReadCount();
+            Long writeCount = row.getRunLogWriteCount();
+            // 存量行（V4.0.0.45 建列前）没有读/写列：按正文动态解析兜底，保证旧记录详情仍可见
+            if ((readCount == null || writeCount == null) && !lines.isEmpty()) {
+                long[] rw = SyncTaskRunLogBuffer.extractReadWrite(lines);
+                readCount = readCount != null ? readCount : (rw[0] < 0 ? null : rw[0]);
+                writeCount = writeCount != null ? writeCount : (rw[1] < 0 ? null : rw[1]);
+            }
             return ReturnResult.ok(new SyncTaskRunLogDetailVO(
                     row.getId(),
                     row.getRunLogTaskId(),
@@ -600,11 +615,155 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                     row.getRunLogRunTime() == null ? "" : row.getRunLogRunTime().format(RUN_TIME_FORMAT),
                     row.getRunLogCostMs(),
                     row.getRunLogLineCount(),
-                    runLogBuffer.parseLines(row.getRunLogLines())));
+                    lines,
+                    readCount,
+                    writeCount));
         } catch (Exception e) {
             log.error("[sync-log] 查询执行日志详情失败, id={}", logId, e);
             return ReturnResult.error("查询执行日志详情失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<SyncRunLogStatsVO> runLogStats() {
+        try {
+            List<MsSyncTaskRunLog> rows = runLogMapper.selectList(
+                    new LambdaQueryWrapper<MsSyncTaskRunLog>()
+                            .select(MsSyncTaskRunLog::getRunLogStatus, MsSyncTaskRunLog::getRunLogCostMs,
+                                    MsSyncTaskRunLog::getRunLogRunTime, MsSyncTaskRunLog::getRunLogLines,
+                                    MsSyncTaskRunLog::getRunLogTaskId)
+                            .ge(MsSyncTaskRunLog::getRunLogRunTime,
+                                    LocalDateTime.now().minusDays(30)));
+            if (rows == null || rows.isEmpty()) {
+                return ReturnResult.ok(new SyncRunLogStatsVO(0, 0, 0, 0, 0, List.of(), List.of()));
+            }
+            long total = rows.size();
+            long success = rows.stream().filter(r -> "SUCCESS".equals(r.getRunLogStatus())).count();
+            long failed = total - success;
+            double rate = total == 0 ? 0 : Math.round(success * 1000.0 / total) / 10.0;
+            long sumCost = rows.stream().filter(r -> r.getRunLogCostMs() != null)
+                    .mapToLong(MsSyncTaskRunLog::getRunLogCostMs).sum();
+            long costCount = rows.stream().filter(r -> r.getRunLogCostMs() != null).count();
+            long avgCost = costCount == 0 ? 0 : sumCost / costCount;
+
+            // 近 24 小时逐小时分布（新在前，最多 24 个）
+            List<SyncRunLogStatsVO.Hourly> hourly = new ArrayList<>();
+            LocalDateTime now = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
+            Map<String, long[]> byHour = new LinkedHashMap<>();
+            for (int i = 23; i >= 0; i--) {
+                byHour.put(now.minusHours(i).format(HOUR_KEY), new long[3]);
+            }
+            for (MsSyncTaskRunLog r : rows) {
+                if (r.getRunLogRunTime() == null) continue;
+                long[] bucket = byHour.get(r.getRunLogRunTime().withMinute(0).withSecond(0).withNano(0).format(HOUR_KEY));
+                if (bucket == null) continue;
+                bucket[0]++;
+                if ("SUCCESS".equals(r.getRunLogStatus())) bucket[1]++;
+                else bucket[2]++;
+            }
+            byHour.forEach((k, v) -> hourly.add(new SyncRunLogStatsVO.Hourly(k, v[0], v[1], v[2])));
+
+            // 失败原因归类：失败日志的 ERROR 行按稳定关键段分组
+            List<SyncRunLogStatsVO.FailureGroup> failures = new ArrayList<>();
+            Map<String, Long> failCount = new LinkedHashMap<>();
+            for (MsSyncTaskRunLog r : rows) {
+                if (!"FAILED".equals(r.getRunLogStatus())) continue;
+                String label = classifyFailure(r.getRunLogLines());
+                if (label != null) failCount.merge(label, 1L, Long::sum);
+            }
+            failCount.entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .limit(8)
+                    .forEach(e -> failures.add(new SyncRunLogStatsVO.FailureGroup(e.getKey(), e.getValue())));
+
+            return ReturnResult.ok(new SyncRunLogStatsVO(total, success, failed, rate, avgCost, hourly, failures));
+        } catch (Exception e) {
+            log.error("[sync-log] 查询执行日志统计失败", e);
+            return ReturnResult.error("查询执行日志统计失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<SyncRunLogTrendVO> runLogTrend(Long taskId, Integer limit) {
+        try {
+            if (taskId == null) {
+                throw new IllegalArgumentException("任务 ID 不能为空");
+            }
+            int safeLimit = Math.min(Math.max(limit == null ? 30 : limit, 1), 100);
+            MsSyncTask task = taskMapper.selectById(taskId);
+            String taskName = task == null ? "（任务已删除）" : task.getSyncTaskName();
+            // 取「最近 safeLimit 次」：先按时间倒序截断，再反转为升序（新的在末尾）
+            List<MsSyncTaskRunLog> rows = runLogMapper.selectList(
+                    new LambdaQueryWrapper<MsSyncTaskRunLog>()
+                            .eq(MsSyncTaskRunLog::getRunLogTaskId, taskId)
+                            .orderByDesc(MsSyncTaskRunLog::getRunLogRunTime, MsSyncTaskRunLog::getId)
+                            .last("LIMIT " + safeLimit));
+            java.util.Collections.reverse(rows);
+            List<SyncRunLogTrendVO.Point> points = new ArrayList<>();
+            if (rows != null) {
+                for (MsSyncTaskRunLog r : rows) {
+                    points.add(new SyncRunLogTrendVO.Point(
+                            r.getRunLogRunTime() == null ? "" : r.getRunLogRunTime().format(RUN_TIME_FORMAT),
+                            r.getRunLogCostMs(),
+                            r.getRunLogStatus()));
+                }
+            }
+            return ReturnResult.ok(new SyncRunLogTrendVO(taskId, taskName, points));
+        } catch (IllegalArgumentException e) {
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[sync-log] 查询执行耗时趋势失败, taskId={}", taskId, e);
+            return ReturnResult.error("查询执行耗时趋势失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<SyncTaskRunVO> rerunFromLog(Long logId) {
+        try {
+            if (logId == null) {
+                throw new IllegalArgumentException("日志 ID 不能为空");
+            }
+            MsSyncTaskRunLog row = runLogMapper.selectById(logId);
+            if (row == null) {
+                throw new IllegalStateException("日志不存在（可能已被 30 天保留策略清理）");
+            }
+            if (row.getRunLogTaskId() == null) {
+                throw new IllegalStateException("该日志没有关联任务，无法重跑");
+            }
+            return runOnce(row.getRunLogTaskId());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[sync-log] 从日志重跑任务失败, logId={}", logId, e);
+            return ReturnResult.error("重跑失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从失败日志正文归纳「失败原因」标签（基于 ERROR 行稳定关键段）。
+     *
+     * <p>规则先拍板成稳定文案：按顺序匹配已知关键词（目标表问题 / 连接问题 /
+     * 超时 / 权限 / 主键冲突 / 字段问题 / HTTP / 读取失败），命中即返回该标签；
+     * 未命中返回「其他错误」。匹配顺序即优先级，避免「连接超时」同时命中连接与超时。</p>
+     *
+     * @param lines 失败日志正文（{@code 时间\t级别\t内容} 逐行拼接）
+     * @return 失败原因标签；正文为空返回 null
+     */
+    private String classifyFailure(String lines) {
+        if (lines == null || lines.isBlank()) {
+            return null;
+        }
+        if (lines.contains("目标表不存在") || lines.contains("表不存在")) return "目标表不存在";
+        if (lines.contains("没有写权限") || lines.contains("Access denied") || lines.contains("denied")) return "权限不足";
+        if (lines.contains("Duplicate entry") || lines.contains("主键冲突") || lines.contains("唯一键")) return "主键/唯一键冲突";
+        if (lines.contains("Connection timed out") || lines.contains("connect timed out")) return "连接超时";
+        if (lines.contains("UnknownHostException") || lines.contains("无法连接")) return "无法连接主机";
+        if (lines.contains("connection refused") || lines.contains("Connection refused")) return "连接被拒绝";
+        if (lines.contains("字段映射") || lines.contains("列不存在") || lines.contains("Unknown column")) return "字段/列问题";
+        if (lines.contains("HTTP") && (lines.contains("超时") || lines.contains("timeout") || lines.contains("status"))) return "HTTP 请求失败";
+        if (lines.contains("读取失败") || lines.contains("无法读取") || lines.contains("Can't read")) return "源读取失败";
+        if (lines.contains("写入失败") || lines.contains("SQLException")) return "写入失败";
+        return "其他错误";
     }
 
     /**
@@ -613,6 +772,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     private static boolean hasText(String s) {
         return s != null && !s.isBlank();
     }
+
+    /**
+     * 小时级时间键格式（健康度 24h 分布用，如 {@code yyyy-MM-dd HH:00}）。
+     */
+    private static final DateTimeFormatter HOUR_KEY = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:00");
 
     /**
      * 执行一次同步：读源、按映射转换、写目标，并回写任务状态。

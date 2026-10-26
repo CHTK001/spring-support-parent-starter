@@ -17,6 +17,12 @@ import java.util.List;
  */
 public class JsonObject2ArrayListJacksonProblemHandler implements JacksonProblemHandler {
 
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG =
+            System.getLogger(JsonObject2ArrayListJacksonProblemHandler.class.getName());
+
     @Override
     /**
      * 处理
@@ -35,7 +41,8 @@ public class JsonObject2ArrayListJacksonProblemHandler implements JacksonProblem
                 }
                 return java.lang.String.join(",", sb);
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            LOG.log(System.Logger.Level.DEBUG, "[jackson] 对象转列表失败: " + e.getMessage(), e);
         }
         return null;
     }

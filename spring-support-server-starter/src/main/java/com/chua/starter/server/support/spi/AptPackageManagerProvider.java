@@ -59,6 +59,22 @@ public class AptPackageManagerProvider extends AbstractPackageManagerProvider {
     }
 
     @Override
+    public String installedCommand() {
+        // dpkg-query 输出 name<TAB>version<TAB>arch\n，逐包一行，最稳定
+        return "dpkg-query -W -f='${Package}\\t${Version}\\n'";
+    }
+
+    @Override
+    public String uninstallCommand(String name) {
+        return "sudo apt-get remove -y " + name;
+    }
+
+    @Override
+    public String upgradeCommand(String name) {
+        return "sudo apt-get install --only-upgrade -y " + name;
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         List<SoftwarePackage> list = new ArrayList<>();
         if (output == null) {
@@ -76,6 +92,27 @@ public class AptPackageManagerProvider extends AbstractPackageManagerProvider {
                 name = name.split("\\s+")[0];
             }
             add(list, name, null, summary);
+        }
+        return list;
+    }
+
+    @Override
+    public List<SoftwarePackage> parseInstalled(String output) {
+        List<SoftwarePackage> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            // dpkg-query: name<TAB>version<TAB>arch
+            String[] parts = line.split("\\t");
+            if (parts.length < 2) {
+                continue;
+            }
+            add(list, parts[0].trim(), parts[1].trim(), null);
         }
         return list;
     }

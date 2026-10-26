@@ -58,23 +58,27 @@ public class ChocolateyPackageManagerProvider extends AbstractPackageManagerProv
     }
 
     @Override
+    public String installedCommand() {
+        return CHOCO + " list --limit-output";
+    }
+
+    @Override
+    public String uninstallCommand(String name) {
+        return CHOCO + " uninstall " + name + " -y --no-progress";
+    }
+
+    @Override
+    public String upgradeCommand(String name) {
+        return CHOCO + " upgrade " + name + " -y --no-progress --limit-output";
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
-        List<SoftwarePackage> list = new java.util.ArrayList<>();
-        if (output == null) {
-            return list;
-        }
-        for (String raw : output.split("\\r?\\n")) {
-            String line = raw.trim();
-            // --limit-output 下每个结果为 name|version[|...]，其余提示行不含 '|'，天然过滤
-            if (!line.contains("|")) {
-                continue;
-            }
-            String[] parts = line.split("\\|");
-            String name = parts[0].trim();
-            String version = parts.length >= 2 ? parts[1].trim() : null;
-            // Chocolatey 搜索不直接返回简介，以包名占位保持字段非空
-            add(list, name, version, name);
-        }
-        return list;
+        return parsePipe(output);
+    }
+
+    @Override
+    public List<SoftwarePackage> parseInstalled(String output) {
+        return parsePipe(output);
     }
 }

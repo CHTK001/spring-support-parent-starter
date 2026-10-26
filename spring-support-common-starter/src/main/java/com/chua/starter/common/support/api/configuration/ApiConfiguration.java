@@ -288,7 +288,8 @@ public class ApiConfiguration implements EnvironmentAware  {
         this.apiProperties = Binder.get(environment).bindOrCreate(ApiProperties.PRE, ApiProperties.class);
         try {
             GlobalSettingFactory.PREFIX = apiProperties.getPlatform().getPlatformName();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[api] 设置平台前缀失败，已忽略: {}", e.getMessage());
         }
         new ModuleEnvironmentRegistration(ApiProperties.PRE, apiProperties, true);
     }

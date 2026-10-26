@@ -56,7 +56,27 @@ public class YumPackageManagerProvider extends AbstractPackageManagerProvider {
     }
 
     @Override
+    public String installedCommand() {
+        return "yum list installed";
+    }
+
+    @Override
+    public String uninstallCommand(String name) {
+        return "sudo yum remove -y " + name;
+    }
+
+    @Override
+    public String upgradeCommand(String name) {
+        return "sudo yum update -y " + name;
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         return parseRhelSearch(output);
+    }
+
+    @Override
+    public List<SoftwarePackage> parseInstalled(String output) {
+        return parseRhelInstalled(output);
     }
 }

@@ -275,7 +275,8 @@ public class JacksonConfiguration {
             String name = t.name();
             try {
                 return ReflectUtils.instantiate(NULLABLE_FIELDS.get(name, targetRawClass)).handle(ctxt, targetType, t, p, failureMsg);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[Jackson配置]实例化处理器失败，回退默认处理: {}", e.getMessage());
             }
             return super.handleUnexpectedToken(ctxt, targetType, t, p, failureMsg);
         }

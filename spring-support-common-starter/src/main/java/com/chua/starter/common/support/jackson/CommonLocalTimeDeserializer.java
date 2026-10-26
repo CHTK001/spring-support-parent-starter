@@ -18,6 +18,12 @@ import java.time.LocalTime;
  * @author CH
  */
 public class CommonLocalTimeDeserializer extends LocalTimeDeserializer {
+
+    /**
+     * 日志
+     */
+    private static final System.Logger LOG = System.getLogger(CommonLocalTimeDeserializer.class.getName());
+
     @Override
     /**
      * 反序列化
@@ -33,7 +39,8 @@ public class CommonLocalTimeDeserializer extends LocalTimeDeserializer {
         if(parser.hasTokenId(JsonTokenId.ID_STRING)) {
             try {
                 return DateUtils.toLocalTime(parser.getText());
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                LOG.log(System.Logger.Level.DEBUG, "[jackson] 解析 LocalTime 失败，回退原始异常", e);
             }
         }
         throw ex;

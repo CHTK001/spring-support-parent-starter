@@ -54,6 +54,7 @@ public class SpringGlueFactory extends GlueFactory{
                                     fieldBean = applicationContext.getBean(field.getName());
                                 }
                             } catch (Exception var11) {
+                                log.debug("按名称获取 Bean 失败，回退按类型获取: {}", var11.getMessage());
                             }
 
                             if (fieldBean == null) {

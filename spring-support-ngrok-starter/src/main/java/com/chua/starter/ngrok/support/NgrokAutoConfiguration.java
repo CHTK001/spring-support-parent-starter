@@ -146,7 +146,8 @@ public class NgrokAutoConfiguration {
         if (portStr != null && !portStr.isBlank() && !"0".equals(portStr)) {
             try {
                 return Integer.parseInt(portStr);
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[Ngrok] server.port 解析失败，回退默认端口: {}", e.getMessage());
             }
         }
         return -1;

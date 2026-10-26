@@ -796,7 +796,8 @@ public class FaceClientManager {
         }
         try {
             storage.close();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            RESOLVE_OBSERVE.debug("[face] 关闭向量存储失败，已忽略: {}", e.getMessage());
         }
     }
 

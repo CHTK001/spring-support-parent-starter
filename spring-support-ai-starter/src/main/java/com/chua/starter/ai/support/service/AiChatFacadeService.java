@@ -24,6 +24,19 @@ import java.util.function.Consumer;
 public interface AiChatFacadeService {
 
     /**
+     * 日志持有者（接口不允许私有静态字段，用嵌套类持有）
+     */
+    final class LogHolder {
+        /**
+         * 日志
+         */
+        private static final System.Logger LOG = System.getLogger(AiChatFacadeService.class.getName());
+
+        private LogHolder() {
+        }
+    }
+
+    /**
      * 同步对话调用。
      *
      * @param request 对话请求
@@ -226,7 +239,8 @@ public interface AiChatFacadeService {
         SseEmitter emitter = new SseEmitter(60_000L);
         try {
             emitter.completeWithError(new IllegalStateException("当前实现不支持人工确认恢复"));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LogHolder.LOG.log(System.Logger.Level.DEBUG, "[ai] 下发错误失败，已忽略: " + e.getMessage(), e);
         }
         return emitter;
     }

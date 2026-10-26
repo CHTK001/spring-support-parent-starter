@@ -28,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -83,6 +84,20 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     private final Map<String, Bridge> bridges = new ConcurrentHashMap<>();
 
     /**
+     * 共享房间注册表：房间 标识 -> 共享房间上下文
+     *
+     * <p>一个房间持有一条 SSH 连接与一个远端 伪终端，多个 WS 会话共享同一条
+     * 终端输出流；输入仅当前控制者（controller）可写，观察者只读。
+     * 房间由首个进入者创建（owner），最后一人退出时销毁。</p>
+     */
+    private final Map<String, ShareRoom> rooms = new ConcurrentHashMap<>();
+
+    /**
+     * WS 会话归属：WS 会话 标识 -> 房间 标识（仅共享成员登记，直连会话不登记）
+     */
+    private final Map<String, String> memberRoom = new ConcurrentHashMap<>();
+
+    /**
      * 连接建立：解析参数、SSH 握手并启动输出回推
      *
      * @param wsSession 浏览器 WS 会话
@@ -94,6 +109,12 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         Long hostId = WebSocketSessions.parseLong(params.get("hostId"));
         if (hostId == null) {
             reject(wsSession, "缺少 hostId 参数");
+            return;
+        }
+        // 共享终端：带 roomId 时加入/创建共享房间（不新建 SSH 连接，复用房间 PTY）
+        String roomId = params.get("roomId");
+        if (roomId != null && !roomId.isBlank()) {
+            joinSharedRoom(wsSession, params, roomId.trim(), hostId);
             return;
         }
         Long identityId = WebSocketSessions.parseLong(params.get("identityId"));
@@ -169,14 +190,20 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession wsSession, TextMessage message) {
         Bridge bridge = bridges.get(wsSession.getId());
-        if (bridge == null) {
+        String roomId = memberRoom.get(wsSession.getId());
+        if (bridge == null && roomId == null) {
             return;
         }
-        bridge.touch();
         String payload = message.getPayload();
         if (payload == null || !payload.startsWith("{")) {
             return;
         }
+        // 共享成员：处理房间控制指令（尺寸 / 控制权）
+        if (roomId != null) {
+            handleSharedText(wsSession, roomId, payload);
+            return;
+        }
+        bridge.touch();
         if (payload.contains("\"resize\"")) {
             int nextCols = readInt(payload, "cols", bridge.cols);
             int nextRows = readInt(payload, "rows", bridge.rows);
@@ -197,6 +224,25 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     @Override
     protected void handleBinaryMessage(WebSocketSession wsSession, BinaryMessage message) {
+        // 共享成员：仅当前控制者可写入远端 伪终端（观察者只读）
+        String roomId = memberRoom.get(wsSession.getId());
+        if (roomId != null) {
+            ShareRoom room = rooms.get(roomId);
+            if (room == null || room.operation == null
+                    || !wsSession.getId().equals(room.controllerId)) {
+                return;
+            }
+            ByteBuffer buffer = message.getPayload();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            try {
+                room.touch();
+                room.operation.sendRaw(new String(bytes, StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                log.warn("[terminal-ssh] 共享输入写入失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
+            }
+            return;
+        }
         Bridge bridge = bridges.get(wsSession.getId());
         if (bridge == null || bridge.operation == null) {
             return;
@@ -221,6 +267,12 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession wsSession, CloseStatus status) {
+        // 共享成员断开：移出房间（空房销毁）
+        String roomId = memberRoom.get(wsSession.getId());
+        if (roomId != null) {
+            leaveSharedRoom(wsSession, roomId, "浏览器断开");
+            return;
+        }
         Bridge bridge = bridges.get(wsSession.getId());
         if (bridge != null) {
             log.info("[terminal-ssh] 浏览器关闭 sessionId={} {}", wsSession.getId(), status);
@@ -237,6 +289,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     public void handleTransportError(WebSocketSession wsSession, Throwable exception) {
         log.warn("[terminal-ssh] WS 传输异常 sessionId={} {}", wsSession.getId(), exception.toString());
+        String roomId = memberRoom.get(wsSession.getId());
+        if (roomId != null) {
+            leaveSharedRoom(wsSession, roomId, "传输异常");
+            return;
+        }
         Bridge bridge = bridges.get(wsSession.getId());
         if (bridge != null) {
             closeBridge(bridge, "传输异常");
@@ -335,6 +392,331 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         } catch (Exception e) {
             log.debug("[terminal-ssh] 关闭 SSH 句柄异常: {}", e.getMessage());
         }
+    }
+
+        /**
+     * 加入共享房间：房间不存在则创建（建 SSH + PTY），存在则作为观察者 attach。
+     *
+     * <p>创建者即房间 owner（首控）；后续进入者一律观察者，可请求控制。
+     * 主机必须与房间一致，防止串台。</p>
+     *
+     * @param wsSession WS 会话
+     * @param params    握手参数
+     * @param roomId    房间 标识
+     * @param hostId    目标主机 标识
+     */
+    private void joinSharedRoom(WebSocketSession wsSession, Map<String, String> params, String roomId, Long hostId) {
+        ShareRoom room = rooms.get(roomId);
+        if (room == null) {
+            room = createShareRoom(wsSession, params, roomId, hostId);
+            if (room == null) {
+                return; // createShareRoom 内部已 reject
+            }
+        } else if (!Objects.equals(room.hostId, hostId)) {
+            reject(wsSession, "该共享会话属于另一台主机，无法加入");
+            return;
+        }
+        String user = params.get("user");
+        String name = WebSocketSessions.firstNonBlank(user, "访客-" + wsSession.getId().substring(0, Math.min(6, wsSession.getId().length())));
+        ShareMember member = new ShareMember(wsSession, name);
+        room.members.put(wsSession.getId(), member);
+        memberRoom.put(wsSession.getId(), roomId);
+        // 加入者先收到房间全量状态，再广播他人「有新人加入」
+        sendText(wsSession, room.toRoomStateJson(member));
+        broadcastText(room, room.toMemberJoinJson(member), wsSession.getId());
+        log.info("[terminal-ssh] 共享成员加入 roomId={} sessionId={} name={} 人数={}",
+                roomId, wsSession.getId(), name, room.members.size());
+    }
+
+    /**
+     * 创建共享房间：解析凭据、建立 SSH 连接与远端 伪终端。
+     *
+     * @param wsSession 创建者 WS 会话
+     * @param params    握手参数
+     * @param roomId    房间 标识
+     * @param hostId    目标主机 标识
+     * @return 房间上下文，失败时返回 空（已 reject）
+     */
+    private ShareRoom createShareRoom(WebSocketSession wsSession, Map<String, String> params, String roomId, Long hostId) {
+        Long identityId = WebSocketSessions.parseLong(params.get("identityId"));
+        int cols = WebSocketSessions.parsePositiveInt(params.get("cols"), DEFAULT_COLS);
+        int rows = WebSocketSessions.parsePositiveInt(params.get("rows"), DEFAULT_ROWS);
+        ReturnResult<MsServerHost> hostResult = serverHostService.get(hostId);
+        if (!hostResult.isOk() || hostResult.getData() == null) {
+            reject(wsSession, hostResult.getMsg());
+            return null;
+        }
+        MsServerHost host = hostResult.getData();
+        if (host.getServerHostCollectMode() != null
+                && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim())) {
+            reject(wsSession, "本机不支持 SSH 远控，请使用 VNC");
+            return null;
+        }
+        ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId, PROTOCOL);
+        if (!resolved.isOk()) {
+            reject(wsSession, resolved.getMsg());
+            return null;
+        }
+        int port = host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
+                ? host.getServerHostRemotePort()
+                : (host.getServerHostPort() == null ? ServerConstants.DEFAULT_SSH_PORT : host.getServerHostPort());
+
+        SshClients.Handle handle;
+        try {
+            handle = SshClients.open(host.getServerHostAddress(), port, resolved.getData());
+            handle.client().connect();
+        } catch (Exception e) {
+            String cause = WebSocketSessions.describeCause(e);
+            log.warn("[terminal-ssh] 共享 SSH 连接失败 hostId={} {}:{} {}", hostId, host.getServerHostAddress(), port, cause, e);
+            reject(wsSession, "SSH 连接失败 " + host.getServerHostAddress() + ":" + port + " - " + cause);
+            return null;
+        }
+
+        ShareRoom room = new ShareRoom(roomId, hostId, wsSession.getId(), handle);
+
+        String userName = WebSocketSessions.firstNonBlank(params.get("user"), resolved.getData().username());
+        MsTerminalSession record = terminalSessionService.openRecord(
+                hostId, host.getServerHostName(), PROTOCOL, userName, WebSocketSessions.clientIp(wsSession));
+        room.recordId = record == null ? null : record.getId();
+        room.controllerId = wsSession.getId();
+        try {
+            SshClient.TerminalOperation operation = handle.client().terminal()
+                    .pty(true)
+                    .width(cols)
+                    .height(rows)
+                    .onOutput(room::broadcast)
+                    .onClose(() -> destroyShareRoom(room, "远端会话结束"))
+                    .connect();
+            room.operation = operation;
+            // 并发保护：两账号同时建同一 roomId 时，后来者放弃本次连接、复用先建成的房间
+            ShareRoom pre = rooms.putIfAbsent(roomId, room);
+            if (pre != null) {
+                log.info("[terminal-ssh] 房间已存在，放弃重复连接 roomId={}", roomId);
+                if (operation != null) {
+                    try {
+                        operation.close();
+                    } catch (Exception ignored) {
+                        // 忽略关闭异常
+                    }
+                }
+                closeHandle(handle);
+                terminalSessionService.closeRecord(room.recordId, "房间已由其他账号创建");
+                return pre;
+            }
+            log.info("[terminal-ssh] 共享房间建立 roomId={} hostId={} {}:{} {}x{} owner={}",
+                    roomId, hostId, host.getServerHostAddress(), port, cols, rows, wsSession.getId());
+            return room;
+        } catch (Exception e) {
+            closeHandle(handle);
+            terminalSessionService.closeRecord(room.recordId, "PTY 打开失败");
+            String cause = WebSocketSessions.describeCause(e);
+            log.warn("[terminal-ssh] 共享 PTY 打开失败 hostId={} {}", hostId, cause, e);
+            reject(wsSession, "PTY 打开失败 - " + cause);
+            return null;
+        }
+    }
+
+    /**
+     * 成员离开共享房间：从房间摘除；房间空/创建者离开时销毁整个房间。
+     *
+     * @param wsSession 离开的 WS 会话
+     * @param roomId    房间 标识
+     * @param reason    原因
+     */
+    private void leaveSharedRoom(WebSocketSession wsSession, String roomId, String reason) {
+        ShareRoom room = rooms.get(roomId);
+        if (room == null) {
+            memberRoom.remove(wsSession.getId());
+            return;
+        }
+        ShareMember member = room.members.remove(wsSession.getId());
+        memberRoom.remove(wsSession.getId());
+        if (member == null) {
+            return;
+        }
+        // 创建者（owner）离开即解散房间，其余成员随之断开
+        boolean isOwner = room.ownerSessionId.equals(wsSession.getId());
+        if (isOwner) {
+            destroyShareRoom(room, "创建者离开");
+            return;
+        }
+        // 控制者离开：控制权交给剩余成员中最早加入者
+        if (wsSession.getId().equals(room.controllerId)) {
+            room.controllerId = room.members.isEmpty() ? null : room.members.keySet().iterator().next();
+            broadcastText(room, "{\"c\":\"control\",\"controller\":"
+                    + (room.controllerId == null ? "null" : "\"" + room.controllerId + "\"") + "}", null);
+        }
+        broadcastText(room, room.toMemberLeaveJson(wsSession.getId()), null);
+        log.info("[terminal-ssh] 共享成员离开 roomId={} sessionId={} reason={} 剩余={}",
+                roomId, wsSession.getId(), reason, room.members.size());
+    }
+
+    /**
+     * 处理共享成员文本指令：尺寸调整 / 请求控制 / 授权控制 / 释放控制 / 主动离开
+     *
+     * @param wsSession WS 会话
+     * @param roomId    房间 标识
+     * @param payload   指令 JSON
+     */
+    private void handleSharedText(WebSocketSession wsSession, String roomId, String payload) {
+        ShareRoom room = rooms.get(roomId);
+        if (room == null || room.operation == null) {
+            return;
+        }
+        room.touch();
+        if (payload.contains("\"request-control\"") || payload.contains("\"request\"")) {
+            // 观察者申请控制：仅提示当前控制者（不做自动授权，防抢）
+            if (!wsSession.getId().equals(room.controllerId)) {
+                String name = room.members.containsKey(wsSession.getId())
+                        ? room.members.get(wsSession.getId()).name : wsSession.getId();
+                broadcastText(room, "{\"c\":\"control-request\",\"id\":\"" + wsSession.getId()
+                        + "\",\"name\":\"" + WebSocketSessions.escapeJson(name) + "\"}", null);
+            }
+            return;
+        }
+        if (payload.contains("\"grant\"")) {
+            // 仅当前控制者可授权；to 为目标成员 id
+            if (wsSession.getId().equals(room.controllerId)) {
+                String to = extractString(payload, "to");
+                if (to != null && room.members.containsKey(to)) {
+                    room.controllerId = to;
+                    broadcastText(room, "{\"c\":\"control\",\"controller\":\"" + to + "\"}", null);
+                }
+            }
+            return;
+        }
+        if (payload.contains("\"release\"") || payload.contains("\"release-control\"")) {
+            if (wsSession.getId().equals(room.controllerId)) {
+                room.controllerId = null;
+                broadcastText(room, "{\"c\":\"control\",\"controller\":null}", null);
+            }
+            return;
+        }
+        if (payload.contains("\"resize\"")) {
+            // 尺寸调整仅当前控制者生效（PTY 只有一套窗口尺寸）
+            if (wsSession.getId().equals(room.controllerId)) {
+                int nextCols = readInt(payload, "cols", room.cols);
+                int nextRows = readInt(payload, "rows", room.rows);
+                if (nextCols > 0 && nextRows > 0) {
+                    room.cols = nextCols;
+                    room.rows = nextRows;
+                    room.resize(nextCols, nextRows);
+                }
+            }
+            return;
+        }
+        if (payload.contains("\"leave\"") || payload.contains("\"bye\"")) {
+            leaveSharedRoom(wsSession, roomId, "主动离开");
+        }
+    }
+
+    /**
+     * 销毁共享房间：幂等关闭 PTY、SSH 句柄、审计记录，并通知全部成员
+     *
+     * @param room   房间上下文
+     * @param reason 原因
+     */
+    private void destroyShareRoom(ShareRoom room, String reason) {
+        if (room.closed) {
+            return;
+        }
+        room.closed = true;
+        rooms.remove(room.roomId);
+        if (room.operation != null) {
+            try {
+                room.operation.close();
+            } catch (Exception e) {
+                log.debug("[terminal-ssh] 关闭共享 PTY 异常: {}", e.getMessage());
+            }
+        }
+        closeHandle(room.handle);
+        terminalSessionService.closeRecord(room.recordId, reason);
+        for (ShareMember member : room.members.values()) {
+            memberRoom.remove(member.wsSession.getId());
+            try {
+                member.wsSession.sendMessage(new TextMessage("{\"c\":\"closed\",\"msg\":\""
+                        + WebSocketSessions.escapeJson(reason) + "\"}"));
+            } catch (IOException ignored) {
+                // 发送失败不阻塞关闭
+            }
+            try {
+                member.wsSession.close(CloseStatus.NORMAL);
+            } catch (IOException e) {
+                log.debug("[terminal-ssh] 关闭共享成员 WS 失败 sessionId={}", member.wsSession.getId());
+            }
+        }
+        room.members.clear();
+        log.info("[terminal-ssh] 共享房间销毁 roomId={} reason={}", room.roomId, reason);
+    }
+
+    /**
+     * 向单个 WS 会话发送文本帧
+     *
+     * @param wsSession WS 会话
+     * @param json      文本
+     */
+    private void sendText(WebSocketSession wsSession, String json) {
+        try {
+            wsSession.sendMessage(new TextMessage(json));
+        } catch (IOException | IllegalStateException e) {
+            log.debug("[terminal-ssh] 文本发送失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 向房间全部成员广播文本帧（可选排除某个 WS）
+     *
+     * @param room   房间上下文
+     * @param json   文本
+     * @param except 排除的 WS 会话 标识，可空
+     */
+    private void broadcastText(ShareRoom room, String json, String except) {
+        for (ShareMember member : room.members.values()) {
+            if (except != null && except.equals(member.wsSession.getId())) {
+                continue;
+            }
+            try {
+                member.wsSession.sendMessage(new TextMessage(json));
+            } catch (IOException | IllegalStateException e) {
+                log.debug("[terminal-ssh] 房间广播失败 sessionId={}: {}", member.wsSession.getId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 从 JSON 中提取字符串字段（仅用于短控制指令，无需引入 JSON 解析器）
+     *
+     * @param json 原始 JSON
+     * @param key  字段名
+     * @return 字段值，不存在返回 空
+     */
+    private String extractString(String json, String key) {
+        int idx = json.indexOf("\"" + key + "\"");
+        if (idx < 0) {
+            return null;
+        }
+        int colon = json.indexOf(':', idx);
+        if (colon < 0) {
+            return null;
+        }
+        int start = colon + 1;
+        while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == '\t')) {
+            start++;
+        }
+        if (start >= json.length() || json.charAt(start) != '"') {
+            return null;
+        }
+        int end = start + 1;
+        while (end < json.length() && json.charAt(end) != '"') {
+            if (json.charAt(end) == '\\' && end + 1 < json.length()) {
+                end++;
+            }
+            end++;
+        }
+        if (end >= json.length()) {
+            return null;
+        }
+        return json.substring(start + 1, end);
     }
 
     /**
@@ -511,6 +893,217 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             } catch (Exception e) {
                 log.debug("[terminal-ssh] 尺寸调整失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
             }
+        }
+    }
+
+    /**
+     * 共享终端房间上下文：一条 SSH 连接 + 一个远端 伪终端，多个成员共享输出流。
+     */
+    private static final class ShareRoom {
+
+        /**
+         * 房间 标识（前端生成，跨账号加入凭它）
+         */
+        private final String roomId;
+
+        /**
+         * 目标主机 标识（成员加入时校验一致）
+         */
+        private final Long hostId;
+
+        /**
+         * SSH 句柄
+         */
+        private final SshClients.Handle handle;
+
+        /**
+         * 创建者（owner）WS 会话 标识；owner 离开即解散房间
+         */
+        private final String ownerSessionId;
+
+        /**
+         * 房间成员：WS 会话 标识 -> 成员
+         */
+        private final Map<String, ShareMember> members = new ConcurrentHashMap<>();
+
+        /**
+         * 当前控制者 WS 会话 标识（可写）；空 表示无人可写（仅观察）
+         */
+        private volatile String controllerId;
+
+        /**
+         * 远端 PTY 操作
+         */
+        private volatile SshClient.TerminalOperation operation;
+
+        /**
+         * 审计记录 标识，可空
+         */
+        private volatile Long recordId;
+
+        /**
+         * 当前列数（以控制者最后一次调整为基准）
+         */
+        private volatile int cols = DEFAULT_COLS;
+
+        /**
+         * 当前行数
+         */
+        private volatile int rows = DEFAULT_ROWS;
+
+        /**
+         * 最近活跃时间
+         */
+        private volatile LocalDateTime lastActiveTime = LocalDateTime.now();
+
+        /**
+         * 是否已关闭（幂等标记）
+         */
+        private volatile boolean closed;
+
+        /**
+         * 构造房间
+         *
+         * @param roomId          房间 标识
+         * @param hostId          目标主机 标识
+         * @param ownerSessionId  创建者（owner）WS 会话 标识
+         * @param handle          SSH 句柄
+         */
+        private ShareRoom(String roomId, Long hostId, String ownerSessionId, SshClients.Handle handle) {
+            this.roomId = roomId;
+            this.hostId = hostId;
+            this.ownerSessionId = ownerSessionId;
+            this.handle = handle;
+        }
+
+        /**
+         * 刷新活跃时间
+         */
+        private void touch() {
+            lastActiveTime = LocalDateTime.now();
+        }
+
+        /**
+         * 远端输出广播给房间全体成员（二进制帧，UTF-8 编码）
+         *
+         * @param data 远端输出
+         */
+        private void broadcast(String data) {
+            if (closed || members.isEmpty()) {
+                return;
+            }
+            touch();
+            byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
+            for (ShareMember member : members.values()) {
+                if (!member.wsSession.isOpen()) {
+                    continue;
+                }
+                try {
+                    synchronized (member.wsSession) {
+                        member.wsSession.sendMessage(new BinaryMessage(bytes));
+                    }
+                } catch (IOException | IllegalStateException e) {
+                    log.debug("[terminal-ssh] 共享输出回推失败 sessionId={}: {}", member.wsSession.getId(), e.getMessage());
+                }
+            }
+        }
+
+        /**
+         * 调整远端 伪终端 尺寸（与控制者联动）
+         *
+         * @param nextCols 列数
+         * @param nextRows 行数
+         */
+        private void resize(int nextCols, int nextRows) {
+            SshClient.TerminalOperation current = operation;
+            if (current == null || closed) {
+                return;
+            }
+            try {
+                org.apache.sshd.client.channel.ChannelShell channel = current.getChannel();
+                if (channel != null && channel.isOpen()) {
+                    channel.sendWindowChange(nextCols, nextRows);
+                }
+            } catch (Exception e) {
+                log.debug("[terminal-ssh] 共享尺寸调整失败: {}", e.getMessage());
+            }
+        }
+
+        /**
+         * 加入者视角的房间全量状态
+         *
+         * @param self 新加入成员
+         * @return 状态 JSON
+         */
+        private String toRoomStateJson(ShareMember self) {
+            StringBuilder sb = new StringBuilder(128);
+            sb.append("{\"c\":\"room\",\"roomId\":\"").append(roomId)
+                    .append("\",\"id\":\"").append(self.wsSession.getId())
+                    .append("\",\"controller\":")
+                    .append(controllerId == null ? "null" : "\"" + controllerId + "\"")
+                    .append(",\"members\":[");
+            boolean first = true;
+            for (ShareMember m : members.values()) {
+                if (!first) {
+                    sb.append(',');
+                }
+                first = false;
+                sb.append("{\"id\":\"").append(m.wsSession.getId())
+                        .append("\",\"name\":\"").append(WebSocketSessions.escapeJson(m.name))
+                        .append("\",\"owner\":").append(ownerSessionId.equals(m.wsSession.getId()))
+                        .append('}');
+            }
+            sb.append("]}");
+            return sb.toString();
+        }
+
+        /**
+         * 成员加入通知
+         *
+         * @param member 新成员
+         * @return 通知 JSON
+         */
+        private String toMemberJoinJson(ShareMember member) {
+            return "{\"c\":\"member-join\",\"id\":\"" + member.wsSession.getId()
+                    + "\",\"name\":\"" + WebSocketSessions.escapeJson(member.name)
+                    + "\",\"owner\":" + ownerSessionId.equals(member.wsSession.getId()) + "}";
+        }
+
+        /**
+         * 成员离开通知
+         *
+         * @param memberId 离开的 WS 会话 标识
+         * @return 通知 JSON
+         */
+        private String toMemberLeaveJson(String memberId) {
+            return "{\"c\":\"member-leave\",\"id\":\"" + memberId + "\"}";
+        }
+    }
+
+    /**
+     * 共享房间成员载体：浏览器 WS 会话 + 显示名。
+     */
+    private static final class ShareMember {
+
+        /**
+         * 浏览器 WS 会话
+         */
+        private final WebSocketSession wsSession;
+
+        /**
+         * 显示名（来自握手 user 参数或兜底）
+         */
+        private final String name;
+
+        /**
+         * 构造成员
+         *
+         * @param wsSession WS 会话
+         * @param name      显示名
+         */
+        private ShareMember(WebSocketSession wsSession, String name) {
+            this.wsSession = wsSession;
+            this.name = name;
         }
     }
 }

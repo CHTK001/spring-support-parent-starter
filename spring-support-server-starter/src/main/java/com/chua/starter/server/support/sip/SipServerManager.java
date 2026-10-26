@@ -47,7 +47,9 @@ public class SipServerManager {
         new Thread(() -> {
             try {
                 Thread.sleep(10000);
-            } catch (InterruptedException ignored) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.debug("[SIP] 启动延时被中断，立即尝试启动: {}", e.getMessage());
             }
             tryStart();
         }, "sip-init").start();

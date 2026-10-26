@@ -554,7 +554,9 @@ public class DatalakeComprehensiveProbe {
             es.execute(() -> {
                 try {
                     startLatch.await();
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("[DatalakeProbe] 等待启动闩锁被中断: " + e.getMessage());
                 }
                 server.stop();
                 stopOk.set(true);

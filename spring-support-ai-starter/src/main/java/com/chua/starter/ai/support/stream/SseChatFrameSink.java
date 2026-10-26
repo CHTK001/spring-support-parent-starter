@@ -92,7 +92,8 @@ public class SseChatFrameSink implements ChatFrameSink {
         if (onClose != null) {
             try {
                 onClose.run();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[ai-sse] 关闭回调失败，已忽略: {}", e.getMessage());
             }
         }
     }

@@ -4,6 +4,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncRunLogStatsVO;
+import com.chua.starter.monitor.support.model.SyncRunLogTrendVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
@@ -97,10 +99,11 @@ public interface SyncTaskService {
      * @param taskId  任务 ID 过滤，null/空不过滤
      * @param status  执行状态过滤（SUCCESS/FAILED），null/空不过滤
      * @param trigger 触发方式过滤（MANUAL/SCHEDULED/REALTIME），null/空不过滤
+     * @param keyword 过程日志正文关键词过滤（LIKE 匹配 lines），null/空不过滤
      * @return 分页记录；无数据时 total=0
      */
     ReturnResult<com.baomidou.mybatisplus.core.metadata.IPage<SyncTaskRunLogItemVO>> runLogPage(
-            long page, long size, Long taskId, String status, String trigger);
+            long page, long size, Long taskId, String status, String trigger, String keyword);
 
     /**
      * 查询单条执行日志的详情（记录 + 完整过程行）。
@@ -112,6 +115,33 @@ public interface SyncTaskService {
      * @return 详情；不存在时返回错误
      */
     ReturnResult<SyncTaskRunLogDetailVO> runLogDetail(Long logId);
+
+    /**
+     * 查询同步执行日志的健康度总览（「同步日志」页顶部统计卡 + 24h 趋势 + 失败归类）。
+     *
+     * @return 统计总览；库内无记录时各项为 0 / 空列表
+     */
+    ReturnResult<SyncRunLogStatsVO> runLogStats();
+
+    /**
+     * 查询单个任务的执行耗时趋势（最近 {@code limit} 次落盘执行，升序）。
+     *
+     * @param taskId 任务 ID
+     * @param limit  最多返回点数（1~100，默认 30）
+     * @return 耗时序列
+     */
+    ReturnResult<SyncRunLogTrendVO> runLogTrend(Long taskId, Integer limit);
+
+    /**
+     * 从某条执行日志重跑对应任务（「失败一键重跑」）。
+     *
+     * <p>按日志上的 {@code taskId} 找到任务执行一次；任务已删除时返回错误。
+     * 执行本身沿用 {@link #runOnce(Long)} 的语义（同步阻塞、结果回写任务行、过程日志落盘）。</p>
+     *
+     * @param logId 日志主键
+     * @return 本次执行结果
+     */
+    ReturnResult<SyncTaskRunVO> rerunFromLog(Long logId);
 
     /**
      * 启用或停用任务的定时调度。

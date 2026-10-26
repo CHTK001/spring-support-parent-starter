@@ -237,12 +237,14 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
         } finally {
             try {
                 sshCache().getSftp(host).rm().path(remote).exec();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[ssh] 清理远端脚本失败，已忽略: {}", e.getMessage());
             }
             if (local != null) {
                 try {
                     Files.deleteIfExists(local);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.debug("[ssh] 删除本地临时脚本失败，已忽略: {}", e.getMessage());
                 }
             }
         }

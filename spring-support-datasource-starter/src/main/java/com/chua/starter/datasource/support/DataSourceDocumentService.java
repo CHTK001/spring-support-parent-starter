@@ -259,10 +259,12 @@ public class DataSourceDocumentService {
                             Object val = f.get(raw);
                             return val == null ? null : val.toString();
                         }
-                    } catch (Throwable ignore) {
+                    } catch (Throwable e) {
+                        log.debug("[datasource] 操作失败，已忽略: {}", e.getMessage());
                     }
                 }
-            } catch (Throwable ignore) {
+            } catch (Throwable e) {
+                log.debug("[datasource] 操作失败，已忽略: {}", e.getMessage());
             }
         }
         return null;

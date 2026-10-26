@@ -935,7 +935,8 @@ public class MetricServiceImpl implements MetricService {
         if (point.getTags() != null && !point.getTags().isEmpty()) {
             try {
                 metric.setMetricTags(objectMapper.writeValueAsString(point.getTags()));
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[monitor] 操作失败，已忽略: {}", e.getMessage());
             }
         }
         metric.setCollectTime(collectTime);
@@ -1094,7 +1095,8 @@ public class MetricServiceImpl implements MetricService {
         if (point.getTags() != null && !point.getTags().isEmpty()) {
             try {
                 redis.setMetricTags(objectMapper.writeValueAsString(point.getTags()));
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[monitor] 操作失败，已忽略: {}", e.getMessage());
             }
         }
         redis.setCollectTime(collectTime);

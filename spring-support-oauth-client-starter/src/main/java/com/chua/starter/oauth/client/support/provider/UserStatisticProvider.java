@@ -368,7 +368,8 @@ public class UserStatisticProvider {
         Set<String> dashboardGrid = new HashSet<>();
         try {
             dashboardGrid = new HashSet<>(Splitter.on(',').trimResults().omitEmptyStrings().splitToList(userGrid));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[oauth] 解析用户面板网格失败，回退空集合: {}", e.getMessage());
         }
         return ReturnResult.ok(new UserMenuResult(menu, permissions, dashboardGrid, userDashboard));
     }

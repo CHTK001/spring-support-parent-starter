@@ -92,7 +92,8 @@ public class ChatStreamRegistry {
             sink.sendEvent(java.util.Map.of("type", "finish", "finishReason", "stop"));
             sink.sendEvent(java.util.Map.of("type", "turn_end", "finishReason", "stop"));
             sink.sendDone();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[ai-stream] 发送结束帧失败，已忽略: {}", e.getMessage());
         }
         active.remove(sessionId);
         sink.close();

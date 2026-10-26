@@ -329,6 +329,48 @@ public class ReleaseController {
         return releaseService.installSoftware(hostId, name);
     }
 
+    /**
+     * 列出已安装软件。
+     *
+     * @param hostId 主机标识
+     * @return 已安装软件包列表
+     */
+    @Operation(summary = "列出主机已安装软件")
+    @GetMapping("/software/installed")
+    public ReturnResult<List<SoftwarePackage>> listInstalledSoftware(@RequestParam Long hostId) {
+        return releaseService.listInstalledSoftware(hostId);
+    }
+
+    /**
+     * 卸载软件。
+     *
+     * @param hostId 主机标识
+     * @param name 软件名称
+     * @return 异步任务标识
+     */
+    @Operation(summary = "卸载软件（异步，返回taskId）")
+    @PostMapping("/software/uninstall")
+    public ReturnResult<String> uninstallSoftware(
+            @RequestParam Long hostId,
+            @RequestParam String name) {
+        return releaseService.uninstallSoftware(hostId, name);
+    }
+
+    /**
+     * 升级软件到最新版。
+     *
+     * @param hostId 主机标识
+     * @param name 软件名称
+     * @return 异步任务标识
+     */
+    @Operation(summary = "升级软件到最新版（异步，返回taskId）")
+    @PostMapping("/software/upgrade")
+    public ReturnResult<String> upgradeSoftware(
+            @RequestParam Long hostId,
+            @RequestParam String name) {
+        return releaseService.upgradeSoftware(hostId, name);
+    }
+
     // ==================== 状态检测 ====================
 
     /**
