@@ -11,6 +11,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -68,12 +69,23 @@ public class SlowCallFilter implements Filter {
         }
 
         long start = System.currentTimeMillis();
+        // 本次请求的真实 traceId：写进 MDC，让请求处理期间产生的真实日志
+        // 与这条链路记录用同一个 traceId 关联（日志页按 traceId 可直接下钻）。
+        String traceId = "trace-http-" + Long.toHexString(start);
+        String previous = MDC.get(ApmLogAppender.MDC_TRACE_ID);
+        boolean owned = previous == null;
+        if (owned) {
+            MDC.put(ApmLogAppender.MDC_TRACE_ID, traceId);
+        }
         try {
             chain.doFilter(request, response);
         } finally {
+            if (owned) {
+                MDC.remove(ApmLogAppender.MDC_TRACE_ID);
+            }
             long duration = System.currentTimeMillis() - start;
             if (duration >= thresholdMs) {
-                recordRequest(httpRequest, httpResponse, duration);
+                recordRequest(httpRequest, httpResponse, duration, owned ? traceId : previous);
             }
         }
     }
@@ -102,9 +114,10 @@ public class SlowCallFilter implements Filter {
      * @param request  HTTP 请求
      * @param response HTTP 响应
      * @param duration 实际耗时（ms）
+     * @param traceId  本次请求的真实 traceId
      */
     private void recordRequest(HttpServletRequest request,
-                               HttpServletResponse response, long duration) {
+                               HttpServletResponse response, long duration, String traceId) {
         try {
             long now = System.currentTimeMillis();
             String protocol = request.getScheme() != null
@@ -117,7 +130,7 @@ public class SlowCallFilter implements Filter {
             int status = response.getStatus();
 
             TransmissionEvent event = TransmissionEvent.builder()
-                    .traceId("trace-http-" + Long.toHexString(now))
+                    .traceId(traceId)
                     .spanId("span-" + now)
                     .sourceProtocol(protocol)
                     .sourceSoftware(protocol)
