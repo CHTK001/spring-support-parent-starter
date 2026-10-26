@@ -185,6 +185,7 @@ public class DatasourceServiceImpl implements DatasourceService {
             }
             MsDatasource entity = new MsDatasource();
             copy(data, entity);
+            entity.setDatasourcePassword(DatasourceSecrets.encode(data.password()));
             entity.setCreateTime(LocalDateTime.now());
             datasourceMapper.insert(entity);
             return ReturnResult.ok(toVO(datasourceMapper.selectById(entity.getId())));
@@ -214,6 +215,13 @@ public class DatasourceServiceImpl implements DatasourceService {
             MsDatasource entity = new MsDatasource();
             entity.setId(id);
             copy(data, entity);
+            // 口令留空 = 不修改：接口不再回传口令明文（VO 只有 passwordSet 标记），
+            // 编辑弹窗打开时口令框本来就是空的。若按空串写回，用户改个备注就会
+            // 把口令清掉 —— 那是实打实的数据丢失。
+            String password = data.password();
+            entity.setDatasourcePassword(password == null || password.isBlank()
+                    ? exists.getDatasourcePassword()
+                    : DatasourceSecrets.encode(password));
             entity.setCreateTime(exists.getCreateTime());
             entity.setUpdateTime(LocalDateTime.now());
             datasourceMapper.updateById(entity);
@@ -1047,6 +1055,9 @@ public class DatasourceServiceImpl implements DatasourceService {
     /**
      * 把请求体字段复制到实体，空值统一写空串。
      *
+     * <p>口令<b>不在这里处理</b>：新建要加密、更新要区分「留空=不修改」，
+     * 两条路径语义不同，由 {@code create}/{@code update} 各自写入。</p>
+     *
      * @param data   请求体
      * @param entity 实体
      */
@@ -1057,7 +1068,6 @@ public class DatasourceServiceImpl implements DatasourceService {
         entity.setDatasourcePort(data.port());
         entity.setDatasourceDatabase(nullToEmpty(data.database()).trim());
         entity.setDatasourceUsername(nullToEmpty(data.username()).trim());
-        entity.setDatasourcePassword(data.password() == null ? "" : data.password());
         entity.setDatasourceRemark(nullToEmpty(data.remark()).trim());
         // 状态为空按启用处理，老调用方（只传 8 个字段）不会把数据源误停用
         entity.setDatasourceStatus(data.status() == null ? 1 : data.status());
@@ -1097,16 +1107,19 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (row == null) {
             return null;
         }
+        String stored = row.getDatasourcePassword();
         return new DataSourceVO(row.getId(), row.getDatasourceName(), row.getDatasourceType(),
                 row.getDatasourceHost(), row.getDatasourcePort(), row.getDatasourceDatabase(),
-                row.getDatasourceUsername(), row.getDatasourcePassword(), row.getDatasourceRemark(),
+                row.getDatasourceUsername(), DatasourceSecrets.decode(stored),
+                row.getDatasourceRemark(),
                 row.getDatasourceStatus(), row.getDatasourceDriverClassName(), row.getDatasourceDriverJarId(),
                 row.getCreateTime() == null ? null : row.getCreateTime().toString(),
                 row.getUpdateTime() == null ? null : row.getUpdateTime().toString(),
                 row.getDatasourceConnectLatencyMs(), row.getDatasourceSessionLatencyMs(),
                 row.getDatasourceLastTestTime() == null ? null : row.getDatasourceLastTestTime().toString(),
                 row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
-                nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()));
+                nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()),
+                !nullToEmpty(stored).isEmpty());
     }
 
     /**
