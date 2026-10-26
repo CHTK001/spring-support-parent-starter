@@ -19,11 +19,62 @@ public final class DatasourceHubConstants {
     public static final String API_PREFIX = "/ms/datasource";
 
     /**
+     * clickhouse 类型标识。
+     *
+     * <p>走 JDBC（驱动在应用 classpath 上），因此数据库管理台、打开表、设计表、
+     * 查询与版本探测全部复用 jdbc 那套，不为它单写管理面。默认端口取 HTTP 端口
+     * 8123 —— clickhouse-jdbc 走的就是 HTTP 协议，不是 9000 的原生 TCP 端口。</p>
+     */
+    public static final String DS_TYPE_CLICKHOUSE = "clickhouse";
+
+    /**
+     * duckdb 类型标识。
+     *
+     * <p>单文件嵌入式库：没有主机、没有端口、没有服务端进程，{@code datasource_database}
+     * 存的是**文件路径**（或 {@code :memory:}）。走 JDBC 复用同一套管理台，
+     * 但探测与建连都必须按「文件库」处理 —— 不设 TCP 超时属性，也不做 TCP 探活。</p>
+     */
+    public static final String DS_TYPE_DUCKDB = "duckdb";
+
+    /**
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
             "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "kafka", "nginx", "etcd", "prometheus", "mongodb",
-            "elasticsearch");
+            "elasticsearch", DS_TYPE_CLICKHOUSE, DS_TYPE_DUCKDB);
+
+    /**
+     * 走 JDBC 协议的类型集合。
+     *
+     * <p>这三个类型的建连、探测、元数据、管理台是同一条路径，只差 URL 前缀；
+     * 原先各处写死 {@code "jdbc".equalsIgnoreCase(type)}，加类型时漏一处就会出现
+     * 「能连上但打不开表」这种半通状态，故收口到一处判断。</p>
+     */
+    public static final List<String> DS_JDBC_TYPES = List.of("jdbc", DS_TYPE_CLICKHOUSE, DS_TYPE_DUCKDB);
+
+    /**
+     * 该类型是否走 JDBC 协议。
+     *
+     * @param type 类型标识，可为 null
+     * @return 走 JDBC 返回 true
+     */
+    public static boolean isJdbcFamily(String type) {
+        if (type == null) {
+            return false;
+        }
+        String normalized = type.trim().toLowerCase();
+        return DS_JDBC_TYPES.contains(normalized);
+    }
+
+    /**
+     * 该类型是否为本地文件库（连接串里带磁盘路径，需要过路径白名单）。
+     *
+     * @param type 类型标识，可为 null
+     * @return 文件库返回 true
+     */
+    public static boolean isFileJdbcType(String type) {
+        return type != null && DS_TYPE_DUCKDB.equalsIgnoreCase(type.trim());
+    }
 
     /**
      * nginx 类型标识。
@@ -130,7 +181,9 @@ public final class DatasourceHubConstants {
             Map.entry("prometheus", PROMETHEUS_DEFAULT_HTTP_PORT),
             Map.entry(DS_TYPE_MONGODB, MONGODB_DEFAULT_PORT),
             Map.entry(DS_TYPE_KAFKA, KAFKA_DEFAULT_PORT),
-            Map.entry(DS_TYPE_ELASTICSEARCH, ELASTICSEARCH_DEFAULT_PORT));
+            Map.entry(DS_TYPE_ELASTICSEARCH, ELASTICSEARCH_DEFAULT_PORT),
+            // clickhouse-jdbc 走 HTTP 协议，默认端口是 8123（不是原生 TCP 的 9000）
+            Map.entry(DS_TYPE_CLICKHOUSE, 8123));
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接
