@@ -409,7 +409,7 @@ public class DatasourceServiceImpl implements DatasourceService {
      */
     private DatasourceProbeSupport.ProbeOutcome probe(DataSourceVO ds, String targetHost, Integer targetPort) {
         int timeoutMs = properties.getProbeTimeoutMs();
-        if ("jdbc".equalsIgnoreCase(trim(ds.type()))) {
+        if (DatasourceHubConstants.isJdbcFamily(ds.type())) {
             return probeJdbc(ds, timeoutMs);
         }
         int port = targetPort != null ? targetPort
@@ -595,9 +595,13 @@ public class DatasourceServiceImpl implements DatasourceService {
      */
     private Properties buildJdbcProps(MsDatasource row, String url) {
         Properties props = new Properties();
-        props.setProperty("user", row.getDatasourceUsername() == null ? "" : row.getDatasourceUsername());
-        // 台账里明文与 b64: 前缀两种存法共存，见 DatasourceSecrets
-        props.setProperty("password", DatasourceSecrets.decode(row.getDatasourcePassword()));
+        // DuckDB 是本地文件库，没有账号概念：塞空的 user/password 会被驱动当成
+        // 非法连接属性直接拒连，所以整段跳过。
+        if (!(url != null && url.regionMatches(true, 0, "jdbc:duckdb:", 0, "jdbc:duckdb:".length()))) {
+            props.setProperty("user", row.getDatasourceUsername() == null ? "" : row.getDatasourceUsername());
+            // 台账里明文与 b64: 前缀两种存法共存，见 DatasourceSecrets
+            props.setProperty("password", DatasourceSecrets.decode(row.getDatasourcePassword()));
+        }
         // MySQL Connector/J 默认不读 information_schema：列注释/长度、索引元数据会缺失，
         // 数据库管理器的表结构/索引页依赖这些元数据，故显式开启。
         if (url.regionMatches(true, 0, "jdbc:mysql:", 0, "jdbc:mysql:".length())
@@ -627,12 +631,18 @@ public class DatasourceServiceImpl implements DatasourceService {
     private void applyConnectTimeout(Properties props, String url) {
         int seconds = Math.max(1, properties.getConnectTimeoutSeconds());
         String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
-        // 文件库：没有网络连接，跳过
+        // 文件库：没有网络连接，跳过（DuckDB 与 SQLite/H2 同理 —— 写进去的属性
+        // 会被驱动当成非法连接参数直接拒连）
         if (lower.startsWith("jdbc:sqlite:") || lower.startsWith("jdbc:h2:")
-                || lower.startsWith("jdbc:derby:") || lower.startsWith("jdbc:hsqldb:")) {
+                || lower.startsWith("jdbc:derby:") || lower.startsWith("jdbc:hsqldb:")
+                || lower.startsWith("jdbc:duckdb:")) {
             return;
         }
-        if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+        if (lower.startsWith("jdbc:clickhouse:")) {
+            // clickhouse-jdbc 走 HTTP，认 connect_timeout / socket_timeout（毫秒）
+            props.setProperty("connect_timeout", String.valueOf(seconds * 1000L));
+            props.setProperty("socket_timeout", String.valueOf(seconds * 1000L));
+        } else if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
             props.setProperty("connectTimeout", String.valueOf(seconds * 1000L));
             props.setProperty("socketTimeout", String.valueOf(seconds * 1000L));
         } else if (lower.startsWith("jdbc:oracle:")) {
@@ -684,7 +694,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (row == null) {
             throw new IllegalStateException("数据源不存在: " + datasourceId);
         }
-        if (!"jdbc".equalsIgnoreCase(trim(row.getDatasourceType()))) {
+        if (!DatasourceHubConstants.isJdbcFamily(row.getDatasourceType())) {
             throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
         }
         String url = resolveJdbcUrl(row);
@@ -803,7 +813,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (row == null) {
             throw new IllegalStateException("数据源不存在: " + datasourceId);
         }
-        if (!"jdbc".equalsIgnoreCase(trim(row.getDatasourceType()))) {
+        if (!DatasourceHubConstants.isJdbcFamily(row.getDatasourceType())) {
             throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
         }
         return new DatasourceJdbcInfo(
@@ -962,15 +972,31 @@ public class DatasourceServiceImpl implements DatasourceService {
      * @throws IllegalStateException 文件库路径越界
      */
     private String resolveJdbcUrl(MsDatasource row) {
+        String type = trim(row.getDatasourceType()).toLowerCase(java.util.Locale.ROOT);
         String database = trim(row.getDatasourceDatabase());
         if (database.regionMatches(true, 0, DatasourceHubConstants.JDBC_URL_PREFIX, 0,
                 DatasourceHubConstants.JDBC_URL_PREFIX.length())) {
             guardFileJdbcPath(database);
             return database;
         }
+        // DuckDB：database 存的是文件路径（或 :memory:），没有主机与端口
+        if (DatasourceHubConstants.DS_TYPE_DUCKDB.equals(type)) {
+            if (database.isEmpty()) {
+                throw new IllegalStateException("DuckDB 数据源缺少库文件路径");
+            }
+            String url = "jdbc:duckdb:" + database;
+            guardFileJdbcPath(url);
+            return url;
+        }
         String host = trim(row.getDatasourceHost());
         if (host.isEmpty() || database.isEmpty()) {
             throw new IllegalStateException("JDBC 数据源缺少主机或库名");
+        }
+        // ClickHouse：走 HTTP 协议（clickhouse-jdbc），默认 8123
+        if (DatasourceHubConstants.DS_TYPE_CLICKHOUSE.equals(type)) {
+            int chPort = row.getDatasourcePort() != null ? row.getDatasourcePort()
+                    : DatasourceHubConstants.DS_DEFAULT_PORTS.get(DatasourceHubConstants.DS_TYPE_CLICKHOUSE);
+            return String.format("jdbc:clickhouse://%s:%d/%s", host, chPort, database);
         }
         int port = row.getDatasourcePort() != null ? row.getDatasourcePort()
                 : DatasourceHubConstants.DS_DEFAULT_PORTS.get("jdbc");
@@ -1014,7 +1040,7 @@ public class DatasourceServiceImpl implements DatasourceService {
      */
     private void checkReachable(DataSourceVO ds) throws Exception {
         String type = trim(ds.type());
-        if ("jdbc".equalsIgnoreCase(type)) {
+        if (DatasourceHubConstants.isJdbcFamily(type)) {
             try (Connection conn = connection(ds.id())) {
                 if (!conn.isValid(Math.max(1, properties.getProbeTimeoutMs() / 1000))) {
                     throw new IllegalStateException("连接已建立但校验未通过");
@@ -1057,15 +1083,27 @@ public class DatasourceServiceImpl implements DatasourceService {
                 && !"2".equals(trim(data.version())) && !"3".equals(trim(data.version()))) {
             return "InfluxDB 版本仅支持 2 或 3";
         }
-        boolean jdbcUrlForm = "jdbc".equalsIgnoreCase(trim(data.type()))
+        boolean jdbcFamily = DatasourceHubConstants.isJdbcFamily(trim(data.type()));
+        boolean jdbcUrlForm = jdbcFamily
                 && nullToEmpty(data.database()).trim().startsWith(DatasourceHubConstants.JDBC_URL_PREFIX);
-        if (isBlank(data.host()) && !jdbcUrlForm) {
+        // DuckDB 是单文件库：没有主机，库「名」就是磁盘路径
+        boolean fileDbForm = DatasourceHubConstants.isFileJdbcType(trim(data.type()));
+        if (fileDbForm && isBlank(data.database())) {
+            return "DuckDB 数据源必须填写库文件路径（如 /data/warehouse.db 或 :memory:）";
+        }
+        if (isBlank(data.host()) && !jdbcUrlForm && !fileDbForm) {
             return "主机地址不能为空";
         }
         // 保存时就拦文件库越界路径：等到建连才发现的话，台账里已经躺着一条
         // 「存得下、连不上」的记录，用户只能看到连接失败，看不到真正的原因。
         if (jdbcUrlForm) {
             String pathError = fileJdbcPathError(nullToEmpty(data.database()).trim());
+            if (pathError != null) {
+                return pathError;
+            }
+        }
+        if (fileDbForm && !jdbcUrlForm) {
+            String pathError = fileJdbcPathError("jdbc:duckdb:" + nullToEmpty(data.database()).trim());
             if (pathError != null) {
                 return pathError;
             }

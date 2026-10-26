@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.config;
 
 import com.chua.common.support.storage.FileStorage;
 import com.chua.starter.filesystem.support.controller.FileDirController;
+import com.chua.starter.filesystem.support.controller.FileCollabController;
 import com.chua.starter.filesystem.support.controller.FileLogController;
 import com.chua.starter.filesystem.support.controller.FileServerConfigController;
 import com.chua.starter.filesystem.support.controller.UploadTaskController;
@@ -205,6 +206,39 @@ public class MonitorFileStorageGatewayConfig {
     @ConditionalOnMissingBean
     public FileLogController fileLogController() {
         return new FileLogController(com.chua.starter.filesystem.support.log.FileLogStore.getInstance());
+    }
+
+    /**
+     * 协同文档存储器（内存态，与上传任务同生命周期）。
+     *
+     * <p>文件资产右键「创建协同」的落库容器：快照 + 版本乐观锁 + SSE 广播。
+     * 无外部依赖，直接注册单例。</p>
+     *
+     * @return 协同文档存储器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public com.chua.starter.filesystem.support.collab.FileCollabStore fileCollabStore() {
+        return new com.chua.starter.filesystem.support.collab.FileCollabStore();
+    }
+
+    /**
+     * 协同文档控制器（{@code /v2/file/collab}）。
+     *
+     * <p>与 {@link FileLogController} 同理：{@code FileSystemAutoConfiguration}
+     * 整链被排除后，协同接口一并消失。本配置单独补回——它依赖本配置已装配的
+     * {@code fileCollabStore} 与 {@code uploadTaskManager}（时间轮驱动 SSE 心跳）。</p>
+     *
+     * @param fileCollabStore   协同文档存储器
+     * @param uploadTaskManager 上传任务管理器（时间轮，SSE 心跳复用）
+     * @return 协同文档控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FileCollabController fileCollabController(
+            com.chua.starter.filesystem.support.collab.FileCollabStore fileCollabStore,
+            UploadTaskManager uploadTaskManager) {
+        return new FileCollabController(fileCollabStore, uploadTaskManager);
     }
 
     /**

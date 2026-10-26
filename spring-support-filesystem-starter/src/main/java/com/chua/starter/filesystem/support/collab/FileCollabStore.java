@@ -47,11 +47,11 @@ public class FileCollabStore {
      * @return 新创建的协同文档
      */
     public FileCollab create(String bucket, String objectKey, String fileName, String owner,
-                             FileCollab.Visibility visibility, java.util.Set<String> allowedUserIds) {
+                             Visibility visibility, java.util.Set<String> allowedUserIds) {
         String id = UUID.randomUUID().toString().replace("-", "");
         FileCollab collab = new FileCollab(id, bucket == null ? "" : bucket,
                 objectKey == null ? "" : objectKey, fileName == null ? "" : fileName,
-                owner, visibility == null ? FileCollab.Visibility.PUBLIC : visibility,
+                owner, visibility == null ? Visibility.PUBLIC : visibility,
                 allowedUserIds == null ? new java.util.LinkedHashSet<>() : new java.util.LinkedHashSet<>(allowedUserIds),
                 System.currentTimeMillis(), System.currentTimeMillis(),
                 null, 0);
@@ -80,7 +80,7 @@ public class FileCollabStore {
     public List<FileCollab> list(String userId) {
         List<FileCollab> result = new ArrayList<>();
         for (FileCollab c : collabs.values()) {
-            if (c.visibility() == FileCollab.Visibility.PUBLIC
+            if (c.visibility() == Visibility.PUBLIC
                     || c.owner().equals(userId)
                     || c.allowedUserIds().contains(userId)) {
                 result.add(c);
@@ -119,13 +119,13 @@ public class FileCollabStore {
      * @param allowedUserIds 新的授权用户集合（null 表示不变）
      * @return 更新后的文档；不存在返回 null
      */
-    public FileCollab updateAccess(String id, FileCollab.Visibility visibility,
+    public FileCollab updateAccess(String id, Visibility visibility,
                                    java.util.Set<String> allowedUserIds) {
         FileCollab c = collabs.get(id);
         if (c == null) {
             return null;
         }
-        FileCollab.Visibility v = visibility == null ? c.visibility() : visibility;
+        Visibility v = visibility == null ? c.visibility() : visibility;
         java.util.Set<String> users = allowedUserIds == null
                 ? c.allowedUserIds() : new java.util.LinkedHashSet<>(allowedUserIds);
         FileCollab updated = c.withAccess(v, users, System.currentTimeMillis());
@@ -162,6 +162,20 @@ public class FileCollabStore {
     }
 
     /**
+     * 可见性：公开（全员可看可编辑）/ 私有（仅创建者与授权用户）。
+     */
+    public enum Visibility {
+        /**
+         * 公开
+         */
+        PUBLIC,
+        /**
+         * 私有
+         */
+        PRIVATE
+    }
+
+    /**
      * 协同文档。
      *
      * @param id             协同文档号
@@ -179,20 +193,6 @@ public class FileCollabStore {
     public record FileCollab(String id, String bucket, String objectKey, String fileName,
                              String owner, Visibility visibility, java.util.Set<String> allowedUserIds,
                              long createdAt, long updatedAt, String snapshot, long version) {
-
-        /**
-         * 可见性：公开（全员可看可编辑）/ 私有（仅创建者与授权用户）。
-         */
-        public enum Visibility {
-            /**
-             * 公开
-             */
-            PUBLIC,
-            /**
-             * 私有
-             */
-            PRIVATE
-        }
 
         /**
          * 附带新快照的副本（版本 +1，时间刷新）。

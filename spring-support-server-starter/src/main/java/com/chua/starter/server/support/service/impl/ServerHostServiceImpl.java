@@ -714,6 +714,14 @@ public class ServerHostServiceImpl implements ServerHostService {
                     cipher.decrypt(key.getMsServerKeyPassword()),
                     cipher.decrypt(key.getMsServerKeyPrivateKey())));
         }
+        // 免密认证：目标主机已放行（authorized_keys 或允许空口令），凭据只承载用户名，
+        // 后端不存密码/私钥；连接层以空口令身份尝试（空串密码触发密码认证，服务器放行则通过）
+        if (AuthType.NONE.name().equals(identity.getMsServerIdentityAuthType())) {
+            return ReturnResult.ok(new SshCredential(username,
+                    identity.getMsServerIdentityPassword() == null
+                            ? null : cipher.decrypt(identity.getMsServerIdentityPassword()),
+                    null));
+        }
         // 密码认证：直接解密口令
         return ReturnResult.ok(new SshCredential(username,
                 cipher.decrypt(identity.getMsServerIdentityPassword()), null));

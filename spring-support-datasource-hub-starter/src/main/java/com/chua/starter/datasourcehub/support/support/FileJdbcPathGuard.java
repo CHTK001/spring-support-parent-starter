@@ -148,6 +148,15 @@ public final class FileJdbcPathGuard {
                     || r.startsWith("//")) {
                 return null;
             }
+        } else if (lower.startsWith("jdbc:duckdb:")) {
+            // DuckDB 是单文件库：rest 就是磁盘路径（或 :memory:）。
+            // 它比 SQLite 更需要这道闸 —— DuckDB 默认**可写**，一次 DELETE/删表
+            // 直接改磁盘上的库文件，路径不设防等于台账能指挥进程改任意 .db。
+            rest = url.substring("jdbc:duckdb:".length());
+            String r = rest.toLowerCase(Locale.ROOT);
+            if (r.startsWith(":memory:") || r.isEmpty() || r.startsWith("//")) {
+                return null;
+            }
         } else {
             return null;
         }

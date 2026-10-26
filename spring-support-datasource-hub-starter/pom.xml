@@ -127,6 +127,25 @@
             <artifactId>sqlite-jdbc</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- ClickHouse：走 JDBC（HTTP 协议，默认 8123），数据库管理台/打开表/设计表/查询
+             与版本探测全部复用 jdbc 那一套，只需驱动在 classpath 上。
+             用 all 分类器的 shaded 包：普通包会连带拉进自己的 Jackson/HttpClient，
+             与应用的版本在同一 classpath 上打架，表现为别的功能莫名报 NoSuchMethod。 -->
+        <dependency>
+            <groupId>com.clickhouse</groupId>
+            <artifactId>clickhouse-jdbc</artifactId>
+            <version>0.11.0</version>
+            <classifier>all</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- DuckDB：单文件嵌入式库（可直查 Parquet/CSV、ATTACH 其它库做联邦查询）。
+             驱动内含各平台 native 库，故体积偏大（约 60MB），仅运行时需要 -->
+        <dependency>
+            <groupId>org.duckdb</groupId>
+            <artifactId>duckdb_jdbc</artifactId>
+            <version>1.5.6.0</version>
+            <scope>runtime</scope>
+        </dependency>
         <!-- ZooKeeper 管理页：复用本仓 Curator 封装，不额外引入第三方注册中心客户端
              （坐标照抄 monitor-starter，用于 ZookeeperClient/ZookeeperManageServiceImpl） -->
         <dependency>
