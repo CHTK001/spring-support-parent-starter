@@ -356,6 +356,20 @@ public class SyncTaskRunLogBuffer {
     }
 
     /**
+     * 解析库里某条执行的日志正文，还原成过程行。
+     *
+     * <p>供「同步日志」详情查询复用：单条执行从库里整体读出正文后，
+     * 用同一套 {@link #splitLines} 规则还原为行，保证「内存实时行」与
+     * 「落库后读回的行」在界面上的渲染结果完全一致。</p>
+     *
+     * @param text 日志正文（{@code 时间\t级别\t内容} 逐行拼接）
+     * @return 过程行；空正文返回空列表
+     */
+    public List<SyncTaskRunLogVO.Line> parseLines(String text) {
+        return splitLines(text);
+    }
+
+    /**
      * 丢弃某任务的全部日志（删除任务时调用）。
      *
      * @param taskId 任务 ID
