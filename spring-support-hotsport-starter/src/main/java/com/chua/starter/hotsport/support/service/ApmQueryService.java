@@ -361,6 +361,20 @@ public class ApmQueryService {
         }
         result.putIfAbsent("traceCount", 0L);
         result.putIfAbsent("errorCount", 0L);
+        // 依赖边计数：storage 的 dependencies 计数器只在字节码级依赖采集生效时才累加，
+        // 纯 Spring Boot 应用恒为 0。此时回落到「从真实传输记录派生的边」条数，
+        // 避免概览页显示「依赖 0 条」而依赖拓扑页却有真实边的自相矛盾。
+        long dependencyCount = ((Number) result.getOrDefault("dependencyCount", 0L)).longValue();
+        if (dependencyCount <= 0L) {
+            try {
+                int derived = dependencies(Integer.MAX_VALUE).size();
+                if (derived > 0) {
+                    result.put("dependencyCount", (long) derived);
+                }
+            } catch (Exception e) {
+                log.debug("[Hotsport] 依赖边派生失败: {}", e.getMessage());
+            }
+        }
         return result;
     }
 
@@ -679,6 +693,12 @@ public class ApmQueryService {
         List<LogRecord> all = queryAll(q, storage -> storage.queryLogs(q));
         List<Map<String, Object>> items = new ArrayList<>();
         for (LogRecord r : all) {
+            // traceId 由本层精确过滤：部分存储实现不透传 Query.traceId，
+            // 若只依赖存储过滤会导致「按 traceId 下钻」失效
+            if (traceId != null && !traceId.isBlank()
+                    && !traceId.equals(r.getTraceId())) {
+                continue;
+            }
             if (level != null && !level.isBlank()
                     && !level.equalsIgnoreCase(r.getLevel())) {
                 continue;
@@ -754,10 +774,84 @@ public class ApmQueryService {
             m.put("timestamp", toIso(e.getTimestamp()));
             m.put("source", e.getSource());
             m.put("level", e.getLevel());
-            m.put("line", e.getLine());
+            // 捕获的是带 ANSI 颜色码的原始控制台输出，展示前统一清洗
+            m.put("line", stripAnsi(e.getLine()));
             items.add(m);
         }
         return items;
+    }
+
+    /**
+     * 统一 Span 视图 — 优先取 Agent {@code TraceHandler} 的方法级 Span；
+     * 当 Agent 未产生任何方法级 Span（例如纯 Spring Boot 应用未接入字节码方法采集）时，
+     * 回落到**真实传输记录**派生，字段全部取自真实请求，不做任何填充或模拟。
+     *
+     * @return 归一化 Span 视图列表（空列表表示确实没有任何真实链路数据）
+     */
+    private List<Map<String, Object>> spanViews() {
+        List<Map<String, Object>> views = new ArrayList<>();
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        if (handler != null) {
+            try {
+                for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+                    if (span == null || span.getDuration() < 0) {
+                        continue;
+                    }
+                    Map<String, Object> v = new LinkedHashMap<>();
+                    v.put("className", span.getClassName());
+                    v.put("methodName", span.getMethodName());
+                    v.put("phase", span.getPhase() == null ? "method" : span.getPhase());
+                    v.put("durationMs", span.getDuration());
+                    v.put("selfTimeMs", span.getSelfTime());
+                    v.put("error", "ERROR".equals(span.getStatus()));
+                    v.put("traceId", span.getTraceId());
+                    v.put("spanId", span.getSpanId());
+                    v.put("parentSpanId", span.getParentSpanId());
+                    v.put("startTime", span.getStartTime());
+                    v.put("endTime", span.getEndTime());
+                    v.put("operation", (span.getClassName() == null ? "" : span.getClassName())
+                            + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
+                    v.put("displayName", (span.getClassName() == null ? "" : span.getClassName())
+                            + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
+                    views.add(v);
+                }
+            } catch (Exception e) {
+                log.debug("[Hotsport] 读取 Agent Span 失败: {}", e.getMessage());
+            }
+        }
+        if (!views.isEmpty()) {
+            return views;
+        }
+        // 真实回落：一次真实 HTTP 请求就是一条真实 Span（无子 Span，selfTime = 耗时）
+        List<TransmissionEvent> all = queryAll(new Query().setLimit(100000),
+                storage -> storage.queryTransmissions(new Query().setLimit(100000)));
+        for (TransmissionEvent e : all) {
+            if (e == null || e.getDuration() < 0) {
+                continue;
+            }
+            String op = e.getOperation() != null ? e.getOperation() : "?";
+            String cls = attr(e, "class.name", null);
+            String mtd = attr(e, "method.name", null);
+            Map<String, Object> v = new LinkedHashMap<>();
+            v.put("className", cls);
+            v.put("methodName", mtd);
+            v.put("phase", e.getProtocol() != null ? e.getProtocol().toLowerCase() : "http");
+            v.put("durationMs", e.getDuration());
+            v.put("selfTimeMs", e.getDuration());
+            v.put("error", e.getStatus() == StatusCode.ERROR);
+            v.put("traceId", e.getTraceId());
+            v.put("spanId", e.getSpanId());
+            v.put("parentSpanId", e.getParentSpanId());
+            v.put("startTime", e.getStartTime());
+            v.put("endTime", e.getEndTime());
+            v.put("operation", op);
+            // HTTP 请求记录没有类/方法语义，展示名直接用真实操作串（如 GET /api/apm/stats）
+            v.put("displayName", op);
+            views.add(v);
+        }
+        return views;
     }
 
     /**
@@ -767,25 +861,21 @@ public class ApmQueryService {
      * @return 热点方法列表（按总耗时降序）
      */
     public List<Map<String, Object>> traceHotspots(int limit) {
-        com.chua.runtime.apm.handler.TraceHandler handler =
-                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
-                        com.chua.runtime.apm.handler.TraceHandler.class);
-        if (handler == null) {
-            return new ArrayList<>();
-        }
         Map<String, Map<String, Object>> agg = new LinkedHashMap<>();
-        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
-            if (span == null || span.getDuration() < 0) {
-                continue;
-            }
-            String key = (span.getClassName() == null ? "" : span.getClassName())
-                    + "." + (span.getMethodName() == null ? "" : span.getMethodName())
-                    + "|" + (span.getPhase() == null ? "method" : span.getPhase());
+        for (Map<String, Object> span : spanViews()) {
+            String className = (String) span.get("className");
+            String methodName = (String) span.get("methodName");
+            String phase = (String) span.get("phase");
+            long duration = ((Number) span.get("durationMs")).longValue();
+            String key = (className == null ? "" : className)
+                    + "." + (methodName == null ? "" : methodName)
+                    + "|" + (phase == null ? "method" : phase);
             Map<String, Object> row = agg.computeIfAbsent(key, k -> {
                 Map<String, Object> m = new LinkedHashMap<>();
-                m.put("className", span.getClassName());
-                m.put("methodName", span.getMethodName());
-                m.put("phase", span.getPhase());
+                m.put("className", className);
+                m.put("methodName", methodName);
+                m.put("displayName", span.get("displayName"));
+                m.put("phase", phase);
                 m.put("count", 0L);
                 m.put("totalMs", 0L);
                 m.put("maxMs", 0L);
@@ -794,12 +884,13 @@ public class ApmQueryService {
                 return m;
             });
             row.put("count", ((Number) row.get("count")).longValue() + 1);
-            row.put("totalMs", ((Number) row.get("totalMs")).longValue() + span.getDuration());
-            row.put("maxMs", Math.max(((Number) row.get("maxMs")).longValue(), span.getDuration()));
-            row.put("errorCount", "ERROR".equals(span.getStatus())
+            row.put("totalMs", ((Number) row.get("totalMs")).longValue() + duration);
+            row.put("maxMs", Math.max(((Number) row.get("maxMs")).longValue(), duration));
+            row.put("errorCount", Boolean.TRUE.equals(span.get("error"))
                     ? ((Number) row.get("errorCount")).longValue() + 1
                     : row.get("errorCount"));
-            row.put("selfTimeMs", ((Number) row.get("selfTimeMs")).longValue() + span.getSelfTime());
+            row.put("selfTimeMs", ((Number) row.get("selfTimeMs")).longValue()
+                    + ((Number) span.get("selfTimeMs")).longValue());
         }
         List<Map<String, Object>> list = new ArrayList<>(agg.values());
         for (Map<String, Object> row : list) {
@@ -821,21 +912,16 @@ public class ApmQueryService {
      * @return 阶段汇总列表
      */
     public List<Map<String, Object>> tracePhases() {
-        com.chua.runtime.apm.handler.TraceHandler handler =
-                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
-                        com.chua.runtime.apm.handler.TraceHandler.class);
-        if (handler == null) {
-            return new ArrayList<>();
-        }
         Map<String, Map<String, Object>> agg = new LinkedHashMap<>();
-        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
-            if (span == null || span.getDuration() < 0) {
-                continue;
+        for (Map<String, Object> span : spanViews()) {
+            String phase = (String) span.get("phase");
+            if (phase == null) {
+                phase = "method";
             }
-            String phase = span.getPhase() == null ? "method" : span.getPhase();
+            long duration = ((Number) span.get("durationMs")).longValue();
             Map<String, Object> row = agg.computeIfAbsent(phase, k -> {
                 Map<String, Object> m = new LinkedHashMap<>();
-                m.put("phase", phase);
+                m.put("phase", k);
                 m.put("count", 0L);
                 m.put("totalMs", 0L);
                 m.put("maxMs", 0L);
@@ -843,9 +929,10 @@ public class ApmQueryService {
                 return m;
             });
             row.put("count", ((Number) row.get("count")).longValue() + 1);
-            row.put("totalMs", ((Number) row.get("totalMs")).longValue() + span.getDuration());
-            row.put("maxMs", Math.max(((Number) row.get("maxMs")).longValue(), span.getDuration()));
-            row.put("selfTimeMs", ((Number) row.get("selfTimeMs")).longValue() + span.getSelfTime());
+            row.put("totalMs", ((Number) row.get("totalMs")).longValue() + duration);
+            row.put("maxMs", Math.max(((Number) row.get("maxMs")).longValue(), duration));
+            row.put("selfTimeMs", ((Number) row.get("selfTimeMs")).longValue()
+                    + ((Number) span.get("selfTimeMs")).longValue());
         }
         List<Map<String, Object>> list = new ArrayList<>(agg.values());
         for (Map<String, Object> row : list) {
@@ -864,31 +951,22 @@ public class ApmQueryService {
      * @return SkyWalking 兼容 Segment 列表
      */
     public List<Map<String, Object>> skywalkingExport() {
-        com.chua.runtime.apm.handler.TraceHandler handler =
-                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
-                        com.chua.runtime.apm.handler.TraceHandler.class);
-        if (handler == null) {
-            return new ArrayList<>();
-        }
         Map<String, List<Map<String, Object>>> segments = new LinkedHashMap<>();
-        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
-            if (span == null) {
-                continue;
-            }
-            String traceId = span.getTraceId() == null ? "" : span.getTraceId();
+        for (Map<String, Object> span : spanViews()) {
+            String traceId = span.get("traceId") == null ? "" : (String) span.get("traceId");
             List<Map<String, Object>> spans = segments.computeIfAbsent(traceId, k -> new ArrayList<>());
             Map<String, Object> sw = new LinkedHashMap<>();
-            sw.put("spanId", span.getSpanId());
-            sw.put("parentSpanId", span.getParentSpanId());
-            sw.put("operationName", (span.getClassName() == null ? "" : span.getClassName())
-                    + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
-            sw.put("spanType", span.getParentSpanId() == null ? "Entry" : "Local");
-            sw.put("spanLayer", span.getPhase() == null ? "Unknown" : span.getPhase());
-            sw.put("startTime", span.getStartTime());
-            sw.put("endTime", span.getEndTime());
-            sw.put("isError", "ERROR".equals(span.getStatus()));
-            sw.put("logs", "ERROR".equals(span.getStatus()) ? span.getException() : null);
-            sw.put("peer", span.getClientIp());
+            sw.put("spanId", span.get("spanId"));
+            sw.put("parentSpanId", span.get("parentSpanId"));
+            sw.put("operationName", span.get("operation"));
+            sw.put("spanType", span.get("parentSpanId") == null ? "Entry" : "Local");
+            sw.put("spanLayer", span.get("phase") == null ? "Unknown" : span.get("phase"));
+            sw.put("startTime", span.get("startTime"));
+            sw.put("endTime", span.get("endTime"));
+            sw.put("isError", Boolean.TRUE.equals(span.get("error")));
+            sw.put("logs", Boolean.TRUE.equals(span.get("error"))
+                    ? String.valueOf(span.get("operation")) + " 失败" : null);
+            sw.put("peer", span.get("className"));
             spans.add(sw);
         }
         List<Map<String, Object>> result = new ArrayList<>();
@@ -909,69 +987,107 @@ public class ApmQueryService {
      * @return 根因路径（含 traceId / rootSpan / path / bottleneck）
      */
     public Map<String, Object> rootCausePath(String traceId) {
-        com.chua.runtime.apm.handler.TraceHandler handler =
-                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
-                        com.chua.runtime.apm.handler.TraceHandler.class);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("traceId", traceId);
         result.put("found", false);
-        if (handler == null || traceId == null || traceId.isBlank()) {
+        if (traceId == null || traceId.isBlank()) {
             return result;
         }
 
-        // 收集该 trace 的 Span，并按 spanId 建索引
-        List<com.chua.runtime.apm.handler.TraceHandler.Span> spans = new ArrayList<>();
-        for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
-            if (span == null || !traceId.equals(span.getTraceId())) {
-                continue;
+        // 收集该 trace 的 Span：优先 Agent 方法级 Span，缺失时按 traceId 精确回落到真实传输记录
+        List<Map<String, Object>> spans = new ArrayList<>();
+        com.chua.runtime.apm.handler.TraceHandler handler =
+                com.chua.runtime.apm.ApmBootstrap.getGlobalHandler(
+                        com.chua.runtime.apm.handler.TraceHandler.class);
+        if (handler != null) {
+            try {
+                for (com.chua.runtime.apm.handler.TraceHandler.Span span : handler.getSpans()) {
+                    if (span == null || !traceId.equals(span.getTraceId()) || span.getDuration() < 0) {
+                        continue;
+                    }
+                    Map<String, Object> v = new LinkedHashMap<>();
+                    v.put("spanId", span.getSpanId());
+                    v.put("parentSpanId", span.getParentSpanId());
+                    v.put("operation", (span.getClassName() == null ? "" : span.getClassName())
+                            + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
+                    v.put("phase", span.getPhase());
+                    v.put("durationMs", span.getDuration());
+                    v.put("selfTimeMs", span.getSelfTime());
+                    v.put("status", span.getStatus());
+                    v.put("startTime", span.getStartTime());
+                    spans.add(v);
+                }
+            } catch (Exception e) {
+                log.debug("[Hotsport] 读取 Agent Span 失败: {}", e.getMessage());
             }
-            spans.add(span);
+        }
+        if (spans.isEmpty()) {
+            // 真实回落：该 traceId 下的真实请求记录本身就是一次 Span
+            Query q = new Query().setLimit(100000).setTraceId(traceId);
+            for (TransmissionEvent e : queryAll(q, storage -> storage.queryTransmissions(q))) {
+                if (e == null || e.getDuration() < 0) {
+                    continue;
+                }
+                String op = e.getOperation() != null ? e.getOperation() : "?";
+                Map<String, Object> v = new LinkedHashMap<>();
+                v.put("spanId", e.getSpanId());
+                v.put("parentSpanId", e.getParentSpanId());
+                v.put("operation", op);
+                v.put("phase", e.getProtocol() != null ? e.getProtocol().toLowerCase() : "http");
+                v.put("durationMs", e.getDuration());
+                v.put("selfTimeMs", e.getDuration());
+                v.put("status", e.getStatus() != null ? e.getStatus().name() : "OK");
+                v.put("startTime", e.getStartTime());
+                spans.add(v);
+            }
         }
         if (spans.isEmpty()) {
             return result;
         }
 
-        Map<String, com.chua.runtime.apm.handler.TraceHandler.Span> spanById = new LinkedHashMap<>();
-        for (com.chua.runtime.apm.handler.TraceHandler.Span s : spans) {
-            spanById.put(s.getSpanId(), s);
+        Map<String, Map<String, Object>> spanById = new LinkedHashMap<>();
+        for (Map<String, Object> s : spans) {
+            spanById.put((String) s.get("spanId"), s);
         }
 
         // 找根 Span：parentSpanId 不在本 trace（null 或外部）
-        com.chua.runtime.apm.handler.TraceHandler.Span root = null;
-        for (com.chua.runtime.apm.handler.TraceHandler.Span s : spans) {
-            String parent = s.getParentSpanId();
+        Map<String, Object> root = null;
+        for (Map<String, Object> s : spans) {
+            String parent = (String) s.get("parentSpanId");
             if (parent == null || !spanById.containsKey(parent)) {
                 root = s;
                 break;
             }
         }
-        if (root == null && !spans.isEmpty()) {
+        if (root == null) {
             // 退化为最早开始的 Span
             root = spans.stream()
-                    .min(Comparator.comparingLong(com.chua.runtime.apm.handler.TraceHandler.Span::getStartTime))
+                    .min(Comparator.comparingLong(
+                            x -> ((Number) x.get("startTime")).longValue()))
                     .orElse(spans.get(0));
         }
 
         // 沿最慢子 Span 向下
         List<Map<String, Object>> path = new ArrayList<>();
-        com.chua.runtime.apm.handler.TraceHandler.Span cursor = root;
+        Map<String, Object> cursor = root;
         while (cursor != null) {
             Map<String, Object> node = new LinkedHashMap<>();
-            node.put("spanId", cursor.getSpanId());
-            node.put("operation", (cursor.getClassName() == null ? "" : cursor.getClassName())
-                    + "." + (cursor.getMethodName() == null ? "" : cursor.getMethodName()));
-            node.put("phase", cursor.getPhase());
-            node.put("durationMs", cursor.getDuration());
-            node.put("selfTimeMs", cursor.getSelfTime());
-            node.put("status", cursor.getStatus());
-            node.put("startTime", cursor.getStartTime());
+            node.put("spanId", cursor.get("spanId"));
+            node.put("operation", cursor.get("operation"));
+            node.put("phase", cursor.get("phase"));
+            node.put("durationMs", cursor.get("durationMs"));
+            node.put("selfTimeMs", cursor.get("selfTimeMs"));
+            node.put("status", cursor.get("status"));
+            node.put("startTime", cursor.get("startTime"));
             path.add(node);
 
             // 选最慢的直接子 Span
-            com.chua.runtime.apm.handler.TraceHandler.Span slowestChild = null;
-            for (com.chua.runtime.apm.handler.TraceHandler.Span s : spans) {
-                if (cursor.getSpanId() != null && cursor.getSpanId().equals(s.getParentSpanId())) {
-                    if (slowestChild == null || s.getDuration() > slowestChild.getDuration()) {
+            Map<String, Object> slowestChild = null;
+            for (Map<String, Object> s : spans) {
+                if (cursor.get("spanId") != null && cursor.get("spanId").equals(s.get("parentSpanId"))) {
+                    if (slowestChild == null
+                            || ((Number) s.get("durationMs")).longValue()
+                            > ((Number) slowestChild.get("durationMs")).longValue()) {
                         slowestChild = s;
                     }
                 }
@@ -981,7 +1097,7 @@ public class ApmQueryService {
 
         result.put("found", true);
         result.put("spanCount", spans.size());
-        result.put("rootSpan", root == null ? null : root.getSpanId());
+        result.put("rootSpan", root.get("spanId"));
         result.put("path", path);
         if (!path.isEmpty()) {
             Map<String, Object> bottleneck = path.get(path.size() - 1);
@@ -1295,6 +1411,9 @@ public class ApmQueryService {
         String[] header = {"id", "timestamp", "level", "logger", "className", "methodName", "message", "traceId"};
         List<Map<String, Object>> rows = new ArrayList<>();
         for (LogRecord r : all) {
+            if (traceId != null && !traceId.isBlank() && !traceId.equals(r.getTraceId())) {
+                continue;
+            }
             if (level != null && !level.isBlank() && !level.equalsIgnoreCase(r.getLevel())) {
                 continue;
             }
@@ -1938,7 +2057,9 @@ public class ApmQueryService {
             m.put("timestamp", toIso(e.getTimestamp()));
             m.put("source", e.getSource());
             m.put("level", e.getLevel());
-            m.put("line", e.getLine());
+            // 控制台捕获到的是带 ANSI 颜色码的原始输出，前端要按纯文本展示，
+            // 在这里统一清洗，避免终端转义序列漏到页面上
+            m.put("line", stripAnsi(e.getLine()));
             items.add(m);
         }
         result.put("items", items);
@@ -2353,6 +2474,25 @@ public class ApmQueryService {
     private static boolean containsIgnoreCase(String haystack, String needle) {
         return haystack != null && needle != null
                 && haystack.toLowerCase().contains(needle.toLowerCase());
+    }
+
+    /**
+     * 终端 ANSI 转义序列（颜色 / 光标控制）。
+     */
+    private static final java.util.regex.Pattern ANSI_PATTERN =
+            java.util.regex.Pattern.compile("\u001B\\[[0-9;?]*[ -/]*[@-~]");
+
+    /**
+     * 清洗 ANSI 转义序列，得到可直接展示的纯文本。
+     *
+     * @param raw 原始文本
+     * @return 清洗后文本（null 原样返回）
+     */
+    private static String stripAnsi(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return raw;
+        }
+        return ANSI_PATTERN.matcher(raw).replaceAll("");
     }
 
     /**
