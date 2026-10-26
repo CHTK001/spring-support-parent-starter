@@ -4,6 +4,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
+import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
@@ -82,6 +84,34 @@ public interface SyncTaskService {
      * @return 日志列表；无记录时为空列表
      */
     ReturnResult<List<SyncTaskRunLogVO>> runLogs(Long id);
+
+    /**
+     * 分页查询全部任务的执行日志记录（跨任务，新在前）。
+     *
+     * <p>与 {@link #runLogs(Long)} 的单任务弹窗不同，这是「同步日志」菜单页的全局视角：
+     * 每一次执行一行记录（带任务名），可跨任务翻页，并按需用任务 / 状态 / 触发方式过滤。
+     * 列表行不携带过程行（LONGTEXT 正文只出「行数」），点开单条再取详情。</p>
+     *
+     * @param page    页码（从 1 开始）
+     * @param size    每页条数
+     * @param taskId  任务 ID 过滤，null/空不过滤
+     * @param status  执行状态过滤（SUCCESS/FAILED），null/空不过滤
+     * @param trigger 触发方式过滤（MANUAL/SCHEDULED/REALTIME），null/空不过滤
+     * @return 分页记录；无数据时 total=0
+     */
+    ReturnResult<com.baomidou.mybatisplus.core.metadata.IPage<SyncTaskRunLogItemVO>> runLogPage(
+            long page, long size, Long taskId, String status, String trigger);
+
+    /**
+     * 查询单条执行日志的详情（记录 + 完整过程行）。
+     *
+     * <p>「同步日志」菜单页点开某次执行时调用：按日志主键整体读回正文并解析成行，
+     * 与内存态的过程日志渲染一致。任务已删除的日志仍可追溯（表无外键、任务删除不级联）。</p>
+     *
+     * @param logId 日志主键（{@code ms_sync_task_run_log.id}）
+     * @return 详情；不存在时返回错误
+     */
+    ReturnResult<SyncTaskRunLogDetailVO> runLogDetail(Long logId);
 
     /**
      * 启用或停用任务的定时调度。
