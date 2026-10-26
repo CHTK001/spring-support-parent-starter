@@ -1,0 +1,1 @@
+import{t as e}from"./koi-slack-A4zTORpV.js";export{e as default};

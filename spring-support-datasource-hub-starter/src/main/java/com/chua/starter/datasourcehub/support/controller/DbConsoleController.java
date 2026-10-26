@@ -27,6 +27,7 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbTableVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTxRegistry;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTxSession;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTxStatus;
+import com.chua.starter.datasourcehub.support.dbconsole.DbTransferCodec;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlParameterBinder;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlScriptSplitter;
 import com.chua.starter.datasourcehub.support.config.DatasourceHubProperties;
@@ -1111,7 +1112,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     while (rs.next()) {
                         Map<String, Object> row = new java.util.LinkedHashMap<>();
                         for (int i = 1; i <= colCount; i++) {
-                            row.put(columns.get(i - 1), rs.getObject(i));
+                            // 必须过 cellValue：直接把 java.sql.Date/Time/Timestamp 交给 Jackson
+                            // 会变成 epoch 毫秒数，网格里显示成 1793376000000，且编辑保存时
+                            // 会被原样拼进 UPDATE 写坏日期列
+                            row.put(columns.get(i - 1), DbTransferCodec.cellValue(rs.getObject(i)));
                         }
                         rows.add(row);
                     }
@@ -1708,7 +1712,71 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         if (payload instanceof StructureSyncErrorVO v) {
             return "{\"message\":" + jsonStr(v.message()) + "}";
         }
-        return "{}";
+        // 导入向导的事件负载是 Map / List / 标量。这里必须真序列化：
+        // 以前一律落到 "{}"，前端收到的每个事件都是空对象，日志与进度全瞎。
+        return jsonValue(payload);
+    }
+
+    /**
+     * 通用 JSON 值序列化：覆盖 Map / Iterable / 数组 / 字符串 / 数字 / 布尔 / null。
+     *
+     * <p>只用于本控制器手写 SSE 帧的负载。刻意不引 ObjectMapper：本项目在该
+     * Spring 版本下 record 的 JSON 序列化会静默产出空串（见 {@link #writeSseEvent}）。</p>
+     *
+     * @param value 任意值
+     * @return JSON 文本
+     */
+    private static String jsonValue(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof CharSequence cs) {
+            return jsonStr(cs.toString());
+        }
+        if (value instanceof Number || value instanceof Boolean) {
+            return value.toString();
+        }
+        if (value instanceof java.util.Map<?, ?> map) {
+            StringBuilder sb = new StringBuilder("{");
+            boolean first = true;
+            for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+                if (!first) {
+                    sb.append(',');
+                }
+                first = false;
+                sb.append(jsonStr(String.valueOf(entry.getKey())))
+                        .append(':')
+                        .append(jsonValue(entry.getValue()));
+            }
+            return sb.append('}').toString();
+        }
+        if (value instanceof Iterable<?> iterable) {
+            StringBuilder sb = new StringBuilder("[");
+            boolean first = true;
+            for (Object item : iterable) {
+                if (!first) {
+                    sb.append(',');
+                }
+                first = false;
+                sb.append(jsonValue(item));
+            }
+            return sb.append(']').toString();
+        }
+        if (value.getClass().isArray()) {
+            StringBuilder sb = new StringBuilder("[");
+            int length = java.lang.reflect.Array.getLength(value);
+            for (int i = 0; i < length; i++) {
+                if (i > 0) {
+                    sb.append(',');
+                }
+                sb.append(jsonValue(java.lang.reflect.Array.get(value, i)));
+            }
+            return sb.append(']').toString();
+        }
+        if (value instanceof Enum<?> e) {
+            return jsonStr(e.name());
+        }
+        return jsonStr(String.valueOf(value));
     }
 
     /** JSON 字符串字面量：转义引号、反斜杠与控制字符（含换行，SQL 里常见） */
@@ -2040,7 +2108,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 while (rs.next() && rowCount < SQL_MAX_ROWS) {
                     Map<String, Object> row = new java.util.LinkedHashMap<>(colCount);
                     for (int i = 1; i <= colCount; i++) {
-                        row.put(columns.get(i - 1), rs.getObject(i));
+                        // 同 runTableData：日期时间列必须转文本，否则下发 epoch 毫秒数
+                        row.put(columns.get(i - 1), DbTransferCodec.cellValue(rs.getObject(i)));
                     }
                     rows.add(row);
                     rowCount++;
@@ -2805,6 +2874,371 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     // ==================== 数据导入 / 导出（对齐 Navicat 导入导出向导） ====================
 
     /**
+     * 导入向导第 2 步：上传文件并立刻解析一次。
+     *
+     * <p>返回 {@code token}，后续第 3～7 步都带着它，不再重传文件。响应里同时带
+     * 解析结果（列名 / 预览行 / Excel 工作表清单），因此前端选完文件就能直接显示
+     * 「源文件内容」，用户改一次分隔符再调 {@code import/parse} 重新解析即可。</p>
+     *
+     * @param file     上传的数据文件
+     * @param optionJson 向导选项 JSON（可只带 format / encoding）
+     * @return 令牌 + 解析结果
+     */
+    @Operation(summary = "导入向导：上传文件并解析")
+    @PostMapping("import/upload")
+    public ReturnResult<Map<String, Object>> importUpload(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "option", required = false) String optionJson) {
+        return callDb("上传导入文件", () -> {
+            com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO option = parseImportOption(optionJson);
+            if (option == null) {
+                option = emptyImportOption();
+            }
+            option = withFileName(option, file.getOriginalFilename());
+            byte[] bytes = file.getBytes();
+            var entry = com.chua.starter.datasourcehub.support.dbconsole.DbImportUploadStore
+                    .save(file.getOriginalFilename(), bytes);
+            var parsed = com.chua.starter.datasourcehub.support.dbconsole.DbImportSource.parse(bytes, option);
+            return describeImport(entry.token(), parsed, option);
+        });
+    }
+
+    /**
+     * 导入向导第 3 步：带新选项重新解析已上传的文件。
+     *
+     * <p>用户每改一次「字段名称行 / 分隔符 / 编码」，前端就调一次本接口刷新预览。
+     * 不重传文件，因此调再多次也不会把大文件反复搬运。</p>
+     *
+     * @param request 令牌 + 向导选项
+     * @return 解析结果
+     */
+    @Operation(summary = "导入向导：重新解析")
+    @PostMapping("import/parse")
+    public ReturnResult<Map<String, Object>> importParse(@RequestBody Map<String, Object> request) {
+        return callDb("解析导入文件", () -> {
+            com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO option = importOptionFromBody(request);
+            String token = option.token() == null ? "" : option.token();
+            byte[] bytes = com.chua.starter.datasourcehub.support.dbconsole.DbImportUploadStore.read(token);
+            var entry = com.chua.starter.datasourcehub.support.dbconsole.DbImportUploadStore.get(token);
+            if (entry != null && (option.fileName() == null || option.fileName().isBlank())) {
+                option = withFileName(option, entry.fileName());
+            }
+            var parsed = com.chua.starter.datasourcehub.support.dbconsole.DbImportSource.parse(bytes, option);
+            return describeImport(token, parsed, option);
+        });
+    }
+
+    /**
+     * 导入向导第 4 步：按源列建议目标表结构。
+     *
+     * <p>「新建表」时前端需要一个默认表名与列清单。表名取源文件名（去掉后缀、清洗成
+     * 合法标识符），列名取源列；这里只<b>建议</b>，用户在界面上仍可改。</p>
+     *
+     * @param request 令牌（可选）+ 源列名
+     * @return 建议表名与列定义
+     */
+    @Operation(summary = "导入向导：建议新建表结构")
+    @PostMapping("import/table-plan")
+    public ReturnResult<Map<String, Object>> importTablePlan(@RequestBody Map<String, Object> request) {
+        return callDb("生成建表建议", () -> {
+            List<String> sourceColumns = stringList(request.get("sourceColumns"));
+            String suggested = com.chua.starter.datasourcehub.support.dbconsole.DbImportDdl
+                    .sanitize(stringValue(request.get("fileName")));
+            // 去掉扩展名残留的点：sanitize 会把 "." 变成 "_"，这里只处理常见的 _csv 尾巴
+            suggested = suggested.replaceAll("_(?i:csv|xlsx?|xlsm|txt|json|sql)$", "");
+            // 中文文件名清洗后只剩一串下划线（「订单 明细.csv」→「_____」）。
+            // 这种表名语法上合法，但用户在树里根本认不出是哪张表，退回固定名更好认。
+            if (suggested.replace("_", "").isBlank()) {
+                suggested = "import_table";
+            }
+            // 表名不能以数字开头已被 sanitize 处理；再兜一层「不能是纯关键字」没有意义 ——
+            // 所有标识符都会加反引号引用。
+            List<Map<String, Object>> columns = new java.util.ArrayList<>();
+            List<String> names = com.chua.starter.datasourcehub.support.dbconsole.DbImportDdl.sanitizeAll(sourceColumns);
+            for (int i = 0; i < sourceColumns.size(); i++) {
+                columns.add(Map.of(
+                        "name", names.get(i),
+                        "source", sourceColumns.get(i) == null ? "" : sourceColumns.get(i)));
+            }
+            return Map.of("tableName", suggested, "columns", columns);
+        });
+    }
+
+    /**
+     * 导入向导第 6～7 步：执行导入（SSE 流式日志）。
+     *
+     * <p>事件类型与结构同步一致：{@code log}（逐条语句）、{@code progress}（进度）、
+     * {@code phase}（阶段提示）、{@code done}（汇总）、{@code error}（早期失败）。
+     * 用 {@code StreamingResponseBody} 而不是 {@code SseEmitter}：本项目在
+     * Boot 4.1 / Spring 7 下 SseEmitter 的 data 会被静默丢弃（详见结构同步端点注释）。</p>
+     *
+     * @param request      令牌 + 完整向导选项
+     * @param httpResponse HTTP 响应（用于写 Content-Type）
+     * @return SSE 流
+     */
+    @Operation(summary = "导入向导：执行导入（SSE 流式）")
+    @SysLog(name = "导入数据")
+    @PostMapping(value = "import/run", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody importRun(
+            @RequestBody Map<String, Object> request,
+            jakarta.servlet.http.HttpServletResponse httpResponse) {
+        httpResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+        httpResponse.setCharacterEncoding("UTF-8");
+        return outputStream -> {
+            java.io.PrintWriter out = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(outputStream, java.nio.charset.StandardCharsets.UTF_8));
+            out.flush();
+            runImport(out, request);
+            out.flush();
+        };
+    }
+
+    /**
+     * 导入执行主体：解析 → 建表 → 写入，全程把进度写进 SSE 流。
+     *
+     * @param out     输出流
+     * @param request 令牌 + 向导选项
+     */
+    private void runImport(java.io.PrintWriter out, Map<String, Object> request) {
+        long startedAt = System.currentTimeMillis();
+        try {
+            com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO option = importOptionFromBody(request);
+            String token = option.token() == null ? "" : option.token();
+            byte[] bytes = com.chua.starter.datasourcehub.support.dbconsole.DbImportUploadStore.read(token);
+            String table = safeIdent(option.tableName(), "表名");
+            var parsed = com.chua.starter.datasourcehub.support.dbconsole.DbImportSource.parse(bytes, option);
+            if ("sql".equals(parsed.format())) {
+                var result = executeSqlScript(
+                        com.chua.starter.datasourcehub.support.dbconsole.DbTransferCodec.decode(bytes, option.encoding()),
+                        option);
+                writeImportDone(out, result, startedAt, table);
+                return;
+            }
+            Map<String, String> mapping = option.columnMapping() == null ? Map.of() : option.columnMapping();
+            if (mapping.isEmpty() && !Boolean.TRUE.equals(option.createTable())) {
+                throw new IllegalArgumentException("请先在第 5 步配置字段映射");
+            }
+            var plan = new com.chua.starter.datasourcehub.support.dbconsole.DbImporter.ImportPlan(
+                    table,
+                    parsed.table().columns(),
+                    mapping,
+                    option.importMode(),
+                    option.keyColumns(),
+                    option.advanced(),
+                    option.batchRows(),
+                    Boolean.TRUE.equals(option.createTable()),
+                    Boolean.TRUE.equals(option.truncateFirst()),
+                    option.dateOptions());
+            writeSseEvent(out, "phase", Map.of("message",
+                    "开始导入 " + table + "（" + parsed.table().rows().size() + " 行，"
+                            + option.importMode().label() + "）"));
+            try (java.sql.Connection conn = datasourceService.connection(option.datasourceId());
+                 SchemaScope scope = useSchema(conn, option.database())) {
+                var result = com.chua.starter.datasourcehub.support.dbconsole.DbImporter.importRows(
+                        conn, parsed.table().rows(), plan,
+                        importProgress(out, parsed.table().rows().size()));
+                // 这里刻意不丢弃 token：Excel 多工作表是「一张表一次 import/run」，
+                // 同一次向导里第 2 张起还要用同一个 token 读文件。临时文件交给
+                // DbImportUploadStore 的 TTL（60 分钟）与条数上限回收。
+                writeImportDone(out, result, startedAt, table);
+            }
+        } catch (Exception e) {
+            log.warn("[db] 导入失败: {}", e.getMessage(), e);
+            writeSseEvent(out, "error", Map.of("message", e.getMessage() == null
+                    ? e.getClass().getSimpleName() : e.getMessage()));
+            writeSseEvent(out, "done", Map.of("total", 0, "inserted", 0, "updated", 0,
+                    "skipped", 0, "deleted", 0, "errors", 0,
+                    "elapsedMs", System.currentTimeMillis() - startedAt, "failed", true));
+        }
+    }
+
+    /**
+     * 把导入进度桥接成 SSE 事件。
+     *
+     * <p>逐行日志会让大文件产生几万条事件，前端渲染必然卡死。因此{@code onStatement}
+     * 只<b>失败</b>时推送（用户只关心错在哪），成功语句汇总成每 200 行一条
+     * {@code progress}。</p>
+     *
+     * @param out   输出流
+     * @param total 总行数
+     * @return 进度回调
+     */
+    private com.chua.starter.datasourcehub.support.dbconsole.DbImporter.Progress importProgress(
+            java.io.PrintWriter out, int total) {
+        int[] lastReported = {0};
+        return new com.chua.starter.datasourcehub.support.dbconsole.DbImporter.Progress() {
+            @Override
+            public void onPhase(String text) {
+                writeSseEvent(out, "phase", Map.of("message", text));
+            }
+
+            @Override
+            public void onProgress(int done, int totalRows) {
+                if (done - lastReported[0] < 200 && done < totalRows) {
+                    return;
+                }
+                lastReported[0] = done;
+                writeSseEvent(out, "progress", Map.of("done", done, "total", totalRows));
+            }
+
+            @Override
+            public void onStatement(int no, String sql, boolean ok, int affected, String error) {
+                if (ok) {
+                    return;
+                }
+                writeSseEvent(out, "log", Map.of("no", no, "ok", false,
+                        "affected", affected,
+                        "error", error == null ? "" : error));
+            }
+        };
+    }
+
+    /**
+     * 写一条导入完成事件。
+     *
+     * @param out       输出流
+     * @param result    导入结果
+     * @param startedAt 开始时间戳
+     * @param table     目标表
+     */
+    private void writeImportDone(java.io.PrintWriter out,
+                                 com.chua.starter.datasourcehub.support.dbconsole.DbImporter.ImportResult result,
+                                 long startedAt, String table) {
+        int failed = Math.max(0, result.totalRows() - result.inserted() - result.updated()
+                - result.skipped() - result.deleted());
+        writeSseEvent(out, "done", Map.of(
+                "table", table,
+                "total", result.totalRows(),
+                "inserted", result.inserted(),
+                "updated", result.updated(),
+                "skipped", result.skipped(),
+                "deleted", result.deleted(),
+                "errors", result.errors().size(),
+                "errorDetails", result.errors(),
+                "elapsedMs", System.currentTimeMillis() - startedAt,
+                "failed", false));
+        // failed 与 errors 用同一份数据：前端只需要看 errors 是否 > 0
+        if (failed > 0) {
+            log.debug("[db] 导入 {} 有 {} 行未计入统计", table, failed);
+        }
+    }
+
+    /**
+     * 组装上传/解析接口的响应。
+     *
+     * @param token  令牌
+     * @param parsed 解析结果
+     * @param option 向导选项
+     * @return 响应体
+     */
+    private Map<String, Object> describeImport(String token,
+                                               com.chua.starter.datasourcehub.support.dbconsole.DbImportSource.Parsed parsed,
+                                               com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO option) {
+        int previewSize = 100;
+        var rows = parsed.table().rows();
+        var preview = rows.size() <= previewSize ? rows : rows.subList(0, previewSize);
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("token", token);
+        body.put("format", parsed.format());
+        body.put("columns", parsed.table().columns());
+        body.put("rows", preview);
+        body.put("rowCount", rows.size());
+        body.put("previewSize", previewSize);
+        body.put("delimiter", parsed.delimiter());
+        body.put("encoding", parsed.encoding());
+        body.put("sheets", parsed.sheets());
+        body.put("activeSheet", parsed.activeSheet());
+        body.put("warnings", parsed.warnings());
+        body.put("excelAvailable", com.chua.starter.datasourcehub.support.dbconsole.DbImportExcel.available());
+        body.put("fileName", option.fileName());
+        return body;
+    }
+
+    /**
+     * 从请求体构造导入选项。
+     *
+     * @param body 请求体
+     * @return 选项
+     */
+    private com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO importOptionFromBody(Map<String, Object> body) {
+        Object option = body.get("option");
+        if (option instanceof Map<?, ?> map) {
+            try {
+                return new com.fasterxml.jackson.databind.ObjectMapper()
+                        .convertValue(map, com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO.class);
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("导入选项格式不正确: " + e.getMessage());
+            }
+        }
+        // 兼容「选项平铺在请求体里」的调用方式
+        return new com.fasterxml.jackson.databind.ObjectMapper()
+                .convertValue(body, com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO.class);
+    }
+
+    /**
+     * 空选项（只用来做格式探测）。
+     *
+     * @return 选项
+     */
+    private static com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO emptyImportOption() {
+        return new com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO(
+                null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null);
+    }
+
+    /**
+     * 补文件名。
+     *
+     * @param option   选项
+     * @param fileName 文件名
+     * @return 新选项
+     */
+    private static com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO withFileName(
+            com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO option, String fileName) {
+        return new com.chua.starter.datasourcehub.support.dbconsole.DbImportDTO(
+                fileName == null ? option.fileName() : fileName,
+                option.format(), option.delimiter(), option.hasHeader(), option.encoding(),
+                option.database(), option.tableName(), option.columnMapping(), option.truncateFirst(),
+                option.onConflict(), option.batchSize(), option.datasourceId(), option.sheetName(),
+                option.recordDelimiter(), option.textQualifier(), option.fieldNamesLine(),
+                option.firstDataLine(), option.lastDataLine(), option.decimalSymbol(),
+                option.dateOrder(), option.dateTimeOrder(), option.dateSeparator(),
+                option.yearSeparator(), option.timeSeparator(), option.mode(),
+                option.keyColumns(), option.extendedInsert(), option.maxStatementKb(),
+                option.nullForEmpty(), option.ignoreForeignKey(), option.continueOnError(),
+                option.createTable(), option.token());
+    }
+
+    /**
+     * 取字符串。
+     *
+     * @param value 原值
+     * @return 字符串；null 归一为空串
+     */
+    private static String stringValue(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    /**
+     * 取字符串列表。
+     *
+     * @param value 原值
+     * @return 字符串列表
+     */
+    @SuppressWarnings("unchecked")
+    private static List<String> stringList(Object value) {
+        if (value instanceof List<?> list) {
+            List<String> out = new java.util.ArrayList<>(list.size());
+            for (Object item : list) {
+                out.add(item == null ? "" : String.valueOf(item));
+            }
+            return out;
+        }
+        return List.of();
+    }
+
+    /**
      * 导入预览：解析上传文件、回显列名与前若干行，供用户在向导第一步确认解析结果。
      *
      * <p>只解析不落库，因此不会对目标库产生任何副作用。</p>
@@ -2946,7 +3380,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             }
         }
         return new com.chua.starter.datasourcehub.support.dbconsole.DbImporter.ImportResult(
-                statements.size(), affected, 0, 0, List.of());
+                statements.size(), affected, 0, 0, 0, List.of());
     }
 
     /**

@@ -47,8 +47,9 @@ public class PackageManagerRouter {
                 if (provider.supports(host)) {
                     return provider;
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
                 // 单个 Provider 判定异常不影响后续匹配
+                log.debug("[pkg] Provider 判定异常，跳过: {}", e.getMessage());
             }
             tried.add(provider.getClass().getSimpleName());
         }

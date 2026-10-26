@@ -1,0 +1,1 @@
+import{t as e}from"./koi-timer-pause-C-YMk0jB.js";export{e as default};

@@ -53,7 +53,27 @@ public class DnfPackageManagerProvider extends AbstractPackageManagerProvider {
     }
 
     @Override
+    public String installedCommand() {
+        return "dnf list installed";
+    }
+
+    @Override
+    public String uninstallCommand(String name) {
+        return "sudo dnf remove -y " + name;
+    }
+
+    @Override
+    public String upgradeCommand(String name) {
+        return "sudo dnf upgrade -y " + name;
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         return parseRhelSearch(output);
+    }
+
+    @Override
+    public List<SoftwarePackage> parseInstalled(String output) {
+        return parseRhelInstalled(output);
     }
 }

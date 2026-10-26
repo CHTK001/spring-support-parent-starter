@@ -108,11 +108,14 @@ class OsgiFrameworkApiRealTest {
                     .filter(b -> b.getSymbolicName() != null
                             && b.getSymbolicName().startsWith(BUNDLE_SYMBOLIC_NAME))
                     .forEach(OsgiBundle::uninstall);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            // 清理阶段失败不影响断言结果，仅记录
+            System.out.println("[OsgiFrameworkApiRealTest] 卸载测试 bundle 失败: " + e.getMessage());
         }
         try {
             osgiLauncher.setAutoStartInstalledBundles(true);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            System.out.println("[OsgiFrameworkApiRealTest] 恢复自动启动开关失败: " + e.getMessage());
         }
     }
 

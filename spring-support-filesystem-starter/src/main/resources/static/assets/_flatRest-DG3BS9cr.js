@@ -1,0 +1,1 @@
+import{n as e,r as t,t as n}from"./_baseFlatten-DT7i6dAl.js";function r(e){return e!=null&&e.length?n(e,1):[]}function i(n){return t(e(n,void 0,r),n+``)}export{r as n,i as t};

@@ -207,7 +207,9 @@ public class SipTunnel {
             }
             try {
                 Thread.sleep(5000);
-            } catch (InterruptedException ignored) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.debug("[sip] 等待被中断，已退出: {}", e.getMessage());
             }
         }
     }
@@ -276,13 +278,15 @@ public class SipTunnel {
             POOL.submit(() -> {
                 try {
                     copy(aIn, bOut);
-                } catch (IOException ignored) {
+                } catch (IOException e) {
+                    log.debug("[sip] 关闭连接失败，已忽略: {}", e.getMessage());
                 }
             });
             POOL.submit(() -> {
                 try {
                     copy(bIn, aOut);
-                } catch (IOException ignored) {
+                } catch (IOException e) {
+                    log.debug("[sip] 关闭连接失败，已忽略: {}", e.getMessage());
                 }
             });
         } catch (IOException e) {

@@ -2,6 +2,7 @@ package com.chua.starter.filesystem.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.logger.ModuleLog;
+import com.chua.starter.filesystem.support.log.FileLogStore;
 import com.chua.starter.filesystem.support.task.UploadTaskManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -101,6 +102,9 @@ public class UploadTaskController {
                 request.chunkSize() == null ? 0 : request.chunkSize(),
                 request.provider(),
                 request.bucket());
+        FileLogStore.getInstance().record("TASK_CREATE",
+                request.fileName(), 200, 0,
+                "taskId=" + task.getTaskId() + " size=" + task.getTotalSize());
         return ReturnResult.ok(toMap(task));
     }
 
@@ -229,6 +233,10 @@ public class UploadTaskController {
         if (task == null) {
             return ReturnResult.illegal("任务不存在或状态不允许完成");
         }
+        FileLogStore.getInstance().record("TASK_COMPLETE",
+                task.getFileName(), 200, 0,
+                "taskId=" + task.getTaskId() + " state=" + task.getState().name()
+                        + (task.getObjectKey() == null ? "" : " key=" + task.getObjectKey()));
         return ReturnResult.ok(toMap(task));
     }
 
@@ -333,6 +341,9 @@ public class UploadTaskController {
         if (task == null) {
             return ReturnResult.illegal("任务不存在");
         }
+        FileLogStore.getInstance().record("TASK_CANCEL",
+                task.getFileName(), 200, 0,
+                "taskId=" + task.getTaskId());
         return ReturnResult.ok(toMap(task));
     }
 

@@ -399,7 +399,8 @@ public class MonitorScheduler {
                                     .value(num)
                                     .targetTable(rule.getTargetTable())
                                     .build());
-                        } catch (NumberFormatException ignored) {
+                        } catch (NumberFormatException e) {
+                            log.debug("[monitor] 解析任务参数失败，已忽略: {}", e.getMessage());
                         }
                     }
                 }

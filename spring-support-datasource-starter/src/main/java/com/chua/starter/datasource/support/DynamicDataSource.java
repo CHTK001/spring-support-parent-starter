@@ -112,7 +112,8 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             try {
                 connectionHolder.released();
                 this.binder = false;
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[datasource] 切换数据源失败，已忽略: {}", e.getMessage());
             }
         }
 

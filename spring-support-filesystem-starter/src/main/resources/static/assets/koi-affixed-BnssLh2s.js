@@ -1,0 +1,1 @@
+import{t as e}from"./koi-affixed-onMKFEN4.js";export{e as default};

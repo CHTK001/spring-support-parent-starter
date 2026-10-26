@@ -1,0 +1,1 @@
+import{t as e}from"./koi-search-favorite-NxVtdwak.js";export{e as default};

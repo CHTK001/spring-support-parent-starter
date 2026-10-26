@@ -1,0 +1,1 @@
+import{t as e}from"./koi-folder-D2if0tnY.js";export{e as default};

@@ -69,38 +69,41 @@ public final class DbTransferCodec {
      * @return 表头列名与数据行；{@code hasHeader=false} 时表头为空列表
      */
     public static ParsedTable parseDelimited(String text, char delimiter, boolean hasHeader) {
-        List<List<String>> raw = readAllRecords(stripBom(text), delimiter);
-        List<String> header = new ArrayList<>();
-        List<Map<String, Object>> rows = new ArrayList<>();
-        int start = 0;
-        if (hasHeader && !raw.isEmpty()) {
-            List<String> first = raw.get(0);
-            for (int i = 0; i < first.size(); i++) {
-                header.add(first.get(i).trim());
-            }
-            start = 1;
-        } else {
-            for (int i = 0; i < (raw.isEmpty() ? 0 : raw.get(0).size()); i++) {
-                header.add("col" + (i + 1));
-            }
-        }
-        for (int r = start; r < raw.size(); r++) {
-            List<String> record = raw.get(r);
-            // 跳过完全空行（CSV 结尾多一个换行很常见）
-            boolean blank = record.stream().allMatch(v -> v == null || v.trim().isEmpty());
-            if (blank) {
-                continue;
-            }
-            Map<String, Object> row = new LinkedHashMap<>();
-            for (int c = 0; c < header.size(); c++) {
-                row.put(header.get(c), c < record.size() ? record.get(c) : null);
-            }
-            rows.add(row);
-            if (rows.size() >= MAX_PARSE_ROWS) {
-                break;
-            }
-        }
-        return new ParsedTable(List.copyOf(header), List.copyOf(rows));
+        return parseDelimited(text, DelimitedOptions.of(delimiter, hasHeader));
+    }
+
+    /**
+     * 按完整选项解析分隔符格式（CSV / TSV）。
+     *
+     * <p>支持 Navicat 导入向导里的附加选项：自定义记录分隔符、文本识别符、
+     * 字段名所在行与数据行区间、自定义小数点符号。切分顺序是
+     * <b>先按记录切 → 再按行区间截取 → 最后按分隔符切列</b>，
+     * 不能反过来：先切列会把引号内的换行当成两个半行。</p>
+     *
+     * @param text    原始文本，可含 BOM
+     * @param options 解析选项
+     * @return 表头列名与数据行
+     */
+    public static ParsedTable parseDelimited(String text, DelimitedOptions options) {
+        DelimitedOptions effective = options == null ? DelimitedOptions.defaults() : options;
+        List<List<String>> matrix = readMatrix(stripBom(text), effective);
+        return effective.toTable(matrix);
+    }
+
+    /**
+     * 按记录分隔符与文本识别符切分为二维矩阵（不做行区间截取）。
+     *
+     * <p>对外开放是因为 Excel 分支也要复用同一条「行区间 + 表头」的收尾逻辑
+     * （{@link DelimitedOptions#toTable}），只是矩阵来源不同。</p>
+     *
+     * @param text    原始文本（已去 BOM）
+     * @param options 解析选项
+     * @return 行 × 列的原始单元格文本
+     */
+    public static List<List<String>> readMatrix(String text, DelimitedOptions options) {
+        DelimitedOptions effective = options == null ? DelimitedOptions.defaults() : options;
+        return readAllRecords(text, effective.delimiter(), effective.textQualifier(),
+                effective.recordSeparatorChars());
     }
 
     /**
@@ -111,16 +114,43 @@ public final class DbTransferCodec {
      * @return 记录列表
      */
     private static List<List<String>> readAllRecords(String text, char delimiter) {
+        return readAllRecords(text, delimiter, DelimitedOptions.DEFAULT_TEXT_QUALIFIER, new char[]{'\r', '\n'});
+    }
+
+    /**
+     * 按记录分隔符与文本识别符切分为二维矩阵。
+     *
+     * <p>引号内的记录分隔符是<b>数据</b>不是行边界（CSV 里字段可含换行），
+     * 因此引号状态机必须与切列共用同一遍扫描 —— 分两遍做（先按行 split 再切列）
+     * 会把带换行的字段劈成两行，且列数错位后整表映射全乱。</p>
+     *
+     * <p>{@code textQualifier=0} 表示不识别引号：此时全文按纯文本切分，
+     * 适合「字段里本来就有双引号但文件没做转义」的脏数据。</p>
+     *
+     * @param text            原始文本（已去 BOM）
+     * @param delimiter       字段分隔符
+     * @param textQualifier   文本识别符，0 表示不识别
+     * @param recordSeparators 视为记录边界的字符集
+     * @return 行 × 列的原始单元格文本
+     */
+    private static List<List<String>> readAllRecords(String text, char delimiter,
+                                                    char textQualifier, char[] recordSeparators) {
         List<List<String>> records = new ArrayList<>();
+        if (text == null || text.isEmpty()) {
+            return records;
+        }
+        boolean useQualifier = textQualifier != 0;
+        char[] boundaries = recordSeparators == null || recordSeparators.length == 0
+                ? new char[]{'\r', '\n'} : recordSeparators;
         List<String> current = new ArrayList<>();
         StringBuilder field = new StringBuilder();
         boolean inQuotes = false;
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             if (inQuotes) {
-                if (c == '"') {
-                    if (i + 1 < text.length() && text.charAt(i + 1) == '"') {
-                        field.append('"');
+                if (c == textQualifier) {
+                    if (i + 1 < text.length() && text.charAt(i + 1) == textQualifier) {
+                        field.append(textQualifier);
                         i++;
                     } else {
                         inQuotes = false;
@@ -130,13 +160,14 @@ public final class DbTransferCodec {
                 }
                 continue;
             }
-            if (c == '"') {
+            if (useQualifier && c == textQualifier) {
                 inQuotes = true;
             } else if (c == delimiter) {
                 current.add(field.toString());
                 field.setLength(0);
-            } else if (c == '\n' || c == '\r') {
-                if (c == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') {
+            } else if (isBoundary(c, boundaries)) {
+                // CRLF 视为一个边界：吃掉紧随的 LF，否则每个 Windows 换行都会多切出一个空行
+                if (c == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n' && isBoundary('\n', boundaries)) {
                     i++;
                 }
                 current.add(field.toString());
@@ -153,6 +184,23 @@ public final class DbTransferCodec {
         }
         return records;
     }
+
+    /**
+     * 字符是否为记录边界。
+     *
+     * @param c          待判定字符
+     * @param boundaries 边界字符集
+     * @return true=是边界
+     */
+    private static boolean isBoundary(char c, char[] boundaries) {
+        for (char boundary : boundaries) {
+            if (boundary == c) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     /**
      * 解析 JSON 数组为行集合。
@@ -303,15 +351,34 @@ public final class DbTransferCodec {
         if (bytes == null) {
             return "";
         }
-        Charset charset = StandardCharsets.UTF_8;
+        return new String(bytes, resolveCharset(encoding));
+    }
+
+    /**
+     * 解析字符集名，非法或为空时回退 UTF-8。
+     *
+     * @param encoding 编码名
+     * @return 字符集
+     */
+    public static Charset resolveCharset(String encoding) {
         if (encoding != null && !encoding.isBlank()) {
             try {
-                charset = Charset.forName(encoding.trim());
+                return Charset.forName(encoding.trim());
             } catch (RuntimeException ignored) {
                 // 未知编码名，回退 UTF-8
             }
         }
-        return new String(bytes, charset);
+        return StandardCharsets.UTF_8;
+    }
+
+    /**
+     * 实际使用的字符集名（回显用：用户填了非法名时不该回显那个非法名）。
+     *
+     * @param encoding 编码名
+     * @return 形如 {@code UTF-8}
+     */
+    public static String charsetName(String encoding) {
+        return resolveCharset(encoding).name();
     }
 
     // ==================== 序列化侧（导出） ====================
@@ -479,6 +546,56 @@ public final class DbTransferCodec {
             return decimal.toPlainString();
         }
         return String.valueOf(value);
+    }
+
+    /**
+     * 单元格值归一化为「可直接 JSON 下发 / 可直接回写」的形状。
+     *
+     * <p><b>为什么不能直接把 {@code rs.getObject(i)} 塞进 Map</b>：JDBC 驱动把
+     * {@code DATE} / {@code TIME} / {@code TIMESTAMP} 给成 {@code java.sql.Date /
+     * Time / Timestamp}，而 Jackson 对这几个类默认按 <b>epoch 毫秒数</b>输出。
+     * 于是控制台的表格里 {@code 2026-10-31} 显示成 {@code 1793376000000}，
+     * 日期选择器也取不到值；更要命的是「编辑行 → 只改备注 → 保存」时，
+     * 这些数字会被原样拼进 UPDATE，把日期列写成一个整数。</p>
+     *
+     * <p>改成下发文本后，前端拿到的就是库里的字面值，展示、选择器回填、
+     * 原样回写三件事都不再依赖「浏览器时区 == 服务端时区」这种脆弱前提。</p>
+     *
+     * <p>格式按类型分开，且都用 {@link #toString()} 的 ISO 形状：</p>
+     * <ul>
+     *   <li>{@code DATE} → {@code 2026-10-31}</li>
+     *   <li>{@code TIME} → {@code 09:15:30}</li>
+     *   <li>{@code TIMESTAMP} → {@code 2026-10-26 08:00:00}（有小数秒则保留）</li>
+     * </ul>
+     *
+     * @param value 数据库原样取值
+     * @return 可安全序列化的值
+     */
+    public static Object cellValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof java.sql.Date date) {
+            // java.sql.Date 的 toString 是 yyyy-MM-dd，正好是 DATE 列的字面值
+            return date.toString();
+        }
+        if (value instanceof java.sql.Time time) {
+            return time.toString();
+        }
+        if (value instanceof java.sql.Timestamp timestamp) {
+            // Timestamp.toString 是 yyyy-MM-dd HH:mm:ss[.fffffffff]，
+            // 与 MySQL / PG 的字面值一致；末尾多余的 0 由 toString 自己裁掉
+            return timestamp.toString();
+        }
+        if (value instanceof byte[]) {
+            return stringify(value);
+        }
+        if (value instanceof BigDecimal decimal) {
+            // 用 toPlainString：toString 在特定标度下会输出科学计数法，
+            // 前端展示成 1E+3 且回写时 MySQL 不认
+            return decimal.toPlainString();
+        }
+        return normalize(value);
     }
 
     /**

@@ -148,6 +148,29 @@ public interface ReleaseService {
      */
     ReturnResult<String> installSoftware(Long hostId, String name);
 
+    /**
+     * 列出主机上已安装的软件（同步执行，返回已安装包列表；依赖包管理器 supported 命令）
+     *
+     * @param hostId 主机ID
+     */
+    ReturnResult<List<SoftwarePackage>> listInstalledSoftware(Long hostId);
+
+    /**
+     * 卸载软件（异步，返回 taskId，实时进度经 socket 推送）
+     *
+     * @param hostId 主机ID
+     * @param name 软件包名
+     */
+    ReturnResult<String> uninstallSoftware(Long hostId, String name);
+
+    /**
+     * 升级软件到仓库最新版（异步，返回 taskId，实时进度经 socket 推送）
+     *
+     * @param hostId 主机ID
+     * @param name 软件包名
+     */
+    ReturnResult<String> upgradeSoftware(Long hostId, String name);
+
     // ==================== 状态检测 ====================
 
     /**

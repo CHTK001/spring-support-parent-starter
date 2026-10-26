@@ -603,6 +603,91 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
+    /**
+     * 列出已安装软件：同步执行 provider 的 installed 命令并解析。
+     */
+    @Override
+    public ReturnResult<List<SoftwarePackage>> listInstalledSoftware(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+
+        PackageManagerProvider provider;
+        try {
+            provider = packageManagerRouter.route(host);
+        } catch (IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        }
+
+        String command = provider.installedCommand();
+        if (isBlank(command)) {
+            return ReturnResult.error("该主机包管理器（" + provider.manager() + "）暂不支持查看已安装软件");
+        }
+
+        ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
+                execService.runCommand(Collections.singletonList(hostId), command, 60, null);
+
+        List<SoftwarePackage> packages = new ArrayList<>();
+        if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
+            String output = result.getData().get(0).getMsExecLogOutput();
+            packages = provider.parseInstalled(output);
+        }
+        return ReturnResult.ok(packages);
+    }
+
+    /**
+     * 卸载软件：构建包管理器卸载命令，转为异步任务
+     */
+    @Override
+    public ReturnResult<String> uninstallSoftware(Long hostId, String name) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (isBlank(name)) {
+            return ReturnResult.error("软件包名不能为空");
+        }
+
+        PackageManagerProvider provider;
+        try {
+            provider = packageManagerRouter.route(host);
+        } catch (IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        }
+        String command = provider.uninstallCommand(name);
+
+        List<ProjectStep> steps = List.of(new ProjectStep("卸载 " + name, command, 1));
+        String taskId = projectTaskService.startTask(hostId, null, "uninstall", steps, null);
+        return task(taskId);
+    }
+
+    /**
+     * 升级软件到最新版：构建包管理器升级命令，转为异步任务
+     */
+    @Override
+    public ReturnResult<String> upgradeSoftware(Long hostId, String name) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (isBlank(name)) {
+            return ReturnResult.error("软件包名不能为空");
+        }
+
+        PackageManagerProvider provider;
+        try {
+            provider = packageManagerRouter.route(host);
+        } catch (IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        }
+        String command = provider.upgradeCommand(name);
+
+        List<ProjectStep> steps = List.of(new ProjectStep("升级 " + name, command, 1));
+        String taskId = projectTaskService.startTask(hostId, null, "upgrade", steps, null);
+        return task(taskId);
+    }
+
     // ==================== 状态检测 ====================
 
     @Override

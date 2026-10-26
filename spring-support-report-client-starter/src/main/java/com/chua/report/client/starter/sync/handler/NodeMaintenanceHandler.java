@@ -1054,7 +1054,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                             if (value != null) {
                                 properties.put(name, value);
                             }
-                        } catch (Exception ignored) {
+                        } catch (Exception e) {
+                            log.debug("[report] 读取配置项失败，跳过: {}", e.getMessage());
                         }
                     }
                 }

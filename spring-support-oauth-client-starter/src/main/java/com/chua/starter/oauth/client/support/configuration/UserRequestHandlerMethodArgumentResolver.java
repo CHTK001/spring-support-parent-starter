@@ -15,6 +15,7 @@ import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.beans.factory.config.BeanExpressionResolver;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -41,6 +42,7 @@ import java.util.function.Function;
  * @since 2022/7/25 16:48
  * @author CH
  */
+@Slf4j
 public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
     /**
@@ -205,7 +207,8 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         if (conversionService.canConvert(o.getClass(), parameterType)) {
             try {
                 convert = conversionService.convert(o, parameterType);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[oauth] 参数类型转换失败，回退 BeanMap 组装: {}", e.getMessage());
             }
         }
         if (null == convert) {

@@ -1,6 +1,7 @@
 package com.chua.starter.mybatis.handler;
 
 import com.google.common.base.Splitter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.MappedJdbcTypes;
@@ -18,6 +19,7 @@ import java.util.List;
  * @author CH
  * @since 4.0.0
  */
+@Slf4j
 @MappedTypes(List.class)
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
@@ -78,7 +80,8 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
         for (String part : parts) {
             try {
                 result.add(Integer.parseInt(part));
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.debug("[mybatis] 列表元素解析失败，跳过: {}", e.getMessage());
             }
         }
         return result;

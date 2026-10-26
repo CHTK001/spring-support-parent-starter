@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.config;
 
 import com.chua.common.support.storage.FileStorage;
 import com.chua.starter.filesystem.support.controller.FileDirController;
+import com.chua.starter.filesystem.support.controller.FileLogController;
 import com.chua.starter.filesystem.support.controller.FileServerConfigController;
 import com.chua.starter.filesystem.support.controller.UploadTaskController;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
@@ -188,6 +189,22 @@ public class MonitorFileStorageGatewayConfig {
                                                      FileStorageTemplate template,
                                                      FileStorageProperties properties) {
         return new UploadTaskController(uploadTaskManager, template, properties);
+    }
+
+    /**
+     * 文件操作日志控制器（{@code /v2/file/log}）。
+     *
+     * <p>与 {@link UploadTaskController} 同理：{@code FileSystemAutoConfiguration}
+     * 整链被排除后，文件日志接口一并消失。本配置单独补回——它只依赖
+     * {@link com.chua.starter.filesystem.support.log.FileLogStore} 全局单例，
+     * 不触碰被排除的文件服务链。</p>
+     *
+     * @return 文件日志控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FileLogController fileLogController() {
+        return new FileLogController(com.chua.starter.filesystem.support.log.FileLogStore.getInstance());
     }
 
     /**

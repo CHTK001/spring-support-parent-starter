@@ -92,6 +92,20 @@ public class MsSyncTaskRunLog {
     private Integer runLogLineCount;
 
     /**
+     * 本轮读取行数（执行结束时从过程日志解析写入；存量行为 null，详情页动态解析兜底）
+     */
+    @TableField("ms_sync_task_run_log_read_count")
+    @Schema(description = "本轮读取行数", example = "1000")
+    private Long runLogReadCount;
+
+    /**
+     * 本轮写入行数（执行结束时从过程日志解析写入；存量行为 null，详情页动态解析兜底）
+     */
+    @TableField("ms_sync_task_run_log_write_count")
+    @Schema(description = "本轮写入行数", example = "1000")
+    private Long runLogWriteCount;
+
+    /**
      * 入库时刻
      */
     @TableField("ms_sync_task_run_log_create_time")

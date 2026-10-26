@@ -1,0 +1,1 @@
+import{n as e,t}from"./ReTab-BRnWP590.js";export{t as default,e as install};

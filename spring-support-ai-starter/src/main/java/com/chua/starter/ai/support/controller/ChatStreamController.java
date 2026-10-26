@@ -146,7 +146,8 @@ public class ChatStreamController {
         SseChatFrameSink sink = new SseChatFrameSink(objectMapper, os, () -> {
             try {
                 emitter.complete();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         });
         // 2.5 帧槽套上「会话超时」看门狗后再注册：
@@ -189,7 +190,8 @@ public class ChatStreamController {
         SseChatFrameSink sink = new SseChatFrameSink(objectMapper, os, () -> {
             try {
                 emitter.complete();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         });
         registry.register(p.sessionId(), p.memoryUser(), sink);
@@ -226,7 +228,8 @@ public class ChatStreamController {
             registry.remove(sessionId);
             try {
                 emitter.complete();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         });
         emitter.onError(t -> registry.remove(sessionId));

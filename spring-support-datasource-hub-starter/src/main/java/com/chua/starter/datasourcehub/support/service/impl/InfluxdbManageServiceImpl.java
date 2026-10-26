@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -464,12 +465,18 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         long start = System.nanoTime();
         // 三条路而不是两条：v3 只有 SQL；v2 按登记方言在 Flux 与 InfluxQL 间切换
         // （v2 关掉 flux-enabled 时只剩 InfluxQL 可用）。
+        //
+        // v2 + 方言 Flux 时还要再看一眼语句本身：管理台的「设计表」发的是
+        // SHOW FIELD KEYS / SHOW TAG KEYS 这类 InfluxQL，若按方言当 Flux 发到
+        // /api/v2/query，会被 Flux 解析器拒成 400（undefined identifier SHOW），
+        // 表现为设计表恒「暂未读取到字段」。按语句首词分流既不动方言选择，
+        // 也不让 InfluxQL 语句走错端点。
         List<JsonObject> raw;
         if (target.isV3()) {
             raw = client.v3QuerySql(target, database(request, target), statement);
         } else if (target.isV1()) {
             raw = client.v1Query(target, database(request, target), statement);
-        } else if (flux) {
+        } else if (flux && !looksLikeInfluxQl(statement)) {
             raw = client.query(target, statement);
         } else {
             // v2 的 InfluxQL 走 v1 兼容 /query（/api/v2/query 只支持 Flux）
@@ -482,6 +489,31 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             rows.add(raw.get(i));
         }
         return new InfluxdbQueryResultVO(statement, elapsed, rows, rows.size(), raw.size(), truncated);
+    }
+
+    /**
+     * InfluxQL 语句的首关键字集合。
+     *
+     * <p>用于在「方言登记为 Flux」的 v2 数据源上认出「这条其实是 InfluxQL」。
+     * Flux 语句永远以 {@code from(} / {@code import} / {@code option} / 变量赋值开头，
+     * 不会以这些关键字开头，所以按首词判断不会把 Flux 误判成 InfluxQL。</p>
+     */
+    private static final Set<String> INFLUXQL_KEYWORDS = Set.of(
+            "SHOW", "SELECT", "CREATE", "DROP", "ALTER", "DELETE", "GRANT", "REVOKE", "EXPLAIN", "KILL");
+
+    /**
+     * 语句首词是否为 InfluxQL 关键字。
+     *
+     * @param statement 查询语句
+     * @return 像 InfluxQL 返回 true
+     */
+    private static boolean looksLikeInfluxQl(String statement) {
+        String text = statement == null ? "" : statement.trim();
+        int end = 0;
+        while (end < text.length() && Character.isLetter(text.charAt(end))) {
+            end++;
+        }
+        return end > 0 && INFLUXQL_KEYWORDS.contains(text.substring(0, end).toUpperCase(Locale.ROOT));
     }
 
     /**

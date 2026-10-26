@@ -1,0 +1,1 @@
+import{t as e}from"./koi-document-forward-BOT6qRU4.js";export{e as default};

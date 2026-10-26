@@ -1,0 +1,1 @@
+import{t as e}from"./koi-align-left-D8d0l6D4.js";export{e as default};

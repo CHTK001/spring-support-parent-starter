@@ -203,7 +203,8 @@ public class DynamicDataSourceAspect {
                 }
                 return value;
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("[datasource] 解析数据源注解失败，已忽略: {}", e.getMessage());
         }
         return dsName;
     }

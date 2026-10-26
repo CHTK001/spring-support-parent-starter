@@ -1,0 +1,1 @@
+import{t as e}from"./ReButton-C-ql0fuV.js";var t={install(t){t.component(`ReButton`,e)}},n=e;export{t as n,n as t};

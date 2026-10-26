@@ -1,0 +1,1 @@
+import{t as e}from"./koi-message-like-96mnG4ow.js";export{e as default};

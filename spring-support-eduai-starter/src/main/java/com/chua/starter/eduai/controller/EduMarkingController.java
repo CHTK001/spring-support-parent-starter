@@ -1,6 +1,7 @@
 package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
@@ -65,6 +66,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "提交答题卡")
     @PostMapping("/submit")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<String> submit(@RequestBody MarkingSubmitDTO dto) {
         return ReturnResult.ok(markingService.submitAnswerSheet(dto));
     }
@@ -88,6 +90,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "扫描试卷图片并阅卷（支持多张）")
     @PostMapping("/scan")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<String> scan(@RequestParam(value = "file", required = false) MultipartFile[] files,
                                      @RequestParam(value = "mode", required = false, defaultValue = "SELF") String mode,
                                      @RequestParam(value = "paperId", required = false) Long paperId,
@@ -172,6 +175,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "教师确认评分")
     @PutMapping("/confirm")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<Boolean> confirm(@RequestBody MarkingConfirmDTO dto) {
         return ReturnResult.ok(markingService.confirmMarking(dto));
     }
@@ -184,6 +188,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "阅卷完成（错题归到对应学生）")
     @PostMapping("/{taskId}/finish")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<MarkingFinishResultVO> finish(@PathVariable String taskId) {
         return ReturnResult.ok(markingService.finishMarking(taskId));
     }
@@ -199,6 +204,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "撤销阅卷完成（回退错题归位）")
     @PostMapping("/{taskId}/unfinish")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<MarkingUndoResultVO> unfinish(@PathVariable String taskId) {
         return ReturnResult.ok(markingService.unfinishMarking(taskId));
     }
@@ -229,6 +235,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "批量阅卷完成")
     @PostMapping("/batch-finish")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<List<BatchMarkingResultVO>> batchFinish(@RequestBody BatchMarkingRequest request) {
         return ReturnResult.ok(markingService.batchFinishMarking(request));
     }
@@ -241,6 +248,7 @@ public class EduMarkingController {
      */
     @Operation(summary = "批量撤销阅卷完成")
     @PostMapping("/batch-unfinish")
+    @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<List<BatchMarkingResultVO>> batchUnfinish(@RequestBody BatchMarkingRequest request) {
         return ReturnResult.ok(markingService.batchUnfinishMarking(request));
     }

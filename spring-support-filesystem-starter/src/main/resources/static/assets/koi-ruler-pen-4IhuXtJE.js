@@ -1,0 +1,1 @@
+import{t as e}from"./koi-ruler-pen-O_aOxG0k.js";export{e as default};

@@ -57,6 +57,32 @@ public interface PackageManagerProvider {
     String installCommand(String name);
 
     /**
+     * 构造「已安装软件列表」命令（同步执行，输出由 {@link #parseInstalled(String)} 解析）
+     *
+     * <p>命令需在目标主机直接可执行且非交互；实现若不支持返回 {@code null}，
+     * 业务层将给出「该包管理器暂不支持查看已安装列表」的错误。</p>
+     *
+     * @return 可在目标主机执行的命令
+     */
+    String installedCommand();
+
+    /**
+     * 构造软件卸载命令
+     *
+     * @param name 软件包名
+     * @return 可在目标主机执行的命令
+     */
+    String uninstallCommand(String name);
+
+    /**
+     * 构造软件升级命令（把指定包升到仓库最新版）
+     *
+     * @param name 软件包名
+     * @return 可在目标主机执行的命令
+     */
+    String upgradeCommand(String name);
+
+    /**
      * 解析搜索命令输出为软件包列表
      *
      * @param output  命令标准输出
@@ -64,4 +90,12 @@ public interface PackageManagerProvider {
      * @return 软件包列表，无结果时为空列表
      */
     List<SoftwarePackage> parse(String output, String keyword);
+
+    /**
+     * 解析「已安装软件列表」命令输出为软件包列表
+     *
+     * @param output 命令标准输出
+     * @return 软件包列表，无结果时为空列表
+     */
+    List<SoftwarePackage> parseInstalled(String output);
 }

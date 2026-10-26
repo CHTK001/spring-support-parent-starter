@@ -1,0 +1,1 @@
+import{t as e}from"./koi-picture-Ds7A0mZp.js";export{e as default};

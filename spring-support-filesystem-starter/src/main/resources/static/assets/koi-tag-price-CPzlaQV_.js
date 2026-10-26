@@ -1,0 +1,1 @@
+import{t as e}from"./koi-tag-price-DleH-bYE.js";export{e as default};

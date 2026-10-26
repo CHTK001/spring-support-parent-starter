@@ -1,0 +1,1 @@
+import{t as e}from"./koi-firstline-Bi3flpfc.js";export{e as default};

@@ -1700,9 +1700,12 @@ public class ServerHostServiceImpl implements ServerHostService {
     /**
      * 「本机」主机的地址与远控协议归一。
      *
-     * <p>本机即运行本服务的机器，远控由平台自身发起：①地址强制为物理网卡的局域网 IP，
-     * 不使用回环地址（远程 guacd 收到 127.0.0.1 会回连到 guacd 自身，无法连到本机）；
-     * ②本机远控仅支持 VNC，强制协议为 VNC。</p>
+     * <p>本机即运行本服务的机器，远控由平台自身发起：①地址为空时才强制为物理网卡
+     * 的局域网 IP（回环 127.0.0.1 不需要强制替换——VNC websockify 桥接层在
+     * 本机场景已自行用 {@code NetUtils.getPreferredLocalIp()} 换出回环，
+     * guacd 也不会收到 127.0.0.1；用户显式填写的地址一律保留，否则「改了 IP
+     * 保存后又被覆盖回首选网卡 IP」的 bug 会重现）；②本机远控仅支持 VNC，
+     * 强制协议为 VNC。</p>
      *
      * @param host 主机
      */
@@ -1710,10 +1713,9 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!"LOCAL".equals(upper(host.getServerHostCollectMode()))) {
             return;
         }
-        // 地址为空或回环（guacd 收到 127.0.0.1 会回连自身）时归一为物理网卡 IP；
-        // 用户显式填写的本机网卡地址保留，不强行覆盖
+        // 仅地址为空时归一为物理网卡 IP；用户显式填写的地址（含回环）不覆盖
         String address = host.getServerHostAddress() == null ? "" : host.getServerHostAddress().trim();
-        if (address.isEmpty() || isLoopbackAddress(address)) {
+        if (address.isEmpty()) {
             host.setServerHostAddress(NetUtils.getPreferredLocalIp());
         }
         host.setServerHostRemoteProtocol(ProtocolType.VNC.name());

@@ -138,4 +138,69 @@ public abstract class AbstractPackageManagerProvider implements PackageManagerPr
         }
         return list;
     }
+
+    /**
+     * RHEL 系（yum / dnf）已安装列表解析（{@code yum list installed} / {@code dnf list installed}）。
+     * <p>
+     * 输出形如 {@code name.arch  version  repo}（含表头 {@code Installed Packages}）。
+     * 每行提取包名（去架构后缀）与版本列。
+     * </p>
+     *
+     * @param output 命令输出
+     * @return 软件包列表
+     */
+    protected static List<SoftwarePackage> parseRhelInstalled(String output) {
+        List<SoftwarePackage> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("-") || line.startsWith("=")) {
+                continue;
+            }
+            String low = line.toLowerCase();
+            if (containsAny(low, "installed packages", "loaded plugins", "last metadata",
+                    "dependencies resolved", "complete!", "nothing to do")) {
+                continue;
+            }
+            // name.arch version repo（按 2+ 空格分列）
+            String[] parts = line.split("\\s{2,}");
+            if (parts.length < 2) {
+                continue;
+            }
+            String name = parts[0].trim().replaceAll("\\.[a-z0-9_]+$", "");
+            if (name.contains("@")) {
+                // 形如 name@repo，取 name 部分
+                name = name.substring(0, name.indexOf('@'));
+            }
+            String version = parts.length >= 2 ? parts[1].trim() : null;
+            add(list, name, version, null);
+        }
+        return list;
+    }
+
+    /**
+     * 通用管道分隔（name|version|…）解析，供 choco 等使用。
+     *
+     * @param output 命令输出
+     * @return 软件包列表
+     */
+    protected static List<SoftwarePackage> parsePipe(String output) {
+        List<SoftwarePackage> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (!line.contains("|")) {
+                continue;
+            }
+            String[] parts = line.split("\\|");
+            String name = parts[0].trim();
+            String version = parts.length >= 2 ? parts[1].trim() : null;
+            add(list, name, version, name);
+        }
+        return list;
+    }
 }
