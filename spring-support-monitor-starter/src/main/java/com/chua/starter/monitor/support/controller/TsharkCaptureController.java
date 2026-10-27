@@ -10,6 +10,9 @@ import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
+import com.chua.starter.monitor.support.tshark.TsharkInstallStreamRegistry;
+import com.chua.starter.monitor.support.tshark.TsharkRuntime;
+import com.chua.starter.monitor.support.tshark.TsharkRuntimeStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.Resource;
@@ -45,13 +48,23 @@ public class TsharkCaptureController {
 
     private final TsharkCaptureService tsharkCaptureService; // tshark抓包服务
 
+    private final TsharkRuntime tsharkRuntime; // tshark 运行时检测与自动补齐
+
+    private final TsharkInstallStreamRegistry installStreamRegistry; // 安装进度推送
+
     /**
      * 构造器，注入 tshark 抓包服务
      *
-     * @param tsharkCaptureService tshark 抓包服务
+     * @param tsharkCaptureService  tshark 抓包服务
+     * @param tsharkRuntime         tshark 运行时
+     * @param installStreamRegistry 安装进度推送注册表
      */
-    public TsharkCaptureController(TsharkCaptureService tsharkCaptureService) {
+    public TsharkCaptureController(TsharkCaptureService tsharkCaptureService,
+                                   TsharkRuntime tsharkRuntime,
+                                   TsharkInstallStreamRegistry installStreamRegistry) {
         this.tsharkCaptureService = tsharkCaptureService;
+        this.tsharkRuntime = tsharkRuntime;
+        this.installStreamRegistry = installStreamRegistry;
     }
 
     /**
@@ -63,6 +76,50 @@ public class TsharkCaptureController {
     @GetMapping("/check")
     public ReturnResult<Boolean> check() {
         return this.tsharkCaptureService.checkTshark();
+    }
+
+    /**
+     * tshark 运行时状态。
+     *
+     * <p>比 {@code /check} 多带「安装到哪一步 / 能不能实时抓包 / 为什么不可用」，
+     * 页面据此决定是显示进度、提示装驱动，还是直接放行。</p>
+     *
+     * @return 状态快照
+     */
+    @Operation(summary = "tshark 运行时状态")
+    @GetMapping("/status")
+    public ReturnResult<TsharkRuntimeStatus> status() {
+        return ReturnResult.ok(this.tsharkRuntime.status());
+    }
+
+    /**
+     * 触发一次异步补齐（下载 / 解压 / 自检）。
+     *
+     * <p>幂等：正在安装时直接返回当前状态，不会重复下载。页面上的「重试」也走这个接口，
+     * 失败后不需要重启服务。</p>
+     *
+     * @return 触发后的状态快照
+     */
+    @Operation(summary = "安装 / 重试补齐 tshark")
+    @PostMapping("/install")
+    public ReturnResult<TsharkRuntimeStatus> install() {
+        this.tsharkRuntime.ensureAsync();
+        return ReturnResult.ok(this.tsharkRuntime.status());
+    }
+
+    /**
+     * 安装进度推送（SSE）。
+     *
+     * <p>事件名 {@code progress}，载荷就是 {@link TsharkRuntimeStatus}；连上先回一帧当前状态，
+     * 因此中途打开页面也能看到真实进度而不是从 0 开始。</p>
+     *
+     * @return SSE 连接
+     */
+    @Operation(summary = "tshark 安装进度")
+    @GetMapping("/install/stream")
+    public ResponseEntity<SseEmitter> installStream() {
+        SseEmitter emitter = this.installStreamRegistry.subscribe(this.tsharkRuntime.status());
+        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
     }
 
     /**

@@ -192,6 +192,20 @@ plugin:
       connect-timeout-seconds: 15
       session-timeout-seconds: 15
       exec-timeout-seconds: 60
+    tshark:
+      # 抓包工具自动补齐：启动时用虚拟线程探测一次，缺失则解压便携包（不需要管理员权限）。
+      # 已有 Wireshark 的机器会被自动识别（Program Files / PATH），无需配置。
+      # 只补 tshark 本体；实时抓包仍需要抓包驱动（Windows: Npcap / Linux: libpcap），
+      # 页面会如实提示「可解析但不可实时抓包」，不会静默安装内核驱动。
+      auto-install: true
+      # 离线部署：把含 tshark 与依赖 DLL 的 zip 放到机器上，填绝对路径（优先于 package-url）
+      # package-path: /data/packages/tshark-win64.zip
+      # 内网镜像地址（zip）。两者都为空时只探测、不下载，状态会提示「缺少安装包」
+      # package-url: http://10.0.0.5:8094/ms/tshark/package
+      # 解压目录，留空用 ~/spring-support/tshark
+      # install-dir: /data/app/tshark
+      # 下载 + 解压 + 自检的总超时（秒）
+      timeout-seconds: 600
 
 logging:
   level:
