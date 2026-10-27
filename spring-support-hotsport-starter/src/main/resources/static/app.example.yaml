@@ -1,0 +1,683 @@
+# ===========================================
+# 应用程序基础配置模板（app.example.yaml）
+# 用法：复制为 apps/{appName}/app.yaml 后按需修改
+# 优先级：defaultAppConfig < app.example.yaml < apps/{appName}/app.yaml < 环境变量
+# ===========================================
+
+# ===========================================
+# ConfigConfig 配置中心
+# ===========================================
+configConfig:
+  # 是否启用远程配置拉取（true=启动时按 http.baseUrl + url.setting 拉取远端配置并合并；
+  # false=仅使用本地配置。远程拉取失败自动降级，不影响应用启动）
+  enable: true
+
+# ===========================================
+# RouteConfig 路由配置（三模式）
+# ===========================================
+routeConfig:
+  # 路由模式：static=静态路由写死 / module=按 page 模块装配 / remote=后端菜单接口返回
+  mode: static
+  # 远程菜单接口地址（mode=remote 时生效；等价于 urlConfig.menu，getMenu() 实际使用 urlConfig.menu，冗余保留）
+  remoteUrl: ""
+  # 远程基础上是否合并本地静态路由（mode=remote 时生效）
+  mergeLocalMenu: false
+  # 本地业务路由模块路径（mode=module 时生效，对应 monorepo pages 模块）
+  modulePaths: []
+  # 远程菜单允许的路径前缀白名单（为空不过滤；命中保留，未命中过滤）
+  allowPrefixes: []
+  # 无需登录即可访问的路由白名单
+  whiteList:
+    - /login
+    - /403
+    - /404
+    - /500
+    # Prometheus 控制台免登录嵌入页（OAuth 网关放行对应 API：/ms/monitor/prometheus/dashboard/embed/**）
+    - /prometheus/embed/**
+    # Nginx 控制台免登录嵌入页（OAuth 网关放行对应 API：/ms/monitor/nginx/dashboard/embed/**）
+    - /nginx/embed/**
+  # 登录页路径
+  loginPath: /login
+  # 首页路径（layout 重定向目标）
+  homePath: /home
+  # 404 路径
+  notFoundPath: /404
+  # 403 路径
+  forbiddenPath: /403
+  # 500 路径
+  serverErrorPath: /500
+
+# ===========================================
+# AppConfig 系统信息
+# ===========================================
+appConfig:
+  # 系统名称（浏览器标题 / 登录页品牌）—— 各应用在 apps/{appName}/app.yaml 覆盖
+  title: 应用
+  # 平台版本号
+  version: "1.0.0"
+  # 平台标识码（storage 存储前缀，防止多个 app 共用同一 key）
+  systemCode: system
+  # 是否开启鉴权（false=免登录直接进入）
+  openAuth: true
+
+# ===========================================
+# HttpConfig 请求配置
+# ===========================================
+httpConfig:
+  # 远程 API 地址（后端接口基础路径）
+  baseUrl: ""
+  # 模块独立后端基础路径（如 device→/api/device，spider→/api/spider；缺省回退 baseUrl）
+  moduleBaseUrl:
+    device: /api/device
+    spider: /api/spider
+    ai: /api/ai
+  # API 版本号（拼到请求 query，如 ?version=v1）
+  apiVersion: ""
+  # 是否启用请求配置
+  enable: true
+  # 请求是否加密
+  encrypt: false
+  # 请求超时时间（毫秒）
+  timeout: 30000
+  # 重试次数（0=不重试；幂等方法 GET/HEAD/OPTIONS/PUT/DELETE 遇 5xx 时自动重试）
+  retryCount: 0
+  # 重试间隔（毫秒）
+  retryDelay: 1000
+  # 请求时显示 loading 状态
+  showLoading: true
+  # 是否启用 x-sign 防重放签名（默认 false，未配置签名头时后端跳过）
+  sign: false
+  # 签名密钥（与后端 NonceSignProperties secretKey 一致）
+  signSecret: ""
+
+# ===========================================
+# StorageConfig 缓存与存储配置
+# ===========================================
+storageConfig:
+  # 是否开启缓存加密（需同时配置 key 非空才真正加密；仅 encode=true 而 key 为空时退化为明文存储）
+  encode: false
+  # 缓存加密密钥（encode 开启时必填；同时作为 prefix 为空时的命名空间前缀）
+  key: "2XNN4K8LC0ELVWN4"
+  # 存储命名空间前缀（为空时依次取 storage.key / app.systemCode，最后兜底 "system"）
+  prefix: ""
+  # 指定不添加前缀的 key（跨应用共享）
+  noPrefixKeys:
+    - sys-fingerprint
+    - weather-location
+    - weather-cache
+  # 按登录账号隔离的 key（不同用户不互相串数据，未登录时统一为 anonymous）
+  userScopeKeys:
+    - tabs
+    - layout
+    - user-config
+    # 改名后的用户可调配置快照（user-config 只用于丢弃旧数据），同样按账号隔离
+    - user-config.v2
+    - global
+    - double-second-fixed
+    - map-toolbar-collapsed
+    - ai-character-messages
+    - ai-character-pos
+    - re-progress-history
+    - re-progress-settings
+
+# ===========================================
+# SecurityConfig 安全配置
+# ===========================================
+securityConfig:
+  # 百度 js 反调试（开启调试模式直接跳走）
+  baiduJs:
+    # 是否启用
+    enable: false
+    # 外部反调试脚本地址（可选；空=仅内置监听，配置后动态注入 <script> 加载，与内置监听互补）
+    url: ""
+    # 调试模式动作：clear=清空页面 / redirect=跳转
+    action: clear
+    # 调试模式跳转地址（action=redirect 且为空时跳首页）
+    jumpUrl: ""
+  # 动态字体加密（防止 OCR 识别）
+  dynamicFont:
+    # 是否启用
+    enable: false
+  # OCR 混淆（页面文本混淆，防止抓取）
+  ocrObfuscation:
+    # 是否启用
+    enable: false
+  # 全局水印（默认关闭；后端 Watermark* 设置变更后由热重载联动）
+  watermark:
+    # 是否开启全局水印
+    enable: false
+    # 水印文案
+    text: ""
+    # 水印颜色（hex，如 #409EFF）
+    color: ""
+    # 透明度 0~1
+    alpha: 0
+    # 旋转角度（度）
+    rotate: 0
+
+# ===========================================
+# LoginConfig 登录页配置
+# ===========================================
+loginConfig:
+  # 是否启用图形验证码
+  captcha: false
+  # 是否启用 OTP 动态口令（TOTP，6 位数字）
+  otp: false
+  # 是否启用滑块验证（前端滑动校验）
+  slider: true
+  # 品牌名（登录页 / 浏览器标题）—— 各应用在 apps/{appName}/app.yaml 覆盖
+  brandName: "应用"
+  # 品牌 Logo（登录页左上角/品牌区）—— 各应用在 apps/{appName}/app.yaml 覆盖
+  # 默认用户头像（无头像时使用，GitHub/图床 URL）
+  avatarUrl: ""
+  # 欢迎语
+  welcome: "欢迎登录"
+  # 主标题 —— 各应用在 apps/{appName}/app.yaml 覆盖
+  title: "应用"
+  # 描述（副标题下方）
+  description: ""
+  # 左侧大图（kf 介绍图）
+  imageUrl: /assets/images/login/science.png
+  # 功能特性标签
+  featureTags:
+    - icon: DataAnalysis
+      text: "高效管理"
+    - icon: Brush
+      text: "现代设计"
+    - icon: Lock
+      text: "安全可靠"
+  # 备案号；为空串则不显示备案区域
+  beiAnHao: ""
+
+# ===========================================
+# PermissionConfig 权限配置
+# ===========================================
+permissionConfig:
+  # 超级管理员角色标识（前端据此判断用户是否 superadmin）
+  # 注意：hasRole 只忽略大小写、不忽略下划线 —— 此处必须与后端下发的角色字面量
+  # 完全一致（含下划线）。本模板按常见后端约定使用 "SUPER_ADMIN" / "ADMIN"；
+  # 若你的后端下发的是小写 "superadmin"/"admin"，请同步修改，否则 v-admin 会误隐藏。
+  superadmin: "SUPER_ADMIN"
+  # 管理员角色标识列表（命中其一即视为管理员；默认含 superadmin，保证超管同时具备管理权限）
+  admin:
+    - "ADMIN"
+    - "SUPER_ADMIN"
+
+# ===========================================
+# TokenConfig 令牌配置
+# ===========================================
+tokenConfig:
+  # 是否启用 token 刷新（总开关，false 时手动 refresh() 与定时刷新均不生效）
+  refresh: false
+  # 是否开启 token 定时刷新（需 refresh 开启且 urlConfig.refreshToken 非空）
+  autoRefresh: false
+  # accessToken 存储 key
+  accessTokenKey: "accessToken"
+  # refreshToken 存储 key
+  refreshTokenKey: "refreshToken"
+  # 刷新间隔（毫秒）
+  refreshInterval: 300000
+  # 提前刷新时间（毫秒，在过期前多久刷新）
+  advanceRefresh: 60000
+
+# ===========================================
+# I18nConfig 国际化配置
+# ===========================================
+i18nConfig:
+  # 默认语言
+  defaultLocale: zh-CN
+  # 支持的语言列表
+  locales:
+    - zh-CN
+    - en-US
+
+# ===========================================
+# LayoutConfig 用户布局配置
+# ===========================================
+layoutConfig:
+  # 是否启用布局保存（false=不保存布局，只读模式；默认开启）
+  enable: true
+  # 配置来源（local: 本地 / remote: 远程，remote 时启用远程同步）
+  source: local
+
+# ===========================================
+# MenuConfig 菜单配置
+# ===========================================
+menuConfig:
+  # 父菜单只有单个子菜单时是否折叠到父级（默认 true）
+  # true：菜单 -> 用户管理 → 直接显示「用户管理」
+  # false：菜单 -> 用户管理 → 显示「菜单」展开后看到「用户管理」
+  collapseSingleChild: true
+  # 折叠形态（默认 false；仅垂直布局 layout=vertical 生效）
+  # false：折叠后显示 mini 图标菜单条
+  # true ：折叠后不渲染菜单，整个菜单收缩为一个「展开菜单」按钮，点击恢复
+  # 也可在顶部「设置」抽屉里切换（会随用户配置持久化）
+  collapseToButton: false
+  # 菜单缺省图标（菜单未配置 icon 时兜底显示，避免图标位空白）
+  # 取值同 meta.icon：koi-* 走本地 svg sprite（见 packages/assets/src/icons），
+  #                   PascalCase / ep:xxx 走 Element Plus，带前缀的走 Iconify
+  # 默认 koi-text-menu；后端菜单未下发 icon 时适用
+  defaultIcon: koi-text-menu
+
+  # 侧边栏底部入口（仅纵向布局提供：vertical / group / classic / double / optimum / columns）
+  #
+  # 规则：
+  #   0 个可用条目 → 整块不渲染
+  #   1 个条目     → 直接就是按钮（与历史行为一致）
+  #   多个条目     → 主按钮弹出菜单，点条目按各自模式执行
+  #
+  # 每个条目的模式（mode）：
+  #   route （默认）：点击跳 path；目标路由未注册时该条目自动隐藏（避免死链）
+  #   dialog        ：点击打开弹框；弹框内容 = description 文案 + children 子项列表
+  #
+  # 字段：
+  #   key / label / icon      必填项、文案、图标（ReIcon 名称）
+  #   mode                    route | dialog
+  #   path                    route 模式的目标路由
+  #   description             dialog 模式的说明文案
+  #   children                dialog 模式下列出的子项（可再嵌套，结构同本条）
+  #   admin                   仅管理员可见（默认 false；默认的「设置」为 true）
+  #
+  # 不配置时等价于下面这段（单个「设置」→ /system/config → 仅管理员）：
+  # footer:
+  #   enable: true
+  #   label: 设置
+  #   icon: Setting
+  #   entries:
+  #     - { key: systemConfig, label: 设置, icon: Setting, path: /system/config, admin: true }
+  #
+  # 多条目 + 弹框示例：
+  # footer:
+  #   enable: true
+  #   label: 更多
+  #   icon: Setting
+  #   entries:
+  #     - { key: systemConfig, label: 系统配置, icon: Setting, path: /system/config, admin: true }
+  #     - key: help
+  #       label: 帮助与关于
+  #       icon: QuestionFilled
+  #       mode: dialog
+  #       description: 版本、构建信息与常用入口。
+  #       children:
+  #         - { key: chassis, label: 采集器管理, icon: Operation, path: /collect/design }
+  #         - { key: notice, label: 通知配置, icon: Bell, path: /collect/notice }
+  footer:
+    enable: true
+    label: 设置
+    icon: Setting
+    entries:
+      - key: systemConfig
+        label: 设置
+        icon: Setting
+        mode: route
+        path: /system/config
+        admin: true
+
+# ===========================================
+# UploadConfig 上传配置
+# ===========================================
+uploadConfig:
+  # 是否启用上传（false=关闭上传能力）
+  enable: true
+  # 单个文件大小上限（字节）
+  maxSize: 10485760
+  # 允许的文件扩展名
+  accept:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".gif"
+    - ".pdf"
+    - ".zip"
+
+# ===========================================
+# UrlConfig 接口地址（集中管理，改接口只改这里）
+# ===========================================
+urlConfig:
+  # 登录接口
+  login: /v2/user/login
+  # 登出接口
+  logout: /v2/user/logout
+  # 当前用户信息接口
+  me: /v2/user/me
+  # 刷新 token 接口
+  refreshToken: /v2/user/refresh-token
+  # 验证码接口
+  captcha: /v1/captcha
+  # 默认配置接口（登录页/首页拉取后端配置合并到 getConfig；同时作为启动时远程配置地址）
+  setting: /v2/setting/default
+  # 远程菜单接口
+  menu: /v2/user/menu
+  # 用户布局接口（GET/PUT /v2/user/layout，获取/保存用户布局并缓存）
+  layout: /v2/user/layout
+  # 文件上传接口（相对路径基于 http.baseUrl；为空时回退 /v2/file/upload）
+  upload: /v2/file/upload
+
+# ===========================================
+# EnvConfig 环境配置
+# ===========================================
+envConfig:
+  # 当前环境（dev / test / prod）
+  env: dev
+
+# ===========================================
+# SystemConfig 系统配置
+# ===========================================
+systemConfig:
+  # 是否显示消息组件
+  showMessage: true
+  # 是否显示配置组件
+  showConfig: true
+  # 是否显示日志组件
+  showLog: true
+  # 是否显示监控组件
+  showMonitor: true
+
+# ===========================================
+# CryptoConfig 加密配置
+# ===========================================
+crypto:
+  # wasm 加密模块地址
+  wasmUrl: "/wasm/crypto-wasm.js"
+  # 默认加密算法（aes / sm2 / sm3 / sm4）
+  algorithm: "aes"
+
+# ===========================================
+# SocketConfig 连接配置（多协议统一管理）
+# ===========================================
+socketConfig:
+  # 是否启用
+  enable: false
+  # 协议类型（socketio / websocket / sse，默认 sse）
+  protocol: sse
+  # 服务器地址列表（逗号分隔，支持多个；为空时回退到后端 BaseUrl/当前源）
+  urls: ""
+  # Socket.IO 上下文路径（协议=socketio 时生效，默认 /socket.io）
+  context: "/socket.io"
+  # WebSocket/SSE 路径（协议=websocket/sse 时生效）
+  path: "/sse"
+  # 自动连接（默认 true）
+  autoConnect: true
+  # 自动重连（默认 true）
+  reconnection: true
+  # 重连尝试次数（默认 3）
+  reconnectionAttempts: 3
+  # 重连延迟毫秒（默认 1000）
+  reconnectionDelay: 1000
+  # 心跳间隔毫秒（WebSocket 专用，默认 30000）
+  heartbeatInterval: 30000
+  # 传输方式（socketio 专用，如 ["websocket","polling"]）
+  transports:
+    - websocket
+
+# ===========================================
+# MessageConfig 消息通知配置
+# ===========================================
+messageConfig:
+  # 消息展示位置：right-bottom=右下角浮窗 / toolbar=顶栏铃铛 / hidden=全部隐藏
+  position: toolbar
+  # 顶栏消息未读数量上限
+  maxUnread: 99
+  # 是否依赖 Socket 实时推送（false 时仅 HTTP 拉取）
+  socket: true
+  # 是否开启站内消息 HTTP 查询（true=开启；false=关闭仅保留 Socket 推送；
+  # 缺省=跟随 app.openAuth，后端就绪时开启，否则静默跳过）
+  query: true
+  # 站内消息查询接口路径
+  listUrl: /v2/message/sys-message/page
+  # 未读数查询接口路径
+  unreadUrl: /v2/message/sys-message/unread-count
+  # 已读（游标）接口路径
+  readUrl: /v2/message/sys-message/read
+
+# ===========================================
+# MonitorConfig 全局异常监控
+# ===========================================
+monitorConfig:
+  # 是否启用全局异常监控（false=不采集不上报，跳过 Worker 创建）
+  enable: false
+  # 异常上报服务端接口路径（相对 http.baseUrl；为空=仅本地统计订阅，不上报服务端）
+  reportUrl: /v2/log/report
+  # 单批上报条数上限（缓冲达到该数量即触发上报）
+  batchSize: 20
+  # 批量上报节流间隔（毫秒，防止高频错误频繁上报）
+  reportInterval: 5000
+  # 去重窗口（毫秒，同一窗口内相同错误只记录一次并累计次数）
+  dedupWindow: 60000
+  # 采样率 0~1（1=全量采集，用于高峰期降噪）
+  sampleRate: 1
+  # 缓冲上限（超出丢弃最旧，防止内存无限增长）
+  maxBuffer: 200
+  # 采集 JS 运行时异常（window.error / error 事件）
+  captureJsError: true
+  # 采集未处理的 Promise 拒绝（unhandledrejection）
+  captureRejection: true
+  # 采集资源加载失败（script/img/link 等 onerror）
+  captureResource: true
+
+# ===========================================
+# OtherConfig 其它配置
+# ===========================================
+other:
+  # 主题（default / koi）
+  themeId: "koi"
+  # 主题配置抽屉关闭是否二次确认（默认 false 直接关闭）
+  themeConfigCloseConfirm: false
+  # 状态颜色（与主题色一致的基础色，用于按钮/标签等状态组件）
+  statusColors:
+    # 成功色
+    success: "#67C23A"
+    # 警告色
+    warning: "#E6A23C"
+    # 危险色
+    danger: "#F56C6C"
+    # 信息色
+    info: "#909399"
+  # 框架组件显隐开关（Header 工具栏等）
+  toolbar:
+    # 搜索菜单
+    searchMenu: true
+    # 路由缓存刷新
+    refresh: true
+    # 明亮/暗黑模式切换
+    dark: true
+    # 语言翻译切换
+    language: true
+    # 全屏切换
+    fullScreen: true
+    # 主题配置入口
+    themeSetting: true
+    # 用户信息下拉
+    user: true
+    # 面包屑导航
+    breadcrumb: true
+    # 面包屑子级下拉（有子菜单时显示下拉箭头/菜单）
+    breadcrumbDropdown: true
+    # 面包屑显示图标
+    breadcrumbIcon: true
+    # 标签页（Tabs）显示图标
+    tabIcon: true
+    # Logo（图片 + 品牌文字）显示
+    logo: true
+    # 站内消息（铃铛徽标）
+    message: true
+    # 顶栏天气组件
+    weather: true
+    # 工具栏默认折叠（true=折叠只显示头像，false=展开显示全部图标）
+    collapse: true
+    # 顶栏条目声明式顺序表（可选）
+    #
+    # 不写 / 空数组：按框架固有顺序渲染，上面各布尔开关照常生效（向后兼容）。
+    # 写了：按数组顺序渲染，未列入的内置条目不再渲染。
+    #
+    # 每项字段：
+    #   key       必填，条目键。
+    #             内置：topMenus / searchMenu / refresh / message / dark / language /
+    #                   fullScreen / themeSetting / user / bigscreen / timer /
+    #                   weather / typhoon
+    #             扩展：envBadge（环境徽标：DEV/TEST/PROD + 后端地址，
+    #                   仅在 items 里列出才出现，避免污染存量应用）
+    #                   alerts（APM 未处置告警角标，数据来自 /api/apm/alerts；
+    #                   options 支持 limit / intervalMs / to）
+    #   visible   可选，false 等价于不写（保留一行便于临时关闭）
+    #   priority  可选，high=窄屏/折叠时也保留；normal（默认）跟随折叠
+    #   options   可选，条目私有参数（envBadge 支持 label / showHost；
+    #             alerts 支持 limit / intervalMs / to）
+    #
+    # 例：
+    # items:
+    #   - { key: envBadge, options: { label: 测试 } }
+    #   - { key: alerts, options: { to: /hotspot/alerts, intervalMs: 60000 } }
+    #   - { key: searchMenu }
+    #   - { key: dark }
+    #   - { key: user }
+    #   - { key: weather, priority: high }
+    items: []
+  # 业务能力开关：声明"本应用的后台是否提供该能力"
+  #   true / 不写：先 HEAD 探测后台接口，命中走后台，未命中回落三方（默认行为）
+  #   false：停用——不发探测、不请求后台（后台确实没有该接口时避免每次启动的 404 噪音），
+  #          对应前端入口（顶栏天气 / 台风等）一并隐藏；此项在主题配置抽屉里不再显示
+  # 能力清单见 packages/core/src/api/capability.ts（新增能力在此登记后即可用同名键配置）
+  capabilities:
+    # 天气总览（/v2/weather/overview）
+    weather: true
+    # 定位解析（/v2/location/resolve）
+    location: true
+    # 活跃台风（/v2/typhoon/active）
+    typhoon: true
+    # IP 转物理地址（/v2/ip/lookup）
+    ipLookup: true
+    # 节假日安排（/v2/holiday/get），主页日历据此显示放假与补班
+    holiday: true
+  # 顶部计时器（@repo/work 定时器 Worker，多时区最多 3 个，UTC ±12）
+  timer:
+    # 是否启用顶部计时器
+    enable: false
+    # 展示时区（UTC 偏移小时，-12 ~ +12，最多 3 个；空数组仅显示本地时间）
+    zones: []
+  # 天气配置（Open-Meteo 免费 API，enable 显隐，经纬度定位，默认每小时缓存）
+  weather:
+    # 是否启用在头部工具栏显示天气
+    enable: true
+    # 纬度（0=未配置，优先浏览器定位；定位失败且未配置时隐藏天气，不写死默认城市）
+    latitude: 0
+    # 经度（0=未配置，优先浏览器定位；定位失败且未配置时隐藏天气）
+    longitude: 0
+    # 城市名称显示（默认 "本地"）
+    city: ""
+  # 大屏配置（顶栏入口 + 独立路由 URL，开启后顶栏显示大屏图标、菜单注入大屏路由）
+  bigscreen:
+    # 是否启用大屏功能（false=完全隐藏入口和路由）
+    enable: false
+    # 大屏路由路径（默认 /bigscreen；可改为子路径如 /datav/main）
+    url: "/bigscreen"
+    # 新窗口打开大屏时的 windowFeatures
+    windowFeatures: "width=1920,height=1080"
+  # 无障碍配置（读屏优化 / 高对比度 / 语音朗读）
+  accessibility:
+    # 是否在设置面板显示无障碍分区（默认 true）
+    enable: true
+    # 读屏优化模式：为视障用户优化焦点高亮和可读性
+    screenReaderMode: false
+    # 高对比度模式：提高文字与背景对比度，独立于深色模式
+    highContrastMode: false
+    # 语音朗读：焦点移入元素时自动朗读内容（依赖 SpeechSynthesis API）
+    voiceReadEnabled: false
+  # 开发工具配置（仅 dev/test 环境显示）
+  devTools:
+    # 是否在设置面板显示 DevTools 分区（默认 true，仅 dev/test 生效）
+    enable: true
+    # 轻量调试总开关：显示标尺、网格和悬停信息等调试辅助
+    devLiteTools: false
+    # 标尺：在顶部和左侧显示像素标尺
+    devRuler: false
+    # 网格：显示布局网格辅助对齐
+    devGrid: false
+    # 悬停检查：悬停显示元素标签、类名和尺寸
+    devHoverInspector: false
+    # 系统调试：集成 eruda（移动端调试控制台）
+    debugEruda: false
+  # 热力图配置（用户点击热点覆盖层，仅 dev/test 环境显示）
+  heatmap:
+    # 是否在设置面板显示热点工具分区（默认 true，仅 dev/test 生效）
+    enable: true
+    # 热力图覆盖层：记录用户点击热点，以热力图形式覆盖展示
+    devHeatmap: false
+  # 性能监控配置（FPS / 内存 / CPU 等，实时指标悬浮）
+  performance:
+    # 是否在设置面板显示性能监控分区（默认 true）
+    enable: true
+    # FPS 监控：衡量页面流畅度，60FPS 为最佳
+    fpsMonitorEnabled: false
+    # 内存监控：当前页面使用的 JS 堆内存（仅 Chrome/Edge 有效）
+    memoryMonitorEnabled: false
+    # CPU 监控：基于主线程帧间隔估算的负载值（非系统真实 CPU）
+    cpuMonitorEnabled: false
+    # 带宽监控：显示当前页面网络请求的传输速率
+    bandwidthMonitorEnabled: false
+    # 电池监控：显示电池电量和充电状态
+    batteryMonitorEnabled: false
+    # 蓝牙监控：显示蓝牙功能可用性
+    bluetoothMonitorEnabled: false
+    # 屏幕监控：显示屏幕分辨率
+    screenMonitorEnabled: false
+    # 显示位置
+    performanceMonitorPosition: "top-left"
+    # 内容展示模式：detailed=详细 / simple=简洁 / minimal=极简
+    performanceMonitorMode: "detailed"
+    # 布局模式：merged=合并 / split=分离
+    performanceMonitorLayout: "split"
+    # 布局方向：auto=自动 / vertical=垂直 / horizontal=水平
+    performanceMonitorDirection: "auto"
+  # AI 对话配置（webllm 本地推理 / vendor 厂商 API）
+  aiChat:
+    # 是否在设置面板显示 AI 对话分区（默认 true）
+    enable: true
+    # AI 助手显示开关：控制页面悬浮 AI 助手入口是否显示
+    aiChatEnabled: false
+    # 运行模式：webllm=浏览器本地推理 / vendor=厂商 API
+    aiChatMode: "webllm"
+    # WebLLM 模型 ID（如 Qwen2.5-1.5B-Instruct-q4f16_1-MLC）
+    aiChatModel: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
+    # WebLLM 可选模型列表（覆盖内置默认；label 显示名 / value 模型 ID / image 模型图标）
+    webllmModels:
+      - label: "Qwen2.5-1.5B-Instruct（推荐·轻量）"
+        value: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
+        image: "/assets/models/qwen-color.svg"
+      - label: "Qwen2.5-3B-Instruct（中等）"
+        value: "Qwen2.5-3B-Instruct-q4f16_1-MLC"
+        image: "/assets/models/qwen-color.svg"
+      - label: "Llama-3.2-1B-Instruct（轻量）"
+        value: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+        image: "/assets/models/meta-color.svg"
+      - label: "Llama-3.2-3B-Instruct（中等）"
+        value: "Llama-3.2-3B-Instruct-q4f16_1-MLC"
+        image: "/assets/models/meta-color.svg"
+      - label: "Phi-3.5-mini-instruct（中等）"
+        value: "Phi-3.5-mini-instruct-q4f16_1-MLC"
+        image: "/assets/models/microsoft-color.svg"
+      - label: "gemma-2-2b-it（中等）"
+        value: "gemma-2-2b-it-q4f16_1-MLC"
+        image: "/assets/models/gemini-color.svg"
+    # 厂商名称（openai / deepseek / custom 等）
+    aiChatVendor: "openai"
+    # 厂商 API Key
+    aiChatApiKey: ""
+    # 厂商 API URL
+    aiChatApiUrl: ""
+    # 最大生成 token 数
+    aiChatMaxTokens: 4096
+    # 温度参数（0~2）
+    aiChatTemperature: 0.7
+    # 上下文消息条数上限（10~500）
+    aiChatContextLimit: 100
+    # 自动总结阈值百分比（50~100）
+    aiChatSummaryThreshold: 80
+    # 是否启用第 N 轮压缩：达到阈值后，将历史消息压缩为摘要，并保留最近 N 轮原始对话
+    aiChatSummaryEnabled: true
+    # 第 N 轮压缩：保留最近 N 轮原始对话（1~50），其余压缩为摘要
+    aiChatSummaryRetainRounds: 6
+  # 首页配置
+  home:
+    # 首页右侧自定义布局按钮（默认开启）
+    customLayoutButton: true
