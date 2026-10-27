@@ -1793,6 +1793,7 @@ public class ApmQueryService {
             ds.sort(Comparator.naturalOrder());
             m.put("avgMs", callCount > 0 ? Math.round((Long) m.get("totalMs") * 10.0 / callCount) / 10.0 : 0);
             m.put("p95Ms", percentile(ds, 0.95));
+            m.put("p99Ms", percentile(ds, 0.99));
             m.put("maxMs", ds.isEmpty() ? 0L : ds.get(ds.size() - 1));
             m.put("errorRate", callCount > 0
                     ? Math.round(10000.0 * (Long) m.get("errorCount") / callCount) / 100.0 : 0.0);
