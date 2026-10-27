@@ -507,7 +507,7 @@ public class RagController {
     @Operation(summary = "URL 抓取文档", description = "从指定 URL 抓取网页内容并添加为 RAG 文档")
     @PostMapping("/document/url")
     public ReturnResult<RagDocument> addDocumentByUrl(@RequestBody com.chua.starter.ai.support.model.UrlDocumentRequest request) {
-        String url = request.getUrl();
+        String url = request.url();
         if (StringUtils.isBlank(url)) {
             return ReturnResult.error("URL 不能为空");
         }
