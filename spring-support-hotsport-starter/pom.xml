@@ -68,6 +68,15 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- MySQL 驱动：仅 apm.storage.type=mysql 时需要。
+             设为 optional 是刻意的——默认存储是内嵌 SQLite，宿主不该为了观测组件
+             平白多背 2.5MB 驱动；要接 MySQL 时由使用方显式引入。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

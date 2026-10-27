@@ -345,8 +345,9 @@ public class ApmController {
      *
      * <p>只传需要修改的项，未传的保持原值。语义：</p>
      * <ul>
-     *   <li>{@code type} — inmemory / sqlite / noop</li>
+     *   <li>{@code type} — sqlite / mysql / inmemory / noop</li>
      *   <li>{@code path} — 落盘文件路径；传空串表示回到默认临时目录</li>
+     *   <li>{@code url} / {@code username} / {@code password} — MySQL 连接信息（type=mysql 时必填 url）</li>
      *   <li>{@code retentionMs} / {@code capacity} — 保留期与单表容量</li>
      *   <li>{@code async} — 异步批量写开关</li>
      *   <li>{@code maintenanceIntervalMs} — 自维护周期（保留期清理 + 容量淘汰），下限 5000</li>
@@ -358,6 +359,9 @@ public class ApmController {
      *
      * @param type                  存储类型
      * @param path                  落盘路径（空串表示默认目录）
+     * @param url                   JDBC URL（type=mysql 时必填）
+     * @param username              数据库用户名
+     * @param password              数据库密码
      * @param retentionMs           数据保留毫秒
      * @param capacity              单表容量上限
      * @param async                 是否异步批量写
@@ -369,6 +373,9 @@ public class ApmController {
     public ReturnResult<Map<String, Object>> updateStorageConfig(
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String path,
+            @RequestParam(required = false) String url,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String password,
             @RequestParam(required = false) Long retentionMs,
             @RequestParam(required = false) Integer capacity,
             @RequestParam(required = false) Boolean async,
@@ -378,14 +385,23 @@ public class ApmController {
                 hotsportProperties.getApm().getStorage();
         if (type != null && !type.isBlank()) {
             String normalized = type.trim().toLowerCase(java.util.Locale.ROOT);
-            if (!java.util.Set.of("inmemory", "sqlite", "noop").contains(normalized)) {
-                return storageResult(false, "不支持的存储类型: " + type + "（可选 inmemory / sqlite / noop）");
+            if (!java.util.Set.of("inmemory", "sqlite", "mysql", "noop").contains(normalized)) {
+                return storageResult(false, "不支持的存储类型: " + type + "（可选 sqlite / mysql / inmemory / noop）");
             }
             storage.setType(normalized);
         }
         if (path != null) {
             // 空串是有意义的值：表示「回到默认目录」，不能当成「未传」忽略
             storage.setPath(path.trim());
+        }
+        if (url != null) {
+            storage.setUrl(url.trim());
+        }
+        if (username != null) {
+            storage.setUsername(username.trim());
+        }
+        if (password != null) {
+            storage.setPassword(password);
         }
         if (retentionMs != null) {
             if (retentionMs <= 0) {
