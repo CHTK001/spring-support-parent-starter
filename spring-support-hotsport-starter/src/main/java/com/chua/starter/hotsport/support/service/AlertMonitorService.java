@@ -368,6 +368,25 @@ public class AlertMonitorService {
         return alerts(3);
     }
 
+    /**
+     * 未处置告警数（{@code status = OPEN}）。
+     *
+     * <p>侧栏红点要的是「全部未处置条数」，而 {@link #recentAlerts()} 只取最近 3 条，
+     * 拿它计数会少算。这里直接对事件队列计数，随 SSE 帧下发，前端就不必再为红点
+     * 轮询 {@code /api/apm/alerts}。</p>
+     *
+     * @return 未处置告警条数
+     */
+    public int openAlertCount() {
+        int count = 0;
+        for (AlertEvent e : events) {
+            if ("OPEN".equals(e.status)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     // ------------------------------------------------------------------
     // 规则 CRUD
     // ------------------------------------------------------------------
