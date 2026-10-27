@@ -13,6 +13,7 @@ import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
+import com.chua.starter.monitor.support.tshark.TsharkRuntime;
 import lombok.extern.slf4j.Slf4j;
 import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
@@ -54,6 +55,24 @@ import java.util.concurrent.TimeUnit;
 public class TsharkCaptureService {
 
     private static final String TSHARK_BIN = System.getenv().getOrDefault("TSHARK_BIN", "tshark"); // TSHARK_BIN
+
+    /**
+     * tshark 运行时。
+     *
+     * <p>可执行文件不再只认环境变量：{@link TsharkRuntime} 会自动探测本机安装、必要时
+     * 在虚拟线程里补齐便携版。抓包命令必须走它解析出来的路径，否则「装好了却还在用
+     * 一个不存在的 tshark」——这是最容易踩的一处。</p>
+     */
+    private final TsharkRuntime tsharkRuntime;
+
+    /**
+     * 当前可执行文件。
+     *
+     * @return 运行时解析出的路径，未探测到结果时回落到 {@link #TSHARK_BIN}
+     */
+    private String bin() {
+        return this.tsharkRuntime == null ? TSHARK_BIN : this.tsharkRuntime.bin();
+    }
 
     /**
      * pcap 落盘目录。
@@ -129,11 +148,13 @@ public class TsharkCaptureService {
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
                                 MsTsharkPacketMapper packetMapper,
                                 MonitorPushService pushService,
-                                ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider) {
+                                ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider,
+                                TsharkRuntime tsharkRuntime) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
         this.pushService = pushService;
         this.streamRegistryProvider = streamRegistryProvider;
+        this.tsharkRuntime = tsharkRuntime;
     }
 
     /**
@@ -154,7 +175,7 @@ public class TsharkCaptureService {
             // 合并后 tshark 的报错文案会和网卡行混在一起，分不出哪些是网卡；
             // 单独落文件既能读到报错，又不会因为两个流互相堵塞而死锁。
             errFile = Files.createTempFile("tshark-iface-err", ".txt");
-            ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-D");
+            ProcessBuilder pb = new ProcessBuilder(bin(), "-D");
             pb.redirectError(errFile.toFile());
             Process p = pb.start();
             List<TsharkInterfaceVO> ifaces = new ArrayList<>();
@@ -355,7 +376,7 @@ public class TsharkCaptureService {
      */
     public ReturnResult<Boolean> checkTshark() {
         try {
-            ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "--version");
+            ProcessBuilder pb = new ProcessBuilder(bin(), "--version");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             StringBuilder sb = new StringBuilder();
@@ -387,7 +408,7 @@ public class TsharkCaptureService {
     private String execHint(Exception e) {
         String raw = String.valueOf(e.getMessage());
         if (raw.contains("error=2") || raw.contains("No such file or directory")) {
-            return "未找到 tshark 可执行文件（" + TSHARK_BIN + "），请安装 Wireshark 或设置环境变量 TSHARK_BIN 指向绝对路径";
+            return "未找到 tshark 可执行文件（" + bin() + "），请安装 Wireshark 或设置环境变量 TSHARK_BIN 指向绝对路径";
         }
         return raw;
     }
@@ -572,7 +593,7 @@ public class TsharkCaptureService {
             String fileName = UUID.randomUUID().toString().replace("-", "") + ".pcap";
             Path filePath = Paths.get(CAPTURE_DIR, fileName);
             List<String> cmd = new ArrayList<>();
-            cmd.add(TSHARK_BIN);
+            cmd.add(bin());
             cmd.add("-i");
             cmd.add(iface);
             if (filter != null && !filter.isBlank()) {
@@ -883,7 +904,7 @@ public class TsharkCaptureService {
      * @return 本次新增条数
      */
     private long parsePcapIncrementally(Long sessionId, Path filePath, long afterFrame) {
-        List<String> cmd = new ArrayList<>(List.of(TSHARK_BIN, "-r", filePath.toString(),
+        List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                 "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=f"));
         for (String field : TSHARK_FIELDS) {
             cmd.add("-e");
@@ -1008,7 +1029,7 @@ public class TsharkCaptureService {
                 log.warn("capture file empty, session={}", sessionId);
                 return;
             }
-            List<String> cmd = new ArrayList<>(List.of(TSHARK_BIN, "-r", filePath.toString(),
+            List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                     "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=f"));
             // 字段顺序即输出列顺序，逐列含义见 TSHARK_FIELDS 的注释
             for (String field : TSHARK_FIELDS) {
