@@ -15,6 +15,7 @@ import com.chua.starter.hotsport.support.model.TransmissionQuery;
 import com.chua.starter.agent.support.service.AgentAttachService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 
@@ -56,6 +57,14 @@ public class ApmQueryService {
      * Hotsport 配置（读取 plugin.hotsport.apm.storage.* 交给本地 APM 引擎）。
      */
     private final com.chua.starter.hotsport.support.config.HotsportProperties hotsportProperties;
+
+    /**
+     * Spring 容器：用于读取本进程真实的 WebServer 监听端口与实现名。
+     *
+     * <p>端口必须来自实际绑定的 WebServer，不能写死常量——{@code --server.port}
+     * 与随机端口都以实际绑定值为准。</p>
+     */
+    private final ApplicationContext applicationContext;
 
     /**
      * 本进程 APM 引擎（启动后保留引用，供运行时热更新存储配置使用）。
@@ -369,12 +378,18 @@ public class ApmQueryService {
             try {
                 int derived = dependencies(Integer.MAX_VALUE).size();
                 if (derived > 0) {
-                    result.put("dependencyCount", (long) derived);
+                    dependencyCount = derived;
                 }
             } catch (Exception e) {
                 log.debug("[Hotsport] 依赖边派生失败: {}", e.getMessage());
             }
         }
+        // 两个键同源写回。result.putAll(raw) 会把 storage 的复数原始键 dependencies
+        // 原样带出，而它只在字节码级依赖采集生效时才累加 —— 纯 Spring Boot 应用恒为 0。
+        // 若只补 *Count，同一份 stats 里就会同时出现 dependencies=0 与
+        // dependencyCount=N，读哪一个都对、拼在一起却自相矛盾。
+        result.put("dependencyCount", dependencyCount);
+        result.put("dependencies", dependencyCount);
         return result;
     }
 
@@ -2744,7 +2759,11 @@ public class ApmQueryService {
         }
         t.put("modules", modules);
         List<Map<String, Object>> ports = new ArrayList<>();
-        addPort(ports, "HTTP", "Tomcat/Spring Boot", 8890);
+        // 端口取 WebServer 实际绑定值：原来这里写死 8890，与实际监听端口无关，属于伪造数据
+        int httpPort = localServerPort();
+        if (httpPort > 0) {
+            addPort(ports, "HTTP", localWebServerName(), httpPort);
+        }
         addPort(ports, "AGENT", "Hotsport Shell", agentAttachService.getShellPort());
         t.put("ports", ports);
         List<Map<String, Object>> connections = new ArrayList<>();
@@ -2796,6 +2815,72 @@ public class ApmQueryService {
         t.put("nodes", nodes);
         t.put("edges", edges);
         return t;
+    }
+
+    /**
+     * 本进程自身标识（依赖拓扑标「当前主机」用，全部取真实值）。
+     *
+     * @return { hostName, address, port, software, display }
+     */
+    public Map<String, Object> selfIdentity() {
+        String hostName = "unknown";
+        String address = "";
+        try {
+            java.net.InetAddress local = java.net.InetAddress.getLocalHost();
+            hostName = local.getHostName();
+            address = local.getHostAddress();
+        } catch (Exception e) {
+            log.debug("[Hotsport] 读取本机地址失败: {}", e.getMessage());
+        }
+        int port = localServerPort();
+        Map<String, Object> self = new LinkedHashMap<>();
+        self.put("hostName", hostName);
+        self.put("address", address);
+        self.put("port", port);
+        self.put("software", localWebServerName());
+        self.put("display", port > 0 ? hostName + ":" + port : hostName);
+        return self;
+    }
+
+    /**
+     * 本进程真实 HTTP 监听端口。
+     *
+     * <p>取 WebServer 实际绑定的端口（{@code --server.port} 与随机端口都以实际值为准）；
+     * 拿不到就返回 -1 —— 宁可不画这个节点，也不写死一个数字。</p>
+     *
+     * @return 监听端口，未知返回 -1
+     */
+    private int localServerPort() {
+        try {
+            if (applicationContext
+                    instanceof org.springframework.boot.web.server.context.WebServerApplicationContext ctx
+                    && ctx.getWebServer() != null) {
+                return ctx.getWebServer().getPort();
+            }
+        } catch (Exception e) {
+            log.debug("[Hotsport] 读取 WebServer 端口失败: {}", e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * 本进程真实 WebServer 实现名（如 Tomcat / Jetty）。
+     *
+     * @return 软件名，未知返回 {@code HTTP}
+     */
+    private String localWebServerName() {
+        try {
+            if (applicationContext
+                    instanceof org.springframework.boot.web.server.context.WebServerApplicationContext ctx
+                    && ctx.getWebServer() != null) {
+                String simple = ctx.getWebServer().getClass().getSimpleName();
+                return simple.endsWith("WebServer")
+                        ? simple.substring(0, simple.length() - "WebServer".length()) : simple;
+            }
+        } catch (Exception e) {
+            log.debug("[Hotsport] 读取 WebServer 实现失败: {}", e.getMessage());
+        }
+        return "HTTP";
     }
 
     private static void addPort(List<Map<String, Object>> ports, String protocol,

@@ -689,10 +689,20 @@ public class ApmController {
     }
 
     /**
-     * 链路树（trace → span 两级 ReTree 数据源）。
+     * 本进程自身标识（真实主机名 / 地址 / 监听端口），依赖拓扑据此标出「当前主机」。
      *
-     * @param limit trace 上限
-     * @return trace 节点列表
+     * @return 自身标识
+     */
+    @GetMapping("/agent/self")
+    public ReturnResult<Map<String, Object>> agentSelf() {
+        return ReturnResult.ok(apmQueryService.selfIdentity());
+    }
+
+    /**
+     * 链路树（首层真实 HTTP 请求，子层真实 class.method，按 parentSpanId 嵌套）。
+     *
+     * @param limit 根节点上限
+     * @return 根节点列表
      */
     @GetMapping("/agent/traces/tree")
     public ReturnResult<List<Map<String, Object>>> agentTracesTree(
