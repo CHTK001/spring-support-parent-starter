@@ -1,1 +1,0 @@
-import{t as e}from"./ReCountup-ByCkWM4i.js";var t={install(t){t.component(`ReCountup`,e)}},n=e;export{n as default,t as install};
