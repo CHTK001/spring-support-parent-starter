@@ -1,0 +1,1 @@
+import{t as e}from"./RePagination-DIZsaoSM.js";var t={install(t){t.component(`RePagination`,e)}},n=e;export{n as default,t as install};
