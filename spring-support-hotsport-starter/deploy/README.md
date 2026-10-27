@@ -1,6 +1,6 @@
 # hotsport 部署（lib 与业务 jar 分离）
 
-日常升级只上传 **业务 jar（约 3MB）**，不上传 107MB 的依赖。这是本目录存在的唯一理由。
+日常升级只上传 **业务 jar（含前端 agent 包后约 14MB）**，不上传 107MB 的依赖。这是本目录存在的唯一理由。
 
 与 `spring-support-ai-starter/deploy/` 同一套方案、同一套目录约定，区别只在于
 主类、端口、探活端点。
@@ -17,21 +17,23 @@ fat jar 里 97% 是依赖。Spring Boot 默认的 `java -jar` 只认 jar 内 `BO
 
 `start.sh` 用的是第三种。
 
-## 实测体积（v4.0.0.42）
+## 实测体积（v4.0.0.42，含前端 agent 包）
 
 | 部分 | 大小 |
 |---|---|
 | fat jar | 108.3 MB |
 | `BOOT-INF/lib`（125 个 jar） | 106.5 MB |
 | 业务代码 `target/classes`（43 个文件） | 3.35 MB |
+| 前端 agent 包 `static/`（713 文件） | 26.4 MB（随业务 jar 一起打进 `app.jar`） |
 
-也就是说：一次日常升级传 3.35MB，而不是 108MB。
+日常升级上传的 `app.jar` = 业务代码 + 前端 agent 包 + 少量启动料 ≈ **14MB**
+（而不是 108MB 的 fat jar）。
 
 ## 目标机目录
 
 ```
 /data/hotsport/
-├── app.jar           业务 jar，约 3MB，每次发布替换（旧的留 5 份 app.jar.bak-*）
+├── app.jar           业务 jar，约 14MB（业务代码 + 前端 agent 包），每次发布替换（旧的留 5 份 app.jar.bak-*）
 ├── lib/              125 个依赖 jar，约 107MB，只在依赖变化时增量更新
 ├── jdk/              （可选）自带 JDK；不放则用 PATH 里的 java
 ├── config/
@@ -69,7 +71,7 @@ pwsh -File spring-support-hotsport-starter/deploy/release.ps1 -SyncDeps
 > 清单必须是 **LF 换行**。远端用 `IFS= read -r n` 逐行读，CRLF 会让每个文件名
 > 尾部多一个 `\r`，`[ -f "$n" ]` 全部失败 → 每次都重传全量。
 
-## 日常升级（只传 3MB）
+## 日常升级（只传 14MB）
 
 ```powershell
 pwsh -File spring-support-hotsport-starter/deploy/release.ps1
@@ -78,9 +80,9 @@ pwsh -File spring-support-hotsport-starter/deploy/release.ps1
 输出形如：
 
 ```
-[release] business jar: app.jar  3,431 KB  (43 entries)  sha256=3f2a...
+[release] business jar: app.jar  13,873 KB  (744 entries)  sha256=3f2a...
 [release] skipping dependency sync (pass -SyncDeps to enable)
-[release] uploading business jar (3,431 KB) ...
+[release] uploading business jar (13,873 KB) ...
 [release] restarting service
 [release] health check (GET /api/apm/stats)
 [release] DONE - /api/apm/stats reachable
@@ -141,13 +143,41 @@ ssh -p 2222 <user>@<host> 'bash /data/hotsport/start.sh restart'
 不依赖外部数据库（`application.yml` 的 H2 兜底），返回 `200` + `"ok": true`
 即证明 Tomcat + Spring MVC + APM 服务层全部就绪。
 
+## 前端交付：三包拆分
+
+前端产物（`vue-support-parent-starter/apps/vue-support-hotspot-starter/dist`）
+总约 178MB，直接整体入库/入 jar 太重。用 `split-dist.ps1` 拆成三个交付包：
+
+| 包 | 内容 | 体积 | 用途 |
+|---|---|---|---|
+| **agent** | `index.html` + `loader*.js` + `os/` + `assets/` 全部 | 26.4MB | 观测面板核心运行时：Dashboard / Traces / Errors / 依赖 / JVM / 告警 / 日志等全部页面。**直接依赖 `@pages/hotsport` 的模块、或只要观测面板的部署，只需要这一包** |
+| **resources** | `wasm/` `vendor/` `ruffle/` `images/` `apps/` + `flyfish-viewer-assets.json` | 151.6MB | 重型可选资源：文件预览（wasm）、Flash（ruffle）、地图引擎（vendor）等**按需懒加载**功能。不引入则面板其余功能不受影响 |
+| **full** | agent + resources | 178MB | 完整 dist 原样 |
+
+```powershell
+# 在 vue-support-parent-starter 根：先构建再拆分
+pnpm -C apps/vue-support-hotspot-starter build
+pwsh -File apps/vue-support-hotspot-starter/split-dist.ps1
+# 产物：dist-split/hotsport-agent.zip / hotsport-resources.zip / hotsport-full.zip / manifest.txt
+```
+
+**agent 包已打进 `app.jar`**：`src/main/resources/static/` 直接放 agent 包内容
+（713 文件 / 26.4MB），thin jar 随之约 14MB。日常升级流程不变，前端页面
+（含慢 SQL / 运维工具 / 调用序列下钻等排查分析界面）随 jar 一体交付。
+
+**资源包不进入 jar**（151MB 太重，且与面板核心无关）。需要文件预览 / Flash /
+地图等懒加载功能时，单独给部署挂资源：
+
+> 注意：`common-starter` 的 `ResourceWebMvcConfigurer` 硬编码 `/** → classpath:/static/`，
+> 覆盖了 `spring.web.resources.static-locations` 属性——**外部静态目录方案不可用**。
+> 资源包要么打进一个独立的辅助 jar（`classpath:/static/wasm|vendor|ruffle...` 即可被
+> 同一映射命中），要么在宿主上另起一个轻量静态服务（`instabox-port serve <dir>`）
+> 并通过前端 loader-config 指向该地址。二者都不要与 `app.jar` 的 `static/` 混放。
+
 ## 已知缺口
 
-- **`app.jar` 里不含前端静态资源的最新版本**：`src/main/resources/static/` 目前仍是
-  早期构建产物。前端产物 178MB（含 `wasm/`、`ruffle/`、`vendor/` 等重型库），
-  不宜整体入库。前端要么单独部署、要么把重型库分离后再打进 `app.jar`。
 - `release.ps1` 是 PowerShell：开发机是 Windows。Linux 开发机需要 `scp` 手工传
-  `app.jar`（3MB，手工也不痛）或自行改写。
+  `app.jar`（含前端后约 14MB，手工也能接受）或自行改写。
 
 ## 存储后端
 
