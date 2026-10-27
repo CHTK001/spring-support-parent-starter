@@ -6,41 +6,33 @@ import java.io.Serializable;
 /**
  * IP2代理 LITE 查询结果模型
  *
+ * @param proxy 代理
+ * @param ip IP
  * @since 4.0.0.42
  * @author CH
  */
-public class IP2ProxyResult implements Serializable {
+public record IP2ProxyResult(
+        /**
+         * 代理
+         */
+        IP2Proxy proxy,
+        /**
+         * IP
+         */
+        String ip
+) implements Serializable {
 
-    private static final long serialVersionUID = 1L; // 串行版本uid
+    /** 串行版本uid */
+    private static final long serialVersionUID = 1L;
 
     /**
      * Not_支持
-    */
+     */
     private static final String NOT_SUPPORTED = "NOT SUPPORTED";
     /**
      * 是否为空
-    */
-    private static final String EMPTY = "-";
-
-    /**
-     * 代理
-    */
-    private final IP2Proxy proxy;
-    /**
-     * IP
-    */
-    private final String ip;
-
-    /**
-     * 创建 IP2代理结果 实例
-     * @param proxy 代理
-     * @param ip 字符串
-     * @param ip ip
      */
-    public IP2ProxyResult(IP2Proxy proxy, String ip) {
-        this.proxy = proxy;
-        this.ip = ip;
-    }
+    private static final String EMPTY = "-";
 
     /**
      * 是否Valid
