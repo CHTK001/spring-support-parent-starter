@@ -101,6 +101,14 @@ public class ApmController {
             });
 
     /**
+     * 趋势聚合随帧下发的间隔（按帧计）。
+     *
+     * <p>{@code trend()} 需要扫描传输记录，比 stats 重得多，不适合每帧都算；
+     * 按默认 3s 一帧，每 5 帧即 15s 下发一次即可满足趋势图的粒度。</p>
+     */
+    private static final int TREND_FRAME_EVERY = 5;
+
+    /**
      * 概览统计。
      *
      * @return 各类型总量 + agent 状态
@@ -1043,6 +1051,10 @@ public class ApmController {
     public SseEmitter stream(@RequestParam(defaultValue = "3000") long intervalMs) {
         long effective = Math.max(1000, Math.min(60000, intervalMs));
         SseEmitter emitter = new SseEmitter(5L * 60 * 1000);
+        // 趋势聚合要扫传输记录，比 stats 重得多，不适合每帧都算。
+        // 折中：每 5 帧（默认 3s×5=15s）随帧下发一次，前端就不必再定时请求
+        // /trend 与 /transmissions —— 整站仍然只有这一条推送通道。
+        java.util.concurrent.atomic.AtomicInteger frameNo = new java.util.concurrent.atomic.AtomicInteger();
         ScheduledFuture<?> task = sseExecutor.scheduleAtFixedRate(() -> {
             try {
                 Map<String, Object> stats = apmQueryService.stats();
@@ -1051,6 +1063,11 @@ public class ApmController {
                 stats.putAll(health);
                 // 并入最近告警（前端 Dashboard 可选消费）
                 stats.put("recentAlerts", alertMonitorService.recentAlerts());
+                // 未处置告警总数：侧栏红点直接读它，避免前端为计数再发一次 /alerts
+                stats.put("openAlertCount", alertMonitorService.openAlertCount());
+                if (frameNo.getAndIncrement() % TREND_FRAME_EVERY == 0) {
+                    stats.put("trend", apmQueryService.trend(30, 60));
+                }
                 String json = objectMapper.writeValueAsString(Map.of("ts", System.currentTimeMillis(), "data", stats));
                 emitter.send(SseEmitter.event().name("stats").data(json, MediaType.TEXT_PLAIN));
             } catch (IOException e) {

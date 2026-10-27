@@ -93,8 +93,11 @@ public class SlowCallFilter implements Filter {
     /**
      * 判断请求 URI 是否应被排除。
      *
-     * <p>只排除「非调用语义」的资源：静态资源、favicon、actuator、健康检查、
-     * 以及 SSE 长连接。API 查询请求同样记录——它们就是本进程真实的负载。</p>
+     * <p>排除「非调用语义」的资源：静态资源、favicon、actuator、健康检查、
+     * 以及 APM 自身的全部接口。APM 接口曾经也记录，结果是观测台前端的每次刷新
+     * 都被当成业务调用回灌进统计：沙箱实测传输记录 828 条里有 819 条是
+     * {@code /api/apm/*} 自观测，依赖拓扑、服务排名、慢调用榜全被自己占满，
+     * 而且「读数据」又产生新数据，形成自激噪声。观测组件不该把自己算成业务流量。</p>
      *
      * @param uri 请求路径
      * @return 是否排除
@@ -104,8 +107,8 @@ public class SlowCallFilter implements Filter {
                 || uri.startsWith("/actuator/") || uri.equals("/health")) {
             return true;
         }
-        // SSE 长连接不按「一次请求一次调用」计量，记录会得到一条永不结束的假耗时
-        return uri.startsWith("/api/apm/stream");
+        // APM 自身接口（含 SSE 长连接）不计量：自观测会污染所有统计口径
+        return uri.startsWith("/api/apm/");
     }
 
     /**
@@ -216,7 +219,7 @@ public class SlowCallFilter implements Filter {
     public Map<String, Object> info() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("thresholdMs", thresholdMs);
-        m.put("excludes", "[/assets/**, /favicon.ico, /actuator/**, /health, /api/apm/stream*]");
+        m.put("excludes", "[/assets/**, /favicon.ico, /actuator/**, /health, /api/apm/**]");
         return m;
     }
 }
