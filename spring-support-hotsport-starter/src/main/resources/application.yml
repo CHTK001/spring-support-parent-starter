@@ -2,7 +2,7 @@
 # Hotsport (APM 热点观测) 启动配置
 #
 # 本后台是纯观测进程：不依赖任何外部数据库（已排除 DataSourceAutoConfiguration），
-# APM 数据全部来自 StorageManager SPI（inmemory / sqlite）+ 真实字节码采集。
+# APM 数据全部来自 StorageManager SPI（sqlite / mysql / inmemory）+ 真实字节码采集。
 # ============================================================
 server:
   port: 8086
@@ -20,10 +20,16 @@ plugin:
   hotsport:
     # 演示数据种子已彻底移除：页面只显示真实采集数据，无数据即空态。
     # （历史 demo.seed 会伪造 120 条传输/6 条依赖/5 条泄漏/40 条日志，已删除）
-    # 静态存储后端：inmemory / sqlite / noop
+    # 存储后端：sqlite（默认，真实数据库文件，重启不丢）/ mysql（JDBC）/ inmemory / noop
+    #
+    # 默认用 sqlite 而不是 inmemory：内存存储重启即归零，面板上永远是「刚启动」的假空态。
+    # 默认用 sqlite 而不是 mysql：观测组件不能因为外部数据库连不上就采不到数据，
+    # 需要集中存储时再显式切 mysql 并配置 url / username / password。
     apm:
       storage:
-        type: inmemory
+        type: sqlite
+        # 落盘目录（不是文件）：库文件为 <path>/apm.db
+        path: ${user.home}/.hotsport/apm
         retention-ms: 604800000
   # Agent 自注入（spring-support-agent-starter 自动配置，前缀 plugin.agent）
   agent:

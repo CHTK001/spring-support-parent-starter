@@ -11,8 +11,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * <p>提供 REST API 暴露运行时 APM 数据（传输记录 / 依赖图 / 资源泄漏 / 日志），
  * 并在启动时自注入 Java Agent（{@code RuntimeBoot.attachSelf}）对当前 JVM 插桩。</p>
  *
- * <p><b>不依赖数据库</b>：本模块业务代码零 {@code DataSource} / {@code JdbcTemplate}
- * 使用，APM 数据全部走 {@code StorageManager} SPI（内存 / SQLite）。{@code spring-jdbc}
+ * <p><b>不依赖外部数据库</b>：本模块业务代码零 {@code DataSource} / {@code JdbcTemplate}
+ * 使用，APM 数据全部走 {@code StorageManager} SPI（SQLite 默认 / MySQL 可选 / 内存）。
+ * 即使切到 MySQL，也是自管 {@code DriverManager} 连接，不参与 Spring 的
+ * {@code DataSource} 自动配置。{@code spring-jdbc}
  * 仅因 common-starter 的异常处理器引用 {@code DataAccessException} 才留在 classpath，
  * 但绝不能让它自动配置 DataSource —— 否则会要求一个可连的 MySQL，启动即失败。
  * 故这里显式排除 {@link DataSourceAutoConfiguration}：观测后台必须能脱离任何外部

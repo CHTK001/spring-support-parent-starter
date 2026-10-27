@@ -148,3 +148,22 @@ ssh -p 2222 <user>@<host> 'bash /data/hotsport/start.sh restart'
   不宜整体入库。前端要么单独部署、要么把重型库分离后再打进 `app.jar`。
 - `release.ps1` 是 PowerShell：开发机是 Windows。Linux 开发机需要 `scp` 手工传
   `app.jar`（3MB，手工也不痛）或自行改写。
+
+## 存储后端
+
+| type | 说明 | 重启后数据 |
+|---|---|---|
+| `sqlite`（默认） | 内嵌真实数据库文件（`<path>/apm.db`），不依赖外部服务 | 保留 |
+| `mysql` | 真实 MySQL/MariaDB，JDBC 直连，可 `SELECT` 直查/备份/多实例共享 | 保留 |
+| `inmemory` | 仅调试用 | 丢失（归零） |
+| `noop` | 关闭采集写入 | — |
+
+`type=mysql` 时需额外满足：
+
+1. `lib/` 里放入 `mysql-connector-j`（starter 中该依赖为 `optional`，fat jar 不含它，
+   需手动拷贝：`scp .../mysql-connector-j-9.7.0.jar host:/data/hotsport/lib/`）；
+2. 在 `config/app.env` 的 `APP_ARGS` 里给出 `url` / `username` / `password`（见模板）。
+
+> 连接三键走 JVM 系统属性（`apm.storage.url` 等）生效：`ApmBootstrap`
+> 只把固定键与「系统属性中 `apm.storage.*` 的键」合并进存储配置，
+> provider 返回的其它键不会带入存储层（见 `ApmQueryService.currentStorageConfig()` 注释）。
