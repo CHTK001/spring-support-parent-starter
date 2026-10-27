@@ -165,37 +165,56 @@ if ($SyncDeps) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [System.IO.Compression.ZipFile]::OpenRead($execJar.FullName)
     try {
-        $names = $zip.Entries |
+        # name SPACE size. Space, not tab: the diff runs over `ssh host '<cmd>'`, and the
+        # remote login shell is not guaranteed to be bash -- `IFS=$'\t'` is a bashism that
+        # degrades to the literal string under dash/sh, so no field is ever split, `$s`
+        # stays empty and every line is reported as changed. Jar names never contain
+        # spaces, so one space is unambiguous and works in any shell.
+        #
+        # `$_.Length` IS the uncompressed size (the jar's real byte length, which is what
+        # `stat -c %s` reports remotely). `$_.Size` does NOT exist on ZipArchiveEntry and
+        # silently formats as empty -- that shipped a manifest with a blank size field and
+        # every jar compared unequal. `CompressedLength` happens to be identical here
+        # because Spring Boot stores nested jars without re-deflating.
+        #
+        # Size (not just the name) is required: every module in this repo is versioned
+        # 4.0.0.42, so editing a utils module and rebuilding yields the SAME file name
+        # with different content. A name-only test reports "unchanged" and silently ships
+        # a jar whose dependency was never updated.
+        $lines = $zip.Entries |
             Where-Object { $_.FullName -like "BOOT-INF/lib/*" -and $_.Length -gt 0 } |
-            ForEach-Object { $_.FullName -replace "^BOOT-INF/lib/", "" } |
+            ForEach-Object { "{0} {1}" -f ($_.FullName -replace "^BOOT-INF/lib/", ""), $_.Length } |
             Sort-Object
-        # LF only, no CR. The remote loop reads this with `IFS= read -r n` and tests
-        # [ -f "$n" ]; a CRLF manifest (Set-Content -Encoding ASCII writes CRLF on
-        # Windows) leaves a trailing CR on every name, so every jar looks missing and
-        # each -SyncDeps re-ships all ~900MB instead of nothing.
-        [IO.File]::WriteAllText($manifest, (($names -join "`n") + "`n"), [System.Text.Encoding]::ASCII)
-        Write-Step "manifest: $($names.Count) jars"
+        # LF only, no CR: a CRLF manifest leaves a trailing CR on every field, so nothing
+        # compares equal and each -SyncDeps re-ships all ~900MB instead of nothing.
+        [IO.File]::WriteAllText($manifest, (($lines -join "`n") + "`n"), [System.Text.Encoding]::ASCII)
+        Write-Step "manifest: $($lines.Count) jars"
     } finally { $zip.Dispose() }
 
     if (-not $DryRun) {
         Copy-ToRemote $manifest "/tmp/lib-manifest.txt"
         Write-Step "diffing remote lib/ ..."
-        # Presence-only comparison, on purpose. A size check looks stricter but is wrong
-        # here: the numbers would come from the fat jar's *re-compressed* entries, while
-        # the remote copies came from the repo originals -- every jar then looks
-        # "differing" and the first run uploaded all 433 (880MB) despite lib/ already
-        # being complete. A Maven file name already pins groupId+artifactId+version, so
-        # name presence is the correct identity test.
-        # `tr -d '\r'` is belt-and-braces on top of the LF-only write above: if the
-        # manifest ever comes back CRLF (different editor, git autocrlf, hand-edited
-        # file), every name would carry a trailing CR, [ -f "$n" ] would fail for all
-        # of them, and -SyncDeps would re-upload ~900MB while claiming success.
-        $diffCmd = "cd '$AppDir/lib' && while IFS= read -r n; do " +
-                   "n=`${n%`$'\r'}; [ -z `"`$n`" ] && continue; " +
-                   "if [ ! -f `"`$n`" ]; then echo `"`$n`"; fi; " +
+        # Name + size. Size is what catches a rebuilt jar whose file name did not change
+        # (every module here is fixed at version 4.0.0.42). Plain `read -r n s` with the
+        # default IFS and no bashisms, so it works under sh/dash as well as bash.
+        $diffCmd = "cd '$AppDir/lib' && while read -r n s; do " +
+                   "n=`${n%`$'\r'}; s=`${s%`$'\r'}; [ -z `"`$n`" ] && continue; " +
+                   "if [ ! -f `"`$n`" ] || [ `"`$(stat -c %s `"`$n`" 2>/dev/null)`" != `"`$s`" ]; then echo `"`$n`"; fi; " +
                    "done < /tmp/lib-manifest.txt"
-        $missing = @(Invoke-Remote $diffCmd | Where-Object { "$_".Trim() -ne "" })
-        Write-Step "missing dependencies: $($missing.Count)"
+        $diffRaw = @(Invoke-Remote $diffCmd | ForEach-Object { "$_".Trim() } | Where-Object { $_ -ne "" })
+        # Only `.jar` lines count as "missing". Anything else is the remote command
+        # talking (stderr text, shell diagnostics). Treating that as a file name once made
+        # the script stage nothing, report a "0.0 MB" delta, print "dependencies synced"
+        # and ship a jar whose dependency had never been updated -- a silent mismatch.
+        $missing = @($diffRaw | Where-Object { $_ -like "*.jar" })
+        $noise = @($diffRaw | Where-Object { $_ -notlike "*.jar" })
+        if ($noise.Count -gt 0) {
+            Write-Warn "remote diff produced $($noise.Count) non-jar line(s); first 3:"
+            $noise | Select-Object -First 3 | ForEach-Object { Write-Warn "    $_" }
+            Fail ("dependency diff is not returning file names - refusing to continue, " +
+                  "because a broken diff is indistinguishable from 'nothing to do'.")
+        }
+        Write-Step "missing/changed dependencies: $($missing.Count)"
 
         if ($missing.Count -gt 0) {
             $stage = Join-Path $targetDir ".lib-stage"
