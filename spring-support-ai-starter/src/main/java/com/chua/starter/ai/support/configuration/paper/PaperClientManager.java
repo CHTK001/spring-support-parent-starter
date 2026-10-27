@@ -235,15 +235,18 @@ public class PaperClientManager implements PaperClient {
     /**
      * 当前生效的引擎。
      *
+     * <p>引擎不再由 {@code paper.engine} 设置项决定（该项已从配置定义移除），
+     * 改为<b>按模型配置推导</b>：配了结构化大模型（{@code llm_provider} /
+     * {@code llm_model} 任一非空）→ {@code ocr+llm}；否则 → {@code ocr}。
+     * 用户无需手动选「识别引擎」，配了 LLM 就自动走结构化管线。</p>
+     *
      * @return ocr / ocr+llm
      */
     @Override
     public String engine() {
-        String engine = settingReader.getStr(GROUP, "engine");
-        if (!ENGINE_OCR.equals(engine) && !ENGINE_OCR_LLM.equals(engine)) {
-            return ENGINE_OCR;
-        }
-        return engine;
+        boolean llmConfigured = StringUtils.isNotBlank(settingReader.getStr(GROUP, "llm_provider"))
+                || StringUtils.isNotBlank(settingReader.getStr(GROUP, "llm_model"));
+        return llmConfigured ? ENGINE_OCR_LLM : ENGINE_OCR;
     }
 
     /**

@@ -19,6 +19,11 @@ import java.util.List;
  *       把整页文本结构化为「题号 / 题干 / 作答」，用于外来卷等没有题库的判分。</li>
  * </ul>
  *
+ * <p><b>不再提供 {@code engine} 配置项</b>：引擎由模型配置自动推导 —— 配了
+ * {@code llm_provider} / {@code llm_model} 即为 {@code ocr+llm}，否则为
+ * {@code ocr}（见 {@code PaperClientManager#engine()}）。界面少一个「识别引擎」
+ * 下拉，用户无需理解两条管线的细节，配了 LLM 就自动结构化。</p>
+ *
  * <p>模型字段可复用 {@code ocr} / {@code layout} 分组，也可在本分组独立配置；
  * 留空时按复用优先（优先读本分组，其次读 ocr / layout 分组）。</p>
  *
@@ -51,8 +56,9 @@ public class PaperGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
-                // 引擎：ocr = 纯 OCR（版面+文字块）；ocr+llm = OCR 后接 LLM 结构化
-                new GlobalSettingProvider.SettingItem("engine", "ocr", "STRING", "试卷识别引擎（ocr / ocr+llm）", 1),
+                // 引擎不再提供配置项：由 PaperClientManager.engine() 按模型配置推导
+                // （配了 llm_provider / llm_model → ocr+llm，否则 ocr）。移除后设置页
+                // 少一个「识别引擎」下拉，用户不用理解双管线细节。
                 // 版面模型：留空时回落到 layout 分组
                 new GlobalSettingProvider.SettingItem("layout_model", "", "STRING", "版面分析模型（留空复用 layout 分组）", 2),
                 new GlobalSettingProvider.SettingItem("layout_threshold", "0.5", "NUMBER", "版面置信度阈值（0~1）", 3),
