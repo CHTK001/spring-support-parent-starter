@@ -39,13 +39,27 @@ START_TIMEOUT="${START_TIMEOUT:-180}"
 JAVA_OPTS="${JAVA_OPTS:--Xms512m -Xmx2560m -Duser.timezone=Asia/Shanghai -Djava.net.preferIPv4Stack=true}"
 APP_ARGS="${APP_ARGS:---spring.profiles.active=local}"
 
+# 必需 JVM 标志 —— 与 JAVA_OPTS 分开，因为下面是**整体覆盖**：
+#   JAVA_OPTS 会被 config/app.env 里的同名变量整段替换，而 app.env 是部署方手写的。
+#   --enable-preview 一旦漏掉，启动期**看不出来**（多数路径不加载预览类），
+#   直到真正走到那条分支才炸，报错还很有迷惑性：
+#     UnsupportedClassVersionError: Preview features are not enabled for
+#     com/chua/common/support/task/pipeline/builder/DefaultPipeline
+#     (class file version 69.65535). Try running with '--enable-preview'
+#   实测踩过：人脸重识别在配置了模型、真正构建 pipeline 时才暴露。
+#   65535 是「预览特性编译」的标志位，不是笔误。
+REQUIRED_JAVA_FLAGS="${REQUIRED_JAVA_FLAGS:---enable-preview}"
+
 # 部署参数文件优先于内置默认值；里面可以覆盖 PORT / JAVA_OPTS / APP_ARGS
 if [ -f "$ENV_FILE" ]; then
   # shellcheck disable=SC1090
   set -a; . "$ENV_FILE"; set +a
 fi
 
-log() { printf '%s %s\n' "$(date '+%F %T')" "$*"; }
+# 日志时间固定按 Asia/Shanghai 输出。主机系统时区可能是 UTC，而 JVM 已用
+# -Duser.timezone=Asia/Shanghai 记日志；不统一时，脚本行与应用日志会差 8 小时，
+# 排查时极易把两次重启的先后顺序看反（实测踩过）。
+log() { printf '%s %s\n' "$(TZ=Asia/Shanghai date '+%F %T')" "$*"; }
 
 running_pid() {
   if [ -f "$PID_FILE" ]; then
@@ -78,8 +92,13 @@ do_start() {
 
   mkdir -p "$LOG_DIR"
   log "启动 app.jar（lib $(ls "$LIB_DIR"/*.jar 2>/dev/null | wc -l) 个 jar）"
+  # 必须先切到 APP_DIR 再起进程：应用里有若干**相对路径**配置，模型根就是其一
+  # （yaml 默认 `models/onnx`）。不切目录时进程 CWD 继承 ssh 登录目录 /data/home，
+  # 相对根就解析成 /data/home/models/onnx —— 目录不存在，模型同步清单恒为 0，
+  # 日志表现为「模型根=/data/home/models/onnx 清单=0」，人脸/重识别全部不可用。
+  cd "$APP_DIR" || { log "无法进入 $APP_DIR"; return 1; }
   # shellcheck disable=SC2086
-  nohup "$JAVA_BIN" $JAVA_OPTS \
+  nohup "$JAVA_BIN" $REQUIRED_JAVA_FLAGS $JAVA_OPTS \
     -cp "$APP_JAR:$LIB_DIR/*" \
     com.chua.starter.ai.support.AiStarterApplication \
     $APP_ARGS >> "$LOG_FILE" 2>&1 &
