@@ -137,6 +137,8 @@ public class ApmQueryService {
     private void startLocalApmEngine() {
         // ② 本进程 APM 引擎（与 stats() 同 classloader，数据同源）
         try {
+            // 自定义存储实现必须先注册：StorageManager.resolve 只在注册表里找非内置类型
+            com.chua.starter.hotsport.support.storage.JdbcStorage.register();
             com.chua.runtime.apm.ApmBootstrap apm =
                     new com.chua.runtime.apm.ApmBootstrap(java.nio.file.Paths.get(System.getProperty("java.io.tmpdir")));
             // 把 plugin.hotsport.apm.storage.* 交给存储层：类型/保留期/容量/落盘目录/写入模式。
@@ -169,13 +171,37 @@ public class ApmQueryService {
      * <p>用 {@code includeDefaults=true}：运行中把某项改回默认（如清空落盘路径）时，
      * 必须让下游看到「键存在但值为空」，否则会被判定为配置未变化而不生效。</p>
      *
+     * <p><b>MySQL 连接三键为什么走系统属性</b>：{@code ApmBootstrap.resolveStorageConfig()}
+     * 只把固定键（type/retention/capacity/path/async/...）与「系统属性里以
+     * {@code apm.storage.} 开头的键」合并进 {@code StorageConfig}；provider 返回的其它键
+     * 只会以「键集合」形式参与，值不会被带入。若这里返回 url 等键，反而会让
+     * {@code resolveStorageConfig} 判定「系统属性已有该键」而跳过合并。因此连接三键
+     * 这里剔除并写入系统属性，让解析逻辑能真正读到它们。</p>
+     *
      * @return 存储配置键值对
      */
     private Map<String, String> currentStorageConfig() {
+        Map<String, String> raw;
         if (hotsportProperties == null || hotsportProperties.getApm() == null) {
-            return java.util.Collections.emptyMap();
+            raw = java.util.Collections.emptyMap();
+        } else {
+            raw = hotsportProperties.getApm().toStorageConfig(true);
         }
-        return hotsportProperties.getApm().toStorageConfig(true);
+        Map<String, String> config = new java.util.LinkedHashMap<>(raw);
+        // JDBC 连接信息：从 provider 移除，改为系统属性（ApmBootstrap 只合并系统属性里的 apm.storage.*）
+        String url = config.remove("apm.storage.url");
+        String username = config.remove("apm.storage.username");
+        String password = config.remove("apm.storage.password");
+        if (url != null) {
+            System.setProperty("apm.storage.url", url);
+        }
+        if (username != null) {
+            System.setProperty("apm.storage.username", username);
+        }
+        if (password != null) {
+            System.setProperty("apm.storage.password", password);
+        }
+        return config;
     }
 
     /**
@@ -199,6 +225,8 @@ public class ApmQueryService {
         Map<String, Object> before = new java.util.LinkedHashMap<>(apm.storageStatus());
         boolean ok;
         try {
+            // StorageManager.shutdown 会清空注册表，热更新前补注册，保证 mysql 类型可解析
+            com.chua.starter.hotsport.support.storage.JdbcStorage.register();
             ok = apm.reloadStorageConfig();
         } catch (Throwable e) {
             log.warn("[Hotsport] 存储热更新异常: {}", e.getMessage(), e);
@@ -257,10 +285,8 @@ public class ApmQueryService {
         for (Thread t : Thread.getAllStackTraces().keySet()) {
             String name = t.getName();
             total++;
-            if (name.startsWith("apm-sqlite-maintenance")) {
-                maintenance++;
-            }
-            if (name.startsWith("apm-memory-maintenance")) {
+            if (name.startsWith("apm-") && name.contains("maintenance")) {
+                // sqlite / memory / jdbc 三种实现的自维护线程统一识别
                 maintenance++;
             }
             if (name.startsWith("agent-attach")) {

@@ -215,6 +215,24 @@ public class HotsportProperties {
             if (!path.isEmpty() || includeDefaults) {
                 config.put("apm.storage.path", path);
             }
+            String url = storage.getUrl() == null ? "" : storage.getUrl().trim();
+            if (!url.isEmpty() || includeDefaults) {
+                config.put("apm.storage.url", url);
+            }
+            String username = storage.getUsername() == null ? "" : storage.getUsername().trim();
+            if (!username.isEmpty() || includeDefaults) {
+                config.put("apm.storage.username", username);
+            }
+            String password = storage.getPassword() == null ? "" : storage.getPassword();
+            if (!password.isEmpty() || includeDefaults) {
+                config.put("apm.storage.password", password);
+            }
+            if (storage.getPoolSize() > 0 || includeDefaults) {
+                config.put("apm.storage.pool.size", String.valueOf(storage.getPoolSize()));
+            }
+            if (storage.getBatchSize() > 0 || includeDefaults) {
+                config.put("apm.storage.batch.size", String.valueOf(storage.getBatchSize()));
+            }
             if (storage.getAsync() != null || includeDefaults) {
                 config.put("apm.storage.async", storage.getAsync() == null
                         ? "true" : String.valueOf(storage.getAsync()));
@@ -236,9 +254,12 @@ public class HotsportProperties {
     public static class Storage {
 
         /**
-         * 存储类型：inmemory / sqlite / noop。
+         * 存储类型：sqlite / mysql / inmemory / noop。
+         *
+         * <p>默认 {@code sqlite}：真实数据库（SQLite 文件），重启不丢数据，
+         * 且不需要外部服务，观测组件不会因为数据库不可用而拖住宿主。</p>
         */
-        private String type = "inmemory";
+        private String type = "sqlite";
 
         /**
          * 数据保留毫秒。
@@ -254,6 +275,34 @@ public class HotsportProperties {
          * 存储落盘目录（sqlite 等非内存实现使用；为空时用临时目录）。
         */
         private String path = "";
+
+        /**
+         * JDBC URL（type=mysql 时必填）。
+         *
+         * <p>形如 {@code jdbc:mysql://127.0.0.1:3306/hotsport}。驱动是可选依赖，
+         * 用 MySQL 存储时需自行引入 {@code mysql-connector-j}。</p>
+        */
+        private String url = "";
+
+        /**
+         * 数据库用户名（type=mysql 时使用）。
+        */
+        private String username = "";
+
+        /**
+         * 数据库密码（type=mysql 时使用）。
+        */
+        private String password = "";
+
+        /**
+         * 连接池大小（type=mysql 时使用，默认 4）。
+        */
+        private int poolSize = 4;
+
+        /**
+         * 单批写入条数（type=mysql 时使用，默认 200）。
+        */
+        private int batchSize = 200;
 
         /**
          * 写入模式：true 异步批量写（默认，业务线程不阻塞），false 逐条同步写。
@@ -400,6 +449,96 @@ public class HotsportProperties {
          */
         public void setPath(String path) {
             this.path = path;
+        }
+
+        /**
+         * 获取 JDBC URL。
+         *
+         * @return JDBC URL
+         */
+        public String getUrl() {
+            return url;
+        }
+
+        /**
+         * 设置 JDBC URL。
+         *
+         * @param url JDBC URL
+         */
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        /**
+         * 获取数据库用户名。
+         *
+         * @return 用户名
+         */
+        public String getUsername() {
+            return username;
+        }
+
+        /**
+         * 设置数据库用户名。
+         *
+         * @param username 用户名
+         */
+        public void setUsername(String username) {
+            this.username = username;
+        }
+
+        /**
+         * 获取数据库密码。
+         *
+         * @return 密码
+         */
+        public String getPassword() {
+            return password;
+        }
+
+        /**
+         * 设置数据库密码。
+         *
+         * @param password 密码
+         */
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        /**
+         * 获取连接池大小。
+         *
+         * @return 连接池大小
+         */
+        public int getPoolSize() {
+            return poolSize;
+        }
+
+        /**
+         * 设置连接池大小。
+         *
+         * @param poolSize 连接池大小
+         */
+        public void setPoolSize(int poolSize) {
+            this.poolSize = poolSize;
+        }
+
+        /**
+         * 获取单批写入条数。
+         *
+         * @return 单批条数
+         */
+        public int getBatchSize() {
+            return batchSize;
+        }
+
+        /**
+         * 设置单批写入条数。
+         *
+         * @param batchSize 单批条数
+         */
+        public void setBatchSize(int batchSize) {
+            this.batchSize = batchSize;
         }
     }
 
