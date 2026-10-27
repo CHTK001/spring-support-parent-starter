@@ -32,51 +32,23 @@ import java.util.Map;
  *
  * <p>实例是不可变值对象，每次派发新建一个。</p>
  *
+ * @param applicationContext 宿主容器，可能为 null（脱离 Spring 装配时）
+ * @param jobKey             任务标识，允许为 null
+ * @param jobName            任务显示名，允许为 null
+ * @param executeParam       台账执行参数，允许为 null
  * @since 4.0.0.43
  * @author CH
  */
-public class JobObjectContext {
+public record JobObjectContext(
+        ApplicationContext applicationContext,
+        String jobKey,
+        String jobName,
+        String executeParam) {
 
     /**
      * 日志门面
      */
     private static final Logger LOG = LoggerFactory.getLogger(JobObjectContext.class);
-
-    /**
-     * 宿主容器，可能为 null（脱离 Spring 装配时）
-     */
-    private final ApplicationContext applicationContext;
-
-    /**
-     * 任务标识
-     */
-    private final String jobKey;
-
-    /**
-     * 任务显示名
-     */
-    private final String jobName;
-
-    /**
-     * 台账执行参数
-     */
-    private final String executeParam;
-
-    /**
-     * 构造 执行上下文。
-     *
-     * @param applicationContext 宿主容器，允许为 null
-     * @param jobKey             任务标识，允许为 null
-     * @param jobName            任务显示名，允许为 null
-     * @param executeParam       台账执行参数，允许为 null
-     */
-    public JobObjectContext(ApplicationContext applicationContext, String jobKey,
-                            String jobName, String executeParam) {
-        this.applicationContext = applicationContext;
-        this.jobKey = jobKey;
-        this.jobName = jobName;
-        this.executeParam = executeParam;
-    }
 
     /**
      * 构造 脱离容器的 执行上下文（无 bean 可取，用于自检与单测）。
@@ -164,7 +136,7 @@ public class JobObjectContext {
     }
 
     /**
-     * 获取任务标识。
+     * 获取任务标识（归一：null → 空串）。
      *
      * @return 任务标识，未设置时为空串
      */
@@ -173,7 +145,7 @@ public class JobObjectContext {
     }
 
     /**
-     * 获取任务显示名。
+     * 获取任务显示名（归一：null → 空串）。
      *
      * @return 任务显示名，未设置时为空串
      */
@@ -182,7 +154,7 @@ public class JobObjectContext {
     }
 
     /**
-     * 获取台账执行参数。
+     * 获取台账执行参数（归一：null → 空串）。
      *
      * @return 执行参数，未设置时为空串
      */
