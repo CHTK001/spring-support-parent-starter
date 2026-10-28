@@ -28,6 +28,7 @@ package com.chua.starter.datasourcehub.support.model;
  *                    也靠它决定编辑时要不要提示「留空表示不修改」
  * @param fastLoadEnabled 是否支持 CSV 快速导入（LOAD/COPY 直灌）。服务端按 JDBC
  *                        方言自动计算：MySQL / PostgreSQL 为 true，其余类型或无法判断为 null
+ * @param topFlag 置顶标记：1 置顶、0 普通；列表按置顶优先排序
  * @author CH
  * @since 4.0.0.42
  */
@@ -54,11 +55,12 @@ public record DataSourceVO(
         String controlTarget,
         String version,
         Boolean passwordSet,
-        Boolean fastLoadEnabled
+        Boolean fastLoadEnabled,
+        Integer topFlag
 ) {
 
     /**
-     * 兼容旧签名的构造器（不带 {@code passwordSet}）。
+     * 兼容旧签名的构造器（不带 {@code passwordSet}/{@code topFlag}）。
      *
      * <p>中间件客户端、控制台会用请求里的连接参数临时拼一个 ad-hoc 视图去建连，
      * 这些场景不关心「是否已设置口令」。保留这个重载让那些调用点一行都不用改。</p>
@@ -92,7 +94,7 @@ public record DataSourceVO(
                         String controlMode, String controlTarget, String version) {
         this(id, name, type, host, port, database, username, password, remark, status,
                 driverClassName, driverJarId, createTime, updateTime, connectLatencyMs, sessionLatencyMs,
-                lastTestTime, lastTestOk, controlMode, controlTarget, version, null, null);
+                lastTestTime, lastTestOk, controlMode, controlTarget, version, null, null, null);
     }
 
     /**
@@ -111,6 +113,6 @@ public record DataSourceVO(
         }
         return new DataSourceVO(id, name, type, host, port, database, username, "", remark, status,
                 driverClassName, driverJarId, createTime, updateTime, connectLatencyMs, sessionLatencyMs,
-                lastTestTime, lastTestOk, controlMode, controlTarget, version, passwordSet, fastLoadEnabled);
+                lastTestTime, lastTestOk, controlMode, controlTarget, version, passwordSet, fastLoadEnabled, topFlag);
     }
 }
