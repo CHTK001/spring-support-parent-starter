@@ -62,19 +62,13 @@ public final class DatasourceProbeSupport {
      * @param questions           累计提问次数（MySQL 自身计数）
      * @param uptimeSeconds       服务器已运行秒数
      * @param maxUsedConnections  历史峰值客户端连接数
-     * @param memoryBytes         实例内存占用（字节）。来自
-     *                            {@code performance_schema.memory_summary_global_by_event_name}
-     *                            的 InnoDB 相关事件当前占用合计 —— 是 MySQL 进程
-     *                            <b>内部</b>内存（缓冲池 / 字典缓存等），不是宿主机内存；
-     *                            权限不足或 performance_schema 关闭时为 null
      */
     public record ServerStats(
             Long slowQueries,
             Long threadsRunning,
             Long questions,
             Long uptimeSeconds,
-            Long maxUsedConnections,
-            Long memoryBytes
+            Long maxUsedConnections
     ) {
     }
 
@@ -88,7 +82,6 @@ public final class DatasourceProbeSupport {
      * @param connectionCount    采样时刻目标服务上的客户端连接数；取不到为 null
      *                           （不是所有类型都暴露该指标，null 在图上是缺格）
      * @param serverStats        采样时刻服务器运行指标；不支持的类型为 null
-     * @param serverVersion      服务端版本；探测不到为 null
      */
     public record ProbeOutcome(
             boolean success,
@@ -97,23 +90,8 @@ public final class DatasourceProbeSupport {
             String message,
             Long connectionCount,
             ServerStats serverStats,
-            String serverVersion
+            String version
     ) {
-        /**
-         * 无版本、无服务器指标的六参构造。
-         *
-         * @param success            是否连通
-         * @param connectLatencyMs   连接延迟（毫秒）
-         * @param sessionLatencyMs   会话延迟（毫秒）
-         * @param message            结果说明
-         * @param connectionCount    采样时刻目标服务上的客户端连接数
-         * @param serverStats        采样时刻服务器运行指标
-         */
-        public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
-                            String message, Long connectionCount, ServerStats serverStats) {
-            this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, serverStats, null);
-        }
-
         /**
          * 无服务器指标的五参构造：让不支持服务器指标的类型照旧只填前五项，
          * 不需要每个调用点都补 {@code null}。
@@ -127,6 +105,14 @@ public final class DatasourceProbeSupport {
         public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
                             String message, Long connectionCount) {
             this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, null, null);
+        }
+
+        /**
+         * 无版本号但带服务器指标：复用于表达「指标有、版本未知」。
+         */
+        public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
+                            String message, Long connectionCount, ServerStats serverStats) {
+            this(success, connectLatencyMs, sessionLatencyMs, message, connectionCount, serverStats, null);
         }
 
         /**
@@ -182,16 +168,13 @@ public final class DatasourceProbeSupport {
         String normalized = type == null ? "" : type.trim().toLowerCase();
         try {
             Long connectionCount = null;
-            String serverVersion = null;
             long sessionMs;
             switch (normalized) {
                 case "redis" -> {
-                    // 顺路取客户端连接数与版本：PING 与 INFO 在同一次会话里完成，
+                    // 顺路取客户端连接数：PING 与 INFO 在同一次会话里完成，
                     // 多一次往返也不浪费 —— 反正这条 socket 用完即关。
                     long[] session = new long[1];
-                    RedisProbe redis = redisProbe(host, port, timeoutMs, session);
-                    connectionCount = redis.connectionCount();
-                    serverVersion = redis.version();
+                    connectionCount = redisProbe(host, port, timeoutMs, session);
                     sessionMs = session[0];
                 }
                 case "nginx", "nacos", "influxdb", "prometheus" -> sessionMs = httpRoundTrip(host, port, timeoutMs);
@@ -199,7 +182,7 @@ public final class DatasourceProbeSupport {
                 // 退化为第二次建链作为会话延迟近似值。
                 default -> sessionMs = connectAndMeasure(host, port, timeoutMs);
             }
-            return new ProbeOutcome(true, connectMs, sessionMs, "连接测试成功", connectionCount, null, serverVersion);
+            return new ProbeOutcome(true, connectMs, sessionMs, "连接测试成功", connectionCount);
         } catch (Exception e) {
             // 建链已成功，会话探测失败不推翻连通性结论，但会话延迟无值
             log.debug("数据源 {} 会话探测失败: {}", type, e.getMessage());
@@ -209,21 +192,21 @@ public final class DatasourceProbeSupport {
     }
 
     /**
-     * Redis 会话探测：发送 RESP {@code PING} 并读到响应，随后 {@code INFO} 解析
-     * {@code connected_clients} 与 {@code redis_version}。
+     * Redis 会话探测：发送 RESP {@code PING} 并读到响应，随后尝试 {@code INFO clients}
+     * 解析 {@code connected_clients}。
      *
-     * <p>连接数与版本都是「尽力而为」：未设密码的实例能拿到；设了密码时 INFO 返回 NOAUTH，
-     * 这里返回 null 而不是报错 —— 连通性结论已经由 PING 得出，缺一格
+     * <p>连接数是「尽力而为」：未设密码的实例能拿到；设了密码时 INFO 返回 NOAUTH，
+     * 这里返回 null 而不是报错 —— 连通性结论已经由 PING 得出，连接数缺一格
      * 比为了它把整次探测判成失败合理得多。</p>
      *
      * @param host      目标主机
      * @param port      目标端口
      * @param timeoutMs 超时（毫秒）
      * @param sessionMs 长度为 1 的出参，带回 PING 往返耗时（毫秒）
-     * @return 连接数与版本（都可能为 null）
+     * @return 客户端连接数；解析不到返回 null
      * @throws Exception PING 探测失败
      */
-    private static RedisProbe redisProbe(String host, int port, int timeoutMs, long[] sessionMs) throws Exception {
+    private static Long redisProbe(String host, int port, int timeoutMs, long[] sessionMs) throws Exception {
         long start = System.nanoTime();
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(host, port), timeoutMs);
@@ -238,50 +221,24 @@ public final class DatasourceProbeSupport {
             }
             sessionMs[0] = (System.nanoTime() - start) / 1_000_000L;
 
-            // INFO：不带 section 取全量，一次往返同时拿到连接数与版本。
-            // 原先只发 INFO clients，版本还得再来一次往返 —— 这条 socket 用完即关，
-            // 省下的那次往返没有意义，而版本正是「这条数据源到底是哪个 redis」的答案。
-            out.write("*2\r\n$4\r\nINFO\r\n$0\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+            // INFO clients：RESP 内联命令 *2\r\n$4\r\nINFO\r\n$7\r\nclients\r\n
+            out.write("*2\r\n$4\r\nINFO\r\n$7\r\nclients\r\n".getBytes(StandardCharsets.UTF_8));
             out.flush();
             String body = respBulkRead(in);
-            if (body == null) {
-                return new RedisProbe(null, null);
-            }
-            Long connectionCount = null;
-            String version = null;
-            for (String line : body.split("\r\n")) {
-                if (line.startsWith("connected_clients:")) {
-                    connectionCount = parseLongOrNull(line.substring("connected_clients:".length()).trim());
-                } else if (line.startsWith("redis_version:")) {
-                    String value = line.substring("redis_version:".length()).trim();
-                    version = value.isEmpty() ? null : value;
+            if (body != null) {
+                for (String line : body.split("\r\n")) {
+                    if (line.startsWith("connected_clients:")) {
+                        String value = line.substring("connected_clients:".length()).trim();
+                        try {
+                            return Long.parseLong(value);
+                        } catch (NumberFormatException ignored) {
+                            return null;
+                        }
+                    }
                 }
             }
-            return new RedisProbe(connectionCount, version);
-        }
-    }
-
-    /**
-     * 解析长整型，失败返回 null。
-     *
-     * @param text 文本
-     * @return 数值或 null
-     */
-    private static Long parseLongOrNull(String text) {
-        try {
-            return Long.parseLong(text);
-        } catch (NumberFormatException ignored) {
             return null;
         }
-    }
-
-    /**
-     * Redis 探测顺带取到的两项信息。
-     *
-     * @param connectionCount 客户端连接数，取不到为 null
-     * @param version         {@code redis_version}，取不到为 null
-     */
-    private record RedisProbe(Long connectionCount, String version) {
     }
 
     /**

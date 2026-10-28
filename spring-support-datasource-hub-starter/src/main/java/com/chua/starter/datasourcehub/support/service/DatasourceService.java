@@ -67,6 +67,15 @@ public interface DatasourceService {
     ReturnResult<Boolean> delete(Long id);
 
     /**
+     * 置顶 / 取消置顶数据源。
+     *
+     * @param id  数据源 ID
+     * @param top true 置顶、false 取消置顶
+     * @return 更新后的数据源
+     */
+    ReturnResult<DataSourceVO> toggleTop(Long id, boolean top);
+
+    /**
      * 测试数据源连通性：jdbc 真实建连，其余类型做 TCP 探测。
      *
      * @param id 数据源 ID

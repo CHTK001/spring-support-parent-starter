@@ -7,6 +7,7 @@ import com.chua.starter.datasourcehub.support.model.InfluxdbOrgVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbQueryResultVO;
 import com.chua.starter.datasourcehub.support.model.MiddlewareTestVO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbBucketDTO;
+import com.chua.starter.datasourcehub.support.model.dto.InfluxdbMeasurementDeleteDTO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbQueryDTO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbWriteDTO;
 import com.chua.starter.datasourcehub.support.model.dto.MiddlewareTestDTO;
@@ -109,4 +110,15 @@ public interface InfluxdbManageService {
      * @param request 写入请求
      */
     void write(InfluxdbWriteDTO request);
+
+    /**
+     * 删除测量（InfluxDB 的「表」）或删除其数据。
+     *
+     * <p>v1/v2 用 InfluxQL {@code DROP MEASUREMENT} 删除整个测量；v3 用 SQL
+     * {@code DROP TABLE}。只删数据保留测量不支持（时序库无独立清空语义，用户可
+     * 按时间范围删除，见 {@code deleteData}）。</p>
+     *
+     * @param request 删除请求
+     */
+    void dropMeasurement(InfluxdbMeasurementDeleteDTO request);
 }
