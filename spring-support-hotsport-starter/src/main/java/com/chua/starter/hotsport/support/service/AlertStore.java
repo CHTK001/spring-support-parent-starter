@@ -60,12 +60,15 @@ public class AlertStore {
 
     /**
      * 建表语句：全部幂等（IF NOT EXISTS），重复启动安全。
-     * <p>id 由应用显式写入（与内存 id 保持一致，保证重启后 ack/mute 仍按同一 id 寻址），
-     * 因此不用自增；规则表用 metric 唯一键兜底覆盖。</p>
+     * <p>id 由 DB AUTO_INCREMENT 分配——多实例共享同一张表时，应用级计数器无法跨
+     * 实例协调，实测两实例并发新增会分配相同 id，INSERT 撞主键静默丢数据；DB 自增
+     * 是唯一可靠的全局 id 协调点。INSERT 后经 {@code RETURN_GENERATED_KEYS} 回读
+     * 新 id 同步内存（事件 ack/mute 仍按同一 id 寻址）；规则/渠道另有业务唯一键
+     * （metric/name）先查后写合并同名。</p>
      */
     private static final String[] DDL = {
             "CREATE TABLE IF NOT EXISTS alert_rules ("
-                    + "id BIGINT NOT NULL,"
+                    + "id BIGINT NOT NULL AUTO_INCREMENT,"
                     + "metric VARCHAR(64) NOT NULL,"
                     + "threshold DOUBLE NOT NULL DEFAULT 0,"
                     + "severity VARCHAR(32),"
@@ -75,16 +78,17 @@ public class AlertStore {
                     + "UNIQUE KEY uk_alert_rule_metric (metric)"
                     + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS alert_channels ("
-                    + "id BIGINT NOT NULL,"
+                    + "id BIGINT NOT NULL AUTO_INCREMENT,"
                     + "name VARCHAR(128),"
                     + "type VARCHAR(32),"
                     + "url VARCHAR(1024),"
                     + "secret VARCHAR(256),"
                     + "enabled TINYINT(1) DEFAULT 1,"
-                    + "PRIMARY KEY (id)"
+                    + "PRIMARY KEY (id),"
+                    + "UNIQUE KEY uk_alert_channel_name (name)"
                     + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS alert_events ("
-                    + "id BIGINT NOT NULL,"
+                    + "id BIGINT NOT NULL AUTO_INCREMENT,"
                     + "ts BIGINT DEFAULT 0,"
                     + "metric VARCHAR(64),"
                     + "current_value DOUBLE DEFAULT 0,"
@@ -102,21 +106,30 @@ public class AlertStore {
     };
 
     /**
-     * 渠道写穿：按主键整行覆盖。
+     * 渠道名称定位（业务唯一键，保证多实例共享同一张表时按 name 寻址）。
      */
-    private static final String UPSERT_CHANNEL = "INSERT INTO alert_channels "
-            + "(id, name, type, url, secret, enabled) "
-            + "VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE "
-            + "name = VALUES(name), type = VALUES(type), url = VALUES(url),"
-            + "secret = VALUES(secret), enabled = VALUES(enabled)";
+    private static final String FIND_CHANNEL = "SELECT id FROM alert_channels WHERE name = ?";
+
+    /**
+     * 渠道写入（新 id）。
+     */
+    private static final String INSERT_CHANNEL = "INSERT INTO alert_channels "
+            + "(name, type, url, secret, enabled) "
+            + "VALUES (?,?,?,?,?)";
+
+    /**
+     * 渠道更新（按已有 id）。
+     */
+    private static final String UPDATE_CHANNEL = "UPDATE alert_channels SET "
+            + "type = ?, url = ?, secret = ?, enabled = ? WHERE id = ?";
 
     /**
      * 事件写入。
      */
     private static final String INSERT_EVENT = "INSERT INTO alert_events "
-            + "(id, ts, metric, current_value, threshold, severity, message, status,"
+            + "(ts, metric, current_value, threshold, severity, message, status,"
             + " status_ts, fingerprint, silenced_until, repeat_count) "
-            + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+            + "VALUES (?,?,?,?,?,?,?,?,?,?,?)";
 
     /**
      * 事件状态更新（ack / mute / ignore 共用）。
@@ -180,12 +193,57 @@ public class AlertStore {
                         st.execute(ddl);
                     }
                 }
+                migrateChannelNameKey(conn);
+                migrateAutoIncrement(conn);
             }
             active = true;
             log.info("[Hotsport] 告警持久化已激活（MySQL: {}）", url);
         } catch (Exception e) {
             active = false;
             log.warn("[Hotsport] 告警持久化激活失败，降级为纯内存: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 幂等迁移：给已存在的渠道表补 name 唯一键。
+     *
+     * <p>老库的 alert_channels 建表时没有 uk_alert_channel_name（{@code CREATE TABLE
+     * IF NOT EXISTS} 不会改已有表结构），而多实例共享该表时 name 唯一键是先查后写
+     * 策略的落点——没有它，并发新增渠道仍可能因各实例独立 id 计数器而错行。此处
+     * 尝试 {@code ADD UNIQUE KEY}，键已存在（重复启动 / 新库已建）则静默跳过。</p>
+     *
+     * @param conn 连接
+     */
+    private static void migrateChannelNameKey(Connection conn) {
+        try (Statement st = conn.createStatement()) {
+            st.execute("ALTER TABLE alert_channels "
+                    + "ADD UNIQUE KEY uk_alert_channel_name (name)");
+        } catch (SQLException e) {
+            // 1061 = Duplicate key name（已存在，预期内）；其它错误才告警
+            if (e.getErrorCode() != 1061 && !String.valueOf(e.getMessage()).contains("Duplicate key name")) {
+                log.warn("[Hotsport] 渠道 name 唯一键迁移失败: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 幂等迁移：老库三张表的 id 列补 AUTO_INCREMENT。
+     *
+     * <p>新库由 DDL 直接建出自增 id；老库（应用显式写 id 时代建的）需在这里补改。
+     * 多实例共享同一张表时 id 必须由 DB 全局分配，否则两实例并发新增必撞主键
+     * （实测 Duplicate entry for key 'PRIMARY' 静默丢数据）。重复执行 MODIFY
+     * 是幂等无操作。</p>
+     *
+     * @param conn 连接
+     */
+    private static void migrateAutoIncrement(Connection conn) {
+        String[] tables = {"alert_rules", "alert_channels", "alert_events"};
+        try (Statement st = conn.createStatement()) {
+            for (String t : tables) {
+                st.execute("ALTER TABLE " + t + " MODIFY id BIGINT NOT NULL AUTO_INCREMENT");
+            }
+        } catch (SQLException e) {
+            log.warn("[Hotsport] id 自增迁移失败: {}", e.getMessage());
         }
     }
 
@@ -345,18 +403,23 @@ public class AlertStore {
      * {@code id}（应用分配的递增号）与 {@code metric}（业务唯一键）两个唯一键，
      * MariaDB 在双键同时冲突时更新哪一行依赖索引检查顺序，多实例共享同一张表时
      * 极易更新错行（实测出现规则值写入其它 metric 行的脏数据）。改为显式按
-     * metric 定位：行已存在用其 id 更新，不存在才以新 id 插入，杜绝歧义。</p>
+     * metric 定位：行已存在用其 id 更新，不存在才以 DB 自增 id 插入。</p>
+     *
+     * <p>id 列已改为 {@code AUTO_INCREMENT}：INSERT 不带 id，落库后经
+     * {@code RETURN_GENERATED_KEYS} 回读 DB 分配的真实 id 返回给调用方，由调用方
+     * 同步内存——应用级计数器无法跨实例协调，DB 自增是唯一全局协调点。</p>
      *
      * @param rule 规则
+     * @return DB 实际生效的规则 id（更新路径返回 DB id，插入路径返回自增 id；失败 -1）
      */
-    public void saveRule(AlertMonitorService.AlertRule rule) {
+    public long saveRule(AlertMonitorService.AlertRule rule) {
         if (!active || rule == null) {
-            return;
+            return -1L;
         }
         String find = "SELECT id FROM alert_rules WHERE metric = ?";
         String insert = "INSERT INTO alert_rules "
-                + "(id, metric, threshold, severity, debounce_ms, enabled) "
-                + "VALUES (?,?,?,?,?,?)";
+                + "(metric, threshold, severity, debounce_ms, enabled) "
+                + "VALUES (?,?,?,?,?)";
         String update = "UPDATE alert_rules SET threshold = ?, severity = ?, "
                 + "debounce_ms = ?, enabled = ? WHERE id = ?";
         try (Connection conn = connect()) {
@@ -364,30 +427,39 @@ public class AlertStore {
                 psFind.setString(1, rule.metric);
                 try (ResultSet rs = psFind.executeQuery()) {
                     if (rs.next()) {
+                        long dbId = rs.getLong("id");
                         try (PreparedStatement ps = conn.prepareStatement(update)) {
                             ps.setDouble(1, rule.threshold);
                             ps.setString(2, rule.severity);
                             ps.setLong(3, rule.debounceMs);
                             ps.setBoolean(4, rule.enabled);
-                            ps.setLong(5, rs.getLong("id"));
+                            ps.setLong(5, dbId);
                             ps.executeUpdate();
                         }
-                    } else {
-                        try (PreparedStatement ps = conn.prepareStatement(insert)) {
-                            ps.setLong(1, rule.id);
-                            ps.setString(2, rule.metric);
-                            ps.setDouble(3, rule.threshold);
-                            ps.setString(4, rule.severity);
-                            ps.setLong(5, rule.debounceMs);
-                            ps.setBoolean(6, rule.enabled);
-                            ps.executeUpdate();
-                        }
+                        return dbId;
                     }
                 }
             }
+            try (PreparedStatement ps = conn.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, rule.metric);
+                ps.setDouble(2, rule.threshold);
+                ps.setString(3, rule.severity);
+                ps.setLong(4, rule.debounceMs);
+                ps.setBoolean(5, rule.enabled);
+                ps.executeUpdate();
+                return generatedId(ps, conn, find, rule.metric);
+            }
         } catch (Exception e) {
+            // 并发同 metric 同时 INSERT：唯一键冲突说明另一实例先落库，按业务键回查合并
+            if (isDuplicateKey(e)) {
+                long id = refindId(find, rule.metric);
+                if (id > 0) {
+                    return id;
+                }
+            }
             log.warn("[Hotsport] 告警规则落库失败: {}", e.getMessage());
         }
+        return -1L;
     }
 
     /**
@@ -409,72 +481,115 @@ public class AlertStore {
     }
 
     /**
-     * 渠道写穿（新增或覆盖，按主键）。
+     * 渠道写穿（新增或覆盖，按 name 定位）。
+     *
+     * <p><b>为什么先查再写而不是 UPSERT</b>：渠道 id 由各实例独立 {@code AtomicLong}
+     * 分配，无业务键时两实例并发新增会分配相同 id，UPSERT 后写静默覆盖先写。
+     * 改为按 name 唯一键定位：存在则沿用其 id 更新（返回该 id），不存在则以 DB
+     * 自增 id 插入（{@code RETURN_GENERATED_KEYS} 回读，杜绝跨实例撞主键）。</p>
      *
      * @param channel 渠道
+     * @return DB 实际生效的渠道 id（更新路径返回 DB id，插入路径返回自增 id；失败 -1）
      */
-    public void saveChannel(AlertMonitorService.AlertChannel channel) {
+    public long saveChannel(AlertMonitorService.AlertChannel channel) {
         if (!active || channel == null) {
-            return;
+            return -1L;
         }
-        try (Connection conn = connect();
-             PreparedStatement ps = conn.prepareStatement(UPSERT_CHANNEL)) {
-            ps.setLong(1, channel.id);
-            ps.setString(2, channel.name);
-            ps.setString(3, channel.type);
-            ps.setString(4, channel.url);
-            ps.setString(5, channel.secret);
-            ps.setBoolean(6, channel.enabled);
-            ps.executeUpdate();
+        try (Connection conn = connect()) {
+            try (PreparedStatement psFind = conn.prepareStatement(FIND_CHANNEL)) {
+                psFind.setString(1, channel.name);
+                try (ResultSet rs = psFind.executeQuery()) {
+                    if (rs.next()) {
+                        long dbId = rs.getLong("id");
+                        try (PreparedStatement ps = conn.prepareStatement(UPDATE_CHANNEL)) {
+                            ps.setString(1, channel.type);
+                            ps.setString(2, channel.url);
+                            ps.setString(3, channel.secret);
+                            ps.setBoolean(4, channel.enabled);
+                            ps.setLong(5, dbId);
+                            ps.executeUpdate();
+                        }
+                        return dbId;
+                    }
+                }
+            }
+            try (PreparedStatement ps = conn.prepareStatement(INSERT_CHANNEL, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, channel.name);
+                ps.setString(2, channel.type);
+                ps.setString(3, channel.url);
+                ps.setString(4, channel.secret);
+                ps.setBoolean(5, channel.enabled);
+                ps.executeUpdate();
+                return generatedId(ps, conn, FIND_CHANNEL, channel.name);
+            }
         } catch (Exception e) {
+            // 并发同名同时 INSERT：唯一键（uk_alert_channel_name）冲突说明另一实例
+            // 先落库，按 name 回查它的 id 合并，而不是凭空丢数据
+            if (isDuplicateKey(e)) {
+                long id = refindId(FIND_CHANNEL, channel.name);
+                if (id > 0) {
+                    return id;
+                }
+            }
             log.warn("[Hotsport] 告警渠道落库失败: {}", e.getMessage());
         }
+        return -1L;
     }
 
     /**
-     * 渠道删除。
+     * 渠道删除（DB 为权威）。
      *
      * @param id 渠道 ID
+     * @return 是否真正删除了行（affected > 0）；持久化未激活时返回 false
      */
-    public void deleteChannel(long id) {
+    public boolean deleteChannel(long id) {
         if (!active) {
-            return;
+            return false;
         }
         try (Connection conn = connect();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM alert_channels WHERE id = ?")) {
             ps.setLong(1, id);
-            ps.executeUpdate();
+            return ps.executeUpdate() > 0;
         } catch (Exception e) {
             log.warn("[Hotsport] 告警渠道删除落库失败: {}", e.getMessage());
+            return false;
         }
     }
 
     /**
-     * 事件写入（新增）；顺带裁剪最旧行防止表无限膨胀。
+     * 事件写入（新增），id 由 DB 自增；顺带裁剪最旧行防止表无限膨胀。
+     *
+     * <p>id 由 DB AUTO_INCREMENT 分配（多实例共享事件表时唯一可靠协调点），INSERT
+     * 后经 {@code RETURN_GENERATED_KEYS} 回读，调用方用它修正内存事件 id，保证
+     * ack/mute/touch 始终按 DB 同一 id 寻址。</p>
      *
      * @param event 事件
+     * @return DB 分配的事件 id；持久化未激活或失败返回 -1
      */
-    public void saveEvent(AlertMonitorService.AlertEvent event) {
+    public long saveEvent(AlertMonitorService.AlertEvent event) {
         if (!active || event == null) {
-            return;
+            return -1L;
         }
         try (Connection conn = connect();
-             PreparedStatement ps = conn.prepareStatement(INSERT_EVENT)) {
-            ps.setLong(1, event.id);
-            ps.setLong(2, event.ts);
-            ps.setString(3, event.metric);
-            ps.setDouble(4, event.current);
-            ps.setDouble(5, event.threshold);
-            ps.setString(6, event.severity);
-            ps.setString(7, event.message);
-            ps.setString(8, event.status);
-            ps.setLong(9, event.statusTs);
-            ps.setString(10, event.fingerprint);
-            ps.setLong(11, event.silencedUntil);
-            ps.setLong(12, event.repeatCount);
+             PreparedStatement ps = conn.prepareStatement(INSERT_EVENT, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setLong(1, event.ts);
+            ps.setString(2, event.metric);
+            ps.setDouble(3, event.current);
+            ps.setDouble(4, event.threshold);
+            ps.setString(5, event.severity);
+            ps.setString(6, event.message);
+            ps.setString(7, event.status);
+            ps.setLong(8, event.statusTs);
+            ps.setString(9, event.fingerprint);
+            ps.setLong(10, event.silencedUntil);
+            ps.setLong(11, event.repeatCount);
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                return keys != null && keys.next() ? keys.getLong(1) : -1L;
+            }
         } catch (Exception e) {
             log.debug("[Hotsport] 告警事件落库失败: {}", e.getMessage());
+            return -1L;
         }
     }
 
@@ -554,6 +669,62 @@ public class AlertStore {
             }
         } catch (Exception e) {
             log.debug("[Hotsport] 告警事件裁剪失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 从 {@code RETURN_GENERATED_KEYS} 回读 DB 自增 id。
+     *
+     * <p>绝大多数驱动对 AUTO_INCREMENT 都会返回生成键；万一驱动行为异常（返回空集），
+     * 按业务唯一键回查兜底，保证调用方始终拿到真实 id。</p>
+     *
+     * @param ps      已执行 INSERT 的语句（RETURN_GENERATED_KEYS）
+     * @param conn    同连接（回查用）
+     * @param findSql 业务键定位 SQL（一个 ?）
+     * @param key     业务键值
+     * @return id；回读失败返回 -1
+     * @throws SQLException 连接/SQL 异常
+     */
+    private static long generatedId(PreparedStatement ps, Connection conn, String findSql, String key)
+            throws SQLException {
+        try (ResultSet keys = ps.getGeneratedKeys()) {
+            if (keys != null && keys.next()) {
+                return keys.getLong(1);
+            }
+        }
+        try (PreparedStatement psFind = conn.prepareStatement(findSql)) {
+            psFind.setString(1, key);
+            try (ResultSet rs = psFind.executeQuery()) {
+                return rs.next() ? rs.getLong("id") : -1L;
+            }
+        }
+    }
+
+    /**
+     * 判定唯一键冲突异常（并发 INSERT 撞业务唯一键：duplicate entry/key ...）。
+     */
+    private static boolean isDuplicateKey(Exception e) {
+        String msg = String.valueOf(e.getMessage()).toLowerCase();
+        return msg.contains("duplicate") && (msg.contains("key") || msg.contains("entry"));
+    }
+
+    /**
+     * 并发唯一键冲突后的回查：另一实例刚落库，按业务键取回它的 id（合并语义）。
+     *
+     * @param findSql 定位 SQL（含一个 ? 业务键）
+     * @param key     业务键值
+     * @return DB id；仍查不到返回 -1
+     */
+    private long refindId(String findSql, String key) {
+        try (Connection conn = connect();
+             PreparedStatement ps = conn.prepareStatement(findSql)) {
+            ps.setString(1, key);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong("id") : -1L;
+            }
+        } catch (Exception e) {
+            log.warn("[Hotsport] 并发冲突回查失败: {}", e.getMessage());
+            return -1L;
         }
     }
 

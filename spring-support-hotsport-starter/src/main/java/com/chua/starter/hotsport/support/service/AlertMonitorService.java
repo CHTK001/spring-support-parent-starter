@@ -247,7 +247,11 @@ public class AlertMonitorService {
                 seedDefaultRules();
                 for (AlertRule r : rules.values()) {
                     if (r != null) {
-                        alertStore.saveRule(r);
+                        long dbId = alertStore.saveRule(r);
+                        if (dbId > 0 && dbId != r.id) {
+                            r.id = dbId;
+                            ruleIdGen.accumulateAndGet(dbId + 1L, Math::max);
+                        }
                     }
                 }
             }
@@ -480,7 +484,13 @@ public class AlertMonitorService {
         while (events.size() > EVENT_CAPACITY) {
             events.pollFirst();
         }
-        alertStore.saveEvent(event);
+        long eventDbId = alertStore.saveEvent(event);
+        if (eventDbId > 0 && eventDbId != event.id) {
+            // DB AUTO_INCREMENT 是跨实例唯一全局 id：持久化激活时用回读的 id 修正
+            // 内存事件（环形缓冲持有同一引用），保证 ack/mute/touch 按下发的同一 id 寻址
+            event.id = eventDbId;
+            eventIdGen.accumulateAndGet(eventDbId + 1L, Math::max);
+        }
         alertStore.trimEvents();
         notifyChannels(event);
         log.info("[Hotsport] 告警触发 [{}] {}: {}", rule.severity, rule.metric, event.message);
@@ -776,8 +786,12 @@ public class AlertMonitorService {
      */
     public AlertRule addRule(AlertRule rule) {
         rule.id = ruleIdGen.getAndIncrement();
+        long dbId = alertStore.saveRule(rule);
+        if (dbId > 0 && dbId != rule.id) {
+            rule.id = dbId;
+            ruleIdGen.accumulateAndGet(dbId + 1L, Math::max);
+        }
         rules.put(rule.metric, rule);
-        alertStore.saveRule(rule);
         return rule;
     }
 
@@ -788,8 +802,12 @@ public class AlertMonitorService {
      * @return 保存后的规则
      */
     public AlertRule updateRule(AlertRule rule) {
+        long dbId = alertStore.saveRule(rule);
+        if (dbId > 0 && dbId != rule.id) {
+            rule.id = dbId;
+            ruleIdGen.accumulateAndGet(dbId + 1L, Math::max);
+        }
         rules.put(rule.metric, rule);
-        alertStore.saveRule(rule);
         return rule;
     }
 
@@ -847,8 +865,15 @@ public class AlertMonitorService {
      */
     public AlertChannel addChannel(AlertChannel channel) {
         channel.id = channelIdGen.getAndIncrement();
+        // 先落库取 DB 实际生效的 id：持久化激活且 DB 已有同名渠道时，saveChannel 返回
+        // 已存在行的 id（按 name 合并），内存必须以同一 id 寻址，否则 listChannels(DB 优先)
+        // 与本地缓存脱节。
+        long dbId = alertStore.saveChannel(channel);
+        if (dbId > 0 && dbId != channel.id) {
+            channel.id = dbId;
+            channelIdGen.accumulateAndGet(dbId + 1L, Math::max);
+        }
         channels.put(channel.id, channel);
-        alertStore.saveChannel(channel);
         return channel;
     }
 
@@ -859,11 +884,15 @@ public class AlertMonitorService {
      * @return 是否删除成功
      */
     public boolean deleteChannel(long id) {
-        boolean removed = channels.remove(id) != null;
-        if (removed) {
-            alertStore.deleteChannel(id);
+        // DB 为权威：持久化激活时无条件删 DB（哪怕本实例内存没有——前端列表读的是
+        // DB，可能显示其它实例建的渠道，若只在内存命中才删，跨实例渠道将永远删不掉）。
+        // DB 删成功或未激活时才动本地缓存，保持两源一致。
+        boolean dbRemoved = alertStore.deleteChannel(id);
+        if (alertStore.isActive()) {
+            channels.remove(id);
+            return dbRemoved;
         }
-        return removed;
+        return channels.remove(id) != null;
     }
 
     /**
@@ -874,12 +903,30 @@ public class AlertMonitorService {
      * @return 是否更新成功
      */
     public boolean toggleChannel(long id, boolean enabled) {
+        // DB 优先：从 DB 按 id 定位（可能由其它实例创建），修改后按 name 合写回库，
+        // 并把内存同步到同一 id——与 listChannels(DB 优先) 的显示源保持一致。
+        if (alertStore.isActive()) {
+            for (AlertChannel c : alertStore.loadChannels()) {
+                if (c.id == id) {
+                    c.enabled = enabled;
+                    long dbId = alertStore.saveChannel(c);
+                    if (dbId > 0 && dbId != id) {
+                        channels.remove(id);
+                        channels.put(dbId, c);
+                        channelIdGen.accumulateAndGet(dbId + 1L, Math::max);
+                    } else {
+                        channels.put(id, c);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
         AlertChannel c = channels.get(id);
         if (c == null) {
             return false;
         }
         c.enabled = enabled;
-        alertStore.saveChannel(c);
         return true;
     }
 
