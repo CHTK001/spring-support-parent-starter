@@ -1,0 +1,1 @@
+import{i as e,n as t,r as n,t as r}from"./StateIcon-lyyh2fVr.js";var i={install(e){e.component(`ReStateIcon`,r)}},a=r;export{t as DEFAULT_STATE_ICON_PRESET,n as STATE_ICON_PRESETS,a as default,i as install,e as resolveStateIcons};

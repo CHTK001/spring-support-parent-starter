@@ -1,1 +1,0 @@
-import{t as e}from"./ReButton-DymDHZrz.js";var t={install(t){t.component(`ReButton`,e)}},n=e;export{t as n,n as t};

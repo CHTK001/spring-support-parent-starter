@@ -1,0 +1,1 @@
+import{n as e,t}from"./ReSkeleton-Dv8OJBj-.js";export{t as default,e as install};
