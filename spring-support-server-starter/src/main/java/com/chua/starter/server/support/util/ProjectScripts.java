@@ -378,6 +378,11 @@ public final class ProjectScripts {
                         + LINUX_PID_ECHO;
                 restart = stop + "\nsleep 2\n" + start;
             }
+            case "model" -> {
+                // 模型项目：仅管理模型文件，无运行进程
+                start = linuxEnter() + "echo \"Model repository - no process to start\"";
+                restart = start;
+            }
             default -> {
                 return new Scripts("./start.sh", "./stop.sh", "./restart.sh", LINUX_STATUS);
             }
@@ -592,6 +597,11 @@ public final class ProjectScripts {
                         ? winStart("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + PH_ENTRY)
                         : winStart(PH_ENTRY, "__ARGS__")) + "\n" + WIN_VERIFY_RUNNING;
                 return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+            }
+            case "model" -> {
+                // 模型项目：仅管理模型文件，无运行进程
+                String start = "Write-Host \"Model repository - no process to start\"";
+                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 1\n" + start, WIN_STATUS);
             }
             default -> {
                 return new Scripts(".\\start.ps1", ".\\stop.ps1", ".\\restart.ps1", WIN_STATUS);

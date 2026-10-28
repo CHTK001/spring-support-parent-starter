@@ -468,4 +468,28 @@ public class ReleaseController {
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         return releaseService.uploadAndUpgrade(id, file);
     }
+
+    /**
+     * 统计分离式项目 lib 目录中的 jar 文件数量。
+     *
+     * @param id 项目标识
+     * @return jar 文件数量
+     */
+    @Operation(summary = "统计分离式项目依赖 jar 数量")
+    @GetMapping("/project/{id}/lib/count")
+    public ReturnResult<Integer> countLibFiles(@PathVariable Long id) {
+        return releaseService.countLibFiles(id);
+    }
+
+    /**
+     * Git 自动发布：拉取项目配置的 Git 仓库 → Maven 构建 → 上传 → 升级重启。
+     *
+     * @param id 项目标识
+     * @return 异步任务标识
+     */
+    @Operation(summary = "Git 自动发布：拉取代码→构建→上传→升级（异步，返回taskId）")
+    @PostMapping("/project/{id}/git/deploy")
+    public ReturnResult<String> gitPullAndDeploy(@PathVariable Long id) {
+        return releaseService.gitPullAndDeploy(id);
+    }
 }
