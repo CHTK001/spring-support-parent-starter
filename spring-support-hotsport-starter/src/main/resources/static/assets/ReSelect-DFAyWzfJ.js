@@ -1,1 +1,0 @@
-import{t as e}from"./ReSelect-BujSPcU5.js";var t={install(t){t.component(`ReSelect`,e)}},n=e;export{t as n,n as t};

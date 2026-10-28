@@ -857,6 +857,77 @@ public class ApmController {
     }
 
     /**
+     * 通知渠道列表。
+     *
+     * @return 渠道列表
+     */
+    @GetMapping("/alerts/channels")
+    public ReturnResult<List<Map<String, Object>>> alertChannels() {
+        return ReturnResult.ok(alertMonitorService.listChannels().stream().map(c -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", c.id);
+            m.put("name", c.name);
+            m.put("type", c.type);
+            m.put("url", c.url);
+            m.put("secret", c.secret);
+            m.put("enabled", c.enabled);
+            return m;
+        }).collect(Collectors.toList()));
+    }
+
+    /**
+     * 新增通知渠道（触发告警时向 url 推送 Webhook）。
+     *
+     * @param name  渠道名称
+     * @param type  渠道类型（webhook / dingtalk / feishu / email）
+     * @param url   Webhook URL
+     * @param secret 可选签名密钥
+     * @param enabled 是否启用
+     * @return 保存后的渠道
+     */
+    @PostMapping("/alerts/channels")
+    public ReturnResult<Map<String, Object>> addAlertChannel(
+            @RequestParam String name, @RequestParam(defaultValue = "webhook") String type,
+            @RequestParam String url, @RequestParam(defaultValue = "") String secret,
+            @RequestParam(defaultValue = "true") boolean enabled) {
+        AlertMonitorService.AlertChannel channel =
+                new AlertMonitorService.AlertChannel(0, name, type, url, secret, enabled);
+        AlertMonitorService.AlertChannel saved = alertMonitorService.addChannel(channel);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", saved.id);
+        m.put("name", saved.name);
+        m.put("type", saved.type);
+        m.put("url", saved.url);
+        m.put("secret", saved.secret);
+        m.put("enabled", saved.enabled);
+        return ReturnResult.ok(m);
+    }
+
+    /**
+     * 删除通知渠道。
+     *
+     * @param id 渠道 ID
+     * @return 是否删除成功
+     */
+    @DeleteMapping("/alerts/channels/{id}")
+    public ReturnResult<Boolean> deleteAlertChannel(@PathVariable long id) {
+        return ReturnResult.ok(alertMonitorService.deleteChannel(id));
+    }
+
+    /**
+     * 启停通知渠道。
+     *
+     * @param id      渠道 ID
+     * @param enabled 是否启用
+     * @return 是否更新成功
+     */
+    @PostMapping("/alerts/channels/toggle")
+    public ReturnResult<Boolean> toggleAlertChannel(
+            @RequestParam long id, @RequestParam boolean enabled) {
+        return ReturnResult.ok(alertMonitorService.toggleChannel(id, enabled));
+    }
+
+    /**
      * 慢调用排行（按耗时降序）。
      *
      * @param limit 返回上限

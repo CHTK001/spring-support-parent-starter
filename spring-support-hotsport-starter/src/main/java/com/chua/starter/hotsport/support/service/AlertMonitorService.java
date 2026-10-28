@@ -9,11 +9,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,6 +52,31 @@ public class AlertMonitorService {
      * 事件环形缓冲容量。
     */
     private static final int EVENT_CAPACITY = 100;
+
+    /**
+     * Webhook 通知渠道（type=webhook 时使用）。
+     */
+    public static class AlertChannel {
+
+        public long id;
+        public String name;       // 渠道名称，如：值班群
+        public String type;       // webhook / dingtalk / feishu / email
+        public String url;        // Webhook URL（webhook/dingtalk/feishu 用）
+        public String secret;     // 可选签名密钥（dingtalk 签名等）
+        public boolean enabled;   // 是否启用
+
+        public AlertChannel() {
+        }
+
+        public AlertChannel(long id, String name, String type, String url, String secret, boolean enabled) {
+            this.id = id;
+            this.name = name;
+            this.type = type;
+            this.url = url;
+            this.secret = secret;
+            this.enabled = enabled;
+        }
+    }
 
     /**
      * 告警规则（可动态增删改）。
@@ -112,9 +143,19 @@ public class AlertMonitorService {
     private final AtomicLong ruleIdGen = new AtomicLong(1);
 
     /**
-     * 规则表（metric → AlertRule），初始 3 条默认规则。
+     * 渠道 ID 原子计数。
+    */
+    private final AtomicLong channelIdGen = new AtomicLong(1);
+
+    /**
+     * 规则表（metric → AlertRule），初始 6 条默认规则。
     */
     private final ConcurrentHashMap<String, AlertRule> rules = new ConcurrentHashMap<>();
+
+    /**
+     * 通知渠道表（id → AlertChannel）。
+    */
+    private final ConcurrentHashMap<Long, AlertChannel> channels = new ConcurrentHashMap<>();
 
     /**
      * 事件环形缓冲。
@@ -125,6 +166,13 @@ public class AlertMonitorService {
      * 各指标上次触发时间（去抖）。
     */
     private final ConcurrentHashMap<String, Long> lastFired = new ConcurrentHashMap<>();
+
+    /**
+     * Webhook 异步推送客户端（触发告警时不阻塞巡检线程）。
+    */
+    private final HttpClient webhookClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .build();
 
     private final JvmMetricsService jvmMetricsService;
 
@@ -138,7 +186,7 @@ public class AlertMonitorService {
     }
 
     /**
-     * 注册钩子：初始化 3 条默认规则 + 挂接 JVM 采样。
+     * 注册钩子：初始化 6 条默认规则 + 挂接 JVM 采样。
     */
     @PostConstruct
     public void init() {
@@ -148,6 +196,12 @@ public class AlertMonitorService {
                 new AlertRule(ruleIdGen.getAndIncrement(), "error_rate", 10.0, "CRITICAL", 5000L, true));
         rules.put("active_leaks",
                 new AlertRule(ruleIdGen.getAndIncrement(), "active_leaks", 3.0, "WARNING", 5000L, true));
+        rules.put("cpu_percent",
+                new AlertRule(ruleIdGen.getAndIncrement(), "cpu_percent", 80.0, "WARNING", 5000L, true));
+        rules.put("thread_count",
+                new AlertRule(ruleIdGen.getAndIncrement(), "thread_count", 300.0, "WARNING", 5000L, false));
+        rules.put("transmission_rate",
+                new AlertRule(ruleIdGen.getAndIncrement(), "transmission_rate", 100.0, "WARNING", 5000L, false));
         jvmMetricsService.registerSampleHook(this::check);
         log.info("[Hotsport] 告警监控启动（{} 条规则）", rules.size());
     }
@@ -157,7 +211,10 @@ public class AlertMonitorService {
      *
      * <p>heap_percent → {@code lastSample().memory.heapUsedPercent}；
      * error_rate → {@link #computeErrorRate()}；active_leaks →
-     * {@code jvmMetricsService.activeLeakCount()}。</p>
+     * {@code jvmMetricsService.activeLeakCount()}；cpu_percent →
+     * {@code lastSample().cpu.processCpuLoad}；thread_count →
+     * {@code lastSample().threads.liveThreads}；transmission_rate →
+     * {@link #computeTransmissionRate()}。</p>
      */
     public void check() {
         try {
@@ -166,6 +223,9 @@ public class AlertMonitorService {
             double heapPercent = ((Number) memory.get("heapUsedPercent")).doubleValue();
             double errorRate = computeErrorRate();
             int activeLeaks = jvmMetricsService.activeLeakCount();
+            double cpuPercent = metricDouble(sample, "cpu", "processCpuLoad");
+            double threadCount = metricDouble(sample, "threads", "liveThreads");
+            double transmissionRate = computeTransmissionRate();
 
             for (AlertRule rule : rules.values()) {
                 if (rule == null || !rule.enabled) {
@@ -182,6 +242,15 @@ public class AlertMonitorService {
                     case "active_leaks":
                         current = activeLeaks;
                         break;
+                    case "cpu_percent":
+                        current = cpuPercent;
+                        break;
+                    case "thread_count":
+                        current = threadCount;
+                        break;
+                    case "transmission_rate":
+                        current = transmissionRate;
+                        break;
                     default:
                         continue;
                 }
@@ -189,6 +258,53 @@ public class AlertMonitorService {
             }
         } catch (Exception e) {
             log.debug("[Hotsport] 告警巡检失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 从 JVM 采样快照按两级键取数值指标（缺字段返回 0）。
+     *
+     * @param sample 采样快照
+     * @param group  一级键（memory/cpu/threads/os/...）
+     * @param key    二级键
+     * @return 数值；缺字段/非数值返回 0
+     */
+    private static double metricDouble(Map<String, Object> sample, String group, String key) {
+        try {
+            Object g = sample.get(group);
+            if (g instanceof Map<?, ?> m) {
+                Object v = m.get(key);
+                return v instanceof Number n ? n.doubleValue() : 0.0;
+            }
+        } catch (Exception e) {
+            // 采样缺字段时按 0 处理，不中断巡检
+        }
+        return 0.0;
+    }
+
+    /**
+     * 传输速率：最近 1 分钟新增传输记录数 / 60。
+     *
+     * <p>从存储层查询最近 1 分钟记录数（真实计数），无存储返回 0。</p>
+     *
+     * @return 每秒传输条数
+     */
+    private double computeTransmissionRate() {
+        try {
+            ApmStorage storage = HotsportProperties.storage();
+            if (storage == null) {
+                return 0.0;
+            }
+            long cutoff = System.currentTimeMillis() - 60_000L;
+            List<TransmissionEvent> all =
+                    storage.queryTransmissions(new Query().setLimit(100000).setStartTime(cutoff));
+            if (all == null) {
+                return 0.0;
+            }
+            return Math.round(all.size() * 100.0 / 60.0) / 100.0;
+        } catch (Exception e) {
+            log.debug("[Hotsport] 传输速率统计失败: {}", e.getMessage());
+            return 0.0;
         }
     }
 
@@ -240,7 +356,83 @@ public class AlertMonitorService {
         while (events.size() > EVENT_CAPACITY) {
             events.pollFirst();
         }
+        notifyChannels(event);
         log.info("[Hotsport] 告警触发 [{}] {}: {}", rule.severity, rule.metric, event.message);
+    }
+
+    /**
+     * 把新告警事件分发给全部启用的通知渠道（异步 Webhook，不阻塞巡检线程）。
+     *
+     * <p>失败只记日志不重试——观测组件不因推送失败干扰告警主流程。</p>
+     *
+     * @param event 触发的事件
+     */
+    private void notifyChannels(AlertEvent event) {
+        List<AlertChannel> enabledChannels = new ArrayList<>();
+        for (AlertChannel c : channels.values()) {
+            if (c != null && c.enabled && c.url != null && !c.url.isBlank()) {
+                enabledChannels.add(c);
+            }
+        }
+        if (enabledChannels.isEmpty()) {
+            return;
+        }
+        for (AlertChannel c : enabledChannels) {
+            final AlertChannel ch = c;
+            CompletableFuture.runAsync(() -> pushWebhook(ch, event));
+        }
+    }
+
+    /**
+     * 单渠道 Webhook 推送：POST JSON（钉钉/飞书/通用 webhook 同构）。
+     *
+     * @param channel 渠道
+     * @param event   告警事件
+     */
+    private void pushWebhook(AlertChannel channel, AlertEvent event) {
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("msgtype", "text");
+            Map<String, Object> text = new LinkedHashMap<>();
+            String ts = new java.text.SimpleDateFormat("MM-dd HH:mm:ss")
+                    .format(new java.util.Date(event.ts));
+            text.put("content", String.format(
+                    "[Hotsport 告警 %s] %s\n指标: %s  当前: %s  阈值: %s\n时间: %s",
+                    event.severity, event.message, event.metric, formatNum(event.current),
+                    formatNum(event.threshold), ts));
+            payload.put("text", text);
+            payload.put("metric", event.metric);
+            payload.put("severity", event.severity);
+            payload.put("ts", event.ts);
+            String body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(channel.url.trim()))
+                    .timeout(Duration.ofSeconds(3))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> resp = webhookClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() >= 400) {
+                log.warn("[Hotsport] Webhook 推送失败 [{}] {}: HTTP {}", channel.name, channel.url, resp.statusCode());
+            } else {
+                log.debug("[Hotsport] Webhook 推送成功 [{}] {}", channel.name, resp.statusCode());
+            }
+        } catch (Exception e) {
+            log.debug("[Hotsport] Webhook 推送异常 [{}]: {}", channel.name, e.getMessage());
+        }
+    }
+
+    /**
+     * 数值格式化：整数不带小数，非整数保留两位。
+     *
+     * @param v 数值
+     * @return 格式化字符串
+     */
+    private static String formatNum(double v) {
+        if (v == Math.rint(v)) {
+            return String.valueOf(Math.round(v));
+        }
+        return String.format("%.2f", v);
     }
 
     /**
@@ -258,6 +450,12 @@ public class AlertMonitorService {
                 return "错误率 " + String.format("%.1f", current) + "% 超过阈值 " + Math.round(threshold) + "%";
             case "active_leaks":
                 return "活跃泄漏 " + Math.round(current) + " 个超过阈值 " + Math.round(threshold);
+            case "cpu_percent":
+                return "进程 CPU " + String.format("%.1f", current) + "% 超过阈值 " + Math.round(threshold) + "%";
+            case "thread_count":
+                return "线程数 " + Math.round(current) + " 超过阈值 " + Math.round(threshold);
+            case "transmission_rate":
+                return "传输速率 " + String.format("%.2f", current) + "/s 超过阈值 " + Math.round(threshold) + "/s";
             default:
                 return metric + " 指标超阈值 " + threshold;
         }
@@ -443,5 +641,58 @@ public class AlertMonitorService {
         if (r != null) {
             r.enabled = enabled;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // 通知渠道 CRUD（Webhook 推送目标）
+    // ------------------------------------------------------------------
+
+    /**
+     * 通知渠道列表（按 id 升序）。
+     *
+     * @return 渠道列表
+     */
+    public List<AlertChannel> listChannels() {
+        List<AlertChannel> out = new ArrayList<>(channels.values());
+        out.sort(Comparator.comparingLong(c -> c.id));
+        return out;
+    }
+
+    /**
+     * 新增通知渠道（自动分配 ID）。
+     *
+     * @param channel 渠道（id 忽略）
+     * @return 保存后的渠道
+     */
+    public AlertChannel addChannel(AlertChannel channel) {
+        channel.id = channelIdGen.getAndIncrement();
+        channels.put(channel.id, channel);
+        return channel;
+    }
+
+    /**
+     * 删除通知渠道。
+     *
+     * @param id 渠道 ID
+     * @return 是否删除成功
+     */
+    public boolean deleteChannel(long id) {
+        return channels.remove(id) != null;
+    }
+
+    /**
+     * 启停通知渠道。
+     *
+     * @param id      渠道 ID
+     * @param enabled 是否启用
+     * @return 是否更新成功
+     */
+    public boolean toggleChannel(long id, boolean enabled) {
+        AlertChannel c = channels.get(id);
+        if (c == null) {
+            return false;
+        }
+        c.enabled = enabled;
+        return true;
     }
 }

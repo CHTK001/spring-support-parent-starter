@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/ReSectionHead-D7MTYhIr.js","assets/lib-antv-DPUBrK1v.js","assets/rolldown-runtime-Dd_uD5pT.js","assets/_plugin-vue_export-helper-BDNMzG2s.js","assets/ReSectionHead-Cl6miaqn.css"])))=>i.map(i=>d[i]);
+import{t as e}from"./preload-helper-Czpn1I53.js";import{t}from"./theme-CzG5XagE.js";var n=t(`ReSectionHead`,{default:()=>e(()=>import(`./ReSectionHead-D7MTYhIr.js`),__vite__mapDeps([0,1,2,3,4]))}),r=n.component;export{r as component,r as default,n as install};
