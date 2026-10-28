@@ -1,2 +1,0 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/ReStatCard-Bqr9wBqd.js","assets/lib-antv-DPUBrK1v.js","assets/rolldown-runtime-Dd_uD5pT.js","assets/_plugin-vue_export-helper-BDNMzG2s.js","assets/ReStatCard-M5CCQRAC.css","assets/re-surface-DfM1G9PW.css"])))=>i.map(i=>d[i]);
-import{t as e}from"./preload-helper-Czpn1I53.js";import{t}from"./theme-CzG5XagE.js";var n=t(`ReStatCard`,{default:()=>e(()=>import(`./ReStatCard-Bqr9wBqd.js`),__vite__mapDeps([0,1,2,3,4,5]))}),r=n.component;export{n,r as t};

@@ -1,1 +1,0 @@
-import{n as e,t}from"./ReStatCard-F0N7M5vf.js";export{t as component,t as default,e as install};

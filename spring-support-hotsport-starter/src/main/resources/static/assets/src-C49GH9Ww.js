@@ -1,1 +1,0 @@
-import{t as e}from"./src-92vgkZrr.js";import"./resolveAssetUrl-BSVKPcQJ.js";import"./framework-CVjxWs2s.js";export{e as setupSvgSprite};

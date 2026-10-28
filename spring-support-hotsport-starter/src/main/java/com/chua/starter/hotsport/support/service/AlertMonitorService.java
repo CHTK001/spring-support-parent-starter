@@ -168,6 +168,16 @@ public class AlertMonitorService {
     private final ConcurrentHashMap<String, Long> lastFired = new ConcurrentHashMap<>();
 
     /**
+     * DB 规则/渠道刷新节流：每次采样（约 5s）累计，达到阈值才向 DB 请求一次。
+    */
+    private final AtomicLong dbRefreshTicks = new AtomicLong();
+
+    /**
+     * DB 规则/渠道刷新间隔（采样 tick 数，约 15s）。
+    */
+    private static final long DB_REFRESH_EVERY_TICKS = 3;
+
+    /**
      * Webhook 异步推送客户端（触发告警时不阻塞巡检线程）。
     */
     private final HttpClient webhookClient = HttpClient.newBuilder()
@@ -177,19 +187,94 @@ public class AlertMonitorService {
     private final JvmMetricsService jvmMetricsService;
 
     /**
-     * 构造器（@Lazy 打破 JvmMetricsService ← AlertMonitorService 循环依赖）。
+     * 持久化层（mysql 后端可选落库；非激活时全为 no-op，内存态永远是权威）。
+     */
+    private final AlertStore alertStore;
+
+    /**
+     * 构造器：
+     * <ul>
+     *   <li>{@code @Lazy} 打破 JvmMetricsService ← AlertMonitorService 循环依赖；</li>
+     *   <li>{@code AlertStore} 单独注册，无循环。</li>
+     * </ul>
      *
      * @param jvmMetricsService JVM 指标服务
+     * @param alertStore        告警持久化层
      */
-    public AlertMonitorService(@Lazy JvmMetricsService jvmMetricsService) {
+    public AlertMonitorService(@Lazy JvmMetricsService jvmMetricsService, AlertStore alertStore) {
         this.jvmMetricsService = jvmMetricsService;
+        this.alertStore = alertStore;
     }
 
     /**
-     * 注册钩子：初始化 6 条默认规则 + 挂接 JVM 采样。
-    */
+     * 注册钩子：初始化默认规则 + 回灌持久化数据 + 挂接 JVM 采样。
+     */
     @PostConstruct
     public void init() {
+        alertStore.start();
+        restoreFromStore();
+        jvmMetricsService.registerSampleHook(this::check);
+        log.info("[Hotsport] 告警监控启动（{} 条规则，持久化 {}）",
+                rules.size(), alertStore.isActive() ? "MySQL 已启用" : "内存态");
+    }
+
+    /**
+     * 启动回灌：从持久层恢复规则 / 渠道 / 最近事件。
+     *
+     * <p>DB 中有数据则以 DB 为权威（运维改过的阈值、启停、渠道在重启后保留）；
+     * DB 为空（首次启动）则用默认规则，并统一落库让默认值也成为持久资产。</p>
+     */
+    private void restoreFromStore() {
+        try {
+            // 规则：DB 优先；有空缺补默认，全部落库
+            List<AlertRule> loaded = alertStore.loadRules();
+            Map<String, AlertRule> loadedMap = new java.util.HashMap<>();
+            for (AlertRule r : loaded) {
+                loadedMap.put(r.metric, r);
+                if (r.id > ruleIdGen.get()) {
+                    ruleIdGen.set(r.id);
+                }
+            }
+            if (!loadedMap.isEmpty()) {
+                rules.clear();
+                rules.putAll(loadedMap);
+            } else {
+                // DB 无数据（首次启动）：先铺默认规则并落库成为持久资产。
+                // 注意：仅此处写库。重启回灌时不写回加载到的规则 —— 否则在
+                // 多实例共享同一张 alert_rules 时，实例 B 的「读旧值→写回」会
+                // 覆盖实例 A 刚写入的新值（脏数据竞态）。
+                seedDefaultRules();
+                for (AlertRule r : rules.values()) {
+                    if (r != null) {
+                        alertStore.saveRule(r);
+                    }
+                }
+            }
+            // 渠道：DB 有数据则恢复内存；空的渠道表无需写回（新增渠道走 addChannel 直接落库）
+            List<AlertChannel> channels = alertStore.loadChannels();
+            for (AlertChannel c : channels) {
+                this.channels.put(c.id, c);
+                if (c.id > channelIdGen.get()) {
+                    channelIdGen.set(c.id);
+                }
+            }
+            // 最近事件：填满环形缓冲，重启后页面仍有历史
+            List<AlertEvent> recent = alertStore.loadRecentEvents(EVENT_CAPACITY);
+            for (AlertEvent e : recent) {
+                events.addLast(e);
+                if (e.id > eventIdGen.get()) {
+                    eventIdGen.set(e.id);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Hotsport] 告警持久化回灌失败（继续纯内存运行）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 默认规则（首次启动 / DB 无数据时兜底，全部启用阈值规则）。
+     */
+    private void seedDefaultRules() {
         rules.put("heap_percent",
                 new AlertRule(ruleIdGen.getAndIncrement(), "heap_percent", 90.0, "CRITICAL", 5000L, true));
         rules.put("error_rate",
@@ -202,8 +287,6 @@ public class AlertMonitorService {
                 new AlertRule(ruleIdGen.getAndIncrement(), "thread_count", 300.0, "WARNING", 5000L, false));
         rules.put("transmission_rate",
                 new AlertRule(ruleIdGen.getAndIncrement(), "transmission_rate", 100.0, "WARNING", 5000L, false));
-        jvmMetricsService.registerSampleHook(this::check);
-        log.info("[Hotsport] 告警监控启动（{} 条规则）", rules.size());
     }
 
     /**
@@ -218,6 +301,7 @@ public class AlertMonitorService {
      */
     public void check() {
         try {
+            refreshFromDbScheduled();
             Map<String, Object> sample = jvmMetricsService.lastSample();
             Map<String, Object> memory = (Map<String, Object>) sample.get("memory");
             double heapPercent = ((Number) memory.get("heapUsedPercent")).doubleValue();
@@ -258,6 +342,36 @@ public class AlertMonitorService {
             }
         } catch (Exception e) {
             log.debug("[Hotsport] 告警巡检失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 节流地从 DB 刷新规则/渠道到内存巡检缓存。
+     *
+     * <p><b>为什么需要</b>：巡检与告警触发用内存 {@link #rules} / {@link #channels}
+     * 保证性能，但另一实例（或运维直接改库）的变更不会自动进入本实例内存。
+     * 每 {@value #DB_REFRESH_EVERY_TICKS} 个采样 tick（约 15s）向 DB 拉一次，
+     * 覆盖远程修改，同时保证口径一致、且不对 DB 造成高频查询。</p>
+     */
+    private void refreshFromDbScheduled() {
+        if (!alertStore.isActive()) {
+            return;
+        }
+        if (dbRefreshTicks.incrementAndGet() % DB_REFRESH_EVERY_TICKS != 0) {
+            return;
+        }
+        try {
+            List<AlertRule> fromDb = alertStore.loadRules();
+            if (!fromDb.isEmpty()) {
+                Map<String, AlertRule> fresh = new java.util.HashMap<>();
+                for (AlertRule r : fromDb) {
+                    fresh.put(r.metric, r);
+                }
+                rules.clear();
+                rules.putAll(fresh);
+            }
+        } catch (Exception e) {
+            log.debug("[Hotsport] 巡检规则刷新失败: {}", e.getMessage());
         }
     }
 
@@ -336,6 +450,7 @@ public class AlertMonitorService {
             recent.repeatCount++;
             recent.current = current;
             recent.ts = now;
+            alertStore.touchEvent(recent);
             log.debug("[Hotsport] 告警静默期内重复触发，累计 {} 次: {}", recent.repeatCount, rule.metric);
             return;
         }
@@ -356,6 +471,8 @@ public class AlertMonitorService {
         while (events.size() > EVENT_CAPACITY) {
             events.pollFirst();
         }
+        alertStore.saveEvent(event);
+        alertStore.trimEvents();
         notifyChannels(event);
         log.info("[Hotsport] 告警触发 [{}] {}: {}", rule.severity, rule.metric, event.message);
     }
@@ -499,6 +616,7 @@ public class AlertMonitorService {
             if (e.id == eventId) {
                 e.status = toStatus;
                 e.statusTs = System.currentTimeMillis();
+                alertStore.updateEventStatus(e.id, e.status, e.statusTs, e.silencedUntil);
                 return true;
             }
         }
@@ -519,6 +637,7 @@ public class AlertMonitorService {
                 e.silencedUntil = until;
                 e.status = "MUTED";
                 e.statusTs = System.currentTimeMillis();
+                alertStore.updateEventStatus(e.id, e.status, e.statusTs, e.silencedUntil);
                 return true;
             }
         }
@@ -585,16 +704,58 @@ public class AlertMonitorService {
         return count;
     }
 
+    /**
+     * DB 全量历史事件分页查询（超出口内存环形缓冲的历史）。
+     *
+     * <p>仅当持久化激活时有意义；否则返回空表（页面展示「仅内存态」空态）。
+     * 字段形状与 {@link #alerts(int)} 完全一致，前端可复用同一套渲染。</p>
+     *
+     * @param limit  每页条数
+     * @param offset 起始偏移（时间倒序）
+     * @return 事件列表
+     */
+    public List<Map<String, Object>> alertHistory(int limit, int offset) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (AlertEvent e : alertStore.history(limit, offset)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", e.id);
+            m.put("ts", e.ts);
+            m.put("metric", e.metric);
+            m.put("current", e.current);
+            m.put("threshold", e.threshold);
+            m.put("severity", e.severity);
+            m.put("message", e.message);
+            m.put("status", e.status);
+            m.put("statusTs", e.statusTs);
+            m.put("fingerprint", e.fingerprint);
+            m.put("repeatCount", e.repeatCount);
+            m.put("silencedUntil", e.silencedUntil);
+            out.add(m);
+        }
+        return out;
+    }
+
     // ------------------------------------------------------------------
     // 规则 CRUD
     // ------------------------------------------------------------------
 
     /**
-     * 规则列表。
+     * 规则列表（持久化激活时以 DB 为权威读取，保证多实例共享同一真相）。
+     *
+     * <p><b>为什么读 DB 而不是内存</b>：两实例共享一张 {@code alert_rules} 表，
+     * 若各自维护内存规则，实例 A 的修改实例 B 看不到，B 下次写回会把 A 的新值
+     * 覆盖成旧值（脏数据）。巡检仍走内存缓存保证性能；列表与修改接口一律
+     * DB 优先——DB 读失败时回退内存，观测组件不因持久化故障而不可用。</p>
      *
      * @return 当前全部规则
      */
     public List<AlertRule> listRules() {
+        if (alertStore.isActive()) {
+            List<AlertRule> fromDb = alertStore.loadRules();
+            if (!fromDb.isEmpty()) {
+                return fromDb;
+            }
+        }
         return new ArrayList<>(rules.values());
     }
 
@@ -607,6 +768,7 @@ public class AlertMonitorService {
     public AlertRule addRule(AlertRule rule) {
         rule.id = ruleIdGen.getAndIncrement();
         rules.put(rule.metric, rule);
+        alertStore.saveRule(rule);
         return rule;
     }
 
@@ -618,6 +780,7 @@ public class AlertMonitorService {
      */
     public AlertRule updateRule(AlertRule rule) {
         rules.put(rule.metric, rule);
+        alertStore.saveRule(rule);
         return rule;
     }
 
@@ -628,6 +791,7 @@ public class AlertMonitorService {
      */
     public void deleteRule(String metric) {
         rules.remove(metric);
+        alertStore.deleteRule(metric);
     }
 
     /**
@@ -640,6 +804,7 @@ public class AlertMonitorService {
         AlertRule r = rules.get(metric);
         if (r != null) {
             r.enabled = enabled;
+            alertStore.saveRule(r);
         }
     }
 
@@ -648,11 +813,18 @@ public class AlertMonitorService {
     // ------------------------------------------------------------------
 
     /**
-     * 通知渠道列表（按 id 升序）。
+     * 通知渠道列表（按 id 升序；持久化激活时以 DB 为权威）。
      *
      * @return 渠道列表
      */
     public List<AlertChannel> listChannels() {
+        if (alertStore.isActive()) {
+            List<AlertChannel> fromDb = alertStore.loadChannels();
+            if (!fromDb.isEmpty()) {
+                fromDb.sort(Comparator.comparingLong(c -> c.id));
+                return fromDb;
+            }
+        }
         List<AlertChannel> out = new ArrayList<>(channels.values());
         out.sort(Comparator.comparingLong(c -> c.id));
         return out;
@@ -667,6 +839,7 @@ public class AlertMonitorService {
     public AlertChannel addChannel(AlertChannel channel) {
         channel.id = channelIdGen.getAndIncrement();
         channels.put(channel.id, channel);
+        alertStore.saveChannel(channel);
         return channel;
     }
 
@@ -677,7 +850,11 @@ public class AlertMonitorService {
      * @return 是否删除成功
      */
     public boolean deleteChannel(long id) {
-        return channels.remove(id) != null;
+        boolean removed = channels.remove(id) != null;
+        if (removed) {
+            alertStore.deleteChannel(id);
+        }
+        return removed;
     }
 
     /**
@@ -693,6 +870,16 @@ public class AlertMonitorService {
             return false;
         }
         c.enabled = enabled;
+        alertStore.saveChannel(c);
         return true;
+    }
+
+    /**
+     * 持久化层状态（运维排查：是否落库、事件库行数）。
+     *
+     * @return 键值对
+     */
+    public Map<String, Object> alertStoreInfo() {
+        return alertStore.info();
     }
 }
