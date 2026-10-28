@@ -1,0 +1,1 @@
+import{t as e}from"./ReButton-CG2JC7ob.js";var t={install(t){t.component(`ReButton`,e)}},n=e;export{t as n,n as t};

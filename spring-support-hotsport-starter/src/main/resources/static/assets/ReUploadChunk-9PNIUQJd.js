@@ -1,1 +1,0 @@
-import{t as e}from"./ReUploadChunk-C4sIDzzD.js";var t={install(t){t.component(`ReUploadChunk`,e)}},n=e;export{n as default,t as install};

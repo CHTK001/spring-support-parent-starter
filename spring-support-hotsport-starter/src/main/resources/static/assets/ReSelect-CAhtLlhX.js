@@ -1,0 +1,1 @@
+import{t as e}from"./ReSelect-H6VZVHFb.js";var t={install(t){t.component(`ReSelect`,e)}},n=e;export{t as n,n as t};
