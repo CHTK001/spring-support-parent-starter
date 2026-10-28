@@ -218,4 +218,29 @@ public interface ReleaseService {
      */
     ReturnResult<String> uploadAndUpgrade(Long id,
                                           org.springframework.web.multipart.MultipartFile file);
+
+    /**
+     * Git 自动发布：从项目配置的 Git 仓库拉取代码 → Maven 构建 → SFTP 上传产物 → 升级重启。
+     *
+     * <p>流程：</p>
+     * <ol>
+     *   <li>克隆或拉取 Git 仓库到本地临时工作区</li>
+     *   <li>执行 Maven 构建（默认 clean,package，跳过测试）</li>
+     *   <li>定位构建产物（jar/war）</li>
+     *   <li>SFTP 上传到远程主机 uploads 目录</li>
+     *   <li>调用 runUpgrade 执行备份+投放+重启</li>
+     * </ol>
+     *
+     * @param id 项目ID
+     * @return 异步任务标识（taskId）
+     */
+    ReturnResult<String> gitPullAndDeploy(Long id);
+
+    /**
+     * 统计分离式项目 lib 目录中的 jar 数量
+     *
+     * @param id 项目ID
+     * @return jar 文件数量
+     */
+    ReturnResult<Integer> countLibFiles(Long id);
 }

@@ -5,11 +5,15 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.placeholder.MapMixSystemPlaceholderResolver;
 import com.chua.common.support.lang.placeholder.PlaceholderSupport;
 import com.chua.common.support.lang.placeholder.StringValuePropertyResolver;
+import com.chua.git.support.GitClient;
+import com.chua.maven.support.MavenClient;
+import com.chua.maven.support.MavenCompileResult;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsServerConfig;
 import com.chua.starter.server.support.entity.MsExecLog;
 import com.chua.starter.server.support.entity.MsServerProject;
 import com.chua.starter.server.support.entity.MsServerRelease;
+import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.SoftwarePackage;
 import com.chua.starter.server.support.mapper.MsServerConfigMapper;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
@@ -36,14 +40,29 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * 发布管理服务实现
@@ -233,6 +252,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         exists.setConfigDir(project.getConfigDir() == null ? exists.getConfigDir() : project.getConfigDir());
         exists.setLibDir(project.getLibDir() == null ? exists.getLibDir() : project.getLibDir());
         exists.setNginxDir(project.getNginxDir() == null ? exists.getNginxDir() : project.getNginxDir());
+        exists.setGitUrl(project.getGitUrl() == null ? exists.getGitUrl() : project.getGitUrl());
+        exists.setGitBranch(project.getGitBranch() == null ? exists.getGitBranch() : project.getGitBranch());
+        exists.setGitAuthType(project.getGitAuthType() == null ? exists.getGitAuthType() : project.getGitAuthType());
+        exists.setGitToken(project.getGitToken() == null ? exists.getGitToken() : project.getGitToken());
+        exists.setGitBuildGoals(project.getGitBuildGoals() == null ? exists.getGitBuildGoals() : project.getGitBuildGoals());
+        exists.setGitSkipTests(project.getGitSkipTests() == null ? exists.getGitSkipTests() : project.getGitSkipTests());
+        exists.setMavenHome(project.getMavenHome() == null ? exists.getMavenHome() : project.getMavenHome());
+        exists.setMavenVersion(project.getMavenVersion() == null ? exists.getMavenVersion() : project.getMavenVersion());
         // 四个脚本为空时用内置通用模板补全
         applyDefaultScripts(exists);
         exists.setUpdateTime(LocalDateTime.now());
@@ -570,8 +597,20 @@ public class ReleaseServiceImpl implements ReleaseService {
                 execService.runCommand(Collections.singletonList(hostId), command, 30, null);
 
         List<SoftwarePackage> packages = new ArrayList<>();
-        if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
-            String output = result.getData().get(0).getMsExecLogOutput();
+        if (result.getData() != null && !result.getData().isEmpty()) {
+            com.chua.starter.server.support.entity.MsExecLog log = result.getData().get(0);
+            // 同样检查单条日志状态：SSH 凭据缺失时命令执行失败，输出为空
+            if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
+                String reason = log.getMsExecLogError();
+                if (isBlank(reason)) {
+                    reason = "命令执行失败（退出码 " + log.getMsExecLogExitCode() + "）";
+                }
+                return ReturnResult.error("搜索软件失败: " + reason);
+            }
+            String output = log.getMsExecLogOutput();
+            if (isBlank(output)) {
+                return ReturnResult.ok(packages);
+            }
             packages = provider.parse(output, keyword);
         }
         return ReturnResult.ok(packages);
@@ -629,8 +668,23 @@ public class ReleaseServiceImpl implements ReleaseService {
                 execService.runCommand(Collections.singletonList(hostId), command, 60, null);
 
         List<SoftwarePackage> packages = new ArrayList<>();
-        if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
-            String output = result.getData().get(0).getMsExecLogOutput();
+        if (result.getData() != null && !result.getData().isEmpty()) {
+            com.chua.starter.server.support.entity.MsExecLog log = result.getData().get(0);
+            // 必须检查单条日志的执行状态：runCommand 的 ReturnResult.isSuccess()
+            // 只表示 HTTP 层成功，不代表命令执行成功。SSH 凭据缺失、命令退出码非 0
+            // 等情况日志状态为 FAIL，输出为空——若不检查直接 parseInstalled("")
+            // 会返回空列表，前端显示「尚未安装任何软件」而非真实错误。
+            if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
+                String reason = log.getMsExecLogError();
+                if (isBlank(reason)) {
+                    reason = "命令执行失败（退出码 " + log.getMsExecLogExitCode() + "）";
+                }
+                return ReturnResult.error("读取已安装软件失败: " + reason);
+            }
+            String output = log.getMsExecLogOutput();
+            if (isBlank(output)) {
+                return ReturnResult.ok(packages);
+            }
             packages = provider.parseInstalled(output);
         }
         return ReturnResult.ok(packages);
@@ -858,6 +912,10 @@ public class ReleaseServiceImpl implements ReleaseService {
         boolean autoRestart = boolCfg(cfg, "autoRestart", true);
         boolean autoRollback = boolCfg(cfg, "autoRollback", false);
         String packagePath = strCfg(cfg, "packagePath", "");
+        boolean uploadExtract = boolCfg(cfg, "uploadExtract", true);
+        String uploadTargetDir = strCfg(cfg, "uploadTargetDir", "");
+        String deployType = strCfg(cfg, "deployType", "");
+        String projectType = project.getProjectType() == null ? "" : project.getProjectType().trim().toLowerCase();
 
         List<ProjectStep> steps = new ArrayList<>();
         ProjectStep cfgStep = springConfigStep(win, project);
@@ -872,7 +930,103 @@ public class ReleaseServiceImpl implements ReleaseService {
             steps.add(new ProjectStep("备份当前版本", backupCommand(win, path), 2));
         }
         if (!isBlank(packagePath)) {
-            if (autoExtract && isArchive(packagePath)) {
+            if ("model".equals(projectType)) {
+                // 模型项目：上传到目标目录，可选解压，无需重启
+                String targetDir = !isBlank(uploadTargetDir)
+                        ? (path.endsWith("/") ? path : path + "/") + uploadTargetDir
+                        : path;
+                if (uploadExtract && isArchive(packagePath)) {
+                    steps.add(new ProjectStep("解压模型文件到目录", extractCommand(win, targetDir, packagePath), 2));
+                } else {
+                    String pkgName = new File(packagePath).getName();
+                    steps.add(new ProjectStep("投放模型文件到目录", "", 2, () -> {
+                        String src = packagePath.replace('\\', '/');
+                        String dst = targetDir.replace('\\', '/') + "/" + pkgName;
+                        ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
+                        if (!mv.isOk()) {
+                            sftpService.delete(ctx.hostId, null, dst, false);
+                            mv = sftpService.rename(ctx.hostId, null, src, dst);
+                        }
+                        if (mv.isOk()) {
+                            return java.util.List.of("sftp rename " + src + " -> " + dst);
+                        }
+                        String sdkWhy = mv.getMsg();
+                        ReturnResult<java.util.List<MsExecLog>> placed =
+                                execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                                        placeCommand(win, targetDir, packagePath, pkgName), 60, null);
+                        if (!placed.isOk() || anyExecFailed(placed.getData())) {
+                            throw new IllegalStateException("投放模型文件失败: " + sdkWhy);
+                        }
+                        return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
+                    }));
+                }
+            } else if ("separated".equals(projectType)) {
+                // 分离式部署：根据 deployType 决定投放内容
+                String libDir = !isBlank(project.getLibDir()) ? project.getLibDir() : "lib";
+                boolean doMain = !isBlank(deployType) && ("main".equals(deployType) || "both".equals(deployType));
+                boolean doLib = "lib".equals(deployType) || "both".equals(deployType);
+                if (isBlank(deployType)) { doMain = true; doLib = true; }
+                if (doMain) {
+                    if (autoExtract && isArchive(packagePath)) {
+                        steps.add(new ProjectStep("解压主包", extractCommand(win, path, packagePath), 2));
+                    } else {
+                        String sdkTarget = (path.endsWith("/") ? path : path + "/") + project.getMainEntry();
+                        steps.add(new ProjectStep("投放主包", "", 2, () -> {
+                            String src = packagePath.replace('\\', '/');
+                            String dst = sdkTarget.replace('\\', '/');
+                            ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
+                            if (!mv.isOk()) {
+                                sftpService.delete(ctx.hostId, null, dst, false);
+                                mv = sftpService.rename(ctx.hostId, null, src, dst);
+                            }
+                            if (mv.isOk()) {
+                                return java.util.List.of("sftp rename " + src + " -> " + dst);
+                            }
+                            String sdkWhy = mv.getMsg();
+                            ReturnResult<java.util.List<MsExecLog>> placed =
+                                    execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                                            placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
+                            if (!placed.isOk() || anyExecFailed(placed.getData())) {
+                                String restoreNote = restoreAndRestart(win, ctx, path, project);
+                                throw new IllegalStateException("投放主包失败且旧文件已删除；" + restoreNote + "SDK=" + sdkWhy);
+                            }
+                            return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
+                        }));
+                    }
+                }
+                if (doLib) {
+                    String libPath = (path.endsWith("/") ? path : path + "/") + libDir;
+                    if (autoExtract && isArchive(packagePath)) {
+                        steps.add(new ProjectStep("解压依赖到 lib 目录", extractCommand(win, libPath, packagePath), 2));
+                    } else {
+                        String pkgName = new File(packagePath).getName();
+                        steps.add(new ProjectStep("投放依赖到 lib 目录", "", 2, () -> {
+                            String src = packagePath.replace('\\', '/');
+                            String libFull = libPath.replace('\\', '/');
+                            sftpService.mkdir(ctx.hostId, null, libFull);
+                            String dst = libFull + "/" + pkgName;
+                            ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
+                            if (!mv.isOk()) {
+                                sftpService.delete(ctx.hostId, null, dst, false);
+                                mv = sftpService.rename(ctx.hostId, null, src, dst);
+                            }
+                            if (mv.isOk()) {
+                                return java.util.List.of("sftp rename " + src + " -> " + dst);
+                            }
+                            String sdkWhy = mv.getMsg();
+                            ReturnResult<java.util.List<MsExecLog>> placed =
+                                    execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                                            placeCommand(win, libFull, packagePath, pkgName), 60, null);
+                            if (!placed.isOk() || anyExecFailed(placed.getData())) {
+                                throw new IllegalStateException("投放依赖失败: " + sdkWhy);
+                            }
+                            return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
+                        }));
+                    }
+                }
+            } else {
+                // springboot/fatjar/static/nginx：现有逻辑
+                if (autoExtract && isArchive(packagePath)) {
                 steps.add(new ProjectStep("解压新版本包", extractCommand(win, path, packagePath), 2));
             } else {
                 // SDK 优先：文件投放用 SFTP rename（同文件系统内即移动），SDK 不可用才回退平台命令
@@ -911,8 +1065,12 @@ public class ReleaseServiceImpl implements ReleaseService {
                     return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
                 }));
             }
+            }
         }
-        if (autoRollback && !isBlank(project.getStatusScript())) {
+        // model 类型无需重启（仅管理模型文件）
+        if ("model".equals(projectType)) {
+            steps.add(pidStep(win, path));
+        } else if (autoRollback && !isBlank(project.getStatusScript())) {
             steps.add(new ProjectStep("重启并健康检测（失败自动回滚）",
                     guardedRestartCommand(win, path, project, autoRestart), 3));
         } else if (autoRestart) {
@@ -962,7 +1120,443 @@ public class ReleaseServiceImpl implements ReleaseService {
                 ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
                 : defaultGlobalConfig();
         cfg.put("packagePath", remotePackage);
+        // 注入项目自身的上传配置，覆盖全局默认
+        if (project.getUploadExtract() != null) {
+            cfg.put("uploadExtract", project.getUploadExtract());
+        }
+        if (!isBlank(project.getUploadTargetDir())) {
+            cfg.put("uploadTargetDir", project.getUploadTargetDir());
+        }
+        if (!isBlank(project.getDeployType())) {
+            cfg.put("deployType", project.getDeployType());
+        }
         return runUpgrade(id, cfg);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public ReturnResult<String> gitPullAndDeploy(Long id) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        MsServerProject project = ctx.project;
+
+        // 1. 校验 Git 配置
+        if (isBlank(project.getGitUrl())) {
+            return ReturnResult.error("项目未配置 Git 仓库地址，请在项目配置中填写");
+        }
+        String gitUrl = project.getGitUrl().trim();
+        if (gitUrl.startsWith("git@") || gitUrl.startsWith("ssh://")) {
+            return ReturnResult.error("暂不支持 SSH 方式的 Git 仓库，请使用 HTTPS 地址（如 https://github.com/org/repo.git）");
+        }
+
+        // 2. 创建本地工作区
+        Path workspace = Paths.get(System.getProperty("java.io.tmpdir"),
+                "git-deploy", String.valueOf(project.getId()));
+        try {
+            Files.createDirectories(workspace);
+        } catch (IOException e) {
+            return ReturnResult.error("创建工作目录失败: " + e.getMessage());
+        }
+
+        // 3. 克隆或拉取
+        boolean isClone = !Files.exists(workspace.resolve(".git"));
+        try {
+            if (isClone) {
+                // 清空旧工作区（可能残留上次失败的克隆）
+                deleteDirectory(workspace.toFile());
+                Files.createDirectories(workspace);
+                log.info("[Git发布] 克隆仓库: {} -> {}", gitUrl, workspace);
+                GitClient.Builder builder = GitClient.builder()
+                        .remoteUrl(gitUrl)
+                        .localPath(workspace);
+                if ("token".equalsIgnoreCase(project.getGitAuthType())
+                        && !isBlank(project.getGitToken())) {
+                    builder.credentials("oauth2", project.getGitToken());
+                }
+                GitClient cloned = (GitClient) builder.build().cloneOp().execute();
+                // 切换到配置的分支
+                String branch = project.getGitBranch();
+                if (!isBlank(branch)) {
+                    cloned.getGit().checkout().setName(branch).call();
+                    log.info("[Git发布] 切换分支到: {}", branch);
+                }
+                cloned.close();
+            } else {
+                log.info("[Git发布] 拉取仓库更新: {}", workspace);
+                GitClient.Builder builder = GitClient.builder()
+                        .remoteUrl(gitUrl)
+                        .localPath(workspace);
+                if ("token".equalsIgnoreCase(project.getGitAuthType())
+                        && !isBlank(project.getGitToken())) {
+                    builder.credentials("oauth2", project.getGitToken());
+                }
+                GitClient client = builder.build().open();
+                // 切换到配置的分支（如果不同）
+                String branch = project.getGitBranch();
+                if (!isBlank(branch)) {
+                    String currentBranch = client.getRepository().getBranch();
+                    if (!branch.equals(currentBranch)) {
+                        client.getGit().checkout().setName(branch).call();
+                        log.info("[Git发布] 切换分支 {} -> {}", currentBranch, branch);
+                    }
+                }
+                client.pull(null, null);
+                client.close();
+            }
+        } catch (Exception e) {
+            log.error("[Git发布] Git 操作失败", e);
+            return ReturnResult.error("Git 操作失败: " + e.getMessage());
+        }
+
+        // 4. 查找 pom.xml
+        Path pomPath = findPomXml(workspace);
+        if (pomPath == null) {
+            return ReturnResult.error("未找到 pom.xml，该项目可能不是 Maven 项目");
+        }
+
+        // 5. 确保 Maven 可用（自动检测 / 自动下载）
+        try {
+            ensureMavenAvailable(project);
+        } catch (Exception e) {
+            log.error("[Git发布] Maven 准备失败", e);
+            return ReturnResult.error("Maven 准备失败: " + e.getMessage());
+        }
+
+        // 6. Maven 构建
+        String goalsStr = isBlank(project.getGitBuildGoals())
+                ? "clean,package" : project.getGitBuildGoals();
+        String[] goals = goalsStr.split(",");
+        boolean skipTests = project.getGitSkipTests() == null || project.getGitSkipTests();
+
+        log.info("[Git发布] 执行 Maven 构建: {} [goals={}, skipTests={}]",
+                pomPath, goalsStr, skipTests);
+        MavenCompileResult buildResult;
+        try {
+            buildResult = MavenClient.create()
+                    .projectPath(pomPath.toString())
+                    .goal(goals)
+                    .skipTests(skipTests)
+                    .execute();
+        } catch (Exception e) {
+            log.error("[Git发布] Maven 构建异常", e);
+            return ReturnResult.error("Maven 构建异常: " + e.getMessage());
+        }
+
+        if (!buildResult.isSuccess()) {
+            String errors = String.join("; ", buildResult.getErrors());
+            return ReturnResult.error("Maven 构建失败: " + errors);
+        }
+
+        // 7. 获取构建产物
+        String artifactPath = buildResult.getMainArtifact();
+        if (isBlank(artifactPath)) {
+            return ReturnResult.error("Maven 构建完成但未找到产物（jar/war），请检查项目打包配置");
+        }
+        log.info("[Git发布] 构建产物: {}", artifactPath);
+
+        // 8. 上传到目标主机
+        if (isBlank(project.getProjectPath())) {
+            return ReturnResult.error("项目地址未配置，无法上传构建产物");
+        }
+        String uploadDir = project.getProjectPath() + "/uploads";
+        ReturnResult<Void> mk = sftpService.mkdir(ctx.hostId, null, uploadDir);
+        if (!mk.isOk()) {
+            return ReturnResult.error("创建上传目录失败: " + mk.getMsg());
+        }
+        File artifactFile = new File(artifactPath);
+        MultipartFile multipartFile = createMultipartFile(artifactFile);
+        ReturnResult<String> up = sftpService.upload(ctx.hostId, null, uploadDir, multipartFile);
+        if (!up.isOk()) {
+            return ReturnResult.error("上传构建产物失败: " + up.getMsg());
+        }
+        String remotePackage = up.getData();
+        log.info("[Git发布] 产物已上传: {}", remotePackage);
+
+        // 9. 调用 runUpgrade 执行备份+投放+重启
+        Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
+        Map<String, Object> cfg = global instanceof Map
+                ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
+                : defaultGlobalConfig();
+        cfg.put("packagePath", remotePackage);
+        return runUpgrade(id, cfg);
+    }
+
+    @Override
+    public ReturnResult<Integer> countLibFiles(Long id) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        MsServerProject project = ctx.project;
+        if (!"separated".equalsIgnoreCase(project.getProjectType())) {
+            return ReturnResult.error("仅分离式项目支持依赖计数");
+        }
+        String libDir = !isBlank(project.getLibDir()) ? project.getLibDir() : "lib";
+        String libPath = (project.getProjectPath().endsWith("/")
+                ? project.getProjectPath() : project.getProjectPath() + "/") + libDir;
+        // 统计 lib 目录下的 jar 文件数
+        String cmd = "find '" + libPath.replace("'", "'\\''") + "' -maxdepth 1 -name '*.jar' 2>/dev/null | wc -l";
+        try {
+            ReturnResult<java.util.List<MsExecLog>> result = execService.runCommand(
+                    java.util.Collections.singletonList(ctx.hostId), cmd, 30, null);
+            if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
+                return ReturnResult.error("执行依赖计数失败");
+            }
+            String output = result.getData().get(0).getMsExecLogOutput();
+            if (output == null) {
+                return ReturnResult.error("依赖计数无输出");
+            }
+            int count = Integer.parseInt(output.trim());
+            return ReturnResult.ok(count);
+        } catch (Exception e) {
+            return ReturnResult.error("依赖计数异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查找工作区中的 pom.xml（根目录或一级子目录）
+     *
+     * @param workspace 工作区路径
+     * @return pom.xml 路径，未找到返回 null
+     */
+    private Path findPomXml(Path workspace) {
+        // 根目录
+        Path rootPom = workspace.resolve("pom.xml");
+        if (Files.exists(rootPom)) {
+            return rootPom;
+        }
+        // 一级子目录（兼容 monorepo / 项目在子目录中的场景）
+        try (var entries = Files.list(workspace)) {
+            return entries.filter(Files::isDirectory)
+                    .map(dir -> dir.resolve("pom.xml"))
+                    .filter(Files::exists)
+                    .findFirst()
+                    .orElse(null);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 将本地文件包装为 MultipartFile（供 SFTP 上传使用）
+     *
+     * @param file 本地文件
+     * @return MultipartFile 实例
+     */
+    private MultipartFile createMultipartFile(File file) {
+        try {
+            byte[] bytes = Files.readAllBytes(file.toPath());
+            String name = file.getName();
+            return new MultipartFile() {
+                @Override
+                public String getName() {
+                    return "file";
+                }
+
+                @Override
+                public String getOriginalFilename() {
+                    return name;
+                }
+
+                @Override
+                public String getContentType() {
+                    return "application/octet-stream";
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return bytes.length == 0;
+                }
+
+                @Override
+                public long getSize() {
+                    return bytes.length;
+                }
+
+                @Override
+                public byte[] getBytes() {
+                    return bytes;
+                }
+
+                @Override
+                public InputStream getInputStream() {
+                    return new ByteArrayInputStream(bytes);
+                }
+
+                @Override
+                public void transferTo(File dest) throws IOException, IllegalStateException {
+                    Files.write(dest.toPath(), bytes);
+                }
+            };
+        } catch (IOException e) {
+            throw new IllegalStateException("读取构建产物失败: " + file.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * 递归删除目录
+     *
+     * @param dir 目录
+     */
+    private void deleteDirectory(File dir) {
+        if (dir == null || !dir.exists()) {
+            return;
+        }
+        try (var walk = Files.walk(dir.toPath())) {
+            walk.sorted(java.util.Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+        } catch (IOException e) {
+            log.warn("[Git发布] 清理工作区失败: {}", dir.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * 确保 Maven 可用：优先使用项目配置的 mavenHome，其次检测系统环境，
+     * 都不可用时自动下载 Maven 到临时目录。
+     *
+     * @param project 项目（含 Maven 配置）
+     * @throws Exception 下载或解压失败
+     */
+    private void ensureMavenAvailable(MsServerProject project) throws Exception {
+        // 1. 项目配置的 mavenHome
+        if (!isBlank(project.getMavenHome())) {
+            File mh = new File(project.getMavenHome().trim());
+            if (mh.exists() && new File(mh, "bin").exists()) {
+                System.setProperty("maven.home", mh.getAbsolutePath());
+                log.info("[Git发布] 使用项目配置的 Maven: {}", mh.getAbsolutePath());
+                return;
+            }
+            log.warn("[Git发布] 项目配置的 Maven 路径无效: {}，尝试自动检测/下载", project.getMavenHome());
+        }
+
+        // 2. 已设置的系统属性
+        String sysHome = System.getProperty("maven.home");
+        if (!isBlank(sysHome) && new File(sysHome).exists()) {
+            return;
+        }
+
+        // 3. 环境变量 MAVEN_HOME / M2_HOME
+        String envHome = System.getenv("MAVEN_HOME");
+        if (isBlank(envHome)) {
+            envHome = System.getenv("M2_HOME");
+        }
+        if (!isBlank(envHome) && new File(envHome).exists()) {
+            System.setProperty("maven.home", envHome);
+            return;
+        }
+
+        // 4. PATH 中查找 mvn
+        String pathEnv = System.getenv("PATH");
+        if (!isBlank(pathEnv)) {
+            for (String dir : pathEnv.split(File.pathSeparator)) {
+                if (new File(dir, "mvn.cmd").exists() || new File(dir, "mvn").exists()) {
+                    File mavenDir = new File(dir).getParentFile();
+                    if (mavenDir != null && new File(mavenDir, "lib").exists()) {
+                        System.setProperty("maven.home", mavenDir.getAbsolutePath());
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 5. 自动下载
+        downloadMaven(project);
+    }
+
+    /**
+     * 自动下载 Maven 到临时目录并设置 maven.home 系统属性
+     *
+     * @param project 项目（含 Maven 版本配置）
+     * @throws Exception 下载或解压失败
+     */
+    private void downloadMaven(MsServerProject project) throws Exception {
+        String version = isBlank(project.getMavenVersion())
+                ? "3.9.9" : project.getMavenVersion().trim();
+        String artifactName = "apache-maven-" + version;
+        String archiveName = artifactName + "-bin.zip";
+        String url = "https://archive.apache.org/dist/maven/maven-3/"
+                + version + "/binaries/" + archiveName;
+
+        Path mavenRoot = Paths.get(System.getProperty("java.io.tmpdir"),
+                "git-deploy", "maven");
+        Path archivePath = mavenRoot.resolve(archiveName);
+        Path mavenHome = mavenRoot.resolve(artifactName);
+
+        // 已下载过则直接使用
+        if (Files.exists(mavenHome.resolve("bin"))) {
+            // 确保 mvn 脚本有执行权限（旧版本下载的可能没有）
+            Path mvnScript = mavenHome.resolve("bin").resolve("mvn");
+            if (Files.exists(mvnScript)) {
+                try {
+                    mvnScript.toFile().setExecutable(true);
+                } catch (Exception e) {
+                    log.warn("[Git发布] 设置 mvn 脚本可执行权限失败: {}", mvnScript, e);
+                }
+            }
+            System.setProperty("maven.home", mavenHome.toString());
+            log.info("[Git发布] 复用已下载的 Maven: {}", mavenHome);
+            return;
+        }
+
+        Files.createDirectories(mavenRoot);
+        log.info("[Git发布] Maven 未检测到，自动下载: {}", url);
+
+        // 下载
+        HttpClient http = HttpClient.newHttpClient();
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+        HttpResponse<Path> resp = http.send(req,
+                HttpResponse.BodyHandlers.ofFile(archivePath));
+        if (resp.statusCode() / 100 != 2) {
+            throw new IOException("Maven 下载失败，HTTP " + resp.statusCode() + ": " + url);
+        }
+        log.info("[Git发布] Maven 下载完成: {} ({} bytes)", archivePath, Files.size(archivePath));
+
+        // 解压
+        log.info("[Git发布] 解压 Maven 到: {}", mavenRoot);
+        try (ZipFile zip = new ZipFile(archivePath.toFile())) {
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                Path out = mavenRoot.resolve(entry.getName()).normalize();
+                if (!out.startsWith(mavenRoot)) {
+                    continue; // 防止 zip slip
+                }
+                if (entry.isDirectory()) {
+                    Files.createDirectories(out);
+                } else {
+                    Files.createDirectories(out.getParent());
+                    try (InputStream is = zip.getInputStream(entry);
+                         FileOutputStream fos = new FileOutputStream(out.toFile())) {
+                        is.transferTo(fos);
+                    }
+                }
+            }
+        }
+
+        // 清理下载的压缩包
+        Files.deleteIfExists(archivePath);
+
+        // Linux 下设置 mvn 脚本可执行权限（ZipFile 解压不保留 Unix 权限位）
+        Path mvnScript = mavenHome.resolve("bin").resolve("mvn");
+        if (Files.exists(mvnScript)) {
+            try {
+                mvnScript.toFile().setExecutable(true);
+                log.info("[Git发布] 已设置 mvn 脚本可执行权限: {}", mvnScript);
+            } catch (Exception e) {
+                log.warn("[Git发布] 设置 mvn 脚本可执行权限失败: {}", mvnScript, e);
+            }
+        }
+
+        System.setProperty("maven.home", mavenHome.toString());
+        log.info("[Git发布] Maven 自动下载完成: {}", mavenHome);
     }
 
     // ==================== 辅助 ====================
