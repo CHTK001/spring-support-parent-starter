@@ -2773,16 +2773,46 @@ public class ApmQueryService {
         t.put("center", hostname);
         t.put("jvmPid", java.lang.management.ManagementFactory.getRuntimeMXBean().getPid());
         List<Map<String, Object>> modules = new ArrayList<>();
-        String[] moduleNames = {"spring-boot", "spring-support-common-starter",
-                "utils-support-runtime-apm", "utils-support-runtime-protocol",
-                "utils-support-runtime-agent", "spring-support-hotsport-starter",
-                "spring-support-agent-starter", "common-starter"};
-        for (String mn : moduleNames) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", mn);
-            m.put("label", mn);
-            m.put("kind", "module");
-            modules.add(m);
+        // 真实 classpath：java.class.path 是 JVM 展开后的真实 jar 列表（部署实例实测
+        // 是 127 个 jar 的完整路径串，而非命令行字面量 lib/*）。逐项取文件名、去掉
+        // 版本号作为展示名。绝不写死模块数组（那属于伪造数据）。
+        String cp = System.getProperty("java.class.path", "");
+        if (!cp.isBlank()) {
+            for (String entry : cp.split(java.util.regex.Pattern.quote(java.io.File.pathSeparator), -1)) {
+                if (entry == null || entry.isBlank()) {
+                    continue;
+                }
+                String fileName = entry;
+                int slash = Math.max(entry.lastIndexOf('/'), entry.lastIndexOf('\\'));
+                if (slash >= 0) {
+                    fileName = entry.substring(slash + 1);
+                }
+                String jarName = fileName;
+                String label = fileName;
+                if (label.endsWith(".jar")) {
+                    label = label.substring(0, label.length() - 4);
+                }
+                // 去掉版本号（如 -4.0.0.42 / -1.18.48），同组件聚合展示
+                String shown = label.replaceFirst("-[0-9].*$", "");
+                if (shown.isBlank()) {
+                    shown = label;
+                }
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", jarName);
+                m.put("label", shown);
+                m.put("jar", jarName);
+                m.put("kind", "module");
+                modules.add(m);
+            }
+        }
+        if (modules.isEmpty()) {
+            // 极端兜底：classpath 不可读时给一个真实感空态，绝不回退到写死模块名
+            Map<String, Object> fallback = new LinkedHashMap<>();
+            fallback.put("id", "unknown-classpath");
+            fallback.put("label", "classpath 不可读");
+            fallback.put("jar", "");
+            fallback.put("kind", "unknown");
+            modules.add(fallback);
         }
         t.put("modules", modules);
         List<Map<String, Object>> ports = new ArrayList<>();
@@ -2814,11 +2844,49 @@ public class ApmQueryService {
             log.debug("[Hotsport] 网络接口枚举失败: {}", e.getMessage());
         }
         t.put("connections", connections);
+
+        // 真实外部依赖卫星：来自依赖图 / 真实传输的聚合边（source → target）。
+        // 中心进程是 target（被调用方）时，把 source 端作为卫星节点挂到中心下方，
+        // 让系统拓扑真正展示「本进程实际与谁通信」，而不是孤立的中心节点。
+        List<Map<String, Object>> deps = new ArrayList<>();
+        try {
+            deps = dependenciesAggregated(20);
+        } catch (Exception e) {
+            log.debug("[Hotsport] 拓扑外部依赖聚合失败: {}", e.getMessage());
+        }
+        // 本进程自身端点（source/target 都可能是它自己：source=本机 target=本机端口）
+        String selfEndpoints = hostname + ":" + localServerPort();
+        List<Map<String, Object>> peerNodes = new ArrayList<>();
+        java.util.Set<String> peerSeen = new java.util.HashSet<>();
+        for (Map<String, Object> dep : deps) {
+            String source = String.valueOf(dep.get("source"));
+            String target = String.valueOf(dep.get("target"));
+            // 卫星取 source 端（本进程被谁调用 / 谁调进来）；target 通常是本机端口
+            String peer = source != null && !"null".equals(source) && !source.isBlank()
+                    ? source : null;
+            if (peer == null || "unknown".equals(peer)
+                    || peer.startsWith("127.0.0.1") || peer.startsWith("localhost")
+                    || selfEndpoints.startsWith(peer + ":")) {
+                continue;
+            }
+            if (peerSeen.add(peer)) {
+                Map<String, Object> pn = new LinkedHashMap<>();
+                pn.put("id", "peer-" + peer);
+                pn.put("label", peer);
+                pn.put("symbolSize", 26);
+                pn.put("category", "peer");
+                peerNodes.add(pn);
+            }
+        }
+        t.put("deps", deps);
+        t.put("peerCount", peerNodes.size());
+
         List<Map<String, Object>> nodes = new ArrayList<>();
         Map<String, Object> centerNode = new LinkedHashMap<>();
         centerNode.put("id", "center");
         centerNode.put("label", hostname);
         centerNode.put("symbolSize", 56);
+        centerNode.put("category", "center");
         nodes.add(centerNode);
         List<Map<String, Object>> edges = new ArrayList<>();
         for (Map<String, Object> p : ports) {
@@ -2826,6 +2894,7 @@ public class ApmQueryService {
             n.put("id", "port-" + p.get("port"));
             n.put("label", String.valueOf(p.get("port")));
             n.put("symbolSize", 30);
+            n.put("category", "port");
             nodes.add(n);
             Map<String, Object> e = new LinkedHashMap<>();
             e.put("source", "center");
@@ -2837,7 +2906,17 @@ public class ApmQueryService {
             n.put("id", m.get("id"));
             n.put("label", String.valueOf(m.get("label")));
             n.put("symbolSize", 20);
+            n.put("category", "module");
             nodes.add(n);
+        }
+        // 外部依赖卫星节点与中心连线（真实调用方 → 本进程）
+        for (Map<String, Object> pn : peerNodes) {
+            nodes.add(pn);
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("source", "center");
+            e.put("target", String.valueOf(pn.get("id")));
+            e.put("category", "peer");
+            edges.add(e);
         }
         t.put("nodes", nodes);
         t.put("edges", edges);
