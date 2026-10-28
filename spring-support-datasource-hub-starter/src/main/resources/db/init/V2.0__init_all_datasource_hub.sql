@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS `ms_datasource`
     `id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `datasource_name`        VARCHAR(128) NOT NULL COMMENT '数据源名称',
     `datasource_type`        VARCHAR(32)  NOT NULL COMMENT '数据源类型(jdbc/redis/influxdb/neo4j/nacos/zookeeper/kafka/nginx/etcd/prometheus/mongodb)',
-    `datasource_version`     VARCHAR(16)  NULL DEFAULT '' COMMENT '服务端大版本（influxdb: 2/3）',
+    `datasource_version`     VARCHAR(64)  NULL DEFAULT '' COMMENT '版本：influxdb 存大版本 2/3；其余类型存探测到的服务端版本（如 ClickHouse 24.8.14.39）',
     `datasource_host`        VARCHAR(255) NULL DEFAULT '' COMMENT '主机地址',
     `datasource_port`        INT          NULL COMMENT '端口，空则按类型默认',
     `datasource_database`    VARCHAR(512) NULL DEFAULT '' COMMENT '库名/命名空间；jdbc 可存完整 JDBC URL',
@@ -102,11 +102,21 @@ DEALLOCATE PREPARE st;
 --   且真正需要补列的存量库上若前面某条语句失败，补列也可能没执行 ——
 --   列没建成要等到运行期 SELECT 才暴露成 Unknown column。
 --   改成判存动态 DDL 后：新库走空操作、老库正常补列、两种情况都算执行成功。
+--   版本列现在承担两种语义：influxdb 的 2/3，以及其余类型探测到的服务端版本
+--   （"ClickHouse 24.8.14.39" 就有 21 字符）。原先只建 VARCHAR(16)，探测回写直接
+--   报 Data too long for column 'datasource_version' —— 而它是在「测试连接」的
+--   回写路径上，于是「连接其实成功了」被报成一次失败。所以这里不只补列，
+--   存量库里宽度不够的还要 MODIFY 加宽。
 SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
-          AND COLUMN_NAME = 'datasource_version'),
+          AND COLUMN_NAME = 'datasource_version'
+          AND CHARACTER_MAXIMUM_LENGTH >= 64),
         'SELECT 1',
-        'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_version` VARCHAR(16) NULL DEFAULT '''' COMMENT ''服务端大版本（influxdb: 2/3）'' AFTER `datasource_type`'));
+        IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_datasource'
+                  AND COLUMN_NAME = 'datasource_version'),
+            'ALTER TABLE `ms_datasource` MODIFY COLUMN `datasource_version` VARCHAR(64) NULL DEFAULT '''' COMMENT ''版本：influxdb 存大版本 2/3；其余类型存探测到的服务端版本''',
+            'ALTER TABLE `ms_datasource` ADD COLUMN `datasource_version` VARCHAR(64) NULL DEFAULT '''' COMMENT ''版本：influxdb 存大版本 2/3；其余类型存探测到的服务端版本'' AFTER `datasource_type`')));
 PREPARE st FROM @ddl;
 EXECUTE st;
 DEALLOCATE PREPARE st;
@@ -210,7 +220,9 @@ CREATE TABLE IF NOT EXISTS `ms_jdbc_driver_jar`
         `id`                 BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
         `jar_name`           VARCHAR(255) NOT NULL COMMENT '上传时的原始文件名',
         `stored_name`        VARCHAR(255) NOT NULL COMMENT '落盘文件名（含内容指纹，避免同名覆盖）',
-        `driver_class_name`  VARCHAR(255) NOT NULL COMMENT '驱动类全名，如 org.h2.Driver',
+        `driver_class_name`  VARCHAR(255) NOT NULL COMMENT '驱动类全名，如 org.h2.Driver；中间件 jar 为 SPI 实现类全名',
+        `jar_kind`           VARCHAR(32)  NULL DEFAULT 'jdbc' COMMENT 'jar 类别：jdbc / middleware（单 jar 的中间件客户端）',
+        `provider_name`      VARCHAR(64)  NULL DEFAULT '' COMMENT '中间件类型名，如 kafka；仅 jar_kind=middleware 有值',
         `jar_size`           BIGINT       NULL COMMENT '字节数',
         `jar_sha256`         VARCHAR(64)  NULL DEFAULT '' COMMENT '内容 sha256',
         `jar_remark`         VARCHAR(512) NULL DEFAULT '' COMMENT '备注',
@@ -218,6 +230,31 @@ CREATE TABLE IF NOT EXISTS `ms_jdbc_driver_jar`
         PRIMARY KEY (`id`),
         UNIQUE KEY `uk_ms_jdbc_driver_jar_stored` (`stored_name`)
     ) COMMENT 'JDBC 驱动 jar 库';
+
+-- 老库补列：jar_kind / provider_name
+-- 中间件客户端按「单 jar 上传、运行期加载」处理，与 JDBC 驱动共用一张台账；
+-- 老库没有这两列，新库建表时已经带上，所以同样用查 information_schema 的幂等写法。
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_jdbc_driver_jar'
+          AND COLUMN_NAME = 'jar_kind'),
+        'SELECT 1',
+        'ALTER TABLE `ms_jdbc_driver_jar` ADD COLUMN `jar_kind` VARCHAR(32) NULL DEFAULT ''jdbc'' COMMENT ''jar 类别：jdbc / middleware'''));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_jdbc_driver_jar'
+          AND COLUMN_NAME = 'provider_name'),
+        'SELECT 1',
+        'ALTER TABLE `ms_jdbc_driver_jar` ADD COLUMN `provider_name` VARCHAR(64) NULL DEFAULT '''' COMMENT ''中间件类型名，仅 middleware 有值'''));
+PREPARE st FROM @ddl;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+-- 存量行补齐类别：老数据全部是 JDBC 驱动，NULL 会让按类别过滤的查询漏掉它们。
+-- 用 IS NULL 而不是 '' 判断：DEFAULT 只作用于新插入的行，老的 NULL 行不会被回填。
+UPDATE `ms_jdbc_driver_jar` SET `jar_kind` = 'jdbc' WHERE `jar_kind` IS NULL;
 
 -- 数据源引用哪个驱动 jar；为空则走应用 classpath 上的内置驱动
 -- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL
@@ -317,6 +354,7 @@ CREATE TABLE IF NOT EXISTS `ms_datasource_metric`
     `questions`        BIGINT      NULL COMMENT '累计提问次数（取不到为 NULL）',
     `uptime`           BIGINT      NULL COMMENT '服务器已运行秒数（取不到为 NULL）',
     `max_used_connections` BIGINT  NULL COMMENT '历史峰值客户端连接数（取不到为 NULL）',
+    `instance_memory`  BIGINT      NULL COMMENT '实例内存占用字节数（performance_schema 的 InnoDB 事件合计，取不到为 NULL）',
     `tunneled`         TINYINT     NULL COMMENT '1 经 SSH 隧道 / 0 直连 / NULL 未判定',
     `error_message`    VARCHAR(512) NULL DEFAULT '' COMMENT '失败原因（成功时为空）',
     `create_time`      DATETIME    NOT NULL COMMENT '采样时刻',

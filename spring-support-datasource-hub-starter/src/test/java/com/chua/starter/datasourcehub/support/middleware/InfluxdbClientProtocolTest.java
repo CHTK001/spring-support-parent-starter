@@ -213,6 +213,39 @@ class InfluxdbClientProtocolTest {
     }
 
     @Test
+    @DisplayName("v2 Flux 多 table：每个 table 重复的表头不能被当成数据行")
+    void v2FluxMultiTableSkipsRepeatedHeader() {
+        pingVersion = "2.7.11";
+        // 真实 2.x 的注解 CSV 在每个 table 前都会重发一段 #datatype/#group/#default + 表头。
+        // 只认第一个表头时，第 2 个 table 的表头会变成一行 _time=_time 的脏数据
+        // （101.200.205.64 上查 from(bucket:"e2e") 实测复现）。
+        queryResponse = """
+                #datatype,string,long,dateTime:RFC3339,double,string,string
+                #group,false,false,false,false,true,true
+                #default,_result,,,,,
+                ,result,table,_time,_value,_field,_measurement
+                ,,0,2026-10-26T08:00:00Z,1.5,pressure,cpu
+                #datatype,string,long,dateTime:RFC3339,double,string,string
+                #group,false,false,false,false,true,true
+                #default,_result,,,,,
+                ,result,table,_time,_value,_field,_measurement
+                ,,1,2026-10-26T08:01:00Z,0.6,value,cpu
+                """;
+
+        InfluxdbClient client = new InfluxdbClient(null);
+        InfluxdbClient.Target target = client.target(datasource("2"));
+        List<JsonObject> rows = client.query(target, "from(bucket: \"b\") |> range(start: -1h)");
+
+        assertEquals(2, rows.size(), "两个 table 各 1 行数据，表头行不能再算一行");
+        assertEquals("pressure", str(rows.get(0), "_field"));
+        assertEquals("value", str(rows.get(1), "_field"), "第二个 table 的值要落到正确的列");
+        assertEquals(0.6D, ((Number) rows.get(1).get("_value")).doubleValue(), 1e-9);
+        for (JsonObject row : rows) {
+            assertFalse("_time".equals(str(row, "_time")), "表头行泄漏进了数据行：" + row);
+        }
+    }
+
+    @Test
     @DisplayName("v2 实例 + 登记 v3：InfluxQL 必须走 v1 兼容 /query（带 db 与 Token），不走 /api/v2/query")
     void v2InfluxQlUsesV1CompatQuery() {
         pingVersion = "2.7.11";

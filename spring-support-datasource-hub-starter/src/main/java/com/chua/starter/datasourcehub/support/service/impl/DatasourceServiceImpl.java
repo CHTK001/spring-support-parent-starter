@@ -56,6 +56,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DatasourceServiceImpl implements DatasourceService {
 
     /**
+     * 台账 {@code datasource_version} 列的宽度（VARCHAR(64)）。
+     *
+     * <p>该列存两类值：influxdb 的大版本 {@code 2}/{@code 3}，以及其余类型探测到的
+     * 服务端版本串。版本串长度由驱动决定（不受我们控制），回写前按此宽度截断，
+     * 避免一次「测试连接」因为记账超长而整体失败。</p>
+     */
+    private static final int VERSION_MAX_LENGTH = 64;
+
+    /**
      * 数据源映射器
      */
     private final MsDatasourceMapper datasourceMapper;
@@ -324,6 +333,7 @@ public class DatasourceServiceImpl implements DatasourceService {
             log.warn("[datasource-hub] 数据源 {} {}", id, reason);
             if (persist) {
                 persistProbeResult(id,
+                        ds.type(),
                         DatasourceProbeSupport.ProbeOutcome.failed(reason),
                         testedAt);
             }
@@ -354,7 +364,7 @@ public class DatasourceServiceImpl implements DatasourceService {
         DatasourceProbeSupport.ProbeOutcome outcome =
                 probe(ds, targetHost, targetPort);
         if (persist) {
-            persistProbeResult(id, outcome, testedAt);
+            persistProbeResult(id, ds.type(), outcome, testedAt);
         }
         return ReturnResult.ok(new DataSourceTestVO(outcome.success(), outcome.message(), ds.type(),
                 outcome.connectLatencyMs(), outcome.sessionLatencyMs(), tunneled, testedAt,
@@ -485,10 +495,13 @@ public class DatasourceServiceImpl implements DatasourceService {
     /**
      * 在探测连接上查询目标库当前的客户端连接数（按方言尽力而为）。
      *
-     * <p>覆盖面与理由：MySQL/MariaDB 的 {@code Threads_connected} 是服务器级累计连接，
-     * PostgreSQL 的 {@code pg_stat_activity} 是活动会话清单 —— 两者是各自生态里
-     * 「现在有多少客户端连着」的标准答案。其余方言（Oracle/SQLServer/DB2/文件库）
-     * 要么查询语法特殊、要么根本没有这个概念，统一返回 null。</p>
+     * <p>覆盖 MySQL/MariaDB（{@code Threads_connected}）、PostgreSQL
+     * （{@code pg_stat_activity}）、ClickHouse（{@code system.metrics.TCPConnection}）、
+     * Oracle（{@code v$session}）、SQL Server（{@code sys.dm_exec_sessions}）——
+     * 都是各自生态里「现在有多少客户端连着」的标准口径。</p>
+     *
+     * <p>文件型/嵌入式库（SQLite / DuckDB / H2）没有服务器进程，也就没有这个概念，
+     * 返回 null。</p>
      *
      * <p>查询失败不抛：连接数缺一格只影响曲线，不该把一次成功的连通性探测判成失败。</p>
      *
@@ -498,12 +511,17 @@ public class DatasourceServiceImpl implements DatasourceService {
      */
     private Long queryJdbcConnectionCount(Connection conn, String url) {
         String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
-        String sql;
-        if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
-            sql = "SHOW STATUS LIKE 'Threads_connected'";
-        } else if (lower.startsWith("jdbc:postgresql:")) {
-            sql = "SELECT COUNT(*) FROM pg_stat_activity";
-        } else {
+        String sql = switch (jdbcDialect(url)) {
+            case "mysql" -> "SHOW STATUS LIKE 'Threads_connected'";
+            case "postgresql" -> "SELECT COUNT(*) FROM pg_stat_activity";
+            case "clickhouse" -> "SELECT sum(value) FROM system.metrics"
+                    + " WHERE metric IN ('TCPConnection', 'HTTPConnection')";
+            case "oracle" -> "SELECT COUNT(*) FROM v$session WHERE type = 'USER'";
+            case "sqlserver" -> "SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE is_user_process = 1";
+            // 文件型/嵌入式库没有服务器进程，也就没有「客户端连接数」
+            default -> null;
+        };
+        if (sql == null) {
             return null;
         }
         try (var statement = conn.createStatement(); var rs = statement.executeQuery(sql)) {
@@ -533,14 +551,25 @@ public class DatasourceServiceImpl implements DatasourceService {
     /**
      * 在探测连接上查询目标服务器的一组运行指标（按方言尽力而为）。
      *
-     * <p>覆盖范围：目前只有 MySQL/MariaDB 的 {@code SHOW GLOBAL STATUS} 能稳定取到
-     * 服务器侧指标；PostgreSQL 的 {@code pg_stat_database} 可做但不含慢查询的通用口径，
-     * 其余方言/协议统一返回 null —— 前端面板对 null 显示「暂未采集」，不编造数值。</p>
+     * <p>覆盖范围：MySQL/MariaDB（{@code SHOW GLOBAL STATUS}）、PostgreSQL
+     * （{@code pg_stat_activity} / {@code pg_postmaster_start_time()}）、
+     * ClickHouse（{@code system.metrics} / {@code system.events} / {@code uptime()}）、
+     * Oracle（{@code v$session} / {@code v$sysstat} / {@code v$instance} /
+     * {@code v$resource_limit}）、SQL Server（{@code sys.dm_exec_requests} /
+     * {@code sys.dm_os_sys_info}）。</p>
      *
-     * <p><strong>关于 CPU</strong>：MySQL 协议本身不暴露宿主机 CPU 使用率，
-     * 因此这里不硬造一个「CPU %」；{@code Threads_running}（正在执行的线程数）
-     * 是 SQL 侧负载最接近的公开口径，前端会如实标注。指标均为服务器启动以来的
-     * {@code SHOW GLOBAL STATUS} 累计/瞬时值，采样间隔是探测间隔（约 60s）。</p>
+     * <p><strong>取不到就留 null，不填 0、不估算</strong>：慢查询数在 PostgreSQL /
+     * ClickHouse / Oracle / SQL Server 上都没有「累计慢查询」的通用口径
+     * （PG 要装 {@code pg_stat_statements} 扩展；ClickHouse 要开 {@code query_log}
+     * 再扫日志，代价不适合每次探活）；PostgreSQL 与 SQL Server 也没有累计查询计数。
+     * 前端对这些 null 显示「—」，而不是显示一个假 0。</p>
+     *
+     * <p><strong>关于 CPU</strong>：数据库协议本身不暴露宿主机 CPU 使用率，
+     * 因此这里不硬造一个「CPU %」；活跃会话/查询数（{@code threadsRunning}）
+     * 是 SQL 侧负载最接近的公开口径，前端会如实标注。</p>
+     *
+     * <p>文件型/嵌入式库（SQLite / DuckDB / H2）没有独立服务器进程，返回 null，
+     * 由前端说明「无服务器侧指标」，而不是含糊地写「仅支持 MySQL」。</p>
      *
      * <p>查询失败不抛：服务器指标缺失只影响面板展示，不该把一次成功的连通性探测
      * 判成失败。</p>
@@ -550,10 +579,82 @@ public class DatasourceServiceImpl implements DatasourceService {
      * @return 服务器运行指标；方言不支持或查询失败返回 null
      */
     private DatasourceProbeSupport.ServerStats queryJdbcServerStats(Connection conn, String url) {
-        String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
-        if (!lower.startsWith("jdbc:mysql:") && !lower.startsWith("jdbc:mariadb:")) {
+        try {
+            return switch (jdbcDialect(url)) {
+                case "mysql" -> mySqlServerStats(conn);
+                case "postgresql" -> postgreSqlServerStats(conn);
+                case "clickhouse" -> clickHouseServerStats(conn);
+                case "oracle" -> oracleServerStats(conn);
+                case "sqlserver" -> sqlServerServerStats(conn);
+                default -> null;
+            };
+        } catch (Exception e) {
+            log.debug("[datasource-hub] 服务器状态查询失败 url-prefix={} reason={}",
+                    url == null ? "" : url.substring(0, Math.min(16, url.length())), e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 按 URL 前缀识别 JDBC 方言。
+     *
+     * <p>只认前缀而不是解析整条 URL：这里只需要区分族别，URL 里可能带一堆参数，
+     * 解析反而是多余的失败点。</p>
+     *
+     * @param url 实际使用的 JDBC URL
+     * @return 方言键；未知返回 {@code unknown}
+     */
+    private static String jdbcDialect(String url) {
+        String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+        if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+            return "mysql";
+        }
+        if (lower.startsWith("jdbc:postgresql:")) {
+            return "postgresql";
+        }
+        if (lower.startsWith("jdbc:clickhouse:")) {
+            return "clickhouse";
+        }
+        if (lower.startsWith("jdbc:oracle:")) {
+            return "oracle";
+        }
+        if (lower.startsWith("jdbc:sqlserver:")) {
+            return "sqlserver";
+        }
+        if (lower.startsWith("jdbc:sqlite:")) {
+            return "sqlite";
+        }
+        if (lower.startsWith("jdbc:h2:")) {
+            return "h2";
+        }
+        if (lower.startsWith("jdbc:duckdb:")) {
+            return "duckdb";
+        }
+        return "unknown";
+    }
+
+    /**
+     * 读一列的 long 值，SQL NULL 归一成 Java null（{@code getLong} 会把 NULL 读成 0，
+     * 不判 {@code wasNull} 就会把「取不到」变成「确实是 0」）。
+     *
+     * @param rs    结果集
+     * @param index 列序号
+     * @return 值或 null
+     * @throws SQLException 读取失败
+     */
+    private static Long nullableLong(java.sql.ResultSet rs, int index) throws SQLException {
+        long value = rs.getLong(index);
+        return rs.wasNull() ? null : value;
+    }
+
+    /**
+     * MySQL / MariaDB：{@code SHOW GLOBAL STATUS} 一次取齐五个累计/瞬时值。
+     *
+     * @param conn 探测连接
+     * @return 服务器指标
+     * @throws SQLException 查询失败
+     */
+    private DatasourceProbeSupport.ServerStats mySqlServerStats(Connection conn) throws SQLException {
         try (var statement = conn.createStatement();
              var rs = statement.executeQuery("SHOW GLOBAL STATUS WHERE Variable_name IN ("
                      + "'Slow_queries', 'Threads_running', 'Questions', 'Uptime', 'Max_used_connections')")) {
@@ -575,12 +676,135 @@ public class DatasourceServiceImpl implements DatasourceService {
                     values.get("threads_running"),
                     values.get("questions"),
                     values.get("uptime"),
-                    values.get("max_used_connections")
+                    values.get("max_used_connections"),
+                    instanceMemoryBytes(conn)
             );
-        } catch (Exception e) {
-            log.debug("[datasource-hub] 服务器状态查询失败 url-prefix={} reason={}",
-                    lower.substring(0, Math.min(16, lower.length())), e.getMessage());
+        }
+    }
+
+    /**
+     * MySQL 实例内存占用（字节）。
+     *
+     * <p>取 {@code performance_schema.memory_summary_global_by_event_name} 中
+     * InnoDB 相关事件的当前占用字节合计（缓冲池 / 数据字典等）。协议不暴露宿主机
+     * 内存，这个口径是「MySQL 进程<b>内部</b>用了多少内存」最接近的公开数据；
+     * performance_schema 关闭或当前账号无权限时返回 null（面板显示「暂未采集」）。</p>
+     *
+     * @param conn 探测连接
+     * @return 实例内存字节数；取不到为 null
+     */
+    private static Long instanceMemoryBytes(Connection conn) {
+        try (var statement = conn.createStatement();
+             var rs = statement.executeQuery(
+                     "SELECT SUM(CURRENT_NUMBER_OF_BYTES_USED)"
+                             + " FROM performance_schema.memory_summary_global_by_event_name"
+                             + " WHERE EVENT_NAME LIKE 'memory/innodb/%'")) {
+            if (!rs.next()) {
+                return null;
+            }
+            long value = rs.getLong(1);
+            return rs.wasNull() ? null : value;
+        } catch (SQLException e) {
+            // 无权限 / performance_schema 关闭：内存一栏留空，不影响其余五个指标
             return null;
+        }
+    }
+
+    /**
+     * PostgreSQL：活跃会话数 + 实例启动至今秒数。
+     *
+     * <p>累计查询数没有无扩展口径（{@code pg_stat_statements} 默认不装），
+     * 因此 QPS 一栏留空；用事务数冒充查询数会把面板上的「平均 QPS」变成
+     * 一个语义不同的数字，那比留空更糟。</p>
+     *
+     * @param conn 探测连接
+     * @return 服务器指标
+     * @throws SQLException 查询失败
+     */
+    private DatasourceProbeSupport.ServerStats postgreSqlServerStats(Connection conn) throws SQLException {
+        try (var statement = conn.createStatement();
+             var rs = statement.executeQuery(
+                     "SELECT (SELECT count(*) FROM pg_stat_activity"
+                             + " WHERE state = 'active' AND pid <> pg_backend_pid()),"
+                             + " (SELECT CAST(extract(epoch FROM now() - pg_postmaster_start_time()) AS bigint))")) {
+            if (!rs.next()) {
+                return null;
+            }
+            return new DatasourceProbeSupport.ServerStats(
+                    null, nullableLong(rs, 1), null, nullableLong(rs, 2), null, null);
+        }
+    }
+
+    /**
+     * ClickHouse：正在执行的查询数、累计查询数、启动至今秒数。
+     *
+     * <p>慢查询没有累计计数器（要么开 {@code query_log} 扫日志，要么用
+     * {@code system.query_log} 聚合），探活阶段不做这种重查询，留 null。</p>
+     *
+     * @param conn 探测连接
+     * @return 服务器指标
+     * @throws SQLException 查询失败
+     */
+    private DatasourceProbeSupport.ServerStats clickHouseServerStats(Connection conn) throws SQLException {
+        try (var statement = conn.createStatement();
+             var rs = statement.executeQuery(
+                     "SELECT (SELECT value FROM system.metrics WHERE metric = 'Query'),"
+                             + " (SELECT value FROM system.events WHERE event = 'Query'),"
+                             + " uptime()")) {
+            if (!rs.next()) {
+                return null;
+            }
+            return new DatasourceProbeSupport.ServerStats(
+                    null, nullableLong(rs, 1), nullableLong(rs, 2), nullableLong(rs, 3), null, null);
+        }
+    }
+
+    /**
+     * Oracle：活跃用户会话、累计执行次数、启动至今秒数、会话数历史峰值。
+     *
+     * <p>这些 {@code v$} 视图需要相应权限；没有权限时整条查询失败，
+     * 上层捕获后返回 null，面板显示「—」，不影响连通性结论。</p>
+     *
+     * @param conn 探测连接
+     * @return 服务器指标
+     * @throws SQLException 查询失败
+     */
+    private DatasourceProbeSupport.ServerStats oracleServerStats(Connection conn) throws SQLException {
+        try (var statement = conn.createStatement();
+             var rs = statement.executeQuery(
+                     "SELECT (SELECT COUNT(*) FROM v$session WHERE status = 'ACTIVE' AND type = 'USER'),"
+                             + " (SELECT value FROM v$sysstat WHERE name = 'execute count'),"
+                             + " (SELECT ROUND((SYSDATE - startup_time) * 86400) FROM v$instance),"
+                             + " (SELECT MAX_UTILIZATION FROM v$resource_limit WHERE resource_name = 'sessions')"
+                             + " FROM dual")) {
+            if (!rs.next()) {
+                return null;
+            }
+            return new DatasourceProbeSupport.ServerStats(
+                    null, nullableLong(rs, 1), nullableLong(rs, 2), nullableLong(rs, 3), nullableLong(rs, 4), null);
+        }
+    }
+
+    /**
+     * SQL Server：正在执行的请求数、启动至今秒数。
+     *
+     * <p>累计查询数在 SQL Server 上只有性能计数器（且是每秒速率，不是累计值），
+     * 拿来算「平均 QPS」会算错，故留 null。</p>
+     *
+     * @param conn 探测连接
+     * @return 服务器指标
+     * @throws SQLException 查询失败
+     */
+    private DatasourceProbeSupport.ServerStats sqlServerServerStats(Connection conn) throws SQLException {
+        try (var statement = conn.createStatement();
+             var rs = statement.executeQuery(
+                     "SELECT (SELECT COUNT(*) FROM sys.dm_exec_requests WHERE session_id <> @@SPID),"
+                             + " (SELECT DATEDIFF(SECOND, sqlserver_start_time, GETDATE()) FROM sys.dm_os_sys_info)")) {
+            if (!rs.next()) {
+                return null;
+            }
+            return new DatasourceProbeSupport.ServerStats(
+                    null, nullableLong(rs, 1), null, nullableLong(rs, 2), null, null);
         }
     }
 
@@ -639,9 +863,11 @@ public class DatasourceServiceImpl implements DatasourceService {
             return;
         }
         if (lower.startsWith("jdbc:clickhouse:")) {
-            // clickhouse-jdbc 走 HTTP，认 connect_timeout / socket_timeout（毫秒）
-            props.setProperty("connect_timeout", String.valueOf(seconds * 1000L));
-            props.setProperty("socket_timeout", String.valueOf(seconds * 1000L));
+            // clickhouse-jdbc 0.11 的连接参数是**白名单**校验的：不认识的键直接抛
+            // ClientMisconfigurationException: Unknown and unmapped config properties
+            // 把整条连接判死（实测 connect_timeout 就被拒，正确的键是 connection_timeout）。
+            // 所以这里只设它认的那一个，不顺手把 MySQL 那套参数搬过来。
+            props.setProperty("connection_timeout", String.valueOf(seconds * 1000L));
         } else if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
             props.setProperty("connectTimeout", String.valueOf(seconds * 1000L));
             props.setProperty("socketTimeout", String.valueOf(seconds * 1000L));
@@ -671,14 +897,62 @@ public class DatasourceServiceImpl implements DatasourceService {
      * @param outcome  探活结果
      * @param testedAt 测试时间
      */
-    private void persistProbeResult(Long id, DatasourceProbeSupport.ProbeOutcome outcome, LocalDateTime testedAt) {
+    /**
+     * 回写探活结果：延迟、测试时间、是否连通，以及**探测到的服务端版本**。
+     *
+     * <p>版本必须落台账，不能只留在前端会话里：原先版本是前端一个 ref，
+     * 切换数据源不重置，于是「检测过 ClickHouse 之后，点任何别的数据源，
+     * 版本行都显示 ClickHouse 24.8.14.39」—— 把别人的版本按到了当前这条上。
+     * 落到 {@code datasource_version} 后，每条记录各存各的，刷新页面也不会丢。</p>
+     *
+     * <p><b>influxdb 例外</b>：它的 {@code datasource_version} 存的是用户选的
+     * 服务端大版本（{@code 2}/{@code 3}），是「用 Flux 还是 InfluxQL」的路由依据，
+     * 被探测结果覆盖会直接把查询语法打错，所以这一类型一律不写。</p>
+     *
+     * @param id       数据源 ID
+     * @param type     数据源类型（决定版本字段的语义）
+     * @param outcome  探活结果
+     * @param testedAt 测试时间
+     */
+    private void persistProbeResult(Long id, String type,
+                                    DatasourceProbeSupport.ProbeOutcome outcome, LocalDateTime testedAt) {
         var update = new LambdaUpdateWrapper<MsDatasource>()
                 .eq(MsDatasource::getId, id)
                 .set(MsDatasource::getDatasourceLastTestTime, testedAt)
                 .set(MsDatasource::getDatasourceLastTestOk, outcome.success() ? 1 : 0)
                 .set(MsDatasource::getDatasourceConnectLatencyMs, outcome.success() ? outcome.connectLatencyMs() : null)
                 .set(MsDatasource::getDatasourceSessionLatencyMs, outcome.success() ? outcome.sessionLatencyMs() : null);
-        datasourceMapper.update(null, update);
+        // 只有探测成功且确实读到了版本才写：失败时留着上一次的值，
+        // 比清成空更接近事实（连不上不代表版本变了）。
+        if (outcome.success() && !isBlank(outcome.serverVersion())
+                && !DatasourceHubConstants.DS_TYPE_INFLUXDB.equalsIgnoreCase(trim(type))) {
+            update.set(MsDatasource::getDatasourceVersion, capVersion(outcome.serverVersion()));
+        }
+        // 台账回写失败不能把「连接成功」报成失败：这段是记账，不是探测本身。
+        // 实测过一次真实故障 —— datasource_version 还是 VARCHAR(16) 时，
+        // ClickHouse 的 "ClickHouse 24.8.14.39"（21 字符）触发
+        // Data too long for column，异常一路抛到 advice，
+        // 用户看到的是「数据校验失败」，而其实连接是通的、版本也读到了。
+        try {
+            datasourceMapper.update(null, update);
+        } catch (RuntimeException e) {
+            log.warn("[datasource-hub] 数据源 {} 探活结果回写台账失败（不影响本次探测结论）: {}",
+                    id, e.getMessage());
+        }
+    }
+
+    /**
+     * 版本串按台账列宽截断（{@code datasource_version} 为 VARCHAR(64)）。
+     *
+     * <p>驱动给出的版本串长度不受我们控制（有的会把 build hash、OS 一起拼进来），
+     * 与其让一次「测试连接」因为记账超长而整体失败，不如截断后照常展示。</p>
+     *
+     * @param version 原始版本串
+     * @return 不超过列宽的版本串
+     */
+    private static String capVersion(String version) {
+        String trimmed = version.trim();
+        return trimmed.length() <= VERSION_MAX_LENGTH ? trimmed : trimmed.substring(0, VERSION_MAX_LENGTH);
     }
 
     @Override
@@ -1076,7 +1350,10 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (!DatasourceHubConstants.DS_TYPES.contains(trim(data.type()).toLowerCase())) {
             return "不支持的数据源类型: " + data.type();
         }
-        if (data.port() != null && (data.port() < 1 || data.port() > 65535)) {
+        // 端口范围校验对「无端口」的文件库（DuckDB）不适用：该类型前端表单
+        // 用 port=0 占位（没有主机/端口等式样），按 1~65535 会把它误伤成「端口非法」。
+        if (data.port() != null && (data.port() < 1 || data.port() > 65535)
+                && !DatasourceHubConstants.isFileJdbcType(trim(data.type()))) {
             return "端口非法，需为 1~65535";
         }
         if ("influxdb".equalsIgnoreCase(trim(data.type())) && !isBlank(data.version())
@@ -1166,10 +1443,16 @@ public class DatasourceServiceImpl implements DatasourceService {
         entity.setDatasourceControlTarget(
                 DatasourceHubConstants.CONTROL_SYSTEMD.equals(entity.getDatasourceControlMode())
                         ? nullToEmpty(data.controlTarget()).trim() : "");
-        // 服务端大版本只对 influxdb 有意义：非 influxdb 一律清空，避免脏字段误用
+        // 服务端版本字段的语义按类型分：
+        //  - influxdb：用户选的大版本（2/3），是 Flux/InfluxQL 的路由依据，只认这两个值；
+        //  - 其余类型：由「立即检测」探测回写（MySQL 8.4.13 / ClickHouse 24.8.14.39 …）。
+        //    这里**不写**该字段（保持 null），让 updateById 跳过它 —— 原先写 "" 会在
+        //    每次编辑保存时把探测到的版本抹掉，用户看到版本行突然变回「—」。
         boolean influxdb = DatasourceHubConstants.DS_TYPE_INFLUXDB.equalsIgnoreCase(trim(data.type()).toLowerCase());
         String version = trim(data.version());
-        entity.setDatasourceVersion(influxdb && ("2".equals(version) || "3".equals(version)) ? version : "");
+        if (influxdb) {
+            entity.setDatasourceVersion(("2".equals(version) || "3".equals(version)) ? version : "");
+        }
     }
 
     /**
@@ -1194,7 +1477,41 @@ public class DatasourceServiceImpl implements DatasourceService {
                 row.getDatasourceLastTestTime() == null ? null : row.getDatasourceLastTestTime().toString(),
                 row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
                 nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()),
-                !nullToEmpty(stored).isEmpty());
+                !nullToEmpty(stored).isEmpty(), fastLoadOf(row));
+    }
+
+    /**
+     * 是否支持 CSV 快速导入（LOAD/COPY 直灌）：按 JDBC 方言自动计算。
+     *
+     * <p>当前仅 MySQL / PostgreSQL 有 {JdbcCsvLoader} SPI 实现（LOAD DATA INFILE /
+     * COPY FROM STDIN），其余 JDBC 方言或非 JDBC 类型返回 null（前端据此显示
+     * 「不支持快速导入」）。判断依据是台账 database 字段（JDBC 类型存完整 URL
+     * 或库名，两者都能带出方言前缀）。</p>
+     *
+     * @param row 台账实体
+     * @return true 支持 / false 不支持 / null 无法判断
+     */
+    private Boolean fastLoadOf(MsDatasource row) {
+        if (!DatasourceHubConstants.isJdbcFamily(row.getDatasourceType())) {
+            return null;
+        }
+        // 多条线索判断方言：database 可能是完整 URL（jdbc:mysql:...）也可能是裸库名（report）；
+        // driverClassName / version（探测回写如「MySQL 8.4.13」）兜底。任一命中即认为支持 LOAD 直灌。
+        String database = trim(row.getDatasourceDatabase()).toLowerCase(java.util.Locale.ROOT);
+        if (database.startsWith("jdbc:mysql:") || database.startsWith("jdbc:mariadb:")
+                || database.startsWith("jdbc:postgresql:")) {
+            return Boolean.TRUE;
+        }
+        String driver = trim(row.getDatasourceDriverClassName()).toLowerCase(java.util.Locale.ROOT);
+        if (driver.contains("mysql") || driver.contains("mariadb") || driver.contains("postgresql")) {
+            return Boolean.TRUE;
+        }
+        String version = trim(row.getDatasourceVersion()).toLowerCase(java.util.Locale.ROOT);
+        if (version.contains("mysql") || version.contains("postgresql")) {
+            return Boolean.TRUE;
+        }
+        // 仍是 jdbc 但无法判断方言（老数据没探测过版本）：不武断判 false，返回 null 由前端按「不确定」展示
+        return null;
     }
 
     /**

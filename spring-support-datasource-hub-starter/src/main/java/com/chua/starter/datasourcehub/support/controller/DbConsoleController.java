@@ -32,6 +32,7 @@ import com.chua.starter.datasourcehub.support.dbconsole.SqlParameterBinder;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlScriptSplitter;
 import com.chua.starter.datasourcehub.support.config.DatasourceHubProperties;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
+import com.chua.starter.datasourcehub.support.service.InfluxdbManageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 数据库 web 管理器（navicat 风格）REST 接口。
@@ -84,6 +87,12 @@ public class DbConsoleController {
      * 数据源服务（数据源配置落库与 JDBC 连接构建）。
      */
     private final DatasourceService datasourceService;
+
+    /**
+     * InfluxDB 管理服务（可选）：数据源为 influxdb 类型时，
+     * databases/tables/columns 端点改走 Bucket/度量/字段 映射。
+     */
+    private final ObjectProvider<InfluxdbManageService> influxdbManageServiceProvider;
 
     /**
      * 数据源中心配置（语句执行超时等）。
@@ -900,6 +909,18 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @Operation(summary = "获取数据库列表")
     @GetMapping("databases")
     public ReturnResult<java.util.List<String>> getDbDatabases(@RequestParam(required = false) Long datasourceId) {
+        // InfluxDB 没有 JDBC 连接：Bucket → 数据库 映射
+        InfluxdbManageService influxSvc = influxdbManageServiceProvider.getIfAvailable();
+        if (influxSvc != null && isInfluxdbType(datasourceId)) {
+            try {
+                return ReturnResult.ok(influxSvc.buckets(datasourceId).stream()
+                        .map(com.chua.starter.datasourcehub.support.model.InfluxdbBucketVO::name)
+                        .filter(n -> n != null && !n.isEmpty())
+                        .toList());
+            } catch (Exception e) {
+                return ReturnResult.error("获取 InfluxDB 数据库列表失败: " + e.getMessage());
+            }
+        }
         try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
             java.util.List<String> catalogs = new java.util.ArrayList<>();
             java.util.List<String> schemas = new java.util.ArrayList<>();
@@ -950,6 +971,19 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     public ReturnResult<java.util.List<DbTableVO>> getDbTables(
             @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database) {
+        // InfluxDB：度量 → 表 映射
+        InfluxdbManageService influxSvc = influxdbManageServiceProvider.getIfAvailable();
+        if (influxSvc != null && isInfluxdbType(datasourceId)) {
+            try {
+                java.util.List<DbTableVO> result = new java.util.ArrayList<>();
+                for (var m : influxSvc.measurements(datasourceId, database)) {
+                    result.add(new DbTableVO(m.name(), "TABLE", null));
+                }
+                return ReturnResult.ok(result);
+            } catch (Exception e) {
+                return ReturnResult.error("获取 InfluxDB 表列表失败: " + e.getMessage());
+            }
+        }
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
              SchemaScope scope = useSchema(conn, database)) {
             java.util.List<DbTableVO> tables = new java.util.ArrayList<>();
@@ -973,6 +1007,22 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             @PathVariable String tableName,
             @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database) {
+        // InfluxDB：度量字段 → 列 映射
+        InfluxdbManageService influxSvc = influxdbManageServiceProvider.getIfAvailable();
+        if (influxSvc != null && isInfluxdbType(datasourceId)) {
+            try {
+                java.util.List<DbColumnVO> result = new java.util.ArrayList<>();
+                int pos = 0;
+                for (var f : influxSvc.measurementFields(datasourceId, database, tableName)) {
+                    pos++;
+                    result.add(DbColumnVO.basic(f.name(), f.type(), 0, true,
+                            null, null, pos, false));
+                }
+                return ReturnResult.ok(result);
+            } catch (Exception e) {
+                return ReturnResult.error("获取 InfluxDB 表结构失败: " + e.getMessage());
+            }
+        }
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
              SchemaScope scope = useSchema(conn, database)) {
             String table = safeIdent(tableName, "表名");
@@ -1084,9 +1134,9 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             if (column != null) {
                 requireColumn(conn, table, column);
             }
-            String quotedTable = SqlName.quoteMysql(table, "表名");
+            String quotedTable = DbDialectSupport.quoteIdent(conn, table, "表名");
             String orderClause = column == null ? ""
-                    : " ORDER BY " + SqlName.quoteMysql(column, "排序列") + " " + direction;
+                    : " ORDER BY " + DbDialectSupport.quoteIdent(conn, column, "排序列") + " " + direction;
             String dataSql = "SELECT * FROM " + quotedTable + whereSql + orderClause + " LIMIT ? OFFSET ?";
             String countSql = "SELECT COUNT(*) FROM " + quotedTable + whereSql;
             java.util.List<String> columns;
@@ -1831,7 +1881,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                         request.sourceDatabase(), request.targetDatasourceId(),
                         request.targetDatabase(), request.tables()));
             } catch (Exception e) {
-                writeSseEvent(out, "error", new StructureSyncErrorVO("比较失败: " + e.getMessage()));
+                writeSseEvent(out, "error", new StructureSyncErrorVO("比较失败: " + describeSqlError(e.getMessage())));
                 return;
             }
             // 只执行有 DDL 的差异（EXTRA_* 只提示，ddl 为空）
@@ -1863,7 +1913,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 } catch (java.sql.SQLException e) {
                     fail++;
                     writeSseEvent(out, "log", new StructureSyncLogVO(i + 1, sql, false,
-                            null, e.getMessage()));
+                            null, describeSqlError(e.getMessage())));
                     if (stopOnError) {
                         break;
                     }
@@ -1872,7 +1922,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             writeSseEvent(out, "done", new StructureSyncDoneVO(total, ok, fail,
                     System.currentTimeMillis() - start));
         } catch (Exception e) {
-            writeSseEvent(out, "error", new StructureSyncErrorVO("执行失败: " + e.getMessage()));
+            writeSseEvent(out, "error", new StructureSyncErrorVO("执行失败: " + describeSqlError(e.getMessage())));
         }
     }
 
@@ -2017,9 +2067,9 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 });
                 return ReturnResult.ok(result);
             } catch (IllegalStateException e) {
-                return ReturnResult.error("SQL 执行失败: " + e.getMessage());
+                return ReturnResult.error("SQL 执行失败: " + describeSqlError(e.getMessage()));
             } catch (IllegalArgumentException e) {
-                return ReturnResult.error("SQL 执行失败: " + e.getMessage());
+                return ReturnResult.error("SQL 执行失败: " + describeSqlError(e.getMessage()));
             }
         }
         // 顺序要求：先切库、再建 Statement。
@@ -2032,7 +2082,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
              java.sql.Statement stmt = conn.createStatement()) {
             return ReturnResult.ok(runOneStatement(stmt, bound));
         } catch (Exception e) {
-            return ReturnResult.error("SQL 执行失败: " + e.getMessage());
+            return ReturnResult.error("SQL 执行失败: " + describeSqlError(e.getMessage()));
         }
     }
 
@@ -2194,7 +2244,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     }
                 }));
             } catch (IllegalArgumentException | IllegalStateException e) {
-                return ReturnResult.error(e.getMessage());
+                return ReturnResult.error(describeSqlError(e.getMessage()));
             }
         }
         try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
@@ -2205,7 +2255,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 return ReturnResult.ok(early);
             }
         } catch (Exception e) {
-            return ReturnResult.error("批量执行失败: " + e.getMessage());
+            return ReturnResult.error("批量执行失败: " + describeSqlError(e.getMessage()));
         }
         return ReturnResult.ok(summarizeBatch(statements.size(), results));
     }
@@ -2248,7 +2298,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             try {
                 results.add(runOneStatement(stmt, one));
             } catch (Exception e) {
-                String reason = e.getMessage();
+                String reason = describeSqlError(e.getMessage());
                 String summary = "第 " + (i + 1) + "/" + statements.size() + " 条语句失败: " + reason
                         + "；语句=" + abbreviate(one);
                 if (stopOnError) {
@@ -2310,7 +2360,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
                 requireTable(conn, table);
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP TABLE " + SqlName.quoteMysql(table, "表名"))) {
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP TABLE " + DbDialectSupport.quoteIdent(conn, table, "表名"))) {
                     applyQueryTimeout(stmt);
                     stmt.executeUpdate();
                 }
@@ -2343,7 +2393,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                  SchemaScope scope = useSchema(conn, database)) {
                 // 沿用 requireTable 的存在性校验：它查的是元数据，表与视图都能命中
                 requireTable(conn, view);
-                try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP VIEW " + SqlName.quoteMysql(view, "视图名"))) {
+                try (java.sql.PreparedStatement stmt = conn.prepareStatement("DROP VIEW " + DbDialectSupport.quoteIdent(conn, view, "视图名"))) {
                     applyQueryTimeout(stmt);
                     stmt.executeUpdate();
                 }
@@ -2499,6 +2549,38 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
+     * 把 SQL 底层报错翻译成面向用户的业务说明。
+     *
+     * <p>{@code SQLException.getMessage()} 返回的是 MySQL 原文，例如
+     * "Field 'id' doesn't have a default value" 或 "Duplicate entry 'x' for key 'PRIMARY'"。
+     * 直接拼进信封返回，用户看不懂也不知道怎么改。这里按已知模式映射成
+     * 一句能看懂的中文提示，映射不到的原样保留。</p>
+     */
+    private static String describeSqlError(String raw) {
+        if (raw == null || raw.isEmpty()) return "操作失败";
+        String msg = raw.trim();
+        // Field 'xxx' doesn't have a default value
+        Matcher m = Pattern.compile("Field '([^']+)' doesn't have a default value", Pattern.CASE_INSENSITIVE).matcher(msg);
+        if (m.find()) return "列「" + m.group(1) + "」没有默认值，请填写该列的值或确认该列支持自增";
+        // Column 'xxx' cannot be null
+        m = Pattern.compile("Column '([^']+)' cannot be null", Pattern.CASE_INSENSITIVE).matcher(msg);
+        if (m.find()) return "列「" + m.group(1) + "」不能为空，请填写后再保存";
+        // Data too long for column 'xxx'
+        m = Pattern.compile("Data too long for column '([^']+)'", Pattern.CASE_INSENSITIVE).matcher(msg);
+        if (m.find()) return "列「" + m.group(1) + "」的值超出长度限制，请缩短后重试";
+        // Unknown column 'xxx' in 'field list'
+        m = Pattern.compile("Unknown column '([^']+)' in 'field list'", Pattern.CASE_INSENSITIVE).matcher(msg);
+        if (m.find()) return "表中不存在列「" + m.group(1) + "」，可能已被删除或表结构已变更";
+        // Duplicate entry 'xxx' for key 'xxx'
+        m = Pattern.compile("Duplicate entry '([^']+)' for key '([^']+)'", Pattern.CASE_INSENSITIVE).matcher(msg);
+        if (m.find()) return "「" + m.group(2) + "」已存在值为「" + m.group(1) + "」的记录，不能重复";
+        // Table 'xxx' doesn't exist
+        m = Pattern.compile("Table '([^']+)' doesn't exist", Pattern.CASE_INSENSITIVE).matcher(msg);
+        if (m.find()) return "表「" + m.group(1) + "」不存在，可能已被删除或库名有误";
+        return msg;
+    }
+
+    /**
      * 执行一次表级 DML/DDL 操作，把底层异常换成可读原因而不是 500 堆栈。
      */
     private <T> ReturnResult<T> callDb(String action, ThrowingSupplier<T> supplier) {
@@ -2506,7 +2588,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             return ReturnResult.ok(supplier.get());
         } catch (Exception e) {
             log.error("[db] {}失败", action, e);
-            return ReturnResult.error(action + "失败: " + e.getMessage());
+            return ReturnResult.error(action + "失败: " + describeSqlError(e.getMessage()));
         }
     }
 
@@ -2516,6 +2598,17 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             return SqlName.checkSimple(name == null ? null : name.trim(), label);
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException(label + "只能由字母、数字和下划线组成，且最长 64 字符: " + name, ex);
+        }
+    }
+
+    /** 判断数据源是否为 InfluxDB 类型 */
+    private boolean isInfluxdbType(Long datasourceId) {
+        try {
+            var vo = datasourceService.get(datasourceId);
+            return vo != null && vo.getData() != null
+                    && "influxdb".equalsIgnoreCase(vo.getData().type());
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -2628,18 +2721,15 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         if (primaryKey == null || primaryKey.isEmpty()) {
             return ReturnResult.error("缺少主键定位条件 primaryKey");
         }
-        StringBuilder sql = new StringBuilder("UPDATE ").append(SqlName.quoteMysql(t, "表名"))
-                .append(" SET ").append(SqlName.quoteMysql(column, "列名")).append(" = ? WHERE ");
+        // 标识符引用要按方言拼（MySQL 反引号 / 其余双引号），而方言只有拿到连接才知道，
+        // 所以这里只收集列名，SQL 留到 update 闭包里拼 —— 早拼死会让 DuckDB /
+        // PostgreSQL / SQLite 上的「改单元格」直接语法错误。
         List<Object> params = new ArrayList<>();
         params.add(newValue);
-        boolean first = true;
+        List<String> pkColumns = new ArrayList<>(primaryKey.size());
         for (Map.Entry<String, Object> e : primaryKey.entrySet()) {
-            if (!first) {
-                sql.append(" AND ");
-            }
-            sql.append(SqlName.quoteMysql(safeIdent(e.getKey(), "主键列"), "主键列")).append(" = ?");
+            pkColumns.add(safeIdent(e.getKey(), "主键列"));
             params.add(e.getValue());
-            first = false;
         }
         Long dsId = queryOrBodyDatasourceId(datasourceId, body);
         String db = queryOrBodyDatabase(database, body);
@@ -2662,11 +2752,33 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 if (newValue instanceof String text && isBinaryColumn(conn, t, column)) {
                     params.set(0, decodeBase64(text));
                 }
+                // ClickHouse 没有 UPDATE ... SET ... WHERE：改行必须写成
+                // ALTER TABLE ... UPDATE ... WHERE（mutation），且默认异步，
+                // 要带 SETTINGS mutations_sync = 2 才会等数据真正落盘，
+                // 否则 executeUpdate 立刻返回、界面刷新还是旧值。
+                boolean clickhouse = DbDialectSupport.isClickHouse(conn);
+                StringBuilder sql = new StringBuilder(clickhouse ? "ALTER TABLE " : "UPDATE ")
+                        .append(DbDialectSupport.quoteIdent(conn, t, "表名"))
+                        .append(clickhouse ? " UPDATE " : " SET ")
+                        .append(DbDialectSupport.quoteIdent(conn, column, "列名"))
+                        .append(" = ? WHERE ");
+                for (int i = 0; i < pkColumns.size(); i++) {
+                    if (i > 0) {
+                        sql.append(" AND ");
+                    }
+                    sql.append(DbDialectSupport.quoteIdent(conn, pkColumns.get(i), "主键列")).append(" = ?");
+                }
+                if (clickhouse) {
+                    sql.append(" SETTINGS mutations_sync = 2");
+                }
                 try (java.sql.PreparedStatement ps = conn.prepareStatement(sql.toString())) {
                     for (int i = 0; i < params.size(); i++) {
                         ps.setObject(i + 1, params.get(i));
                     }
-                    return ps.executeUpdate();
+                    int affected = ps.executeUpdate();
+                    // mutation 不上报影响行数（恒为 0），但语句成功即代表改动已同步落盘；
+                    // 返回 0 会让前端显示「影响 0 行」像是没改，这里按 1 报。
+                    return clickhouse && affected == 0 ? 1 : affected;
                 }
             } catch (java.sql.SQLException e) {
                 throw new IllegalStateException(e.getMessage(), e);
@@ -3321,11 +3433,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                 if (option.truncateFirst()) {
                     try (java.sql.Statement stmt = conn.createStatement()) {
                         applyQueryTimeout(stmt);
-                        stmt.executeUpdate("TRUNCATE TABLE " + SqlName.quoteMysql(table, "表名"));
+                        stmt.executeUpdate("TRUNCATE TABLE " + DbDialectSupport.quoteIdent(conn, table, "表名"));
                     } catch (java.sql.SQLException fallback) {
                         try (java.sql.Statement stmt = conn.createStatement()) {
                             applyQueryTimeout(stmt);
-                            stmt.executeUpdate("DELETE FROM " + SqlName.quoteMysql(table, "表名"));
+                            stmt.executeUpdate("DELETE FROM " + DbDialectSupport.quoteIdent(conn, table, "表名"));
                         }
                     }
                 }
@@ -3537,12 +3649,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             try {
                 requireTable(conn, t);
                 try {
-                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("TRUNCATE TABLE " + SqlName.quoteMysql(t, "表名"))) {
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("TRUNCATE TABLE " + DbDialectSupport.quoteIdent(conn, t, "表名"))) {
                         applyQueryTimeout(stmt);
                         stmt.executeUpdate();
                     }
                 } catch (java.sql.SQLException fallback) {
-                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + SqlName.quoteMysql(t, "表名"))) {
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + DbDialectSupport.quoteIdent(conn, t, "表名"))) {
                         applyQueryTimeout(stmt);
                         stmt.executeUpdate();
                     }
@@ -3713,6 +3825,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             @RequestBody Map<String, Object> body,
             @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database) {
+        // InfluxDB 没有列注释概念：直接返回成功，备注仅前端展示
+        InfluxdbManageService influxSvc = influxdbManageServiceProvider.getIfAvailable();
+        if (influxSvc != null && isInfluxdbType(datasourceId)) {
+            return ReturnResult.ok(Boolean.TRUE);
+        }
         String t = safeIdent(tableName, "表名");
         String col = safeIdent(columnName, "列名");
         // 改列时列名不可变：忽略请求体里的 columnName，强制用路径参数
@@ -3746,12 +3863,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             @RequestParam(required = false) String database) {
         String t = safeIdent(tableName, "表名");
         String col = safeIdent(columnName, "列名");
-        String sql = "ALTER TABLE " + SqlName.quoteMysql(t, "表名")
-                + " DROP COLUMN " + SqlName.quoteMysql(col, "列名");
         return callDb("删除列", () -> {
             try (java.sql.Connection conn = datasourceService.connection(datasourceId);
                  SchemaScope scope = useSchema(conn, database)) {
                 requireColumn(conn, t, col);
+                // 引用形式按方言拼（MySQL 反引号 / DuckDB·PG·SQLite 双引号）
+                String sql = "ALTER TABLE " + DbDialectSupport.quoteIdent(conn, t, "表名")
+                        + " DROP COLUMN " + DbDialectSupport.quoteIdent(conn, col, "列名");
                 try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.executeUpdate();
                 }

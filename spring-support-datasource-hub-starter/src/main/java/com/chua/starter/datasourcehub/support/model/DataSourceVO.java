@@ -26,6 +26,8 @@ package com.chua.starter.datasourcehub.support.model;
  * @param version 服务端大版本（当前 influxdb 使用：2/3）
  * @param passwordSet 是否已设置口令。页面靠它显示「已设置 / 未设置」，
  *                    也靠它决定编辑时要不要提示「留空表示不修改」
+ * @param fastLoadEnabled 是否支持 CSV 快速导入（LOAD/COPY 直灌）。服务端按 JDBC
+ *                        方言自动计算：MySQL / PostgreSQL 为 true，其余类型或无法判断为 null
  * @author CH
  * @since 4.0.0.42
  */
@@ -51,7 +53,8 @@ public record DataSourceVO(
         String controlMode,
         String controlTarget,
         String version,
-        Boolean passwordSet
+        Boolean passwordSet,
+        Boolean fastLoadEnabled
 ) {
 
     /**
@@ -89,7 +92,7 @@ public record DataSourceVO(
                         String controlMode, String controlTarget, String version) {
         this(id, name, type, host, port, database, username, password, remark, status,
                 driverClassName, driverJarId, createTime, updateTime, connectLatencyMs, sessionLatencyMs,
-                lastTestTime, lastTestOk, controlMode, controlTarget, version, null);
+                lastTestTime, lastTestOk, controlMode, controlTarget, version, null, null);
     }
 
     /**
@@ -108,6 +111,6 @@ public record DataSourceVO(
         }
         return new DataSourceVO(id, name, type, host, port, database, username, "", remark, status,
                 driverClassName, driverJarId, createTime, updateTime, connectLatencyMs, sessionLatencyMs,
-                lastTestTime, lastTestOk, controlMode, controlTarget, version, passwordSet);
+                lastTestTime, lastTestOk, controlMode, controlTarget, version, passwordSet, fastLoadEnabled);
     }
 }
