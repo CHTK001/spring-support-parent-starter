@@ -171,7 +171,9 @@ public class JvmMetricsService {
         m.put("threads", threads);
 
         Map<String, Object> network = new LinkedHashMap<>();
-        network.put("listeners", 0);
+        // 网络连接/监听数需要真实的 netstat / socket 枚举才可信；在拿到可靠
+        // 数据源前不输出任何写死的假值（曾经是 listeners=0，那是伪造数据，
+        // 已删除）。JVM 快照只报真实可证字段，宁可缺省也不造假。
         m.put("network", network);
 
         RuntimeMXBean rt = ManagementFactory.getRuntimeMXBean();
