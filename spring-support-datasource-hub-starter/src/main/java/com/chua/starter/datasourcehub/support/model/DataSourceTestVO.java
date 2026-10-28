@@ -20,9 +20,7 @@ import java.time.LocalDateTime;
  * @param testedAt           测试时间
  * @param connectionCount    采样时刻目标服务上的客户端连接数；类型不支持时为 null
  * @param serverStats        采样时刻服务器运行指标；类型不支持时为 null
- * @param version            服务端版本（如 {@code MySQL 8.0.36}、{@code 7.2.4}）；
- *                           探测不到时为 null —— 页面据此显示右栏「版本」行，
- *                           不再让这一行永远是「—」
+ * @param version            探测出的数据库服务端版本（如 {@code 8.0.36}）；探测不出时为 null
  * @author CH
  * @since 4.0.0.42
  */
@@ -68,7 +66,7 @@ public record DataSourceTestVO(
     }
 
     /**
-     * 无服务器指标的五参之后的兼容构造：不采集服务器指标的类型照旧填前八项。
+     * 无服务器指标、无版本号的五参之后的兼容构造：不采集服务器指标的类型照旧填前八项。
      *
      * @param success          是否连通
      * @param message          结果说明
@@ -91,5 +89,23 @@ public record DataSourceTestVO(
     ) {
         this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled,
                 testedAt, connectionCount, null, null);
+    }
+
+    /**
+     * 无版本号但带服务器指标：复用于重载干净地表达「版本未知」。
+     */
+    public DataSourceTestVO(
+            boolean success,
+            String message,
+            String type,
+            Long connectLatencyMs,
+            Long sessionLatencyMs,
+            Boolean tunneled,
+            LocalDateTime testedAt,
+            Long connectionCount,
+            DatasourceProbeSupport.ServerStats serverStats
+    ) {
+        this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled,
+                testedAt, connectionCount, serverStats, null);
     }
 }

@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * @param controlTarget  控制方式为 {@code systemd} 时的托管单元名，如 {@code nginx.service}。
  *                       为空时仍由自动探测决定；{@code local} 方式不使用本字段
  * @param version        服务端大版本（当前 influxdb 使用：2/3）
+ * @param topFlag        置顶标记：1 置顶、0 普通；为空按不置顶处理
  * @author CH
  * @since 4.0.0.42
  */
@@ -38,6 +39,7 @@ public record DataSourceDTO(
         Long driverJarId,
         String controlMode,
         String controlTarget,
-        String version
+        String version,
+        Integer topFlag
 ) {
 }

@@ -12,6 +12,7 @@ import com.chua.starter.datasourcehub.support.model.InfluxdbOrgVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbQueryResultVO;
 import com.chua.starter.datasourcehub.support.model.MiddlewareTestVO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbBucketDTO;
+import com.chua.starter.datasourcehub.support.model.dto.InfluxdbMeasurementDeleteDTO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbQueryDTO;
 import com.chua.starter.datasourcehub.support.model.dto.InfluxdbWriteDTO;
 import com.chua.starter.datasourcehub.support.model.dto.MiddlewareTestDTO;
@@ -713,6 +714,20 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
             return;
         }
         client.write(target, bucket, request.precision(), lines);
+    }
+
+    @Override
+    public void dropMeasurement(InfluxdbMeasurementDeleteDTO request) {
+        String bucket = requireText(request == null ? null : request.bucket(), "目标 Bucket 不能为空");
+        String measurement = requireText(request == null ? null : request.measurement(), "测量名不能为空");
+        InfluxdbClient.Target target = client.target(request == null ? null : request.datasourceId());
+        if (target.isV3()) {
+            // v3 用 SQL DROP TABLE 删除整个测量
+            client.v3QuerySql(target, bucket, "DROP TABLE " + sqlIdentifier(measurement));
+            return;
+        }
+        // v1/v2 用 InfluxQL DROP MEASUREMENT 删除整个测量（v2 兼容 InfluxQL DDL）
+        client.v1Execute(target, bucket, "DROP MEASUREMENT " + sqlIdentifier(measurement));
     }
 
     /**

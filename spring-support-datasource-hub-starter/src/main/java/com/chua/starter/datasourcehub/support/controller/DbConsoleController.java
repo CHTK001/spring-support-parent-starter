@@ -15,7 +15,13 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport;
 import com.chua.starter.datasourcehub.support.dbconsole.DbErDiagram;
 import com.chua.starter.datasourcehub.support.dbconsole.DbFilter;
 import com.chua.starter.datasourcehub.support.dbconsole.DbObjectDialect;
+import com.chua.starter.datasourcehub.support.dbconsole.DbProcessKillRequest;
+import com.chua.starter.datasourcehub.support.dbconsole.DbProcessVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbSlowQueryVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlBatchVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbUserDeleteDTO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbUserSaveDTO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbUserVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlExecuteDTO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSqlResultVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbStructureDiff;
@@ -2527,6 +2533,573 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         } catch (Exception e) {
             return ReturnResult.error("删除数据库失败: " + e.getMessage());
         }
+    }
+
+    // ==================== 数据库进程管理（显示进程 / 关闭 / 批量关闭） ====================
+
+    /**
+     * 查询目标库当前进程（会话）列表。
+     *
+     * <p><b>能力与方言</b>：进程列表是内核特有能力，不是所有 JDBC 数据源都有 ——
+     * MySQL 系走 {@code SHOW PROCESSLIST}，PostgreSQL 走 {@code pg_stat_activity}，
+     * 其余方言（Oracle / SQLServer / 文件库）返回 {@code supported=false}，前端据此
+     * 不显示「显示进程」右键入口（能力声明与类型判断都在这一层做）。</p>
+     *
+     * <p><b>为什么不用游标分页</b>：进程列表通常只有几百行，一次拉回即可；
+     * 内核返回什么列就透传什么，前端按本端点的统一行结构渲染。</p>
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @return 进程列表（supported=false 表示该内核不支持）
+     */
+    @Operation(summary = "数据库进程列表")
+    @GetMapping("processes")
+    public ReturnResult<java.util.Map<String, Object>> processes(
+            @RequestParam(required = false) Long datasourceId) {
+        return callDb("查询数据库进程", () -> {
+            String url = "";
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                java.util.List<DbProcessVO> rows;
+                if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+                    rows = listMySqlProcesses(conn);
+                } else if (lower.startsWith("jdbc:postgresql:")) {
+                    rows = listPostgresProcesses(conn);
+                } else {
+                    java.util.Map<String, Object> unsupported = new java.util.LinkedHashMap<>();
+                    unsupported.put("supported", false);
+                    unsupported.put("processes", java.util.List.of());
+                    unsupported.put("message", "该数据库内核不支持进程列表（仅 MySQL/MariaDB/PostgreSQL 支持）");
+                    return unsupported;
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("processes", rows);
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 关闭单个数据库进程（会话）。
+     *
+     * @param request 请求：datasourceId + pid
+     * @return 是否成功
+     */
+    @Operation(summary = "关闭数据库进程")
+    @SysLog(name = "关闭数据库进程")
+    @PostMapping("process/kill")
+    public ReturnResult<Boolean> killProcess(@RequestBody DbProcessKillRequest request) {
+        if (request == null || isBlank(request.pid())) {
+            return ReturnResult.error("进程 ID 不能为空");
+        }
+        return killProcessesInternal(request.datasourceId(), java.util.List.of(request.pid()));
+    }
+
+    /**
+     * 批量关闭数据库进程（会话）。
+     *
+     * @param request 请求：datasourceId + pids
+     * @return 关闭结果（成功数 / 失败数）
+     */
+    @Operation(summary = "批量关闭数据库进程")
+    @SysLog(name = "批量关闭数据库进程")
+    @PostMapping("processes/kill")
+    public ReturnResult<java.util.Map<String, Object>> killProcesses(@RequestBody DbProcessKillRequest request) {
+        if (request == null || request.pids() == null || request.pids().isEmpty()) {
+            return ReturnResult.error("进程 ID 列表不能为空");
+        }
+        return killProcessesInternal(request.datasourceId(), request.pids());
+    }
+
+    /**
+     * 关闭进程的公共实现：MySQL 系 {@code KILL <id>}，PostgreSQL {@code pg_terminate_backend(<id>)}。
+     *
+     * @param datasourceId 数据源 ID
+     * @param pids         进程 ID 列表
+     * @param <T>          返回类型
+     * @param <T>          返回类型
+     * @return 关闭结果
+     */
+    private <T> ReturnResult<T> killProcessesInternal(Long datasourceId, java.util.List<String> pids) {
+        return callDb("关闭数据库进程", () -> {
+            java.util.Set<String> safePids = new java.util.LinkedHashSet<>();
+            for (String pid : pids) {
+                String trimmed = isBlank(pid) ? "" : pid.trim();
+                if (trimmed.matches("\\d{1,15}")) {
+                    safePids.add(trimmed);
+                }
+            }
+            if (safePids.isEmpty()) {
+                return (T) new java.util.LinkedHashMap<String, Object>() {{
+                    put("successCount", 0);
+                    put("failCount", pids.size());
+                    put("message", "没有有效的进程 ID");
+                }};
+            }
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                String url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                String killSql;
+                if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+                    killSql = "KILL ";
+                } else if (lower.startsWith("jdbc:postgresql:")) {
+                    killSql = "SELECT pg_terminate_backend(?)";
+                } else {
+                    throw new IllegalStateException("该数据库内核不支持进程关闭");
+                }
+                int success = 0;
+                java.util.List<String> failures = new java.util.ArrayList<>();
+                for (String pid : safePids) {
+                    try {
+                        if (killSql.endsWith("?")) {
+                            try (java.sql.PreparedStatement stmt = conn.prepareStatement(killSql)) {
+                                stmt.setLong(1, Long.parseLong(pid));
+                                stmt.execute();
+                            }
+                        } else {
+                            try (java.sql.Statement stmt = conn.createStatement()) {
+                                stmt.execute(killSql + pid);
+                            }
+                        }
+                        success++;
+                    } catch (Exception e) {
+                        failures.add(pid);
+                    }
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("successCount", success);
+                result.put("failCount", failures.size());
+                result.put("message", failures.isEmpty()
+                        ? "已关闭 " + success + " 个进程"
+                        : "成功 " + success + " 个，失败 " + failures.size() + " 个（失败 PID: " + failures + "）");
+                return (T) result;
+            }
+        });
+    }
+
+    // ==================== 慢查询（需求 1.7：SPI 能力判断 + 各内核查询） ====================
+
+    /**
+     * 慢查询列表（按平均耗时降序）。
+     *
+     * <p><b>能力与方言</b>：慢查询同样是内核特有能力 —— MySQL / MariaDB 读
+     * {@code performance_schema.events_statements_summary_by_digest}，
+     * PostgreSQL 读 {@code pg_stat_statements}（需先 {@code CREATE EXTENSION
+     * pg_stat_statements} 并加到 shared_preload_libraries）。两处都读不到时
+     * （未开启采样 / 权限不足 / 表不存在），返回 {@code supported=false}，
+     * 前端据此不显示「慢查询」右键入口，或在弹窗内给出原因。</p>
+     *
+     * <p><b>阈值口径</b>：不依赖各库的 {@code long_query_time} 配置，
+     * 直接取平均耗时最高的前 50 条 —— 对「谁在拖慢库」的定位语义一致，
+     * 且不读用户变量（老账号常没有 SHOW VARIABLES 权限）。</p>
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @return 慢查询列表（supported=false 表示该内核/实例不支持）
+     */
+    @Operation(summary = "数据库慢查询列表")
+    @GetMapping("slow-queries")
+    public ReturnResult<java.util.Map<String, Object>> slowQueries(
+            @RequestParam(required = false) Long datasourceId) {
+        return callDb("查询数据库慢查询", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                String url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                java.util.List<DbSlowQueryVO> rows;
+                if (lower.startsWith("jdbc:mysql:") || lower.startsWith("jdbc:mariadb:")) {
+                    rows = listMySqlSlowQueries(conn);
+                } else if (lower.startsWith("jdbc:postgresql:")) {
+                    rows = listPostgresSlowQueries(conn);
+                } else {
+                    java.util.Map<String, Object> unsupported = new java.util.LinkedHashMap<>();
+                    unsupported.put("supported", false);
+                    unsupported.put("rows", java.util.List.of());
+                    unsupported.put("message", "该数据库内核不支持慢查询（仅 MySQL/MariaDB/PostgreSQL 支持）");
+                    return unsupported;
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("rows", rows);
+                return result;
+            }
+        });
+    }
+
+    // ==================== 用户管理（需求 1：SPI 能力判断 + 各内核查询） ====================
+
+    /**
+     * 数据库用户列表（按用户名 + 主机排序）。
+     *
+     * <p><b>能力与方言</b>：用户管理是 MySQL/MariaDB 内核特有能力 —— 用户定义落在
+     * {@code mysql.user} 表，可直接读取并执行 {@code CREATE / ALTER / DROP USER}。
+     * 其余内核（含 PostgreSQL 的 {@code pg_roles}，结构差异大、没有 SSL/资源限额列）
+     * 返回 {@code supported=false}，前端据此不显示「用户管理」右键入口。</p>
+     *
+     * @param datasourceId 数据源 ID，为空或 0 表示默认主数据源
+     * @return 用户列表（supported=false 表示该内核不支持用户管理）
+     */
+    @Operation(summary = "数据库用户列表")
+    @GetMapping("users")
+    public ReturnResult<java.util.Map<String, Object>> users(
+            @RequestParam(required = false) Long datasourceId) {
+        return callDb("查询数据库用户", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(datasourceId)) {
+                String url = jdbcUrlOf(datasourceId);
+                String lower = url == null ? "" : url.toLowerCase(java.util.Locale.ROOT);
+                if (!lower.startsWith("jdbc:mysql:") && !lower.startsWith("jdbc:mariadb:")) {
+                    java.util.Map<String, Object> unsupported = new java.util.LinkedHashMap<>();
+                    unsupported.put("supported", false);
+                    unsupported.put("users", java.util.List.of());
+                    unsupported.put("message", "该数据库内核不支持用户管理（仅 MySQL/MariaDB 支持）");
+                    return unsupported;
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("users", listMySqlUsers(conn));
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 新建数据库用户：{@code CREATE USER} + 可选 {@code GRANT}。
+     *
+     * @param request 请求：datasourceId + username + host + password + grants
+     * @return 是否成功
+     */
+    @Operation(summary = "新建数据库用户")
+    @SysLog(name = "新建数据库用户")
+    @PostMapping("users")
+    public ReturnResult<Boolean> createUser(@RequestBody DbUserSaveDTO request) {
+        return saveUserInternal(request, false);
+    }
+
+    /**
+     * 修改数据库用户：{@code ALTER USER}（改密码 / 资源限额 / 超级权限）+ 增量 GRANT/REVOKE。
+     *
+     * @param request 请求：datasourceId + username + host + password + grants + superUser
+     * @return 是否成功
+     */
+    @Operation(summary = "修改数据库用户")
+    @SysLog(name = "修改数据库用户")
+    @PutMapping("users")
+    public ReturnResult<Boolean> updateUser(@RequestBody DbUserSaveDTO request) {
+        return saveUserInternal(request, true);
+    }
+
+    /**
+     * 删除数据库用户：{@code DROP USER 'x'@'h'}。
+     *
+     * @param request 请求：datasourceId + username + host
+     * @return 是否成功
+     */
+    @Operation(summary = "删除数据库用户")
+    @SysLog(name = "删除数据库用户")
+    @DeleteMapping("users")
+    public ReturnResult<Boolean> deleteUser(@RequestBody DbUserDeleteDTO request) {
+        if (request == null) {
+            return ReturnResult.error("请求不能为空");
+        }
+        String user = safeUserIdent(request.username(), "用户名");
+        String host = safeUserHost(request.host());
+        if (user.isEmpty()) {
+            return ReturnResult.error("用户名不能为空");
+        }
+        String sql = "DROP USER '" + user + "'@'" + host + "'";
+        return callDb("删除数据库用户", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 java.sql.Statement stmt = conn.createStatement()) {
+                stmt.execute(sql);
+                return true;
+            }
+        });
+    }
+
+    /**
+     * 查询用户权限：{@code SHOW GRANTS FOR 'x'@'h'}。
+     *
+     * @param request 请求：datasourceId + username + host
+     * @return 权限语句清单（supported=false 表示该内核不支持）
+     */
+    @Operation(summary = "查询数据库用户权限")
+    @PostMapping("users/grants")
+    public ReturnResult<java.util.Map<String, Object>> userGrants(@RequestBody DbUserDeleteDTO request) {
+        if (request == null) {
+            return ReturnResult.error("请求不能为空");
+        }
+        String user = safeUserIdent(request.username(), "用户名");
+        String host = safeUserHost(request.host());
+        if (user.isEmpty()) {
+            return ReturnResult.error("用户名不能为空");
+        }
+        String sql = "SHOW GRANTS FOR '" + user + "'@'" + host + "'";
+        return callDb("查询数据库用户权限", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 java.sql.Statement stmt = conn.createStatement();
+                 java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+                java.util.List<String> grants = new java.util.ArrayList<>();
+                while (rs.next()) {
+                    String line = rs.getString(1);
+                    if (line != null) {
+                        grants.add(line.trim());
+                    }
+                }
+                java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+                result.put("supported", true);
+                result.put("grants", grants);
+                return result;
+            }
+        });
+    }
+
+    /**
+     * 新建/修改用户的公共实现：MySQL 系 {@code CREATE/ALTER USER} + GRANT/REVOKE。
+     *
+     * <p>用户名经单引号转义、主机经白名单校验后才拼进 SQL（防注入）；
+     * 密码只在非空时写 {@code IDENTIFIED BY}（空=不设/不改）。</p>
+     *
+     * @param request 请求
+     * @param update  true 修改、false 新建
+     * @return 是否成功
+     */
+    private ReturnResult<Boolean> saveUserInternal(DbUserSaveDTO request, boolean update) {
+        if (request == null) {
+            return ReturnResult.error("请求不能为空");
+        }
+        String user = safeUserIdent(request.username(), "用户名");
+        String host = safeUserHost(request.host());
+        if (user.isEmpty()) {
+            return ReturnResult.error("用户名不能为空");
+        }
+        String pass = request.password() == null ? "" : request.password();
+        return callDb("保存数据库用户", () -> {
+            try (java.sql.Connection conn = datasourceService.connection(request.datasourceId());
+                 java.sql.Statement stmt = conn.createStatement()) {
+                java.util.List<String> statements = new java.util.ArrayList<>();
+                String quoted = "'" + user + "'@'" + host + "'";
+                if (update) {
+                    // 修改：只重建要发的语句。密码非空才 ALTER 密码，避免空密码覆盖原有认证
+                    StringBuilder alter = new StringBuilder("ALTER USER " + quoted);
+                    if (!pass.isEmpty()) {
+                        alter.append(" IDENTIFIED BY '").append(escapeSingle(pass)).append("'");
+                    }
+                    statements.add(alter.toString());
+                } else {
+                    StringBuilder create = new StringBuilder("CREATE USER " + quoted);
+                    if (!pass.isEmpty()) {
+                        create.append(" IDENTIFIED BY '").append(escapeSingle(pass)).append("'");
+                    }
+                    statements.add(create.toString());
+                }
+                // 权限：全量走 GRANT（GRANT 幂等 —— 重复授予同一权限不报错）。
+                java.util.List<String> grants = request.grants() == null
+                        ? java.util.List.of() : request.grants();
+                if (!grants.isEmpty()) {
+                    statements.add("GRANT " + String.join(", ", grants) + " ON *.* TO " + quoted);
+                }
+                // 超级权限是独立维度：MySQL 里 GRANT SUPER ON *.* 单独一条
+                if (Boolean.TRUE.equals(request.superUser())) {
+                    statements.add("GRANT SUPER ON *.* TO " + quoted);
+                }
+                for (String statement : statements) {
+                    try (java.sql.Statement s = conn.createStatement()) {
+                        s.execute(statement);
+                    }
+                }
+                return true;
+            }
+        });
+    }
+
+    /**
+     * MySQL/MariaDB：{@code mysql.user} 用户清单。
+     */
+    private java.util.List<DbUserVO> listMySqlUsers(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbUserVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT User, Host, ssl_type, "
+                + "max_questions, max_updates, max_connections, max_user_connections, "
+                + "Super_priv FROM mysql.user ORDER BY User, Host";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String name = rs.getString("User");
+                String host = rs.getString("Host");
+                if (name == null) {
+                    continue;
+                }
+                String superv = rs.getString("Super_priv");
+                out.add(new DbUserVO(
+                        name.trim(),
+                        host == null ? "" : host.trim(),
+                        rs.getString("ssl_type"),
+                        longOrNull(rs, "max_questions"),
+                        longOrNull(rs, "max_updates"),
+                        longOrNull(rs, "max_connections"),
+                        longOrNull(rs, "max_user_connections"),
+                        superv != null && "Y".equalsIgnoreCase(superv.trim())));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 用户名白名单校验：字母/数字/下划线/$/点，最长 64 字符。
+     */
+    private static String safeUserIdent(String name, String label) {
+        if (name == null) {
+            return "";
+        }
+        String trimmed = name.trim();
+        if (!trimmed.matches("[A-Za-z0-9_$.]{1,64}")) {
+            throw new IllegalArgumentException(label + "只能由字母、数字、下划线、$ 和点组成，且最长 64 字符");
+        }
+        return trimmed;
+    }
+
+    /**
+     * 主机白名单校验：字母/数字/点/冒号/下划线/百分号/横杠，最长 255 字符。
+     */
+    private static String safeUserHost(String host) {
+        if (host == null || host.isBlank()) {
+            return "%";
+        }
+        String trimmed = host.trim();
+        if (!trimmed.matches("[A-Za-z0-9.:_%-]{1,255}")) {
+            throw new IllegalArgumentException("主机名不合法");
+        }
+        return trimmed;
+    }
+
+    /**
+     * SQL 单引号转义（MySQL 用两个单引号表示一个）。
+     */
+    private static String escapeSingle(String text) {
+        return text.replace("'", "''");
+    }
+
+    /**
+     * MySQL/MariaDB：{@code performance_schema.events_statements_summary_by_digest}。
+     *
+     * <p>取平均耗时前 50 条；performance_schema 表在绝大多数发行版默认开启且对所有
+     * 会话可读。读不到（5.5 及以下、被显式关闭、权限收紧）抛 SQL 异常，
+     * 由 callDb 转成可读错误。</p>
+     */
+    private java.util.List<DbSlowQueryVO> listMySqlSlowQueries(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbSlowQueryVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT digest_text, "
+                + "ROUND(avg_timer_wait / 1000000000) AS avg_ms, "
+                + "ROUND(max_timer_wait / 1000000000) AS max_ms, "
+                + "count_star AS calls, last_seen "
+                + "FROM performance_schema.events_statements_summary_by_digest "
+                + "WHERE digest_text IS NOT NULL AND avg_timer_wait > 0 "
+                + "ORDER BY avg_timer_wait DESC LIMIT 50";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String lastSeen = rs.getTimestamp("last_seen") == null
+                        ? null : rs.getTimestamp("last_seen").toLocalDateTime().toString();
+                out.add(new DbSlowQueryVO(
+                        rs.getString("digest_text"),
+                        longOrNull(rs, "avg_ms"),
+                        longOrNull(rs, "max_ms"),
+                        rs.getLong("calls"),
+                        lastSeen));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * PostgreSQL：{@code pg_stat_statements}。
+     *
+     * <p>依赖扩展已加载；未加载（或用不了 read 权限）抛异常由 callDb 转错。</p>
+     */
+    private java.util.List<DbSlowQueryVO> listPostgresSlowQueries(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbSlowQueryVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT query, ROUND(mean_exec_time)::bigint AS avg_ms, "
+                + "ROUND(max_exec_time)::bigint AS max_ms, calls, last_planning_time AS last_seen "
+                + "FROM pg_stat_statements "
+                + "WHERE mean_exec_time > 0 ORDER BY mean_exec_time DESC LIMIT 50";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                out.add(new DbSlowQueryVO(
+                        rs.getString("query"),
+                        rs.getLong("avg_ms"),
+                        rs.getLong("max_ms"),
+                        rs.getLong("calls"),
+                        null));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * MySQL/MariaDB：{@code SHOW PROCESSLIST}。
+     */
+    private java.util.List<DbProcessVO> listMySqlProcesses(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbProcessVO> out = new java.util.ArrayList<>();
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery("SHOW PROCESSLIST")) {
+            java.sql.ResultSetMetaData meta = rs.getMetaData();
+            while (rs.next()) {
+                out.add(new DbProcessVO(
+                        rs.getString("Id"),
+                        rs.getString("User"),
+                        rs.getString("Host"),
+                        rs.getString("db"),
+                        rs.getString("Command"),
+                        longOrNull(rs, "Time"),
+                        rs.getString("Info"),
+                        null));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * PostgreSQL：{@code pg_stat_activity}。
+     */
+    private java.util.List<DbProcessVO> listPostgresProcesses(java.sql.Connection conn) throws java.sql.SQLException {
+        java.util.List<DbProcessVO> out = new java.util.ArrayList<>();
+        String sql = "SELECT pid, usename, coalesce(application_name,''), "
+                + "coalesce(client_addr::text,''), state, extract(epoch from now()-query_start)::bigint, query "
+                + "FROM pg_stat_activity";
+        try (java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                out.add(new DbProcessVO(
+                        rs.getString(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4),
+                        rs.getString(5),
+                        rs.getLong(6),
+                        rs.getString(7),
+                        null));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 读取数据源 JDBC URL（用于内核判断）。
+     */
+    private String jdbcUrlOf(Long datasourceId) {
+        return datasourceService.jdbcInfo(datasourceId).url();
+    }
+
+    private static Long longOrNull(java.sql.ResultSet rs, String column) {
+        try {
+            long v = rs.getLong(column);
+            return rs.wasNull() ? null : v;
+        } catch (java.sql.SQLException e) {
+            return null;
+        }
+    }
+
+    private static boolean isBlank(String text) {
+        return text == null || text.isBlank();
     }
 
 
