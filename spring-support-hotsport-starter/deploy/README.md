@@ -34,7 +34,7 @@ fat jar 里 97% 是依赖。Spring Boot 默认的 `java -jar` 只认 jar 内 `BO
 ```
 /data/hotsport/
 ├── app.jar           业务 jar，约 14MB（业务代码 + 前端 agent 包），每次发布替换（旧的留 5 份 app.jar.bak-*）
-├── lib/              125 个依赖 jar，约 107MB，只在依赖变化时增量更新
+├── lib/              依赖 jar 目录（127 个：126 依赖 + hotsport-resources.jar），只在依赖变化时增量更新
 ├── jdk/              （可选）自带 JDK；不放则用 PATH 里的 java
 ├── config/
 │   └── app.env       部署参数（不入仓库，见 app.env.example）
@@ -165,14 +165,29 @@ pwsh -File apps/vue-support-hotspot-starter/split-dist.ps1
 （713 文件 / 26.4MB），thin jar 随之约 14MB。日常升级流程不变，前端页面
 （含慢 SQL / 运维工具 / 调用序列下钻等排查分析界面）随 jar 一体交付。
 
-**资源包不进入 jar**（151MB 太重，且与面板核心无关）。需要文件预览 / Flash /
-地图等懒加载功能时，单独给部署挂资源：
+**资源包以独立 jar 挂载**（已落地验证）：
 
-> 注意：`common-starter` 的 `ResourceWebMvcConfigurer` 硬编码 `/** → classpath:/static/`，
-> 覆盖了 `spring.web.resources.static-locations` 属性——**外部静态目录方案不可用**。
-> 资源包要么打进一个独立的辅助 jar（`classpath:/static/wasm|vendor|ruffle...` 即可被
-> 同一映射命中），要么在宿主上另起一个轻量静态服务（`instabox-port serve <dir>`）
-> 并通过前端 loader-config 指向该地址。二者都不要与 `app.jar` 的 `static/` 混放。
+```powershell
+# 在 vue-support-parent-starter 根：把 dist-split/resources 打成独立 jar
+pwsh -File apps/vue-support-hotspot-starter/pack-resources.ps1
+# 产物：dist-split/hotsport-resources.jar（约 67MB，static/ 前缀）
+# 自检：jar 内须含 static/wasm/crypto-wasm.js 等三个关键路径（脚本会自动检查）
+
+# 部署：放入共享依赖目录（18100 复用 /data/hotsport/lib，一次放两实例生效）
+scp dist-split/hotsport-resources.jar <host>:/data/hotsport/lib/
+bash /data/hotsport/start.sh restart
+```
+
+这样文件预览（wasm/typst）、Flash（ruffle）、地图引擎（vendor）、加密库
+（crypto-wasm）等懒加载资源即可用。原理：`common-starter` 的
+`ResourceWebMvcConfigurer` 映射 `/** → classpath:/static/`，任何 classpath 上
+jar 的 `static/*` 都会命中——不需要改 Java 代码，也不受
+`spring.web.resources.static-locations` 属性被覆盖的影响。`release.ps1`
+的 `-SyncDeps` 只做存在性补缺、不删除 lib 里多出的 jar，因此该资源 jar
+不会被后续部署清除。
+
+> 备选（未采用）：独立静态服务（`instabox-port serve <dir>`）+ 前端
+> loader-config 指向。仅当不想给 lib/ 加 jar 时考虑。
 
 ## 已知缺口
 
