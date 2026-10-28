@@ -90,6 +90,26 @@ public class DatasourceHubProperties {
     private long driverJarMaxBytes = 64L * 1024 * 1024;
 
     /**
+     * 文件库（SQLite / DuckDB / H2）库文件的上传落盘目录。
+     *
+     * <p>默认 {@code data/file-db}，落在应用工作目录下：这类库要的是
+     * 「服务器上一个可写的绝对路径」，放进临时目录会被系统清理任务扫掉，
+     * 台账里还留着那个路径，第二天就连不上了。</p>
+     *
+     * <p>该目录应落在 {@code fileJdbcAllowedDirs} 允许的范围内，
+     * 否则建连会被路径白名单挡下 —— 默认值本身就在工作目录内，无需额外配置。</p>
+     */
+    private String fileDbUploadDir = "data" + java.io.File.separator + "file-db";
+
+    /**
+     * 文件库库文件的单个大小上限（字节），默认 64MB。
+     *
+     * <p>单文件库正常在几 MB 以内；给上限是为了防止误传一个几百 MB 的
+     * 数据仓库文件把磁盘写满。要传更大的库，把这个值调大即可。</p>
+     */
+    private long fileDbMaxBytes = 64L * 1024 * 1024;
+
+    /**
      * 文件库（SQLite / H2 file / Derby / HSQLDB）JDBC URL 允许的根目录白名单。
      *
      * <p>这类连接串里带的是**磁盘路径**，而连接串来自数据源台账 ——

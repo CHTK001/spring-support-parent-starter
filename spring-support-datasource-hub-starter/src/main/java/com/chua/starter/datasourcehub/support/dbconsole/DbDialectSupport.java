@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -266,6 +267,26 @@ public final class DbDialectSupport {
     }
 
     /**
+     * 按当前连接的方言引用一个标识符（表名/列名）。
+     *
+     * <p>数据库管理台早期只面向 MySQL，标识符一律用反引号拼；换到 PostgreSQL /
+     * DuckDB / SQLite 上会直接语法错误（实测 DuckDB 报
+     * {@code Parser Error: syntax error at or near "`"}），表现为「表能列出来、
+     * 一点开就报错」。所以凡是拼 SQL 的地方都改从这里取引用形式，
+     * 由 {@link #isMysqlFamilyQuiet} 判断走反引号还是双引号。</p>
+     *
+     * <p>ClickHouse 两种引号都认，归到非 MySQL 分支用双引号同样成立。</p>
+     *
+     * @param conn  数据库连接（用于探测方言）
+     * @param name  标识符
+     * @param label 错误提示里的字段名
+     * @return 已引用的标识符
+     */
+    public static String quoteIdent(Connection conn, String name, String label) {
+        return quote(isMysqlFamilyQuiet(conn), name, label);
+    }
+
+    /**
      * 应用表注释（跨方言）。
      *
      * <p>MySQL 内联在 CREATE TABLE 里，本方法无操作；H2/PostgreSQL/Oracle 走
@@ -422,10 +443,25 @@ public final class DbDialectSupport {
         String quotedTable = SqlName.quote(safeTable, "表名");
         String quotedColumn = SqlName.quote(safeColumn, "列名");
         String typeOnly = typeFragment(def);
-        executeFirstQuietly(conn, List.of(
-                "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " " + typeOnly,
-                "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " TYPE " + typeOnly,
-                "ALTER TABLE " + quotedTable + " MODIFY COLUMN " + quotedColumn + " " + typeOnly));
+        if (isClickHouse(conn)) {
+            // ClickHouse 改类型统一走 MODIFY COLUMN（它同时接受
+            // ALTER COLUMN ... TYPE，但 MODIFY 是官方写法），
+            // 类型名要换回内核认的大小写，可空用 Nullable(T) 表达。
+            executeFirstSupported(conn, List.of(
+                            "ALTER TABLE " + quotedTable + " MODIFY COLUMN " + quotedColumn + " "
+                                    + clickHouseType(typeOnly, def.nullable())),
+                    "修改列 " + def.name());
+            applyColumnComment(conn, safeTable, safeColumn, def.comment());
+            return;
+        }
+        // 改类型是核心动作，同样不能静默：候选（标准写法 / TYPE / MODIFY）
+        // 全被内核拒绝时必须报错，否则「修改列」会假成功。
+        // 后面的 NOT NULL / DEFAULT 步骤保持尽力而为 —— 很多内核本来就不支持。
+        executeFirstSupported(conn, List.of(
+                        "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " " + typeOnly,
+                        "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " TYPE " + typeOnly,
+                        "ALTER TABLE " + quotedTable + " MODIFY COLUMN " + quotedColumn + " " + typeOnly),
+                "修改列 " + def.name());
         executeFirstQuietly(conn, List.of(def.nullable()
                 ? "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " DROP NOT NULL"
                 : "ALTER TABLE " + quotedTable + " ALTER COLUMN " + quotedColumn + " SET NOT NULL"));
@@ -465,14 +501,13 @@ public final class DbDialectSupport {
      * @return 类型片段
      */
     private static String typeFragment(DbColumnDef def) {
-        // enumValues 必须原样带过去：传空列表会撞上 DbColumnDef 的构造期校验
-        // （「ENUM 必须至少配置一个取值」），把「内核不支持 ENUM」的真错误
-        // 换成一句让人摸不着头脑的提示。带上取值后，非 MySQL 内核会以
-        // 「类型不存在」拒收 —— 那才是真实原因（见 alterColumn 的「不静默丢弃」）。
-        DbColumnDef typeOnly = new DbColumnDef(
-                def.name(), def.type(), def.size(), def.scale(), def.unsigned(), def.zerofill(),
-                "", "", def.nullable(), "", "", false, def.enumValues(), false, "");
-        return typeOnly.toSqlFragment();
+        // 只要「类型本身」，绝不能带上 NULL / NOT NULL / DEFAULT / COMMENT ——
+        // 那是 MySQL 语法，ClickHouse 等内核的 ADD COLUMN 会直接语法错：
+        //   Code: 62 SYNTAX_ERROR: failed at position 43 ('NULL')
+        // 原先这里构造一个「空壳 DbColumnDef」再调 toSqlFragment()，但空壳的
+        // nullable 仍是 true，于是拼出 "INT NULL"，而异常又被 executeFirstQuietly
+        // 吞掉 —— 表现成「新增列提示成功、列其实没加上」的假成功。
+        return def.toTypeOnlyFragment();
     }
 
     /**
@@ -507,8 +542,32 @@ public final class DbDialectSupport {
                     + " ADD COLUMN " + quotedColumn + " " + def.toSqlFragment());
             return;
         }
-        executeFirstQuietly(conn, List.of("ALTER TABLE " + SqlName.quote(safeTable, "表名")
-                + " ADD COLUMN " + SqlName.quote(def.name(), "列名") + " " + typeFragment(def)));
+        // 这条是**核心 DDL**，必须用「候选全失败就抛错」的版本。
+        // 原先用 executeFirstQuietly：内核拒绝时异常被吞掉、接口照样返回「操作成功」，
+        // 用户点了新增列、界面提示成功、列却根本没加上（实测 ClickHouse 就是这种假成功）。
+        // 只有后面的可选步骤（SET DEFAULT / COMMENT）才适合静默重试。
+        //
+        // 候选顺序：先试带可空性后缀的写法（PostgreSQL/H2/SQLite 等认），
+        // 被拒再退回纯类型 —— MySQL 系以外的内核常常不认 NULL/NOT NULL 后缀。
+        //
+        // ClickHouse 单独一条：它只接受「类型 [DEFAULT|CODEC|TTL|COMMENT]」，
+        // 可空性必须体现在类型上（Nullable(T)），而且**类型名大小写敏感**
+        // （String 不是 STRING），所以要经 clickHouseType() 换写法。
+        String quotedTable = SqlName.quote(safeTable, "表名");
+        String quotedName = SqlName.quote(def.name(), "列名");
+        String typeOnly = typeFragment(def);
+        String addPrefix = "ALTER TABLE " + quotedTable + " ADD COLUMN " + quotedName + " ";
+        if (isClickHouse(conn)) {
+            executeFirstSupported(conn, List.of(
+                            addPrefix + clickHouseType(typeOnly, def.nullable()),
+                            addPrefix + clickHouseType(typeOnly, false)),
+                    "新增列 " + def.name());
+        } else {
+            executeFirstSupported(conn, List.of(
+                            addPrefix + typeOnly + (def.nullable() ? " NULL" : " NOT NULL"),
+                            addPrefix + typeOnly),
+                    "新增列 " + def.name());
+        }
         if (!def.defaultValue().isEmpty()) {
             executePreparedFirstQuietly(conn, List.of("ALTER TABLE " + SqlName.quote(safeTable, "表名")
                     + " ALTER COLUMN " + SqlName.quote(def.name(), "列名") + " SET DEFAULT ?"),
@@ -529,6 +588,83 @@ public final class DbDialectSupport {
         } catch (SQLException e) {
             return false;
         }
+    }
+
+    /**
+     * 是否 ClickHouse 内核。
+     *
+     * <p>ClickHouse 的 SQL 方言有两处会直接改变写法，不能只按「非 MySQL」处理：</p>
+     * <ul>
+     *   <li>{@code UPDATE ... SET ... WHERE} 不被支持，改行要用
+     *       {@code ALTER TABLE ... UPDATE ... WHERE}（mutation）；</li>
+     *   <li>mutation 默认**异步**，不加 {@code SETTINGS mutations_sync = 2}
+     *       的话语句立即返回、数据还没落，界面看着「改了但没变」。</li>
+     * </ul>
+     *
+     * @param conn 数据库连接
+     * @return true=ClickHouse；探测失败按 false 处理
+     */
+    public static boolean isClickHouse(Connection conn) {
+        try {
+            String product = conn.getMetaData().getDatabaseProductName();
+            return product != null && product.toLowerCase(Locale.ROOT).contains("clickhouse");
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    /**
+     * ClickHouse 原生类型的大小写对照表。
+     *
+     * <p><b>类型名大小写敏感</b>：{@code String} 不是 {@code STRING}，
+     * 写成全大写会被拒 —— {@code Code: 50 Unknown data type family: STRING.
+     * Maybe you meant: ['String','Ring']}。而列类型白名单为了做大小写无关的校验，
+     * 内部统一存大写，所以真正下发给内核前必须换回这里的大小写。</p>
+     *
+     * <p>不在表里的（{@code INT}/{@code VARCHAR}/{@code UUID} 等）ClickHouse
+     * 本来就接受全大写别名，原样下发即可。</p>
+     */
+    private static final Map<String, String> CLICKHOUSE_TYPE_CASING = Map.ofEntries(
+            Map.entry("STRING", "String"),
+            Map.entry("FIXEDSTRING", "FixedString"),
+            Map.entry("UINT8", "UInt8"),
+            Map.entry("UINT16", "UInt16"),
+            Map.entry("UINT32", "UInt32"),
+            Map.entry("UINT64", "UInt64"),
+            Map.entry("INT8", "Int8"),
+            Map.entry("INT16", "Int16"),
+            Map.entry("INT32", "Int32"),
+            Map.entry("INT64", "Int64"),
+            Map.entry("FLOAT32", "Float32"),
+            Map.entry("FLOAT64", "Float64"),
+            Map.entry("DATE32", "Date32"),
+            Map.entry("DATETIME64", "DateTime64"),
+            Map.entry("IPV4", "IPv4"),
+            Map.entry("IPV6", "IPv6"),
+            Map.entry("LOWCARDINALITY", "LowCardinality"));
+
+    /**
+     * 把白名单里的全大写类型名换成 ClickHouse 认的写法，并按需包 {@code Nullable(...)}。
+     *
+     * <p>ClickHouse 的 {@code ADD COLUMN} 只接受
+     * 「类型 [DEFAULT|CODEC|TTL|COMMENT]」，不接受 MySQL 那种 {@code NULL}/{@code NOT NULL}
+     * 后缀；可空性必须体现在类型上：{@code Nullable(String)}。</p>
+     *
+     * @param typeOnly  仅类型片段，如 {@code STRING}、{@code FIXEDSTRING(8)}
+     * @param nullable  是否可空
+     * @return ClickHouse 类型片段，如 {@code Nullable(String)}
+     */
+    private static String clickHouseType(String typeOnly, boolean nullable) {
+        String base = typeOnly;
+        String suffix = "";
+        int paren = typeOnly.indexOf('(');
+        if (paren > 0) {
+            base = typeOnly.substring(0, paren);
+            suffix = typeOnly.substring(paren);
+        }
+        String mapped = CLICKHOUSE_TYPE_CASING.getOrDefault(base.trim().toUpperCase(Locale.ROOT), base.trim());
+        String full = mapped + suffix;
+        return nullable ? "Nullable(" + full + ")" : full;
     }
 
     /**

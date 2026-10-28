@@ -62,13 +62,19 @@ public final class DatasourceProbeSupport {
      * @param questions           累计提问次数（MySQL 自身计数）
      * @param uptimeSeconds       服务器已运行秒数
      * @param maxUsedConnections  历史峰值客户端连接数
+     * @param memoryBytes         实例内存占用（字节）。来自
+     *                            {@code performance_schema.memory_summary_global_by_event_name}
+     *                            的 InnoDB 相关事件当前占用合计 —— 是 MySQL 进程
+     *                            <b>内部</b>内存（缓冲池 / 字典缓存等），不是宿主机内存；
+     *                            权限不足或 performance_schema 关闭时为 null
      */
     public record ServerStats(
             Long slowQueries,
             Long threadsRunning,
             Long questions,
             Long uptimeSeconds,
-            Long maxUsedConnections
+            Long maxUsedConnections,
+            Long memoryBytes
     ) {
     }
 

@@ -6,6 +6,7 @@ import com.chua.starter.datasourcehub.support.middleware.InfluxdbClient;
 import com.chua.starter.datasourcehub.support.middleware.MiddlewareNamespace;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbBucketVO;
+import com.chua.starter.datasourcehub.support.model.InfluxdbFieldVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbMeasurementVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbOrgVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbQueryResultVO;
@@ -203,6 +204,95 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         for (String measurement : names) {
             result.add(new InfluxdbMeasurementVO(measurement, fieldCounts.get(measurement),
                     tagCounts.get(measurement), lastWrites.get(measurement)));
+        }
+        return result;
+    }
+
+    @Override
+    public List<InfluxdbFieldVO> measurementFields(Long datasourceId, String bucket, String measurement) {
+        InfluxdbClient.Target target = client.target(datasourceId);
+        String name = trim(bucket);
+        if (name.isEmpty()) {
+            name = firstBucket(target);
+        }
+        String m = trim(measurement);
+        if (m.isEmpty()) {
+            return List.of();
+        }
+        try {
+            if (target.isV3()) {
+                return v3MeasurementFields(target, name, m);
+            }
+            if (!target.usesFlux()) {
+                return influxqlMeasurementFields(target, name, m);
+            }
+            return fluxMeasurementFields(target, name, m);
+        } catch (IllegalStateException e) {
+            log.debug("[influxdb] 获取度量字段失败: measurement={}, {}", m, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * v3 度量字段：从 information_schema.columns 取列定义。
+     */
+    private List<InfluxdbFieldVO> v3MeasurementFields(InfluxdbClient.Target target, String database, String measurement) {
+        String sql = "SELECT column_name, data_type FROM information_schema.columns"
+                + " WHERE table_name = '" + measurement.replace("'", "''") + "'";
+        List<JsonObject> rows = client.v3QuerySql(target, database, sql);
+        List<InfluxdbFieldVO> result = new ArrayList<>();
+        for (JsonObject row : rows) {
+            String colName = firstNonBlank(str(row.get("column_name")), str(row.get("name")));
+            String dataType = firstNonBlank(str(row.get("data_type")), str(row.get("type")));
+            if (colName.isEmpty() || "time".equals(colName)) {
+                continue;
+            }
+            boolean isTag = dataType.toLowerCase(Locale.ROOT).contains("dictionary");
+            result.add(new InfluxdbFieldVO(colName, dataType, isTag));
+        }
+        return result;
+    }
+
+    /**
+     * v2 Flux 度量字段：用 schema.tagKeys / schema.fieldKeys 过滤 _measurement。
+     */
+    private List<InfluxdbFieldVO> fluxMeasurementFields(InfluxdbClient.Target target, String bucket, String measurement) {
+        List<InfluxdbFieldVO> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        String tagFlux = "import \"influxdata/influxdb/schema\"\n"
+                + "schema.tagKeys(bucket: " + quote(bucket) + ")\n"
+                + "  |> filter(fn: (r) => r._measurement == " + quote(measurement) + ")";
+        for (JsonObject row : client.query(target, tagFlux)) {
+            String key = firstNonBlank(str(row.get("_value")), str(row.get("key")));
+            if (!key.isEmpty() && seen.add(key)) {
+                result.add(new InfluxdbFieldVO(key, "tag", true));
+            }
+        }
+        String fieldFlux = "import \"influxdata/influxdb/schema\"\n"
+                + "schema.fieldKeys(bucket: " + quote(bucket) + ")\n"
+                + "  |> filter(fn: (r) => r._measurement == " + quote(measurement) + ")";
+        for (JsonObject row : client.query(target, fieldFlux)) {
+            String key = firstNonBlank(str(row.get("_value")), str(row.get("key")));
+            if (!key.isEmpty() && !key.equals("_time") && seen.add(key)) {
+                result.add(new InfluxdbFieldVO(key, "field", false));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * v1 InfluxQL 度量字段：SHOW COLUMNS FROM measurement。
+     */
+    private List<InfluxdbFieldVO> influxqlMeasurementFields(InfluxdbClient.Target target, String database, String measurement) {
+        List<JsonObject> rows = client.v1Query(target, database, "SHOW COLUMNS FROM " + sqlIdentifier(measurement));
+        List<InfluxdbFieldVO> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (JsonObject row : rows) {
+            String key = firstNonBlank(str(row.get("field")), str(row.get("key")), str(row.get("name")));
+            if (!key.isEmpty() && !key.equals("_time") && seen.add(key)) {
+                boolean isTag = "true".equalsIgnoreCase(str(row.get("tag")));
+                result.add(new InfluxdbFieldVO(key, isTag ? "tag" : "field", isTag));
+            }
         }
         return result;
     }
