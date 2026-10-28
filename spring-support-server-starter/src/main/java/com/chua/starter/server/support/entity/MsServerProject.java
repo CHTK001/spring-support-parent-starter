@@ -154,6 +154,64 @@ public class MsServerProject {
     private String nginxDir;
 
     /**
+     * Git 仓库地址（如 https://github.com/org/repo.git 或 git@host:org/repo.git）
+     */
+    private String gitUrl;
+
+    /**
+     * Git 分支（默认 main）
+     */
+    private String gitBranch;
+
+    /**
+     * Git 认证方式：none=无认证；token=Personal Access Token
+     */
+    private String gitAuthType;
+
+    /**
+     * Git 访问令牌（gitAuthType=token 时使用）
+     */
+    private String gitToken;
+
+    /**
+     * Maven 构建目标（逗号分隔，如 "clean,package"）
+     */
+    private String gitBuildGoals;
+
+    /**
+     * 是否跳过测试（默认 true）
+     */
+    private Boolean gitSkipTests;
+
+    /**
+     * Maven 安装路径（可选，留空则自动检测 / 自动下载）
+     */
+    private String mavenHome;
+
+    /**
+     * Maven 版本（可选，自动下载时使用，默认 3.9.9）
+     */
+    private String mavenVersion;
+
+    /**
+     * 上传时是否自动解压（默认 true；jar 不解压，zip/tar.gz 解压）
+     * <p>模型项目上传模型文件到目录时设为 false，保留原文件结构</p>
+     */
+    private Boolean uploadExtract;
+
+    /**
+     * 上传目标目录（相对项目地址，如 models/onnx）
+     * <p>模型项目必填；jar 类项目留空则投放到主入口文件名</p>
+     */
+    private String uploadTargetDir;
+
+    /**
+     * 分离式部署类型：main=仅主包；lib=仅依赖；both=全部
+     * <p>仅 projectType=separated 时使用，控制升级时投放哪些文件</p>
+     */
+    private String deployType;
+
+    /**
      * 本次启动时间（运行时长基准，启动时写入、停止时清空）
      */
     private LocalDateTime runningSince;
