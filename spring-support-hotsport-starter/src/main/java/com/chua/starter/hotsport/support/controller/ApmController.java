@@ -747,6 +747,33 @@ public class ApmController {
     }
 
     /**
+     * 告警历史事件（DB 全量分页，时间倒序）。
+     *
+     * <p>内存环形缓冲只保留最近 100 条；历史查询走 MySQL（告警持久化激活时），
+     * 运维可以翻出重启前、甚至删除的旧事件。字段形状与 {@code /alerts} 一致。</p>
+     *
+     * @param limit  每页条数（<=200）
+     * @param offset 起始偏移（时间倒序）
+     * @return 历史事件列表
+     */
+    @GetMapping("/alerts/history")
+    public ReturnResult<List<Map<String, Object>>> alertHistory(
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(defaultValue = "0") int offset) {
+        return ReturnResult.ok(alertMonitorService.alertHistory(limit, offset));
+    }
+
+    /**
+     * 告警持久化层状态（运维排查：是否落库、事件库行数）。
+     *
+     * @return 持久化状态
+     */
+    @GetMapping("/alerts/persistence")
+    public ReturnResult<Map<String, Object>> alertPersistence() {
+        return ReturnResult.ok(alertMonitorService.alertStoreInfo());
+    }
+
+    /**
      * 告警规则列表。
      *
      * @return 规则列表
