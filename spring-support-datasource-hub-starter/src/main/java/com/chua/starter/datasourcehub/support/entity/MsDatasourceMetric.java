@@ -116,6 +116,17 @@ public class MsDatasourceMetric implements Serializable {
     private Long maxUsedConnections;
 
     /**
+     * 实例内存占用（字节，MySQL/MariaDB，取不到为 null）。
+     *
+     * <p>来自 {@code performance_schema.memory_summary_global_by_event_name} 的
+     * InnoDB 事件当前占用合计 —— 是 MySQL 进程内部内存（缓冲池 / 数据字典等），
+     * 不是宿主机内存；前端卡片如实标注口径。</p>
+     */
+    @TableField("instance_memory")
+    @Schema(description = "实例内存占用（字节），取不到为 null", example = "536870912")
+    private Long memoryBytes;
+
+    /**
      * 1 经 SSH 隧道 / 0 直连 / null 未判定
      */
     @TableField("tunneled")

@@ -4,6 +4,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.datasource.support.middleware.MiddlewareClientProvider;
 import com.chua.datasource.support.middleware.MiddlewareNotInstalledException;
+import com.chua.starter.datasourcehub.support.support.MiddlewareDriverSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -47,6 +48,10 @@ public class MiddlewareClientRegistry {
      *
      * <p>每次现取而不是构造期快照：OSGi bundle 是运行期安装的，
      * 快照会导致「装上后用不了、卸掉后还在」。</p>
+     *
+     * <p>除 classpath 上的 SPI 实现外，还要并入「上传 jar 里的实现」：
+     * 单 jar 的中间件客户端不随产物发布，用户传上来后必须立刻可用。
+     * 同名时以上传的为准——用户显式传了一个实现，说明他要的就是这一份。</p>
      */
     private Map<String, MiddlewareClientProvider> snapshot() {
         Map<String, MiddlewareClientProvider> map = new LinkedHashMap<>();
@@ -69,6 +74,8 @@ public class MiddlewareClientRegistry {
                 log.warn("[middleware] 跳过初始化失败的 SPI 实现: {}", String.valueOf(definition.getName()), t);
             }
         }
+        // 上传 jar 的实现放在最后覆盖，保证「传上来的这份」生效
+        map.putAll(MiddlewareDriverSupport.uploaded());
         return map;
     }
 

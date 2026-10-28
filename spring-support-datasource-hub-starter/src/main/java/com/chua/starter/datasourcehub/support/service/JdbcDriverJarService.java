@@ -2,6 +2,7 @@ package com.chua.starter.datasourcehub.support.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.datasource.support.middleware.MiddlewareClientProvider;
 import com.chua.starter.datasourcehub.support.config.DatasourceHubProperties;
 import com.chua.starter.datasourcehub.support.entity.MsDatasource;
 import com.chua.starter.datasourcehub.support.entity.MsJdbcDriverJar;
@@ -9,6 +10,8 @@ import com.chua.starter.datasourcehub.support.mapper.MsDatasourceMapper;
 import com.chua.starter.datasourcehub.support.mapper.MsJdbcDriverJarMapper;
 import com.chua.starter.datasourcehub.support.model.JdbcDriverJarVO;
 import com.chua.starter.datasourcehub.support.support.JdbcDriverSupport;
+import com.chua.starter.datasourcehub.support.support.MiddlewareDriverSupport;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -83,12 +86,25 @@ public class JdbcDriverJarService {
      * 「内容指纹 + 净化后的原名」拼成。原名里可能带 {@code ../}，
      * 直接用原名落盘就是目录穿越。</p>
      *
-     * @param file             上传文件
-     * @param driverClassName  驱动类全名
-     * @param remark           备注
+     * <p><b>两类 jar 共用一条通道</b>：{@code kind=jdbc} 时入口类必须是
+     * {@link java.sql.Driver}；{@code kind=middleware} 时入口类必须是
+     * {@code MiddlewareClientProvider}，且它的 {@code name()} 决定数据源类型名。
+     * 两种情形都在上传当下实例化一次，失败就把文件与台账一起回滚 ——
+     * 不留「传上去了、一用就 ClassNotFound」的半成品。</p>
+     *
+     * @param file            上传文件
+     * @param driverClassName 入口类全名
+     * @param remark          备注
+     * @param kind            jar 类别，空按 {@code jdbc}
      * @return 落库后的驱动 jar
      */
-    public ReturnResult<JdbcDriverJarVO> upload(MultipartFile file, String driverClassName, String remark) {
+    public ReturnResult<JdbcDriverJarVO> upload(MultipartFile file, String driverClassName, String remark, String kind) {
+        String jarKind = kind == null || kind.isBlank()
+                ? JdbcDriverJarVO.KIND_JDBC
+                : kind.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!JdbcDriverJarVO.KIND_JDBC.equals(jarKind) && !JdbcDriverJarVO.KIND_MIDDLEWARE.equals(jarKind)) {
+            return ReturnResult.error("不支持的 jar 类别: " + kind + "（只接受 jdbc / middleware）");
+        }
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("驱动 jar 文件为空");
         }
@@ -106,6 +122,7 @@ public class JdbcDriverJarService {
         }
         Path root;
         Path target;
+        boolean preexisting;
         try {
             root = rootDir();
             // 先写临时文件再算指纹，避免把整包读进内存
@@ -116,6 +133,9 @@ public class JdbcDriverJarService {
             String sha = JdbcDriverSupport.sha256(tmp.toFile());
             String stored = sha.substring(0, 16) + "-" + original;
             target = root.resolve(stored);
+            // 记下「这份内容之前是否已经在库里」：同一份 jar 传第二次时不能当成新文件，
+            // 更不能在后续校验失败时把已登记的那份删掉
+            preexisting = Files.exists(target);
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             return ReturnResult.error("驱动 jar 落盘失败: " + e.getMessage());
@@ -125,6 +145,7 @@ public class JdbcDriverJarService {
         row.setJarName(original);
         row.setStoredName(target.getFileName().toString());
         row.setDriverClassName(driverClass);
+        row.setJarKind(jarKind);
         row.setJarSize(file.getSize());
         try {
             row.setJarSha256(JdbcDriverSupport.sha256(target.toFile()));
@@ -133,26 +154,84 @@ public class JdbcDriverJarService {
         }
         row.setJarRemark(remark == null ? "" : remark.trim());
         row.setCreateTime(LocalDateTime.now());
-        driverJarMapper.insert(row);
 
         // 立刻验证一次：现在失败比用户配好数据源后连不上再排查便宜得多
         try {
-            JdbcDriverSupport.driverOf(target.toFile(), driverClass);
-        } catch (Exception e) {
-            // 校验不通过就把刚传的删掉，不留一个用不了的 jar 在库里
-            JdbcDriverSupport.evict(target.toFile());
-            driverJarMapper.deleteById(row.getId());
-            try {
-                Files.deleteIfExists(target);
-            } catch (IOException deleteError) {
-                // 文件删不掉不该盖掉真正的失败原因（驱动类加载失败），只记日志
-                log.warn("[datasource-hub] 校验失败后删除 jar 文件失败: {} -> {}", target, deleteError.getMessage());
+            if (JdbcDriverJarVO.KIND_MIDDLEWARE.equals(jarKind)) {
+                MiddlewareClientProvider provider =
+                        MiddlewareDriverSupport.providerOf(target.toFile(), driverClass);
+                // 类型名由实现自己说了算，回填进台账——让用户手填必然出现对不上的情况
+                row.setProviderName(provider.name().toLowerCase(java.util.Locale.ROOT));
+            } else {
+                JdbcDriverSupport.driverOf(target.toFile(), driverClass);
+                row.setProviderName("");
             }
-            return ReturnResult.error("jar 里找不到或无法实例化驱动类 " + driverClass + ": " + e.getMessage());
+        } catch (Exception e) {
+            // 校验不通过就把刚传的删掉，不留一个用不了的 jar 在库里。
+            // 但如果是「同一份内容以前已登记过」，文件不是这次新建的，删了会连累老登记
+            JdbcDriverSupport.evict(target.toFile());
+            MiddlewareDriverSupport.evict(target.toFile());
+            if (!preexisting) {
+                try {
+                    Files.deleteIfExists(target);
+                } catch (IOException deleteError) {
+                    // 文件删不掉不该盖掉真正的失败原因（入口类加载失败），只记日志
+                    log.warn("[datasource-hub] 校验失败后删除 jar 文件失败: {} -> {}", target, deleteError.getMessage());
+                }
+            }
+            String what = JdbcDriverJarVO.KIND_MIDDLEWARE.equals(jarKind) ? "中间件客户端" : "驱动类";
+            return ReturnResult.error("jar 里找不到或无法实例化" + what + " " + driverClass + ": " + e.getMessage());
         }
-        log.info("[datasource-hub] 已上传 JDBC 驱动: {} ({} bytes) driver={}",
-                original, file.getSize(), driverClass);
+        // 同一份内容只登记一次（stored_name 上有唯一键）：重复上传直接复用老登记，
+        // 既不会插出重复行，也不会让老数据源引用的记录消失
+        MsJdbcDriverJar existing = driverJarMapper.selectOne(new LambdaQueryWrapper<MsJdbcDriverJar>()
+                .eq(MsJdbcDriverJar::getStoredName, target.getFileName().toString()));
+        if (existing != null) {
+            if (existing.getDriverClassName() != null
+                    && existing.getDriverClassName().equals(driverClass)
+                    && jarKind.equalsIgnoreCase(existing.getJarKind() == null ? JdbcDriverJarVO.KIND_JDBC : existing.getJarKind())) {
+                log.info("[datasource-hub] 驱动 jar 已存在，直接复用登记: id={} file={}", existing.getId(), existing.getStoredName());
+                return ReturnResult.ok(toVO(existing));
+            }
+            return ReturnResult.error("这份 jar 已登记为「" + existing.getDriverClassName() + "」，"
+                    + "同一份文件不能重复登记成另一个入口类；请先删除原登记再上传");
+        }
+        driverJarMapper.insert(row);
+        log.info("[datasource-hub] 已上传驱动 jar: {} ({} bytes) kind={} entry={}",
+                original, file.getSize(), jarKind, driverClass);
         return ReturnResult.ok(toVO(row));
+    }
+
+    /**
+     * 应用启动时把已上传的中间件 jar 重新装配一遍。
+     *
+     * <p>类加载器在内存里，进程一重启就没了；台账还在，所以启动时必须按台账重放，
+     * 否则用户看到的是「jar 明明在库里，功能却未开放」。单个 jar 加载失败只告警，
+     * 不能拖垮整个应用启动。</p>
+     */
+    @PostConstruct
+    public void warmUpMiddlewareJars() {
+        List<MsJdbcDriverJar> rows;
+        try {
+            rows = driverJarMapper.selectList(new LambdaQueryWrapper<MsJdbcDriverJar>()
+                    .eq(MsJdbcDriverJar::getJarKind, JdbcDriverJarVO.KIND_MIDDLEWARE));
+        } catch (RuntimeException e) {
+            log.warn("[datasource-hub] 读取中间件 jar 台账失败，跳过启动装配: {}", e.getMessage());
+            return;
+        }
+        for (MsJdbcDriverJar row : rows) {
+            try {
+                java.io.File jar = rootDir().resolve(row.getStoredName()).toFile();
+                if (!jar.isFile()) {
+                    log.warn("[datasource-hub] 中间件 jar 文件缺失，跳过: {}", row.getStoredName());
+                    continue;
+                }
+                MiddlewareDriverSupport.providerOf(jar, row.getDriverClassName());
+            } catch (Exception e) {
+                log.warn("[datasource-hub] 启动装配中间件 jar 失败: {} -> {}",
+                        row.getJarName(), e.getMessage());
+            }
+        }
     }
 
     /**
@@ -177,6 +256,7 @@ public class JdbcDriverJarService {
         try {
             Path file = rootDir().resolve(row.getStoredName());
             JdbcDriverSupport.evict(file.toFile());
+            MiddlewareDriverSupport.evict(file.toFile());
             Files.deleteIfExists(file);
         } catch (IOException e) {
             log.warn("[datasource-hub] 删除 jar 文件失败（台账已删）: {}", e.getMessage());
@@ -213,7 +293,9 @@ public class JdbcDriverJarService {
     public String driverClassNameOf(Long driverJarId, String fallbackOnRow) {
         if (driverJarId != null) {
             MsJdbcDriverJar row = driverJarMapper.selectById(driverJarId);
-            if (row != null && row.getDriverClassName() != null && !row.getDriverClassName().isBlank()) {
+            // 中间件 jar 的 driver_class_name 是 SPI 实现类，不能当 JDBC 驱动类用
+            if (row != null && !JdbcDriverJarVO.KIND_MIDDLEWARE.equalsIgnoreCase(row.getJarKind())
+                    && row.getDriverClassName() != null && !row.getDriverClassName().isBlank()) {
                 return row.getDriverClassName().trim();
             }
         }
@@ -255,6 +337,9 @@ public class JdbcDriverJarService {
         return new JdbcDriverJarVO(row.getId(), row.getJarName(), row.getStoredName(),
                 row.getDriverClassName(), row.getJarSize(), row.getJarSha256(),
                 row.getJarRemark() == null ? "" : row.getJarRemark(),
-                row.getCreateTime() == null ? null : row.getCreateTime().toString());
+                row.getCreateTime() == null ? null : row.getCreateTime().toString(),
+                row.getJarKind() == null || row.getJarKind().isBlank()
+                        ? JdbcDriverJarVO.KIND_JDBC : row.getJarKind(),
+                row.getProviderName() == null ? "" : row.getProviderName());
     }
 }

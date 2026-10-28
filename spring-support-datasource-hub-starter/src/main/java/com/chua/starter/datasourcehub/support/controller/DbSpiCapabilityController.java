@@ -539,14 +539,20 @@ public class DbSpiCapabilityController {
             // 默认只看 1ms 以上的语句：performance_schema 里大量 0.0x ms 的语句会把面板刷成噪声，
             // 需要全量时前端传 minAvgMs=0。
             double floor = minAvgMs == null ? DEFAULT_SLOW_MS : minAvgMs;
+            int seq = 0;
             for (SlowQueryInfo info : manager.listSlowQueries(floor, limit == null ? 0 : limit)) {
                 Map<String, Object> row = new LinkedHashMap<>();
+                // 逐条事件来源下 digest 会重复（同一语句多个客户端/多次执行），
+                // 前端表格 row-key 需要唯一字段：用行号序列（刷新全量替换，键稳定即可）。
+                row.put("id", seq++);
                 // 前端「语句摘要」列展示样板语句；没有样板时退回摘要哈希
                 row.put("digest", info.digestText() == null ? info.digest() : info.digestText());
                 row.put("avgMs", round1(info.avgMs()));
                 row.put("maxMs", round1(info.maxMs()));
                 row.put("calls", info.calls());
                 row.put("lastAt", info.lastSeen());
+                // 逐条事件 / 慢日志来源有客户端主机，聚合来源为 null（前端显示「—」）
+                row.put("host", info.host());
                 rows.add(row);
             }
             payload.put("supported", true);

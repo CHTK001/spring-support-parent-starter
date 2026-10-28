@@ -537,12 +537,25 @@ public class InfluxdbClient {
         List<JsonObject> rows = new ArrayList<>();
         List<String> header = null;
         for (String line : text.split("\r?\n")) {
-            if (line.isEmpty() || line.startsWith("#")) {
+            if (line.isEmpty()) {
+                continue;
+            }
+            if (line.startsWith("#")) {
+                // 每个 table 前都会重复一段注解（#group / #datatype / #default）再跟一行表头。
+                // 只认第一个表头会把后续 table 的表头当成数据行（_start=_start 这种脏行），
+                // 所以每遇到 #datatype 就把 header 置空，让下一行非注解行重新当表头。
+                if (line.startsWith("#datatype")) {
+                    header = null;
+                }
                 continue;
             }
             List<String> cells = splitCsv(line);
             if (header == null) {
                 header = cells;
+                continue;
+            }
+            // 兜底：没有 #datatype 但表头行重复出现时，按「与表头完全一致」识别并跳过
+            if (cells.equals(header)) {
                 continue;
             }
             JsonObject row = new JsonObject();

@@ -70,7 +70,29 @@ public record DbColumnDef(
             // 枚举集合
             "ENUM", "SET",
             // JSON
-            "JSON");
+            "JSON",
+            // 向量（MySQL 9 的 VECTOR(n)、pgvector 的 vector(n)）。
+            // 维度必填，上限 16383 由 normalizeSize 单独校验。
+            "VECTOR",
+            // PostgreSQL：字节数组 / 带时区时间戳 / 区间 / 二进制 JSON
+            "BYTEA", "TIMESTAMPTZ", "INTERVAL", "JSONB",
+            // Oracle：数值 / 变长字符 / 大字符 / 原始字节 / 二进制浮点
+            "NUMBER", "VARCHAR2", "NVARCHAR2", "NCHAR", "CLOB", "NCLOB", "RAW",
+            "BINARY_FLOAT", "BINARY_DOUBLE",
+            // SQL Server：货币 / 双字节字符 / 长文本 / 图像 / 日期时间族 / GUID / XML
+            "MONEY", "SMALLMONEY", "NVARCHAR", "NTEXT", "IMAGE",
+            "DATETIME2", "SMALLDATETIME", "DATETIMEOFFSET", "UNIQUEIDENTIFIER", "XML",
+            // DuckDB：无符号整数 / 128 位整数
+            "UTINYINT", "USMALLINT", "UINTEGER", "UBIGINT", "HUGEINT",
+            // ClickHouse 原生类型。放在同一张白名单里是因为校验发生在构造期（拿不到连接），
+            // 无法按方言分流；其它内核不认这些类型，会以「类型不存在」拒收 ——
+            // 失败是明确的，不再出现「选了 String 直接被白名单挡在门外」。
+            "STRING", "FIXEDSTRING",
+            "UINT8", "UINT16", "UINT32", "UINT64",
+            "INT8", "INT16", "INT32", "INT64",
+            "FLOAT32", "FLOAT64",
+            "DATE32", "DATETIME64",
+            "UUID", "IPV4", "IPV6");
 
     /** 允许 UNSIGNED / ZEROFILL 的类型（字符与日期类不允许）。 */
     private static final Set<String> UNSIGNED_ALLOWED = Set.of(
@@ -79,10 +101,20 @@ public record DbColumnDef(
 
     /** 需要长度的类型。 */
     private static final Set<String> SIZE_REQUIRED = Set.of(
-            "CHAR", "VARCHAR", "BINARY", "VARBINARY", "DECIMAL", "NUMERIC");
+            "CHAR", "VARCHAR", "BINARY", "VARBINARY", "DECIMAL", "NUMERIC",
+            // Oracle / SQL Server 的变长与定长字符、原始字节
+            "VARCHAR2", "NVARCHAR2", "NCHAR", "NVARCHAR", "RAW",
+            // 向量：维度就是长度，必须写
+            "VECTOR",
+            // ClickHouse 的 FixedString 必须写长度（FixedString(N)）
+            "FIXEDSTRING");
 
     /** 允许带小数位（精度）的类型。 */
-    private static final Set<String> SCALE_ALLOWED = Set.of("DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "REAL");
+    private static final Set<String> SCALE_ALLOWED = Set.of(
+            "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "REAL", "NUMBER");
+
+    /** 向量维度上限（MySQL 9 与 pgvector 都落在 16000 附近，取两者的安全交集）。 */
+    private static final int MAX_VECTOR_DIM = 16383;
 
     /** ENUM / SET 的取值个数上限。 */
     private static final int MAX_ENUM_VALUES = 255;
@@ -167,6 +199,11 @@ public record DbColumnDef(
         }
         if (size < 1 || size > 65535) {
             throw new IllegalArgumentException("长度必须在 1 到 65535 之间");
+        }
+        // 向量维度是「长度」的语义，但上限远低于 65535：MySQL 9 与 pgvector 都在 16000 上下，
+        // 取 16383 作为两者都接受的上界，避免把 6 万维的 DDL 发给内核再被拒。
+        if ("VECTOR".equals(type) && size > MAX_VECTOR_DIM) {
+            throw new IllegalArgumentException("VECTOR 维度不能超过 " + MAX_VECTOR_DIM);
         }
         if (type.startsWith("CHAR") && size > 255 && !"LONGTEXT".equals(type)) {
             throw new IllegalArgumentException(type + " 的长度不能超过 255");
@@ -304,6 +341,42 @@ public record DbColumnDef(
      * @return DDL 片段
      */
     public String toSqlFragment() {
+        StringBuilder ddl = new StringBuilder(toTypeOnlyFragment());
+        ddl.append(nullable ? " NULL" : " NOT NULL");
+        if (!defaultValue.isEmpty()) {
+            ddl.append(" DEFAULT ").append(quoteSqlLiteral(defaultValue));
+        }
+        if (autoIncrement) {
+            ddl.append(" AUTO_INCREMENT");
+        }
+        if (generated) {
+            ddl.append(" GENERATED ALWAYS AS (");
+            ddl.append(quoteSqlLiteral(defaultValue));
+            ddl.append(") STORED");
+        }
+        if (!onUpdate.isEmpty()) {
+            ddl.append(" ON UPDATE ").append(onUpdate);
+        }
+        if (!comment.isEmpty()) {
+            ddl.append(" COMMENT ").append(quoteSqlLiteral(comment));
+        }
+        return ddl.toString();
+    }
+
+    /**
+     * 只拼「类型本身」的部分：类型名 + 长度/精度 + ENUM 取值 + UNSIGNED/ZEROFILL
+     * + 字符集/排序规则，**不含**可空性、DEFAULT、AUTO_INCREMENT、COMMENT 等列属性。
+     *
+     * <p>为什么要单独拆出来：{@link #toSqlFragment()} 无条件追加 {@code NULL}/
+     * {@code NOT NULL}（MySQL 语法），而不少内核的 {@code ALTER TABLE ... ADD COLUMN}
+     * 根本不接受这个后缀 —— ClickHouse 就要求列类型后直接跟 {@code DEFAULT}/{@code CODEC}/
+     * {@code TTL}/{@code COMMENT} 或语句结束，写了 {@code NULL} 直接
+     * {@code SYNTAX_ERROR: failed at position ... ('NULL')}。
+     * 跨方言拼「改列 / 加列」时只能用这个片段。</p>
+     *
+     * @return 仅类型部分的 DDL 片段，如 {@code VARCHAR(64)}
+     */
+    public String toTypeOnlyFragment() {
         StringBuilder ddl = new StringBuilder(type);
         if (size != null) {
             ddl.append('(').append(size);
@@ -332,24 +405,6 @@ public record DbColumnDef(
         }
         if (!collation.isEmpty()) {
             ddl.append(" COLLATE ").append(collation);
-        }
-        ddl.append(nullable ? " NULL" : " NOT NULL");
-        if (!defaultValue.isEmpty()) {
-            ddl.append(" DEFAULT ").append(quoteSqlLiteral(defaultValue));
-        }
-        if (autoIncrement) {
-            ddl.append(" AUTO_INCREMENT");
-        }
-        if (generated) {
-            ddl.append(" GENERATED ALWAYS AS (");
-            ddl.append(quoteSqlLiteral(defaultValue));
-            ddl.append(") STORED");
-        }
-        if (!onUpdate.isEmpty()) {
-            ddl.append(" ON UPDATE ").append(onUpdate);
-        }
-        if (!comment.isEmpty()) {
-            ddl.append(" COMMENT ").append(quoteSqlLiteral(comment));
         }
         return ddl.toString();
     }
@@ -386,6 +441,12 @@ public record DbColumnDef(
         }
         if (zerofill) {
             upper = upper.replace(" ZEROFILL", "").replace("ZEROFILL", "").trim();
+        }
+        // ClickHouse 的可空包装 Nullable(T) 必须先剥掉外层：
+        // 否则下面按「第一个左括号」切出来的 baseType 是 NULLABLE，
+        // 前端「列属性」弹窗按 baseType 回填类型时就会显示一个内核里不存在的类型。
+        if (upper.startsWith("NULLABLE(") && upper.endsWith(")")) {
+            upper = upper.substring("NULLABLE(".length(), upper.length() - 1).trim();
         }
         String base = upper;
         List<String> enumValues = List.of();

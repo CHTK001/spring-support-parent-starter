@@ -150,7 +150,8 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                                 r.getThreadsRunning(),
                                 r.getQuestions(),
                                 r.getUptime(),
-                                r.getMaxUsedConnections()
+                                r.getMaxUsedConnections(),
+                                r.getMemoryBytes()
                         )))
                 .toList();
         return ReturnResult.success(
@@ -209,6 +210,7 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                 row.setQuestions(serverStats.questions());
                 row.setUptime(serverStats.uptimeSeconds());
                 row.setMaxUsedConnections(serverStats.maxUsedConnections());
+                row.setMemoryBytes(serverStats.memoryBytes());
             }
             if (error != null) {
                 row.setErrorMessage(error.length() > 500 ? error.substring(0, 500) : error);

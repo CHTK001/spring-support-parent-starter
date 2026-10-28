@@ -1,6 +1,7 @@
 package com.chua.starter.datasourcehub.support.service;
 
 import com.chua.starter.datasourcehub.support.model.InfluxdbBucketVO;
+import com.chua.starter.datasourcehub.support.model.InfluxdbFieldVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbMeasurementVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbOrgVO;
 import com.chua.starter.datasourcehub.support.model.InfluxdbQueryResultVO;
@@ -47,6 +48,19 @@ public interface InfluxdbManageService {
      * @return 度量列表
      */
     List<InfluxdbMeasurementVO> measurements(Long datasourceId, String bucket);
+
+    /**
+     * 获取度量下的字段（tag + field）信息。
+     *
+     * <p>用于数据库管理器的列展示：tag 作为维度列、field 作为度量列。
+     * v3 走 information_schema.columns，v2/v1 走 Flux/InfluxQL schema 查询。</p>
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @param bucket       Bucket 名，为空时取第一个 Bucket
+     * @param measurement  度量名
+     * @return 字段列表（tag + field），失败时返回空列表
+     */
+    List<InfluxdbFieldVO> measurementFields(Long datasourceId, String bucket, String measurement);
 
     /**
      * 执行一条 Flux 查询。
