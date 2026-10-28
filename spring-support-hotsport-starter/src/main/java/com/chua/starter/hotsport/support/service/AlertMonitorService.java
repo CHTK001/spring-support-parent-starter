@@ -231,9 +231,10 @@ public class AlertMonitorService {
             Map<String, AlertRule> loadedMap = new java.util.HashMap<>();
             for (AlertRule r : loaded) {
                 loadedMap.put(r.metric, r);
-                if (r.id > ruleIdGen.get()) {
-                    ruleIdGen.set(r.id);
-                }
+                // id 计数器语义 = 下一个可用 id（上一版本用 set(r.id) + getAndIncrement
+                // 会返回 max 而非 max+1，重启后新增规则 INSERT 撞主键落库失败 —— 实测
+                // Duplicate entry 'max' for key 'PRIMARY'）
+                ruleIdGen.accumulateAndGet(r.id + 1L, Math::max);
             }
             if (!loadedMap.isEmpty()) {
                 rules.clear();
@@ -254,17 +255,13 @@ public class AlertMonitorService {
             List<AlertChannel> channels = alertStore.loadChannels();
             for (AlertChannel c : channels) {
                 this.channels.put(c.id, c);
-                if (c.id > channelIdGen.get()) {
-                    channelIdGen.set(c.id);
-                }
+                channelIdGen.accumulateAndGet(c.id + 1L, Math::max);
             }
             // 最近事件：填满环形缓冲，重启后页面仍有历史
             List<AlertEvent> recent = alertStore.loadRecentEvents(EVENT_CAPACITY);
             for (AlertEvent e : recent) {
                 events.addLast(e);
-                if (e.id > eventIdGen.get()) {
-                    eventIdGen.set(e.id);
-                }
+                eventIdGen.accumulateAndGet(e.id + 1L, Math::max);
             }
         } catch (Exception e) {
             log.warn("[Hotsport] 告警持久化回灌失败（继续纯内存运行）: {}", e.getMessage());
@@ -297,7 +294,9 @@ public class AlertMonitorService {
      * {@code jvmMetricsService.activeLeakCount()}；cpu_percent →
      * {@code lastSample().cpu.processCpuLoad}；thread_count →
      * {@code lastSample().threads.liveThreads}；transmission_rate →
-     * {@link #computeTransmissionRate()}。</p>
+     * {@link #computeTransmissionRate()}；physical_used_percent →
+     * {@code lastSample().os.physicalUsedPercent}（物理内存使用率）；
+     * system_cpu_load → {@code lastSample().os.systemCpuLoad}（系统 CPU 使用率）。</p>
      */
     public void check() {
         try {
@@ -310,6 +309,10 @@ public class AlertMonitorService {
             double cpuPercent = metricDouble(sample, "cpu", "processCpuLoad");
             double threadCount = metricDouble(sample, "threads", "liveThreads");
             double transmissionRate = computeTransmissionRate();
+            // 物理内存 / 系统 CPU：来自 PlatformMXBean 真实采样（os.physicalUsedPercent /
+            // os.systemCpuLoad，0-100 百分比），与磁盘/堆一样是 host 级资源指标
+            double physicalUsedPercent = metricDouble(sample, "os", "physicalUsedPercent");
+            double systemCpuLoad = metricDouble(sample, "os", "systemCpuLoad");
 
             for (AlertRule rule : rules.values()) {
                 if (rule == null || !rule.enabled) {
@@ -334,6 +337,12 @@ public class AlertMonitorService {
                         break;
                     case "transmission_rate":
                         current = transmissionRate;
+                        break;
+                    case "physical_used_percent":
+                        current = physicalUsedPercent;
+                        break;
+                    case "system_cpu_load":
+                        current = systemCpuLoad;
                         break;
                     default:
                         continue;

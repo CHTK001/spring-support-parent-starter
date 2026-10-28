@@ -1,0 +1,1 @@
+import{t as e}from"./ReCountup-DpWXlp0n.js";var t={install(t){t.component(`ReCountup`,e)}},n=e;export{n as default,t as install};

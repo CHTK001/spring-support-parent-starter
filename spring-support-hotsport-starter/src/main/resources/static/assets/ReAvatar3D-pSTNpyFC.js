@@ -1,0 +1,1 @@
+import{n as e,t}from"./ReAvatar3D-DveYx-XZ.js";export{t as default,e as install};

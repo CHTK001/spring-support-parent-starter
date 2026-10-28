@@ -1,0 +1,1 @@
+import{n as e,t}from"./ReEmpty-boYWDbIn.js";export{t as default,e as install};

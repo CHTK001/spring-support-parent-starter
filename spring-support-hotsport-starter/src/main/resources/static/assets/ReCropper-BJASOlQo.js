@@ -1,1 +1,0 @@
-import{t as e}from"./ReCropper-Bs354fCr.js";var t={install(t){t.component(`ReCropper`,e)}},n=e;export{n as default,t as install};
