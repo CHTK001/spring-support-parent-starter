@@ -13,7 +13,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
@@ -51,20 +50,17 @@ public class AiCacheAutoConfiguration {
     /**
      * 默认缓存管理器：本地 Caffeine（未显式指定 cacheManager 的 @Cacheable 使用）。
      *
-     * <p>标注了 {@code @Primary}：仅本机独立启动 {@code AiStarterApplication} 时生效
-     * （生产按库引入、被 monitor / system 宿主运行时，由宿主的框架
-     * {@code DefaultCacheManagerConfiguration.defaultCacheManager}
-     * 给出主缓存管理器，此时再标 {@code @Primary} 会两处撞车）。本类所在的类路径在独立启动
-     * 时没有框架主缓存管理器，不由 {@code @Primary} 兜底的话，按 {@code CacheManager}
-     * 类型注入的消费方（如 {@code WorldSimServiceImpl}）直接抛 {@code BeanCreationException}
-     *，整个上下文无法 refresh、端口起不来（本地 dev 用）。</p>
-     *
-     * <p>要指名用本地 Caffeine 时按 bean 名 {@code aiCacheManager} 引用即可，
-     * 本类里 {@code redis-cache-*} 三个管理器本来也都是这么用的。</p>
+     * <p><b>刻意不标 {@code @Primary}。</b>宿主（monitor / system / eduai）里已经有框架给的
+     * 主缓存管理器 {@code defaultCacheManager} 和 {@code cacheWithRedis}，本模块再标一个
+     * {@code @Primary} 就变成「多个 primary」，所有按 {@code CacheManager} 类型注入的消费方
+     * （如 eduai 的 {@code sysAnnouncementScheduleTask}）会在 refresh 阶段直接抛
+     * {@code NoUniqueBeanDefinitionException}，整个应用起不来。独立启动
+     * {@code AiStarterApplication} 时同理不需要主管理器兜底 —— 需要本地 Caffeine 的
+     * 消费方按 bean 名 {@code aiCacheManager} 引用即可（本类里 {@code redis-cache-*}
+     * 三个管理器本来也都是按名注入的）。</p>
      *
      * @return Caffeine 缓存管理器
      */
-    @Primary
     @Bean
     public CacheManager aiCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();

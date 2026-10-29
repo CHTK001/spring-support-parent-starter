@@ -19,7 +19,7 @@ import com.chua.starter.ai.support.mapper.SysAiWorldRelationshipMapper;
 import com.chua.starter.ai.support.mapper.SysAiWorldSceneMapper;
 import com.chua.starter.ai.support.service.WorldSimService;
 import com.chua.starter.ai.support.util.AiUserContext;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
@@ -42,7 +42,6 @@ import java.util.Map;
  * @since 4.0.0.42
  */
 @Service
-@RequiredArgsConstructor
 public class WorldSimServiceImpl implements WorldSimService {
 
     /** 世界视图缓存名（Caffeine 本地，30 分钟 TTL，变更后主动失效） */
@@ -58,7 +57,51 @@ public class WorldSimServiceImpl implements WorldSimService {
     private final SysAiWorldEventMapper eventMapper;
     private final SysAiWorldMessageMapper messageMapper;
     private final SysAiRoleMapper roleMapper;
+
+    /**
+     * 本地 Caffeine 缓存管理器。
+     *
+     * <p>必须按 bean 名注入：宿主（如 eduai）里同时存在多个 {@code @Primary}
+     * 的 {@code CacheManager}（{@code defaultCacheManager}、{@code cacheWithRedis}）
+     * 与本模块的 {@code aiCacheManager}，按类型注入会因「多个 primary」直接让上下文
+     * 启动失败。本服务只写 {@code aiWorldView} / {@code aiWorldList} 这两个本地缓存，
+     * 与 Redis 无关。</p>
+     */
     private final CacheManager cacheManager;
+
+    /**
+     * 构造注入。
+     *
+     * <p>不用 {@code @RequiredArgsConstructor}：Lombok 不会把字段上的 {@link Qualifier}
+     * 复制到构造参数，Spring 仍按类型注入，撞上多个 {@code @Primary} 的
+     * {@code CacheManager} 时上下文直接起不来。这里显式声明构造器，把限定符写在参数上。</p>
+     *
+     * @param worldMapper          世界
+     * @param sceneMapper          场景
+     * @param npcMapper            NPC
+     * @param relationshipMapper   关系
+     * @param eventMapper          事件
+     * @param messageMapper        消息
+     * @param roleMapper           角色
+     * @param cacheManager         本地 Caffeine 缓存管理器（aiCacheManager）
+     */
+    public WorldSimServiceImpl(SysAiWorldMapper worldMapper,
+                               SysAiWorldSceneMapper sceneMapper,
+                               SysAiWorldNpcMapper npcMapper,
+                               SysAiWorldRelationshipMapper relationshipMapper,
+                               SysAiWorldEventMapper eventMapper,
+                               SysAiWorldMessageMapper messageMapper,
+                               SysAiRoleMapper roleMapper,
+                               @Qualifier("aiCacheManager") CacheManager cacheManager) {
+        this.worldMapper = worldMapper;
+        this.sceneMapper = sceneMapper;
+        this.npcMapper = npcMapper;
+        this.relationshipMapper = relationshipMapper;
+        this.eventMapper = eventMapper;
+        this.messageMapper = messageMapper;
+        this.roleMapper = roleMapper;
+        this.cacheManager = cacheManager;
+    }
 
     /* ---------------- 世界 ---------------- */
 
