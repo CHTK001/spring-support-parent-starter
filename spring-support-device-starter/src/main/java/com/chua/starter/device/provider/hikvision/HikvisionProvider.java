@@ -10,6 +10,7 @@ import com.chua.starter.device.spi.model.AuthTypeDescriptor;
 import com.chua.starter.device.spi.model.CredentialField;
 import com.chua.starter.device.spi.model.DeviceCapability;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.spi.model.DevicePerson;
 import com.chua.starter.device.spi.model.DeviceVendorDescriptor;
 import com.chua.starter.device.spi.model.OrganizationNode;
 import com.chua.starter.device.spi.model.PlatformDescriptor;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 海康设备 提供者
@@ -206,6 +209,54 @@ public class HikvisionProvider implements DeviceProvider {
     }
 
     @Override
+    /**
+     * 按凭据建连后的会话语境拉取设备目录（cloud-yao OpenAPI：厂商侧组织维度设备列表）
+     */
+    public List<VendorDevice> fetchDevices(DeviceSession session) {
+        if (session instanceof HikvisionCloudYaoSession yao) {
+            try {
+                return yao.fetchDevices();
+            } catch (Exception e) {
+                log.warn("海康云耀 设备目录拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        return fetchDevices();
+    }
+
+    @Override
+    /**
+     * 按凭据建连后的会话语境拉取组织树（cloud-yao OpenAPI：厂商侧组织列表）
+     */
+    public List<OrganizationNode> fetchOrganizations(DeviceSession session) {
+        if (session instanceof HikvisionCloudYaoSession yao) {
+            try {
+                return yao.fetchOrganizations();
+            } catch (Exception e) {
+                log.warn("海康云耀 组织树拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        return fetchOrganizations();
+    }
+
+    @Override
+    /**
+     * 按凭据建连后的会话语境拉取人员列表（cloud-yao OpenAPI：厂商侧组织维度人员列表）
+     */
+    public List<DevicePerson> fetchPersons(DeviceSession session) {
+        if (session instanceof HikvisionCloudYaoSession yao) {
+            try {
+                return yao.fetchPersons();
+            } catch (Exception e) {
+                log.warn("海康云耀 人员列表拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        return List.of();
+    }
+
+    @Override
     public List<VendorDevice> fetchDevices() {
         if (!fallbackMock) {
             // 真实设备目录需各平台开放 API 接入后实现
@@ -226,6 +277,14 @@ public class HikvisionProvider implements DeviceProvider {
         List<CredentialField> platformFields = List.of(
                 new CredentialField("appKey", "AppKey（AK）", false, true, "平台应用的 AppKey"),
                 new CredentialField("appSecret", "AppSecret（SK）", true, true, "平台应用的 AppSecret"));
+        List<CredentialField> productFields = List.of(
+                new CredentialField("productCode", "产品 Code（Product Code）", false, true,
+                        "云曜应用的 ProductCode，同步范围限定在此产品下"),
+                new CredentialField("projectId", "项目 ID（Project ID）", false, true,
+                        "云曜应用归属的项目 ID，组织/人员需按项目筛选"));
+        // 简化作用域：在默认字段基底上追加产品维字段，只给云耀
+        List<CredentialField> cloudYaoFields = Stream.concat(platformFields.stream(), productFields.stream())
+                .collect(Collectors.toList());
         return new DeviceVendorDescriptor(
                 VENDOR,
                 "海康威视",
@@ -234,13 +293,14 @@ public class HikvisionProvider implements DeviceProvider {
                         new AuthTypeDescriptor("SDK", "SDK 直连", "局域网直连设备，需要厂商 SDK 运行库")),
                 List.of(
                         new PlatformDescriptor(PLATFORM_CLOUD_YAO, "海康云耀",
-                                "https://api.hik-cloud.com", platformFields),
+                                "https://api.hik-cloud.com", cloudYaoFields),
                         new PlatformDescriptor(PLATFORM_CLOUD_EYE, "海康云眸",
                                 "https://api.hik-cloud-eye.com", platformFields),
                         new PlatformDescriptor(PLATFORM_SECURE, "海康综合安防平台",
                                 "https://artemis.hikvision.com", platformFields)),
-                Set.of(DeviceCapability.MEDIA, DeviceCapability.PTZ,
-                        DeviceCapability.EVENT, DeviceCapability.ACCESS, DeviceCapability.CHANNEL),
+                Set.of(DeviceCapability.DEVICE, DeviceCapability.MEDIA, DeviceCapability.PTZ,
+                        DeviceCapability.EVENT, DeviceCapability.ACCESS, DeviceCapability.CHANNEL,
+                        DeviceCapability.ORG),
                 60,
                 null,
                 "支持云耀、云眸、综合安防平台与 SDK 直连；组织同步与设备目录同步待各平台 API 接入后开放。");
