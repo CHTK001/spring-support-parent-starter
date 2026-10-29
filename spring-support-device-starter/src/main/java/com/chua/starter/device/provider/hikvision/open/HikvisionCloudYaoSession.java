@@ -1,12 +1,20 @@
 package com.chua.starter.device.provider.hikvision.open;
 
 import com.chua.starter.device.provider.platform.AbstractOpenApiSession;
+import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.spi.model.DevicePerson;
+import com.chua.starter.device.spi.model.OrganizationNode;
+import com.chua.starter.device.spi.model.VendorDevice;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -302,5 +310,382 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
          * @param params 参数
          */
         post(PATH_DOOR_CONTROL, params);
+    }
+
+    /**
+     * 云耀 OpenAPI 路径：组织列表（按 productCode/projectId 隔离）
+     */
+    private static final String PATH_ORG_TREE = "/api/v1/organizations";
+
+    /**
+     * 云耀 OpenAPI 路径：组织维度设备列表（{0} 位厂商侧组织标识，按 productCode/projectId 隔离）
+     */
+    private static final String PATH_ORG_DEVICES = "/api/v1/organizations/%s/devices";
+
+    /**
+     * 云耀 OpenAPI 路径：组织维度人员列表（{0} 位厂商侧组织标识，按 productCode/projectId 隔离）
+     */
+    private static final String PATH_ORG_USERS = "/api/v1/organizations/%s/users";
+
+    /** 分页查询每页条数 */
+    private static final int PAGE_SIZE = 100;
+
+    /**
+     * 云耀 OpenAPI 查询组织列表：单页翻页，按 productCode/projectId 隔离
+     *
+     * <p>路径 {@code GET /api/v1/organizations}，按 productCode/projectId 隔离；每页
+     * {@code PAGE_SIZE} 条。组织节点用厂商侧 orgId 为 key、parentOrgId 为父。
+     * 平台组织字段可能是 {@code orgId} / {@code id} / {@code orgCode}，
+     * {@code toStr} 里逐一尝试后取第一个非空；未填 parentOrgId 时迁入空值。</p>
+     *
+     * @return 组织节点（厂商侧标识 / 名称 / 父标识）
+     */
+    public List<OrganizationNode> fetchOrganizations() {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("pageSize", PAGE_SIZE);
+            JsonNode data = assertOk(get(PATH_ORG_TREE, params));
+            List<JsonNode> orgs = toList(data);
+            return orgs.stream()
+                    .map(n -> new OrganizationNode(
+                            toStr(n, "orgId", "id", "orgCode", "merchantId"),
+                            toStr(n, "orgName", "name", "orgName"),
+                            toStr(n, "parentOrgId", "parentId")))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("海康云耀 组织树拉取失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 云耀 OpenAPI 查询设备目录：按厂商侧组织维度翻页拉取
+     *
+     * <p>组织列表由 {@link #fetchOrganizations()} 拉取，逐个组织翻页取
+     * {@code /api/v1/organizations/{orgId}/devices}；按 productCode/projectId 隔离。
+     * 字段以平台实际返回为准，{@code toStr}/{@code decimal}/{@code bool}
+     * 逐一尝试同一含义的常见字段名，避免错配；未识别标签的云耀平台归入摄像头。</p>
+     *
+     * @return 厂商设备条目
+     */
+    public List<VendorDevice> fetchDevices() {
+        try {
+            List<OrganizationNode> orgs = fetchOrganizations();
+            List<VendorDevice> result = new ArrayList<>();
+            for (OrganizationNode org : orgs) {
+                result.addAll(fetchDevicesByOrg(org.orgId()));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("海康云耀 设备目录拉取失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 厂商 side 组织维度下翻页拉取设备列表
+     *
+     * @param orgId 厂商 side 组织标识
+     * @return 设备条目
+     */
+    private List<VendorDevice> fetchDevicesByOrg(String orgId) {
+        List<VendorDevice> result = new ArrayList<>();
+        for (int pageNo = 1; ; pageNo++) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("pageNo", pageNo);
+            params.put("pageSize", PAGE_SIZE);
+            List<JsonNode> list;
+            try {
+                JsonNode data = assertOk(get(String.format(PATH_ORG_DEVICES, orgId), params));
+                list = toList(data);
+            } catch (Exception e) {
+                log.warn("海康云耀 设备列表拉取失败: orgId={}, page={}", orgId, pageNo, e.getMessage());
+                break;
+            }
+            if (list == null || list.isEmpty()) {
+                break;
+            }
+            result.addAll(toVendorDevices(list));
+            if (list.size() < PAGE_SIZE) {
+                break;
+            }
+        }
+        log.info("海康云耀 设备目录: orgId={}, count={}", orgId, result.size());
+        return result;
+    }
+
+    /**
+     * 云耀 OpenAPI 查询人员列表：按厂商侧组织维度翻页拉取
+     *
+     * <p>组织列表由 {@link #fetchOrganizations()} 拉取，逐个组织翻页取
+     *>{@code /api/v1/organizations/{orgId}/users}；按 productCode/projectId 隔离。
+     * 人员只保留低门槛字段：姓名/职务/手机号/邮箱；行政归属挂接厂商侧组织标识
+     * （与 {@code fetchOrganizations()} 组织标识同口径），避免人员 API 结构换表时
+     * 耦合到 org-person 关联表。</p>
+     *
+     * @return 人员条目（厂商侧组织标识 / 厂商 side 人员标识 / 姓名 / 职务 / 手机 / 邮箱）
+     */
+    public List<DevicePerson> fetchPersons() {
+        try {
+            List<OrganizationNode> orgs = fetchOrganizations();
+            List<DevicePerson> result = new ArrayList<>();
+            for (OrganizationNode org : orgs) {
+                result.addAll(fetchPersonsByOrg(org.orgId()));
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("海康云耀 人员列表拉取失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 厂商 side 组织维度下翻页拉取人员列表
+     *
+     * @param orgId 厂商 side 组织标识
+     * @return 人员条目
+     */
+    private List<DevicePerson> fetchPersonsByOrg(String orgId) {
+        List<DevicePerson> result = new ArrayList<>();
+        for (int pageNo = 1; ; pageNo++) {
+            Map<String, Object> params = new HashMap<>();
+            params.put("pageNo", pageNo);
+            params.put("pageSize", PAGE_SIZE);
+            List<JsonNode> list;
+            try {
+                JsonNode data = assertOk(get(String.format(PATH_ORG_USERS, orgId), params));
+                list = toList(data);
+            } catch (Exception e) {
+                log.warn("海康云耀 人员列表拉取失败: orgId={}, page={}", orgId, pageNo, e.getMessage());
+                break;
+            }
+            if (list == null || list.isEmpty()) {
+                break;
+            }
+            result.addAll(toDevicePersons(list));
+            if (list.size() < PAGE_SIZE) {
+                break;
+            }
+        }
+        log.info("海康云耀 人员列表: orgId={}, count={}", orgId, result.size());
+        return result;
+    }
+
+    /**
+     * 平台返回的响应 data 节点转条目列表：可能是 {@code {list: [...]}} /
+     * {@code {pageList: [...]}} / {@code {records: [...]}} / 匿名数组，逐一尝试后
+     * 仍不是列表时退回空列表。
+     *
+     * @param data 响应的 data 节点
+     * @return 平台条目
+     */
+    private static List<JsonNode> toList(JsonNode data) {
+        if (data == null || data.isNull() || !data.isObject() && !data.isArray()) {
+            return List.of();
+        }
+        if (data.isArray()) {
+            List<JsonNode> result = new ArrayList<>();
+            for (Iterator<JsonNode> it = data.elements(); it.hasNext(); ) {
+                result.add(it.next());
+            }
+            return result;
+        }
+        for (String field : List.of("list", "pageList", "pageInfo", "records", "data",
+                "nodes", "table", "rows", "items", "deviceList", "users")) {
+            if (data.has(field)) {
+                return toList(data.get(field));
+            }
+        }
+        return List.of();
+    }
+
+    /**
+     * 平台设备条目转厂商侧设备目录模型
+     *
+     * @param nodes 平台返回的设备页条目
+     * @return 厂商设备条目
+     */
+    private List<VendorDevice> toVendorDevices(List<JsonNode> nodes) {
+        return nodes.stream()
+                .map(n -> new VendorDevice(
+                        toStr(n, "deviceSerial", "deviceId", "outId", "serial", "externalId"),
+                        toStr(n, "deviceName", "name", "outName"),
+                        toStr(n, "productModel", "model", "deviceModel"),
+                        categorize(n),
+                        toStr(n, "deviceSerial", "serial", "outId", "externalId"),
+                        toStr(n, "ip", "deviceIp", "ipAddress"),
+                        toInt(n, "port", "devicePort"),
+                        toStr(n, "address", "deviceAddress"),
+                        decimal(n, "latitude", "lat", "lon"),
+                        decimal(n, "longitude", "lng", "lat"),
+                        toInt(n, "channelCount", "channels", "channel"),
+                        bool(n, "online", "onlineFlag", "status")))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 平台人员条目转 {@code DevicePerson}
+     *
+     * <p>行政归属取平台的 {@code orgId} / {@code departmentId}，
+     * 平台未提供时为 null，由落地层按组织归口修复。</p>
+     *
+     * @param nodes 平台返回的人员页条目
+     * @return 人员条目
+     */
+    private List<DevicePerson> toDevicePersons(List<JsonNode> nodes) {
+        return nodes.stream()
+                .map(n -> new DevicePerson(
+                        toStr(n, "orgId", "departmentId", "organizationId", "deptId", "departmentCode"),
+                        toStr(n, "userId", "personId", "externalId", "outId", "employeeNumber"),
+                        toStr(n, "userName", "name", "username", "outName"),
+                        toStr(n, "memberTitle", "title", "roleName", "jobTitle"),
+                        toStr(n, "phone", "mobile", "cell", "outMobile"),
+                        toStr(n, "email", "mailbox", "outEmail")))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 平台设备品类码 → 设备目录类。
+     * <p>未能识别时退回到设备名称/型号的关键词，默认归入摄像头，避免配件列表无类可言。</p>
+     *
+     * @param n 平台返回的设备条目
+     * @return 设备分类
+     */
+    private static String categorize(JsonNode n) {
+        String code = toStr(n, "category", "deviceType", "productType", "productTypeCode",
+                "deviceCategory", "type");
+        String name = toStr(n, "deviceName", "name");
+        String model = toStr(n, "productModel", "model");
+        String lower = (name == null ? "" : name) + (model == null ? "" : model);
+        lower = lower.toLowerCase();
+        if ("0".equals(code) || "camera".equalsIgnoreCase(code) || "01".equals(code)
+                || "dcam".equalsIgnoreCase(code) || "0101".equalsIgnoreCase(code)) {
+            return "camera";
+        }
+        if ("access".equalsIgnoreCase(code) || "accessControl".equalsIgnoreCase(code) || "02".equals(code)
+                || "0103".equalsIgnoreCase(code) || lower.contains("gate") || lower.contains("door")
+                || lower.contains("relais")) {
+            return "accessControl";
+        }
+        if ("alarm".equalsIgnoreCase(code) || "03".equals(code) || "0102".equalsIgnoreCase(code)
+                || lower.contains("alarm") || lower.contains("fire")) {
+            return "alarm";
+        }
+        if ("intercom".equalsIgnoreCase(code) || "intercomPhone".equalsIgnoreCase(code) || "04".equals(code)
+                || "0104".equalsIgnoreCase(code) || lower.contains("intercom") || lower.contains("audio")) {
+            return "intercom";
+        }
+        return "camera";
+    }
+
+    /**
+     * 取平台条目的第一个非空字符串
+     *
+     * @param n      平台条目
+     * @param fields 尝试字段名
+     * @return 字段值；均未找到时返回 {@code null}
+     */
+    private static String toStr(JsonNode n, String... fields) {
+        if (n == null) {
+            return null;
+        }
+        for (String f : fields) {
+            JsonNode v = n.path(f);
+            if (v == null || v.isNull() || (v.isTextual() && v.asText().trim().isEmpty())) {
+                continue;
+            }
+            return v.asText().trim();
+        }
+        return null;
+    }
+
+    /**
+     * 取平台条目的首项整型
+     *
+     * @param n      平台条目
+     * @param fields 尝试字段名
+     * @return 字段值；均未找到时返回 {@code null}
+     */
+    private static Integer toInt(JsonNode n, String... fields) {
+        if (n == null) {
+            return null;
+        }
+        for (String f : fields) {
+            JsonNode v = n.path(f);
+            if (v == null || v.isNull()) {
+                continue;
+            }
+            try {
+                return v.asInt();
+            } catch (Exception e) {
+                log.debug("海康云耀 整型字段 {} 解析失败: {}", f, e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 取平台条目的首项布尔（平台常用 1/0 表示）
+     *
+     * @param n      平台条目
+     * @param fields 尝试字段名
+     * @return 字段值；均未找到时返回 {@code null}
+     */
+    private static Boolean bool(JsonNode n, String... fields) {
+        if (n == null) {
+            return null;
+        }
+        for (String f : fields) {
+            JsonNode v = n.path(f);
+            if (v == null || v.isNull()) {
+                continue;
+            }
+            if (v.isBoolean()) {
+                return v.asBoolean();
+            }
+            if (v.isInt()) {
+                return v.asInt() == 1;
+            }
+            if (v.isTextual()) {
+                String text = v.asText().trim();
+                if ("1".equals(text) || "true".equalsIgnoreCase(text) || "YES".equalsIgnoreCase(text)) {
+                    return true;
+                }
+                if ("0".equals(text) || "false".equalsIgnoreCase(text) || "NO".equalsIgnoreCase(text)) {
+                    return false;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 取平台条目的首项数值（字符串或数字均可）
+     *
+     * @param n      平台条目
+     * @param fields 尝试字段名
+     * @return 字段值；均未找到时返回 {@code null}
+     */
+    private static BigDecimal decimal(JsonNode n, String... fields) {
+        if (n == null) {
+            return null;
+        }
+        for (String f : fields) {
+            JsonNode v = n.path(f);
+            if (v == null || v.isNull()) {
+                continue;
+            }
+            if (v.isInt() || v.isLong()) {
+                return new BigDecimal(v.asLong());
+            }
+            if (v.isTextual()) {
+                try {
+                    return new BigDecimal(v.asText().trim());
+                } catch (Exception e) {
+                    log.debug("海康云耀 数值字段 {} 解析失败: {}", f, e.getMessage());
+                }
+            }
+        }
+        return null;
     }
 }
