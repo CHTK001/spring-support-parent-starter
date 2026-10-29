@@ -1114,7 +1114,6 @@ public class ReleaseServiceImpl implements ReleaseService {
         OperationContext ctx = prepared.getData();
         MsServerProject project = ctx.project;
         ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(ctx.osType);
-        String path = project.getProjectPath();
         Map<String, Object> cfg = config == null ? new java.util.LinkedHashMap<>() : config;
         boolean autoBackup = boolCfg(cfg, "autoBackup", true);
         boolean autoExtract = boolCfg(cfg, "autoExtract", true);
@@ -1126,31 +1125,74 @@ public class ReleaseServiceImpl implements ReleaseService {
         String deployType = strCfg(cfg, "deployType", "");
         ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
 
-        // 包来源由项目类型声明：Git 类型未显式给包时先拉源码构建，再走本类型正常的投放与重启
+        // 包来源由项目类型声明：Git 类型先构建，再走本类型正常的投放与重启。
+        // 构建必须放在任务线程里：克隆 + Maven 构建动辄几十秒，超过前端 HTTP 的 30s 超时，
+        // 放在请求线程会让 UI 拿不到 taskId（表现为「操作触发失败」且没有任务面板）。
         String source = strCfg(cfg, "source", "").trim();
         boolean gitSource = ProjectTypeProvider.SOURCE_GIT.equalsIgnoreCase(source)
                 || (source.isEmpty() && isBlank(packagePath)
                         && ProjectTypeProvider.SOURCE_GIT.equals(type.sourceKind()));
-        if (gitSource) {
-            ReturnResult<String> built = prepareGitPackage(ctx);
-            if (!built.isOk()) {
-                return ReturnResult.error(built.getMsg());
-            }
-            packagePath = built.getData();
-            cfg.put("packagePath", packagePath);
-        }
 
         List<ProjectStep> steps = new ArrayList<>();
         ProjectStep cfgStep = springConfigStep(win, project);
         if (cfgStep != null) {
             steps.add(cfgStep);
         }
+        if (gitSource) {
+            // 构建产物路径要到构建结束才确定，先占住步骤位；成功后再把投放/重启步骤追加到同一个列表，
+            // 任务执行器按索引遍历，能继续执行追加进来的步骤。
+            steps.add(new ProjectStep("拉取源码并构建", "", 8, () -> {
+                ReturnResult<String> built = prepareGitPackage(ctx);
+                if (!built.isOk()) {
+                    throw new IllegalStateException(built.getMsg());
+                }
+                String builtPackage = built.getData();
+                appendDeploySteps(steps, win, ctx, project, type, builtPackage,
+                        autoBackup, autoExtract, autoRestart, autoRollback,
+                        uploadExtract, uploadTargetDir, deployType);
+                return List.of("构建产物: " + builtPackage);
+            }));
+        } else {
+            appendDeploySteps(steps, win, ctx, project, type, packagePath,
+                    autoBackup, autoExtract, autoRestart, autoRollback,
+                    uploadExtract, uploadTargetDir, deployType);
+        }
+        String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
+                "upgrade", steps, "running");
+        return task(taskId);
+    }
+
+    /**
+     * 追加「停服 → 备份 → 投放 → 重启/健康检查 → 记录 PID」步骤。
+     *
+     * <p>Git 类型要等构建成功后才能确定包路径，因此这段编排抽成方法，由调用方决定何时追加。</p>
+     *
+     * @param steps           步骤列表（直接追加）
+     * @param pf              平台命令提供者
+     * @param ctx             操作上下文
+     * @param project         项目
+     * @param type            项目类型实现
+     * @param packagePath     安装包路径；为空表示只重启不投放
+     * @param autoBackup      是否自动备份
+     * @param autoExtract     是否自动解压
+     * @param autoRestart     是否自动重启
+     * @param autoRollback    是否健康检查失败自动回滚
+     * @param uploadExtract   上传包是否解压
+     * @param uploadTargetDir 上传投放目录
+     * @param deployType      部署类型
+     */
+    private void appendDeploySteps(List<ProjectStep> steps, ProjectPlatformProvider pf, OperationContext ctx,
+                                   MsServerProject project, ProjectTypeProvider type, String packagePath,
+                                   boolean autoBackup, boolean autoExtract, boolean autoRestart,
+                                   boolean autoRollback, boolean uploadExtract, String uploadTargetDir,
+                                   String deployType) {
+        String path = project.getProjectPath();
         // 先停服：运行中的进程会占用目标文件（尤其 Windows 上 jar 被 JVM 锁），不先停则备份/投放/解压必失败
         if (!isBlank(project.getStopScript())) {
-            steps.add(new ProjectStep("停止服务", buildCommand(win, path, project.getStopScript()), 1));
+            steps.add(new ProjectStep("停止服务", buildCommand(pf, path, project.getStopScript()), 1));
         }
         if (autoBackup) {
-            steps.add(new ProjectStep("备份当前版本", backupCommand(win, path), 2));
+            steps.add(new ProjectStep("备份当前版本", backupCommand(pf, path), 2));
         }
         if (!isBlank(packagePath)) {
             ProjectPlacementContext pc = new ProjectPlacementContext(
@@ -1163,29 +1205,91 @@ public class ReleaseServiceImpl implements ReleaseService {
                     uploadExtract,
                     uploadTargetDir,
                     deployType);
-            steps.addAll(placementSteps(win, ctx, type, pc));
+            steps.addAll(placementSteps(pf, ctx, type, pc));
         }
-        // 没有常驻进程的类型（模型仓库）无需重启
+        // 没有常驻进程的类型（模型仓库）无需重启，读一次 PID 就够
         if (!type.runtimeProcess()) {
-            steps.add(pidStep(win, path));
-        } else if (autoRollback && !isBlank(project.getStatusScript())) {
+            steps.add(pidStep(pf, path));
+            return;
+        }
+        // 启动前补齐日志目录：首次发布时 logs/ 尚不存在，而启动脚本把标准输出重定向到
+        // logs/app.log，shell 在重定向阶段就失败、java 根本没起来，但脚本末尾的
+        // echo $! > app.pid 仍返回 0，任务于是报「成功」且状态 running（实测踩到）。
+        String logFile = ProjectScripts.resolveLogFile(project.getLogPath(), path);
+        String logDir = dirName(logFile);
+        if (!isBlank(logDir)) {
+            steps.add(new ProjectStep("准备日志目录", pf.wrap(path, pf.ensureDir(logDir)), 1));
+        }
+        if (autoRollback && !isBlank(project.getStatusScript())) {
             steps.add(new ProjectStep("重启并健康检测（失败自动回滚）",
-                    guardedRestartCommand(win, path, project, autoRestart), 3));
+                    guardedRestartCommand(pf, path, project, autoRestart), 3));
         } else if (autoRestart) {
             if (!isBlank(project.getRestartScript())) {
                 steps.add(new ProjectStep("重启服务",
-                        buildCommand(win, path, project.getRestartScript()), 3));
+                        buildCommand(pf, path, project.getRestartScript()), 3));
             } else if (!isBlank(project.getStopScript()) && !isBlank(project.getStartScript())) {
                 steps.add(new ProjectStep("停止服务",
-                        buildCommand(win, path, project.getStopScript()), 2));
+                        buildCommand(pf, path, project.getStopScript()), 2));
                 steps.add(new ProjectStep("启动服务",
-                        buildCommand(win, path, project.getStartScript()), 3));
+                        buildCommand(pf, path, project.getStartScript()), 3));
+            }
+            // 重启后必须由项目自己的状态脚本确认「真的在跑」：只看退出码不够，
+            // 启动脚本末尾的 echo 即使 java 没起来也会返回 0。自动回滚分支已内置健康检查，
+            // 这里不重复；autoRestart=false 时服务本就应停着，也不校验。
+            if (!isBlank(project.getStatusScript())) {
+                steps.add(verifyRunningStep(pf, ctx, project, logFile));
             }
         }
-        steps.add(pidStep(win, path));
-        String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
-                "upgrade", steps, "running");
-        return task(taskId);
+        steps.add(pidStep(pf, path));
+    }
+
+    /**
+     * 构造「校验运行状态」步骤：执行项目状态脚本，输出必须包含 {@code running}。
+     *
+     * <p>把「启动脚本返回 0」与「服务真的在跑」区分开：状态脚本是项目自己的判定依据
+     * （Java 用 {@code app.pid} + {@code kill -0}，Nginx 用 master pid），比任何通用猜测可靠。</p>
+     *
+     * @param pf      平台命令提供者
+     * @param ctx     操作上下文
+     * @param project 项目
+     * @param logFile 日志文件（失败提示用）
+     * @return 校验步骤
+     */
+    private ProjectStep verifyRunningStep(ProjectPlatformProvider pf, OperationContext ctx,
+                                          MsServerProject project, String logFile) {
+        String command = buildCommand(pf, project.getProjectPath(), project.getStatusScript());
+        return new ProjectStep("校验运行状态", "", 1, () -> {
+            ReturnResult<java.util.List<MsExecLog>> result = execService.runCommand(
+                    java.util.Collections.singletonList(ctx.hostId), command, 30, null);
+            if (!result.isOk() || anyExecFailed(result.getData())) {
+                throw new IllegalStateException("状态脚本执行失败: " + result.getMsg());
+            }
+            String output = result.getData().get(0).getMsExecLogOutput();
+            String text = output == null ? "" : output.trim();
+            if (!text.toLowerCase().contains("running")) {
+                throw new IllegalStateException("启动后状态校验未通过（状态脚本输出: "
+                        + (text.isEmpty() ? "空" : text) + "），请查看日志 " + logFile);
+            }
+            return java.util.List.of("运行状态: " + text);
+        });
+    }
+
+    /**
+     * 取路径的父目录（兼容 / 与 \）。
+     *
+     * @param file 文件路径
+     * @return 父目录；无分隔符时返回空串
+     */
+    private static String dirName(String file) {
+        if (file == null || file.isBlank()) {
+            return "";
+        }
+        String normalized = file.replace('\\', '/');
+        int idx = normalized.lastIndexOf('/');
+        if (idx < 0) {
+            return "";
+        }
+        return idx == 0 ? "/" : normalized.substring(0, idx);
     }
 
     /**

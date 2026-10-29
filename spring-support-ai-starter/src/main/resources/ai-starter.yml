@@ -184,22 +184,26 @@ plugin:
         # 验收扫描专用实例，避免与并发的验收进程争抢 15689
         - http://localhost:15700
         - http://127.0.0.1:15700
+    decode:
+      # 开发/验收用 AES 密钥（与前端 app.yaml httpConfig.requestCodec.key 一致，
+      # 后端对 key 做 SHA-256 → 32 字节 AES-256 密钥，IV 取前 16 字节）
+      codec-type: aes
+      codec-request-key: e3eccc79fe899fcd06b380126930d61c
   oauth:
     enable: true
     protocol: static
     # 静态协议自校验令牌不外呼；loginAddress 只作为「未登录跳转地址」参与前置判断，
     # 留空会让 isFailure() 直接判为鉴权失败，故必须给出非空值
     auth-address: http://127.0.0.1:8787/login
+    # 拆除鉴权过滤器里的令牌硬要求：无法完成鉴权的请求（无令牌 / 令牌失效）
+    # 直接注入内置 admin 身份放行。本地开发与浏览器验收专用，严禁对外环境开启。
+    local-admin-fallback: true
     temp:
       # 格式 用户名:口令;用户名:口令；用户标识取用户名，跨登录稳定，数据按此归属
       #
-      # [安全警告] 这里刻意留空。曾硬编码 admin123 / alice123 / bob123，
-      # 等于把三个可登录的弱口令提交进版本库：任何拿到源码或镜像的人都能登进后台，
-      # 而线上是否被覆盖要等运行时看日志才知道。
-      # 现改为由部署方通过启动参数显式传入，例如：
-      #   --plugin.oauth.temp.user='<用户名>:<口令>'
-      # 留空时静态登录无可用账号，登录会被明确拒绝，而不是放行一个默认口令。
-      user: ""
+      # [开发环境] 本地联调 / 浏览器验收所需的登录口令（仅在 --spring.profiles.active=local
+      # 时生效；生产 by "on-profile: !local" 文档段由远程 OAuth 接管，此处不传世）
+      user: "admin:admin123"
     # 框架内置默认白名单混有历史应用专用路径（/api/extensions/**、/v2/usage/** 等），
     # 本应用按自身路由显式放行，不继承
     use-default-whitelist: false

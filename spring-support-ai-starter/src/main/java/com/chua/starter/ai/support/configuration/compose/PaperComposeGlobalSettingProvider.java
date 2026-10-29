@@ -1,4 +1,4 @@
-package com.chua.starter.eduai.configuration.compose;
+package com.chua.starter.ai.support.configuration.compose;
 
 import com.chua.common.support.ai.rag.GlobalSettingProvider;
 import com.chua.common.support.spi.annotations.Spi;
@@ -13,6 +13,12 @@ import java.util.List;
  * 启动时自动注册到 {@code sys_ai_global_setting} 表，页面通过 {@code /v2/settings}
  * 统一读写，与 {@code paper}（试卷识别）、{@code marking}（阅卷设置）并列出现在
  * 「试卷配置」里。</p>
+ *
+ * <p><b>归属（2026-10-29 收敛）：</b>本类原先住在 {@code spring-support-eduai-starter}，
+ * 而 {@code paper} 分组与渲染它的 {@code pages/ai/components/setting/PaperConfigPanel.vue}
+ * 都在 AI 模块 —— 结果是「AI 配置中心的试卷配置」要凑两个 jar 才完整：只引 AI 模块的宿主
+ * 看到的是残缺的一组。模块边界应当是「谁的面板谁定义分组」，故迁入本模块。
+ * eduai 侧不再声明这些分组，只依赖 ai-starter 读取运行时值。</p>
  *
  * <p>为什么独立成一个分组，而不是塞进 {@code paper}：</p>
  * <ul>

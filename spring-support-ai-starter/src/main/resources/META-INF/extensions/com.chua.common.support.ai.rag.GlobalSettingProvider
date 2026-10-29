@@ -17,3 +17,5 @@ com.chua.starter.ai.support.configuration.tts.TtsGlobalSettingProvider
 com.chua.starter.ai.support.configuration.search.SearchGlobalSettingProvider
 com.chua.starter.ai.support.configuration.paper.PaperGlobalSettingProvider
 com.chua.starter.ai.support.configuration.reid.ReidGlobalSettingProvider
+com.chua.starter.ai.support.configuration.marking.MarkingGlobalSettingProvider
+com.chua.starter.ai.support.configuration.compose.PaperComposeGlobalSettingProvider

@@ -260,6 +260,14 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
             return null;
         }
 
+        // 密文可以是原始 hex 串（`8fa3...`），也可能是 axios 等 client 把 string 体
+        // 与 application/json 结合后再 JSON.stringify 套上的双引号（`"8fa3..."`），
+        // 后者会被当成 81 字节而非 80 字节 → AES 解密报错 "Input length must be
+        // multiple of 16"。把合法 hex 字面量解包，保证两种提交方式都能解。
+        if (isJsonStringLiteral(rawBody) && isHex(rawBody.substring(1, rawBody.length() - 1))) {
+            return rawBody.substring(1, rawBody.length() - 1);
+        }
+
         if (!rawBody.startsWith("{") && !rawBody.startsWith("[")) {
             return rawBody;
         }
@@ -285,6 +293,26 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         return null;
+    }
+
+    /**
+     * 是否 JSON 字符串字面量（如 `"8fa3..."`，两端双引号）
+     *
+     * @param value 待判正文
+     * @return 是否字面量
+     */
+    private static boolean isJsonStringLiteral(String value) {
+        return value.length() >= 2 && value.charAt(0) == '"' && value.charAt(value.length() - 1) == '"';
+    }
+
+    /**
+     * 是否全为 16 进制字符（密文 hex 串）
+     *
+     * @param value 待判字符串
+     * @return 是否十六进制
+     */
+    private static boolean isHex(String value) {
+        return !value.isEmpty() && value.matches("^[0-9a-fA-F]+$");
     }
 
     /**

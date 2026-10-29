@@ -331,14 +331,18 @@ public class ProjectTaskService {
                 emit(state, PHASE_LOG, null, line == null ? "" : line, null, null);
             };
 
-            int totalWeight = Math.max(1, steps.stream().mapToInt(ProjectStep::weight).sum());
             int accWeight = 0;
             int stepNo = 0;
             // 当前步骤的标准输出（最后一步为「记录PID」，其输出仅为 PID）
             java.util.concurrent.CopyOnWriteArrayList<String> stepOut =
                     new java.util.concurrent.CopyOnWriteArrayList<>();
-            for (ProjectStep step : steps) {
+            // 用索引遍历而不是增强 for：Git 发布的步骤依赖构建产物路径，
+            // 构建成功后才会把投放/重启步骤追加到同一个列表（同一线程内追加）。
+            for (int i = 0; i < steps.size(); i++) {
+                ProjectStep step = steps.get(i);
                 stepNo++;
+                // 每步开始前重算总权重，追加步骤后进度按最新的步骤集合计算
+                int totalWeight = Math.max(1, steps.stream().mapToInt(ProjectStep::weight).sum());
                 state.currentStep = step.name();
                 emit(state, PHASE_STEP, step.name(), null, percent(accWeight, totalWeight), null);
                 long stepStart = System.currentTimeMillis();
