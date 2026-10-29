@@ -8,6 +8,7 @@ import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
+import com.chua.starter.monitor.support.model.TsharkAnomalyVO;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
@@ -1968,6 +1969,50 @@ public class TsharkCaptureService {
     public List<Map<String, Object>> timeline(Long sessionId, Integer bucketSeconds) {
         int bucket = bucketSeconds == null || bucketSeconds <= 0 ? 10 : bucketSeconds;
         return this.packetMapper.selectTimelineBySessionId(sessionId, bucket);
+    }
+
+    /**
+     * 会话常见异常诊断。
+     *
+     * <p>聚合口径见 {@link MsTsharkPacketMapper#selectAnomalyCountsBySessionId}；
+     * 计数为 0 的项不返回，前端「很干净」的判据是有没有行，而不是行的计数。</p>
+     *
+     * @param sessionId 会话标识
+     * @return 异常诊断列表；每项含 key/label/severity/count/filter
+     */
+    public ReturnResult<List<TsharkAnomalyVO>> anomalies(Long sessionId) {
+        Map<String, Object> row = this.packetMapper.selectAnomalyCountsBySessionId(sessionId);
+        List<TsharkAnomalyVO> result = new ArrayList<>(9);
+        if (row != null) {
+            addAnomaly(result, row, "reset", "连接重置 (RST)", "danger",
+                    "tcp.flags.reset == 1");
+            addAnomaly(result, row, "unreachable", "ICMP 不可达", "danger",
+                    "icmp.type == 3");
+            addAnomaly(result, row, "retransmission", "TCP 重传", "warning",
+                    "tcp.analysis.retransmission");
+            addAnomaly(result, row, "outOfOrder", "TCP 乱序", "warning",
+                    "tcp.analysis.out-of-order");
+            addAnomaly(result, row, "zeroWindow", "TCP 零窗口", "warning",
+                    "tcp.analysis.zero_window");
+            addAnomaly(result, row, "dnsFail", "DNS 解析失败", "warning",
+                    "dns.flags.rcode != 0 && dns.flags.response == 1");
+            addAnomaly(result, row, "http4xx", "HTTP 4xx 响应", "info",
+                    "http.response.code >= 400 && http.response.code < 500");
+            addAnomaly(result, row, "http5xx", "HTTP 5xx 响应", "warning",
+                    "http.response.code >= 500 && http.response.code < 600");
+            addAnomaly(result, row, "tlsAlert", "TLS 告警", "info",
+                    "tls.record.content_type == 21");
+        }
+        return ReturnResult.ok(result);
+    }
+
+    private static void addAnomaly(List<TsharkAnomalyVO> out, Map<String, Object> row, String key,
+                                   String label, String severity, String filter) {
+        Object v = row.get(key);
+        long count = v instanceof Number n ? n.longValue() : 0L;
+        if (count > 0) {
+            out.add(new TsharkAnomalyVO(key, label, severity, count, filter));
+        }
     }
 
     /**

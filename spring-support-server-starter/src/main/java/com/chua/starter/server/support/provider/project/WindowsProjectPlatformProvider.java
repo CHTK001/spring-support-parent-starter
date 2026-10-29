@@ -145,6 +145,11 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
     }
 
     @Override
+    public String ensureDir(String dir) {
+        return "New-Item -ItemType Directory -Force -Path '" + quote(dir) + "' | Out-Null";
+    }
+
+    @Override
     public String readPid() {
         return "if (Test-Path 'app.pid') { Get-Content 'app.pid' }";
     }

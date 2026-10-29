@@ -263,6 +263,19 @@ public final class ProjectScripts {
     }
 
     /**
+     * Linux 启动前补齐日志目录。
+     *
+     * <p>首次部署时日志目录通常还不存在，而重定向 {@code > logs/app.log} 在 shell
+     * 打开文件阶段就会失败，进程根本没起来；脚本末尾的 {@code echo $!} 却仍返回 0，
+     * 于是「启动成功」而状态是死的。由模板自己建目录，手工点「启动」也不会踩到。</p>
+     *
+     * @return 建日志目录命令
+     */
+    private static String linuxLogDir() {
+        return "mkdir -p \"$(dirname \"" + PH_LOG + "\")\" 2>/dev/null || true\n";
+    }
+
+    /**
      * Linux 启动脚本写 pid 文件后校验进程存活，再回显运行 PID。
      *
      * <p>与 Windows 侧的 {@code running pid=} 输出对齐。失败自动回滚时，编排层只能靠日志里
@@ -308,6 +321,7 @@ public final class ProjectScripts {
         // 停止 = 按 app.pid 停止 + 回收本项目残留进程（app.pid 陈旧时唯一兜底）
         String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
         String start = linuxEnter()
+                + linuxLogDir()
                 + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ --spring.profiles.active=prod > " + PH_LOG + " 2>&1 &\n"
                 + LINUX_PID_ECHO;
         return new Scripts(start, stop, stop + "\nsleep 2\n" + start, LINUX_PID_STATUS);
@@ -322,6 +336,7 @@ public final class ProjectScripts {
     public static Scripts linuxFatjar(String mainEntry) {
         String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
         String start = linuxEnter()
+                + linuxLogDir()
                 + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
                 + LINUX_PID_ECHO;
         return new Scripts(start, stop, stop + "\nsleep 2\n" + start, LINUX_PID_STATUS);
@@ -409,6 +424,7 @@ public final class ProjectScripts {
     public static Scripts linuxSeparated(String mainEntry) {
         String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
         String start = linuxEnter()
+                + linuxLogDir()
                 + "chmod +x " + PH_ENTRY + ";\n"
                 + "nohup ./" + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
                 + LINUX_PID_ECHO;
@@ -485,7 +501,20 @@ public final class ProjectScripts {
         String innerExpr = inner
                 .replace("__JVMARGS__", "' + (@($JvmArgs) -join ' ') + '")
                 .replace("__ARGS__", "' + (@($AppArgs) -join ' ') + '");
-        return "$__scriptStart = Get-Date\n"
+        // 首次部署时日志目录通常不存在，cmd 重定向到 logs\app.log 会直接失败，
+        // 但启动器仍返回 0，最终「报成功而进程不存在」。启动前先按日志路径补齐父目录；
+        // 相对路径按项目目录解析（计划任务的工作目录是 System32，不能用当前目录）。
+        String logPathPs = PH_LOG.replace("'", "''");
+        String logDirSetup = "$__logTarget = '" + logPathPs + "'\n"
+                + "if (-not [IO.Path]::IsPathRooted($__logTarget)) {\n"
+                + "  $__logTarget = Join-Path '" + PH_PATH.replace("'", "''") + "' $__logTarget\n"
+                + "}\n"
+                + "$__logDir = Split-Path -Parent $__logTarget\n"
+                + "if ($__logDir -and -not (Test-Path -LiteralPath $__logDir)) {\n"
+                + "  New-Item -ItemType Directory -Force -Path $__logDir | Out-Null\n"
+                + "}\n";
+        return logDirSetup
+                + "$__scriptStart = Get-Date\n"
                 + "$ErrorActionPreference = 'SilentlyContinue'\n"
                 + "$inner = '" + innerExpr + "'\n"
                 + "$cmd = 'cmd /c ' + $inner + ' > \"" + PH_LOG + "\" 2>&1'\n"

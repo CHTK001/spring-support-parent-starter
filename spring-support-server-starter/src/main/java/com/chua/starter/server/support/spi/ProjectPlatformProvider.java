@@ -181,6 +181,19 @@ public interface ProjectPlatformProvider {
     String tailLog(String logPath, int lines);
 
     /**
+     * 生成「确保目录存在」命令（已存在时视为成功）。
+     *
+     * <p>典型场景：首次发布时日志目录尚不存在，而启动脚本把标准输出重定向到
+     * {@code logs/app.log}。shell 在重定向阶段就失败、进程根本没起来，但脚本末尾的
+     * {@code echo $! > app.pid} 仍会执行并返回 0，任务于是报「启动成功」而状态是死的。
+     * 发布前先由平台命令补齐目录，才能让「新目录首次部署」与「已有目录升级」表现一致。</p>
+     *
+     * @param dir 目录绝对路径；调用方需保证非空
+     * @return 建目录命令
+     */
+    String ensureDir(String dir);
+
+    /**
      * 单引号/字符串转义（各平台规则不同）。
      *
      * @param value 原始值

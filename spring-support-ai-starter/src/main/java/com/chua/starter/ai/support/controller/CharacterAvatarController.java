@@ -124,7 +124,9 @@ public class CharacterAvatarController {
         final Path dir = avatarDirectory();
         final Path file = findFile(dir, id);
         if (file == null || !Files.exists(file)) {
-            return ResponseEntity.notFound().build();
+            // 即使头像文件（或 avatar 字段）缺失，也返回 200 空体，不 404：
+            // 前端 Avatar 组件 onerror 回退到首字占位（见 CardAvatar.vue）。
+            return ResponseEntity.ok().build();
         }
         final byte[] bytes = Files.readAllBytes(file);
         return ResponseEntity.ok()
