@@ -85,6 +85,11 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
     }
 
     @Override
+    public String ensureDir(String dir) {
+        return "mkdir -p '" + quote(dir) + "'";
+    }
+
+    @Override
     public String readPid() {
         return "cat app.pid 2>/dev/null || true";
     }

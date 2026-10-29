@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
+import com.chua.starter.monitor.support.model.TsharkAnomalyVO;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
@@ -349,5 +350,20 @@ public class TsharkCaptureController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "10") Integer bucketSeconds) {
         return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds));
+    }
+
+    /**
+     * 异常诊断：连接重置 / ICMP 不可达 / 重传 / 乱序 / 零窗口 / DNS 失败 /
+     * HTTP 4xx/5xx / TLS 告警等常见问题的命中计数。
+     *
+     * <p>每项带一条可回填显示过滤条的等价表达式；计数为 0 的项不返回。</p>
+     *
+     * @param id 会话 ID
+     * @return 异常诊断列表
+     */
+    @Operation(summary = "异常诊断")
+    @GetMapping("/sessions/{id}/stats/anomalies")
+    public ReturnResult<List<TsharkAnomalyVO>> anomalies(@PathVariable Long id) {
+        return this.tsharkCaptureService.anomalies(id);
     }
 }

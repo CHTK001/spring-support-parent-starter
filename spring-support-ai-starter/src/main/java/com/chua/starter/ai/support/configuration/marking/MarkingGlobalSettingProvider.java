@@ -1,4 +1,4 @@
-package com.chua.starter.eduai.configuration.marking;
+package com.chua.starter.ai.support.configuration.marking;
 
 import com.chua.common.support.ai.rag.GlobalSettingProvider;
 import com.chua.common.support.spi.annotations.Spi;
@@ -11,7 +11,14 @@ import java.util.List;
  * <p>定义 {@code marking} 分组的全部配置项，由
  * {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
  * 启动时自动注册到 {@code sys_ai_global_setting} 表，页面通过 {@code /v2/settings}
- * 统一读写，与 {@code paper}（试卷识别）分组并列出现在「试卷配置」里。</p>
+ * 统一读写，与 {@code paper}（试卷识别）、{@code compose}（AI 组卷）分组并列出现在
+ * 「试卷配置」里。</p>
+ *
+ * <p><b>归属（2026-10-29 收敛）：</b>本类原先住在 {@code spring-support-eduai-starter}，
+ * 而渲染 {@code marking} 的「试卷配置」面板是 AI 模块的
+ * {@code pages/ai/components/setting/PaperConfigPanel.vue}。分组定义留在业务侧，
+ * 会让「只依赖 AI 模块」的宿主的试卷配置缺一组。故迁入本模块，eduai 侧只依赖
+ * ai-starter 读取运行时值，不再自行声明分组。</p>
  *
  * <p>为什么独立成一个分组，而不是塞进 {@code paper}：</p>
  * <ul>
