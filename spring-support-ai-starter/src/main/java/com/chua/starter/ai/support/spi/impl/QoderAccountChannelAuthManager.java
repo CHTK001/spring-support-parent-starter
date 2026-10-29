@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.spi.impl;
 
+import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -230,7 +231,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         int replayed = 0;
         int amount = 0;
         try {
-            String campaignsBody = ChannelHttp.getJson(openApiBase() + CAMPAIGNS_PATH, sashHeaders());
+            String campaignsBody = ChannelHttp.getJson(openApiBase() + CAMPAIGNS_PATH, checkinHeaders(accessToken));
             Map<String, Object> campaigns = parseJson(campaignsBody);
             Object rawList = campaigns.get("campaigns");
             if (rawList instanceof List<?> list) {
@@ -253,7 +254,7 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
                     }
                     String claimBody = ChannelHttp.postJson(
                             openApiBase() + CAMPAIGNS_PATH + "/" + encode(campaignId) + "/claim",
-                            "{}", sashHeaders());
+                            "{}", checkinHeaders(accessToken));
                     Map<String, Object> claimResult = parseJson(claimBody);
                     Object status = claimResult.get("status");
                     if (Boolean.TRUE.equals(claimResult.get("replayed"))) {
@@ -420,6 +421,13 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return headers;
     }
 
+    /** 签到请求头：sashHeaders + Authorization Bearer（campaigns/claim 端点需鉴权）。 */
+    private static Map<String, String> checkinHeaders(String accessToken) {
+        Map<String, String> headers = new HashMap<>(sashHeaders());
+        headers.put("Authorization", "Bearer " + accessToken);
+        return headers;
+    }
+
     private static Map<String, String> authHeaders(String accessToken) {
         return Map.of("Authorization", "Bearer " + accessToken, "Accept", "application/json");
     }
@@ -507,5 +515,20 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         }
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
+    }
+
+    @Override
+    public RouteTarget toRouteTarget(Map<String, Object> credentials) {
+        String accessToken = readString(credentials, "access_token");
+        if (isBlank(accessToken)) {
+            return null;
+        }
+        return RouteTarget.builder()
+                .provider("openai")
+                .baseUrl(openApiBase() + "/api/v1")
+                .apiKey(accessToken)
+                .authScheme("api_key")
+                .autoSwitchOnRateLimit(true)
+                .build();
     }
 }

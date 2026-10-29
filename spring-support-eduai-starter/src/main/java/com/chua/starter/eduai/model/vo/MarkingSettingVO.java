@@ -6,14 +6,15 @@ import lombok.Data;
 /**
  * 阅卷运行时设置。
  *
- * <p>对应系统配置弹窗「AI 阅卷设置」可维护的两组项：</p>
+ * <p>对应 AI 配置中心「试卷配置 → 阅卷设置」可维护的两组项：</p>
  * <ul>
  *   <li>模型调用重试 —— {@code plugin.eduai.ai.retry.*} 的运行时覆盖；</li>
- *   <li>任意卷识别策略 —— {@code plugin.eduai.marking.extract-strategy} 的运行时覆盖。</li>
+ *   <li>识别策略 / 匹配模式 / 判分提示词 —— {@code plugin.eduai.marking.*} 与内置默认的覆盖。</li>
  * </ul>
  *
- * <p>落库位置为 {@code edu_app_config} 键值表（见 {@code EduAppConfigService}），
- * 未配置的项回落到 application.yml 的 {@code plugin.eduai.*} 默认值。</p>
+ * <p>落库位置为 AI 全局设置表 {@code sys_ai_global_setting} 的 {@code marking} 分组
+ * （见 {@code MarkingGlobalSettingProvider}），未配置的项回落到 application.yml 的
+ * {@code plugin.eduai.*} 默认值。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -57,6 +58,12 @@ public class MarkingSettingVO {
      */
     @Schema(description = "任意卷识别策略：whole（整卷，默认）/ region（按版面区域分块）")
     private String extractStrategy = "whole";
+
+    /**
+     * 匹配模式：{@code strict}（严谨，作答必须落在空内才给分）/ {@code loose}（宽松，只看文本）
+     */
+    @Schema(description = "匹配模式：strict（严谨）/ loose（宽松）")
+    private String matchMode = "strict";
 
     /**
      * 阅卷判分 System Prompt（主观题 LLM 判分指令）。

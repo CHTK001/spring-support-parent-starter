@@ -137,6 +137,29 @@ public class FileLogStore {
     }
 
     /**
+     * 删除早于给定截止时间的日志。
+     *
+     * <p>用于「保留最近 N 天」的定期清理：传入 {@code cutoffMillis}（毫秒时间戳），
+     * 所有 {@code time < cutoffMillis} 的条目都会被移除。</p>
+     *
+     * @param cutoffMillis 截止时间戳（毫秒）；早于它的条目被删除
+     * @return 被删除的条数
+     */
+    public int removeBefore(long cutoffMillis) {
+        synchronized (lock) {
+            int removed = 0;
+            var it = ring.iterator();
+            while (it.hasNext()) {
+                if (it.next().time() < cutoffMillis) {
+                    it.remove();
+                    removed++;
+                }
+            }
+            return removed;
+        }
+    }
+
+    /**
      * 当前日志条数。
      *
      * @return 条数

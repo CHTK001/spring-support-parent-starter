@@ -2,6 +2,8 @@ package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceTaskState;
 
+import java.util.List;
+
 /**
  * 任务状态服务接口（Trigger 模式）
  * <p>后台每秒执行的任务通过判断 Trigger 标志决定是否真正执行业务逻辑，</p>
@@ -11,6 +13,13 @@ import com.chua.starter.device.support.entity.DeviceTaskState;
  * @author CH
  */
 public interface DeviceTaskStateService {
+
+    /**
+     * 列出全部任务状态
+     *
+     * @return 任务状态列表（按任务名升序）
+     */
+    List<DeviceTaskState> list();
 
     /**
      * 判断任务是否应该运行

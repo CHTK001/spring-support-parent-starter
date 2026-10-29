@@ -1,0 +1,7 @@
+com.chua.starter.server.support.provider.project.type.SpringbootProjectTypeProvider
+com.chua.starter.server.support.provider.project.type.FatjarProjectTypeProvider
+com.chua.starter.server.support.provider.project.type.GitProjectTypeProvider
+com.chua.starter.server.support.provider.project.type.SeparatedProjectTypeProvider
+com.chua.starter.server.support.provider.project.type.StaticProjectTypeProvider
+com.chua.starter.server.support.provider.project.type.NginxProjectTypeProvider
+com.chua.starter.server.support.provider.project.type.ModelProjectTypeProvider

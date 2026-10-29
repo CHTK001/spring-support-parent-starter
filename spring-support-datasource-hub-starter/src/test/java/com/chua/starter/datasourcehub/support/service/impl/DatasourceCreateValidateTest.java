@@ -51,7 +51,7 @@ class DatasourceCreateValidateTest {
         DataSourceDTO dto = new DataSourceDTO(
                 "duck-file", "duckdb", "", 0,
                 ":memory:", "", "", "accept", 1,
-                "", null, "", "", null);
+                "", null, "", "", null, 0);
         assertNull(invokeValidate(dto),
                 "文件库类型（DuckDB）端口占位 0 不应被端口范围校验拒绝");
     }
@@ -62,7 +62,7 @@ class DatasourceCreateValidateTest {
         DataSourceDTO dto = new DataSourceDTO(
                 "jdbc-zero", "jdbc", "127.0.0.1", 0,
                 "report", "root", "root", "", 1,
-                "", null, "", "", null);
+                "", null, "", "", null, 0);
         assertEquals("端口非法，需为 1~65535", invokeValidate(dto),
                 "非文件库类型 port=0 仍必须被拒绝");
     }
@@ -73,7 +73,7 @@ class DatasourceCreateValidateTest {
         DataSourceDTO dto = new DataSourceDTO(
                 "jdbc-ok", "jdbc", "127.0.0.1", 3306,
                 "report", "root", "root", "", 1,
-                "", null, "", "", null);
+                "", null, "", "", null, 0);
         assertNull(invokeValidate(dto));
     }
 
@@ -83,7 +83,7 @@ class DatasourceCreateValidateTest {
         DataSourceDTO dto = new DataSourceDTO(
                 "duck-port", "duckdb", "", 65535,
                 ":memory:", "", "", "", 1,
-                "", null, "", "", null);
+                "", null, "", "", null, 0);
         assertNull(invokeValidate(dto),
                 "文件库类型的端口字段完全不参与范围校验");
     }

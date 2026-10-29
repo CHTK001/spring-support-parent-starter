@@ -3,7 +3,9 @@ package com.chua.starter.eduai.service;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
+import com.chua.starter.eduai.model.dto.MarkingToBankDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
+import com.chua.starter.eduai.model.vo.MarkingToBankResultVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishPreviewVO;
@@ -91,6 +93,17 @@ public interface IEduMarkingService {
     byte[] getSheetImage(String taskId, int page);
 
     /**
+     * 读取答卷图片的指定页，可指定图片变体。
+     *
+     * @param taskId  任务标识
+     * @param page    页码（从 1 开始）
+     * @param variant 变体：{@code thumb} 取缩略图（最长边 800px 的灰度 PNG），
+     *                其它值或 null 取原图
+     * @return 图片字节
+     */
+    byte[] getSheetImage(String taskId, int page, String variant);
+
+    /**
      * 教师确认或修正评分
      *
      * @param dto 修正数据
@@ -170,4 +183,22 @@ public interface IEduMarkingService {
      * @return 进度快照
      */
     MarkingProgressVO getProgress(String taskId);
+
+    /**
+     * 把外来卷识别出的题目加入题库。
+     *
+     * <p><b>为什么只有外来卷</b>：自有卷（{@code SELF}）的题目本来就来自题库，
+     * 阅卷结果行上的 {@code questionId} 直指已有题目，再「入库」只会造出重复题目。
+     * 外来卷（{@code ANY}）的题目是 OCR + 模型现场抽出来的，此前判完就散掉；
+     * 本方法让老师复核后把它们沉淀成题库题目。</p>
+     *
+     * <p>题干与学生作答一律回读数据库明细，不采信客户端传值；标准答案优先取老师补写，
+     * 未补写时只在「该题本次判为满分」的情况下用学生作答代替（答对的作答即正确解），
+     * 判错又没补答案的题不入库，作为 {@code needAnswerNos} 返回。</p>
+     *
+     * @param taskId 任务业务标识
+     * @param dto    入题库请求（选中题目 + 学科/学段/年级 + 补充答案）
+     * @return 逐条容错的入库结果
+     */
+    MarkingToBankResultVO addToQuestionBank(String taskId, MarkingToBankDTO dto);
 }

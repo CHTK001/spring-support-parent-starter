@@ -173,6 +173,11 @@ public class SshConnectionCache {
                             cred = new LoginCredential(uname, passPhrase, privKey);
                         }
                     }
+                } else if ("NONE".equalsIgnoreCase(id.getMsServerIdentityAuthType())) {
+                    // 免密认证：目标主机已放行（authorized_keys 或允许空口令），
+                    // 凭据只承载用户名，密码/私钥均为 null；连接层不设空口令，
+                    // SshClient 会回落到默认身份文件走公钥认证
+                    cred = new LoginCredential(uname, null, null);
                 } else {
                     String encPass = id.getMsServerIdentityPassword();
                     if (encPass != null && !encPass.isBlank()) {
@@ -190,10 +195,88 @@ public class SshConnectionCache {
                 }
             }
             result.addAll(roots);
+            // 地址里的 user@ 前缀是网关分配的真实登录名，优先于台账身份里的历史账号
+            result = preferAddressAccount(host, result);
+            // 本机自采集主机没有绑定身份时，用平台运行账号走回环免密
+            if (result.isEmpty() && isLocal(host)) {
+                String osUser = System.getProperty("user.name");
+                if (osUser != null && !osUser.isBlank()) {
+                    result.add(new LoginCredential(osUser, null, null));
+                }
+            }
         } catch (Exception e) {
             log.warn("credentials failed host={}: {}", host.getId(), e.getMessage());
         }
         return result;
+    }
+
+    /**
+     * 地址前缀账号优先。
+     *
+     * <p>{@code ibssh_xxx@ssh.instabox.sh} 里的 {@code ibssh_xxx} 是网关分配的登录名，
+     * 台账里绑定的身份账号可能是历史默认值（user/root），直接连必然认证失败。
+     * 这里用同一份口令/私钥先按地址账号试一次，再保留原身份作为回落。</p>
+     *
+     * @param host  主机
+     * @param creds 已解析的绑定身份凭据
+     * @return 地址账号排在前的凭据列表
+     */
+    private static List<LoginCredential> preferAddressAccount(MsServerHost host, List<LoginCredential> creds) {
+        String user = addressUser(host.getServerHostAddress());
+        if (user == null) {
+            return creds;
+        }
+        java.util.List<LoginCredential> merged = new java.util.ArrayList<>(creds.size() + 1);
+        boolean same = false;
+        for (LoginCredential c : creds) {
+            if (user.equalsIgnoreCase(c.username())) {
+                same = true;
+                break;
+            }
+        }
+        if (!same) {
+            for (LoginCredential c : creds) {
+                merged.add(new LoginCredential(user, c.password(), c.privateKey()));
+            }
+        }
+        merged.addAll(creds);
+        return merged;
+    }
+
+    /**
+     * 取地址里的登录名（{@code user@host} 的 user 部分）。
+     *
+     * @param raw 原始地址
+     * @return 登录名；地址不含 user@ 前缀时返回 null
+     */
+    private static String addressUser(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        int at = raw.lastIndexOf('@');
+        if (at <= 0 || at >= raw.length() - 1) {
+            return null;
+        }
+        String afterAt = raw.substring(at + 1);
+        if (!afterAt.contains(".") && !afterAt.contains(":") && !afterAt.contains("/")) {
+            return null;
+        }
+        String user = raw.substring(0, at).trim();
+        if (user.isEmpty() || user.contains("/") || user.contains(":") || user.contains("\\")) {
+            return null;
+        }
+        return user;
+    }
+
+    /**
+     * 是否本机自采集主机。
+     *
+     * @param host 主机
+     * @return true=LOCAL
+     */
+    private static boolean isLocal(MsServerHost host) {
+        return host.getServerHostCollectMode() != null
+                && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim());
     }
 
     static {
@@ -240,10 +323,15 @@ public class SshConnectionCache {
         Exception lastErr = null;
         for (LoginCredential cred : creds) {
             try {
+                // host.getServerHostAddress() 可能带 user@ 前缀（历史数据/粘贴导入），
+                // MINA SSHD 的 hostname 校验器拒绝 @ 字符，必须剥离；
+                // 本机自采集主机走回环，避免绕公网入口/网桥地址
+                String address = effectiveAddress(host);
                 var builder = com.chua.ssh.support.client.SshClient.builder()
-                        .host(host.getServerHostAddress())
+                        .host(address)
                         .port(host.getServerHostPort() != null ? host.getServerHostPort() : 22)
                         .username(cred.username())
+                        .hostKeyPolicy(com.chua.ssh.support.client.HostKeyPolicy.INSECURE)
                         .connectTimeout(connectTimeoutSeconds())
                         .sessionTimeout(sessionTimeoutSeconds())
                         .execTimeout(execTimeoutSeconds());
@@ -281,8 +369,49 @@ public class SshConnectionCache {
         }
         throw new IllegalStateException("SSH 连接失败 host=" + host.getId() + " "
                 + host.getServerHostAddress() + ":" + (host.getServerHostPort() != null ? host.getServerHostPort() : 22)
+                + " 账号=" + creds.stream().map(LoginCredential::username).distinct().reduce((a, b) -> a + "/" + b).orElse("-")
                 + " 已尝试 " + creds.size() + " 组凭据"
                 + (lastErr == null ? "" : "，最后原因: " + describe(lastErr)), lastErr);
+    }
+
+    /**
+     * 剥离主机地址中的 user@ 前缀。
+     *
+     * <p>历史数据或粘贴导入可能把整行 ssh 命令（{@code user@host}）写进地址字段，
+     * MINA SSHD 的 hostname 校验器把 @ 当非法字符拒绝连接。这里只剥前缀，
+     * 不修改原字段值——地址可能用于展示，展示 {@code user@host} 反而更直观。</p>
+     *
+     * @param raw 原始地址（可能含 user@ 前缀）
+     * @return 纯主机地址（无 user@ 前缀）
+     */
+    private static String cleanAddress(String raw) {
+        if (raw == null || raw.isBlank()) return raw;
+        int at = raw.lastIndexOf('@');
+        // 仅当 @ 后面看起来像主机地址（含 . 或 : 或 /）才剥离
+        if (at > 0 && at < raw.length() - 1) {
+            String afterAt = raw.substring(at + 1);
+            if (afterAt.contains(".") || afterAt.contains(":") || afterAt.contains("/")) {
+                return afterAt;
+            }
+        }
+        return raw;
+    }
+
+    /**
+     * 实际拨号地址：本机自采集主机固定回环，其余剥离 user@ 前缀。
+     *
+     * <p>本机主机台账里的地址可能是网桥地址（172.18.0.1）或公网入口地址，
+     * 从平台内部再拨这两个地址都属于绕路：前者依赖 docker 网桥存活，后者还会
+     * 撞上 hairpin NAT。SSH/SFTP 对本机统一走 127.0.0.1。</p>
+     *
+     * @param host 主机
+     * @return 可拨号的地址
+     */
+    private static String effectiveAddress(MsServerHost host) {
+        if (isLocal(host)) {
+            return "127.0.0.1";
+        }
+        return cleanAddress(host.getServerHostAddress());
     }
 
     /**
@@ -331,10 +460,15 @@ public class SshConnectionCache {
         Exception lastErr = null;
         for (LoginCredential cred : creds) {
             try {
+                // host.getServerHostAddress() 可能带 user@ 前缀（历史数据/粘贴导入），
+                // MINA SSHD 的 hostname 校验器拒绝 @ 字符，必须剥离；
+                // 本机自采集主机走回环，避免绕公网入口/网桥地址
+                String address = effectiveAddress(host);
                 var sftpBuilder = com.chua.ssh.support.client.SftpClient.builder()
-                        .host(host.getServerHostAddress())
+                        .host(address)
                         .port(host.getServerHostPort() != null ? host.getServerHostPort() : 22)
                         .username(cred.username())
+                        .hostKeyPolicy(com.chua.ssh.support.client.HostKeyPolicy.INSECURE)
                         .connectTimeout(connectTimeoutSeconds());
                 if (cred.privateKey() != null) {
                     java.nio.file.Path tmp = java.nio.file.Files.createTempFile("ms-sftp-", ".pem");

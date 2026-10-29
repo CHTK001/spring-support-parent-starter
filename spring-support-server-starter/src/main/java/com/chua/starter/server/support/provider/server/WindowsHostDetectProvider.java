@@ -3,12 +3,14 @@ package com.chua.starter.server.support.provider.server;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostDetectProvider;
 import com.chua.starter.server.support.util.SshClients;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Windows 主机硬件探测提供者（WinRM 采集）
@@ -30,6 +32,12 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
      */
     private static final int DEFAULT_SSH_PORT = 22;
 
+    /**
+     * SSH 连接缓存管理器（复用已建立连接，避免每次探测重复握手）
+     */
+    @Autowired
+    private ConnectionManager connectionManager;
+
     @Override
     public String osType() {
         return "WINDOWS";
@@ -40,8 +48,9 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
         // OpenSSH 端口：优先主机"登录端口"，否则回退 22
         int sshPort = host.getServerHostPort() != null && host.getServerHostPort() > 0
                 ? host.getServerHostPort() : DEFAULT_SSH_PORT;
-        try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), sshPort, credential)) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, credential);
             // 用 -EncodedCommand（UTF-16LE Base64）彻底规避引号/反斜杠/折行/特殊字符问题；
             // 脚本末尾 Write-Output 单行、以 | 分隔 k=v
             String command = PowerShellCommand.encoded(buildDetectScript());
@@ -54,6 +63,10 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
             log.warn("[detect] OpenSSH 探测失败 hostId={} address={}: {}",
                     host.getId(), host.getServerHostAddress(), e.getMessage());
             return ReturnResult.error("OpenSSH 硬件探测失败: " + e.getMessage());
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
         }
     }
 

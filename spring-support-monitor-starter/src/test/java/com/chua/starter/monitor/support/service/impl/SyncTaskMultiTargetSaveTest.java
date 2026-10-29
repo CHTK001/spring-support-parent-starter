@@ -44,7 +44,7 @@ class SyncTaskMultiTargetSaveTest {
      * 被测服务：只有 objectMapper 是必需的
      */
     private final SyncTaskServiceImpl service =
-            new SyncTaskServiceImpl(null, null, new ObjectMapper(), null, null);
+            new SyncTaskServiceImpl(null, null, null, new ObjectMapper(), null, null);
 
     /**
      * 未配置 targets 时返回空列表，调用方继续走旧的单目标三件套。

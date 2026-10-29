@@ -152,6 +152,10 @@ public class LocalFileStorage extends AbstractFileStorage {
                 Files.write(target, request.getContent());
             } else if (request.getInputStream() != null) {
                 Files.copy(request.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            } else if (request.getFile() != null) {
+                // 分片合并路径：builder.file(mergedFile) 只设 File，不设 content/inputStream，
+                // 这里必须显式读文件字节，否则一律抵达「内容为空」分支
+                Files.copy(request.getFile().toPath(), target, StandardCopyOption.REPLACE_EXISTING);
             } else {
                 return PutObjectResult.builder()
                         .resultCode(ObjectResult.ResultCode.FAILURE)

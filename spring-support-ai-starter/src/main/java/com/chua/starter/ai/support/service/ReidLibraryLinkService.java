@@ -122,7 +122,10 @@ public class ReidLibraryLinkService {
         row.setName(name);
         row.setThumbnail(thumbnail);
         row.setMeta(writeMeta(metadata));
-        row.setGroupName(strOf(metadata, "group"));
+        // 分组**必须归一化后再写**：MyBatis 会把 null 显式写进列，覆盖掉 DDL 上的
+        // DEFAULT 'default'，于是这条观测的分组是 NULL —— 查默认组时靠 NULL 兜底还能捞到，
+        // 但任何按分组精确统计/比较都会把它算成「无分组」，与预期不符。
+        row.setGroupName(AiLibraryGroups.normalize(strOf(metadata, "group")));
         row.setLat(lat);
         row.setLng(lng);
         row.setStatus(1);
@@ -187,7 +190,7 @@ public class ReidLibraryLinkService {
         }
         exist.setName(name);
         exist.setMeta(writeMeta(metadata));
-        exist.setGroupName(strOf(metadata, "group"));
+        exist.setGroupName(AiLibraryGroups.normalize(strOf(metadata, "group")));
         exist.setLat(lat);
         exist.setLng(lng);
         Integer faceId = intOf(metadata, "faceId");
@@ -231,20 +234,23 @@ public class ReidLibraryLinkService {
     }
 
     /**
-     * 当前账号的全部观测行（按时间倒序）。
+     * 当前账号指定分组的观测行（按时间倒序）。
      *
      * @param userId 归属账号
+     * @param groups 分组名列表；空表示不按分组过滤
      * @return 观测列表
      */
-    public List<Map<String, Object>> listMine(String userId) {
+    public List<Map<String, Object>> listMine(String userId, List<String> groups) {
         List<SysAiReidLibrary> rows;
         try {
-            rows = mapper.selectList(new LambdaQueryWrapper<SysAiReidLibrary>()
+            LambdaQueryWrapper<SysAiReidLibrary> query = new LambdaQueryWrapper<SysAiReidLibrary>()
                     .eq(SysAiReidLibrary::getUserId, userId)
                     .eq(SysAiReidLibrary::getStatus, 1)
-                    .orderByDesc(SysAiReidLibrary::getCreateTime));
+                    .orderByDesc(SysAiReidLibrary::getCreateTime);
+            appendGroupFilter(query, groups);
+            rows = mapper.selectList(query);
         } catch (Exception ex) {
-            log.warn("[Reid] 读取重识别底库失败: user={} -> {}", userId, ex.getMessage());
+            log.warn("[Reid] 读取重识别底库失败: user={}, groups={} -> {}", userId, groups, ex.getMessage());
             return List.of();
         }
         List<Map<String, Object>> out = new ArrayList<>(rows.size());
@@ -254,6 +260,8 @@ public class ReidLibraryLinkService {
             item.put("trackId", row.getTrackId());
             item.put("cameraId", row.getCameraId());
             item.put("name", row.getName());
+            // 分组以**列**为准（NULL 归一成默认组）：与其它标量字段同口径，列是唯一真相
+            item.put("group", AiLibraryGroups.normalize(row.getGroupName()));
             item.put("faceId", row.getFaceId());
             item.put("faceName", row.getFaceName());
             item.put("lat", row.getLat());
@@ -290,18 +298,47 @@ public class ReidLibraryLinkService {
     }
 
     /**
-     * 把底库观测<b>汇聚成跨帧轨迹</b>。
+     * 给查询加上分组过滤（含「NULL 属于默认组」的语义）。
+     *
+     * <p>抽成一处而不是每处手写：分组过滤有两个易错点 ——
+     * 一是空列表必须表示<b>不过滤</b>（管理端全量），二是查默认组时必须带上 NULL。
+     * 散在五六个查询里手写，迟早有一处漏掉 NULL，表现为「历史数据在列表里看不见、
+     * 但按 id 又能查到」。</p>
+     *
+     * @param query  查询条件
+     * @param groups 分组名列表；空表示不过滤
+     */
+    private static void appendGroupFilter(LambdaQueryWrapper<SysAiReidLibrary> query, List<String> groups) {
+        if (groups == null || groups.isEmpty()) {
+            return;
+        }
+        query.and(w -> {
+            w.in(SysAiReidLibrary::getGroupName, groups);
+            if (AiLibraryGroups.matches(null, groups)) {
+                w.or().isNull(SysAiReidLibrary::getGroupName);
+            }
+        });
+    }
+
+    /**
+     * 把底库观测<b>汇聚成跨帧轨迹</b>（按分组过滤）。
      *
      * <p>这就是「跨帧轨迹从底库汇聚」的落地：一次分组查询得到轨迹，
      * 不依赖任何内存状态 —— 进程重启后轨迹依然在，因为它就是底库数据本身。</p>
      *
+     * <p><b>分组的 NULL 语义</b>：分组列建成之前写入的行是 {@code NULL}，
+     * 语义上属于默认组。查默认组时必须把 {@code NULL} 也捞进来，
+     * 否则历史轨迹会「凭空消失」；查非默认组时不带 {@code NULL}。</p>
+     *
      * @param userId   归属账号
+     * @param groups   分组名列表；空表示不按分组过滤（管理端全量）
      * @param cameraId 只看某个摄像头的轨迹；为空表示全部
      * @param crossOnly 只看跨摄像头轨迹
      * @param limit    返回上限；≤0 表示不限
      * @return 轨迹列表（按最近观测时间倒序）
      */
-    public List<Track> aggregateTracks(String userId, String cameraId, boolean crossOnly, int limit) {
+    public List<Track> aggregateTracks(String userId, List<String> groups,
+                                       String cameraId, boolean crossOnly, int limit) {
         List<SysAiReidLibrary> rows;
         try {
             LambdaQueryWrapper<SysAiReidLibrary> query = new LambdaQueryWrapper<SysAiReidLibrary>()
@@ -309,9 +346,10 @@ public class ReidLibraryLinkService {
                     .eq(SysAiReidLibrary::getStatus, 1)
                     .isNotNull(SysAiReidLibrary::getTrackId)
                     .orderByAsc(SysAiReidLibrary::getCreateTime);
+            appendGroupFilter(query, groups);
             rows = mapper.selectList(query);
         } catch (Exception ex) {
-            log.warn("[Reid] 汇聚轨迹失败: user={} -> {}", userId, ex.getMessage());
+            log.warn("[Reid] 汇聚轨迹失败: user={}, groups={} -> {}", userId, groups, ex.getMessage());
             return List.of();
         }
 
@@ -364,14 +402,15 @@ public class ReidLibraryLinkService {
      * 按轨迹 ID 取一条轨迹（同样从底库汇聚）。
      *
      * @param userId  归属账号
+     * @param groups  分组名列表；空表示不按分组过滤
      * @param trackId 轨迹 ID
      * @return 轨迹；不存在返回 {@code null}
      */
-    public Track track(String userId, String trackId) {
+    public Track track(String userId, List<String> groups, String trackId) {
         if (trackId == null || trackId.isBlank()) {
             return null;
         }
-        for (Track track : aggregateTracks(userId, null, false, 0)) {
+        for (Track track : aggregateTracks(userId, groups, null, false, 0)) {
             if (trackId.equals(track.trackId())) {
                 return track;
             }
@@ -380,27 +419,57 @@ public class ReidLibraryLinkService {
     }
 
     /**
-     * 该账号下轨迹总数。
+     * 按向量标识反查所属轨迹 ID。
      *
-     * @param userId 归属账号
-     * @return 轨迹数
+     * <p><b>为什么需要它。</b>重识别的向量库按 {@code vectorId} 索引，
+     * 而轨迹按 {@code trackId} 汇聚 —— 两者不是同一个键。向量检索命中后
+     * 要把「命中了哪条观测」翻译成「命中了哪条轨迹」，靠的就是这一步反查。
+     * 反查走 DB（{@code sys_ai_reid_library}）而不是向量库的元数据：
+     * 元数据只是向量侧的副本，DB 才是权威。</p>
+     *
+     * @param userId   归属账号
+     * @param vectorId 向量标识
+     * @return 轨迹 ID；不存在返回 {@code null}
      */
-    public int trackCount(String userId) {
-        return aggregateTracks(userId, null, false, 0).size();
+    public String trackIdOf(String userId, String vectorId) {
+        if (userId == null || userId.isBlank() || vectorId == null || vectorId.isBlank()) {
+            return null;
+        }
+        try {
+            SysAiReidLibrary row = find(userId, vectorId);
+            return row == null ? null : row.getTrackId();
+        } catch (Exception ex) {
+            log.warn("[Reid] 反查观测所属轨迹失败: user={}, id={} -> {}", userId, vectorId, ex.getMessage());
+            return null;
+        }
     }
 
     /**
-     * 清空该账号的全部观测（元数据行；向量由调用方清理）。
+     * 指定分组的轨迹总数。
      *
      * @param userId 归属账号
+     * @param groups 分组名列表；空表示不按分组过滤
+     * @return 轨迹数
+     */
+    public int trackCount(String userId, List<String> groups) {
+        return aggregateTracks(userId, groups, null, false, 0).size();
+    }
+
+    /**
+     * 清空指定分组的观测（元数据行；向量由调用方清理）。
+     *
+     * @param userId 归属账号
+     * @param groups 分组名列表；空表示清空该账号全部
      * @return 删除的行数
      */
-    public int clear(String userId) {
+    public int clear(String userId, List<String> groups) {
         try {
-            return mapper.delete(new LambdaQueryWrapper<SysAiReidLibrary>()
-                    .eq(SysAiReidLibrary::getUserId, userId));
+            LambdaQueryWrapper<SysAiReidLibrary> query = new LambdaQueryWrapper<SysAiReidLibrary>()
+                    .eq(SysAiReidLibrary::getUserId, userId);
+            appendGroupFilter(query, groups);
+            return mapper.delete(query);
         } catch (Exception ex) {
-            log.warn("[Reid] 清空重识别底库失败: user={} -> {}", userId, ex.getMessage());
+            log.warn("[Reid] 清空重识别底库失败: user={}, groups={} -> {}", userId, groups, ex.getMessage());
             return 0;
         }
     }

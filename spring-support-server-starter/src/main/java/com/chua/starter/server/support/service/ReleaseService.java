@@ -171,6 +171,23 @@ public interface ReleaseService {
      */
     ReturnResult<String> upgradeSoftware(Long hostId, String name);
 
+    /**
+     * 列出有可用更新的软件（同步执行，供前端决定是否显示「升级」按钮）
+     *
+     * @param hostId 主机ID
+     * @return 可升级条目（当前版本 + 候选版本）；包管理器不支持时返回空列表
+     */
+    ReturnResult<List<com.chua.starter.server.support.model.vo.SoftwareUpgradeVO>> listUpgradableSoftware(Long hostId);
+
+    /**
+     * 查询某个软件包的依赖关系（同步执行）
+     *
+     * @param hostId 主机ID
+     * @param name   软件包名
+     * @return 依赖包名列表；包管理器不支持时返回空列表
+     */
+    ReturnResult<List<String>> softwareDependencies(Long hostId, String name);
+
     // ==================== 状态检测 ====================
 
     /**
@@ -194,13 +211,30 @@ public interface ReleaseService {
 
     /**
      * 读取升级配置：global 全局默认 + last 最近一次手动配置
+     *
+     * @param projectId 项目ID；非空时额外返回该项目的默认升级配置（{@code project}）
+     * @return global / last / project 三份配置
      */
-    ReturnResult<Map<String, Object>> getUpgradeConfig();
+    ReturnResult<Map<String, Object>> getUpgradeConfig(Long projectId);
 
     /**
-     * 保存升级配置（scope=global 全局默认 / last 最近一次手动配置）
+     * 保存升级配置（scope=global 全局默认 / last 最近一次手动配置 / project 项目默认）
+     *
+     * @param scope     配置作用域
+     * @param projectId 项目ID，scope=project 时必填
+     * @param config    升级配置
+     * @return 操作结果
      */
-    ReturnResult<Void> saveUpgradeConfig(String scope, Map<String, Object> config);
+    ReturnResult<Void> saveUpgradeConfig(String scope, Long projectId, Map<String, Object> config);
+
+    /**
+     * 集群批量升级：按同一份配置依次升级多个项目（每个项目独立异步任务）
+     *
+     * @param projectIds 项目ID列表
+     * @param config     升级配置
+     * @return 每个项目的触发结果（taskId / 失败原因）
+     */
+    ReturnResult<List<Map<String, Object>>> batchUpgrade(List<Long> projectIds, Map<String, Object> config);
 
     /**
      * 按给定升级配置执行升级（备份 / 投放包 / 解压 / 回滚 / 重启，按开关组合）（异步，返回 taskId）
@@ -213,11 +247,15 @@ public interface ReleaseService {
     /**
      * 拖拽升级：上传安装包到目标主机 uploads 目录，按全局升级配置执行升级（异步，返回 taskId）
      *
-     * @param id   项目ID
-     * @param file 安装包（jar / tar.gz / zip）
+     * @param id         项目ID
+     * @param file       安装包（jar / tar.gz / zip）
+     * @param deployType 部署类型覆盖（main / lib / both，空则用项目默认）
+     * @param autoRestart 是否重启，null 用配置默认
+     * @return 异步任务标识（taskId）
      */
     ReturnResult<String> uploadAndUpgrade(Long id,
-                                          org.springframework.web.multipart.MultipartFile file);
+                                          org.springframework.web.multipart.MultipartFile file,
+                                          String deployType, Boolean autoRestart);
 
     /**
      * Git 自动发布：从项目配置的 Git 仓库拉取代码 → Maven 构建 → SFTP 上传产物 → 升级重启。

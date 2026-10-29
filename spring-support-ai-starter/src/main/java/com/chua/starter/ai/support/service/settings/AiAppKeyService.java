@@ -46,6 +46,17 @@ public interface AiAppKeyService {
     ReturnResult<Void> delete(Long appKeyId);
 
     /**
+     * 批量删除 appKey（逻辑删除）。
+     *
+     * <p>与 {@link #delete(Long)} 同口径：写出口归属守卫整批过完后才删，
+     * 有问题的行直接拦截，出现部分删除。</p>
+     *
+     * @param appKeyIds appKey 主键列表
+     * @return 实际删除的 appKey 数量
+     */
+    int batchDelete(List<Long> appKeyIds);
+
+    /**
      * 切换 appKey 启用状态。
      *
      * @param appKeyId appKey 主键

@@ -2,6 +2,7 @@ package com.chua.starter.server.support.terminal.handler;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
+import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsTerminalSession;
 import com.chua.starter.server.support.model.SshCredential;
@@ -72,6 +73,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      * 主机服务（地址/端口/凭据解析）
     */
     private final ServerHostService serverHostService;
+
+    /**
+     * SSH 连接缓存管理器（复用已建立连接，避免每次远控重复握手）
+     */
+    private final ConnectionManager connectionManager;
 
     /**
      * 会话审计服务
@@ -145,8 +151,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
 
         SshClients.Handle handle;
         try {
-            handle = SshClients.open(host.getServerHostAddress(), port, resolved.getData());
-            handle.client().connect();
+            handle = connectionManager.borrow(host, resolved.getData());
         } catch (Exception e) {
             String cause = WebSocketSessions.describeCause(e);
             log.warn("[terminal-ssh] SSH 连接失败 hostId={} {}:{} {}", hostId, host.getServerHostAddress(), port, cause, e);
@@ -173,7 +178,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                     wsSession.getId(), hostId, host.getServerHostAddress(), port, cols, rows);
         } catch (Exception e) {
             bridges.remove(wsSession.getId());
-            closeHandle(handle);
+            closeHandle(handle, hostId);
             terminalSessionService.closeRecord(bridge.recordId, "PTY 打开失败");
             String cause = WebSocketSessions.describeCause(e);
             log.warn("[terminal-ssh] PTY 打开失败 hostId={} {}", hostId, cause, e);
@@ -371,7 +376,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                 log.debug("[terminal-ssh] 关闭 PTY 异常: {}", e.getMessage());
             }
         }
-        closeHandle(bridge.handle);
+        closeHandle(bridge.handle, bridge.hostId);
         terminalSessionService.closeRecord(bridge.recordId, reason);
         try {
             bridge.wsSession.close(CloseStatus.NORMAL);
@@ -382,15 +387,16 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     /**
-     * 关闭 SSH 句柄（同时清理临时私钥文件）
+     * 归还借用连接（释放引用计数；连接实体仍由连接池缓存，供后续复用）
      *
      * @param handle SSH 句柄
+     * @param hostId 主机 标识（归还键）
      */
-    private void closeHandle(SshClients.Handle handle) {
+    private void closeHandle(SshClients.Handle handle, Long hostId) {
         try {
-            handle.close();
+            connectionManager.release(hostId);
         } catch (Exception e) {
-            log.debug("[terminal-ssh] 关闭 SSH 句柄异常: {}", e.getMessage());
+            log.debug("[terminal-ssh] 归还 SSH 连接异常: {}", e.getMessage());
         }
     }
 
@@ -463,8 +469,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
 
         SshClients.Handle handle;
         try {
-            handle = SshClients.open(host.getServerHostAddress(), port, resolved.getData());
-            handle.client().connect();
+            handle = connectionManager.borrow(host, resolved.getData());
         } catch (Exception e) {
             String cause = WebSocketSessions.describeCause(e);
             log.warn("[terminal-ssh] 共享 SSH 连接失败 hostId={} {}:{} {}", hostId, host.getServerHostAddress(), port, cause, e);
@@ -499,7 +504,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                         // 忽略关闭异常
                     }
                 }
-                closeHandle(handle);
+                closeHandle(handle, hostId);
                 terminalSessionService.closeRecord(room.recordId, "房间已由其他账号创建");
                 return pre;
             }
@@ -507,7 +512,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                     roomId, hostId, host.getServerHostAddress(), port, cols, rows, wsSession.getId());
             return room;
         } catch (Exception e) {
-            closeHandle(handle);
+            closeHandle(handle, hostId);
             terminalSessionService.closeRecord(room.recordId, "PTY 打开失败");
             String cause = WebSocketSessions.describeCause(e);
             log.warn("[terminal-ssh] 共享 PTY 打开失败 hostId={} {}", hostId, cause, e);
@@ -629,7 +634,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                 log.debug("[terminal-ssh] 关闭共享 PTY 异常: {}", e.getMessage());
             }
         }
-        closeHandle(room.handle);
+        closeHandle(room.handle, room.hostId);
         terminalSessionService.closeRecord(room.recordId, reason);
         for (ShareMember member : room.members.values()) {
             memberRoom.remove(member.wsSession.getId());

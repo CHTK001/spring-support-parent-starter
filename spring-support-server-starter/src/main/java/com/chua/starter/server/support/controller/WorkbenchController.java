@@ -8,12 +8,15 @@ import com.chua.starter.server.support.service.WorkbenchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
@@ -112,19 +115,92 @@ public class WorkbenchController {
     }
 
     /**
-     * 容器最近日志
+     * 容器最近日志（一次性返回，非流式）
      *
      * @param hostId      主机 标识
      * @param containerId 容器 ID
      * @param tail        尾部行数
      * @return 日志文本
      */
-    @Operation(summary = "容器日志")
+    @Operation(summary = "容器日志（一次性）")
     @PostMapping("/docker/containers/{containerId}/logs")
     public ReturnResult<String> dockerContainerLogs(@PathVariable Long hostId,
                                                     @PathVariable String containerId,
                                                     @RequestParam(required = false) Integer tail) {
         return workbenchService.dockerContainerLogs(hostId, containerId, tail);
+    }
+
+    /**
+     * 容器日志实时流（SSE 异步推送）
+     * <p>使用 docker logs -f 持续跟随容器日志，每行作为一条 SSE 事件推送。
+     * 客户端断开连接时自动停止跟随并释放 SSH 连接。</p>
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID
+     * @param tail        起始尾部行数（默认 100）
+     * @return SSE 发射器
+     */
+    @Operation(summary = "容器日志实时流（SSE）")
+    @GetMapping(value = "/docker/containers/{containerId}/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamContainerLogs(@PathVariable Long hostId,
+                                           @PathVariable String containerId,
+                                           @RequestParam(required = false) Integer tail) {
+        return workbenchService.streamContainerLogs(hostId, containerId, tail);
+    }
+
+    /**
+     * 进入容器（SSE 异步流式交互）
+     * <p>通过 SSH PTY 建立交互式会话，执行 docker exec -it 进入容器 shell。
+     * 容器输出经 SSE 推送，客户端输入经 /exec/input 端点发送。</p>
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID
+     * @param body        请求体：command（容器内命令，默认 /bin/bash）
+     * @return SSE 发射器
+     */
+    @Operation(summary = "进入容器（SSE）")
+    @PostMapping(value = "/docker/containers/{containerId}/exec", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter dockerContainerExec(@PathVariable Long hostId,
+                                           @PathVariable String containerId,
+                                           @RequestBody(required = false) Map<String, String> body) {
+        String command = body != null && body.get("command") != null ? body.get("command") : "/bin/bash";
+        return workbenchService.dockerContainerExec(hostId, containerId, command);
+    }
+
+    /**
+     * 发送交互输入到容器会话
+     * <p>向活跃的 docker exec 会话发送输入（按键/命令文本）。</p>
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID
+     * @param body        请求体：sessionId（会话标识）、input（输入文本）
+     * @return 操作结果
+     */
+    @Operation(summary = "容器交互输入")
+    @PostMapping("/docker/containers/{containerId}/exec/input")
+    public ReturnResult<Void> dockerContainerExecInput(@PathVariable Long hostId,
+                                                        @PathVariable String containerId,
+                                                        @RequestBody Map<String, String> body) {
+        String sessionId = body.get("sessionId");
+        String input = body.get("input");
+        return workbenchService.dockerContainerExecInput(hostId, containerId, sessionId, input);
+    }
+
+    /**
+     * 关闭容器交互会话
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID
+     * @param body        请求体：sessionId（会话标识）
+     * @return 操作结果
+     */
+    @Operation(summary = "关闭容器交互会话")
+    @PostMapping("/docker/containers/{containerId}/exec/close")
+    public ReturnResult<Void> dockerContainerExecClose(@PathVariable Long hostId,
+                                                        @PathVariable String containerId,
+                                                        @RequestBody Map<String, String> body) {
+        String sessionId = body.get("sessionId");
+        return workbenchService.dockerContainerExecClose(hostId, containerId, sessionId);
     }
 
     /**

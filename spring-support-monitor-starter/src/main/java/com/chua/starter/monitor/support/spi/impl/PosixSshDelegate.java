@@ -648,18 +648,46 @@ public class PosixSshDelegate implements SystemInfoProvider {
             if (line.isBlank()) {
                 continue;
             }
-            String[] p = line.split("\\s+", 9);
-            if (p.length < 9) {
+            // GNU ls --time-style=long-iso 的列：权限 链接数 属主 属组 大小 日期 时间 名称...
+            // 名称是第 8 列且可能含空格，必须按「前 7 列逐 token、其余整段为名称」解析，
+            // 不能 split("\\s+", 9) 后取 p[8]——那会把普通文件（只有 8 列）整行丢掉，
+            // 只剩带 "-> 目标" 的符号链接（9 列），目录看起来像空的。
+            String[] head = new String[7];
+            int cursor = 0;
+            boolean valid = true;
+            for (int k = 0; k < head.length; k++) {
+                while (cursor < line.length() && Character.isWhitespace(line.charAt(cursor))) {
+                    cursor++;
+                }
+                int start = cursor;
+                while (cursor < line.length() && !Character.isWhitespace(line.charAt(cursor))) {
+                    cursor++;
+                }
+                if (start >= line.length()) {
+                    valid = false;
+                    break;
+                }
+                head[k] = line.substring(start, cursor);
+            }
+            if (!valid) {
+                continue;
+            }
+            String name = line.substring(cursor).trim();
+            int arrow = name.indexOf(" -> ");
+            if (arrow >= 0) {
+                name = name.substring(0, arrow).trim();
+            }
+            if (name.isEmpty()) {
                 continue;
             }
             list.add(new FileEntryVO(
-                    p[8].split(" -> ")[0],
-                    p[0].startsWith("d"),
-                    toLong(p[4]),
-                    p[5] + " " + p[6],
-                    p[2],
-                    p[0],
-                    p[3]));
+                    name,
+                    head[0].startsWith("d"),
+                    toLong(head[4]),
+                    head[5] + " " + head[6],
+                    head[2],
+                    head[0],
+                    head[3]));
         }
         return list;
     }

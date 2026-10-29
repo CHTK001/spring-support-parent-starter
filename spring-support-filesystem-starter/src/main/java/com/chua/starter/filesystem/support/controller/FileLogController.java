@@ -82,4 +82,21 @@ public class FileLogController {
     public ReturnResult<Integer> clear() {
         return ReturnResult.ok(fileLogStore.clear());
     }
+
+    /**
+     * 删除早于指定截止时间的文件操作日志（保留最近 N 天）。
+     *
+     * @param before 截止时间戳（毫秒，Unix 时间）；早于它的日志被删除。
+     *               不传或 <=0 时按「立即删除全部」等价于清空，前端直接传某一天前的毫秒值。
+     * @return 被删除的条数
+     */
+    @Operation(summary = "删除早于截止时间的文件操作日志")
+    @DeleteMapping("/clean")
+    public ReturnResult<Integer> clean(
+            @RequestParam(value = "before", required = false) Long before) {
+        if (before == null || before <= 0) {
+            return ReturnResult.ok(fileLogStore.clear());
+        }
+        return ReturnResult.ok(fileLogStore.removeBefore(before));
+    }
 }

@@ -203,7 +203,8 @@ public class EduAiService {
         EduAiCapabilityVO effective = capability();
         long started = System.currentTimeMillis();
         try {
-            long timeout = Math.max(5000L, properties.getMarking().getTimeout() * 1000L);
+            // 连通性测试只探一次，给短超时即可，不必占用任务预算那么久
+            long timeout = Math.max(5000L, properties.getMarking().getCallTimeout() * 1000L);
             String reply = client.chatSync("只回复两个字：可用", timeout);
             long cost = System.currentTimeMillis() - started;
             String sample = reply == null ? "" : reply.trim();
@@ -669,7 +670,9 @@ public class EduAiService {
         }
 
  // 对话客户端registry 提供的是 通用 对话客户端，调用 对话同步 即可
-        long timeout = properties.getMarking().getTimeout() * 1000L;
+        // 单次调用用「调用超时」而非「任务总预算」：后者可达 30 分钟，
+        // 一次挂死的调用会把并发闸门（默认串行）堵到天荒地老，后续任务全部排队。
+        long timeout = properties.getMarking().getCallTimeout() * 1000L;
         // ChatClient 只有单段提示词入口，必须把 system 指令并进 user 提示词：
         // 原实现直接丢弃 systemPrompt（只发 userPrompt），会让「只返回 JSON」这类约束静默失效
         String combined = StringUtils.isBlank(systemPrompt) ? userPrompt : systemPrompt + "\n\n" + userPrompt;

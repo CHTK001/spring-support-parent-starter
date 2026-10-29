@@ -25,6 +25,7 @@ import com.chua.starter.eduai.model.vo.PaperQuestionQrVO;
 import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.QuestionVO;
 import com.chua.starter.eduai.service.IEduPaperService;
+import com.chua.starter.eduai.service.PaperComposeSettingService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
 import com.chua.starter.eduai.support.util.GradeLevels;
@@ -128,6 +129,31 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     private static final int STATUS_ARCHIVED = 2;
 
     /**
+     * 题型 → 中文大题标题（手动组卷按题型自动归并生成 real 试卷分区版式）。
+     *
+     * <p>与前端 {@code QuestionView} 的题型选项文案保持一致；
+     * 组卷时同题型连续题项归入一个大题，大题名如「一、选择题」。</p>
+     */
+    private static final Map<String, String> QUESTION_TYPE_SECTION_NAMES = Map.of(
+            "SINGLE_CHOICE", "选择题",
+            "MULTIPLE_CHOICE", "多选题",
+            "JUDGE", "判断题",
+            "FILL", "填空题",
+            "BLANK", "填空题",
+            "SHORT_ANSWER", "简答题",
+            "SUBJECTIVE", "主观题",
+            "ESSAY", "作文"
+    );
+
+    /**
+     * 中文大写序号（大题标题「一、二、三…」编号），支持至「二十」。
+     */
+    private static final List<String> CHINESE_SECTION_NUMBERS = List.of(
+            "一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
+            "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十"
+    );
+
+    /**
      * Paperquestionmapper
     */
     private final EduPaperQuestionMapper paperQuestionMapper;
@@ -146,9 +172,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     private final com.chua.starter.eduai.dimension.mapper.EduTeacherMapper teacherMapper;
     private final EduAiService eduAiService;
     /**
-     * 属性
-    */
-    private final EduAiProperties properties;
+     * 组卷设置（AI 配置中心「试卷配置 → AI 组卷」，未配置时回落 {@link EduAiProperties.Paper}）
+     */
+    private final PaperComposeSettingService composeSetting;
 
     /**
      * 分页查询试卷：管理端/通用口径，按当前账号归属 scope 隔离。
@@ -316,7 +342,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         // 此前 AI 路径直接存前端传来的码值，会让「学段」筛选查不到 AI 组的卷。
         paper.setPaperGradeLevel(GradeLevels.normalize(dto.gradeLevel()));
         paper.setPaperGrade(dto.grade());
-        paper.setPaperTotalScore(dto.totalScore() != null ? dto.totalScore() : properties.getPaper().getMaxTotalScore());
+        paper.setPaperTotalScore(dto.totalScore() != null ? dto.totalScore() : composeSetting.maxTotalScore());
         paper.setPaperDuration(dto.duration());
         paper.setPaperStatus(0); // 草稿
         paper.setPaperSource("AI");
@@ -333,8 +359,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         paper.setCreateName(EduUserContext.currentUsername());
         baseMapper.insert(paper);
 
-        int count = dto.questionCount() != null ? dto.questionCount() : properties.getPaper().getDefaultQuestionCount();
-        int perScore = dto.scorePerQuestion() != null ? dto.scorePerQuestion() : properties.getPaper().getDefaultScorePerQuestion();
+        int count = dto.questionCount() != null ? dto.questionCount() : composeSetting.defaultQuestionCount();
+        int perScore = dto.scorePerQuestion() != null ? dto.scorePerQuestion() : composeSetting.defaultScorePerQuestion();
 
         // 2) 候选题目（兜底数据，仅本人题库）：先按学段收敛，学段无题时降级到同学科全集
         List<EduQuestion> candidates = loadCandidates(dto.subject(), dto.gradeLevel(), count);
@@ -476,7 +502,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         pq.setPaperQuestionPaperId(paperId);
         pq.setPaperQuestionQuestionId(newQuestionId);
         pq.setPaperQuestionOrder(0);
-        pq.setPaperQuestionScore(properties.getPaper().getDefaultScorePerQuestion());
+        pq.setPaperQuestionScore(composeSetting.defaultScorePerQuestion());
         pq.setOwnerUserId(paper.getOwnerUserId());
         pq.setCreateTime(LocalDateTime.now());
         paperQuestionMapper.insert(pq);
@@ -579,6 +605,9 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         int nextOrder = nextOrder(paperId);
         int added = 0;
         int updated = 0;
+        // 大题分区状态：样式与上一个题项相同的大题合并，题型变化时编下一个中文序号
+        String lastSection = null;
+        int sectionSeq = 0;
         for (PaperQuestionItemDTO item : items) {
             if (item == null || item.questionId() == null) {
                 throw new BusinessException("题目标识不能为空");
@@ -624,10 +653,17 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             relation.setPaperQuestionNo(paper.getPaperNo() + "-" + formatOrder(nextSeq));
             relation.setPaperQuestionVersion(currentVersion(paper) + 1);
             relation.setOwnerUserId(paper.getOwnerUserId());
+            String resolved = resolveSection(item, question, lastSection, sectionSeq);
+            relation.setPaperQuestionSection(resolved);
             relation.setCreateTime(LocalDateTime.now());
             paperQuestionMapper.insert(relation);
             // 题库「被加入次数」+1：只在新插入时计，改分/重复提交不重复累加
             questionMapper.incrAddCount(item.questionId());
+            // 大题块变化（新题型/新显式分区）→ 推进中文序号；同题型连续则复用同块
+            if (!Objects.equals(resolved, lastSection)) {
+                sectionSeq++;
+            }
+            lastSection = resolved;
             nextSeq++;
             nextOrder++;
             added++;
@@ -637,6 +673,41 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         }
         log.info("[EduAi] 批量加题完成: paperId={}, added={}, updated={}", paperId, added, updated);
         return added + updated;
+    }
+
+    /**
+     * 解析题项的大题标题（{@code section}）。
+     *
+     * <p>显式传值（前端自定义大题名）优先；省略时按题型自动归并：同题型连续题项
+     * 复用同一个中文大题块（如「一、选择题」），题型变化时编下一个中文序号。
+     * 题型不在映射表时返回 {@code null}（不分区），保持历史行为。</p>
+     *
+     * @param item        当前加题项
+     * @param question    对应题库题目（提供题型）
+     * @param lastSection 上一个题项的大题标题，首个为 {@code null}
+     * @param sectionSeq  已用的大题序号（0 起），用于「题型变化时」编排下一个序号
+     * @return 大题标题；无分区返回 {@code null}
+     */
+    private String resolveSection(PaperQuestionItemDTO item,
+                                  EduQuestion question,
+                                  String lastSection,
+                                  int sectionSeq) {
+        // 显式分区：前端自定义大题名（同一大题持续传同名即可保持连续）
+        if (StringUtils.hasText(item.section())) {
+            return item.section().trim();
+        }
+        String typeName = QUESTION_TYPE_SECTION_NAMES.get(question.getQuestionType());
+        if (typeName == null || typeName.isBlank()) {
+            return null;
+        }
+        // 同题型连续题项：复用当前大题块（lastSection 为「一、选择题」整串，
+        // 以「、题型名」结尾即可判定题型一致；显式分区同名同理）
+        if (lastSection != null && lastSection.endsWith("、" + typeName)) {
+            return lastSection;
+        }
+        String head = sectionSeq < CHINESE_SECTION_NUMBERS.size()
+                ? CHINESE_SECTION_NUMBERS.get(sectionSeq) : String.valueOf(sectionSeq + 1);
+        return head + "、" + typeName;
     }
 
     @Override

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.43</version>
+    </parent>
+    <artifactId>spring-support-docker-starter</artifactId>
+    <description>
+        Docker 独立模块：容器 / 镜像 / 网络 / 卷 / 镜像库 / 模板。
+        全部能力经 SSH 在受控主机上执行 docker CLI，不要求额外暴露 Docker TCP 端口；
+        镜像库走 DockerRegistryProvider SPI，长耗时操作统一 SSE 实时回显。
+    </description>
+
+    <properties>
+        <!-- 作为内部 starter 库被宿主依赖：禁止 fat-jar repackage，保持标准库 jar 结构 -->
+        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
+    </properties>
+
+    <dependencies>
+        <!-- 主机台账 / 凭据解析 / SSH 连接池（ConnectionManager、SshClients） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-server-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Web（RestController / SseEmitter） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JSON（镜像库 API 解析 + 本地 JSON 持久化） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- OpenAPI 注解（@Tag / @Operation / @Schema） -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+
+        <!-- 日志 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>${spring-boot.repackage.skip}</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>25</source>
+                    <target>25</target>
+                    <fork>false</fork>
+                    <release/>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

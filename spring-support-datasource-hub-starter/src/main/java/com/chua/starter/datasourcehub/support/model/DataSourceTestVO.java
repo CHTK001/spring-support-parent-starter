@@ -90,22 +90,4 @@ public record DataSourceTestVO(
         this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled,
                 testedAt, connectionCount, null, null);
     }
-
-    /**
-     * 无版本号但带服务器指标：复用于重载干净地表达「版本未知」。
-     */
-    public DataSourceTestVO(
-            boolean success,
-            String message,
-            String type,
-            Long connectLatencyMs,
-            Long sessionLatencyMs,
-            Boolean tunneled,
-            LocalDateTime testedAt,
-            Long connectionCount,
-            DatasourceProbeSupport.ServerStats serverStats
-    ) {
-        this(success, message, type, connectLatencyMs, sessionLatencyMs, tunneled,
-                testedAt, connectionCount, serverStats, null);
-    }
 }

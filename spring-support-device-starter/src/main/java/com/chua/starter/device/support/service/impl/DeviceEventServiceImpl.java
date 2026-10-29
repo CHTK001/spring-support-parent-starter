@@ -11,7 +11,6 @@ import com.chua.starter.device.spi.model.EventType;
 import com.chua.starter.device.spi.model.TimeRange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -75,10 +74,11 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     }
 
     @Override
-    @Scheduled(fixedDelayString = "${plugin.device.event.poll-interval:30000}")
     /**
      * 取出全部devices
-    */
+     * <p>由 {@code DeviceScheduler} 的时间轮任务 {@code deviceEventPoll} 驱动，
+     * 到期判断走 {device_task_state.interval}，不再使用 Spring {@code @Scheduled}。</p>
+     */
     public void pollAllDevices() {
         sessionManager.getAllSessions().forEach((deviceId, session) -> {
             if (session.isOnline()) {

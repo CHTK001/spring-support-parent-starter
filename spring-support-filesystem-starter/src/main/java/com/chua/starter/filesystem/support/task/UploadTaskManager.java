@@ -245,6 +245,40 @@ public class UploadTaskManager {
     }
 
     /**
+     * 删除任务：从内存移除，并尝试删除已写入存储的对象。
+     *
+     * <p>与 {@link #cancel} 的区别：cancel 只是把状态置为 CANCELLED（记录仍在），
+     * delete 则彻底移除记录并连带清理存储对象。调用方应先用 {@link #get}
+     * 判断任务是否存在。</p>
+     *
+     * @param taskId 任务号
+     * @return 删除前是否存在（true=存在并已删除）
+     */
+    public boolean delete(String taskId) {
+        UploadTask task = tasks.remove(taskId);
+        if (task == null) {
+            return false;
+        }
+        cleanupChunks(taskId);
+        String key = task.getObjectKey();
+        if (key != null && !key.isBlank()) {
+            try {
+                if (task.getProvider() == null) {
+                    fileStorageTemplate.deleteObject(key);
+                } else {
+                    fileStorageTemplate.deleteObject(task.getProvider(), key);
+                }
+                MODULE_LOG.info("上传任务已删除（含存储对象）: id={} key={}", taskId, key);
+            } catch (Exception e) {
+                MODULE_LOG.warn("删除存储对象失败（忽略，仅移除任务记录）: id={} key={} - {}", taskId, key, e.getMessage());
+            }
+        } else {
+            MODULE_LOG.info("上传任务已删除（无存储对象）: id={}", taskId);
+        }
+        return true;
+    }
+
+    /**
      * 查询任务。
      *
      * @param taskId 任务号
@@ -252,6 +286,39 @@ public class UploadTaskManager {
      */
     public UploadTask get(String taskId) {
         return tasks.get(taskId);
+    }
+
+    /**
+     * 登记一条「同步直传已完成」的任务（小文件 {@code /simple} 路径用）。
+     *
+     * <p>小文件同步直传不走分片任务链路：写入存储后立即返回，不经过
+     * {@link #createTask} → {@link #putChunk} → {@link #complete}。
+     * 若不登记，任务表（{@code GET /v2/file/upload-task/tasks}）与 SSE
+     * 就永远看不到它，前端「文件导航」分组为空，用户以为上传丢了。</p>
+     *
+     * @param fileName   原始文件名
+     * @param totalSize  文件总字节数
+     * @param provider   存储提供者名（可空）
+     * @param bucketDir  存储桶/目录路径（可空）
+     * @param objectKey  已写入存储的对象键
+     * @return 登记后的任务（状态 = COMPLETED）
+     */
+    public UploadTask registerSyncCompleted(String fileName, long totalSize,
+                                            String provider, String bucketDir, String objectKey,
+                                            String ext, String mime, Integer width, Integer height) {
+        UploadTask task = new UploadTask(fileName, totalSize, 0, provider, bucketDir);
+        task.setState(UploadTask.State.COMPLETED);
+        task.markChunkReceived(0, (int) Math.min(totalSize, Integer.MAX_VALUE));
+        task.setObjectKey(objectKey);
+        task.setExt(ext);
+        task.setMime(mime);
+        task.setWidth(width);
+        task.setHeight(height);
+        tasks.put(task.getTaskId(), task);
+        publish(task);
+        MODULE_LOG.info("小文件同步直传已登记: id={} file={} size={} key={}",
+                task.getTaskId(), fileName, totalSize, objectKey);
+        return task;
     }
 
     /**
@@ -349,6 +416,213 @@ public class UploadTaskManager {
                     + (result == null ? "无结果" : result.getMessage()));
         }
         task.setObjectKey(result.getKey());
+        // 合并后仍是落盘文件：顺带探测元数据（扩展名 / MIME / 图片宽高）
+        applyMeta(task, mergedFile.toFile());
+    }
+
+    /**
+     * 探测并登记文件元数据（扩展名、MIME、图片宽高）。
+     *
+     * @param task 任务（就地写入元数据字段）
+     * @param file 已落盘文件（分片合并后 / 同步直传暂存）
+     */
+    private void applyMeta(UploadTask task, java.io.File file) {
+        try (java.io.InputStream in = new java.io.FileInputStream(file)) {
+            byte[] head = in.readNBytes(128);
+            String ext = extOf(task.getFileName());
+            task.setExt(ext);
+            task.setMime(mimeOf(ext));
+            if (isImage(ext)) {
+                int[] wh = imageDimension(head, ext);
+                if (wh != null) {
+                    task.setWidth(wh[0]);
+                    task.setHeight(wh[1]);
+                }
+            }
+        } catch (IOException ignored) {
+            // 元数据探测失败不影响主流程
+        }
+    }
+
+    /** 从文件名解析扩展名（小写、无点）。 */
+    private static String extOf(String fileName) {
+        if (fileName == null) {
+            return "";
+        }
+        int dot = fileName.lastIndexOf('.');
+        if (dot < 0 || dot == fileName.length() - 1) {
+            return "";
+        }
+        return fileName.substring(dot + 1).toLowerCase();
+    }
+
+    /**
+     * 从文件名与字节内容探测元数据（扩展名 / MIME / 图片宽高）。
+     *
+     * @param fileName 原始文件名
+     * @param content  文件字节（可为 null，图片宽高需真实头部）
+     * @return 包含 ext/mime/width/height 的 Map（width/height 非图片或解析失败时缺省）
+     */
+    public static Map<String, Object> probeMetadata(String fileName, byte[] content) {
+        Map<String, Object> meta = new java.util.HashMap<>();
+        String ext = extOf(fileName);
+        meta.put("ext", ext);
+        meta.put("mime", mimeOf(ext));
+        if (isImage(ext) && content != null && content.length > 0) {
+            int[] wh = imageDimension(content, ext);
+            if (wh != null) {
+                meta.put("width", wh[0]);
+                meta.put("height", wh[1]);
+            }
+        }
+        return meta;
+    }
+
+    /** 常见扩展名 → MIME。 */
+    private static String mimeOf(String ext) {
+        if (ext == null || ext.isEmpty()) {
+            return "application/octet-stream";
+        }
+        return switch (ext) {
+            case "png" -> "image/png";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "gif" -> "image/gif";
+            case "bmp" -> "image/bmp";
+            case "webp" -> "image/webp";
+            case "svg" -> "image/svg+xml";
+            case "pdf" -> "application/pdf";
+            case "txt", "log" -> "text/plain";
+            case "md" -> "text/markdown";
+            case "json" -> "application/json";
+            case "xml" -> "application/xml";
+            case "csv" -> "text/csv";
+            case "zip" -> "application/zip";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "mp4" -> "video/mp4";
+            case "mp3" -> "audio/mpeg";
+            case "wav" -> "audio/wav";
+            case "webm" -> "video/webm";
+            case "mov" -> "video/quicktime";
+            default -> "application/octet-stream";
+        };
+    }
+
+    /** 图片扩展名判定。 */
+    private static boolean isImage(String ext) {
+        return "png".equals(ext) || "jpg".equals(ext) || "jpeg".equals(ext)
+                || "gif".equals(ext) || "bmp".equals(ext) || "webp".equals(ext);
+    }
+
+    /**
+     * 从文件头解析图片宽高（PNG/JPEG/GIF/BMP/WebP）。
+     *
+     * @param head 文件头部字节（建议 ≥128 字节）
+     * @param ext  扩展名
+     * @return [宽, 高]；无法解析返回 null
+     */
+    private static int[] imageDimension(byte[] head, String ext) {
+        if (head == null || head.length < 8) {
+            return null;
+        }
+        int[] wh;
+        switch (ext) {
+            case "png" -> wh = pngDimension(head);
+            case "jpg", "jpeg" -> wh = jpegDimension(head);
+            case "gif" -> wh = gifDimension(head);
+            case "bmp" -> wh = bmpDimension(head);
+            case "webp" -> wh = webpDimension(head);
+            default -> {
+                return null;
+            }
+        }
+        // 合理性校验：解析出的尺寸必须在合理范围内，否则视为误判（非图片/异常头）
+        if (wh == null || wh[0] <= 0 || wh[1] <= 0
+                || wh[0] > 40000 || wh[1] > 40000) {
+            return null;
+        }
+        return wh;
+    }
+
+    private static int[] pngDimension(byte[] h) {
+        // PNG 签名 8 字节 + IHDR: 宽=16..19, 高=20..23（大端）
+        if (h.length < 24 || (h[0] & 0xFF) != 0x89 || h[1] != 0x50 || h[2] != 0x4E || h[3] != 0x47) {
+            return null;
+        }
+        return new int[]{be(h, 16), be(h, 20)};
+    }
+
+    private static int[] jpegDimension(byte[] h) {
+        // 扫描 SOF0/1/2 标记（FF C0..C2）：高度 = 偏移+5..+6，宽度 = +7..+8（大端）
+        int i = 2;
+        while (i + 9 < h.length) {
+            if ((h[i] & 0xFF) != 0xFF) {
+                i++;
+                continue;
+            }
+            int marker = h[i + 1] & 0xFF;
+            if (marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC) {
+                return new int[]{be(h, i + 7), be(h, i + 5)};
+            }
+            int len = ((h[i + 2] & 0xFF) << 8) | (h[i + 3] & 0xFF);
+            i += 2 + len;
+        }
+        return null;
+    }
+
+    private static int[] gifDimension(byte[] h) {
+        // "GIF8" + 宽=6..7, 高=8..9（小端）
+        if (h.length < 10 || h[0] != 'G' || h[1] != 'I' || h[2] != 'F') {
+            return null;
+        }
+        return new int[]{le(h, 6), le(h, 8)};
+    }
+
+    private static int[] bmpDimension(byte[] h) {
+        // "BM" + 宽=18..21, 高=22..25（小端，有符号）
+        if (h.length < 26 || h[0] != 'B' || h[1] != 'M') {
+            return null;
+        }
+        return new int[]{le(h, 18), Math.abs(le(h, 22))};
+    }
+
+    private static int[] webpDimension(byte[] h) {
+        // "RIFF" + "WEBP"
+        if (h.length < 30 || h[0] != 'R' || h[1] != 'I' || h[2] != 'F' || h[3] != 'F'
+                || h[8] != 'W' || h[9] != 'E' || h[10] != 'B' || h[11] != 'P') {
+            return null;
+        }
+        // VP8X（extended）：宽 = 24..26 三位小端 +1，高 = 27..29 +1
+        if (h[12] == 'V' && h[13] == 'P' && h[14] == '8' && h[15] == 'X' && h.length >= 30) {
+            int w = (h[24] & 0xFF) | ((h[25] & 0xFF) << 8) | ((h[26] & 0xFF) << 16);
+            int hh = (h[27] & 0xFF) | ((h[28] & 0xFF) << 8) | ((h[29] & 0xFF) << 16);
+            return new int[]{w + 1, hh + 1};
+        }
+        // VP8 (lossy)：宽 = 26..29 小端 & 0x3FFF，高 = 28..31 & 0x3FFF
+        if (h[12] == 'V' && h[13] == 'P' && h[14] == '8' && h[15] == ' ' && h.length >= 32) {
+            int w = le(h, 26) & 0x3FFF;
+            int hh = le(h, 28) & 0x3FFF;
+            return new int[]{w, hh};
+        }
+        // VP8L (lossless)：宽 = 24 起 14bit，高 = 下 14bit
+        if (h[12] == 'V' && h[13] == 'P' && h[14] == '8' && h[15] == 'L' && h.length >= 28) {
+            int bits = (h[21] & 0xFF) | ((h[22] & 0xFF) << 8) | ((h[23] & 0xFF) << 16) | ((h[24] & 0xFF) << 24);
+            int w = (bits & 0x3FFF) + 1;
+            int hh = ((bits >> 14) & 0x3FFF) + 1;
+            return new int[]{w, hh};
+        }
+        return null;
+    }
+
+    private static int be(byte[] h, int off) {
+        return ((h[off] & 0xFF) << 24) | ((h[off + 1] & 0xFF) << 16)
+                | ((h[off + 2] & 0xFF) << 8) | (h[off + 3] & 0xFF);
+    }
+
+    private static int le(byte[] h, int off) {
+        return (h[off] & 0xFF) | ((h[off + 1] & 0xFF) << 8)
+                | ((h[off + 2] & 0xFF) << 16) | ((h[off + 3] & 0xFF) << 24);
     }
 
     /**
@@ -536,6 +810,26 @@ public class UploadTaskManager {
         private volatile String objectKey;
 
         /**
+         * 文件扩展名（小写，无点，如 "png"）
+         */
+        private volatile String ext;
+
+        /**
+         * MIME 类型（如 "image/png"）
+         */
+        private volatile String mime;
+
+        /**
+         * 图片宽度（像素；非图片为 null）
+         */
+        private volatile Integer width;
+
+        /**
+         * 图片高度（像素；非图片为 null）
+         */
+        private volatile Integer height;
+
+        /**
          * 构造。
          */
         UploadTask(String fileName, long totalSize, long chunkSize, String provider, String bucketDir) {
@@ -603,6 +897,38 @@ public class UploadTaskManager {
 
         public void setObjectKey(String objectKey) {
             this.objectKey = objectKey;
+        }
+
+        public String getExt() {
+            return ext;
+        }
+
+        public void setExt(String ext) {
+            this.ext = ext;
+        }
+
+        public String getMime() {
+            return mime;
+        }
+
+        public void setMime(String mime) {
+            this.mime = mime;
+        }
+
+        public Integer getWidth() {
+            return width;
+        }
+
+        public void setWidth(Integer width) {
+            this.width = width;
+        }
+
+        public Integer getHeight() {
+            return height;
+        }
+
+        public void setHeight(Integer height) {
+            this.height = height;
         }
 
         /**

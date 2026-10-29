@@ -14,7 +14,9 @@ import org.springframework.stereotype.Component;
 import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 试卷扫描器 —— 阅卷的「版面还原 + 文字提取 + 结构化」环节。
@@ -65,10 +67,10 @@ public class EduPaperScanner {
     private final com.chua.starter.eduai.configuration.EduAiProperties eduAiProperties;
 
     /**
-     * 阅卷运行时设置（识别策略）。
+     * 阅卷运行时设置（识别策略 / 匹配模式）。
      *
-     * <p>可选项：读到系统配置弹窗保存的运行时覆盖值；bean 缺失时完全退回
-     * {@code plugin.eduai.marking.extract-strategy} 的 YAML 默认值。</p>
+     * <p>可选项：读到 AI 配置中心「试卷配置 → 阅卷设置」保存的值；bean 缺失时完全退回
+     * {@code plugin.eduai.marking.*} 的 YAML 默认值。</p>
      */
     @Autowired(required = false)
     private com.chua.starter.eduai.service.MarkingSettingService markingSettingService;
@@ -361,6 +363,23 @@ public class EduPaperScanner {
     }
 
     /**
+     * 题号归一化：只留数字（{@code 12.} / {@code 第12题} / {@code 12、} 都归一为 {@code 12}）。
+     *
+     * <p>版面切题与模型补题干两条链路的题号写法不同（一个带 {@code .}、一个可能带
+     * {@code 第…题}），对齐两者必须靠归一化后的数字键。</p>
+     *
+     * @param no 题号原文
+     * @return 归一化题号；解析不出时返回去空白后的原文
+     */
+    private static String normalizeNo(String no) {
+        if (no == null) {
+            return "";
+        }
+        int n = parseNoNum(no);
+        return n >= 0 ? String.valueOf(n) : no.replaceAll("\\s+", "");
+    }
+
+    /**
      * 解析题号里的数字（{@code 第1题} / {@code 12.} / {@code L.} 都要收）。
      *
      * @param no 题号原文
@@ -641,12 +660,24 @@ public class EduPaperScanner {
                             + "|(?:共|每|本|满|总)题?\\s*\\d{1,3}\\s*分\\s*");
 
     /**
+     * 试卷页脚结束语：{@code 试卷结束} / {@code —— 试卷完 ——} / {@code 本试卷到此结束}。
+     *
+     * <p>整卷最后一题的作答区紧邻页脚，版面归属会把结束语并进作答（实测第 18 题
+     * 作答变成「…写得又快又好。 试卷结束」）。判分模型看到作答尾部多出与题目无关的
+     * 四个字，会当成作答不完整而扣分，实测因此丢了 2 分。</p>
+     */
+    private static final java.util.regex.Pattern PAPER_FOOTER =
+            java.util.regex.Pattern.compile(
+                    "\\s*[-—－]{0,4}\\s*(?:本\\s*)?(?:试卷|答题卡|答卷|试题)\\s*"
+                            + "(?:到\\s*此\\s*)?(?:结束|完毕|完)\\s*[-—－]{0,4}\\s*$");
+
+    /**
      * 清理「学生作答」区域：把扫描混入的题号前缀、分值标注、页眉水印、行尾大节标题
      * 从作答里剥离，让判分与前端展示都只面对学生真正书写的内容。
      *
      * <p><b>只剪确定性污染，绝不裁剪学生实质作答</b>：42/43 简答、翻译题的学生书写
      * 必须原样保留（该题的答案是学生文字，不是字母/符号），这里只去掉「不是学生写的
-     * 那部分」。顺序：行尾大节标题 → 分值标注 → 页眉水印 → 行首题号前缀。</p>
+     * 那部分」。顺序：行尾大节标题 → 分值标注 → 页眉水印 → 页脚结束语 → 行首题号前缀。</p>
      *
      * @param answer 扫描识别出的原始作答文本
      * @return 剥离污染后的作答；为空或无法剥离时原样返回
@@ -658,6 +689,7 @@ public class EduPaperScanner {
         String text = stripAnswerNoise(answer);
         text = SCORE_ANNOTATION.matcher(text).replaceAll(" ");
         text = WATERMARK.matcher(text).replaceAll(" ");
+        text = PAPER_FOOTER.matcher(text).replaceAll(" ");
         // 行首题号前缀：1. / L. / 第1题（保留答案本身；只去掉前缀）
         text = text.replaceFirst("^\\s*[\\[【「『{]?\\s*(?:第\\s*)?[0-9lLI]{1,3}\\s*(?:[-—][0-9]{1,3})?\\s*[.。、,，．：:；;]\\s*", "");
         // 折叠多个空白/标点之间的空格，保持可读性
@@ -696,6 +728,16 @@ public class EduPaperScanner {
      */
     private static final java.util.regex.Pattern BARE_ITEM_NO =
             java.util.regex.Pattern.compile("^\\s*[0-9lLI]{1,3}\\s*$");
+
+    /**
+     * 补题干时每批送模型的题数。
+     *
+     * <p>国产网关对 prompt 有内容审核，整卷一次送会被整体拦截（实测讯飞 MaaS
+     * 返回 {@code 400 code=10013}），而单题/少量题送则正常。取 3 是实测通过的
+     * 折中：既能一次补多题减少调用次数，又远小于触发拦截的整卷体量；
+     * 某批被拦也只损失这一批的题干。</p>
+     */
+    private static final int STEM_BATCH_SIZE = 3;
 
     /**
      * 子项前缀：{@code 1）} / {@code 1)} / {@code （1）} 这类「括号编号」。
@@ -939,7 +981,7 @@ public class EduPaperScanner {
 
         @Override
         public List<ScannedQuestion> fillStems(List<ScannedQuestion> base) {
-            return fillStemsByModel(base, text);
+            return fillStemsByModel(base, text, blocks);
         }
 
         @Override
@@ -1075,6 +1117,84 @@ public class EduPaperScanner {
     }
 
     /**
+     * 外来卷作答归一化：清洗 → 提取实质作答 → 剥掉题干残留。
+     *
+     * <p>外来卷没有题库，题干也要从卷面抽，因此版面归属给出的「作答」常常是
+     * <b>题干 + 选项 + 学生作答</b>整段（实测判断题的作答就是
+     * 「“画蛇添足”这个成语比喻做了多余的事，反而不好。（） (对)」）。只做
+     * {@link #extractInlineMark} 能解决客观题，填空/简答题仍会把整段题干当成作答
+     * 交给判分模型 —— 模型只能回「作答照抄题干」并压低分数（实测 3 道简答题
+     * 各丢 2 分，评语都是「论述单薄」「未联系…」，实际是学生答得完整、只是题干
+     * 也被算进了作答长度）。</p>
+     *
+     * <p>剥题干只在<b>已有题干</b>时做：题干为空说明识别没成功，此时剥任何片段都可能
+     * 误删学生的真实作答。</p>
+     *
+     * @param answer 版面给出的作答文本
+     * @param stem   本题题干（可空）
+     * @return 归一化后的学生作答
+     */
+    public static String normalizeAnyAnswer(String answer, String stem) {
+        String cleaned = extractInlineMark(cleanScannedAnswer(answer));
+        if (StringUtils.isBlank(cleaned) || StringUtils.isBlank(stem)) {
+            return cleaned;
+        }
+        // 填空先按空位拆（只留空位里填的内容），再兜底剥前缀题干
+        String stripped = stripFillStem(cleaned, stem);
+        if (StringUtils.isBlank(stripped)) {
+            return cleaned;
+        }
+        stripped = stripLeadingStemTolerant(stripped, stem);
+        return StringUtils.isBlank(stripped) ? cleaned : stripped.trim();
+    }
+
+    /**
+     * 容错剥离前缀题干：允许题干与作答之间有少量 OCR 错字差异。
+     *
+     * <p>实测第 13 题：题干是「人体最大的器官是」，作答是「人体最大的器宫是 皮肤」——
+     * OCR 把「官」认成「宫」。{@link #stripLeadingStem} 要求严格前缀相等，这种一字
+     * 之差的场景剥不掉，学生作答「皮肤」仍带着整句题干送进判分。</p>
+     *
+     * <p>做法：逐字比对，允许最多 20% 的不匹配（至少放行 1 个字）；一旦不匹配率
+     * 超限立即放弃剥离，避免把「学生答案恰好以题干开头几个字开头」误判成题干残留。</p>
+     *
+     * @param answer 作答文本
+     * @param stem   题干
+     * @return 剥掉前缀题干后的作答；差异过大或剥完为空时原样返回
+     */
+    private static String stripLeadingStemTolerant(String answer, String stem) {
+        if (StringUtils.isBlank(answer) || StringUtils.isBlank(stem)) {
+            return answer;
+        }
+        String answerNorm = answer.replaceAll("\\s+", "");
+        String stemNorm = stem.replaceAll("\\s+", "");
+        if (stemNorm.isEmpty() || answerNorm.length() <= stemNorm.length()) {
+            return stripLeadingStem(answer, stem);
+        }
+        int allowed = Math.max(1, stemNorm.length() / 5);
+        int mismatch = 0;
+        for (int i = 0; i < stemNorm.length(); i++) {
+            if (i >= answerNorm.length() || answerNorm.charAt(i) != stemNorm.charAt(i)) {
+                mismatch++;
+                if (mismatch > allowed) {
+                    return stripLeadingStem(answer, stem);
+                }
+            }
+        }
+        // 前 stemNorm.length() 个非空白字符视为题干，在原文上按此长度消费
+        int pos = 0;
+        int consumed = 0;
+        while (consumed < stemNorm.length() && pos < answer.length()) {
+            if (!Character.isWhitespace(answer.charAt(pos))) {
+                consumed++;
+            }
+            pos++;
+        }
+        String rest = answer.substring(Math.min(pos, answer.length())).trim();
+        return rest.isEmpty() ? answer : rest;
+    }
+
+    /**
      * 从「作答文本」里取学生的实质作答（选择题字母 / 判断题符号）。
      *
      * <p>版面块归属路径把题号之后的整段文字（题干 + 选项 + 写在括号里的答案）都当成作答，
@@ -1100,6 +1220,18 @@ public class EduPaperScanner {
         var paren = java.util.regex.Pattern.compile("[（(]\\s*([A-Da-dＡ-Ｄａ-ｄ])\\s*[）)]").matcher(text);
         if (paren.find()) {
             return toHalfWidthUpper(paren.group(1));
+        }
+        // 1.5) 括号里的中文判断符号：（对）/(错)/（正确）/（错误）。
+        //      判断题的作答惯例就是把「对/错」写在题末括号里，而版面块归属把整段
+        //      题干都算进作答（实测 18 题外来卷里 4 道判断题的作答都是
+        //      「“画蛇添足”…反而不好。（） (对)」）。不提取会让判分模型看到
+        //      「作答 = 整段题干」，既污染前端展示，也让模型容易评成「照抄题干」。
+        //      必须放在 √/× 之前：OCR 有时把 √ 一并识别成「√」，两者都要收。
+        var judge = java.util.regex.Pattern.compile(
+                "[（(]\\s*(对|错|正确|错误)\\s*[）)]").matcher(text);
+        if (judge.find()) {
+            String mark = judge.group(1);
+            return "正确".equals(mark) ? "对" : ("错误".equals(mark) ? "错" : mark);
         }
         // 2) 「选C」「答案 C」「选 C」这类写法；这里仅兜底 0/1 没抓到的情况
         var pick = java.util.regex.Pattern.compile("(?:选|答|答案)\\s*[:：]?\\s*([A-Da-dＡ-Ｄａ-ｄ])").matcher(text);
@@ -1175,14 +1307,19 @@ public class EduPaperScanner {
         String marker = "______";
         int markerAt = stem.indexOf(marker);
         if (markerAt < 0) {
-            markerAt = stem.indexOf("（）");
+            marker = "（）";
+            markerAt = stem.indexOf(marker);
         }
         if (markerAt < 0) {
-            markerAt = stem.indexOf("()");
+            marker = "()";
+            markerAt = stem.indexOf(marker);
         }
         if (markerAt < 0) {
             return stripLeadingStem(answer, stem);
         }
+        // 空位标记三种写法长度不同（6 / 2 / 2），必须用真正命中的那个长度，
+        // 否则 stem 只含「（）」时会按 6 切，StringIndexOutOfBounds 被外层 catch
+        // 吞成「判分不可用」，学生答案白白判 0（实测判断题整段作答即命中此路径）。
         String beforeMarker = stem.substring(0, markerAt);
         String afterMarker = stem.substring(markerAt + marker.length());
         String result = answer;
@@ -1288,7 +1425,18 @@ public class EduPaperScanner {
             fallback.setComment("未作答");
             return fallback;
         }
-        String mark = extractInlineMark(question.answer());
+        String mark = normalizeAnyAnswer(question.answer(), question.stem());
+        // 严谨模式：作答必须落在题干空位里。归一化之后仍带着题干碎片的作答，
+        // 说明它确实不是从空位里读出来的（学生把答案写在了括号外），直接不给分。
+        // 「宽松」模式不设这道门禁，仍按文本内容判分。
+        if (markingSettingService != null && markingSettingService.strictMatch()
+                && MarkingBlankRule.outsideBlank(question.stem(), mark)) {
+            var outside = new EduAiService.MarkingOutcome();
+            outside.setSource("AI");
+            outside.setScore(0);
+            outside.setComment("未填写在题目空格内（严谨模式），本题不给分");
+            return outside;
+        }
         String systemPrompt = "你是资深阅卷老师。只输出 JSON，禁止解释。";
         String userPrompt = """
                 外来试卷没有标准答案，请依据学科常识判断作答是否正确，并给出简短评语（不超过 50 字）。
@@ -1302,6 +1450,17 @@ public class EduPaperScanner {
                    只有题干与选项都确实辨认不出时才在评语里说明，并给 0 分；
                 5. 无法辨认或明显残缺的作答按错误处理，并在评语里注明原因。
 
+                【给分尺度 —— 客观题与主观题不同】
+                6. 选择题 / 判断题 / 填空题：只有明确答错才给 0 分。识别造成的错别字、繁简差异
+                   （如「黃山」/「黄山」、「器宫」/「器官」）按**答对**处理，不得因此扣分。
+                7. 简答题：**只要答出了题目要求的主要意思就给满分**。不要拿你心中的「标准答案」
+                   逐条对照扣分 —— 学生用另一种说法表达同一件事、要点数量比你想的少一两句、
+                   语言朴素，都不构成扣分理由。
+                   只有当答案与题目所问**明显无关**、或**遗漏了题目的核心要求**（例如要求列出三项
+                   却只写出一项）时才扣分，且一次只扣 1~2 分并说明缺什么。
+                   「理解较浅」「不够全面」「未联系…」这类主观评价不得作为扣分依据。
+                8. 题目未规定字数或要点数量时，学生给出的一句话正确回答就是完整回答。
+
                 题干: %s
                 学生作答: %s
                 满分: %d
@@ -1312,21 +1471,38 @@ public class EduPaperScanner {
                 """.formatted(question.stem() == null ? "" : question.stem(),
                 mark == null ? "" : mark, maxScore, maxScore);
         try {
-            String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
-        // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，
-        // 直接喂给 JSON 解析只会得到「解析失败」，把真因（如 429 限流）埋掉。
-        requireModelOutput(raw);
-            JsonNode node = MAPPER.readTree(extractJson(raw));
+            // 模型偶尔返回 {"score":0} 而不给任何 comment —— 这不是「判错」，
+            // 而是它压根没做判定（实测第 16 题同一份作答，上一轮 3 分并给出理由，
+            // 这一轮直接 0 分 +「回答错误」，学生白丢 5 分）。
+            // 判据是「评语为空」：给了理由的 0 分是真实判错，必须尊重；没给理由的
+            // 0 分不可采信，重判一次并要求必须给出依据。
+            JsonNode node = null;
+            String comment = "";
+            for (int attempt = 1; attempt <= 2; attempt++) {
+                String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
+                // 模型不可用/限流时 answerQuestion 返回的是错误「字符串」而非 JSON，
+                // 直接喂给 JSON 解析只会得到「解析失败」，把真因（如 429 限流）埋掉。
+                requireModelOutput(raw);
+                node = MAPPER.readTree(extractJson(raw));
+                comment = node.path("comment").asText("").trim();
+                if (!comment.isEmpty()) {
+                    break;
+                }
+                log.warn("[EduScan] 任意卷判分未给出评语（第 {} 次），重判: no={}", attempt,
+                        question.no());
+            }
+            if (comment.isEmpty()) {
+                // 两次都没给依据：不把「没有理由的 0 分」写进成绩，交给人工复核
+                log.warn("[EduScan] 任意卷判分两次均无评语，转人工复核: no={}", question.no());
+                fallback.setScore(0);
+                fallback.setComment("模型未给出判定依据，请人工复核");
+                return fallback;
+            }
             int score = node.path("score").asInt(0);
             score = Math.max(0, Math.min(score, maxScore));
             var outcome = new EduAiService.MarkingOutcome();
             outcome.setSource("AI");
             outcome.setScore(score);
-            String comment = node.path("comment").asText("");
-            if (comment.isBlank()) {
-                // 模型偶尔返回无 comment 的 JSON，落库空串会让结果表出现空白评语
-                comment = score <= 0 ? "回答错误" : score >= maxScore ? "回答正确" : "部分得分";
-            }
             outcome.setComment(comment);
             return outcome;
         } catch (Exception e) {
@@ -1344,59 +1520,423 @@ public class EduPaperScanner {
      *
      * <p>模型失败/返回空时返回空列表，由调用方保留版面结果。</p>
      *
+     * <p><b>为什么分批送</b>：早期实现把整卷识别文本一次塞进 prompt。国产网关
+     * （讯飞 MaaS 实测）对整卷文本会直接返回 {@code 400 code=10013}
+     * 「根据相关法律法规，我们无法提供…」—— 一次内容审核拦截就让<b>全部题干为空</b>，
+     * 选择题因为没有题干里的选项而全部无法判分，18 题里 9 题被误判 0 分。
+     * 实测同一份文本：整卷送 400；拆成单题/前 11 行送则正常返回。故改为按题分段，
+     * 每段单独一次调用；某段被拦只影响该段，其余段照常拿到题干。</p>
+     *
      * @param byLayout 版面抽出的题号+作答
      * @param text     版面全文
-     * @return 补上题干的题目；失败时为空
+     * @return 补上题干的题目；整体失败时返回空列表
      */
     private List<ScannedQuestion> fillStemsByModel(List<ScannedQuestion> byLayout, String text) {
-        try {
-            // 题号在「一、二、三」各节间会重复（1./2./…每节重来），绝不能按题号回填 ——
-            // 重复键在建映射时互相覆盖：实测 ds-v4.1 补齐题干后，B/C 卷各节题干被贴到
-            // 最后一节同号题上，判分全部变成「作答与题干无关」为 0。这里改为
-            // 「按顺序列出 → 按顺序数组返回 → 按下标一一对应」，数量不符即整体放弃（保留空题干）。
-            StringBuilder ordered = new StringBuilder();
-            for (int i = 0; i < byLayout.size(); i++) {
-                ScannedQuestion q = byLayout.get(i);
-                ordered.append(i + 1).append(". [题号 ").append(q.no() == null ? "" : q.no().trim())
-                        .append("] ").append(q.answer() == null ? "" : q.answer().trim()).append('\n');
+        return fillStemsByModel(byLayout, text, null);
+    }
+
+    /**
+     * 版面题号+作答已定，只让模型补题干（带版面块，供确定性兜底）。
+     *
+     * @param byLayout 版面抽出的题号+作答
+     * @param text     版面全文
+     * @param blocks   版面文字块（含坐标），可为 null；仅在模型全部失败时用于本地兜底
+     * @return 补上题干的题目；连本地兜底也抽不出时返回空列表
+     */
+    private List<ScannedQuestion> fillStemsByModel(List<ScannedQuestion> byLayout, String text,
+                                                   List<ScanBlock> blocks) {
+        if (byLayout == null || byLayout.isEmpty()) {
+            return List.of();
+        }
+        // 把整卷文本按题号切成「一题一段」，题号→分段文本；切不出来时退回整卷一段
+        Map<String, String> segments = splitSegmentsByQuestionNo(text);
+        int batchSize = STEM_BATCH_SIZE;
+        List<ScannedQuestion> out = new ArrayList<>(byLayout);
+        int succeeded = 0;
+        for (int start = 0; start < byLayout.size(); start += batchSize) {
+            int end = Math.min(start + batchSize, byLayout.size());
+            List<ScannedQuestion> batch = byLayout.subList(start, end);
+            Map<String, String> filled = fillStemsBatch(batch, segments);
+            if (filled.isEmpty()) {
+                continue;
             }
-            String systemPrompt = "你是试卷结构解析器。只输出 JSON，禁止解释。";
-            String userPrompt = """
-                    下面是一份外来试卷的图片识别文本。已按出现顺序切好 %d 道题：
-                    %s
-                    请依据识别文本，为每道题给出题干（识别有错字按上下文还原；找不到留空字符串），
-                    不要合并拆分、不要编造分值。
-                    题干必须完整：选择题要把该题的选项文字（A. …/B. …/C. …/D. …）一并写进题干 ——
-                    只给问句（如「下列…的一项是」）会让判分环节看不到选项、无从核对作答，
-                    实测因此把正确作答判成 0 分。
+            succeeded++;
+            for (int i = start; i < end; i++) {
+                ScannedQuestion q = out.get(i);
+                String key = normalizeNo(q.no());
+                String stem = filled.get(key);
+                if (StringUtils.isNotBlank(stem)) {
+                    out.set(i, new ScannedQuestion(q.no(), stem, q.answer(), q.score()));
+                }
+            }
+        }
+        if (succeeded == 0) {
+            log.warn("[EduScan] 分批补题干全部失败（{} 题 / {} 段），改用版面原文兜底",
+                    byLayout.size(), (byLayout.size() + batchSize - 1) / batchSize);
+            List<ScannedQuestion> byBlocks = fillStemsByLayoutText(byLayout, segments, blocks);
+            if (!byBlocks.isEmpty()) {
+                return byBlocks;
+            }
+            log.warn("[EduScan] 版面原文兜底也未抽到题干，保留空题干");
+            return List.of();
+        }
+        // 部分批失败时，失败那几题仍尽量从原文兜底（模型拦的是内容，不是这几题不存在）
+        List<ScannedQuestion> fallback = fillStemsByLayoutText(out, segments, blocks);
+        return fallback.isEmpty() ? out : fallback;
+    }
 
-                    必须严格按上面题目的先后顺序，返回同样数量的题干数组（第 i 个元素对应第 i 道题）：
-                    JSON Schema:
-                    {"stems":["第1道题的题干","第2道题的题干"]}
+    /**
+     * 不调模型的题干兜底：按「题号那一行 + 其后直到学生作答之前的行」还原题干。
+     *
+     * <p>存在的意义是把「模型被内容审核拦住」从「整卷不可判分」降级成「题干略糙」：
+     * 选择题最关键的判分依据是<b>选项</b>，而选项是印刷体，OCR 文本里就在题号行下面、
+     * 紧挨着学生作答的括号之前。这一段完全不依赖模型，取出来即可让判定逻辑看到
+     * A/B/C/D 并和学生的字母作答比对。</p>
+     *
+     * <p>切分依据是分段文本（{@link #splitSegmentsByQuestionNo}）：每段第一行是题号行，
+     * 末尾那行是学生作答。这里保留第一行到「最后一行之前」的全部内容作为题干；
+     * 单段只有一行时无从拆分，留空（不编造）。</p>
+     *
+     * <p><b>只补空题干</b>：模型已经给出的题干一律保留 —— 模型的语义还原
+     * （错字纠正、跨行合并）优于纯文本切分，不能被兜底覆盖。</p>
+     *
+     * @param questions 待补题干的题（顺序与段落地图对齐）
+     * @param segments  题号 → 该题原文段落
+     * @param blocks    版面块，可为 null（当前实现只依赖文本，保留参数以便未来按几何切）
+     * @return 补上兜底题干的题目；一题都补不出时返回空列表
+     */
+    static List<ScannedQuestion> fillStemsByLayoutText(List<ScannedQuestion> questions,
+                                                       Map<String, String> segments,
+                                                       List<ScanBlock> blocks) {
+        if (segments.isEmpty()) {
+            return List.of();
+        }
+        List<ScannedQuestion> out = new ArrayList<>(questions.size());
+        int filled = 0;
+        for (ScannedQuestion q : questions) {
+            if (StringUtils.isNotBlank(q.stem())) {
+                out.add(q);
+                continue;
+            }
+            String key = normalizeNo(q.no());
+            String seg = segments.get(key);
+            String stem = stemFromSegment(seg, q.answer());
+            if (StringUtils.isNotBlank(stem)) {
+                filled++;
+                out.add(new ScannedQuestion(q.no(), stem, q.answer(), q.score()));
+            } else {
+                out.add(q);
+            }
+        }
+        if (filled == 0) {
+            return List.of();
+        }
+        log.info("[EduScan] 版面原文兜底补出题干 {}/{} 题", filled, questions.size());
+        return out;
+    }
 
-                    识别文本：
-                    %s
-                    """.formatted(byLayout.size(), ordered, text);
+    /**
+     * 从一题的原文段落里切出题干：去掉题号行的题号前缀，再去掉末尾的学生作答行。
+     *
+     * <p>学生作答行的识别：段落末尾若有一行是「纯选项字母」（{@code (B)} / {@code C}）、
+     * 「纯判断符号」（{@code (对)} / {@code √}）或与作答文本高度重合，即视为作答行剥掉。
+     * 剥不干净时保留原样 —— 题干里多一行作答，也比题干为空、官方选项全丢要好。</p>
+     *
+     * <p><b>折行题干必须保住</b>：填空题的题干常被 OCR 拆成两段
+     * （{@code 11.五岳归来不看山，} + {@code 归来不看岳。}），版面块归属会把右半句
+     * 连同学生作答一起算进 answer。此时若按「answer 里出现过」就剥掉右半句，题干会
+     * 残缺成「五岳归来不看山，」，判分模型无从判断 —— 实测同一题在 1/3/4 分之间
+     * 摇摆，还出现过 81 秒超时。故：<b>上一行以未完标点结尾时，本行属于题干</b>，不剥。</p>
+     *
+     * @param segment 该题的原文段落
+     * @param answer  版面判定的学生作答
+     * @return 题干；无法切出时返回空串
+     */
+    private static String stemFromSegment(String segment, String answer) {
+        if (StringUtils.isBlank(segment)) {
+            return "";
+        }
+        String[] lines = segment.split("\\R");
+        if (lines.length < 2) {
+            // 只有题号行：没有选项也没有作答，题干就是那行本身
+            return stripNoPrefix(segment);
+        }
+        String answerNorm = answer == null ? "" : answer.replaceAll("\\s+", "");
+        int end = lines.length;
+        // 从尾部往前剥「像作答的行」，最多剥两行（作答可能被 OCR 拆成两行）
+        for (int k = 1; k <= 2 && end > 1; k++) {
+            String last = lines[end - 1].trim();
+            if (last.isEmpty()) {
+                end--;
+                continue;
+            }
+            boolean looksAnswer = last.matches("^[（(]?\\s*[A-Da-dＡ-Ｄ]\\s*[）)]?$")
+                    || last.matches("^[（(]?\\s*(对|错|正确|错误|√|×|✓|✗)\\s*[）)]?$")
+                    || (!answerNorm.isEmpty() && answerNorm.contains(last.replaceAll("\\s+", "")));
+            if (!looksAnswer) {
+                break;
+            }
+            // 剥掉后若题干以「，、；：—-」这类<b>未完标点</b>结尾，说明剥掉的很可能是
+            // 题干的折行后半句，不是学生作答 —— 必须保留。
+            // 实测第 11 题：版面块把同一行右侧的「归来不看岳。」与题干「11.五岳归来不看山，」
+            // 一起并进了 answer，按「answer 里出现过」判作答就会把后半句剥掉，
+            // 题干残缺成「五岳归来不看山，」，判分模型无从判断、给分来回摇摆（1 分/3 分/4 分）。
+            if (end - 2 >= 0 && lines[end - 2].trim().matches(".*[，、；：,;:\\-—]$")) {
+                break;
+            }
+            end--;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < end; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            sb.append(i == 0 ? stripNoPrefix(line) : line).append('\n');
+        }
+        return sb.toString().trim();
+    }
+
+    /**
+     * 去掉模型回显在题干开头的题号。
+     *
+     * <p>喂给模型的分段文本里每段都以题号行开头，模型经常把题号连同题干一起抄回来：
+     * 第 12 题的题干被返回成 {@code "12.24的因数中，最大的一个是"}，判分模型读到
+     * {@code 12.24} 会当成小数，把「最大的因数是多少」理解错；第 10 题的题干带
+     * {@code "10."} 前缀同样干扰作答比对。</p>
+     *
+     * <p><b>只剥与本题题号相同的那个数字</b>：题干本身以数字开头的场景（如某题的
+     * 题干是「3.14 是圆周率…」）不会因为本题题号是 7 就被误剥 —— 这是把题号当
+     * 前缀剥掉和把数字当题干内容保留之间唯一可靠的区分依据。</p>
+     *
+     * @param stem 模型返回的题干
+     * @param no   本题题号（版面识别结果）
+     * @return 去掉题号前缀的题干；剥离后为空时返回原文
+     */
+    static String stripStemNoPrefix(String stem, String no) {
+        if (StringUtils.isBlank(stem)) {
+            return "";
+        }
+        String s = stem.trim();
+        // 模型有时会把行内标注也抄回来："[1] 题号 12." / "[1]"
+        // 只吃「[n]」和紧随其后的「题号 <数字+可选标点>」，绝不吃题干正文：
+        // 早期写法用 [^\s，。：:]* 贪婪匹配到标点前，把「[3] 题号 3.三角形的内角和…」
+        // 里的「三角形的内角和…」也当成题号吞掉了。
+        var echo = java.util.regex.Pattern
+                .compile("^\\[\\s*\\d{1,3}\\s*\\]\\s*(?:题号\\s*\\d{1,3}\\s*[.。、,，．：:；;]?\\s*)?")
+                .matcher(s);
+        if (echo.find()) {
+            s = s.substring(echo.end()).trim();
+        }
+        int num = parseNoNum(no);
+        if (num < 0 || s.isEmpty()) {
+            return s;
+        }
+        String numText = String.valueOf(num);
+        var dot = java.util.regex.Pattern
+                .compile("^\\s*(?:第\\s*)?(\\d{1,3})\\s*[.。、,，．：:；;]\\s*")
+                .matcher(s);
+        if (dot.find() && numText.equals(dot.group(1))) {
+            String rest = s.substring(dot.end()).trim();
+            return rest.isEmpty() ? s : rest;
+        }
+        var di = java.util.regex.Pattern
+                .compile("^\\s*第\\s*(\\d{1,3})\\s*题\\s*[.。、,，：:；;]?\\s*")
+                .matcher(s);
+        if (di.find() && numText.equals(di.group(1))) {
+            String rest = s.substring(di.end()).trim();
+            return rest.isEmpty() ? s : rest;
+        }
+        return s;
+    }
+
+    /**
+     * 去掉题号行开头的题号（{@code 12.} / {@code 第12题、}）。
+     *
+     * @param line 题号开头的一行
+     * @return 去掉题号后的内容
+     */
+    private static String stripNoPrefix(String line) {
+        if (line == null) {
+            return "";
+        }
+        var matcher = SELF_NO_PREFIX.matcher(line);
+        if (matcher.find()) {
+            return line.substring(matcher.end()).trim();
+        }
+        return line.trim();
+    }
+
+    /**
+     * 补一批（默认 {@value #STEM_BATCH_SIZE} 题）的题干。
+     *
+     * <p>每批只送这几道题自己的原文段落，既绕开整卷审核拦截，也显著缩小上下文。
+     * 返回「归一化题号 → 题干」；该批失败时返回空 Map，由调用方保留空题干。</p>
+     *
+     * @param batch    这一批要补题干的题（题号 + 版面作答）
+     * @param segments 题号 → 该题的原文段落
+     * @return 归一化题号 → 题干；失败时为空
+     */
+    private Map<String, String> fillStemsBatch(List<ScannedQuestion> batch, Map<String, String> segments) {
+        StringBuilder body = new StringBuilder();
+        for (int i = 0; i < batch.size(); i++) {
+            ScannedQuestion q = batch.get(i);
+            String key = normalizeNo(q.no());
+            String seg = segments.get(key);
+            if (StringUtils.isBlank(seg)) {
+                seg = q.answer() == null ? "" : q.answer();
+            }
+            body.append("[").append(i + 1).append("] 题号 ").append(q.no() == null ? "" : q.no().trim())
+                    .append('\n').append(seg.trim()).append("\n\n");
+        }
+        String systemPrompt = "你是试卷结构解析器。只输出 JSON，禁止解释。";
+        String userPrompt = """
+                下面是一份试卷中若干道题的识别文本，每题以 [序号] 标注。请为每题给出题干。
+                识别有错字按上下文还原；找不到题干时留空字符串。
+                题干必须完整：选择题要把该题的选项文字（A. …/B. …/C. …/D. …）一并写进题干 ——
+                只给问句会让阅卷环节看不到选项、无从核对作答。
+
+                严格按顺序返回同样数量的题干数组：
+                JSON Schema:
+                {"stems":["第1道题的题干","第2道题的题干"]}
+
+                识别文本：
+                %s
+                """.formatted(body.toString().trim());
+        Map<String, String> filled = new LinkedHashMap<>();
+        try {
             String raw = eduAiService.answerQuestion(systemPrompt, userPrompt);
             requireModelOutput(raw);
             JsonNode root = MAPPER.readTree(extractJson(raw));
             JsonNode arr = root.path("stems");
-            if (!arr.isArray() || arr.size() != byLayout.size()) {
-                log.warn("[EduScan] 补题干数量不符（期望 {} 实际 {}），放弃补题干保留空题干",
-                        byLayout.size(), arr.isArray() ? arr.size() : -1);
-                return List.of();
+            if (!arr.isArray()) {
+                // 模型有时不按 Schema 返回，改写成 {"items":[{"no":"1","stem":"…"}]}
+                // 或直接返回字符串数组 —— 直接判「数量不符」会把整整一批题干丢掉
+                // （实测 3 批里 2 批因此退回质量更差的本地兜底）。
+                arr = coerceStemArray(root);
             }
-            List<ScannedQuestion> out = new ArrayList<>();
-            for (int i = 0; i < byLayout.size(); i++) {
-                ScannedQuestion q = byLayout.get(i);
-                String stem = arr.get(i).asText("").trim();
-                out.add(new ScannedQuestion(q.no(), stem, q.answer(), q.score()));
+            if (!arr.isArray() || arr.size() != batch.size()) {
+                log.warn("[EduScan] 补题干数量不符（期望 {} 实际 {}），本批保留空题干",
+                        batch.size(), arr.isArray() ? arr.size() : -1);
+                return Map.of();
             }
-            return out;
+            for (int i = 0; i < batch.size(); i++) {
+                JsonNode item = arr.get(i);
+                // 元素可能是纯字符串，也可能是 {"stem":"…"} / {"题干":"…"}
+                String text = item.isTextual() ? item.asText("")
+                        : firstNonBlank(item.path("stem"), item.path("题干"), item.path("text"));
+                String stem = stripStemNoPrefix(text == null ? "" : text.trim(), batch.get(i).no());
+                if (StringUtils.isNotBlank(stem)) {
+                    filled.put(normalizeNo(batch.get(i).no()), stem);
+                }
+            }
+            return filled;
         } catch (Exception e) {
-            log.warn("[EduScan] 模型补题干失败: {}", e.getMessage());
-            return List.of();
+            log.warn("[EduScan] 模型补题干失败（本批 {} 题）: {}", batch.size(), e.getMessage());
+            return Map.of();
         }
+    }
+
+    /**
+     * 把模型各种「非标准但可救」的题干返回形状归一成数组。
+     *
+     * <p>实测模型返回过这几种：{@code {"items":[{"no":"1","stem":"…"}]}}、
+     * {@code {"stems":{"1":"…","2":"…"}}}、以及裸数组 {@code ["…","…"]}。
+     * 只要能把内容按顺序取出来就不该整批放弃 —— 丢掉一批等于让这几题没有题干，
+     * 选择题会因缺选项被判 0 分。</p>
+     *
+     * @param root 模型返回的 JSON 根节点
+     * @return 题干数组；无法归一时返回缺失节点
+     */
+    private static JsonNode coerceStemArray(JsonNode root) {
+        JsonNode missing = MAPPER.missingNode();
+        if (root.isArray()) {
+            return root;
+        }
+        for (String key : new String[]{"items", "questions", "data", "result", "list"}) {
+            JsonNode arr = root.path(key);
+            if (arr.isArray() && !arr.isEmpty()) {
+                return arr;
+            }
+        }
+        // {"stems":{"1":"…"}}：按对象字段顺序取值
+        JsonNode obj = root.path("stems");
+        if (obj.isObject() && !obj.isEmpty()) {
+            var list = MAPPER.createArrayNode();
+            obj.elements().forEachRemaining(list::add);
+            return list;
+        }
+        return missing;
+    }
+
+    /**
+     * 取第一个非空文本字段。
+     *
+     * @param nodes 候选字段
+     * @return 第一个非空值；都为空时返回 null
+     */
+    private static String firstNonBlank(JsonNode... nodes) {
+        for (JsonNode n : nodes) {
+            if (n != null && !n.isMissingNode() && !n.isNull()) {
+                String v = n.asText("");
+                if (StringUtils.isNotBlank(v)) {
+                    return v;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 把整卷识别文本按题号切成「一题一段」。
+     *
+     * <p>切割只认「行首题号」（{@code 12.} / {@code 第12题}），且要求题号<b>递进</b>：
+     * OCR 常把作答里的数字（{@code 24}、{@code 80,}）识别成题号开头，不校验递进
+     * 就会把一题切成好几段，题干反而被切碎。</p>
+     *
+     * @param text 版面全文
+     * @return 归一化题号 → 该题段落；一段都切不出时返回空 Map
+     */
+    static Map<String, String> splitSegmentsByQuestionNo(String text) {
+        if (StringUtils.isBlank(text)) {
+            return Map.of();
+        }
+        Map<String, String> segments = new LinkedHashMap<>();
+        String currentNo = null;
+        StringBuilder buf = new StringBuilder();
+        int lastNum = -1;
+        for (String rawLine : text.split("\\R")) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            var matcher = SELF_NO_PREFIX.matcher(line);
+            boolean startsQuestion = false;
+            if (matcher.find() && !SUB_ITEM_PREFIX.matcher(line).find()) {
+                int n = parseNoNum(matcher.group());
+                startsQuestion = fitsProgression(n, lastNum);
+                if (startsQuestion) {
+                    lastNum = n;
+                }
+            }
+            if (startsQuestion) {
+                if (currentNo != null && buf.length() > 0) {
+                    segments.put(normalizeNo(currentNo), buf.toString().trim());
+                }
+                currentNo = matcher.group();
+                buf = new StringBuilder(line);
+            } else if (currentNo != null) {
+                // 大节标题不进段落：它属于版式噪声，且含「题」「分」字样的标题
+                // 容易让模型把分值当题干
+                if (!isSectionHeader(line)) {
+                    buf.append('\n').append(line);
+                }
+            }
+        }
+        if (currentNo != null && buf.length() > 0) {
+            segments.put(normalizeNo(currentNo), buf.toString().trim());
+        }
+        return segments;
     }
 
     /**

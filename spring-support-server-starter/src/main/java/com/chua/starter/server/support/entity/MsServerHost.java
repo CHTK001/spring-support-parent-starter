@@ -461,4 +461,13 @@ public class MsServerHost extends SysBase {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Schema(description = "PEM私钥(瞬态)")
     private String serverHostPrivateKey; // 服务端主机私募键
+
+    /**
+     * 认证类型标记（瞬态，不落库）：password / key / none（免密登录）。
+     * 新增/编辑主机表单提交，供 {@code autoCreateIdentity} 决定自动创建的身份类型。
+     */
+    @TableField(exist = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(description = "认证类型标记(瞬态,password/key/none)")
+    private String serverHostAuthType; // 服务端主机认证类型标记
 }
