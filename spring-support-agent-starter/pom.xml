@@ -22,14 +22,14 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.42</version>
+        <version>4.0.0.43</version>
     </parent>
 
     <artifactId>spring-support-agent-starter</artifactId>
     <description>Java Agent 自动注入：引入依赖即自动 RuntimeBoot.attachSelf 自注入当前 JVM</description>
 
     <properties>
-        <utils.version>4.0.0.42</utils.version>
+        <utils.version>4.0.0.43</utils.version>
     </properties>
 
     <dependencies>

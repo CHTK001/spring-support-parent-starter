@@ -1,8 +1,10 @@
 package com.chua.starter.ai.support.service;
 
+import com.chua.common.support.vector.Vector;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FacePipeline;
+import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.configuration.face.FaceClientManager;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
@@ -79,7 +81,15 @@ public class FaceStores {
     /** 设置分组名（用于过滤设置变更事件） */
     private static final String GROUP = "face";
 
-    /** 账号 -> 该账号的人脸库 */
+    /**
+     * 元数据里承载分组名的键。
+     *
+     * <p>分组同时存在于两处：DB 的独立列（权威，可索引、可过滤）与元数据副本
+     * （登记时随请求一起传，供联动层写列）。这里保持键名与前端传参一致。</p>
+     */
+    private static final String GROUP_FIELD = "group";
+
+    /** 「账号 \\u0000 分组」-> 该账号该分组的人脸库 */
     private final Map<String, AccountFace> accounts = new ConcurrentHashMap<>();
 
     /**
@@ -238,24 +248,26 @@ public class FaceStores {
     }
 
     /**
-     * 当前账号的向量存储。
+     * 当前账号**指定分组**的向量存储。
      *
+     * @param group 分组名（空值按默认组）
      * @return 向量存储；未就绪时返回 {@code null}
      */
-    public VectorStorage currentVectorStorage() {
-        return st().storage();
+    public VectorStorage currentVectorStorage(String group) {
+        return st(group).storage();
     }
 
     /**
      * 按**向量**登记（快照持久化的正路）。
      *
+     * @param group    分组名（空值按默认组）
      * @param id       人脸标识
      * @param feature  特征向量
      * @param metadata 元数据
      * @return 是否登记成功
      */
-    public boolean enroll(String id, float[] feature, Map<String, Object> metadata) {
-        AccountFace st = st();
+    public boolean enroll(String group, String id, float[] feature, Map<String, Object> metadata) {
+        AccountFace st = st(group);
         FacePipeline pipeline = st.pipeline();
         if (pipeline == null) {
             return false;
@@ -279,7 +291,9 @@ public class FaceStores {
         // DB 权威：元数据写库（内部已处理「向量失败则回滚 DB 行」）。
         // 放在快照之后 —— 快照是向量重建的来源，它没了，重启后向量也补不回来；
         // DB 写失败由联动层回滚，不会留下半截状态。
-        library.insert(st.account, id, strOf(metadata, "name"), metadata, null, null, null);
+        // 分组必须随档案落库：检索按 (账号, 分组) 过滤，漏写会让这条只存在于文件系统里。
+        library.insert(st.account, id, strOf(metadata, "name"), withGroup(metadata, st.group),
+                null, null, null);
         return true;
     }
 
@@ -350,14 +364,15 @@ public class FaceStores {
      * 「登记成功」——底库里少了人、当事人毫不知情，等到 1:N 检索认不出人才会发现。
      * 这里把检出的总脸数一并带出来，多于 1 张直接拒绝，让用户裁剪后重试。</p>
      *
+     * @param group     分组名（空值按默认组）
      * @param id       人脸标识
      * @param imageData 图片字节
      * @param metadata 元数据
      * @return 是否登记成功
      * @throws MultiFaceEnrollException 图片中检出多于 1 张人脸
      */
-    public boolean enrollFromImage(String id, byte[] imageData, Map<String, Object> metadata) {
-        AccountFace st = st();
+    public boolean enrollFromImage(String group, String id, byte[] imageData, Map<String, Object> metadata) {
+        AccountFace st = st(group);
         FacePipeline pipeline = st.pipeline();
         if (pipeline == null) {
             return false;
@@ -389,23 +404,23 @@ public class FaceStores {
         //
         // 一并落存登记时用的裁剪脸：底库要「看图 + 画特征点」，
         // 而缩略图此前只在登记它的浏览器里，换浏览器就没有图。
-        saveFaceImage(id, FaceImageKind.CROP, result.faceImage());
+        saveFaceImage(st, id, FaceImageKind.CROP, result.faceImage());
         // 同时留一份原图。特征点必须画在原图上才有意义（见 originalImage 的说明），
         // 裁剪脸上只有一张脸，画出来的点永远是「对齐的五点」，看不出任何问题。
-        saveFaceImage(id, FaceImageKind.ORIGINAL, imageData);
+        saveFaceImage(st, id, FaceImageKind.ORIGINAL, imageData);
         // DB 权威：元数据写库。缩略图一并入库，让换浏览器/换机器时列表仍有图 ——
         // 底库图片只在本机磁盘上，DB 里没有副本就等于「换个环境全库无图」。
         // DB 写失败要回滚快照与向量，不能让三处状态分叉。
-        if (!library.insert(st.account, id, strOf(metadata, "name"), metadata,
+        if (!library.insert(st.account, id, strOf(metadata, "name"), withGroup(metadata, st.group),
                 base64Of(result.faceImage()), null, null)) {
             restoreSnapshot(st, id, prev);
             deleteVectorQuietly(st, id);
-            deleteFaceImage(id);
+            deleteFaceImage(st, id);
             try {
                 st.persist();
             } catch (RuntimeException ex) {
-                log.error("[Face] 账号 '{}' 登记失败后回滚快照也失败: id={} -> {}",
-                        st.account, id, ex.getMessage());
+                log.error("[Face] 账号 '{}' 分组 '{}' 登记失败后回滚快照也失败: id={} -> {}",
+                        st.account, st.group, id, ex.getMessage());
             }
             return false;
         }
@@ -438,13 +453,53 @@ public class FaceStores {
     }
 
     /**
+     * 复制一份元数据并**强制写入分组**（以实际落库的分组为准）。
+     *
+     * <p>不直接改入参：调用方的 map 可能被别处复用，就地改会带来难查的串味。
+     * 强制覆盖而不是 {@code putIfAbsent}：分组由本次调用的参数决定，
+     * 元数据里若带了不一致的旧值，应以参数为准 —— 否则「指定了分组却登记进另一组」。</p>
+     *
+     * @param metadata 原始元数据（可空）
+     * @param group    实际分组名
+     * @return 带分组的新元数据
+     */
+    private static Map<String, Object> withGroup(Map<String, Object> metadata, String group) {
+        Map<String, Object> out = metadata == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(metadata);
+        out.put(GROUP_FIELD, AiLibraryGroups.normalize(group));
+        return out;
+    }
+
+    /**
+     * 归一化分组列表：空值只查默认组（**不**等于查全部）。
+     *
+     * @param groups 原始分组列表
+     * @return 归一化后的分组列表，至少一项
+     */
+    private static List<String> normalizeGroups(List<String> groups) {
+        if (groups == null || groups.isEmpty()) {
+            return List.of(AiLibraryGroups.DEFAULT);
+        }
+        List<String> out = new ArrayList<>(groups.size());
+        for (String g : groups) {
+            String n = AiLibraryGroups.normalize(g);
+            if (!out.contains(n)) {
+                out.add(n);
+            }
+        }
+        return out.isEmpty() ? List.of(AiLibraryGroups.DEFAULT) : out;
+    }
+
+    /**
      * 读一条人脸登记时落存的**裁剪图**。
      *
-     * @param id 人脸标识
+     * @param group 分组名（空值按默认组）
+     * @param id    人脸标识
      * @return PNG 字节；未落存（改造前的老数据 / 落存失败）时返回 空
      */
-    public byte[] faceImage(String id) {
-        return readFaceImage(id, FaceImageKind.CROP);
+    public byte[] faceImage(String group, String id) {
+        return readFaceImage(st(group), id, FaceImageKind.CROP);
     }
 
     /**
@@ -456,26 +511,28 @@ public class FaceStores {
      *
      * <p>改造前登记的老数据没有原图，返回 {@code null}；前端此时回退到裁剪图。</p>
      *
-     * @param id 人脸标识
+     * @param group 分组名（空值按默认组）
+     * @param id    人脸标识
      * @return 原图字节；未落存时返回 {@code null}
      */
-    public byte[] originalImage(String id) {
-        return readFaceImage(id, FaceImageKind.ORIGINAL);
+    public byte[] originalImage(String group, String id) {
+        return readFaceImage(st(group), id, FaceImageKind.ORIGINAL);
     }
 
     /**
      * 读取指定种类的登记图。
      *
+     * @param st   账号 + 分组的人脸库
      * @param id   人脸标识
      * @param kind 图种类
      * @return 图片字节；未落存时返回 {@code null}
      */
-    private byte[] readFaceImage(String id, FaceImageKind kind) {
+    private byte[] readFaceImage(AccountFace st, String id, FaceImageKind kind) {
         if (id == null || id.isBlank()) {
             return null;
         }
         try {
-            Path file = faceImagePath(id, kind);
+            Path file = faceImagePath(st, id, kind);
             return Files.exists(file) ? Files.readAllBytes(file) : null;
         } catch (Exception e) {
             log.warn("[Face] 读登记图失败: id={} kind={} -> {}", id, kind, e.getMessage());
@@ -491,16 +548,17 @@ public class FaceStores {
      *
      * <p>失败只记 WARN，绝不影响登记结果 —— 图属于增强展示，向量与档案才是主体。</p>
      *
+     * @param st   账号 + 分组的人脸库
      * @param id   人脸标识
      * @param kind 图种类
      * @param data 图片字节（可能为 {@code null}）
      */
-    private void saveFaceImage(String id, FaceImageKind kind, byte[] data) {
+    private void saveFaceImage(AccountFace st, String id, FaceImageKind kind, byte[] data) {
         if (data == null || data.length == 0) {
             return;
         }
         try {
-            Path file = faceImagePath(id, kind);
+            Path file = faceImagePath(st, id, kind);
             Files.createDirectories(file.getParent());
             Files.write(file, data);
         } catch (Exception e) {
@@ -511,12 +569,13 @@ public class FaceStores {
     /**
      * 删除一条人脸时同步删掉它的登记图（best-effort）。
      *
+     * @param st 账号 + 分组的人脸库
      * @param id 人脸标识
      */
-    private void deleteFaceImage(String id) {
+    private void deleteFaceImage(AccountFace st, String id) {
         for (FaceImageKind kind : FaceImageKind.values()) {
             try {
-                Files.deleteIfExists(faceImagePath(id, kind));
+                Files.deleteIfExists(faceImagePath(st, id, kind));
             } catch (Exception e) {
                 log.debug("[Face] 删除登记图失败: id={} kind={} -> {}", id, kind, e.getMessage());
             }
@@ -552,35 +611,160 @@ public class FaceStores {
     }
 
     /**
-     * 某条人脸登记图的路径（{@code <账号>/face/img/<id><后缀>}）。
+     * 某条人脸登记图的路径（{@code <账号>/<分组>/face/img/<id><后缀>}）。
      *
+     * <p>登记图跟着分组走：同一个人在两个分组里各有一份图，互不覆盖 ——
+     * 否则「员工库删了张三的图」会连带把「访客库张三的图」删掉。</p>
+     *
+     * @param st   账号 + 分组的人脸库
      * @param id   人脸标识
      * @param kind 图种类
      * @return 文件路径
      */
-    private Path faceImagePath(String id, FaceImageKind kind) {
-        return st().dir.resolve(IMAGE_DIR).resolve(sanitize(id) + kind.suffix());
+    private Path faceImagePath(AccountFace st, String id, FaceImageKind kind) {
+        return st.dir.resolve(IMAGE_DIR).resolve(sanitize(id) + kind.suffix());
     }
 
     /**
-     * 1:N 识别（取最大人脸）。
+     * 1:N 识别（取最大人脸），在**多个分组**里检索。
      *
+     * <p><b>为什么是多分组。</b>分组是隔离手段，但业务上经常要「在员工库和访客库里一起找」——
+     * 因此检索接口接受一组分组名，逐组检索后按相似度归并取前 K。
+     * <b>不传分组不等于搜全部</b>：空值只查默认组，避免调用方漏传参数时把不该看到的数据带出来。</p>
+     *
+     * @param groups    分组名列表（空/未指定 = 只查默认组）
      * @param imageData 图片字节
      * @return 识别结果；管线未就绪时返回 {@code null}
      */
-    public FaceIdentifyHit identify(byte[] imageData) {
-        FacePipeline pipeline = st().pipeline();
-        return pipeline == null ? null : pipeline.identifyPipelineLargest(imageData);
+    public FaceIdentifyHit identify(List<String> groups, byte[] imageData) {
+        List<String> wanted = normalizeGroups(groups);
+        // 单组是绝对主流路径：直接用该组的管线，省掉「逐组检索再归并」的开销
+        if (wanted.size() == 1) {
+            FacePipeline pipeline = st(wanted.getFirst()).pipeline();
+            return pipeline == null ? null : pipeline.identifyPipelineLargest(imageData);
+        }
+        return identifyAcross(groups, imageData);
+    }
+
+    /**
+     * 跨分组 1:N 识别：逐组检索后按相似度归并。
+     *
+     * @param groups    分组名列表
+     * @param imageData 图片字节
+     * @return 归并后的识别结果；全部未命中返回 {@code null}
+     */
+    private FaceIdentifyHit identifyAcross(List<String> groups, byte[] imageData) {
+        // 先在某一个可用分组上跑完整识别拿到「框 + 特征」，再用该特征去其余分组补检索
+        FaceIdentifyHit seed = null;
+        for (String group : normalizeGroups(groups)) {
+            FacePipeline pipeline = st(group).pipeline();
+            if (pipeline == null) {
+                continue;
+            }
+            seed = pipeline.identifyPipelineLargest(imageData);
+            if (seed != null) {
+                break;
+            }
+        }
+        if (seed == null) {
+            return null;
+        }
+        float[] feature = seed.feature();
+        if (feature == null || feature.length == 0) {
+            return seed;
+        }
+        List<FaceSearchHit> merged = searchHitsAcross(groups, feature, Integer.MAX_VALUE);
+        if (merged.isEmpty()) {
+            return seed;
+        }
+        return new FaceIdentifyHit(seed.box(), feature, merged, seed.live(), seed.liveScore());
+    }
+
+    /**
+     * 跨分组 1:N 特征检索：逐组检索后按相似度归并取前 K。
+     *
+     * <p><b>为什么在这里归并而不是各自返回。</b>多分组的语义是「在这几组里一起找」，
+     * 归并必须全局按相似度排序后再截断 —— 若每组各取 K 条再由调用方拼接，
+     * 结果条数会随组数翻倍，且「最像的那个」可能被挤在后面。</p>
+     *
+     * @param groups  分组名列表（空/未指定 = 只查默认组）
+     * @param feature 查询特征
+     * @param topK    返回条数（&le;0 表示不限）
+     * @return 归并后的命中列表（按相似度降序）
+     */
+    public List<FaceSearchHit> searchHits(List<String> groups, float[] feature, int topK) {
+        return searchHitsAcross(groups, feature, topK);
+    }
+
+    /**
+     * 跨分组检索的实现（供识别与检索两条路复用）。
+     *
+     * @param groups  分组名列表
+     * @param feature 查询特征
+     * @param topK    返回条数（&le;0 表示不限）
+     * @return 归并后的命中列表（按相似度降序）
+     */
+    private List<FaceSearchHit> searchHitsAcross(List<String> groups, float[] feature, int topK) {
+        if (feature == null || feature.length == 0) {
+            return List.of();
+        }
+        List<FaceSearchHit> merged = new ArrayList<>();
+        for (String group : normalizeGroups(groups)) {
+            AccountFace st = st(group);
+            VectorStorage storage = st.storage();
+            if (storage == null) {
+                continue;
+            }
+            // 每组都取 topK：只有当某一组就能填满 topK 时才可能有多取，
+            // 但组数有上限（AiLibraryGroups.MAX_GROUPS），代价可控。
+            // 不这样做的话，某组内的强命中会因为「全局只取 K 条」的预分配而漏掉。
+            int want = topK <= 0 ? Integer.MAX_VALUE : topK;
+            try {
+                List<Vector> vectors = storage.search(feature, want);
+                if (vectors == null) {
+                    continue;
+                }
+                for (Vector v : vectors) {
+                    merged.add(new FaceSearchHit(
+                            v.id(),
+                            vectorScore(v),
+                            v.data(),
+                            v.metadata() == null ? Map.of() : v.metadata(),
+                            v.content()));
+                }
+            } catch (Exception ex) {
+                log.warn("[Face] 分组 '{}' 检索失败（跳过该组）: {}", group, ex.getMessage());
+            }
+        }
+        merged.sort((a, b) -> Double.compare(b.score(), a.score()));
+        if (topK > 0 && merged.size() > topK) {
+            return new ArrayList<>(merged.subList(0, topK));
+        }
+        return merged;
+    }
+
+    /**
+     * 取向量的相似度分数（向量库把 score 写进 metadata）。
+     *
+     * @param v 命中向量
+     * @return 相似度；缺失返回 0
+     */
+    private static double vectorScore(Vector v) {
+        if (v.metadata() != null && v.metadata().get("score") instanceof Number n) {
+            return n.doubleValue();
+        }
+        return 0d;
     }
 
     /**
      * 删除一条人脸（索引 + 快照同步）。
      *
-     * @param id 人脸标识
+     * @param group 分组名（空值按默认组）
+     * @param id    人脸标识
      * @return 是否删除成功
      */
-    public boolean remove(String id) {
-        AccountFace st = st();
+    public boolean remove(String group, String id) {
+        AccountFace st = st(group);
         Entry prev = st.snapshot.remove(id);
         if (prev == null) {
             return false;
@@ -607,39 +791,42 @@ public class FaceStores {
         }
         // 档案本体已删干净，图与向量才是「附属品」：删失败只影响可看性/检索，
         // 且向量残留会在下次重建索引时自动清掉，不阻断本次删除。
-        deleteFaceImage(id);
+        deleteFaceImage(st, id);
         deleteVectorQuietly(st, id);
         return true;
     }
 
     /**
-     * 当前账号已登记的人脸标识列表。
+     * 某分组已登记的人脸标识列表。
      *
+     * @param group 分组名（空值按默认组）
      * @return 标识列表（按登记顺序）
      */
-    public List<String> ids() {
-        return new ArrayList<>(st().snapshot.keySet());
+    public List<String> ids(String group) {
+        return new ArrayList<>(st(group).snapshot.keySet());
     }
 
     /**
-     * 当前账号已登记的人脸条目（含元数据，不含向量）。
+     * 某分组已登记的人脸条目（含元数据，不含向量）。
      *
-     * <p>档案数据来自数据库 `sys_ai_face_library`；只有账号目录里还没有 DB 行
-     * 时才回落到快照（迁移兜底），避免老数据在补建前从列表消失。</p>
+     * <p>档案数据来自数据库 `sys_ai_face_library`（按分组过滤）；只有账号目录里
+     * 还没有 DB 行时才回落到快照（迁移兜底），避免老数据在补建前从列表消失。</p>
      *
+     * @param group 分组名（空值按默认组）
      * @return 条目列表
      */
-    public List<Map<String, Object>> list() {
-        List<Map<String, Object>> rows = library.listMine(st().account);
-        if (rows.isEmpty() && !st().snapshot.isEmpty()) {
-            rows = snapshotRows(st());
+    public List<Map<String, Object>> list(String group) {
+        AccountFace st = st(group);
+        List<Map<String, Object>> rows = library.listMine(st.account, List.of(st.group));
+        if (rows.isEmpty() && !st.snapshot.isEmpty()) {
+            rows = snapshotRows(st);
         }
         for (Map<String, Object> row : rows) {
             String id = String.valueOf(row.get("id"));
-            row.put("hasImage", Files.exists(faceImagePath(id, FaceImageKind.CROP)));
+            row.put("hasImage", Files.exists(faceImagePath(st, id, FaceImageKind.CROP)));
             // 原图是否存在：特征点对话框画在原图上，老数据没有原图时要回退到裁剪图，
             // 前端据此决定提示「已按裁剪脸显示」还是直接画原图
-            row.put("hasOriginalImage", Files.exists(faceImagePath(id, FaceImageKind.ORIGINAL)));
+            row.put("hasOriginalImage", Files.exists(faceImagePath(st, id, FaceImageKind.ORIGINAL)));
         }
         return rows;
     }
@@ -683,6 +870,7 @@ public class FaceStores {
      * <p><b>筛选口径与前端一致：</b>关键词对 id 与元数据的字符串字段（姓名/标签/身份证/备注等）
      * 做大小写不敏感的包含匹配；状态 {@code thumb}/{@code noThumb} 按服务端登记图是否存在分。</p>
      *
+     * @param group     分组名（空值按默认组）
      * @param keyword   关键词（可空）
      * @param status    状态筛选：{@code thumb}=有图、{@code noThumb}=无图，其余/空=全部
      * @param sortField 排序字段（可空）：{@code id} / {@code hasImage} / 或元数据键
@@ -690,14 +878,14 @@ public class FaceStores {
      * @param sortOrder 排序方向：{@code asc} / {@code desc}；空/其余 = asc
      * @param page      页码（从 1 开始）；&le;0 表示不切片
      * @param size      每页条数；&le;0 表示不切片
-     * @return {@code items}（本页条目）+ {@code total}（命中总数）+ {@code stats}（全库统计，不受筛选影响）
+     * @return {@code items}（本页条目）+ {@code total}（命中总数）+ {@code stats}（本组统计，不受筛选影响）
      */
-    public Map<String, Object> listPage(String keyword, String status, String sortField,
+    public Map<String, Object> listPage(String group, String keyword, String status, String sortField,
                                         String sortOrder, int page, int size) {
         String kw = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         boolean onlyThumb = "thumb".equals(status);
         boolean onlyNoThumb = "noThumb".equals(status);
-        List<Map<String, Object>> rows = list();
+        List<Map<String, Object>> rows = list(group);
         List<Map<String, Object>> matched = new ArrayList<>(rows.size());
         int statTotal = rows.size();
         int statWithImage = 0;
@@ -863,12 +1051,13 @@ public class FaceStores {
      * 下面重推一次向量**只为保证索引与档案一致**（防御索引与档案分叉），
      * 不是为了让识别回传新档案 —— 后者本来就不由索引负责。</p>
      *
+     * @param group    分组名（空值按默认组）
      * @param id       人脸标识
      * @param metadata 新元数据（整体替换；{@code null} 视为空档案）
      * @return 是否更新成功（条目不存在返回 false）
      */
-    public boolean updateMetadata(String id, Map<String, Object> metadata) {
-        AccountFace st = st();
+    public boolean updateMetadata(String group, String id, Map<String, Object> metadata) {
+        AccountFace st = st(group);
         Entry old = st.snapshot.get(id);
         if (old == null) {
             return false;
@@ -885,15 +1074,19 @@ public class FaceStores {
         // DB 权威：同步元数据行。DB 失败要把快照一并还原 ——
         // 只改一半的话，界面读到的是新档案、DB 里是旧档案，日后按 DB 导出/统计又变回旧值。
         //
+        // 分组一并带上：这条档案属于本分组，元数据里若没写分组，联动层会把列更新成 null，
+        // 于是它从「本组」掉进默认组 —— 列表里突然少一条，而检索（按组）又还能命中。
+        //
         // 注意这里必须连异常一起兜住：updateMeta 内部的 find() 走 MyBatis-Plus，
         // 底层 SQL 一旦出错（如保留字被当成列别名）抛的是 RuntimeException 而不是返回 false，
         // 只判返回值会让快照保留新档案、DB 保留旧档案 —— 界面与库从此分叉且无人回滚。
+        Map<String, Object> withGroupMeta = withGroup(metadata, st.group);
         boolean dbOk;
         try {
-            dbOk = library.updateMeta(st.account, id, strOf(metadata, "name"), metadata, null);
+            dbOk = library.updateMeta(st.account, id, strOf(withGroupMeta, "name"), withGroupMeta, null);
         } catch (RuntimeException ex) {
-            log.error("[Face] 账号 '{}' 元数据写入 DB 抛异常，回滚快照: id={} -> {}",
-                    st.account, id, ex.getMessage());
+            log.error("[Face] 账号 '{}' 分组 '{}' 元数据写入 DB 抛异常，回滚快照: id={} -> {}",
+                    st.account, st.group, id, ex.getMessage());
             dbOk = false;
         }
         if (!dbOk) {
@@ -920,54 +1113,88 @@ public class FaceStores {
     }
 
     /**
-     * 当前账号已登记的人脸数量。
+     * 某分组已登记的人脸数量。
      *
+     * @param group 分组名（空值按默认组）
      * @return 数量
      */
-    public int size() {
-        return st().snapshot.size();
+    public int size(String group) {
+        return st(group).snapshot.size();
     }
 
     /**
      * 人脸能力是否就绪。
      *
+     * <p>模型是全局共享的，与分组无关，故这里查默认组的管线即可。</p>
+     *
      * @return true 表示检测模型已配置
      */
     public boolean available() {
-        return st().pipeline() != null;
+        return currentPipeline() != null;
     }
 
     // ==================== 内部：账号解析与快照 ====================
 
     /**
-     * 当前账号的人脸库（不存在则懒建）。
+     * 当前账号**默认分组**的人脸库（不存在则懒建）。
      *
      * @return 账号人脸库
      */
     private AccountFace st() {
-        String account = AiUserContext.requireUserId();
-        return accounts.computeIfAbsent(account, this::create);
+        return st(AiLibraryGroups.DEFAULT);
     }
 
     /**
-     * 创建一个账号的人脸库并加载快照。
+     * 当前账号指定分组的人脸库（不存在则懒建）。
+     *
+     * <p><b>分组是隔离的第一层。</b>不同分组各有自己的向量库与快照目录
+     * （{@code <根>/<账号>/<分组>/face}），互不可见 —— 于是「员工库」与
+     * 「访客库」里即使有同一个人，也不会互相命中。</p>
+     *
+     * @param group 分组名（空值按默认组）
+     * @return 账号 + 分组的人脸库
+     */
+    private AccountFace st(String group) {
+        String account = AiUserContext.requireUserId();
+        String normalized = AiLibraryGroups.normalize(group);
+        return accounts.computeIfAbsent(key(account, normalized), k -> create(account, normalized));
+    }
+
+    /**
+     * 账号 + 分组的缓存键。
+     *
+     * <p>用 {@code \u0000} 分隔而不是 {@code /}：账号名与分组名都可能含
+     * 用户自定义字符，用可打印分隔符会出现「(a, b/c) 与 (a/b, c) 撞键」
+     * 这种把两套底库混在一起的静默错误。</p>
      *
      * @param account 账号标识
+     * @param group   已归一化的分组名
+     * @return 缓存键
+     */
+    private static String key(String account, String group) {
+        return account + '\u0000' + group;
+    }
+
+    /**
+     * 创建一个账号 + 分组的人脸库并加载快照。
+     *
+     * @param account 账号标识
+     * @param group   已归一化的分组名
      * @return 账号人脸库
      */
-    private AccountFace create(String account) {
+    private AccountFace create(String account, String group) {
         // 等应用就绪再建：模型根由 OnnxExternalDirectoryService 在启动期设置，
         // 抢在它之前建库会按默认根解析模型而失败（实测过的竞态）。有界等待，
         // 就绪事件不来也不会把请求永久挂住。
         try {
             if (!readyLatch.await(READY_WAIT_SECONDS, TimeUnit.SECONDS)) {
-                log.warn("[Face] 等待应用就绪超时（{}s），账号 '{}' 的人脸库按当前模型根构建",
-                        READY_WAIT_SECONDS, account);
+                log.warn("[Face] 等待应用就绪超时（{}s），账号 '{}' 分组 '{}' 的人脸库按当前模型根构建",
+                        READY_WAIT_SECONDS, account, group);
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
-        AccountFace st = new AccountFace(account, accountDir(account));
+        AccountFace st = new AccountFace(account, group, accountDir(account, group));
         st.reload();
         return st;
     }
@@ -982,13 +1209,17 @@ public class FaceStores {
     }
 
     /**
-     * 某账号的人脸库目录（{@code <根>/<账号>/face}）。
+     * 某账号某分组的人脸库目录（{@code <根>/<账号>/<分组>/face}）。
      *
      * @param account 账号标识
+     * @param group   分组名
      * @return 目录
      */
-    private Path accountDir(String account) {
-        return baseDir().resolve(sanitize(account)).resolve(LEAF);
+    private Path accountDir(String account, String group) {
+        return baseDir()
+                .resolve(sanitize(account))
+                .resolve(AiLibraryGroups.sanitize(group))
+                .resolve(LEAF);
     }
 
     /**
@@ -1020,13 +1251,18 @@ public class FaceStores {
     }
 
     /**
-     * 单个账号的人脸库：管线 + 向量存储 + 快照。
+     * 单个账号 + 分组的人脸库：管线 + 向量存储 + 快照。
+     *
+     * <p>管线（模型实例）在各分组间是**共享单例**提供的，这里每个分组各持一份
+     * 只是换了个向量存储的轻量包装 —— 重的 ONNX 权重不会按分组翻倍。</p>
      */
     private final class AccountFace {
 
         /** 账号标识 */
         private final String account;
-        /** 本账号目录 */
+        /** 分组名（已归一化） */
+        private final String group;
+        /** 本账号本分组目录 */
         private final Path dir;
         /** 快照：id -> 条目。向量重建的来源与运行时缓存（档案权威在 DB） */
         private final Map<String, Entry> snapshot = new LinkedHashMap<>();
@@ -1035,8 +1271,9 @@ public class FaceStores {
         /** 人脸管线（按当前设置构建） */
         private volatile FacePipeline pipeline;
 
-        AccountFace(String account, Path dir) {
+        AccountFace(String account, String group, Path dir) {
             this.account = account;
+            this.group = group;
             this.dir = dir;
         }
 
@@ -1074,7 +1311,8 @@ public class FaceStores {
             try {
                 Files.createDirectories(dir);
             } catch (Exception ex) {
-                log.warn("[Face] 账号 '{}' 目录创建失败: {} -> {}", account, dir, ex.getMessage());
+                log.warn("[Face] 账号 '{}' 分组 '{}' 目录创建失败: {} -> {}",
+                        account, group, dir, ex.getMessage());
             }
             loadSnapshot();
             // 存量补建放在这里、且在「模型未配置」早返回**之前**：
@@ -1141,18 +1379,25 @@ public class FaceStores {
                 if (existing.contains(e.getKey())) {
                     continue;
                 }
-                if (library.insert(account, e.getKey(), strOf(e.getValue().metadata(), "name"),
-                        e.getValue().metadata(), null, null, null)) {
+                // 分组必须随档案一起回填：否则存量条目会落进默认组，
+                // 而它的向量在本分组的索引里 —— 检索命中后按 (账号,分组) 反查档案
+                // 就会查不到，表现为「搜得到、列表里没有」。
+                Map<String, Object> meta = e.getValue().metadata() == null
+                        ? new LinkedHashMap<>()
+                        : new LinkedHashMap<>(e.getValue().metadata());
+                meta.putIfAbsent(GROUP_FIELD, group);
+                if (library.insert(account, e.getKey(), strOf(meta, "name"),
+                        meta, null, null, null)) {
                     created++;
                 } else {
                     allOk = false;
-                    log.warn("[Face] 账号 '{}' 存量档案补建失败: id={}",
-                            account, e.getKey());
+                    log.warn("[Face] 账号 '{}' 分组 '{}' 存量档案补建失败: id={}",
+                            account, group, e.getKey());
                 }
             }
             if (created > 0) {
-                log.info("[Face] 账号 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
-                        account, created, snapshot.size());
+                log.info("[Face] 账号 '{}' 分组 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
+                        account, group, created, snapshot.size());
             }
             return allOk;
         }

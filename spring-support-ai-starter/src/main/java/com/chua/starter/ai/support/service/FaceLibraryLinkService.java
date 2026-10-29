@@ -78,7 +78,10 @@ public class FaceLibraryLinkService {
         row.setName(name);
         row.setThumbnail(thumbnail);
         row.setMeta(writeMeta(metadata));
-        row.setGroupName(strOf(metadata, "group"));
+        // 分组**必须归一化后再写**：MyBatis 会把 null 显式写进列，覆盖掉 DDL 上的
+        // DEFAULT 'default'，于是这条人脸的分组是 NULL —— 查默认组时靠 NULL 兜底还能捞到，
+        // 但任何按分组精确统计/比较都会把它算成「无分组」，与预期不符。
+        row.setGroupName(AiLibraryGroups.normalize(strOf(metadata, "group")));
         row.setStatus(1);
         // 经纬度：非必填，随档案一起落 DB 标量列；**不参与向量**（向量里只有人脸特征）。
         // 从 metadata 里取而不是加方法参数：登记/更新/回填三条路径都走 metadata，
@@ -150,7 +153,7 @@ public class FaceLibraryLinkService {
             row.setName(name);
         }
         row.setMeta(writeMeta(metadata));
-        row.setGroupName(strOf(metadata, "group"));
+        row.setGroupName(AiLibraryGroups.normalize(strOf(metadata, "group")));
         // 经纬度允许显式清空：metadata 里给了 null/空串就置 NULL，
         // 不给（key 不存在）则保持原值 —— 否则「只改姓名」会把已有坐标抹掉。
         if (metadata != null && metadata.containsKey("lat")) {
@@ -230,26 +233,41 @@ public class FaceLibraryLinkService {
     }
 
     /**
-     * 当前账号的人脸底库行（DB 权威）。
+     * 当前账号**指定分组**的人脸底库行（DB 权威）。
      *
      * <p>列表、关键词、统计、表格排序都从这里取，而不是从 {@code index.json} 取：
      * 数据库 `sys_ai_face_library` 才是档案的权威，索引快照只负责保存向量。
      * 返回的每项只带「向量标识 + 反序列化后的档案」，图片/向量状态由调用方补齐。</p>
      *
+     * <p><b>分组的 NULL 语义</b>：分组列建成之前写入的行是 {@code NULL}，
+     * 它们属于默认组。因此查默认组时必须把 {@code NULL} 也捞进来，
+     * 否则历史数据会「凭空消失」；查非默认组时则不能带 {@code NULL}。</p>
+     *
      * @param userId 归属账号
+     * @param groups 分组名列表；空表示不按分组过滤（管理端全量）
      * @return 数据库人脸行；读取失败时返回空集合
      */
-    public List<Map<String, Object>> listMine(String userId) {
+    public List<Map<String, Object>> listMine(String userId, List<String> groups) {
         if (userId == null || userId.isBlank()) {
             return List.of();
         }
         List<SysAiFaceLibrary> rows;
         try {
-            rows = mapper.selectList(new LambdaQueryWrapper<SysAiFaceLibrary>()
-                    .eq(SysAiFaceLibrary::getUserId, userId)
-                    .orderByAsc(SysAiFaceLibrary::getId));
+            LambdaQueryWrapper<SysAiFaceLibrary> wrapper = new LambdaQueryWrapper<SysAiFaceLibrary>()
+                    .eq(SysAiFaceLibrary::getUserId, userId);
+            if (groups != null && !groups.isEmpty()) {
+                wrapper.and(w -> {
+                    w.in(SysAiFaceLibrary::getGroupName, groups);
+                    // 默认组额外带上 NULL：历史行没有分组值，语义上属于默认组
+                    if (AiLibraryGroups.matches(null, groups)) {
+                        w.or().isNull(SysAiFaceLibrary::getGroupName);
+                    }
+                });
+            }
+            rows = mapper.selectList(wrapper.orderByAsc(SysAiFaceLibrary::getId));
         } catch (Exception ex) {
-            log.error("[Face] 读取底库档案失败（列表将按空库处理）: user={} -> {}", userId, ex.getMessage());
+            log.error("[Face] 读取底库档案失败（列表将按空库处理）: user={}, groups={} -> {}",
+                    userId, groups, ex.getMessage());
             return List.of();
         }
         List<Map<String, Object>> out = new ArrayList<>(rows.size());
@@ -259,6 +277,8 @@ public class FaceLibraryLinkService {
             }
             Map<String, Object> item = new LinkedHashMap<>(4);
             item.put("id", row.getVectorId());
+            // 分组以**列**为准（NULL 归一成默认组）：与经纬度同口径，列是唯一真相
+            item.put("group", AiLibraryGroups.normalize(row.getGroupName()));
             // 经纬度以**列**为准（不是 meta 里的副本）：列是唯一真相，
             // meta 里可能残留历史值或被前端整包回写覆盖。
             item.put("lat", row.getLat());

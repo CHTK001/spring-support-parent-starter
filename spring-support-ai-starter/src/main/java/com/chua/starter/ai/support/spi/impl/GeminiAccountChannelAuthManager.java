@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.spi.impl;
 
+import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -441,5 +442,20 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    @Override
+    public RouteTarget toRouteTarget(Map<String, Object> credentials) {
+        String accessToken = readString(credentials, "access_token");
+        if (isBlank(accessToken)) {
+            return null;
+        }
+        return RouteTarget.builder()
+                .provider("openai")
+                .baseUrl("https://generativelanguage.googleapis.com/v1beta/openai")
+                .apiKey(accessToken)
+                .authScheme("api_key")
+                .autoSwitchOnRateLimit(true)
+                .build();
     }
 }

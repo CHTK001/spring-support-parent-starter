@@ -59,10 +59,21 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
     @Override
     public String rollback(String projectPath, String backupName) {
         var p = prefix(projectPath);
-        if (backupName != null && !backupName.isBlank()) {
-            return p + "latest='backups/" + quote(backupName) + "' && [ -f \"$latest\" ] && tar -xzf \"$latest\"";
-        }
-        return p + "latest=$(ls -t backups/backup_*.tar.gz | head -1) && tar -xzf \"$latest\"";
+        String pick = (backupName != null && !backupName.isBlank())
+                ? "latest='backups/" + quote(backupName) + "'"
+                : "latest=$(ls -t backups/backup_*.tar.gz 2>/dev/null | head -1)";
+        // 回滚不是「覆盖」而是「回到备份时刻」：升级新增的文件备份里根本没有，
+        // 只解压会让它们原样留在目录里（实测：升级前没有 app.jar，回滚后新 jar 仍在、
+        // md5 与升级后完全一致，等于没回滚）。所以先按备份清单算出「当前有、备份没有」
+        // 的新增文件并删掉，再解压，才真正回到备份时刻。
+        // 备份目录自身必须排除，否则会把所有历史备份一起删掉。
+        return p + pick + " && [ -f \"$latest\" ] || { echo '没有可用备份' >&2; exit 1; }; "
+                + "__keep=$(mktemp) && __cur=$(mktemp) && "
+                + "tar -tzf \"$latest\" | sed 's|^\\./||' | grep -v -e '/$' -e '^$' | sort -u > \"$__keep\"; "
+                + "find . -path ./backups -prune -o -type f -print | sed 's|^\\./||' | sort -u > \"$__cur\"; "
+                + "comm -23 \"$__cur\" \"$__keep\" | while IFS= read -r __f; do rm -f -- \"$__f\"; done; "
+                + "rm -f \"$__keep\" \"$__cur\"; "
+                + "tar -xzf \"$latest\"";
     }
 
     @Override
@@ -246,7 +257,15 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
 
     @Override
     public String tailLog(String logPath, int lines) {
-        return "tail -n " + lines + " " + logPath;
+        // 日志路径历史上出现过被配成目录（如 <projectPath>/app/logs）的情况，
+        // 直接 tail 目录只会得到 "Is a directory"，前端看到的就是空日志；
+        // 文件不存在时也应明确回一句提示，而不是静默返回空串。
+        String p = "'" + quote(logPath) + "'";
+        return "p=" + p + "; if [ -d \"$p\" ]; then "
+                + "f=$(ls -tp \"$p\"/* 2>/dev/null | grep -v '/$' | head -n 1); "
+                + "[ -z \"$f\" ] && f=\"$p/app.log\"; else f=\"$p\"; fi; "
+                + "if [ -f \"$f\" ]; then tail -n " + lines + " \"$f\"; "
+                + "else echo \"日志文件不存在: $f\"; fi";
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.spi.impl;
 
+import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -531,5 +532,30 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
 
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    @Override
+    public RouteTarget toRouteTarget(Map<String, Object> credentials) {
+        String accessToken = readString(credentials, "access_token");
+        if (isBlank(accessToken)) {
+            return null;
+        }
+        String baseUrl = readString(credentials, "base_url");
+        if (isBlank(baseUrl)) {
+            String gateway = readString(credentials, "gateway_url");
+            if (!isBlank(gateway)) {
+                baseUrl = gateway.replaceAll("/+$", "") + "/v1";
+            }
+        }
+        if (isBlank(baseUrl)) {
+            return null;
+        }
+        return RouteTarget.builder()
+                .provider("openai")
+                .baseUrl(baseUrl)
+                .apiKey(accessToken)
+                .authScheme("api_key")
+                .autoSwitchOnRateLimit(true)
+                .build();
     }
 }

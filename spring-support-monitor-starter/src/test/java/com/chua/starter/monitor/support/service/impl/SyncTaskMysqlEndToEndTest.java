@@ -7,6 +7,7 @@ import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.monitor.support.datasync.SyncTaskHookNotifier;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.mapper.MsSyncTaskMapper;
+import com.chua.starter.monitor.support.mapper.MsSyncTaskRunLogMapper;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
 import com.chua.starter.monitor.support.model.dto.SyncTargetDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTaskDTO;
@@ -204,8 +205,10 @@ class SyncTaskMysqlEndToEndTest {
         store = new TaskStore();
         service = new SyncTaskServiceImpl(
                 proxy(MsSyncTaskMapper.class, store),
+                proxy(MsSyncTaskRunLogMapper.class, store),
                 proxy(DatasourceService.class, new LocalDatasource()),
-                JSON, new SyncTaskRunLogBuffer(), new SyncTaskHookNotifier(JSON));
+                JSON, new SyncTaskRunLogBuffer(proxy(MsSyncTaskRunLogMapper.class, store)),
+                new SyncTaskHookNotifier(JSON));
         execute("TRUNCATE TABLE " + SRC);
         execute("DROP TABLE IF EXISTS " + TGT_B);
         execute("CREATE TABLE " + TGT_B + " LIKE " + SRC);

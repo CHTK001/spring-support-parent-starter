@@ -2,8 +2,11 @@ package com.chua.starter.monitor.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
+import com.chua.starter.monitor.support.model.BulkImportResultVO;
+import com.chua.starter.monitor.support.model.BulkPreviewVO;
 import com.chua.starter.monitor.support.model.SyncColumnVO;
 import com.chua.starter.monitor.support.model.SyncPreviewVO;
+import com.chua.starter.monitor.support.model.dto.BulkImportDTO;
 import com.chua.starter.monitor.support.model.SyncRunLogStatsVO;
 import com.chua.starter.monitor.support.model.SyncRunLogTrendVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
@@ -173,4 +176,29 @@ public interface SyncTaskService {
      * @return 源列；源不可用时返回错误文案（成功即代表可进入下一步）
      */
     ReturnResult<List<SyncColumnVO>> validateSource(SyncPreviewDTO request);
+
+    /**
+     * CSV 批量导入（快速模式）：同一份 CSV/Excel 文件并行灌入多个输出目标。
+     *
+     * <p>与 datasync 逐行引擎分离：文件统一转成规范 CSV 后，按目标库方言走
+     * LOAD/COPY 直灌（MySQL {@code LOAD DATA LOCAL INFILE} / PG {@code COPY FROM STDIN}），
+     * 由 SPI（{@code JdbcCsvLoader}）按 {@code jdbc:mysql:/jdbc:postgresql:} 方言选择实现；
+     * 目标库不支持快速导入时该目标直接标记失败并说明原因（不降级逐行——快速模式
+     * 的语义就是「只走 LOAD 直灌」，逐行路径由普通同步任务承担）。</p>
+     *
+     * @param request 批量导入入参（文件路径 + 输出目标列表）
+     * @return 每目标行数/耗时/错误 + 整体汇总
+     */
+    ReturnResult<BulkImportResultVO> bulkImport(BulkImportDTO request);
+
+    /**
+     * CSV 批量导入（快速模式）文件预览：真实读取文件表头与前若干行。
+     *
+     * <p>数据必须来自文件真实内容，不允许前端 mock：表头用于字段映射匹配，
+     * 前几行用于「预览确认」步骤核对列序与样例值。</p>
+     *
+     * @param request 批量导入入参（只用 filePath / delimiter / hasHeader / encoding）
+     * @return 表头 + 前若干行 + 数据总行数
+     */
+    ReturnResult<BulkPreviewVO> bulkPreview(BulkImportDTO request);
 }

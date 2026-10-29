@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.controller.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +92,30 @@ public class AiModelController {
     @DeleteMapping("/{modelId}")
     public void delete(@Parameter(description = "模型主键") @PathVariable Long modelId) {
         modelService.delete(modelId);
+    }
+
+    /**
+     * 批量删除模型。
+     *
+     * <p>与 {@link #delete(Long)} 同口径：写出口归属守卫（{@code AiModelServiceImpl}
+     * ）整批过完后才删；{@code ids} 为空或无主行直接拦截，不出现部分删除。</p>
+     *
+     * @param body 请求体，须含 {@code ids} 列表
+     * @return 包含 success 与 deletedCount 的结果
+     */
+    @Operation(summary = "批量删除模型")
+    @DeleteMapping("/batch")
+    public ReturnResult<Map<String, Object>> batchDelete(@RequestBody Map<String, ?> body) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = body == null ? null : (List<Long>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
+        }
+        int deleted = modelService.batchDelete(ids);
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", true);
+        result.put("deletedCount", deleted);
+        return ReturnResult.ok(result);
     }
 
     /**

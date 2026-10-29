@@ -8,7 +8,10 @@ import com.chua.deeplearning.support.feature.FeatureExtractor;
 import com.chua.deeplearning.support.reid.PersonTrack;
 import com.chua.starter.ai.support.configuration.reid.ReidClientManager;
 import com.chua.starter.ai.support.service.AiReidService;
+import com.chua.starter.ai.support.service.ReidLibraryLinkService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.util.AiLibraryGroups;
+import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -67,7 +70,7 @@ public class ReidController {
     /**
      * 重识别底库联动层（列表/删除用）。
      */
-    private final com.chua.starter.ai.support.service.ReidLibraryLinkService reidLibrary;
+    private final ReidLibraryLinkService reidLibrary;
 
     /**
      * 重识别客户端管理器。
@@ -82,11 +85,12 @@ public class ReidController {
     /**
      * 观测一帧：检测人脸并归并进跨帧轨迹。
      *
-     * <p>同一个人在不同摄像头出现时会自动并入同一条轨迹。</p>
+     * <p>同一个人在不同摄像头出现时会自动并入同一条轨迹；观测落底库。</p>
      *
      * @param file     图片文件
      * @param cameraId 摄像头标识（可空，用配置的默认值）
      * @param sourceId 来源帧标识（可空，自动生成）
+     * @param group    分组名（可空，只查默认组）
      * @return 观测结果
      */
     @Operation(summary = "观测一帧", description = "检测图片中的人脸并归并进跨帧轨迹；同一个人自动并入同一轨迹，观测落底库")
@@ -94,13 +98,14 @@ public class ReidController {
     public ReturnResult<?> observe(@RequestParam("file") MultipartFile file,
                                    @RequestParam(value = "cameraId", required = false) String cameraId,
                                    @RequestParam(value = "sourceId", required = false) String sourceId,
+                                   @RequestParam(value = "group", required = false) String group,
                                    @RequestParam(value = "lat", required = false) java.math.BigDecimal lat,
                                    @RequestParam(value = "lng", required = false) java.math.BigDecimal lng) {
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
-            return ReturnResult.ok(reidService.observe(cameraId, sourceId, file.getBytes(), lat, lng));
+            return ReturnResult.ok(reidService.observe(group, cameraId, sourceId, file.getBytes(), lat, lng));
         } catch (IOException e) {
             log.warn("[Reid] 读取上传文件失败: {}", e.getMessage());
             return ReturnResult.error("读取上传文件失败");
@@ -110,19 +115,22 @@ public class ReidController {
     /**
      * 以图搜人：在已有轨迹中检索最相似的人。
      *
-     * @param file 图片文件
-     * @param topK 返回条数（可空，用配置值）
+     * @param file  图片文件
+     * @param topK  返回条数（可空，用配置值）
+     * @param group 分组名（可空，只查默认组；逗号分隔可查多个分组）
      * @return 命中列表
      */
     @Operation(summary = "以图搜人", description = "在已有轨迹中检索最相似的人，返回轨迹与相似度")
     @PostMapping("/search")
     public ReturnResult<?> search(@RequestParam("file") MultipartFile file,
-                                  @RequestParam(value = "topK", required = false) Integer topK) {
+                                  @RequestParam(value = "topK", required = false) Integer topK,
+                                  @RequestParam(value = "group", required = false) String group) {
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
-            List<AiReidService.ReidHit> hits = reidService.search(file.getBytes(), topK == null ? 0 : topK);
+            List<AiReidService.ReidHit> hits = reidService.search(
+                    AiLibraryGroups.parse(group), file.getBytes(), topK == null ? 0 : topK);
             return ReturnResult.ok(Map.of("count", hits.size(), "hits", hits));
         } catch (IOException e) {
             log.warn("[Reid] 读取上传文件失败: {}", e.getMessage());
@@ -133,31 +141,35 @@ public class ReidController {
     /**
      * 列出轨迹。
      *
-     * @param cameraId 只看某个摄像头的轨迹（可空）
+     * @param group     分组名（可空，只查默认组）
+     * @param cameraId  只看某个摄像头的轨迹（可空）
      * @param crossOnly 只看跨摄像头轨迹（可空）
-     * @param limit    返回上限（可空）
+     * @param limit     返回上限（可空）
      * @return 轨迹列表
      */
-    @Operation(summary = "轨迹列表", description = "从重识别底库汇聚出当前账号的跨帧轨迹；可按摄像头过滤或只看跨镜轨迹")
+    @Operation(summary = "轨迹列表", description = "从重识别底库汇聚出当前账号的跨帧轨迹；可按分组/摄像头过滤或只看跨镜轨迹")
     @GetMapping("/tracks")
-    public ReturnResult<?> tracks(@RequestParam(value = "cameraId", required = false) String cameraId,
-                                   @RequestParam(value = "crossOnly", required = false) Boolean crossOnly,
-                                   @RequestParam(value = "limit", required = false) Integer limit) {
+    public ReturnResult<?> tracks(@RequestParam(value = "group", required = false) String group,
+                                  @RequestParam(value = "cameraId", required = false) String cameraId,
+                                  @RequestParam(value = "crossOnly", required = false) Boolean crossOnly,
+                                  @RequestParam(value = "limit", required = false) Integer limit) {
         List<AiReidService.Track> tracks = reidService.tracks(
-                cameraId, Boolean.TRUE.equals(crossOnly), limit == null ? 0 : limit);
+                group, cameraId, Boolean.TRUE.equals(crossOnly), limit == null ? 0 : limit);
         return ReturnResult.ok(Map.of("count", tracks.size(), "tracks", tracks));
     }
 
     /**
      * 轨迹详情。
      *
-     * @param trackId 轨迹 ID
+     * @param group    分组名（可空，只查默认组）
+     * @param trackId  轨迹 ID
      * @return 轨迹
      */
     @Operation(summary = "轨迹详情", description = "按轨迹 ID 查询轨迹的摄像头集合、观测次数、时间跨度与位置")
     @GetMapping("/tracks/{trackId}")
-    public ReturnResult<?> track(@PathVariable("trackId") String trackId) {
-        AiReidService.Track track = reidService.track(trackId);
+    public ReturnResult<?> track(@RequestParam(value = "group", required = false) String group,
+                                 @PathVariable("trackId") String trackId) {
+        AiReidService.Track track = reidService.track(group, trackId);
         if (track == null) {
             return ReturnResult.error("轨迹不存在");
         }
@@ -167,26 +179,29 @@ public class ReidController {
     /**
      * 重识别底库列表（观测记录，供设置中心的「重识别库」面板）。
      *
+     * @param group 分组名（可空，只查默认组）
      * @return 底库观测列表
      */
-    @Operation(summary = "重识别底库列表", description = "列出当前账号的全部观测记录（含摄像头、轨迹、经纬度）")
+    @Operation(summary = "重识别底库列表", description = "列出当前账号指定分组的全部观测记录（含摄像头、轨迹、经纬度）")
     @GetMapping("/library")
-    public ReturnResult<?> library() {
-        String account = com.chua.starter.ai.support.util.AiUserContext.requireUserId();
-        java.util.List<Map<String, Object>> rows = reidLibrary.listMine(account);
+    public ReturnResult<?> library(@RequestParam(value = "group", required = false) String group) {
+        String account = AiUserContext.requireUserId();
+        java.util.List<Map<String, Object>> rows = reidLibrary.listMine(account, AiLibraryGroups.parse(group));
         return ReturnResult.ok(Map.of("count", rows.size(), "items", rows));
     }
 
     /**
      * 删除一条观测记录（同步删向量）。
      *
-     * @param id 观测记录 ID（即向量标识）
+     * @param id    观测记录 ID（即向量标识）
+     * @param group 分组名（可空，只查默认组）
      * @return 是否成功
      */
     @Operation(summary = "删除重识别观测", description = "按记录 ID 删除一条观测（同步删除其向量）")
     @DeleteMapping("/library/{id}")
-    public ReturnResult<?> deleteLibraryItem(@PathVariable("id") String id) {
-        String account = com.chua.starter.ai.support.util.AiUserContext.requireUserId();
+    public ReturnResult<?> deleteLibraryItem(@PathVariable("id") String id,
+                                             @RequestParam(value = "group", required = false) String group) {
+        String account = AiUserContext.requireUserId();
         boolean removed = reidLibrary.deleteMeta(account, id);
         return removed ? ReturnResult.ok("已删除") : ReturnResult.error("删除失败或记录不存在");
     }
@@ -194,27 +209,40 @@ public class ReidController {
     /**
      * 轨迹统计。
      *
+     * @param group 分组名（可空，只查默认组）
      * @return 统计信息
      */
-    @Operation(summary = "轨迹统计", description = "当前账号的轨迹总数与重识别能力状态")
+    @Operation(summary = "轨迹统计", description = "当前账号指定分组的轨迹总数与重识别能力状态")
     @GetMapping("/stats")
-    public ReturnResult<?> stats() {
+    public ReturnResult<?> stats(@RequestParam(value = "group", required = false) String group) {
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("available", reidService.available());
-        stats.put("tracks", reidService.trackCount());
+        stats.put("tracks", reidService.trackCount(group));
         stats.put("config", clientManager.configSummary());
         return ReturnResult.ok(stats);
     }
 
     /**
-     * 清空当前账号的全部轨迹。
+     * 清空指定分组的全部轨迹。
      *
+     * @param group 分组名（可空，只清默认组）
      * @return 清空的轨迹数
      */
-    @Operation(summary = "清空轨迹", description = "清空当前账号的全部跨帧轨迹")
+    @Operation(summary = "清空轨迹", description = "清空当前账号指定分组的全部跨帧轨迹")
     @DeleteMapping("/tracks")
-    public ReturnResult<?> clear() {
-        return ReturnResult.ok(Map.of("cleared", reidService.clear()));
+    public ReturnResult<?> clear(@RequestParam(value = "group", required = false) String group) {
+        return ReturnResult.ok(Map.of("cleared", reidService.clear(group)));
+    }
+
+    /**
+     * 当前账号已有数据的分组名列表（供前端分组选择器）。
+     *
+     * @return 分组名列表
+     */
+    @Operation(summary = "分组列表", description = "返回当前账号已有数据的分组名，供前端分组选择器渲染")
+    @GetMapping("/groups")
+    public ReturnResult<?> groups() {
+        return ReturnResult.ok(Map.of("groups", reidService.groups()));
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.spi;
 
+import com.chua.common.support.ai.chat.route.RouteTarget;
+
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +24,8 @@ import java.util.Map;
  *   <li>{@link #status()}：当前凭据有效性检查（401 探活或本地到期判定）</li>
  *   <li>{@link #checkin()}：每日签到/领取免费额度（可选，无签到渠道默认 no-op）</li>
  *   <li>{@link #listModels()}：拉取当前账号可用模型列表（可选）</li>
+ *   <li>{@link #toRouteTarget()}：把 OAuth 凭据转为路由目标（供免费渠道聚合客户端
+ *       按模型路由到本渠道上游，多账号 429 failover）</li>
  * </ul>
  *
  * <p>凭据为不透明 Map（键如 {@code access_token} / {@code refresh_token} /
@@ -140,5 +144,24 @@ public interface AccountChannelAuthManager {
      */
     default List<Map<String, Object>> listModels(Map<String, Object> credentials) throws Exception {
         return List.of();
+    }
+
+    /**
+     * 把 OAuth 凭据转为路由目标（供免费渠道聚合客户端按模型路由到本渠道上游）。
+     *
+     * <p>返回 {@code null} 表示本渠道不支持路由（无固定推理端点或需 WASM 签名等）。
+     * 实现方应返回 {@link RouteTarget}，其中 {@code apiKey} 取自凭据的
+     * {@code access_token}（session / device_token / JWT 等），{@code baseUrl}
+     * 为本渠道的 OpenAI 兼容推理端点，认证字段按本渠道要求设置。</p>
+     *
+     * <p>多账号 failover：{@code collectChannelRoutes} 会为同一渠道的多个连接
+     * 各自调用本方法，再把返回的 {@code apiKey} 聚合到同一个 {@code RouteTarget.apiKeys}
+     * 列表，触发 429 限流时自动切换到下一个账号。</p>
+     *
+     * @param credentials 连接凭据（含 {@code access_token} 等）
+     * @return 路由目标；不支持路由时返回 {@code null}
+     */
+    default RouteTarget toRouteTarget(Map<String, Object> credentials) {
+        return null;
     }
 }

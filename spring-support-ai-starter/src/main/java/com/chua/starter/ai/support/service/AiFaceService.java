@@ -109,22 +109,24 @@ public interface AiFaceService {
     /**
      * 登记人脸入库（单独能力，取最大人脸）。
      *
+     * @param group     分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}，分组决定入哪套底库
      * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  附加元数据
      * @return 是否登记成功
      */
-    boolean enroll(String id, byte[] imageData, Map<String, Object> metadata);
+    boolean enroll(String group, String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
      * 登记管线（detect → crop → liveness → align → 特征 → 入库，取最大人脸）。
      *
+     * @param group     分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}，分组决定入哪套底库
      * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  元数据
      * @return 是否登记成功
      */
-    boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata);
+    boolean enrollPipeline(String group, String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
      * 直接特征入库（不跑管线，调用方自行提取特征后入库）。
@@ -132,48 +134,67 @@ public interface AiFaceService {
      * <p>适用场景：前端先调 {@link #extractFeature(byte[])} 取特征，再调用本接口入库，
      * 或从外部系统导入预计算特征向量。</p>
      *
+     * @param group     分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}，分组决定入哪套底库
      * @param id        人脸 标识
      * @param feature   特征向量（维度需与 向量storage 一致）
      * @param metadata  元数据
      * @return 是否成功
      */
-    boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata);
+    boolean enrollFeature(String group, String id, float[] feature, Map<String, Object> metadata);
 
     /**
      * 1:N 人脸识别（单独能力，取最大人脸）。
      *
+     * @param groups    分组名列表；为空只查默认组（**不等于查全部**，见 {@link AiLibraryGroups}）
      * @param imageData 图片字节
      * @return 识别命中（TopK）
      */
-    FaceIdentifyHit identify(byte[] imageData);
+    FaceIdentifyHit identify(List<String> groups, byte[] imageData);
 
     /**
      * 识别管线（detect → crop → liveness → 特征 → 检索，取最大人脸）。
      *
+     * @param groups    分组名列表；为空只查默认组（**不等于查全部**）
      * @param imageData 图片字节
      * @return 识别命中（TopK）
      */
-    FaceIdentifyHit identifyPipeline(byte[] imageData);
+    FaceIdentifyHit identifyPipeline(List<String> groups, byte[] imageData);
 
     /**
      * 1:N 特征检索（单独能力）。
      *
+     * @param groups  分组名列表；为空只查默认组（**不等于查全部**）；多组按相似度归并后取前 K
      * @param feature 特征向量
      * @param topK    返回条数
      * @return 检索命中列表
      */
-    List<FaceSearchHit> search(float[] feature, int topK);
+    List<FaceSearchHit> search(List<String> groups, float[] feature, int topK);
 
     /**
-     * 列出**当前账号**人脸库里已登记的条目（id + 元数据，不含向量）。
+     * 枚举**当前账号**已存在的分组名。
+     *
+     * <p>前端要提供分组切换/筛选，就必须先知道有哪些组；此前只能靠用户在输入框里
+     * 手打组名，打错一个字母就等于「一个空库」——查不到任何东西，却看不出哪里错了。
+     * 因此由服务端把已有分组列出来。</p>
+     *
+     * <p>{@link AiLibraryGroups#DEFAULT} 恒定在列，即使该账号一条数据都没有：
+     * 默认组是「未指定分组」的落点，始终可选。</p>
+     *
+     * @return 分组名列表（去重、已排序，至少含默认组）
+     */
+    List<String> groups();
+
+    /**
+     * 列出**当前账号指定分组**人脸库里已登记的条目（id + 元数据，不含向量）。
      *
      * <p>改造前后端没有列举出口，前端只能自己在浏览器本地存一份「登记簿」——
      * 于是同一份服务端人脸的档案在不同浏览器/账号下看到的并不一致。
      * 快照已经保存了登记时传入的元数据，因此这里可以把它读回来。</p>
      *
+     * @param group 分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}
      * @return 条目列表（按登记顺序）
      */
-    List<Map<String, Object>> list();
+    List<Map<String, Object>> list(String group);
 
     /**
      * 分页 + 关键词 + 状态筛选的条目列表（万级底库与表格视图的数据源）。
@@ -182,6 +203,7 @@ public interface AiFaceService {
      * （{@code items} + {@code total}），另带不受筛选影响的全库统计 {@code stats}
      * （total / withImage / withIdCard），供统计卡直接用。</p>
      *
+     * @param group     分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}（各组的统计互不相加）
      * @param keyword   关键词（可空；匹配 id 与元数据字符串字段，大小写不敏感）
      * @param status    状态筛选：{@code thumb}=有图、{@code noThumb}=无图，其余/空=全部
      * @param sortField 排序字段（可空）：{@code id} / {@code hasImage} / 或元数据键；空 = 登记顺序
@@ -190,7 +212,8 @@ public interface AiFaceService {
      * @param size      每页条数；&le;0 表示不切片
      * @return {@code items} + {@code total} + {@code stats}
      */
-    Map<String, Object> listPage(String keyword, String status, String sortField, String sortOrder, int page, int size);
+    Map<String, Object> listPage(String group, String keyword, String status, String sortField, String sortOrder,
+                                 int page, int size);
 
     /**
      * 读一条人脸**登记时落存的裁剪图**（PNG）。
@@ -199,39 +222,43 @@ public interface AiFaceService {
      * （localStorage）里 —— 换浏览器 / 换账号就没有图，也就无从绘制。
      * 登记时把裁剪脸落存到服务端后，这两个能力不再绑定某一台浏览器。</p>
      *
-     * @param id 人脸标识
+     * @param group 分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}
+     * @param id    人脸标识
      * @return PNG 字节；改造前的老数据 / 落存失败时返回 空
      */
-    byte[] faceImage(String id);
+    byte[] faceImage(String group, String id);
 
     /**
      * 读一条人脸**登记时的原图**。
      *
-     * <p>与 {@link #faceImage(String)} 的裁剪脸配套：特征点必须画在原图上才有诊断价值
+     * <p>与 {@link #faceImage(String, String)} 的裁剪脸配套：特征点必须画在原图上才有诊断价值
      * （裁剪脸已被对齐/裁切，画出来永远是「正的」，看不出关键点偏没偏）。
      * 登记时同时落存两份，列表缩略图用裁剪脸、特征点标注用原图。</p>
      *
-     * @param id 人脸标识
+     * @param group 分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}（图按组存放，读错组等于没图）
+     * @param id    人脸标识
      * @return 原图字节；改造前的老数据 / 落存失败时返回 {@code null}
      */
-    byte[] originalImage(String id);
+    byte[] originalImage(String group, String id);
 
     /**
-     * 从**当前账号**人脸库里删除一条（向量索引与快照同步删除）。
+     * 从**当前账号指定分组**人脸库里删除一条（向量索引与快照同步删除）。
      *
-     * @param id 人脸 标识
+     * @param group 分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}
+     * @param id    人脸 标识
      * @return 是否删除成功
      */
-    boolean remove(String id);
+    boolean remove(String group, String id);
 
     /**
      * 更新一条人脸的元数据（只改档案字段，不重跑检测、不动向量）。
      *
+     * @param group    分组名；为空按默认组 {@link AiLibraryGroups#DEFAULT}
      * @param id       人脸标识
      * @param metadata 新元数据（整体替换）
      * @return 是否更新成功（条目不存在返回 false）
      */
-    boolean updateMetadata(String id, Map<String, Object> metadata);
+    boolean updateMetadata(String group, String id, Map<String, Object> metadata);
 
     /**
      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。

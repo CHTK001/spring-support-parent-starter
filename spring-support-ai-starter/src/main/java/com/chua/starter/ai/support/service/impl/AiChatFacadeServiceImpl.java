@@ -42,6 +42,8 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -102,6 +104,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ChatSkillSupport chatSkillSupport; // 已安装技能注入
     private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
     private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
+    private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentProviderFactory agentProviderFactory;
 
     /**
@@ -709,6 +712,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         String provider = request.getProvider();
 
         if (model != null && !model.isBlank()) {
+            // 免费渠道供应商：使用 FreeChannelChatClient 路由 + 429 failover
+            // 跳过按模型名反查 DB provider（否则会命中 KILO/EAC 的直连客户端，绕过路由）
+            if (provider != null && ProviderRouteTargets.isFreeChannel(provider)) {
+                SysAiProvider freeProvider = findFreeChannelProvider();
+                if (freeProvider != null) {
+                    ChatClient freeClient = getCachedDbClient(freeProvider, model);
+                    if (freeClient != null) {
+                        return freeClient;
+                    }
+                }
+            }
             SysAiProvider dbProvider = resolveDbProviderByModel(model, modelProviderId);
             if (dbProvider != null) {
                 ChatClient dbClient = getCachedDbClient(dbProvider, model);
@@ -734,6 +748,20 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             }
         }
         return chatClientRegistry.getDefault();
+    }
+
+    /**
+     * 查找免费渠道供应商（FREE-CHANNEL）。
+     *
+     * @return 免费渠道 供应商；未找到返回 {@code null}
+     */
+    private SysAiProvider findFreeChannelProvider() {
+        try {
+            return sysAiProviderMapper.selectById("FREE-CHANNEL");
+        } catch (Exception e) {
+            log.debug("[AiChat] 未找到免费渠道供应商: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -934,14 +962,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         try {
             List<String> keys = collectAllApiKeys(provider);
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+            Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
+                    provider, ModelClientResolver.ownerScopeOf(provider));
             if (keys.isEmpty()) {
  // 无任何可用密钥：保留原行为（appKey 为 空），由下游/兜底处理
-                ChatClientSetting setting = buildSetting(provider, null, extraHeaders);
+                ChatClientSetting setting = buildSetting(provider, null, extraHeaders, channelRoutes);
                 ChatClient raw = ChatClient.create(setting);
                 return raw == null ? null : raw.model(model);
             }
             if (keys.size() == 1) {
-                ChatClientSetting setting = buildSetting(provider, keys.getFirst(), extraHeaders);
+                ChatClientSetting setting = buildSetting(provider, keys.getFirst(), extraHeaders, channelRoutes);
                 ChatClient raw = ChatClient.create(setting);
                 if (raw == null) {
                     return null;
@@ -959,7 +989,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 逐个创建底层客户端，设置 stream(true)
         for (int i = 0; i < keys.size(); i++) {
             String key = keys.get(i);
-            ChatClientSetting setting = buildSetting(provider, key, extraHeaders);
+            ChatClientSetting setting = buildSetting(provider, key, extraHeaders, channelRoutes);
             ChatClient raw = ChatClient.create(setting);
             if (raw != null) {
                 raw = raw.model(model);
@@ -1682,7 +1712,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param extraHeaders 自定义请求头
      * @return 客户端配置
      */
-    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey, Map<String, String> extraHeaders) {
+    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+                                                   Map<String, String> extraHeaders,
+                                                   Map<String, RouteTarget> channelRoutes) {
         Map<String, Object> extra = provider.getExtra();
         return ChatClientSetting.builder()
                 .provider(provider.getPlatform())
@@ -1693,7 +1725,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .authHeader(extraString(extra, "auth_header"))
                 .authPrefix(extraString(extra, "auth_prefix"))
                 .proxy(provider.getProxy())
-                .routes(ProviderRouteTargets.fromExtra(extra))
+                .routes(channelRoutes != null ? channelRoutes : ProviderRouteTargets.fromExtra(extra))
                 .build();
     }
 

@@ -2,6 +2,7 @@ package com.chua.starter.server.support.probe;
 
 import com.chua.starter.server.support.provider.project.PosixProjectPlatformProvider;
 import com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider;
+import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.util.ProjectScripts;
 
 /**
@@ -20,6 +21,11 @@ import com.chua.starter.server.support.util.ProjectScripts;
  * @since 4.0.0.42
  */
 public final class ReleaseScriptPrinter {
+
+    /**
+     * 项目类型路由器：脚本按项目类型 SPI 生成，与生产链路同源。
+     */
+    private static final ProjectTypeProviderRegistry TYPES = new ProjectTypeProviderRegistry();
 
     private ReleaseScriptPrinter() {
     }
@@ -45,7 +51,7 @@ public final class ReleaseScriptPrinter {
         // __JVMARGS__ / __ARGS__ 在真实发布链路由 ReleaseServiceImpl 替换，生成器这里也要处理，
         // 否则吐出来的脚本会带着字面占位符。端口给定时把 __ARGS__ 填成 --server.port。
         String argLiteral = port > 0 ? "--server.port=" + port : "";
-        ProjectScripts.Scripts raw = ProjectScripts.builtin(windows, type, entry);
+        ProjectScripts.Scripts raw = TYPES.resolveOrGeneric(type).scripts(windows, entry);
         section("START", subst(ProjectScripts.apply(raw.start(), entry, path, log, appName), argLiteral));
         section("STOP", ProjectScripts.apply(raw.stop(), entry, path, log, appName));
         section("RESTART", subst(ProjectScripts.apply(raw.restart(), entry, path, log, appName), argLiteral));

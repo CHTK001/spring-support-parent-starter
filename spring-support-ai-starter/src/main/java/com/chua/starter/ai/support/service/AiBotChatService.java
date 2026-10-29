@@ -39,6 +39,8 @@ import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.websocket.SysAiWebSocketHandler;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiBotCaller;
 import lombok.RequiredArgsConstructor;
@@ -127,6 +129,7 @@ public class AiBotChatService {
      * 角色提示词解析器（分形态提示词 → 角色历史提示词）
      */
     private final SysAiRolePromptResolver sysAiRolePromptResolver;
+    private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
 
     /**
      * 用量记录拦截器（记录每次 机器人 AI 调用的 令牌/费用）
@@ -1232,7 +1235,9 @@ public class AiBotChatService {
             }
             String apiKey = extractApiKey(provider.getCredentials());
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
-            return ChatClient.create(buildSetting(provider, apiKey, extraHeaders))
+            Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
+                    provider, ModelClientResolver.ownerScopeOf(provider));
+            return ChatClient.create(buildSetting(provider, apiKey, extraHeaders, channelRoutes))
                     .model(modelName);
         } catch (Exception e) {
             log.warn("[BotChat] 构建模型 ChatClient 失败 model={}: {}", modelName, e.getMessage());
@@ -1706,8 +1711,10 @@ public class AiBotChatService {
         }
         String apiKey = extractApiKey(provider.getCredentials());
         Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+        Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
+                provider, ModelClientResolver.ownerScopeOf(provider));
         // 3. 构建 对话客户端（带请求超时）并回复
-        ChatClient chatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs))
+        ChatClient chatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs, channelRoutes))
                 .model(plainModel);
         log.info("[BotChat] Bot {} 实际调用 providerId={} platform={} baseUrl={} model={}",
                 bot.getBotId(), provider.getProviderId(), provider.getPlatform(), provider.getBaseUrl(), plainModel);
@@ -1902,8 +1909,10 @@ public class AiBotChatService {
      * @param extraHeaders 自定义请求头
      * @return 客户端配置
      */
-    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey, Map<String, String> extraHeaders) {
-        return buildSetting(provider, apiKey, extraHeaders, null);
+    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+                                                   Map<String, String> extraHeaders,
+                                                   Map<String, RouteTarget> channelRoutes) {
+        return buildSetting(provider, apiKey, extraHeaders, null, channelRoutes);
     }
 
     /**
@@ -1916,7 +1925,8 @@ public class AiBotChatService {
      * @return 客户端配置
      */
     private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
-                                                  Map<String, String> extraHeaders, Long timeoutMillis) {
+                                                  Map<String, String> extraHeaders, Long timeoutMillis,
+                                                   Map<String, RouteTarget> channelRoutes) {
         Map<String, Object> extra = provider.getExtra();
         return ChatClientSetting.builder()
                 .provider(provider.getPlatform())
@@ -1928,7 +1938,7 @@ public class AiBotChatService {
                 .authPrefix(extraString(extra, "auth_prefix"))
                 .proxy(provider.getProxy())
                 .timeoutMillis(timeoutMillis)
-                .routes(ProviderRouteTargets.fromExtra(extra))
+                .routes(channelRoutes != null ? channelRoutes : ProviderRouteTargets.fromExtra(extra))
                 .build();
     }
 

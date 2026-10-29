@@ -65,6 +65,11 @@ public final class GenerateSpiRouter {
             Map.entry("commandcode", "openai"),
             Map.entry("opencode", "openai"),
             Map.entry("siliconflow", "openai"),
+            // Moss 有自有的 MossImageClient（utils-support-mosi-starter），
+            // 不能用 openai 兜底：OpenAiImageClient 未覆写 negativePrompt/seed/steps，
+            // 且默认 readTimeout 只有 30s，而出图官方建议 ≥900s。
+            Map.entry("moss", "mosi"),
+            Map.entry("mosi", "mosi"),
             Map.entry("deepseek", "openai"),
             Map.entry("moonshot", "openai"),
             Map.entry("kimi", "openai"),
@@ -124,7 +129,9 @@ public final class GenerateSpiRouter {
     private static final Set<String> KNOWN_IMAGE_SPI = Set.of(
             "alibaba", "openai", "azure", "microsoft", "google", "gemini",
             "zhipu", "baidu", "tencent-hunyuan", "modelscope", "zai", "amazon",
-            "onnx", "pytorch", "safetensors", "mage", "ollama"
+            "onnx", "pytorch", "safetensors", "mage", "ollama",
+            // Moss 自有实现（MossImageClient，utils-support-mosi-starter）
+            "mosi"
     );
 
     /**

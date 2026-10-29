@@ -371,6 +371,36 @@ public class ReleaseController {
         return releaseService.upgradeSoftware(hostId, name);
     }
 
+    /**
+     * 列出有可用更新的软件。
+     *
+     * <p>前端据此决定是否显示「升级」按钮：只有出现在该清单里的包才可能真的升级。</p>
+     *
+     * @param hostId 主机标识
+     * @return 可升级条目（当前版本 → 候选版本）
+     */
+    @Operation(summary = "列出主机可升级软件")
+    @GetMapping("/software/upgradable")
+    public ReturnResult<List<com.chua.starter.server.support.model.vo.SoftwareUpgradeVO>> listUpgradableSoftware(
+            @RequestParam Long hostId) {
+        return releaseService.listUpgradableSoftware(hostId);
+    }
+
+    /**
+     * 查询软件包依赖关系（详情面板按需调用）。
+     *
+     * @param hostId 主机标识
+     * @param name 软件包名
+     * @return 依赖包名列表
+     */
+    @Operation(summary = "查询软件包依赖关系")
+    @GetMapping("/software/dependencies")
+    public ReturnResult<List<String>> softwareDependencies(
+            @RequestParam Long hostId,
+            @RequestParam String name) {
+        return releaseService.softwareDependencies(hostId, name);
+    }
+
     // ==================== 状态检测 ====================
 
     /**
@@ -416,27 +446,60 @@ public class ReleaseController {
     /**
      * 读取升级配置。
      *
-     * @return 全局和最近一次升级配置
+     * @param projectId 项目ID；传了则附带该项目的默认升级配置
+     * @return 全局、最近一次、项目默认三份配置
      */
-    @Operation(summary = "读取升级配置（global 全局 + last 最近一次）")
+    @Operation(summary = "读取升级配置（global 全局 + last 最近一次 + project 项目默认）")
     @GetMapping("/upgrade/config")
-    public ReturnResult<java.util.Map<String, Object>> getUpgradeConfig() {
-        return releaseService.getUpgradeConfig();
+    public ReturnResult<java.util.Map<String, Object>> getUpgradeConfig(
+            @RequestParam(required = false) Long projectId) {
+        return releaseService.getUpgradeConfig(projectId);
     }
 
     /**
      * 保存升级配置。
      *
-     * @param scope 配置作用域
-     * @param config 升级配置
+     * @param scope     配置作用域
+     * @param projectId 项目ID（scope=project 时必填）
+     * @param config    升级配置
      * @return 操作结果
      */
-    @Operation(summary = "保存升级配置（scope=global/last）")
+    @Operation(summary = "保存升级配置（scope=global/last/project）")
     @PutMapping("/upgrade/config")
     public ReturnResult<Void> saveUpgradeConfig(
             @RequestParam(defaultValue = "global") String scope,
+            @RequestParam(required = false) Long projectId,
             @RequestBody java.util.Map<String, Object> config) {
-        return releaseService.saveUpgradeConfig(scope, config);
+        return releaseService.saveUpgradeConfig(scope, projectId, config);
+    }
+
+    /**
+     * 集群批量升级：按同一份配置依次升级多个项目。
+     *
+     * @param body 请求体，含 projectIds 与 config
+     * @return 每个项目的触发结果
+     */
+    @Operation(summary = "集群批量升级（同类型项目一次下发，异步）")
+    @PostMapping("/project/batch-upgrade")
+    public ReturnResult<java.util.List<java.util.Map<String, Object>>> batchUpgrade(
+            @RequestBody java.util.Map<String, Object> body) {
+        java.util.List<Long> ids = new java.util.ArrayList<>();
+        Object raw = body == null ? null : body.get("projectIds");
+        if (raw instanceof java.util.Collection<?> cols) {
+            for (Object o : cols) {
+                if (o != null) {
+                    ids.add(Long.valueOf(String.valueOf(o)));
+                }
+            }
+        }
+        java.util.Map<String, Object> config = null;
+        Object rawCfg = body == null ? null : body.get("config");
+        if (rawCfg instanceof java.util.Map<?, ?> map) {
+            java.util.Map<String, Object> parsed = new java.util.LinkedHashMap<>();
+            map.forEach((k, v) -> parsed.put(String.valueOf(k), v));
+            config = parsed;
+        }
+        return releaseService.batchUpgrade(ids, config);
     }
 
     /**
@@ -457,16 +520,20 @@ public class ReleaseController {
     /**
      * 上传安装包并执行拖拽升级。
      *
-     * @param id 项目标识
-     * @param file 安装包文件
+     * @param id          项目标识
+     * @param file        安装包文件
+     * @param deployType  部署类型覆盖（main / lib / both，空则用项目默认）
+     * @param autoRestart 是否重启，空则用配置默认
      * @return 异步任务标识
      */
-    @Operation(summary = "拖拽升级：上传安装包并按全局配置升级（异步，返回taskId）")
+    @Operation(summary = "拖拽升级：上传安装包并按项目默认配置升级（异步，返回taskId）")
     @PostMapping("/project/{id}/upload")
     public ReturnResult<String> uploadAndUpgrade(
             @PathVariable Long id,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
-        return releaseService.uploadAndUpgrade(id, file);
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(required = false) String deployType,
+            @RequestParam(required = false) Boolean autoRestart) {
+        return releaseService.uploadAndUpgrade(id, file, deployType, autoRestart);
     }
 
     /**

@@ -4,6 +4,7 @@ package com.chua.starter.server.support.provider.remote;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.ssh.support.client.SftpClient;
 import com.chua.ssh.support.client.SshClient;
+import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.SshCredential;
@@ -20,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Windows 主机远程操作实现（OpenSSH + PowerShell）
@@ -68,6 +70,12 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     private static final String TEMP_DIR = "C:\\Windows\\Temp";
 
     /**
+     * SSH 连接缓存管理器（复用已建立连接，避免每次执行重复握手）
+     */
+    @Autowired
+    private ConnectionManager connectionManager;
+
+    /**
      * 路径分隔符
      */
     private static final String SEPARATOR = "\\";
@@ -90,8 +98,14 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     @Override
     public RemoteExecResult exec(MsServerHost host, SshCredential credential, String command, int timeoutSeconds) throws Exception {
-        try (SshClients.Handle handle = openSsh(host, credential)) {
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, credential);
             return execOn(handle.client(), command);
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
         }
     }
 
@@ -101,17 +115,31 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
         String parent = parentOf(remotePath);
         if (parent != null) {
             // PowerShell New-Item -Force 会递归创建中间目录
-            try (SshClients.Handle handle = openSsh(host, credential)) {
-                RemoteExecResult mk = execOn(handle.client(),
+            SshClients.Handle mkHandle = null;
+            try {
+                mkHandle = connectionManager.borrow(host, credential);
+                RemoteExecResult mk = execOn(mkHandle.client(),
                         "New-Item -ItemType Directory -Path '" + psEscape(parent) + "' -Force | Out-Null");
                 if (!mk.success()) {
                     throw new IllegalStateException("创建远端目录失败: " + mk.failureMessage());
                 }
+            } finally {
+                if (mkHandle != null) {
+                    connectionManager.release(host.getId());
+                }
             }
         }
-        // SFTP 流式上传，无大小限制
-        try (SftpClient client = buildConnectedSftp(host, credential)) {
-            client.upload().local(localFile.toString()).remote(remotePath).exec();
+        // SFTP 流式上传，无大小限制（复用借用连接的会话，不新建连接）
+        SshClients.Handle sftpHandle = null;
+        try {
+            sftpHandle = connectionManager.borrow(host, credential);
+            try (SftpClient channel = sftpHandle.client().sftp()) {
+                channel.upload().local(localFile.toString()).remote(remotePath).exec();
+            }
+        } finally {
+            if (sftpHandle != null) {
+                connectionManager.release(host.getId());
+            }
         }
         return RemoteExecResult.ok("上传完成: " + remotePath + " (" + localSize + " 字节)");
     }
@@ -158,19 +186,38 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     @Override
     public long fileSize(MsServerHost host, SshCredential credential, String file) {
-        try (SshClients.Handle handle = openSsh(host, credential)) {
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, credential);
             return fileSizeOn(handle.client(), file);
         } catch (Exception e) {
             log.debug("[remote] 文件大小探测失败 {}: {}", file, e.getMessage());
             return -1L;
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
         }
     }
 
     @Override
     public RemoteLogChunk tail(MsServerHost host, SshCredential credential, String file, Long cursor, int lines) throws Exception {
         long startCursor = cursor == null ? 0L : Math.max(0L, cursor);
-        try (SshClients.Handle handle = openSsh(host, credential)) {
-            SshClient client = handle.client();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, credential);
+            return tailBorrowed(handle.client(), file, startCursor, lines, cursor);
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
+        }
+    }
+
+    /**
+     * 在借用连接上读取远端日志（调用方负责归还连接）
+     */
+    private RemoteLogChunk tailBorrowed(SshClient client, String file, long startCursor, int lines, Long cursor) throws Exception {
             long size = fileSizeOn(client, file);
             // 日志轮转/截断：文件比上次记录的光标还小 → 当作新文件从头拉取
             if (size >= 0 && startCursor > size) {
@@ -205,7 +252,6 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
             String content = result.stdout() == null ? "" : result.stdout();
             long nextCursor = size >= 0 ? size : startCursor + content.getBytes(StandardCharsets.UTF_8).length;
             return RemoteLogChunk.of(content, nextCursor);
-        }
     }
 
     @Override
@@ -308,20 +354,6 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     @Override
     public String quotePath(String path) {
         return "'" + psEscape(path) + "'";
-    }
-
-    /**
-     * 打开并连接 SSH 通道（SshClients 内部处理私钥临时文件）
-     *
-     * @param host       主机
-     * @param credential 凭据
-     * @return 已连接的 SSH 句柄（调用方负责关闭）
-     * @throws IOException 私钥临时文件写入失败时抛出
-     */
-    private SshClients.Handle openSsh(MsServerHost host, SshCredential credential) throws IOException {
-        SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), credential);
-        handle.client().connect();
-        return handle;
     }
 
     /**
@@ -478,46 +510,5 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
         }
         int idx = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'));
         return idx > 0 ? path.substring(0, idx) : null;
-    }
-
-    /**
-     * 构建并连接 SFTP 客户端（凭据装配后立即清理私钥临时文件）
-     *
-     * @param host       主机
-     * @param credential 凭据
-     * @return 已连接的 SFTP 客户端（调用方负责关闭）
-     * @throws IOException 连接失败时抛出
-     */
-    private SftpClient buildConnectedSftp(MsServerHost host, SshCredential credential) throws IOException {
-        var builder = SftpClient.builder()
-                .host(host.getServerHostAddress())
-                .port(portOf(host))
-                .username(credential.username())
-                .connectTimeout(8);
-        Path tempKey = null;
-        try {
-            if (credential.hasKey()) {
-                // 底层库仅支持路径方式加载私钥：落盘受限临时文件，装配后立即删除
-                tempKey = Files.createTempFile("ms-host-remote-key-", ".pem");
-                Files.writeString(tempKey, credential.privateKey());
-                builder.privateKey(tempKey.toString());
-                if (credential.password() != null && !credential.password().isBlank()) {
-                    builder.password(credential.password());
-                }
-            } else {
-                builder.password(credential.password() == null ? "" : credential.password());
-            }
-            SftpClient client = builder.build();
-            client.connect();
-            return client;
-        } finally {
-            if (tempKey != null) {
-                try {
-                    Files.deleteIfExists(tempKey);
-                } catch (IOException ignored) {
-                    // 临时私钥清理失败不影响主流程
-                }
-            }
-        }
     }
 }

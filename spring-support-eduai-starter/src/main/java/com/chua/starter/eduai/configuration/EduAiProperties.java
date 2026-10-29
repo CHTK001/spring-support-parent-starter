@@ -12,7 +12,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   eduai:
  *     marking:
  *       async: true                # 是否异步阅卷
- *       timeout: 300               # 阅卷超时（秒）
+ *       timeout: 1800              # 单个任务总预算（秒），超时中止并释放队列
+ *       call-timeout: 90           # 单次模型调用超时（秒），超时即失败重试
  *       max-score: 5               # 单题最大分（兜底）
  *     paper:
  *       max-total-score: 100       # 试卷最高总分
@@ -80,9 +81,25 @@ public class EduAiProperties {
         private boolean async = true;
 
         /**
-         * 阅卷超时（秒），由调用方在 对话scope.超时millis 中体现
+         * 单个阅卷任务的<b>总预算</b>（秒）：超过即中止，释放并发闸门，队列继续。
+         *
+         * <p>这里是整条链路的预算，不是单次模型调用的超时 —— 两者必须分开，否则
+         * 一次模型调用卡住就会吃掉整个任务的额度。历史上两者共用同一个值（300 秒），
+         * 实测 18 题外来卷需要 1 次补题干 + 18 次判分共 19 次模型调用，跑到 17/18
+         * 就被「处理超时（&gt;300s）」整任务判失败，最后一题永远拿不到分数。
+         * 单次调用的上限见 {@link #callTimeout}。</p>
          */
-        private int timeout = 300;
+        private int timeout = 1800;
+
+        /**
+         * 单次模型调用的超时（秒）：超过即视为这次调用失败，交由重试逻辑处理。
+         *
+         * <p>与 {@link #timeout} 分工：本项约束「一次 HTTP 请求最多等多久」，
+         * 保证任何一次调用都不会无限挂住；任务总时长由 {@link #timeout} 兜底。
+         * 默认 90 秒 —— 实测国产网关正常响应 5~30 秒，90 秒足够覆盖长题干，
+         * 又能在网关静默挂死时较快失败并重试。</p>
+         */
+        private int callTimeout = 90;
 
         /**
          * 单题最大分（兜底值）

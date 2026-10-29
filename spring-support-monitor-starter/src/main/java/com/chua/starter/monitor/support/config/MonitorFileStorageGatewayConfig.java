@@ -104,6 +104,11 @@ public class MonitorFileStorageGatewayConfig {
         Object backend = applicationContext.getBean(MonitorFileStorageConfig.LOCAL_STORAGE_BEAN_NAME);
         if (backend instanceof FileStorage storage) {
             template.addStorage(BUCKET, storage);
+            // 本地后端无条件作为默认 Provider：上传任务/小文件直传在不显式选
+            // provider 时也走本地桶，否则「默认 Provider 不存在」导致上传 409。
+            if (template.getDefaultStorageName() == null) {
+                template.setDefaultStorage(BUCKET);
+            }
         } else {
             log.warn("[FileStorageGateway] 本地后端 {} 不是 FileStorage 实例: {}",
                     MonitorFileStorageConfig.LOCAL_STORAGE_BEAN_NAME,

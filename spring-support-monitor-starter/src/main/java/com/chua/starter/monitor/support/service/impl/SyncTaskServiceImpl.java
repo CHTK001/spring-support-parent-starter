@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.datasync.agent.support.source.JdbcDataSyncAgentSource;
 import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
@@ -23,6 +24,7 @@ import com.chua.starter.monitor.support.datasync.SyncSourceOptions;
 import com.chua.starter.monitor.support.datasync.SyncSourceType;
 import com.chua.starter.monitor.support.datasync.SyncTaskHookNotifier;
 import com.chua.starter.monitor.support.datasync.SyncWriteMode;
+import com.chua.starter.monitor.support.datasync.loader.JdbcCsvLoader;
 import com.chua.starter.monitor.support.entity.MsSyncTask;
 import com.chua.starter.monitor.support.entity.MsSyncTaskRunLog;
 import com.chua.starter.monitor.support.mapper.MsSyncTaskMapper;
@@ -36,6 +38,9 @@ import com.chua.starter.monitor.support.model.SyncTaskRunLogDetailVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogItemVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunLogVO;
 import com.chua.starter.monitor.support.model.SyncTaskRunVO;
+import com.chua.starter.monitor.support.model.BulkImportResultVO;
+import com.chua.starter.monitor.support.model.BulkPreviewVO;
+import com.chua.starter.monitor.support.model.dto.BulkImportDTO;
 import com.chua.starter.monitor.support.model.dto.SyncPreviewDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTargetDTO;
 import com.chua.starter.monitor.support.model.dto.SyncTaskDTO;
@@ -524,6 +529,266 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     }
 
     @Override
+    public ReturnResult<BulkImportResultVO> bulkImport(BulkImportDTO request) {
+        long startNanos = System.nanoTime();
+        try {
+            if (request == null) {
+                throw new IllegalArgumentException("批量导入参数不能为空");
+            }
+            if (request.getFilePath() == null || request.getFilePath().isBlank()) {
+                throw new IllegalArgumentException("文件路径不能为空");
+            }
+            Path file = Path.of(request.getFilePath().trim());
+            if (!Files.isRegularFile(file)) {
+                throw new IllegalArgumentException("文件不存在或不是普通文件: " + file);
+            }
+            List<BulkImportDTO.BulkImportOutputDTO> outputs = request.getOutputs();
+            if (outputs == null || outputs.isEmpty()) {
+                throw new IllegalArgumentException("至少需要配置一个输出目标");
+            }
+            // 源文件统一读成行流（Map<列名, 值>），与 datasync 文件源同源，一次读、多目标复用
+            SyncSourceOptions sourceOptions = SyncSourceOptions.defaults();
+            if (request.getDelimiter() != null && !request.getDelimiter().isBlank()) {
+                sourceOptions = new SyncSourceOptions("CSV", request.getDelimiter(), 0, null, null, null);
+            }
+            List<Map<String, Object>> rows = MonitorFileRowsSupport.read(file, sourceOptions)
+                    .collectList().block();
+            List<Map<String, Object>> dataRows = rows == null ? List.of() : rows;
+            List<String> fileHeaders = readFileHeaders(file, request, sourceOptions);
+            long readCount = dataRows.size();
+
+            List<BulkImportResultVO.BulkImportOutputResultVO> outputResults = new ArrayList<>(outputs.size());
+            long writeTotal = 0L;
+            int failedCount = 0;
+            for (BulkImportDTO.BulkImportOutputDTO output : outputs) {
+                long targetStart = System.nanoTime();
+                BulkImportResultVO.BulkImportOutputResultVO out = new BulkImportResultVO.BulkImportOutputResultVO();
+                out.setTargetDatasourceId(output.getTargetDatasourceId());
+                out.setTargetTable(output.getTargetTable());
+                out.setReadCount(readCount);
+                try {
+                    validateDatasource(output.getTargetDatasourceId(), "目标数据源");
+                    DatasourceJdbcInfo target = datasourceService.jdbcInfo(output.getTargetDatasourceId());
+                    JdbcCsvLoader loader = csvLoaderFor(target);
+                    if (loader == null) {
+                        throw new UnsupportedOperationException("目标库方言不支持 CSV 快速导入（当前支持 MySQL / PostgreSQL）");
+                    }
+                    List<String> targetColumns = outputColumns(output, fileHeaders);
+                    if (targetColumns.isEmpty()) {
+                        throw new IllegalArgumentException("字段映射为空，无法确定目标列");
+                    }
+                    // 规范 CSV 临时文件：表头 = 目标列顺序，行值按映射取源列
+                    Path csvFile = Files.createTempFile("bulk-import-", ".csv");
+                    try {
+                        long written = writeMappedCsv(csvFile, dataRows, output.getColumnMapping(), targetColumns);
+                        long loaded = loader.load(target, output.getTargetTable(), targetColumns, csvFile, encodingOf(request));
+                        out.setWriteCount(loaded > 0 ? loaded : written);
+                        out.setStatus("SUCCESS");
+                        out.setCostMs(costMs(targetStart));
+                        out.setMessage("快速导入成功，写入 " + out.getWriteCount() + " 行");
+                    } finally {
+                        Files.deleteIfExists(csvFile);
+                    }
+                } catch (Exception e) {
+                    failedCount++;
+                    out.setStatus("FAILED");
+                    out.setCostMs(costMs(targetStart));
+                    out.setMessage(e.getMessage() == null ? e.getClass().getSimpleName() : rootMessage(e));
+                }
+                writeTotal += out.getWriteCount();
+                outputResults.add(out);
+            }
+            boolean allOk = failedCount == 0;
+            BulkImportResultVO result = new BulkImportResultVO();
+            result.setStatus(allOk ? "SUCCESS" : "FAILED");
+            result.setReadCount(readCount);
+            result.setWriteCount(writeTotal);
+            result.setCostMs(costMs(startNanos));
+            result.setMessage(allOk
+                    ? "全部目标快速导入完成"
+                    : (failedCount + "/" + outputs.size() + " 个目标导入失败，详见各目标结果"));
+            result.setOutputs(outputResults);
+            return ReturnResult.ok(result);
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException e) {
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[bulk-import] 批量导入失败", e);
+            return ReturnResult.error("批量导入失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 读取源文件表头（csv 读首行，excel 读首个工作表首行）。
+     *
+     * @param file          源文件
+     * @param request       批量导入入参
+     * @param sourceOptions 源选项
+     * @return 列名列表
+     */
+    private List<String> readFileHeaders(Path file, BulkImportDTO request, SyncSourceOptions sourceOptions) {
+        if (!request.isHasHeader()) {
+            return List.of();
+        }
+        try {
+            return MonitorFileRowsSupport.headers(file, sourceOptions);
+        } catch (Exception e) {
+            log.warn("[bulk-import] 读取表头失败，按无表头处理: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 按方言取 CSV 快速导入 SPI 实现。
+     *
+     * @param target 目标库连接信息
+     * @return SPI 实现；方言不支持时返回 null
+     */
+    private JdbcCsvLoader csvLoaderFor(DatasourceJdbcInfo target) {
+        if (target == null || target.url() == null) {
+            return null;
+        }
+        String url = target.url().toLowerCase(Locale.ROOT);
+        String dialect = url.startsWith("jdbc:mysql:") ? "mysql"
+                : url.startsWith("jdbc:postgresql:") ? "postgresql" : null;
+        if (dialect == null) {
+            return null;
+        }
+        try {
+            return ServiceProvider.of(JdbcCsvLoader.class).getExtension(dialect);
+        } catch (Exception e) {
+            log.warn("[bulk-import] 未找到方言 {} 的 CSV 快速导入实现: {}", dialect, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 推导目标列清单（与 CSV 表头顺序一致）。
+     *
+     * <p>优先按字段映射的目标列顺序；无映射时退回源表头（同名导入）。</p>
+     *
+     * @param output      输出目标
+     * @param fileHeaders 源表头
+     * @return 目标列名清单
+     */
+    private List<String> outputColumns(BulkImportDTO.BulkImportOutputDTO output, List<String> fileHeaders) {
+        List<BulkImportDTO.BulkImportMappingDTO> mapping = output.getColumnMapping();
+        if (mapping != null && !mapping.isEmpty()) {
+            List<String> columns = new ArrayList<>(mapping.size());
+            for (BulkImportDTO.BulkImportMappingDTO m : mapping) {
+                if (m.getTarget() != null && !m.getTarget().isBlank()) {
+                    columns.add(m.getTarget().trim());
+                }
+            }
+            return columns;
+        }
+        return fileHeaders;
+    }
+
+    /**
+     * 把源数据行按映射写成本目标所需的规范 CSV（表头 = 目标列顺序）。
+     *
+     * @param csvFile      临时 CSV 文件
+     * @param dataRows     源数据行
+     * @param mapping      字段映射（可为空 = 同名）
+     * @param targetColumns 目标列清单
+     * @return 写入的数据行数
+     * @throws Exception 写出失败
+     */
+    private long writeMappedCsv(Path csvFile, List<Map<String, Object>> dataRows,
+                                List<BulkImportDTO.BulkImportMappingDTO> mapping,
+                                List<String> targetColumns) throws Exception {
+        // 目标列 → 源列 的取值映射
+        Map<String, String> sourceOf = new LinkedHashMap<>();
+        if (mapping != null) {
+            for (BulkImportDTO.BulkImportMappingDTO m : mapping) {
+                if (m.getSource() != null && m.getTarget() != null && !m.getTarget().isBlank()) {
+                    sourceOf.put(m.getTarget().trim(), m.getSource().trim());
+                }
+            }
+        }
+        try (var writer = Files.newBufferedWriter(csvFile, StandardCharsets.UTF_8)) {
+            writer.write(String.join(",", targetColumns));
+            writer.write("\n");
+            long count = 0L;
+            for (Map<String, Object> row : dataRows) {
+                List<String> cells = new ArrayList<>(targetColumns.size());
+                for (String targetColumn : targetColumns) {
+                    String sourceKey = sourceOf.containsKey(targetColumn) ? sourceOf.get(targetColumn) : targetColumn;
+                    Object value = sourceKey == null ? null : row.get(sourceKey);
+                    cells.add(csvEscape(value == null ? "" : String.valueOf(value)));
+                }
+                writer.write(String.join(",", cells));
+                writer.write("\n");
+                count++;
+            }
+            return count;
+        }
+    }
+
+    /**
+     * CSV 单元格转义：含逗号/引号/换行的值用双引号包裹，内部引号翻倍。
+     *
+     * @param value 原始值
+     * @return 转义后的单元格
+     */
+    private static String csvEscape(String value) {
+        if (value.indexOf(',') >= 0 || value.indexOf('"') >= 0
+                || value.indexOf('\n') >= 0 || value.indexOf('\r') >= 0) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
+    /**
+     * 目标文件字符集（默认 UTF-8）。
+     *
+     * @param request 批量导入入参
+     * @return 字符集名
+     */
+    private String encodingOf(BulkImportDTO request) {
+        return request.getEncoding() == null || request.getEncoding().isBlank() ? "UTF-8" : request.getEncoding().trim();
+    }
+
+    @Override
+    public ReturnResult<BulkPreviewVO> bulkPreview(BulkImportDTO request) {
+        try {
+            if (request == null || request.getFilePath() == null || request.getFilePath().isBlank()) {
+                throw new IllegalArgumentException("文件路径不能为空");
+            }
+            Path file = Path.of(request.getFilePath().trim());
+            if (!Files.isRegularFile(file)) {
+                throw new IllegalArgumentException("文件不存在或不是普通文件: " + file);
+            }
+            SyncSourceOptions sourceOptions = SyncSourceOptions.defaults();
+            if (request.getDelimiter() != null && !request.getDelimiter().isBlank()) {
+                sourceOptions = new SyncSourceOptions("CSV", request.getDelimiter(), 0, null, null, null);
+            }
+            List<String> headers = request.isHasHeader() ? readFileHeaders(file, request, sourceOptions) : List.of();
+            List<Map<String, Object>> rows = MonitorFileRowsSupport.read(file, sourceOptions)
+                    .collectList().block();
+            List<Map<String, Object>> all = rows == null ? List.of() : rows;
+            // 只回前 20 行做预览，避免大文件整份下发
+            int previewLimit = Math.min(20, all.size());
+            List<Map<String, String>> previewRows = new ArrayList<>(previewLimit);
+            for (int i = 0; i < previewLimit; i++) {
+                Map<String, String> row = new LinkedHashMap<>();
+                all.get(i).forEach((k, v) -> row.put(k, v == null ? "" : String.valueOf(v)));
+                previewRows.add(row);
+            }
+            BulkPreviewVO vo = new BulkPreviewVO();
+            vo.setHeaders(headers);
+            vo.setRows(previewRows);
+            vo.setTotal(all.size());
+            return ReturnResult.ok(vo);
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException e) {
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[bulk-import] 文件预览失败", e);
+            return ReturnResult.error("文件预览失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public ReturnResult<List<SyncTaskRunLogVO>> runLogs(Long id) {
         try {
             requireTask(id);
@@ -742,9 +1007,11 @@ public class SyncTaskServiceImpl implements SyncTaskService {
     /**
      * 从失败日志正文归纳「失败原因」标签（基于 ERROR 行稳定关键段）。
      *
-     * <p>规则先拍板成稳定文案：按顺序匹配已知关键词（目标表问题 / 连接问题 /
+     * <p>规则先拍板成稳定文案：按顺序匹配已知关键词（源表问题 / 目标表问题 / 连接问题 /
      * 超时 / 权限 / 主键冲突 / 字段问题 / HTTP / 读取失败），命中即返回该标签；
-     * 未命中返回「其他错误」。匹配顺序即优先级，避免「连接超时」同时命中连接与超时。</p>
+     * 未命中返回「其他错误」。匹配顺序即优先级，避免「连接超时」同时命中连接与超时，
+     * 也避免「源表不存在」被宽泛的「表不存在」误归为「目标表不存在」。
+     * 注意：源读取类规则必须排在「表不存在」之前（源失败文案常同时含「源表不存在/读取失败」）。</p>
      *
      * @param lines 失败日志正文（{@code 时间\t级别\t内容} 逐行拼接）
      * @return 失败原因标签；正文为空返回 null
@@ -753,7 +1020,17 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (lines == null || lines.isBlank()) {
             return null;
         }
-        if (lines.contains("目标表不存在") || lines.contains("表不存在")) return "目标表不存在";
+        // 源读取类优先：文案「源表不存在或无法读取」「读取失败」「Can't read」等指向源侧
+        if (lines.contains("源表不存在") || lines.contains("源读取失败")
+                || lines.contains("无法读取") || lines.contains("Can't read")
+                || lines.contains("CannotReadFileException")) {
+            return "源读取失败";
+        }
+        // 目标表问题：精确关键词优先，避免与源侧混淆
+        if (lines.contains("目标表不存在") || lines.contains("目标表创建失败")
+                || lines.contains("doesn't exist") || lines.contains("不存在的表")) {
+            return "目标表不存在";
+        }
         if (lines.contains("没有写权限") || lines.contains("Access denied") || lines.contains("denied")) return "权限不足";
         if (lines.contains("Duplicate entry") || lines.contains("主键冲突") || lines.contains("唯一键")) return "主键/唯一键冲突";
         if (lines.contains("Connection timed out") || lines.contains("connect timed out")) return "连接超时";
@@ -761,8 +1038,8 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (lines.contains("connection refused") || lines.contains("Connection refused")) return "连接被拒绝";
         if (lines.contains("字段映射") || lines.contains("列不存在") || lines.contains("Unknown column")) return "字段/列问题";
         if (lines.contains("HTTP") && (lines.contains("超时") || lines.contains("timeout") || lines.contains("status"))) return "HTTP 请求失败";
-        if (lines.contains("读取失败") || lines.contains("无法读取") || lines.contains("Can't read")) return "源读取失败";
-        if (lines.contains("写入失败") || lines.contains("SQLException")) return "写入失败";
+        if (lines.contains("读取失败") || lines.contains("SQLException")) return "源读取失败";
+        if (lines.contains("写入失败")) return "写入失败";
         return "其他错误";
     }
 

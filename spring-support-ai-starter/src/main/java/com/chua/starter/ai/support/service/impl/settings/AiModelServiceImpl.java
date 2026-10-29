@@ -110,6 +110,43 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     /**
+     * 批量删除模型（逻辑删除）。
+     *
+     * <p>逐行走过 {@link #requireWritableModel} 再落 SQL：先整批过归属守卫，
+     * 有问题的行（不存在 / 只读账号 / 非归属人 / 无主）直接中断，
+     * 不出现「部分删除、前端反复补发」的脏活。</p>
+     *
+     * @param modelIds 模型主键列表
+     * @return 实际删除的模型数量
+     */
+    @Override
+    @Transactional
+    public int batchDelete(List<Long> modelIds) {
+        if (modelIds == null || modelIds.isEmpty()) {
+            return 0;
+        }
+        for (Long modelId : modelIds) {
+            if (modelId == null || modelId <= 0) {
+                continue;
+            }
+            requireWritableModel(modelId);
+        }
+
+        int deleted = 0;
+        for (Long modelId : modelIds) {
+            if (modelId == null || modelId <= 0) {
+                continue;
+            }
+            int removed = modelMapper.deleteById(modelId);
+            if (removed > 0) {
+                deleted++;
+            }
+            log.debug("[SysAiModel] batch delete success: id={}", modelId);
+        }
+        return deleted;
+    }
+
+    /**
      * 写操作前的账号状态校验：只读账号一律拒绝。
      */
     private void requireWritable() {

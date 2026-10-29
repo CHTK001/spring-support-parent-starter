@@ -3,11 +3,13 @@ package com.chua.starter.device.support.scheduler;
 import com.chua.common.support.task.scheduler.ScheduledTask;
 import com.chua.common.support.task.scheduler.TimeScheduler;
 import com.chua.starter.device.support.entity.DeviceInfo;
+import com.chua.starter.device.support.service.DeviceAccessRecordService;
 import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.support.service.DeviceProviderConfigService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceStatusService;
+import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.support.service.DeviceTaskStateService;
 import com.chua.starter.device.spi.DeviceSession;
 import jakarta.annotation.PostConstruct;
@@ -50,6 +52,21 @@ public class DeviceScheduler {
      * 离线检测任务名
      */
     private static final String TASK_OFFLINE_CHECK = "deviceOfflineCheck";
+
+    /**
+     * 事件轮询任务名
+     */
+    private static final String TASK_EVENT_POLL = "deviceEventPoll";
+
+    /**
+     * 设备目录同步任务名
+     */
+    private static final String TASK_DEVICE_SYNC = "deviceSync";
+
+    /**
+     * 门禁记录抽取任务名
+     */
+    private static final String TASK_ACCESS_EXTRACT = "deviceAccessExtract";
 
     /**
      * 调度触发间隔（秒）
@@ -99,6 +116,21 @@ public class DeviceScheduler {
     private final DeviceSessionManager sessionManager;
 
     /**
+     * 设备事件服务（事件轮询）
+     */
+    private final DeviceEventService eventService;
+
+    /**
+     * 设备目录同步服务（厂商同步）
+     */
+    private final DeviceSyncService syncService;
+
+    /**
+     * 门禁记录服务（抽取落库）
+     */
+    private final DeviceAccessRecordService accessRecordService;
+
+    /**
      * 时间调度器（复用公共模块）
      */
     private TimeScheduler timeScheduler;
@@ -109,15 +141,39 @@ public class DeviceScheduler {
     private ScheduledTask offlineCheckTask;
 
     /**
-     * 启动调度器：每秒触发一次离线检测 Trigger 判断。
-     * <p>事件轮询由 {@link DeviceEventService#pollAllDevices()} 的 {@code @Scheduled} 调度，本类不再重复注册。</p>
+     * 事件轮询定时任务
+     */
+    private ScheduledTask eventPollTask;
+
+    /**
+     * 设备目录同步定时任务
+     */
+    private ScheduledTask deviceSyncTask;
+
+    /**
+     * 门禁记录抽取定时任务
+     */
+    private ScheduledTask accessExtractTask;
+
+    /**
+     * 启动调度器：每秒触发一次各任务的 Trigger 判断。
+     * <p>事件轮询（{@code deviceEventPoll}）、设备同步（{@code deviceSync}）、
+     * 门禁抽取（{@code deviceAccessExtract}）全部注册进 {@link TimeScheduler}，
+     * 统一由 {@link DeviceTaskStateService} 的 interval 控制到期。</p>
      */
     @PostConstruct
     public void start() {
         timeScheduler = TimeScheduler.of();
         offlineCheckTask = timeScheduler.scheduleFixedRate(
                 TASK_OFFLINE_CHECK, this::executeOfflineCheck, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
-        log.info("设备定时调度器已启动，触发间隔 {} 秒（事件轮询由 DeviceEventService @Scheduled 调度）", SCHEDULE_INTERVAL_SEC);
+        eventPollTask = timeScheduler.scheduleFixedRate(
+                TASK_EVENT_POLL, this::executeEventPoll, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
+        deviceSyncTask = timeScheduler.scheduleFixedRate(
+                TASK_DEVICE_SYNC, this::executeDeviceSync, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
+        accessExtractTask = timeScheduler.scheduleFixedRate(
+                TASK_ACCESS_EXTRACT, this::executeAccessExtract, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
+        log.info("设备定时调度器已启动，触发间隔 {} 秒（offlineCheck / eventPoll / sync / accessExtract 统一由时间轮调度）",
+                SCHEDULE_INTERVAL_SEC);
     }
 
     /**
@@ -176,6 +232,58 @@ public class DeviceScheduler {
                 sessionManager.unregister(device.getDeviceInfoId());
                 log.warn("设备离线: id={}, ip={}", device.getDeviceInfoId(), device.getDeviceInfoIp());
             }
+        }
+    }
+
+    /**
+     * 事件轮询 Trigger 判断
+     */
+    private void executeEventPoll() {
+        if (!taskStateService.shouldRun(TASK_EVENT_POLL)) {
+            return;
+        }
+        if (!taskStateService.markRunning(TASK_EVENT_POLL)) {
+            return;
+        }
+        try {
+            eventService.pollAllDevices();
+        } finally {
+            taskStateService.markFinished(TASK_EVENT_POLL);
+        }
+    }
+
+    /**
+     * 设备目录同步 Trigger 判断
+     */
+    private void executeDeviceSync() {
+        if (!taskStateService.shouldRun(TASK_DEVICE_SYNC)) {
+            return;
+        }
+        if (!taskStateService.markRunning(TASK_DEVICE_SYNC)) {
+            return;
+        }
+        try {
+            syncService.syncDevices(null);
+        } finally {
+            taskStateService.markFinished(TASK_DEVICE_SYNC);
+        }
+    }
+
+    /**
+     * 门禁记录抽取 Trigger 判断
+     */
+    private void executeAccessExtract() {
+        if (!taskStateService.shouldRun(TASK_ACCESS_EXTRACT)) {
+            return;
+        }
+        if (!taskStateService.markRunning(TASK_ACCESS_EXTRACT)) {
+            return;
+        }
+        try {
+            LocalDateTime end = LocalDateTime.now();
+            accessRecordService.extractRecent(end.minusMinutes(10), end);
+        } finally {
+            taskStateService.markFinished(TASK_ACCESS_EXTRACT);
         }
     }
 

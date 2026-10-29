@@ -6,10 +6,12 @@ import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
+import com.chua.starter.eduai.model.dto.MarkingToBankDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishPreviewVO;
+import com.chua.starter.eduai.model.vo.MarkingToBankResultVO;
 import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
 import com.chua.starter.eduai.model.vo.BatchMarkingResultVO;
 import com.chua.starter.eduai.service.IEduMarkingService;
@@ -18,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -150,20 +154,26 @@ public class EduMarkingController {
     /**
      * 获取阅卷所用答卷图片的指定页（同版式展示的打底图）。
      *
-     * @param taskId 任务标识
-     * @param page   页码（从 1 开始）
+     * @param taskId  任务标识
+     * @param page    页码（从 1 开始）
+     * @param variant 图片变体：{@code thumb} 取缩略图（左栏展示用），不传取原图
      * @return 图片字节
      */
     @Operation(summary = "获取答卷图片（按页）")
     @GetMapping("/image/{taskId}")
     public ResponseEntity<byte[]> image(@PathVariable String taskId,
-                                        @RequestParam(value = "page", defaultValue = "1") int page) {
-        byte[] image = markingService.getSheetImage(taskId, page);
+                                        @RequestParam(value = "page", defaultValue = "1") int page,
+                                        @RequestParam(value = "variant", required = false) String variant) {
+        byte[] image = markingService.getSheetImage(taskId, page, variant);
         if (image == null) {
             return ResponseEntity.notFound().build();
         }
+        // 答卷扫描图一经落库就不再变化（同一 taskId + page 内容恒定），
+        // 允许浏览器私有缓存一天：老师反复打开同一份卷子时不必再走一次网关。
+        // 实测原图 73KB、缩略图约 30KB，经公网隧道分别约 2.2s / 0.9s，缓存命中后为 0。
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
                 .body(image);
     }
 
@@ -251,6 +261,24 @@ public class EduMarkingController {
     @Permission(role = {"ADMIN", "TEACHER"})
     public ReturnResult<List<BatchMarkingResultVO>> batchUnfinish(@RequestBody BatchMarkingRequest request) {
         return ReturnResult.ok(markingService.batchUnfinishMarking(request));
+    }
+
+    /**
+     * 把外来卷识别出的题目加入题库（仅 {@code mode=ANY}）。
+     *
+     * <p>自有卷的题目本来就来自题库，服务端会拒绝这类请求。题干与学生作答由服务端
+     * 回读阅卷明细，客户端只提交选中的结果行、学科/学段/年级与老师补写的标准答案。</p>
+     *
+     * @param taskId 任务业务标识
+     * @param dto    入题库请求
+     * @return 逐条容错的入库结果
+     */
+    @Operation(summary = "外来卷题目加入题库")
+    @PostMapping("/{taskId}/to-bank")
+    @Permission(role = {"ADMIN", "TEACHER"})
+    public ReturnResult<MarkingToBankResultVO> toBank(@PathVariable String taskId,
+                                                      @RequestBody MarkingToBankDTO dto) {
+        return ReturnResult.ok(markingService.addToQuestionBank(taskId, dto));
     }
 
     /**

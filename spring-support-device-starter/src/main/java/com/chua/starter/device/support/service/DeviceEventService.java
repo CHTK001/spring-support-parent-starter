@@ -35,7 +35,8 @@ public interface DeviceEventService {
 
     /**
      * 轮询所有在线设备的事件
-     * <p>由 Spring 定时任务驱动，每个厂商可独立配置轮询间隔。</p>
+     * <p>由设备时间轮调度器（{@code deviceEventPoll} 任务）驱动，间隔在
+     * {@code device_task_state.interval} 配置。</p>
      */
     void pollAllDevices();
 }

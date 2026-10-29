@@ -51,19 +51,20 @@ public class AiCacheAutoConfiguration {
     /**
      * 默认缓存管理器：本地 Caffeine（未显式指定 cacheManager 的 @Cacheable 使用）。
      *
-     * <p>刻意**不标 {@code @Primary}**：主缓存管理器由框架统一给出 ——
-     * 非 h2 档是 {@code DefaultCacheManagerConfiguration.defaultCacheManager}
-     * （复用一小时过期的 Redis 缓存），h2 档是同类的 {@code primaryCacheManager}
-     * （无 Redis 时兜空实现）。本类再声明一个 {@code @Primary}，两处直接撞车，
-     * 按类型注入 {@code CacheManager} 的地方（如 {@code SysAnnouncementScheduleTask}）
-     * 会抛 {@code NoUniqueBeanDefinitionException: more than one 'primary' bean found}，
-     * 上下文 refresh 失败、端口起不来（实测 2026-10-14，采集平台 h2 档被它卡住）。
+     * <p>标注了 {@code @Primary}：仅本机独立启动 {@code AiStarterApplication} 时生效
+     * （生产按库引入、被 monitor / system 宿主运行时，由宿主的框架
+     * {@code DefaultCacheManagerConfiguration.defaultCacheManager}
+     * 给出主缓存管理器，此时再标 {@code @Primary} 会两处撞车）。本类所在的类路径在独立启动
+     * 时没有框架主缓存管理器，不由 {@code @Primary} 兜底的话，按 {@code CacheManager}
+     * 类型注入的消费方（如 {@code WorldSimServiceImpl}）直接抛 {@code BeanCreationException}
+     *，整个上下文无法 refresh、端口起不来（本地 dev 用）。</p>
      *
      * <p>要指名用本地 Caffeine 时按 bean 名 {@code aiCacheManager} 引用即可，
      * 本类里 {@code redis-cache-*} 三个管理器本来也都是这么用的。</p>
      *
      * @return Caffeine 缓存管理器
      */
+    @Primary
     @Bean
     public CacheManager aiCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();

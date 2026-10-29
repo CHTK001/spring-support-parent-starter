@@ -6,6 +6,7 @@ import com.chua.starter.server.support.provider.project.PosixProjectPlatformProv
 import com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider;
 import com.chua.starter.server.support.provider.service.LaunchdSystemServiceProvider;
 import com.chua.starter.server.support.provider.service.WindowsSystemServiceProvider;
+import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.util.ProjectScripts;
 import java.nio.charset.StandardCharsets;
@@ -57,6 +58,14 @@ public final class ReleaseScriptProbe {
      * Windows 项目路径样例（Java 字面量里的双写反斜杠）。
      */
     private static final String WIN = "C:\\\\ms-acc\\\\demo";
+
+    /**
+     * 项目类型路由器：内置脚本由类型 SPI 生成，探针与生产链路走同一条解析路径。
+     *
+     * <p>刻意经注册中心而不是直接 new 实现类：脚本分发一旦在 SPI 登记上出错
+     * （漏登记、类型拼错），探针必须能暴露，而不是自己另走一条捷径掩盖问题。</p>
+     */
+    private static final ProjectTypeProviderRegistry TYPES = new ProjectTypeProviderRegistry();
 
     /**
      * 通过数。
@@ -115,7 +124,7 @@ public final class ReleaseScriptProbe {
     private void sectionALinuxTemplates() {
         // 注意：builtin() 返回的是仍带 __PATH__/__LOG__ 等占位符的模板，
         // 断言真实路径前必须先经 apply() 完成替换，否则测的是占位符而非生成结果。
-        ProjectScripts.Scripts raw = ProjectScripts.builtin(false, "springboot", "smoke.jar");
+        ProjectScripts.Scripts raw = builtin(false, "springboot", "smoke.jar");
         ProjectScripts.Scripts sb = filled(raw, "smoke.jar", LINUX, LINUX + "/app.log", "demo");
         check("A0 apply() 已把 __PATH__ 替换为真实路径",
                 sb.stop().contains("'" + LINUX + "'") && !sb.stop().contains(ProjectScripts.PH_PATH),
@@ -125,9 +134,29 @@ public final class ReleaseScriptProbe {
                 sb.start());
         // 与 Windows 侧 running pid= 对齐：失败回滚后编排层只能靠日志这一行确定真实 PID，
         // 缺它会导致 Linux 回滚后库里 PID 为空（实测 status=running 但 pid=undefined）。
+        // 必须回显「校验过的那个变量」$__pid，而不是再读一次 app.pid。
         check("A1b Linux 启动段回显 running pid=（供回滚后回写真实 PID）",
-                sb.start().contains("running pid=$(cat app.pid)"),
+                sb.start().contains("echo \"running pid=$__pid\""),
                 sb.start());
+        // 假成功是真机验收抓到的缺陷：nohup ... & 之后 $! 永远有值，哪怕进程立刻退出
+        // （jar 不存在 → Error: Unable to access jarfile），脚本仍 exit 0、任务报「启动成功」，
+        // 而状态是 stopped。Linux 侧必须有与 Windows WIN_VERIFY_RUNNING 等价的存活校验。
+        check("A1c Linux 启动段有存活校验（kill -0 观察窗 + 失败 exit 1 + 回显日志尾部）",
+                sb.start().contains("kill -0") && sb.start().contains("启动校验失败")
+                        && sb.start().contains("tail -n 20") && sb.start().contains("exit 1")
+                        && sb.start().contains("rm -f app.pid"),
+                sb.start());
+        // 重定向顺序踩过坑：`2>/dev/null >&2` 会先把 fd2 指向 /dev/null，再把 fd1 复制成 fd2，
+        // 结果是 tail 什么也不输出（任务日志里只有「---- 日志尾部 ----」这个标题）。
+        // 必须先是 >&2 再 2>/dev/null。
+        check("A1f 失败分支的 tail 重定向顺序正确（>&2 在 2>/dev/null 之前）",
+                sb.start().contains("tail -n 20") && sb.start().contains(">&2 2>/dev/null")
+                        && !sb.start().contains("2>/dev/null >&2"),
+                sb.start());
+        // 敏感性对照：旧实现只有 echo + sleep，没有任何存活判定，必须被 A1c 判负
+        String oldStartTail = "echo $! > app.pid\nsleep 1\necho \"running pid=$(cat app.pid)\"";
+        check("A1d 敏感性对照：旧写法（只 echo 不校验）确实会被 A1c 判负",
+                !oldStartTail.contains("kill -0") && sb.start().contains("kill -0"), oldStartTail);
         // 自安全模式：首字符必须写成 [s]，否则 pgrep -f 会匹配到执行脚本的 shell 自身
         check("A2 停止段用自安全模式 [s]moke\\.jar",
                 sb.stop().contains("pgrep -f '[s]moke\\.jar'"),
@@ -144,20 +173,24 @@ public final class ReleaseScriptProbe {
                 sb.status().contains("app.pid") && sb.status().contains("running") && sb.status().contains("stopped"),
                 sb.status());
 
-        ProjectScripts.Scripts sep = filled(ProjectScripts.builtin(false, "separated", "run.sh"),
+        ProjectScripts.Scripts sep = filled(builtin(false, "separated", "run.sh"),
                 "run.sh", LINUX, LINUX + "/app.log", "demo");
         check("A8 separated 停止段同样带兜底",
                 sep.stop().contains("pgrep -f '[r]un\\.sh'") && sep.stop().contains("readlink /proc/"),
                 sep.stop());
 
-        ProjectScripts.Scripts fat = filled(ProjectScripts.builtin(false, "fatjar", "app.jar"),
+        ProjectScripts.Scripts fat = filled(builtin(false, "fatjar", "app.jar"),
                 "app.jar", LINUX, LINUX + "/app.log", "demo");
         check("A9 fatjar 停止段模式为 [a]pp\\.jar",
                 fat.stop().contains("pgrep -f '[a]pp\\.jar'"),
                 fat.stop());
+        // 三个 Linux 类型共用同一段启动收尾，任何一个漏掉存活校验都会重新打开「假成功」的口子
+        check("A9b fatjar / separated 启动段同样带存活校验",
+                fat.start().contains("kill -0") && sep.start().contains("kill -0"),
+                "fatjar=" + fat.start().contains("kill -0") + " separated=" + sep.start().contains("kill -0"));
 
         // 元字符转义：. 与 + 必须转义，否则正则语义被改变（. 会连带匹配 smokeXjar 之类）
-        ProjectScripts.Scripts meta = filled(ProjectScripts.builtin(false, "fatjar", "a+b.jar"),
+        ProjectScripts.Scripts meta = filled(builtin(false, "fatjar", "a+b.jar"),
                 "a+b.jar", LINUX, LINUX + "/app.log", "demo");
         check("A10 入口含正则元字符时被转义（[a]\\+b\\.jar）",
                 meta.stop().contains("[a]\\+b\\.jar"),
@@ -182,7 +215,7 @@ public final class ReleaseScriptProbe {
     }
 
     private void sectionBWindowsTemplates() {
-        ProjectScripts.Scripts wb = ProjectScripts.builtin(true, "springboot", "smoke.jar");
+        ProjectScripts.Scripts wb = builtin(true, "springboot", "smoke.jar");
         check("B1 Windows 停止段用 CIM 且 try/catch 兜底",
                 wb.stop().contains("Get-CimInstance Win32_Process") && wb.stop().contains("catch"),
                 wb.stop());
@@ -342,7 +375,74 @@ public final class ReleaseScriptProbe {
         check("G1 备份命令含保留语义（保留 10 → tail -n +11）",
                 backup.contains("tail -n +11") && backup.contains("tar -czf"), backup);
         String rb = posix.rollback(LINUX, null);
-        check("G2 回滚命令可用最新备份（参数为空）", rb.contains("tar") && !rb.isBlank(), rb);
+        check("G2 回滚命令可用最新备份（参数为空）",
+                rb.contains("ls -t backups/backup_*.tar.gz") && rb.contains("tar -xzf"), rb);
+        // 回滚必须回到「备份时刻」，而不是「把备份覆盖上去」：升级新增的文件不在备份清单里，
+        // 只解压会让它们原样留下。实测：升级前没有 app.jar，回滚后新 jar 仍在且 md5 未变，
+        // 服务仍跑着升级后的版本，运维却看到「回滚成功」。
+        check("G2b POSIX 回滚先按备份清单反删新增文件，再解压",
+                rb.contains("tar -tzf") && rb.contains("comm -23")
+                        && rb.contains("rm -f -- ")
+                        && rb.indexOf("comm -23") < rb.indexOf("tar -xzf"), rb);
+        check("G2c POSIX 回滚清理时排除 backups 自身（否则历史备份全被删）",
+                rb.contains("-path ./backups -prune"), rb);
+        String rbNamed = posix.rollback(LINUX, "backup_123.tar.gz");
+        check("G2d 指定备份名时不做 ls -t 挑选，且名字经单引号转义",
+                rbNamed.contains("latest='backups/backup_123.tar.gz'")
+                        && !rbNamed.contains("ls -t"), rbNamed);
+        // 敏感性对照：旧实现只有 tar -xzf，必须被 G2b 判负
+        String oldRollback = "cd '/opt/app/demo' && latest=$(ls -t backups/backup_*.tar.gz | head -1)"
+                + " && tar -xzf \"$latest\"";
+        check("G2e 敏感性对照：只解压不清理的旧实现确实会被 G2b 判负",
+                !oldRollback.contains("comm -23") && rb.contains("comm -23"), oldRollback);
+
+        String rbWin = windows.rollback(WIN, null);
+        check("G2f Windows 回滚同样反删新增文件（HashSet 备份清单 + Remove-Item）",
+                rbWin.contains("HashSet[string]") && rbWin.contains("$keep.Contains($rel)")
+                        && rbWin.contains("Remove-Item -LiteralPath"), rbWin);
+        check("G2g Windows 回滚清理同样排除 backups 目录与 pid 文件",
+                rbWin.contains("if ($rel -like 'backups\\*') { return }")
+                        && rbWin.contains("if ($rel -eq 'app.pid'"), rbWin);
+        // 结构校验：清理块必须无条件执行，不能被塞进 $skipped 汇总的 if 里（那会漏掉最常见的
+        // 「没有任何日志文件被占用」场景，等于回滚永远不清理）
+        int iSkipIf = rbWin.indexOf("if ($skipped.Count -gt 0) {");
+        int iKeep = rbWin.indexOf("$keep = New-Object");
+        check("G2h Windows 清理块在 $skipped 汇总之外（否则无占用文件时不清理）",
+                iKeep >= 0 && iSkipIf > iKeep, "iKeep=" + iKeep + " iSkipIf=" + iSkipIf);
+        // 敏感性对照：旧实现（只 robocopy 覆盖）必须被 G2f 判负
+        String oldWinRollback = "robocopy $latest.FullName '.' /E /XD backups | Out-Null";
+        check("G2i 敏感性对照：只覆盖不清理的旧实现确实会被 G2f 判负",
+                !oldWinRollback.contains("HashSet") && rbWin.contains("HashSet"), oldWinRollback);
+
+        // 投放必须是「复制」：源包被移走后，同一个 packagePath 给第二个项目或二次升级就会报
+        // 文件不存在（实测升级后上传目录里的包已消失），且 SDK 移动 / 命令复制两条路径副作用不一致。
+        String placePosix = posix.place(LINUX, "/data/uploads/pkg.jar", "app.jar");
+        check("G5 投放命令是复制（cp -f），源包保留",
+                placePosix.contains("cp -f '/data/uploads/pkg.jar'") && !placePosix.contains("mv ")
+                        && !placePosix.contains("rm "), placePosix);
+        String placeWin = windows.place(WIN, "C:\\uploads\\pkg.jar", "app.jar");
+        check("G6 Windows 投放命令是复制（Copy-Item），不用 Move-Item",
+                placeWin.contains("Copy-Item") && !placeWin.contains("Move-Item"), placeWin);
+        // 敏感性对照：移动式投放必须被判负
+        String movePlace = "mv -f '/data/uploads/pkg.jar' '/opt/app/demo/app.jar'";
+        check("G7 敏感性对照：移动式投放确实会被 G5 判负",
+                !movePlace.contains("cp -f") && placePosix.contains("cp -f"), movePlace);
+        // 生产链路的顺序同样是语义：先命令复制，命令通道不可用才回退 sftp rename（会移动源包）。
+        // 这一条只能看源码，故在源码不在场（例如从 jar 跑探针）时跳过，不制造假失败。
+        Path svc = Path.of("src/main/java/com/chua/starter/server/support/service/impl/ReleaseServiceImpl.java");
+        if (Files.exists(svc)) {
+            try {
+                String src = Files.readString(svc, StandardCharsets.UTF_8);
+                int iCopy = src.indexOf("placeCommand(pf, dir");
+                int iMove = src.indexOf("sftpService.rename(ctx.hostId");
+                check("G8 投放优先走命令复制，sftp rename 仅作回退",
+                        iCopy > 0 && iMove > iCopy, "iCopy=" + iCopy + " iMove=" + iMove);
+                check("G8b 投放步骤日志写明保留源包",
+                        src.contains("保留源包"), "未找到「保留源包」");
+            } catch (Exception e) {
+                check("G8 投放源码可读", false, e.toString());
+            }
+        }
         String quoted = posix.quote("a'b");
         check("G3 POSIX 单引号转义", quoted.equals("a'\\''b"), quoted);
         check("G4 Windows 单引号转义为双写", windows.quote("a'b").equals("a''b"), windows.quote("a'b"));
@@ -360,7 +460,7 @@ public final class ReleaseScriptProbe {
     }
 
     private void sectionHInlineLengthLimit() {
-        ProjectScripts.Scripts wb = ProjectScripts.builtin(true, "springboot", "smoke.jar");
+        ProjectScripts.Scripts wb = builtin(true, "springboot", "smoke.jar");
         ProjectScripts.Scripts wbFull = filled(wb, "smoke.jar", WIN, WIN + "\\app.log", "demo");
         String startLen = String.valueOf(PowerShellCommand.base64Length(wbFull.start()));
         String restartLen = String.valueOf(PowerShellCommand.base64Length(wbFull.restart()));
@@ -451,7 +551,7 @@ public final class ReleaseScriptProbe {
         String exe = resolveShellExe();
         Assumptions.assumeTrue(exe != null,
                 "本机既无 pwsh 也无 powershell，无法做 PowerShell 语法校验，跳过 I 段");
-        var wb = ProjectScripts.builtin(true, "springboot", "smoke.jar");
+        var wb = builtin(true, "springboot", "smoke.jar");
         var wbFull = filled(wb, "smoke.jar", WIN, WIN + "\\app.log", "demo");
         // 敏感性对照：PowerShell **不支持**用行尾 + 续行表达式，换行即被当作新语句，
         // 上行未闭合的括号会直接报 ParserError。真实踩过：诊断输出写成多行 + 拼接，
@@ -527,7 +627,8 @@ public final class ReleaseScriptProbe {
         SystemServiceContext ctx = new SystemServiceContext(
                 "Demo App", 7L, "springboot", "smoke.jar", LINUX, LINUX + "/app.log",
                 "echo START", "echo STOP", "echo running", Map.of("APP_ENV", "prod"),
-                List.of("-Xmx512m"), List.of("--server.port=18091"), "deploy", true, true);
+                List.of("-Xmx512m"), List.of("--server.port=18091"), "deploy", true, true,
+                TYPES.resolveOrGeneric("springboot").posixForeground("smoke.jar"));
         String svc = launchd.defaultServiceName(ctx);
         String install = launchd.install(ctx, svc);
         String uninstall = launchd.uninstall(ctx, svc);
@@ -562,7 +663,8 @@ public final class ReleaseScriptProbe {
         // plist XML 转义：值里含 & < > 必须转义，否则 plist 解析失败、作业根本装不进来
         SystemServiceContext xmlCtx = new SystemServiceContext(
                 "A&B", 8L, "springboot", "a.jar", "/opt/A<B>&C", "/opt/x/out>err.log",
-                "S", "T", "U", Map.of(), List.of(), List.of(), null, true, false);
+                "S", "T", "U", Map.of(), List.of(), List.of(), null, true, false,
+                TYPES.resolveOrGeneric("springboot").posixForeground("a.jar"));
         String xmlInstall = launchd.install(xmlCtx, "svc");
         check("J16 plist 值做 XML 转义（& < > 均转义，不再原样落盘）",
                 xmlInstall.contains("&amp;") && xmlInstall.contains("&lt;") && xmlInstall.contains("&gt;")
@@ -644,7 +746,8 @@ public final class ReleaseScriptProbe {
         SystemServiceContext ctx = new SystemServiceContext(
                 "Win Demo", 38L, "springboot", "smoke.jar", "C:\\ms-acc\\acc-sb", "C:\\ms-acc\\acc-sb\\app.log",
                 "echo START", "echo STOP", "echo running", Map.of(), List.of(), List.of(),
-                "Administrator", true, true);
+                "Administrator", true, true,
+                TYPES.resolveOrGeneric("springboot").posixForeground("smoke.jar"));
         String svc = win.defaultServiceName(ctx);
         String install = win.install(ctx, svc);
         String uninstall = win.uninstall(ctx, svc);
@@ -683,7 +786,8 @@ public final class ReleaseScriptProbe {
         // 两个开关都不开时直接判失败（避免「挂载成功但什么都没发生」）
         SystemServiceContext none = new SystemServiceContext(
                 "N", 1L, "springboot", "a.jar", "C:\\x", "C:\\x\\a.log",
-                "S", "T", "U", Map.of(), List.of(), List.of(), null, false, false);
+                "S", "T", "U", Map.of(), List.of(), List.of(), null, false, false,
+                TYPES.resolveOrGeneric("springboot").posixForeground("a.jar"));
         check("K12 自启与守护都不开时直接判失败（不假报成功）",
                 win.install(none, "ms-n-1").contains("throw '挂载失败"), win.install(none, "ms-n-1"));
 
@@ -803,6 +907,18 @@ public final class ReleaseScriptProbe {
             return;
         }
         failures.add(name + "  <<< " + abbreviate(detail));
+    }
+
+    /**
+     * 按项目类型生成内置四段脚本（等价于生产链路的类型分发）。
+     *
+     * @param windows     是否 Windows
+     * @param projectType 项目类型
+     * @param mainEntry   主入口
+     * @return 仍带占位符的模板脚本
+     */
+    private static ProjectScripts.Scripts builtin(boolean windows, String projectType, String mainEntry) {
+        return TYPES.resolveOrGeneric(projectType).scripts(windows, mainEntry);
     }
 
     /**

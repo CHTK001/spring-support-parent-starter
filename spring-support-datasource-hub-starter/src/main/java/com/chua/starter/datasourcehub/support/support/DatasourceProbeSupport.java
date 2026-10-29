@@ -62,13 +62,15 @@ public final class DatasourceProbeSupport {
      * @param questions           累计提问次数（MySQL 自身计数）
      * @param uptimeSeconds       服务器已运行秒数
      * @param maxUsedConnections  历史峰值客户端连接数
+     * @param memoryBytes         实例内存占用字节数（MySQL: performance_schema InnoDB 占用；取不到为 null）
      */
     public record ServerStats(
             Long slowQueries,
             Long threadsRunning,
             Long questions,
             Long uptimeSeconds,
-            Long maxUsedConnections
+            Long maxUsedConnections,
+            Long memoryBytes
     ) {
     }
 

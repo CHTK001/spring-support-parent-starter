@@ -203,4 +203,146 @@ public abstract class AbstractPackageManagerProvider implements PackageManagerPr
         }
         return list;
     }
+
+    /**
+     * APT 可升级列表解析（{@code apt list --upgradable}）。
+     *
+     * <p>典型行：{@code nginx/jammy-updates 1.18.0-6ubuntu14.4 amd64 [upgradable from: 1.18.0-6ubuntu14.3]}。
+     * 第一段 {@code 包名/仓库} 取斜杠前的包名，第二段是仓库里的候选版本。</p>
+     *
+     * @param output 命令输出
+     * @return 可升级列表（version 为候选版本）
+     */
+    protected static List<SoftwarePackage> parseAptUpgradable(String output) {
+        List<SoftwarePackage> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("Listing") || line.startsWith("WARNING")) {
+                continue;
+            }
+            String[] parts = line.split("\\s+");
+            if (parts.length < 2 || !parts[0].contains("/")) {
+                continue;
+            }
+            String name = parts[0].substring(0, parts[0].indexOf('/'));
+            String candidate = parts[1].trim();
+            list.add(new SoftwarePackage(name, null, candidate));
+        }
+        return list;
+    }
+
+    /**
+     * 表格式可升级列表解析（{@code winget upgrade}）。
+     *
+     * <p>列序为 名称 / Id / 当前版本 / 可用版本 / 来源，列间以 2+ 空格分隔；
+     * 名称本身可能带空格，因此按「倒数第二列是可用版本」取值。</p>
+     *
+     * @param output 命令输出
+     * @return 可升级列表（name 为包 Id）
+     */
+    protected static List<SoftwarePackage> parseTableUpgradable(String output) {
+        List<SoftwarePackage> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("-") || line.startsWith("=")) {
+                continue;
+            }
+            String low = line.toLowerCase();
+            if (low.startsWith("name") || low.contains("upgrades available")
+                    || low.contains("no installed package")) {
+                continue;
+            }
+            String[] parts = line.split("\\s{2,}");
+            if (parts.length < 4) {
+                continue;
+            }
+            String id = parts[1].trim();
+            String candidate = parts[parts.length - 2].trim();
+            list.add(new SoftwarePackage(id, null, candidate));
+        }
+        return list;
+    }
+
+    /**
+     * 管道式可升级列表解析（{@code choco outdated -r}）。
+     *
+     * <p>输出形如 {@code name|current|available|pinned}。</p>
+     *
+     * @param output 命令输出
+     * @return 可升级列表（version 为 available）
+     */
+    protected static List<SoftwarePackage> parsePipeUpgradable(String output) {
+        List<SoftwarePackage> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (!line.contains("|")) {
+                continue;
+            }
+            String[] parts = line.split("\\|");
+            if (parts.length < 3) {
+                continue;
+            }
+            list.add(new SoftwarePackage(parts[0].trim(), null, parts[2].trim()));
+        }
+        return list;
+    }
+
+    /**
+     * 依赖行解析：保留以指定前缀开头的行，取冒号后的包名。
+     *
+     * <p>不同包管理器的依赖输出共性是「前缀 + 包名」：apt 的
+     * {@code Depends: libc6}、choco 的 {@code - dotnet4.5}。版本约束
+     * {@code (>= 1.2)} 与虚拟包尖括号 {@code <libssl3>} 都去掉，
+     * 只留可读的包名，前端按行展示。</p>
+     *
+     * @param output   命令输出
+     * @param prefixes 行前缀（如 "Depends:"、"PreDepends:"）
+     * @return 去重后的依赖名列表
+     */
+    protected static List<String> parseDependencyLines(String output, String... prefixes) {
+        List<String> list = new ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            String value = null;
+            for (String prefix : prefixes) {
+                if (line.startsWith(prefix)) {
+                    value = line.substring(prefix.length()).trim();
+                    break;
+                }
+            }
+            if (value == null && line.startsWith("- ")) {
+                value = line.substring(2).trim();
+            }
+            if (value == null) {
+                continue;
+            }
+            value = value.replaceAll("\\(.*?\\)", "")
+                    .replace("<", "")
+                    .replace(">", "")
+                    .trim();
+            if (value.isEmpty() || value.contains(" ")) {
+                // 依赖名不含空格；带空格的多半是说明文字
+                continue;
+            }
+            if (!list.contains(value)) {
+                list.add(value);
+            }
+        }
+        return list;
+    }
 }

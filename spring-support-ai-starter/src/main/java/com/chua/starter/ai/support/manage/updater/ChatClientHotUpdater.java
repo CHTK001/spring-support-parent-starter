@@ -3,6 +3,8 @@ package com.chua.starter.ai.support.manage.updater;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import com.chua.starter.ai.support.entity.SysAiManufacturerKey;
@@ -11,12 +13,14 @@ import com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper;
 import com.chua.starter.ai.support.mapper.SysAiManufacturerKeyMapper;
 import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * ChatClient 热更新器
@@ -34,6 +38,7 @@ public class ChatClientHotUpdater {
     private final SysAiManufacturerMapper manufacturerMapper;
     private final SysAiManufacturerKeyMapper manufacturerKeyMapper;
     private final SysAiGlobalSettingMapper globalSettingMapper;
+    private final ModelClientResolver modelClientResolver;
 
     /**
      * 监听设置变更事件，按分组触发热更新
@@ -122,11 +127,23 @@ public class ChatClientHotUpdater {
             }
 
             // 5. 创建 ChatClient
-            ChatClientSetting setting = ChatClientSetting.builder()
+            ChatClientSetting.ChatClientSettingBuilder builder = ChatClientSetting.builder()
                     .provider(manufacturer.getCode())
                     .baseUrl(manufacturer.getBaseUrl())
-                    .appKey(appKey)
-                    .build();
+                    .appKey(appKey);
+
+            // 免费渠道：注入动态渠道路由（OAuth 渠道连接自动收集）
+            if (ProviderRouteTargets.isFreeChannel(manufacturer.getCode())) {
+                Map<String, RouteTarget> channelRoutes =
+                        modelClientResolver.collectChannelRoutes("_free");
+                if (channelRoutes != null && !channelRoutes.isEmpty()) {
+                    builder.routes(channelRoutes);
+                    log.info("[ChatClientHotUpdater] 免费渠道已注入 {} 条路由: provider={}",
+                            channelRoutes.size(), manufacturer.getCode());
+                }
+            }
+
+            ChatClientSetting setting = builder.build();
 
             ChatClient chatClient = ChatClient.create(setting);
             if (chatClient == null) {

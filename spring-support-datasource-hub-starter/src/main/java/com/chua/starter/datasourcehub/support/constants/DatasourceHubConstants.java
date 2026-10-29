@@ -37,6 +37,17 @@ public final class DatasourceHubConstants {
     public static final String DS_TYPE_DUCKDB = "duckdb";
 
     /**
+     * calcite 合并类型标识。
+     *
+     * <p>「合并数据源」产生的特殊记录：自身<b>不支持编辑</b>，内部在
+     * {@code datasource_database} 存 {@code {"members":[id,...]}} 成员 JSON，
+     * host/port/username/password 均为空。建连时按成员逐个走
+     * {@code DatasourceService.connection(memberId)} 再用 Calcite 装配成联邦连接：
+     * 每次打开控制台都会重新装配（成员调整后重开即生效）。</p>
+     */
+    public static final String DS_TYPE_CALCITE = "calcite";
+
+    /**
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
@@ -63,7 +74,21 @@ public final class DatasourceHubConstants {
             return false;
         }
         String normalized = type.trim().toLowerCase();
-        return DS_JDBC_TYPES.contains(normalized);
+        return DS_JDBC_TYPES.contains(normalized) || DS_TYPE_CALCITE.equals(normalized);
+    }
+
+    /**
+     * 该类型是否为 Calcite 合并数据源。
+     *
+     * <p>合并记录是 <b>由「合并」动作产生</b>的特殊台账：自身不支持编辑、
+     * host/port/凭证均留空（建连走成员装配）。它与普通 JDBC 类型共用管理台，
+     * 但 {@code create}/{@code update} 必须拒绝外部直接写这类记录。</p>
+     *
+     * @param type 类型标识，可为 null
+     * @return 合并数据源返回 true
+     */
+    public static boolean isCalciteType(String type) {
+        return type != null && DS_TYPE_CALCITE.equalsIgnoreCase(type.trim());
     }
 
     /**

@@ -172,6 +172,42 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
+     * 批量删除 appKey（逻辑删除）。
+     *
+     * <p>与 {@link #delete(Long)} 同口径：写出口归属守卫整批过完后才删，
+     * 有问题的行直接拦截，不出现部分删除。</p>
+     *
+     * @param appKeyIds appKey 主键列表
+     * @return 实际删除的 appKey 数量
+     */
+    @Override
+    @Transactional
+    public int batchDelete(List<Long> appKeyIds) {
+        if (appKeyIds == null || appKeyIds.isEmpty()) {
+            return 0;
+        }
+        for (Long appKeyId : appKeyIds) {
+            if (appKeyId == null || appKeyId <= 0) {
+                continue;
+            }
+            requireWritableAppKey(appKeyId);
+        }
+
+        int deleted = 0;
+        for (Long appKeyId : appKeyIds) {
+            if (appKeyId == null || appKeyId <= 0) {
+                continue;
+            }
+            int removed = appKeyMapper.deleteById(appKeyId.intValue());
+            if (removed > 0) {
+                deleted++;
+            }
+            log.debug("[SysAiAppKey] 批量删除成功: id={}", appKeyId);
+        }
+        return deleted;
+    }
+
+    /**
      * 切换 appKey 启用状态。
      *
      * @param appKeyId appKey 主键

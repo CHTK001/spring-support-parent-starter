@@ -8,7 +8,9 @@ import com.chua.starter.server.support.model.vo.HostSyncSummaryVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +34,7 @@ import java.util.List;
  * @since 4.0.0.42
  */
 @Tag(name = "服务器资产-主机", description = "主机台账管理")
+@Slf4j
 @RestController
 @RequestMapping(ServerConstants.API_PREFIX + "/host")
 @RequiredArgsConstructor

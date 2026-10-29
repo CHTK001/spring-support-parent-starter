@@ -369,6 +369,37 @@ public class ExecServiceImpl implements ExecService {
         item.setMsExecLogJobId(jobId);
         item.setMsExecLogCommand(commandOrPath);
         item.setMsExecLogStartTime(LocalDateTime.now());
+        // 本机自采集主机不经 SSH：跑的就是平台所在机器，直接本地执行，
+        // 免去回环密钥/口令依赖（未配 authorized_keys 也能用）
+        if ("LOCAL".equalsIgnoreCase(host.getServerHostCollectMode()) && localFile == null) {
+            try {
+                boolean windows = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win");
+                ProcessBuilder builder = windows
+                        ? new ProcessBuilder("cmd.exe", "/c", commandOrPath)
+                        : new ProcessBuilder("/bin/sh", "-c", commandOrPath);
+                builder.redirectErrorStream(true);
+                Process process = builder.start();
+                String output = new String(process.getInputStream().readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+                boolean finished = process.waitFor(Math.max(1, timeoutSeconds), java.util.concurrent.TimeUnit.SECONDS);
+                if (!finished) {
+                    process.destroyForcibly();
+                    throw new IllegalStateException("本机命令执行超时: " + timeoutSeconds + "s");
+                }
+                item.setMsExecLogOutput(truncate(output));
+                item.setMsExecLogExitCode(process.exitValue());
+                if (process.exitValue() != 0) {
+                    throw new IllegalStateException("退出码非 0: " + process.exitValue()
+                            + (output.isBlank() ? "" : " " + output.trim()));
+                }
+                item.setMsExecLogStatus(ServerConstants.EXEC_STATUS_SUCCESS);
+            } catch (Exception e) {
+                return fail(item, e.getMessage(), startMs);
+            }
+            fillCost(item, startMs);
+            persistQuietly(item);
+            return item;
+        }
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(host.getId(), null);
         if (!resolved.isOk()) {
             return fail(item, resolved.getMsg(), startMs);
@@ -458,6 +489,7 @@ public class ExecServiceImpl implements ExecService {
     private void execViaSsh(MsServerHost host, SshCredential credential, String command,
                             int timeout, MsExecLog item) throws Exception {
         SshClients.Handle handle = null;
+        boolean broken = false;
         try {
             handle = connectionManager.borrow(host, credential);
             var result = handle.client().exec().command(command).execute();
@@ -479,9 +511,18 @@ public class ExecServiceImpl implements ExecService {
                  */
                 throw new IllegalStateException(withPowerShellLaunchHint(result.stderr()));
             }
+        } catch (Exception e) {
+            // 通道打不开（SshChannelOpenException）/连接已断等：这条池化连接已经不可信。
+            // 不作废的话后续请求会一直复用它，表现为「SSH 连接成功但命令永远失败」，
+            // 要等下一次健康巡检才自愈。Windows 分支同样依赖这里兜底。
+            broken = true;
+            throw e;
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
+            }
+            if (broken) {
+                connectionManager.invalidate(host.getId());
             }
         }
     }

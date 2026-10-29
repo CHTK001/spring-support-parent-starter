@@ -50,6 +50,17 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
     static final long POLL_INTERVAL_MS = 2_000L;
     /** 轮询句柄记录的最后一次轮询时刻（毫秒）。 */
     static final String HANDLE_LAST_POLL_AT = "__lastPollAt";
+    /** 轮询句柄中存放的轮询间隔键名（毫秒），测试可覆写以加速轮询。 */
+    public static final String HANDLE_POLL_INTERVAL_MS = "__pollIntervalMs";
+
+    /**
+     * 站点基址（可覆写指向 mock 测试服务器）。
+     *
+     * @return 站点基址
+     */
+    protected String siteOrigin() {
+        return API_BASE;
+    }
 
     @Override
     public String channel() {
@@ -75,12 +86,13 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
     @Override
     public Map<String, Object> startLogin() {
         String code = qrCode();
-        String qrUrl = API_BASE + "/login/mp?code=" + code + "&appname=" + qrAppnameEncoded();
+        String qrUrl = siteOrigin() + "/login/mp?code=" + code + "&appname=" + qrAppnameEncoded();
         Map<String, Object> handle = new LinkedHashMap<>();
         handle.put("handle", code);
         handle.put("qrUrl", qrUrl);
         handle.put("verifyUrl", qrUrl);
         handle.put("startedAt", System.currentTimeMillis());
+        handle.put(HANDLE_POLL_INTERVAL_MS, POLL_INTERVAL_MS);
         return handle;
     }
 
@@ -98,7 +110,11 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         }
         long now = System.currentTimeMillis();
         Long lastPollAt = toLong(handle.get(HANDLE_LAST_POLL_AT));
-        if (lastPollAt != null && now - lastPollAt < POLL_INTERVAL_MS) {
+        Long pollInterval = toLong(handle.get(HANDLE_POLL_INTERVAL_MS));
+        if (pollInterval == null) {
+            pollInterval = POLL_INTERVAL_MS;
+        }
+        if (lastPollAt != null && now - lastPollAt < pollInterval) {
             return null;
         }
         String code = readString(handle, "handle");
@@ -108,7 +124,7 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         try {
             String body = Json.toJSONString(Map.of("qrcode_code", code));
             String response = ChannelHttp.postJson(
-                    API_BASE + AUTH_API_PREFIX + "/login_with_qrcode_code", body, jsonHeaders());
+                    siteOrigin() + AUTH_API_PREFIX + "/login_with_qrcode_code", body, jsonHeaders());
             Map<String, Object> envelope = parseJson(response);
             Object codeVal = envelope.get("code");
             if (!(codeVal instanceof Number n) || n.intValue() != 0) {
@@ -128,7 +144,7 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
             // 换一个新 code，让二维码重新可用（否则用户卡死）。
             String newCode = qrCode();
             handle.put("handle", newCode);
-            handle.put("qrUrl", API_BASE + "/login/mp?code=" + newCode + "&appname=" + qrAppnameEncoded());
+            handle.put("qrUrl", siteOrigin() + "/login/mp?code=" + newCode + "&appname=" + qrAppnameEncoded());
             handle.put(HANDLE_LAST_POLL_AT, now);
             return null;
         }
@@ -171,7 +187,7 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         String body = Json.toJSONString(Map.of("refresh_token", refreshToken));
         String response;
         try {
-            response = ChannelHttp.postJson(API_BASE + AUTH_API_PREFIX + "/refresh", body, jsonHeaders());
+            response = ChannelHttp.postJson(siteOrigin() + AUTH_API_PREFIX + "/refresh", body, jsonHeaders());
         } catch (ApiException e) {
             if (e.getMessage() != null && e.getMessage().contains("401")) {
                 throw new ApiException(ApiErrorCode.UNAUTHORIZED, "Raccoon 登录态已过期，请重新登录", e);
@@ -218,7 +234,7 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
             return status("expired", "访问令牌已到期");
         }
         try {
-            ChannelHttp.getJson(API_BASE + AUTH_API_PREFIX + "/user_info", authHeaders(accessToken));
+            ChannelHttp.getJson(siteOrigin() + AUTH_API_PREFIX + "/user_info", authHeaders(accessToken));
         } catch (ApiException e) {
             String message = e.getMessage() == null ? "" : e.getMessage();
             if (message.contains("401") || message.contains("403") || message.contains("Unauthorized")) {

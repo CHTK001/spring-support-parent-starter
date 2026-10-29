@@ -6,6 +6,7 @@ import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.ai.EduAiService;
 import com.chua.starter.eduai.ai.EduPaperScanner;
+import com.chua.starter.eduai.ai.MarkingBlankRule;
 import com.chua.starter.eduai.ai.PaperScanPipeline;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
@@ -30,20 +31,26 @@ import com.chua.starter.eduai.model.EduPaperQuestion;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
+import com.chua.starter.eduai.model.dto.MarkingToBankDTO;
 import com.chua.starter.eduai.model.dto.BatchMarkingRequest;
+import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.vo.MarkingProgressVO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishResultVO;
 import com.chua.starter.eduai.model.vo.MarkingFinishPreviewVO;
 import com.chua.starter.eduai.model.vo.MarkingPreviewQuestionVO;
+import com.chua.starter.eduai.model.vo.MarkingToBankResultVO;
 import com.chua.starter.eduai.model.vo.MarkingUndoResultVO;
 import com.chua.starter.eduai.model.vo.BatchMarkingResultVO;
 import com.chua.starter.eduai.queue.MarkingJob;
 import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
+import com.chua.starter.eduai.service.IEduQuestionService;
 import com.chua.starter.eduai.service.IEduWrongQuestionService;
+import com.chua.starter.eduai.service.MarkingSettingService;
 import com.chua.starter.eduai.support.util.AnswerSimilarity;
 import com.chua.starter.eduai.support.util.EduUserContext;
+import com.chua.starter.eduai.support.util.GradeLevels;
 import com.chua.starter.eduai.support.util.MarkingScanIntentResolver;
 import com.chua.starter.eduai.stream.EduMarkingProgressHub;
 import com.chua.starter.queue.MessageTemplate;
@@ -52,10 +59,15 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -120,6 +132,22 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 题号里的首个数字（用于把「第1题」「1.」「(2)」这类写法折算成卷内顺序）
      */
     private static final java.util.regex.Pattern FIRST_DIGITS = java.util.regex.Pattern.compile("\\d+");
+
+    /**
+     * 判定「近似灰度」时单个像素允许的最大通道差（0~255）。
+     *
+     * <p>扫描件的白纸往往带一点点色彩偏移，取 12 既能容忍轻微偏色，又不会把
+     * 真正的彩色照片判成灰度。</p>
+     */
+    private static final int GRAY_TOLERANCE = 12;
+
+    /**
+     * 卷面缩略图的最长边（像素）。
+     *
+     * <p>详情页左栏实际显示宽度只有 600~700px，取 800 既能 1:1 呈现，
+     * 又不会让老师为了看清题目去放大 —— 缩放后版面框是归一化坐标，叠加不受影响。</p>
+     */
+    private static final int THUMB_MAX_EDGE = 800;
 
     /**
      * 文字块最前面的题号 token。必须紧随块文本起始，且紧跟分隔符，
@@ -197,6 +225,26 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 试卷解析结果映射器（姓名/学号/总分/逐题的结构化解析结果落库）
      */
     private final EduMarkingSheetParseMapper sheetParseMapper;
+
+    /**
+     * 题库服务：外来卷「加入题库」复用既有的保存校验与审核态口径，
+     * 不另写一套落库逻辑（否则唯一键、来源类型、审核态会与题库页脱节）
+     */
+    private final IEduQuestionService questionService;
+
+    /**
+     * 阅卷运行时设置（匹配模式）：严谨模式下填空题的作答必须落在题干空位内。
+     *
+     * <p>可选项：bean 缺失（精简测试上下文）时按宽松处理 —— 门禁缺失只会少判负，
+     * 不会因为拿不到配置而把正常作答判 0。</p>
+     */
+    @Autowired(required = false)
+    private MarkingSettingService markingSettingService;
+
+    /**
+     * 外来卷入库时的来源类型：与「手动录入 / 老师上传」区分，便于题库里筛出来单独复核
+     */
+    private static final String SOURCE_TYPE_SCAN = "SCAN";
 
     /**
      * JSON 解析器（还原识别详情，供判分与续跑使用）
@@ -1345,6 +1393,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 }
                 EduAiService.MarkingOutcome outcome;
                 if (anyMode) {
+                    // 切分修复：版面把印刷尾段切进了作答（实测第 15 题题干「…它的面积是」、
+                    // 作答「平方厘米。24」）。先把印刷片段回填到题干、原位补一个空位，
+                    // 学生填的 24 才会落回空内；修复后的题干也让严谨模式的空位门禁有据可依。
+                    MarkingBlankRule.Repair repaired =
+                            MarkingBlankRule.repairPrintedSplit(item.stem(), item.answer());
+                    if (!Objects.equals(repaired.stem(), item.stem())
+                            || !Objects.equals(repaired.answer(), item.answer())) {
+                        log.info("[EduAi] 第 {} 题切分修复: 作答「{}」→「{}」，题干「{}」→「{}」",
+                                item.no(), item.answer(), repaired.answer(), item.stem(), repaired.stem());
+                        item = new EduPaperScanner.ScannedQuestion(
+                                item.no(), repaired.stem(), repaired.answer(), item.score());
+                    }
                     outcome = paperScanner.markAnyQuestion(item, maxScore);
                 } else {
                     if (question == null) {
@@ -2044,11 +2104,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
-        // 「学生作答」统一保存清洗 + 提取后的实质作答：客观题从「题干+选项+作答C」
-        // 整块 OCR 文本里提取 C/√/×，简答去掉水印/分值/题号后保留学生文字。
+        // 「学生作答」统一保存清洗 + 提取 + 剥题干后的实质作答：客观题从「题干+选项+作答C」
+        // 整块 OCR 文本里提取 C/√/×/对错，简答去掉水印/分值/题号后保留学生文字；
+        // 外来卷（题干也是抽出来的）还要剥掉混在作答里的题干片段。
         // 这既让前端展示不再把整段题干当作答，也让判分直接面对真实作答。
-        detail.put("studentAnswer", EduPaperScanner.extractInlineMark(
-                EduPaperScanner.cleanScannedAnswer(item.answer())));
+        // SELF 卷 item.stem() 为 null，normalizeAnyAnswer 退化为原「清洗+提取」行为。
+        detail.put("studentAnswer", EduPaperScanner.normalizeAnyAnswer(item.answer(), item.stem()));
         detail.put("maxScore", maxScore);
         return Json.toJson(detail);
     }
@@ -2068,8 +2129,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
-        detail.put("studentAnswer", EduPaperScanner.extractInlineMark(
-                EduPaperScanner.cleanScannedAnswer(item.answer())));
+        detail.put("studentAnswer", EduPaperScanner.normalizeAnyAnswer(item.answer(), item.stem()));
         detail.put("maxScore", maxScore);
         detail.put("score", outcome == null ? 0 : outcome.getScore());
         detail.put("correct", outcome != null && maxScore > 0 && outcome.getScore() >= maxScore);
@@ -2095,6 +2155,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     private EduAiService.MarkingOutcome tolerantObjectiveOutcome(EduQuestion question,
                                                                  String studentAnswer,
                                                                  int maxScore) {
+        // 严谨模式：填空题的作答必须落在题干空位内。传入的是剥离题干碎片后的作答，
+        // 剥不掉的碎片说明学生把答案写在了括号外（或整段印刷文字被收进了作答）。
+        // 「宽松」模式不做这道门禁，仍按文本内容判分。
+        if (markingSettingService != null && markingSettingService.strictMatch()
+                && MarkingBlankRule.outsideBlank(question.getQuestionStem(), studentAnswer)) {
+            var outside = new EduAiService.MarkingOutcome();
+            outside.setSource("AI");
+            outside.setScore(0);
+            outside.setComment("未填写在题目空格内（严谨模式），本题不给分");
+            return outside;
+        }
         if (isObjectiveType(question.getQuestionType())) {
             // 判断/选择先做符号与选项归一化（√→对、(C)→C）：学生作答里常混着题干
             // （OCR 把「（√）」连题干一起识别），LCS 对符号不敏感，直接比对会误判。
@@ -2196,8 +2267,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             item.put("teacherComment", row.getMarkingResultTeacherComment());
             Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
             item.put("no", detail.get("recognizedNo"));
-            item.put("stem", detail.get("stem"));
-            String rawAnswer = detail.get("studentAnswer") == null ? null : String.valueOf(detail.get("studentAnswer"));
+            // 切分修复（只读兜底）：修复上线前入库的行仍是「题干断在『…它的面积是』、
+            // 作答是『平方厘米。24』」。这里按判分时同一套规则修一次再展示，老任务
+            // 不用重新阅卷也能看到正常题面；新任务在判分时已按修复后的文本落库。
+            MarkingBlankRule.Repair repaired = MarkingBlankRule.repairPrintedSplit(
+                    detail.get("stem") == null ? null : String.valueOf(detail.get("stem")),
+                    detail.get("studentAnswer") == null ? null : String.valueOf(detail.get("studentAnswer")));
+            item.put("stem", repaired.stem());
+            String rawAnswer = repaired.answer();
             item.put("studentAnswer", EduPaperScanner.extractInlineMark(rawAnswer));
             if (detail.get("recognizedNo") != null) {
                 String no = normalizeNo(String.valueOf(detail.get("recognizedNo")));
@@ -2443,6 +2520,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     @Override
     public byte[] getSheetImage(String taskId, int page) {
+        return getSheetImage(taskId, page, null);
+    }
+
+    @Override
+    public byte[] getSheetImage(String taskId, int page, String variant) {
         if (StringUtils.isBlank(taskId) || page < 1) {
             throw new BusinessException("图片参数不合法");
         }
@@ -2455,10 +2537,164 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             throw new BusinessException("答卷图片不存在: 第 " + page + " 页");
         }
         try {
-            return Files.readAllBytes(file);
+            byte[] bytes = shrinkSheetImage(file, Files.readAllBytes(file));
+            return isThumb(variant) ? thumbSheetImage(file, bytes) : bytes;
         } catch (Exception e) {
             throw new BusinessException("读取答卷图片失败: " + e.getMessage());
         }
+    }
+
+    /** 是否请求缩略图变体 */
+    private static boolean isThumb(String variant) {
+        return "thumb".equalsIgnoreCase(variant == null ? null : variant.trim());
+    }
+
+    /**
+     * 把卷面图缩到 {@value #THUMB_MAX_EDGE}px 以内的灰度 PNG（详情页左栏用）。
+     *
+     * <p>详情页左栏显示宽度只有 600~700px，直接下发 1240px 原图等于多传一倍字节
+     * （实测经网关 73KB ≈ 2.2s，缩略图约 30KB ≈ 0.9s）。缩略图按需生成并落盘缓存
+     * （{@code xxx.thumb.png}），源图更新后按修改时间自动失效。</p>
+     *
+     * <p>任何一步失败都退回原图 —— 图片能看比图片更小重要。</p>
+     *
+     * @param file   原始图片路径（用于定位缓存）
+     * @param source 已做过灰度处理的图片字节
+     * @return 缩略图字节（失败时返回 source）
+     */
+    private static byte[] thumbSheetImage(Path file, byte[] source) {
+        String name = file.getFileName().toString();
+        if (!name.toLowerCase(java.util.Locale.ROOT).endsWith(".png")) {
+            return source;
+        }
+        Path cache = file.resolveSibling(name.substring(0, name.length() - 4) + ".thumb.png");
+        try {
+            if (Files.isRegularFile(cache)
+                    && Files.getLastModifiedTime(cache).compareTo(Files.getLastModifiedTime(file)) >= 0) {
+                return Files.readAllBytes(cache);
+            }
+            BufferedImage image = ImageIO.read(new java.io.ByteArrayInputStream(source));
+            if (image == null) {
+                return source;
+            }
+            int maxEdge = Math.max(image.getWidth(), image.getHeight());
+            if (maxEdge <= THUMB_MAX_EDGE) {
+                return source;
+            }
+            double ratio = (double) THUMB_MAX_EDGE / maxEdge;
+            int width = Math.max(1, (int) Math.round(image.getWidth() * ratio));
+            int height = Math.max(1, (int) Math.round(image.getHeight() * ratio));
+            BufferedImage small = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+            Graphics2D graphics = small.createGraphics();
+            graphics.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            graphics.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING,
+                    java.awt.RenderingHints.VALUE_RENDER_QUALITY);
+            graphics.drawImage(image, 0, 0, width, height, null);
+            graphics.dispose();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            if (!ImageIO.write(small, "png", out)) {
+                return source;
+            }
+            byte[] bytes = out.toByteArray();
+            try {
+                Files.write(cache, bytes);
+            } catch (Exception ignored) {
+                // 缓存写不进去不影响本次响应，下次再算一遍即可
+            }
+            return bytes.length < source.length ? bytes : source;
+        } catch (Exception e) {
+            log.debug("[EduMarking] 答卷图片缩略图生成跳过: {}", file.getFileName(), e);
+            return source;
+        }
+    }
+
+    /**
+     * 把答卷图片压缩成灰度 PNG（无损，只在该图本来就是黑白扫描件时生效）。
+     *
+     * <p>扫描/拍照得到的答卷基本都是「白纸黑字」，像素的 R/G/B 三个通道几乎相同，
+     * 但保存 PNG 时用的是真彩色（colorType=2），每个像素白占 3 倍空间。实测
+     * 1240x1800 的一页：原图 171KB，转 8 位灰度 PNG 后 85KB，肉眼无差别。</p>
+     *
+     * <p>转换结果落盘缓存（{@code xxx.gray.png}），后续请求直接读缓存，不再解码；
+     * 源图更新后按修改时间自动失效。任何一步失败都原样返回原始字节 —— 图片能看
+     * 比图片更小重要。</p>
+     *
+     * @param file 原始图片路径
+     * @param raw  原始图片字节
+     * @return 用于响应的图片字节（可能已换成灰度版）
+     */
+    private static byte[] shrinkSheetImage(Path file, byte[] raw) {
+        String name = file.getFileName().toString();
+        if (!name.toLowerCase(java.util.Locale.ROOT).endsWith(".png")) {
+            return raw;
+        }
+        Path cache = file.resolveSibling(name.substring(0, name.length() - 4) + ".gray.png");
+        try {
+            if (Files.isRegularFile(cache)
+                    && Files.getLastModifiedTime(cache).compareTo(Files.getLastModifiedTime(file)) >= 0) {
+                return Files.readAllBytes(cache);
+            }
+            BufferedImage image = ImageIO.read(file.toFile());
+            if (image == null || !isNearGray(image)) {
+                return raw;
+            }
+            BufferedImage gray = new BufferedImage(image.getWidth(), image.getHeight(),
+                    BufferedImage.TYPE_BYTE_GRAY);
+            Graphics2D graphics = gray.createGraphics();
+            graphics.drawImage(image, 0, 0, null);
+            graphics.dispose();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            if (!ImageIO.write(gray, "png", out)) {
+                return raw;
+            }
+            byte[] bytes = out.toByteArray();
+            // 灰度版反而更大说明这张图不是真正的黑白扫描件，保留原图
+            if (bytes.length >= raw.length) {
+                return raw;
+            }
+            try {
+                Files.write(cache, bytes);
+            } catch (Exception ignored) {
+                // 缓存写不进去不影响本次响应，下次再算一遍即可
+            }
+            return bytes;
+        } catch (Exception e) {
+            log.debug("[EduMarking] 答卷图片灰度压缩跳过: {}", file.getFileName(), e);
+            return raw;
+        }
+    }
+
+    /**
+     * 判断图片是否近似灰度（黑白扫描件）。
+     *
+     * <p>按网格抽样，只统计「最亮通道与最暗通道相差不超过 {@value #GRAY_TOLERANCE}」的像素；
+     * 抽样中 97% 以上满足才算灰度。留 3% 余量是为了容忍纸面上的彩色印章、红笔批注 ——
+     * 少量彩色笔迹转灰也不会影响阅卷，而整页彩色照片（偏差远超阈值）不会被误转。</p>
+     *
+     * @param image 图片
+     * @return true 表示可以安全地转成灰度
+     */
+    static boolean isNearGray(BufferedImage image) {
+        int stepX = Math.max(1, image.getWidth() / 200);
+        int stepY = Math.max(1, image.getHeight() / 300);
+        long total = 0;
+        long gray = 0;
+        for (int y = 0; y < image.getHeight(); y += stepY) {
+            for (int x = 0; x < image.getWidth(); x += stepX) {
+                int rgb = image.getRGB(x, y);
+                int r = (rgb >> 16) & 0xFF;
+                int g = (rgb >> 8) & 0xFF;
+                int b = rgb & 0xFF;
+                int max = Math.max(r, Math.max(g, b));
+                int min = Math.min(r, Math.min(g, b));
+                total++;
+                if (max - min <= GRAY_TOLERANCE) {
+                    gray++;
+                }
+            }
+        }
+        return total > 0 && gray * 100 >= total * 97;
     }
 
     /**
@@ -2646,6 +2882,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             Map<String, Object> detail = parseJsonMap(r.getMarkingResultDetail());
             Object no = detail.get("recognizedNo");
             Object answer = detail.get("studentAnswer");
+            // 与 getStructure 同口径：旧行里「印刷尾段 + 作答」按切分规则修正后再返回，
+            // 老师在工作台与详情页看到的是同一份作答。
+            answer = MarkingBlankRule.repairPrintedSplit(
+                    detail.get("stem") == null ? null : String.valueOf(detail.get("stem")),
+                    answer == null ? null : String.valueOf(answer)).answer();
             // 扫描链路 detail 里存的是判分实际采用的卷面满分，优先用它，
             // 避免「得分 10 / 满分 5」这类满分口径错位（教师修正上限同源）
             Integer detailMax = parseDetailMaxScoreOrNull(r.getMarkingResultDetail());
@@ -3260,5 +3501,281 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         int ceiling = maxScore == null ? score : Math.max(maxScore, 0);
         return Math.min(Math.max(score, 0), ceiling);
+    }
+
+    /**
+     * 把外来卷识别出的题目加入题库。
+     *
+     * <p>逐条处理、单条失败不影响其余：题库侧有 {@code uk_edu_question_stem} 唯一键，
+     * 同一题干重复提交时必须给出「已存在」而不是整体报错。</p>
+     *
+     * @param taskId 任务业务标识
+     * @param dto    入题库请求
+     * @return 逐条容错的入库结果
+     */
+    @Override
+    public MarkingToBankResultVO addToQuestionBank(String taskId, MarkingToBankDTO dto) {
+        if (dto == null || dto.resultIds() == null || dto.resultIds().isEmpty()) {
+            throw new BusinessException("请先勾选要加入题库的题目");
+        }
+        if (!StringUtils.hasText(dto.questionSubject())) {
+            throw new BusinessException("请填写学科");
+        }
+        if (!StringUtils.hasText(dto.questionGradeLevel())) {
+            throw new BusinessException("请选择学段");
+        }
+        if (!StringUtils.hasText(dto.questionGrade())) {
+            throw new BusinessException("请填写年级");
+        }
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        // 自有卷本就是题库来的：再入库只会造重复题目，服务端直接拒绝（前端也不给入口）
+        if (!isAnyMode(task)) {
+            throw new BusinessException("自有卷的题目来自题库，无需再次加入题库");
+        }
+        EduUserContext.checkWritable(task.getOwnerUserId());
+
+        String subject = dto.questionSubject().trim();
+        String gradeLevel = GradeLevels.normalize(dto.questionGradeLevel().trim());
+        String grade = dto.questionGrade().trim();
+        int difficulty = dto.questionDifficulty() == null ? 3 : Math.min(5, Math.max(1, dto.questionDifficulty()));
+        Map<Long, String> suppliedAnswers = dto.answers() == null ? Map.of() : dto.answers();
+
+        List<String> errors = new ArrayList<>();
+        List<String> needAnswerNos = new ArrayList<>();
+        int success = 0;
+        int duplicate = 0;
+        Set<Long> seen = new HashSet<>();
+        for (Long resultId : dto.resultIds()) {
+            if (resultId == null || !seen.add(resultId)) {
+                continue;
+            }
+            EduMarkingResult row = markingResultMapper.selectById(resultId);
+            if (row == null || !taskId.equals(row.getMarkingResultTaskId())) {
+                // 只接受本任务的题目：避免拿别的任务的 resultId 越权写入题库
+                errors.add("结果行 " + resultId + " 不属于该任务");
+                continue;
+            }
+            Map<String, Object> detail = parseJsonMap(row.getMarkingResultDetail());
+            String no = displayNo(detail.get("recognizedNo"));
+            String stem = detail.get("stem") == null ? null : String.valueOf(detail.get("stem")).trim();
+            if (!StringUtils.hasText(stem)) {
+                errors.add(label(no) + "没有识别出题干，无法入库");
+                continue;
+            }
+            int maxScore = safeScore(parseDetailMaxScoreOrNull(row.getMarkingResultDetail()));
+            if (maxScore <= 0) {
+                maxScore = properties.getMarking().getMaxScore();
+            }
+            int finalScore = row.getMarkingResultTeacherScore() != null
+                    ? row.getMarkingResultTeacherScore()
+                    : safeScore(row.getMarkingResultAiScore());
+            boolean full = finalScore >= maxScore;
+
+            // 标准答案：老师补写优先；没补写时只有「本次判满分」才用学生作答代替
+            // （答对即正确解），判错的题不能把错误作答当标准答案写进题库。
+            String answer = suppliedAnswers.get(resultId);
+            if (!StringUtils.hasText(answer)) {
+                if (!full) {
+                    needAnswerNos.add(no);
+                    continue;
+                }
+                answer = detail.get("studentAnswer") == null
+                        ? null : String.valueOf(detail.get("studentAnswer")).trim();
+            }
+            if (!StringUtils.hasText(answer)) {
+                needAnswerNos.add(no);
+                continue;
+            }
+
+            String type = guessQuestionType(stem, answer);
+            String options = "SINGLE_CHOICE".equals(type) || "MULTIPLE_CHOICE".equals(type)
+                    ? toJsonOptions(stem) : null;
+            String bankStem = options == null ? stem : stripOptionsFromStem(stem);
+            int score = dto.questionScore() != null && dto.questionScore() > 0
+                    ? dto.questionScore() : maxScore;
+
+            QuestionSaveDTO saveDto = new QuestionSaveDTO(
+                    null, type, subject, gradeLevel, grade, null, difficulty, score,
+                    null, bankStem, null, options, answer,
+                    null,
+                    "外来卷识别入库（任务 " + taskId + " 第 " + (StringUtils.hasText(no) ? no : resultId) + " 题）",
+                    SOURCE_TYPE_SCAN, null, null, false, 1, task.getOwnerUserId());
+            try {
+                if (questionMapper.countSameQuestion(bankStem, subject, task.getOwnerUserId()) > 0) {
+                    duplicate++;
+                    continue;
+                }
+                questionService.saveQuestion(saveDto);
+                success++;
+            } catch (Exception e) {
+                String msg = rootCauseMessage(e);
+                log.warn("[EduAi] 外来卷入题库失败: taskId={}, no={}, err={}", taskId, no, msg);
+                // 唯一键冲突（并发重复提交）按「已存在」处理，不算失败
+                if (msg.contains("uk_edu_question_stem") || msg.contains("Duplicate entry")
+                        || msg.contains("question_stem")) {
+                    duplicate++;
+                } else {
+                    errors.add(label(no) + "：" + msg);
+                }
+            }
+        }
+        log.info("[EduAi] 外来卷入题库: taskId={}, 选中={}, 成功={}, 重复={}, 失败={}, 缺答案={}",
+                taskId, dto.resultIds().size(), success, duplicate, errors.size(), needAnswerNos.size());
+        return new MarkingToBankResultVO(success, duplicate, errors.size(), errors, needAnswerNos);
+    }
+
+    /**
+     * 判断任务是否为「任意卷」（外来卷）。
+     *
+     * @param task 阅卷任务
+     * @return true 表示外来卷
+     */
+    private static boolean isAnyMode(EduMarkingTask task) {
+        return "ANY".equalsIgnoreCase(task.getMarkingTaskMode() == null ? "" : task.getMarkingTaskMode());
+    }
+
+    /**
+     * 题号展示用：去掉结尾的 {@code .} / {@code 、} 等分隔符。
+     *
+     * @param raw 识别出的原始题号
+     * @return 展示题号；为空时返回空串
+     */
+    private static String displayNo(Object raw) {
+        if (raw == null) {
+            return "";
+        }
+        return String.valueOf(raw).trim().replaceAll("[.、．:：]+$", "").trim();
+    }
+
+    /**
+     * 拼「第 N 题」前缀，没有题号时退回中性描述。
+     *
+     * @param no 展示题号
+     * @return 逐条结果用的题目标签
+     */
+    private static String label(String no) {
+        return StringUtils.hasText(no) ? "第 " + no + " 题" : "该题";
+    }
+
+    /**
+     * 取异常根因的单行消息。
+     *
+     * <p>MyBatis 的异常消息是「### Error updating database.」这类多行摘要，
+     * 真正的根因（如 {@code CONSTRAINT xxx failed}）在 {@code getCause()} 里，
+     * 此前直接取 {@code e.getMessage()} 会把真因吞掉、只剩一个空白的「第 1 题」。</p>
+     *
+     * @param e 异常
+     * @return 根因单行消息（超长截断）；取不到时退回异常类名
+     */
+    private static String rootCauseMessage(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String msg = root.getMessage();
+        if (!StringUtils.hasText(msg)) {
+            msg = e.getMessage();
+        }
+        if (!StringUtils.hasText(msg)) {
+            return root.getClass().getSimpleName();
+        }
+        String line = msg.lines().filter(StringUtils::hasText).findFirst().orElse(msg).trim();
+        return line.length() > 120 ? line.substring(0, 120) + "…" : line;
+    }
+
+    /**
+     * 从题干与作答特征推断题型。
+     *
+     * <p>外来卷没有题型字段，只能按形态判断：带成组选项 → 选择；作答是判定符号/「判断」字样 → 判断；
+     * 题干含填空横线 → 填空；其余按简答。推断只影响题库里的分类与后续组卷筛选，
+     * 老师在题库管理里可随时改正。</p>
+     *
+     * @param stem   题干
+     * @param answer 标准答案（用于判断题判定）
+     * @return 题型码值
+     */
+    static String guessQuestionType(String stem, String answer) {
+        String text = stem == null ? "" : stem;
+        boolean hasA = text.matches("(?s).*(^|[\\s；;\\n])[AＡ][.、．].*");
+        boolean hasB = text.matches("(?s).*(^|[\\s；;\\n])[BＢ][.、．].*");
+        boolean hasC = text.matches("(?s).*(^|[\\s；;\\n])[CＣ][.、．].*");
+        if (hasA && hasB) {
+            // 选项超过一个「多选」判据：题干出现「多选」「选出所有」等字样才认为是多选
+            boolean multi = text.contains("多选") || text.contains("所有正确") || text.contains("不止一项");
+            return multi && hasC ? "MULTIPLE_CHOICE" : "SINGLE_CHOICE";
+        }
+        String ans = answer == null ? "" : answer.trim();
+        if (ans.matches("[√✓×✗对错TFtf]") || ans.matches("(正确|错误|对|错)")) {
+            return "JUDGE";
+        }
+        if (text.contains("____") || text.contains("＿＿") || text.contains("（  ）") || text.contains("(  )")) {
+            return "FILL";
+        }
+        return "SHORT_ANSWER";
+    }
+
+    /**
+     * 从题干里抽出选项，转成题库要求的 JSON 数组文本。
+     *
+     * <p>{@code edu_question.question_options} 是 JSON 列且带
+     * {@code CHECK (json_valid(...))}：纯文本（如「A.甲\nB.乙」）会被约束拒绝。
+     * 题库页保存选项时也是 {@code JSON.stringify(数组)}，这里保持同一口径。</p>
+     *
+     * @param stem 题干原文
+     * @return 选项 JSON 数组文本；无成组选项时返回 {@code null}（列为 NULL 才过约束）
+     */
+    static String toJsonOptions(String stem) {
+        if (StringUtils.isBlank(stem)) {
+            return null;
+        }
+        List<String> options = extractOptions(stem);
+        return options.size() >= 2 ? Json.toJson(options) : null;
+    }
+
+    /**
+     * 去掉题干里的选项，只留问题本身（选项单独存题库选项字段）。
+     *
+     * <p>识别口径与 {@link #extractOptions} 一致：行首 `A.…` 整行、或题干内
+     * 空格分隔的 `A.… B.… C.…` 行内选项一并移除。无法剔出干净题干时退回原文。</p>
+     *
+     * @param stem 题干原文
+     * @return 去掉选项后的题干；结果为空时退回原文
+     */
+    static String stripOptionsFromStem(String stem) {
+        String out = stem.replaceAll("(?<![A-Za-z0-9])\\s*[A-DＡ-Ｄ][.、．][^\\s；;\\n]*", "");
+        String trimmed = out.replaceAll("\\s{2,}", " ").trim();
+        return StringUtils.hasText(trimmed) ? trimmed : out.trim();
+    }
+
+    /**
+     * 从题干里抽出选项列表，兼容两种卷面形态：
+     * <ul>
+     *   <li>成行选项（OCR 通常把每个选项拆成独立一行）：`A.完壁归赵\nB.守株待兔\nC.画龙点精`；</li>
+     *   <li>行内选项（整题一行、选项间空格分隔）：`（） A.90 B.95 C.100 D.110`。</li>
+     * </ul>
+     * 判断口径与 {@link #guessQuestionType} 一致：选项字母前必须是行首或空白/分号，
+     * 避免把题干里的「A.」引用当成选项。
+     *
+     * @param stem 题干原文
+     * @return 匹配到的选项条目；不足 2 个返回空列表（题库要求至少两个选项）
+     */
+    private static List<String> extractOptions(String stem) {
+        List<String> options = new ArrayList<>();
+        if (StringUtils.isBlank(stem)) {
+            return options;
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?m)(^|[\\s；;\\n])[A-DＡ-Ｄ][.、．][^\\s；;\\n]*(?=[\\s；;\\n]|$)")
+                .matcher(stem);
+        while (m.find()) {
+            String item = m.group().replaceAll("^[\\s；;\\n]+", "").trim();
+            if (!item.isEmpty() && options.size() < 10) {
+                options.add(item);
+            }
+        }
+        return options;
     }
 }

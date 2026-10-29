@@ -127,4 +127,94 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         }
         return true;
     }
+
+    @Override
+    public boolean pushDevice(DeviceInfo device) {
+        if (device == null || !StringUtils.hasText(device.getDeviceInfoId())) {
+            return false;
+        }
+        DeviceProvider provider = findProvider(device.getDeviceInfoVendor());
+        if (provider == null) {
+            log.warn("[Device][Push] 未注册厂商 Provider: vendor={}", device.getDeviceInfoVendor());
+            return false;
+        }
+        VendorDevice remote = toRemoteDevice(device);
+        boolean ok;
+        try {
+            ok = provider.upsertRemote(remote);
+        } catch (Exception e) {
+            log.warn("[Device][Push] 厂商 {} 写回设备失败: {}, message={}",
+                    provider.getVendor(), device.getDeviceInfoId(), e.getMessage());
+            return false;
+        }
+        log.info("[Device][Push] 厂商 {} 写回设备: id={}, externalId={}, result={}",
+                provider.getVendor(), device.getDeviceInfoId(), device.getDeviceInfoExternalId(), ok);
+        return ok;
+    }
+
+    @Override
+    public boolean removeRemote(DeviceInfo device) {
+        if (device == null || !StringUtils.hasText(device.getDeviceInfoExternalId())) {
+            return false;
+        }
+        DeviceProvider provider = findProvider(device.getDeviceInfoVendor());
+        if (provider == null) {
+            log.warn("[Device][Push] 删除远端设备失败：未注册厂商 Provider: vendor={}", device.getDeviceInfoVendor());
+            return false;
+        }
+        boolean ok;
+        try {
+            ok = provider.removeRemote(device.getDeviceInfoExternalId());
+        } catch (Exception e) {
+            log.warn("[Device][Push] 厂商 {} 删除设备失败: id={}, message={}",
+                    provider.getVendor(), device.getDeviceInfoId(), e.getMessage());
+            return false;
+        }
+        log.info("[Device][Push] 厂商 {} 删除远端设备: id={}, externalId={}, result={}",
+                provider.getVendor(), device.getDeviceInfoId(), device.getDeviceInfoExternalId(), ok);
+        return ok;
+    }
+
+    /**
+     * 按厂商标识取已注册 Provider
+     *
+     * @param vendor 厂商标识
+     * @return Provider；未注册返回 {@code null}
+     */
+    private DeviceProvider findProvider(String vendor) {
+        if (!StringUtils.hasText(vendor)) {
+            return null;
+        }
+        return providers.stream()
+                .filter(p -> vendor.equalsIgnoreCase(p.getVendor()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * 本地台账设备 → 厂商侧传输模型（写回用）。
+     *
+     * <p>externalId 缺省时用序列号兜底，与拉取方向的幂等键口径保持一致。</p>
+     *
+     * @param device 本地设备
+     * @return 厂商设备条目
+     */
+    private VendorDevice toRemoteDevice(DeviceInfo device) {
+        String externalId = StringUtils.hasText(device.getDeviceInfoExternalId())
+                ? device.getDeviceInfoExternalId()
+                : device.getDeviceInfoSerial();
+        return new VendorDevice(
+                externalId,
+                device.getDeviceInfoName(),
+                device.getDeviceInfoModel(),
+                device.getDeviceInfoCategory(),
+                device.getDeviceInfoSerial(),
+                device.getDeviceInfoIp(),
+                device.getDeviceInfoPort(),
+                device.getDeviceInfoAddress(),
+                device.getDeviceInfoLatitude(),
+                device.getDeviceInfoLongitude(),
+                device.getDeviceInfoChannelCount(),
+                device.getDeviceInfoOnline());
+    }
 }

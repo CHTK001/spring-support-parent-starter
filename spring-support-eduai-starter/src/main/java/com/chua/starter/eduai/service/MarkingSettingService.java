@@ -1,29 +1,44 @@
 package com.chua.starter.eduai.service;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.model.vo.MarkingSettingVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Locale;
 
 /**
  * 阅卷运行时设置服务。
  *
- * <p>取值优先级：{@code edu_app_config} 键值表（系统配置弹窗写入） &gt; application.yml
- * 的 {@code plugin.eduai.*} 默认值。把两者合成一处，避免「重试配置」与「识别策略」
- * 各自散落在调用点，日后新增项只改这里。</p>
+ * <p>数据来源为 AI 全局设置表 {@code sys_ai_global_setting} 的 {@code marking} 分组
+ * （由 {@code MarkingGlobalSettingProvider} 定义、AI 配置中心「试卷配置」页维护），
+ * 与 {@code paper} 分组并列；未配置的项回落到 application.yml 的 {@code plugin.eduai.*} 默认值。</p>
+ *
+ * <p>为什么走 {@link GlobalSettingReader#getStrDirect(String, String)}：设置页保存后写的是
+ * <b>全局层</b>，而 {@code getStr} 会优先读当前用户的覆盖层并走 Redis 缓存 —— 阅卷是后台任务、
+ * 常常没有登录用户上下文，用合并视图会「页面保存了、判分却按旧值跑」。直读全局层与
+ * runtime / paper 两个系统分组同口径。</p>
  *
  * <p>设置会被判分热路径（每题一次模型调用）读取，直接查库开销过大，因此这里做了一层
- * 约 {@value #CACHE_TTL_MILLIS} 毫秒的快照缓存：既避免把 MySQL 打满，又保证弹窗保存后
- * 秒级生效。保存时主动失效缓存，改完立即起作用。</p>
+ * 约 {@value #CACHE_TTL_MILLIS} 毫秒的快照缓存：既避免把 MySQL 打满，又保证页面保存后
+ * 秒级生效。</p>
  *
  * @since 4.0.0.42
  * @author CH
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MarkingSettingService {
+
+    /**
+     * 全局设置分组标识
+     */
+    private static final String GROUP = "marking";
 
     /**
      * 快照缓存有效期（毫秒）
@@ -35,9 +50,23 @@ public class MarkingSettingService {
      */
     private static final String STRATEGY_WHOLE = "whole";
 
+    /**
+     * 匹配模式：严谨（作答必须落在空内）
+     */
+    public static final String MATCH_MODE_STRICT = "strict";
+
+    /**
+     * 匹配模式：宽松（只看文本相似度，不做位置门禁）
+     */
+    public static final String MATCH_MODE_LOOSE = "loose";
+
     private final EduAiProperties properties;
 
-    private final EduAppConfigService appConfigService;
+    /**
+     * 全局设置读取器（ai-starter 装配；缺失时全部回落到 YAML 默认值）
+     */
+    @Autowired(required = false)
+    private GlobalSettingReader globalSettingReader;
 
     /**
      * 当前生效的设置快照（缓存）
@@ -52,7 +81,7 @@ public class MarkingSettingService {
     /**
      * 读取当前生效的阅卷设置（带短时缓存）
      *
-     * @return 合并后的设置；弹窗未保存过任何项时等于 application.yml 的默认值
+     * @return 合并后的设置；未保存过任何项时等于 application.yml 的默认值
      */
     public MarkingSettingVO resolved() {
         MarkingSettingVO snapshot = this.cached;
@@ -66,31 +95,25 @@ public class MarkingSettingService {
     }
 
     /**
-     * 写入阅卷设置：逐项落到键值表，并失效缓存使其立即生效。
+     * 当前匹配模式
      *
-     * @param setting 设置；非法值按兜底规则纠正后入库
+     * @return {@link #MATCH_MODE_STRICT} 或 {@link #MATCH_MODE_LOOSE}
      */
-    public void save(MarkingSettingVO setting) {
-        if (setting == null) {
-            return;
-        }
-        appConfigService.set(EduAppConfigService.KEY_MARKING_RETRY_TIMES,
-                String.valueOf(Math.max(0, setting.getRetryTimes())));
-        appConfigService.set(EduAppConfigService.KEY_MARKING_RETRY_BACKOFF_MILLIS,
-                String.valueOf(setting.getRetryBackoffMillis() > 0 ? setting.getRetryBackoffMillis() : 1000L));
-        appConfigService.set(EduAppConfigService.KEY_MARKING_RETRY_BACKOFF_MULTIPLIER,
-                String.valueOf(setting.getRetryBackoffMultiplier() > 1 ? setting.getRetryBackoffMultiplier() : 2.0D));
-        appConfigService.set(EduAppConfigService.KEY_MARKING_RETRY_MAX_BACKOFF_MILLIS,
-                String.valueOf(setting.getRetryMaxBackoffMillis() > 0 ? setting.getRetryMaxBackoffMillis() : 15000L));
-        appConfigService.set(EduAppConfigService.KEY_MARKING_RETRY_ON_TRANSIENT,
-                setting.isRetryOnTransient() ? "1" : "0");
-        appConfigService.set(EduAppConfigService.KEY_MARKING_EXTRACT_STRATEGY, normalizeStrategy(setting.getExtractStrategy()));
-        appConfigService.set(EduAppConfigService.KEY_MARKING_PROMPT, setting.getMarkingPrompt());
-        this.cached = null;
+    public String matchMode() {
+        return resolved().getMatchMode();
     }
 
     /**
-     * 从键值表 + 默认值合并出一份设置
+     * 是否严谨模式：学生作答必须落在空内，否则不得分
+     *
+     * @return true 表示严谨模式
+     */
+    public boolean strictMatch() {
+        return MATCH_MODE_STRICT.equals(matchMode());
+    }
+
+    /**
+     * 从全局设置表 + YAML 默认值合并出一份设置
      *
      * @return 设置
      */
@@ -98,27 +121,121 @@ public class MarkingSettingService {
         EduAiProperties.Retry defaults = retryDefaults();
         MarkingSettingVO setting = new MarkingSettingVO();
 
-        Integer times = appConfigService.getInteger(EduAppConfigService.KEY_MARKING_RETRY_TIMES);
-        setting.setRetryTimes(times != null ? Math.max(0, times) : defaults.getTimes());
-
-        Long backoff = appConfigService.getLong(EduAppConfigService.KEY_MARKING_RETRY_BACKOFF_MILLIS);
-        setting.setRetryBackoffMillis(backoff != null && backoff > 0 ? backoff : defaults.getBackoffMillis());
-
-        Double multiplier = appConfigService.getDouble(EduAppConfigService.KEY_MARKING_RETRY_BACKOFF_MULTIPLIER);
-        setting.setRetryBackoffMultiplier(
-                multiplier != null && multiplier > 1 ? multiplier : defaults.getBackoffMultiplier());
-
-        Long maxBackoff = appConfigService.getLong(EduAppConfigService.KEY_MARKING_RETRY_MAX_BACKOFF_MILLIS);
-        setting.setRetryMaxBackoffMillis(
-                maxBackoff != null && maxBackoff > 0 ? maxBackoff : defaults.getMaxBackoffMillis());
-
-        Boolean retryOnTransient = appConfigService.getBoolean(EduAppConfigService.KEY_MARKING_RETRY_ON_TRANSIENT);
-        setting.setRetryOnTransient(retryOnTransient != null ? retryOnTransient : defaults.isRetryOnTransient());
-
-        String strategy = appConfigService.getText(EduAppConfigService.KEY_MARKING_EXTRACT_STRATEGY);
-        setting.setExtractStrategy(strategy != null ? normalizeStrategy(strategy) : defaultStrategy());
-        setting.setMarkingPrompt(appConfigService.getText(EduAppConfigService.KEY_MARKING_PROMPT));
+        setting.setRetryTimes(readInt("retry_times", defaults.getTimes()));
+        setting.setRetryBackoffMillis(readLong("retry_backoff_millis", defaults.getBackoffMillis()));
+        setting.setRetryBackoffMultiplier(readDouble("retry_backoff_multiplier", defaults.getBackoffMultiplier()));
+        setting.setRetryMaxBackoffMillis(readLong("retry_max_backoff_millis", defaults.getMaxBackoffMillis()));
+        setting.setRetryOnTransient(readBool("retry_on_transient", defaults.isRetryOnTransient()));
+        setting.setExtractStrategy(normalizeStrategy(read("extract_strategy", defaultStrategy())));
+        setting.setMatchMode(normalizeMatchMode(read("match_mode", MATCH_MODE_STRICT)));
+        setting.setMarkingPrompt(read("marking_system_prompt", ""));
+        // 兜底纠偏：页面上可能填了非法值（负数 / 0 / 倍数 <=1），判分前统一按默认规则纠正
+        if (setting.getRetryTimes() < 0) {
+            setting.setRetryTimes(defaults.getTimes());
+        }
+        if (setting.getRetryBackoffMillis() <= 0) {
+            setting.setRetryBackoffMillis(defaults.getBackoffMillis());
+        }
+        if (setting.getRetryBackoffMultiplier() <= 1) {
+            setting.setRetryBackoffMultiplier(defaults.getBackoffMultiplier());
+        }
+        if (setting.getRetryMaxBackoffMillis() <= 0) {
+            setting.setRetryMaxBackoffMillis(defaults.getMaxBackoffMillis());
+        }
         return setting;
+    }
+
+    /**
+     * 读取一个字段的字符串值；全局设置读取器缺失时返回兜底值
+     *
+     * @param field        字段名
+     * @param defaultValue 兜底值
+     * @return 字段值
+     */
+    private String read(String field, String defaultValue) {
+        if (globalSettingReader == null) {
+            return defaultValue;
+        }
+        try {
+            String value = globalSettingReader.getStrDirect(GROUP, field);
+            return StringUtils.hasText(value) ? value.trim() : defaultValue;
+        } catch (Exception e) {
+            log.debug("[MarkingSetting] 读取全局设置失败(field={}): {}", field, e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 读取整型字段
+     *
+     * @param field        字段名
+     * @param defaultValue 兜底值
+     * @return 字段值
+     */
+    private int readInt(String field, int defaultValue) {
+        String raw = read(field, null);
+        if (raw == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 读取长整型字段
+     *
+     * @param field        字段名
+     * @param defaultValue 兜底值
+     * @return 字段值
+     */
+    private long readLong(String field, long defaultValue) {
+        String raw = read(field, null);
+        if (raw == null) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(raw);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 读取浮点字段
+     *
+     * @param field        字段名
+     * @param defaultValue 兜底值
+     * @return 字段值
+     */
+    private double readDouble(String field, double defaultValue) {
+        String raw = read(field, null);
+        if (raw == null) {
+            return defaultValue;
+        }
+        try {
+            return Double.parseDouble(raw);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 读取布尔字段
+     *
+     * @param field        字段名
+     * @param defaultValue 兜底值
+     * @return 字段值
+     */
+    private boolean readBool(String field, boolean defaultValue) {
+        String raw = read(field, null);
+        if (raw == null) {
+            return defaultValue;
+        }
+        String lower = raw.toLowerCase(Locale.ROOT);
+        return "true".equals(lower) || "1".equals(lower) || "yes".equals(lower);
     }
 
     /**
@@ -153,5 +270,19 @@ public class MarkingSettingService {
         return strategy == null || strategy.isBlank()
                 ? STRATEGY_WHOLE
                 : strategy.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 规范化匹配模式：只认 strict / loose，其余回退严谨
+     *
+     * @param mode 原始模式
+     * @return 规范化后的模式 key
+     */
+    private static String normalizeMatchMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return MATCH_MODE_STRICT;
+        }
+        String normalized = mode.trim().toLowerCase(Locale.ROOT);
+        return MATCH_MODE_LOOSE.equals(normalized) ? MATCH_MODE_LOOSE : MATCH_MODE_STRICT;
     }
 }

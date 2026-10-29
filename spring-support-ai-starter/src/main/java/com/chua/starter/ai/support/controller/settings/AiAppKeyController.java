@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.controller.settings;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * appKey 控制器，提供 appKey 的增删改查与启停切换。
@@ -83,13 +87,35 @@ public class AiAppKeyController {
      * @param appKeyId appKey 主键
      * @return 操作结果
      * @param ID" 标识"
-     * @param ID" 标识"
-     * @param ID" ID"
      */
     @Operation(summary = "删除 AppKey")
     @DeleteMapping("/{appKeyId}")
     public ReturnResult<Void> delete(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId) {
         return appKeyService.delete(appKeyId);
+    }
+
+    /**
+     * 批量删除 AppKey。
+     *
+     * <p>与 {@link #delete(Long)} 同口径：写出口归属守卫整批过完后才删，
+     * 有问题的行直接拦截，不出现部分删除。</p>
+     *
+     * @param body 请求体，须含 {@code ids} 列表
+     * @return 包含 success 与 deletedCount 的结果
+     */
+    @Operation(summary = "批量删除 AppKey")
+    @DeleteMapping("/batch")
+    public ReturnResult<Map<String, Object>> batchDelete(@RequestBody Map<String, ?> body) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = body == null ? null : (List<Long>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
+        }
+        int deleted = appKeyService.batchDelete(ids);
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", true);
+        result.put("deletedCount", deleted);
+        return ReturnResult.ok(result);
     }
 
     /**

@@ -38,6 +38,8 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.RequiredArgsConstructor;
@@ -285,6 +287,7 @@ public class RagClientManager implements RagClientProvider {
      * 供应商模型表 Mapper：把「裸模型名」定位到其供应商，再按供应商凭据构建 ChatClient。
      */
     private final SysAiProviderModelMapper providerModelMapper;
+    private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
 
 
     /**
@@ -880,6 +883,8 @@ public class RagClientManager implements RagClientProvider {
                     ? provider.getBaseUrl().trim() : null;
             String authScheme = StringUtils.hasText(provider.getAuthScheme())
                     ? provider.getAuthScheme().trim() : null;
+            Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
+                    provider, ModelClientResolver.ownerScopeOf(provider));
             List<ChatClient> keyClients = new ArrayList<>();
             for (String apiKey : apiKeys) {
                 ChatClientSetting setting = ChatClientSetting.builder()
@@ -888,7 +893,7 @@ public class RagClientManager implements RagClientProvider {
                         .baseUrl(baseUrl)
                         .model(modelName)
                         .authScheme(authScheme)
-                        .routes(ProviderRouteTargets.fromExtra(provider.getExtra()))
+                        .routes(channelRoutes)
                         .build();
                 ChatClient c = ChatClient.create(setting);
                 if (c != null) {

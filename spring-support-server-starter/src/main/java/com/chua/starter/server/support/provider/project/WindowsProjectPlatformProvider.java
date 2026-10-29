@@ -110,6 +110,22 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
         // 非日志文件被占用必须抛出：宁可回滚报错，也不能报成功后内容没回退（robocopy 的假成功根源）
         ps.append("  catch { if ($rel -like '*\\logs\\*' -or $rel -like '*.log') { [void]$skipped.Add($rel) } else { throw } }\n");
         ps.append("}\n");
+        // 回滚不是「覆盖」而是「回到备份时刻」：升级新增的文件备份里没有，只拷回会让它们
+        // 原样留下（实测：升级前没有 app.jar，回滚后新 jar 仍在，等于没回滚）。这里按备份
+        // 清单反删「当前有、备份没有」的文件；backups 目录自身必须排除，否则历史备份全没。
+        // 必须放在 $skipped 汇总之外执行：没有任何被占用的日志文件时也要清理新增文件。
+        ps.append("$keep = New-Object 'System.Collections.Generic.HashSet[string]'\n");
+        ps.append("Get-ChildItem -LiteralPath $src -Recurse -File | ForEach-Object {\n");
+        ps.append("  if ($_.Name -eq 'app.pid' -or $_.Name -eq 'nginx.pid') { return }\n");
+        ps.append("  [void]$keep.Add($_.FullName.Substring($src.Length).Trim([char[]]'\\/'))\n");
+        ps.append("}\n");
+        ps.append("$here = (Get-Location).Path\n");
+        ps.append("Get-ChildItem -LiteralPath '.' -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {\n");
+        ps.append("  $rel = $_.FullName.Substring($here.Length).Trim([char[]]'\\/')\n");
+        ps.append("  if ($rel -eq 'app.pid' -or $_.Name -eq 'nginx.pid') { return }\n");
+        ps.append("  if ($rel -like 'backups\\*') { return }\n");
+        ps.append("  if (-not $keep.Contains($rel)) { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }\n");
+        ps.append("}\n");
         ps.append("if ($skipped.Count -gt 0) {\n");
         ps.append("  Write-Output ('rollback done, skipped locked log file(s): ' + ($skipped -join ', '))\n");
         ps.append("} else {\n");
@@ -291,7 +307,12 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
 
     @Override
     public String tailLog(String logPath, int lines) {
-        return "if (Test-Path '" + logPath + "') { Get-Content -Path '" + logPath + "' -Tail " + lines + " }";
+        return "if (Test-Path '" + logPath + "' -PathType Container) { "
+                + "$f = Get-ChildItem -Path '" + logPath + "' -File | Sort-Object LastWriteTime -Descending "
+                + "| Select-Object -First 1; if (-not $f) { Write-Output '日志目录为空: " + logPath + "' } "
+                + "else { Get-Content -Path $f.FullName -Tail " + lines + " } } "
+                + "elseif (Test-Path '" + logPath + "') { Get-Content -Path '" + logPath + "' -Tail " + lines + " } "
+                + "else { Write-Output '日志文件不存在: " + logPath + "' }";
     }
 
     @Override

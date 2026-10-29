@@ -215,6 +215,19 @@ public class FileStorageTemplate implements AutoCloseable {
     }
 
     /**
+     * 设置默认存储（当尚未设置默认时，monitor 把本地后端注册为默认）。
+     *
+     * @param name 存储名称
+     */
+    public void setDefaultStorage(String name) {
+        if (name == null || !storageMap.containsKey(name)) {
+            return;
+        }
+        this.defaultStorageName = name;
+        log.info("默认 Provider: {}", highlight(name));
+    }
+
+    /**
      * 获取Storages
      *
      * @return 获取storages的结果

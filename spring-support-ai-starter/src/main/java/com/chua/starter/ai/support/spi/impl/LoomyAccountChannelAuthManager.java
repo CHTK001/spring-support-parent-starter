@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.spi.impl;
 
+import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -682,10 +683,12 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
             clean = clean.substring(0, clean.length() - 1);
         }
         StringBuilder sb = new StringBuilder();
-        for (String segment : clean.split("/")) {
+        String[] segments = clean.split("/");
+        // 跳过 segments[0]（前导 "/" 产生的空段），避免输出 "//" 双斜杠
+        for (int i = 1; i < segments.length; i++) {
             sb.append('/');
-            if (!segment.isEmpty()) {
-                sb.append(escapeRfc3986(segment));
+            if (!segments[i].isEmpty()) {
+                sb.append(escapeRfc3986(segments[i]));
             }
         }
         return sb.toString();
@@ -738,5 +741,22 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
             }
         }
         return null;
+    }
+
+    @Override
+    public RouteTarget toRouteTarget(Map<String, Object> credentials) {
+        String accessToken = readString(credentials, "access_token");
+        if (isBlank(accessToken)) {
+            return null;
+        }
+        return RouteTarget.builder()
+                .provider("openai")
+                .baseUrl(API_BASE + "/api/v1")
+                .apiKey(accessToken)
+                .authScheme("api_key")
+                .authHeader("token")
+                .authPrefix("")
+                .autoSwitchOnRateLimit(true)
+                .build();
     }
 }
