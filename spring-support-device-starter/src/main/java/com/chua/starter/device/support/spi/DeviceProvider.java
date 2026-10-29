@@ -2,6 +2,7 @@ package com.chua.starter.device.spi;
 
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.chua.starter.device.spi.model.DeviceCapability;
+import com.chua.starter.device.spi.model.DevicePerson;
 import com.chua.starter.device.spi.model.DeviceVendorDescriptor;
 import com.chua.starter.device.spi.model.OrganizationNode;
 import com.chua.starter.device.spi.model.VendorDevice;
@@ -40,6 +41,19 @@ public interface DeviceProvider {
     DeviceSession connect(DeviceConnectInfo info);
 
     /**
+     * 按凭据建连后的会话语境拉取设备目录（凭据维度同步入口）。
+     *
+     * <p>同步服务先按凭据建连，再以该凭据的会话调用本方法，确保每个平台账号只拉取
+     * 自己名下的设备目录；厂商未反转会话版本时回退到 {@link #fetchDevices()}。</p>
+     *
+     * @param session 按凭据建连后的会话
+     * @return 厂商设备条目
+     */
+    default List<VendorDevice> fetchDevices(DeviceSession session) {
+        return fetchDevices();
+    }
+
+    /**
      * 同步厂商组织树（可选实现）
      * <p>从厂商平台拉取组织/部门列表，调用方将其落库到 {@code device_organization}。</p>
      * <p>默认返回空列表。</p>
@@ -47,6 +61,32 @@ public interface DeviceProvider {
      * @return 组织节点信息（deviceOrganizationId / device组织名称 / 父标识）
      */
     default List<OrganizationNode> fetchOrganizations() {
+        return List.of();
+    }
+
+    /**
+     * 按凭据建连后的会话语境拉取组织树（与 fetchDevices(DeviceSession) 对齐）。
+     *
+     * <p>同步服务先按凭据建连，再以该凭据的会话调用本方法，确保每个平台账号只拉取
+     * 自己名下的组织树。</p>
+     *
+     * @param session 按凭据建连后的会话
+     * @return 组织节点
+     */
+    default List<OrganizationNode> fetchOrganizations(DeviceSession session) {
+        return fetchOrganizations();
+    }
+
+    /**
+     * 按凭据建连后的会话语境拉取人员列表（与 fetchDevices(DeviceSession) 对齐）。
+     *
+     * <p>人员放入与组织表同级的 {@code device_person}（按 vendor + 厂商侧人员标识
+     * 幂等入库），不与人力的组织关系表耦合，只拉取平台可暴露的低门槛字段。</p>
+     *
+     * @param session 按凭据建连后的会话
+     * @return 人员条目（组织标识/姓名/工号）
+     */
+    default List<DevicePerson> fetchPersons(DeviceSession session) {
         return List.of();
     }
 

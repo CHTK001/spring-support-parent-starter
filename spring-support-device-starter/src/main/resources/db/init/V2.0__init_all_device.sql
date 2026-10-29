@@ -301,6 +301,26 @@ CREATE TABLE IF NOT EXISTS device_sync_outbox (
 ) COMMENT '设备变更推送队列';
 
 -- ---------------------------------------------------------------------
+-- 厂商人员表（按厂商侧人员标识幂等入库，行政归属挂接厂商侧组织标识）
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_person (
+    device_person_id            VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_person_name          VARCHAR(64) NOT NULL COMMENT '人员姓名',
+    device_person_title         VARCHAR(64) COMMENT '职称（平台未提供时为空）',
+    device_person_phone         VARCHAR(32) COMMENT '手机（平台未提供时为空）',
+    device_person_email         VARCHAR(64) COMMENT '邮箱（平台未提供时为空）',
+    device_person_vendor        VARCHAR(32) NOT NULL COMMENT '厂商标识：hikvision / dahua',
+    device_person_external_id   VARCHAR(128) NOT NULL COMMENT '厂商侧人员唯一标识',
+    device_person_org_id        VARCHAR(128) COMMENT '厂商侧组织标识（部门 ID），挂接 device_organization',
+    device_person_deleted       TINYINT     DEFAULT 0 COMMENT '已删除标记：1 已删除、0 正常',
+    device_person_created_at    DATETIME    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    device_person_updated_at    DATETIME    DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    KEY idx_person_vendor (`device_person_vendor`),
+    KEY idx_person_external (`device_person_vendor`, `device_person_external_id`),
+    KEY idx_person_org (`device_person_vendor`, `device_person_org_id`)
+) COMMENT '厂商人员表';
+
+-- ---------------------------------------------------------------------
 -- 任务配置（时间轮/可配置检查时间）
 -- （原 V1.1__add_device_asset_p0.sql，已并入本文件）
 -- ---------------------------------------------------------------------

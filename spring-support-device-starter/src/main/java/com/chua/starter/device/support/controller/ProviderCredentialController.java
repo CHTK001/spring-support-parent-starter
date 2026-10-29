@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
 import com.chua.starter.device.support.service.DeviceService;
+import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 提供商接入凭据控制器
@@ -36,6 +39,9 @@ public class ProviderCredentialController {
 
     /** 设备服务（凭据连通性测试） */
     private final DeviceService deviceService;
+
+    /** 凭据维度同步服务 */
+    private final DeviceSyncService deviceSyncService;
 
     @GetMapping("/list")
     public ReturnResult<List<DeviceProviderCredential>> list(@RequestParam(required = false) String vendor) {
@@ -101,5 +107,59 @@ public class ProviderCredentialController {
                 null,
                 null);
         return ReturnResult.ok(deviceService.testConnection(info));
+    }
+
+    /**
+     * 按凭据同步设备目录（拉取方向；落库 device_info）
+     *
+     * <p>以凭据 ID 为维度建连，只拉取该凭据名下设备目录，按 vendor + 厂商侧标识
+     * 幂等 upsert；设备台账行回写 {@code deviceInfoCredentialId}。</p>
+     *
+     * @param id 凭据 ID
+     * @return created / updated / skipped 统计
+     */
+    @PostMapping("/{id}/sync/devices")
+    public ReturnResult<Map<String, Integer>> syncDevices(@PathVariable String id) {
+        return ReturnResult.ok(deviceSyncService.syncDevicesByCredential(id));
+    }
+
+    /**
+     * 按凭据同步组织树（拉取方向；落库 device_organization）
+     *
+     * @param id 凭据 ID
+     * @return created / updated / skipped 统计
+     */
+    @PostMapping("/{id}/sync/org")
+    public ReturnResult<Map<String, Integer>> syncOrg(@PathVariable String id) {
+        return ReturnResult.ok(deviceSyncService.syncOrganizationsByCredential(id));
+    }
+
+    /**
+     * 按凭据同步人员列表（拉取方向；落库 device_person）
+     *
+     * <p>人员与组织表解耦，单建 {@code device_person}（按 vendor + 厂商侧人员标识
+     * 幂等入库），避免人员 API 结构换表时耦合到 org-person 关联表。</p>
+     *
+     * @param id 凭据 ID
+     * @return created / updated / skipped 统计
+     */
+    @PostMapping("/{id}/sync/persons")
+    public ReturnResult<Map<String, Integer>> syncPersons(@PathVariable String id) {
+        return ReturnResult.ok(deviceSyncService.syncPersonsByCredential(id));
+    }
+
+    /**
+     * 按凭据同步设备目录 + 组织树 + 人员列表（全量）
+     *
+     * @param id 凭据 ID
+     * @return 各方向的统计
+     */
+    @PostMapping("/{id}/sync")
+    public ReturnResult<Map<String, Map<String, Integer>>> syncAll(@PathVariable String id) {
+        Map<String, Map<String, Integer>> result = new LinkedHashMap<>();
+        result.put("devices", deviceSyncService.syncDevicesByCredential(id));
+        result.put("organizations", deviceSyncService.syncOrganizationsByCredential(id));
+        result.put("persons", deviceSyncService.syncPersonsByCredential(id));
+        return ReturnResult.ok(result);
     }
 }
