@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.util;
 
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.ssh.support.client.HostKeyPolicy;
 import com.chua.ssh.support.client.SshClient;
 
 import java.io.IOException;
@@ -100,10 +101,14 @@ public final class SshClients {
      */
     public static Handle open(String address, Integer port, SshCredential credential,
                               int connectTimeoutSec, int sessionTimeoutSec, long execTimeoutSec) throws IOException {
+        // 剥离 user@ 前缀：历史数据/粘贴导入可能把 ssh user@host 整行写进地址字段，
+        // MINA SSHD 的 hostname 校验器把 @ 当非法字符拒绝连接
+        String cleanAddress = stripUserPrefix(address);
         var builder = SshClient.builder()
-                .host(address)
+                .host(cleanAddress)
                 .port(port == null || port <= 0 ? DEFAULT_PORT : port)
                 .username(credential.username())
+                .hostKeyPolicy(HostKeyPolicy.INSECURE)
                 .connectTimeout(connectTimeoutSec)
                 .sessionTimeout(sessionTimeoutSec)
                 .execTimeout(execTimeoutSec);
@@ -118,7 +123,12 @@ public final class SshClients {
                 builder.password(credential.password());
             }
         } else {
-            builder.password(credential.password() == null ? "" : credential.password());
+            // NONE 认证（免密）：密码为 null，不设 password identity，
+            // 让 MINA SSHD 走 "none" 认证方法（不发送凭据），目标主机放行即通过。
+            // 之前用空串触发 password 认证，但多数服务器 PermitEmptyPasswords=no 会拒绝。
+            if (credential.password() != null) {
+                builder.password(credential.password());
+            }
         }
         /**
          * 把手。
@@ -136,6 +146,28 @@ public final class SshClients {
      */
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    /**
+     * 剥离主机地址中的 user@ 前缀。
+     *
+     * <p>历史数据或粘贴导入可能把整行 ssh 命令（{@code user@host}）写进地址字段，
+     * MINA SSHD 的 hostname 校验器把 @ 当非法字符拒绝连接。只剥前缀不改原值——
+     * 展示 {@code user@host} 反而更直观。</p>
+     *
+     * @param raw 原始地址（可能含 user@ 前缀）
+     * @return 纯主机地址（无 user@ 前缀）
+     */
+    private static String stripUserPrefix(String raw) {
+        if (raw == null || raw.isBlank()) return raw;
+        int at = raw.lastIndexOf('@');
+        if (at > 0 && at < raw.length() - 1) {
+            String afterAt = raw.substring(at + 1);
+            if (afterAt.contains(".") || afterAt.contains(":") || afterAt.contains("/")) {
+                return afterAt;
+            }
+        }
+        return raw;
     }
 
     /**

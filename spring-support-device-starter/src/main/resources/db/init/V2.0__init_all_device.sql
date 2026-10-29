@@ -143,6 +143,25 @@ CREATE TABLE IF NOT EXISTS device_door (
 ) COMMENT '设备门禁';
 
 -- ---------------------------------------------------------------------
+-- 门禁出入记录落库表
+--
+-- 定时抽取（deviceAccessExtract）把各在线会话 queryAccessRecords 的结果
+-- 按 (deviceId, occurredAt) 落库，供门禁记录页查询；不再依赖设备在线实时直查。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_access_record (
+    device_access_record_id        VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_access_record_device_id VARCHAR(32) NOT NULL COMMENT '所属设备 ID',
+    device_access_record_door_id   VARCHAR(64) COMMENT '门标识（厂商侧）',
+    device_access_record_card_no   VARCHAR(64) COMMENT '卡号',
+    device_access_record_user_name VARCHAR(100) COMMENT '人员姓名',
+    device_access_record_event_type VARCHAR(30) COMMENT '事件类型：刷卡开门 / 密码开门 / 异常 等',
+    device_access_record_direction VARCHAR(16) COMMENT '进出方向：in 进、out 出；厂商未回传为空',
+    device_access_record_photo_url VARCHAR(512) COMMENT '抓拍照片地址',
+    device_access_record_occurred_at DATETIME COMMENT '刷卡时间',
+    KEY idx_acc_device_time (`device_access_record_device_id`, `device_access_record_occurred_at`)
+) COMMENT '门禁出入记录（定时抽取落库）';
+
+-- ---------------------------------------------------------------------
 -- 提供商凭据表（厂商自定义的 AK/SK 等接入参数）
 --
 -- 为什么需要：DeviceConnectInfo 携带 appKey/appSecret/platformType，但 device_info

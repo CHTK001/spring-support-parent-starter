@@ -19,14 +19,19 @@ import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.deeplearning.support.model.PredictRectangle;
 import com.chua.starter.ai.support.configuration.face.FaceClientManager;
+import com.chua.starter.ai.support.service.AiLibraryGroups;
+import com.chua.starter.ai.support.service.FaceLibraryLinkService;
 import com.chua.starter.ai.support.service.FaceStores;
 import com.chua.starter.ai.support.service.AiFaceService;
+import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * AI 人脸识别服务实现。
@@ -51,9 +56,18 @@ public class AiFaceServiceImpl implements AiFaceService {
     private final FaceClientManager faceClientManager;
 
     /**
-     * 人脸底库门面：**按当前登录账号**路由到各自的人脸库（数据隔离 + 快照持久化）。
+     * 人脸底库门面：**按当前登录账号 + 分组**路由到各自的人脸库（数据隔离 + 快照持久化）。
      */
     private final FaceStores faceStores;
+
+    /**
+     * 底库档案（DB）联动层。
+     *
+     * <p>只用于 {@link #groups()} —— 枚举分组必须看 DB 这个权威口径，
+     * 而不是内存快照：快照是懒建的，没被访问过的分组在里面根本不存在，
+     * 用它枚举会出现「同一个账号，分组列表时多时少」。</p>
+     */
+    private final FaceLibraryLinkService library;
 
     /**
      * 取人脸管线，未启用时给出明确业务异常。
@@ -197,98 +211,121 @@ public class AiFaceServiceImpl implements AiFaceService {
     /**
      * 登记人脸入库（单独能力，取最大人脸）。
      *
+     * @param group     分组名（空值按默认组）
      * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  附加元数据
      * @return 是否登记成功
      */
     @Override
-    public boolean enroll(String id, byte[] imageData, Map<String, Object> metadata) {
+    public boolean enroll(String group, String id, byte[] imageData, Map<String, Object> metadata) {
         float[] feature = extractFeature(imageData);
-        // 走门面：入库的同时写入本账号快照（否则重启即丢 —— 改造前就是这样）
-        return faceStores.enroll(id, feature, metadata);
+        // 走门面：入库的同时写入本账号**本分组**的向量与快照（否则重启即丢 —— 改造前就是这样）
+        return faceStores.enroll(group, id, feature, metadata);
     }
 
     /**
      * 登记管线（detect → crop → liveness → 特征 → 入库，取最大人脸）。
      *
+     * @param group     分组名（空值按默认组）
      * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  附加元数据
      * @return 是否登记成功
      */
     @Override
-    public boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata) {
-        return faceStores.enrollFromImage(id, imageData, metadata);
+    public boolean enrollPipeline(String group, String id, byte[] imageData, Map<String, Object> metadata) {
+        return faceStores.enrollFromImage(group, id, imageData, metadata);
     }
 
     @Override
     /**
      * enroll特征
     */
-    public boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata) {
-        return faceStores.enroll(id, feature, metadata);
+    public boolean enrollFeature(String group, String id, float[] feature, Map<String, Object> metadata) {
+        return faceStores.enroll(group, id, feature, metadata);
     }
 
     /**
      * 1:N 人脸识别（单独能力，取最大人脸）。
      *
+     * @param groups    分组名列表（空/未指定只查默认组）
      * @param imageData 图片字节
      * @return 识别命中（TopK）
      */
     @Override
-    public FaceIdentifyHit identify(byte[] imageData) {
-        return pipeline().identifyPipelineLargest(imageData);
+    public FaceIdentifyHit identify(List<String> groups, byte[] imageData) {
+        return faceStores.identify(groups, imageData);
     }
 
     /**
      * 识别管线（detect → crop → liveness → 特征 → 检索，取最大人脸）。
      *
+     * @param groups    分组名列表（空/未指定只查默认组）
      * @param imageData 图片字节
      * @return 识别命中（TopK）
      */
     @Override
-    public FaceIdentifyHit identifyPipeline(byte[] imageData) {
-        return pipeline().identifyPipelineLargest(imageData);
+    public FaceIdentifyHit identifyPipeline(List<String> groups, byte[] imageData) {
+        // 与 identify 同一实现：门面内部已按「单组直查、多组归并」分流（见 FaceStores#identify）
+        return faceStores.identify(groups, imageData);
     }
 
     /**
      * 1:N 特征检索（单独能力）。
      *
+     * @param groups  分组名列表（空/未指定只查默认组）
      * @param feature 特征向量
      * @param topK    返回条数
      * @return 检索命中列表
      */
     @Override
-    public List<FaceSearchHit> search(float[] feature, int topK) {
-        return faceStores.currentVectorStorage().search(feature, topK)
-                .stream()
-                .map(v -> new FaceSearchHit(
-                        v.id(),
-                        /**
-                         * score的。
-                         * @param v v
-                         */
-                        scoreOf(v),
-                        v.data(),
-                        v.metadata() == null ? Map.of() : v.metadata(),
-                        v.content()))
-                .toList();
+    public List<FaceSearchHit> search(List<String> groups, float[] feature, int topK) {
+        // 门面已做跨分组归并 + 分数提取（各自取 K 条后全局排序再截断），这里不再自行映射
+        return faceStores.searchHits(groups, feature, topK);
+    }
+
+    /**
+     * 枚举当前账号已存在的分组名。
+     *
+     * <p><b>为什么读 DB 而不是遍历内存快照。</b>快照是懒建的：某个分组这次进程还没被访问过，
+     * 内存里就没有它的条目，用它枚举会「有些组时有时无」。DB（{@code sys_ai_face_library}）
+     * 是档案权威，不随访问历史变化。</p>
+     *
+     * <p>不传分组列表 = 不做分组过滤（见 {@link FaceLibraryLinkService#listMine}），
+     * 一次拿回该账号全部行；行上的 {@code group} 已是归一化后的字符串，
+     * 但历史 {@code NULL} 行仍要兜一层 normalize，故统一过一遍。</p>
+     *
+     * @return 分组名列表（去重、已排序，至少含默认组）
+     */
+    @Override
+    public List<String> groups() {
+        String account = AiUserContext.requireUserId();
+        // TreeSet 一举满足「去重 + 排序」；默认组先放进去，保证空库也能选到它
+        Set<String> collected = new TreeSet<>();
+        collected.add(AiLibraryGroups.DEFAULT);
+        for (Map<String, Object> row : library.listMine(account, List.of())) {
+            Object group = row.get("group");
+            collected.add(AiLibraryGroups.normalize(group == null ? null : String.valueOf(group)));
+        }
+        return List.copyOf(collected);
     }
 
     /**
      * 列出当前账号人脸库中已登记的条目。
      *
+     * @param group 分组名（空值按默认组）
      * @return 条目列表（id + 元数据）
      */
     @Override
-    public List<Map<String, Object>> list() {
-        return faceStores.list();
+    public List<Map<String, Object>> list(String group) {
+        return faceStores.list(group);
     }
 
     /**
      * 分页 + 关键词 + 状态筛选的条目列表（委托人脸底库门面）。
      *
+     * @param group     分组名（空值按默认组）
      * @param keyword   关键词（可空）
      * @param status    状态筛选（{@code thumb} / {@code noThumb} / 空=全部）
      * @param sortField 排序字段（可空）：{@code id} / {@code hasImage} / 或元数据键
@@ -298,54 +335,58 @@ public class AiFaceServiceImpl implements AiFaceService {
      * @return {@code items} + {@code total} + {@code stats}
      */
     @Override
-    public Map<String, Object> listPage(String keyword, String status, String sortField, String sortOrder,
+    public Map<String, Object> listPage(String group, String keyword, String status, String sortField, String sortOrder,
                                         int page, int size) {
-        return faceStores.listPage(keyword, status, sortField, sortOrder, page, size);
+        return faceStores.listPage(group, keyword, status, sortField, sortOrder, page, size);
     }
 
     /**
      * 读一条人脸登记时落存的裁剪图。
      *
-     * @param id 人脸标识
+     * @param group 分组名（空值按默认组）
+     * @param id    人脸标识
      * @return PNG 字节；未落存时返回 空
      */
     @Override
-    public byte[] faceImage(String id) {
-        return faceStores.faceImage(id);
+    public byte[] faceImage(String group, String id) {
+        return faceStores.faceImage(group, id);
     }
 
     /**
      * 读一条人脸登记时落存的原图。
      *
-     * @param id 人脸标识
+     * @param group 分组名（空值按默认组）
+     * @param id    人脸标识
      * @return 原图字节；未落存（改造前的老数据）时返回 {@code null}
      */
     @Override
-    public byte[] originalImage(String id) {
-        return faceStores.originalImage(id);
+    public byte[] originalImage(String group, String id) {
+        return faceStores.originalImage(group, id);
     }
 
     /**
      * 从当前账号人脸库删除一条。
      *
-     * @param id 人脸 标识
+     * @param group 分组名（空值按默认组）
+     * @param id    人脸 标识
      * @return 是否删除成功
      */
     @Override
-    public boolean remove(String id) {
-        return faceStores.remove(id);
+    public boolean remove(String group, String id) {
+        return faceStores.remove(group, id);
     }
 
     /**
      * 更新一条人脸的元数据（只改档案字段）。
      *
+     * @param group    分组名（空值按默认组）
      * @param id       人脸 标识
      * @param metadata 新元数据
      * @return 是否更新成功
      */
     @Override
-    public boolean updateMetadata(String id, Map<String, Object> metadata) {
-        return faceStores.updateMetadata(id, metadata);
+    public boolean updateMetadata(String group, String id, Map<String, Object> metadata) {
+        return faceStores.updateMetadata(group, id, metadata);
     }
 
     /**
@@ -591,21 +632,5 @@ public class AiFaceServiceImpl implements AiFaceService {
             return 0d;
         }
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-    }
-
-    /**
-     * 计算某条入库向量与查询向量的相似度（供 搜索 结果展示）。
-     *
-     * <p>向量库实现（Memory/JVector）在 search 时会将相似度写入向量 metadata 的 "score" 键，
-     * 此处直接读取，缺失时返回 0。</p>
-     *
-     * @param v 检索结果向量
-     * @return 相似度
-     */
-    private static double scoreOf(com.chua.common.support.vector.Vector v) {
-        if (v.metadata() != null && v.metadata().get("score") instanceof Number n) {
-            return n.doubleValue();
-        }
-        return 0d;
     }
 }

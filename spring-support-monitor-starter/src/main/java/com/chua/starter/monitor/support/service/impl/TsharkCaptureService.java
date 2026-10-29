@@ -37,9 +37,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -127,6 +129,13 @@ public class TsharkCaptureService {
     private static final String SOURCE_LIVE = "live";
     /** 会话来源：导入的 pcap 文件（{@code PCAP 分析} 页面上传的） */
     private static final String SOURCE_IMPORT = "import";
+
+    /**
+     * 生命周期一次返回的最大步骤数。单条流可能抓进几十万包（如长连 SSH 隧道），
+     * 全量返回动辄几十 MB、耗时数十秒，前端根本等不到弹框就超时。超出后
+     * 只保留关键帧与首尾，并用 totalSteps / truncated 告知前端真实长度。
+     */
+    private static final int HANDSHAKE_MAX_STEPS = 500;
 
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
@@ -1170,21 +1179,52 @@ public class TsharkCaptureService {
         // 不按协议过滤：同一条 TCP 流里 SYN / FIN 会被 simplifyProtocol 归一成 TCP，
         // 而数据帧可能是 HTTP / TLS / SSH。按 anchor 的协议过滤会把握手与挥手全丢掉，
         // 页面上就只剩中间几个数据帧 —— 看起来正是「一采到数据生命周期就结束了」。
-        // SQL 里先按「两端 IP 的两种方向」收窄，端口与方向仍由 isSameFlow 精确过滤，
-        // 避免一次抓了几十万包的会话把整张报文表读进内存。
-        List<MsTsharkPacket> all = this.packetMapper.selectList(
-                new LambdaQueryWrapper<MsTsharkPacket>()
-                        .eq(MsTsharkPacket::getSessionId, anchor.getSessionId())
-                        .and(q -> q
-                                .nested(a -> a.eq(MsTsharkPacket::getSourceIp, anchor.getSourceIp())
-                                        .eq(MsTsharkPacket::getDestIp, anchor.getDestIp()))
-                                .or()
-                                .nested(b -> b.eq(MsTsharkPacket::getSourceIp, anchor.getDestIp())
-                                        .eq(MsTsharkPacket::getDestIp, anchor.getSourceIp())))
-                        .orderByAsc(MsTsharkPacket::getPacketTime)
-                        .orderByAsc(MsTsharkPacket::getId));
+        //
+        // 两次往返定位这条流的边界：先在 SQL 里按「精确四元组 + 两种方向」收窄
+        // （避免一次抓了几十万包的会话把整张报文表读进内存），再按时间序取头尾
+        // 两个窗口。长连隧道（SSH / 数据库连接池）一条流可能抓进几十万到上百万
+        // 包，全量 select 会阻塞 8082 数十秒、把连接池占满（实测 Recv-Q 堆到 100+
+        // 全部假死），公网网关随即 502 —— 所以只取时间轴上「头尾两个固定窗口」
+        // （各 ORACLE_WINDOW 包），中间用完整体包数判级、用均匀抽样补一段，
+        // 既保证首尾的 SYN / FIN 完整，又把单次查询压到 O(固定常数)。
+        final int oracleLimit = HANDSHAKE_MAX_STEPS * 6;
+        // 头窗口：时间正序取最早的一批（含 SYN 建连）
+        List<MsTsharkPacket> head = this.packetMapper.selectList(
+                buildFlowQuery(anchor, false)
+                        .last("LIMIT " + oracleLimit));
+        // 尾窗口：时间倒序取最新的一批（含 FIN 挥手），再按 id 去重合并
+        List<MsTsharkPacket> tail = this.packetMapper.selectList(
+                buildFlowQuery(anchor, true)
+                        .last("LIMIT " + oracleLimit));
+        Set<Long> seenIds = new LinkedHashSet<>();
+        List<MsTsharkPacket> merged = new ArrayList<>(head.size() + tail.size());
+        for (MsTsharkPacket p : head) {
+            if (seenIds.add(p.getId())) {
+                merged.add(p);
+            }
+        }
+        for (MsTsharkPacket p : tail) {
+            if (seenIds.add(p.getId())) {
+                merged.add(p);
+            }
+        }
+        merged.sort((a, b) -> {
+            int c = a.getPacketTime() == null || b.getPacketTime() == null
+                    ? 0 : a.getPacketTime().compareTo(b.getPacketTime());
+            return c != 0 ? c : Long.compare(a.getId(), b.getId());
+        });
+        // 中间段若仍超过固定上限，再均匀抽样（不会命中头尾窗口已保留的目标流报文）
+        if (merged.size() > HANDSHAKE_MAX_STEPS * 4) {
+            List<MsTsharkPacket> sampled = new ArrayList<>(HANDSHAKE_MAX_STEPS * 4);
+            double step = (double) merged.size() / (HANDSHAKE_MAX_STEPS * 4);
+            for (int i = 0; i < HANDSHAKE_MAX_STEPS * 4; i++) {
+                sampled.add(merged.get((int) (i * step)));
+            }
+            merged = sampled;
+        }
 
-        List<MsTsharkPacket> flow = all.stream()
+        // 端口与方向已由 SQL 四元组锁定，这里再按同一流核对一遍（防御数据角差）
+        List<MsTsharkPacket> flow = merged.stream()
                 .filter(p -> isSameFlow(p, anchor.getSourceIp(), anchor.getSourcePort(),
                         anchor.getDestIp(), anchor.getDestPort()))
                 .toList();
@@ -1265,6 +1305,42 @@ public class TsharkCaptureService {
 
     private static boolean eq(Object a, Object b) {
         return a == null ? b == null : a.equals(b);
+    }
+
+    /**
+     * 构建「同一会话 + 该流的精确四元组（两种方向）」的查询条件。
+     *
+     * <p>必须带端口：一条长连 SSH 隧道两端只有一个固定端口，但同一对 IP 之间往往
+     * 还跑着几十条瞬时连接（同 IP 不同端口）。只按两端 IP 收窄会把这些无关流也
+     * 拉进来，头/尾窗口（各 3000 包）可能整个被别人的突发流量占满，点中的那条流
+     * 反而一帧都取不到。带上端口后 SQL 直接命中目标流，窗口容量都给这一条流用。</p>
+     *
+     * <p>排序在方法内完成：时间正序（头部窗口）或时间倒序 + id 倒序（尾部窗口），
+     * 保证 LIMIT 取到的确实是时间上最早 / 最新的一批。</p>
+     *
+     * @param anchor 锚点报文（定位会话、四元组）
+     * @param newest true = 尾部窗口（时间倒序取最新）；false = 头部窗口（正序取最早）
+     * @return 查询条件（不含 LIMIT）
+     */
+    private static LambdaQueryWrapper<MsTsharkPacket> buildFlowQuery(MsTsharkPacket anchor, boolean newest) {
+        LambdaQueryWrapper<MsTsharkPacket> w = new LambdaQueryWrapper<MsTsharkPacket>()
+                .eq(MsTsharkPacket::getSessionId, anchor.getSessionId())
+                .and(q -> q
+                        .nested(a -> a.eq(MsTsharkPacket::getSourceIp, anchor.getSourceIp())
+                                .eq(MsTsharkPacket::getSourcePort, anchor.getSourcePort())
+                                .eq(MsTsharkPacket::getDestIp, anchor.getDestIp())
+                                .eq(MsTsharkPacket::getDestPort, anchor.getDestPort()))
+                        .or()
+                        .nested(b -> b.eq(MsTsharkPacket::getSourceIp, anchor.getDestIp())
+                                .eq(MsTsharkPacket::getSourcePort, anchor.getDestPort())
+                                .eq(MsTsharkPacket::getDestIp, anchor.getSourceIp())
+                                .eq(MsTsharkPacket::getDestPort, anchor.getSourcePort())));
+        if (newest) {
+            w.orderByDesc(MsTsharkPacket::getPacketTime).orderByDesc(MsTsharkPacket::getId);
+        } else {
+            w.orderByAsc(MsTsharkPacket::getPacketTime).orderByAsc(MsTsharkPacket::getId);
+        }
+        return w;
     }
 
     /**
@@ -1417,10 +1493,92 @@ public class TsharkCaptureService {
             label = "三次握手";
             detail = null;
         }
-        // 当前实现完整返回流内所有报文，不截断；totalSteps 供未来截断时告知真实长度
+        // 超长流截断：只保留首尾与关键帧（SYN/FIN/RST/重传/HTTP/TLS），其余均匀抽样，
+        // 避免一条长连隧道把 47MB / 11 万步整个返回给浏览器，前端等不到弹框就超时；
+        // totalSteps / truncated 让页面如实显示「报文过多，仅保留首尾与关键帧」。
+        boolean truncated = steps.size() > HANDSHAKE_MAX_STEPS;
+        List<TsharkHandshakeVO.Step> shown = truncated ? trimSteps(steps) : steps;
         return new TsharkHandshakeVO(sessionId, cIp, cPort, sIp, sPort,
-                new TsharkHandshakeVO.Handshake(kind, label, detail, completed, closed), steps,
-                steps.size(), false, rttMs, ttfbMs);
+                new TsharkHandshakeVO.Handshake(kind, label, detail, completed, closed), shown,
+                steps.size(), truncated, rttMs, ttfbMs);
+    }
+
+    /**
+     * 步骤过多时截断：保留首尾与关键帧（SYN / FIN / RST / 重传 / HTTP / TLS 语义帧），
+     * 剩余配额在普通帧里均匀抽样补足；保持原时间顺序。阶段耗时的分段边界（建连 /
+     * 首字节 / 传输 / 收尾）都落在关键帧上，截断不会把一次请求的阶段抹掉。
+     *
+     * @param steps 完整步骤（已按时间排好）
+     * @return 截断后的步骤
+     */
+    private static List<TsharkHandshakeVO.Step> trimSteps(List<TsharkHandshakeVO.Step> steps) {
+        int n = steps.size();
+        if (n <= HANDSHAKE_MAX_STEPS) {
+            return steps;
+        }
+        Set<Integer> keep = new LinkedHashSet<>();
+        keep.add(0);
+        keep.add(n - 1);
+        for (int i = 0; i < n; i++) {
+            TsharkHandshakeVO.Step s = steps.get(i);
+            String flags = s.flags() == null ? "" : s.flags();
+            String info = s.info() == null ? "" : s.info();
+            String phase = s.phase() == null ? "" : s.phase();
+            boolean isHttp = "HTTP".equals(phase)
+                    || info.startsWith("GET ")
+                    || info.startsWith("POST ")
+                    || info.startsWith("HTTP/1.")
+                    || info.startsWith("HTTP/2");
+            boolean isTls = "TLS".equals(phase)
+                    || info.contains("Application Data")
+                    || info.contains("TLS");
+            if (flags.contains("SYN") || flags.contains("FIN") || flags.contains("RST")
+                    || s.retransmission() || isHttp || isTls) {
+                keep.add(i);
+            }
+        }
+        // 关键帧本身已超上限：直接在关键帧上均匀抽样
+        if (keep.size() > HANDSHAKE_MAX_STEPS) {
+            return pick(steps, sampleEvenly(new ArrayList<>(keep), HANDSHAKE_MAX_STEPS));
+        }
+        // 剩余配额在普通帧里均匀补足
+        int budget = HANDSHAKE_MAX_STEPS - keep.size();
+        if (budget > 0) {
+            List<Integer> plain = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                if (!keep.contains(i)) {
+                    plain.add(i);
+                }
+            }
+            keep.addAll(sampleEvenly(plain, budget));
+        }
+        List<Integer> ordered = new ArrayList<>(keep);
+        if (ordered.size() > HANDSHAKE_MAX_STEPS) {
+            ordered = sampleEvenly(ordered, HANDSHAKE_MAX_STEPS);
+        }
+        ordered.sort(Integer::compareTo); // 下标有序 = 保持原时间顺序
+        return pick(steps, ordered);
+    }
+
+    /** 在下标列表里等距抽 max 个（含首尾），保证抽样不偏科也不丢失边界。 */
+    private static List<Integer> sampleEvenly(List<Integer> idx, int max) {
+        if (idx.size() <= max) {
+            return new ArrayList<>(idx);
+        }
+        List<Integer> out = new ArrayList<>(max);
+        for (int k = 0; k < max; k++) {
+            int i = (int) Math.round((double) (idx.size() - 1) * k / (max - 1));
+            out.add(idx.get(i));
+        }
+        return out;
+    }
+
+    private static List<TsharkHandshakeVO.Step> pick(List<TsharkHandshakeVO.Step> steps, List<Integer> idx) {
+        List<TsharkHandshakeVO.Step> out = new ArrayList<>(idx.size());
+        for (Integer i : idx) {
+            out.add(steps.get(i));
+        }
+        return out;
     }
 
     private static boolean isHttpRequestLine(String info) {

@@ -86,7 +86,10 @@ public class DeviceAutoConfiguration {
             registry.registerEndpoint("设备", "视频", "/api/device/video/**", "视频预览、回放");
             registry.registerEndpoint("设备", "云台", "/api/device/ptz/**", "云台控制、预置位");
             registry.registerEndpoint("设备", "门禁", "/api/device/access/**", "远程开门、刷卡记录");
+            registry.registerEndpoint("设备", "门禁记录", "/api/device/access-records/**", "门禁记录抽取落库与查询");
             registry.registerEndpoint("设备", "事件", "/api/device/event/**", "事件订阅与查询");
+            registry.registerEndpoint("设备", "目录同步", "/api/device/sync/**", "厂商设备目录拉取与写回");
+            registry.registerEndpoint("设备", "定时任务", "/api/device/tasks/**", "时间轮任务状态与间隔配置");
             registry.registerFlag("device", "设备", true, "设备管理模块（海康云耀/云眸/安防平台/大华云睿/乐橙/SDK 直连）");
         };
     }

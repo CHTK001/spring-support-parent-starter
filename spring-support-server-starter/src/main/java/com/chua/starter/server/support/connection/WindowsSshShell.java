@@ -5,6 +5,7 @@ import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.util.SshClients;
 import com.chua.ssh.support.client.SshClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -27,6 +28,12 @@ import java.util.function.Consumer;
 @Slf4j
 @Component
 public class WindowsSshShell {
+
+    /**
+     * SSH 连接缓存管理器（复用已建立连接，避免每次执行重复握手）
+     */
+    @Autowired
+    private ConnectionManager connectionManager;
 
     /**
      * 超长脚本落盘时的远端临时目录。
@@ -177,14 +184,19 @@ public class WindowsSshShell {
             return execViaRemoteFile(host, cred, shell, psCommand);
         }
         String command = PowerShellCommand.encoded(shell, psCommand);
-        try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, cred);
             SshClient.ExecResult r = handle.client().exec().command(command).execute();
             return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (WindowsSshExecException e) {
             throw e;
         } catch (Exception e) {
             throw new WindowsSshExecException("OpenSSH 执行失败: " + rootMessage(e), e);
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
         }
     }
 
@@ -613,14 +625,19 @@ public class WindowsSshShell {
      * @return 执行结果
      */
     private Result runRaw(MsServerHost host, SshCredential cred, String command) {
-        try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, cred);
             SshClient.ExecResult r = handle.client().exec().command(command).execute();
             return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (WindowsSshExecException e) {
             throw e;
         } catch (Exception e) {
             throw new WindowsSshExecException("OpenSSH 执行失败: " + rootMessage(e), e);
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
         }
     }
 
@@ -703,12 +720,17 @@ public class WindowsSshShell {
             return execViaRemoteFile(host, cred, shell, psCommand);
         }
         String command = PowerShellCommand.encoded(shell, psCommand);
-        try (SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred)) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, cred);
             SshClient.ExecResult r = handle.client().exec().command(command).stream(onLine, onLine);
             return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (Exception e) {
             throw new WindowsSshExecException("OpenSSH 流式执行失败: " + rootMessage(e), e);
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
+            }
         }
     }
 
@@ -729,9 +751,8 @@ public class WindowsSshShell {
         AtomicReference<SshClient.StreamHandle> streamRef = new AtomicReference<>();
         Thread worker = new Thread(() -> {
             try {
-                SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), portOf(host), cred);
+                SshClients.Handle handle = connectionManager.borrow(host, cred);
                 handleRef.set(handle);
-                handle.client().connect();
                 SshClient.StreamHandle streamHandle = handle.client().exec().command(command).follow(onLine);
                 streamRef.set(streamHandle);
             } catch (Exception e) {
@@ -751,11 +772,8 @@ public class WindowsSshShell {
             }
             SshClients.Handle handle = handleRef.get();
             if (handle != null) {
-                try {
-                    handle.close();
-                } catch (Exception ignore) {
-                    // 关闭异常不处理
-                }
+                // 归还借用连接（不真关闭，连接实体仍由连接池缓存）
+                connectionManager.release(host.getId());
             }
             worker.interrupt();
         };

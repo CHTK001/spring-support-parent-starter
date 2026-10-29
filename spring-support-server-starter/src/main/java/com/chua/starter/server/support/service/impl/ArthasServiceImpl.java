@@ -11,6 +11,7 @@ import com.chua.starter.server.support.mapper.MsServerProjectMapper;
 import com.chua.starter.server.support.mapper.MsServerReleaseMapper;
 import com.chua.starter.server.support.service.ArthasService;
 import com.chua.starter.server.support.service.ExecService;
+import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.util.HostPlatforms;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,11 @@ public class ArthasServiceImpl implements ArthasService {
     private final MsServerHostMapper hostMapper;
     private final ExecService execService;
 
+    /**
+     * 项目类型路由器：Java 进程判定由类型 SPI 声明，不再比较类型字面量
+     */
+    private final ProjectTypeProviderRegistry projectTypeRouter;
+
     /** Arthas 默认 telnet 端口 */
     private static final int DEFAULT_TELNET_PORT = 3658;
 
@@ -65,8 +71,8 @@ public class ArthasServiceImpl implements ArthasService {
             item.put("mainEntry", p.getMainEntry());
             item.put("projectPath", p.getProjectPath());
             item.put("jvmArgs", p.getJvmArgs());
-            // 仅 Java 类型项目支持 Arthas
-            boolean javaProject = "springboot".equals(p.getProjectType()) || "fatjar".equals(p.getProjectType());
+            // 仅 Java 进程类型项目支持 Arthas
+            boolean javaProject = isJavaProject(p.getProjectType());
             item.put("javaProject", javaProject);
             item.put("arthasInjected", isArthasInJvmArgs(p.getJvmArgs()));
             result.add(item);
@@ -89,7 +95,7 @@ public class ArthasServiceImpl implements ArthasService {
         status.put("projectId", project.getId());
         status.put("projectName", project.getProjectName());
         status.put("projectType", project.getProjectType());
-        status.put("javaProject", "springboot".equals(project.getProjectType()) || "fatjar".equals(project.getProjectType()));
+        status.put("javaProject", isJavaProject(project.getProjectType()));
         status.put("arthasInjected", isArthasInJvmArgs(project.getJvmArgs()));
         status.put("jvmArgs", project.getJvmArgs());
 
@@ -136,7 +142,7 @@ public class ArthasServiceImpl implements ArthasService {
         if (project == null) {
             return ReturnResult.error("项目不存在");
         }
-        if (!"springboot".equals(project.getProjectType()) && !"fatjar".equals(project.getProjectType())) {
+        if (!isJavaProject(project.getProjectType())) {
             return ReturnResult.error("仅 SpringBoot / FatJar 类型项目支持 Arthas attach");
         }
         OperationContext ctx = prepareContext(project);
@@ -458,4 +464,16 @@ public class ArthasServiceImpl implements ArthasService {
             "    except: break\n" +
             "sys.stdout.write(out.decode('utf-8',errors='replace'))\n" +
             "s.close()\n";
+
+    /**
+     * 项目是否为 JVM 进程（Arthas 的准入条件）。
+     *
+     * <p>由项目类型 SPI 声明：新增 JVM 类型（如 Git 源码部署）无需改动本类。</p>
+     *
+     * @param projectType 项目类型
+     * @return JVM 进程时为 {@code true}
+     */
+    private boolean isJavaProject(String projectType) {
+        return projectTypeRouter.resolveOrGeneric(projectType).javaProcess();
+    }
 }

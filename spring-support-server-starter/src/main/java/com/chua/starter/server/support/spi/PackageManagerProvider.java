@@ -83,6 +83,53 @@ public interface PackageManagerProvider {
     String upgradeCommand(String name);
 
     /**
+     * 构造「有可用更新的软件列表」命令（同步执行，输出由 {@link #parseUpgradable(String)} 解析）
+     *
+     * <p>实现若不支持返回 {@code null}，业务层将以空列表作答 —— 前端据此隐藏
+     * 全部「升级」按钮，而不是给一个点了没反应的按钮。这条命令的退出码通常
+     * 非 0（如 yum/dnf check-update 有更新时返回 100），因此解析不看退出码，
+     * 只看输出内容。</p>
+     *
+     * @return 可在目标主机执行的命令，不支持时为 null
+     */
+    default String upgradableCommand() {
+        return null;
+    }
+
+    /**
+     * 构造「软件依赖列表」命令（同步执行，输出由 {@link #parseDependencies(String)} 解析）
+     *
+     * @param name 软件包名
+     * @return 可在目标主机执行的命令，不支持时为 null
+     */
+    default String dependenciesCommand(String name) {
+        return null;
+    }
+
+    /**
+     * 解析「有可用更新」命令输出。
+     *
+     * <p>返回值里 {@code version} 一律填「仓库中的候选版本」，{@code name} 是包名；
+     * 业务层再与已安装列表按包名合并，得出「当前版本 → 候选版本」。</p>
+     *
+     * @param output 命令标准输出
+     * @return 可升级软件包列表，无更新或无法解析时为空列表
+     */
+    default List<SoftwarePackage> parseUpgradable(String output) {
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * 解析「软件依赖」命令输出为依赖名列表。
+     *
+     * @param output 命令标准输出
+     * @return 依赖包名列表（去重、去版本约束），无法解析时为空列表
+     */
+    default List<String> parseDependencies(String output) {
+        return java.util.Collections.emptyList();
+    }
+
+    /**
      * 解析搜索命令输出为软件包列表
      *
      * @param output  命令标准输出

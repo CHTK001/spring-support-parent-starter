@@ -42,6 +42,9 @@ import java.util.Base64;
 import java.util.Locale;
 import com.chua.starter.filesystem.support.spi.FileStorageImageFilterProvider;
 import com.chua.starter.filesystem.support.spi.FileStorageUrlPreviewProvider;
+import com.chua.starter.filesystem.support.spi.FileStorageRemoteReader;
+import com.chua.starter.filesystem.support.spi.RemoteFileRequest;
+import com.chua.starter.filesystem.support.spi.RemoteFileResult;
 import com.chua.starter.filesystem.support.log.FileLogStore;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import com.chua.filestorage.support.utils.MimeTypeUtils;
@@ -588,6 +591,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 && ("http:".equals(segments.get(1)) || "https:".equals(segments.get(1)))) {
             String remoteUrl = segments.get(1) + "//" + String.join("/", segments.subList(2, segments.size()));
             return handleRemoteFile(request, response, remoteUrl);
+        }
+
+ // SSH 远程文件透传：路径形如 /{bucket}/ssh:/主机:端口/路径
+        // 凭据走 query 参数（user/password），避免出现在 URL 路径中
+        if (setting.isOpenRemoteFile() && segments.size() > 2
+                && "ssh:".equals(segments.get(1))) {
+            String sshUrl = segments.get(1) + "//" + String.join("/", segments.subList(2, segments.size()));
+            return handleRemoteSshFile(request, response, sshUrl);
         }
 
  // 提取对象 键（第二段之后的所有路径段），并做 URL 解码与穿越防护
@@ -2130,6 +2141,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         sb.append(",\"urlPreviewers\":[");
         appendUrlPreviewers(sb);
         sb.append("]");
+        // 远程文件读取器实现（FileStorageRemoteReader SPI）
+        sb.append(",\"remoteReaders\":[");
+        appendRemoteReaders(sb);
+        sb.append("]");
         sb.append("}");
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
@@ -2337,6 +2352,42 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
         } catch (Throwable t) {
             log.warn("FileStorageUrlPreviewProvider SPI 加载失败（URL 预览能力缺失）: {}", t.getMessage());
+        }
+    }
+
+    /**
+     * 追加远程文件读取器实现列表（{@code FileStorageRemoteReader} SPI）。
+     *
+     * @param sb JSON 构造器
+     */
+    private void appendRemoteReaders(StringBuilder sb) {
+        Set<String> seen = new LinkedHashSet<>();
+        int index = 0;
+        try {
+            ServiceProvider<FileStorageRemoteReader> provider =
+                    ServiceProvider.of(FileStorageRemoteReader.class);
+            for (String ext : provider.getExtensions()) {
+                FileStorageRemoteReader instance = provider.getExtension(ext);
+                if (instance == null || instance.getName() == null) {
+                    continue;
+                }
+                String name = instance.getName().toUpperCase(Locale.ROOT);
+                if (!seen.add(name)) {
+                    continue;
+                }
+                if (index > 0) {
+                    sb.append(",");
+                }
+                index++;
+                sb.append("{\"name\":\"").append(escapeJson(instance.getName())).append("\"");
+                sb.append(",\"label\":\"").append(escapeJson(instance.getLabel() == null ? "" : instance.getLabel())).append("\"");
+                sb.append(",\"description\":\"")
+                        .append(escapeJson(instance.getDescription() == null ? "" : instance.getDescription())).append("\"");
+                sb.append(",\"protocol\":\"").append(escapeJson(instance.protocol())).append("\"");
+                sb.append(",\"supported\":").append(instance.supportsRemoteRead()).append("}");
+            }
+        } catch (Throwable t) {
+            log.warn("FileStorageRemoteReader SPI 加载失败（远程读取能力缺失）: {}", t.getMessage());
         }
     }
 
@@ -3760,6 +3811,11 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return handleRemoteFile(request, response, key);
         }
 
+        // SSH 远程文件透传：Key 为 ssh:// 地址时通过 SPI 读取
+        if (setting.isOpenRemoteFile() && key.startsWith("ssh://")) {
+            return handleRemoteSshFile(request, response, key);
+        }
+
         GetObjectResult result = storage.getObject(key);
         if ((result.getResultCode() != ObjectResult.ResultCode.SUCCESS || result.getInputStream() == null)
                 && !directoryIntent) {
@@ -4643,6 +4699,105 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             response.sendError(502, "Remote Fetch Failed: " + e.getMessage());
         }
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * SSH 远程文件读取：通过 {@link FileStorageRemoteReader} SPI 读取远程主机文件。
+     *
+     * <p>URL 格式：{@code ssh://host:port/path}，凭据走 query 参数
+     * （{@code user} / {@code password}）。实现方必须为每次请求新建连接，
+     * 用完即关——MINA SSHD 的临时密钥交换保证每次加密参数不同。</p>
+     *
+     * @param request   请求
+     * @param response  响应
+     * @param sshUrl    SSH 地址（{@code ssh://host:port/path}）
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> handleRemoteSshFile(ServerRequest request, ServerResponse response, String sshUrl) {
+        try {
+            FileStorageRemoteReader reader = resolveRemoteReader("ssh://");
+            if (reader == null || !reader.supportsRemoteRead()) {
+                return error(response, 403, "SSH remote read disabled");
+            }
+
+            // 解析 ssh://host:port/path
+            String withoutScheme = sshUrl.substring("ssh://".length());
+            int slashIdx = withoutScheme.indexOf('/');
+            String hostPort = slashIdx >= 0 ? withoutScheme.substring(0, slashIdx) : withoutScheme;
+            String path = slashIdx >= 0 ? withoutScheme.substring(slashIdx) : "/";
+
+            String host;
+            int port = 22;
+            int colonIdx = hostPort.indexOf(':');
+            if (colonIdx >= 0) {
+                host = hostPort.substring(0, colonIdx);
+                port = Integer.parseInt(hostPort.substring(colonIdx + 1));
+            } else {
+                host = hostPort;
+            }
+
+            Map<String, String> params = request.getParams();
+            String username = params != null ? params.get("user") : null;
+            String password = params != null ? params.get("password") : null;
+            String privateKey = params != null ? params.get("key") : null;
+
+            if (username == null || username.isBlank()) {
+                return error(response, 400, "Missing 'user' parameter");
+            }
+
+            // 私钥认证优先于密码认证（主机管理实体存储的是 agent key 私钥）
+            if (privateKey != null && !privateKey.isBlank()) {
+                RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username, null, privateKey, path, null);
+                RemoteFileResult result = reader.readRemote(rfRequest);
+                return writeRemoteResult(response, result);
+            }
+
+            RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username, password, null, path, null);
+            RemoteFileResult result = reader.readRemote(rfRequest);
+            return writeRemoteResult(response, result);
+        } catch (Exception e) {
+            log.warn("SSH 远程文件读取失败: {} - {}", sshUrl, e.getMessage());
+            response.sendError(502, "SSH Remote Read Failed: " + e.getMessage());
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 将远程文件读取结果写入 HTTP 响应。
+     *
+     * @param response HTTP 响应
+     * @param result   远程文件读取结果
+     */
+    private CompletionStage<Void> writeRemoteResult(ServerResponse response, RemoteFileResult result) {
+        String fileName = result.fileName() != null ? result.fileName() : "remote";
+        response.setStatus(200)
+                .setContentType(resolveContentType(fileName))
+                .setBody(result.data())
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 按协议前缀解析远程文件读取器 SPI 实现。
+     *
+     * @param protocolPrefix 协议前缀（如 {@code ssh://}）
+     * @return 匹配的实现；未找到返回 null
+     */
+    private FileStorageRemoteReader resolveRemoteReader(String protocolPrefix) {
+        try {
+            ServiceProvider<FileStorageRemoteReader> provider =
+                    ServiceProvider.of(FileStorageRemoteReader.class);
+            for (String ext : provider.getExtensions()) {
+                FileStorageRemoteReader instance = provider.getExtension(ext);
+                if (instance == null) continue;
+                if (protocolPrefix.equalsIgnoreCase(instance.protocol())) {
+                    return instance;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("FileStorageRemoteReader SPI 加载失败: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**

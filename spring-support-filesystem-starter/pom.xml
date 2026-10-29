@@ -22,7 +22,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.42</version>
+        <version>4.0.0.43</version>
 
     </parent>
 
@@ -41,13 +41,18 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-filestorage-starter</artifactId>
-            <version>4.0.0.42</version>
+            <version>4.0.0.43</version>
         </dependency>
         <!-- CAD 图纸预览：DXF 真渲染 + DWG 头信息（?format=cad 端点使用） -->
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>utils-support-ssh-starter</artifactId>
+            <version>4.0.0.43</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>utils-support-cad-starter</artifactId>
-            <version>4.0.0.42</version>
+            <version>4.0.0.43</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

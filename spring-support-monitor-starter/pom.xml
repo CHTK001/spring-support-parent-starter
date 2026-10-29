@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.42</version>
+        <version>4.0.0.43</version>
     </parent>
     <artifactId>spring-support-monitor-starter</artifactId>
     <description>
@@ -31,6 +31,13 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-server-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Docker 独立模块（容器/镜像/网络/卷/镜像库/模板），
+             经 AutoConfiguration.imports 自动装配 /ms/server/docker 接口 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-docker-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- 接码 / 临时邮箱 SPI（临时账号功能）：随机虚拟号码 + 临时邮箱的创建与短信/邮件读取。
@@ -247,6 +254,14 @@
             <artifactId>mysql-connector-j</artifactId>
             <version>8.0.33</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- PostgreSQL 驱动：CSV 快速导入（快速模式）的 COPY ... FROM STDIN 直灌实现
+             （PostgresqlCsvLoader 使用 pgjdbc 的 CopyManager，编译期直接引用驱动专属 API，
+             故用 compile 作用域而非 runtime），版本由 spring-boot BOM 管理 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
         </dependency>
 
         <!-- OSHI 本地硬件/操作系统信息采集 -->

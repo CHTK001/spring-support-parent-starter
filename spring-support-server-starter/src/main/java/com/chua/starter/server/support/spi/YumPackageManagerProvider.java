@@ -71,6 +71,41 @@ public class YumPackageManagerProvider extends AbstractPackageManagerProvider {
     }
 
     @Override
+    public String upgradableCommand() {
+        // 有可用更新时退出码为 100，业务层只看输出
+        return "yum -q check-update 2>/dev/null || true";
+    }
+
+    @Override
+    public String dependenciesCommand(String name) {
+        return "repoquery --requires " + name + " 2>/dev/null";
+    }
+
+    @Override
+    public List<SoftwarePackage> parseUpgradable(String output) {
+        return parseRhelInstalled(output);
+    }
+
+    @Override
+    public List<String> parseDependencies(String output) {
+        List<String> list = new java.util.ArrayList<>();
+        if (output == null) {
+            return list;
+        }
+        for (String raw : output.split("\\r?\\n")) {
+            String line = raw.trim();
+            // rpm 能力型依赖（libc.so.6()(64bit)）不是可读包名，跳过
+            if (line.isEmpty() || line.contains("(") || line.startsWith("/")) {
+                continue;
+            }
+            if (!list.contains(line)) {
+                list.add(line);
+            }
+        }
+        return list;
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         return parseRhelSearch(output);
     }

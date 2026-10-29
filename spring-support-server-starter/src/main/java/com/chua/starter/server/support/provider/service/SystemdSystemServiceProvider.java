@@ -127,13 +127,12 @@ public class SystemdSystemServiceProvider implements SystemServiceProvider {
      * @return POSIX 命令行
      */
     private String foreground(SystemServiceContext ctx) {
-        var type = ctx.projectType() == null ? "" : ctx.projectType();
-        return switch (type) {
-            case "springboot", "fatjar" -> "java $JVM_ARGS -jar '" + sq(ctx.mainEntry()) + "' $APP_ARGS";
-            case "separated" -> "'./" + sq(ctx.mainEntry()) + "' $JVM_ARGS $APP_ARGS";
-            case "nginx", "static" -> "nginx -g 'daemon off;'";
-            default -> "'./" + sq(ctx.mainEntry()) + "' $APP_ARGS";
-        };
+        // 命令由项目类型 SPI 生成（见 ProjectTypeProvider#posixForeground）：
+        // 平台实现不再持有项目类型分支，新增类型无需改动 systemd / launchd。
+        if (!isBlank(ctx.foregroundCommand())) {
+            return ctx.foregroundCommand();
+        }
+        return "'./" + sq(ctx.mainEntry()) + "' $APP_ARGS";
     }
 
     /**

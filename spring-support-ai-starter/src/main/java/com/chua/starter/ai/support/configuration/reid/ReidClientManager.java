@@ -50,6 +50,16 @@ public class ReidClientManager {
     private static final float DEFAULT_THRESHOLD = 0.5f;
 
     /**
+     * 默认检测置信度阈值（低阈值，尽量多检出模糊/远处人脸）。
+     */
+    private static final float DEFAULT_DETECTOR_THRESHOLD = 0.3f;
+
+    /**
+     * 默认人脸识别分流阈值：检测置信度 ≥ 此值走人脸识别，否则走重识别。
+     */
+    private static final float DEFAULT_FACE_THRESHOLD = 0.5f;
+
+    /**
      * 默认归并时间窗（秒）。
      */
     private static final int DEFAULT_GAP_SECONDS = 30;
@@ -93,6 +103,19 @@ public class ReidClientManager {
      * 当前生效的检测管线。
      */
     private volatile FacePipeline detector;
+
+    /**
+     * 当前生效的**低阈值**检测管线（重识别专用）。
+     *
+     * <p><b>为什么需要单独一份。</b>人脸识别分组的检测阈值是「宁可漏检也不误检」
+     * 的高标准（默认 0.5），而重识别需要「尽量多检出」—— 远处、模糊、侧脸
+     * 才是重识别真正的主场（清晰人脸走人脸识别即可）。两者对同一批框的取舍相反，
+     * 因此重识别用<b>自己的低阈值检测器</b>。</p>
+     *
+     * <p><b>不重复加载 ONNX 模型</b>：底层 Translator 由引擎按 modelId 缓存，
+     * 这里只是换了一个阈值参数重新取一次翻译器，模型权重仍是同一份。</p>
+     */
+    private volatile FacePipeline lowThresholdDetector;
 
     /**
      * 当前生效的重识别管线（懒构建）。
@@ -140,6 +163,40 @@ public class ReidClientManager {
                 settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS),
                 settingReader.getInt(GROUP, "track_ttl_seconds", DEFAULT_TTL_SECONDS) * 1000L,
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS) * 1000L);
+    }
+
+    /**
+     * 当前生效的检测管线。
+     *
+     * @return 检测管线；未就绪时返回 {@code null}
+     */
+    public FacePipeline currentDetector() {
+        currentPipeline();
+        return detector;
+    }
+
+    /**
+     * 当前生效的**低阈值**检测管线（重识别专用）。
+     *
+     * <p>与 {@link #currentDetector()} 的区别只在<b>检测置信度阈值</b>：
+     * 本管线用 {@code reid.detector_threshold}（默认 0.3），尽量多检出；
+     * 人脸识别那条链路用 face 组的阈值（默认 0.5），宁可漏检也不误检。</p>
+     *
+     * @return 低阈值检测管线；未就绪时返回 {@code null}
+     */
+    public FacePipeline currentLowThresholdDetector() {
+        currentPipeline();
+        return lowThresholdDetector;
+    }
+
+    /**
+     * 人脸识别分流阈值：检测置信度 ≥ 此值走人脸识别，否则走重识别。
+     *
+     * @return 分流阈值
+     */
+    public float faceThreshold() {
+        BigDecimal value = settingReader.getDecimalOrNull(GROUP, "face_threshold");
+        return value == null ? DEFAULT_FACE_THRESHOLD : value.floatValue();
     }
 
     /**
@@ -192,6 +249,7 @@ public class ReidClientManager {
         this.track = null;
         this.featureExtractor = null;
         this.detector = null;
+        this.lowThresholdDetector = null;
         build();
         log.info("[ReidClientManager] 人脸重识别实例热更新完成");
     }
@@ -239,14 +297,80 @@ public class ReidClientManager {
 
         this.detector = sharedDetector;
         this.featureExtractor = extractor;
+        // 低阈值检测管线：重识别专用，尽量多检出模糊/远处人脸。
+        // 构建失败时退回共享管线（阈值高一点而已，不影响功能，只是少检出一些）。
+        this.lowThresholdDetector = buildLowThresholdDetector(sharedDetector);
         // 管线里的轨迹用一份临时实例：共享实例本身不承载任何账号的轨迹，
         // 业务侧会用各自账号的轨迹管理器另建管线。
         this.track = newTrack();
-        this.pipeline = new FaceReidPipeline(sharedDetector, extractor, this.track);
-        log.info("[Reid] 重识别实例就绪: 特征模型={}, 阈值={}, 归并窗口={}s, 容量={}",
+        this.pipeline = new FaceReidPipeline(this.lowThresholdDetector, extractor, this.track);
+        log.info("[Reid] 重识别实例就绪: 特征模型={}, 阈值={}, 归并窗口={}s, 容量={}, 检测阈值={}, 识别分流={}",
                 featureModel, readThreshold(),
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS),
-                settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS));
+                settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS),
+                readDetectorThreshold(), faceThreshold());
+    }
+
+    /**
+     * 构建**低阈值**检测管线。
+     *
+     * <p><b>为什么要单独一份检测管线。</b>人脸识别分组的检测阈值是「宁可漏检也不误检」
+     * （默认 0.5），而重识别要「尽量多检出」—— 远处、模糊、侧脸才是重识别的主场
+     * （清晰人脸走人脸识别即可）。两者对同一批框的取舍正好相反，共用一个阈值
+     * 就必须二选一。</p>
+     *
+     * <p><b>不会重复加载 ONNX 权重</b>：底层 Translator 由引擎按 modelId 缓存，
+     * 这里只是换了阈值参数再取一次翻译器，模型权重仍是同一份。</p>
+     *
+     * <p>构建失败时返回入参（共享管线）—— 阈值高一些而已，只是少检出一些模糊脸，
+     * 不该因此让整个重识别能力不可用。</p>
+     *
+     * @param sharedDetector 共享检测管线（兜底用）
+     * @return 低阈值检测管线
+     */
+    private FacePipeline buildLowThresholdDetector(FacePipeline sharedDetector) {
+        float threshold = readDetectorThreshold();
+        String detectorModel = settingReader.getStr(GROUP, "detector_model");
+        if (StringUtils.isBlank(detectorModel)) {
+            detectorModel = settingReader.getStr("face", "detector_model");
+        }
+        if (StringUtils.isBlank(detectorModel)) {
+            // 没有独立的检测模型名：无法自建低阈值管线，退回共享的。
+            log.debug("[Reid] 未配置独立检测模型，低阈值检测退回共享管线（阈值 {}）", threshold);
+            return sharedDetector;
+        }
+        try {
+            // minConfidence 是检测之后的置信度过滤：把「框的置信度 ≥ 阈值」这一层
+            // 放到管线里做，于是低阈值管线与共享管线共用同一个 ONNX 翻译器，
+            // 只是各用一个置信度下限。
+            //
+            // 注意：ONNX 翻译器自身的内置阈值（ScrFD 默认 0.70）是**更严**的一层，
+            // 改不动 —— 但它作用在模型原始输出上，而 minConfidence 作用在翻译器
+            // 已经放行的框上。实际效果：minConfidence 越低，能进入后续分流的框越多。
+            FacePipeline built = FacePipeline.builder()
+                    .detector(detectorModel)
+                    .minConfidence(threshold)
+                    .build();
+            if (built == null) {
+                return sharedDetector;
+            }
+            log.info("[Reid] 低阈值检测管线就绪: 模型={}, 置信度下限={}", detectorModel, threshold);
+            return built;
+        } catch (Exception ex) {
+            log.warn("[Reid] 构建低阈值检测管线失败（退回共享管线）: model={} -> {}",
+                    detectorModel, ex.getMessage());
+            return sharedDetector;
+        }
+    }
+
+    /**
+     * 读取检测置信度阈值（低阈值）。
+     *
+     * @return 阈值
+     */
+    private float readDetectorThreshold() {
+        BigDecimal value = settingReader.getDecimalOrNull(GROUP, "detector_threshold");
+        return value == null ? DEFAULT_DETECTOR_THRESHOLD : value.floatValue();
     }
 
     /**
@@ -305,6 +429,8 @@ public class ReidClientManager {
                 + ", gap=" + settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS) + "s"
                 + ", maxTracks=" + settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS)
                 + ", device=" + settingReader.getStr(GROUP, "device")
+                + ", detectThreshold=" + readDetectorThreshold()
+                + ", faceThreshold=" + faceThreshold()
                 + ", available=" + available() + "}";
     }
 }

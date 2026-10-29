@@ -73,6 +73,15 @@ public class UploadTaskController {
         this.syncMaxBytes = Math.max(properties.getTaskSyncMaxMb(), 0) * 1024L * 1024L;
     }
 
+    /** 解析实际 bucket：未显式指定时回退到默认存储名，保证「桶路径」列有值。 */
+    private String resolveBucket(String bucket) {
+        if (bucket != null && !bucket.isBlank()) {
+            return bucket;
+        }
+        String def = fileStorageTemplate.getDefaultStorageName();
+        return def == null ? "" : def;
+    }
+
     /**
      * 列出后台已开启的存储桶（提供者），供前端上传时选择。
      *
@@ -135,9 +144,19 @@ public class UploadTaskController {
         String provider = ossType == null || ossType.isBlank() ? null : ossType;
         String bucket = fileBucket == null || fileBucket.isBlank() ? null : fileBucket;
         try {
-            // 小文件：同步直传，不建任务
+            // 小文件：同步直传，不建任务（但登记任务快照供「文件导航」展示）
             if (file.getSize() <= syncMaxBytes) {
-                return ReturnResult.ok(syncUpload(file, provider, bucket));
+                byte[] content = file.getBytes();
+                Map<String, Object> result = syncUpload(file, provider, bucket);
+                Map<String, Object> meta = UploadTaskManager.probeMetadata(
+                        file.getOriginalFilename(), content);
+                result.putAll(meta);
+                uploadTaskManager.registerSyncCompleted(
+                        file.getOriginalFilename(), file.getSize(), provider, bucket,
+                        (String) result.get("objectKey"),
+                        (String) meta.get("ext"), (String) meta.get("mime"),
+                        (Integer) meta.get("width"), (Integer) meta.get("height"));
+                return ReturnResult.ok(result);
             }
             byte[] bytes = file.getBytes();
             UploadTaskManager.UploadTask task = uploadTaskManager.createTask(
@@ -182,7 +201,7 @@ public class UploadTaskController {
         map.put("totalChunks", 1);
         map.put("receivedChunks", 1);
         map.put("provider", provider == null ? "" : provider);
-        map.put("bucket", bucket == null ? "" : bucket);
+        map.put("bucket", resolveBucket(bucket));
         map.put("state", "COMPLETED");
         map.put("message", "");
         map.put("objectKey", result.getKey() == null ? "" : result.getKey());
@@ -284,7 +303,7 @@ public class UploadTaskController {
         try {
             emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
                     .name("init").data(uploadTaskManager.list().stream()
-                            .map(UploadTaskController::toMap).toList()));
+                            .map(UploadTaskController.this::toMap).toList()));
         } catch (Exception e) {
             emitter.complete();
             return emitter;
@@ -309,7 +328,7 @@ public class UploadTaskController {
     @Operation(summary = "任务列表")
     @GetMapping("/tasks")
     public ReturnResult<List<Map<String, Object>>> tasks() {
-        return ReturnResult.ok(uploadTaskManager.list().stream().map(UploadTaskController::toMap).toList());
+        return ReturnResult.ok(uploadTaskManager.list().stream().map(UploadTaskController.this::toMap).toList());
     }
 
     /**
@@ -348,23 +367,46 @@ public class UploadTaskController {
     }
 
     /**
+     * 删除任务：移除任务记录，并尝试删除已写入存储的对象。
+     *
+     * @param taskId 任务号
+     * @return true = 已删除；false = 任务不存在
+     */
+    @Operation(summary = "删除任务（含存储对象）")
+    @DeleteMapping("/task/{taskId}/delete")
+    public ReturnResult<Boolean> delete(@PathVariable("taskId") String taskId) {
+        boolean existed = uploadTaskManager.delete(taskId);
+        if (!existed) {
+            return ReturnResult.illegal("任务不存在");
+        }
+        FileLogStore.getInstance().record("TASK_DELETE",
+                taskId, 200, 0, "taskId=" + taskId);
+        return ReturnResult.ok(true);
+    }
+
+    /**
      * 任务快照转 Map（避免为响应单独建 DTO 的样板）。
      */
-    private static Map<String, Object> toMap(UploadTaskManager.UploadTask task) {
-        return Map.ofEntries(
-                Map.entry("taskId", task.getTaskId()),
-                Map.entry("fileName", task.getFileName() == null ? "" : task.getFileName()),
-                Map.entry("totalSize", task.getTotalSize()),
-                Map.entry("receivedBytes", task.getReceivedBytes()),
-                Map.entry("chunkSize", task.getChunkSize()),
-                Map.entry("totalChunks", task.getTotalChunks()),
-                Map.entry("receivedChunks", task.getReceivedChunks()),
-                Map.entry("provider", task.getProvider() == null ? "" : task.getProvider()),
-                Map.entry("bucket", task.getBucketDir() == null ? "" : task.getBucketDir()),
-                Map.entry("state", task.getState().name()),
-                Map.entry("message", task.getMessage() == null ? "" : task.getMessage()),
-                Map.entry("objectKey", task.getObjectKey() == null ? "" : task.getObjectKey()),
-                Map.entry("createdAt", task.getCreatedAt()));
+    private Map<String, Object> toMap(UploadTaskManager.UploadTask task) {
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("taskId", task.getTaskId());
+        map.put("fileName", task.getFileName() == null ? "" : task.getFileName());
+        map.put("totalSize", task.getTotalSize());
+        map.put("receivedBytes", task.getReceivedBytes());
+        map.put("chunkSize", task.getChunkSize());
+        map.put("totalChunks", task.getTotalChunks());
+        map.put("receivedChunks", task.getReceivedChunks());
+        map.put("provider", task.getProvider() == null ? "" : task.getProvider());
+        map.put("bucket", resolveBucket(task.getBucketDir()));
+        map.put("state", task.getState().name());
+        map.put("message", task.getMessage() == null ? "" : task.getMessage());
+        map.put("objectKey", task.getObjectKey() == null ? "" : task.getObjectKey());
+        map.put("createdAt", task.getCreatedAt());
+        map.put("ext", task.getExt() == null ? "" : task.getExt());
+        map.put("mime", task.getMime() == null ? "" : task.getMime());
+        map.put("width", task.getWidth() == null ? 0 : task.getWidth());
+        map.put("height", task.getHeight() == null ? 0 : task.getHeight());
+        return map;
     }
 
     /**

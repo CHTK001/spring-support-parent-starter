@@ -11,6 +11,7 @@ import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.AiFaceService;
+import com.chua.starter.ai.support.service.AiLibraryGroups;
 import com.chua.starter.ai.support.service.MultiFaceEnrollException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -199,6 +200,7 @@ public class FaceController {
     /**
      * 人脸登记入库（1:N）。
      *
+     * @param group    分组名；不传/空 = 默认组 default
      * @param id       人脸 标识
      * @param file     图片文件
      * @param metadata 附加元数据（JSON）
@@ -208,7 +210,8 @@ public class FaceController {
     @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库；"
             + "底库只支持单人脸，检出多于一张时拒绝并返回原因")
     @PostMapping("/enroll")
-    public ReturnResult<?> enroll(@RequestParam("id") String id,
+    public ReturnResult<?> enroll(@RequestParam(value = "group", required = false) String group,
+                                  @RequestParam("id") String id,
                                   @RequestParam("file") MultipartFile file,
                                   @RequestParam(value = "metadata", required = false) String metadata) {
         if (id == null || id.isBlank()) {
@@ -219,7 +222,7 @@ public class FaceController {
         }
         try {
             Map<String, Object> meta = parseMetadata(metadata);
-            boolean success = faceService.enrollPipeline(id, file.getBytes(), meta);
+            boolean success = faceService.enrollPipeline(group, id, file.getBytes(), meta);
             return success ? ReturnResult.ok("登记成功") : ReturnResult.error("登记失败");
         } catch (MultiFaceEnrollException e) {
             // 可预期的业务分支：多脸照片。不打 ERROR 全栈（不是故障），只回明确原因
@@ -234,6 +237,7 @@ public class FaceController {
     /**
      * 直接特征入库（不跑管线，调用方自行提取特征后入库）。
      *
+     * @param group     分组名；不传/空 = 默认组 default
      * @param id        人脸 标识
      * @param feature   特征向量 JSON 数组
      * @param metadata  元数据 JSON
@@ -242,7 +246,8 @@ public class FaceController {
      */
     @Operation(summary = "人脸登记（特征向量）", description = "直接用特征向量入库，不跑管线；适用已提取特征或外部导入场景")
     @PostMapping("/enroll-feature")
-    public ReturnResult<?> enrollFeature(@RequestParam("id") String id,
+    public ReturnResult<?> enrollFeature(@RequestParam(value = "group", required = false) String group,
+                                         @RequestParam("id") String id,
                                          @RequestParam("feature") String feature,
                                          @RequestParam(value = "metadata", required = false) String metadata) {
         if (id == null || id.isBlank()) {
@@ -251,7 +256,7 @@ public class FaceController {
         try {
             float[] vector = parseFeature(feature);
             Map<String, Object> meta = parseMetadata(metadata);
-            boolean success = faceService.enrollFeature(id, vector, meta);
+            boolean success = faceService.enrollFeature(group, id, vector, meta);
             return success ? ReturnResult.ok("登记成功") : ReturnResult.error("登记失败");
         } catch (Exception e) {
             log.error("[Face] 特征入库失败", e);
@@ -262,20 +267,24 @@ public class FaceController {
     /**
      * 1:N 人脸识别。
      *
-     * @param file 图片文件
+     * @param groups 逗号分隔的分组名；不传/空 = 默认组 default（**不等于查全部**）
+     * @param file   图片文件
      * @return 识别结果（TopK 命中）
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @请求参数("文件"
      * @param @RequestParam("file" @RequestParam("file"
      */
-    @Operation(summary = "人脸识别", description = "1:N 人脸识别，返回 TopK 命中")
+    @Operation(summary = "人脸识别", description = "1:N 人脸识别，返回 TopK 命中；groups 为逗号分隔的分组名")
     @PostMapping("/identify")
-    public ReturnResult<?> identify(@RequestParam("file") MultipartFile file) {
+    public ReturnResult<?> identify(@RequestParam(value = "groups", required = false) String groups,
+                                    @RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
-            FaceIdentifyHit hit = faceService.identifyPipeline(file.getBytes());
+            // 空值在这里收敛成「只查默认组」：多组语义必须显式列出组名，漏传不该把别的组带出来
+            List<String> wanted = AiLibraryGroups.parse(groups);
+            FaceIdentifyHit hit = faceService.identifyPipeline(wanted, file.getBytes());
             if (hit == null) {
                 return ReturnResult.ok(Map.of("matched", false, "hits", List.of()));
             }
@@ -302,6 +311,7 @@ public class FaceController {
      * 400 + 默认 HTML 错误页拒绝，**连本方法的业务信封都到不了**。
      * 实测：真实全精度特征(6778B) -> 400；低位精度文本(3072B) -> 200。</p>
      *
+     * @param groups  逗号分隔的分组名；不传/空 = 默认组 default（**不等于查全部**）
      * @param feature 特征向量（JSON 数组）
      * @param topK    topk
      * @return 检索结果
@@ -309,19 +319,21 @@ public class FaceController {
      */
     @Operation(summary = "人脸检索(GET)", description = "按特征向量检索人脸库；向量较大时请用 POST 重载")
     @GetMapping("/search")
-    public ReturnResult<?> search(@RequestParam("feature") String feature,
+    public ReturnResult<?> search(@RequestParam(value = "groups", required = false) String groups,
+                                  @RequestParam("feature") String feature,
                                   @RequestParam(value = "topK", defaultValue = "5") int topK) {
-        return doSearch(feature, topK);
+        return doSearch(feature, topK, groups);
     }
 
     /**
      * 1:N 特征检索（POST，JSON body 传参）。
      *
      * <p>存在的理由：GET 版把向量放在 query string，512 维真实特征必然超限
-     * （见 {@link #search(String, int)}）。本重载把向量放进请求体，不受 URI 长度限制。</p>
+     * （见 {@link #search(String, String, int)}）。本重载把向量放进请求体，不受 URI 长度限制。</p>
      *
-     * <p>请求体：{@code {"feature": [0.1, 0.2, ...], "topK": 5}}；
-     * {@code feature} 接受数组或字符串两种写法，{@code topK} 缺省为 5。</p>
+     * <p>请求体：{@code {"feature": [0.1, 0.2, ...], "topK": 5, "groups": "员工,访客"}}；
+     * {@code feature} 接受数组或字符串两种写法，{@code topK} 缺省为 5，
+     * {@code groups} 为逗号分隔字符串、缺省即默认组 default。</p>
      *
      * @param body 请求体
      * @return 检索结果
@@ -332,6 +344,9 @@ public class FaceController {
         Object raw = body == null ? null : body.get("feature");
         // List<Double> 的 toString 恰好是 "[0.1, 0.2, ...]"，与 parseFeature 期望的格式一致
         String feature = raw == null ? "" : String.valueOf(raw);
+        // 分组只能放 query 之外的地方传：GET 版用 query，本重载按契约从请求体读，同样是逗号分隔
+        Object g = body == null ? null : body.get("groups");
+        String groups = g == null ? null : String.valueOf(g);
         int topK = 5;
         Object t = body == null ? null : body.get("topK");
         if (t instanceof Number number) {
@@ -343,7 +358,7 @@ public class FaceController {
                 // 非法 topK 用默认值，与 GET 版 defaultValue="5" 的语义一致
             }
         }
-        return doSearch(feature, topK);
+        return doSearch(feature, topK, groups);
     }
 
     /**
@@ -351,12 +366,13 @@ public class FaceController {
      *
      * @param feature 特征向量（JSON 数组文本）
      * @param topK    返回条数
+     * @param groups  逗号分隔的分组名；不传/空 = 默认组 default（**不等于查全部**）
      * @return 检索结果
      */
-    private ReturnResult<?> doSearch(String feature, int topK) {
+    private ReturnResult<?> doSearch(String feature, int topK, String groups) {
         try {
             float[] vector = parseFeature(feature);
-            List<FaceSearchHit> hits = faceService.search(vector, topK);
+            List<FaceSearchHit> hits = faceService.search(AiLibraryGroups.parse(groups), vector, topK);
             return ReturnResult.ok(Map.of("hits", hits));
         } catch (Exception e) {
             log.error("[Face] 人脸检索失败", e);
@@ -375,6 +391,7 @@ public class FaceController {
      * 万级底库不再整包拉回浏览器；不带时返回全量（兼容既有调用方，如以图搜图登记簿）。
      * {@code keyword} / {@code status} 两种模式都支持，筛选口径与前端一致。</p>
      *
+     * @param group     分组名；不传/空 = 默认组 default
      * @param page      页码（从 1 开始）；不传或 &le;0 返回全部命中
      * @param size      每页条数；不传或 &le;0 返回全部命中（上限 500，防一次拉太大）
      * @param keyword   关键词（匹配 id 与元数据字符串字段，大小写不敏感）
@@ -382,11 +399,12 @@ public class FaceController {
      * @param sortField 排序字段：{@code id} / {@code hasImage} / 或元数据键（name/residence/phone/idCard…）
      * @param sortOrder 排序方向：{@code asc} / {@code desc}
      * @return 已登记条目 {@code items}（id + 元数据，不含向量）+ {@code total}（命中总数）
-     *         + {@code stats}（全库统计 total/withImage/withIdCard，不受筛选影响）
+     *         + {@code stats}（本组统计 total/withImage/withIdCard，不受筛选影响）
      */
     @Operation(summary = "人脸库列表", description = "列出当前账号人脸库中已登记的条目；带 page/size 时服务端分页，不带返回全量")
     @GetMapping("/list")
-    public ReturnResult<?> list(@RequestParam(value = "page", required = false) Integer page,
+    public ReturnResult<?> list(@RequestParam(value = "group", required = false) String group,
+                                @RequestParam(value = "page", required = false) Integer page,
                                 @RequestParam(value = "size", required = false) Integer size,
                                 @RequestParam(value = "keyword", required = false) String keyword,
                                 @RequestParam(value = "status", required = false) String status,
@@ -395,7 +413,7 @@ public class FaceController {
         try {
             boolean paged = page != null && page > 0 && size != null && size > 0;
             int cap = size == null ? 0 : Math.min(size, 500);
-            return ReturnResult.ok(faceService.listPage(keyword, status, sortField, sortOrder,
+            return ReturnResult.ok(faceService.listPage(group, keyword, status, sortField, sortOrder,
                     paged ? page : 0, paged ? cap : 0));
         } catch (Exception e) {
             log.error("[Face] 人脸库列表失败", e);
@@ -404,16 +422,37 @@ public class FaceController {
     }
 
     /**
+     * 枚举当前账号已存在的分组名。
+     *
+     * <p>供前端渲染分组切换/筛选：组名此前只能由用户手打，打错就等于查一个空库，
+     * 界面看不出哪里错了。默认组恒定在列（空库也有得选）。</p>
+     *
+     * @return {@code groups}：分组名列表（去重、已排序，至少含默认组 default）
+     */
+    @Operation(summary = "人脸分组列表", description = "枚举当前账号已存在的分组名；至少含默认组 default")
+    @GetMapping("/groups")
+    public ReturnResult<?> groups() {
+        try {
+            return ReturnResult.ok(Map.of("groups", faceService.groups()));
+        } catch (Exception e) {
+            log.error("[Face] 人脸分组列表失败", e);
+            return ReturnResult.error("人脸分组列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 从当前账号人脸库删除一条（向量索引与快照同步删除）。
      *
-     * @param id 人脸 标识
+     * @param group 分组名；不传/空 = 默认组 default
+     * @param id    人脸 标识
      * @return 是否删除成功
      */
     @Operation(summary = "删除人脸", description = "从当前账号人脸库删除一条记录")
     @DeleteMapping("/{id}")
-    public ReturnResult<?> delete(@PathVariable("id") String id) {
+    public ReturnResult<?> delete(@RequestParam(value = "group", required = false) String group,
+                                  @PathVariable("id") String id) {
         try {
-            return ReturnResult.ok(faceService.remove(id));
+            return ReturnResult.ok(faceService.remove(group, id));
         } catch (Exception e) {
             log.error("[Face] 人脸删除失败", e);
             return ReturnResult.error("人脸删除失败: " + e.getMessage());
@@ -431,14 +470,16 @@ public class FaceController {
      * {@code produces = MediaType.IMAGE_PNG_VALUE}，否则 404 写出阶段会按 image/png
      * 选错转换器；类型在 {@link ResponseEntity} 上给。</p>
      *
-     * @param id 人脸标识
+     * @param group 分组名；不传/空 = 默认组 default
+     * @param id    人脸标识
      * @return PNG 字节；无则 404
      */
     @Operation(summary = "人脸登记图", description = "登记时落存的人脸裁剪图（PNG），供底库展示与特征点绘制")
     @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> image(@PathVariable("id") String id) {
+    public ResponseEntity<byte[]> image(@RequestParam(value = "group", required = false) String group,
+                                        @PathVariable("id") String id) {
         try {
-            byte[] bytes = faceService.faceImage(id);
+            byte[] bytes = faceService.faceImage(group, id);
             if (bytes == null || bytes.length == 0) {
                 return ResponseEntity.notFound().build();
             }
@@ -461,15 +502,17 @@ public class FaceController {
      * <p>改造前登记的老数据没有原图，回 404；前端据此回退到 {@code /{id}/image}
      * 的裁剪图并提示用户，不算错误。</p>
      *
-     * @param id 人脸标识
+     * @param group 分组名；不传/空 = 默认组 default
+     * @param id    人脸标识
      * @return 原图字节；无则 404
      */
     @Operation(summary = "人脸登记原图", description = "登记时上传的原始照片，供特征点在真实照片上标注；"
             + "改造前的旧数据无原图，返回 404")
     @GetMapping("/{id}/original")
-    public ResponseEntity<byte[]> original(@PathVariable("id") String id) {
+    public ResponseEntity<byte[]> original(@RequestParam(value = "group", required = false) String group,
+                                           @PathVariable("id") String id) {
         try {
-            byte[] bytes = faceService.originalImage(id);
+            byte[] bytes = faceService.originalImage(group, id);
             if (bytes == null || bytes.length == 0) {
                 return ResponseEntity.notFound().build();
             }
@@ -511,19 +554,21 @@ public class FaceController {
      * <p>与 {@code enroll} 的区别：本接口**只改档案字段**，不重跑检测、不动特征向量。
      * 「只改个名字」不该要求重新上传照片，也不该因为原照片质量被判失败。</p>
      *
+     * @param group    分组名；不传/空 = 默认组 default（同名 id 在不同组是两条独立档案）
      * @param id       人脸 标识
      * @param metadata 新元数据（整体替换）
      * @return 更新结果
      */
     @Operation(summary = "更新人脸信息", description = "只更新档案字段（姓名/年龄/身份证等），不重跑检测、不动特征向量")
     @PutMapping("/{id}")
-    public ReturnResult<?> update(@PathVariable("id") String id,
+    public ReturnResult<?> update(@RequestParam(value = "group", required = false) String group,
+                                  @PathVariable("id") String id,
                                   @RequestBody Map<String, Object> metadata) {
         if (id == null || id.isBlank()) {
             return ReturnResult.error("人脸 ID 不能为空");
         }
         try {
-            boolean ok = faceService.updateMetadata(id, metadata);
+            boolean ok = faceService.updateMetadata(group, id, metadata);
             return ok ? ReturnResult.ok("更新成功") : ReturnResult.error("未找到该人脸：" + id);
         } catch (Exception e) {
             log.error("[Face] 人脸信息更新失败", e);

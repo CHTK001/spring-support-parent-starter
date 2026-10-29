@@ -160,6 +160,15 @@ public class AiProviderController {
         sensenova.put("defaultApiUrl", "https://token.sensenova.cn/v1");
         list.add(sensenova);
 
+        // Moss 开放平台（当前接入 TTS：/v1/audio/speech，走 OpenAI 兼容协议族路由）
+        Map<String, Object> moss = new HashMap<>(8);
+        moss.put("id", "moss");
+        moss.put("name", "Moss");
+        moss.put("description", "Moss 开放平台（mosi.cn），语音合成 TTS（/v1/audio/speech）");
+        moss.put("protocol", "openai");
+        moss.put("defaultApiUrl", "https://api.mosi.cn/v1");
+        list.add(moss);
+
         // NVIDIA
         Map<String, Object> nvidia = new HashMap<>(8);
         nvidia.put("id", "nvidia");

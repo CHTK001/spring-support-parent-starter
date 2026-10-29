@@ -10,3 +10,5 @@ com.chua.starter.ai.support.spi.impl.LoomyAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.LobsteraiAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.OpencodeAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.WorkBuddyAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.KiloAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.EacAccountChannelAuthManager

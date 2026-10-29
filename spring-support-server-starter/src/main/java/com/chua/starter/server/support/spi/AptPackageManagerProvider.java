@@ -75,6 +75,28 @@ public class AptPackageManagerProvider extends AbstractPackageManagerProvider {
     }
 
     @Override
+    public String upgradableCommand() {
+        // 退出码恒为 0；输出首行是 "Listing..."，解析时跳过
+        return "apt list --upgradable 2>/dev/null || true";
+    }
+
+    @Override
+    public String dependenciesCommand(String name) {
+        // --no-recommends/--no-suggests：只留真正会阻塞安装的强依赖
+        return "apt-cache depends --no-recommends --no-suggests " + name + " 2>/dev/null";
+    }
+
+    @Override
+    public List<SoftwarePackage> parseUpgradable(String output) {
+        return parseAptUpgradable(output);
+    }
+
+    @Override
+    public List<String> parseDependencies(String output) {
+        return parseDependencyLines(output, "Depends:", "PreDepends:");
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         List<SoftwarePackage> list = new ArrayList<>();
         if (output == null) {

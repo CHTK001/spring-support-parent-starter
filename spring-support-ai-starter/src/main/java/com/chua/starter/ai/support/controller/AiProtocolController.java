@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +30,12 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>提供与 {@code AiProtocolServerFilter} 等价的 Spring MVC 路由映射，
  * 将 Claude、打开AI 响应、Gemini 等外部协议请求收敛到统一的 appKey 鉴权与对话链路。</p>
+ *
+ * <h3>架构</h3>
+ * <p>三个入口（Claude Messages、Responses、Gemini）含义不同，但前置校验与对话执行流是完全相同
+ * 的：{@code restEnabled() → authCheck() → 提示词提取 → aiChatFacadeService.call() → 协议化表达}。
+ * 公共部分收归 {@link #route(HttpServletRequest, Object, ProtocolAdapter)} 与统一的工具方法，
+ * 协议相关的请求/响应形态由各 {@link ProtocolAdapter} 实现。</p>
  *
  * <h3>接口列表</h3>
  * <ul>
@@ -63,28 +68,152 @@ public class AiProtocolController extends BaseAiController {
     private final EffectiveChatModelResolver effectiveChatModelResolver;
 
     /**
-     * 兼容协议响应里的 model 字段：优先回显请求模型，其次配置中心默认对话模型。
+     * 协议适配器：描述一个协议族全部的形状（请求/响应/流式），支撑 {@link #route} 统一分发。
      *
-     * <p>以前在没有请求模型时写死 {@code claude-3-haiku-20240307}：
-     * 响应会声称用了某个未必存在、也未必真被调用的模型，误导排障。</p>
-     *
-     * @param model 请求携带的模型名，可为空
-     * @return 回显或解析出的模型名；都拿不到时返回空串
+     * <p>协议相关的不确定性（提示词提取、流式事件排列、响应体结构）各协议之间不可能通用，
+     * 所以由各协议单独实现；鉴权、分组、分组参数、前置开关等流动保证只写一次。</p>
      */
-    private String echoModel(String model) {
-        if (StringUtils.isNotBlank(model)) {
-            return model;
-        }
-        String resolved = effectiveChatModelResolver.resolve(null);
-        return resolved == null ? "" : resolved;
+    interface ProtocolAdapter {
+
+        /**
+         * 协议族标识，用于日志与监控区分。
+         *
+         * @return 协议族名
+         */
+        String family();
+
+        /**
+         * 请求体中的模型字段，用于在响应中回显（优先请求携带，其次配置中心默认）。
+         *
+         * @param body 原始请求体
+         * @return 模型名，未携带时为空
+         */
+        String modelOf(Map<String, Object> body);
+
+        /**
+         * 是否为流式调用（语义由协议定义：Claude / Responses 走 body.stream，Gemini 走路径后缀）。
+         *
+         * @param servletRequest 原始 HTTP 请求
+         * @param body           原始请求体，可为 null（Gemini 允许空体）
+         * @return 是否流式
+         */
+        boolean stream(HttpServletRequest servletRequest, Object body);
+
+        /**
+         * 是否强制要求请求体非空（Gemini 允许空体）。
+         *
+         * @return 强制时返回 true
+         */
+        boolean requestBodyRequired();
+
+        /**
+         * 协议化组装对话请求（提示词提取、系统提示词、分组注入）。
+         *
+         * @param servletRequest HTTP 请求
+         * @param body           原始请求体
+         * @return 对话请求
+         */
+        AiChatRequest request(HttpServletRequest servletRequest, Object body);
+
+        /**
+         * 同步（非流式）对话成功响应。
+         *
+         * @param result 对话结果
+         * @param model 模型名
+         * @return 协议化响应体
+         */
+        Object success(Map<String, Object> result, String model);
+
+        /**
+         * 流式 SSE 响应。
+         *
+         * @param body           原始请求体
+         * @param model          模型名
+         * @param servletRequest HTTP 请求
+         * @return SSE 发射器或协议化响应体
+         */
+        Object stream(Object body, String model, HttpServletRequest servletRequest);
+
+        /**
+         * 模型调用失败时的协议化响应。
+         *
+         * @param model        模型名，可为空
+         * @param errorMessage 失败原因
+         * @return 协议化响应体
+         */
+        Object failure(String model, String errorMessage);
+
+        /**
+         * REST 协议未启用时的协议化响应。
+         *
+         * @return 协议化响应体
+         */
+        Object disabled();
+
+        /**
+         * 鉴权失败时的协议化响应。
+         *
+         * @return 协议化响应体
+         */
+        Object authFailed();
     }
 
     /**
-     * SSE 超时时间（毫秒）
+     * 统一分发入口：鉴权 → 提示词提取 → 对话执行 → 协议化表达，全部由 {@link ProtocolAdapter} 描述。
+     *
+     * @param servletRequest HTTP 请求
+     * @param body           原始请求体
+     * @param adapter        协议适配器
+     * @return {@link ResponseEntity} / SSE 发射器 / 协议化响应体
      */
-    private static final long SSE_TIMEOUT_MILLIS = 30_000L;
+    private Object route(HttpServletRequest servletRequest, Object body, ProtocolAdapter adapter) {
+        // 检查 REST 开关
+        if (!restEnabled()) {
+            log.info("[ai] {} 协议被 REST 开关禁用", adapter.family());
+            return ResponseEntity.ok(adapter.disabled());
+        }
+        // 鉴权校验
+        if (!authCheck(servletRequest)) {
+            log.info("[ai] {} 协议鉴权失败", adapter.family());
+            return ResponseEntity.status(401).body(adapter.authFailed());
+        }
+        // 请求体判空（Gemini 允许空体，其余协议要求非空）
+        if (adapter.requestBodyRequired() && body == null) {
+            log.warn("[ai] {} 协议请求体为空", adapter.family());
+            return ResponseEntity.badRequest().body(adapter.failure(null, "请求体不能为空"));
+        }
+        boolean stream = adapter.stream(servletRequest, body);
+        String model = modelOf(adapter, body);
+        // 流式模式
+        if (stream) {
+            return adapter.stream(body, model, servletRequest);
+        }
+        // 同步模式
+        try {
+            AiChatRequest chatRequest = adapter.request(servletRequest, body);
+            log.info("[ai] {} 协议调用对话,model={}", adapter.family(), model);
+            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
+            return ResponseEntity.ok(adapter.success(result, model));
+        } catch (IllegalStateException ex) {
+            // 解析失败时透传错误信息（模型配置缺失/冲突由门面的 IllegalStateException 表达）
+            log.warn("[ai] {} 协议对话请求失败: {}", adapter.family(), ex.getMessage());
+            return ResponseEntity.ok(adapter.failure(model, ex.getMessage()));
+        }
+    }
 
- // ==================== Claude 消息 ====================
+    /**
+     * 从协议适配器取模型名（{@code toString} 的公共封装）。
+     *
+     * @param adapter 协议适配器
+     * @param body    原始请求体
+     * @return 模型名
+     */
+    private String modelOf(ProtocolAdapter adapter, Object body) {
+        Map<String, Object> m = (Map<String, Object>) body;
+        return m == null ? null : adapter.modelOf(m);
+    }
+
+    // ==================== Claude 消息 ====================
 
     /**
      * Claude 消息 协议入口。
@@ -99,7 +228,8 @@ public class AiProtocolController extends BaseAiController {
      * }
      * }</pre>4
      * }
-     * }</pre>
+     * }
+     * </pre>
      *
      * @param body           请求体
      * @param servletRequest HTTP 请求
@@ -110,37 +240,66 @@ public class AiProtocolController extends BaseAiController {
     @PostMapping("/v1/messages")
     public Object messages(@RequestBody(required = false) Map<String, Object> body,
                            HttpServletRequest servletRequest) {
-        // 检查 REST 开关
-        if (!restEnabled()) {
-            return ResponseEntity.ok(Map.of(
-                    "type", "error",
-                    "error", Map.of("type", "not_found_error", "message", "REST 端口未启用")
-            ));
+        return route(servletRequest, body, new ClaudeAdapter());
+    }
+
+    /**
+     * Claude 消息 协议适配器：Anthropic Messages 请求/响应形态。
+     *
+     * <p>覆盖 Claude 消息 要求的 {@code message_start}、{@code content_block_start}、
+     * {@code content_block_delta}、{@code content_block_stop}、{@code message_delta}、
+     * {@code message_stop} 事件序列，以及 {@code message} 响应体。</p>
+     */
+    private class ClaudeAdapter implements ProtocolAdapter {
+
+        @Override
+        public String family() {
+            return "claude";
         }
-        // 鉴权校验
-        if (!authCheck(servletRequest)) {
-            return ResponseEntity.status(401).body(Map.of(
-                    "type", "error",
-                    "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败")
-            ));
+
+        @Override
+        public String modelOf(Map<String, Object> body) {
+            return AiProtocolController.toString(body.get("model"));
         }
-        // 请求体判空
-        if (body == null) {
-            return ResponseEntity.badRequest().body(buildClaudeError(null, "请求体不能为空"));
+
+        @Override
+        public boolean stream(HttpServletRequest servletRequest, Object body) {
+            return body instanceof Map<?, ?> b && Boolean.TRUE.equals(b.get("stream"));
         }
-        boolean stream = Boolean.TRUE.equals(body.get("stream"));
-        String model = toString(body.get("model"));
-        // 流式模式
-        if (stream) {
-            return claudeStream(body, model, servletRequest);
+
+        @Override
+        public boolean requestBodyRequired() {
+            return true;
         }
-        // 同步模式
-        try {
-            AiChatRequest chatRequest = buildChatRequest(body, servletRequest);
-            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            return ResponseEntity.ok(buildClaudeResponse(result, model));
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.ok(buildClaudeError(model, ex.getMessage()));
+
+        @Override
+        public AiChatRequest request(HttpServletRequest servletRequest, Object body) {
+            return buildChatRequest((Map<String, Object>) body, servletRequest);
+        }
+
+        @Override
+        public Object success(Map<String, Object> result, String model) {
+            return buildClaudeResponse(result, model);
+        }
+
+        @Override
+        public Object stream(Object body, String model, HttpServletRequest servletRequest) {
+            return claudeStream((Map<String, Object>) body, model, servletRequest);
+        }
+
+        @Override
+        public Object failure(String model, String errorMessage) {
+            return buildClaudeError(model, errorMessage);
+        }
+
+        @Override
+        public Object disabled() {
+            return Map.of("type", "error", "error", Map.of("type", "not_found_error", "message", "REST 端口未启用"));
+        }
+
+        @Override
+        public Object authFailed() {
+            return Map.of("type", "error", "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败"));
         }
     }
 
@@ -199,7 +358,7 @@ public class AiProtocolController extends BaseAiController {
         return emitter;
     }
 
- // ==================== 打开AI 响应 (Codex/CCS) ====================
+    // ==================== 打开AI 响应 (Codex/CCS) ====================
 
     /**
      * 打开AI 响应 协议。
@@ -213,7 +372,8 @@ public class AiProtocolController extends BaseAiController {
      * }
      * }</pre>
      * }
-     * }</pre>
+     * }
+     * </pre>
      *
      * @param body           请求体
      * @param servletRequest HTTP 请求
@@ -223,43 +383,70 @@ public class AiProtocolController extends BaseAiController {
     @Operation(summary = "OpenAI Responses", description = "OpenAI Responses API（Codex CLI 兼容）入口")
     @PostMapping("/v1/responses")
     public Object responses(@RequestBody(required = false) Map<String, Object> body,
-                            HttpServletRequest servletRequest) {
-        // 检查 REST 开关
-        if (!restEnabled()) {
-            return ResponseEntity.ok(Map.of(
-                    "object", "response",
-                    "status", "disabled",
-                    "output", List.of(),
-                    "output_text", "REST 协议未启用"
-            ));
+                          HttpServletRequest servletRequest) {
+        return route(servletRequest, body, new ResponsesAdapter());
+    }
+
+    /**
+     * Responses 协议适配器：OpenAI Responses 请求/响应形态。
+     *
+     * <p>覆盖 Responses 要求的 {@code response.created}、{@code response.output_item.added}、
+     * {@code response.content_part.added}、{@code response.output_text.delta}、
+     * {@code response.output_text.done}、{@code response.content_part.done}、
+     * {@code response.output_item.done}、{@code response.completed} 事件序列。</p>
+     */
+    private class ResponsesAdapter implements ProtocolAdapter {
+
+        @Override
+        public String family() {
+            return "responses";
         }
-        // 鉴权校验
-        if (!authCheck(servletRequest)) {
-            return ResponseEntity.status(401).body(Map.of(
-                    "object", "response",
-                    "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败")
-            ));
+
+        @Override
+        public String modelOf(Map<String, Object> body) {
+            return AiProtocolController.toString(body.get("model"));
         }
-        // 请求体判空
-        if (body == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "object", "response",
-                    "error", Map.of("type", "invalid_request_error", "message", "请求体不能为空")
-            ));
+
+        @Override
+        public boolean stream(HttpServletRequest servletRequest, Object body) {
+            return body instanceof Map<?, ?> b && Boolean.TRUE.equals(b.get("stream"));
         }
-        boolean stream = Boolean.TRUE.equals(body.get("stream"));
-        String model = toString(body.get("model"));
-        // 流式模式
-        if (stream) {
-            return responsesStream(body, model, servletRequest);
+
+        @Override
+        public boolean requestBodyRequired() {
+            return true;
         }
-        // 同步模式
-        try {
-            AiChatRequest chatRequest = buildResponsesChatRequest(body, servletRequest);
-            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            return ResponseEntity.ok(buildResponsesResponse(result, model));
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.ok(buildResponsesError(model, ex.getMessage()));
+
+        @Override
+        public AiChatRequest request(HttpServletRequest servletRequest, Object body) {
+            return buildResponsesChatRequest((Map<String, Object>) body, servletRequest);
+        }
+
+        @Override
+        public Object success(Map<String, Object> result, String model) {
+            return buildResponsesResponse(result, model);
+        }
+
+        @Override
+        public Object stream(Object body, String model, HttpServletRequest servletRequest) {
+            return responsesStream((Map<String, Object>) body, model, servletRequest);
+        }
+
+        @Override
+        public Object failure(String model, String errorMessage) {
+            return buildResponsesError(model, errorMessage);
+        }
+
+        @Override
+        public Object disabled() {
+            return Map.of("object", "response", "status", "disabled",
+                    "output", List.of(), "output_text", "REST 协议未启用");
+        }
+
+        @Override
+        public Object authFailed() {
+            return Map.of("object", "response",
+                    "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败"));
         }
     }
 
@@ -363,58 +550,58 @@ public class AiProtocolController extends BaseAiController {
     @PostMapping("/v1beta/models/**")
     public Object gemini(HttpServletRequest request,
                          @RequestBody(required = false) Map<String, Object> body) {
-        // 检查 REST 开关
-        if (!restEnabled()) {
-            return ResponseEntity.ok(Map.of(
-                    "error", Map.of("code", 400, "message", "REST 协议未启用", "status", "INVALID_ARGUMENT")
-            ));
-        }
-        // 鉴权校验
-        if (!authCheck(request)) {
-            return ResponseEntity.status(401).body(Map.of(
-                    "error", Map.of("code", 401, "message", "AI AppKey 校验失败", "status", "UNAUTHENTICATED")
-            ));
-        }
-        String fullPath = request.getRequestURI();
-        return handleGemini(fullPath, body, request);
+        return route(request, body, new GeminiAdapter());
     }
 
     /**
-     * Gemini 处理逻辑。
+     * Gemini 协议适配器：Google generateContent 请求/响应形态。
      *
-     * <p>从请求路径解析模型名称与动作（generateContent / streamGenerateContent），
-     * 构建对话请求并执行。</p>
-     *
-     * @param fullPath        请求完整路径
-     * @param body            请求体
-     * @param servletRequest  HTTP 请求
-     * @return Gemini 响应
+     * <p>通过 {@code /v1beta/models/{model}:{action}} 路径指定模型与动作（
+     * {@code generateContent} / {@code streamGenerateContent}）。</p>
      */
-    private Object handleGemini(String fullPath, Map<String, Object> body, HttpServletRequest servletRequest) {
-        String suffix = "/v1beta/models/";
-        int idx = fullPath.lastIndexOf(suffix);
-        String rest = idx >= 0 ? fullPath.substring(idx + suffix.length()) : fullPath;
-        int colonIdx = rest.lastIndexOf(':');
-        // 路径格式校验
-        if (colonIdx < 0) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", Map.of("code", 400, "message", "Invalid Gemini path: " + fullPath, "status", "INVALID_ARGUMENT")
-            ));
+    private class GeminiAdapter implements ProtocolAdapter {
+
+        @Override
+        public String family() {
+            return "gemini";
         }
-        String model = rest.substring(0, colonIdx);
-        String action = rest.substring(colonIdx + 1);
-        boolean isStream = "streamGenerateContent".equals(action);
 
-        try {
-            AiChatRequest chatRequest = buildGeminiChatRequest(body, servletRequest);
-            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            String text = resolveResultText(result);
+        @Override
+        public String modelOf(Map<String, Object> body) {
+            return AiProtocolController.toString(body.get("model"));
+        }
 
-            // 流式模式
-            if (isStream) {
+        @Override
+        public boolean stream(HttpServletRequest servletRequest, Object body) {
+            // Gemini 的流向由路径后缀定义：/v1beta/models/{model}:streamGenerateContent
+            String fullPath = servletRequest != null ? servletRequest.getRequestURI() : null;
+            return fullPath != null && fullPath.endsWith("streamGenerateContent");
+        }
+
+        @Override
+        public boolean requestBodyRequired() {
+            return false;
+        }
+
+        @Override
+        public AiChatRequest request(HttpServletRequest servletRequest, Object body) {
+            return buildGeminiChatRequest((Map<String, Object>) body, servletRequest);
+        }
+
+        @Override
+        public Object success(Map<String, Object> result, String model) {
+            return buildGeminiResponse(model, resolveResultText(result));
+        }
+
+        @Override
+        public Object stream(Object body, String model, HttpServletRequest servletRequest) {
+            try {
                 SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
                 CompletableFuture.runAsync(() -> {
                     try {
+                        AiChatRequest chatRequest = buildGeminiChatRequest((Map<String, Object>) body, servletRequest);
+                        Map<String, Object> result = aiChatFacadeService.call(chatRequest);
+                        String text = resolveResultText(result);
                         Map<String, Object> candidate = buildGeminiCandidate(model, text);
                         emitter.send(SseEmitter.event().data(toJson(candidate), MediaType.APPLICATION_JSON));
                         emitter.send(SseEmitter.event().data("[DONE]", MediaType.APPLICATION_JSON));
@@ -424,25 +611,30 @@ public class AiProtocolController extends BaseAiController {
                     }
                 });
                 return emitter;
+            } catch (Exception ex) {
+                log.error("[ai] Gemini 流式异常: {}", ex.getMessage(), ex);
+                return ResponseEntity.ok(Map.of(
+                        "error", Map.of("code", 500, "message", ex.getMessage(), "status", "INTERNAL")));
             }
+        }
 
-            // 非流式响应
-            Map<String, Object> geminiResp = new LinkedHashMap<>();
-            geminiResp.put("candidates", List.of(buildGeminiCandidate(model, text)));
-            Map<String, Object> usage = new LinkedHashMap<>();
-            usage.put("promptTokenCount", 0);
-            usage.put("candidatesTokenCount", 0);
-            usage.put("totalTokenCount", 0);
-            geminiResp.put("usageMetadata", usage);
-            return ResponseEntity.ok(geminiResp);
-        } catch (IllegalStateException ex) {
-            return ResponseEntity.ok(Map.of(
-                    "error", Map.of("code", 500, "message", ex.getMessage(), "status", "INTERNAL")
-            ));
+        @Override
+        public Object failure(String model, String errorMessage) {
+            return Map.of("error", Map.of("code", 500, "message", errorMessage, "status", "INTERNAL"));
+        }
+
+        @Override
+        public Object disabled() {
+            return Map.of("error", Map.of("code", 400, "message", "REST 协议未启用", "status", "INVALID_ARGUMENT"));
+        }
+
+        @Override
+        public Object authFailed() {
+            return Map.of("error", Map.of("code", 401, "message", "AI AppKey 校验失败", "status", "UNAUTHENTICATED"));
         }
     }
 
- // ==================== 提示符 抽取 ====================
+    // ==================== 提示符 抽取 ====================
 
     /**
      * 构建通用对话请求（提示符 提取优先使用 消息）。
@@ -533,7 +725,7 @@ public class AiProtocolController extends BaseAiController {
      * @param body 请求体
      * @return 组合提示词
      */
-    private String extractClaudePrompt(Map<String, Object> body) {
+    private static String extractClaudePrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         String system = toString(body.get("system"));
         if (system != null && !system.isBlank()) {
@@ -559,7 +751,7 @@ public class AiProtocolController extends BaseAiController {
      * @param body 请求体
      * @return 系统提示词
      */
-    private String extractSystem(Map<String, Object> body) {
+    private static String extractSystem(Map<String, Object> body) {
         return toString(body.get("system"));
     }
 
@@ -569,7 +761,7 @@ public class AiProtocolController extends BaseAiController {
      * @param body 请求体
      * @return 组合提示词
      */
-    private String extractResponsesPrompt(Map<String, Object> body) {
+    private static String extractResponsesPrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         String instructions = toString(body.get("instructions"));
         if (instructions != null && !instructions.isBlank()) {
@@ -601,7 +793,7 @@ public class AiProtocolController extends BaseAiController {
      * @param body 请求体
      * @return 组合提示词
      */
-    private String extractGeminiPrompt(Map<String, Object> body) {
+    private static String extractGeminiPrompt(Map<String, Object> body) {
         StringBuilder sb = new StringBuilder();
         Object systemInstruction = body.get("systemInstruction");
         if (systemInstruction instanceof Map<?, ?> map) {
@@ -630,7 +822,7 @@ public class AiProtocolController extends BaseAiController {
      * @param obj 对象
      * @return 文本内容
      */
-    private String extractPartsText(Map<?, ?> obj) {
+    private static String extractPartsText(Map<?, ?> obj) {
         Object parts = obj.get("parts");
         if (parts instanceof List<?> list) {
             for (Object part : list) {
@@ -651,7 +843,7 @@ public class AiProtocolController extends BaseAiController {
      * @param value 内容对象
      * @return 文本
      */
-    private String extractText(Object value) {
+    private static String extractText(Object value) {
         if (value == null) {
             return null;
         }
@@ -739,7 +931,7 @@ public class AiProtocolController extends BaseAiController {
      * @param errorMessage 错误消息
      * @return 错误响应体
      */
-    private Map<String, Object> buildClaudeError(String model, String errorMessage) {
+    private static Map<String, Object> buildClaudeError(String model, String errorMessage) {
         String id = "msg_" + UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("id", id);
@@ -755,7 +947,7 @@ public class AiProtocolController extends BaseAiController {
      * @param model  模型名称
      * @return Responses 响应体
      */
-    private Map<String, Object> buildResponsesResponse(Map<String, Object> result, String model) {
+    private static Map<String, Object> buildResponsesResponse(Map<String, Object> result, String model) {
         String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
         String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
         String text = result != null ? toString(result.get("text")) : "";
@@ -769,7 +961,7 @@ public class AiProtocolController extends BaseAiController {
      * @param errorMessage 错误消息
      * @return 错误响应体
      */
-    private Map<String, Object> buildResponsesError(String model, String errorMessage) {
+    private static Map<String, Object> buildResponsesError(String model, String errorMessage) {
         String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
         String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> body = buildCcsResponse(responseId, messageId, model, errorMessage, "failed");
@@ -787,7 +979,7 @@ public class AiProtocolController extends BaseAiController {
      * @param status     状态
      * @return 响应体
      */
-    private Map<String, Object> buildCcsResponse(String responseId, String messageId, String model, String text, String status) {
+    private static Map<String, Object> buildCcsResponse(String responseId, String messageId, String model, String text, String status) {
         String resolvedModel = StringUtils.isNotBlank(model) ? model : "unknown";
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("id", responseId);
@@ -810,7 +1002,7 @@ public class AiProtocolController extends BaseAiController {
      * @param status    状态
      * @return 消息体
      */
-    private Map<String, Object> buildCcsMessage(String messageId, String text, String status) {
+    private static Map<String, Object> buildCcsMessage(String messageId, String text, String status) {
         Map<String, Object> message = new LinkedHashMap<>();
         message.put("id", messageId);
         message.put("type", "message");
@@ -825,13 +1017,13 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-     * 构建 Gemini candidate。
+     * 构建 Gemini 候选体。
      *
      * @param model 模型名称
      * @param text  文本
      * @return candidate 体
      */
-    private Map<String, Object> buildGeminiCandidate(String model, String text) {
+    private static Map<String, Object> buildGeminiCandidate(String model, String text) {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("role", "model");
         content.put("parts", List.of(Map.of("text", text != null ? text : "")));
@@ -842,6 +1034,24 @@ public class AiProtocolController extends BaseAiController {
         return candidate;
     }
 
+    /**
+     * 构建 Gemini 标准响应。
+     *
+     * @param model 模型名称
+     * @param text  文本内容
+     * @return Gemini 响应体
+     */
+    private static Map<String, Object> buildGeminiResponse(String model, String text) {
+        Map<String, Object> geminiResp = new LinkedHashMap<>();
+        geminiResp.put("candidates", List.of(buildGeminiCandidate(model, text)));
+        Map<String, Object> usage = new LinkedHashMap<>();
+        usage.put("promptTokenCount", 0);
+        usage.put("candidatesTokenCount", 0);
+        usage.put("totalTokenCount", 0);
+        geminiResp.put("usageMetadata", usage);
+        return geminiResp;
+    }
+
     // ==================== 工具方法 ====================
 
     /**
@@ -850,7 +1060,7 @@ public class AiProtocolController extends BaseAiController {
      * @param value 对象
      * @return 字符串
      */
-    private String toString(Object value) {
+    private static String toString(Object value) {
         if (value == null) {
             return null;
         }
@@ -866,7 +1076,7 @@ public class AiProtocolController extends BaseAiController {
      * @param result call 返回结果
      * @return 文本内容（错误时返回错误信息）
      */
-    private String resolveResultText(Map<String, Object> result) {
+    private static String resolveResultText(Map<String, Object> result) {
         if (result == null) {
             return "";
         }
@@ -893,5 +1103,22 @@ public class AiProtocolController extends BaseAiController {
         } catch (Exception ex) {
             return "{}";
         }
+    }
+
+    /**
+     * 兼容协议响应里的 model 字段：优先回显请求模型，其次配置中心默认对话模型。
+     *
+     * <p>以前在没有请求模型时写死 {@code claude-3-haiku-20240307}：
+     * 响应会声称用了某个未必存在、也未必真被调用的模型，误导排障。</p>
+     *
+     * @param model 请求携带的模型名，可为空
+     * @return 回显或解析出的模型名；都拿不到时返回空串
+     */
+    private String echoModel(String model) {
+        if (StringUtils.isNotBlank(model)) {
+            return model;
+        }
+        String resolved = effectiveChatModelResolver.resolve(null);
+        return resolved == null ? "" : resolved;
     }
 }

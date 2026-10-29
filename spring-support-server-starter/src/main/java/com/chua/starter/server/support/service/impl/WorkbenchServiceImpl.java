@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -16,8 +17,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -25,6 +29,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 主机工作台服务实现 —— Docker / Kubernetes 经 SSH 执行 CLI 落地
@@ -71,6 +78,11 @@ public class WorkbenchServiceImpl implements WorkbenchService {
      * 连接缓存管理器
      */
     private final ConnectionManager connectionManager;
+
+    /**
+     * 活跃的容器 exec 会话映射：sessionId → 会话上下文
+     */
+    private final Map<String, ExecSession> execSessions = new ConcurrentHashMap<>();
 
     /* ==================== Docker ==================== */
 
@@ -164,6 +176,204 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         } catch (Exception e) {
             log.warn("[workbench] 容器日志失败 hostId={} {}: {}", hostId, containerId, e.getMessage());
             return ReturnResult.error("读取日志失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public SseEmitter streamContainerLogs(Long hostId, String containerId, Integer tail) {
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+        String sessionId = UUID.randomUUID().toString().replace("-", "");
+
+        CompletableFuture.runAsync(() -> {
+            SshClients.Handle[] handleRef = new SshClients.Handle[1];
+            try {
+                ensurePosix(hostId);
+                MsServerHost host = hostMapper.selectById(hostId);
+                ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
+                if (!resolved.isOk()) {
+                    emitter.send(SseEmitter.event().name("error").data(resolved.getMsg(), MediaType.TEXT_PLAIN));
+                    emitter.complete();
+                    return;
+                }
+                SshClients.Handle handle = connectionManager.borrow(host, resolved.getData());
+                handleRef[0] = handle;
+                int lines = tail == null || tail < 1 ? 100 : tail;
+                String cmd = "docker logs -f --tail " + lines + " " + shellSafe(containerId) + " 2>&1";
+
+                SshClient.StreamHandle[] streamHandleRef = new SshClient.StreamHandle[1];
+                SshClient.StreamHandle streamHandle = handle.client().exec().command(cmd).follow(line -> {
+                    try {
+                        emitter.send(SseEmitter.event().name("log").data(line, MediaType.TEXT_PLAIN));
+                    } catch (IOException e) {
+                        // 客户端断开，停止跟随
+                        try { streamHandleRef[0].close(); } catch (Exception ignored) {}
+                    }
+                });
+                streamHandleRef[0] = streamHandle;
+
+                // 客户端断开时清理
+                Runnable cleanup = () -> {
+                    try { streamHandle.close(); } catch (Exception ignored) {}
+                    if (handleRef[0] != null) connectionManager.release(hostId);
+                };
+                emitter.onCompletion(cleanup);
+                emitter.onTimeout(cleanup);
+                emitter.onError(e -> cleanup.run());
+
+                // 发送初始会话标识
+                emitter.send(SseEmitter.event().name("session").data(sessionId, MediaType.TEXT_PLAIN));
+
+            } catch (Exception e) {
+                log.warn("[workbench] 容器日志流失败 hostId={} {}: {}", hostId, containerId, e.getMessage());
+                try {
+                    emitter.send(SseEmitter.event().name("error").data("日志流启动失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
+                } catch (Exception ignored) {}
+                emitter.complete();
+                if (handleRef[0] != null) connectionManager.release(hostId);
+            }
+        });
+
+        return emitter;
+    }
+
+    @Override
+    public SseEmitter dockerContainerExec(Long hostId, String containerId, String command) {
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+        String sessionId = UUID.randomUUID().toString().replace("-", "");
+
+        CompletableFuture.runAsync(() -> {
+            SshClients.Handle[] handleRef = new SshClients.Handle[1];
+            SshClient.TerminalOperation[] terminalRef = new SshClient.TerminalOperation[1];
+            try {
+                ensurePosix(hostId);
+                MsServerHost host = hostMapper.selectById(hostId);
+                ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
+                if (!resolved.isOk()) {
+                    emitter.send(SseEmitter.event().name("error").data(resolved.getMsg(), MediaType.TEXT_PLAIN));
+                    emitter.complete();
+                    return;
+                }
+                SshClients.Handle handle = connectionManager.borrow(host, resolved.getData());
+                handleRef[0] = handle;
+                String execCmd = "docker exec -it " + shellSafe(containerId) + " " + command;
+
+                SshClient.TerminalOperation terminal = handle.client().terminal()
+                        .width(120).height(30)
+                        .onOutput(data -> {
+                            try {
+                                emitter.send(SseEmitter.event().name("output").data(data, MediaType.TEXT_PLAIN));
+                            } catch (IOException e) {
+                                // 客户端断开
+                                SshClient.TerminalOperation t = terminalRef[0];
+                                if (t != null) t.close();
+                            }
+                        })
+                        .onClose(() -> {
+                            try {
+                                emitter.send(SseEmitter.event().name("closed").data("Session closed", MediaType.TEXT_PLAIN));
+                            } catch (Exception ignored) {}
+                            emitter.complete();
+                            if (handleRef[0] != null) connectionManager.release(hostId);
+                            execSessions.remove(sessionId);
+                        })
+                        .connect();
+                terminalRef[0] = terminal;
+
+                // 发送 docker exec 命令
+                terminal.send(execCmd);
+
+                // 存入会话表
+                execSessions.put(sessionId, new ExecSession(sessionId, terminal, handle, hostId));
+
+                // 发送会话标识给前端
+                emitter.send(SseEmitter.event().name("session").data(sessionId, MediaType.TEXT_PLAIN));
+
+                // 客户端断开时清理
+                Runnable cleanup = () -> closeExecSession(sessionId);
+                emitter.onCompletion(cleanup);
+                emitter.onTimeout(cleanup);
+                emitter.onError(e -> cleanup.run());
+
+            } catch (Exception e) {
+                log.warn("[workbench] 容器exec失败 hostId={} {}: {}", hostId, containerId, e.getMessage());
+                try {
+                    emitter.send(SseEmitter.event().name("error").data("进入容器失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
+                } catch (Exception ignored) {}
+                emitter.complete();
+                if (handleRef[0] != null) connectionManager.release(hostId);
+            }
+        });
+
+        return emitter;
+    }
+
+    @Override
+    public ReturnResult<Void> dockerContainerExecInput(Long hostId, String containerId, String sessionId, String input) {
+        ExecSession session = execSessions.get(sessionId);
+        if (session == null) {
+            return ReturnResult.error("会话不存在或已关闭: " + sessionId);
+        }
+        try {
+            session.terminal.sendRaw(input);
+            return ReturnResult.success();
+        } catch (Exception e) {
+            return ReturnResult.error("发送输入失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<Void> dockerContainerExecClose(Long hostId, String containerId, String sessionId) {
+        ExecSession session = execSessions.get(sessionId);
+        if (session == null) {
+            return ReturnResult.error("会话不存在或已关闭: " + sessionId);
+        }
+        closeExecSession(sessionId);
+        return ReturnResult.success();
+    }
+
+    /**
+     * 关闭容器 exec 会话并释放资源
+     *
+     * @param sessionId 会话标识
+     */
+    private void closeExecSession(String sessionId) {
+        ExecSession session = execSessions.remove(sessionId);
+        if (session != null) {
+            try {
+                session.terminal.close();
+            } catch (Exception e) {
+                log.debug("[workbench] 关闭终端异常: {}", e.getMessage());
+            }
+            connectionManager.release(session.hostId);
+        }
+    }
+
+    /**
+     * 容器 exec 会话上下文
+     */
+    private static class ExecSession {
+        /**
+         * 会话标识
+         */
+        final String sessionId;
+        /**
+         * PTY 终端
+         */
+        final SshClient.TerminalOperation terminal;
+        /**
+         * SSH 句柄
+         */
+        final SshClients.Handle handle;
+        /**
+         * 主机标识
+         */
+        final Long hostId;
+
+        ExecSession(String sessionId, SshClient.TerminalOperation terminal, SshClients.Handle handle, Long hostId) {
+            this.sessionId = sessionId;
+            this.terminal = terminal;
+            this.handle = handle;
+            this.hostId = hostId;
         }
     }
 

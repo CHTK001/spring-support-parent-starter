@@ -64,6 +64,22 @@ public class WingetPackageManagerProvider extends AbstractPackageManagerProvider
     }
 
     @Override
+    public String upgradableCommand() {
+        return "winget upgrade --include-unknown --accept-source-agreements";
+    }
+
+    @Override
+    public String dependenciesCommand(String name) {
+        // winget 没有依赖树概念；返回 null 让业务层直接给空列表
+        return null;
+    }
+
+    @Override
+    public List<SoftwarePackage> parseUpgradable(String output) {
+        return parseTableUpgradable(output);
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         List<SoftwarePackage> list = new ArrayList<>();
         if (output == null) {

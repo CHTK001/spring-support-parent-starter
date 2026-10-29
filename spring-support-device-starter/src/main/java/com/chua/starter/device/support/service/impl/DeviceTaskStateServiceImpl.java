@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 任务状态服务实现（Trigger 模式）
@@ -26,6 +27,16 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
      * 任务状态 映射器
      */
     private final DeviceTaskStateMapper taskStateMapper;
+
+    @Override
+    /**
+     * 列出全部任务状态
+    */
+    public List<DeviceTaskState> list() {
+        return taskStateMapper.selectList(
+                new LambdaQueryWrapper<DeviceTaskState>()
+                        .orderByAsc(DeviceTaskState::getDeviceTaskStateName));
+    }
 
     @Override
     /**

@@ -81,4 +81,32 @@ public interface DeviceProvider {
                 null,
                 null);
     }
+
+    /**
+     * 把本地台账设备写回到厂商侧（可选实现）。
+     *
+     * <p>与 {@link #fetchDevices()} 的方向相反：本地编辑了厂商来源设备的名称、
+     * 位置等字段后，由业务层把 {@link VendorDevice} 推回厂商平台，保证两侧台账一致。</p>
+     *
+     * <p>默认返回 {@code false}，表示厂商未实现写回能力；实现了的厂商应在平台
+     * 侧创建/更新成功后返回 {@code true}。</p>
+     *
+     * @param device 本地台账映射后的厂商设备条目
+     * @return 是否写回成功；{@code false} 表示不支持或失败
+     */
+    default boolean upsertRemote(VendorDevice device) {
+        return false;
+    }
+
+    /**
+     * 从厂商侧删除设备（可选实现）。
+     *
+     * <p>本地删除厂商来源设备时调用，按 {@code externalId} 在平台侧一并移除。</p>
+     *
+     * @param externalId 厂商侧设备唯一标识（同步幂等键）
+     * @return 是否删除成功；{@code false} 表示不支持或失败
+     */
+    default boolean removeRemote(String externalId) {
+        return false;
+    }
 }

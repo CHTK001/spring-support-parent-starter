@@ -944,9 +944,9 @@ public class DatasourceServiceImpl implements DatasourceService {
                 .set(MsDatasource::getDatasourceSessionLatencyMs, outcome.success() ? outcome.sessionLatencyMs() : null);
         // 只有探测成功且确实读到了版本才写：失败时留着上一次的值，
         // 比清成空更接近事实（连不上不代表版本变了）。
-        if (outcome.success() && !isBlank(outcome.serverVersion())
+        if (outcome.success() && !isBlank(outcome.version())
                 && !DatasourceHubConstants.DS_TYPE_INFLUXDB.equalsIgnoreCase(trim(type))) {
-            update.set(MsDatasource::getDatasourceVersion, capVersion(outcome.serverVersion()));
+            update.set(MsDatasource::getDatasourceVersion, capVersion(outcome.version()));
         }
         // 台账回写失败不能把「连接成功」报成失败：这段是记账，不是探测本身。
         // 实测过一次真实故障 —— datasource_version 还是 VARCHAR(16) 时，
@@ -1495,8 +1495,6 @@ public class DatasourceServiceImpl implements DatasourceService {
                 row.getUpdateTime() == null ? null : row.getUpdateTime().toString(),
                 row.getDatasourceConnectLatencyMs(), row.getDatasourceSessionLatencyMs(),
                 row.getDatasourceLastTestTime() == null ? null : row.getDatasourceLastTestTime().toString(),
-                row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
-                nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()),
                 row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
                 nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()),
                 !nullToEmpty(stored).isEmpty(), fastLoadOf(row),

@@ -77,7 +77,7 @@ public class ProjectTaskService {
             "rollback", "回滚",
             "install", "安装",
             "uninstall", "卸载",
-            "deploy", "部署");
+            "deploy", "Git发布");
 
     /**
      * 任务保留的日志行数上限（断点续传回放用）
@@ -581,12 +581,21 @@ public class ProjectTaskService {
         String path = logPath == null ? "" : logPath.trim();
         if ("WINDOWS".equalsIgnoreCase(osType)) {
             // 纯 PowerShell 脚本；WinRM follow 内部统一包 EncodedCommand。
-            // 日志文件可能尚未生成，先确保存在，否则 Get-Content -Wait 直接报错退出。
-            return "if (-not (Test-Path '" + path + "')) { New-Item -ItemType File -Path '" + path
-                    + "' -Force | Out-Null }\n"
-                    + "Get-Content -Path '" + path + "' -Tail " + TAIL_LINES + " -Wait";
+            // 日志文件可能尚未生成，先确保存在，否则 Get-Content -Wait 直接报错退出；
+            // 日志路径被配成目录时，跟随目录里最新的文件。
+            return "if (Test-Path '" + path + "' -PathType Container) { "
+                    + "$f = Get-ChildItem -Path '" + path + "' -File "
+                    + "| Sort-Object LastWriteTime -Descending | Select-Object -First 1; "
+                    + "if ($f) { $target = $f.FullName } else { $target = Join-Path '" + path + "' 'app.log' } } "
+                    + "else { $target = '" + path + "' }\n"
+                    + "if (-not (Test-Path $target)) { New-Item -ItemType File -Path $target -Force | Out-Null }\n"
+                    + "Get-Content -Path $target -Tail " + TAIL_LINES + " -Wait";
         }
-        return "tail -n " + TAIL_LINES + " -F " + path;
+        return "p='" + path.replace("'", "'\\''") + "'; if [ -d \"$p\" ]; then "
+                + "f=$(ls -tp \"$p\"/* 2>/dev/null | grep -v '/$' | head -n 1); "
+                + "[ -z \"$f\" ] && f=\"$p/app.log\"; else f=\"$p\"; fi; "
+                + "mkdir -p \"$(dirname \"$f\")\" 2>/dev/null; "
+                + "tail -n " + TAIL_LINES + " -F \"$f\"";
     }
 
     // ==================== 断点续传 ====================

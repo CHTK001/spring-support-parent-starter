@@ -512,8 +512,7 @@ public class ApiProviderController {
     /**
      * 删除 提供者（级联删除模型和连接）。
      *
-     * <p>ONNX 供应商是内置单行，禁止删除：它由模型注册表物化维护，删除后本地推理能力
-     * 会整体失去挂载点，且没有任何机制能自动重建（物化只在缺失时补行）。</p>
+     * <p>单条入口，复用 {@link #doBatchDeleteProviders(List)} 的整批拦截与清理逻辑。</p>
      *
      * @param providerId 提供者 标识
      * @return 成功
@@ -522,10 +521,67 @@ public class ApiProviderController {
     @DeleteMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
-        SysAiProvider target = requireProvider(providerId);
-        if (isOnnxRow(target)) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "ONNX 供应商为内置单行，不允许删除");
+        doBatchDeleteProviders(List.of(providerId));
+        return ApiResult.ok();
+    }
+
+    /**
+     * 解析批量删除的供应商 id 列表，并在删除前拦截非法请求。
+     *
+     * <p>整批定位先于任何写操作：空 id、不存在的 id、批量里混入 ONNX 供应商，都会
+     * 直接拦截整批，不允许部分删除。</p>
+     *
+     * @param body 请求体，须含 {@code ids} 数组（provider_id 字符串）
+     * @return 待删除的供应商 id 列表
+     */
+    private List<String> parseBatchProviderIds(Map<String, ?> body) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = body == null ? null : (List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
+        // 先整批定位，再逐批删除：任何定位失败都直接拦截整批，不出现部分删除
+        List<String> targets = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            if (id == null || id.isBlank()) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "id 不能为空");
+            }
+            SysAiProvider target = requireProvider(id);
+            if (isOnnxRow(target)) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "ONNX 供应商为内置单行，不允许删除");
+            }
+            targets.add(id);
+        }
+        return targets;
+    }
+
+    /**
+     * 批量删除 提供者 行（级联删除其模型与连接）。
+     *
+     * <p>供应商行与模型行不同，id 就是 {@code provider_id}（不带 {@code :} 模型名的复合标识）。
+     * 整批鉴权与清理逻辑与 {@link #deleteProvider} 公用。</p>
+     *
+     * @param body 请求体，须含 {@code ids} 数组（provider_id 字符串）
+     * @return 包含 success 与 deletedCount 的结果
+     */
+    @Permission("admin")
+    @DeleteMapping("/providers/batch")
+    @Transactional
+    public ApiResult<Map<String, Object>> batchDeleteProviders(@RequestBody Map<String, ?> body) {
+        List<String> ids = parseBatchProviderIds(body);
+        int deleted = doBatchDeleteProviders(ids);
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", true);
+        result.put("deletedCount", deleted);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 执行供应商行（及级联）的删除。
+     *
+     * @param providerId 已定位的供应商 id
+     */
+    private void deleteProviderRows(String providerId) {
         // 先取出该提供商的模型标识：全局设置里的「默认模型」按 "providerId:model" 存值，
         // 必须在删除前收集，否则模型行删掉后就无法判断哪些配置项指向了本提供商
         List<String> ownedModels = modelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
@@ -542,11 +598,30 @@ public class ApiProviderController {
                 .eq(SysAiProviderModel::getProviderId, providerId));
         connectionMapper.delete(new LambdaQueryWrapper<SysAiProviderConnection>()
                 .eq(SysAiProviderConnection::getProviderId, providerId));
-        int cleared = clearGlobalSettingsReferencing(providerId, ownedModels);
-        if (cleared > 0) {
-            log.info("删除提供商 {} 时清理了 {} 条指向其模型的全局设置（默认模型等）", providerId, cleared);
+        clearGlobalSettingsReferencing(providerId, ownedModels);
+        log.info("删除供应商 {}，级联删除其模型与连接", providerId);
+    }
+
+    /**
+     * 执行已定位供应商行的整批删除。
+     *
+     * @param ids 已定位的供应商 id 列表
+     * @return 删除的供应商数
+     */
+    private int doBatchDeleteProviders(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
         }
-        return ApiResult.ok();
+        int deleted = 0;
+        for (String providerId : ids) {
+            SysAiProvider entity = providerMapper.selectById(providerId);
+            if (entity == null) {
+                continue;
+            }
+            deleteProviderRows(providerId);
+            deleted++;
+        }
+        return deleted;
     }
 
     /**
@@ -714,9 +789,14 @@ public class ApiProviderController {
      * 所以重复点击只会补录新出现的模型。缺模型名的上游条目计入 skipped 而非报错
      * ——一个坏条目不能让整批失败。</p>
      *
+     * <p><b>元数据同步</b>：上游 {@code /models} 真实声明的上下文窗口、输出上限、
+     * family、能力开关、模态会随录入一起落库；已存在的模型行也会补空列（不改别名、
+     * 启用状态与排序），因此重复点击同时起到「刷新元数据」的作用，
+     * 计数见响应里的 {@code enriched}。</p>
+     *
      * @param providerId 提供者 标识
      * @param body       可选 { 尝试_fix }（404 时补全 /v1 重试，与单次拉取同语义）
-     * @return { total, imported, skipped, models }
+     * @return { total, imported, skipped, enriched, models }
      */
     @SuppressWarnings("unchecked")
     @Permission("admin")
@@ -736,11 +816,14 @@ public class ApiProviderController {
         // 已存在的模型名一次取齐：既是幂等判据，也省掉每条一次 select；
         // 顺带算出最大排序号，新模型排在既有行之后
         Set<String> seen = new HashSet<>(16);
+        Map<String, SysAiProviderModel> existing = new HashMap<>(16);
         int maxSort = -1;
         for (SysAiProviderModel row : modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId))) {
-            seen.add(row.getModel());
+            if (row.getModel() != null) {
+                existing.put(row.getModel(), row);
+            }
             if (row.getSortOrder() != null && row.getSortOrder() > maxSort) {
                 maxSort = row.getSortOrder();
             }
@@ -752,12 +835,27 @@ public class ApiProviderController {
         long now = System.currentTimeMillis();
         int imported = 0;
         int skipped = 0;
+        int enriched = 0;
         List<Map<String, Object>> importedRows = new ArrayList<>(8);
         for (int i = 0; i < upstreamModels.size(); i++) {
             Map<String, Object> m = upstreamModels.get(i);
             String name = batchModelName(m);
-            // Set#add：新名字返回 true 继续录入，已存在/上游重复返回 false 跳过
-            if (name == null || !seen.add(name)) {
+            // 上游缺模型名的坏条目计入 skipped
+            if (name == null) {
+                skipped++;
+                continue;
+            }
+            SysAiProviderModel exist = existing.get(name);
+            if (exist != null) {
+                // 已存在：不覆盖用户配置，只补上游真实元数据（仅空列 + metrics 合并）
+                if (mergeUpstreamMetadata(entity, exist, m, now)) {
+                    enriched++;
+                }
+                skipped++;
+                continue;
+            }
+            // Set#add：上游内部重名也跳过，避免同批插入两条
+            if (!seen.add(name)) {
                 skipped++;
                 continue;
             }
@@ -772,8 +870,81 @@ public class ApiProviderController {
         out.put("total", upstreamModels.size());
         out.put("imported", imported);
         out.put("skipped", skipped);
+        out.put("enriched", enriched);
         out.put("models", importedRows);
         return ApiResult.ok(out);
+    }
+
+    /**
+     * 用上游 {@code /models} 条目回填已存在模型行的元数据。
+     *
+     * <p>只走「空列回填」语义（{@link SysAiModelMetricsService#enrichRowFromMetrics}）：
+     * 别名、启用状态、排序、手填的上下文窗口 / 输出上限与能力开关一律保留；
+     * 上游未声明的键也不会写成空。无实际变化时不产生一次「全表写」。</p>
+     *
+     * @param provider 服务商行（用于记录来源地址）
+     * @param row      已存在的模型行（就地修改并在有变化时落库）
+     * @param upstream 上游目录条目
+     * @param now      本次采集时间
+     * @return 是否写入了新元数据
+     */
+    @SuppressWarnings("unchecked")
+    private boolean mergeUpstreamMetadata(SysAiProvider provider, SysAiProviderModel row,
+                                          Map<String, Object> upstream, long now) {
+        Object rawMetrics = upstream.get("metrics");
+        if (!(rawMetrics instanceof Map<?, ?>)) {
+            return false;
+        }
+        Map<String, Object> metrics = (Map<String, Object>) rawMetrics;
+        if (metrics.isEmpty()) {
+            return false;
+        }
+        Map<String, Object> beforeMetrics = row.getMetrics() == null
+                ? new LinkedHashMap<>(8)
+                : new LinkedHashMap<>(row.getMetrics());
+        beforeMetrics.remove("metrics_captured_at");
+        Map<String, Object> beforeColumns = entityColumns(row);
+        Map<String, Object> current = row.getMetrics() == null
+                ? new LinkedHashMap<>(24)
+                : new LinkedHashMap<>(row.getMetrics());
+        sysAiModelMetricsService.enrichRowFromMetrics(row, current, metrics,
+                "upstream:/models", provider.getBaseUrl(), now);
+        Map<String, Object> afterMetrics = new LinkedHashMap<>(current);
+        afterMetrics.remove("metrics_captured_at");
+        // 采集时间每次都会变，不参与「是否有变化」判断，否则每次点击都全表写
+        if (afterMetrics.equals(beforeMetrics) && entityColumns(row).equals(beforeColumns)) {
+            return false;
+        }
+        row.setUpdatedAt(now);
+        modelMapper.update(row, new LambdaUpdateWrapper<SysAiProviderModel>()
+                .eq(SysAiProviderModel::getProviderId, row.getProviderId())
+                .eq(SysAiProviderModel::getModel, row.getModel()));
+        return true;
+    }
+
+    /**
+     * 快照 {@link SysAiModelMetricsService#enrichRowFromMetrics} 会回填的实体列。
+     *
+     * <p>用于判断一次合并是否真的带来新值，避免「元数据没变也写库」。</p>
+     *
+     * @param row 模型行
+     * @return 列名 → 值
+     */
+    private static Map<String, Object> entityColumns(SysAiProviderModel row) {
+        Map<String, Object> columns = new LinkedHashMap<>(16);
+        columns.put("context_window", row.getContextWindow());
+        columns.put("max_tokens", row.getMaxTokens());
+        columns.put("family", row.getFamily());
+        columns.put("knowledge", row.getKnowledge());
+        columns.put("release_date", row.getReleaseDate());
+        columns.put("last_updated", row.getLastUpdated());
+        columns.put("open_weights", row.getOpenWeights());
+        columns.put("attachment", row.getAttachment());
+        columns.put("reasoning", row.getReasoning());
+        columns.put("tool_call", row.getToolCall());
+        columns.put("temperature_supported", row.getTemperatureSupported());
+        columns.put("modalities", row.getModalities());
+        return columns;
     }
 
     /**
@@ -997,13 +1168,17 @@ public class ApiProviderController {
      * 单条保存路径一致 —— 不落 capabilities 的话批量录入出来的卡片会全退化成
      * 「文本」类型，图像/视频模型在模型选择器里也会被分错组。</p>
      *
+     * <p>上游目录携带的元数据（上下文窗口、输出上限、family、能力开关、模态）也原样
+     * 带过去，{@link #toModelEntity} 直接落实体列；<b>上游没给的键不写入</b>，
+     * 保持「未指定」，由指标库快照或用户手填补上。</p>
+     *
      * @param m     上游条目
      * @param name  模型名（已判空）
      * @param sortOrder 排序号（既有行之后的序号，保证不与已有行并列）
      * @return 模型输入
      */
     private Map<String, Object> batchModelInput(Map<String, Object> m, String name, int sortOrder) {
-        Map<String, Object> input = new LinkedHashMap<>(8);
+        Map<String, Object> input = new LinkedHashMap<>(24);
         input.put("model", name);
         input.put("enabled", true);
         input.put("sort_order", sortOrder);
@@ -1012,6 +1187,15 @@ public class ApiProviderController {
         }
         if (m.get("metrics") instanceof Map<?, ?>) {
             input.put("metrics", m.get("metrics"));
+        }
+        // 上游目录直接给出的实体列元数据：与前端「保存模型」同一套字段名
+        for (String key : new String[]{"context_window", "max_tokens", "family", "knowledge",
+                "release_date", "last_updated", "modalities", "open_weights", "attachment",
+                "reasoning", "tool_call", "temperature_supported"}) {
+            Object value = m.get(key);
+            if (value != null) {
+                input.put(key, value);
+            }
         }
 
         List<String> traits = new ArrayList<>(4);
@@ -1601,6 +1785,71 @@ public class ApiProviderController {
         }
         refreshOnnxDevice(provider);
         return ApiResult.ok();
+    }
+
+    /**
+     * 批量删除 提供者_模型 行（按复合主键 提供者_标识 + 模型）。
+     *
+     * <p>复合 id 用途与 {@link #deleteProviderModel(String, String)} 一致
+     * （如 {@code openai:gpt-4o}），用 {@code ApiErrorCode.NOT_FOUND} 拦住不存在的 provider 行。
+     * 整批解析完成后才删，避免部分删除。每删一个 provider 组刷新一次 ONNX 推理设备覆盖。</p>
+     *
+     * @param body 请求体，须含 {@code ids} 数组（providerId:modelName）
+     * @return 包含 success 与 deletedCount 的结果
+     */
+    @Permission("admin")
+    @DeleteMapping("/provider-models/batch")
+    @Transactional
+    public ApiResult<Map<String, Object>> batchDeleteProviderModels(@RequestBody Map<String, ?> body) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = body == null ? null : (List<String>) body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
+        }
+
+        // 先整批定位标识，再批量删除：定位失败直接拦截整批
+        List<String[]> pairs = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            if (id == null || id.isBlank()) {
+                continue;
+            }
+            int separator = id.indexOf(':');
+            String providerId = separator > 0 ? id.substring(0, separator) : null;
+            String model = separator > 0 ? id.substring(separator + 1) : null;
+            if (providerId == null || providerId.isBlank() || model == null || model.isBlank()) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                        "模型ID格式非法，应为 providerId:modelName");
+            }
+            requireProvider(providerId);
+            pairs.add(new String[] { providerId, model });
+        }
+        if (pairs.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "无有效的模型ID");
+        }
+
+        int deleted = 0;
+        String lastProviderId = null;
+        for (String[] pair : pairs) {
+            String providerId = pair[0];
+            SysAiProvider provider = requireProvider(providerId);
+            int removed = modelMapper.delete(
+                    new LambdaQueryWrapper<SysAiProviderModel>()
+                            .eq(SysAiProviderModel::getProviderId, providerId)
+                            .eq(SysAiProviderModel::getModel, pair[1]));
+            if (removed > 0) {
+                deleted++;
+            }
+            // 同一 provider 连续删除时只刷新一次
+            if (!providerId.equals(lastProviderId)) {
+                refreshOnnxDevice(provider);
+                lastProviderId = providerId;
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", true);
+        result.put("deletedCount", deleted);
+        return ApiResult.ok(result);
     }
 
     // ==================== 模型 协议 ====================
@@ -2485,6 +2734,9 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         m.put("mimo-token-plan-cn", new ProtocolPreset("mimo-token-plan-cn", "https://api.mimo.xiaomi.com/v1"));
         m.put("mimo-token-plan-sgp", new ProtocolPreset("mimo-token-plan-sgp", "https://api.mimo.xiaomi.com/v1"));
         m.put("mimo-token-plan-ams", new ProtocolPreset("mimo-token-plan-ams", "https://api.mimo.xiaomi.com/v1"));
+        // Moss 开放平台：自有一组端点（/audio/speech、/audio/transcriptions、/responses、/images/generations）
+        m.put("moss", new ProtocolPreset("moss", "https://api.mosi.cn/v1"));
+        m.put("mosi", new ProtocolPreset("mosi", "https://api.mosi.cn/v1"));
         m.put("deepgram", new ProtocolPreset("deepgram", "https://api.deepgram.com/v1"));
         m.put("novita", new ProtocolPreset("novita", "https://api.novita.ai/openai/v1"));
         m.put("openrouter", new ProtocolPreset("openrouter", "https://openrouter.ai/api/v1"));
@@ -2775,6 +3027,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
      * 解析 打开AI 兼容的模型列表响应（数据[].标识）。
      *
+     * <p>除了 {@code id/name}，上游条目里的上下文窗口、输出上限、价格、能力开关、
+     * 输入输出模态等元数据也一并解析（见 {@link #upstreamModelRow}）——
+     * 这正是「模型元数据必须来自真实 {@code /models} 响应」的入口，
+     * 不能用模型名猜。</p>
+     *
      * @param body 响应体 JSON
      * @return 模型条目列表
      */
@@ -2790,12 +3047,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 if (id == null || id.isBlank()) {
                     continue;
                 }
-                Map<String, Object> m = new LinkedHashMap<>(4);
-                m.put("id", id);
-                m.put("name", item.path("name").asText(id));
-                m.put("tasks", inferTasks(id));
-                m.put("traits", List.of("streaming"));
-                models.add(m);
+                models.add(upstreamModelRow(id, item.path("name").asText(id), item));
             }
         }
         return models;
@@ -2804,9 +3056,14 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
      * 解析 Google Gemini 的模型列表响应（模型[].名称，形如 模型/gemini-xx）。
      *
+     * <p>Gemini 的条目用 {@code inputTokenLimit} / {@code outputTokenLimit} 表达窗口与
+     * 输出上限（已由统一解析口径识别），这里只补 Gemini 特有的
+     * {@code temperature} 能力与 {@code description / version}。</p>
+     *
      * @param body 响应体 JSON
      * @return 模型条目列表
      */
+    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseGoogleModels(String body) {
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
@@ -2819,15 +3076,190 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 if (id == null || id.isBlank()) {
                     continue;
                 }
-                Map<String, Object> m = new LinkedHashMap<>(4);
-                m.put("id", id);
-                m.put("name", item.path("displayName").asText(id));
-                m.put("tasks", inferTasks(id));
-                m.put("traits", List.of("streaming"));
+                String displayName = item.path("displayName").asText(id);
+                Map<String, Object> m = upstreamModelRow(id, displayName, item);
+                String description = item.path("description").asText(null);
+                if (description != null && !description.isBlank()) {
+                    m.put("description", description);
+                }
+                Map<String, Object> extra = new LinkedHashMap<>(4);
+                // temperature 字段存在即表示支持采样温度（默认 1.0），不是「取值」
+                if (item.has("temperature") && item.get("temperature").isNumber()) {
+                    extra.put("temperature", true);
+                }
+                Long version = longOrNull(item, "version");
+                if (version != null && version > 0) {
+                    extra.put("created", version);
+                }
+                if (!extra.isEmpty()) {
+                    Map<String, Object> merged = m.get("metrics") instanceof Map<?, ?> raw
+                            ? new LinkedHashMap<>((Map<String, Object>) raw)
+                            : new LinkedHashMap<>(4);
+                    merged.putAll(extra);
+                    m.put("metrics", merged);
+                    applyUpstreamMetrics(m, merged);
+                }
                 models.add(m);
             }
         }
         return models;
+    }
+
+    /**
+     * 上游模型条目 → 「从提供商获取」列表行（含可落库的指标元数据）。
+     *
+     * <p>上游 {@code /models} 的元数据字段各家差异很大（OpenRouter 的
+     * {@code pricing} / {@code limit}、intern-ai schema 2.4 的模态数组、
+     * Pollinations 的 {@code supported_parameters} 等），统一交给
+     * {@link HttpChatClientIndicator#parseModelMetrics} 归一成标准指标键，
+     * 再推导出模型弹框与批量录入认识的实体列键。</p>
+     *
+     * <p><b>只放上游真实给过的值</b>：解析不到的键不写入，前端按「未知」处理。
+     * 后续指标库快照只在字段仍为空时兜底，不会覆盖上游真实元数据。</p>
+     *
+     * @param id   模型标识
+     * @param name 模型展示名
+     * @param item 上游条目 JSON
+     * @return 列表行
+     */
+    private Map<String, Object> upstreamModelRow(String id, String name,
+                                                 com.fasterxml.jackson.databind.JsonNode item) {
+        Map<String, Object> m = new LinkedHashMap<>(12);
+        m.put("id", id);
+        m.put("name", name);
+        m.put("tasks", inferTasks(id));
+        m.put("traits", List.of("streaming"));
+        Map<String, Object> metrics = HttpChatClientIndicator.parseModelMetrics(item);
+        if (!metrics.isEmpty()) {
+            m.put("metrics", metrics);
+            applyUpstreamMetrics(m, metrics);
+        }
+        return m;
+    }
+
+    /**
+     * 标准指标键 → 模型实体列键（字段名与「保存提供者模型」接口完全一致）。
+     *
+     * <p>映射口径与 {@link SysAiModelMetricsService#enrichRowFromMetrics} 相同，
+     * 提前做一次是为了让「从提供商获取」列表与批量录入拿到同一份元数据，
+     * 避免列表里看得到、落库后却丢了。</p>
+     *
+     * @param row     列表行（就地写入）
+     * @param metrics 标准指标
+     */
+    private void applyUpstreamMetrics(Map<String, Object> row, Map<String, Object> metrics) {
+        putIfPresent(row, "context_window", metrics.get("context_window_tokens"));
+        putIfPresent(row, "max_tokens", metrics.get("max_output_tokens"));
+        putIfPresent(row, "family", metrics.get("model_family"));
+        putIfPresent(row, "knowledge", metrics.get("knowledge_cutoff"));
+        putIfPresent(row, "release_date", metrics.get("release_date"));
+        putIfPresent(row, "last_updated", metrics.get("last_updated"));
+        putIfPresent(row, "open_weights", metrics.get("open_weights"));
+        putIfPresent(row, "attachment", metrics.get("attachment"));
+        putIfPresent(row, "reasoning", metrics.get("reasoning"));
+        putIfPresent(row, "tool_call", metrics.get("function_calling"));
+        putIfPresent(row, "temperature_supported", metrics.get("temperature"));
+        Map<String, Object> modalities = modalityMapOf(metrics);
+        if (!modalities.isEmpty()) {
+            row.put("modalities", modalities);
+        }
+    }
+
+    /**
+     * 由标准指标组装 {@code {input:[...], output:[...]}} 模态结构。
+     *
+     * <p>优先使用上游显式声明的 {@code input_modalities} / {@code output_modalities}；
+     * 输入侧缺失时按 image / audio / video / file 能力标记补齐。元素一定是字符串，
+     * 与前端 {@code modalities} 契约一致。</p>
+     *
+     * @param metrics 标准指标
+     * @return 模态 Map；两侧都无信息时返回空 Map
+     */
+    private static Map<String, Object> modalityMapOf(Map<String, Object> metrics) {
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        List<String> inputs = stringValues(metrics.get("input_modalities"));
+        if (inputs.isEmpty()) {
+            inputs = new ArrayList<>(4);
+            inputs.add("text");
+            for (String[] pair : new String[][]{{"image_input", "image"}, {"audio_input", "audio"},
+                    {"video_input", "video"}, {"file_input", "file"}}) {
+                if (Boolean.TRUE.equals(metrics.get(pair[0]))) {
+                    inputs.add(pair[1]);
+                }
+            }
+        }
+        if (!inputs.isEmpty()) {
+            result.put("input", inputs);
+        }
+        List<String> outputs = stringValues(metrics.get("output_modalities"));
+        if (!outputs.isEmpty()) {
+            result.put("output", outputs);
+        }
+        return result;
+    }
+
+    /**
+     * 宽松转字符串列表（字符串元素 / {@code {name}} 对象都接受）。
+     *
+     * @param value 原始值
+     * @return 字符串列表；无法识别时返回空列表
+     */
+    private static List<String> stringValues(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> values = new ArrayList<>(list.size());
+        for (Object item : list) {
+            if (item instanceof String text) {
+                if (!text.isBlank()) {
+                    values.add(text);
+                }
+            } else if (item instanceof Map<?, ?> map) {
+                Object name = map.get("name") != null ? map.get("name") : map.get("type");
+                if (name != null) {
+                    values.add(String.valueOf(name));
+                }
+            }
+        }
+        return values;
+    }
+
+    /**
+     * 值非空时写入行。
+     *
+     * @param row   目标行
+     * @param key   键
+     * @param value 值
+     */
+    private static void putIfPresent(Map<String, Object> row, String key, Object value) {
+        if (value != null) {
+            row.put(key, value);
+        }
+    }
+
+    /**
+     * 读取 Long 字段（缺失或非数值返回 null）。
+     *
+     * @param node 节点
+     * @param key  字段名
+     * @return 数值
+     */
+    private static Long longOrNull(com.fasterxml.jackson.databind.JsonNode node, String key) {
+        if (node == null) {
+            return null;
+        }
+        com.fasterxml.jackson.databind.JsonNode value = node.get(key);
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (value.isNumber()) {
+            return value.asLong();
+        }
+        try {
+            return Long.parseLong(value.asText().trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     /**
@@ -2862,7 +3294,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (lower.contains("tts") || lower.contains("speech-synthesis") || lower.contains("speech_synthesis")) {
             return List.of("speech_synthesis");
         }
-        if (lower.contains("whisper") || lower.contains("asr") || lower.contains("speech-recognition")) {
+        if (lower.contains("whisper") || lower.contains("asr") || lower.contains("speech-recognition")
+                || lower.contains("transcribe") || lower.contains("transcription")) {
             return List.of("speech_recognition");
         }
         // 图像/视频：除 dall-e/cogview 这类专名，还要认裸 token。

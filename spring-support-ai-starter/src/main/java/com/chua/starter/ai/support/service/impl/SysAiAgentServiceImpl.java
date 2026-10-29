@@ -18,6 +18,8 @@ import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +52,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
 
     private final SysAiAgentMapper agentMapper; // Agent映射器
     private final SysAiProviderMapper providerMapper; // 提供者映射器
+    private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentRegistry agentRegistry; // Agentregistry
     private final ChatClientRegistry chatClientRegistry; // 对话客户端registry
     private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService; // 全局设置（持久化编排图）
@@ -689,6 +692,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         String apiKey = extractApiKey(provider.getCredentials());
         Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
         Map<String, Object> extra = provider.getExtra();
+        Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
+                provider, ModelClientResolver.ownerScopeOf(provider));
         ChatClientSetting setting = ChatClientSetting.builder()
                 .provider(provider.getPlatform())
                 .appKey(apiKey)
@@ -699,7 +704,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 .authHeader(extra == null || extra.get("auth_header") == null ? null : extra.get("auth_header").toString())
                 .authPrefix(extra == null || extra.get("auth_prefix") == null ? null : extra.get("auth_prefix").toString())
                 .proxy(provider.getProxy())
-                .routes(ProviderRouteTargets.fromExtra(extra))
+                .routes(channelRoutes)
                 .build();
         return ChatClient.create(setting).model(agent.getModel());
     }

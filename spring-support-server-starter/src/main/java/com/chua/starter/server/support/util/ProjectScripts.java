@@ -14,6 +14,10 @@ import java.util.Map;
  *   <li>{@code __APPNAME__} 应用名（取项目名，用于 systemd / Windows 服务等）</li>
  * </ul>
  *
+ * <p>本类只负责「按运行形态产出脚本文本」，不再持有项目类型分支：
+ * 哪个类型用哪一组模板，由 {@code ProjectTypeProvider#scripts} 的实现决定
+ * （见 {@code provider.project.type} 包）。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
@@ -142,21 +146,6 @@ public final class ProjectScripts {
     private static final String WIN_STATUS = "if (Test-Path 'app.pid') { if (Get-Process -Id (Get-Content 'app.pid') -ErrorAction SilentlyContinue) { 'running' } else { 'stopped' } } else { 'stopped' }";
 
     /**
-     * 生成内置四脚本（未展开前，占位符仍在，便于持久化后按项目字段解析）
-     *
-     * @param windows    是否 Windows
-     * @param projectType 项目类型
-     * @param mainEntry  主入口（用于判断 .ps1 等）
-     * @return 模板脚本
-     */
-    public static Scripts builtin(boolean windows, String projectType, String mainEntry) {
-        if (windows) {
-            return builtinWindows(projectType, mainEntry);
-        }
-        return builtinLinux(projectType, mainEntry);
-    }
-
-    /**
      * 由主入口名生成「不会匹配到脚本自身命令行」的进程匹配模式。
      *
      * <p>直接用 {@code pgrep -f '<主入口>'} 会匹配到执行脚本的 shell 自身
@@ -274,120 +263,178 @@ public final class ProjectScripts {
     }
 
     /**
-     * Linux 启动脚本写 pid 文件后回显运行 PID。
+     * Linux 启动脚本写 pid 文件后校验进程存活，再回显运行 PID。
      *
      * <p>与 Windows 侧的 {@code running pid=} 输出对齐。失败自动回滚时，编排层只能靠日志里
      * 的这一行判断「回滚后真正在跑的是哪个 PID」并回写库：只有 Windows 侧有这行时，
      * Linux 升级回滚虽然服务已恢复正常，库里的 PID 仍为空或陈旧（实测 status=running 但
      * pid=undefined），运维据此判断端口归属会得到错误结论。</p>
+     *
+     * <p>与 Windows 的 {@code WIN_VERIFY_RUNNING} 对齐补上存活校验：以前这里只
+     * {@code echo $! > app.pid} 就回显 running，而 {@code nohup ... &} 的后台进程即便
+     * 立刻失败（最典型：目标 jar 不存在 → {@code Error: Unable to access jarfile}，
+     * 或日志重定向目标不可写），{@code $!} 照样有值、脚本照样 exit 0，任务报「启动成功」
+     * 而状态是 stopped、日志里只有一行错误 —— 两个平台一个校验一个不校验，运维看到的是
+     * 同一套 UI 上的两种结论。这里用 4 秒观察窗：进程只要中途退出就判失败并把日志尾部
+     * 回显到任务日志里，直接给出根因，不用再登机器翻文件。</p>
      */
     private static final String LINUX_PID_ECHO =
             "echo $! > app.pid\n"
-                    + "sleep 1\n"
-                    + "echo \"running pid=$(cat app.pid)\"";
+                    + "__pid=$(cat app.pid 2>/dev/null || true)\n"
+                    + "__ok=0\n"
+                    + "for __i in 1 2 3 4; do\n"
+                    + "  sleep 1\n"
+                    + "  if [ -n \"$__pid\" ] && kill -0 \"$__pid\" 2>/dev/null; then __ok=1; else __ok=0; break; fi\n"
+                    + "done\n"
+                    + "if [ \"$__ok\" = \"1\" ]; then\n"
+                    + "  echo \"running pid=$__pid\"\n"
+                    + "else\n"
+                    + "  echo \"启动校验失败: 进程未运行 pid=${__pid:-unknown}\" >&2\n"
+                    + "  echo \"---- 日志尾部 " + PH_LOG + " ----\" >&2\n"
+                    // 重定向顺序必须先是 >&2 再是 2>/dev/null：写反了 fd1 会被复制成 fd2
+                    // 当时的 /dev/null，日志尾部一行都出不来（实测踩过，任务日志里只有标题）。
+                    + "  tail -n 20 " + PH_LOG + " >&2 2>/dev/null\n"
+                    + "  rm -f app.pid\n"
+                    + "  exit 1\n"
+                    + "fi";
 
-    private static Scripts builtinLinux(String projectType, String mainEntry) {
-        String type = projectType == null ? "" : projectType.trim().toLowerCase();
+    /**
+     * Linux SpringBoot 单体：启动命令额外带上生产 profile。
+     *
+     * @param mainEntry 主入口名称
+     * @return 四段脚本
+     */
+    public static Scripts linuxSpringboot(String mainEntry) {
         // 停止 = 按 app.pid 停止 + 回收本项目残留进程（app.pid 陈旧时唯一兜底）
         String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
-        String start;
-        String restart;
-        switch (type) {
-            case "springboot" -> {
-                start = linuxEnter()
-                        + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ --spring.profiles.active=prod > " + PH_LOG + " 2>&1 &\n"
-                        + LINUX_PID_ECHO;
-                restart = stop + "\nsleep 2\n" + start;
-            }
-            case "fatjar" -> {
-                start = linuxEnter()
-                        + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
-                        + LINUX_PID_ECHO;
-                restart = stop + "\nsleep 2\n" + start;
-            }
-            case "static", "nginx" -> {
-                // nginx 自建 pid 文件（相对前缀目录），状态/停止只认本项目，避免误杀/误报其它项目的 nginx。
-                // 必须显式给出 -p/-c：nginx 默认使用编译期前缀（Debian 为 /usr/share/nginx），
-                // 裸 nginx 会去读系统配置并抢占系统端口（实测撞 0.0.0.0:8080），
-                // 静态项目因此无法在自己的目录里独立运行。前缀所需目录由脚本自行补齐。
-                String pid = "logs/nginx.pid";
-                String dirs = "mkdir -p logs temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp temp/scgi_temp\n";
-                // 启动必须把 nginx 的 stdio 重定向掉：nginx 会 daemon 化，若继承 SSH channel 的 stdout/stderr，
-                // 执行器等不到 channel EOF 会一直挂到超时（退出码 -1），并留下不受管的 nginx 与 pid 文件竞态；
-                // 桌面实测「主机上手工跑没问题、经执行器下发就失败」即此因。
-                String nginxCtl = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf";
-                String nginx = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf > /dev/null 2>&1 < /dev/null";
-                // 先读取 pid 再停止：若写成 `[ -f pid ]` 之后再 `cat`，nginx 退出时会删除 pid 文件，
-                // 两次操作之间产生竞态并输出「cat: logs/nginx.pid: 没有那个文件」噪声；
-                // 更关键的是必须先取到 pid —— `nginx -s stop` 成功后 nginx 会自行删除 pid 文件，
-                // 之后再读就取不到 pid，「等待退出」整段会被跳过，脚本立刻返回而 nginx 仍在退出，
-                // 紧随其后的 start 就会撞端口（bind: Address already in use）。
-                String readPid = "pid=$(cat " + pid + " 2>/dev/null || true)\n"
-                        // 陈旧 pid 必须视为无效：回滚会把备份里的 logs/nginx.pid 还原回来，
-                        // 那份 pid 指向的是备份时刻的旧进程（通常早已退出），若直接采用会导致
-                        // 「读到死 pid → 判定已停止 → 不执行停止」，真实进程继续占端口，
-                        // 紧接着的 start 撞 bind: Address already in use。
-                        + "if [ -n \"$pid\" ] && ! kill -0 \"$pid\" 2>/dev/null; then pid=\"\"; fi\n"
-                        // 兜底：无 pid（或 pid 已陈旧）时按前缀找回真实 master。
-                        // 模式必须用括号转义（nginx: [m]aster ...）：执行器以 `bash -c '<脚本文本>'`
-                        // 下发时，脚本自身 shell 的命令行就包含这段模式串，未转义的 pgrep -f 会匹配到
-                        // 自己 → kill -0 永远为真 → 等待循环耗满预算 → 执行器超时（退出码 -1），
-                        // 且随后的 kill -9 可能误杀执行 shell。主机上手工 `sh stop.sh` 不复现该问题。
-                        + "if [ -z \"$pid\" ]; then pid=$(pgrep -f 'nginx: [m]aster process nginx -p "
-                        + PH_PATH + "' 2>/dev/null | head -1); fi\n";
-                // pid 文件只能在确认进程已退出后删除：先删掉会让运行中的实例失去唯一句柄
-                String stopBody = readPid
-                        + "if [ -n \"$pid\" ]; then\n"
-                        // 必须在下发 stop 之前抓子进程：master 一退出，worker 会被 reparent 到 init，
-                        // 之后 pgrep -P 再也找不到它们；而 kill -9 master 会留下继承监听套接字的孤儿 worker，
-                        // 表现为「端口仍被占用但 status 显示 stopped」且无法再停止。
-                        + "  kids=$(pgrep -P $pid 2>/dev/null)\n"
-                        + "  " + nginxCtl + " -s stop 2>/dev/null || true\n"
-                        + "  i=0\n"
-                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 5 ]; do\n"
-                        + "    sleep 1\n"
-                        + "    i=$((i + 1))\n"
-                        + "  done\n"
-                        + "  kill -9 $pid 2>/dev/null\n"
-                        + "  if [ -n \"$kids\" ]; then kill -9 $kids 2>/dev/null; fi\n"
-                        + "  i=0\n"
-                        + "  while kill -0 $pid 2>/dev/null && [ $i -lt 3 ]; do\n"
-                        + "    sleep 1\n"
-                        + "    i=$((i + 1))\n"
-                        + "  done\n"
-                        + "fi\n"
-                        + "rm -f " + pid;
-                String runningCheck = readPid + "if [ -n \"$pid\" ] && kill -0 $pid 2>/dev/null; then\n";
-                start = dirs + nginx;
-                restart = runningCheck
-                        + "  " + nginxCtl + " -s reload > /dev/null 2>&1\n"
-                        + "else\n"
-                        + indent(stopBody, "  ") + "\n"
-                        + "  sleep 2\n"
-                        + indent(start, "  ") + "\n"
-                        + "fi";
-                return new Scripts(start,
-                        stopBody,
-                        restart,
-                        runningCheck + "  echo running\nelse\n  echo stopped\nfi");
-            }
-            case "separated" -> {
-                start = linuxEnter()
-                        + "chmod +x " + PH_ENTRY + ";\n"
-                        + "nohup ./" + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
-                        + LINUX_PID_ECHO;
-                restart = stop + "\nsleep 2\n" + start;
-            }
-            case "model" -> {
-                // 模型项目：仅管理模型文件，无运行进程
-                start = linuxEnter() + "echo \"Model repository - no process to start\"";
-                restart = start;
-            }
-            default -> {
-                return new Scripts("./start.sh", "./stop.sh", "./restart.sh", LINUX_STATUS);
-            }
-        }
-        return new Scripts(start, stop, restart, LINUX_PID_STATUS);
+        String start = linuxEnter()
+                + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ --spring.profiles.active=prod > " + PH_LOG + " 2>&1 &\n"
+                + LINUX_PID_ECHO;
+        return new Scripts(start, stop, stop + "\nsleep 2\n" + start, LINUX_PID_STATUS);
+    }
+
+    /**
+     * Linux FatJar：与 SpringBoot 单体相同，只是不带生产 profile。
+     *
+     * @param mainEntry 主入口名称
+     * @return 四段脚本
+     */
+    public static Scripts linuxFatjar(String mainEntry) {
+        String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
+        String start = linuxEnter()
+                + "nohup java __JVMARGS__ -jar " + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
+                + LINUX_PID_ECHO;
+        return new Scripts(start, stop, stop + "\nsleep 2\n" + start, LINUX_PID_STATUS);
+    }
+
+    /**
+     * Linux 静态站点 / nginx：以项目目录为前缀启动，状态与停止只认本项目 nginx。
+     *
+     * @param mainEntry 主入口名称（静态站点不使用）
+     * @return 四段脚本
+     */
+    public static Scripts linuxStatic(String mainEntry) {
+        // nginx 自建 pid 文件（相对前缀目录），状态/停止只认本项目，避免误杀/误报其它项目的 nginx。
+        // 必须显式给出 -p/-c：nginx 默认使用编译期前缀（Debian 为 /usr/share/nginx），
+        // 裸 nginx 会去读系统配置并抢占系统端口（实测撞 0.0.0.0:8080），
+        // 静态项目因此无法在自己的目录里独立运行。前缀所需目录由脚本自行补齐。
+        String pid = "logs/nginx.pid";
+        String dirs = "mkdir -p logs temp/client_body_temp temp/proxy_temp temp/fastcgi_temp temp/uwsgi_temp temp/scgi_temp\n";
+        // 启动必须把 nginx 的 stdio 重定向掉：nginx 会 daemon 化，若继承 SSH channel 的 stdout/stderr，
+        // 执行器等不到 channel EOF 会一直挂到超时（退出码 -1），并留下不受管的 nginx 与 pid 文件竞态；
+        // 桌面实测「主机上手工跑没问题、经执行器下发就失败」即此因。
+        String nginxCtl = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf";
+        String nginx = "nginx -p '" + PH_PATH + "' -c conf/nginx.conf > /dev/null 2>&1 < /dev/null";
+        // 先读取 pid 再停止：若写成 `[ -f pid ]` 之后再 `cat`，nginx 退出时会删除 pid 文件，
+        // 两次操作之间产生竞态并输出「cat: logs/nginx.pid: 没有那个文件」噪声；
+        // 更关键的是必须先取到 pid —— `nginx -s stop` 成功后 nginx 会自行删除 pid 文件，
+        // 之后再读就取不到 pid，「等待退出」整段会被跳过，脚本立刻返回而 nginx 仍在退出，
+        // 紧随其后的 start 就会撞端口（bind: Address already in use）。
+        String readPid = "pid=$(cat " + pid + " 2>/dev/null || true)\n"
+                // 陈旧 pid 必须视为无效：回滚会把备份里的 logs/nginx.pid 还原回来，
+                // 那份 pid 指向的是备份时刻的旧进程（通常早已退出），若直接采用会导致
+                // 「读到死 pid → 判定已停止 → 不执行停止」，真实进程继续占端口，
+                // 紧接着的 start 撞 bind: Address already in use。
+                + "if [ -n \"$pid\" ] && ! kill -0 \"$pid\" 2>/dev/null; then pid=\"\"; fi\n"
+                // 兜底：无 pid（或 pid 已陈旧）时按前缀找回真实 master。
+                // 模式必须用括号转义（nginx: [m]aster ...）：执行器以 `bash -c '<脚本文本>'`
+                // 下发时，脚本自身 shell 的命令行就包含这段模式串，未转义的 pgrep -f 会匹配到
+                // 自己 → kill -0 永远为真 → 等待循环耗满预算 → 执行器超时（退出码 -1），
+                // 且随后的 kill -9 可能误杀执行 shell。主机上手工 `sh stop.sh` 不复现该问题。
+                + "if [ -z \"$pid\" ]; then pid=$(pgrep -f 'nginx: [m]aster process nginx -p "
+                + PH_PATH + "' 2>/dev/null | head -1); fi\n";
+        // pid 文件只能在确认进程已退出后删除：先删掉会让运行中的实例失去唯一句柄
+        String stopBody = readPid
+                + "if [ -n \"$pid\" ]; then\n"
+                // 必须在下发 stop 之前抓子进程：master 一退出，worker 会被 reparent 到 init，
+                // 之后 pgrep -P 再也找不到它们；而 kill -9 master 会留下继承监听套接字的孤儿 worker，
+                // 表现为「端口仍被占用但 status 显示 stopped」且无法再停止。
+                + "  kids=$(pgrep -P $pid 2>/dev/null)\n"
+                + "  " + nginxCtl + " -s stop 2>/dev/null || true\n"
+                + "  i=0\n"
+                + "  while kill -0 $pid 2>/dev/null && [ $i -lt 5 ]; do\n"
+                + "    sleep 1\n"
+                + "    i=$((i + 1))\n"
+                + "  done\n"
+                + "  kill -9 $pid 2>/dev/null\n"
+                + "  if [ -n \"$kids\" ]; then kill -9 $kids 2>/dev/null; fi\n"
+                + "  i=0\n"
+                + "  while kill -0 $pid 2>/dev/null && [ $i -lt 3 ]; do\n"
+                + "    sleep 1\n"
+                + "    i=$((i + 1))\n"
+                + "  done\n"
+                + "fi\n"
+                + "rm -f " + pid;
+        String runningCheck = readPid + "if [ -n \"$pid\" ] && kill -0 $pid 2>/dev/null; then\n";
+        String start = dirs + nginx;
+        String restart = runningCheck
+                + "  " + nginxCtl + " -s reload > /dev/null 2>&1\n"
+                + "else\n"
+                + indent(stopBody, "  ") + "\n"
+                + "  sleep 2\n"
+                + indent(start, "  ") + "\n"
+                + "fi";
+        return new Scripts(start,
+                stopBody,
+                restart,
+                runningCheck + "  echo running\nelse\n  echo stopped\nfi");
+    }
+
+    /**
+     * Linux 分离式：主入口为可执行启动脚本（如 run.sh），依赖包放 lib 目录。
+     *
+     * @param mainEntry 主入口名称
+     * @return 四段脚本
+     */
+    public static Scripts linuxSeparated(String mainEntry) {
+        String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
+        String start = linuxEnter()
+                + "chmod +x " + PH_ENTRY + ";\n"
+                + "nohup ./" + PH_ENTRY + " __ARGS__ > " + PH_LOG + " 2>&1 &\n"
+                + LINUX_PID_ECHO;
+        return new Scripts(start, stop, stop + "\nsleep 2\n" + start, LINUX_PID_STATUS);
+    }
+
+    /**
+     * Linux 模型仓库：仅管理模型文件，没有常驻进程。
+     *
+     * @param mainEntry 主入口名称（模型项目不使用，仅用于回收同名残留进程）
+     * @return 四段脚本
+     */
+    public static Scripts linuxModel(String mainEntry) {
+        String stop = LINUX_PID_STOP + linuxOrphanReaper(mainEntry);
+        String start = linuxEnter() + "echo \"Model repository - no process to start\"";
+        return new Scripts(start, stop, start, LINUX_PID_STATUS);
+    }
+
+    /**
+     * Linux 通用：不生成具体命令，交给用户自带的 start.sh / stop.sh / restart.sh。
+     *
+     * @param mainEntry 主入口名称（通用模板不使用）
+     * @return 四段脚本
+     */
+    public static Scripts linuxGeneric(String mainEntry) {
+        return new Scripts("./start.sh", "./stop.sh", "./restart.sh", LINUX_STATUS);
     }
 
     /**
@@ -570,43 +617,77 @@ public final class ProjectScripts {
                 + winStart("nginx.exe", "-p " + PH_PATH + " -c conf/nginx.conf");
     }
 
-    private static Scripts builtinWindows(String projectType, String mainEntry) {
-        String type = projectType == null ? "" : projectType.trim().toLowerCase();
-        String entry = mainEntry == null ? "" : mainEntry.trim().toLowerCase();
+    /**
+     * Windows JVM 应用（SpringBoot 单体 / FatJar / Git 源码部署）：{@code java -jar} 并透传参数。
+     *
+     * @param mainEntry 主入口名称
+     * @return 四段脚本
+     */
+    public static Scripts windowsJava(String mainEntry) {
+        // 与 Linux 模板对齐：必须把 JVM 参数与应用参数传下去。
+        // 原先写成 `-jar <入口>` 而不带 __JVMARGS__/__ARGS__，项目里配的
+        // cmdArgs（如 --server.port=NNNN）与 jvmArgs 会被静默忽略。
+        String start = winStart("java", "__JVMARGS__ -jar " + PH_ENTRY + " __ARGS__", mainEntry)
+                + "\n" + WIN_VERIFY_RUNNING;
         // 停止/重启前的停止段都带上孤儿兜底（app.pid 陈旧时唯一能真正停掉进程的手段）
         String stop = WIN_PID_STOP + winOrphanReaper(mainEntry);
         String stopBody = WIN_PID_STOP_BODY + winOrphanReaper(mainEntry);
-        switch (type) {
-            case "springboot", "fatjar" -> {
-                // 与 Linux 模板对齐：必须把 JVM 参数与应用参数传下去。
-                // 原先写成 `-jar <入口>` 而不带 __JVMARGS__/__ARGS__，项目里配的
-                // cmdArgs（如 --server.port=NNNN）与 jvmArgs 会被静默忽略。
-                String start = winStart("java", "__JVMARGS__ -jar " + PH_ENTRY + " __ARGS__", mainEntry)
-                        + "\n" + WIN_VERIFY_RUNNING;
-                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
-            }
-            case "static", "nginx" -> {
-                // 停/重启用 WIN_PID_STOP_BODY（不带末尾 exit 0）：WIN_PID_STOP 会以 exit 0 结束整个脚本，
-                // 重启时停完即退出、启动段永不执行，表现为「restart 报成功但 STATUS 是 stopped」。
-                String start = winStaticStart() + "\n" + WIN_VERIFY_RUNNING;
-                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
-            }
-            case "separated" -> {
-                // 与 Linux 模板对齐：分离式应用同样要能收到 __ARGS__
-                String start = (entry.endsWith(".ps1")
-                        ? winStart("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + PH_ENTRY)
-                        : winStart(PH_ENTRY, "__ARGS__")) + "\n" + WIN_VERIFY_RUNNING;
-                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
-            }
-            case "model" -> {
-                // 模型项目：仅管理模型文件，无运行进程
-                String start = "Write-Host \"Model repository - no process to start\"";
-                return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 1\n" + start, WIN_STATUS);
-            }
-            default -> {
-                return new Scripts(".\\start.ps1", ".\\stop.ps1", ".\\restart.ps1", WIN_STATUS);
-            }
-        }
+        return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+    }
+
+    /**
+     * Windows 静态站点 / nginx：以项目目录为前缀启动本项目的 nginx。
+     *
+     * @param mainEntry 主入口名称（静态站点不使用）
+     * @return 四段脚本
+     */
+    public static Scripts windowsStatic(String mainEntry) {
+        // 停/重启用 WIN_PID_STOP_BODY（不带末尾 exit 0）：WIN_PID_STOP 会以 exit 0 结束整个脚本，
+        // 重启时停完即退出、启动段永不执行，表现为「restart 报成功但 STATUS 是 stopped」。
+        String start = winStaticStart() + "\n" + WIN_VERIFY_RUNNING;
+        String stop = WIN_PID_STOP + winOrphanReaper(mainEntry);
+        String stopBody = WIN_PID_STOP_BODY + winOrphanReaper(mainEntry);
+        return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+    }
+
+    /**
+     * Windows 分离式：主入口为可执行文件或 {@code .ps1} 启动脚本。
+     *
+     * @param mainEntry 主入口名称
+     * @return 四段脚本
+     */
+    public static Scripts windowsSeparated(String mainEntry) {
+        String entry = mainEntry == null ? "" : mainEntry.trim().toLowerCase();
+        // 与 Linux 模板对齐：分离式应用同样要能收到 __ARGS__
+        String start = (entry.endsWith(".ps1")
+                ? winStart("powershell", "-NoProfile -ExecutionPolicy Bypass -File " + PH_ENTRY)
+                : winStart(PH_ENTRY, "__ARGS__")) + "\n" + WIN_VERIFY_RUNNING;
+        String stop = WIN_PID_STOP + winOrphanReaper(mainEntry);
+        String stopBody = WIN_PID_STOP_BODY + winOrphanReaper(mainEntry);
+        return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 2\n" + start, WIN_STATUS);
+    }
+
+    /**
+     * Windows 模型仓库：仅管理模型文件，没有常驻进程。
+     *
+     * @param mainEntry 主入口名称（模型项目不使用，仅用于回收同名残留进程）
+     * @return 四段脚本
+     */
+    public static Scripts windowsModel(String mainEntry) {
+        String start = "Write-Host \"Model repository - no process to start\"";
+        String stop = WIN_PID_STOP + winOrphanReaper(mainEntry);
+        String stopBody = WIN_PID_STOP_BODY + winOrphanReaper(mainEntry);
+        return new Scripts(start, stop, stopBody + "\nStart-Sleep -Seconds 1\n" + start, WIN_STATUS);
+    }
+
+    /**
+     * Windows 通用：不生成具体命令，交给用户自带的 start.ps1 / stop.ps1 / restart.ps1。
+     *
+     * @param mainEntry 主入口名称（通用模板不使用）
+     * @return 四段脚本
+     */
+    public static Scripts windowsGeneric(String mainEntry) {
+        return new Scripts(".\\start.ps1", ".\\stop.ps1", ".\\restart.ps1", WIN_STATUS);
     }
 
     /**

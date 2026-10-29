@@ -20,6 +20,7 @@ import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.mapper.MsServerProjectMapper;
 import com.chua.starter.server.support.mapper.MsServerReleaseMapper;
 import com.chua.starter.server.support.model.vo.ProjectBackupVO;
+import com.chua.starter.server.support.model.vo.SoftwareUpgradeVO;
 import com.chua.starter.server.support.push.ProjectTaskService;
 import com.chua.starter.server.support.push.ProjectTaskService.ProjectStep;
 import com.chua.starter.server.support.service.ExecService;
@@ -29,6 +30,10 @@ import com.chua.starter.server.support.spi.PackageManagerProvider;
 import com.chua.starter.server.support.spi.PackageManagerRouter;
 import com.chua.starter.server.support.spi.ProjectPlatformProvider;
 import com.chua.starter.server.support.spi.ProjectPlatformProviderRegistry;
+import com.chua.starter.server.support.spi.ProjectPlacement;
+import com.chua.starter.server.support.spi.ProjectPlacementContext;
+import com.chua.starter.server.support.spi.ProjectTypeProvider;
+import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.spi.SystemServiceProvider;
 import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
@@ -116,6 +121,12 @@ public class ReleaseServiceImpl implements ReleaseService {
     private final ProjectPlatformProviderRegistry projectPlatformRouter;
 
     /**
+     * 项目类型路由器（按项目类型选择 SPI 实现：内置脚本、升级投放、重启判定、包来源）。
+     * 与项目类型相关的分支一律经它取得，业务层不再出现类型字面量比较。
+     */
+    private final ProjectTypeProviderRegistry projectTypeRouter;
+
+    /**
      * 系统配置 Mapper（读写升级全局/最近配置的原始 JSON）
      */
     private final MsServerConfigMapper serverConfigMapper;
@@ -128,6 +139,8 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     private static final String CFG_GLOBAL_KEY = "upgrade.global";
     private static final String CFG_LAST_KEY = "upgrade.last";
+    /** 项目级默认升级配置的键前缀（后接项目ID），不改表结构 */
+    private static final String CFG_PROJECT_PREFIX = "upgrade.project.";
 
     /**
      * 操作上下文：项目 + 目标主机
@@ -292,7 +305,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         String osType = HostPlatforms.normalize(host.getServerHostOsType());
         boolean windows = HostPlatforms.WINDOWS.equals(osType);
-        ProjectScripts.Scripts def = ProjectScripts.builtin(windows, projectType, mainEntry);
+        ProjectScripts.Scripts def = projectTypeRouter.resolveOrGeneric(projectType).scripts(windows, mainEntry);
         // 用一个只承载上下文的临时项目走 materializeVars，使 envVars/jvmArgs/cmdArgs 的
         // VARS 块与参数展开与执行期一致（前端拿到的即可直接执行，无需二次加工）。
         MsServerProject stub = new MsServerProject();
@@ -742,6 +755,123 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
+    /**
+     * 列出有可用更新的软件。
+     *
+     * <p>判断依据是包管理器自己的「可升级清单」（apt list --upgradable /
+     * dnf check-update / winget upgrade / choco outdated），而不是「仓库里有没有这个包」。
+     * 再把清单与已安装版本按包名合并，前端拿到的每一条都是「当前 → 候选」，
+     * 点下去一定会真的升级。</p>
+     */
+    @Override
+    public ReturnResult<List<SoftwareUpgradeVO>> listUpgradableSoftware(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        PackageManagerProvider provider;
+        try {
+            provider = packageManagerRouter.route(host);
+        } catch (IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        }
+        String command = provider.upgradableCommand();
+        if (isBlank(command)) {
+            return ReturnResult.ok(new ArrayList<>());
+        }
+
+        ReturnResult<List<MsExecLog>> result =
+                execService.runCommand(Collections.singletonList(hostId), command, 90, null);
+        List<SoftwarePackage> candidates = new ArrayList<>();
+        if (result.getData() != null && !result.getData().isEmpty()) {
+            MsExecLog log = result.getData().get(0);
+            String output = log.getMsExecLogOutput();
+            if (isBlank(output)) {
+                // 输出为空且执行失败：不能当成「没有更新」，否则用户永远看不到升级按钮
+                if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
+                    String reason = log.getMsExecLogError();
+                    if (isBlank(reason)) {
+                        reason = "命令执行失败（退出码 " + log.getMsExecLogExitCode() + "）";
+                    }
+                    return ReturnResult.error("检查可升级软件失败: " + reason);
+                }
+                return ReturnResult.ok(new ArrayList<>());
+            }
+            candidates = provider.parseUpgradable(output);
+        }
+        if (candidates.isEmpty()) {
+            return ReturnResult.ok(new ArrayList<>());
+        }
+
+        // 合并已安装版本：只保留确实装在这台机器上的包
+        Map<String, String> installedVersion = new LinkedHashMap<>();
+        ReturnResult<List<SoftwarePackage>> installedResult = listInstalledSoftware(hostId);
+        if (installedResult.isOk() && installedResult.getData() != null) {
+            for (SoftwarePackage pkg : installedResult.getData()) {
+                if (pkg.name() != null) {
+                    installedVersion.put(pkg.name().toLowerCase(), pkg.version());
+                }
+            }
+        }
+
+        List<SoftwareUpgradeVO> upgrades = new ArrayList<>();
+        for (SoftwarePackage candidate : candidates) {
+            if (candidate.name() == null || candidate.name().isBlank()) {
+                continue;
+            }
+            String key = candidate.name().toLowerCase();
+            if (!installedVersion.containsKey(key)) {
+                continue;
+            }
+            String current = installedVersion.get(key);
+            String target = candidate.version();
+            if (!isBlank(current) && !isBlank(target) && current.trim().equals(target.trim())) {
+                // 版本完全相同不是升级；包管理器偶尔会把刚更新的包列一次
+                continue;
+            }
+            upgrades.add(new SoftwareUpgradeVO(candidate.name(), current, target));
+        }
+        return ReturnResult.ok(upgrades);
+    }
+
+    /**
+     * 查询某个软件包的依赖关系。
+     *
+     * <p>依赖是「读了才有」的信息，不预加载：软件列表动辄几百条，逐包跑
+     * {@code apt-cache depends} 会让页面打开变成分钟级。详情页展开时按需查一次。</p>
+     */
+    @Override
+    public ReturnResult<List<String>> softwareDependencies(Long hostId, String name) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (isBlank(name)) {
+            return ReturnResult.error("软件包名不能为空");
+        }
+        PackageManagerProvider provider;
+        try {
+            provider = packageManagerRouter.route(host);
+        } catch (IllegalStateException e) {
+            return ReturnResult.error(e.getMessage());
+        }
+        String command = provider.dependenciesCommand(name);
+        if (isBlank(command)) {
+            return ReturnResult.ok(new ArrayList<>());
+        }
+
+        ReturnResult<List<MsExecLog>> result =
+                execService.runCommand(Collections.singletonList(hostId), command, 30, null);
+        if (result.getData() == null || result.getData().isEmpty()) {
+            return ReturnResult.ok(new ArrayList<>());
+        }
+        String output = result.getData().get(0).getMsExecLogOutput();
+        if (isBlank(output)) {
+            return ReturnResult.ok(new ArrayList<>());
+        }
+        return ReturnResult.ok(provider.parseDependencies(output));
+    }
+
     // ==================== 状态检测 ====================
 
     @Override
@@ -846,19 +976,63 @@ public class ReleaseServiceImpl implements ReleaseService {
                 readStringList(ctx.project.getCmdArgs()),
                 ctx.host == null ? "" : ctx.host.getServerHostAccount(),
                 Boolean.TRUE.equals(ctx.project.getAutostart()),
-                Boolean.TRUE.equals(ctx.project.getGuardian()));
+                Boolean.TRUE.equals(ctx.project.getGuardian()),
+                // 前台常驻命令由项目类型 SPI 生成，平台实现不再持有项目类型分支
+                projectTypeRouter.resolveOrGeneric(ctx.project.getProjectType())
+                        .posixForeground(ctx.project.getMainEntry()));
     }
 
     @Override
-    public ReturnResult<Map<String, Object>> getUpgradeConfig() {
+    public ReturnResult<Map<String, Object>> getUpgradeConfig(Long projectId) {
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         out.put("global", readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig()));
         out.put("last", readCfg(CFG_LAST_KEY, null));
+        if (projectId != null) {
+            out.put("project", projectUpgradeConfig(projectId));
+        }
         return ReturnResult.ok(out);
     }
 
+    /**
+     * 汇总某个项目的「默认升级配置」。
+     *
+     * <p>项目默认 = 项目自身字段（部署类型 / 解压开关 / 模型上传目录）作为基线，
+     * 再被用户显式保存过的项目级配置覆盖。这样升级弹框按项目打开时，
+     * 显示的一定是这个项目自己的默认值，而不是上一次别的项目留下来的全局配置。</p>
+     *
+     * @param projectId 项目ID
+     * @return 项目默认升级配置
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> projectUpgradeConfig(Long projectId) {
+        Map<String, Object> cfg = new java.util.LinkedHashMap<>(defaultGlobalConfig());
+        MsServerProject project = projectMapper.selectById(projectId);
+        if (project != null) {
+            if (!isBlank(project.getDeployType())) {
+                cfg.put("deployType", project.getDeployType());
+            }
+            if (project.getUploadExtract() != null) {
+                cfg.put("uploadExtract", project.getUploadExtract());
+            }
+            if (!isBlank(project.getUploadTargetDir())) {
+                cfg.put("uploadTargetDir", project.getUploadTargetDir());
+            }
+            cfg.put("projectType", project.getProjectType());
+            cfg.put("mainEntry", project.getMainEntry());
+            cfg.put("projectName", project.getProjectName());
+        }
+        Object saved = readCfg(CFG_PROJECT_PREFIX + projectId, null);
+        if (saved instanceof Map) {
+            cfg.putAll((Map<String, Object>) saved);
+            cfg.put("__saved", true);
+        } else {
+            cfg.put("__saved", false);
+        }
+        return cfg;
+    }
+
     @Override
-    public ReturnResult<Void> saveUpgradeConfig(String scope, Map<String, Object> config) {
+    public ReturnResult<Void> saveUpgradeConfig(String scope, Long projectId, Map<String, Object> config) {
         String key;
         String desc;
         if ("global".equalsIgnoreCase(scope)) {
@@ -867,6 +1041,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         } else if ("last".equalsIgnoreCase(scope)) {
             key = CFG_LAST_KEY;
             desc = "最近一次手动升级配置";
+        } else if ("project".equalsIgnoreCase(scope)) {
+            if (projectId == null) {
+                return ReturnResult.error("scope=project 时必须指定 projectId");
+            }
+            key = CFG_PROJECT_PREFIX + projectId;
+            desc = "项目 " + projectId + " 默认升级配置";
         } else {
             return ReturnResult.error("非法 scope: " + scope);
         }
@@ -894,6 +1074,35 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.success();
     }
 
+    @Override
+    public ReturnResult<List<Map<String, Object>>> batchUpgrade(List<Long> projectIds, Map<String, Object> config) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return ReturnResult.error("请选择要升级的项目");
+        }
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Long projectId : projectIds) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("projectId", projectId);
+            try {
+                Map<String, Object> cfg = config == null
+                        ? new java.util.LinkedHashMap<>()
+                        : new java.util.LinkedHashMap<>(config);
+                // 批量升级只对一个项目下发一次：清掉可能残留的包路径判断，交给调用方显式传入
+                ReturnResult<String> r = runUpgrade(projectId, cfg);
+                row.put("ok", r.isOk());
+                row.put("taskId", r.isOk() ? r.getData() : null);
+                if (!r.isOk()) {
+                    row.put("message", r.getMsg());
+                }
+            } catch (Exception e) {
+                row.put("ok", false);
+                row.put("message", e.getMessage());
+            }
+            results.add(row);
+        }
+        return ReturnResult.ok(results);
+    }
+
     // ==================== 按配置升级 ====================
 
     @Override
@@ -915,7 +1124,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         boolean uploadExtract = boolCfg(cfg, "uploadExtract", true);
         String uploadTargetDir = strCfg(cfg, "uploadTargetDir", "");
         String deployType = strCfg(cfg, "deployType", "");
-        String projectType = project.getProjectType() == null ? "" : project.getProjectType().trim().toLowerCase();
+        ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
+
+        // 包来源由项目类型声明：Git 类型未显式给包时先拉源码构建，再走本类型正常的投放与重启
+        String source = strCfg(cfg, "source", "").trim();
+        boolean gitSource = ProjectTypeProvider.SOURCE_GIT.equalsIgnoreCase(source)
+                || (source.isEmpty() && isBlank(packagePath)
+                        && ProjectTypeProvider.SOURCE_GIT.equals(type.sourceKind()));
+        if (gitSource) {
+            ReturnResult<String> built = prepareGitPackage(ctx);
+            if (!built.isOk()) {
+                return ReturnResult.error(built.getMsg());
+            }
+            packagePath = built.getData();
+            cfg.put("packagePath", packagePath);
+        }
 
         List<ProjectStep> steps = new ArrayList<>();
         ProjectStep cfgStep = springConfigStep(win, project);
@@ -930,145 +1153,20 @@ public class ReleaseServiceImpl implements ReleaseService {
             steps.add(new ProjectStep("备份当前版本", backupCommand(win, path), 2));
         }
         if (!isBlank(packagePath)) {
-            if ("model".equals(projectType)) {
-                // 模型项目：上传到目标目录，可选解压，无需重启
-                String targetDir = !isBlank(uploadTargetDir)
-                        ? (path.endsWith("/") ? path : path + "/") + uploadTargetDir
-                        : path;
-                if (uploadExtract && isArchive(packagePath)) {
-                    steps.add(new ProjectStep("解压模型文件到目录", extractCommand(win, targetDir, packagePath), 2));
-                } else {
-                    String pkgName = new File(packagePath).getName();
-                    steps.add(new ProjectStep("投放模型文件到目录", "", 2, () -> {
-                        String src = packagePath.replace('\\', '/');
-                        String dst = targetDir.replace('\\', '/') + "/" + pkgName;
-                        ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
-                        if (!mv.isOk()) {
-                            sftpService.delete(ctx.hostId, null, dst, false);
-                            mv = sftpService.rename(ctx.hostId, null, src, dst);
-                        }
-                        if (mv.isOk()) {
-                            return java.util.List.of("sftp rename " + src + " -> " + dst);
-                        }
-                        String sdkWhy = mv.getMsg();
-                        ReturnResult<java.util.List<MsExecLog>> placed =
-                                execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
-                                        placeCommand(win, targetDir, packagePath, pkgName), 60, null);
-                        if (!placed.isOk() || anyExecFailed(placed.getData())) {
-                            throw new IllegalStateException("投放模型文件失败: " + sdkWhy);
-                        }
-                        return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
-                    }));
-                }
-            } else if ("separated".equals(projectType)) {
-                // 分离式部署：根据 deployType 决定投放内容
-                String libDir = !isBlank(project.getLibDir()) ? project.getLibDir() : "lib";
-                boolean doMain = !isBlank(deployType) && ("main".equals(deployType) || "both".equals(deployType));
-                boolean doLib = "lib".equals(deployType) || "both".equals(deployType);
-                if (isBlank(deployType)) { doMain = true; doLib = true; }
-                if (doMain) {
-                    if (autoExtract && isArchive(packagePath)) {
-                        steps.add(new ProjectStep("解压主包", extractCommand(win, path, packagePath), 2));
-                    } else {
-                        String sdkTarget = (path.endsWith("/") ? path : path + "/") + project.getMainEntry();
-                        steps.add(new ProjectStep("投放主包", "", 2, () -> {
-                            String src = packagePath.replace('\\', '/');
-                            String dst = sdkTarget.replace('\\', '/');
-                            ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
-                            if (!mv.isOk()) {
-                                sftpService.delete(ctx.hostId, null, dst, false);
-                                mv = sftpService.rename(ctx.hostId, null, src, dst);
-                            }
-                            if (mv.isOk()) {
-                                return java.util.List.of("sftp rename " + src + " -> " + dst);
-                            }
-                            String sdkWhy = mv.getMsg();
-                            ReturnResult<java.util.List<MsExecLog>> placed =
-                                    execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
-                                            placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
-                            if (!placed.isOk() || anyExecFailed(placed.getData())) {
-                                String restoreNote = restoreAndRestart(win, ctx, path, project);
-                                throw new IllegalStateException("投放主包失败且旧文件已删除；" + restoreNote + "SDK=" + sdkWhy);
-                            }
-                            return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
-                        }));
-                    }
-                }
-                if (doLib) {
-                    String libPath = (path.endsWith("/") ? path : path + "/") + libDir;
-                    if (autoExtract && isArchive(packagePath)) {
-                        steps.add(new ProjectStep("解压依赖到 lib 目录", extractCommand(win, libPath, packagePath), 2));
-                    } else {
-                        String pkgName = new File(packagePath).getName();
-                        steps.add(new ProjectStep("投放依赖到 lib 目录", "", 2, () -> {
-                            String src = packagePath.replace('\\', '/');
-                            String libFull = libPath.replace('\\', '/');
-                            sftpService.mkdir(ctx.hostId, null, libFull);
-                            String dst = libFull + "/" + pkgName;
-                            ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
-                            if (!mv.isOk()) {
-                                sftpService.delete(ctx.hostId, null, dst, false);
-                                mv = sftpService.rename(ctx.hostId, null, src, dst);
-                            }
-                            if (mv.isOk()) {
-                                return java.util.List.of("sftp rename " + src + " -> " + dst);
-                            }
-                            String sdkWhy = mv.getMsg();
-                            ReturnResult<java.util.List<MsExecLog>> placed =
-                                    execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
-                                            placeCommand(win, libFull, packagePath, pkgName), 60, null);
-                            if (!placed.isOk() || anyExecFailed(placed.getData())) {
-                                throw new IllegalStateException("投放依赖失败: " + sdkWhy);
-                            }
-                            return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
-                        }));
-                    }
-                }
-            } else {
-                // springboot/fatjar/static/nginx：现有逻辑
-                if (autoExtract && isArchive(packagePath)) {
-                steps.add(new ProjectStep("解压新版本包", extractCommand(win, path, packagePath), 2));
-            } else {
-                // SDK 优先：文件投放用 SFTP rename（同文件系统内即移动），SDK 不可用才回退平台命令
-                String sdkTarget = (path.endsWith("/") ? path : path + "/") + project.getMainEntry();
-                steps.add(new ProjectStep("投放新版本文件", "", 2, () -> {
-                    String src = packagePath.replace('\\', '/');
-                    String dst = sdkTarget.replace('\\', '/');
-                    ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
-                    if (!mv.isOk()) {
-                        // 多数 SFTP 实现不支持覆盖式 rename（目标已存在的升级场景必然失败）：
-                        // 先删目标再 rename，仍走 SDK；只有删除后仍失败才回退命令。
-                        sftpService.delete(ctx.hostId, null, dst, false);
-                        mv = sftpService.rename(ctx.hostId, null, src, dst);
-                    }
-                    if (mv.isOk()) {
-                        return java.util.List.of("sftp rename " + src + " -> " + dst);
-                    }
-                    // 跨设备等场景：回退到平台命令（cp -f / Copy-Item）
-                    String sdkWhy = mv.getMsg();
-                    // 必须检查命令投放的结果：此前 runCommand 的返回值被直接丢弃，
-                    // 于是「SFTP 重命名失败 + 命令投放也失败」时步骤依然报成功，
-                    // 编排器继续往下走去重启 —— 而目标文件此时已被 delete 掉，
-                    // 项目一个可用 jar 都不剩，最后表现为「健康检查超时、自动回滚也没跑」。
-                    ReturnResult<java.util.List<MsExecLog>> placed =
-                            execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
-                                    placeCommand(win, path, packagePath, project.getMainEntry()), 60, null);
-                    if (!placed.isOk() || anyExecFailed(placed.getData())) {
-                        // 止损：投放失败且旧文件已被删除，立刻用最新备份还原并把服务重新拉起。
-                        // 只还原文件是不够的 —— 流程在第 3 步中止，后面的「重启并健康检测」
-                        // 不会执行，项目会停留在「已停止」状态；升级失败却把服务弄停，
-                        // 比升级失败本身更严重。
-                        String restoreNote = restoreAndRestart(win, ctx, path, project);
-                        throw new IllegalStateException("投放新版本文件失败且旧文件已删除；" + restoreNote
-                                + "SDK=" + sdkWhy + "；命令投放=" + (placed.isOk() ? "退出码非 0" : placed.getMsg()));
-                    }
-                    return java.util.List.of("SFTP rename 不可用，已回退命令投放: " + sdkWhy);
-                }));
-            }
-            }
+            ProjectPlacementContext pc = new ProjectPlacementContext(
+                    path,
+                    project.getMainEntry(),
+                    project.getLibDir(),
+                    packagePath,
+                    isArchive(packagePath),
+                    autoExtract,
+                    uploadExtract,
+                    uploadTargetDir,
+                    deployType);
+            steps.addAll(placementSteps(win, ctx, type, pc));
         }
-        // model 类型无需重启（仅管理模型文件）
-        if ("model".equals(projectType)) {
+        // 没有常驻进程的类型（模型仓库）无需重启
+        if (!type.runtimeProcess()) {
             steps.add(pidStep(win, path));
         } else if (autoRollback && !isBlank(project.getStatusScript())) {
             steps.add(new ProjectStep("重启并健康检测（失败自动回滚）",
@@ -1090,9 +1188,80 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
+    /**
+     * 按项目类型声明的投放计划生成步骤。
+     *
+     * <p>类型只声明「投到哪、叫什么、是否建目录、失败是否还原重启」，执行细节统一在这里：
+     * 优先 SFTP 重命名（同文件系统内即移动），SDK 不可用才回退平台命令。</p>
+     *
+     * <p>投放失败必须检查命令结果：{@code runCommand} 外层常常是成功的，真正的失败只体现在
+     * 退出码上。若忽略它，目标文件已被删除却仍报「步骤成功」，编排器会继续去重启，
+     * 最终表现为「健康检查超时、自动回滚也没跑」。</p>
+     *
+     * @param pf   平台命令提供者
+     * @param ctx  操作上下文
+     * @param type 项目类型实现
+     * @param pc   投放上下文
+     * @return 投放步骤
+     */
+    private List<ProjectStep> placementSteps(ProjectPlatformProvider pf, OperationContext ctx,
+                                             ProjectTypeProvider type, ProjectPlacementContext pc) {
+        List<ProjectStep> steps = new ArrayList<>();
+        for (ProjectPlacement placement : type.placements(pc)) {
+            if (placement.kind() == ProjectPlacement.Kind.EXTRACT) {
+                steps.add(new ProjectStep(placement.title(),
+                        extractCommand(pf, placement.targetDir(), pc.packagePath()), 2));
+                continue;
+            }
+            steps.add(new ProjectStep(placement.title(), "", 2, () -> {
+                String src = pc.packagePath().replace('\\', '/');
+                String dir = placement.targetDir().replace('\\', '/');
+                String dst = dir + "/" + placement.fileName();
+                if (placement.createTargetDir()) {
+                    // 首次升级时 lib 目录往往还不存在，不建目录投放会失败
+                    sftpService.mkdir(ctx.hostId, null, dir);
+                }
+                // 投放必须是「复制」而不是「移动」：源包被移走后，同一个 packagePath
+                // 给第二个项目或二次升级就会报文件不存在（实测升级后上传目录里的包已消失），
+                // 而且 SDK 路径移动、命令回退路径复制，两条路径的副作用还不一致。
+                // 因此先走平台命令复制（cp -f / Copy-Item），源包始终保留。
+                ReturnResult<java.util.List<MsExecLog>> copied =
+                        execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                                placeCommand(pf, dir, pc.packagePath(), placement.fileName()), 60, null);
+                if (copied.isOk() && !anyExecFailed(copied.getData())) {
+                    return java.util.List.of("已复制到 " + dst + "（保留源包）");
+                }
+                String cmdWhy = copied.isOk() ? "退出码非 0" : copied.getMsg();
+                // 命令通道不可用（如仅开 SFTP 的主机）才退回重命名：这条路径必然移动源包，
+                // 属于次优但唯一可行的手段，会在步骤日志里写明。
+                ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
+                if (!mv.isOk()) {
+                    // 多数 SFTP 实现不支持覆盖式 rename（目标已存在的升级场景必然失败）：
+                    // 先删目标再 rename，仍走 SDK。
+                    sftpService.delete(ctx.hostId, null, dst, false);
+                    mv = sftpService.rename(ctx.hostId, null, src, dst);
+                }
+                if (mv.isOk()) {
+                    return java.util.List.of("命令投放不可用（" + cmdWhy + "），已回退 sftp rename（源包被移动）: "
+                            + src + " -> " + dst);
+                }
+                // cp -f 是就地截断写入，失败时目标可能已被写坏，仍需按备份还原并重启止损
+                if (placement.restoreOnFailure()) {
+                    String restoreNote = restoreAndRestart(pf, ctx, pc.projectPath(), ctx.project);
+                    throw new IllegalStateException(placement.title() + "失败；" + restoreNote
+                            + "命令投放=" + cmdWhy + "；SFTP rename=" + mv.getMsg());
+                }
+                throw new IllegalStateException(placement.title() + "失败: " + cmdWhy
+                        + "；SFTP rename=" + mv.getMsg());
+            }));
+        }
+        return steps;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
-    public ReturnResult<String> uploadAndUpgrade(Long id, MultipartFile file) {
+    public ReturnResult<String> uploadAndUpgrade(Long id, MultipartFile file,
+                                                 String deployTypeOverride, Boolean autoRestartOverride) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
             return ReturnResult.error(prepared.getMsg());
@@ -1130,17 +1299,39 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (!isBlank(project.getDeployType())) {
             cfg.put("deployType", project.getDeployType());
         }
+        // 拖拽上传的调用方可以显式覆盖部署类型（典型：分离式项目「更新依赖包」只投 lib）
+        if (!isBlank(deployTypeOverride)) {
+            cfg.put("deployType", deployTypeOverride.trim().toLowerCase());
+        }
+        if (autoRestartOverride != null) {
+            cfg.put("autoRestart", autoRestartOverride);
+        }
         return runUpgrade(id, cfg);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public ReturnResult<String> gitPullAndDeploy(Long id) {
-        ReturnResult<OperationContext> prepared = prepare(id);
-        if (!prepared.isOk()) {
-            return ReturnResult.error(prepared.getMsg());
-        }
-        OperationContext ctx = prepared.getData();
+        // 与普通升级共用同一条链路：类型决定投放与重启，这里只声明「包来自 Git 构建」。
+        Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
+        Map<String, Object> cfg = global instanceof Map
+                ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
+                : defaultGlobalConfig();
+        cfg.put("source", ProjectTypeProvider.SOURCE_GIT);
+        return runUpgrade(id, cfg);
+    }
+
+    /**
+     * 拉取源码 → Maven 构建 → 上传产物，返回目标主机上的安装包绝对路径。
+     *
+     * <p>只负责「把包做出来」，不碰投放与重启：备份、投放、健康检查仍走
+     * {@link #runUpgrade(Long, Map)} 的统一编排，避免 Git 发布维护第二套发布流程。
+     * 管理端无需预装 Maven，缺失时自动下载。</p>
+     *
+     * @param ctx 操作上下文
+     * @return 目标主机上的安装包路径
+     */
+    private ReturnResult<String> prepareGitPackage(OperationContext ctx) {
         MsServerProject project = ctx.project;
 
         // 1. 校验 Git 配置
@@ -1274,14 +1465,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         String remotePackage = up.getData();
         log.info("[Git发布] 产物已上传: {}", remotePackage);
-
-        // 9. 调用 runUpgrade 执行备份+投放+重启
-        Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
-        Map<String, Object> cfg = global instanceof Map
-                ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
-                : defaultGlobalConfig();
-        cfg.put("packagePath", remotePackage);
-        return runUpgrade(id, cfg);
+        return ReturnResult.ok(remotePackage);
     }
 
     @Override
@@ -1292,7 +1476,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         OperationContext ctx = prepared.getData();
         MsServerProject project = ctx.project;
-        if (!"separated".equalsIgnoreCase(project.getProjectType())) {
+        if (!projectTypeRouter.resolveOrGeneric(project.getProjectType()).supportsLibUpgrade()) {
             return ReturnResult.error("仅分离式项目支持依赖计数");
         }
         String libDir = !isBlank(project.getLibDir()) ? project.getLibDir() : "lib";
@@ -1608,7 +1792,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         MsServerHost host = (release != null && release.getHostId() != null)
                 ? hostMapper.selectById(release.getHostId()) : null;
         boolean windows = host != null && "WINDOWS".equalsIgnoreCase(host.getServerHostOsType());
-        ProjectScripts.Scripts def = ProjectScripts.builtin(windows, project.getProjectType(), project.getMainEntry());
+        ProjectScripts.Scripts def = projectTypeRouter
+                .resolveOrGeneric(project.getProjectType())
+                .scripts(windows, project.getMainEntry());
         if (isBlank(project.getStartScript())) {
             project.setStartScript(def.start());
         }

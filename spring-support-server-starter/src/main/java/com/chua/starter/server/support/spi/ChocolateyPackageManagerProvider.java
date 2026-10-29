@@ -73,6 +73,27 @@ public class ChocolateyPackageManagerProvider extends AbstractPackageManagerProv
     }
 
     @Override
+    public String upgradableCommand() {
+        // -r 管道输出：name|current|available|pinned
+        return CHOCO + " outdated -r --no-progress";
+    }
+
+    @Override
+    public String dependenciesCommand(String name) {
+        return CHOCO + " info " + name + " --limit-output";
+    }
+
+    @Override
+    public List<SoftwarePackage> parseUpgradable(String output) {
+        return parsePipeUpgradable(output);
+    }
+
+    @Override
+    public List<String> parseDependencies(String output) {
+        return parseDependencyLines(output, "Dependencies:");
+    }
+
+    @Override
     public List<SoftwarePackage> parse(String output, String keyword) {
         return parsePipe(output);
     }

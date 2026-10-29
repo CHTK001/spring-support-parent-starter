@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.42</version>
+        <version>4.0.0.43</version>
     </parent>
     <artifactId>spring-support-datasource-hub-starter</artifactId>
     <description>
@@ -33,6 +33,13 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
+        </dependency>
+        <!-- Calcite 联邦内核（数据源合并的编译前提）：datasource-starter 里声明为
+             optional，传递不到本模块；合并功能是本模块的一等能力，故显式引入。
+             未引时 CalciteMergeDataSourceFactory 编译不过，这属于「功能与依赖同进退」。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-calcite-starter</artifactId>
         </dependency>
         <!-- 中间件 SPI 契约：MiddlewareClientProvider / Capability / VO。
              宿主只认契约，不认任何具体中间件客户端 —— Kafka / InfluxDB / ZooKeeper

@@ -3,6 +3,7 @@ package com.chua.starter.server.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.model.vo.WorkbenchDockerCapabilityVO;
 import com.chua.starter.server.support.model.vo.WorkbenchK8sCapabilityVO;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,7 @@ public interface WorkbenchService {
     ReturnResult<Boolean> dockerContainerAction(Long hostId, String containerId, String action);
 
     /**
-     * 容器最近日志
+     * 容器最近日志（一次性返回，非流式）
      *
      * @param hostId      主机 标识
      * @param containerId 容器 ID 或名称
@@ -63,6 +64,51 @@ public interface WorkbenchService {
      * @return 日志文本
      */
     ReturnResult<String> dockerContainerLogs(Long hostId, String containerId, Integer tail);
+
+    /**
+     * 容器日志实时流（SSE 异步推送）
+     * <p>使用 docker logs -f 持续跟随容器日志，每行作为一条 SSE 事件推送。
+     * 客户端断开连接时自动停止跟随并释放 SSH 连接。</p>
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID 或名称
+     * @param tail        起始尾部行数，默认 100
+     * @return SSE 发射器
+     */
+    SseEmitter streamContainerLogs(Long hostId, String containerId, Integer tail);
+
+    /**
+     * 进入容器（SSE 异步流式交互）
+     * <p>通过 SSH PTY 建立交互式会话，执行 docker exec -it 进入容器 shell。
+     * 容器输出经 SSE 推送，客户端输入经 {@link #dockerContainerExecInput} 发送。</p>
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID 或名称
+     * @param command     容器内命令，默认 /bin/bash
+     * @return SSE 发射器
+     */
+    SseEmitter dockerContainerExec(Long hostId, String containerId, String command);
+
+    /**
+     * 发送交互输入到容器会话
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID 或名称
+     * @param sessionId   会话标识（dockerContainerExec 返回的 sessionId）
+     * @param input       输入文本
+     * @return 操作结果
+     */
+    ReturnResult<Void> dockerContainerExecInput(Long hostId, String containerId, String sessionId, String input);
+
+    /**
+     * 关闭容器交互会话
+     *
+     * @param hostId      主机 标识
+     * @param containerId 容器 ID 或名称
+     * @param sessionId   会话标识
+     * @return 操作结果
+     */
+    ReturnResult<Void> dockerContainerExecClose(Long hostId, String containerId, String sessionId);
 
     /**
      * 镜像列表

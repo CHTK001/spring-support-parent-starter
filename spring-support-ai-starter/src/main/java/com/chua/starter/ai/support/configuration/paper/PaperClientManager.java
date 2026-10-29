@@ -160,7 +160,7 @@ public class PaperClientManager implements PaperClient {
      * <p>从 {@code paper} 分组配置装配部件：OCR 用 {@link OcrClientManager#current()}
      * （复用 ocr 分组的共享 OcrPipeline）、版面用 {@link LayoutClientManager#current()}
      * （复用 layout 分组的共享 LayoutDetector）、LLM 用 {@link #resolveLlmClient()}
-     * （paper 分组 provider/model，回落到默认对话模型）。配置指纹变化时重建。</p>
+     * （paper 分组 model，回落到默认对话模型）。配置指纹变化时重建。</p>
      *
      * @return 试卷识别管线；OCR 部件缺失时返回 null（识别走 {@code available()} 判不可用）
      */
@@ -236,16 +236,15 @@ public class PaperClientManager implements PaperClient {
      * 当前生效的引擎。
      *
      * <p>引擎不再由 {@code paper.engine} 设置项决定（该项已从配置定义移除），
-     * 改为<b>按模型配置推导</b>：配了结构化大模型（{@code llm_provider} /
-     * {@code llm_model} 任一非空）→ {@code ocr+llm}；否则 → {@code ocr}。
+     * 改为<b>按模型配置推导</b>：结构化大模型只认「模型管理」登记的模型，
+     * 配了 {@code llm_model}（非空）→ {@code ocr+llm}；否则 → {@code ocr}。
      * 用户无需手动选「识别引擎」，配了 LLM 就自动走结构化管线。</p>
      *
      * @return ocr / ocr+llm
      */
     @Override
     public String engine() {
-        boolean llmConfigured = StringUtils.isNotBlank(settingReader.getStr(GROUP, "llm_provider"))
-                || StringUtils.isNotBlank(settingReader.getStr(GROUP, "llm_model"));
+        boolean llmConfigured = StringUtils.isNotBlank(settingReader.getStr(GROUP, "llm_model"));
         return llmConfigured ? ENGINE_OCR_LLM : ENGINE_OCR;
     }
 
@@ -532,19 +531,14 @@ public class PaperClientManager implements PaperClient {
     }
 
     /**
-     * 解析 LLM 客户端：优先按 paper 分组 provider/model，否则用默认聚合客户端。
+     * 解析 LLM 客户端：优先按 paper 分组 model（模型管理登记的模型），
+     * 否则回落默认对话模型。不再读取 provider —— 结构化大模型必须来自模型管理，
+     * 不允许私自配置供应商（llm_provider 已从配置定义移除）。
      *
      * @return ChatClient，找不到返回 空
      */
     private ChatClient resolveLlmClient() {
-        String provider = settingReader.getStr(GROUP, "llm_provider");
         String model = settingReader.getStr(GROUP, "llm_model");
-        if (StringUtils.isNotBlank(provider)) {
-            ChatClient byProvider = chatClientRegistry.getByProvider(provider);
-            if (byProvider != null) {
-                return byProvider;
-            }
-        }
         if (StringUtils.isNotBlank(model)) {
             ChatClient byModel = chatClientRegistry.getByModel(model);
             if (byModel != null) {
@@ -597,7 +591,6 @@ public class PaperClientManager implements PaperClient {
                 ocrDetectorModel(),
                 ocrRecognizerModel(),
                 String.valueOf(settingReader.getDecimalOrNull(GROUP, "ocr_threshold")),
-                StringUtils.defaultString(settingReader.getStr(GROUP, "llm_provider"), ""),
                 StringUtils.defaultString(settingReader.getStr(GROUP, "llm_model"), ""),
                 StringUtils.defaultString(settingReader.getStr(GROUP, "device"), ""));
     }

@@ -4,6 +4,8 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
+import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -11,6 +13,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -21,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +38,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code 1789547286889:agnes-2.5-flash}），且真实可用客户端是按 DB 供应商配置动态构建的，
  * 注册中心里既没有该限定名、默认客户端也可能为空，导致辅助链路取不到客户端而静默回退。</p>
  *
- * <p>本解析器统一完成：
+ * <p>本解析器统一完成：</p>
  * <ol>
  *   <li>归一化：剥离「{@code providerId:}」前缀，得到裸模型名与可选 providerId；</li>
  *   <li>供应商解析：显式 providerId 直查，否则按启用的 provider_model 行反查；</li>
  *   <li>客户端构建：收集供应商级 + 连接级全部密钥，单密钥直连、多密钥 failover 聚合；</li>
+ *   <li>渠道路由收集：遍历 OAuth 渠道供应商，把每个连接的 access_token 经 SPI 的
+ *       {@code toRouteTarget} 转为路由目标，聚合同一渠道多账号到 {@code apiKeys} 列表；</li>
  *   <li>按 {@code provider::model} 缓存（TTL {@value #CACHE_TTL_MILLIS} ms）。</li>
  * </ol>
  *
@@ -74,6 +80,11 @@ public class ModelClientResolver {
      * 客户端缓存：key = providerId::model
      */
     private final Map<String, CachedClient> cache = new ConcurrentHashMap<>();
+
+    /**
+     * 渠道路由缓存：key = ownerScope
+     */
+    private final Map<String, CachedRoutes> routeCache = new ConcurrentHashMap<>();
 
     /**
      * 按（可能带 providerId 前缀的）模型名解析可用对话客户端。
@@ -118,7 +129,7 @@ public class ModelClientResolver {
      * @param provider 供应商
      * @return 归属作用域
      */
-    private static String ownerScopeOf(SysAiProvider provider) {
+    public static String ownerScopeOf(SysAiProvider provider) {
         if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
             return "_free";
         }
@@ -168,7 +179,7 @@ public class ModelClientResolver {
             }
             if (candidates.size() > 1) {
                 log.warn("[ModelClientResolver] 模型 {} 在 {} 个供应商下同名（{}），未指定供应商时取第一家；"
-                                + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
+                            + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
                         parsed.model(), candidates.size(),
                         candidates.stream().map(SysAiProviderModel::getProviderId).toList());
             }
@@ -197,6 +208,10 @@ public class ModelClientResolver {
         try {
             List<String> keys = collectAllKeys(provider, ownerScope);
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+            // 免费渠道：收集动态渠道路由（多账号 429 failover）
+            Map<String, RouteTarget> channelRoutes = ProviderRouteTargets.isFreeChannel(provider.getPlatform())
+                    ? mergedRoutes(provider, ownerScope)
+                    : null;
             if (keys.isEmpty()) {
                 if (!ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
                     log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
@@ -210,7 +225,7 @@ public class ModelClientResolver {
             boolean autoSwitch = !"false".equalsIgnoreCase(
                     extraString(provider.getExtra(), "auto_switch_on_rate_limit"));
             if (keys.size() == 1 || !autoSwitch) {
-                ChatClient raw = ChatClient.create(buildSetting(provider, keys.getFirst(), extraHeaders));
+                ChatClient raw = ChatClient.create(buildSetting(provider, keys.getFirst(), extraHeaders, channelRoutes));
                 return raw == null ? null : raw.model(model);
             }
             // 多 Key：按 UI 上的 Key 策略（failover / round_robin）组聚合，429 限流自动切下一个
@@ -221,7 +236,7 @@ public class ModelClientResolver {
             aggSetting.setAutoSwitchOnQuotaExhausted(true);
             AggregateChatClient aggregate = new AggregateChatClient(aggSetting);
             for (int i = 0; i < keys.size(); i++) {
-                ChatClient raw = ChatClient.create(buildSetting(provider, keys.get(i), extraHeaders));
+                ChatClient raw = ChatClient.create(buildSetting(provider, keys.get(i), extraHeaders, channelRoutes));
                 if (raw != null) {
                     aggregate.addClient("client-" + i, provider.getPlatform(), 1, raw.model(model));
                 }
@@ -235,19 +250,22 @@ public class ModelClientResolver {
     }
 
     /**
-     * 组装客户端配置，含认证方案。
+     * 组装客户端配置，含认证方案与渠道路由。
      *
      * <p>认证方案必须一并下发：{@code auth_scheme} 决定是否发送认证头，
      * {@code extra.auth_header} / {@code extra.auth_prefix} 决定头名与前缀。
      * 缺了这三项，Dots Studio 这类只认 {@code api-key} 的服务商会因
      * 收到 {@code Authorization: Bearer} 而 401。</p>
      *
-     * @param provider     供应商
-     * @param apiKey       API Key
-     * @param extraHeaders 自定义请求头
+     * @param provider      供应商
+     * @param apiKey        API Key
+     * @param extraHeaders  自定义请求头
+     * @param channelRoutes 渠道路由（免费渠道专用，可为 null）
      * @return 客户端配置
      */
-    private ChatClientSetting buildSetting(SysAiProvider provider, String apiKey, Map<String, String> extraHeaders) {
+    private ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+                                            Map<String, String> extraHeaders,
+                                            Map<String, RouteTarget> channelRoutes) {
         return ChatClientSetting.builder()
                 .provider(provider.getPlatform())
                 .appKey(apiKey)
@@ -258,7 +276,8 @@ public class ModelClientResolver {
                 .authPrefix(extraString(provider.getExtra(), "auth_prefix"))
                 .metricsUrl(extraString(provider.getExtra(), "metrics_url"))
                 .proxy(provider.getProxy())
-                .routes(ProviderRouteTargets.fromExtra(provider.getExtra()))
+                .routes(channelRoutes != null ? channelRoutes
+                        : ProviderRouteTargets.fromExtra(provider.getExtra()))
                 .build();
     }
 
@@ -318,6 +337,157 @@ public class ModelClientResolver {
             log.debug("[ModelClientResolver] 查询连接凭证失败: {}", e.getMessage());
         }
         return new ArrayList<>(keys);
+    }
+
+    /**
+     * 收集所有 OAuth 渠道的路由目标（多账号聚合）。
+     *
+     * <p>遍历所有 {@code auth_scheme=oauth} 的启用供应商，找到对应 SPI 实现，
+     * 查询其连接（按 ownerScope 过滤），调用 {@link AccountChannelAuthManager#toRouteTarget}
+     * 把每个连接的 access_token 转为 RouteTarget，聚合同一渠道的多个账号到同一个
+     * {@code apiKeys} 列表。返回的路由按渠道名 + 模型名注册，供 FreeChannelChatClient
+     * 按模型名路由并触发 429 failover。</p>
+     *
+     * <p>缓存 5 分钟，按 ownerScope 隔离。</p>
+     *
+     * @param ownerScope 归属作用域
+     * @return 渠道路由表；无可用渠道时返回空 Map
+     */
+    public Map<String, RouteTarget> collectChannelRoutes(String ownerScope) {
+        long now = System.currentTimeMillis();
+        CachedRoutes cached = routeCache.get(ownerScope);
+        if (cached != null && now - cached.builtAt() < CACHE_TTL_MILLIS) {
+            return cached.routes();
+        }
+        Map<String, RouteTarget> routes = new LinkedHashMap<>();
+        try {
+            // 查询所有 OAuth 渠道供应商
+            List<SysAiProvider> oauthProviders = providerMapper.selectList(
+                    Wrappers.<SysAiProvider>lambdaQuery()
+                            .eq(SysAiProvider::getAuthScheme, "oauth")
+                            .eq(SysAiProvider::getEnabled, true));
+            for (SysAiProvider provider : oauthProviders) {
+                // 找到对应 SPI
+                AccountChannelAuthManager spi = findSpi(provider.getPlatform());
+                if (spi == null) {
+                    continue;
+                }
+                // 查询连接（按 ownerScope 过滤）
+                LambdaQueryWrapper<SysAiProviderConnection> wrapper =
+                        new LambdaQueryWrapper<SysAiProviderConnection>()
+                                .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
+                if ("_free".equals(ownerScope) || "_sys".equals(ownerScope)) {
+                    wrapper.isNull(SysAiProviderConnection::getUserId);
+                } else {
+                    boolean admin = AiUserContext.isAdmin();
+                    String userId = ownerScope;
+                    wrapper.and(w -> {
+                        w.eq(SysAiProviderConnection::getUserId, userId);
+                        if (admin) {
+                            w.or().isNull(SysAiProviderConnection::getUserId);
+                        }
+                    });
+                }
+                List<SysAiProviderConnection> connections = connectionMapper.selectList(wrapper);
+                if (connections.isEmpty()) {
+                    continue;
+                }
+                // 聚合同一渠道的所有账号
+                List<String> apiKeys = new ArrayList<>();
+                RouteTarget template = null;
+                for (SysAiProviderConnection conn : connections) {
+                    RouteTarget target = spi.toRouteTarget(conn.getCredentials());
+                    if (target == null) {
+                        continue;
+                    }
+                    // 免鉴权渠道（authScheme=none）的 apiKey 为空串，允许通过
+                    if (StringUtils.isBlank(target.getApiKey())
+                            && !"none".equals(target.getAuthScheme())) {
+                        continue;
+                    }
+                    if (template == null) {
+                        template = target;
+                    }
+                    apiKeys.add(target.getApiKey());
+                }
+                if (apiKeys.isEmpty() || template == null) {
+                    continue;
+                }
+                // 构建聚合路由：同一渠道多个账号的 apiKeys
+                RouteTarget merged = RouteTarget.builder()
+                        .provider(template.getProvider())
+                        .baseUrl(template.getBaseUrl())
+                        .authScheme(template.getAuthScheme())
+                        .authHeader(template.getAuthHeader())
+                        .authPrefix(template.getAuthPrefix())
+                        .apiKeys(apiKeys)
+                        .headers(template.getHeaders())
+                        .autoSwitchOnRateLimit(true)
+                        .build();
+                // 查询模型名并注册路由
+                List<SysAiProviderModel> models = providerModelMapper.selectList(
+                        Wrappers.<SysAiProviderModel>lambdaQuery()
+                                .eq(SysAiProviderModel::getProviderId, provider.getProviderId())
+                                .eq(SysAiProviderModel::getEnabled, true));
+                // 按渠道名注册（prefix match）
+                routes.put(provider.getPlatform(), merged);
+                // 按模型名注册（exact match）
+                for (SysAiProviderModel m : models) {
+                    routes.put(m.getModel(), merged);
+                }
+                log.info("[ModelClientResolver] 渠道路由 {} 注册 {} 个模型 {} 个账号",
+                        provider.getPlatform(), models.size(), apiKeys.size());
+            }
+        } catch (Exception e) {
+            log.warn("[ModelClientResolver] 收集渠道路由失败: {}", e.getMessage());
+        }
+        routeCache.put(ownerScope, new CachedRoutes(routes, now));
+        return routes;
+    }
+
+    /**
+     * 根据平台名查找对应的 OAuth 渠道 SPI 实现。
+     *
+     * @param platform 平台名（如 "loomy", "qoder", "workbuddy"）
+     * @return SPI 实例；未找到返回 null
+     */
+    private AccountChannelAuthManager findSpi(String platform) {
+        if (platform == null || platform.isBlank()) {
+            return null;
+        }
+        try {
+            return ServiceProvider.of(AccountChannelAuthManager.class)
+                    .getExtension(platform.trim());
+        } catch (Exception e) {
+            log.debug("[ModelClientResolver] 未找到 SPI: {}", platform);
+            return null;
+        }
+    }
+
+    /**
+     * 合并静态路由（extra.routes）与动态渠道路由。
+     *
+     * <p>免费渠道供应商（{@code free-channel}）的路由由两部分组成：</p>
+     * <ul>
+     *   <li>静态路由：管理员在供应商 extra 中手写的 {@code routes} 配置</li>
+     *   <li>动态路由：由 {@link #collectChannelRoutes} 从 OAuth 渠道连接自动收集</li>
+     * </ul>
+     *
+     * <p>动态路由覆盖静态路由（自动同步优先于手动配置）。</p>
+     *
+     * @param provider   供应商
+     * @param ownerScope 归属作用域
+     * @return 合并后的路由表
+     */
+    public Map<String, RouteTarget> mergedRoutes(SysAiProvider provider, String ownerScope) {
+        Map<String, RouteTarget> staticRoutes = ProviderRouteTargets.fromExtra(provider.getExtra());
+        Map<String, RouteTarget> dynamicRoutes = collectChannelRoutes(ownerScope);
+        Map<String, RouteTarget> merged = new LinkedHashMap<>();
+        if (staticRoutes != null) {
+            merged.putAll(staticRoutes);
+        }
+        merged.putAll(dynamicRoutes);
+        return merged;
     }
 
     /**
@@ -389,5 +559,14 @@ public class ModelClientResolver {
      * @param builtAt 构建时间戳
      */
     private record CachedClient(ChatClient client, long builtAt) {
+    }
+
+    /**
+     * 渠道路由缓存条目。
+     *
+     * @param routes  路由表
+     * @param builtAt 构建时间戳
+     */
+    private record CachedRoutes(Map<String, RouteTarget> routes, long builtAt) {
     }
 }

@@ -224,6 +224,8 @@ public class ServerHostServiceImpl implements ServerHostService {
             host.setServerHostPort(DEFAULT_SSH_PORT);
         }
         applyOsType(host);
+        // 地址里可能整行粘贴了 ssh 命令（user@host），拆出真实登录账号，地址只留主机
+        normalizeAddressAndAccount(host);
         applySshEnabledDefault(host);
         if (host.getServerHostStatus() == null) {
             host.setServerHostStatus(STATUS_ENABLED);
@@ -282,6 +284,17 @@ public class ServerHostServiceImpl implements ServerHostService {
         // 主机资产编码服务端生成（用户未自定义时），保证可读且全局唯一
         if (isBlank(host.getServerHostCode())) {
             host.setServerHostCode(generateHostCode());
+        }
+        // 未填任何凭据时不允许「保存成功但无凭据可用」：
+        // 地址里的 user@ 前缀就是网关分配的真实登录账号，本机则取平台运行账号，
+        // 免密登录只需要账号，密码/私钥都可以空着。
+        if (isBlank(host.getServerHostAccount()) && isBlank(host.getServerHostAuthType())
+                && isBlank(host.getServerHostPassword()) && isBlank(host.getServerHostPrivateKey())) {
+            String derived = defaultLoginAccount(host);
+            if (!isBlank(derived)) {
+                host.setServerHostAccount(derived);
+                host.setServerHostAuthType("none");
+            }
         }
         hostMapper.insert(host);
         // 携带账号密码/PEM 时自动建身份并绑定，保证新增即可测连/远控
@@ -369,9 +382,12 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostRemoteEnabled() != null) {
             exists.setServerHostRemoteEnabled(host.getServerHostRemoteEnabled());
         }
-        // 远控配置：协议/端口留空表示按系统类型与协议默认值推断，不覆盖已有值
-        if (!isBlank(host.getServerHostRemoteProtocol())) {
-            exists.setServerHostRemoteProtocol(host.getServerHostRemoteProtocol().trim());
+        // 远控配置：协议留空（null/空字符串）表示按系统类型推断——需清空已有值
+        // 让 effectiveRemoteProtocol() 按 OS 类型推断，否则旧值（如 VNC）无法被「自动」覆盖
+        if (host.getServerHostRemoteProtocol() != null) {
+            exists.setServerHostRemoteProtocol(
+                isBlank(host.getServerHostRemoteProtocol()) ? null : host.getServerHostRemoteProtocol().trim()
+            );
         }
         if (host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0) {
             exists.setServerHostRemotePort(host.getServerHostRemotePort());
@@ -392,10 +408,21 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostDelayInterval() != null && host.getServerHostDelayInterval() > 0) {
             exists.setServerHostDelayInterval(host.getServerHostDelayInterval());
         }
- // 透传前端提交的凭据瞬态字段（账号密码/PEM），供 auto创建identity 创建/更新身份
+ // 透传前端提交的凭据瞬态字段（账号密码/PEM/认证类型标记），供 auto创建identity 创建/更新身份
         exists.setServerHostAccount(host.getServerHostAccount());
         exists.setServerHostPassword(host.getServerHostPassword());
         exists.setServerHostPrivateKey(host.getServerHostPrivateKey());
+        exists.setServerHostAuthType(host.getServerHostAuthType());
+        // 编辑时也可能粘贴 user@host：拆出账号，避免地址进 SSH 主机名
+        normalizeAddressAndAccount(exists);
+        // 免密登录只提交了类型、没填账号：从地址前缀 / 本机运行账号推导，保证身份能落库
+        if (isBlank(exists.getServerHostAccount())
+                && "none".equalsIgnoreCase(exists.getServerHostAuthType())) {
+            String derived = defaultLoginAccount(exists);
+            if (!isBlank(derived)) {
+                exists.setServerHostAccount(derived);
+            }
+        }
         // 合并后再校验：局部提交可能只改协议或只改通道，单看请求体判不出矛盾组合
         String channelError = validateRemoteChannel(exists);
         if (channelError != null) {
@@ -696,6 +723,17 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("绑定的身份已被删除");
         }
         String username = identity.getMsServerIdentityUsername();
+        // 地址写成 user@host 时，前缀是网关/跳板分配的真实登录名（如 ibssh_xxx@ssh.instabox.sh），
+        // 优先级高于身份里可能遗留的历史默认账号；口令/私钥仍沿用同一身份。
+        // 本机自采集主机没有身份账号时用平台运行账号。
+        if (!isVnc) {
+            String addressUser = addressLoginUser(host.getServerHostAddress());
+            if (addressUser != null) {
+                username = addressUser;
+            } else if (isBlank(username) && "LOCAL".equals(upper(host.getServerHostCollectMode()))) {
+                username = System.getProperty("user.name");
+            }
+        }
         // VNC 桌面认证与 SSH/RDP 登录口令不同源：仅当本次请求就是 VNC 且主机配了 VNC 口令时才取它；
         // 请求 SSH/RDP 时这里 isVnc=false，一律走下面的绑定身份口令/私钥
         boolean vncOnly = isVnc && !isBlank(host.getServerHostVncPassword());
@@ -1248,11 +1286,31 @@ public class ServerHostServiceImpl implements ServerHostService {
         String account = host.getServerHostAccount();
         String password = host.getServerHostPassword();
         String privateKey = host.getServerHostPrivateKey();
+        String authType = host.getServerHostAuthType();
         boolean hasPassword = !isBlank(account) && !isBlank(password);
         boolean hasKey = !isBlank(account) && !isBlank(privateKey);
-        if (!hasPassword && !hasKey) {
+        // 认证类型标记未传或为空时，按凭据可用性推断（password/key/none）
+        if (isBlank(authType)) {
+            if (hasPassword) {
+                authType = AuthType.PASSWORD.name();
+            } else if (hasKey) {
+                authType = AuthType.PUBLIC_KEY.name();
+            } else if (!isBlank(account)) {
+                authType = AuthType.NONE.name();
+            }
+        }
+        boolean noneAuth = "none".equalsIgnoreCase(authType) || AuthType.NONE.name().equalsIgnoreCase(authType);
+        if (!hasPassword && !hasKey && !noneAuth) {
             return host;
         }
+        if (noneAuth && isBlank(account)) {
+            // 免密登录只需要账号：地址里的 user@ 前缀或本机运行账号都能推导出来
+            account = defaultLoginAccount(host);
+        }
+        if (isBlank(account)) {
+            return host;
+        }
+        host.setServerHostAccount(account);
         try {
             // 避免同名身份堆积：名称使用 主机名@账号 模板
             String base = (host.getServerHostName() == null ? "host" : host.getServerHostName()) + "@" + account;
@@ -1260,7 +1318,11 @@ public class ServerHostServiceImpl implements ServerHostService {
             identity.setMsServerIdentityName(base);
             identity.setMsServerIdentityUsername(account.trim());
             identity.setMsServerIdentityRemark("新增主机自动创建");
-            if (hasKey) {
+            if (noneAuth) {
+                // 免密登录：目标主机不校验密码（空口令登录或已配密钥放行），
+                // 凭据只承载用户名，不存密码/私钥；连接层以空口令身份尝试
+                identity.setMsServerIdentityAuthType(AuthType.NONE.name());
+            } else if (hasKey) {
                 // 密钥方式：入库私钥并引用
                 MsServerKey key = new MsServerKey();
                 key.setMsServerKeyName(base + "-key");
@@ -1292,13 +1354,97 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     /**
+     * 拆分「user@host」形式的地址：地址列只保留主机，user 写入登录账号。
+     *
+     * <p>粘贴 {@code ssh -p 2222 user@host} 是常态，user 部分是网关或跳板分配的真实登录名，
+     * 缺了它 SSH 只会拿默认账号去撞认证（实测报 No more authentication methods available）。
+     * 只在 @ 后面确实像主机名时拆分，避免误伤其它含 @ 的格式。</p>
+     *
+     * @param host 主机
+     */
+    private void normalizeAddressAndAccount(MsServerHost host) {
+        String address = host.getServerHostAddress() == null ? "" : host.getServerHostAddress().trim();
+        if (address.isEmpty()) {
+            return;
+        }
+        int at = address.lastIndexOf('@');
+        if (at <= 0 || at >= address.length() - 1) {
+            return;
+        }
+        String hostPart = address.substring(at + 1).trim();
+        if (hostPart.isEmpty()
+                || (!hostPart.contains(".") && !hostPart.contains(":") && !hostPart.contains("/"))) {
+            return;
+        }
+        String userPart = address.substring(0, at).trim();
+        host.setServerHostAddress(hostPart);
+        if (isBlank(host.getServerHostAccount()) && !userPart.isEmpty()
+                && !userPart.contains("/") && !userPart.contains(":")
+                && !userPart.contains("\\")) {
+            host.setServerHostAccount(userPart);
+        }
+    }
+
+    /**
+     * 未显式填写账号时的默认登录账号。
+     *
+     * <p>顺序：地址里的 user@ 前缀 → 本机场景下的平台运行账号。
+     * 免密登录（NONE）只靠账号定位 authorized_keys / 空口令，没有账号就没有身份可用。</p>
+     *
+     * @param host 主机
+     * @return 账号；无法推导时返回 null
+     */
+    private String defaultLoginAccount(MsServerHost host) {
+        String address = host.getServerHostAddress();
+        if (!isBlank(address)) {
+            int at = address.lastIndexOf('@');
+            if (at > 0 && at < address.length() - 1) {
+                String user = address.substring(0, at).trim();
+                if (!user.isEmpty() && !user.contains("/") && !user.contains(":")
+                        && !user.contains("\\")) {
+                    return user;
+                }
+            }
+        }
+        if ("LOCAL".equals(upper(host.getServerHostCollectMode()))) {
+            String osUser = System.getProperty("user.name");
+            return isBlank(osUser) ? null : osUser;
+        }
+        return null;
+    }
+
+    /**
+     * 取地址里的登录名（{@code user@host} 的 user 部分）。
+     *
+     * @param address 主机地址
+     * @return 登录名；不含 user@ 前缀时返回 null
+     */
+    private String addressLoginUser(String address) {
+        if (isBlank(address)) {
+            return null;
+        }
+        int at = address.lastIndexOf('@');
+        if (at <= 0 || at >= address.length() - 1) {
+            return null;
+        }
+        String afterAt = address.substring(at + 1);
+        if (!afterAt.contains(".") && !afterAt.contains(":") && !afterAt.contains("/")) {
+            return null;
+        }
+        String user = address.substring(0, at).trim();
+        if (user.isEmpty() || user.contains("/") || user.contains(":") || user.contains("\\")) {
+            return null;
+        }
+        return user;
+    }
+
+    /**
      * 从 PEM 私钥内容推断密钥类型
      *
      * @param privateKey PEM 私钥
      * @return RSA / ED25519 / ECDSA
      */
-    private String detectKeyType(String privateKey) {
-        String t = privateKey == null ? "" : privateKey;
+    private String detectKeyType(String privateKey) {        String t = privateKey == null ? "" : privateKey;
         if (t.contains("ED25519")) {
             return "ED25519";
         }
@@ -1709,11 +1855,10 @@ public class ServerHostServiceImpl implements ServerHostService {
      * 「本机」主机的地址与远控协议归一。
      *
      * <p>本机即运行本服务的机器，远控由平台自身发起：①地址为空时才强制为物理网卡
-     * 的局域网 IP（回环 127.0.0.1 不需要强制替换——VNC websockify 桥接层在
-     * 本机场景已自行用 {@code NetUtils.getPreferredLocalIp()} 换出回环，
-     * guacd 也不会收到 127.0.0.1；用户显式填写的地址一律保留，否则「改了 IP
-     * 保存后又被覆盖回首选网卡 IP」的 bug 会重现）；②本机远控仅支持 VNC，
-     * 强制协议为 VNC。</p>
+     * 的局域网 IP（回环 127.0.0.1 不需要强制替换——VNC websockify 桥接层在本机场景
+     * 已自行探测回环端口，guacd 也不会收到 127.0.0.1；用户显式填写的地址一律保留，
+     * 否则「改了 IP 保存后又被覆盖回首选网卡 IP」的 bug 会重现）；②远控协议未选择时
+     * 默认 VNC；用户显式选 SSH 时保留（本机网页终端走 127.0.0.1，不再被强制改回 VNC）。</p>
      *
      * @param host 主机
      */
@@ -1726,7 +1871,9 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (address.isEmpty()) {
             host.setServerHostAddress(NetUtils.getPreferredLocalIp());
         }
-        host.setServerHostRemoteProtocol(ProtocolType.VNC.name());
+        if (isBlank(host.getServerHostRemoteProtocol())) {
+            host.setServerHostRemoteProtocol(ProtocolType.VNC.name());
+        }
     }
 
     /**

@@ -115,24 +115,65 @@ public class VncWebsockifyWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         MsServerHost host = hostResult.getData();
-        // 本机地址去回环：桥接自身 LAN IP，不使用 127.0.0.1
+        // 本机：优先回环（VNC 服务通常只监听 127.0.0.1），再退物理网卡 IP；
+        // 端口在配置值之外顺带探测 5900-5910，避免「远控端口沿用了 SSH 端口」
+        // 或 VNC 服务换了显示号时直接把连接打到错误端口。
         boolean isLocal = host.getServerHostCollectMode() != null
                 && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim());
-        String address = isLocal ? NetUtils.getPreferredLocalIp() : host.getServerHostAddress();
-        int port = requestedPort != null && requestedPort > 0
+        java.util.List<String> addresses = new java.util.ArrayList<>();
+        if (isLocal) {
+            addresses.add("127.0.0.1");
+            String lan = NetUtils.getPreferredLocalIp();
+            if (lan != null && !lan.isBlank() && !addresses.contains(lan)) {
+                addresses.add(lan);
+            }
+        }
+        String hostAddress = host.getServerHostAddress();
+        if (hostAddress != null && !hostAddress.isBlank() && !addresses.contains(hostAddress)) {
+            addresses.add(hostAddress);
+        }
+        java.util.List<Integer> ports = new java.util.ArrayList<>();
+        int configuredPort = requestedPort != null && requestedPort > 0
                 ? requestedPort
                 : (host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
                         ? host.getServerHostRemotePort() : ServerConstants.DEFAULT_VNC_PORT);
+        ports.add(configuredPort);
+        if (isLocal) {
+            for (int p = 5900; p <= 5910; p++) {
+                if (!ports.contains(p)) {
+                    ports.add(p);
+                }
+            }
+        }
 
-        Socket tcp = new Socket();
-        try {
-            tcp.connect(new InetSocketAddress(address, port), CONNECT_TIMEOUT_MS);
-            tcp.setTcpNoDelay(true);
-        } catch (Exception e) {
-            String cause = WebSocketSessions.describeCause(e);
-            log.warn("[vnc-websockify] TCP 连接失败 hostId={} {}:{} {}", hostId, address, port, cause);
-            closeQuietly(tcp);
-            reject(wsSession, "VNC 连接失败 " + address + ":" + port + " - " + cause);
+        Socket tcp = null;
+        String address = addresses.isEmpty() ? "" : addresses.get(0);
+        int port = configuredPort;
+        Exception lastErr = null;
+        for (String addr : addresses) {
+            for (Integer candidate : ports) {
+                Socket socket = new Socket();
+                try {
+                    socket.connect(new InetSocketAddress(addr, candidate), CONNECT_TIMEOUT_MS);
+                    socket.setTcpNoDelay(true);
+                    tcp = socket;
+                    address = addr;
+                    port = candidate;
+                    lastErr = null;
+                    break;
+                } catch (Exception e) {
+                    lastErr = e;
+                    closeQuietly(socket);
+                }
+            }
+            if (tcp != null) {
+                break;
+            }
+        }
+        if (tcp == null) {
+            String cause = lastErr == null ? "主机地址为空" : WebSocketSessions.describeCause(lastErr);
+            log.warn("[vnc-websockify] TCP 连接失败 hostId={} {}×{} {}", hostId, addresses, ports, cause);
+            reject(wsSession, "VNC 连接失败，已尝试 " + addresses + " 端口 " + ports + " - " + cause);
             return;
         }
 

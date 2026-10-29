@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.42</version>
+        <version>4.0.0.43</version>
     </parent>
 
     <artifactId>spring-support-test-app</artifactId>
@@ -93,6 +93,12 @@
             <groupId>com.jcraft</groupId>
             <artifactId>jsch</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- Docker 独立模块：/ms/server/docker/**（容器/镜像/网络/卷/镜像库/模板） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-docker-starter</artifactId>
         </dependency>
 
         <!-- 测试：spring-boot-starter-test + h2 + webmvc-test（Boot 4 中 MockMvc 测试支持
