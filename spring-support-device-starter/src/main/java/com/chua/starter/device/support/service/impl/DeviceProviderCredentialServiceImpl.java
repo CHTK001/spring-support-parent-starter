@@ -287,11 +287,22 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
             c.setDeviceCredentialOfflineThreshold(FALLBACK_THRESHOLDS.getOrDefault(
                     c.getDeviceCredentialVendor(), DEFAULT_THRESHOLD));
         }
+        if (c.getDeviceCredentialShortCode() == null || c.getDeviceCredentialShortCode() == null) {
+        }
         if (c.getDeviceCredentialEnabled() == null) {
             c.setDeviceCredentialEnabled(true);
         }
         if (c.getDeviceCredentialIsDefault() == null) {
             c.setDeviceCredentialIsDefault(false);
+        }
+        if (c.getDeviceCredentialOfflineDetectEnabled() == null) {
+            c.setDeviceCredentialOfflineDetectEnabled(false);
+        }
+        if (c.getDeviceCredentialDeviceSyncEnabled() == null) {
+            c.setDeviceCredentialDeviceSyncEnabled(false);
+        }
+        if (c.getDeviceCredentialOrgSyncEnabled() == null) {
+            c.setDeviceCredentialOrgSyncEnabled(false);
         }
     }
 
