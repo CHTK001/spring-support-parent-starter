@@ -4789,7 +4789,9 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                     ServiceProvider.of(FileStorageRemoteReader.class);
             for (String ext : provider.getExtensions()) {
                 FileStorageRemoteReader instance = provider.getExtension(ext);
-                if (instance == null) continue;
+                if (instance == null) {
+                    continue;
+                }
                 if (protocolPrefix.equalsIgnoreCase(instance.protocol())) {
                     return instance;
                 }

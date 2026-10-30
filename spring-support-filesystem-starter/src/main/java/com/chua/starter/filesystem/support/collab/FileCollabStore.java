@@ -90,16 +90,24 @@ public class FileCollabStore {
 
     /** 归一化目录：去首尾斜杠，空/“/” → “”。 */
     private static String normalizePath(String path) {
-        if (path == null) return "";
+        if (path == null) {
+            return "";
+        }
         String p = path.trim().replace('\\', '/');
-        while (p.startsWith("/")) p = p.substring(1);
-        while (p.endsWith("/")) p = p.substring(0, p.length() - 1);
+        while (p.startsWith("/")) {
+            p = p.substring(1);
+        }
+        while (p.endsWith("/")) {
+            p = p.substring(0, p.length() - 1);
+        }
         return p;
     }
 
     /** 按扩展名推断文档类型。 */
     private static String inferType(String fileName) {
-        if (fileName == null) return "excel";
+        if (fileName == null) {
+            return "excel";
+        }
         String lower = fileName.toLowerCase();
         if (lower.endsWith(".doc") || lower.endsWith(".docx")
                 || lower.endsWith(".txt") || lower.endsWith(".md")
@@ -135,8 +143,12 @@ public class FileCollabStore {
      */
     public List<FileCollab> list(String userId, String path, String keyword) {
         String dir = (path == null ? "" : path.trim().replace('\\', '/'));
-        while (dir.startsWith("/")) dir = dir.substring(1);
-        while (dir.endsWith("/")) dir = dir.substring(0, dir.length() - 1);
+        while (dir.startsWith("/")) {
+            dir = dir.substring(1);
+        }
+        while (dir.endsWith("/")) {
+            dir = dir.substring(0, dir.length() - 1);
+        }
         String kw = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase();
         List<FileCollab> result = new ArrayList<>();
         for (FileCollab c : collabs.values()) {

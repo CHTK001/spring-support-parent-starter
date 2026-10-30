@@ -3130,26 +3130,40 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 一句能看懂的中文提示，映射不到的原样保留。</p>
      */
     private static String describeSqlError(String raw) {
-        if (raw == null || raw.isEmpty()) return "操作失败";
+        if (raw == null || raw.isEmpty()) {
+            return "操作失败";
+        }
         String msg = raw.trim();
         // Field 'xxx' doesn't have a default value
         Matcher m = Pattern.compile("Field '([^']+)' doesn't have a default value", Pattern.CASE_INSENSITIVE).matcher(msg);
-        if (m.find()) return "列「" + m.group(1) + "」没有默认值，请填写该列的值或确认该列支持自增";
+        if (m.find()) {
+            return "列「" + m.group(1) + "」没有默认值，请填写该列的值或确认该列支持自增";
+        }
         // Column 'xxx' cannot be null
         m = Pattern.compile("Column '([^']+)' cannot be null", Pattern.CASE_INSENSITIVE).matcher(msg);
-        if (m.find()) return "列「" + m.group(1) + "」不能为空，请填写后再保存";
+        if (m.find()) {
+            return "列「" + m.group(1) + "」不能为空，请填写后再保存";
+        }
         // Data too long for column 'xxx'
         m = Pattern.compile("Data too long for column '([^']+)'", Pattern.CASE_INSENSITIVE).matcher(msg);
-        if (m.find()) return "列「" + m.group(1) + "」的值超出长度限制，请缩短后重试";
+        if (m.find()) {
+            return "列「" + m.group(1) + "」的值超出长度限制，请缩短后重试";
+        }
         // Unknown column 'xxx' in 'field list'
         m = Pattern.compile("Unknown column '([^']+)' in 'field list'", Pattern.CASE_INSENSITIVE).matcher(msg);
-        if (m.find()) return "表中不存在列「" + m.group(1) + "」，可能已被删除或表结构已变更";
+        if (m.find()) {
+            return "表中不存在列「" + m.group(1) + "」，可能已被删除或表结构已变更";
+        }
         // Duplicate entry 'xxx' for key 'xxx'
         m = Pattern.compile("Duplicate entry '([^']+)' for key '([^']+)'", Pattern.CASE_INSENSITIVE).matcher(msg);
-        if (m.find()) return "「" + m.group(2) + "」已存在值为「" + m.group(1) + "」的记录，不能重复";
+        if (m.find()) {
+            return "「" + m.group(2) + "」已存在值为「" + m.group(1) + "」的记录，不能重复";
+        }
         // Table 'xxx' doesn't exist
         m = Pattern.compile("Table '([^']+)' doesn't exist", Pattern.CASE_INSENSITIVE).matcher(msg);
-        if (m.find()) return "表「" + m.group(1) + "」不存在，可能已被删除或库名有误";
+        if (m.find()) {
+            return "表「" + m.group(1) + "」不存在，可能已被删除或库名有误";
+        }
         return msg;
     }
 

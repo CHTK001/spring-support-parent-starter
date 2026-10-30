@@ -159,7 +159,9 @@ public final class SshClients {
      * @return 纯主机地址（无 user@ 前缀）
      */
     private static String stripUserPrefix(String raw) {
-        if (raw == null || raw.isBlank()) return raw;
+        if (raw == null || raw.isBlank()) {
+            return raw;
+        }
         int at = raw.lastIndexOf('@');
         if (at > 0 && at < raw.length() - 1) {
             String afterAt = raw.substring(at + 1);

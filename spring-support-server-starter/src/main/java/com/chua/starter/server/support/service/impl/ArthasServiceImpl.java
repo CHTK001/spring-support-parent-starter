@@ -284,9 +284,13 @@ public class ArthasServiceImpl implements ArthasService {
 
     private OperationContext prepareContext(MsServerProject project) {
         MsServerRelease release = releaseMapper.selectById(project.getReleaseId());
-        if (release == null) return null;
+        if (release == null) {
+            return null;
+        }
         MsServerHost host = hostMapper.selectById(release.getHostId());
-        if (host == null) return null;
+        if (host == null) {
+            return null;
+        }
 
         OperationContext ctx = new OperationContext();
         ctx.project = project;
@@ -299,7 +303,9 @@ public class ArthasServiceImpl implements ArthasService {
 
     /** 检查 jvmArgs 中是否包含 Arthas javaagent */
     private boolean isArthasInJvmArgs(String jvmArgsJson) {
-        if (jvmArgsJson == null || jvmArgsJson.trim().isEmpty()) return false;
+        if (jvmArgsJson == null || jvmArgsJson.trim().isEmpty()) {
+            return false;
+        }
         return jvmArgsJson.contains("arthas");
     }
 
@@ -346,12 +352,16 @@ public class ArthasServiceImpl implements ArthasService {
 
     /** 从命令输出中提取 PID */
     private String extractPid(String output) {
-        if (output == null || output.trim().isEmpty()) return null;
+        if (output == null || output.trim().isEmpty()) {
+            return null;
+        }
         String[] lines = output.trim().split("\\n");
         for (String line : lines) {
             String trimmed = line.trim();
             // 纯数字行
-            if (trimmed.matches("\\d+")) return trimmed;
+            if (trimmed.matches("\\d+")) {
+                return trimmed;
+            }
             // 含 PID 的行
             String[] parts = trimmed.split("\\s+");
             for (String part : parts) {

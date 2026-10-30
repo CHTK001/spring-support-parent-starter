@@ -214,7 +214,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                 // 客户端断开时清理
                 Runnable cleanup = () -> {
                     try { streamHandle.close(); } catch (Exception ignored) {}
-                    if (handleRef[0] != null) connectionManager.release(hostId);
+                    if (handleRef[0] != null) {
+                        connectionManager.release(hostId);
+                    }
                 };
                 emitter.onCompletion(cleanup);
                 emitter.onTimeout(cleanup);
@@ -229,7 +231,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                     emitter.send(SseEmitter.event().name("error").data("日志流启动失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
                 } catch (Exception ignored) {}
                 emitter.complete();
-                if (handleRef[0] != null) connectionManager.release(hostId);
+                if (handleRef[0] != null) {
+                    connectionManager.release(hostId);
+                }
             }
         });
 
@@ -265,7 +269,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                             } catch (IOException e) {
                                 // 客户端断开
                                 SshClient.TerminalOperation t = terminalRef[0];
-                                if (t != null) t.close();
+                                if (t != null) {
+                                    t.close();
+                                }
                             }
                         })
                         .onClose(() -> {
@@ -273,7 +279,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                                 emitter.send(SseEmitter.event().name("closed").data("Session closed", MediaType.TEXT_PLAIN));
                             } catch (Exception ignored) {}
                             emitter.complete();
-                            if (handleRef[0] != null) connectionManager.release(hostId);
+                            if (handleRef[0] != null) {
+                                connectionManager.release(hostId);
+                            }
                             execSessions.remove(sessionId);
                         })
                         .connect();
@@ -300,7 +308,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                     emitter.send(SseEmitter.event().name("error").data("进入容器失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
                 } catch (Exception ignored) {}
                 emitter.complete();
-                if (handleRef[0] != null) connectionManager.release(hostId);
+                if (handleRef[0] != null) {
+                    connectionManager.release(hostId);
+                }
             }
         });
 
