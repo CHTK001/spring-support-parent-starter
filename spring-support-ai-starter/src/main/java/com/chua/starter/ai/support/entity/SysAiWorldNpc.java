@@ -61,6 +61,26 @@ public class SysAiWorldNpc {
     @TableField("is_active")
     private Boolean isActive;
 
+    /** 年龄（虚岁；由编剧驱动随时间增长，开关可控制） */
+    @TableField("age")
+    private Integer age;
+
+    /** 年龄开关：1=随时间增长，0=冻结（登场的 NPC 不可关闭） */
+    @TableField("age_enabled")
+    private Boolean ageEnabled;
+
+    /** 状态：alive（存活）/ dead（寿终/病亡）/ birth（刚出生）/ away（暂退场） */
+    @TableField("status")
+    private String status;
+
+    /** 性别：male/female/unknown */
+    @TableField("gender")
+    private String gender;
+
+    /** 职业/身份（如 丞相/将军/侍从/学者） */
+    @TableField("profession")
+    private String profession;
+
     /** 排序 */
     @TableField("sort")
     private Integer sort;
