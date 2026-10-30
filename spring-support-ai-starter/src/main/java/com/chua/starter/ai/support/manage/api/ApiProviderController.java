@@ -362,9 +362,15 @@ public class ApiProviderController {
             List<SysAiProviderModel> models = modelMapper.selectList(
                     new LambdaQueryWrapper<SysAiProviderModel>()
                             .eq(SysAiProviderModel::getProviderId, p.getProviderId()));
-            List<SysAiProviderConnection> connections = connectionMapper.selectList(
+            // 连接按账号隔离：provider 行是全局的，挂在下面的账号凭证不是。
+            // 注：toProviderResponse 目前并未把 connections 回显到响应里（页面上的
+            // 账号列表走 /api/channels），这里的过滤是防御性的 —— 一旦有人把连接
+            // 加进响应，隔离条件已经在这里，不会裸奔。
+            LambdaQueryWrapper<SysAiProviderConnection> connectionWrapper =
                     new LambdaQueryWrapper<SysAiProviderConnection>()
-                            .eq(SysAiProviderConnection::getProviderId, p.getProviderId()));
+                            .eq(SysAiProviderConnection::getProviderId, p.getProviderId());
+            applyConnectionOwnerFilter(connectionWrapper);
+            List<SysAiProviderConnection> connections = connectionMapper.selectList(connectionWrapper);
             items.add(toProviderResponse(p, models, connections));
         }
 
@@ -392,9 +398,12 @@ public class ApiProviderController {
         List<SysAiProviderModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId));
-        List<SysAiProviderConnection> connections = connectionMapper.selectList(
+        // 连接按账号隔离：详情页同样只能看到自己的账号（管理员另见 NULL 系统池）
+        LambdaQueryWrapper<SysAiProviderConnection> connectionWrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId));
+                        .eq(SysAiProviderConnection::getProviderId, providerId);
+        applyConnectionOwnerFilter(connectionWrapper);
+        List<SysAiProviderConnection> connections = connectionMapper.selectList(connectionWrapper);
         return ApiResult.ok(toProviderResponse(entity, models, connections));
     }
 
@@ -456,9 +465,11 @@ public class ApiProviderController {
         List<SysAiProviderModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId));
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(
+        LambdaQueryWrapper<SysAiProviderConnection> connWrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId));
+                        .eq(SysAiProviderConnection::getProviderId, providerId);
+        applyConnectionOwnerFilter(connWrapper);
+        List<SysAiProviderConnection> conns = connectionMapper.selectList(connWrapper);
         return ApiResult.ok(toProviderResponse(entity, models, conns));
     }
 
@@ -536,9 +547,11 @@ public class ApiProviderController {
         List<SysAiProviderModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, providerId));
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(
+        LambdaQueryWrapper<SysAiProviderConnection> connWrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId));
+                        .eq(SysAiProviderConnection::getProviderId, providerId);
+        applyConnectionOwnerFilter(connWrapper);
+        List<SysAiProviderConnection> conns = connectionMapper.selectList(connWrapper);
         return ApiResult.ok(toProviderResponse(entity, models, conns));
     }
 
@@ -629,10 +642,15 @@ public class ApiProviderController {
         providerMapper.deleteById(providerId);
         modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
                 .eq(SysAiProviderModel::getProviderId, providerId));
+        // 供应商行是全局的，删除它等于全局下线这家供应商，其下连接（无论归属谁）
+        // 都已不可用 —— 一并清理，避免留下 providerId 已不存在的孤儿凭证行
+        // （日后按同一 id 重建供应商会把这些账号“复活”，那才是真正的越权）。
+        // 账号隔离体现在「读」：各用户只能看到自己的连接，删除别人的账号
+        // 只能由删掉这家供应商这件事本身连带发生，且是管理员动作。
         connectionMapper.delete(new LambdaQueryWrapper<SysAiProviderConnection>()
                 .eq(SysAiProviderConnection::getProviderId, providerId));
         clearGlobalSettingsReferencing(providerId, ownedModels);
-        log.info("删除供应商 {}，级联删除其模型与连接", providerId);
+        log.info("删除供应商 {}，级联删除其模型与全部连接", providerId);
     }
 
     /**
@@ -761,16 +779,22 @@ public class ApiProviderController {
             modelMapper.insert(m);
         }
 
-        // 深拷贝连接
-        List<SysAiProviderConnection> sourceConns = connectionMapper.selectList(
+        // 深拷贝连接（只拷贝当前账号可见的那些，见 applyConnectionOwnerFilter）
+        LambdaQueryWrapper<SysAiProviderConnection> sourceWrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId));
+                        .eq(SysAiProviderConnection::getProviderId, providerId);
+        applyConnectionOwnerFilter(sourceWrapper);
+        List<SysAiProviderConnection> sourceConns = connectionMapper.selectList(sourceWrapper);
         for (SysAiProviderConnection srcConn : sourceConns) {
             SysAiProviderConnection c = new SysAiProviderConnection();
             c.setConnectionId(String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000)));
             c.setProviderId(newId);
             c.setRole(srcConn.getRole());
             c.setLabel(srcConn.getLabel());
+            // 归属沿用源行（不改成当前操作者）：克隆是「复制一份同配置」，
+            // 若原行是 user_id IS NULL 的系统池，副本仍应留在系统池里 ——
+            // 免费渠道（_free 作用域）只认 NULL 行，改成当前用户会让副本失效。
+            c.setUserId(srcConn.getUserId());
             c.setBaseUrl(srcConn.getBaseUrl());
             c.setAuthScheme(srcConn.getAuthScheme());
             c.setCredentials(srcConn.getCredentials() != null
@@ -784,9 +808,11 @@ public class ApiProviderController {
         List<SysAiProviderModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
                         .eq(SysAiProviderModel::getProviderId, newId));
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(
+        LambdaQueryWrapper<SysAiProviderConnection> connWrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, newId));
+                        .eq(SysAiProviderConnection::getProviderId, newId);
+        applyConnectionOwnerFilter(connWrapper);
+        List<SysAiProviderConnection> conns = connectionMapper.selectList(connWrapper);
         return ApiResult.ok(toProviderResponse(clone, models, conns));
     }
 
@@ -1563,10 +1589,13 @@ public class ApiProviderController {
     @GetMapping("/providers/{provider_id}/connections")
     public ApiResult<List<Map<String, Object>>> listConnections(@PathVariable("provider_id") String providerId) {
         requireVisibleProvider(providerId);
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(
+        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .orderByAsc(SysAiProviderConnection::getCreatedAt));
+                        .orderByAsc(SysAiProviderConnection::getCreatedAt);
+        // 账号隔离：连接属于绑定它的用户，不是供应商的公共子项
+        applyConnectionOwnerFilter(wrapper);
+        List<SysAiProviderConnection> conns = connectionMapper.selectList(wrapper);
         List<Map<String, Object>> items = conns.stream()
                 .map(this::toConnectionResponse)
                 .collect(Collectors.toList());
@@ -1584,10 +1613,17 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> getConnection(@PathVariable("provider_id") String providerId,
                                                         @PathVariable("role") String role) {
         requireVisibleProvider(providerId);
-        SysAiProviderConnection conn = connectionMapper.selectOne(
+        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .eq(SysAiProviderConnection::getRole, role));
+                        .eq(SysAiProviderConnection::getRole, role);
+        // 账号隔离：别人的连接按「不存在」处理，不区分「有但没权限」与「没有」
+        applyConnectionOwnerFilter(wrapper);
+        // 同 role 可能同时存在「自己名下」与「NULL 系统池」两行（管理员两者都可见），
+        // selectOne 会抛 TooManyResultsException；取自己名下优先。
+        List<SysAiProviderConnection> matches = connectionMapper.selectList(
+                wrapper.orderByDesc(SysAiProviderConnection::getUserId));
+        SysAiProviderConnection conn = matches.isEmpty() ? null : matches.get(0);
         if (conn == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
         }
@@ -1609,10 +1645,18 @@ public class ApiProviderController {
         SysAiProvider entity = requireProvider(providerId);
         String role = requireStr(body, "role");
 
-        SysAiProviderConnection existing = connectionMapper.selectOne(
+        LambdaQueryWrapper<SysAiProviderConnection> lookup =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .eq(SysAiProviderConnection::getRole, role));
+                        .eq(SysAiProviderConnection::getRole, role);
+        // 只认自己的连接（管理员另见 NULL 系统池）：别人 role=default 的账号不能被
+        // 「保存」顺手改掉凭证 —— 同一个 provider 下同 role 可能有多行，按账号归属分家。
+        applyConnectionOwnerFilter(lookup);
+        // 管理员同时看得到「自己名下」与「NULL 系统池」两组行，同 role 可能各有一条；
+        // selectOne 遇到两行会抛 TooManyResultsException。取自己名下优先，其次系统池。
+        List<SysAiProviderConnection> matches = connectionMapper.selectList(
+                lookup.orderByDesc(SysAiProviderConnection::getUserId));
+        SysAiProviderConnection existing = matches.isEmpty() ? null : matches.get(0);
 
         if (existing == null) {
             // 新建：凭证为必填
@@ -1658,10 +1702,13 @@ public class ApiProviderController {
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
                                             @PathVariable("role") String role) {
         requireProvider(providerId);
-        int deleted = connectionMapper.delete(
+        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
                 new LambdaQueryWrapper<SysAiProviderConnection>()
                         .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .eq(SysAiProviderConnection::getRole, role));
+                        .eq(SysAiProviderConnection::getRole, role);
+        // 账号隔离：只删自己名下的连接。别人的同 role 行不会被这条请求带走。
+        applyConnectionOwnerFilter(wrapper);
+        int deleted = connectionMapper.delete(wrapper);
         if (deleted == 0) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
         }
@@ -1907,8 +1954,7 @@ public class ApiProviderController {
      */
     private Map<String, Object> toProviderResponse(SysAiProvider provider,
                                                    List<SysAiProviderModel> models,
-                                                   List<SysAiProviderConnection> connections) {
-        Map<String, Object> map = new LinkedHashMap<>(12);
+                                                   List<SysAiProviderConnection> connections) {        Map<String, Object> map = new LinkedHashMap<>(12);
         map.put("provider_id", provider.getProviderId());
         map.put("platform", provider.getPlatform());
         map.put("name", provider.getName());
@@ -1954,24 +2000,31 @@ public class ApiProviderController {
             map.put("api_key_count", keyCount);
             map.put("api_key_mask", firstKeyMask);
 
-            // 返回完整的key列表，方便前端编辑时显示
-            List<String> allKeys = new ArrayList<>();
-            if (singleKey != null && !singleKey.toString().isEmpty()) {
-                for (String k : singleKey.toString().split(",")) {
-                    String trimmed = k.trim();
-                    if (!trimmed.isEmpty()) {
-                        allKeys.add(trimmed);
+            // 完整 Key 列表只回给管理员：
+            // 本接口（GET /api/providers）是非管理员也能调的读接口，写操作才拦 admin。
+            // 明文 Key 属于凭证语义 —— 回给只读账号等于把可用的上游密钥交给它。
+            // 前端取 api_keys 的地方只有两处，都在 admin-only 的写流程里
+            // （ProviderFormDialog 编辑回显、ModelFetchDialog 拉模型前置判断），
+            // 非管理员拿不到这一段不影响任何只读展示。
+            if (com.chua.starter.ai.support.util.AiUserContext.isAdmin()) {
+                List<String> allKeys = new ArrayList<>();
+                if (singleKey != null && !singleKey.toString().isEmpty()) {
+                    for (String k : singleKey.toString().split(",")) {
+                        String trimmed = k.trim();
+                        if (!trimmed.isEmpty()) {
+                            allKeys.add(trimmed);
+                        }
                     }
                 }
-            }
-            if (multiKeys instanceof List) {
-                for (Object k : (List<?>) multiKeys) {
-                    if (k != null && !k.toString().isEmpty()) {
-                        allKeys.add(k.toString().trim());
+                if (multiKeys instanceof List) {
+                    for (Object k : (List<?>) multiKeys) {
+                        if (k != null && !k.toString().isEmpty()) {
+                            allKeys.add(k.toString().trim());
+                        }
                     }
                 }
+                map.put("api_keys", allKeys);
             }
-            map.put("api_keys", allKeys);
         }
         List<Map<String, Object>> modelItems = new ArrayList<>(8); // 模型数量不可预估
         for (SysAiProviderModel model : models) {
@@ -2585,6 +2638,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         e.setProviderId(providerId);
         e.setRole(requireStr(input, "role"));
         e.setLabel(str(input, "label"));
+        // 归属**故意留空**：本链路的写入入口全部是 admin-only（createProvider / saveConnection /
+        // cloneProvider），落成 user_id IS NULL 即 SysAiProviderConnection 里定义的
+        // 「管理员/系统账号池」—— 管理员读得到（applyConnectionOwnerFilter 额外放行 NULL），
+        // 普通用户读不到，免费渠道（_free 作用域）也靠这批行取账号。
+        // 不要在这里写 currentUserId()：那样免费渠道路由会一条都取不到。
         e.setBaseUrl(requireStr(input, "base_url"));
         e.setAuthScheme(requireStr(input, "auth_scheme"));
         e.setCredentials(uncheckedCast(input.get("credentials")));
@@ -3416,6 +3474,43 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
         }
         return e;
+    }
+
+    /**
+     * 给 connection 查询施加账号隔离条件。
+     *
+     * <p><b>为什么必须有这一层：</b>{@code sys_ai_provider} 是全局表（没有 user_id 列，
+     * 供应商模板与模型目录对所有账号同构），但挂在它下面的 {@code sys_ai_provider_connection}
+     * <b>有</b> {@code sys_ai_provider_connection_user_id} —— 账号凭证属于绑定它的那个人。
+     * 本控制器此前所有 connection 查询都只按 provider_id 过滤，等于把「别人绑的账号」
+     * 一并回显（connection_id / label / status / has_credentials）。渠道管理侧
+     * {@code ApiChannelAuthController.applyOwnerFilter} 早已这么做，这里漏了。</p>
+     *
+     * <p>口径与渠道管理保持一致（{@code ApiChannelAuthController.applyOwnerFilter}）：</p>
+     * <ul>
+     *   <li>普通用户：只看得到 {@code user_id = 自己} 的连接；</li>
+     *   <li>管理员：额外可见 {@code user_id IS NULL} 的系统池行（渠道管理改造前的绑定，
+     *       免费渠道路由 {@code _free} 也取这一批）；</li>
+     *   <li>无身份（AppKey 机器流量 / 后台线程）：只放系统池。这里不能直接抛 401 ——
+     *       {@code GET /api/providers} 同时服务机器调用，改造前对它们可用；且「无主」
+     *       只能被当作最窄的作用域，绝不能当成「全见」。</li>
+     * </ul>
+     *
+     * @param wrapper 连接查询包装器
+     */
+    private void applyConnectionOwnerFilter(LambdaQueryWrapper<SysAiProviderConnection> wrapper) {
+        String owner = com.chua.starter.ai.support.util.AiUserContext.currentUserId();
+        if (owner == null) {
+            wrapper.isNull(SysAiProviderConnection::getUserId);
+            return;
+        }
+        boolean admin = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
+        wrapper.and(w -> {
+            w.eq(SysAiProviderConnection::getUserId, owner);
+            if (admin) {
+                w.or().isNull(SysAiProviderConnection::getUserId);
+            }
+        });
     }
 
     /**

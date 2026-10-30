@@ -28,6 +28,12 @@ public class StaticProjectTypeProvider implements ProjectTypeProvider {
     }
 
     @Override
+    public String pidFile() {
+        // nginx 以项目目录为前缀启动，pid 由其自身写到 logs/nginx.pid（见 linuxStatic）
+        return "logs/nginx.pid";
+    }
+
+    @Override
     public ProjectScripts.Scripts scripts(boolean windows, String mainEntry) {
         return windows
                 ? ProjectScripts.windowsStatic(mainEntry)

@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -225,4 +226,19 @@ public class MsServerProject {
      * 更新时间
      */
     private LocalDateTime updateTime;
+
+    /**
+     * 该类型是否有常驻进程（只读展示字段，不落库）。
+     *
+     * <p>由 {@code ReleaseServiceImpl#listProjects} 按项目类型 SPI 回填：模型仓库等
+     * 只发布文件的项目为 {@code false}，前端据此隐藏启动/停止/重启并展示「已发布」。</p>
+     */
+    @TableField(exist = false)
+    private Boolean runtimeProcess;
+
+    /**
+     * 该类型是否为 JVM 进程（只读展示字段，不落库）。Arthas 诊断准入条件。
+     */
+    @TableField(exist = false)
+    private Boolean javaProcess;
 }

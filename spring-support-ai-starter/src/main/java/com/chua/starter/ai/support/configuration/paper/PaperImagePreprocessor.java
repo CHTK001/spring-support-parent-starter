@@ -1,4 +1,4 @@
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.configuration.paper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,13 +21,16 @@ import java.io.ByteArrayOutputStream;
  * <p>故按「照度背景极差」判据分流：均匀 → 仅归一到训练尺度；不均 → 照度校正 + 提尺度。
  * 只用 JDK 的 {@link BufferedImage}；任何失败都回退原图，绝不让预处理成为新的故障点。</p>
  *
- * @since 4.0.0.42
+ * <p>属于 AI 模块的图片能力：输入是「一张待识别的卷面图」，与具体业务规则无关，
+ * 业务模块只按配置开关决定是否启用。</p>
+ *
+ * @since 4.0.0.44
  * @author CH
  */
 @Slf4j
-public final class EduImagePreprocessor {
+public final class PaperImagePreprocessor {
 
-    private EduImagePreprocessor() {
+    private PaperImagePreprocessor() {
     }
 
     /**
@@ -63,7 +66,7 @@ public final class EduImagePreprocessor {
         try {
             BufferedImage src = ImageIO.read(new ByteArrayInputStream(imageData));
             if (src == null) {
-                log.warn("[EduImg] 图片无法解码，跳过预处理（{} 字节）", imageData.length);
+                log.warn("[PaperImage] 图片无法解码，跳过预处理（{} 字节）", imageData.length);
                 return imageData;
             }
             int w = src.getWidth();
@@ -83,25 +86,25 @@ public final class EduImagePreprocessor {
             // 任何改动（灰度/归一化/放大）都会改变检测输入。实测把 900x390 的验收图
             // 归一化并放大到 1400 会让判分全变 0。
             if (longSide < MIN_PROCESS_SIDE) {
-                log.info("[EduImg] 长边 {} < {} → 原图直通", longSide, MIN_PROCESS_SIDE);
+                log.info("[PaperImage] 长边 {} < {} → 原图直通", longSide, MIN_PROCESS_SIDE);
                 return imageData;
             }
             if (diff < ILLUMINATION_SPREAD_THRESHOLD) {
                 // 干净件：仅当长边超过检测模型的训练尺度时才缩（只缩不放），色彩与归一化都不动。
                 if (longSide <= CLEAN_LONG_SIDE) {
-                    log.info("[EduImg] 照度均匀（极差={}）且长边 {} <= {} → 原图直通", diff, longSide, CLEAN_LONG_SIDE);
+                    log.info("[PaperImage] 照度均匀（极差={}）且长边 {} <= {} → 原图直通", diff, longSide, CLEAN_LONG_SIDE);
                     return imageData;
                 }
-                log.info("[EduImg] 照度均匀（极差={}）→ 缩到长边 {}", diff, CLEAN_LONG_SIDE);
+                log.info("[PaperImage] 照度均匀（极差={}）→ 缩到长边 {}", diff, CLEAN_LONG_SIDE);
                 BufferedImage scaled = scaleToLongSide(src, w, h, CLEAN_LONG_SIDE);
                 return encode(scaled, imageData);
             }
             // 退化件：照度校正 + 提到更高分辨率
-            log.info("[EduImg] 照度不均（极差={}）→ 照度校正 + 长边 {}", diff, DEGRADED_LONG_SIDE);
+            log.info("[PaperImage] 照度不均（极差={}）→ 照度校正 + 长边 {}", diff, DEGRADED_LONG_SIDE);
             BufferedImage scaled = scaleToLongSide(normalized, w, h, DEGRADED_LONG_SIDE);
             return encode(scaled, imageData);
         } catch (Exception e) {
-            log.warn("[EduImg] 预处理失败，回退原图: {}", e.getMessage());
+            log.warn("[PaperImage] 预处理失败，回退原图: {}", e.getMessage());
             return imageData;
         }
     }
@@ -230,7 +233,7 @@ public final class EduImagePreprocessor {
             }
             return baos.toByteArray();
         } catch (Exception e) {
-            log.warn("[EduImg] 编码失败，回退原图: {}", e.getMessage());
+            log.warn("[PaperImage] 编码失败，回退原图: {}", e.getMessage());
             return fallback;
         }
     }

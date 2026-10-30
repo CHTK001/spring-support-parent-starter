@@ -1,4 +1,4 @@
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.configuration.paper;
 
 import com.chua.deeplearning.support.onnx.classification.CardCorrectionTranslator;
 import lombok.extern.slf4j.Slf4j;
@@ -9,18 +9,21 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /**
- * ONNX 卡片/布局矫正器。
+ * 试卷图片 ONNX 卡片/布局矫正器。
  *
- * <p>复用 {@link CardCorrectionTranslator}（card-correction-detector），在 paper 扫描管线
+ * <p>复用 {@link CardCorrectionTranslator}（card-correction-detector），在试卷扫描管线
  * 的入口处对拍照/导出图片做四边形检测与透视拉平。模型未随包提供、检测不到卡片或执行失败时
- * 一律返回原图，保证该功能是可选项、失败也不阻断阅卷。</p>
+ * 一律返回原图，保证该功能是可选项、失败也不阻断识别。</p>
  *
- * @since 4.0.0.42
+ * <p>属于 AI 模块的图片能力：业务模块只按配置开关决定是否启用，不感知模型文件位置、
+ * 缓存目录与失败降级细节。</p>
+ *
+ * @since 4.0.0.44
  * @author CH
  */
 @Slf4j
 @Component
-public class PaperLayoutCorrector {
+public class PaperImageCorrector {
 
     /**
      * 把外部模型根目录下的矫正模型同步到矫正器缓存。
@@ -38,7 +41,7 @@ public class PaperLayoutCorrector {
         }
         Path external = Path.of(root, "cv", "card_correction", "card_detection.onnx");
         if (!Files.isRegularFile(external)) {
-            log.debug("[EduPaper] 外部布局矫正模型不存在，跳过预置: {}", external);
+            log.debug("[PaperImage] 外部布局矫正模型不存在，跳过预置: {}", external);
             return;
         }
         try {
@@ -47,10 +50,10 @@ public class PaperLayoutCorrector {
             Path target = modelDir.resolve("card_detection.onnx");
             if (!Files.isRegularFile(target) || Files.size(target) != Files.size(external)) {
                 Files.copy(external, target, StandardCopyOption.REPLACE_EXISTING);
-                log.info("[EduPaper] 布局矫正模型已同步到缓存: {} -> {}", external, target);
+                log.info("[PaperImage] 布局矫正模型已同步到缓存: {} -> {}", external, target);
             }
         } catch (Exception e) {
-            log.warn("[EduPaper] 布局矫正模型预置失败，将由原实现尝试内嵌模型: {}", e.getMessage());
+            log.warn("[PaperImage] 布局矫正模型预置失败，将由原实现尝试内嵌模型: {}", e.getMessage());
         }
     }
 
@@ -68,13 +71,13 @@ public class PaperLayoutCorrector {
             seedExternalModel();
             byte[] corrected = CardCorrectionTranslator.shared().correct(imageData);
             if (corrected == null || corrected.length == 0) {
-                log.info("[EduPaper] 布局矫正未检出卡片，使用原图（{} 字节）", imageData.length);
+                log.info("[PaperImage] 布局矫正未检出卡片，使用原图（{} 字节）", imageData.length);
                 return imageData;
             }
-            log.info("[EduPaper] 布局矫正已应用：{} -> {} 字节", imageData.length, corrected.length);
+            log.info("[PaperImage] 布局矫正已应用：{} -> {} 字节", imageData.length, corrected.length);
             return corrected;
         } catch (Exception e) {
-            log.warn("[EduPaper] 布局矫正失败，使用原图: {}", e.getMessage());
+            log.warn("[PaperImage] 布局矫正失败，使用原图: {}", e.getMessage());
             return imageData;
         }
     }

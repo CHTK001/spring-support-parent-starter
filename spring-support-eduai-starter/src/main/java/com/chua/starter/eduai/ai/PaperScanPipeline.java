@@ -1,5 +1,7 @@
 package com.chua.starter.eduai.ai;
 
+import com.chua.starter.ai.support.configuration.paper.PaperImageCorrector;
+import com.chua.starter.ai.support.configuration.paper.PaperImagePreprocessor;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +29,7 @@ public class PaperScanPipeline {
     /**
      * 布局矫正器
      */
-    private final PaperLayoutCorrector layoutCorrector;
+    private final PaperImageCorrector layoutCorrector;
 
     /**
      * 版面 + OCR 扫描器
@@ -63,7 +65,7 @@ public class PaperScanPipeline {
             input = correctedData;
         }
         byte[] prepared = properties.getMarking().isPreprocess()
-                ? EduImagePreprocessor.preprocess(input) : input;
+                ? PaperImagePreprocessor.preprocess(input) : input;
         return new ScanOutcome(paperScanner.scan(prepared), corrected);
     }
 }

@@ -214,6 +214,12 @@ public class ReleaseServiceImpl implements ReleaseService {
                         .eq(MsServerProject::getReleaseId, releaseId)
                         .orderByDesc(MsServerProject::getEnabled)
                         .orderByDesc(MsServerProject::getId));
+        // 回填类型能力（不落库）：模型仓库等无常驻进程类型，前端据此隐藏启停并展示「已发布」
+        for (MsServerProject project : projects) {
+            ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
+            project.setRuntimeProcess(type.runtimeProcess());
+            project.setJavaProcess(type.javaProcess());
+        }
         return ReturnResult.list(projects);
     }
 
@@ -344,6 +350,10 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
+        ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
+        if (!type.runtimeProcess()) {
+            return ReturnResult.error("该项目类型（" + type.label() + "）没有常驻进程，无需启动");
+        }
         if (isBlank(project.getStartScript())) {
             return ReturnResult.error("启动脚本未配置");
         }
@@ -363,7 +373,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             steps.add(cfg);
         }
         steps.add(new ProjectStep("启动项目", buildCommand(win, path, project.getStartScript()), 3));
-        steps.add(pidStep(win, path));
+        steps.add(pidStep(win, path, type));
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
                 "start", steps, "running");
         return task(taskId);
@@ -376,6 +386,10 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
+        ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
+        if (!type.runtimeProcess()) {
+            return ReturnResult.error("该项目类型（" + type.label() + "）没有常驻进程，无需停止");
+        }
         if (isBlank(project.getStopScript())) {
             return ReturnResult.error("停止脚本未配置");
         }
@@ -393,6 +407,10 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
+        ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
+        if (!type.runtimeProcess()) {
+            return ReturnResult.error("该项目类型（" + type.label() + "）没有常驻进程，无需重启");
+        }
         String path = project.getProjectPath();
         ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         List<ProjectStep> steps = new ArrayList<>();
@@ -409,7 +427,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             steps.add(new ProjectStep("停止服务", buildCommand(win, path, project.getStopScript()), 2));
             steps.add(new ProjectStep("启动服务", buildCommand(win, path, project.getStartScript()), 3));
         }
-        steps.add(pidStep(win, path));
+        steps.add(pidStep(win, path, type));
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
                 "restart", steps, "running");
         return task(taskId);
@@ -422,6 +440,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
+        ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
         ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         String path = project.getProjectPath();
         List<ProjectStep> steps = new ArrayList<>();
@@ -436,9 +455,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (!isBlank(project.getStartScript())) {
             steps.add(new ProjectStep("启动服务", buildCommand(win, path, project.getStartScript()), 3));
         }
-        steps.add(pidStep(win, path));
+        if (type.runtimeProcess()) {
+            steps.add(pidStep(win, path, type));
+        }
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
-                "upgrade", steps, "running");
+                "upgrade", steps, type.runtimeProcess() ? "running" : null);
         return task(taskId);
     }
 
@@ -463,6 +484,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
+        ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
         ProjectPlatformProvider win = projectPlatformRouter.resolveOrPosix(prepared.getData().osType);
         List<ProjectStep> steps = new ArrayList<>();
         if (!isBlank(project.getStopScript())) {
@@ -470,11 +492,18 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         String stepLabel = isBlank(backupName) ? "恢复最新备份" : ("恢复备份 " + backupName);
         steps.add(new ProjectStep(stepLabel, rollbackCommand(win, project.getProjectPath(), backupName), 2));
+        String finishStatus = null;
         if (!isBlank(project.getStartScript())) {
             steps.add(new ProjectStep("启动服务", buildCommand(win, project.getProjectPath(), project.getStartScript()), 1));
+            if (type.runtimeProcess()) {
+                // 回滚同样要回写 PID：旧实现只重启不读 pid，接口 pid=null、卡片显示「PID —」，
+                // 实际进程却已在跑（验收时 Git 回滚复现）。
+                steps.add(pidStep(win, project.getProjectPath(), type));
+                finishStatus = "running";
+            }
         }
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
-                "rollback", steps, "running");
+                "rollback", steps, finishStatus);
         return task(taskId);
     }
 
@@ -1158,7 +1187,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                     uploadExtract, uploadTargetDir, deployType);
         }
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
-                "upgrade", steps, "running");
+                "upgrade", steps, type.runtimeProcess() ? "running" : null);
         return task(taskId);
     }
 
@@ -1207,9 +1236,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                     deployType);
             steps.addAll(placementSteps(pf, ctx, type, pc));
         }
-        // 没有常驻进程的类型（模型仓库）无需重启，读一次 PID 就够
+        // 没有常驻进程的类型（模型仓库）无需重启，也没有可回写的 PID
         if (!type.runtimeProcess()) {
-            steps.add(pidStep(pf, path));
             return;
         }
         // 启动前补齐日志目录：首次发布时 logs/ 尚不存在，而启动脚本把标准输出重定向到
@@ -1240,7 +1268,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 steps.add(verifyRunningStep(pf, ctx, project, logFile));
             }
         }
-        steps.add(pidStep(pf, path));
+        steps.add(pidStep(pf, path, type));
     }
 
     /**
@@ -1321,6 +1349,12 @@ public class ReleaseServiceImpl implements ReleaseService {
                 String src = pc.packagePath().replace('\\', '/');
                 String dir = placement.targetDir().replace('\\', '/');
                 String dst = dir + "/" + placement.fileName();
+                // 源包与目标为同一文件时必须直接跳过：cp -f 会报「are the same file」，
+                // 随后的 SFTP rename 也会因源/目标相同而失败。典型场景：升级包就放在项目目录
+                // 且文件名与主入口一致（node2 批量升级实测）。文件已在目标位置，视为投放成功。
+                if (samePath(src, dst)) {
+                    return java.util.List.of("源包与目标为同一文件，跳过复制: " + dst);
+                }
                 if (placement.createTargetDir()) {
                     // 首次升级时 lib 目录往往还不存在，不建目录投放会失败
                     sftpService.mkdir(ctx.hostId, null, dir);
@@ -1360,6 +1394,41 @@ public class ReleaseServiceImpl implements ReleaseService {
             }));
         }
         return steps;
+    }
+
+    /**
+     * 判断两个远端路径是否指向同一文件。
+     *
+     * <p>只做字面规范化（分隔符、重复斜杠、结尾斜杠），不访问目标机：
+     * 投放前就能识别「源包就是目标文件」的情况，避免 {@code cp} 报 same file。</p>
+     *
+     * @param a 路径 A
+     * @param b 路径 B
+     * @return 规范化后相等时为 {@code true}
+     */
+    private static boolean samePath(String a, String b) {
+        String x = normalizeRemotePath(a);
+        return !x.isEmpty() && x.equals(normalizeRemotePath(b));
+    }
+
+    /**
+     * 远端路径字面规范化。
+     *
+     * @param path 原始路径
+     * @return 统一使用 {@code /}、去掉重复与结尾斜杠后的路径
+     */
+    private static String normalizeRemotePath(String path) {
+        if (path == null) {
+            return "";
+        }
+        String p = path.trim().replace('\\', '/');
+        while (p.contains("//")) {
+            p = p.replace("//", "/");
+        }
+        if (p.length() > 1 && p.endsWith("/")) {
+            p = p.substring(0, p.length() - 1);
+        }
+        return p;
     }
 
     @Override
@@ -2102,15 +2171,18 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     /**
-     * 构造「读取 PID」步骤（启动 / 重启的最后一步，其输出仅为 PID，供回写卡片）。
-     * 经 buildCommand 包装后在项目目录下读取 app.pid，避免在 WinRM 默认工作目录读到残留文件。
+     * 构造「读取 PID」步骤（启动 / 重启 / 升级 / 回滚的最后一步，其输出仅为 PID，供回写卡片）。
+     * 经平台包装后在项目目录下读取类型声明的 PID 文件（Java 为 app.pid，Nginx 为 logs/nginx.pid），
+     * 避免在 SSH 默认工作目录读到残留文件。
      *
-     * @param windows     是否 Windows
+     * @param pf          平台命令提供者
      * @param projectPath 项目地址
+     * @param type        项目类型（决定 PID 文件位置）
      * @return 步骤
      */
-    private ProjectStep pidStep(ProjectPlatformProvider pf, String projectPath) {
-        return new ProjectStep("记录PID", pf.wrap(projectPath, pf.readPid()), 1);
+    private ProjectStep pidStep(ProjectPlatformProvider pf, String projectPath, ProjectTypeProvider type) {
+        String pidFile = type == null ? "app.pid" : type.pidFile();
+        return new ProjectStep("记录PID", pf.wrap(projectPath, pf.readPid(pidFile)), 1);
     }
 
     /**
@@ -2270,13 +2342,56 @@ public class ReleaseServiceImpl implements ReleaseService {
                 ReturnResult<java.util.List<MsExecLog>> started = execService.runCommand(
                         java.util.Collections.singletonList(ctx.hostId),
                         buildCommand(pf, path, project.getStartScript()), 180, null);
-                sb.append(started.isOk() && !anyExecFailed(started.getData())
-                        ? "已重新拉起服务" : "重新拉起服务未成功");
+                boolean startedOk = started.isOk() && !anyExecFailed(started.getData());
+                sb.append(startedOk ? "已重新拉起服务" : "重新拉起服务未成功");
+                if (startedOk) {
+                    // 把真实 PID 写进止损结果：任务虽然失败，服务其实在跑。任务服务据此回写
+                    // running + PID，否则库里留着升级前的旧 PID（验收时 node2 复现）。
+                    String pid = readProjectPid(pf, ctx, path, project);
+                    if (pid != null) {
+                        sb.append(" running pid=").append(pid);
+                    }
+                }
             } catch (Exception e) {
                 sb.append("重新拉起服务异常(").append(e.getMessage()).append(")");
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * 读取项目当前 PID（失败还原重启后的状态对账用）。
+     *
+     * @param pf      平台命令提供者
+     * @param ctx     操作上下文（取 hostId）
+     * @param path    项目地址
+     * @param project 项目
+     * @return PID；读取失败或输出不是纯数字时返回 {@code null}
+     */
+    private String readProjectPid(ProjectPlatformProvider pf, OperationContext ctx, String path,
+                                  MsServerProject project) {
+        try {
+            String pidFile = projectTypeRouter.resolveOrGeneric(project.getProjectType()).pidFile();
+            ReturnResult<java.util.List<MsExecLog>> result = execService.runCommand(
+                    java.util.Collections.singletonList(ctx.hostId),
+                    pf.wrap(path, pf.readPid(pidFile)), 30, null);
+            if (!result.isOk() || anyExecFailed(result.getData())) {
+                return null;
+            }
+            String output = result.getData().get(0).getMsExecLogOutput();
+            if (output == null) {
+                return null;
+            }
+            for (String line : output.split("\\R")) {
+                String t = line.trim();
+                if (t.matches("\\d+")) {
+                    return t;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[release] 读取项目 PID 失败: {}", e.getMessage());
+        }
+        return null;
     }
 
     private String placeCommand(ProjectPlatformProvider pf, String projectPath, String packagePath, String mainEntry) {

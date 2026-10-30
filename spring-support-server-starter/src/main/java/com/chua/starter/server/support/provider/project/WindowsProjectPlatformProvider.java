@@ -155,6 +155,12 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
     }
 
     @Override
+    public String readPid(String pidFile) {
+        String file = pidFile == null || pidFile.isBlank() ? "app.pid" : pidFile.trim();
+        return "if (Test-Path '" + quote(file) + "') { Get-Content '" + quote(file) + "' }";
+    }
+
+    @Override
     public String varsBlock(List<String> envNames, List<String> envValues, List<String> jvmArgs, List<String> cmdArgs) {
         var b = new StringBuilder();
         for (var i = 0; i < envNames.size(); i++) {

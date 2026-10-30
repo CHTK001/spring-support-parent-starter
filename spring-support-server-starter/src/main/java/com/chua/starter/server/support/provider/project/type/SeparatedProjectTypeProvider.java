@@ -44,6 +44,11 @@ public class SeparatedProjectTypeProvider implements ProjectTypeProvider {
      */
     private static final String DEFAULT_LIB_DIR = "lib";
 
+    /**
+     * 主包默认文件名：分离式启动脚本以它为准（如 run.sh 内 {@code java -jar app.jar}）。
+     */
+    private static final String DEFAULT_MAIN_ARTIFACT = "app.jar";
+
     @Override
     public String type() {
         return "separated";
@@ -81,7 +86,7 @@ public class SeparatedProjectTypeProvider implements ProjectTypeProvider {
     }
 
     /**
-     * 主包投放：解压到项目目录，或把单个文件投放到主入口位置。
+     * 主包投放：解压到项目目录，或把单个文件投放到主包位置。
      *
      * @param context 投放上下文
      * @return 投放指令
@@ -91,7 +96,38 @@ public class SeparatedProjectTypeProvider implements ProjectTypeProvider {
             return ProjectPlacement.extract("解压主包", context.projectPath());
         }
         return ProjectPlacement.place("投放主包", context.projectPath(),
-                context.mainEntry(), false, true);
+                mainArtifactName(context), false, true);
+    }
+
+    /**
+     * 主包目标文件名。
+     *
+     * <p>分离式的 {@code mainEntry} 是<b>启动脚本</b>（如 run.sh），不是主包文件名。
+     * 直接拿它当投放目标会把启动脚本覆盖成 jar（实测 run.sh 变成 Java archive，
+     * 启动报 {@code PK: not found}）。因此只有 mainEntry 本身是 jar/war 时才沿用，
+     * 否则 jar/war 包固定投放到 {@code app.jar}；非 jar 包（原生二进制等）仍按 mainEntry 投放。</p>
+     *
+     * @param context 投放上下文
+     * @return 目标文件名
+     */
+    private static String mainArtifactName(ProjectPlacementContext context) {
+        String entry = context.mainEntry();
+        String pkg = context.packageName();
+        if (isJarLike(pkg) && !isJarLike(entry)) {
+            return DEFAULT_MAIN_ARTIFACT;
+        }
+        return entry.isEmpty() ? pkg : entry;
+    }
+
+    /**
+     * 文件名是否为 Java 包。
+     *
+     * @param name 文件名
+     * @return jar/war 时为 {@code true}
+     */
+    private static boolean isJarLike(String name) {
+        String n = name == null ? "" : name.toLowerCase(Locale.ROOT);
+        return n.endsWith(".jar") || n.endsWith(".war");
     }
 
     /**
