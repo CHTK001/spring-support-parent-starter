@@ -1562,6 +1562,13 @@ public class ServiceInstanceManager {
 
     // ==================== 鉴权 ====================
 
+    /**
+     * 校验请求携带的访问令牌：存在性、启用状态、有效期与请求/Token 额度。
+     *
+     * @param inst     服务实例配置，不能为 null
+     * @param exchange 当前 HTTP 交换对象，用于提取令牌与回写错误
+     * @return 校验通过的令牌实体；校验失败时已回写 401 并返回 null
+     */
     private SysAiServiceToken authenticate(SysAiServiceInstance inst, HttpExchange exchange) {
         String presented = extractPresentedToken(exchange);
         if (presented == null || presented.isBlank()) {
@@ -1596,6 +1603,12 @@ public class ServiceInstanceManager {
         return t;
     }
 
+    /**
+     * 从请求头提取访问令牌，依次尝试 Authorization Bearer、x-goog-api-key、x-api-key。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @return 去除首尾空白的令牌；三个请求头都缺失时返回 null
+     */
     private String extractPresentedToken(HttpExchange exchange) {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
         if (auth != null && auth.startsWith("Bearer ")) {
@@ -1611,6 +1624,9 @@ public class ServiceInstanceManager {
     /**
      * 令牌额度回填：每次请求终结（成功/失败）请求次数 +1；成功时按总 Token 累加。
      * 使用 SQL 原子自增，避免并发计数竞争。
+     *
+     * @param t           已鉴权的令牌实体，可为 null（此时直接返回）
+     * @param totalTokens 本次请求消耗的总 Token 数，可为 null 或非正数，此时只累加请求次数
      */
     private void consumeQuota(SysAiServiceToken t, Long totalTokens) {
         if (t == null || t.getTokenId() == null) {
@@ -1629,10 +1645,22 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 空安全的 Long 取值，null 记为 0。
+     *
+     * @param v 原始值，可为 null
+     * @return 非空数值
+     */
     private static long nz(Long v) {
         return v == null ? 0L : v;
     }
 
+    /**
+     * 计算用量总 Token 数，优先取总数字段，缺失时由输入 + 输出相加。
+     *
+     * @param usage 用量快照，可为 null
+     * @return 总 Token 数；用量为 null 或计算结果非正数时返回 null
+     */
     private static Long totalOf(AiUsage usage) {
         if (usage == null) {
             return null;
@@ -1646,6 +1674,12 @@ public class ServiceInstanceManager {
         return t > 0 ? t : null;
     }
 
+    /**
+     * 解析客户端 IP，优先取 {@code X-Forwarded-For} 的第一段。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @return 客户端 IP；无法解析时返回 {@code unknown}
+     */
     private String clientIp(HttpExchange exchange) {
         String fwd = exchange.getRequestHeaders().getFirst("X-Forwarded-For");
         if (fwd != null && !fwd.isBlank()) {
@@ -1658,6 +1692,12 @@ public class ServiceInstanceManager {
 
     // ==================== 模型兜底 ====================
 
+    /**
+     * 取实际生效的模型名，请求未指定时回落到系统默认模型。
+     *
+     * @param requested 请求中的模型名，可为 null 或空白
+     * @return 生效模型名，未配置时可能返回空字符串
+     */
     private String effectiveModel(String requested) {
         if (requested != null && !requested.isBlank()) {
             return requested;
@@ -1665,6 +1705,11 @@ public class ServiceInstanceManager {
         return defaultModel();
     }
 
+    /**
+     * 按 runtime/models 三级配置键解析默认模型名，均未配置时交给统一模型解析器。
+     *
+     * @return 默认模型名，无法解析时返回空字符串
+     */
     private String defaultModel() {
         String[][] keys = {
                 {"runtime", "default_model"},
@@ -1691,6 +1736,13 @@ public class ServiceInstanceManager {
 
     // ==================== IO 工具 ====================
 
+    /**
+     * 读取并解析 JSON 请求体，解析失败时以 {@code _raw} 键包裹原始文本返回。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @return 解析后的 Map，请求体为空时返回空 Map，不会为 null
+     * @throws IOException 读取请求体失败时抛出
+     */
     private Map<String, Object> readJsonBody(HttpExchange exchange) throws IOException {
         byte[] bytes = exchange.getRequestBody().readAllBytes();
         if (bytes.length == 0) {
@@ -1707,6 +1759,13 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 以 200 状态打开 SSE 响应头，禁用缓存并保持长连接。
+     *
+     * @param exchange    当前 HTTP 交换对象，不能为 null
+     * @param contentType 响应的基础 Content-Type，不能为 null，方法内追加 UTF-8 字符集
+     * @throws IOException 发送响应头失败时抛出
+     */
     private void openSse(HttpExchange exchange, String contentType) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", contentType + "; charset=utf-8");
         exchange.getResponseHeaders().set("Cache-Control", "no-cache");
@@ -1714,6 +1773,14 @@ public class ServiceInstanceManager {
         exchange.sendResponseHeaders(200, 0);
     }
 
+    /**
+     * 输出 JSON 响应，未设置 Content-Type 时补默认值。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param status   HTTP 状态码
+     * @param payload  响应体对象，不能为 null
+     * @throws IOException 序列化或写出响应失败时抛出
+     */
     private void writeJsonResponse(HttpExchange exchange, int status, Object payload) throws IOException {
         if (exchange.getResponseHeaders().get("Content-Type") == null) {
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
@@ -1725,6 +1792,14 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 尽力回写错误响应；响应头已发送时静默跳过，避免二次写头触发异常。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param status   HTTP 状态码
+     * @param type     错误类型标识，不能为 null
+     * @param message 错误描述，可为 null
+     */
     private void tryWriteError(HttpExchange exchange, int status, String type, String message) {
         try {
             if (exchange.getResponseCode() >= 0) {
@@ -1743,10 +1818,21 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 空安全的字符串取值，null 转为空字符串。
+     *
+     * @param o 任意对象，可为 null
+     * @return 字符串形式，null 时返回空字符串
+     */
     private static String str(Object o) {
         return o == null ? "" : String.valueOf(o);
     }
 
+    /**
+     * 生成 12 位无连字符的随机标识片段。
+     *
+     * @return 12 位十六进制随机字符串
+     */
     private static String uuid8() {
         return java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
@@ -1772,7 +1858,13 @@ public class ServiceInstanceManager {
             this.exchange = exchange;
         }
 
-        OutputStream out() throws IOException {
+        /**
+     * 获取响应输出流并标记已提交，首次调用时惰性初始化。
+     *
+     * @return 响应输出流，不会为 null
+     * @throws IOException 打开响应输出流失败时抛出
+     */
+    OutputStream out() throws IOException {
             if (os == null) {
                 os = exchange.getResponseBody();
                 committed = true;
@@ -1780,27 +1872,54 @@ public class ServiceInstanceManager {
             return os;
         }
 
-        void writeSseData(Object payload) throws IOException {
+        /**
+     * 写出单行 SSE data 帧。
+     *
+     * @param payload 帧负载，不能为 null，方法内部序列化为 JSON
+     * @throws IOException 写出失败时抛出
+     */
+    void writeSseData(Object payload) throws IOException {
             String json = JSON.writeValueAsString(payload);
             write(("data: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
         }
 
-        void writeDone() throws IOException {
+        /**
+     * 写出 SSE 结束帧 {@code data: [DONE]}。
+     *
+     * @throws IOException 写出失败时抛出
+     */
+    void writeDone() throws IOException {
             write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
         }
 
-        void writeSseEvent(String event, Object payload) throws IOException {
+        /**
+     * 写出带 event 名的 SSE 帧。
+     *
+     * @param event   事件名，不能为 null
+     * @param payload 帧负载，不能为 null，方法内部序列化为 JSON
+     * @throws IOException 写出失败时抛出
+     */
+    void writeSseEvent(String event, Object payload) throws IOException {
             String json = JSON.writeValueAsString(payload);
             write(("event: " + event + "\ndata: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
         }
 
-        private synchronized void write(byte[] bytes) throws IOException {
+        /**
+     * 同步写出字节并立即 flush，保证 SSE 帧即时可见。
+     *
+     * @param bytes 待写出的字节，不能为 null
+     * @throws IOException 写出或 flush 失败时抛出
+     */
+    private synchronized void write(byte[] bytes) throws IOException {
             OutputStream o = out();
             o.write(bytes);
             o.flush();
         }
 
-        synchronized void close() {
+        /**
+     * 幂等关闭响应流，关闭异常仅记日志。
+     */
+    synchronized void close() {
             if (closed) {
                 return;
             }
