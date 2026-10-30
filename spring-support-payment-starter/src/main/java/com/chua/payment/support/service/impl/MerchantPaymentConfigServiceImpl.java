@@ -35,7 +35,9 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     @Override
     /**
      * 获取商户支付配置
-     */
+     * @param merchantId 长整数
+     * @return 返回值
+    */
     public MerchantPaymentConfig getConfig(Long merchantId) {
         if (merchantId == null) {
             return getDefaultConfig();
@@ -74,7 +76,10 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     @Override
     /**
      * 校验是否允许创建新订单
-     */
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public void checkCanCreateOrder(Long merchantId, Long userId) {
         MerchantPaymentConfig config = getConfig(merchantId);
 
@@ -93,7 +98,9 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     @Override
     /**
      * 校验订单是否允许继续支付
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public void checkCanPayOrder(Long orderId) {
         PaymentOrder order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -120,7 +127,9 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     @Override
     /**
      * 获取订单超时分钟数
-     */
+     * @param merchantId 长整数
+     * @return 返回值
+    */
     public Integer getOrderTimeoutMinutes(Long merchantId) {
         MerchantPaymentConfig config = getConfig(merchantId);
         return config.getOrderTimeoutMinutes();

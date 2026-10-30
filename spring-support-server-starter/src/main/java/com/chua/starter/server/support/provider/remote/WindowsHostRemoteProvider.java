@@ -216,7 +216,14 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
 
     /**
      * 在借用连接上读取远端日志（调用方负责归还连接）
-     */
+     * @param client SSH 客户端
+     * @param cursor 长整数
+     * @param file 字符串
+     * @param lines 整数
+     * @param startCursor 长整数
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private RemoteLogChunk tailBorrowed(SshClient client, String file, long startCursor, int lines, Long cursor) throws Exception {
             long size = fileSizeOn(client, file);
             // 日志轮转/截断：文件比上次记录的光标还小 → 当作新文件从头拉取

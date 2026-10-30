@@ -30,6 +30,8 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     @Override
     /**
      * 尝试获取
+     * @param message 消息
+     * @return 返回值
     */
     public boolean tryAcquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
@@ -46,6 +48,8 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     @Override
     /**
      * 获取
+     * @param message 消息
+     * @return 返回值
     */
     public void acquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
@@ -66,6 +70,8 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     @Override
     /**
      * 释放
+     * @param message 消息
+     * @return 返回值
     */
     public void release(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
@@ -75,6 +81,7 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     @Override
     /**
      * 可用许可证
+     * @return 返回值
     */
     public int availablePermits() {
         return semaphores.values().stream()

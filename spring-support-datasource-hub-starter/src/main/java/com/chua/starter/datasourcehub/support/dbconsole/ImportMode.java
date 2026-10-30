@@ -52,6 +52,15 @@ public enum ImportMode {
     /** 是否需要「已存在则跳过」的语义 */
     private final boolean skipExisting;
 
+    /**
+     * Import Mode
+     * @param code 字符串
+     * @param insertMissing 布尔值
+     * @param label 字符串
+     * @param skipExisting 布尔值
+     * @param updateExisting 布尔值
+     * @return 返回值
+    */
     ImportMode(String code, String label, boolean updateExisting, boolean insertMissing, boolean skipExisting) {
         this.code = code;
         this.label = label;

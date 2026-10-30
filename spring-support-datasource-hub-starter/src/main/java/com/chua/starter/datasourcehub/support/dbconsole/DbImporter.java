@@ -738,6 +738,11 @@ public final class DbImporter {
                 || sqlType == Types.TIMESTAMP_WITH_TIMEZONE || sqlType == Types.TIME_WITH_TIMEZONE;
     }
 
+    /**
+     * parse Boolean
+     * @param text 字符串
+     * @return 返回值
+    */
     private static Boolean parseBoolean(String text) {
         return switch (text.toLowerCase(Locale.ROOT)) {
             case "1", "true", "yes", "y", "on", "t", "是" -> Boolean.TRUE;
@@ -746,6 +751,11 @@ public final class DbImporter {
         };
     }
 
+    /**
+     * abbreviate
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String abbreviate(String value) {
         return value.length() <= 40 ? value : value.substring(0, 40) + "…";
     }
@@ -790,6 +800,13 @@ public final class DbImporter {
         return false;
     }
 
+    /**
+     * read Table Columns
+     * @param conn 参数
+     * @param table 字符串
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private static List<String> readTableColumns(Connection conn, String table) throws SQLException {
         List<String> columns = new ArrayList<>();
         for (String[] scope : new String[][]{{conn.getCatalog(), conn.getSchema()}, {null, null}}) {
@@ -808,6 +825,12 @@ public final class DbImporter {
         return columns;
     }
 
+    /**
+     * read Column Types
+     * @param conn 参数
+     * @param table 字符串
+     * @return 返回值
+    */
     private static Map<String, Integer> readColumnTypes(Connection conn, String table) {
         Map<String, Integer> types = new LinkedHashMap<>();
         try (ResultSet rs = conn.getMetaData().getColumns(conn.getCatalog(), conn.getSchema(), table, "%")) {
@@ -845,6 +868,11 @@ public final class DbImporter {
         }
     }
 
+    /**
+     * is Mysql Family
+     * @param conn 参数
+     * @return 返回值
+    */
     private static boolean isMysqlFamily(Connection conn) {
         String dialect = dialectOf(conn);
         return "mysql".equals(dialect) || "mariadb".equals(dialect);
@@ -863,6 +891,12 @@ public final class DbImporter {
         }
     }
 
+    /**
+     * collect Errors
+     * @param outcome 参数
+     * @param target 参数
+     * @return 返回值
+    */
     private static void collectErrors(List<String> target, BatchOutcome outcome) {
         for (String error : outcome.errors()) {
             if (target.size() < MAX_REPORTED_ERRORS) {
@@ -871,6 +905,11 @@ public final class DbImporter {
         }
     }
 
+    /**
+     * root Message
+     * @param e SQL 异常
+     * @return 返回值
+    */
     private static String rootMessage(SQLException e) {
         Throwable cause = e;
         while (cause.getCause() != null && cause.getCause() != cause) {
@@ -898,6 +937,11 @@ public final class DbImporter {
             this.mode = mode;
         }
 
+        /**
+         * 接收
+         * @param affected 整数
+         * @return 返回值
+        */
         private void accept(int affected) {
             switch (mode) {
                 case UPDATE -> {
@@ -935,10 +979,19 @@ public final class DbImporter {
             }
         }
 
+        /**
+         * applied
+         * @return 返回值
+        */
         private int applied() {
             return inserted + updated + deleted;
         }
 
+        /**
+         * to Outcome
+         * @param errors 参数
+         * @return 返回值
+        */
         private BatchOutcome toOutcome(List<String> errors) {
             return new BatchOutcome(inserted, updated, skipped, deleted, errors);
         }

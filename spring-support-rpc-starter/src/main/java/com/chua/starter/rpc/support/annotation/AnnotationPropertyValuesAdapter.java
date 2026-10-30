@@ -91,6 +91,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     @Override
     /**
      * 获取财产值
+     * @return 返回值
     */
     public PropertyValue[] getPropertyValues() {
         return delegate.getPropertyValues();
@@ -99,6 +100,8 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     @Override
     /**
      * 获取财产值
+     * @param propertyName 字符串
+     * @return 返回值
     */
     public PropertyValue getPropertyValue(String propertyName) {
         return delegate.getPropertyValue(propertyName);
@@ -107,6 +110,8 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     @Override
     /**
      * 改变自
+     * @param old 参数
+     * @return 返回值
     */
     public PropertyValues changesSince(PropertyValues old) {
         return delegate.changesSince(old);
@@ -115,6 +120,8 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     @Override
     /**
      * Contains
+     * @param propertyName 字符串
+     * @return 返回值
     */
     public boolean contains(String propertyName) {
         return delegate.contains(propertyName);
@@ -123,6 +130,7 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
     @Override
     /**
      * 是否空
+     * @return 返回值
     */
     public boolean isEmpty() {
         return delegate.isEmpty();

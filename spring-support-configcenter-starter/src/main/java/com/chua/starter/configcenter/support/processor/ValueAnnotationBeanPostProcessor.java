@@ -167,7 +167,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
     /**
      * 设置Bean工厂
      * @param beanFactory Bean工厂
-     */
+     * @return 返回值
+     * @throws BeansException 异常
+    */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof ConfigurableListableBeanFactory) {
             this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
@@ -179,7 +181,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      * Post处理之后initialization
      * @param bean Bean
      * @param beanName Bean名称
-     */
+     * @return 返回值
+     * @throws BeansException 异常
+    */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (beanFactory != null && !beanFactory.isSingleton(beanName)) {
             return bean;
@@ -477,7 +481,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         /**
          * 值配置监听器。
          * @param configKey 配置Key
-         */
+         * @return 返回值
+        */
         ValueConfigListener(String configKey) {
             this.configKey = configKey;
         }

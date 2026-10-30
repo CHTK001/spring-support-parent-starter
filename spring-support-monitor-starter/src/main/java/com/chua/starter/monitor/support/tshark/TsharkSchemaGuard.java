@@ -36,6 +36,10 @@ public class TsharkSchemaGuard {
     }
 
     @PostConstruct
+    /**
+     * ensure Columns
+     * @return 返回值
+    */
     public void ensureColumns() {
         addIfMissing("ms_tshark_session", "ms_tshark_session_last_error", "VARCHAR(2000) NULL");
         addIfMissing("ms_tshark_session", "ms_tshark_session_file_size", "BIGINT DEFAULT 0");
@@ -43,6 +47,13 @@ public class TsharkSchemaGuard {
         addIfMissing("ms_tshark_packet", "ms_tshark_packet_frame_no", "BIGINT NULL");
     }
 
+    /**
+     * add If Missing
+     * @param column 字符串
+     * @param ddl 字符串
+     * @param table 字符串
+     * @return 返回值
+    */
     private void addIfMissing(String table, String column, String ddl) {
         if (hasColumn(table, column)) {
             return;
@@ -56,6 +67,12 @@ public class TsharkSchemaGuard {
         }
     }
 
+    /**
+     * has Column
+     * @param column 字符串
+     * @param table 字符串
+     * @return 返回值
+    */
     private boolean hasColumn(String table, String column) {
         try (Connection connection = jdbcTemplate.getDataSource().getConnection();
              Statement statement = connection.createStatement();

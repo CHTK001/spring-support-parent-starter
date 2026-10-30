@@ -20,6 +20,8 @@ public class TenantBasedMessageRouter implements MessageRouter {
     @Override
     /**
      * Route
+     * @param message 消息
+     * @return 返回值
     */
     public String route(Message message) {
         Object tenantId = message.getHeader("tenantId");
@@ -37,6 +39,8 @@ public class TenantBasedMessageRouter implements MessageRouter {
     @Override
     /**
      * 支持
+     * @param message 消息
+     * @return 返回值
     */
     public boolean supports(Message message) {
         return message.getHeader("tenantId") != null;
@@ -45,6 +49,7 @@ public class TenantBasedMessageRouter implements MessageRouter {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return -100;

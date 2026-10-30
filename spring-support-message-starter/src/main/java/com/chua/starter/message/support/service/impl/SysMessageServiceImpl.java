@@ -90,10 +90,11 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * pagefor提供者
-     * @param provider 提供者
      * @param page page
      * @param pageSize page大小
-     */
+     * @param provider 提供者
+     * @return 返回值
+    */
     public IPage<SysMessageProvider> pageForProvider(SysMessageProvider provider, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageProvider> wrapper = Wrappers.<SysMessageProvider>lambdaQuery()
                 .eq(SysMessageProvider::getSysMessageProviderDelete, 0)
@@ -112,6 +113,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * 列表for提供者
+     * @return 返回值
     */
     public List<SysMessageProvider> listForProvider() {
         return sysMessageProviderMapper.selectList(Wrappers.<SysMessageProvider>lambdaQuery()
@@ -123,6 +125,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * 列表通道
+     * @return 返回值
     */
     public List<ChannelInfo> listChannels() {
         List<ChannelInfo> result = new ArrayList<>();
@@ -141,7 +144,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 保存提供者
      * @param provider 提供者
-     */
+     * @return 返回值
+    */
     public ReturnResult<SysMessageProvider> saveProvider(SysMessageProvider provider) {
         if (StringUtils.isBlank(provider.getSysMessageProviderCode())) {
             return ReturnResult.illegal("提供商编码不能为空");
@@ -167,7 +171,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 更新提供者
      * @param provider 提供者
-     */
+     * @return 返回值
+    */
     public ReturnResult<Boolean> updateProvider(SysMessageProvider provider) {
         if (provider.getSysMessageProviderId() == null) {
             return ReturnResult.illegal("提供商ID不能为空");
@@ -188,7 +193,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 删除提供者
      * @param providerId 提供者标识
-     */
+     * @return 返回值
+    */
     public ReturnResult<Boolean> deleteProvider(Integer providerId) {
         if (providerId == null) {
             return ReturnResult.illegal("提供商信息不存在");
@@ -202,10 +208,11 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * pagefortemplate
-     * @param template template
      * @param page page
      * @param pageSize page大小
-     */
+     * @param template template
+     * @return 返回值
+    */
     public IPage<SysMessageTemplate> pageForTemplate(SysMessageTemplate template, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageTemplate> wrapper = Wrappers.<SysMessageTemplate>lambdaQuery()
                 .eq(SysMessageTemplate::getSysMessageTemplateDelete, 0)
@@ -226,6 +233,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * 列表fortemplate
+     * @return 返回值
     */
     public List<SysMessageTemplate> listForTemplate() {
         return sysMessageTemplateMapper.selectList(Wrappers.<SysMessageTemplate>lambdaQuery()
@@ -238,7 +246,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 保存Template
      * @param template template
-     */
+     * @return 返回值
+    */
     public ReturnResult<SysMessageTemplate> saveTemplate(SysMessageTemplate template) {
         if (template.getSysMessageProviderId() == null) {
             return ReturnResult.illegal("请选择提供商");
@@ -276,7 +285,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 更新Template
      * @param template template
-     */
+     * @return 返回值
+    */
     public ReturnResult<Boolean> updateTemplate(SysMessageTemplate template) {
         if (template.getSysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
@@ -298,7 +308,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 删除Template
      * @param templateId templateid
-     */
+     * @return 返回值
+    */
     public ReturnResult<Boolean> deleteTemplate(Integer templateId) {
         if (templateId == null) {
             return ReturnResult.illegal("模板信息不存在");
@@ -313,7 +324,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 发送
      * @param request 请求
-     */
+     * @return 返回值
+    */
     public ReturnResult<List<MessageResponse>> send(MessageSendRequest request) {
         if (request.sysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
@@ -398,7 +410,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 发送内容
      * @param request 请求
-     */
+     * @return 返回值
+    */
     public ReturnResult<List<MessageResponse>> sendContent(MessageContentSendRequest request) {
         if (request.sysMessageProviderId() == null) {
             return ReturnResult.illegal("提供商ID不能为空");
@@ -477,7 +490,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 同步template
      * @param providerId 提供者标识
-     */
+     * @return 返回值
+    */
     public ReturnResult<Integer> syncTemplate(Integer providerId) {
         if (providerId == null) {
             return ReturnResult.illegal("提供商ID不能为空");
@@ -619,7 +633,8 @@ public class SysMessageServiceImpl implements SysMessageService {
      * @param log 日志
      * @param page page
      * @param pageSize page大小
-     */
+     * @return 返回值
+    */
     public IPage<SysMessageLog> pageForLog(SysMessageLog log, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageLog> wrapper = Wrappers.<SysMessageLog>lambdaQuery()
                 .eq(SysMessageLog::getSysMessageLogDelete, 0)
@@ -645,7 +660,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * previewtemplate
      * @param request 请求
-     */
+     * @return 返回值
+    */
     public ReturnResult<TemplatePreviewResponse> previewTemplate(TemplatePreviewRequest request) {
         if (request == null || request.sysMessageTemplateId() == null) {
             return ReturnResult.illegal("模板ID不能为空");
@@ -688,7 +704,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * clean日志
      * @param beforeTime 之前时间
-     */
+     * @return 返回值
+    */
     public ReturnResult<Integer> cleanLog(LocalDateTime beforeTime) {
         if (beforeTime == null) {
             return ReturnResult.illegal("截止时间不能为空");
@@ -702,7 +719,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * mark日志读取
      * @param token 令牌
-     */
+     * @return 返回值
+    */
     public ReturnResult<Boolean> markLogRead(String token) {
         if (StringUtils.isBlank(token)) {
             return ReturnResult.illegal("追踪标识不能为空");
@@ -729,7 +747,8 @@ public class SysMessageServiceImpl implements SysMessageService {
      * pagefor状态消息
      * @param page page
      * @param pageSize page大小
-     */
+     * @return 返回值
+    */
     public IPage<SysMessageStationItem> pageForStationMessage(long page, long pageSize) {
         String userId = currentUserId();
         if (StringUtils.isBlank(userId)) {
@@ -747,6 +766,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * 计算数量状态消息unread
+     * @return 返回值
     */
     public ReturnResult<Long> countStationMessageUnread() {
         String userId = currentUserId();
@@ -766,7 +786,8 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * mark状态消息读取
      * @param lastId 最后一个标识
-     */
+     * @return 返回值
+    */
     public ReturnResult<Boolean> markStationMessageRead(Integer lastId) {
         String userId = currentUserId();
         if (StringUtils.isBlank(userId)) {

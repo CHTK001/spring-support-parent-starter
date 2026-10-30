@@ -295,10 +295,12 @@ public class WebRequest {
 
     /**
      * 鉴权链路
-     *
-     * @param chain    链路
+     * @param chain 链路
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws ServletException 异常
+    */
     public void doFailureChain(FilterChain chain, HttpServletResponse response) throws IOException, ServletException {
         WebResponse webResponse = new WebResponse(authProperties, chain, request, response);
         webResponse.doFailureChain(Information.AUTHENTICATION_FAILURE);
@@ -589,10 +591,12 @@ public class WebRequest {
 
     /**
      * 成功
-     *
-     * @param chain    链路
+     * @param chain 链路
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws ServletException 异常
+    */
     public void doChain(FilterChain chain, HttpServletResponse response) throws IOException, ServletException {
         chain.doFilter(request, response);
     }

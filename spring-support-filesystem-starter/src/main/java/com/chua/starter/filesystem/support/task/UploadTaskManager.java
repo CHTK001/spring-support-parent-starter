@@ -386,7 +386,11 @@ public class UploadTaskManager {
 
     /**
      * 按序拼接分片为完整文件（流式，不整文件驻留堆）。
-     */
+     * @param parts 参数
+     * @param target 路径
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void concatParts(List<Path> parts, Path target) throws IOException {
         try (var out = Files.newOutputStream(target, StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
@@ -398,7 +402,10 @@ public class UploadTaskManager {
 
     /**
      * 把合并后的文件写入 FileStorage SPI。
-     */
+     * @param mergedFile 路径
+     * @param task 参数
+     * @return 返回值
+    */
     private void writeStorage(UploadTask task, Path mergedFile) {
         FileStorage storage = task.getProvider() == null
                 ? null : fileStorageTemplate.getStorage(task.getProvider());
@@ -444,7 +451,11 @@ public class UploadTaskManager {
         }
     }
 
-    /** 从文件名解析扩展名（小写、无点）。 */
+    /**
+     * ext Of
+     * @param fileName 字符串
+     * @return 返回值
+    */
     private static String extOf(String fileName) {
         if (fileName == null) {
             return "";
@@ -478,7 +489,11 @@ public class UploadTaskManager {
         return meta;
     }
 
-    /** 常见扩展名 → MIME。 */
+    /**
+     * mime Of
+     * @param ext 字符串
+     * @return 返回值
+    */
     private static String mimeOf(String ext) {
         if (ext == null || ext.isEmpty()) {
             return "application/octet-stream";
@@ -509,7 +524,11 @@ public class UploadTaskManager {
         };
     }
 
-    /** 图片扩展名判定。 */
+    /**
+     * is Image
+     * @param ext 字符串
+     * @return 返回值
+    */
     private static boolean isImage(String ext) {
         return "png".equals(ext) || "jpg".equals(ext) || "jpeg".equals(ext)
                 || "gif".equals(ext) || "bmp".equals(ext) || "webp".equals(ext);
@@ -545,6 +564,11 @@ public class UploadTaskManager {
         return wh;
     }
 
+    /**
+     * png Dimension
+     * @param h 参数
+     * @return 返回值
+    */
     private static int[] pngDimension(byte[] h) {
         // PNG 签名 8 字节 + IHDR: 宽=16..19, 高=20..23（大端）
         if (h.length < 24 || (h[0] & 0xFF) != 0x89 || h[1] != 0x50 || h[2] != 0x4E || h[3] != 0x47) {
@@ -553,6 +577,11 @@ public class UploadTaskManager {
         return new int[]{be(h, 16), be(h, 20)};
     }
 
+    /**
+     * jpeg Dimension
+     * @param h 参数
+     * @return 返回值
+    */
     private static int[] jpegDimension(byte[] h) {
         // 扫描 SOF0/1/2 标记（FF C0..C2）：高度 = 偏移+5..+6，宽度 = +7..+8（大端）
         int i = 2;
@@ -571,6 +600,11 @@ public class UploadTaskManager {
         return null;
     }
 
+    /**
+     * gif Dimension
+     * @param h 参数
+     * @return 返回值
+    */
     private static int[] gifDimension(byte[] h) {
         // "GIF8" + 宽=6..7, 高=8..9（小端）
         if (h.length < 10 || h[0] != 'G' || h[1] != 'I' || h[2] != 'F') {
@@ -579,6 +613,11 @@ public class UploadTaskManager {
         return new int[]{le(h, 6), le(h, 8)};
     }
 
+    /**
+     * bmp Dimension
+     * @param h 参数
+     * @return 返回值
+    */
     private static int[] bmpDimension(byte[] h) {
         // "BM" + 宽=18..21, 高=22..25（小端，有符号）
         if (h.length < 26 || h[0] != 'B' || h[1] != 'M') {
@@ -587,6 +626,11 @@ public class UploadTaskManager {
         return new int[]{le(h, 18), Math.abs(le(h, 22))};
     }
 
+    /**
+     * webp Dimension
+     * @param h 参数
+     * @return 返回值
+    */
     private static int[] webpDimension(byte[] h) {
         // "RIFF" + "WEBP"
         if (h.length < 30 || h[0] != 'R' || h[1] != 'I' || h[2] != 'F' || h[3] != 'F'
@@ -615,11 +659,23 @@ public class UploadTaskManager {
         return null;
     }
 
+    /**
+     * be
+     * @param h 参数
+     * @param off 整数
+     * @return 返回值
+    */
     private static int be(byte[] h, int off) {
         return ((h[off] & 0xFF) << 24) | ((h[off + 1] & 0xFF) << 16)
                 | ((h[off + 2] & 0xFF) << 8) | (h[off + 3] & 0xFF);
     }
 
+    /**
+     * le
+     * @param h 参数
+     * @param off 整数
+     * @return 返回值
+    */
     private static int le(byte[] h, int off) {
         return (h[off] & 0xFF) | ((h[off + 1] & 0xFF) << 8)
                 | ((h[off + 2] & 0xFF) << 16) | ((h[off + 3] & 0xFF) << 24);
@@ -627,7 +683,10 @@ public class UploadTaskManager {
 
     /**
      * 列出分片文件并按序号升序。
-     */
+     * @param chunkDir 路径
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private List<Path> listSortedParts(Path chunkDir) throws IOException {
         List<Path> parts = new ArrayList<>();
         if (!Files.isDirectory(chunkDir)) {
@@ -683,7 +742,9 @@ public class UploadTaskManager {
 
     /**
      * 清理任务分片目录。
-     */
+     * @param taskId 字符串
+     * @return 返回值
+    */
     private void cleanupChunks(String taskId) {
         Path dir = chunkRoot.resolve(taskId);
         if (!Files.isDirectory(dir)) {
@@ -701,7 +762,9 @@ public class UploadTaskManager {
 
     /**
      * 静默删除文件。
-     */
+     * @param path 路径
+     * @return 返回值
+    */
     private void deleteQuietly(Path path) {
         try {
             Files.deleteIfExists(path);
@@ -726,7 +789,9 @@ public class UploadTaskManager {
 
     /**
      * 递归删除目录。
-     */
+     * @param root 路径
+     * @return 返回值
+    */
     private void deleteTree(Path root) {
         if (root == null || !Files.isDirectory(root)) {
             return;
@@ -831,7 +896,13 @@ public class UploadTaskManager {
 
         /**
          * 构造。
-         */
+         * @param bucketDir 字符串
+         * @param chunkSize 长整数
+         * @param fileName 字符串
+         * @param provider 字符串
+         * @param totalSize 长整数
+         * @return 返回值
+        */
         UploadTask(String fileName, long totalSize, long chunkSize, String provider, String bucketDir) {
             this.taskId = java.util.UUID.randomUUID().toString().replace("-", "");
             this.fileName = fileName;
@@ -843,7 +914,8 @@ public class UploadTaskManager {
 
         /**
          * 分片总数（chunkSize<=0 视为单分片）。
-         */
+         * @return 返回值
+        */
         public int getTotalChunks() {
             if (chunkSize <= 0) {
                 return 1;
@@ -856,7 +928,8 @@ public class UploadTaskManager {
 
         /**
          * 是否全部分片已到齐（分片数未知时以显式 complete 为准，恒放行）。
-         */
+         * @return 返回值
+        */
         public boolean allChunksReceived() {
             return totalSize <= 0 || receivedChunks.get() >= getTotalChunks();
         }
@@ -879,54 +952,113 @@ public class UploadTaskManager {
             lastActiveAt = System.currentTimeMillis();
         }
 
+        /**
+         * get Received Chunks
+         * @return 返回值
+        */
         public int getReceivedChunks() {
             return receivedChunks.get();
         }
 
+        /**
+         * get Received Bytes
+         * @return 返回值
+        */
         public long getReceivedBytes() {
             return receivedBytes.get();
         }
 
+        /**
+         * set State
+         * @param state 参数
+         * @return 返回值
+        */
         public void setState(State state) {
             this.state = state;
         }
 
+        /**
+         * set Message
+         * @param message 字符串
+         * @return 返回值
+        */
         public void setMessage(String message) {
             this.message = message;
         }
 
+        /**
+         * set Object Key
+         * @param objectKey 字符串
+         * @return 返回值
+        */
         public void setObjectKey(String objectKey) {
             this.objectKey = objectKey;
         }
 
+        /**
+         * get Ext
+         * @return 返回值
+        */
         public String getExt() {
             return ext;
         }
 
+        /**
+         * set Ext
+         * @param ext 字符串
+         * @return 返回值
+        */
         public void setExt(String ext) {
             this.ext = ext;
         }
 
+        /**
+         * get Mime
+         * @return 返回值
+        */
         public String getMime() {
             return mime;
         }
 
+        /**
+         * set Mime
+         * @param mime 字符串
+         * @return 返回值
+        */
         public void setMime(String mime) {
             this.mime = mime;
         }
 
+        /**
+         * get Width
+         * @return 返回值
+        */
         public Integer getWidth() {
             return width;
         }
 
+        /**
+         * set Width
+         * @param width 整数
+         * @return 返回值
+        */
         public void setWidth(Integer width) {
             this.width = width;
         }
 
+        /**
+         * get Height
+         * @return 返回值
+        */
         public Integer getHeight() {
             return height;
         }
 
+        /**
+         * set Height
+         * @param height 整数
+         * @return 返回值
+        */
         public void setHeight(Integer height) {
             this.height = height;
         }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.eduai.dimension.mapper.EduTeacherClassMapper">
+
+    <!--
+        教师已配置的班级标识列表（老师端数据范围）。
+    -->
+    <select id="selectClassIdsByTeacher" resultType="Long">
+        SELECT teacher_class_class_id
+        FROM edu_teacher_class
+        WHERE teacher_class_teacher_id = #{teacherId}
+    </select>
+
+    <!--
+        清空某教师的全部班级配置（全量替换的前半步）。
+    -->
+    <delete id="deleteByTeacherId">
+        DELETE FROM edu_teacher_class WHERE teacher_class_teacher_id = #{teacherId}
+    </delete>
+
+</mapper>

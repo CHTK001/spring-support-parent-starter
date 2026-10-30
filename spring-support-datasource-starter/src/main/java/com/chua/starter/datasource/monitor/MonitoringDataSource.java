@@ -63,6 +63,8 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 获取Connection
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public Connection getConnection() throws SQLException {
         Connection connection = delegate.getConnection();
@@ -81,6 +83,10 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 获取Connection
+     * @param password 设置认证密码
+     * @param username 设置用户名
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public Connection getConnection(String username, String password) throws SQLException {
         Connection connection = delegate.getConnection(username, password);
@@ -110,6 +116,9 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 是否包装器for
+     * @param iface 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return iface.isInstance(this) || delegate.isWrapperFor(iface);
@@ -118,6 +127,8 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 获取记录日志Writer
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public PrintWriter getLogWriter() throws SQLException {
         return delegate.getLogWriter();
@@ -126,6 +137,9 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 设置记录日志Writer
+     * @param out 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setLogWriter(PrintWriter out) throws SQLException {
         delegate.setLogWriter(out);
@@ -134,6 +148,9 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 设置login超时
+     * @param seconds 整数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setLoginTimeout(int seconds) throws SQLException {
         delegate.setLoginTimeout(seconds);
@@ -142,6 +159,8 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 获取login超时
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public int getLoginTimeout() throws SQLException {
         return delegate.getLoginTimeout();
@@ -150,6 +169,8 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 获取父日志记录器
+     * @return 返回值
+     * @throws SQLFeatureNotSupportedException 异常
     */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return delegate.getParentLogger();
@@ -199,6 +220,7 @@ public class MonitoringDataSource implements DataSource {
     @Override
     /**
      * 转为字符串
+     * @return 返回值
     */
     public String toString() {
         return "MonitoringDataSource{" +

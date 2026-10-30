@@ -21,10 +21,11 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     /**
-     * RedisTemplate 配置。
-     * 使用 Jackson2JsonRedisSerializer 序列化对象。
-     */
-    @Bean
+    /**
+     * RedisTemplate 配置。 使用 Jackson2JsonRedisSerializer 序列化对象。
+     * @param connectionFactory 参数
+     * @return 返回值
+    */
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);

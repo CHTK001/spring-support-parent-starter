@@ -54,6 +54,9 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
     @Override
     /**
      * 支持
+     * @param aClass 参数
+     * @param methodParameter 参数
+     * @return 返回值
     */
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
         return true;
@@ -63,6 +66,13 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
     @Override
     /**
      * 之前主体写入
+     * @param aClass 参数
+     * @param mediaType 参数
+     * @param methodParameter 参数
+     * @param o 对象
+     * @param serverHttpRequest 参数
+     * @param serverHttpResponse 参数
+     * @return 返回值
     */
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof StreamingResponseBody || o instanceof ResponseBodyEmitter) {

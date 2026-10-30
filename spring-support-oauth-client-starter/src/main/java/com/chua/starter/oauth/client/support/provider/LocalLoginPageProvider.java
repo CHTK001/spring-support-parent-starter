@@ -218,6 +218,11 @@ public class LocalLoginPageProvider {
         return out.toString();
     }
 
+    /**
+     * url Encode
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String urlEncode(String value) {
         return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
     }

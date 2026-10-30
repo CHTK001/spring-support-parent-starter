@@ -38,10 +38,10 @@ public enum ServiceAction {
 
     /**
      * 构造方法
-     *
      * @param code 动作标识
      * @param desc 中文描述
-     */
+     * @return 返回值
+    */
     ServiceAction(String code, String desc) {
         this.code = code;
         this.desc = desc;

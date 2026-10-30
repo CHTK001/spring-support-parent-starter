@@ -195,11 +195,23 @@ public class ApiTtsController {
         return map;
     }
 
+    /**
+     * body Text
+     * @param Map<String 参数
+     * @param body 参数
+     * @return 返回值
+    */
     private static String bodyText(Map<String, Object> body) {
         Object value = body == null ? null : body.get("text");
         return value == null ? "" : String.valueOf(value).trim();
     }
 
+    /**
+     * string Value
+     * @param defaultValue 字符串
+     * @param value 对象
+     * @return 返回值
+    */
     private static String stringValue(Object value, String defaultValue) {
         if (value == null || String.valueOf(value).isBlank()) {
             return defaultValue;
@@ -257,6 +269,11 @@ public class ApiTtsController {
         }
     }
 
+    /**
+     * audio Media Type
+     * @param format 格式化
+     * @return 返回值
+    */
     private static MediaType audioMediaType(String format) {
         if (format == null) {
             return MediaType.APPLICATION_OCTET_STREAM;

@@ -31,12 +31,22 @@ public class ArthasController {
 
     @Operation(summary = "列出发布下所有 Java 项目的 Arthas 状态")
     @GetMapping("/projects")
+    /**
+     * list Arthas Projects
+     * @param releaseId 长整数
+     * @return 返回值
+    */
     public ReturnResult<List<Map<String, Object>>> listArthasProjects(@RequestParam Long releaseId) {
         return arthasService.listArthasProjects(releaseId);
     }
 
     @Operation(summary = "查询单个项目的 Arthas 状态")
     @GetMapping("/project/{id}/status")
+    /**
+     * get Arthas Status
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<Map<String, Object>> getArthasStatus(@org.springframework.web.bind.annotation.PathVariable Long id) {
         return arthasService.getArthasStatus(id);
     }
@@ -52,6 +62,11 @@ public class ArthasController {
 
     @Operation(summary = "从 JVM 卸载 Arthas")
     @PostMapping("/project/{id}/detach")
+    /**
+     * detach Arthas
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<String> detachArthas(@org.springframework.web.bind.annotation.PathVariable Long id) {
         return arthasService.detachArthas(id);
     }

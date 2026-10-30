@@ -51,6 +51,12 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
     @Override
     /**
      * 获取access令牌
+     * @param Map<String 参数
+     * @param authType 参数
+     * @param ext 参数
+     * @param password 设置认证密码
+     * @param username 设置用户名
+     * @return 返回值
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         return WebRequest.getProtocolExtension(getAuthClientProperties())
@@ -60,6 +66,10 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
     @Override
     /**
      * Logout
+     * @param logoutType 参数
+     * @param uid 字符串
+     * @param userResult 参数
+     * @return 返回值
     */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult ) {
         return WebRequest.getProtocolExtension(getAuthClientProperties())

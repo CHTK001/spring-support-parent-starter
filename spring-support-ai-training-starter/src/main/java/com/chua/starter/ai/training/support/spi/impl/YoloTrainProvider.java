@@ -197,7 +197,8 @@ public class YoloTrainProvider implements TrainProvider {
      * 列出数据目录顶层条目（目录带 / 后缀），供错误提示使用。
      * @param dataRoot 数据根
      * @return 列表top水平仪的结果
-     */
+     * @throws IOException 异常
+    */
     private static String listTopLevel(Path dataRoot) throws IOException {
         /**
          * 尝试。
@@ -227,7 +228,8 @@ public class YoloTrainProvider implements TrainProvider {
     /**
      * 解析训练脚本：优先外部路径，否则从 类路径 资源落盘到临时目录。
      * @return resolveScript的结果
-     */
+     * @throws IOException 异常
+    */
     private Path resolveScript() throws IOException {
         String external = System.getProperty("plugin.ai.training.yolo.script");
         if (external != null && !external.isBlank() && Files.isRegularFile(Path.of(external))) {
@@ -258,7 +260,8 @@ public class YoloTrainProvider implements TrainProvider {
      * @param pythonCmd pythoncmd
      * @param script script
      * @return spawn服务端的结果
-     */
+     * @throws IOException 异常
+    */
     private Process spawnServer(String pythonCmd, Path script) throws IOException {
         ProcessBuilder pb = new ProcessBuilder(pythonCmd, script.toAbsolutePath().toString());
         pb.redirectErrorStream(true);
@@ -271,7 +274,8 @@ public class YoloTrainProvider implements TrainProvider {
      * 读取 Python stdout 首行 端口=xxx 完成端口协商。
      * @param process 处理
      * @return waitfor就绪的结果
-     */
+     * @throws Exception 异常
+    */
     private int waitForReady(Process process) throws Exception {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -429,7 +433,8 @@ public class YoloTrainProvider implements TrainProvider {
      * 解析 /状态 响应体为 JSON 树（标准解析，字段值含逗号/冒号/引号均不串位）。
      * @param body 主体
      * @return 解析状态的结果
-     */
+     * @throws Exception 异常
+    */
     private JsonNode parseStatus(String body) throws Exception {
         return OBJECT_MAPPER.readTree(body);
     }

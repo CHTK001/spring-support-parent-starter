@@ -82,56 +82,110 @@ public record ApiFeatureInfo(
         private String methodName;
         private Set<String> patterns;
 
+        /**
+         * feature Id
+         * @param featureId 字符串
+         * @return 返回值
+        */
         public Builder featureId(String featureId) {
             this.featureId = featureId;
             return this;
         }
 
+        /**
+         * description
+         * @param description 字符串
+         * @return 返回值
+        */
         public Builder description(String description) {
             this.description = description;
             return this;
         }
 
+        /**
+         * group
+         * @param group 字符串
+         * @return 返回值
+        */
         public Builder group(String group) {
             this.group = group;
             return this;
         }
 
+        /**
+         * default Enabled
+         * @param defaultEnabled 布尔值
+         * @return 返回值
+        */
         public Builder defaultEnabled(boolean defaultEnabled) {
             this.defaultEnabled = defaultEnabled;
             return this;
         }
 
+        /**
+         * enabled
+         * @param enabled 布尔值
+         * @return 返回值
+        */
         public Builder enabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }
 
+        /**
+         * disabled Message
+         * @param disabledMessage 字符串
+         * @return 返回值
+        */
         public Builder disabledMessage(String disabledMessage) {
             this.disabledMessage = disabledMessage;
             return this;
         }
 
+        /**
+         * disabled Status
+         * @param disabledStatus 整数
+         * @return 返回值
+        */
         public Builder disabledStatus(int disabledStatus) {
             this.disabledStatus = disabledStatus;
             return this;
         }
 
+        /**
+         * class Name
+         * @param className 字符串
+         * @return 返回值
+        */
         public Builder className(String className) {
             this.className = className;
             return this;
         }
 
+        /**
+         * method Name
+         * @param methodName 字符串
+         * @return 返回值
+        */
         public Builder methodName(String methodName) {
             this.methodName = methodName;
             return this;
         }
 
+        /**
+         * patterns
+         * @param patterns 参数
+         * @return 返回值
+        */
         public Builder patterns(Set<String> patterns) {
             this.patterns = patterns;
             return this;
         }
 
+        /**
+         * 构建
+         * @return 返回值
+        */
         public ApiFeatureInfo build() {
             return new ApiFeatureInfo(featureId, description, group, defaultEnabled, enabled,
                     disabledMessage, disabledStatus, className, methodName, patterns);

@@ -245,6 +245,10 @@ public class JacksonConfiguration {
         @Override
         /**
          * 反序列化
+         * @param ctxt 参数
+         * @param p 参数
+         * @return 返回值
+         * @throws IOException 异常
         */
         public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             return p.readValuesAs(Object.class);
@@ -269,6 +273,13 @@ public class JacksonConfiguration {
         @Override
         /**
          * 处理unexpected令牌
+         * @param ctxt 参数
+         * @param failureMsg 字符串
+         * @param p 参数
+         * @param t 参数
+         * @param targetType 参数
+         * @return 返回值
+         * @throws IOException 异常
         */
         public Object handleUnexpectedToken(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg) throws IOException {
             Class<?> targetRawClass = targetType.getRawClass();

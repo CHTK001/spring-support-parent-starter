@@ -76,6 +76,11 @@ public class SysAiProviderMetricService {
      */
     @Cacheable(cacheNames = CACHE_NAME, key = "#provider == null ? '' : #provider.toLowerCase()",
             unless = "#result == null")
+    /**
+     * find For Estimate
+     * @param provider 字符串
+     * @return 返回值
+    */
     public SysAiProviderMetric findForEstimate(String provider) {
         if (!StringUtils.hasText(provider)) {
             return null;
@@ -294,6 +299,12 @@ public class SysAiProviderMetricService {
         return result.setScale(6, java.math.RoundingMode.HALF_UP);
     }
 
+    /**
+     * text Of
+     * @param field 字符串
+     * @param node 参数
+     * @return 返回值
+    */
     private static String textOf(JsonNode node, String field) {
         JsonNode value = node.get(field);
         if (value == null || value.isNull()) {
@@ -303,6 +314,12 @@ public class SysAiProviderMetricService {
         return text.isEmpty() ? null : text;
     }
 
+    /**
+     * decimal Of
+     * @param field 字符串
+     * @param node 参数
+     * @return 返回值
+    */
     private static BigDecimal decimalOf(JsonNode node, String field) {
         JsonNode value = node.get(field);
         if (value == null || value.isNull() || !value.isNumber()) {

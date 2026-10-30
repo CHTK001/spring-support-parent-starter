@@ -39,7 +39,8 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     @Override
     /**
      * 获取支付全局配置
-     */
+     * @return 返回值
+    */
     public PaymentGlobalConfigVO getConfig() {
         return toVO(getConfigEntity());
     }
@@ -47,7 +48,8 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     @Override
     /**
      * 获取支付全局配置实体
-     */
+     * @return 返回值
+    */
     public PaymentGlobalConfig getConfigEntity() {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -67,7 +69,9 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     @Override
     /**
      * 保存或更新支付全局配置
-     */
+     * @param dto 参数
+     * @return 返回值
+    */
     public PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto) {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -115,9 +119,9 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
 
     /**
      * 规范化地址：去掉末尾斜杠
-     *
      * @param value 值
-     */
+     * @return 返回值
+    */
     private String normalize(String value) {
         if (!StringUtils.hasText(value)) {
             return null;

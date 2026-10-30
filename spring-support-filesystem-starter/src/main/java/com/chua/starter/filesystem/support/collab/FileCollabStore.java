@@ -88,7 +88,11 @@ public class FileCollabStore {
         return collab;
     }
 
-    /** 归一化目录：去首尾斜杠，空/“/” → “”。 */
+    /**
+     * normalize Path
+     * @param path 字符串
+     * @return 返回值
+    */
     private static String normalizePath(String path) {
         if (path == null) {
             return "";
@@ -103,7 +107,11 @@ public class FileCollabStore {
         return p;
     }
 
-    /** 按扩展名推断文档类型。 */
+    /**
+     * infer Type
+     * @param fileName 字符串
+     * @return 返回值
+    */
     private static String inferType(String fileName) {
         if (fileName == null) {
             return "excel";

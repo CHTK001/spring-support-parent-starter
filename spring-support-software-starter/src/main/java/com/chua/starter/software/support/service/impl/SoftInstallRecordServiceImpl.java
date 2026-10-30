@@ -74,6 +74,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * Install
+     * @param request 参数
+     * @return 返回值
     */
     public ReturnResult<InstallDetailResponse> install(InstallRequest request) {
         SoftSoftware software = softwareService.getById(request.softwareId());
@@ -147,6 +149,10 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * Uninstall
+     * @param deviceId 字符串
+     * @param softwareId 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public ReturnResult<InstallDetailResponse> uninstall(String softwareId, String userId, String deviceId) {
         SoftSoftware software = softwareService.getById(softwareId);
@@ -199,6 +205,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 更新版本
+     * @param deviceId 字符串
+     * @param softwareId 字符串
+     * @param targetVersion 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public ReturnResult<InstallDetailResponse> updateVersion(String softwareId, String userId, String deviceId, String targetVersion) {
         SoftSoftware software = softwareService.getById(softwareId);
@@ -256,6 +267,10 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 更新进步
+     * @param message 字符串
+     * @param progress 整数
+     * @param recordId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> updateProgress(String recordId, Integer progress, String message) {
         if (StringUtils.isBlank(recordId)) {
@@ -273,6 +288,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 完成install
+     * @param recordId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> completeInstall(String recordId) {
         if (StringUtils.isBlank(recordId)) {
@@ -295,6 +312,9 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 失败install
+     * @param errorMessage 字符串
+     * @param recordId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> failInstall(String recordId, String errorMessage) {
         if (StringUtils.isBlank(recordId)) {
@@ -314,6 +334,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 完成uninstall
+     * @param recordId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> completeUninstall(String recordId) {
         if (StringUtils.isBlank(recordId)) {
@@ -336,6 +358,9 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 失败uninstall
+     * @param errorMessage 字符串
+     * @param recordId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> failUninstall(String recordId, String errorMessage) {
         if (StringUtils.isBlank(recordId)) {
@@ -355,6 +380,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 列表bysoftwareid
+     * @param softwareId 字符串
+     * @return 返回值
     */
     public List<SoftInstallRecord> listBySoftwareId(String softwareId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
@@ -365,6 +392,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 列表by用户标识
+     * @param userId 字符串
+     * @return 返回值
     */
     public List<SoftInstallRecord> listByUserId(String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
@@ -375,6 +404,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 列表installedby用户标识
+     * @param userId 字符串
+     * @return 返回值
     */
     public List<SoftInstallRecord> listInstalledByUserId(String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
@@ -385,6 +416,10 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 获取installedrecord
+     * @param deviceId 字符串
+     * @param softwareId 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public SoftInstallRecord getInstalledRecord(String softwareId, String userId, String deviceId) {
         LambdaQueryWrapper<SoftInstallRecord> w = new LambdaQueryWrapper<>();
@@ -398,6 +433,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 获取installedsoftware标识
+     * @param userId 字符串
+     * @return 返回值
     */
     public List<String> getInstalledSoftwareIds(String userId) {
         List<SoftInstallRecord> records = listInstalledByUserId(userId);
@@ -413,6 +450,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     @Override
     /**
      * 获取installdetail
+     * @param recordId 字符串
+     * @return 返回值
     */
     public ReturnResult<InstallDetailResponse> getInstallDetail(String recordId) {
         if (StringUtils.isBlank(recordId)) {

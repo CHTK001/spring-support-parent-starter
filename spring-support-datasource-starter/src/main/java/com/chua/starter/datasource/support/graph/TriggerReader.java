@@ -78,13 +78,11 @@ public class TriggerReader {
     // ============================ 各方言 ============================
 
     /**
-     * 读取mysqllike
-     *
-     * <p>安全豁免：查询 information_schema.TRIGGERS 固定系统视图，不拼接用户输入或用户值。</p>
-     *
+     * 读取mysqllike <p>安全豁免：查询 information_schema.TRIGGERS 固定系统视图，不拼接用户输入或用户值。</p>
      * @param conn conn
      * @return 读取mysqllike的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<TriggerInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, EVENT_MANIPULATION, EVENT_OBJECT_TABLE, " +
                 "ACTION_TIMING, STATUS, ACTION_ORIENTATION " +
@@ -111,12 +109,11 @@ public class TriggerReader {
     }
 
     /**
-     * 读取PostgreSQL
-     * <p>安全豁免：查询 information_schema.triggers 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 读取PostgreSQL <p>安全豁免：查询 information_schema.triggers 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取postgresql的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<TriggerInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT trigger_name, event_manipulation, event_object_table, " +
                 "action_timing, action_orientation " +
@@ -143,12 +140,11 @@ public class TriggerReader {
     }
 
     /**
-     * 读取Oracle
-     * <p>安全豁免：查询 Oracle ALL_TRIGGERS 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 读取Oracle <p>安全豁免：查询 Oracle ALL_TRIGGERS 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取oracle的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<TriggerInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, TABLE_NAME, STATUS, TRIGGER_TYPE, TRIGGERING_EVENT " +
                 "FROM ALL_TRIGGERS WHERE OWNER = USER OR OWNER = SYS_CONTEXT('USERENV','CURRENT_SCHEMA')";
@@ -174,12 +170,11 @@ public class TriggerReader {
     }
 
     /**
-     * 读取SQL服务端
-     * <p>安全豁免：查询 SQL Server sys.triggers 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 读取SQL服务端 <p>安全豁免：查询 SQL Server sys.triggers 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取sql服务端的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<TriggerInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT t.name AS trigger_name, " +
                 "       OBJECT_NAME(t.parent_id) AS table_name, " +
@@ -226,12 +221,11 @@ public class TriggerReader {
     }
 
     /**
-     * 读取Sqlite
-     * <p>安全豁免：查询 SQLite sqlite_master 固定系统表，不含用户可控参数或值。</p>
-     *
+     * 读取Sqlite <p>安全豁免：查询 SQLite sqlite_master 固定系统表，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取sqlite的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<TriggerInfo> readSqlite(Connection conn) throws SQLException {
         String sql = "SELECT name, tbl_name FROM sqlite_master WHERE type = 'trigger'";
         List<TriggerInfo> list = new ArrayList<>();
@@ -256,13 +250,11 @@ public class TriggerReader {
     }
 
     /**
-     * 通用 信息_模式 兜底
-     *
-     * <p>安全豁免：查询 information_schema.TRIGGERS 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 通用 信息_模式 兜底 <p>安全豁免：查询 information_schema.TRIGGERS 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取generic信息模式的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<TriggerInfo> readGenericInfoSchema(Connection conn) throws SQLException {
         String sql = "SELECT * FROM information_schema.TRIGGERS";
         List<TriggerInfo> list = new ArrayList<>();
@@ -323,7 +315,8 @@ public class TriggerReader {
          * 从 {@link DatabaseMetaData} 解析方言
          * @param meta meta
          * @return resolve的结果
-         */
+         * @throws SQLException 异常
+        */
         public static DatabaseDialect resolve(DatabaseMetaData meta) throws SQLException {
             String name = meta.getDatabaseProductName();
             if (name == null) {

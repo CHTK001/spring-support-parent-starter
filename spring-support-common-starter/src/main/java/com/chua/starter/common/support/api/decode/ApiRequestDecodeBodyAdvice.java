@@ -69,10 +69,11 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     @Override
     /**
      * 判断是否支持
+     * @param converterType 转换器类型
      * @param methodParameter 方法参数
      * @param targetType 目标类型
-     * @param converterType 转换器类型
-     */
+     * @return 返回值
+    */
     public boolean supports(MethodParameter methodParameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return true;
     }
@@ -80,11 +81,13 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     @Override
     /**
      * 之前主体读取
+     * @param converterType 转换器类型
      * @param inputMessage 输入消息
      * @param parameter 参数
      * @param targetType 目标类型
-     * @param converterType 转换器类型
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException {
         if (!decodeRegister.requestDecodeOpen()) {
             log.debug("[RequestSign] 签名校验未启用，跳过处理");
@@ -141,11 +144,12 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     /**
      * 之后主体读取
      * @param body 主体
+     * @param converterType 转换器类型
      * @param inputMessage 输入消息
      * @param parameter 参数
      * @param targetType 目标类型
-     * @param converterType 转换器类型
-     */
+     * @return 返回值
+    */
     public Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return body;
     }
@@ -154,11 +158,12 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     /**
      * 处理空主体
      * @param body 主体
+     * @param converterType 转换器类型
      * @param inputMessage 输入消息
      * @param parameter 参数
      * @param targetType 目标类型
-     * @param converterType 转换器类型
-     */
+     * @return 返回值
+    */
     public Object handleEmptyBody(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return body;
     }
@@ -192,7 +197,8 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
      * @param inputMessage 输入消息
      * @param request 请求
      * @return decode请求主体的结果
-     */
+     * @throws IOException 异常
+    */
     private HttpInputMessage decodeRequestBody(HttpInputMessage inputMessage, HttpServletRequest request) throws IOException {
         byte[] bodyBytes = StreamUtils.copyToByteArray(inputMessage.getBody());
         if (bodyBytes.length == 0) {
@@ -253,7 +259,8 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
      * extractencryptedpayload
      * @param bodyBytes 主体bytes
      * @return extractEncryptedPayload的结果
-     */
+     * @throws IOException 异常
+    */
     private String extractEncryptedPayload(byte[] bodyBytes) throws IOException {
         String rawBody = new String(bodyBytes, StandardCharsets.UTF_8).trim();
         if (!StringUtils.hasText(rawBody)) {
@@ -333,9 +340,10 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
 
         /**
          * decodedhttp输入消息。
-         * @param sourceHeaders 源头部
          * @param body 主体
-         */
+         * @param sourceHeaders 源头部
+         * @return 返回值
+        */
         DecodedHttpInputMessage(HttpHeaders sourceHeaders, byte[] body) {
             if (sourceHeaders != null) {
                 this.headers.putAll(sourceHeaders);
@@ -347,6 +355,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         @Override
         /**
          * 获取主体
+         * @return 返回值
         */
         public InputStream getBody() {
             /**
@@ -360,6 +369,7 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         @Override
         /**
          * 获取头部
+         * @return 返回值
         */
         public HttpHeaders getHeaders() {
             return headers;

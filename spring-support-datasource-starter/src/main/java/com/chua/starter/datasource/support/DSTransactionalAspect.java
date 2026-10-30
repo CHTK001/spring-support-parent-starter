@@ -58,10 +58,10 @@ public class DSTransactionalAspect {
             "@within(com.chua.starter.datasource.annotation.DSTransactional))")
     /**
      * Around
-     *
      * @param pjp pjp
      * @return around的结果
-     */
+     * @throws Throwable 异常
+    */
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
         // 解析注解（方法优先 -> 类级别回退）
         DSTransactional dsTransactional = resolveAnnotation(pjp);

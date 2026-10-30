@@ -126,7 +126,8 @@ public enum ApiErrorCode {
      * api错误编码。
      * @param code 编码
      * @param httpStatus http状态
-     */
+     * @return 返回值
+    */
     ApiErrorCode(String code, int httpStatus) {
         this.code = code;
         this.httpStatus = httpStatus;

@@ -291,6 +291,12 @@ public class AgentMcpRuntimeService {
          */
         private final Runnable closeAction;
 
+        /**
+         * Mcp Runtime
+         * @param closeAction 可运行任务
+         * @param manager 参数
+         * @return 返回值
+        */
         McpRuntime(McpManager manager, Runnable closeAction) {
             this.manager = manager;
             this.closeAction = closeAction;
@@ -335,6 +341,12 @@ public class AgentMcpRuntimeService {
          */
         private volatile boolean initialized;
 
+        /**
+         * Sdk Mcp Client
+         * @param client 参数
+         * @param serverName 字符串
+         * @return 返回值
+        */
         SdkMcpClient(McpSyncClient client, String serverName) {
             this.client = client;
             this.serverName = serverName;
@@ -391,7 +403,9 @@ public class AgentMcpRuntimeService {
 
         /**
          * 实际执行一次阻塞式工具调用（由 {@link #callTool} 放到带超时的 future 中运行）。
-         */
+         * @param toolCall 参数
+         * @return 返回值
+        */
         private McpToolResult doCallTool(McpToolCall toolCall) {
             try {
                 McpSchema.CallToolResult res = client.callTool(

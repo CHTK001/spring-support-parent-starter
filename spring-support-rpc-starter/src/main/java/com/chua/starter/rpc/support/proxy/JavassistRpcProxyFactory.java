@@ -33,6 +33,10 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     @Override
     /**
      * 创建代理
+     * @param classLoader 参数
+     * @param handler 参数
+     * @param interfaces 参数
+     * @return 返回值
     */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         if (!JAVASSIST_AVAILABLE) {
@@ -64,6 +68,7 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         // Javassist 性能更好，优先级较高

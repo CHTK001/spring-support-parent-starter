@@ -61,6 +61,9 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -69,6 +72,9 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     @Override
     /**
      * 注册
+     * @param bean 对象
+     * @param name 字符串
+     * @return 返回值
     */
     public RpcServer register(String name, Object bean) {
         if (bean == null) {
@@ -137,6 +143,8 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     @Override
     /**
      * 关闭
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void close() throws Exception {
         serviceRegistry.clear();

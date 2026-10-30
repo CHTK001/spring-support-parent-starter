@@ -28,9 +28,9 @@ public enum RefundOrderStatus {
 
     /**
      * 退款订单状态
-     *
      * @param description 描述
-     */
+     * @return 返回值
+    */
     RefundOrderStatus(String description) {
         this.description = description;
     }

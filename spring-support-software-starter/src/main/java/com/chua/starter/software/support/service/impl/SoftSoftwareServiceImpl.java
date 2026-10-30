@@ -84,6 +84,10 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * pagefor
+     * @param installedSoftwareIds 参数
+     * @param query 查询
+     * @param request 参数
+     * @return 返回值
     */
     public IPage<SoftSoftware> pageFor(Query<SoftSoftware> query, SoftwarePageRequest request, Collection<String> installedSoftwareIds) {
         Page<SoftSoftware> page = query.createPage();
@@ -93,6 +97,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 保存Software
+     * @param software 参数
+     * @return 返回值
     */
     public ReturnResult<SoftSoftware> saveSoftware(SoftSoftware software) {
         if (StringUtils.isBlank(software.getSoftwareCode())) {
@@ -119,6 +125,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 更新Software
+     * @param software 参数
+     * @return 返回值
     */
     public ReturnResult<SoftSoftware> updateSoftware(SoftSoftware software) {
         if (software.getSoftwareId() == null) {
@@ -141,6 +149,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 删除Software
+     * @param softwareId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> deleteSoftware(String softwareId) {
         SoftSoftware exist = getById(softwareId);
@@ -161,6 +171,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 获取by编码
+     * @param code 字符串
+     * @return 返回值
     */
     public SoftSoftware getByCode(String code) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftSoftware>().eq(SoftSoftware::getSoftwareCode, code));
@@ -169,6 +181,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 列表by源标识
+     * @param sourceId 字符串
+     * @return 返回值
     */
     public List<SoftSoftware> listBySourceId(String sourceId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftSoftware>().eq(SoftSoftware::getSoftwareSourceId, sourceId));
@@ -177,6 +191,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 同步从源
+     * @param sourceId 字符串
+     * @return 返回值
     */
     public ReturnResult<Integer> syncFromSource(String sourceId) {
         SoftSource source = sourceService.getById(sourceId);
@@ -213,6 +229,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 索引转为Elasticsearch
+     * @param software 参数
+     * @return 返回值
     */
     public void indexToElasticsearch(SoftSoftware software) {
         log.info("索引软件到ES: {}", software.getSoftwareName());
@@ -221,6 +239,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 索引批量转为Elasticsearch
+     * @param softwareList 参数
+     * @return 返回值
     */
     public void indexBatchToElasticsearch(List<SoftSoftware> softwareList) {
         if (CollectionUtils.isEmpty(softwareList)) {
@@ -238,6 +258,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 删除从Elasticsearch
+     * @param softwareId 字符串
+     * @return 返回值
     */
     public void deleteFromElasticsearch(String softwareId) {
         log.info("从ES删除软件: {}", softwareId);
@@ -246,6 +268,8 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 搜索从Elasticsearch
+     * @param keyword 字符串
+     * @return 返回值
     */
     public List<SoftSoftware> searchFromElasticsearch(String keyword) {
         return searchFromElasticsearch(keyword, 0, 20);
@@ -254,6 +278,10 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
     @Override
     /**
      * 搜索从Elasticsearch
+     * @param from 整数
+     * @param keyword 字符串
+     * @param size 获取数量
+     * @return 返回值
     */
     public List<SoftSoftware> searchFromElasticsearch(String keyword, int from, int size) {
         log.info("从ES搜索软件: keyword={}, from={}, size={}", keyword, from, size);

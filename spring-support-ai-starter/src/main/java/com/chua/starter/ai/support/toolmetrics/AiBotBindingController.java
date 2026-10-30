@@ -348,13 +348,11 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询当前用户生效的 机器人 默认 AI 模型。
-     *
-     * <p>Bot 默认模型按用户隔离：优先返回该用户自己的覆盖，未设置时回落全局默认。</p>
-     *
+    /**
+     * 查询当前用户生效的 机器人 默认 AI 模型。 <p>Bot 默认模型按用户隔离：优先返回该用户自己的覆盖，未设置时回落全局默认。</p>
+     * @param httpRequest 参数
      * @return 默认模型名（可能为空）与来源（user/global）
-     */
-    @GetMapping("/default-model")
+    */
     public ReturnResult<Map<String, Object>> getDefaultModel(HttpServletRequest httpRequest) {
         String userId = currentUserIdFromRequest(httpRequest);
         Optional<String> userValue = userId == null

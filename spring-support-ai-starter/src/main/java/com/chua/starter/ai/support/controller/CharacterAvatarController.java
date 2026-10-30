@@ -109,17 +109,12 @@ public class CharacterAvatarController {
 
     /**
      * 读取角色头像（二进制）。
-     *
-     * <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」）
-     * 头像由产品统一维护，不开放上传/删除。这里对读取做兜底 —— 即使头像文件
-     * 或 avatar 字段缺失，也不 404，前端 Avatar 组件拿到空会显示首字占位，
-     * 产品 logo 由前端静态资源统一提供（与上传链路解耦）。</p>
-     *
+    /**
+     * 读取角色头像（二进制）。 <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」） 头像由产品统一维护，不开放上传/删除。这里对读取做兜底 —— 即使头像文件 或 avatar 字段缺失，也不 404，前端 Avatar 组件拿到空会显示首字占位， 产品 logo 由前端静态资源统一提供（与上传链路解耦）。</p>
      * @param id 角色主键
      * @return 图片字节流
-     */
-    @Operation(summary = "读取角色头像")
-    @GetMapping("/{id}/avatar")
+     * @throws IOException 异常
+    */
     public ResponseEntity<byte[]> getAvatar(@PathVariable Integer id) throws IOException {
         final Path dir = avatarDirectory();
         final Path file = findFile(dir, id);
@@ -167,14 +162,19 @@ public class CharacterAvatarController {
 
     /**
      * 头像目录（解析为绝对路径）。
-     */
+     * @return 返回值
+    */
     private Path avatarDirectory() {
         return Paths.get(avatarDir).toAbsolutePath().normalize();
     }
 
     /**
      * 删除该角色既有头像（任意扩展名）。
-     */
+     * @param dir 路径
+     * @param id 整数
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void deleteOldFiles(Path dir, Integer id) throws IOException {
         if (!Files.isDirectory(dir)) {
             return;
@@ -193,7 +193,11 @@ public class CharacterAvatarController {
 
     /**
      * 查找角色头像文件。
-     */
+     * @param dir 路径
+     * @param id 整数
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private Path findFile(Path dir, Integer id) throws IOException {
         if (!Files.isDirectory(dir)) {
             return null;
@@ -207,7 +211,9 @@ public class CharacterAvatarController {
 
     /**
      * 根据上传文件解析扩展名（含点，默认 .png）。
-     */
+     * @param file 参数
+     * @return 返回值
+    */
     private String resolveExtension(MultipartFile file) {
         String name = file.getOriginalFilename();
         if (name != null && name.contains(".")) {
@@ -231,7 +237,9 @@ public class CharacterAvatarController {
 
     /**
      * 探测文件内容类型（失败回退 image/png）。
-     */
+     * @param file 路径
+     * @return 返回值
+    */
     private String probeContentType(Path file) {
         try {
             String type = Files.probeContentType(file);

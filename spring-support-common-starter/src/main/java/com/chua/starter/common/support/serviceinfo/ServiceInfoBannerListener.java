@@ -48,6 +48,8 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     @Override
     /**
      * 支持事件类型
+     * @param eventType 参数
+     * @return 返回值
     */
     public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
         return ApplicationReadyEvent.class.isAssignableFrom(eventType)
@@ -57,6 +59,8 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     @Override
     /**
      * onapplication事件
+     * @param event 参数
+     * @return 返回值
     */
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ApplicationReadyEvent) {
@@ -117,6 +121,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE;

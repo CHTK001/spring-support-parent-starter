@@ -55,7 +55,9 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
     /**
      * 初始化模式。
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void initSchema() throws SQLException {
         /**
          * 尝试。

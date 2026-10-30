@@ -379,9 +379,9 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
 
         /**
          * 构造函数
-         *
          * @param annotation @数据scope注解对象
-         */
+         * @return 返回值
+        */
         DataScopeInfo(DataScope annotation) {
             this.enabled = annotation.enabled();
             this.useUserPermission = annotation.useUserPermission();

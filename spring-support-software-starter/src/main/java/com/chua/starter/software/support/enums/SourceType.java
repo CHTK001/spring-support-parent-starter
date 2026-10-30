@@ -44,7 +44,8 @@ public enum SourceType {
     /**
      * 源类型。
      * @param value 值
-     */
+     * @return 返回值
+    */
     SourceType(int value) {
         this.value = value;
     }

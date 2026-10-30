@@ -227,6 +227,7 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 获取deviceid
+     * @return 返回值
     */
     public String getDeviceId() {
         return info.ip();
@@ -235,6 +236,7 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 是否Online
+     * @return 返回值
     */
     public boolean isOnline() {
         return online && userId >= 0;
@@ -258,6 +260,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * Preview
+     * @param channel 整数
+     * @return 返回值
     */
     public InputStream preview(int channel) {
         NET_DVR_PREVIEWINFO previewInfo = new NET_DVR_PREVIEWINFO();
@@ -291,6 +295,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 查询Records
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
  // 海康按时间检索录像，此处返回空列表，真实场景需结合 NET_DVR_findrecord API
@@ -300,6 +307,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 获取playbackurl
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public String getPlaybackUrl(int channel, TimeRange range) {
  // JNA 直连模式不返回 URL，由前端调用 /视频/playback 拿到 SDK 拉流字节流
@@ -309,6 +319,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 获取liveurl
+     * @param channel 整数
+     * @param protocol 字符串
+     * @return 返回值
     */
     public String getLiveUrl(int channel, String protocol) {
  // JNA 直连模式不返回 URL，由前端调用 /视频/流 拿到 SDK 拉流字节流
@@ -318,6 +331,7 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 测试connection
+     * @return 返回值
     */
     public boolean testConnection() {
         return isOnline();
@@ -326,6 +340,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * Playback
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public InputStream playback(int channel, TimeRange range) {
         NET_DVR_PLAYBACK_COND cond = new NET_DVR_PLAYBACK_COND();
@@ -374,6 +391,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * ptzcontrol
+     * @param cmd 参数
+     * @param speed 双精度数
+     * @return 返回值
     */
     public void ptzControl(PtzCommand cmd, double speed) {
         Integer command = PTZ_COMMANDS.get(cmd);
@@ -392,6 +412,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 设置Preset
+     * @param name 字符串
+     * @param presetId 整数
+     * @return 返回值
     */
     public void setPreset(int presetId, String name) {
         boolean ok = sdk.NET_DVR_PTZPreset_Other(userId, 1, HCNetSDK.NET_DVR_SET_PRESET, presetId, 0);
@@ -405,6 +428,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 调用Preset
+     * @param presetId 整数
+     * @return 返回值
     */
     public void callPreset(int presetId) {
         boolean ok = sdk.NET_DVR_PTZPreset_Other(userId, 1, HCNetSDK.NET_DVR_GOTO_PRESET, presetId, 0);
@@ -418,6 +443,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 删除Preset
+     * @param presetId 整数
+     * @return 返回值
     */
     public void deletePreset(int presetId) {
         boolean ok = sdk.NET_DVR_PTZPreset_Other(userId, 1, HCNetSDK.NET_DVR_DEL_PRESET, presetId, 0);
@@ -431,6 +458,7 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 列表presets
+     * @return 返回值
     */
     public List<PresetInfo> listPresets() {
         // 海康按通道枚举预置位，此处简化返回空列表
@@ -440,6 +468,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 远程解锁
+     * @param doorId 整数
+     * @return 返回值
     */
     public void remoteUnlock(int doorId) {
         boolean ok = sdk.NET_DVR_RemoteControl(userId, NET_DVR_CMD_OPEN_DOOR, Pointer.NULL, 0, Pointer.NULL, 0);
@@ -453,6 +483,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 查询accessrecords
+     * @param range 参数
+     * @return 返回值
     */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
  // 海康门禁记录需通过 获取_门_状态 等命令查询，此处简化返回空列表
@@ -462,6 +494,9 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 订阅事件
+     * @param listener 参数
+     * @param type 参数
+     * @return 返回值
     */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
@@ -470,6 +505,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 取消订阅事件
+     * @param type 参数
+     * @return 返回值
     */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
@@ -478,6 +515,8 @@ public class HikvisionRealSession implements DeviceSession {
     @Override
     /**
      * 取出事件
+     * @param range 参数
+     * @return 返回值
     */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {

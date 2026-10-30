@@ -75,7 +75,9 @@ public class EduPaperTemplateServiceImpl extends ServiceImpl<EduPaperTemplateMap
     @Override
     /**
      * 获取组卷模板详情
-     */
+     * @param templateId 长整数
+     * @return 返回值
+    */
     public EduPaperTemplate getTemplate(Long templateId) {
         EduPaperTemplate template = baseMapper.selectById(templateId);
         if (template == null) {

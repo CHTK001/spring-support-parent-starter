@@ -141,11 +141,11 @@ public class TyphoonDataServiceImpl implements TyphoonDataService {
 
     /**
      * 详情实体 → 契约。
-     *
      * @param detail 实体
+     * @param fallbackId 字符串
      * @param source 数据源名
      * @return 契约出参
-     */
+    */
     private TyphoonDetailVO toDetail(TyphoonDetail detail, String fallbackId, String source) {
         List<TyphoonPoint> points = detail.getPoints() == null ? List.of() : detail.getPoints();
         String strong = points.isEmpty() ? null : points.getFirst().getStrong();

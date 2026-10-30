@@ -145,9 +145,10 @@ public class ApiSystemController {
 
     /**
      * 触发出厂重置（当前宿主未提供安全擦除编排）。
-     */
-    @Permission("admin")
-    @PostMapping("/system/factory-reset")
+    /**
+     * 触发出厂重置（当前宿主未提供安全擦除编排）。
+     * @return 返回值
+    */
     public ApiResult<Void> factoryReset() {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前宿主未实现出厂重置");
     }
@@ -342,11 +343,11 @@ public class ApiSystemController {
 
     /**
      * 返回当前认证状态（基于真实会话身份）。
-     *
+    /**
+     * 返回当前认证状态（基于真实会话身份）。
+     * @param request 参数
      * @return 认证状态
-     */
-    @TokenForIgnore
-    @GetMapping("/auth/status")
+    */
     public ApiResult<Map<String, Object>> authStatus(HttpServletRequest request) {
         boolean authenticated = AiUserContext.currentUser() != null;
         if (!authenticated) {
@@ -464,10 +465,18 @@ public class ApiSystemController {
     // 内部工具方法
     // -----------------------------------------------------------------------
 
+    /**
+     * resolve Storage Generation
+     * @return 返回值
+    */
     private String resolveStorageGeneration() {
         return STORAGE_GENERATION;
     }
 
+    /**
+     * create Storage Generation
+     * @return 返回值
+    */
     private static String createStorageGeneration() {
         String env = System.getenv("STORAGE_GENERATION");
         if (env != null && !env.isBlank()) {
@@ -476,6 +485,10 @@ public class ApiSystemController {
         return UUID.randomUUID().toString();
     }
 
+    /**
+     * resolve Client Settings
+     * @return 返回值
+    */
     private Map<String, Object> resolveClientSettings() {
         String userId = AiUserContext.requireUserId();
         Map<String, Object> result = new LinkedHashMap<>();
@@ -486,6 +499,13 @@ public class ApiSystemController {
         return result;
     }
 
+    /**
+     * serialize Client Setting
+     * @param key 字符串
+     * @param type 字符串
+     * @param value 对象
+     * @return 返回值
+    */
     private String serializeClientSetting(String key, String type, Object value) {
         if (value == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, key + " 不能为空");
@@ -517,6 +537,13 @@ public class ApiSystemController {
         };
     }
 
+    /**
+     * parse Client Setting
+     * @param defaultValue 对象
+     * @param key 字符串
+     * @param stored 字符串
+     * @return 返回值
+    */
     private Object parseClientSetting(String key, String stored, Object defaultValue) {
         if (stored == null) {
             return defaultValue;
@@ -535,6 +562,12 @@ public class ApiSystemController {
         }
     }
 
+    /**
+     * persist Directory Setting
+     * @param field 字符串
+     * @param value 对象
+     * @return 返回值
+    */
     private void persistDirectorySetting(String field, Object value) {
         if (value == null || value.toString().isBlank()) {
             return;
@@ -547,14 +580,30 @@ public class ApiSystemController {
         }
     }
 
+    /**
+     * resolve Setting
+     * @param defaultValue 字符串
+     * @param field 字符串
+     * @return 返回值
+    */
     private String resolveSetting(String field, String defaultValue) {
         return globalSettingService.getValue(SYSTEM_SETTING_GROUP, field).orElse(defaultValue);
     }
 
+    /**
+     * companion Access Token Key
+     * @param companionId 字符串
+     * @return 返回值
+    */
     private String companionAccessTokenKey(String companionId) {
         return "companion-access-token:" + companionId;
     }
 
+    /**
+     * sha256
+     * @param value 字符串
+     * @return 返回值
+    */
     private String sha256(String value) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")

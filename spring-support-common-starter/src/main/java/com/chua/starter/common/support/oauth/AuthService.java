@@ -33,6 +33,7 @@ public interface AuthService {
         @Override
         /**
          * 获取当前用户
+         * @return 返回值
         */
         public CurrentUser getCurrentUser() {
             return null;

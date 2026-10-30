@@ -41,7 +41,9 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     @Override
     /**
      * 创建订单状态机
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public void createStateMachine(Long orderId) {
         log.debug("订单状态机初始化完成 orderId={}", orderId);
     }
@@ -116,7 +118,9 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     @Override
     /**
      * 获取订单当前状态
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public OrderState getCurrentState(Long orderId) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         return order != null ? OrderState.valueOf(order.getStatus()) : null;

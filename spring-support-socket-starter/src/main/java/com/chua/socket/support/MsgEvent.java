@@ -83,6 +83,7 @@ public class MsgEvent implements Serializable {
     @Override
     /**
      * 转为字符串
+     * @return 返回值
     */
     public String toString() {
         return Json.toJSONString(this);

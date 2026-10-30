@@ -253,6 +253,11 @@ public final class DbImportDdl {
         return "TEXT";
     }
 
+    /**
+     * is Integer
+     * @param text 字符串
+     * @return 返回值
+    */
     private static boolean isInteger(String text) {
         try {
             Long.parseLong(text);
@@ -262,6 +267,11 @@ public final class DbImportDdl {
         }
     }
 
+    /**
+     * is Decimal
+     * @param text 字符串
+     * @return 返回值
+    */
     private static boolean isDecimal(String text) {
         try {
             new java.math.BigDecimal(text.replace(",", ""));
@@ -271,6 +281,11 @@ public final class DbImportDdl {
         }
     }
 
+    /**
+     * is Boolean
+     * @param text 字符串
+     * @return 返回值
+    */
     private static boolean isBoolean(String text) {
         String lower = text.toLowerCase(Locale.ROOT);
         return "0".equals(lower) || "1".equals(lower) || "true".equals(lower) || "false".equals(lower)

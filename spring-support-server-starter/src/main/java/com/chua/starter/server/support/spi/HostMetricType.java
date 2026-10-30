@@ -48,10 +48,10 @@ public enum HostMetricType {
 
     /**
      * 构造
-     *
      * @param code 编码
      * @param desc 描述
-     */
+     * @return 返回值
+    */
     HostMetricType(String code, String desc) {
         this.code = code;
         this.desc = desc;

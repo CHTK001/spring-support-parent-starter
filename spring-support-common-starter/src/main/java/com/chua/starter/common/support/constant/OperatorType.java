@@ -61,9 +61,9 @@ public enum OperatorType {
 
     /**
      * 构造函数
-     *
      * @param operator 运算符字符串
-     */
+     * @return 返回值
+    */
     OperatorType(String operator) {
         this.operator = operator;
     }

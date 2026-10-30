@@ -28,31 +28,51 @@ public class DeviceGroupController {
     private final DeviceInfoMapper deviceInfoMapper;
 
     /** 分组树（含每个分组的直属设备数；根节点里额外带一个「未分组」占位） */
-    @GetMapping("/tree")
+    /**
+     * tree
+     * @return 返回值
+    */
     public List<DeviceGroupTreeNode> tree() {
         return groupService.tree();
     }
 
     /** 新建分组 */
-    @PostMapping
+    /**
+     * 创建
+     * @param req 参数
+     * @return 返回值
+    */
     public void create(@RequestBody DeviceGroupRequest req) {
         groupService.create(req);
     }
 
     /** 更新分组（名称 / 备注 / 上级分组，带防环校验） */
-    @PutMapping("/{groupId}")
+    /**
+     * 更新
+     * @param groupId 字符串
+     * @param req 参数
+     * @return 返回值
+    */
     public void update(@PathVariable String groupId, @RequestBody DeviceGroupRequest req) {
         groupService.update(groupId, req);
     }
 
     /** 删除分组（子孙分组一并删除，设备本身不动） */
-    @DeleteMapping("/{groupId}")
+    /**
+     * 删除
+     * @param groupId 字符串
+     * @return 返回值
+    */
     public void delete(@PathVariable String groupId) {
         groupService.delete(groupId);
     }
 
     /** 分组下的设备列表 */
-    @GetMapping("/{groupId}/devices")
+    /**
+     * group Devices
+     * @param groupId 字符串
+     * @return 返回值
+    */
     public List<DeviceInfo> groupDevices(@PathVariable String groupId) {
         List<String> ids = groupService.groupDeviceIds(groupId);
         if (ids.isEmpty()) {
@@ -65,25 +85,42 @@ public class DeviceGroupController {
     }
 
     /** 分配设备到分组（全量替换） */
-    @PutMapping("/{groupId}/devices")
+    /**
+     * assign Devices
+     * @param deviceIds 参数
+     * @param groupId 字符串
+     * @return 返回值
+    */
     public void assignDevices(@PathVariable String groupId, @RequestBody List<String> deviceIds) {
         groupService.assignDevices(groupId, deviceIds);
     }
 
     /** 设备所属分组ID列表 */
-    @GetMapping("/device/{deviceId}/groups")
+    /**
+     * device Groups
+     * @param deviceId 字符串
+     * @return 返回值
+    */
     public List<String> deviceGroups(@PathVariable String deviceId) {
         return groupService.deviceGroupIds(deviceId);
     }
 
     /** 设置设备所属分组（全量替换该设备的关联） */
-    @PutMapping("/device/{deviceId}/groups")
+    /**
+     * assign Device Groups
+     * @param deviceId 字符串
+     * @param groupIds 参数
+     * @return 返回值
+    */
     public void assignDeviceGroups(@PathVariable String deviceId, @RequestBody List<String> groupIds) {
         groupService.assignDeviceGroups(deviceId, groupIds);
     }
 
     /** 所有设备-分组关联（前端批量回显用） */
-    @GetMapping("/assignments")
+    /**
+     * assignments
+     * @return 返回值
+    */
     public List<DeviceGroupDevice> assignments() {
         return groupService.assignments();
     }

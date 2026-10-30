@@ -124,6 +124,11 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * remove By Source Task
+     * @param sourceTaskId 字符串
+     * @return 返回值
+    */
     public int removeBySourceTask(String sourceTaskId) {
         if (StringUtils.isBlank(sourceTaskId)) {
             return 0;
@@ -142,6 +147,8 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     @Override
     /**
      * Page查询
+     * @param query 查询
+     * @return 返回值
     */
     public PageResult<WrongQuestionVO> pageQuery(WrongQueryDTO query) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
@@ -163,6 +170,8 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     @Override
     /**
      * generate评审paper
+     * @param dto 参数
+     * @return 返回值
     */
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
         int count = dto.count() != null ? dto.count() : 10;
@@ -226,6 +235,11 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * mark Corrected
+     * @param wrongId 长整数
+     * @return 返回值
+    */
     public boolean markCorrected(Long wrongId) {
         EduWrongQuestion entity = baseMapper.selectById(wrongId);
         if (entity == null) {

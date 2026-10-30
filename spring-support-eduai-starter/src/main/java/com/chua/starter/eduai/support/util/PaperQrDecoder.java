@@ -68,6 +68,13 @@ public final class PaperQrDecoder {
         }
     }
 
+    /**
+     * 解码
+     * @param image 参数
+     * @param inverted 布尔值
+     * @return 返回值
+     * @throws NotFoundException 异常
+    */
     private static String decode(BufferedImage image, boolean inverted) throws NotFoundException {
         int width = image.getWidth();
         int height = image.getHeight();
@@ -87,6 +94,11 @@ public final class PaperQrDecoder {
         return new MultiFormatReader().decode(new BinaryBitmap(new HybridBinarizer(source))).getText();
     }
 
+    /**
+     * parse Qr Info
+     * @param text 字符串
+     * @return 返回值
+    */
     private static QrInfo parseQrInfo(String text) {
         if (text == null || text.trim().isEmpty()) {
             return null;
@@ -119,6 +131,11 @@ public final class PaperQrDecoder {
         return new QrInfo(paperId, examId, studentNo);
     }
 
+    /**
+     * parse Long
+     * @param value 字符串
+     * @return 返回值
+    */
     private static Long parseLong(String value) {
         if (value == null || !value.matches("\\d{1,19}")) {
             return null;

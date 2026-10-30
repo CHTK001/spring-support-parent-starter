@@ -316,6 +316,12 @@ public final class DbTransferCodec {
         return result;
     }
 
+    /**
+     * add Statement
+     * @param result 参数
+     * @param statement 字符串
+     * @return 返回值
+    */
     private static void addStatement(List<String> result, String statement) {
         String trimmed = statement.trim();
         if (!trimmed.isEmpty()) {
@@ -323,6 +329,11 @@ public final class DbTransferCodec {
         }
     }
 
+    /**
+     * strip Bom
+     * @param text 字符串
+     * @return 返回值
+    */
     private static String stripBom(String text) {
         return text != null && text.startsWith(UTF8_BOM) ? text.substring(UTF8_BOM.length()) : text;
     }
@@ -512,6 +523,12 @@ public final class DbTransferCodec {
         return "'" + stringify(value).replace("\\", "\\\\").replace("'", "\\'") + "'";
     }
 
+    /**
+     * quote
+     * @param delimiter 参数
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String quote(String value, char delimiter) {
         String v = value == null ? "" : value;
         boolean needQuote = v.indexOf(delimiter) >= 0 || v.indexOf('"') >= 0
@@ -617,6 +634,11 @@ public final class DbTransferCodec {
         return value;
     }
 
+    /**
+     * escape Xml
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String escapeXml(String value) {
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 .replace("\"", "&quot;").replace("'", "&apos;");

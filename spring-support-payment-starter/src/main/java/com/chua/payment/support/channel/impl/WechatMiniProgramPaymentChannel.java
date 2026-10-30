@@ -33,7 +33,10 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     @Override
     /**
      * 是否支持该通道
-     */
+     * @param channelSubType 字符串
+     * @param channelType 字符串
+     * @return 返回值
+    */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && ("MINI_PROGRAM".equalsIgnoreCase(channelSubType)
@@ -43,7 +46,10 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     @Override
     /**
      * 发起支付
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         TencentWechatPayResponse response = gateway(providerSpi(channel, null)).miniProgramPay(buildProperties(channel), payRequest);
@@ -56,7 +62,10 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     @Override
     /**
      * 查询支付结果
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryMiniProgramOrder(buildProperties(channel), orderNo);
 
@@ -69,7 +78,10 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     @Override
     /**
      * 关闭订单
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeMiniProgramOrder(buildProperties(channel), orderNo);
     }

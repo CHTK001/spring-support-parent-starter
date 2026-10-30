@@ -135,7 +135,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     @Override
     /**
      * 获取渠道
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public MerchantChannelVO getChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         Merchant merchant = merchantMapper.selectById(channel.getMerchantId());
@@ -145,7 +147,11 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     @Override
     /**
      * 列表渠道
-     */
+     * @param channelType 字符串
+     * @param merchantId 长整数
+     * @param status 整数
+     * @return 返回值
+    */
     public List<MerchantChannelVO> listChannels(Long merchantId, String channelType, Integer status) {
         LambdaQueryWrapper<MerchantChannel> wrapper = new LambdaQueryWrapper<>();
         if (merchantId != null) {
@@ -225,7 +231,8 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     @Override
     /**
      * 列出平台支持的支付方式目录
-     */
+     * @return 返回值
+    */
     public List<PaymentMethodGuideVO> listCatalog() {
         List<PaymentMethodGuideVO> list = new ArrayList<>();
         list.add(guide("WECHAT", "MINI_PROGRAM", "微信小程序支付开通", "微信支付", "https://pay.wechatpay.cn/", "https://pay.wechatpay.cn/static/applyment_guide/applyment_detail_miniapp.shtml", null,
@@ -308,7 +315,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     @Override
     /**
      * 加密 apiKey
-     */
+     * @param apiKey 字符串
+     * @return 返回值
+    */
     public String encryptApiKey(String apiKey) {
         return paymentCipherService.encrypt(apiKey);
     }
@@ -316,16 +325,18 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     @Override
     /**
      * 解密 apiKey
-     */
+     * @param encryptedKey 字符串
+     * @return 返回值
+    */
     public String decryptApiKey(String encryptedKey) {
         return paymentCipherService.decrypt(encryptedKey);
     }
 
     /**
      * 获取商户，不存在时抛出异常
-     *
      * @param merchantId 商户标识
-     */
+     * @return 返回值
+    */
     private Merchant requireMerchant(Long merchantId) {
         if (merchantId == null) {
             throw new PaymentException("商户ID不能为空");
@@ -353,9 +364,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     /**
      * 有值时执行加密
-     *
      * @param value 值
-     */
+     * @return 返回值
+    */
     private String encryptIfPresent(String value) {
         return StringUtils.hasText(value) ? encryptApiKey(value) : null;
     }
@@ -515,10 +526,10 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     /**
      * 查找支付方式引导
-     *
-     * @param channelType 渠道类型
      * @param channelSubType 渠道子类型
-     */
+     * @param channelType 渠道类型
+     * @return 返回值
+    */
     private PaymentMethodGuideVO findGuide(String channelType, String channelSubType) {
         return listCatalog().stream()
                 .filter(item -> item.channelType().equalsIgnoreCase(channelType))
@@ -742,7 +753,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     @Override
     /**
      * 获取商户的钱包渠道
-     */
+     * @param merchantId 长整数
+     * @return 返回值
+    */
     public MerchantChannel getWalletChannel(Long merchantId) {
         if (merchantId == null) {
             throw new PaymentException("商户ID不能为空");

@@ -66,6 +66,11 @@ public class BotSimulateController {
         return ReturnResult.success(result);
     }
 
+    /**
+     * as String
+     * @param value 对象
+     * @return 返回值
+    */
     private static String asString(Object value) {
         return value == null ? "" : String.valueOf(value);
     }

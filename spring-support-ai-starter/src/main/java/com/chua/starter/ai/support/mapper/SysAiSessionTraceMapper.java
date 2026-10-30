@@ -2,7 +2,6 @@ package com.chua.starter.ai.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.ai.support.entity.SysAiSessionTrace;
-import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -27,13 +26,5 @@ public interface SysAiSessionTraceMapper extends BaseMapper<SysAiSessionTrace> {
      * @param list 待插入的轨迹集合，不可为空集
      * @return 实际插入行数
      */
-    @Insert("<script>INSERT INTO sys_ai_session_trace "
-            + "(sys_ai_session_trace_uid, sys_ai_session_id, chat_request_id, kind, agent_id, "
-            + " span_id, span_end, tool_name, text, event_time, span_end_time, seq) VALUES "
-            + "<foreach collection='list' item='t' separator=','>"
-            + "(#{t.uid}, #{t.sessionId}, #{t.chatRequestId}, #{t.kind}, #{t.agentId}, "
-            + " #{t.spanId}, #{t.spanEnd}, #{t.toolName}, #{t.text}, #{t.eventTime}, "
-            + " #{t.spanEndTime}, #{t.seq})"
-            + "</foreach></script>")
     int insertBatch(@Param("list") List<SysAiSessionTrace> list);
 }

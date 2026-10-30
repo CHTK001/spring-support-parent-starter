@@ -50,6 +50,9 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     @Override
     /**
      * Matches
+     * @param method 参数
+     * @param targetClass 参数
+     * @return 返回值
     */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
@@ -66,6 +69,8 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         log.info("[权限拦截器]初始化权限拦截器");
@@ -74,6 +79,9 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
             @Override
             /**
              * 调用
+             * @param invocation 参数
+             * @return 返回值
+             * @throws Throwable 异常
             */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
@@ -287,6 +295,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;

@@ -269,11 +269,11 @@ public class SipServiceManager {
 
         /**
          * 构造 Provider 注册信息
-         *
-         * @param s   控制连接
-         * @param o   控制连接输出流（自动 flush）
+         * @param o 控制连接输出流（自动 flush）
+         * @param s 控制连接
          * @param svc 服务列表
-         */
+         * @return 返回值
+        */
         ProviderInfo(Socket s, java.io.PrintWriter o, String svc) {
             socket = s;
             out = o;
@@ -304,10 +304,10 @@ public class SipServiceManager {
 
         /**
          * 构造隧道上下文
-         *
-         * @param id 通道号
          * @param ds 数据端口监听
-         */
+         * @param id 通道号
+         * @return 返回值
+        */
         PendingTunnel(int id, ServerSocket ds) {
             channelId = id;
             dataSocket = ds;

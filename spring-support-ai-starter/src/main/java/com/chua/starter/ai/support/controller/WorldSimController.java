@@ -39,20 +39,31 @@ public class WorldSimController {
 
     /* ---------------- 世界 ---------------- */
 
-    /** 我的世界列表 */
-    @GetMapping("/worlds")
+    /**
+     * list Worlds
+     * @return 返回值
+    */
     public List<Map<String, Object>> listWorlds() {
         return worldSimService.listWorlds();
     }
 
     /** 世界详情视图（配置 + 场景 + NPC + 关系网 + 最近事件） */
-    @GetMapping("/worlds/{id}/view")
+    /**
+     * world View
+     * @param id 长整数
+     * @return 返回值
+    */
     public Map<String, Object> worldView(@PathVariable Long id) {
         return worldSimService.worldView(id);
     }
 
     /** 建世界（自动附送「起始之地」场景） */
-    @PostMapping("/worlds")
+    /**
+     * create World
+     * @param Map<String 参数
+     * @param body 参数
+     * @return 返回值
+    */
     public SysAiWorld createWorld(@RequestBody Map<String, String> body) {
         return worldSimService.createWorld(
                 body == null ? null : body.get("name"),
@@ -61,79 +72,136 @@ public class WorldSimController {
     }
 
     /** 更新世界配置 */
-    @PutMapping("/worlds/{id}")
+    /**
+     * update World
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiWorld updateWorld(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateWorld(id, body);
     }
 
     /** 删世界（级联删场景/NPC/关系/事件/消息） */
-    @DeleteMapping("/worlds/{id}")
+    /**
+     * delete World
+     * @param id 长整数
+     * @return 返回值
+    */
     public void deleteWorld(@PathVariable Long id) {
         worldSimService.deleteWorld(id);
     }
 
     /* ---------------- 场景 ---------------- */
 
-    /** 世界场景列表 */
-    @GetMapping("/worlds/{id}/scenes")
+    /**
+     * list Scenes
+     * @param id 长整数
+     * @return 返回值
+    */
     public List<SysAiWorldScene> listScenes(@PathVariable Long id) {
         return worldSimService.listScenes(id);
     }
 
     /** 新建场景 */
-    @PostMapping("/worlds/{id}/scenes")
+    /**
+     * create Scene
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiWorldScene createScene(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.createScene(id, body);
     }
 
     /** 更新场景 */
-    @PutMapping("/scenes/{id}")
+    /**
+     * update Scene
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiWorldScene updateScene(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateScene(id, body);
     }
 
     /** 删场景 */
-    @DeleteMapping("/scenes/{id}")
+    /**
+     * delete Scene
+     * @param id 长整数
+     * @return 返回值
+    */
     public void deleteScene(@PathVariable Long id) {
         worldSimService.deleteScene(id);
     }
 
     /* ---------------- 世界 NPC ---------------- */
 
-    /** 世界 NPC 列表（合并角色信息） */
-    @GetMapping("/worlds/{id}/npcs")
+    /**
+     * list Npcs
+     * @param id 长整数
+     * @return 返回值
+    */
     public List<Map<String, Object>> listNpcs(@PathVariable Long id) {
         return worldSimService.listNpcs(id);
     }
 
     /** 添加角色为世界 NPC */
-    @PostMapping("/worlds/{id}/npcs")
+    /**
+     * add Npc
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiWorldNpc addNpc(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.addNpc(id, body);
     }
 
     /** 更新世界 NPC */
-    @PutMapping("/npcs/{id}")
+    /**
+     * update Npc
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiWorldNpc updateNpc(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateNpc(id, body);
     }
 
     /** 移除世界 NPC（级联删相关关系） */
-    @DeleteMapping("/npcs/{id}")
+    /**
+     * remove Npc
+     * @param id 长整数
+     * @return 返回值
+    */
     public void removeNpc(@PathVariable Long id) {
         worldSimService.removeNpc(id);
     }
 
     /* ---------------- 关系 ---------------- */
 
-    /** 世界关系网 */
-    @GetMapping("/worlds/{id}/relationships")
+    /**
+     * list Relationships
+     * @param id 长整数
+     * @return 返回值
+    */
     public List<Map<String, Object>> listRelationships(@PathVariable Long id) {
         return worldSimService.listRelationships(id);
     }
 
     /** 更新关系（好感度/标签/备注） */
-    @PutMapping("/relationships/{id}")
+    /**
+     * update Relationship
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiWorldRelationship updateRelationship(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateRelationship(id, body);
     }
@@ -150,8 +218,12 @@ public class WorldSimController {
 
     /* ---------------- 场景对话 ---------------- */
 
-    /** 场景对话历史（按时间正序） */
-    @GetMapping("/worlds/{id}/scenes/{sceneId}/messages")
+    /**
+     * list Messages
+     * @param id 长整数
+     * @param sceneId 长整数
+     * @return 返回值
+    */
     public List<SysAiWorldMessage> listMessages(@PathVariable Long id, @PathVariable Long sceneId) {
         return worldSimService.listMessages(id, sceneId);
     }

@@ -42,6 +42,10 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     @Override
     /**
      * Post处理之后initialization
+     * @param bean 对象
+     * @param beanName 字符串
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> targetClass = ClassUtils.getUserClass(bean);
@@ -97,6 +101,9 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;

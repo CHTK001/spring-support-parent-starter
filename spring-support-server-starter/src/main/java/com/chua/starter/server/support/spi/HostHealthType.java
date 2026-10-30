@@ -40,10 +40,10 @@ public enum HostHealthType {
 
     /**
      * 构造
-     *
      * @param code 编码
      * @param desc 描述
-     */
+     * @return 返回值
+    */
     HostHealthType(String code, String desc) {
         this.code = code;
         this.desc = desc;

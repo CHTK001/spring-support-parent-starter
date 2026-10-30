@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.device.support.mapper.DeviceGroupMapper">
+
+    <!--
+        统计某分组下的设备数量。
+    -->
+    <select id="countDevices" resultType="int">
+        SELECT COUNT(*)
+        FROM device_group_device
+        WHERE group_id = #{groupId}
+    </select>
+
+    <!--
+        查询设备所在的全部组标识。
+    -->
+    <select id="findGroupIdsByDeviceId" resultType="String">
+        SELECT group_id
+        FROM device_group_device
+        WHERE device_id = #{deviceId}
+    </select>
+
+</mapper>

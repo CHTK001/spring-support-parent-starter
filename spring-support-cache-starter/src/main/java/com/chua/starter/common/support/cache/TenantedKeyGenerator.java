@@ -84,6 +84,9 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -128,6 +131,10 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     @Override
     /**
      * Generate
+     * @param method 参数
+     * @param params 参数
+     * @param target 对象
+     * @return 返回值
     */
     public Object generate(Object target, Method method, Object... params) {
         StringBuilder keyBuilder = new StringBuilder();

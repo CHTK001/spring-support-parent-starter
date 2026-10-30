@@ -16,6 +16,7 @@ public class OauthAuthService implements AuthService {
     @Override
     /**
      * 获取当前用户
+     * @return 返回值
     */
     public CurrentUser getCurrentUser() {
         UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);

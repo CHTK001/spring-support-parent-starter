@@ -2172,10 +2172,12 @@ public class ApiKnowledgeController {
 
     /**
      * 抓取 URL 来源条目到 snapshots/ 目录，返回抓取汇总。
-     * @param source 源
+     * @param Map<String 参数
+     * @param base 参数
      * @param root 根
+     * @param source 源
      * @return 获取源的结果
-     */
+    */
     private Map<String, Object> fetchSource(Map<String, Object> base, Path root) {
         Map<String, Object> source = uncheckedCast(base.get("source"));
         Object rawEntries = source.get("entries");
@@ -2558,6 +2560,14 @@ public class ApiKnowledgeController {
         return Math.min(n, CHUNK_MAX_LIMIT);
     }
 
+    /**
+     * index Knowledge File
+     * @param Map<String 参数
+     * @param base 参数
+     * @param content 字符串
+     * @param relPath 字符串
+     * @return 返回值
+    */
     private void indexKnowledgeFile(Map<String, Object> base, String relPath, String content) {
         String knowledgeBaseId = String.valueOf(base.get("knowledge_base_id"));
         try {
@@ -2989,7 +2999,9 @@ public class ApiKnowledgeController {
      * 打包目录为 压缩。
      * @param sourceDir 源dir
      * @param zipFile 压缩文件
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void zipDirectory(Path sourceDir, Path zipFile) throws IOException {
         /**
          * 尝试。
@@ -3013,9 +3025,11 @@ public class ApiKnowledgeController {
 
     /**
      * 解压 压缩 到目标目录（防路径穿越）。
-     * @param zipFile 压缩文件
      * @param destDir destdir
-     */
+     * @param zipFile 压缩文件
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void unzip(Path zipFile, Path destDir) throws IOException {
         /**
          * 尝试。

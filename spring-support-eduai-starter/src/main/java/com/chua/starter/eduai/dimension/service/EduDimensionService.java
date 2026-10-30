@@ -163,6 +163,11 @@ public class EduDimensionService {
             cacheNames = CACHE_SUBJECTS,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '')",
             unless = "#result == null")
+    /**
+     * list Subjects
+     * @param gradeLevel 字符串
+     * @return 返回值
+    */
     public List<EduSubject> listSubjects(String gradeLevel) {
         return subjectMapper.listSubjects(gradeLevel, EduUserContext.ownerScope());
     }
@@ -176,6 +181,11 @@ public class EduDimensionService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_SUBJECTS, CACHE_DROPDOWN}, allEntries = true)
+    /**
+     * save Subject
+     * @param entity 参数
+     * @return 返回值
+    */
     public Long saveSubject(EduSubject entity) {
         if (!StringUtils.hasText(entity.getSubjectCode()) || !StringUtils.hasText(entity.getSubjectName())) {
             throw new BusinessException("学科编码与名称必填");
@@ -211,6 +221,11 @@ public class EduDimensionService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_SUBJECTS, CACHE_DROPDOWN}, allEntries = true)
+    /**
+     * delete Subject
+     * @param id 长整数
+     * @return 返回值
+    */
     public boolean deleteSubject(Long id) {
         if (id == null) {
             return false;
@@ -237,6 +252,11 @@ public class EduDimensionService {
             cacheNames = CACHE_GRADES,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '')",
             unless = "#result == null")
+    /**
+     * list Grades
+     * @param gradeLevel 字符串
+     * @return 返回值
+    */
     public List<EduGrade> listGrades(String gradeLevel) {
         return gradeMapper.listGrades(gradeLevel, EduUserContext.ownerScope());
     }
@@ -250,6 +270,11 @@ public class EduDimensionService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_GRADES, CACHE_DROPDOWN}, allEntries = true)
+    /**
+     * save Grade
+     * @param entity 参数
+     * @return 返回值
+    */
     public Long saveGrade(EduGrade entity) {
         if (!StringUtils.hasText(entity.getGradeLevel()) || !StringUtils.hasText(entity.getGradeName())) {
             throw new BusinessException("学段与年级名称必填");
@@ -282,6 +307,11 @@ public class EduDimensionService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_GRADES, CACHE_DROPDOWN}, allEntries = true)
+    /**
+     * delete Grade
+     * @param id 长整数
+     * @return 返回值
+    */
     public boolean deleteGrade(Long id) {
         if (id == null) {
             return false;
@@ -1106,6 +1136,10 @@ public class EduDimensionService {
             cacheNames = CACHE_DROPDOWN,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':'",
             unless = "#result == null")
+    /**
+     * get Dropdown
+     * @return 返回值
+    */
     public DimensionDropdown getDropdown() {
         // 学科 / 年级并行查询，缩短下拉首屏
         java.util.concurrent.CompletableFuture<List<EduSubject>> subjectsF =

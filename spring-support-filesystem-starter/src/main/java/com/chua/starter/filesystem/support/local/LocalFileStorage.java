@@ -117,6 +117,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * 创建multipartstorage
+     * @return 返回值
     */
     public MultipartStorage createMultipartStorage() {
         return new LocalMultipartStorage();
@@ -125,6 +126,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * 放入对象
+     * @param request 参数
+     * @return 返回值
     */
     public PutObjectResult putObject(PutObjectRequest request) {
         try {
@@ -179,6 +182,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * 获取对象
+     * @param key 字符串
+     * @return 返回值
     */
     public GetObjectResult getObject(String key) {
         Path target = resolveSafely(key);
@@ -204,6 +209,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * 获取对象
+     * @param request 参数
+     * @return 返回值
     */
     public GetObjectResult getObject(GetObjectRequest request) {
         return getObject(request.getKey());
@@ -212,6 +219,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * 删除对象
+     * @param key 字符串
+     * @return 返回值
     */
     public DeleteObjectResult deleteObject(String key) {
         try {
@@ -237,6 +246,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * exist对象
+     * @param request 参数
+     * @return 返回值
     */
     public ExistObjectResult existObject(ExistObjectRequest request) {
         String key = request.getKey();
@@ -251,6 +262,8 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /**
      * 列表对象
+     * @param request 参数
+     * @return 返回值
     */
     public ListObjectResult listObject(ListObjectRequest request) {
         try {
@@ -324,6 +337,8 @@ public class LocalFileStorage extends AbstractFileStorage {
         @Override
         /**
          * Initiate
+         * @param request 参数
+         * @return 返回值
         */
         public MultipartPartResult initiate(PutObjectRequest request) {
             String uploadId = UUID.randomUUID().toString().replace("-", "");
@@ -337,6 +352,8 @@ public class LocalFileStorage extends AbstractFileStorage {
         @Override
         /**
          * uploadpart
+         * @param request 参数
+         * @return 返回值
         */
         public MultipartPartResult uploadPart(MultipartUploadPartRequest request) {
             String uploadId = request.getUploadId();
@@ -367,6 +384,9 @@ public class LocalFileStorage extends AbstractFileStorage {
         @Override
         /**
          * 完成
+         * @param parts 参数
+         * @param uploadId 字符串
+         * @return 返回值
         */
         public PutObjectResult complete(String uploadId, List<PartETag> parts) {
             Map<Integer, Path> partMap = multipartMap.remove(uploadId);
@@ -408,6 +428,8 @@ public class LocalFileStorage extends AbstractFileStorage {
         @Override
         /**
          * Abort
+         * @param uploadId 字符串
+         * @return 返回值
         */
         public DeleteObjectResult abort(String uploadId) {
             Map<Integer, Path> parts = multipartMap.remove(uploadId);

@@ -84,7 +84,9 @@ public class AiSessionController {
 
     /**
      * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
-     */
+     * @param settingsObj 对象
+     * @return 返回值
+    */
     private String writeSettings(Object settingsObj) {
         if (settingsObj == null) {
             return null;
@@ -98,9 +100,11 @@ public class AiSessionController {
     }
 
     /**
+    /**
      * 将持久化的 settings JSON 解析为 Map；为空或解析失败时返回空 Map。
-     */
-    @SuppressWarnings("unchecked")
+     * @param json 字符串
+     * @return 返回值
+    */
     private Map<String, Object> readSettings(String json) {
         if (json == null || json.isBlank()) {
             return new HashMap<>();
@@ -186,11 +190,11 @@ public class AiSessionController {
     }
 
     /**
+    /**
      * 解析待确认请求
-     *
+     * @param json 字符串
      * @return 待确认请求 Map；非 pending / 解析失败返回 null
-     */
-    @SuppressWarnings("unchecked")
+    */
     private Map<String, Object> parsePendingConfirmation(String json) {
         if (json == null || json.isBlank()) {
             return null;
@@ -215,18 +219,10 @@ public class AiSessionController {
     }
 
     /**
-     * 解析失败轮的错误态。
-     *
-     * <p>失败助手消息把 {@code finishReason}/{@code errorDetail} 落在 confirmation 里
-     * （见 {@code ChatStreamOrchestrator.persistErroredAssistantMessage}）。SSE 期间前端直接
-     * 吃 turn_end 事件所以能显示红色错误块；刷新后改走本方法还原历史，必须把这两个字段
-     * 一并透出，否则错误提示在重载后整块消失。</p>
-     *
-     * <p>只认非空的 {@code finishReason}，且 {@code errorDetail} 单独判空后回落到 finishReason，
-     * 避免上游只给状态码不给文案时渲染成空白错误框。</p>
-     *
+     * 解析失败轮的错误态。 <p>失败助手消息把 {@code finishReason}/{@code errorDetail} 落在 confirmation 里 （见 {@code ChatStreamOrchestrator.persistErroredAssistantMessage}）。SSE 期间前端直接 吃 turn_end 事件所以能显示红色错误块；刷新后改走本方法还原历史，必须把这两个字段 一并透出，否则错误提示在重载后整块消失。</p> <p>只认非空的 {@code finishReason}，且 {@code errorDetail} 单独判空后回落到 finishReason， 避免上游只给状态码不给文案时渲染成空白错误框。</p>
+     * @param json 字符串
      * @return 含 finishReason（及 errorDetail）的 Map；非失败轮或解析失败返回 null
-     */
+    */
     private Map<String, Object> parseErrorState(String json) {
         if (json == null || json.isBlank()) {
             return null;
@@ -299,15 +295,10 @@ public class AiSessionController {
     }
 
     /**
-     * 解析本轮实际应答的供应商信息。
-     *
-     * <p>写入方在 {@code ChatStreamOrchestrator}：路由一旦出问题（选了 A 家却发到 B 家接口、
-     * B 家返回配额报错），最需要的就是「当时到底是哪家供应商、哪个 baseUrl 应答的」这条信息。
-     * SSE 期间前端从 create 事件拿；刷新后改走本方法还原，必须也从 confirmation 透出，
-     * 否则提示只在流式的那几秒存在，刷新即丢。</p>
-     *
+     * 解析本轮实际应答的供应商信息。 <p>写入方在 {@code ChatStreamOrchestrator}：路由一旦出问题（选了 A 家却发到 B 家接口、 B 家返回配额报错），最需要的就是「当时到底是哪家供应商、哪个 baseUrl 应答的」这条信息。 SSE 期间前端从 create 事件拿；刷新后改走本方法还原，必须也从 confirmation 透出， 否则提示只在流式的那几秒存在，刷新即丢。</p>
+     * @param json 字符串
      * @return 路由信息 Map；无路由信息或解析失败返回 {@code null}
-     */
+    */
     private Map<String, Object> parseRoute(String json) {
         if (json == null || json.isBlank()) {
             return null;

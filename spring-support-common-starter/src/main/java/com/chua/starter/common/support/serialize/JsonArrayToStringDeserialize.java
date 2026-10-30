@@ -28,6 +28,11 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
         @Override
     /**
      * 反序列化
+     * @param ctxt 参数
+     * @param p 参数
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws JacksonException 异常
     */
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);

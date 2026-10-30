@@ -61,6 +61,10 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * Approve
+     * @param cookie 参数
+     * @param subProtocol 字符串
+     * @param token 字符串
+     * @return 返回值
     */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
  // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
@@ -89,6 +93,8 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * 认证用户编码
+     * @param appKeySecret 参数
+     * @return 返回值
     */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
  // 注意：指纹校验应该在过滤器层进行，因为需要比对用户信息里的指纹
@@ -132,6 +138,11 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * upgrade信息
+     * @param cookie 参数
+     * @param refreshToken 字符串
+     * @param token 字符串
+     * @param upgradeType 参数
+     * @return 返回值
     */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
@@ -164,6 +175,12 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * 获取access令牌
+     * @param Map<String 参数
+     * @param authType 参数
+     * @param ext 参数
+     * @param password 设置认证密码
+     * @param username 设置用户名
+     * @return 返回值
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
@@ -225,6 +242,10 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * Logout
+     * @param logoutType 参数
+     * @param uid 字符串
+     * @param userResult 参数
+     * @return 返回值
     */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         JsonObject jsonObject = new JsonObject();
@@ -243,6 +264,10 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * 创建temporary令牌
+     * @param Map<String 参数
+     * @param ext 参数
+     * @param sourceToken 字符串
+     * @return 返回值
     */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
@@ -268,6 +293,8 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * 获取online用户
+     * @param query 查询
+     * @return 返回值
     */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         JsonObject jsonObject = new JsonObject();
@@ -303,6 +330,9 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * 验证Fingerprint
+     * @param fingerprint 字符串
+     * @param token 字符串
+     * @return 返回值
     */
     public FingerprintVerifyResult verifyFingerprint(String token, String fingerprint) {
         JsonObject jsonObject = new JsonObject();
@@ -341,6 +371,8 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /**
      * 获取online状态
+     * @param uid 字符串
+     * @return 返回值
     */
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();

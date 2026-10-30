@@ -78,6 +78,13 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "T(com.chua.starter.ai.support.service.impl.SysAiUserSettingServiceImpl).resolveKey(#userId, #group, #field)",
             unless = "#result == null || #result.isEmpty()")
+    /**
+     * 解析
+     * @param field 字符串
+     * @param group 字符串
+     * @param userId 字符串
+     * @return 返回值
+    */
     public Optional<String> resolve(String userId, String group, String field) {
         Optional<String> override = getUserValue(userId, group, field);
         if (override.isPresent()) {
@@ -269,6 +276,13 @@ public class SysAiUserSettingServiceImpl implements SysAiUserSettingService {
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "T(com.chua.starter.ai.support.service.impl.SysAiUserSettingServiceImpl).resolveKey(#userId, #group, #field)")
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Value
+     * @param field 字符串
+     * @param group 字符串
+     * @param userId 字符串
+     * @return 返回值
+    */
     public int deleteValue(String userId, String group, String field) {
         if (isBlank(userId)) {
             return 0;

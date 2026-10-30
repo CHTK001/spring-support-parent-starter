@@ -878,6 +878,8 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     @Override
     /**
      * 删除维护窗口
+     * @param id 长整数
+     * @return 返回值
     */
     public ReturnResult<Void> deleteMaintenanceWindow(Long id) {
         maintenanceWindowMapper.deleteById(id);
@@ -899,6 +901,11 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     @Override
     /**
      * 测试告警规则
+     * @param metricName 字符串
+     * @param monitorId 长整数
+     * @param ruleId 长整数
+     * @param value 双精度数
+     * @return 返回值
     */
     public ReturnResult<Boolean> testRule(Long ruleId, Long monitorId, String metricName, Double value) {
         try {

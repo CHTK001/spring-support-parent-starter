@@ -161,7 +161,9 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     @Override
     /**
      * 根据出订单号获取支付分订单
-     */
+     * @param outOrderNo 字符串
+     * @return 返回值
+    */
     public WechatPayScoreOrder getByOutOrderNo(String outOrderNo) {
         if (!StringUtils.hasText(outOrderNo)) {
             return null;

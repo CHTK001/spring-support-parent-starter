@@ -158,7 +158,11 @@ public final class ProviderRouteTargets {
 
     /**
      * 读取节点中的布尔字段；缺失返回 {@code null}（由目标默认 {@code true}）。
-     */
+     * @param Map<String 参数
+     * @param keys 参数
+     * @param node 参数
+     * @return 返回值
+    */
     private static Boolean boolNode(Map<String, Object> node, String... keys) {
         for (String key : keys) {
             if (node.containsKey(key)) {

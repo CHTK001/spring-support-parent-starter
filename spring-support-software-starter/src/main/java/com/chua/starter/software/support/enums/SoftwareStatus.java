@@ -37,7 +37,8 @@ public enum SoftwareStatus {
     /**
      * software状态。
      * @param value 值
-     */
+     * @return 返回值
+    */
     SoftwareStatus(int value) {
         this.value = value;
     }

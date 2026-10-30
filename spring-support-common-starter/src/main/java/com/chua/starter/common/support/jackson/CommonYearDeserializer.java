@@ -35,16 +35,12 @@ import java.time.Year;
 public class CommonYearDeserializer extends YearDeserializer {
 
     /**
-     * 将 JSON 解析为 Year 对象。
-     *
-     * @param parser  JSON 解析器
+    /**
+     * 将 JSON 解析为 Year 对象。 反序列化
      * @param context 反序列化上下文
+     * @param parser JSON 解析器
      * @return 解析出的 Year 实例
      * @throws IOException 反序列化过程中无法恢复的 IO 错误
-     */
-    @Override
-    /**
-     * 反序列化
     */
     public Year deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         JsonToken t = parser.currentToken();

@@ -46,6 +46,8 @@ public class GlueJobHandler implements JobHandler {
     @Override
     /**
      * 执行
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void execute() throws Exception {
  // 记录胶水版本信息
@@ -58,6 +60,8 @@ public class GlueJobHandler implements JobHandler {
     @Override
     /**
      * 初始化
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void init() throws Exception {
         log.debug("初始化GLUE任务处理器, 版本: {}", glueUpdatetime);
@@ -67,6 +71,8 @@ public class GlueJobHandler implements JobHandler {
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
         log.debug("销毁GLUE任务处理器, 版本: {}", glueUpdatetime);

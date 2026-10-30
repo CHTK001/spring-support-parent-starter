@@ -82,6 +82,11 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     @Override
     /**
      * 处理删除
+     * @param delete 删除
+     * @param index 整数
+     * @param obj 对象
+     * @param sql 字符串
+     * @return 返回值
     */
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
@@ -93,6 +98,11 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     @Override
     /**
      * 处理更新
+     * @param index 整数
+     * @param obj 对象
+     * @param sql 字符串
+     * @param update 更新
+     * @return 返回值
     */
     protected void processUpdate(Update update, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
@@ -104,6 +114,11 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     @Override
     /**
      * 处理选择
+     * @param index 整数
+     * @param obj 对象
+     * @param select 参数
+     * @param sql 字符串
+     * @return 返回值
     */
     protected void processSelect(Select select, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {

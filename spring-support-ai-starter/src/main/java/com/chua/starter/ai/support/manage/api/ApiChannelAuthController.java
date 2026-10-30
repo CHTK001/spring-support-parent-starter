@@ -535,7 +535,14 @@ public class ApiChannelAuthController {
         return emitter;
     }
 
-    /** 推一条 SSE 事件（客户端已断开时静默）。 */
+    /**
+     * send Event
+     * @param Map<String 参数
+     * @param data 参数
+     * @param emitter 参数
+     * @param name 字符串
+     * @return 返回值
+    */
     private void sendEvent(SseEmitter emitter, String name, Map<String, Object> data) {
         try {
             emitter.send(SseEmitter.event().name(name).data(data, MediaType.APPLICATION_JSON));
@@ -1050,13 +1057,12 @@ public class ApiChannelAuthController {
     }
 
     /**
-     * 查找或新建一条 connection：label 非空时精确匹配；
-     * 为空时按「该渠道下 role=default」匹配；都不存在则新建。
-     *
-     * @param providerId provider 行 ID
+     * 查找或新建一条 connection：label 非空时精确匹配； 为空时按「该渠道下 role=default」匹配；都不存在则新建。
      * @param label 账号标签（可空）
+     * @param owner 字符串
+     * @param providerId provider 行 ID
      * @return 必然存在的 connection
-     */
+    */
     private SysAiProviderConnection findOrCreateConnection(String providerId, String label, String owner) {
         if (label != null && !label.isBlank()) {
             SysAiProviderConnection byLabel = connectionMapper.selectOne(
@@ -1094,9 +1100,11 @@ public class ApiChannelAuthController {
     }
 
     /**
-     * 渠道 connection 的状态摘要：取 credentials 经 impl.status() 的 {@code status} 键。
-     * 出错时返回 "unknown"，前端仍展示连接本身。
-     */
+     * 渠道 connection 的状态摘要：取 credentials 经 impl.status() 的 {@code status} 键。 出错时返回 "unknown"，前端仍展示连接本身。
+     * @param c 参数
+     * @param impl 参数
+     * @return 返回值
+    */
     private String implStatusOf(SysAiProviderConnection c, AccountChannelAuthManager impl) {
         if (c == null || c.getCredentials() == null || c.getCredentials().isEmpty()) {
             return "unbound";

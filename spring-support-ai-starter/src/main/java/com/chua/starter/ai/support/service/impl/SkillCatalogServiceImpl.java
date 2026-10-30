@@ -315,7 +315,9 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
 
     /**
      * 极简 YAML frontmatter 解析：仅取顶层标量键值（title/description/version/name）。
-     */
+     * @param content 字符串
+     * @return 返回值
+    */
     private Map<String, String> parseSimpleFrontmatter(String content) {
         Map<String, String> result = new LinkedHashMap<>();
         if (content == null) {
@@ -414,7 +416,8 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
 
     /**
      * 取本地快照，过期重建。
-     */
+     * @return 返回值
+    */
     private Map<String, List<Map<String, Object>>> localSnapshotMap() {
         Map<String, List<Map<String, Object>>> snapshot = localSnapshot;
         if (snapshot != null && System.currentTimeMillis() - localSnapshotAt < LOCAL_CACHE_TTL_MILLIS) {
@@ -434,7 +437,8 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
 
     /**
      * 扫描所有已安装本地工具的技能。
-     */
+     * @return 返回值
+    */
     private Map<String, List<Map<String, Object>>> scanLocal() {
         Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
         for (SkillOfflineProvider provider : offlineProviders().values()) {
@@ -482,20 +486,38 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
 
     // ============================ 开关读取 ============================
 
+    /**
+     * is Local Enabled
+     * @param tool 字符串
+     * @return 返回值
+    */
     private boolean isLocalEnabled(String tool) {
         return globalSettingService.getBoolean(GROUP, "local_" + tool, true);
     }
 
+    /**
+     * is Market Enabled
+     * @return 返回值
+    */
     private boolean isMarketEnabled() {
         return globalSettingService.getBoolean(GROUP, "market", true);
     }
 
+    /**
+     * is Agg Enabled
+     * @param src 字符串
+     * @return 返回值
+    */
     private boolean isAggEnabled(String src) {
         return globalSettingService.getBoolean(GROUP, "agg_" + src, false);
     }
 
     // ============================ SPI 加载 ============================
 
+    /**
+     * offline Providers
+     * @return 返回值
+    */
     private Map<String, SkillOfflineProvider> offlineProviders() {
         try {
             Map<String, SkillOfflineProvider> map = ServiceProvider.of(SkillOfflineProvider.class).list();
@@ -506,6 +528,10 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         }
     }
 
+    /**
+     * online Providers
+     * @return 返回值
+    */
     private Map<String, SkillOnlineProvider> onlineProviders() {
         try {
             Map<String, SkillOnlineProvider> map = ServiceProvider.of(SkillOnlineProvider.class).list();
@@ -518,6 +544,10 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
 
     // ============================ 工具方法 ============================
 
+    /**
+     * user Root
+     * @return 返回值
+    */
     private Path userRoot() {
         Path p = Paths.get(skillsRoot).resolve("user");
         try {
@@ -528,10 +558,20 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         return p;
     }
 
+    /**
+     * is Installed Here
+     * @param name 字符串
+     * @return 返回值
+    */
     private boolean isInstalledHere(String name) {
         return Files.exists(userRoot().resolve(sanitize(name)));
     }
 
+    /**
+     * safe Name
+     * @param provider 对象
+     * @return 返回值
+    */
     private static String safeName(Object provider) {
         try {
             return String.valueOf(provider.getClass().getMethod("name").invoke(provider));
@@ -540,6 +580,11 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         }
     }
 
+    /**
+     * safe Installed
+     * @param provider 参数
+     * @return 返回值
+    */
     private static boolean safeInstalled(SkillOfflineProvider provider) {
         try {
             return provider.isInstalled();
@@ -550,12 +595,21 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
 
     /**
      * 技能目录名仅保留字母数字、下划线、短横线。
-     */
+     * @param name 字符串
+     * @return 返回值
+    */
     private static String sanitize(String name) {
         String cleaned = name.trim().replaceAll("[^A-Za-z0-9_-]", "_");
         return cleaned.isBlank() ? "skill" : cleaned;
     }
 
+    /**
+     * copy Tree
+     * @param dest 路径
+     * @param src 路径
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private static void copyTree(Path src, Path dest) throws IOException {
         Files.walkFileTree(src, new java.nio.file.SimpleFileVisitor<>() {
             @Override
@@ -577,6 +631,12 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         });
     }
 
+    /**
+     * delete Tree
+     * @param root 路径
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private static void deleteTree(Path root) throws IOException {
         if (root == null || !Files.exists(root)) {
             return;
@@ -592,6 +652,13 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         }
     }
 
+    /**
+     * 标记失败
+     * @param Map<String 参数
+     * @param message 字符串
+     * @param result 参数
+     * @return 返回值
+    */
     private static Map<String, Object> fail(Map<String, Object> result, String message) {
         result.put("success", false);
         result.put("message", message);

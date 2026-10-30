@@ -209,6 +209,11 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     @Transactional
+    /**
+     * delete World
+     * @param id 长整数
+     * @return 返回值
+    */
     public void deleteWorld(Long id) {
         SysAiWorld w = requireOwned(id);
         List<SysAiWorldNpc> npcs = npcMapper.selectList(
@@ -417,6 +422,11 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     @Transactional
+    /**
+     * remove Npc
+     * @param id 长整数
+     * @return 返回值
+    */
     public void removeNpc(Long id) {
         SysAiWorldNpc n = npcMapper.selectById(id);
         if (n == null) {
@@ -583,7 +593,11 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     /* ---------------- 内部 ---------------- */
-
+    /**
+     * require Owned
+     * @param id 长整数
+     * @return 返回值
+    */
     private SysAiWorld requireOwned(Long id) {
         SysAiWorld w = worldMapper.selectById(id);
         if (w == null) {
@@ -598,6 +612,11 @@ public class WorldSimServiceImpl implements WorldSimService {
         return w;
     }
 
+    /**
+     * world Row
+     * @param w 参数
+     * @return 返回值
+    */
     private Map<String, Object> worldRow(SysAiWorld w) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", w.getId());
@@ -624,6 +643,11 @@ public class WorldSimServiceImpl implements WorldSimService {
         return row;
     }
 
+    /**
+     * npc Row
+     * @param n 参数
+     * @return 返回值
+    */
     private Map<String, Object> npcRow(SysAiWorldNpc n) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", n.getId());
@@ -647,7 +671,11 @@ public class WorldSimServiceImpl implements WorldSimService {
         return row;
     }
 
-    /** NPC 展示名：世界内昵称优先，其次角色名 */
+    /**
+     * npc Display Name
+     * @param n 参数
+     * @return 返回值
+    */
     private String npcDisplayName(SysAiWorldNpc n) {
         if (n == null) {
             return "未知";
@@ -659,7 +687,11 @@ public class WorldSimServiceImpl implements WorldSimService {
         return role != null && role.getName() != null ? role.getName() : "NPC";
     }
 
-    /** NPC 展示头像：世界内头像覆盖优先，其次角色头像 */
+    /**
+     * npc Display Avatar
+     * @param n 参数
+     * @return 返回值
+    */
     private String npcDisplayAvatar(SysAiWorldNpc n) {
         if (n == null) {
             return null;
@@ -671,18 +703,36 @@ public class WorldSimServiceImpl implements WorldSimService {
         return role != null ? role.getAvatar() : null;
     }
 
+    /**
+     * clamp Affinity
+     * @param v 整数
+     * @return 返回值
+    */
     private static int clampAffinity(int v) {
         return Math.max(-100, Math.min(100, v));
     }
 
+    /**
+     * cache
+     * @return 返回值
+    */
     private Cache cache() {
         return cacheManager.getCache(VIEW_CACHE);
     }
 
+    /**
+     * list Cache
+     * @return 返回值
+    */
     private Cache listCache() {
         return cacheManager.getCache(LIST_CACHE);
     }
 
+    /**
+     * evict World
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private void evictWorld(Long worldId) {
         if (worldId == null || cache() == null) {
             return;
@@ -690,6 +740,10 @@ public class WorldSimServiceImpl implements WorldSimService {
         cache().evict(worldId + ":" + AiUserContext.requireUserId());
     }
 
+    /**
+     * evict World List
+     * @return 返回值
+    */
     private void evictWorldList() {
         if (listCache() == null) {
             return;
@@ -697,6 +751,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         listCache().evict("list:" + AiUserContext.requireUserId());
     }
 
+    /**
+     * parse Int
+     * @param fallback 整数
+     * @param v 对象
+     * @return 返回值
+    */
     private static int parseInt(Object v, int fallback) {
         try {
             return Integer.parseInt(String.valueOf(v));

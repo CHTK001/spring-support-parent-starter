@@ -379,6 +379,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Id
+         * @param id 字符串
+         * @return 返回值
+        */
         public void setId(String id) {
             this.id = id;
         /**
@@ -388,6 +393,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Protocol
+         * @return 返回值
+        */
         public String getProtocol() {
             return protocol;
         /**
@@ -397,6 +406,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Protocol
+         * @param protocol 字符串
+         * @return 返回值
+        */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         /**
@@ -406,6 +420,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Host
+         * @return 返回值
+        */
         public String getHost() {
             return host;
         /**
@@ -415,6 +433,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Host
+         * @param host 设置主机地址
+         * @return 返回值
+        */
         public void setHost(String host) {
             this.host = host;
         /**
@@ -424,6 +447,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Port
+         * @return 返回值
+        */
         public int getPort() {
             return port;
         /**
@@ -433,6 +460,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Port
+         * @param port 设置端口号
+         * @return 返回值
+        */
         public void setPort(int port) {
             this.port = port;
         /**
@@ -442,6 +474,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Path
+         * @return 返回值
+        */
         public String getPath() {
             return path;
         /**
@@ -451,6 +487,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Path
+         * @param path 字符串
+         * @return 返回值
+        */
         public void setPath(String path) {
             this.path = path;
         /**
@@ -460,6 +501,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Context
+         * @return 返回值
+        */
         public String getContext() {
             return context;
         /**
@@ -469,6 +514,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Context
+         * @param context 字符串
+         * @return 返回值
+        */
         public void setContext(String context) {
             this.context = context;
         /**
@@ -478,6 +528,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * is Enable
+         * @return 返回值
+        */
         public boolean isEnable() {
             return enable;
         /**
@@ -487,6 +541,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Enable
+         * @param enable 布尔值
+         * @return 返回值
+        */
         public void setEnable(boolean enable) {
             this.enable = enable;
         /**
@@ -496,6 +555,10 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Heartbeat
+         * @return 返回值
+        */
         public long getHeartbeat() {
             return heartbeat;
         /**
@@ -507,6 +570,11 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * set Heartbeat
+         * @param heartbeat 发送心跳
+         * @return 返回值
+        */
         public void setHeartbeat(long heartbeat) {
             this.heartbeat = heartbeat;
         /**
@@ -515,18 +583,36 @@ public class SocketServerRegistry {
          */
         }
 
+        /**
+         * get Ttl
+         * @return 返回值
+        */
         public int getTtl() {
             return ttl;
         }
 
+        /**
+         * set Ttl
+         * @param ttl 整数
+         * @return 返回值
+        */
         public void setTtl(int ttl) {
             this.ttl = ttl;
         }
 
+        /**
+         * get Name
+         * @return 返回值
+        */
         public String getName() {
             return name;
         }
 
+        /**
+         * set Name
+         * @param name 字符串
+         * @return 返回值
+        */
         public void setName(String name) {
             this.name = name;
         }

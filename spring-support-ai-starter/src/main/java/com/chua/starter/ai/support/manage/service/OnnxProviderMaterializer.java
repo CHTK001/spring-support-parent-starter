@@ -555,14 +555,12 @@ public class OnnxProviderMaterializer {
     }
 
     /**
-     * 由目录标识与登记的模板推导能力任务名。
-     *
-     * <p>模板是绑定目录时登记的，比目录名更准确地反映能力（目录名只是路径片段）。</p>
-     *
-     * @param dir      模型目录
+     * 由目录标识与登记的模板推导能力任务名。 <p>模板是绑定目录时登记的，比目录名更准确地反映能力（目录名只是路径片段）。</p>
+     * @param dir 模型目录
+     * @param modelName 字符串
      * @param template 登记的模板模型标识，可为空
      * @return 任务名
-     */
+    */
     private static String taskOf(String modelName, String dir) {
         String source = modelName == null || modelName.isBlank() ? dir : modelName;
         return OnnxModelTaxonomy.task(source);

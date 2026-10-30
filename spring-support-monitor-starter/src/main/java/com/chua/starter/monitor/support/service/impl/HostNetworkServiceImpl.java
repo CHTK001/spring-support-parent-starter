@@ -75,6 +75,11 @@ public class HostNetworkServiceImpl implements HostNetworkService {
               $ErrorActionPreference='Stop'
               $ProgressPreference='SilentlyContinue'
               $list=@()
+              /**
+               * in
+               * @param (Get-NetAdapter) 参数
+               * @return 返回值
+              */
               foreach($a in (Get-NetAdapter)){
                 $v4=@()
                 try { $v4=@((Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress) } catch { $v4=@() }
@@ -408,6 +413,11 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         return (start >= 0 && end >= start) ? out.substring(start, end + 1) : out.trim();
     }
 
+    /**
+     * ps Escape
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String psEscape(String value) {
         return value == null ? "" : value.replace("'", "''");
     }

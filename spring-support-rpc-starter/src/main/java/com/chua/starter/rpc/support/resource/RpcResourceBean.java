@@ -95,6 +95,8 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     @Override
     /**
      * 获取对象
+     * @return 返回值
+     * @throws Exception 异常
     */
     public T getObject() throws Exception {
         if (interfaceClass == null) {
@@ -179,6 +181,8 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     @Override
     /**
      * 设置Bean类加载
+     * @param classLoader 参数
+     * @return 返回值
     */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
@@ -187,6 +191,8 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     @Override
     /**
      * 设置Bean名称
+     * @param name 字符串
+     * @return 返回值
     */
     public void setBeanName(String name) {
         this.beanName = name;
@@ -195,6 +201,8 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
 
@@ -203,6 +211,8 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         ConfigurableListableBeanFactory beanFactory = getBeanFactory();
@@ -221,6 +231,9 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;

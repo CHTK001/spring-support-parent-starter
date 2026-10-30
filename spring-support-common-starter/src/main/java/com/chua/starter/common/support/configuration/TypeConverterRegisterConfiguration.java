@@ -85,6 +85,9 @@ public class TypeConverterRegisterConfiguration {
                             @Override
                             /**
                              * Matches
+                             * @param sourceType 参数
+                             * @param targetType 参数
+                             * @return 返回值
                             */
                             public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return true;
@@ -93,6 +96,7 @@ public class TypeConverterRegisterConfiguration {
                             @Override
                             /**
                              * 获取转换类型
+                             * @return 返回值
                             */
                             public Set<GenericConverter.ConvertiblePair> getConvertibleTypes() {
                                 return Collections.singleton(new GenericConverter.ConvertiblePair(String.class, Enum.class));
@@ -101,6 +105,10 @@ public class TypeConverterRegisterConfiguration {
                             @Override
                             /**
                              * 转换
+                             * @param source 对象
+                             * @param sourceType 参数
+                             * @param targetType 参数
+                             * @return 返回值
                             */
                             public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return converter.convert(source);

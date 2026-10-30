@@ -87,7 +87,9 @@ public class DataSourceDocumentController {
     /**
      * 渲染整库 HTML，优先使用缓存
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void preview(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
         /**
@@ -100,7 +102,9 @@ public class DataSourceDocumentController {
     /**
      * 强制刷新后渲染整库 HTML
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void apply(HttpServletResponse response) throws IOException {
         DocumentData data = service.apply();
         /**
@@ -113,7 +117,9 @@ public class DataSourceDocumentController {
     /**
      * 文档元信息 JSON
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void list(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
         Map<String, Object> body = new LinkedHashMap<>();
@@ -149,11 +155,12 @@ public class DataSourceDocumentController {
     }
 
     /**
-     * 渲染单表详情 HTML
-     * <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
+     * 渲染单表详情 HTML <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
      * @param request 请求
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void table(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
         String tableName = lastPathSegment(request);
         if (tableName.isEmpty()) {
@@ -202,7 +209,9 @@ public class DataSourceDocumentController {
     /**
      * 表关系图 JSON（节点 + 边）
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void relationshipJson(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
         /**
@@ -219,7 +228,9 @@ public class DataSourceDocumentController {
      * 返回 relation-图计算 兼容的 JSON（图 + 节点 数据 携带触发器/存储过程）
      * @param request 请求
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void graphJson(HttpServletRequest request, HttpServletResponse response) throws IOException {
         /**
          * ensure图计算服务。
@@ -238,7 +249,9 @@ public class DataSourceDocumentController {
      * 内嵌 relation-图计算 的 HTML 可视化预览页
      * @param request 请求
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void graphHtml(HttpServletRequest request, HttpServletResponse response) throws IOException {
         /**
          * ensure图计算服务。
@@ -255,11 +268,12 @@ public class DataSourceDocumentController {
     }
 
     /**
-     * 单表汇总：列 + 触发器 + 关联存储过程
-     * <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
+     * 单表汇总：列 + 触发器 + 关联存储过程 <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
      * @param request 请求
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void graphTable(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
         /**
          * ensure图计算服务。
@@ -325,7 +339,9 @@ public class DataSourceDocumentController {
     /**
      * 强制重建图谱缓存
      * @param response 响应
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void graphApply(HttpServletResponse response) throws IOException {
         /**
          * ensure图计算服务。
@@ -607,10 +623,11 @@ public class DataSourceDocumentController {
 
     /**
      * 写入HTML
-     *
-     * @param response 响应
      * @param html HTML
-     */
+     * @param response 响应
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void writeHtml(HttpServletResponse response, String html) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
@@ -627,10 +644,11 @@ public class DataSourceDocumentController {
 
     /**
      * 写入Json
-     *
-     * @param response 响应
      * @param body 主体
-     */
+     * @param response 响应
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void writeJson(HttpServletResponse response, Object body) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
@@ -647,10 +665,11 @@ public class DataSourceDocumentController {
 
     /**
      * 写入notfound
-     *
-     * @param response 响应
      * @param msg msg
-     */
+     * @param response 响应
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void writeNotFound(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");

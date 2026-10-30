@@ -44,15 +44,9 @@ public class MiddlewareClientRegistry {
     private final ServiceProvider<MiddlewareClientProvider> providers = ServiceProvider.of(MiddlewareClientProvider.class);
 
     /**
-     * 已装配的实现（按 {@link MiddlewareClientProvider#name()} 索引）。
-     *
-     * <p>每次现取而不是构造期快照：OSGi bundle 是运行期安装的，
-     * 快照会导致「装上后用不了、卸掉后还在」。</p>
-     *
-     * <p>除 classpath 上的 SPI 实现外，还要并入「上传 jar 里的实现」：
-     * 单 jar 的中间件客户端不随产物发布，用户传上来后必须立刻可用。
-     * 同名时以上传的为准——用户显式传了一个实现，说明他要的就是这一份。</p>
-     */
+     * 已装配的实现（按 {@link MiddlewareClientProvider#name()} 索引）。 <p>每次现取而不是构造期快照：OSGi bundle 是运行期安装的， 快照会导致「装上后用不了、卸掉后还在」。</p> <p>除 classpath 上的 SPI 实现外，还要并入「上传 jar 里的实现」： 单 jar 的中间件客户端不随产物发布，用户传上来后必须立刻可用。 同名时以上传的为准——用户显式传了一个实现，说明他要的就是这一份。</p>
+     * @return 返回值
+    */
     private Map<String, MiddlewareClientProvider> snapshot() {
         Map<String, MiddlewareClientProvider> map = new LinkedHashMap<>();
         // 每次现取而不是构造期快照：OSGi bundle 是运行期安装的，

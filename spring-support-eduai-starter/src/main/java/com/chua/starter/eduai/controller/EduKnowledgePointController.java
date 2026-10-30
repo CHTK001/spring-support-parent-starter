@@ -177,12 +177,12 @@ public class EduKnowledgePointController {
 
     /**
      * 上传知识点附件（图片 / PDF / DOCX），返回相对路径供 save 绑定
-     *
+    /**
+     * 上传知识点附件（图片 / PDF / DOCX），返回相对路径供 save 绑定
      * @param file 附件
      * @return 相对路径、文件名、扩展名、大小
-     */
-    @Operation(summary = "上传知识点附件")
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+     * @throws IOException 异常
+    */
     public ReturnResult<Map<String, Object>> upload(@RequestParam("file") MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("文件为空");
@@ -216,12 +216,13 @@ public class EduKnowledgePointController {
 
     /**
      * 按相对路径读取附件字节流（iframe / img 直链预览）
-     *
+    /**
+     * 按相对路径读取附件字节流（iframe / img 直链预览）
      * @param path data/knowledge-files 下的相对路径
      * @param response 响应
-     */
-    @Operation(summary = "预览知识点附件")
-    @GetMapping("/file")
+     * @return 返回值
+     * @throws IOException 异常
+    */
     public void file(@RequestParam String path, HttpServletResponse response) throws IOException {
         Path normalized = Paths.get(path).normalize();
         if (normalized.isAbsolute() || normalized.startsWith("..")) {

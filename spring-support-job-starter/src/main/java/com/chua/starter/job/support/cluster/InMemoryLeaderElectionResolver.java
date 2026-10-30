@@ -30,6 +30,10 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
     @Override
     /**
      * 尝试获取
+     * @param group 字符串
+     * @param leaseSeconds 整数
+     * @param nodeId 字符串
+     * @return 返回值
     */
     public synchronized boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
         long now = System.currentTimeMillis();
@@ -48,6 +52,9 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
     @Override
     /**
      * 释放
+     * @param group 字符串
+     * @param nodeId 字符串
+     * @return 返回值
     */
     public synchronized void release(String group, String nodeId) {
         if (nodeId != null && !nodeId.equals(leaderMap.get(group))) {

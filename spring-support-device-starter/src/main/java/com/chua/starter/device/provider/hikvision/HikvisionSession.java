@@ -55,6 +55,7 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 获取deviceid
+     * @return 返回值
     */
     public String getDeviceId() {
         return info.ip();
@@ -63,6 +64,7 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 是否Online
+     * @return 返回值
     */
     public boolean isOnline() {
         return online;
@@ -80,6 +82,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * Preview
+     * @param channel 整数
+     * @return 返回值
     */
     public InputStream preview(int channel) {
         // 实际调用 SDK 获取预览流
@@ -90,6 +94,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 查询Records
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         // 实际查询录像
@@ -99,6 +106,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * Playback
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public InputStream playback(int channel, TimeRange range) {
         log.debug("海康回放: channel={}, range={}", channel, range);
@@ -108,6 +118,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * ptzcontrol
+     * @param cmd 参数
+     * @param speed 双精度数
+     * @return 返回值
     */
     public void ptzControl(PtzCommand cmd, double speed) {
         log.info("海康云台控制: cmd={}, speed={}", cmd, speed);
@@ -116,6 +129,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 设置Preset
+     * @param name 字符串
+     * @param presetId 整数
+     * @return 返回值
     */
     public void setPreset(int presetId, String name) {
         log.info("海康设置预置位: presetId={}, name={}", presetId, name);
@@ -124,6 +140,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 调用Preset
+     * @param presetId 整数
+     * @return 返回值
     */
     public void callPreset(int presetId) {
         log.info("海康调用预置位: presetId={}", presetId);
@@ -132,6 +150,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 删除Preset
+     * @param presetId 整数
+     * @return 返回值
     */
     public void deletePreset(int presetId) {
         log.info("海康删除预置位: presetId={}", presetId);
@@ -140,6 +160,7 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 列表presets
+     * @return 返回值
     */
     public List<PresetInfo> listPresets() {
         return new ArrayList<>();
@@ -148,6 +169,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 远程解锁
+     * @param doorId 整数
+     * @return 返回值
     */
     public void remoteUnlock(int doorId) {
         log.info("海康远程开门: doorId={}", doorId);
@@ -156,6 +179,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 获取liveurl
+     * @param channel 整数
+     * @param protocol 字符串
+     * @return 返回值
     */
     public String getLiveUrl(int channel, String protocol) {
         // 仅 fallback-mock 模式使用的模拟会话：返回公开 HLS 测试流，
@@ -166,6 +192,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 获取playbackurl
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public String getPlaybackUrl(int channel, TimeRange range) {
         return null;
@@ -174,6 +203,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 查询accessrecords
+     * @param range 参数
+     * @return 返回值
     */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return new ArrayList<>();
@@ -182,6 +213,7 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 测试connection
+     * @return 返回值
     */
     public boolean testConnection() {
         return online;
@@ -190,6 +222,9 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 订阅事件
+     * @param listener 参数
+     * @param type 参数
+     * @return 返回值
     */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new ArrayList<>()).add(listener);
@@ -198,6 +233,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 取消订阅事件
+     * @param type 参数
+     * @return 返回值
     */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
@@ -206,6 +243,8 @@ public class HikvisionSession implements DeviceSession {
     @Override
     /**
      * 取出事件
+     * @param range 参数
+     * @return 返回值
     */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         return new ArrayList<>();

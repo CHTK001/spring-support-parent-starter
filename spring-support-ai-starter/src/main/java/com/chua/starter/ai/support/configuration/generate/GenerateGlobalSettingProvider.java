@@ -34,6 +34,7 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     /**
      * 分组
+     * @return 返回值
     */
     public String group() {
         return GROUP;
@@ -42,6 +43,7 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     /**
      * 分组名称
+     * @return 返回值
     */
     public String groupName() {
         return GROUP_NAME;
@@ -50,6 +52,7 @@ public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     /**
      * 获取Items
+     * @return 返回值
     */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(

@@ -21,6 +21,7 @@ public class JsonAdviceResolver implements AdviceResolver {
     @Override
     /**
      * 类型
+     * @return 返回值
     */
     public String type() {
         return MediaType.APPLICATION_JSON_VALUE;
@@ -29,6 +30,10 @@ public class JsonAdviceResolver implements AdviceResolver {
     @Override
     /**
      * 解析
+     * @param message 字符串
+     * @param response 参数
+     * @param status 整数
+     * @return 返回值
     */
     public Object resolve(HttpServletResponse response, Integer status, String message) {
         ReturnResult<Object> rs = ReturnResult.error(ResultCode.transferForHttpCode(status).getCode(), message);

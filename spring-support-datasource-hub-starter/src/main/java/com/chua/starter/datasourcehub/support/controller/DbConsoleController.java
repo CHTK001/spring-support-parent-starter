@@ -1724,14 +1724,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     public record StructureSyncErrorVO(String message) {
     }
 
-    /** 发送一条 SSE 事件帧：手写帧字节（event 行 + data 行 + 空行）写进 PrintWriter。
-     *
-     *  <p>为什么手写帧而不依赖 SseEmitter.data()：本项目在此 Spring 版本
-     *  （Boot 4.1 / Spring 7）下 SseEmitter 的 data 内容会被静默丢弃（event 行
-     *  正常、data: 恒空，2026-10-23 实测多轮，含 SELECT 1 最小用例）；
-     *  record 的 JSON 序列化（Json.toJson / ObjectMapper）同样静默输出空串。
-     *  三个 VO 字段极少，手写帧 + 手工转义即确定性最强。</p>
-     */
+    /**
+     * <p>为什么手写帧而不依赖 SseEmitter.data()：本项目在此 Spring 版本 （Boot 4.1 / Spring 7）下 SseEmitter 的 data 内容会被静默丢弃（event 行 正常、data: 恒空，2026-10-23 实测多轮，含 SELECT 1 最小用例）； record 的 JSON 序列化（Json.toJson / ObjectMapper）同样静默输出空串。 三个 VO 字段极少，手写帧 + 手工转义即确定性最强。</p>
+     * @param name 字符串
+     * @param out 参数
+     * @param payload 对象
+     * @return 返回值
+    */
     private void writeSseEvent(java.io.PrintWriter out, String name, Object payload) {
         try {
             out.write("event:" + name + "\n");
@@ -1743,7 +1742,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
-    /** 手拼结构同步事件 payload 的 JSON（仅三个 VO，字段已知） */
+    /**
+     * structure Sync Payload Json
+     * @param payload 对象
+     * @return 返回值
+    */
     private static String structureSyncPayloadJson(Object payload) {
         if (payload instanceof StructureSyncLogVO v) {
             StringBuilder sb = new StringBuilder();
@@ -1835,7 +1838,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         return jsonStr(String.valueOf(value));
     }
 
-    /** JSON 字符串字面量：转义引号、反斜杠与控制字符（含换行，SQL 里常见） */
+    /**
+     * json Str
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String jsonStr(String s) {
         if (s == null) {
             return "null";
@@ -1864,7 +1871,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         return sb.append('"').toString();
     }
 
-    /** 在目标库逐条执行结构同步脚本，逐条推送日志事件，结尾推送 done */
+    /**
+     * run Structure Sync
+     * @param out 参数
+     * @param request 参数
+     * @return 返回值
+    */
     private void runStructureSync(java.io.PrintWriter out, StructureSyncRunRequest request) {
         long start = System.currentTimeMillis();
         int ok = 0;
@@ -1934,6 +1946,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     @Operation(summary = "AI 文本生成 SQL 可用状态")
     @GetMapping("ai/status")
+    /**
+     * ai Text2 Sql Status
+     * @return 返回值
+    */
     public ReturnResult<DbAiStatusVO> aiText2SqlStatus() {
         com.chua.starter.ai.support.service.AiChatFacadeService facade = aiChatFacadeProvider.getIfAvailable();
         if (facade == null) {
@@ -1969,6 +1985,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     @Operation(summary = "AI 文本生成 SQL")
     @PostMapping("ai/text2sql")
+    /**
+     * text2sql
+     * @param request 参数
+     * @return 返回值
+    */
     public ReturnResult<DbText2SqlVO> text2sql(@RequestBody DbText2SqlDTO request) {
         String text = request.text() == null ? "" : request.text().trim();
         if (text.isEmpty()) {
@@ -2046,6 +2067,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     @Operation(summary = "执行 SQL")
     @SysLog(name = "执行 SQL")
     @PostMapping("execute")
+    /**
+     * execute Db Sql
+     * @param request 参数
+     * @return 返回值
+    */
     public ReturnResult<DbSqlResultVO> executeDbSql(@RequestBody DbSqlExecuteDTO request) {
         String sql = request.sql();
         if (sql == null || sql.trim().isEmpty()) {
@@ -2116,15 +2142,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 扫描 SQL 里的 {@code ${name}} 占位符，供 UI 提示「这个脚本需要哪些变量」。
-     *
-     * <p>不连库、也不执行，纯文本扫描 —— 编辑器每次改动都问一次后端的话，
-     * 成本会体现在每次按键的延迟上。</p>
-     *
+    /**
+     * 扫描 SQL 里的 {@code ${name}} 占位符，供 UI 提示「这个脚本需要哪些变量」。 <p>不连库、也不执行，纯文本扫描 —— 编辑器每次改动都问一次后端的话， 成本会体现在每次按键的延迟上。</p>
+     * @param request 参数
      * @param sql 待扫描 SQL
      * @return 占位符名列表
-     */
-    @Operation(summary = "扫描 SQL 参数占位符")
-    @PostMapping("scan-params")
+    */
     public ReturnResult<List<String>> scanSqlParams(@RequestBody DbSqlExecuteDTO request) {
         String sql = request.sql();
         if (sql == null || sql.isBlank()) {
@@ -2913,7 +2936,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * MySQL/MariaDB：{@code mysql.user} 用户清单。
-     */
+     * @param conn 参数
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private java.util.List<DbUserVO> listMySqlUsers(java.sql.Connection conn) throws java.sql.SQLException {
         java.util.List<DbUserVO> out = new java.util.ArrayList<>();
         String sql = "SELECT User, Host, ssl_type, "
@@ -2944,7 +2970,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 用户名白名单校验：字母/数字/下划线/$/点，最长 64 字符。
-     */
+     * @param label 字符串
+     * @param name 字符串
+     * @return 返回值
+    */
     private static String safeUserIdent(String name, String label) {
         if (name == null) {
             return "";
@@ -2958,7 +2987,9 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 主机白名单校验：字母/数字/点/冒号/下划线/百分号/横杠，最长 255 字符。
-     */
+     * @param host 设置主机地址
+     * @return 返回值
+    */
     private static String safeUserHost(String host) {
         if (host == null || host.isBlank()) {
             return "%";
@@ -2972,18 +3003,19 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * SQL 单引号转义（MySQL 用两个单引号表示一个）。
-     */
+     * @param text 字符串
+     * @return 返回值
+    */
     private static String escapeSingle(String text) {
         return text.replace("'", "''");
     }
 
     /**
-     * MySQL/MariaDB：{@code performance_schema.events_statements_summary_by_digest}。
-     *
-     * <p>取平均耗时前 50 条；performance_schema 表在绝大多数发行版默认开启且对所有
-     * 会话可读。读不到（5.5 及以下、被显式关闭、权限收紧）抛 SQL 异常，
-     * 由 callDb 转成可读错误。</p>
-     */
+     * MySQL/MariaDB：{@code performance_schema.events_statements_summary_by_digest}。 <p>取平均耗时前 50 条；performance_schema 表在绝大多数发行版默认开启且对所有 会话可读。读不到（5.5 及以下、被显式关闭、权限收紧）抛 SQL 异常， 由 callDb 转成可读错误。</p>
+     * @param conn 参数
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private java.util.List<DbSlowQueryVO> listMySqlSlowQueries(java.sql.Connection conn) throws java.sql.SQLException {
         java.util.List<DbSlowQueryVO> out = new java.util.ArrayList<>();
         String sql = "SELECT digest_text, "
@@ -3010,10 +3042,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * PostgreSQL：{@code pg_stat_statements}。
-     *
-     * <p>依赖扩展已加载；未加载（或用不了 read 权限）抛异常由 callDb 转错。</p>
-     */
+     * PostgreSQL：{@code pg_stat_statements}。 <p>依赖扩展已加载；未加载（或用不了 read 权限）抛异常由 callDb 转错。</p>
+     * @param conn 参数
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private java.util.List<DbSlowQueryVO> listPostgresSlowQueries(java.sql.Connection conn) throws java.sql.SQLException {
         java.util.List<DbSlowQueryVO> out = new java.util.ArrayList<>();
         String sql = "SELECT query, ROUND(mean_exec_time)::bigint AS avg_ms, "
@@ -3036,7 +3069,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * MySQL/MariaDB：{@code SHOW PROCESSLIST}。
-     */
+     * @param conn 参数
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private java.util.List<DbProcessVO> listMySqlProcesses(java.sql.Connection conn) throws java.sql.SQLException {
         java.util.List<DbProcessVO> out = new java.util.ArrayList<>();
         try (java.sql.Statement stmt = conn.createStatement();
@@ -3059,7 +3095,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * PostgreSQL：{@code pg_stat_activity}。
-     */
+     * @param conn 参数
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private java.util.List<DbProcessVO> listPostgresProcesses(java.sql.Connection conn) throws java.sql.SQLException {
         java.util.List<DbProcessVO> out = new java.util.ArrayList<>();
         String sql = "SELECT pid, usename, coalesce(application_name,''), "
@@ -3084,11 +3123,19 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 读取数据源 JDBC URL（用于内核判断）。
-     */
+     * @param datasourceId 长整数
+     * @return 返回值
+    */
     private String jdbcUrlOf(Long datasourceId) {
         return datasourceService.jdbcInfo(datasourceId).url();
     }
 
+    /**
+     * long Or Null
+     * @param column 字符串
+     * @param rs 参数
+     * @return 返回值
+    */
     private static Long longOrNull(java.sql.ResultSet rs, String column) {
         try {
             long v = rs.getLong(column);
@@ -3098,6 +3145,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
+    /**
+     * is Blank
+     * @param text 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String text) {
         return text == null || text.isBlank();
     }
@@ -3122,13 +3174,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * 把 SQL 底层报错翻译成面向用户的业务说明。
-     *
-     * <p>{@code SQLException.getMessage()} 返回的是 MySQL 原文，例如
-     * "Field 'id' doesn't have a default value" 或 "Duplicate entry 'x' for key 'PRIMARY'"。
-     * 直接拼进信封返回，用户看不懂也不知道怎么改。这里按已知模式映射成
-     * 一句能看懂的中文提示，映射不到的原样保留。</p>
-     */
+     * 把 SQL 底层报错翻译成面向用户的业务说明。 <p>{@code SQLException.getMessage()} 返回的是 MySQL 原文，例如 "Field 'id' doesn't have a default value" 或 "Duplicate entry 'x' for key 'PRIMARY'"。 直接拼进信封返回，用户看不懂也不知道怎么改。这里按已知模式映射成 一句能看懂的中文提示，映射不到的原样保留。</p>
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static String describeSqlError(String raw) {
         if (raw == null || raw.isEmpty()) {
             return "操作失败";
@@ -3179,7 +3228,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
-    /** 校验并规整 SQL 标识符，非法直接抛异常，由 callDb 转成可读错误 */
+    /**
+     * safe Ident
+     * @param label 字符串
+     * @param name 字符串
+     * @return 返回值
+    */
     private static String safeIdent(String name, String label) {
         try {
             return SqlName.checkSimple(name == null ? null : name.trim(), label);
@@ -3188,7 +3242,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
-    /** 判断数据源是否为 InfluxDB 类型 */
+    /**
+     * is Influxdb Type
+     * @param datasourceId 长整数
+     * @return 返回值
+    */
     private boolean isInfluxdbType(Long datasourceId) {
         try {
             var vo = datasourceService.get(datasourceId);
@@ -3199,6 +3257,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
+    /**
+     * require Table
+     * @param conn 参数
+     * @param table 字符串
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private static void requireTable(java.sql.Connection conn, String table) throws java.sql.SQLException {
         java.sql.DatabaseMetaData metadata = conn.getMetaData();
         // 依次尝试 (catalog,schema) / (catalog,null) / (null,schema) / (null,null)：
@@ -3223,6 +3288,14 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         return false;
     }
 
+    /**
+     * require Column
+     * @param column 字符串
+     * @param conn 参数
+     * @param table 字符串
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private static void requireColumn(java.sql.Connection conn, String table, String column) throws java.sql.SQLException {
         requireTable(conn, table);
         java.sql.DatabaseMetaData metadata = conn.getMetaData();
@@ -3256,6 +3329,14 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
+    /**
+     * require Index
+     * @param conn 参数
+     * @param index 字符串
+     * @param table 字符串
+     * @return 返回值
+     * @throws java.sql.SQLException 异常
+    */
     private static void requireIndex(java.sql.Connection conn, String table, String index) throws java.sql.SQLException {
         requireTable(conn, table);
         try (java.sql.ResultSet rs = conn.getMetaData().getIndexInfo(conn.getCatalog(), conn.getSchema(), table, false, true)) {
@@ -3269,7 +3350,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
 
-    /** 从请求体里取可选的 datasourceId，空串/0 统一归一为 null（走默认主数据源） */
+    /**
+     * body Datasource Id
+     * @param Map<String 参数
+     * @param body 参数
+     * @return 返回值
+    */
     private static Long bodyDatasourceId(Map<String, Object> body) {
         Object v = body.get("datasourceId");
         if (v == null || String.valueOf(v).isBlank()) {
@@ -3279,7 +3365,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         return id == 0 ? null : id;
     }
 
-    /** 从请求体里取可选 database */
+    /**
+     * body Database
+     * @param Map<String 参数
+     * @param body 参数
+     * @return 返回值
+    */
     private static String bodyDatabase(Map<String, Object> body) {
         Object v = body.get("database");
         if (v == null || String.valueOf(v).isBlank()) {
@@ -4160,7 +4251,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 从请求体取整数，缺失或非数字时用默认值。
-     */
+     * @param defaultValue 整数
+     * @param value 对象
+     * @return 返回值
+    */
     private static int intOrDefault(Object value, int defaultValue) {
         if (value == null) {
             return defaultValue;
@@ -4207,7 +4301,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 判定分隔符：TSV 固定制表符，其余按内容探测（首行含制表符则视为 TSV）。
-     */
+     * @param format 格式化
+     * @param text 字符串
+     * @return 返回值
+    */
     private static char resolveDelimiter(String format, String text) {
         if ("tsv".equals(format)) {
             return '\t';

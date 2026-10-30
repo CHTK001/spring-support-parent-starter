@@ -204,6 +204,8 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     @Override
     /**
      * Upgrade
+     * @param apiResponseEncodeConfiguration 参数
+     * @return 返回值
     */
     public void upgrade(ApiResponseEncodeConfiguration apiResponseEncodeConfiguration) {
         this.apiResponseEncodeConfiguration = apiResponseEncodeConfiguration;
@@ -212,6 +214,8 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     @Override
     /**
      * onapplication事件
+     * @param event 参数
+     * @return 返回值
     */
     public void onApplicationEvent(ApiResponseEncodeConfiguration event) {
         /**

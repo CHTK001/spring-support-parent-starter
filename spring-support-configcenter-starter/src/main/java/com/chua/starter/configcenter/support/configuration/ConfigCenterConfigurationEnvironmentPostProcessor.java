@@ -50,6 +50,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     @Override
     /**
      * Post处理环境
+     * @param application 参数
+     * @param environment 参数
+     * @return 返回值
     */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[配置中心]开始处理配置中心");
@@ -279,9 +282,10 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         /**
          * 环境配置监听器。
          * @param configName 配置名称
-         * @param refreshDelayMs refresh延迟ms
          * @param logOnChange 日志on改变
-         */
+         * @param refreshDelayMs refresh延迟ms
+         * @return 返回值
+        */
         EnvironmentConfigListener(String configName, long refreshDelayMs, boolean logOnChange) {
             this.configName = configName;
             this.refreshDelayMs = refreshDelayMs;
@@ -291,6 +295,10 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         @Override
         /**
          * on改变
+         * @param key 字符串
+         * @param newValue 字符串
+         * @param oldValue 字符串
+         * @return 返回值
         */
         public void onChange(String key, String oldValue, String newValue) {
             if (logOnChange) {
@@ -302,6 +310,10 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         @Override
         /**
          * On更新
+         * @param key 字符串
+         * @param newValue 字符串
+         * @param oldValue 字符串
+         * @return 返回值
         */
         public void onUpdate(String key, String oldValue, String newValue) {
             if (environmentRef == null) {
@@ -347,6 +359,9 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         @Override
         /**
          * On删除
+         * @param key 字符串
+         * @param oldValue 字符串
+         * @return 返回值
         */
         public void onDelete(String key, String oldValue) {
             if (logOnChange) {
@@ -358,6 +373,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE - 100;

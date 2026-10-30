@@ -32,6 +32,12 @@ public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
     @Override
     /**
      * 设置参数
+     * @param i 整数
+     * @param jdbcType 参数
+     * @param ps 参数
+     * @param strings 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setParameter(PreparedStatement ps, int i, List<Integer> strings, JdbcType jdbcType) throws SQLException {
         ps.setString(i, Joiner.on(COMMA).join(strings));
@@ -40,6 +46,10 @@ public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
     @Override
     /**
      * 获取结果
+     * @param columnName 字符串
+     * @param rs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public List<Integer> getResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
@@ -49,6 +59,10 @@ public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
     @Override
     /**
      * 获取结果
+     * @param columnIndex 整数
+     * @param rs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public List<Integer> getResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
@@ -58,6 +72,10 @@ public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
     @Override
     /**
      * 获取结果
+     * @param columnIndex 整数
+     * @param cs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public List<Integer> getResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);

@@ -17,6 +17,7 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     /**
      * 分组
+     * @return 返回值
     */
     public String group() {
         return "rag";
@@ -25,6 +26,7 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     /**
      * 分组名称
+     * @return 返回值
     */
     public String groupName() {
         return "RAG 知识库";
@@ -33,6 +35,7 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     @Override
     /**
      * 获取Items
+     * @return 返回值
     */
     public List<SettingItem> getItems() {
         return List.of(

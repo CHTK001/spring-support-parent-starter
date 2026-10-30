@@ -373,7 +373,8 @@ public class CustomLocalToolRegistrar {
 
     /**
      * 当前是否管理员。上下文不可用时按非管理员处理（更保守的一侧）。
-     */
+     * @return 返回值
+    */
     private boolean isAdmin() {
         try {
             return AiUserContext.isAdmin();

@@ -47,6 +47,8 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     @Override
     /**
      * Route
+     * @param request 参数
+     * @return 返回值
     */
     public MaterializedSqlRoute route(MaterializedSqlRequest request) {
         if (request == null || request.commandType() != MaterializedSqlCommandType.SELECT) {
@@ -67,6 +69,8 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     @Override
     /**
      * 解析数据源
+     * @param route 路由
+     * @return 返回值
     */
     public DataSource resolveDataSource(MaterializedSqlRoute route) {
         if (route == null || !route.isRouted()) {
@@ -82,6 +86,8 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     @Override
     /**
      * On写入成功
+     * @param request 参数
+     * @return 返回值
     */
     public void onWriteSuccess(MaterializedSqlRequest request) {
         // 当前仓库缺失完整物理化实现，先保持 no-op，确保路由链可编译和可安全降级。

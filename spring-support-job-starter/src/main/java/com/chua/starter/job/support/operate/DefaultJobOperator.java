@@ -59,6 +59,8 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 登记或更新任务
+     * @param spec 参数
+     * @return 返回值
     */
     public boolean declare(JobSpec spec) {
         if (spec == null) {
@@ -125,6 +127,10 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 改调度配置
+     * @param jobKey 字符串
+     * @param scheduleTime 字符串
+     * @param scheduleType 字符串
+     * @return 返回值
     */
     public boolean updateSchedule(String jobKey, String scheduleType, String scheduleTime) {
         requireSchedulable(scheduleType, scheduleTime);
@@ -134,6 +140,9 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 启停自动调度
+     * @param enabled 布尔值
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean changeStatus(String jobKey, boolean enabled) {
         return repository.changeStatus(jobKey, enabled);
@@ -142,6 +151,8 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 立即派发一次
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean trigger(String jobKey) {
         if (jobKey == null || jobKey.isBlank() || repository.find(jobKey) == null) {
@@ -176,6 +187,8 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 删除任务
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean remove(String jobKey) {
         return repository.remove(jobKey);
@@ -184,6 +197,8 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 读取运行态
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public JobRuntime runtime(String jobKey) {
         return repository.runtime(jobKey);
@@ -192,6 +207,8 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 按分组列出运行态
+     * @param group 字符串
+     * @return 返回值
     */
     public List<JobRuntime> list(String group) {
         return repository.listGroup(group);
@@ -200,6 +217,8 @@ public class DefaultJobOperator implements JobOperator {
     @Override
     /**
      * 运行态分页
+     * @param query 查询
+     * @return 返回值
     */
     public PageResult<JobRuntime> page(JobQuery query) {
         return repository.page(query);

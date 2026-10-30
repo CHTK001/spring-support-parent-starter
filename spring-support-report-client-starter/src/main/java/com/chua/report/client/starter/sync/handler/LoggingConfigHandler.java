@@ -32,6 +32,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "loggingConfigHandler";
@@ -40,6 +41,8 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     @Override
     /**
      * 支持
+     * @param topic 字符串
+     * @return 返回值
     */
     public boolean supports(String topic) {
         return MonitorTopics.LOGGING_CONFIG.equals(topic);
@@ -48,6 +51,11 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     @Override
     /**
      * 处理
+     * @param Map<String 参数
+     * @param data 参数
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = getString(data, "action");

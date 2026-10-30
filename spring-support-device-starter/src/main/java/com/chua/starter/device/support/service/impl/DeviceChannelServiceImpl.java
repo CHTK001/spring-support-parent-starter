@@ -29,6 +29,8 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
     @Override
     /**
      * 添加通道
+     * @param channel 参数
+     * @return 返回值
     */
     public DeviceChannel addChannel(DeviceChannel channel) {
         channelMapper.insert(channel);
@@ -39,6 +41,9 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
     @Override
     /**
      * 更新通道
+     * @param channel 参数
+     * @param id 字符串
+     * @return 返回值
     */
     public void updateChannel(String id, DeviceChannel channel) {
         channel.setDeviceChannelId(id);
@@ -48,6 +53,8 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
     @Override
     /**
      * 删除通道
+     * @param id 字符串
+     * @return 返回值
     */
     public void deleteChannel(String id) {
         channelMapper.deleteById(id);
@@ -56,6 +63,8 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
     @Override
     /**
      * 获取通道
+     * @param id 字符串
+     * @return 返回值
     */
     public DeviceChannel getChannel(String id) {
         return channelMapper.selectById(id);
@@ -64,6 +73,8 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
     @Override
     /**
      * 列表通道
+     * @param deviceId 字符串
+     * @return 返回值
     */
     public List<DeviceChannel> listChannels(String deviceId) {
         LambdaQueryWrapper<DeviceChannel> wrapper = new LambdaQueryWrapper<>();
@@ -75,6 +86,9 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
     @Override
     /**
      * toggle状态
+     * @param id 字符串
+     * @param status 字符串
+     * @return 返回值
     */
     public void toggleStatus(String id, String status) {
         DeviceChannel channel = new DeviceChannel();

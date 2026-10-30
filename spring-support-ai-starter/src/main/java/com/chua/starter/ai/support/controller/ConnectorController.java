@@ -33,9 +33,10 @@ public class ConnectorController {
     private final AiBotChatService aiBotChatService;
 
     /**
+    /**
      * 获取所有可用的连接器类型（从 SPI BotClient 获取）
-     */
-    @GetMapping("/types")
+     * @return 返回值
+    */
     public ReturnResult<List<Map<String, Object>>> getConnectorTypes() {
         List<Map<String, Object>> types = new ArrayList<>();
         
@@ -88,9 +89,10 @@ public class ConnectorController {
     }
 
     /**
+    /**
      * 获取已绑定的连接器列表
-     */
-    @GetMapping("/bound")
+     * @return 返回值
+    */
     public ReturnResult<List<Map<String, Object>>> getBoundConnectors() {
         List<SysAiBotBinding> bindings = botBindingService.listAll();
         List<Map<String, Object>> result = new ArrayList<>();
@@ -120,9 +122,11 @@ public class ConnectorController {
     }
 
     /**
+    /**
      * 获取单个连接器详情
-     */
-    @GetMapping("/{id}")
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<Map<String, Object>> getConnectorById(@PathVariable Long id) {
         SysAiBotBinding binding = botBindingService.getById(id);
         if (binding == null) {
@@ -145,9 +149,11 @@ public class ConnectorController {
     }
 
     /**
+    /**
      * 获取连接器下的会话列表（按 chatId 聚合，每个联系人/群一个独立上下文）。
-     */
-    @GetMapping("/{id}/conversations")
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<List<Map<String, Object>>> getConnectorConversations(@PathVariable Long id) {
         return ReturnResult.success(
                 aiBotChatService.listBindingConversations(id, AiBotCaller.fromLogin()));
@@ -181,40 +187,44 @@ public class ConnectorController {
     }
 
     /**
-     * 清除某会话的全部消息（重置该会话独立上下文）。
-     *
-     * <p>删除该连接器下指定 chatId 的全部消息，清除后该会话从会话列表消失，
-     * 直到外部平台再次发来消息。请求参数：{@code chatId}。</p>
-     */
-    @DeleteMapping("/{id}/conversations")
+    /**
+     * 清除某会话的全部消息（重置该会话独立上下文）。 <p>删除该连接器下指定 chatId 的全部消息，清除后该会话从会话列表消失， 直到外部平台再次发来消息。请求参数：{@code chatId}。</p>
+     * @param chatId 字符串
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<Integer> clearConversation(@PathVariable Long id, @RequestParam String chatId) {
         int deleted = aiBotChatService.clearConversation(id, chatId, AiBotCaller.fromLogin());
         return ReturnResult.success(deleted);
     }
 
     /**
+    /**
      * 生成微信 iLink 扫码二维码（真实委托 AiBotBindingService）。
-     */
-    @PostMapping("/ilink/qrcode")
+     * @return 返回值
+    */
     public ReturnResult<AiBotBindingService.QrResult> getILinkQrcode() {
         AiBotCaller caller = AiBotCaller.fromLogin();
         return ReturnResult.success(botBindingService.generateQrCode("wechat", null, caller.ownerKey()));
     }
 
     /**
+    /**
      * 轮询微信扫码状态：pending / ready / scanned / confirmed / expired / error。
-     */
-    @GetMapping("/ilink/qrcode/status")
+     * @param key 字符串
+     * @return 返回值
+    */
     public ReturnResult<AiBotBindingService.QrStatus> getILinkQrcodeStatus(@RequestParam String key) {
         return ReturnResult.success(botBindingService.checkQrCodeStatus(key, AiBotCaller.fromLogin().ownerKey()));
     }
 
     /**
-     * 绑定连接器（凭据型：feishu / qq，使用 App ID + App Secret）。
-     *
-     * <p>校验并写入绑定后，立即纳入 {@link AiBotChatService} 托管运行。</p>
-     */
-    @PostMapping("/bind")
+    /**
+     * 绑定连接器（凭据型：feishu / qq，使用 App ID + App Secret）。 <p>校验并写入绑定后，立即纳入 {@link AiBotChatService} 托管运行。</p>
+     * @param Map<String 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public ReturnResult<Long> bindConnector(@RequestBody Map<String, Object> request) {
         String type = request.get("type") == null ? "" : String.valueOf(request.get("type")).trim();
         String appId = request.get("appId") == null ? "" : String.valueOf(request.get("appId")).trim();
@@ -249,11 +259,13 @@ public class ConnectorController {
     }
 
     /**
-     * 以 Bot 身份手动向某会话发送一条消息。
-     *
-     * <p>请求体：{@code {"chatId":"会话标识","content":"内容"}}。</p>
-     */
-    @PostMapping("/{id}/send")
+    /**
+     * 以 Bot 身份手动向某会话发送一条消息。 <p>请求体：{@code {"chatId":"会话标识","content":"内容"}}。</p>
+     * @param Map<String 参数
+     * @param id 长整数
+     * @param request 参数
+     * @return 返回值
+    */
     public ReturnResult<String> sendMessage(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         String chatId = request.get("chatId") == null ? "" : String.valueOf(request.get("chatId")).trim();
         String content = request.get("content") == null ? "" : String.valueOf(request.get("content"));
@@ -352,9 +364,11 @@ public class ConnectorController {
     }
 
     /**
+    /**
      * 解绑连接器
-     */
-    @DeleteMapping("/{id}")
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<String> unbindConnector(@PathVariable Long id) {
         SysAiBotBinding binding = botBindingService.getById(id);
         if (binding == null) {

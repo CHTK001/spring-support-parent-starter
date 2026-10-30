@@ -91,6 +91,8 @@ public class SandboxWechatHttpClient implements HttpClient {
     @Override
     /**
      * Download
+     * @param url 字符串
+     * @return 返回值
     */
     public InputStream download(String url) {
         return delegate.download(rewriteUrl(url));

@@ -73,11 +73,11 @@ public class OrderConfigController {
     @Operation(summary = "预览分表策略")
     @GetMapping("/partitions/{businessType}/preview")
     /**
-    * Preview
-    *
-    * @param businessType 业务类型
-    * @param request 请求
-     */
+     * Preview
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return 返回值
+    */
     public Result<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
         Result<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.preview(businessType));
@@ -104,11 +104,11 @@ public class OrderConfigController {
     @Operation(summary = "手动触发迁移")
     @PostMapping("/partitions/{businessType}/migrate")
     /**
-    * triggermigrate
-    *
-    * @param businessType 业务类型
-    * @param request 请求
-     */
+     * triggermigrate
+     * @param businessType 业务类型
+     * @param request 请求
+     * @return 返回值
+    */
     public Result<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) {

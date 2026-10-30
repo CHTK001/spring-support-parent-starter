@@ -50,10 +50,18 @@ public final class TsharkDisplayFilter {
      * @param args 与占位符一一对应的参数
      */
     public record SqlFilter(String sql, List<Object> args) {
+        /**
+         * empty
+         * @return 返回值
+        */
         public static SqlFilter empty() {
             return new SqlFilter("", List.of());
         }
 
+        /**
+         * 判断是否为空
+         * @return 返回值
+        */
         public boolean isEmpty() {
             return sql == null || sql.isBlank();
         }
@@ -148,6 +156,11 @@ public final class TsharkDisplayFilter {
         private final List<Token> tokens;
         private int pos;
 
+        /**
+         * Parser
+         * @param source 字符串
+         * @return 返回值
+        */
         Parser(String source) {
             this.tokens = new Lexer(source).lex();
         }
@@ -162,6 +175,10 @@ public final class TsharkDisplayFilter {
             }
         }
 
+        /**
+         * parse Or
+         * @return 返回值
+        */
         private Node parseOr() {
             Node left = parseAnd();
             while (matchWord("or") || matchOp("||")) {
@@ -170,6 +187,10 @@ public final class TsharkDisplayFilter {
             return left;
         }
 
+        /**
+         * parse And
+         * @return 返回值
+        */
         private Node parseAnd() {
             Node left = parseUnary();
             while (matchWord("and") || matchOp("&&")) {
@@ -178,6 +199,10 @@ public final class TsharkDisplayFilter {
             return left;
         }
 
+        /**
+         * parse Unary
+         * @return 返回值
+        */
         private Node parseUnary() {
             if (matchWord("not") || matchOp("!")) {
                 return new NotNode(parseUnary());
@@ -190,6 +215,10 @@ public final class TsharkDisplayFilter {
             return parsePrimary();
         }
 
+        /**
+         * parse Primary
+         * @return 返回值
+        */
         private Node parsePrimary() {
             Token left = advance();
             if (left.type == TokenType.EOF) {
@@ -219,6 +248,11 @@ public final class TsharkDisplayFilter {
             return comparison(left.text, op, right.text);
         }
 
+        /**
+         * operand As Node
+         * @param token 参数
+         * @return 返回值
+        */
         private Node operandAsNode(Token token) {
             String text = token.text == null ? "" : token.text.trim();
             if (text.isEmpty()) {
@@ -231,6 +265,11 @@ public final class TsharkDisplayFilter {
             return new KeywordNode(text);
         }
 
+        /**
+         * protocol Node
+         * @param protocol 字符串
+         * @return 返回值
+        */
         private Node protocolNode(String protocol) {
             return out -> {
                 switch (protocol) {
@@ -264,6 +303,13 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * comparison
+         * @param fieldRaw 字符串
+         * @param opRaw 字符串
+         * @param valueRaw 字符串
+         * @return 返回值
+        */
         private Node comparison(String fieldRaw, String opRaw, String valueRaw) {
             String field = fieldRaw == null ? "" : fieldRaw.trim().toLowerCase(Locale.ROOT);
             String op = opRaw == null ? "==" : opRaw.trim().toLowerCase(Locale.ROOT);
@@ -313,6 +359,11 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * full Text Node
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node fullTextNode(String value) {
             return out -> {
                 String like = "%" + value.toLowerCase(Locale.ROOT) + "%";
@@ -323,6 +374,12 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * addr Node
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node addrNode(String value, String op) {
             return out -> {
                 String lowered = value.toLowerCase(Locale.ROOT);
@@ -349,6 +406,13 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * string Column Node
+         * @param column 字符串
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node stringColumnNode(String column, String value, String op) {
             return out -> {
                 if ("contains".equals(op)) {
@@ -364,6 +428,13 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * port Node
+         * @param column 字符串
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node portNode(String value, String op, String column) {
             int port;
             try {
@@ -395,6 +466,13 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * number Node
+         * @param column 字符串
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node numberNode(String column, String value, String op) {
             long number;
             try {
@@ -412,6 +490,12 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * method Node
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node methodNode(String value, String op) {
             String method = value.toLowerCase(Locale.ROOT);
             return out -> {
@@ -430,6 +514,12 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * status Node
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node statusNode(String value, String op) {
             String code = value.toLowerCase(Locale.ROOT);
             return out -> {
@@ -445,6 +535,13 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * like Node
+         * @param column 字符串
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node likeNode(String column, String value, String op) {
             String like = "%" + value.toLowerCase(Locale.ROOT) + "%";
             return out -> {
@@ -460,6 +557,13 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * flags Node
+         * @param field 字符串
+         * @param op 字符串
+         * @param value 字符串
+         * @return 返回值
+        */
         private Node flagsNode(String field, String value, String op) {
             boolean enabled;
             if ("0".equals(value) || "false".equalsIgnoreCase(value)) {
@@ -489,10 +593,20 @@ public final class TsharkDisplayFilter {
             };
         }
 
+        /**
+         * is Operand
+         * @param token 参数
+         * @return 返回值
+        */
         private boolean isOperand(Token token) {
             return token.type == TokenType.WORD || token.type == TokenType.STRING;
         }
 
+        /**
+         * match
+         * @param type 参数
+         * @return 返回值
+        */
         private boolean match(TokenType type) {
             if (peek().type == type) {
                 pos++;
@@ -501,6 +615,11 @@ public final class TsharkDisplayFilter {
             return false;
         }
 
+        /**
+         * match Word
+         * @param word 字符串
+         * @return 返回值
+        */
         private boolean matchWord(String word) {
             if (peek().type == TokenType.WORD && word.equalsIgnoreCase(peek().text)) {
                 pos++;
@@ -509,6 +628,11 @@ public final class TsharkDisplayFilter {
             return false;
         }
 
+        /**
+         * match Op
+         * @param op 字符串
+         * @return 返回值
+        */
         private boolean matchOp(String op) {
             if (peek().type == TokenType.OP && op.equals(peek().text)) {
                 pos++;
@@ -517,16 +641,30 @@ public final class TsharkDisplayFilter {
             return false;
         }
 
+        /**
+         * expect
+         * @param message 字符串
+         * @param type 参数
+         * @return 返回值
+        */
         private void expect(TokenType type, String message) {
             if (!match(type)) {
                 throw error(message);
             }
         }
 
+        /**
+         * peek
+         * @return 返回值
+        */
         private Token peek() {
             return tokens.get(Math.min(pos, tokens.size() - 1));
         }
 
+        /**
+         * advance
+         * @return 返回值
+        */
         private Token advance() {
             Token token = peek();
             if (pos < tokens.size() - 1) {
@@ -535,6 +673,11 @@ public final class TsharkDisplayFilter {
             return token;
         }
 
+        /**
+         * error
+         * @param message 字符串
+         * @return 返回值
+        */
         private IllegalArgumentException error(String message) {
             return new IllegalArgumentException("显示过滤：" + message);
         }
@@ -551,6 +694,11 @@ public final class TsharkDisplayFilter {
         private final String source;
         private int pos;
 
+        /**
+         * Lexer
+         * @param source 字符串
+         * @return 返回值
+        */
         Lexer(String source) {
             this.source = source;
         }
@@ -614,10 +762,20 @@ public final class TsharkDisplayFilter {
             return out;
         }
 
+        /**
+         * peek Next
+         * @param expected 参数
+         * @return 返回值
+        */
         private boolean peekNext(char expected) {
             return pos + 1 < source.length() && source.charAt(pos + 1) == expected;
         }
 
+        /**
+         * read Quoted
+         * @param quote 参数
+         * @return 返回值
+        */
         private String readQuoted(char quote) {
             pos++;
             StringBuilder sb = new StringBuilder();
@@ -634,6 +792,10 @@ public final class TsharkDisplayFilter {
             throw new IllegalArgumentException("显示过滤：引号没有闭合");
         }
 
+        /**
+         * read Word
+         * @return 返回值
+        */
         private String readWord() {
             int start = pos;
             while (pos < source.length()) {

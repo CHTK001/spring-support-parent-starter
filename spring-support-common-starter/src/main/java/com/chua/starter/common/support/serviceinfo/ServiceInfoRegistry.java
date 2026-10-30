@@ -247,6 +247,8 @@ public final class ServiceInfoRegistry {
         @Override
         /**
          * 判断相等
+         * @param o 对象
+         * @return 返回值
         */
         public boolean equals(Object o) {
             if (!(o instanceof EndpointInfo)) {
@@ -345,6 +347,8 @@ public final class ServiceInfoRegistry {
         @Override
         /**
          * 判断相等
+         * @param o 对象
+         * @return 返回值
         */
         public boolean equals(Object o) {
             if (!(o instanceof FlagInfo)) {
@@ -357,6 +361,7 @@ public final class ServiceInfoRegistry {
         @Override
         /**
          * 哈希编码
+         * @return 返回值
         */
         public int hashCode() {
             return Objects.hash(group, name);

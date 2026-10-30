@@ -26,14 +26,12 @@ public class FindAllSqlMethod extends AbstractMethod {
     }
 
     /**
-     * 注入 MyBatis-Plus 的 findAll 语句。
-     *
-     * <p>安全豁免：表名只来自实体 {@link TableInfo} 元数据，不接受请求参数；
-     * 注入前仍经 {@link SqlName#check(String, String)} 严格校验。</p>
-     */
-    @Override
     /**
-     * injectmapped对账单
+     * 注入 MyBatis-Plus 的 findAll 语句。 <p>安全豁免：表名只来自实体 {@link TableInfo} 元数据，不接受请求参数； 注入前仍经 {@link SqlName#check(String, String)} 严格校验。</p> injectmapped对账单
+     * @param mapperClass 参数
+     * @param modelClass 参数
+     * @param tableInfo 参数
+     * @return 返回值
     */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String tableName = SqlName.check(tableInfo.getTableName(), "MyBatis 实体表名");

@@ -36,10 +36,10 @@ public enum MerchantStatus {
 
     /**
      * 商户状态
-     *
      * @param code 编码
      * @param description 描述
-     */
+     * @return 返回值
+    */
     MerchantStatus(int code, String description) {
         this.code = code;
         this.description = description;

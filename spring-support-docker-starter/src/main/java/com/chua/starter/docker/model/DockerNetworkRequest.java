@@ -22,26 +22,53 @@ public class DockerNetworkRequest implements Serializable {
     /** 参数，如 {@code com.docker.network.bridge.name=br-x} */
     private List<String> options;
 
+    /**
+     * get Name
+     * @return 返回值
+    */
     public String getName() {
         return name;
     }
 
+    /**
+     * set Name
+     * @param name 字符串
+     * @return 返回值
+    */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * get Driver
+     * @return 返回值
+    */
     public String getDriver() {
         return driver;
     }
 
+    /**
+     * set Driver
+     * @param driver 字符串
+     * @return 返回值
+    */
     public void setDriver(String driver) {
         this.driver = driver;
     }
 
+    /**
+     * get Options
+     * @return 返回值
+    */
     public List<String> getOptions() {
         return options;
     }
 
+    /**
+     * set Options
+     * @param options 参数
+     * @return 返回值
+    */
     public void setOptions(List<String> options) {
         this.options = options;
     }

@@ -141,6 +141,11 @@ public class RuntimeLogService {
         return new TailResult(file.getAbsolutePath(), true, file.lastModified(), truncated, out);
     }
 
+    /**
+     * truncate
+     * @param s 字符串
+     * @return 返回值
+    */
     private String truncate(String s) {
         if (s == null) {
             return "";
@@ -148,6 +153,11 @@ public class RuntimeLogService {
         return s.length() > MAX_LINE_LEN ? s.substring(0, MAX_LINE_LEN) + "…" : s;
     }
 
+    /**
+     * strip Ansi
+     * @param s 字符串
+     * @return 返回值
+    */
     private String stripAnsi(String s) {
         if (s == null || s.indexOf('\u001B') < 0) {
             return s;
@@ -155,6 +165,11 @@ public class RuntimeLogService {
         return ANSI_PATTERN.matcher(s).replaceAll("");
     }
 
+    /**
+     * detect Level
+     * @param raw 字符串
+     * @return 返回值
+    */
     private String detectLevel(String raw) {
         if (raw == null) {
             return null;
@@ -167,6 +182,11 @@ public class RuntimeLogService {
         return "WARNING".equals(level) ? "WARN" : level;
     }
 
+    /**
+     * resolve File
+     * @param source 字符串
+     * @return 返回值
+    */
     private File resolveFile(String source) {
         boolean err = "err".equalsIgnoreCase(source);
         // 1. 显式配置
@@ -185,9 +205,11 @@ public class RuntimeLogService {
     }
 
     /**
-     * 从文件尾部向前读取，按行返回（保持正序）。
-     * 使用 RandomAccessFile seek 到尾部后逐字节回退，避免把整个大文件读入内存。
-     */
+     * 从文件尾部向前读取，按行返回（保持正序）。 使用 RandomAccessFile seek 到尾部后逐字节回退，避免把整个大文件读入内存。
+     * @param file 文件
+     * @param wantLines 整数
+     * @return 返回值
+    */
     private List<String> readTailLines(File file, int wantLines) {
         List<String> reversed = new ArrayList<>(wantLines);
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
@@ -233,6 +255,12 @@ public class RuntimeLogService {
         return reversed;
     }
 
+    /**
+     * add Line
+     * @param current 参数
+     * @param reversed 参数
+     * @return 返回值
+    */
     private void addLine(List<String> reversed, java.io.ByteArrayOutputStream current) {
         byte[] bytes = current.toByteArray();
         // current 是逆序累积的，需要反转

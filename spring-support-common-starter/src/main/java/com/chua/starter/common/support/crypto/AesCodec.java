@@ -64,10 +64,10 @@ public class AesCodec {
 
     /**
      * Encrypt
-     *
      * @param plain plain
      * @return encrypt的结果
-     */
+     * @throws Exception 异常
+    */
     private byte[] encrypt(byte[] plain) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -78,10 +78,10 @@ public class AesCodec {
 
     /**
      * Decrypt
-     *
      * @param encrypted encrypted
      * @return decrypt的结果
-     */
+     * @throws Exception 异常
+    */
     private byte[] decrypt(byte[] encrypted) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -92,9 +92,9 @@ public class AesCodec {
 
     /**
      * generate键
-     *
      * @return generate键的结果
-     */
+     * @throws Exception 异常
+    */
     private SecretKeySpec generateKey() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
@@ -103,9 +103,9 @@ public class AesCodec {
 
     /**
      * generateiv
-     *
      * @return generateIv的结果
-     */
+     * @throws Exception 异常
+    */
     private IvParameterSpec generateIv() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);

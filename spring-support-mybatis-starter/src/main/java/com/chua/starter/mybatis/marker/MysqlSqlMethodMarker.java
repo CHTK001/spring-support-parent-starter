@@ -31,6 +31,8 @@ public class MysqlSqlMethodMarker implements SqlMethodMarker {
     @Override
     /**
      * Analysis
+     * @param source 字符串
+     * @return 返回值
     */
     public List<AbstractMethod> analysis(String source) {
         return Collections.emptyList();
@@ -39,6 +41,8 @@ public class MysqlSqlMethodMarker implements SqlMethodMarker {
     @Override
     /**
      * Refresh
+     * @param name 字符串
+     * @return 返回值
     */
     public void refresh(String name) {
 
@@ -47,6 +51,8 @@ public class MysqlSqlMethodMarker implements SqlMethodMarker {
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
 

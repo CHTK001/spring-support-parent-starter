@@ -17,6 +17,8 @@ public class ProjectConfiguration implements EnvironmentAware {
     @Override
     /**
      * 设置环境
+     * @param environment 参数
+     * @return 返回值
     */
     public void setEnvironment(Environment environment) {
         Project.getInstance().setEnvironment(environment);

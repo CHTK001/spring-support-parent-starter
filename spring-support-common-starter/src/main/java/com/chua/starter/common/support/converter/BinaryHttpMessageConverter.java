@@ -53,6 +53,11 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     /**
      * 读取内部
+     * @param clazz 参数
+     * @param inputMessage 参数
+     * @return 返回值
+     * @throws HttpMessageNotReadableException 异常
+     * @throws IOException 异常
     */
     protected Object readInternal(Class<?> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
@@ -61,6 +66,12 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     /**
      * 写入内部
+     * @param o 对象
+     * @param outputMessage 参数
+     * @param type 参数
+     * @return 返回值
+     * @throws HttpMessageNotWritableException 异常
+     * @throws IOException 异常
     */
     protected void writeInternal(Object o, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
         if (log.isTraceEnabled()) {
@@ -112,10 +123,11 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
 
     /**
      * 注册Accept
-     *
-     * @param outputMessage 输出消息
      * @param o o
-     */
+     * @param outputMessage 输出消息
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void registerAccept(HttpOutputMessage outputMessage, Object o) throws IOException {
         Class<?> aClass = o.getClass();
         if (log.isTraceEnabled()) {
@@ -143,10 +155,11 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
 
     /**
      * 注册响应实体
-     *
      * @param entity 实体
      * @param outputMessage 输出消息
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void registerResponseEntity(ResponseEntity<?> entity, HttpOutputMessage outputMessage) throws IOException {
         Object body = entity.getBody();
         if (body == null) {
@@ -162,6 +175,12 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     /**
      * 读取
+     * @param contextClass 参数
+     * @param inputMessage 参数
+     * @param type 参数
+     * @return 返回值
+     * @throws HttpMessageNotReadableException 异常
+     * @throws IOException 异常
     */
     public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
@@ -170,6 +189,10 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     /**
      * 是否可以读取
+     * @param contextClass 参数
+     * @param mediaType 参数
+     * @param type 参数
+     * @return 返回值
     */
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
         if (apiResponseEncodeRegister.isPass()) {
@@ -188,6 +211,10 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     @Override
     /**
      * 是否可以写入
+     * @param clazz 参数
+     * @param mediaType 参数
+     * @param type 参数
+     * @return 返回值
     */
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
         if (apiResponseEncodeRegister.isPass()) {

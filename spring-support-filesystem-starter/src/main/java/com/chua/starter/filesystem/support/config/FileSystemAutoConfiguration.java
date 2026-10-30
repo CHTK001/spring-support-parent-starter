@@ -3,7 +3,6 @@ package com.chua.starter.filesystem.support.config;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.filesystem.support.controller.FileDirController;
 import com.chua.starter.filesystem.support.controller.FileCollabController;
-import com.chua.starter.filesystem.support.controller.FileLogController;
 import com.chua.starter.filesystem.support.controller.FileObjectController;
 import com.chua.starter.filesystem.support.controller.FileServerConfigController;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
@@ -166,20 +165,6 @@ public class FileSystemAutoConfiguration {
                                                      FileStorageTemplate template,
                                                      FileStorageProperties properties) {
         return new UploadTaskController(uploadTaskManager, template, properties);
-    }
-
-    /**
-     * 文件操作日志控制器（{@code /v2/file/log}）。
-     *
-     * <p>读取 {@link com.chua.starter.filesystem.support.log.FileLogStore} 内存流水，
-     * 供前端「文件日志」页展示。选用全局单例，不额外装配存储 Bean。</p>
-     *
-     * @return 文件日志控制器
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public FileLogController fileLogController() {
-        return new FileLogController(com.chua.starter.filesystem.support.log.FileLogStore.getInstance());
     }
 
     /**

@@ -21,6 +21,7 @@ public class SpelExpressionParser implements ExpressionParser {
     @Override
     /**
      * 类型
+     * @return 返回值
     */
     public String type() {
         return "spring";
@@ -29,6 +30,8 @@ public class SpelExpressionParser implements ExpressionParser {
     @Override
     /**
      * 解析
+     * @param expression 字符串
+     * @return 返回值
     */
     public BTreeNode parse(String expression) {
         try {
@@ -56,6 +59,8 @@ public class SpelExpressionParser implements ExpressionParser {
     @Override
     /**
      * Generate
+     * @param tree 参数
+     * @return 返回值
     */
     public String generate(BTreeNode tree) {
         if (tree == null) {

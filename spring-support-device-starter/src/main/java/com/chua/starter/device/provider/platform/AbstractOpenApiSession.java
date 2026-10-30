@@ -306,6 +306,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 获取deviceid
+     * @return 返回值
     */
     public String getDeviceId() {
         return info.deviceSerial() != null ? info.deviceSerial() : info.ip();
@@ -314,6 +315,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 是否Online
+     * @return 返回值
     */
     public boolean isOnline() {
         return online;
@@ -374,6 +376,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * Preview
+     * @param channel 整数
+     * @return 返回值
     */
     public InputStream preview(int channel) {
         return emptyStream();
@@ -382,6 +386,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 查询Records
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         return Collections.emptyList();
@@ -390,6 +397,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * Playback
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public InputStream playback(int channel, TimeRange range) {
         return emptyStream();
@@ -398,6 +408,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 获取liveurl
+     * @param channel 整数
+     * @param protocol 字符串
+     * @return 返回值
     */
     public String getLiveUrl(int channel, String protocol) {
         // 子类按平台实现获取 HLS/FLV URL；默认返回空
@@ -407,6 +420,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 获取playbackurl
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // 子类按平台实现获取回放 URL
@@ -416,6 +432,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 测试connection
+     * @return 返回值
     */
     public boolean testConnection() {
  // 默认通过 令牌 缓存判断：有效即认为可达
@@ -425,6 +442,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 列表presets
+     * @return 返回值
     */
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
@@ -433,6 +451,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 查询accessrecords
+     * @param range 参数
+     * @return 返回值
     */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return Collections.emptyList();
@@ -441,6 +461,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 订阅事件
+     * @param listener 参数
+     * @param type 参数
+     * @return 返回值
     */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
@@ -449,6 +472,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 取消订阅事件
+     * @param type 参数
+     * @return 返回值
     */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
@@ -457,6 +482,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 取出事件
+     * @param range 参数
+     * @return 返回值
     */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
@@ -470,6 +497,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 远程解锁
+     * @param doorId 整数
+     * @return 返回值
     */
     public void remoteUnlock(int doorId) {
  // 平台 打开api 远程开门由具体平台实现重写
@@ -478,6 +507,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 设置Preset
+     * @param name 字符串
+     * @param presetId 整数
+     * @return 返回值
     */
     public void setPreset(int presetId, String name) {
  // 平台 打开api 预置位操作由具体平台实现重写
@@ -486,6 +518,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 调用Preset
+     * @param presetId 整数
+     * @return 返回值
     */
     public void callPreset(int presetId) {
  // 平台 打开api 预置位操作由具体平台实现重写
@@ -494,6 +528,8 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * 删除Preset
+     * @param presetId 整数
+     * @return 返回值
     */
     public void deletePreset(int presetId) {
  // 平台 打开api 预置位操作由具体平台实现重写
@@ -502,6 +538,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     @Override
     /**
      * ptzcontrol
+     * @param cmd 参数
+     * @param speed 双精度数
+     * @return 返回值
     */
     public void ptzControl(PtzCommand cmd, double speed) {
  // 平台 打开api 云台控制由具体平台实现重写

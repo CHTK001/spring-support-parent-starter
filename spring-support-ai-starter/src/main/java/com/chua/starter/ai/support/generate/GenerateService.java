@@ -1358,19 +1358,12 @@ public class GenerateService {
     }
 
     /**
-     * 参考图落盘并返回句柄。
-     *
-     * <p>改造前参考图以 data URI 原文落库，一张 1200 万像素手机照片就能把单行撑到十几 MB，
-     * 而历史列表每次都要把它读回来。这里只保留字节在磁盘上的句柄，
-     * 列表因此与参考图大小无关；字节仍按需经 {@code /reference} 吐出，前端无需改动。</p>
-     *
-     * <p>落盘失败或超限时返回 null（卡片退化成纯文本卡），但生成本身不受影响：
-     * 下发给上游的仍是请求里的原始字节，与持久化无关。</p>
-     *
-     * @param taskId         任务号
+     * 参考图落盘并返回句柄。 <p>改造前参考图以 data URI 原文落库，一张 1200 万像素手机照片就能把单行撑到十几 MB， 而历史列表每次都要把它读回来。这里只保留字节在磁盘上的句柄， 列表因此与参考图大小无关；字节仍按需经 {@code /reference} 吐出，前端无需改动。</p> <p>落盘失败或超限时返回 null（卡片退化成纯文本卡），但生成本身不受影响： 下发给上游的仍是请求里的原始字节，与持久化无关。</p>
      * @param referenceImage data URI 或裸 base64
+     * @param task 参数
+     * @param taskId 任务号
      * @return 句柄；无参考图或落盘失败时返回 null
-     */
+    */
     private String persistReference(SysAiGenerateTask task, String referenceImage) {
         String capped = capReference(referenceImage);
         if (capped == null) {

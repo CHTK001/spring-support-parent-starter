@@ -96,6 +96,11 @@ public class TavernServiceImpl implements TavernService {
 
     @Override
     @Transactional
+    /**
+     * delete Group
+     * @param id 长整数
+     * @return 返回值
+    */
     public void deleteGroup(Long id) {
         SysAiTavernGroup g = requireOwned(id);
         memberMapper.delete(new LambdaQueryWrapper<SysAiTavernMember>()
@@ -202,7 +207,13 @@ public class TavernServiceImpl implements TavernService {
         return memberMapper.selectById(id);
     }
 
-    /** 写入成员级随机发言配置（参考连接器），缺省：关闭、概率0、上下文20 */
+    /**
+     * apply Member Random
+     * @param Map<String 参数
+     * @param body 参数
+     * @param m 参数
+     * @return 返回值
+    */
     private void applyMemberRandom(SysAiTavernMember m, Map<String, Object> body) {
         if (body.get("randomReplyEnabled") != null) {
             m.setRandomReplyEnabled(Boolean.parseBoolean(String.valueOf(body.get("randomReplyEnabled"))));
@@ -231,7 +242,11 @@ public class TavernServiceImpl implements TavernService {
     }
 
     /* ---------------- 内部 ---------------- */
-
+    /**
+     * require Owned
+     * @param id 长整数
+     * @return 返回值
+    */
     private SysAiTavernGroup requireOwned(Long id) {
         SysAiTavernGroup g = groupMapper.selectById(id);
         if (g == null) {
@@ -246,6 +261,12 @@ public class TavernServiceImpl implements TavernService {
         return g;
     }
 
+    /**
+     * parse Int
+     * @param fallback 整数
+     * @param v 对象
+     * @return 返回值
+    */
     private static int parseInt(Object v, int fallback) {
         try {
             return Integer.parseInt(String.valueOf(v));

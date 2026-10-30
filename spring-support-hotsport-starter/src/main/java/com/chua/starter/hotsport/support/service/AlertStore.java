@@ -702,7 +702,9 @@ public class AlertStore {
 
     /**
      * 判定唯一键冲突异常（并发 INSERT 撞业务唯一键：duplicate entry/key ...）。
-     */
+     * @param e 异常
+     * @return 返回值
+    */
     private static boolean isDuplicateKey(Exception e) {
         String msg = String.valueOf(e.getMessage()).toLowerCase();
         return msg.contains("duplicate") && (msg.contains("key") || msg.contains("entry"));
@@ -759,6 +761,11 @@ public class AlertStore {
         return m;
     }
 
+    /**
+     * trim
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String trim(String s) {
         return s == null ? "" : s.trim();
     }

@@ -14,6 +14,8 @@ public class JsonArrayConverter implements Converter<Object[], String> {
     @Override
     /**
      * 转换
+     * @param value 参数
+     * @return 返回值
     */
     public String convert(Object[] value) {
         return java.util.Arrays.stream(value).map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
@@ -22,6 +24,8 @@ public class JsonArrayConverter implements Converter<Object[], String> {
     @Override
     /**
      * 获取输入类型
+     * @param typeFactory 参数
+     * @return 返回值
     */
     public JavaType getInputType(TypeFactory typeFactory) {
         return typeFactory.constructArrayType(Object.class);
@@ -30,6 +34,8 @@ public class JsonArrayConverter implements Converter<Object[], String> {
     @Override
     /**
      * 获取输出类型
+     * @param typeFactory 参数
+     * @return 返回值
     */
     public JavaType getOutputType(TypeFactory typeFactory) {
         return typeFactory.constructType(String.class);

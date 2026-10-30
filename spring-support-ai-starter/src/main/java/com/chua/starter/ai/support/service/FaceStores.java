@@ -412,6 +412,11 @@ public class FaceStores {
         // 底库图片只在本机磁盘上，DB 里没有副本就等于「换个环境全库无图」。
         // DB 写失败要回滚快照与向量，不能让三处状态分叉。
         if (!library.insert(st.account, id, strOf(metadata, "name"), withGroup(metadata, st.group),
+                /**
+                 * face Image
+                 * @param result.faceImage() 参数
+                 * @return 返回值
+                */
                 base64Of(result.faceImage()), null, null)) {
             restoreSnapshot(st, id, prev);
             deleteVectorQuietly(st, id);
@@ -596,6 +601,11 @@ public class FaceStores {
 
         private final String suffix;
 
+        /**
+         * Face Image Kind
+         * @param suffix 字符串
+         * @return 返回值
+        */
         FaceImageKind(String suffix) {
             this.suffix = suffix;
         }
@@ -1271,6 +1281,13 @@ public class FaceStores {
         /** 人脸管线（按当前设置构建） */
         private volatile FacePipeline pipeline;
 
+        /**
+         * Account Face
+         * @param account 字符串
+         * @param dir 路径
+         * @param group 字符串
+         * @return 返回值
+        */
         AccountFace(String account, String group, Path dir) {
             this.account = account;
             this.group = group;

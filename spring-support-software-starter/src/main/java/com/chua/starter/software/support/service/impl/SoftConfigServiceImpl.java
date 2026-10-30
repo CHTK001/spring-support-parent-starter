@@ -34,6 +34,9 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * pagefor
+     * @param query 查询
+     * @param request 参数
+     * @return 返回值
     */
     public IPage<SoftConfig> pageFor(com.chua.starter.mybatis.entity.Query<SoftConfig> query, SoftConfig request) {
         Page<SoftConfig> page = query.createPage();
@@ -43,6 +46,8 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 保存配置
+     * @param config 参数
+     * @return 返回值
     */
     public ReturnResult<SoftConfig> saveConfig(SoftConfig config) {
         if (config.getConfigSoftwareId() == null) {
@@ -59,6 +64,8 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 更新配置
+     * @param config 参数
+     * @return 返回值
     */
     public ReturnResult<SoftConfig> updateConfig(SoftConfig config) {
         if (config.getConfigId() == null) {
@@ -76,6 +83,8 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 删除配置
+     * @param configId 字符串
+     * @return 返回值
     */
     public ReturnResult<Boolean> deleteConfig(String configId) {
         if (configId == null) {
@@ -92,6 +101,9 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 获取bysoftwareandKey
+     * @param key 字符串
+     * @param softwareId 字符串
+     * @return 返回值
     */
     public SoftConfig getBySoftwareAndKey(String softwareId, String key) {
         return baseMapper.selectOne(new LambdaQueryWrapper<SoftConfig>()
@@ -104,6 +116,8 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 列表bysoftwareid
+     * @param softwareId 字符串
+     * @return 返回值
     */
     public List<SoftConfig> listBySoftwareId(String softwareId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftConfig>()
@@ -115,6 +129,9 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 列表bysoftwareidand用户标识
+     * @param softwareId 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public List<SoftConfig> listBySoftwareIdAndUserId(String softwareId, String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftConfig>()
@@ -128,6 +145,9 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 列表bysoftwareidanddeviceid
+     * @param deviceId 字符串
+     * @param softwareId 字符串
+     * @return 返回值
     */
     public List<SoftConfig> listBySoftwareIdAndDeviceId(String softwareId, String deviceId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftConfig>()
@@ -141,6 +161,8 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
     @Override
     /**
      * 批量保存或更新
+     * @param configs 参数
+     * @return 返回值
     */
     public ReturnResult<Boolean> batchSaveOrUpdate(List<SoftConfig> configs) {
         if (configs == null || configs.isEmpty()) {

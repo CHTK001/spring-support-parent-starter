@@ -482,9 +482,9 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
 
     /**
      * 解析微信实付金额
-     *
      * @param payload 通知报文
-     */
+     * @return 返回值
+    */
     private BigDecimal resolveWechatPaidAmount(TencentWechatPayNotifyPayload payload) {
         if (payload == null) {
             return null;

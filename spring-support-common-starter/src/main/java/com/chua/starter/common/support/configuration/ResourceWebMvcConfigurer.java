@@ -26,6 +26,8 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
         @Override
     /**
      * 添加resource处理器
+     * @param registry 参数
+     * @return 返回值
     */
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("当前运行目录: {}", new File(".").getAbsolutePath());
@@ -49,6 +51,10 @@ public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
                     @Override
                     /**
                      * 获取Resource
+                     * @param location 参数
+                     * @param resourcePath 字符串
+                     * @return 返回值
+                     * @throws IOException 异常
                     */
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
                         // 在这里处理资源路径编码问题

@@ -171,6 +171,11 @@ public record DbColumnDef(
         }
     }
 
+    /**
+     * trim
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String trim(String value) {
         return value == null ? "" : value.trim();
     }
@@ -190,6 +195,13 @@ public record DbColumnDef(
         return key;
     }
 
+    /**
+     * normalize Size
+     * @param scale 整数
+     * @param size 获取数量
+     * @param type 字符串
+     * @return 返回值
+    */
     private static Integer normalizeSize(String type, Integer size, Integer scale) {
         if (SIZE_REQUIRED.contains(type) && size == null) {
             throw new IllegalArgumentException(type + " 必须指定长度");
@@ -211,6 +223,12 @@ public record DbColumnDef(
         return size;
     }
 
+    /**
+     * normalize Scale
+     * @param scale 整数
+     * @param type 字符串
+     * @return 返回值
+    */
     private static Integer normalizeScale(String type, Integer scale) {
         if (scale == null) {
             return null;
@@ -224,6 +242,12 @@ public record DbColumnDef(
         return scale;
     }
 
+    /**
+     * normalize Ident
+     * @param label 字符串
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String normalizeIdent(String value, String label) {
         String key = trim(value);
         if (key.isEmpty()) {
@@ -266,6 +290,12 @@ public record DbColumnDef(
         return "CURRENT_TIMESTAMP(" + value + ")";
     }
 
+    /**
+     * normalize Enum
+     * @param type 字符串
+     * @param values 参数
+     * @return 返回值
+    */
     private static List<String> normalizeEnum(String type, List<String> values) {
         boolean isEnum = "ENUM".equals(type) || "SET".equals(type);
         if (!isEnum) {

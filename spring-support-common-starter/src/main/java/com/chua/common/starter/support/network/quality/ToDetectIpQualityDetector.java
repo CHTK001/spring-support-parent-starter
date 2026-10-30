@@ -42,6 +42,8 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     @Override
     /**
      * 构建Url
+     * @param ip 字符串
+     * @return 返回值
     */
     protected String buildUrl(String ip) {
         return baseUrl + "/" + ip;
@@ -50,6 +52,9 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     @Override
     /**
      * 解析结果
+     * @param json 字符串
+     * @return 返回值
+     * @throws IOException 异常
     */
     protected IpQuality parseResult(String json) throws IOException {
         JsonNode root = objectMapper.readTree(json);

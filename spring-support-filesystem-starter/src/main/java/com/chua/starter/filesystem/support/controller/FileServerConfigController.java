@@ -88,7 +88,9 @@ public class FileServerConfigController {
 
     /**
      * standalone 对外地址：优先 publicHost，其次 host；空 / 0.0.0.0 归一为 127.0.0.1。
-     */
+     * @param properties 参数
+     * @return 返回值
+    */
     private static String resolvePublicHost(FileStorageServerProperties properties) {
         String publicHost = properties.getPublicHost();
         if (publicHost != null && !publicHost.isBlank() && !"0.0.0.0".equals(publicHost)) {

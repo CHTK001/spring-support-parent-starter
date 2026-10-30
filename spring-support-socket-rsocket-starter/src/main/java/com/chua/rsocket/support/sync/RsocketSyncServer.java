@@ -46,6 +46,10 @@ public class RsocketSyncServer extends AbstractSyncServer {
     @Override
     /**
      * 执行发送
+     * @param data 对象
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     protected void doSend(String sessionId, String topic, Object data) {
         String payload = data instanceof String ? (String) data : String.valueOf(data);

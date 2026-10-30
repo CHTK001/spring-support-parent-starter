@@ -22,6 +22,9 @@ public class NoneFormatter implements Formatter {
     @Override
     /**
      * 格式化
+     * @param field 参数
+     * @param value 对象
+     * @return 返回值
     */
     public Object format(Object value, Field field) {
         return value;

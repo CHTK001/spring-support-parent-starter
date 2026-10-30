@@ -42,10 +42,10 @@ final class JsonFileStore {
 
     /**
      * 构造存储
-     *
-     * @param file   目标文件
+     * @param file 目标文件
      * @param mapper JSON 读写器
-     */
+     * @return 返回值
+    */
     JsonFileStore(Path file, ObjectMapper mapper) {
         this.file = file;
         this.mapper = mapper;

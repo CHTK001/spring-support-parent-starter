@@ -518,6 +518,13 @@ public class ReidStores {
          */
         private volatile VectorStorage storage;
 
+        /**
+         * Account Reid
+         * @param account 字符串
+         * @param dir 路径
+         * @param group 字符串
+         * @return 返回值
+        */
         AccountReid(String account, String group, Path dir) {
             this.account = account;
             this.group = group;

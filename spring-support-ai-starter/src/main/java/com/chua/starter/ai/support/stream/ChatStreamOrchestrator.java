@@ -126,6 +126,11 @@ public class ChatStreamOrchestrator {
         }
     }
 
+    /**
+     * last User Message Id
+     * @param dialogId 长整数
+     * @return 返回值
+    */
     private Long lastUserMessageId(Long dialogId) {
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
@@ -1472,6 +1477,10 @@ public class ChatStreamOrchestrator {
         return route;
     }
 
+    /**
+     * get Default Model
+     * @return 返回值
+    */
     private String getDefaultModel() {
         String[][] keys = {
                 {"runtime", "default_model"},
@@ -1552,6 +1561,11 @@ public class ChatStreamOrchestrator {
      */
     private static final String GLOBAL_FIELD_SYSTEM_PROMPT = "system_prompt";
 
+    /**
+     * load Role
+     * @param characterId 字符串
+     * @return 返回值
+    */
     private SysAiRole loadRole(String characterId) {
         if (characterId == null || characterId.isBlank()) {
             return null;
@@ -1581,6 +1595,11 @@ public class ChatStreamOrchestrator {
         }
     }
 
+    /**
+     * parse Role Settings
+     * @param role 参数
+     * @return 返回值
+    */
     private Map<String, Object> parseRoleSettings(SysAiRole role) {
         if (role == null || role.getSettings() == null || role.getSettings().isBlank()) {
             return new LinkedHashMap<>();
@@ -1596,6 +1615,11 @@ public class ChatStreamOrchestrator {
         }
     }
 
+    /**
+     * parse Skill Names
+     * @param raw 对象
+     * @return 返回值
+    */
     private List<String> parseSkillNames(Object raw) {
         List<String> names = new ArrayList<>();
         if (raw instanceof List<?> list) {
@@ -1645,6 +1669,11 @@ public class ChatStreamOrchestrator {
         }
     }
 
+    /**
+     * resolve Dialog Id
+     * @param sessionId 字符串
+     * @return 返回值
+    */
     private Long resolveDialogId(String sessionId) {
         if (sessionId != null && sessionId.matches("\\d+")) {
             return Long.parseLong(sessionId);
@@ -1670,6 +1699,12 @@ public class ChatStreamOrchestrator {
      */
     private final Map<String, Long> sessionDialogMap = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /**
+     * persist Session Mcp
+     * @param csv 字符串
+     * @param dialogId 长整数
+     * @return 返回值
+    */
     private void persistSessionMcp(Long dialogId, String csv) {
         try {
             com.chua.starter.ai.support.entity.SysAiSession row = sysAiSessionMapper.selectById(dialogId);
@@ -1685,6 +1720,11 @@ public class ChatStreamOrchestrator {
         }
     }
 
+    /**
+     * load Session Mcp Ids
+     * @param dialogId 长整数
+     * @return 返回值
+    */
     private List<String> loadSessionMcpIds(Long dialogId) {
         List<String> ids = new ArrayList<>();
         try {
@@ -1704,6 +1744,13 @@ public class ChatStreamOrchestrator {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * merge Session Mcp
+     * @param Map<String 参数
+     * @param ids 参数
+     * @param roleSettings 参数
+     * @return 返回值
+    */
     private static void mergeSessionMcp(Map<String, Object> roleSettings, List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -1720,10 +1767,20 @@ public class ChatStreamOrchestrator {
         roleSettings.put("plugins", plugins);
     }
 
+    /**
+     * str
+     * @param o 对象
+     * @return 返回值
+    */
     private static String str(Object o) {
         return o != null ? String.valueOf(o) : null;
     }
 
+    /**
+     * safe
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String safe(String s) {
         return s == null ? "" : s;
     }

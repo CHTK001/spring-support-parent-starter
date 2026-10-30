@@ -24,6 +24,11 @@ public class JsonArrayToLongDeserialize extends JsonDeserializer<Long> {
         @Override
     /**
      * 反序列化
+     * @param ctxt 参数
+     * @param p 参数
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws JacksonException 异常
     */
     public Long deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);

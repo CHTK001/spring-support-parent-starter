@@ -84,6 +84,10 @@ public class BuiltinRolePromptSeeder {
         upsertPlan(role, plan);
     }
 
+    /**
+     * load Defaults
+     * @return 返回值
+    */
     private Map<String, Map<String, String>> loadDefaults() {
         ClassPathResource resource = new ClassPathResource(DEFAULT_PLAN_RESOURCE);
         try (var in = resource.getInputStream()) {
@@ -95,12 +99,23 @@ public class BuiltinRolePromptSeeder {
         }
     }
 
+    /**
+     * default Plan
+     * @param code 字符串
+     * @return 返回值
+    */
     private String defaultPlan(String code) {
         Map<String, Map<String, String>> defaults = loadDefaults();
         Map<String, String> item = defaults.get(code);
         return item == null ? null : item.get("plan");
     }
 
+    /**
+     * upsert Plan
+     * @param content 字符串
+     * @param role 参数
+     * @return 返回值
+    */
     private void upsertPlan(SysAiRole role, String content) {
         try {
             SysAiRolePrompt existing = sysAiRolePromptMapper.selectIncludingDeleted(

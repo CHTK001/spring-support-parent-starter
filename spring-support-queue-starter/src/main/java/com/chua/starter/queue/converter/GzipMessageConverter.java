@@ -34,6 +34,8 @@ public class GzipMessageConverter implements MessageConverter {
     @Override
     /**
      * 转换之前发送
+     * @param message 消息
+     * @return 返回值
     */
     public Message convertBeforeSend(Message message) {
         byte[] payload = message.getPayload();
@@ -69,6 +71,8 @@ public class GzipMessageConverter implements MessageConverter {
     @Override
     /**
      * 转换之后接收
+     * @param message 消息
+     * @return 返回值
     */
     public Message convertAfterReceive(Message message) {
         Object compressed = message.getHeaders().get(COMPRESSED_HEADER);
@@ -109,6 +113,8 @@ public class GzipMessageConverter implements MessageConverter {
     @Override
     /**
      * 支持
+     * @param message 消息
+     * @return 返回值
     */
     public boolean supports(Message message) {
         byte[] payload = message.getPayload();
@@ -118,6 +124,7 @@ public class GzipMessageConverter implements MessageConverter {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return 100; // 较低优先级，在加密等操作之后

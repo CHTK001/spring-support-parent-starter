@@ -340,7 +340,10 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
 
     // ── 私有辅助 ──
 
-    /** 生成 PKCE 会话（verifier 43~128 字符、challenge 为 base64url(sha256) 无 padding、nonce、machineId）。 */
+    /**
+     * new Session
+     * @return 返回值
+    */
     private static Map<String, Object> newSession() {
         int length = 43 + RANDOM.nextInt(86);
         StringBuilder verifierBuilder = new StringBuilder(length);
@@ -363,7 +366,13 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return session;
     }
 
-    /** 构建凭据（security_oauth_token 与 access_token 双写；machine_id/uid 回填）。 */
+    /**
+     * build Credential
+     * @param Map<String 参数
+     * @param handle 处理
+     * @param payload 参数
+     * @return 返回值
+    */
     private static Map<String, Object> buildCredential(Map<String, Object> payload, Map<String, Object> handle) {
         Map<String, Object> credential = new LinkedHashMap<>();
         String accessToken = firstString(payload, "token", "device_token", "access_token");
@@ -395,7 +404,13 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return credential;
     }
 
-    /** GET，404 视为「用户尚未授权」返回 null 而不是抛错（Qoder poll 的专属语义）。 */
+    /**
+     * get Tolerant404
+     * @param Map<String 参数
+     * @param headers 参数
+     * @param url 字符串
+     * @return 返回值
+    */
     private static String getTolerant404(String url, Map<String, String> headers) {
         try {
             return ChannelHttp.getJson(url, headers);
@@ -413,7 +428,10 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
-    /** sash 端点请求头（Cosy-ClientType 必须为 10，否则 campaigns 为空）。 */
+    /**
+     * sash Headers
+     * @return 返回值
+    */
     private static Map<String, String> sashHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Accept", "application/json");
@@ -421,17 +439,32 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return headers;
     }
 
-    /** 签到请求头：sashHeaders + Authorization Bearer（campaigns/claim 端点需鉴权）。 */
+    /**
+     * checkin Headers
+     * @param accessToken 字符串
+     * @return 返回值
+    */
     private static Map<String, String> checkinHeaders(String accessToken) {
         Map<String, String> headers = new HashMap<>(sashHeaders());
         headers.put("Authorization", "Bearer " + accessToken);
         return headers;
     }
 
+    /**
+     * auth Headers
+     * @param accessToken 字符串
+     * @return 返回值
+    */
     private static Map<String, String> authHeaders(String accessToken) {
         return Map.of("Authorization", "Bearer " + accessToken, "Accept", "application/json");
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -458,6 +491,13 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return model;
     }
 
+    /**
+     * first String
+     * @param Map<String 参数
+     * @param keys 参数
+     * @param source 参数
+     * @return 返回值
+    */
     private static String firstString(Map<String, Object> source, String... keys) {
         for (String key : keys) {
             Object value = source.get(key);
@@ -468,10 +508,22 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         return source == null ? null : firstString(source, key);
     }
 
+    /**
+     * to Millis
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toMillis(Object value) {
         if (value instanceof Number number && number.doubleValue() > 0) {
             double v = number.doubleValue();
@@ -487,14 +539,29 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * 编码
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();
@@ -502,6 +569,14 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * copy If Present
+     * @param Map<String 参数
+     * @param from 参数
+     * @param key 字符串
+     * @param to 参数
+     * @return 返回值
+    */
     private static void copyIfPresent(Map<String, Object> from, Map<String, Object> to, String key) {
         Object value = from.get(key);
         if (value != null) {
@@ -509,6 +584,11 @@ public class QoderAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         if (response == null) {
             return new LinkedHashMap<>();

@@ -54,6 +54,11 @@ public enum DeviceCapability {
      */
     private final String description;
 
+    /**
+     * Device Capability
+     * @param description 字符串
+     * @return 返回值
+    */
     DeviceCapability(String description) {
         this.description = description;
     }

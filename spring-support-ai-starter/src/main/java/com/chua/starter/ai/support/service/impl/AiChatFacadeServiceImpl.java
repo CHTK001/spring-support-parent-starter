@@ -849,7 +849,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * 解析当前别名缓存桶：无身份上下文时返回系统桶。
-     */
+     * @return 返回值
+    */
     private String resolveAliasBucket() {
         try {
             String userId = AiUserContext.currentUserId();
@@ -1555,10 +1556,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * recordusage。
-     * @param client 客户端
      * @param callType call类型
+     * @param client 客户端
      * @param response 响应
-     */
+     * @param userId 字符串
+     * @return 返回值
+    */
     private void recordUsage(ChatClient client, String callType, ChatSyncResponse response, String userId) {
         recordUsage(client, callType, response != null ? response.getUsage() : null, userId);
     }
@@ -1591,10 +1594,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * 记录流式对话用量。
-     *
-     * @param usage  用量
+     * @param source 字符串
+     * @param usage 用量
      * @param userId 请求线程捕获的归属用户标识
-     */
+     * @return 返回值
+    */
     private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId, String source) {
         recordUsage(usage, "chat_stream", userId, source);
     }
@@ -1611,8 +1615,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * recordusage，并显式标注用量来源。
+     * @param callType 字符串
      * @param source 用量来源 service/third_party/self，为空按默认口径
-     */
+     * @param usage 参数
+     * @param userId 字符串
+     * @return 返回值
+    */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId, String source) {
         if (usage == null) {
             return;

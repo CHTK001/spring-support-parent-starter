@@ -70,6 +70,8 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * 获取
+     * @param key 字符串
+     * @return 返回值
     */
     public String get(String key) {
         return redisTemplate.opsForValue().get(key);
@@ -78,6 +80,9 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * 放入
+     * @param key 字符串
+     * @param value 字符串
+     * @return 返回值
     */
     public void put(String key, String value) {
         if (value == null) {
@@ -90,6 +95,10 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * 放入
+     * @param key 字符串
+     * @param ttl 参数
+     * @param value 字符串
+     * @return 返回值
     */
     public void put(String key, String value, Duration ttl) {
         if (value == null) {
@@ -110,6 +119,8 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * containsKey
+     * @param key 字符串
+     * @return 返回值
     */
     public boolean containsKey(String key) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
@@ -118,6 +129,8 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * 删除
+     * @param key 字符串
+     * @return 返回值
     */
     public boolean delete(String key) {
         return Boolean.TRUE.equals(redisTemplate.delete(key));
@@ -126,6 +139,8 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * Incr
+     * @param key 字符串
+     * @return 返回值
     */
     public long incr(String key) {
         return redisTemplate.opsForValue().increment(key);
@@ -134,6 +149,9 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * Expire
+     * @param key 字符串
+     * @param seconds 长整数
+     * @return 返回值
     */
     public void expire(String key, long seconds) {
         // 契约要求 seconds 必须大于 0，而 Redis 的 EXPIRE 对 0 与负数是「立即删除该键」。
@@ -162,6 +180,8 @@ public class RedisKvEngine implements KvEngine {
     @Override
     /**
      * Ttl
+     * @param key 字符串
+     * @return 返回值
     */
     public long ttl(String key) {
         return redisTemplate.getExpire(key, TimeUnit.SECONDS);

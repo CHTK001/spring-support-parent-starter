@@ -349,7 +349,12 @@ public class TavernChatController {
         return members.get(0);
     }
 
-    /** 路由模型：让默认模型按成员描述挑一位最合适的 */
+    /**
+     * auto Route
+     * @param content 字符串
+     * @param members 参数
+     * @return 返回值
+    */
     private SysAiTavernMember autoRoute(List<SysAiTavernMember> members, String content) {
         try {
             StringBuilder roster = new StringBuilder();
@@ -389,7 +394,12 @@ public class TavernChatController {
         return null;
     }
 
-    /** 拼群历史：user=群主发言，ai=[角色名] 发言 */
+    /**
+     * build History
+     * @param groupId 长整数
+     * @param limit 整数
+     * @return 返回值
+    */
     private List<Map<String, Object>> buildHistory(Long groupId, int limit) {
         LambdaQueryWrapper<SysAiTavernMessage> w = new LambdaQueryWrapper<>();
         w.eq(SysAiTavernMessage::getGroupId, groupId).orderByDesc(SysAiTavernMessage::getId).last("LIMIT " + limit);
@@ -410,6 +420,13 @@ public class TavernChatController {
         return history;
     }
 
+    /**
+     * save Ai Message
+     * @param groupId 长整数
+     * @param member 参数
+     * @param streamed 参数
+     * @return 返回值
+    */
     private void saveAiMessage(Long groupId, SysAiTavernMember member, Streamed streamed) {
         SysAiRole role = roleMapper.selectById(member.getRoleId());
         SysAiTavernMessage m = new SysAiTavernMessage();
@@ -442,6 +459,12 @@ public class TavernChatController {
         return providerId + ":" + model;
     }
 
+    /**
+     * pick Random Other
+     * @param exclude 参数
+     * @param members 参数
+     * @return 返回值
+    */
     private SysAiTavernMember pickRandomOther(List<SysAiTavernMember> members, SysAiTavernMember exclude) {
         List<SysAiTavernMember> others = new ArrayList<>();
         for (SysAiTavernMember m : members) {
@@ -576,6 +599,12 @@ public class TavernChatController {
         return route;
     }
 
+    /**
+     * resolve Model
+     * @param member 参数
+     * @param role 参数
+     * @return 返回值
+    */
     private String resolveModel(SysAiTavernMember member, SysAiRole role) {
         return resolveModelQualified(member, role)[0];
     }
@@ -604,6 +633,11 @@ public class TavernChatController {
         return new String[]{resolved, null};
     }
 
+    /**
+     * require Owned
+     * @param id 长整数
+     * @return 返回值
+    */
     private SysAiTavernGroup requireOwned(Long id) {
         SysAiTavernGroup g = groupMapper.selectById(id);
         if (g == null) {
@@ -615,6 +649,13 @@ public class TavernChatController {
         return g;
     }
 
+    /**
+     * send Raw
+     * @param Map<String 参数
+     * @param event 参数
+     * @param out 输出流
+     * @return 返回值
+    */
     private void sendRaw(OutputStream out, Map<String, Object> event) {
         // 并行回复会从多个线程写同一条 SSE，必须串行写完整帧，否则两个角色
         // 的 text 事件可能交错，前端 JSON.parse 会失败（表现为流式突然中断）。
@@ -629,6 +670,11 @@ public class TavernChatController {
         }
     }
 
+    /**
+     * str
+     * @param v 对象
+     * @return 返回值
+    */
     private static String str(Object v) {
         return v == null ? null : String.valueOf(v);
     }

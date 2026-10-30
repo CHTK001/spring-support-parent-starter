@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiPromptFormMapper">
+
+    <!--
+        查出指定用户下某个 key 的形态行（包含已逻辑删除的行）。
+        <p>{@code @TableLogic} 只对 MyBatis-Plus 生成的语句生效，自定义 SQL 不受影响，
+        所以这里能捞到软删除记录。唯一键 {@code (user_id, form_key)} 不含删除标记列，
+        软删除的行依然占着 key——复用同名形态时必须先复活它，否则插入必然撞唯一键。</p>
+        <p>列名显式取别名：这张表的主键/状态/删除标记都带表前缀，{@code SELECT *}
+        的自动映射对不上 {@code id} 这类属性名。</p>
+    -->
+    <select id="selectIncludingDeleted" resultType="com.chua.starter.ai.support.entity.SysAiPromptForm">
+        SELECT sys_ai_prompt_form_id AS id, user_id AS userId, form_key AS formKey,
+        form_name AS formName, form_icon AS formIcon, form_description AS formDescription,
+        sys_ai_prompt_form_builtin AS builtin, form_sort AS sort,
+        sys_ai_prompt_form_status AS status, sys_ai_prompt_form_delete AS deleted
+        FROM sys_ai_prompt_form
+        WHERE user_id = #{userId} AND form_key = #{formKey}
+        LIMIT 1
+    </select>
+
+    <!--
+        复活一条已逻辑删除的形态行：改回展示信息并清掉删除标记。
+        <p>用显式 SQL 而不是 {@code updateById}：逻辑删除字段在 MP 的更新语句里
+        行为不够直观，显式写出来更省心。</p>
+    -->
+    <update id="revive">
+        UPDATE sys_ai_prompt_form
+        SET form_name = #{name},
+        form_icon = #{icon},
+        form_description = #{description},
+        form_sort = #{sort},
+        sys_ai_prompt_form_status = 1,
+        sys_ai_prompt_form_delete = 0
+        WHERE sys_ai_prompt_form_id = #{id}
+    </update>
+
+</mapper>

@@ -79,6 +79,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * 添加申报值处理器
+     * @param handlers 参数
+     * @return 返回值
     */
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
@@ -87,6 +89,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * 添加参数解析器
+     * @param resolvers 参数
+     * @return 返回值
     */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new RequestParamsMapMethodArgumentResolver());
@@ -94,6 +98,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * configure消息转换器
+     * @param converters 参数
+     * @return 返回值
     */
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
@@ -126,6 +132,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * 添加拦截器
+     * @param registry 参数
+     * @return 返回值
     */
     public void addInterceptors(InterceptorRegistry registry) {
     }
@@ -133,6 +141,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * configure内容negotiation
+     * @param configurer 参数
+     * @return 返回值
     */
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
@@ -173,6 +183,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * extend消息转换器
+     * @param converters 参数
+     * @return 返回值
     */
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         log.info("[消息转换器]开始扩展消息转换器列表, 当前转换器数量: {}", converters.size());
@@ -278,6 +290,8 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * 添加Formatters
+     * @param registry 参数
+     * @return 返回值
     */
     public void addFormatters(FormatterRegistry registry) {
         ApplicationConversionService.configure(registry);
@@ -287,6 +301,9 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         log.info("[消息转换器]初始化消息转换器配置");

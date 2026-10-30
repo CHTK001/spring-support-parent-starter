@@ -80,7 +80,8 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     /**
      * 列表分表配置
-     */
+     * @return 返回值
+    */
     public List<OrderPartitionConfigVO> listConfigs() {
         /**
          * 同步默认配置
@@ -128,7 +129,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     /**
      * 预览分表执行计划
-     */
+     * @param businessType 字符串
+     * @return 返回值
+    */
     public OrderPartitionPreviewVO preview(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         LocalDateTime migrateBeforeTime = LocalDateTime.now().minusDays(config.getMigrateBeforeDays());
@@ -240,7 +243,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     @Override
     /**
      * 获取分表配置实体
-     */
+     * @param businessType 字符串
+     * @return 返回值
+    */
     public OrderPartitionConfig getConfigEntity(String businessType) {
         return requireConfig(businessType);
     }
@@ -534,9 +539,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
 
     /**
      * 解析分表粒度
-     *
      * @param value 值
-     */
+     * @return 返回值
+    */
     private String resolveGranularity(String value) {
         String result = fallback(value, "MONTH").trim().toUpperCase(Locale.ROOT);
         if (!"MONTH".equals(result) && !"DAY".equals(result)) {
@@ -547,11 +552,11 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
 
     /**
      * 解析正整数参数
-     *
-     * @param value 值
      * @param fallback 缺省值
      * @param label 参数名称
-     */
+     * @param value 值
+     * @return 返回值
+    */
     private Integer resolvePositive(Integer value, Integer fallback, String label) {
         int result = value != null ? value : fallback;
         if (result <= 0) {
@@ -562,11 +567,11 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
 
     /**
      * 解析非负整数参数
-     *
-     * @param value 值
      * @param fallback 缺省值
      * @param label 参数名称
-     */
+     * @param value 值
+     * @return 返回值
+    */
     private Integer resolveNonNegative(Integer value, Integer fallback, String label) {
         int result = value != null ? value : fallback;
         if (result < 0) {

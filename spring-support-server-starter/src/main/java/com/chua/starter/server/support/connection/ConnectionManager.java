@@ -65,6 +65,13 @@ public class ConnectionManager {
         */
         final AtomicInteger refCount = new AtomicInteger(0);
 
+        /**
+         * Entry
+         * @param credentialFingerprint 字符串
+         * @param handle 处理
+         * @param nowNanos 长整数
+         * @return 返回值
+        */
         Entry(SshClients.Handle handle, String credentialFingerprint, long nowNanos) {
             this.handle = handle;
             this.credentialFingerprint = credentialFingerprint;

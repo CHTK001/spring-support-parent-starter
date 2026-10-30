@@ -35,11 +35,11 @@ public class RemoteConfigController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
+    /**
      * 回显配置。
-     *
      * @return 已保存的配置（无则空对象）
-     */
-    @GetMapping
+     * @throws IOException 异常
+    */
     public Map<String, Object> getConfig() throws IOException {
         if (Files.exists(CONFIG_FILE)) {
             return objectMapper.readValue(CONFIG_FILE.toFile(), Map.class);
@@ -48,12 +48,13 @@ public class RemoteConfigController {
     }
 
     /**
+    /**
      * 保存配置（持久化到本地文件）。
-     *
+     * @param Map<String 参数
      * @param config 远控连接配置
      * @return 保存结果
-     */
-    @PostMapping
+     * @throws IOException 异常
+    */
     public Map<String, Object> saveConfig(@RequestBody Map<String, Object> config) throws IOException {
         Files.write(CONFIG_FILE, objectMapper.writeValueAsBytes(config));
         Map<String, Object> result = new HashMap<>();

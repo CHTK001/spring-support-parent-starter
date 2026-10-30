@@ -55,6 +55,11 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     @Override
     /**
      * 序列化
+     * @param jsonGenerator 参数
+     * @param serializers 参数
+     * @param value 对象
+     * @return 返回值
+     * @throws IOException 异常
     */
     public void serialize(Object value, JsonGenerator jsonGenerator, SerializerProvider serializers) throws IOException {
         jsonGenerator.writeNull();

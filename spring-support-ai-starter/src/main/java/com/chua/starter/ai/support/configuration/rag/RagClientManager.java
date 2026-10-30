@@ -1070,6 +1070,11 @@ public class RagClientManager implements RagClientProvider {
         return ref;
     }
 
+    /**
+     * resolve Embedding Engine By Model
+     * @param modelId 字符串
+     * @return 返回值
+    */
     private String resolveEmbeddingEngineByModel(String modelId) {
         if (!StringUtils.hasText(modelId)) {
             return null;

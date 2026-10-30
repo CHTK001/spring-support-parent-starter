@@ -305,9 +305,9 @@ public class ApmQueryService {
 
     /**
      * 从 Spring Boot fat jar 的 BOOT-INF/lib/ 中定位 agent jar 并解压到临时目录。
-     *
      * @return agent jar 物理路径；找不到返回 null
-     */
+     * @throws java.io.IOException 异常
+    */
     private static Path resolveAgentJarFromBootInf() throws java.io.IOException {
         String[] jars = System.getProperty("java.class.path").split(java.io.File.pathSeparator);
         for (String entry : jars) {

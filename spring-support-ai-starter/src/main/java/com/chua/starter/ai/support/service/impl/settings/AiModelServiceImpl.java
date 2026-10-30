@@ -67,6 +67,11 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /**
+     * 创建
+     * @param model 参数
+     * @return 返回值
+    */
     public AiModelDTO create(AiModelDTO model) {
         requireWritable();
         SysAiModel entity = toEntity(model);
@@ -89,6 +94,12 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /**
+     * 更新
+     * @param model 参数
+     * @param modelId 长整数
+     * @return 返回值
+    */
     public AiModelDTO update(Long modelId, AiModelDTO model) {
         SysAiModel existing = requireWritableModel(modelId);
         SysAiModel entity = toEntity(model);
@@ -103,6 +114,11 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /**
+     * 删除
+     * @param modelId 长整数
+     * @return 返回值
+    */
     public void delete(Long modelId) {
         requireWritableModel(modelId);
         modelMapper.deleteById(modelId);
@@ -186,6 +202,11 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /**
+     * test Latency
+     * @param modelId 长整数
+     * @return 返回值
+    */
     public AiModelDTO testLatency(Long modelId) {
         // 测延迟会拿模型配置（含供应商 Key）真的发一次请求，等同于使用该模型，故也要归属校验
         // （requireWritableModel 找不到时已抛 NOT_FOUND，这里不再重复判空）

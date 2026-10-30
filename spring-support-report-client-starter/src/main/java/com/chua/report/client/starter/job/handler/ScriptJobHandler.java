@@ -92,6 +92,8 @@ public class ScriptJobHandler implements JobHandler {
     @Override
     /**
      * 执行
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void execute() throws Exception {
         // 验证脚本类型

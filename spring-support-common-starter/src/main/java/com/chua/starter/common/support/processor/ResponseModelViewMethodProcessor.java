@@ -44,6 +44,8 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     @Override
     /**
      * 支持参数
+     * @param returnType 参数
+     * @return 返回值
     */
     public boolean supportsParameter(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
@@ -53,6 +55,8 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     @Override
     /**
      * 支持申报类型
+     * @param returnType 参数
+     * @return 返回值
     */
     public boolean supportsReturnType(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
@@ -62,6 +66,14 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     @Override
     /**
      * 处理申报值
+     * @param mavContainer 参数
+     * @param returnType 参数
+     * @param returnValue 对象
+     * @param webRequest 参数
+     * @return 返回值
+     * @throws HttpMediaTypeNotAcceptableException 异常
+     * @throws HttpMessageNotWritableException 异常
+     * @throws IOException 异常
     */
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
         ModelView modelView = (ModelView) returnValue;

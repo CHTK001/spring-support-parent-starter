@@ -38,6 +38,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     @Override
     /**
      * 设置application事件发布
+     * @param eventPublisher 参数
+     * @return 返回值
     */
     public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
@@ -46,6 +48,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     @Override
     /**
      * 之前发送
+     * @param message 消息
+     * @return 返回值
     */
     public Message beforeSend(Message message) {
         startTimes.put(message.getId(), System.currentTimeMillis());
@@ -62,6 +66,10 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     @Override
     /**
      * 之后发送
+     * @param error 可抛出异常
+     * @param message 消息
+     * @param success 标记成功
+     * @return 返回值
     */
     public void afterSend(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId());
@@ -92,6 +100,8 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     @Override
     /**
      * 之前接收
+     * @param message 消息
+     * @return 返回值
     */
     public Message beforeReceive(Message message) {
         startTimes.put(message.getId() + "_receive", System.currentTimeMillis());
@@ -108,6 +118,10 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     @Override
     /**
      * 之后接收
+     * @param error 可抛出异常
+     * @param message 消息
+     * @param success 标记成功
+     * @return 返回值
     */
     public void afterReceive(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId() + "_receive");
@@ -235,6 +249,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return -500; // 高优先级

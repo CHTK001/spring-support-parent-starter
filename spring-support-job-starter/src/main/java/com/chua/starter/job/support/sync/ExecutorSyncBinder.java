@@ -176,6 +176,9 @@ public class ExecutorSyncBinder {
             @Override
             /**
              * On记录错误
+             * @param clientId 字符串
+             * @param ex 可抛出异常
+             * @return 返回值
             */
             public void onError(String clientId, Throwable ex) {
                 log.warn("[job] SyncClient 收到 onError clientId={} cause={}, 重置 registered",

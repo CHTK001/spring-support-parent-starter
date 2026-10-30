@@ -136,6 +136,11 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     @Override
     /**
      * 执行请求
+     * @param Map<String 参数
+     * @param method 字符串
+     * @param params 参数
+     * @param path 字符串
+     * @return 返回值
     */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
@@ -194,6 +199,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     @Override
     /**
      * 获取liveurl
+     * @param channel 整数
+     * @param protocol 字符串
+     * @return 返回值
     */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
@@ -217,6 +225,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     @Override
     /**
      * 获取playbackurl
+     * @param channel 整数
+     * @param range 参数
+     * @return 返回值
     */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
@@ -255,6 +266,9 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     @Override
     /**
      * ptzcontrol
+     * @param cmd 参数
+     * @param speed 双精度数
+     * @return 返回值
     */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
@@ -298,6 +312,8 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     @Override
     /**
      * 远程解锁
+     * @param doorId 整数
+     * @return 返回值
     */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
