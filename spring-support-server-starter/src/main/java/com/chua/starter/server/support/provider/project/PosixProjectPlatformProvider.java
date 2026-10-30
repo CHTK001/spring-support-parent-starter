@@ -95,6 +95,12 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
     }
 
     @Override
+    public String readPid(String pidFile) {
+        String file = pidFile == null || pidFile.isBlank() ? "app.pid" : pidFile.trim();
+        return "cat '" + quote(file) + "' 2>/dev/null || true";
+    }
+
+    @Override
     public String varsBlock(List<String> envNames, List<String> envValues, List<String> jvmArgs, List<String> cmdArgs) {
         var b = new StringBuilder();
         for (var i = 0; i < envNames.size(); i++) {

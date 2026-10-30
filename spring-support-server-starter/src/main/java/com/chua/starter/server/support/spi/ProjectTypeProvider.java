@@ -112,6 +112,19 @@ public interface ProjectTypeProvider {
     }
 
     /**
+     * 运行进程号文件名（相对项目地址）。
+     *
+     * <p>不同项目类型写 PID 的位置不同：Java 系是 {@code app.pid}，
+     * Nginx / 静态站点由 nginx 自己写到 {@code logs/nginx.pid}。
+     * 启动 / 重启 / 升级 / 回滚后的「记录PID」步骤按此读取。</p>
+     *
+     * @return PID 文件相对路径
+     */
+    default String pidFile() {
+        return "app.pid";
+    }
+
+    /**
      * 是否支持单独更新依赖包（分离式部署的 lib 目录）。
      *
      * @return 支持时为 {@code true}

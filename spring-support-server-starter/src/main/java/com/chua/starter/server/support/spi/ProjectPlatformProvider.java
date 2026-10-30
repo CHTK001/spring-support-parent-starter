@@ -73,6 +73,16 @@ public interface ProjectPlatformProvider {
     String readPid();
 
     /**
+     * 读取指定 PID 文件的命令（默认委托 {@link #readPid()}，兼容旧实现）。
+     *
+     * @param pidFile PID 文件相对路径（如 {@code app.pid}、{@code logs/nginx.pid}）
+     * @return 读取命令
+     */
+    default String readPid(String pidFile) {
+        return readPid();
+    }
+
+    /**
      * 生成变量块（env/jvm/cmd 结构化变量注入脚本用）。
      *
      * @param envNames  环境变量名
