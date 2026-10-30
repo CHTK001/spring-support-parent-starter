@@ -365,7 +365,9 @@ public class ArthasServiceImpl implements ArthasService {
             // 含 PID 的行
             String[] parts = trimmed.split("\\s+");
             for (String part : parts) {
-                if (part.matches("\\d{2,}")) return part;
+                if (part.matches("\\d{2,}")) {
+                    return part;
+                }
             }
         }
         return null;

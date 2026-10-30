@@ -65,7 +65,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
         exam.setOwnerUserId(EduUserContext.requireUserId());
         exam.setExamStatus(exam.getExamStatus() != null ? exam.getExamStatus() : 0);
         exam.setCreateTime(LocalDateTime.now());
-        exam.setUpdateTime(LocalDateTime.now());;
+        exam.setUpdateTime(LocalDateTime.now());
         baseMapper.insert(exam);
         log.info("创建考试成功，ID: {}", exam.getExamId());
         return exam.getExamId();
@@ -99,7 +99,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
         }
         EduUserContext.checkWritable(exists.getOwnerUserId());
         exam.setOwnerUserId(exists.getOwnerUserId());
-        exam.setUpdateTime(LocalDateTime.now());;
+        exam.setUpdateTime(LocalDateTime.now());
         int rows = baseMapper.updateById(exam);
         log.info("更新考试成功，ID: {}", exam.getExamId());
         return rows > 0;
