@@ -24,7 +24,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.43</version>
+        <version>4.0.0.51</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>

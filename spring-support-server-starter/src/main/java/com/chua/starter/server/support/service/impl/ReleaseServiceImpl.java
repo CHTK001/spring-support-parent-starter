@@ -279,6 +279,23 @@ public class ReleaseServiceImpl implements ReleaseService {
         exists.setGitSkipTests(project.getGitSkipTests() == null ? exists.getGitSkipTests() : project.getGitSkipTests());
         exists.setMavenHome(project.getMavenHome() == null ? exists.getMavenHome() : project.getMavenHome());
         exists.setMavenVersion(project.getMavenVersion() == null ? exists.getMavenVersion() : project.getMavenVersion());
+        exists.setUploadExtract(project.getUploadExtract() == null ? exists.getUploadExtract() : project.getUploadExtract());
+        exists.setUploadTargetDir(project.getUploadTargetDir() == null ? exists.getUploadTargetDir() : project.getUploadTargetDir());
+        exists.setDeployType(project.getDeployType() == null ? exists.getDeployType() : project.getDeployType());
+        exists.setUploadAutoUpgrade(project.getUploadAutoUpgrade() == null ? exists.getUploadAutoUpgrade() : project.getUploadAutoUpgrade());
+        exists.setGitPollEnabled(project.getGitPollEnabled() == null ? exists.getGitPollEnabled() : project.getGitPollEnabled());
+        exists.setGitPollCron(project.getGitPollCron() == null ? exists.getGitPollCron() : project.getGitPollCron());
+        // 定时发布：开关或时间变化时重置状态；只接受未来时间，避免登记一个永远不会触发的 cron
+        boolean scheduleTouched = project.getScheduleEnabled() != null || project.getScheduleTime() != null;
+        exists.setScheduleEnabled(project.getScheduleEnabled() == null ? exists.getScheduleEnabled() : project.getScheduleEnabled());
+        exists.setScheduleTime(project.getScheduleTime() == null ? exists.getScheduleTime() : project.getScheduleTime());
+        if (scheduleTouched) {
+            boolean enabled = Boolean.TRUE.equals(exists.getScheduleEnabled()) && exists.getScheduleTime() != null;
+            if (enabled && exists.getScheduleTime().isBefore(LocalDateTime.now())) {
+                return ReturnResult.error("定时发布时间必须晚于当前时间");
+            }
+            exists.setScheduleStatus(enabled ? "PENDING" : "NONE");
+        }
         // 四个脚本为空时用内置通用模板补全
         applyDefaultScripts(exists);
         exists.setUpdateTime(LocalDateTime.now());
@@ -1457,6 +1474,13 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(up.getMsg());
         }
         String remotePackage = up.getData();
+        // 上传配置：默认只上传不升级；仅当项目显式开启「上传后自动升级」时才走投放/重启。
+        // 显式指定 deployType 的调用（如「更新依赖包」只投 lib）本身就是一次升级动作，不受该开关限制。
+        boolean autoUpgrade = Boolean.TRUE.equals(project.getUploadAutoUpgrade()) || !isBlank(deployTypeOverride);
+        if (!autoUpgrade) {
+            log.info("[发布] 项目 {} 未开启上传后自动升级，安装包已上传至 {}", project.getId(), remotePackage);
+            return ReturnResult.ok("upload-only:" + remotePackage);
+        }
         Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
         Map<String, Object> cfg = global instanceof Map
                 ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
@@ -2527,5 +2551,229 @@ public class ReleaseServiceImpl implements ReleaseService {
             this.key = key;
             this.value = value;
         }
+    }
+
+    // ==================== 发布管理增强 ====================
+
+    /**
+     * 页面布局在系统配置表中的键前缀
+     */
+    private static final String CFG_LAYOUT_PREFIX = "ui.layout.";
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<Map<String, Object>> copyProjects(List<Long> projectIds, List<Long> releaseIds) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return ReturnResult.error("请选择要复制的项目");
+        }
+        if (releaseIds == null || releaseIds.isEmpty()) {
+            return ReturnResult.error("请选择目标服务器");
+        }
+        List<Map<String, Object>> copied = new ArrayList<>();
+        List<Map<String, Object>> failed = new ArrayList<>();
+        for (Long projectId : projectIds) {
+            MsServerProject source = projectMapper.selectById(projectId);
+            if (source == null) {
+                failed.add(Map.of("projectId", projectId, "reason", "项目不存在"));
+                continue;
+            }
+            for (Long releaseId : releaseIds) {
+                if (releaseId == null || releaseMapper.selectById(releaseId) == null) {
+                    failed.add(Map.of("projectId", projectId, "releaseId", String.valueOf(releaseId),
+                            "reason", "目标发布不存在"));
+                    continue;
+                }
+                MsServerProject copy = new MsServerProject();
+                org.springframework.beans.BeanUtils.copyProperties(source, copy);
+                copy.setId(null);
+                copy.setReleaseId(releaseId);
+                copy.setPid(null);
+                copy.setStatus("stopped");
+                copy.setRunningSince(null);
+                copy.setServiceName(null);
+                copy.setCreateTime(LocalDateTime.now());
+                copy.setUpdateTime(LocalDateTime.now());
+                if (copy.getScheduleEnabled() == null) {
+                    copy.setScheduleEnabled(false);
+                }
+                if (isBlank(copy.getScheduleStatus())) {
+                    copy.setScheduleStatus("NONE");
+                }
+                projectMapper.insert(copy);
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("sourceProjectId", projectId);
+                row.put("projectId", copy.getId());
+                row.put("releaseId", releaseId);
+                row.put("projectName", copy.getProjectName());
+                copied.add(row);
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("count", copied.size());
+        out.put("copied", copied);
+        out.put("failed", failed);
+        return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> probeProjectEndpoints(Long id) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        MsServerProject project = ctx.project;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("swagger", false);
+        out.put("actuator", false);
+        int port = resolveHealthPort(project);
+        out.put("port", port);
+        if (port <= 0) {
+            out.put("message", "项目未配置 server.port，无法探测 Swagger/Actuator");
+            return ReturnResult.ok(out);
+        }
+        if (ctx.windows) {
+            out.put("message", "Windows 主机暂不支持自动探测");
+            return ReturnResult.ok(out);
+        }
+        String base = "http://127.0.0.1:" + port;
+        String command = "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/v3/api-docs; echo; "
+                + "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/swagger-ui/index.html; echo; "
+                + "curl -s -m 4 " + base + "/actuator/health; echo; "
+                + "curl -s -m 4 " + base + "/actuator/metrics; echo";
+        ReturnResult<List<MsExecLog>> result = execService.runCommand(
+                Collections.singletonList(ctx.hostId), command, 30, null);
+        if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
+            out.put("message", "端点探测失败: " + result.getMsg());
+            return ReturnResult.ok(out);
+        }
+        String output = result.getData().get(0).getMsExecLogOutput();
+        String[] lines = (output == null ? "" : output).replace("\r", "").split("\n", -1);
+        String docsCode = lines.length > 0 ? lines[0].trim() : "";
+        String uiCode = lines.length > 1 ? lines[1].trim() : "";
+        String healthJson = lines.length > 2 ? lines[2].trim() : "";
+        String metricsJson = lines.length > 3 ? lines[3].trim() : "";
+        boolean swagger = "200".equals(docsCode) || "200".equals(uiCode);
+        boolean actuator = healthJson.startsWith("{") || metricsJson.startsWith("{");
+        out.put("swagger", swagger);
+        out.put("actuator", actuator);
+        String hostAddress = ctx.host == null || isBlank(ctx.host.getServerHostAddress())
+                ? "127.0.0.1" : ctx.host.getServerHostAddress();
+        out.put("swaggerUrl", "http://" + hostAddress + ":" + port + "/swagger-ui/index.html");
+        out.put("swaggerApiUrl", "http://" + hostAddress + ":" + port + "/v3/api-docs");
+        out.put("actuatorUrl", "http://" + hostAddress + ":" + port + "/actuator");
+        if (healthJson.startsWith("{")) {
+            try {
+                Map<String, Object> health = JSON.readValue(healthJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() { });
+                out.put("health", health.get("status"));
+            } catch (Exception ignored) {
+                out.put("health", "UNKNOWN");
+            }
+        }
+        if (metricsJson.startsWith("{")) {
+            try {
+                Map<String, Object> metrics = JSON.readValue(metricsJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() { });
+                Object names = metrics.get("names");
+                if (names instanceof List<?> list) {
+                    out.put("metricCount", list.size());
+                    out.put("metrics", list.size() > 8 ? list.subList(0, 8) : list);
+                }
+            } catch (Exception ignored) {
+                // 指标摘要只是增强信息，解析失败不影响按钮可用性
+            }
+        }
+        return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> gitPollDeploy(Long id) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        MsServerProject project = prepared.getData().project;
+        if (isBlank(project.getGitUrl())) {
+            return ReturnResult.error("项目未配置 Git 仓库地址");
+        }
+        Path workspace = Paths.get(System.getProperty("java.io.tmpdir"),
+                "git-deploy", String.valueOf(project.getId()));
+        boolean changed = !Files.exists(workspace.resolve(".git"));
+        String commit = null;
+        if (!changed) {
+            try (GitClient client = buildGitClient(project, workspace).build()) {
+                client.open();
+                String branch = isBlank(project.getGitBranch()) ? "main" : project.getGitBranch().trim();
+                client.getGit().fetch().setRemote("origin").call();
+                org.eclipse.jgit.lib.ObjectId local = client.getRepository().resolve("HEAD");
+                org.eclipse.jgit.lib.ObjectId remote = client.getRepository()
+                        .resolve("refs/remotes/origin/" + branch);
+                commit = remote == null ? null : remote.getName();
+                changed = remote != null && (local == null || !local.equals(remote));
+            } catch (Exception e) {
+                log.warn("[Git轮询] 项目 {} 检查更新失败: {}", id, e.getMessage());
+                return ReturnResult.error("Git 轮询失败: " + e.getMessage());
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("changed", changed);
+        out.put("commit", commit);
+        if (!changed) {
+            return ReturnResult.ok(out);
+        }
+        ReturnResult<String> deploy = gitPullAndDeploy(id);
+        if (!deploy.isOk()) {
+            return ReturnResult.error(deploy.getMsg());
+        }
+        if (!isBlank(commit)) {
+            project.setGitLastCommit(commit);
+            project.setUpdateTime(LocalDateTime.now());
+            projectMapper.updateById(project);
+        }
+        out.put("taskId", deploy.getData());
+        return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> getPageLayout(String pageKey) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("layout", readCfg(CFG_LAYOUT_PREFIX + pageKey, null));
+        return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Void> savePageLayout(String pageKey, String layout) {
+        if (isBlank(pageKey)) {
+            return ReturnResult.error("页面标识不能为空");
+        }
+        String key = CFG_LAYOUT_PREFIX + pageKey;
+        List<MsServerConfig> rows = serverConfigMapper.selectList(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
+        MsServerConfig cfg = rows.isEmpty() ? null : rows.get(0);
+        if (cfg == null) {
+            cfg = new MsServerConfig();
+            cfg.setConfigKey(key);
+            cfg.setConfigValue(layout);
+            cfg.setConfigDesc("页面布局: " + pageKey);
+            serverConfigMapper.insert(cfg);
+        } else {
+            cfg.setConfigValue(layout);
+            serverConfigMapper.updateById(cfg);
+        }
+        return ReturnResult.ok();
+    }
+
+    /**
+     * 构造 Git 客户端（含 token 认证），供轮询与发布共用。
+     */
+    private GitClient.Builder buildGitClient(MsServerProject project, Path workspace) {
+        GitClient.Builder builder = GitClient.builder()
+                .remoteUrl(project.getGitUrl().trim())
+                .localPath(workspace);
+        if ("token".equalsIgnoreCase(project.getGitAuthType()) && !isBlank(project.getGitToken())) {
+            builder.credentials("oauth2", project.getGitToken());
+        }
+        return builder;
     }
 }

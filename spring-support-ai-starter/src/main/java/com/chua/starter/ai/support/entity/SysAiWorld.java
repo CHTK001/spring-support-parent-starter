@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 模拟人生-世界实体，对应表 {@code sys_ai_world}。
+ * 模拟-世界实体，对应表 {@code sys_ai_world}。
  *
  * <p>世界是模拟沙盒的顶层容器：含世界观/时代/天气/时间标签等共同状态，
  * 下面挂场景（scene）、NPC（npc）与事件时间线（event）。按当前登录用户隔离。</p>

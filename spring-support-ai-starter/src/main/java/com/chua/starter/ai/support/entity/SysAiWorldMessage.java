@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 模拟人生-场景对话消息实体，对应表 {@code sys_ai_world_message}。
+ * 模拟-场景对话消息实体，对应表 {@code sys_ai_world_message}。
  *
  * <p>与酒馆群消息同构：在「世界 → 场景」维度下沉用户与 AI 的逐条对话；
  * 历史按 (worldId, sceneId) 拉取，作为多角色对话的上文。</p>

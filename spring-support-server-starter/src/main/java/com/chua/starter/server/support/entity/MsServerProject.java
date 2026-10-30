@@ -213,6 +213,41 @@ public class MsServerProject {
     private String deployType;
 
     /**
+     * 上传完成后是否自动升级（默认 false：只上传到 uploads 目录，不执行投放/重启）
+     */
+    private Boolean uploadAutoUpgrade;
+
+    /**
+     * 是否启用定时发布（一次性）
+     */
+    private Boolean scheduleEnabled;
+
+    /**
+     * 定时发布时间（一次性发布）
+     */
+    private LocalDateTime scheduleTime;
+
+    /**
+     * 定时发布状态：NONE / PENDING / DONE / FAILED / CANCELED
+     */
+    private String scheduleStatus;
+
+    /**
+     * 是否启用 Git 定时拉取，有更新就自动发布
+     */
+    private Boolean gitPollEnabled;
+
+    /**
+     * Git 轮询 cron 表达式（默认每 5 分钟）
+     */
+    private String gitPollCron;
+
+    /**
+     * 最近一次检测到的远端 Git 提交（用于展示与排查）
+     */
+    private String gitLastCommit;
+
+    /**
      * 本次启动时间（运行时长基准，启动时写入、停止时清空）
      */
     private LocalDateTime runningSince;

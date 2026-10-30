@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 模拟人生（世界沙盒）管理接口。
+ * 模拟（世界沙盒）管理接口。
  *
  * <p>世界 → 场景 → 世界 NPC（复用角色库）→ 关系网 → 事件时间线 → 场景对话。
  * 按当前登录用户隔离；流式对话与时间推进在 {@link WorldSimChatController}。</p>

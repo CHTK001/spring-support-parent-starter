@@ -48,7 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 模拟人生-世界沙盒流式控制器（场景对话 SSE + 时间推进）。
+ * 模拟-世界沙盒流式控制器（场景对话 SSE + 时间推进）。
  *
  * <p>与酒馆的区别在于上下文更厚：每位 NPC 回复时，除了角色自己的人设，
  * 还会注入<b>世界状态</b>（世界观/时代/天气/当前时间）、<b>场景描述</b>与

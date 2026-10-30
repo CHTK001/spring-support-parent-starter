@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 模拟人生（世界沙盒）服务实现。
+ * 模拟（世界沙盒）服务实现。
  *
  * <p>世界视图（世界配置 + 场景 + NPC + 关系网 + 最近事件）是只读聚合，走本地
  * Caffeine 缓存（{@code aiCacheManager} 下 {@code aiWorldView} 缓存），任何写操作

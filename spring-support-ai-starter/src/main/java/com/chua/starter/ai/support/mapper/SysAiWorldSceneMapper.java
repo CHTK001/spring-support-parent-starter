@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiWorldScene;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 模拟人生-世界场景 Mapper
+ * 模拟-世界场景 Mapper
  *
  * @author CH
  */

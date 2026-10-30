@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.43</version>
+        <version>4.0.0.51</version>
     </parent>
     <artifactId>spring-support-monitor-starter</artifactId>
     <description>
@@ -31,6 +31,13 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-server-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 任务调度：发布管理的定时发布 / Git 定时轮询依赖 job-starter。
+             server-starter 中该依赖为 optional，应用侧必须显式引入才会装配调度能力。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-job-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- Docker 独立模块（容器/镜像/网络/卷/镜像库/模板），
