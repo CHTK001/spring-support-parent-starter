@@ -33,7 +33,9 @@ import org.springframework.context.annotation.ComponentScan;
         "com.chua.starter.eduai.dimension.service",
         "com.chua.starter.eduai.ai",
         "com.chua.starter.eduai.collect",
-        "com.chua.starter.eduai.queue"
+        "com.chua.starter.eduai.queue",
+        // 同步至统一模板库（paper → template_info）
+        "com.chua.starter.eduai.template"
 })
 @EnableConfigurationProperties(EduAiProperties.class)
 /**

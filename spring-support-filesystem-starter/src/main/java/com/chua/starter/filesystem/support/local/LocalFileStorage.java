@@ -274,37 +274,49 @@ public class LocalFileStorage extends AbstractFileStorage {
                 return ListObjectResult.builder()
                         .resultCode(ObjectResult.ResultCode.SUCCESS)
                         .metadata(metadataList)
+                        .total(0)
                         .build();
             }
-            int limit = request.getLimit() > 0 ? request.getLimit() : 10;
+            long limit = request.getLimit() > 0 ? request.getLimit() : 10;
+            long offset = Math.max(0, request.getOffset());
             /**
              * 尝试。
              * @param Files.list(targetDir 文件.列表(Targetdir
              */
             try (java.util.stream.Stream<Path> stream = Files.list(targetDir)) {
-                stream.sorted(java.util.Comparator.comparing(p -> p.getFileName().toString()))
-                        .limit(limit)
-                        .forEach(path -> {
-                            try {
-                                BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
-                                String name = path.getFileName().toString();
-                                metadataList.add(Metadata.builder()
-                                        .name(name)
-                                        .path(dir == null ? "" : dir)
-                                        .size(attrs.isDirectory() ? 0 : attrs.size())
-                                        .directory(attrs.isDirectory())
-                                        .lastModified(attrs.lastModifiedTime().toInstant().toEpochMilli())
-                                        .build());
-                            } catch (IOException e) {
-                                LOG.log(System.Logger.Level.DEBUG,
-                                        "[storage] 关闭文件通道失败，已忽略: " + e.getMessage(), e);
-                            }
-                        });
+                // 先只枚举子项并按名称排序（不触碰属性），再按 offset/limit 切片；
+                // 只有切片内的条目才会做 readAttributes。
+                // 瓦片图这类超大规模目录，逐项 stat 是卡死根因（一次读属性一次磁盘 IO），
+                // 切片后 stat 次数与「本页条数」成正比，与目录总量无关。
+                List<Path> sorted = stream
+                        .sorted(java.util.Comparator.comparing(p -> p.getFileName().toString()))
+                        .collect(java.util.stream.Collectors.toList());
+                long total = sorted.size();
+                long from = Math.min(offset, total);
+                long to = Math.min(offset + limit, total);
+                for (int i = (int) from; i < (int) to; i++) {
+                    Path path = sorted.get(i);
+                    try {
+                        BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+                        String name = path.getFileName().toString();
+                        metadataList.add(Metadata.builder()
+                                .name(name)
+                                .path(dir == null ? "" : dir)
+                                .size(attrs.isDirectory() ? 0 : attrs.size())
+                                .directory(attrs.isDirectory())
+                                .lastModified(attrs.lastModifiedTime().toInstant().toEpochMilli())
+                                .build());
+                    } catch (IOException e) {
+                        LOG.log(System.Logger.Level.DEBUG,
+                                "[storage] 关闭文件通道失败，已忽略: " + e.getMessage(), e);
+                    }
+                }
+                return ListObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.SUCCESS)
+                        .metadata(metadataList)
+                        .total(total)
+                        .build();
             }
-            return ListObjectResult.builder()
-                    .resultCode(ObjectResult.ResultCode.SUCCESS)
-                    .metadata(metadataList)
-                    .build();
         } catch (IOException e) {
             return ListObjectResult.builder()
                     .resultCode(ObjectResult.ResultCode.FAILURE)

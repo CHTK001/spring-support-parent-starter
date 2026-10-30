@@ -4,8 +4,10 @@ import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
+import com.chua.starter.template.support.model.TemplateSourceInfo;
 import com.chua.starter.template.support.entity.TemplateInfo;
 import com.chua.starter.template.support.printer.PrinterConfig;
+import com.chua.starter.template.support.service.SourceSyncerRegistry;
 import com.chua.starter.template.support.service.TemplateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,7 +20,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 模板管理 控制器
@@ -38,6 +43,11 @@ public class TemplateController {
      * 模板服务
      */
     private final TemplateService templateService;
+
+    /**
+     * 来源同步器注册表（消息 / 组卷模块通过 ApplicationRunner 上线，如未生效则无来源数据）
+     */
+    private final SourceSyncerRegistry syncerRegistry;
 
     /**
      * 分页查询模板
@@ -168,5 +178,44 @@ public class TemplateController {
     public PrinterConfig setPrinter(@RequestBody PrinterConfig printer) {
         templateService.setPrinter(printer);
         return printer;
+    }
+
+    /**
+     * 来源同步：恢复所有来源（message / paper）到统一模板库，返回各来源模板数
+     *
+     * @return source → 模板数
+     */
+    @PostMapping("/sync")
+    public Map<String, Integer> syncAllSources() {
+        return syncerRegistry.sync(null);
+    }
+
+    /**
+     * 来源同步：恢复指定来源（message / paper）到统一模板库，返回该来源模板数
+     *
+     * @param source 来源标识：message / paper
+     * @return source → 模板数
+     */
+    @PostMapping("/sync/{source}")
+    public Map<String, Integer> syncSource(@PathVariable String source) {
+        return syncerRegistry.sync(source);
+    }
+
+    /**
+     * 来源同步器信息（每个来源的已注册数与库中模板数）
+     *
+     * @return 来源列表
+     */
+    @GetMapping("/sync/sources")
+    public List<TemplateSourceInfo> syncSources() {
+        Map<String, Integer> countMap = syncerRegistry.sourceCountMap();
+        List<TemplateSourceInfo> result = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : countMap.entrySet()) {
+            result.add(new TemplateSourceInfo(
+                    e.getKey(), e.getValue(),
+                    syncerRegistry.get(e.getKey()) != null ? 1L : 0L));
+        }
+        result.sort(Comparator.comparing(TemplateSourceInfo::getSource));
+        return result;
     }
 }

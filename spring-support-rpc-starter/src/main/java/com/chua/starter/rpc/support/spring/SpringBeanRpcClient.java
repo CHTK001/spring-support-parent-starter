@@ -63,6 +63,18 @@ public class SpringBeanRpcClient implements RpcClient, ApplicationContextAware {
     private boolean exception = true;
 
     /**
+     * 防止自引用循环：{@link #getLocalBean(Class)} 在解析接口 Bean 列表时，
+     * 若被解析的接口本身由 {@link com.chua.starter.rpc.support.resource.RpcResourceBean}
+     * 的 FactoryBean 暴露（即「Consumer Bean 的代理就是自身」），
+     * 则会从 {@code getObject()} 重新进入 {@link #get(Class)}，形成
+     * {@code get() → getLocalBean() → getBean(RpcResourceBean) → getObject() → get()}
+     * 的无限自循环，最终抛出 {@code StackOverflowError}。
+     * <p>
+     * 同一个线程中，第二次解析已经处于同一目标接口时直接返回 {@code null} 打断循环。
+     */
+    private static final ThreadLocal<Class<?>> RESOLVING_TARGET = new ThreadLocal<>();
+
+    /**
      * 创建 springbean客户端 实例
      * @param registryConfigs registry配置
      * @param consumerConfig consumer配置
@@ -152,19 +164,43 @@ public class SpringBeanRpcClient implements RpcClient, ApplicationContextAware {
     @Override
     @SuppressWarnings("unchecked")
     public <T> T get(Class<T> targetType) {
-        log.debug("[SpringBean RPC] 获取目标接口的代理: {}", targetType.getName());
-        Object bean = getLocalBean(targetType);
-        if (bean == null) {
-            String message = "未在本地 Spring Application Context 中找到本地 Bean: " + targetType.getName()
-                    + (this.appName != null && !this.appName.isEmpty() ? " (app: " + this.appName + ")" : "");
-            if (this.exception) {
-                log.warn("[SpringBean RPC] {}", message);
-                throw new RpcException(RpcException.Type.TRANSPORT, message);
-            }
-            log.warn("[SpringBean RPC] {}", message);
+        if (RESOLVING_TARGET.get() != null && RESOLVING_TARGET.get() == targetType) {
+            log.debug("[SpringBean RPC] 自引用检测，跳过重复解析: {}", targetType.getName());
             return null;
         }
-        log.debug("[SpringBean RPC] 本地 Bean 代理: {} -> {}", targetType.getName(), bean.getClass().getName());
+        RESOLVING_TARGET.set(targetType);
+        try {
+            return doGet(targetType);
+        } finally {
+            RESOLVING_TARGET.remove();
+        }
+    }
+
+    /**
+     * 实际获取目标接口的本地代理（{@link #get(Class)} 保护后调用）
+     * <p>
+     * 永远返回代理：
+     * <ul>
+     *   <li>{@code exception=true}（默认）时，本地 Bean 不存在则在代理创建期抛出 {@link RpcException}
+     *       （消费端 Bean 的创建期即呈现错误）；</li>
+     *   <li>{@code exception=false} 时，返回的代理承载调用期语义：
+     *       {@link SpringBeanRpcInvocationHandler} 在解析不到本地 Bean 时静默返回 {@code null}。</li>
+     * </ul>
+     *
+     * @param targetType 目标类型
+     */
+    @SuppressWarnings("unchecked")
+    private <T> T doGet(Class<T> targetType) {
+        log.debug("[SpringBean RPC] 获取目标接口的代理: {}", targetType.getName());
+        Object bean = getLocalBean(targetType);
+        if (bean == null && this.exception) {
+            String message = "未在本地 Spring Application Context 中找到本地 Bean: " + targetType.getName()
+                    + (this.appName != null && !this.appName.isEmpty() ? " (app: " + this.appName + ")" : "");
+            log.warn("[SpringBean RPC] {}", message);
+            throw new RpcException(RpcException.Type.TRANSPORT, message);
+        }
+        log.debug("[SpringBean RPC] 本地 Bean 代理: {} -> {}", targetType.getName(),
+                bean != null ? bean.getClass().getName() : targetType.getName());
         return (T) proxyCache.computeIfAbsent(targetType, it -> ReflectUtils.newProxy(
                 it.getClassLoader(),
                 new Class<?>[]{it},

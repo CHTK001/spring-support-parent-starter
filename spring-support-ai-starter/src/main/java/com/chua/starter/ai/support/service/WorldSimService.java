@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.starter.ai.support.entity.SysAiWorld;
+import com.chua.starter.ai.support.entity.SysAiWorldAct;
 import com.chua.starter.ai.support.entity.SysAiWorldEvent;
 import com.chua.starter.ai.support.entity.SysAiWorldMessage;
 import com.chua.starter.ai.support.entity.SysAiWorldNpc;
@@ -96,4 +97,27 @@ public interface WorldSimService {
 
     /** 使世界视图/列表缓存失效（对话、推进等 Service 外写操作后调用） */
     void evictWorldCaches(Long worldId);
+
+    /* ---------------- 剧本模拟（幕次） ---------------- */
+
+    /** 幕次列表（状态 / 阶段 / 完成度 / 剧本落盘标记） */
+    List<Map<String, Object>> listActs(Long worldId);
+
+    /** 创建幕次（writing，落盘空剧本文件） */
+    SysAiWorldAct createAct(Long worldId);
+
+    /** 幕次详情（元数据 + 剧本 + 素材完成度） */
+    Map<String, Object> actDetail(Long worldId, Integer actNo);
+
+    /** 推进幕次：writing -> props_ok -> playing -> replay，一步一调 */
+    Map<String, Object> advanceAct(Long worldId, Integer actNo);
+
+    /** 重播已演完的幕次（回滚到 playing） */
+    Map<String, Object> replayAct(Long worldId, Integer actNo);
+
+    /** 结文：replay -> finished */
+    SysAiWorldAct finishAct(Long worldId, Integer actNo);
+
+    /** 使幕次维度的世界视图/列表缓存失效 */
+    void evictActCaches(Long worldId);
 }

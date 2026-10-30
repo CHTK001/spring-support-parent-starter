@@ -3,6 +3,7 @@ package com.chua.starter.template.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.mybatis.entity.PageResult;
@@ -13,12 +14,14 @@ import com.chua.starter.template.support.mapper.TemplatePrinterMapper;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
+import com.chua.starter.template.support.model.TemplateSourceRequest;
 import com.chua.starter.template.support.printer.PrinterConfig;
 import com.chua.starter.template.support.service.TemplateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+
+import com.chua.common.support.utils.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -86,6 +89,46 @@ public class TemplateServiceImpl implements TemplateService {
         existing.setTemplateInfoUpdatedAt(java.time.LocalDateTime.now());
         templateInfoMapper.updateById(existing);
         log.info("[Template] 删除模板: id={}", id);
+    }
+
+    /**
+     * 把来源模块（消息 / 组卷）的模板行接入统一模板库，幂等注册
+     *
+     * <p>已存在同一来源的模板（source + source_id 完全相同）时更新；
+     * 未注册时新建。仅更新 template_info_source/source_id/provider 指向自身的行，
+     * 不触碰 hiprint 自建的绘制模板。</p>
+     *
+     * @param request 来源模板注册请求
+     * @return 注册后的模板信息实体
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TemplateInfo registerTemplate(TemplateSourceRequest request) {
+        if (request == null || StringUtils.isBlank(request.getSource())
+                || StringUtils.isBlank(request.getSourceId())) {
+            throw new IllegalArgumentException("来源模板注册必须指定 source & sourceId");
+        }
+        String source = request.getSource();
+        String sourceId = request.getSourceId();
+        TemplateInfo existing = templateInfoMapper.selectOne(
+                Wrappers.<TemplateInfo>lambdaQuery()
+                        .eq(TemplateInfo::getTemplateInfoSource, source)
+                        .eq(TemplateInfo::getTemplateInfoSourceId, sourceId));
+        if (existing != null) {
+            TemplateInfo template = request.toEntity("-1");
+            template.setTemplateInfoId(existing.getTemplateInfoId());
+            template.setTemplateInfoCreator(existing.getTemplateInfoCreator());
+            template.setTemplateInfoUpdatedAt(java.time.LocalDateTime.now());
+            templateInfoMapper.updateById(template);
+            log.info("[Template] 更新来源模板: source={}, sourceId={}", source, sourceId);
+            return templateInfoMapper.selectById(existing.getTemplateInfoId());
+        }
+        TemplateInfo template = request.toEntity("-1");
+        template.setTemplateInfoCreatedAt(java.time.LocalDateTime.now());
+        template.setTemplateInfoUpdatedAt(java.time.LocalDateTime.now());
+        templateInfoMapper.insert(template);
+        log.info("[Template] 注册来源模板: source={}, sourceId={}", source, sourceId);
+        return templateInfoMapper.selectById(template.getTemplateInfoId());
     }
 
     @Override
@@ -300,6 +343,10 @@ public class TemplateServiceImpl implements TemplateService {
         // 类型
         if (StringUtils.hasText(q.getType())) {
             wrapper.eq(TemplateInfo::getTemplateInfoType, q.getType());
+        }
+        // 来源
+        if (StringUtils.hasText(q.getSource())) {
+            wrapper.eq(TemplateInfo::getTemplateInfoSource, q.getSource());
         }
         // 状态
         if (StringUtils.hasText(q.getStatus())) {
