@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 模拟人生-世界NPC实体，对应表 {@code sys_ai_world_npc}。
+ * 模拟-世界NPC实体，对应表 {@code sys_ai_world_npc}。
  *
  * <p>世界 NPC 复用角色库 {@code sys_ai_role}（人设/头像/系统提示词），本表记录它
  * 在当前世界的"身份"：所在场景、世界内昵称、模型/温度覆盖、人设补充、是否参与

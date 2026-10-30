@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 模拟人生-世界事件时间线实体，对应表 {@code sys_ai_world_event}。
+ * 模拟-世界事件时间线实体，对应表 {@code sys_ai_world_event}。
  *
  * <p>世界动态的持久化事件流：推进（advance，生成一段「世界动态」旁白）、
  * 对话（chat，场景内发生了值得记录的互动）、系统（system）。按时间流水展示，

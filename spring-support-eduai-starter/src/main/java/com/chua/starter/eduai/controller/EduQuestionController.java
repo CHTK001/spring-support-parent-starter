@@ -152,7 +152,7 @@ public class EduQuestionController {
      * AI 选题：按条件向 AI 要一批题目，供组卷页往已存在的试卷里补题。
      *
      * <p>AI 能力依赖 spring-support-ai-starter；不可用时服务端回退到规则选题，
-     * 调用方应先用 {@code GET /v2/edu/ai/capability} 判断是否展示 AI 入口。</p>
+     * 调用方应先用 {@code GET /v2/chat/capability} 判断是否展示 AI 入口。</p>
      *
      * @param dto 选题条件
      * @return 题目列表，保持 AI 给出的顺序

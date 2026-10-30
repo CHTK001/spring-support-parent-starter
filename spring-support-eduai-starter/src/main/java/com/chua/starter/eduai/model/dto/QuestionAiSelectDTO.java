@@ -8,7 +8,7 @@ import java.util.List;
  * <p>供组卷页在「当前试卷已存在」的前提下，直接向 AI 要一批题目补进试卷 ——
  * 与 {@link PaperGenerateDTO} 的区别是本 DTO 不建卷，只返回题目列表。</p>
  *
- * <p>调用方需先通过 {@code GET /v2/edu/ai/capability} 确认 AI 可用；
+ * <p>调用方需先通过 {@code GET /v2/chat/capability} 确认 AI 可用；
  * AI 不可用时服务端会回退到规则选题（按学科/学段取候选题），
  * 不会因此报错，但结果不代表模型判断。</p>
  *

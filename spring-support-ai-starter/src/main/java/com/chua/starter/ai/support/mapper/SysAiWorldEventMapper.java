@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiWorldEvent;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 模拟人生-世界事件时间线 Mapper
+ * 模拟-世界事件时间线 Mapper
  *
  * @author CH
  */

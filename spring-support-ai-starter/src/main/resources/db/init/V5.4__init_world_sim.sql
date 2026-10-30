@@ -1,5 +1,5 @@
 -- =============================================================================
--- V5.4 —— 模拟人生（世界沙盒）六张表
+-- V5.4 —— 模拟（世界沙盒）六张表
 --
 -- 形态：比酒馆（tavern 群聊）更复杂的世界模拟。
 --   世界（world）→ 场景（scene）→ 世界 NPC（npc，复用 sys_ai_role）+ 关系（relationship）+ 事件（event）+ 场景消息（message）
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_world_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟人生-世界';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟-世界';
 
 -- ---------------------------------------------------------------------
 -- 场景（世界内的地点，NPC 分布在各场景）
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world_scene` (
   PRIMARY KEY (`id`),
   KEY `idx_world_scene_world` (`world_id`),
   KEY `idx_world_scene_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟人生-世界场景';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟-世界场景';
 
 -- ---------------------------------------------------------------------
 -- 世界 NPC（复用 sys_ai_role 角色库；本表记录它在这个世界的"身份/位置/配置"）
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world_npc` (
   KEY `idx_world_npc_world` (`world_id`),
   KEY `idx_world_npc_scene` (`scene_id`),
   KEY `idx_world_npc_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟人生-世界NPC';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟-世界NPC';
 
 -- ---------------------------------------------------------------------
 -- 关系（NPC 间好感度 + 关系标签，互动后自动增减）
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world_relationship` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_world_rel_pair` (`world_id`, `from_npc_id`, `to_npc_id`),
   KEY `idx_world_rel_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟人生-NPC关系';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟-NPC关系';
 
 -- ---------------------------------------------------------------------
 -- 世界动态事件时间线（推进/对话/系统 产生的事件流）
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world_event` (
   PRIMARY KEY (`id`),
   KEY `idx_world_event_world` (`world_id`),
   KEY `idx_world_event_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟人生-世界事件时间线';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟-世界事件时间线';
 
 -- ---------------------------------------------------------------------
 -- 场景对话消息（指定场景内的多角色对话历史）
@@ -125,4 +125,4 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world_message` (
   PRIMARY KEY (`id`),
   KEY `idx_world_msg_world_scene` (`world_id`, `scene_id`),
   KEY `idx_world_msg_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟人生-场景对话消息';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模拟-场景对话消息';

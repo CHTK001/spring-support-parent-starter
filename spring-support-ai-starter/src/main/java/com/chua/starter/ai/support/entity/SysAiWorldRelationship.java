@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 模拟人生-NPC关系实体，对应表 {@code sys_ai_world_relationship}。
+ * 模拟-NPC关系实体，对应表 {@code sys_ai_world_relationship}。
  *
  * <p>NPC 两两之间的好感度（affinity）与关系标签（好友/恋人/同事/敌对…）。
  * 互动后由后端自动增减好感度并落库；同一对角色在同一个世界内唯一。</p>
