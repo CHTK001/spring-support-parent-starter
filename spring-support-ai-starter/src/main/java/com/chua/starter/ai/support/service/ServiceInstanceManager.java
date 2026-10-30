@@ -368,6 +368,14 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 构造 OpenAI 流式分片的外层信封骨架。
+     *
+     * @param id      分片所属响应标识，不能为 null
+     * @param created 创建时间戳，单位为秒
+     * @param model   实际生效的模型名，不能为 null
+     * @return 含 id/object/created/model 四个字段的有序 Map
+     */
     private Map<String, Object> openAiChunkEnvelope(String id, long created, String model) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", id);
@@ -377,6 +385,14 @@ public class ServiceInstanceManager {
         return m;
     }
 
+    /**
+     * 构造 OpenAI 流式分片中的 choices 元素。
+     *
+     * @param index        该 choice 在数组中的下标
+     * @param delta        本片增量内容，不能为 null
+     * @param finishReason 结束原因，未结束时为 null
+     * @return 含 index/delta/finish_reason 的有序 Map
+     */
     private Map<String, Object> choiceDelta(int index, Map<String, Object> delta, String finishReason) {
         Map<String, Object> c = new LinkedHashMap<>();
         c.put("index", index);
@@ -385,6 +401,12 @@ public class ServiceInstanceManager {
         return c;
     }
 
+    /**
+     * 把内部用量对象转换为 OpenAI 的 usage 结构，空值按 0 处理。
+     *
+     * @param usage 内部用量快照，可为 null
+     * @return 含 prompt_tokens/completion_tokens/total_tokens 的有序 Map
+     */
     private Map<String, Object> openAiUsage(AiUsage usage) {
         Map<String, Object> u = new LinkedHashMap<>();
         int p = usage != null && usage.getInputTokens() != null ? usage.getInputTokens() : 0;
@@ -395,6 +417,12 @@ public class ServiceInstanceManager {
         return u;
     }
 
+    /**
+     * 归一化 OpenAI 请求中的 messages 数组，补齐缺省角色并展开多段文本内容。
+     *
+     * @param raw 原始 messages 值，可为 null 或非 List 类型，此时返回空列表
+     * @return 归一化后的消息列表，元素为 role/content/tool_calls 等键的有序 Map
+     */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseOpenAiMessages(Object raw) {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -449,6 +477,12 @@ public class ServiceInstanceManager {
         return out;
     }
 
+    /**
+     * 抽取 OpenAI 消息内容为纯文本：字符串直接返回，分段数组只拼接 text 分段。
+     *
+     * @param content 原始 content 值，可为 null
+     * @return 抽取出的文本，无内容时返回空字符串
+     */
     private String extractOpenAiContent(Object content) {
         if (content == null) {
             return "";
@@ -473,6 +507,14 @@ public class ServiceInstanceManager {
 
     // ==================== Claude /v1/messages ====================
 
+    /**
+     * 处理 Claude {@code /v1/messages} 请求，按 stream 标志选择流式或非流式回写。
+     *
+     * @param inst     服务实例配置，不能为 null
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param token    已通过鉴权的访问令牌，不能为 null
+     * @throws IOException 读取请求体或回写响应失败时抛出
+     */
     private void handleCcMessages(SysAiServiceInstance inst, HttpExchange exchange, SysAiServiceToken token) throws IOException {
         Map<String, Object> body = readJsonBody(exchange);
         boolean wantStream = Boolean.TRUE.equals(body.get("stream"));
@@ -510,6 +552,12 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 把 Claude 请求体转换为 OpenAI 风格消息序列，system 作为首条 system 消息插入。
+     *
+     * @param body Claude 请求体，不能为 null；其中 system/messages 字段可为 null
+     * @return 转换后的消息列表，不存在任何输入时返回空列表
+     */
     private List<Map<String, Object>> parseCcMessages(Map<String, Object> body) {
         List<Map<String, Object>> out = new ArrayList<>();
         String sysText = extractCcText(body.get("system"));
@@ -540,6 +588,9 @@ public class ServiceInstanceManager {
 
     /**
      * CC assistant 内容 → OpenAI assistant：text 块并入 content，tool_use 块转为 tool_calls。
+     *
+     * @param out     目标消息列表，转换结果追加到末尾，不能为 null
+     * @param content CC 侧的 content 值，可为 null、字符串或块数组
      */
     private void appendCcAssistant(List<Map<String, Object>> out, Object content) {
         StringBuilder text = new StringBuilder();
@@ -578,6 +629,9 @@ public class ServiceInstanceManager {
     /**
      * CC user 内容 → OpenAI：tool_result 块转为 role=tool（须紧跟 assistant 的 tool_calls），
      * 其余 text 块合并为普通 user 消息。
+     *
+     * @param out     目标消息列表，转换结果追加到末尾，不能为 null
+     * @param content CC 侧的 content 值，可为 null、字符串或块数组
      */
     private void appendCcUser(List<Map<String, Object>> out, Object content) {
         if (!(content instanceof List<?> blocks)) {
@@ -613,6 +667,12 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 把 CC 工具入参序列化为 JSON 字符串，序列化失败或空值时退化为 {@code "{}"}。
+     *
+     * @param input 工具入参对象，可为 null
+     * @return 合法 JSON 字符串，不会为 null
+     */
     private String ccInputJson(Object input) {
         if (input == null) {
             return "{}";
@@ -630,6 +690,9 @@ public class ServiceInstanceManager {
      * 自定义工具（name/description/input_schema）→ {@link ChatTool}；
      * tool_choice auto/any/none/tool{name} → auto/required/none/工具名。
      * computer-use 等内置类型工具（无 name/input_schema）跳过。
+     *
+     * @param request 待填充的内部聊天请求，不能为 null
+     * @param body    CC 请求体，不能为 null；缺 tools/tool_choice 时不修改 request
      */
     @SuppressWarnings("unchecked")
     private void applyCcTools(AiChatRequest request, Map<String, Object> body) {
@@ -678,6 +741,12 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 抽取 CC 内容为纯文本：字符串直接返回，块数组只拼接 text 块。
+     *
+     * @param raw 原始内容值，可为 null
+     * @return 抽取出的文本，无内容时返回空字符串
+     */
     private String extractCcText(Object raw) {
         if (raw == null) {
             return "";
@@ -699,6 +768,11 @@ public class ServiceInstanceManager {
 
     // ==================== Claude /v1/messages/count_tokens ====================
 
+    /**
+     * 处理 Claude {@code /v1/messages/count_tokens} 请求，返回估算的输入 token 数。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     */
     private void handleCcCountTokens(HttpExchange exchange) {
         try {
             Map<String, Object> body = readJsonBody(exchange);
@@ -713,6 +787,9 @@ public class ServiceInstanceManager {
     /**
      * 估算一次 CC 请求的输入 token 数。服务端无 Anthropic 分词器，按「可见字符 / 4」近似，
      * 覆盖 system、消息正文/思考/工具调用与工具结果、以及工具定义，供 Claude Code 做上下文预算。
+     *
+     * @param body CC 请求体，不能为 null
+     * @return 估算的输入 token 数，至少为 0
      */
     private int estimateCcInputTokens(Map<String, Object> body) {
         long chars = ccTextChars(body.get("system"));
@@ -730,6 +807,12 @@ public class ServiceInstanceManager {
         return (int) Math.max(1, (chars + 3) / 4);
     }
 
+    /**
+     * 统计 system 字段的可见字符数，块数组只累计 text 块。
+     *
+     * @param raw 原始内容值，可为 null
+     * @return 字符数，null 时为 0
+     */
     private long ccTextChars(Object raw) {
         if (raw == null) {
             return 0;
@@ -749,6 +832,12 @@ public class ServiceInstanceManager {
         return String.valueOf(raw).length();
     }
 
+    /**
+     * 统计单条消息内容的可见字符数，按块类型分别累计文本、思考、工具调用与工具结果。
+     *
+     * @param raw 消息 content 值，可为 null、字符串或块数组
+     * @return 字符数，null 时为 0
+     */
     private long ccContentChars(Object raw) {
         if (raw == null) {
             return 0;
@@ -785,6 +874,12 @@ public class ServiceInstanceManager {
         return String.valueOf(raw).length();
     }
 
+    /**
+     * 统计工具定义的字符数，含名称、描述与入参 schema 的 JSON 长度。
+     *
+     * @param raw 原始 tools 值，非 List 类型时按 0 处理
+     * @return 字符数，无工具定义时为 0
+     */
     private long ccToolsChars(Object raw) {
         if (!(raw instanceof List<?> tools)) {
             return 0;
@@ -799,10 +894,22 @@ public class ServiceInstanceManager {
         return n;
     }
 
+    /**
+     * 取对象的字符串形式长度，null 记为 0。
+     *
+     * @param o 任意对象，可为 null
+     * @return 字符串长度，null 时为 0
+     */
     private static long strLen(Object o) {
         return o == null ? 0 : String.valueOf(o).length();
     }
 
+    /**
+     * 计算对象的 JSON 序列化长度，序列化失败时退化为字符串长度。
+     *
+     * @param o 任意对象，可为 null
+     * @return JSON 文本长度，null 时为 0
+     */
     private long jsonLen(Object o) {
         if (o == null) {
             return 0;
@@ -838,6 +945,13 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 开启（或复用）Anthropic 流中的 thinking 内容块，返回块下标。
+     *
+     * @param st 流式状态，不能为 null
+     * @return 该 thinking 块在本次响应中的下标
+     * @throws IOException 回写 SSE 事件失败时抛出
+     */
     private int openCcThinkingBlock(StreamState st) throws IOException {
         if (st.ccThinkingOpened) {
             return st.ccThinkingIndex;
@@ -854,6 +968,13 @@ public class ServiceInstanceManager {
         return index;
     }
 
+    /**
+     * 开启（或复用）Anthropic 流中的 text 内容块，返回块下标。
+     *
+     * @param st 流式状态，不能为 null
+     * @return 该 text 块在本次响应中的下标
+     * @throws IOException 回写 SSE 事件失败时抛出
+     */
     private int openCcTextBlock(StreamState st) throws IOException {
         if (st.ccTextOpened) {
             return st.ccTextIndex;
@@ -870,6 +991,16 @@ public class ServiceInstanceManager {
         return index;
     }
 
+    /**
+     * 开启（或复用）Anthropic 流中的 tool_use 内容块，返回块下标。
+     *
+     * @param st            流式状态，不能为 null
+     * @param toolCallIndex 底层 tool_calls 数组中的下标
+     * @param id            工具调用标识，可为 null，落库时空串兜底
+     * @param name          工具名，可为 null，落库时空串兜底
+     * @return 该 tool_use 块在本次响应中的下标
+     * @throws IOException 回写 SSE 事件失败时抛出
+     */
     private int openCcToolBlock(StreamState st, int toolCallIndex, String id, String name) throws IOException {
         Integer existing = st.ccToolBlockByIndex.get(toolCallIndex);
         if (existing != null) {
@@ -891,6 +1022,10 @@ public class ServiceInstanceManager {
     /**
      * 把底层流式 tool_calls 增量翻译为 Anthropic tool_use 事件：
      * 首帧 content_block_start（tool_use, id, name, input{}），随后 input_json_delta 入参片段。
+     *
+     * @param st        流式状态，不能为 null
+     * @param toolCalls 底层下发的工具调用增量列表，不能为 null
+     * @throws IOException 回写 SSE 事件失败时抛出
      */
     private void writeCcToolCalls(StreamState st, List<ChatToolCallData> toolCalls) throws IOException {
         for (ChatToolCallData tc : toolCalls) {
@@ -910,6 +1045,10 @@ public class ServiceInstanceManager {
     /**
      * 收尾 CC 流：按下标顺序 content_block_stop 所有块，再 message_delta（有工具调用则
      * stop_reason=tool_use，否则 end_turn）与 message_stop。
+     *
+     * @param st    流式状态，不能为 null
+     * @param usage 本次调用的用量快照，可为 null
+     * @throws IOException 回写 SSE 事件失败时抛出
      */
     private void finishCcStream(StreamState st, AiUsage usage) throws IOException {
         if (st.ccOpenedBlocks.isEmpty()) {
@@ -934,6 +1073,16 @@ public class ServiceInstanceManager {
 
     // ==================== Gemini ====================
 
+    /**
+     * 处理 Gemini {@code /v1beta/models/**} 请求：GET 走模型列表，POST 走生成或流式生成。
+     *
+     * @param inst     服务实例配置，不能为 null
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param method   HTTP 方法名，不能为 null
+     * @param path     请求路径，用于识别模型名与生成动作
+     * @param token    已通过鉴权的访问令牌，不能为 null
+     * @throws IOException 读取请求体或回写响应失败时抛出
+     */
     private void handleGemini(SysAiServiceInstance inst, HttpExchange exchange, String method, String path,
                               SysAiServiceToken token)
             throws IOException {
@@ -959,6 +1108,12 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 从 Gemini 请求路径中解析模型名。
+     *
+     * @param path 请求路径，不能为 null
+     * @return 模型名；路径不含 {@code /v1beta/models/} 时返回空字符串
+     */
     private String extractGeminiModel(String path) {
         int marker = path.indexOf("/v1beta/models/");
         if (marker < 0) {
@@ -969,6 +1124,12 @@ public class ServiceInstanceManager {
         return colon >= 0 ? rest.substring(0, colon) : rest;
     }
 
+    /**
+     * 把 Gemini 请求体转换为 OpenAI 风格消息序列，systemInstruction 作为首条 system 消息。
+     *
+     * @param body Gemini 请求体，不能为 null；contents/systemInstruction 可为 null
+     * @return 转换后的消息列表，无内容时返回空列表
+     */
     private List<Map<String, Object>> parseGeminiContents(Map<String, Object> body) {
         List<Map<String, Object>> out = new ArrayList<>();
         Object sysInstr = body.get("systemInstruction");
@@ -995,6 +1156,12 @@ public class ServiceInstanceManager {
         return out;
     }
 
+    /**
+     * 拼接 Gemini 内容块中所有 parts 的文本。
+     *
+     * @param raw 内容对象，非 Map 或缺少 parts 时返回空字符串
+     * @return 拼接后的文本，无文本时返回空字符串
+     */
     private String geminiPartsText(Object raw) {
         if (!(raw instanceof Map<?, ?> m)) {
             return "";
@@ -1012,6 +1179,16 @@ public class ServiceInstanceManager {
         return sb.toString();
     }
 
+    /**
+     * 写出一个 Gemini 流式分片，结束时附带 usageMetadata 用量信息。
+     *
+     * @param st     流式状态，不能为 null
+     * @param model  实际生效的模型名，可为 null
+     * @param text   本片文本增量，可为 null
+     * @param finish 是否为最后一片
+     * @param usage  本次调用用量，可为 null，仅在结束时输出
+     * @throws IOException 回写响应失败时抛出
+     */
     private void writeGeminiStream(StreamState st, String model, String text, boolean finish, AiUsage usage)
             throws IOException {
         Map<String, Object> candidate = new LinkedHashMap<>();
@@ -1036,6 +1213,12 @@ public class ServiceInstanceManager {
 
     // ==================== 模型列表 ====================
 
+    /**
+     * 输出模型列表，按 flavor 分别渲染 Gemini {@code models[]} 或 OpenAI {@code data[]} 结构。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param flavor   协议风味，取值为 {@code gemini} 或其他（按 OpenAI 结构输出）
+     */
     private void handleModelsList(HttpExchange exchange, String flavor) {
         try {
             List<String> models = new ArrayList<>(registry.getModels());
@@ -1108,6 +1291,9 @@ public class ServiceInstanceManager {
      * 把 OpenAI 入站 tools / tool_choice 翻译为内部结构：
      * {@code {type:"function", function:{name, description, parameters}}} → {@link ChatTool}；
      * tool_choice 字符串 auto/none/required，或对象 {@code {type:"function", function:{name}}} → 指定工具名。
+     *
+     * @param request 待填充的内部聊天请求，不能为 null
+     * @param body    OpenAI 请求体，不能为 null；缺 tools/tool_choice 时不修改 request
      */
     @SuppressWarnings("unchecked")
     private void applyOpenAiTools(AiChatRequest request, Map<String, Object> body) {
@@ -1331,6 +1517,12 @@ public class ServiceInstanceManager {
                 ));
     }
 
+    /**
+     * 把外部调用模式串映射为协议标识。
+     *
+     * @param mode 调用模式，可为 null
+     * @return 对应协议标识
+     */
     private String modeToProtocol(String mode) {
         if (mode.startsWith("openai")) {
             return "openai";
