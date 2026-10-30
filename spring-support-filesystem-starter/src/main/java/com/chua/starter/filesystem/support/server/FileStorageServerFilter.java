@@ -5568,13 +5568,27 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             if (c == '\\' && i + 1 < raw.length()) {
                 char next = raw.charAt(++i);
                 switch (next) {
-                    case '"': sb.append('"'); break;
-                    case '\\': sb.append('\\'); break;
-                    case '/': sb.append('/'); break;
-                    case 'n': sb.append('\n'); break;
-                    case 't': sb.append('\t'); break;
-                    case 'r': sb.append('\r'); break;
-                    default: sb.append(next); break;
+                    case '"':
+                        sb.append('"');
+                        break;
+                    case '\\':
+                        sb.append('\\');
+                        break;
+                    case '/':
+                        sb.append('/');
+                        break;
+                    case 'n':
+                        sb.append('\n');
+                        break;
+                    case 't':
+                        sb.append('\t');
+                        break;
+                    case 'r':
+                        sb.append('\r');
+                        break;
+                    default:
+                        sb.append(next);
+                        break;
                 }
             } else {
                 sb.append(c);

@@ -169,6 +169,12 @@ public class ServiceInstanceManager {
 
     // ==================== 协议上下文注册（按开关） ====================
 
+    /**
+     * 按实例开关注册各协议端点上下文。
+     *
+     * @param server JDK HttpServer 实例，不能为 null
+     * @param inst   服务实例配置，不能为 null，其协议开关决定注册哪些路径
+     */
     private void registerContexts(HttpServer server, SysAiServiceInstance inst) {
         if (inst.getOpenaiEnabled() != null && inst.getOpenaiEnabled() == 1) {
             server.createContext("/v1/chat/completions", ex -> safeHandle(inst, ex, "openai_chat"));
@@ -184,6 +190,13 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 统一包装请求处理，捕获异常并回写 500 错误，避免单次请求异常导致连接悬挂。
+     *
+     * @param inst     服务实例配置，不能为 null
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param kind     端点类型标识，不能为 null 或空字符串
+     */
     private void safeHandle(SysAiServiceInstance inst, HttpExchange exchange, String kind) {
         try {
             route(inst, exchange, kind);
@@ -195,6 +208,14 @@ public class ServiceInstanceManager {
 
     // ==================== 路由 ====================
 
+    /**
+     * 依据端点类型标识分发到具体协议处理器，未识别的类型回写 404。
+     *
+     * @param inst     服务实例配置，不能为 null
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param kind     端点类型标识，不能为 null 或空字符串
+     * @throws IOException 回写响应体失败时抛出
+     */
     private void route(SysAiServiceInstance inst, HttpExchange exchange, String kind) throws IOException {
         String method = exchange.getRequestMethod();
         String path = exchange.getRequestURI().getPath();
@@ -245,6 +266,14 @@ public class ServiceInstanceManager {
 
     // ==================== OpenAI /v1/chat/completions ====================
 
+    /**
+     * 处理 OpenAI {@code /v1/chat/completions} 请求，按 stream 标志选择流式或非流式回写。
+     *
+     * @param inst     服务实例配置，不能为 null
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param token    已通过鉴权的访问令牌，不能为 null
+     * @throws IOException 读取请求体或回写响应失败时抛出
+     */
     private void handleOpenAiChat(SysAiServiceInstance inst, HttpExchange exchange, SysAiServiceToken token) throws IOException {
         Map<String, Object> body = readJsonBody(exchange);
         boolean wantStream = Boolean.TRUE.equals(body.get("stream"));

@@ -34,6 +34,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -1246,21 +1248,43 @@ public class ApmController {
         bundle.put("exportedAt", System.currentTimeMillis());
         bundle.put("agent", agentAttachService.getStatus());
         bundle.put("stats", apmQueryService.stats());
-        try { bundle.put("health", apmQueryService.health()); } catch (Exception e) { bundle.put("health", Map.of("error", e.getMessage())); }
-        try { bundle.put("jvm", jvmMetricsService.snapshot()); } catch (Exception e) { bundle.put("jvm", Map.of("error", e.getMessage())); }
-        try { bundle.put("threadDump", jvmMetricsService.threadDump()); } catch (Exception e) { bundle.put("threadDump", List.of()); }
-        try { bundle.put("memoryPools", jvmMemoryService.memoryPools()); } catch (Exception e) { bundle.put("memoryPools", Map.of("error", e.getMessage())); }
-        try { bundle.put("classLoading", jvmMemoryService.classLoading()); } catch (Exception e) { bundle.put("classLoading", Map.of("error", e.getMessage())); }
-        try { bundle.put("slowCalls", apmQueryService.slowCalls(20)); } catch (Exception e) { bundle.put("slowCalls", List.of()); }
-        try { bundle.put("slowSql", apmQueryService.slowSql(20, 200)); } catch (Exception e) { bundle.put("slowSql", List.of()); }
-        try { bundle.put("errorRanking", apmQueryService.errorRanking(20)); } catch (Exception e) { bundle.put("errorRanking", List.of()); }
-        try { bundle.put("handles", apmQueryService.handleInventory(100)); } catch (Exception e) { bundle.put("handles", Map.of("error", e.getMessage())); }
-        try { bundle.put("systemOut", apmQueryService.systemOut(100)); } catch (Exception e) { bundle.put("systemOut", List.of()); }
-        try { bundle.put("traceHotspots", apmQueryService.traceHotspots(20)); } catch (Exception e) { bundle.put("traceHotspots", List.of()); }
-        try { bundle.put("tracePhases", apmQueryService.tracePhases()); } catch (Exception e) { bundle.put("tracePhases", List.of()); }
-        try { bundle.put("skywalking", apmQueryService.skywalkingExport()); } catch (Exception e) { bundle.put("skywalking", List.of()); }
-        try { bundle.put("alerts", alertMonitorService.recentAlerts()); } catch (Exception e) { bundle.put("alerts", List.of()); }
+        putDiagnostic(bundle, "health", apmQueryService::health,
+                e -> Map.of("error", String.valueOf(e.getMessage())));
+        putDiagnostic(bundle, "jvm", jvmMetricsService::snapshot,
+                e -> Map.of("error", String.valueOf(e.getMessage())));
+        putDiagnostic(bundle, "threadDump", jvmMetricsService::threadDump, e -> List.of());
+        putDiagnostic(bundle, "memoryPools", jvmMemoryService::memoryPools,
+                e -> Map.of("error", String.valueOf(e.getMessage())));
+        putDiagnostic(bundle, "classLoading", jvmMemoryService::classLoading,
+                e -> Map.of("error", String.valueOf(e.getMessage())));
+        putDiagnostic(bundle, "slowCalls", () -> apmQueryService.slowCalls(20), e -> List.of());
+        putDiagnostic(bundle, "slowSql", () -> apmQueryService.slowSql(20, 200), e -> List.of());
+        putDiagnostic(bundle, "errorRanking", () -> apmQueryService.errorRanking(20), e -> List.of());
+        putDiagnostic(bundle, "handles", () -> apmQueryService.handleInventory(100),
+                e -> Map.of("error", String.valueOf(e.getMessage())));
+        putDiagnostic(bundle, "systemOut", () -> apmQueryService.systemOut(100), e -> List.of());
+        putDiagnostic(bundle, "traceHotspots", () -> apmQueryService.traceHotspots(20), e -> List.of());
+        putDiagnostic(bundle, "tracePhases", apmQueryService::tracePhases, e -> List.of());
+        putDiagnostic(bundle, "skywalking", apmQueryService::skywalkingExport, e -> List.of());
+        putDiagnostic(bundle, "alerts", alertMonitorService::recentAlerts, e -> List.of());
         return ReturnResult.ok(bundle);
+    }
+
+    /**
+     * 采集单个诊断片段并写入诊断包，采集失败时写入兜底值，避免单点异常中断整体导出。
+     *
+     * @param bundle   诊断包容器，不能为 null
+     * @param key      诊断片段键名，不能为 null 或空字符串
+     * @param supplier 片段采集逻辑，不能为 null
+     * @param fallback 采集失败时的兜底值生成函数，入参为捕获到的异常，不能为 null
+     */
+    private void putDiagnostic(Map<String, Object> bundle, String key,
+                               Supplier<Object> supplier, Function<Exception, Object> fallback) {
+        try {
+            bundle.put(key, supplier.get());
+        } catch (Exception e) {
+            bundle.put(key, fallback.apply(e));
+        }
     }
 
     /**
