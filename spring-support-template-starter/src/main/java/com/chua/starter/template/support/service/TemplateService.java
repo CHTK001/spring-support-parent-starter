@@ -4,6 +4,7 @@ import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
+import com.chua.starter.template.support.model.TemplateSourceRequest;
 import com.chua.starter.template.support.entity.TemplateInfo;
 import com.chua.starter.template.support.printer.PrinterConfig;
 
@@ -72,6 +73,18 @@ public interface TemplateService {
      * @return 设计器完整数据
      */
     TemplateDesignerPayload designer(String id);
+
+    /**
+     * 把来源模块（消息 / 组卷）的模板行接入统一模板库，幂等注册
+     *
+     * <p>已存在同一来源的模板（source + source_id 完全相同）时更新；
+     * 未注册时新建。仅更新 template_info_source/source_id/provider 指向自身的行，
+     * 不触碰 hiprint 自建的绘制模板。</p>
+     *
+     * @param request 来源模板注册请求
+     * @return 注册后的模板信息实体
+     */
+    TemplateInfo registerTemplate(TemplateSourceRequest request);
 
     /**
      * 打印机列表（应用侧 hiprint 连接地址与 Token）

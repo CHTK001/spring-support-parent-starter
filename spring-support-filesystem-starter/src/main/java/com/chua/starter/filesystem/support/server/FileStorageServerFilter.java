@@ -1078,8 +1078,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return error(response, 404, "Not Found");
         }
         applyWatermarkHeader(response);
+        // 分页参数（?limit/offset 可选）：仅枚举排序（不 stat）后按窗口切片，
+        // 大目录（如瓦片图目录）不再整目录逐项 stat。
+        int limit = intParam(request, "limit", Integer.MAX_VALUE);
+        int offset = intParam(request, "offset", 0);
         ListObjectResult result = storage.listObject(ListObjectRequest.builder()
-                .limit(Integer.MAX_VALUE)
+                .limit(limit)
+                .offset(offset)
                 .build());
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             return error(response, 500, "List Objects Failed");
@@ -2670,7 +2675,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .append(",\"path\":\"").append(escapeJson(dir == null ? "" : dir)).append("\"")
                 .append(",\"count\":");
         List<Metadata> items = result.getMetadata();
-        json.append(items == null ? 0 : items.size());
+        json.append(items == null ? 0 : items.size())
+                .append(",\"total\":")
+                // 分页后 count 只是本页条数；total 是目录全部条目数（旧实现为空时回退本页条数）
+                .append(result.getTotal() > 0 ? result.getTotal() : (items == null ? 0 : items.size()));
         if (items != null && !items.isEmpty()) {
             json.append(",\"items\":[");
             for (int i = 0; i < items.size(); i++) {
@@ -3806,7 +3814,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             // 对象不存在时尝试按目录回退列出
             ListObjectResult list = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
-                    .limit(Integer.MAX_VALUE)
+                    .limit(intParam(request, "limit", Integer.MAX_VALUE))
+                    .offset(intParam(request, "offset", 0))
                     .build());
             if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS
                     && list.getMetadata() != null && !list.getMetadata().isEmpty()) {
@@ -3824,7 +3833,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             // 路径根本不存在，故必须再用存在性探测区分，否则访问不存在的目录会被当成空目录。
             ListObjectResult list = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
-                    .limit(Integer.MAX_VALUE)
+                    .limit(intParam(request, "limit", Integer.MAX_VALUE))
+                    .offset(intParam(request, "offset", 0))
                     .build());
             if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS
                     && ((list.getMetadata() != null && !list.getMetadata().isEmpty())
@@ -3848,7 +3858,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             // "空目录"与"文件本身损坏"，此时如实报错，避免把真实读取失败伪装成空目录。
             ListObjectResult fallback = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
-                    .limit(Integer.MAX_VALUE)
+                    .limit(intParam(request, "limit", Integer.MAX_VALUE))
+                    .offset(intParam(request, "offset", 0))
                     .build());
             if (fallback.getResultCode() == ObjectResult.ResultCode.SUCCESS
                     && fallback.getMetadata() != null && !fallback.getMetadata().isEmpty()) {
@@ -6300,6 +6311,34 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return true;
         }
         return false;
+    }
+
+    /**
+     * 读取整型查询参数。
+     *
+     * <p>{@code ?limit=200} / {@code ?offset=400} 这类分页参数：解析失败、
+     * 取值为负数或未提供时返回 {@code defaultValue}，绝不抛异常。</p>
+     *
+     * @param request      请求
+     * @param name         参数名
+     * @param defaultValue 缺省/非法取值时的回落值
+     * @return 解析后的整型取值
+     */
+    private int intParam(ServerRequest request, String name, int defaultValue) {
+        Map<String, String> params = request.getParams();
+        if (params == null) {
+            return defaultValue;
+        }
+        String value = params.get(name);
+        if (value == null || value.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            return parsed < 0 ? defaultValue : parsed;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     /**

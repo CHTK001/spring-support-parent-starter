@@ -110,7 +110,15 @@ public enum ApiErrorCode {
      * @param 502 502
      * @return upstream错误的结果
      */
-    UPSTREAM_ERROR("UPSTREAM_ERROR", 502);
+    UPSTREAM_ERROR("UPSTREAM_ERROR", 502),
+
+    /**
+     * AI 调用失败（如编剧生成失败、没有可用的对话模型）
+     * @param "AI_ERROR" "AI_ERROR"
+     * @param 500 500
+     * @return AI_ERROR
+     */
+    AI_ERROR("AI_ERROR", 500);
 
     /**
      * 机器可读错误码

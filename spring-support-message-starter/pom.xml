@@ -47,6 +47,13 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- 消息模板 → 统一模板库（消息模板同时接入 template_info） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-template-starter</artifactId>
+            <version>4.0.0.51</version>
+        </dependency>
+
         <!-- Socket 会话模板（站内消息渠道推送） -->
         <dependency>
             <groupId>com.chua</groupId>

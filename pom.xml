@@ -782,6 +782,13 @@
                 <artifactId>spring-support-message-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一模板库：hiprint 绘制模板 + 消息模板 + 组卷模板 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-template-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>

@@ -136,6 +136,13 @@
             <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
 
+        <!-- 统一模板库（消息模板 + 组卷模板 + hiprint） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-template-starter</artifactId>
+            <version>4.0.0.51</version>
+        </dependency>
+
         <!-- 单元测试：覆盖学生口令摘要/校验这类安全核心逻辑。
              刻意不引 mockito：被测对象是纯函数（无外部依赖），
              打桩只会掩盖真实行为。 -->

@@ -39,6 +39,9 @@ public class TemplateSaveRequest {
     /** 备注 */
     private String remark;
 
+    /** 模板来源：hiprint / message / paper（创建时默认 hiprint） */
+    private String source = "hiprint";
+
     /** 模板 JSON 描述（设计器产物） */
     private String content;
 
@@ -63,6 +66,7 @@ public class TemplateSaveRequest {
         template.setTemplateInfoStatus(status);
         template.setTemplateInfoRemark(remark);
         template.setTemplateInfoContent(content);
+        template.setTemplateInfoSource(source);
         template.setTemplateInfoDeleted(0);
         template.setTemplateInfoUpdatedAt(LocalDateTime.now());
         return template;

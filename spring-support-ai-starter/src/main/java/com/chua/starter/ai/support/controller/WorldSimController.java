@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.starter.ai.support.entity.SysAiWorld;
+import com.chua.starter.ai.support.entity.SysAiWorldAct;
 import com.chua.starter.ai.support.entity.SysAiWorldEvent;
 import com.chua.starter.ai.support.entity.SysAiWorldMessage;
 import com.chua.starter.ai.support.entity.SysAiWorldNpc;
@@ -43,6 +44,7 @@ public class WorldSimController {
      * list Worlds
      * @return 返回值
     */
+    @GetMapping("/worlds")
     public List<Map<String, Object>> listWorlds() {
         return worldSimService.listWorlds();
     }
@@ -53,6 +55,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @GetMapping("/worlds/{id}/view")
     public Map<String, Object> worldView(@PathVariable Long id) {
         return worldSimService.worldView(id);
     }
@@ -64,6 +67,7 @@ public class WorldSimController {
      * @param body 参数
      * @return 返回值
     */
+    @PostMapping("/worlds")
     public SysAiWorld createWorld(@RequestBody Map<String, String> body) {
         return worldSimService.createWorld(
                 body == null ? null : body.get("name"),
@@ -79,6 +83,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @PutMapping("/worlds/{id}")
     public SysAiWorld updateWorld(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateWorld(id, body);
     }
@@ -89,6 +94,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @DeleteMapping("/worlds/{id}")
     public void deleteWorld(@PathVariable Long id) {
         worldSimService.deleteWorld(id);
     }
@@ -100,6 +106,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @GetMapping("/worlds/{id}/scenes")
     public List<SysAiWorldScene> listScenes(@PathVariable Long id) {
         return worldSimService.listScenes(id);
     }
@@ -112,6 +119,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @PostMapping("/worlds/{id}/scenes")
     public SysAiWorldScene createScene(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.createScene(id, body);
     }
@@ -124,6 +132,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @PutMapping("/scenes/{id}")
     public SysAiWorldScene updateScene(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateScene(id, body);
     }
@@ -134,6 +143,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @DeleteMapping("/scenes/{id}")
     public void deleteScene(@PathVariable Long id) {
         worldSimService.deleteScene(id);
     }
@@ -145,6 +155,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @GetMapping("/worlds/{id}/npcs")
     public List<Map<String, Object>> listNpcs(@PathVariable Long id) {
         return worldSimService.listNpcs(id);
     }
@@ -157,6 +168,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @PostMapping("/worlds/{id}/npcs")
     public SysAiWorldNpc addNpc(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.addNpc(id, body);
     }
@@ -169,6 +181,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @PutMapping("/npcs/{id}")
     public SysAiWorldNpc updateNpc(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateNpc(id, body);
     }
@@ -179,6 +192,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @DeleteMapping("/npcs/{id}")
     public void removeNpc(@PathVariable Long id) {
         worldSimService.removeNpc(id);
     }
@@ -190,6 +204,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @GetMapping("/worlds/{id}/relationships")
     public List<Map<String, Object>> listRelationships(@PathVariable Long id) {
         return worldSimService.listRelationships(id);
     }
@@ -202,6 +217,7 @@ public class WorldSimController {
      * @param id 长整数
      * @return 返回值
     */
+    @PutMapping("/relationships/{id}")
     public SysAiWorldRelationship updateRelationship(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return worldSimService.updateRelationship(id, body);
     }
@@ -224,7 +240,46 @@ public class WorldSimController {
      * @param sceneId 长整数
      * @return 返回值
     */
+    @GetMapping("/worlds/{id}/scenes/{sceneId}/messages")
     public List<SysAiWorldMessage> listMessages(@PathVariable Long id, @PathVariable Long sceneId) {
         return worldSimService.listMessages(id, sceneId);
+    }
+
+    /* ---------------- 剧本幕次（Act） ---------------- */
+
+    /** 幕次列表（按编号排序，含完成度与剧本落盘标记） */
+    @GetMapping("/worlds/{id}/acts")
+    public List<Map<String, Object>> listActs(@PathVariable Long id) {
+        return worldSimService.listActs(id);
+    }
+
+    /** 创建幕次（writing，落盘空剧本文件） */
+    @PostMapping("/worlds/{id}/acts")
+    public SysAiWorldAct createAct(@PathVariable Long id) {
+        return worldSimService.createAct(id);
+    }
+
+    /** 幕次详情（元数据 + 剧本 + 素材完成度） */
+    @GetMapping("/worlds/{id}/acts/{actNo}")
+    public Map<String, Object> actDetail(@PathVariable Long id, @PathVariable Integer actNo) {
+        return worldSimService.actDetail(id, actNo);
+    }
+
+    /** 推进幕次：writing -> props_ok -> playing -> replay，一步一调 */
+    @PostMapping("/worlds/{id}/acts/{actNo}/advance")
+    public Map<String, Object> advanceAct(@PathVariable Long id, @PathVariable Integer actNo) {
+        return worldSimService.advanceAct(id, actNo);
+    }
+
+    /** 重播已演完的幕次（状态回滚到 playing，所见素材保留） */
+    @PostMapping("/worlds/{id}/acts/{actNo}/replay")
+    public Map<String, Object> replayAct(@PathVariable Long id, @PathVariable Integer actNo) {
+        return worldSimService.replayAct(id, actNo);
+    }
+
+    /** 结文：replay -> finished，落一条世界事件 */
+    @PostMapping("/worlds/{id}/acts/{actNo}/finish")
+    public SysAiWorldAct finishAct(@PathVariable Long id, @PathVariable Integer actNo) {
+        return worldSimService.finishAct(id, actNo);
     }
 }
