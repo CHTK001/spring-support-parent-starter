@@ -3,11 +3,11 @@ package com.chua.starter.ai.support.configuration.core;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.MemoryChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.ai.support.configuration.chat.AiChatClientFactory;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.updater.ChatClientHotUpdater;
@@ -34,6 +34,7 @@ import org.springframework.core.Ordered;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -103,7 +104,35 @@ public class AiConfiguration {
     @ConditionalOnProperty(prefix = "plugin.ai.chat", name = "enabled", havingValue = "true")
     @ConditionalOnExpression("'${plugin.ai.chat.app-key:}'.trim().length() > 0")
     public ChatClient yamlChatClient(AiChatProperties properties) {
-        return AiChatClientFactory.create(properties);
+        // YAML 没有指定厂商时，SPI 查不到空 provider（返回 null）。所有 OpenAI 兼容网关的
+        // @Spi 都共用了 "openai" 别名，直接按它路由：没写 baseUrl 就走实现类内置默认地址，
+        // 写了则走配置的地址；实现了兜底逻辑，不再需要厂商标识 switch。
+        String provider = StringUtils.hasText(properties.provider())
+                ? properties.provider().trim().toLowerCase(Locale.ROOT)
+                : ChatClient.OPENAI_EXTENSION;
+        ChatClientSetting setting = ChatClientSetting.builder()
+                .provider(provider)
+                .baseUrl(properties.baseUrl())
+                .appKey(properties.appKey())
+                .appSecret(properties.appSecret())
+                .model(properties.model())
+                .temperature(properties.temperature())
+                .maxTokens(properties.maxTokens())
+                .timeoutMillis(properties.timeoutMillis())
+                .authScheme(properties.authScheme())
+                .authHeader(properties.authHeader())
+                .authPrefix(properties.authPrefix())
+                .proxy(properties.proxy())
+                .build();
+        ChatClient client = ChatClient.create(setting);
+        if (client == null) {
+            throw new IllegalStateException("[AiConfiguration] 无法创建对话客户端，provider=" + provider);
+        }
+        log.info("[AiConfiguration] 已按 YAML 配置装配对话客户端: provider={}, model={}, baseUrl={}",
+                provider,
+                properties.model(),
+                properties.baseUrl() == null ? "(实现类默认)" : properties.baseUrl());
+        return client;
     }
 
     /**

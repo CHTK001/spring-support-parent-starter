@@ -145,7 +145,9 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
         // 先清空该分组原设备
         gdMapper.deleteByGroupId(groupId);
         // 再批量插入
-        if (deviceIds == null || deviceIds.isEmpty()) return;
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            return;
+        }
         for (int i = 0; i < deviceIds.size(); i++) {
             DeviceGroupDevice gd = new DeviceGroupDevice();
             gd.setId(UUID.randomUUID().toString());
