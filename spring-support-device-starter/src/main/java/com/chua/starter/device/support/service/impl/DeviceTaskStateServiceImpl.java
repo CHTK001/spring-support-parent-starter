@@ -114,4 +114,24 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
         taskStateMapper.update(null, wrapper);
         log.info("任务间隔已更新: name={}, interval={}s", taskName, interval);
     }
+
+    @Override
+    /**
+     * 补种任务状态行
+     * @param name 任务名称
+     * @param interval 间隔
+     * @param description 描述
+     * @return 是否新补种
+    */
+    public boolean seed(String name, int interval, String description) {
+        if (getState(name) != null) {
+            return false;
+        }
+        DeviceTaskState state = new DeviceTaskState();
+        state.setDeviceTaskStateName(name);
+        state.setDeviceTaskStateRunning(false);
+        state.setDeviceTaskStateInterval(interval);
+        state.setDeviceTaskStateDescription(description);
+        return taskStateMapper.insert(state) > 0;
+    }
 }

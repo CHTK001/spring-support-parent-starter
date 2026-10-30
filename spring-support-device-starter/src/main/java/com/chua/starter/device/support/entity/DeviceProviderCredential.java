@@ -80,6 +80,42 @@ public class DeviceProviderCredential {
     @TableField("device_credential_remark")
     private String deviceCredentialRemark;
 
+    /**
+     * 在离线检测开关：该凭据维度的设备是否由时间轮自动探测（不开则不参与自动检测，改用全局的 {@code deviceOfflineCheck}）
+     */
+    @TableField("device_credential_offline_detect_enabled")
+    private Boolean deviceCredentialOfflineDetectEnabled;
+
+    /**
+     * 在离线检测间隔（秒）
+     */
+    @TableField("device_credential_offline_detect_interval")
+    private Integer deviceCredentialOfflineDetectInterval;
+
+    /**
+     * 设备自动同步开关：该凭据维度是否由时间轮自动拉取设备目录
+     */
+    @TableField("device_credential_device_sync_enabled")
+    private Boolean deviceCredentialDeviceSyncEnabled;
+
+    /**
+     * 设备自动同步间隔（秒）
+     */
+    @TableField("device_credential_device_sync_interval")
+    private Integer deviceCredentialDeviceSyncInterval;
+
+    /**
+     * 组织自动同步开关：该凭据维度是否由时间轮自动拉取厂商侧组织树
+     */
+    @TableField("device_credential_org_sync_enabled")
+    private Boolean deviceCredentialOrgSyncEnabled;
+
+    /**
+     * 组织自动同步间隔（秒）
+     */
+    @TableField("device_credential_org_sync_interval")
+    private Integer deviceCredentialOrgSyncInterval;
+
     /** 创建 时间 */
     @TableField("device_credential_created_at")
     private LocalDateTime deviceCredentialCreatedAt;

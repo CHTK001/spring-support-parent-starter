@@ -160,6 +160,24 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
+    public boolean removePrinter(String name) {
+        if (!StringUtils.hasText(name)) {
+            return false;
+        }
+        PrinterConfig config = printerConfigMap.remove(name);
+        if (config == null) {
+            log.warn("[Template] 打印机 {} 不存在", name);
+            return false;
+        }
+        // 被删除的如果是默认打印机，下掉默认标记
+        for (PrinterConfig other : printerConfigMap.values()) {
+            other.setIsDefault(Boolean.FALSE);
+        }
+        log.info("[Template] 删除打印机: {}", name);
+        return true;
+    }
+
+    @Override
     public void setPrinter(PrinterConfig printer) {
         // 添加打印机连接参数（地址 / 端口 / Token），并自动设为默认
         if (printer == null) {
