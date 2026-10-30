@@ -59,6 +59,20 @@ public interface DatasourceService {
     ReturnResult<DataSourceVO> update(Long id, DataSourceDTO data);
 
     /**
+     * 新建 Calcite 合并数据源（跨库联合查询）。
+     *
+     * <p>合并记录由本动作独占创建：{@code type=calcite}，成员 id 列表以
+     * {@code {"members":[id,...]}} 存入 {@code datasource_database}。
+     * 普通 {@code create}/{@code update} 不接收该类型，避免旁路写入缺成员或
+     * 非法嵌套的合并记录。</p>
+     *
+     * @param name      合并数据源名称
+     * @param memberIds 参与联合查询的成员数据源 ID 列表（按 JDBC 类型、非合并）
+     * @return 合并后的数据源
+     */
+    ReturnResult<DataSourceVO> merge(String name, List<Long> memberIds);
+
+    /**
      * 删除数据源。
      *
      * @param id 数据源 ID
