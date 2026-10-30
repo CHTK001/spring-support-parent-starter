@@ -24,7 +24,7 @@ public class TemplateDesignerPayload {
     /** 操作模式：design / preview / print */
     private Mode mode;
 
-    @Data
+    /** 操作模式 */
     public enum Mode {
         design, preview, print
     }
