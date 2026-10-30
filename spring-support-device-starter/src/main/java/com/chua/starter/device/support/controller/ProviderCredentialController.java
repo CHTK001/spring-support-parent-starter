@@ -2,6 +2,7 @@ package com.chua.starter.device.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
+import com.chua.starter.device.support.scheduler.DeviceScheduleManager;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSyncService;
@@ -43,6 +44,9 @@ public class ProviderCredentialController {
     /** 凭据维度同步服务 */
     private final DeviceSyncService deviceSyncService;
 
+    /** 设备定时调度器（凭据级 Tick 开关/间隔热重载） */
+    private final DeviceScheduleManager scheduleManager;
+
     @GetMapping("/list")
     /**
      * Request Param
@@ -73,7 +77,10 @@ public class ProviderCredentialController {
     @PutMapping("/{id}")
     public ReturnResult<DeviceProviderCredential> update(@PathVariable String id,
                                                          @RequestBody DeviceProviderCredential credential) {
-        return ReturnResult.ok(credentialService.update(id, credential));
+        DeviceProviderCredential updated = credentialService.update(id, credential);
+        // 高级配置（开关/间隔）变更后：重扫该凭据的 Tick，下一轮调度生效
+        scheduleManager.refresh(id);
+        return ReturnResult.ok(updated);
     }
 
     /**
