@@ -141,7 +141,7 @@ public record DbTableSpec(
 
         // 索引（仅 METADATA 来源可重建）
         List<String> indexes = new ArrayList<>();
-        try (ResultSet rs = conn.getMetaData().getIndexInfo(catalog, schema, table, false)) {
+        try (ResultSet rs = conn.getMetaData().getIndexInfo(catalog, schema, table, false, false)) {
             while (rs.next()) {
                 String indexName = rs.getString("INDEX_NAME");
                 if (indexName == null || indexName.isBlank() || "PRIMARY".equalsIgnoreCase(indexName)) {

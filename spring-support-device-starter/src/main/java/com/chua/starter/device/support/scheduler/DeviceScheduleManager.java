@@ -14,7 +14,7 @@ import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceStatusService;
 import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.support.service.DeviceTaskStateService;
-import com.chua.starter.device.support.spi.DeviceSession;
+import com.chua.starter.device.spi.DeviceSession;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;

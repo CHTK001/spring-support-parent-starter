@@ -17,6 +17,7 @@ import com.chua.starter.datasourcehub.support.service.DatasourceOperLogService;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.datasourcehub.support.service.DatasourceTunnelService;
 import com.chua.starter.datasourcehub.support.service.JdbcDriverJarService;
+import com.chua.starter.datasourcehub.support.support.CalciteMergeDataSourceFactory;
 import com.chua.starter.datasourcehub.support.support.DatasourceProbeSupport;
 import com.chua.starter.datasourcehub.support.support.DatasourceSecrets;
 import com.chua.starter.datasourcehub.support.support.FileJdbcPathGuard;
@@ -105,6 +106,16 @@ public class DatasourceServiceImpl implements DatasourceService {
     private final JdbcDriverJarService driverJarService;
 
     /**
+     * Calcite 合并数据源装配器（懒取）。
+     *
+     * <p><b>必须走 {@link ObjectProvider}</b>：{@link CalciteMergeDataSourceFactory}
+     * 内部持有本服务的 {@code ObjectProvider}（成员建连要回调 {@link #connection(Long)}），
+     * 若两边都强注入会形成构造期循环依赖（Boot 3+ 默认禁止）。
+     * 这里只声明提供者，运行到 calcite 分支时才解析。</p>
+     */
+    private final ObjectProvider<CalciteMergeDataSourceFactory> calciteMergeFactoryProvider;
+
+    /**
      * JDBC 连接缓存：datasourceId -&gt; 带空闲过期的连接。
      *
      * <p>每次操作都经 {@link #connection(Long)} 取连接，直连会反复建连/断连；
@@ -187,6 +198,9 @@ public class DatasourceServiceImpl implements DatasourceService {
 
     @Override
     public ReturnResult<DataSourceVO> create(DataSourceDTO data) {
+        if (data != null && DatasourceHubConstants.isCalciteType(data.type())) {
+            return ReturnResult.error("合并数据源由「合并」动作创建，不能直接在新增表单里写 calcite 类型");
+        }
         String error = validate(data);
         if (error != null) {
             return ReturnResult.error(error);
@@ -212,13 +226,16 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (id == null) {
             return ReturnResult.error("数据源 ID 不能为空");
         }
-        String error = validate(data);
-        if (error != null) {
-            return ReturnResult.error(error);
-        }
         MsDatasource exists = datasourceMapper.selectById(id);
         if (exists == null) {
             return ReturnResult.error("数据源不存在");
+        }
+        if (DatasourceHubConstants.isCalciteType(exists.getDatasourceType())) {
+            return ReturnResult.error("合并数据源不支持编辑，请删除后通过「合并」动作重建");
+        }
+        String error = validate(data);
+        if (error != null) {
+            return ReturnResult.error(error);
         }
         try {
             if (existsName(data.name(), id)) {
@@ -243,6 +260,44 @@ public class DatasourceServiceImpl implements DatasourceService {
         } catch (Exception e) {
             log.error("[datasource-hub] 更新数据源失败 id={}", id, e);
             return ReturnResult.error("更新数据源失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<DataSourceVO> merge(String name, List<Long> memberIds) {
+        if (isBlank(name)) {
+            return ReturnResult.error("合并数据源名称不能为空");
+        }
+        List<Long> ids = memberIds == null ? List.of()
+                : memberIds.stream().filter(e -> e != null).distinct().toList();
+        if (ids.isEmpty()) {
+            return ReturnResult.error("合并数据源至少需要一个成员");
+        }
+        try {
+            if (existsName(name, null)) {
+                return ReturnResult.error("数据源名称已存在: " + name);
+            }
+            CalciteMergeDataSourceFactory factory = calciteMergeFactoryProvider.getIfAvailable();
+            if (factory == null) {
+                return ReturnResult.error("Calcite 合并数据源组件未装配");
+            }
+            MsDatasource entity = new MsDatasource();
+            entity.setDatasourceName(trim(name));
+            entity.setDatasourceType(DatasourceHubConstants.DS_TYPE_CALCITE);
+            entity.setDatasourceDatabase(factory.membersPayload(ids));
+            entity.setDatasourceStatus(1);
+            entity.setDatasourceTopFlag(0);
+            entity.setCreateTime(LocalDateTime.now());
+            // 入库前复用装配器的成员校验：成员必须存在、非合并且属于 JDBC 族
+            String error = factory.validateMembers(entity);
+            if (error != null) {
+                return ReturnResult.error(error);
+            }
+            datasourceMapper.insert(entity);
+            return ReturnResult.ok(toVO(datasourceMapper.selectById(entity.getId())));
+        } catch (Exception e) {
+            log.error("[datasource-hub] 新建合并数据源失败", e);
+            return ReturnResult.error("新建合并数据源失败: " + e.getMessage());
         }
     }
 
@@ -272,6 +327,9 @@ public class DatasourceServiceImpl implements DatasourceService {
         MsDatasource row = datasourceMapper.selectById(id);
         if (row == null) {
             return ReturnResult.error("数据源不存在");
+        }
+        if (DatasourceHubConstants.isCalciteType(row.getDatasourceType())) {
+            return ReturnResult.error("合并数据源不支持置顶，置顶仅对常规数据源有意义");
         }
         MsDatasource update = new MsDatasource();
         update.setId(id);
@@ -403,6 +461,11 @@ public class DatasourceServiceImpl implements DatasourceService {
      */
     private DatasourceProbeSupport.ProbeOutcome probe(DataSourceVO ds, String targetHost, Integer targetPort) {
         int timeoutMs = properties.getProbeTimeoutMs();
+        // Calcite 合并记录走「装配联邦连接 + SELECT 1」：它没有单一主机端口，
+        // 走 probeJdbc 会因 resolveJdbcUrl 缺主机/库名直接被当成失败。
+        if (DatasourceHubConstants.isCalciteType(ds.type())) {
+            return probeCalcite(ds.id(), timeoutMs);
+        }
         if (DatasourceHubConstants.isJdbcFamily(ds.type())) {
             return probeJdbc(ds, timeoutMs);
         }
@@ -470,6 +533,46 @@ public class DatasourceServiceImpl implements DatasourceService {
             String version = queryJdbcServerVersion(conn, url);
             return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs,
                     "连接测试成功", connectionCount, serverStats, version);
+        } catch (Exception e) {
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
+                    "连接测试失败: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Calcite 合并数据源探活：装配联邦连接 + {@code SELECT 1}。
+     *
+     * <p>中间件建连（成员逐个取连接）的耗时计入 connect；{@code SELECT 1} 往返
+     * 计入 session。连接数/服务端版本对联邦连接没有单一来源，统一留 null。</p>
+     *
+     * @param id        合并数据源 ID
+     * @param timeoutMs 超时（毫秒）
+     * @return 探活结果
+     */
+    private DatasourceProbeSupport.ProbeOutcome probeCalcite(Long id, int timeoutMs) {
+        CalciteMergeDataSourceFactory factory = calciteMergeFactoryProvider.getIfAvailable();
+        if (factory == null) {
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
+                    "Calcite 合并数据源组件未装配", null);
+        }
+        MsDatasource row = datasourceMapper.selectById(id);
+        if (row == null) {
+            return new DatasourceProbeSupport.ProbeOutcome(false, null, null, "数据源不存在", null);
+        }
+        long start = System.nanoTime();
+        try (Connection conn = factory.openConnection(row)) {
+            long connectMs = (System.nanoTime() - start) / 1_000_000L;
+            if (!conn.isValid(Math.max(1, timeoutMs / 1000))) {
+                return new DatasourceProbeSupport.ProbeOutcome(false, connectMs, null,
+                        "连接已建立但校验未通过", null);
+            }
+            long sessionStart = System.nanoTime();
+            try (var statement = conn.createStatement()) {
+                statement.execute("SELECT 1");
+            }
+            long sessionMs = (System.nanoTime() - sessionStart) / 1_000_000L;
+            return new DatasourceProbeSupport.ProbeOutcome(true, connectMs, sessionMs,
+                    "连接测试成功", null, null, null);
         } catch (Exception e) {
             return new DatasourceProbeSupport.ProbeOutcome(false, null, null,
                     "连接测试失败: " + e.getMessage(), null);
@@ -988,6 +1091,12 @@ public class DatasourceServiceImpl implements DatasourceService {
         if (row == null) {
             throw new IllegalStateException("数据源不存在: " + datasourceId);
         }
+        // Calcite 合并记录没有自身的主机/库名/凭证：建连是「按成员装配联邦 schema」。
+        // 必须走在 isJdbcFamily 之前 —— 该判断已经包含 calcite，不拦的话会落到
+        // resolveJdbcUrl 的「缺少主机或库名」。
+        if (DatasourceHubConstants.isCalciteType(row.getDatasourceType())) {
+            return calciteMergeFactoryProvider.getObject().openConnection(row);
+        }
         if (!DatasourceHubConstants.isJdbcFamily(row.getDatasourceType())) {
             throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
         }
@@ -1106,6 +1215,11 @@ public class DatasourceServiceImpl implements DatasourceService {
         MsDatasource row = datasourceMapper.selectById(datasourceId);
         if (row == null) {
             throw new IllegalStateException("数据源不存在: " + datasourceId);
+        }
+        // Calcite 合并记录没有单一 JDBC 连接串（连接是成员装配出来的），拒绝提供
+        if (DatasourceHubConstants.isCalciteType(row.getDatasourceType())) {
+            throw new UnsupportedOperationException(
+                    "合并数据源没有单一 JDBC 连接串: " + row.getDatasourceName());
         }
         if (!DatasourceHubConstants.isJdbcFamily(row.getDatasourceType())) {
             throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
