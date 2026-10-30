@@ -447,7 +447,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         // 6) 回写试卷总分/题目数
         paper.setPaperTotalScore(totalScore);
         paper.setPaperQuestionCount(aiIds.size());
-        paper.setUpdateTime(LocalDateTime.now());;
+        paper.setUpdateTime(LocalDateTime.now());
         baseMapper.updateById(paper);
         writeHistory(paper, paperQuestionMapper.selectByPaperId(paper.getPaperId()), "CREATE");
 

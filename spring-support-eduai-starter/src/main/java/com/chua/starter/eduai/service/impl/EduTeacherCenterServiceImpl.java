@@ -484,11 +484,14 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         for (EduMarkingTask t : tasks) {
             int status = t.getMarkingTaskStatus() == null ? 0 : t.getMarkingTaskStatus();
             if (status == 0) {
-            taskStatus.get(0).setCount(taskStatus.get(0).getCount() + 1);
-        }
-            else if (status == 1) taskStatus.get(1).setCount(taskStatus.get(1).getCount() + 1);
-            else if (status == 2) taskStatus.get(2).setCount(taskStatus.get(2).getCount() + 1);
-            else taskStatus.get(3).setCount(taskStatus.get(3).getCount() + 1);
+                taskStatus.get(0).setCount(taskStatus.get(0).getCount() + 1);
+            } else if (status == 1) {
+                taskStatus.get(1).setCount(taskStatus.get(1).getCount() + 1);
+            } else if (status == 2) {
+                taskStatus.get(2).setCount(taskStatus.get(2).getCount() + 1);
+            } else {
+                taskStatus.get(3).setCount(taskStatus.get(3).getCount() + 1);
+            }
             if (Integer.valueOf(1).equals(t.getMarkingTaskTeacherFinished())) {
                 teacherDone++;
             }
@@ -522,10 +525,12 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         }
                 double rate = (double) finalScore / maxScore;
                 if (rate < 0.6) {
-            rateLow++;
-        }
-                else if (rate < 0.8) rateMid++;
-                else rateHigh++;
+                    rateLow++;
+                } else if (rate < 0.8) {
+                    rateMid++;
+                } else {
+                    rateHigh++;
+                }
             }
         }
         List<MarkingDashboardStatsVO.NamedCount> scoreRate = new java.util.ArrayList<>();

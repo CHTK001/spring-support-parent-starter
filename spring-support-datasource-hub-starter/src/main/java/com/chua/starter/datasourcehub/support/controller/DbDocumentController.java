@@ -311,9 +311,18 @@ public class DbDocumentController {
             // 代码块开始/结束
             if (line.startsWith("```")) {
                 if (!inCode) {
-                    if (inUl) { sb.append("</ul>\n"); inUl = false; }
-                    if (inOl) { sb.append("</ol>\n"); inOl = false; }
-                    if (inTable) { sb.append("</tbody></table>\n"); inTable = false; }
+                    if (inUl) {
+                        sb.append("</ul>\n");
+                        inUl = false;
+                    }
+                    if (inOl) {
+                        sb.append("</ol>\n");
+                        inOl = false;
+                    }
+                    if (inTable) {
+                        sb.append("</tbody></table>\n");
+                        inTable = false;
+                    }
                     sb.append("<pre><code>");
                     inCode = true;
                 } else {
@@ -328,9 +337,18 @@ public class DbDocumentController {
             }
 
             // 关闭未闭合的列表/表格
-            if (inUl && !line.startsWith("- ") && !line.startsWith("* ")) { sb.append("</ul>\n"); inUl = false; }
-            if (inOl && !line.matches("\\d+\\.\\s.*")) { sb.append("</ol>\n"); inOl = false; }
-            if (inTable && !line.startsWith("|")) { sb.append("</tbody></table>\n"); inTable = false; }
+            if (inUl && !line.startsWith("- ") && !line.startsWith("* ")) {
+                sb.append("</ul>\n");
+                inUl = false;
+            }
+            if (inOl && !line.matches("\\d+\\.\\s.*")) {
+                sb.append("</ol>\n");
+                inOl = false;
+            }
+            if (inTable && !line.startsWith("|")) {
+                sb.append("</tbody></table>\n");
+                inTable = false;
+            }
 
             if (line.isBlank()) {
                 sb.append("\n");
@@ -353,21 +371,30 @@ public class DbDocumentController {
 
             // 无序列表
             if (line.startsWith("- ") || line.startsWith("* ")) {
-                if (!inUl) { sb.append("<ul>\n"); inUl = true; }
+                if (!inUl) {
+                    sb.append("<ul>\n");
+                    inUl = true;
+                }
                 sb.append("<li>").append(inline(line.substring(2))).append("</li>\n");
                 continue;
             }
 
             // 有序列表
             if (line.matches("\\d+\\.\\s.*")) {
-                if (!inOl) { sb.append("<ol>\n"); inOl = true; }
+                if (!inOl) {
+                    sb.append("<ol>\n");
+                    inOl = true;
+                }
                 sb.append("<li>").append(inline(line.replaceFirst("^\\d+\\.\\s+", ""))).append("</li>\n");
                 continue;
             }
 
             // 表格（处理表头分隔行）
             if (line.startsWith("|")) {
-                if (!inTable) { sb.append("<table class='md-table'>\n<thead><tr>"); inTable = true; }
+                if (!inTable) {
+                    sb.append("<table class='md-table'>\n<thead><tr>");
+                    inTable = true;
+                }
                 // 跳过分隔行（|---|:---|）
                 if (line.replace("|", "").replace("-", "").replace(":", "").trim().isEmpty()) {
                     // 分隔行 → 从 thead 切到 tbody
