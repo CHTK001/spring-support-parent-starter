@@ -62,6 +62,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     @Override
     /**
      * 是否appKey已启用
+     * @return 返回值
     */
     public boolean isAppKeyEnabled() {
         return APP_KEY_ENABLED_CACHE.get("app_key_enabled", k ->
@@ -71,6 +72,10 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     @Override
     /**
      * 验证appKey
+     * @param appKey 字符串
+     * @param appSecret 字符串
+     * @param clientIp 字符串
+     * @return 返回值
     */
     public boolean verifyAppKey(String appKey, String appSecret, String clientIp) {
         if (!isAppKeyEnabled()) {
@@ -89,6 +94,9 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     @Override
     /**
      * 验证bearer令牌
+     * @param authorizationHeader 字符串
+     * @param clientIp 字符串
+     * @return 返回值
     */
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
  // 与 验证appKey 保持一致：app_Key_已启用 关闭时免鉴权（仅当管理员显式关闭）

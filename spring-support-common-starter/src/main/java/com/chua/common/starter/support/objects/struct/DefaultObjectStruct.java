@@ -35,6 +35,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     @Override
     /**
      * 转为树
+     * @param source 参数
+     * @return 返回值
     */
     public List<TreeNode<T>> toTree(List<T> source) {
         if (source == null || source.isEmpty()) {
@@ -71,6 +73,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     @Override
     /**
      * 转为barchart数据
+     * @param tree 参数
+     * @return 返回值
     */
     public BarChartData toBarChartData(List<TreeNode<T>> tree) {
         if (tree == null) {
@@ -84,6 +88,13 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return new BarChartData(categories, values);
     }
 
+    /**
+     * collect Nodes
+     * @param categories 参数
+     * @param tree 参数
+     * @param values 参数
+     * @return 返回值
+    */
     private void collectNodes(List<TreeNode<T>> tree, List<String> categories, List<Number> values) {
         for (TreeNode<T> node : tree) {
             if (node.getChildren() != null) {
@@ -99,6 +110,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     @Override
     /**
      * 转为radarchart数据
+     * @param tree 参数
+     * @return 返回值
     */
     public RadarChartData toRadarChartData(List<TreeNode<T>> tree) {
         if (tree == null) {
@@ -115,6 +128,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     @Override
     /**
      * 转为relation数据
+     * @param tree 参数
+     * @return 返回值
     */
     public RelationData toRelationData(List<TreeNode<T>> tree) {
         if (tree == null) {
@@ -128,6 +143,13 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return new RelationData(nodes, links);
     }
 
+    /**
+     * build Relation
+     * @param links 参数
+     * @param nodes 参数
+     * @param tree 参数
+     * @return 返回值
+    */
     private void buildRelation(List<TreeNode<T>> tree, List<RelationData.Node> nodes, List<RelationData.Link> links) {
         for (TreeNode<T> node : tree) {
             if (node.getChildren() != null) {
@@ -146,6 +168,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     @Override
     /**
      * 转为treemap数据
+     * @param tree 参数
+     * @return 返回值
     */
     public TreemapData toTreemapData(List<TreeNode<T>> tree) {
         if (tree == null) {
@@ -158,6 +182,12 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return new TreemapData(blocks);
     }
 
+    /**
+     * build Treemap
+     * @param blocks 参数
+     * @param tree 参数
+     * @return 返回值
+    */
     private void buildTreemap(List<TreeNode<T>> tree, List<TreemapData.Block> blocks) {
         for (TreeNode<T> node : tree) {
             if (node.getChildren() != null) {

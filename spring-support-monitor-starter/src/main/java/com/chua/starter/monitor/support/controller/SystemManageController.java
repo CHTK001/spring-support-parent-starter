@@ -544,6 +544,11 @@ public class SystemManageController {
     @Operation(summary = "获取网络监听与占用进程",
             description = "四类通道（本机/Agent/SSH/WinRM）统一输出 protocol/local/remote/port/state/pid/process 结构化行")
     @GetMapping("/netproc")
+    /**
+     * Request Param
+     * @param hostId 长整数
+     * @return 返回值
+    */
     public Mono<ReturnResult<List<NetProcessRowVO>>> listNetProcesses(@RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);

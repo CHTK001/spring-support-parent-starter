@@ -449,7 +449,12 @@ public class WorldSimChatController {
         return null;
     }
 
-    /** 拼场景对话历史：user=我, ai=[NPC名] 发言 */
+    /**
+     * build History
+     * @param sceneId 长整数
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private List<Map<String, Object>> buildHistory(Long worldId, Long sceneId) {
         LambdaQueryWrapper<SysAiWorldMessage> w = new LambdaQueryWrapper<SysAiWorldMessage>()
                 .eq(SysAiWorldMessage::getWorldId, worldId)
@@ -475,6 +480,14 @@ public class WorldSimChatController {
         return history;
     }
 
+    /**
+     * save Ai Message
+     * @param member 参数
+     * @param sceneId 长整数
+     * @param streamed 参数
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private void saveAiMessage(Long worldId, Long sceneId, SysAiWorldNpc member, Streamed streamed) {
         SysAiRole role = roleMapper.selectById(member.getRoleId());
         SysAiWorldMessage m = new SysAiWorldMessage();
@@ -554,7 +567,11 @@ public class WorldSimChatController {
         }
     }
 
-    /** 解析模型输出的 [{"npc_id":x,"delta":y}] JSON（容忍包围文本） */
+    /**
+     * parse Deltas
+     * @param text 字符串
+     * @return 返回值
+    */
     private List<Map<String, Object>> parseDeltas(String text) {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
@@ -584,6 +601,15 @@ public class WorldSimChatController {
         return result;
     }
 
+    /**
+     * apply Drop Affinity
+     * @param fromNpcId 长整数
+     * @param max 整数
+     * @param min 整数
+     * @param toNpcId 长整数
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private void applyDropAffinity(Long worldId, Long fromNpcId, Long toNpcId, int min, int max) {
         try {
             applyAffinityQuiet(worldId, fromNpcId, toNpcId, min + (int) (Math.random() * (max - min + 1)));
@@ -592,6 +618,14 @@ public class WorldSimChatController {
         }
     }
 
+    /**
+     * apply Affinity Quiet
+     * @param delta 整数
+     * @param fromNpcId 长整数
+     * @param toNpcId 长整数
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private void applyAffinityQuiet(Long worldId, Long fromNpcId, Long toNpcId, int delta) {
         if (fromNpcId == null || toNpcId == null || fromNpcId.equals(toNpcId) || delta == 0) {
             return;
@@ -622,10 +656,12 @@ public class WorldSimChatController {
 
     /* ============================================================================
      * 时间推进（世界动态）
-     * ==========================================================================*/
-
-    /** 推进世界时间，生成「世界动态」事件 */
-    @PostMapping("/advance")
+    /**
+     * 时间推进（世界动态）
+     * @param Map<String 参数
+     * @param body 参数
+     * @return 返回值
+    */
     public Map<String, Object> advance(@RequestBody Map<String, Object> body) {
         Long worldId = body.get("worldId") == null ? null : Long.valueOf(String.valueOf(body.get("worldId")));
         if (worldId == null) {
@@ -696,7 +732,12 @@ public class WorldSimChatController {
         return out;
     }
 
-    /** 挑参与推进的 NPC：优先同场景的（更容易产生互动），数量随推进次数渐变 */
+    /**
+     * pick Participants
+     * @param actives 参数
+     * @param tick 整数
+     * @return 返回值
+    */
     private List<SysAiWorldNpc> pickParticipants(List<SysAiWorldNpc> actives, int tick) {
         List<SysAiWorldNpc> pool = new ArrayList<>(actives);
         List<SysAiWorldNpc> chosen = new ArrayList<>();
@@ -719,7 +760,12 @@ public class WorldSimChatController {
         return chosen;
     }
 
-    /** 生成世界动态：标题 + 正文 + 可选天气 + 好感度增减 */
+    /**
+     * generate Advance
+     * @param participants 参数
+     * @param world 参数
+     * @return 返回值
+    */
     private WorldAdvanceResult generateAdvance(SysAiWorld world, List<SysAiWorldNpc> participants) {
         StringBuilder roster = new StringBuilder();
         for (SysAiWorldNpc n : participants) {
@@ -800,7 +846,11 @@ public class WorldSimChatController {
         }
     }
 
-    /** 容错解析 JSON 对象（容忍 markdown 代码块或前后说明文字） */
+    /**
+     * parse Json Object
+     * @param text 字符串
+     * @return 返回值
+    */
     private JsonNode parseJsonObject(String text) {
         try {
             int open = text.indexOf('{');
@@ -818,7 +868,12 @@ public class WorldSimChatController {
     private record WorldAdvanceResult(String title, String content, String weather, List<Map<String, Object>> deltas) {
     }
 
-    /** 推进时间标签：每天分 上午/下午/傍晚/深夜，第 N 天滚动 */
+    /**
+     * next Time Label
+     * @param current 字符串
+     * @param tick 整数
+     * @return 返回值
+    */
     private String nextTimeLabel(String current, int tick) {
         String[] parts = {"上午", "下午", "傍晚", "深夜"};
         int day = (tick + 3) / 4; // 每 4 tick 一天
@@ -827,9 +882,11 @@ public class WorldSimChatController {
     }
 
     /* ============================================================================
+    /**
      * 内部工具
-     * ==========================================================================*/
-
+     * @param id 长整数
+     * @return 返回值
+    */
     private SysAiWorld requireOwned(Long id) {
         SysAiWorld w = worldMapper.selectById(id);
         if (w == null) {
@@ -844,6 +901,11 @@ public class WorldSimChatController {
         return w;
     }
 
+    /**
+     * list All Npcs
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private List<SysAiWorldNpc> listAllNpcs(Long worldId) {
         return npcMapper.selectList(new LambdaQueryWrapper<SysAiWorldNpc>()
                 .eq(SysAiWorldNpc::getWorldId, worldId)
@@ -851,6 +913,12 @@ public class WorldSimChatController {
                 .orderByAsc(SysAiWorldNpc::getId));
     }
 
+    /**
+     * list Scene Npcs
+     * @param sceneId 长整数
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private List<SysAiWorldNpc> listSceneNpcs(Long worldId, Long sceneId) {
         LambdaQueryWrapper<SysAiWorldNpc> w = new LambdaQueryWrapper<SysAiWorldNpc>()
                 .eq(SysAiWorldNpc::getWorldId, worldId);
@@ -862,6 +930,11 @@ public class WorldSimChatController {
         return npcMapper.selectList(w.orderByAsc(SysAiWorldNpc::getSort).orderByAsc(SysAiWorldNpc::getId));
     }
 
+    /**
+     * list Actives
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private List<SysAiWorldNpc> listActives(Long worldId) {
         return npcMapper.selectList(new LambdaQueryWrapper<SysAiWorldNpc>()
                 .eq(SysAiWorldNpc::getWorldId, worldId)
@@ -870,6 +943,12 @@ public class WorldSimChatController {
                 .orderByAsc(SysAiWorldNpc::getId));
     }
 
+    /**
+     * display Name
+     * @param n 参数
+     * @param role 参数
+     * @return 返回值
+    */
     private String displayName(SysAiWorldNpc n, SysAiRole role) {
         if (n == null) {
             return "NPC";
@@ -880,11 +959,21 @@ public class WorldSimChatController {
         return role != null && role.getName() != null ? role.getName() : "NPC";
     }
 
+    /**
+     * evict World View
+     * @param worldId 长整数
+     * @return 返回值
+    */
     private void evictWorldView(Long worldId) {
         worldSimService.evictWorldCaches(worldId);
     }
 
-    /** 解析成员应答模型，返回「裸模型名 + 供应商标识」（与酒馆同口径） */
+    /**
+     * resolve Model Qualified
+     * @param member 参数
+     * @param role 参数
+     * @return 返回值
+    */
     private String[] resolveModelQualified(SysAiWorldNpc member, SysAiRole role) {
         String providerId = null;
         String raw = null;
@@ -903,7 +992,11 @@ public class WorldSimChatController {
         return resolveDefaultQualified();
     }
 
-    /** 从限定写法里提取供应商标识（与酒馆同口径） */
+    /**
+     * extract Provider Id
+     * @param raw 字符串
+     * @return 返回值
+    */
     private String extractProviderId(String raw) {
         if (raw == null) {
             return null;
@@ -938,7 +1031,12 @@ public class WorldSimChatController {
         return null;
     }
 
-    /** 组装 create 事件携带的路由信息 */
+    /**
+     * build Route
+     * @param model 字符串
+     * @param providerId 字符串
+     * @return 返回值
+    */
     private Map<String, Object> buildRoute(String providerId, String model) {
         Map<String, Object> route = new LinkedHashMap<>(8);
         route.put("model", model);
@@ -959,7 +1057,10 @@ public class WorldSimChatController {
         return route;
     }
 
-    /** 解析全局默认模型（与酒馆同口径） */
+    /**
+     * resolve Default Qualified
+     * @return 返回值
+    */
     private String[] resolveDefaultQualified() {
         String[][] keys = {{"runtime", "default_model"}, {"models", "defaultChatModelId"}, {"runtime", "default_chat_model"}};
         for (String[] k : keys) {
@@ -978,7 +1079,12 @@ public class WorldSimChatController {
         return new String[]{resolved, null};
     }
 
-    /** 拼回限定名 */
+    /**
+     * qualify
+     * @param model 字符串
+     * @param providerId 字符串
+     * @return 返回值
+    */
     private static String qualify(String providerId, String model) {
         if (providerId == null || providerId.isBlank() || model == null) {
             return model;
@@ -986,6 +1092,13 @@ public class WorldSimChatController {
         return providerId + ":" + model;
     }
 
+    /**
+     * send Raw
+     * @param Map<String 参数
+     * @param event 参数
+     * @param out 输出流
+     * @return 返回值
+    */
     private void sendRaw(OutputStream out, Map<String, Object> event) {
         synchronized (out) {
             try {
@@ -998,6 +1111,11 @@ public class WorldSimChatController {
         }
     }
 
+    /**
+     * str
+     * @param v 对象
+     * @return 返回值
+    */
     private static String str(Object v) {
         return v == null ? null : String.valueOf(v);
     }

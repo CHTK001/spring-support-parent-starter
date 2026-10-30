@@ -1118,9 +1118,11 @@ public class ApiSkillController {
 
     /**
      * 解压 压缩 文件到目标目录。
-     * @param zipFile 压缩文件
      * @param targetDir Targetdir
-     */
+     * @param zipFile 压缩文件
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void extractZip(Path zipFile, Path targetDir) throws IOException {
         /**
          * 尝试。
@@ -2725,6 +2727,10 @@ public class ApiSkillController {
      */
     private static final SSLContext OS_TRUST_SSL_CONTEXT = buildOsTrustSslContext();
 
+    /**
+     * build Os Trust Ssl Context
+     * @return 返回值
+    */
     private static SSLContext buildOsTrustSslContext() {
         try {
             TrustManagerFactory tmf = TrustManagerFactory
@@ -2769,6 +2775,13 @@ public class ApiSkillController {
      */
     private static final String GITHUB_RAW_ACCEPT = "application/vnd.github.raw";
 
+    /**
+     * http Get Bytes
+     * @param urlStr 字符串
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws InterruptedException 异常
+    */
     private byte[] httpGetBytes(String urlStr) throws IOException, InterruptedException {
         return httpGetBytes(urlStr, null, DEFAULT_TIMEOUT);
     }

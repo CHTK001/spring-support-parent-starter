@@ -56,6 +56,10 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     @Override
     /**
      * Page查询
+     * @param page 长整数
+     * @param pageSize 长整数
+     * @param query 查询
+     * @return 返回值
     */
     public PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
@@ -170,6 +174,10 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     @Override
     /**
      * 搜索
+     * @param keyword 字符串
+     * @param limit 整数
+     * @param subject 字符串
+     * @return 返回值
     */
     public PageResult<KnowledgeDocVO> search(String keyword, String subject, int limit) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();

@@ -41,6 +41,8 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     @Override
     /**
      * 保存事件
+     * @param event 参数
+     * @return 返回值
     */
     public void saveEvent(DeviceEvent event) {
         DeviceEventRecord record = new DeviceEventRecord();
@@ -56,6 +58,11 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     @Override
     /**
      * 查询事件
+     * @param deviceId 字符串
+     * @param end 参数
+     * @param start 启动
+     * @param type 参数
+     * @return 返回值
     */
     public List<DeviceEventRecord> queryEvents(String deviceId, EventType type, LocalDateTime start, LocalDateTime end) {
         LambdaQueryWrapper<DeviceEventRecord> wrapper = new LambdaQueryWrapper<>();

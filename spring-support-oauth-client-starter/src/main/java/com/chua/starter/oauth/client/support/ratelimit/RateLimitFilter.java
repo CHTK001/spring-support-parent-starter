@@ -113,10 +113,11 @@ public class RateLimitFilter implements Filter {
 
     /**
      * 写入限流拒绝响应
-     *
+     * @param message 提示信息
      * @param response 响应
-     * @param message  提示信息
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void writeRejected(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HTTP_TOO_MANY_REQUESTS);
         response.setContentType("application/json;charset=UTF-8");

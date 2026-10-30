@@ -54,6 +54,8 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     @Override
     /**
      * 解析
+     * @param json 字符串
+     * @return 返回值
     */
     public Object parse(String json) {
         return Json.fromJson(json, TYPE_REFERENCE);
@@ -62,6 +64,8 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     @Override
     /**
      * 转为json
+     * @param obj 对象
+     * @return 返回值
     */
     public String toJson(Object obj) {
         return Json.toJson(obj);

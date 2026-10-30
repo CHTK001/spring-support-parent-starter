@@ -105,18 +105,21 @@ public class SshConnectionCache {
 
     /**
      * 连接超时（秒），缺省给 15
+     * @return 返回值
     */
     private int connectTimeoutSeconds() {
         return sshProperties == null ? 15 : Math.max(1, sshProperties.getConnectTimeoutSeconds());
     }
     /**
      * 会话超时（秒），缺省给 15
+     * @return 返回值
     */
     private int sessionTimeoutSeconds() {
         return sshProperties == null ? 15 : Math.max(1, sshProperties.getSessionTimeoutSeconds());
     }
     /**
      * 命令执行超时（秒），缺省给 60
+     * @return 返回值
     */
     private long execTimeoutSeconds() {
         return sshProperties == null ? 60L : Math.max(1L, sshProperties.getExecTimeoutSeconds());

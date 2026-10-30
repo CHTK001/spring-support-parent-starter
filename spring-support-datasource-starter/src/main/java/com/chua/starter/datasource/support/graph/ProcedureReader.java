@@ -122,14 +122,11 @@ public class ProcedureReader {
     }
 
     /**
-     * 读取mysqllike。
-     *
-     * <p>安全豁免：查询 information_schema.ROUTINES 系统视图，SQL 为 MySQL/MariaDB/H2
-     * 底层方言固定语句，不拼接用户输入或用户值。</p>
-     *
+     * 读取mysqllike。 <p>安全豁免：查询 information_schema.ROUTINES 系统视图，SQL 为 MySQL/MariaDB/H2 底层方言固定语句，不拼接用户输入或用户值。</p>
      * @param conn conn
      * @return 读取mysqllike的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<ProcedureInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_SCHEMA, ROUTINE_COMMENT " +
                 "FROM information_schema.ROUTINES";
@@ -155,12 +152,11 @@ public class ProcedureReader {
     }
 
     /**
-     * 读取PostgreSQL
-     * <p>安全豁免：查询 information_schema.routines 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 读取PostgreSQL <p>安全豁免：查询 information_schema.routines 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取postgresql的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<ProcedureInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT routine_name, routine_type, specific_schema " +
                 "FROM information_schema.routines";
@@ -186,13 +182,11 @@ public class ProcedureReader {
     }
 
     /**
-     * 读取Oracle
-     *
-     * <p>安全豁免：查询 Oracle ALL_OBJECTS 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 读取Oracle <p>安全豁免：查询 Oracle ALL_OBJECTS 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取oracle的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<ProcedureInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT OBJECT_NAME, OBJECT_TYPE FROM ALL_OBJECTS " +
                 "WHERE OBJECT_TYPE IN ('PROCEDURE','FUNCTION') AND OWNER = USER";
@@ -218,12 +212,11 @@ public class ProcedureReader {
     }
 
     /**
-     * 读取SQL服务端
-     * <p>安全豁免：查询 SQL Server sys.objects 固定系统视图，不含用户可控参数或值。</p>
-     *
+     * 读取SQL服务端 <p>安全豁免：查询 SQL Server sys.objects 固定系统视图，不含用户可控参数或值。</p>
      * @param conn conn
      * @return 读取sql服务端的结果
-     */
+     * @throws SQLException 异常
+    */
     private List<ProcedureInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT o.name, o.type_desc FROM sys.objects o " +
                 "WHERE o.type IN ('P','FN','IF','TF')";

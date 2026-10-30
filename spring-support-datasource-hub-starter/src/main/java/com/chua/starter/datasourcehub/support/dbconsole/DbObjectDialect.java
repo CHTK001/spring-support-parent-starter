@@ -49,6 +49,11 @@ public final class DbObjectDialect {
 
         private final String label;
 
+        /**
+         * Category
+         * @param label 字符串
+         * @return 返回值
+        */
         Category(String label) {
             this.label = label;
         }
@@ -471,6 +476,12 @@ public final class DbObjectDialect {
         }
     }
 
+    /**
+     * join Quoted
+     * @param label 字符串
+     * @param names 参数
+     * @return 返回值
+    */
     private static String joinQuoted(List<String> names, String label) {
         List<String> quoted = new ArrayList<>(names.size());
         for (String name : names) {

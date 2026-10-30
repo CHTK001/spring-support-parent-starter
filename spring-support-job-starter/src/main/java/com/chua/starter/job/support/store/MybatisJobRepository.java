@@ -249,6 +249,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 保存任务规格 (新建或按任务键更新), 写入后立即失效触发器缓存
+     * @param spec 参数
+     * @return 返回值
     */
     public boolean save(JobSpec spec) {
         if (spec == null || isBlank(spec.getJobKey())) {
@@ -412,6 +414,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 按任务键读取定义
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public JobDefinition find(String jobKey) {
         JobEntity entity = selectByKey(jobKey);
@@ -421,6 +425,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 按任务键读取运行态
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public JobRuntime runtime(String jobKey) {
         JobEntity entity = selectByKey(jobKey);
@@ -430,6 +436,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * Page任务运行态
+     * @param query 查询
+     * @return 返回值
     */
     public PageResult<JobRuntime> page(JobQuery query) {
         JobQuery condition = query == null ? new JobQuery() : query;
@@ -472,6 +480,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 按分组列出运行态快照
+     * @param group 字符串
+     * @return 返回值
     */
     public List<JobRuntime> listGroup(String group) {
         LambdaQueryWrapper<JobEntity> wrapper = Wrappers.<JobEntity>lambdaQuery()
@@ -493,6 +503,10 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 改调度配置并立即生效
+     * @param jobKey 字符串
+     * @param scheduleTime 字符串
+     * @param scheduleType 字符串
+     * @return 返回值
     */
     public boolean updateSchedule(String jobKey, String scheduleType, String scheduleTime) {
         if (isBlank(jobKey)) {
@@ -516,6 +530,9 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 启停自动调度
+     * @param enabled 布尔值
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean changeStatus(String jobKey, boolean enabled) {
         if (isBlank(jobKey)) {
@@ -537,6 +554,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 逻辑删除任务
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean remove(String jobKey) {
         if (isBlank(jobKey)) {
@@ -558,6 +577,8 @@ public class MybatisJobRepository implements JobRepository {
     @Override
     /**
      * 失效本地触发器缓存与已派发时刻记录
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public void refresh(String jobKey) {
         if (isBlank(jobKey)) {
@@ -747,6 +768,12 @@ public class MybatisJobRepository implements JobRepository {
         }
     }
 
+    /**
+     * compute Next Fire Ms
+     * @param definition 参数
+     * @param lastFireMs 长整数
+     * @return 返回值
+    */
     private long computeNextFireMs(JobDefinition definition, long lastFireMs) {
         try {
             Trigger trigger = JobTriggering.createTrigger(definition);
@@ -757,20 +784,12 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 把本次派发与下次触发时刻写回任务行 (簿记性质, 失败只告警, 绝不影响派发)。
-     *
-     * <p>按主键定位而不是按任务键，是因为多条台账行可以共用一个执行器 Bean；按 Bean 回写会把其中一行的
-     * 触发时刻盖到另一行上，两条各自独立的调度就互相看见对方的排队时间。</p>
-     *
-     * <p><b>两个入参都必须是 cron 槽位，不能是墙钟</b>：{@code last_time} 是下一轮
-     * {@code nextFireAfter} 的基线（{@code lastFireBaseline} 直接读这一列），{@code next_time}
-     * 是扫描谓词 {@code next_time <= now + preReadMs} 的比较对象。写入墙钟会让基线与扫描窗口
-     * 失去可比性，写入已派发完的槽位会让谓词永久成立。</p>
-     *
-     * @param entity    本次派发的任务行
+     * 把本次派发与下次触发时刻写回任务行 (簿记性质, 失败只告警, 绝不影响派发)。 <p>按主键定位而不是按任务键，是因为多条台账行可以共用一个执行器 Bean；按 Bean 回写会把其中一行的 触发时刻盖到另一行上，两条各自独立的调度就互相看见对方的排队时间。</p> <p><b>两个入参都必须是 cron 槽位，不能是墙钟</b>：{@code last_time} 是下一轮 {@code nextFireAfter} 的基线（{@code lastFireBaseline} 直接读这一列），{@code next_time} 是扫描谓词 {@code next_time <= now + preReadMs} 的比较对象。写入墙钟会让基线与扫描窗口 失去可比性，写入已派发完的槽位会让谓词永久成立。</p>
+     * @param entity 本次派发的任务行
      * @param firedSlot 本次已派发的触发槽位（作为后续计算的基线）
-     * @param nextSlot  再下一个触发槽位（扫描谓词的比较对象）
-     */
+     * @param nextSlot 再下一个触发槽位（扫描谓词的比较对象）
+     * @return 返回值
+    */
     private boolean persistFireTimes(JobEntity entity, long firedSlot, long nextSlot) {
         try {
             LambdaUpdateWrapper<JobEntity> wrapper = Wrappers.<JobEntity>lambdaUpdate()
@@ -803,10 +822,10 @@ public class MybatisJobRepository implements JobRepository {
 
     /**
      * 仅回写展示用的下次触发时刻（misfire 跳过时用，不伪造成"本次已触发"）。
-     *
-     * @param entity   任务行
+     * @param entity 任务行
      * @param nextFire 下次触发时刻
-     */
+     * @return 返回值
+    */
     private boolean persistNextFire(JobEntity entity, long nextFire) {
         try {
             LambdaUpdateWrapper<JobEntity> wrapper = Wrappers.<JobEntity>lambdaUpdate()
@@ -860,7 +879,10 @@ public class MybatisJobRepository implements JobRepository {
 
     /**
      * 以读取时的下次触发时刻作为乐观领取条件，避免多个 Leader 同时派发同一任务。
-     */
+     * @param entity 参数
+     * @param wrapper 参数
+     * @return 返回值
+    */
     private void addExpectedNextFilter(LambdaUpdateWrapper<JobEntity> wrapper, JobEntity entity) {
         if (entity.getSysJobTriggerNextTime() == null) {
             wrapper.isNull(JobEntity::getSysJobTriggerNextTime);

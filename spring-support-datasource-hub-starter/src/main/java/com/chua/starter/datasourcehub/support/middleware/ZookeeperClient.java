@@ -688,6 +688,11 @@ public class ZookeeperClient {
          */
         private volatile long lastUsed;
 
+        /**
+         * Session
+         * @param curator 参数
+         * @return 返回值
+        */
         Session(CuratorFramework curator) {
             this.curator = curator;
             this.lastUsed = System.currentTimeMillis();

@@ -43,6 +43,8 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     @Override
     /**
      * 是否candidate类
+     * @param targetClass 参数
+     * @return 返回值
     */
     public boolean isCandidateClass(Class<?> targetClass) {
         return AnnotationUtils.isCandidateClass(targetClass, CACHE_OPERATION_ANNOTATIONS);

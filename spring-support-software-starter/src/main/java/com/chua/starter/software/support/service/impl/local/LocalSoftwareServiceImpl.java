@@ -96,6 +96,8 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * 扫描本地software
+     * @param sourceId 字符串
+     * @return 返回值
     */
     public int scanLocalSoftware(String sourceId) {
         if (StringUtils.isBlank(sourceId)) {
@@ -149,6 +151,8 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * clear本地software
+     * @param sourceId 字符串
+     * @return 返回值
     */
     public boolean clearLocalSoftware(String sourceId) {
         if (StringUtils.isBlank(sourceId)) {
@@ -161,6 +165,8 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * install本地software
+     * @param request 参数
+     * @return 返回值
     */
     public ReturnResult<Object> installLocalSoftware(InstallRequest request) {
         // 从本地软件列表安装，本质上是检查软件是否存在于本地源，然后创建安装记录
@@ -193,6 +199,10 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * uninstall本地software
+     * @param deviceId 字符串
+     * @param softwareId 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public ReturnResult<Object> uninstallLocalSoftware(String softwareId, String userId, String deviceId) {
         SoftSoftware software = softSoftwareService.getById(softwareId);
@@ -211,6 +221,8 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * 添加本地software
+     * @param software 参数
+     * @return 返回值
     */
     public ReturnResult<SoftSoftware> addLocalSoftware(SoftSoftware software) {
         if (StringUtils.isBlank(software.getSoftwareName())) {
@@ -234,6 +246,8 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * 列表本地software
+     * @param keyword 字符串
+     * @return 返回值
     */
     public List<SoftSoftware> listLocalSoftware(String keyword) {
         String localSourceId = getLocalSourceId();
@@ -248,6 +262,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     @Override
     /**
      * 获取本地源标识
+     * @return 返回值
     */
     public String getLocalSourceId() {
         // 查询默认本地源

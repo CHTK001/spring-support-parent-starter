@@ -141,6 +141,10 @@ public final class DbImportUploadStore {
         }
     }
 
+    /**
+     * evict If Needed
+     * @return 返回值
+    */
     private static void evictIfNeeded() {
         ENTRIES.values().removeIf(entry -> {
             if (entry.expired()) {
@@ -163,6 +167,10 @@ public final class DbImportUploadStore {
                 .ifPresent(DbImportUploadStore::discard);
     }
 
+    /**
+     * new Token
+     * @return 返回值
+    */
     private static String newToken() {
         byte[] bytes = new byte[16];
         RANDOM.nextBytes(bytes);

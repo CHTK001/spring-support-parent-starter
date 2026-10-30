@@ -225,7 +225,9 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Override
     /**
      * 根据订单号查询钱包订单
-     */
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public WalletOrder getByOrderNo(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return null;
@@ -283,9 +285,9 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     /**
      * 安全序列化
-     *
      * @param value 值
-     */
+     * @return 返回值
+    */
     private String safeJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

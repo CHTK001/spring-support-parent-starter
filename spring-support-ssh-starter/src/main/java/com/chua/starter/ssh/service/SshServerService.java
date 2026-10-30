@@ -50,6 +50,8 @@ public class SshServerService implements InitializingBean, DisposableBean {
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
@@ -65,6 +67,8 @@ public class SshServerService implements InitializingBean, DisposableBean {
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
         /**
@@ -75,7 +79,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
 
     /**
      * 启动SSH服务端
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void startSshServer() throws IOException {
         sshServer = SshServer.setUpDefaultServer();
         
@@ -118,7 +124,9 @@ public class SshServerService implements InitializingBean, DisposableBean {
 
     /**
      * 停止SSH服务端
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void stopSshServer() throws IOException {
         if (sshServer != null && !sshServer.isClosed()) {
             sshServer.stop();
@@ -138,6 +146,10 @@ public class SshServerService implements InitializingBean, DisposableBean {
                 @Override
                 /**
                  * Authenticate
+                 * @param password 设置认证密码
+                 * @param session 参数
+                 * @param username 设置用户名
+                 * @return 返回值
                 */
                 public boolean authenticate(String username, String password, ServerSession session) {
                     // 简单的用户名密码验证

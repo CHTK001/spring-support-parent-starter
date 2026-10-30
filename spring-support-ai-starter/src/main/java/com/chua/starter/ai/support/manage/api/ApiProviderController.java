@@ -1144,7 +1144,9 @@ public class ApiProviderController {
 
     /**
      * 组装供 indicator 使用的最小 {@link ChatClientSetting}。
-     */
+     * @param entity 参数
+     * @return 返回值
+    */
     private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
         Map<String, String> extraHeaders = extractExtraHeaders(entity.getExtra());
         String platform = entity.getPlatform();
@@ -1165,17 +1167,21 @@ public class ApiProviderController {
     }
 
     /**
-     * 取服务商自身凭证中的第一个 API Key（无则返回 {@code null}）。
-     *
-     * <p>复用 {@link #extractApiKey(Map)} 的既有逻辑。</p>
-     */
+     * 取服务商自身凭证中的第一个 API Key（无则返回 {@code null}）。 <p>复用 {@link #extractApiKey(Map)} 的既有逻辑。</p>
+     * @param entity 参数
+     * @return 返回值
+    */
     private String firstApiKey(SysAiProvider entity) {
         return extractApiKey(entity.getCredentials());
     }
 
     /**
      * 从 extra 中读取字符串值（extra 为 {@code null} 或键不存在时返回 {@code null}）。
-     */
+     * @param Map<String 参数
+     * @param extra 参数
+     * @param key 字符串
+     * @return 返回值
+    */
     private static String extraString(Map<String, Object> extra, String key) {
         if (extra == null) {
             return null;
@@ -1185,9 +1191,12 @@ public class ApiProviderController {
     }
 
     /**
+    /**
      * 从 extra 的 {@code custom_headers} 字段提取附加请求头 Map；无则返回 {@code null}。
-     */
-    @SuppressWarnings("unchecked")
+     * @param Map<String 参数
+     * @param extra 参数
+     * @return 返回值
+    */
     private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
         if (extra == null) {
             return null;
@@ -3820,7 +3829,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     private final Map<String, HttpClient> proxyHttpClients = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** 把目录归一化为单分隔符的规范路径（消除重复反斜杠，保证增删匹配一致）。 */
+    /**
+     * canonical Dir
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static String canonicalDir(String raw) {
         return com.chua.starter.ai.support.manage.service.OnnxExternalDirectoryService.canonicalDir(raw);
     }
@@ -3954,7 +3967,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         return models;
     }
 
-    /** 判断模型名是否包含任一关键字（小写匹配）。 */
+    /**
+     * id Contains
+     * @param id 字符串
+     * @param tokens 参数
+     * @return 返回值
+    */
     private static boolean idContains(String id, String... tokens) {
         for (String t : tokens) {
             if (id.contains(t)) {
@@ -4003,6 +4021,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         return false;
     }
 
+    /**
+     * is Absolute Path Like
+     * @param id 字符串
+     * @return 返回值
+    */
     private static boolean isAbsolutePathLike(String id) {
         if (id == null || id.isBlank()) {
             return false;
@@ -4033,16 +4056,21 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-     * 按模型名约定把 ONNX 注册表模型归类到唯一规范 capability.task。
-     * 顺序敏感：布局 → OCR → 人脸 → 语音 → 嵌入 → 重排序 → 生成类 → 其余归图片识别。
-     */
+     * 按模型名约定把 ONNX 注册表模型归类到唯一规范 capability.task。 顺序敏感：布局 → OCR → 人脸 → 语音 → 嵌入 → 重排序 → 生成类 → 其余归图片识别。
+     * @param modelId 字符串
+     * @return 返回值
+    */
     private static String classifyOnnxTask(String modelId) {
         // 统一走 OnnxModelTaxonomy：修复了旧实现里 "age" 命中 "image" 把图像编码器
         // 误判成人脸的问题，并与物化器 / 前端使用同一套词表。
         return OnnxModelTaxonomy.task(modelId);
     }
 
-    /** 依据 task 返回输入/输出能力 traits（用于模型卡片图标展示）。 */
+    /**
+     * onnx Traits For Task
+     * @param task 字符串
+     * @return 返回值
+    */
     private static List<String> onnxTraitsForTask(String task) {
         switch (task) {
             case "embedding": return List.of("input:text", "output:vector");
@@ -4069,7 +4097,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         return slash < 0 || slash == dir.length() - 1 ? dir : dir.substring(slash + 1);
     }
 
-    /** ONNX task 的中文标签（写入模型描述）。 */
+    /**
+     * onnx Task Label
+     * @param task 字符串
+     * @return 返回值
+    */
     private static String onnxTaskLabel(String task) {
         switch (task) {
             case "layout": return "布局识别";

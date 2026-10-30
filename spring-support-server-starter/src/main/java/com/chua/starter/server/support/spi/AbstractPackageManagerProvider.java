@@ -15,14 +15,19 @@ public abstract class AbstractPackageManagerProvider implements PackageManagerPr
 
     /**
      * 小写化（null 安全）
-     */
+     * @param value 字符串
+     * @return 返回值
+    */
     protected static String lower(String value) {
         return value == null ? "" : value.toLowerCase();
     }
 
     /**
      * 判断字符串是否包含任意一个关键词
-     */
+     * @param keys 参数
+     * @param value 字符串
+     * @return 返回值
+    */
     protected static boolean containsAny(String value, String... keys) {
         if (value == null) {
             return false;
@@ -37,14 +42,21 @@ public abstract class AbstractPackageManagerProvider implements PackageManagerPr
 
     /**
      * 判断是否为 Linux 主机
-     */
+     * @param host 设置主机地址
+     * @return 返回值
+    */
     protected static boolean isLinux(com.chua.starter.server.support.entity.MsServerHost host) {
         return "LINUX".equalsIgnoreCase(host.getServerHostOsType());
     }
 
     /**
      * 构造一个软件包并加入列表
-     */
+     * @param list 列出
+     * @param name 字符串
+     * @param summary 字符串
+     * @param version 字符串
+     * @return 返回值
+    */
     protected static void add(List<SoftwarePackage> list, String name, String version, String summary) {
         if (name == null || name.isBlank()) {
             return;

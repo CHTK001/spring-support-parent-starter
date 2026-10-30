@@ -34,6 +34,8 @@ public class JobConfiguration implements SchedulingConfigurer {
     @Override
     /**
      * configure任务
+     * @param taskRegistrar 参数
+     * @return 返回值
     */
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         this.taskRegistrar = taskRegistrar;

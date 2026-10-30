@@ -72,6 +72,10 @@ public class JobAnnotationScanner implements BeanPostProcessor {
     @Override
     /**
      * Post处理之后initialization
+     * @param bean 对象
+     * @param beanName 字符串
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public Object postProcessAfterInitialization(@NonNull Object bean, @NonNull String beanName) throws BeansException {
  // 扫描带有 @作业 注解的方法

@@ -35,4 +35,15 @@ public class RpcAttribute {
      */
     public static final String INTERFACE_CLASS = "interfaceClass";
 
+    /**
+     * 降级的 RPC 提供者名称
+     * <p>例如 "springbean"：RPC 远端不可用时回退到本地 Spring Bean。</p>
+     */
+    public static final String DEGRADE = "degrade";
+
+    /**
+     * 未找到 RPC Bean 时是否抛出异常
+     */
+    public static final String EXCEPTION = "exception";
+
 }

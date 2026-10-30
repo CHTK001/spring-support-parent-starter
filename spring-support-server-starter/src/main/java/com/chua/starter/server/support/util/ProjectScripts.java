@@ -248,16 +248,9 @@ public final class ProjectScripts {
     }
 
     /**
-     * Linux 启动脚本首行：显式切换到项目目录并以 {@code ;} 收尾。
-     *
-     * <p>必须自带 {@code cd}：调用方（ReleaseServiceImpl#buildCommand）会在脚本前拼接
-     * {@code mkdir -p X && cd 'X' && }，而 {@code &&} 优先级高于 {@code &}，若脚本首行以
-     * {@code &} 结尾，整条 {@code &&} 链会被整体后台化，导致 cd 只在子 shell 生效
-     * （app.pid 写到错误目录），且后台链持有 SSH channel 的 stdout 使 exec 永远等不到
-     * EOF 而超时（退出码 -1）。首行以 {@code ;} 收尾可切断该链，只让 nohup 行被后台化。</p>
-     * <p>项目目录不存在时不能 {@code exit 1}：{@code __PATH__} 可能为空或尚未创建，
-     * 此时仅忽略 cd 失败，让后续命令按调用方已 cd 成功的行为执行。</p>
-     */
+     * Linux 启动脚本首行：显式切换到项目目录并以 {@code ;} 收尾。 <p>必须自带 {@code cd}：调用方（ReleaseServiceImpl#buildCommand）会在脚本前拼接 {@code mkdir -p X && cd 'X' && }，而 {@code &&} 优先级高于 {@code &}，若脚本首行以 {@code &} 结尾，整条 {@code &&} 链会被整体后台化，导致 cd 只在子 shell 生效 （app.pid 写到错误目录），且后台链持有 SSH channel 的 stdout 使 exec 永远等不到 EOF 而超时（退出码 -1）。首行以 {@code ;} 收尾可切断该链，只让 nohup 行被后台化。</p> <p>项目目录不存在时不能 {@code exit 1}：{@code __PATH__} 可能为空或尚未创建， 此时仅忽略 cd 失败，让后续命令按调用方已 cd 成功的行为执行。</p>
+     * @return 返回值
+    */
     private static String linuxEnter() {
         return "cd '" + PH_PATH + "' 2>/dev/null || true;\n";
     }
@@ -770,6 +763,11 @@ public final class ProjectScripts {
         return value;
     }
 
+    /**
+     * trim
+     * @param v 字符串
+     * @return 返回值
+    */
     private static String trim(String v) {
         return v == null ? "" : v.trim();
     }

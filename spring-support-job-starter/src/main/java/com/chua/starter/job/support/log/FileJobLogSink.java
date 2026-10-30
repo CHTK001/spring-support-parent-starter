@@ -52,6 +52,8 @@ public class FileJobLogSink implements JobLogSink {
     @Override
     /**
      * 写入
+     * @param event 参数
+     * @return 返回值
     */
     public void write(JobLogEvent event) {
         if (event == null) {

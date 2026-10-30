@@ -25,6 +25,10 @@ public class ScanExcludeFilter implements TypeFilter {
     @Override
     /**
      * 匹配
+     * @param metadataReader 参数
+     * @param metadataReaderFactory 参数
+     * @return 返回值
+     * @throws IOException 异常
     */
     public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
         String className = metadataReader.getClassMetadata().getClassName();

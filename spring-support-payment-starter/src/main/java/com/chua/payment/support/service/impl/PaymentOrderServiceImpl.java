@@ -232,7 +232,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Override
     /**
      * 获取订单
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public OrderVO getOrder(Long id) {
         return convertToVO(requireOrder(id));
     }
@@ -267,7 +269,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Override
     /**
      * 查询订单状态日志
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public List<OrderStateLogVO> listOrderLogs(Long id) {
         /**
          * 先确认订单存在
@@ -1125,7 +1129,8 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     @Override
     /**
      * 生成订单号
-     */
+     * @return 返回值
+    */
     public String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
@@ -1422,10 +1427,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     /**
      * 解析订单过期分钟数
-     *
      * @param dto dto
      * @param merchant 商户
-     */
+     * @return 返回值
+    */
     private int resolveExpireMinutes(OrderCreateDTO dto, Merchant merchant) {
         if (dto.expireMinutes() != null && dto.expireMinutes() > 0) {
             return dto.expireMinutes();
@@ -1514,9 +1519,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     /**
      * 取实付金额，未支付时退回订单金额
-     *
      * @param order 订单
-     */
+     * @return 返回值
+    */
     private BigDecimal resolvedPaidAmount(PaymentOrder order) {
         BigDecimal paidAmount = nullToZero(order.getPaidAmount());
         return paidAmount.compareTo(BigDecimal.ZERO) > 0 ? paidAmount : nullToZero(order.getOrderAmount());
@@ -1904,9 +1909,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     /**
      * 安全序列化，失败时退回字符串表示
-     *
      * @param value 值
-     */
+     * @return 返回值
+    */
     private String safeJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

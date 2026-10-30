@@ -56,7 +56,9 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     @Override
     /**
      * 按订单标识查询状态流转日志
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public List<OrderStateLog> listByOrderId(Long orderId) {
         return orderStateLogMapper.selectList(new LambdaQueryWrapper<OrderStateLog>()
                 .eq(OrderStateLog::getOrderId, orderId)

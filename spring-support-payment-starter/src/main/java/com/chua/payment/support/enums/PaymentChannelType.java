@@ -40,10 +40,10 @@ public enum PaymentChannelType {
 
     /**
      * 支付渠道类型
-     *
      * @param code 编码
      * @param description 描述
-     */
+     * @return 返回值
+    */
     PaymentChannelType(String code, String description) {
         this.code = code;
         this.description = description;

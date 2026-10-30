@@ -55,10 +55,10 @@ public enum ServiceType {
 
     /**
      * 构造方法
-     *
      * @param code 类型编码
      * @param desc 描述
-     */
+     * @return 返回值
+    */
     ServiceType(String code, String desc) {
         this.code = code;
         this.desc = desc;

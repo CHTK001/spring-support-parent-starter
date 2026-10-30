@@ -1527,7 +1527,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
     }
 
-    /** 构造一行解析结果（归属任务/答题卡，非逐题行题号用空串以命中唯一键）。 */
+    /**
+     * new Parse Row
+     * @param kind 字符串
+     * @param questionNo 字符串
+     * @param task 参数
+     * @return 返回值
+    */
     private EduMarkingSheetParse newParseRow(EduMarkingTask task, String kind, String questionNo) {
         var row = new EduMarkingSheetParse();
         row.setParseOwnerUserId(task.getOwnerUserId());
@@ -1538,7 +1544,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         return row;
     }
 
-    /** 题号归一化 → 锚点，供解析结果记录来源区域。 */
+    /**
+     * anchor Index By No
+     * @param Map<String 参数
+     * @param content 参数
+     * @return 返回值
+    */
     private Map<String, Map<String, Object>> anchorIndexByNo(Map<String, Object> content) {
         var index = new java.util.HashMap<String, Map<String, Object>>();
         for (Map<String, Object> anchor : toMapList(content.get("questionAnchors"))) {
@@ -1547,7 +1558,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         return index;
     }
 
-    /** 截断长文本，避免 TEXT 列被单题超长内容撑爆。 */
+    /**
+     * truncate
+     * @param max 整数
+     * @param value 对象
+     * @return 返回值
+    */
     private static String truncate(Object value, int max) {
         String text = String.valueOf(value == null ? "" : value).trim();
         return text.length() > max ? text.substring(0, max) : text;
@@ -1578,11 +1594,21 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         return text.isEmpty() ? null : truncate(text, 4000);
     }
 
+    /**
+     * trim Or Null
+     * @param value 对象
+     * @return 返回值
+    */
     private static String trimOrNull(Object value) {
         String text = String.valueOf(value == null ? "" : value).trim();
         return text.isEmpty() || "null".equals(text) ? null : text;
     }
 
+    /**
+     * as Int
+     * @param value 对象
+     * @return 返回值
+    */
     private static Integer asInt(Object value) {
         try {
             return value == null ? null : Integer.valueOf(String.valueOf(value).trim());
@@ -1591,6 +1617,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
     }
 
+    /**
+     * as Double
+     * @param value 对象
+     * @return 返回值
+    */
     private static Double asDouble(Object value) {
         try {
             return value == null ? null : Double.valueOf(String.valueOf(value).trim());
@@ -2544,7 +2575,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
     }
 
-    /** 是否请求缩略图变体 */
+    /**
+     * is Thumb
+     * @param variant 字符串
+     * @return 返回值
+    */
     private static boolean isThumb(String variant) {
         return "thumb".equalsIgnoreCase(variant == null ? null : variant.trim());
     }
@@ -2776,6 +2811,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         return out;
     }
 
+    /**
+     * float Value
+     * @param value 对象
+     * @return 返回值
+    */
     private static float floatValue(Object value) {
         if (value instanceof Number n) {
             return n.floatValue();
@@ -2793,6 +2833,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     @Override
     /**
      * 获取结果
+     * @param taskId 字符串
+     * @return 返回值
     */
     public MarkingResultVO getResult(String taskId) {
         EduMarkingTask task = loadTaskQuietly(taskId);
@@ -3086,7 +3128,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         log.info("[EduAi] 识别失败题人工补录落库: taskId={}, no={}, score={}", taskId, norm, score);
     }
 
-    /** 安全取分：null/负值转 0。 */
+    /**
+     * safe Score
+     * @param s 整数
+     * @return 返回值
+    */
     private static int safeScore(Integer s) {
         return s == null || s < 0 ? 0 : s;
     }
@@ -3116,6 +3162,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * finish Marking
+     * @param excludeQuestionIds 参数
+     * @param taskId 字符串
+     * @return 返回值
+    */
     public MarkingFinishResultVO finishMarking(String taskId, List<Long> excludeQuestionIds) {
         EduMarkingTask task = taskMapper.selectByTaskId(taskId);
         if (task == null) {

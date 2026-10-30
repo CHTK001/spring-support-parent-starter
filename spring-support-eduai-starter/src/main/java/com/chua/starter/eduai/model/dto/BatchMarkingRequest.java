@@ -19,9 +19,9 @@ public record BatchMarkingRequest(
 
     /**
      * 构造便捷方法：只有任务列表时使用。
-     *
      * @param taskIds 任务标识列表
-     */
+     * @return 返回值
+    */
     public static BatchMarkingRequest of(List<String> taskIds) {
         return new BatchMarkingRequest(taskIds, null);
     }

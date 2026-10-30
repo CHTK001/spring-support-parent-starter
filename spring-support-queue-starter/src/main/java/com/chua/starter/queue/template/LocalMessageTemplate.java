@@ -106,6 +106,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 发送
+     * @param destination 字符串
+     * @param payload 对象
+     * @return 返回值
     */
     public SendResult send(String destination, Object payload) {
         return send(destination, payload, null);
@@ -114,6 +117,9 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 发送异步
+     * @param destination 字符串
+     * @param payload 对象
+     * @return 返回值
     */
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
         return sendAsync(destination, payload, null);
@@ -161,6 +167,11 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 发送
+     * @param Map<String 参数
+     * @param destination 字符串
+     * @param headers 参数
+     * @param payload 对象
+     * @return 返回值
     */
     public SendResult send(String destination, Object payload, Map<String, Object> headers) {
         // 检查是否已关闭
@@ -194,6 +205,10 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 发送延迟
+     * @param delay 参数
+     * @param destination 字符串
+     * @param payload 对象
+     * @return 返回值
     */
     public SendResult sendDelayed(String destination, Object payload, Duration delay) {
         // 检查是否已关闭
@@ -235,6 +250,10 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param destination 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         CopyOnWriteArrayList<MessageHandler> handlers = subscribers.computeIfAbsent(
@@ -259,6 +278,11 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param destination 字符串
+     * @param group 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         // 本地队列不支持消费组，直接订阅
@@ -274,6 +298,11 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param concurrency 整数
+     * @param destination 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
@@ -342,6 +371,12 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param concurrency 整数
+     * @param destination 字符串
+     * @param group 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         // 本地队列不支持消费组，直接订阅
@@ -358,6 +393,8 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 取消订阅
+     * @param destination 字符串
+     * @return 返回值
     */
     public void unsubscribe(String destination) {
         // 先检查是否还有订阅者，再决定是否清理资源
@@ -417,6 +454,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 获取类型
+     * @return 返回值
     */
     public String getType() {
         return TYPE;
@@ -425,6 +463,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     @Override
     /**
      * 是否连接
+     * @return 返回值
     */
     public boolean isConnected() {
         return running;
@@ -532,10 +571,11 @@ public class LocalMessageTemplate implements MessageTemplate {
 
         /**
          * 事件bussubscriber。
+         * @param autoAck autoACK
          * @param destination 目标
          * @param handler 处理器
-         * @param autoAck autoACK
-         */
+         * @return 返回值
+        */
         EventBusSubscriber(String destination, MessageHandler handler, boolean autoAck) {
             this.destination = destination;
             this.handler = handler;
@@ -592,6 +632,8 @@ public class LocalMessageTemplate implements MessageTemplate {
         @Override
         /**
          * Nack
+         * @param requeue 布尔值
+         * @return 返回值
         */
         public void nack(boolean requeue) {
             // 本地队列不支持requeue，nack等同于丢弃
@@ -601,6 +643,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         @Override
         /**
          * 是否Acknowledged
+         * @return 返回值
         */
         public boolean isAcknowledged() {
             return acknowledged;

@@ -90,7 +90,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 根据主键获取退款单
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public PaymentRefundOrder getById(Long id) {
         PaymentRefundOrder entity = paymentRefundOrderMapper.selectById(id);
         if (entity == null) {
@@ -102,7 +104,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 根据退款单号获取退款单
-     */
+     * @param refundNo 字符串
+     * @return 返回值
+    */
     public PaymentRefundOrder getByRefundNo(String refundNo) {
         if (!StringUtils.hasText(refundNo)) {
             return null;
@@ -115,7 +119,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 根据第三方退款单号获取退款单
-     */
+     * @param thirdPartyRefundNo 字符串
+     * @return 返回值
+    */
     public PaymentRefundOrder getByThirdPartyRefundNo(String thirdPartyRefundNo) {
         if (!StringUtils.hasText(thirdPartyRefundNo)) {
             return null;
@@ -128,7 +134,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 获取退款单详情
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public RefundOrderVO getDetail(Long id) {
         return convertToVO(getById(id));
     }
@@ -162,7 +170,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 获取订单最新一笔退款单
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public PaymentRefundOrder getLatestByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -176,7 +186,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 获取订单处理中的退款单
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public PaymentRefundOrder getProcessingByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -191,7 +203,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 按订单标识查询退款单列表
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public List<PaymentRefundOrder> listByOrderId(Long orderId) {
         return paymentRefundOrderMapper.selectList(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getOrderId, orderId)
@@ -201,7 +215,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 按订单标识查询退款单视图列表
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public List<RefundOrderVO> listVoByOrderId(Long orderId) {
         return listByOrderId(orderId).stream().map(this::convertToVO).toList();
     }
@@ -209,7 +225,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 是否存在处理中的退款单
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public boolean hasProcessingRefund(Long orderId) {
         return getProcessingByOrderId(orderId) != null;
     }
@@ -217,7 +235,9 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     /**
      * 汇总订单已退款金额
-     */
+     * @param orderId 长整数
+     * @return 返回值
+    */
     public BigDecimal sumRefundedAmount(Long orderId) {
         return listByOrderId(orderId).stream()
                 .filter(item -> RefundOrderStatus.REFUNDED.name().equals(item.getStatus()))

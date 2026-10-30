@@ -56,6 +56,10 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     @Override
     /**
      * Increment
+     * @param expire 长整数
+     * @param indicator 字符串
+     * @param key 字符串
+     * @return 返回值
     */
     public void increment(String indicator, String key, long expire) {
         redisTemplate.opsForHash().increment(indicator, key, INCREMENT_STEP);
@@ -65,6 +69,9 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     @Override
     /**
      * Increment
+     * @param indicator 字符串
+     * @param key 字符串
+     * @return 返回值
     */
     public void increment(String indicator, String key) {
         redisTemplate.opsForHash().increment(indicator, key, INCREMENT_STEP);
@@ -73,6 +80,10 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     @Override
     /**
      * Decrement
+     * @param expire 长整数
+     * @param indicator 字符串
+     * @param key 字符串
+     * @return 返回值
     */
     public void decrement(String indicator, String key, long expire) {
         redisTemplate.opsForHash().increment(indicator, key, DECREMENT_STEP);
@@ -82,6 +93,9 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     @Override
     /**
      * Decrement
+     * @param indicator 字符串
+     * @param key 字符串
+     * @return 返回值
     */
     public void decrement(String indicator, String key) {
         redisTemplate.opsForHash().increment(indicator, key, DECREMENT_STEP);
@@ -90,6 +104,8 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     @Override
     /**
      * Qps
+     * @param key 字符串
+     * @return 返回值
     */
     public ReturnResult<BigDecimal> qps(String key) {
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);

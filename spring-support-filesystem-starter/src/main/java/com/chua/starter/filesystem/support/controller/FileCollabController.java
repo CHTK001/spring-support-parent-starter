@@ -3,7 +3,6 @@ package com.chua.starter.filesystem.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.collab.FileCollabStore;
-import com.chua.starter.filesystem.support.log.FileLogStore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -104,9 +103,6 @@ public class FileCollabController {
         String owner = userId == null || userId.isBlank() ? "anonymous" : userId;
         FileCollabStore.FileCollab collab = collabStore.create(bucket, objectKey, fileName,
                 owner, vis, users, path, type);
-        FileLogStore.getInstance().record("COLLAB_CREATE", fileName, 200, 0,
-                "collabId=" + collab.id() + " visibility=" + collab.visibility()
-                        + " path=" + collab.path() + " type=" + collab.type());
         MODULE_LOG.info("创建协同文档: {} owner={} visibility={} users={} path={} type={}",
                 collab.id(), owner, vis, users, collab.path(), collab.type());
         return ReturnResult.ok(toMap(collab));
@@ -187,17 +183,11 @@ public class FileCollabController {
         if (updated == null) {
             FileCollabStore.FileCollab current = collabStore.get(id);
             if (current == null) {
-                FileLogStore.getInstance().record("COLLAB_SAVE", id, 404, 0, "协同文档不存在");
                 return ReturnResult.illegal("协同文档不存在");
             }
-            // 冲突也算一次保存尝试，记下来才能在日志里看出「同一版本被并发写」
-            FileLogStore.getInstance().record("COLLAB_SAVE", current.fileName(), 409, 0,
-                    "collabId=" + id + " 版本冲突 expected=" + expectedVersion
-                            + " current=" + current.version());
+            // 冲突也算一次保存尝试（仅 MODULE_LOG 记录，不再写入文件操作日志）
             return ReturnResult.error("版本冲突：本地快照已过期，请刷新后重试（当前版本 " + current.version() + "）");
         }
-        FileLogStore.getInstance().record("COLLAB_SAVE", updated.fileName(), 200, 0,
-                "collabId=" + id + " version=" + updated.version() + " bytes=" + body.length());
         return ReturnResult.ok(toMap(updated));
     }
 
@@ -220,12 +210,8 @@ public class FileCollabController {
         Set<String> users = parseUserIds(userIds);
         FileCollabStore.FileCollab updated = collabStore.updateAccess(id, vis, users);
         if (updated == null) {
-            FileLogStore.getInstance().record("COLLAB_ACCESS", id, 404, 0, "协同文档不存在");
             return ReturnResult.illegal("协同文档不存在");
         }
-        FileLogStore.getInstance().record("COLLAB_ACCESS", updated.fileName(), 200, 0,
-                "collabId=" + id + " visibility=" + updated.visibility()
-                        + " users=" + updated.allowedUserIds().size());
         return ReturnResult.ok(toMap(updated));
     }
 
@@ -238,11 +224,7 @@ public class FileCollabController {
     @Operation(summary = "删除协同文档")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable("id") String id) {
-        FileCollabStore.FileCollab existed = collabStore.get(id);
         boolean removed = collabStore.delete(id);
-        FileLogStore.getInstance().record("COLLAB_DELETE",
-                existed == null ? id : existed.fileName(), removed ? 200 : 404, 0,
-                "collabId=" + id);
         return ReturnResult.ok(removed);
     }
 
@@ -263,10 +245,8 @@ public class FileCollabController {
         }
         FileCollabStore.FileCollab updated = collabStore.rename(id, fileName);
         if (updated == null) {
-            FileLogStore.getInstance().record("COLLAB_RENAME", id, 404, 0, "协同文档不存在");
             return ReturnResult.illegal("协同文档不存在");
         }
-        FileLogStore.getInstance().record("COLLAB_RENAME", updated.fileName(), 200, 0, "collabId=" + id);
         return ReturnResult.ok(toMap(updated));
     }
 
@@ -285,11 +265,8 @@ public class FileCollabController {
         FileCollabStore.FileCollab copy = collabStore.duplicate(id,
                 userId == null || userId.isBlank() ? "anonymous" : userId);
         if (copy == null) {
-            FileLogStore.getInstance().record("COLLAB_COPY", id, 404, 0, "源协同文档不存在");
             return ReturnResult.illegal("源协同文档不存在");
         }
-        FileLogStore.getInstance().record("COLLAB_COPY", copy.fileName(), 200, 0,
-                "src=" + id + " -> " + copy.id());
         return ReturnResult.ok(toMap(copy));
     }
 

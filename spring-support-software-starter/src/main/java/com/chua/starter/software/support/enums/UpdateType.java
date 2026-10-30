@@ -44,7 +44,8 @@ public enum UpdateType {
     /**
      * 更新类型。
      * @param value 值
-     */
+     * @return 返回值
+    */
     UpdateType(int value) {
         this.value = value;
     }

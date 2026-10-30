@@ -38,7 +38,8 @@ public class TableGraphReader {
     /**
      * 读取全部表节点 + 外键边
      * @return 读取的结果
-     */
+     * @throws SQLException 异常
+    */
     public GraphReadResult read() throws SQLException {
         /**
          * 尝试。
@@ -121,10 +122,11 @@ public class TableGraphReader {
 
     /**
      * fillcolumns
-     *
      * @param meta meta
      * @param t t
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void fillColumns(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
         /**
          * 尝试。
@@ -145,10 +147,11 @@ public class TableGraphReader {
 
     /**
      * fillprimaryKey
-     *
      * @param meta meta
      * @param t t
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void fillPrimaryKeys(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
         /**
          * 尝试。

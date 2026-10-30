@@ -69,6 +69,22 @@ public abstract class AbstractRpcServiceSetting<T> {
     private String cache;
 
     /**
+     * 降级目标提供者名称
+     * <p>RPC 远端服务不可用时回退的协议提供者名称，默认 {@code "springbean"}，
+     * 即回退到本 Spring 应用上下文内的本地 Bean。</p>
+     */
+    private String degrade = "springbean";
+
+    /**
+     * 未找到降级 Bean 时是否抛出异常
+     * <ul>
+     *   <li>{@code true}（默认）：抛出 RPC 异常</li>
+     *   <li>{@code false}：静默返回 {@code null}</li>
+     * </ul>
+     */
+    private boolean exception = true;
+
+    /**
      * 获取服务唯一标识
      *
      * @return 服务唯一标识
@@ -282,5 +298,41 @@ public abstract class AbstractRpcServiceSetting<T> {
      */
     public void setCache(String cache) {
         this.cache = cache;
+    }
+
+    /**
+     * 获取降级目标提供者名称
+     *
+     * @return 降级提供者名称
+     */
+    public String getDegrade() {
+        return degrade;
+    }
+
+    /**
+     * 设置降级目标提供者名称
+     *
+     * @param degrade 降级提供者名称
+     */
+    public void setDegrade(String degrade) {
+        this.degrade = degrade;
+    }
+
+    /**
+     * 获取未找到 Bean 时是否抛出异常
+     *
+     * @return 是否抛出异常
+     */
+    public boolean isException() {
+        return exception;
+    }
+
+    /**
+     * 设置未找到 Bean 时是否抛出异常
+     *
+     * @param exception 是否抛出异常
+     */
+    public void setException(boolean exception) {
+        this.exception = exception;
     }
 }

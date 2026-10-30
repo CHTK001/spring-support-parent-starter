@@ -13,6 +13,7 @@ public class AnyAdviceResolver extends JsonAdviceResolver {
     @Override
     /**
      * 类型
+     * @return 返回值
     */
     public String type() {
         return MediaType.APPLICATION_JSON_VALUE;

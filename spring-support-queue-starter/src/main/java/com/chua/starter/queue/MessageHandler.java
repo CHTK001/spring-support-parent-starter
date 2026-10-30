@@ -58,6 +58,8 @@ public interface MessageHandler {
         @Override
         /**
          * Nack
+         * @param requeue 布尔值
+         * @return 返回值
         */
         public void nack(boolean requeue) {
  // 自动确认模式下，nack 等同于 ACK
@@ -70,6 +72,7 @@ public interface MessageHandler {
         @Override
         /**
          * 是否Acknowledged
+         * @return 返回值
         */
         public boolean isAcknowledged() {
             return true; // 自动确认模式下，始终认为已确认

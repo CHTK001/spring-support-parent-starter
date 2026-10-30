@@ -403,7 +403,13 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return result;
     }
 
-    /** 模型列表端点的 keyfrom query（只带非空字符串字段，不含 refreshToken）。 */
+    /**
+     * models Query
+     * @param Map<String 参数
+     * @param credentials 参数
+     * @param version 字符串
+     * @return 返回值
+    */
     private String modelsQuery(Map<String, Object> credentials, String version) {
         Map<String, Object> keyfrom = keyfromBody(credentials, version);
         StringBuilder sb = new StringBuilder();
@@ -420,7 +426,13 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
 
     // ── 私有辅助 ──
 
-    /** exchange 端点：authCode 换可持久化凭据。 */
+    /**
+     * exchange
+     * @param Map<String 参数
+     * @param code 字符串
+     * @param handle 处理
+     * @return 返回值
+    */
     private Map<String, Object> exchange(String code, Map<String, Object> handle) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("authCode", code);
@@ -445,7 +457,13 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return credential;
     }
 
-    /** 解析 exchange / refresh 响应（{code,msg,data} 信封），归一为本模块凭据 Map。 */
+    /**
+     * parse Token Response
+     * @param Map<String 参数
+     * @param previous 参数
+     * @param response 字符串
+     * @return 返回值
+    */
     private Map<String, Object> parseTokenResponse(String response, Map<String, Object> previous) {
         Map<String, Object> payload = parseJson(response);
         int code = readInt(payload, "code");
@@ -490,7 +508,11 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return credential;
     }
 
-    /** 手机号脱敏归一化（只露末 2 位；非手机号形态原样保留，幂等）。 */
+    /**
+     * mask Phone Tail
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String maskPhoneTail(String value) {
         String trimmed = value == null ? "" : value.trim();
         if (trimmed.matches("1\\d{10}")) {
@@ -508,7 +530,12 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return trimmed;
     }
 
-    /** uid 四级回退（严格对齐实现：user.id → user.userId → user.yid → sha256 前 16 位）。 */
+    /**
+     * resolve Uid
+     * @param Map<String 参数
+     * @param credential 参数
+     * @return 返回值
+    */
     private String resolveUid(Map<String, Object> credential) {
         String userId = readString(credential, "user_id");
         if (!isBlank(userId)) {
@@ -529,9 +556,12 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
     }
 
     /**
-     * keyfrom 身份载荷（refresh 请求体）：{@code firstKeyfrom/latestKeyfrom/version}
-     * + 有才带的 {@code uuid/userId}（缺省时<b>删键</b>而非写空串）。
-     */
+     * keyfrom 身份载荷（refresh 请求体）：{@code firstKeyfrom/latestKeyfrom/version} + 有才带的 {@code uuid/userId}（缺省时<b>删键</b>而非写空串）。
+     * @param Map<String 参数
+     * @param credentials 参数
+     * @param version 字符串
+     * @return 返回值
+    */
     private Map<String, Object> keyfromBody(Map<String, Object> credentials, String version) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("firstKeyfrom", readString(credentials, "first_keyfrom"));
@@ -568,7 +598,14 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return FALLBACK_CLIENT_VERSION;
     }
 
-    /** 读 {code,msg,data} 信封的 data（code 非 0 或 data 缺失抛 UPSTREAM_ERROR）。 */
+    /**
+     * get Envelope Data
+     * @param Map<String 参数
+     * @param credentials 参数
+     * @param label 字符串
+     * @param url 字符串
+     * @return 返回值
+    */
     private Map<String, Object> getEnvelopeData(String url, Map<String, Object> credentials, String label) {
         String response = ChannelHttp.getJson(url, authHeaders(credentials));
         Map<String, Object> payload = parseJson(response);
@@ -582,7 +619,12 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return (Map<String, Object>) data;
     }
 
-    /** 带 Bearer 的业务请求头。 */
+    /**
+     * auth Headers
+     * @param Map<String 参数
+     * @param credentials 参数
+     * @return 返回值
+    */
     private Map<String, String> authHeaders(Map<String, Object> credentials) {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + readString(credentials, "access_token"));
@@ -592,7 +634,10 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return headers;
     }
 
-    /** 无认证请求头（exchange / refresh / 版本号端点用，均不带 Authorization）。 */
+    /**
+     * anonymous Headers
+     * @return 返回值
+    */
     private static Map<String, String> anonymousHeaders() {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Accept", "application/json");
@@ -601,7 +646,11 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return headers;
     }
 
-    /** 解析粘贴回来的回调 URL 的 query 参数（{@code code}/{@code state}）。 */
+    /**
+     * parse Callback Url
+     * @param rawUrl 字符串
+     * @return 返回值
+    */
     private static Map<String, String> parseCallbackUrl(String rawUrl) {
         String trimmed = rawUrl.trim();
         int queryIndex = trimmed.indexOf('?');
@@ -623,6 +672,12 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return result;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -630,12 +685,23 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return result;
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
-    /** 取多个候选键中第一个 number（签到积分字段三级回退链）。 */
+    /**
+     * first Number
+     * @param Map<String 参数
+     * @param keys 参数
+     * @param source 参数
+     * @return 返回值
+    */
     private static Number firstNumber(Map<String, Object> source, String... keys) {
         for (String key : keys) {
             Object value = source.get(key);
@@ -646,6 +712,13 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return null;
     }
 
+    /**
+     * read Int
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static int readInt(Map<String, Object> source, String key) {
         Object value = source.get(key);
         if (value instanceof Number n) {
@@ -657,7 +730,11 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return -1;
     }
 
-    /** 从 JWT 解 {@code exp}（秒）→ 毫秒；解析失败返回 null。 */
+    /**
+     * jwt Expires At Ms
+     * @param jwt 字符串
+     * @return 返回值
+    */
     private static Long jwtExpiresAtMs(String jwt) {
         if (isBlank(jwt)) {
             return null;
@@ -679,15 +756,31 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return null;
     }
 
+    /**
+     * url Encode
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String urlEncode(String value) {
         return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
+    /**
+     * url Decode
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String urlDecode(String value) {
         return java.net.URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
 
-    /** 读宽松字符串（容忍数字下发的字段，如 modelId / modelName）。 */
+    /**
+     * read Loose String
+     * @param Map<? 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readLooseString(Map<?, ?> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -699,6 +792,13 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return null;
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -707,10 +807,20 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();

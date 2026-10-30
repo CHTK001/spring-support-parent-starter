@@ -289,11 +289,10 @@ public class DbDocumentController {
     }
 
     /**
-     * Minimal inline marked-like markdown to HTML converter.
-     *
-     * <p>不引入任何第三方库，直接手写：覆盖本场景所需的子集（标题、表格、代码块、列表、粗斜体、链接）。
-     * 完整 markdown → HTML 转换已有 DocumentProvider("markdown") 负责，这里只做前端预览用的轻量渲染。</p>
-     */
+     * Minimal inline marked-like markdown to HTML converter. <p>不引入任何第三方库，直接手写：覆盖本场景所需的子集（标题、表格、代码块、列表、粗斜体、链接）。 完整 markdown → HTML 转换已有 DocumentProvider("markdown") 负责，这里只做前端预览用的轻量渲染。</p>
+     * @param md 字符串
+     * @return 返回值
+    */
     private static String markdownToHtml(String md) {
         if (md == null || md.isBlank()) {
             return "<p><em>（文档内容为空）</em></p>";
@@ -438,7 +437,11 @@ public class DbDocumentController {
         return sb.toString();
     }
 
-    /** 行内元素：粗体/斜体/行内代码/链接 */
+    /**
+     * inline
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String inline(String s) {
         if (s == null) {
             return "";
@@ -446,7 +449,11 @@ public class DbDocumentController {
         return escHtml(stripMarkdown(s));
     }
 
-    /** 去掉行内 markdown 标记 */
+    /**
+     * strip Markdown
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String stripMarkdown(String s) {
         if (s == null) {
             return "";
@@ -462,6 +469,11 @@ public class DbDocumentController {
         return s;
     }
 
+    /**
+     * esc Html
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String escHtml(String s) {
         if (s == null) {
             return "";

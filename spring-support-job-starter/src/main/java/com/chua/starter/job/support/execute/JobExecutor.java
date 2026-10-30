@@ -765,6 +765,8 @@ public class JobExecutor {
             @Override
             /**
              * 新thread
+             * @param r 可运行任务
+             * @return 返回值
             */
             public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, DEFAULT_THREAD_NAME_PREFIX + counter.incrementAndGet());

@@ -102,7 +102,10 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     @Override
     /**
      * 查询支付首页汇总数据
-     */
+     * @param endDate 参数
+     * @param startDate 参数
+     * @return 返回值
+    */
     public PaymentDashboardSummaryVO summary(LocalDate startDate, LocalDate endDate) {
         LocalDate normalizedEndDate = endDate != null ? endDate : LocalDate.now();
         LocalDate normalizedStartDate = startDate != null ? startDate : normalizedEndDate;

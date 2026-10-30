@@ -102,7 +102,8 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     @Override
     /**
      * 任务标识
-     */
+     * @return 返回值
+    */
     public String taskKey() {
         return "payment-order-timeout-scan";
     }
@@ -110,7 +111,8 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     @Override
     /**
      * 任务名称
-     */
+     * @return 返回值
+    */
     public String taskName() {
         return "订单超时扫描";
     }
@@ -118,7 +120,8 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     @Override
     /**
      * 默认 cron 表达式
-     */
+     * @return 返回值
+    */
     public String defaultCron() {
         return "0 */10 * * * ?";
     }
@@ -126,7 +129,8 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     @Override
     /**
      * 任务说明
-     */
+     * @return 返回值
+    */
     public String description() {
         return "按商户支付配置扫描超时订单并执行自动取消。";
     }

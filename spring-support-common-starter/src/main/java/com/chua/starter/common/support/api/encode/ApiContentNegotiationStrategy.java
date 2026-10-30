@@ -35,6 +35,9 @@ public class ApiContentNegotiationStrategy implements ContentNegotiationStrategy
     @Override
     /**
      * 解析media类型
+     * @param webRequest 参数
+     * @return 返回值
+     * @throws HttpMediaTypeNotAcceptableException 异常
     */
     public List<MediaType> resolveMediaTypes(NativeWebRequest webRequest) throws HttpMediaTypeNotAcceptableException {
         if (apiResponseEncodeRegister.isPass()) {

@@ -46,6 +46,7 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * 服务类型
+     * @return 返回值
     */
     public ServiceType serviceType() {
         return ServiceType.REDIS;
@@ -54,6 +55,11 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * 扫描键
+     * @param count 统计数量
+     * @param ctx 参数
+     * @param cursor 字符串
+     * @param pattern 字符串
+     * @return 返回值
     */
     public Mono<ScanResult> scanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         return Mono.fromCallable(() -> doScanKeys(ctx, pattern, cursor, count))
@@ -63,6 +69,9 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * 获取值
+     * @param ctx 参数
+     * @param key 字符串
+     * @return 返回值
     */
     public Mono<String> getValue(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
@@ -79,6 +88,11 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * 设置值
+     * @param ctx 参数
+     * @param key 字符串
+     * @param ttl 参数
+     * @param value 字符串
+     * @return 返回值
     */
     public Mono<Boolean> setValue(CollectContext ctx, String key, String value, Duration ttl) {
         return Mono.fromCallable(() -> {
@@ -100,6 +114,9 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * 删除键
+     * @param ctx 参数
+     * @param keys 参数
+     * @return 返回值
     */
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
@@ -130,6 +147,10 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * Expire
+     * @param ctx 参数
+     * @param key 字符串
+     * @param ttl 参数
+     * @return 返回值
     */
     public Mono<Boolean> expire(CollectContext ctx, String key, Duration ttl) {
         return Mono.fromCallable(() -> {
@@ -147,6 +168,9 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * Ttl
+     * @param ctx 参数
+     * @param key 字符串
+     * @return 返回值
     */
     public Mono<Long> ttl(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
@@ -163,6 +187,9 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     /**
      * 类型
+     * @param ctx 参数
+     * @param key 字符串
+     * @return 返回值
     */
     public Mono<String> type(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {

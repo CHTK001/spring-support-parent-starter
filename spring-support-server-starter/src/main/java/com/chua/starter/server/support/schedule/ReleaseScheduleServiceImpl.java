@@ -91,7 +91,9 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
 
     /**
      * 撤销库里已不存在或已关闭开关的任务，避免重启后残留幽灵调度。
-     */
+     * @param projects 参数
+     * @return 返回值
+    */
     private void cleanupOrphanJobs(List<MsServerProject> projects) {
         Map<Long, MsServerProject> byId = new LinkedHashMap<>();
         for (MsServerProject project : projects) {
@@ -146,7 +148,9 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
 
     /**
      * 登记一次性定时发布任务。
-     */
+     * @param project 参数
+     * @return 返回值
+    */
     private void declarePublish(MsServerProject project) {
         LocalDateTime time = project.getScheduleTime();
         if (time == null || !time.isAfter(LocalDateTime.now())) {
@@ -170,7 +174,9 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
 
     /**
      * 登记 Git 定时轮询任务。
-     */
+     * @param project 参数
+     * @return 返回值
+    */
     private void declareGitPoll(MsServerProject project) {
         if (project.getGitUrl() == null || project.getGitUrl().trim().isEmpty()) {
             log.warn("[发布定时] 项目 {} 开启 Git 轮询但未配置仓库地址，跳过", project.getId());
@@ -193,7 +199,11 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
 
     /**
      * 组装修剪公共字段的任务规格。
-     */
+     * @param jobKey 字符串
+     * @param jobName 字符串
+     * @param projectId 长整数
+     * @return 返回值
+    */
     private JobSpec baseSpec(String jobKey, String jobName, Long projectId) {
         JobSpec spec = new JobSpec();
         spec.setJobNo(jobKey);
@@ -243,6 +253,14 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
         return out;
     }
 
+    /**
+     * fill Runtime
+     * @param Map<String 参数
+     * @param jobKey 字符串
+     * @param out 参数
+     * @param prefix 字符串
+     * @return 返回值
+    */
     private void fillRuntime(Map<String, Object> out, String jobKey, String prefix) {
         JobRuntime runtime = null;
         try {
@@ -261,12 +279,19 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
 
     /**
      * LocalDateTime 换算为 6 段 cron（秒 分 时 日 月 周）。
-     */
+     * @param time 参数
+     * @return 返回值
+    */
     private String toCron(LocalDateTime time) {
         return time.getSecond() + " " + time.getMinute() + " " + time.getHour() + " "
                 + time.getDayOfMonth() + " " + time.getMonthValue() + " ?";
     }
 
+    /**
+     * parse Project Id
+     * @param jobKey 字符串
+     * @return 返回值
+    */
     private Long parseProjectId(String jobKey) {
         if (jobKey == null) {
             return null;

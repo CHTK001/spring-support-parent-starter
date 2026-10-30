@@ -76,7 +76,10 @@ public final class DbFilter {
     private DbFilter() {
     }
 
-    /** 供 UI 渲染下拉用的运算符清单 */
+    /**
+     * operators
+     * @return 返回值
+    */
     public static List<String> operators() {
         List<String> out = new ArrayList<>(OPS.size() + 2);
         for (String[] pair : OPS) {

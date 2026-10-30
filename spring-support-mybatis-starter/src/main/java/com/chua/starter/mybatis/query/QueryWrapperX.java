@@ -192,6 +192,10 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     @Override
     /**
      * Eq
+     * @param column 字符串
+     * @param condition 布尔值
+     * @param val 对象
+     * @return 返回值
     */
     public QueryWrapperX<T> eq(boolean condition, String column, Object val) {
         super.eq(condition, column, val);
@@ -201,6 +205,9 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     @Override
     /**
      * Eq
+     * @param column 字符串
+     * @param val 对象
+     * @return 返回值
     */
     public QueryWrapperX<T> eq(String column, Object val) {
         super.eq(column, val);
@@ -210,6 +217,8 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     @Override
     /**
      * 订单bydesc
+     * @param column 字符串
+     * @return 返回值
     */
     public QueryWrapperX<T> orderByDesc(String column) {
         super.orderByDesc(true, column);
@@ -219,6 +228,8 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     @Override
     /**
      * 最后一个
+     * @param lastSql 字符串
+     * @return 返回值
     */
     public QueryWrapperX<T> last(String lastSql) {
         super.last(lastSql);
@@ -228,6 +239,9 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     @Override
     /**
      * 入
+     * @param coll 参数
+     * @param column 字符串
+     * @return 返回值
     */
     public QueryWrapperX<T> in(String column, Collection<?> coll) {
         super.in(column, coll);

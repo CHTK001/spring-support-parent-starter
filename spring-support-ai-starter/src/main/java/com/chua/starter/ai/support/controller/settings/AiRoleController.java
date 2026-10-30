@@ -50,10 +50,19 @@ public class AiRoleController {
     public static class ImportBody {
         private List<ImportFile> files;
 
+        /**
+         * get Files
+         * @return 返回值
+        */
         public List<ImportFile> getFiles() {
             return files;
         }
 
+        /**
+         * set Files
+         * @param files 参数
+         * @return 返回值
+        */
         public void setFiles(List<ImportFile> files) {
             this.files = files;
         }
@@ -66,18 +75,36 @@ public class AiRoleController {
         private String content;
         private String filename;
 
+        /**
+         * get Content
+         * @return 返回值
+        */
         public String getContent() {
             return content;
         }
 
+        /**
+         * set Content
+         * @param content 字符串
+         * @return 返回值
+        */
         public void setContent(String content) {
             this.content = content;
         }
 
+        /**
+         * get Filename
+         * @return 返回值
+        */
         public String getFilename() {
             return filename;
         }
 
+        /**
+         * set Filename
+         * @param filename 字符串
+         * @return 返回值
+        */
         public void setFilename(String filename) {
             this.filename = filename;
         }
@@ -257,7 +284,10 @@ public class AiRoleController {
 
     /**
      * 导入条目转实体：两套键名兼容，code 不提供时由 save 侧生成唯一值。
-     */
+     * @param Map<String 参数
+     * @param item 参数
+     * @return 返回值
+    */
     private static SysAiRole toRole(Map<String, Object> item) {
         SysAiRole role = new SysAiRole();
         Object title = item.get("title");
@@ -285,6 +315,11 @@ public class AiRoleController {
         return role;
     }
 
+    /**
+     * str
+     * @param v 对象
+     * @return 返回值
+    */
     private static String str(Object v) {
         return v == null ? null : String.valueOf(v);
     }

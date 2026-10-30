@@ -45,6 +45,12 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     @Override
     /**
      * 设置non空参数
+     * @param i 整数
+     * @param jdbcType 参数
+     * @param parameter 字符串
+     * @param ps 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, encrypt(parameter));
@@ -53,6 +59,10 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     @Override
     /**
      * 获取空结果
+     * @param columnName 字符串
+     * @param rs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
@@ -62,6 +72,10 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     @Override
     /**
      * 获取空结果
+     * @param columnIndex 整数
+     * @param rs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
@@ -71,6 +85,10 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     @Override
     /**
      * 获取空结果
+     * @param columnIndex 整数
+     * @param cs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);

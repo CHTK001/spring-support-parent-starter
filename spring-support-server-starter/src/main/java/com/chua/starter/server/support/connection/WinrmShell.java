@@ -230,6 +230,11 @@ public class WinrmShell {
          */
         private final StringBuilder buffer = new StringBuilder();
 
+        /**
+         * Line Writer
+         * @param onLine 参数
+         * @return 返回值
+        */
         LineWriter(Consumer<String> onLine) {
             this.onLine = onLine;
         }
@@ -271,6 +276,12 @@ public class WinrmShell {
      * WinRM 执行异常
      */
     public static class WinrmExecException extends RuntimeException {
+        /**
+         * Winrm Exec Exception
+         * @param cause 可抛出异常
+         * @param message 字符串
+         * @return 返回值
+        */
         WinrmExecException(String message, Throwable cause) {
             super(message, cause);
         }

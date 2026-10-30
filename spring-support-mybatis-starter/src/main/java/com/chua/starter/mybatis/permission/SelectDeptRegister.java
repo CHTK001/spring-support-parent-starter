@@ -57,6 +57,7 @@ public class SelectDeptRegister extends AbstractDeptRegister {
     @Override
     /**
      * 注册
+     * @return 返回值
     */
     public Expression register() {
         /**

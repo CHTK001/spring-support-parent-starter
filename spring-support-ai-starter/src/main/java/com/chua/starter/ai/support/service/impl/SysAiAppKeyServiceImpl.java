@@ -74,6 +74,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     /**
      * 列表
+     * @return 返回值
     */
     public List<SysAiAppKey> list() {
         return sysAiAppKeyMapper.selectList(
@@ -137,6 +138,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     /**
      * 验证
+     * @param appKey 字符串
+     * @param ip 字符串
+     * @param secret 字符串
+     * @return 返回值
     */
     public boolean verify(String appKey, String secret, String ip) {
         SysAiAppKey dbAppKey = queryAppKeyUncached(appKey);
@@ -149,6 +154,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     /**
      * 验证appKeyonly
+     * @param appKey 字符串
+     * @param ip 字符串
+     * @return 返回值
     */
     public boolean verifyAppKeyOnly(String appKey, String ip) {
         return isValidAppKey(queryAppKeyUncached(appKey), ip);

@@ -164,7 +164,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
     /**
      * 设置Bean工厂
      * @param beanFactory Bean工厂
-     */
+     * @return 返回值
+     * @throws BeansException 异常
+    */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof ConfigurableListableBeanFactory) {
             this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
@@ -176,7 +178,9 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      * Post处理之后initialization
      * @param bean Bean
      * @param beanName Bean名称
-     */
+     * @return 返回值
+     * @throws BeansException 异常
+    */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (beanFactory != null && !beanFactory.isSingleton(beanName)) {
             return bean;
@@ -487,7 +491,8 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         /**
          * 配置值监听器。
          * @param configKey 配置Key
-         */
+         * @return 返回值
+        */
         ConfigValueListener(String configKey) {
             this.configKey = configKey;
         }

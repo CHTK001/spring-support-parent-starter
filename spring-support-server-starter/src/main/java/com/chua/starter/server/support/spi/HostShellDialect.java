@@ -43,11 +43,11 @@ public enum HostShellDialect {
 
     /**
      * 构造
-     *
-     * @param code       编码
-     * @param osName     系统展示名
+     * @param code 编码
+     * @param osName 系统展示名
      * @param scriptName 脚本语言展示名
-     */
+     * @return 返回值
+    */
     HostShellDialect(String code, String osName, String scriptName) {
         this.code = code;
         this.osName = osName;

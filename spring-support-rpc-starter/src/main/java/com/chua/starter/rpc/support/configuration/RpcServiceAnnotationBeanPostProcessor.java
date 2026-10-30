@@ -134,6 +134,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         rpcProperties = Binder.get(this.environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
@@ -151,6 +153,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * Post处理Bean工厂
+     * @param beanFactory 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
@@ -198,6 +203,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * Post处理Beandefinitionregistry
+     * @param registry 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if(!rpcProperties.isEnable()) {
@@ -216,6 +224,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * 设置resource加载
+     * @param resourceLoader 参数
+     * @return 返回值
     */
     public void setResourceLoader(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
@@ -223,6 +233,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * 设置环境
+     * @param environment 参数
+     * @return 返回值
     */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
@@ -278,6 +290,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * 设置Bean类加载
+     * @param classLoader 参数
+     * @return 返回值
     */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
@@ -696,6 +710,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;

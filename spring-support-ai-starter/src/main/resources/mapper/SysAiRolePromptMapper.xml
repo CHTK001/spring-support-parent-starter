@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiRolePromptMapper">
+
+    <!--
+        查出某角色某形态的提示词行（包含已逻辑删除的行）。
+        <p>唯一键 {@code uk_role_prompt_mode (role_id, prompt_mode, user_id)} 不含删除标记列，
+        删过一次的形态再保存会撞唯一键，只能先复活原行。</p>
+    -->
+    <select id="selectIncludingDeleted" resultType="com.chua.starter.ai.support.entity.SysAiRolePrompt">
+        SELECT sys_ai_role_prompt_id AS id, user_id AS userId, role_id AS roleId,
+        prompt_mode AS promptMode, sys_ai_role_prompt_content AS content,
+        sys_ai_role_prompt_status AS status, sys_ai_role_prompt_delete AS deleted
+        FROM sys_ai_role_prompt
+        WHERE role_id = #{roleId} AND prompt_mode = #{promptMode} AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <!--
+        复活一条已逻辑删除的提示词行。
+    -->
+    <update id="revive">
+        UPDATE sys_ai_role_prompt
+        SET sys_ai_role_prompt_content = #{content},
+        sys_ai_role_prompt_status = #{status},
+        sys_ai_role_prompt_delete = 0
+        WHERE sys_ai_role_prompt_id = #{id}
+    </update>
+
+</mapper>

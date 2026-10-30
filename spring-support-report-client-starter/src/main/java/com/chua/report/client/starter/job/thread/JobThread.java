@@ -194,6 +194,8 @@ public class JobThread extends Thread {
                                 @Override
                                 /**
                                  * 调用
+                                 * @return 返回值
+                                 * @throws Exception 异常
                                 */
                                 public Boolean call() throws Exception {
 

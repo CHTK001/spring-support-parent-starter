@@ -18,6 +18,9 @@ public class SyncClientCondition implements Condition {
     @Override
     /**
      * Matches
+     * @param context 参数
+     * @param metadata 参数
+     * @return 返回值
     */
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
  // 获取 类型 配置，默认为 客户端

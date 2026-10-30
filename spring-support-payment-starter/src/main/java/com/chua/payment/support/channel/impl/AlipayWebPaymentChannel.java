@@ -47,7 +47,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     @Override
     /**
      * 是否支持该通道
-     */
+     * @param channelSubType 字符串
+     * @param channelType 字符串
+     * @return 返回值
+    */
     public boolean supports(String channelType, String channelSubType) {
         return "ALIPAY".equalsIgnoreCase(channelType) && "WEB".equalsIgnoreCase(channelSubType);
     }
@@ -55,7 +58,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     @Override
     /**
      * 发起支付
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).pagePay(buildClientProperties(channel),
                 buildPayRequest(request, "FAST_INSTANT_TRADE_PAY"));
@@ -68,7 +74,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     @Override
     /**
      * 查询支付结果
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         AliyunAlipayTradeQueryResponse response = gateway(providerSpi(channel, null)).queryOrder(buildClientProperties(channel), orderNo);
 
@@ -80,7 +89,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     @Override
     /**
      * 关闭订单
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeOrder(buildClientProperties(channel), orderNo);
     }
@@ -88,7 +100,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     @Override
     /**
      * 申请退款
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         AliyunAlipayRefundResponse response = gateway(providerSpi(channel, null)).refund(buildClientProperties(channel), buildRefundRequest(request));
 
@@ -100,7 +115,10 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     @Override
     /**
      * 查询退款结果
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         AliyunAlipayRefundResponse response = gateway(providerSpi(channel, null)).queryRefund(buildClientProperties(channel), buildRefundRequest(request));
 

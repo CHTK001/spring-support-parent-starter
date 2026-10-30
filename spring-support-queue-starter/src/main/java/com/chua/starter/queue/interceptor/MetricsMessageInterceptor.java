@@ -29,6 +29,8 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     @Override
     /**
      * 之前发送
+     * @param message 消息
+     * @return 返回值
     */
     public Message beforeSend(Message message) {
         sendTimestamps.put(message.getId(), System.currentTimeMillis());
@@ -38,6 +40,10 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     @Override
     /**
      * 之后发送
+     * @param error 可抛出异常
+     * @param message 消息
+     * @param success 标记成功
+     * @return 返回值
     */
     public void afterSend(Message message, boolean success, Throwable error) {
         String destination = message.getDestination();
@@ -60,6 +66,8 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     @Override
     /**
      * 之前接收
+     * @param message 消息
+     * @return 返回值
     */
     public Message beforeReceive(Message message) {
         message.getHeaders().put("receiveStartTime", System.currentTimeMillis());
@@ -69,6 +77,10 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     @Override
     /**
      * 之后接收
+     * @param error 可抛出异常
+     * @param message 消息
+     * @param success 标记成功
+     * @return 返回值
     */
     public void afterReceive(Message message, boolean success, Throwable error) {
         String destination = message.getDestination();
@@ -142,6 +154,7 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return -100; // 高优先级

@@ -59,6 +59,10 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
     @Override
     /**
      * 尝试获取
+     * @param group 字符串
+     * @param leaseSeconds 整数
+     * @param nodeId 字符串
+     * @return 返回值
     */
     public boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
         // 租约截止时刻统一由数据库时钟（NOW(3)）计算：多机部署下各节点时钟漂移
@@ -124,6 +128,9 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
     @Override
     /**
      * 释放
+     * @param group 字符串
+     * @param nodeId 字符串
+     * @return 返回值
     */
     public void release(String group, String nodeId) {
         try {

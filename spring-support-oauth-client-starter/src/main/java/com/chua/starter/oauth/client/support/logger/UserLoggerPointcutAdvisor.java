@@ -54,6 +54,9 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     @Override
     /**
      * Matches
+     * @param method 参数
+     * @param targetClass 参数
+     * @return 返回值
     */
     public boolean matches(Method method, Class<?> targetClass) {
         return method.isAnnotationPresent(UserLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
@@ -62,6 +65,11 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     @Override
     /**
      * 创建operate日志记录器
+     * @param invocation 参数
+     * @param proceed 对象
+     * @param startTime 长整数
+     * @param throwable 可抛出异常
+     * @return 返回值
     */
     protected void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
@@ -190,6 +198,10 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     @Override
     /**
      * 获取内容
+     * @param content 字符串
+     * @param invocation 参数
+     * @param proceed 对象
+     * @return 返回值
     */
     protected String getContent(String content, MethodInvocation invocation, Object proceed) {
         if (StringUtils.isEmpty(content)) {
@@ -222,6 +234,8 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     @Override
     /**
      * 获取Module
+     * @param method 参数
+     * @return 返回值
     */
     protected String getModule(Method method) {
         String name = method.getName().toUpperCase();
@@ -264,6 +278,9 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     @Override
     /**
      * 获取名称
+     * @param annotationName 字符串
+     * @param method 参数
+     * @return 返回值
     */
     protected String getName(String annotationName, Method method) {
         String name = super.getName(annotationName, method);

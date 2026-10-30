@@ -95,9 +95,10 @@ public enum MetricType {
     /**
      * 指标类型。
      * @param code 编码
-     * @param description description
      * @param defaultIntervalSeconds 默认间隔seconds
-     */
+     * @param description description
+     * @return 返回值
+    */
     MetricType(String code, String description, int defaultIntervalSeconds) {
         this.code = code;
         this.description = description;

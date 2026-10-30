@@ -56,6 +56,7 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 获取标识
+     * @return 返回值
     */
     public String getId() {
         return session.getId();
@@ -64,6 +65,7 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 获取客户端标识
+     * @return 返回值
     */
     public String getClientId() {
         return clientId;
@@ -72,6 +74,8 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 设置客户端标识
+     * @param clientId 字符串
+     * @return 返回值
     */
     public void setClientId(String clientId) {
         this.clientId = clientId;
@@ -80,6 +84,7 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 获取用户
+     * @return 返回值
     */
     public SocketUser getUser() {
         return user;
@@ -88,6 +93,8 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 设置用户
+     * @param user 参数
+     * @return 返回值
     */
     public void setUser(SocketUser user) {
         this.user = user;
@@ -96,6 +103,9 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 设置Attribute
+     * @param key 字符串
+     * @param value 对象
+     * @return 返回值
     */
     public void setAttribute(String key, Object value) {
         attributes.put(key, value);
@@ -116,6 +126,8 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 移除Attribute
+     * @param key 字符串
+     * @return 返回值
     */
     public void removeAttribute(String key) {
         attributes.remove(key);
@@ -124,6 +136,7 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 获取Attributes
+     * @return 返回值
     */
     public Map<String, Object> getAttributes() {
         return attributes;
@@ -132,6 +145,7 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 是否连接
+     * @return 返回值
     */
     public boolean isConnected() {
         return session.isOpen();
@@ -152,6 +166,9 @@ public class RSocketSessionImpl implements SocketSession {
     @Override
     /**
      * 发送
+     * @param data 对象
+     * @param event 字符串
+     * @return 返回值
     */
     public void send(String event, Object data) {
         if (!session.isOpen()) {

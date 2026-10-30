@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.device.support.mapper.DeviceGroupDeviceMapper">
+
+    <!--
+        查询某分组的全部设备（按 device_order 排序）。
+    -->
+    <select id="findByGroupId" resultType="com.chua.starter.device.support.entity.DeviceGroupDevice">
+        SELECT d.*
+        FROM device_group_device d
+        WHERE d.group_id = #{groupId}
+        ORDER BY d.device_order
+    </select>
+
+    <!--
+        清空某分组的全部设备。
+    -->
+    <delete id="deleteByGroupId">
+        DELETE FROM device_group_device WHERE group_id = #{groupId}
+    </delete>
+
+    <!--
+        清空某设备的全部分组。
+    -->
+    <delete id="deleteByDeviceId">
+        DELETE FROM device_group_device WHERE device_id = #{deviceId}
+    </delete>
+
+    <!--
+        查询某分组的全部设备标识。
+    -->
+    <select id="findDeviceIds" resultType="String">
+        SELECT device_id
+        FROM device_group_device
+        WHERE group_id = #{groupId}
+    </select>
+
+</mapper>

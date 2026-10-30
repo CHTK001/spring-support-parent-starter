@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiSessionTraceMapper">
+
+    <!--
+        批量插入轨迹。
+        <p>轨迹写入是高频的（一次工具调用就可能产生十几条），逐条 insert 会把
+        连接数与事务日志撑满，故这里用一条多值 INSERT 批量落库。
+        调用方需自行控制批量大小，见实现方的单批上限。</p>
+    -->
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO sys_ai_session_trace
+        (sys_ai_session_trace_uid, sys_ai_session_id, chat_request_id, kind, agent_id,
+        span_id, span_end, tool_name, text, event_time, span_end_time, seq) VALUES
+        <foreach collection="list" item="t" separator=",">
+            (#{t.uid}, #{t.sessionId}, #{t.chatRequestId}, #{t.kind}, #{t.agentId},
+            #{t.spanId}, #{t.spanEnd}, #{t.toolName}, #{t.text}, #{t.eventTime},
+            #{t.spanEndTime}, #{t.seq})
+        </foreach>
+    </insert>
+
+</mapper>

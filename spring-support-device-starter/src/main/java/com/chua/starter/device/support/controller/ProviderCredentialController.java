@@ -44,14 +44,29 @@ public class ProviderCredentialController {
     private final DeviceSyncService deviceSyncService;
 
     @GetMapping("/list")
+    /**
+     * Request Param
+     * @param vendor 字符串
+     * @return 返回值
+    */
     public ReturnResult<List<DeviceProviderCredential>> list(@RequestParam(required = false) String vendor) {
         return ReturnResult.ok(credentialService.list(vendor));
     }
     @GetMapping("/{id}")
+    /**
+     * detail
+     * @param id 字符串
+     * @return 返回值
+    */
     public ReturnResult<DeviceProviderCredential> detail(@PathVariable String id) {
         return ReturnResult.ok(credentialService.get(id));
     }
     @PostMapping
+    /**
+     * 创建
+     * @param credential 参数
+     * @return 返回值
+    */
     public ReturnResult<DeviceProviderCredential> create(@RequestBody DeviceProviderCredential credential) {
         return ReturnResult.ok(credentialService.create(credential));
     }
@@ -75,6 +90,11 @@ public class ProviderCredentialController {
     }
 
     @DeleteMapping("/{id}")
+    /**
+     * 删除
+     * @param id 字符串
+     * @return 返回值
+    */
     public ReturnResult<Void> delete(@PathVariable String id) {
         credentialService.delete(id);
         return ReturnResult.ok();

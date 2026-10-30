@@ -506,11 +506,12 @@ public class HostProfileServiceImpl implements HostProfileService {
 
     /**
      * 把采集到的硬件与用量快照写回主机台账。
-     *
-     * @param host    主机
-     * @param info    基础信息
+     * @param host 主机
+     * @param info 基础信息
      * @param metrics 实时指标
-     */
+     * @param provider 参数
+     * @return 返回值
+    */
     private void persistSnapshot(MsServerHost host, HostInfoVO info, HostMetricsVO metrics, SystemInfoProvider provider) {
         if (notEmpty(info.getOsVersion())) {
             host.setServerHostOsVersion(info.getOsVersion());

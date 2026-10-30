@@ -651,7 +651,11 @@ public class DbSpiCapabilityController {
         return new String[]{stripQuotes(raw.substring(0, at)), stripQuotes(raw.substring(at + 1))};
     }
 
-    /** 去掉首尾单引号/反引号。 */
+    /**
+     * strip Quotes
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String stripQuotes(String value) {
         String text = value == null ? "" : value.trim();
         while (!text.isEmpty() && (text.startsWith("'") || text.startsWith("`"))) {
@@ -851,16 +855,30 @@ public class DbSpiCapabilityController {
         };
     }
 
-    /** 账号唯一键：{@code user@host}。 */
+    /**
+     * account
+     * @param host 设置主机地址
+     * @param user 字符串
+     * @return 返回值
+    */
     private static String account(String user, String host) {
         return (user == null ? "" : user) + "@" + (host == null ? "" : host);
     }
 
-    /** SQL 单引号字面量（反斜杠加倍、单引号成对）。 */
+    /**
+     * quote Literal
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String quoteLiteral(String value) {
         return "'" + (value == null ? "" : value.replace("\\", "\\\\").replace("'", "''")) + "'";
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
@@ -875,10 +893,20 @@ public class DbSpiCapabilityController {
         return Math.round(value * 10D) / 10D;
     }
 
+    /**
+     * text
+     * @param value 对象
+     * @return 返回值
+    */
     private static String text(Object value) {
         return value == null ? null : String.valueOf(value).trim();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value == null) {
             return null;
@@ -898,6 +926,11 @@ public class DbSpiCapabilityController {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * texts
+     * @param value 对象
+     * @return 返回值
+    */
     private static List<String> texts(Object value) {
         List<String> result = new ArrayList<>();
         if (value instanceof Iterable<?> iterable) {
@@ -911,6 +944,11 @@ public class DbSpiCapabilityController {
         return result;
     }
 
+    /**
+     * close Quietly
+     * @param conn 参数
+     * @return 返回值
+    */
     private static void closeQuietly(Connection conn) {
         if (conn != null) {
             try {

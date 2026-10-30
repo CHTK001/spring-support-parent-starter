@@ -71,7 +71,10 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     @Override
     /**
      * 按用户查询订单详情
-     */
+     * @param id 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public OrderVO getOrderByUser(Long userId, Long id) {
         return toOrderVO(requireUserOrder(userId, id));
     }
@@ -79,7 +82,10 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     @Override
     /**
      * 按用户查询订单状态日志列表
-     */
+     * @param id 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id) {
         /**
          * 先校验订单归属，避免越权查询

@@ -74,7 +74,11 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     @Override
     /**
      * 分页查询提现审批单
-     */
+     * @param pageNum 整数
+     * @param pageSize 整数
+     * @param status 字符串
+     * @return 返回值
+    */
     public Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status) {
         LambdaQueryWrapper<WalletWithdrawApproval> wrapper = new LambdaQueryWrapper<WalletWithdrawApproval>()
                 .orderByDesc(WalletWithdrawApproval::getCreatedAt);
@@ -87,7 +91,9 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     @Override
     /**
      * 根据主键获取审批单
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public WalletWithdrawApproval getById(Long id) {
         WalletWithdrawApproval approval = approvalMapper.selectById(id);
         if (approval == null) {

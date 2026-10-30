@@ -27,6 +27,7 @@ public class SpringSpelExpressionParser implements com.chua.common.support.lang.
     @Override
     /**
      * 类型
+     * @return 返回值
     */
     public String type() {
         return "spring";
@@ -35,6 +36,8 @@ public class SpringSpelExpressionParser implements com.chua.common.support.lang.
     @Override
     /**
      * 解析
+     * @param express 字符串
+     * @return 返回值
     */
     public BTreeNode parse(String express) {
         Object value = expressionParser.parseExpression(express, new TemplateParserContext()).getValue(evaluationContext);
@@ -44,6 +47,8 @@ public class SpringSpelExpressionParser implements com.chua.common.support.lang.
     @Override
     /**
      * Generate
+     * @param node 参数
+     * @return 返回值
     */
     public String generate(BTreeNode node) {
         if (node == null) {

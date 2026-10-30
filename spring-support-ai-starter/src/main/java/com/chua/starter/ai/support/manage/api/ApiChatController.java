@@ -1102,6 +1102,11 @@ class ApiMessageSearchController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * to Response
+     * @param message 参数
+     * @return 返回值
+    */
     private Map<String, Object> toResponse(SysAiConversationMessage message) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("message_id", message.getMessageId());

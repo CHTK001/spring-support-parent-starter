@@ -32,55 +32,97 @@ public class TavernController {
     private final TavernService tavernService;
 
     /** 我的群列表（含成员数） */
-    @GetMapping("/groups")
+    /**
+     * list Groups
+     * @return 返回值
+    */
     public List<Map<String, Object>> listGroups() {
         return tavernService.listGroups();
     }
 
     /** 建群 */
-    @PostMapping("/groups")
+    /**
+     * create Group
+     * @param Map<String 参数
+     * @param body 参数
+     * @return 返回值
+    */
     public SysAiTavernGroup createGroup(@RequestBody Map<String, String> body) {
         return tavernService.createGroup(body == null ? null : body.get("name"));
     }
 
     /** 更新群配置 */
-    @PutMapping("/groups/{id}")
+    /**
+     * update Group
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiTavernGroup updateGroup(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return tavernService.updateGroup(id, body);
     }
 
     /** 删群 */
-    @DeleteMapping("/groups/{id}")
+    /**
+     * delete Group
+     * @param id 长整数
+     * @return 返回值
+    */
     public void deleteGroup(@PathVariable Long id) {
         tavernService.deleteGroup(id);
     }
 
     /** 群成员（合并角色信息） */
-    @GetMapping("/groups/{id}/members")
+    /**
+     * list Members
+     * @param id 长整数
+     * @return 返回值
+    */
     public List<Map<String, Object>> listMembers(@PathVariable Long id) {
         return tavernService.listMembers(id);
     }
 
     /** 拉角色进群 */
-    @PostMapping("/groups/{id}/members")
+    /**
+     * add Member
+     * @param Map<String 参数
+     * @param body 参数
+     * @param id 长整数
+     * @return 返回值
+    */
     public SysAiTavernMember addMember(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return tavernService.addMember(id, body);
     }
 
     /** 移出群成员 */
-    @DeleteMapping("/members/{memberId}")
+    /**
+     * remove Member
+     * @param memberId 长整数
+     * @return 返回值
+    */
     public void removeMember(@PathVariable Long memberId) {
         tavernService.removeMember(memberId);
     }
 
     /** 更新成员配置（模型覆盖/随机发言/概率/上下文条数） */
-    @PutMapping("/members/{memberId}")
+    /**
+     * update Member
+     * @param Map<String 参数
+     * @param body 参数
+     * @param memberId 长整数
+     * @return 返回值
+    */
     public SysAiTavernMember updateMember(@PathVariable Long memberId, @RequestBody Map<String, Object> body) {
         return tavernService.updateMember(memberId, body);
     }
 
     /** 群消息历史 */
-    @GetMapping("/groups/{id}/messages")
+    /**
+     * list Messages
+     * @param id 长整数
+     * @return 返回值
+    */
     public List<SysAiTavernMessage> listMessages(@PathVariable Long id) {
         return tavernService.listMessages(id);
     }

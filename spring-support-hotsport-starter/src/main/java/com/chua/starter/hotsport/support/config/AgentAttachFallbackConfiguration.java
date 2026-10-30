@@ -39,11 +39,11 @@ public class AgentAttachFallbackConfiguration {
 
     /**
      * 禁用态自注入服务 —— 仅当 agent 自动配置未装配（{@code plugin.agent.enabled=false}）时兜底。
-     *
+    /**
+     * 禁用态自注入服务 —— 仅当 agent 自动配置未装配（{@code plugin.agent.enabled=false}）时兜底。
+     * @param properties 参数
      * @return 禁用态注入服务实例
-     */
-    @Bean
-    @ConditionalOnMissingBean(AgentAttachService.class)
+    */
     public AgentAttachService disabledAgentAttachService(AgentAttachProperties properties) {
         // 显式关闭注入（幂等保护在 attach() 内；即便 properties 被外部改回 true，
         // 也只在调用方显式触发时才注入，不自动启动）

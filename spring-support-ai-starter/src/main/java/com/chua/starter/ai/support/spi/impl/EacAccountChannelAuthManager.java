@@ -246,7 +246,10 @@ public class EacAccountChannelAuthManager implements AccountChannelAuthManager {
 
     // ── 私有辅助 ──
 
-    /** 生成随机 link code（32 字符，alphanumeric + _ + -）。 */
+    /**
+     * generate Link
+     * @return 返回值
+    */
     private static String generateLink() {
         StringBuilder sb = new StringBuilder(LINK_LENGTH);
         for (int i = 0; i < LINK_LENGTH; i++) {
@@ -255,7 +258,12 @@ public class EacAccountChannelAuthManager implements AccountChannelAuthManager {
         return sb.toString();
     }
 
-    /** 调用 /auth/status 并返回解析后的 Map。 */
+    /**
+     * check Status
+     * @param Map<String 参数
+     * @param credentials 参数
+     * @return 返回值
+    */
     private static Map<String, Object> checkStatus(Map<String, Object> credentials) {
         String token = readString(credentials, "access_token");
         if (token == null || token.isBlank()) {
@@ -298,11 +306,23 @@ public class EacAccountChannelAuthManager implements AccountChannelAuthManager {
         return result;
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {

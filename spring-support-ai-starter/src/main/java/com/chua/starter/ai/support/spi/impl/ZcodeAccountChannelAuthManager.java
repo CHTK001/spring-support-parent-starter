@@ -191,7 +191,11 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         return credential;
     }
 
-    /** 从第三方凭据块取 access_token（驼峰/下划线两种形态）。 */
+    /**
+     * pick Access Token
+     * @param block 对象
+     * @return 返回值
+    */
     private static String pickAccessToken(Object block) {
         if (!(block instanceof Map<?, ?> map)) {
             return null;
@@ -235,6 +239,11 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
 
     // ── 私有辅助 ──
 
+    /**
+     * auth Headers
+     * @param deviceMid 字符串
+     * @return 返回值
+    */
     private static Map<String, String> authHeaders(String deviceMid) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", "Bearer " + deviceMid);
@@ -243,6 +252,12 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         return headers;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -250,7 +265,10 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         return result;
     }
 
-    /** device_mid：32 字节随机 hex（插件自生成，不被绑定校验）。 */
+    /**
+     * device Mid
+     * @return 返回值
+    */
     private static String deviceMid() {
         byte[] raw = new byte[32];
         new SecureRandom().nextBytes(raw);
@@ -277,11 +295,23 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         return payload;
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -290,7 +320,13 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
-    /** 读宽松字符串（容忍数字下发的字段，如第三方凭据块里的 id）。 */
+    /**
+     * read Loose String
+     * @param Map<? 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readLooseString(Map<?, ?> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -302,10 +338,20 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();

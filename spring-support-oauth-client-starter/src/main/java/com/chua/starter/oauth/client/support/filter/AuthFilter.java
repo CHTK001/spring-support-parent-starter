@@ -117,6 +117,9 @@ public class AuthFilter implements Filter {
     @Override
     /**
      * 初始化
+     * @param filterConfig 参数
+     * @return 返回值
+     * @throws ServletException 异常
     */
     public void init(FilterConfig filterConfig) throws ServletException {
 
@@ -125,6 +128,12 @@ public class AuthFilter implements Filter {
     @Override
     /**
      * 执行过滤
+     * @param chain 参数
+     * @param request 参数
+     * @param response 参数
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws ServletException 异常
     */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;

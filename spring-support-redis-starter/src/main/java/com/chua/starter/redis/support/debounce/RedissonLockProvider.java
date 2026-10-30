@@ -43,6 +43,9 @@ public class RedissonLockProvider implements LockProvider {
     @Override
     /**
      * 尝试锁
+     * @param timeUnit 参数
+     * @param timeout 整数
+     * @return 返回值
     */
     public boolean tryLock(int timeout, TimeUnit timeUnit)  {
         this.lock = redissonClient.getLock(key);
@@ -76,6 +79,7 @@ public class RedissonLockProvider implements LockProvider {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "redisson";
@@ -84,6 +88,7 @@ public class RedissonLockProvider implements LockProvider {
     @Override
     /**
      * 获取类型
+     * @return 返回值
     */
     public String getType() {
         return "redisson";

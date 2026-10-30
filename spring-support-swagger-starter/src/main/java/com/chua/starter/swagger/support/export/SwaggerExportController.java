@@ -120,11 +120,11 @@ public class SwaggerExportController {
 
     /**
      * Render
-     *
-     * @param provider 提供者
      * @param data 数据
+     * @param provider 提供者
      * @return render的结果
-     */
+     * @throws Exception 异常
+    */
     private byte[] render(OpenApiDocumentProvider provider, OpenApiDocumentData data) throws Exception {
         if (provider instanceof com.chua.common.support.lang.document.OpenApiHtmlProvider html) {
             return html.render(data).getBytes(StandardCharsets.UTF_8);

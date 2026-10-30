@@ -336,6 +336,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return credential;
     }
 
+    /**
+     * parse Exchange Response
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseExchangeResponse(String response) {
         Map<String, Object> payload = parseJson(response);
         // ExchangeToken 响应可能套信封 {code, message, data}。
@@ -381,6 +386,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         }
     }
 
+    /**
+     * fetch Remote Models
+     * @param accessToken 字符串
+     * @return 返回值
+    */
     private static List<Map<String, Object>> fetchRemoteModels(String accessToken) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("channels", CHANNELS);
@@ -417,6 +427,10 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return models;
     }
 
+    /**
+     * fallback Models
+     * @return 返回值
+    */
     private static List<Map<String, Object>> fallbackModels() {
         List<Map<String, Object>> models = new ArrayList<>(FALLBACK_MODELS.length);
         for (String[] entry : FALLBACK_MODELS) {
@@ -429,7 +443,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return models;
     }
 
-    /** 解析粘贴回调 URL 的 query 参数。 */
+    /**
+     * parse Callback Url
+     * @param rawUrl 字符串
+     * @return 返回值
+    */
     private static Map<String, String> parseCallbackUrl(String rawUrl) {
         String query;
         String trimmed = rawUrl.trim();
@@ -455,6 +473,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return result;
     }
 
+    /**
+     * parse Json Param
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJsonParam(String raw) {
         if (raw == null || raw.isBlank()) {
             return new LinkedHashMap<>();
@@ -462,6 +485,13 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return parseJson(raw);
     }
 
+    /**
+     * json String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String jsonString(Map<String, Object> source, String key) {
         if (source == null) {
             return "";
@@ -470,7 +500,12 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return value instanceof String s ? s : (value != null ? String.valueOf(value) : "");
     }
 
-    /** 签到请求头：Cloud-IDE-JWT + 派生设备身份。 */
+    /**
+     * checkin Headers
+     * @param accessToken 字符串
+     * @param uid 字符串
+     * @return 返回值
+    */
     private static Map<String, String> checkinHeaders(String accessToken, String uid) {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Content-Type", "application/json");
@@ -482,7 +517,10 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return headers;
     }
 
-    /** OAuth 请求头。 */
+    /**
+     * o Auth Headers
+     * @return 返回值
+    */
     private static Map<String, String> oAuthHeaders() {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Content-Type", "application/json");
@@ -491,7 +529,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return headers;
     }
 
-    /** 签到设备身份：按 user_id 确定性派生 15 位数字 device_id。 */
+    /**
+     * checkin Device Id
+     * @param uid 字符串
+     * @return 返回值
+    */
     private static String checkinDeviceId(String uid) {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -508,7 +550,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         }
     }
 
-    /** 签到 market_user_id：按 user_id 确定性派生 UUID。 */
+    /**
+     * checkin Market User Id
+     * @param uid 字符串
+     * @return 返回值
+    */
     private static String checkinMarketUserId(String uid) {
         String seed = "trae-market-user-" + uid;
         byte[] bytes = seed.getBytes(java.nio.charset.StandardCharsets.UTF_8);
@@ -521,7 +567,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
                 + "-" + h.substring(16, 20) + "-" + h.substring(20);
     }
 
-    /** 签到 session_id：按 user_id 确定性派生 64hex。 */
+    /**
+     * checkin Session Id
+     * @param uid 字符串
+     * @return 返回值
+    */
     private static String checkinSessionId(String uid) {
         String seed = "trae-session-" + uid;
         try {
@@ -537,7 +587,12 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         }
     }
 
-    /** 积分余额：sum(entitlements[].credits_limit - entitlements[].credits_amount)。 */
+    /**
+     * sum Entitlement Remain
+     * @param Map<String 参数
+     * @param payload 参数
+     * @return 返回值
+    */
     private static Long sumEntitlementRemain(Map<String, Object> payload) {
         Object raw = payload.get("entitlements");
         if (!(raw instanceof List<?> list)) {
@@ -588,7 +643,12 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         sb.append(key).append('=').append(java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    /** 解析 expires_at（毫秒时间戳字符串；秒值自动 ×1000；缺失时解析 JWT exp claim）。 */
+    /**
+     * parse Expires At Ms
+     * @param accessToken 字符串
+     * @param rawExpiry 对象
+     * @return 返回值
+    */
     private static Long parseExpiresAtMs(Object rawExpiry, String accessToken) {
         if (rawExpiry instanceof String s && !s.isBlank()) {
             try {
@@ -614,6 +674,12 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return null;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -621,11 +687,23 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return result;
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         if (source == null) {
             return null;
@@ -637,6 +715,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return null;
     }
 
+    /**
+     * first Non Blank
+     * @param values 参数
+     * @return 返回值
+    */
     private static String firstNonBlank(String... values) {
         for (String v : values) {
             if (v != null && !v.isBlank()) {
@@ -646,6 +729,11 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

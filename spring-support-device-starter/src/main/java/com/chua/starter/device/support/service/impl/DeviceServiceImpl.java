@@ -68,6 +68,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 添加Device
+     * @param info 参数
+     * @return 返回值
     */
     public DeviceInfo addDevice(DeviceConnectInfo info) {
         // 平台接入只传提供商凭据 ID，AK/SK 在服务端补齐，前端不再散落密钥
@@ -111,6 +113,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 添加设备（含资产字段）并连接：请求对象直存资产字段
+     * @param request 参数
+     * @return 返回值
     */
     public DeviceInfo addDevice(DeviceSaveRequest request) {
         DeviceConnectInfo connectInfo = new DeviceConnectInfo(
@@ -127,7 +131,10 @@ public class DeviceServiceImpl implements DeviceService {
 
     /**
      * 把请求对象的非空资产字段覆盖到设备实体。
-     */
+     * @param device 参数
+     * @param request 参数
+     * @return 返回值
+    */
     private void applySaveRequest(DeviceInfo device, DeviceSaveRequest request) {
         if (StringUtils.hasText(request.getDeviceInfoName())) {
             device.setDeviceInfoName(request.getDeviceInfoName());
@@ -174,6 +181,9 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 更新Device
+     * @param id 字符串
+     * @param info 参数
+     * @return 返回值
     */
     public void updateDevice(String id, DeviceInfo info) {
         info.setDeviceInfoId(id);
@@ -183,6 +193,9 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 更新设备（含资产字段）：密码为空或为掩码时不修改
+     * @param id 字符串
+     * @param request 参数
+     * @return 返回值
     */
     public void updateDevice(String id, DeviceSaveRequest request) {
         DeviceInfo existing = deviceInfoMapper.selectById(id);
@@ -200,6 +213,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 删除Device
+     * @param id 字符串
+     * @return 返回值
     */
     public void deleteDevice(String id) {
         deviceInfoMapper.deleteById(id);
@@ -209,6 +224,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 获取Device
+     * @param id 字符串
+     * @return 返回值
     */
     public DeviceInfo getDevice(String id) {
         return deviceInfoMapper.selectById(id);
@@ -217,6 +234,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 列表devices
+     * @param orgId 字符串
+     * @return 返回值
     */
     public List<DeviceInfo> listDevices(String orgId) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
@@ -282,9 +301,10 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     /**
-     * 设备台账统计
-     *
-     * <p>统计范围与列表的组织/厂商过滤一致，不受关键字与在线过滤影响（见 DeviceStats 说明）。</p>
+     * 设备台账统计 <p>统计范围与列表的组织/厂商过滤一致，不受关键字与在线过滤影响（见 DeviceStats 说明）。</p>
+     * @param orgId 字符串
+     * @param vendor 字符串
+     * @return 返回值
     */
     public DeviceStats stats(String orgId, String vendor) {
         LambdaQueryWrapper<DeviceInfo> base = new LambdaQueryWrapper<>();
@@ -336,6 +356,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 列表by分类
+     * @param category 字符串
+     * @return 返回值
     */
     public List<DeviceInfo> listByCategory(String category) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
@@ -374,6 +396,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 获取组织树
+     * @param vendor 字符串
+     * @return 返回值
     */
     public List<DeviceOrganization> getOrganizationTree(String vendor) {
         LambdaQueryWrapper<DeviceOrganization> wrapper = new LambdaQueryWrapper<>();
@@ -386,6 +410,9 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 更新offline阈值
+     * @param id 字符串
+     * @param threshold 整数
+     * @return 返回值
     */
     public void updateOfflineThreshold(String id, int threshold) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
@@ -408,6 +435,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * Reconnect
+     * @param id 字符串
+     * @return 返回值
     */
     public void reconnect(String id) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
@@ -461,6 +490,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * refresh状态
+     * @param id 字符串
+     * @return 返回值
     */
     public void refreshStatus(String id) {
         DeviceInfo device = deviceInfoMapper.selectById(id);
@@ -580,7 +611,9 @@ public class DeviceServiceImpl implements DeviceService {
 
     /**
      * 任意对象转字符串；空白按 {@code null} 处理
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static String str(Object value) {
         if (value == null) {
             return null;
@@ -591,7 +624,9 @@ public class DeviceServiceImpl implements DeviceService {
 
     /**
      * 任意对象转经纬度；非法值返回 {@code null}
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static BigDecimal decimal(Object value) {
         String text = str(value);
         if (text == null) {
@@ -607,6 +642,8 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     /**
      * 测试connection
+     * @param info 参数
+     * @return 返回值
     */
     public boolean testConnection(DeviceConnectInfo info) {
         DeviceSession session = providers.stream()

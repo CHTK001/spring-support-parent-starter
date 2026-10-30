@@ -41,6 +41,7 @@ public class MultiLevelCache implements Cache {
         @Override
         /**
          * 转为字符串
+         * @return 返回值
         */
         public String toString() {
             return "NULL_VALUE";
@@ -107,6 +108,7 @@ public class MultiLevelCache implements Cache {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return name;
@@ -115,6 +117,7 @@ public class MultiLevelCache implements Cache {
     @Override
     /**
      * 获取NAT缓存
+     * @return 返回值
     */
     public Object getNativeCache() {
         return caches;
@@ -123,6 +126,8 @@ public class MultiLevelCache implements Cache {
     @Override
     /**
      * 获取
+     * @param key 对象
+     * @return 返回值
     */
     public ValueWrapper get(Object key) {
         if (key == null) {
@@ -327,6 +332,9 @@ public class MultiLevelCache implements Cache {
     @Override
     /**
      * 放入
+     * @param key 对象
+     * @param value 对象
+     * @return 返回值
     */
     public void put(Object key, Object value) {
         if (key == null) {
@@ -368,6 +376,8 @@ public class MultiLevelCache implements Cache {
     @Override
     /**
      * Evict
+     * @param key 对象
+     * @return 返回值
     */
     public void evict(Object key) {
         if (key == null) {
@@ -504,6 +514,7 @@ public class MultiLevelCache implements Cache {
         @Override
         /**
          * 获取
+         * @return 返回值
         */
         public Object get() {
             return null;

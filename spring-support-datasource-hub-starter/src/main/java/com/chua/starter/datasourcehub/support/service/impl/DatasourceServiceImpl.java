@@ -1006,11 +1006,11 @@ public class DatasourceServiceImpl implements DatasourceService {
 
     /**
      * 取该数据源引用的驱动 jar 文件；没配就返回 null（走内置驱动）。
-     *
      * @param row 数据源台账
      * @return jar 文件；未配置返回 null
      * @throws IOException 定位 jar 文件失败
-     */
+     * @throws java.io.IOException 异常
+    */
     private java.io.File driverJarOf(MsDatasource row) throws java.io.IOException {
         return driverJarService.jarFileOf(row.getDatasourceDriverJarId());
     }

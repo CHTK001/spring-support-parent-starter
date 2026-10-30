@@ -58,6 +58,8 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     /**
      * 获取输入流
+     * @return 返回值
+     * @throws IOException 异常
     */
     public ServletInputStream getInputStream() throws IOException {
         /**
@@ -71,6 +73,8 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     /**
      * 获取Reader
+     * @return 返回值
+     * @throws IOException 异常
     */
     public BufferedReader getReader() throws IOException {
         /**
@@ -84,6 +88,7 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     /**
      * 获取会话
+     * @return 返回值
     */
     public HttpSession getSession() {
         return super.getSession();
@@ -92,6 +97,8 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     /**
      * 获取参数
+     * @param name 字符串
+     * @return 返回值
     */
     public String getParameter(String name) {
         return super.getParameter(name);
@@ -100,6 +107,8 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     @Override
     /**
      * 获取参数值
+     * @param name 字符串
+     * @return 返回值
     */
     public String[] getParameterValues(String name) {
         return super.getParameterValues(name);

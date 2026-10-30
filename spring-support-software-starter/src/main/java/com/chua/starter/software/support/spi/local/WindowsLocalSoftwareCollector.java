@@ -38,6 +38,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     @Override
     /**
      * 支持
+     * @return 返回值
     */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("windows");
@@ -46,6 +47,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     @Override
     /**
      * Collect
+     * @return 返回值
     */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> result = new ArrayList<>();

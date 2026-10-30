@@ -133,7 +133,12 @@ final class ChannelHttp {
         return execute(builder.build(), "POST " + url);
     }
 
-    /** 执行请求，非 2xx 抛 {@link ApiException}（携带上游状态码与响应体摘要）。 */
+    /**
+     * execute
+     * @param label 字符串
+     * @param request 参数
+     * @return 返回值
+    */
     private static String execute(HttpRequest request, String label) {
         HttpResponse<String> response;
         try {
@@ -189,7 +194,11 @@ final class ChannelHttp {
                 && e.getMessage().startsWith(RATE_LIMITED_MARKER);
     }
 
-    /** 读 Retry-After（秒），缺省 2s，上限 10s（轮询上下文不能睡太久）。 */
+    /**
+     * retry After Millis
+     * @param response 参数
+     * @return 返回值
+    */
     private static long retryAfterMillis(HttpResponse<String> response) {
         String raw = response.headers().firstValue("Retry-After").orElse(null);
         if (raw != null) {
@@ -203,7 +212,11 @@ final class ChannelHttp {
         return DEFAULT_RETRY_AFTER_MS;
     }
 
-    /** 退避等待；被中断时恢复中断标记并让调用方走中断分支。 */
+    /**
+     * sleep Quietly
+     * @param millis 长整数
+     * @return 返回值
+    */
     private static void sleepQuietly(long millis) {
         try {
             Thread.sleep(millis);

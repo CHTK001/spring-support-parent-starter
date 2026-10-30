@@ -72,6 +72,9 @@ public class DbTaskStore implements TaskStore {
     @Override
     /**
      * 保存任务
+     * @param status 参数
+     * @param task 参数
+     * @return 返回值
     */
     public void saveTask(Task<?> task, TaskStatus status) {
         if (task == null || task.getTaskId() == null) {
@@ -112,6 +115,9 @@ public class DbTaskStore implements TaskStore {
     @Override
     /**
      * 更新状态
+     * @param status 参数
+     * @param taskId 字符串
+     * @return 返回值
     */
     public void updateStatus(String taskId, TaskStatus status) {
         if (taskId == null) {
@@ -140,6 +146,8 @@ public class DbTaskStore implements TaskStore {
     @Override
     /**
      * 保存结果
+     * @param result 参数
+     * @return 返回值
     */
     public void saveResult(TaskResult<?> result) {
         if (result == null || result.getTaskId() == null) {
@@ -216,6 +224,8 @@ public class DbTaskStore implements TaskStore {
     @Override
     /**
      * 获取状态
+     * @param taskId 字符串
+     * @return 返回值
     */
     public TaskStatus getStatus(String taskId) {
         SysTaskStore entity = cache.get(taskId);
@@ -282,6 +292,8 @@ public class DbTaskStore implements TaskStore {
     @Override
     /**
      * 移除任务
+     * @param taskId 字符串
+     * @return 返回值
     */
     public void removeTask(String taskId) {
         cache.remove(taskId);

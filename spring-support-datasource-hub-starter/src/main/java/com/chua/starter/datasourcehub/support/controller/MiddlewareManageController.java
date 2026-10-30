@@ -166,11 +166,11 @@ public class MiddlewareManageController {
     }
 
     /**
-     * 把数据源行（或前端显式传入的连接参数）转成 SPI 的不可变连接请求。
-     *
-     * <p>SPI 实现可能跑在 OSGi bundle 里，看不到宿主的 Spring 容器，
-     * 因此必须把连接参数在这个方法里一次性备齐，不能让实现方反查宿主。</p>
-     */
+     * 把数据源行（或前端显式传入的连接参数）转成 SPI 的不可变连接请求。 <p>SPI 实现可能跑在 OSGi bundle 里，看不到宿主的 Spring 容器， 因此必须把连接参数在这个方法里一次性备齐，不能让实现方反查宿主。</p>
+     * @param dto 参数
+     * @param type 字符串
+     * @return 返回值
+    */
     private MiddlewareConnectRequest toRequest(String type, MiddlewareTestDTO dto) {
         if (dto != null && dto.datasourceId() != null && dto.datasourceId() > 0) {
             DataSourceVO ds = datasourceService.get(dto.datasourceId()).getData();
@@ -194,10 +194,10 @@ public class MiddlewareManageController {
     }
 
     /**
-     * 数据源行转 SPI 连接请求。
-     *
-     * <p>{@code DataSourceVO} 是 record，取值走访问器而不是 getter。</p>
-     */
+     * 数据源行转 SPI 连接请求。 <p>{@code DataSourceVO} 是 record，取值走访问器而不是 getter。</p>
+     * @param ds 参数
+     * @return 返回值
+    */
     private MiddlewareConnectRequest toRequest(DataSourceVO ds) {
         return new MiddlewareConnectRequest(
                 ds.id() == null ? 0L : ds.id(),

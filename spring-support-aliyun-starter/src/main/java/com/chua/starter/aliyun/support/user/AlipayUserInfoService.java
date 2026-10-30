@@ -22,6 +22,11 @@ public class AlipayUserInfoService implements UserInfoService {
     @Override
     /**
      * 校验Login
+     * @param address 字符串
+     * @param credential 字符串
+     * @param ext 对象
+     * @param principal 字符串
+     * @return 返回值
     */
     public UserResume checkLogin(String principal, String credential, String address, Object ext) {
         String alipayUserId = principal;
@@ -60,6 +65,8 @@ public class AlipayUserInfoService implements UserInfoService {
     @Override
     /**
      * Upgrade
+     * @param userResult 参数
+     * @return 返回值
     */
     public UserResume upgrade(UserResult userResult) {
         return null;

@@ -448,6 +448,11 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         }
 
  // @Override // 自 Spring 5.2.4
+        /**
+         * needs Refresh
+         * @param clazz 参数
+         * @return 返回值
+        */
         protected boolean needsRefresh(Class<?> clazz) {
             if (this.targetClass == clazz) {
                 return false;

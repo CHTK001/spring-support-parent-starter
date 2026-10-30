@@ -103,6 +103,8 @@ public class SyncServer implements InitializingBean, DisposableBean {
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         if (!syncProperties.isServerEnabled()) {
@@ -660,6 +662,8 @@ public class SyncServer implements InitializingBean, DisposableBean {
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
         for (SyncServerInstance instance : instances.values()) {

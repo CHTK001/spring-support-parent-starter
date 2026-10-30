@@ -156,7 +156,9 @@ public class NgrokAutoConfiguration {
     /**
      * 启动隧道。
      * @param localPort 本地端口
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void startTunnels(int localPort) throws IOException {
         String authtoken = resolveAuthtoken();
         if (authtoken == null) {
@@ -187,7 +189,9 @@ public class NgrokAutoConfiguration {
      * 启动 HTTP 转发 / 监听。
      * @param localPort 本地端口
      * @param mode mode
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void startHttpTunnels(int localPort, String mode) throws IOException {
         boolean forward = "forward".equalsIgnoreCase(mode);
 
@@ -227,11 +231,12 @@ public class NgrokAutoConfiguration {
 
     /**
      * 开始httptunnel
-     *
+     * @param forward 远期
      * @param localPort 本地端口
      * @param tag 标签
-     * @param forward 远期
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void startHttpTunnel(int localPort, String tag, boolean forward) throws IOException {
         NgrokClient.HttpBuilderStage stage = client.http()
                 .metadata(buildMetadata("http-" + tag));
@@ -270,7 +275,9 @@ public class NgrokAutoConfiguration {
      * 启动 TLS 转发 / 监听。
      * @param localPort 本地端口
      * @param mode mode
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void startTlsTunnels(int localPort, String mode) throws IOException {
         boolean forward = "forward".equalsIgnoreCase(mode);
         NgrokClient.TlsBuilderStage stage = client.tls()
@@ -287,7 +294,9 @@ public class NgrokAutoConfiguration {
 
     /**
      * 启动 TCP 监听。
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void startTcpTunnels() throws IOException {
         if (!StringUtils.hasText(properties.getRemoteAddress())) {
             /**
@@ -327,7 +336,8 @@ public class NgrokAutoConfiguration {
      * 构建 ngrok客户端，注入所有可选项。
      * @param authtoken authtoken
      * @return 构建客户端的结果
-     */
+     * @throws IOException 异常
+    */
     private NgrokClient buildClient(String authtoken) throws IOException {
         NgrokClient c = NgrokClient.create(authtoken);
         if (StringUtils.hasText(properties.getMetadata())) {
@@ -371,7 +381,8 @@ public class NgrokAutoConfiguration {
      * 加载 类路径 资源形式的 CA 证书。
      * @param location 位置
      * @return 加载cacert的结果
-     */
+     * @throws IOException 异常
+    */
     private byte[] loadCaCert(String location) throws IOException {
         if (resourceLoader == null) {
             /**

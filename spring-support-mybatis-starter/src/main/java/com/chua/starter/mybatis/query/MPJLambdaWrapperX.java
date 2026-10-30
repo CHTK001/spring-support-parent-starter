@@ -216,6 +216,8 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     @Override
     /**
      * 最后一个
+     * @param lastSql 字符串
+     * @return 返回值
     */
     public MPJLambdaWrapperX<T> last(String lastSql) {
         super.last(lastSql);
@@ -234,6 +236,8 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     @Override
     /**
      * 选择全部
+     * @param clazz 参数
+     * @return 返回值
     */
     public MPJLambdaWrapperX<T> selectAll(Class<?> clazz) {
         super.selectAll(clazz);
@@ -243,6 +247,9 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     @Override
     /**
      * 选择全部
+     * @param clazz 参数
+     * @param prefix 字符串
+     * @return 返回值
     */
     public MPJLambdaWrapperX<T> selectAll(Class<?> clazz, String prefix) {
         super.selectAll(clazz, prefix);
@@ -324,6 +331,9 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     @Override
     /**
      * 选择计算数量
+     * @param alias 字符串
+     * @param column 对象
+     * @return 返回值
     */
     public MPJLambdaWrapperX<T> selectCount(Object column, String alias) {
         super.selectCount(column, alias);

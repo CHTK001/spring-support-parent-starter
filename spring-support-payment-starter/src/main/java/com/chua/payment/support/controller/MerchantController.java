@@ -117,9 +117,9 @@ public class MerchantController {
     @PutMapping("/{id}/activate")
     /**
      * 激活商户
-     *
      * @param id 标识
-     */
+     * @return 返回值
+    */
     public Result<Boolean> activateMerchant(@PathVariable Long id) {
         boolean success = merchantService.activateMerchant(id);
         return Result.success(success);
@@ -129,9 +129,9 @@ public class MerchantController {
     @PutMapping("/{id}/deactivate")
     /**
      * 停用商户
-     *
      * @param id 标识
-     */
+     * @return 返回值
+    */
     public Result<Boolean> deactivateMerchant(@PathVariable Long id) {
         boolean success = merchantService.deactivateMerchant(id);
         return Result.success(success);

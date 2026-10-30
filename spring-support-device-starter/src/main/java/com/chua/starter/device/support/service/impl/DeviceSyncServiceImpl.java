@@ -88,11 +88,10 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     @Override
     /**
-     * 按凭据同步组织树（与 syncDevicesByCredential 平齐的维度）
-     *
-     * <p>厂商侧组织以 {@code vendor + 厂商 side 组织标识} 为在键幂等入库（与
-     * 设备列表的 {@code vendor + 序列号} 同口径），父节点依据 {@code desc()} 再挂接。
-     * 平台组织间字段取反/改名时只影响本节课索命，活动页拉动 */
+     * 按凭据同步组织树（与 syncDevicesByCredential 平齐的维度） <p>厂商侧组织以 {@code vendor + 厂商 side 组织标识} 为在键幂等入库（与 设备列表的 {@code vendor + 序列号} 同口径），父节点依据 {@code desc()} 再挂接。
+     * @param credentialId 字符串
+     * @return 返回值
+    */
     public Map<String, Integer> syncOrganizationsByCredential(String credentialId) {
         CredentialJob job = resolveCredential(credentialId);
         if (job == null) {
@@ -135,12 +134,10 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     @Override
     /**
-     * 按凭据同步人员列表（与 syncDevicesByCredential 平齐的维度）
-     *
-     * <p>人员与组织表解耦，单建 {@code device_person}（按 vendor + 厂商 side 人员标识
-     * 幂等入库；行政归属挂接厂商 side 组织标识），避免 API 人员结构换表时耦合到
-     * org-person 关联表。</p>
-     */
+     * 按凭据同步人员列表（与 syncDevicesByCredential 平齐的维度） <p>人员与组织表解耦，单建 {@code device_person}（按 vendor + 厂商 side 人员标识 幂等入库；行政归属挂接厂商 side 组织标识），避免 API 人员结构换表时耦合到 org-person 关联表。</p>
+     * @param credentialId 字符串
+     * @return 返回值
+    */
     public Map<String, Integer> syncPersonsByCredential(String credentialId) {
         CredentialJob job = resolveCredential(credentialId);
         if (job == null) {
@@ -325,7 +322,10 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     /**
      * 按 vendor + 厂商 side 组织标识查已有组织
-     */
+     * @param externalId 字符串
+     * @param vendor 字符串
+     * @return 返回值
+    */
     private DeviceOrganization selectOrganization(String vendor, String externalId) {
         LambdaQueryWrapper<DeviceOrganization> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceOrganization::getDeviceOrganizationVendor, vendor)
@@ -373,7 +373,11 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     /**
      * 关联映射统计词
-     */
+     * @param created 整数
+     * @param skipped 整数
+     * @param updated 整数
+     * @return 返回值
+    */
     private Map<String, Integer> result(int created, int updated, int skipped) {
         Map<String, Integer> result = new LinkedHashMap<>();
         result.put("created", created);
@@ -438,8 +442,12 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
     }
 
     /**
+     * upsert
+     * @param provider 参数
+     * @param remote 参数
+     * @param serial 字符串
      * @return true 表示新增，false 表示更新
-     */
+    */
     private boolean upsert(DeviceProvider provider, VendorDevice remote, String serial) {
         DeviceInfo existing = deviceInfoMapper.selectByVendorAndSerial(provider.getVendor(), serial);
         if (existing != null) {

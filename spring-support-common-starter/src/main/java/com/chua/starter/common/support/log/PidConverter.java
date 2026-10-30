@@ -34,6 +34,8 @@ public class PidConverter extends ClassicConverter {
     @Override
     /**
      * 转换
+     * @param event 参数
+     * @return 返回值
     */
     public String convert(ILoggingEvent event) {
         return PID;

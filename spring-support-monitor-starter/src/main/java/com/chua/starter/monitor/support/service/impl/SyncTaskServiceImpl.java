@@ -1074,7 +1074,9 @@ public class SyncTaskServiceImpl implements SyncTaskService {
 
     /**
      * 字符串是否有内容（查询过滤用，null/空白视为未传）。
-     */
+     * @param s 字符串
+     * @return 返回值
+    */
     private static boolean hasText(String s) {
         return s != null && !s.isBlank();
     }

@@ -66,6 +66,10 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     @Override
     /**
      * Post处理之后initialization
+     * @param bean 对象
+     * @param beanName 字符串
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (messageTemplates == null || messageTemplates.isEmpty()) {

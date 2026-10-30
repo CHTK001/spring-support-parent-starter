@@ -57,6 +57,8 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     @Override
     /**
      * 创建Dialog
+     * @param name 字符串
+     * @return 返回值
     */
     public AIDialog createDialog(String name) {
         SysAiSession session = new SysAiSession();
@@ -77,6 +79,8 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     @Override
     /**
      * 删除Dialog
+     * @param dialogId 长整数
+     * @return 返回值
     */
     public void deleteDialog(Long dialogId) {
         if (dialogId == null) {
@@ -92,6 +96,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     @Override
     /**
      * 列表dialog
+     * @return 返回值
     */
     public List<AIDialog> listDialog() {
         LambdaQueryWrapper<SysAiSession> wrapper = new LambdaQueryWrapper<SysAiSession>()
@@ -109,6 +114,8 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     @Override
     /**
      * 获取dialog消息
+     * @param dialogId 长整数
+     * @return 返回值
     */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         requireReadable(dialogId);
@@ -123,6 +130,9 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     @Override
     /**
      * 添加消息
+     * @param dialogId 长整数
+     * @param message 参数
+     * @return 返回值
     */
     public void addMessage(Long dialogId, ChatMessage message) {
         if (dialogId == null || message == null) {

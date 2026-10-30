@@ -36,6 +36,7 @@ public class JobDispatchHandler implements SyncMessageHandler {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "jobDispatchHandler";
@@ -44,6 +45,8 @@ public class JobDispatchHandler implements SyncMessageHandler {
     @Override
     /**
      * 支持
+     * @param topic 字符串
+     * @return 返回值
     */
     public boolean supports(String topic) {
         return MonitorTopics.JOB_DISPATCH.equals(topic) || MonitorTopics.JOB_CANCEL.equals(topic);
@@ -52,6 +55,11 @@ public class JobDispatchHandler implements SyncMessageHandler {
     @Override
     /**
      * 处理
+     * @param Map<String 参数
+     * @param data 参数
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         if (MonitorTopics.JOB_DISPATCH.equals(topic)) {

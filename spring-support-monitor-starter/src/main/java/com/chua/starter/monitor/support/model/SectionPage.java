@@ -32,10 +32,26 @@ public class SectionPage<T> {
     /** 是否已达通道硬上限（total == MAX_SECTION_SIZE），提示前端数据被截断 */
     private boolean truncated;
 
+    /**
+     * of
+     * @param page 整数
+     * @param rows 参数
+     * @param size 获取数量
+     * @param total 长整数
+     * @return 返回值
+    */
     public static <T> SectionPage<T> of(List<T> rows, long total, int page, int size) {
         return new SectionPage<>(rows, total, page, size, false);
     }
 
+    /**
+     * truncated
+     * @param page 整数
+     * @param rows 参数
+     * @param size 获取数量
+     * @param total 长整数
+     * @return 返回值
+    */
     public static <T> SectionPage<T> truncated(List<T> rows, long total, int page, int size) {
         return new SectionPage<>(rows, total, page, size, true);
     }

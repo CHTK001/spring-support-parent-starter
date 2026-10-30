@@ -119,7 +119,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     @Override
     /**
      * 列出调度任务
-     */
+     * @return 返回值
+    */
     public List<PaymentSchedulerTaskVO> listTasks() {
         AccessMode accessMode = resolveAccessMode();
         JsonNode data = request(HttpMethod.GET, taskListUrl(accessMode), null, accessMode);
@@ -133,7 +134,10 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     @Override
     /**
      * 更新任务配置
-     */
+     * @param dto 参数
+     * @param taskKey 字符串
+     * @return 返回值
+    */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.PUT, taskUrl(accessMode, taskKey), dto, accessMode));
@@ -142,12 +146,22 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     @Override
     /**
      * 手动触发任务
-     */
+     * @param taskKey 字符串
+     * @return 返回值
+    */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.POST, taskTriggerUrl(accessMode, taskKey), null, accessMode));
     }
 
+    /**
+     * request
+     * @param accessMode 参数
+     * @param body 对象
+     * @param method 参数
+     * @param uri 参数
+     * @return 返回值
+    */
     private JsonNode request(HttpMethod method, URI uri, Object body, AccessMode accessMode) {
         try {
             ResponseEntity<String> response = exchange(method, uri, body, accessMode, true);
@@ -361,8 +375,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     /**
      * 解析访问模式：显式配置优先，其次按是否存在透传认证头判断
-     *
-     */
+     * @return 返回值
+    */
     private AccessMode resolveAccessMode() {
         String configuredMode = environment.getProperty("plugin.payment.scheduler.platform-access-mode", "auto");
         if ("platform".equalsIgnoreCase(configuredMode)) {
@@ -548,8 +562,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     /**
      * 调度平台基础地址
-     *
-     */
+     * @return 返回值
+    */
     private String baseUrl() {
         String value = environment.getProperty("plugin.payment.scheduler.platform-base-url",
                 "http://127.0.0.1:18083/scheduler/api");
@@ -559,8 +573,8 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     /**
      * 调度平台命名空间
-     *
-     */
+     * @return 返回值
+    */
     private String namespace() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-namespace", "payment"),
                 "调度平台命名空间不能为空");

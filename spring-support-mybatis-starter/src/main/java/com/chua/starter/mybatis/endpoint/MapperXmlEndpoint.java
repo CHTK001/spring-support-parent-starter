@@ -195,7 +195,8 @@ public class MapperXmlEndpoint {
      * 读取文件内容。
      * @param filename 文件名
      * @return 读取文件内容的结果
-     */
+     * @throws IOException 异常
+    */
     private String readFileContent(String filename) throws IOException {
         Resource[] resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:**/" + filename);

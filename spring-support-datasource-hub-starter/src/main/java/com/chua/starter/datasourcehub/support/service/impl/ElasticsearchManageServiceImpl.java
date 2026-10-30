@@ -335,7 +335,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 把字段定义转成 ES 的 properties 结构
-     */
+     * @param fields 参数
+     * @return 返回值
+    */
     private Map<String, Object> properties(List<ElasticsearchFieldDTO> fields) {
         Map<String, Object> properties = new LinkedHashMap<>();
         if (fields == null) {
@@ -470,7 +472,10 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 取索引当前的 {@code mappings.properties}
-     */
+     * @param name 字符串
+     * @param target 参数
+     * @return 返回值
+    */
     private JsonObject currentProperties(ElasticsearchClient.Target target, String name) {
         JsonObject all = client.index(target, name);
         JsonObject one = all.getJsonObject(name);
@@ -486,7 +491,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * JSON 对象转成可变 Map（重建时要在这上面增删字段）
-     */
+     * @param object 参数
+     * @return 返回值
+    */
     private Map<String, Object> toMap(JsonObject object) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (object == null) {
@@ -507,7 +514,10 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 用户提交的字段与索引现有字段，在「界面上可改的四项」（类型 / 分词器 / 日期格式 / 是否建索引）上是否一致
-     */
+     * @param desired 参数
+     * @param original 参数
+     * @return 返回值
+    */
     private boolean sameExposed(ElasticsearchFieldVO original, ElasticsearchFieldDTO desired) {
         String type = desired.type() == null || desired.type().isBlank() ? "keyword" : desired.type().trim();
         String analyzer = "text".equals(type) && desired.analyzer() != null ? desired.analyzer().trim() : "";
@@ -521,7 +531,12 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 把字段定义写到 dotted path 对应的位置，缺失的中间对象层按需创建
-     */
+     * @param Map<String 参数
+     * @param def 参数
+     * @param path 字符串
+     * @param root 参数
+     * @return 返回值
+    */
     private void putProperty(Map<String, Object> root, String path, Map<String, Object> def) {
         String[] parts = path.split("\\.");
         Map<String, Object> parent = root;
@@ -533,7 +548,11 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 删除 dotted path 对应的字段定义，并清掉因此变空的中间对象层
-     */
+     * @param Map<String 参数
+     * @param path 字符串
+     * @param root 参数
+     * @return 返回值
+    */
     private void removeProperty(Map<String, Object> root, String path) {
         String[] parts = path.split("\\.");
         Map<String, Object> parent = root;
@@ -547,9 +566,14 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
     }
 
     /**
+    /**
      * 取（{@code create=true} 时按需创建）某个对象字段的 {@code properties} 容器
-     */
-    @SuppressWarnings("unchecked")
+     * @param Map<String 参数
+     * @param create 创建
+     * @param key 字符串
+     * @param parent 参数
+     * @return 返回值
+    */
     private Map<String, Object> childProperties(Map<String, Object> parent, String key, boolean create) {
         Object node = parent.get(key);
         Map<String, Object> holder;
@@ -574,9 +598,12 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
     }
 
     /**
+    /**
      * 清掉没有子字段的空对象层：ES 不接受空的 {@code properties}
-     */
-    @SuppressWarnings("unchecked")
+     * @param Map<String 参数
+     * @param properties 参数
+     * @return 返回值
+    */
     private void pruneEmpty(Map<String, Object> properties) {
         for (Iterator<Map.Entry<String, Object>> it = properties.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String, Object> entry = it.next();
@@ -602,21 +629,29 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 空值安全的默认类型（无显式类型的字段按 ES 的 keyword 处理）
-     */
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String defaultKeyword(String value) {
         return value == null || value.isBlank() ? "keyword" : value;
     }
 
     /**
      * 空值安全的空串
-     */
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String nullToEmpty(String value) {
         return value == null ? "" : value;
     }
 
     /**
      * 递归展开 mapping.properties：对象/嵌套字段继续下钻，叶子字段落成一行
-     */
+     * @param out 参数
+     * @param prefix 字符串
+     * @param properties 参数
+     * @return 返回值
+    */
     private void flatten(JsonObject properties, String prefix, List<ElasticsearchFieldVO> out) {
         if (properties == null) {
             return;
@@ -639,7 +674,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 集群「有效设置」：defaults 被 persistent 覆盖后的结果
-     */
+     * @param target 参数
+     * @return 返回值
+    */
     private Map<String, Object> effectiveSettings(ElasticsearchClient.Target target) {
         JsonObject raw = client.clusterSettings(target);
         Map<String, Object> effective = new LinkedHashMap<>();
@@ -660,7 +697,10 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 取索引列表里的对应行（拿健康度与文档数）
-     */
+     * @param name 字符串
+     * @param target 参数
+     * @return 返回值
+    */
     private ElasticsearchIndexVO findRow(ElasticsearchClient.Target target, String name) {
         for (ElasticsearchIndexVO row : indices(target, name)) {
             return row;
@@ -702,7 +742,10 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 按名字取索引行
-     */
+     * @param name 字符串
+     * @param target 参数
+     * @return 返回值
+    */
     private List<ElasticsearchIndexVO> indices(ElasticsearchClient.Target target, String name) {
         List<ElasticsearchIndexVO> result = new ArrayList<>();
         for (Object rowObj : client.indices(target)) {
@@ -718,14 +761,18 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 索引设置转成扁平 Map（请求时带了 flat_settings=true）
-     */
+     * @param settings 参数
+     * @return 返回值
+    */
     private Map<String, Object> flatSettings(JsonObject settings) {
         return settings == null ? Map.of() : new LinkedHashMap<>(settings);
     }
 
     /**
      * 取字符串
-     */
+     * @param index 字符串
+     * @return 返回值
+    */
     private String requireIndex(String index) {
         if (index == null || index.isBlank()) {
             throw new IllegalStateException("索引名不能为空");
@@ -735,14 +782,19 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 空 Map 判定
-     */
+     * @param Map<String 参数
+     * @param map 映射
+     * @return 返回值
+    */
     private boolean isEmpty(Map<String, Object> map) {
         return map == null || map.isEmpty();
     }
 
     /**
      * 把任意 JSON 值规整成对象
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private JsonObject asObject(Object value) {
         if (value instanceof JsonObject object) {
             return object;
@@ -758,14 +810,18 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 空值安全的字符串
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static String str(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
     /**
      * 空值安全的布尔
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static Boolean boolOrNull(Object value) {
         if (value == null) {
             return null;
@@ -778,7 +834,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 空值安全的整数
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static Integer intOrNull(Object value) {
         if (value == null) {
             return null;
@@ -809,7 +867,9 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
 
     /**
      * 空值安全的长整数
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long longOrNull(Object value) {
         if (value == null) {
             return null;

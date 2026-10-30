@@ -162,6 +162,9 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 锁
+     * @param action 可运行任务
+     * @param lockKey 字符串
+     * @return 返回值
     */
     public void lock(String lockKey, Runnable action) {
         /**
@@ -176,6 +179,10 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 锁
+     * @param action 可运行任务
+     * @param leaseTime 参数
+     * @param lockKey 字符串
+     * @return 返回值
     */
     public void lock(String lockKey, Duration leaseTime, Runnable action) {
         RLock lock = getLock(lockKey);
@@ -194,6 +201,10 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 尝试锁
+     * @param action 可运行任务
+     * @param lockKey 字符串
+     * @param waitTime 参数
+     * @return 返回值
     */
     public boolean tryLock(String lockKey, Duration waitTime, Runnable action) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, action);
@@ -202,6 +213,11 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 尝试锁
+     * @param action 可运行任务
+     * @param leaseTime 参数
+     * @param lockKey 字符串
+     * @param waitTime 参数
+     * @return 返回值
     */
     public boolean tryLock(String lockKey, Duration waitTime, Duration leaseTime, Runnable action) {
         RLock lock = getLock(lockKey);
@@ -231,6 +247,8 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 获取
+     * @param lockKey 字符串
+     * @return 返回值
     */
     public boolean acquire(String lockKey) {
         return acquire(lockKey, DEFAULT_WAIT_TIME, DEFAULT_LEASE_TIME);
@@ -239,6 +257,10 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 获取
+     * @param leaseTime 参数
+     * @param lockKey 字符串
+     * @param waitTime 参数
+     * @return 返回值
     */
     public boolean acquire(String lockKey, Duration waitTime, Duration leaseTime) {
         RLock lock = getLock(lockKey);
@@ -260,6 +282,8 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 释放
+     * @param lockKey 字符串
+     * @return 返回值
     */
     public void release(String lockKey) {
         RLock lock = getLock(lockKey);
@@ -272,6 +296,8 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 是否锁
+     * @param lockKey 字符串
+     * @return 返回值
     */
     public boolean isLocked(String lockKey) {
         RLock lock = getLock(lockKey);
@@ -281,6 +307,8 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /**
      * 是否heldby当前thread
+     * @param lockKey 字符串
+     * @return 返回值
     */
     public boolean isHeldByCurrentThread(String lockKey) {
         RLock lock = getLock(lockKey);

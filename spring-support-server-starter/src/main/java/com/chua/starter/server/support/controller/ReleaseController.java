@@ -40,7 +40,9 @@ public class ReleaseController {
 
     /**
      * 同步项目的定时任务（宿主未引入 job-starter 时静默跳过）。
-     */
+     * @param projectId 长整数
+     * @return 返回值
+    */
     private void syncSchedule(Long projectId) {
         ReleaseScheduleService service = releaseScheduleServiceProvider.getIfAvailable();
         if (service == null) {
@@ -55,7 +57,9 @@ public class ReleaseController {
 
     /**
      * 移除项目的定时任务。
-     */
+     * @param projectId 长整数
+     * @return 返回值
+    */
     private void removeSchedule(Long projectId) {
         ReleaseScheduleService service = releaseScheduleServiceProvider.getIfAvailable();
         if (service == null) {
@@ -639,7 +643,9 @@ public class ReleaseController {
 
     /**
      * 解析请求体中的 Long 列表（兼容数字与字符串）。
-     */
+     * @param raw 对象
+     * @return 返回值
+    */
     private java.util.List<Long> toLongList(Object raw) {
         java.util.List<Long> out = new java.util.ArrayList<>();
         if (raw instanceof java.util.Collection<?> cols) {

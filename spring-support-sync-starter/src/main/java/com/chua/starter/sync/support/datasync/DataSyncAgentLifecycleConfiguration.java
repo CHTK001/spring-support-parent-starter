@@ -98,6 +98,9 @@ public class DataSyncAgentLifecycleConfiguration {
             @Override
             /**
              * Accept
+             * @param clientInfo 参数
+             * @param sessionId 字符串
+             * @return 返回值
             */
             public void accept(String sessionId, ClientInfo clientInfo) {
                 String clientId = clientInfo != null ? clientInfo.getClientId() : null;

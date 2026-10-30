@@ -32,6 +32,7 @@ public class SocketIOProvider implements SocketProvider {
     @Override
     /**
      * 获取协议
+     * @return 返回值
     */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SOCKETIO;
@@ -62,6 +63,8 @@ public class SocketIOProvider implements SocketProvider {
     @Override
     /**
      * 开始
+     * @param template 参数
+     * @return 返回值
     */
     public void start(SocketSessionTemplate template) {
         log.info("[SocketIO] 启动 Socket.IO 服务");
@@ -71,6 +74,8 @@ public class SocketIOProvider implements SocketProvider {
     @Override
     /**
      * 停止
+     * @param template 参数
+     * @return 返回值
     */
     public void stop(SocketSessionTemplate template) {
         log.info("[SocketIO] 停止 Socket.IO 服务");

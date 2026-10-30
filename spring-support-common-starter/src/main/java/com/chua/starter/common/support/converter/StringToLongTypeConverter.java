@@ -27,14 +27,10 @@ import java.util.Date;
 public class StringToLongTypeConverter implements Converter<String, Long> {
 
     /**
-     * 执行字符串到 Long 的转换。
-     *
+    /**
+     * 执行字符串到 Long 的转换。 转换：字符串 -> Java.lang.Long
      * @param source 待转换的字符串
      * @return 转换后的 Long 值；无法转换时返回 空
-     */
-    @Override
-    /**
-     * 转换：字符串 -> Java.lang.Long
     */
     public Long convert(String source) {
         // 优先尝试作为数字解析

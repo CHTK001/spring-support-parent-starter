@@ -45,9 +45,9 @@ public class WalletAccountController {
     @PostMapping("/account/recharge")
     /**
      * 充值
-     *
      * @param dto dto
-     */
+     * @return 返回值
+    */
     public Result<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
         return Result.success(walletAccountService.recharge(dto));
     }

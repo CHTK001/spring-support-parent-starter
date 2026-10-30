@@ -161,6 +161,9 @@
         <!-- 设备管理模块（海康/大华等平台接入） -->
         <module>spring-support-device-starter</module>
 
+        <!-- 模板库管理模块（hiprint 模板设计与打印机配置） -->
+        <module>spring-support-template-starter</module>
+
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datasource-hub-starter</module>
         <module>spring-support-monitor-starter</module>

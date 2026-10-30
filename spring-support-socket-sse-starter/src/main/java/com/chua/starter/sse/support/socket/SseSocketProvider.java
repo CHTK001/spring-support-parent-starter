@@ -26,6 +26,7 @@ public class SseSocketProvider implements SocketProvider {
     @Override
     /**
      * 获取协议
+     * @return 返回值
     */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SSE;
@@ -61,6 +62,8 @@ public class SseSocketProvider implements SocketProvider {
     @Override
     /**
      * 开始
+     * @param template 参数
+     * @return 返回值
     */
     public void start(SocketSessionTemplate template) {
         if (template != null) {
@@ -72,6 +75,8 @@ public class SseSocketProvider implements SocketProvider {
     @Override
     /**
      * 停止
+     * @param template 参数
+     * @return 返回值
     */
     public void stop(SocketSessionTemplate template) {
         if (template != null) {
@@ -83,6 +88,8 @@ public class SseSocketProvider implements SocketProvider {
     @Override
     /**
      * 支持
+     * @param protocol 参数
+     * @return 返回值
     */
     public boolean supports(SocketProtocol protocol) {
         return protocol == SocketProtocol.SSE;

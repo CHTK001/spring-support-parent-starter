@@ -405,7 +405,9 @@ public class SysAiModelMetricsService {
 
     /**
      * 组装供 indicator 使用的最小 {@link ChatClientSetting}。
-     */
+     * @param entity 参数
+     * @return 返回值
+    */
     private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
         return ChatClientSetting.builder()
                 .provider(entity.getPlatform() == null || entity.getPlatform().isBlank()
@@ -419,7 +421,9 @@ public class SysAiModelMetricsService {
 
     /**
      * 取服务商自身凭证中的第一个 API Key（无则返回 {@code null}）。
-     */
+     * @param entity 参数
+     * @return 返回值
+    */
     private String firstApiKey(SysAiProvider entity) {
         if (entity.getCredentials() == null || entity.getCredentials().isEmpty()) {
             return null;
@@ -440,7 +444,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 从 extra 中读取字符串值（extra 为 {@code null} 或键不存在时返回 {@code null}）。
-     */
+     * @param Map<String 参数
+     * @param extra 参数
+     * @param key 字符串
+     * @return 返回值
+    */
     private static String extraString(Map<String, Object> extra, String key) {
         if (extra == null) {
             return null;
@@ -601,7 +609,9 @@ public class SysAiModelMetricsService {
 
     /**
      * 模型行是否已配置思考档位（capabilities[].thinking_efforts 非空）。
-     */
+     * @param row 参数
+     * @return 返回值
+    */
     private static boolean hasThinkingEfforts(SysAiProviderModel row) {
         List<Map<String, Object>> caps = row.getCapabilities();
         if (caps == null) {
@@ -617,9 +627,12 @@ public class SysAiModelMetricsService {
     }
 
     /**
+    /**
      * 把思考档位写入行内 capabilities[].thinking_efforts（与 ApiProviderController.applyThinkingEfforts 同款）。
-     */
-    @SuppressWarnings("unchecked")
+     * @param efforts 参数
+     * @param entity 参数
+     * @return 返回值
+    */
     private static void applyThinkingEfforts(SysAiProviderModel entity, List<String> efforts) {
         if (efforts == null) {
             return;
@@ -640,7 +653,9 @@ public class SysAiModelMetricsService {
 
     /**
      * 宽松转字符串列表：非数组返回空列表。
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static List<Object> listOf(Object value) {
         if (value instanceof List<?> list) {
             return new ArrayList<>(list);
@@ -669,7 +684,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 取指标字符串（掐头去尾）。
-     */
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param metrics 参数
+     * @return 返回值
+    */
     private static String str(Map<String, Object> metrics, String key) {
         Object value = metrics.get(key);
         if (!(value instanceof String s) || s.isBlank()) {
@@ -680,7 +699,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 取指标布尔。
-     */
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param metrics 参数
+     * @return 参数
+    */
     private static Boolean bool(Map<String, Object> metrics, String key) {
         Object value = metrics.get(key);
         if (value instanceof Boolean b) {
@@ -694,7 +717,9 @@ public class SysAiModelMetricsService {
 
     /**
      * 毫秒时间戳 → ISO 时间（最后更新时间兜底口径）。
-     */
+     * @param millis 长整数
+     * @return 返回值
+    */
     private static String isoOf(long millis) {
         try {
             return java.time.Instant.ofEpochMilli(millis)
@@ -707,7 +732,10 @@ public class SysAiModelMetricsService {
 
     /**
      * 首非空值。
-     */
+     * @param a 字符串
+     * @param b 字符串
+     * @return 返回值
+    */
     private static String firstNonBlank(String a, String b) {
         return (a != null && !a.isBlank()) ? a : b;
     }
@@ -774,7 +802,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 把指标键/值 Map 写入实体字段（只做赋值，不做锁定判断，用于新增行）。
-     */
+     * @param Map<String 参数
+     * @param e 参数
+     * @param m 参数
+     * @return 返回值
+    */
     private void applyMetricsToEntity(SysAiModelMetrics e, Map<String, Object> m) {
         e.setPriceInputPerMusd(bd(m, "price_input_per_musd"));
         e.setPriceOutputPerMusd(bd(m, "price_output_per_musd"));
@@ -932,7 +964,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 从指标 Map 取 BigDecimal，缺省返回 {@code null}。
-     */
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param m 参数
+     * @return 返回值
+    */
     private static BigDecimal bd(Map<String, Object> m, String key) {
         Object v = m.get(key);
         if (v == null) {
@@ -953,7 +989,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 从指标 Map 取 Long，缺省返回 {@code null}。
-     */
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param m 参数
+     * @return 返回值
+    */
     private static Long longOf(Map<String, Object> m, String key) {
         Object v = m.get(key);
         if (v == null) {
@@ -971,7 +1011,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 从指标 Map 取 Boolean，缺省返回 {@code null}。
-     */
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param m 参数
+     * @return 返回值
+    */
     private static Boolean boolOf(Map<String, Object> m, String key) {
         Object v = m.get(key);
         if (v == null) {
@@ -1150,7 +1194,10 @@ public class SysAiModelMetricsService {
 
     /**
      * 取指标源记录中指定字段的值。
-     */
+     * @param aaRec 参数
+     * @param field 字符串
+     * @return 返回值
+    */
     private Object aaValue(MetricsRecord aaRec, String field) {
         if (aaRec == null) {
             return null;
@@ -1195,7 +1242,9 @@ public class SysAiModelMetricsService {
 
     /**
      * 序列化锁定字段列表为 JSON 字符串。
-     */
+     * @param locked 参数
+     * @return 返回值
+    */
     private static String writeLocked(List<String> locked) {
         try {
             return LOCK_OM.writeValueAsString(locked);
@@ -1207,7 +1256,10 @@ public class SysAiModelMetricsService {
 
     /**
      * 记录转实体（新增）。
-     */
+     * @param now 长整数
+     * @param r 参数
+     * @return 返回值
+    */
     private SysAiModelMetrics toEntity(MetricsRecord r, long now) {
         SysAiModelMetrics e = new SysAiModelMetrics();
         e.setModelKey(r.normalizedKey());

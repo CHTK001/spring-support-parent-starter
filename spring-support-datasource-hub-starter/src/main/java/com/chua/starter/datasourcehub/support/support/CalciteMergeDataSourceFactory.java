@@ -159,7 +159,11 @@ public class CalciteMergeDataSourceFactory {
 
     /**
      * 为成员 id 生成唯一的 schema 名：按成员名字去空白，冲突追加 {@code -2/-3}。
-     */
+     * @param memberId 长整数
+     * @param row 参数
+     * @param used 参数
+     * @return 返回值
+    */
     private String schemaName(Set<String> used, MsDatasource row, Long memberId) {
         MsDatasource member = datasourceMapper.selectById(memberId);
         String base = member == null ? "ds_" + memberId : normalize(member.getDatasourceName(), memberId);
@@ -175,7 +179,10 @@ public class CalciteMergeDataSourceFactory {
 
     /**
      * 成员名转 schema 名：去空白、去非法字符；空名回退 {@code ds_{id}}。
-     */
+     * @param id 长整数
+     * @param name 字符串
+     * @return 返回值
+    */
     private static String normalize(String name, Long id) {
         if (name == null || name.isBlank()) {
             return "ds_" + id;
@@ -186,7 +193,9 @@ public class CalciteMergeDataSourceFactory {
 
     /**
      * 经 {@link DatasourceService#connection(Long)} 建连并包装为 DataSource。
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     private DataSource toDataSource(Long id) {
         try {
             java.sql.Connection connection = datasourceServiceProvider.getObject().connection(id);

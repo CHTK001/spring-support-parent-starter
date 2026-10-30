@@ -308,6 +308,11 @@ public class EduPaperScanner {
             }
             var inlineSpans = findInlineItemSpans(line);
             if (inlineSpans.size() >= 2 && fitsProgression(
+                    /**
+                     * 获取
+                     * @param inlineSpans.get(0)[1]) 参数
+                     * @return 返回值
+                    */
                     parseNoNum(line.substring(inlineSpans.get(0)[0], inlineSpans.get(0)[1])), lastNum)) {
                 // 行内多题只认「递进成立」的题号边界：作答里的算式数字（"80," "9," "1/8。"）
                 // 同样带「数字+分隔符」，逐个校验可避免整行作答被拆成幽灵题判 0；
@@ -856,6 +861,11 @@ public class EduPaperScanner {
     private static final java.util.regex.Pattern NO_PREFIX =
             java.util.regex.Pattern.compile("^\\s*(?:第\\s*)?[0-9]+[a-zA-Z]{0,3}\\s*[.。、,，．：:；;）)]\\s*|^\\s*[lLI1]\\s*[.。、,，．：:；;）)]\\s*");
 
+    /**
+     * extract Any Questions
+     * @param text 字符串
+     * @return 返回值
+    */
     public List<ScannedQuestion> extractAnyQuestions(String text) {
         return extractAnyQuestions(null, text);
     }
@@ -1058,6 +1068,12 @@ public class EduPaperScanner {
                 || s.equals("座位") || s.equals("准考证") || s.equals("学校名");
     }
 
+    /**
+     * extract Any Questions
+     * @param blocks 参数
+     * @param text 字符串
+     * @return 返回值
+    */
     public List<ScannedQuestion> extractAnyQuestions(List<ScanBlock> blocks, String text) {
         return extractAnyScan(blocks, text).questions();
     }
@@ -1342,6 +1358,12 @@ public class EduPaperScanner {
         return result.trim();
     }
 
+    /**
+     * contains Ignoring Space
+     * @param fragment 字符串
+     * @param text 字符串
+     * @return 返回值
+    */
     private static boolean containsIgnoringSpace(String text, String fragment) {
         if (StringUtils.isBlank(fragment)) {
             return false;
@@ -1351,6 +1373,12 @@ public class EduPaperScanner {
         return !f.isEmpty() && t.contains(f);
     }
 
+    /**
+     * remove Ignoring Space
+     * @param fragment 字符串
+     * @param text 字符串
+     * @return 返回值
+    */
     private static String removeIgnoringSpace(String text, String fragment) {
         if (StringUtils.isBlank(text) || StringUtils.isBlank(fragment)) {
             return text;
@@ -1375,6 +1403,12 @@ public class EduPaperScanner {
         return (text.substring(0, start) + text.substring(Math.min(pos, text.length()))).trim();
     }
 
+    /**
+     * index Ignoring Space
+     * @param fragment 字符串
+     * @param text 字符串
+     * @return 返回值
+    */
     private static int indexIgnoringSpace(String text, String fragment) {
         String t = text.replaceAll("\\s+", "");
         String f = fragment.replaceAll("\\s+", "");

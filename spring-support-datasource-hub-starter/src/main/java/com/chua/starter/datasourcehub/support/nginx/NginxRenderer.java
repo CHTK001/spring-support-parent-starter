@@ -180,15 +180,13 @@ public final class NginxRenderer {
     }
 
     /**
-     * 输出原文切片，剥掉公共前导缩进后按新缩进输出。
-     *
-     * <p>原文是以绝对行首记录的，直接搬动会造成阶梯式右移。这里剥掉公共前缀再统一缩进，
-     * 节点被移动位置时缩进才不会错乱。</p>
-     *
-     * @param out      输出缓冲
+     * 输出原文切片，剥掉公共前导缩进后按新缩进输出。 <p>原文是以绝对行首记录的，直接搬动会造成阶梯式右移。这里剥掉公共前缀再统一缩进， 节点被移动位置时缩进才不会错乱。</p>
+     * @param indent 目标缩进
      * @param original 原文
-     * @param indent   目标缩进
-     */
+     * @param out 输出缓冲
+     * @param stripLen 整数
+     * @return 返回值
+    */
     private static void appendOriginal(StringBuilder out, String original, String indent, int stripLen) {
         if (original == null || original.isEmpty()) {
             return;

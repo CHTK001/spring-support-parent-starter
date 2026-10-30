@@ -261,6 +261,8 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     @Override
     /**
      * Upgrade
+     * @param setting 参数
+     * @return 返回值
     */
     public void upgrade(ApiRequestDecodeSetting setting) {
         this.decodeSetting = setting;

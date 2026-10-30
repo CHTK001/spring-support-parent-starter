@@ -44,10 +44,10 @@ public enum SyncMode {
 
     /**
      * 构造同步模式。
-     *
-     * @param code  存储编码
+     * @param code 存储编码
      * @param label 中文说明
-     */
+     * @return 返回值
+    */
     SyncMode(String code, String label) {
         this.code = code;
         this.label = label;

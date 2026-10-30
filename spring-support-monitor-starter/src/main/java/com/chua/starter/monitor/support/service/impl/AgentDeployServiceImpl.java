@@ -332,10 +332,11 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * Linux 注入：写入 /etc/profile.d/apm-javaagent.sh，export JAVA_TOOL_OPTIONS。
-     *
-     * @param session 会话
      * @param remoteJar 远端 jar 路径
-     */
+     * @param session 会话
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void injectLinux(Session session, String remoteJar) throws IOException {
         String options = properties.getApmOptions() == null ? "" : properties.getApmOptions().trim();
         String suffix = options.isEmpty() ? "" : "," + options;
@@ -506,10 +507,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * 建立一次远程会话：凭据、执行通道与远端目录。
-     *
      * @param host 主机
      * @return 会话
-     */
+     * @throws Exception 异常
+    */
     private Session open(MsServerHost host) throws Exception {
         if (host == null) {
             throw new IllegalStateException("主机不存在");
@@ -534,10 +535,11 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * 安装：探测 java → 上传包与配置 → 注册系统服务 → 健康校验。
-     *
-     * @param session 会话
      * @param reinstalled 是否为重装后的安装（用于进度文案）
-     */
+     * @param session 会话
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void install(Session session, boolean reinstalled) throws Exception {
         Long hostId = session.host.getId();
         push(hostId, 26, reinstalled ? "重装：检查远端 Java..." : "检查远端 Java...", "info");
@@ -559,9 +561,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * 升级：新包先落到 .new，停服务后备份在跑版本再换装，健康校验不过就回滚。
-     *
      * @param session 会话
-     */
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void upgrade(Session session) throws Exception {
         Long hostId = session.host.getId();
         String javaBin = requireJava(session);
@@ -608,10 +611,11 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * 卸载：停服务、去自启、删单元文件与目录，并把主机台账回写为未安装。
-     *
-     * @param session 会话
      * @param pushFinal 是否推送最终完成事件（重装的中途清理阶段不推）
-     */
+     * @param session 会话
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void uninstall(Session session, boolean pushFinal) throws Exception {
         Long hostId = session.host.getId();
         push(hostId, 34, "停止 monitor-agent 服务", "info");
@@ -654,10 +658,11 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * 健康校验：只有 agent 自己应答了才算装成功，并顺带把端口/版本写回台账。
-     *
-     * @param session 会话
      * @param label 动作文案
-     */
+     * @param session 会话
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void verifyHealth(Session session, String label) throws Exception {
         verifyHealth(session, label, null);
     }
@@ -831,9 +836,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
 
     /**
      * 写入远端 agent.yml：端口与令牌都取平台配置，避免主机侧与平台侧各写一套。
-     *
      * @param session 会话
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void writeConfig(Session session) throws IOException {
         int port = session.host.getServerHostAgentPort() == null || session.host.getServerHostAgentPort() <= 0
                 ? properties.getPort() : session.host.getServerHostAgentPort();

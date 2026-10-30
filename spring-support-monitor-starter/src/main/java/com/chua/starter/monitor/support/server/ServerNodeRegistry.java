@@ -802,6 +802,10 @@ public class ServerNodeRegistry {
         filter.init(null);
     }
 
+    /**
+     * create OAuth Filter
+     * @return 返回值
+    */
     private ServerFilter createOAuthFilter() {
         try {
             Class<?> filterClass = ReflectUtils.forName(OAUTH_FILTER_CLASS);

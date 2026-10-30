@@ -34,6 +34,7 @@ public class CustomServletInputStream extends ServletInputStream {
     @Override
     /**
      * 是否饰面
+     * @return 返回值
     */
     public boolean isFinished() {
         return inputStream.available() == 0;
@@ -42,6 +43,7 @@ public class CustomServletInputStream extends ServletInputStream {
     @Override
     /**
      * 是否就绪
+     * @return 返回值
     */
     public boolean isReady() {
         return true;
@@ -50,6 +52,8 @@ public class CustomServletInputStream extends ServletInputStream {
     @Override
     /**
      * 设置读取监听器
+     * @param readListener 参数
+     * @return 返回值
     */
     public void setReadListener(ReadListener readListener) {
 
@@ -58,6 +62,8 @@ public class CustomServletInputStream extends ServletInputStream {
     @Override
     /**
      * 读取
+     * @return 返回值
+     * @throws IOException 异常
     */
     public int read() throws IOException {
         return inputStream.read();

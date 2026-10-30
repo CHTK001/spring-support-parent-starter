@@ -466,14 +466,23 @@ public class ElasticsearchClient {
 
     /**
      * 发请求并把响应读成 JSON 对象
-     */
+     * @param Map<String 参数
+     * @param call 调用
+     * @param path 字符串
+     * @param query 查询
+     * @param target 参数
+     * @return 返回值
+    */
     private JsonObject read(Target target, String path, Map<String, String> query, IoCall call) {
         return Json.getJsonObject(callText(path, call));
     }
 
     /**
      * 发请求并返回原始正文
-     */
+     * @param call 调用
+     * @param path 字符串
+     * @return 返回值
+    */
     private String callText(String path, IoCall call) {
         try {
             return call.get();
@@ -507,7 +516,9 @@ public class ElasticsearchClient {
 
     /**
      * 路径片段编码：索引名允许中文与逗号，通配符不能被编码掉
-     */
+     * @param index 字符串
+     * @return 返回值
+    */
     private String encode(String index) {
         return index;
     }

@@ -101,6 +101,8 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     @Override
     /**
      * 获取row类型
+     * @param typeFactory 参数
+     * @return 返回值
     */
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         if (rowType == null) {
@@ -116,6 +118,8 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     @Override
     /**
      * 扫描
+     * @param dataContext 参数
+     * @return 返回值
     */
     public Enumerable<Object[]> scan(DataContext dataContext) {
         String sql = buildUnionAllSql();
@@ -132,6 +136,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
             @Override
             /**
              * 迭代器
+             * @return 返回值
             */
             public Iterator<Object[]> iterator() {
                 return rows.iterator();
@@ -140,6 +145,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
             @Override
             /**
              * Enumerator
+             * @return 返回值
             */
             public Enumerator<Object[]> enumerator() {
                 return new Enumerator<Object[]>() {
@@ -151,6 +157,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
                     @Override
                     /**
                      * 当前
+                     * @return 返回值
                     */
                     public Object[] current() {
                         return rows.get(index);
@@ -159,6 +166,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
                     @Override
                     /**
                      * 移动下一个
+                     * @return 返回值
                     */
                     public boolean moveNext() {
                         return ++index < rows.size();

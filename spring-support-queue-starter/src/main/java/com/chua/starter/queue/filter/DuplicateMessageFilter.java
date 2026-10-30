@@ -29,6 +29,8 @@ public class DuplicateMessageFilter implements MessageFilter {
     @Override
     /**
      * 过滤
+     * @param message 消息
+     * @return 返回值
     */
     public boolean filter(Message message) {
         String messageId = message.getId();
@@ -83,6 +85,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return -1000; // 最高优先级，最先执行

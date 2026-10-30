@@ -322,11 +322,11 @@ public class SipTunnel {
 
         /**
          * 构造 Provider 注册信息
-         *
-         * @param socket   控制连接
-         * @param out      控制连接输出流（自动 flush）
+         * @param out 控制连接输出流（自动 flush）
          * @param services 服务列表
-         */
+         * @param socket 控制连接
+         * @return 返回值
+        */
         ProviderInfo(Socket socket, PrintWriter out, String services) {
             this.socket = socket;
             this.out = out;
@@ -346,11 +346,11 @@ public class SipTunnel {
 
         /**
          * 构造隧道上下文
-         *
-         * @param channelId    通道号
-         * @param dataSocket   数据端口监听
+         * @param channelId 通道号
+         * @param dataSocket 数据端口监听
          * @param visitControl 访客控制连接输出流
-         */
+         * @return 返回值
+        */
         PendingTunnel(int channelId, ServerSocket dataSocket, PrintWriter visitControl) {
             this.channelId = channelId;
             this.dataSocket = dataSocket;

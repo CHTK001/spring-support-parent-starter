@@ -65,7 +65,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     @Override
     /**
      * 任务标识
-     */
+     * @return 返回值
+    */
     public String taskKey() {
         return "payment-notify-retry";
     }
@@ -73,7 +74,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     @Override
     /**
      * 任务名称
-     */
+     * @return 返回值
+    */
     public String taskName() {
         return "回调异常重试";
     }
@@ -81,7 +83,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     @Override
     /**
      * 默认 cron 表达式
-     */
+     * @return 返回值
+    */
     public String defaultCron() {
         return "0 */5 * * * ?";
     }
@@ -89,7 +92,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     @Override
     /**
      * 任务说明
-     */
+     * @return 返回值
+    */
     public String description() {
         return "扫描待重试的支付回调异常并自动回放";
     }

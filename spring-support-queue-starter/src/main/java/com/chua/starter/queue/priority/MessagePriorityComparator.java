@@ -38,6 +38,9 @@ public class MessagePriorityComparator implements Comparator<Message> {
     @Override
     /**
      * 比较
+     * @param m1 消息
+     * @param m2 消息
+     * @return 返回值
     */
     public int compare(Message m1, Message m2) {
         int priority1 = getPriority(m1);

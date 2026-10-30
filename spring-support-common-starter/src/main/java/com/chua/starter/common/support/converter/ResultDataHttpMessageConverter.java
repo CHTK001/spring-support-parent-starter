@@ -30,6 +30,9 @@ public class ResultDataHttpMessageConverter
     @Override
     /**
      * 是否可以写入
+     * @param clazz 参数
+     * @param mediaType 参数
+     * @return 返回值
     */
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
         if(
@@ -45,6 +48,12 @@ public class ResultDataHttpMessageConverter
     @Override
     /**
      * 写入内部
+     * @param object 对象
+     * @param outputMessage 参数
+     * @param type 参数
+     * @return 返回值
+     * @throws HttpMessageNotWritableException 异常
+     * @throws IOException 异常
     */
     protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
         super.writeInternal(object, type, outputMessage);

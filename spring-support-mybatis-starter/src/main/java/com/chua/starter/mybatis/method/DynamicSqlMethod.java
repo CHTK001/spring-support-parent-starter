@@ -60,6 +60,10 @@ public class DynamicSqlMethod extends AbstractMethod {
     @Override
     /**
      * injectmapped对账单
+     * @param mapperClass 参数
+     * @param modelClass 参数
+     * @param tableInfo 参数
+     * @return 返回值
     */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql = MapUtils.getString(param, "content");

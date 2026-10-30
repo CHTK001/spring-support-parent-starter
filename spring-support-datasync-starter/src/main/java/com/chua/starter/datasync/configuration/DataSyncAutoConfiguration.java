@@ -142,7 +142,8 @@ public class DataSyncAutoConfiguration {
         /**
          * 简单目录配置definition。
          * @param directoryPath 目录路径
-         */
+         * @return 返回值
+        */
         SimpleDirectoryConfigDefinition(String directoryPath) {
             this.directoryPath = directoryPath;
         }
@@ -150,6 +151,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * 目录路径
+         * @return 返回值
         */
         public String directoryPath() {
             return directoryPath;
@@ -158,6 +160,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * 输入标识
+         * @return 返回值
         */
         public String inputId() {
             return null;
@@ -166,6 +169,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * 源标识
+         * @return 返回值
         */
         public String sourceId() {
             return null;
@@ -174,6 +178,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * 输出标识
+         * @return 返回值
         */
         public String outputId() {
             return null;
@@ -182,6 +187,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * sinkid
+         * @return 返回值
         */
         public String sinkId() {
             return null;
@@ -190,6 +196,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * Mappings
+         * @return 返回值
         */
         public List<DataSyncFieldMapping> mappings() {
             return List.of();
@@ -198,6 +205,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * 批量
+         * @return 返回值
         */
         public int batch() {
             return 100;
@@ -206,6 +214,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * cron类型
+         * @return 返回值
         */
         public String cronType() {
             return null;
@@ -214,6 +223,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * Cron
+         * @return 返回值
         */
         public String cron() {
             return null;
@@ -222,6 +232,7 @@ public class DataSyncAutoConfiguration {
         @Override
         /**
          * 参数
+         * @return 返回值
         */
         public Map<String, Object> params() {
             return Map.of();

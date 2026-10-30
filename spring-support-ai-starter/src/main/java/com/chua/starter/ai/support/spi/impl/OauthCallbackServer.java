@@ -184,10 +184,10 @@ final class OauthCallbackServer {
 
     /**
      * 从 HTTP 请求头里取请求目标（形如 {@code /authorize?code=..}）。
-     *
      * @param in 请求输入流
      * @return 请求目标；读不到返回 null
-     */
+     * @throws IOException 异常
+    */
     private static String readRequestTarget(InputStream in) throws IOException {
         StringBuilder head = new StringBuilder();
         byte[] buffer = new byte[1024];

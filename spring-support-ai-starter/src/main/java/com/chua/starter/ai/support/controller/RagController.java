@@ -579,16 +579,13 @@ public class RagController {
     );
 
     /**
-     * SSRF 防护：校验 URL 协议与解析后的目标地址。
-     *
-     * <p>仅允许 http/https 协议且目标主机解析为非内网、非回环、非链路本地的公网地址，
-     * 防止服务端被利用访问内网资源。</p>
-     *
+     * SSRF 防护：校验 URL 协议与解析后的目标地址。 <p>仅允许 http/https 协议且目标主机解析为非内网、非回环、非链路本地的公网地址， 防止服务端被利用访问内网资源。</p>
      * @param url 待校验的 URL
      * @return 合法返回 true，非法抛出异常
+     * @throws Exception 异常
      * @throws URISyntaxException URL 格式非法
      * @throws java.net.UnknownHostException 主机无法解析
-     */
+    */
     private boolean isSafeUrl(String url) throws Exception {
         URI uri = new URI(url);
         String protocol = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();

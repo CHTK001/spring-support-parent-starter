@@ -274,14 +274,19 @@ public class ApiModelMetricsController {
 
     /**
      * 构造失败响应。
-     */
+     * @param code 字符串
+     * @param msg 字符串
+     * @return 返回值
+    */
     private static ApiResult<Map<String, Object>> manualError(String code, String msg) {
         return new ApiResult<>(false, null, code, msg, null);
     }
 
     /**
      * 解析 BigDecimal。
-     */
+     * @param value 对象
+     * @return 返回值
+    */
     private static BigDecimal parseBigDecimal(Object value) {
         if (value == null) {
             return null;
@@ -305,7 +310,10 @@ public class ApiModelMetricsController {
 
     /**
      * 解析布尔值。
-     */
+     * @param defaultValue 布尔值
+     * @param value 对象
+     * @return 返回值
+    */
     private static boolean parseBool(Object value, boolean defaultValue) {
         if (value == null) {
             return defaultValue;
@@ -322,7 +330,10 @@ public class ApiModelMetricsController {
 
     /**
      * 解析整数。
-     */
+     * @param defaultValue 整数
+     * @param value 对象
+     * @return 返回值
+    */
     private static int parseInt(Object value, int defaultValue) {
         if (value == null) {
             return defaultValue;

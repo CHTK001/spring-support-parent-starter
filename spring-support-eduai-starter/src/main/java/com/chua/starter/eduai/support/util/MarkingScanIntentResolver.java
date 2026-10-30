@@ -67,6 +67,11 @@ public final class MarkingScanIntentResolver {
         return new Resolution(anyMode, resolvedPaperId, fromQr, resolvedStudent, resolvedExam, identityConflict);
     }
 
+    /**
+     * trim To Null
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String trimToNull(String value) {
         if (value == null) {
             return null;

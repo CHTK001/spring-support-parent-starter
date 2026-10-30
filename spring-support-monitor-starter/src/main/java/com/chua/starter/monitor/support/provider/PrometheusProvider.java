@@ -60,6 +60,7 @@ public class PrometheusProvider implements MetricProvider {
     @Override
     /**
      * 提供者类型
+     * @return 返回值
     */
     public ProviderType providerType() {
         return ProviderType.PROMETHEUS;
@@ -68,6 +69,7 @@ public class PrometheusProvider implements MetricProvider {
     @Override
     /**
      * 支持服务类型
+     * @return 返回值
     */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER, ServiceType.REDIS, ServiceType.MYSQL,
@@ -77,6 +79,8 @@ public class PrometheusProvider implements MetricProvider {
     @Override
     /**
      * Collect
+     * @param context 参数
+     * @return 返回值
     */
     public Mono<CollectResult> collect(CollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))

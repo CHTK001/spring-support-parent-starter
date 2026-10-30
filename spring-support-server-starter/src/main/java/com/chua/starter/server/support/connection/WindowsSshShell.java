@@ -619,11 +619,11 @@ public class WindowsSshShell {
 
     /**
      * 用给定命令行执行一次，不做超限改写、不做退化校验。
-     *
-     * @param cred    凭据
      * @param command 完整命令行
+     * @param cred 凭据
+     * @param host 设置主机地址
      * @return 执行结果
-     */
+    */
     private Result runRaw(MsServerHost host, SshCredential cred, String command) {
         SshClients.Handle handle = null;
         try {
@@ -797,6 +797,12 @@ public class WindowsSshShell {
      * Windows OpenSSH 执行异常
      */
     public static class WindowsSshExecException extends RuntimeException {
+        /**
+         * Windows Ssh Exec Exception
+         * @param cause 可抛出异常
+         * @param message 字符串
+         * @return 返回值
+        */
         WindowsSshExecException(String message, Throwable cause) {
             super(message, cause);
         }

@@ -684,6 +684,13 @@ public final class DbDialectSupport {
         }
     }
 
+    /**
+     * execute Prepared First Quietly
+     * @param candidates 参数
+     * @param conn 参数
+     * @param params 参数
+     * @return 返回值
+    */
     private static void executePreparedFirstQuietly(Connection conn, List<String> candidates, List<Object> params) {
         try {
             executePreparedFirst(conn, candidates, params);

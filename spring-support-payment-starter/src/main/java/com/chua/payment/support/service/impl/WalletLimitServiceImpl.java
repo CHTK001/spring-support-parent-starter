@@ -44,7 +44,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     @Override
     /**
      * 获取商户钱包限额配置
-     */
+     * @param merchantId 长整数
+     * @return 返回值
+    */
     public MerchantWalletLimit getLimit(Long merchantId) {
         if (merchantId == null) {
             return null;
@@ -57,7 +59,9 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     @Override
     /**
      * 保存或更新限额配置
-     */
+     * @param limit 参数
+     * @return 返回值
+    */
     public void saveOrUpdate(MerchantWalletLimit limit) {
         if (limit == null || limit.getMerchantId() == null) {
             throw new PaymentException("限额配置不能为空");
@@ -80,7 +84,11 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     @Override
     /**
      * 校验充值限额
-     */
+     * @param amount 参数
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public void validateRechargeLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -102,7 +110,11 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     @Override
     /**
      * 校验提现限额
-     */
+     * @param amount 参数
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public void validateWithdrawLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -124,7 +136,11 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     @Override
     /**
      * 校验转账限额
-     */
+     * @param amount 参数
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public void validateTransferLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -146,7 +162,12 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     @Override
     /**
      * 校验余额上限
-     */
+     * @param addAmount 参数
+     * @param currentBalance 参数
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public void validateBalanceLimit(Long merchantId, Long userId, BigDecimal currentBalance, BigDecimal addAmount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null || limit.getBalanceLimit() == null) {

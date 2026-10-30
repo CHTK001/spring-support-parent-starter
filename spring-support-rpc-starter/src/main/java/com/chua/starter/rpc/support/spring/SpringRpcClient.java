@@ -67,6 +67,9 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -141,6 +144,8 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     @Override
     /**
      * 关闭
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void close() throws Exception {
         proxyCache.clear();

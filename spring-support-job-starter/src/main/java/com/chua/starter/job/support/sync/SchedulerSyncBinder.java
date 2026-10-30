@@ -162,6 +162,10 @@ public class SchedulerSyncBinder {
             @Override
             /**
              * on消息
+             * @param clientId 字符串
+             * @param message 对象
+             * @param topic 字符串
+             * @return 返回值
             */
             public void onMessage(String clientId, String topic, Object message) {
                 if (JobSyncTopics.TASK_LOG.equals(topic)) {

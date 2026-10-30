@@ -77,6 +77,8 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     @Override
     /**
      * Page查询
+     * @param query 查询
+     * @return 返回值
     */
     public PageResult<EduQuestion> pageQuery(QuestionQueryDTO query) {
         // 未传审核过滤（null 或负数哨兵）时只看已通过：组卷侧（QuestionMarketDialog 不传）
@@ -303,6 +305,12 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
                 || !equalsText(trimOrNull(exists.getQuestionSourceType()), trimOrNull(entity.getQuestionSourceType()));
     }
 
+    /**
+     * equals Text
+     * @param a 字符串
+     * @param b 字符串
+     * @return 返回值
+    */
     private static boolean equalsText(String a, String b) {
         if (a == null) {
             return b == null;
@@ -310,6 +318,12 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         return a.equals(b);
     }
 
+    /**
+     * equals Int
+     * @param a 整数
+     * @param b 整数
+     * @return 返回值
+    */
     private static boolean equalsInt(Integer a, Integer b) {
         if (a == null) {
             return b == null;
@@ -317,6 +331,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         return a.equals(b);
     }
 
+    /**
+     * trim Or Null
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String trimOrNull(String s) {
         if (s == null) {
             return null;
@@ -559,7 +578,9 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     @Override
     /**
      * AI 选题
-     */
+     * @param dto 参数
+     * @return 返回值
+    */
     public List<EduQuestion> aiSelect(QuestionAiSelectDTO dto) {
         int count = dto.count() == null || dto.count() <= 0 ? 10 : Math.min(dto.count(), 100);
         // 前端可能传码值（PRIMARY），而库里存中文名，不归一化会选不出题
@@ -675,6 +696,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         return sb.toString();
     }
 
+    /**
+     * escape Csv
+     * @param v 字符串
+     * @return 返回值
+    */
     private static String escapeCsv(String v) {
         if (v == null) {
             return "";
@@ -686,6 +712,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         return v;
     }
 
+    /**
+     * null Safe
+     * @param v 对象
+     * @return 返回值
+    */
     private static String nullSafe(Object v) {
         return v == null ? "" : String.valueOf(v);
     }

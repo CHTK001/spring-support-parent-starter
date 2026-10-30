@@ -46,6 +46,8 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
     @Override
     /**
      * with默认impl
+     * @param defaultImpl 参数
+     * @return 返回值
     */
     public ObjectMapper.DefaultTypeResolverBuilder withDefaultImpl(Class<?> defaultImpl) {
         return this;

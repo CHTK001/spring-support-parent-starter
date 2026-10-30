@@ -111,6 +111,8 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     @Override
     /**
      * 同步prices
+     * @param code 字符串
+     * @return 返回值
     */
     public void syncPrices(String code) {
         if (code == null || code.isBlank()) {

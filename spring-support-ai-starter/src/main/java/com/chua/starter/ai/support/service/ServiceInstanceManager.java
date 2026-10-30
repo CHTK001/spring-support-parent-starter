@@ -1854,6 +1854,11 @@ public class ServiceInstanceManager {
         final Map<Integer, Integer> ccToolBlockByIndex = new LinkedHashMap<>(); // 工具调用序号 -> content 块下标
         boolean toolCallsEmitted; // OpenAI 协议：本轮是否产生过 tool_calls（决定 finish_reason）
 
+        /**
+         * Stream State
+         * @param exchange HTTP 交换对象
+         * @return 返回值
+        */
         StreamState(HttpExchange exchange) {
             this.exchange = exchange;
         }

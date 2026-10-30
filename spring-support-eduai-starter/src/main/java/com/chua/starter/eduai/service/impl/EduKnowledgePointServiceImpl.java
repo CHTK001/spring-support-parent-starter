@@ -45,6 +45,10 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
     @Override
     /**
      * 列表树
+     * @param grade 字符串
+     * @param gradeLevel 字符串
+     * @param subject 字符串
+     * @return 返回值
     */
     public List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade) {
         List<EduKnowledgePoint> list = baseMapper.selectTree(subject, gradeLevel, grade,
@@ -212,6 +216,11 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * bind File
+     * @param dto 参数
+     * @return 返回值
+    */
     public Long bindFile(KnowledgeFileBindDTO dto) {
         if (dto.knowledgePointId() == null || dto.knowledgePointId() <= 0) {
             throw new BusinessException("缺少所属卡片标识");
@@ -239,6 +248,11 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete File
+     * @param id 长整数
+     * @return 返回值
+    */
     public boolean deleteFile(Long id) {
         EduKnowledgeFile exists = knowledgeFileMapper.selectById(id);
         if (exists == null) {

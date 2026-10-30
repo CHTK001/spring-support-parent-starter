@@ -139,6 +139,11 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Hanzi
+     * @param id 长整数
+     * @return 返回值
+    */
     public boolean deleteHanzi(Long id) {
         if (id == null) {
             return false;

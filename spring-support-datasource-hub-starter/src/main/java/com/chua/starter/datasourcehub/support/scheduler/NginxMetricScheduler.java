@@ -81,13 +81,12 @@ public class NginxMetricScheduler {
     }
 
     /**
-     * 广播趋势新点。
-     *
-     * <p>推送失败只记日志：SSE 是展示增强，订阅端异常不该中断本轮其它数据源的采集。</p>
-     *
+     * 广播趋势新点。 <p>推送失败只记日志：SSE 是展示增强，订阅端异常不该中断本轮其它数据源的采集。</p>
+     * @param id 数据源 id
      * @param service nginx 服务
-     * @param id      数据源 id
-     */
+     * @param streamRegistry 参数
+     * @return 返回值
+    */
     private void pushTrend(NginxManageService service, NginxMetricStreamRegistry streamRegistry, Long id) {
         try {
             List<NginxTrendVO.Point> points = service.latestPoints(id);
@@ -104,10 +103,11 @@ public class NginxMetricScheduler {
 
     /**
      * 广播实时运行态。
-     *
+     * @param id 数据源 id
      * @param service nginx 服务
-     * @param id      数据源 id
-     */
+     * @param streamRegistry 参数
+     * @return 返回值
+    */
     private void pushRuntime(NginxManageService service, NginxMetricStreamRegistry streamRegistry, Long id) {
         try {
             NginxRuntimeVO runtime = service.collectRealtime(id);

@@ -64,6 +64,11 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
 
     @Override
     @Transactional
+    /**
+     * 创建
+     * @param credential 参数
+     * @return 返回值
+    */
     public DeviceProviderCredential create(DeviceProviderCredential credential) {
         normalize(credential);
         assertNameFree(credential, null);
@@ -85,6 +90,12 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
 
     @Override
     @Transactional
+    /**
+     * 更新
+     * @param credential 参数
+     * @param id 字符串
+     * @return 返回值
+    */
     public DeviceProviderCredential update(String id, DeviceProviderCredential credential) {
         DeviceProviderCredential existing = credentialMapper.selectById(id);
         if (existing == null) {
@@ -146,6 +157,12 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
 
     @Override
     @Transactional
+    /**
+     * update Enabled
+     * @param enabled 布尔值
+     * @param id 字符串
+     * @return 返回值
+    */
     public DeviceProviderCredential updateEnabled(String id, boolean enabled) {
         DeviceProviderCredential existing = credentialMapper.selectById(id);
         if (existing == null) {
@@ -162,6 +179,11 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
 
     @Override
     @Transactional
+    /**
+     * 删除
+     * @param id 字符串
+     * @return 返回值
+    */
     public void delete(String id) {
         DeviceProviderCredential existing = credentialMapper.selectById(id);
         if (existing == null) {
@@ -213,12 +235,19 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
 
     /**
      * 取第一个非空白文本；候选为空时回退到原值
-     */
+     * @param candidate 字符串
+     * @param fallback 字符串
+     * @return 返回值
+    */
     private static String firstText(String candidate, String fallback) {
         return StringUtils.hasText(candidate) ? candidate : fallback;
     }
 
-    /** 补齐默认值并做基本校验 */
+    /**
+     * normalize
+     * @param c 参数
+     * @return 返回值
+    */
     private void normalize(DeviceProviderCredential c) {
         if (c == null) {
             throw new IllegalArgumentException("凭据内容为空");
@@ -247,7 +276,12 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
     }
 
-    /** 同厂商同平台下凭据名称唯一 */
+    /**
+     * assert Name Free
+     * @param c 参数
+     * @param selfId 字符串
+     * @return 返回值
+    */
     private void assertNameFree(DeviceProviderCredential c, String selfId) {
         LambdaQueryWrapper<DeviceProviderCredential> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceProviderCredential::getDeviceCredentialVendor, c.getDeviceCredentialVendor())
@@ -262,13 +296,23 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
     }
 
+    /**
+     * count Vendor
+     * @param vendor 字符串
+     * @return 返回值
+    */
     private long countVendor(String vendor) {
         LambdaQueryWrapper<DeviceProviderCredential> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceProviderCredential::getDeviceCredentialVendor, vendor);
         return credentialMapper.selectCount(wrapper);
     }
 
-    /** 清除该厂商的默认标记（排除自身），保证每厂商至多一套默认 */
+    /**
+     * clear Vendor Default
+     * @param keepId 字符串
+     * @param vendor 字符串
+     * @return 返回值
+    */
     private void clearVendorDefault(String vendor, String keepId) {
         LambdaQueryWrapper<DeviceProviderCredential> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceProviderCredential::getDeviceCredentialVendor, vendor)
@@ -283,7 +327,11 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
     }
 
-    /** 默认套被删后，把该厂商最早的一套启用凭据提为默认 */
+    /**
+     * promote Fallback Default
+     * @param vendor 字符串
+     * @return 返回值
+    */
     private void promoteFallbackDefault(String vendor) {
         List<DeviceProviderCredential> rest = list(vendor);
         DeviceProviderCredential next = rest.stream()

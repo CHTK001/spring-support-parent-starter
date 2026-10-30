@@ -28,21 +28,12 @@ public class AgentController {
     private final AgentDeployService deployService;
 
     /**
-     * 下载 agent 安装包（部署时由目标机自取）
-     * <p>
-     * Windows 走 WinRM 通道，单条命令行只有约 8KB，平台无法把 6MB 级的包推进去，
-     * 只能让目标机按 plugin.monitor.agent.jar-url 反向拉取这个端点。
-     * </p>
-     * <p>
-     * 响应直接写入 {@code HttpServletResponse}（本方法返回 void）：包体以
-     * {@code application/octet-stream} 流式下发，带 {@code Cache-Control: no-store}。
-     * <b>定位不到 agent 包时返回 404</b>（{@code deployService.packageFile()} 抛异常
-     * 的分支），此时响应体不是包内容。
-     * </p>
-     *
+    /**
+     * 下载 agent 安装包（部署时由目标机自取） <p> Windows 走 WinRM 通道，单条命令行只有约 8KB，平台无法把 6MB 级的包推进去， 只能让目标机按 plugin.monitor.agent.jar-url 反向拉取这个端点。 </p> <p> 响应直接写入 {@code HttpServletResponse}（本方法返回 void）：包体以 {@code application/octet-stream} 流式下发，带 {@code Cache-Control: no-store}。 <b>定位不到 agent 包时返回 404</b>（{@code deployService.packageFile()} 抛异常 的分支），此时响应体不是包内容。 </p>
      * @param response 响应容器，由容器注入；本方法直接写入其输出流并负责刷出
-     */
-    @GetMapping("/package")
+     * @return 返回值
+     * @throws java.io.IOException 异常
+    */
     public void packageFile(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         Path artifact;
         try {
@@ -62,12 +53,12 @@ public class AgentController {
     }
 
     /**
-     * 下载 Agent tar.gz
-     * 结构: monitor-agent.jar + lib/*.jar + agent.yml + start.sh
+    /**
+     * 下载 Agent tar.gz 结构: monitor-agent.jar + lib/*.jar + agent.yml + start.sh
      * @param serverUrl 服务端URL，不允许为 null
      * @return 响应实体 对象
-     */
-    @GetMapping("/download")
+     * @throws IOException 异常
+    */
     public ResponseEntity<FileSystemResource> download(@RequestParam(defaultValue = "http://localhost:8081") String serverUrl) throws IOException {
         // 更新配置
         File distDir = new File("../../spring-api-starter/spring-api-support-monitor-agent/target");

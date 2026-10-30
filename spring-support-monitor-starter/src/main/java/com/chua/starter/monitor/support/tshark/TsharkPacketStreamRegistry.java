@@ -152,7 +152,10 @@ public class TsharkPacketStreamRegistry {
 
     /**
      * 移除一条连接；集合空了就删掉键，避免留下空桶。
-     */
+     * @param emitter 参数
+     * @param sessionId 长整数
+     * @return 返回值
+    */
     private void remove(Long sessionId, SseEmitter emitter) {
         Set<SseEmitter> set = subscribers.get(sessionId);
         if (set == null) {
