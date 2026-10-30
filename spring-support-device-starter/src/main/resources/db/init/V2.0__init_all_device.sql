@@ -194,6 +194,13 @@ CREATE TABLE IF NOT EXISTS device_provider_credential (
     -- 原 V1.1__add_cloud_yao_fields.sql 的云曜字段，已折进建表
     device_credential_product_code VARCHAR(64) COMMENT '云曜产品编码 ProductCode（云曜平台必填）',
     device_credential_project_id VARCHAR(64) COMMENT '云曜项目 ID ProjectID（云曜平台必填）',
+    -- 凭据维度的自动检测/自动同步（高级配置，挂载到时间轮，默认全关）
+    device_credential_offline_detect_enabled TINYINT DEFAULT 0 COMMENT '该凭据维度的在离线检测开关',
+    device_credential_offline_detect_interval INT COMMENT '该凭据维度的在离线检测间隔（秒）',
+    device_credential_device_sync_enabled TINYINT DEFAULT 0 COMMENT '该凭据维度的设备自动同步开关',
+    device_credential_device_sync_interval INT COMMENT '该凭据维度的设备自动同步间隔（秒）',
+    device_credential_org_sync_enabled TINYINT DEFAULT 0 COMMENT '该凭据维度的组织自动同步开关',
+    device_credential_org_sync_interval INT COMMENT '该凭据维度的组织自动同步间隔（秒）',
     KEY `idx_dpc_vendor_platform` (`device_credential_vendor`, `device_credential_platform_type`)
 ) COMMENT '提供商接入凭据（AK/SK 等）';
 
@@ -649,3 +656,66 @@ SET @sql_org_updated := IF(@has_org_updated > 0, 'SELECT 1',
 PREPARE stmt_org_updated FROM @sql_org_updated;
 EXECUTE stmt_org_updated;
 DEALLOCATE PREPARE stmt_org_updated;
+
+-- ---------------------------------------------------------------------
+-- device_provider_credential：凭据维度的检测/同步开关与间隔（时间轮高级配置）
+-- ---------------------------------------------------------------------
+SET @has_cred_offline_detect_enabled := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_offline_detect_enabled'
+);
+SET @sql_cred_offline_detect_enabled := IF(@has_cred_offline_detect_enabled > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_offline_detect_enabled TINYINT DEFAULT 0 COMMENT ''该凭据维度的在离线检测开关'' AFTER device_credential_remark');
+PREPARE stmt_cred_offline_detect_enabled FROM @sql_cred_offline_detect_enabled;
+EXECUTE stmt_cred_offline_detect_enabled;
+DEALLOCATE PREPARE stmt_cred_offline_detect_enabled;
+
+SET @has_cred_offline_detect_interval := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_offline_detect_interval'
+);
+SET @sql_cred_offline_detect_interval := IF(@has_cred_offline_detect_interval > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_offline_detect_interval INT COMMENT ''该凭据维度的在离线检测间隔（秒）'' AFTER device_credential_offline_detect_enabled');
+PREPARE stmt_cred_offline_detect_interval FROM @sql_cred_offline_detect_interval;
+EXECUTE stmt_cred_offline_detect_interval;
+DEALLOCATE PREPARE stmt_cred_offline_detect_interval;
+
+SET @has_cred_device_sync_enabled := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_device_sync_enabled'
+);
+SET @sql_cred_device_sync_enabled := IF(@has_cred_device_sync_enabled > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_device_sync_enabled TINYINT DEFAULT 0 COMMENT ''该凭据维度的设备自动同步开关'' AFTER device_credential_offline_detect_interval');
+PREPARE stmt_cred_device_sync_enabled FROM @sql_cred_device_sync_enabled;
+EXECUTE stmt_cred_device_sync_enabled;
+DEALLOCATE PREPARE stmt_cred_device_sync_enabled;
+
+SET @has_cred_device_sync_interval := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_device_sync_interval'
+);
+SET @sql_cred_device_sync_interval := IF(@has_cred_device_sync_interval > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_device_sync_interval INT COMMENT ''该凭据维度的设备自动同步间隔（秒）'' AFTER device_credential_device_sync_enabled');
+PREPARE stmt_cred_device_sync_interval FROM @sql_cred_device_sync_interval;
+EXECUTE stmt_cred_device_sync_interval;
+DEALLOCATE PREPARE stmt_cred_device_sync_interval;
+
+SET @has_cred_org_sync_enabled := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_org_sync_enabled'
+);
+SET @sql_cred_org_sync_enabled := IF(@has_cred_org_sync_enabled > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_org_sync_enabled TINYINT DEFAULT 0 COMMENT ''该凭据维度的组织自动同步开关'' AFTER device_credential_device_sync_interval');
+PREPARE stmt_cred_org_sync_enabled FROM @sql_cred_org_sync_enabled;
+EXECUTE stmt_cred_org_sync_enabled;
+DEALLOCATE PREPARE stmt_cred_org_sync_enabled;
+
+SET @has_cred_org_sync_interval := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_org_sync_interval'
+);
+SET @sql_cred_org_sync_interval := IF(@has_cred_org_sync_interval > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_org_sync_interval INT COMMENT ''该凭据维度的组织自动同步间隔（秒）'' AFTER device_credential_org_sync_enabled');
+PREPARE stmt_cred_org_sync_interval FROM @sql_cred_org_sync_interval;
+EXECUTE stmt_cred_org_sync_interval;
+DEALLOCATE PREPARE stmt_cred_org_sync_interval;

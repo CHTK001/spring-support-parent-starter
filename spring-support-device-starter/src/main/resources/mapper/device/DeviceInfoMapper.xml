@@ -101,6 +101,21 @@
             )
     </select>
 
+    <!-- 指定凭据维度的在线检测候选集：只检测该凭据名下的设备 -->
+    <select id="selectCheckableDevicesByCredentialId" resultType="com.chua.starter.device.support.entity.DeviceInfo">
+        SELECT *
+        FROM device_info
+        WHERE device_info_credential_id = #{credentialId}
+          AND (
+                (device_info_ip IS NOT NULL AND device_info_ip != '')
+                OR (device_info_serial IS NOT NULL AND device_info_serial != '')
+            )
+          AND (
+                device_info_status IS NULL
+                OR device_info_status NOT IN ('disabled', 'scrapped')
+            )
+    </select>
+
     <!-- 厂商目录同步：厂商 + 序列号/编码 幂等定位 -->
     <select id="selectByVendorAndSerial" resultType="com.chua.starter.device.support.entity.DeviceInfo">
         SELECT *

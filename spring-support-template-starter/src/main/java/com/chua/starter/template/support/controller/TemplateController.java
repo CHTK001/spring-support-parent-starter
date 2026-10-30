@@ -148,6 +148,17 @@ public class TemplateController {
     }
 
     /**
+     * 删除打印机
+     *
+     * @param name 打印机设备名
+     * @return 是否删除成功
+     */
+    @DeleteMapping("/printer/{name}")
+    public Boolean removePrinter(@PathVariable String name) {
+        return templateService.removePrinter(name);
+    }
+
+    /**
      * 设置打印机参数（包含地址/端口/Token）
      *
      * @param printer 打印机参数

@@ -53,6 +53,17 @@ public interface DeviceInfoMapper extends BaseMapper<DeviceInfo> {
     List<DeviceInfo> selectCheckableDevices();
 
     /**
+     * 指定凭据维度的在线检测候选设备（XML）
+     *
+     * <p>只包含 {@code deviceInfoCredentialId = credentialId} 的设备，
+     * 由按凭据切分的在离线检测任务使用。</p>
+     *
+     * @param credentialId 凭据 ID
+     * @return 候选设备
+     */
+    List<DeviceInfo> selectCheckableDevicesByCredentialId(@Param("credentialId") String credentialId);
+
+    /**
      * 按厂商 + 序列号/编码查询设备（厂商目录同步的幂等键）。
      *
      * @param vendor 厂商标识

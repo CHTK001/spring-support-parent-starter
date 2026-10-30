@@ -367,6 +367,19 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     /**
+     * 列表by凭据
+     * @param credentialId 字符串
+     * @return 返回值
+    */
+    public List<DeviceInfo> listByCredentialId(String credentialId) {
+        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DeviceInfo::getDeviceInfoCredentialId, credentialId);
+        wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
+        return deviceInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    /**
      * 同步组织
     */
     public void syncOrganization() {
