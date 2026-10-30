@@ -170,6 +170,26 @@ public class TsharkPacketStreamRegistry {
     }
 
     /**
+     * 移除某会话的全部订阅（会话删除时调用，避免悬空连接继续收到心跳与重连尝试）。
+     *
+     * @param sessionId 抓包会话 id
+     */
+    public void removeAll(Long sessionId) {
+        Set<SseEmitter> set = subscribers.remove(sessionId);
+        if (set == null || set.isEmpty()) {
+            return;
+        }
+        for (SseEmitter emitter : set) {
+            try {
+                emitter.complete();
+            } catch (Exception e) {
+                log.debug("[tshark] SSE 会话删除时关闭连接失败 sessionId={} reason={}", sessionId, e.getMessage());
+            }
+        }
+        log.info("[tshark] 会话删除，已关闭 {} 条 SSE 订阅 sessionId={}", set.size(), sessionId);
+    }
+
+    /**
      * 心跳：给所有连接推注释帧保活。
      *
      * <p>容器与各类网关对空闲长连接普遍30~60s 超时，静默流会被中间层悄悄掐断，
