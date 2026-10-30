@@ -293,7 +293,7 @@ public class HikvisionProvider implements DeviceProvider {
                         new AuthTypeDescriptor("SDK", "SDK 直连", "局域网直连设备，需要厂商 SDK 运行库")),
                 List.of(
                         new PlatformDescriptor(PLATFORM_CLOUD_YAO, "海康云耀",
-                                "https://api.hik-cloud.com", cloudYaoFields),
+                                "https://open.hikyun.com", cloudYaoFields),
                         new PlatformDescriptor(PLATFORM_CLOUD_EYE, "海康云眸",
                                 "https://api.hik-cloud-eye.com", platformFields),
                         new PlatformDescriptor(PLATFORM_SECURE, "海康综合安防平台",
