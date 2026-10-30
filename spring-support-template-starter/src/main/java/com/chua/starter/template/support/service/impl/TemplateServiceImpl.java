@@ -190,20 +190,19 @@ public class TemplateServiceImpl implements TemplateService {
         }
         LocalDateTime now = LocalDateTime.now();
         TemplatePrinter existing = selectByName(printer.getName());
-        // 自动默认：当前该击首诗（数据库空白）的打印机，或请求显式指定为默认
-        boolean defaultNow = Boolean.TRUE.equals(printer.getIsDefault())
-                && existing == null
-                && templatePrinterMapper.selectCount(null) == 0;
+        // 新增时自动设为默认（沿用旧行为，保证“有默认机直接打”可用）；编辑时保留原标记，
+        // 仅在请求显式指定时变更
+        boolean defaultNow = Boolean.TRUE.equals(printer.getIsDefault()) || existing == null;
+        TemplatePrinter target = existing == null ? new TemplatePrinter() : existing;
+        fill(target, printer, now, defaultNow);
         if (existing == null) {
-            TemplatePrinter entity = new TemplatePrinter();
-            fill(entity, printer, now, defaultNow);
-            templatePrinterMapper.insert(entity);
+            templatePrinterMapper.insert(target);
         } else {
-            fill(existing, printer, now, defaultNow);
-            templatePrinterMapper.updateById(existing);
+            templatePrinterMapper.updateById(target);
         }
-        if (Boolean.TRUE.equals(existing == null ? null : existing.getTemplatePrinterDefault())) {
-            clearDefaultFlag(existing == null ? null : existing.getTemplatePrinterDefault());
+        // 今后的默认唯一：先下掉所有默认标记，再点亮新的默认
+        if (Boolean.TRUE.equals(target.getTemplatePrinterDefault())) {
+            clearDefaultFlag(target.getTemplatePrinterId());
         }
         log.info("[Template] 设置打印机: {}", printer.getName());
     }
