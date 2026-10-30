@@ -16,6 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -703,14 +706,19 @@ public class ReleaseController {
     /**
      * 保存页面布局。
      *
+     * <p>布局是前端整棵树的原始 JSON 文本，这里直接读请求体原样落库：
+     * 若用 {@code @RequestBody String}，{@code application/json} 会交给 Jackson
+     * 反序列化成 String 而对 JSON 对象报错（C0400S0002）。</p>
+     *
      * @param pageKey 页面标识
-     * @param layout  布局 JSON（原样存储）
+     * @param request 请求对象（取原始请求体）
      * @return 操作结果
      */
     @Operation(summary = "保存页面布局")
     @PutMapping("/layout/{pageKey}")
     public ReturnResult<Void> savePageLayout(@PathVariable String pageKey,
-                                             @RequestBody(required = false) String layout) {
+                                             HttpServletRequest request) throws IOException {
+        String layout = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         return releaseService.savePageLayout(pageKey, layout);
     }
 }
