@@ -145,9 +145,25 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
                 return ReturnResult.error("快照正文已损坏");
             }
             Map<String, Object> options = spec.options() == null ? new LinkedHashMap<String, Object>() : spec.options();
+            List<Map<String, Object>> indexes = new ArrayList<>();
+            if (spec.indexes() != null) {
+                for (String idx : spec.indexes()) {
+                    Map<String, Object> one = new LinkedHashMap<>();
+                    one.put("ddl", idx);
+                    indexes.add(one);
+                }
+            }
+            List<Map<String, Object>> foreignKeys = new ArrayList<>();
+            if (spec.foreignKeys() != null) {
+                for (String fk : spec.foreignKeys()) {
+                    Map<String, Object> one = new LinkedHashMap<>();
+                    one.put("ddl", fk);
+                    foreignKeys.add(one);
+                }
+            }
             return ReturnResult.success(new DbSnapshotDetailVO(
                     row.getId(), row.getDatabase(), row.getTableName(), row.getName(), row.getCreator(),
-                    row.getCreateTime(), spec.ddl(), spec.columns(), spec.indexes(), spec.foreignKeys(), options));
+                    row.getCreateTime(), spec.ddl(), spec.columns(), indexes, foreignKeys, options));
         } catch (Exception e) {
             return ReturnResult.error("获取快照详情失败: " + describeSqlError(e.getMessage()));
         }
@@ -257,7 +273,7 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
         if (database == null || database.isBlank()) {
             return new SchemaScope(conn, null);
         }
-        if (!SqlName.isSafeIdentifier(database)) {
+        if (!SqlName.isSafe(database)) {
             throw new SQLException("非法的数据库名");
         }
         if (!original.isBlank() && database.equalsIgnoreCase(original)) {

@@ -5,6 +5,7 @@ import com.chua.starter.datasourcehub.support.constants.DatasourceHubConstants;
 import com.chua.starter.datasourcehub.support.entity.MsDatasource;
 import com.chua.starter.datasourcehub.support.mapper.MsDatasourceMapper;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -116,6 +118,25 @@ public class CalciteMergeDataSourceFactory {
             }
         }
         return null;
+    }
+
+    /**
+     * 从成员 id 列表生成台账成员 JSON（{@code {"members":[...]}}）。
+     *
+     * <p>成员按声明顺序去重：同一 id 重复出现没有意义，也避免装配时
+     * 同一成员被注册成两个 schema。</p>
+     *
+     * @param memberIds 成员数据源 id 列表
+     * @return 成员 JSON 字符串；JSON 序列化失败抛出（此时建合并不应该继续）
+     */
+    public String membersPayload(List<Long> memberIds) {
+        List<Long> deduped = memberIds == null ? List.of()
+                : memberIds.stream().distinct().toList();
+        try {
+            return objectMapper.writeValueAsString(Map.of("members", deduped));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("序列化合并成员失败: " + e.getMessage(), e);
+        }
     }
 
     /**

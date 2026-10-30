@@ -6,6 +6,7 @@ import com.chua.starter.datasourcehub.support.constants.DatasourceHubConstants;
 import com.chua.starter.datasourcehub.support.model.DataSourceTestVO;
 import com.chua.starter.datasourcehub.support.model.DataSourceVO;
 import com.chua.starter.datasourcehub.support.model.dto.DataSourceDTO;
+import com.chua.starter.datasourcehub.support.model.dto.DataSourceMergeDTO;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -72,6 +73,22 @@ public class DatasourceController {
     @PostMapping
     public ReturnResult<DataSourceVO> create(@RequestBody DataSourceDTO data) {
         return masked(datasourceService.create(data));
+    }
+
+    /**
+     * 新建 Calcite 合并数据源（跨库联合查询）。
+     *
+     * <p>与 {@link #create(DataSourceDTO)} 分开：合并记录没有单一主机/端口/凭证，
+     * 成员 id 列表由本接口落成 JSON，不能走普通新增表单。</p>
+     *
+     * @param request 合并数据源名称与成员 id 列表
+     * @return 合并后的数据源
+     */
+    @SysLog(name = "新建合并数据源")
+    @Operation(summary = "新建合并数据源")
+    @PostMapping("/merge")
+    public ReturnResult<DataSourceVO> merge(@RequestBody DataSourceMergeDTO request) {
+        return masked(datasourceService.merge(request.name(), request.memberIds()));
     }
 
     /**

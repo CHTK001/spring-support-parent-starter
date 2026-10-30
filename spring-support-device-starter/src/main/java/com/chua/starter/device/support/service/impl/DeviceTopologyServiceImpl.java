@@ -86,11 +86,11 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
             nodes.add(deviceNode);
             if (subnetId == null) {
                 // 没有网段：设备挂在区域下
-                edges.add(new DeviceTopologyEdge(areaId, deviceNode.getId()));
+                edges.add(new DeviceTopologyEdge(areaId, deviceNode.id()));
             } else {
                 // 有网段：区域 -> 网段 -> 设备
-                edges.add(new DeviceTopologyEdge(areaId, subnetNode.getId()));
-                edges.add(new DeviceTopologyEdge(subnetNode.getId(), deviceNode.getId()));
+                edges.add(new DeviceTopologyEdge(areaId, subnetNode.id()));
+                edges.add(new DeviceTopologyEdge(subnetNode.id(), deviceNode.id()));
             }
             // 通道（NVR 的子相机）作为设备的子节点
             for (DeviceChannel channel : channelService.listChannels(device.getDeviceInfoId())) {
@@ -102,7 +102,7 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
                         "circle",
                         CHANNEL_SIZE, device.getDeviceInfoOnline());
                 nodes.add(channelNode);
-                edges.add(new DeviceTopologyEdge(deviceNode.getId(), channelNode.getId()));
+                edges.add(new DeviceTopologyEdge(deviceNode.id(), channelNode.id()));
             }
         }
         // 排序：先分组（到面）再按设备和通道的 xml 顺序
