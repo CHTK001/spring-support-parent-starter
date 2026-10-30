@@ -247,6 +247,14 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-oauth-client-starter</artifactId>
     </dependency>
+    <!-- RPC 提供者（Dubbo 3.3.6 / 事件协议）：把 AI 能力暴露为 RPC 接口，
+         消费方用 @RpcResource 注入代理，RPC 断连时自动熔断降级到本应用的本地 Bean
+         （degrade = "springbean"），实现「Bean 即 RPC」的永久降级。
+         默认关闭：plugin.rpc.enable 必须显式为 true 才注册服务项目。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-rpc-starter</artifactId>
+    </dependency>
     <!-- 顶栏天气 / 定位 / 台风（/v2/weather/overview、/v2/location/resolve、/v2/typhoon/**）：
          平台可选增强能力，与 api 侧宿主共用同一份实现；自动配置注册，@ComponentScan 无需覆盖。
          前端探测命中即走本模块，未命中回落三方（见 vue-support-parent-starter other.capabilities） -->

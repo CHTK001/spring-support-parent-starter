@@ -248,6 +248,13 @@ spring:
     activate:
       on-profile: "!local"
 plugin:
+  # RPC（Dubbo 3.3.6）：把 AI 能力暴露为 RPC 接口；默认关闭，不松口暴露服务端口
+  # 开启前需配注册中心地址与协议端口；消费方用 @RpcResource(version = "1.0.0") 注入，
+  # rpc 不可用时自动熔断降级到本应用的本地 Bean（degrade = "springbean"）
+  rpc:
+    enable: false
+    scan:
+      - 'com.chua.starter.ai.support.rpc'
   filesystem:
     enable: true
     dir-list: false

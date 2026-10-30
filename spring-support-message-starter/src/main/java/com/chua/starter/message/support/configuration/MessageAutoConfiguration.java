@@ -25,7 +25,11 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @AutoConfiguration
 @MapperScan("com.chua.starter.message.support.mapper")
-@ComponentScan("com.chua.starter.message.support.controller")
+@ComponentScan({
+        "com.chua.starter.message.support.controller",
+        // 同步至统一模板库（message → template_info）
+        "com.chua.starter.message.support.template"
+})
 @EnableConfigurationProperties(MessageTrackProperties.class)
 public class MessageAutoConfiguration {
 

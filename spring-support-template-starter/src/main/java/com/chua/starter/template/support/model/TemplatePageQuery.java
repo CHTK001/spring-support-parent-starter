@@ -36,6 +36,11 @@ public class TemplatePageQuery {
     private String sortOrder = "desc";
 
     /**
+     * 模板来源：hiprint / message / paper
+     */
+    private String source;
+
+    /**
      * 规范化分页参数，避免前端传入 0 或超大页
      *
      * @return 当前对象

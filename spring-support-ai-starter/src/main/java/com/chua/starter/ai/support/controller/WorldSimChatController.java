@@ -662,6 +662,7 @@ public class WorldSimChatController {
      * @param body 参数
      * @return 返回值
     */
+    @PostMapping("/advance")
     public Map<String, Object> advance(@RequestBody Map<String, Object> body) {
         Long worldId = body.get("worldId") == null ? null : Long.valueOf(String.valueOf(body.get("worldId")));
         if (worldId == null) {

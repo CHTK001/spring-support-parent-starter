@@ -12,6 +12,13 @@ import java.time.LocalDateTime;
  * 模板信息实体
  * <p>对应数据库表 template_info。</p>
  *
+ * <h3>来源</h3>
+ * <ul>
+ *   <li>{@code hiprint} 绘制模板（设计了器产物）</li>
+ *   <li>{@code message} 消息模板（短信/邮件/企微）</li>
+ *   <li>{@code paper} 组卷模板（试卷标题/页眉页脚/纸张规格）</li>
+ * </ul>
+ *
  * <h3>模板语言</h3>
  * <ul>
  *   <li>{@code html} HTML</li>
@@ -123,6 +130,33 @@ public class TemplateInfo {
      */
     @TableField("template_info_modifier")
     private String templateInfoModifier;
+
+    /**
+     * 来源：hiprint 绘制模板 / message 消息模板 / paper 组卷模板
+     */
+    @TableField("template_info_source")
+    /**
+     * Template信息来源
+     */
+    private String templateInfoSource;
+
+    /**
+     * 来源行 ID（短信模板为 sys_message_template.id，组卷模板为 edu_paper_template.id）
+     */
+    @TableField("template_info_source_id")
+    /**
+     * Template信息来源ID
+     */
+    private String templateInfoSourceId;
+
+    /**
+     * 来源提供方（消息提供商 ID / 组卷归属用户 ID）
+     */
+    @TableField("template_info_provider")
+    /**
+     * Template信息提供方
+     */
+    private String templateInfoProvider;
 
     /**
      * 软删除标记：0 正常、1 删除
