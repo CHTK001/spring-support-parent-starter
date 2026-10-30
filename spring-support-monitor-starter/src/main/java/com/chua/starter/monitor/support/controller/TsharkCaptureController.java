@@ -240,13 +240,15 @@ public class TsharkCaptureController {
      * <p>HTTP / TLS / SSH 等跑在 TCP 上的协议同样支持：数据帧的协议与握手帧的协议
      * 不同，匹配只按四元组，不按协议列过滤。</p>
      *
+     * @param sessionId 会话 ID
      * @param packetId 数据包 ID
      * @return 生命周期；包不存在或协议不跑在 TCP 上时 404
      */
     @Operation(summary = "查看 TCP 握手生命周期")
-    @GetMapping("/packets/{packetId}/handshake")
-    public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long packetId) {
-        TsharkHandshakeVO vo = this.tsharkCaptureService.handshakeOf(packetId);
+    @GetMapping("/sessions/{sessionId}/packets/{packetId}/handshake")
+    public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long sessionId,
+                                                       @PathVariable Long packetId) {
+        TsharkHandshakeVO vo = this.tsharkCaptureService.handshakeOf(sessionId, packetId);
         return vo == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(vo);
     }
 
@@ -300,13 +302,15 @@ public class TsharkCaptureController {
     /**
      * 数据包详情
      *
+     * @param sessionId 会话 ID
      * @param id 数据包 ID
      * @return 数据包详情
      */
     @Operation(summary = "数据包详情")
-    @GetMapping("/packets/{id}")
-    public ReturnResult<MsTsharkPacket> packet(@PathVariable Long id) {
-        return this.tsharkCaptureService.getPacket(id);
+    @GetMapping("/sessions/{sessionId}/packets/{id}")
+    public ReturnResult<MsTsharkPacket> packet(@PathVariable Long sessionId,
+                                               @PathVariable Long id) {
+        return this.tsharkCaptureService.getPacket(sessionId, id);
     }
 
     /**

@@ -196,8 +196,9 @@ public class TsharkCaptureService {
         }
         MsTsharkSession session = this.sessionMapper.selectById(sessionId);
         if (session == null || session.getFilePath() == null || session.getFilePath().isBlank()) {
-            // 会话不存在且无文件路径时无法推导 .db；由调用点兜底（如全量扫描 0 条直接短路）
-            return;
+            // 会话不存在且无法推导 .db 时显式失败：DynamicDataSource 非严格模式会把
+            // 未注册的 key 静默回退到 master，报文查询会落到 MySQL 老表上读脏数据
+            throw new IllegalStateException("会话报文库不可用（会话不存在或未落盘）: " + sessionId);
         }
         this.sqliteRegistry.ensure(sessionId, Paths.get(session.getFilePath()));
     }
@@ -986,6 +987,7 @@ public class TsharkCaptureService {
      * @return 本次新增条数
      */
     private long parsePcapIncrementally(Long sessionId, Path filePath, long afterFrame) {
+        this.sqliteRegistry.ensure(sessionId, filePath);
         List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                 "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=f"));
         for (String field : TSHARK_FIELDS) {
@@ -1111,6 +1113,7 @@ public class TsharkCaptureService {
                 log.warn("capture file empty, session={}", sessionId);
                 return;
             }
+            this.sqliteRegistry.ensure(sessionId, filePath);
             List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                     "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=f"));
             // 字段顺序即输出列顺序，逐列含义见 TSHARK_FIELDS 的注释
@@ -1810,7 +1813,12 @@ public class TsharkCaptureService {
             packet.setDestPort(parseIntOrNull(firstNonBlank(cols[9], cols[10])));
             packet.setPacketLength(parseIntOrNull(cols[11]));
             packet.setPacketInfo(blankToNull(cols[12]));
-            this.packetMapper.insert(packet);
+            // 报文落库切到本会话的 SQLite 数据源；插入在 tail / runAsync 线程上执行，
+            // ThreadLocal 上下文相互独立，finally 恢复调用前上下文（通常为 null）
+            this.withPacketDb(sessionId, () -> {
+                this.packetMapper.insert(packet);
+                return Boolean.TRUE;
+            });
             if (push) {
                 // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
                 this.pushService.pushTsharkPacket(packet, sessionId);
@@ -1950,7 +1958,11 @@ public class TsharkCaptureService {
             w.le(MsTsharkPacket::getPacketTime, LocalDateTime.parse(endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         w.orderByDesc(MsTsharkPacket::getId);
-        IPage<MsTsharkPacket> p = this.packetMapper.selectPage(new Page<>(page, size), w);
+        // 分页列表不取大字段（rawData / restoredText 几十 KB 起），详情接口按需取
+        w.select(MsTsharkPacket.class, column -> !"ms_tshark_packet_raw".equals(column.getColumn())
+                && !"ms_tshark_packet_restored".equals(column.getColumn()));
+        IPage<MsTsharkPacket> p = this.withPacketDb(sessionId,
+                () -> this.packetMapper.selectPage(new Page<>(page, size), w));
         return ReturnResult.ok(p);
     }
 
@@ -2006,11 +2018,12 @@ public class TsharkCaptureService {
 
     /**
      * 获取数据包。
+     * @param sessionId 会话标识
      * @param id 标识
      * @return 获取数据包的结果
      */
-    public ReturnResult<MsTsharkPacket> getPacket(Long id) {
-        MsTsharkPacket packet = this.packetMapper.selectById(id);
+    public ReturnResult<MsTsharkPacket> getPacket(Long sessionId, Long id) {
+        MsTsharkPacket packet = this.withPacketDb(sessionId, () -> this.packetMapper.selectById(id));
         return packet == null ? ReturnResult.error("数据包不存在: " + id) : ReturnResult.ok(packet);
     }
 
@@ -2021,7 +2034,8 @@ public class TsharkCaptureService {
      */
     public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(Long sessionId) {
         // SQL 层聚合，不再全量加载报文到内存
-        List<Map<String, Object>> rows = this.packetMapper.selectProtocolStatsBySessionId(sessionId);
+        List<Map<String, Object>> rows = this.withPacketDb(sessionId,
+                () -> this.packetMapper.selectProtocolStatsBySessionId(sessionId));
         List<TsharkProtocolStatVO> result = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             String proto = row.get("protocol") == null ? "OTHER" : String.valueOf(row.get("protocol"));
@@ -2040,7 +2054,8 @@ public class TsharkCaptureService {
      */
     public ReturnResult<List<TsharkFlowVO>> topFlows(Long sessionId, int limit) {
         // SQL 层聚合，不再全量加载报文到内存；SQL 已带 LIMIT 20
-        List<Map<String, Object>> rows = this.packetMapper.selectTopFlowsBySessionId(sessionId);
+        List<Map<String, Object>> rows = this.withPacketDb(sessionId,
+                () -> this.packetMapper.selectTopFlowsBySessionId(sessionId));
         List<TsharkFlowVO> result = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             String flow = row.get("flow") == null ? "" : String.valueOf(row.get("flow"));
@@ -2064,7 +2079,7 @@ public class TsharkCaptureService {
      */
     public List<Map<String, Object>> timeline(Long sessionId, Integer bucketSeconds) {
         int bucket = bucketSeconds == null || bucketSeconds <= 0 ? 10 : bucketSeconds;
-        return this.packetMapper.selectTimelineBySessionId(sessionId, bucket);
+        return this.withPacketDb(sessionId, () -> this.packetMapper.selectTimelineBySessionId(sessionId, bucket));
     }
 
     /**
@@ -2077,7 +2092,8 @@ public class TsharkCaptureService {
      * @return 异常诊断列表；每项含 key/label/severity/count/filter
      */
     public ReturnResult<List<TsharkAnomalyVO>> anomalies(Long sessionId) {
-        Map<String, Object> row = this.packetMapper.selectAnomalyCountsBySessionId(sessionId);
+        Map<String, Object> row = this.withPacketDb(sessionId,
+                () -> this.packetMapper.selectAnomalyCountsBySessionId(sessionId));
         List<TsharkAnomalyVO> result = new ArrayList<>(9);
         if (row != null) {
             addAnomaly(result, row, "reset", "连接重置 (RST)", "danger",
@@ -2122,7 +2138,13 @@ public class TsharkCaptureService {
             proc.destroy();
             this.running.remove(sessionId);
         }
-        this.packetMapper.delete(new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId));
+        // SSE 订阅全部摘除：会话没了，挂着的心跳与重连都是浪费
+        TsharkPacketStreamRegistry registry = streamRegistry();
+        if (registry != null) {
+            registry.removeAll(sessionId);
+        }
+        // 报文不再在 MySQL 里，整套迁移到会话自己的 SQLite 文件：关池拿路径后随文件一起删
+        Path dbPath = this.sqliteRegistry.close(sessionId);
         MsTsharkSession session = this.sessionMapper.selectById(sessionId);
         if (session != null && session.getFilePath() != null) {
             try {
@@ -2134,6 +2156,15 @@ public class TsharkCaptureService {
                 Files.deleteIfExists(Paths.get(pcap + ".log"));
             } catch (Exception ignored) {
                 // 抓包文件清理失败不影响删会话的语义：会话与数据包已从库中移除
+            }
+        }
+        if (dbPath != null) {
+            try {
+                Files.deleteIfExists(dbPath);
+                Files.deleteIfExists(Paths.get(dbPath + "-wal"));
+                Files.deleteIfExists(Paths.get(dbPath + "-shm"));
+            } catch (Exception ignored) {
+                // 库文件清理失败同样不阻断删会话
             }
         }
         this.sessionMapper.deleteById(sessionId);
