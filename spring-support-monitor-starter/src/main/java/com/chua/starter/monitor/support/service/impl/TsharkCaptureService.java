@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.datasource.support.DataSourceContextSupport;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
@@ -15,6 +16,7 @@ import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
+import com.chua.starter.monitor.support.tshark.TsharkSqliteSourceRegistry;
 import lombok.extern.slf4j.Slf4j;
 import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
@@ -47,6 +49,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * tshark 网络抓包服务
@@ -141,6 +144,7 @@ public class TsharkCaptureService {
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
     private final MsTsharkPacketMapper packetMapper; // 数据包映射器
+    private final TsharkSqliteSourceRegistry sqliteRegistry;
     /**
      * 实时推送服务（Socket 未启用时静默跳过）
     */
@@ -159,12 +163,14 @@ public class TsharkCaptureService {
                                 MsTsharkPacketMapper packetMapper,
                                 MonitorPushService pushService,
                                 ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider,
-                                TsharkRuntime tsharkRuntime) {
+                                TsharkRuntime tsharkRuntime,
+                                TsharkSqliteSourceRegistry sqliteRegistry) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
         this.pushService = pushService;
         this.streamRegistryProvider = streamRegistryProvider;
         this.tsharkRuntime = tsharkRuntime;
+        this.sqliteRegistry = sqliteRegistry;
     }
 
     /**
@@ -173,6 +179,57 @@ public class TsharkCaptureService {
     */
     private TsharkPacketStreamRegistry streamRegistry() {
         return this.streamRegistryProvider.getIfAvailable();
+    }
+
+    /**
+     * 幂等确保该会话的 SQLite 报文库已就绪。
+     *
+     * <p>读路径没有 pcap 路径参数：报文的库文件与 pcap 同目录同名，先回 master
+     * 查会话登记的文件路径（主记录仍在 MySQL），再交给注册表建池建表。
+     * 写路径（抓包 / 解析）在入库前调用，pcap 路径一定已落盘。</p>
+     *
+     * @param sessionId 会话标识
+     */
+    private void ensurePacketDb(Long sessionId) {
+        if (this.sqliteRegistry.has(sessionId)) {
+            return;
+        }
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        if (session == null || session.getFilePath() == null || session.getFilePath().isBlank()) {
+            // 会话不存在且无文件路径时无法推导 .db；由调用点兜底（如全量扫描 0 条直接短路）
+            return;
+        }
+        this.sqliteRegistry.ensure(sessionId, Paths.get(session.getFilePath()));
+    }
+
+    /**
+     * 在指定会话的 SQLite 数据源上下文中执行一次报文查询。
+     *
+     * <p>setDbType / clearDbType 是 ThreadLocal，尾随解析跑在专属的
+     * {@code tshark-tail-<sessionId>} 线程、runAsync 任务各线程独立，
+     * 用完后必须恢复调用前的上下文（可能为 null），不能简单地 clear。</p>
+     *
+     * @param sessionId 会话标识
+     * @param supplier  报文查询
+     * @param <T>       返回类型
+     * @return 查询结果
+     */
+    private <T> T withPacketDb(Long sessionId, Supplier<T> supplier) {
+        this.ensurePacketDb(sessionId);
+        String previous = DataSourceContextSupport.getDbType();
+        if (previous != null && previous.equals(this.sqliteRegistry.dbName(sessionId))) {
+            return supplier.get();
+        }
+        DataSourceContextSupport.setDbType(this.sqliteRegistry.dbName(sessionId));
+        try {
+            return supplier.get();
+        } finally {
+            if (previous == null) {
+                DataSourceContextSupport.clearDbType();
+            } else {
+                DataSourceContextSupport.setDbType(previous);
+            }
+        }
     }
 
     /**
@@ -842,21 +899,27 @@ public class TsharkCaptureService {
      */
     private void fillTimeRange(Long sessionId) {
         try {
-            List<MsTsharkPacket> firsts = this.packetMapper.selectList(new LambdaQueryWrapper<MsTsharkPacket>()
-                    .select(MsTsharkPacket::getPacketTime)
-                    .eq(MsTsharkPacket::getSessionId, sessionId)
-                    .orderByAsc(MsTsharkPacket::getId)
-                    .last("LIMIT 1"));
+            if (!this.sqliteRegistry.has(sessionId)) {
+                // 从未创建过报文库（如解析 0 条）时不做无谓的 master 探测
+                return;
+            }
+            List<MsTsharkPacket> firsts = this.withPacketDb(sessionId, () -> this.packetMapper.selectList(
+                    new LambdaQueryWrapper<MsTsharkPacket>()
+                            .select(MsTsharkPacket::getPacketTime)
+                            .eq(MsTsharkPacket::getSessionId, sessionId)
+                            .orderByAsc(MsTsharkPacket::getId)
+                            .last("LIMIT 1")));
             if (firsts.isEmpty() || firsts.get(0).getPacketTime() == null) {
                 // 解析出 0 条（空文件 / 非 pcap）时不动时间，避免把会话写成没有时间范围
                 return;
             }
             LocalDateTime first = firsts.get(0).getPacketTime();
-            List<MsTsharkPacket> lasts = this.packetMapper.selectList(new LambdaQueryWrapper<MsTsharkPacket>()
-                    .select(MsTsharkPacket::getPacketTime)
-                    .eq(MsTsharkPacket::getSessionId, sessionId)
-                    .orderByDesc(MsTsharkPacket::getId)
-                    .last("LIMIT 1"));
+            List<MsTsharkPacket> lasts = this.withPacketDb(sessionId, () -> this.packetMapper.selectList(
+                    new LambdaQueryWrapper<MsTsharkPacket>()
+                            .select(MsTsharkPacket::getPacketTime)
+                            .eq(MsTsharkPacket::getSessionId, sessionId)
+                            .orderByDesc(MsTsharkPacket::getId)
+                            .last("LIMIT 1")));
             LocalDateTime last = lasts.isEmpty() || lasts.get(0).getPacketTime() == null ? first : lasts.get(0).getPacketTime();
             MsTsharkSession session = this.sessionMapper.selectById(sessionId);
             if (session == null) {
@@ -1058,8 +1121,8 @@ public class TsharkCaptureService {
             // 尾随循环期间已经增量入库了一部分，这里必须跳过，否则同一批包会被插两次。
             // 用已入库条数当帧号游标：尾随解析严格按 frame.number 递增插入，
             // 所以「条数」就等于「最大帧号」。
-            long already = this.packetMapper.selectCount(
-                    new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId));
+            long already = this.withPacketDb(sessionId, () -> this.packetMapper.selectCount(
+                    new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId)));
             if (already > 0) {
                 cmd.add("-Y");
                 cmd.add("frame.number > " + already);
@@ -1099,8 +1162,8 @@ public class TsharkCaptureService {
             } else {
                 // 0 条必须出声：否则页面只显示「抓完了但一个包都没有」，
                 // 用户无从判断是没流量还是解析坏了
-                long total = this.packetMapper.selectCount(
-                        new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId));
+                long total = this.withPacketDb(sessionId, () -> this.packetMapper.selectCount(
+                        new LambdaQueryWrapper<MsTsharkPacket>().eq(MsTsharkPacket::getSessionId, sessionId)));
                 if (total == 0) {
                     log.warn("capture parsed 0 packet, session={}, file={}", sessionId, filePath);
                 }
@@ -1169,11 +1232,12 @@ public class TsharkCaptureService {
      * {@code [FIN, ACK]}。从方括号里解析就够画握手时序用了。为此新增一列要动 schema 迁移，
      * 收益不抵成本；等真要做「按标志位过滤」时再落库。</p>
      *
+     * @param sessionId 会话标识
      * @param packetId 数据包 id
      * @return 生命周期；包不存在 / 非 TCP 时返回 null
      */
-    public TsharkHandshakeVO handshakeOf(Long packetId) {
-        MsTsharkPacket anchor = this.packetMapper.selectById(packetId);
+    public TsharkHandshakeVO handshakeOf(Long sessionId, Long packetId) {
+        MsTsharkPacket anchor = this.withPacketDb(sessionId, () -> this.packetMapper.selectById(packetId));
         if (anchor == null || anchor.getSessionId() == null || !isTcpBased(anchor)) {
             // 非 TCP 系协议谈不上握手；UDP/ICMP/ARP 直接不返回，前端据此提示不支持
             return null;
@@ -1192,13 +1256,13 @@ public class TsharkCaptureService {
         // 既保证首尾的 SYN / FIN 完整，又把单次查询压到 O(固定常数)。
         final int oracleLimit = HANDSHAKE_MAX_STEPS * 6;
         // 头窗口：时间正序取最早的一批（含 SYN 建连）
-        List<MsTsharkPacket> head = this.packetMapper.selectList(
+        List<MsTsharkPacket> head = this.withPacketDb(sessionId, () -> this.packetMapper.selectList(
                 buildFlowQuery(anchor, false)
-                        .last("LIMIT " + oracleLimit));
+                        .last("LIMIT " + oracleLimit)));
         // 尾窗口：时间倒序取最新的一批（含 FIN 挥手），再按 id 去重合并
-        List<MsTsharkPacket> tail = this.packetMapper.selectList(
+        List<MsTsharkPacket> tail = this.withPacketDb(sessionId, () -> this.packetMapper.selectList(
                 buildFlowQuery(anchor, true)
-                        .last("LIMIT " + oracleLimit));
+                        .last("LIMIT " + oracleLimit)));
         Set<Long> seenIds = new LinkedHashSet<>();
         List<MsTsharkPacket> merged = new ArrayList<>(head.size() + tail.size());
         for (MsTsharkPacket p : head) {

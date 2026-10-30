@@ -318,6 +318,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         beanDefinition.setBeanClassName(RpcResourceBean.class.getName());
         beanDefinition.getPropertyValues().add(RpcAttribute.ID, referenceBeanName);
         beanDefinition.getPropertyValues().add("rpcClient", rpcClient);
+        // 降级通信策略与未找到 Bean 时的异常开关透传到注解延迟处理
+        beanDefinition.getPropertyValues().add(RpcAttribute.DEGRADE, attributes.get(RpcAttribute.DEGRADE));
+        beanDefinition.getPropertyValues().add(RpcAttribute.EXCEPTION, attributes.get(RpcAttribute.EXCEPTION));
+        beanDefinition.getPropertyValues().add("rpcProperties", rpcProperties);
 
  // 设置 attribute instead 的 财产 值
  // Beandefinition.设置attribute(常量.引用_PROPS, attributes);

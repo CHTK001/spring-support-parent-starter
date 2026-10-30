@@ -201,6 +201,8 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     */
     private HttpInputMessage decodeRequestBody(HttpInputMessage inputMessage, HttpServletRequest request) throws IOException {
         byte[] bodyBytes = StreamUtils.copyToByteArray(inputMessage.getBody());
+        /** [Debug] 记录后端收到的原始 body 长度与 hex，只用于本地验收排查 */
+        log.info("[DEBUG-RawBody] uri={} len={} hex={}", request.getRequestURI(), bodyBytes.length, new String(bodyBytes, StandardCharsets.UTF_8).trim());
         if (bodyBytes.length == 0) {
             /**
              * 响应状态异常。
@@ -212,6 +214,8 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         String encryptedPayload = extractEncryptedPayload(bodyBytes);
+        /** [Debug] 记录作用于后端的密文串长度与内容 */
+        log.info("[DEBUG-EncryptedPayload] uri={} len={} val={}", request.getRequestURI(), encryptedPayload == null ? -1 : encryptedPayload.length(), encryptedPayload == null ? "NULL" : encryptedPayload);
         if (!StringUtils.hasText(encryptedPayload)) {
             /**
              * 响应状态异常。

@@ -1,1 +1,2 @@
 spring=com.chua.starter.rpc.support.spring.SpringRpcClient
+springbean=com.chua.starter.rpc.support.spring.SpringBeanRpcClient
