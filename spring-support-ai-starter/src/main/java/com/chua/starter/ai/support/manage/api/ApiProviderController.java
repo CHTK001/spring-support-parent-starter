@@ -173,6 +173,33 @@ public class ApiProviderController {
     }
 
     /**
+     * 渠道管理页 OAuth 行（auth_scheme='oauth'）：由渠道管理为每个已注册渠道镀铬创建，
+     * 没有模型 / 凭证，模型管理的供应商列表不暴露这些行。
+     *
+     * @param provider 供应商
+     * @return true=渠道 OAuth provider
+     */
+    private static boolean isOAuthChannelRow(SysAiProvider provider) {
+        if (provider == null) {
+            return false;
+        }
+        return "oauth".equalsIgnoreCase(provider.getAuthScheme());
+    }
+
+    /**
+     * 免费渠道行（platform='free-channel'/'free'）：渠道管理在模型层的供应层，保留在模型管理列表。
+     *
+     * @param provider 供应商
+     * @return true=免费渠道 provider
+     */
+    private static boolean isFreeChannelRow(SysAiProvider provider) {
+        if (provider == null) {
+            return false;
+        }
+        return ProviderRouteTargets.isFreeChannel(provider.getPlatform());
+    }
+
+    /**
      * 新增 / 克隆供应商前的唯一性校验。
      *
      * <p>两条口径：</p>
@@ -324,6 +351,12 @@ public class ApiProviderController {
         List<Map<String, Object>> items = new ArrayList<>(8); // 提供者数量不可预估
         for (SysAiProvider p : providers) {
             if (isOnnxRow(p) && !onnxVisible) {
+                continue;
+            }
+            // 渠道管理页为每个已注册渠道镀铬的 OAuth provider 行（auth_scheme='oauth'，无模型 / 无凭证），
+            // 模型管理（供应商列表 / 模型面板）与渠道解耦，不暴露这些行。
+            // 免费渠道行（platform='free-channel'/'free'）由渠道管理提供模型供应，保留在列表。
+            if (isOAuthChannelRow(p) && !isFreeChannelRow(p)) {
                 continue;
             }
             List<SysAiProviderModel> models = modelMapper.selectList(

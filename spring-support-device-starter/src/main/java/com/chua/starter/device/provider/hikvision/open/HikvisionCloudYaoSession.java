@@ -19,13 +19,19 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 海康云耀（Hik-连接 / hiddns 外网云）打开api 会话
- * <p>对接海康消费级/中小项目云平台，基于 common-starter HttpClient，全平台可用。</p>
+ * 海康云耀（云曜 / hikyun 外网云）打开api 会话
+ * <p>对接海康云耀 OpenAPI，基于 common-starter HttpClient，全平台可用（无需厂商 SDK 运行库）。</p>
  *
  * <h3>接入说明</h3>
  * <ul>
- *   <li>海康开放平台地址、AppKey/AppSecret、签名算法需按海康云耀 OpenAPI 文档配置</li>
- *   <li>本类提供签名 + HTTP 调用的统一实现，具体 endpoint 与字段以官方文档为准</li>
+ *   <li>云曜网关地址为 https://open.hikyun.com（"云曜的对外开放接口，地址 https://open.hikyun.com"）</li>
+ *   <li>换 access_token：POST https://open.hikyun.com/artemis/oauth/token/v2（JSON 包体），参数为
+ *   appKey / appSecret / productCode （产品标识，必须）/ projectId（项目编号，文档标注非必需）；
+ *   返回的 access_token 有效期 43200 秒（12 小时）</li>
+ *   <li>调用云曜接口时，将 access_token 放入 Headers 中（Authorization: Bearer &lt;access_token&gt;）；
+ *   不得作为 Query / Body 参数转发</li>
+ *   <li>同步接口需凭据侧先完成「3.1.6 接口授权」：联系云曜方提供环境地址及产品 key 进行授权</li>
+ *   <li>具体 endpoint、字段与签名以海康云耀官方文档为准</li>
  * </ul>
  *
  * @since 4.0.0.42
@@ -36,13 +42,19 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
 
     /**
      * 海康云耀默认 baseurl（按官方文档配置）
+     * <p>云曜对外开放的网关地址为 <a href="https://open.hikyun.com">https://open.hikyun.com</a>；
+     * 旧地址 https://api.hik-cloud.com 不是云曜网关，用它换令牌必然失败。</p>
+     * <p>还支持凭据级覆盖：在 {@code DeviceConnectInfo.extra("baseUrl")} /
+     * {@code device_credential_base_url} 填写云曜的接入地址即可更换环境。</p>
      */
-    private static final String DEFAULT_BASE_URL = "https://api.hik-cloud.com";
+    private static final String DEFAULT_BASE_URL = "https://open.hikyun.com";
 
     /**
      * access令牌 接口路径
+     * <p>云曜文档注明的换 access_token 接口：
+     * {@code POST https://open.hikyun.com/artemis/oauth/token/v2}（JSON 包体）</p>
      */
-    private static final String PATH_TOKEN = "/api/v1/oauth/token";
+    private static final String PATH_TOKEN = "/artemis/oauth/token/v2";
 
     /**
      * 获取视频直播地址接口
@@ -105,17 +117,27 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     /**
-     * 登录换取 access令牌（按海康云耀文档约定的 o认证 流程）
+     * 登录换取 access令牌（按海康云耀文档约定的 oauth 流程）
+     * <p>接口地址 {@code POST https://open.hikyun.com/artemis/oauth/token/v2}（JSON 包体），
+     * 参数为 appKey / appSecret / productCode（产品标识，必须）/ projectId（项目编号，文档标注非必需），
+     * 换得后 access_token 有效期默认 43200 秒（12 小时）。</p>
      */
     private void login() {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("appKey", info.appKey());
         params.put("appSecret", info.appSecret());
+        // 产品/项目标识参加换令牌的包体
+        if (productCode != null) {
+            params.put("productCode", productCode);
+        }
+        if (projectId != null) {
+            params.put("projectId", projectId);
+        }
         try {
             JsonNode resp = execute("POST", PATH_TOKEN, params, null);
             JsonNode data = assertOk(resp);
-            String token = data.path("accessToken").asText(null);
-            long expires = data.path("expiresIn").asLong(7200L);
+            String token = firstToken(data);
+            long expires = firstExpires(data);
             if (token == null || token.isEmpty()) {
                 /**
                  * illegal状态异常。
@@ -130,7 +152,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
              * @param expires expires
              */
             cacheToken(token, expires);
-            log.info("海康云耀登录成功: deviceSerial={}", info.deviceSerial());
+            log.info("海康云耀登录成功: deviceSerial={}: accessToken={}...", info.deviceSerial(), maskToken(token));
         } catch (Exception e) {
             /**
              * illegal状态异常。
@@ -139,6 +161,45 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
              */
             throw new IllegalStateException("海康云耀登录失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 取 access_token 的值（新旧字段名都接受：access_token / accessToken）
+     * @param data 响应的 data 节点
+     * @return 令牌；均未找到时返回 {@code null}
+     */
+    private static String firstToken(JsonNode data) {
+        String token = data.path("access_token").asText(null);
+        if (token == null || token.isEmpty()) {
+            token = data.path("accessToken").asText(null);
+        }
+        return token;
+    }
+
+    /**
+     * 取 access_token 有效期（秒，旧格式 expiresIn、新格式 expires_in 都接受），
+     * 云曜文档约定默认有效期 43200 秒（12 小时）
+     * @param data 响应的 data 节点
+     * @return 有效期秒数
+     */
+    private static long firstExpires(JsonNode data) {
+        long seconds = data.path("expires_in").asLong(0L);
+        if (seconds <= 0L) {
+            seconds = data.path("expiresIn").asLong(43200L);
+        }
+        return seconds;
+    }
+
+    /**
+     * 脱敏 access_token 后显示（令牌不回显全文）
+     * @param token 令牌
+     * @return 脱敏后的令牌
+     */
+    private static String maskToken(String token) {
+        if (token == null || token.length() <= 6) {
+            return "****";
+        }
+        return token.substring(0, 2) + "****" + token.substring(token.length() - 4);
     }
 
     /**
@@ -188,9 +249,6 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
         if (params != null) {
             realParams.putAll(params);
         }
-        if (accessToken != null) {
-            realParams.put("accessToken", accessToken);
-        }
         if (!PATH_TOKEN.equals(path)) {
             // 云曜按产品 + 项目维度隔离设备，取流 / 云台 / 门禁都要带
             if (productCode != null) {
@@ -205,7 +263,13 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
                 log.info("[OpenAPI-DEBUG] 海康云耀 签名: {}", sign.length() > 12 ? sign.substring(0, 12) + "..." : sign);
             }
         }
-        return execute(method, path, realParams, null);
+        // 云曜文档约定：access_token 必须放在 Headers 中（Authorization: Bearer <token>），
+        // 不作为 Query / Body 参数转发，否则会被拒绝为"参数不够"。
+        Map<String, String> headers = new LinkedHashMap<>();
+        if (accessToken != null) {
+            headers.put("Authorization", "Bearer " + accessToken);
+        }
+        return execute(method, path, realParams, headers);
     }
 
     /**
