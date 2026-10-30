@@ -114,6 +114,14 @@ public interface DeviceService {
     List<DeviceInfo> listByCategory(String category);
 
     /**
+     * 按绑定的凭据查询设备列表（该凭据维度的自动检测/同步任务使用）。
+     *
+     * @param credentialId 凭据 ID
+     * @return 设备列表
+     */
+    List<DeviceInfo> listByCredentialId(String credentialId);
+
+    /**
      * 同步组织树
      * <p>从各厂商平台拉取最新组织树，更新本地数据库。</p>
      */

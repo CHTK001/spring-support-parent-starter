@@ -60,4 +60,16 @@ public interface DeviceTaskStateService {
      * @param interval 间隔（秒）
      */
     void updateInterval(String taskName, int interval);
+
+    /**
+     * 补种任务状态行
+     * <p>给时间轮上已注册但尚无状态行的任务（如按凭据切分的任务）补一行
+     * {@code device_task_state}，避免 {@link #shouldRun} 因无行而永不执行。</p>
+     *
+     * @param name        任务名称
+     * @param interval    运行间隔（秒）
+     * @param description 描述
+     * @return 是否新补种（已存在返回 {@code false}）
+     */
+    boolean seed(String name, int interval, String description);
 }

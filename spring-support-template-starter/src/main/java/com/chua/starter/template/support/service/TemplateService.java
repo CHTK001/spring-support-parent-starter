@@ -96,6 +96,14 @@ public interface TemplateService {
     boolean setDefaultPrinter(String name);
 
     /**
+     * 删除打印机（按设备名）
+     *
+     * @param name 打印机设备名
+     * @return 是否删除成功
+     */
+    boolean removePrinter(String name);
+
+    /**
      * 设置打印机参数（包含地址/端口/ Token）
      *
      * @param printer 打印机参数
