@@ -408,3 +408,36 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_nginx_metric`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT 'Nginx 时序指标';
+
+-- ============================================================
+-- 表结构版本控制（DL 快照 + 回滚）：ms_schema_snapshot
+--
+-- 一套完整可回滚的结构快照 = 「SHOW CREATE TABLE 取得的建表
+-- DDL（已包含索引/外键） + 列/表选项/字符集」，由拍快照时刻的表定义
+-- 整份落盘；回滚时先 DROP TABLE IF EXISTS（多表场景按依赖倒序），
+-- 再按原顺序重执行 DDL。方言不背  SHOW CREATE TABLE（PostgreSQL/H2/
+-- ClickHouse）时，取回 information_schema 拼成的定义文本与索引/外键
+-- 定义，回滚时一样可以重建。
+--
+-- 快照按「表」组织（db 级快照可一次拍多张表，由调用方决定）：
+--   - 手动拍：给表打一个有业务含义的名称（如 v1.0.3）
+--   - 自动拍：每次保存表设计后由控制台生成一份 "保存于 2026-10-30 15:30"
+-- 回滚不改变其他表，只把本表恢复到快照年代。
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `ms_schema_snapshot`
+(
+    `ms_schema_snapshot_id`      BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_schema_snapshot_ds_id`   BIGINT       NOT NULL COMMENT '数据源 ID（ms_datasource.id）',
+    `ms_schema_snapshot_database`BIGINT       NULL DEFAULT 0 COMMENT '数据库 ID（multi-database 数据源用，空=当前库）',
+    `ms_schema_snapshot_table`   VARCHAR(255) NOT NULL COMMENT '表名',
+    `ms_schema_snapshot_name`    VARCHAR(255) NOT NULL COMMENT '快照名称（手动拍时由用户填写，自动拍时后端生成）',
+    `ms_schema_snapshot_creator` VARCHAR(64)  NULL DEFAULT 'SYSTEM' COMMENT '创建人（手动拍；自动拍=SYSTEM）',
+    `ms_schema_snapshot_created` DATETIME     NOT NULL COMMENT '快照创建时间（拍快照时刻）',
+    `ms_schema_snapshot_snapshot`TEXT       NOT NULL COMMENT '表结构快照（JSON：ddl/indexes/foreignKeys/columns/options）',
+    `ms_schema_snapshot_deleted` INT          NULL DEFAULT 0 COMMENT '逻辑删除 0/1',
+    PRIMARY KEY (`ms_schema_snapshot_id`),
+    KEY `idx_ms_schema_snapshot_ds_table_time` (`ms_schema_snapshot_ds_id`, `ms_schema_snapshot_table`, `ms_schema_snapshot_created`),
+    KEY `idx_ms_schema_snapshot_creator` (`ms_schema_snapshot_creator`),
+    KEY `idx_ms_schema_snapshot_table_created` (`ms_schema_snapshot_table`, `ms_schema_snapshot_created`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT '表结构版本快照（DDL 快照 + 回滚）';

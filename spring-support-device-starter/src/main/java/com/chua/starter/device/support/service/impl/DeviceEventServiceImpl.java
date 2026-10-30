@@ -83,7 +83,7 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     @Override
     /**
      * 取出全部devices
-     * <p>由 {@code DeviceScheduler} 的时间轮任务 {@code deviceEventPoll} 驱动，
+     * <p>由 {@code DeviceScheduleManager} 的时间轮任务 {@code deviceEventPoll} 驱动，
      * 到期判断走 {device_task_state.interval}，不再使用 Spring {@code @Scheduled}。</p>
      */
     public void pollAllDevices() {

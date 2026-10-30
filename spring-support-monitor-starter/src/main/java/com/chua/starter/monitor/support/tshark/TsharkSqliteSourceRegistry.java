@@ -62,6 +62,35 @@ public class TsharkSqliteSourceRegistry {
     private static final String INDEX_PROTOCOL =
             "CREATE INDEX IF NOT EXISTS idx_tshark_packet_protocol ON ms_tshark_packet" +
                     "(ms_tshark_packet_protocol)";
+    /**
+     * 按 4 元组（srcip, srccport, dstip, dstport）的握手/对话窗口：
+     * 每个元组两边各一次等值查找，不依赖文本时间排序，session_id 缩短到会话级。
+     */
+    private static final String INDEX_SESSION_PAIRS =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_session_pairs ON ms_tshark_packet" +
+                    "(ms_tshark_packet_session_id, ms_tshark_packet_source_ip, ms_tshark_packet_source_port, " +
+                    "ms_tshark_packet_dest_ip, ms_tshark_packet_dest_port)";
+    private static final String INDEX_SRC_IP =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_src_ip ON ms_tshark_packet" +
+                    "(ms_tshark_packet_source_ip)";
+    private static final String INDEX_DST_IP =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_dst_ip ON ms_tshark_packet" +
+                    "(ms_tshark_packet_dest_ip)";
+    private static final String INDEX_SRC_PORT =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_src_port ON ms_tshark_packet" +
+                    "(ms_tshark_packet_source_port)";
+    private static final String INDEX_DST_PORT =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_dst_port ON ms_tshark_packet" +
+                    "(ms_tshark_packet_dest_port)";
+    private static final String INDEX_LENGTH =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_length ON ms_tshark_packet" +
+                    "(ms_tshark_packet_length)";
+    private static final String INDEX_FRAME_NO =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_frame_no ON ms_tshark_packet" +
+                    "(ms_tshark_packet_frame_no)";
+    private static final String INDEX_INFO =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_info ON ms_tshark_packet" +
+                    "(ms_tshark_packet_info)";
 
     /**
      * 会话 id → 原生 Hikari 池。
@@ -119,6 +148,16 @@ public class TsharkSqliteSourceRegistry {
                     st.execute(DDL);
                     st.execute(INDEX_SESSION);
                     st.execute(INDEX_PROTOCOL);
+                    // IP / 端口 / 长度 / 帧号 / 信息列的 B-Tree 检索
+                    st.execute(INDEX_SRC_IP);
+                    st.execute(INDEX_DST_IP);
+                    st.execute(INDEX_SRC_PORT);
+                    st.execute(INDEX_DST_PORT);
+                    st.execute(INDEX_LENGTH);
+                    st.execute(INDEX_FRAME_NO);
+                    st.execute(INDEX_INFO);
+                    // 握手/对话窗口的 4 元组等值匹配
+                    st.execute(INDEX_SESSION_PAIRS);
                 }
                 DataSourceContextSupport.addDatasource(dbName(sessionId), ds);
                 pools.put(sessionId, ds);
