@@ -489,7 +489,9 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
             else if (status == 1) taskStatus.get(1).setCount(taskStatus.get(1).getCount() + 1);
             else if (status == 2) taskStatus.get(2).setCount(taskStatus.get(2).getCount() + 1);
             else taskStatus.get(3).setCount(taskStatus.get(3).getCount() + 1);
-            if (Integer.valueOf(1).equals(t.getMarkingTaskTeacherFinished())) teacherDone++;
+            if (Integer.valueOf(1).equals(t.getMarkingTaskTeacherFinished())) {
+                teacherDone++;
+            }
         }
         List<MarkingDashboardStatsVO.NamedCount> teacherFinished = new java.util.ArrayList<>();
         teacherFinished.add(MarkingDashboardStatsVO.NamedCount.builder().name("待完成").count(tasks.size() - teacherDone).build());

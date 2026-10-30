@@ -919,12 +919,19 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 byHour.put(now.minusHours(i).format(HOUR_KEY), new long[3]);
             }
             for (MsSyncTaskRunLog r : rows) {
-                if (r.getRunLogRunTime() == null) continue;
+                if (r.getRunLogRunTime() == null) {
+                    continue;
+                }
                 long[] bucket = byHour.get(r.getRunLogRunTime().withMinute(0).withSecond(0).withNano(0).format(HOUR_KEY));
-                if (bucket == null) continue;
+                if (bucket == null) {
+                    continue;
+                }
                 bucket[0]++;
-                if ("SUCCESS".equals(r.getRunLogStatus())) bucket[1]++;
-                else bucket[2]++;
+                if ("SUCCESS".equals(r.getRunLogStatus())) {
+                    bucket[1]++;
+                } else {
+                    bucket[2]++;
+                }
             }
             byHour.forEach((k, v) -> hourly.add(new SyncRunLogStatsVO.Hourly(k, v[0], v[1], v[2])));
 
@@ -932,9 +939,13 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             List<SyncRunLogStatsVO.FailureGroup> failures = new ArrayList<>();
             Map<String, Long> failCount = new LinkedHashMap<>();
             for (MsSyncTaskRunLog r : rows) {
-                if (!"FAILED".equals(r.getRunLogStatus())) continue;
+                if (!"FAILED".equals(r.getRunLogStatus())) {
+                    continue;
+                }
                 String label = classifyFailure(r.getRunLogLines());
-                if (label != null) failCount.merge(label, 1L, Long::sum);
+                if (label != null) {
+                    failCount.merge(label, 1L, Long::sum);
+                }
             }
             failCount.entrySet().stream()
                     .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
@@ -1031,15 +1042,33 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 || lines.contains("doesn't exist") || lines.contains("不存在的表")) {
             return "目标表不存在";
         }
-        if (lines.contains("没有写权限") || lines.contains("Access denied") || lines.contains("denied")) return "权限不足";
-        if (lines.contains("Duplicate entry") || lines.contains("主键冲突") || lines.contains("唯一键")) return "主键/唯一键冲突";
-        if (lines.contains("Connection timed out") || lines.contains("connect timed out")) return "连接超时";
-        if (lines.contains("UnknownHostException") || lines.contains("无法连接")) return "无法连接主机";
-        if (lines.contains("connection refused") || lines.contains("Connection refused")) return "连接被拒绝";
-        if (lines.contains("字段映射") || lines.contains("列不存在") || lines.contains("Unknown column")) return "字段/列问题";
-        if (lines.contains("HTTP") && (lines.contains("超时") || lines.contains("timeout") || lines.contains("status"))) return "HTTP 请求失败";
-        if (lines.contains("读取失败") || lines.contains("SQLException")) return "源读取失败";
-        if (lines.contains("写入失败")) return "写入失败";
+        if (lines.contains("没有写权限") || lines.contains("Access denied") || lines.contains("denied")) {
+            return "权限不足";
+        }
+        if (lines.contains("Duplicate entry") || lines.contains("主键冲突") || lines.contains("唯一键")) {
+            return "主键/唯一键冲突";
+        }
+        if (lines.contains("Connection timed out") || lines.contains("connect timed out")) {
+            return "连接超时";
+        }
+        if (lines.contains("UnknownHostException") || lines.contains("无法连接")) {
+            return "无法连接主机";
+        }
+        if (lines.contains("connection refused") || lines.contains("Connection refused")) {
+            return "连接被拒绝";
+        }
+        if (lines.contains("字段映射") || lines.contains("列不存在") || lines.contains("Unknown column")) {
+            return "字段/列问题";
+        }
+        if (lines.contains("HTTP") && (lines.contains("超时") || lines.contains("timeout") || lines.contains("status"))) {
+            return "HTTP 请求失败";
+        }
+        if (lines.contains("读取失败") || lines.contains("SQLException")) {
+            return "源读取失败";
+        }
+        if (lines.contains("写入失败")) {
+            return "写入失败";
+        }
         return "其他错误";
     }
 

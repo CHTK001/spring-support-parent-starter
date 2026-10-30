@@ -385,7 +385,9 @@ public class SshConnectionCache {
      * @return 纯主机地址（无 user@ 前缀）
      */
     private static String cleanAddress(String raw) {
-        if (raw == null || raw.isBlank()) return raw;
+        if (raw == null || raw.isBlank()) {
+            return raw;
+        }
         int at = raw.lastIndexOf('@');
         // 仅当 @ 后面看起来像主机地址（含 . 或 : 或 /）才剥离
         if (at > 0 && at < raw.length() - 1) {
