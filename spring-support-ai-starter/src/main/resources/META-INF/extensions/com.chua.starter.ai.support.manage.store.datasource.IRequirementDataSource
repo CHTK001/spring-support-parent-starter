@@ -1,3 +1,0 @@
-local=com.chua.starter.ai.support.manage.store.datasource.LocalDbRequirementDataSource
-lark=com.chua.starter.ai.support.manage.store.datasource.LarkRequirementDataSource
-generic=com.chua.starter.ai.support.manage.store.datasource.GenericApiRequirementDataSource

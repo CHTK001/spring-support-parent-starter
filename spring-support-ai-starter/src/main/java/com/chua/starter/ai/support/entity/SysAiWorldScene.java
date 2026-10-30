@@ -9,7 +9,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 模拟人生-世界场景实体，对应表 {@code sys_ai_world_scene}。
+ * 模拟-世界场景实体，对应表 {@code sys_ai_world_scene}。
  *
  * <p>场景是世界内的地点（咖啡厅/街道/办公室…），NPC 分布在各个场景；
  * 「在哪个场景说话」决定哪些 NPC 在场、以什么环境上下文应答。</p>

@@ -281,4 +281,48 @@ public interface ReleaseService {
      * @return jar 文件数量
      */
     ReturnResult<Integer> countLibFiles(Long id);
+
+    // ==================== 发布管理增强 ====================
+
+    /**
+     * 复制项目到其他服务器（发布）：逐行复制项目配置，仅替换 releaseId。
+     *
+     * @param projectIds 源项目ID列表
+     * @param releaseIds 目标发布（服务器）ID列表
+     * @return 复制结果：success / failed（含原因）
+     */
+    ReturnResult<Map<String, Object>> copyProjects(List<Long> projectIds, List<Long> releaseIds);
+
+    /**
+     * 探测项目的 Swagger / Actuator 端点（在目标主机内 curl，返回卡片可用的地址与摘要）。
+     *
+     * @param id 项目ID
+     * @return swagger/actuator 探测结果
+     */
+    ReturnResult<Map<String, Object>> probeProjectEndpoints(Long id);
+
+    /**
+     * Git 定时轮询：fetch 后比较本地 HEAD 与远端分支，有更新才触发一次发布。
+     *
+     * @param id 项目ID
+     * @return changed=true 表示已触发发布并返回 taskId；false 表示无更新
+     */
+    ReturnResult<Map<String, Object>> gitPollDeploy(Long id);
+
+    /**
+     * 读取页面布局配置（保存在 ms_server_config，key = ui.layout.{pageKey}）
+     *
+     * @param pageKey 页面标识
+     * @return 布局 JSON（无配置时返回空对象）
+     */
+    ReturnResult<Map<String, Object>> getPageLayout(String pageKey);
+
+    /**
+     * 保存页面布局配置
+     *
+     * @param pageKey 页面标识
+     * @param layout  布局 JSON 字符串
+     * @return 操作结果
+     */
+    ReturnResult<Void> savePageLayout(String pageKey, String layout);
 }

@@ -7,10 +7,13 @@ import com.chua.starter.server.support.entity.SoftwarePackage;
 import com.chua.starter.server.support.model.vo.ProjectTaskSnapshotVO;
 import com.chua.starter.server.support.model.vo.ProjectBackupVO;
 import com.chua.starter.server.support.push.ProjectTaskService;
+import com.chua.starter.server.support.schedule.ReleaseScheduleService;
 import com.chua.starter.server.support.service.ReleaseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,10 +28,42 @@ import java.util.List;
 @RestController
 @RequestMapping("/ms/server/release")
 @RequiredArgsConstructor
+@Slf4j
 public class ReleaseController {
 
     private final ReleaseService releaseService;
     private final ProjectTaskService projectTaskService;
+    private final ObjectProvider<ReleaseScheduleService> releaseScheduleServiceProvider;
+
+    /**
+     * 同步项目的定时任务（宿主未引入 job-starter 时静默跳过）。
+     */
+    private void syncSchedule(Long projectId) {
+        ReleaseScheduleService service = releaseScheduleServiceProvider.getIfAvailable();
+        if (service == null) {
+            return;
+        }
+        try {
+            service.syncProject(projectId);
+        } catch (Exception e) {
+            log.warn("[发布管理] 同步项目 {} 定时任务失败: {}", projectId, e.getMessage());
+        }
+    }
+
+    /**
+     * 移除项目的定时任务。
+     */
+    private void removeSchedule(Long projectId) {
+        ReleaseScheduleService service = releaseScheduleServiceProvider.getIfAvailable();
+        if (service == null) {
+            return;
+        }
+        try {
+            service.removeProject(projectId);
+        } catch (Exception e) {
+            log.warn("[发布管理] 移除项目 {} 定时任务失败: {}", projectId, e.getMessage());
+        }
+    }
 
     // ==================== 发布管理 ====================
 
@@ -103,7 +138,11 @@ public class ReleaseController {
     @Operation(summary = "创建项目")
     @PostMapping("/project")
     public ReturnResult<MsServerProject> createProject(@RequestBody MsServerProject project) {
-        return releaseService.createProject(project);
+        ReturnResult<MsServerProject> result = releaseService.createProject(project);
+        if (result.isOk() && result.getData() != null) {
+            syncSchedule(result.getData().getId());
+        }
+        return result;
     }
 
     /**
@@ -116,7 +155,11 @@ public class ReleaseController {
     @Operation(summary = "更新项目")
     @PutMapping("/project/{id}")
     public ReturnResult<MsServerProject> updateProject(@PathVariable Long id, @RequestBody MsServerProject project) {
-        return releaseService.updateProject(id, project);
+        ReturnResult<MsServerProject> result = releaseService.updateProject(id, project);
+        if (result.isOk()) {
+            syncSchedule(id);
+        }
+        return result;
     }
 
     /**
@@ -158,7 +201,11 @@ public class ReleaseController {
     @Operation(summary = "删除项目")
     @DeleteMapping("/project/{id}")
     public ReturnResult<Void> deleteProject(@PathVariable Long id) {
-        return releaseService.deleteProject(id);
+        ReturnResult<Void> result = releaseService.deleteProject(id);
+        if (result.isOk()) {
+            removeSchedule(id);
+        }
+        return result;
     }
 
     // ==================== 项目操作 ====================
@@ -558,5 +605,112 @@ public class ReleaseController {
     @PostMapping("/project/{id}/git/deploy")
     public ReturnResult<String> gitPullAndDeploy(@PathVariable Long id) {
         return releaseService.gitPullAndDeploy(id);
+    }
+
+    // ==================== 发布管理增强 ====================
+
+    /**
+     * 复制项目到其他服务器（可多选源项目与目标发布）。
+     *
+     * @param body 请求体：projectIds 源项目、releaseIds 目标发布
+     * @return 复制结果
+     */
+    @Operation(summary = "复制项目到其他服务器（仅替换发布ID）")
+    @PostMapping("/project/copy")
+    public ReturnResult<java.util.Map<String, Object>> copyProjects(@RequestBody java.util.Map<String, Object> body) {
+        java.util.List<Long> projectIds = toLongList(body == null ? null : body.get("projectIds"));
+        java.util.List<Long> releaseIds = toLongList(body == null ? null : body.get("releaseIds"));
+        ReturnResult<java.util.Map<String, Object>> result = releaseService.copyProjects(projectIds, releaseIds);
+        if (result.isOk() && result.getData() != null) {
+            Object copied = result.getData().get("copied");
+            if (copied instanceof java.util.Collection<?> rows) {
+                for (Object row : rows) {
+                    if (row instanceof java.util.Map<?, ?> map && map.get("projectId") != null) {
+                        syncSchedule(Long.valueOf(String.valueOf(map.get("projectId"))));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 解析请求体中的 Long 列表（兼容数字与字符串）。
+     */
+    private java.util.List<Long> toLongList(Object raw) {
+        java.util.List<Long> out = new java.util.ArrayList<>();
+        if (raw instanceof java.util.Collection<?> cols) {
+            for (Object o : cols) {
+                if (o != null && !String.valueOf(o).isBlank()) {
+                    out.add(Long.valueOf(String.valueOf(o)));
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 探测项目的 Swagger / Actuator 端点。
+     *
+     * @param id 项目标识
+     * @return 探测结果（swagger/actuator 布尔值、访问地址、健康状态、指标数量）
+     */
+    @Operation(summary = "探测 Swagger / Actuator 端点")
+    @GetMapping("/project/{id}/endpoints")
+    public ReturnResult<java.util.Map<String, Object>> probeProjectEndpoints(@PathVariable Long id) {
+        return releaseService.probeProjectEndpoints(id);
+    }
+
+    /**
+     * 手动触发一次 Git 轮询：有更新才发布。
+     *
+     * @param id 项目标识
+     * @return changed / commit / taskId
+     */
+    @Operation(summary = "Git 轮询检查（有更新自动发布）")
+    @PostMapping("/project/{id}/git/poll")
+    public ReturnResult<java.util.Map<String, Object>> gitPollDeploy(@PathVariable Long id) {
+        return releaseService.gitPollDeploy(id);
+    }
+
+    /**
+     * 查询项目定时任务运行态（下一次/上一次触发时间）。
+     *
+     * @param id 项目标识
+     * @return 运行态
+     */
+    @Operation(summary = "查询项目定时任务运行态")
+    @GetMapping("/project/{id}/schedule")
+    public ReturnResult<java.util.Map<String, Object>> scheduleStatus(@PathVariable Long id) {
+        ReleaseScheduleService service = releaseScheduleServiceProvider.getIfAvailable();
+        java.util.Map<String, Object> out = service == null
+                ? new java.util.LinkedHashMap<>() : service.status(id);
+        return ReturnResult.ok(out);
+    }
+
+    /**
+     * 读取页面布局。
+     *
+     * @param pageKey 页面标识
+     * @return 布局 JSON
+     */
+    @Operation(summary = "读取页面布局")
+    @GetMapping("/layout/{pageKey}")
+    public ReturnResult<java.util.Map<String, Object>> getPageLayout(@PathVariable String pageKey) {
+        return releaseService.getPageLayout(pageKey);
+    }
+
+    /**
+     * 保存页面布局。
+     *
+     * @param pageKey 页面标识
+     * @param layout  布局 JSON（原样存储）
+     * @return 操作结果
+     */
+    @Operation(summary = "保存页面布局")
+    @PutMapping("/layout/{pageKey}")
+    public ReturnResult<Void> savePageLayout(@PathVariable String pageKey,
+                                             @RequestBody(required = false) String layout) {
+        return releaseService.savePageLayout(pageKey, layout);
     }
 }

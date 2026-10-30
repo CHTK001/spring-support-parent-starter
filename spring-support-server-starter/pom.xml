@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.43</version>
+        <version>4.0.0.51</version>
     </parent>
     <artifactId>spring-support-server-starter</artifactId>
     <description>
@@ -101,6 +101,14 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-maven-starter</artifactId>
             <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 定时发布 / Git 定时轮询：job-starter 为可选依赖，宿主引入后
+             ReleaseScheduleServiceImpl 才装配（@ConditionalOnClass） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-job-starter</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- 远控协议网关：Apache Guacamole 客户端库（对接 guacd 守护进程） -->
