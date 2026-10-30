@@ -1,12 +1,15 @@
 package com.chua.starter.template.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.template.support.entity.TemplateInfo;
+import com.chua.starter.template.support.entity.TemplatePrinter;
 import com.chua.starter.template.support.mapper.TemplateInfoMapper;
+import com.chua.starter.template.support.mapper.TemplatePrinterMapper;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
@@ -17,10 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 模板服务实现
@@ -35,12 +37,14 @@ public class TemplateServiceImpl implements TemplateService {
     private final TemplateInfoMapper templateInfoMapper;
 
     /**
-     * 打印机列表（应用侧 hiprint 调用端点使用），key 为打印机设备名
+     * 打印机配置映射器（配置落库，应用重启不丢默认打印机）
      */
-    private final Map<String, PrinterConfig> printerConfigMap = new ConcurrentHashMap<>();
+    private final TemplatePrinterMapper templatePrinterMapper;
 
-    public TemplateServiceImpl(TemplateInfoMapper templateInfoMapper) {
+    public TemplateServiceImpl(TemplateInfoMapper templateInfoMapper,
+                               TemplatePrinterMapper templatePrinterMapper) {
         this.templateInfoMapper = templateInfoMapper;
+        this.templatePrinterMapper = templatePrinterMapper;
     }
 
     @Override
@@ -121,7 +125,16 @@ public class TemplateServiceImpl implements TemplateService {
 
     @Override
     public List<PrinterConfig> printerList() {
-        return new ArrayList<>(printerConfigMap.values());
+        // 默认打印机排在最前，其余按创建时间升序
+        LambdaQueryWrapper<TemplatePrinter> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(TemplatePrinter::getTemplatePrinterDefault)
+                .orderByAsc(TemplatePrinter::getTemplatePrinterCreatedAt);
+        List<TemplatePrinter> printers = templatePrinterMapper.selectList(wrapper);
+        List<PrinterConfig> result = new ArrayList<>(printers.size());
+        for (TemplatePrinter printer : printers) {
+            result.add(toConfig(printer));
+        }
+        return result;
     }
 
     @Override
@@ -129,63 +142,140 @@ public class TemplateServiceImpl implements TemplateService {
         // 实际（局域网 / 本机）打印机发现由应用层或 hiprint 自带 Agent 完成，
         // 这里只返回已配置的打印机，避免未接入时应用侧一直提示“未找到打印机”。
         List<String> names = new ArrayList<>();
-        for (PrinterConfig config : printerConfigMap.values()) {
-            if (config.getIsDefault()) {
-                names.add(0, config.getName());
-            } else {
-                names.add(config.getName());
-            }
+        for (PrinterConfig config : printerList()) {
+            names.add(config.getName());
         }
         log.info("[Template] 发现打印机: {}", names);
         return names;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean setDefaultPrinter(String name) {
         if (!StringUtils.hasText(name)) {
             return false;
         }
-        for (PrinterConfig config : printerConfigMap.values()) {
-            config.setIsDefault(Boolean.FALSE);
+        TemplatePrinter printer = selectByName(name);
+        if (printer == null) {
+            log.warn("[Template] 设置默认打印机失败，打印机不存在: {}", name);
+            return false;
         }
-        PrinterConfig config = printerConfigMap.get(name);
-        if (config == null) {
-            config = new PrinterConfig();
-            config.setName(name);
-            printerConfigMap.put(name, config);
-        }
-        config.setIsDefault(Boolean.TRUE);
+        clearDefaultFlag(printer.getTemplatePrinterId());
         log.info("[Template] 设置默认打印机: {}", name);
         return true;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean removePrinter(String name) {
         if (!StringUtils.hasText(name)) {
             return false;
         }
-        PrinterConfig config = printerConfigMap.remove(name);
-        if (config == null) {
+        TemplatePrinter printer = selectByName(name);
+        if (printer == null) {
             log.warn("[Template] 打印机 {} 不存在", name);
             return false;
         }
-        // 被删除的如果是默认打印机，下掉默认标记
-        for (PrinterConfig other : printerConfigMap.values()) {
-            other.setIsDefault(Boolean.FALSE);
-        }
+        templatePrinterMapper.deleteById(printer.getTemplatePrinterId());
         log.info("[Template] 删除打印机: {}", name);
         return true;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void setPrinter(PrinterConfig printer) {
-        // 添加打印机连接参数（地址 / 端口 / Token），并自动设为默认
-        if (printer == null) {
-            return;
+        // 添加 / 编辑打印机连接参数（地址 / 端口 / Token）
+        if (printer == null || !StringUtils.hasText(printer.getName())) {
+            throw new IllegalArgumentException("打印机设备名不能为空");
         }
-        printerConfigMap.put(printer.getName(), printer);
-        setDefaultPrinter(printer.getName());
+        LocalDateTime now = LocalDateTime.now();
+        TemplatePrinter existing = selectByName(printer.getName());
+        // 自动默认：当前该击首诗（数据库空白）的打印机，或请求显式指定为默认
+        boolean defaultNow = Boolean.TRUE.equals(printer.getIsDefault())
+                && existing == null
+                && templatePrinterMapper.selectCount(null) == 0;
+        if (existing == null) {
+            TemplatePrinter entity = new TemplatePrinter();
+            fill(entity, printer, now, defaultNow);
+            templatePrinterMapper.insert(entity);
+        } else {
+            fill(existing, printer, now, defaultNow);
+            templatePrinterMapper.updateById(existing);
+        }
+        if (Boolean.TRUE.equals(existing == null ? null : existing.getTemplatePrinterDefault())) {
+            clearDefaultFlag(existing == null ? null : existing.getTemplatePrinterDefault());
+        }
         log.info("[Template] 设置打印机: {}", printer.getName());
+    }
+
+    /**
+     * 把参数填充到打印机实体上（新增时创建、编辑时覆盖）
+     *
+     * @param entity     目标实体
+     * @param printer    参数
+     * @param now        当前时间
+     * @param defaultNow 是否设为默认
+     */
+    private static void fill(TemplatePrinter entity, PrinterConfig printer, LocalDateTime now, boolean defaultNow) {
+        entity.setTemplatePrinterName(printer.getName());
+        entity.setTemplatePrinterAddress(printer.getAddress());
+        entity.setTemplatePrinterPort(printer.getPort());
+        entity.setTemplatePrinterToken(printer.getToken());
+        entity.setTemplatePrinterUsername(printer.getUsername());
+        entity.setTemplatePrinterType(printer.getType());
+        entity.setTemplatePrinterRemark(printer.getRemark());
+        entity.setTemplatePrinterCreatedAt(now);
+        entity.setTemplatePrinterUpdatedAt(now);
+        entity.setTemplatePrinterDefault(defaultNow ? Boolean.TRUE : Boolean.FALSE);
+    }
+
+    /**
+     * 按设备名查询打印机
+     *
+     * @param name 打印机设备名
+     * @return 打印机实体，不存在返回 {@code null}
+     */
+    private TemplatePrinter selectByName(String name) {
+        LambdaQueryWrapper<TemplatePrinter> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(TemplatePrinter::getTemplatePrinterName, name);
+        wrapper.last("LIMIT 1");
+        return templatePrinterMapper.selectOne(wrapper);
+    }
+
+    /**
+     * 仅保留指定打印机为默认，其余全部下掉默认标记
+     *
+     * @param keepId 需要保留为默认的打印机主键
+     */
+    private void clearDefaultFlag(String keepId) {
+        LambdaUpdateWrapper<TemplatePrinter> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.set(TemplatePrinter::getTemplatePrinterDefault, Boolean.FALSE)
+                .eq(TemplatePrinter::getTemplatePrinterDefault, Boolean.TRUE)
+                .ne(TemplatePrinter::getTemplatePrinterId, keepId);
+        templatePrinterMapper.update(null, wrapper);
+        LambdaUpdateWrapper<TemplatePrinter> setDefault = new LambdaUpdateWrapper<>();
+        setDefault.set(TemplatePrinter::getTemplatePrinterDefault, Boolean.TRUE)
+                .eq(TemplatePrinter::getTemplatePrinterId, keepId);
+        templatePrinterMapper.update(null, setDefault);
+    }
+
+    /**
+     * 实体转打印机参数（对外模型）
+     *
+     * @param entity 打印机实体
+     * @return 打印机参数
+     */
+    private static PrinterConfig toConfig(TemplatePrinter entity) {
+        PrinterConfig config = new PrinterConfig();
+        config.setName(entity.getTemplatePrinterName());
+        config.setAddress(entity.getTemplatePrinterAddress());
+        config.setPort(entity.getTemplatePrinterPort());
+        config.setToken(entity.getTemplatePrinterToken());
+        config.setUsername(entity.getTemplatePrinterUsername());
+        config.setType(entity.getTemplatePrinterType());
+        config.setRemark(entity.getTemplatePrinterRemark());
+        config.setIsDefault(Boolean.TRUE.equals(entity.getTemplatePrinterDefault()));
+        return config;
     }
 
     /**

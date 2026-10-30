@@ -182,11 +182,15 @@ public class DeviceScheduleManager {
     /**
      * 刷新单套凭据的 Tick（按开关/间隔），可单独调用于热更新。
      *
-     * @param credentialId 凭据 ID
+     * @param credentialId 凭据 ID（已删除时撤掉其名下全部 Tick）
      */
     public void refresh(String credentialId) {
         DeviceProviderCredential credential = credentialService.get(credentialId);
         if (credential == null) {
+            // 凭据已删除：把它名下的 Tick 全撤掉，避免继续按旧配置跑
+            for (CredentialTask source : CredentialTask.values()) {
+                cancel(source.name(credentialId), credentialTasks);
+            }
             return;
         }
         refreshCredential(credential);
@@ -194,7 +198,8 @@ public class DeviceScheduleManager {
 
     /**
      * 按凭据重注册 3 个 Tick。
-     * <p>开关（enabled）关闭时不注册任务；间隔（interval）为空时不注册任务。</p>
+     * <p>先撤掉该凭据名下的旧 Tick，再按最新配置判定：凭据停用、开关关闭、
+     * 间隔为空或非正数时不注册任务。</p>
      *
      * @param credential 凭据
      */
@@ -204,21 +209,26 @@ public class DeviceScheduleManager {
             return;
         }
         for (CredentialTask source : CredentialTask.values()) {
+            String taskName = source.name(credId);
+            // 先撤旧的：配置改成关闭时也必须落地，而不是留着旧 Tick 继续跑
+            cancel(taskName, credentialTasks);
             if (!source.acts(credential)) {
                 continue;
             }
-            String taskName = source.name(credId);
-            // 间隔优先取任务状态行（用户可能调整过），分录取在中的 interval 字段
-            Integer interval = taskStateInterval(taskName, source.intervalOf(credential));
+            // 间隔：凭据高级配置为准（>0），未配置时回落到状态行（任务页改过）/ 默认 30 秒
+            Integer configured = source.intervalOf(credential);
+            Integer interval = configured != null && configured > 0
+                    ? configured
+                    : taskStateInterval(taskName);
             if (interval == null || interval <= 0) {
                 continue;
             }
-            cancel(taskName, credentialTasks);
             ScheduledTask task = timeScheduler.scheduleFixedRate(taskName,
                     () -> tickCredential(source, credId),
                     interval, TimeUnit.SECONDS);
-            // 补种状态行，让任务出现在任务列表里
+            // 补种状态行让任务出现在任务列表里，并把生效间隔写回（行上显示与实际 tick 一致）
             taskStateService.seed(taskName, interval, source.description(credential));
+            taskStateService.updateInterval(taskName, interval);
             credentialTasks.put(taskName, task);
             log.info("凭据级定时任务已注册: name={}, type={}, interval={}秒", taskName, source, interval);
         }
@@ -240,45 +250,61 @@ public class DeviceScheduleManager {
             return;
         }
         try {
-            source.body(credId).run();
+            body(source, credId).run();
         } finally {
             taskStateService.markFinished(taskName);
         }
     }
 
     /**
-     * 立即执行（绕过时间轮）
+     * 立即执行（绕过时间轮 tick 的间隔判定）
      *
      * @param taskName 任务名（全局任务或凭据级任务）
-     * @return 是否已有对应的执行入口
+     * @return 是否执行成功（未知任务名或任务体抛错为 {@code false}）
      */
     public boolean runNow(String taskName) {
         CredentialTask source = sourceOf(taskName);
         String credId = source == null ? null : credentialIdOf(taskName);
         if (source != null && credId != null) {
-            try {
-                source.body(credId).run();
-                return true;
-            } catch (Exception e) {
-                log.warn("立即执行失败: name={}, message={}", taskName, e.getMessage(), e);
-                return false;
+            return runTracked(taskName, body(source, credId));
+        }
+        return switch (taskName) {
+            case TASK_OFFLINE_CHECK ->
+                    runTracked(taskName, () -> doOfflineCheck(providerConfigService.listCheckableDevices()));
+            case TASK_EVENT_POLL -> runTracked(taskName, () -> eventService.pollAllDevices());
+            case TASK_DEVICE_SYNC -> runTracked(taskName, () -> syncService.syncDevices(null));
+            case TASK_ACCESS_EXTRACT -> runTracked(taskName, () -> {
+                LocalDateTime end = LocalDateTime.now();
+                accessRecordService.extractRecent(end.minusMinutes(10), end);
+            });
+            default -> {
+                log.warn("未实现的任务名: {}", taskName);
+                yield false;
+            }
+        };
+    }
+
+    /**
+     * 立即执行一段任务体：有对应状态行时顺带记录执行时间与 running 态，
+     * 没有状态行（凭据级任务尚未补种）也不影响执行本身。
+     *
+     * @param taskName 任务名
+     * @param body     任务体
+     * @return 是否执行成功（异常只记日志）
+     */
+    private boolean runTracked(String taskName, Runnable body) {
+        boolean tracked = taskStateService.markRunning(taskName);
+        try {
+            body.run();
+            return true;
+        } catch (Exception e) {
+            log.warn("立即执行失败: name={}, message={}", taskName, e.getMessage(), e);
+            return false;
+        } finally {
+            if (tracked) {
+                taskStateService.markFinished(taskName);
             }
         }
-        switch (taskName) {
-            case TASK_OFFLINE_CHECK -> executeOfflineCheck();
-            case TASK_EVENT_POLL -> executeEventPoll();
-            case TASK_DEVICE_SYNC -> {
-                try {
-                    syncService.syncDevices(null);
-                    taskStateService.markFinished(TASK_DEVICE_SYNC);
-                } catch (Exception e) {
-                    log.error("立即执行设备同步失败", e);
-                }
-            }
-            case TASK_ACCESS_EXTRACT -> executeAccessExtract();
-            default -> log.warn("未实现的任务名: {}", taskName);
-        }
-        return true;
     }
 
     /** 注册全局 Tick（从 `device_task_state` 读 state 行，固定间隔 tick） */
@@ -320,20 +346,20 @@ public class DeviceScheduleManager {
         return credentialTasks.get(taskName);
     }
 
-    /** 取任务状态行上的间隔，未补种/未改过则分取 in 的 interval 字段 */
-    private Integer taskStateInterval(String taskName, Integer configuration) {
+    /** 取任务状态行上的间隔（任务页改过就在行上），没有则回落默认 30 秒 */
+    private Integer taskStateInterval(String taskName) {
         DeviceTaskState stateRow;
         try {
             stateRow = taskStateService.getState(taskName);
         } catch (Exception e) {
             // 状态行尚未补种时不阻塞
             log.debug("取任务状态行失败: {}", taskName, e);
-            return configuration == null ? DEFAULT_INTERVAL_SEC : configuration;
+            return DEFAULT_INTERVAL_SEC;
         }
         if (stateRow != null && stateRow.getDeviceTaskStateInterval() != null && stateRow.getDeviceTaskStateInterval() > 0) {
             return stateRow.getDeviceTaskStateInterval();
         }
-        return configuration == null ? DEFAULT_INTERVAL_SEC : configuration;
+        return DEFAULT_INTERVAL_SEC;
     }
 
     /**
@@ -468,36 +494,34 @@ public class DeviceScheduleManager {
     }
 
     /**
-     * 凭据级任务分类（开关 + 间隔 + 调用体）
+     * 凭据级任务分类（开关 + 间隔）
      */
     private enum CredentialTask {
         OFFLINE_DETECT(PREFIX_OFFLINE_DETECT, "在离线检测", DeviceProviderCredential::getDeviceCredentialOfflineDetectEnabled,
-                DeviceProviderCredential::getDeviceCredentialOfflineDetectInterval, DeviceScheduleManager::executeOfflineDetect),
+                DeviceProviderCredential::getDeviceCredentialOfflineDetectInterval),
         DEVICE_SYNC(PREFIX_DEVICE_SYNC, "设备自动同步", DeviceProviderCredential::getDeviceCredentialDeviceSyncEnabled,
-                DeviceProviderCredential::getDeviceCredentialDeviceSyncInterval, DeviceScheduleManager::executeDeviceSyncCredential),
+                DeviceProviderCredential::getDeviceCredentialDeviceSyncInterval),
         ORG_SYNC(PREFIX_ORG_SYNC, "组织自动同步", DeviceProviderCredential::getDeviceCredentialOrgSyncEnabled,
-                DeviceProviderCredential::getDeviceCredentialOrgSyncInterval, DeviceScheduleManager::executeOrgSyncCredential);
+                DeviceProviderCredential::getDeviceCredentialOrgSyncInterval);
 
         private final String prefix;
         private final String description;
         private final java.util.function.Function<DeviceProviderCredential, Boolean> enabled;
         private final java.util.function.Function<DeviceProviderCredential, Integer> interval;
-        private final java.util.function.Function<String, Runnable> body;
 
         CredentialTask(String prefix, String description,
                        java.util.function.Function<DeviceProviderCredential, Boolean> enabled,
-                       java.util.function.Function<DeviceProviderCredential, Integer> interval,
-                       java.util.function.Function<String, Runnable> body) {
+                       java.util.function.Function<DeviceProviderCredential, Integer> interval) {
             this.prefix = prefix;
             this.description = description;
             this.enabled = enabled;
             this.interval = interval;
-            this.body = body;
         }
 
-        /** 开关是否开启 */
+        /** 开关是否开启（凭据整体停用时一律不跑） */
         boolean acts(DeviceProviderCredential credential) {
-            return Boolean.TRUE.equals(enabled.apply(credential));
+            return Boolean.TRUE.equals(credential.getDeviceCredentialEnabled())
+                    && Boolean.TRUE.equals(enabled.apply(credential));
         }
 
         /** 间隔秒 */
@@ -514,25 +538,16 @@ public class DeviceScheduleManager {
         String description(DeviceProviderCredential credential) {
             return credential.getDeviceCredentialName() + "（" + description + "）";
         }
-
-        /** 任务体（按 creditedId 创建） */
-        Runnable body(String credId) {
-            return body.apply(credId);
-        }
     }
 
-    /** 离线检测 — 按凭据维度 */
-    private Runnable executeOfflineDetect(String credId) {
-        return () -> doOfflineCheck(deviceService.listByCredentialId(credId));
-    }
-
-    /** 设备目录同步 — 按凭据维度 */
-    private Runnable executeDeviceSyncCredential(String credId) {
-        return () -> syncService.syncDevicesByCredential(credId);
-    }
-
-    /** 组织同步 — 按凭据维度 */
-    private Runnable executeOrgSyncCredential(String credId) {
-        return () -> syncService.syncOrganizationsByCredential(credId);
+    /**
+     * 凭据级任务体：按来源把任务要求成可执行的 Runnable
+     */
+    private Runnable body(CredentialTask source, String credId) {
+        return switch (source) {
+            case OFFLINE_DETECT -> () -> doOfflineCheck(deviceService.listByCredentialId(credId));
+            case DEVICE_SYNC -> () -> syncService.syncDevicesByCredential(credId);
+            case ORG_SYNC -> () -> syncService.syncOrganizationsByCredential(credId);
+        };
     }
 }

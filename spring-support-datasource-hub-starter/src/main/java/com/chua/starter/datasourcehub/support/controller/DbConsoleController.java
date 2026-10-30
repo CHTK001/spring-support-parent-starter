@@ -36,6 +36,13 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbTxStatus;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTransferCodec;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlParameterBinder;
 import com.chua.starter.datasourcehub.support.dbconsole.SqlScriptSplitter;
+import com.chua.starter.datasourcehub.support.dbconsole.DbSchemaSnapshotRequest;
+import com.chua.starter.datasourcehub.support.dbconsole.DbSchemaSnapshotVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbSnapshotDetailVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbSchemaRollbackResultVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbTableSpec;
+import com.chua.starter.datasourcehub.support.service.DbSchemaSnapshotService;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.datasourcehub.support.config.DatasourceHubProperties;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import com.chua.starter.datasourcehub.support.service.InfluxdbManageService;
@@ -129,6 +136,11 @@ public class DbConsoleController {
      * 由 facade 走 DB 提供商配置（sys_ai_provider*）构建真实客户端。</p>
      */
     private final ObjectProvider<EffectiveChatModelResolver> effectiveChatModelResolverProvider;
+
+    /**
+     * 表结构版本控制（DDL 快照 + 回滚）。
+     */
+    private final DbSchemaSnapshotService schemaSnapshotService;
 
     /**
      * 取事务注册表。
@@ -1358,7 +1370,9 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 获取表的建表语句（DDL）。
      *
      * <p>优先 {@code SHOW CREATE TABLE}（MySQL/H2 兼容）；不支持时按列+主键拼装 CREATE TABLE，
-     * 保证在 PostgreSQL 等内核也能给出可用 DDL。</p>
+     * 保证在 PostgreSQL 等内核也能给出可用 DDL。
+     *
+     * <p>逻辑与拍快照同源：{@link DbTableSpec#showCreateTable(java.sql.Connection, String, String)}</p>
      *
      * @param tableName    表名
      * @param datasourceId 数据源 ID
@@ -1375,60 +1389,110 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         try (java.sql.Connection conn = datasourceService.connection(datasourceId);
              SchemaScope scope = useSchema(conn, database)) {
             requireTable(conn, table);
-            String quoted = SqlName.quoteMysql(table, "表名");
-            try (java.sql.Statement st = conn.createStatement();
-                 java.sql.ResultSet rs = st.executeQuery("SHOW CREATE TABLE " + quoted)) {
-                if (rs.next()) {
-                    // SHOW CREATE TABLE 的列是「表名 / 建表语句」；判定必须用「以 CREATE 开头」，
-                    // 用「包含 CREATE」会命中相邻的表名列（表名里带 create 字样时）
-                    for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-                        Object v = rs.getObject(i);
-                        if (v instanceof String s && s.strip().toUpperCase().startsWith("CREATE")) {
-                            return ReturnResult.ok(s);
-                        }
-                    }
-                }
-            } catch (java.sql.SQLException ignored) {
-                // 非 SHOW CREATE 内核，走列结构拼装
-            }
-            String catalog = conn.getCatalog();
-            String schema = conn.getSchema();
-            java.util.Set<String> pkCols = new java.util.LinkedHashSet<>();
-            try (java.sql.ResultSet pkRs = conn.getMetaData().getPrimaryKeys(catalog, schema, table)) {
-                while (pkRs.next()) {
-                    pkCols.add(pkRs.getString("COLUMN_NAME"));
-                }
-            }
-            StringBuilder ddl = new StringBuilder("CREATE TABLE ").append(quoted).append(" (\n");
-            java.util.List<String> defs = new java.util.ArrayList<>();
-            try (java.sql.ResultSet rs = conn.getMetaData().getColumns(catalog, schema, table, "%")) {
-                while (rs.next()) {
-                    String name = rs.getString("COLUMN_NAME");
-                    String type = rs.getString("TYPE_NAME");
-                    int size = rs.getInt("COLUMN_SIZE");
-                    boolean nullable = rs.getInt("NULLABLE") == 1;
-                    String def = rs.getString("COLUMN_DEF");
-                    StringBuilder line = new StringBuilder("  ").append(SqlName.quoteMysql(name, "列名"))
-                            .append(' ').append(type);
-                    if (size > 0 && java.util.Set.of("VARCHAR", "CHAR", "DECIMAL", "NUMERIC").contains(type.toUpperCase())) {
-                        line.append('(').append(size).append(')');
-                    }
-                    line.append(nullable ? " NULL" : " NOT NULL");
-                    if (def != null && !def.isBlank()) {
-                        line.append(" DEFAULT ").append(def);
-                    }
-                    if (pkCols.contains(name)) {
-                        line.append(" PRIMARY KEY");
-                    }
-                    defs.add(line.toString());
-                }
-            }
-            ddl.append(String.join(",\n", defs)).append("\n);");
-            return ReturnResult.ok(ddl.toString());
+            DbTableSpec spec = DbTableSpec.showCreateTable(conn, database, table);
+            return ReturnResult.ok(spec.ddl());
         } catch (Exception e) {
             return ReturnResult.error("获取建表语句失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 给表拍结构快照。
+     *
+     * <p>拍快照 = 把表在拍摄时刻的「建表 DDL + 列 + 索引 + 外键 + 表选项」存到
+     * ms_schema_snapshot。name 不传时后端生成「保存于 2026-10-30 15:30」，
+     * creator 不传时从请求头取当前登录人；没有登录人则记 SYSTEM。</p>
+     *
+     * @param tableName    表名
+     * @param request      拍快照：name（快照名/备注空=自动生成）
+     * @param datasourceId 数据源 ID
+     * @param database     库名（多库数据源的目标库；可空=当前库）
+     * @return 快照 ID
+     */
+    @Operation(summary = "拍结构快照")
+    @SysLog(name = "拍结构快照")
+    @PostMapping("table/{tableName}/schema-snapshots")
+    public ReturnResult<Long> createSchemaSnapshot(
+            @PathVariable String tableName,
+            @RequestBody(required = false) Map<String, Object> request,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database) {
+        return schemaSnapshotService.takeSnapshot(
+                DbSchemaSnapshotRequest.of(tableName, request, datasourceId, database));
+    }
+
+    /**
+     * 列出表的快照（分页、按时间倒序，支持按库名/表名/名称搜索）
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID
+     * @param database     库名（多库数据源的目标库；可空=不限制）
+     * @param name         快照名称模糊搜索（可空）
+     * @param page         页码
+     * @param size         每页条数
+     * @return 分页 snapshots
+     */
+    @Operation(summary = "列出表结构快照")
+    @GetMapping("table/{tableName}/schema-snapshots")
+    public ReturnResult<Page<DbSchemaSnapshotVO>> listSchemaSnapshots(
+            @PathVariable String tableName,
+            @RequestParam(required = false) Long datasourceId,
+            @RequestParam(required = false) String database,
+            @RequestParam(required = false) String name,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return schemaSnapshotService.listSnapshots(
+                DbSchemaSnapshotRequest.ListRequest.of(datasourceId, database, tableName, name, page, size));
+    }
+
+    /**
+     * 快照详情（完整 DDL 文本 + 列/索引/外键原始 JSON）
+     *
+     * @param tableName 表名
+     * @param id        快照 ID
+     * @return 快照详情
+     */
+    @Operation(summary = "获取快照详情")
+    @GetMapping("table/{tableName}/schema-snapshots/{id}")
+    public ReturnResult<DbSnapshotDetailVO> schemaSnapshotDetail(
+            @PathVariable String tableName,
+            @PathVariable Long id) {
+        return schemaSnapshotService.getSnapshotDetail(id);
+    }
+
+    /**
+     * 删除结构快照
+     *
+     * @param tableName 表名
+     * @param id        快照 ID
+     * @return 是否成功
+     */
+    @Operation(summary = "删除结构快照")
+    @SysLog(name = "删除结构快照")
+    @DeleteMapping("table/{tableName}/schema-snapshots/{id}")
+    public ReturnResult<Boolean> deleteSchemaSnapshot(
+            @PathVariable String tableName,
+            @PathVariable Long id) {
+        return schemaSnapshotService.deleteSnapshot(id);
+    }
+
+    /**
+     * 回滚到指定快照：删当前表 → 原样执行 DDL → 重建索引/外键（SHOW CREATE TABLE
+     * 来源的 DDL 已自包含约束，无需重建）
+     *
+     * @param tableName 表名
+     * @param id        快照 ID
+     * @return 回滚结果（总语句数/成功数/失败数/耗时/失败原因）
+     */
+    @Operation(summary = "回滚到指定快照")
+    @SysLog(name = "回滚结构快照")
+    @PostMapping("table/{tableName}/schema-snapshots/{id}/rollback")
+    public ReturnResult<DbSchemaRollbackResultVO> rollbackSchemaSnapshot(
+            @PathVariable String tableName,
+            @PathVariable Long id) {
+        return schemaSnapshotService.rollbackSnapshot(id);
+    }
+
 
     /**
      * 获取表的外键列表。

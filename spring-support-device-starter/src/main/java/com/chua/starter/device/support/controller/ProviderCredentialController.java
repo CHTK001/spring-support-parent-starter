@@ -72,7 +72,10 @@ public class ProviderCredentialController {
      * @return 返回值
     */
     public ReturnResult<DeviceProviderCredential> create(@RequestBody DeviceProviderCredential credential) {
-        return ReturnResult.ok(credentialService.create(credential));
+        DeviceProviderCredential created = credentialService.create(credential);
+        // 新建时高级配置可能已经打开：立刻按配置挂 Tick（全关则什么都不注册）
+        scheduleManager.refresh(created.getDeviceCredentialId());
+        return ReturnResult.ok(created);
     }
     @PutMapping("/{id}")
     public ReturnResult<DeviceProviderCredential> update(@PathVariable String id,
@@ -93,7 +96,10 @@ public class ProviderCredentialController {
     @PutMapping("/{id}/enabled")
     public DeviceProviderCredential updateEnabled(@PathVariable String id,
                                                  @RequestParam boolean enabled) {
-        return credentialService.updateEnabled(id, enabled);
+        DeviceProviderCredential updated = credentialService.updateEnabled(id, enabled);
+        // 停用后该凭据的 Tick 一并下线，启用时按高级配置重新挂上
+        scheduleManager.refresh(id);
+        return updated;
     }
 
     @DeleteMapping("/{id}")
@@ -104,6 +110,8 @@ public class ProviderCredentialController {
     */
     public ReturnResult<Void> delete(@PathVariable String id) {
         credentialService.delete(id);
+        // 凭据没了，它名下的 Tick 也要撤掉
+        scheduleManager.refresh(id);
         return ReturnResult.ok();
     }
 

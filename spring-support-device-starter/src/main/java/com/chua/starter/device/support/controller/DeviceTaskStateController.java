@@ -35,9 +35,7 @@ public class DeviceTaskStateController {
     /** 时间轮调度器 */
     private final DeviceScheduleManager scheduleManager;
 
-     * 任务状态服务
-     */
-    private final DeviceTaskStateService taskStateService;
+
 
     /**
      * 列出全部任务状态
@@ -71,7 +69,7 @@ public class DeviceTaskStateController {
      * 立即执行一次（绕过时间轮 tick）
      *
      * @param taskName 任务名（支持凭据级任务名，如 offlineDetect_{credId}）
-     * @return true 有执行入口
+     * @return true 执行成功；false 任务名未知或执行抛错（详见服务端日志）
      */
     @PostMapping("/{taskName}/run")
     public ReturnResult<Boolean> runNow(@PathVariable String taskName) {
