@@ -141,6 +141,25 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         update.setDeviceCredentialRemark(credential.getDeviceCredentialRemark() != null
                 ? credential.getDeviceCredentialRemark()
                 : existing.getDeviceCredentialRemark());
+        // 凭据级高级配置（默认全关）：与现有字段的合并方式一致，空代表不改
+        update.setDeviceCredentialOfflineDetectEnabled(credential.getDeviceCredentialOfflineDetectEnabled() != null
+                ? credential.getDeviceCredentialOfflineDetectEnabled()
+                : existing.getDeviceCredentialOfflineDetectEnabled());
+        update.setDeviceCredentialOfflineDetectInterval(credential.getDeviceCredentialOfflineDetectInterval() != null
+                ? credential.getDeviceCredentialOfflineDetectInterval()
+                : existing.getDeviceCredentialOfflineDetectInterval());
+        update.setDeviceCredentialDeviceSyncEnabled(credential.getDeviceCredentialDeviceSyncEnabled() != null
+                ? credential.getDeviceCredentialDeviceSyncEnabled()
+                : existing.getDeviceCredentialDeviceSyncEnabled());
+        update.setDeviceCredentialDeviceSyncInterval(credential.getDeviceCredentialDeviceSyncInterval() != null
+                ? credential.getDeviceCredentialDeviceSyncInterval()
+                : existing.getDeviceCredentialDeviceSyncInterval());
+        update.setDeviceCredentialOrgSyncEnabled(credential.getDeviceCredentialOrgSyncEnabled() != null
+                ? credential.getDeviceCredentialOrgSyncEnabled()
+                : existing.getDeviceCredentialOrgSyncEnabled());
+        update.setDeviceCredentialOrgSyncInterval(credential.getDeviceCredentialOrgSyncInterval() != null
+                ? credential.getDeviceCredentialOrgSyncInterval()
+                : existing.getDeviceCredentialOrgSyncInterval());
 
         normalize(update);
         assertNameFree(update, id);
